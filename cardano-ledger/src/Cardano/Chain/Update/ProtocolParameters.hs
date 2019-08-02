@@ -18,7 +18,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import Data.Time (NominalDiffTime)
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
@@ -33,7 +32,8 @@ import Cardano.Chain.Update.SoftforkRule
 -- | Data which is associated with 'BlockVersion'
 data ProtocolParameters = ProtocolParameters
   { ppScriptVersion     :: !Word16
-  , ppSlotDuration      :: !NominalDiffTime
+  -- | Milliseconds.
+  , ppSlotDuration      :: !Natural
   , ppMaxBlockSize      :: !Natural
   , ppMaxHeaderSize     :: !Natural
   , ppMaxTxSize         :: !Natural
@@ -61,19 +61,10 @@ data ProtocolParameters = ProtocolParameters
   } deriving (Show, Eq, Ord, Generic)
     deriving anyclass NFData
 
--- | The `ppSlotDuration` field is expressed in milliseconds, in its JSON and
--- CBOR forms, for consistency with cardano-sl. Parsing will convert it properly
--- to `NominalDiffTime`. `slotDurationToMilliseconds` inverts this.
-slotDurationFromMilliseconds :: Integer -> NominalDiffTime
-slotDurationFromMilliseconds ms = fromRational (toRational ms / 1000)
-
-slotDurationToMilliseconds :: NominalDiffTime -> Integer
-slotDurationToMilliseconds sd = floor (toRational sd * 1000)
-
 instance B.Buildable ProtocolParameters where
   build pp = bprint
     ( "{ script version: " . build
-    . ", slot duration: " . build
+    . ", slot duration: " . bytes'
     . ", block size limit: " . bytes'
     . ", header size limit: " . bytes'
     . ", tx size limit: " . bytes'
@@ -109,7 +100,7 @@ instance B.Buildable ProtocolParameters where
 instance Monad m => ToJSON m ProtocolParameters where
   toJSON pp = mkObject
     [ ("scriptVersion"    , toJSON $ ppScriptVersion pp)
-    , ("slotDuration"     , toJSON $ slotDurationToMilliseconds (ppSlotDuration pp))
+    , ("slotDuration"     , toJSON $ ppSlotDuration pp)
     , ("maxBlockSize"     , toJSON $ ppMaxBlockSize pp)
     , ("maxHeaderSize"    , toJSON $ ppMaxHeaderSize pp)
     , ("maxTxSize"        , toJSON $ ppMaxTxSize pp)
@@ -128,7 +119,7 @@ instance MonadError SchemaError m => FromJSON m ProtocolParameters where
   fromJSON obj =
     ProtocolParameters
       <$> fromJSField obj "scriptVersion"
-      <*> fmap slotDurationFromMilliseconds (fromJSField obj "slotDuration")
+      <*> fromJSField obj "slotDuration"
       <*> fromJSField obj "maxBlockSize"
       <*> fromJSField obj "maxHeaderSize"
       <*> fromJSField obj "maxTxSize"
@@ -146,7 +137,7 @@ instance ToCBOR ProtocolParameters where
   toCBOR pp =
     encodeListLen 14
       <> toCBOR (ppScriptVersion pp)
-      <> toCBOR (slotDurationToMilliseconds (ppSlotDuration pp))
+      <> toCBOR (ppSlotDuration pp)
       <> toCBOR (ppMaxBlockSize pp)
       <> toCBOR (ppMaxHeaderSize pp)
       <> toCBOR (ppMaxTxSize pp)
@@ -165,7 +156,7 @@ instance FromCBOR ProtocolParameters where
     enforceSize "ProtocolParameters" 14
     ProtocolParameters
       <$> fromCBOR
-      <*> fmap slotDurationFromMilliseconds fromCBOR
+      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR

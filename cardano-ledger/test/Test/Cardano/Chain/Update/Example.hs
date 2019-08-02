@@ -24,7 +24,6 @@ import Test.Cardano.Prelude
 
 import Data.List ((!!))
 import qualified Data.Map.Strict as Map
-import Data.Time (NominalDiffTime)
 
 import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common
@@ -65,7 +64,7 @@ exampleProtocolVersion = ProtocolVersion 1 1 1
 exampleProtocolParameters :: ProtocolParameters
 exampleProtocolParameters = ProtocolParameters
   (999 :: Word16)
-  (999e-3 :: NominalDiffTime)
+  (999 :: Natural)
   (999 :: Natural)
   (999 :: Natural)
   (999 :: Natural)
@@ -90,7 +89,7 @@ exampleProtocolParameters = ProtocolParameters
 exampleProtocolParametersUpdate :: ProtocolParametersUpdate
 exampleProtocolParametersUpdate = ProtocolParametersUpdate
   (Just (999 :: Word16))
-  (Just (999e-6 :: NominalDiffTime))
+  (Just (999 :: Natural))
   (Just (999 :: Natural))
   (Just (999 :: Natural))
   (Just (999 :: Natural))
