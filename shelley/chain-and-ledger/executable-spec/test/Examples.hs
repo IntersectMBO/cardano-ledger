@@ -352,7 +352,7 @@ ex1 :: CHAINExample
 ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 expectedStEx1
 
 
--- | Example 2 - apply CHAIN transition to register a stake keys and a pool
+-- | Example 2 - apply CHAIN transition to register stake keys and a pool
 
 
 utxoEx2 :: UTxO
