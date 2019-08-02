@@ -25,7 +25,18 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
-import Cardano.Binary (Annotated(..))
+import Cardano.Binary
+  ( Annotated(..)
+  , Decoder
+  , DecoderError(DecoderErrorUnknownTag)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
+  , encodeListLen
+  , enforceSize
+  , matchSize
+  )
 import Cardano.Chain.Common
   ( Address(..)
   , Lovelace
@@ -77,6 +88,60 @@ data TxValidationError
   | TxValidationUnknownAttributes
   deriving (Eq, Show)
 
+instance ToCBOR TxValidationError where
+  toCBOR = \case
+    TxValidationLovelaceError text loveLaceError ->
+      encodeListLen 3
+        <> toCBOR @Word8 0
+        <> toCBOR text
+        <> toCBOR loveLaceError
+    TxValidationFeeTooSmall tx lovelace1 lovelace2 ->
+      encodeListLen 4
+        <> toCBOR @Word8 1
+        <> toCBOR tx
+        <> toCBOR lovelace1
+        <> toCBOR lovelace2
+    TxValidationInvalidWitness txInWitness ->
+      encodeListLen 2
+        <> toCBOR @Word8 2
+        <> toCBOR txInWitness
+    TxValidationMissingInput txIn ->
+      encodeListLen 2
+        <> toCBOR @Word8 3
+        <> toCBOR txIn
+    TxValidationNetworkMagicMismatch networkMagic1 networkMagic2 ->
+      encodeListLen 3
+        <> toCBOR @Word8 4
+        <> toCBOR networkMagic1
+        <> toCBOR networkMagic2
+    TxValidationTxTooLarge nat1 nat2 ->
+      encodeListLen 3
+        <> toCBOR @Word8 5
+        <> toCBOR nat1
+        <> toCBOR nat2
+    TxValidationUnknownAddressAttributes ->
+      encodeListLen 1
+        <> toCBOR @Word8 6
+    TxValidationUnknownAttributes ->
+      encodeListLen 1
+        <> toCBOR @Word8 7
+
+instance FromCBOR TxValidationError where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: forall s. Int -> Decoder s ()
+        checkSize size = matchSize "TxValidationError" size len
+    tag <- decodeWord8
+    case tag of
+      0 -> checkSize 3 >> TxValidationLovelaceError <$> fromCBOR <*> fromCBOR
+      1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> fromCBOR <*> fromCBOR <*> fromCBOR
+      2 -> checkSize 2 >> TxValidationInvalidWitness <$> fromCBOR
+      3 -> checkSize 2 >> TxValidationMissingInput <$> fromCBOR
+      4 -> checkSize 3 >> TxValidationNetworkMagicMismatch <$> fromCBOR <*> fromCBOR
+      5 -> checkSize 3 >> TxValidationTxTooLarge <$> fromCBOR <*> fromCBOR
+      6 -> checkSize 1 $> TxValidationUnknownAddressAttributes
+      7 -> checkSize 1 $> TxValidationUnknownAttributes
+      _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Validate that:
 --
@@ -207,6 +272,20 @@ data UTxOValidationError
   | UTxOValidationUTxOError UTxOError
   deriving (Eq, Show)
 
+instance ToCBOR UTxOValidationError where
+  toCBOR = \case
+    UTxOValidationTxValidationError txValidationError ->
+      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR txValidationError
+    UTxOValidationUTxOError uTxOError ->
+      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR uTxOError
+
+instance FromCBOR UTxOValidationError where
+  fromCBOR = do
+    enforceSize "UTxOValidationError" 2
+    decodeWord8 >>= \case
+      0   -> UTxOValidationTxValidationError <$> fromCBOR
+      1   -> UTxOValidationUTxOError <$> fromCBOR
+      tag -> cborError $ DecoderErrorUnknownTag "UTxOValidationError" tag
 
 -- | Validate a transaction and use it to update the 'UTxO'
 updateUTxOTx

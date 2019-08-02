@@ -58,7 +58,15 @@ import GHC.TypeLits (type (<=))
 import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
 
-import Cardano.Binary (DecoderError(..), FromCBOR(..), ToCBOR(..))
+import Cardano.Binary
+  ( DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
+  , encodeListLen
+  , matchSize
+  )
 
 
 -- | Lovelace is the least possible unit of currency
@@ -122,6 +130,29 @@ instance B.Buildable LovelaceError where
       ("Lovelace underflow when subtracting " . build . " from " . build)
       c'
       c
+
+instance ToCBOR LovelaceError where
+  toCBOR = \case
+    LovelaceOverflow c ->
+      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR c
+    LovelaceTooLarge c ->
+      encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR c
+    LovelaceTooSmall c ->
+      encodeListLen 2 <> toCBOR @Word8 2 <> toCBOR c
+    LovelaceUnderflow c c' ->
+      encodeListLen 3 <> toCBOR @Word8 3 <> toCBOR c <> toCBOR c'
+
+instance FromCBOR LovelaceError where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize size = matchSize "LovelaceError" size len
+    tag <- decodeWord8
+    case tag of
+      0 -> checkSize 2 >> LovelaceOverflow <$> fromCBOR
+      1 -> checkSize 2 >> LovelaceTooLarge <$> fromCBOR
+      2 -> checkSize 2 >> LovelaceTooSmall <$> fromCBOR
+      3 -> checkSize 3 >> LovelaceUnderflow <$> fromCBOR <*> fromCBOR
+      _ -> cborError $ DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Maximal possible value of 'Lovelace'
 maxLovelaceVal :: Word64
