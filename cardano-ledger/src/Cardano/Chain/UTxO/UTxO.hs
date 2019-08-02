@@ -1,9 +1,11 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TypeApplications           #-}
 
 module Cardano.Chain.UTxO.UTxO
   ( UTxO(..)
@@ -33,7 +35,15 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
-import Cardano.Binary (FromCBOR, ToCBOR)
+import Cardano.Binary
+  ( DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
+  , encodeListLen
+  , matchSize
+  )
 import Cardano.Chain.Common
   (Address, Lovelace, LovelaceError, isRedeemAddress, sumLovelace)
 import Cardano.Chain.UTxO.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
@@ -58,6 +68,22 @@ data UTxOError
   = UTxOMissingInput TxIn
   | UTxOOverlappingUnion
   deriving (Eq, Show)
+
+instance ToCBOR UTxOError where
+  toCBOR = \case
+    UTxOMissingInput txIn ->
+      encodeListLen 2 <> toCBOR @Word8 0 <> toCBOR txIn
+    UTxOOverlappingUnion ->
+      encodeListLen 1 <> toCBOR @Word8 1
+
+instance FromCBOR UTxOError where
+  fromCBOR = do
+    len <- decodeListLen
+    tag <- decodeWord8
+    case tag of
+      0 -> matchSize "UTxOError" 2 len >> UTxOMissingInput <$> fromCBOR
+      1 -> matchSize "UTxOError" 1 len $> UTxOOverlappingUnion
+      _ -> cborError $ DecoderErrorUnknownTag "UTxOError" tag
 
 empty :: UTxO
 empty = UTxO mempty
