@@ -10,6 +10,7 @@ module STS.Utxo
   )
 where
 
+import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 
 import           Lens.Micro ((%~), (&), (.~), (^.))
@@ -84,7 +85,7 @@ utxoInductive = do
   let refunded = keyRefunds pp stakeKeys txbody
   let decayed  = decayedTx pp stakeKeys txbody
   let depositChange =
-        deposits pp stakePools (txbody ^. certs) - (refunded + decayed)
+        deposits pp stakePools (toList $ txbody ^. certs) - (refunded + decayed)
 
   let u' = applyUTxOUpdate u txbody  -- change UTxO
 

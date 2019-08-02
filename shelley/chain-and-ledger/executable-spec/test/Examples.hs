@@ -31,6 +31,7 @@ where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, singleton)
 import           Data.Maybe (fromMaybe)
+import           Data.Sequence (fromList)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -45,7 +46,7 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, seedOp)
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof,
-                     ProtVer (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
+                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern Delegate, pattern PoolDistr, pattern RegKey,
                      pattern RegPool)
@@ -210,9 +211,10 @@ mkBlock prev cold vrf (shot, vhot) txns s enonce bnonce l kesPeriod =
             bnonce
             (Proof (vKey vrf) nonceSeed bnonce)
             l
+
             (Proof (vKey vrf) leaderSeed l)
-            (fromIntegral $ bBodySize txns)
-            (bhbHash [txEx2])
+            (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
+            (bhbHash $ TxSeq $ fromList [txEx2])
             (OCert
               vhot
               (vKey cold)
@@ -223,7 +225,7 @@ mkBlock prev cold vrf (shot, vhot) txns s enonce bnonce l kesPeriod =
             (ProtVer 0 0 0)
     bh = BHeader bhb (Keys.signKES shot bhb kesPeriod)
   in
-    Block bh txns
+    Block bh (TxSeq $ fromList txns)
 
 unsafeMkUnitInterval :: Rational -> UnitInterval
 unsafeMkUnitInterval r =
@@ -348,9 +350,8 @@ txbodyEx2 :: TxBody
 txbodyEx2 = TxBody
            (Set.fromList [TxIn genesisId 0])
            [TxOut aliceAddr (Coin 9740)]
-           [ RegKey aliceSHK
-           , RegPool alicePoolParams
-           ]
+           (fromList [ RegPool alicePoolParams
+                     , RegKey aliceSHK])
            Map.empty
            (Coin 3)
            (Slot 10)
@@ -469,7 +470,7 @@ txbodyEx3 :: TxBody
 txbodyEx3 = TxBody
            (Set.fromList [TxIn (txid txbodyEx2) 0])
            [TxOut aliceAddr (Coin 9736)]
-           [ Delegate $ Delegation aliceSHK aliceOperatorHK ]
+           (fromList [ Delegate $ Delegation aliceSHK aliceOperatorHK ])
            Map.empty
            (Coin 4)
            (Slot 99)

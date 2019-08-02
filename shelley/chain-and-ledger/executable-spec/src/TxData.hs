@@ -10,7 +10,9 @@ import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeLis
 
 import           Lens.Micro.TH (makeLenses)
 
+import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
+import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
@@ -145,7 +147,7 @@ data TxBody hashAlgo dsignAlgo
   = TxBody
       { _inputs   :: !(Set (TxIn hashAlgo dsignAlgo))
       , _outputs  :: [TxOut hashAlgo dsignAlgo]
-      , _certs    :: ![DCert hashAlgo dsignAlgo]
+      , _certs    :: Seq (DCert hashAlgo dsignAlgo)
       , _wdrls    :: Wdrl hashAlgo dsignAlgo
       , _txfee    :: Coin
       , _ttl      :: Slot
@@ -259,7 +261,7 @@ instance
     encodeListLen 6
       <> toCBOR (_inputs txbody)
       <> toCBOR (_outputs txbody)
-      <> toCBOR (_certs txbody)
+      <> toCBOR (toList $ _certs txbody)
       <> toCBOR (_wdrls txbody)
       <> toCBOR (_txfee txbody)
       <> toCBOR (_ttl txbody)
