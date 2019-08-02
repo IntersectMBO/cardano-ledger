@@ -22,7 +22,7 @@ where
 import           Data.ByteString (ByteString)
 import qualified Data.List as List (group)
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import           Data.Set (Set)
 import           Data.Word (Word8)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
@@ -144,7 +144,7 @@ instance ToCBOR Ppm where
       encodeListLen 2 <> toCBOR (18 :: Word8) <> toCBOR protocolVersion
 
 newtype PPUpdate dsignAlgo
-  = PPUpdate (Map.Map (VKeyGenesis dsignAlgo) (Set.Set Ppm))
+  = PPUpdate (Map.Map (VKeyGenesis dsignAlgo) (Set Ppm))
   deriving (Show, Ord, Eq, ToCBOR)
 
 -- | Update Protocol Parameter update with new values, prefer value from `pup1`
