@@ -98,7 +98,7 @@ upiregRelevantTracesAreCovered = withTests 300 $ property $ do
     "at least 30% of the update proposals increase the maximum block-size"
     (0.3 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz Increases) sample)
 
-  cover 40
+  cover 30
     "at least 10% of the update proposals do not change the maximum block-size"
     (0.1 <= ratio (wrtCurrentProtocolParameters Update._maxBkSz RemainsTheSame) sample)
 
