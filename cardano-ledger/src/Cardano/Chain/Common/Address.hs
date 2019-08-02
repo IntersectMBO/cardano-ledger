@@ -52,19 +52,11 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import qualified Data.Aeson as Aeson
-  ( FromJSON(..)
-  , FromJSONKey(..)
-  , FromJSONKeyFunction(..)
-  , ToJSON(toJSON)
-  , ToJSONKey(..)
-  )
-import qualified Data.Aeson.Types as Aeson (toJSONKeyText)
 import Data.ByteString.Base58
   (Alphabet(..), bitcoinAlphabet, decodeBase58, encodeBase58)
 import Data.Text.Internal.Builder (Builder)
 import Formatting
-  (Format, bprint, build, builder, formatToString, later, sformat)
+  (Format, bprint, build, builder, formatToString, later)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
   ( FromJSON(..)
@@ -176,18 +168,6 @@ instance Monad m => ToJSON m Address where
 
 instance MonadError SchemaError m => FromJSON m Address where
   fromJSON = parseJSString fromCBORTextAddress
-
-instance Aeson.FromJSONKey Address where
-  fromJSONKey = Aeson.FromJSONKeyTextParser (toAesonError . fromCBORTextAddress)
-
-instance Aeson.ToJSONKey Address where
-  toJSONKey = Aeson.toJSONKeyText (sformat addressF)
-
-instance Aeson.FromJSON Address where
-  parseJSON = toAesonError . fromCBORTextAddress <=< Aeson.parseJSON
-
-instance Aeson.ToJSON Address where
-  toJSON = Aeson.toJSON . sformat addressF
 
 instance HeapWords Address where
   heapWords (Address root attrs typ) = heapWords3 root attrs typ

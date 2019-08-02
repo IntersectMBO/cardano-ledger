@@ -17,7 +17,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Data.Data (Data)
 import Data.Ix (Ix)
 import Formatting (bprint, int)
@@ -57,10 +56,6 @@ instance FromCBOR EpochNumber where
 -- necessary fit into JS number.
 instance Monad m => ToJSON m EpochNumber where
   toJSON = toJSON . getEpochNumber
-
-deriving instance Aeson.FromJSON EpochNumber
-
-deriving instance Aeson.ToJSON EpochNumber
 
 instance MonadError SchemaError m => FromJSON m EpochNumber where
   fromJSON = fmap EpochNumber . fromJSON

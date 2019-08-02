@@ -19,8 +19,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import Data.Aeson (object, (.:?), (.=))
-import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, formatToString)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
@@ -101,15 +99,3 @@ instance MonadError SchemaError m => FromJSON m TxFeePolicy where
     wrapLovelaceError =
       either (expected "Lovelace" . Just . formatToString build) pure
 
-instance Aeson.ToJSON TxFeePolicy where
-    toJSON = object . \case
-        TxFeePolicyTxSizeLinear linear -> ["txSizeLinear" .= linear]
-
-instance Aeson.FromJSON TxFeePolicy where
-    parseJSON = Aeson.withObject "TxFeePolicy" $ \o -> do
-        mLinear <- o .:? "txSizeLinear"
-        toAesonError @Text $ case mLinear of
-            Nothing     -> Left "TxFeePolicy: none provided"
-            Just linear -> Right $ TxFeePolicyTxSizeLinear linear
--- there's only one choice for now, but eventually:
---          _           -> Left "TxFeePolicy: ambiguous choice"

@@ -17,9 +17,8 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
-import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.Map.Strict as M
-import Formatting (bprint, build, sformat)
+import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
@@ -31,7 +30,6 @@ import Cardano.Chain.Common
   , addLovelace
   , fromCBORTextAddress
   , integerToLovelace
-  , unsafeGetLovelace
   )
 
 
@@ -52,17 +50,6 @@ instance Monad m => ToJSON m GenesisNonAvvmBalances where
 
 instance MonadError SchemaError m => FromJSON m GenesisNonAvvmBalances where
   fromJSON = fmap GenesisNonAvvmBalances . fromJSON
-
-instance Aeson.ToJSON GenesisNonAvvmBalances where
-  toJSON = Aeson.toJSON . convert . unGenesisNonAvvmBalances
-   where
-    convert :: Map Address Lovelace -> Map Text Integer
-    convert = M.fromList . map f . M.toList
-    f :: (Address, Lovelace) -> (Text, Integer)
-    f = bimap (sformat build) (toInteger . unsafeGetLovelace)
-
-instance Aeson.FromJSON GenesisNonAvvmBalances where
-  parseJSON = toAesonError . convertNonAvvmDataToBalances <=< Aeson.parseJSON
 
 data NonAvvmBalancesError
   = NonAvvmBalancesLovelaceError LovelaceError

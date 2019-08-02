@@ -30,9 +30,6 @@ where
 import Cardano.Prelude
 import qualified Prelude
 
-import Data.Aeson (FromJSON(..), ToJSON(..))
-import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as M
 import Formatting (bprint, build, int)
@@ -61,14 +58,6 @@ newtype UnparsedFields =
   deriving (Eq, Ord, Show, Generic)
   deriving newtype HeapWords
   deriving anyclass NFData
-
-instance FromJSON UnparsedFields where
-  parseJSON v =
-    UnparsedFields . M.map (LBS.fromStrict . getByteString64) <$> parseJSON v
-
-instance ToJSON UnparsedFields where
-  toJSON (UnparsedFields fields) =
-    toJSON (M.map (makeByteString64 . LBS.toStrict) fields)
 
 fromUnparsedFields :: UnparsedFields -> Map Word8 LBS.ByteString
 fromUnparsedFields (UnparsedFields m) = m
@@ -231,4 +220,3 @@ dropEmptyAttributes = do
   len <- decodeMapLen
   unless (len == 0) $ cborError $ DecoderErrorSizeMismatch "Attributes" 0 len
 
-deriveJSON defaultOptions ''Attributes

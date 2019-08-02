@@ -22,9 +22,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(throwError))
-import Data.Aeson (FromJSON(..))
-import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveToJSON)
 import Data.Char (isAscii)
 import Data.Data (Data)
 import qualified Data.Text as T
@@ -42,11 +39,6 @@ newtype SystemTag = SystemTag
   } deriving (Eq, Ord, Show, Generic)
     deriving newtype B.Buildable
     deriving anyclass NFData
-
-instance FromJSON SystemTag where
-  parseJSON v = SystemTag <$> parseJSON v
-
-deriveToJSON defaultOptions ''SystemTag
 
 instance ToCBOR SystemTag where
   toCBOR = toCBOR . getSystemTag

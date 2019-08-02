@@ -14,16 +14,15 @@ import Hedgehog (Property)
 import Test.Cardano.Chain.Genesis.Example (exampleGenesisData0)
 import Test.Cardano.Chain.Genesis.Gen
   ( genGenesisAvvmBalances
-  , genGenesisInitializer
   , genGenesisNonAvvmBalances
   , genGenesisKeyHashes
   )
 import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Update.Gen
-  (genProtocolVersion, genCanonicalProtocolParameters)
+  (genCanonicalProtocolParameters)
 import Test.Cardano.Chain.Genesis.Gen
   (genCanonicalGenesisData, genCanonicalGenesisDelegation)
-import Test.Cardano.Crypto.Gen (feedPM, genProtocolMagic)
+import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
 
@@ -60,14 +59,6 @@ ts_roundTripCanonicalProtocolParameters =
   eachOfTS 100 genCanonicalProtocolParameters roundTripsCanonicalJsonPretty
 
 --------------------------------------------------------------------------------
--- GenesisAvvmBalances
---------------------------------------------------------------------------------
-
-ts_roundTripGenesisAvvmBalances :: TSProperty
-ts_roundTripGenesisAvvmBalances =
-  eachOfTS 100 genGenesisAvvmBalances roundTripsAesonShow
-
---------------------------------------------------------------------------------
 -- GenesisData (Canonical JSON)
 --------------------------------------------------------------------------------
 
@@ -80,29 +71,9 @@ golden_GenesisData0Dec =
   goldenTestCanonicalJSONDec exampleGenesisData0
     "test/golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic"
 
---------------------------------------------------------------------------------
--- GenesisInitializer
---------------------------------------------------------------------------------
-
-ts_roundTripGenesisInitializer :: TSProperty
-ts_roundTripGenesisInitializer =
-  eachOfTS 1000 genGenesisInitializer roundTripsAesonShow
-
---------------------------------------------------------------------------------
--- BlockVersionData
---------------------------------------------------------------------------------
-
-ts_roundTripProtocolVersion :: TSProperty
-ts_roundTripProtocolVersion =
-  eachOfTS 100 genProtocolVersion roundTripsAesonShow
-
---------------------------------------------------------------------------------
--- ProtocolMagic
---------------------------------------------------------------------------------
-
-ts_roundTripProtocolMagic :: TSProperty
-ts_roundTripProtocolMagic =
-  eachOfTS 100 genProtocolMagic roundTripsAesonShow
+-------------------------------------------------------------------------------
+-- Main test export
+-------------------------------------------------------------------------------
 
 tests :: TSGroup
 tests = concatTSGroups [const $$discoverGolden, $$discoverPropArg]

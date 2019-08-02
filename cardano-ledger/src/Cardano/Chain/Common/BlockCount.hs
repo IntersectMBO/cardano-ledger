@@ -9,7 +9,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Formatting.Buildable (Buildable)
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
@@ -17,7 +16,7 @@ import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 newtype BlockCount = BlockCount
   { unBlockCount :: Word64
-  } deriving ( Eq, Ord, Enum, Read, Show, Buildable, Generic, NFData)
+  } deriving (Eq, Ord, Enum, Read, Show, Buildable, Generic, NFData)
 
 instance ToCBOR BlockCount where
   toCBOR = toCBOR . unBlockCount
@@ -26,4 +25,3 @@ instance ToCBOR BlockCount where
 instance FromCBOR BlockCount where
   fromCBOR = BlockCount <$> fromCBOR
 
-deriveJSON defaultOptions ''BlockCount

@@ -17,8 +17,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(throwError))
-import Data.Aeson (FromJSON(..))
-import Data.Aeson.TH (defaultOptions, deriveToJSON)
 import Data.Char (isAscii)
 import Data.Data (Data)
 import qualified Data.Text as T
@@ -37,11 +35,6 @@ instance ToCBOR ApplicationName where
 
 instance FromCBOR ApplicationName where
   fromCBOR = ApplicationName <$> fromCBOR
-
-instance FromJSON ApplicationName where
-  -- FIXME does the defaultOptions derived JSON toCBOR directly as text? Or
-  -- as an object with a single key?
-  parseJSON v = ApplicationName <$> parseJSON v
 
 data ApplicationNameError
   = ApplicationNameTooLong Text
@@ -70,4 +63,3 @@ checkApplicationName (ApplicationName appName)
 applicationNameMaxLength :: Integral i => i
 applicationNameMaxLength = 12
 
-deriveToJSON defaultOptions ''ApplicationName

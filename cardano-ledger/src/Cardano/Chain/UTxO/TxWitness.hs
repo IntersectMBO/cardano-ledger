@@ -18,8 +18,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson (FromJSON(..), ToJSON(toJSON), object, withObject, (.:), (.=))
-import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Vector (Vector)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
@@ -64,25 +62,6 @@ data TxInWitness
   -- ^ RedeemWitness twRedeemKey twRedeemSig
   deriving (Eq, Show, Generic)
   deriving anyclass NFData
-
-instance ToJSON TxInWitness where
-  toJSON = \case
-    VKWitness twKey twSig ->
-      object ["tag" .= ("VKWitness" :: Text), "key" .= twKey, "sig" .= twSig]
-    RedeemWitness twRedeemKey twRedeemSig -> object
-      [ "tag" .= ("RedeemWitness" :: Text)
-      , "redeemKey" .= twRedeemKey
-      , "redeemSig" .= twRedeemSig
-      ]
-
-instance FromJSON TxInWitness where
-  parseJSON = withObject "TxInWitness" $ \o -> (o .: "tag") >>= \case
-    ("VKWitness" :: Text) -> VKWitness <$> (o .: "key") <*> (o .: "sig")
-    "RedeemWitness" ->
-      RedeemWitness <$> (o .: "redeemKey") <*> (o .: "redeemSig")
-    _ ->
-      aesonError @Text
-        "expected 'tag' to be one of 'VKWitness' or 'RedeemWitness'"
 
 instance B.Buildable TxInWitness where
   build (VKWitness key sig) = bprint
@@ -154,4 +133,3 @@ instance FromCBOR TxSigData where
 -- | 'Signature' of addrId
 type TxSig = Signature TxSigData
 
-deriveJSON defaultOptions ''TxSigData

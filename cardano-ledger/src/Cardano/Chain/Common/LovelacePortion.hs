@@ -36,7 +36,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
-import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Formatting (bprint, build, float, int, sformat)
 import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
@@ -83,14 +82,6 @@ instance MonadError SchemaError m => FromJSON m LovelacePortion where
   fromJSON val = do
     number <- fromJSON val
     pure $ LovelacePortion number
-
-instance Aeson.FromJSON LovelacePortion where
-  parseJSON v = do
-    c <- Aeson.parseJSON v
-    toAesonError $ lovelacePortionFromDouble c
-
-instance Aeson.ToJSON LovelacePortion where
-  toJSON = Aeson.toJSON . lovelacePortionToDouble
 
 -- | Denominator used by 'LovelacePortion'.
 lovelacePortionDenominator :: Word64
