@@ -588,8 +588,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
 verifiedWits
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
+  :: ( DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => Tx hashAlgo dsignAlgo

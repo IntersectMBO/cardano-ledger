@@ -87,8 +87,7 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- |Verify a transaction body witness
 verifyWitVKey
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
+  :: ( DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
@@ -98,8 +97,7 @@ verifyWitVKey tx (WitVKey vkey sig) = verify vkey tx sig
 
 -- |Create a witness for transaction
 makeWitnessVKey
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
+  :: ( DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
@@ -109,8 +107,7 @@ makeWitnessVKey tx keys = WitVKey (vKey keys) (sign (sKey keys) tx)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
+  :: ( DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo

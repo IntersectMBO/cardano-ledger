@@ -115,7 +115,7 @@ hashKey (VKey vk) = KeyHash $ hashWithSerialiser encodeVerKeyDSIGN vk
 
 -- |Produce a digital signature
 sign
-  :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a, ToCBOR a)
+  :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a)
   => SKey dsignAlgo
   -> a
   -> Sig dsignAlgo a
@@ -123,17 +123,17 @@ sign (SKey k) d =
   Sig
     . fst
     . withDRG (drgNewSeed (seedFromInteger 0))
-    $ signedDSIGN toCBOR d k
+    $ signedDSIGN d k
 
 -- |Verify a digital signature
 verify
-  :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a, ToCBOR a)
+  :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a)
   => VKey dsignAlgo
   -> a
   -> Sig dsignAlgo a
   -> Bool
 verify (VKey vk) vd (Sig sigDSIGN) =
-  either (const False) (const True) $ verifySignedDSIGN toCBOR vk vd sigDSIGN
+  either (const False) (const True) $ verifySignedDSIGN vk vd sigDSIGN
 
 
 newtype SKeyES kesAlgo = SKeyES (SignKeyKES kesAlgo)
@@ -181,7 +181,7 @@ hashKeyES (VKeyES vKeyES) =
 
 -- |Produce a key evolving signature
 signKES
-  :: (KESAlgorithm kesAlgo, KES.Signable kesAlgo a, ToCBOR a)
+  :: (KESAlgorithm kesAlgo, KES.Signable kesAlgo a)
   => SKeyES kesAlgo
   -> a
   -> Natural
@@ -192,11 +192,11 @@ signKES (SKeyES k) d n =
     . fromJust
     . fst
     . withDRG (drgNewSeed (seedFromInteger 0))
-    $ signedKES toCBOR n d k
+    $ signedKES n d k
 
 -- |Verify a key evolving signature
 verifyKES
-  :: (KESAlgorithm kesAlgo, KES.Signable kesAlgo a, ToCBOR a)
+  :: (KESAlgorithm kesAlgo, KES.Signable kesAlgo a)
   => VKeyES kesAlgo
   -> a
   -> KESig kesAlgo a
@@ -204,7 +204,7 @@ verifyKES
   -> Bool
 verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
   either (const False) (const True)
-    $ verifySignedKES toCBOR vKeyES n vd sigKES
+    $ verifySignedKES vKeyES n vd sigKES
 
 newtype Dms dsignAlgo =
   Dms (Map.Map (VKeyGenesis dsignAlgo) (VKey dsignAlgo))
