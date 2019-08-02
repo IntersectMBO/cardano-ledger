@@ -25,6 +25,7 @@ module LedgerState
   , EpochState(..)
   , emptyEpochState
   , emptyLedgerState
+  , clearPpup
   , dstate
   , pstate
   , ptrs
@@ -300,6 +301,14 @@ emptyDState =
 emptyPState :: PState hashAlgo dsignAlgo
 emptyPState =
   PState (StakePools Map.empty) Map.empty Map.empty Map.empty
+
+-- |Clear the protocol parameter updates
+clearPpup
+  :: UTxOState hashAlgo dsignAlgo
+  -> UTxOState hashAlgo dsignAlgo
+clearPpup utxoSt =
+  let (_, avup, faps, aps) = _ups utxoSt
+  in utxoSt {_ups = (PPUpdate Map.empty, avup, faps, aps)}
 
 data UTxOState hashAlgo dsignAlgo =
     UTxOState

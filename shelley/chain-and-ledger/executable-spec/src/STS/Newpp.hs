@@ -63,10 +63,10 @@ newPpTransition = do
           let utxoSt' = utxoSt { _deposited = Coin oblgNew }
           in  -- TODO: update mechanism
               let acnt' = acnt { _reserves = Coin $ reserves + diff }
-                                       in  pure (utxoSt', acnt', ppNew')
+              in pure (clearPpup utxoSt', acnt', ppNew')
         else
-          pure ( utxoSt
+          pure ( clearPpup utxoSt
               , acnt
               , pp
               )
-    Nothing -> pure (utxoSt, acnt, pp)
+    Nothing -> pure (clearPpup utxoSt, acnt, pp)
