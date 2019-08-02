@@ -24,26 +24,33 @@ instance DSIGNAlgorithm dsignAlgo => STS (PPUP dsignAlgo) where
   type Signal (PPUP dsignAlgo) = PPUpdate dsignAlgo
   type Environment (PPUP dsignAlgo) = (Slot, Dms dsignAlgo)
   data PredicateFailure (PPUP dsignAlgo)
-    = NonGenesisUpdatePPUP
+    = NonGenesisUpdatePPUP (Set.Set (VKeyGenesis dsignAlgo)) (Set.Set (VKeyGenesis dsignAlgo))
     | PPUpdateTooEarlyPPUP
+    | PPUpdateNonEmpty
     | PVCannotFollowPPUP
     deriving (Show, Eq)
 
   initialRules = []
 
-  transitionRules = [ppupTransition]
+  transitionRules = [ppupTransitionEmpty, ppupTransitionNonEmpty]
 
-ppupTransition :: DSIGNAlgorithm dsignAlgo => TransitionRule (PPUP dsignAlgo)
-ppupTransition = do
-  TRC ((s, Dms _dms), pupS@(PPUpdate pupS'), pup@(PPUpdate pup')) <-
+ppupTransitionEmpty :: TransitionRule (PPUP dsignAlgo)
+ppupTransitionEmpty = do
+  TRC ((_, _), pupS, PPUpdate pup') <-
     judgmentContext
-  if Map.null pupS'
-    then pure pupS
-    else do
-      not (Map.keysSet pup' `Set.isSubsetOf` Map.keysSet _dms)
-        ?! NonGenesisUpdatePPUP
-      let Epoch slotEpoch = epochFromSlot (Slot 1)
-      s
-        <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
-        ?! PPUpdateTooEarlyPPUP
-      pure $ updatePPup pupS pup
+  do
+    Map.null pup' ?! PPUpdateNonEmpty
+    pure pupS
+
+ppupTransitionNonEmpty :: DSIGNAlgorithm dsignAlgo => TransitionRule (PPUP dsignAlgo)
+ppupTransitionNonEmpty = do
+  TRC ((s, Dms _dms), pupS, pup@(PPUpdate pup')) <-
+    judgmentContext
+  do
+    (Map.keysSet pup' `Set.isSubsetOf` Map.keysSet _dms)
+      ?! NonGenesisUpdatePPUP (Map.keysSet pup') (Map.keysSet _dms)
+    let Epoch slotEpoch = epochFromSlot (Slot 1)
+    s
+      <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
+      ?! PPUpdateTooEarlyPPUP
+    pure $ updatePPup pupS pup

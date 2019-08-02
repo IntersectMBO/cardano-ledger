@@ -28,5 +28,5 @@ updTransition = do
   TRC (eta, (eta_v, eta_c), s) <- judgmentContext
   let Epoch e = epochFromSlot s
   if s +* slotsPrior < firstSlot (Epoch (e + 1))
-    then pure (seedOp eta_v eta, seedOp eta_c eta)
-    else pure (seedOp eta_v eta, eta_c)
+    then pure (eta_v ⭒ eta, eta_v ⭒ eta)
+    else pure (eta_v ⭒ eta, eta_c)

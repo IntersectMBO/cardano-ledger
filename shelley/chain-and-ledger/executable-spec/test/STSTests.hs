@@ -14,7 +14,7 @@ import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
 
-import           BaseTypes (Seed (..))
+import           BaseTypes (Seed (..), (⭒))
 import           Control.State.Transition (TRC (..), applySTS)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           Slot (Slot (..))
@@ -25,13 +25,16 @@ import           TxData (pattern RewardAcnt, pattern ScriptHashObj)
 
 -- | The UPDN transition should update both the evolving nonce and
 -- the candidate nonce during the first two-thirds of the epoch.
+-- In order for the candidate nonce to catch up with the evolving
+-- nonce after an epoch change, the candidate nonce is set to
+-- the same value as the evolving nonce during this time.
 -- Note that the number of slots per epoch is hard-coded in the Slot module.
 testUPNEarly :: Assertion
 testUPNEarly =
   let
     st = applySTS @UPDN (TRC (Nonce 1, (Nonce 2, Nonce 3), Slot.Slot 5))
   in
-    st @?= Right (SeedOp (Nonce 2) (Nonce 1), SeedOp (Nonce 3) (Nonce 1))
+    st @?= Right (Nonce 2 ⭒ Nonce 1, Nonce 2 ⭒ Nonce 1)
 
 -- | The UPDN transition should update only the evolving nonce
 -- in the last thirds of the epoch.
