@@ -111,9 +111,11 @@ module LedgerState
   ) where
 
 import           Control.Monad (foldM)
+import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Ratio ((%))
+import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Numeric.Natural (Natural)
@@ -363,7 +365,7 @@ genesisId =
   (TxBody
    Set.empty
    []
-   []
+   Seq.Empty
    Map.empty
    (Coin 0)
    (Slot 0)
@@ -454,7 +456,7 @@ produced
   -> TxBody hashAlgo dsignAlgo
   -> Coin
 produced pp stakePools tx =
-    balance (txouts tx) + tx ^. txfee + deposits pp stakePools (tx ^. certs)
+    balance (txouts tx) + tx ^. txfee + deposits pp stakePools (toList $ tx ^. certs)
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
@@ -463,7 +465,7 @@ keyRefunds
   -> TxBody hashAlgo dsignAlgo
   -> Coin
 keyRefunds pp stk tx =
-  sum [keyRefund dval dmin lambda stk (tx ^. ttl) c | c@(DeRegKey _) <- tx ^. certs]
+  sum [keyRefund dval dmin lambda stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
   where (dval, dmin, lambda) = decayKey pp
 
 -- | Key refund for a deregistration certificate.
@@ -511,7 +513,7 @@ decayedTx
   -> TxBody hashAlgo dsignAlgo
   -> Coin
 decayedTx pp stk tx =
-    sum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- tx ^. certs]
+    sum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
 
 -- |Compute the lovelace which are destroyed by the transaction
 consumed
@@ -580,8 +582,8 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
     wdrlAuthors =
       Set.fromList $ extractKeyHash $ map getRwdHK (Map.keys (txbody ^. wdrls))
     owners = foldl Set.union Set.empty
-               [pool ^. poolOwners | RegPool pool <- txbody ^. certs]
-    certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK (txbody ^. certs))
+               [pool ^. poolOwners | RegPool pool <- toList $ txbody ^. certs]
+    certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK (toList $ txbody ^. certs))
     getCertHK = cwitness
     updateKeys = propWits (txup tx) _dms
 
@@ -768,7 +770,7 @@ asStateTransition slot pp ls tx d' =
     Valid          -> foldM (certAsStateTransition slot (ls ^. txSlotIx)) ls' cs
       where
         ls' = applyTxBody ls pp (tx ^. body)
-        cs = zip [0..] (tx ^. body . certs) -- index certificates
+        cs = zip [0..] (toList $ tx ^. body . certs) -- index certificates
 
 -- |In the case where a certificate is valid for a given ledger state,
 -- apply the certificate as a state transition function on the ledger state.
@@ -835,7 +837,7 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
   where
     currentPool = ls ^. utxoState . deposited
     txDeposits =
-      deposits pp (ls ^. delegationState . pstate . stPools) (tx ^. certs)
+      deposits pp (ls ^. delegationState . pstate . stPools) (toList $ tx ^. certs)
     txRefunds = keyRefunds pp (ls ^. delegationState . dstate . stKeys) tx
 
 -- |Apply a transaction body as a state transition function on the ledger state.

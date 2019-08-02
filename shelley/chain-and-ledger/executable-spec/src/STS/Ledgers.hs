@@ -12,6 +12,8 @@ module STS.Ledgers
 where
 
 import           Control.Monad (foldM)
+import           Data.Foldable (toList)
+import           Data.Sequence (Seq)
 
 import           Keys
 import           LedgerState
@@ -33,7 +35,7 @@ instance
   => STS (LEDGERS hashAlgo dsignAlgo)
  where
   type State (LEDGERS hashAlgo dsignAlgo) = LedgerState hashAlgo dsignAlgo
-  type Signal (LEDGERS hashAlgo dsignAlgo) = [Tx hashAlgo dsignAlgo]
+  type Signal (LEDGERS hashAlgo dsignAlgo) = Seq (Tx hashAlgo dsignAlgo)
   type Environment (LEDGERS hashAlgo dsignAlgo) = (Slot, PParams)
   data PredicateFailure (LEDGERS hashAlgo dsignAlgo)
     = LedgerFailure (PredicateFailure (LEDGER hashAlgo dsignAlgo))
@@ -59,7 +61,7 @@ ledgersTransition = do
             $ TRC ((slot, ix, pp), (u', dw'), tx)
         )
         (u, dw)
-      $ zip [0 ..] txwits
+      $ zip [0 ..] $ toList txwits
   pure $ LedgerState u'' dw'' (_txSlotIx ls)
 
 instance

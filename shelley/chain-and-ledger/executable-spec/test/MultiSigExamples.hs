@@ -15,6 +15,7 @@ module MultiSigExamples
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
+import           Data.Sequence (Seq (..))
 
 import qualified Data.Set as Set (fromList)
 
@@ -72,7 +73,7 @@ initTxBody :: [(Addr, Coin)] -> TxBody
 initTxBody addrs = TxBody
         (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
         (map (uncurry TxOut) addrs)
-        []
+        Empty
         Map.empty
         (Coin 0)
         (Slot 0)
@@ -83,7 +84,7 @@ makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
     [uncurry TxOut addrC | addrC <- addrCs]
-    []
+    Empty
     wdrl
     (Coin 0)
     (Slot 10)
