@@ -10,6 +10,8 @@
         "hedgehog" = (((hackage.hedgehog)."1.0").revisions).default;
         "micro-recursion-schemes" = (((hackage.micro-recursion-schemes)."5.0.2.2").revisions).default;
         "streaming-binary" = (((hackage.streaming-binary)."0.3.0.1").revisions).default;
+        "cborg" = (((hackage.cborg)."0.2.2.0").revisions).default;
+        "canonical-json" = (((hackage.canonical-json)."0.6.0.0").revisions).default;
         } // {
         delegation = ./delegation.nix;
         cs-blockchain = ./cs-blockchain.nix;
@@ -19,9 +21,7 @@
         cardano-prelude = ./cardano-prelude.nix;
         cardano-binary = ./cardano-binary.nix;
         cardano-crypto-class = ./cardano-crypto-class.nix;
-        cborg = ./cborg.nix;
         cardano-crypto = ./cardano-crypto.nix;
-        canonical-json = ./canonical-json.nix;
         };
       compiler.version = "8.6.5";
       compiler.nix-name = "ghc865";
