@@ -29,7 +29,6 @@ import Test.Cardano.Prelude
 
 import Data.ByteString.Base16 as B16
 import Data.Coerce (coerce)
-import qualified Data.Set as S
 import qualified Data.Vector as V
 
 import Hedgehog
@@ -58,6 +57,7 @@ import Cardano.Chain.UTxO
   , fromList
   , mkTxAux
   , mkTxPayload
+  , mkUTxOConfiguration
   , toCompactTxId
   , toCompactTxIn
   , toCompactTxOut
@@ -124,8 +124,8 @@ genTxOutList = Gen.nonEmpty (Range.linear 1 100) genTxOut
 
 genUTxOConfiguration :: Gen UTxOConfiguration
 genUTxOConfiguration =
-  UTxOConfiguration
-    <$> (S.fromList <$> Gen.list (Range.linear 0 50) genAddress)
+  mkUTxOConfiguration
+    <$> Gen.list (Range.linear 0 50) genAddress
 
 genTxPayload :: ProtocolMagicId -> Gen TxPayload
 genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)

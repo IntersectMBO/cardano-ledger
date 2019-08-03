@@ -47,6 +47,7 @@ elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
         (Concrete.mkKnownLovelace @0)
         (Concrete.mkKnownLovelace @0)
     }
+  , Concrete.UTxO.utxoConfiguration = Concrete.defaultUTxOConfiguration
   }
 
 elaborateUTxO

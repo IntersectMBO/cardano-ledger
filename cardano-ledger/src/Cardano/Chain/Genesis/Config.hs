@@ -55,6 +55,8 @@ import Cardano.Chain.ProtocolConstants
   (kEpochSlots, kSlotSecurityParam, kChainQualityThreshold)
 import Cardano.Chain.Slotting (EpochSlots, SlotCount)
 import Cardano.Chain.Update (ProtocolParameters)
+import Cardano.Chain.UTxO.UTxOConfiguration
+  (UTxOConfiguration, defaultUTxOConfiguration)
 import Cardano.Crypto
   ( AProtocolMagic(..)
   , Hash
@@ -90,6 +92,8 @@ data Config = Config
     -- ^ Secrets needed to access 'GenesisData' in testing
     , configReqNetMagic       :: RequiresNetworkMagic
     -- ^ Differentiates between Testnet and Mainet/Staging
+    , configUTxOConfiguration :: UTxOConfiguration
+    -- ^ Extra local data used in UTxO validation rules
     }
 
 configGenesisHeaderHash :: Config -> HeaderHash
@@ -213,10 +217,11 @@ mkConfigFromFile rnm fp expectedHash = do
     `orThrowError` GenesisHashMismatch genesisHash expectedHash
 
   pure $ Config
-    { configGenesisData      = genesisData
-    , configGenesisHash      = genesisHash
-    , configGeneratedSecrets = Nothing
-    , configReqNetMagic      = rnm
+    { configGenesisData       = genesisData
+    , configGenesisHash       = genesisHash
+    , configGeneratedSecrets  = Nothing
+    , configReqNetMagic       = rnm
+    , configUTxOConfiguration = defaultUTxOConfiguration --TODO: add further config plumbing
     }
 
 mkConfig
@@ -232,6 +237,7 @@ mkConfig startTime genesisSpec = do
     , configGenesisHash      = genesisHash
     , configGeneratedSecrets = Just generatedSecrets
     , configReqNetMagic = getRequiresNetworkMagic (gsProtocolMagic genesisSpec)
+    , configUTxOConfiguration = defaultUTxOConfiguration
     }
   where
     -- Anything will do for the genesis hash. A hash of "patak" was used before,

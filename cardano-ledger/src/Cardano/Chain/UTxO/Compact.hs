@@ -17,7 +17,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.UTxO.Compact
-  ( CompactTxIn
+  ( CompactTxIn(..)
   , toCompactTxIn
   , fromCompactTxIn
 
@@ -25,7 +25,7 @@ module Cardano.Chain.UTxO.Compact
   , toCompactTxId
   , fromCompactTxId
 
-  , CompactTxOut
+  , CompactTxOut(..)
   , toCompactTxOut
   , fromCompactTxOut
   )

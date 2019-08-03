@@ -17,6 +17,7 @@ module Cardano.Chain.UTxO.UTxO
   , toList
   , member
   , lookup
+  , lookupCompact
   , lookupAddress
   , union
   , concat
@@ -112,6 +113,9 @@ member txIn = M.member (toCompactTxIn txIn) . unUTxO
 
 lookup :: TxIn -> UTxO -> Maybe TxOut
 lookup txIn = fmap fromCompactTxOut . M.lookup (toCompactTxIn txIn) . unUTxO
+
+lookupCompact :: CompactTxIn -> UTxO -> Maybe CompactTxOut
+lookupCompact txIn = M.lookup txIn . unUTxO
 
 lookupAddress :: TxIn -> UTxO -> Either UTxOError Address
 lookupAddress txIn =

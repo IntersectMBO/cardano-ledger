@@ -53,6 +53,7 @@ import Cardano.Chain.Common
   , unknownAttributesLength
   )
 import Cardano.Chain.UTxO.Tx (Tx(..), TxIn, TxOut(..))
+import Cardano.Chain.UTxO.Compact (CompactTxOut(..), toCompactTxIn)
 import Cardano.Chain.UTxO.TxAux (ATxAux, aTaTx, taWitness)
 import Cardano.Chain.UTxO.TxWitness
   (TxInWitness(..), TxSigData(..), recoverSigData)
@@ -60,6 +61,7 @@ import Cardano.Chain.UTxO.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.UTxO.UTxO as UTxO
 import Cardano.Chain.Update (ProtocolParameters(..))
+import Cardano.Chain.UTxO.UTxOConfiguration
 import Cardano.Chain.ValidationMode
   ( ValidationMode
   , whenTxValidation
@@ -172,7 +174,7 @@ validateTx env utxo (Annotated tx txBytes) = do
   txOutputs tx `forM_` validateTxOutNM nm
 
   -- Check that every input is in the domain of 'utxo'
-  txInputs tx `forM_` validateTxIn utxo
+  txInputs tx `forM_` validateTxIn utxoConfiguration utxo
 
   -- Calculate the minimum fee from the 'TxFeePolicy'
   minFee <- if isRedeemUTxO inputUTxO
@@ -194,7 +196,7 @@ validateTx env utxo (Annotated tx txBytes) = do
   -- Check that the fee is greater than the minimum
   (minFee <= fee) `orThrowError` TxValidationFeeTooSmall tx minFee fee
  where
-  Environment { protocolMagic, protocolParameters } = env
+  Environment { protocolMagic, protocolParameters, utxoConfiguration } = env
 
   maxTxSize = ppMaxTxSize protocolParameters
   feePolicy = ppTxFeePolicy protocolParameters
@@ -216,12 +218,22 @@ validateTx env utxo (Annotated tx txBytes) = do
 -- | Validate that 'TxIn' is in the domain of 'UTxO'
 validateTxIn
   :: MonadError TxValidationError m
-  => UTxO
+  => UTxOConfiguration
+  -> UTxO
   -> TxIn
   -> m ()
-validateTxIn utxo txIn
-  | txIn `UTxO.member` utxo = pure ()
-  | otherwise = throwError $ TxValidationMissingInput txIn
+validateTxIn UTxOConfiguration{tcAssetLockedSrcAddrs} utxo txIn
+  | S.null tcAssetLockedSrcAddrs
+  , txIn `UTxO.member` utxo
+  = pure ()
+
+  | Just txOut <- UTxO.lookupCompact (toCompactTxIn txIn) utxo
+  , let (CompactTxOut txOutAddr _) = txOut
+  , txOutAddr `S.notMember` tcAssetLockedSrcAddrs
+  = pure ()
+
+  | otherwise
+  = throwError $ TxValidationMissingInput txIn
 
 
 -- | Validate the NetworkMagic of a TxOut
@@ -265,6 +277,7 @@ validateWitness pmi sigData addr witness = case witness of
 data Environment = Environment
   { protocolMagic      :: !(AProtocolMagic ByteString)
   , protocolParameters :: !ProtocolParameters
+  , utxoConfiguration  :: !UTxOConfiguration
   } deriving (Eq, Show)
 
 data UTxOValidationError

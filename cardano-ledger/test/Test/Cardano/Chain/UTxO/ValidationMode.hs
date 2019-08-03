@@ -79,7 +79,7 @@ ts_prop_updateUTxO_Valid =
 
       -- Validate the generated concrete transaction
       let pm = Dummy.aProtocolMagic
-          env = Environment pm pparams
+          env = Environment pm pparams UTxO.defaultUTxOConfiguration
       vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
       updateRes <- (`runReaderT` vMode) . runExceptT $
         UTxO.updateUTxO env utxo [tx]
@@ -123,7 +123,7 @@ ts_prop_updateUTxO_InvalidWit =
       let txInvalidWit = tx { aTaWitness = invalidWitness }
 
       -- Validate the generated concrete transaction
-      let env = Environment pm pparams
+      let env = Environment pm pparams UTxO.defaultUTxOConfiguration
       vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
       updateRes <- (`runReaderT` vMode) . runExceptT $
         UTxO.updateUTxO env utxo [txInvalidWit]
