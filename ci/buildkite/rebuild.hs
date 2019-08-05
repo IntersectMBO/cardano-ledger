@@ -13,7 +13,7 @@ import           Turtle
 -- | Run build and upload coverage information when successful
 main :: IO ()
 main = do
-  buildResult <- buildStep "-j2"
+  buildResult <- buildStep (Just "-j2")
 
   when (buildResult == ExitSuccess) coverageUploadStep
 
