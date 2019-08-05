@@ -1,19 +1,19 @@
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-import Control.Exception
-import Control.Monad.Trans.Maybe
+import           Control.Exception
+import           Control.Monad.Trans.Maybe
 import qualified Data.Text as T
-import Safe
-import System.Exit (exitWith)
-import Turtle
+import           Safe
+import           System.Exit (exitWith)
+import           Turtle
 
 
 -- | Run build and upload coverage information when successful
 main :: IO ()
 main = do
-  buildResult <- buildStep Nothing
+  buildResult <- buildStep "-j2"
 
   when (buildResult == ExitSuccess) coverageUploadStep
 
