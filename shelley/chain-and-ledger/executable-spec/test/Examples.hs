@@ -12,6 +12,9 @@ module Examples
   , ex2G
   , ex2H
   , ex2I
+  , ex3A
+  , ex3B
+  , ex3C
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -31,7 +34,7 @@ where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, singleton)
 import           Data.Maybe (fromMaybe)
-import           Data.Sequence (fromList)
+import           Data.Sequence (fromList, empty)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -69,7 +72,7 @@ import           TxData (pattern AddrBase, pattern Delegation, pattern KeyHashOb
                      _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt,
                      _poolVrf)
 import           Updates (pattern AVUpdate, Applications (..), pattern PPUpdate, Ppm (..),
-                     pattern Update, emptyUpdate, emptyUpdateState)
+                     pattern Update, emptyUpdate, emptyUpdateState, updatePPup)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
 
 
@@ -258,8 +261,9 @@ lsEx1 :: LedgerState
 lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1) 0
 
 ppsEx1 :: PParams
-ppsEx1 = emptyPParams { _maxBBSize = 10000
+ppsEx1 = emptyPParams { _maxBBSize = 50000
                    , _maxBHSize = 10000
+                   , _maxTxSize = 10000
                    , _keyDeposit = Coin 7
                    , _poolDeposit = Coin 250
                    , _d = unsafeMkUnitInterval 0.5
@@ -946,3 +950,250 @@ expectedStEx2I =
 
 ex2I :: CHAINExample
 ex2I = CHAINExample (Slot 410) expectedStEx2H blockEx2I expectedStEx2I
+
+
+-- | Example 3A - Setting up for a successful protocol parameter update,
+-- have three genesis keys vote on the same new parameters
+
+
+ppupEx3A :: PPUpdate
+ppupEx3A = PPUpdate $ Map.fromList [ (coreNodeVKG 0, Set.singleton (PoolDeposit 200))
+                                   , (coreNodeVKG 3, Set.singleton (PoolDeposit 200))
+                                   , (coreNodeVKG 4, Set.singleton (PoolDeposit 200))
+                                   ]
+
+updateEx3A :: Update
+updateEx3A = Update ppupEx3A (AVUpdate Map.empty)
+
+txbodyEx3A :: TxBody
+txbodyEx3A = TxBody
+           (Set.fromList [TxIn genesisId 0])
+           [TxOut aliceAddr (Coin 9999)]
+           Data.Sequence.empty
+           Map.empty
+           (Coin 1)
+           (Slot 10)
+           updateEx3A
+
+txEx3A :: Tx
+txEx3A = Tx
+          txbodyEx3A
+          (makeWitnessesVKey
+            txbodyEx3A
+            [ alicePay
+            , cold $ coreNodeKeys 0
+            , cold $ coreNodeKeys 3
+            , cold $ coreNodeKeys 4
+            ])
+          Map.empty
+
+blockEx3A :: Block
+blockEx3A = mkBlock
+             Nothing
+             (coreNodeKeys 4)
+             [txEx3A]
+             (Slot 10)
+             (Nonce 0)
+             (Nonce 1)
+             zero
+             0
+
+updateStEx3A :: ( PPUpdate
+               , AVUpdate
+               , Map Slot Applications
+               , Applications)
+updateStEx3A =
+  ( ppupEx3A
+  , AVUpdate Map.empty
+  , Map.empty
+  , Applications Map.empty)
+
+expectedLSEx3A :: LedgerState
+expectedLSEx3A = LedgerState
+               (UTxOState
+                 (UTxO . Map.fromList $
+                   [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+                   , (TxIn (txid txbodyEx3A) 0, TxOut aliceAddr (Coin 9999))
+                   ])
+                 (Coin 0)
+                 (Coin 1)
+                 updateStEx3A)
+               (DPState dsEx1 psEx1)
+               0
+
+blockEx3AHash :: Maybe HashHeader
+blockEx3AHash = Just (bhHash (bheader blockEx3A))
+
+expectedStEx3A :: ChainState
+expectedStEx3A =
+  ( NewEpochState
+      (Epoch 0)
+      (Nonce 0)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1)
+      Nothing
+      (PoolDistr Map.empty)
+      overlayEx2A
+  , Nonce 0 ⭒ Nonce 1
+  , Nonce 0 ⭒ Nonce 1
+  , blockEx3AHash
+  , Slot 10
+  )
+
+ex3A :: CHAINExample
+ex3A = CHAINExample (Slot 10) initStEx2A blockEx3A expectedStEx3A
+
+
+-- | Example 3B - Finish getting enough votes for the protocol parameter update.
+
+
+ppupEx3B :: PPUpdate
+ppupEx3B = PPUpdate $ Map.fromList [ (coreNodeVKG 1, Set.singleton (PoolDeposit 200))
+                                   , (coreNodeVKG 5, Set.singleton (PoolDeposit 200))
+                                   ]
+
+updateEx3B :: Update
+updateEx3B = Update ppupEx3B (AVUpdate Map.empty)
+
+txbodyEx3B :: TxBody
+txbodyEx3B = TxBody
+           (Set.fromList [TxIn (txid txbodyEx3A) 0])
+           [TxOut aliceAddr (Coin 9998)]
+           Data.Sequence.empty
+           Map.empty
+           (Coin 1)
+           (Slot 31)
+           updateEx3B
+
+txEx3B :: Tx
+txEx3B = Tx
+          txbodyEx3B
+          (makeWitnessesVKey
+            txbodyEx3B
+            [ alicePay
+            , cold $ coreNodeKeys 1
+            , cold $ coreNodeKeys 5
+            ])
+          Map.empty
+
+blockEx3B :: Block
+blockEx3B = mkBlock
+             blockEx3AHash
+             (coreNodeKeys 3)
+             [txEx3B]
+             (Slot 20)
+             (Nonce 0)
+             (Nonce 2)
+             zero
+             0
+
+updateStEx3B :: ( PPUpdate
+               , AVUpdate
+               , Map Slot Applications
+               , Applications)
+updateStEx3B =
+  ( ppupEx3A `updatePPup` ppupEx3B
+  , AVUpdate Map.empty
+  , Map.empty
+  , Applications Map.empty)
+
+utxoEx3B :: UTxO
+utxoEx3B = UTxO . Map.fromList $
+             [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+             , (TxIn (txid txbodyEx3B) 0, TxOut aliceAddr (Coin 9998))
+             ]
+
+expectedLSEx3B :: LedgerState
+expectedLSEx3B = LedgerState
+               (UTxOState
+                 utxoEx3B
+                 (Coin 0)
+                 (Coin 2)
+                 updateStEx3B)
+               (DPState dsEx1 psEx1)
+               0
+
+blockEx3BHash :: Maybe HashHeader
+blockEx3BHash = Just (bhHash (bheader blockEx3B))
+
+expectedStEx3B :: ChainState
+expectedStEx3B =
+  ( NewEpochState
+      (Epoch 0)
+      (Nonce 0)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1)
+      Nothing
+      (PoolDistr Map.empty)
+      overlayEx2A
+  , mkSeqNonce 2
+  , mkSeqNonce 2
+  , blockEx3BHash
+  , Slot 20
+  )
+
+ex3B :: CHAINExample
+ex3B = CHAINExample (Slot 20) expectedStEx3A blockEx3B expectedStEx3B
+
+
+-- | Example 3C - Adopt protocol parameter update
+
+
+blockEx3C :: Block
+blockEx3C = mkBlock
+             blockEx3BHash
+             (coreNodeKeys 4)
+             []
+             (Slot 110)
+             (mkSeqNonce 2)
+             (Nonce 3)
+             zero
+             1
+
+blockEx3CHash :: Maybe HashHeader
+blockEx3CHash = Just (bhHash (bheader blockEx3C))
+
+overlayEx3C :: Map Slot (Maybe VKeyGenesis)
+overlayEx3C = overlaySchedule
+                    (Epoch 1)
+                    (Map.keysSet dms)
+                    (mkSeqNonce 2)
+                    ppsEx1
+
+snapsEx3C :: SnapShots
+snapsEx3C = emptySnapShots { _feeSS = Coin 2 }
+
+expectedLSEx3C :: LedgerState
+expectedLSEx3C = LedgerState
+               (UTxOState
+                 utxoEx3B
+                 (Coin 0)
+                 (Coin 2)
+                 emptyUpdateState)
+               (DPState dsEx1 psEx1)
+               0
+
+ppsEx3C :: PParams
+ppsEx3C = ppsEx1 { _poolDeposit = Coin 200 }
+
+expectedStEx3C :: ChainState
+expectedStEx3C =
+  ( NewEpochState
+      (Epoch 1)
+      (mkSeqNonce 2)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx3C)
+      Nothing
+      (PoolDistr Map.empty)
+      overlayEx3C
+  , mkSeqNonce 3
+  , mkSeqNonce 3
+  , blockEx3CHash
+  , Slot 110
+  )
+
+ex3C :: CHAINExample
+ex3C = CHAINExample (Slot 110) expectedStEx3B blockEx3C expectedStEx3C

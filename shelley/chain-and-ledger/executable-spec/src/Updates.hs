@@ -16,6 +16,7 @@ module Updates
   , votedValue
   , emptyUpdateState
   , emptyUpdate
+  , updatePParams
   )
 where
 
@@ -23,6 +24,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.List as List (group)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Word (Word8)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
@@ -30,6 +32,7 @@ import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           BaseTypes (Seed, UnitInterval)
 import           Coin (Coin)
 import           Keys (DSIGNAlgorithm, Dms, VKeyGenesis)
+import           PParams (PParams(..))
 import           Slot (Epoch, Slot)
 
 import           Numeric.Natural (Natural)
@@ -181,3 +184,26 @@ emptyUpdateState =
 
 emptyUpdate :: Update dsignAlgo
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)
+
+updatePParams :: PParams -> Set Ppm -> PParams
+updatePParams = Set.foldr updatePParams'
+  where
+    updatePParams' (MinFeeA p) pps = pps {_minfeeA = p}
+    updatePParams' (MinFeeB p) pps = pps {_minfeeB = p}
+    updatePParams' (MaxBBSize p) pps = pps {_maxBBSize = p}
+    updatePParams' (MaxTxSize p) pps = pps {_maxTxSize = p}
+    updatePParams' (KeyDeposit p) pps = pps {_keyDeposit = p}
+    updatePParams' (KeyMinRefund p) pps = pps {_keyMinRefund = p}
+    updatePParams' (KeyDecayRate p) pps = pps {_keyDecayRate = p}
+    updatePParams' (PoolDeposit p) pps = pps {_poolDeposit = p}
+    updatePParams' (PoolMinRefund p) pps = pps {_poolMinRefund = p}
+    updatePParams' (PoolDecayRate p) pps = pps {_poolDecayRate = p}
+    updatePParams' (EMax p) pps = pps {_eMax = p}
+    updatePParams' (Nopt p) pps = pps {_nOpt = p}
+    updatePParams' (A0 p) pps = pps {_a0 = p}
+    updatePParams' (Rho p) pps = pps {_rho = p}
+    updatePParams' (Tau p) pps = pps {_tau = p}
+    updatePParams' (ActiveSlotCoefficient p) pps = pps {_activeSlotCoeff = p}
+    updatePParams' (D p) pps = pps {_d = p}
+    updatePParams' (ExtraEntropy p) pps = pps {_extraEntropy = p}
+    updatePParams' (ProtocolVersion p) pps = pps {_protocolVersion = p}
