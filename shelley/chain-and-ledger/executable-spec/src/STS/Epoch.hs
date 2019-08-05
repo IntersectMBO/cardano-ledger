@@ -11,7 +11,11 @@ where
 
 import           EpochBoundary
 import           LedgerState
+import           Data.Set (Set)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           PParams
+import           Updates
 import           Slot
 
 import           Control.State.Transition
@@ -39,16 +43,33 @@ initialEpoch :: InitialRule (EPOCH hashAlgo dsignAlgo)
 initialEpoch =
   pure $ EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams
 
+votedValuePParams
+  :: PPUpdate dsignAlgo
+  -> PParams
+  -> Maybe PParams
+votedValuePParams (PPUpdate ppup) pps =
+  let
+    votes = Map.foldr
+              (\vote tally -> Map.insert vote (Map.findWithDefault 0 vote tally + 1) tally)
+              (Map.empty :: Map (Set Ppm) Int)
+              ppup
+    consensus = Map.filter (>= 5) votes
+  in
+    case length consensus of
+      1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
+      _ -> Nothing
+
 epochTransition :: forall hashAlgo dsignAlgo . TransitionRule (EPOCH hashAlgo dsignAlgo)
 epochTransition = do
   TRC (_, EpochState as ss ls pp, e) <- judgmentContext
-  let us            = _utxoState ls
+  let us = _utxoState ls
+  let (ppup, _, _, _) = _ups us
   let DPState ds ps = _delegationState ls
   (ss', us') <-
     trans @(SNAP hashAlgo dsignAlgo) $ TRC ((pp, ds, ps), (ss, us), e)
   (as', ds', ps') <-
     trans @(POOLREAP hashAlgo dsignAlgo) $ TRC (pp, (as, ds, ps), e)
-  let ppNew = Just pp -- TODO: result from votedValuePParams
+  let ppNew = votedValuePParams ppup pp
   (us'', as'', pp') <-
     trans @(NEWPP hashAlgo dsignAlgo)
       $ TRC ((ppNew, ds', ps'), (us', as', pp), e)
