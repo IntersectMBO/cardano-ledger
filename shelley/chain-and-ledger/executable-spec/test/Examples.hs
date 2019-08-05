@@ -3,15 +3,15 @@
 module Examples
   ( CHAINExample(..)
   , ex1
-  , ex2
-  , ex3
-  , ex4
-  , ex5
-  , ex6
-  , ex7
-  , ex8
-  , ex9
-  , ex10
+  , ex2A
+  , ex2B
+  , ex2C
+  , ex2D
+  , ex2E
+  , ex2F
+  , ex2G
+  , ex2H
+  , ex2I
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -201,7 +201,7 @@ mkBlock prev pkeys txns s enonce bnonce l kesPeriod =
             l
             (Proof (vKey $ vrf pkeys) leaderSeed l)
             (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
-            (bhbHash $ TxSeq $ fromList [txEx2])
+            (bhbHash $ TxSeq $ fromList txns)
             (OCert
               vhot
               (vKey $ cold pkeys)
@@ -282,7 +282,7 @@ initStEx1 =
       Nothing
       (PoolDistr Map.empty)
       (Map.singleton (Slot 1) (Just $ coreNodeVKG 0))
-      -- The overlay schedule has one entry, setting Gerolamo to slot 1.
+      -- The overlay schedule has one entry, setting Core Node 1 to slot 1.
   , Nonce 0
   , Nonce 0
   , Nothing
@@ -325,22 +325,22 @@ ex1 :: CHAINExample
 ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 expectedStEx1
 
 
--- | Example 2 - apply CHAIN transition to register stake keys and a pool
+-- | Example 2A - apply CHAIN transition to register stake keys and a pool
 
 
-utxoEx2 :: UTxO
-utxoEx2 = genesisCoins
+utxoEx2A :: UTxO
+utxoEx2A = genesisCoins
        [ TxOut aliceAddr aliceInitCoin
        , TxOut bobAddr bobInitCoin]
 
-ppupEx2 :: PPUpdate
-ppupEx2 = PPUpdate $ Map.singleton (coreNodeVKG 0) (Set.singleton (PoolDeposit 255))
+ppupEx2A :: PPUpdate
+ppupEx2A = PPUpdate $ Map.singleton (coreNodeVKG 0) (Set.singleton (PoolDeposit 255))
 
-updateEx2 :: Update
-updateEx2 = Update ppupEx2 (AVUpdate Map.empty)
+updateEx2A :: Update
+updateEx2A = Update ppupEx2A (AVUpdate Map.empty)
 
-txbodyEx2 :: TxBody
-txbodyEx2 = TxBody
+txbodyEx2A :: TxBody
+txbodyEx2A = TxBody
            (Set.fromList [TxIn genesisId 0])
            [TxOut aliceAddr (Coin 9733)]
            (fromList [ RegKey aliceSHK
@@ -350,71 +350,69 @@ txbodyEx2 = TxBody
            Map.empty
            (Coin 3)
            (Slot 10)
-           updateEx2
+           updateEx2A
 
-txEx2 :: Tx
-txEx2 = Tx
-          txbodyEx2
+txEx2A :: Tx
+txEx2A = Tx
+          txbodyEx2A
           (makeWitnessesVKey
-            txbodyEx2
+            txbodyEx2A
             [alicePay, aliceStake, bobStake, cold alicePool, cold $ coreNodeKeys 0])
           Map.empty
 
-utxostEx2 :: UTxOState
-utxostEx2 = UTxOState utxoEx2 (Coin 0) (Coin 0) emptyUpdateState
+utxostEx2A :: UTxOState
+utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyUpdateState
 
-lsEx2 :: LedgerState
-lsEx2 = LedgerState utxostEx2 (DPState dsEx1 psEx1) 0
+lsEx2A :: LedgerState
+lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1) 0
 
-acntEx2 :: AccountState
-acntEx2 = AccountState
+acntEx2A :: AccountState
+acntEx2A = AccountState
             { _treasury = Coin 0
             , _reserves = Coin 45*1000*1000*1000*1000*1000
             }
 
-esEx2 :: EpochState
-esEx2 = EpochState acntEx2 emptySnapShots lsEx2 ppsEx1
+esEx2A :: EpochState
+esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1
 
 
--- | This overlay schedule creates BFT slots on the even slot
--- with Gerolamo assigned to the multiples of ten.
-overlayEx2 :: Map Slot (Maybe VKeyGenesis)
-overlayEx2 = overlaySchedule
+overlayEx2A :: Map Slot (Maybe VKeyGenesis)
+overlayEx2A = overlaySchedule
                     (Epoch 0)
                     (Map.keysSet dms)
                     NeutralSeed
                     ppsEx1
 
-initStEx2 :: ChainState
-initStEx2 =
+initStEx2A :: ChainState
+initStEx2A =
   ( NewEpochState
       (Epoch 0)
       (Nonce 0)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      esEx2
+      esEx2A
       Nothing
       (PoolDistr Map.empty)
-      overlayEx2
+      overlayEx2A
   , Nonce 0
   , Nonce 0
   , Nothing
   , Slot 0
   )
 
-blockEx2 :: Block
-blockEx2 = mkBlock
+blockEx2A :: Block
+blockEx2A = mkBlock
              Nothing
              (coreNodeKeys 4)
-             [txEx2]
+             [txEx2A]
              (Slot 10)
              (Nonce 0)
              (Nonce 1)
              zero
              0
 
-dsEx2 :: DState
-dsEx2 = dsEx1
+dsEx2A :: DState
+dsEx2A = dsEx1
           { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK)
                                  , (Ptr (Slot 10) 0 1, bobSHK) ]
           , _stKeys = StakeKeys $ Map.fromList [ (aliceSHK, Slot 10)
@@ -423,67 +421,67 @@ dsEx2 = dsEx1
                                     , (RewardAcnt bobSHK, Coin 0) ]
           }
 
-psEx2 :: PState
-psEx2 = psEx1
+psEx2A :: PState
+psEx2A = psEx1
           { _stPools = StakePools $ Map.singleton (hk alicePool) (Slot 10)
           , _pParams = Map.singleton (hk alicePool) alicePoolParams
           , _cCounters = Map.insert (hk alicePool) 0 (_cCounters psEx1)
           }
 
-updateStEx2 :: ( PPUpdate
+updateStEx2A :: ( PPUpdate
                , AVUpdate
                , Map Slot Applications
                , Applications)
-updateStEx2 =
-  ( ppupEx2
+updateStEx2A =
+  ( ppupEx2A
   , AVUpdate Map.empty
   , Map.empty
   , Applications Map.empty)
 
-expectedLSEx2 :: LedgerState
-expectedLSEx2 = LedgerState
+expectedLSEx2A :: LedgerState
+expectedLSEx2A = LedgerState
                (UTxOState
                  (UTxO . Map.fromList $
                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx2) 0, TxOut aliceAddr (Coin 9733))
+                   , (TxIn (txid txbodyEx2A) 0, TxOut aliceAddr (Coin 9733))
                    ])
                  (Coin 264)
                  (Coin 3)
-                 updateStEx2)
-               (DPState dsEx2 psEx2)
+                 updateStEx2A)
+               (DPState dsEx2A psEx2A)
                0
 
-blockEx2Hash :: Maybe HashHeader
-blockEx2Hash = Just (bhHash (bheader blockEx2))
+blockEx2AHash :: Maybe HashHeader
+blockEx2AHash = Just (bhHash (bheader blockEx2A))
 
-expectedStEx2 :: ChainState
-expectedStEx2 =
+expectedStEx2A :: ChainState
+expectedStEx2A =
   ( NewEpochState
       (Epoch 0)
       (Nonce 0)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx2 emptySnapShots expectedLSEx2 ppsEx1)
+      (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1)
       Nothing
       (PoolDistr Map.empty)
-      overlayEx2
+      overlayEx2A
   , Nonce 0 ⭒ Nonce 1
   , Nonce 0 ⭒ Nonce 1
-  , blockEx2Hash
+  , blockEx2AHash
   , Slot 10
   )
 
-ex2 :: CHAINExample
-ex2 = CHAINExample (Slot 10) initStEx2 blockEx2 expectedStEx2
+ex2A :: CHAINExample
+ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A expectedStEx2A
 
 
--- | Example 3 - continuing on after example 2, process a block late enough
+-- | Example 2B - continuing on after example 2, process a block late enough
 -- in the epoch in order to create a reward update.
 -- The block delegates Alice's and Bob's stake to Alice's pool.
 
-txbodyEx3 :: TxBody
-txbodyEx3 = TxBody
-           (Set.fromList [TxIn (txid txbodyEx2) 0])
+txbodyEx2B :: TxBody
+txbodyEx2B = TxBody
+           (Set.fromList [TxIn (txid txbodyEx2A) 0])
            [TxOut aliceAddr (Coin 9729)]
            (fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
            , Delegate $ Delegation bobSHK (hk alicePool)
@@ -493,83 +491,83 @@ txbodyEx3 = TxBody
            (Slot 99)
            emptyUpdate
 
-txEx3 :: Tx
-txEx3 = Tx
-          txbodyEx3
-          (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake, bobStake, cold $ coreNodeKeys 0])
+txEx2B :: Tx
+txEx2B = Tx
+          txbodyEx2B
+          (makeWitnessesVKey txbodyEx2B [alicePay, aliceStake, bobStake, cold $ coreNodeKeys 0])
           Map.empty
 
-blockEx3 :: Block
-blockEx3 = mkBlock
-             blockEx2Hash
+blockEx2B :: Block
+blockEx2B = mkBlock
+             blockEx2AHash
              (coreNodeKeys 3)
-             [txEx3]
+             [txEx2B]
              (Slot 90)
              (Nonce 0)
              (Nonce 2)
              zero
              1
 
-blockEx3Hash :: Maybe HashHeader
-blockEx3Hash = Just (bhHash (bheader blockEx3))
+blockEx2BHash :: Maybe HashHeader
+blockEx2BHash = Just (bhHash (bheader blockEx2B))
 
-utxoEx3 :: UTxO
-utxoEx3 = UTxO . Map.fromList $
+utxoEx2B :: UTxO
+utxoEx2B = UTxO . Map.fromList $
                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx3) 0, TxOut aliceAddr (Coin 9729))
+                   , (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr (Coin 9729))
                    ]
 
-delegsEx3 :: Map Credential KeyHash
-delegsEx3 = Map.fromList
+delegsEx2B :: Map Credential KeyHash
+delegsEx2B = Map.fromList
               [ (aliceSHK, hk alicePool)
               , (bobSHK, hk alicePool)
               ]
 
-dsEx3 :: DState
-dsEx3 = dsEx2 { _delegations = delegsEx3 }
+dsEx2B :: DState
+dsEx2B = dsEx2A { _delegations = delegsEx2B }
 
-expectedLSEx3 :: LedgerState
-expectedLSEx3 = LedgerState
+expectedLSEx2B :: LedgerState
+expectedLSEx2B = LedgerState
                (UTxOState
-                 utxoEx3
+                 utxoEx2B
                  (Coin 264)
                  (Coin 7)
-                 updateStEx2)
-               (DPState dsEx3 psEx2)
+                 updateStEx2A)
+               (DPState dsEx2B psEx2A)
                0
 
-expectedStEx3 :: ChainState
-expectedStEx3 =
+expectedStEx2B :: ChainState
+expectedStEx2B =
   ( NewEpochState
       (Epoch 0)
       (Nonce 0)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx2 emptySnapShots expectedLSEx3 ppsEx1)
+      (EpochState acntEx2A emptySnapShots expectedLSEx2B ppsEx1)
       (Just RewardUpdate { deltaT = Coin 0
                          , deltaR = Coin 0
                          , rs     = Map.empty
                          , deltaF = Coin 0
                          })
       (PoolDistr Map.empty)
-      overlayEx2
+      overlayEx2A
   , Nonce 0 ⭒ Nonce 1 ⭒ Nonce 2
   , Nonce 0 ⭒ Nonce 1
-  , blockEx3Hash
+  , blockEx2BHash
   , Slot 90
   )
 
-ex3 :: CHAINExample
-ex3 = CHAINExample (Slot 90) expectedStEx2 blockEx3 expectedStEx3
+ex2B :: CHAINExample
+ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B expectedStEx2B
 
 
--- | Example 4 - continuing on after example 3, process an empty block in the next epoch
+-- | Example 2C - continuing on after example 3, process an empty block in the next epoch
 -- so that the (empty) reward update is applied and a stake snapshot is made.
 
 
-blockEx4 :: Block
-blockEx4 = mkBlock
-             blockEx3Hash
+blockEx2C :: Block
+blockEx2C = mkBlock
+             blockEx2BHash
              (coreNodeKeys 4)
              []
              (Slot 110)
@@ -578,65 +576,65 @@ blockEx4 = mkBlock
              zero
              1
 
-epoch1OSchedEx4 :: Map Slot (Maybe VKeyGenesis)
-epoch1OSchedEx4 = overlaySchedule
+epoch1OSchedEx2C :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2C = overlaySchedule
                     (Epoch 1)
                     (Map.keysSet dms)
                     (Nonce 0 ⭒ Nonce 1)
                     ppsEx1
 
-snapEx4 :: (Stake, Map Credential KeyHash)
-snapEx4 = ( Stake ( Map.fromList [(aliceSHK, Coin 9729), (bobSHK, bobInitCoin)])
-          , delegsEx3 )
+snapEx2C :: (Stake, Map Credential KeyHash)
+snapEx2C = ( Stake ( Map.fromList [(aliceSHK, Coin 9729), (bobSHK, bobInitCoin)])
+          , delegsEx2B )
 
-snapsEx4 :: SnapShots
-snapsEx4 = emptySnapShots { _pstakeMark = snapEx4
+snapsEx2C :: SnapShots
+snapsEx2C = emptySnapShots { _pstakeMark = snapEx2C
                           , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
                           , _feeSS = Coin 271
                           }
 
-expectedLSEx4 :: LedgerState
-expectedLSEx4 = LedgerState
+expectedLSEx2C :: LedgerState
+expectedLSEx2C = LedgerState
                (UTxOState
-                 utxoEx3
+                 utxoEx2B
                  (Coin 0)   -- TODO check that both deposits really decayed completely
                  (Coin 271) -- TODO shouldn't this pot have moved to the treasury?
                  emptyUpdateState) -- Note that the ppup is gone now
-               (DPState dsEx3 psEx2)
+               (DPState dsEx2B psEx2A)
                0
 
-blockEx4Hash :: Maybe HashHeader
-blockEx4Hash = Just (bhHash (bheader blockEx4))
+blockEx2CHash :: Maybe HashHeader
+blockEx2CHash = Just (bhHash (bheader blockEx2C))
 
-expectedStEx4 :: ChainState
-expectedStEx4 =
+expectedStEx2C :: ChainState
+expectedStEx2C =
   ( NewEpochState
       (Epoch 1)
       (Nonce 0 ⭒ Nonce 1)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx2 snapsEx4 expectedLSEx4 ppsEx1)
+      (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
       Nothing
       (PoolDistr Map.empty)
-      epoch1OSchedEx4
+      epoch1OSchedEx2C
   , mkSeqNonce 3
   , mkSeqNonce 3
-  , blockEx4Hash
+  , blockEx2CHash
   , Slot 110
   )
 
-ex4 :: CHAINExample
-ex4 = CHAINExample (Slot 110) expectedStEx3 blockEx4 expectedStEx4
+ex2C :: CHAINExample
+ex2C = CHAINExample (Slot 110) expectedStEx2B blockEx2C expectedStEx2C
 
 
--- | Example 5 - continuing on after example 4, process an empty block late enough
+-- | Example 2D - continuing on after example 4, process an empty block late enough
 -- in the epoch in order to create a second reward update, preparing the way for
 -- the first non-empty pool distribution in this running example.
 
 
-blockEx5 :: Block
-blockEx5 = mkBlock
-             blockEx4Hash
+blockEx2D :: Block
+blockEx2D = mkBlock
+             blockEx2CHash
              (coreNodeKeys 3)
              []
              (Slot 190)
@@ -645,41 +643,41 @@ blockEx5 = mkBlock
              zero
              2
 
-blockEx5Hash :: Maybe HashHeader
-blockEx5Hash = Just (bhHash (bheader blockEx5))
+blockEx2DHash :: Maybe HashHeader
+blockEx2DHash = Just (bhHash (bheader blockEx2D))
 
-expectedStEx5 :: ChainState
-expectedStEx5 =
+expectedStEx2D :: ChainState
+expectedStEx2D =
   ( NewEpochState
       (Epoch 1)
       (Nonce 0 ⭒ Nonce 1)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx2 snapsEx4 expectedLSEx4 ppsEx1)
+      (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
       (Just RewardUpdate { deltaT = Coin 271
                          , deltaR = Coin 0
                          , rs     = Map.empty
                          , deltaF = Coin (-271)
                          })
       (PoolDistr Map.empty)
-      epoch1OSchedEx4
+      epoch1OSchedEx2C
   , mkSeqNonce 4
   , mkSeqNonce 3
-  , blockEx5Hash
+  , blockEx2DHash
   , Slot 190
   )
 
-ex5 :: CHAINExample
-ex5 = CHAINExample (Slot 190) expectedStEx4 blockEx5 expectedStEx5
+ex2D :: CHAINExample
+ex2D = CHAINExample (Slot 190) expectedStEx2C blockEx2D expectedStEx2D
 
 
--- | Example 6 - continuing on after example 5, create the first non-empty pool distribution
+-- | Example 2E - continuing on after example 5, create the first non-empty pool distribution
 -- by creating a block in the third epoch of this running example.
 
 
-blockEx6 :: Block
-blockEx6 = mkBlock
-             blockEx5Hash
+blockEx2E :: Block
+blockEx2E = mkBlock
+             blockEx2DHash
              (coreNodeKeys 3)
              []
              (Slot 220)
@@ -688,118 +686,116 @@ blockEx6 = mkBlock
              zero
              2
 
--- | This overlay schedule creates BFT slots on the even slot
--- with Gerolamo assigned to the multiples of ten.
-epoch1OSchedEx6 :: Map Slot (Maybe VKeyGenesis)
-epoch1OSchedEx6 = overlaySchedule
+epoch1OSchedEx2E :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2E = overlaySchedule
                     (Epoch 2)
                     (Map.keysSet dms)
                     (mkSeqNonce 3)
                     ppsEx1
 
-snapsEx6 :: SnapShots
-snapsEx6 = emptySnapShots { _pstakeMark = snapEx4
-                          , _pstakeSet = snapEx4
+snapsEx2E :: SnapShots
+snapsEx2E = emptySnapShots { _pstakeMark = snapEx2C
+                          , _pstakeSet = snapEx2C
                           , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
                           , _feeSS = Coin 0
                           }
 
-expectedLSEx6 :: LedgerState
-expectedLSEx6 = LedgerState
+expectedLSEx2E :: LedgerState
+expectedLSEx2E = LedgerState
                (UTxOState
-                 utxoEx3
+                 utxoEx2B
                  (Coin 0)
                  (Coin 0)
                  emptyUpdateState)
-               (DPState dsEx3 psEx2)
+               (DPState dsEx2B psEx2A)
                0
 
-blockEx6Hash :: Maybe HashHeader
-blockEx6Hash = Just (bhHash (bheader blockEx6))
+blockEx2EHash :: Maybe HashHeader
+blockEx2EHash = Just (bhHash (bheader blockEx2E))
 
-acntEx6 :: AccountState
-acntEx6 = AccountState
+acntEx2E :: AccountState
+acntEx2E = AccountState
             { _treasury = Coin 271
             , _reserves = Coin 45*1000*1000*1000*1000*1000
             }
 
-expectedStEx6 :: ChainState
-expectedStEx6 =
+expectedStEx2E :: ChainState
+expectedStEx2E =
   ( NewEpochState
       (Epoch 2)
       (mkSeqNonce 3)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx6 snapsEx6 expectedLSEx6 ppsEx1)
+      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
       Nothing
       (PoolDistr
         (Map.singleton
            (hk alicePool)
            (1, hashKey (vKey $ vrf alicePool))))
-      epoch1OSchedEx6
+      epoch1OSchedEx2E
   , mkSeqNonce 5
   , mkSeqNonce 5
-  , blockEx6Hash
+  , blockEx2EHash
   , Slot 220
   )
 
-ex6 :: CHAINExample
-ex6 = CHAINExample (Slot 220) expectedStEx5 blockEx6 expectedStEx6
+ex2E :: CHAINExample
+ex2E = CHAINExample (Slot 220) expectedStEx2D blockEx2E expectedStEx2E
 
 
--- | Example 7 - continuing on after example 6, create a decentralized Praos block
+-- | Example 2F - continuing on after example 6, create a decentralized Praos block
 -- (ie one not in the overlay schedule)
 
 
-blockEx7 :: Block
-blockEx7 = mkBlock
-             blockEx6Hash
+blockEx2F :: Block
+blockEx2F = mkBlock
+             blockEx2EHash
              alicePool
              []
-             (Slot 295) -- odd slots open for decentralization in epoch1OSchedEx6
+             (Slot 295) -- odd slots open for decentralization in epoch1OSchedEx2E
              (mkSeqNonce 3)
              (Nonce 6)
              zero
              3
 
-blockEx7Hash :: Maybe HashHeader
-blockEx7Hash = Just (bhHash (bheader blockEx7))
+blockEx2FHash :: Maybe HashHeader
+blockEx2FHash = Just (bhHash (bheader blockEx2F))
 
-pdEx7 :: PoolDistr
-pdEx7 = PoolDistr $ Map.singleton (hk alicePool) (1, hashKey $ vKey $ vrf alicePool)
+pdEx2F :: PoolDistr
+pdEx2F = PoolDistr $ Map.singleton (hk alicePool) (1, hashKey $ vKey $ vrf alicePool)
 
-expectedStEx7 :: ChainState
-expectedStEx7 =
+expectedStEx2F :: ChainState
+expectedStEx2F =
   ( NewEpochState
       (Epoch 2)
       (mkSeqNonce 3)
       (BlocksMade Map.empty)
       (BlocksMade $ Map.singleton (hk alicePool) 1)
-      (EpochState acntEx6 snapsEx6 expectedLSEx6 ppsEx1)
+      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
       (Just RewardUpdate { deltaT = Coin 0
                          , deltaR = Coin 0
                          , rs     = Map.empty
                          , deltaF = Coin 0
                          })
-      pdEx7
-      epoch1OSchedEx6
+      pdEx2F
+      epoch1OSchedEx2E
   , mkSeqNonce 6
   , mkSeqNonce 5
-  , blockEx7Hash
+  , blockEx2FHash
   , Slot 295
   )
 
-ex7 :: CHAINExample
-ex7 = CHAINExample (Slot 295) expectedStEx6 blockEx7 expectedStEx7
+ex2F :: CHAINExample
+ex2F = CHAINExample (Slot 295) expectedStEx2E blockEx2F expectedStEx2F
 
 
--- | Example 8 - continuing on after example 7, create an empty block in the next epoch
+-- | Example 2G - continuing on after example 7, create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
 
 
-blockEx8 :: Block
-blockEx8 = mkBlock
-             blockEx7Hash
+blockEx2G :: Block
+blockEx2G = mkBlock
+             blockEx2FHash
              (coreNodeKeys 4)
              []
              (Slot 310)
@@ -808,46 +804,46 @@ blockEx8 = mkBlock
              zero
              3
 
-blockEx8Hash :: Maybe HashHeader
-blockEx8Hash = Just (bhHash (bheader blockEx8))
+blockEx2GHash :: Maybe HashHeader
+blockEx2GHash = Just (bhHash (bheader blockEx2G))
 
-epoch1OSchedEx8 :: Map Slot (Maybe VKeyGenesis)
-epoch1OSchedEx8 = overlaySchedule
+epoch1OSchedEx2G :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2G = overlaySchedule
                     (Epoch 3)
                     (Map.keysSet dms)
                     (mkSeqNonce 5)
                     ppsEx1
 
-snapsEx8 :: SnapShots
-snapsEx8 = snapsEx6 { _pstakeGo = snapEx4 }
+snapsEx2G :: SnapShots
+snapsEx2G = snapsEx2E { _pstakeGo = snapEx2C }
 
-expectedStEx8 :: ChainState
-expectedStEx8 =
+expectedStEx2G :: ChainState
+expectedStEx2G =
   ( NewEpochState
       (Epoch 3)
       (mkSeqNonce 5)
       (BlocksMade $ Map.singleton (hk alicePool) 1)
       (BlocksMade Map.empty)
-      (EpochState acntEx6 snapsEx8 expectedLSEx6 ppsEx1)
+      (EpochState acntEx2E snapsEx2G expectedLSEx2E ppsEx1)
       Nothing
-      pdEx7
-      epoch1OSchedEx8
+      pdEx2F
+      epoch1OSchedEx2G
   , mkSeqNonce 7
   , mkSeqNonce 7
-  , blockEx8Hash
+  , blockEx2GHash
   , Slot 310
   )
 
-ex8 :: CHAINExample
-ex8 = CHAINExample (Slot 310) expectedStEx7 blockEx8 expectedStEx8
+ex2G :: CHAINExample
+ex2G = CHAINExample (Slot 310) expectedStEx2F blockEx2G expectedStEx2G
 
 
--- | Example 9 - continuing on after example 8, create the first non-trivial reward update
+-- | Example 2H - continuing on after example 8, create the first non-trivial reward update
 
 
-blockEx9 :: Block
-blockEx9 = mkBlock
-             blockEx8Hash
+blockEx2H :: Block
+blockEx2H = mkBlock
+             blockEx2GHash
              (coreNodeKeys 3)
              []
              (Slot 390)
@@ -856,44 +852,44 @@ blockEx9 = mkBlock
              zero
              4
 
-blockEx9Hash :: Maybe HashHeader
-blockEx9Hash = Just (bhHash (bheader blockEx9))
+blockEx2HHash :: Maybe HashHeader
+blockEx2HHash = Just (bhHash (bheader blockEx2H))
 
-rewardsEx9 :: Map RewardAcnt Coin
-rewardsEx9 = Map.fromList [ (RewardAcnt aliceSHK, Coin 82593524514)
+rewardsEx2H :: Map RewardAcnt Coin
+rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, Coin 82593524514)
                           , (RewardAcnt bobSHK, Coin 730001159951) ]
 
-expectedStEx9 :: ChainState
-expectedStEx9 =
+expectedStEx2H :: ChainState
+expectedStEx2H =
   ( NewEpochState
       (Epoch 3)
       (mkSeqNonce 5)
       (BlocksMade $ Map.singleton (hk alicePool) 1)
       (BlocksMade Map.empty)
-      (EpochState acntEx6 snapsEx8 expectedLSEx6 ppsEx1)
+      (EpochState acntEx2E snapsEx2G expectedLSEx2E ppsEx1)
       (Just RewardUpdate { deltaT = Coin 8637405315535
                          , deltaR = Coin (-9450000000000)
-                         , rs = rewardsEx9
+                         , rs = rewardsEx2H
                          , deltaF = Coin 0
                          })
-      pdEx7
-      epoch1OSchedEx8
+      pdEx2F
+      epoch1OSchedEx2G
   , mkSeqNonce 8
   , mkSeqNonce 7
-  , blockEx9Hash
+  , blockEx2HHash
   , Slot 390
   )
 
-ex9 :: CHAINExample
-ex9 = CHAINExample (Slot 390) expectedStEx8 blockEx9 expectedStEx9
+ex2H :: CHAINExample
+ex2H = CHAINExample (Slot 390) expectedStEx2G blockEx2H expectedStEx2H
 
 
--- | Example 10 - continuing on after example 9, apply the first non-trivial reward update
+-- | Example 2I - continuing on after example 9, apply the first non-trivial reward update
 
 
-blockEx10 :: Block
-blockEx10 = mkBlock
-              blockEx9Hash
+blockEx2I :: Block
+blockEx2I = mkBlock
+              blockEx2HHash
               (coreNodeKeys 4)
               []
               (Slot 410)
@@ -902,51 +898,51 @@ blockEx10 = mkBlock
               zero
               4
 
-blockEx10Hash :: Maybe HashHeader
-blockEx10Hash = Just (bhHash (bheader blockEx10))
+blockEx2IHash :: Maybe HashHeader
+blockEx2IHash = Just (bhHash (bheader blockEx2I))
 
-epoch1OSchedEx10 :: Map Slot (Maybe VKeyGenesis)
-epoch1OSchedEx10 = overlaySchedule
+epoch1OSchedEx2I :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2I = overlaySchedule
                      (Epoch 4)
                      (Map.keysSet dms)
                      (mkSeqNonce 7)
                      ppsEx1
 
-acntEx10 :: AccountState
-acntEx10 = AccountState
+acntEx2I :: AccountState
+acntEx2I = AccountState
             { _treasury = Coin 8637405315806
             , _reserves = Coin 44990550000000000
             }
 
-dsEx10 :: DState
-dsEx10 = dsEx3 { _rewards = rewardsEx9 }
+dsEx2I :: DState
+dsEx2I = dsEx2B { _rewards = rewardsEx2H }
 
-expectedLSEx10 :: LedgerState
-expectedLSEx10 = LedgerState
+expectedLSEx2I :: LedgerState
+expectedLSEx2I = LedgerState
                (UTxOState
-                 utxoEx3
+                 utxoEx2B
                  (Coin 0)
                  (Coin 0)
                  emptyUpdateState)
-               (DPState dsEx10 psEx2)
+               (DPState dsEx2I psEx2A)
                0
 
-expectedStEx10 :: ChainState
-expectedStEx10 =
+expectedStEx2I :: ChainState
+expectedStEx2I =
   ( NewEpochState
       (Epoch 4)
       (mkSeqNonce 7)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx10 snapsEx8 expectedLSEx10 ppsEx1)
+      (EpochState acntEx2I snapsEx2G expectedLSEx2I ppsEx1)
       Nothing
-      pdEx7
-      epoch1OSchedEx10
+      pdEx2F
+      epoch1OSchedEx2I
   , mkSeqNonce 9
   , mkSeqNonce 9
-  , blockEx10Hash
+  , blockEx2IHash
   , Slot 410
   )
 
-ex10 :: CHAINExample
-ex10 = CHAINExample (Slot 410) expectedStEx9 blockEx10 expectedStEx10
+ex2I :: CHAINExample
+ex2I = CHAINExample (Slot 410) expectedStEx2H blockEx2I expectedStEx2I
