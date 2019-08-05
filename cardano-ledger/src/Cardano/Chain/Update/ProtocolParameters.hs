@@ -18,7 +18,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import Data.Time (NominalDiffTime)
 import Formatting (Format, bprint, build, bytes, shortest)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
@@ -33,7 +32,8 @@ import Cardano.Chain.Update.SoftforkRule
 -- | Data which is associated with 'BlockVersion'
 data ProtocolParameters = ProtocolParameters
   { ppScriptVersion     :: !Word16
-  , ppSlotDuration      :: !NominalDiffTime
+  -- | Milliseconds.
+  , ppSlotDuration      :: !Natural
   , ppMaxBlockSize      :: !Natural
   , ppMaxHeaderSize     :: !Natural
   , ppMaxTxSize         :: !Natural
@@ -64,7 +64,7 @@ data ProtocolParameters = ProtocolParameters
 instance B.Buildable ProtocolParameters where
   build pp = bprint
     ( "{ script version: " . build
-    . ", slot duration: " . build
+    . ", slot duration: " . bytes'
     . ", block size limit: " . bytes'
     . ", header size limit: " . bytes'
     . ", tx size limit: " . bytes'

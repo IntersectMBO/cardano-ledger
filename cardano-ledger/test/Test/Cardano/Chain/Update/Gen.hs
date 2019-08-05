@@ -74,7 +74,7 @@ genCanonicalProtocolParameters :: Gen ProtocolParameters
 genCanonicalProtocolParameters =
   ProtocolParameters
     <$> genScriptVersion
-    <*> genNominalDiffTime
+    <*> genNatural
     <*> genNatural
     <*> genNatural
     <*> genNatural
@@ -99,7 +99,7 @@ genProtocolParameters :: Gen ProtocolParameters
 genProtocolParameters =
   ProtocolParameters
     <$> genScriptVersion
-    <*> genNominalDiffTime
+    <*> genNatural
     <*> genNatural
     <*> genNatural
     <*> genNatural
@@ -117,7 +117,7 @@ genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
 genProtocolParametersUpdate =
   ProtocolParametersUpdate
     <$> Gen.maybe genScriptVersion
-    <*> Gen.maybe genNominalDiffTime
+    <*> Gen.maybe genNatural
     <*> Gen.maybe genNatural
     <*> Gen.maybe genNatural
     <*> Gen.maybe genNatural

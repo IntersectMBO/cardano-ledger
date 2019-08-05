@@ -15,7 +15,6 @@ where
 import Cardano.Prelude hiding (empty)
 
 import Data.Text.Lazy.Builder (Builder)
-import Data.Time (NominalDiffTime)
 import Formatting (Format, bprint, build, bytes, later, shortest)
 import qualified Formatting.Buildable as B
 
@@ -29,7 +28,7 @@ import Cardano.Chain.Update.SoftforkRule (SoftforkRule)
 -- | Data which represents modifications of block (aka protocol) version
 data ProtocolParametersUpdate = ProtocolParametersUpdate
   { ppuScriptVersion     :: !(Maybe Word16)
-  , ppuSlotDuration      :: !(Maybe NominalDiffTime)
+  , ppuSlotDuration      :: !(Maybe Natural)
   , ppuMaxBlockSize      :: !(Maybe Natural)
   , ppuMaxHeaderSize     :: !(Maybe Natural)
   , ppuMaxTxSize         :: !(Maybe Natural)
@@ -48,7 +47,7 @@ data ProtocolParametersUpdate = ProtocolParametersUpdate
 instance B.Buildable ProtocolParametersUpdate where
   build ppu = bprint
     ( "{ script version: " . bmodifier build
-    . ", slot duration: " . bmodifier build
+    . ", slot duration: " . bmodifier bytes'
     . ", block size limit: " . bmodifier bytes'
     . ", header size limit: " . bmodifier bytes'
     . ", tx size limit: " . bmodifier bytes'
