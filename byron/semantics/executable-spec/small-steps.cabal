@@ -73,7 +73,7 @@ test-suite doctests
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -threaded
-                      -"-with-rtsopts=-N2"
+                      "-with-rtsopts=-N2"
 
   if (!flag(development))
     ghc-options:      -Werror
@@ -99,7 +99,7 @@ test-suite examples
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -threaded
-                      -"-with-rtsopts=-N2"
+                      "-with-rtsopts=-N2"
 
   if (!flag(development))
     ghc-options:      -Werror
