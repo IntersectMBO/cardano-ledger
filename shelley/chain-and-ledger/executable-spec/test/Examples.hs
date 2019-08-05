@@ -86,6 +86,11 @@ mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyDSIGN
   return (SKey sk, VKey $ deriveVerKeyDSIGN sk)
 
+mkVKGen :: (Word64, Word64, Word64, Word64, Word64) -> VKeyGenesis
+mkVKGen seed = fst . withDRG (drgNewTest seed) $ do
+  sk <- genKeyDSIGN
+  return $ VKeyGenesis $ deriveVerKeyDSIGN sk
+
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
 mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKeyES, VKeyES)
 mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
@@ -96,47 +101,33 @@ mkAddr :: (KeyPair, KeyPair) -> Addr
 mkAddr (payKey, stakeKey) =
   AddrBase (KeyHashObj . hashKey $ vKey payKey) (KeyHashObj . hashKey $ vKey stakeKey)
 
-gerolamoVKG :: VKeyGenesis
-gerolamoVKG = VKeyGenesis 1501 :: VKeyGenesis
+data AllPoolKeys = AllPoolKeys
+  { cold :: KeyPair
+  , vrf :: KeyPair
+  , hot :: (SKeyES, VKeyES)
+  , hk  :: KeyHash
+  } deriving (Show, Eq)
 
-gerolamoCold :: KeyPair
-gerolamoCold = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1501, 0, 0, 0, 0)
+mkAllPoolKeys :: Word64 -> AllPoolKeys
+mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
+                              (KeyPair vkVrf skVrf)
+                              (mkKESKeyPair (w, 0, 0, 0, 3))
+                              (hashKey vkCold)
+  where
+    (skCold, vkCold) = mkKeyPair (w, 0, 0, 0, 1)
+    (skVrf, vkVrf) = mkKeyPair (w, 0, 0, 0, 2)
 
-gerolamoVRF :: KeyPair
-gerolamoVRF = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1501, 0, 0, 0, 1)
+coreNodes :: [(VKeyGenesis, AllPoolKeys)]
+coreNodes = [(mkVKGen (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..107]]
 
-gerolamoHot :: (SKeyES, VKeyES)
-gerolamoHot = mkKESKeyPair (0, 0, 0, 0, 0)
+coreNodeVKG :: Int -> VKeyGenesis
+coreNodeVKG = fst . (coreNodes !!)
 
-lodovicoVKG :: VKeyGenesis
-lodovicoVKG = VKeyGenesis 1521 :: VKeyGenesis
+coreNodeKeys :: Int -> AllPoolKeys
+coreNodeKeys = snd . (coreNodes !!)
 
-lodovicoCold :: KeyPair
-lodovicoCold = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1521, 0, 0, 0, 0)
-
-lodovicoVRF :: KeyPair
-lodovicoVRF = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1521, 0, 0, 0, 1)
-
-lodovicoHot :: (SKeyES, VKeyES)
-lodovicoHot = mkKESKeyPair (1, 0, 0, 0, 0)
-
-nicoloVKG :: VKeyGenesis
-nicoloVKG = VKeyGenesis 1499 :: VKeyGenesis
-
-nicoloCold :: KeyPair
-nicoloCold = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1499, 0, 0, 0, 0)
-
-nicoloVRF :: KeyPair
-nicoloVRF = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1499, 0, 0, 0, 1)
-
-nicoloHot :: (SKeyES, VKeyES)
-nicoloHot = mkKESKeyPair (1, 0, 0, 0, 0)
+dms :: Map VKeyGenesis VKey
+dms = Map.fromList [ (coreNodeVKG n, vKey $ cold $ coreNodeKeys n) | n <- [0..6]]
 
 alicePay :: KeyPair
 alicePay = KeyPair vk sk
@@ -146,19 +137,8 @@ aliceStake :: KeyPair
 aliceStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
-aliceOperator :: KeyPair
-aliceOperator = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (10, 10, 10, 10, 10)
-
-aliceVRF :: KeyPair
-aliceVRF = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (20, 20, 20, 20, 20)
-
-aliceOperatorHK :: KeyHash
-aliceOperatorHK = hashKey $ vKey aliceOperator
-
-aliceHot :: (SKeyES, VKeyES)
-aliceHot = mkKESKeyPair (0, 0, 0, 0, 1)
+alicePool :: AllPoolKeys
+alicePool = mkAllPoolKeys 1
 
 aliceAddr :: Addr
 aliceAddr = mkAddr (alicePay, aliceStake)
@@ -189,8 +169,8 @@ bobInitCoin = 1000
 alicePoolParams :: PoolParams
 alicePoolParams =
   PoolParams
-    { _poolPubKey = vKey aliceOperator
-    , _poolVrf = hashKey $ vKey aliceVRF
+    { _poolPubKey = vKey $ cold alicePool
+    , _poolVrf = hashKey $ vKey $ vrf alicePool
     , _poolPledge = Coin 1
     , _poolCost = Coin 5
     , _poolMargin = unsafeMkUnitInterval 0.1
@@ -204,30 +184,30 @@ alicePoolParams =
 mkSeqNonce :: Natural -> Seed
 mkSeqNonce m = foldl (\c x -> c ⭒ Nonce x) NeutralSeed [0..toInteger m]
 
-mkBlock :: Maybe HashHeader -> KeyPair -> KeyPair -> (SKeyES, VKeyES) -> [Tx] -> Slot
+mkBlock :: Maybe HashHeader -> AllPoolKeys -> [Tx] -> Slot
   -> Seed -> Seed -> UnitInterval -> Natural -> Block
-mkBlock prev cold vrf (shot, vhot) txns s enonce bnonce l kesPeriod =
+mkBlock prev pkeys txns s enonce bnonce l kesPeriod =
   let
+    (shot, vhot) = hot pkeys
     nonceSeed = (enonce ⭒ slotToSeed s) ⭒ SeedEta
     leaderSeed = (enonce ⭒ slotToSeed s) ⭒ SeedL
     bhb = BHBody
             prev
-            (vKey cold)
-            (vKey vrf)
+            (vKey $ cold pkeys)
+            (vKey $ vrf pkeys)
             s
             bnonce
-            (Proof (vKey vrf) nonceSeed bnonce)
+            (Proof (vKey $ vrf pkeys) nonceSeed bnonce)
             l
-
-            (Proof (vKey vrf) leaderSeed l)
+            (Proof (vKey $ vrf pkeys) leaderSeed l)
             (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
             (bhbHash $ TxSeq $ fromList [txEx2])
             (OCert
               vhot
-              (vKey cold)
+              (vKey $ cold pkeys)
               0
               (KESPeriod 0)
-              (sign (sKey cold) (vhot, 0, KESPeriod 0))
+              (sign (sKey $ cold pkeys) (vhot, 0, KESPeriod 0))
             )
             (ProtVer 0 0 0)
     bh = BHeader bhb (Keys.signKES shot bhb kesPeriod)
@@ -267,16 +247,11 @@ dariaAddr = mkAddr (dariaPay, dariaStake)
 utxostEx1 :: UTxOState
 utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
-genesisDelegations :: Map VKeyGenesis VKey
-genesisDelegations = Map.fromList [ (gerolamoVKG, vKey gerolamoCold)
-                                  , (lodovicoVKG, vKey lodovicoCold)
-                                  , (nicoloVKG,   vKey nicoloCold) ]
-
 dsEx1 :: DState
-dsEx1 = emptyDState { _dms = Dms genesisDelegations }
+dsEx1 = emptyDState { _dms = Dms dms }
 
 psEx1 :: PState
-psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems genesisDelegations)) }
+psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems dms)) }
   where f vk = (hashKey vk, 0)
 
 lsEx1 :: LedgerState
@@ -306,7 +281,7 @@ initStEx1 =
       esEx1
       Nothing
       (PoolDistr Map.empty)
-      (Map.singleton (Slot 1) (Just gerolamoVKG))
+      (Map.singleton (Slot 1) (Just $ coreNodeVKG 0))
       -- The overlay schedule has one entry, setting Gerolamo to slot 1.
   , Nonce 0
   , Nonce 0
@@ -320,9 +295,7 @@ zero = unsafeMkUnitInterval 0
 blockEx1 :: Block
 blockEx1 = mkBlock
              Nothing
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             (coreNodeKeys 0)
              []
              (Slot 1)
              (Nonce 0)
@@ -341,7 +314,7 @@ expectedStEx1 =
       esEx1
       Nothing
       (PoolDistr Map.empty)
-      (Map.singleton (Slot 1) (Just gerolamoVKG))
+      (Map.singleton (Slot 1) (Just $ coreNodeVKG 0))
   , Nonce 0 ⭒ Nonce 1
   , Nonce 0 ⭒ Nonce 1
   , Just (bhHash (bheader blockEx1))
@@ -361,7 +334,7 @@ utxoEx2 = genesisCoins
        , TxOut bobAddr bobInitCoin]
 
 ppupEx2 :: PPUpdate
-ppupEx2 = PPUpdate $ Map.singleton gerolamoVKG (Set.singleton (PoolDeposit 255))
+ppupEx2 = PPUpdate $ Map.singleton (coreNodeVKG 0) (Set.singleton (PoolDeposit 255))
 
 updateEx2 :: Update
 updateEx2 = Update ppupEx2 (AVUpdate Map.empty)
@@ -384,7 +357,7 @@ txEx2 = Tx
           txbodyEx2
           (makeWitnessesVKey
             txbodyEx2
-            [alicePay, aliceStake, bobStake, aliceOperator, gerolamoCold])
+            [alicePay, aliceStake, bobStake, cold alicePool, cold $ coreNodeKeys 0])
           Map.empty
 
 utxostEx2 :: UTxOState
@@ -408,7 +381,7 @@ esEx2 = EpochState acntEx2 emptySnapShots lsEx2 ppsEx1
 overlayEx2 :: Map Slot (Maybe VKeyGenesis)
 overlayEx2 = overlaySchedule
                     (Epoch 0)
-                    (Map.keysSet genesisDelegations)
+                    (Map.keysSet dms)
                     NeutralSeed
                     ppsEx1
 
@@ -432,9 +405,7 @@ initStEx2 =
 blockEx2 :: Block
 blockEx2 = mkBlock
              Nothing
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             (coreNodeKeys 4)
              [txEx2]
              (Slot 10)
              (Nonce 0)
@@ -454,9 +425,9 @@ dsEx2 = dsEx1
 
 psEx2 :: PState
 psEx2 = psEx1
-          { _stPools = StakePools $ Map.singleton aliceOperatorHK (Slot 10)
-          , _pParams = Map.singleton aliceOperatorHK alicePoolParams
-          , _cCounters = Map.insert aliceOperatorHK 0 (_cCounters psEx1)
+          { _stPools = StakePools $ Map.singleton (hk alicePool) (Slot 10)
+          , _pParams = Map.singleton (hk alicePool) alicePoolParams
+          , _cCounters = Map.insert (hk alicePool) 0 (_cCounters psEx1)
           }
 
 updateStEx2 :: ( PPUpdate
@@ -514,8 +485,8 @@ txbodyEx3 :: TxBody
 txbodyEx3 = TxBody
            (Set.fromList [TxIn (txid txbodyEx2) 0])
            [TxOut aliceAddr (Coin 9729)]
-           (fromList [ Delegate $ Delegation aliceSHK aliceOperatorHK
-           , Delegate $ Delegation bobSHK aliceOperatorHK
+           (fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
+           , Delegate $ Delegation bobSHK (hk alicePool)
            ])
            Map.empty
            (Coin 4)
@@ -525,15 +496,13 @@ txbodyEx3 = TxBody
 txEx3 :: Tx
 txEx3 = Tx
           txbodyEx3
-          (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake, bobStake, gerolamoCold])
+          (makeWitnessesVKey txbodyEx3 [alicePay, aliceStake, bobStake, cold $ coreNodeKeys 0])
           Map.empty
 
 blockEx3 :: Block
 blockEx3 = mkBlock
              blockEx2Hash
-             nicoloCold
-             nicoloVRF
-             nicoloHot
+             (coreNodeKeys 3)
              [txEx3]
              (Slot 90)
              (Nonce 0)
@@ -552,8 +521,8 @@ utxoEx3 = UTxO . Map.fromList $
 
 delegsEx3 :: Map Credential KeyHash
 delegsEx3 = Map.fromList
-              [ (aliceSHK, aliceOperatorHK)
-              , (bobSHK, aliceOperatorHK)
+              [ (aliceSHK, hk alicePool)
+              , (bobSHK, hk alicePool)
               ]
 
 dsEx3 :: DState
@@ -601,9 +570,7 @@ ex3 = CHAINExample (Slot 90) expectedStEx2 blockEx3 expectedStEx3
 blockEx4 :: Block
 blockEx4 = mkBlock
              blockEx3Hash
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             (coreNodeKeys 4)
              []
              (Slot 110)
              (Nonce 0)
@@ -614,7 +581,7 @@ blockEx4 = mkBlock
 epoch1OSchedEx4 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx4 = overlaySchedule
                     (Epoch 1)
-                    (Map.keysSet genesisDelegations)
+                    (Map.keysSet dms)
                     (Nonce 0 ⭒ Nonce 1)
                     ppsEx1
 
@@ -624,7 +591,7 @@ snapEx4 = ( Stake ( Map.fromList [(aliceSHK, Coin 9729), (bobSHK, bobInitCoin)])
 
 snapsEx4 :: SnapShots
 snapsEx4 = emptySnapShots { _pstakeMark = snapEx4
-                          , _poolsSS = Map.singleton aliceOperatorHK alicePoolParams
+                          , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
                           , _feeSS = Coin 271
                           }
 
@@ -670,9 +637,7 @@ ex4 = CHAINExample (Slot 110) expectedStEx3 blockEx4 expectedStEx4
 blockEx5 :: Block
 blockEx5 = mkBlock
              blockEx4Hash
-             nicoloCold
-             nicoloVRF
-             nicoloHot
+             (coreNodeKeys 3)
              []
              (Slot 190)
              (Nonce 0 ⭒ Nonce 1)
@@ -715,9 +680,7 @@ ex5 = CHAINExample (Slot 190) expectedStEx4 blockEx5 expectedStEx5
 blockEx6 :: Block
 blockEx6 = mkBlock
              blockEx5Hash
-             lodovicoCold
-             lodovicoVRF
-             lodovicoHot
+             (coreNodeKeys 3)
              []
              (Slot 220)
              (mkSeqNonce 3)
@@ -730,14 +693,14 @@ blockEx6 = mkBlock
 epoch1OSchedEx6 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx6 = overlaySchedule
                     (Epoch 2)
-                    (Map.keysSet genesisDelegations)
+                    (Map.keysSet dms)
                     (mkSeqNonce 3)
                     ppsEx1
 
 snapsEx6 :: SnapShots
 snapsEx6 = emptySnapShots { _pstakeMark = snapEx4
                           , _pstakeSet = snapEx4
-                          , _poolsSS = Map.singleton aliceOperatorHK alicePoolParams
+                          , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
                           , _feeSS = Coin 0
                           }
 
@@ -771,8 +734,8 @@ expectedStEx6 =
       Nothing
       (PoolDistr
         (Map.singleton
-           aliceOperatorHK
-           (1, hashKey (vKey aliceVRF))))
+           (hk alicePool)
+           (1, hashKey (vKey $ vrf alicePool))))
       epoch1OSchedEx6
   , mkSeqNonce 5
   , mkSeqNonce 5
@@ -791,9 +754,7 @@ ex6 = CHAINExample (Slot 220) expectedStEx5 blockEx6 expectedStEx6
 blockEx7 :: Block
 blockEx7 = mkBlock
              blockEx6Hash
-             aliceOperator
-             aliceVRF
-             aliceHot
+             alicePool
              []
              (Slot 295) -- odd slots open for decentralization in epoch1OSchedEx6
              (mkSeqNonce 3)
@@ -805,7 +766,7 @@ blockEx7Hash :: Maybe HashHeader
 blockEx7Hash = Just (bhHash (bheader blockEx7))
 
 pdEx7 :: PoolDistr
-pdEx7 = PoolDistr $ Map.singleton aliceOperatorHK (1, hashKey (vKey aliceVRF))
+pdEx7 = PoolDistr $ Map.singleton (hk alicePool) (1, hashKey $ vKey $ vrf alicePool)
 
 expectedStEx7 :: ChainState
 expectedStEx7 =
@@ -813,7 +774,7 @@ expectedStEx7 =
       (Epoch 2)
       (mkSeqNonce 3)
       (BlocksMade Map.empty)
-      (BlocksMade $ Map.singleton aliceOperatorHK 1)
+      (BlocksMade $ Map.singleton (hk alicePool) 1)
       (EpochState acntEx6 snapsEx6 expectedLSEx6 ppsEx1)
       (Just RewardUpdate { deltaT = Coin 0
                          , deltaR = Coin 0
@@ -839,9 +800,7 @@ ex7 = CHAINExample (Slot 295) expectedStEx6 blockEx7 expectedStEx7
 blockEx8 :: Block
 blockEx8 = mkBlock
              blockEx7Hash
-             gerolamoCold
-             gerolamoVRF
-             gerolamoHot
+             (coreNodeKeys 4)
              []
              (Slot 310)
              (mkSeqNonce 5)
@@ -855,7 +814,7 @@ blockEx8Hash = Just (bhHash (bheader blockEx8))
 epoch1OSchedEx8 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx8 = overlaySchedule
                     (Epoch 3)
-                    (Map.keysSet genesisDelegations)
+                    (Map.keysSet dms)
                     (mkSeqNonce 5)
                     ppsEx1
 
@@ -867,7 +826,7 @@ expectedStEx8 =
   ( NewEpochState
       (Epoch 3)
       (mkSeqNonce 5)
-      (BlocksMade $ Map.singleton aliceOperatorHK 1)
+      (BlocksMade $ Map.singleton (hk alicePool) 1)
       (BlocksMade Map.empty)
       (EpochState acntEx6 snapsEx8 expectedLSEx6 ppsEx1)
       Nothing
@@ -889,9 +848,7 @@ ex8 = CHAINExample (Slot 310) expectedStEx7 blockEx8 expectedStEx8
 blockEx9 :: Block
 blockEx9 = mkBlock
              blockEx8Hash
-             nicoloCold
-             nicoloVRF
-             nicoloHot
+             (coreNodeKeys 3)
              []
              (Slot 390)
              (mkSeqNonce 5)
@@ -911,7 +868,7 @@ expectedStEx9 =
   ( NewEpochState
       (Epoch 3)
       (mkSeqNonce 5)
-      (BlocksMade $ Map.singleton aliceOperatorHK 1)
+      (BlocksMade $ Map.singleton (hk alicePool) 1)
       (BlocksMade Map.empty)
       (EpochState acntEx6 snapsEx8 expectedLSEx6 ppsEx1)
       (Just RewardUpdate { deltaT = Coin 8637405315535
@@ -937,9 +894,7 @@ ex9 = CHAINExample (Slot 390) expectedStEx8 blockEx9 expectedStEx9
 blockEx10 :: Block
 blockEx10 = mkBlock
               blockEx9Hash
-              gerolamoCold
-              gerolamoVRF
-              gerolamoHot
+              (coreNodeKeys 4)
               []
               (Slot 410)
               (mkSeqNonce 7)
@@ -953,7 +908,7 @@ blockEx10Hash = Just (bhHash (bheader blockEx10))
 epoch1OSchedEx10 :: Map Slot (Maybe VKeyGenesis)
 epoch1OSchedEx10 = overlaySchedule
                      (Epoch 4)
-                     (Map.keysSet genesisDelegations)
+                     (Map.keysSet dms)
                      (mkSeqNonce 7)
                      ppsEx1
 
