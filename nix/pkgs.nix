@@ -68,6 +68,11 @@ let
           '';
         };
       }
+      {
+        packages = {
+          cardano-ledger.src = pkgs.lib.cleanSource ../cardano-ledger;
+        };
+      }
     ];
   };
 in
