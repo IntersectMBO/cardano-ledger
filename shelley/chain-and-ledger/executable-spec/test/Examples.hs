@@ -120,8 +120,11 @@ mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
     (skCold, vkCold) = mkKeyPair (w, 0, 0, 0, 1)
     (skVrf, vkVrf) = mkKeyPair (w, 0, 0, 0, 2)
 
+numCoreNodes :: Word64
+numCoreNodes = 7
+
 coreNodes :: [(VKeyGenesis, AllPoolKeys)]
-coreNodes = [(mkVKGen (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..107]]
+coreNodes = [(mkVKGen (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..100+numCoreNodes]]
 
 coreNodeVKG :: Int -> VKeyGenesis
 coreNodeVKG = fst . (coreNodes !!)
@@ -130,7 +133,7 @@ coreNodeKeys :: Int -> AllPoolKeys
 coreNodeKeys = snd . (coreNodes !!)
 
 dms :: Map VKeyGenesis VKey
-dms = Map.fromList [ (coreNodeVKG n, vKey $ cold $ coreNodeKeys n) | n <- [0..6]]
+dms = Map.fromList [ (gkey, vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
 
 alicePay :: KeyPair
 alicePay = KeyPair vk sk

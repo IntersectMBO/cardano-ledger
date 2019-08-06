@@ -49,8 +49,9 @@ votedValuePParams
   -> Maybe PParams
 votedValuePParams (PPUpdate ppup) pps =
   let
+    incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
     votes = Map.foldr
-              (\vote tally -> Map.insert vote (Map.findWithDefault 0 vote tally + 1) tally)
+              (\vote tally -> Map.insert vote (incrTally vote tally) tally)
               (Map.empty :: Map (Set Ppm) Int)
               ppup
     consensus = Map.filter (>= 5) votes
