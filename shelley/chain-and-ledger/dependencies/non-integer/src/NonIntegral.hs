@@ -181,7 +181,7 @@ taylorExp maxN n x lastX acc divisor
   | otherwise = taylorExp maxN (n + 1) x nextX (acc + nextX) (divisor + 1)
   where nextX = (lastX * x) / divisor
 
-taylorExpCmp :: (RealFrac a, Show a) => a -> a -> a -> CompareResult a
+taylorExpCmp :: (RealFrac a) => a -> a -> a -> CompareResult a
 taylorExpCmp boundX cmp x = go 1000 0 x 1 1
   where
     go maxN n err acc divisor
