@@ -54,7 +54,7 @@ instance
   data PredicateFailure (OVERLAY hashAlgo dsignAlgo kesAlgo)
     = NotPraosLeaderOVERLAY
     | NotActiveSlotOVERLAY
-    | WrongGenesisColdKeyOVERLAY
+    | WrongGenesisColdKeyOVERLAY (VKey dsignAlgo) (VKey dsignAlgo)
     | NoGenesisStakingOVERLAY
     | OcertFailure (PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo))
     deriving (Show, Eq)
@@ -89,7 +89,7 @@ overlayTransition = do
           let dmsKey' = Map.lookup gkey dms
           case dmsKey' of
             Nothing     -> failBecause NoGenesisStakingOVERLAY
-            Just dmsKey -> vk == dmsKey ?! WrongGenesisColdKeyOVERLAY
+            Just dmsKey -> vk == dmsKey ?! WrongGenesisColdKeyOVERLAY vk dmsKey
       cs' <- trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
       pure cs'
 

@@ -8,8 +8,8 @@ import qualified Data.Map.Strict as Map (empty, singleton)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
-import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex10, ex2,
-                     ex3, ex4, ex5, ex6, ex7, ex8, ex9)
+import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2A, ex2B,
+                     ex2C, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex3A, ex3B, ex3C)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
@@ -53,47 +53,59 @@ testCHAINExample (CHAINExample slotNow initSt block expectedSt) =
 testCHAINExample1 :: Assertion
 testCHAINExample1 = testCHAINExample ex1
 
-testCHAINExample2 :: Assertion
-testCHAINExample2 = testCHAINExample ex2
+testCHAINExample2A :: Assertion
+testCHAINExample2A = testCHAINExample ex2A
 
-testCHAINExample3 :: Assertion
-testCHAINExample3 = testCHAINExample ex3
+testCHAINExample2B :: Assertion
+testCHAINExample2B = testCHAINExample ex2B
 
-testCHAINExample4 :: Assertion
-testCHAINExample4 = testCHAINExample ex4
+testCHAINExample2C :: Assertion
+testCHAINExample2C = testCHAINExample ex2C
 
-testCHAINExample5 :: Assertion
-testCHAINExample5 = testCHAINExample ex5
+testCHAINExample2D :: Assertion
+testCHAINExample2D = testCHAINExample ex2D
 
-testCHAINExample6 :: Assertion
-testCHAINExample6 = testCHAINExample ex6
+testCHAINExample2E :: Assertion
+testCHAINExample2E = testCHAINExample ex2E
 
-testCHAINExample7 :: Assertion
-testCHAINExample7 = testCHAINExample ex7
+testCHAINExample2F :: Assertion
+testCHAINExample2F = testCHAINExample ex2F
 
-testCHAINExample8 :: Assertion
-testCHAINExample8 = testCHAINExample ex8
+testCHAINExample2G :: Assertion
+testCHAINExample2G = testCHAINExample ex2G
 
-testCHAINExample9 :: Assertion
-testCHAINExample9 = testCHAINExample ex9
+testCHAINExample2H :: Assertion
+testCHAINExample2H = testCHAINExample ex2H
 
-testCHAINExample10 :: Assertion
-testCHAINExample10 = testCHAINExample ex10
+testCHAINExample2I :: Assertion
+testCHAINExample2I = testCHAINExample ex2I
+
+testCHAINExample3A :: Assertion
+testCHAINExample3A = testCHAINExample ex3A
+
+testCHAINExample3B :: Assertion
+testCHAINExample3B = testCHAINExample ex3B
+
+testCHAINExample3C :: Assertion
+testCHAINExample3C = testCHAINExample ex3C
 
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
   [ testCase "update nonce early in the epoch" testUPNEarly
   , testCase "update nonce late in the epoch" testUPNLate
   , testCase "CHAIN example 1 - empty block" testCHAINExample1
-  , testCase "CHAIN example 2 - register stake key" testCHAINExample2
-  , testCase "CHAIN example 3 - delegate stake and create reward update" testCHAINExample3
-  , testCase "CHAIN example 4 - new epoch changes" testCHAINExample4
-  , testCase "CHAIN example 5 - second reward update" testCHAINExample5
-  , testCase "CHAIN example 6 - nonempty pool distr" testCHAINExample6
-  , testCase "CHAIN example 7 - decentralized block" testCHAINExample7
-  , testCase "CHAIN example 8 - prelude to the first nontrivial rewards" testCHAINExample8
-  , testCase "CHAIN example 9 - create a nontrivial rewards" testCHAINExample9
-  , testCase "CHAIN example 10 - apply a nontrivial rewards" testCHAINExample10
+  , testCase "CHAIN example 2A - register stake key" testCHAINExample2A
+  , testCase "CHAIN example 2B - delegate stake and create reward update" testCHAINExample2B
+  , testCase "CHAIN example 2C - new epoch changes" testCHAINExample2C
+  , testCase "CHAIN example 2D - second reward update" testCHAINExample2D
+  , testCase "CHAIN example 2E - nonempty pool distr" testCHAINExample2E
+  , testCase "CHAIN example 2F - decentralized block" testCHAINExample2F
+  , testCase "CHAIN example 2G - prelude to the first nontrivial rewards" testCHAINExample2G
+  , testCase "CHAIN example 2H - create a nontrivial rewards" testCHAINExample2H
+  , testCase "CHAIN example 2I - apply a nontrivial rewards" testCHAINExample2I
+  , testCase "CHAIN example 3A - get 3/7 votes for a pparam update" testCHAINExample3A
+  , testCase "CHAIN example 3B - get 5/7 votes for a pparam update" testCHAINExample3B
+  , testCase "CHAIN example 3C - processes a pparam update" testCHAINExample3C
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
   , testCase "Everybody signs in multi-sig" testEverybodySigns
