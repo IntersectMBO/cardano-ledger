@@ -34,6 +34,7 @@
         "delegation-test" = {
           depends = [
             (hsPkgs.base)
+            (hsPkgs.bytestring)
             (hsPkgs.cryptonite)
             (hsPkgs.tasty)
             (hsPkgs.tasty-hunit)
