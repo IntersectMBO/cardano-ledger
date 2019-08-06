@@ -236,7 +236,7 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       \\
       \var{fav}=\Nothing
       \\
-      \var{cur}\leteq\{\var{s}\mapsto\var{v}\in\var{favs} ~\mid~ s\geq\var{slot}\}
+      \var{cur}\leteq\{\var{sl}\mapsto\var{v}\in\var{favs} ~\mid~ \var{sl}\geq\var{slot}\}
       \\
       \var{avs'}\leteq\fun{newAVs}~\var{avs}~\var{cur}
     }
@@ -257,7 +257,7 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       \left(
       \begin{array}{l}
         \varUpdate{\var{aup'}}\\
-        \varUpdate{\var{favs}\setminus\var{cur}}\\
+        \varUpdate{\var{cur}}\\
         \varUpdate{\var{avs'}}\\
       \end{array}
       \right)
@@ -302,8 +302,7 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       \left(
       \begin{array}{l}
         \varUpdate{\emptyset}\\
-        \varUpdate{(\var{favs}\setminus\var{cur})
-          \unionoverrideRight\{\var{s}\mapsto\var{fav}\}}\\
+        \varUpdate{\var{cur}\unionoverrideRight\{\var{s}\mapsto\var{fav}\}}\\
         \varUpdate{\var{avs'}}\\
       \end{array}
       \right)
