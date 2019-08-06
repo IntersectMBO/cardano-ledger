@@ -121,6 +121,10 @@ then calls the $\mathsf{DELEGS}$ transition.
 
 The transition system $\mathsf{LEDGER}$ in Figure~\ref{fig:rules:ledger} is iterated
 in $\mathsf{LEDGERS}$ in order to process a list of transactions.
+The base case also adopts new application versions at the appropriate times
+and cleans up the future application versions mapping.
+Note that it is better to handle this logic here than in the $\mathsf{AVUP}$ transiton,
+because here it will happen even if the block contains no transactions.
 
 \begin{figure}[htb]
   \emph{Ledger Sequence transitions}
@@ -129,7 +133,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transactions.
     \var{\_} \trans{ledgers}{\_} \var{\_}
     \subseteq \powerset ((\Slot\times\PParams) \times \LState \times \seqof{\Tx} \times \LState)
   \end{equation*}
-  \caption{Ledger transition-system types}
+  \caption{Ledger Sequence transition-system types}
   \label{fig:ts-types:ledgers}
 \end{figure}
 
@@ -137,7 +141,21 @@ in $\mathsf{LEDGERS}$ in order to process a list of transactions.
   \begin{equation}
     \label{eq:ledgers-base}
     \inference[Seq-ledger-base]
-    {}
+    {
+      ((\var{utxo},~\var{deposits},~\var{fees},~\var{us}),~\var{dp})\leteq\var{ls}
+      \\
+      (\var{pup},~\var{aup},~\var{favs},~\var{avs}) \leteq\var{us}
+      \\~\\
+      {\begin{array}{r@{~\leteq~}l}
+        \var{favs'} & \{\var{s}\mapsto\var{v}\in\var{favs} ~\mid~ s>\var{slot}\}
+        \\
+        \var{avs'} & \fun{newAVs}~\var{avs}~(\var{favs}\setminus\var{favs'})
+      \end{array}}
+      \\~\\
+      \var{us'}\leteq(\var{pup},~\var{aup},~\var{favs'},~\var{avs'})
+      \\
+      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~\var{dp})
+    }
     {
       \left(
         \begin{array}{r}
@@ -145,7 +163,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transactions.
           \var{pp}\\
         \end{array}
       \right)
-      \vdash \var{ls} \trans{ledgers}{\epsilon} \var{ls}
+      \vdash \var{ls} \trans{ledgers}{\epsilon} \varUpdate{\var{ls'}}
     }
   \end{equation}
 

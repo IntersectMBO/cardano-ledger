@@ -9,7 +9,7 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2A, ex2B,
-                     ex2C, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex3A, ex3B, ex3C)
+                     ex2C, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
@@ -89,6 +89,15 @@ testCHAINExample3B = testCHAINExample ex3B
 testCHAINExample3C :: Assertion
 testCHAINExample3C = testCHAINExample ex3C
 
+testCHAINExample4A :: Assertion
+testCHAINExample4A = testCHAINExample ex4A
+
+testCHAINExample4B :: Assertion
+testCHAINExample4B = testCHAINExample ex4B
+
+testCHAINExample4C :: Assertion
+testCHAINExample4C = testCHAINExample ex4C
+
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
   [ testCase "update nonce early in the epoch" testUPNEarly
@@ -106,6 +115,9 @@ stsTests = testGroup "STS Tests"
   , testCase "CHAIN example 3A - get 3/7 votes for a pparam update" testCHAINExample3A
   , testCase "CHAIN example 3B - get 5/7 votes for a pparam update" testCHAINExample3B
   , testCase "CHAIN example 3C - processes a pparam update" testCHAINExample3C
+  , testCase "CHAIN example 4A - get 3/7 votes for a version update" testCHAINExample4A
+  , testCase "CHAIN example 4B - create a future app version" testCHAINExample4B
+  , testCase "CHAIN example 4C - adopt a future app version" testCHAINExample4C
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
   , testCase "Everybody signs in multi-sig" testEverybodySigns
