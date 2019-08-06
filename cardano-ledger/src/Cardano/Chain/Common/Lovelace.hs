@@ -50,7 +50,6 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.Aeson as Aeson (FromJSON(..), ToJSON(..))
 import Data.Data (Data)
 import Formatting (Format, bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
@@ -97,14 +96,6 @@ instance Monad m => Canonical.ToJSON m Lovelace where
 
 instance Canonical.ReportSchemaErrors m => Canonical.FromJSON m Lovelace where
   fromJSON = fmap Lovelace . Canonical.fromJSON
-
-instance Aeson.FromJSON Lovelace where
-  parseJSON v = do
-    c <- Aeson.parseJSON v
-    toAesonError $ mkLovelace c
-
-instance Aeson.ToJSON Lovelace where
-  toJSON = Aeson.toJSON . unsafeGetLovelace
 
 data LovelaceError
   = LovelaceOverflow Word64

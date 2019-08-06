@@ -19,7 +19,6 @@ import Cardano.Prelude
 import qualified Prelude
 
 import Control.Monad.Except (MonadError)
-import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)
 import qualified Formatting.Buildable as B (Buildable(..))
@@ -72,4 +71,3 @@ checkSoftwareVersion sv =
   checkApplicationName (svAppName sv)
     `wrapError` SoftwareVersionApplicationNameError
 
-deriveJSON defaultOptions ''SoftwareVersion

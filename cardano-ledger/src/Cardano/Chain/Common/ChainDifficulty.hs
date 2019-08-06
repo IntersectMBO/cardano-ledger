@@ -11,17 +11,17 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Formatting.Buildable (Buildable)
 
 import Cardano.Binary
   (Dropper, FromCBOR(..), ToCBOR(..), dropWord64, encodeListLen, enforceSize)
 
+
 -- | Chain difficulty represents necessary effort to generate a
 -- chain. In the simplest case it can be number of blocks in chain.
 newtype ChainDifficulty = ChainDifficulty
   { unChainDifficulty :: Word64
-  } deriving ( Show, Eq, Ord, Enum, Generic, Buildable, NFData)
+  } deriving (Show, Eq, Ord, Enum, Generic, Buildable, NFData)
 
 instance ToCBOR ChainDifficulty where
     toCBOR cd = encodeListLen 1 <> toCBOR (unChainDifficulty cd)
@@ -36,4 +36,3 @@ dropChainDifficulty = do
   enforceSize "ChainDifficulty" 1
   dropWord64
 
-deriveJSON defaultOptions ''ChainDifficulty

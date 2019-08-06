@@ -12,7 +12,6 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.Aeson as Aeson
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Chain.Common (Lovelace)
@@ -32,5 +31,3 @@ instance Monad m => ToJSON m GenesisAvvmBalances where
 instance MonadError SchemaError m => FromJSON m GenesisAvvmBalances where
     fromJSON = fmap GenesisAvvmBalances . fromJSON
 
-deriving instance Aeson.ToJSON GenesisAvvmBalances
-deriving instance Aeson.FromJSON GenesisAvvmBalances

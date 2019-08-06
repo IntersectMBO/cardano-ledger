@@ -18,21 +18,7 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson
-  ( FromJSON(..)
-  , FromJSONKey(..)
-  , FromJSONKeyFunction(..)
-  , ToJSON(toJSON)
-  , ToJSONKey(..)
-  , object
-  , withObject
-  , (.:)
-  , (.=)
-  )
-import Data.Aeson.TH (defaultOptions, deriveJSON)
-import Data.Aeson.Types (toJSONKeyText)
-import qualified Data.Text as T
-import Formatting (Format, bprint, build, builder, int, sformat)
+import Formatting (Format, bprint, build, builder, int)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
@@ -49,13 +35,10 @@ import Cardano.Chain.Common.CBOR
 import Cardano.Chain.Common
   ( Address(..)
   , Lovelace
-  , fromCBORTextAddress
-  , integerToLovelace
   , lovelaceF
-  , lovelaceToInteger
   )
 import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
-import Cardano.Crypto (Hash, decodeAbstractHash, hash, hashHexF, shortHashF)
+import Cardano.Crypto (Hash, hash, shortHashF)
 
 
 --------------------------------------------------------------------------------
@@ -144,18 +127,6 @@ data TxIn
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass NFData
 
-instance FromJSON TxIn where
-  parseJSON v = toAesonError =<< txInFromText <$> parseJSON v
-
-instance ToJSON TxIn where
-  toJSON = toJSON . txInToText
-
-instance FromJSONKey TxIn where
-  fromJSONKey = FromJSONKeyTextParser (toAesonError . txInFromText)
-
-instance ToJSONKey TxIn where
-  toJSONKey = toJSONKeyText txInToText
-
 instance B.Buildable TxIn where
   build (TxInUtxo txInHash txInIndex) =
     bprint ("TxInUtxo " . shortHashF . " #" . int) txInHash txInIndex
@@ -179,16 +150,6 @@ instance FromCBOR TxIn where
 instance HeapWords TxIn where
   heapWords (TxInUtxo txid w32) = heapWords2 txid w32
 
-txInFromText :: Text -> Either Text TxIn
-txInFromText t = case T.splitOn "_" t of
-  ["TxInUtxo", h, idx] ->
-    TxInUtxo <$> decodeAbstractHash h <*> first toS (readEither (toS idx))
-  _ -> Left $ "Invalid TxIn " <> t
-
-txInToText :: TxIn -> Text
-txInToText (TxInUtxo txInHash txInIndex) =
-  sformat ("TxInUtxo_" . hashHexF . "_" . int) txInHash txInIndex
-
 
 --------------------------------------------------------------------------------
 -- TxOut
@@ -200,18 +161,6 @@ data TxOut = TxOut
   , txOutValue   :: !Lovelace
   } deriving (Eq, Ord, Generic, Show)
     deriving anyclass NFData
-
-instance FromJSON TxOut where
-  parseJSON = withObject "TxOut" $ \o ->
-    TxOut
-      <$> (toAesonError . fromCBORTextAddress =<< o .: "address")
-      <*> (toAesonError . integerToLovelace =<< o .: "lovelace")
-
-instance ToJSON TxOut where
-  toJSON txOut = object
-    [ "lovelace" .= lovelaceToInteger (txOutValue txOut)
-    , "address" .= sformat build (txOutAddress txOut)
-    ]
 
 instance B.Buildable TxOut where
   build txOut = bprint
@@ -234,4 +183,3 @@ instance FromCBOR TxOut where
 instance HeapWords TxOut where
   heapWords (TxOut address _) = 3 + heapWords address
 
-deriveJSON defaultOptions ''Tx

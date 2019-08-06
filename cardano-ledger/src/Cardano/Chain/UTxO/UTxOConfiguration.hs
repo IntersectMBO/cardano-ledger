@@ -7,9 +7,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson (FromJSON(..), ToJSON(..), genericParseJSON, genericToJSON)
-import Data.Aeson.Options (defaultOptions)
-
 import Cardano.Chain.Common.Address (Address)
 
 -- | Delegation configruation part.
@@ -23,8 +20,3 @@ data UTxOConfiguration = UTxOConfiguration
   , tcAssetLockedSrcAddrs :: !(Set Address)
   } deriving (Eq,Show,Generic)
 
-instance ToJSON UTxOConfiguration where
-  toJSON = genericToJSON defaultOptions
-
-instance FromJSON UTxOConfiguration where
-  parseJSON = genericParseJSON defaultOptions

@@ -20,7 +20,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson (FromJSON, ToJSON)
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
@@ -78,5 +77,3 @@ instance FromCBOR (ATxAux ByteSpan) where
     enforceSize "TxAux" 2
     ATxAux <$> fromCBORAnnotated <*> fromCBORAnnotated
 
-instance ToJSON (ATxAux ()) where
-instance FromJSON (ATxAux ()) where

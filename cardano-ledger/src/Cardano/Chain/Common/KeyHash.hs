@@ -14,7 +14,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import Data.Aeson (FromJSONKey, ToJSONKey)
 import Formatting (formatToString)
 import Formatting.Buildable (Buildable)
 import Text.JSON.Canonical
@@ -34,8 +33,6 @@ newtype KeyHash = KeyHash
              , Show
              , NFData
              , Buildable
-             , FromJSONKey
-             , ToJSONKey
              , FromCBOR
              , ToCBOR
              , HeapWords

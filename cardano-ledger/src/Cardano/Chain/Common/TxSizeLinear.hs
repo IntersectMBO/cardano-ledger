@@ -14,8 +14,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson (object, (.=))
-import qualified Data.Aeson as Aeson
 import Data.Fixed (Nano)
 import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
@@ -66,13 +64,6 @@ instance FromCBOR TxSizeLinear where
     wrapLovelaceError :: Either LovelaceError Lovelace -> Decoder s Lovelace
     wrapLovelaceError =
       toCborError . first (DecoderErrorCustom "TxSizeLinear" . sformat build)
-
-instance Aeson.ToJSON TxSizeLinear where
-  toJSON (TxSizeLinear a b) = object ["a" .= a, "b" .= b]
-
-instance Aeson.FromJSON TxSizeLinear where
-  parseJSON = Aeson.withObject "TxSizeLinear"
-      $ \o -> TxSizeLinear <$> (o Aeson..: "a") <*> (o Aeson..: "b")
 
 calculateTxSizeLinear
   :: TxSizeLinear -> Natural -> Either LovelaceError Lovelace

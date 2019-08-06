@@ -11,8 +11,6 @@ where
 import Cardano.Prelude
 
 import Cardano.Chain.Common (Lovelace, LovelacePortion)
-import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
 
 -- | Options determining generated genesis stakes, balances, and delegation
 data GenesisInitializer = GenesisInitializer
@@ -53,6 +51,3 @@ data FakeAvvmOptions = FakeAvvmOptions
   , faoOneBalance :: !Lovelace
   } deriving (Eq, Show, Generic)
 
-deriveJSON defaultOptions ''GenesisInitializer
-deriveJSON defaultOptions ''TestnetBalanceOptions
-deriveJSON defaultOptions ''FakeAvvmOptions

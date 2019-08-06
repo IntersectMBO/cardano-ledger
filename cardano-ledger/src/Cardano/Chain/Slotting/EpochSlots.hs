@@ -11,7 +11,6 @@ where
 
 import Cardano.Prelude
 
-import Data.Aeson (ToJSON(..), FromJSON(..))
 import Data.Data (Data)
 import Formatting.Buildable (Buildable)
 
@@ -27,9 +26,6 @@ instance ToCBOR EpochSlots where
 
 instance FromCBOR EpochSlots where
   fromCBOR = EpochSlots <$> fromCBOR
-
-deriving instance ToJSON EpochSlots
-deriving instance FromJSON EpochSlots
 
 -- | Data with an accompanying slots per epoch context.
 data WithEpochSlots a = WithEpochSlots

@@ -16,8 +16,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
-import qualified Data.Aeson.Options as S (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..), fromJSField, mkObject)
@@ -76,4 +74,3 @@ instance MonadError SchemaError m => FromJSON m SoftforkRule where
       <*> fromJSField obj "minThd"
       <*> fromJSField obj "thdDecrement"
 
-deriveJSON S.defaultOptions ''SoftforkRule
