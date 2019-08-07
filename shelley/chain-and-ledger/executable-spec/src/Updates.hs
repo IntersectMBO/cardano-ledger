@@ -8,7 +8,7 @@ module Updates
   , updatePPup
   , ApName(..)
   , ApVer(..)
-  , Metadata
+  , Metadata(..)
   , Applications(..)
   , AVUpdate(..)
   , Update(..)
@@ -32,7 +32,7 @@ import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           BaseTypes (Seed, UnitInterval)
 import           Coin (Coin)
 import           Keys (DSIGNAlgorithm, Dms, VKeyGenesis)
-import           PParams (PParams(..))
+import           PParams (PParams (..))
 import           Slot (Epoch, Slot)
 
 import           Numeric.Natural (Natural)

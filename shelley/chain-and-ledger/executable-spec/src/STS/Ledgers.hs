@@ -13,6 +13,7 @@ where
 
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
+import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 
 import           Keys
@@ -20,6 +21,7 @@ import           LedgerState
 import           PParams
 import           Slot
 import           Tx
+import           Updates (newAVs)
 
 import           Control.State.Transition
 
@@ -62,7 +64,12 @@ ledgersTransition = do
         )
         (u, dw)
       $ zip [0 ..] $ toList txwits
-  pure $ LedgerState u'' dw'' (_txSlotIx ls)
+
+  let UTxOState utxo' dep fee (ppup, aup, favs, avs) = u''
+  let (favs', ready) = Map.partitionWithKey (\s _ -> s > slot) favs
+  let avs' = newAVs avs ready
+  let u''' = UTxOState utxo' dep fee (ppup, aup, favs', avs')
+  pure $ LedgerState u''' dw'' (_txSlotIx ls)
 
 instance
   ( HashAlgorithm hashAlgo

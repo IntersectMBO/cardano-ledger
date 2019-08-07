@@ -112,6 +112,7 @@ test-suite delegation-test
         -Werror
     build-depends:
       base,
+      bytestring,
       cryptonite,
       tasty,
       tasty-hunit,
