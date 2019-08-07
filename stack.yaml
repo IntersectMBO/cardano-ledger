@@ -29,7 +29,7 @@ extra-deps:
       - binary/test
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 2f68ce26c684b16dc4fb6f08d3e44cf981d502bb
+    commit: 69dc593dc30a4df954930f95a515239f7e8abad7
     subdirs:
       - byron/semantics/executable-spec
       - byron/ledger/executable-spec
@@ -40,12 +40,12 @@ extra-deps:
 
   # Following deps are for cardano-shell
   - git: https://github.com/input-output-hk/cardano-shell
-    commit: 455c006e5d1a0c1cf3d31777df24752afcbaab10
+    commit: e5e9f9527569c6221717c6834a386559ec3fed29
 
   - time-units-1.0.0
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: bd31cd2f3922010ddb76bb869f29c4e63bb8001b
+    commit: 0dae43937d2858b437bfc93f7952ba93b88607e6
     subdirs:
       - contra-tracer
       - iohk-monitoring
