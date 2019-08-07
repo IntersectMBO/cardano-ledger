@@ -47,7 +47,7 @@ import Cardano.Chain.Genesis
   , TestnetBalanceOptions(..)
   , gsSigningKeys
   , gsSigningKeysPoor
-  , mkConfig
+  , generateGenesisConfig
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting (EpochNumber(..), EpochSlots, SlotCount)
@@ -61,7 +61,7 @@ dummyConfig           :: Config
 dummyGeneratedSecrets :: GeneratedSecrets
 (dummyConfig, dummyGeneratedSecrets) =
     either (panic . show) identity $
-      mkConfig startTime dummyGenesisSpec
+      generateGenesisConfig startTime dummyGenesisSpec
   where
     startTime = UTCTime (ModifiedJulianDay 0) 0
 

@@ -19,7 +19,6 @@ module Cardano.Chain.Genesis.Config
   , configNonAvvmBalances
   , configProtocolParameters
   , configAvvmDistr
-  , mkConfig
   , mkConfigFromFile
   )
 where
@@ -27,7 +26,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
-import Data.Coerce (coerce)
 import Data.Time (UTCTime)
 import Formatting (build, bprint, string)
 import qualified Formatting.Buildable as B
@@ -39,9 +37,6 @@ import Cardano.Chain.Genesis.Data
   (GenesisData(..), GenesisDataError, readGenesisData)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
-import Cardano.Chain.Genesis.Generate
-  (GeneratedSecrets, GenesisDataGenerationError, generateGenesisData)
-import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
@@ -57,7 +52,6 @@ import Cardano.Crypto
   , ProtocolMagic
   , ProtocolMagicId(..)
   , RequiresNetworkMagic
-  , hash
   )
 
 
@@ -145,32 +139,11 @@ mkConfigFromFile rnm fp expectedHash = do
     , configUTxOConfiguration = defaultUTxOConfiguration --TODO: add further config plumbing
     }
 
-mkConfig
-  :: MonadError ConfigurationError m => UTCTime -> GenesisSpec -> m (Config, GeneratedSecrets)
-mkConfig startTime genesisSpec = do
-  (genesisData, generatedSecrets) <-
-    generateGenesisData startTime genesisSpec
-      `wrapError` ConfigurationGenerationError
-
-
-  let config = Config
-        { configGenesisData      = genesisData
-        , configGenesisHash      = genesisHash
-        , configReqNetMagic = getRequiresNetworkMagic (gsProtocolMagic genesisSpec)
-        , configUTxOConfiguration = defaultUTxOConfiguration
-        }
-  return (config, generatedSecrets)
-  where
-    -- Anything will do for the genesis hash. A hash of "patak" was used before,
-    -- and so it remains.
-        genesisHash = GenesisHash $ coerce $ hash @Text "patak"
-
 data ConfigurationError
   = ConfigurationGenesisDataError GenesisDataError
   -- ^ An error in constructing 'GenesisData'
   | GenesisHashMismatch GenesisHash (Hash Raw)
   -- ^ The GenesisData canonical JSON hash is different than expected
-  | ConfigurationGenerationError GenesisDataGenerationError
   | GenesisHashDecodeError Text
   -- ^ An error occured while decoding the genesis hash.
   deriving (Show)
@@ -190,11 +163,6 @@ instance B.Buildable ConfigurationError where
              )
              (show genesisHash)
              (show expectedHash)
-    ConfigurationGenerationError genesisDataGenerationError ->
-      bprint ("Configuration GenenerationError"
-             . build
-             )
-             genesisDataGenerationError
     GenesisHashDecodeError decodeErr ->
      bprint ("GenesisHashDecodeError: "
             . string

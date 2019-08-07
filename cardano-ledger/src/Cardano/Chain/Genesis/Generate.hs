@@ -14,6 +14,7 @@ module Cardano.Chain.Genesis.Generate
   , gsSigningKeysPoor
   , PoorSecret(..)
   , generateGenesisData
+  , generateGenesisConfig
   , GenesisDataGenerationError(..)
 
   -- * Helpers which are also used by keygen.
@@ -28,6 +29,7 @@ import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Data.Time (UTCTime)
+import Data.Coerce (coerce)
 import Formatting (build, bprint, int, stext)
 import qualified Formatting.Buildable as B
 
@@ -54,10 +56,13 @@ import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
 import Cardano.Chain.Genesis.Data (GenesisData(..))
 import Cardano.Chain.Genesis.Delegation
   (GenesisDelegation(..), GenesisDelegationError, mkGenesisDelegation)
+import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.Initializer
   (FakeAvvmOptions(..), GenesisInitializer(..), TestnetBalanceOptions(..))
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances(..))
 import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
+import Cardano.Chain.Genesis.Config (Config(..))
+import Cardano.Chain.UTxO.UTxOConfiguration (defaultUTxOConfiguration)
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes(..))
 import Cardano.Crypto
   ( EncryptedSigningKey
@@ -66,6 +71,8 @@ import Cardano.Crypto
   , emptyPassphrase
   , encToSigning
   , getProtocolMagicId
+  , getRequiresNetworkMagic
+  , hash
   , keyGen
   , noPassEncrypt
   , noPassSafeSigner
@@ -315,6 +322,33 @@ generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
   genPoorSecret = if tboUseHDAddresses tbo
     then PoorEncryptedSecret . snd <$> safeKeyGen emptyPassphrase
     else PoorSecret . snd <$> keyGen
+
+
+----------------------------------------------------------------------------
+-- Generating a Genesis Config
+----------------------------------------------------------------------------
+
+-- | Generate a genesis 'Config' from a 'GenesisSpec'. This is used only for
+-- tests. For the real node we always generate an external JSON genesis file.
+--
+generateGenesisConfig
+  :: MonadError GenesisDataGenerationError m
+  => UTCTime -> GenesisSpec -> m (Config, GeneratedSecrets)
+generateGenesisConfig startTime genesisSpec = do
+    (genesisData, generatedSecrets) <- generateGenesisData startTime genesisSpec
+
+    let config = Config
+          { configGenesisData       = genesisData
+          , configGenesisHash       = genesisHash
+          , configReqNetMagic       = getRequiresNetworkMagic
+                                        (gsProtocolMagic genesisSpec)
+          , configUTxOConfiguration = defaultUTxOConfiguration
+          }
+    return (config, generatedSecrets)
+  where
+    -- Anything will do for the genesis hash. A hash of "patak" was used before,
+    -- and so it remains. Here lies the last of the Serokell code. RIP.
+    genesisHash = GenesisHash $ coerce $ hash ("patak" :: Text)
 
 
 ----------------------------------------------------------------------------
