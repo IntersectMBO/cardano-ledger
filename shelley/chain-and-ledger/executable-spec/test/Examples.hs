@@ -747,10 +747,10 @@ expectedStEx2D =
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 168
+      (Just RewardUpdate { deltaT = Coin 20
                          , deltaR = Coin 0
                          , rs     = Map.empty
-                         , deltaF = Coin (-168)
+                         , deltaF = Coin (-20)
                          })
       (PoolDistr Map.empty)
       epoch1OSchedEx2C
@@ -790,15 +790,15 @@ snapsEx2E :: SnapShots
 snapsEx2E = emptySnapShots { _pstakeMark = snapEx2C
                           , _pstakeSet = snapEx2C
                           , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
-                          , _feeSS = Coin 0
+                          , _feeSS = Coin 13
                           }
 
 expectedLSEx2E :: LedgerState
 expectedLSEx2E = LedgerState
                (UTxOState
                  utxoEx2B
-                 (Coin 0)
-                 (Coin 0)
+                 (Coin 238)
+                 (Coin 13)
                  emptyUpdateState)
                (DPState dsEx2B psEx2A)
                0
@@ -808,7 +808,7 @@ blockEx2EHash = Just (bhHash (bheader blockEx2E))
 
 acntEx2E :: AccountState
 acntEx2E = AccountState
-            { _treasury = Coin 271
+            { _treasury = Coin 20
             , _reserves = Coin 45*1000*1000*1000*1000*1000
             }
 
@@ -865,10 +865,10 @@ expectedStEx2F =
       (BlocksMade Map.empty)
       (BlocksMade $ Map.singleton (hk alicePool) 1)
       (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 0
+      (Just RewardUpdate { deltaT = Coin 13
                          , deltaR = Coin 0
                          , rs     = Map.empty
-                         , deltaF = Coin 0
+                         , deltaF = Coin (-13)
                          })
       pdEx2F
       epoch1OSchedEx2E
@@ -908,7 +908,18 @@ epoch1OSchedEx2G = overlaySchedule
                     ppsEx1
 
 snapsEx2G :: SnapShots
-snapsEx2G = snapsEx2E { _pstakeGo = snapEx2C }
+snapsEx2G = snapsEx2E { _pstakeGo = snapEx2C
+                      , _feeSS = 10}
+
+expectedLSEx2G :: LedgerState
+expectedLSEx2G = LedgerState
+               (UTxOState
+                 utxoEx2B
+                 (Coin 228)
+                 (Coin 10)
+                 emptyUpdateState)
+               (DPState dsEx2B psEx2A)
+               0
 
 expectedStEx2G :: ChainState
 expectedStEx2G =
@@ -917,7 +928,7 @@ expectedStEx2G =
       (mkSeqNonce 5)
       (BlocksMade $ Map.singleton (hk alicePool) 1)
       (BlocksMade Map.empty)
-      (EpochState acntEx2E snapsEx2G expectedLSEx2E ppsEx1)
+      (EpochState (acntEx2E { _treasury = 33}) snapsEx2G expectedLSEx2G ppsEx1)
       Nothing
       pdEx2F
       epoch1OSchedEx2G
@@ -959,11 +970,11 @@ expectedStEx2H =
       (mkSeqNonce 5)
       (BlocksMade $ Map.singleton (hk alicePool) 1)
       (BlocksMade Map.empty)
-      (EpochState acntEx2E snapsEx2G expectedLSEx2E ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 8637405315535
+      (EpochState (acntEx2E { _treasury = Coin 33 }) snapsEx2G expectedLSEx2G ppsEx1)
+      (Just RewardUpdate { deltaT = Coin 8637405315545
                          , deltaR = Coin (-9450000000000)
                          , rs = rewardsEx2H
-                         , deltaF = Coin 0
+                         , deltaF = Coin (-10)
                          })
       pdEx2F
       epoch1OSchedEx2G
@@ -1003,7 +1014,7 @@ epoch1OSchedEx2I = overlaySchedule
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
-            { _treasury = Coin 8637405315806
+            { _treasury = Coin 8637405315578
             , _reserves = Coin 44990550000000000
             }
 
@@ -1014,8 +1025,8 @@ expectedLSEx2I :: LedgerState
 expectedLSEx2I = LedgerState
                (UTxOState
                  utxoEx2B
-                 (Coin 0)
-                 (Coin 0)
+                 (Coin 219)
+                 (Coin 9)
                  emptyUpdateState)
                (DPState dsEx2I psEx2A)
                0
@@ -1027,7 +1038,7 @@ expectedStEx2I =
       (mkSeqNonce 7)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx2I snapsEx2G expectedLSEx2I ppsEx1)
+      (EpochState acntEx2I (snapsEx2G { _feeSS = Coin 9 }) expectedLSEx2I ppsEx1)
       Nothing
       pdEx2F
       epoch1OSchedEx2I
