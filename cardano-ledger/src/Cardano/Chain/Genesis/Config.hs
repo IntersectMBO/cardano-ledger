@@ -1,7 +1,4 @@
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Genesis.Config
   ( Config(..)
@@ -27,8 +24,6 @@ import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
 import Data.Time (UTCTime)
-import Formatting (build, bprint, string)
-import qualified Formatting.Buildable as B
 
 import Cardano.Binary (Annotated(..), Raw)
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
@@ -152,23 +147,3 @@ data ConfigurationError
   -- ^ An error occured while decoding the genesis hash.
   deriving (Show)
 
-instance B.Buildable ConfigurationError where
-  build = \case
-    ConfigurationGenesisDataError genesisDataError ->
-      bprint ("Error in constructing GenesisData: "
-             . build
-             )
-             genesisDataError
-    GenesisHashMismatch genesisHash expectedHash ->
-      bprint ("GenesisData canonical JSON hash is different than expected. GenesisHash: "
-             . string
-             . " Expected hash: "
-             . string
-             )
-             (show genesisHash)
-             (show expectedHash)
-    GenesisHashDecodeError decodeErr ->
-     bprint ("GenesisHashDecodeError: "
-            . string
-            )
-            (toS decodeErr)
