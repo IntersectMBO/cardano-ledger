@@ -17,12 +17,12 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 8273fe5f00ac03b0c66ef3841c8e957139ee18f2
+  tag: 4c48d34fd60991bb1b9168d293cfe31a975d858e
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 8273fe5f00ac03b0c66ef3841c8e957139ee18f2
+  tag: 4c48d34fd60991bb1b9168d293cfe31a975d858e
   subdir: test
 
 source-repository-package
@@ -63,13 +63,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 0dae43937d2858b437bfc93f7952ba93b88607e6
+  tag: 38d601eb3dd20e8a27b7b7008aa90c70db911089
   subdir: contra-tracer
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 0dae43937d2858b437bfc93f7952ba93b88607e6
+  tag: 38d601eb3dd20e8a27b7b7008aa90c70db911089
   subdir: iohk-monitoring
 
 source-repository-package
