@@ -38,6 +38,8 @@ module Control.State.Transition.Generator
   , randomTraceOfSize
   , TraceLength (Maximum, Desired)
   , TraceProfile (TraceProfile, proportionOfValidSignals, proportionOfInvalidSignals, failures)
+  -- * Invalid trace generation
+  , invalidTrace
   -- * Trace classification
   , classifyTraceLength
   , classifySize
@@ -74,6 +76,7 @@ import           Hedgehog.Internal.Tree
 
 import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
                      State, TRC (TRC), applySTS)
+import qualified Control.State.Transition.Invalid.Trace as Invalid
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
                      lastState, mkTrace, traceLength, traceSignals, _traceEnv)
 
@@ -122,11 +125,11 @@ data TraceLength = Maximum Word64 | Desired Word64
 
 data TraceProfile sts
   = TraceProfile
-  { proportionOfValidSignals :: Int
+  { proportionOfValidSignals :: !Int
     -- ^ Proportion of valid signals to generate.
-  , proportionOfInvalidSignals :: Int
+  , proportionOfInvalidSignals :: !Int
     -- ^ Proportion of invalid signals to generate.
-  , failures :: [(Int, PredicateFailure sts)]
+  , failures :: ![(Int, PredicateFailure sts)]
     -- ^ List of failure conditions to try generate when generating an invalid signal, and the
     -- proportion of each failure.
   }
@@ -299,6 +302,29 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
       pure $! NodeT
         (mkTrace env st0 (zip rootStates rootSignals))
         (fmap (fmap (closure @s env st0)) children)
+
+-- | Generate an invalid trace
+--
+invalidTrace
+  :: forall s
+   . HasTrace s
+  => Word64
+  -- ^ Maximum length of the generated traces.
+  -> [(Int, PredicateFailure s)]
+  -- ^ Trace failure profile to be used to get an invalid signal.
+  -> Gen (Invalid.Trace s)
+invalidTrace maxTraceLength failureProfile = do
+  tr <- trace @s maxTraceLength
+  let env = _traceEnv tr
+      st = lastState tr
+  iSig <- generateSignalWithFailureProportions failureProfile (sigGen @s) env st
+  let est' = applySTS @s $ TRC (env, st, iSig)
+  pure $! Invalid.Trace
+            { Invalid.prefix = tr
+            , Invalid.sig = iSig
+            , Invalid.errorOrLastState = est'
+            }
+
 
 traceSuchThat
   :: forall s
