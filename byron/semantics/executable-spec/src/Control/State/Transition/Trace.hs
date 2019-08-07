@@ -6,10 +6,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 -- | Traces of transition systems and associated operators.
 --
 -- This module also includes a minimal domain-specific-language to specify
 -- expectations on traces.
+--
 module Control.State.Transition.Trace
   ( (.-)
   , (.->)
@@ -31,21 +33,14 @@ module Control.State.Transition.Trace
   )
 where
 
-import Control.Lens (makeLenses, (^.), (^..), _1, _2, to)
-import Control.Monad (void)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
-import Test.Tasty.HUnit ((@?=), assertFailure)
+import           Control.Lens (makeLenses, to, (^.), (^..), _1, _2)
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
+import           Test.Tasty.HUnit (assertFailure, (@?=))
 
-import Control.State.Transition
-  ( Environment
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , applySTS
-  , PredicateFailure
-  )
+import           Control.State.Transition (Environment, PredicateFailure, STS, Signal, State,
+                     TRC (TRC), applySTS)
 
 -- | A successful trace of a transition system.
 --
