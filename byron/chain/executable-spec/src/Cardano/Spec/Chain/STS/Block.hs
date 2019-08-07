@@ -1,7 +1,9 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists       #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Cardano.Spec.Chain.STS.Block where
 
@@ -22,6 +24,9 @@ import           Ledger.Delegation
 import           Ledger.Update (ProtVer, STag, UProp, Vote)
 import           Ledger.UTxO (TxIn, TxOut, TxWits, Wit)
 
+
+import           Test.Goblin
+import           Test.Goblin.TH
 
 data BlockHeader
   = BlockHeader
@@ -235,3 +240,20 @@ updateBody block bodyUpdate =
     (_bUtxo newBody)
   where
     newBody = bodyUpdate (_bBody block)
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''Block
+deriveGoblin ''BlockBody
+deriveGoblin ''BlockHeader
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''Block
+deriveAddShrinks ''BlockBody
+deriveAddShrinks ''BlockHeader
