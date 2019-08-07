@@ -49,11 +49,11 @@ import qualified Ledger.Update as Update
 
 upiregTracesAreClassified :: Property
 upiregTracesAreClassified =
-  withTests 100 $ traceLengthsAreClassified @UPIREG 500 50
+  withTests 100 $ traceLengthsAreClassified @UPIREG 100 10
 
 upiregRelevantTracesAreCovered :: Property
 upiregRelevantTracesAreCovered = withTests 300 $ property $ do
-  sample <- forAll (trace @UPIREG 400)
+  sample <- forAll (trace @UPIREG 200)
 
   cover 40
     "at least 30% of the update proposals increase the major version"
@@ -392,15 +392,15 @@ instance HasTrace UBLOCK where
 
 ublockTraceLengthsAreClassified :: Property
 ublockTraceLengthsAreClassified =
-  withTests 100 $ traceLengthsAreClassified @UBLOCK 500 50
+  withTests 100 $ traceLengthsAreClassified @UBLOCK 100 10
 
 ublockOnlyValidSignalsAreGenerated :: HasCallStack => Property
 ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
-ublockRelevantTracesAreCovered = withTests 150 $ property $ do
-  sample <- forAll (traceOfLength @UBLOCK 500)
+ublockRelevantTracesAreCovered = withTests 300 $ property $ do
+  sample <- forAll (traceOfLength @UBLOCK 100)
 
   -- Since we generate votes on the most voted proposals, we do not expect a very large percentage
   -- of confirmed proposals. As a reference, in the runs that were performed manually, for a trace

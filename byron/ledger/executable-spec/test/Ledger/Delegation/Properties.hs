@@ -14,6 +14,7 @@ module Ledger.Delegation.Properties
   , dblockTracesAreClassified
   , relevantCasesAreCovered
   , onlyValidSignalsAreGenerated
+  , invalidSignalsAreGenerated
   )
 where
 
@@ -21,6 +22,7 @@ import           Control.Arrow (first, (***))
 import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
+import           Data.Either (isLeft)
 import           Data.List (foldl', last)
 import           Data.List.Unique (repeated)
 import qualified Data.Map.Strict as Map
@@ -35,10 +37,11 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace,
                      TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
-                     failures, isTrivial, nonTrivialTrace, proportionOfInvalidSignals,
-                     proportionOfValidSignals, sigGen, suchThatLastState, trace,
-                     traceLengthsAreClassified, traceWithProfile)
+                     failures, invalidTrace, isTrivial, nonTrivialTrace,
+                     proportionOfInvalidSignals, proportionOfValidSignals, sigGen,
+                     suchThatLastState, trace, traceLengthsAreClassified, traceWithProfile)
 import qualified Control.State.Transition.Generator as TransitionGenerator
+import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
 import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
@@ -219,7 +222,7 @@ expectedDms s d sbs =
 -- | Check that there are no duplicated certificates in the trace.
 dcertsAreNotReplayed :: Property
 dcertsAreNotReplayed = withTests 300 $ property $ do
-  let (thisTraceLength, step) = (1000, 100)
+  let (thisTraceLength, step) = (100, 10)
   sample <- forAll (traceWithProfile @DBLOCK thisTraceLength profile)
   classifyTraceLength sample thisTraceLength step
   dcertsAreNotReplayedInTrace sample
@@ -234,12 +237,13 @@ dcertsAreNotReplayed = withTests 300 $ property $ do
         traceDelegationCertificates = traceSignals OldestFirst traceSample
                                     & fmap _blockCerts
                                     & concat
-    profile
-      = TraceProfile
-        { proportionOfValidSignals = 95
-        , proportionOfInvalidSignals = 5
-        , failures = [(1, InvalidDelegationCertificate)]
-        }
+profile :: TraceProfile DBLOCK
+profile
+  = TraceProfile
+      { proportionOfValidSignals = 95
+      , proportionOfInvalidSignals = 5
+      , failures = [(1, InvalidDelegationCertificate)]
+      }
 
 instance HasTrace DBLOCK where
 
@@ -310,11 +314,11 @@ dcertsAreTriggered :: Property
 dcertsAreTriggered = withTests 300 $ property $
   -- The number of tests was determined ad-hoc, since the default failed to
   -- uncover the presence of errors.
-  forAll (nonTrivialTrace 1000) >>= dcertsAreTriggeredInTrace
+  forAll (nonTrivialTrace 100) >>= dcertsAreTriggeredInTrace
 
 dblockTracesAreClassified :: Property
 dblockTracesAreClassified = withTests 200 $ property $ do
-  let (tl, step) = (1000, 100)
+  let (tl, step) = (100, 10)
   tr <- forAll (trace @DBLOCK tl)
   classifyTraceLength tr tl step
   -- Classify the traces by the total number of delegation certificates on
@@ -333,7 +337,7 @@ traceDCerts = concat . traceDCertsByBlock
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 400 $ property $ do
-  let tl = 1000
+  let tl = 100
   tr <- forAll (trace @DBLOCK tl)
 
   -- 40% of the traces must contain as many delegation certificates as blocks.
@@ -392,9 +396,9 @@ onlyValidSignalsAreGenerated =
 -- generated, then the test will fail when the heap limit is reached, or
 -- hedgehog gives up.
 rejectDupSchedDelegs :: Property
-rejectDupSchedDelegs = property $ do
+rejectDupSchedDelegs = withTests 300 $ property $ do
   (tr, dcert) <- forAll $ do
-    tr <- trace @DELEG 1000
+    tr <- trace @DELEG 100
           `suchThatLastState` (not . null . view scheduledDelegations)
     let vkS =
           case lastState tr ^. scheduledDelegations of
@@ -413,3 +417,14 @@ rejectDupSchedDelegs = property $ do
 -- | Classify the traces.
 tracesAreClassified :: Property
 tracesAreClassified = traceLengthsAreClassified @DELEG 1000 100
+
+-- | The signal generator generates invalid signals with high probability when
+-- invalid signals are requested.
+invalidSignalsAreGenerated :: Property
+invalidSignalsAreGenerated = withTests 300 $ property $ do
+  let aTraceLength = 100
+      failureProfile = failures profile
+  tr <- forAll (invalidTrace @DBLOCK aTraceLength failureProfile)
+  cover 80
+        "Invalid signals are generated when requested"
+        (isLeft $ Invalid.Trace.errorOrLastState tr)
