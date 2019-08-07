@@ -48,7 +48,24 @@ module Ledger.Delegation
   , _dIStateLastDelegation
   , _dIStateScheduledDelegations
   , _dIStateKeyEpochDelegations
+  , PredicateFailure
+    ( ADelegSFailure
+    , ADelegFailure
+    , SDelegSFailure
+    , SDelegFailure
+    , BeforeExistingDelegation
+    , NoLastDelegation
+    , AfterExistingDelegation
+    , AlreadyADelegateOf
+    , IsAlreadyScheduled
+    , IsNotGenesisKey
+    , EpochInThePast
+    , EpochPastNextEpoch
+    , HasAlreadyDelegated
+    , DoesNotVerify
+    )
   , liveAfter
+  , EpochDiff(..)
   -- * State lens fields
   , slot
   , epoch
@@ -119,6 +136,9 @@ import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), O
                      (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
+
+import Test.Goblin
+import Test.Goblin.TH
 
 
 --------------------------------------------------------------------------------
@@ -745,3 +765,25 @@ maxCertsPerBlock groupedCerts
   = case groupedCerts of
       [] -> 0
       _  -> List.maximum (length <$> groupedCerts)
+
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''DCert
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''DCert
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''DSEnv
+deriveSeedGoblin ''DIState

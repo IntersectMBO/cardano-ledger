@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 
@@ -7,6 +8,7 @@ module Cardano.Ledger.Spec.STS.UTXO
   ( UTXO
   , UTxOEnv (UTxOEnv)
   , UTxOState (UTxOState)
+  , PredicateFailure(..)
   , utxo
   , utxo0
   , pps
@@ -33,6 +35,8 @@ import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
 import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams)
 import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value, unUTxO)
+import Test.Goblin
+import Test.Goblin.TH
 
 data UTXO
 
@@ -97,3 +101,11 @@ instance STS UTXO where
                            }
 
     ]
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''UTxOEnv
+deriveSeedGoblin ''UTxOState
