@@ -9,7 +9,8 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2A, ex2B,
-                     ex2C, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C)
+                     ex2C, ex2Cbis, ex2Cquater, ex2Cter, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex3A,
+                     ex3B, ex3C, ex4A, ex4B, ex4C)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
@@ -62,6 +63,15 @@ testCHAINExample2B = testCHAINExample ex2B
 testCHAINExample2C :: Assertion
 testCHAINExample2C = testCHAINExample ex2C
 
+testCHAINExample2Cbis :: Assertion
+testCHAINExample2Cbis = testCHAINExample ex2Cbis
+
+testCHAINExample2Cter :: Assertion
+testCHAINExample2Cter = testCHAINExample ex2Cter
+
+testCHAINExample2Cquater :: Assertion
+testCHAINExample2Cquater = testCHAINExample ex2Cquater
+
 testCHAINExample2D :: Assertion
 testCHAINExample2D = testCHAINExample ex2D
 
@@ -106,6 +116,9 @@ stsTests = testGroup "STS Tests"
   , testCase "CHAIN example 2A - register stake key" testCHAINExample2A
   , testCase "CHAIN example 2B - delegate stake and create reward update" testCHAINExample2B
   , testCase "CHAIN example 2C - new epoch changes" testCHAINExample2C
+  , testCase "CHAIN example 2Cbis - as 2C but no decay" testCHAINExample2Cbis
+  , testCase "CHAIN example 2Cter - as 2C but full refund" testCHAINExample2Cter
+  , testCase "CHAIN example 2Cquater - as 2C but with instant decay" testCHAINExample2Cquater
   , testCase "CHAIN example 2D - second reward update" testCHAINExample2D
   , testCase "CHAIN example 2E - nonempty pool distr" testCHAINExample2E
   , testCase "CHAIN example 2F - decentralized block" testCHAINExample2F

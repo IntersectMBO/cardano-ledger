@@ -6,6 +6,9 @@ module Examples
   , ex2A
   , ex2B
   , ex2C
+  , ex2Cbis
+  , ex2Cter
+  , ex2Cquater
   , ex2D
   , ex2E
   , ex2F
@@ -278,7 +281,24 @@ ppsEx1 = emptyPParams { _maxBBSize = 50000
                    , _activeSlotCoeff = unsafeMkUnitInterval 0.1
                    , _tau = unsafeMkUnitInterval 0.2
                    , _rho = unsafeMkUnitInterval 0.0021
+                   , _keyDecayRate = 0.002
+                   , _keyMinRefund = unsafeMkUnitInterval 0.5
+                   , _poolDecayRate = 0.001
+                   , _poolMinRefund = unsafeMkUnitInterval 0.5
                    }
+
+ppsExNoDecay :: PParams
+ppsExNoDecay = ppsEx1 { _keyDecayRate = 0
+                      , _poolDecayRate = 0 }
+
+ppsExFullRefund :: PParams
+ppsExFullRefund = ppsEx1 { _keyMinRefund = unsafeMkUnitInterval 1
+                         , _poolMinRefund = unsafeMkUnitInterval 1 }
+
+ppsExInstantDecay :: PParams
+ppsExInstantDecay = ppsEx1 { _keyDecayRate = 1000
+                           , _poolDecayRate = 1000 }
+
 
 esEx1 :: EpochState
 esEx1 = EpochState emptyAccount emptySnapShots lsEx1 ppsEx1
@@ -548,14 +568,14 @@ expectedLSEx2B = LedgerState
                (DPState dsEx2B psEx2A)
                0
 
-expectedStEx2B :: ChainState
-expectedStEx2B =
+expectedStEx2Bgeneric :: PParams -> ChainState
+expectedStEx2Bgeneric pp =
   ( NewEpochState
       (Epoch 0)
       (Nonce 0)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx2B ppsEx1)
+      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
       (Just RewardUpdate { deltaT = Coin 0
                          , deltaR = Coin 0
                          , rs     = Map.empty
@@ -569,9 +589,21 @@ expectedStEx2B =
   , Slot 90
   )
 
+
+expectedStEx2B :: ChainState
+expectedStEx2B = expectedStEx2Bgeneric ppsEx1
+
+expectedStEx2Bbis :: ChainState
+expectedStEx2Bbis = expectedStEx2Bgeneric ppsExNoDecay
+
+expectedStEx2Bter :: ChainState
+expectedStEx2Bter = expectedStEx2Bgeneric ppsExFullRefund
+
+expectedStEx2Bquater :: ChainState
+expectedStEx2Bquater = expectedStEx2Bgeneric ppsExInstantDecay
+
 ex2B :: CHAINExample
 ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B expectedStEx2B
-
 
 -- | Example 2C - continuing on after example 3, process an empty block in the next epoch
 -- so that the (empty) reward update is applied and a stake snapshot is made.
@@ -599,33 +631,58 @@ snapEx2C :: (Stake, Map Credential KeyHash)
 snapEx2C = ( Stake ( Map.fromList [(aliceSHK, Coin 9729), (bobSHK, bobInitCoin)])
           , delegsEx2B )
 
-snapsEx2C :: SnapShots
-snapsEx2C = emptySnapShots { _pstakeMark = snapEx2C
+snapsEx2Cgeneric :: Coin -> SnapShots
+snapsEx2Cgeneric feeSnapShot = emptySnapShots { _pstakeMark = snapEx2C
                           , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
-                          , _feeSS = Coin 271
+                          , _feeSS = feeSnapShot
                           }
 
-expectedLSEx2C :: LedgerState
-expectedLSEx2C = LedgerState
-               (UTxOState
-                 utxoEx2B
-                 (Coin 0)   -- TODO check that both deposits really decayed completely
-                 (Coin 271)
-                 emptyUpdateState) -- Note that the ppup is gone now
-               (DPState dsEx2B psEx2A)
+snapsEx2C :: SnapShots
+snapsEx2C = snapsEx2Cgeneric 20
+
+snapsEx2Cbis :: SnapShots
+snapsEx2Cbis = snapsEx2Cgeneric 7
+
+snapsEx2Cter :: SnapShots
+snapsEx2Cter = snapsEx2Cgeneric 7
+
+snapsEx2Cquater :: SnapShots
+snapsEx2Cquater = snapsEx2Cgeneric 140
+
+expectedLSEx2Cgeneric :: Coin -> Coin -> LedgerState
+expectedLSEx2Cgeneric lsDeposits lsFees =
+  LedgerState
+  (UTxOState
+    utxoEx2B
+    lsDeposits
+    lsFees
+    emptyUpdateState) -- Note that the ppup is gone now
+  (DPState dsEx2B psEx2A)
                0
+
+expectedLSEx2C :: LedgerState
+expectedLSEx2C = expectedLSEx2Cgeneric 251 20
+
+expectedLSEx2Cbis :: LedgerState
+expectedLSEx2Cbis = expectedLSEx2Cgeneric 264 7
+
+expectedLSEx2Cter :: LedgerState
+expectedLSEx2Cter = expectedLSEx2Cgeneric 264 7
+
+expectedLSEx2Cquater :: LedgerState
+expectedLSEx2Cquater = expectedLSEx2Cgeneric 131 140
 
 blockEx2CHash :: Maybe HashHeader
 blockEx2CHash = Just (bhHash (bheader blockEx2C))
 
-expectedStEx2C :: ChainState
-expectedStEx2C =
+expectedStEx2Cgeneric :: SnapShots -> LedgerState -> PParams -> ChainState
+expectedStEx2Cgeneric ss ls pp =
   ( NewEpochState
       (Epoch 1)
       (Nonce 0 ⭒ Nonce 1)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
-      (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
+      (EpochState acntEx2A ss ls pp)
       Nothing
       (PoolDistr Map.empty)
       epoch1OSchedEx2C
@@ -635,8 +692,32 @@ expectedStEx2C =
   , Slot 110
   )
 
+expectedStEx2C :: ChainState
+expectedStEx2C = expectedStEx2Cgeneric snapsEx2C expectedLSEx2C ppsEx1
+
+expectedStEx2Cbis :: ChainState
+expectedStEx2Cbis = expectedStEx2Cgeneric snapsEx2Cbis expectedLSEx2Cbis ppsExNoDecay
+
+expectedStEx2Cter :: ChainState
+expectedStEx2Cter =
+  expectedStEx2Cgeneric snapsEx2Cter expectedLSEx2Cter ppsExFullRefund
+
+expectedStEx2Cquater :: ChainState
+expectedStEx2Cquater =
+  expectedStEx2Cgeneric snapsEx2Cquater expectedLSEx2Cquater ppsExInstantDecay
+
 ex2C :: CHAINExample
 ex2C = CHAINExample (Slot 110) expectedStEx2B blockEx2C expectedStEx2C
+
+ex2Cbis :: CHAINExample
+ex2Cbis = CHAINExample (Slot 110) expectedStEx2Bbis blockEx2C expectedStEx2Cbis
+
+ex2Cter :: CHAINExample
+ex2Cter = CHAINExample (Slot 110) expectedStEx2Bter blockEx2C expectedStEx2Cter
+
+ex2Cquater :: CHAINExample
+ex2Cquater =
+  CHAINExample (Slot 110) expectedStEx2Bquater blockEx2C expectedStEx2Cquater
 
 
 -- | Example 2D - continuing on after example 4, process an empty block late enough
@@ -666,10 +747,10 @@ expectedStEx2D =
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 271
+      (Just RewardUpdate { deltaT = Coin 168
                          , deltaR = Coin 0
                          , rs     = Map.empty
-                         , deltaF = Coin (-271)
+                         , deltaF = Coin (-168)
                          })
       (PoolDistr Map.empty)
       epoch1OSchedEx2C
