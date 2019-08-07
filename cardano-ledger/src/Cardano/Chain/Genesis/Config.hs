@@ -31,11 +31,10 @@ import Data.Coerce (coerce)
 import Data.Time (UTCTime)
 import Formatting (build, bprint, string)
 import qualified Formatting.Buildable as B
-import Text.Megaparsec.Error (ParseErrorBundle)
 
 import Cardano.Binary (Annotated(..), Raw)
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
-import Cardano.Chain.Common (BlockCount, LovelaceError, LovelacePortionError)
+import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.Data
   (GenesisData(..), GenesisDataError, readGenesisData)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
@@ -167,35 +166,17 @@ mkConfig startTime genesisSpec = do
         genesisHash = GenesisHash $ coerce $ hash @Text "patak"
 
 data ConfigurationError
-  = MissingSystemStartTime
-  -- ^ A system start time must be given when a testnet genesis is used
-  | UnnecessarySystemStartTime
-  -- ^ Must not give a custom system start time when using a mainnet genesis
-  | ConfigurationGenesisDataError GenesisDataError
+  = ConfigurationGenesisDataError GenesisDataError
   -- ^ An error in constructing 'GenesisData'
   | GenesisHashMismatch GenesisHash (Hash Raw)
   -- ^ The GenesisData canonical JSON hash is different than expected
-  | MeaninglessSeed
-  -- ^ Custom seed was provided, but it doesn't make sense
   | ConfigurationGenerationError GenesisDataGenerationError
   | GenesisHashDecodeError Text
   -- ^ An error occured while decoding the genesis hash.
-  | ConfigParsingError (ParseErrorBundle Text Void)
-  -- ^ An error occured while parsing 'CardanoConfiguration'.
-  | ConfigPortionConvErr LovelacePortionError
-  -- ^ An error occured while converting from a value
-  -- from 'CardanoConfiguration' to 'LovelacePortion'.
-  | ConfigLovelaceConvErr LovelaceError
-  -- ^ An error occured while converting a value
-  -- from 'CardanoConfiguration' to 'Lovelace'.
   deriving (Show)
 
 instance B.Buildable ConfigurationError where
   build = \case
-    MissingSystemStartTime ->
-      bprint "Missing system start time."
-    UnnecessarySystemStartTime ->
-      bprint "Cannot give a custom start time when using a mainnet genesis."
     ConfigurationGenesisDataError genesisDataError ->
       bprint ("Error in constructing GenesisData: "
              . build
@@ -209,8 +190,6 @@ instance B.Buildable ConfigurationError where
              )
              (show genesisHash)
              (show expectedHash)
-    MeaninglessSeed ->
-      bprint "Custom seed was provided but it does not make sense"
     ConfigurationGenerationError genesisDataGenerationError ->
       bprint ("Configuration GenenerationError"
              . build
@@ -221,15 +200,3 @@ instance B.Buildable ConfigurationError where
             . string
             )
             (toS decodeErr)
-    ConfigParsingError pErr ->
-      bprint string (show pErr)
-    ConfigPortionConvErr err ->
-      bprint ("ConfigPortionConvErr: "
-             . build
-             )
-             err
-    ConfigLovelaceConvErr err ->
-      bprint ("ConfigLovelaceConvErr: "
-             . build
-             )
-             err
