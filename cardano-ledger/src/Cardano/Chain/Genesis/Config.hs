@@ -116,13 +116,17 @@ configProtocolParameters = gdProtocolParameters . configGenesisData
 configAvvmDistr :: Config -> GenesisAvvmBalances
 configAvvmDistr = gdAvvmDistr . configGenesisData
 
+-- | Construct a 'Config' from an external genesis file.
+--
+-- The 'FilePath' refers to a canonical JSON file. It will be hashed and
+-- checked against the expected hash, which should be known from config.
+--
 mkConfigFromFile
   :: (MonadError ConfigurationError m, MonadIO m)
   => RequiresNetworkMagic
   -> FilePath
   -> Hash Raw
-  -- ^ This hash comes from 'CardanoConfiguration'
-  -- which lives in cardano-shell
+  -- ^ The expected hash of the file
   -> m Config
 mkConfigFromFile rnm fp expectedHash = do
   (genesisData, genesisHash) <-
