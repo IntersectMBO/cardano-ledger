@@ -15,6 +15,9 @@ module Examples
   , ex3A
   , ex3B
   , ex3C
+  , ex4A
+  , ex4B
+  , ex4C
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -31,10 +34,11 @@ module Examples
   )
 where
 
+import           Data.ByteString.Char8 (pack)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, singleton)
 import           Data.Maybe (fromMaybe)
-import           Data.Sequence (fromList, empty)
+import           Data.Sequence (empty, fromList)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -71,8 +75,9 @@ import           TxData (pattern AddrBase, pattern Delegation, pattern KeyHashOb
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt,
                      _poolVrf)
-import           Updates (pattern AVUpdate, Applications (..), pattern PPUpdate, Ppm (..),
-                     pattern Update, emptyUpdate, emptyUpdateState, updatePPup)
+import           Updates (pattern AVUpdate, ApName (..), ApVer (..), Applications (..),
+                     Metadata (..), pattern PPUpdate, Ppm (..), pattern Update, emptyUpdate,
+                     emptyUpdateState, updatePPup)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
 
 
@@ -605,7 +610,7 @@ expectedLSEx2C = LedgerState
                (UTxOState
                  utxoEx2B
                  (Coin 0)   -- TODO check that both deposits really decayed completely
-                 (Coin 271) -- TODO shouldn't this pot have moved to the treasury?
+                 (Coin 271)
                  emptyUpdateState) -- Note that the ppup is gone now
                (DPState dsEx2B psEx2A)
                0
@@ -1200,3 +1205,255 @@ expectedStEx3C =
 
 ex3C :: CHAINExample
 ex3C = CHAINExample (Slot 110) expectedStEx3B blockEx3C expectedStEx3C
+
+
+-- | Example 4A - Setting up for a successful application version update,
+-- have three genesis keys vote on the same new version
+
+
+appsEx4A :: Applications
+appsEx4A = Applications $ Map.singleton
+                            (ApName $ pack "Daedalus")
+                            (ApVer 2, Metadata)
+
+avupEx4A :: AVUpdate
+avupEx4A = AVUpdate $ Map.fromList [ (coreNodeVKG 0, appsEx4A)
+                                   , (coreNodeVKG 3, appsEx4A)
+                                   , (coreNodeVKG 4, appsEx4A)
+                                   ]
+
+updateEx4A :: Update
+updateEx4A = Update (PPUpdate Map.empty) avupEx4A
+
+txbodyEx4A :: TxBody
+txbodyEx4A = TxBody
+           (Set.fromList [TxIn genesisId 0])
+           [TxOut aliceAddr (Coin 9999)]
+           Data.Sequence.empty
+           Map.empty
+           (Coin 1)
+           (Slot 10)
+           updateEx4A
+
+txEx4A :: Tx
+txEx4A = Tx
+          txbodyEx4A
+          (makeWitnessesVKey
+            txbodyEx4A
+            [ alicePay
+            , cold $ coreNodeKeys 0
+            , cold $ coreNodeKeys 3
+            , cold $ coreNodeKeys 4
+            ])
+          Map.empty
+
+blockEx4A :: Block
+blockEx4A = mkBlock
+             Nothing
+             (coreNodeKeys 4)
+             [txEx4A]
+             (Slot 10)
+             (Nonce 0)
+             (Nonce 1)
+             zero
+             0
+
+updateStEx4A :: ( PPUpdate
+               , AVUpdate
+               , Map Slot Applications
+               , Applications)
+updateStEx4A =
+  ( PPUpdate Map.empty
+  , avupEx4A
+  , Map.empty
+  , Applications Map.empty)
+
+expectedLSEx4A :: LedgerState
+expectedLSEx4A = LedgerState
+               (UTxOState
+                 (UTxO . Map.fromList $
+                   [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+                   , (TxIn (txid txbodyEx4A) 0, TxOut aliceAddr (Coin 9999))
+                   ])
+                 (Coin 0)
+                 (Coin 1)
+                 updateStEx4A)
+               (DPState dsEx1 psEx1)
+               0
+
+blockEx4AHash :: Maybe HashHeader
+blockEx4AHash = Just (bhHash (bheader blockEx4A))
+
+expectedStEx4A :: ChainState
+expectedStEx4A =
+  ( NewEpochState
+      (Epoch 0)
+      (Nonce 0)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1)
+      Nothing
+      (PoolDistr Map.empty)
+      overlayEx2A
+  , Nonce 0 ⭒ Nonce 1
+  , Nonce 0 ⭒ Nonce 1
+  , blockEx4AHash
+  , Slot 10
+  )
+
+ex4A :: CHAINExample
+ex4A = CHAINExample (Slot 10) initStEx2A blockEx4A expectedStEx4A
+
+
+-- | Example 4B - Finish getting enough votes for the application version update.
+
+avupEx4B :: AVUpdate
+avupEx4B = AVUpdate $ Map.fromList [ (coreNodeVKG 1, appsEx4A)
+                                   , (coreNodeVKG 5, appsEx4A)
+                                   ]
+
+updateEx4B :: Update
+updateEx4B = Update (PPUpdate Map.empty) avupEx4B
+
+txbodyEx4B :: TxBody
+txbodyEx4B = TxBody
+           (Set.fromList [TxIn (txid txbodyEx4A) 0])
+           [TxOut aliceAddr (Coin 9998)]
+           Data.Sequence.empty
+           Map.empty
+           (Coin 1)
+           (Slot 31)
+           updateEx4B
+
+txEx4B :: Tx
+txEx4B = Tx
+          txbodyEx4B
+          (makeWitnessesVKey
+            txbodyEx4B
+            [ alicePay
+            , cold $ coreNodeKeys 1
+            , cold $ coreNodeKeys 5
+            ])
+          Map.empty
+
+blockEx4B :: Block
+blockEx4B = mkBlock
+             blockEx4AHash
+             (coreNodeKeys 3)
+             [txEx4B]
+             (Slot 20)
+             (Nonce 0)
+             (Nonce 2)
+             zero
+             0
+
+updateStEx4B :: ( PPUpdate
+               , AVUpdate
+               , Map Slot Applications
+               , Applications)
+updateStEx4B =
+  ( PPUpdate Map.empty
+  , AVUpdate Map.empty
+  , Map.singleton (Slot 53) appsEx4A
+  , Applications Map.empty)
+
+utxoEx4B :: UTxO
+utxoEx4B = UTxO . Map.fromList $
+             [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+             , (TxIn (txid txbodyEx4B) 0, TxOut aliceAddr (Coin 9998))
+             ]
+
+expectedLSEx4B :: LedgerState
+expectedLSEx4B = LedgerState
+               (UTxOState
+                 utxoEx4B
+                 (Coin 0)
+                 (Coin 2)
+                 updateStEx4B)
+               (DPState dsEx1 psEx1)
+               0
+
+blockEx4BHash :: Maybe HashHeader
+blockEx4BHash = Just (bhHash (bheader blockEx4B))
+
+expectedStEx4B :: ChainState
+expectedStEx4B =
+  ( NewEpochState
+      (Epoch 0)
+      (Nonce 0)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1)
+      Nothing
+      (PoolDistr Map.empty)
+      overlayEx2A
+  , mkSeqNonce 2
+  , mkSeqNonce 2
+  , blockEx4BHash
+  , Slot 20
+  )
+
+ex4B :: CHAINExample
+ex4B = CHAINExample (Slot 20) expectedStEx4A blockEx4B expectedStEx4B
+
+
+-- | Example 4C - Adopt application version update
+
+
+blockEx4C :: Block
+blockEx4C = mkBlock
+             blockEx4BHash
+             (coreNodeKeys 5)
+             []
+             (Slot 60)
+             (Nonce 0)
+             (Nonce 3)
+             zero
+             0
+
+updateStEx4C :: ( PPUpdate
+               , AVUpdate
+               , Map Slot Applications
+               , Applications)
+updateStEx4C =
+  ( PPUpdate Map.empty
+  , AVUpdate Map.empty
+  , Map.empty
+  , appsEx4A)
+
+expectedLSEx4C :: LedgerState
+expectedLSEx4C = LedgerState
+               (UTxOState
+                 utxoEx4B
+                 (Coin 0)
+                 (Coin 2)
+                 updateStEx4C)
+               (DPState dsEx1 psEx1)
+               0
+blockEx4CHash :: Maybe HashHeader
+blockEx4CHash = Just (bhHash (bheader blockEx4C))
+
+expectedStEx4C :: ChainState
+expectedStEx4C =
+  ( NewEpochState
+      (Epoch 0)
+      (Nonce 0)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A emptySnapShots expectedLSEx4C ppsEx1)
+      (Just RewardUpdate { deltaT = Coin 0
+                         , deltaR = Coin 0
+                         , rs     = Map.empty
+                         , deltaF = Coin 0
+                         })
+      (PoolDistr Map.empty)
+      overlayEx2A
+  , mkSeqNonce 3
+  , mkSeqNonce 3
+  , blockEx4CHash
+  , Slot 60
+  )
+
+
+ex4C :: CHAINExample
+ex4C = CHAINExample (Slot 60) expectedStEx4B blockEx4C expectedStEx4C
