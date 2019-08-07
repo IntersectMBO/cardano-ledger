@@ -247,7 +247,13 @@ rcDCert vk k ast@(slot, _, _, _, _, _) =
 --
 abEnvToCfg :: Transition.Environment CHAIN -> Genesis.Config
 abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stableAfter) =
-  Genesis.Config genesisData genesisHash Nothing rnm
+  Genesis.Config {
+      Genesis.configGenesisData       = genesisData
+    , Genesis.configGenesisHash       = genesisHash
+    , Genesis.configGeneratedSecrets  = Nothing
+    , Genesis.configReqNetMagic       = rnm
+    , Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
+    }
  where
   rnm = getRequiresNetworkMagic Dummy.aProtocolMagic
 

@@ -109,6 +109,7 @@ import Cardano.Chain.Slotting
   (EpochNumber(..), SlotNumber(..), EpochAndSlotCount(..), slotNumberEpoch, fromSlotNumber)
 import Cardano.Chain.UTxO (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
 import qualified Cardano.Chain.UTxO.Validation as UTxO
+import Cardano.Chain.UTxO.UTxOConfiguration (UTxOConfiguration)
 import qualified Cardano.Chain.Update as Update
 import Cardano.Chain.Update.Validation.Endorsement (Endorsement(..))
 import qualified Cardano.Chain.Update.Validation.Interface as UPI
@@ -416,6 +417,7 @@ validateBlockProofs b =
 
 data BodyEnvironment = BodyEnvironment
   { protocolMagic      :: !(AProtocolMagic ByteString)
+  , utxoConfiguration  :: !UTxOConfiguration
   , k                  :: !BlockCount
   , allowedDelegators  :: !(Set KeyHash)
   , protocolParameters :: !Update.ProtocolParameters
@@ -470,7 +472,8 @@ updateBody env bs b = do
     , delegationState = delegationState'
     }
  where
-  BodyEnvironment { protocolMagic, k, allowedDelegators, currentEpoch } = env
+  BodyEnvironment { protocolMagic, k, allowedDelegators
+                  , utxoConfiguration, currentEpoch } = env
 
   BodyState { utxo, updateState, delegationState } = bs
 
@@ -494,6 +497,7 @@ updateBody env bs b = do
   utxoEnv = UTxO.Environment
     { UTxO.protocolMagic = protocolMagic
     , UTxO.protocolParameters = UPI.adoptedProtocolParameters updateState
+    , UTxO.utxoConfiguration = utxoConfiguration
     }
 
   updateEnv = UPI.Environment
@@ -606,6 +610,7 @@ updateBlock config cvs b = do
       , k          = configK config
       , allowedDelegators
       , protocolParameters = UPI.adoptedProtocolParameters updateState'
+      , utxoConfiguration = Genesis.configUTxOConfiguration config
       , currentEpoch = slotNumberEpoch (configEpochSlots config) (blockSlot b)
       }
 
