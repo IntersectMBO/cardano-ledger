@@ -96,6 +96,7 @@ test-suite test
                        Test.Cardano.Crypto.Json
                        Test.Cardano.Crypto.Keys
                        Test.Cardano.Crypto.Limits
+                       Test.Cardano.Crypto.Orphans
                        Test.Cardano.Crypto.Random
                        Test.Cardano.Crypto.Signing.Redeem
                        Test.Cardano.Crypto.Signing.Safe
