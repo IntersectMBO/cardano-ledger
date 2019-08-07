@@ -22,7 +22,10 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey
 -- | Wrapper around 'Ed25519.SecretKey'.
 newtype RedeemSigningKey =
   RedeemSigningKey Ed25519.SecretKey
-  deriving (Eq, Ord, Show, Generic, NFData, FromCBOR, ToCBOR)
+  deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
+
+-- Note that there is deliberately no Ord instance. The crypto libraries
+-- encourage using key /hashes/ not keys for things like sets, map etc.
 
 instance B.Buildable RedeemSigningKey where
   build = bprint ("redeem_sec_of_vk:" . redeemVKB64F) . redeemToVerification

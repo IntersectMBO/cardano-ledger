@@ -19,21 +19,22 @@ import Formatting (bprint)
 
 import Cardano.Binary (Decoder, Encoding, FromCBOR(..), ToCBOR(..))
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..), shortVerificationKeyHexF)
-import Cardano.Crypto.Hashing (hash)
 
 
 -- | Wrapper around 'CC.XPrv'.
 newtype SigningKey = SigningKey CC.XPrv
     deriving (NFData)
 
+-- Note that there is deliberately no Eq instance. The cardano-crypto library
+-- does not define one for XPrv.
+
+-- Note that there is deliberately no Ord instance. The crypto libraries
+-- encourage using key /hashes/ not keys for things like sets, map etc.
+
 -- | Generate a verification key from a signing key. Fast (it just drops some bytes
 -- off the signing key).
 toVerification :: SigningKey -> VerificationKey
 toVerification (SigningKey k) = VerificationKey (CC.toXPub k)
-
--- | Direct comparison of signing keys is a security issue (cc @vincent)
-instance Eq SigningKey where
-  a == b = hash a == hash b
 
 instance Show SigningKey where
   show sk = "<signing of " ++ show (toVerification sk) ++ ">"

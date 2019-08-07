@@ -32,7 +32,10 @@ import Cardano.Crypto.Signing.Tag (SignTag, signTag, signTagDecoded)
 -- | Wrapper around 'Ed25519.Signature'
 newtype RedeemSignature a =
   RedeemSignature Ed25519.Signature
-  deriving (Eq, Ord, Show, Generic, NFData, FromCBOR, ToCBOR)
+  deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
+
+-- Note that there is deliberately no Ord instance. The crypto libraries
+-- encourage using key /hashes/ not keys for things like sets, map etc.
 
 instance B.Buildable (RedeemSignature a) where
   build _ = "<redeem signature>"
