@@ -8,8 +8,7 @@ module Test.Cardano.Chain.Genesis.Example
   , exampleGenesisData0
   , exampleGenesisDelegation
   , exampleGenesisInitializer
-  , exampleStaticConfig_GCSpec
-  , exampleStaticConfig_GCSrc
+  , exampleGenesisSpec
   )
 where
 
@@ -22,7 +21,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 
-import Cardano.Binary (Annotated(..), Raw(..))
+import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , LovelacePortion(..)
@@ -40,7 +39,6 @@ import Cardano.Chain.Genesis
   , GenesisInitializer(..)
   , GenesisSpec(..)
   , GenesisKeyHashes(..)
-  , StaticConfig(..)
   , TestnetBalanceOptions(..)
   )
 import Cardano.Chain.Slotting (EpochNumber(..))
@@ -50,7 +48,6 @@ import Cardano.Crypto
   , RequiresNetworkMagic(..)
   , RedeemVerificationKey
   , Signature(..)
-  , abstractHash
   , redeemDeterministicKeyGen
   )
 import Cardano.Crypto.Signing (VerificationKey(..))
@@ -66,12 +63,8 @@ import Test.Cardano.Crypto.Example (exampleProtocolMagicId0)
 exampleBlockCount :: BlockCount
 exampleBlockCount = BlockCount 12344
 
-exampleStaticConfig_GCSrc :: StaticConfig
-exampleStaticConfig_GCSrc =
-  GCSrc "dRaMwdYsH3QA3dChe" (abstractHash (Raw "Test"))
-
-exampleStaticConfig_GCSpec :: StaticConfig
-exampleStaticConfig_GCSpec = GCSpec $ UnsafeGenesisSpec
+exampleGenesisSpec :: GenesisSpec
+exampleGenesisSpec = UnsafeGenesisSpec
   exampleGenesisAvvmBalances
   exampleGenesisDelegation
   exampleProtocolParameters

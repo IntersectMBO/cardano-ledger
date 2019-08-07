@@ -12,7 +12,6 @@ module Test.Cardano.Chain.Genesis.Gen
   , genGenesisKeyHashes
   , genSignatureEpochNumber
   , genTestnetBalanceOptions
-  , genStaticConfig
   )
 where
 
@@ -39,7 +38,6 @@ import Cardano.Chain.Genesis
   , GenesisNonAvvmBalances(..)
   , GenesisSpec(..)
   , GenesisKeyHashes(..)
-  , StaticConfig(..)
   , TestnetBalanceOptions(..)
   , mkGenesisDelegation
   , mkGenesisSpec
@@ -55,8 +53,7 @@ import Test.Cardano.Chain.Delegation.Gen
 import Test.Cardano.Chain.Update.Gen
   (genCanonicalProtocolParameters, genProtocolParameters)
 import Test.Cardano.Crypto.Gen
-  ( genHashRaw
-  , genProtocolMagic
+  ( genProtocolMagic
   , genProtocolMagicId
   , genRedeemVerificationKey
   , genTextHash
@@ -98,12 +95,6 @@ genGenesisData pm =
 
 genGenesisHash :: Gen GenesisHash
 genGenesisHash = GenesisHash . coerce <$> genTextHash
-
-genStaticConfig :: ProtocolMagicId -> Gen StaticConfig
-genStaticConfig pm = Gen.choice
-  [ GCSrc <$> Gen.string (Range.constant 10 25) Gen.alphaNum <*> genHashRaw
-  , GCSpec <$> genGenesisSpec pm
-  ]
 
 genFakeAvvmOptions :: Gen FakeAvvmOptions
 genFakeAvvmOptions =

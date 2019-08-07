@@ -4,8 +4,7 @@
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.Genesis.Config
-  ( StaticConfig(..)
-  , Config(..)
+  ( Config(..)
   , ConfigurationError(..)
   , configGenesisHeaderHash
   , configK
@@ -22,7 +21,6 @@ module Cardano.Chain.Genesis.Config
   , configAvvmDistr
   , mkConfig
   , mkConfigFromFile
-  , mkConfigFromStaticConfig
   )
 where
 
@@ -42,7 +40,6 @@ import Cardano.Chain.Genesis.Data
   (GenesisData(..), GenesisDataError, readGenesisData)
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.AvvmBalances (GenesisAvvmBalances(..))
-import Cardano.Chain.Genesis.Initializer (GenesisInitializer(..))
 import Cardano.Chain.Genesis.Generate
   (GeneratedSecrets, GenesisDataGenerationError, generateGenesisData)
 import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
@@ -63,18 +60,6 @@ import Cardano.Crypto
   , RequiresNetworkMagic
   , hash
   )
-
-
---------------------------------------------------------------------------------
--- StaticConfig
---------------------------------------------------------------------------------
-
-data StaticConfig
-  = GCSpec !GenesisSpec
-  -- ^ Genesis from a 'GenesisSpec'
-  | GCSrc !FilePath !(Hash Raw)
-  -- ^ 'GenesisData' is stored in at 'FilePath' with expected 'Hash Raw'
-  deriving (Eq, Show)
 
 
 --------------------------------------------------------------------------------
@@ -137,55 +122,6 @@ configProtocolParameters = gdProtocolParameters . configGenesisData
 
 configAvvmDistr :: Config -> GenesisAvvmBalances
 configAvvmDistr = gdAvvmDistr . configGenesisData
-
--- | Construct a 'Config' from a 'StaticConfig'
---
---   If the 'StaticConfig' refers to a canonical JSON file, then it will be
---   hashed and checked against the expected hash.
---
---   If the 'StaticConfig' contains a 'GenesisSpec', then a full 'GenesisData'
---   will be generated. In this case a start time must be provided.
-mkConfigFromStaticConfig
-  :: (MonadError ConfigurationError m, MonadIO m)
-  => RequiresNetworkMagic
-  -> Maybe UTCTime
-  -- ^ Optional system start time.
-  --   It must be given when the genesis spec uses a testnet initializer.
-  -> Maybe Integer
-  -- ^ Optional seed which overrides one from testnet initializer if provided
-  -> StaticConfig
-  -> m Config
-mkConfigFromStaticConfig rnm mSystemStart mSeed = \case
-  -- If a 'GenesisData' source file is given, we check its hash against the
-  -- given expected hash, parse it, and use the GenesisData to fill in all of
-  -- the obligations.
-  GCSrc fp expectedHash -> do
-
-    isNothing mSystemStart `orThrowError` UnnecessarySystemStartTime
-
-    isNothing mSeed `orThrowError` MeaninglessSeed
-
-    mkConfigFromFile rnm fp expectedHash
-
-
-  -- If a 'GenesisSpec' is given, we ensure we have a start time (needed if it's
-  -- a testnet initializer) and then make a 'GenesisData' from it.
-  GCSpec spec -> do
-
-    systemStart <- maybe (throwError MissingSystemStartTime) pure mSystemStart
-
-    -- Override seed if necessary
-    let
-      overrideSeed :: Integer -> GenesisInitializer -> GenesisInitializer
-      overrideSeed newSeed gi = gi { giSeed = newSeed }
-
-    let
-      spec' = case mSeed of
-        Nothing -> spec
-        Just newSeed ->
-          spec { gsInitializer = overrideSeed newSeed (gsInitializer spec) }
-
-    fst <$> mkConfig systemStart spec'
 
 mkConfigFromFile
   :: (MonadError ConfigurationError m, MonadIO m)
