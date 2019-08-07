@@ -4,7 +4,6 @@
 
 module Test.Cardano.Chain.Genesis.Dummy
   ( dummyConfig
-  , dummyConfigStartTime
   , dummyK
   , dummyEpochSlots
   , dummySlotSecurityParam
@@ -19,7 +18,6 @@ module Test.Cardano.Chain.Genesis.Dummy
   , dummyGenesisSpec
   , dummyProtocolParameters
   , dummyGenesisData
-  , dummyGenesisDataStartTime
   , dummyGenesisHash
   )
 where
@@ -59,12 +57,13 @@ import Cardano.Crypto (SigningKey)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 
-dummyConfig :: Config
-dummyConfig = dummyConfigStartTime (UTCTime (ModifiedJulianDay 0) 0)
-
-dummyConfigStartTime :: UTCTime -> Config
-dummyConfigStartTime startTime =
-  either (panic . show) identity $ mkConfig startTime dummyGenesisSpec
+dummyConfig           :: Config
+dummyGeneratedSecrets :: GeneratedSecrets
+(dummyConfig, dummyGeneratedSecrets) =
+    either (panic . show) identity $
+      mkConfig startTime dummyGenesisSpec
+  where
+    startTime = UTCTime (ModifiedJulianDay 0) 0
 
 dummyK :: BlockCount
 dummyK = BlockCount 10
@@ -74,14 +73,6 @@ dummyEpochSlots = kEpochSlots dummyK
 
 dummySlotSecurityParam :: SlotCount
 dummySlotSecurityParam = kSlotSecurityParam dummyK
-
-dummyGeneratedSecrets :: GeneratedSecrets
-dummyGeneratedSecrets =
-  fromMaybe
-      (panic
-        "The impossible happened: GeneratedSecrets should be in dummyConfig"
-      )
-    $ configGeneratedSecrets dummyConfig
 
 dummyGenesisSecretsRich :: [SigningKey]
 dummyGenesisSecretsRich = gsRichSecrets dummyGeneratedSecrets
@@ -153,9 +144,6 @@ dummyGenesisInitializer = GenesisInitializer
 
 dummyGenesisData :: GenesisData
 dummyGenesisData = configGenesisData dummyConfig
-
-dummyGenesisDataStartTime :: UTCTime -> GenesisData
-dummyGenesisDataStartTime = configGenesisData . dummyConfigStartTime
 
 dummyGenesisHash :: GenesisHash
 dummyGenesisHash = configGenesisHash dummyConfig

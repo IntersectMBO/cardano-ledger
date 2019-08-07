@@ -14,7 +14,6 @@ module Cardano.Chain.Genesis.Config
   , configEpochSlots
   , configProtocolMagic
   , configProtocolMagicId
-  , configGeneratedSecretsThrow
   , configGenesisKeyHashes
   , configHeavyDelegation
   , configStartTime
@@ -34,7 +33,6 @@ import Data.Coerce (coerce)
 import Data.Time (UTCTime)
 import Formatting (build, bprint, string)
 import qualified Formatting.Buildable as B
-import System.IO.Error (userError)
 import Text.Megaparsec.Error (ParseErrorBundle)
 
 import Cardano.Binary (Annotated(..), Raw)
@@ -88,8 +86,6 @@ data Config = Config
     -- ^ The data needed at genesis
     , configGenesisHash       :: GenesisHash
     -- ^ The hash of the canonical JSON representation of the 'GenesisData'
-    , configGeneratedSecrets  :: Maybe GeneratedSecrets
-    -- ^ Secrets needed to access 'GenesisData' in testing
     , configReqNetMagic       :: RequiresNetworkMagic
     -- ^ Differentiates between Testnet and Mainet/Staging
     , configUTxOConfiguration :: UTxOConfiguration
@@ -123,15 +119,6 @@ configProtocolMagic config = AProtocolMagic (Annotated pmi ()) rnm
 configProtocolMagicId :: Config -> ProtocolMagicId
 configProtocolMagicId = gdProtocolMagicId . configGenesisData
 
-
-configGeneratedSecretsThrow :: MonadIO m => Config -> m GeneratedSecrets
-configGeneratedSecretsThrow =
-  maybe
-      (liftIO $ throwIO $ userError
-        "GeneratedSecrets missing from Genesis.Config"
-      )
-      pure
-    . configGeneratedSecrets
 
 configGenesisKeyHashes :: Config -> GenesisKeyHashes
 configGenesisKeyHashes = gdGenesisKeyHashes . configGenesisData
@@ -198,7 +185,7 @@ mkConfigFromStaticConfig rnm mSystemStart mSeed = \case
         Just newSeed ->
           spec { gsInitializer = overrideSeed newSeed (gsInitializer spec) }
 
-    mkConfig systemStart spec'
+    fst <$> mkConfig systemStart spec'
 
 mkConfigFromFile
   :: (MonadError ConfigurationError m, MonadIO m)
@@ -219,26 +206,25 @@ mkConfigFromFile rnm fp expectedHash = do
   pure $ Config
     { configGenesisData       = genesisData
     , configGenesisHash       = genesisHash
-    , configGeneratedSecrets  = Nothing
     , configReqNetMagic       = rnm
     , configUTxOConfiguration = defaultUTxOConfiguration --TODO: add further config plumbing
     }
 
 mkConfig
-  :: MonadError ConfigurationError m => UTCTime -> GenesisSpec -> m Config
+  :: MonadError ConfigurationError m => UTCTime -> GenesisSpec -> m (Config, GeneratedSecrets)
 mkConfig startTime genesisSpec = do
   (genesisData, generatedSecrets) <-
     generateGenesisData startTime genesisSpec
       `wrapError` ConfigurationGenerationError
 
 
-  pure $ Config
-    { configGenesisData      = genesisData
-    , configGenesisHash      = genesisHash
-    , configGeneratedSecrets = Just generatedSecrets
-    , configReqNetMagic = getRequiresNetworkMagic (gsProtocolMagic genesisSpec)
-    , configUTxOConfiguration = defaultUTxOConfiguration
-    }
+  let config = Config
+        { configGenesisData      = genesisData
+        , configGenesisHash      = genesisHash
+        , configReqNetMagic = getRequiresNetworkMagic (gsProtocolMagic genesisSpec)
+        , configUTxOConfiguration = defaultUTxOConfiguration
+        }
+  return (config, generatedSecrets)
   where
     -- Anything will do for the genesis hash. A hash of "patak" was used before,
     -- and so it remains.
