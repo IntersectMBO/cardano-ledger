@@ -22,5 +22,10 @@ extra-deps:
     - binary
     - cardano-crypto-class
 
+- git: https://github.com/input-output-hk/goblins
+  commit: 26f6992e92d3544c749276962b284a0eead3c395
+- moo-1.2
+- gray-code-0.3.1
+
 nix:
   shell-file: nix/stack-shell.nix

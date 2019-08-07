@@ -18,7 +18,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Ledger.Update
-  (module Ledger.Update)
+  ( module Ledger.Update
+  , PredicateFailure()
+  )
 where
 
 import           Control.Arrow (second, (&&&))
@@ -55,6 +57,8 @@ import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation 
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 import qualified Ledger.GlobalParams as GP
+import           Test.Goblin
+import           Test.Goblin.TH
 
 import           Prelude
 
@@ -1632,3 +1636,50 @@ protocolVersionEndorsementGen upienv upistate =
         endorsementsMap = Set.toList (endorsements upistate)
                         & fmap (second Set.singleton)
                         & Map.fromListWith Set.union
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+instance GeneOps g => Goblin g Metadata where
+  tinker = pure
+  conjure = pure Metadata
+
+deriveGoblin ''ApVer
+deriveGoblin ''ApName
+deriveGoblin ''ProtVer
+deriveGoblin ''PParams
+deriveGoblin ''SwVer
+deriveGoblin ''UpId
+deriveGoblin ''UProp
+deriveGoblin ''Vote
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+instance AddShrinks Metadata where
+  addShrinks = pure
+
+deriveAddShrinks ''ApName
+deriveAddShrinks ''ApVer
+deriveAddShrinks ''PParams
+deriveAddShrinks ''ProtVer
+deriveAddShrinks ''SwVer
+deriveAddShrinks ''UpId
+deriveAddShrinks ''UProp
+deriveAddShrinks ''Vote
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''ApName
+deriveSeedGoblin ''ApVer
+deriveSeedGoblin ''SwVer
+deriveSeedGoblin ''PParams
+deriveSeedGoblin ''ProtVer
+deriveSeedGoblin ''Metadata
+deriveSeedGoblin ''UpId
