@@ -134,4 +134,49 @@ needed for KES.
   \caption{KES Cryptographic definitions}
   \label{fig:kes-defs-shelley}
 \end{figure}
+
+\begin{figure*}[hbt]
+  \emph{MultiSig Type}
+
+  \begin{equation*}
+    \begin{array}{rll}
+      \var{msig} & \in & \type{RequireSig}~\KeyHash\\
+      & \uniondistinct &
+         \type{RequireAllOf}~[\Script] \\
+      & \uniondistinct&
+         \type{RequireAnyOf}~[\Script] \\
+      & \uniondistinct&
+        \type{RequireMOf}~\N~[\Script]
+    \end{array}
+  \end{equation*}
+
+  \emph{Functions}
+
+  \begin{align*}
+    \fun{validateScript} & \in\Script\to\Tx\to\Bool & \text{validate native
+                                                          script} \\
+    \fun{validateScript} & ~\var{msig}~\var{tx}= \\
+                         & \textrm{let}~\var{vhks}\leteq \{\fun{hashKey}~vk \vert
+                           vk \in \fun{txwitsVKey}~\var{tx}\} \\
+                         & \fun{evalMultiSigScript}~msig~vhks\\
+  \end{align*}
+  \begin{align*}
+    \fun{evalMultiSigScript} & \in\Script\to\powerset\KeyHash\to\Bool & \\
+    \fun{evalMultiSigScript} & ~(\type{RequireSig}~hk)~\var{vhks} =  hk \in vhks \\
+    \fun{evalMultiSigScript} & ~(\type{RequireAllOf}~ts)~\var{vhks} =
+                              \forall t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalMultiSigScript} & ~(\type{RequireAnyOf}~ts)~\var{vhks} =
+                              \exists t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalMultiSigScript} & ~(\type{RequireMOf}~m~ts)~\var{vhks} = \\
+                             & m \leq \Sigma
+                               \left(
+                               [\textrm{if}~(\fun{evalMultiSigScript}~\var{t}~\var{vhks})~
+                               \textrm{then}~1~\textrm{else}~0\vert t \leftarrow ts]
+                               \right)
+  \end{align*}
+
+  \caption{Multi-signature via Native Scripts}
+  \label{fig:types-msig}
+\end{figure*}
+
 \clearpage
