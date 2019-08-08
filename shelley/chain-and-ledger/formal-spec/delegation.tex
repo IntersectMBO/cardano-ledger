@@ -133,10 +133,8 @@ It does the following:
   \emph{Certificate Accessor functions}
   %
   \begin{equation*}
-  \begin{array}{r@{~\in~}lr}
-    \cwitness{} & \DCert \to \KeyHash
-  & \text{certificate witness}
-  \\
+    \begin{array}{r@{~\in~}lr}
+      \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness} \\
   \fun{dpool} & \DCertDeleg \to \KeyHash
   & \text{pool being delegated to}
   \\
@@ -226,15 +224,24 @@ and the protocol parameters.
 %% Figure - Delegation Transitions
 %%
 \begin{figure}
+  \emph{Delegation Types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{stakeCred} & \StakeCredential & (\KeyHash_{stake} \uniondistinct
+                                       \HashScr) \\
+      \var{stakeDelegator} & \StakeDelegs & \StakeCredential \mapsto \Slot \\
+    \end{array}
+  \end{equation*}
+  %
   \emph{Delegation States}
   %
   \begin{equation*}
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \StakeKeys & \text{registered stake keys}\\
-      \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
-      \var{delegations} & \KeyHash_{stake} \mapsto \KeyHash_{pool} & \text{delegations}\\
+            \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
+            \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
+            \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
       \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
       \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
       \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
