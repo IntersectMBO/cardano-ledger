@@ -6,13 +6,7 @@ package cardano-ledger
   tests: True
 
 constraints:
-  hashable == 1.2.*, network == 3.0.*, primitive == 0.6.*
-
-source-repository-package
-  type: git
-  location: https://github.com/well-typed/cborg
-  tag: 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d
-  subdir: cborg
+  hashable == 1.2.*, network == 3.0.*, primitive == 0.6.*, cborg == 0.2.2.*
 
 source-repository-package
   type: git
@@ -28,13 +22,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 565df9739781db7589c7220a9125ea46a615dd40
+  tag: 1121579803319f01612583fc445c50b0a0ce0424
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 565df9739781db7589c7220a9125ea46a615dd40
+  tag: 1121579803319f01612583fc445c50b0a0ce0424
   subdir: binary/test
 
 source-repository-package
@@ -63,19 +57,19 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 38d601eb3dd20e8a27b7b7008aa90c70db911089
+  tag: 738154f2a491e2bea8e65ae5785a1dcc828abacb
   subdir: contra-tracer
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 38d601eb3dd20e8a27b7b7008aa90c70db911089
+  tag: 738154f2a491e2bea8e65ae5785a1dcc828abacb
   subdir: iohk-monitoring
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-shell
-  tag: e5e9f9527569c6221717c6834a386559ec3fed29
+  tag: 5c4e0b73f209631debd74795fa8cd4c92ed874fb
 
 source-repository-package
   type: git
