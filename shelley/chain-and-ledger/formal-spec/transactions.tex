@@ -162,6 +162,15 @@ This function must produce a unique id for each unique transaction.
                         \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrScr \times Coin))
   \end{align*}
   %
+  \begin{align*}
+    \fun{validateScript} & \in\Script\to\Tx\to\Bool & \text{validate native
+                                                          script} \\
+    \fun{validateScript} & ~\var{msig}~\var{tx}= \\
+                         & \textrm{let}~\var{vhks}\leteq \{\fun{hashKey}~vk \vert
+                           vk \in \fun{txwitsVKey}~\var{tx}\} \\
+                         & \fun{evalMultiSigScript}~msig~vhks
+  \end{align*}
+  %
   \caption{Helper Functions for Transaction Inputs}
   \label{fig:defs:functions-txins}
 \end{figure*}
