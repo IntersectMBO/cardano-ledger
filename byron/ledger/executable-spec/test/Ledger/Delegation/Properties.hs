@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -22,6 +23,7 @@ import           Control.Arrow (first, (***))
 import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
+import           Data.Data (Data, Typeable, toConstr)
 import           Data.Either (isLeft)
 import           Data.List (foldl', last)
 import           Data.List.Unique (repeated)
@@ -91,7 +93,7 @@ initialDIState = DIState
   }
 
 -- | Delegation blocks. Simple blockchain to test delegation.
-data DBLOCK
+data DBLOCK deriving (Data, Typeable)
 
 -- | A delegation block.
 data DBlock
@@ -113,8 +115,7 @@ instance STS DBLOCK where
   data PredicateFailure DBLOCK
     = DPF (PredicateFailure DELEG)
     | NotIncreasingBlockSlot
-    | InvalidDelegationCertificate -- We need this to be able to use the trace profile.
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules
     = [ do
@@ -242,7 +243,7 @@ profile
   = TraceProfile
       { proportionOfValidSignals = 95
       , proportionOfInvalidSignals = 5
-      , failures = [(1, InvalidDelegationCertificate)]
+      , failures = [(1, toConstr (DPF undefined))]
       }
 
 instance HasTrace DBLOCK where
@@ -273,8 +274,12 @@ instance HasTrace DBLOCK where
         n <- Gen.integral (Range.linear 0 13)
         pure $! Set.fromAscList $ mkVKeyGenesis <$> [0 .. n]
 
-  sigGen (Just InvalidDelegationCertificate) _ (env, _st) =
-    DBlock <$> nextSlotGen env <*> Gen.list (Range.constant 0 10) randomDCertGen
+  sigGen maybePredFailure _ (env, st) =
+    case maybePredFailure of
+      Just pf | toConstr (DPF undefined) == pf ->
+        DBlock <$> nextSlotGen env <*> Gen.list (Range.constant 0 10) randomDCertGen
+      _ ->
+        DBlock <$> nextSlotGen env <*> sigGen @DELEG Nothing env st
     where
       -- | Generate a random delegation certificate, which has a high probability of failing since
       -- we do not consider the current delegation state. So for instance, we could generate a
@@ -292,8 +297,6 @@ instance HasTrace DBLOCK where
                     .  (fromIntegral n +)
                    <$> Gen.integral (Range.constant (-2 :: Int) 2)
             where Epoch n = _dSEnvEpoch env
-  sigGen _ _ (env, st) =
-    DBlock <$> nextSlotGen env <*> sigGen @DELEG Nothing env st
 
 
 -- | Generate a next slot. We want the resulting trace to include a large number of epoch changes,
