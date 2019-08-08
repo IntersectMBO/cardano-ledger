@@ -113,10 +113,11 @@ This function must produce a unique id for each unique transaction.
       & \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
         \times \Coin \times \Slot \times \Wdrl \times \Update
       \\
+      \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \HashScr \mapsto \Script)
+      \\
       \var{tx}
       & \Tx
-      & \TxBody \times (\VKey \mapsto \Sig)
-      \\
+      & \TxBody \times \TxWitness
     \end{array}
   \end{equation*}
   %
@@ -130,8 +131,9 @@ This function must produce a unique id for each unique transaction.
       \fun{txttl} & \Tx \to \Slot & \text{time to live} \\
       \fun{txwdrls} & \Tx \to \Wdrl & \text{withdrawals} \\
       \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
-      \fun{txwits} & \Tx \to (\VKey \mapsto \Sig) & \text{witnesses} \\
-      \fun{txup} & \Tx \to \Update & \text{protocol parameter update} \\
+      \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
+      \fun{txwitsScript} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}\\
+      \fun{txup} & \Tx \to \Update & \text{protocol parameter update}
     \end{array}
   \end{equation*}
   %
@@ -139,6 +141,7 @@ This function must produce a unique id for each unique transaction.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
+      \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
