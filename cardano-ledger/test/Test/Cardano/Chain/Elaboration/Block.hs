@@ -250,7 +250,6 @@ abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stabl
   Genesis.Config {
       Genesis.configGenesisData       = genesisData
     , Genesis.configGenesisHash       = genesisHash
-    , Genesis.configGeneratedSecrets  = Nothing
     , Genesis.configReqNetMagic       = rnm
     , Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
     }
