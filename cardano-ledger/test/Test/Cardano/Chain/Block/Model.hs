@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE OverloadedLists  #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TupleSections    #-}
@@ -34,6 +35,7 @@ import Hedgehog
   , PropertyT
   , collect
   , evalEither
+  , failure
   , footnote
   , forAll
   , property
@@ -52,14 +54,16 @@ import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
 import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import Control.State.Transition.Generator (classifyTraceLength, trace)
-import Control.State.Transition (State)
+import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace)
+import Control.State.Transition (State, PredicateFailure)
+import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(NewestFirst, OldestFirst)
+  , _traceEnv
+  , lastState
   , preStatesAndSignals
   , traceEnv
-  , _traceEnv
   , traceSignals
   )
 import qualified Ledger.Core as AbstractCore
@@ -85,7 +89,7 @@ tests = $$discoverPropArg
 ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 300  $ property $ do
-    let (traceLength, step) = (500 :: Word64, 10 :: Word64)
+    let (traceLength, step) = (200 :: Word64, 10 :: Word64)
     tr <- forAll $ trace @CHAIN traceLength
     classifyTraceLength tr traceLength step
     printAdditionalInfoOnFailure tr
@@ -100,30 +104,15 @@ ts_prop_generatedChainsAreValidated =
 
 
 passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()
-passConcreteValidation tr = void $ evalEither res
+passConcreteValidation tr = void $ evalEither result
  where
-  res =
-    foldM (elaborateAndUpdate config) (initialState, initialAbstractToConcreteIdMaps)
-      $ preStatesAndSignals OldestFirst tr
-
-  initialState = initialStateNoUTxO { cvsUtxo = initialUTxO }
-
-  initialAbstractToConcreteIdMaps = mempty { transactionIds = txIdMap }
-
-  initialStateNoUTxO =
-    either (panic . show) identity $ initialChainValidationState config
-
-  config = abEnvToCfg abstractEnv
-
-  abstractEnv@( _currentSlot
-              , abstractInitialUTxO
-              , _allowedDelegators
-              , _protocolParams
-              , _stableAfter) = tr ^. traceEnv
-
-  (initialUTxO, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
+   ValidationOutput { result } = applyTrace tr
 
 
+-- | Elaborate an abstract signal into a concrete one, and apply the validators
+-- to the elaborated signal and given concrete state. If the signal was
+-- validated, return the next state. Otherwise return an error.
+--
 elaborateAndUpdate
   :: Genesis.Config
   -> (ChainValidationState, AbstractToConcreteIdMaps)
@@ -150,3 +139,88 @@ classifyTransactions =
     . sum
     . fmap (length . Abstract._bUtxo . Abstract._bBody)
     . traceSignals NewestFirst
+
+ts_prop_invalidDelegationSignalsAreRejected :: TSProperty
+ts_prop_invalidDelegationSignalsAreRejected =
+  withTestsTS 300  $ property $ do
+    let traceLength = 100 :: Word64
+    tr <- forAll $ invalidTrace @CHAIN traceLength failureProfile
+    let ValidationOutput { elaboratedConfig, result }
+          = applyTrace (Invalid.Trace.prefix tr)
+    case result of
+      Left error -> do
+        footnote $ "Expecting a valid prefix but got: " ++ show error
+        failure
+      Right concreteState ->
+        let abstractState = lastState (Invalid.Trace.prefix tr)
+            block = Invalid.Trace.sig tr
+            result' = elaborateAndUpdate
+                    elaboratedConfig
+                    concreteState
+                    (abstractState, block)
+        in
+        case (Invalid.Trace.errorOrLastState tr, result') of
+          (Right _, Right _) ->
+            -- Success: it is possible that the invalid signals generator
+            -- produces a valid signal, since the generator is probabilistic.
+            pure ()
+          (Left _, Left _) ->
+            -- Success: both the model and the concrete implementation failed
+            -- to validate the signal.
+            --
+            -- TODO: we could establish a mapping between concrete and abstract errors.
+            pure ()
+          (abstractResult, concreteResult) -> do
+            footnote "Validation results mismatch."
+            footnote $ "Abstract result: " ++ show abstractResult
+            footnote $ "Concrete result: " ++ show concreteResult
+            failure
+  where
+    -- TODO: define this.
+    failureProfile :: [(Int, PredicateFailure CHAIN)]
+    failureProfile = [(1, panic mempty)] -- TODO: we need to modify the failure
+                                         -- profile in CSL so that we pass a
+                                         -- constructor representation, instead
+                                         -- of a concrete value.
+
+-- | Output resulting from elaborating and validating an abstract trace with
+-- the concrete validators.
+data ValidationOutput = ValidationOutput
+  { elaboratedConfig :: !Genesis.Config
+  -- ^ Elaborated configuration. This configuration results from elaborating
+  -- the trace initial environment.
+  , result :: !(Either
+                  ChainValidationError
+                  (ChainValidationState, AbstractToConcreteIdMaps)
+               )
+  }
+
+
+-- | Apply the concrete validators to the given abstract trace.
+--
+applyTrace
+  :: Trace CHAIN
+  -> ValidationOutput
+applyTrace tr =
+  ValidationOutput
+  { elaboratedConfig = config
+  , result = foldM (elaborateAndUpdate config) (initialState, initialAbstractToConcreteIdMaps)
+           $ preStatesAndSignals OldestFirst tr
+  }
+  where
+    initialState = initialStateNoUTxO { cvsUtxo = initialUTxO }
+
+    initialAbstractToConcreteIdMaps = mempty { transactionIds = txIdMap }
+
+    initialStateNoUTxO =
+      either (panic . show) identity $ initialChainValidationState config
+
+    config = abEnvToCfg abstractEnv
+
+    abstractEnv@( _currentSlot
+                , abstractInitialUTxO
+                , _allowedDelegators
+                , _protocolParams
+                , _stableAfter) = tr ^. traceEnv
+
+    (initialUTxO, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
