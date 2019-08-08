@@ -34,6 +34,10 @@ of~\cite{delegation_design} explains this design choice.  The mechanism for
 transferring rewards from these accounts will be explained in
 Section~\ref{sec:utxo} and follows~\cite{chimeric}.
 
+Base, pointer and enterprise addresses contain a payment credential which is
+either a key hash or a script hash. Base addresses contain a staking credential
+which is also either a key hash or a script hash.
+
 \begin{figure*}[hbt]
   \emph{Abstract types}
   %
@@ -95,12 +99,15 @@ Section~\ref{sec:utxo} and follows~\cite{chimeric}.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{paymentHK} & \Addr \to \KeyHash_{pay}
-                      & \text{hash of payment key from addr}\\
-      \fun{stakeHK_b} & \AddrB \to \KeyHash_{stake}
-                      & \text{hash of stake key from base addr}\\
-      \fun{stakeHK_r} & \AddrRWD \to \KeyHash_{stake}
-                      & \text{hash of stake key from reward account}\\
+      \fun{paymentHK} & \AddrVKey \to \KeyHash_{pay}
+      & \text{hash of payment key from addr}\\
+      \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
+                                                    script} \\
+            \fun{stakeCred_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
+                          \StakeCredential & \text{stake credential from base
+                                      addr}\\
+      \fun{stakeCred_{r}} & \AddrRWD \to \StakeCredential & \text{stake credential
+                                                   from reward addr}\\
       \fun{addrPtr} & \AddrP \to \Ptr
                     & \text{pointer from pointer addr}\\
     \end{array}
@@ -111,7 +118,7 @@ Section~\ref{sec:utxo} and follows~\cite{chimeric}.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{addr_{rwd}}
-        & \KeyHash_{stake} \to \AddrRWD
+        & \Credential_{stake} \to \AddrRWD
         & \text{construct a reward account}
     \end{array}
   \end{equation*}
