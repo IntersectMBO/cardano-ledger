@@ -156,8 +156,8 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/iohk-monitoring-framework";
-      rev = "38d601eb3dd20e8a27b7b7008aa90c70db911089";
-      sha256 = "124w5lihspg7vshdk5vyql4g8cpdfx0ijcsvynvkpxadhxw92bar";
+      rev = "738154f2a491e2bea8e65ae5785a1dcc828abacb";
+      sha256 = "18f0akcbg5mw1dcig4s1cgnx0idd58ji1yyjr5zf3aqanvn6bfk9";
       });
     postUnpack = "sourceRoot+=/iohk-monitoring; echo source root reset to \$sourceRoot";
     }
