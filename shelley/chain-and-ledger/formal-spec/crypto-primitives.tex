@@ -135,6 +135,22 @@ needed for KES.
   \label{fig:kes-defs-shelley}
 \end{figure}
 
+Figure~\ref{fig:types-msig} shows the types for multi-signature
+schemes. Multi-signatures effectively specify one or more combinations of
+cryptographic signatures which are considered valid. This is realized in a
+native way via a script-like DSL which allows for defining terms that can be
+evaluated. The terms form a tree like structure and are evaluated via the
+\fun{evalMultiSigScript} function. The parameters are a script and a set of key
+hashes. The function returns $True$ in the case of the supplied key hashes being
+a valid combination for the script, else it returns $False$.
+
+Use cases for this are for example:
+\begin{itemize}
+\item Require two parties to sign.
+\item Require either of two parties to sign.
+\item Generally, require $m$ out of $n$ ($m \leq n$) parties to sign.
+\end{itemize}
+
 \begin{figure*}[hbt]
   \emph{MultiSig Type}
 
@@ -152,14 +168,6 @@ needed for KES.
 
   \emph{Functions}
 
-  \begin{align*}
-    \fun{validateScript} & \in\Script\to\Tx\to\Bool & \text{validate native
-                                                          script} \\
-    \fun{validateScript} & ~\var{msig}~\var{tx}= \\
-                         & \textrm{let}~\var{vhks}\leteq \{\fun{hashKey}~vk \vert
-                           vk \in \fun{txwitsVKey}~\var{tx}\} \\
-                         & \fun{evalMultiSigScript}~msig~vhks\\
-  \end{align*}
   \begin{align*}
     \fun{evalMultiSigScript} & \in\Script\to\powerset\KeyHash\to\Bool & \\
     \fun{evalMultiSigScript} & ~(\type{RequireSig}~hk)~\var{vhks} =  hk \in vhks \\
