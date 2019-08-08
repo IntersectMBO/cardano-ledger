@@ -576,15 +576,29 @@ This consists of:
       \right\}
   \end{align*}
 
+    \begin{align*}
+    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to
+      \powerset{\KeyHash}
+    & \text{required key hashes} \\
+    &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
+    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \} \\
+    \cup & ~~
+           \left(\{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\} \cap \KeyHash_{Stake}  \right)\\
+    \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
+    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx}) \\
+    \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
+  \end{align*}
   \begin{align*}
-    & \fun{witsNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
-    & \text{hashkeys for needed witnesses} \\
-    & \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
-    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \}~\cup \\
-    & ~~\{\fun{stakeHK_r}~a \mid a\mapsto \wcard \in \txwdrls{tx}\}~\cup \\
-    & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
-    & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\cup \\
-    & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
+    & \hspace{-0.5cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
+      \powerset{\HashScr}
+    & \text{required script hashes} \\
+    &  \hspace{-0.5cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
+    & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
+    & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{tx}})}~{utxo}\} \\
+    \cup & ~~\left(\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
+           \restrictdom \fun{txwdrls}~\var{tx}) \} \cap \HashScr\right) \\
+    \cup & ~~\{\AddrScr \cap \fun{cwitness}~\var{c} \mid c \in \fun{txcerts}~\var{tx}\}
   \end{align*}
   \caption{Functions used in witness rule}
   \label{fig:functions-witnesses}
@@ -619,10 +633,15 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
     \inference[UTxO-wit]
     {
       (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\~\\
-      \forall \var{vk} \mapsto \sigma \in \txwits{tx},
-        \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsNeeded}~\var{utxo}~\var{tx}~\var{dms} =
-        \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwits{tx})} \}\\
+            \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{tx},\\
+      \fun{hashScript}~\var{validator} = \var{hs} \wedge
+      \fun{validateScript}~\var{validator}~\var{tx}\\~\\
+      \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{tx})
+      \\~\\
+      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
+      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
+      \fun{witsVKeyNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid
+      \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
       {
         \begin{array}{l}
         \var{utxoEnv}
