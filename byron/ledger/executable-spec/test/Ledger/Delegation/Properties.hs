@@ -55,10 +55,10 @@ import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      PredicateFailure (IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
                      delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio, epoch,
                      liveAfter, mkDCert, multipleDelegationsRatio, nextEpochDelegationsRatio,
-                     scheduledDelegations, selfDelegationsRatio, slot, thisEpochDelegationsRatio,
-                     _dIStateDelegationMap, _dIStateKeyEpochDelegations, _dIStateLastDelegation,
-                     _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
-                     _dSStateScheduledDelegations)
+                     randomDCertGen, scheduledDelegations, selfDelegationsRatio, slot,
+                     thisEpochDelegationsRatio, _dIStateDelegationMap, _dIStateKeyEpochDelegations,
+                     _dIStateLastDelegation, _dIStateScheduledDelegations,
+                     _dSStateKeyEpochDelegations, _dSStateScheduledDelegations)
 
 import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Ledger.Core.Generators as CoreGen
@@ -279,26 +279,6 @@ instance HasTrace DBLOCK where
 
   sigGen _ (env, st) =
     DBlock <$> nextSlotGen env <*> sigGen @DELEG env st
-
-
--- | Generate a random delegation certificate, which has a high probability of failing since
--- we do not consider the current delegation state. So for instance, we could generate a
--- delegation certificate for a genesis key that already delegated in this epoch.
---
--- TODO: Put this function in some module in the @src@ directory.
-randomDCertGen :: Environment DELEG -> Gen DCert
-randomDCertGen env = do
-  (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
-  pure $! mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
-  where
-    vkgGen' = Gen.element $ Set.toList allowed
-    allowed = _dSEnvAllowedDelegators env
-    vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
-    epochGen' =  Epoch
-              .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
-              .  (fromIntegral n +)
-             <$> Gen.integral (Range.constant (-2 :: Int) 2)
-      where Epoch n = _dSEnvEpoch env
 
 
 -- | Generate a next slot. We want the resulting trace to include a large number of epoch changes,

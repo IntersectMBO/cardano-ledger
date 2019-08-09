@@ -62,6 +62,7 @@ module Ledger.Delegation
   , dcertGen
   , dcertsGen
   , initialEnvFromGenesisKeys
+  , randomDCertGen
   -- * Functions on delegation state
   , delegatorOf
   -- * Support Functions for delegation properties
@@ -99,7 +100,7 @@ import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Range (linear)
+import qualified Hedgehog.Range as Range
 
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
@@ -107,7 +108,7 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
-import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
+import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
                      addSlot, hash, mkVkGenesisSet, owner, range, signWithGenesisKey, unBlockCount,
                      (∈), (∉), (⨃))
@@ -525,6 +526,26 @@ dcertsGen env st =
           , _dSStateKeyEpochDelegations = _dIStateKeyEpochDelegations st
           }
 
+
+-- | Generate a random delegation certificate, which has a high probability of failing since
+-- we do not consider the current delegation state. So for instance, we could generate a
+-- delegation certificate for a genesis key that already delegated in this epoch.
+--
+randomDCertGen :: Environment DELEG -> Gen DCert
+randomDCertGen env = do
+  (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
+  pure $! mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
+  where
+    vkgGen' = Gen.element $ Set.toList allowed
+    allowed = _dSEnvAllowedDelegators env
+    vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
+    epochGen' =  Epoch
+              .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
+              .  (fromIntegral n +)
+             <$> Gen.integral (Range.constant (-2 :: Int) 2)
+      where Epoch n = _dSEnvEpoch env
+
+
 -- | Dummy transition system needed for generating sequences of delegation certificates.
 data MSDELEG deriving (Data, Typeable)
 
@@ -565,7 +586,7 @@ instance HasTrace DELEG where
 
 delegEnvGen :: Word64 -> Gen DSEnv
 delegEnvGen chainLength = do
-  ngk <- Gen.integral (linear 1 14)
+  ngk <- Gen.integral (Range.linear 1 14)
   initialEnvFromGenesisKeys ngk chainLength
 
 -- | Generate an initial 'DELEG' environment from the given number of genesis
