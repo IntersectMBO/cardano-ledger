@@ -7,8 +7,6 @@ packages:
   - crypto/test
 
 extra-deps:
-  - libsystemd-journal-1.4.4
-
   - tasty-hedgehog-1.0.0.1
 
   # To be able to use `stack hoogle`
@@ -38,27 +36,11 @@ extra-deps:
   # Not yet in Stack
   - bimap-0.4.0
 
-  # Following deps are for cardano-shell
-  - git: https://github.com/input-output-hk/cardano-shell
-    commit: 5c4e0b73f209631debd74795fa8cd4c92ed874fb
-
-  - time-units-1.0.0
-
-  - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 738154f2a491e2bea8e65ae5785a1dcc828abacb
-    subdirs:
-      - contra-tracer
-      - iohk-monitoring
-
   # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
     commit: ec96c64c665b741c17b4e38f611315bae9b0b054
 
   - Unique-0.4.7.6
-
-flags:
-  iohk-monitoring:
-    disable-prometheus: true
 
 nix:
   shell-file: nix/stack-shell.nix

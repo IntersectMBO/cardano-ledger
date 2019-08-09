@@ -28,7 +28,6 @@ library
                        Cardano.Chain.Block
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
-                       Cardano.Chain.Conversion
                        Cardano.Chain.Delegation
                        Cardano.Chain.Delegation.Validation.Activation
                        Cardano.Chain.Delegation.Validation.Interface
@@ -132,7 +131,6 @@ library
                      , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-prelude
-                     , cardano-shell
                      , containers
                      , concurrency
                      , cryptonite
