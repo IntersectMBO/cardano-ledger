@@ -254,11 +254,11 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
     Keys that are not both registered and delegated are filtered out.
     The relation passed to $\fun{aggregate_{+}}$ is made up of:
     \begin{itemize}
-      \item $\fun{stakeHK_b}^{-1}$, relating hashkeys to (base) addresses
-      \item $\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}$, relating hashkeys to (pointer)
+      \item $\fun{stakeCred_b}^{-1}$, relating credentials to (base) addresses
+      \item $\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}$, relating credentials to (pointer)
         addresses
       \item $\range{utxo}$, relating addresses to coins
-      \item $\fun{stakeHK_r}^{-1}\circ\var{rewards}$, relating (reward) addresses to coins
+      \item $\fun{stakeCred_r}^{-1}\circ\var{rewards}$, relating (reward) addresses to coins
     \end{itemize}
     The notation for relations is explained in Section~\ref{sec:notation-shelley}.
 \end{itemize}
@@ -286,10 +286,10 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
         = \var{dstate} \\
       & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
-        \left(\fun{stakeHK_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
+        \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
         \right)
-        \cup \left(\fun{stakeHK_r}^{-1}\circ\var{rewards}\right) \\
+        \cup \left(\fun{stakeCred_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
                (\dom{stkeys}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
   \end{align*}
