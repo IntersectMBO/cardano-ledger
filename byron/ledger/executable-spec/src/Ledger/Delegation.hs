@@ -554,14 +554,14 @@ instance HasTrace MSDELEG where
 
   envGen = delegEnvGen
 
-  sigGen _ env st = dcertGen env (_dSStateKeyEpochDelegations st)
+  sigGen env st = dcertGen env (_dSStateKeyEpochDelegations st)
 
 
 instance HasTrace DELEG where
 
   envGen = delegEnvGen
 
-  sigGen _ = dcertsGen
+  sigGen = dcertsGen
 
 delegEnvGen :: Word64 -> Gen DSEnv
 delegEnvGen chainLength = do

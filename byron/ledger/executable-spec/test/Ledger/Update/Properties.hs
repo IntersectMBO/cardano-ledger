@@ -360,7 +360,7 @@ instance HasTrace UBLOCK where
       -- @k@ should be a function of it.
       pure (Slot 0, dms, BlockCount 10, numberOfGenesisKeys)
 
-  sigGen _ _env UBlockState {upienv, upistate} = do
+  sigGen _env UBlockState {upienv, upistate} = do
     (anOptionalUpdateProposal, aListOfVotes) <-
       Update.updateProposalAndVotesGen upienv upistate
 

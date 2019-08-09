@@ -199,7 +199,7 @@ instance HasTrace CHAIN where
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
 
-  sigGen _ = sigGenChain GenDelegation GenUTxO GenUpdate Nothing
+  sigGen = sigGenChain GenDelegation GenUTxO GenUpdate
 
 data ShouldGenDelegation = GenDelegation | NoGenDelegation
 
@@ -211,7 +211,6 @@ sigGenChain
   :: ShouldGenDelegation
   -> ShouldGenUTxO
   -> ShouldGenUpdate
-  -> Maybe (PredicateFailure CHAIN)
   -> Environment CHAIN
   -> State CHAIN
   -> Gen (Signal CHAIN)
@@ -219,7 +218,6 @@ sigGenChain
   shouldGenDelegation
   shouldGenUTxO
   shouldGenUpdate
-  _
   (_sNow, utxo0, ads, _pps, k)
   (Slot s, sgs, h, utxo, ds, us)
   = do
@@ -291,7 +289,7 @@ sigGenChain
       case shouldGenUTxO of
         GenUTxO   ->
           let utxoEnv = UTxOEnv utxo0 pps' in
-            sigGen @UTXOWS Nothing utxoEnv utxo
+            sigGen @UTXOWS utxoEnv utxo
         NoGenUTxO -> pure []
 
     (anOptionalUpdateProposal, aListOfVotes) <-

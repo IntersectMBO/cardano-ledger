@@ -23,7 +23,7 @@ import           Control.Arrow (first, (***))
 import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import           Data.Data (Data, Typeable, toConstr)
+import           Data.Data (Data, Typeable)
 import           Data.Either (isLeft)
 import           Data.List (foldl', last)
 import           Data.List.Unique (repeated)
@@ -37,11 +37,10 @@ import qualified Hedgehog.Range as Range
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasSizeInfo, HasTrace,
+import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, SignalGenerator,
                      TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
-                     failures, invalidTrace, isTrivial, nonTrivialTrace,
-                     proportionOfInvalidSignals, proportionOfValidSignals, sigGen,
-                     suchThatLastState, trace, traceLengthsAreClassified, traceWithProfile)
+                     failures, invalidTrace, isTrivial, nonTrivialTrace, proportionOfValidSignals,
+                     sigGen, suchThatLastState, trace, traceLengthsAreClassified, traceWithProfile)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
@@ -242,9 +241,13 @@ profile :: TraceProfile DBLOCK
 profile
   = TraceProfile
       { proportionOfValidSignals = 95
-      , proportionOfInvalidSignals = 5
-      , failures = [(1, toConstr (DPF undefined))]
+      , failures = [(5, invalidDBlockGen)]
       }
+  where
+    invalidDBlockGen :: SignalGenerator DBLOCK
+    invalidDBlockGen env _st =
+        DBlock <$> nextSlotGen env <*> Gen.list (Range.constant 0 10) (randomDCertGen env)
+
 
 instance HasTrace DBLOCK where
 
@@ -274,29 +277,28 @@ instance HasTrace DBLOCK where
         n <- Gen.integral (Range.linear 0 13)
         pure $! Set.fromAscList $ mkVKeyGenesis <$> [0 .. n]
 
-  sigGen maybePredFailure _ (env, st) =
-    case maybePredFailure of
-      Just pf | toConstr (DPF undefined) == pf ->
-        DBlock <$> nextSlotGen env <*> Gen.list (Range.constant 0 10) randomDCertGen
-      _ ->
-        DBlock <$> nextSlotGen env <*> sigGen @DELEG Nothing env st
-    where
-      -- | Generate a random delegation certificate, which has a high probability of failing since
-      -- we do not consider the current delegation state. So for instance, we could generate a
-      -- delegation certificate for a genesis key that already delegated in this epoch.
-      randomDCertGen :: Gen DCert
-      randomDCertGen = do
-        (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
-        pure $! mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
-        where
-          vkgGen' = Gen.element $ Set.toList allowed
-          allowed = _dSEnvAllowedDelegators env
-          vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
-          epochGen' =  Epoch
-                    .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
-                    .  (fromIntegral n +)
-                   <$> Gen.integral (Range.constant (-2 :: Int) 2)
-            where Epoch n = _dSEnvEpoch env
+  sigGen _ (env, st) =
+    DBlock <$> nextSlotGen env <*> sigGen @DELEG env st
+
+
+-- | Generate a random delegation certificate, which has a high probability of failing since
+-- we do not consider the current delegation state. So for instance, we could generate a
+-- delegation certificate for a genesis key that already delegated in this epoch.
+--
+-- TODO: Put this function in some module in the @src@ directory.
+randomDCertGen :: Environment DELEG -> Gen DCert
+randomDCertGen env = do
+  (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
+  pure $! mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
+  where
+    vkgGen' = Gen.element $ Set.toList allowed
+    allowed = _dSEnvAllowedDelegators env
+    vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
+    epochGen' =  Epoch
+              .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
+              .  (fromIntegral n +)
+             <$> Gen.integral (Range.constant (-2 :: Int) 2)
+      where Epoch n = _dSEnvEpoch env
 
 
 -- | Generate a next slot. We want the resulting trace to include a large number of epoch changes,
@@ -431,3 +433,4 @@ invalidSignalsAreGenerated = withTests 300 $ property $ do
   cover 80
         "Invalid signals are generated when requested"
         (isLeft $ Invalid.Trace.errorOrLastState tr)
+  -- TODO: classify the kind of failures we get.
