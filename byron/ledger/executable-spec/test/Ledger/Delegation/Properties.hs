@@ -45,12 +45,10 @@ import qualified Control.State.Transition.Generator as TransitionGenerator
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
                      preStatesAndSignals, traceEnv, traceLength, traceSignals)
-import           Ledger.Core (Epoch (Epoch), Owner (Owner), Sig (Sig), Slot, SlotCount (SlotCount),
-                     VKey (VKey), VKeyGenesis, addSlot, mkVKeyGenesis, owner, signWithGenesisKey,
-                     unSlot, unSlotCount)
+import           Ledger.Core (Epoch (Epoch), Sig (Sig), Slot, SlotCount (SlotCount), VKey,
+                     VKeyGenesis, addSlot, mkVKeyGenesis, owner, unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
-                     DSEnv (DSEnv, _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK),
-                     DSState (DSState),
+                     DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
                      PredicateFailure (IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
                      delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio, epoch,
