@@ -513,8 +513,16 @@ a stake pool, though these concerns are independent of the ledger rules.
 
 The DELEG rule has five predicate failures:
 \begin{itemize}
+<<<<<<< HEAD
 \item In the case of a key registration certificate, if the staking key is already
   registered, there is a \emph{StakeKeyAlreadyRegistered} failure.
+||||||| merged common ancestors
+\item In the case of a key registration certificate, if the staking key is already
+  registered, there is a a \em{StakeKeyAlreadyRegistered} failure.
+=======
+\item In the case of a key registration certificate, if the staking key is
+  already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
+>>>>>>> 96833182503fa1cd65e6eb643d3142bc2a505308
 \item In the case of a key deregistration certificate, if the key is not
   registered, there is a \emph{StakeKeyNotRegistered} failure.
 \item In the case of a non-existing stake pool key in a delegation certificate,
@@ -702,12 +710,12 @@ The POOL rule has three predicate failures:
 \begin{itemize}
 \item In the case of a pool retirement certificate, if the pool key is not in
   the domain of the stake pools mapping, there is a
-  {\emph StakePoolNotRegisteredOnKey} failure.
+  \emph{StakePoolNotRegisteredOnKey} failure.
 \item In the case of a pool retirement certificate, if the retirement epoch is
   not between the current epoch and the relative maximal epoch from the current
-  epoch, there is a {\emph StakePoolRetirementWrongEpoch} failure.
+  epoch, there is a \emph{StakePoolRetirementWrongEpoch} failure.
 \item If the delegation certificate is not of one of the pool types, there is a
-  {\emph WrongCertificateType} failure.
+  \emph{WrongCertificateType} failure.
 \end{itemize}
 
 \clearpage
