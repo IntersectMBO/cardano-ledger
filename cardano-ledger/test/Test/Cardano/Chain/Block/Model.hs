@@ -40,6 +40,8 @@ import Hedgehog
   , forAll
   , property
   )
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
   ( BlockValidationMode (..)
@@ -52,10 +54,17 @@ import Cardano.Chain.Common (unBlockCount)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
-import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
+import Cardano.Spec.Chain.STS.Rule.Chain
+  ( CHAIN
+  , ShouldGenDelegation(NoGenDelegation)
+  , ShouldGenUTxO(NoGenUTxO)
+  , ShouldGenUpdate(NoGenUpdate)
+  , sigGenChain
+  )
+import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace)
-import Control.State.Transition (State, PredicateFailure)
+import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace, SignalGenerator)
+import Control.State.Transition (State)
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
   ( Trace
@@ -67,6 +76,14 @@ import Control.State.Transition.Trace
   , traceSignals
   )
 import qualified Ledger.Core as AbstractCore
+import Ledger.Delegation
+  ( DSEnv (DSEnv)
+  , _dSEnvAllowedDelegators
+  , _dSEnvEpoch
+  , _dSEnvK
+  , _dSEnvSlot
+  , randomDCertGen
+  )
 
 import Test.Cardano.Chain.Elaboration.Block
   ( AbstractToConcreteIdMaps
@@ -169,6 +186,15 @@ ts_prop_invalidDelegationSignalsAreRejected =
             -- to validate the signal.
             --
             -- TODO: we could establish a mapping between concrete and abstract errors.
+            --
+            -- TODO: we want to check that the concrete errors are included in
+            -- the abstract ones. Currently the concrete implementation
+            -- short-circuits on the first failure, that's why we can only
+            -- check inclusion at the moment. To make sure we cover the errors
+            -- that can arise in the concrete implementation we need to make
+            -- sure that the invalid generators cover a good deal of abstract
+            -- errors permutations. So for instance, given abstract errors @X@,
+            -- @Y@, and @Z@, we would want to generate all combinations of them.
             pure ()
           (abstractResult, concreteResult) -> do
             footnote "Validation results mismatch."
@@ -176,12 +202,30 @@ ts_prop_invalidDelegationSignalsAreRejected =
             footnote $ "Concrete result: " ++ show concreteResult
             failure
   where
-    -- TODO: define this.
-    failureProfile :: [(Int, PredicateFailure CHAIN)]
-    failureProfile = [(1, panic mempty)] -- TODO: we need to modify the failure
-                                         -- profile in CSL so that we pass a
-                                         -- constructor representation, instead
-                                         -- of a concrete value.
+    failureProfile :: [(Int, SignalGenerator CHAIN)]
+    failureProfile = [(1, invalidDelegationGen)]
+      where
+        invalidDelegationGen :: SignalGenerator CHAIN
+        invalidDelegationGen env@(sn, _, allowedDelegators, _, k) st =
+          addDelegation <$> sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
+                        <*> invalidDelegationCerts
+          where
+            addDelegation block delegationCerts =
+              let newBody = (Abstract._bBody block)
+                              { Abstract._bDCerts = delegationCerts }
+              in block { Abstract._bBody = newBody }
+            invalidDelegationCerts = Gen.list (Range.constant 0 10)
+                                              (randomDCertGen delegationEnv)
+              where
+                delegationEnv =
+                  ( DSEnv
+                    { _dSEnvAllowedDelegators = allowedDelegators
+                    , _dSEnvEpoch = sEpoch sn k
+                    , _dSEnvSlot = sn
+                    , _dSEnvK = k
+                    }
+                  )
+
 
 -- | Output resulting from elaborating and validating an abstract trace with
 -- the concrete validators.
