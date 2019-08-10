@@ -28,7 +28,6 @@
           (hsPkgs.cardano-crypto)
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-prelude)
-          (hsPkgs.cardano-shell)
           (hsPkgs.containers)
           (hsPkgs.concurrency)
           (hsPkgs.cryptonite)
