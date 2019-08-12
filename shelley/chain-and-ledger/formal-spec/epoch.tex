@@ -1086,14 +1086,13 @@ The calculation is done pool-by-pool.
       \item $\var{maxP}$, maximum rewards the pool can claim if the pledge is met,
         and zero otherwise.
       \item $\var{poolR}$, the pool's actual reward, based on its performance.
-      \item $\var{mRewards}$, the member's rewards as a mapping of reward accouts to coin.
+      \item $\var{mRewards}$, the member's rewards as a mapping of reward accounts to coin.
       \item $\var{lReward}$, the leader's reward as coin.
       \item $\var{potentialRewards}$, the combination of $\var{mRewards}$ and $\var{lRewards}$.
       \item $\var{rewards}$, the restriction of $\var{potentialRewards}$ to the active
         reward accounts.
     \end{itemize}
-  \item The $\fun{reward}$ function applies $\fun{rewardOnePool}$ to each registered stake
-    pool, calculating both the full reward mapping.
+  \item The $\fun{reward}$ function applies $\fun{rewardOnePool}$ to each registered stake pool.
 \end{itemize}
 
 %%
@@ -1300,7 +1299,7 @@ The $\fun{applyRUpd}$ function does the following:
       \item Add each individual reward to the global reward mapping.
     \end{itemize}
 
-These two functions will be used in the blockchain transitions systems in Section~\ref{sec:chain}.
+These two functions will be used in the blockchain transition systems in Section~\ref{sec:chain}.
 In particular,
 $\fun{createRUpd}$ will be used in Equation~\ref{eq:reward-update},
 and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
