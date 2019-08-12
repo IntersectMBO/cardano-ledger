@@ -16,7 +16,7 @@ module Delegation.Certificates
   ) where
 
 import           Coin (Coin (..))
-import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyHash, hashGenesisKey, hashKey)
+import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyHash, hashKey)
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
@@ -38,10 +38,10 @@ cwitness
   -> StakeCredential hashAlgo dsignAlgo
 cwitness (RegKey hk)               = hk
 cwitness (DeRegKey hk)             = hk
-cwitness (RegPool pool)            = KeyHashObj $ hashKey $ pool ^. poolPubKey
+cwitness (RegPool pool)            = KeyHashObj . hashKey $ pool ^. poolPubKey
 cwitness (RetirePool k _)          = KeyHashObj k
 cwitness (Delegate delegation)     = delegation ^. delegator
-cwitness (GenesisDelegate (gk, _)) = KeyHashObj $ hashGenesisKey gk
+cwitness (GenesisDelegate (gk, _)) = GenesisHashObj $ hashKey gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert hashAlgo dsignAlgo -> PParams -> Coin

@@ -44,7 +44,7 @@ initialEpoch =
   pure $ EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams
 
 votedValuePParams
-  :: PPUpdate dsignAlgo
+  :: PPUpdate hashAlgo dsignAlgo
   -> PParams
   -> Maybe PParams
 votedValuePParams (PPUpdate ppup) pps =

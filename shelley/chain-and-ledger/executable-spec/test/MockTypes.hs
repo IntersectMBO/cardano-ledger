@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module MockTypes where
 
 import           Cardano.Crypto.DSIGN (MockDSIGN)
@@ -31,7 +33,9 @@ type StakePools = TxData.StakePools ShortHash MockDSIGN
 
 type KeyHash = Keys.KeyHash ShortHash MockDSIGN
 
-type KeyPair = Keys.KeyPair MockDSIGN
+type GenKeyHash = Keys.GenKeyHash ShortHash MockDSIGN
+
+type KeyPair = Keys.KeyPair 'Keys.Regular MockDSIGN
 
 type VKey = Keys.VKey MockDSIGN
 
@@ -112,8 +116,8 @@ type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN
 
 type Stake = EpochBoundary.Stake ShortHash MockDSIGN
 
-type Update = Updates.Update MockDSIGN
+type Update = Updates.Update ShortHash MockDSIGN
 
-type PPUpdate = Updates.PPUpdate MockDSIGN
+type PPUpdate = Updates.PPUpdate ShortHash MockDSIGN
 
-type AVUpdate = Updates.AVUpdate MockDSIGN
+type AVUpdate = Updates.AVUpdate ShortHash MockDSIGN

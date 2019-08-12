@@ -94,11 +94,8 @@ delegsTransition = do
 
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
 
-      dpstate'' <-
-        trans @(DELPL hashAlgo dsignAlgo)
-          $ TRC ((_slot, ptr, pp), dpstate', cert)
-
-      pure dpstate''
+      trans @(DELPL hashAlgo dsignAlgo)
+        $ TRC ((_slot, ptr, pp), dpstate', cert)
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)

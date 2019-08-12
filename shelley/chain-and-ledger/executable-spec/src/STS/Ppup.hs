@@ -22,14 +22,14 @@ import           Control.State.Transition
 import           Data.Ix (inRange)
 import           Numeric.Natural (Natural)
 
-data PPUP dsignAlgo
+data PPUP hashAlgo dsignAlgo
 
-instance DSIGNAlgorithm dsignAlgo => STS (PPUP dsignAlgo) where
-  type State (PPUP dsignAlgo) = PPUpdate dsignAlgo
-  type Signal (PPUP dsignAlgo) = PPUpdate dsignAlgo
-  type Environment (PPUP dsignAlgo) = (Slot, PParams, Dms dsignAlgo)
-  data PredicateFailure (PPUP dsignAlgo)
-    = NonGenesisUpdatePPUP (Set.Set (VKeyGenesis dsignAlgo)) (Set.Set (VKeyGenesis dsignAlgo))
+instance STS (PPUP hashAlgo dsignAlgo) where
+  type State (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
+  type Signal (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
+  type Environment (PPUP hashAlgo dsignAlgo) = (Slot, PParams, Dms hashAlgo dsignAlgo)
+  data PredicateFailure (PPUP hashAlgo dsignAlgo)
+    = NonGenesisUpdatePPUP (Set.Set (GenKeyHash hashAlgo dsignAlgo)) (Set.Set (GenKeyHash hashAlgo dsignAlgo))
     | PPUpdateTooEarlyPPUP
     | PPUpdateEmpty
     | PPUpdateNonEmpty
@@ -48,7 +48,7 @@ pvCanFollow (mjp, mip, ap) (ProtocolVersion (mjn, mn, an))
   && ((mjp + 1 == mjn) ==> (mn == 0))
 pvCanFollow _ _ = True
 
-ppupTransitionEmpty :: TransitionRule (PPUP dsignAlgo)
+ppupTransitionEmpty :: TransitionRule (PPUP hashAlgo dsignAlgo)
 ppupTransitionEmpty = do
   TRC ((_, _, _), pupS, PPUpdate pup') <- judgmentContext
 
@@ -56,7 +56,7 @@ ppupTransitionEmpty = do
 
   pure pupS
 
-ppupTransitionNonEmpty :: DSIGNAlgorithm dsignAlgo => TransitionRule (PPUP dsignAlgo)
+ppupTransitionNonEmpty :: TransitionRule (PPUP hashAlgo dsignAlgo)
 ppupTransitionNonEmpty = do
   TRC ((s, pp, Dms _dms), pupS, pup@(PPUpdate pup')) <- judgmentContext
 

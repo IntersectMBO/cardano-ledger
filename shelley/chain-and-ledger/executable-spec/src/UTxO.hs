@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -43,7 +44,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Coin (Coin (..))
-import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyPair, Signable, hash, hashKey, sKey, sign,
+import           Keys (KeyDiscriminator(..), DSIGNAlgorithm, HashAlgorithm, KeyPair, Signable, hash, hashKey, sKey, sign,
                      vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
@@ -131,17 +132,18 @@ makeWitnessVKey
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
-  -> KeyPair dsignAlgo
+  -> KeyPair 'Regular dsignAlgo
   -> WitVKey hashAlgo dsignAlgo
 makeWitnessVKey tx keys = WitVKey (vKey keys) (sign (sKey keys) tx)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
   :: ( DSIGNAlgorithm dsignAlgo
+     , HashAlgorithm hashAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
-  -> [KeyPair dsignAlgo]
+  -> [KeyPair 'Regular dsignAlgo]
   -> Set (WitVKey hashAlgo dsignAlgo)
 makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
 
@@ -164,7 +166,7 @@ deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
-txup :: Tx hashAlgo dsignAlgo -> Update dsignAlgo
+txup :: Tx hashAlgo dsignAlgo -> Update hashAlgo dsignAlgo
 txup (Tx txbody _ _) = _txUpdate txbody
 
 -- | Extract script hash from value address with script.
@@ -177,6 +179,7 @@ scriptStakeCred
   :: StakeCredential hashAlgo dsignAlgo
   -> Maybe (ScriptHash hashAlgo dsignAlgo)
 scriptStakeCred (KeyHashObj _ )    =  Nothing
+scriptStakeCred (GenesisHashObj _ )    =  Nothing
 scriptStakeCred (ScriptHashObj hs) = Just hs
 
 -- | Computes the set of script hashes required to unlock the transcation inputs
@@ -189,9 +192,9 @@ scriptsNeeded
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
   `Set.union`
-  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
   `Set.union`
-  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . cwitness) certificates)
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) certificates)
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
