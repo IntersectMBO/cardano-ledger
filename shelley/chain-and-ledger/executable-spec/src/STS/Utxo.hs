@@ -45,7 +45,7 @@ instance
       , PParams
       , StakeKeys hashAlgo dsignAlgo
       , StakePools hashAlgo dsignAlgo
-      , Dms dsignAlgo
+      , Dms hashAlgo dsignAlgo
       )
   data PredicateFailure (UTXO hashAlgo dsignAlgo)
     = BadInputsUTxO
@@ -59,7 +59,7 @@ instance
                                               -- to prevent these predicate
                                               -- failures?
     | UnexpectedSuccessUTXO
-    | UpdateFailure (PredicateFailure (UP dsignAlgo))
+    | UpdateFailure (PredicateFailure (UP hashAlgo dsignAlgo))
     deriving (Eq, Show)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -92,7 +92,7 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Update Proposals
-  ups' <- trans @(UP dsignAlgo) $ TRC ((slot_, pp, dms_), u ^. ups, txup tx)
+  ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC ((slot_, pp, dms_), u ^. ups, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
   all (0<) outputCoins ?! NonPositiveOutputsUTxO
@@ -116,6 +116,6 @@ utxoInductive = do
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Embed (UP dsignAlgo) (UTXO hashAlgo dsignAlgo)
+  => Embed (UP hashAlgo dsignAlgo) (UTXO hashAlgo dsignAlgo)
  where
   wrapFailed = UpdateFailure

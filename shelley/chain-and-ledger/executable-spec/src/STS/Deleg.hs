@@ -20,7 +20,7 @@ import           Control.State.Transition
 data DELEG hashAlgo dsignAlgo
 
 instance
-  (DSIGNAlgorithm dsignAlgo)
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => STS (DELEG hashAlgo dsignAlgo)
  where
   type State (DELEG hashAlgo dsignAlgo) = DState hashAlgo dsignAlgo
@@ -38,7 +38,7 @@ instance
   transitionRules = [delegationTransition]
 
 delegationTransition
-  :: (DSIGNAlgorithm dsignAlgo)
+  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELEG hashAlgo dsignAlgo)
 delegationTransition = do
   TRC ((_slot, p), d@(DState _ _ _ _ genMap (Dms _dms)), c) <- judgmentContext
@@ -53,9 +53,11 @@ delegationTransition = do
       validStakeDelegation c d == Valid ?! StakeDelegationImpossibleDELEG
       pure $ applyDCertDState p c d
     GenesisDelegate (gkey, vk) -> do
-      Map.member gkey _dms ?! GenesisKeyNotInpMappingDELEG
       let s' = _slot +* slotsPrior
-      pure $ d { _fdms = Map.insert (s', gkey) vk genMap}
+          gkeyHash = hashKey gkey
+          vkeyHash = hashKey vk
+      Map.member gkeyHash _dms ?! GenesisKeyNotInpMappingDELEG
+      pure $ d { _fdms = Map.insert (s', gkeyHash) vkeyHash genMap}
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure d

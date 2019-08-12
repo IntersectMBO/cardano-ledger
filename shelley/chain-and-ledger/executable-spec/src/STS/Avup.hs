@@ -17,14 +17,14 @@ import           Updates
 
 import           Control.State.Transition
 
-data AVUP dsignAlgo
+data AVUP hashAlgo dsignAlgo
 
-instance DSIGNAlgorithm dsignAlgo => STS (AVUP dsignAlgo) where
-  type State (AVUP dsignAlgo)
-    = (AVUpdate dsignAlgo, Map.Map Slot Applications, Applications)
-  type Signal (AVUP dsignAlgo) = AVUpdate dsignAlgo
-  type Environment (AVUP dsignAlgo) = (Slot, Dms dsignAlgo)
-  data PredicateFailure (AVUP dsignAlgo)
+instance STS (AVUP hashAlgo dsignAlgo) where
+  type State (AVUP hashAlgo dsignAlgo)
+    = (AVUpdate hashAlgo dsignAlgo, Map.Map Slot Applications, Applications)
+  type Signal (AVUP hashAlgo dsignAlgo) = AVUpdate hashAlgo dsignAlgo
+  type Environment (AVUP hashAlgo dsignAlgo) = (Slot, Dms hashAlgo dsignAlgo)
+  data PredicateFailure (AVUP hashAlgo dsignAlgo)
     = NonGenesisUpdateAVUP
     deriving (Show, Eq)
 
@@ -32,7 +32,7 @@ instance DSIGNAlgorithm dsignAlgo => STS (AVUP dsignAlgo) where
 
   transitionRules = [avupTransition]
 
-avupTransition :: DSIGNAlgorithm dsignAlgo => TransitionRule (AVUP dsignAlgo)
+avupTransition :: TransitionRule (AVUP hashAlgo dsignAlgo)
 avupTransition = do
   TRC ((_slot, Dms _dms), src@(AVUpdate aupS, favs, avs), AVUpdate _aup) <-
     judgmentContext
