@@ -105,8 +105,8 @@ data Error
   | NonGenesisDelegator KeyHash
   -- ^ This delegator is not one of the allowed genesis keys
 
-  | PastEpoch EpochNumber EpochNumber
-  -- ^ This delegation is for a past epoch
+  | WrongEpoch EpochNumber EpochNumber
+  -- ^ This delegation is for a past or for a too future epoch
 
   deriving (Eq, Show)
 
@@ -125,9 +125,9 @@ scheduleCertificate env st cert = do
   delegatorHash `Set.member` allowedDelegators
     `orThrowError` NonGenesisDelegator delegatorHash
 
-  -- Check that the delegation epoch is greater than or equal to the current one
-  currentEpoch <= delegationEpoch
-    `orThrowError` PastEpoch currentEpoch delegationEpoch
+  -- Check that the delegation epoch refers to the current or to the next epoch
+  currentEpoch <= delegationEpoch && delegationEpoch <= currentEpoch + 1
+    `orThrowError` WrongEpoch currentEpoch delegationEpoch
 
   -- Check that the delegator hasn't already delegated in 'delegationEpoch'
   (delegationEpoch, delegatorHash) `Set.notMember` keyEpochDelegations
