@@ -16,8 +16,8 @@ import qualified Control.State.Transition.Trace as Trace
 
 data Trace s
   = Trace
-    { prefix :: !(Trace.Trace s)
-    , sig :: !(Signal s)
+    { validPrefix :: !(Trace.Trace s)
+    , signal :: !(Signal s)
     -- ^ Last signal in the trace. This might cause a predicate failure, but it
     -- isn't guaranteed to do so, since invalid trace generation is
     -- probabilistic.
