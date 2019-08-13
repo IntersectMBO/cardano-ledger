@@ -30,14 +30,14 @@ import           Ledger.UTxO (Tx (Tx), TxIn (TxIn), TxOut (TxOut), TxWits, UTxO 
 
 -- | Check that the money is constant in the system.
 moneyIsConstant :: Property
-moneyIsConstant = withTests 200 . property $ do
-  (st0, st) <- firstAndLastState <$> forAll (trace @UTXOW 500)
+moneyIsConstant = withTests 300 . property $ do
+  (st0, st) <- firstAndLastState <$> forAll (trace @UTXOW 100)
   reserves st0 + balance (utxo st0) === reserves st + balance (utxo st)
 
 -- | Check that there is no double spending
 noDoubleSpending :: Property
-noDoubleSpending = property $ do
-  t <- forAll (trace @UTXOW 300)
+noDoubleSpending = withTests 300 . property $ do
+  t <- forAll (trace @UTXOW 100)
   let
     UTxOState {utxo = utxo0} = _traceInitState t
     txs = body <$> traceSignals OldestFirst t
@@ -53,8 +53,8 @@ noDoubleSpending = property $ do
 
 -- | Check that UTxO is outputs minus inputs
 utxoDiff :: Property
-utxoDiff = property $ do
-  t <- forAll (trace @UTXOW 500)
+utxoDiff = withTests 300 . property $ do
+  t <- forAll (trace @UTXOW 100)
   let
     (utxo0, utxoSt) = (utxo *** utxo) . firstAndLastState $ t
     txs = body <$> traceSignals OldestFirst t
@@ -159,7 +159,7 @@ avgInputsOutputs txs
 -- containing exactly 3 inputs, and only one output.
 tracesAreClassified :: Property
 tracesAreClassified = withTests 200 . property $ do
-  let (tl, step) = (500, 50)
+  let (tl, step) = (100, 10)
   tr <- forAll (trace @UTXOW tl)
   classifyTraceLength tr tl step
 

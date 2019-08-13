@@ -866,7 +866,7 @@ instance HasTrace UPIREG where
 
   envGen _ = upiEnvGen
 
-  sigGen _ (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, pws)
+  sigGen (_slot, dms, _k, _ngk) ((pv, pps), _fads, avs, rpus, raus, _cps, _vts, _bvs, pws)
     = do
     (vk, pv', pps', sv') <- (,,,) <$> issuerGen
                                   <*> pvGen
@@ -1316,7 +1316,7 @@ instance HasTrace UPIVOTES where
 
   envGen _ = upiEnvGen
 
-  sigGen _ (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
+  sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
     (mkVote <$>) . concatMap replicateFst
       <$> genVotesOnMostVotedProposals completedVotes
       where
@@ -1563,18 +1563,18 @@ updateProposalAndVotesGen upienv upistate = do
                        , (1, generateUpdateProposalAndVotes)
                        ]
   where
-    generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES Nothing upienv upistate
+    generateOnlyVotes = (Nothing,) <$> sigGen @UPIVOTES upienv upistate
     generateUpdateProposalAndVotes = do
-      updateProposal <- sigGen @UPIREG Nothing upienv upistate
+      updateProposal <- sigGen @UPIREG upienv upistate
       -- We want to have the possibility of generating votes for the proposal we
       -- registered.
       case applySTS @UPIREG (TRC (upienv, upistate, updateProposal)) of
         Left _ ->
           (Just updateProposal, )
-            <$> sigGen @UPIVOTES Nothing upienv upistate
+            <$> sigGen @UPIVOTES upienv upistate
         Right upistateAfterRegistration ->
           (Just updateProposal, )
-            <$> sigGen @UPIVOTES Nothing upienv upistateAfterRegistration
+            <$> sigGen @UPIVOTES upienv upistateAfterRegistration
 
 
 -- | Generate an endorsement given an update environment and state.

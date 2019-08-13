@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -61,6 +62,7 @@ module Ledger.Delegation
   , dcertGen
   , dcertsGen
   , initialEnvFromGenesisKeys
+  , randomDCertGen
   -- * Functions on delegation state
   , delegatorOf
   -- * Support Functions for delegation properties
@@ -84,6 +86,7 @@ import           Control.Lens (Lens', lens, makeFields, to, (%~), (&), (.~), (<>
 import           Data.AbstractSize
 import           Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
+import           Data.Data (Data, Typeable)
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
@@ -97,7 +100,7 @@ import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Range (linear)
+import qualified Hedgehog.Range as Range
 
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
@@ -105,7 +108,7 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
-import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
+import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
                      addSlot, hash, mkVkGenesisSet, owner, range, signWithGenesisKey, unBlockCount,
                      (∈), (∉), (⨃))
@@ -237,10 +240,10 @@ dIStateDState = lens
 --------------------------------------------------------------------------------
 
 -- | Delegation scheduling rules
-data SDELEG
+data SDELEG deriving (Data, Typeable)
 
 data EpochDiff = EpochDiff { currentEpoch :: Epoch, certEpoch :: Epoch }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data, Typeable)
 
 instance STS SDELEG where
   type State SDELEG = DSState
@@ -254,7 +257,7 @@ instance STS SDELEG where
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ return DSState
                    { _dSStateScheduledDelegations = []
@@ -310,7 +313,7 @@ liveAfter :: BlockCount -> SlotCount
 liveAfter bc = SlotCount $ 2 * unBlockCount bc
 
 -- | Delegation rules
-data ADELEG
+data ADELEG deriving (Data, Typeable)
 
 instance STS ADELEG where
   type State ADELEG = DState
@@ -325,8 +328,7 @@ instance STS ADELEG where
     | AfterExistingDelegation
     -- | The given key is a delegate of the given genesis key.
     | AlreadyADelegateOf VKey VKeyGenesis
-
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [
     do
@@ -374,7 +376,7 @@ instance STS ADELEG where
     ]
 
 -- | Delegation scheduling sequencing
-data SDELEGS
+data SDELEGS deriving (Data, Typeable)
 
 instance STS SDELEGS where
   type State SDELEGS = DSState
@@ -383,7 +385,7 @@ instance STS SDELEGS where
 
   data PredicateFailure SDELEGS
     = SDelegFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -404,7 +406,7 @@ instance Embed SDELEG SDELEGS where
   wrapFailed = SDelegFailure
 
 -- | Delegation rules sequencing
-data ADELEGS
+data ADELEGS deriving (Data, Typeable)
 
 instance STS ADELEGS where
   type State ADELEGS = DState
@@ -413,7 +415,7 @@ instance STS ADELEGS where
 
   data PredicateFailure ADELEGS
     = ADelegFailure (PredicateFailure ADELEG)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -434,7 +436,7 @@ instance Embed ADELEG ADELEGS where
   wrapFailed = ADelegFailure
 
 -- | Delegation interface
-data DELEG
+data DELEG deriving (Data, Typeable)
 
 instance STS DELEG where
   type State DELEG = DIState
@@ -444,7 +446,7 @@ instance STS DELEG where
   data PredicateFailure DELEG
     = SDelegSFailure (PredicateFailure SDELEGS)
     | ADelegSFailure (PredicateFailure ADELEGS)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -524,8 +526,28 @@ dcertsGen env st =
           , _dSStateKeyEpochDelegations = _dIStateKeyEpochDelegations st
           }
 
+
+-- | Generate a random delegation certificate, which has a high probability of failing since
+-- we do not consider the current delegation state. So for instance, we could generate a
+-- delegation certificate for a genesis key that already delegated in this epoch.
+--
+randomDCertGen :: Environment DELEG -> Gen DCert
+randomDCertGen env = do
+  (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
+  pure $! mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
+  where
+    vkgGen' = Gen.element $ Set.toList allowed
+    allowed = _dSEnvAllowedDelegators env
+    vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
+    epochGen' =  Epoch
+              .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
+              .  (fromIntegral n +)
+             <$> Gen.integral (Range.constant (-2 :: Int) 2)
+      where Epoch n = _dSEnvEpoch env
+
+
 -- | Dummy transition system needed for generating sequences of delegation certificates.
-data MSDELEG
+data MSDELEG deriving (Data, Typeable)
 
 instance STS MSDELEG where
 
@@ -534,7 +556,7 @@ instance STS MSDELEG where
   type Signal MSDELEG = Maybe DCert
 
   data PredicateFailure MSDELEG = SDELEGFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
 
@@ -553,18 +575,18 @@ instance HasTrace MSDELEG where
 
   envGen = delegEnvGen
 
-  sigGen _ env st = dcertGen env (_dSStateKeyEpochDelegations st)
+  sigGen env st = dcertGen env (_dSStateKeyEpochDelegations st)
 
 
 instance HasTrace DELEG where
 
   envGen = delegEnvGen
 
-  sigGen _ = dcertsGen
+  sigGen = dcertsGen
 
 delegEnvGen :: Word64 -> Gen DSEnv
 delegEnvGen chainLength = do
-  ngk <- Gen.integral (linear 1 14)
+  ngk <- Gen.integral (Range.linear 1 14)
   initialEnvFromGenesisKeys ngk chainLength
 
 -- | Generate an initial 'DELEG' environment from the given number of genesis
