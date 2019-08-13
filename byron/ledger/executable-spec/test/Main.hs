@@ -38,6 +38,7 @@ main = defaultMain tests
       , testProperty "Duplicated certificates are rejected" DELEG.rejectDupSchedDelegs
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
       , testProperty "Only valid DBLOCK signals are generated" DELEG.onlyValidSignalsAreGenerated
+      , testProperty "Invalid signals are generated when requested" DELEG.invalidSignalsAreGenerated
       ]
     , testGroup
       "PVBUMP properties"

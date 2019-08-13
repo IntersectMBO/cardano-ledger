@@ -52,5 +52,5 @@ instance HasTrace UTXOWS where
   envGen = envGen @UTXOW
 
   -- We generate signal for UTXOWS as a list of signals from UTXOW
-  sigGen _ env st =
+  sigGen env st =
     traceSignals OldestFirst <$> genTrace @UTXOW 20 env st (sigGen @UTXOW)

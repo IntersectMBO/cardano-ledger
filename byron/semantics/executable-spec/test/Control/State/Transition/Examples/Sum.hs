@@ -38,20 +38,20 @@ instance STS SUM where
 instance HasTrace SUM where
   envGen _ = pure ()
 
-  sigGen _ _ _ =
+  sigGen _ _ =
     Gen.list (Range.constant 1 100) (Gen.integral (Range.constant (-3) 3))
 
 -- | This property is intended to be used to manually inspect the
 -- counterexamples that we get.
 prop_Bounded :: Property
 prop_Bounded = property $ do
-  tr <- forAll (trace @SUM 300)
+  tr <- forAll (trace @SUM 100)
   assert (lastState tr < 10)
 
 -- | Property that simply classifies the trace length distribution.
 prop_Classified :: Property
 prop_Classified = withTests 300 $ property $ do
-  let tl = 1000
+  let tl = 200
   tr <- forAll (trace @SUM tl)
-  classifyTraceLength tr tl 100
+  classifyTraceLength tr tl 10
   assert True

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ConstrainedClassMethods    #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
@@ -15,6 +16,7 @@ import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
+import           Data.Data (Data, Typeable)
 import Data.Typeable (typeOf)
 import qualified Data.Sequence as Seq
 import Data.Map.Strict (Map)
@@ -48,7 +50,7 @@ class HasHash a where
 -- |Representation of the owner of key pair.
 newtype Owner = Owner
   { unOwner :: Natural
-  } deriving stock (Show, Generic)
+  } deriving stock (Show, Generic, Data, Typeable)
     deriving newtype (Eq, Ord, Hashable)
     deriving anyclass (HasTypeReps)
 
@@ -57,7 +59,7 @@ class HasOwner a where
 
 -- |Signing Key.
 newtype SKey = SKey Owner
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord)
   deriving anyclass (HasTypeReps)
 
@@ -66,7 +68,7 @@ instance HasOwner SKey where
 
 -- |Verification Key.
 newtype VKey = VKey Owner
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable)
   deriving anyclass (HasTypeReps)
 
@@ -78,7 +80,7 @@ instance HasOwner VKey where
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey}
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, HasHash)
   deriving anyclass (HasTypeReps)
 
@@ -142,7 +144,7 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 ---------------------------------------------------------------------------------
 
 newtype Epoch = Epoch Word64
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, Num)
   deriving anyclass (HasTypeReps)
 
@@ -209,7 +211,7 @@ instance HasTypeReps BlockCount
 
 -- |The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, HasOwner)
   deriving anyclass (HasTypeReps)
 
