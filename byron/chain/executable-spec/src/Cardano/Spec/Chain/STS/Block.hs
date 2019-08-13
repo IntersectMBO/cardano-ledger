@@ -215,3 +215,21 @@ bIsEBB = const False
 
 instance HasSizeInfo Block where
   isTrivial = null . view (bBody . bDCerts)
+
+
+updateBody
+  :: Block
+  -> (BlockBody -> BlockBody)
+  -> Block
+updateBody block bodyUpdate =
+  mkBlock
+    (_bhPrevHash . _bHeader $ block)
+    (_bhSlot . _bHeader $ block)
+    (_bhIssuer . _bHeader $ block)
+    (_bProtVer newBody)
+    (_bDCerts newBody)
+    (_bUpdProp newBody)
+    (_bUpdVotes newBody)
+    (_bUtxo newBody)
+  where
+    newBody = bodyUpdate (_bBody block)
