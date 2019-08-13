@@ -163,14 +163,14 @@ ts_prop_invalidDelegationSignalsAreRejected =
     let traceLength = 100 :: Word64
     tr <- forAll $ invalidTrace @CHAIN traceLength failureProfile
     let ValidationOutput { elaboratedConfig, result }
-          = applyTrace (Invalid.Trace.prefix tr)
+          = applyTrace (Invalid.Trace.validPrefix tr)
     case result of
       Left error -> do
         footnote $ "Expecting a valid prefix but got: " ++ show error
         failure
       Right concreteState ->
-        let abstractState = lastState (Invalid.Trace.prefix tr)
-            block = Invalid.Trace.sig tr
+        let abstractState = lastState (Invalid.Trace.validPrefix tr)
+            block = Invalid.Trace.signal tr
             result' = elaborateAndUpdate
                     elaboratedConfig
                     concreteState
@@ -211,9 +211,10 @@ ts_prop_invalidDelegationSignalsAreRejected =
                         <*> invalidDelegationCerts
           where
             addDelegation block delegationCerts =
-              let newBody = (Abstract._bBody block)
-                              { Abstract._bDCerts = delegationCerts }
-              in block { Abstract._bBody = newBody }
+              Abstract.updateBody
+                block
+                (\body -> body { Abstract._bDCerts = delegationCerts })
+
             invalidDelegationCerts = Gen.list (Range.constant 0 10)
                                               (randomDCertGen delegationEnv)
               where
