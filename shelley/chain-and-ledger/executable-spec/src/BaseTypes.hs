@@ -35,7 +35,7 @@ fpPrecision :: FixedPoint
 fpPrecision = (10::FixedPoint)^(34::Integer)
 
 fpEpsilon :: FixedPoint
-fpEpsilon = (10::FixedPoint)^(17::Integer)
+fpEpsilon = (10::FixedPoint)^(17::Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnitInterval Rational
