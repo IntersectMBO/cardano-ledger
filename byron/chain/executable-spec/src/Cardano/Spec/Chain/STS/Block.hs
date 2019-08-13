@@ -217,6 +217,8 @@ instance HasSizeInfo Block where
   isTrivial = null . view (bBody . bDCerts)
 
 
+-- | Update a field of the block body, recomputing the hashes to get a valid
+-- block.
 updateBody
   :: Block
   -> (BlockBody -> BlockBody)
