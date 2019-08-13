@@ -44,7 +44,7 @@ aTxId :: TxId
 aTxId = TxId (hash aTx)
 
 aHeader :: BlockHeader
-aHeader = MkBlockHeader {
+aHeader = BlockHeader {
           _bhPrevHash = undefined :: Hash
         , _bhSlot = undefined :: Slot
         , _bhIssuer = undefined :: VKey

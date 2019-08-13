@@ -10,11 +10,9 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import           Control.Lens (Lens', (&), (.~), (^.), _1, _5)
+import           Control.Lens (Lens', (^.), _1, _5)
 import           Data.Bimap (Bimap)
 import           Data.Bits (shift)
-import           Data.ByteString (ByteString)
-import qualified Data.Hashable as H
 import qualified Data.Map as Map
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
@@ -167,9 +165,6 @@ instance Embed DELEG CHAIN where
 instance Embed UTXOWS CHAIN where
   wrapFailed = LedgerUTxOFailure
 
-genesisHash :: Hash
--- Not sure we need a concrete hash in the specs ...
-genesisHash = Hash $ H.hash ("" :: ByteString)
 
 headerIsValid :: UPIState -> BlockHeader -> Rule CHAIN 'Transition ()
 headerIsValid us bh = do
@@ -299,26 +294,12 @@ sigGenChain
         NoGenUpdate ->
           pure (Nothing, [])
 
-    let
-      dummySig = Sig genesisHash (owner vkI)
-      unsignedHeader = MkBlockHeader
-        h
-        nextSlot
-        vkI
-        dummySig -- Fill with a dummy signature first and then sign afterwards
-        (hash utxoPayload)
-        (hash delegationPayload)
-        (hash (bb ^. bUpdProp, bb ^. bUpdVotes))
-
-      signedHeader =
-        unsignedHeader & bhSig .~ Sig (hashHeader unsignedHeader) (owner vkI)
-
-      bb =
-        BlockBody
-          delegationPayload
-          utxoPayload
-          anOptionalUpdateProposal
-          aListOfVotes
-          aBlockVersion
-
-    pure $ Block signedHeader bb
+    pure $! mkBlock
+              h
+              nextSlot
+              vkI
+              aBlockVersion
+              delegationPayload
+              anOptionalUpdateProposal
+              aListOfVotes
+              utxoPayload
