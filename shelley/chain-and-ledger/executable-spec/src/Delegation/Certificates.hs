@@ -54,7 +54,7 @@ refund :: Coin -> UnitInterval -> Rational -> Duration -> Coin
 refund (Coin dval) dmin lambda delta = floor refund'
   where
     pow     = fromRational (-lambda * fromIntegral delta) :: FixedPoint
-    refund' = fromIntegral dval * (dmin' + (1 - dmin')) * dCay
+    refund' = fromIntegral dval * (dmin' + (1 - dmin') * dCay)
     dmin'   = intervalValue dmin
     dCay    = approxRational (exp' pow) fpEpsilon
 
