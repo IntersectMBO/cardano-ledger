@@ -876,7 +876,7 @@ parameters. The function checks:
 \end{itemize}
 
 \begin{figure}
-  \emph{VRF helper funnction}
+  \emph{VRF helper function}
   \begin{align*}
       & \fun{vrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
       & \fun{vrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
@@ -918,7 +918,7 @@ The environments for this transition are:
   \item A mapping $\var{osched}$ of slots to an optional genesis key.
     In the terminology of \cite{delegation_design},
     the slots in $\var{osched}$ are the ``OBFT slots''.
-    A slot in this map with a value of $\Nothing$ is a non-active slots,
+    A slot in this map with a value of $\Nothing$ is a non-active slot,
     otherwise it is an active slot and its value designates the genesis key
     responsible for producing the block.
   \item The epoch nonce $\eta_0$.
