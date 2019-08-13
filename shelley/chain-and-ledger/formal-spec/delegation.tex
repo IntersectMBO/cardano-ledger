@@ -212,7 +212,8 @@ state transition types. We define two separate parts of the ledger state.
       \item $\var{retiring}$ tracks stake pool retirements, using a map from hashkeys to
         the epoch in which it will retire.
       \item $\var{cs}$ stores the latest operational certificate issues numbers used for each pool.
-        The numbers are used the operation certificate transition in Figure~\ref{fig:rules:ocert}.
+        The numbers are used in the operation certificate transition
+        in Figure~\ref{fig:rules:ocert}.
     \end{itemize}
 \end{itemize}
 
@@ -691,12 +692,12 @@ The POOL rule has three predicate failures:
 \begin{itemize}
 \item In the case of a pool retirement certificate, if the pool key is not in
   the domain of the stake pools mapping, there is a
-  \em{StakePoolNotRegisteredOnKey} failure.
+  {\em StakePoolNotRegisteredOnKey} failure.
 \item In the case of a pool retirement certificate, if the retirement epoch is
   not between the current epoch and the relative maximal epoch from the current
-  epoch, there is a \em{StakePoolRetirementWrongEpoch} failure.
+  epoch, there is a {\em StakePoolRetirementWrongEpoch} failure.
 \item If the delegation certificate is not of one of the pool types, there is a
-  \em{WrongCertificateType} failure.
+  {\em WrongCertificateType} failure.
 \end{itemize}
 
 \clearpage
@@ -875,7 +876,7 @@ will be invalid.
     The base case triggers the following state transformation:
     \begin{itemize}
       \item Reward accounts are set to zero for each corresponding withdrawal.
-      \item The genesis key delegation mapping is updated accourding to the future delegation
+      \item The genesis key delegation mapping is updated according to the future delegation
         mapping. For each genesis key, we take the most recent delegation in $\var{fdms}$
         that is past the current slot.
       \item The future genesis key delegation has any items past the current slots removed.
