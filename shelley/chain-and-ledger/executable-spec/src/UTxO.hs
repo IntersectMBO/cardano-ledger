@@ -1,5 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+
+-- for the Relation instance
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {-|
 Module      : UTxO
@@ -22,10 +26,6 @@ module UTxO
   , txup
   , balance
   , deposits
-  , (<|)
-  , (</|)
-  , dom
-  , union
   , makeWitnessVKey
   , makeWitnessesVKey
   , verifyWitVKey
@@ -45,6 +45,7 @@ import qualified Data.Set as Set
 import           Coin (Coin (..))
 import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyPair, Signable, hash, hashKey, sKey, sign,
                      vKey, verify)
+import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
                      TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdHK, inputs,
@@ -57,6 +58,34 @@ import           Delegation.Certificates (DCert (..), StakePools (..), cwitness,
 newtype UTxO hashAlgo dsignAlgo
   = UTxO (Map (TxIn hashAlgo dsignAlgo) (TxOut hashAlgo dsignAlgo))
   deriving (Show, Eq, Ord)
+
+instance Relation (UTxO hashAlgo dsignAlgo) where
+  type Domain (UTxO hashAlgo dsignAlgo) = TxIn hashAlgo dsignAlgo
+  type Range (UTxO hashAlgo dsignAlgo)  = TxOut hashAlgo dsignAlgo
+
+  singleton k v = UTxO $ Map.singleton k v
+
+  dom (UTxO utxo) = dom utxo
+
+  range (UTxO utxo) = range utxo
+
+  s ◁ (UTxO utxo) = UTxO $ s ◁ utxo
+
+  s ⋪ (UTxO utxo) = UTxO $ s ⋪ utxo
+
+  (UTxO utxo) ▷ s = UTxO $ utxo ▷ s
+
+  (UTxO a) ∪ (UTxO b) = UTxO $ a ∪ b
+
+  (UTxO a) ⨃ b = UTxO $ a ⨃ b
+
+  vmax <=◁ (UTxO utxo) = UTxO $ vmax <=◁ utxo
+
+  (UTxO utxo) ▷<= vmax = UTxO $ utxo ▷<= vmax
+
+  (UTxO utxo) ▷>= vmin = UTxO $ utxo ▷>= vmin
+
+  size (UTxO utxo) = size utxo
 
 -- |Compute the id of a transaction.
 txid
@@ -115,36 +144,6 @@ makeWitnessesVKey
   -> [KeyPair dsignAlgo]
   -> Set (WitVKey hashAlgo dsignAlgo)
 makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
-
--- |Domain restriction
-(<|)
-  :: Set (TxIn hashAlgo dsignAlgo)
-  -> UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-ins <| (UTxO utxo) =
-  UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
-
--- |Domain exclusion
-(</|)
-  :: Set (TxIn hashAlgo dsignAlgo)
-  -> UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-ins </| (UTxO utxo) =
-  UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
-
--- | Domain of UTxO
-dom :: UTxO hashAlgo dsignAlgo -> Set (TxIn hashAlgo dsignAlgo)
-dom (UTxO utxo) = Map.keysSet utxo
-
--- |Combine two collections of UTxO.
---
---     * TODO - Should we return 'Maybe UTxO' so that we can return
--- Nothing when the collections are not disjoint?
-union
-  :: UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-union (UTxO a) (UTxO b) = UTxO $ Map.union a b
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO hashAlgo dsignAlgo -> Coin
