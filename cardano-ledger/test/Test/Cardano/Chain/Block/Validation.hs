@@ -12,6 +12,7 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
+import Control.Tracer
 import qualified Data.Map.Strict as M
 import Data.Maybe (isJust)
 import qualified Data.Sequence as Seq
@@ -145,7 +146,7 @@ foldChainValidationState shouldAssertNF config cvs blocks =
                   <> show (cvsLastSlot c)
                   )
               NoAssertNF -> pure ()
-            updateChainBoundary c bvd
+            updateChainBoundary nullTracer c bvd
           ABOBBlock block -> updateBlock config c block
 
   blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe SlotNumber

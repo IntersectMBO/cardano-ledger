@@ -13,6 +13,7 @@ where
 import Cardano.Prelude hiding (trace)
 
 import Control.Monad.Trans.Resource (ResIO, runResourceT)
+import Control.Tracer
 import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
@@ -83,7 +84,7 @@ foldChainValidationState
 foldChainValidationState config chainValState blocks = S.foldM_
   (\cvs block ->
     withExceptT (EpochChainValidationError (blockOrBoundarySlot block))
-      $ updateChainBlockOrBoundary config cvs block
+      $ updateChainBlockOrBoundary nullTracer config cvs block
   )
   (pure chainValState)
   pure (pure (hoist (withExceptT EpochParseError) blocks))
