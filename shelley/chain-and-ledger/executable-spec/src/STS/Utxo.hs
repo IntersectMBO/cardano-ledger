@@ -92,7 +92,7 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Update Proposals
-  ups' <- trans @(UP dsignAlgo) $ TRC ((slot_, dms_), u ^. ups, txup tx)
+  ups' <- trans @(UP dsignAlgo) $ TRC ((slot_, pp, dms_), u ^. ups, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
   all (0<) outputCoins ?! NonPositiveOutputsUTxO
