@@ -13,6 +13,7 @@ import qualified Data.Set as Set
 import           BaseTypes
 import           BlockChain
 import           Keys
+import           Ledger.Core (dom, (⊆))
 import           PParams
 import           Slot
 import           Updates
@@ -62,7 +63,7 @@ ppupTransitionNonEmpty = do
   do
     pup' /= Map.empty ?! PPUpdateEmpty
     all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
-    (Map.keysSet pup' `Set.isSubsetOf` Map.keysSet _dms)
+    (dom pup' ⊆ dom _dms)
       ?! NonGenesisUpdatePPUP (Map.keysSet pup') (Map.keysSet _dms)
     let Epoch slotEpoch = epochFromSlot (Slot 1)
     s
