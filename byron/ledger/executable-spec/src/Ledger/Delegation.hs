@@ -24,7 +24,7 @@ module Ledger.Delegation
   , dwho
   , mkDCert
   , signature
-    -- * Delegation activation
+  -- * Delegation activation
   , ADELEG
   , ADELEGS
   , DSEnv
@@ -48,7 +48,6 @@ module Ledger.Delegation
   , _dIStateLastDelegation
   , _dIStateScheduledDelegations
   , _dIStateKeyEpochDelegations
-  , PredicateFailure(SDelegSFailure, SDelegFailure, IsAlreadyScheduled)
   , liveAfter
   -- * State lens fields
   , slot
@@ -78,6 +77,12 @@ module Ledger.Delegation
   , repeatedDelegationsRatio
   , maxRepeatedDelegations
   , maxCertsPerBlock
+  -- * Predicate failures
+  , PredicateFailure
+      ( IsNotGenesisKey, EpochInThePast, EpochPastNextEpoch
+      , HasAlreadyDelegated, IsAlreadyScheduled, DoesNotVerify
+      , SDelegSFailure, SDelegFailure
+      )
   )
 where
 
@@ -452,7 +457,7 @@ instance STS DELEG where
                      IRC env <- judgmentContext
                      initADelegsState <- trans @ADELEGS $ IRC (env ^. allowedDelegators)
                      initSDelegsState <- trans @SDELEGS $ IRC env
-                     return DIState
+                     pure $! DIState
                        { _dIStateDelegationMap  = initADelegsState ^. delegationMap
                        , _dIStateLastDelegation = initADelegsState ^. lastDelegation
                        , _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations
