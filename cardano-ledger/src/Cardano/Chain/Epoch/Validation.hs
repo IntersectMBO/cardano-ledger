@@ -45,20 +45,25 @@ data EpochError
 
 -- | Check that a single epoch's `Block`s are valid by folding over them
 -- TODO(KS): We should use contra-tracer here!
+-- tracing is orthogonal to throwing errors; it does not change the program flow.
 validateEpochFile
   :: forall m
-   . (MonadIO m, MonadError EpochError m)
-  => ValidationMode
+   . (MonadIO m)
+  => Tracer m EpochError
+  -> ValidationMode
   -> Genesis.Config
   -> ChainValidationState
   -> FilePath
   -> m ChainValidationState
-validateEpochFile vMode config cvs fp = do
+validateEpochFile tr vMode config cvs fp = do
 
   res <- liftIO $ runResourceT $ (`runReaderT` vMode) $ runExceptT $
         foldChainValidationState config cvs stream
 
-  either throwError pure res
+  case res of
+    Left e     -> traceWith tr e >> pure cvs
+    Right cvs' -> pure cvs'
+
  where
   stream = parseEpochFileWithBoundary mainnetEpochSlots fp
 
@@ -84,7 +89,7 @@ foldChainValidationState
 foldChainValidationState config chainValState blocks = S.foldM_
   (\cvs block ->
     withExceptT (EpochChainValidationError (blockOrBoundarySlot block))
-      $ updateChainBlockOrBoundary nullTracer config cvs block
+      $ updateChainBlockOrBoundary config cvs block
   )
   (pure chainValState)
   pure (pure (hoist (withExceptT EpochParseError) blocks))

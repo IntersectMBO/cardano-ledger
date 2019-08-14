@@ -40,7 +40,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO)
-import Control.Tracer
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
@@ -332,22 +331,6 @@ data ChainValidationError
 
   deriving (Eq, Show)
 
-orThrowErrorTraced :: MonadError e m => Bool -> (Tracer m e, e) -> m ()
-orThrowErrorTraced condition (tr, e) =
-  if condition
-  then pure ()
-  else do
-    traceWith tr e
-    throwError e
-
-infix 1 `orThrowErrorTraced`
-
-throwErrorTraced :: MonadError e m => Tracer m e -> e -> m ()
-throwErrorTraced tr e = do
-    traceWith tr e
-    throwError e
-
-infix 1 `throwErrorTraced`
 
 --------------------------------------------------------------------------------
 -- Validation Functions
@@ -355,39 +338,37 @@ infix 1 `throwErrorTraced`
 
 updateChainBlockOrBoundary
   :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
-  => Tracer m ChainValidationError
-  -> Genesis.Config
+  => Genesis.Config
   -> ChainValidationState
   -> ABlockOrBoundary ByteString
   -> m ChainValidationState
-updateChainBlockOrBoundary _tr config c b = case b of
-  ABOBBoundary bvd   -> updateChainBoundary nullTracer c bvd
+updateChainBlockOrBoundary config c b = case b of
+  ABOBBoundary bvd   -> updateChainBoundary c bvd
   ABOBBlock    block -> updateBlock config c block
 
 
 updateChainBoundary
   :: MonadError ChainValidationError m
-  => Tracer m ChainValidationError
-  -> ChainValidationState
+  => ChainValidationState
   -> ABoundaryBlock ByteString
   -> m ChainValidationState
-updateChainBoundary tr cvs bvd = do
+updateChainBoundary cvs bvd = do
   case (cvsPreviousHash cvs, boundaryPrevHash (boundaryHeader bvd)) of
     (Left expected, Left actual) ->
         (expected == actual)
-          `orThrowErrorTraced` (tr, ChainValidationGenesisHashMismatch expected actual)
+          `orThrowError` ChainValidationGenesisHashMismatch expected actual
     (Right expected, Right actual) ->
         (expected == actual)
-          `orThrowErrorTraced` (tr, ChainValidationInvalidHash expected actual)
+          `orThrowError` ChainValidationInvalidHash expected actual
 
     (Left gh, Right hh) ->
-        throwErrorTraced tr $ ChainValidationExpectedGenesisHash gh hh
+        throwError $ ChainValidationExpectedGenesisHash gh hh
     (Right hh, Left gh) ->
-        throwErrorTraced tr $ ChainValidationExpectedHeaderHash hh gh
+        throwError $ ChainValidationExpectedHeaderHash hh gh
 
   -- Validate that the block is within the size bounds
   (boundaryBlockLength bvd <= 2e6)
-    `orThrowErrorTraced` (tr, ChainValidationBoundaryTooLarge)
+    `orThrowError` ChainValidationBoundaryTooLarge
 
   -- Update the previous hash
   pure $ cvs
@@ -403,32 +384,30 @@ updateChainBoundary tr cvs bvd = do
 
 validateHeaderMatchesBody
   :: MonadError ProofValidationError m
-  => Tracer m ProofValidationError
-  -> AHeader ByteString
+  => AHeader ByteString
   -> ABody ByteString
   -> m ()
-validateHeaderMatchesBody tr hdr body = do
+validateHeaderMatchesBody hdr body = do
   let hdrProof = headerProof hdr
 
   -- Validate the delegation payload signature
   proofDelegation hdrProof == hashDecoded (bodyDlgPayload body)
-    `orThrowErrorTraced` (tr, DelegationProofValidationError)
+    `orThrowError` DelegationProofValidationError
 
   -- Validate the transaction payload proof
   proofUTxO hdrProof == recoverTxProof (bodyTxPayload body)
-    `orThrowErrorTraced` (tr, UTxOProofValidationError)
+    `orThrowError` UTxOProofValidationError
 
   -- Validate the update payload proof
   proofUpdate hdrProof == hashDecoded (bodyUpdatePayload body)
-    `orThrowErrorTraced` (tr, UpdateProofValidationError)
+    `orThrowError` UpdateProofValidationError
 
 validateBlockProofs
   :: MonadError ProofValidationError m
-  => Tracer m ProofValidationError
-  -> ABlock ByteString
+  => ABlock ByteString
   -> m ()
-validateBlockProofs tr b =
-  validateHeaderMatchesBody tr blockHeader blockBody
+validateBlockProofs b =
+  validateHeaderMatchesBody blockHeader blockBody
  where
   ABlock
     { blockHeader
@@ -469,7 +448,7 @@ updateBody env bs b = do
       ChainValidationBlockTooLarge maxBlockSize (blockLength b)
 
   -- Validate the delegation, transaction, and update payload proofs.
-  whenBlockValidation (validateBlockProofs nullTracer b)
+  whenBlockValidation (validateBlockProofs b)
     `wrapErrorWithValidationMode` ChainValidationProofValidationError
 
   -- Update the delegation state
