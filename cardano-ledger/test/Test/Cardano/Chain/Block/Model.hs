@@ -157,6 +157,7 @@ classifyTransactions =
     . fmap (length . Abstract._bUtxo . Abstract._bBody)
     . traceSignals NewestFirst
 
+
 ts_prop_invalidDelegationSignalsAreRejected :: TSProperty
 ts_prop_invalidDelegationSignalsAreRejected =
   withTestsTS 300  $ property $ do
