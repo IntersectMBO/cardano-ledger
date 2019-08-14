@@ -96,7 +96,6 @@ ts_prop_updateBlock_Valid =
           Abstract.NoGenDelegation
           Abstract.NoGenUTxO
           Abstract.NoGenUpdate
-          Nothing
           chainEnv
           lastState
       let config = abEnvToCfg chainEnv
@@ -139,7 +138,6 @@ ts_prop_updateBlock_InvalidProof =
           Abstract.NoGenDelegation
           Abstract.NoGenUTxO
           Abstract.NoGenUpdate
-          Nothing
           chainEnv
           lastState
       let config = abEnvToCfg chainEnv
