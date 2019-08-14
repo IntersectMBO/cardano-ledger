@@ -263,7 +263,7 @@ of which are active.
       \begin{array}{r@{~\in~}lr}
         \eta_1 & \Seed & \text{epoch nonce} \\
         \var{s} & \Slot & \text{current slot} \\
-        \var{gkeys} & \powerset{\VKeyGen} & \text{genesis keys} \\
+        \var{gkeys} & \powerset{\KeyHashGen} & \text{genesis key hashes} \\
       \end{array}
     \right)
   \end{equation*}
@@ -280,15 +280,15 @@ of which are active.
         \var{es} & \EpochState & \text{epoch state} \\
         \var{ru} & \RewardUpdate^? & \text{reward update} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
+        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
       \end{array}
     \right)
   \end{equation*}
   %
   \emph{Abstract pseudorandom schedule function}
   \begin{align*}
-    & \fun{overlaySchedule} \in \Epoch \to \powerset{\VKeyGen} \to \Seed \to \PParams
-        \to (\Slot\mapsto\VKeyGen^?) \\
+    & \fun{overlaySchedule} \in \Epoch \to \powerset{\KeyHashGen} \to \Seed \to \PParams
+        \to (\Slot\mapsto\KeyHashGen^?) \\
   \end{align*}
   %
   \emph{Constraints}
@@ -955,10 +955,10 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{pp} & \PParams & \text{protocol parameters} \\
-        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
+        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -980,10 +980,12 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \var{bhb}\leteq\bheader{bh}
       &
       \var{vk}\leteq\bvkcold{bhb}
-      \\
-      \bslot bhb \mapsto \var{gkey}\in\var{osched}
       &
-      \var{gkey}\mapsto\var{vk}\in\var{dms}
+      \var{vkh}\leteq\hashKey{vk}
+      \\
+      \bslot bhb \mapsto \var{gkh}\in\var{osched}
+      &
+      \var{gkh}\mapsto\var{vkh}\in\var{dms}
       \\~\\
       {
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
