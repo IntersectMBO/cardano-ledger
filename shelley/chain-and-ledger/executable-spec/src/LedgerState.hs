@@ -62,6 +62,7 @@ module LedgerState
   -- * Validation
   , ValidationError (..)
   , minfee
+  , txsize
   , validStakePoolRetire
   , validInputs
   , validNoReplay
@@ -70,6 +71,8 @@ module LedgerState
   , validKeyDeregistration
   , validStakeDelegation
   , preserveBalance
+  , produced
+  , consumed
   , verifiedWits
   , witsVKeyNeeded
   -- lenses
@@ -140,8 +143,7 @@ import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolPa
                      poolPledge, poolPubKey, poolRAcnt, ttl, txfee, wdrls)
 import           Updates (AVUpdate (..), Applications, PPUpdate (..), Update (..), emptyUpdate,
                      emptyUpdateState)
-import           UTxO (UTxO (..), balance, deposits, dom, txinLookup, txins, txouts, txup, union,
-                     verifyWitVKey, (</|), (<|))
+import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
 
 import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeKeys (..),
                      StakePools (..), cwitness, decayKey, refund)
@@ -149,7 +151,7 @@ import           Delegation.PoolParams (poolSpec)
 
 import           BaseTypes (Seed (..), UnitInterval, intervalValue, mkUnitInterval)
 
-import           Ledger.Core ((∪+), (▷), (◁))
+import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs dsignAlgo = [(KeyPair dsignAlgo, KeyPair dsignAlgo)]
@@ -532,7 +534,7 @@ consumed
   -> TxBody hashAlgo dsignAlgo
   -> Coin
 consumed pp u stakeKeys tx =
-    balance (txins tx <| u) + refunds + withdrawals
+    balance (txins tx ◁ u) + refunds + withdrawals
   where
     refunds = keyRefunds pp stakeKeys tx
     withdrawals = sum $ tx ^. wdrls
@@ -877,7 +879,7 @@ applyUTxOUpdate
   => UTxOState hashAlgo dsignAlgo
   -> TxBody hashAlgo dsignAlgo
   -> UTxOState hashAlgo dsignAlgo
-applyUTxOUpdate u tx = u & utxo .~ txins tx </| (u ^. utxo) `union` txouts tx
+applyUTxOUpdate u tx = u & utxo .~ txins tx ⋪ (u ^. utxo) ∪ txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert
