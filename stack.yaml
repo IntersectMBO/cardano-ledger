@@ -33,6 +33,11 @@ extra-deps:
       - byron/ledger/executable-spec
       - byron/chain/executable-spec
 
+  - git: https://github.com/input-output-hk/iohk-monitoring-framework
+    commit: 6e3047f785efe874819e8654ab928b0d9e9ff499
+    subdirs:
+      - contra-tracer
+
   # Not yet in Stack
   - bimap-0.4.0
 

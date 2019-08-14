@@ -54,3 +54,8 @@ source-repository-package
   tag: 69dc593dc30a4df954930f95a515239f7e8abad7
   subdir: byron/chain/executable-spec
 
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/iohk-monitoring-framework
+  subdir:   contra-tracer
+  tag: 6e3047f785efe874819e8654ab928b0d9e9ff499

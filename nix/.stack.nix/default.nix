@@ -25,6 +25,7 @@
         small-steps = ./small-steps.nix;
         cs-ledger = ./cs-ledger.nix;
         cs-blockchain = ./cs-blockchain.nix;
+        contra-tracer = ./contra-tracer.nix;
         cardano-sl-x509 = ./cardano-sl-x509.nix;
         cardano-crypto = ./cardano-crypto.nix;
         };

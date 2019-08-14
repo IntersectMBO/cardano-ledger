@@ -132,6 +132,7 @@ library
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , containers
+                     , contra-tracer
                      , concurrency
                      , cryptonite
                      , Cabal
@@ -246,6 +247,7 @@ test-suite cardano-ledger-test
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers
+                     , contra-tracer
                      , cryptonite
                      , cs-blockchain
                      , cs-ledger
@@ -302,6 +304,7 @@ test-suite epoch-validation-normal-form-test
                      , cardano-prelude
                      , cardano-prelude-test
                      , containers
+                     , contra-tracer
                      , directory
                      , filepath
                      , formatting
