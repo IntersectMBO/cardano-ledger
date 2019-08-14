@@ -19,12 +19,13 @@ import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 
 import           Coin
+import           Ledger.Core ((<|))
 import           LedgerState hiding (dms)
 import           PParams
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
-import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey, (<|))
+import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey)
 
 import           Generator
 import           MockTypes
