@@ -51,12 +51,15 @@ module Control.State.Transition.Generator
   -- * Trace properties
   , traceLengthsAreClassified
   , onlyValidSignalsAreGenerated
+  -- * Helpers
+  , tinkerWithSigGen
   )
 where
 
 import           Control.Arrow (second)
 import           Control.Monad (forM, void)
 import           Control.Monad.Trans.Maybe (MaybeT)
+import           Control.Monad.Trans.State.Strict (evalState)
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity)
 import           Data.Maybe (fromMaybe)
@@ -79,6 +82,8 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
                      lastState, mkTrace, traceLength, traceSignals, _traceEnv)
 import           Hedgehog.Extra.Manual (Manual)
 import qualified Hedgehog.Extra.Manual as Manual
+
+import Test.Goblin (Goblin, GoblinData, SeedGoblin, seeder, tinker)
 
 
 class STS s => HasTrace s where
@@ -564,3 +569,20 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
   footnoteShow sig
   footnoteShow result
   void $ evalEither result
+
+
+--------------------------------------------------------------------------------
+-- Helpers
+--------------------------------------------------------------------------------
+
+tinkerWithSigGen
+  :: forall g sts
+   . ( HasTrace sts, Goblin g (Signal sts)
+     , SeedGoblin (Environment sts)
+     , SeedGoblin (State sts) )
+  => GoblinData g
+  -> Environment sts
+  -> State sts
+  -> Gen (Signal sts)
+tinkerWithSigGen gd env state = flip evalState gd $
+  seeder env >> seeder state >> tinker (sigGen @sts env state)
