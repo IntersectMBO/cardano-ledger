@@ -22,6 +22,7 @@
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cs-ledger)
+          (hsPkgs.goblins)
           (hsPkgs.hashable)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)

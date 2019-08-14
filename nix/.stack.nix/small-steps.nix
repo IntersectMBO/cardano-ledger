@@ -21,6 +21,7 @@
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
           (hsPkgs.free)
+          (hsPkgs.goblins)
           (hsPkgs.hedgehog)
           (hsPkgs.tasty-hunit)
           (hsPkgs.lens)

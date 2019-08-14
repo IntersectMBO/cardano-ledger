@@ -20,6 +20,7 @@
           (hsPkgs.base)
           (hsPkgs.bimap)
           (hsPkgs.containers)
+          (hsPkgs.goblins)
           (hsPkgs.hashable)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
