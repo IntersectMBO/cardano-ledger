@@ -85,7 +85,6 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), Application
                      emptyUpdateState, updatePPup)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
 
-
 type ChainState = (NewEpochState, Seed, Seed, Maybe HashHeader, Slot)
 
 data CHAINExample = CHAINExample Slot ChainState Block ChainState
@@ -438,7 +437,7 @@ initStEx2A =
 blockEx2A :: Block
 blockEx2A = mkBlock
              Nothing
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              [txEx2A]
              (Slot 10)
              (Nonce 0)
@@ -615,7 +614,7 @@ ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B expectedStEx2B
 blockEx2C :: Block
 blockEx2C = mkBlock
              blockEx2BHash
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              []
              (Slot 110)
              (Nonce 0)
@@ -892,7 +891,7 @@ ex2F = CHAINExample (Slot 295) expectedStEx2E blockEx2F expectedStEx2F
 blockEx2G :: Block
 blockEx2G = mkBlock
              blockEx2FHash
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              []
              (Slot 310)
              (mkSeqNonce 5)
@@ -997,7 +996,7 @@ ex2H = CHAINExample (Slot 390) expectedStEx2G blockEx2H expectedStEx2H
 blockEx2I :: Block
 blockEx2I = mkBlock
               blockEx2HHash
-              (coreNodeKeys 4)
+              (coreNodeKeys 6)
               []
               (Slot 410)
               (mkSeqNonce 7)
@@ -1093,7 +1092,7 @@ txEx3A = Tx
 blockEx3A :: Block
 blockEx3A = mkBlock
              Nothing
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              [txEx3A]
              (Slot 10)
              (Nonce 0)
@@ -1247,7 +1246,7 @@ ex3B = CHAINExample (Slot 20) expectedStEx3A blockEx3B expectedStEx3B
 blockEx3C :: Block
 blockEx3C = mkBlock
              blockEx3BHash
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              []
              (Slot 110)
              (mkSeqNonce 2)
@@ -1345,7 +1344,7 @@ txEx4A = Tx
 blockEx4A :: Block
 blockEx4A = mkBlock
              Nothing
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              [txEx4A]
              (Slot 10)
              (Nonce 0)
@@ -1498,7 +1497,7 @@ ex4B = CHAINExample (Slot 20) expectedStEx4A blockEx4B expectedStEx4B
 blockEx4C :: Block
 blockEx4C = mkBlock
              blockEx4BHash
-             (coreNodeKeys 5)
+             (coreNodeKeys 0)
              []
              (Slot 60)
              (Nonce 0)
