@@ -30,6 +30,7 @@ $\mathsf{UTXOW}$ transition.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
         \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
       \end{array}
     \right)
@@ -55,6 +56,7 @@ $\mathsf{UTXOW}$ transition.
     {
       \begin{array}{l}
         \var{slot}\\
+        \var{pp}\\
         \var{dms}\\
       \end{array}
       \vdash \var{pup_s}\trans{ppup}{pup}\var{pup_s}
@@ -70,13 +72,15 @@ $\mathsf{UTXOW}$ transition.
       &
       \dom{pup}\subseteq\dom{dms}
       \\
-      \var{ppv}\mapsto\var{v}\in\var{pup}\implies\fun{pvCanFollow}~(\fun{ppv}~\var{pup_s})~\var{v}
+      \forall\var{ps}\in\range{pup},~
+        \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
       \\
       \var{slot} < \firstSlot{((\epoch{slot}) + 1) - \SlotsPrior}
     }
     {
       \begin{array}{l}
         \var{slot}\\
+        \var{pp}\\
         \var{dms}\\
       \end{array}
       \vdash
@@ -321,6 +325,7 @@ The AVUP rule has one predicate failure:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
         \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
       \end{array}
     \right)
@@ -360,6 +365,7 @@ The AVUP rule has one predicate failure:
         \left(
           \begin{array}{r}
             \var{slot} \\
+            \var{pp} \\
             \var{dms} \\
           \end{array}
         \right)
@@ -401,6 +407,7 @@ The AVUP rule has one predicate failure:
     {
       \begin{array}{l}
         \var{slot}\\
+        \var{pp} \\
         \var{dms}\\
       \end{array}
       \vdash

@@ -12,6 +12,7 @@ where
 import qualified Data.Map.Strict as Map
 
 import           Keys
+import           PParams
 import           Slot
 import           Updates
 
@@ -30,7 +31,7 @@ instance DSIGNAlgorithm dsignAlgo => STS (UP dsignAlgo) where
       , Applications
       )
   type Signal (UP dsignAlgo) = Update dsignAlgo
-  type Environment (UP dsignAlgo) = (Slot, Dms dsignAlgo)
+  type Environment (UP dsignAlgo) = (Slot, PParams, Dms dsignAlgo)
   data PredicateFailure (UP dsignAlgo)
     = NonGenesisUpdateUP
     | AvupFailure (PredicateFailure (AVUP dsignAlgo))
@@ -45,11 +46,11 @@ upTransition
    . DSIGNAlgorithm dsignAlgo
   => TransitionRule (UP dsignAlgo)
 upTransition = do
-  TRC (env, (pupS, aupS, favs, avs), Update pup _aup) <- judgmentContext
+  TRC ((_slot, pp, _dms), (pupS, aupS, favs, avs), Update pup _aup) <- judgmentContext
 
-  pup' <- trans @(PPUP dsignAlgo) $ TRC (env, pupS, pup)
+  pup' <- trans @(PPUP dsignAlgo) $ TRC ((_slot, pp, _dms), pupS, pup)
   (aup', favs', avs') <-
-    trans @(AVUP dsignAlgo) $ TRC (env, (aupS, favs, avs), _aup)
+    trans @(AVUP dsignAlgo) $ TRC ((_slot, _dms), (aupS, favs, avs), _aup)
 
   pure (pup', aup', favs', avs')
 

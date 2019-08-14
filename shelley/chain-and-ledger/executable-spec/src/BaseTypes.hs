@@ -14,6 +14,7 @@ module BaseTypes
   , Seed(..)
   , mkNonce
   , (⭒)
+  , (==>)
   ) where
 
 
@@ -82,3 +83,7 @@ a ⭒ b = SeedOp a b
 
 mkNonce :: Integer -> Seed
 mkNonce = Nonce
+
+(==>) :: Bool -> Bool -> Bool
+a ==> b = not a || b
+infix 1 ==>
