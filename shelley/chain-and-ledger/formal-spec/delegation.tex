@@ -201,7 +201,7 @@ state transition types. We define two separate parts of the ledger state.
       \item $\var{ptrs}$ maps stake keys to the position of the registration certificate
         in the blockchain. This is needed to lookup the stake hashkey of a pointer address.
       \item $\var{fdms}$ future genesis keys delegations.
-      \item $\var{dms}$ maps genesis keys to the cold key delegates.
+      \item $\var{dms}$ maps genesis key hashes to hashes of the cold key delegates.
     \end{itemize}
   \item $\PState$ keeps track of the stake pool information:
     \begin{itemize}
@@ -236,8 +236,8 @@ and the protocol parameters.
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \KeyHash_{stake} \mapsto \KeyHash_{pool} & \text{delegations}\\
       \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
-      \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
-      \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
+      \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
+      \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
     \end{array}\right)
     \\
     \\
@@ -462,9 +462,12 @@ a stake pool, though these concerns are independent of the ledger rules.
     {
       \var{c}\in \DCertGen
       & (\var{gkey},~\var{vk})\leteq\fun{genDel}~{c}
-      & \var{gkey}\in\dom{dms}
+      \\
+      \var{gkh} \leteq \hashKey{gkey}
+      & \var{vkh} \leteq \hashKey{vk}
       \\
       s'\leteq\var{slot}+\SlotsPrior
+      & \var{gkh}\in\dom{dms}
     }
     {
       \begin{array}{r}
@@ -490,7 +493,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \var{delegations} \\
         \var{ptrs} \\
         \varUpdate{\var{fdms}} & \varUpdate{\unionoverrideRight}
-                               & \varUpdate{\{(\var{s'},~\var{gkey}) \mapsto \var{vk}\}} \\
+                               & \varUpdate{\{(\var{s'},~\var{gkh}) \mapsto \var{vkh}\}} \\
         \var{dms} \\
       \end{array}
       \right)
@@ -905,21 +908,21 @@ will be invalid.
       \\~\\
       \var{curr}\leteq
       \left\{
-        (\var{s},~\var{gkey})\mapsto\var{vkey}\in\var{fdms}
+        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fdms}
         ~\mathrel{\Bigg|}~
         {
           \begin{array}{r}
             \var{s}\geq\var{slot}\\
-            \var{s}=\max\{s'~\mid~(s',~\var{gkey})\in\dom{\var{fdms}}\}
+            \var{s}=\max\{s'~\mid~(s',~\var{gkh})\in\dom{\var{fdms}}\}
           \end{array}
         }
       \right\}
       \\
       \var{dms'}\leteq
       \{
-        \var{gkey}\mapsto\var{vkey}
+        \var{gkh}\mapsto\var{vkh}
         ~\mid~
-        (\var{s},~\var{gkey})\mapsto\var{vkey}\in\var{curr}
+        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{curr}
       \}
     }
     {
