@@ -31,7 +31,7 @@ $\mathsf{UTXOW}$ transition.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -167,7 +167,7 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}

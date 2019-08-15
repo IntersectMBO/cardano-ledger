@@ -34,7 +34,7 @@ instance
   type Signal (BHEAD hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
   type Environment (BHEAD hashAlgo dsignAlgo kesAlgo)
-    = (Seed, Set.Set (VKeyGenesis dsignAlgo))
+    = (Seed, Set.Set (GenKeyHash hashAlgo dsignAlgo))
   data PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo)
     = HeaderSizeTooLargeBHEAD
     | BlockSizeTooLargeBHEAD

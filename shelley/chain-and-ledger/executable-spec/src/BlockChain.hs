@@ -58,7 +58,7 @@ newtype HashHeader hashAlgo dsignAlgo kesAlgo =
   deriving (Show, Eq, Ord, ToCBOR)
 
 newtype TxSeq hashAlgo dsignAlgo = TxSeq (Seq (Tx hashAlgo dsignAlgo))
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Show)
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
   ToCBOR (TxSeq hashAlgo dsignAlgo)  where

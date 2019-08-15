@@ -15,6 +15,7 @@ import qualified Data.Maybe as Maybe (fromMaybe)
 import           BaseTypes
 import           Coin
 import           EpochBoundary
+import           Keys (DSIGNAlgorithm, HashAlgorithm)
 import           LedgerState
 import           PParams
 import           Slot
@@ -28,10 +29,11 @@ import           Control.State.Transition
 
 data NEWEPOCH hashAlgo dsignAlgo
 
-instance STS (NEWEPOCH hashAlgo dsignAlgo) where
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+    => STS (NEWEPOCH hashAlgo dsignAlgo) where
   type State (NEWEPOCH hashAlgo dsignAlgo) = NewEpochState hashAlgo dsignAlgo
   type Signal (NEWEPOCH hashAlgo dsignAlgo) = Epoch
-  type Environment (NEWEPOCH hashAlgo dsignAlgo) = NewEpochEnv dsignAlgo
+  type Environment (NEWEPOCH hashAlgo dsignAlgo) = NewEpochEnv hashAlgo dsignAlgo
   data PredicateFailure (NEWEPOCH hashAlgo dsignAlgo)
     = EpochFailure (PredicateFailure (EPOCH hashAlgo dsignAlgo))
     deriving (Show, Eq)
@@ -49,7 +51,9 @@ instance STS (NEWEPOCH hashAlgo dsignAlgo) where
         Map.empty]
   transitionRules = [newEpochTransition]
 
-newEpochTransition :: forall hashAlgo dsignAlgo . TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
+newEpochTransition :: forall hashAlgo dsignAlgo
+  .  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
 newEpochTransition = do
   TRC ( NewEpochEnv eta1 _s gkeys
       , src@(NewEpochState (Epoch eL') _ _ bcur es ru _pd _osched)
@@ -85,5 +89,6 @@ newEpochTransition = do
                            (PoolDistr pd')
                            osched'
 
-instance Embed (EPOCH hashAlgo dsignAlgo) (NEWEPOCH hashAlgo dsignAlgo) where
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+    => Embed (EPOCH hashAlgo dsignAlgo) (NEWEPOCH hashAlgo dsignAlgo) where
   wrapFailed = EpochFailure
