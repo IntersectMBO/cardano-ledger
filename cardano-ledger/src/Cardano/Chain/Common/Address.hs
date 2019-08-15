@@ -35,6 +35,7 @@ module Cardano.Chain.Common.Address
   , addrNetworkMagic
   , deriveLvl2KeyPair
   , deriveFirstHDAddress
+  , unAddressHash
 
   -- * Pattern-matching helpers
   , isRedeemAddress
@@ -50,6 +51,8 @@ module Cardano.Chain.Common.Address
 where
 
 import Cardano.Prelude
+
+import qualified Data.ByteArray
 
 import Control.Monad.Except (MonadError)
 import Data.ByteString.Base58
@@ -120,6 +123,10 @@ instance FromCBOR Address' where
     len <- decodeListLenCanonical
     matchSize "Address'" 3 len
     fmap Address' $ (,,) <$> fromCBOR <*> fromCBOR <*> fromCBOR
+
+-- | Get the ByteString of the hash.
+unAddressHash :: AddressHash Address' -> ByteString
+unAddressHash = Data.ByteArray.convert
 
 -- | 'Address' is where you can send Lovelace
 data Address = Address
