@@ -23,7 +23,7 @@ extra-deps:
     - cardano-crypto-class
 
 - git: https://github.com/input-output-hk/goblins
-  commit: a4ae515ebd48af5902d7308417a0aa8ad9580df7
+  commit: 6ea969b31c2bbaa7ba78b8e83b53a36bedfae10e
 - moo-1.2
 - gray-code-0.3.1
 
