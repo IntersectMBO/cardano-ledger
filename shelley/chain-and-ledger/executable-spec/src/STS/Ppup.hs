@@ -50,23 +50,25 @@ pvCanFollow _ _ = True
 
 ppupTransitionEmpty :: TransitionRule (PPUP dsignAlgo)
 ppupTransitionEmpty = do
-  TRC ((_, _, _), pupS, PPUpdate pup') <-
-    judgmentContext
-  do
-    Map.null pup' ?! PPUpdateNonEmpty
-    pure pupS
+  TRC ((_, _, _), pupS, PPUpdate pup') <- judgmentContext
+
+  Map.null pup' ?! PPUpdateNonEmpty
+
+  pure pupS
 
 ppupTransitionNonEmpty :: DSIGNAlgorithm dsignAlgo => TransitionRule (PPUP dsignAlgo)
 ppupTransitionNonEmpty = do
-  TRC ((s, pp, Dms _dms), pupS, pup@(PPUpdate pup')) <-
-    judgmentContext
-  do
-    pup' /= Map.empty ?! PPUpdateEmpty
-    all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
-    (dom pup' ⊆ dom _dms)
-      ?! NonGenesisUpdatePPUP (Map.keysSet pup') (Map.keysSet _dms)
-    let Epoch slotEpoch = epochFromSlot (Slot 1)
-    s
-      <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
-      ?! PPUpdateTooEarlyPPUP
-    pure $ updatePPup pupS pup
+  TRC ((s, pp, Dms _dms), pupS, pup@(PPUpdate pup')) <- judgmentContext
+
+  pup' /= Map.empty ?! PPUpdateEmpty
+
+  all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
+
+  (dom pup' ⊆ dom _dms) ?! NonGenesisUpdatePPUP (dom pup') (dom _dms)
+
+  let Epoch slotEpoch = epochFromSlot (Slot 1)
+  s
+    <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
+    ?! PPUpdateTooEarlyPPUP
+
+  pure $ updatePPup pupS pup
