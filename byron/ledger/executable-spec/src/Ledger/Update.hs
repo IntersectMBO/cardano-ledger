@@ -1644,12 +1644,9 @@ protocolVersionEndorsementGen upienv upistate =
 -- Goblins instances
 --------------------------------------------------------------------------------
 
-instance GeneOps g => Goblin g Metadata where
-  tinker = pure
-  conjure = pure Metadata
-
 deriveGoblin ''ApVer
 deriveGoblin ''ApName
+deriveGoblin ''Metadata
 deriveGoblin ''ProtVer
 deriveGoblin ''PParams
 deriveGoblin ''SwVer
@@ -1662,11 +1659,9 @@ deriveGoblin ''Vote
 -- AddShrinks instances
 --------------------------------------------------------------------------------
 
-instance AddShrinks Metadata where
-  addShrinks = pure
-
 deriveAddShrinks ''ApName
 deriveAddShrinks ''ApVer
+deriveAddShrinks ''Metadata
 deriveAddShrinks ''PParams
 deriveAddShrinks ''ProtVer
 deriveAddShrinks ''SwVer
