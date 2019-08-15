@@ -1,6 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module TxData
   where
@@ -11,6 +15,7 @@ import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeLis
 import           Lens.Micro.TH (makeLenses)
 
 import           Data.Foldable (toList)
+import           Data.Ord (comparing)
 import           Data.Map.Strict (Map)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
@@ -20,7 +25,7 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KeyHash (..), Sig, VKey, VKeyGenesis)
+import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, GenKeyHash, KeyHash, pattern KeyHash, Sig, VKey, VKeyGenesis, hashKey)
 import           Slot (Epoch, Slot)
 import           Updates (Update)
 
@@ -28,7 +33,7 @@ import           Updates (Update)
 data Delegation hashAlgo dsignAlgo = Delegation
   { _delegator :: Credential hashAlgo dsignAlgo
   , _delegatee :: KeyHash hashAlgo dsignAlgo
-  } deriving (Show, Eq, Ord)
+  } deriving (Eq, Show)
 
 -- |A stake pool.
 data PoolParams hashAlgo dsignAlgo =
@@ -40,7 +45,7 @@ data PoolParams hashAlgo dsignAlgo =
     , _poolMargin  :: UnitInterval
     , _poolRAcnt   :: RewardAcnt hashAlgo dsignAlgo
     , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq)
 
 -- |An account based address for a rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
@@ -51,6 +56,7 @@ newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
 data Credential hashAlgo dsignAlgo =
     ScriptHashObj { _validatorHash :: ScriptHash hashAlgo dsignAlgo }
   | KeyHashObj    { _vkeyHash      :: KeyHash hashAlgo dsignAlgo }
+  | GenesisHashObj { _genKeyHash   :: GenKeyHash hashAlgo dsignAlgo }
     deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.
@@ -140,7 +146,7 @@ data DCert hashAlgo dsignAlgo
   | Delegate (Delegation hashAlgo dsignAlgo)
     -- | Genesis key delegation certificate
   | GenesisDelegate (VKeyGenesis dsignAlgo, VKey dsignAlgo)
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq)
 
 -- |A raw transaction
 data TxBody hashAlgo dsignAlgo
@@ -151,13 +157,17 @@ data TxBody hashAlgo dsignAlgo
       , _wdrls    :: Wdrl hashAlgo dsignAlgo
       , _txfee    :: Coin
       , _ttl      :: Slot
-      , _txUpdate :: Update dsignAlgo
-      } deriving (Show, Eq, Ord)
+      , _txUpdate :: Update hashAlgo dsignAlgo
+      } deriving (Show, Eq)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey hashAlgo dsignAlgo
   = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq)
+
+instance forall hashAlgo dsignAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
+  => Ord (WitVKey hashAlgo dsignAlgo) where
+    compare = comparing (\(WitVKey key _) -> hashKey @hashAlgo key)
 
 -- |A fully formed transaction.
 data Tx hashAlgo dsignAlgo
@@ -166,7 +176,7 @@ data Tx hashAlgo dsignAlgo
       , _witnessVKeySet :: !(Set (WitVKey hashAlgo dsignAlgo))
       , _witnessMSigMap ::
           Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
-      } deriving (Show, Eq, Ord)
+      } deriving (Show, Eq)
 
 newtype StakeKeys hashAlgo dsignAlgo =
   StakeKeys (Map (StakeCredential hashAlgo dsignAlgo) Slot)
@@ -309,6 +319,10 @@ instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
     KeyHashObj kh ->
       encodeListLen 2
       <> toCBOR (1 :: Word8)
+      <> toCBOR kh
+    GenesisHashObj kh ->
+      encodeListLen 2
+      <> toCBOR (2 :: Word8)
       <> toCBOR kh
 
 instance

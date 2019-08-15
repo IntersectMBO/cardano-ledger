@@ -52,10 +52,10 @@ instance
   type Environment (PRTCL hashAlgo dsignAlgo kesAlgo) =
     ( -- OverlayEnvironment
       ( PParams
-      , Map.Map Slot (Maybe (VKeyGenesis dsignAlgo))
+      , Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
       , Seed
       , PoolDistr hashAlgo dsignAlgo
-      , Dms dsignAlgo
+      , Dms hashAlgo dsignAlgo
       )
     , Slot
     )

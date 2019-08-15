@@ -31,13 +31,14 @@ import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
 import           BaseTypes (Seed, UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, Dms, VKeyGenesis)
+import           Keys (DSIGNAlgorithm, HashAlgorithm, GenKeyHash, Dms)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot)
 
 import           Numeric.Natural (Natural)
 
 import           Ledger.Core ((∪))
+
 
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, ToCBOR)
@@ -55,24 +56,23 @@ newtype Applications = Applications {
   apps :: Map.Map ApName (ApVer, Metadata)
   } deriving (Show, Ord, Eq, ToCBOR)
 
-newtype AVUpdate dsignAlgo = AVUpdate {
-  aup :: Map.Map (VKeyGenesis dsignAlgo) Applications
-  } deriving (Show, Ord, Eq, ToCBOR)
+newtype AVUpdate hashAlgo dsignAlgo = AVUpdate {
+  aup :: Map.Map (GenKeyHash hashAlgo dsignAlgo) Applications
+  } deriving (Show, Eq, ToCBOR)
 
 -- | Update Proposal
-data Update dsignAlgo = Update (PPUpdate dsignAlgo) (AVUpdate dsignAlgo)
-  deriving (Show, Ord, Eq)
+data Update hashAlgo dsignAlgo
+  = Update (PPUpdate hashAlgo dsignAlgo) (AVUpdate hashAlgo dsignAlgo)
+  deriving (Show, Eq)
 
-instance DSIGNAlgorithm dsignAlgo => ToCBOR (Update dsignAlgo) where
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) => ToCBOR (Update hashAlgo dsignAlgo) where
   toCBOR (Update ppUpdate avUpdate) =
-    encodeListLen 2
-      <> toCBOR ppUpdate
-      <> toCBOR avUpdate
+    encodeListLen 2 <> toCBOR ppUpdate <> toCBOR avUpdate
 
-data PPUpdateEnv dsignAlgo = PPUpdateEnv {
+data PPUpdateEnv hashAlgo dsignAlgo = PPUpdateEnv {
     slot :: Slot
-  , dms  :: Dms dsignAlgo
-  } deriving (Show, Ord, Eq)
+  , dms  :: Dms hashAlgo dsignAlgo
+  } deriving (Show, Eq)
 
 data Ppm = MinFeeA Integer
   | MinFeeB Natural
@@ -129,11 +129,11 @@ instance ToCBOR Ppm where
 
     Nopt nopt -> encodeListLen 2 <> toCBOR (11 :: Word8) <> toCBOR nopt
 
-    A0 a0 -> encodeListLen 2 <> toCBOR (12 :: Word8) <> toCBOR a0
+    A0   a0   -> encodeListLen 2 <> toCBOR (12 :: Word8) <> toCBOR a0
 
-    Rho rho -> encodeListLen 2 <> toCBOR (13 :: Word8) <> toCBOR rho
+    Rho  rho  -> encodeListLen 2 <> toCBOR (13 :: Word8) <> toCBOR rho
 
-    Tau tau -> encodeListLen 2 <> toCBOR (14 :: Word8) <> toCBOR tau
+    Tau  tau  -> encodeListLen 2 <> toCBOR (14 :: Word8) <> toCBOR tau
 
     ActiveSlotCoefficient activeSlotCoeff ->
       encodeListLen 2 <> toCBOR (15 :: Word8) <> toCBOR activeSlotCoeff
@@ -146,17 +146,16 @@ instance ToCBOR Ppm where
     ProtocolVersion protocolVersion ->
       encodeListLen 2 <> toCBOR (18 :: Word8) <> toCBOR protocolVersion
 
-newtype PPUpdate dsignAlgo
-  = PPUpdate (Map.Map (VKeyGenesis dsignAlgo) (Set Ppm))
-  deriving (Show, Ord, Eq, ToCBOR)
+newtype PPUpdate hashAlgo dsignAlgo
+  = PPUpdate (Map.Map (GenKeyHash hashAlgo dsignAlgo) (Set Ppm))
+  deriving (Show, Eq, ToCBOR)
 
 -- | Update Protocol Parameter update with new values, prefer value from `pup1`
 -- in case of already existing value in `pup0`
 updatePPup
-  :: DSIGNAlgorithm dsignAlgo
-  => PPUpdate dsignAlgo
-  -> PPUpdate dsignAlgo
-  -> PPUpdate dsignAlgo
+  :: PPUpdate hashAlgo dsignAlgo
+  -> PPUpdate hashAlgo dsignAlgo
+  -> PPUpdate hashAlgo dsignAlgo
 updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate (pup1' ∪ pup0')
 
 newAVs :: Applications -> Map.Map Slot Applications -> Applications
@@ -164,46 +163,49 @@ newAVs avs favs = if not $ Map.null favs
   then let maxSlot = maximum $ Map.keys favs in favs Map.! maxSlot  -- value exists because maxSlot is in keys
   else avs
 
-votedValue :: Eq a => Map.Map (VKeyGenesis dsignAlgo) a -> Maybe a
+votedValue
+  :: Eq a => Map.Map (GenKeyHash hashAlgo dsignAlgo) a -> Maybe a
 votedValue vs | null elemLists = Nothing
               | otherwise      = Just $ (head . head) elemLists  -- elemLists contains an element
                                                -- and that list contains at
                                                -- least 5 elements
+
+
  where
   elemLists =
     filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
 
 emptyUpdateState
-  :: ( Updates.PPUpdate dsignAlgo
-     , Updates.AVUpdate dsignAlgo
+  :: ( Updates.PPUpdate hashAlgo dsignAlgo
+     , Updates.AVUpdate hashAlgo dsignAlgo
      , Map.Map Slot Updates.Applications
      , Updates.Applications
      )
 emptyUpdateState =
   (PPUpdate Map.empty, AVUpdate Map.empty, Map.empty, Applications Map.empty)
 
-emptyUpdate :: Update dsignAlgo
+emptyUpdate :: Update hashAlgo dsignAlgo
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)
 
 updatePParams :: PParams -> Set Ppm -> PParams
 updatePParams = Set.foldr updatePParams'
-  where
-    updatePParams' (MinFeeA p) pps = pps {_minfeeA = p}
-    updatePParams' (MinFeeB p) pps = pps {_minfeeB = p}
-    updatePParams' (MaxBBSize p) pps = pps {_maxBBSize = p}
-    updatePParams' (MaxTxSize p) pps = pps {_maxTxSize = p}
-    updatePParams' (KeyDeposit p) pps = pps {_keyDeposit = p}
-    updatePParams' (KeyMinRefund p) pps = pps {_keyMinRefund = p}
-    updatePParams' (KeyDecayRate p) pps = pps {_keyDecayRate = p}
-    updatePParams' (PoolDeposit p) pps = pps {_poolDeposit = p}
-    updatePParams' (PoolMinRefund p) pps = pps {_poolMinRefund = p}
-    updatePParams' (PoolDecayRate p) pps = pps {_poolDecayRate = p}
-    updatePParams' (EMax p) pps = pps {_eMax = p}
-    updatePParams' (Nopt p) pps = pps {_nOpt = p}
-    updatePParams' (A0 p) pps = pps {_a0 = p}
-    updatePParams' (Rho p) pps = pps {_rho = p}
-    updatePParams' (Tau p) pps = pps {_tau = p}
-    updatePParams' (ActiveSlotCoefficient p) pps = pps {_activeSlotCoeff = p}
-    updatePParams' (D p) pps = pps {_d = p}
-    updatePParams' (ExtraEntropy p) pps = pps {_extraEntropy = p}
-    updatePParams' (ProtocolVersion p) pps = pps {_protocolVersion = p}
+ where
+  updatePParams' (MinFeeA               p) pps = pps { _minfeeA = p }
+  updatePParams' (MinFeeB               p) pps = pps { _minfeeB = p }
+  updatePParams' (MaxBBSize             p) pps = pps { _maxBBSize = p }
+  updatePParams' (MaxTxSize             p) pps = pps { _maxTxSize = p }
+  updatePParams' (KeyDeposit            p) pps = pps { _keyDeposit = p }
+  updatePParams' (KeyMinRefund          p) pps = pps { _keyMinRefund = p }
+  updatePParams' (KeyDecayRate          p) pps = pps { _keyDecayRate = p }
+  updatePParams' (PoolDeposit           p) pps = pps { _poolDeposit = p }
+  updatePParams' (PoolMinRefund         p) pps = pps { _poolMinRefund = p }
+  updatePParams' (PoolDecayRate         p) pps = pps { _poolDecayRate = p }
+  updatePParams' (EMax                  p) pps = pps { _eMax = p }
+  updatePParams' (Nopt                  p) pps = pps { _nOpt = p }
+  updatePParams' (A0                    p) pps = pps { _a0 = p }
+  updatePParams' (Rho                   p) pps = pps { _rho = p }
+  updatePParams' (Tau                   p) pps = pps { _tau = p }
+  updatePParams' (ActiveSlotCoefficient p) pps = pps { _activeSlotCoeff = p }
+  updatePParams' (D                     p) pps = pps { _d = p }
+  updatePParams' (ExtraEntropy          p) pps = pps { _extraEntropy = p }
+  updatePParams' (ProtocolVersion       p) pps = pps { _protocolVersion = p }

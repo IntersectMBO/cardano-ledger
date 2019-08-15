@@ -49,9 +49,10 @@ import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
 import           MockTypes (AVUpdate, Addr, Block, Credential, DState, EpochState, HashHeader,
+                     GenKeyHash,
                      KeyHash, KeyPair, LedgerState, NewEpochState, PPUpdate, PState, PoolDistr,
                      PoolParams, RewardAcnt, SKey, SKeyES, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, VKey, VKeyES, VKeyGenesis)
+                     UTxOState, Update, VKey, VKeyGenesis, VKeyES)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, (⭒))
@@ -63,7 +64,8 @@ import           Delegation.Certificates (pattern Delegate, pattern PoolDistr, p
 import           EpochBoundary (BlocksMade (..), pattern Stake, emptySnapShots, _feeSS, _poolsSS,
                      _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
-                     pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey)
+                     pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey
+                     )
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
@@ -82,7 +84,6 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), Application
                      Metadata (..), pattern PPUpdate, Ppm (..), pattern Update, emptyUpdate,
                      emptyUpdateState, updatePPup)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
-
 
 type ChainState = (NewEpochState, Seed, Seed, Maybe HashHeader, Slot)
 
@@ -110,14 +111,15 @@ mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
 
 mkAddr :: (KeyPair, KeyPair) -> Addr
 mkAddr (payKey, stakeKey) =
-  AddrBase (KeyHashObj . hashKey $ vKey payKey) (KeyHashObj . hashKey $ vKey stakeKey)
+  AddrBase (KeyHashObj . hashKey $ vKey payKey)
+           (KeyHashObj . hashKey $ vKey stakeKey)
 
 data AllPoolKeys = AllPoolKeys
   { cold :: KeyPair
   , vrf :: KeyPair
   , hot :: (SKeyES, VKeyES)
   , hk  :: KeyHash
-  } deriving (Show, Eq)
+  } deriving (Show)
 
 mkAllPoolKeys :: Word64 -> AllPoolKeys
 mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
@@ -140,8 +142,8 @@ coreNodeVKG = fst . (coreNodes !!)
 coreNodeKeys :: Int -> AllPoolKeys
 coreNodeKeys = snd . (coreNodes !!)
 
-dms :: Map VKeyGenesis VKey
-dms = Map.fromList [ (gkey, vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
+dms :: Map GenKeyHash KeyHash
+dms = Map.fromList [ (hashKey gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
 
 alicePay :: KeyPair
 alicePay = KeyPair vk sk
@@ -266,7 +268,7 @@ dsEx1 = emptyDState { _dms = Dms dms }
 
 psEx1 :: PState
 psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems dms)) }
-  where f vk = (hashKey vk, 0)
+  where f vk = (vk, 0)
 
 lsEx1 :: LedgerState
 lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1) 0
@@ -313,7 +315,7 @@ initStEx1 =
       esEx1
       Nothing
       (PoolDistr Map.empty)
-      (Map.singleton (Slot 1) (Just $ coreNodeVKG 0))
+      (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0))
       -- The overlay schedule has one entry, setting Core Node 1 to slot 1.
   , Nonce 0
   , Nonce 0
@@ -346,7 +348,7 @@ expectedStEx1 =
       esEx1
       Nothing
       (PoolDistr Map.empty)
-      (Map.singleton (Slot 1) (Just $ coreNodeVKG 0))
+      (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0))
   , Nonce 0 ⭒ Nonce 1
   , Nonce 0 ⭒ Nonce 1
   , Just (bhHash (bheader blockEx1))
@@ -366,7 +368,7 @@ utxoEx2A = genesisCoins
        , TxOut bobAddr bobInitCoin]
 
 ppupEx2A :: PPUpdate
-ppupEx2A = PPUpdate $ Map.singleton (coreNodeVKG 0) (Set.singleton (PoolDeposit 255))
+ppupEx2A = PPUpdate $ Map.singleton (hashKey $ coreNodeVKG 0) (Set.singleton (PoolDeposit 255))
 
 updateEx2A :: Update
 updateEx2A = Update ppupEx2A (AVUpdate Map.empty)
@@ -408,7 +410,7 @@ esEx2A :: EpochState
 esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1
 
 
-overlayEx2A :: Map Slot (Maybe VKeyGenesis)
+overlayEx2A :: Map Slot (Maybe GenKeyHash)
 overlayEx2A = overlaySchedule
                     (Epoch 0)
                     (Map.keysSet dms)
@@ -435,7 +437,7 @@ initStEx2A =
 blockEx2A :: Block
 blockEx2A = mkBlock
              Nothing
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              [txEx2A]
              (Slot 10)
              (Nonce 0)
@@ -612,7 +614,7 @@ ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B expectedStEx2B
 blockEx2C :: Block
 blockEx2C = mkBlock
              blockEx2BHash
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              []
              (Slot 110)
              (Nonce 0)
@@ -620,7 +622,7 @@ blockEx2C = mkBlock
              zero
              1
 
-epoch1OSchedEx2C :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2C :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2C = overlaySchedule
                     (Epoch 1)
                     (Map.keysSet dms)
@@ -779,7 +781,7 @@ blockEx2E = mkBlock
              zero
              2
 
-epoch1OSchedEx2E :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2E :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2E = overlaySchedule
                     (Epoch 2)
                     (Map.keysSet dms)
@@ -889,7 +891,7 @@ ex2F = CHAINExample (Slot 295) expectedStEx2E blockEx2F expectedStEx2F
 blockEx2G :: Block
 blockEx2G = mkBlock
              blockEx2FHash
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              []
              (Slot 310)
              (mkSeqNonce 5)
@@ -900,7 +902,7 @@ blockEx2G = mkBlock
 blockEx2GHash :: Maybe HashHeader
 blockEx2GHash = Just (bhHash (bheader blockEx2G))
 
-epoch1OSchedEx2G :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2G :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2G = overlaySchedule
                     (Epoch 3)
                     (Map.keysSet dms)
@@ -994,7 +996,7 @@ ex2H = CHAINExample (Slot 390) expectedStEx2G blockEx2H expectedStEx2H
 blockEx2I :: Block
 blockEx2I = mkBlock
               blockEx2HHash
-              (coreNodeKeys 4)
+              (coreNodeKeys 6)
               []
               (Slot 410)
               (mkSeqNonce 7)
@@ -1005,7 +1007,7 @@ blockEx2I = mkBlock
 blockEx2IHash :: Maybe HashHeader
 blockEx2IHash = Just (bhHash (bheader blockEx2I))
 
-epoch1OSchedEx2I :: Map Slot (Maybe VKeyGenesis)
+epoch1OSchedEx2I :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2I = overlaySchedule
                      (Epoch 4)
                      (Map.keysSet dms)
@@ -1057,9 +1059,9 @@ ex2I = CHAINExample (Slot 410) expectedStEx2H blockEx2I expectedStEx2I
 
 
 ppupEx3A :: PPUpdate
-ppupEx3A = PPUpdate $ Map.fromList [ (coreNodeVKG 0, Set.singleton (PoolDeposit 200))
-                                   , (coreNodeVKG 3, Set.singleton (PoolDeposit 200))
-                                   , (coreNodeVKG 4, Set.singleton (PoolDeposit 200))
+ppupEx3A = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, Set.singleton (PoolDeposit 200))
+                                   , (hashKey $ coreNodeVKG 3, Set.singleton (PoolDeposit 200))
+                                   , (hashKey $ coreNodeVKG 4, Set.singleton (PoolDeposit 200))
                                    ]
 
 updateEx3A :: Update
@@ -1090,7 +1092,7 @@ txEx3A = Tx
 blockEx3A :: Block
 blockEx3A = mkBlock
              Nothing
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              [txEx3A]
              (Slot 10)
              (Nonce 0)
@@ -1149,8 +1151,8 @@ ex3A = CHAINExample (Slot 10) initStEx2A blockEx3A expectedStEx3A
 
 
 ppupEx3B :: PPUpdate
-ppupEx3B = PPUpdate $ Map.fromList [ (coreNodeVKG 1, Set.singleton (PoolDeposit 200))
-                                   , (coreNodeVKG 5, Set.singleton (PoolDeposit 200))
+ppupEx3B = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, Set.singleton (PoolDeposit 200))
+                                   , (hashKey $ coreNodeVKG 5, Set.singleton (PoolDeposit 200))
                                    ]
 
 updateEx3B :: Update
@@ -1244,7 +1246,7 @@ ex3B = CHAINExample (Slot 20) expectedStEx3A blockEx3B expectedStEx3B
 blockEx3C :: Block
 blockEx3C = mkBlock
              blockEx3BHash
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              []
              (Slot 110)
              (mkSeqNonce 2)
@@ -1255,7 +1257,7 @@ blockEx3C = mkBlock
 blockEx3CHash :: Maybe HashHeader
 blockEx3CHash = Just (bhHash (bheader blockEx3C))
 
-overlayEx3C :: Map Slot (Maybe VKeyGenesis)
+overlayEx3C :: Map Slot (Maybe GenKeyHash)
 overlayEx3C = overlaySchedule
                     (Epoch 1)
                     (Map.keysSet dms)
@@ -1309,9 +1311,9 @@ appsEx4A = Applications $ Map.singleton
                             (ApVer 2, Metadata)
 
 avupEx4A :: AVUpdate
-avupEx4A = AVUpdate $ Map.fromList [ (coreNodeVKG 0, appsEx4A)
-                                   , (coreNodeVKG 3, appsEx4A)
-                                   , (coreNodeVKG 4, appsEx4A)
+avupEx4A = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, appsEx4A)
+                                   , (hashKey $ coreNodeVKG 3, appsEx4A)
+                                   , (hashKey $ coreNodeVKG 4, appsEx4A)
                                    ]
 
 updateEx4A :: Update
@@ -1342,7 +1344,7 @@ txEx4A = Tx
 blockEx4A :: Block
 blockEx4A = mkBlock
              Nothing
-             (coreNodeKeys 4)
+             (coreNodeKeys 6)
              [txEx4A]
              (Slot 10)
              (Nonce 0)
@@ -1400,8 +1402,8 @@ ex4A = CHAINExample (Slot 10) initStEx2A blockEx4A expectedStEx4A
 -- | Example 4B - Finish getting enough votes for the application version update.
 
 avupEx4B :: AVUpdate
-avupEx4B = AVUpdate $ Map.fromList [ (coreNodeVKG 1, appsEx4A)
-                                   , (coreNodeVKG 5, appsEx4A)
+avupEx4B = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, appsEx4A)
+                                   , (hashKey $ coreNodeVKG 5, appsEx4A)
                                    ]
 
 updateEx4B :: Update
@@ -1495,7 +1497,7 @@ ex4B = CHAINExample (Slot 20) expectedStEx4A blockEx4B expectedStEx4B
 blockEx4C :: Block
 blockEx4C = mkBlock
              blockEx4BHash
-             (coreNodeKeys 5)
+             (coreNodeKeys 0)
              []
              (Slot 60)
              (Nonce 0)

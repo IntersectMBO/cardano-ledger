@@ -21,41 +21,41 @@ import           Control.State.Transition
 import           STS.Avup
 import           STS.Ppup
 
-data UP dsignAlgo
+data UP hashAlgo dsignAlgo
 
-instance DSIGNAlgorithm dsignAlgo => STS (UP dsignAlgo) where
-  type State (UP dsignAlgo)
-    = ( PPUpdate dsignAlgo
-      , AVUpdate dsignAlgo
+instance DSIGNAlgorithm dsignAlgo => STS (UP hashAlgo dsignAlgo) where
+  type State (UP hashAlgo dsignAlgo)
+    = ( PPUpdate hashAlgo dsignAlgo
+      , AVUpdate hashAlgo dsignAlgo
       , Map.Map Slot Applications
       , Applications
       )
-  type Signal (UP dsignAlgo) = Update dsignAlgo
-  type Environment (UP dsignAlgo) = (Slot, PParams, Dms dsignAlgo)
-  data PredicateFailure (UP dsignAlgo)
+  type Signal (UP hashAlgo dsignAlgo) = Update hashAlgo dsignAlgo
+  type Environment (UP hashAlgo dsignAlgo) = (Slot, PParams, Dms hashAlgo dsignAlgo)
+  data PredicateFailure (UP hashAlgo dsignAlgo)
     = NonGenesisUpdateUP
-    | AvupFailure (PredicateFailure (AVUP dsignAlgo))
-    | PpupFailure (PredicateFailure (PPUP dsignAlgo))
+    | AvupFailure (PredicateFailure (AVUP hashAlgo dsignAlgo))
+    | PpupFailure (PredicateFailure (PPUP hashAlgo dsignAlgo))
     deriving (Show, Eq)
 
   initialRules = []
   transitionRules = [upTransition]
 
 upTransition
-  :: forall dsignAlgo
+  :: forall hashAlgo dsignAlgo
    . DSIGNAlgorithm dsignAlgo
-  => TransitionRule (UP dsignAlgo)
+  => TransitionRule (UP hashAlgo dsignAlgo)
 upTransition = do
   TRC ((_slot, pp, _dms), (pupS, aupS, favs, avs), Update pup _aup) <- judgmentContext
 
-  pup' <- trans @(PPUP dsignAlgo) $ TRC ((_slot, pp, _dms), pupS, pup)
+  pup' <- trans @(PPUP hashAlgo dsignAlgo) $ TRC ((_slot, pp, _dms), pupS, pup)
   (aup', favs', avs') <-
-    trans @(AVUP dsignAlgo) $ TRC ((_slot, _dms), (aupS, favs, avs), _aup)
+    trans @(AVUP hashAlgo dsignAlgo) $ TRC ((_slot, _dms), (aupS, favs, avs), _aup)
 
   pure (pup', aup', favs', avs')
 
-instance DSIGNAlgorithm dsignAlgo => Embed (AVUP dsignAlgo) (UP dsignAlgo) where
+instance DSIGNAlgorithm dsignAlgo => Embed (AVUP hashAlgo dsignAlgo) (UP hashAlgo dsignAlgo) where
   wrapFailed = AvupFailure
 
-instance DSIGNAlgorithm dsignAlgo => Embed (PPUP dsignAlgo) (UP dsignAlgo) where
+instance DSIGNAlgorithm dsignAlgo => Embed (PPUP hashAlgo dsignAlgo) (UP hashAlgo dsignAlgo) where
   wrapFailed = PpupFailure
