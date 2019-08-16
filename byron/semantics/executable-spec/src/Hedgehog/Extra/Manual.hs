@@ -127,7 +127,7 @@ splits (x:xs) = ([],x,xs) : fmap (\(as,b,cs) -> (x:as,b,cs)) (splits xs)
 -- | @removes n@ splits a list into chunks of size n and returns all possible
 -- lists where one of these chunks has been removed.
 --
--- Examples
+-- Examples:
 --
 -- > removes 1 [1..3] == [[2,3],[1,3],[1,2]]
 -- > removes 2 [1..4] == [[3,4],[1,2]]
