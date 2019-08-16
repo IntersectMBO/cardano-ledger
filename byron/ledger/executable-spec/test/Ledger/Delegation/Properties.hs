@@ -1,9 +1,12 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Properties of the delegation traces induced by the transition systems
 -- associated with this aspect of the ledger.
@@ -16,14 +19,16 @@ module Ledger.Delegation.Properties
   , relevantCasesAreCovered
   , onlyValidSignalsAreGenerated
   , invalidSignalsAreGenerated
+  , extractValues
   )
 where
+
 
 import           Control.Arrow (first, (***))
 import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import           Data.Data (Data, Typeable)
+import           Data.Data (Constr, Data, Typeable, toConstr)
 import           Data.Either (isLeft)
 import           Data.List (foldl', last)
 import           Data.List.Unique (repeated)
@@ -43,20 +48,21 @@ import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, Sign
                      sigGen, suchThatLastState, trace, traceLengthsAreClassified, traceWithProfile)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
-import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
-                     preStatesAndSignals, traceEnv, traceLength, traceSignals)
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), extractValues,
+                     lastState, preStatesAndSignals, traceEnv, traceLength, traceSignals)
 import           Ledger.Core (Epoch (Epoch), Sig (Sig), Slot, SlotCount (SlotCount), VKey,
                      VKeyGenesis, addSlot, mkVKeyGenesis, owner, unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
-                     PredicateFailure (IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
-                     delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio, epoch,
-                     liveAfter, mkDCert, multipleDelegationsRatio, nextEpochDelegationsRatio,
-                     randomDCertGen, scheduledDelegations, selfDelegationsRatio, slot,
-                     thisEpochDelegationsRatio, _dIStateDelegationMap, _dIStateKeyEpochDelegations,
-                     _dIStateLastDelegation, _dIStateScheduledDelegations,
-                     _dSStateKeyEpochDelegations, _dSStateScheduledDelegations)
+                     PredicateFailure (DoesNotVerify, EpochInThePast, EpochPastNextEpoch, HasAlreadyDelegated, IsAlreadyScheduled, IsAlreadyScheduled, IsNotGenesisKey, SDelegFailure, SDelegSFailure),
+                     SDELEG, delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio,
+                     epoch, liveAfter, mkDCert, multipleDelegationsRatio,
+                     nextEpochDelegationsRatio, randomDCertGen, scheduledDelegations,
+                     selfDelegationsRatio, slot, thisEpochDelegationsRatio, _dIStateDelegationMap,
+                     _dIStateKeyEpochDelegations, _dIStateLastDelegation,
+                     _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
+                     _dSStateScheduledDelegations)
 
 import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Ledger.Core.Generators as CoreGen
@@ -405,10 +411,65 @@ tracesAreClassified = traceLengthsAreClassified @DELEG 1000 100
 -- invalid signals are requested.
 invalidSignalsAreGenerated :: Property
 invalidSignalsAreGenerated = withTests 300 $ property $ do
+
   let aTraceLength = 100
       failureProfile = failures profile
+
   tr <- forAll (invalidTrace @DBLOCK aTraceLength failureProfile)
+
   cover 80
         "Invalid signals are generated when requested"
         (isLeft $ Invalid.Trace.errorOrLastState tr)
-  -- TODO: classify the kind of failures we get.
+
+  case Invalid.Trace.errorOrLastState tr of
+    Left pfs -> do
+      let
+        sdelegFailures :: [PredicateFailure SDELEG]
+        sdelegFailures = extractValues pfs
+
+        sdelegFailuresConstructors :: [Constr]
+        sdelegFailuresConstructors = toConstr <$> sdelegFailures
+
+        -- We have 6 failures we're interested in. However demanding an uniform
+        -- distribution of predicate failures requires precise tweaking, which is
+        -- difficult to guarantee. For this reason we allow for an order of
+        -- magnitude deviation from the uniform distribution:
+        --
+        -- > 1/6 * 0.1 * 100 ~ 1.67
+        --
+        -- which we round up to 2.
+
+      -- TODO: raise the threshold once we incorporate goblins
+      cover
+        0
+        "IsNotGenesisKey"
+        (toConstr IsNotGenesisKey `elem` sdelegFailuresConstructors)
+
+      cover
+        2
+        "EpochInThePast"
+        (toConstr (EpochInThePast undefined) `elem` sdelegFailuresConstructors)
+
+      cover
+        2
+        "EpochPastNextEpoch"
+        (toConstr (EpochPastNextEpoch undefined) `elem` sdelegFailuresConstructors)
+
+      cover
+        2
+        "HasAlreadyDelegated"
+        (toConstr HasAlreadyDelegated `elem` sdelegFailuresConstructors)
+
+      cover
+        2
+        "IsAlreadyScheduled"
+        (toConstr IsAlreadyScheduled `elem` sdelegFailuresConstructors)
+
+      -- TODO: raise the threshold once we incorporate goblins
+      cover
+        0
+        "DoesNotVerify"
+        (toConstr DoesNotVerify `elem` sdelegFailuresConstructors)
+
+    Right _ ->
+      pure ()
