@@ -13,14 +13,16 @@ module Hedgehog.Extra.Manual
   , fromManual
   , dontShrink
     -- * Combinators
-  , manualSized
-  , manualReplicate
+  , sized
+  , replicate
   , interleave
     -- * Auxiliary
   , wrapTreeT
   , unwrapTreeT
   )
 where
+
+import           Prelude hiding (replicate)
 
 import           Control.Monad (ap, liftM)
 import           Control.Monad.Trans.Maybe (MaybeT (MaybeT))
@@ -69,22 +71,18 @@ instance Monad Manual where
   Combinators
 -------------------------------------------------------------------------------}
 
-manualSized :: (Size -> Manual a) -> Manual a
-manualSized f = Manual $ \size seed -> unManual (f size) size seed
+sized :: (Size -> Manual a) -> Manual a
+sized f = Manual $ \size seed -> unManual (f size) size seed
 
 
--- TODO: change this to just @manual@ and use it qualified.
-manualReplicate :: forall a. Int -> Manual a -> Manual [a]
-manualReplicate n (Manual f) = Manual $ \size seed ->
+-- | A version of 'Control.Monad.replicateM' specific to 'Manual'.
+replicate :: forall a. Int -> Manual a -> Manual [a]
+replicate n (Manual f) = Manual $ \size seed ->
     let go :: Int -> Seed -> [a]
         go 0   _ = []
         go !n' s = case Seed.split s of
                      (s', s'') -> f size s' : go (n' - 1) s''
     in go n seed
-
-{-------------------------------------------------------------------------------
-  Interleaving
--------------------------------------------------------------------------------}
 
 interleave:: [TreeT (MaybeT Identity) a] -> TreeT (MaybeT Identity) [a]
 interleave = coerce (Just . interleave' . catMaybes)

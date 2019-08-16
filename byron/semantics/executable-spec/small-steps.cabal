@@ -26,7 +26,6 @@ library
                      , Control.State.Transition.Invalid.Trace
                      , Control.State.Transition.Generator
                      , Control.State.Transition.Trace
-                     , Hedgehog.Extra.List
                      , Hedgehog.Extra.Manual
                      , Data.AbstractSize
   -- other-modules:

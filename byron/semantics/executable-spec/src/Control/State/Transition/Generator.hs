@@ -69,25 +69,16 @@ import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Range (Size (Size))
 import qualified Hedgehog.Range as Range
 
---------------------------------------------------------------------------------
--- Temporary imports till hedgehog exposes interleaveTreeT and withGenT
---------------------------------------------------------------------------------
-import           Hedgehog.Internal.Gen
-import           Hedgehog.Internal.Tree
---------------------------------------------------------------------------------
--- END: Temporary imports till hedgehog exposes interleaveTreeT and withGenT
---------------------------------------------------------------------------------
+import           Hedgehog.Internal.Gen (integral_, runDiscardEffectT)
+import           Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 
--- TODO: make the imports explicit
-import           Hedgehog.Extra.List
-import           Hedgehog.Extra.Manual (Manual)
-import qualified Hedgehog.Extra.Manual as Manual
---
 import           Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC),
                      applySTS)
 import qualified Control.State.Transition.Invalid.Trace as Invalid
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
                      lastState, mkTrace, traceLength, traceSignals, _traceEnv)
+import           Hedgehog.Extra.Manual (Manual)
+import qualified Hedgehog.Extra.Manual as Manual
 
 
 class STS s => HasTrace s where
@@ -249,63 +240,6 @@ genTraceWithProfile ub profile env st0 aSigGen =
 -- | Return a (valid) trace generator that generates traces of the given size. If the signal
 -- generator can generate invalid signals, then the size of resulting trace is not guaranteed.
 --
--- genTraceOfLength
---   :: forall s
---    . STS s
---   => Word64
---   -- ^ Desired trace length.
---   -> TraceProfile s
---   -> Environment s
---   -- ^ Environment, which remains constant in the system.
---   -> State s
---   -- ^ Initial state.
---   -> SignalGenerator s
---   -- ^ Signal generator. This generator relies on an environment and a state to
---   -- generate a signal.
---   -> Gen (Trace s)
--- genTraceOfLength aTraceLength profile env st0 aSigGen =
---   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop aTraceLength st0 []
---   where
---     loop
---       :: Word64
---       -> State s
---       -> [(State s, TreeT (MaybeT Identity) (Signal s))]
---       -> Gen [(State s, TreeT (MaybeT Identity) (Signal s))]
---     loop 0 _ acc = pure acc
---     loop !d sti acc = do
---       sigTree :: TreeT (MaybeT Identity) (Signal s)
---         <- toTreeMaybeT $
---              Gen.frequency
---                [ ( proportionOfValidSignals profile
---                  , aSigGen env sti
---                  )
---                , ( proportionOfInvalidSignals profile
---                  , generateSignalWithFailureProportions @s (failures profile) env sti
---                  )
---                ]
---       let
---         --  Take the root of the next-state signal tree.
---         mSig = treeValue $ runDiscardEffectT sigTree
---       case mSig of
---         Nothing ->
---           loop (d - 1) sti acc
---         Just sig ->
---           case applySTS @s (TRC(env, sti, sig)) of
---             Left _err  -> loop (d - 1) sti acc
---             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
-
---     interleaveSigs
---       :: MaybeT Identity (NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))])
---       -> MaybeT Identity (NodeT (MaybeT Identity) (Trace s))
---     interleaveSigs mst = do
---       nodeT :: NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))] <- mst
---       let (rootStates, trees) = unzip (nodeValue nodeT)
---       NodeT rootSignals children <- interleaveTreeT trees
---       pure $! NodeT
---         (mkTrace env st0 (zip rootStates rootSignals))
---         (fmap (fmap (closure @s env st0)) children)
-
-
 genTraceOfLength
   :: forall s
    . STS s
@@ -630,16 +564,3 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
   footnoteShow sig
   footnoteShow result
   void $ evalEither result
-
-
---------------------------------------------------------------------------------
--- Temporary definitions till hedgehog exposes these
---------------------------------------------------------------------------------
-
-interleaveTreeT :: Monad m => [TreeT m a] -> m (NodeT m [a])
-interleaveTreeT =
-  fmap interleave . traverse runTreeT
-
---------------------------------------------------------------------------------
--- END: Temporary definitions till hedgehog exposes these
---------------------------------------------------------------------------------
