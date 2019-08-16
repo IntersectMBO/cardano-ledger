@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -58,6 +59,7 @@ import           Control.Monad (forM, void)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity)
+import           Data.Maybe (fromMaybe)
 import           Data.String (fromString)
 import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
@@ -76,6 +78,11 @@ import           Hedgehog.Internal.Tree
 -- END: Temporary imports till hedgehog exposes interleaveTreeT and withGenT
 --------------------------------------------------------------------------------
 
+-- TODO: make the imports explicit
+import           Hedgehog.Extra.List
+import           Hedgehog.Extra.Manual (Manual)
+import qualified Hedgehog.Extra.Manual as Manual
+--
 import           Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC),
                      applySTS)
 import qualified Control.State.Transition.Invalid.Trace as Invalid
@@ -242,6 +249,63 @@ genTraceWithProfile ub profile env st0 aSigGen =
 -- | Return a (valid) trace generator that generates traces of the given size. If the signal
 -- generator can generate invalid signals, then the size of resulting trace is not guaranteed.
 --
+-- genTraceOfLength
+--   :: forall s
+--    . STS s
+--   => Word64
+--   -- ^ Desired trace length.
+--   -> TraceProfile s
+--   -> Environment s
+--   -- ^ Environment, which remains constant in the system.
+--   -> State s
+--   -- ^ Initial state.
+--   -> SignalGenerator s
+--   -- ^ Signal generator. This generator relies on an environment and a state to
+--   -- generate a signal.
+--   -> Gen (Trace s)
+-- genTraceOfLength aTraceLength profile env st0 aSigGen =
+--   mapGenT (TreeT . interleaveSigs . runTreeT) $ loop aTraceLength st0 []
+--   where
+--     loop
+--       :: Word64
+--       -> State s
+--       -> [(State s, TreeT (MaybeT Identity) (Signal s))]
+--       -> Gen [(State s, TreeT (MaybeT Identity) (Signal s))]
+--     loop 0 _ acc = pure acc
+--     loop !d sti acc = do
+--       sigTree :: TreeT (MaybeT Identity) (Signal s)
+--         <- toTreeMaybeT $
+--              Gen.frequency
+--                [ ( proportionOfValidSignals profile
+--                  , aSigGen env sti
+--                  )
+--                , ( proportionOfInvalidSignals profile
+--                  , generateSignalWithFailureProportions @s (failures profile) env sti
+--                  )
+--                ]
+--       let
+--         --  Take the root of the next-state signal tree.
+--         mSig = treeValue $ runDiscardEffectT sigTree
+--       case mSig of
+--         Nothing ->
+--           loop (d - 1) sti acc
+--         Just sig ->
+--           case applySTS @s (TRC(env, sti, sig)) of
+--             Left _err  -> loop (d - 1) sti acc
+--             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
+
+--     interleaveSigs
+--       :: MaybeT Identity (NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))])
+--       -> MaybeT Identity (NodeT (MaybeT Identity) (Trace s))
+--     interleaveSigs mst = do
+--       nodeT :: NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))] <- mst
+--       let (rootStates, trees) = unzip (nodeValue nodeT)
+--       NodeT rootSignals children <- interleaveTreeT trees
+--       pure $! NodeT
+--         (mkTrace env st0 (zip rootStates rootSignals))
+--         (fmap (fmap (closure @s env st0)) children)
+
+
 genTraceOfLength
   :: forall s
    . STS s
@@ -257,17 +321,17 @@ genTraceOfLength
   -- generate a signal.
   -> Gen (Trace s)
 genTraceOfLength aTraceLength profile env st0 aSigGen =
-  mapGenT (TreeT . interleaveSigs . runTreeT) $ loop aTraceLength st0 []
+  Manual.fromManual $ fmap interleaveSigs $ loop aTraceLength st0 []
   where
     loop
       :: Word64
       -> State s
       -> [(State s, TreeT (MaybeT Identity) (Signal s))]
-      -> Gen [(State s, TreeT (MaybeT Identity) (Signal s))]
+      -> Manual [(State s, TreeT (MaybeT Identity) (Signal s))]
     loop 0 _ acc = pure acc
-    loop d sti acc = do
+    loop !d sti acc = do
       sigTree :: TreeT (MaybeT Identity) (Signal s)
-        <- toTreeMaybeT $
+        <- Manual.toManual $
              Gen.frequency
                [ ( proportionOfValidSignals profile
                  , aSigGen env sti
@@ -288,15 +352,34 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
 
     interleaveSigs
-      :: MaybeT Identity (NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))])
-      -> MaybeT Identity (NodeT (MaybeT Identity) (Trace s))
-    interleaveSigs mst = do
-      nodeT :: NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))] <- mst
-      let (rootStates, trees) = unzip (nodeValue nodeT)
-      NodeT rootSignals children <- interleaveTreeT trees
-      pure $! NodeT
-        (mkTrace env st0 (zip rootStates rootSignals))
-        (fmap (fmap (closure @s env st0)) children)
+      :: [(State s, TreeT (MaybeT Identity) (Signal s))]
+      -> TreeT (MaybeT Identity) (Trace s)
+    interleaveSigs stateSignalTrees
+      = Manual.wrapTreeT
+      $ Just
+      $ NodeT
+          rootTrace
+          (fmap (fmap (closure @s env st0)) signalShrinksChilren)
+      where
+        rootStates :: [State s]
+        signalTrees :: [TreeT (MaybeT Identity) (Signal s)]
+        (rootStates, signalTrees) = unzip stateSignalTrees
+        rootSignals :: [Signal s]
+        rootSignals = fmap (fromMaybe err . treeValue . runDiscardEffectT) signalTrees
+        err = error "genTraceOfLength: the tree nodes must always contain a signal"
+        -- The states ensuing the root signals were calculated at 'loop'
+        -- already, so there is no need to apply the STS again.
+        rootTrace :: Trace s
+        rootTrace = mkTrace env st0 (zip rootStates rootSignals)
+        signalShrinks :: TreeT (MaybeT Identity) [Signal s]
+        signalShrinks = Manual.interleave signalTrees
+        -- The signals at the root of 'signalShrinks' are already included in
+        -- the 'rootTrace' so there is no need to include them again in the tree
+        -- of traces. Thus we only need to apply 'closure' to the children of
+        -- the shrink tree.
+        signalShrinksChilren :: [TreeT (MaybeT Identity) [Signal s]]
+        signalShrinksChilren = nodeChildren $ fromMaybe err $ Manual.unwrapTreeT signalShrinks
+
 
 -- | Generate an invalid trace
 --
