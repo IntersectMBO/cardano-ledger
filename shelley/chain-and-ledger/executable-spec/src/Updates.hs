@@ -12,15 +12,20 @@ module Updates
   , Applications(..)
   , AVUpdate(..)
   , Update(..)
+  , apNameValid
+  , allNames
   , newAVs
   , votedValue
   , emptyUpdateState
   , emptyUpdate
   , updatePParams
+  , svCanFollow
   )
 where
 
 import           Data.ByteString (ByteString)
+import           Data.ByteString.Char8 (unpack)
+import           Data.Char (isAscii)
 import qualified Data.List as List (group)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -31,7 +36,7 @@ import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 
 import           BaseTypes (Seed, UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, HashAlgorithm, GenKeyHash, Dms)
+import           Keys (DSIGNAlgorithm, Dms, GenKeyHash, HashAlgorithm)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot)
 
@@ -158,10 +163,34 @@ updatePPup
   -> PPUpdate hashAlgo dsignAlgo
 updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate (pup1' ∪ pup0')
 
-newAVs :: Applications -> Map.Map Slot Applications -> Applications
-newAVs avs favs = if not $ Map.null favs
-  then let maxSlot = maximum $ Map.keys favs in favs Map.! maxSlot  -- value exists because maxSlot is in keys
-  else avs
+-- | This is just an example and not neccessarily how we will actually validate names
+apNameValid :: ApName -> Bool
+apNameValid (ApName an) = all isAscii cs && length cs <= 12
+  where cs = unpack an
+
+type Favs = Map.Map Slot Applications
+
+maxVer :: ApName -> Applications -> Favs -> (ApVer, Metadata)
+maxVer an avs favs =
+  maximum $ vs an avs : fmap (vs an) (Map.elems favs)
+    where
+      vs n (Applications as) =
+        Map.foldr max (ApVer 0, Metadata) (Map.filterWithKey (\k _ -> k == n) as)
+
+svCanFollow :: Applications -> Favs -> (ApName, (ApVer, Metadata)) -> Bool
+svCanFollow avs favs (an, (ApVer v, _)) = v == 1 + m
+  where (ApVer m) = fst $ maxVer an avs favs
+
+allNames :: Applications -> Favs -> Set ApName
+allNames (Applications avs) favs =
+  Prelude.foldr
+    (\(Applications fav) acc -> acc `Set.union` Map.keysSet fav)
+    (Map.keysSet avs)
+    (Map.elems favs)
+
+newAVs :: Applications -> Favs -> Applications
+newAVs avs favs = Applications $
+                    Map.fromList [(an, maxVer an avs favs) | an <- Set.toList $ allNames avs favs]
 
 votedValue
   :: Eq a => Map.Map (GenKeyHash hashAlgo dsignAlgo) a -> Maybe a

@@ -17,11 +17,12 @@ import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 
 import           Keys
+import           Ledger.Core ((⨃))
 import           LedgerState
 import           PParams
 import           Slot
 import           Tx
-import           Updates (newAVs)
+import           Updates (Applications (..), apps, newAVs)
 
 import           Control.State.Transition
 
@@ -67,7 +68,7 @@ ledgersTransition = do
 
   let UTxOState utxo' dep fee (ppup, aup, favs, avs) = u''
   let (favs', ready) = Map.partitionWithKey (\s _ -> s > slot) favs
-  let avs' = newAVs avs ready
+  let avs' = Applications $ apps avs ⨃ (Map.toList . apps $ newAVs avs ready)
   let u''' = UTxOState utxo' dep fee (ppup, aup, favs', avs')
   pure $ LedgerState u''' dw'' (_txSlotIx ls)
 
