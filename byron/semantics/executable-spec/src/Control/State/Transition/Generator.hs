@@ -53,6 +53,7 @@ module Control.State.Transition.Generator
   , onlyValidSignalsAreGenerated
   -- * Helpers
   , tinkerWithSigGen
+  , coverFailures
   )
 where
 
@@ -60,30 +61,32 @@ import           Control.Arrow (second)
 import           Control.Monad (forM, void)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Trans.State.Strict (evalState)
+import           Data.Data (Constr, Data, toConstr)
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity)
 import           Data.Maybe (fromMaybe)
 import           Data.String (fromString)
 import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
-import           Hedgehog (Gen, Property, PropertyT, classify, evalEither, footnoteShow, forAll,
-                     property, success)
+import           Hedgehog (Gen, MonadTest, Property, PropertyT, classify, cover, evalEither,
+                     footnoteShow, forAll, property, success)
 import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Internal.Property (CoverPercentage)
 import           Hedgehog.Range (Size (Size))
 import qualified Hedgehog.Range as Range
 
 import           Hedgehog.Internal.Gen (integral_, runDiscardEffectT)
 import           Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 
-import           Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC),
-                     applySTS)
+import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
+                     State, TRC (TRC), applySTS)
 import qualified Control.State.Transition.Invalid.Trace as Invalid
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
-                     lastState, mkTrace, traceLength, traceSignals, _traceEnv)
+                     extractValues, lastState, mkTrace, traceLength, traceSignals, _traceEnv)
 import           Hedgehog.Extra.Manual (Manual)
 import qualified Hedgehog.Extra.Manual as Manual
 
-import Test.Goblin (Goblin(..), GoblinData, SeedGoblin(..))
+import           Test.Goblin (Goblin (..), GoblinData, SeedGoblin (..))
 
 
 class STS s => HasTrace s where
@@ -570,6 +573,33 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
   footnoteShow result
   void $ evalEither result
 
+
+coverFailures
+  :: forall m s a
+   .  (MonadTest m
+     , HasCallStack
+     , Data (PredicateFailure s)
+     , Data a
+     )
+  => CoverPercentage
+  -> [PredicateFailure s]
+  -- ^ Target predicate failures
+  -> a
+  -- ^ Structure containing the failures
+  -> m ()
+coverFailures coverPercentage targetFailures failureStructure = do
+  traverse_ coverFailure (toConstr <$> targetFailures)
+  where
+    coverFailure predicateFailureConstructor =
+      cover coverPercentage
+            (fromString $ show predicateFailureConstructor)
+            (predicateFailureConstructor `elem` failuresConstructors)
+      where
+        subFailures :: [PredicateFailure s]
+        subFailures = extractValues failureStructure
+
+        failuresConstructors :: [Constr]
+        failuresConstructors = toConstr <$> subFailures
 
 --------------------------------------------------------------------------------
 -- Helpers

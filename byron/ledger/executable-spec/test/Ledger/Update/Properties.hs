@@ -37,8 +37,8 @@ import           Numeric.Natural (Natural)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen,
-                     invalidTrace, randomTraceOfSize, ratio, sigGen, trace,
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, coverFailures,
+                     envGen, invalidTrace, randomTraceOfSize, ratio, sigGen, trace,
                      traceLengthsAreClassified, traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
@@ -49,9 +49,9 @@ import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (S
                      unBlockCount)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
-import           Ledger.Update (PParams, PredicateFailure (CannotFollowPv, CannotUpdatePv), ProtVer,
-                     UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UPPVV, UProp, Vote, emptyUPIState,
-                     protocolParameters, tamperWithUpdateProposal)
+import           Ledger.Update (PParams, PredicateFailure (AlreadyProposedPv, AlreadyProposedSv, CannotFollowPv, CannotFollowSv, CannotUpdatePv, InvalidApplicationName, InvalidSystemTags),
+                     ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UPPVV, UPSVV, UProp,
+                     Vote, emptyUPIState, protocolParameters, tamperWithUpdateProposal)
 import qualified Ledger.Update as Update
 
 upiregTracesAreClassified :: Property
@@ -573,22 +573,22 @@ invalidSignalsAreGenerated = withTests 300 $ property $ do
 
   case Invalid.Trace.errorOrLastState tr of
     Left pfs -> do
-      let
-        uppvvFailures :: [PredicateFailure UPPVV]
-        uppvvFailures = extractValues pfs
-
-        uppvvFailuresConstructors :: [Constr]
-        uppvvFailuresConstructors = toConstr <$> uppvvFailures
-
-      cover
+      coverFailures
         2
-        "CannotFollowPv"
-        (toConstr CannotFollowPv `elem` uppvvFailuresConstructors)
+        [ CannotFollowPv
+        , CannotUpdatePv []
+        , AlreadyProposedPv
+        ]
+        pfs
 
-      cover
+      coverFailures
         2
-        "CannotUpdatePv"
-        (toConstr (CannotUpdatePv []) `elem` uppvvFailuresConstructors)
+        [ AlreadyProposedSv
+        , CannotFollowSv
+        , InvalidApplicationName
+        , InvalidSystemTags
+        ]
+        pfs
 
     Right _ ->
       pure ()

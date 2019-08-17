@@ -26,6 +26,7 @@ where
 
 import           Control.Arrow (second, (&&&))
 import           Control.Lens
+import           Control.Monad (mzero)
 import           Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import           Data.Char (isAscii)
@@ -1229,9 +1230,10 @@ tamperWithUpdateProposal env st uprop =
   -- Tamper with the update proposal so that the protocol version cannot follow.
   Gen.choice [ invalidProtocolVersion
              , invalidParametersUpdate
+             , duplicatedProtocolVersion
              ]
   where
-    ((pv, pps), fads, avs, tpus, raus, cps, vts, bvs, pws) = st
+    ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = st
 
     invalidProtocolVersion :: Gen UProp
     invalidProtocolVersion
@@ -1245,7 +1247,17 @@ tamperWithUpdateProposal env st uprop =
       Gen.element
         [ uprop & upParams . maxBkSz .~ uprop ^. upParams . maxBkSz * 3
         , uprop & upParams . maxTxSz .~ uprop ^. upParams . maxBkSz * 2
+        , uprop & upParams . scriptVersion .~ uprop ^. upParams . scriptVersion + 2
         ]
+
+    duplicatedProtocolVersion :: Gen UProp
+    duplicatedProtocolVersion =  do
+      let registeredVersions = fst <$> Map.elems rpus
+      if null registeredVersions
+        then mzero
+        else do
+          duplicatedVersion <- Gen.element registeredVersions
+          pure $! uprop & upPV .~ duplicatedVersion
 
 
 data UPIVOTE deriving (Generic, Data, Typeable)
