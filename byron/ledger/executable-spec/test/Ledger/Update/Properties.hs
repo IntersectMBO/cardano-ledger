@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -14,18 +15,21 @@ module Ledger.Update.Properties
   , ublockOnlyValidSignalsAreGenerated
   , ublockRelevantTracesAreCovered
   , ublockSampleTraceMetrics
+  , invalidSignalsAreGenerated
   ) where
 
 import           GHC.Stack (HasCallStack)
 
 import qualified Data.Bimap as Bimap
+import           Data.Data (Constr, Data, Typeable, toConstr)
+import           Data.Either (isLeft)
 import           Data.Foldable (fold, traverse_)
 import           Data.Function ((&))
 import           Data.List.Unique (count)
 import           Data.Maybe (catMaybes, isNothing)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
-import           Hedgehog (Property, cover, forAll, property, withTests)
+import           Hedgehog (Gen, Property, cover, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
@@ -33,18 +37,21 @@ import           Numeric.Natural (Natural)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, envGen, randomTraceOfSize, ratio,
-                     sigGen, trace, traceLengthsAreClassified, traceOfLength)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen,
+                     invalidTrace, randomTraceOfSize, ratio, sigGen, trace,
+                     traceLengthsAreClassified, traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
-import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
-                     traceSignals, traceStates, _traceEnv, _traceInitState)
+import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), extractValues,
+                     traceLength, traceSignals, traceStates, _traceEnv, _traceInitState)
 
 import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (SlotCount), dom,
                      unBlockCount)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
-import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
-                     Vote, emptyUPIState, protocolParameters)
+import           Ledger.Update (PParams, PredicateFailure (CannotFollowPv, CannotUpdatePv), ProtVer,
+                     UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UPPVV, UProp, Vote, emptyUPIState,
+                     protocolParameters, tamperWithUpdateProposal)
 import qualified Ledger.Update as Update
 
 upiregTracesAreClassified :: Property
@@ -263,7 +270,7 @@ onlyValidSignalsAreGenerated =
 
 
 -- | Dummy transition system to test blocks with update payload only.
-data UBLOCK
+data UBLOCK deriving (Data, Typeable)
 
 -- | An update block
 data UBlock
@@ -294,7 +301,7 @@ instance STS UBLOCK where
     | UPIVOTESFailure (PredicateFailure UPIVOTES)
     | UPIENDFailure (PredicateFailure UPIEND)
     | NotIncreasingBlockSlot
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules
     = [ do
@@ -550,3 +557,45 @@ numberOfVotes sample
   = traceSignals OldestFirst sample
   & concatMap votes
   & length
+
+--------------------------------------------------------------------------------
+-- Invalid trace generation
+--------------------------------------------------------------------------------
+
+invalidSignalsAreGenerated :: Property
+invalidSignalsAreGenerated = withTests 300 $ property $ do
+
+  tr <- forAll (invalidTrace @UPIREG 100 [(1, invalidUPropGen)])
+
+  cover 80
+        "Invalid signals are generated when requested"
+        (isLeft $ Invalid.Trace.errorOrLastState tr)
+
+  case Invalid.Trace.errorOrLastState tr of
+    Left pfs -> do
+      let
+        uppvvFailures :: [PredicateFailure UPPVV]
+        uppvvFailures = extractValues pfs
+
+        uppvvFailuresConstructors :: [Constr]
+        uppvvFailuresConstructors = toConstr <$> uppvvFailures
+
+      cover
+        2
+        "CannotFollowPv"
+        (toConstr CannotFollowPv `elem` uppvvFailuresConstructors)
+
+      cover
+        2
+        "CannotUpdatePv"
+        (toConstr (CannotUpdatePv []) `elem` uppvvFailuresConstructors)
+
+    Right _ ->
+      pure ()
+
+
+  where
+    invalidUPropGen :: SignalGenerator UPIREG
+    invalidUPropGen env st = do
+      uprop' <- sigGen @UPIREG env st
+      tamperWithUpdateProposal env st uprop'

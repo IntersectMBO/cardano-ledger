@@ -19,7 +19,6 @@ module Ledger.Delegation.Properties
   , relevantCasesAreCovered
   , onlyValidSignalsAreGenerated
   , invalidSignalsAreGenerated
-  , extractValues
   )
 where
 

@@ -154,7 +154,7 @@ newtype Epoch = Epoch { unEpoch :: Word64 }
   deriving anyclass (HasTypeReps)
 
 newtype Slot = Slot { unSlot :: Word64 }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable)
   deriving anyclass (HasTypeReps)
 

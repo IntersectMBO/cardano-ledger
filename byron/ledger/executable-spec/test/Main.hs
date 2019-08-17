@@ -63,6 +63,7 @@ main = defaultMain tests
       , testProperty "Only valid UPIREG signals are generated" UPDATE.onlyValidSignalsAreGenerated
       , testProperty "Only valid UBLOCK signals are generated" UPDATE.ublockOnlyValidSignalsAreGenerated
       , testProperty "Relevant UBLOCK traces are covered" UPDATE.ublockRelevantTracesAreCovered
+      , testProperty "Invalid signals are generated when requested" UPDATE.invalidSignalsAreGenerated
       ]
     -- TODO move this out of here (these are not properties of the transition
     -- systems) and also move the Relation class and instances out of Ledger.Core
