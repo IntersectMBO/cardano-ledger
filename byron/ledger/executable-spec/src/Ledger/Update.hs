@@ -298,6 +298,9 @@ instance STS UPSVV where
   type State UPSVV = Map UpId (ApName, ApVer, Metadata)
   type Signal UPSVV = UProp
 
+  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
+  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
+  --   `False` cases.
   data PredicateFailure UPSVV
     = AlreadyProposedSv
     | CannotFollowSv
@@ -332,6 +335,9 @@ instance STS UPPVV where
   type State UPPVV = Map UpId (ProtVer, PParams)
   type Signal UPPVV = UProp
 
+  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
+  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
+  --   `False` cases.
   data PredicateFailure UPPVV
     = CannotFollowPv
     | CannotUpdatePv [UpdateConstraintViolation]
@@ -369,6 +375,7 @@ instance STS UPV where
 
   type Signal UPV = UProp
 
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure UPV
     = UPPVVFailure (PredicateFailure UPPVV)
     | UPSVVFailure (PredicateFailure UPSVV)
@@ -430,6 +437,7 @@ instance STS UPREG where
     )
   type Signal UPREG = UProp
 
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure UPREG
     = UPVFailure (PredicateFailure UPV)
     | NotGenesisDelegate
@@ -483,6 +491,7 @@ instance STS ADDVOTE where
   type State ADDVOTE = Set (UpId, Core.VKeyGenesis)
   type Signal ADDVOTE = Vote
 
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure ADDVOTE
     = AVSigDoesNotVerify
     | NoUpdateProposal UpId
@@ -520,10 +529,14 @@ instance STS UPVOTE where
     , Set (UpId, Core.VKeyGenesis)
     )
   type Signal UPVOTE = Vote
+
+  -- | `S_CfmThdNotReached` is a structural `PredicateFailure`, used to fail
+  -- from one transition rule to the other. The other `PredicateFailure`s are
+  -- all throwable.
   data PredicateFailure UPVOTE
     = ADDVOTEFailure (PredicateFailure ADDVOTE)
     | HigherThanThdAndNotAlreadyConfirmed
-    | CfmThdNotReached
+    | S_CfmThdNotReached
     | AlreadyConfirmed
     deriving (Eq, Show)
 
@@ -547,7 +560,7 @@ instance STS UPVOTE where
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        t <= size ([pid] ◁ vts') ?! CfmThdNotReached
+        t <= size ([pid] ◁ vts') ?! S_CfmThdNotReached
         pid ∉ dom cps ?! AlreadyConfirmed
         pure $! ( cps ⨃ [(pid, sn)]
                 , vts'
@@ -613,9 +626,12 @@ instance STS UPEND where
     )
   type Signal UPEND = (ProtVer, Core.VKey)
 
+  -- | `S_TryNextRule` is a structural `PredicateFailure`, used to fail from
+  -- one transition rule to the other. The other `PredicateFailure`s are all
+  -- throwable.
   data PredicateFailure UPEND
     = ProtVerUnknown ProtVer
-    | TryNextRule
+    | S_TryNextRule
     | CanAdopt ProtVer
     | CannotAdopt ProtVer
     | NotADelegate VKey
@@ -634,7 +650,7 @@ instance STS UPEND where
           Just (pid, _) -> do
             -- If we found the proposal id that corresponds to 'bv' then we
             -- have to check that it isn't confirmed for this rule to succeed.
-            pid ∉ dom (cps ▷<= sn  -. 2 *. k) ?! TryNextRule
+            pid ∉ dom (cps ▷<= sn  -. 2 *. k) ?! S_TryNextRule
             pure $! (fads, bvs)
           Nothing ->
             -- If we didn't find the proposal id that corresponds to 'bv' then
@@ -654,17 +670,17 @@ instance STS UPEND where
             ) <- judgmentContext
         case lookupR vk dms of
           Nothing  -> do
-            False ?! TryNextRule
+            False ?! S_TryNextRule
             pure $! (fads, bvs)
           Just vks -> do
             let bvs' = bvs ∪ singleton bv vks
             size ([bv] ◁ bvs') < t ?! CanAdopt bv
             case findKey ((== bv) . fst) rpus of
               Just (pid, _) -> do
-                pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! TryNextRule
+                pid ∈ dom (cps ▷<= sn -. 2 *. k) ?! S_TryNextRule
                 pure $! (fads, bvs')
               Nothing -> do
-                False ?! TryNextRule
+                False ?! S_TryNextRule
                 pure $! (fads, bvs')
 
     , do

@@ -255,6 +255,9 @@ instance STS SDELEG where
   type Signal SDELEG = DCert
   type Environment SDELEG = DSEnv
 
+  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
+  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
+  --   `False` cases.
   data PredicateFailure SDELEG
     = IsNotGenesisKey
     | EpochInThePast EpochDiff
@@ -325,14 +328,15 @@ instance STS ADELEG where
   type Signal ADELEG = (Slot, (VKeyGenesis, VKey))
   type Environment ADELEG = Set VKeyGenesis
 
+  -- | None of these `PredicateFailure`s are actually "throwable". The
+  --   disjuction of the rules' preconditions is `True`, which means that one of
+  --   them will pass. The `PredicateFailure` just act as switches to direct
+  --   control flow to the successful one.
   data PredicateFailure ADELEG
-    = BeforeExistingDelegation
-      -- | Not actually a failure; this should just trigger the other rule.
-    | NoLastDelegation
-      -- | Not a failure; this should just pass the other rule
-    | AfterExistingDelegation
-    -- | The given key is a delegate of the given genesis key.
-    | AlreadyADelegateOf VKey VKeyGenesis
+    = S_BeforeExistingDelegation
+    | S_NoLastDelegation
+    | S_AfterExistingDelegation
+    | S_AlreadyADelegateOf VKey VKeyGenesis
     deriving (Eq, Show, Data, Typeable)
 
   initialRules = [
@@ -354,11 +358,11 @@ instance STS ADELEG where
                      }
             , (s, (vks, vkd))
             ) <- judgmentContext
-        vkd ∉ range dms ?! AlreadyADelegateOf vkd (dms !> vkd)
+        vkd ∉ range dms ?! S_AlreadyADelegateOf vkd (dms !> vkd)
         case Map.lookup vks dws of
           Nothing -> pure () -- If vks hasn't delegated, then we proceed and
                              -- update the @ADELEG@ state.
-          Just sp -> sp < s ?! BeforeExistingDelegation
+          Just sp -> sp < s ?! S_BeforeExistingDelegation
         return $!
           DState { _dStateDelegationMap = dms ⨃ [(vks, vkd)]
                  , _dStateLastDelegation = dws ⨃ [(vks, s)]
@@ -374,7 +378,7 @@ instance STS ADELEG where
           then return st
           else do
             case Map.lookup vks dws of
-              Just sp -> sp >= s ?! AfterExistingDelegation
+              Just sp -> sp >= s ?! S_AfterExistingDelegation
               Nothing -> error $  "This can't happen since otherwise "
                                ++ "the previous rule would have been triggered."
             return st
