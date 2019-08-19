@@ -78,6 +78,10 @@ class ( Eq (PredicateFailure a)
 
   -- | Descriptive type for the possible failures which might cause a transition
   -- to fail.
+  --
+  -- As a convention, `PredicateFailure`s which are "structural" (meaning that
+  -- they are not "throwable" in practice, and are used to pass control from
+  -- one transition rule to another) are prefixed with `S_`.
   data PredicateFailure a :: *
 
   -- | Rules governing transition under this system.

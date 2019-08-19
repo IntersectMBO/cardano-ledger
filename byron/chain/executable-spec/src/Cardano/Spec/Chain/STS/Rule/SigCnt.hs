@@ -32,6 +32,7 @@ instance STS SIGCNT where
 
   type Signal SIGCNT = VKey
 
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure SIGCNT
     = TooManyIssuedBlocks VKeyGenesis -- The given genesis key issued too many blocks.
     | NotADelegate

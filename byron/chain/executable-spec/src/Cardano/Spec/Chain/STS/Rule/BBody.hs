@@ -43,6 +43,7 @@ instance STS BBODY where
 
   type Signal BBODY = Block
 
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure BBODY
     = InvalidBlockSize
     | InvalidUtxoHash
