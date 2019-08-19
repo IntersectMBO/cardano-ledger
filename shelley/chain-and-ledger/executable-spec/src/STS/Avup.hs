@@ -8,7 +8,6 @@ module STS.Avup
 where
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 
 import           BlockChain
 import           Keys
@@ -16,6 +15,8 @@ import           Slot
 import           Updates
 
 import           Control.State.Transition
+import           Data.Maybe
+import           Ledger.Core (dom, (⊆), (⨃))
 
 data AVUP hashAlgo dsignAlgo
 
@@ -25,30 +26,76 @@ instance STS (AVUP hashAlgo dsignAlgo) where
   type Signal (AVUP hashAlgo dsignAlgo) = AVUpdate hashAlgo dsignAlgo
   type Environment (AVUP hashAlgo dsignAlgo) = (Slot, Dms hashAlgo dsignAlgo)
   data PredicateFailure (AVUP hashAlgo dsignAlgo)
-    = NonGenesisUpdateAVUP
+    = EmptyAVUP
+    | NonEmptyAVUP
+    | NoAVConsensus
+    | AVConsensus
+    | NonGenesisUpdateAVUP
+    | CannotFollow
+    | InvalidName
     deriving (Show, Eq)
 
   initialRules = []
 
-  transitionRules = [avupTransition]
+  transitionRules = [avUpdateEmpty, avUpdateNoConsensus, avUpdateConsensus]
 
-avupTransition :: TransitionRule (AVUP hashAlgo dsignAlgo)
-avupTransition = do
-  TRC ((_slot, Dms _dms), src@(AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+avUpdateEmpty :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateEmpty = do
+  TRC (_, src, AVUpdate _aup) <-
     judgmentContext
 
-  if Map.null _aup
-    then pure src
-    else do
-      Map.keysSet _aup `Set.isSubsetOf` Map.keysSet _dms ?! NonGenesisUpdateAVUP
+  Map.null _aup ?! NonEmptyAVUP
+  pure src
 
-      let aup'         = Map.union _aup aupS
-      let fav          = votedValue aup'
-      case fav of
-        Nothing -> pure (AVUpdate aup', favs, avs)
-        Just fav' ->
-          pure
-            ( AVUpdate Map.empty
-            , Map.insert (_slot +* slotsPrior) fav' favs
-            , avs
-            )
+avUpdateNoConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateNoConsensus = do
+  TRC ((_slot, Dms _dms), (AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+    judgmentContext
+
+  not (Map.null _aup) ?! EmptyAVUP
+
+  dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
+
+  all (all apNameValid . Map.keysSet . apps) (Map.elems _aup) ?! InvalidName
+
+  all (\vote -> all (svCanFollow avs favs) (Map.toList $ apps vote)) (Map.elems _aup)
+    ?! CannotFollow
+
+  -- TODO - do we need system tags? if so, check them here
+
+  let aup'         = _aup ⨃ Map.toList aupS
+  let fav          = votedValue aup'
+
+  fav == Nothing ?! AVConsensus
+
+  pure (AVUpdate aup', favs, avs)
+
+avUpdateConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateConsensus = do
+  TRC ((_slot, Dms _dms), (AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+    judgmentContext
+
+  not (Map.null _aup) ?! EmptyAVUP
+
+  dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
+
+  all (all apNameValid . Map.keysSet . apps) (Map.elems _aup) ?! InvalidName
+
+  all (\vote -> all (svCanFollow avs favs) (Map.toList $ apps vote)) (Map.elems _aup)
+    ?! CannotFollow
+
+  -- TODO - do we need system tags? if so, check them here
+
+  let aup'         = _aup ⨃ Map.toList aupS
+  let fav          = votedValue aup'
+
+  fav /= Nothing ?! NoAVConsensus
+  let fav' = fromMaybe (Applications Map.empty) fav
+
+  let s = _slot +* slotsPrior
+
+  pure
+    ( AVUpdate Map.empty
+    , favs ⨃ [(s, fav')]
+    , avs
+    )

@@ -149,7 +149,8 @@ because here it will happen even if the block contains no transactions.
       {\begin{array}{r@{~\leteq~}l}
         \var{favs'} & \{\var{s}\mapsto\var{v}\in\var{favs} ~\mid~ s>\var{slot}\}
         \\
-        \var{avs'} & \fun{newAVs}~\var{avs}~(\var{favs}\setminus\var{favs'})
+        \var{avs'}
+        & \var{avs}\unionoverrideRight\fun{newAVs}~\var{avs}~(\var{favs}\setminus\var{favs'})
       \end{array}}
       \\~\\
       \var{us'}\leteq(\var{pup},~\var{aup},~\var{favs'},~\var{avs'})
