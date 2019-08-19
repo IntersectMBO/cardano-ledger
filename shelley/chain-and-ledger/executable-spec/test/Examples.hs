@@ -48,11 +48,10 @@ import           Data.Word (Word64)
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes (AVUpdate, Addr, Block, Credential, DState, EpochState, HashHeader,
-                     GenKeyHash,
-                     KeyHash, KeyPair, LedgerState, NewEpochState, PPUpdate, PState, PoolDistr,
-                     PoolParams, RewardAcnt, SKey, SKeyES, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, VKey, VKeyGenesis, VKeyES)
+import           MockTypes (AVUpdate, Addr, Block, Credential, DState, EpochState, GenKeyHash,
+                     HashHeader, KeyHash, KeyPair, LedgerState, NewEpochState, PPUpdate, PState,
+                     PoolDistr, PoolParams, RewardAcnt, SKey, SKeyES, SnapShots, Stake, Tx, TxBody,
+                     UTxO, UTxOState, Update, VKey, VKeyES, VKeyGenesis)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, (⭒))
@@ -64,8 +63,7 @@ import           Delegation.Certificates (pattern Delegate, pattern PoolDistr, p
 import           EpochBoundary (BlocksMade (..), pattern Stake, emptySnapShots, _feeSS, _poolsSS,
                      _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
-                     pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey
-                     )
+                     pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
@@ -144,6 +142,12 @@ coreNodeKeys = snd . (coreNodes !!)
 
 dms :: Map GenKeyHash KeyHash
 dms = Map.fromList [ (hashKey gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
+
+byronApps :: Applications
+byronApps = Applications $ Map.fromList
+                            [ (ApName $ pack "Daedalus", (ApVer 16, Metadata))
+                            , (ApName $ pack "Yoroi", (ApVer 4, Metadata))
+                            ]
 
 alicePay :: KeyPair
 alicePay = KeyPair vk sk
@@ -394,8 +398,11 @@ txEx2A = Tx
             [alicePay, aliceStake, bobStake, cold alicePool, cold $ coreNodeKeys 0])
           Map.empty
 
+usEx2A :: (PPUpdate, AVUpdate, Map Slot Applications, Applications)
+usEx2A = (PPUpdate Map.empty, AVUpdate Map.empty, Map.empty, byronApps)
+
 utxostEx2A :: UTxOState
-utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyUpdateState
+utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) usEx2A
 
 lsEx2A :: LedgerState
 lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1) 0
@@ -470,7 +477,7 @@ updateStEx2A =
   ( ppupEx2A
   , AVUpdate Map.empty
   , Map.empty
-  , Applications Map.empty)
+  , byronApps)
 
 expectedLSEx2A :: LedgerState
 expectedLSEx2A = LedgerState
@@ -658,7 +665,7 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
     utxoEx2B
     lsDeposits
     lsFees
-    emptyUpdateState) -- Note that the ppup is gone now
+    usEx2A) -- Note that the ppup is gone now
   (DPState dsEx2B psEx2A)
                0
 
@@ -801,7 +808,7 @@ expectedLSEx2E = LedgerState
                  utxoEx2B
                  (Coin 238)
                  (Coin 13)
-                 emptyUpdateState)
+                 usEx2A)
                (DPState dsEx2B psEx2A)
                0
 
@@ -919,7 +926,7 @@ expectedLSEx2G = LedgerState
                  utxoEx2B
                  (Coin 228)
                  (Coin 10)
-                 emptyUpdateState)
+                 usEx2A)
                (DPState dsEx2B psEx2A)
                0
 
@@ -1029,7 +1036,7 @@ expectedLSEx2I = LedgerState
                  utxoEx2B
                  (Coin 219)
                  (Coin 9)
-                 emptyUpdateState)
+                 usEx2A)
                (DPState dsEx2I psEx2A)
                0
 
@@ -1108,7 +1115,7 @@ updateStEx3A =
   ( ppupEx3A
   , AVUpdate Map.empty
   , Map.empty
-  , Applications Map.empty)
+  , byronApps)
 
 expectedLSEx3A :: LedgerState
 expectedLSEx3A = LedgerState
@@ -1198,7 +1205,7 @@ updateStEx3B =
   ( ppupEx3A `updatePPup` ppupEx3B
   , AVUpdate Map.empty
   , Map.empty
-  , Applications Map.empty)
+  , byronApps)
 
 utxoEx3B :: UTxO
 utxoEx3B = UTxO . Map.fromList $
@@ -1273,7 +1280,7 @@ expectedLSEx3C = LedgerState
                  utxoEx3B
                  (Coin 0)
                  (Coin 2)
-                 emptyUpdateState)
+                 usEx2A)
                (DPState dsEx1 psEx1)
                0
 
@@ -1308,7 +1315,7 @@ ex3C = CHAINExample (Slot 110) expectedStEx3B blockEx3C expectedStEx3C
 appsEx4A :: Applications
 appsEx4A = Applications $ Map.singleton
                             (ApName $ pack "Daedalus")
-                            (ApVer 2, Metadata)
+                            (ApVer 17, Metadata)
 
 avupEx4A :: AVUpdate
 avupEx4A = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, appsEx4A)
@@ -1360,7 +1367,7 @@ updateStEx4A =
   ( PPUpdate Map.empty
   , avupEx4A
   , Map.empty
-  , Applications Map.empty)
+  , byronApps)
 
 expectedLSEx4A :: LedgerState
 expectedLSEx4A = LedgerState
@@ -1449,7 +1456,7 @@ updateStEx4B =
   ( PPUpdate Map.empty
   , AVUpdate Map.empty
   , Map.singleton (Slot 53) appsEx4A
-  , Applications Map.empty)
+  , byronApps)
 
 utxoEx4B :: UTxO
 utxoEx4B = UTxO . Map.fromList $
@@ -1513,7 +1520,11 @@ updateStEx4C =
   ( PPUpdate Map.empty
   , AVUpdate Map.empty
   , Map.empty
-  , appsEx4A)
+  , Applications $ Map.fromList
+                     [ (ApName $ pack "Daedalus", (ApVer 17, Metadata))
+                     , (ApName $ pack "Yoroi", (ApVer 4, Metadata))
+                     ]
+  )
 
 expectedLSEx4C :: LedgerState
 expectedLSEx4C = LedgerState

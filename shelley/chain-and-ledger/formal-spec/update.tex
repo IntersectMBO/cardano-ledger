@@ -132,26 +132,33 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
   \end{align*}
 
   \begin{align*}
-      & \fun{validAV} \in \ApName \to \ApVer \to \Metadata \to \Applications \to \Bool\\
-      & \fun{validAV}~\var{an}~\var{av}~\var{md}~\var{avs} = \\
-      & ~~~~\fun{apNameValid}~\var{an}
-        ~\land~\fun{svCanFollow}~\var{avs}~(\var{an},~\var{av})
-        ~\land~\forall\var{st}\in\dom{md},~\fun{sTagValid}~\var{st}
+      & \fun{maxVer} \in \ApName \to \Applications \to (\Slot\mapsto\Applications)
+        \to (\ApVer, \Metadata)\\
+      & \fun{maxVer}~\var{an}~\var{avs}~\var{avs} = \\
+      & ~~~~\fun{max_{first}} \Bigg(
+        \Big\{(0, \emptyset)\Big\}
+        \cup
+        \range{avs}
+        \cup
+        \bigcup_{\var{fav}\in\var{favs}}
+        \range{favs}
+        \Bigg)
+  \end{align*}
+
+  \begin{align*}
+      & \fun{svCanFollow} \in \Applications \to (\Slot\mapsto\Applications)
+        \to \ApName \to \ApVer \to \Bool\\
+      & \fun{svCanFollow}~\var{avs}~\var{favs}~\var{an}~\var{av}= av = 1 + v' \\
+      & ~~~~\where (v',~\wcard) = \fun{maxVer}~\var{an}~\var{avs}~\var{favs}
   \end{align*}
 
   \begin{align*}
       & \fun{newAVs} \in \Applications \to (\Slot\mapsto\Applications) \to \Applications \\
-      & \fun{newAVs}~\var{avs}~\var{favs} =
-        \begin{cases}
-          \var{avs}\unionoverrideRight\var{avs}'
-                     & \var{favs}\neq\emptyset \\
-                     & ~\land~s_m\mapsto\var{avs'}\in\var{favs} \\
-                     & ~\land~s_m=\max(\dom{\var{favs}}) \\
-                     & ~\land~\forall(an\mapsto(av, mdt)\in\var{avs}'),
-                         ~\fun{validAV}~\var{an}~\var{av}~\var{md}~\var{avs}
-          \\
-          \var{avs} & \text{otherwise}
-        \end{cases}
+      & \fun{newAVs}~\var{avs}~\var{favs} = \\
+      & ~~~~\Bigg\{\var{an}\mapsto\fun{maxVer}~\var{an}~\var{avs}~\var{favs}
+            ~\mid~
+            \var{an}\in\Big(\dom{avs}\cup\bigcup_{\var{fav}\in\var{favs}}\dom{fav}\Big)
+            \Bigg\}
   \end{align*}
 
   \caption{Epoch Helper Functions}
@@ -234,10 +241,16 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       &
       \dom{\var{aup}}\subseteq\dom{\var{dms}}
       \\
-      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
-      &
-      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
+        \fun{apNameValid}~\var{v}
       \\
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
+      \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
+      \\
+      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
+      \\
+      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
+      &
       \var{fav}=\Nothing
     }
     {
@@ -273,12 +286,18 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       &
       \dom{\var{aup}}\subseteq\dom{\var{dms}}
       \\
-      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
-      &
-      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
+        \fun{apNameValid}~\var{v}
       \\
-      \var{fav}\neq\Nothing
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
+        \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
+      \\
+      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
+      \\
+      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
       &
+      \var{fav}\neq\Nothing
+      \\
       s\leteq\var{slot}+\SlotsPrior
     }
     {
@@ -309,11 +328,17 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
   \label{fig:rules:av-update}
 \end{figure}
 
-The AVUP rule has one predicate failure:
+The AVUP rule has three predicate failures:
 \begin{itemize}
 \item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
   \dom dms$ fails, there is a {\em NonGenesisUpdate} failure as only genesis keys
   can be used in the application version update.
+\item In the case of \var{aup} being non-empty, if any of the application names
+  in the proposal are invalid, there is a {\em InvalidName} failure.
+\item In the case of \var{aup} being non-empty, if any of the application versions
+  in the proposal are not exactly one more than the greatest version for the given
+  application name in the current application versions or the future application
+  versions, there is a {\em CannotFollow} failure.
 \end{itemize}
 
 \clearpage
