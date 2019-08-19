@@ -332,8 +332,11 @@ instance STS UPSVV where
     ]
     where
       apNameValid (ApName n) = all isAscii n && length n <= 12
-      fstSnd (x, y, _) = (x, y)
+
       sTagValid tag = all isAscii tag && length tag <= 10
+
+fstSnd :: (a, b, c) -> (a, b)
+fstSnd (x, y, _) = (x, y)
 
 
 data UPPVV deriving (Generic, Data, Typeable)
@@ -1231,6 +1234,10 @@ tamperWithUpdateProposal env st uprop =
   Gen.choice [ invalidProtocolVersion
              , invalidParametersUpdate
              , duplicatedProtocolVersion
+             , duplicatedSoftwareVersion
+             , invalidSoftwareVersion
+             , invalidApplicationName
+             , invalidSystemTag
              ]
   where
     ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = st
@@ -1251,14 +1258,36 @@ tamperWithUpdateProposal env st uprop =
         ]
 
     duplicatedProtocolVersion :: Gen UProp
-    duplicatedProtocolVersion =  do
-      let registeredVersions = fst <$> Map.elems rpus
-      if null registeredVersions
-        then mzero
-        else do
-          duplicatedVersion <- Gen.element registeredVersions
-          pure $! uprop & upPV .~ duplicatedVersion
+    duplicatedProtocolVersion =
+      let registeredVersions = fst <$> Map.elems rpus in
+        if null registeredVersions
+          then mzero
+          else do
+            duplicatedVersion <- Gen.element registeredVersions
+            pure $! uprop & upPV .~ duplicatedVersion
 
+    duplicatedSoftwareVersion :: Gen UProp
+    duplicatedSoftwareVersion =
+      let registeredVersions = fmap fstSnd (Map.elems raus) in
+        if null registeredVersions
+          then mzero
+          else do
+            (an, av) <- Gen.element registeredVersions
+            pure $! uprop & upSwVer .~ SwVer { _svName = an, _svVer = av }
+
+    invalidSoftwareVersion :: Gen UProp
+    invalidSoftwareVersion =
+      pure $! over (upSwVer . svVer) (+42) uprop
+
+    invalidApplicationName :: Gen UProp
+    invalidApplicationName = do
+      randomName <- ApName <$> Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! uprop & upSwVer . svName .~ randomName
+
+    invalidSystemTag :: Gen UProp
+    invalidSystemTag = do
+      randomTag <- Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! over upSTags (Set.insert randomTag) uprop
 
 data UPIVOTE deriving (Generic, Data, Typeable)
 
