@@ -48,22 +48,6 @@ module Ledger.Delegation
   , _dIStateLastDelegation
   , _dIStateScheduledDelegations
   , _dIStateKeyEpochDelegations
-  , PredicateFailure
-    ( ADelegSFailure
-    , ADelegFailure
-    , SDelegSFailure
-    , SDelegFailure
-    , BeforeExistingDelegation
-    , NoLastDelegation
-    , AfterExistingDelegation
-    , AlreadyADelegateOf
-    , IsAlreadyScheduled
-    , IsNotGenesisKey
-    , EpochInThePast
-    , EpochPastNextEpoch
-    , HasAlreadyDelegated
-    , DoesNotVerify
-    )
   , liveAfter
   , EpochDiff(..)
   -- * State lens fields
@@ -99,7 +83,9 @@ module Ledger.Delegation
   , PredicateFailure
       ( IsNotGenesisKey, EpochInThePast, EpochPastNextEpoch
       , HasAlreadyDelegated, IsAlreadyScheduled, DoesNotVerify
-      , SDelegSFailure, SDelegFailure
+      , ADelegSFailure, ADelegFailure, SDelegSFailure, SDelegFailure
+      , S_BeforeExistingDelegation, S_NoLastDelegation
+      , S_AfterExistingDelegation, S_AlreadyADelegateOf
       )
   )
 where
