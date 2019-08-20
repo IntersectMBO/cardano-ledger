@@ -34,7 +34,8 @@ instance STS SIGCNT where
 
   -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure SIGCNT
-    = TooManyIssuedBlocks VKeyGenesis -- The given genesis key issued too many blocks.
+    = TooManyIssuedBlocks VKeyGenesis
+    -- ^ The given genesis key issued too many blocks.
     | NotADelegate
     -- ^ The key signing the block is not a delegate of a genesis key.
 
