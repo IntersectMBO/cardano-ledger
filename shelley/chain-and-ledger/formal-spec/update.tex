@@ -98,12 +98,12 @@ The PPUP rule has three predicate failures:
 \begin{itemize}
 \item In the case of \var{slot} being smaller than
   $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
-  a {\em PPUpdateTooEarly} failure.
+  a \emph{PPUpdateTooEarly} failure.
 \item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
-  \dom dms$ fails, there is a {\em NonGenesisUpdate} failure as only genesis keys
+  \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the protocol parameter update.
 \item If a protocol parameter update in \var{pup} cannot follow the current
-  protocol parameter, there is a {\em PVCannotFollow} failure.
+  protocol parameter, there is a \emph{PVCannotFollow} failure.
 \end{itemize}
 
 \clearpage
@@ -331,14 +331,14 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
 The AVUP rule has three predicate failures:
 \begin{itemize}
 \item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
-  \dom dms$ fails, there is a {\em NonGenesisUpdate} failure as only genesis keys
+  \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the application version update.
 \item In the case of \var{aup} being non-empty, if any of the application names
-  in the proposal are invalid, there is a {\em InvalidName} failure.
+  in the proposal are invalid, there is a \emph{InvalidName} failure.
 \item In the case of \var{aup} being non-empty, if any of the application versions
   in the proposal are not exactly one more than the greatest version for the given
   application name in the current application versions or the future application
-  versions, there is a {\em CannotFollow} failure.
+  versions, there is a \emph{CannotFollow} failure.
 \end{itemize}
 
 \clearpage
