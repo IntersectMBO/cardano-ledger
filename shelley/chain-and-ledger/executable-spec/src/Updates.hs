@@ -12,6 +12,7 @@ module Updates
   , Applications(..)
   , AVUpdate(..)
   , Update(..)
+  , Favs
   , apNameValid
   , allNames
   , newAVs
@@ -42,7 +43,7 @@ import           Slot (Epoch, Slot)
 
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core ((∪))
+import           Ledger.Core (range, (∪), (◁))
 
 
 newtype ApVer = ApVer Natural
@@ -172,10 +173,10 @@ type Favs = Map.Map Slot Applications
 
 maxVer :: ApName -> Applications -> Favs -> (ApVer, Metadata)
 maxVer an avs favs =
-  maximum $ vs an avs : fmap (vs an) (Map.elems favs)
+  maximum $ vs an avs : fmap (vs an) (Set.toList (range favs))
     where
       vs n (Applications as) =
-        Map.foldr max (ApVer 0, Metadata) (Map.filterWithKey (\k _ -> k == n) as)
+        Map.foldr max (ApVer 0, Metadata) (Set.singleton n ◁ as)
 
 svCanFollow :: Applications -> Favs -> (ApName, (ApVer, Metadata)) -> Bool
 svCanFollow avs favs (an, (ApVer v, _)) = v == 1 + m
