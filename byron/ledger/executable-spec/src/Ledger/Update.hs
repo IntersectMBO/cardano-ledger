@@ -530,14 +530,14 @@ instance STS UPVOTE where
     )
   type Signal UPVOTE = Vote
 
-  -- | `S_CfmThdNotReached` is a structural `PredicateFailure`, used to fail
-  -- from one transition rule to the other. The other `PredicateFailure`s are
-  -- all throwable.
+  -- | The 3 non-embedded `PredicateFailure`s here are all structural. The
+  -- disjuntion of the preconditions is `True` - one rule either fires or the
+  -- other does.
   data PredicateFailure UPVOTE
     = ADDVOTEFailure (PredicateFailure ADDVOTE)
-    | HigherThanThdAndNotAlreadyConfirmed
+    | S_HigherThanThdAndNotAlreadyConfirmed
     | S_CfmThdNotReached
-    | AlreadyConfirmed
+    | S_AlreadyConfirmed
     deriving (Eq, Show)
 
   initialRules = []
@@ -549,7 +549,7 @@ instance STS UPVOTE where
             ) <- judgmentContext
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
-        size ([pid] ◁ vts') < t || pid ∈ dom cps ?! HigherThanThdAndNotAlreadyConfirmed
+        size ([pid] ◁ vts') < t || pid ∈ dom cps ?! S_HigherThanThdAndNotAlreadyConfirmed
         pure $! ( cps
                 , vts'
                 )
@@ -561,7 +561,7 @@ instance STS UPVOTE where
         vts' <- trans @ADDVOTE $ TRC ((rups, dms), vts, vote)
         let pid = vote ^. vPropId
         t <= size ([pid] ◁ vts') ?! S_CfmThdNotReached
-        pid ∉ dom cps ?! AlreadyConfirmed
+        pid ∉ dom cps ?! S_AlreadyConfirmed
         pure $! ( cps ⨃ [(pid, sn)]
                 , vts'
                 )

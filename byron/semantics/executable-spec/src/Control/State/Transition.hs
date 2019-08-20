@@ -82,6 +82,11 @@ class ( Eq (PredicateFailure a)
   -- As a convention, `PredicateFailure`s which are "structural" (meaning that
   -- they are not "throwable" in practice, and are used to pass control from
   -- one transition rule to another) are prefixed with `S_`.
+  --
+  -- Structural `PredicateFailure`s represent conditions between rules where
+  -- the disjunction of all rules' preconditions is equal to `True`. That is,
+  -- either one rule will throw a structural `PredicateFailure` and the other
+  -- will succeed, or vice-versa.
   data PredicateFailure a :: *
 
   -- | Rules governing transition under this system.
