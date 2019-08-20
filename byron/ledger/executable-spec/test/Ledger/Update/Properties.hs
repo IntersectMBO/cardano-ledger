@@ -15,6 +15,7 @@ module Ledger.Update.Properties
   , ublockOnlyValidSignalsAreGenerated
   , ublockRelevantTracesAreCovered
   , ublockSampleTraceMetrics
+  , invalidRegistrationsAreGenerated
   , invalidSignalsAreGenerated
   ) where
 
@@ -49,9 +50,10 @@ import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (S
                      unBlockCount)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
-import           Ledger.Update (PParams, PredicateFailure (AlreadyProposedPv, AlreadyProposedSv, CannotFollowPv, CannotFollowSv, CannotUpdatePv, InvalidApplicationName, InvalidSystemTags),
+import           Ledger.Update (PParams, PredicateFailure (AVSigDoesNotVerify, AlreadyProposedPv, AlreadyProposedSv, CannotFollowPv, CannotFollowSv, CannotUpdatePv, DoesNotVerify, InvalidApplicationName, InvalidSystemTags, NoUpdateProposal, NotGenesisDelegate),
                      ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UPPVV, UPSVV, UProp,
-                     Vote, emptyUPIState, protocolParameters, tamperWithUpdateProposal)
+                     UpId (UpId), Vote, emptyUPIState, protocolParameters,
+                     tamperWithUpdateProposal)
 import qualified Ledger.Update as Update
 
 upiregTracesAreClassified :: Property
@@ -562,8 +564,8 @@ numberOfVotes sample
 -- Invalid trace generation
 --------------------------------------------------------------------------------
 
-invalidSignalsAreGenerated :: Property
-invalidSignalsAreGenerated = withTests 300 $ property $ do
+invalidRegistrationsAreGenerated :: Property
+invalidRegistrationsAreGenerated = withTests 300 $ property $ do
 
   tr <- forAll (invalidTrace @UPIREG 100 [(1, invalidUPropGen)])
 
@@ -590,6 +592,13 @@ invalidSignalsAreGenerated = withTests 300 $ property $ do
         ]
         pfs
 
+      coverFailures
+        2
+        [ NotGenesisDelegate
+        , DoesNotVerify
+        ]
+        pfs
+
     Right _ ->
       pure ()
 
@@ -597,5 +606,41 @@ invalidSignalsAreGenerated = withTests 300 $ property $ do
   where
     invalidUPropGen :: SignalGenerator UPIREG
     invalidUPropGen env st = do
-      uprop' <- sigGen @UPIREG env st
-      tamperWithUpdateProposal env st uprop'
+      uprop <- sigGen @UPIREG env st
+      tamperWithUpdateProposal env st uprop
+
+
+invalidSignalsAreGenerated :: Property
+invalidSignalsAreGenerated = withTests 300 $ property $ do
+
+  tr <- forAll (invalidTrace @UBLOCK 100 [(1, invalidUBlockGen)])
+
+  cover 80
+        "Invalid signals are generated when requested"
+        (isLeft $ Invalid.Trace.errorOrLastState tr)
+
+
+  case Invalid.Trace.errorOrLastState tr of
+    Left pfs -> do
+      coverFailures
+        2
+        [ AVSigDoesNotVerify
+        , NoUpdateProposal (UpId 0) -- We need to pass a dummy update id here.
+        ]
+        pfs
+
+    Right _ ->
+      pure ()
+
+  where
+    invalidUBlockGen :: SignalGenerator UBLOCK
+    invalidUBlockGen env st = do
+      Gen.choice
+        [ do
+            uprop <- sigGen @UPIREG (upienv st) (upistate st)
+            tamperedUprop <- tamperWithUpdateProposal (upienv st) (upistate st) uprop
+            ublock <- sigGen @UBLOCK env st
+            pure $! ublock { optionalUpdateProposal = Just tamperedUprop }
+        -- , do
+
+        ]

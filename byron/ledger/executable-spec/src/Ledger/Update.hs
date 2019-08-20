@@ -30,6 +30,7 @@ import           Control.Monad (mzero)
 import           Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import           Data.Char (isAscii)
+import           Data.Coerce (coerce)
 import           Data.Data (Data, Typeable)
 import           Data.Foldable (foldl', toList)
 import           Data.Hashable (Hashable)
@@ -144,10 +145,13 @@ makeLenses ''SwVer
 instance HasTypeReps SwVer
 
 -- | Part of the update proposal which must be signed
+--
 type UpSD =
   ( ProtVer
   , PParams
   , SwVer
+  , Set STag
+  , Metadata
   )
 
 -- | System tag, this represents a target operating system for the update (e.g.
@@ -172,25 +176,55 @@ data UProp = UProp
   -- ^ Metadata required for performing software updates.
   } deriving (Eq, Generic, Show, Hashable)
 
+
+-- We need the Hashable instance before making lenses.
 instance Hashable a => Hashable (Set a) where
   hashWithSalt = H.hashUsing Set.toList
 
 
 makeLenses ''UProp
 
-instance HasTypeReps (ProtVer, PParams, SwVer)
+
+upSigData :: Lens' UProp UpSD
+upSigData = lens
+  (\up -> (up ^. upPV, up ^. upParams, up ^. upSwVer, up ^. upSTags, up ^. upMdt))
+  (\up (pv, pps, sv, stags, mdt) -> up
+    & upParams .~ pps
+    & upPV .~ pv
+    & upSwVer .~ sv
+    & upSTags .~ stags
+    & upMdt .~ mdt
+  )
+
+
+mkUProp
+  :: UpId
+  -> Core.VKey
+  -> ProtVer
+  -> PParams
+  -> SwVer
+  -> Set STag
+  -> Metadata
+  -> UProp
+mkUProp upId issuer pv pps sv stags mdt = uprop
+  where
+    uprop = UProp
+            { _upId = upId
+            , _upIssuer = issuer
+            , _upParams = pps
+            , _upPV = pv
+            , _upSwVer = sv
+            , _upSig = Core.sign (skey issuer) (uprop ^. upSigData)
+            , _upSTags = stags
+            , _upMdt = mdt
+            }
+
+
+instance HasTypeReps (ProtVer, PParams, SwVer, Set STag, Metadata)
 instance HasTypeReps Metadata
 instance HasTypeReps UProp
 instance HasTypeReps (Maybe UProp)
 
-upSigData :: Lens' UProp UpSD
-upSigData = lens
-  (\up -> (up ^. upPV, up ^. upParams, up ^. upSwVer))
-  (\up (pv, pps, sv) -> up
-    & upParams .~ pps
-    & upPV .~ pv
-    & upSwVer .~ sv
-  )
 
 -- | Test if a pair is present in a map.
 inMap :: (Ord key, Eq v) => key -> v -> Map key v -> Bool
@@ -1017,13 +1051,12 @@ instance HasTrace UPIREG where
         -> SwVer
         -> Gen UProp
       generateUpdateProposalWith vk pps' pv' sv'
-        = UProp
+        = mkUProp
         <$> idGen
         <*> pure vk
-        <*> pure pps'
         <*> pure pv'
+        <*> pure pps'
         <*> pure sv'
-        <*> pure (Core.sign (skey vk) (pv', pps', sv'))
         <*> stTagsGen
         <*> mdtGen
 
@@ -1229,16 +1262,27 @@ increasingProbabilityAt gen (lower, upper)
 --   - DoesNotVerify
 --
 tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
-tamperWithUpdateProposal env st uprop =
-  -- Tamper with the update proposal so that the protocol version cannot follow.
-  Gen.choice [ invalidProtocolVersion
-             , invalidParametersUpdate
-             , duplicatedProtocolVersion
-             , duplicatedSoftwareVersion
-             , invalidSoftwareVersion
-             , invalidApplicationName
-             , invalidSystemTag
-             ]
+tamperWithUpdateProposal env st uprop = do
+  let failureGenerators
+        = [ invalidProtocolVersion
+          , invalidParametersUpdate
+          , duplicatedProtocolVersion
+          , duplicatedSoftwareVersion
+          , invalidSoftwareVersion
+          , invalidApplicationName
+          , invalidSystemTag
+          , invalidIssuer
+          ]
+  tamperedUprop <- Gen.choice failureGenerators
+  -- We need to re-sign the update proposal since we changed the contents of
+  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
+  -- error (where 'n' is the total number of predicate failures, 'n = length
+  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
+  -- tampered proposal without re-signing it, which will cause the
+  -- 'DoesNotVerify' failure.
+  Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
+                , (1, pure $! tamperedUprop)
+                ]
   where
     ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = st
 
@@ -1288,6 +1332,17 @@ tamperWithUpdateProposal env st uprop =
     invalidSystemTag = do
       randomTag <- Gen.string (Range.linear 10 20) Gen.unicode
       pure $! over upSTags (Set.insert randomTag) uprop
+
+    invalidIssuer :: Gen UProp
+    invalidIssuer =
+      pure $! over upIssuer (VKey . Owner . (10 +) . coerce) uprop
+
+
+-- | Update the signature of the update proposal.
+reSign :: UProp -> UProp
+reSign uprop
+  = uprop
+  & upSig .~ Core.sign (skey (uprop ^. upIssuer)) (uprop ^. upSigData)
 
 data UPIVOTE deriving (Generic, Data, Typeable)
 
