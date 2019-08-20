@@ -439,6 +439,10 @@ invalidSignalsAreGenerated = withTests 300 $ property $ do
         -- which we round up to 2.
 
       -- TODO: raise the threshold once we incorporate goblins
+
+      -- TODO: once the threshold is raised, use
+      -- 'Control.State.Transition.Generator.coverFailures' to remove the
+      -- duplication below
       cover
         0
         "IsNotGenesisKey"
