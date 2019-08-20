@@ -755,9 +755,9 @@ If the size checks pass, then three transitions are done:
 The BHEAD rule has two predicate failures:
 \begin{itemize}
 \item If the size of the block header is larger than the maximally allowed size,
-  there is a \em{HeaderSizeTooLarge} failure.
+  there is a \emph{HeaderSizeTooLarge} failure.
 \item If the size of the block body is larger than the maximally allowed size,
-  there is a \em{BlockSizeTooLarge} failure.
+  there is a \emph{BlockSizeTooLarge} failure.
 \end{itemize}
 
 \clearpage
@@ -845,18 +845,18 @@ of the key \var{hk} with the KES period \var{n}.
 The OCERT rule has six predicate failures:
 \begin{itemize}
 \item If the KES period is less than the KES period start in the certificate,
-  there is a \em{KESBeforeStart} failure.
+  there is a \emph{KESBeforeStart} failure.
 \item If the KES period is greater than or equal to the KES period end (start +
-  90) in the certificate, there is a \em{KESAfterEnd} failure.
+  90) in the certificate, there is a \emph{KESAfterEnd} failure.
 \item If the period counter in the original key hash counter mapping is larger
-  than the period number in the certificate, there is a \em{KESPeriodWrong}
+  than the period number in the certificate, there is a \emph{KESPeriodWrong}
   failure.
 \item If the signature of the hot key, KES period number and period start is
-  incorrect, there is an \em{InvalidSignature} failure.
+  incorrect, there is an \emph{InvalidSignature} failure.
 \item I the KES signature using the hot key of the block header body is
-  incorrect, there is an \em{InvalideKesSignature} failure.
+  incorrect, there is an \emph{InvalideKesSignature} failure.
 \item If there is no entry in the key hash to counter mapping for the cold key,
-  there is a \em{NoCounterForKeyHash} failure.
+  there is a \emph{NoCounterForKeyHash} failure.
 \end{itemize}
 
 \subsection{Verifiable Random Function}
@@ -1049,15 +1049,15 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
 The OVERLAY rule has four predicate failures:
 \begin{itemize}
 \item In the case of the slot not being part of a OBFT schedule, if the VRF
-  leader check does not verify, there is a \em{NotPraosLeader} failure.
+  leader check does not verify, there is a \emph{NotPraosLeader} failure.
 \item In the case of the slot being in the OBFT schedule, but without genesis
-  key (i.e., $Nothing$), there is a \em{NotActiveSlot} failure.
+  key (i.e., $Nothing$), there is a \emph{NotActiveSlot} failure.
 \item In the case of the slot being in the OBFT schedule, if there is a
   specified key, but this key is not in the genesis delegation map, there is a
-  \em{NoGenesisStaking} failure.
+  \emph{NoGenesisStaking} failure.
 \item In the case of the slot being in the OBFT schedule, if there is a
   specified genesis key which is not the same key as in the bock header body,
-  there is a \em{NoGenesisColdKey} failure.
+  there is a \emph{NoGenesisColdKey} failure.
 \end{itemize}
 
 \clearpage
@@ -1181,9 +1181,9 @@ The states for this transition consists of:
 The PRTCL rule has two predicate failures:
 \begin{itemize}
 \item If the slot of the block header body is not larger than the last slot or
-  greater than the current slot, there is a \em{WrongSlotInterval} failure.
+  greater than the current slot, there is a \emph{WrongSlotInterval} failure.
 \item If the hash of the previous header of the block header body is not equal
-  to the hash given in the environment, there is a \em{WrongBlockSequence}
+  to the hash given in the environment, there is a \emph{WrongBlockSequence}
   failure.
 \end{itemize}
 
@@ -1317,7 +1317,7 @@ current slot is not an overlay slot.
 The BBODY rule has one predicate failure:
 \begin{itemize}
 \item if the size of the block body in the header is not equal to the real size
-  of the block body, there is a \em{WrongBlockBodySize} failure.
+  of the block body, there is a \emph{WrongBlockBodySize} failure.
 \end{itemize}
 
 \clearpage
