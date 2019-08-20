@@ -575,20 +575,19 @@ The signal of the transition rule $\mathsf{RUPD}$ is the slot \var{s}. The
 execution of the transition role is as follows:
 
 \begin{itemize}
-\item If \var{s} is less than or equal to the sum of the first slot of its epoch
-  and the duration to start rewards \StartRewards, then the state is not
-  updated.
-\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
-  update has already been calculated but not yet applied, then the state is not
-  updated.
 \item If the current reward update \var{ru} is empty and \var{s} is greater than
   the sum of the first slot of its epoch and the duration \StartRewards, then a
   new rewards update is calculated and the state is updated.
+\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
+  update has already been calculated but not yet applied, then the state is not updated.
+\item If the current reward update \var{ru} is empty and \var{s} is less than or equal to the sum
+  of the first slot of its epoch and the duration to start rewards \StartRewards,
+  then the state is not updated.
 \end{itemize}
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:reward-update}
-    \inference[Reward-Update]
+    \inference[Create-Reward-Update]
     {
       s > (\firstSlot{\epoch{s}}) + \StartRewards
       &
@@ -611,7 +610,7 @@ execution of the transition role is as follows:
   \nextdef
 
   \begin{equation}\label{eq:no-reward-update}
-    \inference[No-Reward-Update]
+    \inference[Reward-Update-Exists]
     {
       ru \neq \Nothing
     }
@@ -632,6 +631,8 @@ execution of the transition role is as follows:
   \begin{equation}\label{eq:reward-too-early}
     \inference[Reward-Too-Early]
     {
+      ru = \Nothing
+      \\
       s \leq (\firstSlot{\epoch{s}}) + \StartRewards
     }
     {
