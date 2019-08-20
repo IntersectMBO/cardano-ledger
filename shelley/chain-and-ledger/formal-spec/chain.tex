@@ -310,17 +310,17 @@ of which are active.
   \label{fig:ts-types:newepoch}
 \end{figure}
 
-Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It
-has two rules: the first one deals with the case when the epoch signal $e$ is before the
-current epoch \var{e_\ell}. This rule does not change the state. The second rule
-describes the change in the case of $e$ being equal to the next epoch
+Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It has two rules.
+The first rule describes the change in the case of $e$ being equal to the next epoch
 $e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule.
+The second one deals with the case when the epoch signal $e$ is not one greater than the
+current epoch \var{e_\ell}. This rule does not change the state.
 
 In the second case, the new epoch state is updated as follows:
 
 \begin{itemize}
 \item The epoch is set to the new epoch $e$.
-\item The epoch nonce is replaced with the compbination of the new one from the
+\item The epoch nonce is replaced with the combination of the new one from the
   environment and any extra entropy present in the UTxO state.
 \item The mapping for the blocks produced by each stake pool for the previous epoch
   is set to the current such mapping.
@@ -413,7 +413,7 @@ In the second case, the new epoch state is updated as follows:
   \begin{equation}\label{eq:not-new-epoch}
     \inference[Not-New-Epoch]
     {
-      e_\ell \neq e + 1
+      e \neq e_\ell + 1
     }
     {
       \left(
@@ -474,7 +474,7 @@ $\eta_c$ and the evolving nonce $\eta_v$.
 
 The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal.
 There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
-\SlotsPrior{} slots from the beginning of the epoch and one where \var{s} is at least
+\SlotsPrior{} slots from the beginning of the next epoch and one where \var{s} is at least
 \SlotsPrior{} slots after the first slot of the epoch.
 
 Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
@@ -486,7 +486,7 @@ start of a new epoch (so that the entropy added near the end of the epoch is not
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
     {
-      slot < \firstSlot{((\epoch{slot}) + 1) - \SlotsPrior}
+      s < \firstSlot{((\epoch{s}) + 1) - \SlotsPrior}
     }
     {
       \left(
@@ -590,11 +590,11 @@ execution of the transition role is as follows:
   \begin{equation}\label{eq:reward-update}
     \inference[Reward-Update]
     {
-      ru' \leteq \createRUpd{b}{es}
-      \\~\\
       s > (\firstSlot{\epoch{s}}) + \StartRewards
       &
       ru = \Nothing
+      \\~\\
+      ru' \leteq \createRUpd{b}{es}
     }
     {
       \left(
@@ -827,9 +827,9 @@ of the key \var{hk} with the KES period \var{n}.
       &
       m \leq n
       \\~\\
-      \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\sigma}
+      \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\tau}
       &
-      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\tau}^{t}
+      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
       \\
     }
     {
@@ -869,8 +869,7 @@ parameters. The function checks:
 
 \begin{itemize}
 \item The validity of the proofs for the leader value and the new nonce.
-\item The verification key is associated to a non-zero relative stake
-  $\sigma$ in the stake distribution.
+\item The verification key is associated with relative stake $\sigma$ in the stake distribution.
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
   this slot.
 \end{itemize}
@@ -883,9 +882,11 @@ parameters. The function checks:
       & \begin{array}{cl}
         ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
         ~~~~ \land &
-             \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb},~\bnonce{bhb}}) \\
+             \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}
+               {(\bprfn{bhb},~\bnonce{bhb}}) \\
         ~~~~ \land &
-             \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb},~\bleader{bhb}}) \\
+             \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}
+               {(\bprfl{bhb},~\bleader{bhb}}) \\
         ~~~~ \land &
              \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
       \end{array} \\
@@ -1231,7 +1232,7 @@ produced by each stake pool.
   %
   \emph{BBody helper function}
   \begin{align*}
-      & \fun{incrBlocks} \in \Bool \to \KeyHash \to
+      & \fun{incrBlocks} \in \Bool \to \KeyHash_{pool} \to
           \BlocksMade \to \BlocksMade \\
       & \fun{incrBlocks}~\var{isOverlay}~\var{hk}~\var{b} =
         \begin{cases}
@@ -1259,10 +1260,7 @@ The transition is executed if the following preconditions are met:
 \begin{itemize}
 \item The size of the block body matches the value given in the block header body.
 \item The hash of the block body matches the value given in the block header body.
-\item Either \var{hk} to \var{n} is in the mapping of produced blocks, or
-  \var{n} is equal to 0.
-\item The transactions \var{txs} were correctly signed by \var{vk}, producing
-  the signature $\sigma$.
+\item The $\mathsf{LEDGERS}$ transition succeeds.
 \end{itemize}
 
 After this, the transition system updates the mapping of the hashed stake pool
@@ -1389,13 +1387,13 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           & (\wcard,~\wcard,~\var{ls},~\wcard)
           & \var{es}
           \\
-          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard))
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard))
           & \var{ls}
       \end{array}
   \end{align*}
   %
   \begin{align*}
-      & \fun{setIssueNumbers} \in \LState \to (\KeyHash\to\N) \to \LState \\
+      & \fun{setIssueNumbers} \in \LState \to (\KeyHash_{pool}\to\N) \to \LState \\
       & \fun{setIssueNumbers}~
           (\var{utxoSt},
           ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard)))
@@ -1442,7 +1440,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \leteq\var{nes'} \\
         (\wcard,~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
-          ( (\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
             (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
       {
         \left(
