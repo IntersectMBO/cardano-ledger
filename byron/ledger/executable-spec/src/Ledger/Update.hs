@@ -206,10 +206,10 @@ mkUProp
   -> Set STag
   -> Metadata
   -> UProp
-mkUProp upId issuer pv pps sv stags mdt = uprop
+mkUProp aUpId issuer pv pps sv stags mdt = uprop
   where
     uprop = UProp
-            { _upId = upId
+            { _upId = aUpId
             , _upIssuer = issuer
             , _upParams = pps
             , _upPV = pv
@@ -521,9 +521,20 @@ data Vote = Vote
   , _vSig :: Core.Sig UpId
   } deriving (Eq, Generic, Show, Hashable)
 
+
 makeLenses ''Vote
 
+
 instance HasTypeReps Vote
+
+
+mkVote :: Core.VKey -> UpId -> Vote
+mkVote caster proposalId
+  = Vote
+  { _vCaster = caster
+  , _vPropId = proposalId
+  , _vSig = Core.sign (skey caster) proposalId
+  }
 
 instance HasHash (Maybe Ledger.Update.UProp, [Ledger.Update.Vote]) where
   hash = Core.Hash . H.hash
@@ -1240,8 +1251,8 @@ increasingProbabilityAt gen (lower, upper)
                   , (5, pure upper)
                   ]
 
--- | Tamper with the update proposal in such a way that we trigger the following
--- predicate failures with equal probability:
+-- | Tamper with the update proposal in such a way that the following
+-- predicate failures are triggered with equal probability:
 --
 -- - UPREGFailure
 --   - UPVFailure
@@ -1262,7 +1273,7 @@ increasingProbabilityAt gen (lower, upper)
 --   - DoesNotVerify
 --
 tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
-tamperWithUpdateProposal env st uprop = do
+tamperWithUpdateProposal _env st uprop = do
   let failureGenerators
         = [ invalidProtocolVersion
           , invalidParametersUpdate
@@ -1284,7 +1295,7 @@ tamperWithUpdateProposal env st uprop = do
                 , (1, pure $! tamperedUprop)
                 ]
   where
-    ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = st
+    ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
 
     invalidProtocolVersion :: Gen UProp
     invalidProtocolVersion
@@ -1335,8 +1346,51 @@ tamperWithUpdateProposal env st uprop = do
 
     invalidIssuer :: Gen UProp
     invalidIssuer =
-      pure $! over upIssuer (VKey . Owner . (10 +) . coerce) uprop
+      -- We use a large (constant) increment here, so that we have a bigger chance to get a
+      -- non-genesis delegate.
+      pure $! over upIssuer (VKey . Owner . (100 +) . coerce) uprop
 
+
+-- | Tamper with some of the votes provided as parameter in such a way that the following
+-- predicate failures are triggered with equal probability:
+--
+-- - AVSigDoesNotVerify
+-- - NoUpdateProposal
+--
+tamperWithVotes :: UPIEnv -> UPIState -> [Vote] -> Gen [Vote]
+tamperWithVotes _env _st [] = do
+  -- If there are no votes, then we generate a random one.
+  vote <- mkVote <$> CoreGen.vkGen <*> randomUpId
+  (:[]) <$> tamperWithVote vote
+tamperWithVotes env st [vote] =
+  -- If we have only one vote we duplicate it and try again, raising the
+  -- probabilities that one of the votes in the list will be tampered with.
+  tamperWithVotes env st [vote, vote]
+tamperWithVotes _env _st votes =
+  traverse tamperWithVote votes
+
+
+tamperWithVote :: Vote -> Gen Vote
+tamperWithVote vote =
+  Gen.choice
+    [ -- Change the vote by some random proposal id. There might be a chance
+      -- that the proposal id exists though, but this should be minimal if
+      -- we generate only small valid proposal id's.
+       mkVote (vote ^. vCaster)
+       .   UpId
+       <$> Gen.integral (Range.constant 10000 10100)
+    , do
+        vk <- CoreGen.vkGen
+        -- Replace the signature by the signature of some random key.
+        pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId)
+    , pure $! vote
+    ]
+
+
+-- | Generate a random update proposal id, by picking a large number so that the
+-- probability of having an update proposal with that id is nearly zero.
+randomUpId :: Gen UpId
+randomUpId = UpId <$> Gen.integral (Range.constant 10000 10100)
 
 -- | Update the signature of the update proposal.
 reSign :: UProp -> UProp
@@ -1484,7 +1538,7 @@ instance HasTrace UPIVOTES where
   envGen _ = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
-    (mkVote <$>) . concatMap replicateFst
+    (mkVoteForDelegate <$>) . concatMap replicateFst
       <$> genVotesOnMostVotedProposals completedVotes
       where
         -- Votes needed for confirmation, per proposal ID.
@@ -1494,15 +1548,16 @@ instance HasTrace UPIVOTES where
                        & fmap Set.toList
                        & Map.toList
 
-        mkVote
+        -- Make a vote for a delegate of a genesis key.
+        mkVoteForDelegate
           :: (UpId, Core.VKeyGenesis)
           -> Vote
-        mkVote (proposalId, vkg) =
+        mkVoteForDelegate (proposalId, vkg) =
           Vote vk proposalId (Core.sign (skey vk) proposalId)
           where
             vk = fromMaybe err $ Bimap.lookup vkg dms
               where
-                err = error $  "Ledger.Update.mkVote: "
+                err = error $  "Ledger.Update.mkVoteForDelegate: "
                             ++ "the genesis key was not found in the delegation map, "
                             ++ "but it should be since we used `dms` to get the keys"
                             ++ "that can vote (and so they should have a pre-image in `dms`)."

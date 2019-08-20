@@ -22,7 +22,7 @@ module Ledger.Update.Properties
 import           GHC.Stack (HasCallStack)
 
 import qualified Data.Bimap as Bimap
-import           Data.Data (Constr, Data, Typeable, toConstr)
+import           Data.Data (Data, Typeable)
 import           Data.Either (isLeft)
 import           Data.Foldable (fold, traverse_)
 import           Data.Function ((&))
@@ -30,7 +30,7 @@ import           Data.List.Unique (count)
 import           Data.Maybe (catMaybes, isNothing)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
-import           Hedgehog (Gen, Property, cover, forAll, property, withTests)
+import           Hedgehog (Property, cover, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
@@ -43,17 +43,16 @@ import           Control.State.Transition.Generator (HasTrace, SignalGenerator, 
                      traceLengthsAreClassified, traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
-import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), extractValues,
-                     traceLength, traceSignals, traceStates, _traceEnv, _traceInitState)
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
+                     traceSignals, traceStates, _traceEnv, _traceInitState)
 
 import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (SlotCount), dom,
                      unBlockCount)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update (PParams, PredicateFailure (AVSigDoesNotVerify, AlreadyProposedPv, AlreadyProposedSv, CannotFollowPv, CannotFollowSv, CannotUpdatePv, DoesNotVerify, InvalidApplicationName, InvalidSystemTags, NoUpdateProposal, NotGenesisDelegate),
-                     ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UPPVV, UPSVV, UProp,
-                     UpId (UpId), Vote, emptyUPIState, protocolParameters,
-                     tamperWithUpdateProposal)
+                     ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, UpId (UpId), Vote,
+                     emptyUPIState, protocolParameters, tamperWithUpdateProposal, tamperWithVotes)
 import qualified Ledger.Update as Update
 
 upiregTracesAreClassified :: Property
@@ -635,12 +634,13 @@ invalidSignalsAreGenerated = withTests 300 $ property $ do
   where
     invalidUBlockGen :: SignalGenerator UBLOCK
     invalidUBlockGen env st = do
+      ublock <- sigGen @UBLOCK env st
       Gen.choice
         [ do
             uprop <- sigGen @UPIREG (upienv st) (upistate st)
             tamperedUprop <- tamperWithUpdateProposal (upienv st) (upistate st) uprop
-            ublock <- sigGen @UBLOCK env st
             pure $! ublock { optionalUpdateProposal = Just tamperedUprop }
-        -- , do
-
+        , do
+            tamperedVotes <- tamperWithVotes (upienv st) (upistate st) (votes ublock)
+            pure $! ublock { votes = tamperedVotes }
         ]
