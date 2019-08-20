@@ -16,7 +16,7 @@ import           Updates
 
 import           Control.State.Transition
 import           Data.Maybe
-import           Ledger.Core (dom, (⊆), (⨃))
+import           Ledger.Core (dom, range, (⊆), (⨃))
 
 data AVUP hashAlgo dsignAlgo
 
@@ -56,15 +56,14 @@ avUpdateNoConsensus = do
 
   dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
 
-  all (all apNameValid . Map.keysSet . apps) (Map.elems _aup) ?! InvalidName
+  all allApNamesValid (range _aup) ?! InvalidName
 
-  all (\vote -> all (svCanFollow avs favs) (Map.toList $ apps vote)) (Map.elems _aup)
-    ?! CannotFollow
+  all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
 
   -- TODO - do we need system tags? if so, check them here
 
-  let aup'         = _aup ⨃ Map.toList aupS
-  let fav          = votedValue aup'
+  let aup' = _aup ⨃ Map.toList aupS
+  let fav  = votedValue aup'
 
   fav == Nothing ?! AVConsensus
 
@@ -79,15 +78,14 @@ avUpdateConsensus = do
 
   dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
 
-  all (all apNameValid . Map.keysSet . apps) (Map.elems _aup) ?! InvalidName
+  all allApNamesValid (range _aup) ?! InvalidName
 
-  all (\vote -> all (svCanFollow avs favs) (Map.toList $ apps vote)) (Map.elems _aup)
-    ?! CannotFollow
+  all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
 
   -- TODO - do we need system tags? if so, check them here
 
-  let aup'         = _aup ⨃ Map.toList aupS
-  let fav          = votedValue aup'
+  let aup' = _aup ⨃ Map.toList aupS
+  let fav  = votedValue aup'
 
   fav /= Nothing ?! NoAVConsensus
   let fav' = fromMaybe (Applications Map.empty) fav
@@ -99,3 +97,9 @@ avUpdateConsensus = do
     , favs ⨃ [(s, fav')]
     , avs
     )
+
+allApNamesValid :: Applications -> Bool
+allApNamesValid = all apNameValid . dom . apps
+
+allSvCanFollow_ :: Applications -> Favs -> Applications -> Bool
+allSvCanFollow_ avs favs = all (svCanFollow avs favs) . Map.toList . apps

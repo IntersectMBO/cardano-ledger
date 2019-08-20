@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module TxData
   where
@@ -15,8 +16,9 @@ import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeLis
 import           Lens.Micro.TH (makeLenses)
 
 import           Data.Foldable (toList)
-import           Data.Ord (comparing)
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Ord (comparing)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
@@ -25,7 +27,9 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, GenKeyHash, KeyHash, pattern KeyHash, Sig, VKey, VKeyGenesis, hashKey)
+import           Keys (DSIGNAlgorithm, GenKeyHash, Hash, HashAlgorithm, KeyHash, pattern KeyHash,
+                     Sig, VKey, VKeyGenesis, hashKey)
+import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
 import           Updates (Update)
 
@@ -378,6 +382,34 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   toCBOR rwdAcnt =
     encodeListLen 1
       <> toCBOR (getRwdHK rwdAcnt)
+
+instance Relation (StakeKeys hashAlgo dsignAlgo) where
+  type Domain (StakeKeys hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo
+  type Range (StakeKeys hashAlgo dsignAlgo)  = Slot
+
+  singleton k v = StakeKeys $ Map.singleton k v
+
+  dom (StakeKeys stKeys) = dom stKeys
+
+  range (StakeKeys stKeys) = range stKeys
+
+  s ◁ (StakeKeys stKeys) = StakeKeys $ s ◁ stKeys
+
+  s ⋪ (StakeKeys stKeys) = StakeKeys $ s ⋪ stKeys
+
+  (StakeKeys stKeys) ▷ s = StakeKeys $ stKeys ▷ s
+
+  (StakeKeys a) ∪ (StakeKeys b) = StakeKeys $ a ∪ b
+
+  (StakeKeys a) ⨃ b = StakeKeys $ a ⨃ b
+
+  vmax <=◁ (StakeKeys stKeys) = StakeKeys $ vmax <=◁ stKeys
+
+  (StakeKeys stKeys) ▷<= vmax = StakeKeys $ stKeys ▷<= vmax
+
+  (StakeKeys stKeys) ▷>= vmin = StakeKeys $ stKeys ▷>= vmin
+
+  size (StakeKeys stKeys) = size stKeys
 
 -- Lenses
 
