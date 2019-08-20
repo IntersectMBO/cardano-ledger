@@ -51,6 +51,10 @@ instance STS UTXO where
   type Environment UTXO = UTxOEnv
   type State UTXO = UTxOState
   type Signal UTXO = Tx
+
+  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
+  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
+  --   `False` cases.
   data PredicateFailure UTXO
     = EmptyTxInputs
     | EmptyTxOutputs

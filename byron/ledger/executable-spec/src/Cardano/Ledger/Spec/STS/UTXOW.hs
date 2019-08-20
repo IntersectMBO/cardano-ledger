@@ -32,6 +32,8 @@ instance STS UTXOW where
   type Environment UTXOW = UTxOEnv
   type State UTXOW = UTxOState
   type Signal UTXOW = TxWits
+
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure UTXOW
     = UtxoFailure (PredicateFailure UTXO)
     | InsufficientWitnesses
