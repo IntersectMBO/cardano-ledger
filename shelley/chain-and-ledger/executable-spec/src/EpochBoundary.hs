@@ -27,6 +27,7 @@ module EpochBoundary
   , poolRefunds
   , maxPool
   , groupByPool
+  , (⊎)
   ) where
 
 import           Coin (Coin (..))
@@ -60,6 +61,13 @@ newtype Stake hashAlgo dsignAlgo
   = Stake (Map.Map (StakeCredential hashAlgo dsignAlgo) Coin)
   deriving (Show, Eq, Ord)
 
+-- | Add two stake distributions
+(⊎)
+  :: Stake hashAlgo dsignAlgo
+  -> Stake hashAlgo dsignAlgo
+  -> Stake hashAlgo dsignAlgo
+(Stake lhs) ⊎ (Stake rhs) = Stake $ Map.unionWith (+) lhs rhs
+
 -- | Extract hash of staking key from base address.
 getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (StakeCredential hashAlgo dsignAlgo)
 getStakeHK (AddrBase _ hk) = Just hk
@@ -82,8 +90,8 @@ baseStake vals =
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr hashAlgo dsignAlgo -> Maybe Ptr
-getStakePtr (AddrPtr ptr) = Just ptr
-getStakePtr _             = Nothing
+getStakePtr (AddrPtr _ ptr) = Just ptr
+getStakePtr _               = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
 ptrStake
