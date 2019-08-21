@@ -265,6 +265,12 @@ class Relation m where
   (▷), (|>) :: Ord (Range m) => m -> Set (Range m) -> m
   s |> r = s ▷ r
 
+  -- | Range exclusion
+  --
+  -- Unicode: 22eb
+  (⋫), (|/>) :: Ord (Range m) => m -> Set (Range m) -> m
+  s |/> r = s ⋫ r
+
   -- | Union
   (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
 
@@ -322,6 +328,8 @@ instance (Ord k, Ord v) => Relation (Bimap k v) where
 
   r ▷ s = Bimap.filter (\_ v -> Set.member v s) r
 
+  r ⋫ s = Bimap.filter (\_ v -> Set.notMember v s) r
+
   d0 ∪ d1 = Bimap.fold Bimap.insert d0 d1
   d0 ⨃ d1 = foldr (uncurry Bimap.insert) d0 (toList d1)
 
@@ -347,6 +355,8 @@ instance Relation (Map k v) where
   s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` toSet s) r
 
   r ▷ s = Map.filter (flip Set.member s) r
+
+  r ⋫ s = Map.filter (flip Set.notMember s) r
 
   d0 ∪ d1 = Map.union d0 d1
   -- For union override we pass @d1@ as first argument, since 'Map.union' is
@@ -381,6 +391,8 @@ instance Relation (Set (a, b)) where
 
   r ▷ s = Set.filter (\(_,v) -> Set.member v s) r
 
+  r ⋫ s = Set.filter (\(_,v) -> Set.notMember v s) r
+
   (∪) = Set.union
 
   d0 ⨃ d1 = d1' ∪ ((dom d1') ⋪ d0)
@@ -410,6 +422,8 @@ instance Relation [(a, b)] where
   s ⋪ r = filter ((`Set.notMember` toSet s) . fst) r
 
   r ▷ s = filter ((`Set.member` toSet s) . snd) r
+
+  r ⋫ s = filter ((`Set.notMember` toSet s) . snd) r
 
   (∪) = (++)
 

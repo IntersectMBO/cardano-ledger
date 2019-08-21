@@ -54,7 +54,7 @@ instance
     | InputSetEmptyUTxO
     | FeeTooSmallUTxO Coin Coin
     | ValueNotConservedUTxO Coin Coin
-    | NonPositiveOutputsUTxO
+    | NegativeOutputsUTxO
     | UnexpectedFailureUTXO [ValidationError] -- TODO maybe restructure Validity
                                               -- to prevent these predicate
                                               -- failures?
@@ -95,7 +95,7 @@ utxoInductive = do
   ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC ((slot_, pp, dms_), u ^. ups, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
-  all (0<) outputCoins ?! NonPositiveOutputsUTxO
+  all (0 <=) outputCoins ?! NegativeOutputsUTxO
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize txBody
@@ -107,12 +107,12 @@ utxoInductive = do
 
       depositChange = deposits pp stakePools txCerts - (refunded + decayed)
 
-  pure $ UTxOState
-          { _utxo      = (txins txBody ⋪ (u ^. utxo)) ∪ txouts txBody
-          , _deposited = _deposited u + depositChange
-          , _fees      = _fees u + (txBody ^. txfee) + decayed
-          , _ups       = ups'
-          }
+  pure UTxOState
+        { _utxo      = (txins txBody ⋪ (u ^. utxo)) ∪ txouts txBody
+        , _deposited = _deposited u + depositChange
+        , _fees      = _fees u + (txBody ^. txfee) + decayed
+        , _ups       = ups'
+        }
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
