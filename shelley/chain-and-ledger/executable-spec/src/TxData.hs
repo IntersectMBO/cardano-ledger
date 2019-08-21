@@ -72,7 +72,8 @@ data Addr hashAlgo dsignAlgo
   | AddrEnterprise
     { _enterprisePayment :: Credential hashAlgo dsignAlgo }
   | AddrPtr
-      { _stakePtr :: Ptr
+      { _paymentObjP :: Credential hashAlgo dsignAlgo
+      , _stakePtr :: Ptr
       }
   deriving (Show, Eq, Ord)
 
@@ -343,9 +344,10 @@ instance
       encodeListLen 2
         <> toCBOR (1 :: Word8)
         <> toCBOR pay
-    AddrPtr stakePtr ->
-      encodeListLen 2
+    AddrPtr pay stakePtr ->
+      encodeListLen 3
         <> toCBOR (2 :: Word8)
+        <> toCBOR pay
         <> toCBOR stakePtr
 
 instance ToCBOR Ptr where

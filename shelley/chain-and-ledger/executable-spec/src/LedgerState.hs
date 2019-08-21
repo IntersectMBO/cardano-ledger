@@ -125,14 +125,15 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Numeric.Natural (Natural)
 
-import           Lens.Micro ((%~), (&), (.~), (^.), to)
+import           Lens.Micro (to, (%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 
 import           Coin (Coin (..))
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), baseStake, consolidate,
-                     emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake, rewardStake)
-import           Keys (KeyDiscriminator(..), DSIGNAlgorithm, Dms (..), HashAlgorithm, AnyKeyHash, KeyHash, GenKeyHash, KeyPair, Signable,
-                       hash, hashKey, undiscriminateKeyHash)
+                     emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake, rewardStake, (⊎))
+import           Keys (AnyKeyHash, DSIGNAlgorithm, Dms (..), GenKeyHash, HashAlgorithm,
+                     KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash, hashKey,
+                     undiscriminateKeyHash)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
                      keyMinRefund, minfeeA, minfeeB)
 import           Slot (Duration (..), Epoch (..), Slot (..), epochFromSlot, firstSlot,
@@ -967,7 +968,7 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
       return (pool, c)
     addStake _ (TxOut (AddrBase _ _) _) = undefined -- TODO: script addresses
     addStake _ (TxOut (AddrEnterprise _) _) = undefined -- TODO: script addresses
-    addStake delegs (TxOut (AddrPtr ptr) c) = do
+    addStake delegs (TxOut (AddrPtr _ ptr) c) = do
       key  <- Map.lookup ptr $ ds ^. dstate . ptrs
       pool <- Map.lookup key delegs
       return (pool, c)
@@ -1101,10 +1102,7 @@ stakeDistr u ds ps = (Stake $ Map.keysSet activeDelegs ◁ stake, delegs)
       DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
       PState (StakePools stpools) _ _ _                   = ps
       outs = consolidate u
-      stake = baseStake' `Map.union` pointerStake `Map.union` rewardStake'
-      Stake baseStake'   = baseStake outs
-      Stake pointerStake = ptrStake outs ptrs'
-      Stake rewardStake' = rewardStake rewards'
+      Stake stake = baseStake outs ⊎ ptrStake outs ptrs' ⊎ rewardStake rewards'
       activeDelegs       = Map.keysSet stkeys ◁ delegs ▷ Map.keysSet stpools
 
 -- | Apply a reward update
