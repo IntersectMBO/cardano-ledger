@@ -26,6 +26,7 @@ library
   exposed-modules:     Hedgehog.Gen.Aux
                      , Ledger.Core
                      , Ledger.Core.Generators
+                     , Ledger.Core.Unsafe
                      , Ledger.Delegation
                      , Ledger.GlobalParams
                      , Ledger.Update

@@ -57,10 +57,11 @@ import           Control.State.Transition.Generator (HasTrace, SignalGenerator, 
 import           Data.AbstractSize (HasTypeReps)
 
 import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
-                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash, skey, (*.),
-                     (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
+                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash, (*.), (-.),
+                     (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
+import           Ledger.Core.Unsafe (skey)
 import qualified Ledger.GlobalParams as GP
 import           Ledger.Util (mkGoblinGens)
 

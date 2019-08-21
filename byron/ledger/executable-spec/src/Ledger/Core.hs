@@ -103,8 +103,6 @@ mkVkGenesisSet
   -> Set VKeyGenesis
 mkVkGenesisSet ngk = Set.fromAscList $ mkVKeyGenesis <$> [0 .. (fromIntegral ngk - 1)]
 
-signWithGenesisKey :: VKeyGenesis -> a -> Sig a
-signWithGenesisKey vkg = sign (skey (unVKeyGenesis vkg))
 
 -- |Key Pair.
 data KeyPair = KeyPair
@@ -118,12 +116,6 @@ instance HasTypeReps KeyPair
 keyPair :: Owner -> KeyPair
 keyPair o = KeyPair (SKey o) (VKey o)
 
--- | Get the signing key from the verification key. We use this in the
--- generators, where we need to generate signed data for a given verification
--- key (e.g. one that appears in the delegation map) for which we don't have
--- the signing key.
-skey :: VKey -> SKey
-skey = SKey . owner
 
 -- |A digital signature.
 data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable)
