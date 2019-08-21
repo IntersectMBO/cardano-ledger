@@ -160,8 +160,6 @@ registerProposalComponents
   -> AProposal ByteString
   -> m State
 registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
-  -- Check that the 'SystemTag's in the metadata are valid
-  mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
 
   -- Register protocol update if we have one
   registeredPUPs' <- if protocolVersionChanged
@@ -179,7 +177,6 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
     { protocolVersion
     , protocolParametersUpdate = ppu
     , softwareVersion
-    , metadata
     } = Proposal.body proposal
 
   SoftwareVersion appName appVersion = softwareVersion
@@ -304,6 +301,9 @@ registerSoftwareUpdate
   -> m SoftwareUpdateProposals
 registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
+  -- Check that the 'SystemTag's in the metadata are valid
+  mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
+
   -- Check that this software version isn't already registered
   null (M.filter (== softwareVersion) registeredSUPs)
     `orThrowError` DuplicateSoftwareVersion softwareVersion
@@ -317,7 +317,7 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
   -- Add to the list of registered software update proposals
   pure $ M.insert (recoverUpId proposal) softwareVersion registeredSUPs
-  where ProposalBody { softwareVersion } = Proposal.body proposal
+  where ProposalBody { softwareVersion, metadata } = Proposal.body proposal
 
 
 -- | Check that a new 'SoftwareVersion' is a valid next version

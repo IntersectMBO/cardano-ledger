@@ -28,11 +28,12 @@ import qualified Cardano.Chain.Update as Concrete
 import qualified Cardano.Chain.Update.Proposal as Proposal
 
 import Ledger.Core (unSlotCount)
+import Ledger.Core.Omniscient (signatureVKey, signatureData)
 import qualified Ledger.Update as Abstract
 import qualified Ledger.GlobalParams as GP
 
 
-import Test.Cardano.Chain.Elaboration.Keys (vKeyToSafeSigner)
+import Test.Cardano.Chain.Elaboration.Keys (elaborateVKey, vKeyToSafeSigner)
 import Test.Cardano.Chain.Genesis.Dummy (dummyProtocolParameters)
 
 elaboratePParams :: Abstract.PParams -> Concrete.ProtocolParameters
@@ -119,34 +120,63 @@ elaborateUpdateProposal
   -> Abstract.UProp
   -> Concrete.AProposal ()
 elaborateUpdateProposal protocolMagicId abstractProposal =
-  Concrete.signProposal
-    protocolMagicId
+  Concrete.unsafeProposal
     body
-    safeSigner
+    issuer
+    proposalSignature
   where
     body = elaborateProposalBody abstractProposal
-    safeSigner = vKeyToSafeSigner $ Abstract._upIssuer abstractProposal
+    issuer = elaborateVKey $ Abstract._upIssuer abstractProposal
+    signer = signatureVKey $ Abstract._upSig abstractProposal
+    signedProposalBody
+      = elaborateUpSD
+      $ signatureData
+      $ Abstract._upSig abstractProposal
+    -- To elaborate the signature, we extract the signer and the (abstract)
+    -- data that was signed from the signature of the abstract proposal. We
+    -- cannot simply sign the concrete proposal data, since the abstract signed
+    -- data might differ from the data in the certificate (for instance due to
+    -- invalid data generation).
+    --
+    proposalSignature =
+      Concrete.signatureForProposal
+        protocolMagicId
+        signedProposalBody
+        safeSigner
+    safeSigner = vKeyToSafeSigner signer
+
 
 elaborateProposalBody
   :: Abstract.UProp
   -> Concrete.ProposalBody
-elaborateProposalBody proposal =
+elaborateProposalBody = elaborateUpSD . Abstract.getUpSigData
+
+
+elaborateUpSD :: Abstract.UpSD -> Concrete.ProposalBody
+elaborateUpSD ( protocolVersion
+              , protocolParameters
+              , softwareVersion
+              , systemTags
+              , _metadata) =
   Proposal.ProposalBody
   { Proposal.protocolVersion =
-      elaborateProtocolVersion $ Abstract._upPV proposal
+      elaborateProtocolVersion protocolVersion
   , Proposal.protocolParametersUpdate =
-      justifyProtocolParameters $ elaboratePParams $ Abstract._upParams proposal
+      justifyProtocolParameters $ elaboratePParams protocolParameters
   , Proposal.softwareVersion =
-      elaborateSoftwareVersion $ Abstract._upSwVer proposal
+      elaborateSoftwareVersion softwareVersion
   , Proposal.metadata =
-      Map.fromList $ zip systemTags systemHashes
+      Map.fromList $ zip concreteSystemTags concreteSystemHashes
   }
   where
-    systemTags = fmap elaborateSystemTag $ Set.toList $ Abstract._upSTags proposal
+    concreteSystemTags =
+      fmap elaborateSystemTag $ Set.toList systemTags
     -- TODO: we might need different hashes here, which means that either the
     -- elaborators should be able to generate random data, or the abstract
     -- update payload should include (an abstract version of) these hashes.
-    systemHashes = repeat $ Concrete.InstallerHash $ coerce $ H.hash ("" :: ByteString)
+    concreteSystemHashes =
+      repeat $ Concrete.InstallerHash $ coerce $ H.hash ("" :: ByteString)
+
 
 -- | Convert a 'ProtocolParameters' value to a 'ProtocolParametersUpdate'
 --

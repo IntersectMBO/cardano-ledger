@@ -16,8 +16,9 @@ module Cardano.Chain.Update.Proposal
   , UpId
 
   -- * Proposal Constructors
-  , mkProposal
+  , unsafeProposal
   , signProposal
+  , signatureForProposal
 
   -- * Proposal Accessors
   , body
@@ -95,12 +96,28 @@ type Proposal = AProposal ()
 -- Proposal Constructors
 --------------------------------------------------------------------------------
 
-mkProposal :: ProposalBody -> VerificationKey -> Signature ProposalBody -> Proposal
-mkProposal b k s = AProposal (Annotated b ()) k s ()
 
+-- | Create an update 'Proposal', signing it with the provided safe signer.
 signProposal :: ProtocolMagicId -> ProposalBody -> SafeSigner -> Proposal
-signProposal pm pb ss = mkProposal pb (safeToVerification ss) sig
-  where sig = safeSign pm SignUSProposal ss pb
+signProposal protocolMagicId proposalBody safeSigner =
+  unsafeProposal
+    proposalBody
+    (safeToVerification safeSigner)
+    (signatureForProposal protocolMagicId proposalBody safeSigner)
+
+
+signatureForProposal
+  :: ProtocolMagicId
+  -> ProposalBody
+  -> SafeSigner
+  -> Signature ProposalBody
+signatureForProposal protocolMagicId proposalBody safeSigner =
+  safeSign protocolMagicId SignUSProposal safeSigner proposalBody
+
+
+-- | Create an update 'Proposal' using the provided signature.
+unsafeProposal :: ProposalBody -> VerificationKey -> Signature ProposalBody -> Proposal
+unsafeProposal b k s = AProposal (Annotated b ()) k s ()
 
 
 --------------------------------------------------------------------------------

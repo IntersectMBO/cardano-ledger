@@ -41,7 +41,7 @@ import Cardano.Chain.Block
   , mkHeaderExplicit
   )
 import Cardano.Chain.Common (KeyHash, BlockCount)
-import Cardano.Chain.Delegation (mkCertificate)
+import Cardano.Chain.Delegation (signCertificate)
 import Cardano.Chain.Genesis (GenesisHash(..))
 import Cardano.Chain.Slotting
   (EpochNumber(..), EpochSlots, WithEpochSlots(WithEpochSlots))
@@ -81,7 +81,7 @@ genBlockSignature pm epochSlots =
   mkBlockSignature issuerSafeSigner delegateSK epoch toSign =
     let
       cert =
-        mkCertificate pm issuerSafeSigner (toVerification delegateSK) epoch
+        signCertificate pm (toVerification delegateSK) epoch issuerSafeSigner
       issuerVK = safeToVerification issuerSafeSigner
       sig      = sign pm (SignBlock issuerVK) delegateSK toSign
     in ABlockSignature cert sig
@@ -123,11 +123,11 @@ genHeader protocolMagicId epochSlots =
         epochSlots
         slotNumber
         signingKey
-        (mkCertificate
+        (signCertificate
           protocolMagicId
-          (noPassSafeSigner signingKey)
           (toVerification signingKey)
           (EpochNumber 0)
+          (noPassSafeSigner signingKey)
         )
         body
         protocolVersion
@@ -197,16 +197,16 @@ genBlock protocolMagicId epochSlots =
         epochSlots
         slotNumber
         signingKey
-        (mkCertificate
+        (signCertificate
           protocolMagicId
-          (noPassSafeSigner signingKey)
           (toVerification signingKey)
           (EpochNumber 0)
+          (noPassSafeSigner signingKey)
         )
         body
 
 genBoundaryBlock :: Gen (ABoundaryBlock ())
-genBoundaryBlock = 
+genBoundaryBlock =
   ABoundaryBlock
     <$> pure 0
     <*> genBoundaryHeader

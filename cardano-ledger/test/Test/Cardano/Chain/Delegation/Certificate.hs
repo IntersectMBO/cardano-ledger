@@ -15,7 +15,7 @@ import qualified Hedgehog.Gen as Gen
 
 import Cardano.Binary (decodeFull, serialize, slice)
 import Cardano.Chain.Delegation
-  (ACertificate(delegateVK), Certificate, isValid, mkCertificate)
+  (ACertificate(delegateVK), Certificate, isValid, signCertificate)
 
 import Test.Cardano.Chain.Slotting.Gen (genEpochNumber)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
@@ -33,15 +33,15 @@ tests = $$discover
 -- Certificate Properties
 --------------------------------------------------------------------------------
 
--- | Can validate 'Certificate's produced by 'mkCertificate'
+-- | Can validate 'Certificate's produced by 'signCertificate'
 prop_certificateCorrect :: Property
 prop_certificateCorrect = property $ do
   cert <-
     forAll
-    $   mkCertificate Dummy.protocolMagicId
-    <$> genSafeSigner
-    <*> genVerificationKey
+    $   signCertificate Dummy.protocolMagicId
+    <$> genVerificationKey
     <*> genEpochNumber
+    <*> genSafeSigner
 
   let aCert = annotateCert cert
 
@@ -52,10 +52,10 @@ prop_certificateIncorrect :: Property
 prop_certificateIncorrect = property $ do
   cert <-
     forAll
-    $   mkCertificate Dummy.protocolMagicId
-    <$> genSafeSigner
-    <*> genVerificationKey
+    $   signCertificate Dummy.protocolMagicId
+    <$> genVerificationKey
     <*> genEpochNumber
+    <*> genSafeSigner
   badDelegateVK <- forAll $ Gen.filter (/= delegateVK cert) genVerificationKey
 
   let

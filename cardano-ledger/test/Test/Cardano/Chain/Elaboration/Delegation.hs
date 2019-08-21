@@ -84,11 +84,11 @@ ts_prop_elaboratedCertsValid =
 
 
 elaborateDCert :: ProtocolMagicId -> DCert -> Concrete.Certificate
-elaborateDCert pm cert = Concrete.mkCertificate
+elaborateDCert pm cert = Concrete.signCertificate
   pm
-  (noPassSafeSigner delegatorSK)
   delegateVK
   epochNo
+  (noPassSafeSigner delegatorSK)
  where
   VKeyGenesis delegatorVKey = delegator cert
   (_         , delegatorSK) = elaborateKeyPair $ vKeyPair delegatorVKey

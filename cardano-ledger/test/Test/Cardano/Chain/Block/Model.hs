@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE OverloadedLists  #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeApplications #-}
@@ -63,7 +64,7 @@ import Cardano.Spec.Chain.STS.Rule.Chain
   )
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace, SignalGenerator)
+import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace, SignalGenerator, sigGen)
 import Control.State.Transition (State)
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
@@ -79,11 +80,14 @@ import qualified Ledger.Core as AbstractCore
 import Ledger.Delegation
   ( DSEnv (DSEnv)
   , _dSEnvAllowedDelegators
+  , _dIStateDelegationMap
   , _dSEnvEpoch
   , _dSEnvK
   , _dSEnvSlot
   , randomDCertGen
   )
+import Ledger.Update (tamperWithUpdateProposal, UPIREG)
+import qualified Ledger.Update.Test as Update.Test
 
 import Test.Cardano.Chain.Elaboration.Block
   ( AbstractToConcreteIdMaps
@@ -158,9 +162,9 @@ classifyTransactions =
     . traceSignals NewestFirst
 
 
-ts_prop_invalidDelegationSignalsAreRejected :: TSProperty
-ts_prop_invalidDelegationSignalsAreRejected =
-  withTestsTS 300  $ property $ do
+ts_prop_invalidBlocksAreRejected :: TSProperty
+ts_prop_invalidBlocksAreRejected =
+  withTestsTS 400  $ property $ do
     let traceLength = 100 :: Word64
     tr <- forAll $ invalidTrace @CHAIN traceLength failureProfile
     let ValidationOutput { elaboratedConfig, result }
@@ -182,7 +186,7 @@ ts_prop_invalidDelegationSignalsAreRejected =
             -- Success: it is possible that the invalid signals generator
             -- produces a valid signal, since the generator is probabilistic.
             pure ()
-          (Left _, Left _) ->
+          (Left pfs, Left _) -> do
             -- Success: both the model and the concrete implementation failed
             -- to validate the signal.
             --
@@ -196,15 +200,21 @@ ts_prop_invalidDelegationSignalsAreRejected =
             -- sure that the invalid generators cover a good deal of abstract
             -- errors permutations. So for instance, given abstract errors @X@,
             -- @Y@, and @Z@, we would want to generate all combinations of them.
+            Update.Test.coverUpiregFailures 1 pfs
             pure ()
           (abstractResult, concreteResult) -> do
             footnote "Validation results mismatch."
+            footnote $ "Signal: " ++ show block
             footnote $ "Abstract result: " ++ show abstractResult
             footnote $ "Concrete result: " ++ show concreteResult
             failure
   where
     failureProfile :: [(Int, SignalGenerator CHAIN)]
-    failureProfile = [(1, invalidDelegationGen)]
+    failureProfile = [ (1, invalidDelegationGen)
+                     , (1, invalidUpdateProposalGen)
+                     -- TODO: coming soon
+                     -- , (1, invalidVotesGen)
+                     ]
       where
         invalidDelegationGen :: SignalGenerator CHAIN
         invalidDelegationGen env@(sn, _, allowedDelegators, _, k) st =
@@ -227,6 +237,30 @@ ts_prop_invalidDelegationSignalsAreRejected =
                     , _dSEnvK = k
                     }
                   )
+
+
+        invalidUpdateProposalGen :: SignalGenerator CHAIN
+        invalidUpdateProposalGen env@(_, _, allowedDelegators, _, k) st = do
+          block <- sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
+          let (_slot, _sgs, _h, _utxoSt, delegSt, upiSt) = st
+              numberOfDelegators = Set.size allowedDelegators
+              -- TODO: reduce duplication w.r.t. @Cardano.Spec.Chain.STS.Rule.Chain@ in @cardano-ledger-specs@.
+              ngk
+                | fromIntegral (maxBound :: Word8) < numberOfDelegators =
+                  panic $ "ts_prop_invalidDelegationSignalsAreRejected: "
+                        <> "too many genesis keys: "
+                        <> show numberOfDelegators
+                | otherwise = fromIntegral numberOfDelegators
+              blockSlot = Abstract._bhSlot (Abstract._bHeader block)
+              upiEnv = (blockSlot, _dIStateDelegationMap delegSt, k, ngk)
+          uprop <- sigGen @UPIREG upiEnv upiSt
+          tamperedUprop <- tamperWithUpdateProposal upiEnv upiSt uprop
+          pure $! Abstract.updateBody
+                    block
+                    (\body -> body { Abstract._bUpdProp = Just tamperedUprop })
+
+        -- invalidVotesGen :: SignalGenerator CHAIN
+        -- invalidVotesGen = undefined
 
 
 -- | Output resulting from elaborating and validating an abstract trace with
