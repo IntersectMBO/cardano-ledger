@@ -15,6 +15,7 @@ module Examples
   , ex2G
   , ex2H
   , ex2I
+  , ex2J
   , ex3A
   , ex3B
   , ex3C
@@ -58,8 +59,8 @@ import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, (⭒))
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof,
                      ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
 import           Coin (Coin (..))
-import           Delegation.Certificates (pattern Delegate, pattern PoolDistr, pattern RegKey,
-                     pattern RegPool)
+import           Delegation.Certificates (pattern DeRegKey, pattern Delegate, pattern PoolDistr,
+                     pattern RegKey, pattern RegPool)
 import           EpochBoundary (BlocksMade (..), pattern Stake, emptySnapShots, _feeSS, _poolsSS,
                      _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
@@ -516,8 +517,7 @@ ex2A :: CHAINExample
 ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A expectedStEx2A
 
 
--- | Example 2B - continuing on after example 2, process a block late enough
--- in the epoch in order to create a reward update.
+-- | Example 2B - process a block late enough in the epoch in order to create a reward update.
 -- The block delegates Alice's and Bob's stake to Alice's pool.
 
 txbodyEx2B :: TxBody
@@ -614,7 +614,7 @@ expectedStEx2Bquater = expectedStEx2Bgeneric ppsExInstantDecay
 ex2B :: CHAINExample
 ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B expectedStEx2B
 
--- | Example 2C - continuing on after example 3, process an empty block in the next epoch
+-- | Example 2C - process an empty block in the next epoch
 -- so that the (empty) reward update is applied and a stake snapshot is made.
 
 
@@ -729,7 +729,7 @@ ex2Cquater =
   CHAINExample (Slot 110) expectedStEx2Bquater blockEx2C expectedStEx2Cquater
 
 
--- | Example 2D - continuing on after example 4, process an empty block late enough
+-- | Example 2D - process an empty block late enough
 -- in the epoch in order to create a second reward update, preparing the way for
 -- the first non-empty pool distribution in this running example.
 
@@ -773,7 +773,7 @@ ex2D :: CHAINExample
 ex2D = CHAINExample (Slot 190) expectedStEx2C blockEx2D expectedStEx2D
 
 
--- | Example 2E - continuing on after example 5, create the first non-empty pool distribution
+-- | Example 2E - create the first non-empty pool distribution
 -- by creating a block in the third epoch of this running example.
 
 
@@ -845,8 +845,7 @@ ex2E :: CHAINExample
 ex2E = CHAINExample (Slot 220) expectedStEx2D blockEx2E expectedStEx2E
 
 
--- | Example 2F - continuing on after example 6, create a decentralized Praos block
--- (ie one not in the overlay schedule)
+-- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
 
 
 blockEx2F :: Block
@@ -891,7 +890,7 @@ ex2F :: CHAINExample
 ex2F = CHAINExample (Slot 295) expectedStEx2E blockEx2F expectedStEx2F
 
 
--- | Example 2G - continuing on after example 7, create an empty block in the next epoch
+-- | Example 2G - create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
 
 
@@ -951,7 +950,7 @@ ex2G :: CHAINExample
 ex2G = CHAINExample (Slot 310) expectedStEx2F blockEx2G expectedStEx2G
 
 
--- | Example 2H - continuing on after example 8, create the first non-trivial reward update
+-- | Example 2H - create the first non-trivial reward update
 
 
 blockEx2H :: Block
@@ -997,7 +996,7 @@ ex2H :: CHAINExample
 ex2H = CHAINExample (Slot 390) expectedStEx2G blockEx2H expectedStEx2H
 
 
--- | Example 2I - continuing on after example 9, apply the first non-trivial reward update
+-- | Example 2I - apply the first non-trivial reward update
 
 
 blockEx2I :: Block
@@ -1061,14 +1060,100 @@ ex2I :: CHAINExample
 ex2I = CHAINExample (Slot 410) expectedStEx2H blockEx2I expectedStEx2I
 
 
+-- | Example 2J - drain reward account and de-register stake key
+
+aliceAda2J :: Coin
+aliceAda2J = Coin 82593524514 -- reward account
+                   + 9729 -- txin we will consume (must spend at least one)
+                   + 4 -- stake registration refund
+                   - 9 -- tx fee
+
+txbodyEx2J :: TxBody
+txbodyEx2J = TxBody
+           (Set.fromList [TxIn (txid txbodyEx2B) 0]) --
+           [TxOut aliceAddr aliceAda2J]
+           (fromList [DeRegKey aliceSHK])
+           (Map.singleton (RewardAcnt aliceSHK) (Coin 82593524514))
+           (Coin 9)
+           (Slot 500)
+           emptyUpdate
+
+txEx2J :: Tx
+txEx2J = Tx
+          txbodyEx2J
+          (makeWitnessesVKey txbodyEx2J [alicePay, aliceStake])
+          Map.empty
+
+blockEx2J :: Block
+blockEx2J = mkBlock
+              blockEx2IHash
+              (coreNodeKeys 3)
+              [txEx2J]
+              (Slot 420)
+              (mkSeqNonce 7)
+              (Nonce 10)
+              zero
+              4
+
+blockEx2JHash :: Maybe HashHeader
+blockEx2JHash = Just (bhHash (bheader blockEx2J))
+
+utxoEx2J :: UTxO
+utxoEx2J = UTxO . Map.fromList $
+                   [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+                   , (TxIn (txid txbodyEx2J) 0, TxOut aliceAddr aliceAda2J)
+                   ]
+
+dsEx2J :: DState
+dsEx2J = dsEx1
+          { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 1, bobSHK) ]
+          , _stKeys = StakeKeys $ Map.singleton bobSHK (Slot 10)
+          , _delegations = Map.singleton bobSHK (hk alicePool)
+          , _rewards = Map.singleton (RewardAcnt bobSHK) (Coin 730001159951)
+          }
+
+expectedLSEx2J :: LedgerState
+expectedLSEx2J = LedgerState
+               (UTxOState
+                 utxoEx2J
+                 (Coin 219 - 4)
+                 (Coin 18)
+                 usEx2A)
+               (DPState dsEx2J psEx2A)
+               0
+
+expectedStEx2J :: ChainState
+expectedStEx2J =
+  ( NewEpochState
+      (Epoch 4)
+      (mkSeqNonce 7)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2I (snapsEx2G { _feeSS = Coin 9 }) expectedLSEx2J ppsEx1)
+      Nothing
+      pdEx2F
+      epoch1OSchedEx2I
+  , mkSeqNonce 10
+  , mkSeqNonce 10
+  , blockEx2JHash
+  , Slot 420
+  )
+
+ex2J :: CHAINExample
+ex2J = CHAINExample (Slot 420) expectedStEx2I blockEx2J expectedStEx2J
+
+
 -- | Example 3A - Setting up for a successful protocol parameter update,
 -- have three genesis keys vote on the same new parameters
 
 
+ppVote3A :: Set.Set Ppm
+ppVote3A = Set.fromList [ExtraEntropy (Nonce 123), PoolDeposit 200]
+
 ppupEx3A :: PPUpdate
-ppupEx3A = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, Set.singleton (PoolDeposit 200))
-                                   , (hashKey $ coreNodeVKG 3, Set.singleton (PoolDeposit 200))
-                                   , (hashKey $ coreNodeVKG 4, Set.singleton (PoolDeposit 200))
+ppupEx3A = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, ppVote3A)
+                                   , (hashKey $ coreNodeVKG 3, ppVote3A)
+                                   , (hashKey $ coreNodeVKG 4, ppVote3A)
                                    ]
 
 updateEx3A :: Update
@@ -1158,8 +1243,8 @@ ex3A = CHAINExample (Slot 10) initStEx2A blockEx3A expectedStEx3A
 
 
 ppupEx3B :: PPUpdate
-ppupEx3B = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, Set.singleton (PoolDeposit 200))
-                                   , (hashKey $ coreNodeVKG 5, Set.singleton (PoolDeposit 200))
+ppupEx3B = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, ppVote3A)
+                                   , (hashKey $ coreNodeVKG 5, ppVote3A)
                                    ]
 
 updateEx3B :: Update
@@ -1286,12 +1371,13 @@ expectedLSEx3C = LedgerState
 
 ppsEx3C :: PParams
 ppsEx3C = ppsEx1 { _poolDeposit = Coin 200 }
+-- Note that _extraEntropy is still NeutralSeed
 
 expectedStEx3C :: ChainState
 expectedStEx3C =
   ( NewEpochState
       (Epoch 1)
-      (mkSeqNonce 2)
+      (mkSeqNonce 2 ⭒ Nonce 123)
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx3C)

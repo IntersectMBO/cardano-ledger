@@ -44,8 +44,8 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Coin (Coin (..))
-import           Keys (KeyDiscriminator(..), DSIGNAlgorithm, HashAlgorithm, KeyPair, Signable, hash, hashKey, sKey, sign,
-                     vKey, verify)
+import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyDiscriminator (..), KeyPair, Signable,
+                     hash, hashKey, sKey, sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
@@ -75,6 +75,8 @@ instance Relation (UTxO hashAlgo dsignAlgo) where
   s ⋪ (UTxO utxo) = UTxO $ s ⋪ utxo
 
   (UTxO utxo) ▷ s = UTxO $ utxo ▷ s
+
+  (UTxO utxo) ⋫ s = UTxO $ utxo ⋫ s
 
   (UTxO a) ∪ (UTxO b) = UTxO $ a ∪ b
 
