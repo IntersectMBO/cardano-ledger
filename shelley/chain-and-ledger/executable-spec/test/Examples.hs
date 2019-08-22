@@ -16,6 +16,8 @@ module Examples
   , ex2H
   , ex2I
   , ex2J
+  , ex2K
+  , ex2L
   , ex3A
   , ex3B
   , ex3C
@@ -60,17 +62,17 @@ import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pat
                      ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate, pattern PoolDistr,
-                     pattern RegKey, pattern RegPool)
-import           EpochBoundary (BlocksMade (..), pattern Stake, emptySnapShots, _feeSS, _poolsSS,
-                     _pstakeGo, _pstakeMark, _pstakeSet)
+                     pattern RegKey, pattern RegPool, pattern RetirePool)
+import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
+                     _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
                      pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
                      emptyPState, genesisCoins, genesisId, overlaySchedule, rs, _cCounters,
-                     _delegations, _dms, _pParams, _ptrs, _reserves, _rewards, _stKeys, _stPools,
-                     _treasury)
+                     _delegations, _dms, _pParams, _ptrs, _reserves, _retiring, _rewards, _stKeys,
+                     _stPools, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
@@ -282,6 +284,7 @@ ppsEx1 :: PParams
 ppsEx1 = emptyPParams { _maxBBSize = 50000
                    , _maxBHSize = 10000
                    , _maxTxSize = 10000
+                   , _eMax = Epoch 10000
                    , _keyDeposit = Coin 7
                    , _poolDeposit = Coin 250
                    , _d = unsafeMkUnitInterval 0.5
@@ -1163,6 +1166,154 @@ expectedStEx2J =
 
 ex2J :: CHAINExample
 ex2J = CHAINExample (Slot 420) expectedStEx2I blockEx2J expectedStEx2J
+
+
+-- | Example 2K - start stake pool retirement
+
+
+txbodyEx2K :: TxBody
+txbodyEx2K = TxBody
+           (Set.fromList [TxIn (txid txbodyEx2B) 0])
+           [TxOut alicePtrAddr 727]
+           (fromList [RetirePool (hk alicePool) (Epoch 5)])
+           Map.empty
+           (Coin 2)
+           (Slot 500)
+           emptyUpdate
+
+txEx2K :: Tx
+txEx2K = Tx
+          txbodyEx2K
+          (makeWitnessesVKey txbodyEx2K [cold alicePool, alicePay])
+          Map.empty
+
+blockEx2K :: Block
+blockEx2K = mkBlock
+              blockEx2JHash
+              (coreNodeKeys 3)
+              [txEx2K]
+              (Slot 490)
+              (mkSeqNonce 7)
+              (Nonce 11)
+              zero
+              5
+
+blockEx2KHash :: Maybe HashHeader
+blockEx2KHash = Just (bhHash (bheader blockEx2K))
+
+utxoEx2K :: UTxO
+utxoEx2K = UTxO . Map.fromList $
+                   [ (TxIn (txid txbodyEx2J) 0, TxOut bobAddr bobAda2J)
+                   , (TxIn (txid txbodyEx2K) 0, TxOut alicePtrAddr (Coin 727))
+                   , (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr (Coin 9000))
+                   ]
+
+psEx2K :: PState
+psEx2K = psEx2A { _retiring = Map.singleton (hk alicePool) (Epoch 5) }
+
+expectedLSEx2K :: LedgerState
+expectedLSEx2K = LedgerState
+               (UTxOState
+                 utxoEx2K
+                 (Coin 215)
+                 (Coin 20)
+                 usEx2A)
+               (DPState dsEx2J psEx2K)
+               0
+
+
+expectedStEx2K :: ChainState
+expectedStEx2K =
+  ( NewEpochState
+      (Epoch 4)
+      (mkSeqNonce 7)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1)
+      (Just RewardUpdate { deltaT = Coin 9
+                         , deltaR = Coin 0
+                         , rs = Map.empty
+                         , deltaF = Coin (-9)
+                         })
+      pdEx2F
+      epoch1OSchedEx2I
+  , mkSeqNonce 11
+  , mkSeqNonce 10
+  , blockEx2KHash
+  , Slot 490
+  )
+
+ex2K :: CHAINExample
+ex2K = CHAINExample (Slot 490) expectedStEx2J blockEx2K expectedStEx2K
+
+
+-- | Example 2L - reap a stake pool
+
+
+blockEx2L :: Block
+blockEx2L = mkBlock
+              blockEx2KHash
+              (coreNodeKeys 6)
+              []
+              (Slot 510)
+              (mkSeqNonce 10)
+              (Nonce 12)
+              zero
+              5
+
+blockEx2LHash :: Maybe HashHeader
+blockEx2LHash = Just (bhHash (bheader blockEx2L))
+
+acntEx2L :: AccountState
+acntEx2L = acntEx2I { _treasury =  _treasury acntEx2I --previous amount
+                                  + Coin 9 } -- from the reward update
+
+snapsEx2L :: SnapShots
+snapsEx2L = SnapShots { _pstakeMark =
+                          (Stake ( Map.fromList [ (aliceSHK, aliceRAcnt2H + 9000 + 727) ])
+                          , Map.singleton aliceSHK (hk alicePool))
+                      , _pstakeSet = _pstakeMark snapsEx2I
+                      , _pstakeGo = _pstakeSet snapsEx2I
+                      , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
+                      , _feeSS = Coin 21
+                      }
+dsEx2L :: DState
+dsEx2L = dsEx1
+          { _ptrs = Map.singleton (Ptr (Slot 10) 0 0) aliceSHK
+          , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 10)
+          , _rewards = Map.singleton (RewardAcnt aliceSHK) (aliceRAcnt2H + Coin 250)
+                       -- Note the pool cert refund of 250
+          }
+
+expectedLSEx2L :: LedgerState
+expectedLSEx2L = LedgerState
+               (UTxOState
+                 utxoEx2K
+                 (Coin 205)
+                 (Coin 21)
+                 usEx2A)
+               (DPState dsEx2L psEx1) -- Note the stake pool is reaped
+               0
+
+expectedStEx2L :: ChainState
+expectedStEx2L =
+  ( NewEpochState
+      (Epoch 5)
+      (mkSeqNonce 10)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1)
+      Nothing
+      pdEx2F
+      (overlaySchedule (Epoch 5) (Map.keysSet dms) (mkSeqNonce 10) ppsEx1)
+  , mkSeqNonce 12
+  , mkSeqNonce 12
+  , blockEx2LHash
+  , Slot 510
+  )
+
+ex2L :: CHAINExample
+ex2L = CHAINExample (Slot 510) expectedStEx2K blockEx2L expectedStEx2L
 
 
 -- | Example 3A - Setting up for a successful protocol parameter update,
