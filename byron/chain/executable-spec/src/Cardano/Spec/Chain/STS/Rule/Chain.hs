@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -13,6 +14,7 @@ module Cardano.Spec.Chain.STS.Rule.Chain where
 import           Control.Lens (Lens', (^.), _1, _5)
 import           Data.Bimap (Bimap)
 import           Data.Bits (shift)
+import           Data.Data (Data, Typeable)
 import qualified Data.Map as Map
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
@@ -40,7 +42,7 @@ import           Cardano.Spec.Chain.STS.Rule.Epoch (EPOCH, sEpoch)
 import           Cardano.Spec.Chain.STS.Rule.Pbft
 import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCntGen
 
-data CHAIN
+data CHAIN deriving (Data, Typeable)
 
 instance STS CHAIN where
   type Environment CHAIN =
@@ -75,7 +77,7 @@ instance STS CHAIN where
     | MaximumBlockSize Natural Natural
     | LedgerDelegationFailure (PredicateFailure DELEG)
     | LedgerUTxOFailure (PredicateFailure UTXOWS)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules =
     [ do

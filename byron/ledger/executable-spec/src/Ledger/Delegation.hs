@@ -145,7 +145,7 @@ data DCert = DCert
   , depoch :: Epoch
     -- | Witness for the delegation certificate
   , signature :: Sig (VKey, Epoch)
-  } deriving (Show, Eq, Ord, Generic, Hashable)
+  } deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable)
 
 instance HasTypeReps DCert
 

@@ -101,7 +101,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
-  } deriving (Eq, Generic, Ord, Show, Hashable)
+  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable)
 
 makeLenses ''PParams
 
@@ -139,7 +139,7 @@ instance HasTypeReps ApVer
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Generic, Show, Hashable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
 
 makeLenses ''SwVer
 
@@ -175,7 +175,7 @@ data UProp = UProp
   -- ^ System tags involved in the update proposal.
   , _upMdt :: Metadata
   -- ^ Metadata required for performing software updates.
-  } deriving (Eq, Generic, Show, Hashable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
 
 
 -- We need the Hashable instance before making lenses.
@@ -197,6 +197,9 @@ upSigData = lens
     & upMdt .~ mdt
   )
 
+
+getUpSigData :: UProp -> UpSD
+getUpSigData = view upSigData
 
 mkUProp
   :: UpId
@@ -520,7 +523,7 @@ data Vote = Vote
   { _vCaster :: Core.VKey
   , _vPropId :: UpId
   , _vSig :: Core.Sig UpId
-  } deriving (Eq, Generic, Show, Hashable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
 
 
 makeLenses ''Vote

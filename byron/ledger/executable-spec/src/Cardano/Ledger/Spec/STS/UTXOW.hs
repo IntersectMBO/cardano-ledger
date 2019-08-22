@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -10,6 +11,7 @@
 
 module Cardano.Ledger.Spec.STS.UTXOW where
 
+import           Data.Data (Data, Typeable)
 import qualified Data.Map as Map
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
@@ -21,16 +23,18 @@ import           Control.State.Transition.Generator (HasTrace, SignalGenerator, 
 import           Ledger.Core (Addr (Addr), KeyPair (KeyPair), VKey, keyPair, mkAddr, owner, sign,
                      verify)
 import qualified Ledger.Update.Generators as UpdateGen
+import           Ledger.Util (mkGoblinGens)
 import           Ledger.UTxO (Tx, TxIn, TxOut (TxOut), TxWits (TxWits), UTxO (UTxO), Wit (Wit),
                      body, fromTxOuts, inputs, pcMinFee)
 import qualified Ledger.UTxO.Generators as UTxOGen
-import           Ledger.Util (mkGoblinGens)
 
 import           Cardano.Ledger.Spec.STS.UTXO
 
 import           Test.Goblin (GoblinData, mkEmptyGoblin)
 
-data UTXOW
+
+data UTXOW deriving (Data, Typeable)
+
 
 instance STS UTXOW where
 
@@ -42,7 +46,7 @@ instance STS UTXOW where
   data PredicateFailure UTXOW
     = UtxoFailure (PredicateFailure UTXO)
     | InsufficientWitnesses
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules =
     [ do

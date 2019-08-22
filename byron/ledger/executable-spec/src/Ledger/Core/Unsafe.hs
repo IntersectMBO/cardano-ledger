@@ -10,8 +10,12 @@ import           Ledger.Core (SKey (SKey), Sig (Sig), VKey (VKey), VKeyGenesis, 
 -- | Extract the verifying key of a signature. This is useful when elaborating
 -- an abstract signature into a concrete one.
 signatureVKey :: Sig a -> VKey
-signatureVKey (Sig _data aOwner) = VKey aOwner
+signatureVKey (Sig _someData someOwner) = VKey someOwner
 
+
+-- | Extract the signature data.
+signatureData :: Sig a -> a
+signatureData (Sig someData _someOwner) = someData
 
 -- | Get the signing key from the verification key. We use this in the
 -- generators, where we need to generate signed data for a given verification

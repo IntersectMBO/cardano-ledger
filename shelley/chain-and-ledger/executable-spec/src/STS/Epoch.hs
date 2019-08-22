@@ -9,14 +9,14 @@ module STS.Epoch
   )
 where
 
-import           EpochBoundary
-import           LedgerState
-import           Data.Set (Set)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Set (Set)
+import           EpochBoundary
+import           LedgerState
 import           PParams
-import           Updates
 import           Slot
+import           Updates
 
 import           Control.State.Transition
 

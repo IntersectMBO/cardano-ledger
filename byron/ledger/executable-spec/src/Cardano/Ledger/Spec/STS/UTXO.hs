@@ -1,7 +1,9 @@
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+
 
 -- | UTXO transition system
 module Cardano.Ledger.Spec.STS.UTXO
@@ -16,30 +18,22 @@ module Cardano.Ledger.Spec.STS.UTXO
   )
 where
 
+import           Data.Data (Data, Typeable)
 import qualified Data.Set as Set
 
-import Control.State.Transition
-  ( Environment
-  , IRC(IRC)
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , initialRules
-  , transitionRules
-  , (?!)
-  , judgmentContext
-  )
-import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
-import Ledger.GlobalParams (lovelaceCap)
-import Ledger.Update (PParams)
-import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value, unUTxO)
+import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
+                     State, TRC (TRC), initialRules, judgmentContext, transitionRules, (?!))
+import           Ledger.Core (Lovelace, dom, range, (∪), (⊆), (⋪), (◁))
+import           Ledger.GlobalParams (lovelaceCap)
+import           Ledger.Update (PParams)
+import           Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, unUTxO, value)
 
-import Test.Goblin (SeedGoblin(..))
-import Test.Goblin.TH (deriveSeedGoblin)
+import           Test.Goblin (SeedGoblin (..))
+import           Test.Goblin.TH (deriveSeedGoblin)
 
-data UTXO
+
+data UTXO deriving (Data, Typeable)
+
 
 data UTxOEnv = UTxOEnv
   { utxo0 :: UTxO
@@ -67,7 +61,7 @@ instance STS UTXO where
     | IncreasedTotalBalance
     | InputsNotInUTxO
     | NonPositiveOutputs
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules =
     [ do
