@@ -34,6 +34,7 @@ library
                      , containers
                      , cryptonite
                      , free
+                     , goblins
                      , hedgehog >= 1.0
                      , tasty-hunit
                      , lens

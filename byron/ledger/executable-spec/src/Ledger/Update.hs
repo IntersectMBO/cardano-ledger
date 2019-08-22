@@ -18,7 +18,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Ledger.Update
-  (module Ledger.Update)
+  ( module Ledger.Update
+  , PredicateFailure()
+  )
 where
 
 import           Control.Arrow (second, (&&&))
@@ -46,7 +48,8 @@ import qualified Hedgehog.Range as Range
 import           Numeric.Natural
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator,
+                     envGen, sigGen, tinkerWithSigGen)
 import           Data.AbstractSize (HasTypeReps)
 
 import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
@@ -55,6 +58,10 @@ import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation 
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
 import qualified Ledger.GlobalParams as GP
+import           Ledger.Util (mkGoblinGens)
+
+import           Test.Goblin (AddShrinks(..), Goblin(..), GoblinData, SeedGoblin(..), mkEmptyGoblin)
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 import           Prelude
 
@@ -1632,3 +1639,71 @@ protocolVersionEndorsementGen upienv upistate =
         endorsementsMap = Set.toList (endorsements upistate)
                         & fmap (second Set.singleton)
                         & Map.fromListWith Set.union
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''ApVer
+deriveGoblin ''ApName
+deriveGoblin ''Metadata
+deriveGoblin ''ProtVer
+deriveGoblin ''PParams
+deriveGoblin ''SwVer
+deriveGoblin ''UpId
+deriveGoblin ''UProp
+deriveGoblin ''Vote
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''ApName
+deriveAddShrinks ''ApVer
+deriveAddShrinks ''Metadata
+deriveAddShrinks ''PParams
+deriveAddShrinks ''ProtVer
+deriveAddShrinks ''SwVer
+deriveAddShrinks ''UpId
+deriveAddShrinks ''UProp
+deriveAddShrinks ''Vote
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''ApName
+deriveSeedGoblin ''ApVer
+deriveSeedGoblin ''SwVer
+deriveSeedGoblin ''PParams
+deriveSeedGoblin ''ProtVer
+deriveSeedGoblin ''Metadata
+deriveSeedGoblin ''UpId
+
+
+--------------------------------------------------------------------------------
+-- GoblinData & goblin-tinkered SignalGenerators
+--------------------------------------------------------------------------------
+
+mkGoblinGens
+  "UPIREG"
+  [ "UPREGFailure_DoesNotVerify"
+  , "UPREGFailure_NotGenesisDelegate"
+  , "UPREGFailure_UPVFailure_AVChangedInPVUpdate"
+  , "UPREGFailure_UPVFailure_PVChangedInSVUpdate"
+  , "UPREGFailure_UPVFailure_ParamsChangedInSVUpdate"
+  , "UPREGFailure_UPVFailure_UPPVVFailure_CannotFollowPv"
+  , "UPREGFailure_UPVFailure_UPPVVFailure_CannotUpdatePv"
+  , "UPREGFailure_UPVFailure_UPSVVFailure_AlreadyProposedSv"
+  , "UPREGFailure_UPVFailure_UPSVVFailure_CannotFollowSv"
+  , "UPREGFailure_UPVFailure_UPSVVFailure_InvalidApplicationName"
+  , "UPREGFailure_UPVFailure_UPSVVFailure_InvalidSystemTags"
+  ]
+
+mkGoblinGens
+  "UPIVOTES"
+  [ "ApplyVotesFailure_UpivoteFailure_UPVOTEFailure_ADDVOTEFailure_AVSigDoesNotVerify"
+  , "ApplyVotesFailure_UpivoteFailure_UPVOTEFailure_ADDVOTEFailure_NoUpdateProposal"
+  ]

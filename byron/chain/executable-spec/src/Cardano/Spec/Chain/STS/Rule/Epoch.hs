@@ -14,7 +14,10 @@ sEpoch
   :: Slot
   -> BlockCount
   -> Epoch
-sEpoch (Slot s) k = Epoch $ s `div` slotsPerEpoch k
+sEpoch (Slot s) k = if k' > 0
+                       then Epoch $ s `div` k'
+                       else error ("sEpoch: bad `k` provided: " <> show k)
+  where k' = slotsPerEpoch k
 
 data EPOCH
 

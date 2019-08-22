@@ -7,6 +7,8 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -30,6 +32,9 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 
 import Data.AbstractSize
+
+import Test.Goblin (AddShrinks(..), Goblin(..), SeedGoblin(..))
+import Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
 -- | An encoded hash of part of the system.
@@ -143,7 +148,7 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 -- Slots and Epochs
 ---------------------------------------------------------------------------------
 
-newtype Epoch = Epoch Word64
+newtype Epoch = Epoch { unEpoch :: Word64 }
   deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, Num)
   deriving anyclass (HasTypeReps)
@@ -440,3 +445,53 @@ toSet = Set.fromList . toList
 
 (∩) :: Ord a => Set a -> Set a -> Set a
 (∩) = intersection
+
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''Addr
+deriveGoblin ''BlockCount
+deriveGoblin ''Epoch
+deriveGoblin ''Hash
+deriveGoblin ''Lovelace
+deriveGoblin ''Owner
+deriveGoblin ''Sig
+deriveGoblin ''Slot
+deriveGoblin ''SlotCount
+deriveGoblin ''VKey
+deriveGoblin ''VKeyGenesis
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''Addr
+deriveAddShrinks ''BlockCount
+deriveAddShrinks ''Epoch
+deriveAddShrinks ''Hash
+deriveAddShrinks ''Lovelace
+deriveAddShrinks ''Owner
+deriveAddShrinks ''Sig
+deriveAddShrinks ''Slot
+deriveAddShrinks ''SlotCount
+deriveAddShrinks ''VKey
+deriveAddShrinks ''VKeyGenesis
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''Addr
+deriveSeedGoblin ''BlockCount
+deriveSeedGoblin ''Epoch
+deriveSeedGoblin ''Hash
+deriveSeedGoblin ''Lovelace
+deriveSeedGoblin ''Owner
+deriveSeedGoblin ''Slot
+deriveSeedGoblin ''SlotCount
+deriveSeedGoblin ''VKey
+deriveSeedGoblin ''VKeyGenesis
