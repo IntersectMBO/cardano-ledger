@@ -123,7 +123,7 @@ import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), O
                      addSlot, hash, mkVkGenesisSet, owner, range, unBlockCount, (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
-import           Ledger.Core.Unsafe (signWithGenesisKey)
+import           Ledger.Core.Omniscient (signWithGenesisKey)
 
 import           Ledger.Util (mkGoblinGens)
 import           Test.Goblin (AddShrinks (..), Goblin (..), GoblinData, SeedGoblin (..),

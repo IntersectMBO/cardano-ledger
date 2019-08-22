@@ -61,7 +61,7 @@ import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation 
                      (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
-import           Ledger.Core.Unsafe (skey)
+import           Ledger.Core.Omniscient (skey)
 import qualified Ledger.GlobalParams as GP
 import           Ledger.Util (mkGoblinGens)
 

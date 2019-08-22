@@ -1,7 +1,11 @@
 
 
--- | Unsafe operations that are intended to be used in tests, but not in the executable specifications.
-module Ledger.Core.Unsafe where
+-- | Functions that are intended to be used in tests, but not in the executable
+-- specifications. These functions are not possible in practice (like recovering
+-- the signed data from the signature only), but are possible for the abstract
+-- data we use in the specifications.
+--
+module Ledger.Core.Omniscient where
 
 import           Ledger.Core (SKey (SKey), Sig (Sig), VKey (VKey), VKeyGenesis, owner, sign,
                      unVKeyGenesis)
