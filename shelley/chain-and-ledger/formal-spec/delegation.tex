@@ -413,7 +413,7 @@ a stake pool, though these concerns are independent of the ledger rules.
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stkeys}} \\
         \varUpdate{\{\addrRw \var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{delegations}} \\
-        \varUpdate{\{ptr\}} & \varUpdate{\subtractdom} & \varUpdate{\var{ptrs}} \\
+        \varUpdate{\var{ptrs}} & \varUpdate{\subtractrange} & \varUpdate{\{\var{hk}\}} \\
         \var{fdms} \\
         \var{dms} \\
       \end{array}

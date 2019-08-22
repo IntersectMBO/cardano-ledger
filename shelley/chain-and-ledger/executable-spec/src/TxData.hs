@@ -399,6 +399,8 @@ instance Relation (StakeKeys hashAlgo dsignAlgo) where
 
   (StakeKeys stKeys) ▷ s = StakeKeys $ stKeys ▷ s
 
+  (StakeKeys stKeys) ⋫ s = StakeKeys $ stKeys ⋫ s
+
   (StakeKeys a) ∪ (StakeKeys b) = StakeKeys $ a ∪ b
 
   (StakeKeys a) ⨃ b = StakeKeys $ a ⨃ b
