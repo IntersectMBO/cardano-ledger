@@ -1,15 +1,18 @@
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedLists       #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 
 module Cardano.Spec.Chain.STS.Block where
 
 import           Control.Lens (makeLenses, view, (^.))
 import           Data.AbstractSize
 import           Data.ByteString (ByteString)
+import           Data.Data (Data, Typeable)
 import qualified Data.Hashable as H
 import qualified Data.Map.Strict as Map
 import           Data.Sequence ((<|))
@@ -24,7 +27,7 @@ import           Ledger.Delegation
 import           Ledger.Update (ProtVer, STag, UProp, Vote)
 import           Ledger.UTxO (TxIn, TxOut, TxWits, Wit)
 
-import           Test.Goblin (AddShrinks(..), Goblin(..))
+import           Test.Goblin (AddShrinks (..), Goblin (..))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin)
 
 data BlockHeader
@@ -46,7 +49,7 @@ data BlockHeader
   , _bhUpdHash :: !Hash
     -- TODO: BlockVersion – the protocol (block) version that created the block
     -- TODO: SoftwareVersion – the software version that created the block
-  } deriving (Eq, Generic, Show)
+  } deriving (Eq, Generic, Show, Data, Typeable)
 
 
 makeLenses ''BlockHeader
@@ -76,7 +79,7 @@ data BlockBody
   -- ^ Update votes payload
   , _bProtVer :: !ProtVer
   -- ^ Protocol version
-  } deriving (Generic, Show)
+  } deriving (Generic, Show, Data, Typeable)
 
 
 makeLenses ''BlockBody
@@ -91,7 +94,7 @@ data Block
   = Block
   { _bHeader :: BlockHeader
   , _bBody :: BlockBody
-  } deriving (Generic, Show)
+  } deriving (Generic, Show, Data, Typeable)
 
 
 makeLenses ''Block

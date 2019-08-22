@@ -26,10 +26,12 @@ library
   exposed-modules:     Hedgehog.Gen.Aux
                      , Ledger.Core
                      , Ledger.Core.Generators
+                     , Ledger.Core.Omniscient
                      , Ledger.Delegation
                      , Ledger.GlobalParams
                      , Ledger.Update
                      , Ledger.Update.Generators
+                     , Ledger.Update.Test
                      , Ledger.UTxO
                      , Ledger.UTxO.Generators
                      , Ledger.Util

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -5,9 +6,11 @@
 module Cardano.Spec.Chain.STS.Rule.Epoch where
 
 import           Control.State.Transition
+import           Data.Data (Data, Typeable)
 import           Ledger.Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update
+
 
 -- | Compute the epoch for the given _absolute_ slot and chain stability parameter.
 sEpoch
@@ -19,7 +22,7 @@ sEpoch (Slot s) k = if k' > 0
                        else error ("sEpoch: bad `k` provided: " <> show k)
   where k' = slotsPerEpoch k
 
-data EPOCH
+data EPOCH deriving (Data, Typeable)
 
 instance STS EPOCH where
   type Environment EPOCH =
@@ -34,7 +37,7 @@ instance STS EPOCH where
   type Signal EPOCH = Slot
   data PredicateFailure EPOCH =
     UPIECFailure (PredicateFailure UPIEC)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
 
