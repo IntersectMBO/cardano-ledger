@@ -576,7 +576,7 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
 
 coverFailures
   :: forall m s a
-   .  (MonadTest m
+   . ( MonadTest m
      , HasCallStack
      , Data (PredicateFailure s)
      , Data a

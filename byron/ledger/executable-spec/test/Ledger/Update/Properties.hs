@@ -38,8 +38,8 @@ import           Numeric.Natural (Natural)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, SignalGenerator, coverFailures,
-                     envGen, invalidTrace, randomTraceOfSize, ratio, sigGen, trace,
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen,
+                     invalidTrace, randomTraceOfSize, ratio, sigGen, trace,
                      traceLengthsAreClassified, traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
@@ -50,10 +50,11 @@ import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (S
                      unBlockCount)
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
-import           Ledger.Update (PParams, PredicateFailure (AVSigDoesNotVerify, AlreadyProposedPv, AlreadyProposedSv, CannotFollowPv, CannotFollowSv, CannotUpdatePv, DoesNotVerify, InvalidApplicationName, InvalidSystemTags, NoUpdateProposal, NotGenesisDelegate),
-                     ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, UpId (UpId), Vote,
-                     emptyUPIState, protocolParameters, tamperWithUpdateProposal, tamperWithVotes)
+import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
+                     Vote, emptyUPIState, protocolParameters, tamperWithUpdateProposal,
+                     tamperWithVotes)
 import qualified Ledger.Update as Update
+import qualified Ledger.Update.Test as Update.Test
 
 upiregTracesAreClassified :: Property
 upiregTracesAreClassified =
@@ -573,30 +574,8 @@ invalidRegistrationsAreGenerated = withTests 300 $ property $ do
         (isLeft $ Invalid.Trace.errorOrLastState tr)
 
   case Invalid.Trace.errorOrLastState tr of
-    Left pfs -> do
-      coverFailures
-        2
-        [ CannotFollowPv
-        , CannotUpdatePv []
-        , AlreadyProposedPv
-        ]
-        pfs
-
-      coverFailures
-        2
-        [ AlreadyProposedSv
-        , CannotFollowSv
-        , InvalidApplicationName
-        , InvalidSystemTags
-        ]
-        pfs
-
-      coverFailures
-        2
-        [ NotGenesisDelegate
-        , DoesNotVerify
-        ]
-        pfs
+    Left pfs ->
+      Update.Test.coverUpiregFailures 2 pfs
 
     Right _ ->
       pure ()
@@ -620,13 +599,8 @@ invalidSignalsAreGenerated = withTests 300 $ property $ do
 
 
   case Invalid.Trace.errorOrLastState tr of
-    Left pfs -> do
-      coverFailures
-        2
-        [ AVSigDoesNotVerify
-        , NoUpdateProposal (UpId 0) -- We need to pass a dummy update id here.
-        ]
-        pfs
+    Left pfs ->
+      Update.Test.coverUpivoteFailures 2 pfs
 
     Right _ ->
       pure ()
