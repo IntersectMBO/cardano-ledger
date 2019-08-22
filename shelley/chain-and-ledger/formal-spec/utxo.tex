@@ -59,7 +59,7 @@ Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition
     Some of the definitions used in this function will be defined in
     Section~\ref{sec:deps-refunds}.
     In particular, $\fun{keyRefunds}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
-    and $\StakeKeys$ is defined in Figure~\ref{fig:delegation-defs}.
+    and $\StakeDelegs$ is defined in Figure~\ref{fig:delegation-defs}.
 
   \item The calculation $\fun{produced}$ gives the value produced by the transaction $\var{tx}$
     in the context of the protocol parameters and the registered stake pools.
@@ -100,12 +100,12 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
     & \text{withdrawal balance} \\
     & \fun{wbalance} ~ ws = \sum_{\wcard\mapsto c\in\var{ws}} c
     \nextdef
-    & \fun{consumed} \in \PParams \to \UTxO \to \StakeKeys \to \Wdrl \to \Tx \to \Coin
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeDelegs \to \Wdrl \to \Tx \to \Coin
     & \text{value consumed} \\
-    & \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \\
+    & \consumed{pp}{utxo}{stdelegs}{rewards}~{tx} = \\
     & ~~\ubalance{(\txins{tx} \restrictdom \var{utxo})} +
         \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
-    & ~~~~ + \keyRefunds{pp}{stkeys}{tx} \\
+    & ~~~~ + \keyRefunds{pp}{stdelegs}{tx} \\
     \nextdef
     & \fun{produced} \in \PParams \to \StakePools \to \Tx \to \Coin
     & \text{value produced} \\
@@ -155,7 +155,7 @@ The signal for the UTxO transition is a transaction.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{stkeys} & \StakeKeys & \text{stake key}\\
+        \var{stdelegs} & \StakeDeleg & \text{stake credential}\\
         \var{stpools} & \StakePools & \text{stake pool}\\
         \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
@@ -293,7 +293,7 @@ requests).
       & \minfee{pp}{tx} \leq \txfee{tx}
       & \txins{tx} \subseteq \dom \var{utxo}
       \\
-      \consumed{pp}{utxo}{stkeys}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
+      \consumed{pp}{utxo}{stdelegs}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
       \\
       ~
       \\
@@ -316,9 +316,9 @@ requests).
       \\
       ~
       \\
-      \var{refunded} \leteq \keyRefunds{pp}{stkeys}~{tx}
+      \var{refunded} \leteq \keyRefunds{pp}{stdelegs}~{tx}
       \\
-      \var{decayed} \leteq \decayedTx{pp}{stkeys}~{tx}
+      \var{decayed} \leteq \decayedTx{pp}{stdelegs}~{tx}
       \\
       \var{depositChange} \leteq
         (\deposits{pp}~{stpools}~{\txcerts{tx}}) - (\var{refunded} + \var{decayed})
@@ -327,7 +327,7 @@ requests).
       \begin{array}{l}
         \var{slot}\\
         \var{pp}\\
-        \var{stkeys}\\
+        \var{stdelegs}\\
         \var{stpools}\\
         \var{dms}\\
       \end{array}
@@ -392,7 +392,7 @@ Figure~\ref{fig:functions:deposits-refunds} defines the deposit and refund funct
   \item The function $\fun{keyRefund}$, calculates the refund for an individual
     stake key registration deposit, based on the slot when it was created and
     the slot passed to the function. The creation slot should always exist in the map
-    $\var{stkeys}$ passed to the function and this would be a good property
+    $\var{stdelegs}$ passed to the function and this would be a good property
     to prove about the transition system.
   \item The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
     the total value to be refunded to all individual key deregistration certificate authors
@@ -470,25 +470,25 @@ Section~\ref{sec:epoch}.
             \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
       \nextdef
       & \fun{keyRefund} \in \Coin \to \unitInterval \to \posReals \to \\
-      & ~~~~~\StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
+      & ~~~~~\StakeDelegs \to \Slot \to \DCertDeRegKey \to \Coin
       & \text{key refund for a certificate} \\
-      & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{slot}{c} =\\
+      & \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{slot}{c} =\\
       & ~~~~~\begin{cases}
-            0 & \text{if}~\cwitness c \notin \dom stkeys\\
+            0 & \text{if}~\cwitness c \notin \dom stdelegs \\
             \refund{\dval}{d_{\min}}{\lambda}{\delta}
             & \text{otherwise}
         \end{cases}\\
       &
       \begin{array}{lr@{~=~}l}
         \where
-        &\delta & \slotminus{slot}{(stkeys~(\cwitness c))}\\
+        &\delta & \slotminus{slot}{(stdelegs~(\cwitness c))}\\
       \end{array}\\
       \nextdef
-      & \fun{keyRefunds} \in \PParams \to \StakeKeys \to \Tx \to \Coin
+      & \fun{keyRefunds} \in \PParams \to \StakeDelegs \to \Tx \to \Coin
       & \text{key refunds for a transaction} \\
-      & \keyRefunds{pp}{stkeys}{tx} =\\
+      & \keyRefunds{pp}{stdelegs}{tx} =\\
       & ~~~~~ \sum\limits_{\substack{c \in \txcerts{tx} \\ c\in\DCertDeRegKey}}
-              \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{(\txttl{tx})}{c}\\
+              \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{(\txttl{tx})}{c}\\
       &
       \begin{array}{lr@{~=~}l}
         \where \\
@@ -504,31 +504,31 @@ Section~\ref{sec:epoch}.
 \begin{figure}[htb]
   \begin{align*}
       & \fun{decayedKey} \in
-      \PParams \to \StakeKeys \to \Slot \to \DCertDeRegKey \to \Coin
+      \PParams \to \StakeDelegs \to \Slot \to \DCertDeRegKey \to \Coin
       & \text{decayed since epoch} \\
-      & \decayedKey{pp}{stkeys}{cslot}{c} =\\
+      & \decayedKey{pp}{stdelegs}{cslot}{c} =\\
       & \begin{cases}
-            0 & \text{if}~\cwitness c \notin \dom stkeys\\
+            0 & \text{if}~\cwitness c \notin \dom stdelegs\\
             \var{epochRefund} - \var{currentRefund}
             & \text{otherwise}
         \end{cases}\\
       &
       \begin{array}{lr@{~=~}l}
         \where
-          & \var{created} & \var{stkeys}~(\cwitness~\var{c}) \\
+          & \var{created} & \var{stdelegs}~(\cwitness~\var{c}) \\
           & \var{start} & \mathsf{max}~(\firstSlot{\epoch{cslot}})~created \\
-          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{start}{c} \\
-          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkeys}{cslot}{c} \\
+          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{start}{c} \\
+          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{cslot}{c} \\
           & \dval & \fun{keyDeposit}~\var{pp}\\
           & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
           & \lambda & \fun{keyDecayRate}~\var{pp}\\
       \end{array}\\
       \nextdef
-      & \fun{decayedTx} \in \PParams \to \StakeKeys \to \Tx \to \Coin
+      & \fun{decayedTx} \in \PParams \to \StakeDelegs \to \Tx \to \Coin
       & \text{decayed deposit portions} \\
-      & \decayedTx{pp}{stkeys}{tx} =\\
+      & \decayedTx{pp}{stdelegs}{tx} =\\
       &   \sum\limits_{\substack{c \in \txcerts{tx} \\ c \in\DCertDeRegKey}}
-          \decayedKey{pp}{stkeys}{(\txttl{tx})}{c}\\
+          \decayedKey{pp}{stdelegs}{(\txttl{tx})}{c}\\
   \end{align*}
   \caption{Functions used in Deposits - Decay}
   \label{fig:functions:deposits-decay}
