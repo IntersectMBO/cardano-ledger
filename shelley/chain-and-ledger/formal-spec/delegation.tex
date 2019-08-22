@@ -53,10 +53,10 @@ Here we introduce the following primitive datatypes used in delegation:
 \end{itemize}
 The following derived types are introduced:
 \begin{itemize}
-  \item $\type{StakeKeys}$ represents registered stake keys and is represented by a finite
-    map from hashkeys to slot when it was registered.
-  \item$\type{StakePools}$ represents registered stake pools and has the same type as
-    $\type{StakeKeys}$.
+\item $\type{StakeDelegs}$ represents registered stake delegations and is
+  represented by a finite map from stake credentials to slot when it was
+  registered.
+\item$\type{StakePools}$ represents registered stake pools
 \item $\PoolParam$ represents the parameters found in a stake pool registration certificate
   that must be tracked:
   \begin{itemize}
@@ -116,9 +116,9 @@ It does the following:
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{l@{\qquad=\qquad}lr}
-      \StakeKeys
-      & \KeyHash \mapsto \Slot
-      & \text{registered stake keys} \\
+      \StakeDeleg
+      & \Credential \mapsto \Slot
+      & \text{registered stake credential} \\
       %
       \StakePools
       & \KeyHash \mapsto \Slot
@@ -190,8 +190,8 @@ state transition types. We define two separate parts of the ledger state.
 \begin{itemize}
   \item $\DState$ keeps track of the delegation state, consisting of:
     \begin{itemize}
-      \item $\var{stkeys}$ tracks the registered stake keys. It consists of a finite
-        mapping from hashkeys to the slot of the registration.
+    \item $\var{stdelegs}$ tracks the registered stake credentials. It consists
+      of a finite mapping from hashkeys to the slot of the registration.
       \item $\var{rewards}$ stores the rewards accumulated by stake keys.
         These are represented by a finite map from reward addresses to the accumulated rewards.
       \item $\var{delegations}$ stores the delegation relation, mapping stake keys to the
@@ -360,7 +360,7 @@ a stake pool, though these concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-    \var{c}\in\DCertRegKey & hk \leteq \cwitness{c} & hk \notin \dom \var{stkeys}
+    \var{c}\in\DCertRegKey & hk \leteq \cwitness{c} & hk \notin \dom \var{stdelegs}
     }
     {
       \begin{array}{r}
@@ -370,7 +370,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
         \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -381,7 +381,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\var{stkeys}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
+        \varUpdate{\var{stdelegs}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
         \varUpdate{\var{rewards}} & \varUpdate{\union} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
         \var{delegations} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
@@ -396,7 +396,7 @@ a stake pool, though these concerns are independent of the ledger rules.
     \inference[Deleg-Dereg]
     {
       \var{c}\in \DCertDeRegKey  & hk \leteq \cwitness{c} \\
-    hk \in \dom \var{stkeys} & \addrRw \var{hk} \mapsto 0 \in \var{rewards}
+    hk \in \dom \var{stdelegs} & \addrRw \var{hk} \mapsto 0 \in \var{rewards}
     }
     {
       \begin{array}{r}
@@ -406,7 +406,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -417,7 +417,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stkeys}} \\
+        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stdelegs}} \\
         \varUpdate{\{\addrRw \var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{delegations}} \\
         \varUpdate{\{ptr\}} & \varUpdate{\subtractdom} & \varUpdate{\var{ptrs}} \\
@@ -431,7 +431,7 @@ a stake pool, though these concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-deleg}
     \inference[Deleg-Deleg]
     {
-      \var{c}\in \DCertDeleg & hk \leteq \cwitness{c} & hk \in \dom \var{stkeys}
+      \var{c}\in \DCertDeleg & hk \leteq \cwitness{c} & hk \in \dom \var{stdelegs}
     }
     {
       \begin{array}{r}
@@ -441,7 +441,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -452,7 +452,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{rcl}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \varUpdate{\var{delegations}} & \varUpdate{\unionoverrideRight}
                                       & \varUpdate{\{\var{hk} \mapsto \dpool c\}} \\
@@ -484,7 +484,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -495,7 +495,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{rcl}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -513,16 +513,8 @@ a stake pool, though these concerns are independent of the ledger rules.
 
 The DELEG rule has five predicate failures:
 \begin{itemize}
-<<<<<<< HEAD
-\item In the case of a key registration certificate, if the staking key is already
-  registered, there is a \emph{StakeKeyAlreadyRegistered} failure.
-||||||| merged common ancestors
-\item In the case of a key registration certificate, if the staking key is already
-  registered, there is a a \em{StakeKeyAlreadyRegistered} failure.
-=======
 \item In the case of a key registration certificate, if the staking key is
   already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
->>>>>>> 96833182503fa1cd65e6eb643d3142bc2a505308
 \item In the case of a key deregistration certificate, if the key is not
   registered, there is a \emph{StakeKeyNotRegistered} failure.
 \item In the case of a non-existing stake pool key in a delegation certificate,
@@ -954,7 +946,7 @@ will be invalid.
       \begin{array}{c}
         \left(
         \begin{array}{r}
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -977,7 +969,7 @@ will be invalid.
       \begin{array}{c}
         \left(
         \begin{array}{c}
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
           \var{ptrs} \\

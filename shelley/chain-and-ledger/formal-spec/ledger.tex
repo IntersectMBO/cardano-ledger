@@ -75,14 +75,14 @@ then calls the $\mathsf{DELEGS}$ transition.
                      \fun{txcerts}~\var{tx}} dpstate'
       \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-      (\var{stkeys}, \_, \_, \_, \_, \var{dms}) \leteq \var{dstate} \\
+      (\var{stdelegs}, \_, \_, \_, \_, \var{dms}) \leteq \var{dstate} \\
       (\var{stpools}, \_, \_, \_) \leteq \var{pstate} \\
       \\~\\
       \left({
         \begin{array}{r}
         \var{slot} \\
         \var{pp} \\
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{stpools} \\
         \var{dms} \\
         \end{array}
