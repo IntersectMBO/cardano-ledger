@@ -33,8 +33,8 @@ import Numeric.Natural (Natural)
 
 import Data.AbstractSize
 
-import Test.Goblin
-import Test.Goblin.TH
+import Test.Goblin (AddShrinks(..), Goblin(..), SeedGoblin(..))
+import Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
 -- | An encoded hash of part of the system.

@@ -35,8 +35,9 @@ import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
 import Ledger.GlobalParams (lovelaceCap)
 import Ledger.Update (PParams)
 import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value, unUTxO)
-import Test.Goblin
-import Test.Goblin.TH
+
+import Test.Goblin (SeedGoblin(..))
+import Test.Goblin.TH (deriveSeedGoblin)
 
 data UTXO
 

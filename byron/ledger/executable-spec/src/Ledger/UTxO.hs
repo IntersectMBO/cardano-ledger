@@ -28,8 +28,10 @@ import           Numeric.Natural   (Natural)
 
 import           Ledger.Core       hiding ((<|))
 import           Ledger.Update     (PParams (PParams), _factorA, _factorB)
-import           Test.Goblin
-import           Test.Goblin.TH
+
+import           Test.Goblin (AddShrinks(..), Goblin(..), SeedGoblin(..))
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin,
+                   deriveSeedGoblin)
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }

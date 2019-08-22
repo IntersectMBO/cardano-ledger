@@ -83,7 +83,7 @@ import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst)
 import           Hedgehog.Extra.Manual (Manual)
 import qualified Hedgehog.Extra.Manual as Manual
 
-import Test.Goblin (Goblin, GoblinData, SeedGoblin, seeder, tinker)
+import Test.Goblin (Goblin(..), GoblinData, SeedGoblin(..))
 
 
 class STS s => HasTrace s where
