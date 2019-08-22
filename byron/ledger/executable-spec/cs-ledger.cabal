@@ -32,15 +32,19 @@ library
                      , Ledger.Update.Generators
                      , Ledger.UTxO
                      , Ledger.UTxO.Generators
+                     , Ledger.Util
                      , Cardano.Ledger.Spec.STS.UTXO
                      , Cardano.Ledger.Spec.STS.UTXOW
                      , Cardano.Ledger.Spec.STS.UTXOWS
   build-depends:       base >=4.11 && <5
                      , bimap >=0.4 && <0.5
                      , containers
+                     , filepath
+                     , goblins
                      , hashable
                      , hedgehog >= 1.0
                      , lens
+                     , template-haskell
                      , Unique >= 0.4.7.6
                      -- Local deps
                      , small-steps

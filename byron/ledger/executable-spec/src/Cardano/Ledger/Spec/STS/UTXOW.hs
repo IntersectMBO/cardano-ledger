@@ -2,6 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -14,7 +15,8 @@ import qualified Data.Map as Map
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, sigGen,
+                     tinkerWithSigGen)
 
 import           Ledger.Core (Addr (Addr), KeyPair (KeyPair), VKey, keyPair, mkAddr, owner, sign,
                      verify)
@@ -22,8 +24,11 @@ import qualified Ledger.Update.Generators as UpdateGen
 import           Ledger.UTxO (Tx, TxIn, TxOut (TxOut), TxWits (TxWits), UTxO (UTxO), Wit (Wit),
                      body, fromTxOuts, inputs, pcMinFee)
 import qualified Ledger.UTxO.Generators as UTxOGen
+import           Ledger.Util (mkGoblinGens)
 
 import           Cardano.Ledger.Spec.STS.UTXO
+
+import           Test.Goblin (GoblinData, mkEmptyGoblin)
 
 data UTXOW
 
@@ -104,3 +109,18 @@ witnessForTxIn tx (UTxO utxo) txin =
 
 witnessForTx :: KeyPair -> Tx -> Wit
 witnessForTx (KeyPair sk vk) tx = Wit vk (sign sk tx)
+
+
+--------------------------------------------------------------------------------
+-- GoblinData & goblin-tinkered SignalGenerators
+--------------------------------------------------------------------------------
+
+mkGoblinGens
+  "UTXOW"
+  [ "InsufficientWitnesses"
+  , "UtxoFailure_EmptyTxInputs"
+  , "UtxoFailure_EmptyTxOutputs"
+  , "UtxoFailure_FeeTooLow"
+  , "UtxoFailure_InputsNotInUTxO"
+  , "UtxoFailure_NonPositiveOutputs"
+  ]

@@ -49,6 +49,7 @@ module Ledger.Delegation
   , _dIStateScheduledDelegations
   , _dIStateKeyEpochDelegations
   , liveAfter
+  , EpochDiff(..)
   -- * State lens fields
   , slot
   , epoch
@@ -62,6 +63,7 @@ module Ledger.Delegation
   , dcertsGen
   , initialEnvFromGenesisKeys
   , randomDCertGen
+  , goblinGensDELEG
   -- * Functions on delegation state
   , delegatorOf
   -- * Support Functions for delegation properties
@@ -81,7 +83,9 @@ module Ledger.Delegation
   , PredicateFailure
       ( IsNotGenesisKey, EpochInThePast, EpochPastNextEpoch
       , HasAlreadyDelegated, IsAlreadyScheduled, DoesNotVerify
-      , SDelegSFailure, SDelegFailure
+      , ADelegSFailure, ADelegFailure, SDelegSFailure, SDelegFailure
+      , S_BeforeExistingDelegation, S_NoLastDelegation
+      , S_AfterExistingDelegation, S_AlreadyADelegateOf
       )
   )
 where
@@ -111,7 +115,8 @@ import qualified Hedgehog.Range as Range
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, genTrace,
+                     sigGen, tinkerWithSigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
@@ -119,6 +124,10 @@ import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), O
                      (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
+import           Ledger.Util (mkGoblinGens)
+
+import           Test.Goblin (AddShrinks(..), Goblin(..), GoblinData, SeedGoblin(..), mkEmptyGoblin)
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
 --------------------------------------------------------------------------------
@@ -745,3 +754,38 @@ maxCertsPerBlock groupedCerts
   = case groupedCerts of
       [] -> 0
       _  -> List.maximum (length <$> groupedCerts)
+
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''DCert
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''DCert
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''DSEnv
+deriveSeedGoblin ''DIState
+
+
+--------------------------------------------------------------------------------
+-- GoblinData & goblin-tinkered SignalGenerators
+--------------------------------------------------------------------------------
+
+mkGoblinGens
+  "DELEG"
+  [ "SDelegSFailure_SDelegFailure_EpochInThePast"
+  , "SDelegSFailure_SDelegFailure_EpochPastNextEpoch"
+  , "SDelegSFailure_SDelegFailure_IsAlreadyScheduled"
+  , "SDelegSFailure_SDelegFailure_IsNotGenesisKey"
+  ]

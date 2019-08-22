@@ -38,6 +38,7 @@ library
                      , bytestring
                      , containers
                      , cs-ledger
+                     , goblins
                      , hashable
                      , hedgehog >= 1.0
                      , lens

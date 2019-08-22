@@ -20,9 +20,12 @@
           (hsPkgs.base)
           (hsPkgs.bimap)
           (hsPkgs.containers)
+          (hsPkgs.filepath)
+          (hsPkgs.goblins)
           (hsPkgs.hashable)
           (hsPkgs.hedgehog)
           (hsPkgs.lens)
+          (hsPkgs.template-haskell)
           (hsPkgs.Unique)
           (hsPkgs.small-steps)
           ];

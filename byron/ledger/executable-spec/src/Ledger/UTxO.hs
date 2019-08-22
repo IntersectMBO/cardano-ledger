@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -27,6 +28,10 @@ import           Numeric.Natural   (Natural)
 
 import           Ledger.Core       hiding ((<|))
 import           Ledger.Update     (PParams (PParams), _factorA, _factorB)
+
+import           Test.Goblin (AddShrinks(..), Goblin(..), SeedGoblin(..))
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin,
+                   deriveSeedGoblin)
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
@@ -143,3 +148,37 @@ makeTxWits (UTxO utxo) tx = TxWits
     in KeyPair (SKey o) (VKey o)
   keys = getKey <$> inputs tx
   wits = makeWitness <$> keys <*> pure tx
+
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''Tx
+deriveGoblin ''TxId
+deriveGoblin ''TxIn
+deriveGoblin ''TxOut
+deriveGoblin ''TxWits
+deriveGoblin ''Wit
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''Tx
+deriveAddShrinks ''TxId
+deriveAddShrinks ''TxIn
+deriveAddShrinks ''TxOut
+deriveAddShrinks ''TxWits
+deriveAddShrinks ''Wit
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''UTxO
+deriveSeedGoblin ''TxId
+deriveSeedGoblin ''TxIn
+deriveSeedGoblin ''TxOut
