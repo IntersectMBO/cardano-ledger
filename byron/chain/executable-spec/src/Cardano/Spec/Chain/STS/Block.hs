@@ -24,9 +24,8 @@ import           Ledger.Delegation
 import           Ledger.Update (ProtVer, STag, UProp, Vote)
 import           Ledger.UTxO (TxIn, TxOut, TxWits, Wit)
 
-
-import           Test.Goblin
-import           Test.Goblin.TH
+import           Test.Goblin (AddShrinks(..), Goblin(..))
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin)
 
 data BlockHeader
   = BlockHeader

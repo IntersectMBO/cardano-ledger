@@ -54,7 +54,6 @@ mkGoblinGens stsNameStr pfNames = do
 mkGoblinDecls :: String -> String -> Q (Name, [Dec])
 mkGoblinDecls stsNameStr pfNameStr = do
   decs <- mconcat <$> sequence [goblinDataDecs, goblinGenDecs]
-  runIO (print decs)
   pure (ggName, decs)
  where
   genomeName = stsNameStr <> "_" <> pfNameStr
