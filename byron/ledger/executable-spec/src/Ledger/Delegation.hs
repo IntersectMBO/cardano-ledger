@@ -120,13 +120,14 @@ import           Control.State.Transition.Generator (HasTrace, SignalGenerator, 
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, mkVkGenesisSet, owner, range, signWithGenesisKey, unBlockCount,
-                     (∈), (∉), (⨃))
+                     addSlot, hash, mkVkGenesisSet, owner, range, unBlockCount, (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
-import           Ledger.Util (mkGoblinGens)
+import           Ledger.Core.Omniscient (signWithGenesisKey)
 
-import           Test.Goblin (AddShrinks(..), Goblin(..), GoblinData, SeedGoblin(..), mkEmptyGoblin)
+import           Ledger.Util (mkGoblinGens)
+import           Test.Goblin (AddShrinks (..), Goblin (..), GoblinData, SeedGoblin (..),
+                     mkEmptyGoblin)
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
@@ -144,7 +145,7 @@ data DCert = DCert
   , depoch :: Epoch
     -- | Witness for the delegation certificate
   , signature :: Sig (VKey, Epoch)
-  } deriving (Show, Eq, Ord, Generic, Hashable)
+  } deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable)
 
 instance HasTypeReps DCert
 

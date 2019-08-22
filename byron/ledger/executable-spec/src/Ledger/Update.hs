@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -25,9 +26,12 @@ where
 
 import           Control.Arrow (second, (&&&))
 import           Control.Lens
+import           Control.Monad (mzero)
 import           Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import           Data.Char (isAscii)
+import           Data.Coerce (coerce)
+import           Data.Data (Data, Typeable)
 import           Data.Foldable (foldl', toList)
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
@@ -48,19 +52,21 @@ import qualified Hedgehog.Range as Range
 import           Numeric.Natural
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, SignalGenerator,
-                     envGen, sigGen, tinkerWithSigGen)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, sigGen,
+                     tinkerWithSigGen)
 import           Data.AbstractSize (HasTypeReps)
 
 import           Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
-                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash, skey, (*.),
-                     (-.), (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
+                     SlotCount (..), VKey (VKey), VKeyGenesis (VKeyGenesis), dom, hash, (*.), (-.),
+                     (∈), (∉), (⋪), (▷), (▷<=), (▷>=), (◁), (⨃))
 import qualified Ledger.Core as Core
 import qualified Ledger.Core.Generators as CoreGen
+import           Ledger.Core.Omniscient (skey)
 import qualified Ledger.GlobalParams as GP
 import           Ledger.Util (mkGoblinGens)
 
-import           Test.Goblin (AddShrinks(..), Goblin(..), GoblinData, SeedGoblin(..), mkEmptyGoblin)
+import           Test.Goblin (AddShrinks (..), Goblin (..), GoblinData, SeedGoblin (..),
+                     mkEmptyGoblin)
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 import           Prelude
@@ -95,14 +101,14 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Minimum fees per transaction
   , _factorB :: !Int
   -- ^ Additional fees per transaction size
-  } deriving (Eq, Generic, Ord, Show, Hashable)
+  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable)
 
 makeLenses ''PParams
 
 instance HasTypeReps PParams
 
 newtype UpId = UpId Int
-  deriving stock (Generic, Show)
+  deriving stock (Generic, Show, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable)
   deriving anyclass (HasTypeReps)
 
@@ -111,21 +117,21 @@ data ProtVer = ProtVer
   { _pvMaj :: Natural
   , _pvMin :: Natural
   , _pvAlt :: Natural
-  } deriving (Eq, Generic, Ord, Show, Hashable)
+  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable)
 
 makeLenses ''ProtVer
 
 instance HasTypeReps ProtVer
 
 newtype ApName = ApName String
-  deriving stock (Generic, Show)
+  deriving stock (Generic, Show, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable)
 
 instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
-  deriving stock (Generic, Show)
+  deriving stock (Generic, Show, Data, Typeable)
   deriving newtype (Eq, Ord, Num, Hashable)
 
 instance HasTypeReps ApVer
@@ -133,17 +139,20 @@ instance HasTypeReps ApVer
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Generic, Show, Hashable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
 
 makeLenses ''SwVer
 
 instance HasTypeReps SwVer
 
 -- | Part of the update proposal which must be signed
+--
 type UpSD =
   ( ProtVer
   , PParams
   , SwVer
+  , Set STag
+  , Metadata
   )
 
 -- | System tag, this represents a target operating system for the update (e.g.
@@ -152,7 +161,7 @@ type STag = String
 
 -- | For now we do not have any requirements on metadata.
 data Metadata = Metadata
-  deriving (Eq, Ord, Show, Generic, Hashable)
+  deriving (Eq, Ord, Show, Generic, Hashable, Data, Typeable)
 
 -- | Update proposal
 data UProp = UProp
@@ -166,27 +175,60 @@ data UProp = UProp
   -- ^ System tags involved in the update proposal.
   , _upMdt :: Metadata
   -- ^ Metadata required for performing software updates.
-  } deriving (Eq, Generic, Show, Hashable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
 
+
+-- We need the Hashable instance before making lenses.
 instance Hashable a => Hashable (Set a) where
   hashWithSalt = H.hashUsing Set.toList
 
 
 makeLenses ''UProp
 
-instance HasTypeReps (ProtVer, PParams, SwVer)
+
+upSigData :: Lens' UProp UpSD
+upSigData = lens
+  (\up -> (up ^. upPV, up ^. upParams, up ^. upSwVer, up ^. upSTags, up ^. upMdt))
+  (\up (pv, pps, sv, stags, mdt) -> up
+    & upParams .~ pps
+    & upPV .~ pv
+    & upSwVer .~ sv
+    & upSTags .~ stags
+    & upMdt .~ mdt
+  )
+
+
+getUpSigData :: UProp -> UpSD
+getUpSigData = view upSigData
+
+mkUProp
+  :: UpId
+  -> Core.VKey
+  -> ProtVer
+  -> PParams
+  -> SwVer
+  -> Set STag
+  -> Metadata
+  -> UProp
+mkUProp aUpId issuer pv pps sv stags mdt = uprop
+  where
+    uprop = UProp
+            { _upId = aUpId
+            , _upIssuer = issuer
+            , _upParams = pps
+            , _upPV = pv
+            , _upSwVer = sv
+            , _upSig = Core.sign (skey issuer) (uprop ^. upSigData)
+            , _upSTags = stags
+            , _upMdt = mdt
+            }
+
+
+instance HasTypeReps (ProtVer, PParams, SwVer, Set STag, Metadata)
 instance HasTypeReps Metadata
 instance HasTypeReps UProp
 instance HasTypeReps (Maybe UProp)
 
-upSigData :: Lens' UProp UpSD
-upSigData = lens
-  (\up -> (up ^. upPV, up ^. upParams, up ^. upSwVer))
-  (\up (pv, pps, sv) -> up
-    & upParams .~ pps
-    & upPV .~ pv
-    & upSwVer .~ sv
-  )
 
 -- | Test if a pair is present in a map.
 inMap :: (Ord key, Eq v) => key -> v -> Map key v -> Bool
@@ -280,7 +322,7 @@ data UpdateConstraintViolation
   | TransactionSizeTooLarge Natural (Threshold Natural)
   | ScriptVersionTooLarge Natural (Threshold Natural)
   | ScriptVersionTooSmall Natural (Threshold Natural)
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Data, Typeable)
 
 svCanFollow
   :: Map ApName (ApVer, Core.Slot, Metadata)
@@ -298,7 +340,7 @@ svCanFollow avs (an,av) =
 ------------------------------------------------------------------------
 
 -- | Update Proposal Software Version Validation
-data UPSVV
+data UPSVV deriving (Generic, Data, Typeable)
 
 instance STS UPSVV where
   type Environment UPSVV = Map ApName (ApVer, Core.Slot, Metadata)
@@ -313,7 +355,7 @@ instance STS UPSVV where
     | CannotFollowSv
     | InvalidApplicationName
     | InvalidSystemTags
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -328,11 +370,14 @@ instance STS UPSVV where
     ]
     where
       apNameValid (ApName n) = all isAscii n && length n <= 12
-      fstSnd (x, y, _) = (x, y)
+
       sTagValid tag = all isAscii tag && length tag <= 10
 
+fstSnd :: (a, b, c) -> (a, b)
+fstSnd (x, y, _) = (x, y)
 
-data UPPVV
+
+data UPPVV deriving (Generic, Data, Typeable)
 
 instance STS UPPVV where
   type Environment UPPVV =
@@ -349,7 +394,7 @@ instance STS UPPVV where
     = CannotFollowPv
     | CannotUpdatePv [UpdateConstraintViolation]
     | AlreadyProposedPv
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -366,7 +411,7 @@ instance STS UPPVV where
 
 
 -- | Update proposal validity
-data UPV
+data UPV deriving (Generic, Data, Typeable)
 
 instance STS UPV where
   type Environment UPV =
@@ -389,7 +434,7 @@ instance STS UPV where
     | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
     | ParamsChangedInSVUpdate
     | PVChangedInSVUpdate
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -429,7 +474,7 @@ instance Embed UPPVV UPV where
 instance Embed UPSVV UPV where
   wrapFailed = UPSVVFailure
 
-data UPREG
+data UPREG deriving (Generic, Data, Typeable)
 
 instance STS UPREG where
   type Environment UPREG =
@@ -449,7 +494,7 @@ instance STS UPREG where
     = UPVFailure (PredicateFailure UPV)
     | NotGenesisDelegate
     | DoesNotVerify
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -478,17 +523,28 @@ data Vote = Vote
   { _vCaster :: Core.VKey
   , _vPropId :: UpId
   , _vSig :: Core.Sig UpId
-  } deriving (Eq, Generic, Show, Hashable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
+
 
 makeLenses ''Vote
 
+
 instance HasTypeReps Vote
+
+
+mkVote :: Core.VKey -> UpId -> Vote
+mkVote caster proposalId
+  = Vote
+  { _vCaster = caster
+  , _vPropId = proposalId
+  , _vSig = Core.sign (skey caster) proposalId
+  }
 
 instance HasHash (Maybe Ledger.Update.UProp, [Ledger.Update.Vote]) where
   hash = Core.Hash . H.hash
 
 
-data ADDVOTE
+data ADDVOTE deriving (Generic, Data, Typeable)
 
 instance STS ADDVOTE where
   type Environment ADDVOTE =
@@ -502,7 +558,7 @@ instance STS ADDVOTE where
   data PredicateFailure ADDVOTE
     = AVSigDoesNotVerify
     | NoUpdateProposal UpId
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -522,7 +578,7 @@ instance STS ADDVOTE where
         return $! vts <> vtsPid
     ]
 
-data UPVOTE
+data UPVOTE deriving (Generic, Data, Typeable)
 
 instance STS UPVOTE where
   type Environment UPVOTE =
@@ -545,7 +601,7 @@ instance STS UPVOTE where
     | S_HigherThanThdAndNotAlreadyConfirmed
     | S_CfmThdNotReached
     | S_AlreadyConfirmed
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -582,14 +638,14 @@ instance Embed ADDVOTE UPVOTE where
 -- Update voting
 ------------------------------------------------------------------------
 
-data FADS
+data FADS deriving (Generic, Data, Typeable)
 
 instance STS FADS where
   type Environment FADS = ()
   type State FADS = [(Core.Slot, (ProtVer, PParams))]
   type Signal FADS = (Core.Slot, (ProtVer, PParams))
   data PredicateFailure FADS
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -605,7 +661,7 @@ instance STS FADS where
           _ -> (sn, (bv, ppsc)) : fads
     ]
 
-data UPEND
+data UPEND deriving (Generic, Data, Typeable)
 
 -- | Find the key that corresponds to the value satisfying the given predicate.
 -- In case zero or more than one key is found this function returns Nothing.
@@ -643,7 +699,7 @@ instance STS UPEND where
     | CannotAdopt ProtVer
     | NotADelegate VKey
     | UnconfirmedProposal UpId
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -842,7 +898,7 @@ registeredProtocolUpdateProposals :: UPIState -> Map UpId (ProtVer, PParams)
 registeredProtocolUpdateProposals ((_, _), _, _, rpus, _, _, _, _, _) = rpus
 
 
-data UPIREG
+data UPIREG deriving (Generic, Data, Typeable)
 
 instance STS UPIREG where
   type Environment UPIREG = UPIEnv
@@ -850,7 +906,7 @@ instance STS UPIREG where
   type Signal UPIREG = UProp
   data PredicateFailure UPIREG
     = UPREGFailure (PredicateFailure UPREG)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1010,13 +1066,12 @@ instance HasTrace UPIREG where
         -> SwVer
         -> Gen UProp
       generateUpdateProposalWith vk pps' pv' sv'
-        = UProp
+        = mkUProp
         <$> idGen
         <*> pure vk
-        <*> pure pps'
         <*> pure pv'
+        <*> pure pps'
         <*> pure sv'
-        <*> pure (Core.sign (skey vk) (pv', pps', sv'))
         <*> stTagsGen
         <*> mdtGen
 
@@ -1200,7 +1255,154 @@ increasingProbabilityAt gen (lower, upper)
                   , (5, pure upper)
                   ]
 
-data UPIVOTE
+-- | Tamper with the update proposal in such a way that the following
+-- predicate failures are triggered with equal probability:
+--
+-- - UPREGFailure
+--   - UPVFailure
+--     - UPVFailure
+--       - UPPVVFailure
+--         - CannotFollowPv
+--         - CannotUpdatePv
+--         - AlreadyProposedPv
+--       - UPSVVFailure
+--         - AlreadyProposedSv
+--         - CannotFollowSv
+--         - InvalidApplicationName
+--         - InvalidSystemTags
+--       - AVChangedInPVUpdate
+--       - ParamsChangedInSVUpdate
+--       - PVChangedInSVUpdate
+--   - NotGenesisDelegate
+--   - DoesNotVerify
+--
+tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
+tamperWithUpdateProposal _env st uprop = do
+  let failureGenerators
+        = [ invalidProtocolVersion
+          , invalidParametersUpdate
+          , duplicatedProtocolVersion
+          , duplicatedSoftwareVersion
+          , invalidSoftwareVersion
+          , invalidApplicationName
+          , invalidSystemTag
+          , invalidIssuer
+          ]
+  tamperedUprop <- Gen.choice failureGenerators
+  -- We need to re-sign the update proposal since we changed the contents of
+  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
+  -- error (where 'n' is the total number of predicate failures, 'n = length
+  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
+  -- tampered proposal without re-signing it, which will cause the
+  -- 'DoesNotVerify' failure.
+  Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
+                , (1, pure $! tamperedUprop)
+                ]
+  where
+    ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
+
+    invalidProtocolVersion :: Gen UProp
+    invalidProtocolVersion
+      = (\mj mn alt -> uprop { _upPV =  ProtVer mj mn alt})
+      <$> Gen.integral (Range.constant 0 100)
+      <*> Gen.integral (Range.constant 0 100)
+      <*> Gen.integral (Range.constant 0 100)
+
+    invalidParametersUpdate :: Gen UProp
+    invalidParametersUpdate =
+      Gen.element
+        [ uprop & upParams . maxBkSz .~ uprop ^. upParams . maxBkSz * 3
+        , uprop & upParams . maxTxSz .~ uprop ^. upParams . maxBkSz * 2
+        , uprop & upParams . scriptVersion .~ uprop ^. upParams . scriptVersion + 2
+        ]
+
+    duplicatedProtocolVersion :: Gen UProp
+    duplicatedProtocolVersion =
+      let registeredVersions = fst <$> Map.elems rpus in
+        if null registeredVersions
+          then mzero
+          else do
+            duplicatedVersion <- Gen.element registeredVersions
+            pure $! uprop & upPV .~ duplicatedVersion
+
+    duplicatedSoftwareVersion :: Gen UProp
+    duplicatedSoftwareVersion =
+      let registeredVersions = fmap fstSnd (Map.elems raus) in
+        if null registeredVersions
+          then mzero
+          else do
+            (an, av) <- Gen.element registeredVersions
+            pure $! uprop & upSwVer .~ SwVer { _svName = an, _svVer = av }
+
+    invalidSoftwareVersion :: Gen UProp
+    invalidSoftwareVersion =
+      pure $! over (upSwVer . svVer) (+42) uprop
+
+    invalidApplicationName :: Gen UProp
+    invalidApplicationName = do
+      randomName <- ApName <$> Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! uprop & upSwVer . svName .~ randomName
+
+    invalidSystemTag :: Gen UProp
+    invalidSystemTag = do
+      randomTag <- Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! over upSTags (Set.insert randomTag) uprop
+
+    invalidIssuer :: Gen UProp
+    invalidIssuer =
+      -- We use a large (constant) increment here, so that we have a bigger chance to get a
+      -- non-genesis delegate.
+      pure $! over upIssuer (VKey . Owner . (100 +) . coerce) uprop
+
+
+-- | Tamper with some of the votes provided as parameter in such a way that the following
+-- predicate failures are triggered with equal probability:
+--
+-- - AVSigDoesNotVerify
+-- - NoUpdateProposal
+--
+tamperWithVotes :: UPIEnv -> UPIState -> [Vote] -> Gen [Vote]
+tamperWithVotes _env _st [] = do
+  -- If there are no votes, then we generate a random one.
+  vote <- mkVote <$> CoreGen.vkGen <*> randomUpId
+  (:[]) <$> tamperWithVote vote
+tamperWithVotes env st [vote] =
+  -- If we have only one vote we duplicate it and try again, raising the
+  -- probabilities that one of the votes in the list will be tampered with.
+  tamperWithVotes env st [vote, vote]
+tamperWithVotes _env _st votes =
+  traverse tamperWithVote votes
+
+
+tamperWithVote :: Vote -> Gen Vote
+tamperWithVote vote =
+  Gen.choice
+    [ -- Change the vote by some random proposal id. There might be a chance
+      -- that the proposal id exists though, but this should be minimal if
+      -- we generate only small valid proposal id's.
+       mkVote (vote ^. vCaster)
+       .   UpId
+       <$> Gen.integral (Range.constant 10000 10100)
+    , do
+        vk <- CoreGen.vkGen
+        -- Replace the signature by the signature of some random key.
+        pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId)
+    , pure $! vote
+    ]
+
+
+-- | Generate a random update proposal id, by picking a large number so that the
+-- probability of having an update proposal with that id is nearly zero.
+randomUpId :: Gen UpId
+randomUpId = UpId <$> Gen.integral (Range.constant 10000 10100)
+
+-- | Update the signature of the update proposal.
+reSign :: UProp -> UProp
+reSign uprop
+  = uprop
+  & upSig .~ Core.sign (skey (uprop ^. upIssuer)) (uprop ^. upSigData)
+
+data UPIVOTE deriving (Generic, Data, Typeable)
 
 instance STS UPIVOTE where
   type Environment UPIVOTE = UPIEnv
@@ -1208,7 +1410,7 @@ instance STS UPIVOTE where
   type Signal UPIVOTE = Vote
   data PredicateFailure UPIVOTE
     = UPVOTEFailure (PredicateFailure UPVOTE)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -1251,7 +1453,7 @@ instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
 
 
-data APPLYVOTES
+data APPLYVOTES deriving (Generic, Data, Typeable)
 
 instance STS APPLYVOTES where
   type Environment APPLYVOTES = UPIEnv
@@ -1260,7 +1462,7 @@ instance STS APPLYVOTES where
 
   data PredicateFailure APPLYVOTES
     = UpivoteFailure (PredicateFailure UPIVOTE)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1278,7 +1480,7 @@ instance STS APPLYVOTES where
 instance Embed UPIVOTE APPLYVOTES where
   wrapFailed = UpivoteFailure
 
-data UPIVOTES
+data UPIVOTES deriving (Generic, Data, Typeable)
 
 instance STS UPIVOTES where
   type Environment UPIVOTES = UPIEnv
@@ -1287,7 +1489,7 @@ instance STS UPIVOTES where
 
   data PredicateFailure UPIVOTES
     = ApplyVotesFailure (PredicateFailure APPLYVOTES)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1340,7 +1542,7 @@ instance HasTrace UPIVOTES where
   envGen _ = upiEnvGen
 
   sigGen (_slot, dms, _k, _ngk) ((_pv, _pps), _fads, _avs, rpus, _raus, _cps, vts, _bvs, _pws) =
-    (mkVote <$>) . concatMap replicateFst
+    (mkVoteForDelegate <$>) . concatMap replicateFst
       <$> genVotesOnMostVotedProposals completedVotes
       where
         -- Votes needed for confirmation, per proposal ID.
@@ -1350,15 +1552,16 @@ instance HasTrace UPIVOTES where
                        & fmap Set.toList
                        & Map.toList
 
-        mkVote
+        -- Make a vote for a delegate of a genesis key.
+        mkVoteForDelegate
           :: (UpId, Core.VKeyGenesis)
           -> Vote
-        mkVote (proposalId, vkg) =
+        mkVoteForDelegate (proposalId, vkg) =
           Vote vk proposalId (Core.sign (skey vk) proposalId)
           where
             vk = fromMaybe err $ Bimap.lookup vkg dms
               where
-                err = error $  "Ledger.Update.mkVote: "
+                err = error $  "Ledger.Update.mkVoteForDelegate: "
                             ++ "the genesis key was not found in the delegation map, "
                             ++ "but it should be since we used `dms` to get the keys"
                             ++ "that can vote (and so they should have a pre-image in `dms`)."
@@ -1422,7 +1625,7 @@ instance HasTrace UPIVOTES where
         replicateFst (a, bs) = zip (repeat a) bs
 
 
-data UPIEND
+data UPIEND deriving (Generic, Data, Typeable)
 
 instance STS UPIEND where
   type Environment UPIEND = UPIEnv
@@ -1430,7 +1633,7 @@ instance STS UPIEND where
   type Signal UPIEND = (ProtVer, Core.VKey)
   data PredicateFailure UPIEND
     = UPENDFailure (PredicateFailure UPEND)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1491,7 +1694,7 @@ pickHighlyEndorsedProtocolVersion endorsementsList =
                           & take 5
                           & fmap fst
 
-data PVBUMP
+data PVBUMP deriving (Generic, Data, Typeable)
 
 instance STS PVBUMP where
   type Environment PVBUMP =
@@ -1509,7 +1712,7 @@ instance STS PVBUMP where
 
   -- PVBUMP has no predicate failures
   data PredicateFailure PVBUMP = NoPVBUMPFailure
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =
@@ -1522,7 +1725,7 @@ instance STS PVBUMP where
             pure $! (pv_c, pps_c)
     ]
 
-data UPIEC
+data UPIEC deriving (Generic, Data, Typeable)
 
 instance STS UPIEC where
   type Environment UPIEC =
@@ -1536,7 +1739,7 @@ instance STS UPIEC where
   type Signal UPIEC = ()
   data PredicateFailure UPIEC
     = PVBUMPFailure (PredicateFailure PVBUMP)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
   transitionRules =

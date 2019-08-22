@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,6 +10,8 @@
 
 module Cardano.Ledger.Spec.STS.UTXOWS where
 
+import           Data.Data (Data, Typeable)
+
 import           Cardano.Ledger.Spec.STS.UTXO (UTxOEnv, UTxOState)
 import           Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
@@ -18,7 +21,7 @@ import           Control.State.Transition.Generator (HasTrace, envGen, genTrace,
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.UTxO (TxWits)
 
-data UTXOWS
+data UTXOWS deriving (Data, Typeable)
 
 instance STS UTXOWS where
   type State UTXOWS = UTxOState
@@ -26,7 +29,7 @@ instance STS UTXOWS where
   type Environment UTXOWS = UTxOEnv
   data PredicateFailure UTXOWS
     = UtxowFailure (PredicateFailure UTXOW)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules =
     [ do

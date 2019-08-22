@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -6,6 +7,7 @@ module Cardano.Spec.Chain.STS.Rule.Pbft where
 
 import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
+import           Data.Data (Data, Typeable)
 import           Data.Sequence (Seq)
 
 import           Control.State.Transition
@@ -16,7 +18,7 @@ import           Ledger.Update
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.SigCnt
 
-data PBFT
+data PBFT deriving (Data, Typeable)
 
 instance STS PBFT where
   type Environment PBFT =
@@ -37,7 +39,7 @@ instance STS PBFT where
     | PrevHashNotMatching Hash Hash
     | InvalidHeaderSignature VKey (Sig Hash)
     | SigCountFailure (PredicateFailure SIGCNT)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
 

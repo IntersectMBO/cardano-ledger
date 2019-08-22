@@ -1,26 +1,18 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Spec.Chain.STS.Rule.Bupi where
 
-import Control.State.Transition
-  ( Embed
-  , Environment
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , initialRules
-  , judgmentContext
-  , trans
-  , transitionRules
-  , wrapFailed
-  , TransitionRule
-  )
-import Ledger.Core (VKey)
-import Ledger.Update (UPIEnv, UPIState, UProp, Vote, ProtVer, UPIREG, UPIVOTES, UPIEND)
+import           Data.Data (Data, Typeable)
+
+
+import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
+                     TRC (TRC), TransitionRule, initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed)
+import           Ledger.Core (VKey)
+import           Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
 
 
 type UpdatePayload =
@@ -30,7 +22,7 @@ type UpdatePayload =
   )
 
 
-data BUPI
+data BUPI deriving (Data, Typeable)
 
 instance STS BUPI where
   type Environment BUPI = UPIEnv
@@ -43,7 +35,7 @@ instance STS BUPI where
     = UPIREGFailure (PredicateFailure UPIREG)
     | UPIVOTESFailure (PredicateFailure UPIVOTES)
     | UPIENDFailure (PredicateFailure UPIEND)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
 

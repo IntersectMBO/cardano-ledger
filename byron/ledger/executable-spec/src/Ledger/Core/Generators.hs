@@ -22,7 +22,7 @@ import           Ledger.GlobalParams (slotsPerEpochToK)
 
 
 vkGen :: Gen VKey
-vkGen = VKey . Owner <$> Gen.integral (Range.linear 0 10000)
+vkGen = VKey . Owner <$> Gen.integral (Range.linear 0 100)
 
 vkgenesisGen :: Gen VKeyGenesis
 vkgenesisGen = VKeyGenesis <$> vkGen
