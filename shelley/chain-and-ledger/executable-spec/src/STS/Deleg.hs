@@ -13,7 +13,7 @@ import           BlockChain (slotsPrior)
 import           Coin (Coin (..))
 import           Delegation.Certificates
 import           Keys
-import           Ledger.Core (dom, singleton, (∈), (∉), (∪), (⋪), (⨃))
+import           Ledger.Core (dom, singleton, (∈), (∉), (∪), (⋪), (⋫),(⨃))
 import           LedgerState
 import           Slot
 import           TxData
@@ -67,7 +67,7 @@ delegationTransition = do
         { _stKeys      = Set.singleton key              ⋪ _stKeys ds
         , _rewards     = Set.singleton (RewardAcnt key) ⋪ _rewards ds
         , _delegations = Set.singleton key              ⋪ _delegations ds
-        , _ptrs        = Set.singleton ptr_             ⋪ _ptrs ds
+        , _ptrs        = _ptrs ds                       ⋫ Set.singleton key
         }
 
     Delegate (Delegation delegator_ delegatee_) -> do
