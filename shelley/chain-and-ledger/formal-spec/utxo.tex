@@ -52,14 +52,15 @@ Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition
     The $\fun{wbalance}$ function calculates the total sum of all the reward withdrawals in a
     transaction.
 
-  \item The calculation $\fun{consumed}$ gives the value consumed by the transaction $\var{tx}$
-    in the context of the protocol parameters, the current UTxO on the ledger and the registered
-    stake keys.  This calculation is a sum of all coin in the inputs of $\var{tx}$,
-    reward withdrawals and stake key deposit refunds.
-    Some of the definitions used in this function will be defined in
-    Section~\ref{sec:deps-refunds}.
-    In particular, $\fun{keyRefunds}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
-    and $\StakeDelegs$ is defined in Figure~\ref{fig:delegation-defs}.
+  \item The calculation $\fun{consumed}$ gives the value consumed by the
+    transaction $\var{tx}$ in the context of the protocol parameters, the
+    current UTxO on the ledger and the registered stake credentials. This
+    calculation is a sum of all coin in the inputs of $\var{tx}$, reward
+    withdrawals and stake credential deposit refunds. Some of the definitions
+    used in this function will be defined in Section~\ref{sec:deps-refunds}. In
+    particular, $\fun{keyRefunds}$ is defined in
+    Figure~\ref{fig:functions:deposits-refunds} and $\StakeDelegs$ is defined in
+    Figure~\ref{fig:delegation-defs}.
 
   \item The calculation $\fun{produced}$ gives the value produced by the transaction $\var{tx}$
     in the context of the protocol parameters and the registered stake pools.
@@ -127,9 +128,8 @@ The environment, $\UTxOEnv$, consists of:
 \begin{itemize}
   \item The current slot.
   \item The protocol parameters.
-  \item The registered stake keys
-    (which will be explained in Section~\ref{sec:delegation-shelley},
-    Figure~\ref{fig:delegation-defs}).
+  \item The registered stake credentials (which will be explained in
+    Section~\ref{sec:delegation-shelley}, Figure~\ref{fig:delegation-defs}).
   \item The registered stake pools
     (also explained in Section~\ref{sec:delegation-shelley},
     Figure~\ref{fig:delegation-defs}).
@@ -374,26 +374,27 @@ The UTXO rule has five predicate failures:
 \subsection{Deposits and Refunds}
 \label{sec:deps-refunds}
 
-Deposits are described in appendix B.2 of the delegation design document \cite{delegation_design}.
-These deposit functions were used above in the UTxO transition,~\ref{sec:utxo-trans}.
-Deposits are used for stake key registration and pool
-registration certificates, which will be explained in Section~\ref{sec:delegation-shelley}.
-In particular, the function $\cwitness{}$, which gets the certificate witness
-from a certificate, will be defined later.
-Figure~\ref{fig:functions:deposits-refunds} defines the deposit and refund functions.
+Deposits are described in appendix B.2 of the delegation design document
+\cite{delegation_design}.  These deposit functions were used above in the UTxO
+transition,~\ref{sec:utxo-trans}. Deposits are used for stake credential
+registration and pool registration certificates, which will be explained in
+Section~\ref{sec:delegation-shelley}.  In particular, the function
+$\cwitness{}$, which gets the certificate witness from a certificate, will be
+defined later.  Figure~\ref{fig:functions:deposits-refunds} defines the deposit
+and refund functions.
 \begin{itemize}
-  \item The function $\fun{deposits}$ returns the total deposits that have to be made
-    by a transaction.  This calculation is based on the protocol parameters.
-    Specifically, for a given transaction, it sums up the values of the stake key deposits
-    and the stake pool deposits.  Those certificates which are
-    updates of stake pool parameters of already registered pool keys should not
-    (and are, in fact, not allowed to) make a deposit.
+\item The function $\fun{deposits}$ returns the total deposits that have to be
+  made by a transaction.  This calculation is based on the protocol parameters.
+  Specifically, for a given transaction, it sums up the values of the stake
+  credential deposits and the stake pool deposits. Those certificates which are
+  updates of stake pool parameters of already registered pool keys should not
+  (and are, in fact, not allowed to) make a deposit.
   \item The function $\fun{refund}$ calculates the deposit refund with an exponential decay.
   \item The function $\fun{keyRefund}$, calculates the refund for an individual
-    stake key registration deposit, based on the slot when it was created and
-    the slot passed to the function. The creation slot should always exist in the map
-    $\var{stdelegs}$ passed to the function and this would be a good property
-    to prove about the transition system.
+    stake credential registration deposit, based on the slot when it was created
+    and the slot passed to the function. The creation slot should always exist
+    in the map $\var{stdelegs}$ passed to the function and this would be a good
+    property to prove about the transition system.
   \item The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
     the total value to be refunded to all individual key deregistration certificate authors
     in a transaction.
@@ -433,13 +434,14 @@ Figure~\ref{fig:functions:deposits-refunds} defines the deposit and refund funct
 Figure~\ref{fig:functions:deposits-decay} defines the decays functions.
 \begin{itemize}
 
-  \item The function $\fun{decayedKey}$ calculates how much of a stake key deposit
-    has decayed since the last epoch. Again, this is done using the time to live of
-    the transaction (and not the current slot, as explained above).
-    At the epoch boundaries, decayed portions of deposits are moved to the reward pot,
-    so between epochs we need only account for what has decayed since the last epoch.
-    The value is calculated by subtracting the refund calculation based at the epoch boundary
-    from the refund calculation based at the time to live of the transaction.
+\item The function $\fun{decayedKey}$ calculates how much of a stake credential
+  deposit has decayed since the last epoch. Again, this is done using the time
+  to live of the transaction (and not the current slot, as explained above).  At
+  the epoch boundaries, decayed portions of deposits are moved to the reward
+  pot, so between epochs we need only account for what has decayed since the
+  last epoch.  The value is calculated by subtracting the refund calculation
+  based at the epoch boundary from the refund calculation based at the time to
+  live of the transaction.
   \item The function $\fun{decayedTx}$ calculates the total decayed deposits associated
     with all the refunds in a given transaction.  This function was used earlier in the
     UTxO transition in Figure~\ref{fig:rules:utxo-shelley}.
@@ -545,23 +547,24 @@ Replay prevention is an inherent property of UTxO type accounting
 since transaction IDs are unique and we require all transaction to
 consume at least one input.
 
-A transaction is witnessed by a signature and a verification key corresponding to this signature.
-The witnesses, together with the transaction body, form a full transaction.
-Every witness in a transaction signs the transaction body.
-Moreover, the witnesses are represented as finite maps from verification keys to signatures,
-so that any key that is required to sign a transaction only provides a single witness.
-This means that, for example, a transaction which includes a delegation certificate and
-a reward withdrawal corresponding to the same stake key still only includes one signature.
+A transaction is witnessed by a signature and a verification key corresponding
+to this signature.  The witnesses, together with the transaction body, form a
+full transaction.  Every witness in a transaction signs the transaction body.
+Moreover, the witnesses are represented as finite maps from verification keys to
+signatures, so that any key that is required to sign a transaction only provides
+a single witness.  This means that, for example, a transaction which includes a
+delegation certificate and a reward withdrawal corresponding to the same stake
+credential still only includes one signature.
 
 Figure~\ref{fig:functions-witnesses} defines the function which
 gathers all the (hashes of) verification keys needed to witness a given transaction.
 This consists of:
 \begin{itemize}
   \item payment keys for outputs being spent
-  \item stake keys for reward withdrawals
-  \item stake keys for delegation certificates (all five types)
+  \item stake credentials for reward withdrawals
+  \item stake credentials for delegation certificates (all five types)
   \item delegates of the genesis keys for any protocol parameter updates
-  \item stake keys for the pool owners in a pool registration certificate
+  \item stake credentials for the pool owners in a pool registration certificate
 \end{itemize}
 
 \begin{figure}[htb]
