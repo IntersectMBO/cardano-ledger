@@ -1074,8 +1074,9 @@ Finally, the full reward calculation is presented in Figure~\ref{fig:functions:r
 The calculation is done pool-by-pool.
 \begin{itemize}
 \item The $\fun{rewardOnePool}$ function calculates the rewards given out to
-  each member of a given pool. The pool leader is identified by the stake key of
-  the pool operator. The function returns the rewards, calculated as follows:
+  each member of a given pool. The pool leader is identified by the stake
+  credential of the pool operator. The function returns the rewards, calculated
+  as follows:
     \begin{itemize}
       \item $\var{pstake}$, the total amount of stake controlled by the stake pool.
       \item $\var{ostake}$, the total amount of stake controlled by the stake pool operator
