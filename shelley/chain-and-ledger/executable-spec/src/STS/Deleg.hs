@@ -13,7 +13,7 @@ import           BlockChain (slotsPrior)
 import           Coin (Coin (..))
 import           Delegation.Certificates
 import           Keys
-import           Ledger.Core (dom, singleton, (∈), (∉), (∪), (⋪), (⋫),(⨃))
+import           Ledger.Core (dom, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import           LedgerState
 import           Slot
 import           TxData
@@ -22,9 +22,7 @@ import           Control.State.Transition
 
 data DELEG hashAlgo dsignAlgo
 
-instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => STS (DELEG hashAlgo dsignAlgo)
+instance STS (DELEG hashAlgo dsignAlgo)
  where
   type State (DELEG hashAlgo dsignAlgo) = DState hashAlgo dsignAlgo
   type Signal (DELEG hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
@@ -42,8 +40,7 @@ instance
   transitionRules = [delegationTransition]
 
 delegationTransition
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => TransitionRule (DELEG hashAlgo dsignAlgo)
+  :: TransitionRule (DELEG hashAlgo dsignAlgo)
 delegationTransition = do
   TRC ((slot_, ptr_), ds, c) <- judgmentContext
 
@@ -78,14 +75,11 @@ delegationTransition = do
 
     GenesisDelegate (gkey, vk) -> do
       let s' = slot_ +* slotsPrior
-          gkeyHash = hashKey gkey
-          vkeyHash = hashKey vk
           (Dms dms_) = _dms ds
 
-      gkeyHash ∈ dom dms_ ?! GenesisKeyNotInpMappingDELEG
-
+      gkey ∈ dom dms_ ?! GenesisKeyNotInpMappingDELEG
       pure $ ds
-        { _fdms = _fdms ds ⨃ [((s', gkeyHash), vkeyHash)]}
+        { _fdms = _fdms ds ⨃ [((s', gkey), vk)]}
 
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails

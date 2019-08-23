@@ -125,6 +125,10 @@ The base case also adopts new application versions at the appropriate times
 and cleans up the future application versions mapping.
 Note that it is better to handle this logic here than in the $\mathsf{AVUP}$ transiton,
 because here it will happen even if the block contains no transactions.
+Similarly, the genesis key delegation mapping is updated according to the future delegation
+mapping. For each genesis key, we adopt the most recent delegation in $\var{fdms}$
+that is past the current slot, and any future genesis key delegations past the current
+slot is removed.
 
 \begin{figure}[htb]
   \emph{Ledger Sequence transitions}
@@ -142,9 +146,14 @@ because here it will happen even if the block contains no transactions.
     \label{eq:ledgers-base}
     \inference[Seq-ledger-base]
     {
-      ((\var{utxo},~\var{deposits},~\var{fees},~\var{us}),~\var{dp})\leteq\var{ls}
+      ((\var{utxo},~\var{deposits},~\var{fees},~\var{us})
+      ,~(\var{ds},~\var{ps}))
+      \leteq\var{ls}
       \\
       (\var{pup},~\var{aup},~\var{favs},~\var{avs}) \leteq\var{us}
+      \\
+      (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},~\var{fdms},~\var{dms})
+      \leteq\var{ds}
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
         \var{favs'} & \{\var{s}\mapsto\var{v}\in\var{favs} ~\mid~ s>\var{slot}\}
@@ -153,9 +162,31 @@ because here it will happen even if the block contains no transactions.
         & \var{avs}\unionoverrideRight\fun{newAVs}~\var{avs}~(\var{favs}\setminus\var{favs'})
       \end{array}}
       \\~\\
+      \var{curr}\leteq
+      \{
+        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fdms}
+        ~\mid~
+        \var{s}\geq\var{slot}
+      \}\\
+      \var{dms'}\leteq
+      \left\{
+        \var{gkh}\mapsto\var{vkh}
+        ~\mathrel{\Bigg|}~
+        {
+          \begin{array}{l}
+            (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{curr}\\
+            \var{s}=\max\{s'~\mid~(s',~\var{gkh})\in\dom{\var{curr}}\}
+          \end{array}
+        }
+      \right\}
+      \\~\\
       \var{us'}\leteq(\var{pup},~\var{aup},~\var{favs'},~\var{avs'})
       \\
-      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~\var{dp})
+      \var{ds'}\leteq
+      (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
+      ~\var{fdms}\setminus\var{curr},~\var{dms}\unionoverrideRight\var{dms'})
+      \\
+      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'},~\var{ps}))
     }
     {
       \left(

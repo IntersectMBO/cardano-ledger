@@ -890,10 +890,6 @@ will be invalid.
   following state transformation:
     \begin{itemize}
       \item Reward accounts are set to zero for each corresponding withdrawal.
-      \item The genesis key delegation mapping is updated according to the future delegation
-        mapping. For each genesis key, we take the most recent delegation in $\var{fdms}$
-        that is past the current slot.
-      \item The future genesis key delegation has any items past the current slots removed.
     \end{itemize}
   \item The inductive case, when the list is non-empty, is captured by \cref{eq:delegs-induct}.
     It constructs a certificate pointer given the current slot and transaction index,
@@ -916,25 +912,6 @@ will be invalid.
       \var{wdrls} \subseteq \var{rewards}
       \\
       \var{rewards'} \leteq \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\}
-      \\~\\
-      \var{curr}\leteq
-      \left\{
-        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fdms}
-        ~\mathrel{\Bigg|}~
-        {
-          \begin{array}{r}
-            \var{s}\geq\var{slot}\\
-            \var{s}=\max\{s'~\mid~(s',~\var{gkh})\in\dom{\var{fdms}}\}
-          \end{array}
-        }
-      \right\}
-      \\
-      \var{dms'}\leteq
-      \{
-        \var{gkh}\mapsto\var{vkh}
-        ~\mid~
-        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{curr}
-      \}
     }
     {
       \left(
@@ -977,8 +954,8 @@ will be invalid.
           \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
           \var{ptrs} \\
-          \varUpdate{\var{fdms}\setminus\var{curr}} \\
-          \varUpdate{\var{dms}\unionoverrideRight\var{dms'}} \\
+          \var{fdms} \\
+          \var{dms} \\
         \end{array}
         \right) \\~\\
         \left(

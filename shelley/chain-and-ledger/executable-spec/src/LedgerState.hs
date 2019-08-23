@@ -134,7 +134,7 @@ import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), agg
                      baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
                      rewardStake)
 import           Keys (AnyKeyHash, DSIGNAlgorithm, Dms (..), GenKeyHash, HashAlgorithm,
-                     KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash, hashKey,
+                     KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
                      undiscriminateKeyHash)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
                      keyMinRefund, minfeeA, minfeeB)
@@ -143,8 +143,8 @@ import           Slot (Duration (..), Epoch (..), Slot (..), epochFromSlot, firs
 import           Tx (extractKeyHash)
 import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolParams, Ptr (..),
                      RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..),
-                     TxOut (..), WitVKey (..), body, certs, getRwdHK, inputs, poolOwners,
-                     poolPledge, poolPubKey, poolRAcnt, ttl, txfee, wdrls)
+                     TxOut (..), body, certs, getRwdHK, inputs, poolOwners, poolPledge, poolPubKey,
+                     poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), Applications, PPUpdate (..), Update (..), emptyUpdate,
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
@@ -435,26 +435,15 @@ validInputs tx u =
     else Invalid [BadInputs]
 
 -- |Implementation of abstract transaction size
-txsize
-  :: DSIGNAlgorithm dsignAlgo
-  => TxBody hashAlgo dsignAlgo
-  -> Integer
+txsize :: TxBody hashAlgo dsignAlgo -> Integer
 txsize = toEnum . length . show
 
 -- |Minimum fee calculation
-minfee
-  :: DSIGNAlgorithm dsignAlgo
-  => PParams
-  -> TxBody hashAlgo dsignAlgo
-  -> Coin
+minfee :: PParams -> TxBody hashAlgo dsignAlgo -> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
 
 -- |Determine if the fee is large enough
-validFee
-  :: DSIGNAlgorithm dsignAlgo
-  => PParams
-  -> TxBody hashAlgo dsignAlgo
-  -> Validity
+validFee :: PParams -> TxBody hashAlgo dsignAlgo -> Validity
 validFee pc tx =
   if needed <= given
     then Valid
@@ -576,8 +565,7 @@ correctWithdrawals accs withdrawals =
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => UTxO hashAlgo dsignAlgo
+  :: UTxO hashAlgo dsignAlgo
   -> Tx hashAlgo dsignAlgo
   -> Dms hashAlgo dsignAlgo
   -> Set (AnyKeyHash hashAlgo dsignAlgo)
@@ -631,8 +619,7 @@ enoughWits tx@(Tx _ wits _) d' u =
     then Valid
     else Invalid [MissingWitnesses]
   where
-    signers = Set.map (\(WitVKey vkey _) ->
-      undiscriminateKeyHash $ hashKey vkey) wits
+    signers = Set.map witKeyHash wits
 
 validRuleUTXO
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
@@ -790,8 +777,7 @@ asStateTransition slot pp ls tx d' =
 -- apply the certificate as a state transition function on the ledger state.
 -- Otherwise, return a list of validation errors.
 certAsStateTransition
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Slot
+  :: Slot
   -> Ix
   -> LedgerState hashAlgo dsignAlgo
   -> (Ix, DCert hashAlgo dsignAlgo)
@@ -839,8 +825,7 @@ retirePools ls@(LedgerState _ ds _) epoch =
 
 -- |Calculate the change to the deposit pool for a given transaction.
 depositPoolChange
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => LedgerState hashAlgo dsignAlgo
+  :: LedgerState hashAlgo dsignAlgo
   -> PParams
   -> TxBody hashAlgo dsignAlgo
   -> Coin
@@ -887,8 +872,7 @@ applyUTxOUpdate u tx = u & utxo .~ txins tx ⋪ (u ^. utxo) ∪ txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Ptr
+  :: Ptr
   -> DCert hashAlgo dsignAlgo
   -> DPState hashAlgo dsignAlgo
   -> DPState hashAlgo dsignAlgo
@@ -936,8 +920,7 @@ applyDCertDState _ (Delegate (Delegation source target)) ds =
 applyDCertDState _ _ ds = ds
 
 applyDCertPState
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Ptr
+  :: Ptr
   -> DCert hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
@@ -946,7 +929,7 @@ applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
        & pParams  %~ Map.insert hsk sp
        & cCounters  %~ Map.insert hsk c
        & retiring %~ Map.delete hsk
-  where hsk = hashKey $ sp ^. poolPubKey
+  where hsk = sp ^. poolPubKey
         (StakePools pools) = ps ^. stPools
         slot' = fromMaybe slot (Map.lookup hsk pools)
         c = fromMaybe 0 (Map.lookup hsk (ps ^. cCounters))
