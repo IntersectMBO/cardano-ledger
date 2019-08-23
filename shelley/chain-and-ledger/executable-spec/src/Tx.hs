@@ -32,7 +32,7 @@ module Tx
 where
 
 
-import           Keys (AnyKeyHash, KeyHash, hashKey, undiscriminateKeyHash)
+import           Keys (AnyKeyHash, undiscriminateKeyHash)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 
@@ -49,8 +49,8 @@ import qualified Data.Set as Set
 
 import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
                      TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs,
-                     inputs, outputs, ttl, txUpdate, txfee, wdrls, witnessMSigMap, witnessVKeySet
-                     )
+                     inputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap,
+                     witnessVKeySet)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -63,7 +63,7 @@ class (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, ToCBOR a) =>
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript
   :: MultiSig hashAlgo dsignAlgo
-  -> Set (KeyHash hashAlgo dsignAlgo)
+  -> Set (AnyKeyHash hashAlgo dsignAlgo)
   -> Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -82,7 +82,7 @@ validateNativeMultiSigScript
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig vhks
   where witsSet = _witnessVKeySet tx
-        vhks    = Set.map (\(WitVKey vk _) -> hashKey vk) witsSet
+        vhks    = Set.map witKeyHash witsSet
 
 -- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
 -- front and then calling the script CBOR function.

@@ -168,7 +168,7 @@ mutateDCert keys _ (RegPool (PoolParams _ vrfHk pledge cost margin rwdacnt owner
   cost'   <- mutateCoin 0 100 cost
   p'      <- mutateNat 0 100 (fromIntegral $ numerator $ intervalValue margin)
   let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
-  pure $ RegPool (PoolParams key' vrfHk pledge cost' interval rwdacnt owners)
+  pure $ RegPool (PoolParams (hashKey key') vrfHk pledge cost' interval rwdacnt owners)
 
 mutateDCert keys _ (Delegate (Delegation _ _)) = do
   delegator' <- getAnyStakeKey keys
@@ -177,4 +177,4 @@ mutateDCert keys _ (Delegate (Delegation _ _)) = do
 
 mutateDCert keys _ (GenesisDelegate (gk, _)) = do
   _delegatee <- getAnyStakeKey keys
-  pure $ GenesisDelegate (gk, _delegatee)
+  pure $ GenesisDelegate (gk, hashKey _delegatee)

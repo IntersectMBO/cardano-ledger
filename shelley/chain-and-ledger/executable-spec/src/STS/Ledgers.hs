@@ -15,9 +15,10 @@ import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
+import qualified Data.Set as Set
 
 import           Keys
-import           Ledger.Core ((⨃))
+import           Ledger.Core ((◁), (⨃))
 import           LedgerState
 import           PParams
 import           Slot
@@ -70,7 +71,23 @@ ledgersTransition = do
   let (favs', ready) = Map.partitionWithKey (\s _ -> s > slot) favs
   let avs' = Applications $ apps avs ⨃ (Map.toList . apps $ newAVs avs ready)
   let u''' = UTxOState utxo' dep fee (ppup, aup, favs', avs')
-  pure $ LedgerState u''' dw'' (_txSlotIx ls)
+
+  let ds = _dstate dw''
+      fdms_    = _fdms ds
+      Dms dms_ = _dms ds
+      (fdms', curr) = Map.partitionWithKey (\(s, _) _ -> slot <= s) fdms_
+  let maxSlot = maximum . Set.map fst . Map.keysSet
+  let latestPerGKey gk =
+        ( (maxSlot . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
+        , gk)
+  let dmsKeys = Set.map
+                  latestPerGKey
+                  (Set.map snd (Map.keysSet curr))
+  let dms' = Map.mapKeys snd $ dmsKeys ◁ curr
+  let dw''' = dw'' { _dstate = (_dstate dw'') { _fdms = fdms'
+                                              , _dms = Dms $ dms_ ⨃ Map.toList dms'}}
+
+  pure $ LedgerState u''' dw''' (_txSlotIx ls)
 
 instance
   ( HashAlgorithm hashAlgo

@@ -21,9 +21,7 @@ import           Control.State.Transition
 
 data POOL hashAlgo dsignAlgo
 
-instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => STS (POOL hashAlgo dsignAlgo)
+instance STS (POOL hashAlgo dsignAlgo)
  where
   type State (POOL hashAlgo dsignAlgo) = PState hashAlgo dsignAlgo
   type Signal (POOL hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
@@ -37,15 +35,13 @@ instance
   initialRules = [pure emptyPState]
   transitionRules = [poolDelegationTransition]
 
-poolDelegationTransition
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => TransitionRule (POOL hashAlgo dsignAlgo)
+poolDelegationTransition :: TransitionRule (POOL hashAlgo dsignAlgo)
 poolDelegationTransition = do
   TRC ((slot, pp), ps, c) <- judgmentContext
   let StakePools stPools_ = _stPools ps
   case c of
     RegPool poolParam -> do
-      let hk = hashKey (poolParam ^. poolPubKey)
+      let hk = poolParam ^. poolPubKey
 
       if hk ∉ dom stPools_
         then -- register new
