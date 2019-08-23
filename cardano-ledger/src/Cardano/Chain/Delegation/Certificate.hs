@@ -19,7 +19,7 @@ module Cardano.Chain.Delegation.Certificate
   , ACertificate(..)
 
   -- * Certificate Constructors
-  , mkCertificate
+  , signCertificate
   , unsafeCertificate
 
   -- * Certificate Accessor
@@ -91,23 +91,27 @@ data ACertificate a = UnsafeACertificate
 -- Certificate Constructors
 --------------------------------------------------------------------------------
 
--- | Create a valid 'Certificate'
-mkCertificate
+-- | Create a 'Certificate', signing it with the provided safe signer.
+signCertificate
   :: ProtocolMagicId
-  -> SafeSigner
   -> VerificationKey
   -> EpochNumber
+  -> SafeSigner
   -> Certificate
-mkCertificate pm ss delegateVK e = UnsafeACertificate
-  { aEpoch     = Annotated e ()
-  , issuerVK   = safeToVerification ss
+signCertificate protocolMagicId delegateVK epochNumber safeSigner =
+  UnsafeACertificate
+  { aEpoch     = Annotated epochNumber ()
+  , issuerVK   = safeToVerification safeSigner
   , delegateVK = delegateVK
   , signature  = coerce sig
   }
  where
-  sig = safeSign pm SignCertificate ss
-    $ mconcat ["00", CC.unXPub (unVerificationKey delegateVK), serialize' e]
+  sig = safeSign protocolMagicId SignCertificate safeSigner
+    $ mconcat [ "00"
+              , CC.unXPub (unVerificationKey delegateVK)
+              , serialize' epochNumber]
 
+-- | Create a certificate using the provided signature.
 unsafeCertificate
   :: EpochNumber
   -> VerificationKey

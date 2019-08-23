@@ -295,20 +295,20 @@ exampleHeader = mkHeaderExplicit
  where
   pm          = ProtocolMagicId 7
   [delegateSk, issuerSk] = exampleSigningKeys 5 2
-  certificate = Delegation.mkCertificate
+  certificate = Delegation.signCertificate
     pm
-    (noPassSafeSigner issuerSk)
     (toVerification delegateSk)
     (EpochNumber 5)
+    (noPassSafeSigner issuerSk)
 
 exampleBlockSignature :: BlockSignature
 exampleBlockSignature = ABlockSignature cert sig
  where
-  cert = Delegation.mkCertificate
+  cert = Delegation.signCertificate
     pm
-    (noPassSafeSigner issuerSK)
     (toVerification delegateSK)
     (EpochNumber 5)
+    (noPassSafeSigner issuerSK)
 
   sig = sign pm (SignBlock (toVerification issuerSK)) delegateSK exampleToSign
 

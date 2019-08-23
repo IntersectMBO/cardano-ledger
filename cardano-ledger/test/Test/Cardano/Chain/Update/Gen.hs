@@ -41,7 +41,7 @@ import Cardano.Chain.Update
   , InstallerHash(..)
   , Vote
   , applicationNameMaxLength
-  , mkProposal
+  , unsafeProposal
   , mkVote
   , payload
   , systemTagMaxLength
@@ -159,7 +159,7 @@ genProof pm = genAbstractHash (genPayload pm)
 
 genProposal :: ProtocolMagicId -> Gen Proposal
 genProposal pm =
-  mkProposal
+  unsafeProposal
     <$> genProposalBody
     <*> genVerificationKey
     <*> genSignature pm genProposalBody
