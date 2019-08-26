@@ -13,7 +13,6 @@ import           Ledger.AbstractSize.Properties (testTxHasTypeReps)
 import qualified Ledger.Core.Generators.Properties as CoreGen
 import           Ledger.Delegation.Examples (deleg)
 import qualified Ledger.Delegation.Properties as DELEG
-import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, firstProposal)
 import           Ledger.Relation.Properties (testRelation)
 import           Ledger.Update.Examples (upiendExamples)
 import qualified Ledger.Update.Properties as UPDATE
@@ -39,12 +38,6 @@ main = defaultMain tests
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
       , testProperty "Only valid DBLOCK signals are generated" DELEG.onlyValidSignalsAreGenerated
       , testProperty "Invalid signals are generated when requested" DELEG.invalidSignalsAreGenerated
-      ]
-    , testGroup
-      "PVBUMP properties"
-      [ testProperty "Same state for no updates"         emptyPVUpdate
-      , testProperty "Same state for early on in chain"  beginningsNoUpdate
-      , testProperty "State determined by first proposal" firstProposal
       ]
     , testGroup
       "UTxO properties"
