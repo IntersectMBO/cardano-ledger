@@ -1,40 +1,40 @@
+{-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE ConstrainedClassMethods    #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Ledger.Core where
 
-import Data.Bimap (Bimap)
+import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.Hashable (Hashable)
-import qualified Data.Hashable as H
 import           Data.Data (Data, Typeable)
-import Data.Typeable (typeOf)
-import qualified Data.Sequence as Seq
-import Data.Map.Strict (Map)
+import           Data.Foldable (elem, toList)
+import           Data.Hashable (Hashable)
+import qualified Data.Hashable as H
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum(..))
-import Data.Set (Set, isSubsetOf, intersection)
+import           Data.Monoid (Sum (..))
+import qualified Data.Sequence as Seq
+import           Data.Set (Set, intersection, isSubsetOf)
 import qualified Data.Set as Set
-import Data.Word (Word64, Word8)
-import Data.Foldable (toList, elem)
-import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
+import           Data.Typeable (typeOf)
+import           Data.Word (Word64, Word8)
+import           GHC.Generics (Generic)
+import           Numeric.Natural (Natural)
 
-import Data.AbstractSize
+import           Data.AbstractSize
 
-import Test.Goblin (AddShrinks(..), Goblin(..), SeedGoblin(..))
-import Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
+import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
 -- | An encoded hash of part of the system.
