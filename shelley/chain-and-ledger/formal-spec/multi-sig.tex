@@ -591,7 +591,7 @@ spent inputs locked by scripts and consumed withdrawals locked by scripts.
       \powerset{\KeyHash}
     & \text{required keyhashes} \\
     &  \hspace{-1cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
-    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\txins{tx} \} \\
+    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{txinsVKey}~{tx} \} \\
     \cup & ~~
            \left(\{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
       \restrictdom \txwdrls{tx}\} \cap \KeyHash_{Stake}  \right)\\

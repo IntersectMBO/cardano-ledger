@@ -136,13 +136,13 @@ throughout the rest of the section.
 \begin{figure}[htb]
   \emph{Total possible refunds}
   \begin{align*}
-      & \fun{obligation} \in \PParams \to \StakeKeys \to \StakePools \to \Slot \to \Coin \\
-      & \obligation{pp}{stkeys}{stpools}{cslot} =\\
-      & \sum\limits_{(\_ \mapsto s) \in \var{stkeys}}
-        \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})}
-        + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
-        \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
-      &
+    & \fun{obligation} \in \PParams \to \StakeDelegs \to \StakePools \to \Slot \to \Coin \\
+    & \obligation{pp}{stdelegs}{stpools}{cslot} =\\
+    & \sum\limits_{(\_ \mapsto s) \in \var{stdelegs}}
+      \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})}
+      + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
+      \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
+    &
       \begin{array}{lr@{~=~}l}
         \where
           & \dval,~d_{\min},~\lambda_d
@@ -254,11 +254,11 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
     Keys that are not both registered and delegated are filtered out.
     The relation passed to $\fun{aggregate_{+}}$ is made up of:
     \begin{itemize}
-      \item $\fun{stakeHK_b}^{-1}$, relating hashkeys to (base) addresses
-      \item $\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}$, relating hashkeys to (pointer)
+      \item $\fun{stakeCred_b}^{-1}$, relating credentials to (base) addresses
+      \item $\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}$, relating credentials to (pointer)
         addresses
       \item $\range{utxo}$, relating addresses to coins
-      \item $\fun{stakeHK_r}^{-1}\circ\var{rewards}$, relating (reward) addresses to coins
+      \item $\fun{stakeCred_r}^{-1}\circ\var{rewards}$, relating (reward) addresses to coins
     \end{itemize}
     The notation for relations is explained in Section~\ref{sec:notation-shelley}.
 \end{itemize}
@@ -282,16 +282,16 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
       (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
       & \where \\
-      & ~~~~ (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
+      & ~~~~ (\var{stdelegs},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
         = \var{dstate} \\
       & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
-        \left(\fun{stakeHK_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
+        \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
         \right)
-        \cup \left(\fun{stakeHK_r}^{-1}\circ\var{rewards}\right) \\
+        \cup \left(\fun{stakeCred_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
-               (\dom{stkeys}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
+               (\dom{stdelegs}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
   \end{align*}
 
   \caption{Stake Distribution Function}
@@ -396,11 +396,11 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{~\leteq~}l}
         (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \var{utxoSt}\\
-        (\var{stkeys},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
+        (\var{stdelegs},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
         \var{slot} & \firstSlot{e} \\
-        \var{oblg} & \obligation{pp}{stkeys}{stpools}{slot} \\
+        \var{oblg} & \obligation{pp}{stdelegs}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{oblg} \\
       \end{array}
       }
@@ -533,7 +533,7 @@ This transition has no preconditions and results in the following state change:
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -551,7 +551,7 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
           \var{reserves} \\
           ~ \\
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
           \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retired}} \\
           \var{ptrs} \\
@@ -663,8 +663,8 @@ for ease of reading.
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
           \var{slot} & \leteq & \firstSlot{e} \\
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{stdelegs}{stpools}{slot} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stdelegs}{stpools}{slot} \\
           \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
       \end{array}}
       \\~\\~\\
@@ -741,8 +741,8 @@ for ease of reading.
       \\~\\~\\
       {\begin{array}{rcl}
           \var{slot} & \leteq & \firstSlot{e} \\
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkeys}{stpools}{slot} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkeys}{stpools}{slot} \\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{stdelegs}{stpools}{slot} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stdelegs}{stpools}{slot} \\
           \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
       \end{array}}
       \\~\\~\\
@@ -1074,8 +1074,9 @@ Finally, the full reward calculation is presented in Figure~\ref{fig:functions:r
 The calculation is done pool-by-pool.
 \begin{itemize}
 \item The $\fun{rewardOnePool}$ function calculates the rewards given out to
-  each member of a given pool. The pool leader is identified by the stake key of
-  the pool operator. The function returns the rewards, calculated as follows:
+  each member of a given pool. The pool leader is identified by the stake
+  credential of the pool operator. The function returns the rewards, calculated
+  as follows:
     \begin{itemize}
       \item $\var{pstake}$, the total amount of stake controlled by the stake pool.
       \item $\var{ostake}$, the total amount of stake controlled by the stake pool operator
@@ -1357,7 +1358,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -1380,7 +1381,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \varUpdate{\var{treasury} + \Delta t}\\
           \varUpdate{\var{reserves} + \Delta r}\\
           ~ \\
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
           \var{delegations} \\
           \var{ptrs} \\

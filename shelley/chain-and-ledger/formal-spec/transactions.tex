@@ -113,10 +113,11 @@ This function must produce a unique id for each unique transaction.
       & \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
         \times \Coin \times \Slot \times \Wdrl \times \Update
       \\
+      \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \HashScr \mapsto \Script)
+      \\
       \var{tx}
       & \Tx
-      & \TxBody \times (\VKey \mapsto \Sig)
-      \\
+      & \TxBody \times \TxWitness
     \end{array}
   \end{equation*}
   %
@@ -130,8 +131,9 @@ This function must produce a unique id for each unique transaction.
       \fun{txttl} & \Tx \to \Slot & \text{time to live} \\
       \fun{txwdrls} & \Tx \to \Wdrl & \text{withdrawals} \\
       \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
-      \fun{txwits} & \Tx \to (\VKey \mapsto \Sig) & \text{witnesses} \\
-      \fun{txup} & \Tx \to \Update & \text{protocol parameter update} \\
+      \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
+      \fun{txwitsScript} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}\\
+      \fun{txup} & \Tx \to \Update & \text{protocol parameter update}
     \end{array}
   \end{equation*}
   %
@@ -139,10 +141,43 @@ This function must produce a unique id for each unique transaction.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
+      \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}
   \label{fig:defs:utxo-shelley}
 \end{figure*}
+
+\begin{figure*}[htb]
+  \emph{Helper Functions}
+  %
+  \begin{align*}
+    \fun{txinsVKey} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{VKey Tx inputs}\\
+    \fun{txinsVKey} & ~\var{txins}~\var{utxo} =
+    \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrVKey \times Coin))
+    \\
+    \\
+    \fun{txinsScript} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{Script Tx inputs}\\
+    \fun{txinsScript} & ~\var{txins}~\var{utxo} =
+                        \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrScr \times Coin))
+  \end{align*}
+  %
+  \begin{align*}
+    \fun{validateScript} & \in\Script\to\Tx\to\Bool & \text{validate native
+                                                          script} \\
+    \fun{validateScript} & ~\var{msig}~\var{tx}= \\
+                         & \textrm{let}~\var{vhks}\leteq \{\fun{hashKey}~vk \vert
+                           vk \in \fun{txwitsVKey}~\var{tx}\} \\
+                         & \fun{evalMultiSigScript}~msig~vhks
+  \end{align*}
+  %
+  \caption{Helper Functions for Transaction Inputs}
+  \label{fig:defs:functions-txins}
+\end{figure*}
+
+Figure~\ref{fig:defs:functions-txins} shows the helper functions
+$\fun{txinsVKey}$ and $\fun{txinsScript}$ which partition the set of transaction
+inputs of the transaction into those that are locked with a private key and
+those that are locked via a script.
 
 \clearpage

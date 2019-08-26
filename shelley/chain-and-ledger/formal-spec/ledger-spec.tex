@@ -42,6 +42,7 @@
 \newcommand{\Rnn}{\ensuremath{\mathbb{R}^{\geq 0}}}
 \newcommand{\Tx}{\type{Tx}}
 \newcommand{\TxBody}{\type{TxBody}}
+\newcommand{\TxWitness}{\type{TxWitness}}
 \newcommand{\Ix}{\type{Ix}}
 \newcommand{\TxId}{\type{TxId}}
 \newcommand{\Addr}{\type{Addr}}
@@ -55,7 +56,7 @@
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
-\newcommand{\StakeKeys}{\type{StakeKeys}}
+\newcommand{\StakeDeleg}{\type{StakeDeleg}}
 \newcommand{\Seed}{\type{Seed}}
 \newcommand{\seedOp}{\star}
 \newcommand{\Ppm}{\type{Ppm}}
@@ -101,6 +102,28 @@
 \newcommand{\DPoolReap}{\ensuremath{\type{poolreap}}}
 \newcommand{\UPIState}{\type{UPIState}}
 \newcommand{\UpdatePayload}{\type{UpdatePayload}}
+
+% multi-signature
+\newcommand{\StakeCredential}{\type{StakeCredential}}
+\newcommand{\StakeDelegs}{\type{StakeDelegs}}
+
+\newcommand{\txwitsVKey}[1]{\fun{txwitsVKey}~\var{#1}}
+\newcommand{\txwitsScript}[1]{\fun{txwitsScript}~\var{#1}}
+
+\newcommand{\AddrVKey}{\type{Addr^{vkey}}}
+\newcommand{\AddrRWDVKey}{\type{Addr_{rwd}^{vkey}}}
+\newcommand{\AddrRWDScr}{\type{Addr_{rwd}^{script}}}
+\newcommand{\AddrVKeyB}{\type{Addr^{vkey}_{base}}}
+\newcommand{\AddrVKeyP}{\type{Addr^{vkey}_{ptr}}}
+\newcommand{\AddrVKeyE}{\type{Addr^{vkey}_{enterprise}}}
+\newcommand{\AddrVKeyBS}{\type{Addr^{vkey}_{bootstrap}}}
+\newcommand{\AddrScr}{\type{Addr^{script}}}
+\newcommand{\AddrScrBase}{\type{Addr_{base}^{script}}}
+\newcommand{\AddrScrEnterprise}{\type{Addr_{enterprise}^{script}}}
+\newcommand{\AddrScrPtr}{\type{Addr_{ptr}^{script}}}
+\newcommand{\HashScr}{\type{ScriptHash}}
+\newcommand{\Script}{\type{Script}}
+\newcommand{\Credential}{\type{Credential}}
 
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}

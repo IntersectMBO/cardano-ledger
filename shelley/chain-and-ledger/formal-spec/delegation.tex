@@ -4,32 +4,29 @@
 We briefly describe the motivation and context for delegation.
 The full context is contained in \cite{delegation_design}.
 
-Stake is said to be \textit{active} in the blockchain protocol
-when it is eligible for participation in the leader election. In order for
-stake to become active,
-the associated verification stake key must be registered
-and its staking rights must be delegated to an active stake pool.
-Individuals who wish to participate in the protocol can
-register themselves as a stake pool.
+Stake is said to be \textit{active} in the blockchain protocol when it is
+eligible for participation in the leader election. In order for stake to become
+active, the associated verification stake credential must be registered and its
+staking rights must be delegated to an active stake pool. Individuals who wish
+to participate in the protocol can register themselves as a stake pool.
 
-Stake keys are registered (or deregistered) through the use of
-registration (or deregistration) certificates.
-Registered stake keys are delegated through the use of delegation certificates.
-Finally, stake pools are registered (or retired) through the use of
-registration (or retirement) certificates.
+Stake credentials are registered (or deregistered) through the use of
+registration (or deregistration) certificates. Registered stake credentials are
+delegated through the use of delegation certificates.  Finally, stake pools are
+registered (or retired) through the use of registration (or retirement)
+certificates.
 
-Stake pool retirement is handled a bit differently than stake key deregistration.
-Stake keys are considered inactive as soon as a deregistration certificate
-is applied to the ledger state.
-Stake pool retirement certificates, however, specify the epoch in
-which it will retire.
+Stake pool retirement is handled a bit differently than stake deregistration.
+Stake credentials are considered inactive as soon as a deregistration
+certificate is applied to the ledger state.  Stake pool retirement certificates,
+however, specify the epoch in which it will retire.
 
-Delegation requires the following to be tracked by the ledger state:
-the registered stake keys, the delegation map from registered stake keys to stake
-pools, pointers associated with stake keys,
-the registered stake pools and upcoming stake pool retirements.
-Additionally, the blockchain protocol rewards eligible stake and so we must
-also include a mapping from active stake keys to rewards.
+Delegation requires the following to be tracked by the ledger state: the
+registered stake credentials, the delegation map from registered stake
+credentials to stake pools, pointers associated with stake credentials, the
+registered stake pools and upcoming stake pool retirements.  Additionally, the
+blockchain protocol rewards eligible stake and so we must also include a mapping
+from active stake credentials to rewards.
 
 Finally, there is a type of delegation certificate available only to the genesis
 keys. The genesis keys will still be used for update proposals at the begin of the Shelley
@@ -43,9 +40,9 @@ In \cref{fig:delegation-defs} we give the delegation primitives.
 Here we introduce the following primitive datatypes used in delegation:
 
 \begin{itemize}
-\item $\DCertRegKey$: a stake key registration certificate.
-\item $\DCertDeRegKey$: a stake key de-registration certificate.
-\item $\DCertDeleg$: a stake key delegation certificate.
+\item $\DCertRegKey$: a stake credential registration certificate.
+\item $\DCertDeRegKey$: a stake credential de-registration certificate.
+\item $\DCertDeleg$: a stake credential delegation certificate.
 \item $\DCertRegPool$: a stake pool registration certificate.
 \item $\DCertRetirePool$: a stake pool retirement certificate.
 \item $\DCertGen$: a genesis key delegation certificate.
@@ -53,10 +50,10 @@ Here we introduce the following primitive datatypes used in delegation:
 \end{itemize}
 The following derived types are introduced:
 \begin{itemize}
-  \item $\type{StakeKeys}$ represents registered stake keys and is represented by a finite
-    map from hashkeys to slot when it was registered.
-  \item$\type{StakePools}$ represents registered stake pools and has the same type as
-    $\type{StakeKeys}$.
+\item $\type{StakeDelegs}$ represents registered stake delegations and is
+  represented by a finite map from stake credentials to slot when it was
+  registered.
+\item$\type{StakePools}$ represents registered stake pools
 \item $\PoolParam$ represents the parameters found in a stake pool registration certificate
   that must be tracked:
   \begin{itemize}
@@ -116,9 +113,9 @@ It does the following:
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{l@{\qquad=\qquad}lr}
-      \StakeKeys
-      & \KeyHash \mapsto \Slot
-      & \text{registered stake keys} \\
+      \StakeDeleg
+      & \Credential \mapsto \Slot
+      & \text{registered stake credential} \\
       %
       \StakePools
       & \KeyHash \mapsto \Slot
@@ -133,10 +130,8 @@ It does the following:
   \emph{Certificate Accessor functions}
   %
   \begin{equation*}
-  \begin{array}{r@{~\in~}lr}
-    \cwitness{} & \DCert \to \KeyHash
-  & \text{certificate witness}
-  \\
+    \begin{array}{r@{~\in~}lr}
+      \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness} \\
   \fun{dpool} & \DCertDeleg \to \KeyHash
   & \text{pool being delegated to}
   \\
@@ -192,14 +187,16 @@ state transition types. We define two separate parts of the ledger state.
 \begin{itemize}
   \item $\DState$ keeps track of the delegation state, consisting of:
     \begin{itemize}
-      \item $\var{stkeys}$ tracks the registered stake keys. It consists of a finite
-        mapping from hashkeys to the slot of the registration.
-      \item $\var{rewards}$ stores the rewards accumulated by stake keys.
-        These are represented by a finite map from reward addresses to the accumulated rewards.
-      \item $\var{delegations}$ stores the delegation relation, mapping stake keys to the
-        pool to which is delegates.
-      \item $\var{ptrs}$ maps stake keys to the position of the registration certificate
-        in the blockchain. This is needed to lookup the stake hashkey of a pointer address.
+    \item $\var{stdelegs}$ tracks the registered stake credentials. It consists
+      of a finite mapping from hashkeys to the slot of the registration.
+    \item $\var{rewards}$ stores the rewards accumulated by stake credentials.
+      These are represented by a finite map from reward addresses to the
+      accumulated rewards.
+    \item $\var{delegations}$ stores the delegation relation, mapping stake
+      credentials to the pool to which is delegates.
+    \item $\var{ptrs}$ maps stake credentials to the position of the
+      registration certificate in the blockchain. This is needed to lookup the
+      stake hashkey of a pointer address.
       \item $\var{fdms}$ future genesis keys delegations.
       \item $\var{dms}$ maps genesis key hashes to hashes of the cold key delegates.
     \end{itemize}
@@ -226,15 +223,24 @@ and the protocol parameters.
 %% Figure - Delegation Transitions
 %%
 \begin{figure}
+  \emph{Delegation Types}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{stakeCred} & \StakeCredential & (\KeyHash_{stake} \uniondistinct
+                                       \HashScr) \\
+      \var{stakeDelegator} & \StakeDelegs & \StakeCredential \mapsto \Slot \\
+    \end{array}
+  \end{equation*}
+  %
   \emph{Delegation States}
   %
   \begin{equation*}
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stkeys} & \StakeKeys & \text{registered stake keys}\\
-      \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
-      \var{delegations} & \KeyHash_{stake} \mapsto \KeyHash_{pool} & \text{delegations}\\
+            \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
+            \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
+            \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
       \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
       \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
       \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
@@ -295,29 +301,32 @@ and the protocol parameters.
 \label{sec:deleg-rules}
 
 
-The rules for registering and delegating stake keys are given in \cref{fig:delegation-rules}.
-Note that section 5.2 of \cite{delegation_design} describes how a wallet would help a user choose
-a stake pool, though these concerns are independent of the ledger rules.
+The rules for registering and delegating stake credentials are given in
+\cref{fig:delegation-rules}.  Note that section 5.2 of \cite{delegation_design}
+describes how a wallet would help a user choose a stake pool, though these
+concerns are independent of the ledger rules.
 
 \begin{itemize}
-  \item Stake key registration is handled by \cref{eq:deleg-reg}, since it contains the
-    precondition that the certificate has type $\DCertRegKey$.
-    All the equations in $\mathsf{DELEG}$ and $\mathsf{POOL}$ follow this same pattern of matching
-    on certificate type.
+\item Stake credential registration is handled by \cref{eq:deleg-reg}, since it
+  contains the precondition that the certificate has type $\DCertRegKey$.  All
+  the equations in $\mathsf{DELEG}$ and $\mathsf{POOL}$ follow this same pattern
+  of matching on certificate type.
 
-    There is also a precondition on registration that the hashkey associated with the certificate
-    witness of the certificate is not already found in the current list of stake keys.
+  There is also a precondition on registration that the hashkey associated with
+  the certificate witness of the certificate is not already found in the current
+  list of stake credentials.
 
     Registration causes the following state transformation:
     \begin{itemize}
-      \item The key is added to the set of registered stake keys.
+    \item The key is added to the set of registered stake credentials.
       \item A reward account is created for this key, with a starting balance of zero.
-      \item The certificate pointer is mapped to the new stake key.
+      \item The certificate pointer is mapped to the new stake credential.
     \end{itemize}
 
-  \item Stake key deregistration is handled by \cref{eq:deleg-dereg}.
-    There is a precondition that the key has been registered and that the reward balance is zero.
-    Deregistration causes the following state transformation:
+  \item Stake credential deregistration is handled by \cref{eq:deleg-dereg}.
+    There is a precondition that the credential has been registered and that
+    the reward balance is zero.  Deregistration causes the following state
+    transformation:
     \begin{itemize}
       \item The key is removed from the collection of registered keys.
       \item The reward account is removed.
@@ -325,13 +334,14 @@ a stake pool, though these concerns are independent of the ledger rules.
       \item The certificate pointer is removed.
     \end{itemize}
 
-  \item Stake key delegation is handled by \cref{eq:deleg-deleg}.
+  \item Stake credential delegation is handled by \cref{eq:deleg-deleg}.
     There is a precondition that the key has been registered.
     Delegation causes the following state transformation:
     \begin{itemize}
-      \item The delegation relation is updated so that stake key is delegated to the given
-        stake pool. The use of union override here allows us to use the same rule
-        to perform both an initial delegation and an update to an existing delegation.
+    \item The delegation relation is updated so that the stake credential is
+      delegated to the given stake pool. The use of union override here allows
+      us to use the same rule to perform both an initial delegation and an
+      update to an existing delegation.
     \end{itemize}
 
   \item Genesis key delegation is handled by \cref{eq:deleg-gen}.
@@ -353,7 +363,7 @@ a stake pool, though these concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-    \var{c}\in\DCertRegKey & hk \leteq \cwitness{c} & hk \notin \dom \var{stkeys}
+    \var{c}\in\DCertRegKey & hk \leteq \cwitness{c} & hk \notin \dom \var{stdelegs}
     }
     {
       \begin{array}{r}
@@ -363,7 +373,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
         \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -374,7 +384,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\var{stkeys}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
+        \varUpdate{\var{stdelegs}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
         \varUpdate{\var{rewards}} & \varUpdate{\union} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
         \var{delegations} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
@@ -389,7 +399,7 @@ a stake pool, though these concerns are independent of the ledger rules.
     \inference[Deleg-Dereg]
     {
       \var{c}\in \DCertDeRegKey  & hk \leteq \cwitness{c} \\
-    hk \in \dom \var{stkeys} & \addrRw \var{hk} \mapsto 0 \in \var{rewards}
+    hk \in \dom \var{stdelegs} & \addrRw \var{hk} \mapsto 0 \in \var{rewards}
     }
     {
       \begin{array}{r}
@@ -399,7 +409,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -410,7 +420,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{\var{c}}
       \left(
       \begin{array}{rcl}
-        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stkeys}} \\
+        \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{stdelegs}} \\
         \varUpdate{\{\addrRw \var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{rewards}} \\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{delegations}} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\subtractrange} & \varUpdate{\{\var{hk}\}} \\
@@ -424,7 +434,7 @@ a stake pool, though these concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-deleg}
     \inference[Deleg-Deleg]
     {
-      \var{c}\in \DCertDeleg & hk \leteq \cwitness{c} & hk \in \dom \var{stkeys}
+      \var{c}\in \DCertDeleg & hk \leteq \cwitness{c} & hk \in \dom \var{stdelegs}
     }
     {
       \begin{array}{r}
@@ -434,7 +444,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -445,7 +455,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{rcl}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \varUpdate{\var{delegations}} & \varUpdate{\unionoverrideRight}
                                       & \varUpdate{\{\var{hk} \mapsto \dpool c\}} \\
@@ -477,7 +487,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \vdash
       \left(
       \begin{array}{r}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -488,7 +498,7 @@ a stake pool, though these concerns are independent of the ledger rules.
       \trans{deleg}{c}
       \left(
       \begin{array}{rcl}
-        \var{stkeys} \\
+        \var{stdelegs} \\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
@@ -506,8 +516,8 @@ a stake pool, though these concerns are independent of the ledger rules.
 
 The DELEG rule has five predicate failures:
 \begin{itemize}
-\item In the case of a key registration certificate, if the staking key is already
-  registered, there is a \emph{StakeKeyAlreadyRegistered} failure.
+\item In the case of a key registration certificate, if the staking credential
+  is already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
 \item In the case of a key deregistration certificate, if the key is not
   registered, there is a \emph{StakeKeyNotRegistered} failure.
 \item In the case of a non-existing stake pool key in a delegation certificate,
@@ -695,12 +705,12 @@ The POOL rule has three predicate failures:
 \begin{itemize}
 \item In the case of a pool retirement certificate, if the pool key is not in
   the domain of the stake pools mapping, there is a
-  {\emph StakePoolNotRegisteredOnKey} failure.
+  \emph{StakePoolNotRegisteredOnKey} failure.
 \item In the case of a pool retirement certificate, if the retirement epoch is
   not between the current epoch and the relative maximal epoch from the current
-  epoch, there is a {\emph StakePoolRetirementWrongEpoch} failure.
+  epoch, there is a \emph{StakePoolRetirementWrongEpoch} failure.
 \item If the delegation certificate is not of one of the pool types, there is a
-  {\emph WrongCertificateType} failure.
+  \emph{WrongCertificateType} failure.
 \end{itemize}
 
 \clearpage
@@ -870,13 +880,14 @@ carrying a certificate that schedules a pool retirement in a past epoch, the who
 will be invalid.
 
 \begin{itemize}
-  \item The base case, when the list is empty, is captured by \cref{eq:delegs-base}.
-    In the base case we address one final accounting detail not yet covered by the UTxO
-    transition, namely setting the reward account balance to zero for any account that made a
-    withdrawal.  There is therefore a precondition that all withdrawals are correct, where
-    correct means that there is a reward account for each stake key and that the balance
-    matches that of the reward being withdrawn.
-    The base case triggers the following state transformation:
+\item The base case, when the list is empty, is captured by
+  \cref{eq:delegs-base}.  In the base case we address one final accounting
+  detail not yet covered by the UTxO transition, namely setting the reward
+  account balance to zero for any account that made a withdrawal.  There is
+  therefore a precondition that all withdrawals are correct, where correct means
+  that there is a reward account for each stake credential and that the balance
+  matches that of the reward being withdrawn.  The base case triggers the
+  following state transformation:
     \begin{itemize}
       \item Reward accounts are set to zero for each corresponding withdrawal.
       \item The genesis key delegation mapping is updated according to the future delegation
@@ -939,7 +950,7 @@ will be invalid.
       \begin{array}{c}
         \left(
         \begin{array}{r}
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -962,7 +973,7 @@ will be invalid.
       \begin{array}{c}
         \left(
         \begin{array}{c}
-          \var{stkeys} \\
+          \var{stdelegs} \\
           \varUpdate{\var{rewards'}} \\
           \var{delegations} \\
           \var{ptrs} \\
