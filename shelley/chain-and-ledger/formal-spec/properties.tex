@@ -19,7 +19,7 @@ Section~\ref{sec:delegation-shelley} for delegation.
   \begin{align*}
     \genesisId & \in & \TxId \\
     \genesisTxOut & \in & \TxOut \\
-    \genesisUTxO & \coloneqq & \{\genesisId, \emptyset\} \mapsto \genesisTxOut
+    \genesisUTxO & \coloneqq & (\genesisId, 0) \mapsto \genesisTxOut
     \\
     \ledgerState & \in & \left(
                          \begin{array}{c}
@@ -28,8 +28,8 @@ Section~\ref{sec:delegation-shelley} for delegation.
                          \end{array}
     \right)\\
                && \\
-    \fun{getUTxO} & \in & \ledgerState \to \UTxO \\
-    \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard) \to \var{utxo}
+    \fun{getUTxO} & \in & \UTxOState \to \UTxO \\
+    \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard, \wcard, \wcard) \to \var{utxo}
   \end{align*}
   \caption{Definitions and Functions for Valid Ledger State}
   \label{fig:valid-ledger}
@@ -43,12 +43,10 @@ transaction inputs are the empty set for the initial transaction. An element of
 
 \begin{definition}[\textbf{Valid Ledger State}]
   \begin{multline*}
-    \forall l_{0},\ldots,l_{n} \in \ledgerState, l_{0} =
-    \left(
+    \forall l_{0},\ldots,l_{n} \in \LState, lenv_{0},\ldots,lenv_{n} \in \LEnv,
+    l_{0} = \left(
       \begin{array}{c}
-        \left\{
-        \genesisUTxO
-        \right\} \\
+        \genesisUTxOState \\
         \left(
         \begin{array}{c}
           \emptyset\\
@@ -57,8 +55,9 @@ transaction inputs are the empty set for the initial transaction. An element of
         \right)
       \end{array}
     \right)  \\
-    \implies \forall 0 < i \leq n, (\exists tx_{i} \in \Tx, l_{i-1}
-    \trans{ledger}{tx_{i}} l_{i}) \implies \applyFun{validLedgerState} l_{n}
+    \implies \forall 0 < i \leq n, (\exists tx_{i} \in \Tx,
+    lenv_{i-1}\vdash l_{i-1} \trans{ledger}{tx_{i}} l_{i}) \implies
+    \applyFun{validLedgerState} l_{n}
   \end{multline*}
   \label{def:valid-ledger-state}
 \end{definition}
@@ -75,8 +74,9 @@ state.
 
 \begin{property}[\textbf{Preserve Balance Modulo Fee}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'} \\
+    \forall \var{l}, \var{l'} \in \LState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash\var{u} \trans{utxow}{tx} \var{u'} \\
     \implies \applyFun{destroyed}{pc utxo stKeys rewards tx} =
     \applyFun{created}{pc stPools tx}
   \end{multline*}
@@ -93,10 +93,12 @@ amount of value is left unchanged by a transaction.
 \begin{property}[\textbf{Preserve Balance Restricted to TxIns in Balance of
     TxOuts}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \\
     \implies \fun{ubalance}(\applyFun{txins}{tx} \restrictdom
-    \applyFun{getUTxO}{l}) = \fun{ubalance}(\applyFun{outs}{tx}) +
+    \applyFun{getUTxO}{u}) = \fun{ubalance}(\applyFun{outs}{tx}) +
     \applyFun{txfee}{tx}
   \end{multline*}
   \label{prop:ledger-properties-2}
@@ -110,10 +112,11 @@ minus the transaction fees.
 
 \begin{property}[\textbf{Preserve Outputs of Transaction}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
-    \implies \forall \var{out} \in \applyFun{outs}{tx}, out \in
-    \applyFun{getUTxO}{l'}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \implies \forall \var{out} \in
+    \applyFun{outs}{tx}, out \in \applyFun{getUTxO}{u'}
   \end{multline*}
   \label{prop:ledger-properties-3}
 \end{property}
@@ -124,10 +127,11 @@ set of $l'$, i.e., they are now available as unspent transaction output.
 
 \begin{property}[\textbf{Eliminate Inputs of Transaction}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
-    \implies \forall \var{in} \in \applyFun{txins}{tx}, in \not\in
-    \fun{dom}(\applyFun{getUTxO}{l'})
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \implies \forall \var{in} \in
+    \applyFun{txins}{tx}, in \not\in \fun{dom}(\applyFun{getUTxO}{u'})
   \end{multline*}
   \label{prop:ledger-properties-4}
 \end{property}
@@ -140,12 +144,14 @@ to spend.
 \begin{property}[\textbf{Completeness and Collision-Freeness of new Transaction
     Ids}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
-    \implies \forall utxo' \in \applyFun{outs}{tx}, \var{utxo'} \in
-    \applyFun{getUTxO}{l'} \wedge \\(\var{utxo'} = ((\var{txId'}, \wcard) \mapsto
-    \wcard) \implies \forall \var{utxo} \in \applyFun{getUTxO}{l}, \var{utxo} =
-    ((\var{txId}, \wcard) \mapsto \wcard) \implies \var{txId'} \neq \var{txId}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \implies \forall utxo' \in \applyFun{outs}{tx},
+    \var{utxo'} \in \applyFun{getUTxO}{u'} \wedge \\(\var{utxo'} =
+    ((\var{txId'}, \wcard) \mapsto \wcard) \implies \forall \var{utxo} \in
+    \applyFun{getUTxO}{u}, \var{utxo} = ((\var{txId}, \wcard) \mapsto \wcard)
+    \implies \var{txId'} \neq \var{txId}
   \end{multline*}
   \label{prop:ledger-properties-5}
 \end{property}
@@ -170,10 +176,11 @@ set of $l$.
         \end{array}
         \right)
       \end{array}
-    \right) \wedge \applyFun{validLedgerState} l_{n} \\
-    \implies \forall 0 < i \leq n, tx_{i} \in \Tx, l_{i-1}
-    \trans{ledger}{tx_{i}} l_{i} \wedge \applyFun{validLedgerState} l_{i}
-    \\ \implies \forall j < i, \applyFun{txins}{tx_{j}} \cap
+    \right) \wedge \applyFun{validLedgerState} l_{n}, l_{i}=(u_{i},\wcard,\wcard,\wcard)\\
+    \implies \forall 0 < i \leq n, tx_{i} \in \Tx, lenv_{i}\in\LEnv,
+    lenv_{i} \vdash l_{i-1}
+    \trans{ledger}{tx_{i}} l_{i} \wedge \applyFun{validLedgerState} l_{i} \\
+    \implies \forall j < i, \applyFun{txins}{tx_{j}} \cap
     \applyFun{txins}{tx_{i}} = \emptyset
   \end{multline*}
   \label{prop:ledger-properties-no-double-spend}
