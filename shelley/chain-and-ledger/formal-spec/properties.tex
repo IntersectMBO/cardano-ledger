@@ -196,26 +196,29 @@ each output of a transition is spent at most once.
 \begin{figure}[ht]
   \centering
   \begin{align*}
-    \fun{getStKeys} & \in & \ledgerState \to \powerset \KeyHash \\
-    \fun{getStKeys} & \coloneqq & (\wcard, (\var{stKeys}, \wcard, \wcard),
-                                  \wcard) \to \var{stkeys} \\
-                    &&\\
-    \fun{getRewards} & \in & \ledgerState \to \AddrRWD \mapsto \Coin \\
-    \fun{getRewards} & \coloneqq & (\wcard, (\wcard, \var{rewards}, \wcard),
-                                   \wcard) \to \var{rewards} \\
-                    &&\\
-    \fun{getDelegations} & \in & \ledgerState \to \KeyHash \mapsto \KeyHash \\
-    \fun{getDelegations} & \coloneqq & (\wcard, (\wcard, \wcard,
-                                       \var{delegations}), \wcard) \to
+    \fun{getStDelegs} & \in & \LState \to \powerset \Credential \\
+    \fun{getStDelegs} & \coloneqq &
+                                    (\wcard, ((\var{stDelegs}, \wcard,
+                                    \wcard,\wcard,\wcard,\wcard), \wcard)) \to \var{stDelegs} \\
+                      &&\\
+    \fun{getRewards} & \in & \LState \to (\AddrRWD \mapsto \Coin) \\
+    \fun{getRewards} & \coloneqq & (\wcard,
+                                   ((\wcard, \var{rewards},
+                                   \wcard,\wcard,\wcard,\wcard), \wcard))
+                                   \to \var{rewards} \\
+                      &&\\
+    \fun{getDelegations} & \in & \LState \to (\Credential \mapsto \KeyHash) \\
+    \fun{getDelegations} & \coloneqq & (\wcard, ((\wcard, \wcard,
+                                       \var{delegations},\wcard,\wcard,\wcard), \wcard)) \to
                                        \var{delegations} \\
-                    &&\\
-    \fun{getStPools} & \in & \ledgerState \to \KeyHash \mapsto \DCertRegPool \\
-    \fun{getStPools} & \coloneqq & (\wcard, \wcard,
-                                   (\var{stpools}, \wcard)) \to \var{stpools} \\
-                    &&\\
-    \fun{getRetiring} & \in & \ledgerState \to \KeyHash \mapsto \Epoch \\
-    \fun{getRetiring} & \coloneqq & (\wcard, \wcard,
-                                    (\wcard, \var{retiring})) \to \var{retiring} \\
+                      &&\\
+    \fun{getStPools} & \in & \LState \to (\KeyHash \mapsto \DCertRegPool) \\
+    \fun{getStPools} & \coloneqq & (\wcard, (\wcard,
+                                   (\var{stpools},\wcard,\wcard,\wcard))) \to \var{stpools} \\
+                      &&\\
+    \fun{getRetiring} & \in & \LState \to (\KeyHash \mapsto \Epoch) \\
+    \fun{getRetiring} & \coloneqq & (\wcard, (\wcard,
+                                    (\wcard, \wcard, \var{retiring},\wcard))) \to \var{retiring} \\
   \end{align*}
   \caption{Definitions and Functions for Stake Delegation in Ledger States}
   \label{fig:stake-delegation-functions}
