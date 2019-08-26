@@ -10,9 +10,9 @@ property-based testing or formal verification.
 
 Many properties only make sense when applied to a valid ledger state. In
 informal terms, a valid ledger state $l$ can only be reached when starting from
-an initial state $l_{0}$ (genesis state) and only executing state transition
-rules as specified in Section~\ref{sec:utxo} for UTxO or
-Section~\ref{sec:delegation-shelley} for delegation.
+an initial state $l_{0}$ (ledger in the genesis state) and only executing LEDGER
+state transition rules as specified in Section~\ref{sec:ledger-trans} which
+changes wither the  UTxO or the delegation state.
 
 \begin{figure}[ht]
   \centering
@@ -23,7 +23,7 @@ Section~\ref{sec:delegation-shelley} for delegation.
     \\
     \ledgerState & \in & \left(
                          \begin{array}{c}
-                           \UTxO \\
+                           \UTxOState \\
                            \DPState
                          \end{array}
     \right)\\
@@ -38,8 +38,8 @@ Section~\ref{sec:delegation-shelley} for delegation.
 In Figure~\ref{fig:valid-ledger} \genesisId{} marks the transaction identifier
 of the initial coin distribution, where \genesisTxOut{} represents the initial
 UTxO. It should be noted that no corresponding inputs exists, i.e., the
-transaction inputs are the empty set for the initial transaction. An element of
-\ledgerState{} is a tuple of UTxO and delegation witness state (\DPState).
+transaction inputs are the empty set for the initial transaction. The function
+\fun{getUTxO} extracts the UTxO from a UTxO state.
 
 \begin{definition}[\textbf{Valid Ledger State}]
   \begin{multline*}
@@ -63,8 +63,8 @@ transaction inputs are the empty set for the initial transaction. An element of
 \end{definition}
 
 Definition~\ref{def:valid-ledger-state} defines a valid ledger state reachable
-from the genesis state via valid UTxO, stake delegation or stake pool
-transactions. This gives a constructive rule how to reach a valid ledger state.
+from the genesis state via valid LEDGER STS transitions. This gives a
+constructive rule how to reach a valid ledger state.
 
 \subsection{Ledger Properties}
 \label{sec:ledger-properties}
@@ -72,23 +72,23 @@ transactions. This gives a constructive rule how to reach a valid ledger state.
 The following properties state the desired features of updating a valid ledger
 state.
 
-\begin{property}[\textbf{Preserve Balance Modulo Fee}]
+\begin{property}[\textbf{Preserve Balance}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \LState: \applyFun{validLedgerstate}{l},
     l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
     \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash\var{u} \trans{utxow}{tx} \var{u'} \\
-    \implies \applyFun{destroyed}{pc utxo stKeys rewards tx} =
-    \applyFun{created}{pc stPools tx}
+    \implies \applyFun{destroyed}{pc~utxo~stDelegs~rewards~tx} =
+    \applyFun{created}{pc~stPools~tx}
   \end{multline*}
   \label{prop:ledger-properties-1}
 \end{property}
 
 Property~\ref{prop:ledger-properties-1} states that for each valid ledger $l$,
-if a transaction $tx$ is added to the ledger via the state transition rule
-$utxow$ to the new ledger state $l'$, the balance of the UTxOs in $l$ equals the
-balance of the UTxOs in $l'$ in the sense that the amount of created value in
-$l'$ equals the amount of destroyed value in $l$. This means that the total
-amount of value is left unchanged by a transaction.
+if a transaction $tx$ is added to the ledger via the state transition rule UTXOW
+to the new ledger state $l'$, the balance of the UTxOs in $l$ equals the balance
+of the UTxOs in $l'$ in the sense that the amount of created value in $l'$
+equals the amount of destroyed value in $l$. This means that the total amount of
+value is left unchanged by a transaction.
 
 \begin{property}[\textbf{Preserve Balance Restricted to TxIns in Balance of
     TxOuts}]
@@ -99,16 +99,17 @@ amount of value is left unchanged by a transaction.
     \trans{utxow}{tx} \var{u'} \\
     \implies \fun{ubalance}(\applyFun{txins}{tx} \restrictdom
     \applyFun{getUTxO}{u}) = \fun{ubalance}(\applyFun{outs}{tx}) +
-    \applyFun{txfee}{tx}
+    \applyFun{txfee}{tx} + depositChange
   \end{multline*}
   \label{prop:ledger-properties-2}
 \end{property}
 
-Property~\ref{prop:ledger-properties-2} states the more detailed relation of the
-balances change. For ledgers $l, l'$ and a transaction $tx$ as above, the
+Property~\ref{prop:ledger-properties-2} states a slightly more detailed relation
+of the balances change. For ledgers $l, l'$ and a transaction $tx$ as above, the
 balance of the UTxOs of $l$ restricted to those whose domain is in the set of
 transaction inputs of $tx$ equals the balance of the transaction outputs of $tx$
-minus the transaction fees.
+minus the transaction fees and the change in the deposit
+$depositChange$~(cf.~Fig.~\ref{fig:rules:utxo-shelley}).
 
 \begin{property}[\textbf{Preserve Outputs of Transaction}]
   \begin{multline*}
@@ -138,8 +139,8 @@ set of $l'$, i.e., they are now available as unspent transaction output.
 
 Property~\ref{prop:ledger-properties-4} states that for all ledger states
 $l, l'$ and transaction $tx$ as above, all transaction inputs $in$ of $tx$ are
-not in the domain of the UTxO set of $l'$, i.e., these are no longer available
-to spend.
+not in the domain of the UTxO of $l'$, i.e., these are no longer available to
+spend.
 
 \begin{property}[\textbf{Completeness and Collision-Freeness of new Transaction
     Ids}]
@@ -147,11 +148,9 @@ to spend.
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
     l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
     \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
-    \trans{utxow}{tx} \var{u'} \implies \forall utxo' \in \applyFun{outs}{tx},
-    \var{utxo'} \in \applyFun{getUTxO}{u'} \wedge \\(\var{utxo'} =
-    ((\var{txId'}, \wcard) \mapsto \wcard) \implies \forall \var{utxo} \in
-    \applyFun{getUTxO}{u}, \var{utxo} = ((\var{txId}, \wcard) \mapsto \wcard)
-    \implies \var{txId'} \neq \var{txId}
+    \trans{utxow}{tx} \var{u'} \\ \implies \forall ((txId', \wcard) \mapsto
+    \wcard) \in \applyFun{outs}{tx}, ((txId, \wcard) \mapsto \wcard)
+    \in\applyFun{getUTxO}{u} \implies \var{txId'} \neq \var{txId}
   \end{multline*}
   \label{prop:ledger-properties-5}
 \end{property}
@@ -178,8 +177,8 @@ set of $l$.
       \end{array}
     \right) \wedge \applyFun{validLedgerState} l_{n}, l_{i}=(u_{i},\wcard,\wcard,\wcard)\\
     \implies \forall 0 < i \leq n, tx_{i} \in \Tx, lenv_{i}\in\LEnv,
-    lenv_{i} \vdash l_{i-1}
-    \trans{ledger}{tx_{i}} l_{i} \wedge \applyFun{validLedgerState} l_{i} \\
+    lenv_{i} \vdash u_{i-1}
+    \trans{ledger}{tx_{i}} u_{i} \wedge \applyFun{validLedgerState} l_{i} \\
     \implies \forall j < i, \applyFun{txins}{tx_{j}} \cap
     \applyFun{txins}{tx_{i}} = \emptyset
   \end{multline*}
