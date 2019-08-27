@@ -48,25 +48,19 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr =
-            obligation pp (ds ^. stKeys) (ps ^. stPools) (firstSlot e)
-      let Coin oblgNew =
-            obligation ppNew' (ds ^. stKeys) (ps ^. stPools) (slotFromEpoch e)
-      let diff          = oblgCurr - oblgNew
+      let slot_ = firstSlot e
+          Coin oblgCurr = obligation pp (ds ^. stKeys) (ps ^. stPools) slot_
+          Coin oblgNew = obligation ppNew' (ds ^. stKeys) (ps ^. stPools) slot_
+          diff = oblgCurr - oblgNew
+
       let Coin reserves = _reserves acnt
-      if reserves
-           +  diff
-           >= 0
-           && (_maxTxSize ppNew' + _maxBHSize ppNew')
-           <  _maxBBSize ppNew'
+      if reserves + diff >= 0
+         && (_maxTxSize ppNew' + _maxBHSize ppNew') <  _maxBBSize ppNew'
         then
           let utxoSt' = utxoSt { _deposited = Coin oblgNew }
           in  -- TODO: update mechanism
               let acnt' = acnt { _reserves = Coin $ reserves + diff }
               in pure (clearPpup utxoSt', acnt', ppNew')
         else
-          pure ( clearPpup utxoSt
-              , acnt
-              , pp
-              )
+          pure (clearPpup utxoSt, acnt, pp)
     Nothing -> pure (clearPpup utxoSt, acnt, pp)
