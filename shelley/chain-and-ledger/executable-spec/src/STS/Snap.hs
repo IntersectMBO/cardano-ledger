@@ -8,7 +8,7 @@ where
 
 import qualified Data.Map.Strict as Map
 
-import           Lens.Micro ((%~), (&), (.~), (^.))
+import           Lens.Micro ((^.))
 
 import           Coin
 import           EpochBoundary
@@ -43,21 +43,15 @@ snapTransition :: TransitionRule (SNAP hashAlgo dsignAlgo)
 snapTransition = do
   TRC ((pparams, d, p), (s, u), eNew) <- judgmentContext
   let pooledStake = stakeDistr (u ^. utxo) d p
-  let _slot       = firstSlot eNew
+  let _slot = firstSlot eNew
   let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) _slot
-  let decayed     = (u ^. deposited) - oblg
+  let decayed = (u ^. deposited) - oblg
   pure
-    ( s
-    &  pstakeMark
-    .~ pooledStake
-    &  pstakeSet
-    .~ (s ^. pstakeMark)
-    &  pstakeGo
-    .~ (s ^. pstakeSet)
-    &  poolsSS
-    .~ (p ^. pParams)
-    &  feeSS
-    .~ (u ^. fees)
-    +  decayed
-    , u & deposited .~ oblg & fees %~ (+) decayed
+    ( s { _pstakeMark = pooledStake
+        , _pstakeSet = s ^. pstakeMark
+        , _pstakeGo = s ^. pstakeSet
+        , _poolsSS = p ^. pParams
+        , _feeSS = (u ^. fees) + decayed}
+    , u { _deposited = oblg
+        , _fees = (u ^. fees) + decayed}
     )
