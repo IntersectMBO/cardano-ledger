@@ -41,7 +41,7 @@ import           Data.Word (Word8)
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm)
 
-import           BaseTypes (Seed, UnitInterval)
+import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
 import           Keys (DSIGNAlgorithm, Dms, GenKeyHash)
 import           PParams (PParams (..))
@@ -106,7 +106,7 @@ data Ppm = MinFeeA Integer
   | Tau UnitInterval
   | ActiveSlotCoefficient UnitInterval
   | D UnitInterval
-  | ExtraEntropy Seed
+  | ExtraEntropy Nonce
   | ProtocolVersion (Natural, Natural, Natural)
   deriving (Show, Ord, Eq)
 

@@ -56,7 +56,7 @@ import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeC
 -- validation and hashing.
 class (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, ToCBOR a) =>
   MultiSignatureScript a hashAlgo dsignAlgo where
-  validateScript :: a -> Tx hashAlgo dsignAlgo -> Bool
+  validateScript :: a -> Tx hashAlgo dsignAlgo vrfAlgo -> Bool
   hashScript :: a -> ScriptHash hashAlgo dsignAlgo
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
@@ -77,7 +77,7 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 validateNativeMultiSigScript
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => MultiSig hashAlgo dsignAlgo
-  -> Tx hashAlgo dsignAlgo
+  -> Tx hashAlgo dsignAlgo vrfAlgo
   -> Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig vhks
@@ -107,7 +107,7 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript
-  :: Tx hashAlgo dsignAlgo
+  :: Tx hashAlgo dsignAlgo vrfAlgo
   -> Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
 txwitsScript = _witnessMSigMap
 

@@ -31,32 +31,32 @@ import           Ledger.Core (dom, (∈), (⊆), (⨃))
 
 import           Hedgehog (Gen)
 
-data DELEGS hashAlgo dsignAlgo
+data DELEGS hashAlgo dsignAlgo vrfAlgo
 
-data DelegsEnv hashAlgo dsignAlgo
-  = DelegsEnv Slot Ix PParams (Tx hashAlgo dsignAlgo)
-    deriving (Show)
+data DelegsEnv hashAlgo dsignAlgo vrfAlgo
+  = DelegsEnv Slot Ix PParams (Tx hashAlgo dsignAlgo vrfAlgo)
+  deriving Show
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => STS (DELEGS hashAlgo dsignAlgo)
+  => STS (DELEGS hashAlgo dsignAlgo vrfAlgo)
  where
-  type State (DELEGS hashAlgo dsignAlgo) = DPState hashAlgo dsignAlgo
-  type Signal (DELEGS hashAlgo dsignAlgo) = Seq (DCert hashAlgo dsignAlgo)
-  type Environment (DELEGS hashAlgo dsignAlgo) = DelegsEnv hashAlgo dsignAlgo
-  data PredicateFailure (DELEGS hashAlgo dsignAlgo)
+  type State (DELEGS hashAlgo dsignAlgo vrfAlgo) = DPState hashAlgo dsignAlgo vrfAlgo
+  type Signal (DELEGS hashAlgo dsignAlgo vrfAlgo) = Seq (DCert hashAlgo dsignAlgo vrfAlgo)
+  type Environment (DELEGS hashAlgo dsignAlgo vrfAlgo) = DelegsEnv hashAlgo dsignAlgo vrfAlgo
+  data PredicateFailure (DELEGS hashAlgo dsignAlgo vrfAlgo)
     = DelegateeNotRegisteredDELEG
     | WithrawalsNotInRewardsDELEGS
-    | DelplFailure (PredicateFailure (DELPL hashAlgo dsignAlgo))
+    | DelplFailure (PredicateFailure (DELPL hashAlgo dsignAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules    = [ pure emptyDelegation ]
   transitionRules = [ delegsTransition     ]
 
 delegsTransition
-  :: forall hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo vrfAlgo
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => TransitionRule (DELEGS hashAlgo dsignAlgo)
+  => TransitionRule (DELEGS hashAlgo dsignAlgo vrfAlgo)
 delegsTransition = do
   TRC (env@(DelegsEnv _slot txIx pp (Tx txbody _ _)), dpstate, certificates) <- judgmentContext
 
@@ -74,7 +74,7 @@ delegsTransition = do
 
     certs_ :|> cert -> do
       dpstate' <-
-        trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, certs_)
+        trans @(DELEGS hashAlgo dsignAlgo vrfAlgo) $ TRC (env, dpstate, certs_)
 
       let ptr = Ptr _slot txIx (fromIntegral $ length certs_)
 
@@ -86,17 +86,17 @@ delegsTransition = do
 
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
 
-      trans @(DELPL hashAlgo dsignAlgo)
+      trans @(DELPL hashAlgo dsignAlgo vrfAlgo)
         $ TRC (DelplEnv _slot ptr pp, dpstate', cert)
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Embed (DELPL hashAlgo dsignAlgo) (DELEGS hashAlgo dsignAlgo)
+  => Embed (DELPL hashAlgo dsignAlgo vrfAlgo) (DELEGS hashAlgo dsignAlgo vrfAlgo)
  where
   wrapFailed = DelplFailure
 
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => HasTrace (DELEGS hashAlgo dsignAlgo) where
-  envGen _ = undefined :: Gen (DelegsEnv hashAlgo dsignAlgo)
-  sigGen _ _ = undefined :: Gen (Seq (DCert hashAlgo dsignAlgo))
+  => HasTrace (DELEGS hashAlgo dsignAlgo vrfAlgo) where
+  envGen _ = undefined :: Gen (DelegsEnv hashAlgo dsignAlgo vrfAlgo)
+  sigGen _ _ = undefined :: Gen (Seq (DCert hashAlgo dsignAlgo vrfAlgo))

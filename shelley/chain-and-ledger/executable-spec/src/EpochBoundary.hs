@@ -74,7 +74,7 @@ getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (StakeCredential hashAlgo dsignAl
 getStakeHK (AddrBase _ hk) = Just hk
 getStakeHK _               = Nothing
 
-aggregateOuts :: UTxO hashAlgo dsignAlgo -> Map (Addr hashAlgo dsignAlgo) Coin
+aggregateOuts :: UTxO hashAlgo dsignAlgo vrfAlgo -> Map (Addr hashAlgo dsignAlgo) Coin
 aggregateOuts (UTxO u) =
   Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
@@ -187,7 +187,7 @@ groupByPool active delegs =
     | hk <- Map.keys delegs
     ]
 
-data SnapShots hashAlgo dsignAlgo
+data SnapShots hashAlgo dsignAlgo vrfAlgo
   = SnapShots
     { _pstakeMark
       :: ( Stake hashAlgo dsignAlgo
@@ -202,13 +202,13 @@ data SnapShots hashAlgo dsignAlgo
          , Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
          )
     , _poolsSS
-      :: Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
+      :: Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo vrfAlgo)
     , _feeSS :: Coin
     } deriving (Show, Eq)
 
 makeLenses ''SnapShots
 
-emptySnapShots :: SnapShots hashAlgo dsignAlgo
+emptySnapShots :: SnapShots hashAlgo dsignAlgo vrfAlgo
 emptySnapShots =
     SnapShots snapEmpty snapEmpty snapEmpty Map.empty (Coin 0)
     where pooledEmpty = Map.empty

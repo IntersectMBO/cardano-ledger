@@ -5,6 +5,7 @@ module MockTypes where
 import           Cardano.Crypto.DSIGN (MockDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (MockKES)
+import           Cardano.Crypto.VRF.Fake (FakeVRF)
 
 import qualified BlockChain
 import qualified Delegation.Certificates
@@ -26,13 +27,13 @@ import qualified TxData
 import qualified Updates
 import qualified UTxO
 
-type DCert = Delegation.Certificates.DCert ShortHash MockDSIGN
+type DCert = Delegation.Certificates.DCert ShortHash MockDSIGN FakeVRF
 
-type PoolDistr = Delegation.Certificates.PoolDistr ShortHash MockDSIGN
+type PoolDistr = Delegation.Certificates.PoolDistr ShortHash MockDSIGN FakeVRF
 
 type Delegation = TxData.Delegation ShortHash MockDSIGN
 
-type PoolParams = TxData.PoolParams ShortHash MockDSIGN
+type PoolParams = TxData.PoolParams ShortHash MockDSIGN FakeVRF
 
 type RewardAcnt = TxData.RewardAcnt ShortHash MockDSIGN
 
@@ -52,81 +53,85 @@ type KeyPairs = LedgerState.KeyPairs MockDSIGN
 
 type VKeyGenesis = Keys.VKeyGenesis MockDSIGN
 
-type EpochState = LedgerState.EpochState ShortHash MockDSIGN
+type EpochState = LedgerState.EpochState ShortHash MockDSIGN FakeVRF
 
-type NEWEPOCH = STS.NewEpoch.NEWEPOCH ShortHash MockDSIGN
+type NEWEPOCH = STS.NewEpoch.NEWEPOCH ShortHash MockDSIGN FakeVRF
 
-type LedgerState = LedgerState.LedgerState ShortHash MockDSIGN
+type LedgerState = LedgerState.LedgerState ShortHash MockDSIGN FakeVRF
 
-type LedgerValidation = LedgerState.LedgerValidation ShortHash MockDSIGN
+type LedgerValidation = LedgerState.LedgerValidation ShortHash MockDSIGN FakeVRF
 
-type UTxOState = LedgerState.UTxOState ShortHash MockDSIGN
+type UTxOState = LedgerState.UTxOState ShortHash MockDSIGN FakeVRF
 
 type DState = LedgerState.DState ShortHash MockDSIGN
 
-type PState = LedgerState.PState ShortHash MockDSIGN
+type PState = LedgerState.PState ShortHash MockDSIGN FakeVRF
 
-type DPState = LedgerState.DPState ShortHash MockDSIGN
+type DPState = LedgerState.DPState ShortHash MockDSIGN FakeVRF
 
 type Addr = TxData.Addr ShortHash MockDSIGN
 
-type Tx = Tx.Tx ShortHash MockDSIGN
+type Tx = Tx.Tx ShortHash MockDSIGN FakeVRF
 
-type TxBody = Tx.TxBody ShortHash MockDSIGN
+type TxBody = Tx.TxBody ShortHash MockDSIGN FakeVRF
 
-type TxIn = Tx.TxIn ShortHash MockDSIGN
+type TxIn = Tx.TxIn ShortHash MockDSIGN FakeVRF
 
 type TxOut = Tx.TxOut ShortHash MockDSIGN
 
-type TxId = TxData.TxId ShortHash MockDSIGN
+type TxId = TxData.TxId ShortHash MockDSIGN FakeVRF
 
-type UTxO = UTxO.UTxO ShortHash MockDSIGN
+type UTxO = UTxO.UTxO ShortHash MockDSIGN FakeVRF
 
-type Block = BlockChain.Block ShortHash MockDSIGN MockKES
+type Block = BlockChain.Block ShortHash MockDSIGN MockKES FakeVRF
 
-type BHBody = BlockChain.BHBody ShortHash MockDSIGN MockKES
+type BHBody = BlockChain.BHBody ShortHash MockDSIGN MockKES FakeVRF
 
 type SKeyES = Keys.SKeyES MockKES
 
 type VKeyES = Keys.VKeyES MockKES
 
+type SignKeyVRF = Keys.SignKeyVRF FakeVRF
+
+type VerKeyVRF = Keys.VerKeyVRF FakeVRF
+
+type CertifiedVRF = Keys.CertifiedVRF FakeVRF
+
 type KESig = Keys.KESig MockKES BHBody
 
 type Sig a = Keys.Sig MockDSIGN a
-
-type Proof a = BlockChain.Proof MockDSIGN
 
 type BHeader = BlockChain.BHeader ShortHash MockDSIGN MockKES
 
 type OCert = OCert.OCert MockDSIGN MockKES
 
-type HashHeader = BlockChain.HashHeader ShortHash MockDSIGN MockKES
+type HashHeader = BlockChain.HashHeader ShortHash MockDSIGN MockKES FakeVRF
 
 type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN
 
 type RewardUpdate = LedgerState.RewardUpdate ShortHash MockDSIGN
 
-type ChainState = STS.Chain.ChainState ShortHash MockDSIGN MockKES
+type ChainState = STS.Chain.ChainState ShortHash MockDSIGN MockKES FakeVRF
 
-type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
+type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES FakeVRF
 
-type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
+type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN FakeVRF
 
-type UTXO = STS.Utxo.UTXO ShortHash MockDSIGN
+type UTXO = STS.Utxo.UTXO ShortHash MockDSIGN FakeVRF
 
 type UtxoEnv = STS.Utxo.UtxoEnv ShortHash MockDSIGN
 
-type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
+type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN FakeVRF
 
-type LEDGER = STS.Ledger.LEDGER ShortHash MockDSIGN
+type LEDGER = STS.Ledger.LEDGER ShortHash MockDSIGN FakeVRF
 
 type LedgerEnv = STS.Ledger.LedgerEnv
 
-type DELEGS = STS.Delegs.DELEGS ShortHash MockDSIGN
+type DELEGS = STS.Delegs.DELEGS ShortHash MockDSIGN FakeVRF
 
-type POOL = STS.Pool.POOL ShortHash MockDSIGN
+type POOL = STS.Pool.POOL ShortHash MockDSIGN FakeVRF
 
-type POOLREAP = STS.PoolReap.POOLREAP ShortHash MockDSIGN
+type POOLREAP = STS.PoolReap.POOLREAP ShortHash MockDSIGN FakeVRF
 
 type Credential = TxData.Credential ShortHash MockDSIGN
 
@@ -141,7 +146,7 @@ type WitVKey = TxData.WitVKey ShortHash MockDSIGN
 
 type Wdrl = TxData.Wdrl ShortHash MockDSIGN
 
-type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN
+type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN FakeVRF
 
 type Stake = EpochBoundary.Stake ShortHash MockDSIGN
 

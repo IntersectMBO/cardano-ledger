@@ -15,13 +15,13 @@ import           Control.State.Transition
 
 data UPDN
 
-data UpdnState = UpdnState Seed Seed
+data UpdnState = UpdnState Nonce Nonce
   deriving (Show, Eq)
 
 instance STS UPDN where
   type State UPDN = UpdnState
   type Signal UPDN = Slot.Slot
-  type Environment UPDN = Seed
+  type Environment UPDN = Nonce
   data PredicateFailure UPDN = FailureUPDN
                                deriving (Show, Eq)
   initialRules = [pure (UpdnState (mkNonce 0) (mkNonce 0))]

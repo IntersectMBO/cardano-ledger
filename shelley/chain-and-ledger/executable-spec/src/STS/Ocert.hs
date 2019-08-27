@@ -19,23 +19,23 @@ import           OCert
 
 import           Control.State.Transition
 
-data OCERT hashAlgo dsignAlgo kesAlgo
+data OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo
 
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
   , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
   , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
   )
-  => STS (OCERT hashAlgo dsignAlgo kesAlgo)
+  => STS (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
-  type State (OCERT hashAlgo dsignAlgo kesAlgo)
+  type State (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = Map (KeyHash hashAlgo dsignAlgo) Natural
-  type Signal (OCERT hashAlgo dsignAlgo kesAlgo)
-    = BHeader hashAlgo dsignAlgo kesAlgo
-  type Environment (OCERT hashAlgo dsignAlgo kesAlgo) = ()
-  data PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo)
+  type Signal (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+  type Environment (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) = ()
+  data PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = KESBeforeStartOCERT
     | KESAfterEndOCERT
     | KESPeriodWrongOCERT
@@ -52,9 +52,9 @@ ocertTransition
      , DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
      , KESAlgorithm kesAlgo
-     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
      )
-  => TransitionRule (OCERT hashAlgo dsignAlgo kesAlgo)
+  => TransitionRule (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
 ocertTransition = do
   TRC (_, cs, BHeader bhb sigma) <- judgmentContext
 

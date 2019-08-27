@@ -27,47 +27,50 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data UTXOW hashAlgo dsignAlgo
+data UTXOW hashAlgo dsignAlgo vrfAlgo
 
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , VRFAlgorithm vrfAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
   )
-  => STS (UTXOW hashAlgo dsignAlgo)
+  => STS (UTXOW hashAlgo dsignAlgo vrfAlgo)
  where
-  type State (UTXOW hashAlgo dsignAlgo) = UTxOState hashAlgo dsignAlgo
-  type Signal (UTXOW hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
-  type Environment (UTXOW hashAlgo dsignAlgo) = UtxoEnv hashAlgo dsignAlgo
-  data PredicateFailure (UTXOW hashAlgo dsignAlgo)
+  type State (UTXOW hashAlgo dsignAlgo vrfAlgo) = UTxOState hashAlgo dsignAlgo vrfAlgo
+  type Signal (UTXOW hashAlgo dsignAlgo vrfAlgo) = Tx hashAlgo dsignAlgo vrfAlgo
+  type Environment (UTXOW hashAlgo dsignAlgo vrfAlgo) = UtxoEnv hashAlgo dsignAlgo
+  data PredicateFailure (UTXOW hashAlgo dsignAlgo vrfAlgo)
     = InvalidWitnessesUTXOW
     | MissingVKeyWitnessesUTXOW
     | MissingScriptWitnessesUTXOW
     | ScriptWitnessNotValidatingUTXOW
-    | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo))
+    | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo))
     deriving (Eq, Show)
 
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
 initialLedgerStateUTXOW
-  :: forall hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo vrfAlgo
    . ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     , VRFAlgorithm vrfAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
      )
-   => InitialRule (UTXOW hashAlgo dsignAlgo)
+   => InitialRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
 initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakeKeys stakePools dms) <- judgmentContext
-  trans @(UTXO hashAlgo dsignAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools dms)
+  trans @(UTXO hashAlgo dsignAlgo vrfAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools dms)
 
 utxoWitnessed
-  :: forall hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo vrfAlgo
    . ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     , VRFAlgorithm vrfAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
      )
-   => TransitionRule (UTXOW hashAlgo dsignAlgo)
+   => TransitionRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
 utxoWitnessed = do
   TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx@(Tx _ wits _))
     <- judgmentContext
@@ -86,19 +89,25 @@ utxoWitnessed = do
   scriptsNeeded utxo' tx == Map.keysSet (txwitsScript tx)
     ?! MissingScriptWitnessesUTXOW
 
-  trans @(UTXO hashAlgo dsignAlgo)
+  trans @(UTXO hashAlgo dsignAlgo vrfAlgo)
     $ TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx)
 
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , VRFAlgorithm vrfAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
   )
-  => Embed (UTXO hashAlgo dsignAlgo) (UTXOW hashAlgo dsignAlgo)
+  => Embed (UTXO hashAlgo dsignAlgo vrfAlgo) (UTXOW hashAlgo dsignAlgo vrfAlgo)
  where
   wrapFailed = UtxoFailure
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, Signable dsignAlgo (TxBody hashAlgo dsignAlgo))
-  => HasTrace (UTXOW hashAlgo dsignAlgo) where
+instance
+    ( HashAlgorithm hashAlgo
+    , DSIGNAlgorithm dsignAlgo
+    , VRFAlgorithm vrfAlgo
+    , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+    )
+  => HasTrace (UTXOW hashAlgo dsignAlgo vrfAlgo) where
   envGen _ = undefined :: Gen (UtxoEnv hashAlgo dsignAlgo)
-  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo vrfAlgo)
