@@ -10,26 +10,26 @@ property-based testing or formal verification.
 
 Many properties only make sense when applied to a valid ledger state. In
 informal terms, a valid ledger state $l$ can only be reached when starting from
-an initial state $l_{0}$ (genesis state) and only executing state transition
-rules as specified in Section~\ref{sec:utxo} for UTxO or
-Section~\ref{sec:delegation-shelley} for delegation.
+an initial state $l_{0}$ (ledger in the genesis state) and only executing LEDGER
+state transition rules as specified in Section~\ref{sec:ledger-trans} which
+changes wither the  UTxO or the delegation state.
 
 \begin{figure}[ht]
   \centering
   \begin{align*}
     \genesisId & \in & \TxId \\
     \genesisTxOut & \in & \TxOut \\
-    \genesisUTxO & \coloneqq & \{\genesisId, \emptyset\} \mapsto \genesisTxOut
+    \genesisUTxO & \coloneqq & (\genesisId, 0) \mapsto \genesisTxOut
     \\
     \ledgerState & \in & \left(
                          \begin{array}{c}
-                           \UTxO \\
+                           \UTxOState \\
                            \DPState
                          \end{array}
     \right)\\
                && \\
-    \fun{getUTxO} & \in & \ledgerState \to \UTxO \\
-    \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard) \to \var{utxo}
+    \fun{getUTxO} & \in & \UTxOState \to \UTxO \\
+    \fun{getUTxO} & \coloneqq & (\var{utxo}, \wcard, \wcard, \wcard) \to \var{utxo}
   \end{align*}
   \caption{Definitions and Functions for Valid Ledger State}
   \label{fig:valid-ledger}
@@ -38,17 +38,15 @@ Section~\ref{sec:delegation-shelley} for delegation.
 In Figure~\ref{fig:valid-ledger} \genesisId{} marks the transaction identifier
 of the initial coin distribution, where \genesisTxOut{} represents the initial
 UTxO. It should be noted that no corresponding inputs exists, i.e., the
-transaction inputs are the empty set for the initial transaction. An element of
-\ledgerState{} is a tuple of UTxO and delegation witness state (\DPState).
+transaction inputs are the empty set for the initial transaction. The function
+\fun{getUTxO} extracts the UTxO from a UTxO state.
 
 \begin{definition}[\textbf{Valid Ledger State}]
   \begin{multline*}
-    \forall l_{0},\ldots,l_{n} \in \ledgerState, l_{0} =
-    \left(
+    \forall l_{0},\ldots,l_{n} \in \LState, lenv_{0},\ldots,lenv_{n} \in \LEnv,
+    l_{0} = \left(
       \begin{array}{c}
-        \left\{
-        \genesisUTxO
-        \right\} \\
+        \genesisUTxOState \\
         \left(
         \begin{array}{c}
           \emptyset\\
@@ -57,15 +55,16 @@ transaction inputs are the empty set for the initial transaction. An element of
         \right)
       \end{array}
     \right)  \\
-    \implies \forall 0 < i \leq n, (\exists tx_{i} \in \Tx, l_{i-1}
-    \trans{ledger}{tx_{i}} l_{i}) \implies \applyFun{validLedgerState} l_{n}
+    \implies \forall 0 < i \leq n, (\exists tx_{i} \in \Tx,
+    lenv_{i-1}\vdash l_{i-1} \trans{ledger}{tx_{i}} l_{i}) \implies
+    \applyFun{validLedgerState} l_{n}
   \end{multline*}
   \label{def:valid-ledger-state}
 \end{definition}
 
 Definition~\ref{def:valid-ledger-state} defines a valid ledger state reachable
-from the genesis state via valid UTxO, stake delegation or stake pool
-transactions. This gives a constructive rule how to reach a valid ledger state.
+from the genesis state via valid LEDGER STS transitions. This gives a
+constructive rule how to reach a valid ledger state.
 
 \subsection{Ledger Properties}
 \label{sec:ledger-properties}
@@ -73,47 +72,52 @@ transactions. This gives a constructive rule how to reach a valid ledger state.
 The following properties state the desired features of updating a valid ledger
 state.
 
-\begin{property}[\textbf{Preserve Balance Modulo Fee}]
+\begin{property}[\textbf{Preserve Balance}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'} \\
-    \implies \applyFun{destroyed}{pc utxo stKeys rewards tx} =
-    \applyFun{created}{pc stPools tx}
+    \forall \var{l}, \var{l'} \in \LState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash\var{u} \trans{utxow}{tx} \var{u'} \\
+    \implies \applyFun{destroyed}{pc~utxo~stDelegs~rewards~tx} =
+    \applyFun{created}{pc~stPools~tx}
   \end{multline*}
   \label{prop:ledger-properties-1}
 \end{property}
 
 Property~\ref{prop:ledger-properties-1} states that for each valid ledger $l$,
-if a transaction $tx$ is added to the ledger via the state transition rule
-$utxow$ to the new ledger state $l'$, the balance of the UTxOs in $l$ equals the
-balance of the UTxOs in $l'$ in the sense that the amount of created value in
-$l'$ equals the amount of destroyed value in $l$. This means that the total
-amount of value is left unchanged by a transaction.
+if a transaction $tx$ is added to the ledger via the state transition rule UTXOW
+to the new ledger state $l'$, the balance of the UTxOs in $l$ equals the balance
+of the UTxOs in $l'$ in the sense that the amount of created value in $l'$
+equals the amount of destroyed value in $l$. This means that the total amount of
+value is left unchanged by a transaction.
 
 \begin{property}[\textbf{Preserve Balance Restricted to TxIns in Balance of
     TxOuts}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \\
     \implies \fun{ubalance}(\applyFun{txins}{tx} \restrictdom
-    \applyFun{getUTxO}{l}) = \fun{ubalance}(\applyFun{outs}{tx}) +
-    \applyFun{txfee}{tx}
+    \applyFun{getUTxO}{u}) = \fun{ubalance}(\applyFun{outs}{tx}) +
+    \applyFun{txfee}{tx} + depositChange
   \end{multline*}
   \label{prop:ledger-properties-2}
 \end{property}
 
-Property~\ref{prop:ledger-properties-2} states the more detailed relation of the
-balances change. For ledgers $l, l'$ and a transaction $tx$ as above, the
+Property~\ref{prop:ledger-properties-2} states a slightly more detailed relation
+of the balances change. For ledgers $l, l'$ and a transaction $tx$ as above, the
 balance of the UTxOs of $l$ restricted to those whose domain is in the set of
 transaction inputs of $tx$ equals the balance of the transaction outputs of $tx$
-minus the transaction fees.
+minus the transaction fees and the change in the deposit
+$depositChange$~(cf.~Fig.~\ref{fig:rules:utxo-shelley}).
 
 \begin{property}[\textbf{Preserve Outputs of Transaction}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
-    \implies \forall \var{out} \in \applyFun{outs}{tx}, out \in
-    \applyFun{getUTxO}{l'}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \implies \forall \var{out} \in
+    \applyFun{outs}{tx}, out \in \applyFun{getUTxO}{u'}
   \end{multline*}
   \label{prop:ledger-properties-3}
 \end{property}
@@ -124,28 +128,29 @@ set of $l'$, i.e., they are now available as unspent transaction output.
 
 \begin{property}[\textbf{Eliminate Inputs of Transaction}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
-    \implies \forall \var{in} \in \applyFun{txins}{tx}, in \not\in
-    \fun{dom}(\applyFun{getUTxO}{l'})
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \implies \forall \var{in} \in
+    \applyFun{txins}{tx}, in \not\in \fun{dom}(\applyFun{getUTxO}{u'})
   \end{multline*}
   \label{prop:ledger-properties-4}
 \end{property}
 
 Property~\ref{prop:ledger-properties-4} states that for all ledger states
 $l, l'$ and transaction $tx$ as above, all transaction inputs $in$ of $tx$ are
-not in the domain of the UTxO set of $l'$, i.e., these are no longer available
-to spend.
+not in the domain of the UTxO of $l'$, i.e., these are no longer available to
+spend.
 
 \begin{property}[\textbf{Completeness and Collision-Freeness of new Transaction
     Ids}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{tx} \in \Tx, \var{l} \trans{utxow}{tx} \var{l'}
-    \implies \forall utxo' \in \applyFun{outs}{tx}, \var{utxo'} \in
-    \applyFun{getUTxO}{l'} \wedge \\(\var{utxo'} = ((\var{txId'}, \wcard) \mapsto
-    \wcard) \implies \forall \var{utxo} \in \applyFun{getUTxO}{l}, \var{utxo} =
-    ((\var{txId}, \wcard) \mapsto \wcard) \implies \var{txId'} \neq \var{txId}
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
+    \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash \var{u}
+    \trans{utxow}{tx} \var{u'} \\ \implies \forall ((txId', \wcard) \mapsto
+    \wcard) \in \applyFun{outs}{tx}, ((txId, \wcard) \mapsto \wcard)
+    \in\applyFun{getUTxO}{u} \implies \var{txId'} \neq \var{txId}
   \end{multline*}
   \label{prop:ledger-properties-5}
 \end{property}
@@ -170,10 +175,11 @@ set of $l$.
         \end{array}
         \right)
       \end{array}
-    \right) \wedge \applyFun{validLedgerState} l_{n} \\
-    \implies \forall 0 < i \leq n, tx_{i} \in \Tx, l_{i-1}
-    \trans{ledger}{tx_{i}} l_{i} \wedge \applyFun{validLedgerState} l_{i}
-    \\ \implies \forall j < i, \applyFun{txins}{tx_{j}} \cap
+    \right) \wedge \applyFun{validLedgerState} l_{n}, l_{i}=(u_{i},\wcard,\wcard,\wcard)\\
+    \implies \forall 0 < i \leq n, tx_{i} \in \Tx, lenv_{i}\in\LEnv,
+    lenv_{i} \vdash u_{i-1}
+    \trans{ledger}{tx_{i}} u_{i} \wedge \applyFun{validLedgerState} l_{i} \\
+    \implies \forall j < i, \applyFun{txins}{tx_{j}} \cap
     \applyFun{txins}{tx_{i}} = \emptyset
   \end{multline*}
   \label{prop:ledger-properties-no-double-spend}
@@ -190,90 +196,98 @@ each output of a transition is spent at most once.
 \begin{figure}[ht]
   \centering
   \begin{align*}
-    \fun{getStKeys} & \in & \ledgerState \to \powerset \KeyHash \\
-    \fun{getStKeys} & \coloneqq & (\wcard, (\var{stKeys}, \wcard, \wcard),
-                                  \wcard) \to \var{stkeys} \\
-                    &&\\
-    \fun{getRewards} & \in & \ledgerState \to \AddrRWD \mapsto \Coin \\
-    \fun{getRewards} & \coloneqq & (\wcard, (\wcard, \var{rewards}, \wcard),
-                                   \wcard) \to \var{rewards} \\
-                    &&\\
-    \fun{getDelegations} & \in & \ledgerState \to \KeyHash \mapsto \KeyHash \\
-    \fun{getDelegations} & \coloneqq & (\wcard, (\wcard, \wcard,
-                                       \var{delegations}), \wcard) \to
+    \fun{getStDelegs} & \in & \LState \to \powerset \Credential \\
+    \fun{getStDelegs} & \coloneqq &
+                                    (\wcard, ((\var{stDelegs}, \wcard,
+                                    \wcard,\wcard,\wcard,\wcard), \wcard)) \to \var{stDelegs} \\
+                      &&\\
+    \fun{getRewards} & \in & \LState \to (\AddrRWD \mapsto \Coin) \\
+    \fun{getRewards} & \coloneqq & (\wcard,
+                                   ((\wcard, \var{rewards},
+                                   \wcard,\wcard,\wcard,\wcard), \wcard))
+                                   \to \var{rewards} \\
+                      &&\\
+    \fun{getDelegations} & \in & \LState \to (\Credential \mapsto \KeyHash) \\
+    \fun{getDelegations} & \coloneqq & (\wcard, ((\wcard, \wcard,
+                                       \var{delegations},\wcard,\wcard,\wcard), \wcard)) \to
                                        \var{delegations} \\
-                    &&\\
-    \fun{getStPools} & \in & \ledgerState \to \KeyHash \mapsto \DCertRegPool \\
-    \fun{getStPools} & \coloneqq & (\wcard, \wcard,
-                                   (\var{stpools}, \wcard)) \to \var{stpools} \\
-                    &&\\
-    \fun{getRetiring} & \in & \ledgerState \to \KeyHash \mapsto \Epoch \\
-    \fun{getRetiring} & \coloneqq & (\wcard, \wcard,
-                                    (\wcard, \var{retiring})) \to \var{retiring} \\
+                      &&\\
+    \fun{getStPools} & \in & \LState \to (\KeyHash \mapsto \DCertRegPool) \\
+    \fun{getStPools} & \coloneqq & (\wcard, (\wcard,
+                                   (\var{stpools},\wcard,\wcard,\wcard))) \to \var{stpools} \\
+                      &&\\
+    \fun{getRetiring} & \in & \LState \to (\KeyHash \mapsto \Epoch) \\
+    \fun{getRetiring} & \coloneqq & (\wcard, (\wcard,
+                                    (\wcard, \wcard, \var{retiring},\wcard))) \to \var{retiring} \\
   \end{align*}
   \caption{Definitions and Functions for Stake Delegation in Ledger States}
   \label{fig:stake-delegation-functions}
 \end{figure}
 
 
-\begin{property}[\textbf{Registered Staking Key with Zero Rewards}]
+\begin{property}[\textbf{Registered Staking Credential with Zero Rewards}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{c} \in \DCertRegKey, \var{l} \trans{delegw}{c} \var{l'}
-    \implies \applyFun{author}{c} = \var{hk}\\ \implies
-    \var{hk} \in \applyFun{getStKeys}{l'} \wedge
-    (\applyFun{getRewards}var{rewards})[hk] = 0
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l = (\wcard, (dp, \wcard)), l' = (\wcard, (dp', \wcard)), dpsEnv\in\DPSEnv \\
+    \implies \forall \var{c} \in \DCertRegKey, dpsEnv\vdash \var{dp}
+    \trans{delegs}{c} \var{dp'} \implies \applyFun{cwitness}{c} = \var{hk}\\
+    \implies \var{hk} \in \applyFun{getStDelegs}{l'} \wedge
+    (\applyFun{getRewards}\var{l'})[\fun{addr_{rwd}}{hk}] = 0
   \end{multline*}
   \label{prop:ledger-properties-6}
 \end{property}
 
 Property~\ref{prop:ledger-properties-6} states that for each valid ledger state
 $l$, if a delegation transaction of type $\DCertRegKey$ is executed, then in the
-resulting ledger state $l'$, the set of staking keys of $l'$ includes the key
-$hk$ associated with the key registration certificate and the associated reward
-is set to 0 in $l'$.
+resulting ledger state $l'$, the set of staking credential of $l'$ includes the
+credential $hk$ associated with the key registration certificate and the
+associated reward is set to 0 in $l'$.
 
-\begin{property}[\textbf{Deregistered Staking Key}]
+\begin{property}[\textbf{Deregistered Staking Credential}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{c} \in \DCertDeRegKey, \var{l} \trans{delegw}{c} \var{l'}
-    \implies \applyFun{author}{c} = \var{hk}\\ \implies
-    \var{hk} \not\in \applyFun{getStKeys}{l'} \wedge
-    (\fun{dom}(\applyFun{getRewards}{l'}) \cup
-    \fun{dom}(\applyFun{getDelegations}{l'})) \cap \{hk\} = \emptyset
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
+    \implies \forall \var{c} \in \DCertDeRegKey, dpsEnv\vdash\var{dp}
+    \trans{delegs}{c} \var{dp'} \implies \applyFun{cwitness}{c} = \var{hk}\\
+    \implies \var{hk} \not\in \applyFun{getStDelegs}{l'} \wedge
+    hk\not\in({\fun{stakeCred_{r}}~sc\vert
+      sc\in\fun{dom}(\applyFun{getRewards}{l'})} \cup
+    \fun{dom}(\applyFun{getDelegations}{l'}))
   \end{multline*}
   \label{prop:ledger-properties-7}
 \end{property}
 
 Property~\ref{prop:ledger-properties-7} states that for $l, l'$ as above but
-with a delegation transition of type $\DCertDeRegKey$, the staking key $hk$
-associated with the deregistration certificate is not in the set of staking keys
-of $l'$ and is not in the domain of either the rewards or the delegation map
-of $l'$.
+with a delegation transition of type $\DCertDeRegKey$, the staking credential
+$hk$ associated with the deregistration certificate is not in the set of staking
+credentials of $l'$ and is not in the domain of either the rewards or the
+delegation map of $l'$.
 
 \begin{property}[\textbf{Delegated Stake}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
-    \implies \forall \var{c} \in \DCertDeleg, \var{l} \trans{delegw}{c} \var{l'}
-    \implies \applyFun{author}{c} = \var{hk}\\ \implies
-    \var{hk} \in \applyFun{getStKeys}{l} \wedge
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
+    \implies \forall \var{c} \in \DCertDeleg, dpsEnv \vdash\var{dp}
+    \trans{delegs}{c} \var{dp'} \implies \applyFun{cwitness}{c} = \var{hk}\\
+    \implies \var{hk} \in \applyFun{getStDelegs}{l} \wedge
     (\applyFun{getDelegations}{l'})[hk] = \applyFun{pool}{c}
   \end{multline*}
   \label{prop:ledger-properties-8}
 \end{property}
 
 Property~\ref{prop:ledger-properties-8} states that for $l, l'$ as above but
-with a delegation transition of type $\DCertDeleg$, the staking key $hk$
-associated with the deregistration certificate is in the set of staking keys of
-$l$ and delegates to the staking pool associated with the delegation
-certificate in $l'$.
+with a delegation transition of type $\DCertDeleg$, the staking credential $hk$
+associated with the deregistration certificate is in the set of staking
+credentials of $l$ and delegates to the staking pool associated with the
+delegation certificate in $l'$.
 
 \subsection{Ledger State Properties for Staking Pool Transitions}
 \label{sec:ledg-state-prop}
 
 \begin{property}[\textbf{Registered Staking Pool}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l}\\
+    \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
+    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
     \implies \forall \var{c} \in \DCertRegPool, \var{l} \trans{pool}{c} \var{l'}
     \implies \applyFun{author}{c} = \var{hk}\\ \implies
     (\applyFun{getStPools}{l'})[\var{hk}] = c \wedge \var{hk} \not\in
@@ -290,10 +304,11 @@ and that $hk$ is not in the set of retiring stake pools in $l'$.
 \begin{property}[\textbf{Start Staking Pool Retirement}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState, \var{cepoch} \in \Epoch:
-    \applyFun{validLedgerstate}{l} \\
-    \implies \forall \var{c} \in \DCertRetirePool, \var{l} \trans{pool}{c} \var{l'}
-    \\ \implies e = \applyFun{retire}{c} \wedge
-    \var{cepoch} < e < \var{cepoch} + \emax \wedge \applyFun{author}{c} =
+    \applyFun{validLedgerstate}{l},
+    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
+    \implies \forall \var{c} \in \DCertRetirePool, dpsEnv\vdash\var{dp}
+    \trans{DELEGS}{c} \var{dp'} \\ \implies e = \applyFun{retire}{c} \wedge
+    \var{cepoch} < e < \var{cepoch} + \emax \wedge \applyFun{cwitness}{c} =
     \var{hk}\\ \implies (\applyFun{getRetiring}{l'})[\var{hk}] = e \wedge
     \var{hk} \in \fun{dom}(\applyFun{getStPools}{l})
   \end{multline*}
@@ -303,29 +318,30 @@ and that $hk$ is not in the set of retiring stake pools in $l'$.
 Property~\ref{prop:ledger-properties-10} states that for $l, l'$ as above but
 with a delegation transition of type $\DCertRetirePool$, the key $hk$ is
 associated with the author of the pool registration certificate in
-$\var{stpools}$ of $l'$ and that $hk$ is not in the set of retiring stake pools
-in $l'$.
+$\var{stpools}$ of $l'$ and that $hk$ is in the map of retiring staking pools of
+$l'$ with retirement epoch $e$, as well as that $hk$ is in the map of stake
+pools in $l$.
 
 \begin{property}[\textbf{Stake Pool Reaping}]
   \begin{multline*}
-    \forall \var{l}, \var{l'} \in \ledgerState, \var{cepoch} \in \Epoch:
-    \applyFun{validLedgerstate}{l} \\
-    \implies \var{l} \trans{poolreap}{} \var{l'} \implies \forall \var{retire} =
-    retiring^{-1} cepoch, retired \neq \emptyset \\ \wedge \var{retire}
-    \subseteq \fun{dom}(\applyFun{getStPool}{l}) \wedge
-    \var{retire} \cap \fun{dom}(\applyFun{getStPool}{l'}) = \emptyset \\
-    \wedge \var{retire} \subseteq \fun{dom}(\applyFun{getRetiring}{l}) \wedge
-    \var{retire} \cap \fun{dom}(\applyFun{getRetiring}{l'}) = \emptyset
+    \forall \var{l}, \var{l'} \in \ledgerState, \var{e} \in \Epoch:
+    \applyFun{validLedgerstate}{l},\\
+    l = (\wcard, dp), l' = (\wcard, dp'), pp\in\PParams, acnt, acnt'\in\Acnt \\
+    \implies pp\vdash\var{(acnt, dp)} \trans{poolreap}{e} \var{(acnt, l')}
+    \implies \forall \var{retire}\in{(\fun{getRetiring}~l)}^{-1}[e], retire \neq
+    \emptyset \\ \wedge \var{retire} \subseteq
+    \fun{dom}(\applyFun{getStPool}{l}) \wedge
+    \var{retire} \cap\fun{dom}(\applyFun{getStPool}{l'})=\emptyset \\
+    \wedge\var{retire} \cap \fun{dom}(\applyFun{getRetiring}{l'}) = \emptyset
   \end{multline*}
   \label{prop:ledger-properties-11}
 \end{property}
 
 Property~\ref{prop:ledger-properties-11} states that for $l, l'$ as above but
-with a delegation transition of type $\DPoolReap$, there exist registered stake
+with a delegation transition of type $POOLREAP$, there exist registered stake
 pools in $l$ which are associated to stake pool registration certificates and
-which are to be retired at the current epoch $\var{cepoch}$. In $l'$ all those
-stake pools are removed from the maps $stpools$ and $retiring$.
-
+which are to be retired at the current epoch $\var{e}$. In $l'$ all those stake
+pools are removed from the maps $stpools$ and $retiring$.
 
 \subsection{Properties of Numerical Calculations}
 \label{sec:prop-numer-calc}
