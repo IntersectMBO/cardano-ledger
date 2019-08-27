@@ -28,7 +28,7 @@ import           STS.Ledger
 import           Tx
 import           Updates (Applications (..), UpdateState (..), apps, newAVs)
 
-data LEDGERS hashAlgo dsignAlgo
+data LEDGERS hashAlgo dsignAlgo vrfAlgo
 
 data LedgersEnv
   = LedgersEnv Slot PParams
@@ -36,34 +36,36 @@ data LedgersEnv
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
   )
-  => STS (LEDGERS hashAlgo dsignAlgo)
+  => STS (LEDGERS hashAlgo dsignAlgo vrfAlgo)
  where
-  type State (LEDGERS hashAlgo dsignAlgo) = LedgerState hashAlgo dsignAlgo
-  type Signal (LEDGERS hashAlgo dsignAlgo) = Seq (Tx hashAlgo dsignAlgo)
-  type Environment (LEDGERS hashAlgo dsignAlgo) = LedgersEnv
-  data PredicateFailure (LEDGERS hashAlgo dsignAlgo)
-    = LedgerFailure (PredicateFailure (LEDGER hashAlgo dsignAlgo))
+  type State (LEDGERS hashAlgo dsignAlgo vrfAlgo) = LedgerState hashAlgo dsignAlgo vrfAlgo
+  type Signal (LEDGERS hashAlgo dsignAlgo vrfAlgo) = Seq (Tx hashAlgo dsignAlgo vrfAlgo)
+  type Environment (LEDGERS hashAlgo dsignAlgo vrfAlgo) = LedgersEnv
+  data PredicateFailure (LEDGERS hashAlgo dsignAlgo vrfAlgo)
+    = LedgerFailure (PredicateFailure (LEDGER hashAlgo dsignAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules = [pure emptyLedgerState]
   transitionRules = [ledgersTransition]
 
 ledgersTransition
-  :: forall hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo vrfAlgo
    . ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+     , VRFAlgorithm vrfAlgo
      )
-  => TransitionRule (LEDGERS hashAlgo dsignAlgo)
+  => TransitionRule (LEDGERS hashAlgo dsignAlgo vrfAlgo)
 ledgersTransition = do
   TRC (LedgersEnv slot pp, ls, txwits) <- judgmentContext
   let (u, dw) = (_utxoState ls, _delegationState ls)
   (u'', dw'') <-
     foldM
         (\(u', dw') (ix, tx) ->
-          trans @(LEDGER hashAlgo dsignAlgo)
+          trans @(LEDGER hashAlgo dsignAlgo vrfAlgo)
             $ TRC (LedgerEnv slot ix pp, (u', dw'), tx)
         )
         (u, dw)
@@ -99,8 +101,9 @@ ledgersTransition = do
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
   )
-  => Embed (LEDGER hashAlgo dsignAlgo) (LEDGERS hashAlgo dsignAlgo)
+  => Embed (LEDGER hashAlgo dsignAlgo vrfAlgo) (LEDGERS hashAlgo dsignAlgo vrfAlgo)
  where
   wrapFailed = LedgerFailure

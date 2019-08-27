@@ -24,18 +24,18 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data POOL hashAlgo dsignAlgo
+data POOL hashAlgo dsignAlgo vrfAlgo
 
 data PoolEnv =
   PoolEnv Slot PParams
   deriving (Show, Eq)
 
-instance STS (POOL hashAlgo dsignAlgo)
+instance STS (POOL hashAlgo dsignAlgo vrfAlgo)
  where
-  type State (POOL hashAlgo dsignAlgo) = PState hashAlgo dsignAlgo
-  type Signal (POOL hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
-  type Environment (POOL hashAlgo dsignAlgo) = PoolEnv
-  data PredicateFailure (POOL hashAlgo dsignAlgo)
+  type State (POOL hashAlgo dsignAlgo vrfAlgo) = PState hashAlgo dsignAlgo vrfAlgo
+  type Signal (POOL hashAlgo dsignAlgo vrfAlgo) = DCert hashAlgo dsignAlgo vrfAlgo
+  type Environment (POOL hashAlgo dsignAlgo vrfAlgo) = PoolEnv
+  data PredicateFailure (POOL hashAlgo dsignAlgo vrfAlgo)
     = StakePoolNotRegisteredOnKeyPOOL
     | StakePoolRetirementWrongEpochPOOL
     | WrongCertificateTypePOOL
@@ -44,7 +44,7 @@ instance STS (POOL hashAlgo dsignAlgo)
   initialRules = [pure emptyPState]
   transitionRules = [poolDelegationTransition]
 
-poolDelegationTransition :: TransitionRule (POOL hashAlgo dsignAlgo)
+poolDelegationTransition :: TransitionRule (POOL hashAlgo dsignAlgo vrfAlgo)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let StakePools stPools_ = _stPools ps
@@ -90,6 +90,6 @@ m ⨃ (k,v) = Map.union (Map.singleton k v) m
 m ∪ (k,v) = Map.union m (Map.singleton k v)
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => HasTrace (POOL hashAlgo dsignAlgo) where
+  => HasTrace (POOL hashAlgo dsignAlgo vrfAlgo) where
   envGen _ = undefined :: Gen PoolEnv
-  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo vrfAlgo)

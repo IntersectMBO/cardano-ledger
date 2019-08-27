@@ -37,7 +37,7 @@ import           STS.Up
 
 import           Hedgehog (Gen)
 
-data UTXO hashAlgo dsignAlgo
+data UTXO hashAlgo dsignAlgo vrfAlgo
 
 data UtxoEnv hashAlgo dsignAlgo
   = UtxoEnv
@@ -49,13 +49,13 @@ data UtxoEnv hashAlgo dsignAlgo
       deriving(Show)
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => STS (UTXO hashAlgo dsignAlgo)
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => STS (UTXO hashAlgo dsignAlgo vrfAlgo)
  where
-  type State (UTXO hashAlgo dsignAlgo) = UTxOState hashAlgo dsignAlgo
-  type Signal (UTXO hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
-  type Environment (UTXO hashAlgo dsignAlgo) = UtxoEnv hashAlgo dsignAlgo
-  data PredicateFailure (UTXO hashAlgo dsignAlgo)
+  type State (UTXO hashAlgo dsignAlgo vrfAlgo) = UTxOState hashAlgo dsignAlgo vrfAlgo
+  type Signal (UTXO hashAlgo dsignAlgo vrfAlgo) = Tx hashAlgo dsignAlgo vrfAlgo
+  type Environment (UTXO hashAlgo dsignAlgo vrfAlgo) = UtxoEnv hashAlgo dsignAlgo
+  data PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo)
     = BadInputsUTxO
     | ExpiredUTxO Slot Slot
     | MaxTxSizeUTxO Integer Integer
@@ -72,15 +72,15 @@ instance
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 
-initialLedgerState :: InitialRule (UTXO hashAlgo dsignAlgo)
+initialLedgerState :: InitialRule (UTXO hashAlgo dsignAlgo vrfAlgo)
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
 utxoInductive
-  :: forall hashAlgo dsignAlgo
-   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => TransitionRule (UTXO hashAlgo dsignAlgo)
+  :: forall hashAlgo dsignAlgo vrfAlgo
+   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => TransitionRule (UTXO hashAlgo dsignAlgo vrfAlgo)
 utxoInductive = do
   TRC (UtxoEnv slot_ pp stakeKeys stakePools dms_, u, tx) <- judgmentContext
   let txBody = _body tx
@@ -123,12 +123,17 @@ utxoInductive = do
         }
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Embed (UP hashAlgo dsignAlgo) (UTXO hashAlgo dsignAlgo)
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => Embed (UP hashAlgo dsignAlgo) (UTXO hashAlgo dsignAlgo vrfAlgo)
  where
   wrapFailed = UpdateFailure
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, Signable dsignAlgo (TxBody hashAlgo dsignAlgo))
-  => HasTrace (UTXO hashAlgo dsignAlgo) where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , VRFAlgorithm vrfAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  )
+  => HasTrace (UTXO hashAlgo dsignAlgo vrfAlgo) where
   envGen _ = undefined :: Gen (UtxoEnv hashAlgo dsignAlgo)
-  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo vrfAlgo)

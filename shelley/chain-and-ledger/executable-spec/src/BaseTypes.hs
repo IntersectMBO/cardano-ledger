@@ -1,6 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
 
 module BaseTypes
   ( FixedPoint
@@ -8,20 +10,26 @@ module BaseTypes
   , fpEpsilon
   , UnitInterval
   , mkUnitInterval
+  , truncateUnitInterval
   , intervalValue
   , interval0
   , interval1
   , Seed(..)
+  , Nonce(..)
   , mkNonce
   , (⭒)
   , (==>)
   ) where
 
 
-import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
+import           Data.Coerce (coerce)
 import           Data.Word (Word8)
-
-import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
+import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
+import           Data.Ratio (numerator, denominator, (%))
+import           Numeric.Natural (Natural)
+import           GHC.Generics (Generic)
+import           Cardano.Binary (ToCBOR(..), encodeListLen)
+import           Cardano.Crypto.Hash
 
 data E34
 
@@ -46,6 +54,12 @@ newtype UnitInterval = UnitInterval Rational
 mkUnitInterval :: Rational -> Maybe UnitInterval
 mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnitInterval r else Nothing
 
+-- | Convert a rational to a `UnitInterval` by ignoring its integer part.
+truncateUnitInterval :: Rational -> UnitInterval
+truncateUnitInterval r = case (numerator r, denominator r) of
+  (n, d) | n > d -> UnitInterval $ (n - d) % d
+  _ -> UnitInterval r
+
 -- | Get rational value of `UnitInterval` type
 intervalValue :: UnitInterval -> Rational
 intervalValue (UnitInterval v) = v
@@ -56,33 +70,38 @@ interval0 = UnitInterval 0
 interval1 :: UnitInterval
 interval1 = UnitInterval 1
 
--- | Tree like structure to represent nonce values and to support the binary
--- operation on values.
-data Seed
-  = Nonce Integer
-  | NeutralSeed
-  | SeedL
-  | SeedEta
-  | SeedOp Seed
-           Seed
-  deriving (Show, Eq, Ord)
+-- | Evolving nonce type.
+data Nonce
+  = Nonce (Hash SHA256 Nonce)
+  | NeutralNonce -- ^ 0 element
+  deriving (Eq, Ord, Show)
 
-instance ToCBOR Seed where
-  toCBOR = \case
-    Nonce nonce -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR nonce
-    NeutralSeed -> encodeListLen 1 <> toCBOR (1 :: Word8)
-    SeedL -> encodeListLen 1 <> toCBOR (2 :: Word8)
-    SeedEta -> encodeListLen 1 <> toCBOR (3 :: Word8)
-    SeedOp s1 s2 ->
-      encodeListLen 3 <> toCBOR (4 :: Word8) <> toCBOR s1 <> toCBOR s2
+instance ToCBOR Nonce where
+  toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
+  toCBOR (Nonce n) = encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR n
 
-(⭒) :: Seed -> Seed -> Seed
-NeutralSeed ⭒ s = s
-s ⭒ NeutralSeed = s
-a ⭒ b = SeedOp a b
+-- | Evolve the nonce
+(⭒) :: Nonce -> Nonce -> Nonce
+(Nonce a) ⭒ (Nonce b) = Nonce . coerce $ hash @SHA256 (getHash a <> getHash b)
+x ⭒ NeutralNonce = x
+NeutralNonce ⭒ x = x
 
-mkNonce :: Integer -> Seed
-mkNonce = Nonce
+instance Semigroup Nonce where
+  (<>) = (⭒)
+
+instance Monoid Nonce where
+  mempty = NeutralNonce
+
+-- | Make a nonce from a natural number
+mkNonce :: Natural -> Nonce
+mkNonce = Nonce . coerce . hash @SHA256
+
+-- | Seed to the verifiable random function.
+--
+--   We do not expose the constructor to `Seed`. Instead, a `Seed` should be
+--   created using `mkSeed` for a VRF calculation.
+newtype Seed = Seed (Hash SHA256 Seed)
+  deriving (Eq, Ord, Show, Generic, ToCBOR)
 
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b

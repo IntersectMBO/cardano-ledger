@@ -24,34 +24,42 @@ import           STS.Rupd
 
 import           Control.State.Transition
 
-data BHEAD hashAlgo dsignAlgo kesAlgo
+data BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-data BheadEnv hashAlgo dsignAlgo kesAlgo
-  = BheadEnv Seed (Set (GenKeyHash hashAlgo dsignAlgo))
+data BheadEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
+  = BheadEnv Nonce (Set (GenKeyHash hashAlgo dsignAlgo))
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
-  => STS (BHEAD hashAlgo dsignAlgo kesAlgo)
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , VRFAlgorithm vrfAlgo
+  , KESAlgorithm kesAlgo
+  )
+  => STS (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
-  type State (BHEAD hashAlgo dsignAlgo kesAlgo)
-    = NewEpochState hashAlgo dsignAlgo
-  type Signal (BHEAD hashAlgo dsignAlgo kesAlgo)
-    = BHeader hashAlgo dsignAlgo kesAlgo
-  type Environment (BHEAD hashAlgo dsignAlgo kesAlgo) = BheadEnv hashAlgo dsignAlgo kesAlgo
-  data PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo)
+  type State (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = NewEpochState hashAlgo dsignAlgo vrfAlgo
+  type Signal (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+  type Environment (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo) = BheadEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
+  data PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = HeaderSizeTooLargeBHEAD
     | BlockSizeTooLargeBHEAD
-    | NewEpochFailure (PredicateFailure (NEWEPOCH hashAlgo dsignAlgo))
-    | RupdFailure (PredicateFailure (RUPD hashAlgo dsignAlgo))
+    | NewEpochFailure (PredicateFailure (NEWEPOCH hashAlgo dsignAlgo vrfAlgo))
+    | RupdFailure (PredicateFailure (RUPD hashAlgo dsignAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules = []
   transitionRules = [bheadTransition]
 
 bheadTransition
-  :: forall hashAlgo dsignAlgo kesAlgo
-   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
-  => TransitionRule (BHEAD hashAlgo dsignAlgo kesAlgo)
+  :: forall hashAlgo dsignAlgo kesAlgo vrfAlgo
+   . ( HashAlgorithm hashAlgo
+     , DSIGNAlgorithm dsignAlgo
+     , VRFAlgorithm vrfAlgo
+     , KESAlgorithm kesAlgo
+     )
+  => TransitionRule (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
 bheadTransition = do
   TRC (BheadEnv etaC gkeys, nes@(NewEpochState _ _ bprev _ es _ _ _), bh@(BHeader bhb _)) <-
     judgmentContext
@@ -61,21 +69,29 @@ bheadTransition = do
   fromIntegral (bHeaderSize bh) < _maxBHSize pp ?! HeaderSizeTooLargeBHEAD
   fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
-  nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
+  nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
     $ TRC (NewEpochEnv etaC slot gkeys, nes, epochFromSlot slot)
 
-  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC (RupdEnv bprev es, nesRu nes', slot)
+  ru' <- trans @(RUPD hashAlgo dsignAlgo vrfAlgo) $ TRC (RupdEnv bprev es, nesRu nes', slot)
   let nes'' = nes' { nesRu = ru' }
   pure nes''
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
-  => Embed (NEWEPOCH hashAlgo dsignAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo)
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , VRFAlgorithm vrfAlgo
+  , KESAlgorithm kesAlgo
+  )
+  => Embed (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
   wrapFailed = NewEpochFailure
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
-  => Embed (RUPD hashAlgo dsignAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo)
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , KESAlgorithm kesAlgo
+  , VRFAlgorithm vrfAlgo
+  )
+  => Embed (RUPD hashAlgo dsignAlgo vrfAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
   wrapFailed = RupdFailure

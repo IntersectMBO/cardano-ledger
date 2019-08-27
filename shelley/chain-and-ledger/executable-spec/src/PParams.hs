@@ -28,7 +28,7 @@ module PParams
 
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Seed (NeutralSeed), UnitInterval, interval0)
+import           BaseTypes (Nonce(NeutralNonce), UnitInterval, interval0)
 import           Coin (Coin (..))
 import           Slot (Epoch (..))
 
@@ -72,7 +72,7 @@ data PParams = PParams
     -- | Decentralization parameter
   , _d               :: UnitInterval
     -- | Extra entropy
-  , _extraEntropy    :: Seed
+  , _extraEntropy    :: Nonce
     -- | Protocol version
   , _protocolVersion :: (Natural, Natural, Natural)
   } deriving (Show, Eq)
@@ -101,6 +101,6 @@ emptyPParams =
      , _tau = interval0
      , _activeSlotCoeff = interval0
      , _d = interval0
-     , _extraEntropy = NeutralSeed
+     , _extraEntropy = NeutralNonce
      , _protocolVersion = (0, 0, 0)
      }

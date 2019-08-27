@@ -24,7 +24,7 @@ import           STS.Utxo (UtxoEnv (..))
 import           STS.Utxow
 import           Tx
 
-data LEDGER hashAlgo dsignAlgo
+data LEDGER hashAlgo dsignAlgo vrfAlgo
 
 data LedgerEnv
   = LedgerEnv Slot Ix PParams
@@ -33,55 +33,59 @@ data LedgerEnv
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
   )
-  => STS (LEDGER hashAlgo dsignAlgo)
+  => STS (LEDGER hashAlgo dsignAlgo vrfAlgo)
  where
-  type State (LEDGER hashAlgo dsignAlgo)
-    = (UTxOState hashAlgo dsignAlgo, DPState hashAlgo dsignAlgo)
-  type Signal (LEDGER hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
-  type Environment (LEDGER hashAlgo dsignAlgo) = LedgerEnv
-  data PredicateFailure (LEDGER hashAlgo dsignAlgo)
-    = UtxowFailure (PredicateFailure (UTXOW hashAlgo dsignAlgo))
-    | DelegsFailure (PredicateFailure (DELEGS hashAlgo dsignAlgo))
+  type State (LEDGER hashAlgo dsignAlgo vrfAlgo)
+    = (UTxOState hashAlgo dsignAlgo vrfAlgo, DPState hashAlgo dsignAlgo vrfAlgo)
+  type Signal (LEDGER hashAlgo dsignAlgo vrfAlgo) = Tx hashAlgo dsignAlgo vrfAlgo
+  type Environment (LEDGER hashAlgo dsignAlgo vrfAlgo) = LedgerEnv
+  data PredicateFailure (LEDGER hashAlgo dsignAlgo vrfAlgo)
+    = UtxowFailure (PredicateFailure (UTXOW hashAlgo dsignAlgo vrfAlgo))
+    | DelegsFailure (PredicateFailure (DELEGS hashAlgo dsignAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules = []
   transitionRules = [ledgerTransition]
 
 ledgerTransition
-  :: forall hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo vrfAlgo
    . ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+     , VRFAlgorithm vrfAlgo
      )
-  => TransitionRule (LEDGER hashAlgo dsignAlgo)
+  => TransitionRule (LEDGER hashAlgo dsignAlgo vrfAlgo)
 ledgerTransition = do
   TRC (LedgerEnv slot ix pp, (u, d), tx) <- judgmentContext
-  utxo' <- trans @(UTXOW hashAlgo dsignAlgo) $ TRC
+  utxo' <- trans @(UTXOW hashAlgo dsignAlgo vrfAlgo) $ TRC
     ( UtxoEnv slot pp (d ^. dstate . stKeys) (d ^. pstate . stPools) (d ^. dstate . dms)
     , u
     , tx
     )
   deleg' <-
-    trans @(DELEGS hashAlgo dsignAlgo)
+    trans @(DELEGS hashAlgo dsignAlgo vrfAlgo)
       $ TRC (DelegsEnv slot ix pp tx, d, tx ^. body . certs)
   pure (utxo', deleg')
 
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
   )
-  => Embed (DELEGS hashAlgo dsignAlgo) (LEDGER hashAlgo dsignAlgo)
+  => Embed (DELEGS hashAlgo dsignAlgo vrfAlgo) (LEDGER hashAlgo dsignAlgo vrfAlgo)
  where
   wrapFailed = DelegsFailure
 
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
   )
-  => Embed (UTXOW hashAlgo dsignAlgo) (LEDGER hashAlgo dsignAlgo)
+  => Embed (UTXOW hashAlgo dsignAlgo vrfAlgo) (LEDGER hashAlgo dsignAlgo vrfAlgo)
  where
   wrapFailed = UtxowFailure

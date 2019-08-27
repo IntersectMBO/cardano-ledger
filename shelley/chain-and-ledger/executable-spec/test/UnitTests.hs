@@ -17,6 +17,7 @@ import           Test.Tasty.HUnit
 
 import           Address
 import           BaseTypes
+import qualified Cardano.Crypto.VRF.Fake as FakeVRF
 import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey, pattern RegPool,
                      pattern RetirePool, StakeKeys (..), StakePools (..))
@@ -24,7 +25,7 @@ import           TxData (pattern AddrBase, Credential (..), Delegation (..), pat
                      pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
 
-import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
+import           Keys (pattern Dms, pattern KeyPair, hashKey, hashKeyVRF, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
                      asStateTransition, cCounters, delegationState, delegations, dstate,
                      emptyDelegation, genesisId, genesisCoins, genesisState, minfee, pParams, pstate, ptrs,
@@ -84,8 +85,8 @@ changeReward ls acnt c = ls & delegationState . dstate . rewards .~ newAccounts
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = KeyPair 5 5
 
-stakePoolVRFKey1 :: KeyPair
-stakePoolVRFKey1 = KeyPair 15 15
+stakePoolVRFKey1 :: VerKeyVRF
+stakePoolVRFKey1 = FakeVRF.VerKeyFakeVRF 15
 
 
 ledgerState :: [Tx] -> Either [ValidationError] LedgerState
@@ -331,7 +332,7 @@ stakePool :: PoolParams
 stakePool = PoolParams
             {
               _poolPubKey = hashKey $ vKey stakePoolKey1
-            , _poolVrf = hashKey $ vKey stakePoolVRFKey1
+            , _poolVrf = hashKeyVRF stakePoolVRFKey1
             , _poolPledge  = Coin 0
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
             , _poolMargin = interval0     --          or here?
@@ -347,7 +348,7 @@ stakePoolUpdate :: PoolParams
 stakePoolUpdate = PoolParams
                    {
                      _poolPubKey = hashKey $ vKey stakePoolKey1
-                   , _poolVrf = hashKey $ vKey stakePoolVRFKey1
+                   , _poolVrf = hashKeyVRF stakePoolVRFKey1
                    , _poolPledge  = Coin 0
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?
                    , _poolMargin = halfInterval     --          or here?
