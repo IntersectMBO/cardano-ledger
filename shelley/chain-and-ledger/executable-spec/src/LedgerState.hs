@@ -2,6 +2,7 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -129,8 +130,9 @@ import           Lens.Micro (to, (%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 
 import           Coin (Coin (..))
-import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), baseStake, consolidate,
-                     emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake, rewardStake, (⊎))
+import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
+                     baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
+                     rewardStake)
 import           Keys (AnyKeyHash, DSIGNAlgorithm, Dms (..), GenKeyHash, HashAlgorithm,
                      KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash, hashKey,
                      undiscriminateKeyHash)
@@ -1091,19 +1093,26 @@ reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
 
 -- | Stake distribution
 stakeDistr
-  :: UTxO hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo
+   . UTxO hashAlgo dsignAlgo
   -> DState hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
   -> ( Stake hashAlgo dsignAlgo
      , Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
      )
-stakeDistr u ds ps = (Stake $ Map.keysSet activeDelegs ◁ stake, delegs)
+stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ (aggregatePlus stakeRelation)
+                     , delegs)
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
       PState (StakePools stpools) _ _ _                   = ps
-      outs = consolidate u
-      Stake stake = baseStake outs ⊎ ptrStake outs ptrs' ⊎ rewardStake rewards'
-      activeDelegs       = Map.keysSet stkeys ◁ delegs ▷ Map.keysSet stpools
+      outs = aggregateOuts u
+
+      stakeRelation :: [(StakeCredential hashAlgo dsignAlgo, Coin)]
+      stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
+
+      activeDelegs = dom stkeys ◁ delegs ▷ dom stpools
+
+      aggregatePlus = Map.fromListWith (+)
 
 -- | Apply a reward update
 applyRUpd
