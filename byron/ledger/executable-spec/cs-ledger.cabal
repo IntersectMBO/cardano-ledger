@@ -97,7 +97,6 @@ test-suite ledger-rules-test
                , Ledger.AbstractSize.Properties
                , Ledger.Update.Examples
                , Ledger.Update.Properties
-               , Ledger.Pvbump.Properties
                , Ledger.Relation.Properties
                , Ledger.UTxO.Properties
   type: exitcode-stdio-1.0
