@@ -27,8 +27,8 @@ instance DSIGNAlgorithm dsignAlgo => STS (UP hashAlgo dsignAlgo) where
   type State (UP hashAlgo dsignAlgo)
     = ( PPUpdate hashAlgo dsignAlgo
       , AVUpdate hashAlgo dsignAlgo
-      , Map.Map Slot Applications
-      , Applications
+      , Map.Map Slot (Applications hashAlgo)
+      , Applications hashAlgo
       )
   type Signal (UP hashAlgo dsignAlgo) = Update hashAlgo dsignAlgo
   type Environment (UP hashAlgo dsignAlgo) = (Slot, PParams, Dms hashAlgo dsignAlgo)
