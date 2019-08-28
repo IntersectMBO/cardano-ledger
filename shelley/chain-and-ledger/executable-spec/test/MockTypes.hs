@@ -13,6 +13,7 @@ import qualified Keys
 import qualified LedgerState
 import qualified OCert
 import qualified STS.Chain
+import qualified STS.Deleg
 import qualified STS.Utxow
 import qualified Tx
 import qualified TxData
@@ -100,6 +101,8 @@ type RewardUpdate = LedgerState.RewardUpdate ShortHash MockDSIGN
 type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
+
+type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
 
 type Credential = TxData.Credential ShortHash MockDSIGN
 
