@@ -22,7 +22,7 @@ data AVUP hashAlgo dsignAlgo
 
 instance STS (AVUP hashAlgo dsignAlgo) where
   type State (AVUP hashAlgo dsignAlgo)
-    = (AVUpdate hashAlgo dsignAlgo, Map.Map Slot Applications, Applications)
+    = (AVUpdate hashAlgo dsignAlgo, Map.Map Slot (Applications hashAlgo), Applications hashAlgo)
   type Signal (AVUP hashAlgo dsignAlgo) = AVUpdate hashAlgo dsignAlgo
   type Environment (AVUP hashAlgo dsignAlgo) = (Slot, Dms hashAlgo dsignAlgo)
   data PredicateFailure (AVUP hashAlgo dsignAlgo)
@@ -33,6 +33,7 @@ instance STS (AVUP hashAlgo dsignAlgo) where
     | NonGenesisUpdateAVUP
     | CannotFollow
     | InvalidName
+    | InvalidSystemTags
     deriving (Show, Eq)
 
   initialRules = []
@@ -60,7 +61,7 @@ avUpdateNoConsensus = do
 
   all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
 
-  -- TODO - do we need system tags? if so, check them here
+  all allTagsValid (range _aup) ?! InvalidSystemTags
 
   let aup' = _aup ⨃ Map.toList aupS
   let fav  = votedValue aup'
@@ -82,7 +83,7 @@ avUpdateConsensus = do
 
   all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
 
-  -- TODO - do we need system tags? if so, check them here
+  all allTagsValid (range _aup) ?! InvalidSystemTags
 
   let aup' = _aup ⨃ Map.toList aupS
   let fav  = votedValue aup'
@@ -98,8 +99,11 @@ avUpdateConsensus = do
     , avs
     )
 
-allApNamesValid :: Applications -> Bool
+allApNamesValid :: Applications hashAlgo -> Bool
 allApNamesValid = all apNameValid . dom . apps
 
-allSvCanFollow_ :: Applications -> Favs -> Applications -> Bool
+allSvCanFollow_ :: Applications hashAlgo -> Favs hashAlgo -> Applications hashAlgo -> Bool
 allSvCanFollow_ avs favs = all (svCanFollow avs favs) . Map.toList . apps
+
+allTagsValid :: Applications hashAlgo -> Bool
+allTagsValid = all sTagsValid . range . range . apps
