@@ -76,12 +76,12 @@ import Cardano.Crypto
   , verifyRedeemSigDecoded
   )
 
-
 -- | A representation of all the ways a transaction might be invalid
 data TxValidationError
   = TxValidationLovelaceError Text LovelaceError
   | TxValidationFeeTooSmall Tx Lovelace Lovelace
-  | TxValidationInvalidWitness TxInWitness
+  | TxValidationWitnessWrongSignature TxInWitness ProtocolMagicId TxSigData
+  | TxValidationWitnessWrongKey TxInWitness Address
   | TxValidationMissingInput TxIn
   | TxValidationNetworkMagicMismatch NetworkMagic NetworkMagic
   -- ^ Fields are <expected> <actual>
@@ -103,30 +103,37 @@ instance ToCBOR TxValidationError where
         <> toCBOR tx
         <> toCBOR lovelace1
         <> toCBOR lovelace2
-    TxValidationInvalidWitness txInWitness ->
-      encodeListLen 2
+    TxValidationWitnessWrongSignature txInWitness pmi sigData ->
+      encodeListLen 4
         <> toCBOR @Word8 2
         <> toCBOR txInWitness
+        <> toCBOR pmi
+        <> toCBOR sigData
+    TxValidationWitnessWrongKey txInWitness addr  ->
+      encodeListLen 3
+        <> toCBOR @Word8 3
+        <> toCBOR txInWitness
+        <> toCBOR addr
     TxValidationMissingInput txIn ->
       encodeListLen 2
-        <> toCBOR @Word8 3
+        <> toCBOR @Word8 4
         <> toCBOR txIn
     TxValidationNetworkMagicMismatch networkMagic1 networkMagic2 ->
       encodeListLen 3
-        <> toCBOR @Word8 4
+        <> toCBOR @Word8 5
         <> toCBOR networkMagic1
         <> toCBOR networkMagic2
     TxValidationTxTooLarge nat1 nat2 ->
       encodeListLen 3
-        <> toCBOR @Word8 5
+        <> toCBOR @Word8 6
         <> toCBOR nat1
         <> toCBOR nat2
     TxValidationUnknownAddressAttributes ->
       encodeListLen 1
-        <> toCBOR @Word8 6
+        <> toCBOR @Word8 7
     TxValidationUnknownAttributes ->
       encodeListLen 1
-        <> toCBOR @Word8 7
+        <> toCBOR @Word8 8
 
 instance FromCBOR TxValidationError where
   fromCBOR = do
@@ -137,12 +144,13 @@ instance FromCBOR TxValidationError where
     case tag of
       0 -> checkSize 3 >> TxValidationLovelaceError <$> fromCBOR <*> fromCBOR
       1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> fromCBOR <*> fromCBOR <*> fromCBOR
-      2 -> checkSize 2 >> TxValidationInvalidWitness <$> fromCBOR
-      3 -> checkSize 2 >> TxValidationMissingInput <$> fromCBOR
-      4 -> checkSize 3 >> TxValidationNetworkMagicMismatch <$> fromCBOR <*> fromCBOR
-      5 -> checkSize 3 >> TxValidationTxTooLarge <$> fromCBOR <*> fromCBOR
-      6 -> checkSize 1 $> TxValidationUnknownAddressAttributes
-      7 -> checkSize 1 $> TxValidationUnknownAttributes
+      2 -> checkSize 4 >> TxValidationWitnessWrongSignature <$> fromCBOR <*> fromCBOR <*> fromCBOR
+      3 -> checkSize 3 >> TxValidationWitnessWrongKey <$> fromCBOR <*> fromCBOR
+      4 -> checkSize 2 >> TxValidationMissingInput <$> fromCBOR
+      5 -> checkSize 3 >> TxValidationNetworkMagicMismatch <$> fromCBOR <*> fromCBOR
+      6 -> checkSize 3 >> TxValidationTxTooLarge <$> fromCBOR <*> fromCBOR
+      7 -> checkSize 1 $> TxValidationUnknownAddressAttributes
+      8 -> checkSize 1 $> TxValidationUnknownAttributes
       _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Validate that:
@@ -261,18 +269,20 @@ validateWitness
   -> TxInWitness
   -> m ()
 validateWitness pmi sigData addr witness = case witness of
-  VKWitness vk sig ->
-    (  verifySignatureDecoded pmi SignTx vk sigData sig
-      && checkVerKeyAddress vk addr
-      )
-      `orThrowError` TxValidationInvalidWitness witness
+  VKWitness vk sig -> do
+    verifySignatureDecoded pmi SignTx vk sigData sig
+      `orThrowError` TxValidationWitnessWrongSignature
+      witness (unAnnotated pmi) (unAnnotated sigData)
+    checkVerKeyAddress vk addr
+      `orThrowError` TxValidationWitnessWrongKey
+      witness addr
 
-  RedeemWitness vk sig ->
-    (  verifyRedeemSigDecoded pmi SignRedeemTx vk sigData sig
-      && checkRedeemAddress vk addr
-      )
-      `orThrowError` TxValidationInvalidWitness witness
-
+  RedeemWitness vk sig -> do
+    verifyRedeemSigDecoded pmi SignRedeemTx vk sigData sig
+      `orThrowError` TxValidationWitnessWrongSignature
+      witness (unAnnotated pmi) (unAnnotated sigData)
+    checkRedeemAddress vk addr
+      `orThrowError` TxValidationWitnessWrongKey       witness addr
 
 data Environment = Environment
   { protocolMagic      :: !(AProtocolMagic ByteString)

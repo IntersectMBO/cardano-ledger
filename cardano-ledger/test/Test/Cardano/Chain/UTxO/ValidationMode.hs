@@ -138,7 +138,8 @@ ts_prop_updateUTxO_InvalidWit =
  where
   isInvalidWitnessError :: UTxOValidationError -> Bool
   isInvalidWitnessError (UTxOValidationTxValidationError err) = case err of
-    TxValidationInvalidWitness _ -> True
+    TxValidationWitnessWrongSignature{} -> True
+    TxValidationWitnessWrongKey{}       -> True
     _ -> False
   isInvalidWitnessError _ = False
 
