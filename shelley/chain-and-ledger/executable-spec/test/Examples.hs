@@ -49,6 +49,7 @@ import qualified Data.Set as Set
 import           Data.Word (Word64)
 
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
+import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
 import           MockTypes (AVUpdate, Addr, Block, Credential, DState, EpochState, GenKeyHash,
@@ -56,17 +57,20 @@ import           MockTypes (AVUpdate, Addr, Block, Credential, DState, EpochStat
                      PoolDistr, PoolParams, RewardAcnt, SKey, SKeyES, SnapShots, Stake, Tx, TxBody,
                      UTxO, UTxOState, Update, VKey, VKeyES, VKeyGenesis)
 import           Numeric.Natural (Natural)
+import           Unsafe.Coerce (unsafeCoerce)
 
 import           BaseTypes (Seed (..), UnitInterval, mkUnitInterval, (⭒))
-import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern Proof,
-                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, slotToSeed)
+import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
+                     pattern Proof, ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader,
+                     slotToSeed)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate, pattern PoolDistr,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
-import           Keys (pattern Dms, pattern KeyPair, pattern SKey, pattern SKeyES, pattern VKey,
-                     pattern VKeyES, pattern VKeyGenesis, hashKey, sKey, sign, signKES, vKey)
+import           Keys (pattern Dms, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
+                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey, sKey, sign,
+                     signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
@@ -86,7 +90,7 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), Application
                      emptyUpdateState, updatePPup)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
 
-type ChainState = (NewEpochState, Seed, Seed, Maybe HashHeader, Slot)
+type ChainState = (NewEpochState, Seed, Seed, HashHeader, Slot)
 
 data CHAINExample = CHAINExample Slot ChainState Block ChainState
 
@@ -207,7 +211,7 @@ alicePoolParams =
 mkSeqNonce :: Natural -> Seed
 mkSeqNonce m = foldl (\c x -> c ⭒ Nonce x) NeutralSeed [0..toInteger m]
 
-mkBlock :: Maybe HashHeader -> AllPoolKeys -> [Tx] -> Slot
+mkBlock :: HashHeader -> AllPoolKeys -> [Tx] -> Slot
   -> Seed -> Seed -> UnitInterval -> Natural -> Block
 mkBlock prev pkeys txns s enonce bnonce l kesPeriod =
   let
@@ -313,6 +317,13 @@ ppsExInstantDecay = ppsEx1 { _keyDecayRate = 1000
 esEx1 :: EpochState
 esEx1 = EpochState emptyAccount emptySnapShots lsEx1 ppsEx1
 
+-- |The first block of the Shelley era will point back to the last block of the Byron era.
+-- For our purposes in this test we can bootstrap the chain by just coercing the value.
+-- When this transition actually occurs, the consensus layer will do the work of making
+-- sure that the hash gets translated across the fork
+lastByronHeaderHash :: HashHeader
+lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
+
 initStEx1 :: ChainState
 initStEx1 =
   ( NewEpochState
@@ -327,7 +338,7 @@ initStEx1 =
       -- The overlay schedule has one entry, setting Core Node 1 to slot 1.
   , Nonce 0
   , Nonce 0
-  , Nothing
+  , lastByronHeaderHash
   , Slot 0
   )
 
@@ -336,7 +347,7 @@ zero = unsafeMkUnitInterval 0
 
 blockEx1 :: Block
 blockEx1 = mkBlock
-             Nothing
+             lastByronHeaderHash
              (coreNodeKeys 0)
              []
              (Slot 1)
@@ -359,7 +370,7 @@ expectedStEx1 =
       (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0))
   , Nonce 0 ⭒ Nonce 1
   , Nonce 0 ⭒ Nonce 1
-  , Just (bhHash (bheader blockEx1))
+  , bhHash (bheader blockEx1)
   , Slot 1
   )
 
@@ -444,13 +455,13 @@ initStEx2A =
       overlayEx2A
   , Nonce 0
   , Nonce 0
-  , Nothing
+  , lastByronHeaderHash
   , Slot 0
   )
 
 blockEx2A :: Block
 blockEx2A = mkBlock
-             Nothing
+             lastByronHeaderHash
              (coreNodeKeys 6)
              [txEx2A]
              (Slot 10)
@@ -499,8 +510,8 @@ expectedLSEx2A = LedgerState
                (DPState dsEx2A psEx2A)
                0
 
-blockEx2AHash :: Maybe HashHeader
-blockEx2AHash = Just (bhHash (bheader blockEx2A))
+blockEx2AHash :: HashHeader
+blockEx2AHash = bhHash (bheader blockEx2A)
 
 expectedStEx2A :: ChainState
 expectedStEx2A =
@@ -557,8 +568,8 @@ blockEx2B = mkBlock
              zero
              1
 
-blockEx2BHash :: Maybe HashHeader
-blockEx2BHash = Just (bhHash (bheader blockEx2B))
+blockEx2BHash :: HashHeader
+blockEx2BHash = bhHash (bheader blockEx2B)
 
 utxoEx2B :: UTxO
 utxoEx2B = UTxO . Map.fromList $
@@ -690,8 +701,8 @@ expectedLSEx2Cter = expectedLSEx2Cgeneric 264 7
 expectedLSEx2Cquater :: LedgerState
 expectedLSEx2Cquater = expectedLSEx2Cgeneric 131 140
 
-blockEx2CHash :: Maybe HashHeader
-blockEx2CHash = Just (bhHash (bheader blockEx2C))
+blockEx2CHash :: HashHeader
+blockEx2CHash = bhHash (bheader blockEx2C)
 
 expectedStEx2Cgeneric :: SnapShots -> LedgerState -> PParams -> ChainState
 expectedStEx2Cgeneric ss ls pp =
@@ -754,8 +765,8 @@ blockEx2D = mkBlock
              zero
              2
 
-blockEx2DHash :: Maybe HashHeader
-blockEx2DHash = Just (bhHash (bheader blockEx2D))
+blockEx2DHash :: HashHeader
+blockEx2DHash = bhHash (bheader blockEx2D)
 
 expectedStEx2D :: ChainState
 expectedStEx2D =
@@ -821,8 +832,8 @@ expectedLSEx2E = LedgerState
                (DPState dsEx2B psEx2A)
                0
 
-blockEx2EHash :: Maybe HashHeader
-blockEx2EHash = Just (bhHash (bheader blockEx2E))
+blockEx2EHash :: HashHeader
+blockEx2EHash = bhHash (bheader blockEx2E)
 
 acntEx2E :: AccountState
 acntEx2E = AccountState
@@ -868,8 +879,8 @@ blockEx2F = mkBlock
              zero
              3
 
-blockEx2FHash :: Maybe HashHeader
-blockEx2FHash = Just (bhHash (bheader blockEx2F))
+blockEx2FHash :: HashHeader
+blockEx2FHash = bhHash (bheader blockEx2F)
 
 pdEx2F :: PoolDistr
 pdEx2F = PoolDistr $ Map.singleton (hk alicePool) (1, hashKey $ vKey $ vrf alicePool)
@@ -914,8 +925,8 @@ blockEx2G = mkBlock
              zero
              3
 
-blockEx2GHash :: Maybe HashHeader
-blockEx2GHash = Just (bhHash (bheader blockEx2G))
+blockEx2GHash :: HashHeader
+blockEx2GHash = bhHash (bheader blockEx2G)
 
 epoch1OSchedEx2G :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2G = overlaySchedule
@@ -973,8 +984,8 @@ blockEx2H = mkBlock
              zero
              4
 
-blockEx2HHash :: Maybe HashHeader
-blockEx2HHash = Just (bhHash (bheader blockEx2H))
+blockEx2HHash :: HashHeader
+blockEx2HHash = bhHash (bheader blockEx2H)
 
 aliceRAcnt2H :: Coin
 aliceRAcnt2H = Coin 82593524514
@@ -1025,8 +1036,8 @@ blockEx2I = mkBlock
               zero
               4
 
-blockEx2IHash :: Maybe HashHeader
-blockEx2IHash = Just (bhHash (bheader blockEx2I))
+blockEx2IHash :: HashHeader
+blockEx2IHash = bhHash (bheader blockEx2I)
 
 epoch1OSchedEx2I :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2I = overlaySchedule
@@ -1119,8 +1130,8 @@ blockEx2J = mkBlock
               zero
               4
 
-blockEx2JHash :: Maybe HashHeader
-blockEx2JHash = Just (bhHash (bheader blockEx2J))
+blockEx2JHash :: HashHeader
+blockEx2JHash = bhHash (bheader blockEx2J)
 
 utxoEx2J :: UTxO
 utxoEx2J = UTxO . Map.fromList $
@@ -1198,8 +1209,8 @@ blockEx2K = mkBlock
               zero
               5
 
-blockEx2KHash :: Maybe HashHeader
-blockEx2KHash = Just (bhHash (bheader blockEx2K))
+blockEx2KHash :: HashHeader
+blockEx2KHash = bhHash (bheader blockEx2K)
 
 utxoEx2K :: UTxO
 utxoEx2K = UTxO . Map.fromList $
@@ -1261,8 +1272,8 @@ blockEx2L = mkBlock
               zero
               5
 
-blockEx2LHash :: Maybe HashHeader
-blockEx2LHash = Just (bhHash (bheader blockEx2L))
+blockEx2LHash :: HashHeader
+blockEx2LHash = bhHash (bheader blockEx2L)
 
 acntEx2L :: AccountState
 acntEx2L = acntEx2I { _treasury =  _treasury acntEx2I --previous amount
@@ -1356,7 +1367,7 @@ txEx3A = Tx
 
 blockEx3A :: Block
 blockEx3A = mkBlock
-             Nothing
+             lastByronHeaderHash
              (coreNodeKeys 6)
              [txEx3A]
              (Slot 10)
@@ -1388,8 +1399,8 @@ expectedLSEx3A = LedgerState
                (DPState dsEx1 psEx1)
                0
 
-blockEx3AHash :: Maybe HashHeader
-blockEx3AHash = Just (bhHash (bheader blockEx3A))
+blockEx3AHash :: HashHeader
+blockEx3AHash = bhHash (bheader blockEx3A)
 
 expectedStEx3A :: ChainState
 expectedStEx3A =
@@ -1481,8 +1492,8 @@ expectedLSEx3B = LedgerState
                (DPState dsEx1 psEx1)
                0
 
-blockEx3BHash :: Maybe HashHeader
-blockEx3BHash = Just (bhHash (bheader blockEx3B))
+blockEx3BHash :: HashHeader
+blockEx3BHash = bhHash (bheader blockEx3B)
 
 expectedStEx3B :: ChainState
 expectedStEx3B =
@@ -1519,8 +1530,8 @@ blockEx3C = mkBlock
              zero
              1
 
-blockEx3CHash :: Maybe HashHeader
-blockEx3CHash = Just (bhHash (bheader blockEx3C))
+blockEx3CHash :: HashHeader
+blockEx3CHash = bhHash (bheader blockEx3C)
 
 overlayEx3C :: Map Slot (Maybe GenKeyHash)
 overlayEx3C = overlaySchedule
@@ -1609,7 +1620,7 @@ txEx4A = Tx
 
 blockEx4A :: Block
 blockEx4A = mkBlock
-             Nothing
+             lastByronHeaderHash
              (coreNodeKeys 6)
              [txEx4A]
              (Slot 10)
@@ -1641,8 +1652,8 @@ expectedLSEx4A = LedgerState
                (DPState dsEx1 psEx1)
                0
 
-blockEx4AHash :: Maybe HashHeader
-blockEx4AHash = Just (bhHash (bheader blockEx4A))
+blockEx4AHash :: HashHeader
+blockEx4AHash = bhHash (bheader blockEx4A)
 
 expectedStEx4A :: ChainState
 expectedStEx4A =
@@ -1733,8 +1744,8 @@ expectedLSEx4B = LedgerState
                (DPState dsEx1 psEx1)
                0
 
-blockEx4BHash :: Maybe HashHeader
-blockEx4BHash = Just (bhHash (bheader blockEx4B))
+blockEx4BHash :: HashHeader
+blockEx4BHash = bhHash (bheader blockEx4B)
 
 expectedStEx4B :: ChainState
 expectedStEx4B =
@@ -1794,8 +1805,8 @@ expectedLSEx4C = LedgerState
                  updateStEx4C)
                (DPState dsEx1 psEx1)
                0
-blockEx4CHash :: Maybe HashHeader
-blockEx4CHash = Just (bhHash (bheader blockEx4C))
+blockEx4CHash :: HashHeader
+blockEx4CHash = bhHash (bheader blockEx4C)
 
 expectedStEx4C :: ChainState
 expectedStEx4C =
