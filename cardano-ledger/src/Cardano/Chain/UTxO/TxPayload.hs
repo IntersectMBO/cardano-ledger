@@ -56,7 +56,7 @@ txpAnnotatedTxs = fmap aTaTx . aUnTxPayload
 txpTxs :: ATxPayload a -> [Tx]
 txpTxs = fmap taTx . unTxPayload
 
-txpWitnesses :: TxPayload -> [TxWitness]
+txpWitnesses :: ATxPayload a -> [TxWitness]
 txpWitnesses = fmap taWitness . unTxPayload
 
 recoverHashedBytes :: ATxPayload ByteString -> Annotated [TxWitness] ByteString

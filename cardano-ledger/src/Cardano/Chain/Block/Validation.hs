@@ -54,8 +54,8 @@ import Cardano.Binary
   )
 import Cardano.Chain.Block.Body (ABody (..))
 import Cardano.Chain.Block.Block
-  ( ABlock(..)
-  , ABlockOrBoundary(..)
+  ( Block(..)
+  , BlockOrBoundary(..)
   , ABoundaryBlock(..)
   , blockAProtocolMagicId
   , blockDlgPayload
@@ -268,11 +268,11 @@ updateChainBlockOrBoundary
   :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => Genesis.Config
   -> ChainValidationState
-  -> ABlockOrBoundary ByteString
+  -> BlockOrBoundary
   -> m ChainValidationState
 updateChainBlockOrBoundary config c b = case b of
-  ABOBBoundary bvd   -> updateChainBoundary c bvd
-  ABOBBlock    block -> updateBlock config c block
+  BOBBoundary bvd   -> updateChainBoundary c bvd
+  BOBBlock    block -> updateBlock config c block
 
 
 updateChainBoundary
@@ -332,12 +332,12 @@ validateHeaderMatchesBody hdr body = do
 
 validateBlockProofs
   :: MonadError ProofValidationError m
-  => ABlock ByteString
+  => Block
   -> m ()
 validateBlockProofs b =
   validateHeaderMatchesBody blockHeader blockBody
  where
-  ABlock
+  Block
     { blockHeader
     , blockBody
     } = b
@@ -367,7 +367,7 @@ updateBody
   :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => BodyEnvironment
   -> BodyState
-  -> ABlock ByteString
+  -> Block
   -> m BodyState
 updateBody env bs b = do
   -- Validate the block size
@@ -512,7 +512,7 @@ updateBlock
   :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => Genesis.Config
   -> ChainValidationState
-  -> ABlock ByteString
+  -> Block
   -> m ChainValidationState
 updateBlock config cvs b = do
 
@@ -585,7 +585,7 @@ data Error
 foldUTxO
   :: UTxO.Environment
   -> UTxO
-  -> Stream (Of (ABlock ByteString)) (ExceptT ParseError ResIO) ()
+  -> Stream (Of Block) (ExceptT ParseError ResIO) ()
   -> ExceptT Error (ReaderT ValidationMode ResIO) UTxO
 foldUTxO env utxo blocks = S.foldM_
   (foldUTxOBlock env)
@@ -597,7 +597,7 @@ foldUTxO env utxo blocks = S.foldM_
 foldUTxOBlock
   :: UTxO.Environment
   -> UTxO
-  -> ABlock ByteString
+  -> Block
   -> ExceptT Error (ReaderT ValidationMode ResIO) UTxO
 foldUTxOBlock env utxo block =
   withExceptT

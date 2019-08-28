@@ -28,9 +28,9 @@ import qualified Streaming.Prelude as S
 import System.Directory (doesFileExist)
 import System.FilePath ((-<.>))
 
-import Cardano.Binary (DecoderError, decodeFullDecoder, slice)
+import Cardano.Binary (DecoderError, decodeAnnotatedDecoder)
 import Cardano.Chain.Block.Block
-  (ABlockOrBoundary(..), fromCBORABlockOrBoundary)
+  (BlockOrBoundary(..), fromCBORBlockOrBoundary)
 import Cardano.Chain.Slotting (EpochSlots(..))
 
 
@@ -78,7 +78,7 @@ parseEpochFileWithBoundary
   :: EpochSlots
   -> FilePath
   -> Stream
-       (Of (ABlockOrBoundary ByteString))
+       (Of BlockOrBoundary)
        (ExceptT ParseError ResIO)
        ()
 parseEpochFileWithBoundary epochSlots file = do
@@ -101,10 +101,7 @@ parseEpochFileWithBoundary epochSlots file = do
 
   liftBinaryError
     :: (a, B.ByteOffset, Either String ())
-    -> Stream
-         (Of (ABlockOrBoundary ByteString))
-         (ExceptT ParseError ResIO)
-         ()
+    -> Stream (Of BlockOrBoundary) (ExceptT ParseError ResIO) ()
   liftBinaryError = \case
     (_, _, Right ()) -> pure ()
     (_, offset, Left message) ->
@@ -113,17 +110,14 @@ parseEpochFileWithBoundary epochSlots file = do
 parseEpochFilesWithBoundary
   :: EpochSlots
   -> [FilePath]
-  -> Stream
-       (Of (ABlockOrBoundary ByteString))
-       (ExceptT ParseError ResIO)
-       ()
+  -> Stream (Of BlockOrBoundary) (ExceptT ParseError ResIO) ()
 parseEpochFilesWithBoundary epochSlots fs =
   foldr (<>) mempty (parseEpochFileWithBoundary epochSlots <$> fs)
 
 slotDataHeader :: LBS.ByteString
 slotDataHeader = "blnd"
 
-getSlotData :: EpochSlots -> B.Get (Either DecoderError (ABlockOrBoundary ByteString))
+getSlotData :: EpochSlots -> B.Get (Either DecoderError BlockOrBoundary)
 getSlotData epochSlots = runExceptT $ do
   header <- lift $ B.getLazyByteString (LBS.length slotDataHeader)
   lift $ guard (header == slotDataHeader)
@@ -131,11 +125,10 @@ getSlotData epochSlots = runExceptT $ do
   undoSize  <- lift getWord32be
   block     <- do
     blockBytes <- lift $ B.getLazyByteString (fromIntegral blockSize)
-    bb         <- ExceptT . pure $ decodeFullDecoder
-      "ABlockOrBoundary"
-      (fromCBORABlockOrBoundary epochSlots)
+    ExceptT . pure $ decodeAnnotatedDecoder
+      "BlockOrBoundary"
+      (fromCBORBlockOrBoundary epochSlots)
       blockBytes
-    pure $ map (LBS.toStrict . slice blockBytes) bb
   -- Drop the Undo bytes as we no longer use these
   void . lift $ B.getLazyByteString (fromIntegral undoSize)
   pure block

@@ -19,7 +19,7 @@ import Data.Word (Word64)
 
 import Cardano.Binary (Annotated (..))
 import Cardano.Chain.Block
-  ( ABlock (..)
+  ( Block (..)
   , AHeader (..)
   , BlockValidationMode (..)
   , Proof (..)
@@ -59,8 +59,8 @@ import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Elaboration.Block
   ( transactionIds
   , abEnvToCfg
-  , elaborateBS
   , rcDCert
+  , elaborate
   )
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Chain.UTxO.Gen (genTxProof)
@@ -107,7 +107,7 @@ ts_prop_updateBlock_Valid =
                     lastState
       vMode <- forAll $ fromBlockValidationMode <$> genBlockValidationMode
       let (concreteBlock, _txIdMap') =
-            elaborateBS
+            elaborate
               mempty { transactionIds = txIdMap }
               config
               dCert
@@ -146,7 +146,7 @@ ts_prop_updateBlock_InvalidProof =
           dCert = rcDCert (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer) stableAfter lastState
       vMode <- forAll $ fromBlockValidationMode <$> genBlockValidationMode
       let (concreteBlock, _abstractToConcreteIdMaps') =
-            elaborateBS
+            elaborate
               initialAbstractToConcreteIdMaps
               config
               dCert
@@ -215,15 +215,15 @@ createInitialDIState dState =
 
 modifyAHeader
   :: (AHeader ByteString -> AHeader ByteString)
-  -> ABlock ByteString
-  -> ABlock ByteString
+  -> Block
+  -> Block
 modifyAHeader ahModifier ab =
   ab { blockHeader = ahModifier (blockHeader ab) }
 
 modifyAProof
   :: (Annotated Proof ByteString -> Annotated Proof ByteString)
-  -> ABlock ByteString
-  -> ABlock ByteString
+  -> Block
+  -> Block
 modifyAProof apModifier ab =
   modifyAHeader ahModifier ab
  where
@@ -232,8 +232,8 @@ modifyAProof apModifier ab =
 
 modifyDelegationProof
   :: (Hash Delegation.Payload -> Hash Delegation.Payload)
-  -> ABlock ByteString
-  -> ABlock ByteString
+  -> Block
+  -> Block
 modifyDelegationProof dpModifier ab =
   modifyAProof apModifier ab
  where
@@ -244,8 +244,8 @@ modifyDelegationProof dpModifier ab =
 
 modifyTxProof
   :: (TxProof -> TxProof)
-  -> ABlock ByteString
-  -> ABlock ByteString
+  -> Block
+  -> Block
 modifyTxProof tpModifier ab =
   modifyAProof apModifier ab
  where
@@ -255,8 +255,8 @@ modifyTxProof tpModifier ab =
     bs
 
 invalidateABlockProof
-  :: ABlock ByteString
-  -> Gen (ABlock ByteString)
+  :: Block
+  -> Gen Block
 invalidateABlockProof ab =
   -- 'Gen.filter' to ensure we don't generate a valid proof
   Gen.filter (\x -> blockProof x /= blockProof ab) $ do

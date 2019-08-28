@@ -12,8 +12,7 @@
 module Cardano.Chain.Block.Block
   (
   -- * Block
-    Block
-  , ABlock(..)
+    Block (..)
 
   -- * Block Constructors
   , mkBlock
@@ -42,24 +41,24 @@ module Cardano.Chain.Block.Block
 
   -- * Block Binary Serialization
   , toCBORBlock
-  , fromCBORABlock
+  , fromCBORBlock
 
   -- * Block Formatting
   , renderBlock
 
-  -- * ABlockOrBoundary
-  , ABlockOrBoundary(..)
-  , toCBORABOBBlock
-  , fromCBORABOBBlock
-  , fromCBORABlockOrBoundary
-  , toCBORABlockOrBoundary
+  -- * BlockOrBoundary
+  , BlockOrBoundary(..)
+  , toCBORBOBBlock
+  , fromCBORBOBBlock
+  , fromCBORBlockOrBoundary
+  , toCBORBlockOrBoundary
 
   -- * ABoundaryBlock
   , ABoundaryBlock(..)
   , boundaryHashAnnotated
   , fromCBORABoundaryBlock
   , toCBORABoundaryBlock
-  , toCBORABOBBoundary
+  , toCBORBOBBoundary
 
   , ABoundaryBody(..)
   )
@@ -74,6 +73,7 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary
   ( Annotated(..)
+  , AnnotatedDecoder
   , ByteSpan(..)
   , Decoded(..)
   , Decoder
@@ -86,6 +86,10 @@ import Cardano.Binary
   , encodeListLen
   , encodeListLenIndef
   , enforceSize
+  , serialize'
+  , withSlice'
+  , liftByteSpanDecoder
+  , serializeEncoding'
   )
 import Cardano.Chain.Block.Body
   ( ABody
@@ -108,7 +112,6 @@ import Cardano.Chain.Block.Header
   , boundaryHeaderHashAnnotated
   , fromCBORABoundaryHeader
   , fromCBORAHeader
-  , genesisHeaderHash
   , hashHeader
   , headerDifficulty
   , headerHashAnnotated
@@ -147,13 +150,11 @@ import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 -- Block
 --------------------------------------------------------------------------------
 
-type Block = ABlock ()
-
-data ABlock a = ABlock
-  { blockHeader     :: AHeader a
-  , blockBody       :: ABody a
-  , blockAnnotation :: a
-  } deriving (Eq, Show, Generic, NFData, Functor)
+data Block = Block
+  { blockHeader     :: AHeader ByteString
+  , blockBody       :: ABody ByteString
+  , blockSerialized :: ByteString
+  } deriving (Eq, Show, Generic, NFData)
 
 
 --------------------------------------------------------------------------------
@@ -162,29 +163,15 @@ data ABlock a = ABlock
 
 -- | Smart constructor for 'Block'
 mkBlock
-  :: ProtocolMagicId
-  -> ProtocolVersion
-  -> SoftwareVersion
-  -> Either GenesisHash Header
-  -> EpochSlots
-  -> SlotNumber
-  -> SigningKey
-  -- ^ The 'SigningKey' used for signing the block
-  -> Delegation.Certificate
-  -- ^ A certificate of delegation from a genesis key to the 'SigningKey'
+  :: EpochSlots
+  -> Header
   -> Body
   -> Block
-mkBlock pm bv sv prevHeader epochSlots = mkBlockExplicit
-  pm
-  bv
-  sv
-  prevHash
-  difficulty
-  epochSlots
- where
-  prevHash = either genesisHeaderHash (hashHeader epochSlots) prevHeader
-  difficulty =
-    either (const $ ChainDifficulty 0) (succ . headerDifficulty) prevHeader
+mkBlock epochSlots header body =
+  let block = Block header' body' (serializeEncoding' $ toCBORBlock epochSlots block)
+      header' = (serializeEncoding' $ toCBORHeader epochSlots header) <$ header
+      body' = (serialize' body) <$ body
+  in block
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.
@@ -205,21 +192,18 @@ mkBlockExplicit
   -> Body
   -> Block
 mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotNumber sk dlgCert body
-  = ABlock
-    (mkHeaderExplicit
-      pm
-      prevHash
-      difficulty
-      epochSlots
-      slotNumber
-      sk
-      dlgCert
-      body
-      pv
-      sv
-    )
-    body
-    ()
+  = let header = mkHeaderExplicit
+          pm
+          prevHash
+          difficulty
+          epochSlots
+          slotNumber
+          sk
+          dlgCert
+          body
+          pv
+          sv
+    in mkBlock epochSlots header body
 
 
 --------------------------------------------------------------------------------
@@ -227,61 +211,61 @@ mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotNumber sk dlgCert bo
 --------------------------------------------------------------------------------
 
 blockHash :: EpochSlots -> Block -> HeaderHash
-blockHash epochSlots = hashHeader epochSlots . blockHeader
+blockHash epochSlots = hashHeader epochSlots . void . blockHeader
 
-blockHashAnnotated :: ABlock ByteString -> HeaderHash
+blockHashAnnotated :: Block -> HeaderHash
 blockHashAnnotated = headerHashAnnotated . blockHeader
 
-blockProtocolMagicId :: ABlock a -> ProtocolMagicId
+blockProtocolMagicId :: Block -> ProtocolMagicId
 blockProtocolMagicId = headerProtocolMagicId . blockHeader
 
-blockAProtocolMagicId :: ABlock a -> Annotated ProtocolMagicId a
+blockAProtocolMagicId :: Block -> Annotated ProtocolMagicId ByteString
 blockAProtocolMagicId = aHeaderProtocolMagicId . blockHeader
 
-blockPrevHash :: ABlock a -> HeaderHash
+blockPrevHash :: Block -> HeaderHash
 blockPrevHash = headerPrevHash . blockHeader
 
-blockProof :: ABlock a -> Proof
+blockProof :: Block -> Proof
 blockProof = headerProof . blockHeader
 
-blockSlot :: ABlock a -> SlotNumber
+blockSlot :: Block -> SlotNumber
 blockSlot = headerSlot . blockHeader
 
-blockGenesisKey :: ABlock a -> VerificationKey
+blockGenesisKey :: Block -> VerificationKey
 blockGenesisKey = headerGenesisKey . blockHeader
 
-blockIssuer :: ABlock a -> VerificationKey
+blockIssuer :: Block -> VerificationKey
 blockIssuer = headerIssuer . blockHeader
 
-blockDifficulty :: ABlock a -> ChainDifficulty
+blockDifficulty :: Block -> ChainDifficulty
 blockDifficulty = headerDifficulty . blockHeader
 
-blockToSign :: EpochSlots -> ABlock a -> ToSign
+blockToSign :: EpochSlots -> Block -> ToSign
 blockToSign epochSlots = headerToSign epochSlots . blockHeader
 
-blockSignature :: ABlock a -> ABlockSignature a
+blockSignature :: Block -> ABlockSignature ByteString
 blockSignature = headerSignature . blockHeader
 
-blockProtocolVersion :: ABlock a -> ProtocolVersion
+blockProtocolVersion :: Block -> ProtocolVersion
 blockProtocolVersion = headerProtocolVersion . blockHeader
 
-blockSoftwareVersion :: ABlock a -> SoftwareVersion
+blockSoftwareVersion :: Block -> SoftwareVersion
 blockSoftwareVersion = headerSoftwareVersion . blockHeader
 
-blockTxPayload :: ABlock a -> ATxPayload a
+blockTxPayload :: Block -> ATxPayload ByteString
 blockTxPayload = bodyTxPayload . blockBody
 
-blockSscPayload :: ABlock a -> SscPayload
+blockSscPayload :: Block -> SscPayload
 blockSscPayload = bodySscPayload . blockBody
 
-blockUpdatePayload :: ABlock a -> Update.APayload a
+blockUpdatePayload :: Block -> Update.APayload ByteString
 blockUpdatePayload = bodyUpdatePayload . blockBody
 
-blockDlgPayload :: ABlock a -> Delegation.APayload a
+blockDlgPayload :: Block -> Delegation.APayload ByteString
 blockDlgPayload = bodyDlgPayload . blockBody
 
-blockLength :: ABlock ByteString -> Natural
-blockLength = fromIntegral . BS.length . blockAnnotation
+blockLength :: Block -> Natural
+blockLength = fromIntegral . BS.length . blockSerialized
 
 
 --------------------------------------------------------------------------------
@@ -290,27 +274,23 @@ blockLength = fromIntegral . BS.length . blockAnnotation
 
 -- | Encode a block, given a number of slots-per-epoch.
 --
---   Unlike 'toCBORABOBBlock', this function does not take the deprecated epoch
+--   Unlike 'toCBORBOBBlock', this function does not take the deprecated epoch
 --   boundary blocks into account.
 --
 toCBORBlock :: EpochSlots -> Block -> Encoding
 toCBORBlock epochSlots block
   =  encodeListLen 3
-  <> toCBORHeader epochSlots (blockHeader block)
-  <> toCBOR (blockBody block)
+  <> toCBORHeader epochSlots (void $ blockHeader block)
+  <> toCBOR (void $ blockBody block)
   <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
 
-fromCBORABlock :: EpochSlots -> Decoder s (ABlock ByteSpan)
-fromCBORABlock epochSlots = do
-  Annotated (header, body) byteSpan <- annotatedDecoder $ do
-    enforceSize "Block" 3
-    (,)
-      <$> fromCBORAHeader epochSlots
-      <*> fromCBOR
-      -- Drop the deprecated ExtraBodyData
-      <*  (enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes)
-  pure $ ABlock header body byteSpan
-
+fromCBORBlock :: EpochSlots -> AnnotatedDecoder s Block
+fromCBORBlock epochSlots = withSlice' $
+  Block <$ lift (enforceSize "Block" 3)
+    <*> liftByteSpanDecoder (fromCBORAHeader epochSlots)
+    <*> liftByteSpanDecoder fromCBOR
+    -- Drop the deprecated ExtraBodyData
+    <* (lift $ enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes)
 
 --------------------------------------------------------------------------------
 -- Block Formatting
@@ -328,44 +308,44 @@ renderBlock es block =
     . "  " . shown . "\n"
     . "  update payload: " . build
     )
-    (WithEpochSlots es $ blockHeader block)
+    (WithEpochSlots es $ void $ blockHeader block)
     (length txs)
     txs
     (blockDlgPayload block)
     (blockSscPayload block)
-    (blockUpdatePayload block)
+    (void $ blockUpdatePayload block)
   where txs = bodyTxs $ blockBody block
 
 
 --------------------------------------------------------------------------------
--- ABlockOrBoundary
+-- BlockOrBoundary
 --------------------------------------------------------------------------------
 
-data ABlockOrBoundary a
-  = ABOBBlock (ABlock a)
-  | ABOBBoundary (ABoundaryBlock a)
-  deriving (Eq, Show, Functor)
+data BlockOrBoundary
+  = BOBBlock Block
+  | BOBBoundary (ABoundaryBlock ByteString)
+  deriving (Eq, Show)
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
-toCBORABOBBlock :: EpochSlots -> ABlock a -> Encoding
-toCBORABOBBlock epochSlots block =
+toCBORBOBBlock :: EpochSlots -> Block -> Encoding
+toCBORBOBBlock epochSlots block =
   encodeListLen 2
     <> toCBOR (1 :: Word)
-    <> toCBORBlock epochSlots (fmap (const ()) block)
+    <> toCBORBlock epochSlots block
 
 -- | toCBORABoundaryBlock but with the list length and tag discriminator bytes.
-toCBORABOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
-toCBORABOBBoundary pm bvd =
+toCBORBOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
+toCBORBOBBoundary pm bvd =
   encodeListLen 2
     <> toCBOR (0 :: Word)
     <> toCBORABoundaryBlock pm bvd
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
-fromCBORABOBBlock :: EpochSlots -> Decoder s (Maybe Block)
-fromCBORABOBBlock epochSlots =
-  fromCBORABlockOrBoundary epochSlots >>= \case
-    ABOBBoundary _ -> pure Nothing
-    ABOBBlock    b -> pure . Just $ void b
+fromCBORBOBBlock :: EpochSlots -> AnnotatedDecoder s (Maybe Block)
+fromCBORBOBBlock epochSlots =
+  fromCBORBlockOrBoundary epochSlots >>= \case
+    BOBBoundary _ -> pure Nothing
+    BOBBlock    b -> pure . Just $ b
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 --
@@ -374,20 +354,20 @@ fromCBORABOBBlock epochSlots =
 --   now deprecated these explicit boundary blocks, but we still need to decode
 --   blocks in the old format. In the case that we find a boundary block, we
 --   drop it using 'dropBoundaryBlock' and return a 'Nothing'.
-fromCBORABlockOrBoundary
-  :: EpochSlots -> Decoder s (ABlockOrBoundary ByteSpan)
-fromCBORABlockOrBoundary epochSlots = do
-  enforceSize "Block" 2
-  fromCBOR @Word >>= \case
-    0 -> ABOBBoundary <$> fromCBORABoundaryBlock
-    1 -> ABOBBlock <$> fromCBORABlock epochSlots
-    t -> cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
+fromCBORBlockOrBoundary
+  :: EpochSlots -> AnnotatedDecoder s BlockOrBoundary
+fromCBORBlockOrBoundary epochSlots = do
+  lift $ enforceSize "Block" 2
+  (lift $ fromCBOR @Word) >>= \case
+    0 -> BOBBoundary <$> liftByteSpanDecoder fromCBORABoundaryBlock
+    1 -> BOBBlock <$> fromCBORBlock epochSlots
+    t -> lift $ cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
-toCBORABlockOrBoundary
-  :: ProtocolMagicId -> EpochSlots -> ABlockOrBoundary a -> Encoding
-toCBORABlockOrBoundary pm epochSlots abob = case abob of
-  ABOBBlock    blk -> toCBORABOBBlock epochSlots blk
-  ABOBBoundary ebb -> toCBORABOBBoundary pm ebb
+toCBORBlockOrBoundary
+  :: ProtocolMagicId -> EpochSlots -> BlockOrBoundary -> Encoding
+toCBORBlockOrBoundary pm epochSlots abob = case abob of
+  BOBBlock    blk -> toCBORBOBBlock epochSlots blk
+  BOBBoundary ebb -> toCBORBOBBoundary pm ebb
 
 --------------------------------------------------------------------------------
 -- ABoundaryBlock

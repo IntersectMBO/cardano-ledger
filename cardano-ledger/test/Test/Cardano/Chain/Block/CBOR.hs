@@ -25,7 +25,7 @@ import Data.Maybe (fromJust)
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding)
+import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder)
 import Cardano.Chain.Block
   ( ABlockSignature(..)
   , Block
@@ -41,11 +41,11 @@ import Cardano.Chain.Block
   , fromCBORABoundaryBlock
   , fromCBORBoundaryConsensusData
   , fromCBORABoundaryHeader
-  , fromCBORABOBBlock
+  , fromCBORBOBBlock
   , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
-  , toCBORABOBBlock
+  , toCBORBOBBlock
   , toCBORABoundaryBlock
   , toCBORHeader
   , toCBORHeaderToHash
@@ -133,9 +133,9 @@ ts_roundTripBlockCompat = eachOfTS
   roundTripsBlockCompat :: WithEpochSlots Block -> H.PropertyT IO ()
   roundTripsBlockCompat esb@(WithEpochSlots es _) = trippingBuildable
     esb
-    (serializeEncoding . toCBORABOBBlock es . unWithEpochSlots)
+    (serializeEncoding . toCBORBOBBlock es . unWithEpochSlots)
     ( fmap (WithEpochSlots es . fromJust)
-    . decodeFullDecoder "Block" (fromCBORABOBBlock es)
+    . decodeAnnotatedDecoder "Block" (fromCBORBOBBlock es)
     )
 
 

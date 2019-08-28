@@ -66,8 +66,8 @@ instance FromCBOR (ABody ByteSpan) where
       <*> fromCBOR
       <*> fromCBOR
 
-bodyTxs :: Body -> [Tx]
+bodyTxs :: ABody a -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload
 
-bodyWitnesses :: Body -> [TxWitness]
+bodyWitnesses :: ABody a -> [TxWitness]
 bodyWitnesses = txpWitnesses . bodyTxPayload

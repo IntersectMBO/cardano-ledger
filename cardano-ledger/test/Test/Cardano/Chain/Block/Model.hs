@@ -142,7 +142,7 @@ import qualified Ledger.Update.Test as Update.Test
 import Test.Cardano.Chain.Elaboration.Block
   ( AbstractToConcreteIdMaps
   , abEnvToCfg
-  , elaborateBS
+  , elaborate
   , rcDCert
   , transactionIds
   )
@@ -194,7 +194,7 @@ elaborateAndUpdate
 elaborateAndUpdate config (cvs, abstractToConcreteIdMaps) (ast, ab) =
   (, abstractToConcreteIdMaps') <$> runReaderT (updateBlock config cvs concreteBlock) vMode
  where
-  (concreteBlock, abstractToConcreteIdMaps') = elaborateBS abstractToConcreteIdMaps config dCert cvs ab
+  (concreteBlock, abstractToConcreteIdMaps') = elaborate abstractToConcreteIdMaps config dCert cvs ab
 
   dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) stableAfter ast
 
