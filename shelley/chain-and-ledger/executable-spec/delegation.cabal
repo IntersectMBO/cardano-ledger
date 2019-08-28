@@ -91,6 +91,7 @@ test-suite delegation-test
                          PropertyTests
                          STSTests
                          Examples
+                         Rules.TestDelegs
     hs-source-dirs:      test
     ghc-options:
       -threaded

@@ -102,7 +102,9 @@ type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
 
 type Credential = TxData.Credential ShortHash MockDSIGN
+
 type StakeCredential = TxData.StakeCredential ShortHash MockDSIGN
+type StakeKeys = TxData.StakeKeys ShortHash MockDSIGN
 
 type MultiSig = TxData.MultiSig ShortHash MockDSIGN
 

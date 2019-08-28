@@ -23,6 +23,7 @@ module LedgerState
   , DState(..)
   , AccountState(..)
   , RewardUpdate(..)
+  , RewardAccounts
   , emptyRewardUpdate
   , EpochState(..)
   , emptyEpochState
