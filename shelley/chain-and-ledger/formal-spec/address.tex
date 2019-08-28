@@ -14,6 +14,9 @@ There are four types of UTxO addresses:
   \item Bootstrap addresses, $\AddrBS$,
         corresponding to the addresses in Byron, behaving exactly like enterprise addresses.
 \end{itemize}
+
+The boostrap addresses are needed for the Byron-Shelley transition in order to
+accommodate having UTxO entries from the Byron era during the Shelley era.
 Together, these three address types make up the $\Addr$ type, which will be used
 in transaction outputs in Section~\ref{sec:utxo}.
 

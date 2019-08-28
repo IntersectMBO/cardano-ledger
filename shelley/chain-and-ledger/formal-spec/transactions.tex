@@ -6,28 +6,41 @@ A transaction body, $\TxBody$, is made up of seven pieces:
 
 \begin{itemize}
   \item A set of transaction inputs.
-    The $\TxIn$ derived type identifies an output from a previous transaction.
+    This derived type identifies an output from a previous transaction.
     It consists of a transaction id and an index to uniquely identify the output.
-  \item An indexed collection of transaction outputs.
+  \item  An indexed collection of transaction outputs.
     The $\TxOut$ type is an address paired with a coin value.
   \item A list of certificates, which will be explained in detail in
     Section~\ref{sec:delegation-shelley}.
-  \item A transaction fee. This value will be added to the fee pot and eventually handed out
+  \item The transaction fee. This value will be added to the fee pot and eventually handed out
     as stake rewards.
   \item A time to live. A transaction will be deemed invalid if processed after this slot.
   \item A mapping of reward account withdrawals.  The type $\Wdrl$ is a finite map that maps
     a reward address to the coin value to be withdrawn. The coin value must be equal
     to the full value contained in the account. Explicitly stating these values ensures
     that error messages can be precise about why a transaction is invalid.
-  \item Update proposals, a pair of mappings from genesis keys to proposals.
-    The first mapping is for protocol parameters and the second one is for application versions.
+    For reward calculation rules, see Section \ref{sec:reward-overview},
+    and for the rule for collecting rewards, see Section \ref{sec:utxo-trans}.
+  \item Update proposals for protocol parameters and software
 \end{itemize}
-A transaction, $\Tx$, is a transaction body together with:
+
+The update proposal type $\Update$ is a pair of
 
 \begin{itemize}
+  \item $\PPUpdate$, the protocol parameter upates
+  \item $\AVUpdates$, the updates to Shelley software (applications)
+\end{itemize}
+
+Note that both are finite maps are indexed by the entities proposing the given
+update, the $\VKeyGen$ keys. This is because updates
+can only be proposed by the owners of the genesis keys.
+(see Section \ref{sec:update}).
+A transaction, $\Tx$, consists of:
+
+\begin{itemize}
+  \item The transaction body
   \item A collection of witnesses, represented as a finite map from payment verification keys
     to signatures.
-  \item Updates from genesis keys.
 \end{itemize}
 
 Additionally, the $\UTxO$ type will be used by the ledger state to store all the

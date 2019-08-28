@@ -1,26 +1,56 @@
-\section{Updates}
+\section{Update Proposal Mechanism}
 \label{sec:update}
 
 
 The $\mathsf{UPDATE}$ transition is responsible for the federated governance model in Shelley.
-This includes the ability to change the protocol parameters and also handles software
-updates.
+The governance process includes a mechanism for core nodes to propose updates, and
+a voting mechanism all stake holders can participate in. In this chapter we
+outline rules for genesis keys \textit{proposing} both protocol parameter
+and application version updates, as well as voting on whether a particular
+software update is an acceptable future option (again, only genesis keys vote on this).
+For rules regarding the \textit{adoption} of protocol
+parameter updates, see \ref{sec:pparam-update}. For rules regarding
+adoption of new software versions see \ref{sec:software-updates}.
 
-The application versions behave much like a protocol parameter, but because adoption
-for them must occur as soon as consensus is met
-\footnote{as opposed to waiting until the end of an epoch},
-they are handled separately.
-The adoption of new application versions is what triggers software updates.
-Therefore $\mathsf{UPDATE}$ is the combination of the
-$\mathsf{PPUP}$ transition for the protocol parameters and the
-the $\mathsf{AVUP}$ transition for the application versions.
-Note that $\PPUpdate$, $\AVUpdate$, and $\Update$ were defined in
-Figure~\ref{fig:defs:utxo-shelley}, and that $\fun{pvCanFollow}$
-was defined in \cite{byron_ledger_spec}.
-
-
+This chapter does not discuss authontication of update proposals.
 The signature for the keys in the proposal will be checked in the
 $\mathsf{UTXOW}$ transition.
+
+The transition type $\mathsf{PPUP}$ is for proposing updates to protocol
+parameters, see Figure \ref{fig:ts-types:pp-update} (for the corresponding rules,
+see Figure \ref{fig:rules:pp-update}). The environment for PP updates contains
+the value $\var{dms}$. We only use here the domain of the $\var{dms}$ finite map
+to access the list of genesis keys,
+but this is the variable in the ledger state that contains these keys.
+The signal for this transition is a finite map of proposed updates (indexed by
+genesis keys). The rules for this transition
+are:
+
+\begin{itemize}
+  \item PP-Update-Empty : no new updates were proposed, do nothing
+  \item PP-Update-Nonempty : some new updates $\var{pup}$ were proposed
+  Add these to
+  the existing proposals using a right override. That is, if a genesis key
+  has previously submitted an update proposal, replace it with its new
+  proposal in $\var{pup}$. This rule has the following predicate failures:
+
+  \begin{itemize}
+  \item In the case of \var{slot} being smaller than
+    $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
+    a \em{PPUpdateTooEarly} failure.
+  \item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
+    \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
+    can be used in the protocol parameter update.
+  \item If a protocol parameter update in \var{pup} cannot follow the current
+    protocol paramter, there is a \em{PVCannotFollow} failure.
+  \end{itemize}
+\end{itemize}
+
+Note that $\fun{pvCanFollow}$
+was defined in \cite{byron_ledger_spec}. Note also that the constant $\SlotsPrior$
+has to do with using verifiable random functions for blockchain layer functionality,
+and is explained in detail in the paper \cite{ouroboros_praos}. It is used in this document in 
+Section \ref{sec:chain}.
 
 
 \begin{figure}[htb]
@@ -42,7 +72,7 @@ $\mathsf{UTXOW}$ transition.
     \subseteq \powerset (\PPUpdateEnv \times \PPUpdate \times \PPUpdate \times \PPUpdate)
   \end{equation*}
   %
-  \caption{Protocol Parameter Update transition-system types}
+  \caption{Protocol Parameter Update Transition System Types}
   \label{fig:ts-types:pp-update}
 \end{figure}
 
@@ -86,21 +116,11 @@ $\mathsf{UTXOW}$ transition.
     }
   \end{equation}
 
-  \caption{Protocol Parameter Update inference rules}
+  \caption{Protocol Parameter Update Inference Rules}
   \label{fig:rules:pp-update}
 \end{figure}
 
-The PPUP rule has three predicate failures:
-\begin{itemize}
-\item In the case of \var{slot} being smaller than
-  $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
-  a \em{PPUpdateTooEarly} failure.
-\item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
-  \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
-  can be used in the protocol parameter update.
-\item If a protocol parameter update in \var{pup} cannot follow the current
-  protocol paramter, there is a \em{PVCannotFollow} failure.
-\end{itemize}
+
 
 \clearpage
 
@@ -108,11 +128,22 @@ Figure~\ref{fig:funcs:helper-updates} gives some helper functions for the
 application version update transition.
 The function $\fun{votedValue_T}$ returns
 the consensus value of update proposals in the event that at least five
-genesis keys agree.
+genesis keys agree. Note that this is greater than majority (there are seven
+core nodes), so there can
+be \text{at most one value} with five or more votes.
 This function will also be used for the protocol parameters later in Section~\ref{sec:epoch}.
-Note that $\type{T}$ is an arbitrary type.
+Note that $\type{T}$ is an arbitrary type. The specific choice of this type
+determines what is being voted on, e.g. the application version.
+Recall here that $\type{T}^?$ is similar to the \texttt{Maybe T} type in Haskell,
+and $\Nothing$ represents \texttt{Nothing}.
+
 The function $\fun{validAV}$ uses three functions from \cite{byron_ledger_spec}, namely
-$\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
+$\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$. It determines
+whether an application version is valid, given its name, version number,
+metadata, and a set of applications to compare against.
+The function $\fun{newAVs}$ adds the most recent valid application
+versions to (a finite map of) applications (using right override).
+This helper function will be used in the ledger update.
 
 %%
 %% Figure - Helper Function for Consensus of Update Proposals
@@ -154,7 +185,64 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
   \label{fig:funcs:helper-updates}
 \end{figure}
 
+Because adoption
+for AV update proposals must occur as soon as consensus is met (as opposed to waiting until the
+end of an epoch, as we do for PP) they are handled separately.
+The adoption of new application versions is what triggers software updates.
 
+The application (or software) version update is defined by the $\mathsf{AVUP}$
+transition type (see Figure \ref{fig:ts-types:av-update}), and the rules in
+Figure \ref{fig:rules:av-update}.
+The state contains a finite map of update proposals
+$\var{aup} : \AVUpdate$ ($= \VKeyGen \mapsto \Applications$) that the genesis keys have
+made previously.
+The \texttt{voting} and \texttt{proposing an AV update} is done through the same
+mechanism - the $\var{aup}$ signal carried by a transaction. The difference
+is that a proposal is not in the
+range of the $\var{aup}$ already, but a vote is for an existing proposal.
+
+Note here that a single AV update proposal can be
+proposing changes to multiple parts of the Cardano system software simultaneously.
+This is why it is stored as the finite map $\Applications$, associating the
+specific bit of software (referred to by name) with the proposed version.
+A proposal for several versions of the same application cannot be made.
+
+Now, the state variable $\var{favs}$ contains update proposals that
+were voted on by at least five genesis keys in a given slot.
+At most one
+can be selected for a given slot, and some slots do not have any
+updates selected by voting - either because none were proposed, or the vote
+did not reach a concensus. Finally, the $\var{avs}$ variable stores
+the versions of the software that are currently in use.
+
+It is not possible to
+\texttt{force} users to adopt an AV update when the time comes, however,
+the system will follow the interpretation of blockchain data prescribed by
+the functionality of the current software version. If the change is minor and
+it happens to be
+compatible with as a previous software version a user is using, there
+will be no problem.
+
+\begin{itemize}
+  \item [AV-Update-Empty] rule represents an update with
+and empty set of AV proposals, when nothing happens.
+  \item [AV-Update-No-Consensus] rule
+is for the case where a voting consensus was not reached on a proposed software
+update after combining the set of new (signal) and existing (state) proposals
+by a right override. In this case, we simply use this combined new value
+of update proposal (votes) as the state UP value.
+  \item [AV-Update-Consensus] applies when voting on update proposals by genesis keys
+reaches consensus. In this case, the proposal which was voted on in this slot
+is considered an update upcoming in the future, and is stored associated
+with a slot which is $\SlotsPrior$ in the future, to be implemented at that time.
+All other update proposals are scrapped.
+
+The AVUP rule has one predicate failure:
+\begin{itemize}
+\item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
+  \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
+  can be used in the application version update.
+\end{itemize}
 
 \begin{figure}[htb]
   \emph{Application Version Update environment}
@@ -294,7 +382,7 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       \left(
       \begin{array}{l}
         \varUpdate{\emptyset}\\
-        \varUpdate{\var{fav}\unionoverrideRight\{\var{s}\mapsto\var{fav}\}}\\
+        \varUpdate{\var{favs}\unionoverrideRight\{\var{s}\mapsto\var{fav}\}}\\
         \var{avs}\\
       \end{array}
       \right)
@@ -305,14 +393,14 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
   \label{fig:rules:av-update}
 \end{figure}
 
-The AVUP rule has one predicate failure:
-\begin{itemize}
-\item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
-  \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
-  can be used in the application version update.
-\end{itemize}
-
 \clearpage
+
+The $\mathsf{UP}$ transition type combines processing update
+proposals for protocol parameters and applications. The signal for this
+transition is a pair of update proposals for parameters and applications,
+and each of these is a signal for updating the corresponding data structure.
+Both get updated simultaneously by this rule according to a relevant
+update rules for each.
 
 \begin{figure}[htb]
   \emph{Update environment}

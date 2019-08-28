@@ -46,6 +46,12 @@ organization chosen for an implementation.
       \var{d} & \Data  & \text{data}\\
     \end{array}
   \end{equation*}
+  \emph{Genesis Key Notation}
+  \begin{equation*}
+    \begin{array}{r@{~\subset~}lr}
+      \VKeyGen & \VKey & \text{subset of genesis public keys}\\
+    \end{array}
+  \end{equation*}
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
@@ -81,8 +87,20 @@ organization chosen for an implementation.
   \label{fig:crypto-defs-shelley}
 \end{figure}
 
+Note here that we use the $\VKeyGen$ notation to represent the subset of genesis
+(public verification) keys. Genesis keys are the keys belonging to the federated
+nodes running the Cardano system currently (also referred to as core nodes).
+The process of decentralization will
+be gradual, and when it is complete, these keys will still have a special
+significance to the system. For example, they will be the only ones able to
+propose software and protocol updates. For more on the decentralization process,
+see \ref{sec:new-epoch-trans}.
+
 When we get to the blockchain layer validation, we will use
-key evolving signatures according to the MMM scheme \citep{cryptoeprint:2001:034}.
+key evolving signatures (KES) according to the MMM scheme \citep{cryptoeprint:2001:034}.
+These signature schemes provide forward cryptographic security, meaning that a
+compromised key does make it easier for an adversary to forge a signature that
+allegedly had been signed in the past.
 Figure~\ref{fig:crypto-defs-shelley} introduces the additional cryptographic abstractions
 needed for KES.
 
