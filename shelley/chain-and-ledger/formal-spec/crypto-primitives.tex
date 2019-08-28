@@ -13,7 +13,7 @@ order to guarantee certain security properties of the delegation process, which
 we discuss later.
 
 The cryptographic concepts required for the formal definition
-of witnessing include public-private key pairs, one-way functions
+of witnessing include public-private key pairs, one-way hash functions
 and signatures. The constraint we introduce states that a signature of
 some data signed with a (private) key is only correct whenever we can verify
 it using the corresponding public key.
@@ -98,11 +98,20 @@ see \ref{sec:new-epoch-trans}.
 
 When we get to the blockchain layer validation, we will use
 key evolving signatures (KES) according to the MMM scheme \citep{cryptoeprint:2001:034}.
+This is another asymmetric key cryptographic scheme, also relying on
+the use of public and private key pairs.
 These signature schemes provide forward cryptographic security, meaning that a
 compromised key does make it easier for an adversary to forge a signature that
 allegedly had been signed in the past.
 Figure~\ref{fig:crypto-defs-shelley} introduces the additional cryptographic abstractions
 needed for KES.
+
+In KES, the public verification key stays constant, but the
+corresponding private key evolves incrementally. For this reason, KES
+verification keys are indexed by integers representing the step in the key's
+evolution. This evolution step parameter is also an additional parameter needed
+for the signing (denoted by $\signEv$) and verification
+(denoted by $\verifyEv$) functions.
 
 
 \begin{figure}[htb]

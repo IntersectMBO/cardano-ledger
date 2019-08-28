@@ -28,12 +28,12 @@ The update proposal type $\Update$ is a pair of
 
 \begin{itemize}
   \item $\PPUpdate$, the protocol parameter upates
-  \item $\AVUpdates$, the updates to Shelley software (applications)
+  \item $\AVUpdate$, the updates to Shelley software (applications)
 \end{itemize}
 
-Note that both are finite maps are indexed by the entities proposing the given
+Note that both are finite maps indexed by the entities proposing the given
 update, the $\VKeyGen$ keys. This is because updates
-can only be proposed by the owners of the genesis keys.
+can only be proposed and voted on by the owners of the genesis keys.
 (see Section \ref{sec:update}).
 A transaction, $\Tx$, consists of:
 
