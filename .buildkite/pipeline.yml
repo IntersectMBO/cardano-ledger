@@ -24,6 +24,6 @@ steps:
       system: x86_64-linux
 
   - label: Check that cabal.project and stack.yaml have consistent git hashes for dependencies
-    command: 'scripts/buildkite/stack-cabal_config_check.sh'
+    command: 'nix-shell --run scripts/buildkite/stack-cabal_config_check.sh'
     agents:
       system: x86_64-linux
