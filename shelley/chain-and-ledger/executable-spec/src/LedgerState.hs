@@ -1100,7 +1100,7 @@ stakeDistr
   -> ( Stake hashAlgo dsignAlgo
      , Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
      )
-stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ (aggregatePlus stakeRelation)
+stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
     where
       DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
@@ -1119,20 +1119,18 @@ applyRUpd
   :: RewardUpdate hashAlgo dsignAlgo
   -> EpochState hashAlgo dsignAlgo
   -> EpochState hashAlgo dsignAlgo
-applyRUpd ru (EpochState as ss ls pp) = es'
-  where treasury' = _treasury as + deltaT ru
-        reserves' = _reserves as + deltaR ru
-        rew       = _rewards $ _dstate $ _delegationState ls
-        rewards'  = rew ∪+ rs ru
-        fees'     = _fees (_utxoState ls) + deltaF ru
-        dstate'   = _dstate $ _delegationState ls
-        utxo'     = _utxoState ls
-        ls'       =
-          ls { _utxoState = utxo' { _fees = fees' }
-             , _delegationState = DPState
-                  (dstate' { _rewards = rewards'})
-                  (_pstate $ _delegationState ls)}
-        es' = EpochState (AccountState treasury' reserves') ss ls' pp
+applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
+  where utxoState_ = _utxoState ls
+        delegState = _delegationState ls
+        dState = _dstate delegState
+
+        as' = as { _treasury = _treasury as + deltaT ru
+                 , _reserves = _reserves as + deltaR ru
+                 }
+        ls' = ls { _utxoState =
+                     utxoState_ {_fees = _fees utxoState_ + deltaF ru }
+                 , _delegationState =
+                     delegState {_dstate = dState {_rewards = _rewards dState ∪+ rs ru}}}
 
 -- | Create a reward update
 createRUpd
@@ -1168,7 +1166,7 @@ overlaySchedule
   -> Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
 overlaySchedule e gkeys _ pp = Map.union active inactive
   where
-    numActive = floor $ dval * fromIntegral slotsPerEpoch
+    numActive = dval * fromIntegral slotsPerEpoch
     dval = intervalValue $ pp ^. d
     dInv = 1 / dval
     asc = intervalValue $ pp ^. activeSlotCoeff
@@ -1176,9 +1174,9 @@ overlaySchedule e gkeys _ pp = Map.union active inactive
     toRelativeSlot x = (Duration . floor) (dInv * fromInteger x)
     toSlot x = firstSlot e +* toRelativeSlot x
 
-    genesisSlots = [ toSlot x | x <-[0..numActive] ]
+    genesisSlots = [ toSlot x | x <-[0..(floor numActive)] ]
 
-    numInactivePerActive = floor (fromRational (asc * (numActive % 1)) :: Rational) - 1
+    numInactivePerActive = floor (asc * fromRational numActive) - 1
     activitySchedule =  cycle (True:replicate numInactivePerActive False)
     unassignedSched = zip activitySchedule genesisSlots
 
