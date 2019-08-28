@@ -28,6 +28,7 @@ module Control.State.Transition.Trace
   , traceSignals
   , traceStates
   , preStatesAndSignals
+  , sourceSignalTargets
   , traceLength
   , lastState
   , firstAndLastState
@@ -346,3 +347,16 @@ extractValues d =  catMaybes (gmapQ extractValue d)
   where
     extractValue :: forall d1 . (Data d1) => d1 -> Maybe a
     extractValue d1 = cast d1
+
+
+-- | Extract triplets of the form [(s, sig, t)] from a trace. For a valid trace,
+-- each source state can reach a target state via the given signal.
+--
+sourceSignalTargets :: forall a. Trace a -> [(State a, Signal a, State a)]
+sourceSignalTargets (Trace _ _ []) = [] -- only init state exists
+sourceSignalTargets (Trace _ sInit ts) =
+  doIt sInit $ reverse ts
+  where doIt :: State a -> [(State a, Signal a)] -> [(State a, Signal a, State a)]
+        doIt s targets = case targets of
+          [] -> []
+          (t, sig):targets' -> (s, sig, t):(doIt t targets')
