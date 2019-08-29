@@ -63,10 +63,7 @@ newtype InstallerHash hashAlgo = InstallerHash (Hash hashAlgo ByteString)
   deriving (Show, Ord, Eq, ToCBOR)
 
 newtype Mdt hashAlgo = Mdt (Map.Map SystemTag (InstallerHash hashAlgo))
-  deriving (Show, Ord, Eq)
-
-instance HashAlgorithm hashAlgo => ToCBOR (Mdt hashAlgo) where
-  toCBOR _ = toCBOR ()
+  deriving (Show, Ord, Eq, ToCBOR)
 
 newtype Applications hashAlgo = Applications {
   apps :: Map.Map ApName (ApVer, Mdt hashAlgo)
