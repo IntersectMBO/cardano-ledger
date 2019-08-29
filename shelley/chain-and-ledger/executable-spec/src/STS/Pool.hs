@@ -6,11 +6,13 @@ module STS.Pool
   )
 where
 
-import           Lens.Micro ((^.))
-
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import           Delegation.Certificates
 import           Keys
+import           Ledger.Core (dom, (∈), (∉), (⋪))
 import           LedgerState
+import           Lens.Micro ((^.))
 import           PParams
 import           Slot
 import           TxData
@@ -39,15 +41,45 @@ poolDelegationTransition
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (POOL hashAlgo dsignAlgo)
 poolDelegationTransition = do
-  TRC ((slot, p@Ptr{}, pp), ps, c) <- judgmentContext
+  TRC ((slot, _, pp), ps, c) <- judgmentContext
+  let StakePools stPools_ = _stPools ps
   case c of
-    RegPool _              -> pure $ applyDCertPState p c ps
-    RetirePool _ (Epoch e) -> do
-      validStakePoolRetire c ps == Valid ?! StakePoolNotRegisteredOnKeyPOOL
+    RegPool poolParam -> do
+      let hk = hashKey (poolParam ^. poolPubKey)
+
+      if hk ∉ dom stPools_
+        then -- register new
+          pure $ ps { _stPools = StakePools $ stPools_ ∪ (hk, slot)
+                    , _pParams = _pParams ps ∪ (hk, poolParam)
+                    , _cCounters = _cCounters ps ∪ (hk, 0)}
+        else -- re-register
+          pure $ ps { _pParams = _pParams ps ⨃ (hk, poolParam)
+                    , _retiring = Set.singleton hk ⋪ _retiring ps }
+
+    RetirePool hk (Epoch e) -> do
       let Epoch cepoch   = epochFromSlot slot
-      let Epoch maxEpoch = pp ^. eMax
+          Epoch maxEpoch = pp ^. eMax
+
+      hk ∈ dom stPools_ ?! StakePoolNotRegisteredOnKeyPOOL
+
       cepoch < e && e < cepoch + maxEpoch ?! StakePoolRetirementWrongEpochPOOL
-      pure $ applyDCertPState p c ps
+
+      pure $ ps { _retiring = _retiring ps ⨃ (hk, Epoch e) }
+
     _ -> do
       failBecause WrongCertificateTypePOOL
-      pure $ applyDCertPState p c ps
+      pure ps
+
+-- Note: we avoid using the Relation operators (⨃) and (∪) here because that
+-- would require an Ord instance for PParams, which we don't need otherwise.
+-- Instead, we just define these operators here.
+
+(⨃) :: Map.Map (KeyHash hashAlgo dsignAlgo) a
+    -> (KeyHash hashAlgo dsignAlgo, a)
+    -> Map.Map (KeyHash hashAlgo dsignAlgo) a
+m ⨃ (k,v) = Map.union (Map.singleton k v) m
+
+(∪) :: Map.Map (KeyHash hashAlgo dsignAlgo) a
+    -> (KeyHash hashAlgo dsignAlgo, a)
+    -> Map.Map (KeyHash hashAlgo dsignAlgo) a
+m ∪ (k,v) = Map.union m (Map.singleton k v)
