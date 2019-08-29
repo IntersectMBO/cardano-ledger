@@ -27,7 +27,7 @@ instance
  where
   type State (POOL hashAlgo dsignAlgo) = PState hashAlgo dsignAlgo
   type Signal (POOL hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
-  type Environment (POOL hashAlgo dsignAlgo) = (Slot, Ptr, PParams)
+  type Environment (POOL hashAlgo dsignAlgo) = (Slot, PParams)
   data PredicateFailure (POOL hashAlgo dsignAlgo)
     = StakePoolNotRegisteredOnKeyPOOL
     | StakePoolRetirementWrongEpochPOOL
@@ -41,7 +41,7 @@ poolDelegationTransition
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (POOL hashAlgo dsignAlgo)
 poolDelegationTransition = do
-  TRC ((slot, _, pp), ps, c) <- judgmentContext
+  TRC ((slot, pp), ps, c) <- judgmentContext
   let StakePools stPools_ = _stPools ps
   case c of
     RegPool poolParam -> do
