@@ -196,10 +196,10 @@ each output of a transition is spent at most once.
 \begin{figure}[ht]
   \centering
   \begin{align*}
-    \fun{getStDelegs} & \in & \LState \to \powerset \Credential \\
+    \fun{getStDelegs} & \in & \DState \to \powerset \Credential \\
     \fun{getStDelegs} & \coloneqq &
-                                    (\wcard, ((\var{stDelegs}, \wcard,
-                                    \wcard,\wcard,\wcard,\wcard), \wcard)) \to \var{stDelegs} \\
+                                    ((\var{stDelegs}, \wcard,
+                                    \wcard,\wcard,\wcard,\wcard) \to \var{stDelegs} \\
                       &&\\
     \fun{getRewards} & \in & \LState \to (\AddrRWD \mapsto \Coin) \\
     \fun{getRewards} & \coloneqq & (\wcard,
@@ -228,11 +228,12 @@ each output of a transition is spent at most once.
 \begin{property}[\textbf{Registered Staking Credential with Zero Rewards}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
-    l = (\wcard, (dp, \wcard)), l' = (\wcard, (dp', \wcard)), dpsEnv\in\DPSEnv \\
-    \implies \forall \var{c} \in \DCertRegKey, dpsEnv\vdash \var{dp}
-    \trans{delegs}{c} \var{dp'} \implies \applyFun{cwitness}{c} = \var{hk}\\
-    \implies \var{hk} \in \applyFun{getStDelegs}{l'} \wedge
-    (\applyFun{getRewards}\var{l'})[\fun{addr_{rwd}}{hk}] = 0
+    l = (\wcard, ((d, \wcard), \wcard)), l' = (\wcard, ((d',\wcard), \wcard)), dEnv\in\DEnv \\
+    \implies \forall \var{c} \in \DCertRegKey, dEnv\vdash \var{d}
+    \trans{deleg}{c} \var{d'} \implies \applyFun{cwitness}{c} = \var{hk}\\
+    \implies hk\not\in \fun{getStDelegs}~\var{d} \implies \var{hk} \in
+    \applyFun{getStDelegs}{d'} \wedge
+    (\applyFun{getRewards}\var{d'})[\fun{addr_{rwd}}{hk}] = 0
   \end{multline*}
   \label{prop:ledger-properties-6}
 \end{property}
