@@ -51,11 +51,11 @@ delplTransition = do
   case c of
     RegPool _ -> do
       ps <-
-        trans @(POOL hashAlgo dsignAlgo) $ TRC ((slotIx, ptr, pp), _pstate d, c)
+        trans @(POOL hashAlgo dsignAlgo) $ TRC ((slotIx, pp), _pstate d, c)
       pure $ d { _pstate = ps }
     RetirePool _ _ -> do
       ps <-
-        trans @(POOL hashAlgo dsignAlgo) $ TRC ((slotIx, ptr, pp), _pstate d, c)
+        trans @(POOL hashAlgo dsignAlgo) $ TRC ((slotIx, pp), _pstate d, c)
       pure $ d { _pstate = ps }
     GenesisDelegate _ -> do
       ds <-
