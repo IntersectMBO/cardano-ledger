@@ -13,6 +13,7 @@ import           Numeric.Natural (Natural)
 
 import           BlockChain
 import           Keys
+import           Ledger.Core ((⨃))
 import           OCert
 
 import           Control.State.Transition
@@ -55,20 +56,23 @@ ocertTransition
   => TransitionRule (OCERT hashAlgo dsignAlgo kesAlgo)
 ocertTransition = do
   TRC (_, cs, BHeader bhb sigma) <- judgmentContext
-  let OCert vk_hot vk_cold n c0@(KESPeriod c0') tau = bheaderOCert bhb
-  let hk = hashKey vk_cold
-  let s  = bheaderSlot bhb
-  verify vk_cold (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
-  let kp@(KESPeriod kp') = kesPeriod s
+
+  let OCert vk_hot vk_cold n c0@(KESPeriod c0_) tau = bheaderOCert bhb
+      hk = hashKey vk_cold
+      s = bheaderSlot bhb
+      kp@(KESPeriod kp_) = kesPeriod s
+      t = kp_ - c0_
+
   c0 <= kp ?! KESBeforeStartOCERT
-  kp' < c0' + 90 ?! KESAfterEndOCERT
-  let t = kp' - c0'
+  kp_ < c0_ + 90 ?! KESAfterEndOCERT
+
+  verify vk_cold (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
   verifyKES vk_hot bhb sigma t ?! InvalidKesSignatureOCERT
-  let hkEntry = Map.lookup hk cs
-  case hkEntry of
+
+  case Map.lookup hk cs of
     Nothing -> do
       failBecause NoCounterForKeyHashOCERT
       pure cs
     Just m -> do
       m <= n ?! KESPeriodWrongOCERT
-      pure $ Map.insert hk n cs
+      pure $ cs ⨃ [(hk, n)]
