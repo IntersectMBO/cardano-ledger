@@ -154,6 +154,8 @@ slot is removed.
       \\
       (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},~\var{fdms},~\var{dms})
       \leteq\var{ds}
+      \\
+      (\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs})\leteq\var{ps}
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
         \var{favs'} & \{\var{s}\mapsto\var{v}\in\var{favs} ~\mid~ s>\var{slot}\}
@@ -166,7 +168,7 @@ slot is removed.
       \{
         (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fdms}
         ~\mid~
-        \var{s}\geq\var{slot}
+        \var{s}\leq\var{slot}
       \}\\
       \var{dms'}\leteq
       \left\{
@@ -186,7 +188,14 @@ slot is removed.
       (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
       ~\var{fdms}\setminus\var{curr},~\var{dms}\unionoverrideRight\var{dms'})
       \\
-      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'},~\var{ps}))
+      \var{oldGenDelegs}\leteq\range((\dom\var{dms'})\restrictdom\var{dms})
+      \\
+      \var{cs'}\leteq(\var{oldGenDelegs}\subtractdom\var{oldGenDelegs})\unionoverrideRight
+      \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{dms'}\}
+      \\
+      \var{ps'}\leteq(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs'})
+      \\
+      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'},~\var{ps'}))
     }
     {
       \left(
