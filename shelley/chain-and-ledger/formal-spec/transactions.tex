@@ -45,7 +45,7 @@ This function must produce a unique id for each unique transaction.
       \var{txid} & \TxId & \text{transaction id}\\
       \var{an} & \ApName & \text{application name}\\
       \var{st} & \SystemTag & \text{system tag}\\
-      \var{ud} & \UpdateData & \text{update data}\\
+      \var{ih} & \InstallerHash & \text{update data}\\
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -84,7 +84,7 @@ This function must produce a unique id for each unique transaction.
       \\
       \var{md}
       & \Metadata
-      & \SystemTag\mapsto\UpdateData
+      & \SystemTag\mapsto\InstallerHash
       & \text{application metadata}
       \\
       \var{apps}

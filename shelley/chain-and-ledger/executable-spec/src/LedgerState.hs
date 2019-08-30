@@ -323,8 +323,8 @@ data UTxOState hashAlgo dsignAlgo =
     , _fees      :: Coin
     , _ups       :: ( PPUpdate hashAlgo dsignAlgo
                     , AVUpdate hashAlgo dsignAlgo
-                    , Map.Map Slot Applications
-                    , Applications)
+                    , Map.Map Slot (Applications hashAlgo)
+                    , Applications hashAlgo)
     } deriving (Show, Eq)
 
 -- | New Epoch state and environment
