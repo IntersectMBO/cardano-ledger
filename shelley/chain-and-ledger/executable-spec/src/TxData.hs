@@ -27,8 +27,8 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, GenKeyHash, Hash, HashAlgorithm, KeyHash, pattern KeyHash,
-                     Sig, VKey, VKeyGenesis, hashKey)
+import           Keys (AnyKeyHash, pattern AnyKeyHash, DSIGNAlgorithm, GenKeyHash, Hash,
+                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, hashAnyKey)
 import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
 import           Updates (Update)
@@ -42,7 +42,7 @@ data Delegation hashAlgo dsignAlgo = Delegation
 -- |A stake pool.
 data PoolParams hashAlgo dsignAlgo =
   PoolParams
-    { _poolPubKey  :: VKey dsignAlgo
+    { _poolPubKey  :: KeyHash hashAlgo dsignAlgo
     , _poolVrf     :: KeyHash hashAlgo dsignAlgo
     , _poolPledge  :: Coin
     , _poolCost    :: Coin
@@ -102,7 +102,7 @@ data Ptr
 data MultiSig hashAlgo dsignAlgo =
        -- | Require the redeeming transaction be witnessed by the spending key
        --   corresponding to the given verification key hash.
-       RequireSignature   (KeyHash hashAlgo dsignAlgo)
+       RequireSignature   (AnyKeyHash hashAlgo dsignAlgo)
 
        -- | Require all the sub-terms to be satisfied.
      | RequireAllOf      [MultiSig hashAlgo dsignAlgo]
@@ -150,7 +150,7 @@ data DCert hashAlgo dsignAlgo
     -- | A stake delegation certificate.
   | Delegate (Delegation hashAlgo dsignAlgo)
     -- | Genesis key delegation certificate
-  | GenesisDelegate (VKeyGenesis dsignAlgo, VKey dsignAlgo)
+  | GenesisDelegate (GenKeyHash hashAlgo dsignAlgo, KeyHash hashAlgo dsignAlgo)
   deriving (Show, Eq)
 
 -- |A raw transaction
@@ -168,11 +168,18 @@ data TxBody hashAlgo dsignAlgo
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey hashAlgo dsignAlgo
   = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
+  | WitGVKey (VKeyGenesis dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
   deriving (Show, Eq)
+
+witKeyHash
+  :: forall hashAlgo dsignAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
+  => WitVKey hashAlgo dsignAlgo -> AnyKeyHash hashAlgo dsignAlgo
+witKeyHash (WitVKey key _) = hashAnyKey key
+witKeyHash (WitGVKey key _) = hashAnyKey key
 
 instance forall hashAlgo dsignAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
   => Ord (WitVKey hashAlgo dsignAlgo) where
-    compare = comparing (\(WitVKey key _) -> hashKey @hashAlgo key)
+    compare = comparing witKeyHash
 
 -- |A fully formed transaction.
 data Tx hashAlgo dsignAlgo
@@ -256,6 +263,10 @@ instance
     encodeListLen 2
       <> toCBOR vk
       <> toCBOR sig
+  toCBOR (WitGVKey vk sig) =
+    encodeListLen 2
+      <> toCBOR vk
+      <> toCBOR sig
 
 
 instance
@@ -300,7 +311,7 @@ instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
     ctor <- decodeWord
     case ctor of
       0 -> do
-       hk <- KeyHash <$> fromCBOR
+       hk <- AnyKeyHash <$> fromCBOR
        pure $ RequireSignature hk
       1 -> do
         msigs <- fromCBOR

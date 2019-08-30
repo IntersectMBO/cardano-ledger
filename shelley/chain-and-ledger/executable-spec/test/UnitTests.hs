@@ -330,7 +330,7 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
 stakePool :: PoolParams
 stakePool = PoolParams
             {
-              _poolPubKey = vKey stakePoolKey1
+              _poolPubKey = hashKey $ vKey stakePoolKey1
             , _poolVrf = hashKey $ vKey stakePoolVRFKey1
             , _poolPledge  = Coin 0
             , _poolCost = Coin 0      -- TODO: what is a sensible value?
@@ -346,7 +346,7 @@ halfInterval =
 stakePoolUpdate :: PoolParams
 stakePoolUpdate = PoolParams
                    {
-                     _poolPubKey = vKey stakePoolKey1
+                     _poolPubKey = hashKey $ vKey stakePoolKey1
                    , _poolVrf = hashKey $ vKey stakePoolVRFKey1
                    , _poolPledge  = Coin 0
                    , _poolCost = Coin 100      -- TODO: what is a sensible value?

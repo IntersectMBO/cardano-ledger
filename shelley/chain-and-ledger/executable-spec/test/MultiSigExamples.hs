@@ -21,7 +21,7 @@ import qualified Data.Set as Set (fromList)
 
 import           Coin
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
-import           Keys (pattern Dms)
+import           Keys (pattern Dms, undiscriminateKeyHash)
 import           LedgerState (genesisId, genesisState, _utxoState)
 import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody, TxId,
                      TxIn, UTXOW, UTxOState, Wdrl)
@@ -41,7 +41,7 @@ import           Examples (aliceAddr, alicePay, bobAddr, bobPay, carlAddr, daria
 
 -- Multi-signature scripts
 singleKeyOnly :: Addr -> MultiSig
-singleKeyOnly (AddrBase (KeyHashObj pk) _ ) = RequireSignature pk
+singleKeyOnly (AddrBase (KeyHashObj pk) _ ) = RequireSignature $ undiscriminateKeyHash pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: MultiSig

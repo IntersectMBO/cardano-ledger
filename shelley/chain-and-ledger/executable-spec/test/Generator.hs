@@ -325,7 +325,7 @@ genStakePool skeys vrfKeys = do
                    Just i  -> i
                    Nothing -> interval0
   pure $ PoolParams
-           poolKey
+           (hashKey poolKey)
            (hashKey vrfKey)
            pledge
            cost

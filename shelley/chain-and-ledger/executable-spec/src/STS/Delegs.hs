@@ -9,7 +9,6 @@ module STS.Delegs
   )
 where
 
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
 import           Data.Sequence (Seq (..))
@@ -58,27 +57,13 @@ delegsTransition = do
     Empty -> do
       let ds       = _dstate dpstate
           rewards_ = _rewards ds
-          fdms_    = _fdms ds
-          Dms dms_ = _dms ds
           wdrls_   = _wdrls txbody
 
       wdrls_ ⊆ rewards_ ?! WithrawalsNotInRewardsDELEGS
 
       let rewards' = rewards_ ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
 
-      let (curr, fdmsMinCurr) =
-            if Map.null fdms_
-              then (Map.empty, fdms_)
-              else
-                -- maximum exists as fdms isn't empty here
-                let sMax = maximum [s | (s, _) <- Set.toList (dom fdms_)] in
-                Map.partitionWithKey (\(s, _) _ -> s >= _slot && s == sMax) fdms_
-
-      let dms' = [(gk, vk) | ((_, gk), vk) <- Map.toList curr]
-
-      pure $ dpstate { _dstate = ds { _rewards = rewards'
-                                    , _fdms = fdmsMinCurr
-                                    , _dms = Dms $ dms_ ⨃ dms'}}
+      pure $ dpstate { _dstate = ds { _rewards = rewards' } }
 
     certs_ :|> cert -> do
       dpstate' <-

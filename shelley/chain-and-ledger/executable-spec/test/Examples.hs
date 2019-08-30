@@ -24,6 +24,8 @@ module Examples
   , ex4A
   , ex4B
   , ex4C
+  , ex5A
+  , ex5B
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -37,6 +39,7 @@ module Examples
   , dariaPay
   , dariaStake
   , dariaAddr
+  , coreNodeSKG -- TODO remove
   )
 where
 
@@ -65,8 +68,9 @@ import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pat
                      pattern Proof, ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader,
                      slotToSeed)
 import           Coin (Coin (..))
-import           Delegation.Certificates (pattern DeRegKey, pattern Delegate, pattern PoolDistr,
-                     pattern RegKey, pattern RegPool, pattern RetirePool)
+import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
+                     pattern GenesisDelegate, pattern PoolDistr, pattern RegKey, pattern RegPool,
+                     pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern Dms, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
@@ -76,8 +80,8 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
                      emptyPState, genesisCoins, genesisId, overlaySchedule, rs, _cCounters,
-                     _delegations, _dms, _pParams, _ptrs, _reserves, _retiring, _rewards, _stKeys,
-                     _stPools, _treasury)
+                     _delegations, _dms, _fdms, _pParams, _ptrs, _reserves, _retiring, _rewards,
+                     _stKeys, _stPools, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
@@ -89,7 +93,7 @@ import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, 
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
                      pattern Update, emptyUpdate, emptyUpdateState, updatePPup)
-import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
+import           UTxO (pattern UTxO, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
 type ChainState = (NewEpochState, Seed, Seed, HashHeader, Slot)
 
@@ -104,10 +108,11 @@ mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyDSIGN
   return (SKey sk, VKey $ deriveVerKeyDSIGN sk)
 
-mkVKGen :: (Word64, Word64, Word64, Word64, Word64) -> VKeyGenesis
-mkVKGen seed = fst . withDRG (drgNewTest seed) $ do
+mkGenKeys :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKeyGenesis)
+mkGenKeys seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyDSIGN
-  return $ VKeyGenesis $ deriveVerKeyDSIGN sk
+  return (SKey sk, VKeyGenesis $ deriveVerKeyDSIGN sk)
+
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
 mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKeyES, VKeyES)
@@ -139,17 +144,20 @@ mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
 numCoreNodes :: Word64
 numCoreNodes = 7
 
-coreNodes :: [(VKeyGenesis, AllPoolKeys)]
-coreNodes = [(mkVKGen (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..100+numCoreNodes]]
+coreNodes :: [((SKey, VKeyGenesis), AllPoolKeys)]
+coreNodes = [(mkGenKeys (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..100+numCoreNodes]]
+
+coreNodeSKG :: Int -> SKey
+coreNodeSKG = fst . fst . (coreNodes !!)
 
 coreNodeVKG :: Int -> VKeyGenesis
-coreNodeVKG = fst . (coreNodes !!)
+coreNodeVKG = snd . fst . (coreNodes !!)
 
 coreNodeKeys :: Int -> AllPoolKeys
 coreNodeKeys = snd . (coreNodes !!)
 
 dms :: Map GenKeyHash KeyHash
-dms = Map.fromList [ (hashKey gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
+dms = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
 
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
@@ -197,7 +205,7 @@ bobInitCoin = 1000
 alicePoolParams :: PoolParams
 alicePoolParams =
   PoolParams
-    { _poolPubKey = vKey $ cold alicePool
+    { _poolPubKey = (hashKey . vKey . cold) alicePool
     , _poolVrf = hashKey $ vKey $ vrf alicePool
     , _poolPledge = Coin 1
     , _poolCost = Coin 5
@@ -1838,3 +1846,142 @@ expectedStEx4C =
 
 ex4C :: CHAINExample
 ex4C = CHAINExample (Slot 60) expectedStEx4B blockEx4C expectedStEx4C
+
+
+-- | Example 5A - Genesis key delegation
+
+
+newGenDelegate :: KeyPair
+newGenDelegate  = KeyPair vkCold skCold
+  where (skCold, vkCold) = mkKeyPair (108, 0, 0, 0, 1)
+
+txbodyEx5A :: TxBody
+txbodyEx5A = TxBody
+              (Set.fromList [TxIn genesisId 0])
+              [TxOut aliceAddr (Coin 9999)]
+              (fromList [GenesisDelegate
+                          ( (hashKey . coreNodeVKG) 0
+                          , (hashKey . vKey) newGenDelegate)])
+              Map.empty
+              (Coin 1)
+              (Slot 10)
+              emptyUpdate
+
+txEx5A :: Tx
+txEx5A = Tx
+           txbodyEx5A
+           (makeWitnessesVKey txbodyEx5A [ alicePay ] `Set.union` makeGenWitnessesVKey txbodyEx5A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
+           Map.empty
+
+blockEx5A :: Block
+blockEx5A = mkBlock
+              lastByronHeaderHash
+              (coreNodeKeys 6)
+              [txEx5A]
+              (Slot 10)
+              (Nonce 0)
+              (Nonce 1)
+              zero
+              0
+
+blockEx5AHash :: HashHeader
+blockEx5AHash = bhHash (bheader blockEx5A)
+
+dsEx5A :: DState
+dsEx5A = dsEx1 { _fdms = Map.singleton
+                          ( Slot 43, hashKey $ coreNodeVKG 0 )
+                          ( (hashKey . vKey) newGenDelegate ) }
+
+utxoEx5A :: UTxO
+utxoEx5A = UTxO . Map.fromList $
+                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+                    , (TxIn (txid txbodyEx5A) 0, TxOut aliceAddr (Coin 9999))
+                    ]
+
+expectedLSEx5A :: LedgerState
+expectedLSEx5A = LedgerState
+               (UTxOState
+                 utxoEx5A
+                 (Coin 0)
+                 (Coin 1)
+                 (PPUpdate Map.empty , AVUpdate Map.empty , Map.empty , byronApps))
+               (DPState dsEx5A psEx1)
+               0
+
+expectedStEx5A :: ChainState
+expectedStEx5A =
+  ( NewEpochState
+      (Epoch 0)
+      (Nonce 0)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1)
+      Nothing
+      (PoolDistr Map.empty)
+      overlayEx2A
+  , Nonce 0 ⭒ Nonce 1
+  , Nonce 0 ⭒ Nonce 1
+  , blockEx5AHash
+  , Slot 10
+  )
+
+ex5A :: CHAINExample
+ex5A = CHAINExample (Slot 10) initStEx2A blockEx5A expectedStEx5A
+
+
+-- | Example 5B - New genesis key delegation updated from future delegations
+
+blockEx5B :: Block
+blockEx5B = mkBlock
+             blockEx5AHash
+             (coreNodeKeys 2)
+             []
+             (Slot 50)
+             (Nonce 0)
+             (Nonce 2)
+             zero
+             0
+
+blockEx5BHash :: HashHeader
+blockEx5BHash = bhHash (bheader blockEx5B)
+
+dsEx5B :: DState
+dsEx5B = dsEx5A { _fdms = Map.empty
+                , _dms = Dms $ Map.insert
+                                 ((hashKey . coreNodeVKG) 0)
+                                 ((hashKey . vKey) newGenDelegate)
+                                 dms }
+
+expectedLSEx5B :: LedgerState
+expectedLSEx5B = LedgerState
+               (UTxOState
+                 utxoEx5A
+                 (Coin 0)
+                 (Coin 1)
+                 (PPUpdate Map.empty , AVUpdate Map.empty , Map.empty , byronApps))
+               (DPState dsEx5B psEx1)
+               0
+
+expectedStEx5B :: ChainState
+expectedStEx5B =
+  ( NewEpochState
+      (Epoch 0)
+      (Nonce 0)
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      (EpochState acntEx2A emptySnapShots expectedLSEx5B ppsEx1)
+      (Just RewardUpdate { deltaT = Coin 0
+                         , deltaR = Coin 0
+                         , rs     = Map.empty
+                         , deltaF = Coin 0
+                         })
+      (PoolDistr Map.empty)
+      overlayEx2A
+  , mkSeqNonce 2
+  , mkSeqNonce 2
+  , blockEx5BHash
+  , Slot 50
+  )
+
+ex5B :: CHAINExample
+ex5B = CHAINExample (Slot 50) expectedStEx5A blockEx5B expectedStEx5B

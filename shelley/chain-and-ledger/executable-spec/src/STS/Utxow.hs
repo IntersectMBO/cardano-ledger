@@ -21,6 +21,7 @@ import           LedgerState hiding (dms)
 import           PParams
 import           Slot
 import           Tx
+import           TxData
 import           UTxO
 
 import           Control.State.Transition
@@ -78,9 +79,7 @@ utxoWitnessed = do
   TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits _))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
-  let witnessKeys = Set.map (\(WitVKey vk _)
-                              -> undiscriminateKeyHash $ hashKey vk
-                            ) wits
+  let witnessKeys = Set.map witKeyHash wits
   let needed = witsVKeyNeeded (_utxo u) tx _dms
   needed `Set.isSubsetOf` witnessKeys  ?! MissingVKeyWitnessesUTXOW
 
