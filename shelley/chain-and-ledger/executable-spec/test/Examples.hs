@@ -52,10 +52,11 @@ import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes (AVUpdate, Addr, Block, Credential, DState, EpochState, GenKeyHash,
-                     HashHeader, KeyHash, KeyPair, LedgerState, NewEpochState, PPUpdate, PState,
-                     PoolDistr, PoolParams, RewardAcnt, SKey, SKeyES, SnapShots, Stake, Tx, TxBody,
-                     UTxO, UTxOState, Update, VKey, VKeyES, VKeyGenesis)
+import           MockTypes (AVUpdate, Addr, Applications, Block, Credential, DState, EpochState,
+                     GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState, Mdt,
+                     NewEpochState, PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
+                     SKeyES, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update, VKey, VKeyES,
+                     VKeyGenesis)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
@@ -85,9 +86,9 @@ import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, 
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _paymentObj, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolVrf)
-import           Updates (pattern AVUpdate, ApName (..), ApVer (..), Applications (..),
-                     Metadata (..), pattern PPUpdate, Ppm (..), pattern Update, emptyUpdate,
-                     emptyUpdateState, updatePPup)
+import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
+                     InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
+                     pattern Update, emptyUpdate, emptyUpdateState, updatePPup)
 import           UTxO (pattern UTxO, makeWitnessesVKey, txid)
 
 type ChainState = (NewEpochState, Seed, Seed, HashHeader, Slot)
@@ -152,8 +153,8 @@ dms = Map.fromList [ (hashKey gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys)
 
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
-                            [ (ApName $ pack "Daedalus", (ApVer 16, Metadata))
-                            , (ApName $ pack "Yoroi", (ApVer 4, Metadata))
+                            [ (ApName $ pack "Daedalus", (ApVer 16, Mdt Map.empty))
+                            , (ApName $ pack "Yoroi", (ApVer 4, Mdt Map.empty))
                             ]
 
 alicePay :: KeyPair
@@ -1582,10 +1583,15 @@ ex3C = CHAINExample (Slot 110) expectedStEx3B blockEx3C expectedStEx3C
 -- have three genesis keys vote on the same new version
 
 
+daedalusMDEx4A :: Mdt
+daedalusMDEx4A = Mdt $ Map.singleton
+                              (SystemTag $ pack "DOS")
+                              (InstallerHash $ hash $ pack "ABC")
+
 appsEx4A :: Applications
 appsEx4A = Applications $ Map.singleton
                             (ApName $ pack "Daedalus")
-                            (ApVer 17, Metadata)
+                            (ApVer 17, daedalusMDEx4A)
 
 avupEx4A :: AVUpdate
 avupEx4A = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, appsEx4A)
@@ -1791,8 +1797,8 @@ updateStEx4C =
   , AVUpdate Map.empty
   , Map.empty
   , Applications $ Map.fromList
-                     [ (ApName $ pack "Daedalus", (ApVer 17, Metadata))
-                     , (ApName $ pack "Yoroi", (ApVer 4, Metadata))
+                     [ (ApName $ pack "Daedalus", (ApVer 17, daedalusMDEx4A))
+                     , (ApName $ pack "Yoroi", (ApVer 4, Mdt Map.empty))
                      ]
   )
 

@@ -247,6 +247,9 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
       \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
       \\
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall \wcard\mapsto(\wcard,~m)\in\var{vote},~
+      \forall \var{st}\mapsto\wcard\in\var{m},~ \fun{sTagValid}~\var{st}
+      \\
       \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
       \\
       \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
@@ -291,6 +294,9 @@ $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$.
       \\
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
         \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
+      \\
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall \wcard\mapsto(\wcard,~m)\in\var{vote},~
+      \forall \var{st}\mapsto\wcard\in\var{m},~ \fun{sTagValid}~\var{st}
       \\
       \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
       \\
@@ -339,6 +345,8 @@ The AVUP rule has three predicate failures:
   in the proposal are not exactly one more than the greatest version for the given
   application name in the current application versions or the future application
   versions, there is a \emph{CannotFollow} failure.
+\item In the case of \var{aup} being non-empty, if any of the metadata in
+  in the proposal contains an invalid system tag, there is a \emph{InvalidSystemTags} failure.
 \end{itemize}
 
 \clearpage

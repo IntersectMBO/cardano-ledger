@@ -116,6 +116,10 @@ type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN
 
 type Stake = EpochBoundary.Stake ShortHash MockDSIGN
 
+type Mdt = Updates.Mdt ShortHash
+
+type Applications = Updates.Applications ShortHash
+
 type Update = Updates.Update ShortHash MockDSIGN
 
 type PPUpdate = Updates.PPUpdate ShortHash MockDSIGN

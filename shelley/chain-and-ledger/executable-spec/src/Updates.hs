@@ -8,7 +8,9 @@ module Updates
   , updatePPup
   , ApName(..)
   , ApVer(..)
-  , Metadata(..)
+  , Mdt(..)
+  , SystemTag(..)
+  , InstallerHash(..)
   , Applications(..)
   , AVUpdate(..)
   , Update(..)
@@ -21,6 +23,7 @@ module Updates
   , emptyUpdate
   , updatePParams
   , svCanFollow
+  , sTagsValid
   )
 where
 
@@ -34,16 +37,17 @@ import qualified Data.Set as Set
 import           Data.Word (Word8)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
+import           Cardano.Crypto.Hash (Hash, HashAlgorithm)
 
 import           BaseTypes (Seed, UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, Dms, GenKeyHash, HashAlgorithm)
+import           Keys (DSIGNAlgorithm, Dms, GenKeyHash)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot)
 
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (range, (∪), (◁))
+import           Ledger.Core (dom, range, (∪), (◁))
 
 
 newtype ApVer = ApVer Natural
@@ -52,18 +56,21 @@ newtype ApVer = ApVer Natural
 newtype ApName = ApName ByteString
   deriving (Show, Ord, Eq, ToCBOR)
 
-data Metadata = Metadata -- for now, there are no requirements on Metadata
-  deriving (Show, Ord, Eq)
+newtype SystemTag = SystemTag ByteString
+  deriving (Show, Ord, Eq, ToCBOR)
 
-instance ToCBOR Metadata where
-  toCBOR _ = toCBOR ()
+newtype InstallerHash hashAlgo = InstallerHash (Hash hashAlgo ByteString)
+  deriving (Show, Ord, Eq, ToCBOR)
 
-newtype Applications = Applications {
-  apps :: Map.Map ApName (ApVer, Metadata)
+newtype Mdt hashAlgo = Mdt (Map.Map SystemTag (InstallerHash hashAlgo))
+  deriving (Show, Ord, Eq, ToCBOR)
+
+newtype Applications hashAlgo = Applications {
+  apps :: Map.Map ApName (ApVer, Mdt hashAlgo)
   } deriving (Show, Ord, Eq, ToCBOR)
 
 newtype AVUpdate hashAlgo dsignAlgo = AVUpdate {
-  aup :: Map.Map (GenKeyHash hashAlgo dsignAlgo) Applications
+  aup :: Map.Map (GenKeyHash hashAlgo dsignAlgo) (Applications hashAlgo)
   } deriving (Show, Eq, ToCBOR)
 
 -- | Update Proposal
@@ -169,27 +176,35 @@ apNameValid :: ApName -> Bool
 apNameValid (ApName an) = all isAscii cs && length cs <= 12
   where cs = unpack an
 
-type Favs = Map.Map Slot Applications
+-- | This is just an example and not neccessarily how we will actually validate system tags
+sTagValid :: SystemTag -> Bool
+sTagValid (SystemTag st) = all isAscii cs && length cs <= 10
+  where cs = unpack st
 
-maxVer :: ApName -> Applications -> Favs -> (ApVer, Metadata)
+sTagsValid :: Mdt hashAlgo -> Bool
+sTagsValid (Mdt md) = all sTagValid (dom md)
+
+type Favs hashAlgo = Map.Map Slot (Applications hashAlgo)
+
+maxVer :: ApName -> Applications hashAlgo -> Favs hashAlgo -> (ApVer, Mdt hashAlgo)
 maxVer an avs favs =
   maximum $ vs an avs : fmap (vs an) (Set.toList (range favs))
     where
       vs n (Applications as) =
-        Map.foldr max (ApVer 0, Metadata) (Set.singleton n ◁ as)
+        Map.foldr max (ApVer 0, Mdt Map.empty) (Set.singleton n ◁ as)
 
-svCanFollow :: Applications -> Favs -> (ApName, (ApVer, Metadata)) -> Bool
+svCanFollow :: Applications hashAlgo -> Favs hashAlgo -> (ApName, (ApVer, Mdt hashAlgo)) -> Bool
 svCanFollow avs favs (an, (ApVer v, _)) = v == 1 + m
   where (ApVer m) = fst $ maxVer an avs favs
 
-allNames :: Applications -> Favs -> Set ApName
+allNames :: Applications hashAlgo -> Favs hashAlgo -> Set ApName
 allNames (Applications avs) favs =
   Prelude.foldr
     (\(Applications fav) acc -> acc `Set.union` Map.keysSet fav)
     (Map.keysSet avs)
     (Map.elems favs)
 
-newAVs :: Applications -> Favs -> Applications
+newAVs :: Applications hashAlgo -> Favs hashAlgo -> Applications hashAlgo
 newAVs avs favs = Applications $
                     Map.fromList [(an, maxVer an avs favs) | an <- Set.toList $ allNames avs favs]
 
@@ -208,8 +223,8 @@ votedValue vs | null elemLists = Nothing
 emptyUpdateState
   :: ( Updates.PPUpdate hashAlgo dsignAlgo
      , Updates.AVUpdate hashAlgo dsignAlgo
-     , Map.Map Slot Updates.Applications
-     , Updates.Applications
+     , Map.Map Slot (Applications hashAlgo)
+     , Applications hashAlgo
      )
 emptyUpdateState =
   (PPUpdate Map.empty, AVUpdate Map.empty, Map.empty, Applications Map.empty)
