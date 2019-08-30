@@ -18,7 +18,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Set as Set
 
 import           Keys
-import           Ledger.Core ((◁), (⨃))
+import           Ledger.Core (dom, range, (⋪), (◁), (⨃))
 import           LedgerState
 import           PParams
 import           Slot
@@ -73,9 +73,10 @@ ledgersTransition = do
   let u''' = UTxOState utxo' dep fee (ppup, aup, favs', avs')
 
   let ds = _dstate dw''
+      ps = _pstate dw''
       fdms_    = _fdms ds
       Dms dms_ = _dms ds
-      (fdms', curr) = Map.partitionWithKey (\(s, _) _ -> slot <= s) fdms_
+      (curr, fdms') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fdms_
   let maxSlot = maximum . Set.map fst . Map.keysSet
   let latestPerGKey gk =
         ( (maxSlot . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
@@ -84,8 +85,12 @@ ledgersTransition = do
                   latestPerGKey
                   (Set.map snd (Map.keysSet curr))
   let dms' = Map.mapKeys snd $ dmsKeys ◁ curr
-  let dw''' = dw'' { _dstate = (_dstate dw'') { _fdms = fdms'
-                                              , _dms = Dms $ dms_ ⨃ Map.toList dms'}}
+  let oldGenDelegs = range (dom dms' ◁ dms_)
+  let cs' = (oldGenDelegs ⋪ _cCounters ps) ⨃ fmap (\x -> (x, 0)) (Map.elems dms')
+  let dw''' = dw'' { _dstate = ds { _fdms = fdms'
+                                  , _dms = Dms $ dms_ ⨃ Map.toList dms'}
+                   , _pstate = ps { _cCounters = cs' }
+                   }
 
   pure $ LedgerState u''' dw''' (_txSlotIx ls)
 
