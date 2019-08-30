@@ -29,6 +29,7 @@ module UTxO
   , deposits
   , makeWitnessVKey
   , makeWitnessesVKey
+  , makeGenWitnessesVKey
   , verifyWitVKey
   , scriptsNeeded
   , txinsScript
@@ -45,7 +46,7 @@ import qualified Data.Set as Set
 
 import           Coin (Coin (..))
 import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyDiscriminator (..), KeyPair, Signable,
-                     hash, hashKey, sKey, sign, vKey, verify)
+                     hash, sKey, sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
@@ -127,6 +128,7 @@ verifyWitVKey
   -> WitVKey hashAlgo dsignAlgo
   -> Bool
 verifyWitVKey tx (WitVKey vkey sig) = verify vkey tx sig
+verifyWitVKey tx (WitGVKey vkey sig) = verify vkey tx sig
 
 -- |Create a witness for transaction
 makeWitnessVKey
@@ -149,6 +151,27 @@ makeWitnessesVKey
   -> Set (WitVKey hashAlgo dsignAlgo)
 makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
 
+-- |Create a genesis witness for transaction
+makeGenWitnessVKey
+  :: ( DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+  => TxBody hashAlgo dsignAlgo
+  -> KeyPair 'Genesis dsignAlgo
+  -> WitVKey hashAlgo dsignAlgo
+makeGenWitnessVKey tx keys = WitGVKey (vKey keys) (sign (sKey keys) tx)
+
+-- |Create genesis witnesses for transaction
+makeGenWitnessesVKey
+  :: ( DSIGNAlgorithm dsignAlgo
+     , HashAlgorithm hashAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+  => TxBody hashAlgo dsignAlgo
+  -> [KeyPair 'Genesis dsignAlgo]
+  -> Set (WitVKey hashAlgo dsignAlgo)
+makeGenWitnessesVKey tx = Set.fromList . fmap (makeGenWitnessVKey tx)
+
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO hashAlgo dsignAlgo -> Coin
 balance (UTxO utxo) = foldr addCoins 0 utxo
@@ -156,15 +179,14 @@ balance (UTxO utxo) = foldr addCoins 0 utxo
 
 -- |Determine the total deposit amount needed
 deposits
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => PParams
+  :: PParams
   -> StakePools hashAlgo dsignAlgo
   -> [DCert hashAlgo dsignAlgo]
   -> Coin
 deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ pool ^. poolPubKey) stpools
+    notRegisteredPool (RegPool pool) = Map.notMember (pool ^. poolPubKey) stpools
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
@@ -187,8 +209,7 @@ scriptStakeCred (ScriptHashObj hs) = Just hs
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => UTxO hashAlgo dsignAlgo
+  :: UTxO hashAlgo dsignAlgo
   -> Tx hashAlgo dsignAlgo
   -> Set (ScriptHash hashAlgo dsignAlgo)
 scriptsNeeded u tx =

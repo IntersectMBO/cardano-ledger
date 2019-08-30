@@ -25,6 +25,7 @@ module Keys
   , KeyHash
   , pattern KeyHash
   , GenKeyHash
+  , pattern AnyKeyHash
   , AnyKeyHash
   , undiscriminateKeyHash
   , KeyPair(..)
