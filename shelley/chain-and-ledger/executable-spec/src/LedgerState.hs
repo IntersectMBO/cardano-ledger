@@ -983,14 +983,16 @@ delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
 
 -- | Calculate pool reward
 poolRewards
-  :: StakeCredential hashAlgo dsignAlgo -- TODO check why this paramater is not used
+  :: UnitInterval
   -> UnitInterval
   -> Natural
   -> Natural
   -> Coin
   -> Coin
-poolRewards _ sigma blocksN blocksTotal (Coin maxP) =
-  floor $ p * fromIntegral maxP
+poolRewards d_ sigma blocksN blocksTotal (Coin maxP) =
+  if intervalValue d_ < 0.8
+    then floor (p * fromIntegral maxP)
+    else 1
   where
     p = beta / intervalValue sigma
     beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
@@ -1005,7 +1007,7 @@ leaderRew
 leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
   | f' <= c = f
   | otherwise =
-    floor $ fromIntegral (c + (f' - c)) * (m' + (1 - m') * sigma / s)
+    Coin $ c + floor (fromIntegral (f' - c) * (m' + (1 - m') * s / sigma))
   where
     (Coin c, m, _) = poolSpec pool
     m' = intervalValue m
@@ -1019,7 +1021,7 @@ memberRew
   -> Coin
 memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | f' <= c = 0
-  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * sigma / t
+  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * t / sigma
   where
     (Coin c, m, _) = poolSpec pool
     m' = intervalValue m
@@ -1052,7 +1054,7 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
         then maxPool pp r sigma pr
         else 0
     s' = fromMaybe (error "LedgerState.rewardOnePool: Unexpected Nothing") $ mkUnitInterval sigma
-    poolR = poolRewards poolHK s' blocksN blocksTotal maxP
+    poolR = poolRewards (_d pp) s' blocksN blocksTotal maxP
     tot = fromIntegral total
     mRewards = Map.fromList
      [(RewardAcnt hk,
