@@ -997,10 +997,10 @@ blockEx2HHash :: HashHeader
 blockEx2HHash = bhHash (bheader blockEx2H)
 
 aliceRAcnt2H :: Coin
-aliceRAcnt2H = Coin 82593524514
+aliceRAcnt2H = Coin 69258309255
 
 bobRAcnt2H :: Coin
-bobRAcnt2H = Coin 730001159951
+bobRAcnt2H = Coin 6341690744
 
 rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
@@ -1014,7 +1014,7 @@ expectedStEx2H =
       (BlocksMade $ Map.singleton (hk alicePool) 1)
       (BlocksMade Map.empty)
       (EpochState (acntEx2E { _treasury = Coin 33 }) snapsEx2G expectedLSEx2G ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 8637405315545
+      (Just RewardUpdate { deltaT = Coin 9374400000011
                          , deltaR = Coin (-9450000000000)
                          , rs = rewardsEx2H
                          , deltaF = Coin (-10)
@@ -1057,7 +1057,7 @@ epoch1OSchedEx2I = overlaySchedule
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
-            { _treasury = Coin 8637405315578
+            { _treasury = Coin 9374400000044
             , _reserves = Coin 44990550000000000
             }
 
