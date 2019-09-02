@@ -73,24 +73,25 @@ overlayTransition
      )
   => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo)
 overlayTransition = do
-  TRC ((pp, osched, eta0, pd, Dms dms), cs, bh@(BHeader bhb _)) <-
-    judgmentContext
-  let gkey'' = Map.lookup (bheaderSlot bhb) osched
-      vk     = bvkcold bhb
-      vkh    = hashKey vk
-  case gkey'' of
-    Nothing -> do
+  TRC ( (pp, osched, eta0, pd, Dms dms)
+      , cs
+      , bh@(BHeader bhb _)) <- judgmentContext
+  let vk = bvkcold bhb
+      vkh = hashKey vk
+
+  case Map.lookup (bheaderSlot bhb) osched of
+    Nothing ->
       vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
-      trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
-    Just gkey' -> do
-      case gkey' of
-        Nothing   -> failBecause NotActiveSlotOVERLAY
-        Just gkey -> do
-          let dmsKey' = Map.lookup gkey dms
-          case dmsKey' of
-            Nothing     -> failBecause NoGenesisStakingOVERLAY
-            Just dmsKey -> vkh == dmsKey ?! WrongGenesisColdKeyOVERLAY vkh dmsKey
-      trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
+    Just Nothing ->
+      failBecause NotActiveSlotOVERLAY
+    Just (Just gkey) ->
+      case Map.lookup gkey dms of
+        Nothing ->
+          failBecause NoGenesisStakingOVERLAY
+        Just dmsKey ->
+          vkh == dmsKey ?! WrongGenesisColdKeyOVERLAY vkh dmsKey
+
+  trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
 
 instance
   ( HashAlgorithm hashAlgo
