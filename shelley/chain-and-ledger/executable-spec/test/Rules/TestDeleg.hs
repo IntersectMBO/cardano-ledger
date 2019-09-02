@@ -17,6 +17,7 @@ import           Control.State.Transition.Generator (trace)
 import           Control.State.Transition.Trace (sourceSignalTargets, traceLength)
 
 import           Address (mkRwdAcnt)
+import           BaseTypes ((==>))
 import           Coin (Coin)
 import           LedgerState (_delegationState, _delegations, _dstate, _pstate, _retiring, _rewards,
                      _stKeys, _stPools)
@@ -25,7 +26,7 @@ import           MockTypes (DELEG, DState, KeyHash, LedgerState, RewardAcnt, Sta
 import           Slot (Epoch)
 import           TxData (pattern RegKey)
 
-import           Ledger.Core (dom, (∈))
+import           Ledger.Core (dom, (∈), (∉))
 
 -------------------------------
 -- helper accessor functions --
@@ -74,7 +75,7 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
     True === (all credNewlyRegisteredAndRewardZero tr)
 
   where credNewlyRegisteredAndRewardZero (d, RegKey hk, d') =
-                 hk ∈ getStDelegs d
-          || (   hk ∈ getStDelegs d'
-              && (Maybe.maybe True (== 0) $ Map.lookup (mkRwdAcnt hk) (getRewards d')))
+          (hk ∉ getStDelegs d) ==>
+          (   hk ∈ getStDelegs d'
+           && (Maybe.maybe True (== 0) $ Map.lookup (mkRwdAcnt hk) (getRewards d')))
         credNewlyRegisteredAndRewardZero (_, _, _) = True
