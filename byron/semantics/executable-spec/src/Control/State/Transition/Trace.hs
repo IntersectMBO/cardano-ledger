@@ -28,6 +28,7 @@ module Control.State.Transition.Trace
   , traceSignals
   , traceStates
   , preStatesAndSignals
+  , sourceSignalTargets
   , traceLength
   , lastState
   , firstAndLastState
@@ -346,3 +347,19 @@ extractValues d =  catMaybes (gmapQ extractValue d)
   where
     extractValue :: forall d1 . (Data d1) => d1 -> Maybe a
     extractValue d1 = cast d1
+
+
+-- | Extract triplets of the form [(s, sig, t)] from a trace. For a valid trace,
+-- each source state can reach a target state via the given signal.
+--
+-- Examples
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> sourceSignalTargets tr0123
+-- [(0,"one",1),(1,"two",2),(2,"three",3)]
+--
+sourceSignalTargets :: forall a. Trace a -> [(State a, Signal a, State a)]
+sourceSignalTargets trace = zip3 states signals (tail states)
+  where
+    states = traceStates OldestFirst trace
+    signals = traceSignals OldestFirst trace
