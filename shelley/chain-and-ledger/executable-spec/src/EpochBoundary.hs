@@ -37,7 +37,7 @@ import           Keys (KeyHash)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot, slotFromEpoch, (-*))
 import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential, TxOut (..),
-                     getRwdHK)
+                     getRwdCred)
 import           UTxO (UTxO (..))
 
 import qualified Data.Map.Strict as Map
@@ -119,7 +119,7 @@ rewardStake
 rewardStake rewards =
   map convert $ Map.toList rewards
   where
-    convert (rwdKey, c) = (getRwdHK rwdKey, c)
+    convert (rwdKey, c) = (getRwdCred rwdKey, c)
 
 -- | Get stake of one pool
 poolStake

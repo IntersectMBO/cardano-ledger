@@ -51,9 +51,9 @@ data PoolParams hashAlgo dsignAlgo =
     , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
     } deriving (Show, Eq)
 
--- |An account based address for a rewards
+-- |An account based address for rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
-  { getRwdHK :: Credential hashAlgo signAlgo
+  { getRwdCred :: StakeCredential hashAlgo signAlgo
   } deriving (Show, Eq, Ord)
 
 -- | Script hash or key hash for a payment or a staking object.
@@ -394,7 +394,7 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => ToCBOR (RewardAcnt hashAlgo dsignAlgo) where
   toCBOR rwdAcnt =
     encodeListLen 1
-      <> toCBOR (getRwdHK rwdAcnt)
+      <> toCBOR (getRwdCred rwdAcnt)
 
 instance Relation (StakeKeys hashAlgo dsignAlgo) where
   type Domain (StakeKeys hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo

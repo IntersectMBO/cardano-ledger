@@ -201,15 +201,14 @@ each output of a transition is spent at most once.
                                     ((\var{stDelegs}, \wcard,
                                     \wcard,\wcard,\wcard,\wcard) \to \var{stDelegs} \\
                       &&\\
-    \fun{getRewards} & \in & \LState \to (\AddrRWD \mapsto \Coin) \\
-    \fun{getRewards} & \coloneqq & (\wcard,
-                                   ((\wcard, \var{rewards},
-                                   \wcard,\wcard,\wcard,\wcard), \wcard))
+    \fun{getRewards} & \in & \DState \to (\AddrRWD \mapsto \Coin) \\
+    \fun{getRewards} & \coloneqq & (\wcard, \var{rewards},
+                                   \wcard,\wcard,\wcard,\wcard)
                                    \to \var{rewards} \\
                       &&\\
-    \fun{getDelegations} & \in & \LState \to (\Credential \mapsto \KeyHash) \\
-    \fun{getDelegations} & \coloneqq & (\wcard, ((\wcard, \wcard,
-                                       \var{delegations},\wcard,\wcard,\wcard), \wcard)) \to
+    \fun{getDelegations} & \in & \DState \to (\Credential \mapsto \KeyHash) \\
+    \fun{getDelegations} & \coloneqq & (\wcard, \wcard,
+                                       \var{delegations},\wcard,\wcard,\wcard) \to
                                        \var{delegations} \\
                       &&\\
     \fun{getStPools} & \in & \LState \to (\KeyHash \mapsto \DCertRegPool) \\
@@ -247,13 +246,14 @@ associated reward is set to 0 in $l'$.
 \begin{property}[\textbf{Deregistered Staking Credential}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
-    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
-    \implies \forall \var{c} \in \DCertDeRegKey, dpsEnv\vdash\var{dp}
-    \trans{delegs}{c} \var{dp'} \implies \applyFun{cwitness}{c} = \var{hk}\\
-    \implies \var{hk} \not\in \applyFun{getStDelegs}{l'} \wedge
-    hk\not\in({\fun{stakeCred_{r}}~sc\vert
-      sc\in\fun{dom}(\applyFun{getRewards}{l'})} \cup
-    \fun{dom}(\applyFun{getDelegations}{l'}))
+    l = (\wcard, (d, \wcard)), l' = (\wcard, (d', \wcard)), dEnv\in\DEnv \\
+    \implies \forall \var{c} \in \DCertDeRegKey, dEnv\vdash\var{d}
+    \trans{deleg}{c} \var{d'} \implies \applyFun{cwitness}{c} = \var{hk}\\
+    \implies \var{hk} \not\in \applyFun{getStDelegs}{d'} \wedge hk\not\in
+    \left\{ \fun{stakeCred_{r}}~sc\vert
+      sc\in\fun{dom}(\applyFun{getRewards}{d'})
+    \right\}\\
+    \wedge hk \not\in \fun{dom}(\applyFun{getDelegations}{d'}))
   \end{multline*}
   \label{prop:ledger-properties-7}
 \end{property}
@@ -267,11 +267,11 @@ delegation map of $l'$.
 \begin{property}[\textbf{Delegated Stake}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
-    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
-    \implies \forall \var{c} \in \DCertDeleg, dpsEnv \vdash\var{dp}
-    \trans{delegs}{c} \var{dp'} \implies \applyFun{cwitness}{c} = \var{hk}\\
-    \implies \var{hk} \in \applyFun{getStDelegs}{l} \wedge
-    (\applyFun{getDelegations}{l'})[hk] = \applyFun{pool}{c}
+    l = (\wcard, (d,\wcard)), l' = (\wcard, (d',\wcard)), dEnv\in\DEnv \\
+    \implies \forall \var{c} \in \DCertDeleg, dEnv \vdash\var{d}
+    \trans{deleg}{c} \var{d'} \implies \applyFun{cwitness}{c} = \var{hk}\\
+    \implies \var{hk} \in \applyFun{getStDelegs}{d'} \wedge
+    (\applyFun{getDelegations}{d'})[hk] = \applyFun{dpool}{c}
   \end{multline*}
   \label{prop:ledger-properties-8}
 \end{property}

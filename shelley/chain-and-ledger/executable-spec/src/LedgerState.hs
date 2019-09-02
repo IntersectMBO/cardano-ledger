@@ -144,8 +144,8 @@ import           Slot (Duration (..), Epoch (..), Slot (..), epochFromSlot, firs
 import           Tx (extractKeyHash)
 import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolParams, Ptr (..),
                      RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..),
-                     TxOut (..), body, certs, getRwdHK, inputs, poolOwners, poolPledge, poolPubKey,
-                     poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+                     TxOut (..), body, certs, getRwdCred, inputs, poolOwners, poolPledge,
+                     poolPubKey, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), Applications, PPUpdate (..), Update (..), emptyUpdate,
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
@@ -584,7 +584,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
         _                               -> hkeys
 
     wdrlAuthors =
-      Set.fromList $ extractKeyHash $ map getRwdHK (Map.keys (txbody ^. wdrls))
+      Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (txbody ^. wdrls))
     owners = foldl Set.union Set.empty
                [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | RegPool pool <- toList $ txbody ^. certs]
     certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK (toList $ txbody ^. certs))
