@@ -10,6 +10,7 @@ import           Data.Map (Map)
 import qualified Data.Map.Strict as Map (lookup)
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
+import qualified Data.Set as Set (singleton, size)
 
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
@@ -24,9 +25,9 @@ import           LedgerState (_delegationState, _delegations, _pstate, _retiring
 import           MockTypes (DELEG, DState, KeyHash, LedgerState, RewardAcnt, StakeCredential,
                      StakePools)
 import           Slot (Epoch)
-import           TxData (pattern DeRegKey, pattern RegKey)
+import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
-import           Ledger.Core (dom, (∈), (∉))
+import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 -------------------------------
 -- helper accessor functions --
@@ -98,3 +99,23 @@ credentialRemovedAfterDereg = withTests (fromIntegral numberOfTests) . property 
           && mkRwdAcnt cred ∉ dom (getRewards d')
           && cred ∉ dom (getDelegations d')
         removedDeregCredential (_, _, _) = True
+
+-- |Check that a registered stake credential get correctly delegated when
+-- applying a delegation certificate.
+credentialMappingAfterDelegation :: Property
+credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @DELEG $ fromIntegral traceLen)
+  let
+    n :: Integer
+    n = fromIntegral $ traceLength t
+    tr = sourceSignalTargets t
+
+  when (n > 1) $
+    True === (all delegatedCredential tr)
+
+  where delegatedCredential (_, Delegate (Delegation cred to), d') =
+          let credImage = range ((Set.singleton cred) ◁ (getDelegations d')) in
+             cred ∈ getStDelegs d'
+          && to ∈ credImage
+          && Set.size credImage == 1
+        delegatedCredential (_, _, _) = True
