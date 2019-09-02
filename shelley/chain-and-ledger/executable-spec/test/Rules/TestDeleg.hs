@@ -19,12 +19,12 @@ import           Control.State.Transition.Trace (sourceSignalTargets, traceLengt
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
 import           Coin (Coin)
-import           LedgerState (_delegationState, _delegations, _dstate, _pstate, _retiring, _rewards,
-                     _stKeys, _stPools)
+import           LedgerState (_delegationState, _delegations, _pstate, _retiring, _rewards, _stKeys,
+                     _stPools)
 import           MockTypes (DELEG, DState, KeyHash, LedgerState, RewardAcnt, StakeCredential,
                      StakePools)
 import           Slot (Epoch)
-import           TxData (pattern RegKey)
+import           TxData (pattern DeRegKey, pattern RegKey)
 
 import           Ledger.Core (dom, (∈), (∉))
 
@@ -38,8 +38,8 @@ getStDelegs l = dom $ _stKeys l
 getRewards :: DState -> Map RewardAcnt Coin
 getRewards l = _rewards l
 
-getDelegations :: LedgerState -> Map StakeCredential KeyHash
-getDelegations l = _delegations $ _dstate $ _delegationState l
+getDelegations :: DState -> Map StakeCredential KeyHash
+getDelegations l = _delegations l
 
 getStPools :: LedgerState -> StakePools
 getStPools l = _stPools $ _pstate $ _delegationState l
@@ -79,3 +79,22 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
           (   hk ∈ getStDelegs d'
            && (Maybe.maybe True (== 0) $ Map.lookup (mkRwdAcnt hk) (getRewards d')))
         credNewlyRegisteredAndRewardZero (_, _, _) = True
+
+-- | Check that when a stake credential is deregistered, it will not be in the
+-- rewards mapping or delegation mapping of the target state.
+credentialRemovedAfterDereg :: Property
+credentialRemovedAfterDereg = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @DELEG $ fromIntegral traceLen)
+  let
+    n :: Integer
+    n = fromIntegral $ traceLength t
+    tr = sourceSignalTargets t
+
+  when (n > 1) $
+    True === (all removedDeregCredential tr)
+
+  where removedDeregCredential (_, DeRegKey cred, d') =
+             cred ∉ getStDelegs d'
+          && mkRwdAcnt cred ∉ dom (getRewards d')
+          && cred ∉ dom (getDelegations d')
+        removedDeregCredential (_, _, _) = True
