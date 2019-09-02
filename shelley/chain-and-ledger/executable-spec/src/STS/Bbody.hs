@@ -17,6 +17,7 @@ import qualified Data.Set as Set
 import           BlockChain
 import           EpochBoundary
 import           Keys
+import           Ledger.Core ((∈))
 import           LedgerState
 import           PParams
 import           Slot
@@ -45,6 +46,7 @@ instance
 
   data PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo)
     = WrongBlockBodySizeBBODY
+    | InvalidBodyHashBBODY
     | LedgersFailure (PredicateFailure (LEDGERS hashAlgo dsignAlgo))
     deriving (Show, Eq)
 
@@ -59,16 +61,20 @@ bbodyTransition
      )
   => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo)
 bbodyTransition = do
-  TRC ((oslots, pp), (ls, b), Block (BHeader bhb _) txs'@(TxSeq txs)) <- judgmentContext
+  TRC ( (oslots, pp)
+      , (ls, b)
+      , Block (BHeader bhb _) txsSeq@(TxSeq txs)) <- judgmentContext
   let hk = hashKey $ bvkcold bhb
-  bBodySize txs' == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
 
-  ls' <-
-    trans @(LEDGERS hashAlgo dsignAlgo) $ TRC ((bheaderSlot bhb, pp), ls, txs)
+  bBodySize txsSeq == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
 
-  let b' = incrBlocks (Set.member (bheaderSlot bhb) oslots) hk b
+  bhbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
 
-  pure (ls', b')
+  ls' <- trans @(LEDGERS hashAlgo dsignAlgo)
+         $ TRC ((bheaderSlot bhb, pp), ls, txs)
+
+  pure ( ls'
+       , incrBlocks (bheaderSlot bhb ∈ oslots) hk b)
 
 instance
   ( HashAlgorithm hashAlgo
