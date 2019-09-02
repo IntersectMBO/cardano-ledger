@@ -73,7 +73,7 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    True === (all credNewlyRegisteredAndRewardZero tr)
+    [] === filter (not . credNewlyRegisteredAndRewardZero) tr
 
   where credNewlyRegisteredAndRewardZero (d, RegKey hk, d') =
           (hk ∉ getStDelegs d) ==>
@@ -92,7 +92,7 @@ credentialRemovedAfterDereg = withTests (fromIntegral numberOfTests) . property 
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    True === (all removedDeregCredential tr)
+    [] === filter (not . removedDeregCredential) tr
 
   where removedDeregCredential (_, DeRegKey cred, d') =
              cred ∉ getStDelegs d'
@@ -111,7 +111,7 @@ credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . prop
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    True === (all delegatedCredential tr)
+    [] === filter (not . delegatedCredential) tr
 
   where delegatedCredential (_, Delegate (Delegation cred to), d') =
           let credImage = range ((Set.singleton cred) ◁ (getDelegations d')) in
