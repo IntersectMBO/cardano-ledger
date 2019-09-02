@@ -19,6 +19,9 @@ import           Slot
 import           TxData
 
 import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+
+import           Hedgehog (Gen)
 
 data DELEG hashAlgo dsignAlgo
 
@@ -84,3 +87,9 @@ delegationTransition = do
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
+
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => HasTrace (DELEG hashAlgo dsignAlgo) where
+  envGen _ = undefined :: Gen (Slot, Ptr)
+  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo)
