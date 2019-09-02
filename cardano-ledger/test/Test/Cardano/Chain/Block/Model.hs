@@ -201,6 +201,7 @@ ts_prop_invalidBlocksAreRejected =
             -- errors permutations. So for instance, given abstract errors @X@,
             -- @Y@, and @Z@, we would want to generate all combinations of them.
             Update.Test.coverUpiregFailures 1 pfs
+            Update.Test.coverUpivoteFailures 1 pfs
             pure ()
           (abstractResult, concreteResult) -> do
             footnote "Validation results mismatch."
