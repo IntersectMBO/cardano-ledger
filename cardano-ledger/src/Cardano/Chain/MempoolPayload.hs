@@ -1,6 +1,8 @@
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.MempoolPayload
   ( MempoolPayload
@@ -11,13 +13,13 @@ where
 import Cardano.Prelude
 
 import Cardano.Binary
-  ( DecoderError(..)
+  ( ByteSpan
+  , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
-  , decodeListLen
   , decodeWord8
   , encodeListLen
-  , matchSize
+  , enforceSize
   )
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (ATxAux)
@@ -38,7 +40,7 @@ data AMempoolPayload a
   -- ^ An update proposal payload.
   | MempoolUpdateVotePayload !(Update.AVote a)
   -- ^ An update vote payload.
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
 
 instance ToCBOR MempoolPayload where
   toCBOR (MempoolTxPayload tp) =
@@ -51,9 +53,11 @@ instance ToCBOR MempoolPayload where
     encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR upv
 
 instance FromCBOR MempoolPayload where
+  fromCBOR = void <$> fromCBOR @(AMempoolPayload ByteSpan)
+
+instance FromCBOR (AMempoolPayload ByteSpan) where
   fromCBOR = do
-    len <- decodeListLen
-    matchSize "MempoolPayload" 2 len
+    enforceSize "MempoolPayload" 2
     decodeWord8 >>= \case
       0   -> MempoolTxPayload             <$> fromCBOR
       1   -> MempoolDlgPayload            <$> fromCBOR
