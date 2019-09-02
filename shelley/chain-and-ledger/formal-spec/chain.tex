@@ -1318,10 +1318,11 @@ current slot is not an overlay slot.
   \label{fig:rules:bbody}
 \end{figure}
 
-The BBODY rule has one predicate failure:
+The BBODY rule has two predicate failures:
 \begin{itemize}
 \item if the size of the block body in the header is not equal to the real size
   of the block body, there is a \emph{WrongBlockBodySize} failure.
+\item if the hash of the block body is not also the hash of transactions, there is an \emph{InvalidBodyHash} failure.
 \end{itemize}
 
 \clearpage
