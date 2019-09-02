@@ -10,6 +10,7 @@ import           Data.Map (Map)
 import qualified Data.Map.Strict as Map (lookup)
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
+import qualified Data.Set as Set (singleton, size)
 
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
@@ -19,14 +20,14 @@ import           Control.State.Transition.Trace (sourceSignalTargets, traceLengt
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
 import           Coin (Coin)
-import           LedgerState (_delegationState, _delegations, _dstate, _pstate, _retiring, _rewards,
-                     _stKeys, _stPools)
+import           LedgerState (_delegationState, _delegations, _pstate, _retiring, _rewards, _stKeys,
+                     _stPools)
 import           MockTypes (DELEG, DState, KeyHash, LedgerState, RewardAcnt, StakeCredential,
                      StakePools)
 import           Slot (Epoch)
-import           TxData (pattern RegKey)
+import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
-import           Ledger.Core (dom, (∈), (∉))
+import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 -------------------------------
 -- helper accessor functions --
@@ -38,8 +39,8 @@ getStDelegs l = dom $ _stKeys l
 getRewards :: DState -> Map RewardAcnt Coin
 getRewards l = _rewards l
 
-getDelegations :: LedgerState -> Map StakeCredential KeyHash
-getDelegations l = _delegations $ _dstate $ _delegationState l
+getDelegations :: DState -> Map StakeCredential KeyHash
+getDelegations l = _delegations l
 
 getStPools :: LedgerState -> StakePools
 getStPools l = _stPools $ _pstate $ _delegationState l
@@ -72,10 +73,49 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    True === (all credNewlyRegisteredAndRewardZero tr)
+    [] === filter (not . credNewlyRegisteredAndRewardZero) tr
 
   where credNewlyRegisteredAndRewardZero (d, RegKey hk, d') =
           (hk ∉ getStDelegs d) ==>
           (   hk ∈ getStDelegs d'
            && (Maybe.maybe True (== 0) $ Map.lookup (mkRwdAcnt hk) (getRewards d')))
         credNewlyRegisteredAndRewardZero (_, _, _) = True
+
+-- | Check that when a stake credential is deregistered, it will not be in the
+-- rewards mapping or delegation mapping of the target state.
+credentialRemovedAfterDereg :: Property
+credentialRemovedAfterDereg = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @DELEG $ fromIntegral traceLen)
+  let
+    n :: Integer
+    n = fromIntegral $ traceLength t
+    tr = sourceSignalTargets t
+
+  when (n > 1) $
+    [] === filter (not . removedDeregCredential) tr
+
+  where removedDeregCredential (_, DeRegKey cred, d') =
+             cred ∉ getStDelegs d'
+          && mkRwdAcnt cred ∉ dom (getRewards d')
+          && cred ∉ dom (getDelegations d')
+        removedDeregCredential (_, _, _) = True
+
+-- |Check that a registered stake credential get correctly delegated when
+-- applying a delegation certificate.
+credentialMappingAfterDelegation :: Property
+credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @DELEG $ fromIntegral traceLen)
+  let
+    n :: Integer
+    n = fromIntegral $ traceLength t
+    tr = sourceSignalTargets t
+
+  when (n > 1) $
+    [] === filter (not . delegatedCredential) tr
+
+  where delegatedCredential (_, Delegate (Delegation cred to), d') =
+          let credImage = range ((Set.singleton cred) ◁ (getDelegations d')) in
+             cred ∈ getStDelegs d'
+          && to ∈ credImage
+          && Set.size credImage == 1
+        delegatedCredential (_, _, _) = True

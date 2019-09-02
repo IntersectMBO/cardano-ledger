@@ -50,8 +50,8 @@ import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyDiscriminator (..), Key
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdHK, inputs,
-                     outputs, poolPubKey, txUpdate)
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred,
+                     inputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue)
@@ -215,7 +215,7 @@ scriptsNeeded
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
   `Set.union`
-  Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
   Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) certificates)
   where unTxOut (TxOut a _) = a
