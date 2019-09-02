@@ -17,7 +17,9 @@ module Cardano.Chain.Update.Vote
 
   -- * Vote Constructors
   , mkVote
-  , mkVoteSafe
+  , signVote
+  , signatureForVote
+  , unsafeVote
 
   -- * Vote Accessors
   , proposalId
@@ -102,20 +104,46 @@ mkVote pm sk upId decision = UnsafeVote
   (Annotated upId ())
   (sign pm SignUSVote sk (upId, decision))
 
--- | Same as 'mkVote', but uses 'SafeSigner'
-mkVoteSafe
+
+-- | Create a vote for the given update proposal id, signing it with the
+-- provided safe signer.
+signVote
   :: ProtocolMagicId
-  -> SafeSigner
-  -- ^ The voter
   -> UpId
   -- ^ Proposal which is voted for
   -> Bool
   -- ^ Approval/rejection bit
+  -> SafeSigner
+  -- ^ The voter
   -> Vote
-mkVoteSafe pm sk upId decision = UnsafeVote
-  (safeToVerification sk)
-  (Annotated upId ())
-  (safeSign pm SignUSVote sk (upId, decision))
+signVote protocolMagicId upId decision safeSigner =
+  unsafeVote
+    (safeToVerification safeSigner)
+    upId
+    (signatureForVote protocolMagicId upId decision safeSigner)
+
+
+signatureForVote
+  :: ProtocolMagicId
+  -> UpId
+  -> Bool
+  -> SafeSigner
+  -> Signature (UpId, Bool)
+signatureForVote protocolMagicId upId decision safeSigner =
+  safeSign protocolMagicId SignUSVote safeSigner (upId, decision)
+
+
+-- | Create a vote for the given update proposal id using the provided
+-- signature.
+--
+-- For the meaning of the parameters see 'signVote'.
+unsafeVote
+  :: VerificationKey
+  -> UpId
+  -> Signature (UpId, Bool)
+  -> Vote
+unsafeVote vk upId voteSignature =
+  UnsafeVote vk (Annotated upId ()) voteSignature
 
 
 --------------------------------------------------------------------------------

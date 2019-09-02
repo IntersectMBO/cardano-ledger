@@ -98,6 +98,7 @@ type Proposal = AProposal ()
 
 
 -- | Create an update 'Proposal', signing it with the provided safe signer.
+--
 signProposal :: ProtocolMagicId -> ProposalBody -> SafeSigner -> Proposal
 signProposal protocolMagicId proposalBody safeSigner =
   unsafeProposal
@@ -116,6 +117,7 @@ signatureForProposal protocolMagicId proposalBody safeSigner =
 
 
 -- | Create an update 'Proposal' using the provided signature.
+--
 unsafeProposal :: ProposalBody -> VerificationKey -> Signature ProposalBody -> Proposal
 unsafeProposal b k s = AProposal (Annotated b ()) k s ()
 

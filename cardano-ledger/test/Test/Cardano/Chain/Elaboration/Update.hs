@@ -211,20 +211,50 @@ elaborateVote
   -> Abstract.Vote
   -> Concrete.AVote ()
 elaborateVote protocolMagicId proposalsIdMap abstractVote =
-  Concrete.mkVoteSafe
-    protocolMagicId
-    safeSigner
-    proposalId
-    True
+  Concrete.unsafeVote
+    issuer
+    (elaborateProposalId proposalsIdMap abstractProposalId)
+    voteSignature
   where
-    safeSigner = vKeyToSafeSigner $ Abstract._vCaster abstractVote
-    proposalId =
-      fromMaybe
-        error
-        (Map.lookup abstractProposalId proposalsIdMap)
+    abstractProposalId = Abstract._vPropId abstractVote
+    issuer = elaborateVKey $ Abstract._vCaster abstractVote
+    voteSignature =
+      Concrete.signatureForVote
+        protocolMagicId
+        signedUpId
+        True -- We assume the decision to be always constant
+        safeSigner
+    signedUpId = elaborateProposalId proposalsIdMap
+               $ signatureData
+               $ Abstract._vSig abstractVote
+    safeSigner =
+      vKeyToSafeSigner $ signatureVKey $ Abstract._vSig abstractVote
+
+
+-- | Lookup the proposal id in the map. If the proposal id is not in the map
+-- then return the hash of the abstract proposal id.
+--
+-- The reason why we return the hash of the abstract proposal id if the
+-- proposal id is not in the given map is that when producing invalid abstract
+-- votes, we need to elaborate a non-existing abstract proposal id into a
+-- concrete one. Since we don't return a 'Gen' monad, the only source of
+-- variability we have is the abstract proposal id.
+elaborateProposalId
+  :: Map Abstract.UpId Concrete.UpId
+  -> Abstract.UpId
+  -> Concrete.UpId
+elaborateProposalId proposalsIdMap abstractProposalId  =
+  fromMaybe
+    abstractIdHash
+    (Map.lookup abstractProposalId proposalsIdMap)
       where
-        abstractProposalId = Abstract._vPropId abstractVote
-        error :: Concrete.UpId -- Keeps GHC happy ...
-        error = panic $ "Could not find a concrete proposal id"
-                      <> " that corresponds to an abstract proposal id:"
-                      <> show abstractProposalId
+        -- If we cannot find a concrete proposal id that corresponds with the
+        -- given abstract proposal id, then we return the (coerced) hash of the
+        -- abstract proposal id.
+        --
+        -- NOTE: if the elaborators returned a `Gen a` value, then we could
+        -- return random hashes here.
+        abstractIdHash :: Concrete.UpId -- Keeps GHC happy ...
+        abstractIdHash = coerce $ H.hash id
+          where
+            Abstract.UpId id = abstractProposalId

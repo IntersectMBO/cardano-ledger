@@ -59,13 +59,13 @@ import Cardano.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
   , ShouldGenUTxO(NoGenUTxO)
-  , ShouldGenUpdate(NoGenUpdate)
+  , ShouldGenUpdate(NoGenUpdate, GenUpdate)
   , sigGenChain
   )
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace, SignalGenerator, sigGen)
-import Control.State.Transition (State)
+import Control.State.Transition (State, Environment)
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
   ( Trace
@@ -86,7 +86,7 @@ import Ledger.Delegation
   , _dSEnvSlot
   , randomDCertGen
   )
-import Ledger.Update (tamperWithUpdateProposal, UPIREG)
+import Ledger.Update (tamperWithUpdateProposal, UPIREG, UPIEnv, tamperWithVotes, UPIState)
 import qualified Ledger.Update.Test as Update.Test
 
 import Test.Cardano.Chain.Elaboration.Block
@@ -212,8 +212,7 @@ ts_prop_invalidBlocksAreRejected =
     failureProfile :: [(Int, SignalGenerator CHAIN)]
     failureProfile = [ (1, invalidDelegationGen)
                      , (1, invalidUpdateProposalGen)
-                     -- TODO: coming soon
-                     -- , (1, invalidVotesGen)
+                     , (1, invalidVotesGen)
                      ]
       where
         invalidDelegationGen :: SignalGenerator CHAIN
@@ -240,28 +239,61 @@ ts_prop_invalidBlocksAreRejected =
 
 
         invalidUpdateProposalGen :: SignalGenerator CHAIN
-        invalidUpdateProposalGen env@(_, _, allowedDelegators, _, k) st = do
+        invalidUpdateProposalGen env st = do
           block <- sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
-          let (_slot, _sgs, _h, _utxoSt, delegSt, upiSt) = st
-              numberOfDelegators = Set.size allowedDelegators
-              -- TODO: reduce duplication w.r.t. @Cardano.Spec.Chain.STS.Rule.Chain@ in @cardano-ledger-specs@.
-              ngk
-                | fromIntegral (maxBound :: Word8) < numberOfDelegators =
-                  panic $ "ts_prop_invalidDelegationSignalsAreRejected: "
-                        <> "too many genesis keys: "
-                        <> show numberOfDelegators
-                | otherwise = fromIntegral numberOfDelegators
-              blockSlot = Abstract._bhSlot (Abstract._bHeader block)
-              upiEnv = (blockSlot, _dIStateDelegationMap delegSt, k, ngk)
+          let
+            upiEnv = mkUpiEnv block env st
+            upiSt = mkUpiSt st
           uprop <- sigGen @UPIREG upiEnv upiSt
           tamperedUprop <- tamperWithUpdateProposal upiEnv upiSt uprop
           pure $! Abstract.updateBody
                     block
                     (\body -> body { Abstract._bUpdProp = Just tamperedUprop })
 
-        -- invalidVotesGen :: SignalGenerator CHAIN
-        -- invalidVotesGen = undefined
+        invalidVotesGen :: SignalGenerator CHAIN
+        invalidVotesGen env st = do
+          block <- sigGenChain NoGenDelegation NoGenUTxO GenUpdate env st
+          let
+            blockVotes = Abstract._bUpdVotes (Abstract._bBody block)
+          tamperedVotes <- tamperWithVotes (mkUpiEnv block env st) (mkUpiSt st) blockVotes
+          pure $! Abstract.updateBody
+                    block
+                    (\body -> body { Abstract._bUpdVotes = tamperedVotes })
 
+
+
+-- | Extract the update interface environment from a given block and chain
+-- environment and state.
+--
+-- TODO: this should be in `cardano-ledger-specs`.
+--
+mkUpiEnv
+  :: Abstract.Block
+  -> Environment CHAIN
+  -> State CHAIN
+  -> UPIEnv
+mkUpiEnv block env st = (blockSlot, _dIStateDelegationMap delegSt, k, ngk)
+  where
+    blockSlot = Abstract._bhSlot (Abstract._bHeader block)
+    (_, _, allowedDelegators, _, k) = env
+    (_slot, _sgs, _h, _utxoSt, delegSt, _upiSt) = st
+    numberOfDelegators = Set.size allowedDelegators
+    ngk
+      | fromIntegral (maxBound :: Word8) < numberOfDelegators =
+          panic $ "ts_prop_invalidDelegationSignalsAreRejected: "
+                <> "too many genesis keys: "
+                <> show numberOfDelegators
+      | otherwise = fromIntegral numberOfDelegators
+
+
+-- | Extract the update state from the given chain state.
+--
+-- TODO: put this in `cardano-ledger-specs`.
+--
+mkUpiSt
+  :: State CHAIN
+  -> UPIState
+mkUpiSt (_slot, _sgs, _h, _utxoSt, _delegSt, upiSt) = upiSt
 
 -- | Output resulting from elaborating and validating an abstract trace with
 -- the concrete validators.
