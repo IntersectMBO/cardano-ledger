@@ -267,11 +267,11 @@ delegation map of $l'$.
 \begin{property}[\textbf{Delegated Stake}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
-    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
-    \implies \forall \var{c} \in \DCertDeleg, dpsEnv \vdash\var{dp}
-    \trans{delegs}{c} \var{dp'} \implies \applyFun{cwitness}{c} = \var{hk}\\
-    \implies \var{hk} \in \applyFun{getStDelegs}{l} \wedge
-    (\applyFun{getDelegations}{l'})[hk] = \applyFun{pool}{c}
+    l = (\wcard, (d,\wcard)), l' = (\wcard, (d',\wcard)), dEnv\in\DEnv \\
+    \implies \forall \var{c} \in \DCertDeleg, dEnv \vdash\var{d}
+    \trans{deleg}{c} \var{d'} \implies \applyFun{cwitness}{c} = \var{hk}\\
+    \implies \var{hk} \in \applyFun{getStDelegs}{d'} \wedge
+    (\applyFun{getDelegations}{d'})[hk] = \applyFun{dpool}{c}
   \end{multline*}
   \label{prop:ledger-properties-8}
 \end{property}
