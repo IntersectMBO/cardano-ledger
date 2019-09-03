@@ -63,6 +63,7 @@ import Test.Cardano.Chain.Common.Gen
   , genBlockCount
   , genChainDifficulty
   , genLovelace
+  , genLovelaceError
   , genLovelacePortion
   , genMerkleTree
   , genMerkleRoot
@@ -184,6 +185,13 @@ golden_Lovelace = goldenTestCBOR c "test/golden/cbor/common/Lovelace"
 
 ts_roundTripLovelaceCBOR :: TSProperty
 ts_roundTripLovelaceCBOR = eachOfTS 1000 genLovelace roundTripsCBORBuildable
+
+--------------------------------------------------------------------------------
+-- LovelaceError
+--------------------------------------------------------------------------------
+ts_roundTripLovelaceErrorCBOR :: TSProperty
+ts_roundTripLovelaceErrorCBOR =
+  eachOfTS 1000 genLovelaceError roundTripsCBORBuildable
 
 --------------------------------------------------------------------------------
 -- LovelacePortion

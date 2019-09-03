@@ -16,6 +16,7 @@ module Test.Cardano.Chain.Common.Gen
   , genCompactAddress
   , genCustomLovelace
   , genLovelace
+  , genLovelaceError
   , genLovelaceWithRange
   , genLovelacePortion
   , genMerkleRoot
@@ -47,6 +48,7 @@ import Cardano.Chain.Common
   , ChainDifficulty(..)
   , CompactAddress
   , Lovelace
+  , LovelaceError(..)
   , LovelacePortion(..)
   , MerkleRoot(..)
   , MerkleTree
@@ -129,6 +131,30 @@ genCustomLovelace size = genLovelaceWithRange (Range.linear 0 size)
 
 genLovelace :: Gen Lovelace
 genLovelace = genLovelaceWithRange (Range.constant 0 maxLovelaceVal)
+
+genLovelaceError :: Gen LovelaceError
+genLovelaceError = Gen.choice
+  [ LovelaceOverflow <$> Gen.word64 overflowRange
+  , LovelaceTooLarge <$> Gen.integral tooLargeRange
+  , LovelaceTooSmall <$> Gen.integral tooSmallRange
+  , uncurry LovelaceUnderflow <$> genUnderflowErrorValues
+  ]
+ where
+  overflowRange :: Range Word64
+  overflowRange = Range.constant (maxLovelaceVal + 1) (maxBound :: Word64)
+
+  tooLargeRange :: Range Integer
+  tooLargeRange = Range.constant (fromIntegral (maxLovelaceVal + 1))
+                                 (fromIntegral (maxBound :: Word64))
+
+  tooSmallRange :: Range Integer
+  tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (- 1)
+
+  genUnderflowErrorValues :: Gen (Word64, Word64)
+  genUnderflowErrorValues = do
+    a <- Gen.word64 (Range.constant 0 (maxBound - 1))
+    b <- Gen.word64 (Range.constant a maxBound)
+    pure (a, b)
 
 genLovelaceWithRange :: Range Word64 -> Gen Lovelace
 genLovelaceWithRange r =
