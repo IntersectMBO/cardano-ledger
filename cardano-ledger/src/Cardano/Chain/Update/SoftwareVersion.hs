@@ -23,7 +23,14 @@ import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)
 import qualified Formatting.Buildable as B (Buildable(..))
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
+import Cardano.Binary
+  ( DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeWord8
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Update.ApplicationName
 
 
@@ -55,6 +62,20 @@ instance FromCBOR SoftwareVersion where
 data SoftwareVersionError =
   SoftwareVersionApplicationNameError ApplicationNameError
   deriving (Data, Eq, Show)
+
+instance ToCBOR SoftwareVersionError where
+  toCBOR (SoftwareVersionApplicationNameError applicationNameError) =
+    encodeListLen 2
+      <> toCBOR (0 :: Word8)
+      <> toCBOR applicationNameError
+
+instance FromCBOR SoftwareVersionError where
+  fromCBOR = do
+    enforceSize "SoftwareVersionError" 2
+    tag <- decodeWord8
+    case tag of
+      0 -> SoftwareVersionApplicationNameError <$> fromCBOR
+      _ -> cborError $ DecoderErrorUnknownTag "SoftwareVersionError" tag
 
 instance B.Buildable SoftwareVersionError where
   build = \case
