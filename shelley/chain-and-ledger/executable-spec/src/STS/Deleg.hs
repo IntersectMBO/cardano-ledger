@@ -13,7 +13,7 @@ import           BlockChain (slotsPrior)
 import           Coin (Coin (..))
 import           Delegation.Certificates
 import           Keys
-import           Ledger.Core (dom, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
+import           Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import           LedgerState
 import           Slot
 import           TxData
@@ -37,6 +37,7 @@ instance STS (DELEG hashAlgo dsignAlgo)
     | StakeDelegationImpossibleDELEG
     | WrongCertificateTypeDELEG
     | GenesisKeyNotInpMappingDELEG
+    | DuplicateGenesisDelegateDELEG
     deriving (Show, Eq)
 
   initialRules = [pure emptyDState]
@@ -81,6 +82,7 @@ delegationTransition = do
           (Dms dms_) = _dms ds
 
       gkey ∈ dom dms_ ?! GenesisKeyNotInpMappingDELEG
+      vk ∉ range dms_ ?! DuplicateGenesisDelegateDELEG
       pure $ ds
         { _fdms = _fdms ds ⨃ [((s', gkey), vk)]}
 
