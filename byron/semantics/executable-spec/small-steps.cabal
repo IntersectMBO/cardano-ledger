@@ -23,8 +23,10 @@ flag development
 
 library
   exposed-modules:     Control.State.Transition
+                     , Control.State.Transition.Invalid.Trace
                      , Control.State.Transition.Generator
                      , Control.State.Transition.Trace
+                     , Hedgehog.Extra.Manual
                      , Data.AbstractSize
   -- other-modules:
   -- other-extensions:
@@ -32,6 +34,7 @@ library
                      , containers
                      , cryptonite
                      , free
+                     , goblins
                      , hedgehog >= 1.0
                      , tasty-hunit
                      , lens

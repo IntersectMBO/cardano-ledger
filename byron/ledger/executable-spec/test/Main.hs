@@ -13,7 +13,6 @@ import           Ledger.AbstractSize.Properties (testTxHasTypeReps)
 import qualified Ledger.Core.Generators.Properties as CoreGen
 import           Ledger.Delegation.Examples (deleg)
 import qualified Ledger.Delegation.Properties as DELEG
-import           Ledger.Pvbump.Properties (beginningsNoUpdate, emptyPVUpdate, firstProposal)
 import           Ledger.Relation.Properties (testRelation)
 import           Ledger.Update.Examples (upiendExamples)
 import qualified Ledger.Update.Properties as UPDATE
@@ -38,12 +37,7 @@ main = defaultMain tests
       , testProperty "Duplicated certificates are rejected" DELEG.rejectDupSchedDelegs
       , testProperty "Traces are classified"                DELEG.tracesAreClassified
       , testProperty "Only valid DBLOCK signals are generated" DELEG.onlyValidSignalsAreGenerated
-      ]
-    , testGroup
-      "PVBUMP properties"
-      [ testProperty "Same state for no updates"         emptyPVUpdate
-      , testProperty "Same state for early on in chain"  beginningsNoUpdate
-      , testProperty "State determined by first proposal" firstProposal
+      , testProperty "Invalid signals are generated when requested" DELEG.invalidSignalsAreGenerated
       ]
     , testGroup
       "UTxO properties"
@@ -62,6 +56,8 @@ main = defaultMain tests
       , testProperty "Only valid UPIREG signals are generated" UPDATE.onlyValidSignalsAreGenerated
       , testProperty "Only valid UBLOCK signals are generated" UPDATE.ublockOnlyValidSignalsAreGenerated
       , testProperty "Relevant UBLOCK traces are covered" UPDATE.ublockRelevantTracesAreCovered
+      , testProperty "Invalid registrations are generated when requested" UPDATE.invalidRegistrationsAreGenerated
+      , testProperty "Invalid signals are generated when requested" UPDATE.invalidSignalsAreGenerated
       ]
     -- TODO move this out of here (these are not properties of the transition
     -- systems) and also move the Relation class and instances out of Ledger.Core

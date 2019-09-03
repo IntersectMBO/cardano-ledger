@@ -25,7 +25,6 @@ module Tx
   , MultiSignatureScript
   , validateScript
   , hashScript
-  , txwitsVKey
   , txwitsScript
   , extractKeyHash
   , extractScriptHash
@@ -33,7 +32,7 @@ module Tx
 where
 
 
-import           Keys (KeyHash, Sig, VKey, hashKey)
+import           Keys (AnyKeyHash, undiscriminateKeyHash)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 
@@ -50,7 +49,8 @@ import qualified Data.Set as Set
 
 import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
                      TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs,
-                     inputs, outputs, ttl, txUpdate, txfee, wdrls, witnessMSigMap, witnessVKeySet)
+                     inputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap,
+                     witnessVKeySet)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -63,7 +63,7 @@ class (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, ToCBOR a) =>
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript
   :: MultiSig hashAlgo dsignAlgo
-  -> Set (KeyHash hashAlgo dsignAlgo)
+  -> Set (AnyKeyHash hashAlgo dsignAlgo)
   -> Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -82,7 +82,7 @@ validateNativeMultiSigScript
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig vhks
   where witsSet = _witnessVKeySet tx
-        vhks    = Set.map (\(WitVKey vk _) -> hashKey vk) witsSet
+        vhks    = Set.map witKeyHash witsSet
 
 -- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
 -- front and then calling the script CBOR function.
@@ -105,14 +105,6 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
   validateScript = validateNativeMultiSigScript
   hashScript = hashNativeMultiSigScript
 
--- | Witness accessor function for Transactions
-txwitsVKey
-  :: (DSIGNAlgorithm dsignAlgo)
-  => Tx hashAlgo dsignAlgo
-  -> Map.Map (VKey dsignAlgo) (Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
-txwitsVKey tx =
-  Map.fromList $ map (\(WitVKey vk sig) -> (vk, sig)) (Set.toList $ _witnessVKeySet tx)
-
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript
   :: Tx hashAlgo dsignAlgo
@@ -121,10 +113,11 @@ txwitsScript = _witnessMSigMap
 
 extractKeyHash
   :: [StakeCredential hashAlgo dsignAlgo]
-  -> [KeyHash hashAlgo dsignAlgo]
+  -> [AnyKeyHash hashAlgo dsignAlgo]
 extractKeyHash =
   mapMaybe (\case
-                KeyHashObj hk -> Just hk
+                KeyHashObj hk -> Just $ undiscriminateKeyHash hk
+                GenesisHashObj hk -> Just $ undiscriminateKeyHash hk
                 _ -> Nothing)
 
 extractScriptHash

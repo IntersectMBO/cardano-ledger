@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -23,7 +24,7 @@ module Ledger.Delegation
   , dwho
   , mkDCert
   , signature
-    -- * Delegation activation
+  -- * Delegation activation
   , ADELEG
   , ADELEGS
   , DSEnv
@@ -47,8 +48,8 @@ module Ledger.Delegation
   , _dIStateLastDelegation
   , _dIStateScheduledDelegations
   , _dIStateKeyEpochDelegations
-  , PredicateFailure(SDelegSFailure, SDelegFailure, IsAlreadyScheduled)
   , liveAfter
+  , EpochDiff(..)
   -- * State lens fields
   , slot
   , epoch
@@ -61,6 +62,8 @@ module Ledger.Delegation
   , dcertGen
   , dcertsGen
   , initialEnvFromGenesisKeys
+  , randomDCertGen
+  , goblinGensDELEG
   -- * Functions on delegation state
   , delegatorOf
   -- * Support Functions for delegation properties
@@ -76,6 +79,14 @@ module Ledger.Delegation
   , repeatedDelegationsRatio
   , maxRepeatedDelegations
   , maxCertsPerBlock
+  -- * Predicate failures
+  , PredicateFailure
+      ( IsNotGenesisKey, EpochInThePast, EpochPastNextEpoch
+      , HasAlreadyDelegated, IsAlreadyScheduled, DoesNotVerify
+      , ADelegSFailure, ADelegFailure, SDelegSFailure, SDelegFailure
+      , S_BeforeExistingDelegation, S_NoLastDelegation
+      , S_AfterExistingDelegation, S_AlreadyADelegateOf
+      )
   )
 where
 
@@ -84,6 +95,7 @@ import           Control.Lens (Lens', lens, makeFields, to, (%~), (&), (.~), (<>
 import           Data.AbstractSize
 import           Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
+import           Data.Data (Data, Typeable)
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import qualified Data.List as List
@@ -97,20 +109,26 @@ import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Range (linear)
+import qualified Hedgehog.Range as Range
 
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, genTrace,
+                     sigGen, tinkerWithSigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
-import           Ledger.Core (BlockCount, Epoch, HasHash, Hash (Hash), Owner (Owner), Sig,
+import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, mkVkGenesisSet, owner, range, signWithGenesisKey, unBlockCount,
-                     (∈), (∉), (⨃))
+                     addSlot, hash, mkVkGenesisSet, owner, range, unBlockCount, (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
+import           Ledger.Core.Omniscient (signWithGenesisKey)
+
+import           Ledger.Util (mkGoblinGens)
+import           Test.Goblin (AddShrinks (..), Goblin (..), GoblinData, SeedGoblin (..),
+                     mkEmptyGoblin)
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
 --------------------------------------------------------------------------------
@@ -127,7 +145,7 @@ data DCert = DCert
   , depoch :: Epoch
     -- | Witness for the delegation certificate
   , signature :: Sig (VKey, Epoch)
-  } deriving (Show, Eq, Ord, Generic, Hashable)
+  } deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable)
 
 instance HasTypeReps DCert
 
@@ -237,16 +255,19 @@ dIStateDState = lens
 --------------------------------------------------------------------------------
 
 -- | Delegation scheduling rules
-data SDELEG
+data SDELEG deriving (Data, Typeable)
 
 data EpochDiff = EpochDiff { currentEpoch :: Epoch, certEpoch :: Epoch }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Data, Typeable)
 
 instance STS SDELEG where
   type State SDELEG = DSState
   type Signal SDELEG = DCert
   type Environment SDELEG = DSEnv
 
+  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
+  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
+  --   `False` cases.
   data PredicateFailure SDELEG
     = IsNotGenesisKey
     | EpochInThePast EpochDiff
@@ -254,7 +275,7 @@ instance STS SDELEG where
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ return DSState
                    { _dSStateScheduledDelegations = []
@@ -310,23 +331,23 @@ liveAfter :: BlockCount -> SlotCount
 liveAfter bc = SlotCount $ 2 * unBlockCount bc
 
 -- | Delegation rules
-data ADELEG
+data ADELEG deriving (Data, Typeable)
 
 instance STS ADELEG where
   type State ADELEG = DState
   type Signal ADELEG = (Slot, (VKeyGenesis, VKey))
   type Environment ADELEG = Set VKeyGenesis
 
+  -- | None of these `PredicateFailure`s are actually "throwable". The
+  --   disjuction of the rules' preconditions is `True`, which means that one of
+  --   them will pass. The `PredicateFailure` just act as switches to direct
+  --   control flow to the successful one.
   data PredicateFailure ADELEG
-    = BeforeExistingDelegation
-      -- | Not actually a failure; this should just trigger the other rule.
-    | NoLastDelegation
-      -- | Not a failure; this should just pass the other rule
-    | AfterExistingDelegation
-    -- | The given key is a delegate of the given genesis key.
-    | AlreadyADelegateOf VKey VKeyGenesis
-
-    deriving (Eq, Show)
+    = S_BeforeExistingDelegation
+    | S_NoLastDelegation
+    | S_AfterExistingDelegation
+    | S_AlreadyADelegateOf VKey VKeyGenesis
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [
     do
@@ -347,11 +368,11 @@ instance STS ADELEG where
                      }
             , (s, (vks, vkd))
             ) <- judgmentContext
-        vkd ∉ range dms ?! AlreadyADelegateOf vkd (dms !> vkd)
+        vkd ∉ range dms ?! S_AlreadyADelegateOf vkd (dms !> vkd)
         case Map.lookup vks dws of
           Nothing -> pure () -- If vks hasn't delegated, then we proceed and
                              -- update the @ADELEG@ state.
-          Just sp -> sp < s ?! BeforeExistingDelegation
+          Just sp -> sp < s ?! S_BeforeExistingDelegation
         return $!
           DState { _dStateDelegationMap = dms ⨃ [(vks, vkd)]
                  , _dStateLastDelegation = dws ⨃ [(vks, s)]
@@ -367,14 +388,14 @@ instance STS ADELEG where
           then return st
           else do
             case Map.lookup vks dws of
-              Just sp -> sp >= s ?! AfterExistingDelegation
+              Just sp -> sp >= s ?! S_AfterExistingDelegation
               Nothing -> error $  "This can't happen since otherwise "
                                ++ "the previous rule would have been triggered."
             return st
     ]
 
 -- | Delegation scheduling sequencing
-data SDELEGS
+data SDELEGS deriving (Data, Typeable)
 
 instance STS SDELEGS where
   type State SDELEGS = DSState
@@ -383,7 +404,7 @@ instance STS SDELEGS where
 
   data PredicateFailure SDELEGS
     = SDelegFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -404,7 +425,7 @@ instance Embed SDELEG SDELEGS where
   wrapFailed = SDelegFailure
 
 -- | Delegation rules sequencing
-data ADELEGS
+data ADELEGS deriving (Data, Typeable)
 
 instance STS ADELEGS where
   type State ADELEGS = DState
@@ -413,7 +434,7 @@ instance STS ADELEGS where
 
   data PredicateFailure ADELEGS
     = ADelegFailure (PredicateFailure ADELEG)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -434,7 +455,7 @@ instance Embed ADELEG ADELEGS where
   wrapFailed = ADelegFailure
 
 -- | Delegation interface
-data DELEG
+data DELEG deriving (Data, Typeable)
 
 instance STS DELEG where
   type State DELEG = DIState
@@ -444,13 +465,13 @@ instance STS DELEG where
   data PredicateFailure DELEG
     = SDelegSFailure (PredicateFailure SDELEGS)
     | ADelegSFailure (PredicateFailure ADELEGS)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = [ do
                      IRC env <- judgmentContext
                      initADelegsState <- trans @ADELEGS $ IRC (env ^. allowedDelegators)
                      initSDelegsState <- trans @SDELEGS $ IRC env
-                     return DIState
+                     pure $! DIState
                        { _dIStateDelegationMap  = initADelegsState ^. delegationMap
                        , _dIStateLastDelegation = initADelegsState ^. lastDelegation
                        , _dIStateScheduledDelegations = initSDelegsState ^. scheduledDelegations
@@ -524,8 +545,28 @@ dcertsGen env st =
           , _dSStateKeyEpochDelegations = _dIStateKeyEpochDelegations st
           }
 
+
+-- | Generate a random delegation certificate, which has a high probability of failing since
+-- we do not consider the current delegation state. So for instance, we could generate a
+-- delegation certificate for a genesis key that already delegated in this epoch.
+--
+randomDCertGen :: Environment DELEG -> Gen DCert
+randomDCertGen env = do
+  (vkg, vk, e) <- (,,) <$> vkgGen' <*> vkGen' <*> epochGen'
+  pure $! mkDCert vkg (signWithGenesisKey vkg (vk, e)) vk e
+  where
+    vkgGen' = Gen.element $ Set.toList allowed
+    allowed = _dSEnvAllowedDelegators env
+    vkGen' = Gen.element $ VKey . Owner <$> [0 .. (2 * fromIntegral (length allowed))]
+    epochGen' =  Epoch
+              .  fromIntegral -- We don't care about underflow. We want to generate large epochs anyway.
+              .  (fromIntegral n +)
+             <$> Gen.integral (Range.constant (-2 :: Int) 2)
+      where Epoch n = _dSEnvEpoch env
+
+
 -- | Dummy transition system needed for generating sequences of delegation certificates.
-data MSDELEG
+data MSDELEG deriving (Data, Typeable)
 
 instance STS MSDELEG where
 
@@ -534,7 +575,7 @@ instance STS MSDELEG where
   type Signal MSDELEG = Maybe DCert
 
   data PredicateFailure MSDELEG = SDELEGFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
 
@@ -553,18 +594,18 @@ instance HasTrace MSDELEG where
 
   envGen = delegEnvGen
 
-  sigGen _ env st = dcertGen env (_dSStateKeyEpochDelegations st)
+  sigGen env st = dcertGen env (_dSStateKeyEpochDelegations st)
 
 
 instance HasTrace DELEG where
 
   envGen = delegEnvGen
 
-  sigGen _ = dcertsGen
+  sigGen = dcertsGen
 
 delegEnvGen :: Word64 -> Gen DSEnv
 delegEnvGen chainLength = do
-  ngk <- Gen.integral (linear 1 14)
+  ngk <- Gen.integral (Range.linear 1 14)
   initialEnvFromGenesisKeys ngk chainLength
 
 -- | Generate an initial 'DELEG' environment from the given number of genesis
@@ -714,3 +755,38 @@ maxCertsPerBlock groupedCerts
   = case groupedCerts of
       [] -> 0
       _  -> List.maximum (length <$> groupedCerts)
+
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''DCert
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''DCert
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''DSEnv
+deriveSeedGoblin ''DIState
+
+
+--------------------------------------------------------------------------------
+-- GoblinData & goblin-tinkered SignalGenerators
+--------------------------------------------------------------------------------
+
+mkGoblinGens
+  "DELEG"
+  [ "SDelegSFailure_SDelegFailure_EpochInThePast"
+  , "SDelegSFailure_SDelegFailure_EpochPastNextEpoch"
+  , "SDelegSFailure_SDelegFailure_IsAlreadyScheduled"
+  , "SDelegSFailure_SDelegFailure_IsNotGenesisKey"
+  ]

@@ -1,6 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module TxData
   where
@@ -12,6 +17,8 @@ import           Lens.Micro.TH (makeLenses)
 
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Ord (comparing)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
@@ -20,7 +27,9 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KeyHash (..), Sig, VKey, VKeyGenesis)
+import           Keys (AnyKeyHash, pattern AnyKeyHash, DSIGNAlgorithm, GenKeyHash, Hash,
+                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, hashAnyKey)
+import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
 import           Updates (Update)
 
@@ -28,29 +37,30 @@ import           Updates (Update)
 data Delegation hashAlgo dsignAlgo = Delegation
   { _delegator :: Credential hashAlgo dsignAlgo
   , _delegatee :: KeyHash hashAlgo dsignAlgo
-  } deriving (Show, Eq, Ord)
+  } deriving (Eq, Show)
 
 -- |A stake pool.
 data PoolParams hashAlgo dsignAlgo =
   PoolParams
-    { _poolPubKey  :: VKey dsignAlgo
+    { _poolPubKey  :: KeyHash hashAlgo dsignAlgo
     , _poolVrf     :: KeyHash hashAlgo dsignAlgo
     , _poolPledge  :: Coin
     , _poolCost    :: Coin
     , _poolMargin  :: UnitInterval
     , _poolRAcnt   :: RewardAcnt hashAlgo dsignAlgo
     , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq)
 
--- |An account based address for a rewards
+-- |An account based address for rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
-  { getRwdHK :: Credential hashAlgo signAlgo
+  { getRwdCred :: StakeCredential hashAlgo signAlgo
   } deriving (Show, Eq, Ord)
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential hashAlgo dsignAlgo =
     ScriptHashObj { _validatorHash :: ScriptHash hashAlgo dsignAlgo }
   | KeyHashObj    { _vkeyHash      :: KeyHash hashAlgo dsignAlgo }
+  | GenesisHashObj { _genKeyHash   :: GenKeyHash hashAlgo dsignAlgo }
     deriving (Show, Eq, Ord)
 
 -- |An address for UTxO.
@@ -62,7 +72,8 @@ data Addr hashAlgo dsignAlgo
   | AddrEnterprise
     { _enterprisePayment :: Credential hashAlgo dsignAlgo }
   | AddrPtr
-      { _stakePtr :: Ptr
+      { _paymentObjP :: Credential hashAlgo dsignAlgo
+      , _stakePtr :: Ptr
       }
   deriving (Show, Eq, Ord)
 
@@ -91,7 +102,7 @@ data Ptr
 data MultiSig hashAlgo dsignAlgo =
        -- | Require the redeeming transaction be witnessed by the spending key
        --   corresponding to the given verification key hash.
-       RequireSignature   (KeyHash hashAlgo dsignAlgo)
+       RequireSignature   (AnyKeyHash hashAlgo dsignAlgo)
 
        -- | Require all the sub-terms to be satisfied.
      | RequireAllOf      [MultiSig hashAlgo dsignAlgo]
@@ -139,8 +150,8 @@ data DCert hashAlgo dsignAlgo
     -- | A stake delegation certificate.
   | Delegate (Delegation hashAlgo dsignAlgo)
     -- | Genesis key delegation certificate
-  | GenesisDelegate (VKeyGenesis dsignAlgo, VKey dsignAlgo)
-  deriving (Show, Eq, Ord)
+  | GenesisDelegate (GenKeyHash hashAlgo dsignAlgo, KeyHash hashAlgo dsignAlgo)
+  deriving (Show, Eq)
 
 -- |A raw transaction
 data TxBody hashAlgo dsignAlgo
@@ -151,13 +162,24 @@ data TxBody hashAlgo dsignAlgo
       , _wdrls    :: Wdrl hashAlgo dsignAlgo
       , _txfee    :: Coin
       , _ttl      :: Slot
-      , _txUpdate :: Update dsignAlgo
-      } deriving (Show, Eq, Ord)
+      , _txUpdate :: Update hashAlgo dsignAlgo
+      } deriving (Show, Eq)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey hashAlgo dsignAlgo
   = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
-  deriving (Show, Eq, Ord)
+  | WitGVKey (VKeyGenesis dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
+  deriving (Show, Eq)
+
+witKeyHash
+  :: forall hashAlgo dsignAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
+  => WitVKey hashAlgo dsignAlgo -> AnyKeyHash hashAlgo dsignAlgo
+witKeyHash (WitVKey key _) = hashAnyKey key
+witKeyHash (WitGVKey key _) = hashAnyKey key
+
+instance forall hashAlgo dsignAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
+  => Ord (WitVKey hashAlgo dsignAlgo) where
+    compare = comparing witKeyHash
 
 -- |A fully formed transaction.
 data Tx hashAlgo dsignAlgo
@@ -166,7 +188,7 @@ data Tx hashAlgo dsignAlgo
       , _witnessVKeySet :: !(Set (WitVKey hashAlgo dsignAlgo))
       , _witnessMSigMap ::
           Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
-      } deriving (Show, Eq, Ord)
+      } deriving (Show, Eq)
 
 newtype StakeKeys hashAlgo dsignAlgo =
   StakeKeys (Map (StakeCredential hashAlgo dsignAlgo) Slot)
@@ -241,6 +263,10 @@ instance
     encodeListLen 2
       <> toCBOR vk
       <> toCBOR sig
+  toCBOR (WitGVKey vk sig) =
+    encodeListLen 2
+      <> toCBOR vk
+      <> toCBOR sig
 
 
 instance
@@ -285,7 +311,7 @@ instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
     ctor <- decodeWord
     case ctor of
       0 -> do
-       hk <- KeyHash <$> fromCBOR
+       hk <- AnyKeyHash <$> fromCBOR
        pure $ RequireSignature hk
       1 -> do
         msigs <- fromCBOR
@@ -310,6 +336,10 @@ instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
       encodeListLen 2
       <> toCBOR (1 :: Word8)
       <> toCBOR kh
+    GenesisHashObj kh ->
+      encodeListLen 2
+      <> toCBOR (2 :: Word8)
+      <> toCBOR kh
 
 instance
   (Typeable dsignAlgo, HashAlgorithm hashAlgo)
@@ -325,9 +355,10 @@ instance
       encodeListLen 2
         <> toCBOR (1 :: Word8)
         <> toCBOR pay
-    AddrPtr stakePtr ->
-      encodeListLen 2
+    AddrPtr pay stakePtr ->
+      encodeListLen 3
         <> toCBOR (2 :: Word8)
+        <> toCBOR pay
         <> toCBOR stakePtr
 
 instance ToCBOR Ptr where
@@ -363,7 +394,37 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => ToCBOR (RewardAcnt hashAlgo dsignAlgo) where
   toCBOR rwdAcnt =
     encodeListLen 1
-      <> toCBOR (getRwdHK rwdAcnt)
+      <> toCBOR (getRwdCred rwdAcnt)
+
+instance Relation (StakeKeys hashAlgo dsignAlgo) where
+  type Domain (StakeKeys hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo
+  type Range (StakeKeys hashAlgo dsignAlgo)  = Slot
+
+  singleton k v = StakeKeys $ Map.singleton k v
+
+  dom (StakeKeys stKeys) = dom stKeys
+
+  range (StakeKeys stKeys) = range stKeys
+
+  s ◁ (StakeKeys stKeys) = StakeKeys $ s ◁ stKeys
+
+  s ⋪ (StakeKeys stKeys) = StakeKeys $ s ⋪ stKeys
+
+  (StakeKeys stKeys) ▷ s = StakeKeys $ stKeys ▷ s
+
+  (StakeKeys stKeys) ⋫ s = StakeKeys $ stKeys ⋫ s
+
+  (StakeKeys a) ∪ (StakeKeys b) = StakeKeys $ a ∪ b
+
+  (StakeKeys a) ⨃ b = StakeKeys $ a ⨃ b
+
+  vmax <=◁ (StakeKeys stKeys) = StakeKeys $ vmax <=◁ stKeys
+
+  (StakeKeys stKeys) ▷<= vmax = StakeKeys $ stKeys ▷<= vmax
+
+  (StakeKeys stKeys) ▷>= vmin = StakeKeys $ stKeys ▷>= vmin
+
+  size (StakeKeys stKeys) = size stKeys
 
 -- Lenses
 

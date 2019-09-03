@@ -1,36 +1,43 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Ledger.UTxO where
 
 import           Data.AbstractSize (HasTypeReps, abstractSize)
-import           Data.Hashable     (Hashable)
-import qualified Data.Hashable     as H
-import           Data.Map.Strict   (Map)
-import qualified Data.Map.Strict   as Map
-import           Data.Maybe        (fromMaybe)
-import           Data.Typeable     (typeOf)
-import           GHC.Generics      (Generic)
-import           Numeric.Natural   (Natural)
+import           Data.Data (Data, Typeable)
+import           Data.Hashable (Hashable)
+import qualified Data.Hashable as H
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
+import           Data.Typeable (typeOf)
+import           GHC.Generics (Generic)
+import           Numeric.Natural (Natural)
 
-import           Ledger.Core       hiding ((<|))
-import           Ledger.Update     (PParams (PParams), _factorA, _factorB)
+import           Ledger.Core hiding ((<|))
+import           Ledger.Update (PParams (PParams), _factorA, _factorB)
+
+import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable)
   deriving anyclass (HasTypeReps)
 
@@ -38,17 +45,17 @@ newtype TxId = TxId { getTxId :: Hash }
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
 data TxIn = TxIn TxId Natural
-  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps)
+  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
 
 -- |The output of a UTxO.
 data TxOut = TxOut { addr  :: Addr
                    , value :: Lovelace
-                   } deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps)
+                   } deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
 
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO
   { unUTxO :: Map TxIn TxOut
-  } deriving stock (Show)
+  } deriving stock (Show, Data, Typeable)
     deriving newtype (Eq, Relation)
 
 addValue :: TxOut -> Lovelace -> TxOut
@@ -63,7 +70,7 @@ fromTxOuts = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
 data Tx = Tx
   { inputs  :: [TxIn]
   , outputs :: [TxOut]
-  } deriving (Eq, Show, Ord, Generic, Hashable, HasTypeReps)
+  } deriving (Eq, Show, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
 
 txid :: Tx -> TxId
 txid = TxId . hash
@@ -111,7 +118,7 @@ txsize = abstractSize costs
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey (Sig Tx)
-  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps)
+  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
 
 -- |A fully formed transaction.
 --
@@ -119,7 +126,7 @@ data Wit = Wit VKey (Sig Tx)
 data TxWits = TxWits
   { body      :: Tx
   , witnesses :: [Wit]
-  } deriving (Show, Eq, Generic, Hashable, HasTypeReps)
+  } deriving (Show, Eq, Generic, Hashable, HasTypeReps, Data, Typeable)
 
 instance HasHash [TxWits] where
   hash = Hash . H.hash
@@ -143,3 +150,37 @@ makeTxWits (UTxO utxo) tx = TxWits
     in KeyPair (SKey o) (VKey o)
   keys = getKey <$> inputs tx
   wits = makeWitness <$> keys <*> pure tx
+
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''Tx
+deriveGoblin ''TxId
+deriveGoblin ''TxIn
+deriveGoblin ''TxOut
+deriveGoblin ''TxWits
+deriveGoblin ''Wit
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''Tx
+deriveAddShrinks ''TxId
+deriveAddShrinks ''TxIn
+deriveAddShrinks ''TxOut
+deriveAddShrinks ''TxWits
+deriveAddShrinks ''Wit
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''UTxO
+deriveSeedGoblin ''TxId
+deriveSeedGoblin ''TxIn
+deriveSeedGoblin ''TxOut

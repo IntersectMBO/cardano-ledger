@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -7,6 +8,7 @@ import           Control.Arrow ((|||))
 import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
+import           Data.Data (Data, Typeable)
 import           Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
 import           Data.Word (Word8)
@@ -19,7 +21,7 @@ import           Control.State.Transition
 import           Ledger.Core hiding ((|>))
 import           Ledger.Update hiding (NotADelegate)
 
-data SIGCNT
+data SIGCNT deriving (Data, Typeable)
 
 instance STS SIGCNT where
   type Environment SIGCNT
@@ -32,12 +34,13 @@ instance STS SIGCNT where
 
   type Signal SIGCNT = VKey
 
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure SIGCNT
-    = TooManyIssuedBlocks VKeyGenesis -- The given genesis key issued too many blocks.
+    = TooManyIssuedBlocks VKeyGenesis
+    -- ^ The given genesis key issued too many blocks.
     | NotADelegate
     -- ^ The key signing the block is not a delegate of a genesis key.
-
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
 

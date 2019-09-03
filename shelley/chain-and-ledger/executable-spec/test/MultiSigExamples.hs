@@ -21,11 +21,11 @@ import qualified Data.Set as Set (fromList)
 
 import           Coin
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
-import           Keys (pattern Dms)
+import           Keys (pattern Dms, undiscriminateKeyHash)
 import           LedgerState (genesisId, genesisState, _utxoState)
 import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody, TxId,
                      TxIn, UTXOW, UTxOState, Wdrl)
-import           PParams (emptyPParams)
+import           PParams (PParams (..), emptyPParams)
 import           Slot (Slot (..))
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
@@ -41,7 +41,7 @@ import           Examples (aliceAddr, alicePay, bobAddr, bobPay, carlAddr, daria
 
 -- Multi-signature scripts
 singleKeyOnly :: Addr -> MultiSig
-singleKeyOnly (AddrBase (KeyHashObj pk) _ ) = RequireSignature pk
+singleKeyOnly (AddrBase (KeyHashObj pk) _ ) = RequireSignature $ undiscriminateKeyHash pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: MultiSig
@@ -105,6 +105,9 @@ genesis = genesisState
            [ TxOut aliceAddr aliceInitCoin
            , TxOut bobAddr bobInitCoin]
 
+initPParams :: PParams
+initPParams = emptyPParams {_maxTxSize = 1000}
+
 -- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob
 -- 'bobInitCoin' to spend. Then create and apply a transaction which, if
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
@@ -125,7 +128,7 @@ initialUTxOState aliceKeep msigs =
                   [alicePay, bobPay]
                   Map.empty in
   (txid $ _body tx, applySTS @UTXOW (TRC( (Slot 0
-                                           , emptyPParams
+                                           , initPParams
                                            , StakeKeys Map.empty
                                            , StakePools Map.empty
                                            , Dms Map.empty)
@@ -150,7 +153,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
         utxoSt = case initUtxo of
                    Right utxoSt'' -> utxoSt''
-                   _                      -> error ("must fail test before"
+                   _                      -> error ("must fail test before: "
                                                    ++ show initUtxo)
         txbody = makeTxBody inputs [(aliceAddr, aliceInitCoin + bobInitCoin + sum wdrl)] wdrl
         inputs = [TxIn txId (fromIntegral n) | n <-
@@ -161,7 +164,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
               signers
               (Map.fromList $ map (\scr -> (hashScript scr, scr)) unlockScripts)
         utxoSt' = applySTS @UTXOW (TRC( (Slot 0
-                                        , emptyPParams
+                                        , initPParams
                                         , StakeKeys Map.empty
                                         , StakePools Map.empty
                                         , Dms Map.empty)

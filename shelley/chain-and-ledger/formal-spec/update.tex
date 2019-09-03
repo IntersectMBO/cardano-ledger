@@ -113,16 +113,16 @@ genesis keys).
   the existing proposals using a right override. That is, if a genesis key
   has previously submitted an update proposal, replace it with its new
   proposal in $\var{pup}$. This rule has the following predicate failures:
-
+  
   \begin{enumerate}
   \item In the case of \var{slot} being smaller than
     $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
-    a \em{PPUpdateTooEarly} failure.
+    a \emph{PPUpdateTooEarly} failure.
   \item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
-    \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
+    \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
     can be used in the protocol parameter update.
   \item If a protocol parameter update in \var{pup} cannot follow the current
-    protocol paramter, there is a \em{PVCannotFollow} failure.
+    protocol parameter, there is a \emph{PVCannotFollow} failure.
   \end{enumerate}
 \end{itemize}
 
@@ -140,7 +140,8 @@ Section \ref{sec:chain}.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -165,6 +166,7 @@ Section \ref{sec:chain}.
     {
       \begin{array}{l}
         \var{slot}\\
+        \var{pp}\\
         \var{dms}\\
       \end{array}
       \vdash \var{pup_s}\trans{ppup}{pup}\var{pup_s}
@@ -180,13 +182,15 @@ Section \ref{sec:chain}.
       &
       \dom{pup}\subseteq\dom{dms}
       \\
-      \var{ppv}\mapsto\var{v}\in\var{pup}\implies\fun{pvCanFollow}~(\fun{ppv}~\var{pup_s})~\var{v}
+      \forall\var{ps}\in\range{pup},~
+        \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
       \\
       \var{slot} < \firstSlot{((\epoch{slot}) + 1) - \SlotsPrior}
     }
     {
       \begin{array}{l}
         \var{slot}\\
+        \var{pp}\\
         \var{dms}\\
       \end{array}
       \vdash
@@ -237,26 +241,33 @@ This helper function will be used in the ledger update.
   \end{align*}
 
   \begin{align*}
-      & \fun{validAV} \in \ApName \to \ApVer \to \Metadata \to \Applications \to \Bool\\
-      & \fun{validAV}~\var{an}~\var{av}~\var{md}~\var{avs} = \\
-      & ~~~~\fun{apNameValid}~\var{an}
-        ~\land~\fun{svCanFollow}~\var{avs}~(\var{an},~\var{av})
-        ~\land~\forall\var{st}\in\dom{md},~\fun{sTagValid}~\var{st}
+      & \fun{maxVer} \in \ApName \to \Applications \to (\Slot\mapsto\Applications)
+        \to (\ApVer, \Metadata)\\
+      & \fun{maxVer}~\var{an}~\var{avs}~\var{avs} = \\
+      & ~~~~\fun{max_{first}} \Bigg(
+        \Big\{(0, \emptyset)\Big\}
+        \cup
+        \range{avs}
+        \cup
+        \bigcup_{\var{fav}\in\var{favs}}
+        \range{favs}
+        \Bigg)
+  \end{align*}
+
+  \begin{align*}
+      & \fun{svCanFollow} \in \Applications \to (\Slot\mapsto\Applications)
+        \to \ApName \to \ApVer \to \Bool\\
+      & \fun{svCanFollow}~\var{avs}~\var{favs}~\var{an}~\var{av}= av = 1 + v' \\
+      & ~~~~\where (v',~\wcard) = \fun{maxVer}~\var{an}~\var{avs}~\var{favs}
   \end{align*}
 
   \begin{align*}
       & \fun{newAVs} \in \Applications \to (\Slot\mapsto\Applications) \to \Applications \\
-      & \fun{newAVs}~\var{avs}~\var{favs} =
-        \begin{cases}
-          \var{avs}\unionoverrideRight\var{avs}'
-                     & \var{favs}\neq\emptyset \\
-                     & ~\land~s_m\mapsto\var{avs'}\in\var{favs} \\
-                     & ~\land~s_m=\max(\dom{\var{favs}}) \\
-                     & ~\land~\forall(an\mapsto(av, mdt)\in\var{avs}'),
-                         ~\fun{validAV}~\var{an}~\var{av}~\var{md}~\var{avs}
-          \\
-          \var{avs} & \text{otherwise}
-        \end{cases}
+      & \fun{newAVs}~\var{avs}~\var{favs} = \\
+      & ~~~~\Bigg\{\var{an}\mapsto\fun{maxVer}~\var{an}~\var{avs}~\var{favs}
+            ~\mid~
+            \var{an}\in\Big(\dom{avs}\cup\bigcup_{\var{fav}\in\var{favs}}\dom{fav}\Big)
+            \Bigg\}
   \end{align*}
 
   \caption{Epoch Helper Functions}
@@ -309,11 +320,19 @@ with a slot which is $\SlotsPrior$ in the future, to be implemented at that time
 All other update proposals are scrapped.
 \end{itemize}
 
-The AVUP rule has one predicate failure:
+The AVUP rule has three predicate failures:
 \begin{itemize}
 \item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
-  \dom dms$ fails, there is a \em{NonGenesisUpdate} failure as only genesis keys
+  \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the application version update.
+\item In the case of \var{aup} being non-empty, if any of the application names
+  in the proposal are invalid, there is a \emph{InvalidName} failure.
+\item In the case of \var{aup} being non-empty, if any of the application versions
+  in the proposal are not exactly one more than the greatest version for the given
+  application name in the current application versions or the future application
+  versions, there is a \emph{CannotFollow} failure.
+\item In the case of \var{aup} being non-empty, if any of the metadata in
+  in the proposal contains an invalid system tag, there is a \emph{InvalidSystemTags} failure.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -323,7 +342,7 @@ The AVUP rule has one predicate failure:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -390,10 +409,19 @@ The AVUP rule has one predicate failure:
       &
       \dom{\var{aup}}\subseteq\dom{\var{dms}}
       \\
-      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
-      &
-      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
+        \fun{apNameValid}~\var{v}
       \\
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
+      \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
+      \\
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall \wcard\mapsto(\wcard,~m)\in\var{vote},~
+      \forall \var{st}\mapsto\wcard\in\var{m},~ \fun{sTagValid}~\var{st}
+      \\
+      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
+      \\
+      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
+      &
       \var{fav}=\Nothing
     }
     {
@@ -429,12 +457,21 @@ The AVUP rule has one predicate failure:
       &
       \dom{\var{aup}}\subseteq\dom{\var{dms}}
       \\
-      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
-      &
-      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
+        \fun{apNameValid}~\var{v}
       \\
-      \var{fav}\neq\Nothing
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
+        \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
+      \\
+      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall \wcard\mapsto(\wcard,~m)\in\var{vote},~
+      \forall \var{st}\mapsto\wcard\in\var{m},~ \fun{sTagValid}~\var{st}
+      \\
+      \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
+      \\
+      \var{fav}\leteq\fun{votedValue_{Applications}}~\var{aup'}
       &
+      \var{fav}\neq\Nothing
+      \\
       s\leteq\var{slot}+\SlotsPrior
     }
     {
@@ -464,7 +501,6 @@ The AVUP rule has one predicate failure:
   \caption{Application Version Update inference rules}
   \label{fig:rules:av-update}
 \end{figure}
-
 \clearpage
 
 The $\mathsf{UP}$ transition type combines processing update
@@ -481,6 +517,7 @@ update rules for each.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
+        \var{pp} & \PParams & \text{protocol parameters}\\
         \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
       \end{array}
     \right)
@@ -520,6 +557,7 @@ update rules for each.
         \left(
           \begin{array}{r}
             \var{slot} \\
+            \var{pp} \\
             \var{dms} \\
           \end{array}
         \right)
@@ -561,6 +599,7 @@ update rules for each.
     {
       \begin{array}{l}
         \var{slot}\\
+        \var{pp} \\
         \var{dms}\\
       \end{array}
       \vdash

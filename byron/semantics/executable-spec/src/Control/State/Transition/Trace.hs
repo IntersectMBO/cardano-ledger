@@ -6,14 +6,18 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 -- | Traces of transition systems and associated operators.
 --
 -- This module also includes a minimal domain-specific-language to specify
 -- expectations on traces.
+--
 module Control.State.Transition.Trace
-  ( (.-)
+  ( -- * Trace checking
+    (.-)
   , (.->)
   , checkTrace
+    -- * Trace
   , Trace
   , TraceOrder (NewestFirst, OldestFirst)
   , mkTrace
@@ -24,28 +28,26 @@ module Control.State.Transition.Trace
   , traceSignals
   , traceStates
   , preStatesAndSignals
+  , sourceSignalTargets
   , traceLength
   , lastState
   , firstAndLastState
   , closure
+  -- * Miscellaneous utilities
+  , extractValues
   )
 where
 
-import Control.Lens (makeLenses, (^.), (^..), _1, _2, to)
-import Control.Monad (void)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
-import Test.Tasty.HUnit ((@?=), assertFailure)
+import           Control.Lens (makeLenses, to, (^.), (^..), _1, _2)
+import           Control.Monad (void)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
+import           Data.Data (Data, Typeable, cast, gmapQ)
+import           Data.Maybe (catMaybes)
+import           Test.Tasty.HUnit (assertFailure, (@?=))
 
-import Control.State.Transition
-  ( Environment
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , applySTS
-  , PredicateFailure
-  )
+import           Control.State.Transition (Environment, PredicateFailure, STS, Signal, State,
+                     TRC (TRC), applySTS)
 
 -- | A successful trace of a transition system.
 --
@@ -316,3 +318,48 @@ checkTrace
   -> IO ()
 checkTrace env act =
   void $ runReaderT act (\st sig -> applySTS (TRC(env, st, sig)))
+
+-- | Extract all the values of a given type.
+--
+-- Examples:
+--
+-- >>> extractValues "hello" :: [Char]
+-- "hello"
+--
+-- >>> extractValues ("hello", " " ,"world") :: [Char]
+-- "hello world"
+--
+-- >>> extractValues "hello" :: [Int]
+-- []
+--
+-- >>> extractValues ([('a', 0 :: Int), ('b', 1)] :: [(Char, Int)]) :: [Int]
+-- [0,1]
+--
+-- >>> extractValues (["hello"] :: [[Char]], 1, 'z') :: [[Char]]
+-- ["hello","ello","llo","lo","o",""]
+--
+-- >>> extractValues ("hello", 'z') :: [Char]
+-- "zhello"
+--
+extractValues :: forall d a . (Data d, Typeable a) => d -> [a]
+extractValues d =  catMaybes (gmapQ extractValue d)
+                ++ concat (gmapQ extractValues d)
+  where
+    extractValue :: forall d1 . (Data d1) => d1 -> Maybe a
+    extractValue d1 = cast d1
+
+
+-- | Extract triplets of the form [(s, sig, t)] from a trace. For a valid trace,
+-- each source state can reach a target state via the given signal.
+--
+-- Examples
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> sourceSignalTargets tr0123
+-- [(0,"one",1),(1,"two",2),(2,"three",3)]
+--
+sourceSignalTargets :: forall a. Trace a -> [(State a, Signal a, State a)]
+sourceSignalTargets trace = zip3 states signals (tail states)
+  where
+    states = traceStates OldestFirst trace
+    signals = traceSignals OldestFirst trace

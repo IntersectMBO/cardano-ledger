@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -14,11 +15,15 @@ module Ledger.Update.Properties
   , ublockOnlyValidSignalsAreGenerated
   , ublockRelevantTracesAreCovered
   , ublockSampleTraceMetrics
+  , invalidRegistrationsAreGenerated
+  , invalidSignalsAreGenerated
   ) where
 
 import           GHC.Stack (HasCallStack)
 
 import qualified Data.Bimap as Bimap
+import           Data.Data (Data, Typeable)
+import           Data.Either (isLeft)
 import           Data.Foldable (fold, traverse_)
 import           Data.Function ((&))
 import           Data.List.Unique (count)
@@ -33,9 +38,11 @@ import           Numeric.Natural (Natural)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, envGen, randomTraceOfSize, ratio,
-                     sigGen, trace, traceLengthsAreClassified, traceOfLength)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen,
+                     invalidTrace, randomTraceOfSize, ratio, sigGen, trace,
+                     traceLengthsAreClassified, traceOfLength)
 import qualified Control.State.Transition.Generator as TransitionGenerator
+import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
                      traceSignals, traceStates, _traceEnv, _traceInitState)
 
@@ -44,16 +51,18 @@ import           Ledger.Core (BlockCount (BlockCount), Slot (Slot), SlotCount (S
 import qualified Ledger.Core as Core
 import           Ledger.GlobalParams (slotsPerEpoch)
 import           Ledger.Update (PParams, ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp,
-                     Vote, emptyUPIState, protocolParameters)
+                     Vote, emptyUPIState, protocolParameters, tamperWithUpdateProposal,
+                     tamperWithVotes)
 import qualified Ledger.Update as Update
+import qualified Ledger.Update.Test as Update.Test
 
 upiregTracesAreClassified :: Property
 upiregTracesAreClassified =
-  withTests 100 $ traceLengthsAreClassified @UPIREG 500 50
+  withTests 100 $ traceLengthsAreClassified @UPIREG 100 10
 
 upiregRelevantTracesAreCovered :: Property
 upiregRelevantTracesAreCovered = withTests 300 $ property $ do
-  sample <- forAll (trace @UPIREG 400)
+  sample <- forAll (trace @UPIREG 200)
 
   cover 40
     "at least 30% of the update proposals increase the major version"
@@ -263,7 +272,7 @@ onlyValidSignalsAreGenerated =
 
 
 -- | Dummy transition system to test blocks with update payload only.
-data UBLOCK
+data UBLOCK deriving (Data, Typeable)
 
 -- | An update block
 data UBlock
@@ -294,7 +303,7 @@ instance STS UBLOCK where
     | UPIVOTESFailure (PredicateFailure UPIVOTES)
     | UPIENDFailure (PredicateFailure UPIEND)
     | NotIncreasingBlockSlot
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules
     = [ do
@@ -360,7 +369,7 @@ instance HasTrace UBLOCK where
       -- @k@ should be a function of it.
       pure (Slot 0, dms, BlockCount 10, numberOfGenesisKeys)
 
-  sigGen _ _env UBlockState {upienv, upistate} = do
+  sigGen _env UBlockState {upienv, upistate} = do
     (anOptionalUpdateProposal, aListOfVotes) <-
       Update.updateProposalAndVotesGen upienv upistate
 
@@ -392,15 +401,15 @@ instance HasTrace UBLOCK where
 
 ublockTraceLengthsAreClassified :: Property
 ublockTraceLengthsAreClassified =
-  withTests 100 $ traceLengthsAreClassified @UBLOCK 500 50
+  withTests 100 $ traceLengthsAreClassified @UBLOCK 100 10
 
 ublockOnlyValidSignalsAreGenerated :: HasCallStack => Property
 ublockOnlyValidSignalsAreGenerated =
   withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
-ublockRelevantTracesAreCovered = withTests 150 $ property $ do
-  sample <- forAll (traceOfLength @UBLOCK 500)
+ublockRelevantTracesAreCovered = withTests 300 $ property $ do
+  sample <- forAll (traceOfLength @UBLOCK 100)
 
   -- Since we generate votes on the most voted proposals, we do not expect a very large percentage
   -- of confirmed proposals. As a reference, in the runs that were performed manually, for a trace
@@ -550,3 +559,62 @@ numberOfVotes sample
   = traceSignals OldestFirst sample
   & concatMap votes
   & length
+
+--------------------------------------------------------------------------------
+-- Invalid trace generation
+--------------------------------------------------------------------------------
+
+invalidRegistrationsAreGenerated :: Property
+invalidRegistrationsAreGenerated = withTests 300 $ property $ do
+
+  tr <- forAll (invalidTrace @UPIREG 100 [(1, invalidUPropGen)])
+
+  cover 80
+        "Invalid signals are generated when requested"
+        (isLeft $ Invalid.Trace.errorOrLastState tr)
+
+  case Invalid.Trace.errorOrLastState tr of
+    Left pfs ->
+      Update.Test.coverUpiregFailures 2 pfs
+
+    Right _ ->
+      pure ()
+
+
+  where
+    invalidUPropGen :: SignalGenerator UPIREG
+    invalidUPropGen env st = do
+      uprop <- sigGen @UPIREG env st
+      tamperWithUpdateProposal env st uprop
+
+
+invalidSignalsAreGenerated :: Property
+invalidSignalsAreGenerated = withTests 300 $ property $ do
+
+  tr <- forAll (invalidTrace @UBLOCK 100 [(1, invalidUBlockGen)])
+
+  cover 80
+        "Invalid signals are generated when requested"
+        (isLeft $ Invalid.Trace.errorOrLastState tr)
+
+
+  case Invalid.Trace.errorOrLastState tr of
+    Left pfs ->
+      Update.Test.coverUpivoteFailures 2 pfs
+
+    Right _ ->
+      pure ()
+
+  where
+    invalidUBlockGen :: SignalGenerator UBLOCK
+    invalidUBlockGen env st = do
+      ublock <- sigGen @UBLOCK env st
+      Gen.choice
+        [ do
+            uprop <- sigGen @UPIREG (upienv st) (upistate st)
+            tamperedUprop <- tamperWithUpdateProposal (upienv st) (upistate st) uprop
+            pure $! ublock { optionalUpdateProposal = Just tamperedUprop }
+        , do
+            tamperedVotes <- tamperWithVotes (upienv st) (upistate st) (votes ublock)
+            pure $! ublock { votes = tamperedVotes }
+        ]

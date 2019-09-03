@@ -263,7 +263,7 @@ of which are active.
       \begin{array}{r@{~\in~}lr}
         \eta_1 & \Seed & \text{epoch nonce} \\
         \var{s} & \Slot & \text{current slot} \\
-        \var{gkeys} & \powerset{\VKeyGen} & \text{genesis keys} \\
+        \var{gkeys} & \powerset{\KeyHashGen} & \text{genesis key hashes} \\
       \end{array}
     \right)
   \end{equation*}
@@ -280,15 +280,15 @@ of which are active.
         \var{es} & \EpochState & \text{epoch state} \\
         \var{ru} & \RewardUpdate^? & \text{reward update} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
+        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
       \end{array}
     \right)
   \end{equation*}
   %
   \emph{Abstract pseudorandom schedule function}
   \begin{align*}
-    & \fun{overlaySchedule} \in \Epoch \to \powerset{\VKeyGen} \to \Seed \to \PParams
-        \to (\Slot\mapsto\VKeyGen^?) \\
+    & \fun{overlaySchedule} \in \Epoch \to \powerset{\KeyHashGen} \to \Seed \to \PParams
+        \to (\Slot\mapsto\KeyHashGen^?) \\
   \end{align*}
   %
   \emph{Constraints}
@@ -310,17 +310,17 @@ of which are active.
   \label{fig:ts-types:newepoch}
 \end{figure}
 
-Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It
-has two rules: the first one deals with the case when the epoch signal $e$ is before the
-current epoch \var{e_\ell}. This rule does not change the state. The second rule
-describes the change in the case of $e$ being equal to the next epoch
+Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It has two rules.
+The first rule describes the change in the case of $e$ being equal to the next epoch
 $e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule.
+The second one deals with the case when the epoch signal $e$ is not one greater than the
+current epoch \var{e_\ell}. This rule does not change the state.
 
 In the second case, the new epoch state is updated as follows:
 
 \begin{itemize}
 \item The epoch is set to the new epoch $e$.
-\item The epoch nonce is replaced with the compbination of the new one from the
+\item The epoch nonce is replaced with the combination of the new one from the
   environment and any extra entropy present in the UTxO state.
 \item The mapping for the blocks produced by each stake pool for the previous epoch
   is set to the current such mapping.
@@ -413,7 +413,7 @@ In the second case, the new epoch state is updated as follows:
   \begin{equation}\label{eq:not-new-epoch}
     \inference[Not-New-Epoch]
     {
-      e_\ell \neq e + 1
+      e \neq e_\ell + 1
     }
     {
       \left(
@@ -474,7 +474,7 @@ $\eta_c$ and the evolving nonce $\eta_v$.
 
 The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal.
 There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
-\SlotsPrior{} slots from the beginning of the epoch and one where \var{s} is at least
+\SlotsPrior{} slots from the beginning of the next epoch and one where \var{s} is at least
 \SlotsPrior{} slots after the first slot of the epoch.
 
 Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
@@ -486,7 +486,7 @@ start of a new epoch (so that the entropy added near the end of the epoch is not
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
     {
-      slot < \firstSlot{((\epoch{slot}) + 1) - \SlotsPrior}
+      s < \firstSlot{((\epoch{s}) + 1) - \SlotsPrior}
     }
     {
       \left(
@@ -575,26 +575,25 @@ The signal of the transition rule $\mathsf{RUPD}$ is the slot \var{s}. The
 execution of the transition role is as follows:
 
 \begin{itemize}
-\item If \var{s} is less than or equal to the sum of the first slot of its epoch
-  and the duration to start rewards \StartRewards, then the state is not
-  updated.
-\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
-  update has already been calculated but not yet applied, then the state is not
-  updated.
 \item If the current reward update \var{ru} is empty and \var{s} is greater than
   the sum of the first slot of its epoch and the duration \StartRewards, then a
   new rewards update is calculated and the state is updated.
+\item If the current reward update \var{ru} is not \Nothing, i.e., a reward
+  update has already been calculated but not yet applied, then the state is not updated.
+\item If the current reward update \var{ru} is empty and \var{s} is less than or equal to the sum
+  of the first slot of its epoch and the duration to start rewards \StartRewards,
+  then the state is not updated.
 \end{itemize}
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:reward-update}
-    \inference[Reward-Update]
+    \inference[Create-Reward-Update]
     {
-      ru' \leteq \createRUpd{b}{es}
-      \\~\\
       s > (\firstSlot{\epoch{s}}) + \StartRewards
       &
       ru = \Nothing
+      \\~\\
+      ru' \leteq \createRUpd{b}{es}
     }
     {
       \left(
@@ -611,7 +610,7 @@ execution of the transition role is as follows:
   \nextdef
 
   \begin{equation}\label{eq:no-reward-update}
-    \inference[No-Reward-Update]
+    \inference[Reward-Update-Exists]
     {
       ru \neq \Nothing
     }
@@ -632,6 +631,8 @@ execution of the transition role is as follows:
   \begin{equation}\label{eq:reward-too-early}
     \inference[Reward-Too-Early]
     {
+      ru = \Nothing
+      \\
       s \leq (\firstSlot{\epoch{s}}) + \StartRewards
     }
     {
@@ -723,7 +724,11 @@ If the size checks pass, then three transitions are done:
         \var{nes}'
       }
       \\~\\
-      (\wcard,~\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\var{ru},~\wcard,~\wcard)\leteq\var{nes} \\
+      (\wcard,~\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)\leteq\var{nes} \\
+      \\
+      (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{ru},~\wcard,~\wcard)\leteq\var{nes'} \\
+      \\
+      (\wcard,~\wcard,~\wcard,~\var{pp})\leteq\var{es} \\
       \\
       {
         \left(
@@ -754,9 +759,9 @@ If the size checks pass, then three transitions are done:
 The BHEAD rule has two predicate failures:
 \begin{itemize}
 \item If the size of the block header is larger than the maximally allowed size,
-  there is a \em{HeaderSizeTooLarge} failure.
+  there is a \emph{HeaderSizeTooLarge} failure.
 \item If the size of the block body is larger than the maximally allowed size,
-  there is a \em{BlockSizeTooLarge} failure.
+  there is a \emph{BlockSizeTooLarge} failure.
 \end{itemize}
 
 \clearpage
@@ -827,9 +832,9 @@ of the key \var{hk} with the KES period \var{n}.
       &
       m \leq n
       \\~\\
-      \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\sigma}
+      \mathcal{V}_{\var{vk_{cold}}}{\serialised{(\var{vk_{hot}},~n,~c_0)}}_{\tau}
       &
-      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\tau}^{t}
+      \mathcal{V}^{\mathsf{KES}}_{vk_{hot}}{\serialised{bhb}}_{\sigma}^{t}
       \\
     }
     {
@@ -844,18 +849,18 @@ of the key \var{hk} with the KES period \var{n}.
 The OCERT rule has six predicate failures:
 \begin{itemize}
 \item If the KES period is less than the KES period start in the certificate,
-  there is a \em{KESBeforeStart} failure.
+  there is a \emph{KESBeforeStart} failure.
 \item If the KES period is greater than or equal to the KES period end (start +
-  90) in the certificate, there is a \em{KESAfterEnd} failure.
+  90) in the certificate, there is a \emph{KESAfterEnd} failure.
 \item If the period counter in the original key hash counter mapping is larger
-  than the period number in the certificate, there is a \em{KESPeriodWrong}
+  than the period number in the certificate, there is a \emph{KESPeriodWrong}
   failure.
 \item If the signature of the hot key, KES period number and period start is
-  incorrect, there is an \em{InvalidSignature} failure.
+  incorrect, there is an \emph{InvalidSignature} failure.
 \item I the KES signature using the hot key of the block header body is
-  incorrect, there is an \em{InvalideKesSignature} failure.
+  incorrect, there is an \emph{InvalideKesSignature} failure.
 \item If there is no entry in the key hash to counter mapping for the cold key,
-  there is a \em{NoCounterForKeyHash} failure.
+  there is a \emph{NoCounterForKeyHash} failure.
 \end{itemize}
 
 \subsection{Verifiable Random Function}
@@ -869,23 +874,24 @@ parameters. The function checks:
 
 \begin{itemize}
 \item The validity of the proofs for the leader value and the new nonce.
-\item The verification key is associated to a non-zero relative stake
-  $\sigma$ in the stake distribution.
+\item The verification key is associated with relative stake $\sigma$ in the stake distribution.
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
   this slot.
 \end{itemize}
 
 \begin{figure}
-  \emph{VRF helper funnction}
+  \emph{VRF helper function}
   \begin{align*}
       & \fun{vrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
       & \fun{vrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
       & \begin{array}{cl}
         ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
         ~~~~ \land &
-             \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}{(\bprfn{bhb},~\bnonce{bhb}}) \\
+             \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}
+               {(\bprfn{bhb},~\bnonce{bhb}}) \\
         ~~~~ \land &
-             \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}{(\bprfl{bhb},~\bleader{bhb}}) \\
+             \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}
+               {(\bprfl{bhb},~\bleader{bhb}}) \\
         ~~~~ \land &
              \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
       \end{array} \\
@@ -918,7 +924,7 @@ The environments for this transition are:
   \item A mapping $\var{osched}$ of slots to an optional genesis key.
     In the terminology of \cite{delegation_design},
     the slots in $\var{osched}$ are the ``OBFT slots''.
-    A slot in this map with a value of $\Nothing$ is a non-active slots,
+    A slot in this map with a value of $\Nothing$ is a non-active slot,
     otherwise it is an active slot and its value designates the genesis key
     responsible for producing the block.
   \item The epoch nonce $\eta_0$.
@@ -955,10 +961,10 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{pp} & \PParams & \text{protocol parameters} \\
-        \var{osched} & \Slot\mapsto\VKeyGen^? & \text{OBFT overlay schedule} \\
+        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{dms} & \VKeyGen\mapsto\VKey & \text{genesis key delegations} \\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -980,10 +986,12 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \var{bhb}\leteq\bheader{bh}
       &
       \var{vk}\leteq\bvkcold{bhb}
-      \\
-      \bslot bhb \mapsto \var{gkey}\in\var{osched}
       &
-      \var{gkey}\mapsto\var{vk}\in\var{dms}
+      \var{vkh}\leteq\hashKey{vk}
+      \\
+      \bslot bhb \mapsto \var{gkh}\in\var{osched}
+      &
+      \var{gkh}\mapsto\var{vkh}\in\var{dms}
       \\~\\
       {
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
@@ -1045,15 +1053,15 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
 The OVERLAY rule has four predicate failures:
 \begin{itemize}
 \item In the case of the slot not being part of a OBFT schedule, if the VRF
-  leader check does not verify, there is a \em{NotPraosLeader} failure.
+  leader check does not verify, there is a \emph{NotPraosLeader} failure.
 \item In the case of the slot being in the OBFT schedule, but without genesis
-  key (i.e., $Nothing$), there is a \em{NotActiveSlot} failure.
+  key (i.e., $Nothing$), there is a \emph{NotActiveSlot} failure.
 \item In the case of the slot being in the OBFT schedule, if there is a
   specified key, but this key is not in the genesis delegation map, there is a
-  \em{NoGenesisStaking} failure.
+  \emph{NoGenesisStaking} failure.
 \item In the case of the slot being in the OBFT schedule, if there is a
   specified genesis key which is not the same key as in the bock header body,
-  there is a \em{NoGenesisColdKey} failure.
+  there is a \emph{NoGenesisColdKey} failure.
 \end{itemize}
 
 \clearpage
@@ -1177,9 +1185,9 @@ The states for this transition consists of:
 The PRTCL rule has two predicate failures:
 \begin{itemize}
 \item If the slot of the block header body is not larger than the last slot or
-  greater than the current slot, there is a \em{WrongSlotInterval} failure.
+  greater than the current slot, there is a \emph{WrongSlotInterval} failure.
 \item If the hash of the previous header of the block header body is not equal
-  to the hash given in the environment, there is a \em{WrongBlockSequence}
+  to the hash given in the environment, there is a \emph{WrongBlockSequence}
   failure.
 \end{itemize}
 
@@ -1229,7 +1237,7 @@ produced by each stake pool.
   %
   \emph{BBody helper function}
   \begin{align*}
-      & \fun{incrBlocks} \in \Bool \to \KeyHash \to
+      & \fun{incrBlocks} \in \Bool \to \KeyHash_{pool} \to
           \BlocksMade \to \BlocksMade \\
       & \fun{incrBlocks}~\var{isOverlay}~\var{hk}~\var{b} =
         \begin{cases}
@@ -1257,10 +1265,7 @@ The transition is executed if the following preconditions are met:
 \begin{itemize}
 \item The size of the block body matches the value given in the block header body.
 \item The hash of the block body matches the value given in the block header body.
-\item Either \var{hk} to \var{n} is in the mapping of produced blocks, or
-  \var{n} is equal to 0.
-\item The transactions \var{txs} were correctly signed by \var{vk}, producing
-  the signature $\sigma$.
+\item The $\mathsf{LEDGERS}$ transition succeeds.
 \end{itemize}
 
 After this, the transition system updates the mapping of the hashed stake pool
@@ -1313,10 +1318,11 @@ current slot is not an overlay slot.
   \label{fig:rules:bbody}
 \end{figure}
 
-The BBODY rule has one predicate failure:
+The BBODY rule has two predicate failures:
 \begin{itemize}
 \item if the size of the block body in the header is not equal to the real size
-  of the block body, there is a \em{WrongBlockBodySize} failure.
+  of the block body, there is a \emph{WrongBlockBodySize} failure.
+\item if the hash of the block body is not also the hash of transactions, there is an \emph{InvalidBodyHash} failure.
 \end{itemize}
 
 \clearpage
@@ -1387,13 +1393,13 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           & (\wcard,~\wcard,~\var{ls},~\wcard)
           & \var{es}
           \\
-          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard))
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard))
           & \var{ls}
       \end{array}
   \end{align*}
   %
   \begin{align*}
-      & \fun{setIssueNumbers} \in \LState \to (\KeyHash\to\N) \to \LState \\
+      & \fun{setIssueNumbers} \in \LState \to (\KeyHash_{pool}\to\N) \to \LState \\
       & \fun{setIssueNumbers}~
           (\var{utxoSt},
           ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard)))
@@ -1440,7 +1446,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \leteq\var{nes'} \\
         (\wcard,~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
-          ( (\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
             (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
       {
         \left(
@@ -1583,7 +1589,7 @@ which takes the Byron ledger state and creates the Shelley ledger state.
                               \emptyset \\
                               \emptyset \\
                               \emptyset \\
-                              \emptyset \\
+                              \fun{avs}~\var{us}\\
                             \end{array}
                           \right) \\
                         \end{array}
@@ -1605,7 +1611,7 @@ which takes the Byron ledger state and creates the Shelley ledger state.
                             \emptyset \\
                             \emptyset \\
                             \emptyset \\
-                            \emptyset \\
+                            \var{cs} \\
                           \end{array}
                         \right) \\
                         \end{array}
@@ -1626,7 +1632,8 @@ which takes the Byron ledger state and creates the Shelley ledger state.
           \var{h} \\
           \var{s_{last}} \\
         \end{array}
-      \right)
+      \right) \\
+      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{(\fun{dms}~\var{ds})}\} \\
   \end{align*}
 
   \caption{Byron to Shelley State Transtition}

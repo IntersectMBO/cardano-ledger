@@ -9,7 +9,8 @@ module STS.Delegs
   )
 where
 
-import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+
 import           Data.Sequence (Seq (..))
 
 import           Delegation.Certificates
@@ -24,7 +25,7 @@ import           Control.State.Transition
 
 import           STS.Delpl
 
-import           Ledger.Core ((∪))
+import           Ledger.Core (dom, (∈), (⊆), (⨃))
 
 data DELEGS hashAlgo dsignAlgo
 
@@ -51,42 +52,35 @@ delegsTransition
   => TransitionRule (DELEGS hashAlgo dsignAlgo)
 delegsTransition = do
   TRC (env@(_slot, txIx, pp, Tx txbody _ _), dpstate, certificates) <- judgmentContext
+
   case certificates of
     Empty -> do
-      let wdrls' = _wdrls txbody
-      let rews = _rewards $ _dstate dpstate
-      wdrls' `Map.isSubmapOf` rews ?! WithrawalsNotInRewardsDELEGS
-      let rewards' = Map.union (Map.fromList [(w, 0) | w <- Map.keys wdrls']) rews
-      let ds = _dstate dpstate
-      let fdms' = _fdms ds
+      let ds       = _dstate dpstate
+          rewards_ = _rewards ds
+          wdrls_   = _wdrls txbody
 
-      let (curr, fdms'') =
-            if Map.null fdms' then (Map.empty, fdms')
-                                  -- maximum exists as fdms isn't empty here
-             else let sMax = maximum [s | (s, _) <- Map.keys fdms'] in
-              Map.partitionWithKey (\(s, _) _ -> s >= _slot && s == sMax) fdms'
+      wdrls_ ⊆ rewards_ ?! WithrawalsNotInRewardsDELEGS
 
-      let Dms dms' = _dms ds
-      let dms'' = Map.fromList [(gk, vk) | ((_, gk), vk) <- Map.toList curr]
-      pure $ dpstate { _dstate = ds { _rewards = rewards'
-                                    , _fdms = fdms''
-                                    , _dms = Dms $ dms'' ∪ dms'}}
-    _certs :|> cert -> do
+      let rewards' = rewards_ ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
+
+      pure $ dpstate { _dstate = ds { _rewards = rewards' } }
+
+    certs_ :|> cert -> do
       dpstate' <-
-        trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, _certs)
+        trans @(DELEGS hashAlgo dsignAlgo) $ TRC (env, dpstate, certs_)
 
-      let ptr = Ptr _slot txIx (fromIntegral $ length _certs)
-      let isDelegationRegistered = case cert of
+      let ptr = Ptr _slot txIx (fromIntegral $ length certs_)
+
+          isDelegationRegistered = case cert of
             Delegate deleg ->
-              let StakePools sp = _stPools $ _pstate dpstate' in
-              Map.member (_delegatee deleg) sp
+              let StakePools stPools_ = _stPools $ _pstate dpstate' in
+              _delegatee deleg ∈ dom stPools_
             _ -> True
+
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
 
-      dpstate'' <-
-        trans @(DELPL hashAlgo dsignAlgo)
-          $ TRC ((_slot, ptr, pp), dpstate', cert)
-      pure dpstate''
+      trans @(DELPL hashAlgo dsignAlgo)
+        $ TRC ((_slot, ptr, pp), dpstate', cert)
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)

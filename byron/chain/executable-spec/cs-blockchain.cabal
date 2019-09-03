@@ -29,7 +29,6 @@ library
                      , Cardano.Spec.Chain.STS.Rule.Epoch
                      , Cardano.Spec.Chain.STS.Rule.Pbft
                      , Cardano.Spec.Chain.STS.Rule.SigCnt
-                     , Cardano.Spec.Consensus.Block
   --other-modules:
   -- other-extensions:
   hs-source-dirs:      src
@@ -39,6 +38,7 @@ library
                      , bytestring
                      , containers
                      , cs-ledger
+                     , goblins
                      , hashable
                      , hedgehog >= 1.0
                      , lens

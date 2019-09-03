@@ -72,6 +72,7 @@ library
     bytestring,
     containers,
     cryptonite,
+    hedgehog,
     small-steps,
     microlens,
     microlens-th,
@@ -91,6 +92,8 @@ test-suite delegation-test
                          PropertyTests
                          STSTests
                          Examples
+                         Rules.TestDeleg
+                         Rules.TestPool
     hs-source-dirs:      test
     ghc-options:
       -threaded

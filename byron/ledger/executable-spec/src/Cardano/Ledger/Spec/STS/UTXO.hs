@@ -1,12 +1,16 @@
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+
 
 -- | UTXO transition system
 module Cardano.Ledger.Spec.STS.UTXO
   ( UTXO
   , UTxOEnv (UTxOEnv)
   , UTxOState (UTxOState)
+  , PredicateFailure(..)
   , utxo
   , utxo0
   , pps
@@ -14,27 +18,22 @@ module Cardano.Ledger.Spec.STS.UTXO
   )
 where
 
+import           Data.Data (Data, Typeable)
 import qualified Data.Set as Set
 
-import Control.State.Transition
-  ( Environment
-  , IRC(IRC)
-  , PredicateFailure
-  , STS
-  , Signal
-  , State
-  , TRC(TRC)
-  , initialRules
-  , transitionRules
-  , (?!)
-  , judgmentContext
-  )
-import Ledger.Core (Lovelace, (∪), (⊆), (⋪), (◁), dom, range)
-import Ledger.GlobalParams (lovelaceCap)
-import Ledger.Update (PParams)
-import Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, value, unUTxO)
+import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
+                     State, TRC (TRC), initialRules, judgmentContext, transitionRules, (?!))
+import           Ledger.Core (Lovelace, dom, range, (∪), (⊆), (⋪), (◁))
+import           Ledger.GlobalParams (lovelaceCap)
+import           Ledger.Update (PParams)
+import           Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, unUTxO, value)
 
-data UTXO
+import           Test.Goblin (SeedGoblin (..))
+import           Test.Goblin.TH (deriveSeedGoblin)
+
+
+data UTXO deriving (Data, Typeable)
+
 
 data UTxOEnv = UTxOEnv
   { utxo0 :: UTxO
@@ -51,6 +50,10 @@ instance STS UTXO where
   type Environment UTXO = UTxOEnv
   type State UTXO = UTxOState
   type Signal UTXO = Tx
+
+  -- | These `PredicateFailure`s are all "throwable". The disjunction of the
+  --   rules' preconditions is not `True` - the `PredicateFailure`s represent
+  --   `False` cases.
   data PredicateFailure UTXO
     = EmptyTxInputs
     | EmptyTxOutputs
@@ -58,7 +61,7 @@ instance STS UTXO where
     | IncreasedTotalBalance
     | InputsNotInUTxO
     | NonPositiveOutputs
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules =
     [ do
@@ -93,3 +96,11 @@ instance STS UTXO where
                            }
 
     ]
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''UTxOEnv
+deriveSeedGoblin ''UTxOState

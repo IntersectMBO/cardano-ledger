@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module MockTypes where
 
 import           Cardano.Crypto.DSIGN (MockDSIGN)
@@ -11,6 +13,8 @@ import qualified Keys
 import qualified LedgerState
 import qualified OCert
 import qualified STS.Chain
+import qualified STS.Deleg
+import qualified STS.Pool
 import qualified STS.Utxow
 import qualified Tx
 import qualified TxData
@@ -31,7 +35,9 @@ type StakePools = TxData.StakePools ShortHash MockDSIGN
 
 type KeyHash = Keys.KeyHash ShortHash MockDSIGN
 
-type KeyPair = Keys.KeyPair MockDSIGN
+type GenKeyHash = Keys.GenKeyHash ShortHash MockDSIGN
+
+type KeyPair = Keys.KeyPair 'Keys.Regular MockDSIGN
 
 type VKey = Keys.VKey MockDSIGN
 
@@ -97,8 +103,14 @@ type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
 
+type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
+
+type POOL = STS.Pool.POOL ShortHash MockDSIGN
+
 type Credential = TxData.Credential ShortHash MockDSIGN
+
 type StakeCredential = TxData.StakeCredential ShortHash MockDSIGN
+type StakeKeys = TxData.StakeKeys ShortHash MockDSIGN
 
 type MultiSig = TxData.MultiSig ShortHash MockDSIGN
 
@@ -112,8 +124,12 @@ type SnapShots = EpochBoundary.SnapShots ShortHash MockDSIGN
 
 type Stake = EpochBoundary.Stake ShortHash MockDSIGN
 
-type Update = Updates.Update MockDSIGN
+type Mdt = Updates.Mdt ShortHash
 
-type PPUpdate = Updates.PPUpdate MockDSIGN
+type Applications = Updates.Applications ShortHash
 
-type AVUpdate = Updates.AVUpdate MockDSIGN
+type Update = Updates.Update ShortHash MockDSIGN
+
+type PPUpdate = Updates.PPUpdate ShortHash MockDSIGN
+
+type AVUpdate = Updates.AVUpdate ShortHash MockDSIGN

@@ -1,45 +1,56 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+
 
 module Cardano.Spec.Chain.STS.Block where
 
 import           Control.Lens (makeLenses, view, (^.))
-import           Control.State.Transition.Generator
 import           Data.AbstractSize
+import           Data.ByteString (ByteString)
+import           Data.Data (Data, Typeable)
 import qualified Data.Hashable as H
 import qualified Data.Map.Strict as Map
 import           Data.Sequence ((<|))
 import           Data.Typeable (typeOf)
 import           GHC.Generics (Generic)
-import           Ledger.Core (Hash (Hash), Sig, Slot, VKey)
+import           Numeric.Natural (Natural)
+
+import           Control.State.Transition.Generator
+
+import           Ledger.Core (Hash (Hash), Sig (Sig), Slot, VKey, hash, owner)
 import           Ledger.Delegation
 import           Ledger.Update (ProtVer, STag, UProp, Vote)
 import           Ledger.UTxO (TxIn, TxOut, TxWits, Wit)
-import           Numeric.Natural (Natural)
+
+import           Test.Goblin (AddShrinks (..), Goblin (..))
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin)
 
 data BlockHeader
-  = MkBlockHeader
-  {
-    -- | Hash of the previous block header, or 'genesisHash' in case of
+  = BlockHeader
+  { -- | Hash of the previous block header, or 'genesisHash' in case of
     -- the first block in a chain.
-    _bhPrevHash :: Hash
+    _bhPrevHash :: !Hash
     -- | Absolute slot for which the block was generated.
-  , _bhSlot :: Slot
+  , _bhSlot :: !Slot
     -- | Block issuer.
-  , _bhIssuer   :: VKey
+  , _bhIssuer :: !VKey
     -- | Part of the block header which must be signed.
-  , _bhSig      :: Sig Hash
+  , _bhSig :: !(Sig Hash)
     -- | UTxO hash
-  , _bhUtxoHash :: Hash
+  , _bhUtxoHash :: !Hash
     -- | Delegation hash
-  , _bhDlgHash   :: Hash
+  , _bhDlgHash :: !Hash
     -- | Update payload hash
-  , _bhUpdHash :: Hash
+  , _bhUpdHash :: !Hash
     -- TODO: BlockVersion – the protocol (block) version that created the block
-
     -- TODO: SoftwareVersion – the software version that created the block
-  } deriving (Eq, Generic, Show)
+  } deriving (Eq, Generic, Show, Data, Typeable)
+
 
 makeLenses ''BlockHeader
 
@@ -55,22 +66,27 @@ instance HasTypeReps BlockHeader where
                <> typeReps (x ^. bhIssuer :: VKey)
                <> typeReps (x ^. bhSig :: Sig Hash)
 
+
 data BlockBody
   = BlockBody
-  { _bDCerts     :: [DCert]
+  { _bDCerts :: ![DCert]
   -- ^ Delegation certificates
-  , _bUtxo       :: [TxWits]
+  , _bUtxo :: ![TxWits]
   -- ^ UTxO payload
-  , _bUpdProp    :: Maybe UProp
+  , _bUpdProp :: !(Maybe UProp)
   -- ^ Update proposal payload
-  , _bUpdVotes   :: [Vote]
+  , _bUpdVotes :: ![Vote]
   -- ^ Update votes payload
-  , _bProtVer    :: ProtVer
+  , _bProtVer :: !ProtVer
   -- ^ Protocol version
-  } deriving (Generic, Show)
+  } deriving (Generic, Show, Data, Typeable)
+
+
+makeLenses ''BlockBody
+
 
 instance HasTypeReps BlockBody
-makeLenses ''BlockBody
+
 
 -- | A block in the chain. The specification only models regular blocks since
 -- epoch boundary blocks will be largely ignored in the Byron-Shelley bridge.
@@ -78,10 +94,73 @@ data Block
   = Block
   { _bHeader :: BlockHeader
   , _bBody :: BlockBody
-  } deriving (Generic, Show)
+  } deriving (Generic, Show, Data, Typeable)
+
+
+makeLenses ''Block
+
 
 instance HasTypeReps Block
-makeLenses ''Block
+
+
+mkBlock
+  :: Hash
+  -- ^ Hash of the previous block
+  -> Slot
+  -- ^ Current slot
+  -> VKey
+  -- ^ Issuer
+  -> ProtVer
+  -- ^ Protocol version
+  -> [DCert]
+  -- ^ Delegation certificates
+  -> Maybe UProp
+  -- ^ Update proposal
+  -> [Vote]
+  -- ^ Votes on update proposals
+  -> [TxWits]
+  -- ^ UTxO payload
+  -> Block
+mkBlock
+  prevHash
+  currentSlot
+  issuer
+  version
+  delegationCerts
+  maybeUpdateProposal
+  updateProposalVotes
+  utxoTransactions = Block signedHeader body
+  where
+    signedHeader =
+      unsignedHeader { _bhSig = Sig (hashHeader unsignedHeader) (owner issuer) }
+      where
+        unsignedHeader =
+          BlockHeader
+            { _bhPrevHash = prevHash
+            , _bhSlot = currentSlot
+            , _bhIssuer = issuer
+            , _bhSig = dummySig
+            , _bhUtxoHash = (hash utxoTransactions)
+            , _bhDlgHash  = (hash delegationCerts)
+            , _bhUpdHash = (hash (maybeUpdateProposal, updateProposalVotes))
+            }
+          where
+            dummySig = Sig genesisHash (owner issuer)
+
+    body =
+      BlockBody
+        { _bProtVer = version
+        , _bDCerts = delegationCerts
+        , _bUpdProp = maybeUpdateProposal
+        , _bUpdVotes = updateProposalVotes
+        , _bUtxo = utxoTransactions
+        }
+
+-- | Dummy genesis hash.
+genesisHash :: Hash
+-- Not sure we need a concrete hash in the specs ...
+genesisHash = Hash $ H.hash ("" :: ByteString)
+
 
 -- | Protocol version endorsment
 bEndorsment :: Block -> (ProtVer, VKey)
@@ -143,3 +222,40 @@ bIsEBB = const False
 
 instance HasSizeInfo Block where
   isTrivial = null . view (bBody . bDCerts)
+
+
+-- | Update a field of the block body, recomputing the hashes to get a valid
+-- block.
+updateBody
+  :: Block
+  -> (BlockBody -> BlockBody)
+  -> Block
+updateBody block bodyUpdate =
+  mkBlock
+    (_bhPrevHash . _bHeader $ block)
+    (_bhSlot . _bHeader $ block)
+    (_bhIssuer . _bHeader $ block)
+    (_bProtVer newBody)
+    (_bDCerts newBody)
+    (_bUpdProp newBody)
+    (_bUpdVotes newBody)
+    (_bUtxo newBody)
+  where
+    newBody = bodyUpdate (_bBody block)
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''Block
+deriveGoblin ''BlockBody
+deriveGoblin ''BlockHeader
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''Block
+deriveAddShrinks ''BlockBody
+deriveAddShrinks ''BlockHeader

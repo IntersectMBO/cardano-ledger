@@ -12,16 +12,19 @@ where
 
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
-import           Lens.Micro ((%~), (&), (.~), (^.))
+import           Lens.Micro ((^.))
 
 import           Coin
 import           Delegation.Certificates
 import           Keys
+import           Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import           LedgerState
 import           PParams
 import           Slot
 import           Tx
+
 import           Updates
 import           UTxO
 
@@ -42,19 +45,21 @@ instance
       , PParams
       , StakeKeys hashAlgo dsignAlgo
       , StakePools hashAlgo dsignAlgo
-      , Dms dsignAlgo
+      , Dms hashAlgo dsignAlgo
       )
   data PredicateFailure (UTXO hashAlgo dsignAlgo)
     = BadInputsUTxO
     | ExpiredUTxO Slot Slot
+    | MaxTxSizeUTxO Integer Integer
     | InputSetEmptyUTxO
     | FeeTooSmallUTxO Coin Coin
     | ValueNotConservedUTxO Coin Coin
+    | NegativeOutputsUTxO
     | UnexpectedFailureUTXO [ValidationError] -- TODO maybe restructure Validity
                                               -- to prevent these predicate
                                               -- failures?
     | UnexpectedSuccessUTXO
-    | UpdateFailure (PredicateFailure (UP dsignAlgo))
+    | UpdateFailure (PredicateFailure (UP hashAlgo dsignAlgo))
     deriving (Eq, Show)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -69,55 +74,48 @@ utxoInductive
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (UTXO hashAlgo dsignAlgo)
 utxoInductive = do
-  TRC ((_slot, pp, stakeKeys, stakePools, _dms), u, tx) <- judgmentContext
+  TRC ((slot_, pp, stakeKeys, stakePools, dms_), u, tx) <- judgmentContext
+  let txBody = _body tx
 
-  let txbody = _body tx
-  validInputs txbody u == Valid ?! BadInputsUTxO
-  _ttl txbody >= _slot ?! ExpiredUTxO (_ttl txbody) _slot
-  validNoReplay txbody == Valid ?! InputSetEmptyUTxO
+  _ttl txBody >= slot_ ?! ExpiredUTxO (_ttl txBody) slot_
 
-  let validateFee = validFee pp txbody
-  validateFee == Valid ?! unwrapFailureUTXO validateFee
+  txins txBody /= Set.empty ?! InputSetEmptyUTxO
 
-  let validateBalance = preserveBalance stakePools stakeKeys pp txbody u
-  validateBalance == Valid ?! unwrapFailureUTXO validateBalance
+  let minFee = minfee pp txBody
+      txFee  = txBody ^. txfee
+  minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  let refunded = keyRefunds pp stakeKeys txbody
-  let decayed  = decayedTx pp stakeKeys txbody
-  let depositChange =
-        deposits pp stakePools (toList $ txbody ^. certs) - (refunded + decayed)
+  txins txBody ⊆ dom (u ^. utxo) ?! BadInputsUTxO
 
-  let u' = applyUTxOUpdate u txbody  -- change UTxO
+  let consumed_ = consumed pp (u ^. utxo) stakeKeys txBody
+      produced_ = produced pp stakePools txBody
+  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Update Proposals
-  ups' <- trans @(UP dsignAlgo) $ TRC ((_slot, _dms), u ^. ups, txup tx)
+  ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC ((slot_, pp, dms_), u ^. ups, txup tx)
 
-  pure
-    $  u'
-    &  deposited
-    %~ (+) depositChange
-    &  fees
-    %~ (+) ((txbody ^. txfee) + decayed)
-    &  ups
-    .~ ups'
+  let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
+  all (0 <=) outputCoins ?! NegativeOutputsUTxO
 
-unwrapFailureUTXO :: Validity -> PredicateFailure (UTXO hashAlgo dsignAlgo)
-unwrapFailureUTXO (Invalid [e]) = unwrapFailureUTXO' e
-unwrapFailureUTXO Valid         = UnexpectedSuccessUTXO
-unwrapFailureUTXO (Invalid x)   = UnexpectedFailureUTXO x
+  let maxTxSize_ = fromIntegral (_maxTxSize pp)
+      txSize_ = txsize txBody
+  txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
-unwrapFailureUTXO'
-  :: ValidationError
-  -> PredicateFailure (UTXO hashAlgo dsignAlgo)
-unwrapFailureUTXO' BadInputs                = BadInputsUTxO
-unwrapFailureUTXO' (Expired s s')           = ExpiredUTxO s s'
-unwrapFailureUTXO' InputSetEmpty            = InputSetEmptyUTxO
-unwrapFailureUTXO' (FeeTooSmall       c c') = FeeTooSmallUTxO c c'
-unwrapFailureUTXO' (ValueNotConserved c c') = ValueNotConservedUTxO c c'
-unwrapFailureUTXO' x                        = UnexpectedFailureUTXO [x]
+  let refunded = keyRefunds pp stakeKeys txBody
+      decayed = decayedTx pp stakeKeys txBody
+      txCerts = toList $ txBody ^. certs
+
+      depositChange = deposits pp stakePools txCerts - (refunded + decayed)
+
+  pure UTxOState
+        { _utxo      = (txins txBody ⋪ (u ^. utxo)) ∪ txouts txBody
+        , _deposited = _deposited u + depositChange
+        , _fees      = _fees u + (txBody ^. txfee) + decayed
+        , _ups       = ups'
+        }
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Embed (UP dsignAlgo) (UTXO hashAlgo dsignAlgo)
+  => Embed (UP hashAlgo dsignAlgo) (UTXO hashAlgo dsignAlgo)
  where
   wrapFailed = UpdateFailure

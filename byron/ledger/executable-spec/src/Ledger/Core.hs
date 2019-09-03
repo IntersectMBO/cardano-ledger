@@ -1,39 +1,46 @@
-{-# LANGUAGE ConstrainedClassMethods    #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE ConstrainedClassMethods #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Ledger.Core where
 
-import Data.Bimap (Bimap)
+import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import Data.Hashable (Hashable)
+import           Data.Data (Data, Typeable)
+import           Data.Foldable (elem, toList)
+import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
-import Data.Typeable (typeOf)
-import qualified Data.Sequence as Seq
-import Data.Map.Strict (Map)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum(..))
-import Data.Set (Set, isSubsetOf, intersection)
+import           Data.Monoid (Sum (..))
+import qualified Data.Sequence as Seq
+import           Data.Set (Set, intersection, isSubsetOf)
 import qualified Data.Set as Set
-import Data.Word (Word64, Word8)
-import Data.Foldable (toList, elem)
-import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
+import           Data.Typeable (typeOf)
+import           Data.Word (Word64, Word8)
+import           GHC.Generics (Generic)
+import           Numeric.Natural (Natural)
 
-import Data.AbstractSize
+import           Data.AbstractSize
+
+import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
+import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
 -- | An encoded hash of part of the system.
 newtype Hash = Hash
   { unHash :: Int
-  } deriving stock (Show, Generic)
+  } deriving stock (Show, Generic, Data, Typeable)
     deriving newtype (Eq, Ord, Hashable)
     deriving anyclass (HasTypeReps)
 
@@ -48,7 +55,7 @@ class HasHash a where
 -- |Representation of the owner of key pair.
 newtype Owner = Owner
   { unOwner :: Natural
-  } deriving stock (Show, Generic)
+  } deriving stock (Show, Generic, Data, Typeable)
     deriving newtype (Eq, Ord, Hashable)
     deriving anyclass (HasTypeReps)
 
@@ -57,7 +64,7 @@ class HasOwner a where
 
 -- |Signing Key.
 newtype SKey = SKey Owner
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord)
   deriving anyclass (HasTypeReps)
 
@@ -66,7 +73,7 @@ instance HasOwner SKey where
 
 -- |Verification Key.
 newtype VKey = VKey Owner
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable)
   deriving anyclass (HasTypeReps)
 
@@ -78,7 +85,7 @@ instance HasOwner VKey where
 
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey}
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, HasHash)
   deriving anyclass (HasTypeReps)
 
@@ -96,8 +103,6 @@ mkVkGenesisSet
   -> Set VKeyGenesis
 mkVkGenesisSet ngk = Set.fromAscList $ mkVKeyGenesis <$> [0 .. (fromIntegral ngk - 1)]
 
-signWithGenesisKey :: VKeyGenesis -> a -> Sig a
-signWithGenesisKey vkg = sign (skey (unVKeyGenesis vkg))
 
 -- |Key Pair.
 data KeyPair = KeyPair
@@ -111,15 +116,9 @@ instance HasTypeReps KeyPair
 keyPair :: Owner -> KeyPair
 keyPair o = KeyPair (SKey o) (VKey o)
 
--- | Get the signing key from the verification key. We use this in the
--- generators, where we need to generate signed data for a given verification
--- key (e.g. one that appears in the delegation map) for which we don't have
--- the signing key.
-skey :: VKey -> SKey
-skey = SKey . owner
 
 -- |A digital signature.
-data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable)
+data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable, Typeable, Data)
 
 -- | We need a custom instance here that returns only the top level type.
 --   A generic instance would have recursed into type 'a' and since we use
@@ -141,13 +140,13 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 -- Slots and Epochs
 ---------------------------------------------------------------------------------
 
-newtype Epoch = Epoch Word64
-  deriving stock (Show, Generic)
+newtype Epoch = Epoch { unEpoch :: Word64 }
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, Num)
   deriving anyclass (HasTypeReps)
 
 newtype Slot = Slot { unSlot :: Word64 }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable)
   deriving anyclass (HasTypeReps)
 
@@ -157,7 +156,7 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  period of slots, and also to distinguish between number of slots and number
 --  of blocks.
 newtype SlotCount = SlotCount { unSlotCount :: Word64 }
-  deriving stock (Generic, Show)
+  deriving stock (Generic, Show, Data, Typeable)
   deriving newtype (Eq, Ord, Num, Hashable)
 
 instance HasTypeReps SlotCount
@@ -209,7 +208,7 @@ instance HasTypeReps BlockCount
 
 -- |The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, HasOwner)
   deriving anyclass (HasTypeReps)
 
@@ -224,7 +223,7 @@ instance HasHash Addr where
 --
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
-  } deriving stock (Show, Generic)
+  } deriving stock (Show, Generic, Data, Typeable)
     deriving newtype (Eq, Ord, Num, Hashable)
     deriving (Semigroup, Monoid) via (Sum Integer)
     deriving anyclass (HasTypeReps)
@@ -262,6 +261,12 @@ class Relation m where
   -- Unicode: 25b7
   (▷), (|>) :: Ord (Range m) => m -> Set (Range m) -> m
   s |> r = s ▷ r
+
+  -- | Range exclusion
+  --
+  -- Unicode: 22eb
+  (⋫), (|/>) :: Ord (Range m) => m -> Set (Range m) -> m
+  s |/> r = s ⋫ r
 
   -- | Union
   (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
@@ -320,6 +325,8 @@ instance (Ord k, Ord v) => Relation (Bimap k v) where
 
   r ▷ s = Bimap.filter (\_ v -> Set.member v s) r
 
+  r ⋫ s = Bimap.filter (\_ v -> Set.notMember v s) r
+
   d0 ∪ d1 = Bimap.fold Bimap.insert d0 d1
   d0 ⨃ d1 = foldr (uncurry Bimap.insert) d0 (toList d1)
 
@@ -345,6 +352,8 @@ instance Relation (Map k v) where
   s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` toSet s) r
 
   r ▷ s = Map.filter (flip Set.member s) r
+
+  r ⋫ s = Map.filter (flip Set.notMember s) r
 
   d0 ∪ d1 = Map.union d0 d1
   -- For union override we pass @d1@ as first argument, since 'Map.union' is
@@ -379,6 +388,8 @@ instance Relation (Set (a, b)) where
 
   r ▷ s = Set.filter (\(_,v) -> Set.member v s) r
 
+  r ⋫ s = Set.filter (\(_,v) -> Set.notMember v s) r
+
   (∪) = Set.union
 
   d0 ⨃ d1 = d1' ∪ ((dom d1') ⋪ d0)
@@ -409,6 +420,8 @@ instance Relation [(a, b)] where
 
   r ▷ s = filter ((`Set.member` toSet s) . snd) r
 
+  r ⋫ s = filter ((`Set.notMember` toSet s) . snd) r
+
   (∪) = (++)
 
   -- In principle a list of pairs allows for duplicated keys.
@@ -438,3 +451,53 @@ toSet = Set.fromList . toList
 
 (∩) :: Ord a => Set a -> Set a -> Set a
 (∩) = intersection
+
+
+--------------------------------------------------------------------------------
+-- Goblins instances
+--------------------------------------------------------------------------------
+
+deriveGoblin ''Addr
+deriveGoblin ''BlockCount
+deriveGoblin ''Epoch
+deriveGoblin ''Hash
+deriveGoblin ''Lovelace
+deriveGoblin ''Owner
+deriveGoblin ''Sig
+deriveGoblin ''Slot
+deriveGoblin ''SlotCount
+deriveGoblin ''VKey
+deriveGoblin ''VKeyGenesis
+
+
+--------------------------------------------------------------------------------
+-- AddShrinks instances
+--------------------------------------------------------------------------------
+
+deriveAddShrinks ''Addr
+deriveAddShrinks ''BlockCount
+deriveAddShrinks ''Epoch
+deriveAddShrinks ''Hash
+deriveAddShrinks ''Lovelace
+deriveAddShrinks ''Owner
+deriveAddShrinks ''Sig
+deriveAddShrinks ''Slot
+deriveAddShrinks ''SlotCount
+deriveAddShrinks ''VKey
+deriveAddShrinks ''VKeyGenesis
+
+
+--------------------------------------------------------------------------------
+-- SeedGoblin instances
+--------------------------------------------------------------------------------
+
+deriveSeedGoblin ''Addr
+deriveSeedGoblin ''BlockCount
+deriveSeedGoblin ''Epoch
+deriveSeedGoblin ''Hash
+deriveSeedGoblin ''Lovelace
+deriveSeedGoblin ''Owner
+deriveSeedGoblin ''Slot
+deriveSeedGoblin ''SlotCount
+deriveSeedGoblin ''VKey
+deriveSeedGoblin ''VKeyGenesis

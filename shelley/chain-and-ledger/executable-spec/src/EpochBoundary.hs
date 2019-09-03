@@ -19,7 +19,7 @@ module EpochBoundary
   , feeSS
   , emptySnapShots
   , rewardStake
-  , consolidate
+  , aggregateOuts
   , baseStake
   , ptrStake
   , poolStake
@@ -27,6 +27,7 @@ module EpochBoundary
   , poolRefunds
   , maxPool
   , groupByPool
+  , (⊎)
   ) where
 
 import           Coin (Coin (..))
@@ -36,7 +37,7 @@ import           Keys (KeyHash)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot, slotFromEpoch, (-*))
 import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential, TxOut (..),
-                     getRwdHK)
+                     getRwdCred)
 import           UTxO (UTxO (..))
 
 import qualified Data.Map.Strict as Map
@@ -60,20 +61,29 @@ newtype Stake hashAlgo dsignAlgo
   = Stake (Map.Map (StakeCredential hashAlgo dsignAlgo) Coin)
   deriving (Show, Eq, Ord)
 
+-- | Add two stake distributions
+(⊎)
+  :: Stake hashAlgo dsignAlgo
+  -> Stake hashAlgo dsignAlgo
+  -> Stake hashAlgo dsignAlgo
+(Stake lhs) ⊎ (Stake rhs) = Stake $ Map.unionWith (+) lhs rhs
+
 -- | Extract hash of staking key from base address.
 getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (StakeCredential hashAlgo dsignAlgo)
 getStakeHK (AddrBase _ hk) = Just hk
 getStakeHK _               = Nothing
 
-consolidate :: UTxO hashAlgo dsignAlgo -> Map.Map (Addr hashAlgo dsignAlgo) Coin
-consolidate (UTxO u) =
+aggregateOuts :: UTxO hashAlgo dsignAlgo -> Map.Map (Addr hashAlgo dsignAlgo) Coin
+aggregateOuts (UTxO u) =
   Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
-baseStake :: Map.Map (Addr hashAlgo dsignAlgo) Coin -> Stake hashAlgo dsignAlgo
+baseStake
+  :: Map.Map (Addr hashAlgo dsignAlgo) Coin
+  -> [(StakeCredential hashAlgo dsignAlgo, Coin)]
 baseStake vals =
-  Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
- where
+  mapMaybe convert $ Map.toList vals
+  where
    convert
      :: (Addr hashAlgo dsignAlgo, Coin)
      -> Maybe (StakeCredential hashAlgo dsignAlgo, Coin)
@@ -82,17 +92,17 @@ baseStake vals =
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr hashAlgo dsignAlgo -> Maybe Ptr
-getStakePtr (AddrPtr ptr) = Just ptr
-getStakePtr _             = Nothing
+getStakePtr (AddrPtr _ ptr) = Just ptr
+getStakePtr _               = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
 ptrStake
   :: forall hashAlgo dsignAlgo
    . Map.Map (Addr hashAlgo dsignAlgo) Coin
   -> Map.Map Ptr (StakeCredential hashAlgo dsignAlgo)
-  -> Stake hashAlgo dsignAlgo
+  -> [(StakeCredential hashAlgo dsignAlgo, Coin)]
 ptrStake vals pointers =
-  Stake $ Map.fromListWith (+) (mapMaybe convert $ Map.toList vals)
+  mapMaybe convert $ Map.toList vals
   where
     convert
       :: (Addr hashAlgo dsignAlgo, Coin)
@@ -103,14 +113,13 @@ ptrStake vals pointers =
         Just s -> (,c) <$> Map.lookup s pointers
 
 rewardStake
-  :: Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
-  -> Stake hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo
+   . Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  -> [(StakeCredential hashAlgo dsignAlgo, Coin)]
 rewardStake rewards =
-  Stake $
-  Map.foldlWithKey
-    (\m rewKey c -> Map.insert (getRwdHK rewKey) c m)
-    Map.empty
-    rewards
+  map convert $ Map.toList rewards
+  where
+    convert (rwdKey, c) = (getRwdCred rwdKey, c)
 
 -- | Get stake of one pool
 poolStake

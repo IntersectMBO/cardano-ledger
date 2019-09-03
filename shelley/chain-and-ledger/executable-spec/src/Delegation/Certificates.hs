@@ -16,7 +16,7 @@ module Delegation.Certificates
   ) where
 
 import           Coin (Coin (..))
-import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyHash, hashGenesisKey, hashKey)
+import           Keys (KeyHash)
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
@@ -32,16 +32,13 @@ import           Data.Ratio (approxRational)
 import           Lens.Micro ((^.))
 
 -- |Determine the certificate author
-cwitness
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => DCert hashAlgo dsignAlgo
-  -> StakeCredential hashAlgo dsignAlgo
+cwitness :: DCert hashAlgo dsignAlgo -> StakeCredential hashAlgo dsignAlgo
 cwitness (RegKey hk)               = hk
 cwitness (DeRegKey hk)             = hk
-cwitness (RegPool pool)            = KeyHashObj $ hashKey $ pool ^. poolPubKey
+cwitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
 cwitness (RetirePool k _)          = KeyHashObj k
 cwitness (Delegate delegation)     = delegation ^. delegator
-cwitness (GenesisDelegate (gk, _)) = KeyHashObj $ hashGenesisKey gk
+cwitness (GenesisDelegate (gk, _)) = GenesisHashObj gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert hashAlgo dsignAlgo -> PParams -> Coin
@@ -54,7 +51,7 @@ refund :: Coin -> UnitInterval -> Rational -> Duration -> Coin
 refund (Coin dval) dmin lambda delta = floor refund'
   where
     pow     = fromRational (-lambda * fromIntegral delta) :: FixedPoint
-    refund' = fromIntegral dval * (dmin' + (1 - dmin')) * dCay
+    refund' = fromIntegral dval * (dmin' + (1 - dmin') * dCay)
     dmin'   = intervalValue dmin
     dCay    = approxRational (exp' pow) fpEpsilon
 

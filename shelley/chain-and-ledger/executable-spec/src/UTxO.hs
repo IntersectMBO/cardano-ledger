@@ -1,5 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
+
+-- for the Relation instance
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {-|
 Module      : UTxO
@@ -22,12 +27,9 @@ module UTxO
   , txup
   , balance
   , deposits
-  , (<|)
-  , (</|)
-  , dom
-  , union
   , makeWitnessVKey
   , makeWitnessesVKey
+  , makeGenWitnessesVKey
   , verifyWitVKey
   , scriptsNeeded
   , txinsScript
@@ -43,12 +45,13 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Coin (Coin (..))
-import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyPair, Signable, hash, hashKey, sKey, sign,
-                     vKey, verify)
+import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyDiscriminator (..), KeyPair, Signable,
+                     hash, sKey, sign, vKey, verify)
+import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdHK, inputs,
-                     outputs, poolPubKey, txUpdate)
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred,
+                     inputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue)
@@ -57,6 +60,36 @@ import           Delegation.Certificates (DCert (..), StakePools (..), cwitness,
 newtype UTxO hashAlgo dsignAlgo
   = UTxO (Map (TxIn hashAlgo dsignAlgo) (TxOut hashAlgo dsignAlgo))
   deriving (Show, Eq, Ord)
+
+instance Relation (UTxO hashAlgo dsignAlgo) where
+  type Domain (UTxO hashAlgo dsignAlgo) = TxIn hashAlgo dsignAlgo
+  type Range (UTxO hashAlgo dsignAlgo)  = TxOut hashAlgo dsignAlgo
+
+  singleton k v = UTxO $ Map.singleton k v
+
+  dom (UTxO utxo) = dom utxo
+
+  range (UTxO utxo) = range utxo
+
+  s ◁ (UTxO utxo) = UTxO $ s ◁ utxo
+
+  s ⋪ (UTxO utxo) = UTxO $ s ⋪ utxo
+
+  (UTxO utxo) ▷ s = UTxO $ utxo ▷ s
+
+  (UTxO utxo) ⋫ s = UTxO $ utxo ⋫ s
+
+  (UTxO a) ∪ (UTxO b) = UTxO $ a ∪ b
+
+  (UTxO a) ⨃ b = UTxO $ a ⨃ b
+
+  vmax <=◁ (UTxO utxo) = UTxO $ vmax <=◁ utxo
+
+  (UTxO utxo) ▷<= vmax = UTxO $ utxo ▷<= vmax
+
+  (UTxO utxo) ▷>= vmin = UTxO $ utxo ▷>= vmin
+
+  size (UTxO utxo) = size utxo
 
 -- |Compute the id of a transaction.
 txid
@@ -95,6 +128,7 @@ verifyWitVKey
   -> WitVKey hashAlgo dsignAlgo
   -> Bool
 verifyWitVKey tx (WitVKey vkey sig) = verify vkey tx sig
+verifyWitVKey tx (WitGVKey vkey sig) = verify vkey tx sig
 
 -- |Create a witness for transaction
 makeWitnessVKey
@@ -102,49 +136,41 @@ makeWitnessVKey
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
-  -> KeyPair dsignAlgo
+  -> KeyPair 'Regular dsignAlgo
   -> WitVKey hashAlgo dsignAlgo
 makeWitnessVKey tx keys = WitVKey (vKey keys) (sign (sKey keys) tx)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
   :: ( DSIGNAlgorithm dsignAlgo
+     , HashAlgorithm hashAlgo
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
      )
   => TxBody hashAlgo dsignAlgo
-  -> [KeyPair dsignAlgo]
+  -> [KeyPair 'Regular dsignAlgo]
   -> Set (WitVKey hashAlgo dsignAlgo)
 makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
 
--- |Domain restriction
-(<|)
-  :: Set (TxIn hashAlgo dsignAlgo)
-  -> UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-ins <| (UTxO utxo) =
-  UTxO $ Map.filterWithKey (\k _ -> k `Set.member` ins) utxo
+-- |Create a genesis witness for transaction
+makeGenWitnessVKey
+  :: ( DSIGNAlgorithm dsignAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+  => TxBody hashAlgo dsignAlgo
+  -> KeyPair 'Genesis dsignAlgo
+  -> WitVKey hashAlgo dsignAlgo
+makeGenWitnessVKey tx keys = WitGVKey (vKey keys) (sign (sKey keys) tx)
 
--- |Domain exclusion
-(</|)
-  :: Set (TxIn hashAlgo dsignAlgo)
-  -> UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-ins </| (UTxO utxo) =
-  UTxO $ Map.filterWithKey (\k _ -> k `Set.notMember` ins) utxo
-
--- | Domain of UTxO
-dom :: UTxO hashAlgo dsignAlgo -> Set (TxIn hashAlgo dsignAlgo)
-dom (UTxO utxo) = Map.keysSet utxo
-
--- |Combine two collections of UTxO.
---
---     * TODO - Should we return 'Maybe UTxO' so that we can return
--- Nothing when the collections are not disjoint?
-union
-  :: UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-  -> UTxO hashAlgo dsignAlgo
-union (UTxO a) (UTxO b) = UTxO $ Map.union a b
+-- |Create genesis witnesses for transaction
+makeGenWitnessesVKey
+  :: ( DSIGNAlgorithm dsignAlgo
+     , HashAlgorithm hashAlgo
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     )
+  => TxBody hashAlgo dsignAlgo
+  -> [KeyPair 'Genesis dsignAlgo]
+  -> Set (WitVKey hashAlgo dsignAlgo)
+makeGenWitnessesVKey tx = Set.fromList . fmap (makeGenWitnessVKey tx)
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO hashAlgo dsignAlgo -> Coin
@@ -153,19 +179,18 @@ balance (UTxO utxo) = foldr addCoins 0 utxo
 
 -- |Determine the total deposit amount needed
 deposits
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => PParams
+  :: PParams
   -> StakePools hashAlgo dsignAlgo
   -> [DCert hashAlgo dsignAlgo]
   -> Coin
 deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (hashKey $ pool ^. poolPubKey) stpools
+    notRegisteredPool (RegPool pool) = Map.notMember (pool ^. poolPubKey) stpools
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
-txup :: Tx hashAlgo dsignAlgo -> Update dsignAlgo
+txup :: Tx hashAlgo dsignAlgo -> Update hashAlgo dsignAlgo
 txup (Tx txbody _ _) = _txUpdate txbody
 
 -- | Extract script hash from value address with script.
@@ -178,21 +203,21 @@ scriptStakeCred
   :: StakeCredential hashAlgo dsignAlgo
   -> Maybe (ScriptHash hashAlgo dsignAlgo)
 scriptStakeCred (KeyHashObj _ )    =  Nothing
+scriptStakeCred (GenesisHashObj _ )    =  Nothing
 scriptStakeCred (ScriptHashObj hs) = Just hs
 
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => UTxO hashAlgo dsignAlgo
+  :: UTxO hashAlgo dsignAlgo
   -> Tx hashAlgo dsignAlgo
   -> Set (ScriptHash hashAlgo dsignAlgo)
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
   `Set.union`
-  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . getRwdHK) $ Map.keys withdrawals)
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
-  Set.fromList (Maybe.catMaybes $ map (scriptStakeCred . cwitness) certificates)
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) certificates)
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u

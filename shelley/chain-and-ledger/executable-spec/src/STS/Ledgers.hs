@@ -15,13 +15,15 @@ import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
+import qualified Data.Set as Set
 
 import           Keys
+import           Ledger.Core (dom, range, (⋪), (◁), (⨃))
 import           LedgerState
 import           PParams
 import           Slot
 import           Tx
-import           Updates (newAVs)
+import           Updates (Applications (..), apps, newAVs)
 
 import           Control.State.Transition
 
@@ -67,9 +69,30 @@ ledgersTransition = do
 
   let UTxOState utxo' dep fee (ppup, aup, favs, avs) = u''
   let (favs', ready) = Map.partitionWithKey (\s _ -> s > slot) favs
-  let avs' = newAVs avs ready
+  let avs' = Applications $ apps avs ⨃ (Map.toList . apps $ newAVs avs ready)
   let u''' = UTxOState utxo' dep fee (ppup, aup, favs', avs')
-  pure $ LedgerState u''' dw'' (_txSlotIx ls)
+
+  let ds = _dstate dw''
+      ps = _pstate dw''
+      fdms_    = _fdms ds
+      Dms dms_ = _dms ds
+      (curr, fdms') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fdms_
+  let maxSlot = maximum . Set.map fst . Map.keysSet
+  let latestPerGKey gk =
+        ( (maxSlot . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
+        , gk)
+  let dmsKeys = Set.map
+                  latestPerGKey
+                  (Set.map snd (Map.keysSet curr))
+  let dms' = Map.mapKeys snd $ dmsKeys ◁ curr
+  let oldGenDelegs = range (dom dms' ◁ dms_)
+  let cs' = (oldGenDelegs ⋪ _cCounters ps) ⨃ fmap (\x -> (x, 0)) (Map.elems dms')
+  let dw''' = dw'' { _dstate = ds { _fdms = fdms'
+                                  , _dms = Dms $ dms_ ⨃ Map.toList dms'}
+                   , _pstate = ps { _cCounters = cs' }
+                   }
+
+  pure $ LedgerState u''' dw''' (_txSlotIx ls)
 
 instance
   ( HashAlgorithm hashAlgo

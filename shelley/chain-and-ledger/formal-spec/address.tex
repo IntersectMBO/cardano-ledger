@@ -5,15 +5,20 @@ Addresses are described in section 4.2 of the delegation design document \cite{d
 The types needed for the addresses are defined in Figure~\ref{fig:defs:addresses}.
 There are four types of UTxO addresses:
 \begin{itemize}
-  \item Base addresses, $\AddrB$,
-        containing the hash of a payment key and the hash of a staking key,
-  \item Pointer addresses, $\AddrP$,
-        containing the hash of a payment key and a pointer to a stake key registration certificate,
-  \item Enterprise addresses, $\AddrE$,
-        containing only the hash of a payment key (and which have no staking rights).
-  \item Bootstrap addresses, $\AddrBS$,
-        corresponding to the addresses in Byron, behaving exactly like enterprise addresses.
+\item Base addresses, $\AddrB$, containing the hash of a payment credential and
+  the hash of a staking credential,
+\item Pointer addresses, $\AddrP$, containing the hash of a payment credential
+  and a pointer to a stake credential registration certificate,
+\item Enterprise addresses, $\AddrE$,
+  containing only the hash of a payment credential (and which have no staking rights).
+\item Bootstrap addresses, $\AddrBS$, corresponding to the addresses in
+  Byron, behaving exactly like enterprise addresses with a key hash
+  payment credential.
 \end{itemize}
+
+Where a credential is either key or a multi-signature script. Together, these
+three address types make up the $\Addr$ type, which will be used in transaction
+outputs in Section~\ref{sec:utxo}.
 
 The boostrap addresses are needed for the Byron-Shelley transition in order to
 accommodate having UTxO entries from the Byron era during the Shelley era.
@@ -21,16 +26,22 @@ Together, these three address types make up the $\Addr$ type, which will be used
 in transaction outputs in Section~\ref{sec:utxo}.
 
 Note that for security, privacy and usability reasons, the staking (delegating)
-key pair associated with an address should be different from its payment key pair.
-Before the stake key is registered and delegated to an existing stake pool,
-the payment key can be used for transactions, though it will not receive rewards from staking.
-Once a stake key is registered, the shorter pointer addresses can generated.
+credential associated with an address should be different from its payment
+credential.  Before the stake credential is registered and delegated to an
+existing stake pool, the payment credential can be used for transactions, though
+it will not receive rewards from staking.  Once a stake credential is
+registered, the shorter pointer addresses can be generated.
 
-Finally, there is an account style address $\AddrRWD$ which contains the hash of a staking key.
-These account addresses will only be used for receiving rewards from the proof of
-stake leader election.  Apendix A of \cite{delegation_design} explains this design choice.
-The mechanism for transferring rewards from these accounts will be explained in
-Section~\ref{sec:utxo} and follows \cite{chimeric}.
+Finally, there is an account style address $\AddrRWD$ which contains the hash of
+a staking credential. These account addresses will only be used for receiving
+rewards from the proof of stake leader election. Appendix A
+of~\cite{delegation_design} explains this design choice.  The mechanism for
+transferring rewards from these accounts will be explained in
+Section~\ref{sec:utxo} and follows~\cite{chimeric}.
+
+Base, pointer and enterprise addresses contain a payment credential which is
+either a key hash or a script hash. Base addresses contain a staking credential
+which is also either a key hash or a script hash.
 
 \begin{figure*}[hbt]
   \emph{Abstract types}
@@ -46,6 +57,7 @@ Section~\ref{sec:utxo} and follows \cite{chimeric}.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{cred} & \Credential & \KeyHash\uniondistinct\HashScr \\
       \var{(s,t,c)}
       & \Ptr
       & \Slot\times\Ix\times\Ix
@@ -92,12 +104,15 @@ Section~\ref{sec:utxo} and follows \cite{chimeric}.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{paymentHK} & \Addr \to \KeyHash_{pay}
-                      & \text{hash of payment key from addr}\\
-      \fun{stakeHK_b} & \AddrB \to \KeyHash_{stake}
-                      & \text{hash of stake key from base addr}\\
-      \fun{stakeHK_r} & \AddrRWD \to \KeyHash_{stake}
-                      & \text{hash of stake key from reward account}\\
+      \fun{paymentHK} & \AddrVKey \to \KeyHash_{pay}
+      & \text{hash of payment key from addr}\\
+      \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
+                                                    script} \\
+            \fun{stakeCred_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
+                          \StakeCredential & \text{stake credential from base
+                                      addr}\\
+      \fun{stakeCred_{r}} & \AddrRWD \to \StakeCredential & \text{stake credential
+                                                   from reward addr}\\
       \fun{addrPtr} & \AddrP \to \Ptr
                     & \text{pointer from pointer addr}\\
     \end{array}
@@ -108,7 +123,7 @@ Section~\ref{sec:utxo} and follows \cite{chimeric}.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \fun{addr_{rwd}}
-        & \KeyHash_{stake} \to \AddrRWD
+        & \Credential_{stake} \to \AddrRWD
         & \text{construct a reward account}
     \end{array}
   \end{equation*}

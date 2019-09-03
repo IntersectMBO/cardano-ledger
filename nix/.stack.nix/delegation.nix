@@ -21,6 +21,7 @@
           (hsPkgs.bytestring)
           (hsPkgs.containers)
           (hsPkgs.cryptonite)
+          (hsPkgs.hedgehog)
           (hsPkgs.small-steps)
           (hsPkgs.microlens)
           (hsPkgs.microlens-th)

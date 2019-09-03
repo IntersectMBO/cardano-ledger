@@ -26,21 +26,27 @@ library
   exposed-modules:     Hedgehog.Gen.Aux
                      , Ledger.Core
                      , Ledger.Core.Generators
+                     , Ledger.Core.Omniscient
                      , Ledger.Delegation
                      , Ledger.GlobalParams
                      , Ledger.Update
                      , Ledger.Update.Generators
+                     , Ledger.Update.Test
                      , Ledger.UTxO
                      , Ledger.UTxO.Generators
+                     , Ledger.Util
                      , Cardano.Ledger.Spec.STS.UTXO
                      , Cardano.Ledger.Spec.STS.UTXOW
                      , Cardano.Ledger.Spec.STS.UTXOWS
   build-depends:       base >=4.11 && <5
                      , bimap >=0.4 && <0.5
                      , containers
+                     , filepath
+                     , goblins
                      , hashable
                      , hedgehog >= 1.0
                      , lens
+                     , template-haskell
                      , Unique >= 0.4.7.6
                      -- Local deps
                      , small-steps
@@ -91,7 +97,6 @@ test-suite ledger-rules-test
                , Ledger.AbstractSize.Properties
                , Ledger.Update.Examples
                , Ledger.Update.Properties
-               , Ledger.Pvbump.Properties
                , Ledger.Relation.Properties
                , Ledger.UTxO.Properties
   type: exitcode-stdio-1.0

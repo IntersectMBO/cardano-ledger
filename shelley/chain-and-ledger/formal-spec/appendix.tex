@@ -624,24 +624,26 @@ SZS output end CNFRefutation for floor.tptp
 
 \begin{proof}
   For the property~(\ref{prop:reward-splitting})
-  (p.~\pageref{prop:reward-splitting}) for reward splitting between we actually
-  show a stronger one, by removing the floor function. Using the fractional
-  values we get an upper bound for the real value and showing that this upper
-  bound is bounded by $\hat{f}$ we show that the real value is also bounded by
-  $\hat{f}$. To eliminate the sum, we use the identity
-  $\frac{s + \sum_{j}t_{j}}{\sigma} = 1$, see the definition of $\sigma$
-  in~\cite{delegation_design}. Using this, we show for $\hat{f} > c$
+  (p.~\pageref{prop:reward-splitting}) for reward splitting we actually show a
+  stronger one, by removing the floor function. Using the fractional values we
+  get an upper bound for the real value and showing that this upper bound is
+  bounded by $\hat{f}$ we show that the real value is also bounded by
+  $\hat{f}$. To eliminate the sum, we use the identity $\frac{s +
+    \sum_{j}t_{j}}{\sigma} = 1$, see the definition of
+  $\sigma$ in~\cite{delegation_design}. Using this, we show for $\hat{f} > c$
 
-  \begin{multline*}
-    0 \leq c + (\hat{f} - c)\cdot (m + (1 - m))\cdot \frac{s}{\sigma} +
-    \sum_{j}(\hat{f}-c)\cdot(1-m)\cdot\frac{t_{j}}{\sigma} \leq \hat{f} \\
-    \Leftrightarrow
-    0\leq c + (\hat{f}-c)\cdot m \cdot \frac{s}{\sigma} + (\hat{f}
-    -c)\cdot(1-m)\cdot\frac{s + \sum_{j}t_{j}}{\sigma} \leq \hat{f} \\
-    \Leftrightarrow
-    0\leq c + (\hat{f}-c)\cdot m \cdot \frac{s}{\sigma} + (\hat{f}
-    -c)\cdot(1-m) \leq \hat{f} \\
-  \end{multline*}
+  \begin{equation*}
+    \begin{array}{cll}
+      & 0 \leq c + (\hat{f} - c)\cdot (m + (1 - m))\cdot \frac{s}{\sigma} +
+        \sum_{j}(\hat{f}-c)\cdot(1-m)\cdot\frac{t_{j}}{\sigma} & \leq \hat{f} \\
+      \Leftrightarrow &
+                        0\leq c + (\hat{f}-c)\cdot m \cdot \frac{s}{\sigma} + (\hat{f}
+                        -c)\cdot(1-m)\cdot\frac{s + \sum_{j}t_{j}}{\sigma} & \leq \hat{f} \\
+      \Leftrightarrow &
+                        0\leq c + (\hat{f}-c)\cdot m \cdot \frac{s}{\sigma} + (\hat{f}
+                        -c)\cdot(1-m) & \leq \hat{f} \\
+    \end{array}
+  \end{equation*}
 
   This can be proven automatically using
 

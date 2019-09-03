@@ -58,7 +58,7 @@ newtype HashHeader hashAlgo dsignAlgo kesAlgo =
   deriving (Show, Eq, Ord, ToCBOR)
 
 newtype TxSeq hashAlgo dsignAlgo = TxSeq (Seq (Tx hashAlgo dsignAlgo))
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Show)
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
   ToCBOR (TxSeq hashAlgo dsignAlgo)  where
@@ -125,7 +125,7 @@ data BHBody hashAlgo dsignAlgo kesAlgo = BHBody
     -- TODO Since the Shelley chain will begins with blocks from
     -- the Byron era, we should probably use a sum type here,
     -- so that the first shelley block can point to the last Byron block.
-    bheaderPrev           :: Maybe (HashHeader hashAlgo dsignAlgo kesAlgo)
+    bheaderPrev           :: HashHeader hashAlgo dsignAlgo kesAlgo
     -- | verification key of block issuer
   , bheaderVk             :: VKey dsignAlgo
     -- | VRF verification key for block issuer

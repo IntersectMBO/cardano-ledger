@@ -8,7 +8,6 @@ module STS.Avup
 where
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 
 import           BlockChain
 import           Keys
@@ -16,39 +15,95 @@ import           Slot
 import           Updates
 
 import           Control.State.Transition
+import           Data.Maybe
+import           Ledger.Core (dom, range, (⊆), (⨃))
 
-data AVUP dsignAlgo
+data AVUP hashAlgo dsignAlgo
 
-instance DSIGNAlgorithm dsignAlgo => STS (AVUP dsignAlgo) where
-  type State (AVUP dsignAlgo)
-    = (AVUpdate dsignAlgo, Map.Map Slot Applications, Applications)
-  type Signal (AVUP dsignAlgo) = AVUpdate dsignAlgo
-  type Environment (AVUP dsignAlgo) = (Slot, Dms dsignAlgo)
-  data PredicateFailure (AVUP dsignAlgo)
-    = NonGenesisUpdateAVUP
+instance STS (AVUP hashAlgo dsignAlgo) where
+  type State (AVUP hashAlgo dsignAlgo)
+    = (AVUpdate hashAlgo dsignAlgo, Map.Map Slot (Applications hashAlgo), Applications hashAlgo)
+  type Signal (AVUP hashAlgo dsignAlgo) = AVUpdate hashAlgo dsignAlgo
+  type Environment (AVUP hashAlgo dsignAlgo) = (Slot, Dms hashAlgo dsignAlgo)
+  data PredicateFailure (AVUP hashAlgo dsignAlgo)
+    = EmptyAVUP
+    | NonEmptyAVUP
+    | NoAVConsensus
+    | AVConsensus
+    | NonGenesisUpdateAVUP
+    | CannotFollow
+    | InvalidName
+    | InvalidSystemTags
     deriving (Show, Eq)
 
   initialRules = []
 
-  transitionRules = [avupTransition]
+  transitionRules = [avUpdateEmpty, avUpdateNoConsensus, avUpdateConsensus]
 
-avupTransition :: DSIGNAlgorithm dsignAlgo => TransitionRule (AVUP dsignAlgo)
-avupTransition = do
-  TRC ((_slot, Dms _dms), src@(AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+avUpdateEmpty :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateEmpty = do
+  TRC (_, src, AVUpdate _aup) <-
     judgmentContext
 
-  if Map.null _aup
-    then pure src
-    else do
-      Map.keysSet _aup `Set.isSubsetOf` Map.keysSet _dms ?! NonGenesisUpdateAVUP
+  Map.null _aup ?! NonEmptyAVUP
+  pure src
 
-      let aup'         = Map.union _aup aupS
-      let fav          = votedValue aup'
-      case fav of
-        Nothing -> pure (AVUpdate aup', favs, avs)
-        Just fav' ->
-          pure
-            ( AVUpdate Map.empty
-            , Map.insert (_slot +* slotsPrior) fav' favs
-            , avs
-            )
+avUpdateNoConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateNoConsensus = do
+  TRC ((_slot, Dms _dms), (AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+    judgmentContext
+
+  not (Map.null _aup) ?! EmptyAVUP
+
+  dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
+
+  all allApNamesValid (range _aup) ?! InvalidName
+
+  all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
+
+  all allTagsValid (range _aup) ?! InvalidSystemTags
+
+  let aup' = _aup ⨃ Map.toList aupS
+  let fav  = votedValue aup'
+
+  fav == Nothing ?! AVConsensus
+
+  pure (AVUpdate aup', favs, avs)
+
+avUpdateConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateConsensus = do
+  TRC ((_slot, Dms _dms), (AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+    judgmentContext
+
+  not (Map.null _aup) ?! EmptyAVUP
+
+  dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
+
+  all allApNamesValid (range _aup) ?! InvalidName
+
+  all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
+
+  all allTagsValid (range _aup) ?! InvalidSystemTags
+
+  let aup' = _aup ⨃ Map.toList aupS
+  let fav  = votedValue aup'
+
+  fav /= Nothing ?! NoAVConsensus
+  let fav' = fromMaybe (Applications Map.empty) fav
+
+  let s = _slot +* slotsPrior
+
+  pure
+    ( AVUpdate Map.empty
+    , favs ⨃ [(s, fav')]
+    , avs
+    )
+
+allApNamesValid :: Applications hashAlgo -> Bool
+allApNamesValid = all apNameValid . dom . apps
+
+allSvCanFollow_ :: Applications hashAlgo -> Favs hashAlgo -> Applications hashAlgo -> Bool
+allSvCanFollow_ avs favs = all (svCanFollow avs favs) . Map.toList . apps
+
+allTagsValid :: Applications hashAlgo -> Bool
+allTagsValid = all sTagsValid . range . range . apps

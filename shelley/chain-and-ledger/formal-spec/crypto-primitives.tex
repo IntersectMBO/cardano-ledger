@@ -12,11 +12,11 @@ cryptography outside this work. The types and rules we give here are needed in
 order to guarantee certain security properties of the delegation process, which
 we discuss later.
 
-The cryptographic concepts required for the formal definition
-of witnessing include public-private key pairs, one-way hash functions
-and signatures. The constraint we introduce states that a signature of
-some data signed with a (private) key is only correct whenever we can verify
-it using the corresponding public key.
+The cryptographic concepts required for the formal definition of witnessing
+include public-private key pairs, one-way functions, signatures and
+multi-signature scripts. The constraint we introduce states that a signature of
+some data signed with a (private) key is only correct whenever we can verify it
+using the corresponding public key.
 
 Besides basic cryptographic abstractions, we also make use of some abstract
 data storage properties in this document in order to build necessary definitions
@@ -44,6 +44,8 @@ organization chosen for an implementation.
       \var{hk} & \KeyHash & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
       \var{d} & \Data  & \text{data}\\
+      \var{script} & \Script & \text{multi-signature script} \\
+      \var{hs} & \HashScr & \text{hash of a script}
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -64,6 +66,7 @@ organization chosen for an implementation.
                    %
       \fun{sign} & \SKey \to \Data \to \Sig
                  & \text{signing function}\\
+      \fun{hashScript} & \Script \to \HashScr & \text{hash a serialized script}
     \end{array}
   \end{equation*}
   \emph{Constraints}
@@ -147,4 +150,57 @@ the KES period, and is the constant $\KESPeriod$.
   \caption{KES Cryptographic definitions}
   \label{fig:kes-defs-shelley}
 \end{figure}
+
+Figure~\ref{fig:types-msig} shows the types for multi-signature
+schemes. Multi-signatures effectively specify one or more combinations of
+cryptographic signatures which are considered valid. This is realized in a
+native way via a script-like DSL which allows for defining terms that can be
+evaluated. The terms form a tree like structure and are evaluated via the
+\fun{evalMultiSigScript} function. The parameters are a script and a set of key
+hashes. The function returns $True$ in the case of the supplied key hashes being
+a valid combination for the script, else it returns $False$.
+
+Use cases for this are for example:
+\begin{itemize}
+\item Require two parties to sign.
+\item Require either of two parties to sign.
+\item Generally, require $m$ out of $n$ ($m \leq n$) parties to sign.
+\end{itemize}
+
+\begin{figure*}[hbt]
+  \emph{MultiSig Type}
+
+  \begin{equation*}
+    \begin{array}{rll}
+      \var{msig} & \in & \type{RequireSig}~\KeyHash\\
+      & \uniondistinct &
+         \type{RequireAllOf}~[\Script] \\
+      & \uniondistinct&
+         \type{RequireAnyOf}~[\Script] \\
+      & \uniondistinct&
+        \type{RequireMOf}~\N~[\Script]
+    \end{array}
+  \end{equation*}
+
+  \emph{Functions}
+
+  \begin{align*}
+    \fun{evalMultiSigScript} & \in\Script\to\powerset\KeyHash\to\Bool & \\
+    \fun{evalMultiSigScript} & ~(\type{RequireSig}~hk)~\var{vhks} =  hk \in vhks \\
+    \fun{evalMultiSigScript} & ~(\type{RequireAllOf}~ts)~\var{vhks} =
+                              \forall t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalMultiSigScript} & ~(\type{RequireAnyOf}~ts)~\var{vhks} =
+                              \exists t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+    \fun{evalMultiSigScript} & ~(\type{RequireMOf}~m~ts)~\var{vhks} = \\
+                             & m \leq \Sigma
+                               \left(
+                               [\textrm{if}~(\fun{evalMultiSigScript}~\var{t}~\var{vhks})~
+                               \textrm{then}~1~\textrm{else}~0\vert t \leftarrow ts]
+                               \right)
+  \end{align*}
+
+  \caption{Multi-signature via Native Scripts}
+  \label{fig:types-msig}
+\end{figure*}
+
 \clearpage

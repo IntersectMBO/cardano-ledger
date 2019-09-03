@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -22,6 +23,7 @@ import           Control.Monad (unless)
 import           Control.Monad.Free.Church
 import           Control.Monad.Trans.State.Strict (modify, runState)
 import qualified Control.Monad.Trans.State.Strict as MonadState
+import           Data.Data (Data, Typeable)
 import           Data.Foldable (find, traverse_)
 import           Data.Kind (Type)
 
@@ -78,6 +80,15 @@ class ( Eq (PredicateFailure a)
 
   -- | Descriptive type for the possible failures which might cause a transition
   -- to fail.
+  --
+  -- As a convention, `PredicateFailure`s which are "structural" (meaning that
+  -- they are not "throwable" in practice, and are used to pass control from
+  -- one transition rule to another) are prefixed with `S_`.
+  --
+  -- Structural `PredicateFailure`s represent conditions between rules where
+  -- the disjunction of all rules' preconditions is equal to `True`. That is,
+  -- either one rule will throw a structural `PredicateFailure` and the other
+  -- will succeed, or vice-versa.
   data PredicateFailure a :: *
 
   -- | Rules governing transition under this system.
@@ -190,4 +201,4 @@ applySTS ctx = case applySTSIndifferently ctx of
 -- | This can be used to specify predicate failures in STS rules where a value
 -- is beyond a certain threshold.
 newtype Threshold a = Threshold a
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Data, Typeable)

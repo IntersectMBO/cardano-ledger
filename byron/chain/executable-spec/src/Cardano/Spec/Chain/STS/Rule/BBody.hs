@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,6 +9,7 @@ module Cardano.Spec.Chain.STS.Rule.BBody where
 import           Cardano.Spec.Chain.STS.Rule.Bupi
 import           Control.Lens ((^.))
 import           Data.Bimap (keys)
+import           Data.Data (Data, Typeable)
 import           Data.Set (fromList)
 import           Data.Word (Word8)
 
@@ -24,7 +26,7 @@ import           Ledger.UTxO (UTxO)
 
 import           Cardano.Spec.Chain.STS.Block
 
-data BBODY
+data BBODY deriving (Data, Typeable)
 
 instance STS BBODY where
   type Environment BBODY =
@@ -43,6 +45,7 @@ instance STS BBODY where
 
   type Signal BBODY = Block
 
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure BBODY
     = InvalidBlockSize
     | InvalidUtxoHash
@@ -51,7 +54,7 @@ instance STS BBODY where
     | BUPIFailure (PredicateFailure BUPI)
     | DelegationFailure (PredicateFailure DELEG)
     | UTXOWSFailure (PredicateFailure UTXOWS)
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
 

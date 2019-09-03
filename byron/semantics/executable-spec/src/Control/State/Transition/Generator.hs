@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,6 +22,7 @@
 --
 module Control.State.Transition.Generator
   ( HasTrace
+  , SignalGenerator
   , envGen
   , sigGen
   , traceSigGen
@@ -37,7 +39,10 @@ module Control.State.Transition.Generator
   , randomTrace
   , randomTraceOfSize
   , TraceLength (Maximum, Desired)
-  , TraceProfile (TraceProfile, proportionOfValidSignals, proportionOfInvalidSignals, failures)
+  , TraceProfile (TraceProfile, proportionOfValidSignals, failures)
+  , proportionOfInvalidSignals
+  -- * Invalid trace generation
+  , invalidTrace
   -- * Trace classification
   , classifyTraceLength
   , classifySize
@@ -46,36 +51,42 @@ module Control.State.Transition.Generator
   -- * Trace properties
   , traceLengthsAreClassified
   , onlyValidSignalsAreGenerated
+  -- * Helpers
+  , tinkerWithSigGen
+  , coverFailures
   )
 where
 
 import           Control.Arrow (second)
 import           Control.Monad (forM, void)
 import           Control.Monad.Trans.Maybe (MaybeT)
+import           Control.Monad.Trans.State.Strict (evalState)
+import           Data.Data (Constr, Data, toConstr)
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity)
+import           Data.Maybe (fromMaybe)
 import           Data.String (fromString)
 import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
-import           Hedgehog (Gen, Property, PropertyT, classify, evalEither, footnoteShow, forAll,
-                     property, success)
+import           Hedgehog (Gen, MonadTest, Property, PropertyT, classify, cover, evalEither,
+                     footnoteShow, forAll, property, success)
 import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Internal.Property (CoverPercentage)
 import           Hedgehog.Range (Size (Size))
 import qualified Hedgehog.Range as Range
 
---------------------------------------------------------------------------------
--- Temporary imports till hedgehog exposes interleaveTreeT and withGenT
---------------------------------------------------------------------------------
-import           Hedgehog.Internal.Gen
-import           Hedgehog.Internal.Tree
---------------------------------------------------------------------------------
--- END: Temporary imports till hedgehog exposes interleaveTreeT and withGenT
---------------------------------------------------------------------------------
+import           Hedgehog.Internal.Gen (integral_, runDiscardEffectT)
+import           Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 
 import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
                      State, TRC (TRC), applySTS)
+import qualified Control.State.Transition.Invalid.Trace as Invalid
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
-                     lastState, mkTrace, traceLength, traceSignals, _traceEnv)
+                     extractValues, lastState, mkTrace, traceLength, traceSignals, _traceEnv)
+import           Hedgehog.Extra.Manual (Manual)
+import qualified Hedgehog.Extra.Manual as Manual
+
+import           Test.Goblin (Goblin (..), GoblinData, SeedGoblin (..))
 
 
 class STS s => HasTrace s where
@@ -85,23 +96,15 @@ class STS s => HasTrace s where
     -- ^ Trace length that will be used by 'trace' or 'traceOfLength'.
     -> Gen (Environment s)
 
-  -- | Generate a signal that __might__ result in the given failure, given an environment and a
-  -- pre-state. Note that the failure generation algorithm can be probabilistic, so the signal is
-  -- not guaranteed to generate the given failure.
+  -- | Generate a (valid) signal given an environment and a pre-state.
   --
-  -- If 'Nothing' is passed, then the generator should produce a valid signal (according to the
-  -- environment, pre-state, and operational rules of the @sts@ transition system).
   sigGen
-    :: Maybe (PredicateFailure s)
-    -- ^ Failure that should be generated.
-    -> Environment s
-    -> State s
-    -> Gen (Signal s)
+    :: SignalGenerator s
 
   trace
     :: Word64
-    -- ^ Maximum length of the generated traces. The actual length will be between 0 and this
-    -- maximum.
+    -- ^ Maximum length of the generated traces. The actual length will be
+    -- between 0 and this maximum.
     -> Gen (Trace s)
   trace n = traceWithProfile @s n allValid
 
@@ -118,38 +121,39 @@ class STS s => HasTrace s where
     -> Gen (Trace s)
   traceOfLength n = traceSigGenWithProfile (Desired n) allValid (sigGen @s)
 
+type SignalGenerator s = Environment s -> State s -> Gen (Signal s)
+
 data TraceLength = Maximum Word64 | Desired Word64
 
-data TraceProfile sts
+data TraceProfile s
   = TraceProfile
-  { proportionOfValidSignals :: Int
+  { proportionOfValidSignals :: !Int
     -- ^ Proportion of valid signals to generate.
-  , proportionOfInvalidSignals :: Int
-    -- ^ Proportion of invalid signals to generate.
-  , failures :: [(Int, PredicateFailure sts)]
+  , failures :: ![(Int, SignalGenerator s)]
     -- ^ List of failure conditions to try generate when generating an invalid signal, and the
     -- proportion of each failure.
   }
 
-allValid :: TraceProfile sts
+proportionOfInvalidSignals :: TraceProfile s -> Int
+proportionOfInvalidSignals = sum . fmap fst . failures
+
+allValid :: TraceProfile s
 allValid
   = TraceProfile
     { proportionOfValidSignals = 1
-    , proportionOfInvalidSignals = 0
     , failures = []
     }
 
+-- | Generate a signal by combining the generators using @hedgehog@'s
+-- 'frequency' combinator.
 generateSignalWithFailureProportions
-  :: [(Int, PredicateFailure s)]
+  :: [(Int, SignalGenerator s)]
   -- ^ Failure proportions. See 'failures' in 'TraceProfile'.
-  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
-  -> Environment s
-  -> State s
-  -> Gen (Signal s)
-generateSignalWithFailureProportions proportions aSigGen env st =
+  -> SignalGenerator s
+generateSignalWithFailureProportions proportions env st =
   Gen.frequency $ second aSigGenWithFailure <$> proportions
   where
-    aSigGenWithFailure predicateFailure = aSigGen (Just predicateFailure) env st
+    aSigGenWithFailure invalidSigGen = invalidSigGen env st
 
 -- | Extract the maximum or desired integer value of the trace length.
 traceLengthValue :: TraceLength -> Word64
@@ -160,7 +164,7 @@ traceSigGen
   :: forall s
    . HasTrace s
   => TraceLength
-  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -> SignalGenerator s
   -> Gen (Trace s)
 traceSigGen aTraceLength = traceSigGenWithProfile aTraceLength allValid
 
@@ -169,7 +173,7 @@ traceSigGenWithProfile
    . HasTrace s
   => TraceLength
   -> TraceProfile s
-  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -> SignalGenerator s
   -> Gen (Trace s)
 traceSigGenWithProfile aTraceLength profile gen = do
   env <- envGen @s (traceLengthValue aTraceLength)
@@ -199,7 +203,7 @@ genTrace
   -- ^ Environment, which remains constant in the system.
   -> State s
   -- ^ Initial state.
-  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -> SignalGenerator s
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
@@ -218,7 +222,7 @@ genTraceWithProfile
   -- ^ Environment, which remains constant in the system.
   -> State s
   -- ^ Initial state.
-  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -> SignalGenerator s
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
@@ -254,28 +258,28 @@ genTraceOfLength
   -- ^ Environment, which remains constant in the system.
   -> State s
   -- ^ Initial state.
-  -> (Maybe (PredicateFailure s) -> Environment s -> State s -> Gen (Signal s))
+  -> SignalGenerator s
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
 genTraceOfLength aTraceLength profile env st0 aSigGen =
-  mapGenT (TreeT . interleaveSigs . runTreeT) $ loop aTraceLength st0 []
+  Manual.fromManual $ fmap interleaveSigs $ loop aTraceLength st0 []
   where
     loop
       :: Word64
       -> State s
       -> [(State s, TreeT (MaybeT Identity) (Signal s))]
-      -> Gen [(State s, TreeT (MaybeT Identity) (Signal s))]
+      -> Manual [(State s, TreeT (MaybeT Identity) (Signal s))]
     loop 0 _ acc = pure acc
-    loop d sti acc = do
+    loop !d sti acc = do
       sigTree :: TreeT (MaybeT Identity) (Signal s)
-        <- toTreeMaybeT $
+        <- Manual.toManual $
              Gen.frequency
                [ ( proportionOfValidSignals profile
-                 , aSigGen Nothing env sti
+                 , aSigGen env sti
                  )
                , ( proportionOfInvalidSignals profile
-                 , generateSignalWithFailureProportions @s (failures profile) aSigGen env sti
+                 , generateSignalWithFailureProportions @s (failures profile) env sti
                  )
                ]
       let
@@ -290,15 +294,57 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
 
     interleaveSigs
-      :: MaybeT Identity (NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))])
-      -> MaybeT Identity (NodeT (MaybeT Identity) (Trace s))
-    interleaveSigs mst = do
-      nodeT :: NodeT (MaybeT Identity) [(State s, TreeT (MaybeT Identity) (Signal s))] <- mst
-      let (rootStates, trees) = unzip (nodeValue nodeT)
-      NodeT rootSignals children <- interleaveTreeT trees
-      pure $! NodeT
-        (mkTrace env st0 (zip rootStates rootSignals))
-        (fmap (fmap (closure @s env st0)) children)
+      :: [(State s, TreeT (MaybeT Identity) (Signal s))]
+      -> TreeT (MaybeT Identity) (Trace s)
+    interleaveSigs stateSignalTrees
+      = Manual.wrapTreeT
+      $ Just
+      $ NodeT
+          rootTrace
+          (fmap (fmap (closure @s env st0)) signalShrinksChilren)
+      where
+        rootStates :: [State s]
+        signalTrees :: [TreeT (MaybeT Identity) (Signal s)]
+        (rootStates, signalTrees) = unzip stateSignalTrees
+        rootSignals :: [Signal s]
+        rootSignals = fmap (fromMaybe err . treeValue . runDiscardEffectT) signalTrees
+        err = error "genTraceOfLength: the tree nodes must always contain a signal"
+        -- The states ensuing the root signals were calculated at 'loop'
+        -- already, so there is no need to apply the STS again.
+        rootTrace :: Trace s
+        rootTrace = mkTrace env st0 (zip rootStates rootSignals)
+        signalShrinks :: TreeT (MaybeT Identity) [Signal s]
+        signalShrinks = Manual.interleave signalTrees
+        -- The signals at the root of 'signalShrinks' are already included in
+        -- the 'rootTrace' so there is no need to include them again in the tree
+        -- of traces. Thus we only need to apply 'closure' to the children of
+        -- the shrink tree.
+        signalShrinksChilren :: [TreeT (MaybeT Identity) [Signal s]]
+        signalShrinksChilren = nodeChildren $ fromMaybe err $ Manual.unwrapTreeT signalShrinks
+
+
+-- | Generate an invalid trace
+--
+invalidTrace
+  :: forall s
+   . HasTrace s
+  => Word64
+  -- ^ Maximum length of the generated traces.
+  -> [(Int, SignalGenerator s)]
+  -- ^ Trace failure profile to be used to get an invalid signal.
+  -> Gen (Invalid.Trace s)
+invalidTrace maxTraceLength failureProfile = do
+  tr <- trace @s maxTraceLength
+  let env = _traceEnv tr
+      st = lastState tr
+  iSig <- generateSignalWithFailureProportions @s failureProfile env st
+  let est' = applySTS @s $ TRC (env, st, iSig)
+  pure $! Invalid.Trace
+            { Invalid.validPrefix = tr
+            , Invalid.signal = iSig
+            , Invalid.errorOrLastState = est'
+            }
+
 
 traceSuchThat
   :: forall s
@@ -518,7 +564,7 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
 
     st' :: State s
     st' = lastState tr
-  sig <- forAll (sigGen @s Nothing env st')
+  sig <- forAll (sigGen @s env st')
   let result = applySTS @s (TRC(env, st', sig))
   -- TODO: For some reason the result that led to the failure is not shown
   -- (even without using tasty, and setting the condition to True === False)
@@ -528,14 +574,45 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
   void $ evalEither result
 
 
+coverFailures
+  :: forall m s a
+   . ( MonadTest m
+     , HasCallStack
+     , Data (PredicateFailure s)
+     , Data a
+     )
+  => CoverPercentage
+  -> [PredicateFailure s]
+  -- ^ Target predicate failures
+  -> a
+  -- ^ Structure containing the failures
+  -> m ()
+coverFailures coverPercentage targetFailures failureStructure = do
+  traverse_ coverFailure (toConstr <$> targetFailures)
+  where
+    coverFailure predicateFailureConstructor =
+      cover coverPercentage
+            (fromString $ show predicateFailureConstructor)
+            (predicateFailureConstructor `elem` failuresConstructors)
+      where
+        subFailures :: [PredicateFailure s]
+        subFailures = extractValues failureStructure
+
+        failuresConstructors :: [Constr]
+        failuresConstructors = toConstr <$> subFailures
+
 --------------------------------------------------------------------------------
--- Temporary definitions till hedgehog exposes these
+-- Helpers
 --------------------------------------------------------------------------------
 
-interleaveTreeT :: Monad m => [TreeT m a] -> m (NodeT m [a])
-interleaveTreeT =
-  fmap interleave . traverse runTreeT
-
---------------------------------------------------------------------------------
--- END: Temporary definitions till hedgehog exposes these
---------------------------------------------------------------------------------
+tinkerWithSigGen
+  :: forall g sts
+   . ( HasTrace sts, Goblin g (Signal sts)
+     , SeedGoblin (Environment sts)
+     , SeedGoblin (State sts) )
+  => GoblinData g
+  -> Environment sts
+  -> State sts
+  -> Gen (Signal sts)
+tinkerWithSigGen gd env state = flip evalState gd $
+  seeder env >> seeder state >> tinker (sigGen @sts env state)

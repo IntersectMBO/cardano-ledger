@@ -1,7 +1,9 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -9,33 +11,42 @@
 
 module Cardano.Ledger.Spec.STS.UTXOW where
 
+import           Data.Data (Data, Typeable)
 import qualified Data.Map as Map
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, sigGen,
+                     tinkerWithSigGen)
 
 import           Ledger.Core (Addr (Addr), KeyPair (KeyPair), VKey, keyPair, mkAddr, owner, sign,
                      verify)
 import qualified Ledger.Update.Generators as UpdateGen
+import           Ledger.Util (mkGoblinGens)
 import           Ledger.UTxO (Tx, TxIn, TxOut (TxOut), TxWits (TxWits), UTxO (UTxO), Wit (Wit),
                      body, fromTxOuts, inputs, pcMinFee)
 import qualified Ledger.UTxO.Generators as UTxOGen
 
 import           Cardano.Ledger.Spec.STS.UTXO
 
-data UTXOW
+import           Test.Goblin (GoblinData, mkEmptyGoblin)
+
+
+data UTXOW deriving (Data, Typeable)
+
 
 instance STS UTXOW where
 
   type Environment UTXOW = UTxOEnv
   type State UTXOW = UTxOState
   type Signal UTXOW = TxWits
+
+  -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure UTXOW
     = UtxoFailure (PredicateFailure UTXO)
     | InsufficientWitnesses
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data, Typeable)
 
   initialRules =
     [ do
@@ -87,7 +98,7 @@ instance HasTrace UTXOW where
         -- come from we use the hash of the address as transaction id.
         pure $ fromTxOuts txOuts
 
-  sigGen _ UTxOEnv { pps } st = do
+  sigGen UTxOEnv { pps } st = do
     tx <- UTxOGen.genTxFromUTxO traceAddrs (pcMinFee pps) (utxo st)
     let wits = witnessForTxIn tx (utxo st) <$> inputs tx
     pure $ TxWits tx wits
@@ -102,3 +113,18 @@ witnessForTxIn tx (UTxO utxo) txin =
 
 witnessForTx :: KeyPair -> Tx -> Wit
 witnessForTx (KeyPair sk vk) tx = Wit vk (sign sk tx)
+
+
+--------------------------------------------------------------------------------
+-- GoblinData & goblin-tinkered SignalGenerators
+--------------------------------------------------------------------------------
+
+mkGoblinGens
+  "UTXOW"
+  [ "InsufficientWitnesses"
+  , "UtxoFailure_EmptyTxInputs"
+  , "UtxoFailure_EmptyTxOutputs"
+  , "UtxoFailure_FeeTooLow"
+  , "UtxoFailure_InputsNotInUTxO"
+  , "UtxoFailure_NonPositiveOutputs"
+  ]

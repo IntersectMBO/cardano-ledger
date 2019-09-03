@@ -45,16 +45,16 @@ instance
 
   type Environment (OVERLAY hashAlgo dsignAlgo kesAlgo) =
     ( PParams
-    , Map.Map Slot (Maybe (VKeyGenesis dsignAlgo))
+    , Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
     , Seed
     , PoolDistr hashAlgo dsignAlgo
-    , Dms dsignAlgo
+    , Dms hashAlgo dsignAlgo
     )
 
   data PredicateFailure (OVERLAY hashAlgo dsignAlgo kesAlgo)
     = NotPraosLeaderOVERLAY
     | NotActiveSlotOVERLAY
-    | WrongGenesisColdKeyOVERLAY (VKey dsignAlgo) (VKey dsignAlgo)
+    | WrongGenesisColdKeyOVERLAY (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
     | NoGenesisStakingOVERLAY
     | OcertFailure (PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo))
     deriving (Show, Eq)
@@ -73,25 +73,25 @@ overlayTransition
      )
   => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo)
 overlayTransition = do
-  TRC ((pp, osched, eta0, pd, Dms dms), cs, bh@(BHeader bhb _)) <-
-    judgmentContext
-  let gkey'' = Map.lookup (bheaderSlot bhb) osched
-  let vk     = bvkcold bhb
-  case gkey'' of
-    Nothing -> do
+  TRC ( (pp, osched, eta0, pd, Dms dms)
+      , cs
+      , bh@(BHeader bhb _)) <- judgmentContext
+  let vk = bvkcold bhb
+      vkh = hashKey vk
+
+  case Map.lookup (bheaderSlot bhb) osched of
+    Nothing ->
       vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
-      cs' <- trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
-      pure cs'
-    Just gkey' -> do
-      case gkey' of
-        Nothing   -> failBecause NotActiveSlotOVERLAY
-        Just gkey -> do
-          let dmsKey' = Map.lookup gkey dms
-          case dmsKey' of
-            Nothing     -> failBecause NoGenesisStakingOVERLAY
-            Just dmsKey -> vk == dmsKey ?! WrongGenesisColdKeyOVERLAY vk dmsKey
-      cs' <- trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
-      pure cs'
+    Just Nothing ->
+      failBecause NotActiveSlotOVERLAY
+    Just (Just gkey) ->
+      case Map.lookup gkey dms of
+        Nothing ->
+          failBecause NoGenesisStakingOVERLAY
+        Just dmsKey ->
+          vkh == dmsKey ?! WrongGenesisColdKeyOVERLAY vkh dmsKey
+
+  trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
 
 instance
   ( HashAlgorithm hashAlgo

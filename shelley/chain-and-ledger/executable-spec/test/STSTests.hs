@@ -9,7 +9,8 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2A, ex2B,
-                     ex2C, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C)
+                     ex2C, ex2Cbis, ex2Cquater, ex2Cter, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex2J,
+                     ex2K, ex2L, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C, ex5A, ex5B)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
@@ -62,6 +63,15 @@ testCHAINExample2B = testCHAINExample ex2B
 testCHAINExample2C :: Assertion
 testCHAINExample2C = testCHAINExample ex2C
 
+testCHAINExample2Cbis :: Assertion
+testCHAINExample2Cbis = testCHAINExample ex2Cbis
+
+testCHAINExample2Cter :: Assertion
+testCHAINExample2Cter = testCHAINExample ex2Cter
+
+testCHAINExample2Cquater :: Assertion
+testCHAINExample2Cquater = testCHAINExample ex2Cquater
+
 testCHAINExample2D :: Assertion
 testCHAINExample2D = testCHAINExample ex2D
 
@@ -79,6 +89,15 @@ testCHAINExample2H = testCHAINExample ex2H
 
 testCHAINExample2I :: Assertion
 testCHAINExample2I = testCHAINExample ex2I
+
+testCHAINExample2J :: Assertion
+testCHAINExample2J = testCHAINExample ex2J
+
+testCHAINExample2K :: Assertion
+testCHAINExample2K = testCHAINExample ex2K
+
+testCHAINExample2L :: Assertion
+testCHAINExample2L = testCHAINExample ex2L
 
 testCHAINExample3A :: Assertion
 testCHAINExample3A = testCHAINExample ex3A
@@ -98,6 +117,12 @@ testCHAINExample4B = testCHAINExample ex4B
 testCHAINExample4C :: Assertion
 testCHAINExample4C = testCHAINExample ex4C
 
+testCHAINExample5A :: Assertion
+testCHAINExample5A = testCHAINExample ex5A
+
+testCHAINExample5B :: Assertion
+testCHAINExample5B = testCHAINExample ex5B
+
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
   [ testCase "update nonce early in the epoch" testUPNEarly
@@ -106,18 +131,26 @@ stsTests = testGroup "STS Tests"
   , testCase "CHAIN example 2A - register stake key" testCHAINExample2A
   , testCase "CHAIN example 2B - delegate stake and create reward update" testCHAINExample2B
   , testCase "CHAIN example 2C - new epoch changes" testCHAINExample2C
+  , testCase "CHAIN example 2Cbis - as 2C but no decay" testCHAINExample2Cbis
+  , testCase "CHAIN example 2Cter - as 2C but full refund" testCHAINExample2Cter
+  , testCase "CHAIN example 2Cquater - as 2C but with instant decay" testCHAINExample2Cquater
   , testCase "CHAIN example 2D - second reward update" testCHAINExample2D
   , testCase "CHAIN example 2E - nonempty pool distr" testCHAINExample2E
   , testCase "CHAIN example 2F - decentralized block" testCHAINExample2F
   , testCase "CHAIN example 2G - prelude to the first nontrivial rewards" testCHAINExample2G
   , testCase "CHAIN example 2H - create a nontrivial rewards" testCHAINExample2H
   , testCase "CHAIN example 2I - apply a nontrivial rewards" testCHAINExample2I
+  , testCase "CHAIN example 2J - drain reward account and deregister" testCHAINExample2J
+  , testCase "CHAIN example 2K - stage stake pool retirement" testCHAINExample2K
+  , testCase "CHAIN example 2L - reap stake pool" testCHAINExample2L
   , testCase "CHAIN example 3A - get 3/7 votes for a pparam update" testCHAINExample3A
   , testCase "CHAIN example 3B - get 5/7 votes for a pparam update" testCHAINExample3B
   , testCase "CHAIN example 3C - processes a pparam update" testCHAINExample3C
   , testCase "CHAIN example 4A - get 3/7 votes for a version update" testCHAINExample4A
   , testCase "CHAIN example 4B - create a future app version" testCHAINExample4B
   , testCase "CHAIN example 4C - adopt a future app version" testCHAINExample4C
+  , testCase "CHAIN example 5A - stage genesis key delegation" testCHAINExample5A
+  , testCase "CHAIN example 5B - adopt genesis key delegation" testCHAINExample5B
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
   , testCase "Everybody signs in multi-sig" testEverybodySigns

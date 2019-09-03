@@ -10,22 +10,28 @@ where
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
+import           BaseTypes
 import           BlockChain
 import           Keys
+import           Ledger.Core (dom, (⊆))
+import           PParams
 import           Slot
 import           Updates
 
 import           Control.State.Transition
+import           Data.Ix (inRange)
+import           Numeric.Natural (Natural)
 
-data PPUP dsignAlgo
+data PPUP hashAlgo dsignAlgo
 
-instance DSIGNAlgorithm dsignAlgo => STS (PPUP dsignAlgo) where
-  type State (PPUP dsignAlgo) = PPUpdate dsignAlgo
-  type Signal (PPUP dsignAlgo) = PPUpdate dsignAlgo
-  type Environment (PPUP dsignAlgo) = (Slot, Dms dsignAlgo)
-  data PredicateFailure (PPUP dsignAlgo)
-    = NonGenesisUpdatePPUP (Set.Set (VKeyGenesis dsignAlgo)) (Set.Set (VKeyGenesis dsignAlgo))
+instance STS (PPUP hashAlgo dsignAlgo) where
+  type State (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
+  type Signal (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
+  type Environment (PPUP hashAlgo dsignAlgo) = (Slot, PParams, Dms hashAlgo dsignAlgo)
+  data PredicateFailure (PPUP hashAlgo dsignAlgo)
+    = NonGenesisUpdatePPUP (Set.Set (GenKeyHash hashAlgo dsignAlgo)) (Set.Set (GenKeyHash hashAlgo dsignAlgo))
     | PPUpdateTooEarlyPPUP
+    | PPUpdateEmpty
     | PPUpdateNonEmpty
     | PVCannotFollowPPUP
     deriving (Show, Eq)
@@ -34,23 +40,35 @@ instance DSIGNAlgorithm dsignAlgo => STS (PPUP dsignAlgo) where
 
   transitionRules = [ppupTransitionEmpty, ppupTransitionNonEmpty]
 
-ppupTransitionEmpty :: TransitionRule (PPUP dsignAlgo)
-ppupTransitionEmpty = do
-  TRC ((_, _), pupS, PPUpdate pup') <-
-    judgmentContext
-  do
-    Map.null pup' ?! PPUpdateNonEmpty
-    pure pupS
+pvCanFollow :: (Natural, Natural, Natural) -> Ppm -> Bool
+pvCanFollow (mjp, mip, ap) (ProtocolVersion (mjn, mn, an))
+  = (mjp, mip, ap) < (mjn, mn, an)
+  && inRange (0,1) (mjn - mjp)
+  && ((mjp == mjn) ==> (mip + 1 == mn))
+  && ((mjp + 1 == mjn) ==> (mn == 0))
+pvCanFollow _ _ = True
 
-ppupTransitionNonEmpty :: DSIGNAlgorithm dsignAlgo => TransitionRule (PPUP dsignAlgo)
+ppupTransitionEmpty :: TransitionRule (PPUP hashAlgo dsignAlgo)
+ppupTransitionEmpty = do
+  TRC ((_, _, _), pupS, PPUpdate pup') <- judgmentContext
+
+  Map.null pup' ?! PPUpdateNonEmpty
+
+  pure pupS
+
+ppupTransitionNonEmpty :: TransitionRule (PPUP hashAlgo dsignAlgo)
 ppupTransitionNonEmpty = do
-  TRC ((s, Dms _dms), pupS, pup@(PPUpdate pup')) <-
-    judgmentContext
-  do
-    (Map.keysSet pup' `Set.isSubsetOf` Map.keysSet _dms)
-      ?! NonGenesisUpdatePPUP (Map.keysSet pup') (Map.keysSet _dms)
-    let Epoch slotEpoch = epochFromSlot (Slot 1)
-    s
-      <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
-      ?! PPUpdateTooEarlyPPUP
-    pure $ updatePPup pupS pup
+  TRC ((s, pp, Dms _dms), pupS, pup@(PPUpdate pup')) <- judgmentContext
+
+  pup' /= Map.empty ?! PPUpdateEmpty
+
+  all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
+
+  (dom pup' ⊆ dom _dms) ?! NonGenesisUpdatePPUP (dom pup') (dom _dms)
+
+  let Epoch slotEpoch = epochFromSlot (Slot 1)
+  s
+    <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
+    ?! PPUpdateTooEarlyPPUP
+
+  pure $ updatePPup pupS pup
