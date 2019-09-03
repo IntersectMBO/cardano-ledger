@@ -3,8 +3,8 @@
 
 
 The $\mathsf{UPDATE}$ transition is responsible for the federated governance model in Shelley.
-The governance process includes a mechanism for core nodes to propose updates, and
-a voting mechanism all stake holders can participate in. In this chapter we
+The governance process includes a mechanism for core nodes to propose and vote on
+updates. In this chapter we
 outline rules for genesis keys \textit{proposing} both protocol parameter
 and application version updates, as well as voting on whether a particular
 software update is an acceptable future option (again, only genesis keys vote on this).
@@ -12,19 +12,99 @@ For rules regarding the \textit{adoption} of protocol
 parameter updates, see \ref{sec:pparam-update}. For rules regarding
 adoption of new software versions see \ref{sec:software-updates}.
 
-This chapter does not discuss authontication of update proposals.
+\underline{Distinction between protocol parameter and application updates.}
+\begin{itemize}
+\item \textbf{Protocol parameters} (excluding $\ProtVer$, explained below): constants
+currently used in ledger calculations according to the rules described in this document
+\begin{itemize}
+\item[$\circ$] Stored on the leger
+\item[$\circ$] Changed only at epoch boundary
+\item[$\circ$] Changed according to the genesis key votes, which are also stored on the ledger
+\item[$\circ$] All nodes automatically adopt new values (this mechanism is an explicit
+ part of the ledger rules, and is included in the epoch boundary transition)
+\item[$\circ$] Has no effect on ledger transition rules
+\end{itemize}
+\item \textbf{Protocol version} ($\ProtVer$): a special value in PP's which
+corresponds to a specific version of the \textit{ledger rules}
+\begin{itemize}
+\item[$\circ$] I.e. if $\var{pv}$ changes, this document should be updated with
+the new rules
+\item[$\circ$] E.g. the change may be that the new rules now allow \textit{all} nodes
+to vote on update proposals
+\item[$\circ$] Adoption mechanism is the same as PP's (which this value is included it),
+so the new rules come into effect at an epoch boundary
+\item[$\circ$] Because a new set of transition rules must now be followed, nodes must have
+software installed that can implement these rules at the epoch boundary
+when the PP adoption occurs
+\item[$\circ$] Switching to using these new rules is mandatory in the sense that
+if the nodes do not have the applications implementing them, this
+may prevent a user from reading and
+writing to the blockchain, e.g changing the
+transaction data structure would cause such a problem
+\end{itemize}
+\item \textbf{Applications} The version of the software the nodes run,
+as well as the related system tags and metadata
+\begin{itemize}
+\item[$\circ$] These updates cannot be forced
+\item[$\circ$] Any application version that is capable of implementing the protocol version
+currently on the ledger can be used by a node
+\item[$\circ$] Users can update applications as soon as update is agreed upon, and should
+do so before their current application becomes incompatible with the
+current protocol version (due to an update)
+\end{itemize}
+\end{itemize}
+
+Applications must sometimes support \textit{several different versions}
+of ledger rules in order to accommodate the timely switch of the $\ProtVer$ at the
+epoch boundary. Usually, the currently accepted protocol version, and next the
+version they are ready to upgrade to (that their application versions can
+implement).
+The protocol version a node is ready to upgrade to is actually part of the block
+header of a block it makes, see \ref{sec:defs-blocks}.
+
+So, users have some agency in the process of adoption of
+new protocol versions. They may refuse to download and install updates.
+Since software updates cannot be \textit{forced} on the users, if the majority of
+users do not perform an update which allows to switch to the next $\ProtVer$,
+it cannot happen.
+
+There is no data in the transaction that says what application
+versions a user has, or what protocol version they are using (this always has to
+be the version recorded on the ledger).
+Having the wrong version of an application
+may potentially become problematic (when it is not able to follow the current
+ledger rules dictated by $\ProtVer$), however, the update mechanism should
+ensure this does not happen often.
+
+This chapter does not discuss authentication of update proposals.
 The signature for the keys in the proposal will be checked in the
-$\mathsf{UTXOW}$ transition.
+$\mathsf{UTXOW}$ transition, which checks all the necessary witnesses
+for a transaction, see \ref{sec:witnesses-shelley}.
+
+\begin{note}
+\underline{Genesis Key Delegations}
+\newline
+\noindent The environment for both PP and AV updates contains
+the value $\var{dms}$, which is a finite map indexed by genesis keys.
+This is the genesis key delegations. During the Byron era, they are expected
+to all have delegated to some $\VKey$, and these delegations are inherited
+through the Byron-Shelley transition (see \ref{sec:byron-to-shelley}).
+These delegations can be updated as described in \ref{sec:delegation-shelley},
+but those genesis keys that do not delegate to anything are not able to vote,
+since the rules below only count the votes of delegated keys.
+\end{note}
+
+Because the PP and application update mechanisms are very different, the
+update proposals for these are handled by separate sets of rules.
+
+\section{PP Update Proposals}
+\label{sec:pp-proposals}
 
 The transition type $\mathsf{PPUP}$ is for proposing updates to protocol
 parameters, see Figure \ref{fig:ts-types:pp-update} (for the corresponding rules,
-see Figure \ref{fig:rules:pp-update}). The environment for PP updates contains
-the value $\var{dms}$. We only use here the domain of the $\var{dms}$ finite map
-to access the list of genesis keys,
-but this is the variable in the ledger state that contains these keys.
+see Figure \ref{fig:rules:pp-update}).
 The signal for this transition is a finite map of proposed updates (indexed by
-genesis keys). The rules for this transition
-are:
+genesis keys).
 
 \begin{itemize}
   \item PP-Update-Empty : no new updates were proposed, do nothing
@@ -48,7 +128,7 @@ are:
 
 Note that $\fun{pvCanFollow}$
 was defined in \cite{byron_ledger_spec}. Note also that the constant $\SlotsPrior$
-has to do with using verifiable random functions for blockchain layer functionality,
+is used in defining the blockchain layer functionality,
 and is explained in detail in the paper \cite{ouroboros_praos}. It is used in this document in
 Section \ref{sec:chain}.
 
@@ -120,8 +200,6 @@ Section \ref{sec:chain}.
   \label{fig:rules:pp-update}
 \end{figure}
 
-
-
 \clearpage
 
 Figure~\ref{fig:funcs:helper-updates} gives some helper functions for the
@@ -134,15 +212,15 @@ be \text{at most one value} with five or more votes.
 This function will also be used for the protocol parameters later in Section~\ref{sec:epoch}.
 Note that $\type{T}$ is an arbitrary type. The specific choice of this type
 determines what is being voted on, e.g. the application version.
-Recall here that $\type{T}^?$ is similar to the \texttt{Maybe T} type in Haskell,
-and $\Nothing$ represents \texttt{Nothing}.
+Recall here that $\type{T}^?$ is the option type, see \ref{sec:notation-shelley},
+and a term of this type can have a value of type $\type{T}$ or no value.
 
 The function $\fun{validAV}$ uses three functions from \cite{byron_ledger_spec}, namely
 $\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$. It determines
 whether an application version is valid, given its name, version number,
 metadata, and a set of applications to compare against.
 The function $\fun{newAVs}$ adds the most recent valid application
-versions to (a finite map of) applications (using right override).
+versions to a finite map of applications using right override.
 This helper function will be used in the ledger update.
 
 %%
@@ -185,10 +263,8 @@ This helper function will be used in the ledger update.
   \label{fig:funcs:helper-updates}
 \end{figure}
 
-Because adoption
-for AV update proposals must occur as soon as consensus is met (as opposed to waiting until the
-end of an epoch, as we do for PP) they are handled separately.
-The adoption of new application versions is what triggers software updates.
+\section{Application Update Proposals}
+\label{sec:app-proposals}
 
 The application (or software) version update is defined by the $\mathsf{AVUP}$
 transition type (see Figure \ref{fig:ts-types:av-update}), and the rules in
@@ -199,14 +275,15 @@ made previously.
 The \textit{voting} and \textit{proposing an AV update} is done through the same
 mechanism - the $\var{aup}$ signal carried by a transaction. The difference
 is that a proposal is not in the
-range of the $\var{aup}$, but a vote is for an existing proposal 
+range of the $\var{aup}$, but a vote is for an existing proposal
 in $\var{aup}$.
 
-Note here that a single AV update proposal can be
+Recall here that a single AV update proposal can be
 proposing changes to multiple parts of the Cardano system software simultaneously.
 This is why it is stored as the finite map $\Applications$, associating the
 specific bit of software (referred to by name) with the proposed version.
-A proposal for several versions of the same application cannot be made.
+A proposal for several versions of the same application cannot be made in
+a single transaction by the same genesis key.
 
 Now, the state variable $\var{favs}$ contains update proposals that
 were voted on by at least five genesis keys in a given slot.
@@ -214,15 +291,8 @@ At most one
 can be selected for a given slot, and some slots do not have any
 updates selected by voting - either because none were proposed, or the vote
 did not reach a concensus. Finally, the $\var{avs}$ variable stores
-the versions of the software that are currently in use.
-
-It is not possible to
-\textit{force} users to adopt an AV update when the time comes, however,
-the system will follow the interpretation of blockchain data prescribed by
-the functionality of the current software version. If the change is minor and
-it happens to be
-compatible with as a previous software version a user is using, there
-will be no problem.
+the versions of the software that are currently in use. The update
+proposal rules are as follows:
 
 \begin{itemize}
   \item AV-Update-Empty: rule represents an update with
@@ -237,6 +307,7 @@ reaches consensus. In this case, the proposal which was voted on in this slot
 is considered an update upcoming in the future, and is stored associated
 with a slot which is $\SlotsPrior$ in the future, to be implemented at that time.
 All other update proposals are scrapped.
+\end{itemize}
 
 The AVUP rule has one predicate failure:
 \begin{itemize}
