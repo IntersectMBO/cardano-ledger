@@ -18,6 +18,9 @@ import           Slot
 import           TxData
 
 import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+
+import           Hedgehog (Gen)
 
 data POOL hashAlgo dsignAlgo
 
@@ -79,3 +82,8 @@ m ⨃ (k,v) = Map.union (Map.singleton k v) m
     -> (KeyHash hashAlgo dsignAlgo, a)
     -> Map.Map (KeyHash hashAlgo dsignAlgo) a
 m ∪ (k,v) = Map.union m (Map.singleton k v)
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => HasTrace (POOL hashAlgo dsignAlgo) where
+  envGen _ = undefined :: Gen (Slot, PParams)
+  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo)
