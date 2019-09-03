@@ -20,11 +20,8 @@ import           Control.State.Transition.Trace (sourceSignalTargets, traceLengt
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
 import           Coin (Coin)
-import           LedgerState (_delegationState, _delegations, _pstate, _retiring, _rewards, _stKeys,
-                     _stPools)
-import           MockTypes (DELEG, DState, KeyHash, LedgerState, RewardAcnt, StakeCredential,
-                     StakePools)
-import           Slot (Epoch)
+import           LedgerState (_delegations, _rewards, _stKeys)
+import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
 import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
@@ -41,13 +38,6 @@ getRewards l = _rewards l
 
 getDelegations :: DState -> Map StakeCredential KeyHash
 getDelegations l = _delegations l
-
-getStPools :: LedgerState -> StakePools
-getStPools l = _stPools $ _pstate $ _delegationState l
-
-getRetiring :: LedgerState -> Map KeyHash Epoch
-getRetiring l = _retiring $ _pstate $ _delegationState l
-
 
 ------------------------------
 -- Constants for Properties --
