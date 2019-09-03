@@ -45,7 +45,7 @@ where
 
 import           Data.ByteString.Char8 (pack)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, singleton)
+import qualified Data.Map.Strict as Map (delete, elems, empty, fromList, insert, keysSet, singleton)
 import           Data.Maybe (fromMaybe)
 import           Data.Sequence (empty, fromList)
 import qualified Data.Set as Set
@@ -56,10 +56,9 @@ import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
 import           MockTypes (AVUpdate, Addr, Applications, Block, Credential, DState, EpochState,
-                     GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState, Mdt,
-                     NewEpochState, PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
-                     SKeyES, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update, VKey, VKeyES,
-                     VKeyGenesis)
+                     GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState, Mdt, NewEpochState,
+                     PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey, SKeyES, SnapShots,
+                     Stake, Tx, TxBody, UTxO, UTxOState, Update, VKey, VKeyES, VKeyGenesis)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
@@ -1952,6 +1951,14 @@ dsEx5B = dsEx5A { _fdms = Map.empty
                                  ((hashKey . vKey) newGenDelegate)
                                  dms }
 
+psEx5B :: PState
+psEx5B = psEx1 { _cCounters =
+                              Map.insert
+                                ((hashKey . vKey) newGenDelegate)
+                                0
+                                (Map.delete (hk $ coreNodeKeys 0) (_cCounters psEx1))
+               }
+
 expectedLSEx5B :: LedgerState
 expectedLSEx5B = LedgerState
                (UTxOState
@@ -1959,7 +1966,7 @@ expectedLSEx5B = LedgerState
                  (Coin 0)
                  (Coin 1)
                  (PPUpdate Map.empty , AVUpdate Map.empty , Map.empty , byronApps))
-               (DPState dsEx5B psEx1)
+               (DPState dsEx5B psEx5B)
                0
 
 expectedStEx5B :: ChainState

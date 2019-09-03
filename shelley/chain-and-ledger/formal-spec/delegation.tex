@@ -478,6 +478,7 @@ concerns are independent of the ledger rules.
       \\
       s'\leteq\var{slot}+\SlotsPrior
       & \var{gkh}\in\dom{dms}
+      & \var{vk}\notin\range{dms}
     }
     {
       \begin{array}{r}
@@ -514,7 +515,7 @@ concerns are independent of the ledger rules.
   \label{fig:delegation-rules}
 \end{figure}
 
-The DELEG rule has five predicate failures:
+The DELEG rule has six predicate failures:
 \begin{itemize}
 \item In the case of a key registration certificate, if the staking credential
   is already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
@@ -524,9 +525,12 @@ The DELEG rule has five predicate failures:
   there is a \emph{StakeDelegationImpossible} failure.
 \item In the case of a pool delegation certificate, there is a
   \emph{WrongCertificateType} failure.
-\item  In the case of a genesis key delegation certificate, if the key is not
+\item  In the case of a genesis key delegation certificate, if the genesis key is not
   in the domain of the genesis delegation mapping, there is a
   \emph{GenesisKeyNotInMapping} failure.
+\item  In the case of a genesis key delegation certificate, if the delegate key is
+  in the range of the genesis delegation mapping, there is a
+  \emph{DuplicateGenesisDelegate} failure.
 \end{itemize}
 
 \clearpage
