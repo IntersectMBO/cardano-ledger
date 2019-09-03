@@ -56,6 +56,7 @@ import Test.Cardano.Chain.UTxO.Gen
   , genTxProof
   , genTxSig
   , genTxSigData
+  , genTxValidationError
   , genTxWitness
   )
 import Test.Cardano.Crypto.Example
@@ -239,6 +240,15 @@ goldenTxSigData =
 
 ts_roundTripTxSigData :: TSProperty
 ts_roundTripTxSigData = eachOfTS 50 genTxSigData roundTripsCBORShow
+
+
+--------------------------------------------------------------------------------
+-- TxValidationError
+--------------------------------------------------------------------------------
+
+ts_roundTripTxValidationError :: TSProperty
+ts_roundTripTxValidationError =
+  eachOfTS 50 genTxValidationError roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
