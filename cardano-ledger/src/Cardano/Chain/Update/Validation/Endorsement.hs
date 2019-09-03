@@ -21,7 +21,14 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
-import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
+import Cardano.Binary
+  ( DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeWord8
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Common (BlockCount, KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber, subSlotCount)
@@ -98,6 +105,20 @@ data Error
   -- ^ Multiple proposals were found, which propose an update to the same
   -- protocol version.
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR (MultipleProposalsForProtocolVersion protocolVersion) =
+    encodeListLen 2
+      <> toCBOR (0 :: Word8)
+      <> toCBOR protocolVersion
+
+instance FromCBOR Error where
+  fromCBOR = do
+    enforceSize "Endorsement.Error" 2
+    tag <- decodeWord8
+    case tag of
+      0 -> MultipleProposalsForProtocolVersion <$> fromCBOR
+      _ -> cborError   $  DecoderErrorUnknownTag "Endorsement.Error" tag
 
 -- | Register an endorsement.
 --
