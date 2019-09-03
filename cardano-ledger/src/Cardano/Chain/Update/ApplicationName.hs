@@ -23,7 +23,16 @@ import qualified Data.Text as T
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
+import Cardano.Binary
+  ( Decoder
+  , DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
+  , encodeListLen
+  , matchSize
+  )
 
 
 newtype ApplicationName = ApplicationName
@@ -40,6 +49,28 @@ data ApplicationNameError
   = ApplicationNameTooLong Text
   | ApplicationNameNotAscii Text
   deriving (Data, Eq, Show)
+
+instance ToCBOR ApplicationNameError where
+  toCBOR err = case err of
+    ApplicationNameTooLong appName ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR appName
+    ApplicationNameNotAscii appName ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR appName
+
+instance FromCBOR ApplicationNameError where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "ApplicationNameError" size len
+    tag <- decodeWord8
+    case tag of
+      0  -> checkSize 2 >> ApplicationNameTooLong <$> fromCBOR
+      1  -> checkSize 2 >> ApplicationNameNotAscii <$> fromCBOR
+      _  -> cborError   $  DecoderErrorUnknownTag "ApplicationNameError" tag
 
 instance B.Buildable ApplicationNameError where
   build = \case
