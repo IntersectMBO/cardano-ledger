@@ -288,11 +288,11 @@ delegation certificate in $l'$.
 \begin{property}[\textbf{Registered Staking Pool}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
-    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
-    \implies \forall \var{c} \in \DCertRegPool, \var{l} \trans{pool}{c} \var{l'}
-    \implies \applyFun{author}{c} = \var{hk}\\ \implies
-    (\applyFun{getStPools}{l'})[\var{hk}] = c \wedge \var{hk} \not\in
-    \applyFun{getRetiring}{l'}
+    l = (\wcard, (\wcard, p)), l' = (\wcard, (\wcard, p')), pEnv\in\PEnv \\
+    \implies \forall \var{c} \in \DCertRegPool, \var{p} \trans{pool}{c} \var{p'}
+    \implies \applyFun{cwitness}{c} = \var{hk}\\ \implies
+    \var{hk}\in\applyFun{getStPools}{p'} \wedge \var{hk} \not\in
+    \applyFun{getRetiring}{p'}
   \end{multline*}
   \label{prop:ledger-properties-9}
 \end{property}
