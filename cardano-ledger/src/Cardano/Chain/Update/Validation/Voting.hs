@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveAnyClass   #-}
-{-# LANGUAGE DeriveGeneric    #-}
-{-# LANGUAGE DerivingVia      #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DerivingVia       #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 -- | Validation rules for registering votes and confirming proposals
 --
@@ -22,7 +23,17 @@ import Cardano.Prelude hiding (State)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
-import Cardano.Binary (Annotated)
+import Cardano.Binary
+  ( Annotated
+  , Decoder
+  , DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
+  , encodeListLen
+  , matchSize
+  )
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
@@ -68,6 +79,32 @@ data Error
   | VotingProposalNotRegistered UpId
   | VotingVoterNotDelegate KeyHash
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR err = case err of
+    VotingInvalidSignature ->
+      encodeListLen 1
+        <> toCBOR (0 :: Word8)
+    VotingProposalNotRegistered upId ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR upId
+    VotingVoterNotDelegate keyHash ->
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
+        <> toCBOR keyHash
+
+instance FromCBOR Error where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "Voting.Error" size len
+    tag <- decodeWord8
+    case tag of
+      0 -> checkSize 1 >> pure VotingInvalidSignature
+      1 -> checkSize 2 >> VotingProposalNotRegistered <$> fromCBOR
+      2 -> checkSize 2 >> VotingVoterNotDelegate <$> fromCBOR
+      _ -> cborError   $  DecoderErrorUnknownTag "Voting.Error" tag
 
 
 -- | Register a vote and confirm the corresponding proposal if it passes the
