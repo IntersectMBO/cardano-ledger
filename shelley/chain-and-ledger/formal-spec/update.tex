@@ -10,9 +10,9 @@ and application version updates, as well as voting on whether a particular
 software update is an acceptable future option (again, only genesis keys vote on this).
 For rules regarding the \textit{adoption} of protocol
 parameter updates, see \ref{sec:pparam-update}. For rules regarding
-adoption of new software versions see \ref{sec:software-updates}.
+adoption of new software versions see \ref{sec:software-updates}. \newline
 
-\underline{Distinction between protocol parameter and application updates.}
+\noindent \underline{Distinction between protocol parameter and application updates.}
 \begin{itemize}
 \item \textbf{Protocol parameters} (excluding $\ProtVer$, explained below): constants
 currently used in ledger calculations according to the rules described in this document
@@ -50,7 +50,9 @@ as well as the related system tags and metadata
 currently on the ledger can be used by a node
 \item[$\circ$] Users can update applications as soon as update is agreed upon, and should
 do so before their current application becomes incompatible with the
-current protocol version (due to an update)
+current protocol version (due to an update), however
+\item[$\circ$] A voted on AV update has a recommended adoption date,
+which official Cardano software will automatically follow
 \end{itemize}
 \end{itemize}
 
@@ -73,7 +75,8 @@ versions a user has, or what protocol version they are using (this always has to
 be the version recorded on the ledger).
 Having the wrong version of an application
 may potentially become problematic (when it is not able to follow the current
-ledger rules dictated by $\ProtVer$), however, the update mechanism should
+ledger rules dictated by $\ProtVer$), however, the update mechanism implemented
+in the official Cardano software should
 ensure this does not happen often.
 
 This chapter does not discuss authentication of update proposals.
@@ -82,9 +85,7 @@ $\mathsf{UTXOW}$ transition, which checks all the necessary witnesses
 for a transaction, see \ref{sec:witnesses-shelley}.
 
 \begin{note}
-\underline{Genesis Key Delegations}
-\newline
-\noindent The environment for both PP and AV updates contains
+\textbf{Genesis Key Delegations.} The environment for both PP and AV updates contains
 the value $\var{dms}$, which is a finite map indexed by genesis keys.
 This is the genesis key delegations. During the Byron era, they are expected
 to all have delegated to some $\VKey$, and these delegations are inherited
@@ -97,14 +98,15 @@ since the rules below only count the votes of delegated keys.
 Because the PP and application update mechanisms are very different, the
 update proposals for these are handled by separate sets of rules.
 
-\section{PP Update Proposals}
+\subsection{Protocol Parameter Update Proposals}
 \label{sec:pp-proposals}
 
 The transition type $\mathsf{PPUP}$ is for proposing updates to protocol
 parameters, see Figure \ref{fig:ts-types:pp-update} (for the corresponding rules,
 see Figure \ref{fig:rules:pp-update}).
 The signal for this transition is a finite map of proposed updates (indexed by
-genesis keys).
+genesis keys). The purpose of the $\Seed$ type in the $\PPUpdate$ derived type is explained
+in the PP adoption rules.
 
 \begin{itemize}
   \item PP-Update-Empty : no new updates were proposed, do nothing
@@ -113,7 +115,7 @@ genesis keys).
   the existing proposals using a right override. That is, if a genesis key
   has previously submitted an update proposal, replace it with its new
   proposal in $\var{pup}$. This rule has the following predicate failures:
-  
+
   \begin{enumerate}
   \item In the case of \var{slot} being smaller than
     $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
@@ -127,9 +129,11 @@ genesis keys).
 \end{itemize}
 
 Note that $\fun{pvCanFollow}$
-was defined in \cite{byron_ledger_spec}. Note also that the constant $\SlotsPrior$
-is used in defining the blockchain layer functionality,
-and is explained in detail in the paper \cite{ouroboros_praos}. It is used in this document in
+was defined in \cite{byron_ledger_spec}. The constant $\SlotsPrior$
+is used in defining the blockchain layer functionality (specifically,
+properties of header validation),
+and is explained in detail in the paper \cite{ouroboros_praos}.
+It is used in this document in
 Section \ref{sec:chain}.
 
 
@@ -274,7 +278,7 @@ This helper function will be used in the ledger update.
   \label{fig:funcs:helper-updates}
 \end{figure}
 
-\section{Application Update Proposals}
+\subsection{Application Version Update Proposals}
 \label{sec:app-proposals}
 
 The application (or software) version update is defined by the $\mathsf{AVUP}$
@@ -296,9 +300,16 @@ specific bit of software (referred to by name) with the proposed version.
 A proposal for several versions of the same application cannot be made in
 a single transaction by the same genesis key.
 
+The state variable $\var{avs}$ stores the official current application version
+that the users \textit{should} be running.
 Now, the state variable $\var{favs}$ contains update proposals that
-were voted on by at least five genesis keys in a given slot.
-At most one
+were voted on by at least five genesis keys\.
+The particular update $\var{favs} = s \mapsto ap$ will become
+the official AV at slot $s$.
+Updating the official AV is part of the rules in the ledger transitionn,
+see Section \ref{sec:ledger-trans}.
+
+At most one AV update
 can be selected for a given slot, and some slots do not have any
 updates selected by voting - either because none were proposed, or the vote
 did not reach a concensus. Finally, the $\var{avs}$ variable stores
@@ -314,9 +325,9 @@ update after combining the set of new (signal) and existing (state) proposals
 by a right override. In this case, we simply use this combined new value
 of update proposal (votes) as the state UP value.
   \item AV-Update-Consensus: applies when voting on update proposals by genesis keys
-reaches consensus. In this case, the proposal which was voted on in this slot
-is considered an update upcoming in the future, and is stored associated
-with a slot which is $\SlotsPrior$ in the future, to be implemented at that time.
+reaches consensus. This update is stored associated with a slot which is
+$\SlotsPrior$ in the future from the current one, because this is when
+this update will become the official AV.
 All other update proposals are scrapped.
 \end{itemize}
 

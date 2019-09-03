@@ -40,8 +40,20 @@ The transition system is explained in \cite{small_step_semantics}.
   \item[Option type] An option type in type $A$ is denoted as $A^? = A + \Nothing$. The
     $A$ case corresponds to the case when there is a value of type $A$ and the $1$
     case corresponds to the case when there is no value.
-
 \end{description}
+
+\begin{note}
+We abuse the \textbf{:=} symbol here to mean propositional equality. In the
+style of semantics we use in this formal spec, definitional equality is not needed.
+It is meant to make the spec easier to read in the sense that each time we use it,
+we use a fresh variable as shorthand notation for an expression, e.g. we write
+
+\[s := slot + \SlotsPrior\]
+
+Then, in subsequent expressions, it is more convenient to write simply $s$.
+It is not meant to shadow variables, and if it does, there is likely a problem with the
+rules that must be addressed.
+\end{note}
 
 In Figure~\ref{fig:notation:nonstandard}, we specify the notation we use in
 the rest of the document.
