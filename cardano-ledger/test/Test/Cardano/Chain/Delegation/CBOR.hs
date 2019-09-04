@@ -15,9 +15,10 @@ import Hedgehog (Property)
 import Cardano.Chain.Delegation (unsafePayload)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  (goldenTestCBOR, roundTripsCBORBuildable)
+  (goldenTestCBOR, roundTripsCBORBuildable, roundTripsCBORShow)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
-import Test.Cardano.Chain.Delegation.Gen (genCertificate, genPayload)
+import Test.Cardano.Chain.Delegation.Gen
+  (genCertificate, genError, genPayload)
 import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 
@@ -48,6 +49,15 @@ goldenDlgPayload = goldenTestCBOR dp "test/golden/cbor/delegation/DlgPayload"
 ts_roundTripDlgPayloadCBOR :: TSProperty
 ts_roundTripDlgPayloadCBOR =
   eachOfTS 100 (feedPM genPayload) roundTripsCBORBuildable
+
+
+--------------------------------------------------------------------------------
+-- Error
+--------------------------------------------------------------------------------
+
+ts_roundTripErrorCBOR :: TSProperty
+ts_roundTripErrorCBOR =
+  eachOfTS 100 genError roundTripsCBORShow
 
 
 tests :: TSGroup

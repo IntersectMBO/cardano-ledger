@@ -30,7 +30,16 @@ import Distribution.Text (display)
 import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
+import Cardano.Binary
+  ( Decoder
+  , DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
+  , encodeListLen
+  , matchSize
+  )
 
 
 -- | Tag of system for which update data is purposed, e.g. win64, mac32
@@ -53,6 +62,28 @@ data SystemTagError
   = SystemTagNotAscii Text
   | SystemTagTooLong Text
   deriving (Eq, Show, Data)
+
+instance ToCBOR SystemTagError where
+  toCBOR err = case err of
+    SystemTagNotAscii tag ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR tag
+    SystemTagTooLong tag ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR tag
+
+instance FromCBOR SystemTagError where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "SystemTagError" size len
+    tag <- decodeWord8
+    case tag of
+      0  -> checkSize 2 >> SystemTagNotAscii <$> fromCBOR
+      1  -> checkSize 2 >> SystemTagTooLong <$> fromCBOR
+      _  -> cborError   $  DecoderErrorUnknownTag "SystemTagError" tag
 
 instance B.Buildable SystemTagError where
   build = \case

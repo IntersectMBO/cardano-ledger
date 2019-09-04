@@ -23,10 +23,15 @@ import qualified Data.Set as Set
 
 import Cardano.Binary
   ( Annotated(..)
+  , Decoder
+  , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
   , encodeListLen
   , enforceSize
+  , matchSize
   )
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
@@ -110,6 +115,44 @@ data Error
 
   deriving (Eq, Show)
 
+instance ToCBOR Error where
+  toCBOR err = case err of
+    InvalidCertificate ->
+      encodeListLen 1
+        <> toCBOR (0 :: Word8)
+    MultipleDelegationsForEpoch epochNumber keyHash ->
+      encodeListLen 3
+        <> toCBOR (1 :: Word8)
+        <> toCBOR epochNumber
+        <> toCBOR keyHash
+    MultipleDelegationsForSlot slotNumber keyHash ->
+      encodeListLen 3
+        <> toCBOR (2 :: Word8)
+        <> toCBOR slotNumber
+        <> toCBOR keyHash
+    NonGenesisDelegator keyHash  ->
+      encodeListLen 2
+        <> toCBOR (3 :: Word8)
+        <> toCBOR keyHash
+    WrongEpoch currentEpoch delegationEpoch ->
+      encodeListLen 3
+        <> toCBOR (4 :: Word8)
+        <> toCBOR currentEpoch
+        <> toCBOR delegationEpoch
+
+instance FromCBOR Error where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "Scheduling.Error" size len
+    tag <- decodeWord8
+    case tag of
+      0 -> checkSize 1 >> pure InvalidCertificate
+      1 -> checkSize 3 >> MultipleDelegationsForEpoch <$> fromCBOR <*> fromCBOR
+      2 -> checkSize 3 >> MultipleDelegationsForSlot <$> fromCBOR <*> fromCBOR
+      3 -> checkSize 2 >> NonGenesisDelegator <$> fromCBOR
+      4 -> checkSize 3 >> WrongEpoch <$> fromCBOR <*> fromCBOR
+      _ -> cborError   $  DecoderErrorUnknownTag "Scheduling.Error" tag
 
 -- | Update the delegation 'State' with a 'Certificate' if it passes
 --   all the validation rules. This is an implementation of the delegation

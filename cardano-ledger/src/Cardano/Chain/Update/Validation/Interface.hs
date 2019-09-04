@@ -40,10 +40,15 @@ import qualified Data.Set as S
 
 import Cardano.Binary
   ( Annotated
+  , Decoder
+  , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
   , encodeListLen
   , enforceSize
+  , matchSize
   )
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
@@ -158,6 +163,38 @@ data Error
   | Endorsement Endorsement.Error
   | NumberOfGenesisKeysTooLarge (Registration.TooLarge Int)
   deriving (Eq, Show)
+
+instance ToCBOR Error where
+  toCBOR err = case err of
+    Registration registrationErr ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR registrationErr
+    Voting votingErr ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR votingErr
+    Endorsement endorsementErr ->
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
+        <> toCBOR endorsementErr
+    NumberOfGenesisKeysTooLarge tooLarge ->
+      encodeListLen 2
+        <> toCBOR (3 :: Word8)
+        <> toCBOR tooLarge
+
+instance FromCBOR Error where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "Interface.Error" size len
+    tag <- decodeWord8
+    case tag of
+      0 -> checkSize 2 >> Registration <$> fromCBOR
+      1 -> checkSize 2 >> Voting <$> fromCBOR
+      2 -> checkSize 2 >> Endorsement <$> fromCBOR
+      3 -> checkSize 2 >> NumberOfGenesisKeysTooLarge <$> fromCBOR
+      _ -> cborError   $  DecoderErrorUnknownTag "Interface.Error" tag
 
 
 -- | Signal combining signals from various rules

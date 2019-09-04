@@ -19,8 +19,11 @@ module Test.Cardano.Chain.UTxO.Gen
   , genTxProof
   , genTxSig
   , genTxSigData
+  , genTxValidationError
   , genTxWitness
   , genUTxO
+  , genUTxOError
+  , genUTxOValidationError
   )
 where
 
@@ -35,7 +38,7 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Chain.Common (mkAttributes)
+import Cardano.Chain.Common (makeNetworkMagic, mkAttributes)
 import Cardano.Chain.UTxO
   ( CompactTxId
   , CompactTxIn
@@ -51,9 +54,12 @@ import Cardano.Chain.UTxO
   , TxProof(..)
   , TxSig
   , TxSigData(..)
+  , TxValidationError(..)
   , TxWitness
   , UTxOConfiguration(..)
   , UTxO
+  , UTxOError(..)
+  , UTxOValidationError(..)
   , fromList
   , mkTxAux
   , mkTxPayload
@@ -62,17 +68,20 @@ import Cardano.Chain.UTxO
   , toCompactTxIn
   , toCompactTxOut
   )
-import Cardano.Crypto (Hash, ProtocolMagicId, decodeHash, sign)
+import Cardano.Crypto
+  (Hash, ProtocolMagicId, decodeHash, getProtocolMagicId, sign)
 
-import Test.Cardano.Chain.Common.Gen (genAddress, genLovelace, genMerkleRoot)
+import Test.Cardano.Chain.Common.Gen
+  (genAddress, genLovelace, genLovelaceError, genMerkleRoot, genNetworkMagic)
 import Test.Cardano.Crypto.Gen
   ( genAbstractHash
-  , genVerificationKey
+  , genProtocolMagic
   , genRedeemVerificationKey
   , genRedeemSignature
   , genSigningKey
   , genSignTag
   , genTextHash
+  , genVerificationKey
   )
 
 genCompactTxId :: Gen CompactTxId
@@ -141,6 +150,30 @@ genTxSig pm = sign pm <$> genSignTag <*> genSigningKey <*> genTxSigData
 genTxSigData :: Gen TxSigData
 genTxSigData = TxSigData <$> genTxHash
 
+genTxValidationError :: Gen TxValidationError
+genTxValidationError = do
+  pm <- genProtocolMagic
+  let pmi = getProtocolMagicId pm
+      nm  = makeNetworkMagic pm
+  Gen.choice
+    [ TxValidationLovelaceError
+        <$> Gen.text (Range.constant 0 1000) Gen.alphaNum
+        <*> genLovelaceError
+    , TxValidationFeeTooSmall <$> genTx <*> genLovelace <*> genLovelace
+    , TxValidationWitnessWrongSignature
+        <$> genTxInWitness pmi
+        <*> pure pmi
+        <*> genTxSigData
+    , TxValidationWitnessWrongKey <$> genTxInWitness pmi <*> genAddress
+    , TxValidationMissingInput <$> genTxIn
+    , TxValidationNetworkMagicMismatch <$> genNetworkMagic <*> pure nm
+    , TxValidationTxTooLarge
+        <$> Gen.integral (Range.constant 0 1000)
+        <*> Gen.integral (Range.constant 0 1000)
+    , pure TxValidationUnknownAddressAttributes
+    , pure TxValidationUnknownAttributes
+    ]
+
 genTxInWitness :: ProtocolMagicId -> Gen TxInWitness
 genTxInWitness pm = Gen.choice [genVKWitness pm, genRedeemWitness pm]
 
@@ -153,3 +186,15 @@ genUTxO = fromList <$> Gen.list (Range.constant 0 1000) genTxInTxOut
   where
     genTxInTxOut :: Gen (TxIn, TxOut)
     genTxInTxOut = (,) <$> genTxIn <*> genTxOut
+
+genUTxOError :: Gen UTxOError
+genUTxOError = Gen.choice
+  [ UTxOMissingInput <$> genTxIn
+  , pure UTxOOverlappingUnion
+  ]
+
+genUTxOValidationError :: Gen UTxOValidationError
+genUTxOValidationError = Gen.choice
+  [ UTxOValidationTxValidationError <$> genTxValidationError
+  , UTxOValidationUTxOError <$> genUTxOError
+  ]

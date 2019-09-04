@@ -1,5 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 
 -- | Validation rules for registering updates
 --
@@ -20,7 +23,18 @@ import Cardano.Prelude hiding (State)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
-import Cardano.Binary (Annotated)
+import Cardano.Binary
+  ( Annotated
+  , Decoder
+  , DecoderError(..)
+  , FromCBOR(..)
+  , ToCBOR(..)
+  , decodeListLen
+  , decodeWord8
+  , encodeListLen
+  , enforceSize
+  , matchSize
+  )
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
@@ -96,13 +110,103 @@ data Error
   | SystemTagError SystemTagError
   deriving (Eq, Show)
 
+instance ToCBOR Error where
+  toCBOR err = case err of
+    DuplicateProtocolVersion protocolVersion ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR protocolVersion
+    DuplicateSoftwareVersion softwareVersion ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR softwareVersion
+    InvalidProposer keyHash ->
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
+        <> toCBOR keyHash
+    InvalidProtocolVersion protocolVersion adopted  ->
+      encodeListLen 3
+        <> toCBOR (3 :: Word8)
+        <> toCBOR protocolVersion
+        <> toCBOR adopted
+    InvalidScriptVersion adoptedScriptVersion newScriptVersion ->
+      encodeListLen 3
+        <> toCBOR (4 :: Word8)
+        <> toCBOR adoptedScriptVersion
+        <> toCBOR newScriptVersion
+    InvalidSignature ->
+      encodeListLen 1
+        <> toCBOR (5 :: Word8)
+    InvalidSoftwareVersion applicationVersions softwareVersion ->
+      encodeListLen 3
+        <> toCBOR (6 :: Word8)
+        <> toCBOR applicationVersions
+        <> toCBOR softwareVersion
+    MaxBlockSizeTooLarge tooLarge ->
+      encodeListLen 2
+        <> toCBOR (7 :: Word8)
+        <> toCBOR tooLarge
+    MaxTxSizeTooLarge tooLarge ->
+      encodeListLen 2
+        <> toCBOR (8 :: Word8)
+        <> toCBOR tooLarge
+    ProposalAttributesUnknown ->
+      encodeListLen 1
+        <> toCBOR (9 :: Word8)
+    ProposalTooLarge tooLarge ->
+      encodeListLen 2
+        <> toCBOR (10 :: Word8)
+        <> toCBOR tooLarge
+    SoftwareVersionError softwareVersionError  ->
+      encodeListLen 2
+        <> toCBOR (11 :: Word8)
+        <> toCBOR softwareVersionError
+    SystemTagError systemTagError ->
+      encodeListLen 2
+        <> toCBOR (12 :: Word8)
+        <> toCBOR systemTagError
+
+instance FromCBOR Error where
+  fromCBOR = do
+    len <- decodeListLen
+    let checkSize :: Int -> Decoder s ()
+        checkSize size = matchSize "Registration.Error" size len
+    tag <- decodeWord8
+    case tag of
+      0  -> checkSize 2 >> DuplicateProtocolVersion <$> fromCBOR
+      1  -> checkSize 2 >> DuplicateSoftwareVersion <$> fromCBOR
+      2  -> checkSize 2 >> InvalidProposer <$> fromCBOR
+      3  -> checkSize 3 >> InvalidProtocolVersion <$> fromCBOR <*> fromCBOR
+      4  -> checkSize 3 >> InvalidScriptVersion <$> fromCBOR <*> fromCBOR
+      5  -> checkSize 1 >> pure InvalidSignature
+      6  -> checkSize 3 >> InvalidSoftwareVersion <$> fromCBOR <*> fromCBOR
+      7  -> checkSize 2 >> MaxBlockSizeTooLarge <$> fromCBOR
+      8  -> checkSize 2 >> MaxTxSizeTooLarge <$> fromCBOR
+      9  -> checkSize 1 >> pure ProposalAttributesUnknown
+      10 -> checkSize 2 >> ProposalTooLarge <$> fromCBOR
+      11 -> checkSize 2 >> SoftwareVersionError <$> fromCBOR
+      12 -> checkSize 2 >> SystemTagError <$> fromCBOR
+      _  -> cborError   $  DecoderErrorUnknownTag "Registration.Error" tag
+
 data TooLarge n = TooLarge
   { tlActual   :: n
   , tlMaxBound :: n
   } deriving (Eq, Show)
 
+instance (ToCBOR n) => ToCBOR (TooLarge n) where
+  toCBOR TooLarge{ tlActual, tlMaxBound } =
+    encodeListLen 2
+      <> toCBOR tlActual
+      <> toCBOR tlMaxBound
+
+instance (FromCBOR n) => FromCBOR (TooLarge n) where
+  fromCBOR = do
+    enforceSize "TooLarge" 2
+    TooLarge <$> fromCBOR <*> fromCBOR
+
 newtype Adopted = Adopted ProtocolVersion
   deriving (Eq, Show)
+  deriving newtype (ToCBOR, FromCBOR)
 
 -- | Register an update proposal after verifying its signature and validating
 --   its contents. This corresponds to the @UPREG@ rules in the spec.
