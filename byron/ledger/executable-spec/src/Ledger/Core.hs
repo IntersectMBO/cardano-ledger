@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -33,7 +34,8 @@ import           Numeric.Natural (Natural)
 
 import           Data.AbstractSize
 
-import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
+import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), SeedGoblin (..),
+                     saveInBagOfTricks, tinkerRummagedOrConjureOrSave, (<$$>))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
@@ -227,6 +229,10 @@ newtype Lovelace = Lovelace
     deriving newtype (Eq, Ord, Num, Hashable)
     deriving (Semigroup, Monoid) via (Sum Integer)
     deriving anyclass (HasTypeReps)
+
+-- | Maximal possible value of 'Lovelace'
+maxLovelaceVal :: Integer
+maxLovelaceVal = 45e15
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
@@ -461,13 +467,20 @@ deriveGoblin ''Addr
 deriveGoblin ''BlockCount
 deriveGoblin ''Epoch
 deriveGoblin ''Hash
-deriveGoblin ''Lovelace
 deriveGoblin ''Owner
 deriveGoblin ''Sig
 deriveGoblin ''Slot
 deriveGoblin ''SlotCount
 deriveGoblin ''VKey
 deriveGoblin ''VKeyGenesis
+
+instance GeneOps g => Goblin g Lovelace where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((Lovelace
+           <$$> tinker ((\(Lovelace x) -> x `mod` maxLovelaceVal) <$> gen)))
+  conjure = saveInBagOfTricks =<< (Lovelace . (`mod` maxLovelaceVal) <$>
+    conjure)
 
 
 --------------------------------------------------------------------------------
