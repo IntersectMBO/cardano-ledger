@@ -64,16 +64,16 @@ epochTransition :: forall hashAlgo dsignAlgo . TransitionRule (EPOCH hashAlgo ds
 epochTransition = do
   TRC (_, EpochState as ss ls pp, e) <- judgmentContext
   let us = _utxoState ls
-  let (ppup, _, _, _) = _ups us
+  let UpdateState ppup _ _ _ = _ups us
   let DPState ds ps = _delegationState ls
-  (ss', us') <-
-    trans @(SNAP hashAlgo dsignAlgo) $ TRC ((pp, ds, ps), (ss, us), e)
-  (as', ds', ps') <-
-    trans @(POOLREAP hashAlgo dsignAlgo) $ TRC (pp, (as, ds, ps), e)
+  SnapState ss' us' <-
+    trans @(SNAP hashAlgo dsignAlgo) $ TRC (SnapEnv pp ds ps, SnapState ss us, e)
+  PoolreapState as' ds' ps' <-
+    trans @(POOLREAP hashAlgo dsignAlgo) $ TRC (pp, PoolreapState as ds ps, e)
   let ppNew = votedValuePParams ppup pp
-  (us'', as'', pp') <-
+  NewppState us'' as'' pp' <-
     trans @(NEWPP hashAlgo dsignAlgo)
-      $ TRC ((ppNew, ds', ps'), (us', as', pp), e)
+      $ TRC (NewppEnv ppNew ds' ps', NewppState us' as' pp, e)
   pure $ EpochState
     as''
     ss'

@@ -146,7 +146,7 @@ import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolPa
                      RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..),
                      TxOut (..), body, certs, getRwdCred, inputs, poolOwners, poolPledge,
                      poolPubKey, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
-import           Updates (AVUpdate (..), Applications, PPUpdate (..), Update (..), emptyUpdate,
+import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
 
@@ -314,18 +314,15 @@ clearPpup
   :: UTxOState hashAlgo dsignAlgo
   -> UTxOState hashAlgo dsignAlgo
 clearPpup utxoSt =
-  let (_, avup, faps, aps) = _ups utxoSt
-  in utxoSt {_ups = (PPUpdate Map.empty, avup, faps, aps)}
+  let UpdateState _ avup faps aps = _ups utxoSt
+  in utxoSt {_ups = UpdateState (PPUpdate Map.empty) avup faps aps}
 
 data UTxOState hashAlgo dsignAlgo =
     UTxOState
     { _utxo      :: !(UTxO hashAlgo dsignAlgo)
     , _deposited :: Coin
     , _fees      :: Coin
-    , _ups       :: ( PPUpdate hashAlgo dsignAlgo
-                    , AVUpdate hashAlgo dsignAlgo
-                    , Map.Map Slot (Applications hashAlgo)
-                    , Applications hashAlgo)
+    , _ups       :: UpdateState hashAlgo dsignAlgo
     } deriving (Show, Eq)
 
 -- | New Epoch state and environment

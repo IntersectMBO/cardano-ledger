@@ -20,6 +20,7 @@ import           LedgerState (_retiring, _stPools)
 import           MockTypes (KeyHash, POOL, PState, StakePools)
 import           PParams (_eMax)
 import           Slot (Epoch (..), epochFromSlot)
+import           STS.Pool (PoolEnv (..))
 import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool,
                      pattern StakePools)
 
@@ -31,10 +32,10 @@ import           Ledger.Core (dom, (∈), (∉))
 -------------------------------
 
 getRetiring :: PState -> Map KeyHash Epoch
-getRetiring p = _retiring p
+getRetiring = _retiring
 
 getStPools :: PState -> StakePools
-getStPools p = _stPools p
+getStPools = _stPools
 
 ------------------------------
 -- Constants for Properties --
@@ -80,10 +81,10 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
     n :: Integer
     n = fromIntegral $ traceLength t
     tr = sourceSignalTargets t
-    (s, pp) = _traceEnv t
+    PoolEnv s pp = _traceEnv t
 
   when (n > 1) $
-    [] === filter (not . (registeredPoolRetired s pp)) tr
+    [] === filter (not . registeredPoolRetired s pp) tr
 
   where registeredPoolRetired s pp (p, c@(RetirePool _ e), p') =
           case cwitness c of

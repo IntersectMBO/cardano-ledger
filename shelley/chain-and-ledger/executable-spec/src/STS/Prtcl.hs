@@ -10,6 +10,8 @@ module STS.Prtcl
   ( PRTCL
   , PredicateFailure(..)
   , State
+  , PrtclEnv(..)
+  , PrtclState(..)
   )
 where
 
@@ -18,10 +20,8 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes
 import           BlockChain
-import           Delegation.Certificates
 import           Keys
 import           OCert
-import           PParams
 import           Slot
 
 import           STS.Overlay
@@ -30,6 +30,17 @@ import           STS.Updn
 import           Control.State.Transition
 
 data PRTCL hashAlgo dsignAlgo kesAlgo
+
+data PrtclState hashAlgo dsignAlgo kesAlgo
+  = PrtclState
+      (Map.Map (KeyHash hashAlgo dsignAlgo) Natural)
+      (HashHeader hashAlgo dsignAlgo kesAlgo)
+      Slot
+      Seed
+      Seed
+
+data PrtclEnv hashAlgo dsignAlgo kesAlgo
+  = PrtclEnv (OverlayEnv hashAlgo dsignAlgo kesAlgo) Slot
 
 instance
   ( HashAlgorithm hashAlgo
@@ -40,27 +51,13 @@ instance
   )
   => STS (PRTCL hashAlgo dsignAlgo kesAlgo)
  where
-  type State (PRTCL hashAlgo dsignAlgo kesAlgo)
-    = ( Map.Map (KeyHash hashAlgo dsignAlgo) Natural
-      , HashHeader hashAlgo dsignAlgo kesAlgo
-      , Slot
-      , Seed
-      , Seed
-      )
+  type State (PRTCL hashAlgo dsignAlgo kesAlgo) = PrtclState hashAlgo dsignAlgo kesAlgo
 
   type Signal (PRTCL hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
 
-  type Environment (PRTCL hashAlgo dsignAlgo kesAlgo) =
-    ( -- OverlayEnvironment
-      ( PParams
-      , Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
-      , Seed
-      , PoolDistr hashAlgo dsignAlgo
-      , Dms hashAlgo dsignAlgo
-      )
-    , Slot
-    )
+  type Environment (PRTCL hashAlgo dsignAlgo kesAlgo) = PrtclEnv hashAlgo dsignAlgo kesAlgo
+
   data PredicateFailure (PRTCL hashAlgo dsignAlgo kesAlgo)
     = WrongSlotIntervalPRTCL
     | WrongBlockSequencePRTCL
@@ -82,7 +79,7 @@ prtclTransition
      )
   => TransitionRule (PRTCL hashAlgo dsignAlgo kesAlgo)
 prtclTransition = do
-  TRC ((oe, sNow), (cs, h, sL, etaV, etaC), bh) <- judgmentContext
+  TRC (PrtclEnv oe sNow, PrtclState cs h sL etaV etaC, bh) <- judgmentContext
   let bhb  = bhbody bh
   let slot = bheaderSlot bhb
   let eta  = bheaderEta bhb
@@ -90,9 +87,9 @@ prtclTransition = do
   h == bheaderPrev bhb ?! WrongBlockSequencePRTCL
 
   cs'            <- trans @(OVERLAY hashAlgo dsignAlgo kesAlgo) $ TRC (oe, cs, bh)
-  (etaV', etaC') <- trans @UPDN $ TRC (eta, (etaV, etaC), slot)
+  UpdnState etaV' etaC' <- trans @UPDN $ TRC (eta, UpdnState etaV etaC, slot)
 
-  pure (cs', bhHash bh, slot, etaV', etaC')
+  pure $ PrtclState cs' (bhHash bh) slot etaV' etaC'
 
 instance
   ( HashAlgorithm hashAlgo

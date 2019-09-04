@@ -8,6 +8,7 @@
 
 module STS.Ledgers
   ( LEDGERS
+  , LedgersEnv (..)
   )
 where
 
@@ -23,13 +24,16 @@ import           LedgerState
 import           PParams
 import           Slot
 import           Tx
-import           Updates (Applications (..), apps, newAVs)
+import           Updates (Applications (..), UpdateState (..), apps, newAVs)
 
 import           Control.State.Transition
 
 import           STS.Ledger
 
 data LEDGERS hashAlgo dsignAlgo
+
+data LedgersEnv
+  = LedgersEnv Slot PParams
 
 instance
   ( HashAlgorithm hashAlgo
@@ -40,7 +44,7 @@ instance
  where
   type State (LEDGERS hashAlgo dsignAlgo) = LedgerState hashAlgo dsignAlgo
   type Signal (LEDGERS hashAlgo dsignAlgo) = Seq (Tx hashAlgo dsignAlgo)
-  type Environment (LEDGERS hashAlgo dsignAlgo) = (Slot, PParams)
+  type Environment (LEDGERS hashAlgo dsignAlgo) = LedgersEnv
   data PredicateFailure (LEDGERS hashAlgo dsignAlgo)
     = LedgerFailure (PredicateFailure (LEDGER hashAlgo dsignAlgo))
     deriving (Show, Eq)
@@ -56,21 +60,21 @@ ledgersTransition
      )
   => TransitionRule (LEDGERS hashAlgo dsignAlgo)
 ledgersTransition = do
-  TRC ((slot, pp), ls, txwits) <- judgmentContext
+  TRC (LedgersEnv slot pp, ls, txwits) <- judgmentContext
   let (u, dw) = (_utxoState ls, _delegationState ls)
   (u'', dw'') <-
     foldM
         (\(u', dw') (ix, tx) ->
           trans @(LEDGER hashAlgo dsignAlgo)
-            $ TRC ((slot, ix, pp), (u', dw'), tx)
+            $ TRC (LedgerEnv slot ix pp, (u', dw'), tx)
         )
         (u, dw)
       $ zip [0 ..] $ toList txwits
 
-  let UTxOState utxo' dep fee (ppup, aup, favs, avs) = u''
+  let UTxOState utxo' dep fee (UpdateState ppup aup favs avs) = u''
   let (favs', ready) = Map.partitionWithKey (\s _ -> s > slot) favs
   let avs' = Applications $ apps avs ⨃ (Map.toList . apps $ newAVs avs ready)
-  let u''' = UTxOState utxo' dep fee (ppup, aup, favs', avs')
+  let u''' = UTxOState utxo' dep fee (UpdateState ppup aup favs' avs')
 
   let ds = _dstate dw''
       ps = _pstate dw''
