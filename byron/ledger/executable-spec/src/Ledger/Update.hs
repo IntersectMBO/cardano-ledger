@@ -1255,141 +1255,6 @@ increasingProbabilityAt gen (lower, upper)
                   , (5, pure upper)
                   ]
 
--- | Tamper with the update proposal in such a way that the following
--- predicate failures are triggered with equal probability:
---
--- - UPREGFailure
---   - UPVFailure
---     - UPVFailure
---       - UPPVVFailure
---         - CannotFollowPv
---         - CannotUpdatePv
---         - AlreadyProposedPv
---       - UPSVVFailure
---         - AlreadyProposedSv
---         - CannotFollowSv
---         - InvalidApplicationName
---         - InvalidSystemTags
---       - AVChangedInPVUpdate
---       - ParamsChangedInSVUpdate
---       - PVChangedInSVUpdate
---   - NotGenesisDelegate
---   - DoesNotVerify
---
-tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
-tamperWithUpdateProposal _env st uprop = do
-  let failureGenerators
-        = [ invalidProtocolVersion
-          , invalidParametersUpdate
-          , duplicatedProtocolVersion
-          , duplicatedSoftwareVersion
-          , invalidSoftwareVersion
-          , invalidApplicationName
-          , invalidSystemTag
-          , invalidIssuer
-          ]
-  tamperedUprop <- Gen.choice failureGenerators
-  -- We need to re-sign the update proposal since we changed the contents of
-  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
-  -- error (where 'n' is the total number of predicate failures, 'n = length
-  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
-  -- tampered proposal without re-signing it, which will cause the
-  -- 'DoesNotVerify' failure.
-  Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
-                , (1, pure $! tamperedUprop)
-                ]
-  where
-    ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
-
-    invalidProtocolVersion :: Gen UProp
-    invalidProtocolVersion
-      = (\mj mn alt -> uprop { _upPV =  ProtVer mj mn alt})
-      <$> Gen.integral (Range.constant 0 100)
-      <*> Gen.integral (Range.constant 0 100)
-      <*> Gen.integral (Range.constant 0 100)
-
-    invalidParametersUpdate :: Gen UProp
-    invalidParametersUpdate =
-      Gen.element
-        [ uprop & upParams . maxBkSz .~ uprop ^. upParams . maxBkSz * 3
-        , uprop & upParams . maxTxSz .~ uprop ^. upParams . maxBkSz * 2
-        , uprop & upParams . scriptVersion .~ uprop ^. upParams . scriptVersion + 2
-        ]
-
-    duplicatedProtocolVersion :: Gen UProp
-    duplicatedProtocolVersion =
-      let registeredVersions = fst <$> Map.elems rpus in
-        if null registeredVersions
-          then mzero
-          else do
-            duplicatedVersion <- Gen.element registeredVersions
-            pure $! uprop & upPV .~ duplicatedVersion
-
-    duplicatedSoftwareVersion :: Gen UProp
-    duplicatedSoftwareVersion =
-      let registeredVersions = fmap fstSnd (Map.elems raus) in
-        if null registeredVersions
-          then mzero
-          else do
-            (an, av) <- Gen.element registeredVersions
-            pure $! uprop & upSwVer .~ SwVer { _svName = an, _svVer = av }
-
-    invalidSoftwareVersion :: Gen UProp
-    invalidSoftwareVersion =
-      pure $! over (upSwVer . svVer) (+42) uprop
-
-    invalidApplicationName :: Gen UProp
-    invalidApplicationName = do
-      randomName <- ApName <$> Gen.string (Range.linear 10 20) Gen.unicode
-      pure $! uprop & upSwVer . svName .~ randomName
-
-    invalidSystemTag :: Gen UProp
-    invalidSystemTag = do
-      randomTag <- Gen.string (Range.linear 10 20) Gen.unicode
-      pure $! over upSTags (Set.insert randomTag) uprop
-
-    invalidIssuer :: Gen UProp
-    invalidIssuer =
-      -- We use a large (constant) increment here, so that we have a bigger chance to get a
-      -- non-genesis delegate.
-      pure $! over upIssuer (VKey . Owner . (100 +) . coerce) uprop
-
-
--- | Tamper with some of the votes provided as parameter in such a way that the following
--- predicate failures are triggered with equal probability:
---
--- - AVSigDoesNotVerify
--- - NoUpdateProposal
---
-tamperWithVotes :: UPIEnv -> UPIState -> [Vote] -> Gen [Vote]
-tamperWithVotes _env _st [] = do
-  -- If there are no votes, then we generate a random one.
-  vote <- mkVote <$> CoreGen.vkGen <*> randomUpId
-  (:[]) <$> tamperWithVote vote
-tamperWithVotes env st [vote] =
-  -- If we have only one vote we duplicate it and try again, raising the
-  -- probabilities that one of the votes in the list will be tampered with.
-  tamperWithVotes env st [vote, vote]
-tamperWithVotes _env _st votes =
-  traverse tamperWithVote votes
-
-
-tamperWithVote :: Vote -> Gen Vote
-tamperWithVote vote =
-  Gen.choice
-    [ -- Change the vote by some random proposal id. There might be a chance
-      -- that the proposal id exists though, but this should be minimal if
-      -- we generate only small valid proposal id's.
-       mkVote (vote ^. vCaster)
-       .   UpId
-       <$> Gen.integral (Range.constant 10000 10100)
-    , do
-        vk <- CoreGen.vkGen
-        -- Replace the signature by the signature of some random key.
-        pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId)
-    , pure $! vote
-    ]
-
 
 -- | Generate a random update proposal id, by picking a large number so that the
 -- probability of having an update proposal with that id is nearly zero.
@@ -1910,3 +1775,150 @@ mkGoblinGens
   [ "ApplyVotesFailure_UpivoteFailure_UPVOTEFailure_ADDVOTEFailure_AVSigDoesNotVerify"
   , "ApplyVotesFailure_UpivoteFailure_UPVOTEFailure_ADDVOTEFailure_NoUpdateProposal"
   ]
+
+--------------------------------------------------------------------------------
+-- Tampering functions
+--
+-- These must be dropped at the end of the file because they reference
+-- TH-expanded definitions.
+--------------------------------------------------------------------------------
+
+-- | Tamper with the update proposal in such a way that the following
+-- predicate failures are triggered with equal probability:
+--
+-- - UPREGFailure
+--   - UPVFailure
+--     - UPVFailure
+--       - UPPVVFailure
+--         - CannotFollowPv
+--         - CannotUpdatePv
+--         - AlreadyProposedPv
+--       - UPSVVFailure
+--         - AlreadyProposedSv
+--         - CannotFollowSv
+--         - InvalidApplicationName
+--         - InvalidSystemTags
+--       - AVChangedInPVUpdate
+--       - ParamsChangedInSVUpdate
+--       - PVChangedInSVUpdate
+--   - NotGenesisDelegate
+--   - DoesNotVerify
+--
+tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
+tamperWithUpdateProposal env st uprop = do
+  let failureGenerators
+        = [ invalidProtocolVersion
+          , invalidParametersUpdate
+          , duplicatedProtocolVersion
+          , duplicatedSoftwareVersion
+          , invalidSoftwareVersion
+          , invalidApplicationName
+          , invalidSystemTag
+          , invalidIssuer
+          ] ++ (map (\sg -> sg env st) goblinGensUPIREG)
+  tamperedUprop <- Gen.choice failureGenerators
+  -- We need to re-sign the update proposal since we changed the contents of
+  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
+  -- error (where 'n' is the total number of predicate failures, 'n = length
+  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
+  -- tampered proposal without re-signing it, which will cause the
+  -- 'DoesNotVerify' failure.
+  Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
+                , (1, pure $! tamperedUprop)
+                ]
+  where
+    ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
+
+    invalidProtocolVersion :: Gen UProp
+    invalidProtocolVersion
+      = (\mj mn alt -> uprop { _upPV =  ProtVer mj mn alt})
+      <$> Gen.integral (Range.constant 0 100)
+      <*> Gen.integral (Range.constant 0 100)
+      <*> Gen.integral (Range.constant 0 100)
+
+    invalidParametersUpdate :: Gen UProp
+    invalidParametersUpdate =
+      Gen.element
+        [ uprop & upParams . maxBkSz .~ uprop ^. upParams . maxBkSz * 3
+        , uprop & upParams . maxTxSz .~ uprop ^. upParams . maxBkSz * 2
+        , uprop & upParams . scriptVersion .~ uprop ^. upParams . scriptVersion + 2
+        ]
+
+    duplicatedProtocolVersion :: Gen UProp
+    duplicatedProtocolVersion =
+      let registeredVersions = fst <$> Map.elems rpus in
+        if null registeredVersions
+          then mzero
+          else do
+            duplicatedVersion <- Gen.element registeredVersions
+            pure $! uprop & upPV .~ duplicatedVersion
+
+    duplicatedSoftwareVersion :: Gen UProp
+    duplicatedSoftwareVersion =
+      let registeredVersions = fmap fstSnd (Map.elems raus) in
+        if null registeredVersions
+          then mzero
+          else do
+            (an, av) <- Gen.element registeredVersions
+            pure $! uprop & upSwVer .~ SwVer { _svName = an, _svVer = av }
+
+    invalidSoftwareVersion :: Gen UProp
+    invalidSoftwareVersion =
+      pure $! over (upSwVer . svVer) (+42) uprop
+
+    invalidApplicationName :: Gen UProp
+    invalidApplicationName = do
+      randomName <- ApName <$> Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! uprop & upSwVer . svName .~ randomName
+
+    invalidSystemTag :: Gen UProp
+    invalidSystemTag = do
+      randomTag <- Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! over upSTags (Set.insert randomTag) uprop
+
+    invalidIssuer :: Gen UProp
+    invalidIssuer =
+      -- We use a large (constant) increment here, so that we have a bigger chance to get a
+      -- non-genesis delegate.
+      pure $! over upIssuer (VKey . Owner . (100 +) . coerce) uprop
+
+
+-- | Tamper with some of the votes provided as parameter in such a way that the following
+-- predicate failures are triggered with equal probability:
+--
+-- - AVSigDoesNotVerify
+-- - NoUpdateProposal
+--
+tamperWithVotes :: UPIEnv -> UPIState -> [Vote] -> Gen [Vote]
+tamperWithVotes env st vs =
+  Gen.frequency [ (1, go vs)
+                , (1, Gen.choice (map (\sg -> sg env st) goblinGensUPIVOTES))
+                ]
+ where
+  go [] = do
+    -- If there are no votes, then we generate a random one.
+    vote <- mkVote <$> CoreGen.vkGen <*> randomUpId
+    (:[]) <$> tamperWithVote vote
+  go [vote] =
+    -- If we have only one vote we duplicate it and try again, raising the
+    -- probabilities that one of the votes in the list will be tampered with.
+    go [vote, vote]
+  go votes =
+    traverse tamperWithVote votes
+
+
+tamperWithVote :: Vote -> Gen Vote
+tamperWithVote vote =
+  Gen.choice
+    [ -- Change the vote by some random proposal id. There might be a chance
+      -- that the proposal id exists though, but this should be minimal if
+      -- we generate only small valid proposal id's.
+       mkVote (vote ^. vCaster)
+       .   UpId
+       <$> Gen.integral (Range.constant 10000 10100)
+    , do
+        vk <- CoreGen.vkGen
+        -- Replace the signature by the signature of some random key.
+        pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId)
+    , pure $! vote
+    ]
