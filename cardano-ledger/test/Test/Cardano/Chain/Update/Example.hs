@@ -45,7 +45,7 @@ import Cardano.Chain.Update
   , InstallerHash(..)
   , Vote
   , mkProof
-  , mkVoteSafe
+  , signVote
   , payload
   , signProposal
   )
@@ -159,7 +159,7 @@ exampleProposalBody = ProposalBody bv bvm sv hm
     Map.fromList $ zip (exampleSystemTags 10 5) (exampleInstallerHashes 10 5)
 
 exampleVote :: Vote
-exampleVote = mkVoteSafe pm ss ui ar
+exampleVote = signVote pm ui ar ss
  where
   pm = ProtocolMagicId 0
   ss = exampleSafeSigner 0

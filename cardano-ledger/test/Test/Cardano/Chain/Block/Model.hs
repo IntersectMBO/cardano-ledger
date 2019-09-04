@@ -34,6 +34,7 @@ import Data.Word (Word64)
 import Hedgehog
   ( MonadTest
   , PropertyT
+  , TestLimit
   , collect
   , evalEither
   , failure
@@ -59,13 +60,13 @@ import Cardano.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
   , ShouldGenUTxO(NoGenUTxO)
-  , ShouldGenUpdate(NoGenUpdate)
+  , ShouldGenUpdate(NoGenUpdate, GenUpdate)
   , sigGenChain
   )
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace, SignalGenerator, sigGen)
-import Control.State.Transition (State)
+import Control.State.Transition (State, Environment, PredicateFailure)
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
   ( Trace
@@ -86,7 +87,7 @@ import Ledger.Delegation
   , _dSEnvSlot
   , randomDCertGen
   )
-import Ledger.Update (tamperWithUpdateProposal, UPIREG)
+import Ledger.Update (tamperWithUpdateProposal, UPIREG, UPIEnv, tamperWithVotes, UPIState)
 import qualified Ledger.Update.Test as Update.Test
 
 import Test.Cardano.Chain.Elaboration.Block
@@ -162,59 +163,12 @@ classifyTransactions =
     . traceSignals NewestFirst
 
 
-ts_prop_invalidBlocksAreRejected :: TSProperty
-ts_prop_invalidBlocksAreRejected =
-  withTestsTS 400  $ property $ do
-    let traceLength = 100 :: Word64
-    tr <- forAll $ invalidTrace @CHAIN traceLength failureProfile
-    let ValidationOutput { elaboratedConfig, result }
-          = applyTrace (Invalid.Trace.validPrefix tr)
-    case result of
-      Left error -> do
-        footnote $ "Expecting a valid prefix but got: " ++ show error
-        failure
-      Right concreteState ->
-        let abstractState = lastState (Invalid.Trace.validPrefix tr)
-            block = Invalid.Trace.signal tr
-            result' = elaborateAndUpdate
-                    elaboratedConfig
-                    concreteState
-                    (abstractState, block)
-        in
-        case (Invalid.Trace.errorOrLastState tr, result') of
-          (Right _, Right _) ->
-            -- Success: it is possible that the invalid signals generator
-            -- produces a valid signal, since the generator is probabilistic.
-            pure ()
-          (Left pfs, Left _) -> do
-            -- Success: both the model and the concrete implementation failed
-            -- to validate the signal.
-            --
-            -- TODO: we could establish a mapping between concrete and abstract errors.
-            --
-            -- TODO: we want to check that the concrete errors are included in
-            -- the abstract ones. Currently the concrete implementation
-            -- short-circuits on the first failure, that's why we can only
-            -- check inclusion at the moment. To make sure we cover the errors
-            -- that can arise in the concrete implementation we need to make
-            -- sure that the invalid generators cover a good deal of abstract
-            -- errors permutations. So for instance, given abstract errors @X@,
-            -- @Y@, and @Z@, we would want to generate all combinations of them.
-            Update.Test.coverUpiregFailures 1 pfs
-            pure ()
-          (abstractResult, concreteResult) -> do
-            footnote "Validation results mismatch."
-            footnote $ "Signal: " ++ show block
-            footnote $ "Abstract result: " ++ show abstractResult
-            footnote $ "Concrete result: " ++ show concreteResult
-            failure
+ts_prop_invalidDelegationCertificatesAreRejected :: TSProperty
+ts_prop_invalidDelegationCertificatesAreRejected =
+  invalidChainTracesAreRejected 300 delegationFailureProfile coverDelegationRegistration
   where
-    failureProfile :: [(Int, SignalGenerator CHAIN)]
-    failureProfile = [ (1, invalidDelegationGen)
-                     , (1, invalidUpdateProposalGen)
-                     -- TODO: coming soon
-                     -- , (1, invalidVotesGen)
-                     ]
+    delegationFailureProfile :: [(Int, SignalGenerator CHAIN)]
+    delegationFailureProfile = [(1, invalidDelegationGen)]
       where
         invalidDelegationGen :: SignalGenerator CHAIN
         invalidDelegationGen env@(sn, _, allowedDelegators, _, k) st =
@@ -239,28 +193,146 @@ ts_prop_invalidBlocksAreRejected =
                   )
 
 
+    coverDelegationRegistration :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    -- TODO: add coverage testing for delegation.
+    --
+    -- TODO: we could establish a mapping between concrete and abstract errors.
+    --
+    -- TODO: we want to check that the concrete errors are included in
+    -- the abstract ones. Currently the concrete implementation
+    -- short-circuits on the first failure, that's why we can only
+    -- check inclusion at the moment. To make sure we cover the errors
+    -- that can arise in the concrete implementation we need to make
+    -- sure that the invalid generators cover a good deal of abstract
+    -- errors permutations. So for instance, given abstract errors @X@,
+    -- @Y@, and @Z@, we would want to generate all combinations of them.
+    coverDelegationRegistration _abstractPfs _concretePfs = pure ()
+
+
+-- | Test that the invalid chains that are generated according to the given
+-- failure profile are rejected. On failure agreement the given function is
+-- called using the abstract and concrete predicate failures as arguments.
+invalidChainTracesAreRejected
+  :: TestLimit
+  -> [(Int, SignalGenerator CHAIN)]
+  -> ([[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ())
+  -> TSProperty
+invalidChainTracesAreRejected numberOfTests failureProfile onFailureAgreement =
+  withTestsTS numberOfTests $ property $ do
+    let traceLength = 100 :: Word64
+    tr <- forAll $ invalidTrace @CHAIN traceLength failureProfile
+    let ValidationOutput { elaboratedConfig, result } =
+          applyTrace (Invalid.Trace.validPrefix tr)
+    case result of
+      Left error -> do
+        footnote $ "Expecting a valid prefix but got: " ++ show error
+        failure
+      Right concreteState ->
+        let abstractState = lastState (Invalid.Trace.validPrefix tr)
+            block = Invalid.Trace.signal tr
+            result' = elaborateAndUpdate
+                    elaboratedConfig
+                    concreteState
+                    (abstractState, block)
+        in
+        case (Invalid.Trace.errorOrLastState tr, result') of
+          (Right _, Right _) ->
+            -- Success: it is possible that the invalid signals generator
+            -- produces a valid signal, since the generator is probabilistic.
+            pure ()
+          (Left abstractPfs, Left concretePfs) -> do
+            -- Success: both the model and the concrete implementation failed
+            -- to validate the signal.
+            --
+            onFailureAgreement abstractPfs concretePfs
+          (abstractResult, concreteResult) -> do
+            footnote "Validation results mismatch."
+            footnote $ "Signal: " ++ show block
+            footnote $ "Abstract result: " ++ show abstractResult
+            footnote $ "Concrete result: " ++ show concreteResult
+            failure
+
+
+ts_prop_invalidUpdateRegistrationsAreRejected :: TSProperty
+ts_prop_invalidUpdateRegistrationsAreRejected =
+  invalidChainTracesAreRejected 300 updateRegistrationFailureProfile coverUpdateRegistration
+  where
+    updateRegistrationFailureProfile :: [(Int, SignalGenerator CHAIN)]
+    updateRegistrationFailureProfile = [(1, invalidUpdateProposalGen)]
+      where
         invalidUpdateProposalGen :: SignalGenerator CHAIN
-        invalidUpdateProposalGen env@(_, _, allowedDelegators, _, k) st = do
+        invalidUpdateProposalGen env st = do
           block <- sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
-          let (_slot, _sgs, _h, _utxoSt, delegSt, upiSt) = st
-              numberOfDelegators = Set.size allowedDelegators
-              -- TODO: reduce duplication w.r.t. @Cardano.Spec.Chain.STS.Rule.Chain@ in @cardano-ledger-specs@.
-              ngk
-                | fromIntegral (maxBound :: Word8) < numberOfDelegators =
-                  panic $ "ts_prop_invalidDelegationSignalsAreRejected: "
-                        <> "too many genesis keys: "
-                        <> show numberOfDelegators
-                | otherwise = fromIntegral numberOfDelegators
-              blockSlot = Abstract._bhSlot (Abstract._bHeader block)
-              upiEnv = (blockSlot, _dIStateDelegationMap delegSt, k, ngk)
+          let
+            upiEnv = mkUpiEnv block env st
+            upiSt = mkUpiSt st
           uprop <- sigGen @UPIREG upiEnv upiSt
           tamperedUprop <- tamperWithUpdateProposal upiEnv upiSt uprop
           pure $! Abstract.updateBody
                     block
                     (\body -> body { Abstract._bUpdProp = Just tamperedUprop })
 
-        -- invalidVotesGen :: SignalGenerator CHAIN
-        -- invalidVotesGen = undefined
+    coverUpdateRegistration :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
+    coverUpdateRegistration abstractPfs _concretePfs =
+      Update.Test.coverUpiregFailures 1 abstractPfs
+
+
+-- | Extract the update interface environment from a given block and chain
+-- environment and state.
+--
+-- TODO: this should be in `cardano-ledger-specs`.
+--
+mkUpiEnv
+  :: Abstract.Block
+  -> Environment CHAIN
+  -> State CHAIN
+  -> UPIEnv
+mkUpiEnv block env st = (blockSlot, _dIStateDelegationMap delegSt, k, ngk)
+  where
+    blockSlot = Abstract._bhSlot (Abstract._bHeader block)
+    (_, _, allowedDelegators, _, k) = env
+    (_slot, _sgs, _h, _utxoSt, delegSt, _upiSt) = st
+    numberOfDelegators = Set.size allowedDelegators
+    ngk
+      | fromIntegral (maxBound :: Word8) < numberOfDelegators =
+          panic $ "ts_prop_invalidDelegationSignalsAreRejected: "
+                <> "too many genesis keys: "
+                <> show numberOfDelegators
+      | otherwise = fromIntegral numberOfDelegators
+
+
+-- | Extract the update state from the given chain state.
+--
+-- TODO: put this in `cardano-ledger-specs`.
+--
+mkUpiSt
+  :: State CHAIN
+  -> UPIState
+mkUpiSt (_slot, _sgs, _h, _utxoSt, _delegSt, upiSt) = upiSt
+
+
+ts_prop_invalidVotesAreRejected :: TSProperty
+ts_prop_invalidVotesAreRejected =
+  invalidChainTracesAreRejected 300 votesFailureProfile coverVotes
+  where
+    votesFailureProfile :: [(Int, SignalGenerator CHAIN)]
+    votesFailureProfile = [(1, invalidVotesGen)]
+      where
+        invalidVotesGen :: SignalGenerator CHAIN
+        invalidVotesGen env st = do
+          block <- sigGenChain NoGenDelegation NoGenUTxO GenUpdate env st
+          let
+            blockVotes = Abstract._bUpdVotes (Abstract._bBody block)
+          tamperedVotes <- tamperWithVotes (mkUpiEnv block env st) (mkUpiSt st) blockVotes
+          pure $! Abstract.updateBody
+                    block
+                    (\body -> body { Abstract._bUpdVotes = tamperedVotes })
+
+    coverVotes :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
+    coverVotes abstractPfs _concretePfs =
+      Update.Test.coverUpivoteFailures 1 abstractPfs
 
 
 -- | Output resulting from elaborating and validating an abstract trace with
