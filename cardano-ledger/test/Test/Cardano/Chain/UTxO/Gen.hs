@@ -22,6 +22,7 @@ module Test.Cardano.Chain.UTxO.Gen
   , genTxValidationError
   , genTxWitness
   , genUTxO
+  , genUTxOError
   )
 where
 
@@ -56,6 +57,7 @@ import Cardano.Chain.UTxO
   , TxWitness
   , UTxOConfiguration(..)
   , UTxO
+  , UTxOError(..)
   , fromList
   , mkTxAux
   , mkTxPayload
@@ -182,3 +184,9 @@ genUTxO = fromList <$> Gen.list (Range.constant 0 1000) genTxInTxOut
   where
     genTxInTxOut :: Gen (TxIn, TxOut)
     genTxInTxOut = (,) <$> genTxIn <*> genTxOut
+
+genUTxOError :: Gen UTxOError
+genUTxOError = Gen.choice
+  [ UTxOMissingInput <$> genTxIn
+  , pure UTxOOverlappingUnion
+  ]

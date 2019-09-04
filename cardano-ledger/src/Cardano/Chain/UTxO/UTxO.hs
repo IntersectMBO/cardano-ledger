@@ -9,7 +9,7 @@
 
 module Cardano.Chain.UTxO.UTxO
   ( UTxO(..)
-  , UTxOError
+  , UTxOError(..)
   , empty
   , fromList
   , fromBalances
