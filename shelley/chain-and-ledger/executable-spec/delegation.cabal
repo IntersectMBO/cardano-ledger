@@ -94,6 +94,7 @@ test-suite delegation-test
                          Examples
                          Rules.TestDeleg
                          Rules.TestPool
+                         Rules.TestPoolreap
     hs-source-dirs:      test
     ghc-options:
       -threaded
