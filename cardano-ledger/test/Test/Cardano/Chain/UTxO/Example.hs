@@ -5,7 +5,9 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
 module Test.Cardano.Chain.UTxO.Example
-  ( exampleTxId
+  ( exampleTxAux
+  , exampleTxAux1
+  , exampleTxId
   , exampleTxInList
   , exampleTxInUtxo
   , exampleTxPayload
