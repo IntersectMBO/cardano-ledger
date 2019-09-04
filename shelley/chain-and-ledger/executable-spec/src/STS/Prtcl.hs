@@ -8,6 +8,8 @@
 
 module STS.Prtcl
   ( PRTCL
+  , PredicateFailure(..)
+  , State
   )
 where
 
