@@ -13,6 +13,9 @@ module Cardano.Ledger.Spec.STS.UTXOW where
 
 import           Data.Data (Data, Typeable)
 import qualified Data.Map as Map
+import           Hedgehog (Gen)
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
@@ -128,3 +131,8 @@ mkGoblinGens
   , "UtxoFailure_InputsNotInUTxO"
   , "UtxoFailure_NonPositiveOutputs"
   ]
+
+tamperedTxWitsList :: UTxOEnv -> UTxOState -> Gen [TxWits]
+tamperedTxWitsList env st = do
+  gen <- Gen.element (map (\sg -> sg env st) goblinGensUTXOW)
+  Gen.list (Range.linear 0 10) gen
