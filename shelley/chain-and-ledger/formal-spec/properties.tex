@@ -329,19 +329,19 @@ pools in $l$ and $l'$.
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState, \var{e} \in \Epoch:
     \applyFun{validLedgerstate}{l},\\
-    l = (\wcard, dp), l' = (\wcard, dp'), pp\in\PParams, acnt, acnt'\in\Acnt \\
-    \implies pp\vdash\var{(acnt, dp)} \trans{poolreap}{e} \var{(acnt, l')}
-    \implies \forall \var{retire}\in{(\fun{getRetiring}~l)}^{-1}[e], retire \neq
+    l = (\wcard, (d, p)), l' = (\wcard, (d', p')), pp\in\PParams, acnt, acnt'\in\Acnt \\
+    \implies pp\vdash\var{(acnt, d, p} \trans{poolreap}{e} \var{(acnt, d', p')}
+    \implies \forall \var{retire}\in{(\fun{getRetiring}~p)}^{-1}[e], retire \neq
     \emptyset \\ \wedge \var{retire} \subseteq
-    \fun{dom}(\applyFun{getStPool}{l}) \wedge
-    \var{retire} \cap\fun{dom}(\applyFun{getStPool}{l'})=\emptyset \\
-    \wedge\var{retire} \cap \fun{dom}(\applyFun{getRetiring}{l'}) = \emptyset
+    \fun{dom}(\applyFun{getStPool}{p}) \wedge
+    \var{retire} \cap\fun{dom}(\applyFun{getStPool}{p'})=\emptyset \\
+    \wedge\var{retire} \cap \fun{dom}(\applyFun{getRetiring}{p'}) = \emptyset
   \end{multline*}
   \label{prop:ledger-properties-11}
 \end{property}
 
 Property~\ref{prop:ledger-properties-11} states that for $l, l'$ as above but
-with a delegation transition of type $POOLREAP$, there exist registered stake
+with a delegation transition of type POOLREAP, there exist registered stake
 pools in $l$ which are associated to stake pool registration certificates and
 which are to be retired at the current epoch $\var{e}$. In $l'$ all those stake
 pools are removed from the maps $stpools$ and $retiring$.

@@ -18,6 +18,9 @@ import           PParams
 import           Slot
 
 import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+
+import           Hedgehog (Gen)
 
 import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 
@@ -58,3 +61,7 @@ poolReapTransition = do
          , _pParams = retired ⋪ _pParams ps
          , _retiring = retired ⋪ _retiring ps
          , _cCounters = retired ⋪ _cCounters ps})
+
+instance HasTrace (POOLREAP hashAlgo dsignAlgo) where
+  envGen _ = undefined :: Gen PParams
+  sigGen _ _ = undefined :: Gen Epoch
