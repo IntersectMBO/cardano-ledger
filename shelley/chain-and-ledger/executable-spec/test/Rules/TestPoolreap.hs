@@ -15,6 +15,7 @@ import           Control.State.Transition.Trace (sourceSignalTargets, traceLengt
 
 import           MockTypes (POOLREAP)
 import           TxData (pattern StakePools)
+import           STS.PoolReap (PoolreapState (..))
 
 import           Rules.TestPool (getRetiring, getStPools)
 
@@ -47,13 +48,13 @@ removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
   when (n > 1) $
     [] === filter (not . poolRemoved) tr
 
-  where poolRemoved ((_, _, p), e, (_, _, p')) =
+  where poolRemoved (PoolreapState _ _ p, e, PoolreapState _ _ p') =
           let StakePools stp  = getStPools p
               StakePools stp' = getStPools p'
               retiring        = getRetiring p
               retiring'       = getRetiring p'
               retire          = dom $ retiring ▷ Set.singleton e in
              (not . null) retire
-          && (retire `Set.isSubsetOf` (dom stp))
-          && Set.null (retire `Set.intersection` (dom $ stp'))
-          && Set.null (retire `Set.intersection` (dom $ retiring'))
+          && (retire `Set.isSubsetOf` dom stp)
+          && Set.null (retire `Set.intersection` dom stp')
+          && Set.null (retire `Set.intersection` dom retiring')

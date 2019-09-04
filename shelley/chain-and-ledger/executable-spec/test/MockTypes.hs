@@ -100,6 +100,8 @@ type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN
 
 type RewardUpdate = LedgerState.RewardUpdate ShortHash MockDSIGN
 
+type ChainState = STS.Chain.ChainState ShortHash MockDSIGN MockKES
+
 type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
@@ -132,6 +134,8 @@ type Mdt = Updates.Mdt ShortHash
 type Applications = Updates.Applications ShortHash
 
 type Update = Updates.Update ShortHash MockDSIGN
+
+type UpdateState = Updates.UpdateState ShortHash MockDSIGN
 
 type PPUpdate = Updates.PPUpdate ShortHash MockDSIGN
 

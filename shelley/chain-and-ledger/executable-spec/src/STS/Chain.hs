@@ -8,6 +8,7 @@
 
 module STS.Chain
   ( CHAIN
+  , ChainState (..)
   )
 where
 
@@ -26,9 +27,19 @@ import           Control.State.Transition
 
 import           STS.Bbody
 import           STS.Bhead
+import           STS.Overlay
 import           STS.Prtcl
 
 data CHAIN hashAlgo dsignAlgo kesAlgo
+
+data ChainState hashAlgo dsignAlgo kesAlgo
+  = ChainState
+      (NewEpochState hashAlgo dsignAlgo)
+      Seed
+      Seed
+      (HashHeader hashAlgo dsignAlgo kesAlgo)
+      Slot
+  deriving (Show, Eq)
 
 instance
   ( HashAlgorithm hashAlgo
@@ -40,13 +51,7 @@ instance
   )
   => STS (CHAIN hashAlgo dsignAlgo kesAlgo)
  where
-  type State (CHAIN hashAlgo dsignAlgo kesAlgo)
-    = ( NewEpochState hashAlgo dsignAlgo
-      , Seed
-      , Seed
-      , HashHeader hashAlgo dsignAlgo kesAlgo
-      , Slot
-      )
+  type State (CHAIN hashAlgo dsignAlgo kesAlgo) = ChainState hashAlgo dsignAlgo kesAlgo
 
   type Signal (CHAIN hashAlgo dsignAlgo kesAlgo)
     = Block hashAlgo dsignAlgo kesAlgo
@@ -73,26 +78,26 @@ chainTransition
      )
   => TransitionRule (CHAIN hashAlgo dsignAlgo kesAlgo)
 chainTransition = do
-  TRC (sNow, (nes, etaV, etaC, h, sL), block@(Block bh _)) <- judgmentContext
+  TRC (sNow, ChainState nes etaV etaC h sL, block@(Block bh _)) <- judgmentContext
 
   let gkeys = getGKeys nes
   nes' <-
-    trans @(BHEAD hashAlgo dsignAlgo kesAlgo) $ TRC ((etaC, gkeys), nes, bh)
+    trans @(BHEAD hashAlgo dsignAlgo kesAlgo) $ TRC (BheadEnv etaC gkeys, nes, bh)
 
   let NewEpochState _ eta0 _ bcur es _ _pd osched = nes'
   let EpochState _ _ ls pp                        = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _dms) (PState _ _ _ cs)) _ = ls
 
-  (cs', h', sL', etaV', etaC') <- trans @(PRTCL hashAlgo dsignAlgo kesAlgo)
-    $ TRC (((pp, osched, eta0, _pd, _dms), sNow), (cs, h, sL, etaV, etaC), bh)
+  PrtclState cs' h' sL' etaV' etaC' <- trans @(PRTCL hashAlgo dsignAlgo kesAlgo)
+    $ TRC (PrtclEnv (OverlayEnv pp osched eta0 _pd _dms) sNow, PrtclState cs h sL etaV etaC, bh)
 
   let ls' = setIssueNumbers ls cs'
-  (ls'', bcur') <- trans @(BBODY hashAlgo dsignAlgo kesAlgo)
-    $ TRC ((Map.keysSet osched, pp), (ls', bcur), block)
+  BbodyState ls'' bcur' <- trans @(BBODY hashAlgo dsignAlgo kesAlgo)
+    $ TRC (BbodyEnv (Map.keysSet osched) pp, BbodyState ls' bcur, block)
 
   let nes'' = updateNES nes' bcur' ls''
 
-  pure (nes'', etaV', etaC', h', sL')
+  pure $ ChainState nes'' etaV' etaC' h' sL'
 
 instance
   ( HashAlgorithm hashAlgo

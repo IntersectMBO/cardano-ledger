@@ -4,6 +4,8 @@
 
 module STS.Avup
   ( AVUP
+  , AVUPState(..)
+  , AVUPEnv(..)
   )
 where
 
@@ -20,11 +22,20 @@ import           Ledger.Core (dom, range, (⊆), (⨃))
 
 data AVUP hashAlgo dsignAlgo
 
+data AVUPState hashAlgo dsignAlgo
+  = AVUPState
+      (AVUpdate hashAlgo dsignAlgo)
+      (Map.Map Slot (Applications hashAlgo))
+      (Applications hashAlgo)
+
+data AVUPEnv hashAlgo dsignAlgo
+  = AVUPEnv Slot (Dms hashAlgo dsignAlgo)
+
 instance STS (AVUP hashAlgo dsignAlgo) where
   type State (AVUP hashAlgo dsignAlgo)
-    = (AVUpdate hashAlgo dsignAlgo, Map.Map Slot (Applications hashAlgo), Applications hashAlgo)
+    = AVUPState hashAlgo dsignAlgo
   type Signal (AVUP hashAlgo dsignAlgo) = AVUpdate hashAlgo dsignAlgo
-  type Environment (AVUP hashAlgo dsignAlgo) = (Slot, Dms hashAlgo dsignAlgo)
+  type Environment (AVUP hashAlgo dsignAlgo) = AVUPEnv hashAlgo dsignAlgo
   data PredicateFailure (AVUP hashAlgo dsignAlgo)
     = EmptyAVUP
     | NonEmptyAVUP
@@ -50,7 +61,7 @@ avUpdateEmpty = do
 
 avUpdateNoConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
 avUpdateNoConsensus = do
-  TRC ((_slot, Dms _dms), (AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+  TRC (AVUPEnv _slot (Dms _dms), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
     judgmentContext
 
   not (Map.null _aup) ?! EmptyAVUP
@@ -68,11 +79,11 @@ avUpdateNoConsensus = do
 
   fav == Nothing ?! AVConsensus
 
-  pure (AVUpdate aup', favs, avs)
+  pure $ AVUPState (AVUpdate aup') favs avs
 
 avUpdateConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
 avUpdateConsensus = do
-  TRC ((_slot, Dms _dms), (AVUpdate aupS, favs, avs), AVUpdate _aup) <-
+  TRC (AVUPEnv _slot (Dms _dms), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
     judgmentContext
 
   not (Map.null _aup) ?! EmptyAVUP
@@ -93,11 +104,10 @@ avUpdateConsensus = do
 
   let s = _slot +* slotsPrior
 
-  pure
-    ( AVUpdate Map.empty
-    , favs ⨃ [(s, fav')]
-    , avs
-    )
+  pure $ AVUPState
+    (AVUpdate Map.empty)
+    (favs ⨃ [(s, fav')])
+    avs
 
 allApNamesValid :: Applications hashAlgo -> Bool
 allApNamesValid = all apNameValid . dom . apps

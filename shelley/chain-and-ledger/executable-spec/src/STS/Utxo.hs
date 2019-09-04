@@ -7,6 +7,7 @@
 
 module STS.Utxo
   ( UTXO
+  , UtxoEnv (..)
   )
 where
 
@@ -34,19 +35,21 @@ import           STS.Up
 
 data UTXO hashAlgo dsignAlgo
 
+data UtxoEnv hashAlgo dsignAlgo
+  = UtxoEnv
+      Slot
+      PParams
+      (StakeKeys hashAlgo dsignAlgo)
+      (StakePools hashAlgo dsignAlgo)
+      (Dms hashAlgo dsignAlgo)
+
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => STS (UTXO hashAlgo dsignAlgo)
  where
   type State (UTXO hashAlgo dsignAlgo) = UTxOState hashAlgo dsignAlgo
   type Signal (UTXO hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
-  type Environment (UTXO hashAlgo dsignAlgo)
-    = ( Slot
-      , PParams
-      , StakeKeys hashAlgo dsignAlgo
-      , StakePools hashAlgo dsignAlgo
-      , Dms hashAlgo dsignAlgo
-      )
+  type Environment (UTXO hashAlgo dsignAlgo) = UtxoEnv hashAlgo dsignAlgo
   data PredicateFailure (UTXO hashAlgo dsignAlgo)
     = BadInputsUTxO
     | ExpiredUTxO Slot Slot
@@ -74,7 +77,7 @@ utxoInductive
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (UTXO hashAlgo dsignAlgo)
 utxoInductive = do
-  TRC ((slot_, pp, stakeKeys, stakePools, dms_), u, tx) <- judgmentContext
+  TRC (UtxoEnv slot_ pp stakeKeys stakePools dms_, u, tx) <- judgmentContext
   let txBody = _body tx
 
   _ttl txBody >= slot_ ?! ExpiredUTxO (_ttl txBody) slot_
@@ -92,7 +95,7 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Update Proposals
-  ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC ((slot_, pp, dms_), u ^. ups, txup tx)
+  ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC (UpdateEnv slot_ pp dms_, u ^. ups, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
   all (0 <=) outputCoins ?! NegativeOutputsUTxO
