@@ -17,8 +17,8 @@ import Test.Cardano.Chain.UTxO.Gen (genTxAux)
 
 genMempoolPayload :: ProtocolMagicId -> Gen MempoolPayload
 genMempoolPayload pmi = Gen.choice
-  [ MempoolTxPayload <$> genTxAux pmi
-  , MempoolDlgPayload <$> Delegation.genCertificate pmi
-  , MempoolUpdateProposalPayload <$> Update.genProposal pmi
-  , MempoolUpdateVotePayload <$> Update.genVote pmi
+  [ MempoolTx <$> genTxAux pmi
+  , MempoolDlg <$> Delegation.genCertificate pmi
+  , MempoolUpdateProposal <$> Update.genProposal pmi
+  , MempoolUpdateVote <$> Update.genVote pmi
   ]

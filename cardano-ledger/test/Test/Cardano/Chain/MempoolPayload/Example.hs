@@ -20,13 +20,13 @@ import Test.Cardano.Chain.UTxO.Example (exampleTxAux)
 
 
 exampleMempoolPayload :: MempoolPayload
-exampleMempoolPayload = MempoolTxPayload exampleTxAux
+exampleMempoolPayload = MempoolTx exampleTxAux
 
 exampleMempoolPayload1 :: MempoolPayload
-exampleMempoolPayload1 = MempoolDlgPayload (Delegation.exampleCertificates !! 0)
+exampleMempoolPayload1 = MempoolDlg (Delegation.exampleCertificates !! 0)
 
 exampleMempoolPayload2 :: MempoolPayload
-exampleMempoolPayload2 = MempoolUpdateProposalPayload Update.exampleProposal
+exampleMempoolPayload2 = MempoolUpdateProposal Update.exampleProposal
 
 exampleMempoolPayload3 :: MempoolPayload
-exampleMempoolPayload3 = MempoolUpdateVotePayload Update.exampleVote
+exampleMempoolPayload3 = MempoolUpdateVote Update.exampleVote
