@@ -19,7 +19,7 @@ import           Slot
 
 import           Control.State.Transition
 
-import           Ledger.Core ((∪+), (⋪), (◁))
+import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 
 data POOLREAP hashAlgo dsignAlgo
 
@@ -37,40 +37,24 @@ instance STS (POOLREAP hashAlgo dsignAlgo) where
 poolReapTransition :: TransitionRule (POOLREAP hashAlgo dsignAlgo)
 poolReapTransition = do
   TRC (pp, (a, ds, ps), e) <- judgmentContext
-  let retired  = Map.keysSet $ Map.filter (== e) $ ps ^. retiring
-  let pr       = poolRefunds pp (ps ^. retiring) (firstSlot e)
-  let relevant = retired ◁ (ps ^. pParams)
-  let rewardAcnts = Map.mapMaybeWithKey
-        (\k v -> case Map.lookup k relevant of
-          Nothing -> Nothing
-          Just _  -> Just (v ^. poolRAcnt)
-        )
-        (ps ^. pParams)
-  let rewardAcnts' = Map.keysSet pr ◁ rewardAcnts
-  let refunds' = Map.foldlWithKey
-        (\m k addr -> Map.insert addr (pr Map.! k) m)
-        Map.empty
-        rewardAcnts' -- not yet restricted to a in dom(rewards)
-  let domRewards = Map.keysSet (ds ^. rewards)
-  let (refunds, unclaimed') =
-        Map.partitionWithKey (\k _ -> k `Set.member` domRewards) refunds'
-  let unclaimed             = Map.foldl (+) (Coin 0) unclaimed'
-  let StakePools stakePools = ps ^. stPools
 
-  let treasury' = _treasury a + unclaimed
+  let retired = dom $ (ps ^. retiring) ▷ Set.singleton e
+      relevant = retired ◁ (ps ^. pParams)
+      rewardAcnts = Map.intersectionWith (\_ v -> v ^. poolRAcnt) relevant (ps ^. pParams)
+      pr = poolRefunds pp (ps ^. retiring) (firstSlot e)
+      refunds' = Map.fromList . Map.elems
+               $ Map.intersectionWith (\coin addr -> (addr,coin)) pr rewardAcnts
 
-  let rewards'  = _rewards ds ∪+ refunds
-  let delegations' = Map.filter (`Set.notMember` retired) (_delegations ds)
+      domRewards = dom (ds ^. rewards)
+      (refunds, unclaimed') = Map.partitionWithKey (\k _ -> k ∈ domRewards) refunds'
 
-  let stPools' = StakePools $ retired ⋪ stakePools
-  let pParams' = retired ⋪ _pParams ps
-  let retiring' = retired ⋪ _retiring ps
-  let cs' = retired ⋪ _cCounters ps
+      unclaimed = Map.foldl (+) (Coin 0) unclaimed'
+      StakePools stakePools = ps ^. stPools
   pure
-    ( a { _treasury = treasury' }
-    , ds { _rewards = rewards'
-         , _delegations = delegations' }
-    , ps { _stPools = stPools'
-         , _pParams = pParams'
-         , _retiring = retiring'
-         , _cCounters = cs'})
+    ( a { _treasury = _treasury a + unclaimed }
+    , ds { _rewards = _rewards ds ∪+ refunds
+         , _delegations = _delegations ds ⋫ retired }
+    , ps { _stPools = StakePools $ retired ⋪ stakePools
+         , _pParams = retired ⋪ _pParams ps
+         , _retiring = retired ⋪ _retiring ps
+         , _cCounters = retired ⋪ _cCounters ps})
