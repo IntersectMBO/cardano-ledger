@@ -1,34 +1,22 @@
-\section{Software Update Adoption}
+\section{Software Updates}
 \label{sec:software-updates}
 
 This section describes how software updates are performed.
 The process of upgrading the system a new version consists of:
 
 \begin{enumerate}
-  \item New software is ready for downloading.
-  \item The core nodes propose and vote on changing the
-    \textit{application version}.
-    The distinction between protocol and software updates, as well
-    as the voting and proposal of AV updates, is discussed
-    in Section \ref{sec:update}.
-  \item If accepted, the proposal is stored on the blockchain as the future AV
-    $\var{favs} = s \mapsto ap$,
-    indexed by the slot number $s$ in which $ap$
-    is scheduled to become the official version.
-  \item The users can now download the applications listed in $ap$
-  \item In slot $s$, $ap$ becomes the official version, stored as the value
-  $\var{avs}$ on the blockchain
-  \item All nodes running official Cardano software update their software
-  automatically, as soon as they see the updated official version on the ledger.
-  \item This new software should be implementing the ledger rules in the
-  PV currently in the PP's on the ledger
-  \item There may be PP update proposals with new versions of PV's on the ledger
-  (the AV $ap$ must be able to implement all these proposed PV updates)
-  \item Every block producer includes the PV they are ready to move to
-  in the block header (this would be a PV in an update proposals on the ledger)
-  \item Core nodes monitor the PV's in the block headers of blocks being produced
-  \item When enough blocks have the same future PV, core nodes vote to make
-  it the current PV at some upcoming epoch boundary, see Section \ref{sec:ledger-trans}
-  \item When the PV version switch is made on the ledger, the applications $ap$
-  now begin implementing the ledger rules of the new PV
+  \item New software is ready for downloading. The core nodes propose changing the
+    \textit{application version}. If accepted, the proposal
+    will change the application version at the start of the next epoch.
+  \item All nodes see a new application version and update their software.
+    Note that the new software should be compatible with the older version, and the new
+    ledger rules will not be applied as long as the protocol version in the
+    protocol parameters is not increased.
+  \item Every block producer includes the protocol version corresponding to the software
+    they are using in the blocks they produce.
+  \item The core nodes monitor how many block headers contain the new protocol version.
+    Once enough blocks have the new version, the core nodes post another protocol parameter
+    update to increas the protocol version.
+    If this proposal is accepted, it will be changed at the start of the new epoch and
+    the current software then makes use of new rules.
 \end{enumerate}
