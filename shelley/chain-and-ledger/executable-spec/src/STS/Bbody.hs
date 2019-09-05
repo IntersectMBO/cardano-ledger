@@ -14,7 +14,7 @@ module STS.Bbody
 where
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import           Data.Set (Set)
 
 import           BlockChain
 import           EpochBoundary
@@ -35,7 +35,7 @@ data BbodyState hashAlgo dsignAlgo
   = BbodyState (LedgerState hashAlgo dsignAlgo) (BlocksMade hashAlgo dsignAlgo)
 
 data BbodyEnv
-  = BbodyEnv (Set.Set Slot) PParams
+  = BbodyEnv (Set Slot) PParams
 
 instance
   ( HashAlgorithm hashAlgo

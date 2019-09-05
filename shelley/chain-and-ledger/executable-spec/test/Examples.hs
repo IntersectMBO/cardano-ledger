@@ -48,6 +48,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (delete, elems, empty, fromList, insert, keysSet, singleton)
 import           Data.Maybe (fromMaybe)
 import           Data.Sequence (empty, fromList)
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -1322,7 +1323,7 @@ ex2L = CHAINExample (Slot 510) expectedStEx2K blockEx2L expectedStEx2L
 -- have three genesis keys vote on the same new parameters
 
 
-ppVote3A :: Set.Set Ppm
+ppVote3A :: Set Ppm
 ppVote3A = Set.fromList [ExtraEntropy (Nonce 123), PoolDeposit 200]
 
 ppupEx3A :: PPUpdate

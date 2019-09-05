@@ -10,7 +10,7 @@ module STS.Bhead
   )
 where
 
-import qualified Data.Set as Set
+import           Data.Set (Set)
 
 import           BaseTypes
 import           BlockChain
@@ -27,7 +27,7 @@ import           Control.State.Transition
 data BHEAD hashAlgo dsignAlgo kesAlgo
 
 data BheadEnv hashAlgo dsignAlgo kesAlgo
-  = BheadEnv Seed (Set.Set (GenKeyHash hashAlgo dsignAlgo))
+  = BheadEnv Seed (Set (GenKeyHash hashAlgo dsignAlgo))
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)

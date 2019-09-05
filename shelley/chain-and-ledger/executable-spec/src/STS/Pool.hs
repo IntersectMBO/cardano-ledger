@@ -7,6 +7,7 @@ module STS.Pool
   )
 where
 
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Delegation.Certificates
@@ -78,14 +79,14 @@ poolDelegationTransition = do
 -- would require an Ord instance for PParams, which we don't need otherwise.
 -- Instead, we just define these operators here.
 
-(⨃) :: Map.Map (KeyHash hashAlgo dsignAlgo) a
+(⨃) :: Map (KeyHash hashAlgo dsignAlgo) a
     -> (KeyHash hashAlgo dsignAlgo, a)
-    -> Map.Map (KeyHash hashAlgo dsignAlgo) a
+    -> Map (KeyHash hashAlgo dsignAlgo) a
 m ⨃ (k,v) = Map.union (Map.singleton k v) m
 
-(∪) :: Map.Map (KeyHash hashAlgo dsignAlgo) a
+(∪) :: Map (KeyHash hashAlgo dsignAlgo) a
     -> (KeyHash hashAlgo dsignAlgo, a)
-    -> Map.Map (KeyHash hashAlgo dsignAlgo) a
+    -> Map (KeyHash hashAlgo dsignAlgo) a
 m ∪ (k,v) = Map.union m (Map.singleton k v)
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)

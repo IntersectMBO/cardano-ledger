@@ -9,6 +9,7 @@ module STS.Avup
   )
 where
 
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
 import           BlockChain
@@ -25,7 +26,7 @@ data AVUP hashAlgo dsignAlgo
 data AVUPState hashAlgo dsignAlgo
   = AVUPState
       (AVUpdate hashAlgo dsignAlgo)
-      (Map.Map Slot (Applications hashAlgo))
+      (Map Slot (Applications hashAlgo))
       (Applications hashAlgo)
 
 data AVUPEnv hashAlgo dsignAlgo

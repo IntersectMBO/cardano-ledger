@@ -9,7 +9,7 @@ module STS.Ppup
 where
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import           Data.Set (Set)
 
 import           BaseTypes
 import           BlockChain
@@ -33,7 +33,7 @@ instance STS (PPUP hashAlgo dsignAlgo) where
   type Signal (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
   type Environment (PPUP hashAlgo dsignAlgo) = PPUPEnv hashAlgo dsignAlgo
   data PredicateFailure (PPUP hashAlgo dsignAlgo)
-    = NonGenesisUpdatePPUP (Set.Set (GenKeyHash hashAlgo dsignAlgo)) (Set.Set (GenKeyHash hashAlgo dsignAlgo))
+    = NonGenesisUpdatePPUP (Set (GenKeyHash hashAlgo dsignAlgo)) (Set (GenKeyHash hashAlgo dsignAlgo))
     | PPUpdateTooEarlyPPUP
     | PPUpdateEmpty
     | PPUpdateNonEmpty

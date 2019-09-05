@@ -15,7 +15,7 @@ module STS.Prtcl
   )
 where
 
-import qualified Data.Map.Strict as Map
+import           Data.Map.Strict (Map)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes
@@ -33,7 +33,7 @@ data PRTCL hashAlgo dsignAlgo kesAlgo
 
 data PrtclState hashAlgo dsignAlgo kesAlgo
   = PrtclState
-      (Map.Map (KeyHash hashAlgo dsignAlgo) Natural)
+      (Map (KeyHash hashAlgo dsignAlgo) Natural)
       (HashHeader hashAlgo dsignAlgo kesAlgo)
       Slot
       Seed
