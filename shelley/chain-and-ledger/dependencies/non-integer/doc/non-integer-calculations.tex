@@ -12,7 +12,7 @@
 \usepackage{stmaryrd}
 \usepackage{extarrows}
 \usepackage{slashed}
-\usepackage[colon]{natbib}
+%\usepackage[colon]{natbib}
 \usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
@@ -25,8 +25,11 @@
 \usepackage[obeyFinal]{todonotes}
 \newcommand{\khcomment}[1]{\todo[color=blue!20]{KH: #1}}
 
-%% In-para enumeration
+%% In-para enumeration -- KH
 \usepackage{paralist}
+
+%% PDF viewer synchronisation with editor, use with synctex -- KH
+\usepackage{pdfsync}
 
 %%
 %% Package `semantic` can be used for writing inference rules.
@@ -84,6 +87,10 @@
 
 \section{Introduction}
 \label{sec:introduction}
+
+\khcomment{Once this is distributed to a broader group, there should be some versioning and changelog mechanism (the PDF creation
+  date isn't enough, since it doesn't have the source version).  This will help ensure that we're referring to the correct document :)
+  I have some macros that could be adapted.}
 
 The Shelley ledger specification~\cite{shelley_spec}\khcomment{I'd prefer a reference format that was shorter e.g. [G\"ud19], and made it clearer what were internal, public, published etc. documents} and the Ouroboros
 protocol~\cite{ouroboros} use non-integral calculations in a few places. Most of these can be
@@ -364,6 +371,7 @@ in the convergence radius of the approximation schemes.
 Our experimental results have shown that continued fractions converge faster, in particular for the natural logarithm.
 
 \khcomment{Give captions for the plots.  Combine the plots from Figs. 1 and 2 into a single figure (one above the other?).  Do the same for Figs. 3 and 4.}
+
 \begin{figure}[ht]
   \centering
     \includegraphics[width=\textwidth]{ln_taylor}
@@ -526,7 +534,8 @@ optimization. For the 10 data points, the first 5 succeed in the leader
 election, the remaining 5 do not.
 
 \addcontentsline{toc}{section}{References}
-\bibliographystyle{plainnat}
+% \bibliographystyle{plainnat}
+\bibliographystyle{habbrv}
 \bibliography{references}
 
 \end{document}
