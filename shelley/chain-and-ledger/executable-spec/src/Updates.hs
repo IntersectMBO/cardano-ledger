@@ -14,6 +14,7 @@ module Updates
   , Applications(..)
   , AVUpdate(..)
   , Update(..)
+  , UpdateState(..)
   , Favs
   , apNameValid
   , allNames
@@ -220,14 +221,12 @@ votedValue vs | null elemLists = Nothing
   elemLists =
     filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
 
-emptyUpdateState
-  :: ( Updates.PPUpdate hashAlgo dsignAlgo
-     , Updates.AVUpdate hashAlgo dsignAlgo
-     , Map.Map Slot (Applications hashAlgo)
-     , Applications hashAlgo
-     )
-emptyUpdateState =
-  (PPUpdate Map.empty, AVUpdate Map.empty, Map.empty, Applications Map.empty)
+emptyUpdateState :: UpdateState hashAlgo dsignAlgo
+emptyUpdateState = UpdateState
+                     (PPUpdate Map.empty)
+                     (AVUpdate Map.empty)
+                     Map.empty
+                     (Applications Map.empty)
 
 emptyUpdate :: Update hashAlgo dsignAlgo
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)
@@ -254,3 +253,11 @@ updatePParams = Set.foldr updatePParams'
   updatePParams' (D                     p) pps = pps { _d = p }
   updatePParams' (ExtraEntropy          p) pps = pps { _extraEntropy = p }
   updatePParams' (ProtocolVersion       p) pps = pps { _protocolVersion = p }
+
+data UpdateState hashAlgo dsignAlgo
+  = UpdateState
+      (PPUpdate hashAlgo dsignAlgo)
+      (AVUpdate hashAlgo dsignAlgo)
+      (Map.Map Slot (Applications hashAlgo))
+      (Applications hashAlgo)
+  deriving (Show, Eq)

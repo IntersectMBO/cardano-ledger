@@ -6,6 +6,7 @@
 
 module STS.Delegs
   ( DELEGS
+  , DelegsEnv (..)
   )
 where
 
@@ -29,14 +30,16 @@ import           Ledger.Core (dom, (∈), (⊆), (⨃))
 
 data DELEGS hashAlgo dsignAlgo
 
+data DelegsEnv hashAlgo dsignAlgo
+  = DelegsEnv Slot Ix PParams (Tx hashAlgo dsignAlgo)
+
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => STS (DELEGS hashAlgo dsignAlgo)
  where
   type State (DELEGS hashAlgo dsignAlgo) = DPState hashAlgo dsignAlgo
   type Signal (DELEGS hashAlgo dsignAlgo) = Seq (DCert hashAlgo dsignAlgo)
-  type Environment (DELEGS hashAlgo dsignAlgo)
-    = (Slot, Ix, PParams, Tx hashAlgo dsignAlgo)
+  type Environment (DELEGS hashAlgo dsignAlgo) = DelegsEnv hashAlgo dsignAlgo
   data PredicateFailure (DELEGS hashAlgo dsignAlgo)
     = DelegateeNotRegisteredDELEG
     | WithrawalsNotInRewardsDELEGS
@@ -51,7 +54,7 @@ delegsTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELEGS hashAlgo dsignAlgo)
 delegsTransition = do
-  TRC (env@(_slot, txIx, pp, Tx txbody _ _), dpstate, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv _slot txIx pp (Tx txbody _ _)), dpstate, certificates) <- judgmentContext
 
   case certificates of
     Empty -> do
@@ -80,7 +83,7 @@ delegsTransition = do
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
 
       trans @(DELPL hashAlgo dsignAlgo)
-        $ TRC ((_slot, ptr, pp), dpstate', cert)
+        $ TRC (DelplEnv _slot ptr pp, dpstate', cert)
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)

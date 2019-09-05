@@ -31,13 +31,13 @@ import           Ledger.Core (dom, range, (∈), (∉), (◁))
 -------------------------------
 
 getStDelegs :: DState -> Set StakeCredential
-getStDelegs l = dom $ _stKeys l
+getStDelegs = dom . _stKeys
 
 getRewards :: DState -> Map RewardAcnt Coin
-getRewards l = _rewards l
+getRewards = _rewards
 
 getDelegations :: DState -> Map StakeCredential KeyHash
-getDelegations l = _delegations l
+getDelegations = _delegations
 
 ------------------------------
 -- Constants for Properties --
@@ -68,7 +68,7 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
   where credNewlyRegisteredAndRewardZero (d, RegKey hk, d') =
           (hk ∉ getStDelegs d) ==>
           (   hk ∈ getStDelegs d'
-           && (Maybe.maybe True (== 0) $ Map.lookup (mkRwdAcnt hk) (getRewards d')))
+           && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt hk) (getRewards d')))
         credNewlyRegisteredAndRewardZero (_, _, _) = True
 
 -- | Check that when a stake credential is deregistered, it will not be in the
@@ -104,7 +104,7 @@ credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . prop
     [] === filter (not . delegatedCredential) tr
 
   where delegatedCredential (_, Delegate (Delegation cred to), d') =
-          let credImage = range ((Set.singleton cred) ◁ (getDelegations d')) in
+          let credImage = range (Set.singleton cred ◁ getDelegations d') in
              cred ∈ getStDelegs d'
           && to ∈ credImage
           && Set.size credImage == 1

@@ -3,6 +3,7 @@
 
 module STS.PoolReap
   ( POOLREAP
+  , PoolreapState (..)
   )
 where
 
@@ -26,20 +27,26 @@ import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 
 data POOLREAP hashAlgo dsignAlgo
 
+data PoolreapState hashAlgo dsignAlgo =
+  PoolreapState
+    AccountState
+    (DState hashAlgo dsignAlgo)
+    (PState hashAlgo dsignAlgo)
+  deriving (Show, Eq)
+
 instance STS (POOLREAP hashAlgo dsignAlgo) where
-  type State (POOLREAP hashAlgo dsignAlgo)
-    = (AccountState, DState hashAlgo dsignAlgo, PState hashAlgo dsignAlgo)
+  type State (POOLREAP hashAlgo dsignAlgo) = PoolreapState hashAlgo dsignAlgo
   type Signal (POOLREAP hashAlgo dsignAlgo) = Epoch
   type Environment (POOLREAP hashAlgo dsignAlgo) = PParams
   data PredicateFailure (POOLREAP hashAlgo dsignAlgo)
     = FailurePOOLREAP
     deriving (Show, Eq)
-  initialRules = [pure (emptyAccount, emptyDState, emptyPState)]
+  initialRules = [pure $ PoolreapState emptyAccount emptyDState emptyPState]
   transitionRules = [poolReapTransition]
 
 poolReapTransition :: TransitionRule (POOLREAP hashAlgo dsignAlgo)
 poolReapTransition = do
-  TRC (pp, (a, ds, ps), e) <- judgmentContext
+  TRC (pp, PoolreapState a ds ps, e) <- judgmentContext
 
   let retired = dom $ (ps ^. retiring) ▷ Set.singleton e
       relevant = retired ◁ (ps ^. pParams)
@@ -53,14 +60,14 @@ poolReapTransition = do
 
       unclaimed = Map.foldl (+) (Coin 0) unclaimed'
       StakePools stakePools = ps ^. stPools
-  pure
-    ( a { _treasury = _treasury a + unclaimed }
-    , ds { _rewards = _rewards ds ∪+ refunds
-         , _delegations = _delegations ds ⋫ retired }
-    , ps { _stPools = StakePools $ retired ⋪ stakePools
-         , _pParams = retired ⋪ _pParams ps
-         , _retiring = retired ⋪ _retiring ps
-         , _cCounters = retired ⋪ _cCounters ps})
+  pure $ PoolreapState
+    a { _treasury = _treasury a + unclaimed }
+    ds { _rewards = _rewards ds ∪+ refunds
+       , _delegations = _delegations ds ⋫ retired }
+    ps { _stPools = StakePools $ retired ⋪ stakePools
+       , _pParams = retired ⋪ _pParams ps
+       , _retiring = retired ⋪ _retiring ps
+       , _cCounters = retired ⋪ _cCounters ps}
 
 instance HasTrace (POOLREAP hashAlgo dsignAlgo) where
   envGen _ = undefined :: Gen PParams
