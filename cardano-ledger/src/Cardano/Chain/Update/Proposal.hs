@@ -1,37 +1,30 @@
 {-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE PatternSynonyms       #-}
 {-# LANGUAGE TypeFamilies          #-}
 
 module Cardano.Chain.Update.Proposal
   (
   -- * Proposal
-    AProposal(..)
-  , Proposal
+    Proposal(..)
+  , pattern Proposal
   , UpId
 
   -- * Proposal Constructors
-  , unsafeProposal
   , signProposal
   , signatureForProposal
-
-  -- * Proposal Accessors
-  , body
-  , recoverUpId
 
   -- * Proposal Formatting
   , formatMaybeProposal
 
   -- * ProposalBody
   , ProposalBody(..)
-
-  -- * ProposalBody Binary Serialization
-  , recoverProposalSignedBytes
+  , pattern ProposalBody
   )
 where
 
@@ -43,14 +36,16 @@ import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( Annotated(..)
-  , ByteSpan
-  , Decoded(..)
+  ( Decoded(..)
+  , Decoder
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , annotatedDecoder
   , encodeListLen
+  , encodePreEncoded
   , enforceSize
+  , serializeEncoding'
+  , withSlice'
   )
 import Cardano.Chain.Common.Attributes (dropEmptyAttributes)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
@@ -66,7 +61,6 @@ import Cardano.Crypto
   , SignTag(SignUSProposal)
   , Signature
   , hash
-  , hashDecoded
   , safeSign
   , safeToVerification
   )
@@ -79,33 +73,49 @@ import Cardano.Crypto
 -- | ID of software update proposal
 type UpId = Hash Proposal
 
--- | Proposal for software update
-data AProposal a = AProposal
-  { aBody      :: !(Annotated ProposalBody a)
-  , issuer     :: !VerificationKey
-  -- ^ Who proposed this UP.
-  , signature  :: !(Signature ProposalBody)
-  , annotation :: !a
-  } deriving (Eq, Show, Generic, Functor)
-    deriving anyclass NFData
+-- | Create an update 'Proposal' using the provided signature.
+pattern Proposal
+  :: ProposalBody
+  -> VerificationKey
+  -> Signature ProposalBody
+  -> Proposal
+pattern Proposal body issuer signature <- Proposal' {body, issuer, signature}
+  where
+    Proposal body issuer signature =
+      let bytes = serializeEncoding' $
+            encodeListLen 7
+              <> toCBOR (protocolVersion body)
+              <> toCBOR (protocolParametersUpdate body)
+              <> toCBOR (softwareVersion body)
+              <> toCBOR (metadata body)
+              <> toCBOR (mempty :: Map Word8 LByteString)
+              <> toCBOR issuer
+              <> toCBOR signature
+      in Proposal' body issuer signature bytes
 
-type Proposal = AProposal ()
+-- | Proposal for software update
+data Proposal = Proposal'
+  { body               :: !ProposalBody
+  , issuer             :: !VerificationKey
+  -- ^ Who proposed this UP.
+  , signature          :: !(Signature ProposalBody)
+  , proposalSerialized :: ByteString
+  } deriving (Eq, Show, Generic)
+    deriving anyclass NFData
 
 
 --------------------------------------------------------------------------------
 -- Proposal Constructors
 --------------------------------------------------------------------------------
 
-
 -- | Create an update 'Proposal', signing it with the provided safe signer.
 --
 signProposal :: ProtocolMagicId -> ProposalBody -> SafeSigner -> Proposal
 signProposal protocolMagicId proposalBody safeSigner =
-  unsafeProposal
+  Proposal
     proposalBody
     (safeToVerification safeSigner)
     (signatureForProposal protocolMagicId proposalBody safeSigner)
-
 
 signatureForProposal
   :: ProtocolMagicId
@@ -116,69 +126,42 @@ signatureForProposal protocolMagicId proposalBody safeSigner =
   safeSign protocolMagicId SignUSProposal safeSigner proposalBody
 
 
--- | Create an update 'Proposal' using the provided signature.
 --
-unsafeProposal :: ProposalBody -> VerificationKey -> Signature ProposalBody -> Proposal
-unsafeProposal b k s = AProposal (Annotated b ()) k s ()
-
-
---------------------------------------------------------------------------------
--- Proposal Accessors
---------------------------------------------------------------------------------
-
-body :: AProposal a -> ProposalBody
-body = unAnnotated . aBody
-
-recoverUpId :: AProposal ByteString -> UpId
-recoverUpId = hashDecoded
-
-
 --------------------------------------------------------------------------------
 -- Proposal Binary Serialization
 --------------------------------------------------------------------------------
 
 instance ToCBOR Proposal where
-  toCBOR proposal =
-    encodeListLen 7
-      <> toCBOR (protocolVersion body')
-      <> toCBOR (protocolParametersUpdate body')
-      <> toCBOR (softwareVersion body')
-      <> toCBOR (metadata body')
-      <> toCBOR (mempty :: Map Word8 LByteString)
-      <> toCBOR (issuer proposal)
-      <> toCBOR (signature proposal)
-    where body' = body proposal
+  toCBOR = encodePreEncoded . proposalSerialized
 
-instance FromCBOR Proposal where
-  fromCBOR = void <$> fromCBOR @(AProposal ByteSpan)
-
-instance FromCBOR (AProposal ByteSpan) where
-  fromCBOR = do
-    Annotated (pb, vk, sig) byteSpan <- annotatedDecoder $ do
-      enforceSize "Proposal" 7
-      pb <- annotatedDecoder
-        (   ProposalBody
+instance FromCBORAnnotated Proposal where
+  fromCBORAnnotated' = withSlice' $
+    Proposal' <$ lift (enforceSize "Proposal" 7)
+      <*> withSlice' (lift fromCBORProposalBody)
+      <*> lift fromCBOR
+      <*> lift fromCBOR
+   where
+    -- Prepend byte corresponding to `encodeListLen 5`, which was used during
+    -- signing
+    fromCBORProposalBody :: Decoder s (ByteString -> ProposalBody)
+    fromCBORProposalBody = fmap (. ("\133" <>)) $
+      ProposalBody'
         <$> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
         <*  dropEmptyAttributes
-        )
-      vk  <- fromCBOR
-      sig <- fromCBOR
-      pure (pb, vk, sig)
-    pure $ AProposal pb vk sig byteSpan
 
-instance Decoded (AProposal ByteString) where
-  type BaseType (AProposal ByteString) = Proposal
-  recoverBytes = annotation
+instance Decoded Proposal where
+  type BaseType Proposal = Proposal
+  recoverBytes = proposalSerialized
 
 
 --------------------------------------------------------------------------------
 -- Proposal Formatting
 --------------------------------------------------------------------------------
 
-instance B.Buildable (AProposal ()) where
+instance B.Buildable Proposal where
   build proposal = bprint
     ( build
     . " { block v"
@@ -207,12 +190,33 @@ formatMaybeProposal = maybe "no proposal" B.build
 -- ProposalBody
 --------------------------------------------------------------------------------
 
-data ProposalBody = ProposalBody
+pattern ProposalBody
+  :: ProtocolVersion
+  -> ProtocolParametersUpdate
+  -> SoftwareVersion
+  -> Map SystemTag InstallerHash
+  -> ProposalBody
+pattern ProposalBody protocolVersion protocolParametersUpdate softwareVersion metadata <-
+  ProposalBody' {protocolVersion, protocolParametersUpdate, softwareVersion, metadata}
+  where
+    ProposalBody protocolVersion protocolParametersUpdate softwareVersion metadata =
+      let bytes = serializeEncoding' $
+            encodeListLen 5
+              <> toCBOR protocolVersion
+              <> toCBOR protocolParametersUpdate
+              <> toCBOR softwareVersion
+              <> toCBOR metadata
+              -- Encode empty Attributes
+              <> toCBOR (mempty :: Map Word8 LByteString)
+      in ProposalBody' protocolVersion protocolParametersUpdate softwareVersion metadata bytes
+
+data ProposalBody = ProposalBody'
   { protocolVersion          :: !ProtocolVersion
   , protocolParametersUpdate :: !ProtocolParametersUpdate
   , softwareVersion          :: !SoftwareVersion
   , metadata                 :: !(Map SystemTag InstallerHash)
   -- ^ InstallerHash for each system which this update affects
+  , proposalBodySerialized   :: ByteString
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
@@ -222,27 +226,18 @@ data ProposalBody = ProposalBody
 --------------------------------------------------------------------------------
 
 instance ToCBOR ProposalBody where
-  toCBOR pb =
-    encodeListLen 5
-      <> toCBOR (protocolVersion pb)
-      <> toCBOR (protocolParametersUpdate pb)
-      <> toCBOR (softwareVersion pb)
-      <> toCBOR (metadata pb)
-      -- Encode empty Attributes
-      <> toCBOR (mempty :: Map Word8 LByteString)
+  toCBOR = encodePreEncoded . proposalBodySerialized
 
-instance FromCBOR ProposalBody where
-  fromCBOR = do
+instance FromCBORAnnotated ProposalBody where
+  fromCBORAnnotated' = withSlice' . lift $ do
     enforceSize "ProposalBody" 5
-    ProposalBody
+    ProposalBody'
       <$> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*  dropEmptyAttributes
 
--- | Prepend byte corresponding to `encodeListLen 5`, which was used during
---   signing
-recoverProposalSignedBytes
-  :: Annotated ProposalBody ByteString -> Annotated ProposalBody ByteString
-recoverProposalSignedBytes = fmap ("\133" <>)
+instance Decoded ProposalBody where
+  type BaseType ProposalBody = ProposalBody
+  recoverBytes = proposalBodySerialized

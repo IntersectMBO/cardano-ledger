@@ -16,7 +16,13 @@ import Cardano.Prelude
 import Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
+import Cardano.Binary
+  ( FromCBOR(..)
+  , FromCBORAnnotated(..)
+  , ToCBOR(..)
+  , encodeListLen
+  , enforceSize
+  )
 import Cardano.Chain.Block.Body
   (Body(..), bodyDlgPayload, bodyTxPayload, bodyUpdatePayload)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
@@ -50,14 +56,17 @@ instance ToCBOR Proof where
       <> toCBOR (proofDelegation bc)
       <> toCBOR (proofUpdate bc)
 
-instance FromCBOR Proof where
-  fromCBOR = do
-    enforceSize "Proof" 4
-    Proof <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
+instance FromCBORAnnotated Proof where
+  fromCBORAnnotated' =
+    Proof <$ lift (enforceSize "Proof" 4)
+      <*> fromCBORAnnotated'
+      <*> lift fromCBOR
+      <*> lift fromCBOR
+      <*> lift fromCBOR
 
 mkProof :: Body -> Proof
 mkProof body = Proof
-  { proofUTxO        = mkTxProof $ void $ bodyTxPayload body
+  { proofUTxO        = mkTxProof $ bodyTxPayload body
   , proofSsc        = SscProof
   , proofDelegation = hash $ void $ bodyDlgPayload body
   , proofUpdate     = Update.mkProof $ void $ bodyUpdatePayload body

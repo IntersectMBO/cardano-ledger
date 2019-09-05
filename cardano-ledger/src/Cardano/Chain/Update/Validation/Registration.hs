@@ -45,13 +45,11 @@ import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
 import qualified Cardano.Chain.Update.Proposal as Proposal
 import Cardano.Chain.Update.Proposal
-  ( AProposal(..)
+  ( Proposal(..)
   , ProposalBody(..)
   , UpId
   , protocolParametersUpdate
   , protocolVersion
-  , recoverProposalSignedBytes
-  , recoverUpId
   , softwareVersion
   )
 import Cardano.Chain.Update.ProtocolParameters
@@ -73,6 +71,7 @@ import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag, SystemTag
 import Cardano.Crypto
   ( ProtocolMagicId
   , SignTag(SignUSProposal)
+  , hash
   , verifySignatureDecoded
   )
 
@@ -220,7 +219,7 @@ registerProposal
   :: MonadError Error m
   => Environment
   -> State
-  -> AProposal ByteString
+  -> Proposal
   -> m State
 registerProposal env rs proposal = do
   -- Check that the proposer is delegated to by a genesis key
@@ -232,7 +231,8 @@ registerProposal env rs proposal = do
       protocolMagic
       SignUSProposal
       issuer
-      (recoverProposalSignedBytes aBody)
+      -- (recoverProposalSignedBytes aBody)
+      body
       signature
     `orThrowError` InvalidSignature
 
@@ -244,7 +244,7 @@ registerProposal env rs proposal = do
     rs
     proposal
  where
-  AProposal { aBody, issuer, signature } = proposal
+  Proposal' { body, issuer, signature } = proposal
 
   proposerId = hashKey issuer
 
@@ -267,7 +267,7 @@ registerProposalComponents
   -> ProtocolParameters
   -> ApplicationVersions
   -> State
-  -> AProposal ByteString
+  -> Proposal
   -> m State
 registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
@@ -283,7 +283,7 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
   pure $ State registeredPUPs' registeredSUPs'
  where
-  ProposalBody
+  ProposalBody'
     { protocolVersion
     , protocolParametersUpdate = ppu
     , softwareVersion
@@ -317,7 +317,7 @@ registerProtocolUpdate
   => ProtocolVersion
   -> ProtocolParameters
   -> ProtocolUpdateProposals
-  -> AProposal ByteString
+  -> Proposal
   -> m ProtocolUpdateProposals
 registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
@@ -331,9 +331,9 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
   canUpdate adoptedPP newPP proposal
 
-  pure $ M.insert (recoverUpId proposal) (newPV, newPP) registeredPUPs
+  pure $ M.insert (hash proposal) (newPV, newPP) registeredPUPs
  where
-  ProposalBody { protocolVersion = newPV, protocolParametersUpdate } =
+  ProposalBody' { protocolVersion = newPV, protocolParametersUpdate } =
     Proposal.body proposal
   newPP = PPU.apply protocolParametersUpdate adoptedPP
 
@@ -360,7 +360,7 @@ canUpdate
   :: MonadError Error m
   => ProtocolParameters
   -> ProtocolParameters
-  -> AProposal ByteString
+  -> Proposal
   -> m ()
 canUpdate adoptedPP proposedPP proposal = do
 
@@ -384,7 +384,7 @@ canUpdate adoptedPP proposedPP proposal = do
                      adoptedScriptVersion newScriptVersion
  where
   proposalSize :: Natural
-  proposalSize         = fromIntegral . BS.length $ Proposal.annotation proposal
+  proposalSize         = fromIntegral . BS.length $ proposalSerialized proposal
   maxProposalSize      = ppMaxProposalSize adoptedPP
 
   adoptedMaxBlockSize  = ppMaxBlockSize adoptedPP
@@ -410,7 +410,7 @@ registerSoftwareUpdate
   :: MonadError Error m
   => ApplicationVersions
   -> SoftwareUpdateProposals
-  -> AProposal ByteString
+  -> Proposal
   -> m SoftwareUpdateProposals
 registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
@@ -429,8 +429,8 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
     `orThrowError` InvalidSoftwareVersion appVersions softwareVersion
 
   -- Add to the list of registered software update proposals
-  pure $ M.insert (recoverUpId proposal) (softwareVersion, metadata) registeredSUPs
-  where ProposalBody { softwareVersion, metadata } = Proposal.body proposal
+  pure $ M.insert (hash proposal) (softwareVersion, metadata) registeredSUPs
+  where ProposalBody' { softwareVersion, metadata } = Proposal.body proposal
 
 
 -- | Check that a new 'SoftwareVersion' is a valid next version

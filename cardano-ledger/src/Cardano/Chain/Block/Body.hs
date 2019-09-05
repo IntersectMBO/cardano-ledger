@@ -24,7 +24,7 @@ import Cardano.Binary
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload(..))
 import Cardano.Chain.UTxO.Tx (Tx)
-import Cardano.Chain.UTxO.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
+import Cardano.Chain.UTxO.TxPayload (TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 
@@ -32,7 +32,7 @@ import qualified Cardano.Chain.Update.Payload as Update
 pattern Body :: TxPayload -> SscPayload -> Delegation.Payload -> Update.Payload -> Body
 pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
   Body'
-    (void -> bodyTxPayload)
+    bodyTxPayload
     bodySscPayload
     (void -> bodyDlgPayload)
     (void -> bodyUpdatePayload)
@@ -40,22 +40,21 @@ pattern Body bodyTxPayload bodySscPayload bodyDlgPayload bodyUpdatePayload <-
   where
   Body tx ssc dlg upd =
     let bytes = serializeEncoding' $ encodeListLen 4
-          <> encodePreEncoded txBytes
+          <> toCBOR tx
           <> encodePreEncoded sscBytes
           <> encodePreEncoded dlgBytes
           <> encodePreEncoded updBytes
-        txBytes = serialize' tx
         sscBytes = serialize' ssc
         dlgBytes = serialize' dlg
         updBytes = serialize' upd
     -- FIXME: This constructs the members of members of the body with incorrect
     -- bytestring references. We'd need to make the same change we made to body
     -- all the way down to correct this problem.
-    in Body' (txBytes <$ tx) ssc (dlgBytes <$ dlg) (updBytes <$ upd) bytes
+    in Body' tx ssc (dlgBytes <$ dlg) (updBytes <$ upd) bytes
 
 -- | 'Body' consists of payloads of all block components
 data Body = Body'
-  { bodyTxPayload     :: !(ATxPayload ByteString)
+  { bodyTxPayload     :: !TxPayload
   -- ^ UTxO payload
   , bodySscPayload    :: !SscPayload
   -- ^ Ssc payload
@@ -72,7 +71,7 @@ instance ToCBOR Body where
 instance FromCBORAnnotated Body where
   fromCBORAnnotated' = withSlice' $
     Body' <$ lift (enforceSize "Body" 4)
-      <*> liftByteSpanDecoder fromCBOR
+      <*> fromCBORAnnotated'
       <*> lift fromCBOR
       <*> liftByteSpanDecoder fromCBOR
       <*> liftByteSpanDecoder fromCBOR

@@ -1,13 +1,14 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.UTxO.Tx
   ( Tx(..)
+  , pattern Tx
   , txF
   , TxId
   , TxAttributes
@@ -25,10 +26,14 @@ import Cardano.Binary
   ( Case(..)
   , DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
   , encodeListLen
+  , encodePreEncoded
   , enforceSize
+  , serializeEncoding'
   , szCases
+  , withSlice'
   )
 import Cardano.Chain.Common.CBOR
   (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
@@ -45,16 +50,28 @@ import Cardano.Crypto (Hash, hash, shortHashF)
 -- Tx
 --------------------------------------------------------------------------------
 
+pattern Tx :: NonEmpty TxIn -> NonEmpty TxOut -> TxAttributes -> Tx
+pattern Tx txInputs txOutputs txAttributes <- Tx' {txInputs, txOutputs, txAttributes}
+  where
+    Tx txInputs txOutputs txAttributes =
+      let bytes = serializeEncoding' $
+            encodeListLen 3
+              <> toCBOR txInputs
+              <> toCBOR txOutputs
+              <> toCBOR txAttributes
+      in Tx' txInputs txOutputs txAttributes bytes
+
 -- | Transaction
 --
 --   NB: transaction witnesses are stored separately
-data Tx = UnsafeTx
+data Tx = Tx'
   { txInputs     :: !(NonEmpty TxIn)
   -- ^ Inputs of transaction.
   , txOutputs    :: !(NonEmpty TxOut)
   -- ^ Outputs of transaction.
   , txAttributes :: !TxAttributes
   -- ^ Attributes of transaction
+  , txSerialized :: ByteString
   } deriving (Eq, Ord, Generic, Show)
     deriving anyclass NFData
 
@@ -79,18 +96,18 @@ instance B.Buildable Tx where
       | otherwise                = bprint (", attributes: " . build) attrs
 
 instance ToCBOR Tx where
-  toCBOR tx =
-    encodeListLen 3 <> toCBOR (txInputs tx) <> toCBOR (txOutputs tx) <> toCBOR
-      (txAttributes tx)
+  toCBOR = encodePreEncoded . txSerialized
 
   encodedSizeExpr size pxy =
     1 + size (txInputs <$> pxy) + size (txOutputs <$> pxy) + size
       (txAttributes <$> pxy)
 
-instance FromCBOR Tx where
-  fromCBOR = do
-    enforceSize "Tx" 3
-    UnsafeTx <$> fromCBOR <*> fromCBOR <*> fromCBOR
+instance FromCBORAnnotated Tx where
+  fromCBORAnnotated' = withSlice' . lift $
+    Tx' <$ enforceSize "Tx" 3
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 -- | Specialized formatter for 'Tx'
 txF :: Format r (Tx -> r)
@@ -182,4 +199,3 @@ instance FromCBOR TxOut where
 
 instance HeapWords TxOut where
   heapWords (TxOut address _) = 3 + heapWords address
-

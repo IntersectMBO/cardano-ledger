@@ -16,6 +16,7 @@ import Cardano.Binary
   ( ByteSpan
   , DecoderError(..)
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
   , decodeWord8
   , encodeListLen
@@ -25,6 +26,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (ATxAux)
+import Cardano.Chain.UTxO.TxPayload (TxPayload)
 import qualified Cardano.Chain.Update as Update
 
 -- | A payload which can be submitted into or between mempools via the
@@ -64,15 +66,14 @@ instance ToCBOR (AMempoolPayload ByteString) where
   toCBOR (MempoolUpdateVote upv) =
     encodeListLen 2 <> toCBOR (3 :: Word8) <> encodePreEncoded (recoverBytes upv)
 
-instance FromCBOR MempoolPayload where
+instance FromCBORAnnotated MempoolPayload where
   fromCBOR = void <$> fromCBOR @(AMempoolPayload ByteSpan)
 
 instance FromCBOR (AMempoolPayload ByteSpan) where
-  fromCBOR = do
+      0   -> MempoolTxPayload <$> fromCBORAnnotated'
     enforceSize "MempoolPayload" 2
-    decodeWord8 >>= \case
+      tag -> lift . cborError $ DecoderErrorUnknownTag "MempoolPayload" tag
       0   -> MempoolTx             <$> fromCBOR
       1   -> MempoolDlg            <$> fromCBOR
       2   -> MempoolUpdateProposal <$> fromCBOR
       3   -> MempoolUpdateVote     <$> fromCBOR
-      tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" tag

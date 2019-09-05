@@ -1,10 +1,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
@@ -12,8 +10,7 @@
 module Cardano.Chain.Update.Vote
   (
   -- * Vote
-    AVote(..)
-  , Vote
+    Vote(voterVK, aProposalId, signature, serializeVote)
   , VoteId
 
   -- * Vote Constructors
@@ -25,7 +22,6 @@ module Cardano.Chain.Update.Vote
   -- * Vote Accessors
   , proposalId
   , voteId
-  , recoverVoteId
 
   -- * Vote Binary Serialization
   , recoverSignedBytes
@@ -44,14 +40,15 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary
   ( Annotated(Annotated, unAnnotated)
-  , ByteSpan
-  , Decoded(..)
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , annotatedDecoder
-  , fromCBORAnnotated
   , encodeListLen
+  , encodePreEncoded
   , enforceSize
+  , serialize'
+  , serializeEncoding'
+  , withSlice'
   )
 import qualified Cardano.Binary as Binary (annotation)
 import Cardano.Chain.Common (addressHash)
@@ -65,7 +62,6 @@ import Cardano.Crypto
   , SignTag(SignUSVote)
   , Signature
   , hash
-  , hashDecoded
   , safeSign
   , safeToVerification
   , shortHashF
@@ -81,20 +77,18 @@ import Cardano.Crypto
 -- | An update proposal vote identifier (the 'Hash' of a 'Vote').
 type VoteId = Hash Vote
 
-type Vote = AVote ()
-
 -- | Vote for update proposal
 --
 --   Invariant: The signature is valid.
-data AVote a = UnsafeVote
+data Vote = UnsafeVote
   { voterVK     :: !VerificationKey
   -- ^ Verification key casting the vote
-  , aProposalId :: !(Annotated UpId a)
+  , aProposalId :: !(Annotated UpId ByteString)
   -- ^ Proposal to which this vote applies
   , signature   :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit)
-  , annotation  :: !a
-  } deriving (Eq, Show, Generic, Functor)
+  , serializeVote  :: ByteString
+  } deriving (Generic, Show, Eq)
     deriving anyclass NFData
 
 
@@ -112,11 +106,10 @@ mkVote
   -> Bool
   -- ^ Approval/rejection bit
   -> Vote
-mkVote pm sk upId decision = UnsafeVote
+mkVote pm sk upId decision = unsafeVote
   (toVerification sk)
-  (Annotated upId ())
+  upId
   (sign pm SignUSVote sk (upId, decision))
-  ()
 
 
 -- | Create a vote for the given update proposal id, signing it with the
@@ -157,59 +150,47 @@ unsafeVote
   -> Signature (UpId, Bool)
   -> Vote
 unsafeVote vk upId voteSignature =
-  UnsafeVote vk (Annotated upId ()) voteSignature ()
+  let upIdBytes = serialize' upId
+      bytes = serializeEncoding' $
+        encodeListLen 4
+          <> toCBOR vk
+          <> encodePreEncoded upIdBytes
+          -- We encode @True@ here because we removed the decision bit. This is safe
+          -- because we know that all @Vote@s on mainnet use this encoding and any
+          -- changes to the encoding in our implementation will be picked up by
+          -- golden tests.
+          <> toCBOR True
+          <> toCBOR voteSignature
+  in  UnsafeVote vk (Annotated upId upIdBytes) voteSignature bytes
 
 
 --------------------------------------------------------------------------------
 -- Vote Accessors
 --------------------------------------------------------------------------------
 
-proposalId :: AVote a -> UpId
+proposalId :: Vote -> UpId
 proposalId = unAnnotated . aProposalId
 
-voteId :: AVote a -> VoteId
-voteId = hash . void
-
-recoverVoteId :: AVote ByteString -> VoteId
-recoverVoteId = hashDecoded
-
+voteId :: Vote -> VoteId
+voteId = hash
 
 --------------------------------------------------------------------------------
 -- Vote Binary Serialization
 --------------------------------------------------------------------------------
 
 instance ToCBOR Vote where
-  toCBOR uv =
-    encodeListLen 4
-      <> toCBOR (voterVK uv)
-      <> toCBOR (proposalId uv)
-      -- We encode @True@ here because we removed the decision bit. This is safe
-      -- because we know that all @Vote@s on mainnet use this encoding and any
-      -- changes to the encoding in our implementation will be picked up by
-      -- golden tests.
-      <> toCBOR True
-      <> toCBOR (signature uv)
+  toCBOR = encodePreEncoded . serializeVote
 
-instance FromCBOR Vote where
-  fromCBOR = void <$> fromCBOR @(AVote ByteSpan)
-
-instance FromCBOR (AVote ByteSpan) where
-  fromCBOR = do
-    Annotated (voterVK, aProposalId, signature) byteSpan <- annotatedDecoder $ do
-      enforceSize "Vote" 4
-      voterVK     <- fromCBOR
-      aProposalId <- fromCBORAnnotated
+instance FromCBORAnnotated Vote where
+  fromCBORAnnotated' = withSlice' $
+    UnsafeVote <$ lift (enforceSize "Vote" 4)
+      <*> lift fromCBOR
+      <*> fromCBORAnnotated'
       -- Drop the decision bit that previously allowed negative voting
-      void $ fromCBOR @Bool
-      signature <- fromCBOR
-      pure (voterVK, aProposalId, signature)
-    pure $ UnsafeVote voterVK aProposalId signature byteSpan
+      <*  lift (fromCBOR @Bool)
+      <*> lift fromCBOR
 
-instance Decoded (AVote ByteString) where
-  type BaseType (AVote ByteString) = Vote
-  recoverBytes = annotation
-
-recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
+recoverSignedBytes :: Vote -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =
   let
     bytes = mconcat
@@ -228,7 +209,7 @@ recoverSignedBytes v =
 -- Vote Formatting
 --------------------------------------------------------------------------------
 
-instance B.Buildable (AVote a) where
+instance B.Buildable Vote where
   build uv = bprint
     ( "Update Vote { voter: "
     . build
