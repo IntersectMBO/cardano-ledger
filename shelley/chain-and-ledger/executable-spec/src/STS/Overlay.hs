@@ -8,6 +8,7 @@
 
 module STS.Overlay
   ( OVERLAY
+  , OverlayEnv(..)
   )
 where
 
@@ -28,6 +29,14 @@ import           Control.State.Transition
 
 data OVERLAY hashAlgo dsignAlgo kesAlgo
 
+data OverlayEnv hashAlgo dsignAlgo kesAlgo
+  = OverlayEnv
+      PParams
+      (Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo)))
+      Seed
+      (PoolDistr hashAlgo dsignAlgo)
+      (Dms hashAlgo dsignAlgo)
+
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
@@ -43,13 +52,7 @@ instance
   type Signal (OVERLAY hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
 
-  type Environment (OVERLAY hashAlgo dsignAlgo kesAlgo) =
-    ( PParams
-    , Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
-    , Seed
-    , PoolDistr hashAlgo dsignAlgo
-    , Dms hashAlgo dsignAlgo
-    )
+  type Environment (OVERLAY hashAlgo dsignAlgo kesAlgo) = OverlayEnv hashAlgo dsignAlgo kesAlgo
 
   data PredicateFailure (OVERLAY hashAlgo dsignAlgo kesAlgo)
     = NotPraosLeaderOVERLAY
@@ -73,7 +76,7 @@ overlayTransition
      )
   => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo)
 overlayTransition = do
-  TRC ( (pp, osched, eta0, pd, Dms dms)
+  TRC ( OverlayEnv pp osched eta0 pd (Dms dms)
       , cs
       , bh@(BHeader bhb _)) <- judgmentContext
   let vk = bvkcold bhb

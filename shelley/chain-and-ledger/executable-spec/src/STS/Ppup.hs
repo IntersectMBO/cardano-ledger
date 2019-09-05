@@ -4,6 +4,7 @@
 
 module STS.Ppup
   ( PPUP
+  , PPUPEnv(..)
   )
 where
 
@@ -24,10 +25,13 @@ import           Numeric.Natural (Natural)
 
 data PPUP hashAlgo dsignAlgo
 
+data PPUPEnv hashAlgo dsignAlgo
+  = PPUPEnv Slot PParams (Dms hashAlgo dsignAlgo)
+
 instance STS (PPUP hashAlgo dsignAlgo) where
   type State (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
   type Signal (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
-  type Environment (PPUP hashAlgo dsignAlgo) = (Slot, PParams, Dms hashAlgo dsignAlgo)
+  type Environment (PPUP hashAlgo dsignAlgo) = PPUPEnv hashAlgo dsignAlgo
   data PredicateFailure (PPUP hashAlgo dsignAlgo)
     = NonGenesisUpdatePPUP (Set.Set (GenKeyHash hashAlgo dsignAlgo)) (Set.Set (GenKeyHash hashAlgo dsignAlgo))
     | PPUpdateTooEarlyPPUP
@@ -50,7 +54,7 @@ pvCanFollow _ _ = True
 
 ppupTransitionEmpty :: TransitionRule (PPUP hashAlgo dsignAlgo)
 ppupTransitionEmpty = do
-  TRC ((_, _, _), pupS, PPUpdate pup') <- judgmentContext
+  TRC (_, pupS, PPUpdate pup') <- judgmentContext
 
   Map.null pup' ?! PPUpdateNonEmpty
 
@@ -58,7 +62,7 @@ ppupTransitionEmpty = do
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP hashAlgo dsignAlgo)
 ppupTransitionNonEmpty = do
-  TRC ((s, pp, Dms _dms), pupS, pup@(PPUpdate pup')) <- judgmentContext
+  TRC (PPUPEnv s pp (Dms _dms), pupS, pup@(PPUpdate pup')) <- judgmentContext
 
   pup' /= Map.empty ?! PPUpdateEmpty
 
