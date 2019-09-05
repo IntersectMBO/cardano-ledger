@@ -21,6 +21,7 @@ module Generator
     , genKeyPairs
     ) where
 
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ratio
 import           Data.Sequence (Seq (..))
@@ -57,7 +58,7 @@ utxoSize :: UTxO -> Int
 utxoSize (UTxO m) = Map.size m
 
 -- | Extract the map in an 'UTxO'.
-utxoMap :: UTxO -> Map.Map TxIn TxOut
+utxoMap :: UTxO -> Map TxIn TxOut
 utxoMap (UTxO m) = m
 
 -- | Generates a list of '(pay, stake)' key pairs.
