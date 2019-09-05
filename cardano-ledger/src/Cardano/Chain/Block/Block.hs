@@ -40,7 +40,6 @@ module Cardano.Chain.Block.Block
   , blockLength
 
   -- * Block Binary Serialization
-  , toCBORBlock
   , fromCBORBlock
 
   -- * Block Formatting
@@ -80,20 +79,20 @@ import Cardano.Binary
   , DecoderError(..)
   , Encoding
   , FromCBOR(..)
+  , FromCBORAnnotated (..)
   , ToCBOR(..)
   , annotatedDecoder
   , encodeBreak
   , encodeListLen
   , encodeListLenIndef
+  , encodePreEncoded
   , enforceSize
-  , serialize'
   , withSlice'
   , liftByteSpanDecoder
   , serializeEncoding'
   )
 import Cardano.Chain.Block.Body
-  ( ABody
-  , Body
+  ( Body
   , bodyDlgPayload
   , bodySscPayload
   , bodyTxPayload
@@ -152,7 +151,7 @@ import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 
 data Block = Block
   { blockHeader     :: AHeader ByteString
-  , blockBody       :: ABody ByteString
+  , blockBody       :: Body
   , blockSerialized :: ByteString
   } deriving (Eq, Show, Generic, NFData)
 
@@ -168,10 +167,16 @@ mkBlock
   -> Body
   -> Block
 mkBlock epochSlots header body =
-  let block = Block header' body' (serializeEncoding' $ toCBORBlock epochSlots block)
-      header' = (serializeEncoding' $ toCBORHeader epochSlots header) <$ header
-      body' = (serialize' body) <$ body
-  in block
+  -- FIXME: This constructs the members of members of the block with
+  -- incorrect bytestring references. We'd need to make the same change we
+  -- made to block all the way down to correct this problem.
+  let headerBytes = serializeEncoding' $ toCBORHeader epochSlots header
+      header' = headerBytes <$ header
+      bytes = serializeEncoding' $ encodeListLen 3
+              <> encodePreEncoded headerBytes
+              <> toCBOR body
+              <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
+  in Block header' body bytes
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.
@@ -272,23 +277,14 @@ blockLength = fromIntegral . BS.length . blockSerialized
 -- Block Binary Serialization
 --------------------------------------------------------------------------------
 
--- | Encode a block, given a number of slots-per-epoch.
---
---   Unlike 'toCBORBOBBlock', this function does not take the deprecated epoch
---   boundary blocks into account.
---
-toCBORBlock :: EpochSlots -> Block -> Encoding
-toCBORBlock epochSlots block
-  =  encodeListLen 3
-  <> toCBORHeader epochSlots (void $ blockHeader block)
-  <> toCBOR (void $ blockBody block)
-  <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
+instance ToCBOR Block where
+  toCBOR = encodePreEncoded . blockSerialized
 
 fromCBORBlock :: EpochSlots -> AnnotatedDecoder s Block
 fromCBORBlock epochSlots = withSlice' $
   Block <$ lift (enforceSize "Block" 3)
     <*> liftByteSpanDecoder (fromCBORAHeader epochSlots)
-    <*> liftByteSpanDecoder fromCBOR
+    <*> fromCBORAnnotated'
     -- Drop the deprecated ExtraBodyData
     <* (lift $ enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes)
 
@@ -327,11 +323,11 @@ data BlockOrBoundary
   deriving (Eq, Show)
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
-toCBORBOBBlock :: EpochSlots -> Block -> Encoding
-toCBORBOBBlock epochSlots block =
+toCBORBOBBlock :: Block -> Encoding
+toCBORBOBBlock block =
   encodeListLen 2
     <> toCBOR (1 :: Word)
-    <> toCBORBlock epochSlots block
+    <> toCBOR block
 
 -- | toCBORABoundaryBlock but with the list length and tag discriminator bytes.
 toCBORBOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
@@ -364,9 +360,9 @@ fromCBORBlockOrBoundary epochSlots = do
     t -> lift $ cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
 toCBORBlockOrBoundary
-  :: ProtocolMagicId -> EpochSlots -> BlockOrBoundary -> Encoding
-toCBORBlockOrBoundary pm epochSlots abob = case abob of
-  BOBBlock    blk -> toCBORBOBBlock epochSlots blk
+  :: ProtocolMagicId -> BlockOrBoundary -> Encoding
+toCBORBlockOrBoundary pm abob = case abob of
+  BOBBlock    blk -> toCBORBOBBlock blk
   BOBBoundary ebb -> toCBORBOBBoundary pm ebb
 
 --------------------------------------------------------------------------------

@@ -52,7 +52,7 @@ import Cardano.Binary
   , enforceSize
   , serialize'
   )
-import Cardano.Chain.Block.Body (ABody (..))
+import Cardano.Chain.Block.Body (Body (..))
 import Cardano.Chain.Block.Block
   ( Block(..)
   , BlockOrBoundary(..)
@@ -313,7 +313,7 @@ updateChainBoundary cvs bvd = do
 validateHeaderMatchesBody
   :: MonadError ProofValidationError m
   => AHeader ByteString
-  -> ABody ByteString
+  -> Body
   -> m ()
 validateHeaderMatchesBody hdr body = do
   let hdrProof = headerProof hdr

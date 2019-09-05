@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
-{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns -fno-warn-orphans #-}
 
 module Test.Cardano.Chain.Block.CBOR
   ( tests
@@ -72,6 +72,7 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode
   , goldenTestCBOR
   , goldenTestCBORExplicit
+  , roundTripsCBORAnnotatedShow
   , roundTripsCBORBuildable
   , roundTripsCBORShow
   )
@@ -133,7 +134,7 @@ ts_roundTripBlockCompat = eachOfTS
   roundTripsBlockCompat :: WithEpochSlots Block -> H.PropertyT IO ()
   roundTripsBlockCompat esb@(WithEpochSlots es _) = trippingBuildable
     esb
-    (serializeEncoding . toCBORBOBBlock es . unWithEpochSlots)
+    (serializeEncoding . toCBORBOBBlock . unWithEpochSlots)
     ( fmap (WithEpochSlots es . fromJust)
     . decodeAnnotatedDecoder "Block" (fromCBORBOBBlock es)
     )
@@ -232,11 +233,11 @@ goldenDeprecatedBoundaryProof = deprecatedGoldenDecode
 -- Body
 --------------------------------------------------------------------------------
 
-goldenBody :: Property
-goldenBody = goldenTestCBOR exampleBody "test/golden/cbor/block/Body"
+--goldenBody :: Property
+--goldenBody = goldenTestCBOR exampleBody "test/golden/cbor/block/Body"
 
 ts_roundTripBodyCBOR :: TSProperty
-ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORShow
+ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORAnnotatedShow
 
 
 --------------------------------------------------------------------------------

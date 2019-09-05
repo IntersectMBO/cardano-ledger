@@ -18,7 +18,7 @@ import qualified Formatting.Buildable as B
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import Cardano.Chain.Block.Body
-  (ABody(..), Body, bodyDlgPayload, bodyTxPayload, bodyUpdatePayload)
+  (Body(..), bodyDlgPayload, bodyTxPayload, bodyUpdatePayload)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscProof(..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
@@ -57,16 +57,16 @@ instance FromCBOR Proof where
 
 mkProof :: Body -> Proof
 mkProof body = Proof
-  { proofUTxO        = mkTxProof $ bodyTxPayload body
+  { proofUTxO        = mkTxProof $ void $ bodyTxPayload body
   , proofSsc        = SscProof
-  , proofDelegation = hash $ bodyDlgPayload body
-  , proofUpdate     = Update.mkProof $ bodyUpdatePayload body
+  , proofDelegation = hash $ void $ bodyDlgPayload body
+  , proofUpdate     = Update.mkProof $ void $ bodyUpdatePayload body
   }
 
 -- TODO: Should we be using this somewhere?
-recoverProof :: ABody ByteString -> Proof
+recoverProof :: Body -> Proof
 recoverProof body = Proof
-  { proofUTxO        = recoverTxProof $ bodyTxPayload body
+  { proofUTxO       = recoverTxProof $ bodyTxPayload body
   , proofSsc        = SscProof
   , proofDelegation = hashDecoded $ bodyDlgPayload body
   , proofUpdate     = Update.recoverProof $ bodyUpdatePayload body

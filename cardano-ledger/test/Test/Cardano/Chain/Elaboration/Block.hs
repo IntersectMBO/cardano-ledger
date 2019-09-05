@@ -131,12 +131,11 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   cDCert :: Delegation.Certificate
   cDCert = elaborateDCert pm dCert
 
-  bb0    = Concrete.ABody
-    { Concrete.bodyTxPayload     = UTxO.ATxPayload txPayload
-    , Concrete.bodySscPayload    = Ssc.SscPayload
-    , Concrete.bodyDlgPayload    = Delegation.UnsafeAPayload dcerts ()
-    , Concrete.bodyUpdatePayload = updatePayload
-    }
+  bb0    = Concrete.Body
+             (UTxO.ATxPayload txPayload)
+             Ssc.SscPayload
+             (Delegation.UnsafeAPayload dcerts ())
+             updatePayload
 
   dcerts =
     abstractBlock
