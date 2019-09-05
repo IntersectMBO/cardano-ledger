@@ -22,7 +22,7 @@ currently used in ledger calculations according to the rules described in this d
 \item[$\circ$] Changed according to the genesis key votes, which are also stored on the ledger
 \item[$\circ$] All nodes automatically adopt new values (this mechanism is an explicit
  part of the ledger rules, and is included in the epoch boundary transition)
-\item[$\circ$] Has no effect on ledger transition rules
+\item[$\circ$] Has no effect on the logic of the ledger transition rules
 \end{itemize}
 \item \textbf{Protocol version} ($\ProtVer$): a special value in PP's which
 corresponds to a specific version of the \textit{ledger rules}
@@ -52,7 +52,7 @@ currently on the ledger can be used by a node
 do so before their current application becomes incompatible with the
 current protocol version (due to an update), however
 \item[$\circ$] A voted on AV update has a recommended adoption date,
-which official Cardano software will automatically follow
+which applications will automatically follow
 \end{itemize}
 \end{itemize}
 
@@ -76,7 +76,7 @@ be the version recorded on the ledger).
 Having the wrong version of an application
 may potentially become problematic (when it is not able to follow the current
 ledger rules dictated by $\ProtVer$), however, the update mechanism implemented
-in the official Cardano software should
+in the node software should
 ensure this does not happen often.
 
 This chapter does not discuss authentication of update proposals.
@@ -87,12 +87,12 @@ for a transaction, see \ref{sec:witnesses-shelley}.
 \begin{note}
 \textbf{Genesis Key Delegations.} The environment for both PP and AV updates contains
 the value $\var{dms}$, which is a finite map indexed by genesis keys.
-This is the genesis key delegations. During the Byron era, they are expected
-to all have delegated to some $\VKey$, and these delegations are inherited
+This is the genesis key delegations. During the Byron era, they are all
+already delegated to some $\VKey$, and these delegations are inherited
 through the Byron-Shelley transition (see \ref{sec:byron-to-shelley}).
 These delegations can be updated as described in \ref{sec:delegation-shelley},
-but those genesis keys that do not delegate to anything are not able to vote,
-since the rules below only count the votes of delegated keys.
+but there is no mechanism for them to un-delegate or for the keys they delegate
+to to retire (unlike regular stake pools).
 \end{note}
 
 Because the PP and application update mechanisms are very different, the
@@ -300,13 +300,13 @@ specific bit of software (referred to by name) with the proposed version.
 A proposal for several versions of the same application cannot be made in
 a single transaction by the same genesis key.
 
-The state variable $\var{avs}$ stores the official current application version
+The ledger state variable $\var{avs}$ stores the current application version
 that the users \textit{should} be running.
 Now, the state variable $\var{favs}$ contains update proposals that
 were voted on by at least five genesis keys\.
 The particular update $\var{favs} = s \mapsto ap$ will become
-the official AV at slot $s$.
-Updating the official AV is part of the rules in the ledger transitionn,
+the current AV at slot $s$.
+Updating the current AV is part of the rules in the ledger transitionn,
 see Section \ref{sec:ledger-trans}.
 
 At most one AV update
