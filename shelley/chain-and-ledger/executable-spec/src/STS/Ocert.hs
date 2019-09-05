@@ -8,6 +8,7 @@ module STS.Ocert
   )
 where
 
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
 
@@ -30,7 +31,7 @@ instance
   => STS (OCERT hashAlgo dsignAlgo kesAlgo)
  where
   type State (OCERT hashAlgo dsignAlgo kesAlgo)
-    = Map.Map (KeyHash hashAlgo dsignAlgo) Natural
+    = Map (KeyHash hashAlgo dsignAlgo) Natural
   type Signal (OCERT hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
   type Environment (OCERT hashAlgo dsignAlgo kesAlgo) = ()

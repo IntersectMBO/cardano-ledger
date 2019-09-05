@@ -119,6 +119,7 @@ module LedgerState
 
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
 import           Data.Ratio ((%))
@@ -212,7 +213,7 @@ instance Monoid Validity where
   mappend = (<>)
 
 type RewardAccounts hashAlgo dsignAlgo
-  = Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  = Map (RewardAcnt hashAlgo dsignAlgo) Coin
 
 -- | StakeShare type
 newtype StakeShare =
@@ -232,11 +233,11 @@ data DState hashAlgo dsignAlgo = DState
       -- |The active accounts.
     ,  _rewards    :: RewardAccounts hashAlgo dsignAlgo
       -- |The current delegations.
-    , _delegations :: Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+    , _delegations :: Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
       -- |The pointed to hash keys.
-    , _ptrs        :: Map.Map Ptr (StakeCredential hashAlgo dsignAlgo)
+    , _ptrs        :: Map Ptr (StakeCredential hashAlgo dsignAlgo)
       -- | future genesis key delegations
-    , _fdms        :: Map.Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+    , _fdms        :: Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
       -- |Genesis key delegations
     , _dms         :: Dms hashAlgo dsignAlgo
     } deriving (Show, Eq)
@@ -245,11 +246,11 @@ data PState hashAlgo dsignAlgo = PState
     { -- |The active stake pools.
       _stPools     :: StakePools hashAlgo dsignAlgo
       -- |The pool parameters.
-    , _pParams     :: Map.Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
+    , _pParams     :: Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
       -- |A map of retiring stake pools to the epoch when they retire.
-    , _retiring    :: Map.Map (KeyHash hashAlgo dsignAlgo) Epoch
+    , _retiring    :: Map (KeyHash hashAlgo dsignAlgo) Epoch
       -- | Operational Certificate Counters.
-    , _cCounters   :: Map.Map (KeyHash hashAlgo dsignAlgo) Natural
+    , _cCounters   :: Map (KeyHash hashAlgo dsignAlgo) Natural
     } deriving (Show, Eq)
 
 -- |The state associated with the current stake delegation.
@@ -263,7 +264,7 @@ data DPState hashAlgo dsignAlgo =
 data RewardUpdate hashAlgo dsignAlgo = RewardUpdate
   { deltaT :: Coin
   , deltaR :: Coin
-  , rs     :: Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  , rs     :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
   , deltaF :: Coin
   } deriving (Show, Eq)
 
@@ -335,7 +336,7 @@ data NewEpochState hashAlgo dsignAlgo =
   , nesEs    :: EpochState hashAlgo dsignAlgo
   , nesRu    :: Maybe (RewardUpdate hashAlgo dsignAlgo)
   , nesPd    :: PoolDistr hashAlgo dsignAlgo
-  , nesOsched :: Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
+  , nesOsched :: Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
   } deriving (Show, Eq)
 
 getGKeys :: NewEpochState hashAlgo dsignAlgo -> Set (GenKeyHash hashAlgo dsignAlgo)
@@ -348,7 +349,7 @@ data NewEpochEnv hashAlgo dsignAlgo =
   NewEpochEnv {
     neeEta1  :: Seed
   , neeS     :: Slot
-  , neeGkeys :: Set.Set (GenKeyHash hashAlgo dsignAlgo)
+  , neeGkeys :: Set (GenKeyHash hashAlgo dsignAlgo)
   } deriving (Show, Eq)
 
 -- |The state associated with a 'Ledger'.
@@ -654,7 +655,7 @@ validRuleUTXOW tx d' l = verifiedWits tx
 propWits
   :: Update hashAlgo dsignAlgo
   -> Dms hashAlgo dsignAlgo
-  -> Set.Set (KeyHash hashAlgo dsignAlgo)
+  -> Set (KeyHash hashAlgo dsignAlgo)
 propWits (Update (PPUpdate pup) (AVUpdate aup')) (Dms _dms) =
   Set.fromList $ Map.elems updateKeys
   where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup') ◁ _dms
@@ -942,7 +943,7 @@ applyDCertPState _ _ ps = ps
 -- |Compute how much stake each active stake pool controls.
 delegatedStake
   :: LedgerState hashAlgo dsignAlgo
-  -> Map.Map (KeyHash hashAlgo dsignAlgo) Coin
+  -> Map (KeyHash hashAlgo dsignAlgo) Coin
 delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
@@ -1017,8 +1018,8 @@ rewardOnePool
   -> PoolParams hashAlgo dsignAlgo
   -> Stake hashAlgo dsignAlgo
   -> Coin
-  -> Set.Set (RewardAcnt hashAlgo dsignAlgo)
-  -> Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  -> Set (RewardAcnt hashAlgo dsignAlgo)
+  -> Map (RewardAcnt hashAlgo dsignAlgo) Coin
 rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) addrsRew =
   rewards'
   where
@@ -1049,11 +1050,11 @@ reward
   :: PParams
   -> BlocksMade hashAlgo dsignAlgo
   -> Coin
-  -> Set.Set (RewardAcnt hashAlgo dsignAlgo)
-  -> Map.Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
+  -> Set (RewardAcnt hashAlgo dsignAlgo)
+  -> Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo)
   -> Stake hashAlgo dsignAlgo
-  -> Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
-  -> Map.Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  -> Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+  -> Map (RewardAcnt hashAlgo dsignAlgo) Coin
 reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
   rewards'
   where
@@ -1081,7 +1082,7 @@ stakeDistr
   -> DState hashAlgo dsignAlgo
   -> PState hashAlgo dsignAlgo
   -> ( Stake hashAlgo dsignAlgo
-     , Map.Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+     , Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
      )
 stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
@@ -1146,7 +1147,7 @@ overlaySchedule
   -> Set (GenKeyHash hashAlgo dsignAlgo)
   -> Seed
   -> PParams
-  -> Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
+  -> Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
 overlaySchedule e gkeys _ pp = Map.union active inactive
   where
     numActive = dval * fromIntegral slotsPerEpoch
@@ -1175,7 +1176,7 @@ overlaySchedule e gkeys _ pp = Map.union active inactive
 -- | Set issue numbers
 setIssueNumbers
   :: LedgerState hashAlgo dsignAlgo
-  -> Map.Map (KeyHash hashAlgo dsignAlgo) Natural
+  -> Map (KeyHash hashAlgo dsignAlgo) Natural
   -> LedgerState hashAlgo dsignAlgo
 setIssueNumbers (LedgerState u
                  (DPState _dstate
