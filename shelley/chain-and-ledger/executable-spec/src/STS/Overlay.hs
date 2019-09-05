@@ -12,6 +12,7 @@ module STS.Overlay
   )
 where
 
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
 
@@ -32,7 +33,7 @@ data OVERLAY hashAlgo dsignAlgo kesAlgo
 data OverlayEnv hashAlgo dsignAlgo kesAlgo
   = OverlayEnv
       PParams
-      (Map.Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo)))
+      (Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo)))
       Seed
       (PoolDistr hashAlgo dsignAlgo)
       (Dms hashAlgo dsignAlgo)
@@ -47,7 +48,7 @@ instance
   => STS (OVERLAY hashAlgo dsignAlgo kesAlgo)
  where
   type State (OVERLAY hashAlgo dsignAlgo kesAlgo)
-    = Map.Map (KeyHash hashAlgo dsignAlgo) Natural
+    = Map (KeyHash hashAlgo dsignAlgo) Natural
 
   type Signal (OVERLAY hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
