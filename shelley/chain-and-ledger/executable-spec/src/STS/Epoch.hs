@@ -68,16 +68,16 @@ epochTransition = do
   let DPState ds ps = _delegationState ls
   SnapState ss' us' <-
     trans @(SNAP hashAlgo dsignAlgo) $ TRC (SnapEnv pp ds ps, SnapState ss us, e)
-  PoolreapState as' ds' ps' <-
-    trans @(POOLREAP hashAlgo dsignAlgo) $ TRC (pp, PoolreapState as ds ps, e)
+  PoolreapState us'' as' ds' ps' <-
+    trans @(POOLREAP hashAlgo dsignAlgo) $ TRC (pp, PoolreapState us' as ds ps, e)
   let ppNew = votedValuePParams ppup pp
-  NewppState us'' as'' pp' <-
+  NewppState us''' as'' pp' <-
     trans @(NEWPP hashAlgo dsignAlgo)
-      $ TRC (NewppEnv ppNew ds' ps', NewppState us' as' pp, e)
+      $ TRC (NewppEnv ppNew ds' ps', NewppState us'' as' pp, e)
   pure $ EpochState
     as''
     ss'
-    (ls { _utxoState = us'', _delegationState = DPState ds' ps' })
+    (ls { _utxoState = us''', _delegationState = DPState ds' ps' })
     pp'
 
 instance Embed (SNAP hashAlgo dsignAlgo) (EPOCH hashAlgo dsignAlgo) where
