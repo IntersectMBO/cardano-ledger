@@ -26,6 +26,7 @@ module Examples
   , ex4C
   , ex5A
   , ex5B
+  , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -79,10 +80,10 @@ import           Keys (pattern Dms, Hash, pattern KeyPair, pattern SKey, pattern
                      signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
-                     pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
-                     emptyPState, genesisCoins, genesisId, overlaySchedule, rs, _cCounters,
-                     _delegations, _dms, _fdms, _pParams, _ptrs, _reserves, _retiring, _rewards,
-                     _stKeys, _stPools, _treasury)
+                     pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
+                     genesisCoins, genesisId, overlaySchedule, rs, _cCounters, _delegations, _dms,
+                     _fdms, _pParams, _ptrs, _reserves, _retiring, _rewards, _stKeys, _stPools,
+                     _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
@@ -96,7 +97,7 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
                      pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState,
                      updatePPup)
-import           UTxO (pattern UTxO, makeGenWitnessesVKey, makeWitnessesVKey, txid)
+import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
 
 data CHAINExample = CHAINExample Slot ChainState Block ChainState
@@ -325,8 +326,14 @@ ppsExInstantDecay = ppsEx1 { _keyDecayRate = 1000
                            , _poolDecayRate = 1000 }
 
 
+acntEx1 :: AccountState
+acntEx1 = AccountState
+            { _treasury = Coin 0
+            , _reserves = maxLovelaceSupply
+            }
+
 esEx1 :: EpochState
-esEx1 = EpochState emptyAccount emptySnapShots lsEx1 ppsEx1
+esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1
 
 -- |The first block of the Shelley era will point back to the last block of the Byron era.
 -- For our purposes in this test we can bootstrap the chain by just coercing the value.
@@ -434,15 +441,17 @@ utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) usEx2A
 lsEx2A :: LedgerState
 lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1) 0
 
+maxLovelaceSupply :: Coin
+maxLovelaceSupply = Coin 45*1000*1000*1000*1000*1000
+
 acntEx2A :: AccountState
 acntEx2A = AccountState
             { _treasury = Coin 0
-            , _reserves = Coin 45*1000*1000*1000*1000*1000
+            , _reserves = maxLovelaceSupply - balance utxoEx2A
             }
 
 esEx2A :: EpochState
 esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1
-
 
 overlayEx2A :: Map Slot (Maybe GenKeyHash)
 overlayEx2A = overlaySchedule
@@ -838,7 +847,7 @@ blockEx2EHash = bhHash (bheader blockEx2E)
 acntEx2E :: AccountState
 acntEx2E = AccountState
             { _treasury = Coin 20
-            , _reserves = Coin 45*1000*1000*1000*1000*1000
+            , _reserves = maxLovelaceSupply - balance utxoEx2A
             }
 
 expectedStEx2E :: ChainState
@@ -1002,8 +1011,8 @@ expectedStEx2H = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState (acntEx2E { _treasury = Coin 33 }) snapsEx2G expectedLSEx2G ppsEx1)
-     (Just RewardUpdate { deltaT = Coin 9374400000011
-                        , deltaR = Coin (-9450000000000)
+     (Just RewardUpdate { deltaT = Coin 9374400000008
+                        , deltaR = Coin (-9449999999997)
                         , rs = rewardsEx2H
                         , deltaF = Coin (-10)
                         })
@@ -1044,8 +1053,8 @@ epoch1OSchedEx2I = overlaySchedule
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
-            { _treasury = Coin 9374400000044
-            , _reserves = Coin 44990550000000000
+            { _treasury = Coin 9374400000041
+            , _reserves = Coin 44990549999989003
             }
 
 dsEx2I :: DState
@@ -1285,15 +1294,15 @@ dsEx2L :: DState
 dsEx2L = dsEx1
           { _ptrs = Map.singleton (Ptr (Slot 10) 0 0) aliceSHK
           , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 10)
-          , _rewards = Map.singleton (RewardAcnt aliceSHK) (aliceRAcnt2H + Coin 250)
-                       -- Note the pool cert refund of 250
+          , _rewards = Map.singleton (RewardAcnt aliceSHK) (aliceRAcnt2H + Coin 201)
+                       -- Note the pool cert refund of 201
           }
 
 expectedLSEx2L :: LedgerState
 expectedLSEx2L = LedgerState
                (UTxOState
                  utxoEx2K
-                 (Coin 205)
+                 (Coin 4)
                  (Coin 21)
                  usEx2A)
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped

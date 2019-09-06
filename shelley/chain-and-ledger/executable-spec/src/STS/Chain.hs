@@ -9,6 +9,7 @@
 module STS.Chain
   ( CHAIN
   , ChainState (..)
+  , totalAda
   )
 where
 
@@ -17,11 +18,13 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes
 import           BlockChain
+import           Coin (Coin (..))
 import           Keys
 import           LedgerState
 import           OCert
 import           Slot
 import           Tx
+import           UTxO (balance)
 
 import           Control.State.Transition
 
@@ -134,3 +137,14 @@ instance
   => Embed (PRTCL hashAlgo dsignAlgo kesAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo)
  where
   wrapFailed = PrtclFailure
+
+-- |Calculate the total ada in the chain state
+totalAda :: ChainState hashAlgo dsignAlgo kesAlgo -> Coin
+totalAda (ChainState nes _ _ _ _) =
+  treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
+  where
+    (EpochState (AccountState treasury_ reserves_) _ ls _) = nesEs nes
+    (UTxOState u deposits fees_ _) = _utxoState ls
+    (DPState ds _) = _delegationState ls
+    rewards_ = sum (Map.elems (_rewards ds))
+    circulation = balance u
