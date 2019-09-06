@@ -14,8 +14,8 @@ import           Control.State.Transition.Generator (trace)
 import           Control.State.Transition.Trace (sourceSignalTargets, traceLength)
 
 import           MockTypes (POOLREAP)
-import           TxData (pattern StakePools)
 import           STS.PoolReap (PoolreapState (..))
+import           TxData (pattern StakePools)
 
 import           Rules.TestPool (getRetiring, getStPools)
 
@@ -48,7 +48,7 @@ removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
   when (n > 1) $
     [] === filter (not . poolRemoved) tr
 
-  where poolRemoved (PoolreapState _ _ p, e, PoolreapState _ _ p') =
+  where poolRemoved (PoolreapState _ _ _ p, e, PoolreapState _ _ _ p') =
           let StakePools stp  = getStPools p
               StakePools stp' = getStPools p'
               retiring        = getRetiring p

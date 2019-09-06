@@ -35,7 +35,7 @@ import           Delegation.Certificates (StakeKeys (..), StakePools (..), decay
                      refund)
 import           Keys (KeyHash)
 import           PParams (PParams (..))
-import           Slot (Epoch, Slot, slotFromEpoch, (-*))
+import           Slot (Slot, (-*))
 import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential, TxOut (..),
                      getRwdCred)
 import           UTxO (UTxO (..))
@@ -134,13 +134,13 @@ poolStake hk delegs (Stake stake) =
 -- | Calculate pool refunds
 poolRefunds
   :: PParams
-  -> Map (KeyHash hashAlgo dsignAlgo) Epoch
+  -> Map (KeyHash hashAlgo dsignAlgo) Slot
   -> Slot
   -> Map (KeyHash hashAlgo dsignAlgo) Coin
 poolRefunds pp retirees cslot =
   Map.map
-    (\e ->
-       refund pval pmin lambda (cslot -* slotFromEpoch e))
+    (\s ->
+       refund pval pmin lambda (cslot -* s))
     retirees
   where
     (pval, pmin, lambda) = decayPool pp
