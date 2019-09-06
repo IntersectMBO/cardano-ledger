@@ -29,6 +29,7 @@ data POOLREAP hashAlgo dsignAlgo
 
 data PoolreapState hashAlgo dsignAlgo =
   PoolreapState
+    (UTxOState hashAlgo dsignAlgo)
     AccountState
     (DState hashAlgo dsignAlgo)
     (PState hashAlgo dsignAlgo)
@@ -41,17 +42,18 @@ instance STS (POOLREAP hashAlgo dsignAlgo) where
   data PredicateFailure (POOLREAP hashAlgo dsignAlgo)
     = FailurePOOLREAP
     deriving (Show, Eq)
-  initialRules = [pure $ PoolreapState emptyAccount emptyDState emptyPState]
+  initialRules = [pure $ PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState]
   transitionRules = [poolReapTransition]
 
 poolReapTransition :: TransitionRule (POOLREAP hashAlgo dsignAlgo)
 poolReapTransition = do
-  TRC (pp, PoolreapState a ds ps, e) <- judgmentContext
+  TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
   let retired = dom $ (ps ^. retiring) ▷ Set.singleton e
       relevant = retired ◁ (ps ^. pParams)
       rewardAcnts = Map.intersectionWith (\_ v -> v ^. poolRAcnt) relevant (ps ^. pParams)
-      pr = poolRefunds pp (ps ^. retiring) (firstSlot e)
+      StakePools stPools' = ps ^. stPools
+      pr = poolRefunds pp (retired ◁ stPools') (firstSlot e)
       refunds' = Map.fromList . Map.elems
                $ Map.intersectionWith (\coin addr -> (addr,coin)) pr rewardAcnts
 
@@ -61,6 +63,7 @@ poolReapTransition = do
       unclaimed = Map.foldl (+) (Coin 0) unclaimed'
       StakePools stakePools = ps ^. stPools
   pure $ PoolreapState
+    us { _deposited = _deposited us - (unclaimed + sum (Map.elems refunds))}
     a { _treasury = _treasury a + unclaimed }
     ds { _rewards = _rewards ds ∪+ refunds
        , _delegations = _delegations ds ⋫ retired }

@@ -28,6 +28,7 @@ module LedgerState
   , EpochState(..)
   , emptyEpochState
   , emptyLedgerState
+  , emptyUTxOState
   , clearPpup
   , dstate
   , pstate
@@ -284,6 +285,9 @@ data EpochState hashAlgo dsignAlgo
       PParams
   deriving (Show, Eq)
 
+emptyUTxOState :: UTxOState hashAlgo dsignAlgo
+emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
+
 emptyEpochState :: EpochState hashAlgo dsignAlgo
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
@@ -291,7 +295,7 @@ emptyEpochState =
 emptyLedgerState :: LedgerState hashAlgo dsignAlgo
 emptyLedgerState =
   LedgerState
-  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)
+  emptyUTxOState
   emptyDelegation
   0
 
