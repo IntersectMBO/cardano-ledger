@@ -25,31 +25,36 @@ import Data.Maybe (fromJust)
 import Hedgehog (Property)
 import qualified Hedgehog as H
 
-import Cardano.Binary (decodeFullDecoder, dropBytes, serializeEncoding, decodeAnnotatedDecoder)
+import Cardano.Binary
+  ( Decoder
+  , decodeAnnotatedDecoder
+  , dropBytes
+  , fromCBOREmptyAnnotation
+  , serializeEncoding
+  , toCBOR
+  )
 import Cardano.Chain.Block
-  ( ABlockSignature(..)
+  ( BlockSignature(..)
   , Block
-  , BlockSignature
   , Body
-  , ABoundaryBlock(boundaryBlockLength)
   , pattern Body
+  , BoundaryBlock
+  , BoundaryHeader
   , Header
   , HeaderHash
   , Proof(..)
+  , pattern Proof
   , ToSign(..)
   , dropBoundaryBody
-  , fromCBORABoundaryBlock
   , fromCBORBoundaryConsensusData
-  , fromCBORABoundaryHeader
   , fromCBORBOBBlock
   , fromCBORHeader
   , fromCBORHeaderToHash
   , mkHeaderExplicit
   , toCBORBOBBlock
-  , toCBORABoundaryBlock
-  , toCBORHeader
   , toCBORHeaderToHash
   )
+
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting
   ( EpochNumber(..)
@@ -71,10 +76,11 @@ import Cardano.Crypto
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode
   , goldenTestCBOR
-  , goldenTestCBORExplicit
+  , goldenTestCBORAnnotated
+  , goldenTestExplicit
   , roundTripsCBORAnnotatedShow
+  , roundTripsCBORAnnotatedBuildable
   , roundTripsCBORBuildable
-  , roundTripsCBORShow
   )
 import Test.Cardano.Chain.Block.Gen
 import Test.Cardano.Chain.Common.Example (exampleChainDifficulty)
@@ -98,10 +104,9 @@ exampleEs :: EpochSlots
 exampleEs = EpochSlots 50
 
 goldenHeader :: Property
-goldenHeader = goldenTestCBORExplicit
-  "Header"
-  (toCBORHeader exampleEs)
-  (fromCBORHeader exampleEs)
+goldenHeader = goldenTestExplicit
+  (serializeEncoding . toCBOR)
+  (decodeAnnotatedDecoder "header" $ fromCBORHeader exampleEs)
   exampleHeader
   "test/golden/cbor/block/Header"
 
@@ -115,9 +120,9 @@ ts_roundTripHeaderCompat = eachOfTS
   roundTripsHeaderCompat :: WithEpochSlots Header -> H.PropertyT IO ()
   roundTripsHeaderCompat esh@(WithEpochSlots es _) = trippingBuildable
     esh
-    (serializeEncoding . toCBORHeaderToHash es . unWithEpochSlots)
+    (serializeEncoding . toCBORHeaderToHash . unWithEpochSlots)
     ( fmap (WithEpochSlots es . fromJust)
-    . decodeFullDecoder "Header" (fromCBORHeaderToHash es)
+    . decodeAnnotatedDecoder "Header" (fromCBORHeaderToHash es)
     )
 
 --------------------------------------------------------------------------------
@@ -143,14 +148,13 @@ ts_roundTripBlockCompat = eachOfTS
 --------------------------------------------------------------------------------
 -- BlockSignature
 --------------------------------------------------------------------------------
-
 goldenBlockSignature :: Property
 goldenBlockSignature =
-  goldenTestCBOR exampleBlockSignature "test/golden/cbor/block/BlockSignature"
+  goldenTestCBORAnnotated exampleBlockSignature "test/golden/cbor/block/BlockSignature"
 
 ts_roundTripBlockSignatureCBOR :: TSProperty
 ts_roundTripBlockSignatureCBOR =
-  eachOfTS 300 (feedPMEpochSlots genBlockSignature) roundTripsCBORBuildable
+  eachOfTS 300 (feedPMEpochSlots genBlockSignature) roundTripsCBORAnnotatedBuildable
 
 
 --------------------------------------------------------------------------------
@@ -160,27 +164,17 @@ ts_roundTripBlockSignatureCBOR =
 goldenDeprecatedBoundaryBlockHeader :: Property
 goldenDeprecatedBoundaryBlockHeader = deprecatedGoldenDecode
   "BoundaryBlockHeader"
-  (void fromCBORABoundaryHeader)
+  (void (fromCBOREmptyAnnotation :: forall s. Decoder s BoundaryHeader))
   "test/golden/cbor/block/BoundaryBlockHeader"
 
 ts_roundTripBoundaryBlock :: TSProperty
 ts_roundTripBoundaryBlock = eachOfTS
     300
     (feedPM genBVDWithPM)
-    roundTripsBVD
+    (roundTripsCBORAnnotatedBuildable . snd)
   where
-    -- We ignore the size of the BVD here, since calculating it is annoying.
-    roundTripsBVD :: (ProtocolMagicId, ABoundaryBlock ()) -> H.PropertyT IO ()
-    roundTripsBVD (pm, bvd) = trippingBuildable
-      bvd
-      (serializeEncoding . toCBORABoundaryBlock pm)
-      (fmap (dropSize . fmap (const ())) <$> decodeFullDecoder "BoundaryBlock" fromCBORABoundaryBlock)
-
-    genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, ABoundaryBlock ())
-    genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryBlock
-
-    dropSize :: ABoundaryBlock a -> ABoundaryBlock a
-    dropSize bvd = bvd { boundaryBlockLength = 0 }
+    genBVDWithPM :: ProtocolMagicId -> H.Gen (ProtocolMagicId, BoundaryBlock)
+    genBVDWithPM pm = (,) <$> pure pm <*> genBoundaryBlock pm
 
 
 --------------------------------------------------------------------------------
@@ -233,8 +227,8 @@ goldenDeprecatedBoundaryProof = deprecatedGoldenDecode
 -- Body
 --------------------------------------------------------------------------------
 
---goldenBody :: Property
---goldenBody = goldenTestCBOR exampleBody "test/golden/cbor/block/Body"
+goldenBody :: Property
+goldenBody = goldenTestCBORAnnotated exampleBody "test/golden/cbor/block/Body"
 
 ts_roundTripBodyCBOR :: TSProperty
 ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORAnnotatedShow
@@ -245,10 +239,10 @@ ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORAnnotatedShow
 --------------------------------------------------------------------------------
 
 goldenProof :: Property
-goldenProof = goldenTestCBOR exampleProof "test/golden/cbor/block/Proof"
+goldenProof = goldenTestCBORAnnotated exampleProof "test/golden/cbor/block/Proof"
 
 ts_roundTripProofCBOR :: TSProperty
-ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
+ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORAnnotatedBuildable
 
 
 --------------------------------------------------------------------------------
@@ -256,11 +250,11 @@ ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenToSign :: Property
-goldenToSign = goldenTestCBOR exampleToSign "test/golden/cbor/block/ToSign"
+goldenToSign = goldenTestCBORAnnotated exampleToSign "test/golden/cbor/block/ToSign"
 
 ts_roundTripToSignCBOR :: TSProperty
 ts_roundTripToSignCBOR =
-  eachOfTS 20 (feedPMEpochSlots genToSign) roundTripsCBORShow
+  eachOfTS 20 (feedPMEpochSlots genToSign) roundTripsCBORAnnotatedShow
 
 
 --------------------------------------------------------------------------------
@@ -289,7 +283,7 @@ exampleHeader = mkHeaderExplicit
     (noPassSafeSigner issuerSk)
 
 exampleBlockSignature :: BlockSignature
-exampleBlockSignature = ABlockSignature cert sig
+exampleBlockSignature = BlockSignature cert sig
  where
   cert = Delegation.signCertificate
     pm
@@ -308,14 +302,14 @@ exampleProof = Proof
   SscProof
   (abstractHash dp)
   Update.exampleProof
-  where dp = Delegation.unsafePayload (take 4 exampleCertificates)
+  where dp = Delegation.UnsafePayload (take 4 exampleCertificates)
 
 exampleHeaderHash :: HeaderHash
 exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
 
 exampleBody :: Body
 exampleBody = Body exampleTxPayload SscPayload dp Update.examplePayload
-  where dp = Delegation.unsafePayload (take 4 exampleCertificates)
+  where dp = Delegation.UnsafePayload (take 4 exampleCertificates)
 
 exampleToSign :: ToSign
 exampleToSign = ToSign

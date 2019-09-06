@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.Update.Payload
-  ( Payload(..)
+  ( Payload(payloadProposal, payloadVotes, payloadSerialized)
   , pattern Payload
   )
 where
@@ -20,13 +20,9 @@ import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( Annotated(..)
-  , ByteSpan
-  , Decoded(..)
-  , FromCBOR(..)
+  ( Decoded(..)
   , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , annotatedDecoder
   , encodeListLen
   , encodePreEncoded
   , enforceSize
@@ -43,18 +39,20 @@ import Cardano.Chain.Update.Vote
   )
 
 
+{-# COMPLETE Payload #-}
 pattern Payload :: Maybe Proposal -> [Vote] -> Payload
-pattern Payload payloadProposal payloadVotes <- Payload' {payloadProposal, payloadVotes}
+pattern Payload{payloadProposal, payloadVotes} <- 
+  Payload' payloadProposal payloadVotes _
   where
-    Payload payloadProposal payloadVotes =
+    Payload pp pv =
       let bytes = serializeEncoding' $
-            encodeListLen 2 <> toCBOR payloadProposal <> toCBOR payloadVotes
-      in Payload' payloadProposal payloadVotes bytes
+            encodeListLen 2 <> toCBOR pp <> toCBOR pv
+      in Payload' pp pv bytes
 
 -- | Update System payload
 data Payload = Payload'
-  { payloadProposal   :: !(Maybe Proposal)
-  , payloadVotes      :: ![Vote]
+  { payloadProposal'  :: !(Maybe Proposal)
+  , payloadVotes'     :: ![Vote]
   , payloadSerialized :: ByteString
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData

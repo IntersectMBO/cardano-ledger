@@ -1,10 +1,21 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia       #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms   #-}
 
 module Cardano.Chain.Block.Proof
-  ( Proof(..)
+  ( Proof
+    ( proofUTxO
+    , proofSsc
+    , proofDelegation
+    , proofUpdate
+    , proofSerialized
+    )
+  , pattern Proof
   , ProofValidationError (..)
   , mkProof
   , recoverProof
@@ -22,6 +33,9 @@ import Cardano.Binary
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
+  , serializeEncoding'
+  , encodePreEncoded
+  , withSlice'
   )
 import Cardano.Chain.Block.Body
   (Body(..), bodyDlgPayload, bodyTxPayload, bodyUpdatePayload)
@@ -29,16 +43,31 @@ import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscProof(..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
-import Cardano.Crypto (Hash, hash, hashDecoded)
+import Cardano.Crypto (Hash, hash)
 
 
 -- | Proof of everything contained in the payload
-data Proof = Proof
-  { proofUTxO       :: !TxProof
-  , proofSsc        :: !SscProof
-  , proofDelegation :: !(Hash Delegation.Payload)
-  , proofUpdate     :: !Update.Proof
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+data Proof = Proof'
+  { proofUTxO'      :: !TxProof
+  , proofSsc'       :: !SscProof
+  , proofDelegation':: !(Hash Delegation.Payload)
+  , proofUpdate'    :: !Update.Proof
+  , proofSerialized :: ByteString
+  } deriving (Eq, Show, Generic, NFData)
+    deriving NoUnexpectedThunks via AllowThunksIn '["proofSerialized"] Proof
+
+{-# COMPLETE Proof #-}
+pattern Proof :: TxProof -> SscProof -> (Hash Delegation.Payload) -> Update.Proof -> Proof
+pattern Proof{ proofUTxO, proofSsc, proofDelegation, proofUpdate } <-
+  Proof' proofUTxO proofSsc proofDelegation proofUpdate _
+  where
+  Proof utxo ssc delegation update =
+    let bytes = serializeEncoding' $ encodeListLen 4
+          <> toCBOR utxo
+          <> toCBOR ssc
+          <> toCBOR delegation
+          <> toCBOR update
+    in Proof' utxo ssc delegation update bytes
 
 instance B.Buildable Proof where
   build proof = bprint
@@ -49,37 +78,30 @@ instance B.Buildable Proof where
     (proofUpdate proof)
 
 instance ToCBOR Proof where
-  toCBOR bc =
-    encodeListLen 4
-      <> toCBOR (proofUTxO bc)
-      <> toCBOR (proofSsc bc)
-      <> toCBOR (proofDelegation bc)
-      <> toCBOR (proofUpdate bc)
+  toCBOR = encodePreEncoded . proofSerialized
 
 instance FromCBORAnnotated Proof where
-  fromCBORAnnotated' =
-    Proof <$ lift (enforceSize "Proof" 4)
-      <*> fromCBORAnnotated'
-      <*> lift fromCBOR
-      <*> lift fromCBOR
-      <*> lift fromCBOR
+  fromCBORAnnotated' = withSlice' $
+     Proof' <$ lift (enforceSize "Proof" 4)
+     <*> fromCBORAnnotated'
+     <*> lift fromCBOR
+     <*> lift fromCBOR
+     <*> lift fromCBOR
 
 mkProof :: Body -> Proof
 mkProof body = Proof
-  { proofUTxO        = mkTxProof $ bodyTxPayload body
-  , proofSsc        = SscProof
-  , proofDelegation = hash $ void $ bodyDlgPayload body
-  , proofUpdate     = Update.mkProof $ void $ bodyUpdatePayload body
-  }
+   (mkTxProof $ bodyTxPayload body)
+   SscProof
+   (hash $ bodyDlgPayload body)
+   (Update.mkProof $ bodyUpdatePayload body)
 
 -- TODO: Should we be using this somewhere?
 recoverProof :: Body -> Proof
 recoverProof body = Proof
-  { proofUTxO       = recoverTxProof $ bodyTxPayload body
-  , proofSsc        = SscProof
-  , proofDelegation = hashDecoded $ bodyDlgPayload body
-  , proofUpdate     = Update.recoverProof $ bodyUpdatePayload body
-  }
+   (recoverTxProof $ bodyTxPayload body)
+   SscProof
+   (hash $ bodyDlgPayload body)
+   (Update.recoverProof $ bodyUpdatePayload body)
 
 -- | Error which can result from attempting to validate an invalid payload
 -- proof.

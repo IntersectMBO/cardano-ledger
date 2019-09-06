@@ -8,14 +8,15 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE PatternSynonyms      #-}
 
 module Cardano.Chain.Block.Block
   (
   -- * Block
-    Block (..)
+    Block (blockHeader, blockBody, blockSerialized)
 
   -- * Block Constructors
-  , mkBlock
+  , pattern Block
   , mkBlockExplicit
 
   -- * Block Accessors
@@ -52,14 +53,14 @@ module Cardano.Chain.Block.Block
   , fromCBORBlockOrBoundary
   , toCBORBlockOrBoundary
 
-  -- * ABoundaryBlock
-  , ABoundaryBlock(..)
+  -- * BoundaryBlock
+  , BoundaryBlock(boundaryBlockLength, boundaryHeader, boundaryBody)
+  , pattern BoundaryBlock
   , boundaryHashAnnotated
-  , fromCBORABoundaryBlock
-  , toCBORABoundaryBlock
   , toCBORBOBBoundary
 
-  , ABoundaryBody(..)
+  , BoundaryBody
+  , pattern BoundaryBody
   )
 where
 
@@ -73,22 +74,17 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary
   ( Annotated(..)
   , AnnotatedDecoder
-  , ByteSpan(..)
-  , Decoded(..)
-  , Decoder
   , DecoderError(..)
   , Encoding
   , FromCBOR(..)
   , FromCBORAnnotated (..)
   , ToCBOR(..)
-  , annotatedDecoder
   , encodeBreak
   , encodeListLen
   , encodeListLenIndef
   , encodePreEncoded
   , enforceSize
   , withSlice'
-  , liftByteSpanDecoder
   , serializeEncoding'
   )
 import Cardano.Chain.Block.Body
@@ -102,18 +98,17 @@ import Cardano.Chain.Block.Body
 import Cardano.Chain.Block.Boundary
   (dropBoundaryBody, dropBoundaryExtraBodyData)
 import Cardano.Chain.Block.Header
-  ( ABlockSignature
-  , AHeader(..)
-  , ABoundaryHeader(..)
+  ( BlockSignature
+  , Header(..)
+  , BoundaryHeader(..)
   , Header
   , HeaderHash
   , ToSign
+  , aHeaderProtocolMagicId
   , boundaryHeaderHashAnnotated
-  , fromCBORABoundaryHeader
-  , fromCBORAHeader
+  , fromCBORHeader
   , hashHeader
   , headerDifficulty
-  , headerHashAnnotated
   , headerGenesisKey
   , headerIssuer
   , headerPrevHash
@@ -125,8 +120,6 @@ import Cardano.Chain.Block.Header
   , headerSoftwareVersion
   , headerToSign
   , mkHeaderExplicit
-  , toCBORHeader
-  , toCBORABoundaryHeader
   )
 import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
@@ -138,7 +131,7 @@ import Cardano.Chain.Slotting
   , WithEpochSlots(WithEpochSlots)
   )
 import Cardano.Chain.Ssc (SscPayload)
-import Cardano.Chain.UTxO.TxPayload (ATxPayload)
+import Cardano.Chain.UTxO.TxPayload (TxPayload)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import qualified Cardano.Chain.Update.Payload as Update
 import Cardano.Chain.Update.SoftwareVersion (SoftwareVersion)
@@ -149,9 +142,9 @@ import Cardano.Crypto (ProtocolMagicId, SigningKey, VerificationKey)
 -- Block
 --------------------------------------------------------------------------------
 
-data Block = Block
-  { blockHeader     :: AHeader ByteString
-  , blockBody       :: Body
+data Block = Block'
+  { blockHeader'    :: !Header
+  , blockBody'      :: !Body
   , blockSerialized :: ByteString
   } deriving (Eq, Show, Generic, NFData)
 
@@ -161,27 +154,19 @@ data Block = Block
 --------------------------------------------------------------------------------
 
 -- | Smart constructor for 'Block'
-mkBlock
-  :: EpochSlots
-  -> Header
-  -> Body
-  -> Block
-mkBlock epochSlots header body =
-  -- FIXME: This constructs the members of members of the block with
-  -- incorrect bytestring references. We'd need to make the same change we
-  -- made to block all the way down to correct this problem.
-  let headerBytes = serializeEncoding' $ toCBORHeader epochSlots header
-      header' = headerBytes <$ header
-      bytes = serializeEncoding' $ encodeListLen 3
-              <> encodePreEncoded headerBytes
-              <> toCBOR body
-              <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
-  in Block header' body bytes
+{-# COMPLETE Block #-}
+pattern Block :: Header -> Body -> Block
+pattern Block { blockHeader, blockBody } <- Block' blockHeader blockBody _
+  where
+  Block header body =
+    let bytes = serializeEncoding' $ encodeListLen 3
+                <> toCBOR header
+                <> toCBOR body
+                <> (encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
+    in Block' header body bytes
 
 -- | Smart constructor for 'Block', without requiring the entire previous
 --   'Header'. Instead, you give its hash and the difficulty of this block.
---   These are derived from the previous header in 'mkBlock' so if you have
---   the previous header, consider using that one.
 mkBlockExplicit
   :: ProtocolMagicId
   -> ProtocolVersion
@@ -208,18 +193,18 @@ mkBlockExplicit pm pv sv prevHash difficulty epochSlots slotNumber sk dlgCert bo
           body
           pv
           sv
-    in mkBlock epochSlots header body
+    in Block header body
 
 
 --------------------------------------------------------------------------------
 -- Block Accessors
 --------------------------------------------------------------------------------
 
-blockHash :: EpochSlots -> Block -> HeaderHash
-blockHash epochSlots = hashHeader epochSlots . void . blockHeader
+blockHash :: Block -> HeaderHash
+blockHash = hashHeader . blockHeader
 
 blockHashAnnotated :: Block -> HeaderHash
-blockHashAnnotated = headerHashAnnotated . blockHeader
+blockHashAnnotated = hashHeader . blockHeader
 
 blockProtocolMagicId :: Block -> ProtocolMagicId
 blockProtocolMagicId = headerProtocolMagicId . blockHeader
@@ -248,7 +233,7 @@ blockDifficulty = headerDifficulty . blockHeader
 blockToSign :: EpochSlots -> Block -> ToSign
 blockToSign epochSlots = headerToSign epochSlots . blockHeader
 
-blockSignature :: Block -> ABlockSignature ByteString
+blockSignature :: Block -> BlockSignature
 blockSignature = headerSignature . blockHeader
 
 blockProtocolVersion :: Block -> ProtocolVersion
@@ -257,16 +242,16 @@ blockProtocolVersion = headerProtocolVersion . blockHeader
 blockSoftwareVersion :: Block -> SoftwareVersion
 blockSoftwareVersion = headerSoftwareVersion . blockHeader
 
-blockTxPayload :: Block -> ATxPayload ByteString
+blockTxPayload :: Block -> TxPayload
 blockTxPayload = bodyTxPayload . blockBody
 
 blockSscPayload :: Block -> SscPayload
 blockSscPayload = bodySscPayload . blockBody
 
-blockUpdatePayload :: Block -> Update.APayload ByteString
+blockUpdatePayload :: Block -> Update.Payload
 blockUpdatePayload = bodyUpdatePayload . blockBody
 
-blockDlgPayload :: Block -> Delegation.APayload ByteString
+blockDlgPayload :: Block -> Delegation.Payload
 blockDlgPayload = bodyDlgPayload . blockBody
 
 blockLength :: Block -> Natural
@@ -282,8 +267,8 @@ instance ToCBOR Block where
 
 fromCBORBlock :: EpochSlots -> AnnotatedDecoder s Block
 fromCBORBlock epochSlots = withSlice' $
-  Block <$ lift (enforceSize "Block" 3)
-    <*> liftByteSpanDecoder (fromCBORAHeader epochSlots)
+  Block' <$ lift (enforceSize "Block" 3)
+    <*> fromCBORHeader epochSlots
     <*> fromCBORAnnotated'
     -- Drop the deprecated ExtraBodyData
     <* (lift $ enforceSize "ExtraBodyData" 1 >> dropEmptyAttributes)
@@ -304,12 +289,12 @@ renderBlock es block =
     . "  " . shown . "\n"
     . "  update payload: " . build
     )
-    (WithEpochSlots es $ void $ blockHeader block)
+    (WithEpochSlots es $ blockHeader block)
     (length txs)
     txs
     (blockDlgPayload block)
     (blockSscPayload block)
-    (void $ blockUpdatePayload block)
+    (blockUpdatePayload block)
   where txs = bodyTxs $ blockBody block
 
 
@@ -319,7 +304,7 @@ renderBlock es block =
 
 data BlockOrBoundary
   = BOBBlock Block
-  | BOBBoundary (ABoundaryBlock ByteString)
+  | BOBBoundary BoundaryBlock
   deriving (Eq, Show)
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
@@ -330,11 +315,11 @@ toCBORBOBBlock block =
     <> toCBOR block
 
 -- | toCBORABoundaryBlock but with the list length and tag discriminator bytes.
-toCBORBOBBoundary :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
-toCBORBOBBoundary pm bvd =
+toCBORBOBBoundary :: BoundaryBlock -> Encoding
+toCBORBOBBoundary bvd =
   encodeListLen 2
     <> toCBOR (0 :: Word)
-    <> toCBORABoundaryBlock pm bvd
+    <> toCBOR bvd
 
 -- | Decode a 'Block' accounting for deprecated epoch boundary blocks
 fromCBORBOBBlock :: EpochSlots -> AnnotatedDecoder s (Maybe Block)
@@ -355,90 +340,82 @@ fromCBORBlockOrBoundary
 fromCBORBlockOrBoundary epochSlots = do
   lift $ enforceSize "Block" 2
   (lift $ fromCBOR @Word) >>= \case
-    0 -> BOBBoundary <$> liftByteSpanDecoder fromCBORABoundaryBlock
+    0 -> BOBBoundary <$> fromCBORAnnotated'
     1 -> BOBBlock <$> fromCBORBlock epochSlots
     t -> lift $ cborError $ DecoderErrorUnknownTag "Block" (fromIntegral t)
 
-toCBORBlockOrBoundary
-  :: ProtocolMagicId -> BlockOrBoundary -> Encoding
-toCBORBlockOrBoundary pm abob = case abob of
+toCBORBlockOrBoundary :: BlockOrBoundary -> Encoding
+toCBORBlockOrBoundary abob = case abob of
   BOBBlock    blk -> toCBORBOBBlock blk
-  BOBBoundary ebb -> toCBORBOBBoundary pm ebb
+  BOBBoundary ebb -> toCBORBOBBoundary ebb
 
 --------------------------------------------------------------------------------
--- ABoundaryBlock
+-- BoundaryBlock
 --------------------------------------------------------------------------------
 
 -- | For boundary body data, we only keep an annotation. It's the body and
 -- extra body data.
-data ABoundaryBody a = ABoundaryBody
-  { boundaryBodyAnnotation :: !a
-  } deriving (Eq, Show, Functor)
+data BoundaryBody = BoundaryBody'
+  { boundaryBodySerialized :: ByteString
+  } deriving (Eq, Show)
 
-instance Decoded (ABoundaryBody ByteString) where
-  type BaseType (ABoundaryBody ByteString) = ABoundaryBody ()
-  recoverBytes = boundaryBodyAnnotation
+pattern BoundaryBody :: BoundaryBody
+pattern BoundaryBody <- BoundaryBody' _
+  where
+  BoundaryBody = BoundaryBody' $ serializeEncoding' $
+    (encodeListLenIndef <> encodeBreak)
+      <> ( encodeListLen 1 <> toCBOR (mempty :: Map Word8 LByteString))
 
-fromCBORABoundaryBody :: Decoder s (ABoundaryBody ByteSpan)
-fromCBORABoundaryBody = do
-  Annotated _ bs <- annotatedDecoder $ do
-    dropBoundaryBody
-    dropBoundaryExtraBodyData
-  pure $ ABoundaryBody bs
+instance FromCBORAnnotated BoundaryBody where
+  fromCBORAnnotated' = withSlice' $
+    BoundaryBody'
+      <$ lift dropBoundaryBody
+      <* lift dropBoundaryExtraBodyData
 
--- | Every boundary body has the same encoding: empty.
-toCBORABoundaryBody :: ABoundaryBody a -> Encoding
-toCBORABoundaryBody _ =
-  (encodeListLenIndef <> encodeBreak)
-    <> ( encodeListLen 1
-        <> toCBOR (mempty :: Map Word8 LByteString)
-       )
+instance ToCBOR BoundaryBody where
+  toCBOR = encodePreEncoded . boundaryBodySerialized
 
 -- | For a boundary block, we keep the header, body, and an annotation for
 -- the whole thing (commonly the bytes from which it was decoded).
-data ABoundaryBlock a = ABoundaryBlock
-  { boundaryBlockLength     :: !Int64
+data BoundaryBlock = BoundaryBlock'
+  { boundaryBlockLength     :: Int64
   -- ^ Needed for validation.
-  , boundaryHeader          :: !(ABoundaryHeader a)
-  , boundaryBody            :: !(ABoundaryBody a)
-  , boundaryAnnotation      :: !a
-  } deriving (Eq, Show, Functor)
-
-instance Decoded (ABoundaryBlock ByteString) where
-  type BaseType (ABoundaryBlock ByteString) = ABoundaryBlock ()
-  recoverBytes = boundaryAnnotation
+  , boundaryHeader'         :: !BoundaryHeader
+  , boundaryBody'           :: !BoundaryBody
+  , boundarySerialized      :: ByteString
+  } deriving (Eq, Show)
 
 -- | Extract the hash of a boundary block from its annotation.
-boundaryHashAnnotated :: ABoundaryBlock ByteString -> HeaderHash
+boundaryHashAnnotated :: BoundaryBlock -> HeaderHash
 boundaryHashAnnotated = boundaryHeaderHashAnnotated . boundaryHeader
 
-fromCBORABoundaryBlock :: Decoder s (ABoundaryBlock ByteSpan)
-fromCBORABoundaryBlock = do
-  Annotated (hdr, bod) bytespan@(ByteSpan start end) <- annotatedDecoder $ do
-    enforceSize "BoundaryBlock" 3
+instance FromCBORAnnotated BoundaryBlock where
+  fromCBORAnnotated' = withSlice' $ do
+    lift $ enforceSize "BoundaryBlock" 3
     -- 1 item (list of 5)
-    hdr <- fromCBORABoundaryHeader
+    hdr <- fromCBORAnnotated'
     -- 2 items (body and extra body data)
-    bod <- fromCBORABoundaryBody
-    pure (hdr, bod)
-  pure $ ABoundaryBlock
-    { boundaryBlockLength = end - start
-    , boundaryHeader      = hdr
-    , boundaryBody        = bod
-    , boundaryAnnotation  = bytespan
-    }
+    bod <- fromCBORAnnotated'
+    pure $
+      \bytes -> BoundaryBlock' (fromIntegral $ BS.length bytes) hdr bod bytes
 
--- | See note on `toCBORABoundaryHeader`. This as well does not necessarily
--- invert the decoder `fromCBORABoundaryBlock`.
-toCBORABoundaryBlock :: ProtocolMagicId -> ABoundaryBlock a -> Encoding
-toCBORABoundaryBlock pm ebb =
-    encodeListLen 3
-      -- 1 item (list of 5)
-      <> toCBORABoundaryHeader pm (boundaryHeader ebb)
-      -- 2 items (body and extra body data)
-      <> toCBORABoundaryBody (boundaryBody ebb)
+pattern BoundaryBlock :: BoundaryHeader -> BoundaryBody -> BoundaryBlock
+pattern BoundaryBlock{ boundaryHeader, boundaryBody } <-
+  BoundaryBlock' _ boundaryHeader boundaryBody _
+  where
+    BoundaryBlock hdr bod =
+      let bytes = serializeEncoding' $ 
+            encodeListLen 3
+              -- 1 item (list of 5)
+              <> toCBOR hdr
+              -- 2 items (body and extra body data)
+              <> toCBOR bod
+      in BoundaryBlock' (fromIntegral $ BS.length bytes) hdr bod bytes
 
-instance B.Buildable (ABoundaryBlock a) where
+instance ToCBOR BoundaryBlock where
+  toCBOR = encodePreEncoded . boundarySerialized
+
+instance B.Buildable BoundaryBlock where
   build bvd = bprint
     ( "Boundary:\n"
     . "  Starting epoch: " . int . "\n"

@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
@@ -36,8 +37,6 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Trans.Resource (ResIO)
-import qualified Data.ByteString.Lazy as BSL
-import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Formatting.Buildable (Buildable)
@@ -56,7 +55,7 @@ import Cardano.Chain.Block.Body (Body (..))
 import Cardano.Chain.Block.Block
   ( Block(..)
   , BlockOrBoundary(..)
-  , ABoundaryBlock(..)
+  , BoundaryBlock(..)
   , blockAProtocolMagicId
   , blockDlgPayload
   , blockHashAnnotated
@@ -70,13 +69,13 @@ import Cardano.Chain.Block.Block
   , blockUpdatePayload
   )
 import Cardano.Chain.Block.Header
-  ( AHeader (..)
-  , ABoundaryHeader (..)
+  ( Header (..)
+  , BoundaryHeader (..)
+  , boundaryHeaderHashAnnotated
   , BlockSignature
   , HeaderHash
   , headerLength
   , headerProof
-  , wrapBoundaryBytes
   )
 import Cardano.Chain.Block.Proof (Proof(..), ProofValidationError (..))
 import Cardano.Chain.Common
@@ -101,7 +100,7 @@ import Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ProtocolConstants (kEpochSlots)
 import Cardano.Chain.Slotting
   (EpochNumber(..), SlotNumber(..), EpochAndSlotCount(..), slotNumberEpoch, fromSlotNumber)
-import Cardano.Chain.UTxO (ATxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
+import Cardano.Chain.UTxO (TxPayload(..), UTxO(..), genesisUtxo, recoverTxProof)
 import qualified Cardano.Chain.UTxO.Validation as UTxO
 import Cardano.Chain.UTxO.UTxOConfiguration (UTxOConfiguration)
 import qualified Cardano.Chain.Update as Update
@@ -111,7 +110,6 @@ import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagicId
   , VerificationKey
-  , hashRaw
   , hashDecoded
   )
 import Cardano.Chain.ValidationMode
@@ -278,7 +276,7 @@ updateChainBlockOrBoundary config c b = case b of
 updateChainBoundary
   :: MonadError ChainValidationError m
   => ChainValidationState
-  -> ABoundaryBlock ByteString
+  -> BoundaryBlock
   -> m ChainValidationState
 updateChainBoundary cvs bvd = do
   case (cvsPreviousHash cvs, boundaryPrevHash (boundaryHeader bvd)) of
@@ -302,17 +300,13 @@ updateChainBoundary cvs bvd = do
   pure $ cvs
     { cvsPreviousHash =
       Right
-      . coerce
-      . hashRaw
-      . BSL.fromStrict
-      . wrapBoundaryBytes
-      $ boundaryHeaderAnnotation (boundaryHeader bvd)
+      $ boundaryHeaderHashAnnotated (boundaryHeader bvd)
     }
 
 
 validateHeaderMatchesBody
   :: MonadError ProofValidationError m
-  => AHeader ByteString
+  => Header
   -> Body
   -> m ()
 validateHeaderMatchesBody hdr body = do
@@ -335,13 +329,7 @@ validateBlockProofs
   => Block
   -> m ()
 validateBlockProofs b =
-  validateHeaderMatchesBody blockHeader blockBody
- where
-  Block
-    { blockHeader
-    , blockBody
-    } = b
-
+  validateHeaderMatchesBody (blockHeader b) (blockBody b)
 
 data BodyEnvironment = BodyEnvironment
   { protocolMagic      :: !(AProtocolMagic ByteString)
@@ -412,7 +400,7 @@ updateBody env bs b = do
 
   certificates  = Delegation.getPayload $ blockDlgPayload b
 
-  txs           = aUnTxPayload $ blockTxPayload b
+  txs           = unTxPayload $ blockTxPayload b
 
   delegationEnv = DI.Environment
     { DI.protocolMagic = getAProtocolMagicId protocolMagic
@@ -454,7 +442,7 @@ toNumGenKeys n
 headerIsValid
   :: (MonadError ChainValidationError m, MonadReader ValidationMode m)
   => UPI.State
-  -> AHeader ByteString
+  -> Header
   -> m ()
 headerIsValid updateState h =
   -- Validate the header size
@@ -604,7 +592,7 @@ foldUTxOBlock env utxo block =
     (ErrorUTxOValidationError . fromSlotNumber mainnetEpochSlots $ blockSlot
       block
     )
-  $ UTxO.updateUTxO env utxo (aUnTxPayload $ blockTxPayload block)
+  $ UTxO.updateUTxO env utxo (unTxPayload $ blockTxPayload block)
 
 -- | Size of a heap value, in words
 newtype HeapSize a =

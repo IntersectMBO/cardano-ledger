@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.UTxO.Tx
-  ( Tx(..)
+  ( Tx(txInputs, txOutputs, txAttributes, txSerialized)
   , pattern Tx
   , txF
   , TxId
@@ -51,25 +51,26 @@ import Cardano.Crypto (Hash, hash, shortHashF)
 --------------------------------------------------------------------------------
 
 pattern Tx :: NonEmpty TxIn -> NonEmpty TxOut -> TxAttributes -> Tx
-pattern Tx txInputs txOutputs txAttributes <- Tx' {txInputs, txOutputs, txAttributes}
+pattern Tx{txInputs, txOutputs, txAttributes} <-
+   Tx' txInputs txOutputs txAttributes _
   where
-    Tx txInputs txOutputs txAttributes =
+    Tx txin txout txattr =
       let bytes = serializeEncoding' $
             encodeListLen 3
-              <> toCBOR txInputs
-              <> toCBOR txOutputs
-              <> toCBOR txAttributes
-      in Tx' txInputs txOutputs txAttributes bytes
+              <> toCBOR txin
+              <> toCBOR txout
+              <> toCBOR txattr
+      in Tx' txin txout txattr bytes
 
 -- | Transaction
 --
 --   NB: transaction witnesses are stored separately
 data Tx = Tx'
-  { txInputs     :: !(NonEmpty TxIn)
+  { txInputs'    :: !(NonEmpty TxIn)
   -- ^ Inputs of transaction.
-  , txOutputs    :: !(NonEmpty TxOut)
+  , txOutputs'   :: !(NonEmpty TxOut)
   -- ^ Outputs of transaction.
-  , txAttributes :: !TxAttributes
+  , txAttributes':: !TxAttributes
   -- ^ Attributes of transaction
   , txSerialized :: ByteString
   } deriving (Eq, Ord, Generic, Show)

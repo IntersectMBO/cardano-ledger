@@ -3,7 +3,6 @@
 
 module Test.Cardano.Chain.Elaboration.Delegation
   ( elaborateDCert
-  , elaborateDCertAnnotated
   , elaborateDSEnv
   , tests
   )
@@ -69,7 +68,7 @@ ts_prop_elaboratedCertsValid =
                     -- fails. Coverage testing ensures we will not generate a
                     -- large portion of 'Nothing'.
           Just cert ->
-            let concreteCert = elaborateDCertAnnotated pm cert in
+            let concreteCert = elaborateDCert pm cert in
             assert
               $ Concrete.Certificate.isValid (Annotated pm (serialize' pm)) concreteCert
  where
@@ -98,19 +97,6 @@ elaborateDCert pm cert = Concrete.signCertificate
 
   epochNo :: Concrete.EpochNumber
   epochNo = fromIntegral e
-
-
-elaborateDCertAnnotated
-  :: ProtocolMagicId -> DCert -> Concrete.ACertificate ByteString
-elaborateDCertAnnotated pm = annotateDCert . elaborateDCert pm
- where
-  annotateDCert :: Concrete.Certificate -> Concrete.ACertificate ByteString
-  annotateDCert cert = cert
-    { Concrete.Certificate.aEpoch = Annotated omega (serialize' omega)
-    , Concrete.Certificate.annotation = serialize' cert
-    }
-    where omega = Concrete.Certificate.epoch cert
-
 
 elaborateDSEnv :: DSEnv -> Scheduling.Environment
 elaborateDSEnv abstractEnv = Scheduling.Environment

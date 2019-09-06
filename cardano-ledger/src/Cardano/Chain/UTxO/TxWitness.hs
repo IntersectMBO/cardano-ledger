@@ -5,9 +5,11 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE PatternSynonyms     #-}
 
 module Cardano.Chain.UTxO.TxWitness
-  ( TxWitness(..)
+  ( TxWitness(txInWitnesses, txWitnessSerialized)
+  , pattern TxWitness
   , TxInWitness(..)
   , TxSigData(..)
   , TxSig
@@ -15,7 +17,7 @@ module Cardano.Chain.UTxO.TxWitness
   )
 where
 
-import Cardano.Prelude
+import Cardano.Prelude as P
 
 import Data.Vector (Vector)
 import Formatting (bprint, build)
@@ -35,6 +37,7 @@ import Cardano.Binary
   , serialize'
   , szCases
   , withSlice'
+  , serializeEncoding'
   )
 import Cardano.Chain.Common.CBOR
   (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
@@ -54,8 +57,8 @@ import Cardano.Crypto
 -- | A witness is a proof that a transaction is allowed to spend the funds it
 --   spends (by providing signatures, redeeming scripts, etc). A separate proof
 --   is provided for each input.
-data TxWitness = TxWitness
-  { txInWitnesses :: Vector TxInWitness
+data TxWitness = TxWitness'
+  { txInWitnesses' :: !(Vector TxInWitness)
   , txWitnessSerialized :: ByteString
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
@@ -63,9 +66,16 @@ data TxWitness = TxWitness
 instance ToCBOR TxWitness where
   toCBOR = encodePreEncoded . txWitnessSerialized
 
+  encodedSizeExpr size _ = encodedSizeExpr size (Proxy :: Proxy (Vector TxInWitness))
+
+pattern TxWitness :: Vector TxInWitness -> TxWitness
+pattern TxWitness{ txInWitnesses } <- TxWitness' txInWitnesses _
+  where
+  TxWitness wits = TxWitness' wits (serializeEncoding' $ toCBOR wits)
+
 instance FromCBORAnnotated TxWitness where
   fromCBORAnnotated' = withSlice' . lift $
-    TxWitness <$> fromCBOR
+    TxWitness' <$> fromCBOR
 
 -- | A witness for a single input
 data TxInWitness

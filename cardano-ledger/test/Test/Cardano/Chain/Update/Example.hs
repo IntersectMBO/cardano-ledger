@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE PatternSynonyms  #-}
 
 module Test.Cardano.Chain.Update.Example
   ( exampleApplicationName
@@ -32,9 +33,11 @@ import Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
   , Payload
+  , pattern Payload
   , Proof
   , Proposal
   , ProposalBody(..)
+  , pattern ProposalBody
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)
@@ -46,7 +49,6 @@ import Cardano.Chain.Update
   , Vote
   , mkProof
   , signVote
-  , payload
   , signProposal
   )
 import Cardano.Crypto (ProtocolMagicId(..), hash)
@@ -134,7 +136,7 @@ exampleUpId :: UpId
 exampleUpId = hash exampleProposal
 
 examplePayload :: Payload
-examplePayload = payload up uv
+examplePayload = Payload up uv
  where
   up = Just exampleProposal
   uv = [exampleVote]

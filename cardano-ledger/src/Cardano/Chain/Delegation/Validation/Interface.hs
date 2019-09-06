@@ -29,11 +29,10 @@ import Cardano.Binary
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
-  , serialize'
   )
 import Cardano.Chain.Common (BlockCount(..), KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Delegation.Certificate (ACertificate, Certificate)
+import Cardano.Chain.Delegation.Certificate (Certificate)
 import qualified Cardano.Chain.Delegation.Validation.Activation as Activation
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Chain.Genesis (GenesisDelegation(..))
@@ -109,16 +108,7 @@ initialState env genesisDelegation = updateDelegation env' is certificates
       }
     }
 
-  certificates =
-    fmap annotateCertificate . M.elems $ unGenesisDelegation genesisDelegation
-
-  annotateCertificate :: Certificate -> ACertificate ByteString
-  annotateCertificate c = c
-    { Delegation.aEpoch = Annotated
-        (Delegation.epoch c)
-        (serialize' $ Delegation.epoch c)
-    , Delegation.annotation = serialize' c
-    }
+  certificates = M.elems $ unGenesisDelegation genesisDelegation
 
 
 -- | Check whether a delegation is valid in the 'State'
@@ -135,7 +125,7 @@ updateDelegation
   :: MonadError Scheduling.Error m
   => Environment
   -> State
-  -> [ACertificate ByteString]
+  -> [Certificate]
   -> m State
 updateDelegation env is certificates = do
   -- Schedule new certificates

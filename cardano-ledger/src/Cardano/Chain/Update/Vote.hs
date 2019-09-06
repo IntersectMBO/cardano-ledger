@@ -6,21 +6,24 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE ViewPatterns       #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 module Cardano.Chain.Update.Vote
   (
   -- * Vote
-    Vote(voterVK, aProposalId, signature, serializeVote)
+    Vote(voterVK, proposalId, signature, serializeVote)
   , VoteId
 
   -- * Vote Constructors
   , mkVote
   , signVote
   , signatureForVote
-  , unsafeVote
+  , pattern UnsafeVote
 
   -- * Vote Accessors
-  , proposalId
+  , aProposalId
   , voteId
 
   -- * Vote Binary Serialization
@@ -80,12 +83,12 @@ type VoteId = Hash Vote
 -- | Vote for update proposal
 --
 --   Invariant: The signature is valid.
-data Vote = UnsafeVote
-  { voterVK     :: !VerificationKey
+data Vote = UnsafeVote'
+  { voterVK'    :: !VerificationKey
   -- ^ Verification key casting the vote
-  , aProposalId :: !(Annotated UpId ByteString)
+  , aProposalId':: !(Annotated UpId ByteString)
   -- ^ Proposal to which this vote applies
-  , signature   :: !(Signature (UpId, Bool))
+  , signature'  :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit)
   , serializeVote  :: ByteString
   } deriving (Generic, Show, Eq)
@@ -95,6 +98,33 @@ data Vote = UnsafeVote
 --------------------------------------------------------------------------------
 -- Vote Constructors
 --------------------------------------------------------------------------------
+
+
+-- | Create a vote for the given update proposal id using the provided
+-- signature.
+--
+-- For the meaning of the parameters see 'signVote'.
+{-# COMPLETE UnsafeVote #-}
+pattern UnsafeVote :: VerificationKey -> UpId -> Signature (UpId, Bool) -> Vote
+pattern UnsafeVote { voterVK, proposalId, signature } <- UnsafeVote'
+  voterVK
+  (unAnnotated -> proposalId)
+  signature
+  _
+  where
+  UnsafeVote  vk upId voteSignature =
+    let upIdBytes = serialize' upId
+        bytes = serializeEncoding' $
+          encodeListLen 4
+            <> toCBOR vk
+            <> encodePreEncoded upIdBytes
+            -- We encode @True@ here because we removed the decision bit. This is safe
+            -- because we know that all @Vote@s on mainnet use this encoding and any
+            -- changes to the encoding in our implementation will be picked up by
+            -- golden tests.
+            <> toCBOR True
+            <> toCBOR voteSignature
+    in  UnsafeVote' vk (Annotated upId upIdBytes) voteSignature bytes
 
 -- | A safe constructor for 'UnsafeVote'
 mkVote
@@ -106,7 +136,7 @@ mkVote
   -> Bool
   -- ^ Approval/rejection bit
   -> Vote
-mkVote pm sk upId decision = unsafeVote
+mkVote pm sk upId decision = UnsafeVote
   (toVerification sk)
   upId
   (sign pm SignUSVote sk (upId, decision))
@@ -124,7 +154,7 @@ signVote
   -- ^ The voter
   -> Vote
 signVote protocolMagicId upId decision safeSigner =
-  unsafeVote
+  UnsafeVote
     (safeToVerification safeSigner)
     upId
     (signatureForVote protocolMagicId upId decision safeSigner)
@@ -140,39 +170,17 @@ signatureForVote protocolMagicId upId decision safeSigner =
   safeSign protocolMagicId SignUSVote safeSigner (upId, decision)
 
 
--- | Create a vote for the given update proposal id using the provided
--- signature.
---
--- For the meaning of the parameters see 'signVote'.
-unsafeVote
-  :: VerificationKey
-  -> UpId
-  -> Signature (UpId, Bool)
-  -> Vote
-unsafeVote vk upId voteSignature =
-  let upIdBytes = serialize' upId
-      bytes = serializeEncoding' $
-        encodeListLen 4
-          <> toCBOR vk
-          <> encodePreEncoded upIdBytes
-          -- We encode @True@ here because we removed the decision bit. This is safe
-          -- because we know that all @Vote@s on mainnet use this encoding and any
-          -- changes to the encoding in our implementation will be picked up by
-          -- golden tests.
-          <> toCBOR True
-          <> toCBOR voteSignature
-  in  UnsafeVote vk (Annotated upId upIdBytes) voteSignature bytes
 
 
 --------------------------------------------------------------------------------
 -- Vote Accessors
 --------------------------------------------------------------------------------
 
-proposalId :: Vote -> UpId
-proposalId = unAnnotated . aProposalId
-
 voteId :: Vote -> VoteId
 voteId = hash
+
+aProposalId :: Vote -> Annotated UpId ByteString
+aProposalId = aProposalId'
 
 --------------------------------------------------------------------------------
 -- Vote Binary Serialization
@@ -183,7 +191,7 @@ instance ToCBOR Vote where
 
 instance FromCBORAnnotated Vote where
   fromCBORAnnotated' = withSlice' $
-    UnsafeVote <$ lift (enforceSize "Vote" 4)
+    UnsafeVote' <$ lift (enforceSize "Vote" 4)
       <*> lift fromCBOR
       <*> fromCBORAnnotated'
       -- Drop the decision bit that previously allowed negative voting

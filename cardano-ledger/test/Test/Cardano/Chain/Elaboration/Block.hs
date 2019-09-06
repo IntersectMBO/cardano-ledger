@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE PatternSynonyms    #-}
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
@@ -91,7 +92,7 @@ elaborate
   -> Abstract.Block
   -> (Concrete.Block, AbstractToConcreteIdMaps)
 elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
-  ( Concrete.mkBlock epochSlots (recomputeHashes bh0) bb0
+  ( Concrete.Block (recomputeHashes bh0) bb0
   , AbstractToConcreteIdMaps
     { transactionIds = txIdMap'
     , proposalIds = proposalsIdMap'
@@ -132,9 +133,9 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   cDCert = elaborateDCert pm dCert
 
   bb0    = Concrete.Body
-             (UTxO.ATxPayload txPayload)
+             (UTxO.TxPayload txPayload)
              Ssc.SscPayload
-             (Delegation.UnsafeAPayload dcerts ())
+             (Delegation.UnsafePayload dcerts)
              updatePayload
 
   dcerts =
@@ -143,19 +144,18 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
             (elaborateDCert pm)
           )
 
-  (txPayload, txIdMap') = first (fmap void) $ elaborateTxWitnesses
+  (txPayload, txIdMap') = elaborateTxWitnesses
     txIdMap
     (abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
 
-  updatePayload :: Update.APayload ()
+  updatePayload :: Update.Payload
   updatePayload =
-    Update.APayload
+    Update.Payload
       (fmap snd maybeProposals)
       (fmap (elaborateVote pm proposalsIdMap')
       $ Abstract._bUpdVotes
       $ Abstract._bBody abstractBlock
       )
-      () -- Update payload annotation
 
   maybeProposals :: Maybe (Abstract.Update.UProp, Update.Proposal)
   maybeProposals
@@ -175,9 +175,9 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
   -- | Recompute the block header hashes (which correspond to the block
   -- payload) if the abstract hashes don't match the abstract payload.
-  recomputeHashes :: Concrete.AHeader () -> Concrete.AHeader ()
+  recomputeHashes :: Concrete.Header -> Concrete.Header
   recomputeHashes concreteHeader =
-    concreteHeader {Concrete.aHeaderProof = Binary.Annotated alteredHdrProof ()}
+    concreteHeader {Concrete.headerProof = alteredHdrProof}
     where
       alteredHdrProof :: Concrete.Proof
       alteredHdrProof =
@@ -188,8 +188,7 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
           }
         where
           originalHeaderProof :: Concrete.Proof
-          originalHeaderProof =
-            Binary.unAnnotated (Concrete.aHeaderProof concreteHeader)
+          originalHeaderProof = Concrete.headerProof concreteHeader
 
           possiblyAlteredUTxOProof :: UTxO.TxProof
           possiblyAlteredUTxOProof =

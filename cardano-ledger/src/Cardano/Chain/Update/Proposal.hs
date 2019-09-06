@@ -11,8 +11,8 @@
 module Cardano.Chain.Update.Proposal
   (
   -- * Proposal
-    Proposal(..)
-  , pattern Proposal
+    Proposal(proposalBody, proposalIssuer, proposalSignature, proposalSerialized)
+  , pattern UnsafeProposal
   , UpId
 
   -- * Proposal Constructors
@@ -23,7 +23,13 @@ module Cardano.Chain.Update.Proposal
   , formatMaybeProposal
 
   -- * ProposalBody
-  , ProposalBody(..)
+  , ProposalBody
+    ( proposalBodyProtocolVersion
+    , proposalBodyProtocolParametersUpdate
+    , proposalBodySoftwareVersion
+    , proposalBodyMetadata
+    , proposalBodySerialized
+    )
   , pattern ProposalBody
   )
 where
@@ -74,31 +80,33 @@ import Cardano.Crypto
 type UpId = Hash Proposal
 
 -- | Create an update 'Proposal' using the provided signature.
-pattern Proposal
+{-# COMPLETE UnsafeProposal #-}
+pattern UnsafeProposal
   :: ProposalBody
   -> VerificationKey
   -> Signature ProposalBody
   -> Proposal
-pattern Proposal body issuer signature <- Proposal' {body, issuer, signature}
+pattern UnsafeProposal{proposalBody, proposalIssuer, proposalSignature} <-
+  Proposal' proposalBody proposalIssuer proposalSignature _
   where
-    Proposal body issuer signature =
+    UnsafeProposal b iss s =
       let bytes = serializeEncoding' $
             encodeListLen 7
-              <> toCBOR (protocolVersion body)
-              <> toCBOR (protocolParametersUpdate body)
-              <> toCBOR (softwareVersion body)
-              <> toCBOR (metadata body)
+              <> toCBOR (proposalBodyProtocolVersion b)
+              <> toCBOR (proposalBodyProtocolParametersUpdate b)
+              <> toCBOR (proposalBodySoftwareVersion b)
+              <> toCBOR (proposalBodyMetadata b)
               <> toCBOR (mempty :: Map Word8 LByteString)
-              <> toCBOR issuer
-              <> toCBOR signature
-      in Proposal' body issuer signature bytes
+              <> toCBOR iss
+              <> toCBOR s
+      in Proposal' b iss s bytes
 
 -- | Proposal for software update
 data Proposal = Proposal'
-  { body               :: !ProposalBody
-  , issuer             :: !VerificationKey
+  { body'              :: !ProposalBody
+  , issuer'            :: !VerificationKey
   -- ^ Who proposed this UP.
-  , signature          :: !(Signature ProposalBody)
+  , signature'         :: !(Signature ProposalBody)
   , proposalSerialized :: ByteString
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
@@ -111,19 +119,19 @@ data Proposal = Proposal'
 -- | Create an update 'Proposal', signing it with the provided safe signer.
 --
 signProposal :: ProtocolMagicId -> ProposalBody -> SafeSigner -> Proposal
-signProposal protocolMagicId proposalBody safeSigner =
-  Proposal
-    proposalBody
+signProposal protocolMagicId body safeSigner =
+  UnsafeProposal
+    body
     (safeToVerification safeSigner)
-    (signatureForProposal protocolMagicId proposalBody safeSigner)
+    (signatureForProposal protocolMagicId body safeSigner)
 
 signatureForProposal
   :: ProtocolMagicId
   -> ProposalBody
   -> SafeSigner
   -> Signature ProposalBody
-signatureForProposal protocolMagicId proposalBody safeSigner =
-  safeSign protocolMagicId SignUSProposal safeSigner proposalBody
+signatureForProposal protocolMagicId body safeSigner =
+  safeSign protocolMagicId SignUSProposal safeSigner body
 
 
 --
@@ -174,13 +182,13 @@ instance B.Buildable Proposal where
     . listJson
     . " }"
     )
-    (softwareVersion body')
-    (protocolVersion body')
+    (proposalBodySoftwareVersion body')
+    (proposalBodyProtocolVersion body')
     (hash proposal)
-    (protocolParametersUpdate body')
-    (M.keys $ metadata body')
+    (proposalBodyProtocolParametersUpdate body')
+    (M.keys $ proposalBodyMetadata body')
    where
-    body' = body proposal
+    body' = proposalBody proposal
 
 formatMaybeProposal :: Maybe Proposal -> Builder
 formatMaybeProposal = maybe "no proposal" B.build
@@ -190,14 +198,24 @@ formatMaybeProposal = maybe "no proposal" B.build
 -- ProposalBody
 --------------------------------------------------------------------------------
 
+{-# COMPLETE ProposalBody #-}
 pattern ProposalBody
   :: ProtocolVersion
   -> ProtocolParametersUpdate
   -> SoftwareVersion
   -> Map SystemTag InstallerHash
   -> ProposalBody
-pattern ProposalBody protocolVersion protocolParametersUpdate softwareVersion metadata <-
-  ProposalBody' {protocolVersion, protocolParametersUpdate, softwareVersion, metadata}
+pattern ProposalBody
+  { proposalBodyProtocolVersion
+  , proposalBodyProtocolParametersUpdate
+  , proposalBodySoftwareVersion
+  , proposalBodyMetadata
+  } <- ProposalBody'
+       proposalBodyProtocolVersion
+       proposalBodyProtocolParametersUpdate
+       proposalBodySoftwareVersion
+       proposalBodyMetadata
+       _
   where
     ProposalBody protocolVersion protocolParametersUpdate softwareVersion metadata =
       let bytes = serializeEncoding' $
@@ -211,10 +229,10 @@ pattern ProposalBody protocolVersion protocolParametersUpdate softwareVersion me
       in ProposalBody' protocolVersion protocolParametersUpdate softwareVersion metadata bytes
 
 data ProposalBody = ProposalBody'
-  { protocolVersion          :: !ProtocolVersion
-  , protocolParametersUpdate :: !ProtocolParametersUpdate
-  , softwareVersion          :: !SoftwareVersion
-  , metadata                 :: !(Map SystemTag InstallerHash)
+  { protocolVersion'         :: !ProtocolVersion
+  , protocolParametersUpdate':: !ProtocolParametersUpdate
+  , softwareVersion'         :: !SoftwareVersion
+  , metadata'                :: !(Map SystemTag InstallerHash)
   -- ^ InstallerHash for each system which this update affects
   , proposalBodySerialized   :: ByteString
   } deriving (Eq, Show, Generic)

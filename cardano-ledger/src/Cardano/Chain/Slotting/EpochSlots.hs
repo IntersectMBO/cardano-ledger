@@ -19,7 +19,8 @@ import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 -- | The number of slots per epoch.
 newtype EpochSlots = EpochSlots
   { unEpochSlots :: Word64
-  } deriving (Data, Eq, Ord, Read, Show, Buildable, Generic, NoUnexpectedThunks)
+  } deriving (Data, Eq, Ord, Read, Show, Buildable, Generic, NoUnexpectedThunks
+             , NFData)
 
 instance ToCBOR EpochSlots where
   toCBOR = toCBOR . unEpochSlots

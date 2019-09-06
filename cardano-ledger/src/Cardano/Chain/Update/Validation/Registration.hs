@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 
 -- | Validation rules for registering updates
 --
@@ -47,10 +48,8 @@ import qualified Cardano.Chain.Update.Proposal as Proposal
 import Cardano.Chain.Update.Proposal
   ( Proposal(..)
   , ProposalBody(..)
+  , pattern ProposalBody
   , UpId
-  , protocolParametersUpdate
-  , protocolVersion
-  , softwareVersion
   )
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
@@ -244,7 +243,11 @@ registerProposal env rs proposal = do
     rs
     proposal
  where
-  Proposal' { body, issuer, signature } = proposal
+  Proposal.UnsafeProposal
+    { proposalBody = body
+    , proposalIssuer = issuer
+    , proposalSignature = signature
+    } = proposal
 
   proposerId = hashKey issuer
 
@@ -283,11 +286,11 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
   pure $ State registeredPUPs' registeredSUPs'
  where
-  ProposalBody'
-    { protocolVersion
-    , protocolParametersUpdate = ppu
-    , softwareVersion
-    } = Proposal.body proposal
+  ProposalBody
+    { proposalBodyProtocolVersion = protocolVersion
+    , proposalBodyProtocolParametersUpdate = ppu
+    , proposalBodySoftwareVersion = softwareVersion
+    } = Proposal.proposalBody proposal
 
   SoftwareVersion appName appVersion = softwareVersion
 
@@ -333,9 +336,11 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
   pure $ M.insert (hash proposal) (newPV, newPP) registeredPUPs
  where
-  ProposalBody' { protocolVersion = newPV, protocolParametersUpdate } =
-    Proposal.body proposal
-  newPP = PPU.apply protocolParametersUpdate adoptedPP
+  ProposalBody { proposalBodyProtocolVersion = newPV
+               , proposalBodyProtocolParametersUpdate = pu
+               } =
+    Proposal.proposalBody proposal
+  newPP = PPU.apply pu adoptedPP
 
 
 -- | Check that the new 'ProtocolVersion' is a valid next version
@@ -430,7 +435,9 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
   -- Add to the list of registered software update proposals
   pure $ M.insert (hash proposal) (softwareVersion, metadata) registeredSUPs
-  where ProposalBody' { softwareVersion, metadata } = Proposal.body proposal
+  where ProposalBody { proposalBodySoftwareVersion = softwareVersion
+                     , proposalBodyMetadata = metadata
+                     } = Proposal.proposalBody proposal
 
 
 -- | Check that a new 'SoftwareVersion' is a valid next version
