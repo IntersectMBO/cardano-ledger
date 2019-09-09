@@ -8,15 +8,15 @@ The details of the background and the larger context
 for the design decisions formalized in this document are presented
 in~\cite{delegation_design}.
 
-In this work,
-we present important properties any implementation of the ledger must have.
+In this document,
+we present the most important properties that any implementation of the ledger must have.
 Specifically, we model the following aspects
 of the functionality of the ledger on the blockchain:
 
 \begin{description}
-\item[Preservation of value] Every coin in the system is accounted for,
+\item[Preservation of value] Every coin in the system must be accounted for,
   and the total amount is unchanged by every transaction and epoch change.
-  In particular, every coin is accounted for by one of the following categories:
+  In particular, every coin is accounted for by exactly one of the following categories:
   \begin{itemize}
     \item Circulation (UTxO)
     \item Deposit pot
@@ -35,9 +35,9 @@ of the functionality of the ledger on the blockchain:
 \item[Updates] The update mechanism for Shelley protocol parameters and software.
 \end{description}
 
-While the blockchain protocol is a reactive system driven by the arrival
+While the blockchain protocol is a reactive system that is driven by the arrival
 of blocks causing updates to the ledger, the formal description is a collection
-of rules which is a
+of rules that compose a
 static description of what a \textit{valid ledger} is. A valid ledger state can only
 reached by applying a sequence of inference rules and any valid ledger state
 is reachable by applying some sequence of these rules.
@@ -46,11 +46,11 @@ the rules we present in this document are explained in detail in
 \cite{small_step_semantics} (this document will really help the reader's
 understanding of the contents of this specification).
 
-The structure of the rules we give here is such that their application is
+The structure of the rules that we give here is such that their application is
 deterministic. That is, given a specific initial state and relevant environmental
 constants, there is no ambiguity
 about which rule should be applied at any given time (i.e.~which state
-transition is allowed take place). This is an important property which reflects
+transition is allowed to take place). This is an important property which reflects
 the reality of the implementation --- the blockchain evolves in a particular way
 given some user activity and the passage of time --- its behaviour is
 never unexpected.
