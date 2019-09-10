@@ -27,6 +27,7 @@ import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx
                      TxIn, UTXOW, UTxOState, Wdrl)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Slot (..))
+import           STS.Utxo (UtxoEnv (..))
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
@@ -127,11 +128,12 @@ initialUTxOState aliceKeep msigs =
   let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]
                   Map.empty in
-  (txid $ _body tx, applySTS @UTXOW (TRC( (Slot 0
-                                           , initPParams
-                                           , StakeKeys Map.empty
-                                           , StakePools Map.empty
-                                           , Dms Map.empty)
+  (txid $ _body tx, applySTS @UTXOW (TRC( UtxoEnv
+                                           (Slot 0)
+                                           initPParams
+                                           (StakeKeys Map.empty)
+                                           (StakePools Map.empty)
+                                           (Dms Map.empty)
                                          , _utxoState genesis
                                          , tx)))
 
@@ -163,10 +165,11 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
               txbody
               signers
               (Map.fromList $ map (\scr -> (hashScript scr, scr)) unlockScripts)
-        utxoSt' = applySTS @UTXOW (TRC( (Slot 0
-                                        , initPParams
-                                        , StakeKeys Map.empty
-                                        , StakePools Map.empty
-                                        , Dms Map.empty)
+        utxoSt' = applySTS @UTXOW (TRC( UtxoEnv
+                                          (Slot 0)
+                                          initPParams
+                                          (StakeKeys Map.empty)
+                                          (StakePools Map.empty)
+                                          (Dms Map.empty)
                                       , utxoSt
                                       , tx))

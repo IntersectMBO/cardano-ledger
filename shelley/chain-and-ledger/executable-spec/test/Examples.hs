@@ -26,6 +26,7 @@ module Examples
   , ex4C
   , ex5A
   , ex5B
+  , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
   , aliceStake
@@ -48,6 +49,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (delete, elems, empty, fromList, insert, keysSet, singleton)
 import           Data.Maybe (fromMaybe)
 import           Data.Sequence (empty, fromList)
+import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -55,10 +57,11 @@ import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes (AVUpdate, Addr, Applications, Block, Credential, DState, EpochState,
-                     GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState, Mdt, NewEpochState,
+import           MockTypes (AVUpdate, Addr, Applications, Block, ChainState, Credential, DState,
+                     EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState, Mdt,
                      PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey, SKeyES, SnapShots,
-                     Stake, Tx, TxBody, UTxO, UTxOState, Update, VKey, VKeyES, VKeyGenesis)
+                     Stake, Tx, TxBody, UTxO, UTxOState, Update, UpdateState, VKey, VKeyES,
+                     VKeyGenesis)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
@@ -77,13 +80,14 @@ import           Keys (pattern Dms, Hash, pattern KeyPair, pattern SKey, pattern
                      signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
-                     pattern UTxOState, deltaF, deltaR, deltaT, emptyAccount, emptyDState,
-                     emptyPState, genesisCoins, genesisId, overlaySchedule, rs, _cCounters,
-                     _delegations, _dms, _fdms, _pParams, _ptrs, _reserves, _retiring, _rewards,
-                     _stKeys, _stPools, _treasury)
+                     pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
+                     genesisCoins, genesisId, overlaySchedule, rs, _cCounters, _delegations, _dms,
+                     _fdms, _pParams, _ptrs, _reserves, _retiring, _rewards, _stKeys, _stPools,
+                     _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
+import           STS.Chain (pattern ChainState)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeKeys,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
@@ -91,10 +95,10 @@ import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, 
                      _poolRAcnt, _poolVrf)
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
-                     pattern Update, emptyUpdate, emptyUpdateState, updatePPup)
-import           UTxO (pattern UTxO, makeGenWitnessesVKey, makeWitnessesVKey, txid)
+                     pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState,
+                     updatePPup)
+import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
-type ChainState = (NewEpochState, Seed, Seed, HashHeader, Slot)
 
 data CHAINExample = CHAINExample Slot ChainState Block ChainState
 
@@ -322,8 +326,14 @@ ppsExInstantDecay = ppsEx1 { _keyDecayRate = 1000
                            , _poolDecayRate = 1000 }
 
 
+acntEx1 :: AccountState
+acntEx1 = AccountState
+            { _treasury = Coin 0
+            , _reserves = maxLovelaceSupply
+            }
+
 esEx1 :: EpochState
-esEx1 = EpochState emptyAccount emptySnapShots lsEx1 ppsEx1
+esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1
 
 -- |The first block of the Shelley era will point back to the last block of the Byron era.
 -- For our purposes in this test we can bootstrap the chain by just coercing the value.
@@ -333,22 +343,21 @@ lastByronHeaderHash :: HashHeader
 lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
 initStEx1 :: ChainState
-initStEx1 =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      esEx1
-      Nothing
-      (PoolDistr Map.empty)
-      (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0))
-      -- The overlay schedule has one entry, setting Core Node 1 to slot 1.
-  , Nonce 0
-  , Nonce 0
-  , lastByronHeaderHash
-  , Slot 0
-  )
+initStEx1 = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     esEx1
+     Nothing
+     (PoolDistr Map.empty)
+     (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0)))
+    -- The overlay schedule has one entry, setting Core Node 1 to slot 1.
+  (Nonce 0)
+  (Nonce 0)
+  lastByronHeaderHash
+  (Slot 0)
 
 zero :: UnitInterval
 zero = unsafeMkUnitInterval 0
@@ -365,22 +374,21 @@ blockEx1 = mkBlock
              0
 
 expectedStEx1 :: ChainState
-expectedStEx1 =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      -- Note that blocks in the overlay schedule do not add to this count.
-      esEx1
-      Nothing
-      (PoolDistr Map.empty)
-      (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0))
-  , Nonce 0 ⭒ Nonce 1
-  , Nonce 0 ⭒ Nonce 1
-  , bhHash (bheader blockEx1)
-  , Slot 1
-  )
+expectedStEx1 = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     -- Note that blocks in the overlay schedule do not add to this count.
+     esEx1
+     Nothing
+     (PoolDistr Map.empty)
+     (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0)))
+  (Nonce 0 ⭒ Nonce 1)
+  (Nonce 0 ⭒ Nonce 1)
+  (bhHash (bheader blockEx1))
+  (Slot 1)
 
 ex1 :: CHAINExample
 ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 expectedStEx1
@@ -424,8 +432,8 @@ txEx2A = Tx
 alicePtrAddr :: Addr
 alicePtrAddr = AddrPtr (_paymentObj aliceAddr) (Ptr (Slot 10) 0 0)
 
-usEx2A :: (PPUpdate, AVUpdate, Map Slot Applications, Applications)
-usEx2A = (PPUpdate Map.empty, AVUpdate Map.empty, Map.empty, byronApps)
+usEx2A :: UpdateState
+usEx2A = UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps
 
 utxostEx2A :: UTxOState
 utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) usEx2A
@@ -433,15 +441,17 @@ utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) usEx2A
 lsEx2A :: LedgerState
 lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1) 0
 
+maxLovelaceSupply :: Coin
+maxLovelaceSupply = Coin 45*1000*1000*1000*1000*1000
+
 acntEx2A :: AccountState
 acntEx2A = AccountState
             { _treasury = Coin 0
-            , _reserves = Coin 45*1000*1000*1000*1000*1000
+            , _reserves = maxLovelaceSupply - balance utxoEx2A
             }
 
 esEx2A :: EpochState
 esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1
-
 
 overlayEx2A :: Map Slot (Maybe GenKeyHash)
 overlayEx2A = overlaySchedule
@@ -451,8 +461,8 @@ overlayEx2A = overlaySchedule
                     ppsEx1
 
 initStEx2A :: ChainState
-initStEx2A =
-  ( NewEpochState
+initStEx2A = ChainState
+  (NewEpochState
       (Epoch 0)
       (Nonce 0)
       (BlocksMade Map.empty)
@@ -460,12 +470,11 @@ initStEx2A =
       esEx2A
       Nothing
       (PoolDistr Map.empty)
-      overlayEx2A
-  , Nonce 0
-  , Nonce 0
-  , lastByronHeaderHash
-  , Slot 0
-  )
+      overlayEx2A)
+  (Nonce 0)
+  (Nonce 0)
+  lastByronHeaderHash
+  (Slot 0)
 
 blockEx2A :: Block
 blockEx2A = mkBlock
@@ -495,15 +504,12 @@ psEx2A = psEx1
           , _cCounters = Map.insert (hk alicePool) 0 (_cCounters psEx1)
           }
 
-updateStEx2A :: ( PPUpdate
-               , AVUpdate
-               , Map Slot Applications
-               , Applications)
-updateStEx2A =
-  ( ppupEx2A
-  , AVUpdate Map.empty
-  , Map.empty
-  , byronApps)
+updateStEx2A :: UpdateState
+updateStEx2A = UpdateState
+  ppupEx2A
+  (AVUpdate Map.empty)
+  Map.empty
+  byronApps
 
 expectedLSEx2A :: LedgerState
 expectedLSEx2A = LedgerState
@@ -522,21 +528,20 @@ blockEx2AHash :: HashHeader
 blockEx2AHash = bhHash (bheader blockEx2A)
 
 expectedStEx2A :: ChainState
-expectedStEx2A =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1)
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , Nonce 0 ⭒ Nonce 1
-  , Nonce 0 ⭒ Nonce 1
-  , blockEx2AHash
-  , Slot 10
-  )
+expectedStEx2A = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (Nonce 0 ⭒ Nonce 1)
+  (Nonce 0 ⭒ Nonce 1)
+  blockEx2AHash
+  (Slot 10)
 
 ex2A :: CHAINExample
 ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A expectedStEx2A
@@ -606,26 +611,24 @@ expectedLSEx2B = LedgerState
                0
 
 expectedStEx2Bgeneric :: PParams -> ChainState
-expectedStEx2Bgeneric pp =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
-      (Just RewardUpdate { deltaT = Coin 0
-                         , deltaR = Coin 0
-                         , rs     = Map.empty
-                         , deltaF = Coin 0
-                         })
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , Nonce 0 ⭒ Nonce 1 ⭒ Nonce 2
-  , Nonce 0 ⭒ Nonce 1
-  , blockEx2BHash
-  , Slot 90
-  )
-
+expectedStEx2Bgeneric pp = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
+     (Just RewardUpdate { deltaT = Coin 0
+                        , deltaR = Coin 0
+                        , rs     = Map.empty
+                        , deltaF = Coin 0
+                        })
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (Nonce 0 ⭒ Nonce 1 ⭒ Nonce 2)
+  (Nonce 0 ⭒ Nonce 1)
+  blockEx2BHash
+  (Slot 90)
 
 expectedStEx2B :: ChainState
 expectedStEx2B = expectedStEx2Bgeneric ppsEx1
@@ -713,21 +716,20 @@ blockEx2CHash :: HashHeader
 blockEx2CHash = bhHash (bheader blockEx2C)
 
 expectedStEx2Cgeneric :: SnapShots -> LedgerState -> PParams -> ChainState
-expectedStEx2Cgeneric ss ls pp =
-  ( NewEpochState
-      (Epoch 1)
-      (Nonce 0 ⭒ Nonce 1)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A ss ls pp)
-      Nothing
-      (PoolDistr Map.empty)
-      epoch1OSchedEx2C
-  , mkSeqNonce 3
-  , mkSeqNonce 3
-  , blockEx2CHash
-  , Slot 110
-  )
+expectedStEx2Cgeneric ss ls pp = ChainState
+  (NewEpochState
+     (Epoch 1)
+     (Nonce 0 ⭒ Nonce 1)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A ss ls pp)
+     Nothing
+     (PoolDistr Map.empty)
+     epoch1OSchedEx2C)
+  (mkSeqNonce 3)
+  (mkSeqNonce 3)
+  blockEx2CHash
+  (Slot 110)
 
 expectedStEx2C :: ChainState
 expectedStEx2C = expectedStEx2Cgeneric snapsEx2C expectedLSEx2C ppsEx1
@@ -777,25 +779,24 @@ blockEx2DHash :: HashHeader
 blockEx2DHash = bhHash (bheader blockEx2D)
 
 expectedStEx2D :: ChainState
-expectedStEx2D =
-  ( NewEpochState
-      (Epoch 1)
-      (Nonce 0 ⭒ Nonce 1)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 20
-                         , deltaR = Coin 0
-                         , rs     = Map.empty
-                         , deltaF = Coin (-20)
-                         })
-      (PoolDistr Map.empty)
-      epoch1OSchedEx2C
-  , mkSeqNonce 4
-  , mkSeqNonce 3
-  , blockEx2DHash
-  , Slot 190
-  )
+expectedStEx2D = ChainState
+  (NewEpochState
+     (Epoch 1)
+     (Nonce 0 ⭒ Nonce 1)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
+     (Just RewardUpdate { deltaT = Coin 20
+                        , deltaR = Coin 0
+                        , rs     = Map.empty
+                        , deltaF = Coin (-20)
+                        })
+     (PoolDistr Map.empty)
+     epoch1OSchedEx2C)
+  (mkSeqNonce 4)
+  (mkSeqNonce 3)
+  blockEx2DHash
+  (Slot 190)
 
 ex2D :: CHAINExample
 ex2D = CHAINExample (Slot 190) expectedStEx2C blockEx2D expectedStEx2D
@@ -846,28 +847,27 @@ blockEx2EHash = bhHash (bheader blockEx2E)
 acntEx2E :: AccountState
 acntEx2E = AccountState
             { _treasury = Coin 20
-            , _reserves = Coin 45*1000*1000*1000*1000*1000
+            , _reserves = maxLovelaceSupply - balance utxoEx2A
             }
 
 expectedStEx2E :: ChainState
-expectedStEx2E =
-  ( NewEpochState
-      (Epoch 2)
-      (mkSeqNonce 3)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
-      Nothing
-      (PoolDistr
-        (Map.singleton
-           (hk alicePool)
-           (1, hashKey (vKey $ vrf alicePool))))
-      epoch1OSchedEx2E
-  , mkSeqNonce 5
-  , mkSeqNonce 5
-  , blockEx2EHash
-  , Slot 220
-  )
+expectedStEx2E = ChainState
+  (NewEpochState
+     (Epoch 2)
+     (mkSeqNonce 3)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
+     Nothing
+     (PoolDistr
+       (Map.singleton
+          (hk alicePool)
+          (1, hashKey (vKey $ vrf alicePool))))
+     epoch1OSchedEx2E)
+  (mkSeqNonce 5)
+  (mkSeqNonce 5)
+  blockEx2EHash
+  (Slot 220)
 
 ex2E :: CHAINExample
 ex2E = CHAINExample (Slot 220) expectedStEx2D blockEx2E expectedStEx2E
@@ -894,25 +894,24 @@ pdEx2F :: PoolDistr
 pdEx2F = PoolDistr $ Map.singleton (hk alicePool) (1, hashKey $ vKey $ vrf alicePool)
 
 expectedStEx2F :: ChainState
-expectedStEx2F =
-  ( NewEpochState
-      (Epoch 2)
-      (mkSeqNonce 3)
-      (BlocksMade Map.empty)
-      (BlocksMade $ Map.singleton (hk alicePool) 1)
-      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 13
-                         , deltaR = Coin 0
-                         , rs     = Map.empty
-                         , deltaF = Coin (-13)
-                         })
-      pdEx2F
-      epoch1OSchedEx2E
-  , mkSeqNonce 6
-  , mkSeqNonce 5
-  , blockEx2FHash
-  , Slot 295
-  )
+expectedStEx2F = ChainState
+  (NewEpochState
+     (Epoch 2)
+     (mkSeqNonce 3)
+     (BlocksMade Map.empty)
+     (BlocksMade $ Map.singleton (hk alicePool) 1)
+     (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
+     (Just RewardUpdate { deltaT = Coin 13
+                        , deltaR = Coin 0
+                        , rs     = Map.empty
+                        , deltaF = Coin (-13)
+                        })
+     pdEx2F
+     epoch1OSchedEx2E)
+  (mkSeqNonce 6)
+  (mkSeqNonce 5)
+  blockEx2FHash
+  (Slot 295)
 
 ex2F :: CHAINExample
 ex2F = CHAINExample (Slot 295) expectedStEx2E blockEx2F expectedStEx2F
@@ -958,21 +957,20 @@ expectedLSEx2G = LedgerState
                0
 
 expectedStEx2G :: ChainState
-expectedStEx2G =
-  ( NewEpochState
-      (Epoch 3)
-      (mkSeqNonce 5)
-      (BlocksMade $ Map.singleton (hk alicePool) 1)
-      (BlocksMade Map.empty)
-      (EpochState (acntEx2E { _treasury = 33}) snapsEx2G expectedLSEx2G ppsEx1)
-      Nothing
-      pdEx2F
-      epoch1OSchedEx2G
-  , mkSeqNonce 7
-  , mkSeqNonce 7
-  , blockEx2GHash
-  , Slot 310
-  )
+expectedStEx2G = ChainState
+  (NewEpochState
+     (Epoch 3)
+     (mkSeqNonce 5)
+     (BlocksMade $ Map.singleton (hk alicePool) 1)
+     (BlocksMade Map.empty)
+     (EpochState (acntEx2E { _treasury = 33}) snapsEx2G expectedLSEx2G ppsEx1)
+     Nothing
+     pdEx2F
+     epoch1OSchedEx2G)
+  (mkSeqNonce 7)
+  (mkSeqNonce 7)
+  blockEx2GHash
+  (Slot 310)
 
 ex2G :: CHAINExample
 ex2G = CHAINExample (Slot 310) expectedStEx2F blockEx2G expectedStEx2G
@@ -1006,25 +1004,24 @@ rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
                           , (RewardAcnt bobSHK, bobRAcnt2H) ]
 
 expectedStEx2H :: ChainState
-expectedStEx2H =
-  ( NewEpochState
-      (Epoch 3)
-      (mkSeqNonce 5)
-      (BlocksMade $ Map.singleton (hk alicePool) 1)
-      (BlocksMade Map.empty)
-      (EpochState (acntEx2E { _treasury = Coin 33 }) snapsEx2G expectedLSEx2G ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 9374400000011
-                         , deltaR = Coin (-9450000000000)
-                         , rs = rewardsEx2H
-                         , deltaF = Coin (-10)
-                         })
-      pdEx2F
-      epoch1OSchedEx2G
-  , mkSeqNonce 8
-  , mkSeqNonce 7
-  , blockEx2HHash
-  , Slot 390
-  )
+expectedStEx2H = ChainState
+  (NewEpochState
+     (Epoch 3)
+     (mkSeqNonce 5)
+     (BlocksMade $ Map.singleton (hk alicePool) 1)
+     (BlocksMade Map.empty)
+     (EpochState (acntEx2E { _treasury = Coin 33 }) snapsEx2G expectedLSEx2G ppsEx1)
+     (Just RewardUpdate { deltaT = Coin 9374400000008
+                        , deltaR = Coin (-9449999999997)
+                        , rs = rewardsEx2H
+                        , deltaF = Coin (-10)
+                        })
+     pdEx2F
+     epoch1OSchedEx2G)
+  (mkSeqNonce 8)
+  (mkSeqNonce 7)
+  blockEx2HHash
+  (Slot 390)
 
 ex2H :: CHAINExample
 ex2H = CHAINExample (Slot 390) expectedStEx2G blockEx2H expectedStEx2H
@@ -1056,8 +1053,8 @@ epoch1OSchedEx2I = overlaySchedule
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
-            { _treasury = Coin 9374400000044
-            , _reserves = Coin 44990550000000000
+            { _treasury = Coin 9374400000041
+            , _reserves = Coin 44990549999989003
             }
 
 dsEx2I :: DState
@@ -1083,21 +1080,20 @@ snapsEx2I = snapsEx2G { _pstakeMark =
                       }
 
 expectedStEx2I :: ChainState
-expectedStEx2I =
-  ( NewEpochState
-      (Epoch 4)
-      (mkSeqNonce 7)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2I snapsEx2I expectedLSEx2I ppsEx1)
-      Nothing
-      pdEx2F
-      epoch1OSchedEx2I
-  , mkSeqNonce 9
-  , mkSeqNonce 9
-  , blockEx2IHash
-  , Slot 410
-  )
+expectedStEx2I = ChainState
+  (NewEpochState
+     (Epoch 4)
+     (mkSeqNonce 7)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2I snapsEx2I expectedLSEx2I ppsEx1)
+     Nothing
+     pdEx2F
+     epoch1OSchedEx2I)
+  (mkSeqNonce 9)
+  (mkSeqNonce 9)
+  blockEx2IHash
+  (Slot 410)
 
 ex2I :: CHAINExample
 ex2I = CHAINExample (Slot 410) expectedStEx2H blockEx2I expectedStEx2I
@@ -1167,21 +1163,20 @@ expectedLSEx2J = LedgerState
                0
 
 expectedStEx2J :: ChainState
-expectedStEx2J =
-  ( NewEpochState
-      (Epoch 4)
-      (mkSeqNonce 7)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2I snapsEx2I expectedLSEx2J ppsEx1)
-      Nothing
-      pdEx2F
-      epoch1OSchedEx2I
-  , mkSeqNonce 10
-  , mkSeqNonce 10
-  , blockEx2JHash
-  , Slot 420
-  )
+expectedStEx2J = ChainState
+  (NewEpochState
+     (Epoch 4)
+     (mkSeqNonce 7)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2I snapsEx2I expectedLSEx2J ppsEx1)
+     Nothing
+     pdEx2F
+     epoch1OSchedEx2I)
+  (mkSeqNonce 10)
+  (mkSeqNonce 10)
+  blockEx2JHash
+  (Slot 420)
 
 ex2J :: CHAINExample
 ex2J = CHAINExample (Slot 420) expectedStEx2I blockEx2J expectedStEx2J
@@ -1242,25 +1237,24 @@ expectedLSEx2K = LedgerState
 
 
 expectedStEx2K :: ChainState
-expectedStEx2K =
-  ( NewEpochState
-      (Epoch 4)
-      (mkSeqNonce 7)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 9
-                         , deltaR = Coin 0
-                         , rs = Map.empty
-                         , deltaF = Coin (-9)
-                         })
-      pdEx2F
-      epoch1OSchedEx2I
-  , mkSeqNonce 11
-  , mkSeqNonce 10
-  , blockEx2KHash
-  , Slot 490
-  )
+expectedStEx2K = ChainState
+  (NewEpochState
+     (Epoch 4)
+     (mkSeqNonce 7)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1)
+     (Just RewardUpdate { deltaT = Coin 9
+                        , deltaR = Coin 0
+                        , rs = Map.empty
+                        , deltaF = Coin (-9)
+                        })
+     pdEx2F
+     epoch1OSchedEx2I)
+  (mkSeqNonce 11)
+  (mkSeqNonce 10)
+  blockEx2KHash
+  (Slot 490)
 
 ex2K :: CHAINExample
 ex2K = CHAINExample (Slot 490) expectedStEx2J blockEx2K expectedStEx2K
@@ -1300,36 +1294,35 @@ dsEx2L :: DState
 dsEx2L = dsEx1
           { _ptrs = Map.singleton (Ptr (Slot 10) 0 0) aliceSHK
           , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 10)
-          , _rewards = Map.singleton (RewardAcnt aliceSHK) (aliceRAcnt2H + Coin 250)
-                       -- Note the pool cert refund of 250
+          , _rewards = Map.singleton (RewardAcnt aliceSHK) (aliceRAcnt2H + Coin 201)
+                       -- Note the pool cert refund of 201
           }
 
 expectedLSEx2L :: LedgerState
 expectedLSEx2L = LedgerState
                (UTxOState
                  utxoEx2K
-                 (Coin 205)
+                 (Coin 4)
                  (Coin 21)
                  usEx2A)
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped
                0
 
 expectedStEx2L :: ChainState
-expectedStEx2L =
-  ( NewEpochState
-      (Epoch 5)
-      (mkSeqNonce 10)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1)
-      Nothing
-      pdEx2F
-      (overlaySchedule (Epoch 5) (Map.keysSet dms) (mkSeqNonce 10) ppsEx1)
-  , mkSeqNonce 12
-  , mkSeqNonce 12
-  , blockEx2LHash
-  , Slot 510
-  )
+expectedStEx2L = ChainState
+  (NewEpochState
+     (Epoch 5)
+     (mkSeqNonce 10)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1)
+     Nothing
+     pdEx2F
+     (overlaySchedule (Epoch 5) (Map.keysSet dms) (mkSeqNonce 10) ppsEx1))
+  (mkSeqNonce 12)
+  (mkSeqNonce 12)
+  blockEx2LHash
+  (Slot 510)
 
 ex2L :: CHAINExample
 ex2L = CHAINExample (Slot 510) expectedStEx2K blockEx2L expectedStEx2L
@@ -1339,7 +1332,7 @@ ex2L = CHAINExample (Slot 510) expectedStEx2K blockEx2L expectedStEx2L
 -- have three genesis keys vote on the same new parameters
 
 
-ppVote3A :: Set.Set Ppm
+ppVote3A :: Set Ppm
 ppVote3A = Set.fromList [ExtraEntropy (Nonce 123), PoolDeposit 200]
 
 ppupEx3A :: PPUpdate
@@ -1384,15 +1377,12 @@ blockEx3A = mkBlock
              zero
              0
 
-updateStEx3A :: ( PPUpdate
-               , AVUpdate
-               , Map Slot Applications
-               , Applications)
-updateStEx3A =
-  ( ppupEx3A
-  , AVUpdate Map.empty
-  , Map.empty
-  , byronApps)
+updateStEx3A :: UpdateState
+updateStEx3A = UpdateState
+  ppupEx3A
+  (AVUpdate Map.empty)
+  Map.empty
+  byronApps
 
 expectedLSEx3A :: LedgerState
 expectedLSEx3A = LedgerState
@@ -1411,21 +1401,20 @@ blockEx3AHash :: HashHeader
 blockEx3AHash = bhHash (bheader blockEx3A)
 
 expectedStEx3A :: ChainState
-expectedStEx3A =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1)
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , Nonce 0 ⭒ Nonce 1
-  , Nonce 0 ⭒ Nonce 1
-  , blockEx3AHash
-  , Slot 10
-  )
+expectedStEx3A = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (Nonce 0 ⭒ Nonce 1)
+  (Nonce 0 ⭒ Nonce 1)
+  blockEx3AHash
+  (Slot 10)
 
 ex3A :: CHAINExample
 ex3A = CHAINExample (Slot 10) initStEx2A blockEx3A expectedStEx3A
@@ -1474,15 +1463,12 @@ blockEx3B = mkBlock
              zero
              0
 
-updateStEx3B :: ( PPUpdate
-               , AVUpdate
-               , Map Slot Applications
-               , Applications)
-updateStEx3B =
-  ( ppupEx3A `updatePPup` ppupEx3B
-  , AVUpdate Map.empty
-  , Map.empty
-  , byronApps)
+updateStEx3B :: UpdateState
+updateStEx3B = UpdateState
+  (ppupEx3A `updatePPup` ppupEx3B)
+  (AVUpdate Map.empty)
+  Map.empty
+  byronApps
 
 utxoEx3B :: UTxO
 utxoEx3B = UTxO . Map.fromList $
@@ -1504,21 +1490,20 @@ blockEx3BHash :: HashHeader
 blockEx3BHash = bhHash (bheader blockEx3B)
 
 expectedStEx3B :: ChainState
-expectedStEx3B =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1)
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , mkSeqNonce 2
-  , mkSeqNonce 2
-  , blockEx3BHash
-  , Slot 20
-  )
+expectedStEx3B = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (mkSeqNonce 2)
+  (mkSeqNonce 2)
+  blockEx3BHash
+  (Slot 20)
 
 ex3B :: CHAINExample
 ex3B = CHAINExample (Slot 20) expectedStEx3A blockEx3B expectedStEx3B
@@ -1566,21 +1551,20 @@ ppsEx3C = ppsEx1 { _poolDeposit = Coin 200 }
 -- Note that _extraEntropy is still NeutralSeed
 
 expectedStEx3C :: ChainState
-expectedStEx3C =
-  ( NewEpochState
-      (Epoch 1)
-      (mkSeqNonce 2 ⭒ Nonce 123)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx3C)
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx3C
-  , mkSeqNonce 3
-  , mkSeqNonce 3
-  , blockEx3CHash
-  , Slot 110
-  )
+expectedStEx3C = ChainState
+  (NewEpochState
+     (Epoch 1)
+     (mkSeqNonce 2 ⭒ Nonce 123)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx3C)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx3C)
+  (mkSeqNonce 3)
+  (mkSeqNonce 3)
+  blockEx3CHash
+  (Slot 110)
 
 ex3C :: CHAINExample
 ex3C = CHAINExample (Slot 110) expectedStEx3B blockEx3C expectedStEx3C
@@ -1642,15 +1626,12 @@ blockEx4A = mkBlock
              zero
              0
 
-updateStEx4A :: ( PPUpdate
-               , AVUpdate
-               , Map Slot Applications
-               , Applications)
-updateStEx4A =
-  ( PPUpdate Map.empty
-  , avupEx4A
-  , Map.empty
-  , byronApps)
+updateStEx4A :: UpdateState
+updateStEx4A = UpdateState
+  (PPUpdate Map.empty)
+  avupEx4A
+  Map.empty
+  byronApps
 
 expectedLSEx4A :: LedgerState
 expectedLSEx4A = LedgerState
@@ -1669,21 +1650,20 @@ blockEx4AHash :: HashHeader
 blockEx4AHash = bhHash (bheader blockEx4A)
 
 expectedStEx4A :: ChainState
-expectedStEx4A =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1)
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , Nonce 0 ⭒ Nonce 1
-  , Nonce 0 ⭒ Nonce 1
-  , blockEx4AHash
-  , Slot 10
-  )
+expectedStEx4A = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (Nonce 0 ⭒ Nonce 1)
+  (Nonce 0 ⭒ Nonce 1)
+  blockEx4AHash
+  (Slot 10)
 
 ex4A :: CHAINExample
 ex4A = CHAINExample (Slot 10) initStEx2A blockEx4A expectedStEx4A
@@ -1731,15 +1711,12 @@ blockEx4B = mkBlock
              zero
              0
 
-updateStEx4B :: ( PPUpdate
-               , AVUpdate
-               , Map Slot Applications
-               , Applications)
-updateStEx4B =
-  ( PPUpdate Map.empty
-  , AVUpdate Map.empty
-  , Map.singleton (Slot 53) appsEx4A
-  , byronApps)
+updateStEx4B :: UpdateState
+updateStEx4B = UpdateState
+  (PPUpdate Map.empty)
+  (AVUpdate Map.empty)
+  (Map.singleton (Slot 53) appsEx4A)
+  byronApps
 
 utxoEx4B :: UTxO
 utxoEx4B = UTxO . Map.fromList $
@@ -1761,21 +1738,20 @@ blockEx4BHash :: HashHeader
 blockEx4BHash = bhHash (bheader blockEx4B)
 
 expectedStEx4B :: ChainState
-expectedStEx4B =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1)
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , mkSeqNonce 2
-  , mkSeqNonce 2
-  , blockEx4BHash
-  , Slot 20
-  )
+expectedStEx4B = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (mkSeqNonce 2)
+  (mkSeqNonce 2)
+  blockEx4BHash
+  (Slot 20)
 
 ex4B :: CHAINExample
 ex4B = CHAINExample (Slot 20) expectedStEx4A blockEx4B expectedStEx4B
@@ -1795,19 +1771,15 @@ blockEx4C = mkBlock
              zero
              0
 
-updateStEx4C :: ( PPUpdate
-               , AVUpdate
-               , Map Slot Applications
-               , Applications)
-updateStEx4C =
-  ( PPUpdate Map.empty
-  , AVUpdate Map.empty
-  , Map.empty
-  , Applications $ Map.fromList
+updateStEx4C :: UpdateState
+updateStEx4C = UpdateState
+  (PPUpdate Map.empty)
+  (AVUpdate Map.empty)
+  Map.empty
+  (Applications $ Map.fromList
                      [ (ApName $ pack "Daedalus", (ApVer 17, daedalusMDEx4A))
                      , (ApName $ pack "Yoroi", (ApVer 4, Mdt Map.empty))
-                     ]
-  )
+                     ])
 
 expectedLSEx4C :: LedgerState
 expectedLSEx4C = LedgerState
@@ -1818,29 +1790,29 @@ expectedLSEx4C = LedgerState
                  updateStEx4C)
                (DPState dsEx1 psEx1)
                0
+
 blockEx4CHash :: HashHeader
 blockEx4CHash = bhHash (bheader blockEx4C)
 
 expectedStEx4C :: ChainState
-expectedStEx4C =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx4C ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 0
-                         , deltaR = Coin 0
-                         , rs     = Map.empty
+expectedStEx4C = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx4C ppsEx1)
+     (Just RewardUpdate { deltaT = Coin 0
+                        , deltaR = Coin 0
+                        , rs     = Map.empty
                          , deltaF = Coin 0
                          })
       (PoolDistr Map.empty)
-      overlayEx2A
-  , mkSeqNonce 3
-  , mkSeqNonce 3
-  , blockEx4CHash
-  , Slot 60
-  )
+      overlayEx2A)
+  (mkSeqNonce 3)
+  (mkSeqNonce 3)
+  blockEx4CHash
+  (Slot 60)
 
 
 ex4C :: CHAINExample
@@ -1903,26 +1875,25 @@ expectedLSEx5A = LedgerState
                  utxoEx5A
                  (Coin 0)
                  (Coin 1)
-                 (PPUpdate Map.empty , AVUpdate Map.empty , Map.empty , byronApps))
+                 (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
                (DPState dsEx5A psEx1)
                0
 
 expectedStEx5A :: ChainState
-expectedStEx5A =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1)
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , Nonce 0 ⭒ Nonce 1
-  , Nonce 0 ⭒ Nonce 1
-  , blockEx5AHash
-  , Slot 10
-  )
+expectedStEx5A = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (Nonce 0 ⭒ Nonce 1)
+  (Nonce 0 ⭒ Nonce 1)
+  blockEx5AHash
+  (Slot 10)
 
 ex5A :: CHAINExample
 ex5A = CHAINExample (Slot 10) initStEx2A blockEx5A expectedStEx5A
@@ -1965,30 +1936,29 @@ expectedLSEx5B = LedgerState
                  utxoEx5A
                  (Coin 0)
                  (Coin 1)
-                 (PPUpdate Map.empty , AVUpdate Map.empty , Map.empty , byronApps))
+                 (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
                (DPState dsEx5B psEx5B)
                0
 
 expectedStEx5B :: ChainState
-expectedStEx5B =
-  ( NewEpochState
-      (Epoch 0)
-      (Nonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      (EpochState acntEx2A emptySnapShots expectedLSEx5B ppsEx1)
-      (Just RewardUpdate { deltaT = Coin 0
-                         , deltaR = Coin 0
-                         , rs     = Map.empty
-                         , deltaF = Coin 0
-                         })
-      (PoolDistr Map.empty)
-      overlayEx2A
-  , mkSeqNonce 2
-  , mkSeqNonce 2
-  , blockEx5BHash
-  , Slot 50
-  )
+expectedStEx5B = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (Nonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx5B ppsEx1)
+     (Just RewardUpdate { deltaT = Coin 0
+                        , deltaR = Coin 0
+                        , rs     = Map.empty
+                        , deltaF = Coin 0
+                        })
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (mkSeqNonce 2)
+  (mkSeqNonce 2)
+  blockEx5BHash
+  (Slot 50)
 
 ex5B :: CHAINExample
 ex5B = CHAINExample (Slot 50) expectedStEx5A blockEx5B expectedStEx5B

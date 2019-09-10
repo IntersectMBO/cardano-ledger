@@ -8,7 +8,7 @@ The transition system is explained in \cite{small_step_semantics}.
     the subsets of $X$.
   \item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
     sequences having elements taken from $\type{X}$. The empty sequence is
-    denoted by $\epsilon$ and given a sequence $\Lambda$, $\Lambda; \type{x}$ is
+    denoted by $\epsilon$. Given a sequence $\Lambda$, $\Lambda; \type{x}$ is
     the sequence that results from appending $\type{x} \in \type{X}$ to
     $\Lambda$.
   \item[Functions] $A \to B$ denotes a \textbf{total function} from $A$ to $B$.
@@ -33,7 +33,7 @@ The transition system is explained in \cite{small_step_semantics}.
     $a\mapsto b \in m$.
     Given a relation $R$ on $A\times B$, we define the inverse relation $R^{-1}$ to be
     all pairs $(b, a)$ such that $(a, b)\in R$. Similarly, given a function $f:A\to B$ we
-    define inverse relation $f^{-1}$ to consist of all pairs $(f(a), a)$.
+    define the inverse relation $f^{-1}$ to consist of all pairs $(f(a), a)$.
     Finally, given two relations $R\subseteq A\times B$ and $S\subseteq B\times C$,
     we define the compostion $R\circ S$ to be all pairs $(a, c)$ such that
     $(a, b)\in R$ and $(b, c)\in S$ for some $b\in B$.
@@ -53,7 +53,7 @@ The transition system is explained in \cite{small_step_semantics}.
 \end{description}
 
 
-In Figure~\ref{fig:notation:nonstandard}, we specify the notation we use in
+In Figure~\ref{fig:notation:nonstandard}, we specify the notation that we use in
 the rest of the document.
 
 \begin{figure}[htb]

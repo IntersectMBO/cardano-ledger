@@ -1,0 +1,10 @@
+\contentsline {todo}{We could also require a signature by \(sks_\text {reward}\). However, that would require more coordination for ``charity pools'', and I don't see an obvious threat when we do not require that signature.}{17}{section*.6}
+\contentsline {todo}{There is a subtlety here, in that Praos has more slots than OBFT. We'll have to adjust this slightly. Also, if we do go for rewards per block, we'll have to think about the transition period again.}{24}{section*.10}
+\contentsline {todo}{Decide whether to exclude pools that do not meet their pledge from the protocol, or only deny them rewards}{31}{section*.15}
+\contentsline {todo}{We're considering moving away from the moving average, so we might have to update this}{33}{section*.16}
+\contentsline {todo}{Specify how many places the pool has to drop in order to trigger this notification. Needs input from research.}{33}{section*.17}
+\contentsline {todo}{Add a section on stake pools entering the market, based in Aikaterini's write up}{33}{section*.18}
+\contentsline {todo}{This should be discussed with the Daedalus team to figure out the UI, and also with the researchers, to make sure this does not introduce any security issues.}{35}{section*.22}
+\contentsline {todo}{It seems to be advantageous to have the monetary expansion depend on the number of blocks in an epoch (for instance, by just having an exponential decay \emph {per block} of the reserves. This discourages block withholding attacks.}{37}{section*.23}
+\contentsline {todo}{We might switch to determining the rewards directly by the number of blocks produced, instead of the stake. The document will be updated once we have decided on this.}{39}{section*.24}
+\contentsline {todo}{We have to discuss this proposal with the researchers on the Game Theory side. We also need to decide whether we should preclude transactions with an overall negative fee.}{53}{section*.28}
