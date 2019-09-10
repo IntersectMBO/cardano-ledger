@@ -475,22 +475,22 @@ Setting $c= \ln(1 - f)$ and using $q = 1 - p$ we obtain the following:
     & p < 1 - \exp(\sigma \cdot c) & \\
     \Leftrightarrow & \exp(\sigma \cdot c) < 1 - p & (\textrm{c is negative})\\
     \Leftrightarrow & \frac{1}{\exp(-\sigma \cdot c)} < q & \\
-    \Leftrightarrow & \frac{1}{q} < \exp(-\sigma \cdot c) &
+    \Leftrightarrow & \frac{1}{q} < \exp(-\sigma \cdot c) & \\
+    \Leftrightarrow & \ln(\frac{1}{q}) < (-\sigma \cdot c) & \\
+    \Leftrightarrow & \ln(q) > \sigma \cdot c &
   \end{array}
 \end{equation*}
 
 \noindent
-The term $\exp(-\sigma \cdot c)$ can be computed using the Taylor series as
-described in Section~\ref{sec:taylor-series}. \khcomment{This can be simplified
-  further by applying $ln$ to each side to give $\ln(\frac{1}{q}) < (-\sigma \cdot c)$ and then
-  cancelling the negations to give $\ln(q) > \sigma \cdot c$.  This can then be used with
-  table lookup on $q$ to give a quick check as to whether the term might be true, and only applying
-  the complex calculation if so.  This should be more efficient than
-the calculation below, since most checks will fail.}
+The terms $\exp(-\sigma \cdot c)$ or $\ln(q)$ can be computed using the Taylor series as
+described in Section~\ref{sec:taylor-series}.   By using table lookup on $\ln{q}$, a quick
+check can be obtained on whether the comparison is definitely true or not true.  If it is
+not certain, then the full calculation can be performed. By using a log calculation, integer sizes will
+be reduced, which will also improve the performance of the calculation.
 
 Since the relevant information is not the result of the calculation, but only whether
-the given $p$ is less than or greater than this value, one can also optimize
-further. Using the Lagrange remainder to estimate the error, it is possible to
+the given $p$ is less than or greater than this value, one can also optimize the $\exp{\ldots}$ or $\ln{\ldots}$
+calculation further if desired. Using the Lagrange remainder to estimate the error, it is possible to
 only compute as many iterations as necessary to get the desired information.
 
 \begin{equation*}
