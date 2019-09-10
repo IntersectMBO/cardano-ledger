@@ -235,3 +235,139 @@ The number blocks made in an epoch is never greater than the number of slots in 
 
 TODO - Without just restating predicates already in our rules, how can we
 state properties stating that UTxO transfer, certificates, etc, are properly authorized?
+
+
+# Praos Properties
+
+**_The following Properties are taken from the Ouroboros Praos Document_**  
+
+Persistence and Liveness seem to be the key properties of interest.
+
+Some questions:
+
+What does semisynchronous actually mean?  
+What implications does this protocol have for performance?
+What are acceptable values for various system protocol parameters?
+
+The following are examples of things that should be part of some overview document
+
+(1) potentially, multiple slot leaders may be elected for a particular slot (forming a slot leader set); 
+
+(2) frequently, slots will have no leaders assigned to them; and 
+
+(3) a priori, only a slot leader is aware that it is indeed a leader for a given slot; this assignment is unknown to all the other stakeholders—including other slot leaders of the same slot—until the other stakeholders receive a valid block from this slot leader.
+
+     
+
+**Independent aggregation property (Property 2)**
+
+Page 10:  The probability of a stakeholder becoming a slot leader in a particular slot is independent of whether this stakeholder acts as a single party in the protocol, or splits its stake among several “virtual” parties.
+
+_This is a technical property that may have some deeper implications.
+Invariance of selection rule under arbitrary reassignment of stake._
+
+**Strong consistency between theoretical and real world experiments**
+
+Page 11: Any property of the protocol that we prove true in the hybrid experiment (such as achieving common prefix, chain growth and chain quality) will remain true (with overwhelming probability) in the setting where FVRF and FKES are replaced by their real-world implementations—in the so-called real experiment (p.11).  Argued in Theorems 1 & 2.
+
+
+**"Small" Divergence**
+
+Page 16: With high probability, the characteristic strings induced by protocol πSPoS have small divergence and hence provide strong guarantees on common prefix.
+
+_"small" needs to be quantified - is this an absolute measure, or relative to a period of time (epoch, system, slot)
+- we might be able to ensure specific levels of divergence throughout a slot for example_
+
+**Subadditivity of φ**
+
+Page 17: Proposition 1. The function φf (α) satisfies the following properties. 􏰍􏰎
+
+φ
+􏰓α =1−􏰔(1−φ (α))≤􏰓φ (α), α ≥0, fififii
+iii
+φf(α) = φf(α) ≥ α, α ∈ [0,1].
+(5)
+(6)
+
+_Proposition 1 needs to be embedded in the spec (true by design and construction?)_
+
+**Common prefix**
+
+Page 19: There is a low probability of violating the common prefix condition.
+
+Theorem 5 (Common prefix). Let k,R,∆ ∈ N and ε ∈ (0,1). Let A be an α-dominated adversary against the protocol πSPoS for some α satisfying α(1−f)∆ ≥ (1+ε)/2. Then the probability that A, when executed in a ∆-semisynchronous environment, makes πSPoS violate the common prefix property with parameter k throughout a period of R slots is no more than exp(ln R + ∆ − Ω(k)). The constant hidden by the Ω(·)-notation depends on ε.
+
+_This is a key property.  It may be necessary to test this rather than proving it.  It should be embedded by design in the spec.  Note that the three properties in this section use exponentials. How does this relate to the non-integer calcs?_
+
+
+**Chain growth**
+
+Page 20: The length of the chain grows by at least the number of slots.
+
+Theorem 6 (Chain growth). Let k, R, ∆ ∈ N and ε ∈ (0, 1). Let A be an α-dominated adversary against the protocol πSPoS for some α > 0. Then the probability that A, when executed in a ∆-semi- synchronous environment, makes πSPoS violate the chain growth property with parameters s ≥ 4∆ and τ = cα/4 throughout a period of R slots, is no more than exp (−cαs/(20∆) + ln R∆ + O(1)), where c denotes the constant c:=c(f,∆)=f(1−f)∆.
+
+_This is a key property that is worth verifying/proving.  It might also form the basis for progress/productivity._
+
+
+
+**Chain quality**
+
+Page 21: There is a low probability of violating the chain property condition.
+
+Theorem 7 (Chain quality). Let k, R, ∆ ∈ N and ε ∈ (0, 1). Let A be an α-dominated adversary against the protocol πSPoS for some α > 0 satisfying α(1−f)∆ ≥ (1+ε)/2. Then the probability that A, when executed in a ∆-semisynchronous environment, makes πSPoS violate the chain quality property with parameters k and μ = 1/k throughout a period of R slots, is no more than exp(ln R − Ω(k)).
+
+_Another key property.  Approach should be similar to common prefix._
+
+**Probability Calculations**
+
+Page 21 contains two displayed conditions that could be used to generate tests to confirm correct probabilities.
+
+**Theorem 8**
+
+Page 22:
+
+_Is this related to the slot leadership?
+Is the corruption monitored/verified/avoided somehow?  Or is it just a condition/assumption?_
+
+
+**Participation**
+
+Page 25:
+
+_It's not obvious from this whether a non-participating actor could disrupt the system (e.g. by
+causing timeslot problems).  Does non-participation imply loss of benefit?  Do we need to assure
+participation?  Can we use the assumption to help ensure progress?
+Also what happens if a slot leader fails to participate?
+Some of these discussions may be in the design document?_
+
+**Theorem 9**
+
+Page 26:
+
+_Theorem 9 is the main persistence and liveness property.
+I assume this has been evaluated empirically (graph of probabilities/simulation).
+Are there any false independence assumptions?
+Liveness refers to honest actors and transactions.  If there are no honest transactions,
+there will presumably be no growth?
+What assumptions are being made here in terms of deadlock, availability etc.
+(these could have a major impact on system viability_
+
+
+**Key pair correctness**
+
+Page 30:
+
+_Check assumptions.  Should be by construction and design if spec is consistent._
+
+**Theorem 2**
+
+Page 32:
+
+_This is just a technical result, I think?_
+
+**Test Properties**
+
+Page 33/34:
+
+_These look like ways to drive test case generation_
+
