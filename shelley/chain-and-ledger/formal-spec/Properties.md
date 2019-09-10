@@ -239,7 +239,9 @@ state properties stating that UTxO transfer, certificates, etc, are properly aut
 
 # Praos Properties
 
-**_The following Properties are taken from the Ouroboros Praos Document_**  
+**_The following Properties are taken from the Ouroboros Praos Document.  Not all of them will reflect
+into ledger properties, but we should record them somewhere since they will be overall concerns that
+should be driving tests/proofs. _**  
 
 Persistence and Liveness seem to be the key properties of interest.
 
@@ -322,9 +324,14 @@ _Another key property.  Approach should be similar to common prefix._
 
 Page 21 contains two displayed conditions that could be used to generate tests to confirm correct probabilities.
 
+R∆ exp(−cα(s − 3∆)/(20∆)) = exp(−cα(s − 3∆)/(20∆) + ln R∆)
+
+Pr [g(x) ≤ b(x)] ≤ Pr [g(x) ≤ b(x)]
+x←Df x←Dαf
+
 **Theorem 8**
 
-Page 22:
+Page 22: Every adaptive adversary A that corrupts at most (1−α)-fraction of stake throughout the whole execution is α-dominated.
 
 _Is this related to the slot leadership?
 Is the corruption monitored/verified/avoided somehow?  Or is it just a condition/assumption?_
@@ -332,17 +339,18 @@ Is the corruption monitored/verified/avoided somehow?  Or is it just a condition
 
 **Participation**
 
-Page 25:
+Page 25: It is sufficient for an honest stakeholder to join at the beginning of each epoch, determine whether she belongs to the slot leader set for any slots within this epoch (using the Eval interface of FVRF), and then come online and act on those slots while maintaining online presence at least every k slots.
 
 _It's not obvious from this whether a non-participating actor could disrupt the system (e.g. by
 causing timeslot problems).  Does non-participation imply loss of benefit?  Do we need to assure
-participation?  Can we use the assumption to help ensure progress?
+adequate participation by all stakeholders?  Can we use the assumption to help ensure progress?
 Also what happens if a slot leader fails to participate?
 Some of these discussions may be in the design document?_
 
 **Theorem 9**
 
-Page 26:
+Page 26: The protocol πDPoS, with access to Fτ,r , with τ ≤ 8k/(1 + ε) satisfies persistence with parameters RLB
+k and liveness under specific conditions.
 
 _Theorem 9 is the main persistence and liveness property.
 I assume this has been evaluated empirically (graph of probabilities/simulation).
@@ -355,19 +363,15 @@ What assumptions are being made here in terms of deadlock, availability etc.
 
 **Key pair correctness**
 
-Page 30:
+Page 30: Correctness: for every key pair (KES.sk1,KES.vk) ← Gen(1k,T), every message m and every
+time period j ≤ T , VerifyKES.vk (m, SignKES.skj (m)) = 1
 
-_Check assumptions.  Should be by construction and design if spec is consistent._
+_Check assumptions.  The proof should be by construction and design if the spec is consistent with the Praos document._
 
-**Theorem 2**
-
-Page 32:
-
-_This is just a technical result, I think?_
 
 **Test Properties**
 
-Page 33/34:
+Page 33/34:  Various possible attacks are given.  The protocol implementation should defend against these.
 
 _These look like ways to drive test case generation_
 
