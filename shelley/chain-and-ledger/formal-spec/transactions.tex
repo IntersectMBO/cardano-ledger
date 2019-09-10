@@ -6,7 +6,7 @@ A transaction body, $\TxBody$, is made up of seven pieces:
 
 \begin{itemize}
   \item A set of transaction inputs.
-    The $\TxIn$ derived type identifies an output from a previous transaction.
+    This derived type identifies an output from a previous transaction.
     It consists of a transaction id and an index to uniquely identify the output.
   \item An indexed collection of transaction outputs.
     The $\TxOut$ type is an address paired with a coin value.
@@ -19,15 +19,54 @@ A transaction body, $\TxBody$, is made up of seven pieces:
     a reward address to the coin value to be withdrawn. The coin value must be equal
     to the full value contained in the account. Explicitly stating these values ensures
     that error messages can be precise about why a transaction is invalid.
-  \item Update proposals, a pair of mappings from genesis keys to proposals.
-    The first mapping is for protocol parameters and the second one is for application versions.
+    For reward calculation rules, see Section \ref{sec:reward-overview},
+    and for the rule for collecting rewards, see Section \ref{sec:utxo-trans}.
+  \item Update proposals for protocol parameters and software.
 \end{itemize}
-A transaction, $\Tx$, is a transaction body together with:
+
+In the derived types, $\Metadata$ and $\Applications$ are values
+that contain versions of current and next versions of applications.
+The $\ApName$ uniquely identifies a specific kind of application (e.g.
+the wallet), and the associated $\ApVer$ is the specific version of that
+application. The associated $\Metadata$ value gives the \textit{next possible}
+versions of the given application. It is a mapping of system tags to hashes of
+installer binaries, and is needed for the update mechanism.
+The update proposal type $\Update$ is a pair of
 
 \begin{itemize}
+  \item $\PPUpdate$, the protocol parameter upates
+  \item $\AVUpdate$, the updates to Shelley software (applications)
+\end{itemize}
+
+The $\PPUpdate$ has to do with changing rules and constants of the ledger
+protocol. The relationship between the rule update procedure and updating the
+node software that implements these rules is outlined in the next section
+(see Section \ref{sec:update}).
+
+Note that both of these finite maps are indexed by the entities proposing the given
+update, the $\VKeyGen$ keys.
+We use the abstract type $\VKeyGen$ to represent the set of genesis
+(public verification) keys, and these are a distinct type than the usual
+user verification keys, $\VKey$. Genesis keys are the keys belonging to the federated
+nodes running the Cardano system currently (also referred to as core nodes).
+
+Currently, updates
+can only be proposed and voted on by the owners of the genesis keys.
+The process of decentralization will result in the core nodes gradually giving up
+some of their priviledges and responsibilities to the other system nodes.
+The aim is for these nodes to eventually give them \textit{all} up.
+The intent is that in the future, the update proposal mechanism will
+be decentralized as well, and allow all nodes to participate (but likely
+not as a feature in the Shelley release).
+For more on the decentralization process,
+see \ref{sec:new-epoch-trans}.
+
+A transaction, $\Tx$, consists of:
+
+\begin{itemize}
+  \item The transaction body.
   \item A collection of witnesses, represented as a finite map from payment verification keys
     to signatures.
-  \item Updates from genesis keys.
 \end{itemize}
 
 Additionally, the $\UTxO$ type will be used by the ledger state to store all the
@@ -42,6 +81,7 @@ This function must produce a unique id for each unique transaction.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      \var{gkey} & \VKeyGen & \text{genesis public keys}\\
       \var{txid} & \TxId & \text{transaction id}\\
       \var{an} & \ApName & \text{application name}\\
       \var{st} & \SystemTag & \text{system tag}\\
