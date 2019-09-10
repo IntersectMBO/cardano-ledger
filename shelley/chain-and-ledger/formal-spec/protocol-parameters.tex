@@ -5,15 +5,18 @@ The rules for the ledger depend on several parameters contained in the $\PParams
 defined in \cite{byron_ledger_spec}.
 The parameters are listed in Figure~\ref{fig:defs:protocol-parameters},
 the first ten of which below are common to the Byron era.
+We will explain the significance of each parameter as it comes up in
+the calculations used in transition rules.
 
 The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
 and $\Z$ is only chosen over $\N$ for its additive inverses.
 
 Two global constants are defined, $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$,
-representing the number of slots in an epoch/KES period. Cycles will be used in
-the key evolving signatures. As global constants, these values can only be
-changed by updating the software.
+representing the number of slots in an epoch/KES period (for a brief explanation
+of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
+As global constants, these values can only be
+changed by updating the software. 
 
 Some helper functions are defined in Figure~\ref{fig:defs:protocol-parameters-helpers}.
 The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
@@ -50,6 +53,10 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
       & \Z
       & \text{unit of value}
       \\
+      \var{pv}
+      & \ProtVer
+      & \N\times\N\times\N
+      & \text{protocol version}
     \end{array}
   \end{equation*}
   %
@@ -76,7 +83,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
         \var{activeSlotCoeff} \mapsto \unitInterval & \PParams & f\text{ in \cite{ouroboros_praos}}\\
         \var{d} \mapsto \{0,~0.1,~0.2,~\ldots,~1\} & \PParams & \text{decentralization parameter}\\
         \var{extraEntropy} \mapsto \Seed & \PParams & \text{extra entropy}\\
-        \var{pv} \mapsto \N\times\N\times\N & \PParams & \text{protocol version}\\
+        \var{pv} \mapsto \ProtVer & \PParams & \text{protocol version}\\
       \end{array}
   \end{equation*}
   %
@@ -123,7 +130,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \end{array}
   \end{equation*}
   %
-  \caption{Definitions used in Protocol Parameters}
+  \caption{Definitions Used in Protocol Parameters}
   \label{fig:defs:protocol-parameters}
 \end{figure*}
 
