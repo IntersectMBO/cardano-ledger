@@ -1,22 +1,102 @@
 \section{Software Updates}
 \label{sec:software-updates}
 
-This section describes how software updates are performed.
+
+The distinction between protocol parameter and application updates is as
+follows: \newline
+
+\noindent \textbf{Protocol parameters}
+\begin{itemize}
+  \item All parameters excluding $\ProtVer$: constants
+currently used in ledger calculations performed according to the rules described
+in this document
+\begin{itemize}
+\item[$\circ$] Updated only at epoch boundary
+\item[$\circ$] All nodes automatically adopt new values (this mechanism is an explicit
+ part of the ledger rules, and is included in the epoch boundary transition)
+\item[$\circ$] Has no effect on the logic of the ledger transition rules
+\end{itemize}
+\item Protocol version parameter ($\ProtVer$): a special value which
+corresponds to a specific version of the \textit{ledger rules}
+\begin{itemize}
+\item[$\circ$] I.e. if $\var{pv}$ changes, this document may have to be updated with
+the new rules and types if there is a change in the logic
+\item[$\circ$] E.g. the change may be that the new rules now allow \textit{all} nodes
+to vote on update proposals
+\item[$\circ$] Whether the $\var{pv}$ must change with any change of protocol
+parameters when the \textit{rules do not change} is to be decided
+\item[$\circ$] Mechanism for updating is inherited from the general protocol
+parameter update and voting rules
+\item[$\circ$] If there is a change in transition rules, nodes must have
+software installed that can implement these rules at the epoch boundary
+when the protocol parameter adoption occurs
+\item[$\circ$] Switching to using these new rules is mandatory in the sense that
+if the nodes do not have the applications implementing them, this
+will prevent a user from reading and
+writing to the ledger
+\end{itemize}
+\end{itemize}
+\textbf{Applications} The version of the software the nodes run,
+as well as the related system tags and metadata
+\begin{itemize}
+\item[$\circ$] We cannot force the users to actually upgrade their software
+\item[$\circ$] Any application version that is capable of implementing the protocol version
+currently on the ledger can be used by a node
+\item[$\circ$] Users can update applications as soon as update is agreed upon, and should
+do so before their current application becomes incompatible with the
+current protocol version (due to the update), however
+\item[$\circ$] A voted on application version update has a recommended adoption date,
+which applications will automatically follow
+\end{itemize}
+
+Applications must sometimes support \textit{several different versions}
+of ledger rules in order to accommodate the timely switch of the $\ProtVer$ at the
+epoch boundary. Usually, the currently accepted protocol version, and next the
+version they are ready to upgrade to (that their application versions can
+implement).
+The newest protocol version a node is ready to use is included in the block
+header of the blocks it produces, see \ref{sec:defs-blocks}. This is either
+
+\begin{itemize}
+\item the current version (if there is no protocol version update pending or the node
+has not updated to an upcoming software version capable of of implementing a
+newer protocol version), or
+\item the next protocol version,
+(if the node has updated its software, but the current protocol version on the
+ledger has not been updated yet).
+\end{itemize}
+
+So, users have some agency in the process of adoption of
+new protocol versions. They may refuse to download and install updates.
+Since software updates cannot be \textit{forced} on the users, if the majority of
+users do not perform an update which allows to switch to the next $\ProtVer$,
+it cannot happen.
+
+There is no data in blocks or transactions that says what application
+versions a user has, or what protocol version they are using (this always has to
+be the version recorded on the ledger).
+Having the wrong version of an application
+may potentially become problematic (when it is not able to follow the current
+ledger rules dictated by $\ProtVer$), however, the update mechanism implemented
+in the node software should
+ensure this does not happen often.
 The process of upgrading the system a new version consists of:
 
 \begin{enumerate}
-  \item New software is ready for downloading. The core nodes propose changing the
-    \textit{application version}. If accepted, the proposal
-    will change the application version at the start of the next epoch.
-  \item All nodes see a new application version and update their software.
-    Note that the new software should be compatible with the older version, and the new
-    ledger rules will not be applied as long as the protocol version in the
-    protocol parameters is not increased.
-  \item Every block producer includes the protocol version corresponding to the software
-    they are using in the blocks they produce.
-  \item The core nodes monitor how many block headers contain the new protocol version.
-    Once enough blocks have the new version, the core nodes post another protocol parameter
-    update to increase the protocol version.
-    If this proposal is accepted, it will be changed at the start of the new epoch and
-    the current software then makes use of new rules.
+  \item New software is ready for downloading.
+  \item The core nodes propose changing
+  the application version to this
+  new software. The the voting and proposal of application version updates is discussed
+    in Section \ref{sec:update}.
+  \item If there is concensus, this application version becomes the current application version,
+  see Section \ref{sec:ledger-trans}.
+  \item All nodes see a new application version on the ledger and update their
+  software.
 \end{enumerate}
+
+Note that if there is a \textit{new protocol version} implemented by this new
+software, the core nodes monitor how many nodes are ready to use the new
+protocol version via the block headers.
+Once enough nodes are ready for the new protocol version, this
+may now be updated as well (by the mechanism in described in 
+Section \ref{sec:update}).
