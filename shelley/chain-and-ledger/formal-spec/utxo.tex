@@ -569,9 +569,9 @@ This consists of:
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{propWits} \in \Update \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
+    & \fun{propWits} \in \Update \to (\KeyHashGen\mapsto\VKey) \to \powerset{\KeyHash}
     & \text{hashkeys for proposals} \\
-    & \fun{propWits}~(\var{pup},~\var{aup}) \var{dms} = \\
+    & \fun{propWits}~(\var{pup},~\var{aup})~\var{dms} = \\
     & ~~\left\{
       \hashKey{vkey}
       \mid
@@ -581,7 +581,7 @@ This consists of:
   \end{align*}
 
     \begin{align*}
-    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to
+    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\KeyHashGen\mapsto\VKey) \to
       \powerset{\KeyHash}
     & \text{required key hashes} \\
     &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
@@ -590,7 +590,7 @@ This consists of:
            \left(\{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
       \restrictdom \txwdrls{tx}\} \cap \KeyHash_{Stake}  \right)\\
     \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
-    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx}) \\
+    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{dms} \\
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
   \end{align*}
   \begin{align*}
