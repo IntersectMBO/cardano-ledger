@@ -12,10 +12,11 @@ import           Test.Tasty.HUnit (testCase)
 import           Ledger.Core (BlockCount (BlockCount), Owner (Owner), Slot (Slot),
                      SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis), unBlockCount,
                      unOwner, unSlot, unSlotCount, unVKeyGenesis)
-import           Ledger.Update (ApName (ApName), ApVer (ApVer), Metadata (Metadata),
-                     PParams (PParams), ProtVer (ProtVer), UPIEND, UpId (UpId), _bkSgnCntT,
-                     _bkSlotsPerEpoch, _factorA, _factorB, _maxBkSz, _maxHdrSz, _maxPropSz,
-                     _maxTxSz, _pvAlt, _pvMaj, _pvMin, _scriptVersion, _upAdptThd, _upTtl)
+import           Ledger.Update (ApName (ApName), ApVer (ApVer), FactorA (..), FactorB (..),
+                     Metadata (Metadata), PParams (PParams), ProtVer (ProtVer), UPIEND,
+                     UpId (UpId), _bkSgnCntT, _bkSlotsPerEpoch, _factorA, _factorB, _maxBkSz,
+                     _maxHdrSz, _maxPropSz, _maxTxSz, _pvAlt, _pvMaj, _pvMin, _scriptVersion,
+                     _upAdptThd, _upTtl)
 
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 
@@ -35,8 +36,8 @@ upiendExamples =
           , _upTtl = SlotCount { unSlotCount = 10 }
           , _scriptVersion = 0
           , _upAdptThd = 0.6
-          , _factorA = 1
-          , _factorB = 2
+          , _factorA = FactorA 1
+          , _factorB = FactorB 2
           }
         newPParams =
           PParams
@@ -49,8 +50,8 @@ upiendExamples =
           , _upTtl = SlotCount { unSlotCount = 2 }
           , _scriptVersion = 0
           , _upAdptThd = 0.0
-          , _factorA = 0
-          , _factorB = 0
+          , _factorA = FactorA 0
+          , _factorB = FactorB 0
           }
       in
         checkTrace @UPIEND
