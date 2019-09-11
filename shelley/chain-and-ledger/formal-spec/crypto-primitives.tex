@@ -171,7 +171,9 @@ requirements on spending an output:
 
   \begin{equation*}
     \begin{array}{rll}
-      \var{msig} & \in & \type{RequireSig}~\KeyHash\\
+      \MSig & \subseteq & \Script \\
+      \\~\\
+      \var{msig}\in\MSig & = & \type{RequireSig}~\KeyHash\\
       & \uniondistinct &
          \type{RequireAllOf}~[\Script] \\
       & \uniondistinct&
@@ -184,7 +186,7 @@ requirements on spending an output:
   \emph{Functions}
 
   \begin{align*}
-    \fun{evalMultiSigScript} & \in\Script\to\powerset\KeyHash\to\Bool & \\
+    \fun{evalMultiSigScript} & \in\MSig\to\powerset\KeyHash\to\Bool & \\
     \fun{evalMultiSigScript} & ~(\type{RequireSig}~hk)~\var{vhks} =  hk \in vhks \\
     \fun{evalMultiSigScript} & ~(\type{RequireAllOf}~ts)~\var{vhks} =
                               \forall t \in ts: \fun{evalMultiSigScript}~t~vhks\\
