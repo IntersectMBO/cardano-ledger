@@ -67,17 +67,17 @@ which is also either a key hash or a script hash.
       \\
       \var{addr}
       & \AddrB
-      & \KeyHash_{pay}\times\KeyHash_{stake}
+      & \Credential_{pay}\times\Credential_{stake}
       & \text{base address}
       \\
       \var{addr}
       & \AddrP
-      & \KeyHash_{pay}\times\Ptr
+      & \Credential_{pay}\times\Ptr
       & \text{pointer address}
       \\
       \var{addr}
       & \AddrE
-      & \KeyHash_{pay}
+      & \Credential_{pay}
       & \text{enterprise address}
       \\
       \var{addr}
@@ -96,9 +96,52 @@ which is also either a key hash or a script hash.
       \\
       \var{acct}
       & \AddrRWD
-      & \KeyHash_{stake}
+      & \Credential_{stake}
       & \text{reward account}
       \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{Address subtypes}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{addr^{vkey}_{base}}
+                 & \Addr^{vkey}_{base}
+                               & \KeyHash\restrictdom\Addr_{base}
+      \\
+      \var{addr^{script}_{base}}
+                 & \Addr^{vkey}_{base}
+                               & \HashScr\restrictdom\Addr_{base}
+      \\
+      \var{addr^{vkey}_{ptr}}
+                 & \Addr^{vkey}_{ptr}
+                               & \KeyHash\restrictdom\Addr_{ptr}
+      \\
+      \var{addr^{script}_{ptr}}
+                 & \Addr^{vkey}_{ptr}
+                               & \HashScr\restrictdom\Addr_{ptr}
+      \\
+      \var{addr^{vkey}_{enterprise}}
+                 & \Addr^{vkey}_{enterprise}
+                               & \KeyHash\cap\Addr_{enterprise}
+      \\
+      \var{addr^{script}_{enterprise}}
+                 & \Addr^{vkey}_{enterprise}
+                               & \HashScr\cap\Addr_{enterprise}
+      \\[0.5cm]
+      \var{addr^{vkey}} &
+             \Addr^{vkey} &
+                            \Addr^{vkey}_{base} \uniondistinct \Addr^{vkey}_{ptr} \uniondistinct \Addr^{vkey}_{enterprise} \uniondistinct \Addr^{vkey}_{bootstrap}\\[0.3cm]
+      \var{addr^{script}} &
+                            \Addr^{script} &
+                                             \Addr^{script}_{base}
+                                             \uniondistinct \Addr^{script}_{ptr}
+                                             \uniondistinct
+                                             \Addr^{script}_{enterprise}
+      \\[0.5cm]
+      \var{addr_{rwd}^{vkey}} & \Addr_{rwd}^{vkey} & \Addr_{rwd}\cap\KeyHash \\
+      \var{addr_{rwd}^{script}} & \Addr_{rwd}^{script} & \Addr_{rwd}\cap\HashScr \\
     \end{array}
   \end{equation*}
   %
@@ -110,7 +153,7 @@ which is also either a key hash or a script hash.
       & \text{hash of payment key from addr}\\
       \fun{validatorHash} & \AddrScr \to \HashScr & \text{hash of validator
                                                     script} \\
-            \fun{stakeCred_{b}} & (\AddrVKeyB \uniondistinct \AddrScrBase) \to
+            \fun{stakeCred_{b}} & \AddrB \to
                           \StakeCredential & \text{stake credential from base
                                       addr}\\
       \fun{stakeCred_{r}} & \AddrRWD \to \StakeCredential & \text{stake credential
