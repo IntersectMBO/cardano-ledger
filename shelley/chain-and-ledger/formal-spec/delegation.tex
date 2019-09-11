@@ -113,7 +113,7 @@ It does the following:
   \emph{Derived types}
   \begin{equation*}
     \begin{array}{l@{\qquad=\qquad}lr}
-      \StakeDeleg
+      \StakeDelegs
       & \Credential \mapsto \Slot
       & \text{registered stake credential} \\
       %
@@ -197,7 +197,10 @@ state transition types. We define two separate parts of the ledger state.
     \item $\var{ptrs}$ maps stake credentials to the position of the
       registration certificate in the blockchain. This is needed to lookup the
       stake hashkey of a pointer address.
-      \item $\var{fdms}$ future genesis keys delegations.
+      \item $\var{fdms}$ are the future genesis keys delegations. This variable
+      is needed because genesis keys can only update their delegation with a
+      delay of $\SlotsPrior$ slots after submitting the certificate (this is
+      necessary for header validation, see Section \ref{sec:chain})
       \item $\var{dms}$ maps genesis key hashes to hashes of the cold key delegates.
     \end{itemize}
   \item $\PState$ keeps track of the stake pool information:
@@ -213,6 +216,13 @@ state transition types. We define two separate parts of the ledger state.
         in Figure~\ref{fig:rules:ocert}.
     \end{itemize}
 \end{itemize}
+
+The operational certificates $\var{cs}$ in the stake pool state are a tool to
+prevent nodes from rejecting blocks signed by a new hot staking key.
+These certificates are part of the block header, and allow nodes to process
+blocks where the re-delegation information for the new key could be is inside a block
+signed by that new key. For a discussion, see \cite{delegation_design}, and for
+the relevant rules, see Section \ref{sec:oper-cert-trans}.
 
 The environment for the state transition for $\DState$ contains the current slot number
 and the index for the current certificate pointer.

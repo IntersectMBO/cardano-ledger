@@ -66,6 +66,14 @@ Definition~\ref{def:valid-ledger-state} defines a valid ledger state reachable
 from the genesis state via valid LEDGER STS transitions. This gives a
 constructive rule how to reach a valid ledger state.
 
+
+\begin{property}[\textbf{Genesis Keys are Always All Delegated}]
+  \label{prop:genkeys-delegated}
+
+  All of the genesis keys are always all delegated.
+
+\end{property}
+
 \subsection{Ledger Properties}
 \label{sec:ledger-properties}
 
@@ -420,6 +428,7 @@ they both split the reward between the pool leader and the members.
   \end{multline*}
 
 \end{property}
+
 
 \clearpage
 

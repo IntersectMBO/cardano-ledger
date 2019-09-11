@@ -43,10 +43,11 @@ protocol. The relationship between the rule update procedure and updating the
 node software that implements these rules is outlined in the next section
 (see Section \ref{sec:update}).
 
-Note that both of these finite maps are indexed by the entities proposing the given
-update, the $\VKeyGen$ keys.
-We use the abstract type $\VKeyGen$ to represent the set of genesis
-(public verification) keys, and these are a distinct type than the usual
+Note that both of these finite maps are indexed by the hashes of the keys of
+entities proposing the given
+updates, $\KeyHashGen$.
+We use the abstract type $\KeyHashGen$ to represent the set hashes of genesis
+(public verification) keys, which have type $\VKeyGen$. These are a distinct type than the usual
 user verification keys, $\VKey$. Genesis keys are the keys belonging to the federated
 nodes running the Cardano system currently (also referred to as core nodes).
 
@@ -82,6 +83,7 @@ This function must produce a unique id for each unique transaction.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{gkey} & \VKeyGen & \text{genesis public keys}\\
+      \var{gkh} & \KeyHashGen & \text{genesis key hash}\\
       \var{txid} & \TxId & \text{transaction id}\\
       \var{an} & \ApName & \text{application name}\\
       \var{st} & \SystemTag & \text{system tag}\\
@@ -114,7 +116,7 @@ This function must produce a unique id for each unique transaction.
       \\
       \var{pup}
       & \PPUpdate
-      & \VKeyGen \mapsto \Ppm \mapsto \Seed
+      & \KeyHashGen \mapsto \Ppm \mapsto \Seed
       & \text{protocol parameter update}
       \\
       \var{av}
@@ -134,7 +136,7 @@ This function must produce a unique id for each unique transaction.
       \\
       \var{aup}
       & \AVUpdate
-      & \VKeyGen \mapsto \Applications
+      & \KeyHashGen \mapsto \Applications
       & \text{application update}
       \\
       \var{up}

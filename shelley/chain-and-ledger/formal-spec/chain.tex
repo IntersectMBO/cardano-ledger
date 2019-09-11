@@ -800,6 +800,8 @@ transition which are the following:
 \begin{itemize}
 \item The KES period start \var{c_0} is greater than or equal to the KES period of
   the slot of the block header body and less than 90 KES periods after \var{c_0}.
+  The value 90 KES Periods is the agreed-upon lifetime of an operational certificate,
+  see \cite{delegation_design}.
 \item \var{hk} exists as key in the mapping of certificate issues numbers to a KES
   period \var{m} and that period is less than or equal to \var{n}.
 \item The signature $\sigma$ can be verified with the cold verification key
@@ -857,7 +859,7 @@ The OCERT rule has six predicate failures:
   failure.
 \item If the signature of the hot key, KES period number and period start is
   incorrect, there is an \emph{InvalidSignature} failure.
-\item I the KES signature using the hot key of the block header body is
+\item If the KES signature using the hot key of the block header body is
   incorrect, there is an \emph{InvalideKesSignature} failure.
 \item If there is no entry in the key hash to counter mapping for the cold key,
   there is a \emph{NoCounterForKeyHash} failure.
