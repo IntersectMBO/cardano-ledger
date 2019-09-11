@@ -13,7 +13,8 @@ import           Hedgehog.Gen.Aux (doubleInc)
 import qualified Hedgehog.Range as Range
 import           Ledger.Core (BlockCount (BlockCount), SlotCount (SlotCount), unBlockCount,
                      unSlotCount)
-import           Ledger.Update (PParams (PParams))
+import           Ledger.Update (BkSgnCntT (..), FactorA (..), FactorB (..), PParams (PParams),
+                     UpAdptThd (..))
 import           Numeric.Natural (Natural)
 
 
@@ -24,25 +25,25 @@ import           Numeric.Natural (Natural)
 pparamsGen :: Gen PParams
 pparamsGen =
   (\((maxBkSz, maxHdrSz, maxTxSz, maxPropSz) :: (Natural, Natural, Natural, Natural))
-    (bkSgnCntT :: Double)
+    (bkSgnCntTDouble :: Double)
     ((bkSlotsPerEpoch, upTtl) :: (SlotCount, SlotCount))
     (scriptVersion :: Natural)
     (_cfmThd :: Double)
-    (upAdptThd :: Double)
-    (factorA :: Int)
-    (factorB :: Int)
+    (upAdptThdDouble :: Double)
+    (factorAInt :: Int)
+    (factorBInt :: Int)
     -> PParams
       maxBkSz
       maxHdrSz
       maxTxSz
       maxPropSz
-      bkSgnCntT
+      (BkSgnCntT bkSgnCntTDouble)
       bkSlotsPerEpoch
       upTtl
       scriptVersion
-      upAdptThd
-      factorA
-      factorB
+      (UpAdptThd upAdptThdDouble)
+      (FactorA factorAInt)
+      (FactorB factorBInt)
   )
     <$> szGen
     <*> doubleInc                                       -- bkSgnCntT

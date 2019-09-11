@@ -65,12 +65,33 @@ import           Ledger.Core.Omniscient (skey)
 import qualified Ledger.GlobalParams as GP
 import           Ledger.Util (mkGoblinGens)
 
-import           Test.Goblin (AddShrinks (..), Goblin (..), GoblinData, SeedGoblin (..),
-                     mkEmptyGoblin)
+import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), GoblinData, SeedGoblin (..),
+                     mkEmptyGoblin, saveInBagOfTricks, tinkerRummagedOrConjureOrSave,
+                     transcribeGenesAsInt, (<$$>))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 import           Prelude
 
+
+newtype FactorA = FactorA Int
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
+
+newtype FactorB = FactorB Int
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
+
+newtype UpAdptThd = UpAdptThd Double
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable, Num, Real, Fractional, RealFrac)
+  deriving anyclass (HasTypeReps)
+
+newtype BkSgnCntT = BkSgnCntT Double
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable, Num, Fractional)
+  deriving anyclass (HasTypeReps)
 
 -- | Protocol parameters.
 --
@@ -83,7 +104,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Maximum (abstract) transaction size in words
   , _maxPropSz :: !Natural
   -- ^ Maximum (abstract) update proposal size in words
-  , _bkSgnCntT :: Double
+  , _bkSgnCntT :: !BkSgnCntT
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
   -- and 1/4
@@ -94,12 +115,12 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: !Natural
   -- ^ Script version
-  , _upAdptThd :: !Double
+  , _upAdptThd :: !UpAdptThd
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _factorA :: !Int -- TODO: these should have type 'Word64', like in `cardano-ledger`.
+  , _factorA :: !FactorA -- TODO: these should have type 'Word64', like in `cardano-ledger`.
   -- ^ Minimum fees per transaction
-  , _factorB :: !Int
+  , _factorB :: !FactorB
   -- ^ Additional fees per transaction size
   } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable)
 
@@ -872,8 +893,8 @@ initialPParams =
      -- For now we choose small numbers here so that we do not need a high UTxO
      -- balance when generating the initial UTxO (see @module
      -- Ledger.UTxO.Generators@).
-     , _factorA = 1 -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
-     , _factorB = 10 * fromIntegral GP.c -- In mainet this value is set to 43946000000
+     , _factorA = FactorA 1 -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
+     , _factorB = FactorB (10 * fromIntegral GP.c) -- In mainet this value is set to 43946000000
      }
 
 protocolVersion :: UPIState -> ProtVer
@@ -1174,6 +1195,11 @@ ppsUpdateFrom pps = do
            , _factorB
            } = pps
 
+    FactorA fA = _factorA
+    FactorB fB = _factorB
+    BkSgnCntT bsct = _bkSgnCntT
+    UpAdptThd uat = _upAdptThd
+
     nextMaxHdrSzGen :: Gen Natural
     nextMaxHdrSzGen =
       Gen.integral (Range.exponentialFrom
@@ -1190,12 +1216,12 @@ ppsUpdateFrom pps = do
                       (2 * _maxPropSz)
                    )
 
-    nextBkSgnCntT :: Gen Double
-    nextBkSgnCntT =
+    nextBkSgnCntT :: Gen BkSgnCntT
+    nextBkSgnCntT = BkSgnCntT <$>
       Gen.double (Range.exponentialFloatFrom
-                    _bkSgnCntT
-                    (_bkSgnCntT - 0.01)
-                    (_bkSgnCntT + 0.01)
+                    bsct
+                    (bsct - 0.01)
+                    (bsct + 0.01)
                  )
 
     nextUpTtl :: Gen SlotCount
@@ -1215,22 +1241,22 @@ ppsUpdateFrom pps = do
     nextScriptVersion :: Gen Natural
     nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
 
-    nextUpAdptThd :: Gen Double
-    nextUpAdptThd =
-      Gen.double (Range.exponentialFloatFrom _upAdptThd 0 1)
+    nextUpAdptThd :: Gen UpAdptThd
+    nextUpAdptThd = UpAdptThd <$>
+      Gen.double (Range.exponentialFloatFrom uat 0 1)
       `increasingProbabilityAt` (0, 1)
 
-    nextFactorA :: Gen Int
-    nextFactorA =
+    nextFactorA :: Gen FactorA
+    nextFactorA = FactorA <$>
       -- TODO: we choose arbitrary numbers here for now.
-      Gen.integral (Range.exponentialFrom _factorA 0 10)
+      Gen.integral (Range.exponentialFrom fA 0 10)
       `increasingProbabilityAt` (0, 10)
 
     -- The next value of the factor B shouldn't drop below 'GP.c' since when
     -- elaborating this factor we divide it by 'GP.c' (see 'initialPParams').
-    nextFactorB :: Gen Int
-    nextFactorB =
-      Gen.integral (Range.exponentialFrom _factorB minFactorB maxFactorB)
+    nextFactorB :: Gen FactorB
+    nextFactorB = FactorB <$>
+      Gen.integral (Range.exponentialFrom fB minFactorB maxFactorB)
       `increasingProbabilityAt` (minFactorB, maxFactorB)
       where
         minFactorB = 5 * fromIntegral GP.c
@@ -1722,6 +1748,36 @@ deriveGoblin ''UpId
 deriveGoblin ''UProp
 deriveGoblin ''Vote
 
+instance GeneOps g => Goblin g FactorA where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((\x -> FactorA (x `mod` fromIntegral Core.maxLovelaceVal))
+           <$$> tinker ((\(FactorA x) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (FactorA . (`mod` fromIntegral Core.maxLovelaceVal) <$>
+    conjure)
+
+instance GeneOps g => Goblin g FactorB where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((\x -> FactorB (x `mod` fromIntegral Core.maxLovelaceVal))
+           <$$> tinker ((\(FactorB x) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (FactorB . (`mod` fromIntegral Core.maxLovelaceVal) <$>
+    conjure)
+
+instance GeneOps g => Goblin g BkSgnCntT where
+  tinker _
+    = pure <$> conjure
+  conjure = saveInBagOfTricks =<< do
+    i <- transcribeGenesAsInt 100
+    pure (BkSgnCntT (fromIntegral i / 100))
+
+instance GeneOps g => Goblin g UpAdptThd where
+  tinker _
+    = pure <$> conjure
+  conjure = saveInBagOfTricks =<< do
+    i <- transcribeGenesAsInt 100
+    pure (UpAdptThd (fromIntegral i / 100))
+
 
 --------------------------------------------------------------------------------
 -- AddShrinks instances
@@ -1729,10 +1785,14 @@ deriveGoblin ''Vote
 
 deriveAddShrinks ''ApName
 deriveAddShrinks ''ApVer
+deriveAddShrinks ''BkSgnCntT
+deriveAddShrinks ''FactorA
+deriveAddShrinks ''FactorB
 deriveAddShrinks ''Metadata
 deriveAddShrinks ''PParams
 deriveAddShrinks ''ProtVer
 deriveAddShrinks ''SwVer
+deriveAddShrinks ''UpAdptThd
 deriveAddShrinks ''UpId
 deriveAddShrinks ''UProp
 deriveAddShrinks ''Vote
@@ -1744,10 +1804,14 @@ deriveAddShrinks ''Vote
 
 deriveSeedGoblin ''ApName
 deriveSeedGoblin ''ApVer
+deriveSeedGoblin ''BkSgnCntT
+deriveSeedGoblin ''FactorA
+deriveSeedGoblin ''FactorB
 deriveSeedGoblin ''SwVer
 deriveSeedGoblin ''PParams
 deriveSeedGoblin ''ProtVer
 deriveSeedGoblin ''Metadata
+deriveSeedGoblin ''UpAdptThd
 deriveSeedGoblin ''UpId
 
 

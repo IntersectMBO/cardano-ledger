@@ -30,7 +30,7 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Ledger.Core hiding ((<|))
-import           Ledger.Update (PParams (PParams), _factorA, _factorB)
+import           Ledger.Update (FactorA (..), FactorB (..), PParams (PParams), _factorA, _factorB)
 
 import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
@@ -102,7 +102,7 @@ instance Ledger.Core.HasHash Tx where
 ---------------------------------------------------------------------------------
 
 pcMinFee :: PParams -> Tx -> Lovelace
-pcMinFee PParams {_factorA = a, _factorB = b} tx
+pcMinFee PParams {_factorA = FactorA a, _factorB = FactorB b} tx
   = fromIntegral $ a + b * txsize tx
 
 txsize :: Tx -> Int
