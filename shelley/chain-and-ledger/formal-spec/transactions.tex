@@ -211,7 +211,7 @@ This function must produce a unique id for each unique transaction.
                              \mathsf{False} & \text{otherwise}
                            \end{cases} \\
                          & ~~~~\where \var{vhks}\leteq \{\fun{hashKey}~vk \vert
-                           vk \in \fun{txwitsVKey}~\var{tx}\}
+                           vk \in \dom(\fun{txwitsVKey}~\var{tx})\}
   \end{align*}
   %
   \caption{Helper Functions for Transaction Inputs}
