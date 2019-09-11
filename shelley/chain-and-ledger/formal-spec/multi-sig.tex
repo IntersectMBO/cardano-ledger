@@ -1,4 +1,25 @@
 \documentclass[11pt,a4paper,dvipsnames]{article}
+
+\usepackage[deliverable]{IOHKCoverPage}
+
+% data for Deliverable header -- added by KH from an EU H2020 project template
+\DeliverableNumber{DX}
+\DeliverableTitle{A Formal Specification of a Multi-Signature Scheme \\ using Scripts}
+\DeliverableResponsible{Formal Methods Team}
+\EditorName{Matthias G\"udemann, \IOHK}
+\Authors{Jared Corduan \quad \texttt{<jared.corduan@iohk.io>}
+   \\[1em]
+%  \newline
+  Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
+}
+\DueDate{XX$^{\textrm{th}}$ XX 2019}
+\SubmissionDate{11th September 2019}
+\LeaderName{Philipp Kant, \IOHK}
+\InstitutionAddress{\IOHK}
+\Version{0.2}
+\Project{Shelley Ledger}
+\DisseminationDR
+
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{iohk}
 \usepackage{microtype}
@@ -11,7 +32,7 @@
 \usepackage{stmaryrd}
 \usepackage{extarrows}
 \usepackage{slashed}
-\usepackage[colon]{natbib}
+%\usepackage[colon]{natbib}
 \usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
@@ -21,6 +42,16 @@
 \usepackage{tikz}
 \usepackage{booktabs}
 \usepackage{enumerate}
+
+%% Commenting -- KH
+\usepackage[obeyFinal]{todonotes}
+\newcommand{\khcomment}[1]{\todo[color=blue!20]{KH: #1}}
+
+%% In-para enumeration -- KH
+\usepackage{paralist}
+
+%% PDF viewer synchronisation with editor, use with synctex -- KH
+\usepackage{pdfsync}
 
 
 %%
@@ -232,6 +263,15 @@
   urlbordercolor={white}
 }
 
+\begin{changelog}
+	\change{11/09/19}{Jared Corduan and Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
+	\change{11/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page, applied review comments.}
+\end{changelog}
+
+\clearpage
+\tableofcontents
+\listoffigures
+
 \title{A Formal Specification of a Multi-Signature Scheme using Scripts}
 
 \author{Jared Corduan  \\ {\small \texttt{jared.corduan@iohk.io}} \\
@@ -242,56 +282,64 @@
 \maketitle
 
 \begin{abstract}
-  This documents specifies a way to support multi-signature transactions. It is
-  based on a simple script model which uses only single step script execution
-  and does not require data scripts. We provide two different ways to implement
-  such a scheme on top of the Shelley formal ledger specification. One based on
-  Plutus script, the other based on a simple script DSL for which a native
-  interpreter can be used.
-
+  This document specifies how to support ``multi-signature'' transactions, that is ones where two or more parties are required
+  to authorise the transaction. It  The approach is based on a simple script model, which allows multiple requirements to
+  be expressed for a single transaction. It uses only single-step script execution
+  and does not require data scripts. We illustrate this by providing two different ways to implement
+  such a scheme on top of the Shelley formal ledger specification: \begin{inparaenum}
+    \item based on
+      Plutus scripts;
+    \item
+      based on a simple script DSL, for which a native script interpreter can be used.
+      \end{inparaenum}
+%
   A multi-signature scheme allows an unspent transaction output to be used as an
   input to a new transaction if a pre-defined combination of signatures is
-  provided, e.g., two persons have to sign simultaneously, two out of three
+  provided, e.g., if two parties have to sign simultaneously, or two out of three possible
   keys have to be provided, etc.
-
-  For an output that is locked with a multi-signature, the set of all keys that
-  signed the transaction is given to the script for validation. In this way, the
-  script can decide in a single step whether is has the correct key combination
-  to spend the output.
+%
+  For an output that is locked with\khcomment{protected by? mandates? requires?
+    depends on? needs to be authorised by?} a ``multi-signature'', the set of all the keys that have signed the
+  transaction is passed to a validation script. In this way, the script can
+  decide in a single step whether or not it has a combination of keys that
+  will permit the output to be spent correctly.  It is possible to supply more signatures than are required
+  to authorise the transaction.  In this case, any subset of valid signatures can be used.
 \end{abstract}
 
 % \section*{List of Contributors}
 % \label{acknowledgements}
 
-% \tableofcontents
-% \listoffigures
 
 \section{Introduction}
 \label{sec:introduction}
 
-This specification for a simple multi-signature scheme is based
-on~\cite{shelley_formal_spec} which formally specifies the Shelley Cardano
-ledger. The main changes are the following:
+Under some circumstances, multiple signatures may be required to authorise a transaction, for example, where an account
+is held in joint names or is a business account that is held by several business partners.
+Depending on the account, it may be that authorisation is required by all signatories or by a single signatory.
+This specification for a simple multi-signature scheme
+on the formal specification for the Shelley Cardano Ledger~\cite{shelley_spec}.
+% which formally specifies the Shelley Cardano ledger.
+The main changes from that document are:
 
-\begin{itemize}
-\item Add a new address type for outputs, stake and rewards locked by scripts.
-\item Add a new witness type to the transaction.
-\item Adapt the signature validation in such a way that funds locked by a
-  multi-signature script can be spent and delegation certificates locked by
-  multi-signature scripts can be used.
-\item Adapt the functions used in the validation for the extended types of
-  addresses, transaction inputs and delegation certificates with scripts.
-\end{itemize}
+\begin{enumerate}
+\item Add a new address type for outputs, stake and rewards that are locked by scripts;
+\item Add a new witness type to the transaction;
+\item Adapt the signature validation in such a way that funds that are locked\khcomment{reserved?} by a
+  multi-signature script can be spent and delegation certificates that are locked by
+  multi-signature scripts can be used;
+\item Adapt the validation functions to the extended types of
+  addresses, transaction inputs and to delegation certificates with scripts.
+\end{enumerate}
 
-In this approach for multi-signature, the scripts receive as input the set of
-keys which were used to sign the transaction. The script can then check those
-against its own representation of which keys in which combination can unlock the
+In this approach for multi-signature, the scripts will receive as input the set of
+all the keys that were used to sign the transaction. The script can then check this set
+against its own representation of valid combinations of keys that are permitted to unlock the
 unspent output.
-
-This means that the scripts are completely stateless and no data needs to be
-supplied to the script apart from the information about which keys and in which
-combination can sign the transaction. It allows for any type of $n$ out of $m$
-required signatures for a specific unspent transaction output.
+%
+This design means that the scripts are completely stateless and therefore that no data needs to be
+supplied to the script apart from the information about which combinations of keys
+can legitimately sign the transaction. The design allows for any $n$ of $m$
+signatures to be required for each unspent transaction output, where $m, n \ge 0$.
 
 \section{Types}
 \label{sec:types}
@@ -354,7 +402,7 @@ required signatures for a specific unspent transaction output.
   \label{fig:types-scripts}
 \end{figure*}
 
-In Figure~\ref{fig:types-scripts} the $\Addr$ type of~\cite{shelley_formal_spec}
+In Figure~\ref{fig:types-scripts} the $\Addr$ type of~\cite{shelley_spec}
 is changed to include both public key and script addresses, split into the
 sub-types $\AddrVKey$ and $\AddrScr$. The new script addresses contain the hash
 of the validator script. In accordance with the extended UTxO
@@ -422,7 +470,7 @@ be a staking reference.
 \end{figure*}
 
 In Figure~\ref{fig:types_defs_multi} the type of a transaction
-from~\cite{shelley_formal_spec} is extended to carry an additional witness
+from~\cite{shelley_spec} is extended to carry an additional witness
 type. This is achieved by explicitly defining $\TxWitness$ as a type of the form
 of a pair of pubkey witnesses and script witnesses. The former accessor function
 $\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new accessor function
@@ -783,7 +831,7 @@ can be added to the transaction fees or as gas cost. The scripts can be realized
 with only limited requirements on functionality on the script language.
 
 The necessary extensions to the data types in the Shelley
-specification~\cite{shelley_formal_spec} are relatively simple. They consist
+specification~\cite{shelley_spec} are relatively simple. They consist
 mainly of the introduction of additional optional data for payment objects or
 staking references.
 
@@ -799,7 +847,8 @@ specializing the script validation function. If the Plutus approach is not
 viable for any reason, e.g., script size or readiness of library, only the
 native script implementation could be pursued instead.
 
-\addcontentsline{toc}{section}{References} \bibliographystyle{plainnat}
+\addcontentsline{toc}{section}{References}
+\bibliographystyle{habbrv}
 \bibliography{references}
 
 \end{document}
