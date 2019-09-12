@@ -90,6 +90,7 @@
 	\change{05/09/19}{Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
 	\change{05/09/19}{Kevin Hammond}{FM (IOHK)}{Reviewed and applied comments.}
 	\change{12/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page for consistency.}
+	\change{12/09/19}{Kevin Hammond}{FM (IOHK)}{Included review comments from MG.}
 \end{changelog}
 
 \cleardoublepage
@@ -105,13 +106,13 @@
 \maketitle
 
 \begin{abstract}
-  This document defines a way to perform exact non-integral calculations in
-  the Shelley ledger for Cardano.  \khcomment{I think you said that the calculations have an error margin, so are not exact?}
+  This document defines a consistent way to perform non-integral calculations in
+  the Shelley ledger for Cardano.  % \khcomment{I think you said that the calculations have an error margin, so are not exact?}
   These calculations are defined in terms of \emph{elementary} mathematical functions, and are used in a few,
   but important, places in the ledger calculation.  The main
   objective of this work is to provide a clear and unambiguous specification that will give the same results for each
   calculation, regardless of the computer architecture or programming language implementation that is chosen.
-  The goal is to prevent chain\khcomment{blockchain?} forks because of slight differences in the calculated values
+  The goal is to prevent blockchain forks because of slight differences in the calculated values
   that might otherwise come from different implementations of the Shelley ledger specification or Ouroboros protocol, for example.
 \end{abstract}
 
@@ -121,11 +122,12 @@
 \section{Introduction}
 \label{sec:introduction}
 
-\khcomment{Once this is distributed to a broader group, there should be some versioning and changelog mechanism (the PDF creation
-  date isn't enough, since it doesn't have the source version).  This will help ensure that we're referring to the correct document :)
-  I have some macros that could be adapted.}
+%% Actioned this. KH
+%\khcomment{Once this is distributed to a broader group, there should be some versioning and changelog mechanism (the PDF creation
+%  date isn't enough, since it doesn't have the source version).  This will help ensure that we're referring to the correct document :)
+%  I have some macros that could be adapted.}
 
-The Shelley ledger specification~\cite{shelley_spec}\khcomment{I'd prefer a reference format that was shorter e.g. [G\"ud19], and made it clearer what were internal, public, published etc. documents} and the Ouroboros
+The Shelley ledger specification~\cite{shelley_spec}\khcomment{I'd prefer a reference format that was shorter e.g. [G\"ud19], and made it clearer what were internal, public, published etc. documents - I've applied a possible format here.  We should also ideally use a single references.bib...} and the Ouroboros
 protocol~\cite{ouroboros} use non-integral calculations in a few places. Most of these can be
 implemented in an exact way using rational numbers and arbitrary precision integers, which are
 available either directly as programming language constructs (e.g. in Haskell) or via external libraries.~ \footnote{The
@@ -136,7 +138,7 @@ precisely represented as rational numbers, and therefore require a representatio
 range of \emph{real numbers}.
 These include the exponential function
 $e^{x}, x \in \mathbb{R}$, which is used to calculate how refunds decay over time, and general non-integral exponentiation
-$x^{y}, x, y \in \mathbb{R}$, which is used to \khcomment{...}.
+$x^{y}, x, y \in \mathbb{R}$, which is used to \khcomment{MG, please fix!}.
 
 \section{Problem Description}
 \label{sec:problem-description}
@@ -145,8 +147,7 @@ The calculations in the Shelley ledger specification and Ouroboros protocol that
 \begin{inparaenum}
 \item
   the decay of the value that should be refunded from a deposit;
-\item
-  the calculation of the pool reward via the moving average; and
+and
 \item
   the leader election probability.
 \end{inparaenum}
@@ -154,15 +155,15 @@ The calculations in the Shelley ledger specification and Ouroboros protocol that
 In all these cases, it is important that all distributed nodes calculate the
 same values, since otherwise there might be a disagreement about what should be included in the blockchain
 and forks might then result.
-\khcomment{Not true, just less likely...  Optimisation can mess things up, for instance.  In the case of a single implementation, this will not be
-a problem, as only one result is possible, but in the case of multiple
-implementations, this can become an issue.}
+%\khcomment{The following statement is not true, just less likely...  Optimisation can mess things up, for instance.  In the case of a single implementation, this will not be
+% a problem, as only one result is possible, but in the case of multiple
+%implementations, this can become an issue.}
 This is a particular problem where there could be multiple independent implementations that could
 deliver inconsistent results.
 Since Cardano aims to be a
 cryptocurrency that is fully defined by a precise specification, we need an exact specification of
 non-integer calculations, allowing different implementations to have the same, correct and verifiable,
-behavior. \khcomment{US English is standard for company documents, I assume?}
+behavior. % \khcomment{US English is standard for company documents, I assume?}
 
 \section{Implementation Possibilities for Non-Integer Arithmetic}
 \label{sec:impl-poss}
@@ -182,24 +183,25 @@ The basic arithmetic operations of IEEE~754 floating-point are well specified,
 and they are usually very efficient due to direct HW implementation.
 %
 Double-precision IEEE~754 floating-point numbers (\emph{binary64}) provide 53 bits (~15.99 decimal digits) of
-precision.  This is slightly less than is need needed to represent the
+precision.  This is slightly less than is needed to represent the
 required fraction of 1 lovelace: there are $4.5\cdot10^{16}$ possible fractions.
 Moreover, the  elementary functions that are required for Cardano are not standardized and there can be
-subtle differences in different implementations. It is also worth noting that some architectures
+subtle differences in different implementations, with results even varying when different compiler settings are used
+on the same implementation\footnote{e.g. maintaining intermediate representations within internal registers \emph{vs.} writing to memory.}. It is also worth noting that some architectures
 provide excess precision~\footnote{The original x87 provided 80 bit
   floating-point}, which can result in greater accuracy, but can also give slight differences in results
 between implementations. Some programming languages, e.g., D, exploit this by default. Many
 languages support excess precision, but default to IEEE~754 64 bits. In
 particular on the AMD64 architecture most language implementations use SSE floating-point arithmetic.
 A final problem is that IEEE~754 supports different rounding modes\footnote{round to nearest (with even digits breaking ties or ties rounding away from zero), round down, round up, round to zero},  which will obviously give
-different results in some cases.  Some programming languages allow the rounding mode to be changed, e.g. C99 onwards\khcomment{check}, but others do
+different results in some cases.  Some programming languages allow the rounding mode to be changed, e.g. C99 onwards, but others do
 not, e.g., Haskell.
 
 \subsection{Rational Numbers}
 \label{sec:rational-numbers}
 
 Rational numbers can be implemented on top of exact arbitrary precision integral
-arithmetic using a pait of numbers to represent a numerator and denominator.
+arithmetic using a pair of numbers to represent a numerator and denominator.
 Effectively, \emph{gcd} calculations are used to normalize the results
 after each basic operation. While not all real numbers are rationals, this approach allows for
 arbitrarily precise approximation of all real numbers. However, arbitrarily
@@ -209,7 +211,8 @@ run-time.
 
 \subsection{Fixed Point Arithmetic}
 
-Fixed point\khcomment{Added this discussion} arithmetic uses a fixed size value (typically 32 or 64 bits) to
+%% KH: added this discussion
+Fixed point arithmetic uses a fixed size value (typically 32 or 64 bits) to
 represent non-integer numbers.  A fixed scaling factor is used to determine the
 position of the decimal point and normal integer arithmetic operations are
 applied for addition, multiplication etc.  Like floating point, this has the
@@ -222,7 +225,8 @@ representing currency in Cardano (it might, however, be suitable for e.g. leader
 \subsection{Fixed Precision Arithmetic}
 \label{sec:fixed-point-arithm}
 
-An alternative approach is to use fixed precision\khcomment{Changed Fixed Point to Fixed Precision} arithmetic based on exact integers
+An alternative approach is to use fixed precision %\khcomment{Changed Fixed Point to Fixed Precision}
+arithmetic based on exact integers
 where a proportion of the integer is used as fractional part.
 The number of fractional digits is fixed to a constant.
 This is more efficient
@@ -231,7 +235,10 @@ values after calculations, arbitrary precision results are not supported, and on
 arbitrarily sized integer needs to be stored.
 Since it is implemented purely in software on top of exact integer arithmetic, this approach
 will be less efficient than IEEE~754 floating point.
-However, it can be made to behave equivalently in different implementations.\khcomment{This is not clear: performance, accuracy, ...}
+However, it can be made to behave equivalently in different implementations, including
+ensuring consistent (bounded) timings for each architecture, by providing golden tests to validate consistent
+esults for different architectures etc.
+% .\khcomment{This is not clear: performance, accuracy, ...}
 %
 The basic idea is the following: for $n$ decimal digits of precision, multiply
 each integral value by $10^{n}$ and take this into account in the basic
@@ -243,8 +250,8 @@ fraction.  Haskell provides library support for fixed precision numbers and arit
 
 Finally, there has been some research work on exact representations of real
 numbers using e.g. \emph{continued fractions}, exploiting lazy evaluation to
-produce the required number of digits of precision\khcomment{Citation to
-  e.g. Martin Escardo's work}. All real numbers can be represented, whether rational or irrational.
+produce the required number of digits of precision (e.g. \cite{DBLP:journals/tcs/Escardo96}).
+All real numbers can be represented, whether rational or irrational.
 These approaches have not yet been widely used, however,
 except for research purposes.  Implementations are often complicated and
 expensive, and some algorithms may need to be changed (for example, exact equality may
@@ -258,14 +265,15 @@ seems to be most suitable. It allows for the desired precision and can be
 implemented in an equivalent way, because it uses exact integer
 arithmetic.~\footnote{There already exist two implementations, Haskell and C.}
 While the fixed-precision approach is less efficient than IEEE~754 floating point,
-by using partial pre-computation it will be possible to improve performance in
-some cases (e.g. when using a constant base for exponentiation).
+by using partial pre-computation and other techniques, it will be possible to improve performance considerably in
+some cases (e.g. when using a constant base for exponentiation): experiments show that improvements
+of two orders of magnitude are possible.
 
 \section{Approximation Algorithms}
 \label{sec:algorithms}
 
-Other than basic arithmetic (addition, multiplication, subtraction, and division\khcomment{check for division -- I spotted some
-  uses, but it might be possible to remove them}),
+Other than basic arithmetic (addition, multiplication, subtraction, and division\khcomment{check for uses of division in the algorithms -- I spotted some
+  uses, but it might be possible to remove them using e.g. rotation/scaling.}),
 the only elementary functions that are required by the ledger specification are the exponential function, $e^{x}$, and
 its generalisation to the exponentiation function,  $x^{y}$. Exponentiation of arbitrary real numbers is
 calculated using the identity: $x^{y}= \exp({\ln(x^{y})}) = \exp(y\cdot
@@ -326,7 +334,8 @@ this:
   b_{0} + \cfrac{a_{1}}{b_{1} + \cfrac{a_{2}}{b_{2}  + \cfrac{a_{3}}{\ddots}}}
 \end{equation*}
 
-The convergents\khcomment{was covergents -- check!} $x_{i} = \frac{A_{i}}{B_{i}}$ are computed via the following
+The convergents%\khcomment{was covergents -- check!}
+$x_{i} = \frac{A_{i}}{B_{i}}$ are computed via the following
 recursion:
 
 \begin{align*}
@@ -361,7 +370,7 @@ as follows:
 Neither Taylor series approximations nor continued fractions converge for arbitrary input
 values: their convergence radius is limited. Therefore, we apply scaling before
 we do the approximation, using the mathematical properties of $\exp$ and $\ln$
-to obtainthe correct results.
+to obtain the correct results.
 
 To calculate the exponential functions, we scale $x$ in such a way that
 $x \in [0; 1]$ via:
@@ -520,6 +529,8 @@ described in Section~\ref{sec:taylor-series}.   By using table lookup on $\ln{q}
 check can be obtained on whether the comparison is definitely true or not true.  If it is
 not certain, then the full calculation can be performed. By using a log calculation, integer sizes will
 be reduced, which will also improve the performance of the calculation.
+Alternatively, since the result of the function falls within known limits, we can use linear lower and upper bounds
+to quickly eliminate comparisons that will certainly fail, without needing to perform the full calculation.
 
 Since the relevant information is not the result of the calculation, but only whether
 the given $p$ is less than or greater than this value, one can also optimize the $\exp{\ldots}$ or $\ln{\ldots}$
@@ -540,7 +551,9 @@ term) $R_{k}(x)$ can be estimated as follows:
 
 For the leader election use-case, a good integral bound for the error
 estimation is the maximal value of $\vert\ln(1 - f)\vert\leq M$ for
-$f \in [0, 0.95]$, that is $M = 3$\khcomment{check!}.
+$f \in [0, 0.95]$, that is $M = 3$\footnote{Since $f$ is the active slot coefficient, we will very likely stay at lower values,
+  and $M=12$ would then be enough for $[0, 0.99].$}
+%\khcomment{check!}.
 For larger values of $f$, a different value of $M$
 would need to be chosen. The current value for $f$ in the Shelley ledger is $0.1$.
 
