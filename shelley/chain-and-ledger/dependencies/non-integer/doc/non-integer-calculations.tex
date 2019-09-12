@@ -81,6 +81,21 @@
   urlbordercolor={white}
 }
 
+  \cleardoublepage%
+  \tableofcontents%
+  \listoffigures%
+  \clearpage%
+
+  \begin{changelog}
+	\change{05/09/19}{Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
+	\change{05/09/19}{Kevin Hammond}{FM (IOHK)}{Reviewed and applied comments.}
+	\change{12/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page for consistency.}
+\end{changelog}
+
+\cleardoublepage
+\renewcommand{\thepage}{\arabic{page}}
+\setcounter{page}{1}
+
 \title{A Specification of the Non-Integral Calculations in the Shelley Ledger}
 
 \author{Matthias G\"udemann  \\ {\small \texttt{matthias.gudemann@iohk.io}}}
