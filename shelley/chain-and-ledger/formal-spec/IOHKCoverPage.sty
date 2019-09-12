@@ -33,7 +33,8 @@
 \def\DeliverableNumber#1{\def\@DeliverableNumber{#1}}
 \def\DeliverableTitle#1#2{\def\@DeliverableTitle{#1}\def\@ShortDelTitle{#2}}
 \def\DueDate#1{\def\@DueDate{#1}}
-\def\SubmissionDate#1{\def\@SubmissionDate{#1}}
+%% should be possible to convert! KH
+\def\SubmissionDate#1#2{\def\@SubmissionDate{#1}\def\@ShortSubmissionDate{#2}}
 \def\VersionDate#1{\def\@VersionDate{#1}}
 \def\LeaderName#1{\def\@LeaderName{#1}}
 \def\Authors#1{\def\@Authors{#1}}
@@ -63,6 +64,7 @@
 \def\@ShortDelTitle{\@DeliverableTitle}
 \def\@DueDate{XXXX}
 \def\@SubmissionDate{XXXX}
+\def\@ShortSubmissionDate{\@SubmissionDate}
 \def\@LeaderName{XXXX}
 \def\@DeliverableResponsible{XXXX}
 \def\@Institution{XXXX}
@@ -229,8 +231,8 @@
 
 \newcommand{\@PrintBackCoverPage}{%
 \pagestyle{myheadings}%
-\markboth{\@Project: \@ShortDelTitle (v.\@Version), \@SubmissionDate}%
-         {\@Project: \@ShortDelTitle (v.\@Version), \@SubmissionDate}%
+\markboth{\@Project: \@ShortDelTitle~(v.\@Version, \@ShortSubmissionDate)}%
+         {\@Project: \@ShortDelTitle~(v.\@Version, \@ShortSubmissionDate)}%
 }
 
 
