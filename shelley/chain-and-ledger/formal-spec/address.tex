@@ -20,6 +20,13 @@ There are four types of UTxO addresses:
 three address types make up the $\Addr$ type, which will be used in transaction
 outputs in Section~\ref{sec:utxo}.
 
+There are also subtypes of the address types which correspond to the credential
+being either a key hash (the $vkey$ subtype) or a script hash (the $script$
+subtype). So for example $\Addr_{base}^{script}$ is the type of base addresses
+which have a script hash as pay credential. This approach is used to facilitate
+expressing the restriction of the domain of certain functions to a specific
+credential type.
+
 For an explanation of why enterprise addresses do not have staking rights,
 and how they can delegate to a stake pool, see \ref{sec:delegation-shelley}.
 The boostrap addresses are needed for the Byron-Shelley transition in order to
