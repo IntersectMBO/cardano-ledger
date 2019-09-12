@@ -16,6 +16,7 @@ import qualified STS.Chain
 import qualified STS.Deleg
 import qualified STS.Pool
 import qualified STS.PoolReap
+import qualified STS.Utxo
 import qualified STS.Utxow
 import qualified Tx
 import qualified TxData
@@ -105,6 +106,8 @@ type ChainState = STS.Chain.ChainState ShortHash MockDSIGN MockKES
 type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
+
+type UtxoEnv = STS.Utxo.UtxoEnv ShortHash MockDSIGN
 
 type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
 
