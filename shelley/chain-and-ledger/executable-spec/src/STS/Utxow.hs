@@ -17,13 +17,15 @@ import qualified Data.Set as Set
 
 import           Keys
 import           LedgerState hiding (dms)
+import           STS.Utxo
 import           Tx
 import           TxData
 import           UTxO
 
 import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
-import           STS.Utxo
+import           Hedgehog (Gen)
 
 data UTXOW hashAlgo dsignAlgo
 
@@ -95,3 +97,8 @@ instance
   => Embed (UTXO hashAlgo dsignAlgo) (UTXOW hashAlgo dsignAlgo)
  where
   wrapFailed = UtxoFailure
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, Signable dsignAlgo (TxBody hashAlgo dsignAlgo))
+  => HasTrace (UTXOW hashAlgo dsignAlgo) where
+  envGen _ = undefined :: Gen (UtxoEnv hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo)
