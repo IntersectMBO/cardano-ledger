@@ -138,7 +138,7 @@ mkGoblinGens
 tamperedTxWitsList :: UTxOEnv -> UTxOState -> Gen [TxWits]
 tamperedTxWitsList env st = do
   gen <- Gen.element (map (\sg -> sg env st) goblinGensUTXOW)
-  Gen.list (Range.linear 0 10) gen
+  Gen.list (Range.linear 1 10) gen
 
 
 --------------------------------------------------------------------------------
