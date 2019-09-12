@@ -375,3 +375,15 @@ Page 33/34:  Various possible attacks are given.  The protocol implementation sh
 
 _These look like ways to drive test case generation_
 
+
+#Multi-signature properties
+
+**Sufficient Signatures are Provided to authorise Multi-Signature Transactions**
+	
+Outputs of transactions that require multiple signatures will be "locked" against use until at least the
+required number of signatures is provided.
+
+_This should come by construction from the rules in the multi-sig spec._
+
+
+  
