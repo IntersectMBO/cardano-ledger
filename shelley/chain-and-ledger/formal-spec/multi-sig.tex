@@ -4,7 +4,7 @@
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
 \DeliverableNumber{DX}
-\DeliverableTitle{A Formal Specification of a Multi-Signature Scheme \\ using Scripts}
+\DeliverableTitle{A Formal Specification of a Multi-Signature Scheme \\ using Scripts}{Multi-Sig Formal Spec.}
 \DeliverableResponsible{Formal Methods Team}
 \EditorName{Matthias G\"udemann, \IOHK}
 \Authors{Jared Corduan \quad \texttt{<jared.corduan@iohk.io>}
@@ -263,14 +263,19 @@
   urlbordercolor={white}
 }
 
-\begin{changelog}
+  \cleardoublepage%
+  \tableofcontents%
+  \listoffigures%
+  \clearpage%
+
+  \begin{changelog}
 	\change{11/09/19}{Jared Corduan and Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
 	\change{11/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page, applied review comments.}
 \end{changelog}
 
-\clearpage
-\tableofcontents
-\listoffigures
+\cleardoublepage
+\renewcommand{\thepage}{\arabic{page}}
+\setcounter{page}{1}
 
 \title{A Formal Specification of a Multi-Signature Scheme using Scripts}
 

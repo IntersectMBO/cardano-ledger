@@ -1,3 +1,9 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{IOHKCoverPage}[2019/09/12]
+
+\RequirePackage{fancyhdr}
+%\RequirePackage{xcolor}
+
 \newif\if@deliverable
 \newif\if@teamreport
 \newif\if@wpreport
@@ -25,7 +31,7 @@
 \def\Project#1{\def\@Project{#1}}
 \def\ReportNumber#1{\def\@ReportNumber{#1}}
 \def\DeliverableNumber#1{\def\@DeliverableNumber{#1}}
-\def\DeliverableTitle#1{\def\@DeliverableTitle{#1}}
+\def\DeliverableTitle#1#2{\def\@DeliverableTitle{#1}\def\@ShortDelTitle{#2}}
 \def\DueDate#1{\def\@DueDate{#1}}
 \def\SubmissionDate#1{\def\@SubmissionDate{#1}}
 \def\VersionDate#1{\def\@VersionDate{#1}}
@@ -54,6 +60,7 @@
 \def\@ReportNumber{XXXX}
 \def\@DeliverableNumber{XXXX}
 \def\@DeliverableTitle{XXXX}
+\def\@ShortDelTitle{\@DeliverableTitle}
 \def\@DueDate{XXXX}
 \def\@SubmissionDate{XXXX}
 \def\@LeaderName{XXXX}
@@ -200,6 +207,9 @@
 \newcommand{\@PrintCoverPage}{\bgroup\global\setbox255\vbox{%
  \vspace*{-.25in}%
  \noindent\hspace*{-.25in}%
+ \renewcommand{\thepage}{\roman{page}}
+ \pagestyle{myheadings} \markboth{}{}
+
  \rlap{
   \begin{minipage}[t][\@CoverPageHeight][t]{\@CoverPageWidth}%
    \parbox{\linewidth}{
@@ -217,11 +227,18 @@
 }\egroup\shipout\box255}
 
 
-\newcommand{\@PrintBackCoverPage}{}
+\newcommand{\@PrintBackCoverPage}{%
+\pagestyle{myheadings}%
+\markboth{\@Project: \@ShortDelTitle (v.\@Version), \@SubmissionDate}%
+         {\@Project: \@ShortDelTitle (v.\@Version), \@SubmissionDate}%
+}
 
 
 
-\AtBeginDocument{\@PrintCoverPage\@PrintBackCoverPage\cleardoublepage}
+\AtBeginDocument{\@PrintCoverPage\@PrintBackCoverPage%
+  \renewcommand{\thepage}{\roman{page}}%
+%  \setcounter{page}{1}%
+}
 
 %% Added change log -- KH
 
