@@ -42,6 +42,7 @@ data UtxoEnv hashAlgo dsignAlgo
       (StakeKeys hashAlgo dsignAlgo)
       (StakePools hashAlgo dsignAlgo)
       (Dms hashAlgo dsignAlgo)
+      deriving(Show)
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
