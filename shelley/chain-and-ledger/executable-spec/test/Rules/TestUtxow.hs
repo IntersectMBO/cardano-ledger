@@ -7,6 +7,7 @@ module Rules.TestUtxow where
 
 import           Control.Monad (when)
 import           Data.Foldable (toList)
+import qualified Data.Map.Strict as Map (isSubmapOf)
 
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
@@ -17,7 +18,7 @@ import           LedgerState (pattern UTxOState, decayedTx, keyRefunds)
 import           MockTypes (UTXOW)
 import           STS.Utxo (UtxoEnv (..))
 import           TxData (_body, _certs, _inputs, _txfee)
-import           UTxO (balance, deposits, txouts)
+import           UTxO (pattern UTxO, balance, deposits, txouts)
 
 import           Ledger.Core ((<|))
 
@@ -85,3 +86,19 @@ preserveBalanceRestricted = withTests (fromIntegral numberOfTests) . property $ 
           - (refunded pp stk txb + decayed pp stk txb)
         refunded pp stk txb = keyRefunds pp stk txb
         decayed pp stk txb  = decayedTx pp stk txb
+
+-- | Preserve outputs of Txs
+preserveOutputsTx :: Property
+preserveOutputsTx = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  let
+    n :: Integer
+    n = fromIntegral $ traceLength t
+    tr = sourceSignalTargets t
+
+  when (n > 1) $
+    [] === filter (not . outputPreserved) tr
+
+  where outputPreserved (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
+          let UTxO outs = txouts (_body tx) in
+          outs `Map.isSubmapOf` utxo'
