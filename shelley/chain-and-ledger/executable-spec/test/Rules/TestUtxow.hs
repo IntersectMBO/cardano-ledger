@@ -8,7 +8,7 @@ module Rules.TestUtxow where
 import           Control.Monad (when)
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
-import qualified Data.Set as Set (intersection, null)
+import qualified Data.Set as Set (intersection, isSubsetOf, map, null)
 
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
@@ -18,7 +18,7 @@ import           Control.State.Transition.Trace (sourceSignalTargets, traceLengt
 import           LedgerState (pattern UTxOState, decayedTx, keyRefunds)
 import           MockTypes (UTXOW)
 import           STS.Utxo (UtxoEnv (..))
-import           TxData (_body, _certs, _inputs, _txfee)
+import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
 
 import           Ledger.Core (dom, (<|))
@@ -118,3 +118,26 @@ eliminateTxInputs = withTests (fromIntegral numberOfTests) . property $ do
 
   where inputsEliminated (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
           Set.null $ txins (_body tx) `Set.intersection` dom utxo'
+
+-- | Check that all new entries of a Tx are included in the new UTxO and that
+-- all TxIds are new.
+newEntriesAndUniqueTxIns :: Property
+newEntriesAndUniqueTxIns = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  let
+    n :: Integer
+    n = fromIntegral $ traceLength t
+    tr = sourceSignalTargets t
+
+  when (n > 1) $
+    [] === filter (not . newEntryPresent) tr
+
+  where newEntryPresent ( UTxOState (UTxO utxo) _ _ _
+                        , tx
+                        , (UTxOState (UTxO utxo') _ _ _)) =
+          let UTxO outs = txouts (_body tx)
+              outIds = Set.map (\(TxIn _id _) -> _id) (dom outs)
+              oldIds = Set.map (\(TxIn _id _) -> _id) (dom utxo)
+          in
+               null (outIds `Set.intersection` oldIds)
+            && (dom outs) `Set.isSubsetOf` (dom utxo')
