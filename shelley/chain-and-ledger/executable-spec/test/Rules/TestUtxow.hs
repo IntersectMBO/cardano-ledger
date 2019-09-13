@@ -8,6 +8,7 @@ module Rules.TestUtxow where
 import           Control.Monad (when)
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
+import qualified Data.Set as Set (intersection, null)
 
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
@@ -18,9 +19,9 @@ import           LedgerState (pattern UTxOState, decayedTx, keyRefunds)
 import           MockTypes (UTXOW)
 import           STS.Utxo (UtxoEnv (..))
 import           TxData (_body, _certs, _inputs, _txfee)
-import           UTxO (pattern UTxO, balance, deposits, txouts)
+import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
 
-import           Ledger.Core ((<|))
+import           Ledger.Core (dom, (<|))
 
 ------------------------------
 -- Constants for Properties --
@@ -102,3 +103,18 @@ preserveOutputsTx = withTests (fromIntegral numberOfTests) . property $ do
   where outputPreserved (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
           let UTxO outs = txouts (_body tx) in
           outs `Map.isSubmapOf` utxo'
+
+-- | Check that consumed inputs are elimiated from the resulting UTxO
+eliminateTxInputs :: Property
+eliminateTxInputs = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  let
+    n :: Integer
+    n = fromIntegral $ traceLength t
+    tr = sourceSignalTargets t
+
+  when (n > 1) $
+    [] === filter (not . inputsEliminated) tr
+
+  where inputsEliminated (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
+          Set.null $ txins (_body tx) `Set.intersection` dom utxo'
