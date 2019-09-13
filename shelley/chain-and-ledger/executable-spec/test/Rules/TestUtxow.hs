@@ -13,10 +13,11 @@ import qualified Data.Set as Set (intersection, isSubsetOf, map, null)
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
 import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace (sourceSignalTargets, traceLength, _traceEnv)
+import           Control.State.Transition.Trace (TraceOrder (..), sourceSignalTargets, traceLength,
+                     traceSignals, _traceEnv)
 
 import           LedgerState (pattern UTxOState, decayedTx, keyRefunds)
-import           MockTypes (UTXOW)
+import           MockTypes (Tx, UTXOW)
 import           STS.Utxo (UtxoEnv (..))
 import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
@@ -141,3 +142,26 @@ newEntriesAndUniqueTxIns = withTests (fromIntegral numberOfTests) . property $ d
           in
                null (outIds `Set.intersection` oldIds)
             && (dom outs) `Set.isSubsetOf` (dom utxo')
+
+-- | Check for absence of double spend
+noDoubleSpend :: Property
+noDoubleSpend = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  let
+    sigs = traceSignals OldestFirst t
+
+  [] === getDoubleInputs sigs
+
+  where
+    getDoubleInputs :: [Tx] -> [(Tx, [Tx])]
+    getDoubleInputs [] = []
+    getDoubleInputs (t:ts) = (lookForDoubleSpends t ts) ++ (getDoubleInputs ts)
+
+    lookForDoubleSpends :: Tx -> [Tx] -> [(Tx, [Tx])]
+    lookForDoubleSpends _ [] = []
+    lookForDoubleSpends tx_j ts =
+      if null doubles then [] else [(tx_j, doubles)]
+      where doubles =
+              filter (\tx_i -> (not . Set.null)
+                       (inps_j `Set.intersection` (_inputs $ _body tx_i))) ts
+            inps_j = _inputs $ _body tx_j
