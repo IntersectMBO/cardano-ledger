@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/b83730dccab14111d62144b048084eec7900d091/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/56fadcea03417771f4b3666fd1dfc9bad8df1484/snapshot.yaml
 
 packages:
   - cardano-ledger
@@ -15,13 +15,13 @@ extra-deps:
   - generic-monoid-0.1.0.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: b83730dccab14111d62144b048084eec7900d091
+    commit: 56fadcea03417771f4b3666fd1dfc9bad8df1484
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 31aafc8d5c090c4443a12d588c923badac929843
+    commit: 0e26a4f00324100b4c34f2a9c7606ae03e94d7a2
     subdirs:
       - binary
       - binary/test
@@ -35,12 +35,12 @@ extra-deps:
 
   # Needed for `cardano-ledger-specs`
   - git: https://github.com/input-output-hk/goblins
-    commit: 6ea969b31c2bbaa7ba78b8e83b53a36bedfae10e
+    commit: b5e99cf153a3abb1b764f80095f6a930ba056048
   - moo-1.2
   - gray-code-0.3.1
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: c85d57a95d919336afea7e0eff00e834bd6b4b58
+    commit: e22be186e0b1018260ed7c5166871f82a869b94d
     subdirs:
       - contra-tracer
 
@@ -49,7 +49,7 @@ extra-deps:
 
   # Extracted from cardano-sl since it's quite useful
   - git: https://github.com/input-output-hk/cardano-sl-x509
-    commit: ec96c64c665b741c17b4e38f611315bae9b0b054
+    commit: 43a036c5bbe68ca2e9cbe611eab7982e2348fe49
 
   - Unique-0.4.7.6
 
