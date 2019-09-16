@@ -55,7 +55,6 @@ import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotCount, SlotCount(SlotCount), unSlotNumber)
-import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
@@ -64,9 +63,7 @@ import Cardano.Chain.Update.ProtocolParameters
   )
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(..))
 import Cardano.Chain.Update.SoftwareVersion
-  ( NumSoftwareVersion
-  , SoftwareVersion
-  , svAppName
+  ( svAppName
   , svNumber
   )
 import Cardano.Chain.Update.Validation.Endorsement
@@ -109,11 +106,11 @@ data State = State
     -- ^ Adopted protocol parameters
   , candidateProtocolUpdates          :: ![CandidateProtocolUpdate]
     -- ^ Candidate protocol versions
-  , appVersions                       :: !(Map ApplicationName (NumSoftwareVersion, SlotNumber))
-    -- ^ Current application versions (by application name)
-  , registeredProtocolUpdateProposals :: !(Map UpId (ProtocolVersion, ProtocolParameters))
+  , appVersions                       :: !Registration.ApplicationVersions
+    -- ^ Current application versions
+  , registeredProtocolUpdateProposals :: !Registration.ProtocolUpdateProposals
     -- ^ Registered protocol update proposals
-  , registeredSoftwareUpdateProposals :: !(Map UpId SoftwareVersion)
+  , registeredSoftwareUpdateProposals :: !Registration.SoftwareUpdateProposals
     -- ^ Registered software update proposals
   , confirmedProposals                :: !(Map UpId SlotNumber)
     -- ^ Confirmed update proposals
@@ -324,8 +321,8 @@ registerVotes env st votes = do
       currentSlot `seq`
       M.fromList $! [ let !svAppName' = svAppName sv
                           !svNumber' = svNumber sv
-                      in (svAppName', (svNumber', currentSlot))
-                    | (!pid, !sv) <- M.toList registeredSoftwareUpdateProposals
+                      in (svAppName', (svNumber', currentSlot, metadata))
+                    | (!pid, (!sv, !metadata)) <- M.toList registeredSoftwareUpdateProposals
                     , pid `elem` M.keys confirmedApplicationUpdates
                     ]
   pure $!

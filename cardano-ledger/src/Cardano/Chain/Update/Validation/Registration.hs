@@ -12,7 +12,10 @@ module Cardano.Chain.Update.Validation.Registration
   ( Error
   , Environment (..)
   , State (..)
+  , ApplicationVersions
+  , Metadata
   , ProtocolUpdateProposals
+  , SoftwareUpdateProposals
   , registerProposal
   , TooLarge (..)
   )
@@ -39,6 +42,7 @@ import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
+import Cardano.Chain.Update.InstallerHash (InstallerHash)
 import qualified Cardano.Chain.Update.Proposal as Proposal
 import Cardano.Chain.Update.Proposal
   ( AProposal(..)
@@ -65,7 +69,7 @@ import Cardano.Chain.Update.SoftwareVersion
   , SoftwareVersionError
   , checkSoftwareVersion
   )
-import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag)
+import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag, SystemTag)
 import Cardano.Crypto
   ( ProtocolMagicId
   , SignTag(SignUSProposal)
@@ -77,9 +81,13 @@ data Environment = Environment
   { protocolMagic             :: !(Annotated ProtocolMagicId ByteString)
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
-  , appVersions               :: !(Map ApplicationName (NumSoftwareVersion, SlotNumber))
+  , appVersions               :: !ApplicationVersions
   , delegationMap             :: !Delegation.Map
   }
+
+type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, SlotNumber, Metadata)
+
+type Metadata = Map SystemTag InstallerHash
 
 -- | State keeps track of registered protocol and software update
 --   proposals
@@ -89,9 +97,7 @@ data State = State
   }
 
 type ProtocolUpdateProposals = Map UpId (ProtocolVersion, ProtocolParameters)
-type SoftwareUpdateProposals = Map UpId SoftwareVersion
-
-type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, SlotNumber)
+type SoftwareUpdateProposals = Map UpId (SoftwareVersion, Metadata)
 
 -- | Error captures the ways in which registration could fail
 data Error
@@ -286,7 +292,10 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
   SoftwareVersion appName appVersion = softwareVersion
 
   softwareVersionChanged =
-    maybe True ((/= appVersion) . fst) $ M.lookup appName appVersions
+    maybe True ((/= appVersion) . fst3) $ M.lookup appName appVersions
+    where
+      fst3 :: (a, b, c) -> a
+      fst3 (x, _, _) = x
 
   protocolVersionChanged =
     not $ protocolVersion == adoptedPV && PPU.apply ppu adoptedPP == adoptedPP
@@ -409,7 +418,7 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
   mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
 
   -- Check that this software version isn't already registered
-  null (M.filter (== softwareVersion) registeredSUPs)
+  null (M.filter ((== softwareVersion) . fst) registeredSUPs)
     `orThrowError` DuplicateSoftwareVersion softwareVersion
 
   -- Check that the software version is valid
@@ -420,7 +429,7 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
     `orThrowError` InvalidSoftwareVersion appVersions softwareVersion
 
   -- Add to the list of registered software update proposals
-  pure $ M.insert (recoverUpId proposal) softwareVersion registeredSUPs
+  pure $ M.insert (recoverUpId proposal) (softwareVersion, metadata) registeredSUPs
   where ProposalBody { softwareVersion, metadata } = Proposal.body proposal
 
 
@@ -431,5 +440,5 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 svCanFollow :: ApplicationVersions -> SoftwareVersion -> Bool
 svCanFollow avs softwareVersion = case M.lookup appName avs of
   Nothing -> appVersion == 1
-  Just (currentAppVersion, _) -> appVersion == currentAppVersion + 1
+  Just (currentAppVersion, _, _) -> appVersion == currentAppVersion + 1
   where SoftwareVersion appName appVersion = softwareVersion
