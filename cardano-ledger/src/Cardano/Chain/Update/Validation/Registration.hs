@@ -49,17 +49,17 @@ import Cardano.Chain.Update.Proposal
   , ProposalBody(..)
   , UpId
   , protocolParametersUpdate
-  , softwareVersion
+  , protocolVersion
   , recoverProposalSignedBytes
   , recoverUpId
-  , protocolVersion
+  , softwareVersion
   )
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
   , ppMaxBlockSize
   , ppMaxProposalSize
-  , ppScriptVersion
   , ppMaxTxSize
+  , ppScriptVersion
   )
 import qualified Cardano.Chain.Update.ProtocolParametersUpdate as PPU
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion(ProtocolVersion))
