@@ -644,18 +644,26 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsVKeyNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{dms} \subseteq \{ \hashKey \var{vk} \mid
       \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
       {
         \begin{array}{l}
-        \var{utxoEnv}
+          \var{slot}\\
+          \var{pp}\\
+          \var{stdelegs}\\
+          \var{stpools}\\
+          \var{dms}\\
         \end{array}
       }
       \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{tx} \var{utxoSt'}\\
     }
     {
       \begin{array}{l}
-        \var{utxoEnv}
+        \var{slot}\\
+        \var{pp}\\
+        \var{stdelegs}\\
+        \var{stpools}\\
+        \var{dms}\\
       \end{array}
       \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
     }
