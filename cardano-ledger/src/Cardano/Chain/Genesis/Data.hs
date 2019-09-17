@@ -51,14 +51,14 @@ import Cardano.Crypto
 -- | Genesis data contains all data which determines consensus rules. It must be
 --   same for all nodes. It's used to initialize global state, slotting, etc.
 data GenesisData = GenesisData
-    { gdGenesisKeyHashes :: !GenesisKeyHashes
-    , gdHeavyDelegation  :: !GenesisDelegation
-    , gdStartTime        :: !UTCTime
-    , gdNonAvvmBalances  :: !GenesisNonAvvmBalances
+    { gdGenesisKeyHashes   :: !GenesisKeyHashes
+    , gdHeavyDelegation    :: !GenesisDelegation
+    , gdStartTime          :: !UTCTime
+    , gdNonAvvmBalances    :: !GenesisNonAvvmBalances
     , gdProtocolParameters :: !ProtocolParameters
-    , gdK                :: !BlockCount
-    , gdProtocolMagicId  :: !ProtocolMagicId
-    , gdAvvmDistr        :: !GenesisAvvmBalances
+    , gdK                  :: !BlockCount
+    , gdProtocolMagicId    :: !ProtocolMagicId
+    , gdAvvmDistr          :: !GenesisAvvmBalances
     } deriving (Show, Eq)
 
 instance Monad m => ToJSON m GenesisData where

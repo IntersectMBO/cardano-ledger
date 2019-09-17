@@ -55,13 +55,13 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 
 data Config = Config
-    { configGenesisData       :: GenesisData
+    { configGenesisData       :: !GenesisData
     -- ^ The data needed at genesis
-    , configGenesisHash       :: GenesisHash
+    , configGenesisHash       :: !GenesisHash
     -- ^ The hash of the canonical JSON representation of the 'GenesisData'
-    , configReqNetMagic       :: RequiresNetworkMagic
+    , configReqNetMagic       :: !RequiresNetworkMagic
     -- ^ Differentiates between Testnet and Mainet/Staging
-    , configUTxOConfiguration :: UTxOConfiguration
+    , configUTxOConfiguration :: !UTxOConfiguration
     -- ^ Extra local data used in UTxO validation rules
     }
 

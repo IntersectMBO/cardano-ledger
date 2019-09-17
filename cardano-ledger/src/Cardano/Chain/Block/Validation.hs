@@ -241,7 +241,10 @@ initialChainValidationState config = do
         $ configGenesisKeyHashes config
       , shSigningQueue = Empty
       }
-    , cvsPreviousHash   = Left $ configGenesisHash config
+      -- Ensure that we don't allow the internal value of this 'Left' to be
+      -- lazy as we want to ensure that the 'ChainValidationState' is always
+      -- in normal form.
+    , cvsPreviousHash   = Left $! configGenesisHash config
     , cvsUtxo           = genesisUtxo config
     , cvsUpdateState    = UPI.initialState config
     , cvsDelegationState = delegationState
