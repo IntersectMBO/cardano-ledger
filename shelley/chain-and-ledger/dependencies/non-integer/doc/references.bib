@@ -1,15 +1,16 @@
 @misc{small_step_semantics,
-  author = {Formal Methods Team, IOHK},
-  title  = {Small Step Semantics for Cardano},
+  label =  {CdoSem},
+  author = {{Formal Methods Team, IOHK}},
+  title  = {{Small Step Semantics for Cardano}},
   year   = {2018},
   url   = {https://github.com/input-output-hk/cardano-chain/blob/master/specs/semantics/latex/small-step-semantics.tex},
 }
 
 
 @misc{delegation_design,
+  label =  {cdoDel},
   author = {Philipp Kant and Lars Br\"unjes and Duncan Coutts},
-  title  = {Design Specification for Delegation and Incentives in
-Cardano},
+  title  = {{Design Specification for Delegation and Incentives in Cardano}},
   year   = {2018},
   url   = {https://github.com/input-output-hk/cardano-ledger-specs/tree/master/docs/delegation_design_spec},
 }
@@ -38,21 +39,47 @@ Cardano},
 }
 
 @article{shelley_consensus,
-  author = {Formal Methods Team, IOHK},
-  title   = {?? - Shelley Consensus},
+  author = {{Formal Methods Team, IOHK}},
+  title   = {{?? - Shelley Consensus}},
   year    = {TODO},
 }
 
-@article{shelley_spec,
-  author = {Formal Methods Team, IOHK},
-  title  = {A Formal Specification of the Cardano Ledger},
-  year   = {TODO},
+@misc{shelley_spec,
+  label = {CdoLedger},
+  author = {{Formal Methods Team, IOHK}},
+  title  = {{A Formal Specification of the Cardano Ledger}},
+  year   = {2019},
+  url = {https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/formal-spec/ledger-spec.tex}
 }
 
 @misc{ouroboros,
+    label = {CdoProt},
     author = {Aggelos Kiayias and Alexander Russell and Bernardo David and Roman Oliynykov},
     title = {Ouroboros: A Provably Secure Proof-of-Stake Blockchain Protocol},
     howpublished = {Cryptology ePrint Archive, Report 2016/889},
     year = {2016},
     note = {\url{http://eprint.iacr.org/2016/889}},
+}
+
+@misc{plutus_eutxo,
+label = {CdoUTxoExt},
+author = {{Plutus Team, IOHK}},
+title = {{The Extended UTxO Model}},
+year  = {2019},
+url = {https://github.com/input-output-hk/plutus/tree/master/docs/extended-utxo}
+}
+
+@article{DBLP:journals/tcs/Escardo96,
+  author    = {Mart{\'{\i}}n H{\"{o}}tzel Escard{\'{o}}},
+  title     = {{PCF} Extended with Real Numbers},
+  journal   = {Theor. Comput. Sci.},
+  volume    = {162},
+  number    = {1},
+  pages     = {79--115},
+  year      = {1996},
+  url       = {https://doi.org/10.1016/0304-3975(95)00250-2},
+  doi       = {10.1016/0304-3975(95)00250-2},
+  timestamp = {Sun, 28 May 2017 13:20:09 +0200},
+  biburl    = {https://dblp.org/rec/bib/journals/tcs/Escardo96},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
 }

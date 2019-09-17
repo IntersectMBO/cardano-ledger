@@ -1,4 +1,22 @@
-\documentclass[11pt,a4paper,dvipsnames]{article}
+\documentclass[11pt,a4paper,dvipsnames,twosided]{article}
+
+\usepackage[deliverable]{IOHKCoverPage}
+
+% data for Deliverable header -- added by KH from an EU H2020 project template
+\DeliverableNumber{DX}
+\DeliverableTitle{A Specification of the Non-Integral Calculations \\ in the Shelley Ledger}{Non-Integral Cals.}
+\DeliverableResponsible{Formal Methods Team}
+\EditorName{Matthias G\"udemann, \IOHK}
+\Authors{Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
+}
+\DueDate{XX$^{\textrm{th}}$ XX 2019}
+\SubmissionDate{12$^{\textrm{th}}$ September 2019}{2019/09/12}
+\LeaderName{Philipp Kant, \IOHK}
+\InstitutionAddress{\IOHK}
+\Version{0.2}
+\Project{Shelley Ledger}
+\DisseminationDR
+
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{iohk}
 \usepackage{microtype}
@@ -12,7 +30,7 @@
 \usepackage{stmaryrd}
 \usepackage{extarrows}
 \usepackage{slashed}
-\usepackage[colon]{natbib}
+%\usepackage[colon]{natbib}
 \usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
@@ -20,6 +38,16 @@
 \floatstyle{boxed}
 \restylefloat{figure}
 \usepackage{tikz}
+
+%% Commenting -- KH
+\usepackage[obeyFinal]{todonotes}
+\newcommand{\khcomment}[1]{\todo[color=blue!20]{KH: #1}}
+
+%% In-para enumeration -- KH
+\usepackage{paralist}
+
+%% PDF viewer synchronisation with editor, use with synctex -- KH
+\usepackage{pdfsync}
 
 %%
 %% Package `semantic` can be used for writing inference rules.
@@ -41,7 +69,7 @@
 \begin{document}
 
 \hypersetup{
-  pdftitle={A Specification of the Non-Integral Calculations in the Ledger},
+  pdftitle={A Specification of the Non-Integral Calculations in the Shelley Ledger},
   breaklinks=true,
   bookmarks=true,
   colorlinks=false,
@@ -53,7 +81,23 @@
   urlbordercolor={white}
 }
 
-\title{A Specification of the Non-Integral Calculations in the Ledger}
+  \cleardoublepage%
+  \tableofcontents%
+  \listoffigures%
+  \clearpage%
+
+  \begin{changelog}
+	\change{05/09/19}{Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
+	\change{05/09/19}{Kevin Hammond}{FM (IOHK)}{Reviewed and applied comments.}
+	\change{12/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page for consistency.}
+	\change{12/09/19}{Kevin Hammond}{FM (IOHK)}{Included review comments from MG.}
+\end{changelog}
+
+\cleardoublepage
+\renewcommand{\thepage}{\arabic{page}}
+\setcounter{page}{1}
+
+\title{A Specification of the Non-Integral Calculations in the Shelley Ledger}
 
 \author{Matthias G\"udemann  \\ {\small \texttt{matthias.gudemann@iohk.io}}}
 
@@ -62,11 +106,14 @@
 \maketitle
 
 \begin{abstract}
-  This document defines a way to exactly calculate non-integral calculations in
-  the ledger for Shelley which use elementary mathematical functions. The main
-  objective is to give an unambiguous specification that gives the same results,
-  independent of the architecture or programming language. The goal is to
-  prevent chain forks because of slight differences in calculated results.
+  This document defines a consistent way to perform non-integral calculations in
+  the Shelley ledger for Cardano.  % \khcomment{I think you said that the calculations have an error margin, so are not exact?}
+  These calculations are defined in terms of \emph{elementary} mathematical functions, and are used in a few,
+  but important, places in the ledger calculation.  The main
+  objective of this work is to provide a clear and unambiguous specification that will give the same results for each
+  calculation, regardless of the computer architecture or programming language implementation that is chosen.
+  The goal is to prevent blockchain forks because of slight differences in the calculated values
+  that might otherwise come from different implementations of the Shelley ledger specification or Ouroboros protocol, for example.
 \end{abstract}
 
 \tableofcontents
@@ -75,124 +122,174 @@
 \section{Introduction}
 \label{sec:introduction}
 
-The Shelley specification~\cite{shelley_spec} and the Ouroboros
-protocol~\cite{ouroboros} use non-integral calculations. Most can be done in an
-exact way using rational numbers and arbitrary precision integers which are
-available in most programming languages or via external libraries.~\footnote{The
-  most widely used library is the GNU multi-precision library (GMP)}
+%% Actioned this. KH
+%\khcomment{Once this is distributed to a broader group, there should be some versioning and changelog mechanism (the PDF creation
+%  date isn't enough, since it doesn't have the source version).  This will help ensure that we're referring to the correct document :)
+%  I have some macros that could be adapted.}
 
-There are also instances where elementary functions are used which cannot be
-represented as rational numbers and therefore require a different
-treatment. This includes using the exponential function
-$e^{x}, x \in \mathbb{R}$ to calculate a decay and non-integral exponentiation
-$x^{y}, x, y \in \mathbb{R}$.
+The Shelley ledger specification~\cite{shelley_spec}\khcomment{I'd prefer a reference format that was shorter e.g. [G\"ud19], and made it clearer what were internal, public, published etc. documents - I've applied a possible format here.  We should also ideally use a single references.bib...} and the Ouroboros
+protocol~\cite{ouroboros} use non-integral calculations in a few places. Most of these can be
+implemented in an exact way using rational numbers and arbitrary precision integers, which are
+available either directly as programming language constructs (e.g. in Haskell) or via external libraries.~ \footnote{The
+  most widely used library is the GNU multi-precision library (GMP)}
+%
+In addition, there are some instances where the results of elementary functions cannot be
+precisely represented as rational numbers, and therefore require a representation that covers a wider
+range of \emph{real numbers}.
+These include the exponential function
+$e^{x}, x \in \mathbb{R}$, which is used to calculate how refunds decay over time, and general non-integral exponentiation
+$x^{y}, x, y \in \mathbb{R}$, which is used to \khcomment{MG, please fix!}.
 
 \section{Problem Description}
 \label{sec:problem-description}
 
-The calculations that involve elementary functions are concerned with decay of
-the value to refund from a deposit, calculation of the pool reward via the
-moving average and the leader election probability.
-
+The calculations in the Shelley ledger specification and Ouroboros protocol that involve elementary functions are concerned with:
+\begin{inparaenum}
+\item
+  the decay of the value that should be refunded from a deposit;
+and
+\item
+  the leader election probability.
+\end{inparaenum}
+%
 In all these cases, it is important that all distributed nodes calculate the
-same values, else here might be a disagreement what to include in the blockchain
-and forks might result. In the case of a single implementation, this will not be
-a problem, as only one result is possible, but in the case of multiple
-implementations, this can become an issue. As Cardano is striving to be a
-specification defined cryptocurrency, we need an exact specification of how to
-achieve this, allowing for independent implementations with the same behavior.
+same values, since otherwise there might be a disagreement about what should be included in the blockchain
+and forks might then result.
+%\khcomment{The following statement is not true, just less likely...  Optimisation can mess things up, for instance.  In the case of a single implementation, this will not be
+% a problem, as only one result is possible, but in the case of multiple
+%implementations, this can become an issue.}
+This is a particular problem where there could be multiple independent implementations that could
+deliver inconsistent results.
+Since Cardano aims to be a
+cryptocurrency that is fully defined by a precise specification, we need an exact specification of
+non-integer calculations, allowing different implementations to have the same, correct and verifiable,
+behavior. % \khcomment{US English is standard for company documents, I assume?}
 
-\section{Implementation Possibilities}
+\section{Implementation Possibilities for Non-Integer Arithmetic}
 \label{sec:impl-poss}
 
 There are three main different possibilities to implement non-integral
-calculations. In Haskell, we can use typeclasses to design generic algorithms
-which can handle different backends. Each back-end has its advantages and
-disadvantages.
+calculations. In Haskell, we can use typeclasses or parametric polymorphism
+to design generic algorithms that can handle different choices. Each implementation choice has its
+own advantages and disadvantages.
 
 \subsection{IEEE~754 Floating Point}
 \label{sec:ieee-754-floating}
 
-A straight-forward approach is to use IEEE~754 floating-point arithmetic which
-is generally supported by all relevant programming languages and CPU
-architectures.
-
+A straightforward approach is to use IEEE~754 floating-point arithmetic.  This is
+widely supported by common programming languages and CPU/GPU architectures.
+%
 The basic arithmetic operations of IEEE~754 floating-point are well specified,
-and they are very efficient due to direct HW implementation.
-
-Double precision floating-point provides 53 bits (~15.99 decimal digits) of
-precision which is slightly below the required precision to represent the
-fraction of 1 lovelace, as there are $4.5\cdot10^{16}$ of them. Also, the
-required elementary functions are not standardized and there can be differences
-in different implementations. It is also worth noting that some architectures
+and they are usually very efficient due to direct HW implementation.
+%
+Double-precision IEEE~754 floating-point numbers (\emph{binary64}) provide 53 bits (~15.99 decimal digits) of
+precision.  This is slightly less than is needed to represent the
+required fraction of 1 lovelace: there are $4.5\cdot10^{16}$ possible fractions.
+Moreover, the  elementary functions that are required for Cardano are not standardized and there can be
+subtle differences in different implementations, with results even varying when different compiler settings are used
+on the same implementation\footnote{e.g. maintaining intermediate representations within internal registers \emph{vs.} writing to memory.}. It is also worth noting that some architectures
 provide excess precision~\footnote{The original x87 provided 80 bit
-  floating-point}, which can result in slight differences in results. There
-exist programming languages, e.g., D, which make use of this by default. Many
-languages support excess precision but default to IEEE~754 64 bits, in
-particular on amd64 most make use of SSE floating-point arithmetic. Another
-source problems can be different rounding modes which some programming languages
-allow changing, e.g., C, but others do not, e.g., Haskell.
+  floating-point}, which can result in greater accuracy, but can also give slight differences in results
+between implementations. Some programming languages, e.g., D, exploit this by default. Many
+languages support excess precision, but default to IEEE~754 64 bits. In
+particular on the AMD64 architecture most language implementations use SSE floating-point arithmetic.
+A final problem is that IEEE~754 supports different rounding modes\footnote{round to nearest (with even digits breaking ties or ties rounding away from zero), round down, round up, round to zero},  which will obviously give
+different results in some cases.  Some programming languages allow the rounding mode to be changed, e.g. C99 onwards, but others do
+not, e.g., Haskell.
 
 \subsection{Rational Numbers}
 \label{sec:rational-numbers}
 
 Rational numbers can be implemented on top of exact arbitrary precision integral
-arithmetic. Effectively one uses \emph{gcd} calculation to normalize the results
-after each basic operation. This allows for arbitrary precise approximation of
-all real numbers, but may also incur arbitrary long numerators or denominators.
-
-These arbitrarily long numerators and denominators incur
-non-predictable~\footnote{potentially > 1s for basic arithmetic operations}
+arithmetic using a pair of numbers to represent a numerator and denominator.
+Effectively, \emph{gcd} calculations are used to normalize the results
+after each basic operation. While not all real numbers are rationals, this approach allows for
+arbitrarily precise approximation of all real numbers. However, arbitrarily
+long numerators or denominators may be needed to represent irrational numbers to the required precision.
+These arbitrarily long numerators and denominators are undesirable, since they will incur non-predictable~\footnote{potentially > 1s for basic arithmetic operations}
 run-time.
 
 \subsection{Fixed Point Arithmetic}
+
+%% KH: added this discussion
+Fixed point arithmetic uses a fixed size value (typically 32 or 64 bits) to
+represent non-integer numbers.  A fixed scaling factor is used to determine the
+position of the decimal point and normal integer arithmetic operations are
+applied for addition, multiplication etc.  Like floating point, this has the
+advantage of allowing a compact number representation, and allows fast implementation even on
+a system without floating point supprt.  It also allows precise arithmetic.  However,
+arbitrarily large numbers cannot be supported, which would make it unsuitable for
+representing currency in Cardano (it might, however, be suitable for e.g. leader election calculations).
+
+
+\subsection{Fixed Precision Arithmetic}
 \label{sec:fixed-point-arithm}
 
-An alternative approach is to use fixed point arithmetic based on exact integers
-where a proportion of the integer is used as fractional part. This prevents the
-problem with using fully rational arithmetic which can get very inefficient and
-allows to define the desired number of decimal digits.
-
-As it is implemented purely in SW on top of exact integer arithmetic, on the one
-hand it is less efficient than IEEE~754, on the other hand it can be made to
-behave equivalently in different implementations.
-
+An alternative approach is to use fixed precision %\khcomment{Changed Fixed Point to Fixed Precision}
+arithmetic based on exact integers
+where a proportion of the integer is used as fractional part.
+The number of fractional digits is fixed to a constant.
+This is more efficient
+than using the rational number approach described above, since it is not necessary to normalise
+values after calculations, arbitrary precision results are not supported, and only a single
+arbitrarily sized integer needs to be stored.
+Since it is implemented purely in software on top of exact integer arithmetic, this approach
+will be less efficient than IEEE~754 floating point.
+However, it can be made to behave equivalently in different implementations, including
+ensuring consistent (bounded) timings for each architecture, by providing golden tests to validate consistent
+esults for different architectures etc.
+% .\khcomment{This is not clear: performance, accuracy, ...}
+%
 The basic idea is the following: for $n$ decimal digits of precision, multiply
-each integral value with $10^{n}$ and take this into account in the basic
-operations. To use in the case of Cardano, this would mean using $n=17$ to
-support the required 17 digits of precision to track each possible stake
-fraction.
+each integral value by $10^{n}$ and take this into account in the basic
+operations. For Cardano, this would mean using $n=17$ to
+support the required 17 digits of precision that would track each possible stake
+fraction.  Haskell provides library support for fixed precision numbers and arithmetic.
+
+\subsection{Exact Real Numbers}
+
+Finally, there has been some research work on exact representations of real
+numbers using e.g. \emph{continued fractions}, exploiting lazy evaluation to
+produce the required number of digits of precision (e.g. \cite{DBLP:journals/tcs/Escardo96}).
+All real numbers can be represented, whether rational or irrational.
+These approaches have not yet been widely used, however,
+except for research purposes.  Implementations are often complicated and
+expensive, and some algorithms may need to be changed (for example, exact equality may
+be impossible to determine in a finite time).
 
 \subsection{Conclusion}
 \label{sec:summary}
 
-For the Cardano cryptocurrency, the approach based on fixed point arithmetic
-seems to be the best adapted one. It allows for the desired precision and can be
+For the Cardano cryptocurrency, the fixed precision arithmetic approach
+seems to be most suitable. It allows for the desired precision and can be
 implemented in an equivalent way, because it uses exact integer
 arithmetic.~\footnote{There already exist two implementations, Haskell and C.}
-While the fixed-point approach is less efficient than IEEE~754, using partial
-pre-computation will be possible to speed it up in the case where the base of an
-exponentiation is a constant.
+While the fixed-precision approach is less efficient than IEEE~754 floating point,
+by using partial pre-computation and other techniques, it will be possible to improve performance considerably in
+some cases (e.g. when using a constant base for exponentiation): experiments show that improvements
+of two orders of magnitude are possible.
 
 \section{Approximation Algorithms}
 \label{sec:algorithms}
 
-The elementary functions required in the ledger are the exponential function and
-the exponentiation. Exponentiation $x^{y}$ of arbitrary real numbers is
-calculated via the identity: $x^{y}= \exp({\ln(x^{y})}) = \exp(y\cdot
-\ln(x))$. This means we do need approximation schemes for $\exp(x)$ and
-$\ln(x)$.
-
-There exist two main approaches for approximation: Taylor / MacLaurin series and
+Other than basic arithmetic (addition, multiplication, subtraction, and division\khcomment{check for uses of division in the algorithms -- I spotted some
+  uses, but it might be possible to remove them using e.g. rotation/scaling.}),
+the only elementary functions that are required by the ledger specification are the exponential function, $e^{x}$, and
+its generalisation to the exponentiation function,  $x^{y}$. Exponentiation of arbitrary real numbers is
+calculated using the identity: $x^{y}= \exp({\ln(x^{y})}) = \exp(y\cdot
+\ln(x))$. This means that we need suitable approximation schemes for $\exp(x)$ and $\ln(x)$.
+%
+There are two main approaches that are used for approximation: Taylor / MacLaurin series and
 continued fractions. Both require only basic arithmetic operations and allow for
 iterative approximation, i.e., constructing a sequence of $x_{0},x_{1},\ldots
-x_{n}$ where each $x_{i}$ is a better approximation for the desired value.
+x_{n}$ where each successive $x_{i}$ is a better
+approximation to the desired value.
 
 \subsection{Taylor Series}
 \label{sec:taylor-series}
 
-A Taylor series defines an infinite series that approximates an infinitely often
-differentiable function around a point $a$. It does have the following general
+A Taylor series defines an infinite series that approximates an infinitely
+differentiable function around a point $a$. It has the following general
 form for a function $f$:
 
 \begin{equation*}
@@ -202,22 +299,22 @@ form for a function $f$:
   \right)}^{n}
 \end{equation*}
 
-Most often one develops the Taylor series at $a=0$ which is also called
-MacLaurin series and uses a truncated, finite polynomial for the function
+Most commonly the Taylor series is used at $a=0$. This is also called the
+MacLaurin series.  It uses a truncated, finite polynomial for the function
 approximation as follows:
 
 \begin{equation*}
   x_{m} := \sum_{n=0}^{m}\frac{f^{(n)}(0)}{n!} x^{n}
 \end{equation*}
 
-Using the above, one approximates the exponential function using Taylor series
-as
+Using the above, the exponential function can be approximated using the Taylor series
+by:
 
 \begin{equation*}
   \exp(x) := \sum_{n=0}^{\infty}\frac{x^{n}}{n!}
 \end{equation*}
 
-and the natural logarithm as
+The natural logarithm can similarly be approximated by:
 
 \begin{equation*}
   \ln(x) := \sum_{n=1}^{\infty}\frac{(-1)^{n+1}}{n}
@@ -237,7 +334,8 @@ this:
   b_{0} + \cfrac{a_{1}}{b_{1} + \cfrac{a_{2}}{b_{2}  + \cfrac{a_{3}}{\ddots}}}
 \end{equation*}
 
-The covergents $x_{i} = \frac{A_{i}}{B_{i}}$ are computed via the following
+The convergents%\khcomment{was covergents -- check!}
+$x_{i} = \frac{A_{i}}{B_{i}}$ are computed via the following
 recursion:
 
 \begin{align*}
@@ -250,7 +348,7 @@ recursion:
 \end{align*}
 
 For the exponential function $\exp(x)$, the sequences of $a_{i}$ and $b_{i}$ are
-the following:
+as follows:
 
 \begin{align*}
   \sigma(a_{i}) & := 1 \cdot x, -1 \cdot x, -2 \cdot x, \ldots \\
@@ -258,7 +356,7 @@ the following:
 \end{align*}
 
 For the natural logarithm $\ln(x+1)$, the sequences of $a_{i}$ and $b_{i}$ are
-the following:
+as follows:
 
 \begin{align*}
   \sigma(a_{i}) & := x, 1^{2}\cdot x, 1^{2}\cdot x, 2^{2}\cdot x, 2^{2}\cdot x, 3^{2}\cdot
@@ -269,10 +367,10 @@ the following:
 \subsection{Scaling}
 \label{sec:scaling}
 
-Both Taylor series and continued fractions do not converge for arbitrary input
-values, their convergence radius is limited. Therefore we apply scaling before
+Neither Taylor series approximations nor continued fractions converge for arbitrary input
+values: their convergence radius is limited. Therefore, we apply scaling before
 we do the approximation, using the mathematical properties of $\exp$ and $\ln$
-to get the correct results.
+to obtain the correct results.
 
 To calculate the exponential functions, we scale $x$ in such a way that
 $x \in [0; 1]$ via:
@@ -306,14 +404,15 @@ $\exp(n) \leq x < \exp(n+1)$ and use this as follows:
   \right)
 \end{equation*}
 
-which guarantees that $\frac{x}{\exp(n)}$ is in the interval $[1; e]$ which lies
+This guarantees that $\frac{x}{\exp(n)}$ is in the interval $[1; e]$, which lies
 in the convergence radius of the approximation schemes.
 
 \subsection{Convergence}
 \label{sec:convergence}
 
-Experimental results have shown that continued fractions have a better
-convergence speed, in particular for the natural logarithm.
+Our experimental results have shown that continued fractions converge faster, in particular for the natural logarithm.
+
+\khcomment{Give captions for the plots.  Combine the plots from Figs. 1 and 2 into a single figure (one above the other?).  Do the same for Figs. 3 and 4.}
 
 \begin{figure}[ht]
   \centering
@@ -351,7 +450,7 @@ same number of iterations.
 \end{figure}
 
 Figure~\ref{fig:exp-approx-taylor} shows the relative approximation error of 10
-and 20 iteration using a Taylor series approach. Figure~\ref{fig:exp-approx-cf}
+and 20 iterations using a Taylor series approximation. Figure~\ref{fig:exp-approx-cf}
 shows the relative error of 10 and 20 iterations using continued fractions. In
 this case the error of continued fractions is around one order of magnitude
 lower for the same number of iterations.
@@ -359,20 +458,18 @@ lower for the same number of iterations.
 \subsection{Conclusion}
 \label{sec:conclusion}
 
-From these experiments one can conclude that the convergence speed is higher for
-continued fractions, in particular for the natural logarithm. On the other hand,
-timing analysis showed that due to the simpler calculation per iteration of
+From these experiments, we conclude that the convergence speed is higher for
+continued fractions, in particular for the natural logarithm algorithm. However,
+timing analysis has shown that due to the simpler calculation per iteration of
 Taylor series, the exponential function can be approximated more efficiently
-using that approach. Therefore we decided to use both, Taylor series for $\exp$
-and continued fractions for $\ln$.
-
-To decide when the approximation has enough precision, we use the following
-criterion for two succeeding approximations $x_{n}, x_{n+1}$:
+using that approach. We have therefore decided to use both approaches: Taylor series for $\exp$
+and continued fractions for $\ln$.  In order to decide when the approximation has obtained enough precision,
+we use the following criterion for two successive approximations $x_{n}, x_{n+1}$:
 \begin{equation*}
   \vert x_{n} - x_{n+1}\vert < \epsilon
 \end{equation*}
 
-Therefore both approximation schemes result in the same precision.
+Both approximation schemes therefore will give the same precision.
 
 \section{Reference Implementation}
 \label{sec:refer-impl}
@@ -380,57 +477,64 @@ Therefore both approximation schemes result in the same precision.
 The continued fraction approach using fixed point arithmetic has been
 implemented in Haskell and in C using the GNU multi-precision
 library~\footnote{\url{https://gmplib.org}}.
-
-For the Haskell version there are Quickcheck property-based tests that validate
-mathematical consistency of the laws for $\ln$ and $\exp$.
-
-For both the C and the Haskell version there exists a test program that reads
-two fixed pointed numbers with 34 decimal digits of precision and calculates
-$x^{y}$ from them. This has been used to validate the two different
-implementations for 20.000.000 randomly generated testcases where $x$ and $y$
-were drawn uniformly from the interval $[0.1; 100.1]$, which showed that all
-results were exactly the same for all 34 decimal digits.
-
-The important aspect to get equivalent results is using the same approach to
-rounding after a division. In particular we use rounding to $-\infty$.
+%
+For the Haskell version, Quickcheck property-based tests are provided that will validate
+the mathematical consistency of the laws for $\ln$ and $\exp$.
+%
+For both the C and Haskell versions, there exist test programs that read
+two numbers with 34 decimal digits of precision and calculate
+$x^{y}$. This has been used to validate the two different
+implementations for 20.000.000 randomly generated testcases, where $x$ and $y$
+have been drawn uniformly from the interval $[0.1; 100.1]$. Our results showed that all
+calculation were identical for all 34 decimal digits.
+A key aspect to obtaining equivalent results is to use the same approach to
+rounding after a division. In particular, in our tests we have used rounding to $-\infty$.
 
 \section{Optimisations for Specific Use-Cases}
 \label{sec:optim-spec-use}
 
-One use case for non-integral calculations in Shelley is the calculation of the
-probability of being a slot leader. This calculation has to be done every 2s
-locally for each potential slot leader. It also needs to be done in order to
+One specific use case for non-integral calculations in Shelley is the calculation of the
+probability of being a slot leader. This calculation has to be done locally every 2s
+for each potential slot leader. The calculation also needs to be done in order to
 validate a block (to make sure that the block producer actually had the right to
 do so).
-
-More precisely, one has to check whether for a given $p$, $\sigma$ and a
-constant (at least for one epoch) $f$ the following inequality holds:
+%
+More precisely, it is necessary to check whether for a given $p$, $\sigma$ and a
+constant $f$ (at least for one epoch), the following inequality holds:
 
 \begin{equation*}
   p < 1 - {(1 - f)}^{\sigma}
 \end{equation*}
 
-As $1-f$ is considered to be constant, and because ${(1-f)}^{\sigma}$ is equal
-to $\exp(\sigma\cdot\ln(1-f))$, we can pre-compute the value of $\ln(1-f)$ once
-and use it for every following computation.
+Since $1-f$ is considered to be constant, and because ${(1-f)}^{\sigma}$ is equal
+to $\exp(\sigma\cdot\ln(1-f))$, we can pre-compute the value of $\ln(1-f)$ once for
+each epoch, and use it for every following computation in that epoch.
 
-Setting $c:= \ln(1 - f)$ and using $q := 1 - p$ we get the following:
+Setting $c= \ln(1 - f)$ and using $q = 1 - p$ we obtain the following:
 
 \begin{equation*}
   \begin{array}[h]{ccc}
     & p < 1 - \exp(\sigma \cdot c) & \\
     \Leftrightarrow & \exp(\sigma \cdot c) < 1 - p & (\textrm{c is negative})\\
     \Leftrightarrow & \frac{1}{\exp(-\sigma \cdot c)} < q & \\
-    \Leftrightarrow & \frac{1}{q} < \exp(-\sigma \cdot c) &
+    \Leftrightarrow & \frac{1}{q} < \exp(-\sigma \cdot c) & \\
+    \Leftrightarrow & \ln(\frac{1}{q}) < (-\sigma \cdot c) & \\
+    \Leftrightarrow & \ln(q) > \sigma \cdot c &
   \end{array}
 \end{equation*}
 
-The term $\exp(-\sigma \cdot c)$ can be computed using the Taylor series as
-described in Section~\ref{sec:taylor-series}.
+\noindent
+The terms $\exp(-\sigma \cdot c)$ or $\ln(q)$ can be computed using the Taylor series as
+described in Section~\ref{sec:taylor-series}.   By using table lookup on $\ln{q}$, a quick
+check can be obtained on whether the comparison is definitely true or not true.  If it is
+not certain, then the full calculation can be performed. By using a log calculation, integer sizes will
+be reduced, which will also improve the performance of the calculation.
+Alternatively, since the result of the function falls within known limits, we can use linear lower and upper bounds
+to quickly eliminate comparisons that will certainly fail, without needing to perform the full calculation.
 
-As the relevant information is not the result of the calculation, but whether
-the given $p$ is less than or greater than this value, one can also optimize
-further. Using the Lagrange remainder to estimate the error, it is possible to
+Since the relevant information is not the result of the calculation, but only whether
+the given $p$ is less than or greater than this value, one can also optimize the $\exp{\ldots}$ or $\ln{\ldots}$
+calculation further if desired. Using the Lagrange remainder to estimate the error, it is possible to
 only compute as many iterations as necessary to get the desired information.
 
 \begin{equation*}
@@ -438,23 +542,26 @@ only compute as many iterations as necessary to get the desired information.
     \sum_{n=0}^k\frac{x^{n}}{n!} + R_{k}(x)
 \end{equation*}
 
-Where using an upper bound $M$ on the domain of $x$, the remainder (or error
+By using an upper bound $M$ on the domain of $x$, the remainder (or error
 term) $R_{k}(x)$ can be estimated as follows:
 
 \begin{equation*}
   R_{k}(x) \leq \vert M \cdot \frac{x^{k+1}}{(k+1)!}\vert
 \end{equation*}
 
-For the use-case of the leader election, a good integral bound for the error
+For the leader election use-case, a good integral bound for the error
 estimation is the maximal value of $\vert\ln(1 - f)\vert\leq M$ for
-$f \in [0, 0.95]$ is $M = 3$. For any larger value of $f$, a different value
-would have to be chosen. The current value for $f$ is $0.1$.
+$f \in [0, 0.95]$, that is $M = 3$\footnote{Since $f$ is the active slot coefficient, we will very likely stay at lower values,
+  and $M=12$ would then be enough for $[0, 0.99].$}
+%\khcomment{check!}.
+For larger values of $f$, a different value of $M$
+would need to be chosen. The current value for $f$ in the Shelley ledger is $0.1$.
 
-In general, for this use case one can easily estimate $M$, as the smallest
-integer larger than the exponential function evaluated at the upper bound of the
-interval of the domain of $x$. For each partial sum $\Sigma_{k}$, one can then
-test whether $p$ is greater than $\Sigma_k + \vert R_{k}(x) \vert$ or less than
-$\Sigma_k - \vert R_{k}(x)\vert$ to decide whether one can stop at an early
+In general, $M$ can easily be estimated as the smallest
+integer that is larger than the exponential function that is evaluated at
+the upper bound of the interval of the domain of $x$. For each partial sum $\Sigma_{k}$, it
+is then possible to test whether $p$ is greater than $\Sigma_k + \vert R_{k}(x) \vert$ or less than
+$\Sigma_k - \vert R_{k}(x)\vert$ in order to decide whether to stop the calculation at an early
 iteration.
 
 \begin{figure}[ht]
@@ -473,7 +580,8 @@ optimization. For the 10 data points, the first 5 succeed in the leader
 election, the remaining 5 do not.
 
 \addcontentsline{toc}{section}{References}
-\bibliographystyle{plainnat}
+% \bibliographystyle{plainnat}
+\bibliographystyle{habbrv}
 \bibliography{references}
 
 \end{document}
