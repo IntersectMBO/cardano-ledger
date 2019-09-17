@@ -569,9 +569,9 @@ This consists of:
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{propWits} \in \Update \to (\VKeyGen\mapsto\VKey) \to \powerset{\KeyHash}
+    & \fun{propWits} \in \Update \to (\KeyHashGen\mapsto\VKey) \to \powerset{\KeyHash}
     & \text{hashkeys for proposals} \\
-    & \fun{propWits}~(\var{pup},~\var{aup}) \var{dms} = \\
+    & \fun{propWits}~(\var{pup},~\var{aup})~\var{dms} = \\
     & ~~\left\{
       \hashKey{vkey}
       \mid
@@ -581,27 +581,27 @@ This consists of:
   \end{align*}
 
     \begin{align*}
-    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to
+    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\KeyHashGen\mapsto\VKey) \to
       \powerset{\KeyHash}
     & \text{required key hashes} \\
     &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{txinsVKey}~{tx} \} \\
     \cup & ~~
-           \left(\{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
-      \restrictdom \txwdrls{tx}\} \cap \KeyHash_{Stake}  \right)\\
+           \{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\}\\
     \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
-    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx}) \\
+    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{dms} \\
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
   \end{align*}
   \begin{align*}
-    & \hspace{-0.5cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
+    & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
       \powerset{\HashScr}
     & \text{required script hashes} \\
-    &  \hspace{-0.5cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
+    &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
     & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
     & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{tx}})}~{utxo}\} \\
-    \cup & ~~\left(\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
-           \restrictdom \fun{txwdrls}~\var{tx}) \} \cap \HashScr\right) \\
+    \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
+           \restrictdom \fun{txwdrls}~\var{tx}) \} \\
     \cup & ~~\{\AddrScr \cap \fun{cwitness}~\var{c} \mid c \in \fun{txcerts}~\var{tx}\}
   \end{align*}
   \caption{Functions used in witness rule}
