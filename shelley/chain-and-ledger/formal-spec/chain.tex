@@ -662,7 +662,7 @@ epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
   \emph{Block Header Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset ((\Seed\times\powerset{\VKeyGen}) \times \NewEpochState \times \BHeader \times \NewEpochState)
+    \powerset ((\Seed\times\powerset{\KeyHashGen}) \times \NewEpochState \times \BHeader \times \NewEpochState)
   \end{equation*}
   \caption{BHeader transition-system types}
   \label{fig:ts-types:bheader}
@@ -1382,7 +1382,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
 \begin{figure}[htb]
   \emph{Chain Transition Helper Functions}
   \begin{align*}
-      & \fun{getGKeys} \in \NewEpochState \to \powerset{\VKeyGen} \\
+      & \fun{getGKeys} \in \NewEpochState \to \powerset{\KeyHashGen} \\
       & \fun{getGKeys}~\var{nes} = \dom{dms} \\
       &
       \begin{array}{lr@{~=~}l}
