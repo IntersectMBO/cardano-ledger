@@ -33,7 +33,9 @@ Value can also be transfered to the Fees, but Fees can only
 be increased by this transition.
 
 **Property** The value (Circulation + Deposits + Fees) increases by the sum
-of the withdrawals in the transaction.
+of the withdrawals in the transaction. Note that Circulation decreases
+due to transaction fees and certificate deposits, and can increase
+through the certificate refunds.
 
 **Property** Fees does not decrease.
 
@@ -41,7 +43,8 @@ of the withdrawals in the transaction.
 
 Pots in scope: Rewards
 
-**Property** The rewards to do not change.
+**Property** The rewards to do not change (both as an aggregated value
+and as individual balances).
 
 ### DELEGS
 
@@ -57,6 +60,12 @@ Pots in scope: All
 This transition returns a portion of the the pool certificate deposit to the correct
 reward address, provided it is still registered. Otherwise it is given to the treasury.
 The total is deducted from the deposit pot.
+
+**Property** The value Deposits is non-negative.
+
+**Property (Full Preservation of ADA)**
+The value (Circulation + Deposit + Fees + Treasury + Rewards + Reserves) is the same
+before and after the transition.
 
 ### LEDGER, LEDGERS, BBODY
 
@@ -87,6 +96,8 @@ Pots in scope: Circulation, Deposits, Fees
 The snapshot transition moves decayed deposits from the deposit pot to
 the fee pot.
 
+**Property** The Deposits value decreases by the amount that Fees increases.
+
 ### NEWPP
 
 Pots in scope: Circulation, Deposits, Fees, Treasury, Reserves
@@ -94,23 +105,27 @@ Pots in scope: Circulation, Deposits, Fees, Treasury, Reserves
 The new protocol parameter transition adusts the deposit pot to meet
 the current obligation, and the difference is made up by the reserves.
 
+**Property** The value (Deposits + Reserves) is the same
+before and after the transition. Note that it is possible for Deposits
+to increase or decrease.
+
+**Property** The values Circulation, Fees, and Treasury do not change.
+
 ### EPOCH
 
 Pots in scope: All
 
-With respect to the pots, the epoch transition does the combination
-of SNAP, POOLREAP, and NEWPP.
+With respect to the pots, the EPOCH transition uses each of the following
+once: SNAP, POOLREAP, and NEWPP.
 
 **Property (Full Preservation of ADA)**
-The value (Circulation + Deposit + Fees + Treasury + Rewards + Reserves) is the same
-before and after the transition.
 
-### EPOCH
+### BHEAD
 
 Pots in scope: All
 
-With respect to the pots, the epoch transition does the combination
-of NEWEPOCH and RU.
+With respect to the pots, the BHEAD transition uses each of the following
+once: NEWEPOCH and RU.
 
 **Property (Full Preservation of ADA)**
 
@@ -118,10 +133,19 @@ of NEWEPOCH and RU.
 
 Pots in scope: All
 
-With respect to the pots, the epoch transition does the combination
+With respect to the pots, the CHAIN transition uses each of the following
 of HEAD, PTRCL, and BBODY.
 
 **Property (Full Preservation of ADA)**
+
+### Slots and Epochs
+
+As an easy consequence of the Full Preservation of ADA for the CHAIN
+transition is the following:
+
+**Property (Full Preservation of ADA)** The total amount of ADA in the system
+(Circulation + Deposit + Fees + Treasury + Rewards + Reserves),
+remains constant at each slot and at each epoch.
 
 # Time Traveling Header Properties
 
@@ -131,34 +155,44 @@ We need to adapt properties 1 -3, from section 8 of the byron chain spec, to She
 
 **Property**
 There can be at most one change to the protocol parameters per epoch.
+Moreover, the protocol parameter update state is always empty at begining of epoch.
 
 **Property**
 If there are no pending future application versions,
 there will not be a change to the version for at least SlotsPerEpoch.
 
 **Property**
-Software versions increase lexicographically.
+Updating the sofware versions, without updating the protocol version,
+results in no change to the transition systems.
+Note that changes to the transition system resulting from a new
+protocol version will be difficult to state formally, since this 
+depends on logic in the software changing the ledger rules.
+
+**Definition**
+Let **num-genesis** be the number of genesis nodes
+(concretely this value is seven).
+
+**Definition**
+Let **quorum** be the number of genesis nodes needed for consensus
+on votes (concretely this value is five).
 
 **Property**
-If there are only four gen keys acive, there can be no new future
+If there are only (quorum -1)-many gen keys acive, there can be no new future
 application version or protocol parameters.
 
 **Property**
-The protocol parameter update system and the application version update system
-are independent. (The transition system of one does not effect the state of the other.)
-
-**Property**
-The protocol parameter update state is always empty at begining of epoch.
 
 **Property**
 The keys (of type Slot) of the following two mappings are always past the current slot:
 the future application versions (favs) and the future genesis delegation mapping (fdms).
+The favs slots can appear in any current or future epoch, but the fdms slots
+can be at most one epoch into the future.
 
 **Property**
-The size of the mappings PPUpdate, inside the update state, is always at most six.
+The size of the mappings PPUpdate, inside the update state, is always at most (num-genesis - 1).
 
 **Property**
-The size of the mappings AVUpdate, inside the update state, is always at most seven.
+The size of the mappings AVUpdate, inside the update state, is always at most num-genesis.
 
 # Deposits Properties
 
@@ -171,7 +205,7 @@ negative value for deposits.
 
 # Staking Properties
 
-**Property**
+**Consistency Property for Boundary Case**
 If no stake keys are registered, the rewards from the reward update
 will always sum to zero.
 
@@ -185,28 +219,36 @@ The sum of stake in the stake snapshots is always at most forty-five billion ADA
 **Property**
 The following delegation mappings always has the same size:
 `stdelegs`, `rewards`, and `ptrs`.
-(We can maybe even say more, the key set of `stdelegs` is the same
+Moreover, the key set of `stdelegs` is the same
 as the range of `ptrs`, which also corresponds one-one with the reward addresses
-in `rewards`. Moreover, the key set of `delegations` is a subset of of that of `stdelegs`.
+in `rewards`. Finally, the key set of `delegations` is a subset of that of `stdelegs`.
 
 **Property**
 If all stake keys and pools deregister, then, assuming that no one registers anything,
 by epoch `e+1`, where `e` is the max epoch in the stake pool retirement mapping,
-the delegation state will be nearly empty:
-`stDelegs`, `rewards`, `delegations`, `ptrs`, `stpools`, `poolParams`, `retiring`.
-are all the empty map. (The map `cs` will have size seven, for the genesis keys.)
+the delegation state will be nearly empty. More precisely,
+the mappings `stDelegs`, `rewards`, `delegations`, `ptrs`, `stpools`, `poolParams`,
+and `retiring` are all the empty map.
+(The map `cs` will have size seven, for the genesis keys.)
+
+# Genesis Node Property
+
+**Property**
+The size of the genesis delegation mapping `dms` is always num-genesis.
+Note that the value num-genesis can be given as the size of the
+mapping inherited from Byron.
 
 
 # Entropy Properties
 
-**Property**
+**Consistency Property**
 In the absence of the extra entropy parameter,
 the epoch nonce is what you get from combining the blocks leading up to it
 (and stopping `SlotsPrior`-many slots in the previous epoch).
 
 # Decentralization Properties
 
-**Property**
+**Consistency Property**
 The overlay schedule is obeyed: no blocks are produced during the silent blocks,
 and only core nodes makes blocks on the overlay slots.
 
@@ -219,14 +261,15 @@ to a non-NOTHING value.
 
 # Block Header Properties
 
-**Property**
+**Consistency Property**
 The body size and block body hash listed in the block header are correct.
+Correct refers to the two predicates given in the BBODY transition.
 
 # Block Count Properties
 
 **Property**
 The number of blocks made in an epoch is equal to number of active overlay slots plus
-the number the size of the `BlocksMade` mapping.
+the sum of the values in the `BlocksMade` mapping.
 
 **Property**
 The number blocks made in an epoch is never greater than the number of slots in an epoch.
