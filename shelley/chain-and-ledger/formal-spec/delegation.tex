@@ -106,7 +106,9 @@ It does the following:
   \begin{array}{r@{}c@{}l}
     \DCert &=& \DCertRegKey \uniondistinct \DCertDeRegKey \uniondistinct \DCertDeleg \\
                 &\hfill\uniondistinct\;&
-                \DCertRegPool \uniondistinct \DCertRetirePool \uniondistinct \DCertGen
+                \DCertRegPool \uniondistinct \DCertRetirePool \uniondistinct
+                                         \DCertGen\\
+           &\hfill\uniondistinct\;& \DCertMir
   \end{array}
   \end{equation*}
   %
@@ -132,18 +134,21 @@ It does the following:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness} \\
-  \fun{dpool} & \DCertDeleg \to \KeyHash
-  & \text{pool being delegated to}
-  \\
-  \fun{poolParam} & \DCertRegPool \to \PoolParam
-  & \text{stake pool}
-  \\
-  \fun{retire} & \DCertRetirePool \to \Epoch
-  & \text{epoch of pool retirement}
-  \\
-  \fun{genDel} & \DCertGen \to (\VKeyGen,~\VKey)
-  & \text{genesis delegation}
-  \end{array}
+      \fun{dpool} & \DCertDeleg \to \KeyHash
+                                            & \text{pool being delegated to}
+      \\
+      \fun{poolParam} & \DCertRegPool \to \PoolParam
+                                            & \text{stake pool}
+      \\
+      \fun{retire} & \DCertRetirePool \to \Epoch
+                                            & \text{epoch of pool retirement}
+      \\
+      \fun{genDel} & \DCertGen \to (\VKeyGen,~\VKey)
+                                            & \text{genesis delegation}
+      \\
+      \fun{moveRewards} & \DCertMir \to (\KeyHash \times \Coin)
+                                            & \text{moved intermediate rewards}
+    \end{array}
   \end{equation*}
   %
   \emph{Pool Parameter Accessor functions}
@@ -241,11 +246,13 @@ and the protocol parameters.
             \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
             \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
             \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
-      \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
-      \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
-      \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
-    \end{array}\right)
-    \\
+            \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
+            \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
+            \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
+            \var{i_{rwd}} & \AddrRWD \mapsto \Coin & \text{intermediate rewards}\\
+          \end{array}
+      \right)
+      \\
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
@@ -379,6 +386,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -390,6 +398,7 @@ concerns are independent of the ledger rules.
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
     }
@@ -415,6 +424,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -426,6 +436,7 @@ concerns are independent of the ledger rules.
         \varUpdate{\var{ptrs}} & \varUpdate{\subtractrange} & \varUpdate{\{\var{hk}\}} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
     }
@@ -450,6 +461,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{c}
@@ -462,6 +474,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
     }
@@ -494,6 +507,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{c}
@@ -506,6 +520,47 @@ concerns are independent of the ledger rules.
         \varUpdate{\var{fdms}} & \varUpdate{\unionoverrideRight}
                                & \varUpdate{\{(\var{s'},~\var{gkh}) \mapsto \var{vkh}\}} \\
         \var{dms} \\
+        \var{i_{rwd}}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+
+  \begin{equation}\label{eq:deleg-mir}
+    \inference[Deleg-Mir]
+    {
+      \var{c}\in \DCertMir &
+      i'_{rew}\leteq\var{\{\fun{addr_{rwd}}~{hk}\mapsto\var{val_{rwd}}\vert
+        \var{hk}\mapsto\var{val_{rwd}}\in\fun{moveRewards}~c\}}
+    }
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{stdelegs} \\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fdms} \\
+        \var{dms} \\
+        \var{i_{rwd}}
+      \end{array}
+      \right)
+      \trans{deleg}{c}
+      \left(
+      \begin{array}{rcl}
+        \var{stdelegs}\\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \varUpdate{\var{fdms}}\\
+        \var{dms} \\
+        \varUpdate{\var{i_{rwd}}} & \varUpdate{\unionoverrideRight}
+        & \varUpdate{i'_{rwd}}
       \end{array}
       \right)
     }
