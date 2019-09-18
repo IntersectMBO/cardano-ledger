@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -8,7 +9,7 @@ module BaseTypes
   ( FixedPoint
   , fpPrecision
   , fpEpsilon
-  , UnitInterval
+  , UnitInterval(..)
   , mkUnitInterval
   , truncateUnitInterval
   , intervalValue
@@ -22,15 +23,15 @@ module BaseTypes
   ) where
 
 
-import           Data.Coerce (coerce)
-import           Data.Word (Word8)
-import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
-import           Data.Ratio (numerator, denominator, (%))
-import           Numeric.Natural (Natural)
-import           GHC.Generics (Generic)
-import           Cardano.Binary (ToCBOR(..), encodeListLen)
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           Cardano.Crypto.Hash
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Data.Coerce (coerce)
+import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
+import           Data.Ratio (denominator, numerator, (%))
+import           Data.Word (Word64, Word8)
+import           GHC.Generics (Generic)
+import           Numeric.Natural (Natural)
 
 data E34
 
@@ -48,28 +49,35 @@ fpEpsilon :: FixedPoint
 fpEpsilon = (10::FixedPoint)^(17::Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
-newtype UnitInterval = UnitInterval Rational
-    deriving (Show, Ord, Eq, NoUnexpectedThunks, ToCBOR)
+newtype UnitInterval = UnsafeUnitInterval Rational
+    deriving (Show, Ord, Eq, NoUnexpectedThunks)
+
+instance ToCBOR UnitInterval where
+  toCBOR (UnsafeUnitInterval r) =
+    (convert . numerator) r <>
+    (convert. denominator) r
+   where
+    convert = toCBOR . fromInteger @Word64
 
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
 mkUnitInterval :: Rational -> Maybe UnitInterval
-mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnitInterval r else Nothing
+mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Nothing
 
 -- | Convert a rational to a `UnitInterval` by ignoring its integer part.
 truncateUnitInterval :: Rational -> UnitInterval
 truncateUnitInterval r = case (numerator r, denominator r) of
-  (n, d) | n > d -> UnitInterval $ (n - d) % d
-  _ -> UnitInterval r
+  (n, d) | n > d -> UnsafeUnitInterval $ (n - d) % d
+  _ -> UnsafeUnitInterval r
 
 -- | Get rational value of `UnitInterval` type
 intervalValue :: UnitInterval -> Rational
-intervalValue (UnitInterval v) = v
+intervalValue (UnsafeUnitInterval v) = v
 
 interval0 :: UnitInterval
-interval0 = UnitInterval 0
+interval0 = UnsafeUnitInterval 0
 
 interval1 :: UnitInterval
-interval1 = UnitInterval 1
+interval1 = UnsafeUnitInterval 1
 
 -- | Evolving nonce type.
 data Nonce

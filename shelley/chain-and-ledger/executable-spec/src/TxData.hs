@@ -1,21 +1,23 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module TxData
   where
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
-                     encodeListLen, encodeWord)
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+                     encodeListLen, encodeMapLen, encodeWord)
 import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Lens.Micro.TH (makeLenses)
 
 import           Data.Foldable (toList)
@@ -31,12 +33,13 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
-import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash,
-                     KeyHash, Sig, VKey, VKeyGenesis, VerKeyVRF,
-                     hashAnyKey)
+import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, Sig, VKey,
+                     VKeyGenesis, VerKeyVRF, hashAnyKey)
 import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
-import           Updates (Update)
+import           Updates (Update, updateNull)
+
+import           Serialization (CBORGroup (..), ToCBORGroup (..))
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -67,25 +70,21 @@ newtype RewardAcnt crypto = RewardAcnt
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential crypto =
-    ScriptHashObj { _validatorHash :: ScriptHash crypto }
-  | KeyHashObj    { _vkeyHash      :: KeyHash crypto }
-  | GenesisHashObj { _genKeyHash   :: GenKeyHash crypto }
+    ScriptHashObj (ScriptHash crypto)
+  | KeyHashObj    (KeyHash crypto)
+  | GenesisHashObj (GenKeyHash crypto)
     deriving (Show, Eq, Generic, Ord)
+    deriving ToCBOR via (CBORGroup (Credential crypto))
 
 instance NoUnexpectedThunks (Credential crypto)
 
+
 -- |An address for UTxO.
 data Addr crypto
-  = AddrBase
-      { _paymentObj :: Credential crypto
-      , _stakingObj :: Credential crypto
-      }
-  | AddrEnterprise
-    { _enterprisePayment :: Credential crypto }
-  | AddrPtr
-      { _paymentObjP :: Credential crypto
-      , _stakePtr :: Ptr
-      }
+  = AddrBase (Credential crypto) (Credential crypto)
+  | AddrEnterprise (Credential crypto)
+  | AddrPtr (Credential crypto) Ptr
+  | AddrBootstrap (KeyHash crypto)
   deriving (Show, Eq, Ord, Generic)
 
 instance NoUnexpectedThunks (Addr crypto)
@@ -319,7 +318,7 @@ instance
   => ToCBOR (Tx crypto)
  where
   toCBOR tx =
-    encodeListLen 2
+    encodeListLen 3
       <> toCBOR (_body tx)
       <> toCBOR (_witnessVKeySet tx)
       <> toCBOR (_witnessMSigMap tx)
@@ -329,14 +328,18 @@ instance
   => ToCBOR (TxBody crypto)
  where
   toCBOR txbody =
-    encodeListLen 6
-      <> toCBOR (_inputs txbody)
-      <> toCBOR (_outputs txbody)
-      <> toCBOR (toList $ _certs txbody)
-      <> toCBOR (_wdrls txbody)
-      <> toCBOR (_txfee txbody)
-      <> toCBOR (_ttl txbody)
-      <> toCBOR (_txUpdate txbody)
+    encodeMapLen 6
+      <> encodeWord 0 <> toCBOR (_inputs txbody)
+      <> encodeWord 1 <> toCBOR (_outputs txbody)
+      <> encodeWord 2 <> toCBOR (_txfee txbody)
+      <> encodeWord 3 <> toCBOR (_ttl txbody)
+      <> if null cs then mempty else encodeWord 4 <> toCBOR cs
+      <> if null ws then mempty else encodeWord 5 <> toCBOR ws
+      <> if updateNull us then mempty else encodeWord 6 <> toCBOR us
+    where
+      cs = toList $ _certs txbody
+      ws = _wdrls txbody
+      us = _txUpdate txbody
 
 instance ( Crypto crypto) =>
   ToCBOR (MultiSig crypto) where
@@ -370,48 +373,46 @@ instance ( Crypto crypto) =>
         pure $ RequireMOf m msigs
       _ -> error "pattern no supported"
 
+
 instance (Typeable crypto, Crypto crypto)
-  => ToCBOR (Credential crypto) where
-  toCBOR = \case
-    ScriptHashObj hs ->
-      encodeListLen 2
-      <> toCBOR (0 :: Word8)
-      <> toCBOR hs
-    KeyHashObj kh ->
-      encodeListLen 2
-      <> toCBOR (1 :: Word8)
-      <> toCBOR kh
-    GenesisHashObj kh ->
-      encodeListLen 2
-      <> toCBOR (2 :: Word8)
-      <> toCBOR kh
+  => ToCBORGroup (Credential crypto) where
+  listLen _ = 2
+  toCBORGroup = \case
+    KeyHashObj     kh -> toCBOR (0 :: Word8) <> toCBOR kh
+    ScriptHashObj  hs -> toCBOR (1 :: Word8) <> toCBOR hs
+    GenesisHashObj kh -> toCBOR (2 :: Word8) <> toCBOR kh
 
 instance
   (Typeable crypto, Crypto crypto)
   => ToCBOR (Addr crypto)
  where
-  toCBOR = \case
-    AddrBase pay stake ->
-      encodeListLen 3
-        <> toCBOR (0 :: Word8)
-        <> toCBOR pay
-        <> toCBOR stake
-    AddrEnterprise pay ->
-      encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR pay
-    AddrPtr pay stakePtr ->
-      encodeListLen 3
-        <> toCBOR (2 :: Word8)
-        <> toCBOR pay
-        <> toCBOR stakePtr
+  toCBOR (AddrBase       (KeyHashObj a)    (KeyHashObj b))      =
+    toCBOR (0 :: Word8)  <> toCBOR a       <> toCBOR b
+  toCBOR (AddrBase       (KeyHashObj a)     (ScriptHashObj b))  =
+    toCBOR (1 :: Word8)  <> toCBOR a       <> toCBOR b
+  toCBOR (AddrBase       (ScriptHashObj a)  (KeyHashObj b))     =
+    toCBOR (2 :: Word8)  <> toCBOR a       <> toCBOR b
+  toCBOR (AddrBase       (ScriptHashObj a) (ScriptHashObj b))   =
+    toCBOR (3 :: Word8)  <> toCBOR a       <> toCBOR b
+  toCBOR (AddrPtr        (KeyHashObj a)    pointer)             =
+    toCBOR (4 :: Word8)  <> toCBOR a       <> toCBORGroup pointer
+  toCBOR (AddrPtr        (ScriptHashObj a)  pointer)            =
+    toCBOR (5 :: Word8)  <> toCBOR a       <> toCBORGroup pointer
+  toCBOR (AddrEnterprise (KeyHashObj a))                        =
+    toCBOR (6 :: Word8)  <> toCBOR a
+  toCBOR (AddrEnterprise (ScriptHashObj a))                     =
+    toCBOR (7 :: Word8)  <> toCBOR a
+  toCBOR (AddrBootstrap  a)                                     =
+    toCBOR (8 :: Word8)  <> toCBOR a
+  toCBOR _ = error "wat"
 
-instance ToCBOR Ptr where
-  toCBOR (Ptr sl txIx certIx) =
-    encodeListLen 3
-      <> toCBOR sl
-      <> toCBOR txIx
-      <> toCBOR certIx
+
+instance ToCBORGroup Ptr where
+  toCBORGroup (Ptr sl txIx certIx) =
+         toCBOR sl
+      <> toCBOR (fromInteger (toInteger txIx) :: Word)
+      <> toCBOR (fromInteger (toInteger certIx) :: Word)
+  listLen _ = 3
 
 instance Crypto crypto =>
   ToCBOR (Delegation crypto) where
@@ -437,9 +438,7 @@ instance
 
 instance Crypto crypto
   => ToCBOR (RewardAcnt crypto) where
-  toCBOR rwdAcnt =
-    encodeListLen 1
-      <> toCBOR (getRwdCred rwdAcnt)
+  toCBOR (RewardAcnt ra) = toCBOR ra
 
 instance Relation (StakeCreds crypto) where
   type Domain (StakeCreds crypto) = StakeCredential crypto

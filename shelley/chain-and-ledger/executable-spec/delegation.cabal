@@ -27,6 +27,7 @@ library
                      PParams
                      EpochBoundary
                      LedgerState
+                     Serialization
                      Delegation.PoolParams
                      Delegation.Certificates
                      OCert
@@ -118,6 +119,8 @@ test-suite delegation-test
                          Rules.TestPoolreap
                          Rules.TestUtxo
                          Rules.TestUtxow
+                         Test.Serialization
+                         Test.Utils
     hs-source-dirs:      test
     ghc-options:
       -threaded
@@ -140,6 +143,8 @@ test-suite delegation-test
     build-depends:
       base,
       bytestring,
+      cardano-binary,
+      cborg,
       cryptonite,
       tasty,
       tasty-hunit,

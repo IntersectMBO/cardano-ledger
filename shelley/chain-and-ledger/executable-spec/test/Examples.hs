@@ -51,7 +51,6 @@ module Examples
   , dariaAddr
   , coreNodeSKG -- TODO remove
   -- helpers
-  , mkKeyPair
   , unsafeMkUnitInterval
   )
 where
@@ -59,7 +58,6 @@ where
 import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 
 import           Cardano.Binary (ToCBOR)
-import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
@@ -70,7 +68,7 @@ import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
                      (!?))
-import           Data.Maybe (fromMaybe, isJust, maybe)
+import           Data.Maybe (isJust, maybe)
 import           Data.Ratio ((%))
 import           Data.Sequence (empty, fromList)
 import           Data.Set (Set)
@@ -80,13 +78,12 @@ import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, Certifie
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
                      LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
                      RewardAcnt, SKey, SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF,
-                     hashKeyVRF)
+                     UTxOState, Update, UpdateState, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Address (mkRwdAcnt)
-import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, mkUnitInterval, (⭒))
+import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, (⭒))
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
                      ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, mkSeed,
                      seedEta, seedL, startRewards)
@@ -96,9 +93,8 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
-import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
-                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey, sKey, sign,
-                     signKES, vKey)
+import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKeyES, pattern VKeyES,
+                     hash, hashKey, sKey, sign, signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
@@ -118,10 +114,11 @@ import           STS.Ledger (pattern DelegsFailure, pattern UtxowFailure)
 import           STS.Ledgers (pattern LedgerFailure)
 import           STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
                      pattern MIRInsufficientGenesisSigsUTXOW)
-import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
+import           Test.Utils
+import           TxData (pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                     addStakeCreds, _paymentObj, _poolCost, _poolMargin, _poolOwners, _poolPledge,
+                     addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge,
                      _poolPubKey, _poolRAcnt, _poolVrf)
 import qualified TxData(TxBody(..))
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
@@ -147,17 +144,6 @@ data MIRExample =
   , target     :: Either [[PredicateFailure CHAIN]] ChainState
   } deriving (Show, Eq)
 
--- | Set up keys for all the actors in the examples.
-mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKey)
-mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyDSIGN
-  return (SKey sk, VKey $ deriveVerKeyDSIGN sk)
-
-mkGenKeys :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKeyGenesis)
-mkGenKeys seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyDSIGN
-  return (SKey sk, VKeyGenesis $ deriveVerKeyDSIGN sk)
-
 mkCertifiedVRF
   :: ToCBOR a
   => WithResult a
@@ -178,11 +164,6 @@ mkVRFKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF, VerKeyV
 mkVRFKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyVRF
   return (sk, deriveVerKeyVRF sk)
-
-mkAddr :: (KeyPair, KeyPair) -> Addr
-mkAddr (payKey, stakeKey) =
-  AddrBase (KeyHashObj . hashKey $ vKey payKey)
-           (KeyHashObj . hashKey $ vKey stakeKey)
 
 data AllPoolKeys = AllPoolKeys
   { cold :: KeyPair
@@ -329,11 +310,6 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
     bh = BHeader bhb (Keys.signKES shot bhb kesPeriod)
   in
     Block bh (TxSeq $ fromList txns)
-
--- | You vouch that argument is in [0; 1].
-unsafeMkUnitInterval :: Rational -> UnitInterval
-unsafeMkUnitInterval r =
-  fromMaybe (error "could not construct unit interval") $ mkUnitInterval r
 
 carlPay :: KeyPair
 carlPay = KeyPair vk sk
@@ -552,7 +528,7 @@ txEx2A = Tx
 
 -- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
-alicePtrAddr = AddrPtr (_paymentObj aliceAddr) (Ptr (Slot 10) 0 0)
+alicePtrAddr = AddrPtr (KeyHashObj . hashKey $ vKey alicePay) (Ptr (Slot 10) 0 0)
 
 usEx2A :: UpdateState
 usEx2A = UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps

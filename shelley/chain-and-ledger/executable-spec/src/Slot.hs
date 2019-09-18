@@ -26,7 +26,7 @@ where
 import           Data.Word                      ( Word64 )
 import           Numeric.Natural                ( Natural )
 import           GHC.Generics                   ( Generic )
-import           Cardano.Binary                 ( ToCBOR )
+import           Cardano.Binary                 (ToCBOR(..))
 import           Cardano.Prelude                ( NoUnexpectedThunks(..) )
 
 import qualified Ledger.Core                   as Byron
@@ -34,7 +34,10 @@ import qualified Ledger.Core                   as Byron
 
 -- |A Slot
 newtype Slot = Slot Natural
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num)
+
+instance ToCBOR Slot where
+  toCBOR (Slot s) = toCBOR (fromInteger (toInteger s) :: Word64)
 
 instance Semigroup Slot where
   (Slot x) <> (Slot y) = Slot $ x + y

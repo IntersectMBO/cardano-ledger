@@ -1,0 +1,136 @@
+; Shelley Types
+
+; When you have something that is always length 2, why do you need the header?
+; Would using a map here make it cheaper?
+block =
+  [ header                     : header
+  , transaction_bodies         : [* transaction_body]
+  , transaction_witness_sets   : [* transaction_witness_set]
+  ]
+
+; TODO: Replace direct inlining with unwrap operator (~) for closer correspondence to Haskell types
+; Inlining the header body here to save word, but this would mean no valid CBOR instance for header body...
+header =
+  [ prev_hash        : $hash
+  , issuer_vkey      : $vkey
+  , vrf_vkey         : $vrf_vkey
+  , slot             : uint
+  , nonce            : uint
+  , nonce_proof      : $vrf_proof
+  , leader_value     : ~rational
+  , leader_proof     : $vrf_proof
+  , size             : uint
+  , block_body_hash  : $hash            ; merkle pair root
+  , operational_cert : operational_cert
+  , protocol_version : protocol_version
+  , body_signature   : $kes_signature
+  ]
+
+operational_cert =
+  [ hot_vkey        : $kes_vkey
+  , cold_vkey       : $vkey
+  , sequence_number : uint
+  , kes_period      : uint
+  , sigma           : $signature
+  ]
+
+protocol_version = [uint, uint, uint]
+
+; Do we want to use a Map here? Is it actually cheaper?
+; Do we want to add extension points here?
+transaction_body =
+  { 0 : #6.258([* transaction_input]) ; x
+  , 1 : [* transaction_output]        ; x
+  , 2 : [* delegation_certificate]
+  , 3 : [* withdrawal]
+  , 4 : coin ; fee                    ; x
+  , 5 : uint ; ttl                    ; x
+  , 6 : update
+  }
+
+; Is it okay to have this as a group? Is it valid CBOR?! Does it need to be?
+transaction_input = (transaction_id : $hash, index : uint)
+
+transaction_output = (address : address, amount : uint)
+
+address =
+ (  0, keyhash, keyhash       ; base address
+ // 1, keyhash, scripthash    ; base address
+ // 2, scripthash, keyhash    ; base address
+ // 3, scripthash, scripthash ; base address
+ // 4, keyhash, pointer       ; pointer address
+ // 5, scripthash, pointer    ; pointer address
+ // 6, keyhash                ; enterprise address (null staking reference)
+ // 7, scripthash             ; enterprise address (null staking reference)
+ // 8, keyhash                ; bootstrap address
+ )
+
+delegation_certificate =
+  (  0, keyhash         ; stake key registration
+  // 1, keyhash         ; stake key de-registration
+  // 2                  ; stake key delegation
+      , keyhash         ; delegating key
+      , keyhash         ; key delegated to
+  // 3, keyhash, pool_params  ; stake pool registration
+  // 4, keyhash, epoch  ; stake pool retirement
+  // 5 ; genesis key delegation
+      , keyhash ; delegating key
+      , key     ; key delegated to
+  // 6, [* move_instantaneous_reward] ; move instantaneous rewards
+  )
+
+move_instantaneous_reward = ( keyhash, coin )
+pointer = (uint, uint, uint)
+
+credential =
+  (  0, keyhash
+  // 1, scripthash
+  // 2, genesishash
+  )
+
+coin = uint
+
+epoch = uint
+
+keyhash = $hash
+scripthash = $hash
+
+pool_params = [[* keyhash], coin, rational, coin, credential, $vrf_keyhash]
+
+withdrawal = (reward_acct : credential, amount : uint)
+
+update = [* update_part]
+
+transaction_witness_set =
+  (  0, vkeywitness
+  // 1, scriptwitness
+  // 2, [* vkeywitness]
+  // 3, [* scriptwitness]
+  // 4, [* vkeywitness],[* scriptwitness]
+  )
+
+vkeywitness = [vkey, signature]
+scriptwitness = script
+
+; Crypto Types will be defined for mock and real crypto in separate files using this syntax
+
+$hash /= bytes
+
+$vkey /= bytes
+
+$signature /= bytes
+
+$vrf_keyhash /= bytes
+
+$vrf_proof /= bytes
+
+$kes_vkey /= bytes
+
+$kes_signature /= bytes
+
+; Numeric Types
+
+rational =
+  [ numerator   : uint
+  , denominator : uint
+  ]

@@ -169,6 +169,8 @@ type Mdt = Updates.Mdt MockCrypto
 
 type Applications = Updates.Applications MockCrypto
 
+type InstallerHash = Updates.InstallerHash MockCrypto
+
 type Update = Updates.Update MockCrypto
 
 type UpdateState = Updates.UpdateState MockCrypto
