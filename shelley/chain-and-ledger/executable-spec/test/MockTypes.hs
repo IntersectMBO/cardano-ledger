@@ -14,6 +14,8 @@ import qualified LedgerState
 import qualified OCert
 import qualified STS.Chain
 import qualified STS.Deleg
+import qualified STS.Pool
+import qualified STS.PoolReap
 import qualified STS.Utxow
 import qualified Tx
 import qualified TxData
@@ -98,11 +100,17 @@ type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN
 
 type RewardUpdate = LedgerState.RewardUpdate ShortHash MockDSIGN
 
+type ChainState = STS.Chain.ChainState ShortHash MockDSIGN MockKES
+
 type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
 
 type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
+
+type POOL = STS.Pool.POOL ShortHash MockDSIGN
+
+type POOLREAP = STS.PoolReap.POOLREAP ShortHash MockDSIGN
 
 type Credential = TxData.Credential ShortHash MockDSIGN
 
@@ -126,6 +134,8 @@ type Mdt = Updates.Mdt ShortHash
 type Applications = Updates.Applications ShortHash
 
 type Update = Updates.Update ShortHash MockDSIGN
+
+type UpdateState = Updates.UpdateState ShortHash MockDSIGN
 
 type PPUpdate = Updates.PPUpdate ShortHash MockDSIGN
 

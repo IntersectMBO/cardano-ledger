@@ -1611,7 +1611,7 @@ which takes the Byron ledger state and creates the Shelley ledger state.
                             \emptyset \\
                             \emptyset \\
                             \emptyset \\
-                            \emptyset \\
+                            \var{cs} \\
                           \end{array}
                         \right) \\
                         \end{array}
@@ -1632,7 +1632,8 @@ which takes the Byron ledger state and creates the Shelley ledger state.
           \var{h} \\
           \var{s_{last}} \\
         \end{array}
-      \right)
+      \right) \\
+      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{(\fun{dms}~\var{ds})}\} \\
   \end{align*}
 
   \caption{Byron to Shelley State Transtition}

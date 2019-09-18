@@ -3,6 +3,7 @@ digraph STS {
         CHAIN -> PRTCL
         CHAIN -> BHEAD
         BBODY -> PRTCL [style=dotted]
+        BBODY -> BHEAD [style=dotted]
         PRTCL -> BHEAD [style=dotted]
 
         UTXOW -> UTXO
@@ -36,6 +37,7 @@ digraph STS {
 
         BHEAD -> RUPD
         BHEAD -> NEWEPOCH
+        RUPD -> NEWEPOCH [style=dotted]
 
         OVERLAY -> OCERT
 

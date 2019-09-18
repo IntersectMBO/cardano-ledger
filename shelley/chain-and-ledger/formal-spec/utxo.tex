@@ -99,14 +99,14 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
     \nextdef
     & \fun{wbalance} \in \Wdrl \to \Coin
     & \text{withdrawal balance} \\
-    & \fun{wbalance} ~ ws = \sum_{\wcard\mapsto c\in\var{ws}} c
+    & \fun{wbalance} ~ ws = \sum_{(\wcard\mapsto c)\in\var{ws}} c
     \nextdef
     & \fun{consumed} \in \PParams \to \UTxO \to \StakeDelegs \to \Wdrl \to \Tx \to \Coin
     & \text{value consumed} \\
     & \consumed{pp}{utxo}{stdelegs}{rewards}~{tx} = \\
     & ~~\ubalance{(\txins{tx} \restrictdom \var{utxo})} +
         \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
-    & ~~~~ + \keyRefunds{pp}{stdelegs}{tx} \\
+    & ~~ + \keyRefunds{pp}{stdelegs}{tx} \\
     \nextdef
     & \fun{produced} \in \PParams \to \StakePools \to \Tx \to \Coin
     & \text{value produced} \\

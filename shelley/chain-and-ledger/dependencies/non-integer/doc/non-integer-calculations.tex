@@ -3,14 +3,14 @@
 \usepackage[deliverable]{IOHKCoverPage}
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
-\DeliverableNumber{DX}
+\DeliverableNumber{SL-D1}
 \DeliverableTitle{A Specification of the Non-Integral Calculations \\ in the Shelley Ledger}{Non-Integral Cals.}
 \DeliverableResponsible{Formal Methods Team}
 \EditorName{Matthias G\"udemann, \IOHK}
 \Authors{Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
 }
-\DueDate{XX$^{\textrm{th}}$ XX 2019}
-\SubmissionDate{12$^{\textrm{th}}$ September 2019}{2019/09/12}
+\DueDate{20$^{\textrm{th}}$ September 2019}
+\SubmissionDate{18$^{\textrm{th}}$ September 2019}{2019/09/18}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
 \Version{0.2}
@@ -40,7 +40,7 @@
 \usepackage{tikz}
 
 %% Commenting -- KH
-\usepackage[obeyFinal]{todonotes}
+\usepackage[final,obeyFinal]{todonotes}
 \newcommand{\khcomment}[1]{\todo[color=blue!20]{KH: #1}}
 
 %% In-para enumeration -- KH
@@ -88,6 +88,8 @@
         \change{05/09/19}{Kevin Hammond}{FM (IOHK)}{Reviewed and applied comments.}
         \change{12/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page for consistency.}
         \change{12/09/19}{Kevin Hammond}{FM (IOHK)}{Included review comments from MG.}
+        \change{17/09/19}{Matthias G\"udemann}{FM (IOHK)}{Reviewed and commented.}
+        \change{18/09/19}{Kevin Hammond}{FM (IOHK)}{MG comments incorporated, added deliverable number, frozen to V0.2}
 \end{changelog}
 
 \cleardoublepage
@@ -115,8 +117,8 @@
   specification or Ouroboros protocol, for example.
 \end{abstract}
 
-\tableofcontents
-\listoffigures
+% \tableofcontents
+% \listoffigures
 
 \section{Introduction}
 \label{sec:introduction}
@@ -133,7 +135,7 @@ cannot be precisely represented as rational numbers, and therefore require a
 representation that covers a wider range of \emph{real numbers}.  These include
 the exponential function $e^{x}, x \in \mathbb{R}$, which is used to calculate
 how refunds decay over time, and general non-integral exponentiation
-$x^{y}, x, y \in \mathbb{R}$, which is used to \khcomment{MG, please fix!}.
+$x^{y}, x, y \in \mathbb{R}$. %, which is used to \khcomment{MG, please fix!}.
 
 \section{Problem Description}
 \label{sec:problem-description}
