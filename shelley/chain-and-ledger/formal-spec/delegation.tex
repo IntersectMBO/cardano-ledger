@@ -531,7 +531,8 @@ concerns are independent of the ledger rules.
     {
       \var{c}\in \DCertMir &
       i'_{rew}\leteq\var{\{\fun{addr_{rwd}}~{hk}\mapsto\var{val_{rwd}}\vert
-        \var{hk}\mapsto\var{val_{rwd}}\in\fun{moveRewards}~c\}}
+        \var{hk}\mapsto\var{val_{rwd}}\in\fun{moveRewards}~c\}}\\
+      slot + 2\cdot\SlotsStabilityParam < \fun{firstSlot}(1 + \fun{epoch}~{slot})
     }
     {
       \begin{array}{r}

@@ -16,7 +16,7 @@ Two global constants are defined, $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$,
 representing the number of slots in an epoch/KES period (for a brief explanation
 of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
 As global constants, these values can only be
-changed by updating the software. 
+changed by updating the software.
 
 Some helper functions are defined in Figure~\ref{fig:defs:protocol-parameters-helpers}.
 The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
@@ -127,6 +127,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \begin{array}{r@{~\in~}lr}
       \SlotsPerEpoch & \N & \text{slots per epoch} \\
       \SlotsPerKESPeriod & \N & \text{slots per KES period} \\
+      \SlotsStabilityParam & \N & \text{stability parameter}
     \end{array}
   \end{equation*}
   %
