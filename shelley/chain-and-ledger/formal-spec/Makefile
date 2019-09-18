@@ -6,7 +6,7 @@
 
 # Document name
 ifndef DOCNAME
-	DOCNAME = ledger-spec multi-sig
+	DOCNAME = ledger-spec
 endif
 
 # You want latexmk to *always* run, because make does not have all the info.

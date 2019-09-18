@@ -5,6 +5,7 @@
 module PropertyTests (propertyTests) where
 
 import           Data.Foldable (toList)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.MultiSet (filter, fromSet, occur, size, unions)
 import qualified Data.Set as Set
@@ -33,7 +34,7 @@ import           MockTypes
 
 -- | Take 'addr |-> c' pair from 'TxOut' and insert into map or add 'c' to value
 -- already present. Used to fold over 'UTxO' to accumulate funds per address.
-insertOrUpdate :: TxOut -> Map.Map Addr Coin -> Map.Map Addr Coin
+insertOrUpdate :: TxOut -> Map Addr Coin -> Map Addr Coin
 insertOrUpdate (TxOut a c) m =
     Map.insert a (if Map.member a m
                   then c + (m Map.! a)

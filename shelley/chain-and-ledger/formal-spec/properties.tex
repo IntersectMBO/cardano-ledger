@@ -288,11 +288,11 @@ delegation certificate in $l'$.
 \begin{property}[\textbf{Registered Staking Pool}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState: \applyFun{validLedgerstate}{l},
-    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
-    \implies \forall \var{c} \in \DCertRegPool, \var{l} \trans{pool}{c} \var{l'}
-    \implies \applyFun{author}{c} = \var{hk}\\ \implies
-    (\applyFun{getStPools}{l'})[\var{hk}] = c \wedge \var{hk} \not\in
-    \applyFun{getRetiring}{l'}
+    l = (\wcard, (\wcard, p)), l' = (\wcard, (\wcard, p')), pEnv\in\PEnv \\
+    \implies \forall \var{c} \in \DCertRegPool, \var{p} \trans{pool}{c} \var{p'}
+    \implies \applyFun{cwitness}{c} = \var{hk}\\ \implies
+    \var{hk}\in\applyFun{getStPools}{p'} \wedge \var{hk} \not\in
+    \applyFun{getRetiring}{p'}
   \end{multline*}
   \label{prop:ledger-properties-9}
 \end{property}
@@ -306,12 +306,14 @@ and that $hk$ is not in the set of retiring stake pools in $l'$.
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState, \var{cepoch} \in \Epoch:
     \applyFun{validLedgerstate}{l},
-    l = (\wcard, dp), l' = (\wcard, dp'), dpsEnv\in\DPSEnv \\
-    \implies \forall \var{c} \in \DCertRetirePool, dpsEnv\vdash\var{dp}
-    \trans{DELEGS}{c} \var{dp'} \\ \implies e = \applyFun{retire}{c} \wedge
+    l = (\wcard, (\wcard,p)), l' = (\wcard, (\wcard,p')), pEnv\in\PEnv \\
+    \implies \forall \var{c} \in \DCertRetirePool, pEnv\vdash\var{p}
+    \trans{POOL}{c} \var{p'} \\ \implies e = \applyFun{retire}{c} \wedge
     \var{cepoch} < e < \var{cepoch} + \emax \wedge \applyFun{cwitness}{c} =
-    \var{hk}\\ \implies (\applyFun{getRetiring}{l'})[\var{hk}] = e \wedge
-    \var{hk} \in \fun{dom}(\applyFun{getStPools}{l})
+    \var{hk}\\ \implies (\applyFun{getRetiring}{p'})[\var{hk}] = e \wedge
+    \var{hk} \in
+    \fun{dom}(\applyFun{getStPools}{p})\wedge\fun{dom}(\applyFun{getStPools}{p'}
+    )
   \end{multline*}
   \label{prop:ledger-properties-10}
 \end{property}
@@ -321,25 +323,25 @@ with a delegation transition of type $\DCertRetirePool$, the key $hk$ is
 associated with the author of the pool registration certificate in
 $\var{stpools}$ of $l'$ and that $hk$ is in the map of retiring staking pools of
 $l'$ with retirement epoch $e$, as well as that $hk$ is in the map of stake
-pools in $l$.
+pools in $l$ and $l'$.
 
 \begin{property}[\textbf{Stake Pool Reaping}]
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \ledgerState, \var{e} \in \Epoch:
     \applyFun{validLedgerstate}{l},\\
-    l = (\wcard, dp), l' = (\wcard, dp'), pp\in\PParams, acnt, acnt'\in\Acnt \\
-    \implies pp\vdash\var{(acnt, dp)} \trans{poolreap}{e} \var{(acnt, l')}
-    \implies \forall \var{retire}\in{(\fun{getRetiring}~l)}^{-1}[e], retire \neq
+    l = (\wcard, (d, p)), l' = (\wcard, (d', p')), pp\in\PParams, acnt, acnt'\in\Acnt \\
+    \implies pp\vdash\var{(acnt, d, p} \trans{poolreap}{e} \var{(acnt, d', p')}
+    \implies \forall \var{retire}\in{(\fun{getRetiring}~p)}^{-1}[e], retire \neq
     \emptyset \\ \wedge \var{retire} \subseteq
-    \fun{dom}(\applyFun{getStPool}{l}) \wedge
-    \var{retire} \cap\fun{dom}(\applyFun{getStPool}{l'})=\emptyset \\
-    \wedge\var{retire} \cap \fun{dom}(\applyFun{getRetiring}{l'}) = \emptyset
+    \fun{dom}(\applyFun{getStPool}{p}) \wedge
+    \var{retire} \cap\fun{dom}(\applyFun{getStPool}{p'})=\emptyset \\
+    \wedge\var{retire} \cap \fun{dom}(\applyFun{getRetiring}{p'}) = \emptyset
   \end{multline*}
   \label{prop:ledger-properties-11}
 \end{property}
 
 Property~\ref{prop:ledger-properties-11} states that for $l, l'$ as above but
-with a delegation transition of type $POOLREAP$, there exist registered stake
+with a delegation transition of type POOLREAP, there exist registered stake
 pools in $l$ which are associated to stake pool registration certificates and
 which are to be retired at the current epoch $\var{e}$. In $l'$ all those stake
 pools are removed from the maps $stpools$ and $retiring$.

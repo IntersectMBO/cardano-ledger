@@ -50,7 +50,7 @@
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/goblins";
-      rev = "6ea969b31c2bbaa7ba78b8e83b53a36bedfae10e";
-      sha256 = "1v9zr777j4piz202c2sy3c4clcdmarqyxc3xngwb6c5yydk6qs6d";
+      rev = "2d922d01289f926295f3b2d515138510b87768dc";
+      sha256 = "14iac7x5d1akd96j2w0m8jg24qhgshyc8m9ljqs8bw73kaiqszzx";
       });
     }

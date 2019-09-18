@@ -16,9 +16,16 @@ There are four types of UTxO addresses:
   payment credential.
 \end{itemize}
 
-Where a credential is either key or a multi-signature script. Together, these
+\noindent Where a credential is either key or a multi-signature script. Together, these
 three address types make up the $\Addr$ type, which will be used in transaction
 outputs in Section~\ref{sec:utxo}.
+
+For an explanation of why enterprise addresses do not have staking rights,
+and how they can delegate to a stake pool, see \ref{sec:delegation-shelley}.
+The boostrap addresses are needed for the Byron-Shelley transition in order to
+accommodate having UTxO entries from the Byron era during the Shelley era.
+Together, these address types make up the $\Addr$ type, which will be used
+in transaction outputs in Section~\ref{sec:utxo}.
 
 Note that for security, privacy and usability reasons, the staking (delegating)
 credential associated with an address should be different from its payment
