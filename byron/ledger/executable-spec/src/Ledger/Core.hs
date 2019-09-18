@@ -466,13 +466,23 @@ toSet = Set.fromList . toList
 deriveGoblin ''Addr
 deriveGoblin ''BlockCount
 deriveGoblin ''Epoch
-deriveGoblin ''Hash
 deriveGoblin ''Owner
 deriveGoblin ''Sig
 deriveGoblin ''Slot
 deriveGoblin ''SlotCount
 deriveGoblin ''VKey
 deriveGoblin ''VKeyGenesis
+
+instance GeneOps g => Goblin g Hash where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((\x -> Hash (modulate x))
+           <$$> tinker ((\(Hash x) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (Hash . modulate <$>
+    conjure)
+
+modulate :: Integral a => a -> a
+modulate x = x `mod` 30
 
 instance GeneOps g => Goblin g Lovelace where
   tinker gen

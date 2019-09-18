@@ -166,12 +166,18 @@ coverUtxoFailure coverPercentage someData = do
 
   coverFailures
     coverPercentage
-    [ EmptyTxInputs
-    , EmptyTxOutputs
-    , FeeTooLow
-    , IncreasedTotalBalance
+    [ FeeTooLow
     , InputsNotInUTxO
-    , NonPositiveOutputs
     ]
     someData
 
+    -- We do not check coverage of `EmptyTxInputs` & `EmptyTxOutputs`, because
+    -- they such transactions are not constructible in `cardano-ledger`'s types,
+    -- due to usage of `NonEmpty` for the lists of `TxIn` and `TxOut`.
+    --
+    -- We do not check coverage of `NonPositiveOutputs` because it is not
+    -- possible to represent a non-positive Lovelace value in a `TxOut` since
+    -- there is bounds-checking on all constructions of `Lovelace` values.
+    --
+    -- We do not check coverage of `IncreasedTotalBalance` because it is not
+    -- throwable.

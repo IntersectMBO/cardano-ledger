@@ -158,7 +158,6 @@ makeTxWits (UTxO utxo) tx = TxWits
 -- Goblins instances
 --------------------------------------------------------------------------------
 
-deriveGoblin ''TxId
 deriveGoblin ''TxIn
 deriveGoblin ''TxOut
 deriveGoblin ''TxWits
@@ -194,6 +193,14 @@ instance GeneOps g => Goblin g Tx where
     inputs <- replicateM listLenI conjure
     outputs <- replicateM listLenO conjure
     pure (Tx inputs outputs)
+
+instance GeneOps g => Goblin g TxId where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((\x -> TxId (Hash (modulate x)))
+           <$$> tinker ((\(TxId (Hash x)) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (TxId . Hash . modulate <$>
+    conjure)
 
 
 --------------------------------------------------------------------------------
