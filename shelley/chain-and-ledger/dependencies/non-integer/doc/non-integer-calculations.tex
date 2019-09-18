@@ -104,13 +104,15 @@
 
 \begin{abstract}
   This document defines a consistent way to perform non-integral calculations in
-  the Shelley ledger for Cardano.  % \khcomment{I think you said that the calculations have an error margin, so are not exact?}
-  These calculations are defined in terms of \emph{elementary} mathematical functions, and are used in a few,
-  but important, places in the ledger calculation.  The main
-  objective of this work is to provide a clear and unambiguous specification that will give the same results for each
-  calculation, regardless of the computer architecture or programming language implementation that is chosen.
-  The goal is to prevent blockchain forks because of slight differences in the calculated values
-  that might otherwise come from different implementations of the Shelley ledger specification or Ouroboros protocol, for example.
+  the Shelley ledger for Cardano. These calculations are defined in terms of
+  \emph{elementary} mathematical functions, and are used in a few, but
+  important, places in the ledger calculation.  The main objective of this work
+  is to provide a clear and unambiguous specification that will give the same
+  results for each calculation, regardless of the computer architecture or
+  programming language implementation that is chosen.  The goal is to prevent
+  blockchain forks because of slight differences in the calculated values that
+  might otherwise come from different implementations of the Shelley ledger
+  specification or Ouroboros protocol, for example.
 \end{abstract}
 
 \tableofcontents
@@ -119,22 +121,18 @@
 \section{Introduction}
 \label{sec:introduction}
 
-%% Actioned this. KH
-%\khcomment{Once this is distributed to a broader group, there should be some versioning and changelog mechanism (the PDF creation
-%  date isn't enough, since it doesn't have the source version).  This will help ensure that we're referring to the correct document :)
-%  I have some macros that could be adapted.}
-
-The Shelley ledger specification~\cite{shelley_spec}\khcomment{I'd prefer a reference format that was shorter e.g. [G\"ud19], and made it clearer what were internal, public, published etc. documents - I've applied a possible format here.  We should also ideally use a single references.bib...} and the Ouroboros
-protocol~\cite{ouroboros} use non-integral calculations in a few places. Most of these can be
-implemented in an exact way using rational numbers and arbitrary precision integers, which are
-available either directly as programming language constructs (e.g. in Haskell) or via external libraries.~ \footnote{The
-  most widely used library is the GNU multi-precision library (GMP)}
+The Shelley ledger specification~\cite{shelley_spec} and the Ouroboros
+protocol~\cite{ouroboros} use non-integral calculations in a few places. Most of
+these can be implemented in an exact way using rational numbers and arbitrary
+precision integers, which are available either directly as programming language
+constructs (e.g. in Haskell) or via external libraries.~ \footnote{The most
+  widely used library is the GNU multi-precision library (GMP)}
 %
-In addition, there are some instances where the results of elementary functions cannot be
-precisely represented as rational numbers, and therefore require a representation that covers a wider
-range of \emph{real numbers}.
-These include the exponential function
-$e^{x}, x \in \mathbb{R}$, which is used to calculate how refunds decay over time, and general non-integral exponentiation
+In addition, there are some instances where the results of elementary functions
+cannot be precisely represented as rational numbers, and therefore require a
+representation that covers a wider range of \emph{real numbers}.  These include
+the exponential function $e^{x}, x \in \mathbb{R}$, which is used to calculate
+how refunds decay over time, and general non-integral exponentiation
 $x^{y}, x, y \in \mathbb{R}$, which is used to \khcomment{MG, please fix!}.
 
 \section{Problem Description}
@@ -150,17 +148,14 @@ and
 \end{inparaenum}
 %
 In all these cases, it is important that all distributed nodes calculate the
-same values, since otherwise there might be a disagreement about what should be included in the blockchain
-and forks might then result.
-%\khcomment{The following statement is not true, just less likely...  Optimisation can mess things up, for instance.  In the case of a single implementation, this will not be
-% a problem, as only one result is possible, but in the case of multiple
-%implementations, this can become an issue.}
-This is a particular problem where there could be multiple independent implementations that could
-deliver inconsistent results.
-Since Cardano aims to be a
-cryptocurrency that is fully defined by a precise specification, we need an exact specification of
-non-integer calculations, allowing different implementations to have the same, correct and verifiable,
-behavior. % \khcomment{US English is standard for company documents, I assume?}
+same values, since otherwise there might be a disagreement about what should be
+included in the blockchain and forks might then result. This is a particular
+problem where there could be multiple independent implementations that could
+deliver inconsistent results.  Since Cardano aims to be a cryptocurrency that is
+fully defined by a precise specification, we need an exact specification of
+non-integer calculations, allowing different implementations to have the same,
+correct and verifiable,
+behavior.
 
 \section{Implementation Possibilities for Non-Integer Arithmetic}
 \label{sec:impl-poss}
@@ -222,37 +217,34 @@ representing currency in Cardano (it might, however, be suitable for e.g. leader
 \subsection{Fixed Precision Arithmetic}
 \label{sec:fixed-point-arithm}
 
-An alternative approach is to use fixed precision %\khcomment{Changed Fixed Point to Fixed Precision}
-arithmetic based on exact integers
-where a proportion of the integer is used as fractional part.
-The number of fractional digits is fixed to a constant.
-This is more efficient
-than using the rational number approach described above, since it is not necessary to normalise
-values after calculations, arbitrary precision results are not supported, and only a single
-arbitrarily sized integer needs to be stored.
-Since it is implemented purely in software on top of exact integer arithmetic, this approach
-will be less efficient than IEEE~754 floating point.
-However, it can be made to behave equivalently in different implementations, including
-ensuring consistent (bounded) timings for each architecture, by providing golden tests to validate consistent
-esults for different architectures etc.
-% .\khcomment{This is not clear: performance, accuracy, ...}
-%
+An alternative approach is to use fixed precision arithmetic based on exact
+integers where a proportion of the integer is used as fractional part.  The
+number of fractional digits is fixed to a constant.  This is more efficient than
+using the rational number approach described above, since it is not necessary to
+normalise values after calculations, arbitrary precision results are not
+supported, and only a single arbitrarily sized integer needs to be stored.
+Since it is implemented purely in software on top of exact integer arithmetic,
+this approach will be less efficient than IEEE~754 floating point.  However, it
+can be made to behave equivalently in different implementations, including
+ensuring consistent (bounded) timings for each architecture, by providing golden
+tests to validate consistent esults for different architectures etc.
+
 The basic idea is the following: for $n$ decimal digits of precision, multiply
 each integral value by $10^{n}$ and take this into account in the basic
-operations. For Cardano, this would mean using $n=17$ to
-support the required 17 digits of precision that would track each possible stake
-fraction.  Haskell provides library support for fixed precision numbers and arithmetic.
+operations. For Cardano, this would mean using $n=17$ to support the required 17
+digits of precision that would track each possible stake fraction.  Haskell
+provides library support for fixed precision numbers and arithmetic.
 
 \subsection{Exact Real Numbers}
 
 Finally, there has been some research work on exact representations of real
 numbers using e.g. \emph{continued fractions}, exploiting lazy evaluation to
-produce the required number of digits of precision (e.g. \cite{DBLP:journals/tcs/Escardo96}).
-All real numbers can be represented, whether rational or irrational.
-These approaches have not yet been widely used, however,
-except for research purposes.  Implementations are often complicated and
-expensive, and some algorithms may need to be changed (for example, exact equality may
-be impossible to determine in a finite time).
+produce the required number of digits of precision
+(e.g. \cite{DBLP:journals/tcs/Escardo96}).  All real numbers can be represented,
+whether rational or irrational.  These approaches have not yet been widely used,
+however, except for research purposes.  Implementations are often complicated
+and expensive, and some algorithms may need to be changed (for example, exact
+equality may be impossible to determine in a finite time).
 
 \subsection{Conclusion}
 \label{sec:summary}
@@ -269,12 +261,13 @@ of two orders of magnitude are possible.
 \section{Approximation Algorithms}
 \label{sec:algorithms}
 
-Other than basic arithmetic (addition, multiplication, subtraction, and division\khcomment{check for uses of division in the algorithms -- I spotted some
-  uses, but it might be possible to remove them using e.g. rotation/scaling.}),
-the only elementary functions that are required by the ledger specification are the exponential function, $e^{x}$, and
-its generalisation to the exponentiation function,  $x^{y}$. Exponentiation of arbitrary real numbers is
-calculated using the identity: $x^{y}= \exp({\ln(x^{y})}) = \exp(y\cdot
-\ln(x))$. This means that we need suitable approximation schemes for $\exp(x)$ and $\ln(x)$.
+Other than basic arithmetic (addition, multiplication, subtraction, and
+division), the only elementary functions that are required by the ledger
+specification are the exponential function, $e^{x}$, and its generalisation to
+the exponentiation function, $x^{y}$. Exponentiation of arbitrary real numbers
+is calculated using the identity:
+$x^{y}= \exp({\ln(x^{y})}) = \exp(y\cdot \ln(x))$. This means that we need
+suitable approximation schemes for $\exp(x)$ and $\ln(x)$.
 %
 There are two main approaches that are used for approximation: Taylor / MacLaurin series and
 continued fractions. Both require only basic arithmetic operations and allow for
@@ -331,8 +324,7 @@ this:
   b_{0} + \cfrac{a_{1}}{b_{1} + \cfrac{a_{2}}{b_{2}  + \cfrac{a_{3}}{\ddots}}}
 \end{equation*}
 
-The convergents%\khcomment{was covergents -- check!}
-$x_{i} = \frac{A_{i}}{B_{i}}$ are computed via the following
+The convergents $x_{i} = \frac{A_{i}}{B_{i}}$ are computed via the following
 recursion:
 
 \begin{align*}
@@ -546,13 +538,12 @@ term) $R_{k}(x)$ can be estimated as follows:
   R_{k}(x) \leq \vert M \cdot \frac{x^{k+1}}{(k+1)!}\vert
 \end{equation*}
 
-For the leader election use-case, a good integral bound for the error
-estimation is the maximal value of $\vert\ln(1 - f)\vert\leq M$ for
-$f \in [0, 0.95]$, that is $M = 3$\footnote{Since $f$ is the active slot coefficient, we will very likely stay at lower values,
-  and $M=12$ would then be enough for $[0, 0.99].$}
-%\khcomment{check!}.
-For larger values of $f$, a different value of $M$
-would need to be chosen. The current value for $f$ in the Shelley ledger is $0.1$.
+For the leader election use-case, a good integral bound for the error estimation
+is the maximal value of $\vert\ln(1 - f)\vert\leq M$ for $f \in [0, 0.95]$, that
+is $M = 3$\footnote{Since $f$ is the active slot coefficient, we will very
+  likely stay at lower values, and $M=12$ would then be enough for $[0, 0.99].$}
+For larger values of $f$, a different value of $M$ would need to be chosen. The
+current value for $f$ in the Shelley ledger is $0.1$.
 
 In general, $M$ can easily be estimated as the smallest
 integer that is larger than the exponential function that is evaluated at
