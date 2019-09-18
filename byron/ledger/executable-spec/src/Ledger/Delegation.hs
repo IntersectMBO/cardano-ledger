@@ -120,7 +120,8 @@ import           Control.State.Transition.Generator (HasTrace, SignalGenerator, 
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
-                     addSlot, hash, mkVkGenesisSet, owner, range, unBlockCount, (∈), (∉), (⨃))
+                     addSlot, hash, mkVkGenesisSet, owner, range, unBlockCount, unVKeyGenesis,
+                     verify, (∈), (∉), (⨃))
 import           Ledger.Core.Generators (epochGen, slotGen)
 import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.Core.Omniscient (signWithGenesisKey)
@@ -169,6 +170,10 @@ mkDCert vkg s vkd e
 -- | Who is delegating to whom.
 dwho :: DCert -> (VKeyGenesis, VKey)
 dwho = delegator &&& delegate
+
+-- | Part of the delegation certificate that is signed by the delegator.
+dbody :: DCert -> (VKey, Epoch)
+dbody = delegate &&& depoch
 
 --------------------------------------------------------------------------------
 -- Derived types
@@ -285,7 +290,10 @@ instance STS SDELEG where
   transitionRules =
     [ do
         TRC (env, st, cert) <- judgmentContext
-        verify cert ?! DoesNotVerify
+        verify
+          (unVKeyGenesis $ delegator cert)
+          (dbody cert)
+          (signature cert) ?! DoesNotVerify
         notAlreadyDelegated st cert ?! HasAlreadyDelegated
         let d = liveAfter (env ^. k)
         notAlreadyScheduled d env st cert ?! IsAlreadyScheduled
@@ -307,9 +315,6 @@ instance STS SDELEG where
           & keyEpochDelegations %~ Set.insert (epochDelegator cert)
     ]
     where
-      verify :: DCert -> Bool
-      verify = const True
-
       -- Check that this delegator hasn't already delegated this epoch
       notAlreadyDelegated :: DSState -> DCert -> Bool
       notAlreadyDelegated st cert =
