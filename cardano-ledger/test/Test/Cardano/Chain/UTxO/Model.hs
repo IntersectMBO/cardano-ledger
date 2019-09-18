@@ -17,6 +17,7 @@ import Cardano.Prelude hiding (trace)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
+import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 
 import Hedgehog (MonadTest, evalEither, forAll, property)
@@ -27,7 +28,7 @@ import Cardano.Chain.UTxO
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import Cardano.Chain.ValidationMode (ValidationMode (..))
-import Cardano.Crypto (hashDecoded)
+import Cardano.Crypto (hash, hashDecoded)
 
 import qualified Cardano.Ledger.Spec.STS.UTXO as Abstract
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
@@ -131,12 +132,7 @@ elaborateTxWitsBSWithMap
 elaborateTxWitsBSWithMap txIdMap abstractTxWits = (concreteTxWitness, txIdMap')
  where
   concreteTxWitness = E.elaborateTxWitsBS
-    ( fromMaybe
-        (panic
-          "elaborateTxWitsBSWithMap: Missing abstract TxId during elaboration"
-        )
-    . flip M.lookup txIdMap
-    )
+    (elaborateTxId txIdMap)
     abstractTxWits
 
   concreteTxId = hashDecoded $ Concrete.aTaTx concreteTxWitness
@@ -145,3 +141,15 @@ elaborateTxWitsBSWithMap txIdMap abstractTxWits = (concreteTxWitness, txIdMap')
     (Abstract.txid $ Abstract.body abstractTxWits)
     concreteTxId
     txIdMap
+
+-- | This function uses the supplied txIdMap to look up the concrete
+-- counterpart to an abstract TxId. If the key is not present in the map,
+-- though, it hashes the `show` Text of the TxId, which essentially creates
+-- a new TxId outside of the UTxO (but which is unlikely to collide with
+-- another TxId.
+elaborateTxId :: Map Abstract.TxId Concrete.TxId
+              -> (Abstract.TxId -> Concrete.TxId)
+elaborateTxId txIdMap txId =
+  case M.lookup txId txIdMap of
+    Just concreteTxId -> concreteTxId
+    Nothing -> coerce (hash (show txId :: Text))

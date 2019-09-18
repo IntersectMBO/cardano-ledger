@@ -56,6 +56,8 @@ import Cardano.Chain.Common (unBlockCount)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
+import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(..))
+import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxWitsList)
 import Cardano.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
@@ -311,6 +313,28 @@ mkUpiSt
   -> UPIState
 mkUpiSt (_slot, _sgs, _h, _utxoSt, _delegSt, upiSt) = upiSt
 
+
+ts_prop_invalidTxWitsAreRejected :: TSProperty
+ts_prop_invalidTxWitsAreRejected =
+  invalidChainTracesAreRejected 300 failureProfile coverTxWits
+ where
+  failureProfile :: [(Int, SignalGenerator CHAIN)]
+  failureProfile = [(1, invalidTxWitsGen)]
+
+  invalidTxWitsGen :: SignalGenerator CHAIN
+  invalidTxWitsGen env@(_, utxo, _, pparams, _) st = do
+    block <- sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
+    let (_slot, _sgs, _h, utxoSt, _delegSt, _upiSt) = st
+        utxoEnv = UTxOEnv { utxo0 = utxo, pps = pparams }
+    txWitsList <- tamperedTxWitsList utxoEnv utxoSt
+    pure $! Abstract.updateBody
+              block
+              (\body -> body { Abstract._bUtxo = txWitsList })
+
+  coverTxWits :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+  -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
+  coverTxWits abstractPfs _concretePfs =
+    coverUtxoFailure 1 abstractPfs
 
 ts_prop_invalidVotesAreRejected :: TSProperty
 ts_prop_invalidVotesAreRejected =
