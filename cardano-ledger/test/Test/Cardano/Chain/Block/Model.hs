@@ -88,6 +88,7 @@ import Ledger.Delegation
   , _dSEnvK
   , _dSEnvSlot
   , randomDCertGen
+  , tamperedDcerts
   )
 import Ledger.Update (tamperWithUpdateProposal, UPIREG, UPIEnv, tamperWithVotes, UPIState)
 import qualified Ledger.Update.Test as Update.Test
@@ -167,7 +168,7 @@ classifyTransactions =
 
 ts_prop_invalidDelegationCertificatesAreRejected :: TSProperty
 ts_prop_invalidDelegationCertificatesAreRejected =
-  invalidChainTracesAreRejected 300 delegationFailureProfile coverDelegationRegistration
+  invalidChainTracesAreRejected 300 delegationFailureProfile coverDcerts
   where
     delegationFailureProfile :: [(Int, SignalGenerator CHAIN)]
     delegationFailureProfile = [(1, invalidDelegationGen)]
@@ -182,8 +183,13 @@ ts_prop_invalidDelegationCertificatesAreRejected =
                 block
                 (\body -> body { Abstract._bDCerts = delegationCerts })
 
-            invalidDelegationCerts = Gen.list (Range.constant 0 10)
-                                              (randomDCertGen delegationEnv)
+            -- This chooses with even probability between manually tweaked
+            -- DCerts and goblin-tweaked ones.
+            invalidDelegationCerts = Gen.choice
+              [ Gen.list (Range.constant 0 10)
+                         (randomDCertGen delegationEnv)
+              , tamperedDcerts delegationEnv delegationSt
+              ]
               where
                 delegationEnv =
                   ( DSEnv
@@ -193,9 +199,16 @@ ts_prop_invalidDelegationCertificatesAreRejected =
                     , _dSEnvK = k
                     }
                   )
+                (_, _, _, _, delegationSt, _) = st
 
 
-    coverDelegationRegistration :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    -- @mhueschen : this is lifted from adjacent coverage checkers and does not (at least intentionally)
+    -- address the TODOs listed below.
+    coverDcerts :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
+    coverDcerts abstractPfs _concretePfs =
+      Update.Test.coverDelegFailures 1 abstractPfs
+
     -- TODO: add coverage testing for delegation.
     --
     -- TODO: we could establish a mapping between concrete and abstract errors.
@@ -208,7 +221,6 @@ ts_prop_invalidDelegationCertificatesAreRejected =
     -- sure that the invalid generators cover a good deal of abstract
     -- errors permutations. So for instance, given abstract errors @X@,
     -- @Y@, and @Z@, we would want to generate all combinations of them.
-    coverDelegationRegistration _abstractPfs _concretePfs = pure ()
 
 
 -- | Test that the invalid chains that are generated according to the given
