@@ -31,6 +31,7 @@ module Control.State.Transition.Generator
   , traceWithProfile
   , traceOfLength
   , traceSuchThat
+  , ofLengthAtLeast
   , suchThatLastState
   , nonTrivialTrace
   , HasSizeInfo
@@ -353,6 +354,12 @@ traceSuchThat
   -> (Trace s -> Bool)
   -> Gen (Trace s)
 traceSuchThat n cond = Gen.filter cond (trace @s n)
+
+
+ofLengthAtLeast :: Gen (Trace s) -> Int -> Gen (Trace s)
+ofLengthAtLeast traceGen minLength =
+  Gen.filter ((minLength <=) . traceLength) traceGen
+
 
 suchThatLastState
   :: forall s
