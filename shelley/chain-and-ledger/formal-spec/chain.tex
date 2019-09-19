@@ -1212,6 +1212,7 @@ produced by each stake pool.
       \begin{array}{r@{~\in~}lr}
         \var{oslots} & \powerset{\Slot} & \text{overlay slots} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
+        \var{reserves} & \Coin & \text{total reserves}
       \end{array}
     \right)
   \end{equation*}
@@ -1288,8 +1289,9 @@ current slot is not an overlay slot.
       \\~\\
       {
         {\left(\begin{array}{c}
-            \bslot{bhb} \\
-            \var{pp} \\
+                 \bslot{bhb} \\
+                 \var{pp} \\
+                 \var{reserves}
         \end{array}\right)}
         \vdash
              \var{ls} \\
@@ -1299,8 +1301,9 @@ current slot is not an overlay slot.
     }
     {
       {\left(\begin{array}{c}
-            \var{oslots} \\
-            \var{pp} \\
+               \var{oslots} \\
+               \var{pp} \\
+               \var{reserves}
       \end{array}\right)}
       \vdash
       {\left(\begin{array}{c}
@@ -1444,10 +1447,11 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       } \\~\\
       (\wcard,~\eta_0,~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
         \leteq\var{nes'} \\
-        (\wcard,~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
+        (\var{acnt},~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
           ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
-            (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
+          (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
+          (\wcard, reserves) \leteq \var{acnt}\\
       {
         \left(
           {\begin{array}{c}
@@ -1481,8 +1485,9 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs'} \\
       {
         {\left(\begin{array}{c}
-              \dom{osched} \\
-              \var{pp} \\
+                 \dom{osched} \\
+                 \var{pp} \\
+                 \var{reserves}
         \end{array}\right)}
         \vdash
         {\left(\begin{array}{c}

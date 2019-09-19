@@ -249,7 +249,7 @@ and the protocol parameters.
             \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
             \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
             \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
-            \var{i_{rwd}} & \AddrRWD \mapsto \Coin & \text{intermediate rewards}\\
+            \var{i_{rwd}} & \KeyHash_{pay} \mapsto (\Slot\times\Coin) & \text{intermediate rewards}\\
           \end{array}
       \right)
       \\
@@ -272,6 +272,7 @@ and the protocol parameters.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{slot}\\
         \var{ptr} & \Ptr & \text{certificate pointer}\\
+        \var{reserves} & \Coin & \text{total reserves available}
       \end{array}
     \right)
   \end{equation*}
@@ -376,6 +377,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -414,6 +416,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -451,6 +454,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -497,6 +501,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -530,7 +535,7 @@ concerns are independent of the ledger rules.
     \inference[Deleg-Mir]
     {
       \var{c}\in \DCertMir &
-      i'_{rew}\leteq\var{\{\fun{addr_{rwd}}~{hk}\mapsto\var{val_{rwd}}\vert
+      i'_{rew}\leteq\var{\{{hk}\mapsto(\var{slot}, \var{val_{rwd}})\vert
         \var{hk}\mapsto\var{val_{rwd}}\in\fun{moveRewards}~c\}}\\
       slot + 2\cdot\SlotsStabilityParam < \fun{firstSlot}(1 + \fun{epoch}~{slot})
     }
@@ -538,6 +543,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -791,6 +797,7 @@ combined transition.
         \var{slot} & \Slot & \text{slot}\\
         \var{ptr} & \Ptr & \text{certificate pointer}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{reserves} & \Coin & \text{total available reserves}
       \end{array}
     \right)
   \end{equation*}
@@ -835,6 +842,7 @@ will be successful, since the pool certificates are disjoint from the delegation
           \begin{array}{r}
             \var{slot} \\
             \var{ptr} \\
+            \var{reserves}
           \end{array}
         \right)
       }
@@ -845,6 +853,7 @@ will be successful, since the pool certificates are disjoint from the delegation
           \var{slot} \\
           \var{ptr} \\
           \var{pp} \\
+          \var{reserves}
         \end{array}
       \right)
       \vdash
@@ -883,6 +892,7 @@ will be successful, since the pool certificates are disjoint from the delegation
           \var{slot} \\
           \var{ptr} \\
           \var{pp} \\
+          \var{reserves}
         \end{array}
       \right)
       \vdash
@@ -920,7 +930,8 @@ transition.
         \var{slot} & \Slot & \text{slot}\\
         \var{txIx} & \Ix & \text{transaction index}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{tx} & \Tx & \text{transaction}
+        \var{tx} & \Tx & \text{transaction} \\
+        \var{reserves} & \Coin & \text{total reserves}
       \end{array}
     \right)
   \end{equation*}
@@ -980,7 +991,8 @@ will be invalid.
         \var{slot} \\
         \var{txIx} \\
         \var{pp} \\
-        \var{tx}
+        \var{tx} \\
+        \var{reserves}
       \end{array}
     \right)
       \vdash
@@ -994,6 +1006,7 @@ will be invalid.
           \var{ptrs} \\
           \var{fdms} \\
           \var{dms} \\
+          \var{i_{rwd}}
         \end{array}
         \right) \\~\\
         \left(
@@ -1017,6 +1030,7 @@ will be invalid.
           \var{ptrs} \\
           \var{fdms} \\
           \var{dms} \\
+          \var{i_{rwd}}
         \end{array}
         \right) \\~\\
         \left(
@@ -1046,7 +1060,8 @@ will be invalid.
               \var{slot}\\
               \var{txIx}\\
               \var{pp}\\
-              \var{tx}
+              \var{tx}\\
+              \var{reserves}
             \end{array}
           \right)
         }
@@ -1061,6 +1076,7 @@ will be invalid.
           \var{slot}\\
           \var{ptr}\\
           \var{pp}\\
+          \var{reserves}
         \end{array}
       \right)
     }
@@ -1076,7 +1092,8 @@ will be invalid.
         \var{slot}\\
         \var{txIx}\\
         \var{pp}\\
-        \var{tx}
+        \var{tx}\\
+        \var{reserves}
       \end{array}
     \right)
     }
