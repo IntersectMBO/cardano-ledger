@@ -26,6 +26,7 @@ The ledger state consists of:
         \var{slot} & \Slot & \text{current slot}\\
         \var{txIx} & \Ix & \text{transaction index}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{reserves} & \Coin \text{total reserves}
       \end{array}
     \right)
   \end{equation*}
@@ -66,7 +67,8 @@ then calls the $\mathsf{DELEGS}$ transition.
           \var{slot} \\
           \var{txIx} \\
           \var{pp} \\
-          \var{tx}
+          \var{tx}\\
+          \var{reserves}
         \end{array}
       \right)
       }
@@ -95,6 +97,7 @@ then calls the $\mathsf{DELEGS}$ transition.
           \var{slot} \\
           \var{txIx} \\
           \var{pp} \\
+          \var{reserves}
         \end{array}
       \right)
       \vdash
@@ -135,7 +138,7 @@ slot is removed.
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{ledgers}{\_} \var{\_}
-    \subseteq \powerset ((\Slot\times\PParams) \times \LState \times \seqof{\Tx} \times \LState)
+    \subseteq \powerset ((\Slot\times\PParams\times\Coin) \times \LState \times \seqof{\Tx} \times \LState)
   \end{equation*}
   \caption{Ledger Sequence transition-system types}
   \label{fig:ts-types:ledgers}
@@ -202,6 +205,7 @@ slot is removed.
         \begin{array}{r}
           \var{slot}\\
           \var{pp}\\
+          \var{reserves}
         \end{array}
       \right)
       \vdash \var{ls} \trans{ledgers}{\epsilon} \varUpdate{\var{ls'}}
@@ -219,6 +223,7 @@ slot is removed.
           \begin{array}{r}
             \var{slot}\\
             \var{pp}\\
+            \var{reserves}
           \end{array}
         \right)
       }
@@ -232,7 +237,8 @@ slot is removed.
           \begin{array}{r}
             \var{slot}\\
             \mathsf{len}~\Gamma - 1\\
-            \var{pp}
+            \var{pp}\\
+            \var{reserves}
           \end{array}
         \right)
       }
@@ -246,6 +252,7 @@ slot is removed.
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
+        \var{reserves}
       \end{array}
     \right)
     \vdash
