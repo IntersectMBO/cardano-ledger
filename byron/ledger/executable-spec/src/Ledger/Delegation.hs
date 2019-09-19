@@ -87,6 +87,7 @@ module Ledger.Delegation
       , S_BeforeExistingDelegation, S_NoLastDelegation
       , S_AfterExistingDelegation, S_AlreadyADelegateOf
       )
+  , tamperedDcerts
   )
 where
 
@@ -795,3 +796,8 @@ mkGoblinGens
   , "SDelegSFailure_SDelegFailure_IsAlreadyScheduled"
   , "SDelegSFailure_SDelegFailure_IsNotGenesisKey"
   ]
+
+tamperedDcerts :: DIEnv -> DIState -> Gen [DCert]
+tamperedDcerts env st = do
+  sg <- Gen.element goblinGensDELEG
+  sg env st
