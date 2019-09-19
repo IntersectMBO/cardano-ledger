@@ -1267,6 +1267,8 @@ It consists of four pots:
         \Delta r & \Coin & \text{change to the reserves} \\
         \var{rs} & \AddrRWD\mapsto\Coin & \text{new individual rewards} \\
         \Delta f & \Coin & \text{change to the fee pot} \\
+        \Delta deposits & \Coin & \text{change to the deposits} \\
+        \var{i_{rwd}} & \Credential \mapsto \Coin & \text{instantaneous rewards}
       \end{array}
     \right)
   \end{equation*}
@@ -1328,37 +1330,57 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \emph{Calculation to create a reward update}
   %
   \begin{align*}
-      & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
-      & \createRUpd{b}{es} = \left(
-        \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS} \right) \\
-      & ~~~\where \\
-      &~~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
-      & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
-      & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
-      & ~~~~~~~(\wcard,~\var{reserves}) = \var{acnt} \\
-      & ~~~~~~~\left(
-                 \wcard,~
-                 \left(
-                   \left(\wcard,~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard\right)~
-                   \wcard
-                 \right)
-               \right) = \var{ls} \\
-      & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot \var{reserves}}
+    & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
+    & \createRUpd{b}{es} = \left(
+      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\Delta d,~\var{i_{rwd}}\setminus\var{rewardsInsufficient} \right) \\
+    & ~~~\where \\
+    & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
+    & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
+    & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
+    & ~~~~~~~(\wcard,~\var{reserves}) = \var{acnt} \\
+    & ~~~~~~~\left(
+      \wcard,~
+      \left(
+      \left(\var{stDelegs},~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}}\right)~
+      \wcard
+      \right)
+      \right) = \var{ls} \\
+    & ~~~~~~~unregistered =
+      \left\{
+      hk\mapsto val \vert hk\not\in\dom{stDeleg} \wedge \var{hk}\mapsto\var{val}\in \var{i_{rwd}}
+      \right\}\\
+    & ~~~~~~~\var{registered} = \var{i_{rwd}} \setminus\var{unregistered} \\
+    & ~~~~~~~\var{rewardsInsufficient} =
+      \left\{
+      hk\mapsto val \vert hk\mapsto val \in\var{unregistered}\wedge val \leq \fun{keyDeposit}~{pp}
+      \right\} \\
+    & ~~~~~~~\var{newlyRegister} = \var{unregistered}\setminus\var{rewardsInsufficent}\\
+    & ~~~~~~~\var{rewards_{mir}} =
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} +
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{newlyRegister}} \var{val}\\
+    & ~~~~~~~\var{reserves'} = \var{reserves} - \var{rewards_{mir}}\\
+    & ~~~~~~~\Delta d = \vert newlyRegister \vert\cdot\fun{keydeposit}~\var{pp} \\
+    & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot \var{reserves'}}
     \\
-      & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~{pp}} \\
-      & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
-      & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
-      & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
-      & ~~~~~~~\var{rs}
-           = \reward{pp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs} \\
-      & ~~~~~~~\Delta t_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
-      & ~~~~~~~blocksMade = \sum_{\wcard \mapsto m \in b}m
+    & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~{pp}} \\
+    & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
+    & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
+    & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
+    & ~~~~~~~\var{rs}
+      = \reward{pp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs} \\
+    & ~~~~~~~\Delta t_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
+    & ~~~~~~~blocksMade = \sum_{\wcard \mapsto m \in b}m
   \end{align*}
-  %
+
+  \caption{Reward Update Creation}
+  \label{fig:functions:reward-update-creation}
+\end{figure}
+
+\begin{figure}[htb]
   \emph{Applying a reward update}
   %
   \begin{align*}
-      & \fun{applyRUpd} \in \RewardUpdate \to \EpochState \to \EpochState \\
+      & \fun{applyRUpd} \in \RewardUpdate \to \Epoch\to\EpochState \to \EpochState \\
       & \fun{applyRUpd}~
       \left(
         \begin{array}{c}
@@ -1366,8 +1388,11 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \Delta r \\
           \var{rs} \\
           \Delta f \\
+          \Delta d \\
+          \var{rew_{mir}}
         \end{array}
-      \right)
+    \right)
+    e
       \left(
         \begin{array}{c}
           \var{treasury} \\
@@ -1378,7 +1403,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{delegations} \\
           \var{ptrs} \\
           \var{dms} \\
-          ~ \\
+          \var{i_{rwd}}
+          \\~ \\
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
@@ -1396,27 +1422,38 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \varUpdate{\var{treasury} + \Delta t}\\
           \varUpdate{\var{reserves} + \Delta r}\\
           ~ \\
-          \var{stdelegs} \\
-          \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
+          \varUpdate{\var{stdelegs}\unionoverrideLeft \var{update_{delegs}}} \\
+          \varUpdate{(\var{rewards}\unionoverridePlus\var{rs})\unionoverridePlus\var{update_{rwd}}} \\
           \var{delegations} \\
           \var{ptrs} \\
           \var{dms} \\
-          ~ \\
+          \varUpdate{\emptyset}
+          \\~ \\
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
           \var{cs} \\
           ~ \\
           \var{utxo} \\
-          \var{deposits} \\
+          \varUpdate{\var{deposits} + \Delta d} \\
           \varUpdate{\var{fees}+\Delta f} \\
           \var{up} \\
         \end{array}
-      \right)
+    \right)\\
+      & ~~~\where \\
+      & ~~~~~~~\var{slot} = \fun{firstSlot}~\var{e} \\
+      & ~~~~~~~\var{update_{rwd}} =
+        \left\{
+        \fun{add_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}}
+        \right\}\\
+      & ~~~~~~~\var{update_{delegs}} =
+        \left\{
+        \var{hk}\mapsto\var{slot}\vert\var{hk}\in\dom{rew_{mir}}
+        \right\}
   \end{align*}
 
-  \caption{Reward Update Creation}
-  \label{fig:functions:reward-update-creation}
+  \caption{Reward Update Application}
+  \label{fig:functions:reward-update-application}
 \end{figure}
 
 \clearpage
