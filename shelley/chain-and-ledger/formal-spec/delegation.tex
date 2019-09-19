@@ -147,7 +147,7 @@ It does the following:
                                             & \text{genesis delegation}
       \\
       \fun{moveRewards} & \DCertMir \to (\KeyHash \times \Coin)
-                                            & \text{moved intermediate rewards}
+                                            & \text{moved instantaneous rewards}
     \end{array}
   \end{equation*}
   %
@@ -249,7 +249,7 @@ and the protocol parameters.
             \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
             \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
             \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
-            \var{i_{rwd}} & \KeyHash_{pay} \mapsto (\Slot\times\Coin) & \text{intermediate rewards}\\
+            \var{i_{rwd}} & \KeyHash_{pay} \mapsto (\Slot\times\Coin) & \text{instantaneous rewards}\\
           \end{array}
       \right)
       \\
