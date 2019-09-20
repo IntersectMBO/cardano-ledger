@@ -197,10 +197,9 @@ instance GeneOps g => Goblin g Tx where
 instance GeneOps g => Goblin g TxId where
   tinker gen
     = tinkerRummagedOrConjureOrSave
-        ((\x -> TxId (Hash (modulate x)))
+        ((TxId . Hash . (`mod` 30))
            <$$> tinker ((\(TxId (Hash x)) -> x) <$> gen))
-  conjure = saveInBagOfTricks =<< (TxId . Hash . modulate <$>
-    conjure)
+  conjure = saveInBagOfTricks =<< (TxId . Hash . (`mod` 30) <$> conjure)
 
 
 --------------------------------------------------------------------------------

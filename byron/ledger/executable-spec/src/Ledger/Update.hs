@@ -1751,18 +1751,18 @@ deriveGoblin ''Vote
 instance GeneOps g => Goblin g FactorA where
   tinker gen
     = tinkerRummagedOrConjureOrSave
-        ((\x -> FactorA (x `mod` fromIntegral Core.maxLovelaceVal))
+        ((\x -> FactorA (x `mod` fromIntegral GP.lovelaceCap))
            <$$> tinker ((\(FactorA x) -> x) <$> gen))
-  conjure = saveInBagOfTricks =<< (FactorA . (`mod` fromIntegral Core.maxLovelaceVal) <$>
-    conjure)
+  conjure = saveInBagOfTricks =<< (FactorA . (`mod` fromIntegral GP.lovelaceCap)
+    <$> conjure)
 
 instance GeneOps g => Goblin g FactorB where
   tinker gen
     = tinkerRummagedOrConjureOrSave
-        ((\x -> FactorB (x `mod` fromIntegral Core.maxLovelaceVal))
+        ((\x -> FactorB (x `mod` fromIntegral GP.lovelaceCap))
            <$$> tinker ((\(FactorB x) -> x) <$> gen))
-  conjure = saveInBagOfTricks =<< (FactorB . (`mod` fromIntegral Core.maxLovelaceVal) <$>
-    conjure)
+  conjure = saveInBagOfTricks =<< (FactorB . (`mod` fromIntegral GP.lovelaceCap)
+    <$> conjure)
 
 instance GeneOps g => Goblin g BkSgnCntT where
   tinker _
