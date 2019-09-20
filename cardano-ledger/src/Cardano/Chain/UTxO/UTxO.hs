@@ -102,6 +102,9 @@ fromBalances =
     . concat
     . fmap (fromTxOut . uncurry TxOut)
 
+-- | Construct a UTxO from a TxOut. This UTxO is a singleton with a TxIn that
+-- references an address constructed by hashing the TxOut address. This means
+-- it is not guaranteed (or likely) to be a real address.
 fromTxOut :: TxOut -> UTxO
 fromTxOut out = fromList [(TxInUtxo (coerce . hash $ txOutAddress out) 0, out)]
 

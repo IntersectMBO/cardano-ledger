@@ -68,9 +68,9 @@ elaboratePParams pps = Concrete.ProtocolParameters
   , Concrete.ppUnlockStakeEpoch   = Concrete.EpochNumber maxBound
   }
 
-newtype FeeConstant = FeeConstant Int
+newtype FeeConstant = FeeConstant Abstract.FactorA
 
-newtype FeeCoefficient = FeeCoefficient Int
+newtype FeeCoefficient = FeeCoefficient Abstract.FactorB
 
 elaborateFeePolicy
   :: FeeConstant
@@ -78,9 +78,12 @@ elaborateFeePolicy
   -> Concrete.TxFeePolicy
 -- TODO: we should pass the factors wrapped in some type, to avoid errors
 -- resulting from mixing the order of these parameters.
-elaborateFeePolicy (FeeConstant a) (FeeCoefficient b) =
+elaborateFeePolicy feeConst feeCoeff =
   Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear aC bC
   where
+    FeeConstant (Abstract.FactorA a) = feeConst
+    FeeCoefficient (Abstract.FactorB b) = feeCoeff
+
     aC = intToLovelace a
     bC = intToLovelace
        $ floor
