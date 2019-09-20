@@ -4,6 +4,7 @@
 module Ledger.Update.Test
   ( coverUpiregFailures
   , coverUpivoteFailures
+  , coverDelegFailures
   )
 where
 
@@ -13,6 +14,7 @@ import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (CoverPercentage)
 
+import           Ledger.Delegation (PredicateFailure (EpochInThePast, EpochPastNextEpoch, IsAlreadyScheduled, IsNotGenesisKey))
 import           Ledger.Update (PredicateFailure (AVSigDoesNotVerify, AlreadyProposedPv, AlreadyProposedSv, CannotFollowPv, CannotFollowSv, CannotUpdatePv, DoesNotVerify, InvalidApplicationName, InvalidSystemTags, NoUpdateProposal, NotGenesisDelegate))
 import           Ledger.Update (UpId (UpId))
 
@@ -69,5 +71,25 @@ coverUpivoteFailures coverPercentage someData =
     coverPercentage
     [ AVSigDoesNotVerify
     , NoUpdateProposal (UpId 0) -- We need to pass a dummy update id here.
+    ]
+    someData
+
+
+coverDelegFailures
+  :: forall m a
+   .  ( MonadTest m
+      , HasCallStack
+      , Data a
+      )
+  => CoverPercentage
+  -> a
+  -> m ()
+coverDelegFailures coverPercentage someData =
+  Generator.coverFailures
+    coverPercentage
+    [ EpochInThePast undefined
+    , EpochPastNextEpoch undefined
+    , IsAlreadyScheduled
+    , IsNotGenesisKey
     ]
     someData

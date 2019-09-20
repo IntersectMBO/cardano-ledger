@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -13,12 +14,17 @@ module Cardano.Ledger.Spec.STS.UTXOW where
 
 import           Data.Data (Data, Typeable)
 import qualified Data.Map as Map
+import           GHC.Stack (HasCallStack)
+import           Hedgehog (Gen, MonadTest)
+import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Internal.Property (CoverPercentage)
+import qualified Hedgehog.Range as Range
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
-import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, sigGen,
-                     tinkerWithSigGen)
+import           Control.State.Transition.Generator (HasTrace, SignalGenerator, coverFailures,
+                     envGen, sigGen, tinkerWithSigGen)
 
 import           Ledger.Core (Addr (Addr), KeyPair (KeyPair), VKey, keyPair, mkAddr, owner, sign,
                      verify)
@@ -128,3 +134,50 @@ mkGoblinGens
   , "UtxoFailure_InputsNotInUTxO"
   , "UtxoFailure_NonPositiveOutputs"
   ]
+
+tamperedTxWitsList :: UTxOEnv -> UTxOState -> Gen [TxWits]
+tamperedTxWitsList env st = do
+  gen <- Gen.element (map (\sg -> sg env st) goblinGensUTXOW)
+  Gen.list (Range.linear 1 10) gen
+
+
+--------------------------------------------------------------------------------
+-- Hedgehog coverage checking
+--------------------------------------------------------------------------------
+
+-- | Check that all the relevant predicate failures are covered.
+coverUtxoFailure
+  :: forall m a
+   .  ( MonadTest m
+      , HasCallStack
+      , Data a
+      )
+  => CoverPercentage
+  -- ^ Minimum percentage that each failure must occur.
+  -> a
+  -- ^ Structure containing the failures
+  -> m ()
+coverUtxoFailure coverPercentage someData = do
+  coverFailures
+    coverPercentage
+    [ InsufficientWitnesses
+    ]
+    someData
+
+  coverFailures
+    coverPercentage
+    [ FeeTooLow
+    , InputsNotInUTxO
+    ]
+    someData
+
+    -- We do not check coverage of `EmptyTxInputs` & `EmptyTxOutputs`, because
+    -- they such transactions are not constructible in `cardano-ledger`'s types,
+    -- due to usage of `NonEmpty` for the lists of `TxIn` and `TxOut`.
+    --
+    -- We do not check coverage of `NonPositiveOutputs` because it is not
+    -- possible to represent a non-positive Lovelace value in a `TxOut` since
+    -- there is bounds-checking on all constructions of `Lovelace` values.
+    --
+    -- We do not check coverage of `IncreasedTotalBalance` because it is not
+    -- throwable.

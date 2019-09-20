@@ -189,7 +189,7 @@ instance HasTrace CHAIN where
       <*> (utxo0 <$> envGen @UTXOWS chainLength)
       <*> pure (mkVkGenesisSet ngk)
       -- TODO: for now we're returning a constant set of parameters, where only '_bkSgnCntT' varies.
-      <*> pure initialPParams { _bkSgnCntT = sigCntT }
+      <*> pure initialPParams { _bkSgnCntT = Update.BkSgnCntT sigCntT }
       <*> pure k
     where
       -- If we want to generate large traces, we need to set up the value of the

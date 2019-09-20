@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -20,6 +21,7 @@ import           Data.Data (Data, Typeable)
 import           Data.Foldable (elem, toList)
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
+import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Monoid (Sum (..))
@@ -33,7 +35,8 @@ import           Numeric.Natural (Natural)
 
 import           Data.AbstractSize
 
-import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
+import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), SeedGoblin (..),
+                     saveInBagOfTricks, tinkerRummagedOrConjureOrSave, (<$$>))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 
@@ -224,9 +227,13 @@ instance HasHash Addr where
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Num, Hashable)
+    deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral)
     deriving (Semigroup, Monoid) via (Sum Integer)
     deriving anyclass (HasTypeReps)
+
+-- | Constant amount of Lovelace in the system.
+lovelaceCap :: Lovelace
+lovelaceCap = Lovelace $ 45 * fromIntegral ((10 :: Int64) ^ (15 :: Int64))
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
@@ -460,14 +467,26 @@ toSet = Set.fromList . toList
 deriveGoblin ''Addr
 deriveGoblin ''BlockCount
 deriveGoblin ''Epoch
-deriveGoblin ''Hash
-deriveGoblin ''Lovelace
 deriveGoblin ''Owner
 deriveGoblin ''Sig
 deriveGoblin ''Slot
 deriveGoblin ''SlotCount
 deriveGoblin ''VKey
 deriveGoblin ''VKeyGenesis
+
+instance GeneOps g => Goblin g Hash where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((Hash . (`mod` 30))
+           <$$> tinker ((\(Hash x) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (Hash . (`mod` 30) <$> conjure)
+
+instance GeneOps g => Goblin g Lovelace where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((\x -> (Lovelace x) `mod` lovelaceCap)
+           <$$> tinker ((\(Lovelace x) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< ((`mod` lovelaceCap) . Lovelace <$> conjure)
 
 
 --------------------------------------------------------------------------------

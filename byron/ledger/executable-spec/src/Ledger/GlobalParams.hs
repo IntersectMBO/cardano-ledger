@@ -8,15 +8,10 @@ module Ledger.GlobalParams
   )
 where
 
-import           Data.Int (Int64)
 import           Data.Word (Word64)
 
-import           Ledger.Core (BlockCount (BlockCount), Lovelace (Lovelace))
+import           Ledger.Core (BlockCount (BlockCount), lovelaceCap)
 
-
--- | Constant amount of Lovelace in the system.
-lovelaceCap :: Lovelace
-lovelaceCap = Lovelace $ 45 * fromIntegral ((10 :: Int64) ^ (15 :: Int64))
 
 -- | Given the chain stability parameter, often referred to as @k@, which is
 -- expressed in an amount of blocks, return the number of slots contained in an

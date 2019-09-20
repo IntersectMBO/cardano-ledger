@@ -18,6 +18,7 @@
 
 module Ledger.UTxO where
 
+import           Control.Monad (replicateM)
 import           Data.AbstractSize (HasTypeReps, abstractSize)
 import           Data.Data (Data, Typeable)
 import           Data.Hashable (Hashable)
@@ -30,9 +31,10 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Ledger.Core hiding ((<|))
-import           Ledger.Update (PParams (PParams), _factorA, _factorB)
+import           Ledger.Update (FactorA (..), FactorB (..), PParams (PParams), _factorA, _factorB)
 
-import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
+import           Test.Goblin (AddShrinks (..), GeneOps (..), Goblin (..), SeedGoblin (..), TinkerM,
+                     saveInBagOfTricks, tinkerRummagedOrConjureOrSave, (<$$>))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 -- |A unique ID of a transaction, which is computable from the transaction.
@@ -102,7 +104,7 @@ instance Ledger.Core.HasHash Tx where
 ---------------------------------------------------------------------------------
 
 pcMinFee :: PParams -> Tx -> Lovelace
-pcMinFee PParams {_factorA = a, _factorB = b} tx
+pcMinFee PParams {_factorA = FactorA a, _factorB = FactorB b} tx
   = fromIntegral $ a + b * txsize tx
 
 txsize :: Tx -> Int
@@ -156,12 +158,48 @@ makeTxWits (UTxO utxo) tx = TxWits
 -- Goblins instances
 --------------------------------------------------------------------------------
 
-deriveGoblin ''Tx
-deriveGoblin ''TxId
 deriveGoblin ''TxIn
 deriveGoblin ''TxOut
 deriveGoblin ''TxWits
 deriveGoblin ''Wit
+
+instance GeneOps g => Goblin g Tx where
+  tinker gen = do
+    fIs <- fillEmptyList
+    fOs <- fillEmptyList
+    is <- tinkerRummagedOrConjureOrSave
+            (fIs <$$>
+              (tinker ((\(Tx x _) -> x) <$> gen)))
+    os <- tinkerRummagedOrConjureOrSave
+            (fOs <$$>
+              (tinker ((\(Tx _ x) -> x) <$> gen)))
+    tinkerRummagedOrConjureOrSave
+      (pure (Tx <$> is <*> os))
+   where
+    -- This function will insert a conjured value to an empty list. We can
+    -- thus use it to ensure that the `txIns` and `txOuts` will never be
+    -- empty.
+    fillEmptyList :: Goblin g a => TinkerM g ([a] -> [a])
+    fillEmptyList = do
+      v <- conjure
+      pure (\xs -> case xs of
+                     [] -> [v]
+                     _  -> xs)
+
+  conjure = saveInBagOfTricks =<< do
+    -- Ensure that these lists are never empty.
+    listLenI <- (+1) <$> transcribeGenesAsInt 15
+    listLenO <- (+1) <$> transcribeGenesAsInt 15
+    inputs <- replicateM listLenI conjure
+    outputs <- replicateM listLenO conjure
+    pure (Tx inputs outputs)
+
+instance GeneOps g => Goblin g TxId where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((TxId . Hash . (`mod` 30))
+           <$$> tinker ((\(TxId (Hash x)) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (TxId . Hash . (`mod` 30) <$> conjure)
 
 
 --------------------------------------------------------------------------------
