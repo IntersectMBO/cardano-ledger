@@ -531,13 +531,21 @@ concerns are independent of the ledger rules.
     }
   \end{equation}
 
+  \caption{Delegation Inference Rules}
+  \label{fig:delegation-rules}
+\end{figure}
+
+\begin{figure}[htp]
+  \centering
   \begin{equation}\label{eq:deleg-mir}
     \inference[Deleg-Mir]
     {
-      \var{c}\in \DCertMir &
-      i'_{rew}\leteq\var{\{{hk}\mapsto(\var{slot}, \var{val_{rwd}})\vert
-        \var{hk}\mapsto\var{val_{rwd}}\in\fun{moveRewards}~c\}}\\
-      slot + 2\cdot\SlotsStabilityParam < \fun{firstSlot}(1 + \fun{epoch}~{slot})
+      i'_{rwd}\leteq\var{\{{hk}\mapsto(\var{slot}, \var{val_{rwd}})\vert
+        \var{hk}\mapsto\var{val_{rwd}}\in\fun{moveRewards}~c\}}\\~\\
+      \var{c}\in \DCertMir\\
+      slot < \fun{firstSlot}((\fun{epoch}~\var{s} + 1)) - \fun{SlotsPrior}\\
+      \left(
+        \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i'_{rwd}})} val      \right)\leq\var{reserves}
     }
     {
       \begin{array}{r}
@@ -564,7 +572,7 @@ concerns are independent of the ledger rules.
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
-        \varUpdate{\var{fdms}}\\
+        \var{fdms}\\
         \var{dms} \\
         \varUpdate{\var{i_{rwd}}} & \varUpdate{\unionoverrideRight}
         & \varUpdate{i'_{rwd}}
@@ -572,9 +580,8 @@ concerns are independent of the ledger rules.
       \right)
     }
   \end{equation}
-
-  \caption{Delegation Inference Rules}
-  \label{fig:delegation-rules}
+  \caption{Move Instantaneous Rewards Inference Rule}
+  \label{fig:dcert-mir}
 \end{figure}
 
 The DELEG rule has six predicate failures:
