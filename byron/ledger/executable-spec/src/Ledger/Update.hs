@@ -65,12 +65,33 @@ import           Ledger.Core.Omniscient (skey)
 import qualified Ledger.GlobalParams as GP
 import           Ledger.Util (mkGoblinGens)
 
-import           Test.Goblin (AddShrinks (..), Goblin (..), GoblinData, SeedGoblin (..),
-                     mkEmptyGoblin)
+import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), GoblinData, SeedGoblin (..),
+                     mkEmptyGoblin, saveInBagOfTricks, tinkerRummagedOrConjureOrSave,
+                     transcribeGenesAsInt, (<$$>))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 import           Prelude
 
+
+newtype FactorA = FactorA Int
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
+
+newtype FactorB = FactorB Int
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable)
+  deriving anyclass (HasTypeReps)
+
+newtype UpAdptThd = UpAdptThd Double
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable, Num, Real, Fractional, RealFrac)
+  deriving anyclass (HasTypeReps)
+
+newtype BkSgnCntT = BkSgnCntT Double
+  deriving stock (Generic, Show, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable, Num, Fractional)
+  deriving anyclass (HasTypeReps)
 
 -- | Protocol parameters.
 --
@@ -83,7 +104,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Maximum (abstract) transaction size in words
   , _maxPropSz :: !Natural
   -- ^ Maximum (abstract) update proposal size in words
-  , _bkSgnCntT :: Double
+  , _bkSgnCntT :: !BkSgnCntT
   -- ^ Fraction [0, 1] of the blocks that can be signed by any given key in a
   -- window of lenght '_bkSgnCntW'. This value will be typically between 1/5
   -- and 1/4
@@ -94,12 +115,12 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Update proposal TTL in slots
   , _scriptVersion :: !Natural
   -- ^ Script version
-  , _upAdptThd :: !Double
+  , _upAdptThd :: !UpAdptThd
   -- ^ Update adoption threshold: a proportion of block issuers that have to
   -- endorse a given version to become candidate for adoption
-  , _factorA :: !Int -- TODO: these should have type 'Word64', like in `cardano-ledger`.
+  , _factorA :: !FactorA -- TODO: these should have type 'Word64', like in `cardano-ledger`.
   -- ^ Minimum fees per transaction
-  , _factorB :: !Int
+  , _factorB :: !FactorB
   -- ^ Additional fees per transaction size
   } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable)
 
@@ -872,8 +893,8 @@ initialPParams =
      -- For now we choose small numbers here so that we do not need a high UTxO
      -- balance when generating the initial UTxO (see @module
      -- Ledger.UTxO.Generators@).
-     , _factorA = 1 -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
-     , _factorB = 10 * fromIntegral GP.c -- In mainet this value is set to 43946000000
+     , _factorA = FactorA 1 -- In mainet this value is set to 155381000000000 (A_C in the derivation above)
+     , _factorB = FactorB (10 * fromIntegral GP.c) -- In mainet this value is set to 43946000000
      }
 
 protocolVersion :: UPIState -> ProtVer
@@ -1174,6 +1195,11 @@ ppsUpdateFrom pps = do
            , _factorB
            } = pps
 
+    FactorA fA = _factorA
+    FactorB fB = _factorB
+    BkSgnCntT bsct = _bkSgnCntT
+    UpAdptThd uat = _upAdptThd
+
     nextMaxHdrSzGen :: Gen Natural
     nextMaxHdrSzGen =
       Gen.integral (Range.exponentialFrom
@@ -1190,12 +1216,12 @@ ppsUpdateFrom pps = do
                       (2 * _maxPropSz)
                    )
 
-    nextBkSgnCntT :: Gen Double
-    nextBkSgnCntT =
+    nextBkSgnCntT :: Gen BkSgnCntT
+    nextBkSgnCntT = BkSgnCntT <$>
       Gen.double (Range.exponentialFloatFrom
-                    _bkSgnCntT
-                    (_bkSgnCntT - 0.01)
-                    (_bkSgnCntT + 0.01)
+                    bsct
+                    (bsct - 0.01)
+                    (bsct + 0.01)
                  )
 
     nextUpTtl :: Gen SlotCount
@@ -1215,22 +1241,22 @@ ppsUpdateFrom pps = do
     nextScriptVersion :: Gen Natural
     nextScriptVersion = Gen.element [_scriptVersion, _scriptVersion + 1]
 
-    nextUpAdptThd :: Gen Double
-    nextUpAdptThd =
-      Gen.double (Range.exponentialFloatFrom _upAdptThd 0 1)
+    nextUpAdptThd :: Gen UpAdptThd
+    nextUpAdptThd = UpAdptThd <$>
+      Gen.double (Range.exponentialFloatFrom uat 0 1)
       `increasingProbabilityAt` (0, 1)
 
-    nextFactorA :: Gen Int
-    nextFactorA =
+    nextFactorA :: Gen FactorA
+    nextFactorA = FactorA <$>
       -- TODO: we choose arbitrary numbers here for now.
-      Gen.integral (Range.exponentialFrom _factorA 0 10)
+      Gen.integral (Range.exponentialFrom fA 0 10)
       `increasingProbabilityAt` (0, 10)
 
     -- The next value of the factor B shouldn't drop below 'GP.c' since when
     -- elaborating this factor we divide it by 'GP.c' (see 'initialPParams').
-    nextFactorB :: Gen Int
-    nextFactorB =
-      Gen.integral (Range.exponentialFrom _factorB minFactorB maxFactorB)
+    nextFactorB :: Gen FactorB
+    nextFactorB = FactorB <$>
+      Gen.integral (Range.exponentialFrom fB minFactorB maxFactorB)
       `increasingProbabilityAt` (minFactorB, maxFactorB)
       where
         minFactorB = 5 * fromIntegral GP.c
@@ -1254,141 +1280,6 @@ increasingProbabilityAt gen (lower, upper)
                   , (90, gen)
                   , (5, pure upper)
                   ]
-
--- | Tamper with the update proposal in such a way that the following
--- predicate failures are triggered with equal probability:
---
--- - UPREGFailure
---   - UPVFailure
---     - UPVFailure
---       - UPPVVFailure
---         - CannotFollowPv
---         - CannotUpdatePv
---         - AlreadyProposedPv
---       - UPSVVFailure
---         - AlreadyProposedSv
---         - CannotFollowSv
---         - InvalidApplicationName
---         - InvalidSystemTags
---       - AVChangedInPVUpdate
---       - ParamsChangedInSVUpdate
---       - PVChangedInSVUpdate
---   - NotGenesisDelegate
---   - DoesNotVerify
---
-tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
-tamperWithUpdateProposal _env st uprop = do
-  let failureGenerators
-        = [ invalidProtocolVersion
-          , invalidParametersUpdate
-          , duplicatedProtocolVersion
-          , duplicatedSoftwareVersion
-          , invalidSoftwareVersion
-          , invalidApplicationName
-          , invalidSystemTag
-          , invalidIssuer
-          ]
-  tamperedUprop <- Gen.choice failureGenerators
-  -- We need to re-sign the update proposal since we changed the contents of
-  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
-  -- error (where 'n' is the total number of predicate failures, 'n = length
-  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
-  -- tampered proposal without re-signing it, which will cause the
-  -- 'DoesNotVerify' failure.
-  Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
-                , (1, pure $! tamperedUprop)
-                ]
-  where
-    ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
-
-    invalidProtocolVersion :: Gen UProp
-    invalidProtocolVersion
-      = (\mj mn alt -> uprop { _upPV =  ProtVer mj mn alt})
-      <$> Gen.integral (Range.constant 0 100)
-      <*> Gen.integral (Range.constant 0 100)
-      <*> Gen.integral (Range.constant 0 100)
-
-    invalidParametersUpdate :: Gen UProp
-    invalidParametersUpdate =
-      Gen.element
-        [ uprop & upParams . maxBkSz .~ uprop ^. upParams . maxBkSz * 3
-        , uprop & upParams . maxTxSz .~ uprop ^. upParams . maxBkSz * 2
-        , uprop & upParams . scriptVersion .~ uprop ^. upParams . scriptVersion + 2
-        ]
-
-    duplicatedProtocolVersion :: Gen UProp
-    duplicatedProtocolVersion =
-      let registeredVersions = fst <$> Map.elems rpus in
-        if null registeredVersions
-          then mzero
-          else do
-            duplicatedVersion <- Gen.element registeredVersions
-            pure $! uprop & upPV .~ duplicatedVersion
-
-    duplicatedSoftwareVersion :: Gen UProp
-    duplicatedSoftwareVersion =
-      let registeredVersions = fmap fstSnd (Map.elems raus) in
-        if null registeredVersions
-          then mzero
-          else do
-            (an, av) <- Gen.element registeredVersions
-            pure $! uprop & upSwVer .~ SwVer { _svName = an, _svVer = av }
-
-    invalidSoftwareVersion :: Gen UProp
-    invalidSoftwareVersion =
-      pure $! over (upSwVer . svVer) (+42) uprop
-
-    invalidApplicationName :: Gen UProp
-    invalidApplicationName = do
-      randomName <- ApName <$> Gen.string (Range.linear 10 20) Gen.unicode
-      pure $! uprop & upSwVer . svName .~ randomName
-
-    invalidSystemTag :: Gen UProp
-    invalidSystemTag = do
-      randomTag <- Gen.string (Range.linear 10 20) Gen.unicode
-      pure $! over upSTags (Set.insert randomTag) uprop
-
-    invalidIssuer :: Gen UProp
-    invalidIssuer =
-      -- We use a large (constant) increment here, so that we have a bigger chance to get a
-      -- non-genesis delegate.
-      pure $! over upIssuer (VKey . Owner . (100 +) . coerce) uprop
-
-
--- | Tamper with some of the votes provided as parameter in such a way that the following
--- predicate failures are triggered with equal probability:
---
--- - AVSigDoesNotVerify
--- - NoUpdateProposal
---
-tamperWithVotes :: UPIEnv -> UPIState -> [Vote] -> Gen [Vote]
-tamperWithVotes _env _st [] = do
-  -- If there are no votes, then we generate a random one.
-  vote <- mkVote <$> CoreGen.vkGen <*> randomUpId
-  (:[]) <$> tamperWithVote vote
-tamperWithVotes env st [vote] =
-  -- If we have only one vote we duplicate it and try again, raising the
-  -- probabilities that one of the votes in the list will be tampered with.
-  tamperWithVotes env st [vote, vote]
-tamperWithVotes _env _st votes =
-  traverse tamperWithVote votes
-
-
-tamperWithVote :: Vote -> Gen Vote
-tamperWithVote vote =
-  Gen.choice
-    [ -- Change the vote by some random proposal id. There might be a chance
-      -- that the proposal id exists though, but this should be minimal if
-      -- we generate only small valid proposal id's.
-       mkVote (vote ^. vCaster)
-       .   UpId
-       <$> Gen.integral (Range.constant 10000 10100)
-    , do
-        vk <- CoreGen.vkGen
-        -- Replace the signature by the signature of some random key.
-        pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId)
-    , pure $! vote
-    ]
 
 
 -- | Generate a random update proposal id, by picking a large number so that the
@@ -1857,6 +1748,36 @@ deriveGoblin ''UpId
 deriveGoblin ''UProp
 deriveGoblin ''Vote
 
+instance GeneOps g => Goblin g FactorA where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((\x -> FactorA (x `mod` fromIntegral GP.lovelaceCap))
+           <$$> tinker ((\(FactorA x) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (FactorA . (`mod` fromIntegral GP.lovelaceCap)
+    <$> conjure)
+
+instance GeneOps g => Goblin g FactorB where
+  tinker gen
+    = tinkerRummagedOrConjureOrSave
+        ((\x -> FactorB (x `mod` fromIntegral GP.lovelaceCap))
+           <$$> tinker ((\(FactorB x) -> x) <$> gen))
+  conjure = saveInBagOfTricks =<< (FactorB . (`mod` fromIntegral GP.lovelaceCap)
+    <$> conjure)
+
+instance GeneOps g => Goblin g BkSgnCntT where
+  tinker _
+    = pure <$> conjure
+  conjure = saveInBagOfTricks =<< do
+    i <- transcribeGenesAsInt 100
+    pure (BkSgnCntT (fromIntegral i / 100))
+
+instance GeneOps g => Goblin g UpAdptThd where
+  tinker _
+    = pure <$> conjure
+  conjure = saveInBagOfTricks =<< do
+    i <- transcribeGenesAsInt 100
+    pure (UpAdptThd (fromIntegral i / 100))
+
 
 --------------------------------------------------------------------------------
 -- AddShrinks instances
@@ -1864,10 +1785,14 @@ deriveGoblin ''Vote
 
 deriveAddShrinks ''ApName
 deriveAddShrinks ''ApVer
+deriveAddShrinks ''BkSgnCntT
+deriveAddShrinks ''FactorA
+deriveAddShrinks ''FactorB
 deriveAddShrinks ''Metadata
 deriveAddShrinks ''PParams
 deriveAddShrinks ''ProtVer
 deriveAddShrinks ''SwVer
+deriveAddShrinks ''UpAdptThd
 deriveAddShrinks ''UpId
 deriveAddShrinks ''UProp
 deriveAddShrinks ''Vote
@@ -1879,10 +1804,14 @@ deriveAddShrinks ''Vote
 
 deriveSeedGoblin ''ApName
 deriveSeedGoblin ''ApVer
+deriveSeedGoblin ''BkSgnCntT
+deriveSeedGoblin ''FactorA
+deriveSeedGoblin ''FactorB
 deriveSeedGoblin ''SwVer
 deriveSeedGoblin ''PParams
 deriveSeedGoblin ''ProtVer
 deriveSeedGoblin ''Metadata
+deriveSeedGoblin ''UpAdptThd
 deriveSeedGoblin ''UpId
 
 
@@ -1910,3 +1839,150 @@ mkGoblinGens
   [ "ApplyVotesFailure_UpivoteFailure_UPVOTEFailure_ADDVOTEFailure_AVSigDoesNotVerify"
   , "ApplyVotesFailure_UpivoteFailure_UPVOTEFailure_ADDVOTEFailure_NoUpdateProposal"
   ]
+
+--------------------------------------------------------------------------------
+-- Tampering functions
+--
+-- These must be dropped at the end of the file because they reference
+-- TH-expanded definitions.
+--------------------------------------------------------------------------------
+
+-- | Tamper with the update proposal in such a way that the following
+-- predicate failures are triggered with equal probability:
+--
+-- - UPREGFailure
+--   - UPVFailure
+--     - UPVFailure
+--       - UPPVVFailure
+--         - CannotFollowPv
+--         - CannotUpdatePv
+--         - AlreadyProposedPv
+--       - UPSVVFailure
+--         - AlreadyProposedSv
+--         - CannotFollowSv
+--         - InvalidApplicationName
+--         - InvalidSystemTags
+--       - AVChangedInPVUpdate
+--       - ParamsChangedInSVUpdate
+--       - PVChangedInSVUpdate
+--   - NotGenesisDelegate
+--   - DoesNotVerify
+--
+tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
+tamperWithUpdateProposal env st uprop = do
+  let failureGenerators
+        = [ invalidProtocolVersion
+          , invalidParametersUpdate
+          , duplicatedProtocolVersion
+          , duplicatedSoftwareVersion
+          , invalidSoftwareVersion
+          , invalidApplicationName
+          , invalidSystemTag
+          , invalidIssuer
+          ] ++ (map (\sg -> sg env st) goblinGensUPIREG)
+  tamperedUprop <- Gen.choice failureGenerators
+  -- We need to re-sign the update proposal since we changed the contents of
+  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
+  -- error (where 'n' is the total number of predicate failures, 'n = length
+  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
+  -- tampered proposal without re-signing it, which will cause the
+  -- 'DoesNotVerify' failure.
+  Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
+                , (1, pure $! tamperedUprop)
+                ]
+  where
+    ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
+
+    invalidProtocolVersion :: Gen UProp
+    invalidProtocolVersion
+      = (\mj mn alt -> uprop { _upPV =  ProtVer mj mn alt})
+      <$> Gen.integral (Range.constant 0 100)
+      <*> Gen.integral (Range.constant 0 100)
+      <*> Gen.integral (Range.constant 0 100)
+
+    invalidParametersUpdate :: Gen UProp
+    invalidParametersUpdate =
+      Gen.element
+        [ uprop & upParams . maxBkSz .~ uprop ^. upParams . maxBkSz * 3
+        , uprop & upParams . maxTxSz .~ uprop ^. upParams . maxBkSz * 2
+        , uprop & upParams . scriptVersion .~ uprop ^. upParams . scriptVersion + 2
+        ]
+
+    duplicatedProtocolVersion :: Gen UProp
+    duplicatedProtocolVersion =
+      let registeredVersions = fst <$> Map.elems rpus in
+        if null registeredVersions
+          then mzero
+          else do
+            duplicatedVersion <- Gen.element registeredVersions
+            pure $! uprop & upPV .~ duplicatedVersion
+
+    duplicatedSoftwareVersion :: Gen UProp
+    duplicatedSoftwareVersion =
+      let registeredVersions = fmap fstSnd (Map.elems raus) in
+        if null registeredVersions
+          then mzero
+          else do
+            (an, av) <- Gen.element registeredVersions
+            pure $! uprop & upSwVer .~ SwVer { _svName = an, _svVer = av }
+
+    invalidSoftwareVersion :: Gen UProp
+    invalidSoftwareVersion =
+      pure $! over (upSwVer . svVer) (+42) uprop
+
+    invalidApplicationName :: Gen UProp
+    invalidApplicationName = do
+      randomName <- ApName <$> Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! uprop & upSwVer . svName .~ randomName
+
+    invalidSystemTag :: Gen UProp
+    invalidSystemTag = do
+      randomTag <- Gen.string (Range.linear 10 20) Gen.unicode
+      pure $! over upSTags (Set.insert randomTag) uprop
+
+    invalidIssuer :: Gen UProp
+    invalidIssuer =
+      -- We use a large (constant) increment here, so that we have a bigger chance to get a
+      -- non-genesis delegate.
+      pure $! over upIssuer (VKey . Owner . (100 +) . coerce) uprop
+
+
+-- | Tamper with some of the votes provided as parameter in such a way that the following
+-- predicate failures are triggered with equal probability:
+--
+-- - AVSigDoesNotVerify
+-- - NoUpdateProposal
+--
+tamperWithVotes :: UPIEnv -> UPIState -> [Vote] -> Gen [Vote]
+tamperWithVotes env st vs =
+  Gen.frequency [ (1, go vs)
+                , (1, Gen.choice (map (\sg -> sg env st) goblinGensUPIVOTES))
+                ]
+ where
+  go [] = do
+    -- If there are no votes, then we generate a random one.
+    vote <- mkVote <$> CoreGen.vkGen <*> randomUpId
+    (:[]) <$> tamperWithVote vote
+  go [vote] =
+    -- If we have only one vote we duplicate it and try again, raising the
+    -- probabilities that one of the votes in the list will be tampered with.
+    go [vote, vote]
+  go votes =
+    traverse tamperWithVote votes
+
+
+tamperWithVote :: Vote -> Gen Vote
+tamperWithVote vote =
+  Gen.choice
+    [ -- Change the vote by some random proposal id. There might be a chance
+      -- that the proposal id exists though, but this should be minimal if
+      -- we generate only small valid proposal id's.
+       mkVote (vote ^. vCaster)
+       .   UpId
+       <$> Gen.integral (Range.constant 10000 10100)
+    , do
+        vk <- CoreGen.vkGen
+        -- Replace the signature by the signature of some random key.
+        pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId)
+    , pure $! vote
+    ]
