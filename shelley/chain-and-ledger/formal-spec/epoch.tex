@@ -1332,7 +1332,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \begin{align*}
     & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
     & \createRUpd{b}{es} = \left(
-      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\Delta d,~\var{i_{rwd}}\setminus\var{rewardsInsufficient} \right) \\
+      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\Delta d,~\var{registered}\cup\var{newlyRegister'}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
     & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
@@ -1359,6 +1359,11 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} +
       \sum\limits_{\wcard\mapsto\var{val}\in\var{newlyRegister}} \var{val}\\
     & ~~~~~~~\var{reserves'} = \var{reserves} - \var{rewards_{mir}}\\
+    & ~~~~~~~\var{newlyRegister'} =
+      \left\{
+      hk\mapsto \var{val} - \fun{keyDeposit}~\var{pp} \vert hk\mapsto\var{val}
+      \in newlyRegister
+      \right\}\\
     & ~~~~~~~\Delta d = \vert newlyRegister \vert\cdot\fun{keydeposit}~\var{pp} \\
     & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot \var{reserves'}}
     \\
