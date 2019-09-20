@@ -21,6 +21,7 @@ import           Data.Data (Data, Typeable)
 import           Data.Foldable (elem, toList)
 import           Data.Hashable (Hashable)
 import qualified Data.Hashable as H
+import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Monoid (Sum (..))
@@ -226,13 +227,13 @@ instance HasHash Addr where
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Num, Hashable)
+    deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral)
     deriving (Semigroup, Monoid) via (Sum Integer)
     deriving anyclass (HasTypeReps)
 
--- | Maximal possible value of 'Lovelace'
-maxLovelaceVal :: Integer
-maxLovelaceVal = 45e15
+-- | Constant amount of Lovelace in the system.
+lovelaceCap :: Lovelace
+lovelaceCap = Lovelace $ 45 * fromIntegral ((10 :: Int64) ^ (15 :: Int64))
 
 ---------------------------------------------------------------------------------
 -- Domain restriction and exclusion
@@ -476,21 +477,16 @@ deriveGoblin ''VKeyGenesis
 instance GeneOps g => Goblin g Hash where
   tinker gen
     = tinkerRummagedOrConjureOrSave
-        ((\x -> Hash (modulate x))
+        ((Hash . (`mod` 30))
            <$$> tinker ((\(Hash x) -> x) <$> gen))
-  conjure = saveInBagOfTricks =<< (Hash . modulate <$>
-    conjure)
-
-modulate :: Integral a => a -> a
-modulate x = x `mod` 30
+  conjure = saveInBagOfTricks =<< (Hash . (`mod` 30) <$> conjure)
 
 instance GeneOps g => Goblin g Lovelace where
   tinker gen
     = tinkerRummagedOrConjureOrSave
-        ((\x -> Lovelace (x `mod` fromIntegral maxLovelaceVal))
+        ((\x -> (Lovelace x) `mod` lovelaceCap)
            <$$> tinker ((\(Lovelace x) -> x) <$> gen))
-  conjure = saveInBagOfTricks =<< (Lovelace . (`mod` maxLovelaceVal) <$>
-    conjure)
+  conjure = saveInBagOfTricks =<< ((`mod` lovelaceCap) . Lovelace <$> conjure)
 
 
 --------------------------------------------------------------------------------
