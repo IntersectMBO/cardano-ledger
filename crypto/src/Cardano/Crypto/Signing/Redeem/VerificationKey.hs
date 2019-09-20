@@ -16,6 +16,7 @@ module Cardano.Crypto.Signing.Redeem.VerificationKey
   , redeemVKB64UrlF
   , redeemVKB64ShortF
   , fromAvvmVK
+  , fromVerificationKeyToByteString
   , redeemVKBuild
   )
 where
