@@ -3,7 +3,7 @@
 \usepackage[deliverable]{IOHKCoverPage}
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
-\DeliverableNumber{SL-D2}
+\DeliverableNumber{DX}
 \DeliverableTitle{A Formal Specification of a Multi-Signature Scheme \\ using Scripts}{Multi-Sig Formal Spec.}
 \DeliverableResponsible{Formal Methods Team}
 \EditorName{Matthias G\"udemann, \IOHK}
@@ -12,8 +12,8 @@
 %  \newline
   Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
 }
-\DueDate{20$^{\textrm{th}}$ September 2019}
-\SubmissionDate{18th September 2019}{2019/09/18}
+\DueDate{XX$^{\textrm{th}}$ XX 2019}
+\SubmissionDate{11th September 2019}{2019/09/11}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
 \Version{0.2}
@@ -49,10 +49,6 @@
 
 %% In-para enumeration -- KH
 \usepackage{paralist}
-
-%% PDF viewer synchronisation with editor, use with synctex -- KH
-% \usepackage{pdfsync}
-
 
 %%
 %% Package `semantic` can be used for writing inference rules.
@@ -269,9 +265,8 @@
   \clearpage%
 
   \begin{changelog}
-	\change{11/09/19}{Jared Corduan and Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
-	\change{11/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page, applied review comments.}
-	\change{18/09/19}{Kevin Hammond}{FM (IOHK)}{Checked over, fixed problem caused by pdfsync thanks to MG.}
+        \change{11/09/19}{Jared Corduan and Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
+        \change{11/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page, applied review comments.}
 \end{changelog}
 
 \cleardoublepage
@@ -304,12 +299,12 @@
   provided, e.g., if two parties have to sign simultaneously, or two out of three possible
   keys have to be provided, etc.
 %
-  For an output that is locked with\khcomment{protected by? mandates? requires?
-    depends on? needs to be authorised by?} a ``multi-signature'', the set of all the keys that have signed the
-  transaction is passed to a validation script. In this way, the script can
-  decide in a single step whether or not it has a combination of keys that
-  will permit the output to be spent correctly.  It is possible to supply more signatures than are required
-  to authorise the transaction.  In this case, any subset of valid signatures can be used.
+  For an output that is requires a ``multi-signature'', the set of all the keys
+  that have signed the transaction is passed to a validation script. In this
+  way, the script can decide in a single step whether or not it has a
+  combination of keys that will permit the output to be spent correctly.  It is
+  possible to supply more signatures than are required to authorise the
+  transaction.  In this case, any subset of valid signatures can be used.
 \end{abstract}
 
 % \section*{List of Contributors}
@@ -328,10 +323,10 @@ on the formal specification for the Shelley Cardano Ledger~\cite{shelley_spec}.
 The main changes from that document are:
 
 \begin{enumerate}
-\item Add a new address type for outputs, stake and rewards that are locked by scripts;
+\item Add a new address type for outputs, stake and rewards that require scripts;
 \item Add a new witness type to the transaction;
-\item Adapt the signature validation in such a way that funds that are locked\khcomment{reserved?} by a
-  multi-signature script can be spent and delegation certificates that are locked by
+\item Adapt the signature validation in such a way that funds that require a
+  multi-signature script can be spent and delegation certificates that require
   multi-signature scripts can be used;
 \item Adapt the validation functions to the extended types of
   addresses, transaction inputs and to delegation certificates with scripts.
@@ -408,40 +403,38 @@ signatures to be required for each unspent transaction output, where $m, n \ge 0
   \label{fig:types-scripts}
 \end{figure*}
 
-In Figure~\ref{fig:types-scripts} the $\Addr$ type of the Cardano Ledger formal specification~\cite{shelley_spec}
-is changed to include both public key and script addresses, split into the
-sub-types $\AddrVKey$ and $\AddrScr$. Key addresses, of type $\AddrVKey$, are
-used as in the original specification; script addresses contain the hash\khcomment{Is this enough - two scripts could conceivably have the same hash, couldn't they?}
-of the validator script, and are used to lookup the script.
-In accordance with the extended UTxO
-specification~\cite{plutus_eutxo}, the producer signs the script when creating the transaction\khcomment{?}
-and the consumer provides its  own signature \khcomment{?} later when spending the output. The  $\Script$ type
-is partitioned into subtypes: here,
-$\ScriptPlutus$ for Plutus scripts, $\ScriptMSig$ for native
-interpreter scripts (see Sections~\ref{sec:plutus-scripts}
-and~\ref{sec:native-script-interp} for details).
+In Figure~\ref{fig:types-scripts} the $\Addr$ type of the Cardano Ledger formal
+specification~\cite{shelley_spec} is changed to include both public key and
+script addresses, split into the sub-types $\AddrVKey$ and $\AddrScr$. Key
+addresses, of type $\AddrVKey$, are used as in the original specification;
+script addresses contain the hash of the validator script, and are used to
+lookup the script. The $\Script$ type is partitioned into subtypes: here,
+$\ScriptPlutus$ for Plutus scripts, $\ScriptMSig$ for native interpreter scripts
+(see Sections~\ref{sec:plutus-scripts} and~\ref{sec:native-script-interp} for
+details).
 
-A transaction output that is locked by a script carries the hash of the
-corresponding validator script. The output can only be spent if the matching script is
-provided\khcomment{?} and validates its input. The necessary information is carried by the
-$\AddrScr$ sub-type of $\Addr$ (Figure~\ref{fig:types-scripts}).
-This can therefore be part of a transaction output that consists of a
-pair of $\Addr\times\Coin$. Analogously to $\AddrVKey$, $\AddrScr$ also has an
-\emph{enterprise} script address sub-type which does not allow
-locked funds to be used in staking, as well as \emph{base} and \emph{pointer} script
-address sub-types. We will refer to the parts of an address that is used for payment as the
-\emph{payment object} and the part that is used for staking as the \emph{staking
-  reference}. Analogously to the payment object, the staking reference for an
-$\AddrScr$ is also a script.  This means that staking can also require a combination of
-signatures and these may be different from the combination of signatures that is required for payment.
+A transaction output that requires a script carries the hash of the
+corresponding validator script. The output can only be spent if the matching
+script is provided and validates its input. The necessary information is carried
+by the $\AddrScr$ sub-type of $\Addr$ (Figure~\ref{fig:types-scripts}).  This
+can therefore be part of a transaction output that consists of a pair of
+$\Addr\times\Coin$. Analogously to $\AddrVKey$, $\AddrScr$ also has an
+\emph{enterprise} script address sub-type which does not allow staking, as well
+as \emph{base} and \emph{pointer} script address sub-types. We will refer to the
+parts of an address that is used for payment as the \emph{payment object} and
+the part that is used for staking as the \emph{staking reference}. Analogously
+to the payment object, the staking reference for an $\AddrScr$ is also a script.
+This means that staking can also require a combination of signatures and these
+may be different from the combination of signatures that is required for
+payment.
 
 The $\fun{hashScript}$ function calculates the hash of the serialized
-script. The accessor function $\fun{validatorHash}$ returns the hash
-of a script address. The domain of the accessor function $\fun{paymentHK}$ is
-changed to public key\khcomment{?} addresses. The domains of the accessor functions
-$\fun{stakeHK_b}$, $\fun{stakeHK_{r}}$ and $\fun{addrPtr}$ are extended to also
-include the respective script address variants. The return types are changed to
-be a staking reference.
+script. The accessor function $\fun{validatorHash}$ returns the hash of a script
+address. The domain of the accessor function $\fun{paymentHK}$ is changed to
+public key addresses. The domains of the accessor functions $\fun{stakeHK_b}$,
+$\fun{stakeHK_{r}}$ and $\fun{addrPtr}$ are extended to also include the
+respective script address variants. The return types are changed to be a staking
+reference.
 
 \begin{figure*}[hbt]
   \emph{Transaction Type}
@@ -480,10 +473,10 @@ be a staking reference.
 Figure~\ref{fig:types_defs_multi} extends the type of a transaction
 as defined in the formal ledger specification~\cite{shelley_spec} to carry an additional witness
 type. This is achieved by explicitly defining $\TxWitness$ to be
-a pair of a public key witness and a script witness.\khcomment{I don't understand the difference between a tuple and a $\times$ type.}
+a pair of a public key witness and a script witness. \khcomment{I don't understand the difference between a tuple and a $\times$ type.}
 The accessor function
 $\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new accessor function
-$\fun{txwitsScript}$ returns a map\khcomment{set?} of script hashes.
+$\fun{txwitsScript}$ returns a map of script hashes to scripts.
 In order for a transaction to be accepted, all the corresponding scripts need to validate the transaction.
 
 \begin{figure*}[htb]
@@ -504,19 +497,19 @@ In order for a transaction to be accepted, all the corresponding scripts need to
   \label{fig:defs:functions-txins}
 \end{figure*}
 
-Figure~\ref{fig:defs:functions-txins} shows the
-$\fun{txinsVKey}$ and $\fun{txinsScript}$ scripts, which partition the set of transaction
-inputs of the transaction into those that are locked with a private key and
-those that are locked via a script, respectively.\khcomment{A single function could be used here, taking the type as a parameter.}
+Figure~\ref{fig:defs:functions-txins} shows the $\fun{txinsVKey}$ and
+$\fun{txinsScript}$ scripts, which partition the set of transaction inputs of
+the transaction into those that require a private key and those that require a
+multi-signature script, respectively.
 
 \section{Ledger Transitions for Multi-Signature}
 \label{sec:ledg-trans-multi}
 
-While spending values\khcomment{?} and altering delegation decisions can both be locked by
-multi-signature scripts, script validation can be
-treated in the same way for both cases. The validation of all witnesses occurs through the UTXOW
-STS rule, using the \fun{witsVKeyNeeded}  function to collect all the necessary key
-signatures and the \fun{scriptsNeeded}  function to collect all necessary
+While spending transaction outputs and altering delegation decisions can both
+require multi-signature scripts, script validation can be treated in the same
+way for both cases. The validation of all witnesses occurs through the UTXOW STS
+rule, using the \fun{witsVKeyNeeded} function to collect all the necessary key
+signatures and the \fun{scriptsNeeded} function to collect all necessary
 multi-signature scripts.
 
 \subsection{Delegation Specific Changes}
@@ -575,61 +568,52 @@ but headers are required to have a minimal and fixed size.\khcomment{What size i
 \subsection{UTXOW Transition Rule}
 \label{sec:utxow-transition}
 
-The UTXOW extended transition system\khcomment{Refer to location in original document} is shown in
-Figure~\ref{fig:rules:utxow-multi-sig}
-\khcomment{Something has gone wrong with ``inference''.  Also, the layout is poor - don't split conditions over 2 lines, or lay them out as centred with each other.}. The constraint on the set of required
+The UTXOW extended transition system of~\cite{shelley_spec} is shown in
+Figure~\ref{fig:rules:utxow-multi-sig}. The constraint on the set of required
 witnesses is relaxed in such a way that \emph{redundant} signatures can be
-supplied in the transaction.\khcomment{redundant meaning ``not required'' or ``duplicate''?} The set of verification keys is passed to the
-validator script via the concrete implementation of $\fun{validateScript}$ for
-the specific script type.
+supplied in the transaction. \khcomment{redundant meaning ``not required'' or
+  ``duplicate''?} The set of verification keys is passed to the validator script
+via the concrete implementation of $\fun{validateScript}$ for the specific
+script type.
 %
-The set of all validator scripts of $\fun{txinsScript}~(\fun{txins}~tx)$ is
+The set of all validator scripts of $\fun{txwitsScript}~(\fun{txins}~tx)$ is
 checked for:
 
 \begin{enumerate}
 \item equality of the hashed script with the hash that is stored in the output to spent;
 \item that the script validates the transaction; and
-\item  that it is precisely\khcomment{or includes? - made a change in the figure} the set of the scripts required for the transaction (as
-  returned from $\fun{scriptsNeeded}$).
+\item that it is precisely the set of the scripts required for the transaction
+  (as returned from $\fun{scriptsNeeded}$).
 \end{enumerate}
 
-\noindent
-We also check that the set of spent outputs that is locked by a script is equal to the
-elements of the inputs for which we have a validator script.\khcomment{This sentence is confusing...} This ensures that
-there exists a corresponding validation script for each output that is locked by a script.
-
 \begin{figure}[htb]
-\begin{equation*}
-%$
-    \inference[UTxO-wit]%
+  \begin{equation}
+    \inference[UTxO-wit]
     {
-%       \begin{array}{l}
-        (utxo, \wcard, \wcard) \leteq \var{utxoSt}\\
-        \\~\\
-        \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{tx}, %\\
-        \fun{hashScript}~\var{validator} = \var{hs} \wedge
-        \fun{validateScript}~\var{validator}~\var{tx}\\~\\
-  %      \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{tx})
-        \fun{scriptsNeeded}~\var{utxo}~\var{tx}   \subseteq \dom (\fun{txwitsScript}~{tx})
-        \\~\\
-        \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
-        \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-        \fun{witsVKeyNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
-       {
-          \begin{array}{l}
-          \var{utxoEnv}
-          \end{array}
-        }
-       \vdash \var{utxoSt} \trans{utxo}{tx} \var{utxoSt'}
-%       \end{array}
-     }
-     {
+      (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\~\\
+            \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{tx},\\
+      \fun{hashScript}~\var{validator} = \var{hs} \wedge
+      \fun{validateScript}~\var{validator}~\var{tx}\\~\\
+      \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{tx})
+      \\~\\
+      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
+      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
+      \fun{witsVKeyNeeded}~{utxo}~{tx} \subseteq \{ \hashKey \var{vk} \mid
+      \var{vk}\in\dom{(\txwitsVKey{tx})} \}\\~\\
+      {
+        \begin{array}{l}
+        \var{utxoEnv}
+        \end{array}
+      }
+      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{tx} \var{utxoSt'}\\
+    }
+    {
       \begin{array}{l}
         \var{utxoEnv}
       \end{array}
       \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
     }
-\end{equation*}
+  \end{equation}
   \caption{UTxO with Witnesses and Multi-Signatures}
   \label{fig:rules:utxow-multi-sig}
 \end{figure}
@@ -645,11 +629,10 @@ the original function $\fun{witsNeeded}$ is changed as shown in
 Figure~\ref{fig:functions-witnesses}. Figure~\ref{fig:functions-witnesses} also shows the function
 $\fun{scriptNeeded}$ that computes the required script hashes from the set of
 spent inputs that are locked by scripts and the consumed withdrawals that are locked by scripts.
-\khcomment{witsVKeyNeeded is identical to the original, presumably?}\khcomment{Figure overflows to the left}
 
 \begin{figure}[htb]
   \begin{align*}
-    & \hspace{-1cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to
+    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\VKeyGen\mapsto\VKey) \to
       \powerset{\KeyHash}
     & \text{required keyhashes} \\
     &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
@@ -856,7 +839,6 @@ The relaxation on accepting a superset of the strictly required signatures
 potentially allows the creation of transactions with an arbitrary number of signatures. This
 could then be a possible attack vector. The number of signatures should be taken
 into account in some way in the calculation of the transaction fee.
-\khcomment{Use a dependent type :)}
 
 There are two proposed implementation schemes, one based on Plutus, the other on
 a script-like integration as DSL for a native interpreter. Both follow the same
