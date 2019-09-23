@@ -1,24 +1,24 @@
 \documentclass[11pt,a4paper,dvipsnames,twosided]{article}
 
-\usepackage[deliverable]{IOHKCoverPage}
+% \usepackage[deliverable]{IOHKCoverPage}
 
-% data for Deliverable header -- added by KH from an EU H2020 project template
-\DeliverableNumber{DX}
-\DeliverableTitle{A Formal Specification of a Multi-Signature Scheme \\ using Scripts}{Multi-Sig Formal Spec.}
-\DeliverableResponsible{Formal Methods Team}
-\EditorName{Matthias G\"udemann, \IOHK}
-\Authors{Jared Corduan \quad \texttt{<jared.corduan@iohk.io>}
-   \\[1em]
-%  \newline
-  Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
-}
-\DueDate{XX$^{\textrm{th}}$ XX 2019}
-\SubmissionDate{11th September 2019}{2019/09/11}
-\LeaderName{Philipp Kant, \IOHK}
-\InstitutionAddress{\IOHK}
-\Version{0.2}
-\Project{Shelley Ledger}
-\DisseminationDR
+% % data for Deliverable header -- added by KH from an EU H2020 project template
+% \DeliverableNumber{DX}
+% \DeliverableTitle{A Formal Specification of a Multi-Signature Scheme \\ using Scripts}{Multi-Sig Formal Spec.}
+% \DeliverableResponsible{Formal Methods Team}
+% \EditorName{Matthias G\"udemann, \IOHK}
+% \Authors{Jared Corduan \quad \texttt{<jared.corduan@iohk.io>}
+%    \\[1em]
+% %  \newline
+%   Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
+% }
+% \DueDate{XX$^{\textrm{th}}$ XX 2019}
+% \SubmissionDate{11th September 2019}{2019/09/11}
+% \LeaderName{Philipp Kant, \IOHK}
+% \InstitutionAddress{\IOHK}
+% \Version{0.2}
+% \Project{Shelley Ledger}
+% \DisseminationDR
 
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{iohk}
@@ -259,15 +259,15 @@
   urlbordercolor={white}
 }
 
-  \cleardoublepage%
-  \tableofcontents%
-  \listoffigures%
-  \clearpage%
+%   \cleardoublepage%
+%   \tableofcontents%
+%   \listoffigures%
+%   \clearpage%
 
-  \begin{changelog}
-        \change{11/09/19}{Jared Corduan and Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
-        \change{11/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page, applied review comments.}
-\end{changelog}
+%   \begin{changelog}
+%         \change{11/09/19}{Jared Corduan and Matthias G\"udemann}{FM (IOHK)}{Initial version (0.1).}
+%         \change{11/09/19}{Kevin Hammond}{FM (IOHK)}{Added cover page, applied review comments.}
+% \end{changelog}
 
 \cleardoublepage
 \renewcommand{\thepage}{\arabic{page}}
@@ -306,6 +306,9 @@
   possible to supply more signatures than are required to authorise the
   transaction.  In this case, any subset of valid signatures can be used.
 \end{abstract}
+
+\tableofcontents
+\listoffigures
 
 % \section*{List of Contributors}
 % \label{acknowledgements}
