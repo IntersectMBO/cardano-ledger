@@ -6,7 +6,6 @@
 
 module STS.Delpl
   ( DELPL
-  , DelplEnv (..)
   )
 where
 
@@ -24,16 +23,14 @@ import           STS.Pool
 
 data DELPL hashAlgo dsignAlgo
 
-data DelplEnv
-  = DelplEnv Slot Ptr PParams
-
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => STS (DELPL hashAlgo dsignAlgo)
  where
   type State (DELPL hashAlgo dsignAlgo)       = DPState hashAlgo dsignAlgo
   type Signal (DELPL hashAlgo dsignAlgo)      = DCert hashAlgo dsignAlgo
-  type Environment (DELPL hashAlgo dsignAlgo) = DelplEnv
+  type Environment (DELPL hashAlgo dsignAlgo) =
+    (Slot, Ptr, PParams)
   data PredicateFailure (DELPL hashAlgo dsignAlgo)
     = PoolFailure (PredicateFailure (POOL hashAlgo dsignAlgo))
     | DelegFailure (PredicateFailure (DELEG hashAlgo dsignAlgo))
@@ -50,34 +47,34 @@ delplTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELPL hashAlgo dsignAlgo)
 delplTransition = do
-  TRC (DelplEnv slotIx ptr pp, d, c) <- judgmentContext
+  TRC ((slotIx, ptr, pp), d, c) <- judgmentContext
   case c of
     RegPool _ -> do
       ps <-
-        trans @(POOL hashAlgo dsignAlgo) $ TRC (PoolEnv slotIx pp, _pstate d, c)
+        trans @(POOL hashAlgo dsignAlgo) $ TRC ((slotIx, pp), _pstate d, c)
       pure $ d { _pstate = ps }
     RetirePool _ _ -> do
       ps <-
-        trans @(POOL hashAlgo dsignAlgo) $ TRC (PoolEnv slotIx pp, _pstate d, c)
+        trans @(POOL hashAlgo dsignAlgo) $ TRC ((slotIx, pp), _pstate d, c)
       pure $ d { _pstate = ps }
     GenesisDelegate _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo) $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
 
     RegKey _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo) $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
 
     DeRegKey _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo) $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
 
     Delegate _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo) $ TRC ((slotIx, ptr), _dstate d, c)
       pure $ d { _dstate = ds }
 
 instance

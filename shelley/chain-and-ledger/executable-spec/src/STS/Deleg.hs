@@ -3,7 +3,6 @@
 
 module STS.Deleg
   ( DELEG
-  , DelegEnv (..)
   )
 where
 
@@ -14,7 +13,7 @@ import           BlockChain (slotsPrior)
 import           Coin (Coin (..))
 import           Delegation.Certificates
 import           Keys
-import           Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
+import           Ledger.Core (dom, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import           LedgerState
 import           Slot
 import           TxData
@@ -26,15 +25,11 @@ import           Hedgehog (Gen)
 
 data DELEG hashAlgo dsignAlgo
 
-data DelegEnv
-  = DelegEnv Slot Ptr
-  deriving (Show, Eq)
-
 instance STS (DELEG hashAlgo dsignAlgo)
  where
   type State (DELEG hashAlgo dsignAlgo) = DState hashAlgo dsignAlgo
   type Signal (DELEG hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
-  type Environment (DELEG hashAlgo dsignAlgo) = DelegEnv
+  type Environment (DELEG hashAlgo dsignAlgo) = (Slot, Ptr)
   data PredicateFailure (DELEG hashAlgo dsignAlgo)
     = StakeKeyAlreadyRegisteredDELEG
     | StakeKeyNotRegisteredDELEG
@@ -42,7 +37,6 @@ instance STS (DELEG hashAlgo dsignAlgo)
     | StakeDelegationImpossibleDELEG
     | WrongCertificateTypeDELEG
     | GenesisKeyNotInpMappingDELEG
-    | DuplicateGenesisDelegateDELEG
     deriving (Show, Eq)
 
   initialRules = [pure emptyDState]
@@ -51,7 +45,7 @@ instance STS (DELEG hashAlgo dsignAlgo)
 delegationTransition
   :: TransitionRule (DELEG hashAlgo dsignAlgo)
 delegationTransition = do
-  TRC (DelegEnv slot_ ptr_, ds, c) <- judgmentContext
+  TRC ((slot_, ptr_), ds, c) <- judgmentContext
 
   case c of
     RegKey key -> do
@@ -87,7 +81,6 @@ delegationTransition = do
           (Dms dms_) = _dms ds
 
       gkey ∈ dom dms_ ?! GenesisKeyNotInpMappingDELEG
-      vk ∉ range dms_ ?! DuplicateGenesisDelegateDELEG
       pure $ ds
         { _fdms = _fdms ds ⨃ [((s', gkey), vk)]}
 
@@ -98,5 +91,5 @@ delegationTransition = do
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => HasTrace (DELEG hashAlgo dsignAlgo) where
-  envGen _ = undefined :: Gen DelegEnv
+  envGen _ = undefined :: Gen (Slot, Ptr)
   sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo)

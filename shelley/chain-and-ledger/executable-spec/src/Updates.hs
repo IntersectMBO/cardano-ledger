@@ -14,7 +14,6 @@ module Updates
   , Applications(..)
   , AVUpdate(..)
   , Update(..)
-  , UpdateState(..)
   , Favs
   , apNameValid
   , allNames
@@ -32,7 +31,6 @@ import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 (unpack)
 import           Data.Char (isAscii)
 import qualified Data.List as List (group)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -64,15 +62,15 @@ newtype SystemTag = SystemTag ByteString
 newtype InstallerHash hashAlgo = InstallerHash (Hash hashAlgo ByteString)
   deriving (Show, Ord, Eq, ToCBOR)
 
-newtype Mdt hashAlgo = Mdt (Map SystemTag (InstallerHash hashAlgo))
+newtype Mdt hashAlgo = Mdt (Map.Map SystemTag (InstallerHash hashAlgo))
   deriving (Show, Ord, Eq, ToCBOR)
 
 newtype Applications hashAlgo = Applications {
-  apps :: Map ApName (ApVer, Mdt hashAlgo)
+  apps :: Map.Map ApName (ApVer, Mdt hashAlgo)
   } deriving (Show, Ord, Eq, ToCBOR)
 
 newtype AVUpdate hashAlgo dsignAlgo = AVUpdate {
-  aup :: Map (GenKeyHash hashAlgo dsignAlgo) (Applications hashAlgo)
+  aup :: Map.Map (GenKeyHash hashAlgo dsignAlgo) (Applications hashAlgo)
   } deriving (Show, Eq, ToCBOR)
 
 -- | Update Proposal
@@ -162,7 +160,7 @@ instance ToCBOR Ppm where
       encodeListLen 2 <> toCBOR (18 :: Word8) <> toCBOR protocolVersion
 
 newtype PPUpdate hashAlgo dsignAlgo
-  = PPUpdate (Map (GenKeyHash hashAlgo dsignAlgo) (Set Ppm))
+  = PPUpdate (Map.Map (GenKeyHash hashAlgo dsignAlgo) (Set Ppm))
   deriving (Show, Eq, ToCBOR)
 
 -- | Update Protocol Parameter update with new values, prefer value from `pup1`
@@ -186,7 +184,7 @@ sTagValid (SystemTag st) = all isAscii cs && length cs <= 10
 sTagsValid :: Mdt hashAlgo -> Bool
 sTagsValid (Mdt md) = all sTagValid (dom md)
 
-type Favs hashAlgo = Map Slot (Applications hashAlgo)
+type Favs hashAlgo = Map.Map Slot (Applications hashAlgo)
 
 maxVer :: ApName -> Applications hashAlgo -> Favs hashAlgo -> (ApVer, Mdt hashAlgo)
 maxVer an avs favs =
@@ -211,7 +209,7 @@ newAVs avs favs = Applications $
                     Map.fromList [(an, maxVer an avs favs) | an <- Set.toList $ allNames avs favs]
 
 votedValue
-  :: Eq a => Map (GenKeyHash hashAlgo dsignAlgo) a -> Maybe a
+  :: Eq a => Map.Map (GenKeyHash hashAlgo dsignAlgo) a -> Maybe a
 votedValue vs | null elemLists = Nothing
               | otherwise      = Just $ (head . head) elemLists  -- elemLists contains an element
                                                -- and that list contains at
@@ -222,12 +220,14 @@ votedValue vs | null elemLists = Nothing
   elemLists =
     filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
 
-emptyUpdateState :: UpdateState hashAlgo dsignAlgo
-emptyUpdateState = UpdateState
-                     (PPUpdate Map.empty)
-                     (AVUpdate Map.empty)
-                     Map.empty
-                     (Applications Map.empty)
+emptyUpdateState
+  :: ( Updates.PPUpdate hashAlgo dsignAlgo
+     , Updates.AVUpdate hashAlgo dsignAlgo
+     , Map.Map Slot (Applications hashAlgo)
+     , Applications hashAlgo
+     )
+emptyUpdateState =
+  (PPUpdate Map.empty, AVUpdate Map.empty, Map.empty, Applications Map.empty)
 
 emptyUpdate :: Update hashAlgo dsignAlgo
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)
@@ -254,11 +254,3 @@ updatePParams = Set.foldr updatePParams'
   updatePParams' (D                     p) pps = pps { _d = p }
   updatePParams' (ExtraEntropy          p) pps = pps { _extraEntropy = p }
   updatePParams' (ProtocolVersion       p) pps = pps { _protocolVersion = p }
-
-data UpdateState hashAlgo dsignAlgo
-  = UpdateState
-      (PPUpdate hashAlgo dsignAlgo)
-      (AVUpdate hashAlgo dsignAlgo)
-      (Map Slot (Applications hashAlgo))
-      (Applications hashAlgo)
-  deriving (Show, Eq)

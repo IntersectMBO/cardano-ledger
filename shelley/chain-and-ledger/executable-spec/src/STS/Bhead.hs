@@ -6,11 +6,10 @@
 
 module STS.Bhead
   ( BHEAD
-  , BheadEnv (..)
   )
 where
 
-import           Data.Set (Set)
+import qualified Data.Set as Set
 
 import           BaseTypes
 import           BlockChain
@@ -26,9 +25,6 @@ import           Control.State.Transition
 
 data BHEAD hashAlgo dsignAlgo kesAlgo
 
-data BheadEnv hashAlgo dsignAlgo kesAlgo
-  = BheadEnv Seed (Set (GenKeyHash hashAlgo dsignAlgo))
-
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
   => STS (BHEAD hashAlgo dsignAlgo kesAlgo)
@@ -37,7 +33,8 @@ instance
     = NewEpochState hashAlgo dsignAlgo
   type Signal (BHEAD hashAlgo dsignAlgo kesAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo
-  type Environment (BHEAD hashAlgo dsignAlgo kesAlgo) = BheadEnv hashAlgo dsignAlgo kesAlgo
+  type Environment (BHEAD hashAlgo dsignAlgo kesAlgo)
+    = (Seed, Set.Set (GenKeyHash hashAlgo dsignAlgo))
   data PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo)
     = HeaderSizeTooLargeBHEAD
     | BlockSizeTooLargeBHEAD
@@ -53,7 +50,7 @@ bheadTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
   => TransitionRule (BHEAD hashAlgo dsignAlgo kesAlgo)
 bheadTransition = do
-  TRC (BheadEnv etaC gkeys, nes@(NewEpochState _ _ bprev _ es _ _ _), bh@(BHeader bhb _)) <-
+  TRC ((etaC, gkeys), nes@(NewEpochState _ _ bprev _ es _ _ _), bh@(BHeader bhb _)) <-
     judgmentContext
   let slot                = bheaderSlot bhb
   let EpochState _ _ _ pp = es
@@ -64,7 +61,7 @@ bheadTransition = do
   nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo)
     $ TRC (NewEpochEnv etaC slot gkeys, nes, epochFromSlot slot)
 
-  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC (RupdEnv bprev es, nesRu nes', slot)
+  ru' <- trans @(RUPD hashAlgo dsignAlgo) $ TRC ((bprev, es), nesRu nes', slot)
   let nes'' = nes' { nesRu = ru' }
   pure nes''
 

@@ -10,7 +10,7 @@ import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2A, ex2B,
                      ex2C, ex2Cbis, ex2Cquater, ex2Cter, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex2J,
-                     ex2K, ex2L, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C, ex5A, ex5B, maxLovelaceSupply)
+                     ex2K, ex2L, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C, ex5A, ex5B)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
@@ -19,8 +19,7 @@ import           BaseTypes (Seed (..), (⭒))
 import           Control.State.Transition (TRC (..), applySTS)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           Slot (Slot (..))
-import           STS.Chain (totalAda)
-import           STS.Updn (UPDN, UpdnState (..))
+import           STS.Updn (UPDN)
 import           STS.Utxow (PredicateFailure (..))
 import           Tx (hashScript)
 import           TxData (pattern RewardAcnt, pattern ScriptHashObj)
@@ -34,9 +33,9 @@ import           TxData (pattern RewardAcnt, pattern ScriptHashObj)
 testUPNEarly :: Assertion
 testUPNEarly =
   let
-    st = applySTS @UPDN (TRC (Nonce 1, UpdnState (Nonce 2) (Nonce 3), Slot.Slot 5))
+    st = applySTS @UPDN (TRC (Nonce 1, (Nonce 2, Nonce 3), Slot.Slot 5))
   in
-    st @?= Right (UpdnState (Nonce 2 ⭒ Nonce 1) (Nonce 2 ⭒ Nonce 1))
+    st @?= Right (Nonce 2 ⭒ Nonce 1, Nonce 2 ⭒ Nonce 1)
 
 -- | The UPDN transition should update only the evolving nonce
 -- in the last thirds of the epoch.
@@ -44,67 +43,114 @@ testUPNEarly =
 testUPNLate :: Assertion
 testUPNLate =
   let
-    st = applySTS @UPDN (TRC (Nonce 1, UpdnState (Nonce 2) (Nonce 3), Slot.Slot 85))
+    st = applySTS @UPDN (TRC (Nonce 1, (Nonce 2, Nonce 3), Slot.Slot 85))
   in
-    st @?= Right (UpdnState (SeedOp (Nonce 2) (Nonce 1)) (Nonce 3))
+    st @?= Right (SeedOp (Nonce 2) (Nonce 1), Nonce 3)
 
 testCHAINExample :: CHAINExample -> Assertion
 testCHAINExample (CHAINExample slotNow initSt block expectedSt) =
   checkTrace @CHAIN slotNow $ pure initSt .- block .-> expectedSt
 
-testPreservationOfAda :: CHAINExample -> Assertion
-testPreservationOfAda (CHAINExample _ _ _ expectedSt) =
-  totalAda expectedSt @?= maxLovelaceSupply
+testCHAINExample1 :: Assertion
+testCHAINExample1 = testCHAINExample ex1
+
+testCHAINExample2A :: Assertion
+testCHAINExample2A = testCHAINExample ex2A
+
+testCHAINExample2B :: Assertion
+testCHAINExample2B = testCHAINExample ex2B
+
+testCHAINExample2C :: Assertion
+testCHAINExample2C = testCHAINExample ex2C
+
+testCHAINExample2Cbis :: Assertion
+testCHAINExample2Cbis = testCHAINExample ex2Cbis
+
+testCHAINExample2Cter :: Assertion
+testCHAINExample2Cter = testCHAINExample ex2Cter
+
+testCHAINExample2Cquater :: Assertion
+testCHAINExample2Cquater = testCHAINExample ex2Cquater
+
+testCHAINExample2D :: Assertion
+testCHAINExample2D = testCHAINExample ex2D
+
+testCHAINExample2E :: Assertion
+testCHAINExample2E = testCHAINExample ex2E
+
+testCHAINExample2F :: Assertion
+testCHAINExample2F = testCHAINExample ex2F
+
+testCHAINExample2G :: Assertion
+testCHAINExample2G = testCHAINExample ex2G
+
+testCHAINExample2H :: Assertion
+testCHAINExample2H = testCHAINExample ex2H
+
+testCHAINExample2I :: Assertion
+testCHAINExample2I = testCHAINExample ex2I
+
+testCHAINExample2J :: Assertion
+testCHAINExample2J = testCHAINExample ex2J
+
+testCHAINExample2K :: Assertion
+testCHAINExample2K = testCHAINExample ex2K
+
+testCHAINExample2L :: Assertion
+testCHAINExample2L = testCHAINExample ex2L
+
+testCHAINExample3A :: Assertion
+testCHAINExample3A = testCHAINExample ex3A
+
+testCHAINExample3B :: Assertion
+testCHAINExample3B = testCHAINExample ex3B
+
+testCHAINExample3C :: Assertion
+testCHAINExample3C = testCHAINExample ex3C
+
+testCHAINExample4A :: Assertion
+testCHAINExample4A = testCHAINExample ex4A
+
+testCHAINExample4B :: Assertion
+testCHAINExample4B = testCHAINExample ex4B
+
+testCHAINExample4C :: Assertion
+testCHAINExample4C = testCHAINExample ex4C
+
+testCHAINExample5A :: Assertion
+testCHAINExample5A = testCHAINExample ex5A
+
+testCHAINExample5B :: Assertion
+testCHAINExample5B = testCHAINExample ex5B
 
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
   [ testCase "update nonce early in the epoch" testUPNEarly
   , testCase "update nonce late in the epoch" testUPNLate
-  , testCase "CHAIN example 1 - empty block" $ testCHAINExample ex1
-  , testCase "CHAIN example 2A - register stake key" $ testCHAINExample ex2A
-  , testCase "CHAIN example 2B - delegate stake and create reward update" $ testCHAINExample ex2B
-  , testCase "CHAIN example 2C - new epoch changes" $ testCHAINExample ex2C
-  , testCase "CHAIN example 2Cbis - as 2C but no decay" $ testCHAINExample ex2Cbis
-  , testCase "CHAIN example 2Cter - as 2C but full refund" $ testCHAINExample ex2Cter
-  , testCase "CHAIN example 2Cquater - as 2C but with instant decay" $ testCHAINExample ex2Cquater
-  , testCase "CHAIN example 2D - second reward update" $ testCHAINExample ex2D
-  , testCase "CHAIN example 2E - nonempty pool distr" $ testCHAINExample ex2E
-  , testCase "CHAIN example 2F - decentralized block" $ testCHAINExample ex2F
-  , testCase "CHAIN example 2G - prelude to the first nontrivial rewards" $ testCHAINExample ex2G
-  , testCase "CHAIN example 2H - create a nontrivial rewards" $ testCHAINExample ex2H
-  , testCase "CHAIN example 2I - apply a nontrivial rewards" $ testCHAINExample ex2I
-  , testCase "CHAIN example 2J - drain reward account and deregister" $ testCHAINExample ex2J
-  , testCase "CHAIN example 2K - stage stake pool retirement" $ testCHAINExample ex2K
-  , testCase "CHAIN example 2L - reap stake pool" $ testCHAINExample ex2L
-  , testCase "CHAIN example 3A - get 3/7 votes for a pparam update" $ testCHAINExample ex3A
-  , testCase "CHAIN example 3B - get 5/7 votes for a pparam update" $ testCHAINExample ex3B
-  , testCase "CHAIN example 3C - processes a pparam update" $ testCHAINExample ex3C
-  , testCase "CHAIN example 4A - get 3/7 votes for a version update" $ testCHAINExample ex4A
-  , testCase "CHAIN example 4B - create a future app version" $ testCHAINExample ex4B
-  , testCase "CHAIN example 4C - adopt a future app version" $ testCHAINExample ex4C
-  , testCase "CHAIN example 5A - stage genesis key delegation" $ testCHAINExample ex5A
-  , testCase "CHAIN example 5B - adopt genesis key delegation" $ testCHAINExample ex5B
-  , testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda ex1
-  , testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda ex2A
-  , testCase "CHAIN example 2B - Preservation of ADA" $ testPreservationOfAda ex2B
-  , testCase "CHAIN example 2C - Preservation of ADA" $ testPreservationOfAda ex2C
-  , testCase "CHAIN example 2D - Preservation of ADA" $ testPreservationOfAda ex2D
-  , testCase "CHAIN example 2E - Preservation of ADA" $ testPreservationOfAda ex2E
-  , testCase "CHAIN example 2F - Preservation of ADA" $ testPreservationOfAda ex2F
-  , testCase "CHAIN example 2G - Preservation of ADA" $ testPreservationOfAda ex2G
-  , testCase "CHAIN example 2H - Preservation of ADA" $ testPreservationOfAda ex2H
-  , testCase "CHAIN example 2I - Preservation of ADA" $ testPreservationOfAda ex2I
-  , testCase "CHAIN example 2J - Preservation of ADA" $ testPreservationOfAda ex2J
-  , testCase "CHAIN example 2K - Preservation of ADA" $ testPreservationOfAda ex2K
-  , testCase "CHAIN example 2L - Preservation of ADA" $ testPreservationOfAda ex2L
-  , testCase "CHAIN example 3A - Preservation of ADA" $ testPreservationOfAda ex3A
-  , testCase "CHAIN example 3B - Preservation of ADA" $ testPreservationOfAda ex3B
-  , testCase "CHAIN example 3C - Preservation of ADA" $ testPreservationOfAda ex3C
-  , testCase "CHAIN example 4A - Preservation of ADA" $ testPreservationOfAda ex4A
-  , testCase "CHAIN example 4B - Preservation of ADA" $ testPreservationOfAda ex4B
-  , testCase "CHAIN example 4C - Preservation of ADA" $ testPreservationOfAda ex4C
-  , testCase "CHAIN example 5A - Preservation of ADA" $ testPreservationOfAda ex5A
-  , testCase "CHAIN example 5B - Preservation of ADA" $ testPreservationOfAda ex5B
+  , testCase "CHAIN example 1 - empty block" testCHAINExample1
+  , testCase "CHAIN example 2A - register stake key" testCHAINExample2A
+  , testCase "CHAIN example 2B - delegate stake and create reward update" testCHAINExample2B
+  , testCase "CHAIN example 2C - new epoch changes" testCHAINExample2C
+  , testCase "CHAIN example 2Cbis - as 2C but no decay" testCHAINExample2Cbis
+  , testCase "CHAIN example 2Cter - as 2C but full refund" testCHAINExample2Cter
+  , testCase "CHAIN example 2Cquater - as 2C but with instant decay" testCHAINExample2Cquater
+  , testCase "CHAIN example 2D - second reward update" testCHAINExample2D
+  , testCase "CHAIN example 2E - nonempty pool distr" testCHAINExample2E
+  , testCase "CHAIN example 2F - decentralized block" testCHAINExample2F
+  , testCase "CHAIN example 2G - prelude to the first nontrivial rewards" testCHAINExample2G
+  , testCase "CHAIN example 2H - create a nontrivial rewards" testCHAINExample2H
+  , testCase "CHAIN example 2I - apply a nontrivial rewards" testCHAINExample2I
+  , testCase "CHAIN example 2J - drain reward account and deregister" testCHAINExample2J
+  , testCase "CHAIN example 2K - stage stake pool retirement" testCHAINExample2K
+  , testCase "CHAIN example 2L - reap stake pool" testCHAINExample2L
+  , testCase "CHAIN example 3A - get 3/7 votes for a pparam update" testCHAINExample3A
+  , testCase "CHAIN example 3B - get 5/7 votes for a pparam update" testCHAINExample3B
+  , testCase "CHAIN example 3C - processes a pparam update" testCHAINExample3C
+  , testCase "CHAIN example 4A - get 3/7 votes for a version update" testCHAINExample4A
+  , testCase "CHAIN example 4B - create a future app version" testCHAINExample4B
+  , testCase "CHAIN example 4C - adopt a future app version" testCHAINExample4C
+  , testCase "CHAIN example 5A - stage genesis key delegation" testCHAINExample5A
+  , testCase "CHAIN example 5B - adopt genesis key delegation" testCHAINExample5B
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
   , testCase "Everybody signs in multi-sig" testEverybodySigns

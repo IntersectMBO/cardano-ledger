@@ -20,8 +20,11 @@ import           Control.State.Transition.Trace (sourceSignalTargets, traceLengt
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
 import           Coin (Coin)
-import           LedgerState (_delegations, _rewards, _stKeys)
-import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
+import           LedgerState (_delegationState, _delegations, _pstate, _retiring, _rewards, _stKeys,
+                     _stPools)
+import           MockTypes (DELEG, DState, KeyHash, LedgerState, RewardAcnt, StakeCredential,
+                     StakePools)
+import           Slot (Epoch)
 import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
@@ -31,13 +34,20 @@ import           Ledger.Core (dom, range, (∈), (∉), (◁))
 -------------------------------
 
 getStDelegs :: DState -> Set StakeCredential
-getStDelegs = dom . _stKeys
+getStDelegs l = dom $ _stKeys l
 
 getRewards :: DState -> Map RewardAcnt Coin
-getRewards = _rewards
+getRewards l = _rewards l
 
 getDelegations :: DState -> Map StakeCredential KeyHash
-getDelegations = _delegations
+getDelegations l = _delegations l
+
+getStPools :: LedgerState -> StakePools
+getStPools l = _stPools $ _pstate $ _delegationState l
+
+getRetiring :: LedgerState -> Map KeyHash Epoch
+getRetiring l = _retiring $ _pstate $ _delegationState l
+
 
 ------------------------------
 -- Constants for Properties --
@@ -68,7 +78,7 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
   where credNewlyRegisteredAndRewardZero (d, RegKey hk, d') =
           (hk ∉ getStDelegs d) ==>
           (   hk ∈ getStDelegs d'
-           && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt hk) (getRewards d')))
+           && (Maybe.maybe True (== 0) $ Map.lookup (mkRwdAcnt hk) (getRewards d')))
         credNewlyRegisteredAndRewardZero (_, _, _) = True
 
 -- | Check that when a stake credential is deregistered, it will not be in the
@@ -104,7 +114,7 @@ credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . prop
     [] === filter (not . delegatedCredential) tr
 
   where delegatedCredential (_, Delegate (Delegation cred to), d') =
-          let credImage = range (Set.singleton cred ◁ getDelegations d') in
+          let credImage = range ((Set.singleton cred) ◁ (getDelegations d')) in
              cred ∈ getStDelegs d'
           && to ∈ credImage
           && Set.size credImage == 1

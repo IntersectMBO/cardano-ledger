@@ -2,12 +2,13 @@
 \label{sec:crypto-primitives-shelley}
 
 Figure~\ref{fig:crypto-defs-shelley} introduces the cryptographic abstractions used in
-this document. We begin by listing the abstract types, which are meant to
-represent the corresponding concepts in cryptography.
-Their exact
+this document. we begin by listing the abstract types, which are meant to
+represent the corresponding concepts in cryptography. Only the functionality
+explicitly stated in the figures below is assumed to be within the scope of this paper.
+That is, their exact
 implementation remains open to interpretation and we do not rely on
-any additional properties of public key cryptography that are not explicitly stated
-in this document. The types and rules we give here are needed in
+any additional properties derived from the study or implementation of public key
+cryptography outside this work. The types and rules we give here are needed in
 order to guarantee certain security properties of the delegation process, which
 we discuss later.
 
@@ -84,25 +85,10 @@ organization chosen for an implementation.
 \end{figure}
 
 When we get to the blockchain layer validation, we will use
-key evolving signatures (KES) according to the MMM scheme \citep{cryptoeprint:2001:034}.
-This is another asymmetric key cryptographic scheme, also relying on
-the use of public and private key pairs.
-These signature schemes provide forward cryptographic security, meaning that a
-compromised key does not make it easier for an adversary to forge a signature that
-allegedly had been signed in the past.
-Figure~\ref{fig:crypto-defs-shelley} introduces the additional cryptographic abstractions
+key evolving signatures according to the MMM scheme \citep{cryptoeprint:2001:034}.
+Figure~\ref{fig:kes-defs-shelley} introduces the additional cryptographic abstractions
 needed for KES.
 
-In KES, the public verification key stays constant, but the
-corresponding private key evolves incrementally. For this reason, KES
-verification keys are indexed by integers representing the step in the key's
-evolution. This evolution step parameter is also an additional parameter needed
-for the signing (denoted by $\signEv$) and verification
-(denoted by $\verifyEv$) functions.
-
-Since the private key evolves incrementally in a KES scheme, the ledger rules
-require the pool operators to evolve their keys once per KES period-slots.
-This is the constant $\KESPeriod$.
 
 \begin{figure}[htb]
   \emph{Abstract types}
@@ -155,15 +141,14 @@ cryptographic signatures which are considered valid. This is realized in a
 native way via a script-like DSL which allows for defining terms that can be
 evaluated. The terms form a tree like structure and are evaluated via the
 \fun{evalMultiSigScript} function. The parameters are a script and a set of key
-hashes. The function returns $\mathsf{True}$ when the supplied key hashes are
-a valid combination for the script, otherwise it returns $\mathsf{False}$.
+hashes. The function returns $True$ in the case of the supplied key hashes being
+a valid combination for the script, else it returns $False$.
 
-An example of a use case of this is if we want to impose any of the following
-requirements on spending an output:
+Use cases for this are for example:
 \begin{itemize}
-\item two parties are required to sign;
-\item either one of two parties may sign;
-\item generally, $m$ out of $n$ ($m \leq n$) parties are required to sign.
+\item Require two parties to sign.
+\item Require either of two parties to sign.
+\item Generally, require $m$ out of $n$ ($m \leq n$) parties to sign.
 \end{itemize}
 
 \begin{figure*}[hbt]

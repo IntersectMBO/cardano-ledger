@@ -5,17 +5,17 @@ module Ledger.Util
   ( mkGoblinGens
   ) where
 
-import           Data.FileEmbed (makeRelativeToProject)
 import           Language.Haskell.TH
-import           System.FilePath ((</>))
+import           System.FilePath.Posix ((</>))
 
 import           Test.Goblin (loadGoblinDataFromFilePath)
 
 
 loadGD :: String -> Q Exp
-loadGD pfName = do
-  absPath <- makeRelativeToProject ("src" </> "goblin_genomes" </> pfName)
-  loadGoblinDataFromFilePath absPath
+loadGD pfName =
+  loadGoblinDataFromFilePath
+    -- when compiled with `stack repl` we must add `byron/ledger/executable-spec/` to the path
+    ("src/goblin_genomes" </> pfName)
 
 -- | Take a name (e.g. "DELEG") and a list of `PredicateFailure`s in `renderPF`
 -- form (see repo goblins-sts-breeder; STSExtra typeclass) (e.g.

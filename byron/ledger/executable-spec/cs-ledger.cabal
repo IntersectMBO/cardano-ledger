@@ -42,7 +42,6 @@ library
                      , bimap >=0.4 && <0.5
                      , containers
                      , filepath
-                     , file-embed
                      , goblins
                      , hashable
                      , hedgehog >= 1.0

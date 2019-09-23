@@ -21,7 +21,6 @@
           (hsPkgs.bimap)
           (hsPkgs.containers)
           (hsPkgs.filepath)
-          (hsPkgs.file-embed)
           (hsPkgs.goblins)
           (hsPkgs.hashable)
           (hsPkgs.hedgehog)
