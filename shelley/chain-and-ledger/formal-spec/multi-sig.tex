@@ -473,14 +473,15 @@ reference.
   \label{fig:types_defs_multi}
 \end{figure*}
 
-Figure~\ref{fig:types_defs_multi} extends the type of a transaction
-as defined in the formal ledger specification~\cite{shelley_spec} to carry an additional witness
-type. This is achieved by explicitly defining $\TxWitness$ to be
-a pair of a public key witness and a script witness. \khcomment{I don't understand the difference between a tuple and a $\times$ type.}
-The accessor function
-$\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new accessor function
-$\fun{txwitsScript}$ returns a map of script hashes to scripts.
-In order for a transaction to be accepted, all the corresponding scripts need to validate the transaction.
+Figure~\ref{fig:types_defs_multi} extends the type of a transaction as defined
+in the formal ledger specification~\cite{shelley_spec} to carry an additional
+witness type. This is achieved by explicitly defining $\TxWitness$ to be a pair
+of a public key witness and a script
+witness. %\khcomment{I don't understand the difference between a tuple and a $\times$ type.}
+The accessor function $\fun{txwits}$ is renamed to $\fun{txwitsVKey}$. The new
+accessor function $\fun{txwitsScript}$ returns a map of script hashes to
+scripts.  In order for a transaction to be accepted, all the corresponding
+scripts need to validate the transaction.
 
 \begin{figure*}[htb]
   \emph{Classification Functions}
@@ -566,7 +567,8 @@ Figure~\ref{fig:delegation-state-type}.
 themselves cannot use multi-signature schemes. Otherwise, the lightweight
 certificates that are used for delegation from the pool to the KES hot keys would also need to be
 script witnesses. This is undesirable since these certificates need to be included in each header,
-but headers are required to have a minimal and fixed size.\khcomment{What size is acceptable?}
+but headers are required to have a minimal and fixed size. %\khcomment{What size
+                                                           %is acceptable?}
 
 \subsection{UTXOW Transition Rule}
 \label{sec:utxow-transition}
@@ -574,8 +576,9 @@ but headers are required to have a minimal and fixed size.\khcomment{What size i
 The UTXOW extended transition system of~\cite{shelley_spec} is shown in
 Figure~\ref{fig:rules:utxow-multi-sig}. The constraint on the set of required
 witnesses is relaxed in such a way that \emph{redundant} signatures can be
-supplied in the transaction. \khcomment{redundant meaning ``not required'' or
-  ``duplicate''?} The set of verification keys is passed to the validator script
+supplied in the transaction. %\khcomment{redundant meaning ``not required'' or
+                             %``duplicate''?}
+The set of verification keys is passed to the validator script
 via the concrete implementation of $\fun{validateScript}$ for the specific
 script type.
 %
@@ -829,7 +832,9 @@ The script-based multi-signature scheme that is presented here does not require 
 to use any cryptographic primitives. Rather, it requires only the ability to compare the
 required keys to those that actually signed the transaction. The worst-case
 potential calculation cost can therefore be calculated statically in advance and
-can be added to the transaction fees or as gas cost. \khcomment{Assumes transactions are independent.}
+can be added to the transaction fees or as gas cost. %\khcomment{Assumes
+                                                     %transactions are
+                                                     %independent.}
 The scripts can be realized
 with only limited functionality  requirements for the script language.
 %
