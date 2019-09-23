@@ -55,8 +55,8 @@ import           Data.Maybe (fromJust)
 import           Data.Typeable (Typeable)
 import           Numeric.Natural (Natural)
 
-import           Data.Map.Strict (Map)
-import           Data.Set (Set)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 import           Cardano.Binary (ToCBOR (toCBOR))
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeSigDSIGN, encodeVerKeyDSIGN),
@@ -181,10 +181,10 @@ verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
     $ verifySignedKES vKeyES n vd sigKES
 
 newtype Dms hashAlgo dsignAlgo =
-  Dms (Map (GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo))
+  Dms (Map.Map (GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo))
   deriving (Show, Eq)
 
-newtype GKeys dsignAlgo = GKeys (Set (VKeyGenesis dsignAlgo))
+newtype GKeys dsignAlgo = GKeys (Set.Set (VKeyGenesis dsignAlgo))
   deriving (Show, Eq)
 
 --------------------------------------------------------------------------------

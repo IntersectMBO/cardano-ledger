@@ -8,13 +8,11 @@
 
 module STS.Bbody
   ( BBODY
-  , BbodyState (..)
-  , BbodyEnv (..)
   )
 where
 
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
+import qualified Data.Set as Set
 
 import           BlockChain
 import           EpochBoundary
@@ -31,12 +29,6 @@ import           STS.Ledgers
 
 data BBODY hashAlgo dsignAlgo kesAlgo
 
-data BbodyState hashAlgo dsignAlgo
-  = BbodyState (LedgerState hashAlgo dsignAlgo) (BlocksMade hashAlgo dsignAlgo)
-
-data BbodyEnv
-  = BbodyEnv (Set Slot) PParams
-
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
@@ -44,12 +36,13 @@ instance
   )
   => STS (BBODY hashAlgo dsignAlgo kesAlgo)
  where
-  type State (BBODY hashAlgo dsignAlgo kesAlgo) = BbodyState hashAlgo dsignAlgo
+  type State (BBODY hashAlgo dsignAlgo kesAlgo)
+    = (LedgerState hashAlgo dsignAlgo, BlocksMade hashAlgo dsignAlgo)
 
   type Signal (BBODY hashAlgo dsignAlgo kesAlgo)
     = Block hashAlgo dsignAlgo kesAlgo
 
-  type Environment (BBODY hashAlgo dsignAlgo kesAlgo) = BbodyEnv
+  type Environment (BBODY hashAlgo dsignAlgo kesAlgo) = (Set.Set Slot, PParams)
 
   data PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo)
     = WrongBlockBodySizeBBODY
@@ -57,7 +50,7 @@ instance
     | LedgersFailure (PredicateFailure (LEDGERS hashAlgo dsignAlgo))
     deriving (Show, Eq)
 
-  initialRules = [pure $ BbodyState emptyLedgerState (BlocksMade Map.empty)]
+  initialRules = [pure (emptyLedgerState, BlocksMade Map.empty)]
   transitionRules = [bbodyTransition]
 
 bbodyTransition
@@ -68,8 +61,8 @@ bbodyTransition
      )
   => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo)
 bbodyTransition = do
-  TRC ( BbodyEnv oslots pp
-      , BbodyState ls b
+  TRC ( (oslots, pp)
+      , (ls, b)
       , Block (BHeader bhb _) txsSeq@(TxSeq txs)) <- judgmentContext
   let hk = hashKey $ bvkcold bhb
 
@@ -78,9 +71,10 @@ bbodyTransition = do
   bhbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
 
   ls' <- trans @(LEDGERS hashAlgo dsignAlgo)
-         $ TRC (LedgersEnv (bheaderSlot bhb) pp, ls, txs)
+         $ TRC ((bheaderSlot bhb, pp), ls, txs)
 
-  pure $ BbodyState ls' (incrBlocks (bheaderSlot bhb ∈ oslots) hk b)
+  pure ( ls'
+       , incrBlocks (bheaderSlot bhb ∈ oslots) hk b)
 
 instance
   ( HashAlgorithm hashAlgo

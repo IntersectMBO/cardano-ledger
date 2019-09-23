@@ -158,7 +158,7 @@ throughout the rest of the section.
       (\KeyHash_{pool} \mapsto \Coin) \\
       & \poolRefunds{pp}{retiring}{cslot} = \left\{
         \var{hk}\mapsto
-          \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{(\fun{slot}~e)})}
+          \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda}{(\slotminus{cslot}{(\fun{slot}~e)})}
           \mid
           \var{hk}\mapsto e\in\var{retiring}
         \right\}\\
@@ -464,7 +464,6 @@ which is responsible for removing pools slated for retirement in the given epoch
     \PlReapState =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{utxoSt} & \UTxOState & \text{utxo state}\\
         \var{acnt} & \Acnt & \text{accounting}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
@@ -491,7 +490,6 @@ This transition has no preconditions and results in the following state change:
     pool's registered reward account, provided the reward account is still registered.
   \item The sum of all the refunds attached to unregistered reward accounts are added to the
     treasury.
-  \item The deposit pool is reduced by the amonut of claimed and unclaimed refunds.
   \item Any delegation to a retiring pool is removed.
   \item Each retiring pool is removed from all four maps in the pool state.
 \end{itemize}
@@ -506,7 +504,7 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{~\leteq~}l}
         \var{retired} & \var{retiring}^{-1}~\var{e} \\
-        \var{pr} & \poolRefunds{pp}{(\dom{\var{retired}}\restrictdom\var{stpools})}{(\firstSlot{e})} \\
+        \var{pr} & \poolRefunds{pp}{retiring}{(\firstSlot{e})} \\
         \var{rewardAcnts}
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
                    \var{hk}\mapsto\var{pool} \in \var{retired}\restrictdom\var{poolParams} \} \\
@@ -523,8 +521,7 @@ This transition has no preconditions and results in the following state change:
                           hk \mapsto c \in \var{pr} \\
                           \var{hk}\mapsto\var{a} \in \var{rewardAcnts}, \\
                           \var{a} \notin \dom{\var{rewards}}
-                          }} c \\
-        \var{refunded} & \sum\limits_{c\in\range{\var{refunds}}} c
+                          }} c
       \end{array}
       }
     }
@@ -533,11 +530,6 @@ This transition has no preconditions and results in the following state change:
       \vdash
       \left(
         \begin{array}{r}
-          \var{utxo} \\
-          \var{deposits} \\
-          \var{fees} \\
-          \var{ups} \\
-          ~ \\
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
@@ -556,13 +548,6 @@ This transition has no preconditions and results in the following state change:
       \trans{poolreap}{e}
       \left(
         \begin{array}{rcl}
-          \var{utxo} \\
-          \varUpdate{\var{deposits}}
-          & \varUpdate{-}
-          & \varUpdate{(\var{unclaimed} + \var{refunded})} \\
-          \var{fees} \\
-          \var{ups} \\
-          ~ \\
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
           \var{reserves} \\
           ~ \\

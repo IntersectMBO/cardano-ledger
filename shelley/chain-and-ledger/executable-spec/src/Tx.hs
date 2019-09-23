@@ -42,7 +42,7 @@ import           Cardano.Crypto.DSIGN (DSIGNAlgorithm)
 
 import           Data.Word (Word8)
 
-import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -108,7 +108,7 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript
   :: Tx hashAlgo dsignAlgo
-  -> Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
+  -> Map.Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
 txwitsScript = _witnessMSigMap
 
 extractKeyHash

@@ -15,8 +15,11 @@ where
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
+import           Delegation.Certificates
 import           Keys
 import           LedgerState hiding (dms)
+import           PParams
+import           Slot
 import           Tx
 import           TxData
 import           UTxO
@@ -36,7 +39,13 @@ instance
  where
   type State (UTXOW hashAlgo dsignAlgo) = UTxOState hashAlgo dsignAlgo
   type Signal (UTXOW hashAlgo dsignAlgo) = Tx hashAlgo dsignAlgo
-  type Environment (UTXOW hashAlgo dsignAlgo) = UtxoEnv hashAlgo dsignAlgo
+  type Environment (UTXOW hashAlgo dsignAlgo)
+    = ( Slot
+      , PParams
+      , StakeKeys hashAlgo dsignAlgo
+      , StakePools hashAlgo dsignAlgo
+      , Dms hashAlgo dsignAlgo
+      )
   data PredicateFailure (UTXOW hashAlgo dsignAlgo)
     = InvalidWitnessesUTXOW
     | MissingVKeyWitnessesUTXOW
@@ -56,8 +65,8 @@ initialLedgerStateUTXOW
      )
    => InitialRule (UTXOW hashAlgo dsignAlgo)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakeKeys stakePools dms) <- judgmentContext
-  trans @(UTXO hashAlgo dsignAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools dms)
+  IRC (slots, pp, stakeKeys, stakePools, dms) <- judgmentContext
+  trans @(UTXO hashAlgo dsignAlgo) $ IRC (slots, pp, stakeKeys, stakePools, dms)
 
 utxoWitnessed
   :: forall hashAlgo dsignAlgo
@@ -67,7 +76,7 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW hashAlgo dsignAlgo)
 utxoWitnessed = do
-  TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx@(Tx _ wits _))
+  TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx@(Tx _ wits _))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map witKeyHash wits
@@ -85,7 +94,7 @@ utxoWitnessed = do
     ?! MissingScriptWitnessesUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo)
-    $ TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx)
+    $ TRC ((slot, pp, stakeKeys, stakePools, _dms), u, tx)
 
 instance
   ( HashAlgorithm hashAlgo

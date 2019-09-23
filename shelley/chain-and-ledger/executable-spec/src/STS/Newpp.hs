@@ -3,8 +3,6 @@
 
 module STS.Newpp
   ( NEWPP
-  , NewppState (..)
-  , NewppEnv (..)
   )
 where
 
@@ -24,16 +22,12 @@ import           Control.State.Transition
 
 data NEWPP hashAlgo dsignAlgo
 
-data NewppState hashAlgo dsignAlgo
-  = NewppState (UTxOState hashAlgo dsignAlgo) AccountState PParams
-
-data NewppEnv hashAlgo dsignAlgo
-  = NewppEnv (Maybe PParams) (DState hashAlgo dsignAlgo) (PState hashAlgo dsignAlgo)
-
 instance STS (NEWPP hashAlgo dsignAlgo) where
-  type State (NEWPP hashAlgo dsignAlgo) = NewppState hashAlgo dsignAlgo
+  type State (NEWPP hashAlgo dsignAlgo)
+    = (UTxOState hashAlgo dsignAlgo, AccountState, PParams)
   type Signal (NEWPP hashAlgo dsignAlgo) = Epoch
-  type Environment (NEWPP hashAlgo dsignAlgo) = NewppEnv hashAlgo dsignAlgo
+  type Environment (NEWPP hashAlgo dsignAlgo)
+    = (Maybe PParams, DState hashAlgo dsignAlgo, PState hashAlgo dsignAlgo)
   data PredicateFailure (NEWPP hashAlgo dsignAlgo)
     = FailureNEWPP
     deriving (Show, Eq)
@@ -42,14 +36,15 @@ instance STS (NEWPP hashAlgo dsignAlgo) where
   transitionRules = [newPpTransition]
 
 initialNewPp :: InitialRule (NEWPP hashAlgo dsignAlgo)
-initialNewPp = pure $ NewppState
-  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)
-  emptyAccount
-  emptyPParams
+initialNewPp = pure
+  ( UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
+  , emptyAccount
+  , emptyPParams
+  )
 
 newPpTransition :: TransitionRule (NEWPP hashAlgo dsignAlgo)
 newPpTransition = do
-  TRC (NewppEnv ppNew ds ps, NewppState utxoSt acnt pp, e) <- judgmentContext
+  TRC ((ppNew, ds, ps), (utxoSt, acnt, pp), e) <- judgmentContext
 
   case ppNew of
     Just ppNew' -> do
@@ -65,7 +60,7 @@ newPpTransition = do
           let utxoSt' = utxoSt { _deposited = Coin oblgNew }
           in  -- TODO: update mechanism
               let acnt' = acnt { _reserves = Coin $ reserves + diff }
-              in pure $ NewppState (clearPpup utxoSt') acnt' ppNew'
+              in pure (clearPpup utxoSt', acnt', ppNew')
         else
-          pure $ NewppState (clearPpup utxoSt) acnt pp
-    Nothing -> pure $ NewppState (clearPpup utxoSt) acnt pp
+          pure (clearPpup utxoSt, acnt, pp)
+    Nothing -> pure (clearPpup utxoSt, acnt, pp)

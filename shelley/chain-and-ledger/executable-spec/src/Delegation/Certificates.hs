@@ -26,7 +26,7 @@ import           TxData (Credential (..), DCert (..), StakeCredential, StakeKeys
 import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           NonIntegral (exp')
 
-import           Data.Map.Strict (Map)
+import           Data.Map.Strict as Map (Map)
 import           Data.Ratio (approxRational)
 
 import           Lens.Micro ((^.))
@@ -88,5 +88,5 @@ decayPool pc = (pval, pmin, lambdap)
           lambdap = pc ^. poolDecayRate
 
 newtype PoolDistr hashAlgo dsignAlgo =
-  PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, KeyHash hashAlgo dsignAlgo))
+  PoolDistr (Map.Map (KeyHash hashAlgo dsignAlgo) (Rational, KeyHash hashAlgo dsignAlgo))
   deriving (Show, Eq)

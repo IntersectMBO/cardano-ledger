@@ -6,9 +6,10 @@
 
 module STS.Up
   ( UP
-  , UpdateEnv(..)
   )
 where
+
+import qualified Data.Map.Strict as Map
 
 import           Keys
 import           PParams
@@ -22,13 +23,15 @@ import           STS.Ppup
 
 data UP hashAlgo dsignAlgo
 
-data UpdateEnv hashAlgo dsignAlgo
-  = UpdateEnv Slot PParams (Dms hashAlgo dsignAlgo)
-
 instance DSIGNAlgorithm dsignAlgo => STS (UP hashAlgo dsignAlgo) where
-  type State (UP hashAlgo dsignAlgo) = UpdateState hashAlgo dsignAlgo
+  type State (UP hashAlgo dsignAlgo)
+    = ( PPUpdate hashAlgo dsignAlgo
+      , AVUpdate hashAlgo dsignAlgo
+      , Map.Map Slot (Applications hashAlgo)
+      , Applications hashAlgo
+      )
   type Signal (UP hashAlgo dsignAlgo) = Update hashAlgo dsignAlgo
-  type Environment (UP hashAlgo dsignAlgo) = UpdateEnv hashAlgo dsignAlgo
+  type Environment (UP hashAlgo dsignAlgo) = (Slot, PParams, Dms hashAlgo dsignAlgo)
   data PredicateFailure (UP hashAlgo dsignAlgo)
     = NonGenesisUpdateUP
     | AvupFailure (PredicateFailure (AVUP hashAlgo dsignAlgo))
@@ -43,13 +46,13 @@ upTransition
    . DSIGNAlgorithm dsignAlgo
   => TransitionRule (UP hashAlgo dsignAlgo)
 upTransition = do
-  TRC (UpdateEnv _slot pp _dms, UpdateState pupS aupS favs avs, Update pup _aup) <- judgmentContext
+  TRC ((_slot, pp, _dms), (pupS, aupS, favs, avs), Update pup _aup) <- judgmentContext
 
-  pup' <- trans @(PPUP hashAlgo dsignAlgo) $ TRC (PPUPEnv _slot pp _dms, pupS, pup)
-  AVUPState aup' favs' avs' <-
-    trans @(AVUP hashAlgo dsignAlgo) $ TRC (AVUPEnv _slot _dms, AVUPState aupS favs avs, _aup)
+  pup' <- trans @(PPUP hashAlgo dsignAlgo) $ TRC ((_slot, pp, _dms), pupS, pup)
+  (aup', favs', avs') <-
+    trans @(AVUP hashAlgo dsignAlgo) $ TRC ((_slot, _dms), (aupS, favs, avs), _aup)
 
-  pure $ UpdateState pup' aup' favs' avs'
+  pure (pup', aup', favs', avs')
 
 instance DSIGNAlgorithm dsignAlgo => Embed (AVUP hashAlgo dsignAlgo) (UP hashAlgo dsignAlgo) where
   wrapFailed = AvupFailure

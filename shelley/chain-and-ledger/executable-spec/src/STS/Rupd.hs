@@ -3,7 +3,6 @@
 
 module STS.Rupd
   ( RUPD
-  , RupdEnv(..)
   )
 where
 
@@ -16,13 +15,11 @@ import           Control.State.Transition
 
 data RUPD hashAlgo dsignAlgo
 
-data RupdEnv hashAlgo dsignAlgo
-  = RupdEnv (BlocksMade hashAlgo dsignAlgo) (EpochState hashAlgo dsignAlgo)
-
 instance STS (RUPD hashAlgo dsignAlgo) where
   type State (RUPD hashAlgo dsignAlgo) = Maybe (RewardUpdate hashAlgo dsignAlgo)
   type Signal (RUPD hashAlgo dsignAlgo) = Slot.Slot
-  type Environment (RUPD hashAlgo dsignAlgo) = RupdEnv hashAlgo dsignAlgo
+  type Environment (RUPD hashAlgo dsignAlgo)
+    = (BlocksMade hashAlgo dsignAlgo, EpochState hashAlgo dsignAlgo)
   data PredicateFailure (RUPD hashAlgo dsignAlgo)
     = FailureRUPD
     deriving (Show, Eq)
@@ -32,7 +29,7 @@ instance STS (RUPD hashAlgo dsignAlgo) where
 
 rupdTransition :: TransitionRule (RUPD hashAlgo dsignAlgo)
 rupdTransition = do
-  TRC (RupdEnv b es, ru, s) <- judgmentContext
+  TRC ((b, es), ru, s) <- judgmentContext
   let slot = firstSlot (epochFromSlot s) +* startRewards
   if s <= slot
     then pure ru
