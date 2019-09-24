@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveFunctor        #-}
 {-# LANGUAGE DeriveGeneric        #-}
@@ -44,6 +45,7 @@ module Cardano.Chain.Block.Header
 
   -- * Boundary Header
   , ABoundaryHeader(..)
+  , mkABoundaryHeader
   , toCBORABoundaryHeader
   , fromCBORABoundaryHeader
   , boundaryHeaderHashAnnotated
@@ -149,9 +151,9 @@ data AHeader a = AHeader
   -- ^ The genesis key that is delegating to publish this block
   , headerSignature        :: !(ABlockSignature a)
   -- ^ The signature of the block, which contains the delegation certificate
-  , headerAnnotation       :: a
+  , headerAnnotation       :: !a
   -- ^ An annotation that captures the full header bytes
-  , headerExtraAnnotation  :: a
+  , headerExtraAnnotation  :: !a
   -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
   } deriving (Eq, Show, Generic, NFData, Functor)
 
@@ -443,12 +445,25 @@ headerHashAnnotated = hashDecoded . fmap wrapHeaderBytes
 -- BoundaryHeader
 --------------------------------------------------------------------------------
 
-data ABoundaryHeader a = ABoundaryHeader
+data ABoundaryHeader a = UnsafeABoundaryHeader
   { boundaryPrevHash         :: !(Either GenesisHash HeaderHash)
   , boundaryEpoch            :: !Word64
   , boundaryDifficulty       :: !ChainDifficulty
   , boundaryHeaderAnnotation :: !a
   } deriving (Eq, Show, Functor)
+
+-- | Smart constructor for 'ABoundaryHeader'
+--
+-- Makes sure that the hash is forced.
+mkABoundaryHeader :: Either GenesisHash HeaderHash
+                  -> Word64
+                  -> ChainDifficulty
+                  -> a
+                  -> ABoundaryHeader a
+mkABoundaryHeader prevHash epoch dty ann =
+    case prevHash of
+      Left  !genHash -> UnsafeABoundaryHeader (Left  genHash) epoch dty ann
+      Right !hdrHash -> UnsafeABoundaryHeader (Right hdrHash) epoch dty ann
 
 instance Decoded (ABoundaryHeader ByteString) where
   type BaseType (ABoundaryHeader ByteString) = ABoundaryHeader ()
@@ -506,12 +521,7 @@ fromCBORABoundaryHeader = do
     (epoch, difficulty) <- fromCBORBoundaryConsensusData
     isGen <- dropBoundaryExtraHeaderDataRetainGenesisTag
     let hh' = if epoch == 0 || isGen then Left (coerce hh) else Right hh
-    pure $ ABoundaryHeader
-      { boundaryPrevHash         = hh'
-      , boundaryEpoch            = epoch
-      , boundaryDifficulty       = difficulty
-      , boundaryHeaderAnnotation = ()
-      }
+    pure $ mkABoundaryHeader hh' epoch difficulty ()
   pure (header { boundaryHeaderAnnotation = bytespan })
 
 -- | These bytes must be prepended when hashing raw boundary header data
@@ -536,8 +546,8 @@ type BlockSignature = ABlockSignature ()
 --   1. A delegation certificate from a genesis key to the block signer
 --   2. The actual signature over `ToSign`
 data ABlockSignature a = ABlockSignature
-  { delegationCertificate :: Delegation.ACertificate a
-  , signature             :: Signature ToSign
+  { delegationCertificate :: !(Delegation.ACertificate a)
+  , signature             :: !(Signature ToSign)
   } deriving (Show, Eq, Generic, Functor)
     deriving anyclass NFData
 
