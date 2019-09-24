@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestPool where
@@ -9,10 +10,11 @@ import           Control.Monad (when)
 import           Data.Map (Map, (!?))
 import qualified Data.Maybe as Maybe (maybe)
 
-import           Hedgehog (Property, forAll, property, withTests, (===))
+import           Hedgehog (Property, forAll, property, withTests)
 
 import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace (sourceSignalTargets, traceLength, _traceEnv)
+import           Control.State.Transition.Trace (STTriple (..), sourceSignalTargets, traceLength,
+                     _traceEnv)
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
@@ -26,6 +28,7 @@ import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool
 
 
 import           Ledger.Core (dom, (∈), (∉))
+import           Test.Utils (all')
 
 -------------------------------
 -- helper accessor functions --
@@ -61,15 +64,17 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    [] === filter (not . registeredPoolNotRetiring) tr
+    all' registeredPoolNotRetiring tr
 
-  where registeredPoolNotRetiring (_, c@(RegPool _), p') =
+  where registeredPoolNotRetiring (STTriple
+                                    { signal = c@(RegPool _)
+                                    , target = p'}) =
           case cwitness c of
             KeyHashObj certWit -> let StakePools stp = getStPools p' in
                                       (  certWit ∈ dom stp
                                       && certWit ∉ dom (getRetiring p'))
             _                  -> False
-        registeredPoolNotRetiring (_, _, _) = True
+        registeredPoolNotRetiring _ = True
 
 -- | Check that if a pool retirement certificate is executed in the correct
 -- epoch interval, then the pool key will be added to the retiring map but stays
@@ -84,9 +89,12 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
     PoolEnv s pp = _traceEnv t
 
   when (n > 1) $
-    [] === filter (not . registeredPoolRetired s pp) tr
+    all' (registeredPoolRetired s pp) tr
 
-  where registeredPoolRetired s pp (p, c@(RetirePool _ e), p') =
+  where registeredPoolRetired s pp (STTriple
+                                    { source = p
+                                    , target = p'
+                                    , signal = c@(RetirePool _ e)}) =
           case cwitness c of
             KeyHashObj certWit -> let StakePools stp  = getStPools p
                                       StakePools stp' = getStPools p'
@@ -99,4 +107,4 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
                                     && certWit ∈ dom stp'
                                     && Maybe.maybe False ((== e) . epochFromSlot) (stp' !? certWit))
             _                  -> False
-        registeredPoolRetired _ _ (_, _, _) = True
+        registeredPoolRetired _ _ _ = True

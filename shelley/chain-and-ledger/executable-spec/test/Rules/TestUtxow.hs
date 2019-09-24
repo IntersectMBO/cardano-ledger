@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestUtxow where
@@ -13,8 +14,8 @@ import qualified Data.Set as Set (intersection, isSubsetOf, map, null)
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
 import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace (TraceOrder (..), sourceSignalTargets, traceLength,
-                     traceSignals, _traceEnv)
+import           Control.State.Transition.Trace (STTriple (..), TraceOrder (..),
+                     sourceSignalTargets, traceLength, traceSignals, _traceEnv)
 
 import           LedgerState (pattern UTxOState, decayedTx, keyRefunds)
 import           MockTypes (Tx, UTXOW)
@@ -23,6 +24,7 @@ import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
 
 import           Ledger.Core (dom, (<|))
+import           Test.Utils (all')
 
 ------------------------------
 -- Constants for Properties --
@@ -50,9 +52,12 @@ preserveBalance = withTests (fromIntegral numberOfTests) . property $ do
     UtxoEnv _ pp stk stp _ = _traceEnv t
 
   when (n > 1) $
-    [] === filter (not . (createdIsConsumed pp stk stp)) tr
+    all' (createdIsConsumed pp stk stp) tr
 
-  where createdIsConsumed pp stk stp (UTxOState u _ _ _, tx, UTxOState u' _ _ _) =
+  where createdIsConsumed pp stk stp (STTriple
+                                      { source = UTxOState u _ _ _
+                                      , signal = tx
+                                      , target = UTxOState u' _ _ _}) =
           created u' tx pp stp == consumed u tx pp stk
         created u tx pp stp =
             balance u
@@ -73,9 +78,12 @@ preserveBalanceRestricted = withTests (fromIntegral numberOfTests) . property $ 
     UtxoEnv _ pp stk stp _ = _traceEnv t
 
   when (n > 1) $
-    [] === filter (not . (createdIsConsumed pp stk stp)) tr
+    all' (createdIsConsumed pp stk stp) tr
 
-  where createdIsConsumed pp stk stp (UTxOState u _ _ _, tx, UTxOState _ _ _ _) =
+  where createdIsConsumed pp stk stp (STTriple
+                                       { source = UTxOState u _ _ _
+                                       , signal = tx
+                                       , target = UTxOState _ _ _ _}) =
           inps u tx == outs (_body tx) pp stk stp
         inps u tx = balance $ (_inputs $ _body tx) <| u
         outs tx pp stk stp =
@@ -99,9 +107,11 @@ preserveOutputsTx = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    [] === filter (not . outputPreserved) tr
+    all' outputPreserved tr
 
-  where outputPreserved (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
+  where outputPreserved (STTriple
+                         { signal = tx
+                         , target = UTxOState (UTxO utxo') _ _ _}) =
           let UTxO outs = txouts (_body tx) in
           outs `Map.isSubmapOf` utxo'
 
@@ -115,9 +125,11 @@ eliminateTxInputs = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    [] === filter (not . inputsEliminated) tr
+    all' inputsEliminated tr
 
-  where inputsEliminated (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
+  where inputsEliminated (STTriple
+                           { signal = tx
+                           , target = UTxOState (UTxO utxo') _ _ _}) =
           Set.null $ txins (_body tx) `Set.intersection` dom utxo'
 
 -- | Check that all new entries of a Tx are included in the new UTxO and that
@@ -131,11 +143,12 @@ newEntriesAndUniqueTxIns = withTests (fromIntegral numberOfTests) . property $ d
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    [] === filter (not . newEntryPresent) tr
+    all' newEntryPresent tr
 
-  where newEntryPresent ( UTxOState (UTxO utxo) _ _ _
-                        , tx
-                        , (UTxOState (UTxO utxo') _ _ _)) =
+  where newEntryPresent (STTriple
+                          { source = (UTxOState (UTxO utxo) _ _ _)
+                          , signal = tx
+                          , target = (UTxOState (UTxO utxo') _ _ _)}) =
           let UTxO outs = txouts (_body tx)
               outIds = Set.map (\(TxIn _id _) -> _id) (dom outs)
               oldIds = Set.map (\(TxIn _id _) -> _id) (dom utxo)
