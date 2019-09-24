@@ -66,14 +66,6 @@ Definition~\ref{def:valid-ledger-state} defines a valid ledger state reachable
 from the genesis state via valid LEDGER STS transitions. This gives a
 constructive rule how to reach a valid ledger state.
 
-
-\begin{property}[\textbf{Genesis Keys are Always All Delegated}]
-  \label{prop:genkeys-delegated}
-
-  All of the genesis keys are always all delegated.
-
-\end{property}
-
 \subsection{Ledger Properties}
 \label{sec:ledger-properties}
 
@@ -290,6 +282,32 @@ associated with the deregistration certificate is in the set of staking
 credentials of $l$ and delegates to the staking pool associated with the
 delegation certificate in $l'$.
 
+\begin{property}[\textbf{Genesis Keys are Always All Delegated}]
+  \label{prop:genkeys-delegated}
+  \begin{multline*}
+    \forall \var{l}, \var{l'} \in \LState: \applyFun{validLedgerstate}{l},\\
+    \implies \forall \Gamma \in \seqof{\Tx}, env \in (\Slot \times \PParams), \\
+    env \vdash\var{l} \trans{ledgers}{\Gamma} \var{l'} \implies |dms| = 7
+  \end{multline*}
+\end{property}
+
+Property \ref{prop:genkeys-delegated} states that all seven of the genesis keys
+are constantly all delegated after applying a list of transactions to a valid ledger 
+state.
+
+\begin{property}[\textbf{An Epoch Boundary Transition is Never Blocked}]
+  \label{prop:epoch-tr-happens}
+  \begin{multline*}
+    \forall \var{eps}: \applyFun{validLedgerstate}{l},
+    l=(\wcard, (u, \wcard)), \exists \var{l'} \in \EpochState: \applyFun{validLedgerstate}{l},
+    l' = (\wcard, (u, \wcard))\\
+    \implies \forall \var{e} \in \Epoch, lenv \vdash\var{u} \trans{epoch}{e} \var{u'} \\
+  \end{multline*}
+\end{property}
+
+Property \ref{prop:epoch-tr-happens} states that an epoch boundary transition
+is always invoked at the epoch boundary.
+
 \subsection{Ledger State Properties for Staking Pool Transitions}
 \label{sec:ledg-state-prop}
 
@@ -428,7 +446,6 @@ they both split the reward between the pool leader and the members.
   \end{multline*}
 
 \end{property}
-
 
 \clearpage
 
