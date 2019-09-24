@@ -673,18 +673,21 @@ for ease of reading.
 %%
 \begin{figure}[htb]
   \begin{equation}\label{eq:new-pc-accepted}
-    \inference[New-Proto-Param-Accepted]
+    \hspace{-0.3cm}
+    \inference[New-Proto-Param-Accept]
     {
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
-          \var{slot} & \leteq & \firstSlot{e} \\
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stdelegs}{stpools}{slot} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stdelegs}{stpools}{slot} \\
-          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
+         \var{slot} & \leteq & \firstSlot{e} \\
+         \var{oblg_{cur}} & \leteq & \obligation{pp}{stdelegs}{stpools}{slot} \\
+         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stdelegs}{stpools}{slot} \\
+         \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
+                                                                                      \leteq
+                              & \var{dstate}\\
+         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
       \end{array}}
       \\~\\~\\
-      \var{reserves} + \var{diff} \geq 0
-      \\
+      \var{reserves} + \var{diff} \geq \sum\limits_{\wcard\mapsto\var{val}\in\var{i_{rwd}}} val \\
       \fun{maxTxSize}~\var{pp_{new}} + \fun{maxHeaderSize}~\var{pp_{new}} <
         \fun{maxBlockSize}~\var{pp_{new}}
       \\~\\
@@ -748,7 +751,7 @@ for ease of reading.
       \left({\begin{array}{c}
             \var{pp_{new}}=\Nothing \\
         \lor \\
-        \var{reserves} + \var{diff} < 0\\
+        \var{reserves} + \var{diff} < \sum\limits_{\wcard\mapsto\var{val}\in\var{i_{rwd}}} val\\
         \lor \\
         \fun{maxTxSize}~\var{pp_{new}} + \fun{maxHeaderSize}~\var{pp_{new}} \geq
           \fun{maxBlockSize}~\var{pp_{new}}
@@ -758,7 +761,10 @@ for ease of reading.
           \var{slot} & \leteq & \firstSlot{e} \\
           \var{oblg_{cur}} & \leteq & \obligation{pp}{stdelegs}{stpools}{slot} \\
           \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stdelegs}{stpools}{slot} \\
-          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}} \\
+         \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
+                                                                                 \leteq
+                              & \var{dstate}\\
+         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
       \end{array}}
       \\~\\~\\
       \var{utxoSt'} \leteq
