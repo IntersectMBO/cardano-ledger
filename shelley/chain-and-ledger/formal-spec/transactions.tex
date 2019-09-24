@@ -46,10 +46,13 @@ node software that implements these rules is outlined in the next section
 Note that both of these finite maps are indexed by the hashes of the keys of
 entities proposing the given
 updates, $\KeyHashGen$.
-We use the abstract type $\KeyHashGen$ to represent the set hashes of genesis
-(public verification) keys, which have type $\VKeyGen$. These are a distinct type than the usual
-user verification keys, $\VKey$. Genesis keys are the keys belonging to the federated
+We use the abstract type $\KeyHashGen$ to represent hashes of genesis
+(public verification) keys, which have type $\VKeyGen$.
+Genesis keys are the keys belonging to the federated
 nodes running the Cardano system currently (also referred to as core nodes).
+The the regular user verification keys are of a type $\VKey$, distinct from the
+genesis key type, $\VKeyGen$. Similarly, the type hashes of these
+are distinct, $\KeyHash$ and $\KeyHashGen$ respectively.
 
 Currently, updates
 can only be proposed and voted on by the owners of the genesis keys.

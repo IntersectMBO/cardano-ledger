@@ -217,11 +217,11 @@ state transition types. We define two separate parts of the ledger state.
     \end{itemize}
 \end{itemize}
 
-The operational certificates $\var{cs}$ in the stake pool state are a tool to
-prevent nodes from rejecting blocks signed by a new hot staking key.
-These certificates are part of the block header, and allow nodes to process
-blocks where the re-delegation information for the new key could be is inside a block
-signed by that new key. For a discussion, see \cite{delegation_design}, and for
+The operational certificates counters $\var{cs}$ in the stake pool state are a
+tool to ensure that blocks containing outdated certificates are rejected.
+These certificates are part of the block header.
+For a discussion of why this additional mechanism is needed,
+see \cite{delegation_design}, and for
 the relevant rules, see Section \ref{sec:oper-cert-trans}.
 
 The environment for the state transition for $\DState$ contains the current slot number
