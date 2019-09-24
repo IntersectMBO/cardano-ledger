@@ -47,7 +47,7 @@ newtype SystemTag = SystemTag
   { getSystemTag :: Text
   } deriving (Eq, Ord, Show, Generic)
     deriving newtype B.Buildable
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance ToCBOR SystemTag where
   toCBOR = toCBOR . getSystemTag

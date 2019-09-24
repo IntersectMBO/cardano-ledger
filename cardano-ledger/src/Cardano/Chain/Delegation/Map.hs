@@ -41,6 +41,13 @@ instance FromCBOR Map where
 instance ToCBOR Map where
   toCBOR = toCBOR . Bimap.toList . unMap
 
+-- | A 'Bimap' contains two regular 'Map's, which are spine strict; we therefore
+-- have to worry about the elements only
+instance NoUnexpectedThunks Map where
+  whnfNoUnexpectedThunks ctxt = noUnexpectedThunksInKeysAndValues ctxt
+                              . Bimap.toList
+                              . unMap
+
 --------------------------------------------------------------------------------
 -- Query
 --------------------------------------------------------------------------------

@@ -57,7 +57,7 @@ import Cardano.Chain.UTxO.Tx (TxId, TxIn(..), TxOut(..))
 data CompactTxIn = CompactTxInUtxo {-# UNPACK #-} !CompactTxId
                                    {-# UNPACK #-} !Word32
   deriving (Eq, Ord, Generic, Show)
-  deriving anyclass NFData
+  deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance HeapWords CompactTxIn where
   heapWords _
@@ -114,7 +114,7 @@ data CompactTxId = CompactTxId {-# UNPACK #-} !Word64
                                {-# UNPACK #-} !Word64
                                {-# UNPACK #-} !Word64
   deriving (Eq, Generic, Ord, Show)
-  deriving anyclass NFData
+  deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance HeapWords CompactTxId where
   heapWords _
@@ -192,7 +192,7 @@ fromCompactTxId compactTxId =
 data CompactTxOut = CompactTxOut {-# UNPACK #-} !CompactAddress
                                  {-# UNPACK #-} !Lovelace
   deriving (Eq, Ord, Generic, Show)
-  deriving anyclass NFData
+  deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance HeapWords CompactTxOut where
   heapWords (CompactTxOut compactAddr _)

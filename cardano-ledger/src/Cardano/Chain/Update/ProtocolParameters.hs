@@ -59,7 +59,7 @@ data ProtocolParameters = ProtocolParameters
   , ppTxFeePolicy       :: !TxFeePolicy
   , ppUnlockStakeEpoch  :: !EpochNumber
   } deriving (Show, Eq, Ord, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance B.Buildable ProtocolParameters where
   build pp = bprint

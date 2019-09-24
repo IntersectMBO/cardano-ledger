@@ -42,7 +42,7 @@ import Cardano.Chain.Common.Lovelace
 data TxSizeLinear =
   TxSizeLinear !Lovelace !Lovelace
   deriving (Eq, Ord, Show, Generic)
-  deriving anyclass NFData
+  deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance B.Buildable TxSizeLinear where
   build (TxSizeLinear a b) = bprint (build . " + " . build . "*s") a b

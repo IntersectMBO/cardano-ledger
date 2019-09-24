@@ -1,4 +1,7 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -67,7 +70,9 @@ import Cardano.Crypto.Signing.Safe
 -- | Wrapper around 'CC.XSignature'
 newtype Signature a =
   Signature CC.XSignature
-  deriving (Eq, Ord, Show, Generic, NFData)
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass NFData
+  deriving NoUnexpectedThunks via UseIsNormalForm CC.XSignature
 
 instance B.Buildable (Signature a) where
   build _ = "<signature>"

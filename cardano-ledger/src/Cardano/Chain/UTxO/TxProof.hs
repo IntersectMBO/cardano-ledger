@@ -35,7 +35,7 @@ data TxProof = TxProof
   { txpNumber        :: !Word32
   , txpRoot          :: !(MerkleRoot Tx)
   , txpWitnessesHash :: !(Hash [TxWitness])
-  } deriving (Show, Eq, Generic)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
     deriving anyclass NFData
 
 instance B.Buildable TxProof where

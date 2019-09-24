@@ -37,7 +37,7 @@ import Cardano.Binary
 
 newtype ApplicationName = ApplicationName
   { unApplicationName :: Text
-  } deriving (Eq, Ord, Show, Generic, B.Buildable, NFData)
+  } deriving (Eq, Ord, Show, Generic, B.Buildable, NFData, NoUnexpectedThunks)
 
 instance ToCBOR ApplicationName where
   toCBOR appName = toCBOR (unApplicationName appName)
@@ -93,4 +93,3 @@ checkApplicationName (ApplicationName appName)
 
 applicationNameMaxLength :: Integral i => i
 applicationNameMaxLength = 12
-

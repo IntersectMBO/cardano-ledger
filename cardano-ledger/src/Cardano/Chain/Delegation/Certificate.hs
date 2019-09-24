@@ -84,7 +84,7 @@ data ACertificate a = UnsafeACertificate
   , signature  :: !(Signature EpochNumber)
   -- ^ The signature that proves the certificate was issued by @issuerVK@
   } deriving (Eq, Ord, Show, Generic, Functor)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 
 --------------------------------------------------------------------------------

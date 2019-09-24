@@ -21,7 +21,7 @@ import Cardano.Binary
 -- chain. In the simplest case it can be number of blocks in chain.
 newtype ChainDifficulty = ChainDifficulty
   { unChainDifficulty :: Word64
-  } deriving (Show, Eq, Ord, Enum, Generic, Buildable, NFData)
+  } deriving (Show, Eq, Ord, Enum, Generic, Buildable, NFData, NoUnexpectedThunks)
 
 instance ToCBOR ChainDifficulty where
     toCBOR cd = encodeListLen 1 <> toCBOR (unChainDifficulty cd)
@@ -35,4 +35,3 @@ dropChainDifficulty :: Dropper s
 dropChainDifficulty = do
   enforceSize "ChainDifficulty" 1
   dropWord64
-

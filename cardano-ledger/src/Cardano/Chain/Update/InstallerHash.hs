@@ -28,7 +28,7 @@ import Cardano.Crypto (Hash, hashRaw)
 newtype InstallerHash = InstallerHash
   { unInstallerHash :: Hash Raw
   } deriving (Eq, Show, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance B.Buildable InstallerHash where
   build (InstallerHash h) = bprint ("{ installer hash: " . build . " }") h

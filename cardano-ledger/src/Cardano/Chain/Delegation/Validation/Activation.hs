@@ -31,7 +31,7 @@ import Cardano.Chain.Slotting (SlotNumber(..))
 data State = State
   { delegationMap   :: !Delegation.Map
   , delegationSlots :: !(Map KeyHash SlotNumber)
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance FromCBOR State where
   fromCBOR = do
