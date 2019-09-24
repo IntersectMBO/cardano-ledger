@@ -75,13 +75,13 @@ type Certificate = ACertificate ()
 --   that 'EpochNumber' must correspond to the current or next 'EpochNumber' at
 --   the time of publishing
 data ACertificate a = UnsafeACertificate
-  { aEpoch     :: Annotated EpochNumber a
+  { aEpoch     :: !(Annotated EpochNumber a)
   -- ^ The epoch from which the delegation is valid
-  , issuerVK   :: VerificationKey
+  , issuerVK   :: !VerificationKey
   -- ^ The issuer of the certificate, who delegates their right to sign blocks
-  , delegateVK :: VerificationKey
+  , delegateVK :: !VerificationKey
   -- ^ The delegate, who gains the right to sign blocks
-  , signature  :: Signature EpochNumber
+  , signature  :: !(Signature EpochNumber)
   -- ^ The signature that proves the certificate was issued by @issuerVK@
   } deriving (Eq, Ord, Show, Generic, Functor)
     deriving anyclass NFData

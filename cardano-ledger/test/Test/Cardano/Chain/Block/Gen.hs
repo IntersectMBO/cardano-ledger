@@ -30,6 +30,7 @@ import Cardano.Chain.Block
   , ABoundaryBlock(..)
   , ABoundaryBody(..)
   , ABoundaryHeader(..)
+  , mkABoundaryHeader
   , pattern Body
   , Header
   , HeaderHash
@@ -215,7 +216,7 @@ genBoundaryBlock =
 
 genBoundaryHeader :: Gen (ABoundaryHeader ())
 genBoundaryHeader =
-  ABoundaryHeader
+  mkABoundaryHeader
     <$> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
     <*> (Gen.word64 (Range.constantFrom 10 0 1000))
     <*> genChainDifficulty
