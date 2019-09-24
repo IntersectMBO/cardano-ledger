@@ -167,6 +167,10 @@ instance Embed DELEG CHAIN where
 instance Embed UTXOWS CHAIN where
   wrapFailed = LedgerUTxOFailure
 
+isHeaderSizeTooBigFailure :: PredicateFailure CHAIN -> Bool
+isHeaderSizeTooBigFailure (HeaderSizeTooBig _ _ _) = True
+isHeaderSizeTooBigFailure _ = False
+
 
 headerIsValid :: UPIState -> BlockHeader -> Rule CHAIN 'Transition ()
 headerIsValid us bh = do
