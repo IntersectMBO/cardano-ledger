@@ -29,6 +29,7 @@ module Control.State.Transition.Trace
   , traceSignals
   , traceStates
   , preStatesAndSignals
+  , STTriple (..)
   , sourceSignalTargets
   , traceLength
   , traceInit
@@ -292,26 +293,6 @@ preStatesAndSignals OldestFirst tr
 preStatesAndSignals NewestFirst tr
   = reverse $ preStatesAndSignals OldestFirst tr
 
--- | Extract triplets of the form [(s, sig, t)] from a trace. For a valid trace,
--- each source state can reach a target state via the given signal.
---
--- Examples
---
---
--- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
--- >>> sourceSignalTargets tr0
--- []
---
--- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
--- >>> sourceSignalTargets tr0123
--- [(0,"one",1),(1,"two",2),(2,"three",3)]
---
-sourceSignalTargets :: forall a. Trace a -> [(State a, Signal a, State a)]
-sourceSignalTargets trace = zip3 states signals (tail states)
-  where
-    states = traceStates OldestFirst trace
-    signals = traceSignals OldestFirst trace
-
 -- | Apply the signals in the list and elaborate a trace with the resulting
 -- states.
 --
@@ -428,3 +409,34 @@ extractValues d =  catMaybes (gmapQ extractValue d)
   where
     extractValue :: forall d1 . (Data d1) => d1 -> Maybe a
     extractValue d1 = cast d1
+
+data STTriple a =
+  STTriple {
+    source :: State a
+  , target :: State a
+  , signal :: Signal a
+  }
+
+deriving instance (Eq (State a), Eq (Signal a)) => Eq (STTriple a)
+deriving instance (Show (State a), Show (Signal a)) => Show (STTriple a)
+
+-- | Extract triplets of the form [STTriple {source = s, signal = sig, target =
+-- t)] from a trace. For a valid trace, each source state can reach a target
+-- state via the given signal.
+--
+-- Examples
+--
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> sourceSignalTargets tr0
+-- []
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> sourceSignalTargets tr0123
+-- [STTriple {source = 0, target = 1, signal = "one"},STTriple {source = 1, target = 2, signal = "two"},STTriple {source = 2, target = 3, signal = "three"}]
+--
+sourceSignalTargets :: forall a. Trace a -> [STTriple a]
+sourceSignalTargets trace = zipWith3 STTriple states (tail states) signals
+  where
+    states = traceStates OldestFirst trace
+    signals = traceSignals OldestFirst trace
