@@ -26,7 +26,7 @@ import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
 import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
-import           Test.Utils (all')
+import           Test.Utils (assertAll)
 
 -------------------------------
 -- helper accessor functions --
@@ -61,7 +61,7 @@ rewardZeroAfterReg = withTests numberOfTests . property $ do
   tr <- fmap sourceSignalTargets
       $ forAll
       $ trace @DELEG traceLen `ofLengthAtLeast` 1
-  all' credNewlyRegisteredAndRewardZero tr
+  assertAll credNewlyRegisteredAndRewardZero tr
 
   where credNewlyRegisteredAndRewardZero (STTriple
                                             { source = d
@@ -79,7 +79,7 @@ credentialRemovedAfterDereg = withTests numberOfTests . property $ do
   tr <- fmap sourceSignalTargets
       $ forAll
       $ trace @DELEG traceLen `ofLengthAtLeast` 1
-  all' removedDeregCredential tr
+  assertAll removedDeregCredential tr
 
   where removedDeregCredential (STTriple
                                  { signal = DeRegKey cred
@@ -96,7 +96,7 @@ credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . prop
   tr <- fmap sourceSignalTargets
      $ forAll
      $ trace @DELEG  traceLen `ofLengthAtLeast` 1
-  all' delegatedCredential tr
+  assertAll delegatedCredential tr
 
   where delegatedCredential (STTriple
                               { signal = Delegate (Delegation cred to)

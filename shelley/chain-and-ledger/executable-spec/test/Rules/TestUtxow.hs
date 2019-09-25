@@ -24,7 +24,7 @@ import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
 
 import           Ledger.Core (dom, (<|))
-import           Test.Utils (all')
+import           Test.Utils (assertAll)
 
 ------------------------------
 -- Constants for Properties --
@@ -52,7 +52,7 @@ preserveBalance = withTests (fromIntegral numberOfTests) . property $ do
     UtxoEnv _ pp stk stp _ = _traceEnv t
 
   when (n > 1) $
-    all' (createdIsConsumed pp stk stp) tr
+    assertAll (createdIsConsumed pp stk stp) tr
 
   where createdIsConsumed pp stk stp (STTriple
                                       { source = UTxOState u _ _ _
@@ -78,7 +78,7 @@ preserveBalanceRestricted = withTests (fromIntegral numberOfTests) . property $ 
     UtxoEnv _ pp stk stp _ = _traceEnv t
 
   when (n > 1) $
-    all' (createdIsConsumed pp stk stp) tr
+    assertAll (createdIsConsumed pp stk stp) tr
 
   where createdIsConsumed pp stk stp (STTriple
                                        { source = UTxOState u _ _ _
@@ -107,7 +107,7 @@ preserveOutputsTx = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    all' outputPreserved tr
+    assertAll outputPreserved tr
 
   where outputPreserved (STTriple
                          { signal = tx
@@ -125,7 +125,7 @@ eliminateTxInputs = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    all' inputsEliminated tr
+    assertAll inputsEliminated tr
 
   where inputsEliminated (STTriple
                            { signal = tx
@@ -143,7 +143,7 @@ newEntriesAndUniqueTxIns = withTests (fromIntegral numberOfTests) . property $ d
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    all' newEntryPresent tr
+    assertAll newEntryPresent tr
 
   where newEntryPresent (STTriple
                           { source = (UTxOState (UTxO utxo) _ _ _)

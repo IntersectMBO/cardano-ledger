@@ -20,7 +20,7 @@ import           TxData (pattern StakePools)
 
 import           Ledger.Core (dom, (▷))
 import           Rules.TestPool (getRetiring, getStPools)
-import           Test.Utils
+import           Test.Utils (assertAll)
 
 
 ------------------------------
@@ -48,7 +48,7 @@ removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    all' poolRemoved tr
+    assertAll poolRemoved tr
 
   where poolRemoved (STTriple
                       { source = PoolreapState _ _ _ p
