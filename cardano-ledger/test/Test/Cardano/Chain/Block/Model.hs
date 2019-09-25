@@ -2,6 +2,7 @@
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE OverloadedLists  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TupleSections    #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,30 +26,38 @@ module Test.Cardano.Chain.Block.Model
   )
 where
 
-import Cardano.Prelude hiding (trace, State)
+import Cardano.Prelude hiding (trace, State, state)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Hedgehog
-  ( MonadTest
+  ( Gen
+  , MonadTest
   , PropertyT
   , TestLimit
+  , assert
   , collect
+  , cover
   , evalEither
   , failure
   , footnote
   , forAll
   , property
+  , success
   )
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
-  ( BlockValidationMode (..)
-  , ChainValidationError
+  ( ABlock
+  , BlockValidationMode(..)
+  , ChainValidationError(ChainValidationHeaderTooLarge)
   , ChainValidationState(cvsUtxo)
+  , blockHeader
+  , cvsUpdateState
+  , headerLength
   , initialChainValidationState
   , updateBlock
   )
@@ -58,25 +67,38 @@ import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
 import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(..))
 import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxWitsList)
+import Cardano.Chain.Update (ppMaxHeaderSize)
+import Cardano.Chain.Update.Validation.Interface (adoptedProtocolParameters)
+
 import Cardano.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
   , ShouldGenUTxO(NoGenUTxO)
   , ShouldGenUpdate(NoGenUpdate, GenUpdate)
   , sigGenChain
+  , isHeaderSizeTooBigFailure
   )
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import Control.State.Transition.Generator (classifyTraceLength, trace, invalidTrace, SignalGenerator, sigGen)
-import Control.State.Transition (State, Environment, PredicateFailure)
+import Control.State.Transition.Generator
+  ( SignalGenerator
+  , classifyTraceLength
+  , invalidTrace
+  , ofLengthAtLeast
+  , sigGen
+  , trace
+  )
+import Control.State.Transition (State, Environment, Signal, PredicateFailure, applySTS, TRC(TRC))
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(NewestFirst, OldestFirst)
   , _traceEnv
+  , lastSignal
   , lastState
   , preStatesAndSignals
   , traceEnv
+  , traceInit
   , traceSignals
   )
 import qualified Ledger.Core as AbstractCore
@@ -90,7 +112,14 @@ import Ledger.Delegation
   , randomDCertGen
   , tamperedDcerts
   )
-import Ledger.Update (tamperWithUpdateProposal, UPIREG, UPIEnv, tamperWithVotes, UPIState)
+import Ledger.Update
+  ( UPIEnv
+  , UPIREG
+  , UPIState
+  , _maxHdrSz
+  , tamperWithUpdateProposal
+  , tamperWithVotes
+  )
 import qualified Ledger.Update.Test as Update.Test
 
 import Test.Cardano.Chain.Elaboration.Block
@@ -157,6 +186,35 @@ elaborateAndUpdate config (cvs, abstractToConcreteIdMaps) (ast, ab) =
   vMode :: ValidationMode
   vMode = fromBlockValidationMode BlockValidation
 
+elaborateBlock
+  :: Genesis.Config
+  -> ChainValidationState
+  -> AbstractToConcreteIdMaps
+  -> State CHAIN
+  -> Abstract.Block
+  -> ABlock ByteString
+elaborateBlock
+  config
+  chainValidationState
+  abstractToConcreteIdMaps
+  abstractState
+  abstractBlock = concreteBlock
+  where
+    (concreteBlock, _) = elaborateBS
+                           abstractToConcreteIdMaps
+                           config
+                           dCert
+                           chainValidationState
+                           abstractBlock
+      where
+        dCert = rcDCert
+                  (abstractBlock ^. Abstract.bHeader . Abstract.bhIssuer)
+                  stableAfter
+                  abstractState
+          where
+            stableAfter = AbstractCore.BlockCount
+                        $ unBlockCount
+                        $ Genesis.configK config
 
 classifyTransactions :: Trace CHAIN -> PropertyT IO ()
 classifyTransactions =
@@ -244,16 +302,17 @@ invalidChainTracesAreRejected numberOfTests failureProfile onFailureAgreement =
       Right concreteState ->
         let abstractState = lastState (Invalid.Trace.validPrefix tr)
             block = Invalid.Trace.signal tr
-            result' = elaborateAndUpdate
-                    elaboratedConfig
-                    concreteState
-                    (abstractState, block)
+            result' =
+              elaborateAndUpdate
+                elaboratedConfig
+                concreteState
+                (abstractState, block)
         in
         case (Invalid.Trace.errorOrLastState tr, result') of
           (Right _, Right _) ->
             -- Success: it is possible that the invalid signals generator
             -- produces a valid signal, since the generator is probabilistic.
-            pure ()
+            success
           (Left abstractPfs, Left concretePfs) -> do
             -- Success: both the model and the concrete implementation failed
             -- to validate the signal.
@@ -412,3 +471,119 @@ applyTrace tr =
                 , _stableAfter) = tr ^. traceEnv
 
     (initialUTxO, txIdMap) = elaborateInitialUTxO abstractInitialUTxO
+
+
+ts_prop_invalidHeaderSizesAreRejected :: TSProperty
+ts_prop_invalidHeaderSizesAreRejected =
+  withTestsTS 300 $ property $ do
+  tr <- forAll $ trace @CHAIN 100 `ofLengthAtLeast` 1
+  let
+    ValidationOutput { elaboratedConfig, result } =
+      applyTrace initTr
+    initTr :: Trace CHAIN
+    initTr = traceInit tr
+  case result of
+    Left error -> do
+      footnote $ "Expecting a valid trace but got: " ++ show error
+      failure
+    Right (concreteState, concreteIdMaps) -> do
+      let
+        abstractState :: State CHAIN
+        abstractState = lastState $ initTr
+
+        lastBlock :: Signal CHAIN
+        lastBlock = lastSignal tr
+
+        abstractEnv :: Environment CHAIN
+        abstractEnv = _traceEnv tr
+
+        concreteLastBlock =
+        -- NOTE: since we're altering the maximum header/body size defined in
+        -- the parameters we it shouldn't matter whether we're using the
+        -- altered states.
+          elaborateBlock
+            elaboratedConfig
+            concreteState
+            concreteIdMaps
+            abstractState
+            lastBlock
+
+        lastBlockHeaderSize = Abstract.bHeaderSize (Abstract._bHeader lastBlock)
+
+        concreteLastBlockSize = headerLength (blockHeader concreteLastBlock)
+
+      alteredAbstractState :: State CHAIN <-
+        forAll $ abstractRestrictMaximumHeaderSize abstractState (lastBlockHeaderSize - 1)
+
+      alteredConcreteState <-
+        forAll $ concreteRestrictMaximumHeaderSize concreteState (concreteLastBlockSize - 1)
+        --
+        -- NOTE: Here we could simply choose not to use the concrete block size
+        -- and use the abstract block size instead. The former will be larger
+        -- than the latter. However the problem will be that we won't be
+        -- testing the boundary condition block size - 1 == maximum block size
+
+      let
+        abstractResult =
+          applySTS @CHAIN (TRC (abstractEnv, alteredAbstractState, lastBlock))
+
+        concreteResult =
+          elaborateAndUpdate
+            elaboratedConfig
+            (alteredConcreteState, concreteIdMaps)
+            (alteredAbstractState, lastBlock)
+
+      case (abstractResult, concreteResult) of
+        (Left abstractPfs,  Left (ChainValidationHeaderTooLarge _ _)) -> do
+          assert $
+            any (any isHeaderSizeTooBigFailure)
+                abstractPfs
+          footnote $ "HeaderSizeTooBig not found in the predicate failures: " ++ show abstractPfs
+          cover 85 "Header size validation hit" True
+          success
+        (Right _, Right _) ->
+          -- It might be that we are at an epoch boundary, so the altered
+          -- update state will be overwritten by an epoch transition. In that
+          -- case it is OK if both executable spec and implementation return
+          -- 'Right'.
+          success
+        _ -> do
+          footnote "Validation results mismatch."
+          footnote $ "Altered abstract state: " ++ show alteredAbstractState
+          footnote $ "Signal: " ++ show lastBlock
+          footnote $ "Abstract result: " ++ show abstractResult
+          footnote $ "Concrete result: " ++ show concreteResult
+          failure
+
+-- | Modify the given state so that the maximum header size is between 0 and
+-- the given value.
+abstractRestrictMaximumHeaderSize :: State CHAIN -> Natural -> Gen (State CHAIN)
+abstractRestrictMaximumHeaderSize (slot, sgs, h, utxo, ds, us) maxSize =
+  (slot, sgs, h, utxo, ds, ) <$> restrictMaximumHeaderSize us
+  where
+    restrictMaximumHeaderSize ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = do
+      newMaxSize <- Gen.integral (Range.constant 0 maxSize)
+      pure $! ( (pv, pps { _maxHdrSz = newMaxSize })
+              , fads
+              , avs
+              , rpus
+              , raus
+              , cps
+              , vts
+              , bvs
+              , pws
+              )
+
+
+concreteRestrictMaximumHeaderSize :: ChainValidationState -> Natural -> Gen ChainValidationState
+concreteRestrictMaximumHeaderSize state maxSize =
+  setMaxHeaderSize <$> Gen.integral (Range.constant 0 maxSize)
+  where
+    setMaxHeaderSize newSize = state { cvsUpdateState = newUpdateState }
+      where
+        newUpdateState =
+          (cvsUpdateState state) { adoptedProtocolParameters = newParameters }
+          where
+            newParameters =
+              (adoptedProtocolParameters (cvsUpdateState state)) { ppMaxHeaderSize = newSize }
+              -- And this is why lenses were invented...

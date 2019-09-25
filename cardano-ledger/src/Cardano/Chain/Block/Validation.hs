@@ -22,7 +22,7 @@ module Cardano.Chain.Block.Validation
   , EpochEnvironment(..)
   , ChainValidationState(..)
   , initialChainValidationState
-  , ChainValidationError
+  , ChainValidationError(..)
 
   -- * SigningHistory
   , SigningHistory(..)
