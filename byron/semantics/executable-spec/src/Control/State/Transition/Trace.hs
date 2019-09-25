@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -30,7 +31,9 @@ module Control.State.Transition.Trace
   , preStatesAndSignals
   , sourceSignalTargets
   , traceLength
+  , traceInit
   , lastState
+  , lastSignal
   , firstAndLastState
   , closure
   -- * Miscellaneous utilities
@@ -44,6 +47,7 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
 import           Data.Maybe (catMaybes)
+import           GHC.Stack (HasCallStack)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
 
 import           Control.State.Transition (Environment, PredicateFailure, STS, Signal, State,
@@ -107,9 +111,40 @@ mkTrace = Trace
 -- 2
 --
 lastState :: Trace s -> State s
-lastState tr = case tr ^. traceTrans of
-  (st, _):_ -> st
-  _ -> tr ^. traceInitState
+lastState Trace { _traceInitState, _traceTrans } =
+  case _traceTrans of
+    (st, _):_ -> st
+    _ -> _traceInitState
+
+
+-- | Get the last applied signal in a trace (this is, the newest signal).
+--
+--
+-- Examples:
+--
+-- >>> :set -XScopedTypeVariables
+-- >>> import Control.Exception (catch, ErrorCall)
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> print (lastSignal tr0) `catch` (\(_ :: ErrorCall) -> putStrLn "error!")
+-- "error!
+--
+-- dnadales: In the example above I don't know why the doctests is swallowing
+-- the last @"@.
+--
+-- >>> tr01 = mkTrace True 0 [(1, "one")] :: Trace DUMMY
+-- >>> lastSignal tr01
+-- "one"
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> lastSignal tr0123
+-- "three"
+--
+lastSignal :: HasCallStack => Trace s -> Signal s
+lastSignal Trace { _traceTrans } =
+  case _traceTrans of
+    [] -> error "lastSignal was called with a trace without signals"
+    (_st, signal):_ -> signal
+
 
 -- | Return the first and last state of the trace.
 --
@@ -201,6 +236,32 @@ traceStates order tr = fromNewestFirst order (xs ++ [x])
 traceLength :: Trace s -> Int
 traceLength tr = tr ^. traceTrans . to length
 
+-- | Take all but the newest signal in the trace.
+--
+-- Precondition: the trace must contain at least one signal
+--
+-- Examples:
+--
+--
+-- >>> :set -XScopedTypeVariables
+-- >>> import Control.Exception (catch, ErrorCall)
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> print (traceInit tr0) `catch` (\(_ :: ErrorCall) -> print "error!")
+-- "error!"
+--
+-- >>> tr01 = mkTrace True 0 [(1, "one")] :: Trace DUMMY
+-- >>> traceInit tr01
+-- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = []}
+--
+-- >>> tr012 = mkTrace True 0 [(2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> traceInit tr012
+-- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = [(1,"one")]}
+--
+traceInit :: HasCallStack => Trace s -> Trace s
+traceInit tr@Trace { _traceTrans } =
+  case _traceTrans of
+    [] -> error "traceInit was called with a trace without signals"
+    _:trans -> tr { _traceTrans = trans }
 
 -- | Retrieve all the signals in the trace paired with the state prior to the
 -- application of the signal.
@@ -230,6 +291,26 @@ preStatesAndSignals OldestFirst tr
   = zip (traceStates OldestFirst tr) (traceSignals OldestFirst tr)
 preStatesAndSignals NewestFirst tr
   = reverse $ preStatesAndSignals OldestFirst tr
+
+-- | Extract triplets of the form [(s, sig, t)] from a trace. For a valid trace,
+-- each source state can reach a target state via the given signal.
+--
+-- Examples
+--
+--
+-- >>> tr0 = mkTrace True 0 [] :: Trace DUMMY
+-- >>> sourceSignalTargets tr0
+-- []
+--
+-- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
+-- >>> sourceSignalTargets tr0123
+-- [(0,"one",1),(1,"two",2),(2,"three",3)]
+--
+sourceSignalTargets :: forall a. Trace a -> [(State a, Signal a, State a)]
+sourceSignalTargets trace = zip3 states signals (tail states)
+  where
+    states = traceStates OldestFirst trace
+    signals = traceSignals OldestFirst trace
 
 -- | Apply the signals in the list and elaborate a trace with the resulting
 -- states.
@@ -347,19 +428,3 @@ extractValues d =  catMaybes (gmapQ extractValue d)
   where
     extractValue :: forall d1 . (Data d1) => d1 -> Maybe a
     extractValue d1 = cast d1
-
-
--- | Extract triplets of the form [(s, sig, t)] from a trace. For a valid trace,
--- each source state can reach a target state via the given signal.
---
--- Examples
---
--- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
--- >>> sourceSignalTargets tr0123
--- [(0,"one",1),(1,"two",2),(2,"three",3)]
---
-sourceSignalTargets :: forall a. Trace a -> [(State a, Signal a, State a)]
-sourceSignalTargets trace = zip3 states signals (tail states)
-  where
-    states = traceStates OldestFirst trace
-    signals = traceSignals OldestFirst trace
