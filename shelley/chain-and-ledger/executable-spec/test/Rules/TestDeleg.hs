@@ -5,17 +5,17 @@
 
 module Rules.TestDeleg where
 
-import           Control.Monad (when)
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map (lookup)
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set (singleton, size)
+import           Data.Word (Word64)
 
-import           Hedgehog (Property, forAll, property, withTests, (===))
+import           Hedgehog (Property, TestLimit, forAll, property, withTests, (===))
 
-import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace (sourceSignalTargets, traceLength)
+import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
+import           Control.State.Transition.Trace (sourceSignalTargets)
 
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
@@ -43,10 +43,10 @@ getDelegations = _delegations
 -- Constants for Properties --
 ------------------------------
 
-numberOfTests :: Int
+numberOfTests :: TestLimit
 numberOfTests = 300
 
-traceLen :: Int
+traceLen :: Word64
 traceLen = 100
 
 --------------------------
@@ -55,15 +55,11 @@ traceLen = 100
 
 -- | Check that a newly registered key has a reward of 0.
 rewardZeroAfterReg :: Property
-rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @DELEG $ fromIntegral traceLen)
-  let
-    n :: Integer
-    n = fromIntegral $ traceLength t
-    tr = sourceSignalTargets t
-
-  when (n > 1) $
-    [] === filter (not . credNewlyRegisteredAndRewardZero) tr
+rewardZeroAfterReg = withTests numberOfTests . property $ do
+  tr <- fmap sourceSignalTargets
+      $ forAll
+      $ trace @DELEG traceLen `ofLengthAtLeast` 1
+  [] === filter (not . credNewlyRegisteredAndRewardZero) tr
 
   where credNewlyRegisteredAndRewardZero (d, RegKey hk, d') =
           (hk ∉ getStDelegs d) ==>
@@ -74,15 +70,11 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
 -- | Check that when a stake credential is deregistered, it will not be in the
 -- rewards mapping or delegation mapping of the target state.
 credentialRemovedAfterDereg :: Property
-credentialRemovedAfterDereg = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @DELEG $ fromIntegral traceLen)
-  let
-    n :: Integer
-    n = fromIntegral $ traceLength t
-    tr = sourceSignalTargets t
-
-  when (n > 1) $
-    [] === filter (not . removedDeregCredential) tr
+credentialRemovedAfterDereg = withTests numberOfTests . property $ do
+  tr <- fmap sourceSignalTargets
+      $ forAll
+      $ trace @DELEG traceLen `ofLengthAtLeast` 1
+  [] === filter (not . removedDeregCredential) tr
 
   where removedDeregCredential (_, DeRegKey cred, d') =
              cred ∉ getStDelegs d'
@@ -94,14 +86,10 @@ credentialRemovedAfterDereg = withTests (fromIntegral numberOfTests) . property 
 -- applying a delegation certificate.
 credentialMappingAfterDelegation :: Property
 credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @DELEG $ fromIntegral traceLen)
-  let
-    n :: Integer
-    n = fromIntegral $ traceLength t
-    tr = sourceSignalTargets t
-
-  when (n > 1) $
-    [] === filter (not . delegatedCredential) tr
+  tr <- fmap sourceSignalTargets
+     $ forAll
+     $ trace @DELEG  traceLen `ofLengthAtLeast` 1
+  [] === filter (not . delegatedCredential) tr
 
   where delegatedCredential (_, Delegate (Delegation cred to), d') =
           let credImage = range (Set.singleton cred ◁ getDelegations d') in
