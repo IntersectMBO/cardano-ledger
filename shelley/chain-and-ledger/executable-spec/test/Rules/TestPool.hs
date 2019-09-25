@@ -6,15 +6,15 @@
 
 module Rules.TestPool where
 
-import           Control.Monad (when)
 import           Data.Map (Map, (!?))
 import qualified Data.Maybe as Maybe (maybe)
+import           Data.Word (Word64)
 
 import           Hedgehog (Property, forAll, property, withTests)
 
-import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace (STTriple (..), sourceSignalTargets, traceLength,
-                     _traceEnv)
+import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
+import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
+                     sourceSignalTargets, target, _traceEnv)
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
@@ -44,10 +44,10 @@ getStPools = _stPools
 -- Constants for Properties --
 ------------------------------
 
-numberOfTests :: Int
+numberOfTests :: Word64
 numberOfTests = 300
 
-traceLen :: Int
+traceLen :: Word64
 traceLen = 100
 
 -------------------------
@@ -57,16 +57,13 @@ traceLen = 100
 -- | Check that a newly registered pool key is not in the retiring map.
 rewardZeroAfterReg :: Property
 rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @POOL $ fromIntegral traceLen)
-  let
-    n :: Integer
-    n = fromIntegral $ traceLength t
-    tr = sourceSignalTargets t
+  tr <- fmap sourceSignalTargets
+        $ forAll
+        $ trace @POOL traceLen `ofLengthAtLeast` 1
 
-  when (n > 1) $
-    assertAll registeredPoolNotRetiring tr
+  assertAll registeredPoolNotRetiring tr
 
-  where registeredPoolNotRetiring (STTriple
+  where registeredPoolNotRetiring (SourceSignalTarget
                                     { signal = c@(RegPool _)
                                     , target = p'}) =
           case cwitness c of
@@ -81,17 +78,14 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
 -- in the set of stake pools.
 poolRetireInEpoch :: Property
 poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @POOL $ fromIntegral traceLen)
+  t <- forAll (trace @POOL traceLen `ofLengthAtLeast` 1)
   let
-    n :: Integer
-    n = fromIntegral $ traceLength t
     tr = sourceSignalTargets t
     PoolEnv s pp = _traceEnv t
 
-  when (n > 1) $
-    assertAll (registeredPoolRetired s pp) tr
+  assertAll (registeredPoolRetired s pp) tr
 
-  where registeredPoolRetired s pp (STTriple
+  where registeredPoolRetired s pp (SourceSignalTarget
                                     { source = p
                                     , target = p'
                                     , signal = c@(RetirePool _ e)}) =

@@ -16,7 +16,8 @@ import           Data.Word (Word64)
 import           Hedgehog (Property, TestLimit, forAll, property, withTests)
 
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (STTriple (..), sourceSignalTargets)
+import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
+                     sourceSignalTargets, target)
 
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
@@ -63,7 +64,7 @@ rewardZeroAfterReg = withTests numberOfTests . property $ do
       $ trace @DELEG traceLen `ofLengthAtLeast` 1
   assertAll credNewlyRegisteredAndRewardZero tr
 
-  where credNewlyRegisteredAndRewardZero (STTriple
+  where credNewlyRegisteredAndRewardZero (SourceSignalTarget
                                             { source = d
                                             , signal = RegKey hk
                                             , target = d'}) =
@@ -81,7 +82,7 @@ credentialRemovedAfterDereg = withTests numberOfTests . property $ do
       $ trace @DELEG traceLen `ofLengthAtLeast` 1
   assertAll removedDeregCredential tr
 
-  where removedDeregCredential (STTriple
+  where removedDeregCredential (SourceSignalTarget
                                  { signal = DeRegKey cred
                                  , target = d'}) =
              cred ∉ getStDelegs d'
@@ -98,7 +99,7 @@ credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . prop
      $ trace @DELEG  traceLen `ofLengthAtLeast` 1
   assertAll delegatedCredential tr
 
-  where delegatedCredential (STTriple
+  where delegatedCredential (SourceSignalTarget
                               { signal = Delegate (Delegation cred to)
                               , target = d'}) =
           let credImage = range (Set.singleton cred ◁ getDelegations d') in

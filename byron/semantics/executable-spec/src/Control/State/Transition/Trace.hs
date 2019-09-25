@@ -29,7 +29,7 @@ module Control.State.Transition.Trace
   , traceSignals
   , traceStates
   , preStatesAndSignals
-  , STTriple (..)
+  , SourceSignalTarget (..)
   , sourceSignalTargets
   , traceLength
   , traceInit
@@ -410,17 +410,17 @@ extractValues d =  catMaybes (gmapQ extractValue d)
     extractValue :: forall d1 . (Data d1) => d1 -> Maybe a
     extractValue d1 = cast d1
 
-data STTriple a =
-  STTriple {
+data SourceSignalTarget a =
+  SourceSignalTarget {
     source :: State a
   , target :: State a
   , signal :: Signal a
   }
 
-deriving instance (Eq (State a), Eq (Signal a)) => Eq (STTriple a)
-deriving instance (Show (State a), Show (Signal a)) => Show (STTriple a)
+deriving instance (Eq (State a), Eq (Signal a)) => Eq (SourceSignalTarget a)
+deriving instance (Show (State a), Show (Signal a)) => Show (SourceSignalTarget a)
 
--- | Extract triplets of the form [STTriple {source = s, signal = sig, target =
+-- | Extract triplets of the form [SourceSignalTarget {source = s, signal = sig, target =
 -- t)] from a trace. For a valid trace, each source state can reach a target
 -- state via the given signal.
 --
@@ -433,10 +433,10 @@ deriving instance (Show (State a), Show (Signal a)) => Show (STTriple a)
 --
 -- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> sourceSignalTargets tr0123
--- [STTriple {source = 0, target = 1, signal = "one"},STTriple {source = 1, target = 2, signal = "two"},STTriple {source = 2, target = 3, signal = "three"}]
+-- [SourceSignalTarget {source = 0, target = 1, signal = "one"},SourceSignalTarget {source = 1, target = 2, signal = "two"},SourceSignalTarget {source = 2, target = 3, signal = "three"}]
 --
-sourceSignalTargets :: forall a. Trace a -> [STTriple a]
-sourceSignalTargets trace = zipWith3 STTriple states (tail states) signals
+sourceSignalTargets :: forall a. Trace a -> [SourceSignalTarget a]
+sourceSignalTargets trace = zipWith3 SourceSignalTarget states (tail states) signals
   where
     states = traceStates OldestFirst trace
     signals = traceSignals OldestFirst trace
