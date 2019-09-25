@@ -1,8 +1,8 @@
 module Test.Utils
-  ( all'
+  ( assertAll
   ) where
 
-import Hedgehog ((===), MonadTest)
+import           Hedgehog (MonadTest, (===))
 
-all' :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
-all' p xs = [] === filter (not . p) xs
+assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
+assertAll p xs = [] === filter (not . p) xs

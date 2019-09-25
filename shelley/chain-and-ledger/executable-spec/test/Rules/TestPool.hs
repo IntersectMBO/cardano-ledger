@@ -28,7 +28,7 @@ import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool
 
 
 import           Ledger.Core (dom, (∈), (∉))
-import           Test.Utils (all')
+import           Test.Utils (assertAll)
 
 -------------------------------
 -- helper accessor functions --
@@ -64,7 +64,7 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    all' registeredPoolNotRetiring tr
+    assertAll registeredPoolNotRetiring tr
 
   where registeredPoolNotRetiring (STTriple
                                     { signal = c@(RegPool _)
@@ -89,7 +89,7 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
     PoolEnv s pp = _traceEnv t
 
   when (n > 1) $
-    all' (registeredPoolRetired s pp) tr
+    assertAll (registeredPoolRetired s pp) tr
 
   where registeredPoolRetired s pp (STTriple
                                     { source = p
