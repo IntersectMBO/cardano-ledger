@@ -22,16 +22,20 @@ import           Slot
 import           Tx
 import           TxData
 
-import           Control.State.Transition
-
 import           STS.Delpl
 
+import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+
 import           Ledger.Core (dom, (∈), (⊆), (⨃))
+
+import           Hedgehog (Gen)
 
 data DELEGS hashAlgo dsignAlgo
 
 data DelegsEnv hashAlgo dsignAlgo
   = DelegsEnv Slot Ix PParams (Tx hashAlgo dsignAlgo)
+    deriving (Show)
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
@@ -90,3 +94,9 @@ instance
   => Embed (DELPL hashAlgo dsignAlgo) (DELEGS hashAlgo dsignAlgo)
  where
   wrapFailed = DelplFailure
+
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => HasTrace (DELEGS hashAlgo dsignAlgo) where
+  envGen _ = undefined :: Gen (DelegsEnv hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen (Seq (DCert hashAlgo dsignAlgo))
