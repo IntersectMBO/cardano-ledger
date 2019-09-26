@@ -33,6 +33,8 @@ import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
+import           Cardano.Binary (ToCBOR)
+
 import           Data.AbstractSize
 
 import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), SeedGoblin (..),
@@ -59,7 +61,7 @@ class HasHash a where
 newtype Owner = Owner
   { unOwner :: Natural
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable)
+    deriving newtype (Eq, Ord, Hashable, ToCBOR)
     deriving anyclass (HasTypeReps)
 
 class HasOwner a where
@@ -68,7 +70,7 @@ class HasOwner a where
 -- |Signing Key.
 newtype SKey = SKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord)
+  deriving newtype (Eq, Ord, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner SKey where
@@ -87,7 +89,7 @@ instance HasOwner VKey where
   owner (VKey o) = o
 
 -- | A genesis key is a specialisation of a generic VKey.
-newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey}
+newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey }
   deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, HasHash)
   deriving anyclass (HasTypeReps)
