@@ -100,6 +100,7 @@ test-suite delegation-test
                          Rules.ClassifyTraces
                          Rules.TestDeleg
                          Rules.TestLedger
+                         Rules.TestDelegs
                          Rules.TestPool
                          Rules.TestPoolreap
                          Rules.TestUtxow

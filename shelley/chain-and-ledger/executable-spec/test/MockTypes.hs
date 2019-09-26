@@ -14,6 +14,7 @@ import qualified LedgerState
 import qualified OCert
 import qualified STS.Chain
 import qualified STS.Deleg
+import qualified STS.Delegs
 import qualified STS.Ledger
 import qualified STS.Pool
 import qualified STS.PoolReap
@@ -115,6 +116,8 @@ type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
 type LEDGER = STS.Ledger.LEDGER ShortHash MockDSIGN
 
 type LedgerEnv = STS.Ledger.LedgerEnv
+
+type DELEGS = STS.Delegs.DELEGS ShortHash MockDSIGN
 
 type POOL = STS.Pool.POOL ShortHash MockDSIGN
 
