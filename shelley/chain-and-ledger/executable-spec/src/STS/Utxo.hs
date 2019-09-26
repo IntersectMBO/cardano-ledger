@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module STS.Utxo
   ( UTXO
@@ -30,8 +31,11 @@ import           Updates
 import           UTxO
 
 import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           STS.Up
+
+import           Hedgehog (Gen)
 
 data UTXO hashAlgo dsignAlgo
 
@@ -123,3 +127,8 @@ instance
   => Embed (UP hashAlgo dsignAlgo) (UTXO hashAlgo dsignAlgo)
  where
   wrapFailed = UpdateFailure
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, Signable dsignAlgo (TxBody hashAlgo dsignAlgo))
+  => HasTrace (UTXO hashAlgo dsignAlgo) where
+  envGen _ = undefined :: Gen (UtxoEnv hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo)
