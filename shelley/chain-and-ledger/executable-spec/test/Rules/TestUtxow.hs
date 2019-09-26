@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestUtxow where
@@ -9,12 +10,14 @@ import           Control.Monad (when)
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import qualified Data.Set as Set (intersection, isSubsetOf, map, null)
+import           Data.Word (Word64)
 
 import           Hedgehog (Property, forAll, property, withTests, (===))
 
-import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace (TraceOrder (..), sourceSignalTargets, traceLength,
-                     traceSignals, _traceEnv)
+import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
+import           Control.State.Transition.Trace (pattern SourceSignalTarget, TraceOrder (..),
+                     signal, source, sourceSignalTargets, target, traceLength, traceSignals,
+                     _traceEnv)
 
 import           LedgerState (pattern UTxOState, decayedTx, keyRefunds)
 import           MockTypes (Tx, UTXOW)
@@ -23,15 +26,16 @@ import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
 
 import           Ledger.Core (dom, (<|))
+import           Test.Utils (assertAll)
 
 ------------------------------
 -- Constants for Properties --
 ------------------------------
 
-numberOfTests :: Int
+numberOfTests :: Word64
 numberOfTests = 300
 
-traceLen :: Int
+traceLen :: Word64
 traceLen = 100
 
 --------------------------
@@ -42,17 +46,17 @@ traceLen = 100
 -- equals the sum of the created value.
 preserveBalance :: Property
 preserveBalance = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  t <- forAll (trace @UTXOW traceLen `ofLengthAtLeast` 1)
   let
-    n :: Integer
-    n = fromIntegral $ traceLength t
     tr = sourceSignalTargets t
     UtxoEnv _ pp stk stp _ = _traceEnv t
 
-  when (n > 1) $
-    [] === filter (not . (createdIsConsumed pp stk stp)) tr
+  assertAll (createdIsConsumed pp stk stp) tr
 
-  where createdIsConsumed pp stk stp (UTxOState u _ _ _, tx, UTxOState u' _ _ _) =
+  where createdIsConsumed pp stk stp (SourceSignalTarget
+                                       { source = UTxOState u _ _ _
+                                       , signal = tx
+                                       , target = UTxOState u' _ _ _}) =
           created u' tx pp stp == consumed u tx pp stk
         created u tx pp stp =
             balance u
@@ -65,17 +69,17 @@ preserveBalance = withTests (fromIntegral numberOfTests) . property $ do
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted :: Property
 preserveBalanceRestricted = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  t <- forAll (trace @UTXOW traceLen `ofLengthAtLeast` 1)
   let
-    n :: Integer
-    n = fromIntegral $ traceLength t
     tr = sourceSignalTargets t
     UtxoEnv _ pp stk stp _ = _traceEnv t
 
-  when (n > 1) $
-    [] === filter (not . (createdIsConsumed pp stk stp)) tr
+  assertAll (createdIsConsumed pp stk stp) tr
 
-  where createdIsConsumed pp stk stp (UTxOState u _ _ _, tx, UTxOState _ _ _ _) =
+  where createdIsConsumed pp stk stp (SourceSignalTarget
+                                       { source = UTxOState u _ _ _
+                                       , signal = tx
+                                       , target = UTxOState _ _ _ _}) =
           inps u tx == outs (_body tx) pp stk stp
         inps u tx = balance $ (_inputs $ _body tx) <| u
         outs tx pp stk stp =
@@ -99,9 +103,11 @@ preserveOutputsTx = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    [] === filter (not . outputPreserved) tr
+    assertAll outputPreserved tr
 
-  where outputPreserved (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
+  where outputPreserved (SourceSignalTarget
+                         { signal = tx
+                         , target = UTxOState (UTxO utxo') _ _ _}) =
           let UTxO outs = txouts (_body tx) in
           outs `Map.isSubmapOf` utxo'
 
@@ -115,9 +121,11 @@ eliminateTxInputs = withTests (fromIntegral numberOfTests) . property $ do
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    [] === filter (not . inputsEliminated) tr
+    assertAll inputsEliminated tr
 
-  where inputsEliminated (_, tx, (UTxOState (UTxO utxo') _ _ _)) =
+  where inputsEliminated (SourceSignalTarget
+                           { signal = tx
+                           , target = UTxOState (UTxO utxo') _ _ _}) =
           Set.null $ txins (_body tx) `Set.intersection` dom utxo'
 
 -- | Check that all new entries of a Tx are included in the new UTxO and that
@@ -131,11 +139,12 @@ newEntriesAndUniqueTxIns = withTests (fromIntegral numberOfTests) . property $ d
     tr = sourceSignalTargets t
 
   when (n > 1) $
-    [] === filter (not . newEntryPresent) tr
+    assertAll newEntryPresent tr
 
-  where newEntryPresent ( UTxOState (UTxO utxo) _ _ _
-                        , tx
-                        , (UTxOState (UTxO utxo') _ _ _)) =
+  where newEntryPresent (SourceSignalTarget
+                          { source = (UTxOState (UTxO utxo) _ _ _)
+                          , signal = tx
+                          , target = (UTxOState (UTxO utxo') _ _ _)}) =
           let UTxO outs = txouts (_body tx)
               outIds = Set.map (\(TxIn _id _) -> _id) (dom outs)
               oldIds = Set.map (\(TxIn _id _) -> _id) (dom utxo)

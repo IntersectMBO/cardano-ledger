@@ -1,18 +1,20 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestPool where
 
-import           Control.Monad (when)
 import           Data.Map (Map, (!?))
 import qualified Data.Maybe as Maybe (maybe)
+import           Data.Word (Word64)
 
-import           Hedgehog (Property, forAll, property, withTests, (===))
+import           Hedgehog (Property, forAll, property, withTests)
 
-import           Control.State.Transition.Generator (trace)
-import           Control.State.Transition.Trace (sourceSignalTargets, traceLength, _traceEnv)
+import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
+import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
+                     sourceSignalTargets, target, _traceEnv)
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
@@ -26,6 +28,7 @@ import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool
 
 
 import           Ledger.Core (dom, (∈), (∉))
+import           Test.Utils (assertAll)
 
 -------------------------------
 -- helper accessor functions --
@@ -41,10 +44,10 @@ getStPools = _stPools
 -- Constants for Properties --
 ------------------------------
 
-numberOfTests :: Int
+numberOfTests :: Word64
 numberOfTests = 300
 
-traceLen :: Int
+traceLen :: Word64
 traceLen = 100
 
 -------------------------
@@ -54,39 +57,38 @@ traceLen = 100
 -- | Check that a newly registered pool key is not in the retiring map.
 rewardZeroAfterReg :: Property
 rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @POOL $ fromIntegral traceLen)
-  let
-    n :: Integer
-    n = fromIntegral $ traceLength t
-    tr = sourceSignalTargets t
+  tr <- fmap sourceSignalTargets
+        $ forAll
+        $ trace @POOL traceLen `ofLengthAtLeast` 1
 
-  when (n > 1) $
-    [] === filter (not . registeredPoolNotRetiring) tr
+  assertAll registeredPoolNotRetiring tr
 
-  where registeredPoolNotRetiring (_, c@(RegPool _), p') =
+  where registeredPoolNotRetiring (SourceSignalTarget
+                                    { signal = c@(RegPool _)
+                                    , target = p'}) =
           case cwitness c of
             KeyHashObj certWit -> let StakePools stp = getStPools p' in
                                       (  certWit ∈ dom stp
                                       && certWit ∉ dom (getRetiring p'))
             _                  -> False
-        registeredPoolNotRetiring (_, _, _) = True
+        registeredPoolNotRetiring _ = True
 
 -- | Check that if a pool retirement certificate is executed in the correct
 -- epoch interval, then the pool key will be added to the retiring map but stays
 -- in the set of stake pools.
 poolRetireInEpoch :: Property
 poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @POOL $ fromIntegral traceLen)
+  t <- forAll (trace @POOL traceLen `ofLengthAtLeast` 1)
   let
-    n :: Integer
-    n = fromIntegral $ traceLength t
     tr = sourceSignalTargets t
     PoolEnv s pp = _traceEnv t
 
-  when (n > 1) $
-    [] === filter (not . registeredPoolRetired s pp) tr
+  assertAll (registeredPoolRetired s pp) tr
 
-  where registeredPoolRetired s pp (p, c@(RetirePool _ e), p') =
+  where registeredPoolRetired s pp (SourceSignalTarget
+                                    { source = p
+                                    , target = p'
+                                    , signal = c@(RetirePool _ e)}) =
           case cwitness c of
             KeyHashObj certWit -> let StakePools stp  = getStPools p
                                       StakePools stp' = getStPools p'
@@ -99,4 +101,4 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
                                     && certWit ∈ dom stp'
                                     && Maybe.maybe False ((== e) . epochFromSlot) (stp' !? certWit))
             _                  -> False
-        registeredPoolRetired _ _ (_, _, _) = True
+        registeredPoolRetired _ _ _ = True

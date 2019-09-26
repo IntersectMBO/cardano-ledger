@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestDeleg where
@@ -12,10 +13,11 @@ import           Data.Set (Set)
 import qualified Data.Set as Set (singleton, size)
 import           Data.Word (Word64)
 
-import           Hedgehog (Property, TestLimit, forAll, property, withTests, (===))
+import           Hedgehog (Property, TestLimit, forAll, property, withTests)
 
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (sourceSignalTargets)
+import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
+                     sourceSignalTargets, target)
 
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
@@ -25,6 +27,7 @@ import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
 import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
+import           Test.Utils (assertAll)
 
 -------------------------------
 -- helper accessor functions --
@@ -59,13 +62,16 @@ rewardZeroAfterReg = withTests numberOfTests . property $ do
   tr <- fmap sourceSignalTargets
       $ forAll
       $ trace @DELEG traceLen `ofLengthAtLeast` 1
-  [] === filter (not . credNewlyRegisteredAndRewardZero) tr
+  assertAll credNewlyRegisteredAndRewardZero tr
 
-  where credNewlyRegisteredAndRewardZero (d, RegKey hk, d') =
+  where credNewlyRegisteredAndRewardZero (SourceSignalTarget
+                                            { source = d
+                                            , signal = RegKey hk
+                                            , target = d'}) =
           (hk ∉ getStDelegs d) ==>
           (   hk ∈ getStDelegs d'
-           && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt hk) (getRewards d')))
-        credNewlyRegisteredAndRewardZero (_, _, _) = True
+           && Maybe.maybe False (== 0) (Map.lookup (mkRwdAcnt hk) (getRewards d')))
+        credNewlyRegisteredAndRewardZero _ = True
 
 -- | Check that when a stake credential is deregistered, it will not be in the
 -- rewards mapping or delegation mapping of the target state.
@@ -74,13 +80,15 @@ credentialRemovedAfterDereg = withTests numberOfTests . property $ do
   tr <- fmap sourceSignalTargets
       $ forAll
       $ trace @DELEG traceLen `ofLengthAtLeast` 1
-  [] === filter (not . removedDeregCredential) tr
+  assertAll removedDeregCredential tr
 
-  where removedDeregCredential (_, DeRegKey cred, d') =
+  where removedDeregCredential (SourceSignalTarget
+                                 { signal = DeRegKey cred
+                                 , target = d'}) =
              cred ∉ getStDelegs d'
           && mkRwdAcnt cred ∉ dom (getRewards d')
           && cred ∉ dom (getDelegations d')
-        removedDeregCredential (_, _, _) = True
+        removedDeregCredential _ = True
 
 -- |Check that a registered stake credential get correctly delegated when
 -- applying a delegation certificate.
@@ -89,11 +97,13 @@ credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . prop
   tr <- fmap sourceSignalTargets
      $ forAll
      $ trace @DELEG  traceLen `ofLengthAtLeast` 1
-  [] === filter (not . delegatedCredential) tr
+  assertAll delegatedCredential tr
 
-  where delegatedCredential (_, Delegate (Delegation cred to), d') =
+  where delegatedCredential (SourceSignalTarget
+                              { signal = Delegate (Delegation cred to)
+                              , target = d'}) =
           let credImage = range (Set.singleton cred ◁ getDelegations d') in
              cred ∈ getStDelegs d'
           && to ∈ credImage
           && Set.size credImage == 1
-        delegatedCredential (_, _, _) = True
+        delegatedCredential _ = True
