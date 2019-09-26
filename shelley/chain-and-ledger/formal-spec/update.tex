@@ -19,9 +19,9 @@ for a transaction, see \ref{sec:witnesses-shelley}.
 
 \textbf{Genesis Key Delegations.} The environment for both protocol parameter
 and application version updates contains
-the value $\var{dms}$, which is a finite map indexed by genesis keys.
+the value $\var{dms}$, which is a finite map indexed by genesis key hashes.
 This is the genesis key delegations. During the Byron era, they are all
-already delegated to some $\VKey$, and these delegations are inherited
+already delegated to some $\KeyHash$, and these delegations are inherited
 through the Byron-Shelley transition (see \ref{sec:byron-to-shelley}).
 These delegations can be updated as described in \ref{sec:delegation-shelley},
 but there is no mechanism for them to un-delegate or for the keys to which they delegate
@@ -73,10 +73,9 @@ Note that $\fun{pvCanFollow}$
 was defined in \cite{byron_ledger_spec}. The constant $\SlotsPrior$
 is used in defining the blockchain layer functionality (specifically,
 properties of header validation),
-and is explained in detail in the paper \cite{ouroboros_praos}.
+and is explained in detail in the paper \cite{byron_chain_spec}.
 It is used in this document in
 Section \ref{sec:chain}.
-
 Because of the header validation requirements, a protocol parameter proposal
 must be submitted with at least $\SlotsPrior$-slots before the end of an epoch,
 and will be rejected otherwise.
@@ -180,7 +179,7 @@ This helper function will be used in the ledger update.
 %%
 \begin{figure}[htb]
   \begin{align*}
-      & \fun{votedValue_T} \in (\VKeyGen\mapsto\type{T}) \to \type{T}^?\\
+      & \fun{votedValue_T} \in (\KeyHashGen\mapsto\type{T}) \to \type{T}^?\\
       & \fun{votedValue_T}~\var{vs} =
         \begin{cases}
           t & \exists t\in\range{vs}~(|vs\restrictrange t|\geq 5) \\

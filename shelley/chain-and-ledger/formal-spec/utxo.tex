@@ -489,7 +489,7 @@ Section~\ref{sec:epoch}.
       & \fun{keyRefunds} \in \PParams \to \StakeDelegs \to \Tx \to \Coin
       & \text{key refunds for a transaction} \\
       & \keyRefunds{pp}{stdelegs}{tx} =\\
-      & ~~~~~ \sum\limits_{\substack{c \in \txcerts{tx} \\ c\in\DCertDeRegKey}}
+      & ~~~~~ \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
               \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{(\txttl{tx})}{c}\\
       &
       \begin{array}{lr@{~=~}l}
@@ -529,7 +529,7 @@ Section~\ref{sec:epoch}.
       & \fun{decayedTx} \in \PParams \to \StakeDelegs \to \Tx \to \Coin
       & \text{decayed deposit portions} \\
       & \decayedTx{pp}{stdelegs}{tx} =\\
-      &   \sum\limits_{\substack{c \in \txcerts{tx} \\ c \in\DCertDeRegKey}}
+      &   \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
           \decayedKey{pp}{stdelegs}{(\txttl{tx})}{c}\\
   \end{align*}
   \caption{Functions used in Deposits - Decay}
