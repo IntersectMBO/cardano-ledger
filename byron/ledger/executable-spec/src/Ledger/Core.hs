@@ -70,7 +70,7 @@ class HasOwner a where
 -- |Signing Key.
 newtype SKey = SKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, ToCBOR)
+  deriving newtype (Eq, Ord)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner SKey where
@@ -79,7 +79,7 @@ instance HasOwner SKey where
 -- |Verification Key.
 newtype VKey = VKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
