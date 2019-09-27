@@ -27,6 +27,7 @@
           (hsPkgs.lens)
           (hsPkgs.mtl)
           (hsPkgs.transformers)
+          (hsPkgs.cardano-crypto-class)
           ];
         };
       tests = {
