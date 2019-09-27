@@ -12,7 +12,7 @@ module Rules.TestDeleg
 where
 
 import           Data.Map (Map)
-import qualified Data.Map.Strict as Map (lookup)
+import qualified Data.Map.Strict as Map (difference, filter, lookup)
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set (singleton, size)
@@ -21,13 +21,14 @@ import           Hedgehog (MonadTest, Property, TestLimit, forAll, property, wit
 
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
-import           Coin (Coin)
+
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, sourceSignalTargets, target)
 import           Generator.LedgerTrace ()
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
+import           Coin (Coin, pattern Coin)
 import           LedgerState (_delegations, _rewards, _stKeys)
 import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
 import           Test.Utils (assertAll)
@@ -108,3 +109,26 @@ credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . prop
           && to ∈ credImage
           && Set.size credImage == 1
         delegatedCredential _ = True
+
+-- | Check that the sum of rewards does not change and that each element that is
+-- either removed or added has a zero balance.
+rewardsSumInvariant :: Property
+rewardsSumInvariant = withTests (fromIntegral numberOfTests) . property $ do
+  tr <- fmap sourceSignalTargets
+     $ forAll
+     $ trace @DELEG  traceLen `ofLengthAtLeast` 1
+  assertAll rewardsSumZeroDiff tr
+
+  where rewardsSumZeroDiff (SourceSignalTarget
+                              { source = d
+                              , target = d'}) =
+          let rew  = _rewards d
+              rew' = _rewards d'
+              sumRew = foldl (+) (Coin 0)
+          in
+             -- sum of rewards is not changed
+             sumRew rew == sumRew rew'
+          && -- dropped elements had a zero reward balance
+             null (Map.filter (/= Coin 0) $ rew `Map.difference` rew')
+          && -- added elements have a zero reward balance
+             null (Map.filter (/= Coin 0) $ rew' `Map.difference` rew)
