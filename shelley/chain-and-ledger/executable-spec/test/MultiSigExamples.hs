@@ -22,7 +22,7 @@ import qualified Data.Set as Set (fromList)
 import           Coin
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
 import           Keys (pattern Dms, undiscriminateKeyHash)
-import           LedgerState (genesisId, genesisState, _utxoState)
+import           LedgerState (genesisId, genesisCoins, genesisState, _utxoState)
 import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody, TxId,
                      TxIn, UTXOW, UTxOState, Wdrl)
 import           PParams (PParams (..), emptyPParams)
@@ -102,7 +102,7 @@ bobInitCoin :: Coin
 bobInitCoin = 1000
 
 genesis :: LedgerState
-genesis = genesisState
+genesis = (genesisState . genesisCoins)
            [ TxOut aliceAddr aliceInitCoin
            , TxOut bobAddr bobInitCoin]
 

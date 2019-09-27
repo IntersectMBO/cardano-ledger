@@ -18,17 +18,15 @@ import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import qualified Data.Set as Set
 
+import           Control.State.Transition
 import           Keys
 import           Ledger.Core (dom, range, (⋪), (◁), (⨃))
 import           LedgerState
 import           PParams
 import           Slot
+import           STS.Ledger
 import           Tx
 import           Updates (Applications (..), UpdateState (..), apps, newAVs)
-
-import           Control.State.Transition
-
-import           STS.Ledger
 
 data LEDGERS hashAlgo dsignAlgo
 

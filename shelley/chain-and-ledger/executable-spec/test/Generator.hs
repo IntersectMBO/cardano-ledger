@@ -10,12 +10,12 @@ module Generator
     , genNonEmptyAndAdvanceTx
     , genNonEmptyAndAdvanceTx'
     , genNonemptyGenesisState
+    , genStakePool
     , genStateTx
     , genValidStateTx
     , genValidStateTxKeys
     , genDelegationData
     , genDelegation
-    , genStakePool
     , genDCertRegPool
     , genDCertDelegate
     , genKeyPairs
@@ -37,10 +37,11 @@ import qualified Hedgehog.Range as Range
 
 import           BaseTypes
 import           Coin
+import           Generator.Core (findPayKeyPair)
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
-                     asStateTransition, asStateTransition', dstate, genesisState, stKeys, utxo,
-                     utxoState, _delegationState, _dstate)
+                     asStateTransition, asStateTransition', dstate, genesisCoins, genesisState,
+                     stKeys, utxo, utxoState, _delegationState, _dstate)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
@@ -120,7 +121,7 @@ defPCs = emptyPParams
 genNonemptyGenesisState :: Gen LedgerState
 genNonemptyGenesisState = do
   keyPairs <- genKeyPairs 1 10
-  genesisState <$> genTxOut (addrTxins keyPairs)
+  (genesisState . genesisCoins) <$> genTxOut (addrTxins keyPairs)
 
 -- | Generator for a new 'Tx' and fee value for executing the
 -- transaction. Selects one valid input from the UTxO, sums up all funds of the
@@ -180,7 +181,7 @@ genNonEmptyAndAdvanceTx
 genNonEmptyAndAdvanceTx = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
-  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
+  ls          <- (genesisState . genesisCoins) <$> genTxOut (addrTxins keyPairs)
   (fees, txs, ls') <- repeatCollectTx steps keyPairs (Slot 1) (Coin 0) ls []
   pure (keyPairs, steps, fees, ls, txs, ls')
 
@@ -190,7 +191,7 @@ genNonEmptyAndAdvanceTx'
 genNonEmptyAndAdvanceTx' = do
   keyPairs    <- genKeyPairs 1 10
   steps       <- genNatural 1 10
-  ls          <- genesisState <$> genTxOut (addrTxins keyPairs)
+  ls          <- (genesisState . genesisCoins) <$> genTxOut (addrTxins keyPairs)
   (fees, txs, lv') <- repeatCollectTx' steps keyPairs (Coin 0) ls [] []
   pure (keyPairs, steps, fees, ls, txs, lv')
 
@@ -229,13 +230,6 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
  | otherwise = do
     (txfee', tx, LedgerValidation errors' ls') <- genLedgerStateTx' keyPairs ls
     repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx:txs) (validationErrors ++ errors')
-
--- | Find first matching key pair for address. Returns the matching key pair
--- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPair :: Addr -> KeyPairs -> KeyPair
-findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
-    fst $ head $ filter (\(pay, _) -> addr == hashKey (vKey pay)) keyList
-findPayKeyPair _ _ = error "currently no such keys should be generated"
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
 findStakeKeyPair :: StakeCredential -> KeyPairs -> KeyPair

@@ -49,7 +49,7 @@ testUPNLate =
     st @?= Right (UpdnState (SeedOp (Nonce 2) (Nonce 1)) (Nonce 3))
 
 testCHAINExample :: CHAINExample -> Assertion
-testCHAINExample (CHAINExample slotNow initSt block expectedSt) =
+testCHAINExample (CHAINExample slotNow initSt block expectedSt) = do
   checkTrace @CHAIN slotNow $ pure initSt .- block .-> expectedSt
 
 testPreservationOfAda :: CHAINExample -> Assertion

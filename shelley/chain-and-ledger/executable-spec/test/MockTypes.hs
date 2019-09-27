@@ -14,6 +14,7 @@ import qualified LedgerState
 import qualified OCert
 import qualified STS.Chain
 import qualified STS.Deleg
+import qualified STS.Ledger
 import qualified STS.Pool
 import qualified STS.PoolReap
 import qualified STS.Utxo
@@ -110,6 +111,10 @@ type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
 type UtxoEnv = STS.Utxo.UtxoEnv ShortHash MockDSIGN
 
 type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
+
+type LEDGER = STS.Ledger.LEDGER ShortHash MockDSIGN
+
+type LedgerEnv = STS.Ledger.LedgerEnv
 
 type POOL = STS.Pool.POOL ShortHash MockDSIGN
 

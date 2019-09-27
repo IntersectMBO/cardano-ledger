@@ -4,7 +4,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Rules.TestDeleg where
+module Rules.TestDeleg
+  ( credentialMappingAfterDelegation
+  , credentialRemovedAfterDereg
+  , rewardZeroAfterReg
+  )
+where
 
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map (lookup)
@@ -12,22 +17,21 @@ import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set (singleton, size)
 import           Data.Word (Word64)
-
-import           Hedgehog (Property, TestLimit, forAll, property, withTests)
-
-import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
-                     sourceSignalTargets, target)
+import           Hedgehog (MonadTest, Property, TestLimit, forAll, property, withTests)
 
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
 import           Coin (Coin)
+import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
+import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
+                     signal, sourceSignalTargets, target)
+import           Generator.LedgerTrace ()
+import           Ledger.Core (dom, range, (∈), (∉), (◁))
+
 import           LedgerState (_delegations, _rewards, _stKeys)
 import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
-import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
-
-import           Ledger.Core (dom, range, (∈), (∉), (◁))
 import           Test.Utils (assertAll)
+import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
 -------------------------------
 -- helper accessor functions --
@@ -57,20 +61,17 @@ traceLen = 100
 --------------------------
 
 -- | Check that a newly registered key has a reward of 0.
-rewardZeroAfterReg :: Property
-rewardZeroAfterReg = withTests numberOfTests . property $ do
-  tr <- fmap sourceSignalTargets
-      $ forAll
-      $ trace @DELEG traceLen `ofLengthAtLeast` 1
+rewardZeroAfterReg
+  :: MonadTest m
+  => [SourceSignalTarget DELEG]
+  -> m ()
+rewardZeroAfterReg tr =
   assertAll credNewlyRegisteredAndRewardZero tr
 
-  where credNewlyRegisteredAndRewardZero (SourceSignalTarget
-                                            { source = d
-                                            , signal = RegKey hk
-                                            , target = d'}) =
+  where credNewlyRegisteredAndRewardZero (SourceSignalTarget d d' (RegKey hk)) =
           (hk ∉ getStDelegs d) ==>
-          (   hk ∈ getStDelegs d'
-           && Maybe.maybe False (== 0) (Map.lookup (mkRwdAcnt hk) (getRewards d')))
+          (hk ∈ getStDelegs d'
+           && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt hk) (getRewards d')))
         credNewlyRegisteredAndRewardZero _ = True
 
 -- | Check that when a stake credential is deregistered, it will not be in the
