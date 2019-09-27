@@ -11,8 +11,12 @@ import           Data.Word (Word64)
 import           Hedgehog (Property, forAll, property, withTests)
 
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (pattern SourceSignalTarget, source,
+import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
                      sourceSignalTargets, target)
+
+import           Coin (pattern Coin)
+import           TxData (pattern Tx, _wdrls)
+import           UTxO (balance)
 
 import           LedgerState (pattern UTxOState)
 import           MockTypes (UTXO)
@@ -44,3 +48,23 @@ feesNonDecreasing = withTests (fromIntegral numberOfTests) . property $ do
                             { source = UTxOState _ _ fees _
                             , target = UTxOState _ _ fees' _}) =
           fees <= fees'
+
+-- | Property that checks that the sum of the pots circulation, deposits and
+-- fees increases by the sum of withdrawals of a transaction.
+potsSumIncreaseWdrls :: Property
+potsSumIncreaseWdrls = withTests (fromIntegral numberOfTests) . property $ do
+  tr <-
+    fmap sourceSignalTargets $ forAll (trace @UTXO traceLen `ofLengthAtLeast` 1)
+
+  assertAll potsIncreaseWithWdrlsSum tr
+
+  where potsIncreaseWithWdrlsSum (SourceSignalTarget
+                                   { source = UTxOState u d fees _
+                                   , target = UTxOState u' d' fees' _
+                                   , signal = Tx txbody _ _}) =
+          let circulation  = balance u
+              circulation' = balance u'
+              withdrawals  = foldl (+) (Coin 0) $ _wdrls txbody
+          in
+             withdrawals >= Coin 0
+          && circulation' + d' + fees' == circulation + d + fees + withdrawals
