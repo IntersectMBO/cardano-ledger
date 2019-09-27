@@ -23,7 +23,7 @@ import           Data.Typeable (TypeRep, Typeable, typeOf)
 import           Data.Word (Word64)
 import           GHC.Generics ((:*:) ((:*:)), (:+:) (L1, R1), Generic, K1 (K1), M1 (M1), Rep,
                      U1 (U1), from)
-import           GHC.Natural
+import           GHC.Natural (Natural)
 
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Crypto.Hash.Short (ShortHash)
