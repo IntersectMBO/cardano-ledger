@@ -46,6 +46,10 @@ Pots in scope: Rewards
 **Property** The rewards to do not change (both as an aggregated value
 and as individual balances).
 
+*Note:* here we consider elements that are not present to have a value of 0. On
+the implementation there is a difference between an element which is not present
+in the rewards map and an element with a 0 rewards balance.
+
 ### DELEGS
 
 Pots in scope: Rewards
