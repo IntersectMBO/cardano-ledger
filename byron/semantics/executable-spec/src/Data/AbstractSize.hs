@@ -1,8 +1,8 @@
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | An approach to computing the abstract size of data using 'TypeRep'.
 --
@@ -14,16 +14,19 @@ module Data.AbstractSize
   , Size
   ) where
 
-import qualified Crypto.Hash     as Crypto
+import qualified Crypto.Hash as Crypto
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Sequence   (Seq, empty, (<|), (><))
-import           Data.Set        (Set)
-import           Data.Typeable   (TypeRep, Typeable, typeOf)
-import           Data.Word       (Word64)
-import           GHC.Generics    ((:*:) ((:*:)), (:+:) (L1, R1), Generic,
-                                  K1 (K1), M1 (M1), Rep, U1 (U1), from)
+import           Data.Sequence (Seq, empty, (<|), (><))
+import           Data.Set (Set)
+import           Data.Typeable (TypeRep, Typeable, typeOf)
+import           Data.Word (Word64)
+import           GHC.Generics ((:*:) ((:*:)), (:+:) (L1, R1), Generic, K1 (K1), M1 (M1), Rep,
+                     U1 (U1), from)
 import           GHC.Natural
+
+import           Cardano.Crypto.Hash (Hash)
+import           Cardano.Crypto.Hash.Short (ShortHash)
 
 -- | @abstractSize m a@ computes the abstract size of @a@, using the accounting
 -- map @m@. The map @m@ determines the abstract size of each 'TypeRep'
@@ -166,3 +169,6 @@ instance HasTypeReps Word64 where
 
 instance HasTypeReps (Crypto.Digest Crypto.SHA256) where
   typeReps x = [typeOf x]
+
+instance Typeable a => HasTypeReps (Hash ShortHash a) where
+  typeReps _ = [typeOf (undefined :: ShortHash)]
