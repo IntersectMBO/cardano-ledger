@@ -90,10 +90,16 @@ test-suite delegation-test
                          MultiSigExamples
                          Mutator
                          Generator
+                         Generator.Core
+                         Generator.LedgerTrace
+                         Generator.Delegation
+                         Generator.Utxo
                          PropertyTests
                          STSTests
                          Examples
+                         Rules.ClassifyTraces
                          Rules.TestDeleg
+                         Rules.TestLedger
                          Rules.TestPool
                          Rules.TestPoolreap
                          Rules.TestUtxow

@@ -14,22 +14,21 @@ where
 
 import           Lens.Micro ((^.))
 
+import           Control.State.Transition
 import           Keys
 import           LedgerState
 import           PParams hiding (d)
 import           Slot
-import           Tx
-
-import           Control.State.Transition
-
 import           STS.Delegs
 import           STS.Utxo (UtxoEnv (..))
 import           STS.Utxow
+import           Tx
 
 data LEDGER hashAlgo dsignAlgo
 
 data LedgerEnv
   = LedgerEnv Slot Ix PParams
+  deriving (Show)
 
 instance
   ( HashAlgorithm hashAlgo
@@ -47,7 +46,7 @@ instance
     | DelegsFailure (PredicateFailure (DELEGS hashAlgo dsignAlgo))
     deriving (Show, Eq)
 
-  initialRules    = []
+  initialRules = []
   transitionRules = [ledgerTransition]
 
 ledgerTransition

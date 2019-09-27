@@ -27,7 +27,7 @@ import           TxData (pattern AddrBase, Credential (..), Delegation (..), pat
 import           Keys (pattern Dms, pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
                      asStateTransition, cCounters, delegationState, delegations, dstate,
-                     emptyDelegation, genesisId, genesisState, minfee, pParams, pstate, ptrs,
+                     emptyDelegation, genesisId, genesisCoins, genesisState, minfee, pParams, pstate, ptrs,
                      retiring, rewards, stKeys, stPools, _delegationState, _dms, _dstate)
 import           PParams
 import           Slot
@@ -73,7 +73,7 @@ bobInitCoin :: Coin
 bobInitCoin = Coin 1000
 
 genesis :: LedgerState
-genesis = genesisState
+genesis = (genesisState . genesisCoins)
             [ TxOut aliceAddr aliceInitCoin
             , TxOut bobAddr bobInitCoin ]
 

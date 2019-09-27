@@ -13,21 +13,18 @@ module STS.Bbody
   )
 where
 
-import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 
 import           BlockChain
+import           Control.State.Transition
 import           EpochBoundary
 import           Keys
 import           Ledger.Core ((∈))
 import           LedgerState
 import           PParams
 import           Slot
-import           Tx
-
-import           Control.State.Transition
-
 import           STS.Ledgers
+import           Tx
 
 data BBODY hashAlgo dsignAlgo kesAlgo
 
@@ -57,7 +54,7 @@ instance
     | LedgersFailure (PredicateFailure (LEDGERS hashAlgo dsignAlgo))
     deriving (Show, Eq)
 
-  initialRules = [pure $ BbodyState emptyLedgerState (BlocksMade Map.empty)]
+  initialRules = []
   transitionRules = [bbodyTransition]
 
 bbodyTransition
