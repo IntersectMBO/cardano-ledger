@@ -130,7 +130,7 @@ data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable, Typeable, D
 --   'typeReps' to compute 'abstractSize', this would mean the size of
 --   'Sig a' would include the size of 'a' (e.g. 'Tx'). This would create an
 --   artificial coupling between the size of a type and it's "signature".
-instance HasTypeReps a => HasTypeReps (Sig a) where
+instance Typeable a => HasTypeReps (Sig a) where
   typeReps x = typeOf x Seq.<| Seq.empty
 
 -- |Produce a digital signature

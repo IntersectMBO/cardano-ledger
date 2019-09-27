@@ -99,10 +99,14 @@ type AccountingMap = Map TypeRep Size
 -- >>> typeReps $ Foo [1, 2] ('a', 'b')
 -- fromList [Foo,[Int],Int,Int,(Char,Char),Char,Char]
 --
-class Typeable a => HasTypeReps a where
+class HasTypeReps a where
   typeReps :: a -> Seq TypeRep
 
-  default typeReps :: (Generic a, GHasTypeReps (Rep a)) => a -> Seq TypeRep
+  default typeReps
+    :: ( Generic a
+       , GHasTypeReps (Rep a)
+       , Typeable a
+       ) => a -> Seq TypeRep
   typeReps a = typeOf a <| gTypeReps (from a)
 
 class GHasTypeReps f where
@@ -137,13 +141,17 @@ instance (HasTypeReps a) => GHasTypeReps (K1 i a) where
 -- HasTypeReps instances
 --------------------------------------------------------------------------------
 
-instance HasTypeReps a => HasTypeReps [a] where
+instance (Typeable a, HasTypeReps a) => HasTypeReps [a] where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 
-instance HasTypeReps a => HasTypeReps (Set a) where
+instance (Typeable a, HasTypeReps a) => HasTypeReps (Set a) where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 
-instance (HasTypeReps a, HasTypeReps b) => HasTypeReps (a, b) where
+instance ( Typeable a
+         , Typeable b
+         , HasTypeReps a
+         , HasTypeReps b
+         ) => HasTypeReps (a, b) where
   typeReps t@(a, b) = typeOf t <| (typeReps a >< typeReps b)
 
 instance HasTypeReps Bool where
@@ -171,7 +179,7 @@ instance HasTypeReps (Crypto.Digest Crypto.SHA256) where
   typeReps x = [typeOf x]
 
 instance HasTypeReps ShortHash where
-  typeReps _ = [typeOf (undefined :: ShortHash)]
+  typeReps x = [typeOf x]
 
 instance Typeable a => HasTypeReps (Hash ShortHash a) where
-  typeReps _ = [typeOf (undefined :: ShortHash)]
+  typeReps x = [typeOf x]
