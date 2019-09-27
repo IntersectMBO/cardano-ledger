@@ -23,6 +23,8 @@ import           Coin
 import           Ledger.Core ((<|))
 import           LedgerState hiding (dms)
 import           PParams
+import           Rules.TestLedger (rewardZeroAfterReg)
+import           Rules.ClassifyTraces (relevantCasesAreCovered)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -152,7 +154,11 @@ classifyInvalidDoubleSpend = withTests 1000 $ property $ do
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
-                [ testGroup "Ledger Genesis State"
+                [ testGroup "Classify Traces"
+                  [testProperty "Ledger trace covers the relevant cases" relevantCasesAreCovered]
+                , testGroup "STS Rules - Delegation Properties"
+                  [testProperty "newly registered key has a reward of 0" rewardZeroAfterReg]
+                , testGroup "Ledger Genesis State"
                   [testProperty
                     "non-empty genesis ledger state has non-zero balance"
                     propPositiveBalance

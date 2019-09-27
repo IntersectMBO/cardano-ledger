@@ -400,12 +400,11 @@ genesisCoins outs = UTxO $
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
 genesisState
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => [TxOut hashAlgo dsignAlgo]
+  :: UTxO hashAlgo dsignAlgo
   -> LedgerState hashAlgo dsignAlgo
-genesisState outs = LedgerState
+genesisState utxo0 = LedgerState
   (UTxOState
-    (genesisCoins outs)
+    utxo0
     (Coin 0)
     (Coin 0)
     emptyUpdateState)
