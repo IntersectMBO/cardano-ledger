@@ -170,5 +170,8 @@ instance HasTypeReps Word64 where
 instance HasTypeReps (Crypto.Digest Crypto.SHA256) where
   typeReps x = [typeOf x]
 
+instance HasTypeReps ShortHash where
+  typeReps _ = [typeOf (undefined :: ShortHash)]
+
 instance Typeable a => HasTypeReps (Hash ShortHash a) where
   typeReps _ = [typeOf (undefined :: ShortHash)]
