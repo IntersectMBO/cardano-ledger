@@ -33,6 +33,8 @@ import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
+import           Cardano.Binary (ToCBOR)
+
 import           Data.AbstractSize
 
 import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), SeedGoblin (..),
@@ -59,7 +61,7 @@ class HasHash a where
 newtype Owner = Owner
   { unOwner :: Natural
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable)
+    deriving newtype (Eq, Ord, Hashable, ToCBOR)
     deriving anyclass (HasTypeReps)
 
 class HasOwner a where
@@ -77,7 +79,7 @@ instance HasOwner SKey where
 -- |Verification Key.
 newtype VKey = VKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
@@ -87,7 +89,7 @@ instance HasOwner VKey where
   owner (VKey o) = o
 
 -- | A genesis key is a specialisation of a generic VKey.
-newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey}
+newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey }
   deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, HasHash)
   deriving anyclass (HasTypeReps)
@@ -128,7 +130,7 @@ data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable, Typeable, D
 --   'typeReps' to compute 'abstractSize', this would mean the size of
 --   'Sig a' would include the size of 'a' (e.g. 'Tx'). This would create an
 --   artificial coupling between the size of a type and it's "signature".
-instance HasTypeReps a => HasTypeReps (Sig a) where
+instance Typeable a => HasTypeReps (Sig a) where
   typeReps x = typeOf x Seq.<| Seq.empty
 
 -- |Produce a digital signature

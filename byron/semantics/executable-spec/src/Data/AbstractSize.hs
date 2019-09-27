@@ -1,8 +1,8 @@
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | An approach to computing the abstract size of data using 'TypeRep'.
 --
@@ -14,16 +14,19 @@ module Data.AbstractSize
   , Size
   ) where
 
-import qualified Crypto.Hash     as Crypto
+import qualified Crypto.Hash as Crypto
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Sequence   (Seq, empty, (<|), (><))
-import           Data.Set        (Set)
-import           Data.Typeable   (TypeRep, Typeable, typeOf)
-import           Data.Word       (Word64)
-import           GHC.Generics    ((:*:) ((:*:)), (:+:) (L1, R1), Generic,
-                                  K1 (K1), M1 (M1), Rep, U1 (U1), from)
-import           GHC.Natural
+import           Data.Sequence (Seq, empty, (<|), (><))
+import           Data.Set (Set)
+import           Data.Typeable (TypeRep, Typeable, typeOf)
+import           Data.Word (Word64)
+import           GHC.Generics ((:*:) ((:*:)), (:+:) (L1, R1), Generic, K1 (K1), M1 (M1), Rep,
+                     U1 (U1), from)
+import           GHC.Natural (Natural)
+
+import           Cardano.Crypto.Hash (Hash)
+import           Cardano.Crypto.Hash.Short (ShortHash)
 
 -- | @abstractSize m a@ computes the abstract size of @a@, using the accounting
 -- map @m@. The map @m@ determines the abstract size of each 'TypeRep'
@@ -96,10 +99,14 @@ type AccountingMap = Map TypeRep Size
 -- >>> typeReps $ Foo [1, 2] ('a', 'b')
 -- fromList [Foo,[Int],Int,Int,(Char,Char),Char,Char]
 --
-class Typeable a => HasTypeReps a where
+class HasTypeReps a where
   typeReps :: a -> Seq TypeRep
 
-  default typeReps :: (Generic a, GHasTypeReps (Rep a)) => a -> Seq TypeRep
+  default typeReps
+    :: ( Generic a
+       , GHasTypeReps (Rep a)
+       , Typeable a
+       ) => a -> Seq TypeRep
   typeReps a = typeOf a <| gTypeReps (from a)
 
 class GHasTypeReps f where
@@ -134,13 +141,17 @@ instance (HasTypeReps a) => GHasTypeReps (K1 i a) where
 -- HasTypeReps instances
 --------------------------------------------------------------------------------
 
-instance HasTypeReps a => HasTypeReps [a] where
+instance (Typeable a, HasTypeReps a) => HasTypeReps [a] where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 
-instance HasTypeReps a => HasTypeReps (Set a) where
+instance (Typeable a, HasTypeReps a) => HasTypeReps (Set a) where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 
-instance (HasTypeReps a, HasTypeReps b) => HasTypeReps (a, b) where
+instance ( Typeable a
+         , Typeable b
+         , HasTypeReps a
+         , HasTypeReps b
+         ) => HasTypeReps (a, b) where
   typeReps t@(a, b) = typeOf t <| (typeReps a >< typeReps b)
 
 instance HasTypeReps Bool where
@@ -165,4 +176,10 @@ instance HasTypeReps Word64 where
   typeReps x = [typeOf x]
 
 instance HasTypeReps (Crypto.Digest Crypto.SHA256) where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps ShortHash where
+  typeReps x = [typeOf x]
+
+instance Typeable a => HasTypeReps (Hash ShortHash a) where
   typeReps x = [typeOf x]

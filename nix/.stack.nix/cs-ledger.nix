@@ -28,6 +28,7 @@
           (hsPkgs.lens)
           (hsPkgs.template-haskell)
           (hsPkgs.Unique)
+          (hsPkgs.cardano-binary)
           (hsPkgs.small-steps)
           ];
         };
