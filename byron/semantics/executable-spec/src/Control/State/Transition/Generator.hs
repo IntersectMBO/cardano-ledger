@@ -30,6 +30,7 @@ module Control.State.Transition.Generator
   , trace
   , traceWithProfile
   , traceOfLength
+  , traceOfLengthWithInitState
   , traceSuchThat
   , ofLengthAtLeast
   , suchThatLastState
@@ -122,6 +123,16 @@ class STS s => HasTrace s where
     -> Gen (Trace s)
   traceOfLength n = traceSigGenWithProfile (Desired n) allValid (sigGen @s)
 
+  traceOfLengthWithInitState
+    :: Word64
+    -- ^ Desired length of the generated trace. If the signal generator can generate invalid signals
+    -- then the resulting trace might not have the given length.
+    -> (Environment s -> Gen (State s))
+    -- ^ A generator for Initial State, given the STS environment
+    -> Gen (Trace s)
+  traceOfLengthWithInitState n mkSt0
+    = traceSigGenWithProfileAndInitState (Desired n) allValid (sigGen @s) mkSt0
+
 type SignalGenerator s = Environment s -> State s -> Gen (Signal s)
 
 data TraceLength = Maximum Word64 | Desired Word64
@@ -182,14 +193,40 @@ traceSigGenWithProfile aTraceLength profile gen = do
     -- Hedgehog will give up if the generators fail to produce any valid
     -- initial state, hence we don't have a risk of entering an infinite
     -- recursion.
-    Left _pf  -> traceSigGen aTraceLength gen
+    Left _pf -> traceSigGen aTraceLength gen
     -- Applying an initial rule with an environment and state will simply
     -- validate that state, so we do not care which state 'applySTS' returns.
-    Right st ->
-      case aTraceLength of
-        Maximum n -> genTraceWithProfile n profile env st gen
-        Desired n -> genTraceOfLength n profile env st gen
+    Right st -> genTraceOfMaxOrDesiredLength aTraceLength profile env st gen
 
+-- | A variation of 'traceSigGenWithProfile' which takes an argument generator
+-- for the initial state of the given trace
+traceSigGenWithProfileAndInitState
+  :: forall s
+   . HasTrace s
+  => TraceLength
+  -> TraceProfile s
+  -> SignalGenerator s
+  -> (Environment s -> Gen (State s))
+  -> Gen (Trace s)
+traceSigGenWithProfileAndInitState aTraceLength profile gen mkSt0 = do
+  env <- envGen @s (traceLengthValue aTraceLength)
+  st0 <- mkSt0 env
+
+  genTraceOfMaxOrDesiredLength aTraceLength profile env st0 gen
+
+genTraceOfMaxOrDesiredLength
+  :: forall s
+   . HasTrace s
+  => TraceLength
+  -> TraceProfile s
+  -> Environment s
+  -> State s
+  -> SignalGenerator s
+  -> Gen (Trace s)
+genTraceOfMaxOrDesiredLength aTraceLength profile env st0 gen =
+  case aTraceLength of
+    Maximum n -> genTraceWithProfile n profile env st0 gen
+    Desired n -> genTraceOfLength n profile env st0 gen
 
 -- | Return a (valid) trace generator given an initial state, environment, and
 -- signal generator.

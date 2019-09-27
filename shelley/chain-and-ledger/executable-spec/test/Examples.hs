@@ -41,6 +41,9 @@ module Examples
   , dariaStake
   , dariaAddr
   , coreNodeSKG -- TODO remove
+  -- helpers
+  , mkKeyPair
+  , unsafeMkUnitInterval
   )
 where
 
