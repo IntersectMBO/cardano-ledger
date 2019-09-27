@@ -42,7 +42,7 @@ data SoftwareVersion = SoftwareVersion
   { svAppName :: !ApplicationName
   , svNumber  :: !NumSoftwareVersion
   } deriving (Eq, Generic, Ord)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance B.Buildable SoftwareVersion where
   build sv =
@@ -91,4 +91,3 @@ checkSoftwareVersion
 checkSoftwareVersion sv =
   checkApplicationName (svAppName sv)
     `wrapError` SoftwareVersionApplicationNameError
-

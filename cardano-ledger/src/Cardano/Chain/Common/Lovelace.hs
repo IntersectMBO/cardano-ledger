@@ -71,7 +71,7 @@ import Cardano.Binary
 -- | Lovelace is the least possible unit of currency
 newtype Lovelace = Lovelace
   { getLovelace :: Word64
-  } deriving (Show, Ord, Eq, Generic, Data, NFData)
+  } deriving (Show, Ord, Eq, Generic, Data, NFData, NoUnexpectedThunks)
 
 instance B.Buildable Lovelace where
   build (Lovelace n) = bprint (int . " lovelace") n

@@ -41,6 +41,7 @@ newtype EpochNumber = EpochNumber
              , Generic
              , Bounded
              , NFData
+             , NoUnexpectedThunks
              )
 
 instance Buildable EpochNumber where

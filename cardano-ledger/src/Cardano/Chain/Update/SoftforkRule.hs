@@ -41,7 +41,7 @@ data SoftforkRule = SoftforkRule
   , srThdDecrement :: !LovelacePortion
   -- ^ Theshold will be decreased by this value after each epoch.
   } deriving (Show, Eq, Ord, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance B.Buildable SoftforkRule where
   build sr = bprint
@@ -73,4 +73,3 @@ instance MonadError SchemaError m => FromJSON m SoftforkRule where
       <$> fromJSField obj "initThd"
       <*> fromJSField obj "minThd"
       <*> fromJSField obj "thdDecrement"
-

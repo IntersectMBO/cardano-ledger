@@ -24,7 +24,7 @@ data ProtocolVersion = ProtocolVersion
   , pvMinor :: !Word16
   , pvAlt   :: !Word8
   } deriving (Eq, Generic, Ord)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance Show ProtocolVersion where
   show pv =
@@ -42,4 +42,3 @@ instance FromCBOR ProtocolVersion where
   fromCBOR = do
     enforceSize "ProtocolVersion" 3
     ProtocolVersion <$> fromCBOR <*> fromCBOR <*> fromCBOR
-

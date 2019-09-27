@@ -155,7 +155,7 @@ data AHeader a = AHeader
   -- ^ An annotation that captures the full header bytes
   , headerExtraAnnotation  :: !a
   -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
-  } deriving (Eq, Show, Generic, NFData, Functor)
+  } deriving (Eq, Show, Generic, NFData, Functor, NoUnexpectedThunks)
 
 
 --------------------------------------------------------------------------------
@@ -450,7 +450,7 @@ data ABoundaryHeader a = UnsafeABoundaryHeader
   , boundaryEpoch            :: !Word64
   , boundaryDifficulty       :: !ChainDifficulty
   , boundaryHeaderAnnotation :: !a
-  } deriving (Eq, Show, Functor)
+  } deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
 
 -- | Smart constructor for 'ABoundaryHeader'
 --
@@ -549,7 +549,7 @@ data ABlockSignature a = ABlockSignature
   { delegationCertificate :: !(Delegation.ACertificate a)
   , signature             :: !(Signature ToSign)
   } deriving (Show, Eq, Generic, Functor)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance B.Buildable BlockSignature where
   build (ABlockSignature cert _) = bprint

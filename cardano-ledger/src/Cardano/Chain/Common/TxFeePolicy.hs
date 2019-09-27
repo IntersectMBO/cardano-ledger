@@ -56,7 +56,7 @@ import Cardano.Chain.Common.TxSizeLinear (TxSizeLinear(..))
 data TxFeePolicy
     = TxFeePolicyTxSizeLinear !TxSizeLinear
     deriving (Eq, Ord, Show, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance B.Buildable TxFeePolicy where
     build (TxFeePolicyTxSizeLinear tsp) =
@@ -98,4 +98,3 @@ instance MonadError SchemaError m => FromJSON m TxFeePolicy where
     wrapLovelaceError :: Either LovelaceError Lovelace -> m Lovelace
     wrapLovelaceError =
       either (expected "Lovelace" . Just . formatToString build) pure
-

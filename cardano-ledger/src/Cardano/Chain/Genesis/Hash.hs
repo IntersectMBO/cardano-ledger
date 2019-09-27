@@ -18,6 +18,6 @@ import Cardano.Crypto.Hashing (Hash)
 
 newtype GenesisHash = GenesisHash
   { unGenesisHash :: Hash Raw
-  } deriving (Eq, Generic, NFData, FromCBOR, ToCBOR)
+  } deriving (Eq, Generic, NFData, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 deriving instance Show GenesisHash

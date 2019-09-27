@@ -63,7 +63,7 @@ newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
   } deriving (Eq, Show, Generic)
     deriving newtype (HeapWords, FromCBOR, ToCBOR)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 data UTxOError
   = UTxOMissingInput TxIn

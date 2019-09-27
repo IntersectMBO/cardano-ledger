@@ -64,7 +64,7 @@ data CandidateProtocolUpdate = CandidateProtocolUpdate
   , cpuProtocolVersion    :: !ProtocolVersion
   , cpuProtocolParameters :: !ProtocolParameters
   } deriving (Eq, Show, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance FromCBOR CandidateProtocolUpdate where
   fromCBOR = do
@@ -85,7 +85,7 @@ data Endorsement = Endorsement
   { endorsementProtocolVersion :: !ProtocolVersion
   , endorsementKeyHash         :: !KeyHash
   } deriving (Eq, Show, Ord, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance FromCBOR Endorsement where
   fromCBOR = do

@@ -140,7 +140,7 @@ data SigningHistory = SigningHistory
   { shK                 :: !BlockCount
   , shSigningQueue      :: !(Seq KeyHash)
   , shKeyHashCounts     :: !(Map KeyHash BlockCount)
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance FromCBOR SigningHistory where
   fromCBOR = do
@@ -200,7 +200,7 @@ data ChainValidationState = ChainValidationState
   , cvsUtxo            :: !UTxO
   , cvsUpdateState     :: !UPI.State
   , cvsDelegationState :: !DI.State
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance FromCBOR ChainValidationState where
   fromCBOR = do

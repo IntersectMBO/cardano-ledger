@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
@@ -31,6 +32,7 @@ newtype CompactAddress = CompactAddress ShortByteString
   deriving (Eq, Ord, Generic, Show)
   deriving newtype HeapWords
   deriving anyclass NFData
+  deriving NoUnexpectedThunks via UseIsNormalForm ShortByteString
 
 instance FromCBOR CompactAddress where
   fromCBOR = CompactAddress . BSS.toShort <$> fromCBOR

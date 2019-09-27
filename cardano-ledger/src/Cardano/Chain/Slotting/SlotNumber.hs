@@ -32,7 +32,7 @@ newtype SlotNumber = SlotNumber
   { unSlotNumber :: Word64
   } deriving (Eq, Generic, Ord, Show)
     deriving newtype Num
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance ToCBOR SlotNumber where
   toCBOR = toCBOR . unSlotNumber

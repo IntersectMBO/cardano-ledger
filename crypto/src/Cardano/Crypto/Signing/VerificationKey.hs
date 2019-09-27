@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -38,7 +40,9 @@ import Cardano.Binary
 -- | Wrapper around 'CC.XPub'.
 newtype VerificationKey = VerificationKey
   { unVerificationKey :: CC.XPub
-  } deriving (Eq, Ord, Show, Generic, NFData)
+  } deriving stock (Eq, Ord, Show, Generic)
+    deriving newtype (NFData)
+    deriving NoUnexpectedThunks via UseIsNormalForm CC.XPub
 
 instance ToJSON VerificationKey where
   toJSON = toJSON . sformat fullVerificationKeyF

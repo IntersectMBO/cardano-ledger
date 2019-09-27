@@ -32,7 +32,7 @@ data Proof = Proof
   , proofSsc        :: !SscProof
   , proofDelegation :: !(Hash Delegation.Payload)
   , proofUpdate     :: !Update.Proof
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance B.Buildable Proof where
   build proof = bprint

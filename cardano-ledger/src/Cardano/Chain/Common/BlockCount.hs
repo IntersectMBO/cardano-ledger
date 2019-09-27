@@ -16,7 +16,7 @@ import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 newtype BlockCount = BlockCount
   { unBlockCount :: Word64
-  } deriving (Eq, Ord, Enum, Read, Show, Buildable, Generic, NFData)
+  } deriving (Eq, Ord, Enum, Read, Show, Buildable, Generic, NFData, NoUnexpectedThunks)
 
 instance ToCBOR BlockCount where
   toCBOR = toCBOR . unBlockCount
@@ -24,4 +24,3 @@ instance ToCBOR BlockCount where
 
 instance FromCBOR BlockCount where
   fromCBOR = BlockCount <$> fromCBOR
-

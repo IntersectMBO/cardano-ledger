@@ -85,7 +85,7 @@ dropSscPayload = do
 
 data SscProof =
   SscProof
-  deriving (Eq, Show, Generic, NFData)
+  deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance ToCBOR SscProof where
   toCBOR _ =

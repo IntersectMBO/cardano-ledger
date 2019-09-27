@@ -46,7 +46,7 @@ newtype ProtocolMagicId = ProtocolMagicId
   { unProtocolMagicId :: Word32
   } deriving (Show, Eq, Generic)
     deriving newtype (FromCBOR, ToCBOR)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance A.ToJSON ProtocolMagicId where
   toJSON = A.toJSON . unProtocolMagicId

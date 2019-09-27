@@ -121,7 +121,7 @@ data State = State
   , proposalRegistrationSlot          :: !(Map UpId SlotNumber)
     -- ^ Slot at which an update proposal was registered
   } deriving (Eq, Show, Generic)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance FromCBOR State where
   fromCBOR = do

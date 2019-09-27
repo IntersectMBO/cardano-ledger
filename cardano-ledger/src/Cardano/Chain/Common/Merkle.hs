@@ -62,7 +62,7 @@ newtype MerkleRoot a = MerkleRoot
   { getMerkleRoot :: Hash Raw  -- ^ returns root 'Hash' of Merkle Tree
   } deriving (Show, Eq, Ord, Generic)
     deriving newtype ByteArrayAccess
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance Buildable (MerkleRoot a) where
   build (MerkleRoot h) = "MerkleRoot|" <> build h

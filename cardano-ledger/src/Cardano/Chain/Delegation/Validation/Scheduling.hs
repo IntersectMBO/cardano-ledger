@@ -60,7 +60,7 @@ data Environment = Environment
 data State = State
   { scheduledDelegations :: !(Seq ScheduledDelegation)
   , keyEpochDelegations  :: !(Set (EpochNumber, KeyHash))
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance FromCBOR State where
   fromCBOR = do
@@ -79,7 +79,7 @@ data ScheduledDelegation = ScheduledDelegation
   { sdSlot      :: !SlotNumber
   , sdDelegator :: !KeyHash
   , sdDelegate  :: !KeyHash
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance FromCBOR ScheduledDelegation where
   fromCBOR = do

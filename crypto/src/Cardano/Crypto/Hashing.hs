@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes        #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -75,6 +77,7 @@ import Cardano.Binary
 newtype AbstractHash algo a =
   AbstractHash (Digest algo)
   deriving (Show, Eq, Ord, ByteArray.ByteArrayAccess, Generic, NFData)
+  deriving NoUnexpectedThunks via UseIsNormalForm (Digest algo)
 
 instance HashAlgorithm algo => Read (AbstractHash algo a) where
   readsPrec _ s = case parseBase16 $ toS s of
