@@ -53,9 +53,11 @@ import qualified Hedgehog.Range as Range
 import Cardano.Chain.Block
   ( ABlock
   , BlockValidationMode(..)
-  , ChainValidationError(ChainValidationHeaderTooLarge)
+  , ChainValidationError(ChainValidationBlockTooLarge,
+                     ChainValidationHeaderTooLarge)
   , ChainValidationState(cvsUtxo)
   , blockHeader
+  , blockLength
   , cvsUpdateState
   , headerLength
   , initialChainValidationState
@@ -67,9 +69,14 @@ import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
 import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(..))
 import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxWitsList)
-import Cardano.Chain.Update (ppMaxHeaderSize)
+import Cardano.Chain.Update
+  ( ProtocolParameters
+  , ppMaxBlockSize
+  , ppMaxHeaderSize
+  )
 import Cardano.Chain.Update.Validation.Interface (adoptedProtocolParameters)
 
+import Cardano.Spec.Chain.STS.Rule.BBody (PredicateFailure(InvalidBlockSize))
 import Cardano.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
@@ -88,12 +95,13 @@ import Control.State.Transition.Generator
   , sigGen
   , trace
   )
-import Control.State.Transition (State, Environment, Signal, PredicateFailure, applySTS, TRC(TRC))
+import Control.State.Transition (State, Environment, Signal, applySTS, TRC(TRC))
 import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
 import Control.State.Transition.Trace
   ( Trace
   , TraceOrder(NewestFirst, OldestFirst)
   , _traceEnv
+  , extractValues
   , lastSignal
   , lastState
   , preStatesAndSignals
@@ -113,9 +121,11 @@ import Ledger.Delegation
   , tamperedDcerts
   )
 import Ledger.Update
-  ( UPIEnv
+  ( PParams
+  , UPIEnv
   , UPIREG
   , UPIState
+  , _maxBkSz
   , _maxHdrSz
   , tamperWithUpdateProposal
   , tamperWithVotes
@@ -475,6 +485,51 @@ applyTrace tr =
 
 ts_prop_invalidHeaderSizesAreRejected :: TSProperty
 ts_prop_invalidHeaderSizesAreRejected =
+  invalidSizesAreRejected
+    (\pps newMax -> pps { _maxHdrSz = newMax })
+    (Abstract.bHeaderSize . Abstract._bHeader)
+    (\protocolParameters newMax -> protocolParameters { ppMaxHeaderSize = newMax})
+    (headerLength . blockHeader)
+    checkMaxSizeFailure
+  where
+    checkMaxSizeFailure
+      :: [[PredicateFailure CHAIN]]
+      -> ChainValidationError
+      -> PropertyT IO ()
+    checkMaxSizeFailure abstractPfs ChainValidationHeaderTooLarge{} = do
+      assert
+        $ any isHeaderSizeTooBigFailure
+              (extractValues abstractPfs)
+      footnote
+        $ "HeaderSizeTooBig not found in the abstract predicate failures: "
+        ++ show abstractPfs
+    checkMaxSizeFailure _ concretePF = do
+      footnote $ "Expected 'ChainValidationHeaderTooLarge' error, got "  ++ show concretePF
+      failure
+
+
+-- | Check that blocks with components (e.g. headers, bodies) that have an
+-- invalid size (according to the protocol parameters) are rejected.
+--
+invalidSizesAreRejected
+  :: (PParams -> Natural -> PParams)
+  -- ^ Setter for the abstract protocol parameters. The 'Natural' parameter is
+  -- used to pass a new (generated) maximum size.
+  -> (Abstract.Block -> Natural)
+  -- ^ Function used to compute the size of the abstract-block's component.
+  -> (ProtocolParameters -> Natural -> ProtocolParameters)
+  -- ^ Setter for the concrete protocol parameters.
+  -> (ABlock ByteString -> Natural)
+  -- ^ Function used to compute the size of the concrete-block's component.
+  -> ([[PredicateFailure CHAIN]] -> ChainValidationError -> PropertyT IO ())
+  -- ^ Function to check agreement of concrete and abstract failures.
+  -> TSProperty
+invalidSizesAreRejected
+  setAbstractParamTo
+  abstractBlockComponentSize
+  setConcreteParamTo
+  concreteBlockComponentSize
+  checkFailures =
   withTestsTS 300 $ property $ do
   tr <- forAll $ trace @CHAIN 100 `ofLengthAtLeast` 1
   let
@@ -508,15 +563,15 @@ ts_prop_invalidHeaderSizesAreRejected =
             abstractState
             lastBlock
 
-        lastBlockHeaderSize = Abstract.bHeaderSize (Abstract._bHeader lastBlock)
+        lastBlockHeaderSize = abstractBlockComponentSize lastBlock
 
-        concreteLastBlockSize = headerLength (blockHeader concreteLastBlock)
+        concreteLastBlockSize = concreteBlockComponentSize concreteLastBlock
 
       alteredAbstractState :: State CHAIN <-
-        forAll $ abstractRestrictMaximumHeaderSize abstractState (lastBlockHeaderSize - 1)
+        forAll $ genAbstractAlteredState abstractState (lastBlockHeaderSize - 1)
 
       alteredConcreteState <-
-        forAll $ concreteRestrictMaximumHeaderSize concreteState (concreteLastBlockSize - 1)
+        forAll $ genConcreteAlteredState concreteState (concreteLastBlockSize - 1)
         --
         -- NOTE: Here we could simply choose not to use the concrete block size
         -- and use the abstract block size instead. The former will be larger
@@ -534,12 +589,9 @@ ts_prop_invalidHeaderSizesAreRejected =
             (alteredAbstractState, lastBlock)
 
       case (abstractResult, concreteResult) of
-        (Left abstractPfs,  Left (ChainValidationHeaderTooLarge _ _)) -> do
-          assert $
-            any (any isHeaderSizeTooBigFailure)
-                abstractPfs
-          footnote $ "HeaderSizeTooBig not found in the predicate failures: " ++ show abstractPfs
-          cover 85 "Header size validation hit" True
+        (Left abstractPfs,  Left concretePf) -> do
+          checkFailures abstractPfs concretePf
+          cover 85 "Size validation hit" True
           success
         (Right _, Right _) ->
           -- It might be that we are at an epoch boundary, so the altered
@@ -554,36 +606,59 @@ ts_prop_invalidHeaderSizesAreRejected =
           footnote $ "Abstract result: " ++ show abstractResult
           footnote $ "Concrete result: " ++ show concreteResult
           failure
-
--- | Modify the given state so that the maximum header size is between 0 and
--- the given value.
-abstractRestrictMaximumHeaderSize :: State CHAIN -> Natural -> Gen (State CHAIN)
-abstractRestrictMaximumHeaderSize (slot, sgs, h, utxo, ds, us) maxSize =
-  (slot, sgs, h, utxo, ds, ) <$> restrictMaximumHeaderSize us
   where
-    restrictMaximumHeaderSize ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = do
-      newMaxSize <- Gen.integral (Range.constant 0 maxSize)
-      pure $! ( (pv, pps { _maxHdrSz = newMaxSize })
-              , fads
-              , avs
-              , rpus
-              , raus
-              , cps
-              , vts
-              , bvs
-              , pws
-              )
-
-
-concreteRestrictMaximumHeaderSize :: ChainValidationState -> Natural -> Gen ChainValidationState
-concreteRestrictMaximumHeaderSize state maxSize =
-  setMaxHeaderSize <$> Gen.integral (Range.constant 0 maxSize)
-  where
-    setMaxHeaderSize newSize = state { cvsUpdateState = newUpdateState }
+    genAbstractAlteredState :: State CHAIN -> Natural -> Gen (State CHAIN)
+    genAbstractAlteredState (slot, sgs, h, utxo, ds, us) maxSize =
+      (slot, sgs, h, utxo, ds, ) <$> genAlteredUpdateState us
       where
-        newUpdateState =
-          (cvsUpdateState state) { adoptedProtocolParameters = newParameters }
+        genAlteredUpdateState ((pv, pps), fads, avs, rpus, raus, cps, vts, bvs, pws) = do
+          newMaxSize <- Gen.integral (Range.constant 0 maxSize)
+          pure $! ( (pv, pps `setAbstractParamTo` newMaxSize)
+                  , fads
+                  , avs
+                  , rpus
+                  , raus
+                  , cps
+                  , vts
+                  , bvs
+                  , pws
+                  )
+
+    genConcreteAlteredState
+      :: ChainValidationState -> Natural -> Gen ChainValidationState
+    genConcreteAlteredState state maxSize =
+      setMaxHeaderSize <$> Gen.integral (Range.constant 0 maxSize)
+      where
+        setMaxHeaderSize newSize = state { cvsUpdateState = newUpdateState }
           where
-            newParameters =
-              (adoptedProtocolParameters (cvsUpdateState state)) { ppMaxHeaderSize = newSize }
-              -- And this is why lenses were invented...
+            newUpdateState =
+              (cvsUpdateState state) { adoptedProtocolParameters = newParameters }
+              where
+                newParameters =
+                  (adoptedProtocolParameters (cvsUpdateState state))
+                  `setConcreteParamTo` newSize
+
+
+ts_prop_invalidBlockSizesAreRejected :: TSProperty
+ts_prop_invalidBlockSizesAreRejected =
+  invalidSizesAreRejected
+    (\pps newMax -> pps { _maxBkSz = newMax })
+    Abstract.bSize
+    (\protocolParameters newMax -> protocolParameters { ppMaxBlockSize = newMax })
+    blockLength
+    checkMaxSizeFailure
+  where
+    checkMaxSizeFailure
+      :: [[PredicateFailure CHAIN]]
+      -> ChainValidationError
+      -> PropertyT IO ()
+    checkMaxSizeFailure abstractPfs ChainValidationBlockTooLarge{} = do
+      assert
+        $ any (== InvalidBlockSize)
+              (extractValues abstractPfs)
+      footnote
+        $ "InvalidBlockSize not found in the abstract predicate failures: "
+        ++ show abstractPfs
+    checkMaxSizeFailure _ concretePF = do
+      footnote $ "Expected 'ChainValidationBlockTooLarge' error, got "  ++ show concretePF
+      failure
