@@ -49,9 +49,9 @@ removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
   assertAll poolRemoved tr
 
   where poolRemoved (SourceSignalTarget
-                      { source = PoolreapState _ _ _ p
+                      { source = PoolreapState { prPState = p }
                       , signal = e
-                      , target = PoolreapState _ _ _ p'}) =
+                      , target = PoolreapState { prPState = p' }}) =
           let StakePools stp  = getStPools p
               StakePools stp' = getStPools p'
               retiring        = getRetiring p
