@@ -109,6 +109,8 @@ type CHAIN = STS.Chain.CHAIN ShortHash MockDSIGN MockKES
 
 type UTXOW = STS.Utxow.UTXOW ShortHash MockDSIGN
 
+type UTXO = STS.Utxo.UTXO ShortHash MockDSIGN
+
 type UtxoEnv = STS.Utxo.UtxoEnv ShortHash MockDSIGN
 
 type DELEG = STS.Deleg.DELEG ShortHash MockDSIGN
