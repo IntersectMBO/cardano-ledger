@@ -103,6 +103,7 @@ test-suite delegation-test
                          Rules.TestDelegs
                          Rules.TestPool
                          Rules.TestPoolreap
+                         Rules.TestUtxo
                          Rules.TestUtxow
     hs-source-dirs:      test
     ghc-options:
