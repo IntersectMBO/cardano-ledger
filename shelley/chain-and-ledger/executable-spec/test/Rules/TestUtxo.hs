@@ -15,10 +15,10 @@ import           Control.State.Transition.Trace (pattern SourceSignalTarget, sig
                      sourceSignalTargets, target)
 
 import           Coin (pattern Coin)
-import           TxData (pattern Tx, _wdrls)
+import           TxData (pattern Tx, _body, _wdrls)
 import           UTxO (balance)
 
-import           LedgerState (pattern UTxOState)
+import           LedgerState (pattern UTxOState, _deposited, _fees, _utxo)
 import           MockTypes (UTXO)
 
 import           Test.Utils (assertAll)
@@ -45,8 +45,8 @@ feesNonDecreasing = withTests (fromIntegral numberOfTests) . property $ do
   assertAll feesDoNotIncrease tr
 
   where feesDoNotIncrease (SourceSignalTarget
-                            { source = UTxOState _ _ fees _
-                            , target = UTxOState _ _ fees' _}) =
+                            { source = UTxOState { _fees = fees }
+                            , target = UTxOState { _fees = fees' }}) =
           fees <= fees'
 
 -- | Property that checks that the sum of the pots circulation, deposits and
@@ -59,9 +59,13 @@ potsSumIncreaseWdrls = withTests (fromIntegral numberOfTests) . property $ do
   assertAll potsIncreaseWithWdrlsSum tr
 
   where potsIncreaseWithWdrlsSum (SourceSignalTarget
-                                   { source = UTxOState u d fees _
-                                   , target = UTxOState u' d' fees' _
-                                   , signal = Tx txbody _ _}) =
+                                   { source = UTxOState { _utxo = u
+                                                        , _deposited = d
+                                                        , _fees = fees}
+                                   , target = UTxOState { _utxo = u'
+                                                        , _deposited = d'
+                                                        , _fees = fees'}
+                                   , signal = Tx { _body = txbody }}) =
           let circulation  = balance u
               circulation' = balance u'
               withdrawals  = foldl (+) (Coin 0) $ _wdrls txbody
