@@ -3,7 +3,7 @@
 
 module STS.PoolReap
   ( POOLREAP
-  , PoolreapState (..)
+  , PoolreapState(..)
   )
 where
 
@@ -28,7 +28,7 @@ import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 data POOLREAP hashAlgo dsignAlgo
 
 data PoolreapState hashAlgo dsignAlgo = PoolreapState
-  { prUtxOSt :: UTxOState hashAlgo dsignAlgo
+  { prUTxOSt :: UTxOState hashAlgo dsignAlgo
   , prAcnt   :: AccountState
   , prDState :: DState hashAlgo dsignAlgo
   , prPState :: PState hashAlgo dsignAlgo
