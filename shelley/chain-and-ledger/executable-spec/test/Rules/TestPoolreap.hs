@@ -12,11 +12,12 @@ import           Data.Word (Word64)
 import           Hedgehog (Property, forAll, property, withTests)
 
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
-                     sourceSignalTargets, target)
+import           Control.State.Transition.Trace (pattern NewestFirst, pattern SourceSignalTarget,
+                     signal, source, sourceSignalTargets, target, traceStates)
 
+import           LedgerState (pattern UTxOState, _deposited)
 import           MockTypes (POOLREAP)
-import           STS.PoolReap (PoolreapState (..))
+import           STS.PoolReap (pattern PoolreapState, prPState, prUTxOSt)
 import           TxData (pattern StakePools)
 
 import           Ledger.Core (dom, (▷))
@@ -61,3 +62,14 @@ removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
           && (retire `Set.isSubsetOf` dom stp)
           && Set.null (retire `Set.intersection` dom stp')
           && Set.null (retire `Set.intersection` dom retiring')
+
+
+-- | Check that deposits are always non-negative
+nonNegativeDeposits :: Property
+nonNegativeDeposits = withTests (fromIntegral numberOfTests) . property $ do
+  t <- forAll $ trace @POOLREAP traceLen
+  let states = traceStates NewestFirst t
+
+  assertAll (\PoolreapState
+              { prUTxOSt =
+                  UTxOState { _deposited = deposit} } -> deposit >= 0) states
