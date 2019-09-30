@@ -8,6 +8,7 @@ module Rules.TestDeleg
   ( credentialMappingAfterDelegation
   , credentialRemovedAfterDereg
   , rewardZeroAfterReg
+  , rewardsSumInvariant
   )
 where
 
@@ -24,7 +25,7 @@ import           BaseTypes ((==>))
 
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
-                     signal, sourceSignalTargets, target)
+                     signal, source, sourceSignalTargets, target)
 import           Generator.LedgerTrace ()
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
