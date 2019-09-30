@@ -15,10 +15,13 @@ import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
 import           Control.State.Transition.Trace (pattern NewestFirst, pattern SourceSignalTarget,
                      signal, source, sourceSignalTargets, target, traceStates)
 
-import           LedgerState (pattern UTxOState, _deposited)
+import           Coin (pattern Coin)
+import           LedgerState (pattern AccountState, pattern DState, pattern UTxOState, _deposited,
+                     _fees, _reserves, _rewards, _treasury, _utxo)
 import           MockTypes (POOLREAP)
-import           STS.PoolReap (pattern PoolreapState, prPState, prUTxOSt)
+import           STS.PoolReap (pattern PoolreapState, prAcnt, prDState, prPState, prUTxOSt)
 import           TxData (pattern StakePools)
+import           UTxO (balance)
 
 import           Ledger.Core (dom, (▷))
 import           Rules.TestPool (getRetiring, getStPools)
@@ -73,3 +76,34 @@ nonNegativeDeposits = withTests (fromIntegral numberOfTests) . property $ do
   assertAll (\PoolreapState
               { prUTxOSt =
                   UTxOState { _deposited = deposit} } -> deposit >= 0) states
+
+
+-- | Check that the sum of circulation, deposits, fees, treasury, rewards and
+-- reserves is constant.
+constantSumPots :: Property
+constantSumPots = withTests (fromIntegral numberOfTests) . property $ do
+  tr <- fmap sourceSignalTargets
+        $ forAll
+        $ trace @POOLREAP traceLen `ofLengthAtLeast` 1
+
+  assertAll potsSumEqual tr
+
+  where potsSumEqual (SourceSignalTarget
+                      { source = PoolreapState
+                                 { prUTxOSt = UTxOState {
+                                       _utxo = u
+                                     , _deposited = d
+                                     , _fees = fees }
+                                 , prAcnt = AccountState { _treasury = treasury
+                                                         , _reserves = reserves }
+                                 , prDState = DState { _rewards = rewards}}
+                      , target = PoolreapState
+                                 { prUTxOSt = UTxOState {
+                                       _utxo = u'
+                                     , _deposited = d'
+                                     , _fees = fees' }
+                                 , prAcnt = AccountState { _treasury = treasury'
+                                                         , _reserves = reserves' }
+                                 , prDState = DState { _rewards = rewards'}}}) =
+          (balance u + d + fees + treasury + reserves + foldl (+) (Coin 0) rewards) ==
+          (balance u' + d' + fees' + treasury' + reserves' + foldl (+) (Coin 0) rewards')
