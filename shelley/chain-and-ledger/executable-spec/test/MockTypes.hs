@@ -16,6 +16,7 @@ import qualified STS.Chain
 import qualified STS.Deleg
 import qualified STS.Delegs
 import qualified STS.Ledger
+import qualified STS.NewEpoch
 import qualified STS.Pool
 import qualified STS.PoolReap
 import qualified STS.Utxo
@@ -52,6 +53,8 @@ type KeyPairs = LedgerState.KeyPairs MockDSIGN
 type VKeyGenesis = Keys.VKeyGenesis MockDSIGN
 
 type EpochState = LedgerState.EpochState ShortHash MockDSIGN
+
+type NEWEPOCH = STS.NewEpoch.NEWEPOCH ShortHash MockDSIGN
 
 type LedgerState = LedgerState.LedgerState ShortHash MockDSIGN
 
