@@ -1,5 +1,6 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,7 +14,9 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import           EpochBoundary
-import           LedgerState
+import           LedgerState (pattern DPState, EpochState, pattern EpochState, emptyAccount,
+                     emptyLedgerState, esAccountState, esLState, esPp, esSnapshots,
+                     _delegationState, _ups, _utxoState)
 import           PParams
 import           Slot
 import           Updates
@@ -62,7 +65,10 @@ votedValuePParams (PPUpdate ppup) pps =
 
 epochTransition :: forall hashAlgo dsignAlgo . TransitionRule (EPOCH hashAlgo dsignAlgo)
 epochTransition = do
-  TRC (_, EpochState as ss ls pp, e) <- judgmentContext
+  TRC (_, EpochState { esAccountState = as
+                     , esSnapshots = ss
+                     , esLState = ls
+                     , esPp = pp}, e) <- judgmentContext
   let us = _utxoState ls
   let UpdateState ppup _ _ _ = _ups us
   let DPState ds ps = _delegationState ls

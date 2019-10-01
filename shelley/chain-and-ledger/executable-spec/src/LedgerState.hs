@@ -279,10 +279,11 @@ data AccountState = AccountState
 
 data EpochState hashAlgo dsignAlgo
   = EpochState
-      AccountState
-      (SnapShots hashAlgo dsignAlgo)
-      (LedgerState hashAlgo dsignAlgo)
-      PParams
+    { esAccountState :: AccountState
+    , esSnapshots :: SnapShots hashAlgo dsignAlgo
+    , esLState :: LedgerState hashAlgo dsignAlgo
+    , esPp :: PParams
+    }
   deriving (Show, Eq)
 
 emptyUTxOState :: UTxOState hashAlgo dsignAlgo
