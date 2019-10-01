@@ -27,6 +27,9 @@ import           STS.Epoch
 import           Delegation.Certificates
 
 import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+
+import           Hedgehog (Gen)
 
 data NEWEPOCH hashAlgo dsignAlgo
 
@@ -98,3 +101,8 @@ newEpochTransition = do
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
     => Embed (EPOCH hashAlgo dsignAlgo) (NEWEPOCH hashAlgo dsignAlgo) where
   wrapFailed = EpochFailure
+
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
+  => HasTrace (NEWEPOCH hashAlgo dsignAlgo) where
+  envGen _ = undefined :: Gen (NewEpochEnv hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen Epoch
