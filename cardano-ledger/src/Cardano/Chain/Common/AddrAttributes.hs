@@ -35,7 +35,7 @@ import Cardano.Crypto.HD (HDAddressPayload)
 data AddrAttributes = AddrAttributes
     { aaVKDerivationPath  :: !(Maybe HDAddressPayload)
     , aaNetworkMagic      :: !NetworkMagic
-    } deriving (Eq, Ord, Show, Generic, NFData)
+    } deriving (Eq, Ord, Show, Generic, NFData, NoUnexpectedThunks)
 
 instance HeapWords AddrAttributes where
   heapWords aa = 3 + heapWords (aaVKDerivationPath aa)

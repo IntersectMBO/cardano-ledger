@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -24,6 +25,7 @@ import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..), shortVerific
 -- | Wrapper around 'CC.XPrv'.
 newtype SigningKey = SigningKey CC.XPrv
     deriving (NFData)
+    deriving NoUnexpectedThunks via UseIsNormalForm SigningKey
 
 -- Note that there is deliberately no Eq instance. The cardano-crypto library
 -- does not define one for XPrv.

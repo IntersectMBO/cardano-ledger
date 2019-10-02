@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
 
 module Cardano.Chain.UTxO.UTxOConfiguration
   ( UTxOConfiguration(..)
@@ -20,7 +21,7 @@ data UTxOConfiguration = UTxOConfiguration
   { -- | Set of source address which are asset-locked. Transactions which
     -- use these addresses as transaction inputs will be deemed invalid.
     tcAssetLockedSrcAddrs :: !(Set CompactAddress)
-  } deriving (Eq,Show,Generic)
+  } deriving (Eq,Show,Generic,NoUnexpectedThunks)
 
 defaultUTxOConfiguration :: UTxOConfiguration
 defaultUTxOConfiguration =

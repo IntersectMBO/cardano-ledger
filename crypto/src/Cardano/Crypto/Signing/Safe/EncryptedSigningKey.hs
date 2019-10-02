@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingVia          #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE StandaloneDeriving   #-}
@@ -38,6 +39,7 @@ data EncryptedSigningKey = EncryptedSigningKey
   , eskHash    :: !S.EncryptedPass
   -- ^ Hash of passphrase used for key creation.
   }
+  deriving NoUnexpectedThunks via UseIsNormalForm EncryptedSigningKey
 
 -- We don't have the @Eq CC.XPrv@ instance here because
 -- it is a security issue to compare signing keys. But it

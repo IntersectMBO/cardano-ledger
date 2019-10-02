@@ -25,7 +25,7 @@ import Cardano.Crypto.Signing.Redeem (RedeemVerificationKey)
 -- the pre-sale period. These certificates allow customers to redeem ADA.
 newtype GenesisAvvmBalances = GenesisAvvmBalances
   { unGenesisAvvmBalances :: Map RedeemVerificationKey Lovelace
-  } deriving (Show, Eq, Semigroup)
+  } deriving (Show, Eq, Semigroup, NoUnexpectedThunks)
 
 instance Monad m => ToJSON m GenesisAvvmBalances where
     toJSON = toJSON . unGenesisAvvmBalances
