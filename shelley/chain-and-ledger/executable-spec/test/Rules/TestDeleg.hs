@@ -78,11 +78,11 @@ rewardZeroAfterReg tr =
 
 -- | Check that when a stake credential is deregistered, it will not be in the
 -- rewards mapping or delegation mapping of the target state.
-credentialRemovedAfterDereg :: Property
-credentialRemovedAfterDereg = withTests numberOfTests . property $ do
-  tr <- fmap sourceSignalTargets
-      $ forAll
-      $ trace @DELEG traceLen `ofLengthAtLeast` 1
+credentialRemovedAfterDereg
+  :: MonadTest m
+  => [SourceSignalTarget DELEG]
+  -> m ()
+credentialRemovedAfterDereg tr = do
   assertAll removedDeregCredential tr
 
   where removedDeregCredential (SourceSignalTarget

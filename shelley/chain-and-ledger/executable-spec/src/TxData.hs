@@ -153,6 +153,14 @@ data DCert hashAlgo dsignAlgo
   | GenesisDelegate (GenKeyHash hashAlgo dsignAlgo, KeyHash hashAlgo dsignAlgo)
   deriving (Show, Eq)
 
+isRegKey :: DCert h d -> Bool
+isRegKey (RegKey _) = True
+isRegKey _ = False
+
+isDeRegKey :: DCert h d -> Bool
+isDeRegKey (DeRegKey _) = True
+isDeRegKey _ = False
+
 -- |A raw transaction
 data TxBody hashAlgo dsignAlgo
   = TxBody
