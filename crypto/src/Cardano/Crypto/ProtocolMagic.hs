@@ -38,7 +38,7 @@ import Cardano.Binary (Annotated(..), FromCBOR, ToCBOR)
 data AProtocolMagic a = AProtocolMagic
   { getAProtocolMagicId      :: !(Annotated ProtocolMagicId a)
   , getRequiresNetworkMagic :: !RequiresNetworkMagic
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 type ProtocolMagic = AProtocolMagic ()
 
@@ -89,7 +89,7 @@ instance MonadError SchemaError m => FromJSON m ProtocolMagicId where
 data RequiresNetworkMagic
   = RequiresNoMagic
   | RequiresMagic
-  deriving (Show, Eq, Generic, NFData)
+  deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
 
 -- Aeson JSON instances
 -- N.B @RequiresNetworkMagic@'s ToJSON & FromJSON instances do not round-trip.

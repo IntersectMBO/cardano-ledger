@@ -27,7 +27,7 @@ import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..),
 data NetworkMagic
     = NetworkMainOrStage
     | NetworkTestnet {-# UNPACK #-} !Word32
-    deriving (Show, Eq, Ord, Generic, NFData)
+    deriving (Show, Eq, Ord, Generic, NFData, NoUnexpectedThunks)
 
 instance B.Buildable NetworkMagic where
     build NetworkMainOrStage = "NetworkMainOrStage"

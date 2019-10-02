@@ -57,7 +57,7 @@ newtype UnparsedFields =
   UnparsedFields (Map Word8 LBS.ByteString)
   deriving (Eq, Ord, Show, Generic)
   deriving newtype HeapWords
-  deriving anyclass NFData
+  deriving anyclass (NFData, NoUnexpectedThunks)
 
 fromUnparsedFields :: UnparsedFields -> Map Word8 LBS.ByteString
 fromUnparsedFields (UnparsedFields m) = m
@@ -74,7 +74,7 @@ data Attributes h = Attributes
   -- ^ Data, containing known keys (deserialized)
   , attrRemain :: UnparsedFields
   -- ^ Remaining, unparsed fields
-  } deriving (Eq, Ord, Generic)
+  } deriving (Eq, Ord, Generic, NoUnexpectedThunks)
     deriving anyclass NFData
 
 instance Show h => Show (Attributes h) where
@@ -219,4 +219,3 @@ dropEmptyAttributes :: Dropper s
 dropEmptyAttributes = do
   len <- decodeMapLen
   unless (len == 0) $ cborError $ DecoderErrorSizeMismatch "Attributes" 0 len
-

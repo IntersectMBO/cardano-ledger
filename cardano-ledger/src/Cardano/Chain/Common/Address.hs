@@ -139,7 +139,7 @@ data Address = Address
   -- 'AddrSpendingData', but it can't be checked statically, because
   -- spending data is hashed.
   } deriving (Eq, Ord, Generic, Show)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance ToCBOR Address where
   toCBOR addr =

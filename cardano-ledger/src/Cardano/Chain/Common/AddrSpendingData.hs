@@ -76,7 +76,7 @@ data AddrType
   = ATVerKey
   | ATRedeem
   deriving (Eq, Ord, Generic, Show)
-  deriving anyclass NFData
+  deriving anyclass (NFData, NoUnexpectedThunks)
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
 instance ToCBOR AddrType where

@@ -66,7 +66,7 @@ newtype HDAddressPayload = HDAddressPayload
   { getHDAddressPayload :: ByteString
   } deriving (Eq, Ord, Show, Generic)
     deriving newtype (ToCBOR, HeapWords)
-    deriving anyclass NFData
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance FromCBOR HDAddressPayload where
   fromCBOR = HDAddressPayload <$> decodeBytesCanonical

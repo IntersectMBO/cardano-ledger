@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -51,6 +52,7 @@ import Cardano.Crypto.Orphans ()
 newtype RedeemVerificationKey =
   RedeemVerificationKey Ed25519.PublicKey
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
+  deriving NoUnexpectedThunks via UseIsNormalForm RedeemVerificationKey
 
 -- Note that normally we would not provide any Ord instances.
 -- The crypto libraries encourage using key /hashes/ not keys for

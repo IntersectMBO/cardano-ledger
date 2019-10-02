@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
@@ -59,7 +61,7 @@ data GenesisData = GenesisData
     , gdK                  :: !BlockCount
     , gdProtocolMagicId    :: !ProtocolMagicId
     , gdAvvmDistr          :: !GenesisAvvmBalances
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
 instance Monad m => ToJSON m GenesisData where
   toJSON gd = mkObject

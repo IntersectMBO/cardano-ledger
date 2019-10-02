@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
@@ -84,6 +86,7 @@ import Cardano.Crypto
 
 -- | Poor node secret
 data PoorSecret = PoorSecret SigningKey | PoorEncryptedSecret EncryptedSigningKey
+  deriving (Generic, NoUnexpectedThunks)
 
 -- | Valuable secrets which can unlock genesis data.
 data GeneratedSecrets = GeneratedSecrets
@@ -98,6 +101,7 @@ data GeneratedSecrets = GeneratedSecrets
     , gsFakeAvvmSeeds     :: ![ByteString]
     -- ^ Fake avvm seeds.
     }
+  deriving (Generic, NoUnexpectedThunks)
 
 gsSigningKeys :: GeneratedSecrets -> [SigningKey]
 gsSigningKeys gs = gsRichSecrets gs <> gsSigningKeysPoor gs

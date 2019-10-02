@@ -1,11 +1,12 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Chain.Genesis.Delegation
   ( GenesisDelegation(..)
@@ -42,7 +43,7 @@ import Cardano.Chain.Delegation.Certificate
 --
 newtype GenesisDelegation = UnsafeGenesisDelegation
   { unGenesisDelegation :: Map KeyHash Certificate
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, NoUnexpectedThunks)
 
 instance Monad m => ToJSON m GenesisDelegation where
   toJSON = toJSON . unGenesisDelegation

@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 
 module Cardano.Chain.Genesis.Config
@@ -64,6 +66,7 @@ data Config = Config
     , configUTxOConfiguration :: !UTxOConfiguration
     -- ^ Extra local data used in UTxO validation rules
     }
+  deriving (Generic, NoUnexpectedThunks)
 
 configGenesisHeaderHash :: Config -> HeaderHash
 configGenesisHeaderHash = genesisHeaderHash . configGenesisHash
@@ -146,4 +149,3 @@ data ConfigurationError
   | GenesisHashDecodeError Text
   -- ^ An error occured while decoding the genesis hash.
   deriving (Show)
-
