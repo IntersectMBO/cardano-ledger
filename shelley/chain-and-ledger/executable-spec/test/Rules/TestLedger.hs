@@ -5,6 +5,7 @@
 
 module Rules.TestLedger
   ( rewardZeroAfterReg
+  , credentialRemovedAfterDereg
   , consumedEqualsProduced
   )
 where
@@ -16,8 +17,8 @@ import           Hedgehog (Property, forAll, property, withTests)
 
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace,
                      traceOfLengthWithInitState)
-import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
-                     source, sourceSignalTargets, target)
+import           Control.State.Transition.Trace (SourceSignalTarget (..), source,
+                     sourceSignalTargets, target)
 import           Generator.Core (mkGenesisLedgerState)
 import           Generator.LedgerTrace ()
 
@@ -54,13 +55,21 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
                                    mkGenesisLedgerState
         `ofLengthAtLeast` 1)
 
-  TestDeleg.rewardZeroAfterReg ((concatMap toCerts . sourceSignalTargets) t)
+  TestDeleg.rewardZeroAfterReg
+    ((concatMap ledgerToDelegSsts . sourceSignalTargets) t)
 
-  where toCerts
-          :: SourceSignalTarget LEDGER
-          -> [SourceSignalTarget DELEG]
-        toCerts (SourceSignalTarget (_, DPState d _) (_, DPState d' _) tx) =
-          [SourceSignalTarget d d' cert | cert <- toList . _certs . _body $ tx]
+
+credentialRemovedAfterDereg :: Property
+credentialRemovedAfterDereg =
+  withTests (fromIntegral numberOfTests) . property $ do
+    tr <- fmap sourceSignalTargets
+          $ forAll
+          $ traceOfLengthWithInitState @LEDGER
+                                     (fromIntegral traceLen)
+                                     mkGenesisLedgerState
+            `ofLengthAtLeast` 1
+    TestDeleg.credentialRemovedAfterDereg
+      (concatMap ledgerToDelegSsts tr)
 
 
 -- | Check that the value consumed by UTXO is equal to the value produced in
@@ -93,3 +102,11 @@ consumedEqualsProduced = withTests (fromIntegral numberOfTests) . property $ do
 
           (balance u  + d  + fees  + foldl (+) (Coin 0) rewards ) ==
           (balance u' + d' + fees' + foldl (+) (Coin 0) rewards')
+
+
+-- | Transform LEDGER `sourceSignalTargets`s to DELEG ones.
+ledgerToDelegSsts
+  :: SourceSignalTarget LEDGER
+  -> [SourceSignalTarget DELEG]
+ledgerToDelegSsts (SourceSignalTarget (_, DPState d _) (_, DPState d' _) tx) =
+  [SourceSignalTarget d d' cert | cert <- toList . _certs . _body $ tx]

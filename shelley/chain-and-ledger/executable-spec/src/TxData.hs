@@ -175,6 +175,14 @@ data DCert hashAlgo dsignAlgo vrfAlgo
 
 instance NoUnexpectedThunks (DCert hashAlgo dsignAlgo vrfAlgo)
 
+isRegKey :: DCert h d -> Bool
+isRegKey (RegKey _) = True
+isRegKey _ = False
+
+isDeRegKey :: DCert h d -> Bool
+isDeRegKey (DeRegKey _) = True
+isDeRegKey _ = False
+
 -- |A raw transaction
 data TxBody hashAlgo dsignAlgo vrfAlgo
   = TxBody
