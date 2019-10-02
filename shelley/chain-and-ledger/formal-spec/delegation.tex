@@ -106,7 +106,9 @@ It does the following:
   \begin{array}{r@{}c@{}l}
     \DCert &=& \DCertRegKey \uniondistinct \DCertDeRegKey \uniondistinct \DCertDeleg \\
                 &\hfill\uniondistinct\;&
-                \DCertRegPool \uniondistinct \DCertRetirePool \uniondistinct \DCertGen
+                \DCertRegPool \uniondistinct \DCertRetirePool \uniondistinct
+                                         \DCertGen\\
+           &\hfill\uniondistinct\;& \DCertMir
   \end{array}
   \end{equation*}
   %
@@ -132,18 +134,21 @@ It does the following:
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness} \\
-  \fun{dpool} & \DCertDeleg \to \KeyHash
-  & \text{pool being delegated to}
-  \\
-  \fun{poolParam} & \DCertRegPool \to \PoolParam
-  & \text{stake pool}
-  \\
-  \fun{retire} & \DCertRetirePool \to \Epoch
-  & \text{epoch of pool retirement}
-  \\
-  \fun{genDel} & \DCertGen \to (\VKeyGen,~\VKey)
-  & \text{genesis delegation}
-  \end{array}
+      \fun{dpool} & \DCertDeleg \to \KeyHash
+                                            & \text{pool being delegated to}
+      \\
+      \fun{poolParam} & \DCertRegPool \to \PoolParam
+                                            & \text{stake pool}
+      \\
+      \fun{retire} & \DCertRetirePool \to \Epoch
+                                            & \text{epoch of pool retirement}
+      \\
+      \fun{genDel} & \DCertGen \to (\VKeyGen,~\VKey)
+                                            & \text{genesis delegation}
+      \\
+      \fun{moveRewards} & \DCertMir \to (\KeyHash \mapsto \Coin)
+                                            & \text{moved instantaneous rewards}
+    \end{array}
   \end{equation*}
   %
   \emph{Pool Parameter Accessor functions}
@@ -251,11 +256,13 @@ and the protocol parameters.
             \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
             \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
             \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
-      \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
-      \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
-      \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
-    \end{array}\right)
-    \\
+            \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
+            \var{fdms} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
+            \var{dms} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
+            \var{i_{rwd}} & \KeyHash \mapsto \Coin & \text{instantaneous rewards}\\
+          \end{array}
+      \right)
+      \\
     \\
     \PState =
     \left(\begin{array}{r@{~\in~}lr}
@@ -275,6 +282,7 @@ and the protocol parameters.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{slot}\\
         \var{ptr} & \Ptr & \text{certificate pointer}\\
+        \var{reserves} & \Coin & \text{total reserves available}
       \end{array}
     \right)
   \end{equation*}
@@ -379,6 +387,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -389,6 +398,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -400,6 +410,7 @@ concerns are independent of the ledger rules.
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
     }
@@ -415,6 +426,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -425,6 +437,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{\var{c}}
@@ -436,6 +449,7 @@ concerns are independent of the ledger rules.
         \varUpdate{\var{ptrs}} & \varUpdate{\subtractrange} & \varUpdate{\{\var{hk}\}} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
     }
@@ -450,6 +464,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -460,6 +475,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{c}
@@ -472,6 +488,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
     }
@@ -494,6 +511,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
+        \var{reserves}
       \end{array}
       \vdash
       \left(
@@ -504,6 +522,7 @@ concerns are independent of the ledger rules.
         \var{ptrs} \\
         \var{fdms} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
       \trans{deleg}{c}
@@ -516,6 +535,7 @@ concerns are independent of the ledger rules.
         \varUpdate{\var{fdms}} & \varUpdate{\unionoverrideRight}
                                & \varUpdate{\{(\var{s'},~\var{gkh}) \mapsto \var{vkh}\}} \\
         \var{dms} \\
+        \var{i_{rwd}}
       \end{array}
       \right)
     }
@@ -523,6 +543,53 @@ concerns are independent of the ledger rules.
 
   \caption{Delegation Inference Rules}
   \label{fig:delegation-rules}
+\end{figure}
+
+\begin{figure}[htp]
+  \centering
+  \begin{equation}\label{eq:deleg-mir}
+    \inference[Deleg-Mir]
+    {
+      \var{c}\in \DCertMir\\
+      slot < \fun{firstSlot}((\fun{epoch}~\var{s} + 1)) - \fun{SlotsPrior}\\
+      \left(
+        \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i'_{rwd}})} val      \right)\leq\var{reserves}
+    }
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+        \var{reserves}
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{stdelegs} \\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fdms} \\
+        \var{dms} \\
+        \var{i_{rwd}}
+      \end{array}
+      \right)
+      \trans{deleg}{c}
+      \left(
+      \begin{array}{rcl}
+        \var{stdelegs}\\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fdms}\\
+        \var{dms} \\
+        \varUpdate{\var{i_{rwd}}} & \varUpdate{\unionoverrideRight}
+        & \varUpdate{\fun{moveRewards}~\var{c}}
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Move Instantaneous Rewards Inference Rule}
+  \label{fig:dcert-mir}
 \end{figure}
 
 The DELEG rule has six predicate failures:
@@ -745,6 +812,7 @@ combined transition.
         \var{slot} & \Slot & \text{slot}\\
         \var{ptr} & \Ptr & \text{certificate pointer}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{reserves} & \Coin & \text{total available reserves}
       \end{array}
     \right)
   \end{equation*}
@@ -789,6 +857,7 @@ will be successful, since the pool certificates are disjoint from the delegation
           \begin{array}{r}
             \var{slot} \\
             \var{ptr} \\
+            \var{reserves}
           \end{array}
         \right)
       }
@@ -799,6 +868,7 @@ will be successful, since the pool certificates are disjoint from the delegation
           \var{slot} \\
           \var{ptr} \\
           \var{pp} \\
+          \var{reserves}
         \end{array}
       \right)
       \vdash
@@ -837,6 +907,7 @@ will be successful, since the pool certificates are disjoint from the delegation
           \var{slot} \\
           \var{ptr} \\
           \var{pp} \\
+          \var{reserves}
         \end{array}
       \right)
       \vdash
@@ -874,6 +945,8 @@ transition.
         \var{slot} & \Slot & \text{slot}\\
         \var{txIx} & \Ix & \text{transaction index}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{tx} & \Tx & \text{transaction} \\
+        \var{reserves} & \Coin & \text{total reserves}
       \end{array}
     \right)
   \end{equation*}
@@ -933,7 +1006,8 @@ will be invalid.
         \var{slot} \\
         \var{txIx} \\
         \var{pp} \\
-        \var{tx}
+        \var{tx} \\
+        \var{reserves}
       \end{array}
     \right)
       \vdash
@@ -947,6 +1021,7 @@ will be invalid.
           \var{ptrs} \\
           \var{fdms} \\
           \var{dms} \\
+          \var{i_{rwd}}
         \end{array}
         \right) \\~\\
         \left(
@@ -970,6 +1045,7 @@ will be invalid.
           \var{ptrs} \\
           \var{fdms} \\
           \var{dms} \\
+          \var{i_{rwd}}
         \end{array}
         \right) \\~\\
         \left(
@@ -999,7 +1075,8 @@ will be invalid.
               \var{slot}\\
               \var{txIx}\\
               \var{pp}\\
-              \var{tx}
+              \var{tx}\\
+              \var{reserves}
             \end{array}
           \right)
         }
@@ -1014,6 +1091,7 @@ will be invalid.
           \var{slot}\\
           \var{ptr}\\
           \var{pp}\\
+          \var{reserves}
         \end{array}
       \right)
     }
@@ -1029,7 +1107,8 @@ will be invalid.
         \var{slot}\\
         \var{txIx}\\
         \var{pp}\\
-        \var{tx}
+        \var{tx}\\
+        \var{reserves}
       \end{array}
     \right)
     }
