@@ -1371,7 +1371,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \in newlyRegister
       \right\}\\
     & ~~~~~~~\Delta d = \vert newlyRegister \vert\cdot\fun{keydeposit}~\var{pp} \\
-    & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot \var{reserves'}}
+    & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
+      \var{reserves'}} + rewards_{mir}
     \\
     & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~{pp}} \\
     & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
