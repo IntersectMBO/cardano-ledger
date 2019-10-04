@@ -28,10 +28,13 @@ registered stake pools and upcoming stake pool retirements.  Additionally, the
 blockchain protocol rewards eligible stake and so we must also include a mapping
 from active stake credentials to rewards.
 
-Finally, there is a type of delegation certificate available only to the genesis
-keys. The genesis keys will still be used for update proposals at the begin of the Shelley
-era, and so there must be a way to maintain the delegation of these keys to their cold keys.
-This mapping is also maintained by the delegation state.
+Finally, there are two types of delegation certificates available only to the
+genesis keys. The genesis keys will still be used for update proposals at the
+begin of the Shelley era, and so there must be a way to maintain the delegation
+of these keys to their cold keys.  This mapping is also maintained by the
+delegation state. There is also a mechanism to transfer rewards directly from
+the reserves pot to a reward address. While technically everybody can post such
+a certificate, the transaction that contains it must be signed by genesis keys.
 
 \subsection{Delegation Definitions}
 \label{sec:deleg-defs}
@@ -46,7 +49,8 @@ Here we introduce the following primitive datatypes used in delegation:
 \item $\DCertRegPool$: a stake pool registration certificate.
 \item $\DCertRetirePool$: a stake pool retirement certificate.
 \item $\DCertGen$: a genesis key delegation certificate.
-\item $\DCert$: any one of of the six certificate types above.
+\item $\DCertMir$: a move instantaneous rewards certificate.
+\item $\DCert$: any one of of the seven certificate types above.
 \end{itemize}
 The following derived types are introduced:
 \begin{itemize}
@@ -87,6 +91,8 @@ It does the following:
   of the key of the pool operator.
 \item For a $\DCertGen$ certificate, $\fun{cwitness}$ returns the hashkey
   of the genesis key.
+\item For a $\DCertMir$ certificate, $\fun{cwitness}$ is not defined as there is
+  no single core node or genesis key that posts the certificate.
 \end{itemize}
 
 %%
@@ -133,7 +139,7 @@ It does the following:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness} \\
+      \cwitness{} & \DCert\setminus\DCertMir \to \StakeDelegs & \text{certificate witness} \\
       \fun{dpool} & \DCertDeleg \to \KeyHash
                                             & \text{pool being delegated to}
       \\
@@ -206,7 +212,10 @@ state transition types. We define two separate parts of the ledger state.
       is needed because genesis keys can only update their delegation with a
       delay of $\SlotsPrior$ slots after submitting the certificate (this is
       necessary for header validation, see Section \ref{sec:chain})
-      \item $\var{dms}$ maps genesis key hashes to hashes of the cold key delegates.
+      \item $\var{dms}$ maps genesis key hashes to hashes of the cold key
+        delegates.
+      \item $\var{i_{rwd}}$ stored the map of stake credentials to $\Coin$
+        values for moving instantaneous rewards at the epoch boundary.
     \end{itemize}
   \item $\PState$ keeps track of the stake pool information:
     \begin{itemize}
@@ -368,7 +377,12 @@ concerns are independent of the ledger rules.
     \begin{itemize}
       \item The future genesis delegation relation is updated with the new delegate
         to be adopted in $\SlotsPrior$-many slots.
-    \end{itemize}
+      \end{itemize}
+
+    \item  Moving instantaneous rewards is handled by \cref{eq:deleg-mir}. There
+      is a precondition that the current slot is early enough in the current
+      epoch and that the available reserves are sufficient to pay for the
+      instantaneous rewards.
 \end{itemize}
 
 
