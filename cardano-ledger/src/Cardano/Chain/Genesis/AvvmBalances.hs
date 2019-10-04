@@ -10,10 +10,8 @@ module Cardano.Chain.Genesis.AvvmBalances
   )
 where
 
-import Cardano.Prelude hiding (toStrict)
-import Prelude (id)
+import Cardano.Prelude
 
-import Data.Map.Strict as Map
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Chain.Common (Lovelace)
@@ -37,13 +35,10 @@ instance MonadError SchemaError m => FromJSON m GenesisAvvmBalances where
     -- need to be careful in order to ensure that we're still dealing with a
     -- 'Map' that's strict in both its keys and values.
     --
-    -- To remedy this, we use @Map.map id@ to convert the 'Map'
-    -- to one that is now guaranteed to be strict in both its keys and values.
+    -- To remedy this, we use 'forceElemsToWHNF' from "Cardano.Prelude" to
+    -- convert the 'Map' to one that is now guaranteed to be strict in both
+    -- its keys and values.
     --
     -- n.b. both the strict and lazy 'Map' modules utilize the same 'Map' data
     -- type which is what makes something like this possible.
-    fromJSON = fmap (GenesisAvvmBalances . toStrict) . fromJSON
-     where
-      -- | /O(n)/. Ensures that all values in the given 'Map' are in WHNF.
-      toStrict :: Map k a -> Map k a
-      toStrict = Map.map id
+    fromJSON = fmap (GenesisAvvmBalances . forceElemsToWHNF) . fromJSON
