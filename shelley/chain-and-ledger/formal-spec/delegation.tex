@@ -28,10 +28,13 @@ registered stake pools and upcoming stake pool retirements.  Additionally, the
 blockchain protocol rewards eligible stake and so we must also include a mapping
 from active stake credentials to rewards.
 
-Finally, there is a type of delegation certificate available only to the genesis
-keys. The genesis keys will still be used for update proposals at the begin of the Shelley
-era, and so there must be a way to maintain the delegation of these keys to their cold keys.
-This mapping is also maintained by the delegation state.
+Finally, there are two types of delegation certificates available only to the
+genesis keys. The genesis keys will still be used for update proposals at the
+begin of the Shelley era, and so there must be a way to maintain the delegation
+of these keys to their cold keys.  This mapping is also maintained by the
+delegation state. There is also a mechanism to transfer rewards directly from
+the reserves pot to a reward address. While technically everybody can post such
+a certificate, the transaction that contains it must be signed by genesis keys.
 
 \subsection{Delegation Definitions}
 \label{sec:deleg-defs}
@@ -46,7 +49,8 @@ Here we introduce the following primitive datatypes used in delegation:
 \item $\DCertRegPool$: a stake pool registration certificate.
 \item $\DCertRetirePool$: a stake pool retirement certificate.
 \item $\DCertGen$: a genesis key delegation certificate.
-\item $\DCert$: any one of of the six certificate types above.
+\item $\DCertMir$: a move instantaneous rewards certificate.
+\item $\DCert$: any one of of the seven certificate types above.
 \end{itemize}
 The following derived types are introduced:
 \begin{itemize}
@@ -87,6 +91,8 @@ It does the following:
   of the key of the pool operator.
 \item For a $\DCertGen$ certificate, $\fun{cwitness}$ returns the hashkey
   of the genesis key.
+\item For a $\DCertMir$ certificate, $\fun{cwitness}$ is not defined as there is
+  no single core node or genesis key that posts the certificate.
 \end{itemize}
 
 %%
@@ -133,7 +139,7 @@ It does the following:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness} \\
+      \cwitness{} & \DCert\setminus\DCertMir \to \StakeDelegs & \text{certificate witness} \\
       \fun{dpool} & \DCertDeleg \to \KeyHash
                                             & \text{pool being delegated to}
       \\

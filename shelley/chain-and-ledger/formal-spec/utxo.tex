@@ -562,7 +562,7 @@ This consists of:
 \begin{itemize}
   \item payment keys for outputs being spent
   \item stake credentials for reward withdrawals
-  \item stake credentials for delegation certificates (all five types)
+  \item stake credentials for delegation certificates (all six types)
   \item delegates of the genesis keys for any protocol parameter updates
   \item stake credentials for the pool owners in a pool registration certificate
 \end{itemize}
@@ -589,7 +589,7 @@ This consists of:
     \cup & ~~
            \{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
       \restrictdom \txwdrls{tx}\}\\
-    \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx}\}~\cup \\
+    \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx} \setminus \DCertMir\}~\cup \\
     \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{dms} \\
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
   \end{align*}
@@ -602,7 +602,8 @@ This consists of:
     & ~~~~~i\in\fun{txinsScript}~{(\fun{txins~\var{tx}})}~{utxo}\} \\
     \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
            \restrictdom \fun{txwdrls}~\var{tx}) \} \\
-    \cup & ~~\{\AddrScr \cap \fun{cwitness}~\var{c} \mid c \in \fun{txcerts}~\var{tx}\}
+    \cup & ~~\{\AddrScr \cap \fun{cwitness}~\var{c} \mid c \in
+           \fun{txcerts}~\var{tx} \setminus \DCertMir\}
   \end{align*}
   \caption{Functions used in witness rule}
   \label{fig:functions-witnesses}
