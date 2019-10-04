@@ -230,8 +230,8 @@ mkSeed
   -> Nonce -- ^ Epoch nonce
   -> HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
   -> Seed
-mkSeed (Nonce eta0) slot nonce lastHash =
-  Seed . coerce $ eta0 `Hash.xor` coerce (hash @SHA256 (slot, nonce, lastHash))
+mkSeed (Nonce uc) slot nonce lastHash =
+  Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce, lastHash))
 mkSeed NeutralNonce slot nonce lastHash =
   Seed . coerce $ (hash @SHA256 (slot, nonce, lastHash))
 

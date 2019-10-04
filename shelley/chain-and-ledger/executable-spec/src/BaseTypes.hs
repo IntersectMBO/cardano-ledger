@@ -73,7 +73,7 @@ interval1 = UnitInterval 1
 -- | Evolving nonce type.
 data Nonce
   = Nonce (Hash SHA256 Nonce)
-  | NeutralNonce -- ^ 0 element
+  | NeutralNonce -- ^ Identity element
   deriving (Eq, Ord, Show)
 
 instance ToCBOR Nonce where
@@ -85,12 +85,6 @@ instance ToCBOR Nonce where
 (Nonce a) ⭒ (Nonce b) = Nonce . coerce $ hash @SHA256 (getHash a <> getHash b)
 x ⭒ NeutralNonce = x
 NeutralNonce ⭒ x = x
-
-instance Semigroup Nonce where
-  (<>) = (⭒)
-
-instance Monoid Nonce where
-  mempty = NeutralNonce
 
 -- | Make a nonce from a natural number
 mkNonce :: Natural -> Nonce
