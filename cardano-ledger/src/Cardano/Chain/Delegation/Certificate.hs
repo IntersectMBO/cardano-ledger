@@ -17,6 +17,7 @@ module Cardano.Chain.Delegation.Certificate
   -- * Certificate
     Certificate
   , ACertificate(..)
+  , CertificateId
 
   -- * Certificate Constructors
   , signCertificate
@@ -24,6 +25,7 @@ module Cardano.Chain.Delegation.Certificate
 
   -- * Certificate Accessor
   , epoch
+  , certificateId
 
   -- * Certificate Predicate
   , isValid
@@ -51,11 +53,13 @@ import Cardano.Binary
   )
 import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto
-  ( ProtocolMagicId
+  ( Hash
+  , ProtocolMagicId
   , SafeSigner
   , SignTag(SignCertificate)
   , Signature
   , VerificationKey(unVerificationKey)
+  , hash
   , safeSign
   , safeToVerification
   , verifySignatureDecoded
@@ -65,6 +69,9 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 -- Certificate
 --------------------------------------------------------------------------------
+
+-- | A delegation certificate identifier (the 'Hash' of a 'Certificate').
+type CertificateId = Hash Certificate
 
 type Certificate = ACertificate ()
 
@@ -129,6 +136,9 @@ unsafeCertificate e = UnsafeACertificate (Annotated e ())
 
 epoch :: ACertificate a -> EpochNumber
 epoch = unAnnotated . aEpoch
+
+certificateId :: ACertificate a -> CertificateId
+certificateId = hash . void
 
 
 --------------------------------------------------------------------------------
