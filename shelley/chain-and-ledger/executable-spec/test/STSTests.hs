@@ -46,7 +46,7 @@ testUPNLate =
   let
     st = applySTS @UPDN (TRC (mkNonce 1, UpdnState (mkNonce 2) (mkNonce 3), Slot.Slot 85))
   in
-    st @?= Right (UpdnState ((mkNonce 2) <> (mkNonce 1)) (mkNonce 3))
+    st @?= Right (UpdnState ((mkNonce 2) ⭒ (mkNonce 1)) (mkNonce 3))
 
 testCHAINExample :: CHAINExample -> Assertion
 testCHAINExample (CHAINExample slotNow initSt block expectedSt) = do
