@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -45,6 +46,7 @@ data CompactRedeemVerificationKey =
                                {-# UNPACK #-} !Word64
                                {-# UNPACK #-} !Word64
   deriving (Eq, Generic, Show)
+  deriving NoUnexpectedThunks via UseIsNormalForm CompactRedeemVerificationKey
   deriving anyclass NFData
 
 getCompactRedeemVerificationKey :: Get CompactRedeemVerificationKey

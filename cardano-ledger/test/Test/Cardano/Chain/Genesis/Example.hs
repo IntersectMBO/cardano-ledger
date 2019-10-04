@@ -45,10 +45,11 @@ import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto
   ( AProtocolMagic(..)
   , ProtocolMagicId(..)
+  , CompactRedeemVerificationKey
   , RequiresNetworkMagic(..)
-  , RedeemVerificationKey
   , Signature(..)
   , redeemDeterministicKeyGen
+  , toCompactRedeemVerificationKey
   )
 import Cardano.Crypto.Signing (VerificationKey(..))
 import qualified Cardano.Crypto.Wallet as CC
@@ -74,12 +75,12 @@ exampleGenesisSpec = UnsafeGenesisSpec
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
 exampleGenesisAvvmBalances = GenesisAvvmBalances $ M.fromList
-  [ (exampleRedeemVerificationKey' (0, 32) , mkKnownLovelace @36524597913081152)
-  , (exampleRedeemVerificationKey' (32, 32), mkKnownLovelace @37343863242999412)
+  [ (exampleCompactRVK' (0, 32) , mkKnownLovelace @36524597913081152)
+  , (exampleCompactRVK' (32, 32), mkKnownLovelace @37343863242999412)
   ]
  where
-  exampleRedeemVerificationKey' :: (Int, Int) -> RedeemVerificationKey
-  exampleRedeemVerificationKey' (m, n) =
+  exampleCompactRVK' :: (Int, Int) -> CompactRedeemVerificationKey
+  exampleCompactRVK' (m, n) = toCompactRedeemVerificationKey $
     fromJust (fst <$> redeemDeterministicKeyGen (getBytes m n))
 
 exampleGenesisData0 :: GenesisData

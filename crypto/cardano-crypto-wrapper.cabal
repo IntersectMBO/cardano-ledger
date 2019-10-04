@@ -101,6 +101,7 @@ test-suite test
                        Test.Cardano.Crypto.Orphans
                        Test.Cardano.Crypto.Random
                        Test.Cardano.Crypto.Signing.Redeem
+                       Test.Cardano.Crypto.Signing.Redeem.Compact
                        Test.Cardano.Crypto.Signing.Safe
                        Test.Cardano.Crypto.Signing.Signing
 
