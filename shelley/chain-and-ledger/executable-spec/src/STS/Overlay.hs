@@ -26,16 +26,17 @@ import           Slot
 
 import           STS.Ocert
 
+import qualified Cardano.Crypto.VRF as VRF
 import           Control.State.Transition
 
-data OVERLAY hashAlgo dsignAlgo kesAlgo
+data OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-data OverlayEnv hashAlgo dsignAlgo kesAlgo
+data OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
   = OverlayEnv
       PParams
       (Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo)))
-      Seed
-      (PoolDistr hashAlgo dsignAlgo)
+      Nonce
+      (PoolDistr hashAlgo dsignAlgo vrfAlgo)
       (Dms hashAlgo dsignAlgo)
 
 instance
@@ -43,24 +44,26 @@ instance
   , DSIGNAlgorithm dsignAlgo
   , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
   , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
+  , VRF.Signable vrfAlgo Seed
   )
-  => STS (OVERLAY hashAlgo dsignAlgo kesAlgo)
+  => STS (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
-  type State (OVERLAY hashAlgo dsignAlgo kesAlgo)
+  type State (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = Map (KeyHash hashAlgo dsignAlgo) Natural
 
-  type Signal (OVERLAY hashAlgo dsignAlgo kesAlgo)
-    = BHeader hashAlgo dsignAlgo kesAlgo
+  type Signal (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-  type Environment (OVERLAY hashAlgo dsignAlgo kesAlgo) = OverlayEnv hashAlgo dsignAlgo kesAlgo
+  type Environment (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo) = OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-  data PredicateFailure (OVERLAY hashAlgo dsignAlgo kesAlgo)
+  data PredicateFailure (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = NotPraosLeaderOVERLAY
     | NotActiveSlotOVERLAY
     | WrongGenesisColdKeyOVERLAY (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
     | NoGenesisStakingOVERLAY
-    | OcertFailure (PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo))
+    | OcertFailure (PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules = []
@@ -68,14 +71,16 @@ instance
   transitionRules = [overlayTransition]
 
 overlayTransition
-  :: forall hashAlgo dsignAlgo kesAlgo
+  :: forall hashAlgo dsignAlgo kesAlgo vrfAlgo
    . ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
      , KESAlgorithm kesAlgo
-     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+     , VRFAlgorithm vrfAlgo
+     , VRF.Signable vrfAlgo Seed
      )
-  => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo)
+  => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
 overlayTransition = do
   TRC ( OverlayEnv pp osched eta0 pd (Dms dms)
       , cs
@@ -95,15 +100,17 @@ overlayTransition = do
         Just dmsKey ->
           vkh == dmsKey ?! WrongGenesisColdKeyOVERLAY vkh dmsKey
 
-  trans @(OCERT hashAlgo dsignAlgo kesAlgo) $ TRC ((), cs, bh)
+  trans @(OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) $ TRC ((), cs, bh)
 
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
   , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
   , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
+  , VRF.Signable vrfAlgo Seed
   )
-  => Embed (OCERT hashAlgo dsignAlgo kesAlgo) (OVERLAY hashAlgo dsignAlgo kesAlgo)
+  => Embed (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
   wrapFailed = OcertFailure

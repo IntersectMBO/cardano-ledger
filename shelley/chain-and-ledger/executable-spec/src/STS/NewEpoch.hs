@@ -16,7 +16,7 @@ import           Data.Maybe (catMaybes)
 import           BaseTypes
 import           Coin
 import           EpochBoundary
-import           Keys (DSIGNAlgorithm, HashAlgorithm)
+import           Keys (DSIGNAlgorithm, HashAlgorithm, VRFAlgorithm)
 import           LedgerState
 import           PParams
 import           Slot
@@ -31,15 +31,15 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data NEWEPOCH hashAlgo dsignAlgo
+data NEWEPOCH hashAlgo dsignAlgo vrfAlgo
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-    => STS (NEWEPOCH hashAlgo dsignAlgo) where
-  type State (NEWEPOCH hashAlgo dsignAlgo) = NewEpochState hashAlgo dsignAlgo
-  type Signal (NEWEPOCH hashAlgo dsignAlgo) = Epoch
-  type Environment (NEWEPOCH hashAlgo dsignAlgo) = NewEpochEnv hashAlgo dsignAlgo
-  data PredicateFailure (NEWEPOCH hashAlgo dsignAlgo)
-    = EpochFailure (PredicateFailure (EPOCH hashAlgo dsignAlgo))
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+    => STS (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) where
+  type State (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) = NewEpochState hashAlgo dsignAlgo vrfAlgo
+  type Signal (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) = Epoch
+  type Environment (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) = NewEpochEnv hashAlgo dsignAlgo
+  data PredicateFailure (NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
+    = EpochFailure (PredicateFailure (EPOCH hashAlgo dsignAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules =
@@ -55,9 +55,9 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
         Map.empty]
   transitionRules = [newEpochTransition]
 
-newEpochTransition :: forall hashAlgo dsignAlgo
-  .  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => TransitionRule (NEWEPOCH hashAlgo dsignAlgo)
+newEpochTransition :: forall hashAlgo dsignAlgo vrfAlgo
+  .  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => TransitionRule (NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
 newEpochTransition = do
   TRC ( NewEpochEnv eta1 _s gkeys
       , src@(NewEpochState (Epoch eL) _ _ bcur es ru _pd _osched)
@@ -68,7 +68,7 @@ newEpochTransition = do
       let es_ = case ru of
             Nothing  -> es
             Just ru' -> applyRUpd ru' es
-      es' <- trans @(EPOCH hashAlgo dsignAlgo) $ TRC ((), es_, e)
+      es' <- trans @(EPOCH hashAlgo dsignAlgo vrfAlgo) $ TRC ((), es_, e)
       let EpochState acnt ss ls pp = es'
 
           (Stake stake, delegs) = _pstakeSet ss
@@ -85,7 +85,7 @@ newEpochTransition = do
 
           etaE = _extraEntropy pp
 
-          es'' = EpochState acnt ss ls (pp { _extraEntropy = NeutralSeed })
+          es'' = EpochState acnt ss ls (pp { _extraEntropy = NeutralNonce })
 
       pure $ NewEpochState e
                            (eta1 ⭒ etaE)
@@ -98,11 +98,15 @@ newEpochTransition = do
      where
        aggregatePlus = Map.fromListWith (+)
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-    => Embed (EPOCH hashAlgo dsignAlgo) (NEWEPOCH hashAlgo dsignAlgo) where
+instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+    => Embed (EPOCH hashAlgo dsignAlgo vrfAlgo) (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) where
   wrapFailed = EpochFailure
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => HasTrace (NEWEPOCH hashAlgo dsignAlgo) where
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , VRFAlgorithm vrfAlgo
+  )
+  => HasTrace (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) where
   envGen _ = undefined :: Gen (NewEpochEnv hashAlgo dsignAlgo)
   sigGen _ _ = undefined :: Gen Epoch

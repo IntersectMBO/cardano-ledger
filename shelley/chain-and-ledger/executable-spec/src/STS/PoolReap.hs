@@ -25,27 +25,27 @@ import           Hedgehog (Gen)
 
 import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 
-data POOLREAP hashAlgo dsignAlgo
+data POOLREAP hashAlgo dsignAlgo vrfAlgo
 
-data PoolreapState hashAlgo dsignAlgo = PoolreapState
-  { prUTxOSt :: UTxOState hashAlgo dsignAlgo
+data PoolreapState hashAlgo dsignAlgo vrfAlgo = PoolreapState
+  { prUTxOSt :: UTxOState hashAlgo dsignAlgo vrfAlgo
   , prAcnt   :: AccountState
   , prDState :: DState hashAlgo dsignAlgo
-  , prPState :: PState hashAlgo dsignAlgo
+  , prPState :: PState hashAlgo dsignAlgo vrfAlgo
   }
   deriving (Show, Eq)
 
-instance STS (POOLREAP hashAlgo dsignAlgo) where
-  type State (POOLREAP hashAlgo dsignAlgo) = PoolreapState hashAlgo dsignAlgo
-  type Signal (POOLREAP hashAlgo dsignAlgo) = Epoch
-  type Environment (POOLREAP hashAlgo dsignAlgo) = PParams
-  data PredicateFailure (POOLREAP hashAlgo dsignAlgo)
+instance STS (POOLREAP hashAlgo dsignAlgo vrfAlgo) where
+  type State (POOLREAP hashAlgo dsignAlgo vrfAlgo) = PoolreapState hashAlgo dsignAlgo vrfAlgo
+  type Signal (POOLREAP hashAlgo dsignAlgo vrfAlgo) = Epoch
+  type Environment (POOLREAP hashAlgo dsignAlgo vrfAlgo) = PParams
+  data PredicateFailure (POOLREAP hashAlgo dsignAlgo vrfAlgo)
     = FailurePOOLREAP
     deriving (Show, Eq)
   initialRules = [pure $ PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState]
   transitionRules = [poolReapTransition]
 
-poolReapTransition :: TransitionRule (POOLREAP hashAlgo dsignAlgo)
+poolReapTransition :: TransitionRule (POOLREAP hashAlgo dsignAlgo vrfAlgo)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
@@ -72,6 +72,6 @@ poolReapTransition = do
        , _retiring = retired ⋪ _retiring ps
        , _cCounters = retired ⋪ _cCounters ps}
 
-instance HasTrace (POOLREAP hashAlgo dsignAlgo) where
+instance HasTrace (POOLREAP hashAlgo dsignAlgo vrfAlgo) where
   envGen _ = undefined :: Gen PParams
   sigGen _ _ = undefined :: Gen Epoch

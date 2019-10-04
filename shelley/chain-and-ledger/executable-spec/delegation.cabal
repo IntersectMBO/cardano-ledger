@@ -79,7 +79,8 @@ library
     non-integer,
     cs-ledger,
     cardano-binary,
-    cardano-crypto-class
+    cardano-crypto-class,
+    cardano-prelude
 
 test-suite delegation-test
     type:                exitcode-stdio-1.0
@@ -98,6 +99,7 @@ test-suite delegation-test
                          STSTests
                          Examples
                          Rules.ClassifyTraces
+                         Cardano.Crypto.VRF.Fake
                          Rules.TestDeleg
                          Rules.TestLedger
                          Rules.TestNewEpoch
@@ -139,5 +141,7 @@ test-suite delegation-test
       text,
       microlens,
       cs-ledger,
+      cardano-binary,
       cardano-crypto-class,
+      cardano-prelude,
       small-steps

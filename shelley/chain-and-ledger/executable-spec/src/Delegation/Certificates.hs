@@ -16,7 +16,7 @@ module Delegation.Certificates
   ) where
 
 import           Coin (Coin (..))
-import           Keys (KeyHash)
+import           Keys (Hash, KeyHash, VRFAlgorithm(VerKeyVRF))
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
@@ -32,7 +32,7 @@ import           Data.Ratio (approxRational)
 import           Lens.Micro ((^.))
 
 -- |Determine the certificate author
-cwitness :: DCert hashAlgo dsignAlgo -> StakeCredential hashAlgo dsignAlgo
+cwitness :: DCert hashAlgo dsignAlgo vrfAlgo -> StakeCredential hashAlgo dsignAlgo
 cwitness (RegKey hk)               = hk
 cwitness (DeRegKey hk)             = hk
 cwitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
@@ -41,7 +41,7 @@ cwitness (Delegate delegation)     = delegation ^. delegator
 cwitness (GenesisDelegate (gk, _)) = GenesisHashObj gk
 
 -- |Retrieve the deposit amount for a certificate
-dvalue :: DCert hashAlgo dsignAlgo -> PParams -> Coin
+dvalue :: DCert hashAlgo dsignAlgo vrfAlgo -> PParams -> Coin
 dvalue (RegKey _)  = flip (^.) keyDeposit
 dvalue (RegPool _) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
@@ -57,20 +57,20 @@ refund (Coin dval) dmin lambda delta = floor refund'
 
 -- | Check whether certificate is of releasing type, i.e., key deregistration or
 -- pool retirement.
-releasing :: DCert hashAlgo dsignAlgo -> Bool
+releasing :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
 releasing c = dderegister c || dretire c
 
-dderegister :: DCert hashAlgo dsignAlgo -> Bool
+dderegister :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
 dderegister (DeRegKey _) = True
 dderegister _            = False
 
-dretire :: DCert hashAlgo dsignAlgo -> Bool
+dretire :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
 dretire (RetirePool _ _) = True
 dretire _                = False
 
 -- | Check whether certificate is of allocating type, i.e, key or pool
 -- registration.
-allocating :: DCert hashAlgo dsignAlgo -> Bool
+allocating :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
 allocating (RegKey _)  = True
 allocating (RegPool _) = True
 allocating _           = False
@@ -87,6 +87,6 @@ decayPool pc = (pval, pmin, lambdap)
           pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
 
-newtype PoolDistr hashAlgo dsignAlgo =
-  PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, KeyHash hashAlgo dsignAlgo))
+newtype PoolDistr hashAlgo dsignAlgo vrfAlgo =
+  PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, Hash hashAlgo (VerKeyVRF vrfAlgo)))
   deriving (Show, Eq)

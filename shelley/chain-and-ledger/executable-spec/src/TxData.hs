@@ -28,7 +28,8 @@ import           Numeric.Natural (Natural)
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
 import           Keys (AnyKeyHash, pattern AnyKeyHash, DSIGNAlgorithm, GenKeyHash, Hash,
-                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, hashAnyKey)
+                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, hashAnyKey
+                     , VRFAlgorithm(VerKeyVRF))
 import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
 import           Updates (Update)
@@ -40,10 +41,10 @@ data Delegation hashAlgo dsignAlgo = Delegation
   } deriving (Eq, Show)
 
 -- |A stake pool.
-data PoolParams hashAlgo dsignAlgo =
+data PoolParams hashAlgo dsignAlgo vrfAlgo =
   PoolParams
     { _poolPubKey  :: KeyHash hashAlgo dsignAlgo
-    , _poolVrf     :: KeyHash hashAlgo dsignAlgo
+    , _poolVrf     :: Hash hashAlgo (VerKeyVRF vrfAlgo)
     , _poolPledge  :: Coin
     , _poolCost    :: Coin
     , _poolMargin  :: UnitInterval
@@ -121,13 +122,13 @@ newtype ScriptHash hashAlgo dsignAlgo =
 type Wdrl hashAlgo dsignAlgo = Map (RewardAcnt hashAlgo dsignAlgo) Coin
 
 -- |A unique ID of a transaction, which is computable from the transaction.
-newtype TxId hashAlgo dsignAlgo
-  = TxId { _TxId :: Hash hashAlgo (TxBody hashAlgo dsignAlgo) }
+newtype TxId hashAlgo dsignAlgo vrfAlgo
+  = TxId { _TxId :: Hash hashAlgo (TxBody hashAlgo dsignAlgo vrfAlgo) }
   deriving (Show, Eq, Ord, ToCBOR)
 
 -- |The input of a UTxO.
-data TxIn hashAlgo dsignAlgo
-  = TxIn (TxId hashAlgo dsignAlgo) Natural
+data TxIn hashAlgo dsignAlgo vrfAlgo
+  = TxIn (TxId hashAlgo dsignAlgo vrfAlgo) Natural
   deriving (Show, Eq, Ord)
 
 -- |The output of a UTxO.
@@ -138,13 +139,13 @@ data TxOut hashAlgo dsignAlgo
 type StakeCredential hashAlgo dsignAlgo = Credential hashAlgo dsignAlgo
 
 -- | A heavyweight certificate.
-data DCert hashAlgo dsignAlgo
+data DCert hashAlgo dsignAlgo vrfAlgo
     -- | A stake key registration certificate.
   = RegKey (StakeCredential hashAlgo dsignAlgo)
     -- | A stake key deregistration certificate.
   | DeRegKey (StakeCredential hashAlgo dsignAlgo)
     -- | A stake pool registration certificate.
-  | RegPool (PoolParams hashAlgo dsignAlgo)
+  | RegPool (PoolParams hashAlgo dsignAlgo vrfAlgo)
     -- | A stake pool retirement certificate.
   | RetirePool (KeyHash hashAlgo dsignAlgo) Epoch
     -- | A stake delegation certificate.
@@ -154,11 +155,11 @@ data DCert hashAlgo dsignAlgo
   deriving (Show, Eq)
 
 -- |A raw transaction
-data TxBody hashAlgo dsignAlgo
+data TxBody hashAlgo dsignAlgo vrfAlgo
   = TxBody
-      { _inputs   :: !(Set (TxIn hashAlgo dsignAlgo))
+      { _inputs   :: !(Set (TxIn hashAlgo dsignAlgo vrfAlgo))
       , _outputs  :: [TxOut hashAlgo dsignAlgo]
-      , _certs    :: Seq (DCert hashAlgo dsignAlgo)
+      , _certs    :: Seq (DCert hashAlgo dsignAlgo vrfAlgo)
       , _wdrls    :: Wdrl hashAlgo dsignAlgo
       , _txfee    :: Coin
       , _ttl      :: Slot
@@ -166,26 +167,28 @@ data TxBody hashAlgo dsignAlgo
       } deriving (Show, Eq)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey hashAlgo dsignAlgo
-  = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
-  | WitGVKey (VKeyGenesis dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo))
+data WitVKey hashAlgo dsignAlgo vrfAlgo
+  = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo))
+  | WitGVKey (VKeyGenesis dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo))
   deriving (Show, Eq)
 
 witKeyHash
-  :: forall hashAlgo dsignAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
-  => WitVKey hashAlgo dsignAlgo -> AnyKeyHash hashAlgo dsignAlgo
+  :: forall hashAlgo dsignAlgo vrfAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
+  => WitVKey hashAlgo dsignAlgo vrfAlgo
+  -> AnyKeyHash hashAlgo dsignAlgo
 witKeyHash (WitVKey key _) = hashAnyKey key
 witKeyHash (WitGVKey key _) = hashAnyKey key
 
-instance forall hashAlgo dsignAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
-  => Ord (WitVKey hashAlgo dsignAlgo) where
+instance forall hashAlgo dsignAlgo vrfAlgo
+  . (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
+  => Ord (WitVKey hashAlgo dsignAlgo vrfAlgo) where
     compare = comparing witKeyHash
 
 -- |A fully formed transaction.
-data Tx hashAlgo dsignAlgo
+data Tx hashAlgo dsignAlgo vrfAlgo
   = Tx
-      { _body           :: !(TxBody hashAlgo dsignAlgo)
-      , _witnessVKeySet :: !(Set (WitVKey hashAlgo dsignAlgo))
+      { _body           :: !(TxBody hashAlgo dsignAlgo vrfAlgo)
+      , _witnessVKeySet :: !(Set (WitVKey hashAlgo dsignAlgo vrfAlgo))
       , _witnessMSigMap ::
           Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
       } deriving (Show, Eq)
@@ -202,8 +205,8 @@ newtype StakePools hashAlgo dsignAlgo =
 -- CBOR
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (DCert hashAlgo dsignAlgo)
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => ToCBOR (DCert hashAlgo dsignAlgo vrfAlgo)
  where
   toCBOR = \case
     RegKey vk ->
@@ -238,8 +241,8 @@ instance
         <> toCBOR keys
 
 instance
-  (Typeable dsignAlgo, HashAlgorithm hashAlgo)
-  => ToCBOR (TxIn hashAlgo dsignAlgo)
+  (Typeable dsignAlgo, HashAlgorithm hashAlgo, VRFAlgorithm vrfAlgo)
+  => ToCBOR (TxIn hashAlgo dsignAlgo vrfAlgo)
  where
   toCBOR (TxIn txId index) =
     encodeListLen 2
@@ -256,8 +259,8 @@ instance
       <> toCBOR coin
 
 instance
-  (Typeable hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (WitVKey hashAlgo dsignAlgo)
+  (Typeable hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => ToCBOR (WitVKey hashAlgo dsignAlgo vrfAlgo)
  where
   toCBOR (WitVKey vk sig) =
     encodeListLen 2
@@ -270,8 +273,8 @@ instance
 
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (Tx hashAlgo dsignAlgo)
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => ToCBOR (Tx hashAlgo dsignAlgo vrfAlgo)
  where
   toCBOR tx =
     encodeListLen 2
@@ -280,8 +283,8 @@ instance
       <> toCBOR (_witnessMSigMap tx)
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (TxBody hashAlgo dsignAlgo)
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => ToCBOR (TxBody hashAlgo dsignAlgo vrfAlgo)
  where
   toCBOR txbody =
     encodeListLen 6
@@ -377,8 +380,8 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
 
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (PoolParams hashAlgo dsignAlgo)
+  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  => ToCBOR (PoolParams hashAlgo dsignAlgo vrfAlgo)
  where
   toCBOR poolParams =
     encodeListLen 7

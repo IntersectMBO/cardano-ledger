@@ -22,24 +22,24 @@ import           UTxO
 
 import           Control.State.Transition
 
-data SNAP hashAlgo dsignAlgo
+data SNAP hashAlgo dsignAlgo vrfAlgo
 
-data SnapState hashAlgo dsignAlgo
+data SnapState hashAlgo dsignAlgo vrfAlgo
   = SnapState
-      (SnapShots hashAlgo dsignAlgo)
-      (UTxOState hashAlgo dsignAlgo)
+      (SnapShots hashAlgo dsignAlgo vrfAlgo)
+      (UTxOState hashAlgo dsignAlgo vrfAlgo)
 
-data SnapEnv hashAlgo dsignAlgo
+data SnapEnv hashAlgo dsignAlgo vrfAlgo
   = SnapEnv
       PParams
       (DState hashAlgo dsignAlgo)
-      (PState hashAlgo dsignAlgo)
+      (PState hashAlgo dsignAlgo vrfAlgo)
 
-instance STS (SNAP hashAlgo dsignAlgo) where
-  type State (SNAP hashAlgo dsignAlgo) = SnapState hashAlgo dsignAlgo
-  type Signal (SNAP hashAlgo dsignAlgo) = Epoch
-  type Environment (SNAP hashAlgo dsignAlgo) = SnapEnv hashAlgo dsignAlgo
-  data PredicateFailure (SNAP hashAlgo dsignAlgo)
+instance STS (SNAP hashAlgo dsignAlgo vrfAlgo) where
+  type State (SNAP hashAlgo dsignAlgo vrfAlgo) = SnapState hashAlgo dsignAlgo vrfAlgo
+  type Signal (SNAP hashAlgo dsignAlgo vrfAlgo) = Epoch
+  type Environment (SNAP hashAlgo dsignAlgo vrfAlgo) = SnapEnv hashAlgo dsignAlgo vrfAlgo
+  data PredicateFailure (SNAP hashAlgo dsignAlgo vrfAlgo)
     = FailureSNAP
     deriving (Show, Eq)
 
@@ -47,7 +47,7 @@ instance STS (SNAP hashAlgo dsignAlgo) where
     [pure $ SnapState emptySnapShots (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)]
   transitionRules = [snapTransition]
 
-snapTransition :: TransitionRule (SNAP hashAlgo dsignAlgo)
+snapTransition :: TransitionRule (SNAP hashAlgo dsignAlgo vrfAlgo)
 snapTransition = do
   TRC (SnapEnv pparams d p, SnapState s u, eNew) <- judgmentContext
   let pooledStake = stakeDistr (u ^. utxo) d p

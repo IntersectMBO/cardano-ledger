@@ -26,6 +26,7 @@ import           Slot
 import           Tx
 import           UTxO (balance)
 
+import qualified Cardano.Crypto.VRF as VRF
 import           Control.State.Transition
 
 import           STS.Bbody
@@ -33,14 +34,14 @@ import           STS.Bhead
 import           STS.Overlay
 import           STS.Prtcl
 
-data CHAIN hashAlgo dsignAlgo kesAlgo
+data CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-data ChainState hashAlgo dsignAlgo kesAlgo
+data ChainState hashAlgo dsignAlgo kesAlgo vrfAlgo
   = ChainState
-      (NewEpochState hashAlgo dsignAlgo)
-      Seed
-      Seed
-      (HashHeader hashAlgo dsignAlgo kesAlgo)
+      (NewEpochState hashAlgo dsignAlgo vrfAlgo)
+      Nonce
+      Nonce
+      (HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
       Slot
   deriving (Show, Eq)
 
@@ -48,54 +49,59 @@ instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
   , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
   , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
+  , VRF.Signable vrfAlgo Seed
   )
-  => STS (CHAIN hashAlgo dsignAlgo kesAlgo)
+  => STS (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
-  type State (CHAIN hashAlgo dsignAlgo kesAlgo) = ChainState hashAlgo dsignAlgo kesAlgo
+  type State (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = ChainState hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-  type Signal (CHAIN hashAlgo dsignAlgo kesAlgo)
-    = Block hashAlgo dsignAlgo kesAlgo
+  type Signal (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = Block hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-  type Environment (CHAIN hashAlgo dsignAlgo kesAlgo) = Slot
+  type Environment (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo) = Slot
 
-  data PredicateFailure (CHAIN hashAlgo dsignAlgo kesAlgo)
-    = BbodyFailure (PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo))
-    | BheadFailure (PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo))
-    | PrtclFailure (PredicateFailure (PRTCL hashAlgo dsignAlgo kesAlgo))
+  data PredicateFailure (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = BbodyFailure (PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo))
+    | BheadFailure (PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo))
+    | PrtclFailure (PredicateFailure (PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules = []
   transitionRules = [chainTransition]
 
 chainTransition
-  :: forall hashAlgo dsignAlgo kesAlgo
+  :: forall hashAlgo dsignAlgo kesAlgo vrfAlgo
    . ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
      , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
      , KESAlgorithm kesAlgo
-     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+     , VRFAlgorithm vrfAlgo
+     , VRF.Signable vrfAlgo Seed
      )
-  => TransitionRule (CHAIN hashAlgo dsignAlgo kesAlgo)
+  => TransitionRule (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
 chainTransition = do
   TRC (sNow, ChainState nes etaV etaC h sL, block@(Block bh _)) <- judgmentContext
 
   let gkeys = getGKeys nes
   nes' <-
-    trans @(BHEAD hashAlgo dsignAlgo kesAlgo) $ TRC (BheadEnv etaC gkeys, nes, bh)
+    trans @(BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo) $ TRC (BheadEnv etaC gkeys, nes, bh)
 
   let NewEpochState _ eta0 _ bcur es _ _pd osched = nes'
   let EpochState _ _ ls pp                        = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _dms) (PState _ _ _ cs)) _ = ls
 
-  PrtclState cs' h' sL' etaV' etaC' <- trans @(PRTCL hashAlgo dsignAlgo kesAlgo)
+  PrtclState cs' h' sL' etaV' etaC' <- trans @(PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo)
     $ TRC (PrtclEnv (OverlayEnv pp osched eta0 _pd _dms) sNow, PrtclState cs h sL etaV etaC, bh)
 
   let ls' = setIssueNumbers ls cs'
-  BbodyState ls'' bcur' <- trans @(BBODY hashAlgo dsignAlgo kesAlgo)
+  BbodyState ls'' bcur' <- trans @(BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
     $ TRC (BbodyEnv (Map.keysSet osched) pp, BbodyState ls' bcur, block)
 
   let nes'' = updateNES nes' bcur' ls''
@@ -106,11 +112,13 @@ instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
   , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
   , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
+  , VRF.Signable vrfAlgo Seed
   )
-  => Embed (BBODY hashAlgo dsignAlgo kesAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo)
+  => Embed (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
   wrapFailed = BbodyFailure
 
@@ -118,11 +126,13 @@ instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
   , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
   , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
+  , VRF.Signable vrfAlgo Seed
   )
-  => Embed (BHEAD hashAlgo dsignAlgo kesAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo)
+  => Embed (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
   wrapFailed = BheadFailure
 
@@ -130,16 +140,18 @@ instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
   , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
   , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo)
+  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
+  , VRF.Signable vrfAlgo Seed
   )
-  => Embed (PRTCL hashAlgo dsignAlgo kesAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo)
+  => Embed (PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo) (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
   wrapFailed = PrtclFailure
 
 -- |Calculate the total ada in the chain state
-totalAda :: ChainState hashAlgo dsignAlgo kesAlgo -> Coin
+totalAda :: ChainState hashAlgo dsignAlgo kesAlgo vrfAlgo -> Coin
 totalAda (ChainState nes _ _ _ _) =
   treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
   where

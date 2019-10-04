@@ -24,18 +24,18 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data DELEG hashAlgo dsignAlgo
+data DELEG hashAlgo dsignAlgo vrfAlgo
 
 data DelegEnv
   = DelegEnv Slot Ptr
   deriving (Show, Eq)
 
-instance STS (DELEG hashAlgo dsignAlgo)
+instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
  where
-  type State (DELEG hashAlgo dsignAlgo) = DState hashAlgo dsignAlgo
-  type Signal (DELEG hashAlgo dsignAlgo) = DCert hashAlgo dsignAlgo
-  type Environment (DELEG hashAlgo dsignAlgo) = DelegEnv
-  data PredicateFailure (DELEG hashAlgo dsignAlgo)
+  type State (DELEG hashAlgo dsignAlgo vrfAlgo) = DState hashAlgo dsignAlgo
+  type Signal (DELEG hashAlgo dsignAlgo vrfAlgo) = DCert hashAlgo dsignAlgo vrfAlgo
+  type Environment (DELEG hashAlgo dsignAlgo vrfAlgo) = DelegEnv
+  data PredicateFailure (DELEG hashAlgo dsignAlgo vrfAlgo)
     = StakeKeyAlreadyRegisteredDELEG
     | StakeKeyNotRegisteredDELEG
     | StakeKeyNonZeroAccountBalanceDELEG
@@ -49,7 +49,7 @@ instance STS (DELEG hashAlgo dsignAlgo)
   transitionRules = [delegationTransition]
 
 delegationTransition
-  :: TransitionRule (DELEG hashAlgo dsignAlgo)
+  :: TransitionRule (DELEG hashAlgo dsignAlgo vrfAlgo)
 delegationTransition = do
   TRC (DelegEnv slot_ ptr_, ds, c) <- judgmentContext
 
@@ -97,6 +97,6 @@ delegationTransition = do
 
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => HasTrace (DELEG hashAlgo dsignAlgo) where
+  => HasTrace (DELEG hashAlgo dsignAlgo vrfAlgo) where
   envGen _ = undefined :: Gen DelegEnv
-  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo)
+  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo vrfAlgo)

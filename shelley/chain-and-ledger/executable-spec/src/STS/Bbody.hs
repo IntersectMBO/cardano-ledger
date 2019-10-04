@@ -26,10 +26,10 @@ import           Slot
 import           STS.Ledgers
 import           Tx
 
-data BBODY hashAlgo dsignAlgo kesAlgo
+data BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-data BbodyState hashAlgo dsignAlgo
-  = BbodyState (LedgerState hashAlgo dsignAlgo) (BlocksMade hashAlgo dsignAlgo)
+data BbodyState hashAlgo dsignAlgo vrfAlgo
+  = BbodyState (LedgerState hashAlgo dsignAlgo vrfAlgo) (BlocksMade hashAlgo dsignAlgo)
 
 data BbodyEnv
   = BbodyEnv (Set Slot) PParams
@@ -37,33 +37,36 @@ data BbodyEnv
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , VRFAlgorithm vrfAlgo
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
   )
-  => STS (BBODY hashAlgo dsignAlgo kesAlgo)
+  => STS (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
-  type State (BBODY hashAlgo dsignAlgo kesAlgo) = BbodyState hashAlgo dsignAlgo
+  type State (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = BbodyState hashAlgo dsignAlgo vrfAlgo
 
-  type Signal (BBODY hashAlgo dsignAlgo kesAlgo)
-    = Block hashAlgo dsignAlgo kesAlgo
+  type Signal (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    = Block hashAlgo dsignAlgo kesAlgo vrfAlgo
 
-  type Environment (BBODY hashAlgo dsignAlgo kesAlgo) = BbodyEnv
+  type Environment (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo) = BbodyEnv
 
-  data PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo)
+  data PredicateFailure (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = WrongBlockBodySizeBBODY
     | InvalidBodyHashBBODY
-    | LedgersFailure (PredicateFailure (LEDGERS hashAlgo dsignAlgo))
+    | LedgersFailure (PredicateFailure (LEDGERS hashAlgo dsignAlgo vrfAlgo))
     deriving (Show, Eq)
 
   initialRules = []
   transitionRules = [bbodyTransition]
 
 bbodyTransition
-  :: forall hashAlgo dsignAlgo kesAlgo
+  :: forall hashAlgo dsignAlgo kesAlgo vrfAlgo
    . ( HashAlgorithm hashAlgo
      , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+     , VRFAlgorithm vrfAlgo
      )
-  => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo)
+  => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
 bbodyTransition = do
   TRC ( BbodyEnv oslots pp
       , BbodyState ls b
@@ -74,7 +77,7 @@ bbodyTransition = do
 
   bhbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
 
-  ls' <- trans @(LEDGERS hashAlgo dsignAlgo)
+  ls' <- trans @(LEDGERS hashAlgo dsignAlgo vrfAlgo)
          $ TRC (LedgersEnv (bheaderSlot bhb) pp, ls, txs)
 
   pure $ BbodyState ls' (incrBlocks (bheaderSlot bhb ∈ oslots) hk b)
@@ -82,8 +85,9 @@ bbodyTransition = do
 instance
   ( HashAlgorithm hashAlgo
   , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo)
+  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  , VRFAlgorithm vrfAlgo
   )
-  => Embed (LEDGERS hashAlgo dsignAlgo) (BBODY hashAlgo dsignAlgo kesAlgo)
+  => Embed (LEDGERS hashAlgo dsignAlgo vrfAlgo) (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
  where
   wrapFailed = LedgersFailure

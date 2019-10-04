@@ -14,23 +14,23 @@ import           Slot
 
 import           Control.State.Transition
 
-data RUPD hashAlgo dsignAlgo
+data RUPD hashAlgo dsignAlgo vrfAlgo
 
-data RupdEnv hashAlgo dsignAlgo
-  = RupdEnv (BlocksMade hashAlgo dsignAlgo) (EpochState hashAlgo dsignAlgo)
+data RupdEnv hashAlgo dsignAlgo vrfAlgo
+  = RupdEnv (BlocksMade hashAlgo dsignAlgo) (EpochState hashAlgo dsignAlgo vrfAlgo)
 
-instance STS (RUPD hashAlgo dsignAlgo) where
-  type State (RUPD hashAlgo dsignAlgo) = Maybe (RewardUpdate hashAlgo dsignAlgo)
-  type Signal (RUPD hashAlgo dsignAlgo) = Slot.Slot
-  type Environment (RUPD hashAlgo dsignAlgo) = RupdEnv hashAlgo dsignAlgo
-  data PredicateFailure (RUPD hashAlgo dsignAlgo)
+instance STS (RUPD hashAlgo dsignAlgo vrfAlgo) where
+  type State (RUPD hashAlgo dsignAlgo vrfAlgo) = Maybe (RewardUpdate hashAlgo dsignAlgo)
+  type Signal (RUPD hashAlgo dsignAlgo vrfAlgo) = Slot.Slot
+  type Environment (RUPD hashAlgo dsignAlgo vrfAlgo) = RupdEnv hashAlgo dsignAlgo vrfAlgo
+  data PredicateFailure (RUPD hashAlgo dsignAlgo vrfAlgo)
     = FailureRUPD
     deriving (Show, Eq)
 
   initialRules = [pure Nothing]
   transitionRules = [rupdTransition]
 
-rupdTransition :: TransitionRule (RUPD hashAlgo dsignAlgo)
+rupdTransition :: TransitionRule (RUPD hashAlgo dsignAlgo vrfAlgo)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   let slot = firstSlot (epochFromSlot s) +* startRewards
