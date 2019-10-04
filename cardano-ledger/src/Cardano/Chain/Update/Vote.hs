@@ -14,6 +14,7 @@ module Cardano.Chain.Update.Vote
   -- * Vote
     AVote(..)
   , Vote
+  , VoteId
 
   -- * Vote Constructors
   , mkVote
@@ -23,6 +24,7 @@ module Cardano.Chain.Update.Vote
 
   -- * Vote Accessors
   , proposalId
+  , voteId
 
   -- * Vote Binary Serialization
   , recoverSignedBytes
@@ -51,12 +53,14 @@ import Cardano.Binary
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)
 import Cardano.Crypto
-  ( ProtocolMagicId
+  ( Hash
+  , ProtocolMagicId
   , VerificationKey
   , SafeSigner
   , SigningKey
   , SignTag(SignUSVote)
   , Signature
+  , hash
   , safeSign
   , safeToVerification
   , shortHashF
@@ -68,6 +72,9 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 -- Vote
 --------------------------------------------------------------------------------
+
+-- | An update proposal vote identifier (the 'Hash' of a 'Vote').
+type VoteId = Hash Vote
 
 type Vote = AVote ()
 
@@ -152,6 +159,9 @@ unsafeVote vk upId voteSignature =
 
 proposalId :: AVote a -> UpId
 proposalId = unAnnotated . aProposalId
+
+voteId :: AVote a -> VoteId
+voteId = hash . void
 
 
 --------------------------------------------------------------------------------
