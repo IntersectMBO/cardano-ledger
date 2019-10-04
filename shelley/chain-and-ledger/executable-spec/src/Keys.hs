@@ -2,8 +2,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -47,17 +49,24 @@ module Keys
   , hashKeyES
   , signKES
   , verifyKES
+
+  , VRFAlgorithm(SignKeyVRF, VerKeyVRF)
+  , VRFValue(..)
+  , VRF.CertifiedVRF(..)
+  , hashKeyVRF
   )
 where
 
 import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
 import           Data.Maybe (fromJust)
+import           Data.Ratio ((%))
 import           Data.Typeable (Typeable)
 import           Numeric.Natural (Natural)
 
 import           Data.Map.Strict (Map)
 import           Data.Set (Set)
 
+import           BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
 import           Cardano.Binary (ToCBOR (toCBOR))
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeSigDSIGN, encodeVerKeyDSIGN),
                      SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
@@ -66,6 +75,8 @@ import           Cardano.Crypto.KES
                      (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES),
                      SignedKES (SignedKES), signedKES, verifySignedKES)
 import qualified Cardano.Crypto.KES as KES
+import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
+import qualified Cardano.Crypto.VRF as VRF
 
 -- | Discriminate between keys based on their usage in the system.
 data KeyDiscriminator
@@ -240,3 +251,22 @@ hashKeyES
   -> KeyHashES hashAlgo kesAlgo
 hashKeyES (VKeyES vKeyES) =
   KeyHashES $ hashWithSerialiser encodeVerKeyKES vKeyES
+
+-- | Our VRFAlgorithm provides a 'Natural', so we must exhibit an extractor to
+--   use the bits as some other type
+class VRFValue a where
+  -- | Extract a value from a natural number derived from the VRF computation.
+  fromNatural :: Natural -> a
+
+instance VRFValue Nonce where
+  fromNatural = mkNonce
+
+instance VRFValue UnitInterval where
+  -- TODO Consider whether this is a reasonable thing to do
+  fromNatural k = truncateUnitInterval $ toInteger (k `mod` 10000) % 10000
+
+hashKeyVRF
+  :: (HashAlgorithm hashAlgo, VRFAlgorithm vrfAlgo)
+  => VRF.VerKeyVRF vrfAlgo
+  -> Hash hashAlgo (VerKeyVRF vrfAlgo)
+hashKeyVRF = hashWithSerialiser VRF.encodeVerKeyVRF

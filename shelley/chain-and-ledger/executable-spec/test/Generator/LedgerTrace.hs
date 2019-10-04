@@ -12,6 +12,7 @@ module Generator.LedgerTrace where
 
 import           Cardano.Crypto.DSIGN.Mock (MockDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
+import           Cardano.Crypto.VRF.Fake (FakeVRF)
 
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Generator.Core (traceKeyPairs)
@@ -22,7 +23,7 @@ import           STS.Ledger (LEDGER, LedgerEnv (..))
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
-instance HasTrace (LEDGER ShortHash MockDSIGN)
+instance HasTrace (LEDGER ShortHash MockDSIGN FakeVRF)
   where
     envGen _ =
       LedgerEnv <$> pure (Slot 0)

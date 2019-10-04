@@ -22,32 +22,32 @@ import           UTxO
 
 import           Control.State.Transition
 
-data NEWPP hashAlgo dsignAlgo
+data NEWPP hashAlgo dsignAlgo vrfAlgo
 
-data NewppState hashAlgo dsignAlgo
-  = NewppState (UTxOState hashAlgo dsignAlgo) AccountState PParams
+data NewppState hashAlgo dsignAlgo vrfAlgo
+  = NewppState (UTxOState hashAlgo dsignAlgo vrfAlgo) AccountState PParams
 
-data NewppEnv hashAlgo dsignAlgo
-  = NewppEnv (Maybe PParams) (DState hashAlgo dsignAlgo) (PState hashAlgo dsignAlgo)
+data NewppEnv hashAlgo dsignAlgo vrfAlgo
+  = NewppEnv (Maybe PParams) (DState hashAlgo dsignAlgo) (PState hashAlgo dsignAlgo vrfAlgo)
 
-instance STS (NEWPP hashAlgo dsignAlgo) where
-  type State (NEWPP hashAlgo dsignAlgo) = NewppState hashAlgo dsignAlgo
-  type Signal (NEWPP hashAlgo dsignAlgo) = Epoch
-  type Environment (NEWPP hashAlgo dsignAlgo) = NewppEnv hashAlgo dsignAlgo
-  data PredicateFailure (NEWPP hashAlgo dsignAlgo)
+instance STS (NEWPP hashAlgo dsignAlgo vrfAlgo) where
+  type State (NEWPP hashAlgo dsignAlgo vrfAlgo) = NewppState hashAlgo dsignAlgo vrfAlgo
+  type Signal (NEWPP hashAlgo dsignAlgo vrfAlgo) = Epoch
+  type Environment (NEWPP hashAlgo dsignAlgo vrfAlgo) = NewppEnv hashAlgo dsignAlgo vrfAlgo
+  data PredicateFailure (NEWPP hashAlgo dsignAlgo vrfAlgo)
     = FailureNEWPP
     deriving (Show, Eq)
 
   initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
 
-initialNewPp :: InitialRule (NEWPP hashAlgo dsignAlgo)
+initialNewPp :: InitialRule (NEWPP hashAlgo dsignAlgo vrfAlgo)
 initialNewPp = pure $ NewppState
   (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)
   emptyAccount
   emptyPParams
 
-newPpTransition :: TransitionRule (NEWPP hashAlgo dsignAlgo)
+newPpTransition :: TransitionRule (NEWPP hashAlgo dsignAlgo vrfAlgo)
 newPpTransition = do
   TRC (NewppEnv ppNew ds ps, NewppState utxoSt acnt pp, e) <- judgmentContext
 

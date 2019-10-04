@@ -38,7 +38,7 @@ import qualified Hedgehog.Range as Range
 import           BaseTypes
 import           Coin
 import           Generator.Core (findPayKeyPair)
-import           Keys (pattern KeyPair, hashKey, vKey)
+import           Keys (pattern KeyPair, hashKey, hashKeyVRF, vKey)
 import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
                      asStateTransition, asStateTransition', dstate, genesisCoins, genesisState,
                      stKeys, utxo, utxoState, _delegationState, _dstate)
@@ -308,10 +308,10 @@ genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
   pure $ RetirePool (hashKey key) epoch
 
-genStakePool :: KeyPairs -> KeyPairs -> Gen PoolParams
+genStakePool :: KeyPairs -> [(SignKeyVRF, VerKeyVRF)] -> Gen PoolParams
 genStakePool skeys vrfKeys = do
   poolKey       <- getAnyStakeKey skeys
-  vrfKey        <- getAnyStakeKey vrfKeys
+  vrfKey        <- snd <$> Gen.element vrfKeys
   cost          <- Coin <$> genInteger 1 100
   pledge        <- Coin <$> genInteger 1 100
   marginPercent <- genNatural 0 100
@@ -321,7 +321,7 @@ genStakePool skeys vrfKeys = do
                    Nothing -> interval0
   pure $ PoolParams
            (hashKey poolKey)
-           (hashKey vrfKey)
+           (hashKeyVRF vrfKey)
            pledge
            cost
            interval
@@ -335,7 +335,7 @@ genDelegation keys d = do
   pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
        where (StakeKeys stKeys') = d ^. dstate . stKeys
 
-genDCertRegPool :: KeyPairs -> KeyPairs -> Gen DCert
+genDCertRegPool :: KeyPairs -> [(SignKeyVRF, VerKeyVRF)] -> Gen DCert
 genDCertRegPool skeys vrfKeys = RegPool <$> genStakePool skeys vrfKeys
 
 genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
