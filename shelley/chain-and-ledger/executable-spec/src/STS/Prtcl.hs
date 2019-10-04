@@ -39,6 +39,7 @@ data PrtclState hashAlgo dsignAlgo kesAlgo vrfAlgo
       Slot
       Nonce
       Nonce
+  deriving Show
 
 data PrtclEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
   = PrtclEnv (OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo) Slot
