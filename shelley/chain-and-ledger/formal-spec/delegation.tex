@@ -212,7 +212,10 @@ state transition types. We define two separate parts of the ledger state.
       is needed because genesis keys can only update their delegation with a
       delay of $\SlotsPrior$ slots after submitting the certificate (this is
       necessary for header validation, see Section \ref{sec:chain})
-      \item $\var{dms}$ maps genesis key hashes to hashes of the cold key delegates.
+      \item $\var{dms}$ maps genesis key hashes to hashes of the cold key
+        delegates.
+      \item $\var{i_{rwd}}$ stored the map of stake credentials to $\Coin$
+        values for moving instantaneous rewards at the epoch boundary.
     \end{itemize}
   \item $\PState$ keeps track of the stake pool information:
     \begin{itemize}
@@ -374,7 +377,12 @@ concerns are independent of the ledger rules.
     \begin{itemize}
       \item The future genesis delegation relation is updated with the new delegate
         to be adopted in $\SlotsPrior$-many slots.
-    \end{itemize}
+      \end{itemize}
+
+    \item  Moving instantaneous rewards is handled by \cref{eq:deleg-mir}. There
+      is a precondition that the current slot is early enough in the current
+      epoch and that the available reserves are sufficient to pay for the
+      instantaneous rewards.
 \end{itemize}
 
 

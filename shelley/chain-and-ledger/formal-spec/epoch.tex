@@ -1258,6 +1258,9 @@ It consists of four pots:
   \item The change to the reserves. This will be a negative value.
   \item The map of new individual rewards (to be added to the existing rewards).
   \item The change to the fee pot. This will be a negative value.
+  \item The change to the deposits. This will be a positive value.
+  \item The map from credentials to $\Coin$ values to pay out as instantaneous
+    rewards.
 \end{itemize}
 
 %%
@@ -1292,7 +1295,8 @@ reward update to an instance of $\EpochState$.
 The $\fun{createRUpd}$ function does the following:
 \begin{itemize}
   \item First we calculate the change to the reserves,
-    as determined by the $\rho$ protocol parameter.
+    as determined by the $\rho$ protocol parameter and the amount that must be
+    paid for instantaneous rewards in the map $i_{rwd}$
   \item Next we calculate $\var{rewardPot}$, the total amount of coin available for rewards this
     epoch, as described in section 6.4 of \cite{delegation_design}. It consists of four pots:
     \begin{itemize}
