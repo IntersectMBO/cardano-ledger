@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Delegation.Certificates
   (
     DCert(..)
@@ -28,6 +29,7 @@ import           NonIntegral (exp')
 
 import           Data.Map.Strict (Map)
 import           Data.Ratio (approxRational)
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           Lens.Micro ((^.))
 
@@ -89,4 +91,4 @@ decayPool pc = (pval, pmin, lambdap)
 
 newtype PoolDistr hashAlgo dsignAlgo vrfAlgo =
   PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, Hash hashAlgo (VerKeyVRF vrfAlgo)))
-  deriving (Show, Eq)
+  deriving (Show, Eq, NoUnexpectedThunks)

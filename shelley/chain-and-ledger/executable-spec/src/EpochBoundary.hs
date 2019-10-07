@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
@@ -40,6 +42,7 @@ import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential
                      getRwdCred)
 import           UTxO (UTxO (..))
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
@@ -47,7 +50,7 @@ import           Data.Ratio ((%))
 import qualified Data.Set as Set
 
 import           Numeric.Natural (Natural)
-
+import           GHC.Generics (Generic)
 import           Lens.Micro.TH (makeLenses)
 
 import           Ledger.Core (dom, (▷), (◁))
@@ -55,12 +58,12 @@ import           Ledger.Core (dom, (▷), (◁))
 -- | Blocks made
 newtype BlocksMade hashAlgo dsignAlgo
   = BlocksMade (Map (KeyHash hashAlgo dsignAlgo) Natural)
-  deriving (Show, Eq)
+  deriving (Show, Eq, NoUnexpectedThunks)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake hashAlgo dsignAlgo
   = Stake (Map (StakeCredential hashAlgo dsignAlgo) Coin)
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 -- | Add two stake distributions
 (⊎)
@@ -204,7 +207,9 @@ data SnapShots hashAlgo dsignAlgo vrfAlgo
     , _poolsSS
       :: Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo vrfAlgo)
     , _feeSS :: Coin
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (SnapShots hashAlgo dsignAlgo vrfAlgo)
 
 makeLenses ''SnapShots
 

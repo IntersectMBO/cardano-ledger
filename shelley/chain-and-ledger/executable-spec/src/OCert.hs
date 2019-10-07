@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module OCert
@@ -8,6 +9,8 @@ module OCert
 where
 
 import           Cardano.Binary (ToCBOR, encodeListLen, toCBOR)
+import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           GHC.Generics (Generic)
 
 import           Keys (DSIGNAlgorithm, KESAlgorithm, Sig, VKey, VKeyES)
 import           Slot (Slot (..))
@@ -15,7 +18,7 @@ import           Slot (Slot (..))
 import           Numeric.Natural (Natural)
 
 newtype KESPeriod = KESPeriod Natural
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
 
 data OCert dsignAlgo kesAlgo = OCert
   { -- | The operational hot key
@@ -28,7 +31,12 @@ data OCert dsignAlgo kesAlgo = OCert
   , ocertKESPeriod :: KESPeriod
     -- | Signature of block operational certificate content
   , ocertSigma     :: Sig dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance
+  ( DSIGNAlgorithm dsignAlgo
+  , KESAlgorithm kesAlgo
+  ) => NoUnexpectedThunks (OCert dsignAlgo kesAlgo)
 
 instance
   (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
