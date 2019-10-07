@@ -20,12 +20,13 @@ module Slot
 import           Numeric.Natural (Natural)
 
 import           Cardano.Binary (ToCBOR)
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import qualified Ledger.Core as Byron (Slot (..))
 
 -- |A Slot
 newtype Slot = Slot Natural
-  deriving (Show, Eq, Ord, Num, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, ToCBOR)
 
 instance Semigroup Slot where
   (Slot x) <> (Slot y) = Slot $ x + y
@@ -35,7 +36,7 @@ instance Monoid Slot where
   mappend = (<>)
 
 newtype Duration = Duration Natural
-  deriving (Show, Eq, Ord, Num, Integral, Real, Enum)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, Integral, Real, Enum)
 
 instance Semigroup Duration where
   (Duration x) <> (Duration y) = Duration $ x + y
@@ -56,7 +57,7 @@ instance Monoid Duration where
 
 -- |An Epoch
 newtype Epoch = Epoch Natural
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, NoUnexpectedThunks, Ord, ToCBOR)
 
 instance Semigroup Epoch where
   (Epoch x) <> (Epoch y) = Epoch $ x + y
