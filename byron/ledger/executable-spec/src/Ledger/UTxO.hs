@@ -195,17 +195,6 @@ instance GeneOps g => Goblin g Tx where
     outputs <- replicateM listLenO conjure
     pure (Tx inputs outputs)
 
--- instance GeneOps g => Goblin g TxId where
---   tinker gen
---     = tinkerRummagedOrConjureOrSave
---         (TxId
---            <$$> tinker ((\(TxId h) -> h) <$> gen))
---     -- = tinkerRummagedOrConjureOrSave
---     --     ((TxId . Hash . Just . (`mod` 30))
---     --        <$$> tinker ((\(TxId (Hash x)) -> x) <$> gen))
---   conjure = saveInBagOfTricks =<< (TxId <$> conjure)
-
-
 --------------------------------------------------------------------------------
 -- AddShrinks instances
 --------------------------------------------------------------------------------
