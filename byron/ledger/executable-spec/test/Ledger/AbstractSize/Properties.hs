@@ -45,6 +45,7 @@ exampleTypeRepsTxIn =
   in typeReps txIn @?= typeOf (undefined::TxIn)
                          <| typeOf (undefined::TxId)
                          <| typeOf (undefined::Hash)
+                         <| typeOf (undefined::Maybe Int)
                          <| typeOf (undefined::Int)
                          <| typeOf (undefined::Natural)
                          <| empty

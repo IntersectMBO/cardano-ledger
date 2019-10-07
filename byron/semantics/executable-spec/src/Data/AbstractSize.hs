@@ -141,6 +141,9 @@ instance (HasTypeReps a) => GHasTypeReps (K1 i a) where
 -- HasTypeReps instances
 --------------------------------------------------------------------------------
 
+instance (Typeable a, HasTypeReps a) => HasTypeReps (Maybe a) where
+  typeReps x = typeOf x <| maybe [] typeReps x
+
 instance (Typeable a, HasTypeReps a) => HasTypeReps [a] where
   typeReps xs = typeOf xs <| foldMap typeReps xs
 

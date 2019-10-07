@@ -152,7 +152,7 @@ data DCert = DCert
 instance HasTypeReps DCert
 
 instance HasHash [DCert] where
-  hash = Hash . H.hash
+  hash = Hash . Just . H.hash
 
 mkDCert
   :: VKeyGenesis
