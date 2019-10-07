@@ -1,3 +1,34 @@
+# Ledger and Epoch State Validity
+
+We only care that the properties below are satisfied for _valid_ ledger states, and
+more generally, valid _epoch_ states. Checking things for invalid states should
+not be performed. For this reason, we must have boolean functions that
+evaluate to `True` for valid states. As the STS rule system we have defined
+is deterministic, all valid states can be reached using the transitions in the system,
+and the only states that are valid are those that can be described by a sequence
+of rule applications. Thus, a high-level definition of such a validity function
+would be:
+
+* `validState(s) = True` when `s` is either a valid initial state, or there is
+some sequence of transition rules that can be applied, starting from an
+initial state, to reach the state `s`
+- we say `s` is a valid state
+*  `validState(s) = False` otherwise
+
+Below, we give the types and names of two such functions,
+
+* `validLedgerState : LState -> Bool`
+- This function would be defined using the `LEDGERS` and `EPOCH` transitions,
+starting either from the Byron era state inherited by Shelley at the transition
+or a valid "fresh" state (useful for testing)
+* `validEpochState : EpochState -> Bool`
+- This function would also be defined using the `LEDGERS` and `EPOCH`
+transitions, starting either from the Byron era state inherited by Shelley at
+the transition or a valid "fresh" state (useful for testing)
+
+These two functions cannot be independent. In the rest of the document,
+the properties we give pertain to only valid states.
+
 # Preservation of Value
 
 Recall that there are six pots of money in the Shelley ledger:
@@ -9,7 +40,7 @@ Recall that there are six pots of money in the Shelley ledger:
 * Reserves
 * Treasury
 
-For each transition sytem, we will list what pots are in scope,
+For each transition system, we will list what pots are in scope,
 describe how value moves between the pots,
 and state any relevent properties (usually the preservation of ADA).
 
@@ -106,7 +137,7 @@ the fee pot.
 
 Pots in scope: Circulation, Deposits, Fees, Treasury, Reserves
 
-The new protocol parameter transition adusts the deposit pot to meet
+The new protocol parameter transition adjusts the deposit pot to meet
 the current obligation, and the difference is made up by the reserves.
 
 **Property** The value (Deposits + Reserves) is the same
@@ -166,10 +197,10 @@ If there are no pending future application versions,
 there will not be a change to the version for at least SlotsPerEpoch.
 
 **Property**
-Updating the sofware versions, without updating the protocol version,
+Updating the software versions, without updating the protocol version,
 results in no change to the transition systems.
 Note that changes to the transition system resulting from a new
-protocol version will be difficult to state formally, since this 
+protocol version will be difficult to state formally, since this
 depends on logic in the software changing the ledger rules.
 
 **Definition**
@@ -181,7 +212,7 @@ Let **quorum** be the number of genesis nodes needed for consensus
 on votes (concretely this value is five).
 
 **Property**
-If there are only (quorum -1)-many gen keys acive, there can be no new future
+If there are only (quorum -1)-many gen keys active, there can be no new future
 application version or protocol parameters.
 
 **Property**
@@ -197,6 +228,11 @@ The size of the mappings PPUpdate, inside the update state, is always at most (n
 
 **Property**
 The size of the mappings AVUpdate, inside the update state, is always at most num-genesis.
+
+# Epoch Boundary Transition Properties
+
+**Property** The `SNAP`, `POOLREAP`, `NEWPP`, and `EPOCH` transitions 
+are never blocked (i.e. always invoked at the epoch boundary).
 
 # Deposits Properties
 
@@ -256,12 +292,18 @@ the epoch nonce is what you get from combining the blocks leading up to it
 The overlay schedule is obeyed: no blocks are produced during the silent blocks,
 and only core nodes makes blocks on the overlay slots.
 
+**Property** Full decentralization is reached eventually
+
 # Rewards Properties
 
 **Property**
 At the start of each epoch, the reward update is set to NOTHING.
 Moreover, the reward update will change exactly once during the epoch,
 to a non-NOTHING value.
+
+**Property**
+Total rewards distributed at the epoch boundary is the amount in the reward pot
+minus the share calculated for stake pools that did not meet their pledge.
 
 # Block Header Properties
 
@@ -300,13 +342,13 @@ What are acceptable values for various system protocol parameters?
 
 The following are examples of things that should be part of some overview document
 
-(1) potentially, multiple slot leaders may be elected for a particular slot (forming a slot leader set); 
+(1) potentially, multiple slot leaders may be elected for a particular slot (forming a slot leader set);
 
-(2) frequently, slots will have no leaders assigned to them; and 
+(2) frequently, slots will have no leaders assigned to them; and
 
 (3) a priori, only a slot leader is aware that it is indeed a leader for a given slot; this assignment is unknown to all the other stakeholders—including other slot leaders of the same slot—until the other stakeholders receive a valid block from this slot leader.
 
-     
+
 
 **Independent aggregation property (Property 2)**
 
@@ -426,11 +468,8 @@ _These look like ways to drive test case generation_
 #Multi-signature properties
 
 **Sufficient Signatures are Provided to authorise Multi-Signature Transactions**
-	
+
 Outputs of transactions that require multiple signatures will be "locked" against use until at least the
 required number of signatures is provided.
 
 _This should come by construction from the rules in the multi-sig spec._
-
-
-  
