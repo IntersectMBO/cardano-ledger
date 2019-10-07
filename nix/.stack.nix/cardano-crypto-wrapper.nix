@@ -21,6 +21,7 @@
           (hsPkgs.aeson)
           (hsPkgs.base64-bytestring)
           (hsPkgs.base64-bytestring-type)
+          (hsPkgs.binary)
           (hsPkgs.bytestring)
           (hsPkgs.canonical-json)
           (hsPkgs.cardano-binary)
