@@ -292,21 +292,8 @@ delegation certificate in $l'$.
 \end{property}
 
 Property \ref{prop:genkeys-delegated} states that all seven of the genesis keys
-are constantly all delegated after applying a list of transactions to a valid ledger 
+are constantly all delegated after applying a list of transactions to a valid ledger
 state.
-
-\begin{property}[\textbf{An Epoch Boundary Transition is Never Blocked}]
-  \label{prop:epoch-tr-happens}
-  \begin{multline*}
-    \forall \var{eps}: \applyFun{validLedgerstate}{l},
-    l=(\wcard, (u, \wcard)), \exists \var{l'} \in \EpochState: \applyFun{validLedgerstate}{l},
-    l' = (\wcard, (u, \wcard))\\
-    \implies \forall \var{e} \in \Epoch, lenv \vdash\var{u} \trans{epoch}{e} \var{u'} \\
-  \end{multline*}
-\end{property}
-
-Property \ref{prop:epoch-tr-happens} states that an epoch boundary transition
-is always invoked at the epoch boundary.
 
 \subsection{Ledger State Properties for Staking Pool Transitions}
 \label{sec:ledg-state-prop}
