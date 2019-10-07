@@ -66,13 +66,12 @@ coverUpivoteFailures
   => CoverPercentage
   -> a
   -> m ()
-coverUpivoteFailures coverPercentage someData =
+coverUpivoteFailures coverPercentage =
   Generator.coverFailures
     coverPercentage
     [ AVSigDoesNotVerify
     , NoUpdateProposal (UpId 0) -- We need to pass a dummy update id here.
     ]
-    someData
 
 
 coverDelegFailures
@@ -84,7 +83,7 @@ coverDelegFailures
   => CoverPercentage
   -> a
   -> m ()
-coverDelegFailures coverPercentage someData =
+coverDelegFailures coverPercentage =
   Generator.coverFailures
     coverPercentage
     [ EpochInThePast undefined
@@ -92,4 +91,3 @@ coverDelegFailures coverPercentage someData =
     , IsAlreadyScheduled
     , IsNotGenesisKey
     ]
-    someData

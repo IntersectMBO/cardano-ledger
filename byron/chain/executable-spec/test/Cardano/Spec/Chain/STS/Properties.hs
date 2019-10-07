@@ -88,8 +88,8 @@ signersListIsBoundedByK =  withTests 300 $ property $ do
 
 
 relevantCasesAreCovered :: Property
-relevantCasesAreCovered = withTests 400 $ property $ do
-  tr <- forAll $ traceSigGen (Desired 250) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
+relevantCasesAreCovered = withTests 200 $ property $ do
+  tr <- forAll $ traceSigGen (Desired 200) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
   let certs = traceDCerts tr
 
   -- for at least 1% of traces...
@@ -191,3 +191,12 @@ traceDCertsByBlock tr = _bDCerts . _bBody <$> traceSignals OldestFirst tr
 -- | Flattended list of DCerts for the given Trace
 traceDCerts :: Trace CHAIN -> [DCert]
 traceDCerts = concat . traceDCertsByBlock
+
+invalidSignalsAreGenerated :: Property
+invalidSignalsAreGenerated =
+  withTests 100
+    $ TransitionGenerator.invalidSignalsAreGenerated
+        @CHAIN
+        [(1, invalidProofsBlockGen)]
+        50
+        (coverInvalidBlockProofs 20)
