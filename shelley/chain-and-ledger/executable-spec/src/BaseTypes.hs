@@ -30,6 +30,7 @@ import           Numeric.Natural (Natural)
 import           GHC.Generics (Generic)
 import           Cardano.Binary (ToCBOR(..), encodeListLen)
 import           Cardano.Crypto.Hash
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 data E34
 
@@ -48,7 +49,7 @@ fpEpsilon = (10::FixedPoint)^(17::Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnitInterval Rational
-    deriving (Show, Ord, Eq, ToCBOR)
+    deriving (Show, Ord, Eq, NoUnexpectedThunks, ToCBOR)
 
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
 mkUnitInterval :: Rational -> Maybe UnitInterval
@@ -74,7 +75,9 @@ interval1 = UnitInterval 1
 data Nonce
   = Nonce (Hash SHA256 Nonce)
   | NeutralNonce -- ^ Identity element
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generic, Ord, Show)
+
+instance NoUnexpectedThunks Nonce
 
 instance ToCBOR Nonce where
   toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
@@ -95,7 +98,7 @@ mkNonce = Nonce . coerce . hash @SHA256
 --   We do not expose the constructor to `Seed`. Instead, a `Seed` should be
 --   created using `mkSeed` for a VRF calculation.
 newtype Seed = Seed (Hash SHA256 Seed)
-  deriving (Eq, Ord, Show, Generic, ToCBOR)
+  deriving (Eq, Ord, Show, Generic, NoUnexpectedThunks, ToCBOR)
 
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b

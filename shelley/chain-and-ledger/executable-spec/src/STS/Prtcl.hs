@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -16,6 +17,7 @@ module STS.Prtcl
 where
 
 import           Data.Map.Strict (Map)
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes
@@ -28,6 +30,7 @@ import           STS.Overlay
 import           STS.Updn
 
 import qualified Cardano.Crypto.VRF as VRF
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.State.Transition
 
 data PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo
@@ -39,10 +42,15 @@ data PrtclState hashAlgo dsignAlgo kesAlgo vrfAlgo
       Slot
       Nonce
       Nonce
-  deriving Show
+  deriving (Generic, Show)
+
+instance NoUnexpectedThunks (PrtclState hashAlgo dsignAlgo kesAlgo vrfAlgo)
 
 data PrtclEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
   = PrtclEnv (OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo) Slot
+  deriving (Generic)
+
+instance NoUnexpectedThunks (PrtclEnv hashAlgo dsignAlgo kesAlgo vrfAlgo)
 
 instance
   ( HashAlgorithm hashAlgo

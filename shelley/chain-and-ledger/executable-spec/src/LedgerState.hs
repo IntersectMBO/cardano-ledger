@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -118,6 +120,7 @@ module LedgerState
   , updateNES
   ) where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
@@ -127,6 +130,7 @@ import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Lens.Micro (to, (%~), (&), (.~), (^.))
@@ -167,7 +171,9 @@ type KeyPairs dsignAlgo = [(KeyPair 'Regular dsignAlgo, KeyPair 'Regular dsignAl
 -- validation errors that occurred from a valid 's' to reach 't'.
 data LedgerValidation hashAlgo dsignAlgo vrfAlgo
   = LedgerValidation [ValidationError] (LedgerState hashAlgo dsignAlgo vrfAlgo)
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (LedgerValidation hashAlgo dsignAlgo vrfAlgo)
 
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
@@ -198,7 +204,9 @@ data ValidationError =
   | StakeDelegationImpossible
   -- | Stake pool not registered for key, cannot be retired.
   | StakePoolNotRegisteredOnKey
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks ValidationError
 
 -- |The validity of a transaction, where an invalid transaction
 -- is represented by list of errors.
@@ -219,7 +227,7 @@ type RewardAccounts hashAlgo dsignAlgo
 -- | StakeShare type
 newtype StakeShare =
   StakeShare Rational
-  deriving (Show, Ord, Eq)
+  deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
 -- | Construct an optional probability value
 mkStakeShare :: Rational -> Maybe StakeShare
@@ -241,7 +249,9 @@ data DState hashAlgo dsignAlgo = DState
     , _fdms        :: Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
       -- |Genesis key delegations
     , _dms         :: Dms hashAlgo dsignAlgo
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (DState hashAlgo dsignAlgo)
 
 data PState hashAlgo dsignAlgo vrfAlgo = PState
     { -- |The active stake pools.
@@ -252,7 +262,9 @@ data PState hashAlgo dsignAlgo vrfAlgo = PState
     , _retiring    :: Map (KeyHash hashAlgo dsignAlgo) Epoch
       -- | Operational Certificate Counters.
     , _cCounters   :: Map (KeyHash hashAlgo dsignAlgo) Natural
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (PState hashAlgo dsignAlgo vrfAlgo)
 
 -- |The state associated with the current stake delegation.
 data DPState hashAlgo dsignAlgo vrfAlgo =
@@ -260,14 +272,18 @@ data DPState hashAlgo dsignAlgo vrfAlgo =
     {
       _dstate :: DState hashAlgo dsignAlgo
     , _pstate :: PState hashAlgo dsignAlgo vrfAlgo
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (DPState hashAlgo dsignAlgo vrfAlgo)
 
 data RewardUpdate hashAlgo dsignAlgo = RewardUpdate
   { deltaT :: Coin
   , deltaR :: Coin
   , rs     :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
   , deltaF :: Coin
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (RewardUpdate hashAlgo dsignAlgo)
 
 emptyRewardUpdate :: RewardUpdate hashAlgo dsignAlgo
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
@@ -275,7 +291,9 @@ emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
 data AccountState = AccountState
   { _treasury  :: Coin
   , _reserves  :: Coin
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks AccountState
 
 data EpochState hashAlgo dsignAlgo vrfAlgo
   = EpochState
@@ -284,7 +302,9 @@ data EpochState hashAlgo dsignAlgo vrfAlgo
     , esLState :: LedgerState hashAlgo dsignAlgo vrfAlgo
     , esPp :: PParams
     }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (EpochState hashAlgo dsignAlgo vrfAlgo)
 
 emptyUTxOState :: UTxOState hashAlgo dsignAlgo vrfAlgo
 emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
@@ -329,7 +349,9 @@ data UTxOState hashAlgo dsignAlgo vrfAlgo =
     , _deposited :: Coin
     , _fees      :: Coin
     , _ups       :: UpdateState hashAlgo dsignAlgo
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (UTxOState hashAlgo dsignAlgo vrfAlgo)
 
 -- | New Epoch state and environment
 data NewEpochState hashAlgo dsignAlgo vrfAlgo =
@@ -342,7 +364,9 @@ data NewEpochState hashAlgo dsignAlgo vrfAlgo =
   , nesRu    :: Maybe (RewardUpdate hashAlgo dsignAlgo)
   , nesPd    :: PoolDistr hashAlgo dsignAlgo vrfAlgo
   , nesOsched :: Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (NewEpochState hashAlgo dsignAlgo vrfAlgo)
 
 getGKeys
   :: NewEpochState hashAlgo dsignAlgo vrfAlgo
@@ -357,7 +381,9 @@ data NewEpochEnv hashAlgo dsignAlgo =
     neeEta1  :: Nonce
   , neeS     :: Slot
   , neeGkeys :: Set (GenKeyHash hashAlgo dsignAlgo)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (NewEpochEnv hashAlgo dsignAlgo)
 
 -- |The state associated with a 'Ledger'.
 data LedgerState hashAlgo dsignAlgo vrfAlgo =
@@ -368,7 +394,9 @@ data LedgerState hashAlgo dsignAlgo vrfAlgo =
   , _delegationState   :: !(DPState hashAlgo dsignAlgo vrfAlgo)
     -- |The current transaction index in the current slot.
   , _txSlotIx          :: Ix
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (LedgerState hashAlgo dsignAlgo vrfAlgo)
 
 makeLenses ''DPState
 makeLenses ''DState
