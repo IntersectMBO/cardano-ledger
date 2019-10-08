@@ -63,15 +63,13 @@ then calls the $\mathsf{DELEGS}$ transition.
     \inference[ledger]
     {
       {
-        \left(
-        \begin{array}{l}
+        \begin{array}{c}
           \var{slot} \\
           \var{txIx} \\
           \var{pp} \\
           \var{tx}\\
           \var{reserves}
         \end{array}
-      \right)
       }
       \vdash
       dpstate \trans{\hyperref[fig:rules:delegation-sequence]{delegs}}{
@@ -81,26 +79,24 @@ then calls the $\mathsf{DELEGS}$ transition.
       (\var{stdelegs}, \_, \_, \_, \_, \var{dms}) \leteq \var{dstate} \\
       (\var{stpools}, \_, \_, \_) \leteq \var{pstate} \\
       \\~\\
-      \left({
-        \begin{array}{r}
+      {
+        \begin{array}{c}
         \var{slot} \\
         \var{pp} \\
         \var{stdelegs} \\
         \var{stpools} \\
         \var{dms} \\
         \end{array}
-      }\right)
+      }
       \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxow-shelley]{utxow}}{tx} \var{utxoSt'}
     }
     {
-      \left(
-        \begin{array}{l}
-          \var{slot} \\
-          \var{txIx} \\
-          \var{pp} \\
-          \var{reserves}
-        \end{array}
-      \right)
+      \begin{array}{c}
+        \var{slot} \\
+        \var{txIx} \\
+        \var{pp} \\
+        \var{reserves}
+      \end{array}
       \vdash
       \left(
         \begin{array}{ll}
@@ -202,13 +198,11 @@ slot is removed.
       \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'},~\var{ps'}))
     }
     {
-      \left(
-        \begin{array}{r}
-          \var{slot}\\
-          \var{pp}\\
-          \var{reserves}
-        \end{array}
-      \right)
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+        \var{reserves}
+      \end{array}
       \vdash \var{ls} \trans{ledgers}{\epsilon} \varUpdate{\var{ls'}}
     }
   \end{equation}
@@ -220,13 +214,11 @@ slot is removed.
     \inference[Seq-ledger-ind]
     {
       {
-        \left(
-          \begin{array}{r}
-            \var{slot}\\
-            \var{pp}\\
-            \var{reserves}
-          \end{array}
-        \right)
+        \begin{array}{r}
+          \var{slot}\\
+          \var{pp}\\
+          \var{reserves}
+        \end{array}
       }
       \vdash
       \var{ls}
@@ -234,14 +226,12 @@ slot is removed.
       \var{ls'}
       &
       {
-        \left(
-          \begin{array}{r}
-            \var{slot}\\
-            \mathsf{len}~\Gamma - 1\\
-            \var{pp}\\
-            \var{reserves}
-          \end{array}
-        \right)
+        \begin{array}{r}
+          \var{slot}\\
+          \mathsf{len}~\Gamma - 1\\
+          \var{pp}\\
+          \var{reserves}
+        \end{array}
       }
       \vdash
         \var{ls'}
@@ -249,13 +239,11 @@ slot is removed.
         \var{ls''}
     }
     {
-    \left(
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
         \var{reserves}
       \end{array}
-    \right)
     \vdash
       \var{ls}
       \trans{ledgers}{\Gamma; c}

@@ -376,13 +376,11 @@ In the second case, the new epoch state is updated as follows:
        \end{array}}
     }
     {
-      \left(
-        {\begin{array}{c}
-            \eta_1 \\
-            \var{s} \\
-            \var{gkeys} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \eta_1 \\
+         \var{s} \\
+         \var{gkeys} \\
+       \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{e_\ell} \\
@@ -416,13 +414,11 @@ In the second case, the new epoch state is updated as follows:
       e \neq e_\ell + 1
     }
     {
-      \left(
-        {\begin{array}{c}
-            \eta_1 \\
-            \var{s} \\
-            \var{gkeys} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \eta_1 \\
+         \var{s} \\
+         \var{gkeys} \\
+       \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{e_\ell} \\
@@ -489,11 +485,9 @@ start of a new epoch (so that the entropy added near the end of the epoch is not
       s < \firstSlot{((\epoch{s}) + 1) - \SlotsPrior}
     }
     {
-      \left(
-        {\begin{array}{c}
-            \eta \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \eta \\
+       \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \eta_v \\
@@ -515,11 +509,9 @@ start of a new epoch (so that the entropy added near the end of the epoch is not
       s \geq \firstSlot{((\epoch{s}) + 1) - \SlotsPrior}
     }
     {
-      \left(
-        {\begin{array}{c}
-            \eta \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \eta \\
+       \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \eta_v \\
@@ -596,12 +588,10 @@ execution of the transition role is as follows:
       ru' \leteq \createRUpd{b}{es}
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{b} \\
-            \var{es} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \var{b} \\
+         \var{es} \\
+       \end{array}}
       \vdash
       \var{ru}\trans{rupd}{\var{s}}\varUpdate{\var{ru}'}
     }
@@ -615,12 +605,10 @@ execution of the transition role is as follows:
       ru \neq \Nothing
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{b} \\
-            \var{es} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \var{b} \\
+         \var{es} \\
+       \end{array}}
       \vdash
       \var{ru}\trans{rupd}{\var{s}}\var{ru}
     }
@@ -636,12 +624,10 @@ execution of the transition role is as follows:
       s \leq (\firstSlot{\epoch{s}}) + \StartRewards
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{b} \\
-            \var{es} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \var{b} \\
+         \var{es} \\
+       \end{array}}
       \vdash
       \var{ru}\trans{rupd}{\var{s}}\var{ru}
     }
@@ -711,13 +697,11 @@ If the size checks pass, then three transitions are done:
       \hBbsize{bhb} \leq \fun{maxBlockSize}~\var{pp}
       \\
       {
-        \left(
-          {\begin{array}{c}
-              \eta_c \\
-              \var{s} \\
-              \var{gkeys} \\
-          \end{array}}
-        \right)
+        {\begin{array}{c}
+           \eta_c \\
+           \var{s} \\
+           \var{gkeys} \\
+         \end{array}}
         \vdash
         \var{nes}
         \trans{\hyperref[fig:rules:new-epoch]{newepoch}}{\epoch{s}}
@@ -729,26 +713,22 @@ If the size checks pass, then three transitions are done:
       (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{ru},~\wcard,~\wcard)\leteq\var{nes'} \\
       \\
       (\wcard,~\wcard,~\wcard,~\var{pp})\leteq\var{es} \\
-      \\
+      \\~\\
       {
-        \left(
-          {\begin{array}{c}
-              \var{b_{prev}} \\
-              \var{es} \\
-          \end{array}}
-        \right)
+        {\begin{array}{c}
+           \var{b_{prev}} \\
+           \var{es} \\
+         \end{array}}
         \vdash \var{ru}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru}'
       }
-      \\
+      \\~\\
       \var{nes}''\leteq\var{nes'}\unionoverrideRight\{\var{ru'}\}
     }
     {
-      \left(
-        {\begin{array}{c}
-            \eta_c \\
-            \var{gkeys} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \eta_c \\
+         \var{gkeys} \\
+       \end{array}}
       \vdash\var{nes}\trans{bhead}{\var{bh}}\varUpdate{\var{nes''}}
     }
   \end{equation}
@@ -1000,15 +980,13 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       }
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{pp} \\
-            \var{osched} \\
-            \eta_0 \\
-            \var{pd} \\
-            \var{dms} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \var{pp} \\
+         \var{osched} \\
+         \eta_0 \\
+         \var{pd} \\
+         \var{dms} \\
+       \end{array}}
       \vdash
       \var{cs}
       \trans{overlay}{\var{bh}}
@@ -1032,15 +1010,13 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \fun{vrfChecks}~\eta_0~\var{pd}~(\activeSlotCoeff{pp})~\var{bhb}
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{pp} \\
-            \var{osched} \\
-            \eta_0 \\
-            \var{pd} \\
-            \var{dms} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \var{pp} \\
+         \var{osched} \\
+         \eta_0 \\
+         \var{pd} \\
+         \var{dms} \\
+       \end{array}}
       \vdash
       \var{cs}
       \trans{overlay}{\var{bh}}
@@ -1156,12 +1132,10 @@ The states for this transition consists of:
       }
     }
     {
-      \left(
-        {\begin{array}{c}
-            \var{oe} \\
-            \var{s_{now}} \\
-        \end{array}}
-      \right)
+      {\begin{array}{c}
+         \var{oe} \\
+         \var{s_{now}} \\
+       \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{cs} \\
@@ -1290,11 +1264,11 @@ current slot is not an overlay slot.
       \fun{hash}~{txs} = \bbodyhash{bhb}
       \\~\\
       {
-        {\left(\begin{array}{c}
+        {\begin{array}{c}
                  \bslot{bhb} \\
                  \var{pp} \\
                  \var{reserves}
-        \end{array}\right)}
+        \end{array}}
         \vdash
              \var{ls} \\
         \trans{\hyperref[fig:rules:ledger-sequence]{ledgers}}{\var{txs}}
@@ -1302,11 +1276,11 @@ current slot is not an overlay slot.
       }
     }
     {
-      {\left(\begin{array}{c}
+      {\begin{array}{c}
                \var{oslots} \\
                \var{pp} \\
                \var{reserves}
-      \end{array}\right)}
+      \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{ls} \\
@@ -1439,12 +1413,10 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       \var{gkeys} \leteq \fun{getGKeys}~\var{nes}
       \\~\\
       {
-        \left(
-          {\begin{array}{c}
-              \eta_c \\
-              \var{gkeys} \\
-          \end{array}}
-        \right)
+        {\begin{array}{c}
+           \eta_c \\
+           \var{gkeys} \\
+         \end{array}}
         \vdash\var{nes}\trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}\var{nes'}
       } \\~\\
       (\wcard,~\eta_0,~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
@@ -1455,18 +1427,16 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
           (\wcard, reserves) \leteq \var{acnt}\\
       {
-        \left(
-          {\begin{array}{c}
-              \left(\begin{array}{c}
-                 \var{pp} \\
-                 \var{osched} \\
-                 \eta_0 \\
-                 \var{pd} \\
-                 \var{dms} \\
-              \end{array}\right)\\
-              \var{s_{now}} \\
-          \end{array}}
-        \right)
+        {\begin{array}{c}
+           \begin{array}{c}
+             \var{pp} \\
+             \var{osched} \\
+             \eta_0 \\
+             \var{pd} \\
+             \var{dms} \\
+           \end{array}\\
+           \var{s_{now}} \\
+         \end{array}}
         \vdash
         {\left(\begin{array}{c}
               \var{cs} \\
@@ -1484,13 +1454,13 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
               \eta_c' \\
         \end{array}\right)}
       } \\~\\~\\
-      \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs'} \\
+      \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs'} \\~\\
       {
-        {\left(\begin{array}{c}
+        {\begin{array}{c}
                  \dom{osched} \\
                  \var{pp} \\
                  \var{reserves}
-        \end{array}\right)}
+        \end{array}}
         \vdash
         {\left(\begin{array}{c}
               \var{ls}' \\
@@ -1501,7 +1471,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
               \var{ls}'' \\
               \var{b_{cur}'} \\
         \end{array}\right)}
-      }\\
+      }\\~\\
       \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls''} \\
     }
     {
