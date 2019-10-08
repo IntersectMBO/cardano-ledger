@@ -27,8 +27,7 @@ import           Control.Arrow (first, (***))
 import           Control.Lens (makeLenses, to, view, (&), (.~), (^.))
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import           Data.Data (Constr, Data, Typeable, toConstr)
-import           Data.Either (isLeft)
+import           Data.Data (Data, Typeable)
 import           Data.List (foldl', last)
 import           Data.List.Unique (repeated)
 import qualified Data.Map.Strict as Map
@@ -43,25 +42,24 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, SignalGenerator,
                      TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
-                     failures, invalidTrace, isTrivial, nonTrivialTrace, proportionOfValidSignals,
-                     sigGen, suchThatLastState, trace, traceLengthsAreClassified, traceWithProfile)
-import qualified Control.State.Transition.Generator as TransitionGenerator
-import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
-import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), extractValues,
-                     lastState, preStatesAndSignals, traceEnv, traceLength, traceSignals)
+                     failures, isTrivial, nonTrivialTrace, proportionOfValidSignals, sigGen,
+                     suchThatLastState, trace, traceLengthsAreClassified, traceWithProfile)
+import qualified Control.State.Transition.Generator as Transition.Generator
+import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), lastState,
+                     preStatesAndSignals, traceEnv, traceLength, traceSignals)
 import           Ledger.Core (Epoch (Epoch), Sig (Sig), Slot, SlotCount (SlotCount), VKey,
                      VKeyGenesis, addSlot, mkVKeyGenesis, owner, unSlot, unSlotCount)
 import           Ledger.Delegation (DCert, DELEG, DIState (DIState),
                      DSEnv (DSEnv, _dSEnvEpoch, _dSEnvK), DSState (DSState),
                      DState (DState, _dStateDelegationMap, _dStateLastDelegation),
-                     PredicateFailure (DoesNotVerify, EpochInThePast, EpochPastNextEpoch, HasAlreadyDelegated, IsAlreadyScheduled, IsAlreadyScheduled, IsNotGenesisKey, SDelegFailure, SDelegSFailure),
-                     SDELEG, delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio,
-                     epoch, liveAfter, mkDCert, multipleDelegationsRatio,
-                     nextEpochDelegationsRatio, randomDCertGen, scheduledDelegations,
-                     selfDelegationsRatio, slot, thisEpochDelegationsRatio, _dIStateDelegationMap,
-                     _dIStateKeyEpochDelegations, _dIStateLastDelegation,
-                     _dIStateScheduledDelegations, _dSStateKeyEpochDelegations,
-                     _dSStateScheduledDelegations)
+                     PredicateFailure (IsAlreadyScheduled, IsAlreadyScheduled, SDelegFailure, SDelegSFailure),
+                     delegationMap, delegatorDelegate, depoch, emptyDelegationPayloadRatio, epoch,
+                     liveAfter, mkDCert, multipleDelegationsRatio, nextEpochDelegationsRatio,
+                     scheduledDelegations, selfDelegationsRatio, slot, tamperedDcerts,
+                     thisEpochDelegationsRatio, _dIStateDelegationMap, _dIStateKeyEpochDelegations,
+                     _dIStateLastDelegation, _dIStateScheduledDelegations,
+                     _dSStateKeyEpochDelegations, _dSStateScheduledDelegations)
+import qualified Ledger.Delegation.Test
 
 import           Ledger.Core.Generators (epochGen, slotGen, vkGen)
 import qualified Ledger.Core.Generators as CoreGen
@@ -248,8 +246,10 @@ profile
       }
   where
     invalidDBlockGen :: SignalGenerator DBLOCK
-    invalidDBlockGen env _st =
-        DBlock <$> nextSlotGen env <*> Gen.list (Range.constant 0 10) (randomDCertGen env)
+    invalidDBlockGen env (diEnv, diState)
+      =   DBlock
+      <$> nextSlotGen env
+      <*> tamperedDcerts diEnv diState -- Gen.list (Range.constant 0 10) (randomDCertGen env)
 
 
 instance HasTrace DBLOCK where
@@ -370,7 +370,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @DBLOCK 100
+  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @DBLOCK 100
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules
@@ -409,70 +409,18 @@ tracesAreClassified = traceLengthsAreClassified @DELEG 1000 100
 -- | The signal generator generates invalid signals with high probability when
 -- invalid signals are requested.
 invalidSignalsAreGenerated :: Property
-invalidSignalsAreGenerated = withTests 300 $ property $ do
-
-  let aTraceLength = 100
-      failureProfile = failures profile
-
-  tr <- forAll (invalidTrace @DBLOCK aTraceLength failureProfile)
-
-  cover 80
-        "Invalid signals are generated when requested"
-        (isLeft $ Invalid.Trace.errorOrLastState tr)
-
-  case Invalid.Trace.errorOrLastState tr of
-    Left pfs -> do
-      let
-        sdelegFailures :: [PredicateFailure SDELEG]
-        sdelegFailures = extractValues pfs
-
-        sdelegFailuresConstructors :: [Constr]
-        sdelegFailuresConstructors = toConstr <$> sdelegFailures
-
-        -- We have 6 failures we're interested in. However demanding an uniform
-        -- distribution of predicate failures requires precise tweaking, which is
-        -- difficult to guarantee. For this reason we allow for an order of
-        -- magnitude deviation from the uniform distribution:
-        --
-        -- > 1/6 * 0.1 * 100 ~ 1.67
-        --
-        -- which we round up to 2.
-
-      -- TODO: raise the threshold once we incorporate goblins
-
-      -- TODO: once the threshold is raised, use
-      -- 'Control.State.Transition.Generator.coverFailures' to remove the
-      -- duplication below
-      cover
-        0
-        "IsNotGenesisKey"
-        (toConstr IsNotGenesisKey `elem` sdelegFailuresConstructors)
-
-      cover
-        2
-        "EpochInThePast"
-        (toConstr (EpochInThePast undefined) `elem` sdelegFailuresConstructors)
-
-      cover
-        2
-        "EpochPastNextEpoch"
-        (toConstr (EpochPastNextEpoch undefined) `elem` sdelegFailuresConstructors)
-
-      cover
-        2
-        "HasAlreadyDelegated"
-        (toConstr HasAlreadyDelegated `elem` sdelegFailuresConstructors)
-
-      cover
-        2
-        "IsAlreadyScheduled"
-        (toConstr IsAlreadyScheduled `elem` sdelegFailuresConstructors)
-
-      -- TODO: raise the threshold once we incorporate goblins
-      cover
-        0
-        "DoesNotVerify"
-        (toConstr DoesNotVerify `elem` sdelegFailuresConstructors)
-
-    Right _ ->
-      pure ()
+invalidSignalsAreGenerated =
+  withTests 300
+    $ Transition.Generator.invalidSignalsAreGenerated
+      @DBLOCK
+      (failures profile)
+      100
+      -- We have 6 failures we're interested in. However demanding an uniform
+      -- distribution of predicate failures requires precise tweaking, which is
+      -- difficult to guarantee. For this reason we allow for an order of
+      -- magnitude deviation from the uniform distribution:
+      --
+      -- > 1/6 * 0.1 * 100 ~ 1.67
+      --
+      -- which we round up to 2.
+      (Ledger.Delegation.Test.coverDelegFailures 2)

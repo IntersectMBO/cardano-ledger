@@ -16,7 +16,7 @@ import           Hedgehog (MonadTest, Property, assert, cover, failure, forAll, 
 import           Control.State.Transition
 import           Control.State.Transition.Generator (TraceLength (Desired, Maximum),
                      classifyTraceLength, traceSigGen)
-import qualified Control.State.Transition.Generator as TransitionGenerator
+import qualified Control.State.Transition.Generator as Transition.Generator
 import           Control.State.Transition.Trace
 
 import           Ledger.Core (BlockCount (BlockCount), Epoch, Slot (unSlot))
@@ -66,7 +66,7 @@ blockIssuersAreDelegates =
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 200 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 100
+  withTests 200 $ Transition.Generator.onlyValidSignalsAreGenerated @CHAIN 100
 
 signersListIsBoundedByK :: Property
 signersListIsBoundedByK =  withTests 300 $ property $ do
@@ -195,7 +195,7 @@ traceDCerts = concat . traceDCertsByBlock
 invalidSignalsAreGenerated :: Property
 invalidSignalsAreGenerated =
   withTests 100
-    $ TransitionGenerator.invalidSignalsAreGenerated
+    $ Transition.Generator.invalidSignalsAreGenerated
         @CHAIN
         [(1, invalidProofsBlockGen)]
         50

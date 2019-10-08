@@ -23,7 +23,6 @@ import           GHC.Stack (HasCallStack)
 
 import qualified Data.Bimap as Bimap
 import           Data.Data (Data, Typeable)
-import           Data.Either (isLeft)
 import           Data.Foldable (fold, traverse_)
 import           Data.Function ((&))
 import           Data.List.Unique (count)
@@ -39,10 +38,9 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen,
-                     invalidTrace, randomTraceOfSize, ratio, sigGen, trace,
-                     traceLengthsAreClassified, traceOfLength)
-import qualified Control.State.Transition.Generator as TransitionGenerator
-import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
+                     randomTraceOfSize, ratio, sigGen, trace, traceLengthsAreClassified,
+                     traceOfLength)
+import qualified Control.State.Transition.Generator as Transition.Generator
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), traceLength,
                      traceSignals, traceStates, _traceEnv, _traceInitState)
 
@@ -268,7 +266,7 @@ data Change = Increases | Decreases | RemainsTheSame
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UPIREG 100
+  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @UPIREG 100
 
 
 -- | Dummy transition system to test blocks with update payload only.
@@ -405,7 +403,7 @@ ublockTraceLengthsAreClassified =
 
 ublockOnlyValidSignalsAreGenerated :: HasCallStack => Property
 ublockOnlyValidSignalsAreGenerated =
-  withTests 300 $ TransitionGenerator.onlyValidSignalsAreGenerated @UBLOCK 100
+  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @UBLOCK 100
 
 ublockRelevantTracesAreCovered :: Property
 ublockRelevantTracesAreCovered = withTests 300 $ property $ do
@@ -565,22 +563,13 @@ numberOfVotes sample
 --------------------------------------------------------------------------------
 
 invalidRegistrationsAreGenerated :: Property
-invalidRegistrationsAreGenerated = withTests 300 $ property $ do
-
-  tr <- forAll (invalidTrace @UPIREG 100 [(1, invalidUPropGen)])
-
-  cover 80
-        "Invalid signals are generated when requested"
-        (isLeft $ Invalid.Trace.errorOrLastState tr)
-
-  case Invalid.Trace.errorOrLastState tr of
-    Left pfs ->
-      Update.Test.coverUpiregFailures 2 pfs
-
-    Right _ ->
-      pure ()
-
-
+invalidRegistrationsAreGenerated =
+  withTests 300
+    $ Transition.Generator.invalidSignalsAreGenerated
+        @UPIREG
+        [(1, invalidUPropGen)]
+        100
+        (Update.Test.coverUpiregFailures 2)
   where
     invalidUPropGen :: SignalGenerator UPIREG
     invalidUPropGen env st = do
@@ -589,22 +578,13 @@ invalidRegistrationsAreGenerated = withTests 300 $ property $ do
 
 
 invalidSignalsAreGenerated :: Property
-invalidSignalsAreGenerated = withTests 300 $ property $ do
-
-  tr <- forAll (invalidTrace @UBLOCK 100 [(1, invalidUBlockGen)])
-
-  cover 80
-        "Invalid signals are generated when requested"
-        (isLeft $ Invalid.Trace.errorOrLastState tr)
-
-
-  case Invalid.Trace.errorOrLastState tr of
-    Left pfs ->
-      Update.Test.coverUpivoteFailures 2 pfs
-
-    Right _ ->
-      pure ()
-
+invalidSignalsAreGenerated =
+  withTests 300
+    $ Transition.Generator.invalidSignalsAreGenerated
+        @UBLOCK
+        [(1, invalidUBlockGen)]
+        100
+        (Update.Test.coverUpivoteFailures 2)
   where
     invalidUBlockGen :: SignalGenerator UBLOCK
     invalidUBlockGen env st = do

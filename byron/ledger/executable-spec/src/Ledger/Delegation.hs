@@ -798,6 +798,9 @@ mkGoblinGens
   ]
 
 tamperedDcerts :: DIEnv -> DIState -> Gen [DCert]
-tamperedDcerts env st = do
-  sg <- Gen.element goblinGensDELEG
-  sg env st
+tamperedDcerts env st =
+  Gen.choice [ Gen.list (Range.constant 0 10) (randomDCertGen env)
+             , do
+                 sg <- Gen.element goblinGensDELEG
+                 sg env st
+             ]
