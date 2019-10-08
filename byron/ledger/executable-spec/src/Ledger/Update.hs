@@ -248,7 +248,6 @@ mkUProp aUpId issuer pv pps sv stags mdt = uprop
 instance HasTypeReps (ProtVer, PParams, SwVer, Set STag, Metadata)
 instance HasTypeReps Metadata
 instance HasTypeReps UProp
-instance HasTypeReps (Maybe UProp)
 
 
 -- | Test if a pair is present in a map.
@@ -562,7 +561,7 @@ mkVote caster proposalId
   }
 
 instance HasHash (Maybe Ledger.Update.UProp, [Ledger.Update.Vote]) where
-  hash = Core.Hash . H.hash
+  hash = Core.Hash . Just . H.hash
 
 
 data ADDVOTE deriving (Generic, Data, Typeable)

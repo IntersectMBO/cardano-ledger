@@ -16,7 +16,7 @@ import           Hedgehog (MonadTest, Property, assert, cover, failure, forAll, 
 import           Control.State.Transition
 import           Control.State.Transition.Generator (TraceLength (Desired, Maximum),
                      classifyTraceLength, traceSigGen)
-import qualified Control.State.Transition.Generator as TransitionGenerator
+import qualified Control.State.Transition.Generator as Transition.Generator
 import           Control.State.Transition.Trace
 
 import           Ledger.Core (BlockCount (BlockCount), Epoch, Slot (unSlot))
@@ -66,7 +66,7 @@ blockIssuersAreDelegates =
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 200 $ TransitionGenerator.onlyValidSignalsAreGenerated @CHAIN 100
+  withTests 200 $ Transition.Generator.onlyValidSignalsAreGenerated @CHAIN 100
 
 signersListIsBoundedByK :: Property
 signersListIsBoundedByK =  withTests 300 $ property $ do
@@ -88,8 +88,8 @@ signersListIsBoundedByK =  withTests 300 $ property $ do
 
 
 relevantCasesAreCovered :: Property
-relevantCasesAreCovered = withTests 400 $ property $ do
-  tr <- forAll $ traceSigGen (Desired 250) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
+relevantCasesAreCovered = withTests 200 $ property $ do
+  tr <- forAll $ traceSigGen (Desired 200) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
   let certs = traceDCerts tr
 
   -- for at least 1% of traces...
@@ -191,3 +191,12 @@ traceDCertsByBlock tr = _bDCerts . _bBody <$> traceSignals OldestFirst tr
 -- | Flattended list of DCerts for the given Trace
 traceDCerts :: Trace CHAIN -> [DCert]
 traceDCerts = concat . traceDCertsByBlock
+
+invalidSignalsAreGenerated :: Property
+invalidSignalsAreGenerated =
+  withTests 100
+    $ Transition.Generator.invalidSignalsAreGenerated
+        @CHAIN
+        [(1, invalidProofsBlockGen)]
+        50
+        (coverInvalidBlockProofs 20)

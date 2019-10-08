@@ -159,7 +159,7 @@ mkBlock
 -- | Dummy genesis hash.
 genesisHash :: Hash
 -- Not sure we need a concrete hash in the specs ...
-genesisHash = Hash $ H.hash ("" :: ByteString)
+genesisHash = Hash $ Just $ H.hash ("" :: ByteString)
 
 
 -- | Protocol version endorsment
@@ -203,7 +203,7 @@ bHeaderSize = fromIntegral . abstractSize costs
 
 -- | Computes the hash of a header.
 hashHeader :: BlockHeader -> Hash
-hashHeader bh = Hash $ H.hash (bh ^. bhPrevHash, bh ^. bhSlot, bh ^. bhIssuer)
+hashHeader bh = Hash $ Just $ H.hash (bh ^. bhPrevHash, bh ^. bhSlot, bh ^. bhIssuer)
 
 -- | Computes the hash of the header.
 bhToSign :: BlockHeader -> Hash

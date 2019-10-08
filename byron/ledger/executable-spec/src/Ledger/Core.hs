@@ -24,6 +24,7 @@ import qualified Data.Hashable as H
 import           Data.Int (Int64)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (isJust)
 import           Data.Monoid (Sum (..))
 import qualified Data.Sequence as Seq
 import           Data.Set (Set, intersection, isSubsetOf)
@@ -43,11 +44,18 @@ import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGobli
 
 
 -- | An encoded hash of part of the system.
+--
+-- 'Nothing' is used to signal to the elaborators (i.e. the algorithms that
+-- translate abstract data into data concrete) that they should produce an
+-- invalid concrete hash.
 newtype Hash = Hash
-  { unHash :: Int
+  { unHash :: Maybe Int
   } deriving stock (Show, Generic, Data, Typeable)
     deriving newtype (Eq, Ord, Hashable)
     deriving anyclass (HasTypeReps)
+
+isValid :: Hash -> Bool
+isValid = isJust . unHash
 
 -- | Hash part of the ledger payload
 class HasHash a where
@@ -83,7 +91,7 @@ newtype VKey = VKey Owner
   deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
-  hash = Hash . H.hash
+  hash = Hash . Just . H.hash
 
 instance HasOwner VKey where
   owner (VKey o) = o
@@ -222,7 +230,7 @@ mkAddr :: Natural -> Addr
 mkAddr = Addr . VKey . Owner
 
 instance HasHash Addr where
-  hash = Hash . H.hash
+  hash = Hash . Just . H.hash
 
 -- | A unit of value held by a UTxO.
 --
@@ -479,9 +487,15 @@ deriveGoblin ''VKeyGenesis
 instance GeneOps g => Goblin g Hash where
   tinker gen
     = tinkerRummagedOrConjureOrSave
-        ((Hash . (`mod` 30))
-           <$$> tinker ((\(Hash x) -> x) <$> gen))
-  conjure = saveInBagOfTricks =<< (Hash . (`mod` 30) <$> conjure)
+        ((Hash . Just . (`mod` 30))
+           <$$> tinker (unwrapValue <$> gen))
+    where
+      unwrapValue (Hash (Just x)) = x
+      unwrapValue (Hash Nothing) =
+        error $  "tinker Hash instance: trying to tinker with an invalid hash"
+              ++ " (which contains nothing)"
+
+  conjure = saveInBagOfTricks =<< (Hash . Just . (`mod` 30) <$> conjure)
 
 instance GeneOps g => Goblin g Lovelace where
   tinker gen

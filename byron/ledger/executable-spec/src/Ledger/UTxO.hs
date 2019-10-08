@@ -97,7 +97,7 @@ balance (UTxO utxo) = Map.foldl' addValues mempty utxo
   where addValues b (TxOut _ a) = b <> a
 
 instance Ledger.Core.HasHash Tx where
-  hash = Hash . H.hash
+  hash = Hash . Just . H.hash
 
 ---------------------------------------------------------------------------------
 -- UTxO transitions
@@ -131,7 +131,7 @@ data TxWits = TxWits
   } deriving (Show, Eq, Generic, Hashable, HasTypeReps, Data, Typeable)
 
 instance HasHash [TxWits] where
-  hash = Hash . H.hash
+  hash = Hash . Just . H.hash
 
 -- |Create a witness for transaction
 makeWitness :: KeyPair -> Tx -> Wit
@@ -162,6 +162,7 @@ deriveGoblin ''TxIn
 deriveGoblin ''TxOut
 deriveGoblin ''TxWits
 deriveGoblin ''Wit
+deriveGoblin ''TxId
 
 instance GeneOps g => Goblin g Tx where
   tinker gen = do
@@ -193,14 +194,6 @@ instance GeneOps g => Goblin g Tx where
     inputs <- replicateM listLenI conjure
     outputs <- replicateM listLenO conjure
     pure (Tx inputs outputs)
-
-instance GeneOps g => Goblin g TxId where
-  tinker gen
-    = tinkerRummagedOrConjureOrSave
-        ((TxId . Hash . (`mod` 30))
-           <$$> tinker ((\(TxId (Hash x)) -> x) <$> gen))
-  conjure = saveInBagOfTricks =<< (TxId . Hash . (`mod` 30) <$> conjure)
-
 
 --------------------------------------------------------------------------------
 -- AddShrinks instances

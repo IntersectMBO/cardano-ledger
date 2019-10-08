@@ -152,7 +152,7 @@ data DCert = DCert
 instance HasTypeReps DCert
 
 instance HasHash [DCert] where
-  hash = Hash . H.hash
+  hash = Hash . Just . H.hash
 
 mkDCert
   :: VKeyGenesis
@@ -798,6 +798,9 @@ mkGoblinGens
   ]
 
 tamperedDcerts :: DIEnv -> DIState -> Gen [DCert]
-tamperedDcerts env st = do
-  sg <- Gen.element goblinGensDELEG
-  sg env st
+tamperedDcerts env st =
+  Gen.choice [ Gen.list (Range.constant 0 10) (randomDCertGen env)
+             , do
+                 sg <- Gen.element goblinGensDELEG
+                 sg env st
+             ]
