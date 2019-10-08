@@ -43,6 +43,7 @@ cwitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
 cwitness (RetirePool k _)          = KeyHashObj k
 cwitness (Delegate delegation)     = delegation ^. delegator
 cwitness (GenesisDelegate (gk, _)) = GenesisHashObj gk
+cwitness (InstantaneousRewards _)  = error "no witness in MIR certificate"
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert hashAlgo dsignAlgo vrfAlgo -> PParams -> Coin

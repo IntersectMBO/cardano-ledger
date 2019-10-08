@@ -926,6 +926,8 @@ applyDCert ptr dcert@(RetirePool _ _) ds =
 
 applyDCert _ (GenesisDelegate _) ds = ds -- TODO: check this
 
+applyDCert _ (InstantaneousRewards _) _ = undefined
+
 -- TODO do we also have to check hashKey target?
 applyDCert ptr dcert@(Delegate _) ds =
   ds & dstate %~ applyDCertDState ptr dcert
