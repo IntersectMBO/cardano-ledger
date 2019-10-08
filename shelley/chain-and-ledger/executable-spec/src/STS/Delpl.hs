@@ -80,6 +80,8 @@ delplTransition = do
         trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
       pure $ d { _dstate = ds }
 
+    InstantaneousRewards _ -> undefined
+
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => Embed (POOL hashAlgo dsignAlgo vrfAlgo) (DELPL hashAlgo dsignAlgo vrfAlgo)

@@ -13,7 +13,7 @@ module TxData
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
                      encodeListLen, encodeWord)
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 
 import           Lens.Micro.TH (makeLenses)
 
@@ -31,8 +31,8 @@ import           Numeric.Natural (Natural)
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
 import           Keys (AnyKeyHash, pattern AnyKeyHash, DSIGNAlgorithm, GenKeyHash, Hash,
-                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, hashAnyKey
-                     , VRFAlgorithm(VerKeyVRF))
+                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, VRFAlgorithm (VerKeyVRF),
+                     hashAnyKey)
 import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
 import           Updates (Update)
@@ -171,6 +171,8 @@ data DCert hashAlgo dsignAlgo vrfAlgo
   | Delegate (Delegation hashAlgo dsignAlgo)
     -- | Genesis key delegation certificate
   | GenesisDelegate (GenKeyHash hashAlgo dsignAlgo, KeyHash hashAlgo dsignAlgo)
+    -- | Move instantaneous rewards certificate
+  | InstantaneousRewards (Map (Credential hashAlgo dsignAlgo) Coin)
   deriving (Show, Generic, Eq)
 
 instance NoUnexpectedThunks (DCert hashAlgo dsignAlgo vrfAlgo)
@@ -268,6 +270,11 @@ instance
       encodeListLen 2
         <> toCBOR (5 :: Word8)
         <> toCBOR keys
+
+    InstantaneousRewards credCoinMap ->
+      encodeListLen 2
+        <> toCBOR (6 :: Word8)
+        <> toCBOR credCoinMap
 
 instance
   (Typeable dsignAlgo, HashAlgorithm hashAlgo, VRFAlgorithm vrfAlgo)

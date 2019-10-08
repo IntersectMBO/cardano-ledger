@@ -178,3 +178,7 @@ mutateDCert keys _ (Delegate (Delegation _ _)) = do
 mutateDCert keys _ (GenesisDelegate (gk, _)) = do
   _delegatee <- getAnyStakeKey keys
   pure $ GenesisDelegate (gk, hashKey _delegatee)
+
+mutateDCert keys _ (InstantaneousRewards (gk, _)) = do
+  _delegatee <- getAnyStakeKey keys
+  pure $ GenesisDelegate (gk, hashKey _delegatee)
