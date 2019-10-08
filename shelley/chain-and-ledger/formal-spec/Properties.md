@@ -2,32 +2,10 @@
 
 We only care that the properties below are satisfied for _valid_ ledger states, and
 more generally, valid _epoch_ states. Checking things for invalid states should
-not be performed. For this reason, we must have boolean functions that
-evaluate to `True` for valid states. As the STS rule system we have defined
+not be performed. As the STS rule system we have defined
 is deterministic, all valid states can be reached using the transitions in the system,
 and the only states that are valid are those that can be described by a sequence
-of rule applications. Thus, a high-level definition of such a validity function
-would be:
-
-* `validState(s) = True` when `s` is either a valid initial state, or there is
-some sequence of transition rules that can be applied, starting from an
-initial state, to reach the state `s`
-- we say `s` is a valid state
-*  `validState(s) = False` otherwise
-
-Below, we give the types and names of two such functions,
-
-* `validLedgerState : LState -> Bool`
-- This function would be defined using the `LEDGERS` and `EPOCH` transitions,
-starting either from the Byron era state inherited by Shelley at the transition
-or a valid "fresh" state (useful for testing)
-* `validEpochState : EpochState -> Bool`
-- This function would also be defined using the `LEDGERS` and `EPOCH`
-transitions, starting either from the Byron era state inherited by Shelley at
-the transition or a valid "fresh" state (useful for testing)
-
-These two functions cannot be independent. In the rest of the document,
-the properties we give pertain to only valid states.
+of rule applications (i.e. a composition of valid transitions).
 
 # Preservation of Value
 
@@ -42,7 +20,7 @@ Recall that there are six pots of money in the Shelley ledger:
 
 For each transition system, we will list what pots are in scope,
 describe how value moves between the pots,
-and state any relevent properties (usually the preservation of ADA).
+and state any relevant properties (usually the preservation of ADA).
 
 ### Transitions with no pots in scope
 
@@ -59,8 +37,8 @@ and state any relevent properties (usually the preservation of ADA).
 
 Pots in scope: Circulation, Deposits, Fees
 
-Value can be transfered between Circulation and Deposits.
-Value can also be transfered to the Fees, but Fees can only
+Value can be transferred between Circulation and Deposits.
+Value can also be transferred to the Fees, but Fees can only
 be increased by this transition.
 
 **Property** The value (Circulation + Deposits + Fees) increases by the sum
@@ -231,8 +209,15 @@ The size of the mappings AVUpdate, inside the update state, is always at most nu
 
 # Epoch Boundary Transition Properties
 
-**Property** The `SNAP`, `POOLREAP`, `NEWPP`, and `EPOCH` transitions 
-are never blocked (i.e. always invoked at the epoch boundary).
+**Property** The `NEWEPOCH` transition can always be invoked at the epoch boundary
+(i.e. when `e = e_l + 1`). Thus, the transitions it depends on, `SNAP`, `POOLREAP`, `NEWPP`,
+and `EPOCH`, can always be invoked as well. Note that when no blocks are produced,
+the `CHAIN` rule is blocked and `NEWEPOCH` never fires.
+
+Transitions `SNAP`, `POOLREAP`, and `EPOCH` have no preconditions in the
+antecedents of their rules. `NEWPP` has two associated rules, and the disjunction of the
+preconditions in these rules is a tautology. We justify
+the non-blocking of these rules by this reasoning.
 
 # Deposits Properties
 
@@ -292,8 +277,6 @@ the epoch nonce is what you get from combining the blocks leading up to it
 The overlay schedule is obeyed: no blocks are produced during the silent blocks,
 and only core nodes makes blocks on the overlay slots.
 
-**Property** Full decentralization is reached eventually
-
 # Rewards Properties
 
 **Property**
@@ -302,8 +285,8 @@ Moreover, the reward update will change exactly once during the epoch,
 to a non-NOTHING value.
 
 **Property**
-Total rewards distributed at the epoch boundary is the amount in the reward pot
-minus the share calculated for stake pools that did not meet their pledge.
+All members of stake pools that did not meet their pledges will receive zero
+rewards for the epoch.
 
 # Block Header Properties
 
