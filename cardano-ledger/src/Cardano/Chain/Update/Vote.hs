@@ -14,6 +14,7 @@ module Cardano.Chain.Update.Vote
   -- * Vote
     AVote(..)
   , Vote
+  , VoteId
 
   -- * Vote Constructors
   , mkVote
@@ -23,6 +24,8 @@ module Cardano.Chain.Update.Vote
 
   -- * Vote Accessors
   , proposalId
+  , voteId
+  , recoverVoteId
 
   -- * Vote Binary Serialization
   , recoverSignedBytes
@@ -40,23 +43,29 @@ import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( Annotated(..)
+  ( Annotated(Annotated, unAnnotated)
   , ByteSpan
+  , Decoded(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , annotatedDecoder
   , fromCBORAnnotated
   , encodeListLen
   , enforceSize
   )
+import qualified Cardano.Binary as Binary (annotation)
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)
 import Cardano.Crypto
-  ( ProtocolMagicId
+  ( Hash
+  , ProtocolMagicId
   , VerificationKey
   , SafeSigner
   , SigningKey
   , SignTag(SignUSVote)
   , Signature
+  , hash
+  , hashDecoded
   , safeSign
   , safeToVerification
   , shortHashF
@@ -68,6 +77,9 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 -- Vote
 --------------------------------------------------------------------------------
+
+-- | An update proposal vote identifier (the 'Hash' of a 'Vote').
+type VoteId = Hash Vote
 
 type Vote = AVote ()
 
@@ -81,6 +93,7 @@ data AVote a = UnsafeVote
   -- ^ Proposal to which this vote applies
   , signature   :: !(Signature (UpId, Bool))
   -- ^ Signature of (Update proposal, Approval/rejection bit)
+  , annotation  :: !a
   } deriving (Eq, Show, Generic, Functor)
     deriving anyclass NFData
 
@@ -103,6 +116,7 @@ mkVote pm sk upId decision = UnsafeVote
   (toVerification sk)
   (Annotated upId ())
   (sign pm SignUSVote sk (upId, decision))
+  ()
 
 
 -- | Create a vote for the given update proposal id, signing it with the
@@ -143,7 +157,7 @@ unsafeVote
   -> Signature (UpId, Bool)
   -> Vote
 unsafeVote vk upId voteSignature =
-  UnsafeVote vk (Annotated upId ()) voteSignature
+  UnsafeVote vk (Annotated upId ()) voteSignature ()
 
 
 --------------------------------------------------------------------------------
@@ -152,6 +166,12 @@ unsafeVote vk upId voteSignature =
 
 proposalId :: AVote a -> UpId
 proposalId = unAnnotated . aProposalId
+
+voteId :: AVote a -> VoteId
+voteId = hash . void
+
+recoverVoteId :: AVote ByteString -> VoteId
+recoverVoteId = hashDecoded
 
 
 --------------------------------------------------------------------------------
@@ -175,13 +195,19 @@ instance FromCBOR Vote where
 
 instance FromCBOR (AVote ByteSpan) where
   fromCBOR = do
-    enforceSize "Vote" 4
-    voterVK     <- fromCBOR
-    aProposalId <- fromCBORAnnotated
-    -- Drop the decision bit that previously allowed negative voting
-    void $ fromCBOR @Bool
-    signature <- fromCBOR
-    pure $ UnsafeVote { voterVK, aProposalId, signature }
+    Annotated (voterVK, aProposalId, signature) byteSpan <- annotatedDecoder $ do
+      enforceSize "Vote" 4
+      voterVK     <- fromCBOR
+      aProposalId <- fromCBORAnnotated
+      -- Drop the decision bit that previously allowed negative voting
+      void $ fromCBOR @Bool
+      signature <- fromCBOR
+      pure (voterVK, aProposalId, signature)
+    pure $ UnsafeVote voterVK aProposalId signature byteSpan
+
+instance Decoded (AVote ByteString) where
+  type BaseType (AVote ByteString) = Vote
+  recoverBytes = annotation
 
 recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =
@@ -190,7 +216,7 @@ recoverSignedBytes v =
       [ "\130"
       -- The byte above is part of the signed payload, but is not part of the
       -- transmitted payload
-      , annotation $ aProposalId v
+      , Binary.annotation $ aProposalId v
       , "\245"
       -- The byte above is the canonical encoding of @True@, which we hardcode,
       -- because we removed the possibility of negative voting

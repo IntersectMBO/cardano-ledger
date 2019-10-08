@@ -107,6 +107,7 @@ elaborateDCertAnnotated pm = annotateDCert . elaborateDCert pm
   annotateDCert :: Concrete.Certificate -> Concrete.ACertificate ByteString
   annotateDCert cert = cert
     { Concrete.Certificate.aEpoch = Annotated omega (serialize' omega)
+    , Concrete.Certificate.annotation = serialize' cert
     }
     where omega = Concrete.Certificate.epoch cert
 

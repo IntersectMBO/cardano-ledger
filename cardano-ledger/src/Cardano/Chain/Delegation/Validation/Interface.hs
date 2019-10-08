@@ -115,8 +115,9 @@ initialState env genesisDelegation = updateDelegation env' is certificates
   annotateCertificate :: Certificate -> ACertificate ByteString
   annotateCertificate c = c
     { Delegation.aEpoch = Annotated
-      (Delegation.epoch c)
-      (serialize' $ Delegation.epoch c)
+        (Delegation.epoch c)
+        (serialize' $ Delegation.epoch c)
+    , Delegation.annotation = serialize' c
     }
 
 

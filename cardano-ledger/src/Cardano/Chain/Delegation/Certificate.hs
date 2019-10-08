@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -17,6 +18,7 @@ module Cardano.Chain.Delegation.Certificate
   -- * Certificate
     Certificate
   , ACertificate(..)
+  , CertificateId
 
   -- * Certificate Constructors
   , signCertificate
@@ -24,6 +26,8 @@ module Cardano.Chain.Delegation.Certificate
 
   -- * Certificate Accessor
   , epoch
+  , certificateId
+  , recoverCertificateId
 
   -- * Certificate Predicate
   , isValid
@@ -40,10 +44,12 @@ import Text.JSON.Canonical
   (FromJSON(..), Int54, JSValue(..), ToJSON(..), fromJSField, mkObject)
 
 import Cardano.Binary
-  ( Annotated(..)
+  ( Annotated(Annotated, unAnnotated)
   , ByteSpan
+  , Decoded(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , annotatedDecoder
   , fromCBORAnnotated
   , encodeListLen
   , enforceSize
@@ -51,11 +57,14 @@ import Cardano.Binary
   )
 import Cardano.Chain.Slotting (EpochNumber)
 import Cardano.Crypto
-  ( ProtocolMagicId
+  ( Hash
+  , ProtocolMagicId
   , SafeSigner
   , SignTag(SignCertificate)
   , Signature
   , VerificationKey(unVerificationKey)
+  , hash
+  , hashDecoded
   , safeSign
   , safeToVerification
   , verifySignatureDecoded
@@ -65,6 +74,9 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 -- Certificate
 --------------------------------------------------------------------------------
+
+-- | A delegation certificate identifier (the 'Hash' of a 'Certificate').
+type CertificateId = Hash Certificate
 
 type Certificate = ACertificate ()
 
@@ -83,6 +95,7 @@ data ACertificate a = UnsafeACertificate
   -- ^ The delegate, who gains the right to sign blocks
   , signature  :: !(Signature EpochNumber)
   -- ^ The signature that proves the certificate was issued by @issuerVK@
+  , annotation :: !a
   } deriving (Eq, Ord, Show, Generic, Functor)
     deriving anyclass (NFData, NoUnexpectedThunks)
 
@@ -104,6 +117,7 @@ signCertificate protocolMagicId delegateVK epochNumber safeSigner =
   , issuerVK   = safeToVerification safeSigner
   , delegateVK = delegateVK
   , signature  = coerce sig
+  , annotation = ()
   }
  where
   sig = safeSign protocolMagicId SignCertificate safeSigner
@@ -120,7 +134,7 @@ unsafeCertificate
   -- ^ The delegate of the certificate. See 'UnsafeACertificate'.
   -> Signature EpochNumber
   -> Certificate
-unsafeCertificate e = UnsafeACertificate (Annotated e ())
+unsafeCertificate e ivk dvk sig = UnsafeACertificate (Annotated e ()) ivk dvk sig ()
 
 
 --------------------------------------------------------------------------------
@@ -129,6 +143,12 @@ unsafeCertificate e = UnsafeACertificate (Annotated e ())
 
 epoch :: ACertificate a -> EpochNumber
 epoch = unAnnotated . aEpoch
+
+certificateId :: ACertificate a -> CertificateId
+certificateId = hash . void
+
+recoverCertificateId :: ACertificate ByteString -> CertificateId
+recoverCertificateId = hashDecoded
 
 
 --------------------------------------------------------------------------------
@@ -169,12 +189,18 @@ instance FromCBOR Certificate where
 
 instance FromCBOR (ACertificate ByteSpan) where
   fromCBOR = do
-    enforceSize "Delegation.Certificate" 4
-    UnsafeACertificate
-      <$> fromCBORAnnotated
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+    Annotated (e, ivk, dvk, sig) byteSpan <- annotatedDecoder $ do
+      enforceSize "Delegation.Certificate" 4
+      (,,,)
+        <$> fromCBORAnnotated
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+    pure $ UnsafeACertificate e ivk dvk sig byteSpan
+
+instance Decoded (ACertificate ByteString) where
+  type BaseType (ACertificate ByteString) = Certificate
+  recoverBytes = annotation
 
 
 --------------------------------------------------------------------------------
@@ -182,7 +208,7 @@ instance FromCBOR (ACertificate ByteSpan) where
 --------------------------------------------------------------------------------
 
 instance B.Buildable (ACertificate a) where
-  build (UnsafeACertificate e iVK dVK _) = bprint
+  build (UnsafeACertificate e iVK dVK _ _) = bprint
     ( "Delegation.Certificate { w = " . build
     . ", iVK = " . build
     . ", dVK = " . build
