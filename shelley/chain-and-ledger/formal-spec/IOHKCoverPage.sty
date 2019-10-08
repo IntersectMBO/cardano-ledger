@@ -80,10 +80,9 @@
 \newif\if@Tasks
 \@Tasksfalse
 \def\@LastDate{XXXX}
-\def\@IsPP{}
 \def\@IsPU{}
-\def\@IsRE{}
 \def\@IsCO{}
+\def\@IsDR{}
 \def\@Revision{}
 \def\@Task{}
 
@@ -231,8 +230,8 @@
 
 \newcommand{\@PrintBackCoverPage}{%
 \pagestyle{myheadings}%
-\markboth{\@Project: \@ShortDelTitle~(v.\@Version, \@ShortSubmissionDate)}%
-         {\@Project: \@ShortDelTitle~(v.\@Version, \@ShortSubmissionDate)}%
+\markboth{\@Project: \@ShortDelTitle~(\@DeliverableNumber~v.\@Version, \@ShortSubmissionDate)}%
+         {\@Project: \@ShortDelTitle~(\@DeliverableNumber~v.\@Version, \@ShortSubmissionDate)}%
 }
 
 

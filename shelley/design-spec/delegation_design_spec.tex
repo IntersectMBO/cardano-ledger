@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[11pt,a4paper,dvipsnames,twosided]{article}
 \usepackage[margin=2.5cm]{geometry}
 %\usepackage[a-1b]{pdfx}
 \usepackage{microtype}
@@ -440,7 +440,7 @@ system entities.
                      , node distance = 8em and 10em
                      , text width = 5em
                      , font = \footnotesize
-                     , >={Latex[width=0.5em, length=0.5em]}                     
+                     , >={Latex[width=0.5em, length=0.5em]}
                      , every node/.style = { rectangle
                                          , rounded corners
                                          , draw = black
@@ -517,7 +517,7 @@ delegation:
                      , node distance = 8em and 10em
                      , text width = 5em
                      , font = \footnotesize
-                     , >={Latex[width=0.5em, length=0.5em]}                     
+                     , >={Latex[width=0.5em, length=0.5em]}
                      , every node/.style = { rectangle
                                            , rounded corners
                                            , draw = black
@@ -552,7 +552,7 @@ delegation:
            (spool);
   \draw[-] (skey) edge node[pos=0.1] {$1$}
                        node[pos=0.9] {$1$}
-           (racc);           
+           (racc);
   % Horizontal lines.
   \tikzset{every node/.style={align=left, right}}
   \draw[-] (addr) edge node[pos=0.1] {$n$}
@@ -880,7 +880,7 @@ Subsequent sections provide more details.
           , cert/.style={fill=green!10}
           , dummy/.style={draw=none}
           }
-  
+
   \node (skeys) [key] {Staking keys};
   \node (scold) [key, right = of skeys] {Stake pool keys (cold)};
   \node (shot) [key, right = of scold] {Stake pool keys (hot)};
@@ -890,7 +890,7 @@ Subsequent sections provide more details.
   \node (pd) [cert, below = of scold] {Pool\\ retirement};
   \node (dcert) [cert] at ($(skeyr)!0.5!(pr)$) {Delegation certificate};
   \node (dummy) [dummy, above = of shot] {};
-  \node (lwdcert) [cert] at ($(pr)!0.5!(dummy)$) {Operational key\\certificate};  
+  \node (lwdcert) [cert] at ($(pr)!0.5!(dummy)$) {Operational key\\certificate};
 
   \tikzset{every node/.style={align=center, text width=7em, text=brown}}
   %%
@@ -902,24 +902,24 @@ Subsequent sections provide more details.
   \draw[dashed, ->] (scold) edge node[above] {Grants\\ staking rights}
             (shot);
   % Vertical lines.
-  \draw[->] (skeys) edge 
+  \draw[->] (skeys) edge
             (skeyr);
-  \draw[->] (skeys) edge 
+  \draw[->] (skeys) edge
             (skeyd);
-  \draw[->] (scold) edge 
+  \draw[->] (scold) edge
             (pr);
-  \draw[->] (scold) edge 
-            (pd);            
-  \draw[->] (skeys) edge 
+  \draw[->] (scold) edge
+            (pd);
+  \draw[->] (skeys) edge
             (dcert);
-  \draw[->] (scold) edge 
+  \draw[->] (scold) edge
             (dcert);
-  \draw[->] (scold) edge 
+  \draw[->] (scold) edge
             (lwdcert);
-  \draw[->] (shot) edge 
-            (lwdcert);                            
+  \draw[->] (shot) edge
+            (lwdcert);
   \end{tikzpicture}
-                   
+
   \caption{Relationships between the different keys and certificates}
   \label{fig:relationship-keys-certificates}
 \end{figure}
@@ -1652,7 +1652,7 @@ leader schedule for the next epoch:
     any node.
   \item For the active OBFT slots, the old core nodes will create blocks, in a
     round-robin fashion as per OBFT.
-  \item 
+  \item
     Blocks produced according to this schedule for the active OBFT slots shall
     be considered valid by all nodes.
   \end{itemize}
@@ -3125,7 +3125,7 @@ quickly react to changes and always choose the strategy that maximizes their own
 rewards.
 
 Daedalus will make this information readily available, as detailed in
-\cref{display-of-stake-pools-in-the-wallet}. 
+\cref{display-of-stake-pools-in-the-wallet}.
 
 \subsection{Deciding on Good Values for the Parameters}
 \label{deciding-on-good-values-for-the-parameters}

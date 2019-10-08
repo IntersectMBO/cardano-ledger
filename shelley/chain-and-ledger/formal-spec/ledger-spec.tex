@@ -1,5 +1,27 @@
-\documentclass[11pt,a4paper,dvipsnames]{article}
+\documentclass[11pt,a4paper,dvipsnames,twosided]{article}
+\usepackage[deliverable]{IOHKCoverPage}
+
+% data for Deliverable header -- added by KH from an EU H2020 project template
+\DeliverableNumber{SL-D8}
+\DeliverableTitle{A Formal Specification of the Cardano Ledger}{Formal Cardano Ledger Spec.}
+\DeliverableResponsible{Formal Methods Team}
+\EditorName{Jared Corduan, \IOHK}
+\Authors{Jared Corduan \quad \texttt{<jared.corduan@iohk.io>}
+   \\[1em]
+   Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io}
+   \\[1em]
+   Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
+}
+\DueDate{15$^{\textrm{th}}$ October 2019}
+\SubmissionDate{8th October 2019}{2019/10/08}
+\LeaderName{Philipp Kant, \IOHK}
+\InstitutionAddress{\IOHK}
+\Version{0.2}
+\Project{Shelley Ledger}
+\DisseminationDR
+
 \usepackage[margin=2.5cm]{geometry}
+\usepackage{lscape}
 \usepackage{iohk}
 \usepackage{microtype}
 \usepackage{mathpazo} % nice fonts
@@ -11,7 +33,7 @@
 \usepackage{stmaryrd}
 \usepackage{extarrows}
 \usepackage{slashed}
-\usepackage[colon]{natbib}
+%\usepackage[colon]{natbib}
 \usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage{xcolor}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
@@ -254,8 +276,8 @@
 
 \input{frontmatter.tex}
 
-\tableofcontents
-\listoffigures
+%\tableofcontents
+%\listoffigures
 
 \include{intro}
 \include{notation}
@@ -282,7 +304,8 @@
 
 
 \addcontentsline{toc}{section}{References}
-\bibliographystyle{plainnat}
+\bibliographystyle{habbrv}
+%\bibliographystyle{plainnat}
 \bibliography{references}
 
 \end{document}
