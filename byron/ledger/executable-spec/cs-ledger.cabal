@@ -28,6 +28,7 @@ library
                      , Ledger.Core.Generators
                      , Ledger.Core.Omniscient
                      , Ledger.Delegation
+                     , Ledger.Delegation.Test
                      , Ledger.GlobalParams
                      , Ledger.Update
                      , Ledger.Update.Generators

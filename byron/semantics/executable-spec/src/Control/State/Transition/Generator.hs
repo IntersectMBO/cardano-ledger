@@ -53,6 +53,7 @@ module Control.State.Transition.Generator
   -- * Trace properties
   , traceLengthsAreClassified
   , onlyValidSignalsAreGenerated
+  , invalidSignalsAreGenerated
   -- * Helpers
   , tinkerWithSigGen
   , coverFailures
@@ -64,6 +65,7 @@ import           Control.Monad (forM, void)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Trans.State.Strict (evalState)
 import           Data.Data (Constr, Data, toConstr)
+import           Data.Either (isLeft)
 import           Data.Foldable (traverse_)
 import           Data.Functor.Identity (Identity)
 import           Data.Maybe (fromMaybe)
@@ -644,6 +646,28 @@ coverFailures coverPercentage targetFailures failureStructure = do
 
         failuresConstructors :: [Constr]
         failuresConstructors = toConstr <$> subFailures
+
+
+invalidSignalsAreGenerated
+  :: forall s
+   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
+  => [(Int, SignalGenerator s)]
+  -- ^ Failure profile.
+  -> Word64
+  -- ^ Maximum trace length.
+  -> ([[PredicateFailure s]] -> PropertyT IO ())
+  -- ^ Action to run when the an invalid signal is generated.
+  -> Property
+invalidSignalsAreGenerated failureProfile maximumTraceLength checkFailures = property $ do
+
+  tr <- forAll (invalidTrace @s maximumTraceLength failureProfile)
+
+  cover 80
+    "Invalid signals are generated when requested"
+    (isLeft $ Invalid.errorOrLastState tr)
+
+  either checkFailures (const success) (Invalid.errorOrLastState tr)
+
 
 --------------------------------------------------------------------------------
 -- Helpers

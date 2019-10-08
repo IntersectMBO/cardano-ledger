@@ -11,7 +11,7 @@
 
 module Cardano.Spec.Chain.STS.Rule.Chain where
 
-import           Control.Lens (Lens', (^.), _1, _5)
+import           Control.Lens (Lens', (&), (.~), (^.), _1, _5)
 import           Data.Bimap (Bimap)
 import           Data.Bits (shift)
 import           Data.Data (Data, Typeable)
@@ -20,8 +20,10 @@ import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
-import           Hedgehog (Gen)
+import           GHC.Stack (HasCallStack)
+import           Hedgehog (Gen, MonadTest)
 import qualified Hedgehog.Gen as Gen
+import           Hedgehog.Internal.Property (CoverPercentage)
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
 
@@ -309,3 +311,48 @@ sigGenChain
               anOptionalUpdateProposal
               aListOfVotes
               utxoPayload
+
+
+-- | Produce an invalid hash for one of the three types of block payloads:
+--
+-- - Delegation
+-- - Update
+-- - UTxO
+--
+tamperWithPayloadHash
+  :: Block -> Gen Block
+tamperWithPayloadHash block = do
+  hashLens <- Gen.element [ bhDlgHash
+                          , bhUpdHash
+                          , bhUtxoHash
+                          ]
+  pure $! block & bHeader . hashLens .~ Hash Nothing
+
+-- | Generate a block in which one of the three types of payload hashes:
+--
+-- - Delegation
+-- - Update
+-- - UTxO
+--
+-- is invalid.
+--
+invalidProofsBlockGen :: SignalGenerator CHAIN
+invalidProofsBlockGen env st = sigGen @CHAIN env st >>= tamperWithPayloadHash
+
+coverInvalidBlockProofs
+  :: forall m a
+   .  ( MonadTest m
+      , HasCallStack
+      , Data a
+      )
+  => CoverPercentage
+  -- ^ Minimum percentage that each failure must occur.
+  -> a
+  -- ^ Structure containing the failures
+  -> m ()
+coverInvalidBlockProofs coverPercentage =
+  coverFailures coverPercentage
+    [ InvalidDelegationHash
+    , InvalidUpdateProposalHash
+    , InvalidUtxoHash
+    ]
