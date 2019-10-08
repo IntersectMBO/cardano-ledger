@@ -111,7 +111,7 @@ and will be rejected otherwise.
       \var{pup} = \emptyset
     }
     {
-      \begin{array}{l}
+      \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
         \var{dms}\\
@@ -135,7 +135,7 @@ and will be rejected otherwise.
       \var{slot} < \firstSlot{((\epoch{slot}) + 1) - \SlotsPrior}
     }
     {
-      \begin{array}{l}
+      \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
         \var{dms}\\
@@ -508,13 +508,11 @@ update rules for each.
       (\var{pup_{u}},~\var{aup_{u}})\leteq\var{up}
       \\~\\
       {
-        \left(
-          \begin{array}{r}
-            \var{slot} \\
-            \var{pp} \\
-            \var{dms} \\
-          \end{array}
-        \right)
+        \begin{array}{r}
+          \var{slot} \\
+          \var{pp} \\
+          \var{dms} \\
+        \end{array}
       }
       \vdash
       \left(\var{pup}\right)
@@ -522,12 +520,10 @@ update rules for each.
       \left(\var{pup'}\right)
       &
       {
-        \left(
-          \begin{array}{r}
-            \var{slot} \\
-            \var{dms} \\
-          \end{array}
-        \right)
+        \begin{array}{r}
+          \var{slot} \\
+          \var{dms} \\
+        \end{array}
       }
       \vdash
       {
@@ -551,7 +547,7 @@ update rules for each.
       }
     }
     {
-      \begin{array}{l}
+      \begin{array}{r}
         \var{slot}\\
         \var{pp} \\
         \var{dms}\\
