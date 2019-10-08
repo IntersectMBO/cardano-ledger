@@ -298,13 +298,11 @@ requests).
       ~
       \\
       {
-        \left(
-          \begin{array}{r}
-            \var{slot} \\
-            \var{pp} \\
-            \var{dms} \\
-          \end{array}
-        \right)
+        \begin{array}{r}
+          \var{slot} \\
+          \var{pp} \\
+          \var{dms} \\
+        \end{array}
       }
       \vdash \var{ups} \trans{\hyperref[fig:rules:update]{up}}{\fun{txup}~\var{tx}} \var{ups'}
       \\
@@ -324,7 +322,7 @@ requests).
         (\deposits{pp}~{stpools}~{\txcerts{tx}}) - (\var{refunded} + \var{decayed})
     }
     {
-      \begin{array}{l}
+      \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
         \var{stdelegs}\\
@@ -663,7 +661,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \fun{d}~\var{pp} > 0
       \\~\\
       {
-        \begin{array}{l}
+        \begin{array}{r}
           \var{slot}\\
           \var{pp}\\
           \var{stdelegs}\\
@@ -675,7 +673,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \var{utxoSt'}\\
     }
     {
-      \begin{array}{l}
+      \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
         \var{stdelegs}\\

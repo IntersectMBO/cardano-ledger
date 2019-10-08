@@ -867,24 +867,21 @@ will be successful, since the pool certificates are disjoint from the delegation
     {
       &
       {
-        \left(
-          \begin{array}{r}
-            \var{slot} \\
-            \var{ptr} \\
-            \var{reserves}
-          \end{array}
-        \right)
-      }
-      \vdash \var{dstate} \trans{\hyperref[fig:delegation-rules]{deleg}}{c} \var{dstate'}
-    }
-    { \left(
         \begin{array}{r}
           \var{slot} \\
           \var{ptr} \\
-          \var{pp} \\
           \var{reserves}
         \end{array}
-      \right)
+      }
+      \vdash \var{dstate} \trans{\hyperref[fig:delegation-rules]{deleg}}{c} \var{dstate'}
+    }
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+        \var{pp} \\
+        \var{reserves}
+      \end{array}
       \vdash
       \left(
       \begin{array}{r}
@@ -907,23 +904,20 @@ will be successful, since the pool certificates are disjoint from the delegation
     {
     &
     {
-      \left(
-        \begin{array}{r}
-          \var{slot} \\
-          \var{pp} \\
-        \end{array}
-      \right)
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+      \end{array}
     }
     \vdash \var{pstate} \trans{\hyperref[fig:pool-rules]{pool}}{c} \var{pstate'}
     }
-    { \left(
-        \begin{array}{r}
-          \var{slot} \\
-          \var{ptr} \\
-          \var{pp} \\
-          \var{reserves}
-        \end{array}
-      \right)
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+        \var{pp} \\
+        \var{reserves}
+      \end{array}
       \vdash
       \left(
       \begin{array}{r}
@@ -1015,7 +1009,6 @@ will be invalid.
       \var{rewards'} \leteq \var{rewards} \unionoverrideRight \{(w, 0) \mid w \in \dom \var{wdrls}\}
     }
     {
-      \left(
       \begin{array}{c}
         \var{slot} \\
         \var{txIx} \\
@@ -1023,7 +1016,6 @@ will be invalid.
         \var{tx} \\
         \var{reserves}
       \end{array}
-    \right)
       \vdash
       \left(
       \begin{array}{c}
@@ -1084,15 +1076,13 @@ will be invalid.
       \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{stpools} \\
       ptr \leteq (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma) \\~\\
         {
-          \left(
-            \begin{array}{r}
-              \var{slot}\\
-              \var{txIx}\\
-              \var{pp}\\
-              \var{tx}\\
-              \var{reserves}
-            \end{array}
-          \right)
+          \begin{array}{c}
+            \var{slot}\\
+            \var{txIx}\\
+            \var{pp}\\
+            \var{tx}\\
+            \var{reserves}
+          \end{array}
         }
       \vdash
       \var{dpstate}
@@ -1100,14 +1090,12 @@ will be invalid.
       \var{dpstate'}
     \\~\\~\\
     {
-      \left(
-        \begin{array}{r}
-          \var{slot}\\
-          \var{ptr}\\
-          \var{pp}\\
-          \var{reserves}
-        \end{array}
-      \right)
+      \begin{array}{c}
+        \var{slot}\\
+        \var{ptr}\\
+        \var{pp}\\
+        \var{reserves}
+      \end{array}
     }
     \vdash
       \var{dpstate'}
@@ -1116,15 +1104,13 @@ will be invalid.
     }
     {
     {
-      \left(
-      \begin{array}{r}
+      \begin{array}{c}
         \var{slot}\\
         \var{txIx}\\
         \var{pp}\\
         \var{tx}\\
         \var{reserves}
       \end{array}
-    \right)
     }
     \vdash
       \var{dpstate}
