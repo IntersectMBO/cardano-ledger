@@ -277,16 +277,18 @@ data DPState hashAlgo dsignAlgo vrfAlgo =
 instance NoUnexpectedThunks (DPState hashAlgo dsignAlgo vrfAlgo)
 
 data RewardUpdate hashAlgo dsignAlgo = RewardUpdate
-  { deltaT :: Coin
-  , deltaR :: Coin
-  , rs     :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
-  , deltaF :: Coin
+  { deltaT        :: Coin
+  , deltaR        :: Coin
+  , rs            :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  , deltaF        :: Coin
+  , deltaDeposits :: Coin
+  , updateIRwd    :: Map (Credential hashAlgo dsignAlgo) Coin
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate hashAlgo dsignAlgo)
 
 emptyRewardUpdate :: RewardUpdate hashAlgo dsignAlgo
-emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) (Coin 0) Map.empty
 
 data AccountState = AccountState
   { _treasury  :: Coin
@@ -1161,22 +1163,45 @@ createRUpd
   -> EpochState hashAlgo dsignAlgo vrfAlgo
   -> RewardUpdate hashAlgo dsignAlgo
 createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
-  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss))
+  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) deltaD newIrwd
   where Coin reserves' = _reserves acnt
-        deltaR' =
-          floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'
-        Coin totalPot = _feeSS ss + deltaR'
-        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral totalPot
-        r@(Coin r') = Coin $ totalPot - deltaT1
-        rewards' = _rewards $ _dstate $ _delegationState ls
+
+        ds = _dstate $ _delegationState ls
+        rewards' = _rewards ds
         (stake', delegs') = _pstakeGo ss
         poolsSS' = _poolsSS ss
+        StakeKeys stDelegs = _stKeys ds
+
+        -- instantaneous rewards
+        unregistered = Map.filterWithKey (\cred _ -> cred `Map.member` stDelegs) (_irwd ds)
+        registered = Map.difference (_irwd ds) unregistered
+        rewardsInsufficient = Map.filter (<= _keyDeposit pp) unregistered
+        newlyRegister = Map.difference unregistered rewardsInsufficient
+
+        Coin rewardsMIR =   (Map.foldl (+) (Coin 0) registered)
+                          + (Map.foldl (+) (Coin 0) newlyRegister)
+
+        newlyRegister' = Map.map (flip (-) $ _keyDeposit pp) newlyRegister
+        reserves'' = reserves' - rewardsMIR
+        deltaD = Coin $ fromIntegral $ Map.size newlyRegister'
+        newIrwd = Map.union registered newlyRegister'
+
+        -- reserves and rewards change
+        deltaR' =
+            (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'')
+          + Coin rewardsMIR
+        eta = fromIntegral blocksMade / expectedBlocks
+
+        Coin rewardPot = _feeSS ss + deltaR'
+        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
+        r@(Coin r') = Coin $ rewardPot - deltaT1
+
         deltaT2 = r' - c'
         rs' = reward pp b r (Map.keysSet rewards') poolsSS' stake' delegs'
         Coin c' = Map.foldr (+) (Coin 0) rs'
+
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
         expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
-        eta = fromIntegral blocksMade / expectedBlocks
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.
