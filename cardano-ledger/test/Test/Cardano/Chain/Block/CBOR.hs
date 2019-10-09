@@ -251,20 +251,6 @@ ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
--- SigningHistory
---------------------------------------------------------------------------------
-
--- TODO:
--- goldenSigningHistory :: Property
--- goldenSigningHistory =
---   goldenTestCBOR exampleSigningHistory "test/golden/cbor/block/SigningHistory"
-
-ts_roundTripSigningHistoryCBOR :: TSProperty
-ts_roundTripSigningHistoryCBOR =
-  eachOfTS 20 genSigningHistory roundTripsCBORShow
-
-
---------------------------------------------------------------------------------
 -- ToSign
 --------------------------------------------------------------------------------
 

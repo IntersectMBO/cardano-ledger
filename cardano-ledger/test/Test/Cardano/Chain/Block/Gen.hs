@@ -6,7 +6,6 @@ module Test.Cardano.Chain.Block.Gen
   , genHeader
   , genBody
   , genProof
-  , genSigningHistory
   , genToSign
   , genBlock
   , genBlockWithEpochSlots
@@ -35,13 +34,11 @@ import Cardano.Chain.Block
   , Header
   , HeaderHash
   , Proof(..)
-  , SigningHistory(..)
   , ToSign(..)
   , hashHeader
   , mkBlockExplicit
   , mkHeaderExplicit
   )
-import Cardano.Chain.Common (KeyHash, BlockCount)
 import Cardano.Chain.Delegation (signCertificate)
 import Cardano.Chain.Genesis (GenesisHash(..))
 import Cardano.Chain.Slotting
@@ -57,7 +54,7 @@ import Cardano.Crypto
   )
 
 import Test.Cardano.Chain.Common.Gen
-  (genBlockCount, genChainDifficulty, genKeyHash)
+  (genChainDifficulty)
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Slotting.Gen
   (genEpochNumber, genEpochSlots, genSlotNumber, genEpochAndSlotCount)
@@ -141,16 +138,6 @@ genProof pm =
     <*> pure SscProof
     <*> genAbstractHash (Delegation.genPayload pm)
     <*> Update.genProof pm
-
-genSigningHistory :: Gen SigningHistory
-genSigningHistory =
-  SigningHistory
-    <$> genBlockCount
-    <*> Gen.seq (Range.constant 10 25) genKeyHash
-    <*> Gen.map (Range.constant 10 25) genKeyHashBlockCount
- where
-  genKeyHashBlockCount :: Gen (KeyHash, BlockCount)
-  genKeyHashBlockCount = (,) <$> genKeyHash <*> genBlockCount
 
 genToSign :: ProtocolMagicId -> EpochSlots -> Gen ToSign
 genToSign pm epochSlots =
