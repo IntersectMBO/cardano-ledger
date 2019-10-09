@@ -23,8 +23,8 @@ import           Coin
 import           Ledger.Core ((<|))
 import           LedgerState hiding (dms)
 import           PParams
-import           Rules.TestLedger (rewardZeroAfterReg)
 import           Rules.ClassifyTraces (relevantCasesAreCovered)
+import           Rules.TestLedger (credentialRemovedAfterDereg, rewardZeroAfterReg)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -157,7 +157,10 @@ propertyTests = testGroup "Property-Based Testing"
                 [ testGroup "Classify Traces"
                   [testProperty "Ledger trace covers the relevant cases" relevantCasesAreCovered]
                 , testGroup "STS Rules - Delegation Properties"
-                  [testProperty "newly registered key has a reward of 0" rewardZeroAfterReg]
+                  [ testProperty "newly registered key has a reward of 0" rewardZeroAfterReg
+                  , testProperty "deregistered key's credential is removed"
+                                 credentialRemovedAfterDereg
+                  ]
                 , testGroup "Ledger Genesis State"
                   [testProperty
                     "non-empty genesis ledger state has non-zero balance"

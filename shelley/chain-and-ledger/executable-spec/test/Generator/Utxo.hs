@@ -49,18 +49,22 @@ genTx (LedgerEnv slot _ pparams) (UTxOState utxo _ _ _, dpState) keys = do
   -- output addresses
   recipientAddrs <- genRecipients keys'
 
+  ttl <- Gen.integral $ Range.linear 1 100
+  let slotWithTTL = slot + Slot ttl
+
   -- certificates
-  (certs, certWitnesses, deposits_) <- genDCerts keys' pparams dpState
+  (certs, certWitnesses, deposits_, refunds_)
+    <- genDCerts keys' pparams dpState slotWithTTL
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   when (spendingBalance < deposits_) Gen.discard
-  let balance_ = spendingBalance - deposits_
+  let balance_ = spendingBalance - deposits_ + refunds_
 
   -- calc. fees and output amounts
   let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
 
   -- witnessed transaction
-  txBody <- genTxBody (Set.fromList inputs) outputs certs fee slot
+  txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
   let !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
       multiSig = Map.empty -- TODO @uroboros Generate multi-sig transactions
 
@@ -74,15 +78,14 @@ genTxBody
   -> Coin
   -> Slot
   -> Gen TxBody
-genTxBody inputs outputs certs fee slot = do
-  ttl <- Gen.integral $ Range.linear 1 100
+genTxBody inputs outputs certs fee slotWithTTL = do
   return $ TxBody
              inputs
              outputs
              certs
              Map.empty -- TODO @uroboros generate withdrawals
              fee
-             (slot + Slot ttl)
+             slotWithTTL
              emptyUpdate -- TODO @uroboros generate updates
 
 -- | Calculate the fee and distribute the remainder of the balance
