@@ -37,6 +37,7 @@ module LedgerState
   , ptrs
   , fdms
   , dms
+  , irwd
   , PState(..)
   , cCounters
   , LedgerValidation(..)
@@ -120,7 +121,7 @@ module LedgerState
   , updateNES
   ) where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
@@ -249,6 +250,8 @@ data DState hashAlgo dsignAlgo = DState
     , _fdms        :: Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
       -- |Genesis key delegations
     , _dms         :: Dms hashAlgo dsignAlgo
+      -- | Instantaneous Rewards
+    , _irwd        :: Map (Credential hashAlgo dsignAlgo) Coin
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DState hashAlgo dsignAlgo)
@@ -329,7 +332,7 @@ emptyDelegation =
 
 emptyDState :: DState hashAlgo dsignAlgo
 emptyDState =
-  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty Map.empty (Dms Map.empty)
+  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty Map.empty (Dms Map.empty) Map.empty
 
 emptyPState :: PState hashAlgo dsignAlgo vrfAlgo
 emptyPState =
@@ -374,7 +377,7 @@ getGKeys
 getGKeys nes = Map.keysSet dms
   where NewEpochState _ _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
-        LedgerState _ (DPState (DState _ _ _ _ _ (Dms dms)) _) _ = ls
+        LedgerState _ (DPState (DState _ _ _ _ _ (Dms dms) _) _) _ = ls
 
 data NewEpochEnv hashAlgo dsignAlgo =
   NewEpochEnv {
@@ -1126,8 +1129,8 @@ stakeDistr
 stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
     where
-      DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
-      PState (StakePools stpools) _ _ _                   = ps
+      DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ _ = ds
+      PState (StakePools stpools) _ _ _                     = ps
       outs = aggregateOuts u
 
       stakeRelation :: [(StakeCredential hashAlgo dsignAlgo, Coin)]

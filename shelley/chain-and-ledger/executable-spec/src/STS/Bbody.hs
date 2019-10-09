@@ -15,8 +15,10 @@ where
 
 import           Data.Set (Set)
 
-import           BlockChain
 import           Control.State.Transition
+
+import           BlockChain
+import           Coin (Coin)
 import           EpochBoundary
 import           Keys
 import           Ledger.Core ((∈))
@@ -32,7 +34,11 @@ data BbodyState hashAlgo dsignAlgo vrfAlgo
   = BbodyState (LedgerState hashAlgo dsignAlgo vrfAlgo) (BlocksMade hashAlgo dsignAlgo)
 
 data BbodyEnv
-  = BbodyEnv (Set Slot) PParams
+  = BbodyEnv
+    { bbodySlots    :: (Set Slot)
+    , bbodyPp       :: PParams
+    , bbodyReserves :: Coin
+    }
 
 instance
   ( HashAlgorithm hashAlgo
@@ -68,7 +74,7 @@ bbodyTransition
      )
   => TransitionRule (BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
 bbodyTransition = do
-  TRC ( BbodyEnv oslots pp
+  TRC ( BbodyEnv oslots pp _reserves
       , BbodyState ls b
       , Block (BHeader bhb _) txsSeq@(TxSeq txs)) <- judgmentContext
   let hk = hashKey $ bvkcold bhb
@@ -78,7 +84,7 @@ bbodyTransition = do
   bhbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
 
   ls' <- trans @(LEDGERS hashAlgo dsignAlgo vrfAlgo)
-         $ TRC (LedgersEnv (bheaderSlot bhb) pp, ls, txs)
+         $ TRC (LedgersEnv (bheaderSlot bhb) pp _reserves, ls, txs)
 
   pure $ BbodyState ls' (incrBlocks (bheaderSlot bhb ∈ oslots) hk b)
 

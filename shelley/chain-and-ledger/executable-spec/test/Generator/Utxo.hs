@@ -39,7 +39,7 @@ genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams) (UTxOState utxo _ _ _, dpState) keys = do
+genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys = do
   keys' <- Gen.shuffle keys
 
   -- inputs
