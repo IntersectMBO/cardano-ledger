@@ -12,7 +12,7 @@ import           Control.State.Transition.Generator (traceOfLengthWithInitState)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
 
-import           Delegation.Certificates (pattern RegKey)
+import           Delegation.Certificates (isDeRegKey, isRegKey)
 import           Generator.Core (mkGenesisLedgerState)
 import           Generator.LedgerTrace ()
 import           MockTypes (DCert, LEDGER, Tx)
@@ -34,6 +34,10 @@ relevantCasesAreCovered = withTests 500 $ property $ do
         "there is at least 1 RegKey certificate for every 5 transactions"
         (traceLength tr <= 5 * length (filter isRegKey certs_))
 
+  cover 75
+        "there is at least 1 DeRegKey certificate for every 5 transactions"
+        (traceLength tr <= 5 * length (filter isDeRegKey certs_))
+
   cover 25
         "at most 75% of transactions have no certificates"
         (0.75 >= noCertsRatio (certsByTx txs))
@@ -49,10 +53,6 @@ allCerts = concat . certsByTx
 -- | Ratio of the number of empty certificate groups and the number of groups
 noCertsRatio :: [[DCert]] -> Double
 noCertsRatio = lenRatio (filter null)
-
-isRegKey :: DCert -> Bool
-isRegKey (RegKey _) = True
-isRegKey _ = False
 
 -- | Returns the average number of inputs and outputs for a list of transactions.
 avgInputsOutputs :: [Tx] -> (Double, Double)
