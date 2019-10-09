@@ -14,6 +14,7 @@ where
 
 import           Lens.Micro ((^.))
 
+import           Coin (Coin)
 import           Control.State.Transition
 import           Keys
 import           LedgerState
@@ -27,7 +28,12 @@ import           Tx
 data LEDGER hashAlgo dsignAlgo vrfAlgo
 
 data LedgerEnv
-  = LedgerEnv Slot Ix PParams
+  = LedgerEnv
+    { ledgerSlot     :: Slot
+    , ledgerIx       :: Ix
+    , ledgerPp       :: PParams
+    , ledgerReserves :: Coin
+    }
   deriving (Show)
 
 instance
@@ -59,7 +65,7 @@ ledgerTransition
      )
   => TransitionRule (LEDGER hashAlgo dsignAlgo vrfAlgo)
 ledgerTransition = do
-  TRC (LedgerEnv slot ix pp, (u, d), tx) <- judgmentContext
+  TRC (LedgerEnv slot ix pp _reserves, (u, d), tx) <- judgmentContext
   utxo' <- trans @(UTXOW hashAlgo dsignAlgo vrfAlgo) $ TRC
     ( UtxoEnv slot pp (d ^. dstate . stKeys) (d ^. pstate . stPools) (d ^. dstate . dms)
     , u
@@ -67,7 +73,7 @@ ledgerTransition = do
     )
   deleg' <-
     trans @(DELEGS hashAlgo dsignAlgo vrfAlgo)
-      $ TRC (DelegsEnv slot ix pp tx, d, tx ^. body . certs)
+      $ TRC (DelegsEnv slot ix pp tx _reserves, d, tx ^. body . certs)
   pure (utxo', deleg')
 
 instance

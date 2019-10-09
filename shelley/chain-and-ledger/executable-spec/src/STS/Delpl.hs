@@ -10,6 +10,7 @@ module STS.Delpl
   )
 where
 
+import           Coin (Coin)
 import           Delegation.Certificates
 import           Keys
 import           LedgerState
@@ -25,7 +26,12 @@ import           STS.Pool
 data DELPL hashAlgo dsignAlgo vrfAlgo
 
 data DelplEnv
-  = DelplEnv Slot Ptr PParams
+  = DelplEnv
+    { delplSlot     :: Slot
+    , delPlPtr      :: Ptr
+    , delPlPp       :: PParams
+    , delPlReserves :: Coin
+    }
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
@@ -50,7 +56,7 @@ delplTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELPL hashAlgo dsignAlgo vrfAlgo)
 delplTransition = do
-  TRC (DelplEnv slotIx ptr pp, d, c) <- judgmentContext
+  TRC (DelplEnv slotIx _ptr pp _reserves, d, c) <- judgmentContext
   case c of
     RegPool _ -> do
       ps <-
@@ -62,25 +68,28 @@ delplTransition = do
       pure $ d { _pstate = ps }
     GenesisDelegate _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
     RegKey _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
     DeRegKey _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
     Delegate _ -> do
       ds <-
-        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx ptr, _dstate d, c)
+        trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx _ptr _reserves , _dstate d, c)
       pure $ d { _dstate = ds }
 
-    InstantaneousRewards _ -> undefined
+    InstantaneousRewards _ -> do
+      ds <- trans @(DELEG hashAlgo dsignAlgo vrfAlgo) $ TRC (DelegEnv slotIx _ptr _reserves , _dstate d, c)
+      pure $ d { _dstate = ds }
+
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
