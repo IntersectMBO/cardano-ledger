@@ -13,6 +13,8 @@ module Delegation.Certificates
   , dderegister
   , decayKey
   , decayPool
+  , isRegKey
+  , isDeRegKey
   ) where
 
 import           Coin (Coin (..))
@@ -74,6 +76,16 @@ allocating :: DCert hashAlgo dsignAlgo -> Bool
 allocating (RegKey _)  = True
 allocating (RegPool _) = True
 allocating _           = False
+
+-- | Check for `RegKey` constructor
+isRegKey :: DCert h d -> Bool
+isRegKey (RegKey _) = True
+isRegKey _ = False
+
+-- | Check for `DeRegKey` constructor
+isDeRegKey :: DCert h d -> Bool
+isDeRegKey (DeRegKey _) = True
+isDeRegKey _ = False
 
 decayKey :: PParams -> (Coin, UnitInterval, Rational)
 decayKey pc = (dval, dmin, lambdad)
