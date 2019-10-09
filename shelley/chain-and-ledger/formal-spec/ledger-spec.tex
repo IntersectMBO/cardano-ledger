@@ -2,7 +2,7 @@
 \usepackage[deliverable]{IOHKCoverPage}
 
 % data for Deliverable header -- added by KH from an EU H2020 project template
-\DeliverableNumber{SL-D8}
+\DeliverableNumber{SL-D5}
 \DeliverableTitle{A Formal Specification of the Cardano Ledger}{Formal Cardano Ledger Spec.}
 \DeliverableResponsible{Formal Methods Team}
 \EditorName{Jared Corduan, \IOHK}
@@ -296,16 +296,17 @@
 \include{properties}
 \include{non-integral}
 
-\newpage
-
-\begin{appendix}
-  \input{appendix}
-\end{appendix}
-
+\clearpage
 
 \addcontentsline{toc}{section}{References}
 \bibliographystyle{habbrv}
 %\bibliographystyle{plainnat}
 \bibliography{references}
+
+\clearpage
+\begin{appendix}
+  \input{appendix}
+\end{appendix}
+
 
 \end{document}

@@ -1,14 +1,37 @@
 \documentclass[11pt,a4paper,dvipsnames,twosided]{article}
+\usepackage[deliverable]{IOHKCoverPage}
+
+% data for Deliverable header -- added by KH from an EU H2020 project template
+\DeliverableNumber{SL-D1}
+\DeliverableTitle{Design Specification for Delegation and Incentives in Cardano}{Delegation/Incentives Design Spec.}
+\DeliverableResponsible{Formal Methods Team}
+\EditorName{Philipp Kant, \IOHK}
+\Authors{Philipp Kant   \quad \texttt{<philipp.kant@iohk.io>}
+   \\[1em]
+   Lars Br\"unjes \quad \texttt{<lars.bruenjes@iohk.io>}
+   \\[1em]
+   Duncan Coutts  \quad \texttt{<duncan.coutts@iohk.io>}
+}
+\DueDate{1$^{\textrm{st}}$ August 2019}
+\SubmissionDate{1st August 2019}{2019/08/01}
+\LeaderName{Philipp Kant, \IOHK}
+\InstitutionAddress{\IOHK}
+\Version{1.0}
+\Project{Shelley Ledger}
+\DisseminationPU
+
 \usepackage[margin=2.5cm]{geometry}
+\usepackage{lscape}
 %\usepackage[a-1b]{pdfx}
 \usepackage{microtype}
 \usepackage{mathpazo} % nice fonts
 \usepackage{amsmath, amssymb, stmaryrd, latexsym, mathtools}
 \usepackage{extarrows}
 \usepackage{slashed}
-\usepackage[colon]{natbib}
+% \usepackage[colon]{natbib}
+\newcommand{\citep}[1]{\cite{#1}}
 \usepackage{todonotes}
-\usepackage[unicode=true,pdftex,pdfa]{hyperref}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
 \hypersetup{
   pdftitle={Design Specification for Delegation and Incentives in Cardano},
@@ -16,8 +39,8 @@
   breaklinks=true,
   bookmarks=true,
   colorlinks=false,
-  linkcolor={black},
-  citecolor={black},
+  linkcolor={blue},
+  citecolor={blue},
   urlcolor={blue},
   linkbordercolor={white},
   citebordercolor={white},
@@ -44,6 +67,39 @@
 
 \begin{document}
 
+
+  \cleardoublepage%
+  \tableofcontents%
+  \listoffigures%
+  \clearpage%
+
+  \begin{changelog}
+        \change{2019/10/09}{Kevin Hammond}{FM (IOHK)}{Added standard cover page.}
+      \end{changelog}
+      \clearpage%
+\begin{landscape}
+\floatstyle{plain}
+\restylefloat{figure}
+\begin{figure*}
+\includegraphics[scale=0.8,angle=90]{d1-depends.pdf}
+\caption{Positioning of this Deliverable (outlined in red).}
+\end{figure*}
+\end{landscape}
+\floatstyle{boxed}
+\restylefloat{figure}
+\cleardoublepage
+% \begin{center}
+%   \large{Executive Summary}
+% \end{center}
+
+% \noindent
+% This document provides a formal specification of the Cardano ledger for use in the Shelley implementation.
+% It is intended to form the basis for an executable specification that will be the basis of the initial
+% release.
+% \cleardoublepage
+\renewcommand{\thepage}{\arabic{page}}
+\setcounter{page}{1}
+
 \title{Engineering Design Specification \\
   for Delegation and Incentives \\
   in Cardano--Shelley \\
@@ -67,9 +123,10 @@ Lars Br\"unjes, Jared Corduan, Duncan Coutts, Philipp Kant,
 Dimitris Karakostas, Aggelos Kiayias, Elias Koutsoupias, Mario
 Larangeira, Damian Nadales, Aikaterini-Panagiota Stouka.
 
-\tableofcontents
-\listoffigures
-\listoftodos
+%\tableofcontents
+%\listoffigures
+%% Not in final version -- KH
+%\listoftodos
 
 \section{Purpose}
 \label{purpose}
@@ -4320,7 +4377,8 @@ partake in malicious behaviour and attack the system, against their direct
 incentives.
 
 \addcontentsline{toc}{section}{References}
-\bibliographystyle{plainnat}
+%\bibliographystyle{plainnat}
+\bibliographystyle{habbrv}
 \bibliography{references}
 
 \end{document}
