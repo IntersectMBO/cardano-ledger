@@ -15,7 +15,7 @@ import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.VRF.Fake (FakeVRF)
 
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
-import           Generator.Core (traceKeyPairs)
+import           Generator.Core (genCoin, traceKeyPairs)
 import           Generator.Delegation (genPParams)
 import           Generator.Utxo (genTx)
 import           Slot (Slot (..))
@@ -29,6 +29,7 @@ instance HasTrace (LEDGER ShortHash MockDSIGN FakeVRF)
       LedgerEnv <$> pure (Slot 0)
                 <*> pure 0
                 <*> genPParams
+                <*> genCoin 0 1000
 
     sigGen ledgerEnv ledgerSt =
       genTx ledgerEnv ledgerSt traceKeyPairs
