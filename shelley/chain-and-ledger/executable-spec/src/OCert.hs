@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module OCert
   ( OCert(..)
@@ -7,7 +9,10 @@ module OCert
   , kesPeriod)
 where
 
-import           Cardano.Binary (ToCBOR, encodeListLen, toCBOR)
+import           Cardano.Binary (FromCBOR(..), ToCBOR, encodeListLen
+                                , enforceSize, toCBOR)
+import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           GHC.Generics (Generic)
 
 import           Keys (DSIGNAlgorithm, KESAlgorithm, Sig, VKey, VKeyES)
 import           Slot (Slot (..))
@@ -15,7 +20,7 @@ import           Slot (Slot (..))
 import           Numeric.Natural (Natural)
 
 newtype KESPeriod = KESPeriod Natural
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
 
 data OCert dsignAlgo kesAlgo = OCert
   { -- | The operational hot key
@@ -28,7 +33,12 @@ data OCert dsignAlgo kesAlgo = OCert
   , ocertKESPeriod :: KESPeriod
     -- | Signature of block operational certificate content
   , ocertSigma     :: Sig dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance
+  ( DSIGNAlgorithm dsignAlgo
+  , KESAlgorithm kesAlgo
+  ) => NoUnexpectedThunks (OCert dsignAlgo kesAlgo)
 
 instance
   (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
@@ -41,6 +51,18 @@ instance
       <> toCBOR (ocertN ocert)
       <> toCBOR (ocertKESPeriod ocert)
       <> toCBOR (ocertSigma ocert)
+
+instance
+  (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
+  => FromCBOR (OCert dsignAlgo kesAlgo)
+ where
+  fromCBOR = enforceSize "OCert should have 5 fields" 5 >>
+    OCert
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 slotsPerKESPeriod :: Natural
 slotsPerKESPeriod = 90

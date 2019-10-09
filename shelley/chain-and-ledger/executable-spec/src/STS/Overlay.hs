@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -15,6 +16,7 @@ where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
+import           GHC.Generics (Generic)
 
 import           BaseTypes
 import           BlockChain
@@ -27,6 +29,7 @@ import           Slot
 import           STS.Ocert
 
 import qualified Cardano.Crypto.VRF as VRF
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.State.Transition
 
 data OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo
@@ -38,6 +41,9 @@ data OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
       Nonce
       (PoolDistr hashAlgo dsignAlgo vrfAlgo)
       (Dms hashAlgo dsignAlgo)
+  deriving Generic
+
+instance NoUnexpectedThunks (OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo)
 
 instance
   ( HashAlgorithm hashAlgo

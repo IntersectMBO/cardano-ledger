@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -37,6 +38,7 @@ module UTxO
 
 import           Lens.Micro ((^.))
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -59,7 +61,7 @@ import           Delegation.Certificates (DCert (..), StakePools (..), cwitness,
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo vrfAlgo
   = UTxO (Map (TxIn hashAlgo dsignAlgo vrfAlgo) (TxOut hashAlgo dsignAlgo))
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 instance Relation (UTxO hashAlgo dsignAlgo vrfAlgo) where
   type Domain (UTxO hashAlgo dsignAlgo vrfAlgo) = TxIn hashAlgo dsignAlgo vrfAlgo
