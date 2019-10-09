@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -59,15 +60,17 @@ import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
 import           Data.Maybe (fromJust)
 import           Data.Ratio ((%))
 import           Data.Typeable (Typeable)
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Data.Map.Strict (Map)
 import           Data.Set (Set)
 
 import           BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
-import           Cardano.Binary (ToCBOR (toCBOR))
-import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeSigDSIGN, encodeVerKeyDSIGN),
+import           Cardano.Binary (ToCBOR (toCBOR), FromCBOR(..))
+import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeVerKeyDSIGN),
                      SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
+import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
 import           Cardano.Crypto.KES
                      (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES),
@@ -85,6 +88,8 @@ data KeyDiscriminator
 
 newtype SKey dsignAlgo = SKey (SignKeyDSIGN dsignAlgo)
 
+deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (SKey dsignAlgo)
+
 deriving instance DSIGNAlgorithm dsignAlgo => Show (SKey dsignAlgo)
 deriving instance Num (SignKeyDSIGN dsignAlgo) => Num (SKey dsignAlgo)
 
@@ -96,6 +101,8 @@ deriving instance DSIGNAlgorithm dsignAlgo => Eq   (DiscVKey kd dsignAlgo)
 deriving instance Num (VerKeyDSIGN dsignAlgo) => Num (DiscVKey kd dsignAlgo)
 deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (DiscVKey kd dsignAlgo)
 
+instance (DSIGNAlgorithm dsignAlgo, Typeable kd) => FromCBOR (DiscVKey kd dsignAlgo) where
+  fromCBOR = DiscVKey <$> DSIGN.decodeVerKeyDSIGN
 instance (DSIGNAlgorithm dsignAlgo, Typeable kd) => ToCBOR (DiscVKey kd dsignAlgo) where
   toCBOR (DiscVKey vk) = encodeVerKeyDSIGN vk
 
@@ -110,7 +117,9 @@ data KeyPair (kd :: KeyDiscriminator) dsignAlgo
   = KeyPair
       { vKey :: DiscVKey kd dsignAlgo
       , sKey :: SKey dsignAlgo
-      } deriving (Show)
+      } deriving (Generic, Show)
+
+instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (KeyPair kd dsignAlgo)
 
 newtype Sig dsignAlgo a = Sig (SignedDSIGN dsignAlgo a)
 
@@ -118,8 +127,11 @@ deriving instance (DSIGNAlgorithm dsignAlgo) => Show (Sig dsignAlgo a)
 deriving instance (DSIGNAlgorithm dsignAlgo) => Eq   (Sig dsignAlgo a)
 deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (Sig dsignAlgo a)
 
+instance (DSIGNAlgorithm dsignAlgo, Typeable a) => FromCBOR (Sig dsignAlgo a) where
+  fromCBOR = Sig <$> DSIGN.decodeSignedDSIGN
 instance (DSIGNAlgorithm dsignAlgo, Typeable a) => ToCBOR (Sig dsignAlgo a) where
-  toCBOR (Sig (SignedDSIGN sigDSIGN)) = encodeSigDSIGN sigDSIGN
+  toCBOR (Sig s) = DSIGN.encodeSignedDSIGN s
+
 -- |Produce a digital signature
 sign
   :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a)
@@ -154,6 +166,8 @@ deriving instance (KESAlgorithm kesAlgo) => NoUnexpectedThunks (VKeyES kesAlgo)
 
 instance KESAlgorithm kesAlgo => ToCBOR (VKeyES kesAlgo) where
   toCBOR (VKeyES vKeyES) = encodeVerKeyKES vKeyES
+instance KESAlgorithm kesAlgo => FromCBOR (VKeyES kesAlgo) where
+  fromCBOR = VKeyES <$> KES.decodeVerKeyKES
 
 type KESignable kesAlgo a = KES.Signable kesAlgo a
 
