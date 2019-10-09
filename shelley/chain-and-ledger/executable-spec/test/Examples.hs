@@ -50,6 +50,12 @@ module Examples
 where
 
 import           Cardano.Binary (ToCBOR)
+import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
+import           Cardano.Crypto.Hash (ShortHash)
+import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
+import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
+import           Cardano.Crypto.VRF.Fake (WithResult (..))
+import           Crypto.Random (drgNewTest, withDRG)
 import           Data.ByteString.Char8 (pack)
 import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
@@ -60,24 +66,18 @@ import           Data.Sequence (empty, fromList)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
-import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
-import           Cardano.Crypto.Hash (ShortHash)
-import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
-import           Cardano.Crypto.VRF (genKeyVRF, deriveVerKeyVRF, evalCertified)
-import           Cardano.Crypto.VRF.Fake (WithResult(..))
-import           Crypto.Random (drgNewTest, withDRG)
-import           MockTypes (AVUpdate, Addr, Applications, Block, CertifiedVRF, ChainState, Credential, DState,
-                     EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState, Mdt,
-                     PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey, SKeyES, SnapShots,
-                     Stake, Tx, TxBody, UTxO, UTxOState, Update, UpdateState, VKey, VKeyES,
-                     VKeyGenesis, SignKeyVRF, VerKeyVRF)
+import           MockTypes (AVUpdate, Addr, Applications, Block, CertifiedVRF, ChainState,
+                     Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
+                     LedgerState, Mdt, PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
+                     SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update,
+                     UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
-import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkUnitInterval, mkNonce, (⭒))
+import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, mkUnitInterval, (⭒))
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader,
-                     seedL, seedEta, mkSeed)
+                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, mkSeed,
+                     seedEta, seedL)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern PoolDistr, pattern RegKey, pattern RegPool,
@@ -85,14 +85,14 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern Dms, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
-                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey, hashKeyVRF
-                     , sKey, sign, signKES, vKey)
+                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey, hashKeyVRF,
+                     sKey, sign, signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
-                     pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
-                     genesisCoins, genesisId, overlaySchedule, rs, _cCounters, _delegations, _dms,
-                     _fdms, _pParams, _ptrs, _reserves, _retiring, _rewards, _stKeys, _stPools,
-                     _treasury)
+                     pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
+                     emptyPState, genesisCoins, genesisId, overlaySchedule, rs, updateIRwd,
+                     _cCounters, _delegations, _dms, _fdms, _pParams, _ptrs, _reserves, _retiring,
+                     _rewards, _stKeys, _stPools, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
@@ -657,10 +657,12 @@ expectedStEx2Bgeneric pp = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
-     (Just RewardUpdate { deltaT = Coin 0
-                        , deltaR = Coin 0
-                        , rs     = Map.empty
-                        , deltaF = Coin 0
+     (Just RewardUpdate { deltaT        = Coin 0
+                        , deltaR        = Coin 0
+                        , rs            = Map.empty
+                        , deltaF        = Coin 0
+                        , deltaDeposits = Coin 0
+                        , updateIRwd    = Map.empty
                         })
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -825,10 +827,12 @@ expectedStEx2D = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A snapsEx2C expectedLSEx2C ppsEx1)
-     (Just RewardUpdate { deltaT = Coin 20
-                        , deltaR = Coin 0
-                        , rs     = Map.empty
-                        , deltaF = Coin (-20)
+     (Just RewardUpdate { deltaT        = Coin 20
+                        , deltaR        = Coin 0
+                        , rs            = Map.empty
+                        , deltaF        = Coin (-20)
+                        , deltaDeposits = Coin 0
+                        , updateIRwd    = Map.empty
                         })
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
@@ -940,10 +944,12 @@ expectedStEx2F = ChainState
      (BlocksMade Map.empty)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1)
-     (Just RewardUpdate { deltaT = Coin 13
-                        , deltaR = Coin 0
-                        , rs     = Map.empty
-                        , deltaF = Coin (-13)
+     (Just RewardUpdate { deltaT        = Coin 13
+                        , deltaR        = Coin 0
+                        , rs            = Map.empty
+                        , deltaF        = Coin (-13)
+                        , deltaDeposits = Coin 0
+                        , updateIRwd    = Map.empty
                         })
      pdEx2F
      epoch1OSchedEx2E)
@@ -1050,10 +1056,12 @@ expectedStEx2H = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState (acntEx2E { _treasury = Coin 33 }) snapsEx2G expectedLSEx2G ppsEx1)
-     (Just RewardUpdate { deltaT = Coin 9374400000008
-                        , deltaR = Coin (-9449999999997)
-                        , rs = rewardsEx2H
-                        , deltaF = Coin (-10)
+     (Just RewardUpdate { deltaT        = Coin 9374400000008
+                        , deltaR        = Coin (-9449999999997)
+                        , rs            = rewardsEx2H
+                        , deltaF        = Coin (-10)
+                        , deltaDeposits = Coin 0
+                        , updateIRwd    = Map.empty
                         })
      pdEx2F
      epoch1OSchedEx2G)
@@ -1283,10 +1291,12 @@ expectedStEx2K = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1)
-     (Just RewardUpdate { deltaT = Coin 9
-                        , deltaR = Coin 0
-                        , rs = Map.empty
-                        , deltaF = Coin (-9)
+     (Just RewardUpdate { deltaT        = Coin 9
+                        , deltaR        = Coin 0
+                        , rs            = Map.empty
+                        , deltaF        = Coin (-9)
+                        , deltaDeposits = Coin 0
+                        , updateIRwd    = Map.empty
                         })
      pdEx2F
      epoch1OSchedEx2I)
@@ -1841,11 +1851,13 @@ expectedStEx4C = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx4C ppsEx1)
-     (Just RewardUpdate { deltaT = Coin 0
-                        , deltaR = Coin 0
-                        , rs     = Map.empty
-                         , deltaF = Coin 0
-                         })
+     (Just RewardUpdate { deltaT        = Coin 0
+                        , deltaR        = Coin 0
+                        , rs            = Map.empty
+                        , deltaF        = Coin 0
+                        , deltaDeposits = Coin 0
+                        , updateIRwd    = Map.empty
+                        })
       (PoolDistr Map.empty)
       overlayEx2A)
   (mkSeqNonce 3)
@@ -1987,10 +1999,12 @@ expectedStEx5B = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx5B ppsEx1)
-     (Just RewardUpdate { deltaT = Coin 0
-                        , deltaR = Coin 0
-                        , rs     = Map.empty
-                        , deltaF = Coin 0
+     (Just RewardUpdate { deltaT        = Coin 0
+                        , deltaR        = Coin 0
+                        , rs            = Map.empty
+                        , deltaF        = Coin 0
+                        , deltaDeposits = Coin 0
+                        , updateIRwd    = Map.empty
                         })
      (PoolDistr Map.empty)
      overlayEx2A)
