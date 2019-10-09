@@ -606,7 +606,7 @@ concerns are independent of the ledger rules.
   \label{fig:dcert-mir}
 \end{figure}
 
-The DELEG rule has six predicate failures:
+The DELEG rule has seven possible predicate failures:
 \begin{itemize}
 \item In the case of a key registration certificate, if the staking credential
   is already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
@@ -622,6 +622,8 @@ The DELEG rule has six predicate failures:
 \item  In the case of a genesis key delegation certificate, if the delegate key is
   in the range of the genesis delegation mapping, there is a
   \emph{DuplicateGenesisDelegate} failure.
+\item In the case of insufficient reserves to pay the instantaneous rewards,
+  there is a \emph{InsufficientForInstantaneousRewards} failure.
 \end{itemize}
 
 \clearpage
