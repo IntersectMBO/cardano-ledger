@@ -54,8 +54,10 @@ import Cardano.Chain.Block
   ( ABlock
   , BlockValidationMode(..)
   , ChainValidationError(ChainValidationBlockTooLarge,
-                     ChainValidationHeaderTooLarge)
+                     ChainValidationHeaderTooLarge, ChainValidationProofValidationError)
   , ChainValidationState(cvsUtxo)
+  , ProofValidationError(DelegationProofValidationError,
+                     UTxOProofValidationError, UpdateProofValidationError)
   , blockHeader
   , blockLength
   , cvsUpdateState
@@ -67,8 +69,6 @@ import Cardano.Chain.Common (unBlockCount)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.ValidationMode
   (ValidationMode, fromBlockValidationMode)
-import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(..))
-import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxWitsList)
 import Cardano.Chain.Update
   ( ProtocolParameters
   , ppMaxBlockSize
@@ -76,14 +76,21 @@ import Cardano.Chain.Update
   )
 import Cardano.Chain.Update.Validation.Interface (adoptedProtocolParameters)
 
-import Cardano.Spec.Chain.STS.Rule.BBody (PredicateFailure(InvalidBlockSize))
+import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(..))
+import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxWitsList)
+import Cardano.Spec.Chain.STS.Rule.BBody
+  ( PredicateFailure(InvalidBlockSize, InvalidDelegationHash,
+                 InvalidUpdateProposalHash, InvalidUtxoHash)
+  )
 import Cardano.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
   , ShouldGenUTxO(NoGenUTxO)
-  , ShouldGenUpdate(NoGenUpdate, GenUpdate)
-  , sigGenChain
+  , ShouldGenUpdate(GenUpdate, NoGenUpdate)
+  , coverInvalidBlockProofs
+  , invalidProofsBlockGen
   , isHeaderSizeTooBigFailure
+  , sigGenChain
   )
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
@@ -117,9 +124,9 @@ import Ledger.Delegation
   , _dSEnvEpoch
   , _dSEnvK
   , _dSEnvSlot
-  , randomDCertGen
   , tamperedDcerts
   )
+import qualified Ledger.Delegation.Test as Delegation.Test
 import Ledger.Update
   ( PParams
   , UPIEnv
@@ -253,11 +260,7 @@ ts_prop_invalidDelegationCertificatesAreRejected =
 
             -- This chooses with even probability between manually tweaked
             -- DCerts and goblin-tweaked ones.
-            invalidDelegationCerts = Gen.choice
-              [ Gen.list (Range.constant 0 10)
-                         (randomDCertGen delegationEnv)
-              , tamperedDcerts delegationEnv delegationSt
-              ]
+            invalidDelegationCerts = tamperedDcerts delegationEnv delegationSt
               where
                 delegationEnv =
                   ( DSEnv
@@ -275,7 +278,7 @@ ts_prop_invalidDelegationCertificatesAreRejected =
     coverDcerts :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
     -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
     coverDcerts abstractPfs _concretePfs =
-      Update.Test.coverDelegFailures 1 abstractPfs
+      Delegation.Test.coverDelegFailures 1 abstractPfs
 
     -- TODO: add coverage testing for delegation.
     --
@@ -412,7 +415,7 @@ ts_prop_invalidTxWitsAreRejected =
               block
               (\body -> body { Abstract._bUtxo = txWitsList })
 
-  coverTxWits :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+  coverTxWits :: [[PredicateFailure CHAIN]] -> ChainValidationError -> PropertyT IO ()
   -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
   coverTxWits abstractPfs _concretePfs =
     coverUtxoFailure 1 abstractPfs
@@ -436,9 +439,23 @@ ts_prop_invalidVotesAreRejected =
 
     coverVotes :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
     -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
-    coverVotes abstractPfs _concretePfs =
+    coverVotes abstractPfs _concretePf =
       Update.Test.coverUpivoteFailures 1 abstractPfs
 
+ts_prop_invalidBlockPayloadProofsAreRejected :: TSProperty
+ts_prop_invalidBlockPayloadProofsAreRejected =
+  invalidChainTracesAreRejected 300 [(1, invalidProofsBlockGen)] coverFailures
+  where
+    coverFailures :: [[PredicateFailure CHAIN]] -> ChainValidationError -> PropertyT IO ()
+    coverFailures abstractPfs concretePf = do
+      coverInvalidBlockProofs 15 abstractPfs
+      -- Check that the concrete failures correspond with the abstract ones.
+      when (any (== InvalidDelegationHash) (extractValues abstractPfs))
+        $ assert $ concretePf == ChainValidationProofValidationError DelegationProofValidationError
+      when (any (== InvalidUpdateProposalHash) (extractValues abstractPfs))
+        $ assert $ concretePf == ChainValidationProofValidationError UpdateProofValidationError
+      when (any (== InvalidUtxoHash) (extractValues abstractPfs))
+        $ assert $ concretePf == ChainValidationProofValidationError UTxOProofValidationError
 
 -- | Output resulting from elaborating and validating an abstract trace with
 -- the concrete validators.

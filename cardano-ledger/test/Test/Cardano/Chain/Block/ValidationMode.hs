@@ -172,7 +172,7 @@ ts_prop_updateBlock_InvalidProof =
 --------------------------------------------------------------------------------
 
 genHash :: Gen Abstract.Hash
-genHash = Abstract.Hash <$> Gen.int Range.constantBounded
+genHash = Abstract.Hash . Just <$> Gen.int Range.constantBounded
 
 genBlockValidationMode :: Gen BlockValidationMode
 genBlockValidationMode = Gen.element [BlockValidation, NoBlockValidation]

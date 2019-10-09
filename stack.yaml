@@ -25,9 +25,10 @@ extra-deps:
     subdirs:
       - binary
       - binary/test
+      - cardano-crypto-class
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: dbc1aeaae49806a4e81a5b973bc93aff548fb28d
+    commit: e52fea6ecd6ccb227de8333b0cb7482e81879691
     subdirs:
       - byron/semantics/executable-spec
       - byron/ledger/executable-spec
@@ -35,7 +36,7 @@ extra-deps:
 
   # Needed for `cardano-ledger-specs`
   - git: https://github.com/input-output-hk/goblins
-    commit: 545448938bf620bb2a25212e1686916cfa3acee9
+    commit: 26d35ad52fe9ade3391532dbfeb2f416f07650bc
   - moo-1.2
   - gray-code-0.3.1
 

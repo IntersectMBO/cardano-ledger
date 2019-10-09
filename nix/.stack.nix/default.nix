@@ -24,6 +24,7 @@
         cardano-prelude-test = ./cardano-prelude-test.nix;
         cardano-binary = ./cardano-binary.nix;
         cardano-binary-test = ./cardano-binary-test.nix;
+        cardano-crypto-class = ./cardano-crypto-class.nix;
         small-steps = ./small-steps.nix;
         cs-ledger = ./cs-ledger.nix;
         cs-blockchain = ./cs-blockchain.nix;

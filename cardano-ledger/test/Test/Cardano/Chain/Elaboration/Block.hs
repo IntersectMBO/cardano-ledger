@@ -9,7 +9,7 @@
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
--- rules for the block chain (also called the blockchain specification).
+-- rules for the blockchain (also called the blockchain specification).
 module Test.Cardano.Chain.Elaboration.Block
   ( abEnvToCfg
   , elaborate
@@ -95,8 +95,8 @@ elaborate
   -> (Concrete.Block, AbstractToConcreteIdMaps)
 elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   ( Concrete.ABlock
-    { Concrete.blockHeader     = bh0
-    , Concrete.blockBody       = bb0
+    { Concrete.blockHeader = recomputeHashes bh0
+    , Concrete.blockBody = bb0
     , Concrete.blockAnnotation = ()
     }
   , AbstractToConcreteIdMaps
@@ -178,6 +178,48 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
           (H.hash concreteProposal)
           proposalsIdMap
 
+
+  -- | Recompute the block header hashes (which correspond to the block
+  -- payload) if the abstract hashes don't match the abstract payload.
+  recomputeHashes :: Concrete.AHeader () -> Concrete.AHeader ()
+  recomputeHashes concreteHeader =
+    concreteHeader {Concrete.aHeaderProof = Binary.Annotated alteredHdrProof ()}
+    where
+      alteredHdrProof :: Concrete.Proof
+      alteredHdrProof =
+        originalHeaderProof
+          { Concrete.proofDelegation = possiblyAlteredDelegationProof
+          , Concrete.proofUpdate = possiblyAlteredUpdateProof
+          , Concrete.proofUTxO = possiblyAlteredUTxOProof
+          }
+        where
+          originalHeaderProof :: Concrete.Proof
+          originalHeaderProof =
+            Binary.unAnnotated (Concrete.aHeaderProof concreteHeader)
+
+          possiblyAlteredUTxOProof :: UTxO.TxProof
+          possiblyAlteredUTxOProof =
+            if (Abstract.isValid $ Abstract._bhUtxoHash $ Abstract._bHeader abstractBlock)
+            then originalUTxOProof
+            else originalUTxOProof {UTxO.txpWitnessesHash = coerce dummyHash}
+            where
+              originalUTxOProof :: UTxO.TxProof
+              originalUTxOProof = Concrete.proofUTxO originalHeaderProof
+
+          possiblyAlteredDelegationProof :: H.Hash Delegation.Payload
+          possiblyAlteredDelegationProof =
+            if (Abstract.isValid $ Abstract._bhDlgHash $ Abstract._bHeader abstractBlock)
+            then Concrete.proofDelegation originalHeaderProof
+            else coerce dummyHash
+
+          possiblyAlteredUpdateProof :: Update.Proof
+          possiblyAlteredUpdateProof =
+            if (Abstract.isValid $ Abstract._bhUpdHash $ Abstract._bHeader abstractBlock)
+            then Concrete.proofUpdate originalHeaderProof
+            else coerce dummyHash
+
+      dummyHash :: H.Hash Int
+      dummyHash = H.hash 0
 
 elaborateBS
   :: AbstractToConcreteIdMaps
