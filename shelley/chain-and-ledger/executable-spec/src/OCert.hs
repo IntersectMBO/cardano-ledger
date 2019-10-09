@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module OCert
   ( OCert(..)
@@ -8,7 +9,8 @@ module OCert
   , kesPeriod)
 where
 
-import           Cardano.Binary (ToCBOR, encodeListLen, toCBOR)
+import           Cardano.Binary (FromCBOR(..), ToCBOR, encodeListLen
+                                , enforceSize, toCBOR)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           GHC.Generics (Generic)
 
@@ -18,7 +20,7 @@ import           Slot (Slot (..))
 import           Numeric.Natural (Natural)
 
 newtype KESPeriod = KESPeriod Natural
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
 
 data OCert dsignAlgo kesAlgo = OCert
   { -- | The operational hot key
@@ -49,6 +51,18 @@ instance
       <> toCBOR (ocertN ocert)
       <> toCBOR (ocertKESPeriod ocert)
       <> toCBOR (ocertSigma ocert)
+
+instance
+  (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
+  => FromCBOR (OCert dsignAlgo kesAlgo)
+ where
+  fromCBOR = enforceSize "OCert should have 5 fields" 5 >>
+    OCert
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 slotsPerKESPeriod :: Natural
 slotsPerKESPeriod = 90
