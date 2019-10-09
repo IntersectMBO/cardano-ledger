@@ -134,6 +134,7 @@ import           Numeric.Natural (Natural)
 import           Lens.Micro (to, (%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 
+import           Address (mkRwdAcnt)
 import           Coin (Coin (..))
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
                      baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
@@ -1142,9 +1143,10 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
 -- | Apply a reward update
 applyRUpd
   :: RewardUpdate hashAlgo dsignAlgo
+  -> Epoch
   -> EpochState hashAlgo dsignAlgo vrfAlgo
   -> EpochState hashAlgo dsignAlgo vrfAlgo
-applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
+applyRUpd ru e (EpochState as ss ls pp) = EpochState as' ss ls' pp
   where utxoState_ = _utxoState ls
         delegState = _delegationState ls
         dState = _dstate delegState
@@ -1153,9 +1155,19 @@ applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
                  , _reserves = _reserves as + deltaR ru
                  }
         ls' = ls { _utxoState =
-                     utxoState_ {_fees = _fees utxoState_ + deltaF ru }
+                     utxoState_ { _fees = _fees utxoState_ + deltaF ru
+                                , _deposited = _deposited utxoState_ + deltaDeposits ru}
                  , _delegationState =
-                     delegState {_dstate = dState {_rewards = _rewards dState ∪+ rs ru}}}
+                     delegState
+                     {_dstate = dState
+                                { _rewards = (_rewards dState ∪+ rs ru) ∪+ updateRwd
+                                , _stKeys = StakeKeys $ updateDelegs ∪ stDelegs
+                                , _irwd = Map.empty
+                                }}}
+        StakeKeys stDelegs = _stKeys dState
+        rewMir = updateIRwd ru
+        updateDelegs = Map.fromList [(cred, firstSlot e) | cred <- Map.keys rewMir]
+        updateRwd = Map.mapKeys mkRwdAcnt rewMir
 
 -- | Create a reward update
 createRUpd
