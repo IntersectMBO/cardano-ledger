@@ -24,10 +24,6 @@ module Cardano.Chain.Block.Validation
   , initialChainValidationState
   , ChainValidationError(..)
 
-  -- * SigningHistory
-  , SigningHistory(..)
-  , updateSigningHistory
-
   -- * UTxO
   , HeapSize(..)
   , UTxOSize(..)
@@ -43,8 +39,6 @@ import Control.Monad.Trans.Resource (ResIO)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
-import Data.Sequence (Seq(..), (<|))
-import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import Formatting.Buildable (Buildable)
 import Streaming (Of(..), Stream, hoist)
@@ -127,65 +121,6 @@ import Cardano.Chain.ValidationMode
   , wrapErrorWithValidationMode
   )
 
---------------------------------------------------------------------------------
--- SigningHistory
---------------------------------------------------------------------------------
-
--- | The history of signers in the last @K@ blocks
---
---   We maintain a map of the number of blocks signed for each keyHash to
---   improve performance. The sum of the `BlockCount`s in the map should be
---   equal to the length of the sequence.
-data SigningHistory = SigningHistory
-  { shK                 :: !BlockCount
-  , shSigningQueue      :: !(Seq KeyHash)
-  , shKeyHashCounts     :: !(Map KeyHash BlockCount)
-  } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
-
-instance FromCBOR SigningHistory where
-  fromCBOR = do
-    enforceSize "SigningHistory" 3
-    SigningHistory
-      <$> fromCBOR
-      <*> (Seq.fromList <$> fromCBOR)
-      <*> fromCBOR
-
-instance ToCBOR SigningHistory where
-  toCBOR sh =
-    encodeListLen 3
-      <> toCBOR (shK sh)
-      <> toCBOR (toList (shSigningQueue sh))
-      <> toCBOR (shKeyHashCounts sh)
-
--- | Update the `SigningHistory` with a new signer, removing the oldest value if
---   the sequence is @K@ blocks long
-updateSigningHistory :: VerificationKey -> SigningHistory -> SigningHistory
-updateSigningHistory vk sh
-  | length (shSigningQueue sh) < fromIntegral (unBlockCount $ shK sh) = sh & addKeyHashIn
-  | otherwise = sh & addKeyHashIn & removeKeyHashOut
- where
-  keyHashIn = hashKey vk
-
-  addKeyHashIn :: SigningHistory -> SigningHistory
-  addKeyHashIn sh' = sh'
-    { shSigningQueue      = keyHashIn <| shSigningQueue sh'
-    , shKeyHashCounts = M.adjust
-      succ
-      keyHashIn
-      (shKeyHashCounts sh')
-    }
-
-  removeKeyHashOut :: SigningHistory -> SigningHistory
-  removeKeyHashOut sh' = case shSigningQueue sh' of
-    Empty -> sh'
-    rest :|> keyHashOut -> sh'
-      { shSigningQueue      = rest
-      , shKeyHashCounts = M.adjust
-        pred
-        keyHashOut
-        (shKeyHashCounts sh')
-      }
-
 
 --------------------------------------------------------------------------------
 -- ChainValidationState
@@ -193,7 +128,6 @@ updateSigningHistory vk sh
 
 data ChainValidationState = ChainValidationState
   { cvsLastSlot        :: !SlotNumber
-  , cvsSigningHistory  :: !SigningHistory
   , cvsPreviousHash    :: !(Either GenesisHash HeaderHash)
   -- ^ GenesisHash for the previous hash of the zeroth boundary block and
   --   HeaderHash for all others.
@@ -204,10 +138,9 @@ data ChainValidationState = ChainValidationState
 
 instance FromCBOR ChainValidationState where
   fromCBOR = do
-    enforceSize "ChainValidationState" 6
+    enforceSize "ChainValidationState" 5
     ChainValidationState
       <$> fromCBOR
-      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
@@ -215,9 +148,8 @@ instance FromCBOR ChainValidationState where
 
 instance ToCBOR ChainValidationState where
   toCBOR c =
-    encodeListLen 6
+    encodeListLen 5
       <> toCBOR (cvsLastSlot c)
-      <> toCBOR (cvsSigningHistory c)
       <> toCBOR (cvsPreviousHash c)
       <> toCBOR (cvsUtxo c)
       <> toCBOR (cvsUpdateState c)
@@ -234,13 +166,6 @@ initialChainValidationState config = do
   delegationState <- DI.initialState delegationEnv genesisDelegation
   pure $ ChainValidationState
     { cvsLastSlot       = 0
-    , cvsSigningHistory = SigningHistory
-      { shK = configK config
-      , shKeyHashCounts = M.fromSet (const $ BlockCount 0)
-        . unGenesisKeyHashes
-        $ configGenesisKeyHashes config
-      , shSigningQueue = Empty
-      }
       -- Ensure that we don't allow the internal value of this 'Left' to be
       -- lazy as we want to ensure that the 'ChainValidationState' is always
       -- in normal form.
