@@ -12,10 +12,11 @@ import           Control.State.Transition.Generator (traceOfLengthWithInitState)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
 
+import           Delegation.Certificates (isDeRegKey, isRegKey)
 import           Generator.Core (mkGenesisLedgerState)
 import           Generator.LedgerTrace ()
 import           MockTypes (DCert, LEDGER, Tx)
-import           TxData (isDeRegKey, isRegKey, _body, _certs, _inputs, _outputs)
+import           TxData (_body, _certs, _inputs, _outputs)
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 500 $ property $ do

@@ -18,15 +18,14 @@ import           Lens.Micro ((^.))
 import qualified Hedgehog.Gen as Gen
 
 import           Coin (Coin (..))
-import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, decayKey)
+import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core (toCred)
 import           Ledger.Core (dom, (∈), (∉))
 import           LedgerState (dstate, keyRefund, stKeys, _dstate, _pstate, _stKeys, _stPools)
 import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs)
 import           PParams (PParams (..), emptyPParams)
-import           Slot (Epoch (..), Slot)
-import           TxData (isDeRegKey)
+import           Slot (Epoch (Epoch), Slot)
 import           UTxO (deposits)
 
 -- TODO @uroboros Generate a range of protocol params
@@ -61,6 +60,10 @@ genDCerts
   -> Gen (Seq DCert, [KeyPair], Coin, Coin)
 genDCerts keys pparams dpState slotWithTTL = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
+  -- TODO ensure that the `Seq` is constructed with the list reversed, or that
+  -- later traversals are done backwards, to be consistent with the executable
+  -- spec (see `delegsTransition` in `STS.Delegs`) which consumes the list
+  -- starting at the tail end.
   cert <- genDCert keys (_dstate dpState)
   case cert of
     Nothing ->
@@ -68,9 +71,9 @@ genDCerts keys pparams dpState slotWithTTL = do
     Just (cert_, witKey) -> do
       let certs = [cert_]
           witKeys = [witKey]
-          --
+
           deposits_ = deposits pparams (_stPools (_pstate dpState)) certs
-          --
+
           deRegStakeCreds = filter isDeRegKey certs
           rewardForCred crt =
             let (dval, dmin, lambda) = decayKey pparams
@@ -126,7 +129,7 @@ genDeRegKeyCert keys delegSt =
     [] -> pure Nothing
     _ -> do
            (_payKey, stakeKey) <- Gen.element availableKeys
-           pure $ Just $ (DeRegKey (toCred stakeKey), stakeKey)
+           pure $ Just (DeRegKey (toCred stakeKey), stakeKey)
   where
     registered k = k ∈ dom (_stKeys delegSt)
     availableKeys = filter (registered . toCred . snd) keys
