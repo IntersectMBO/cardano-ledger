@@ -58,9 +58,6 @@ module LedgerState
   , delegatedStake
   , retirePools
   , emptyDelegation
-  , applyDCert
-  , applyDCertDState
-  , applyDCertPState
   , applyUTxOUpdate
   -- * Genesis State
   , genesisId
