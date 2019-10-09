@@ -19,7 +19,7 @@ module Delegation.Certificates
   ) where
 
 import           Coin (Coin (..))
-import           Keys (Hash, KeyHash, VRFAlgorithm(VerKeyVRF))
+import           Keys (Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
@@ -29,9 +29,9 @@ import           TxData (Credential (..), DCert (..), StakeCredential, StakeKeys
 import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           NonIntegral (exp')
 
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
 import           Data.Ratio (approxRational)
-import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           Lens.Micro ((^.))
 
@@ -80,12 +80,12 @@ allocating (RegPool _) = True
 allocating _           = False
 
 -- | Check for `RegKey` constructor
-isRegKey :: DCert h d -> Bool
+isRegKey :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
 isRegKey (RegKey _) = True
 isRegKey _ = False
 
 -- | Check for `DeRegKey` constructor
-isDeRegKey :: DCert h d -> Bool
+isDeRegKey :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
 isDeRegKey (DeRegKey _) = True
 isDeRegKey _ = False
 
