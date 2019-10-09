@@ -1,11 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -61,15 +60,17 @@ import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
 import           Data.Maybe (fromJust)
 import           Data.Ratio ((%))
 import           Data.Typeable (Typeable)
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Data.Map.Strict (Map)
 import           Data.Set (Set)
 
 import           BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
-import           Cardano.Binary (ToCBOR (toCBOR))
-import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeSigDSIGN, encodeVerKeyDSIGN),
+import           Cardano.Binary (ToCBOR (toCBOR), FromCBOR(..))
+import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeVerKeyDSIGN),
                      SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
+import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
 import           Cardano.Crypto.KES
                      (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES),
@@ -77,6 +78,7 @@ import           Cardano.Crypto.KES
 import qualified Cardano.Crypto.KES as KES
 import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
 import qualified Cardano.Crypto.VRF as VRF
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 -- | Discriminate between keys based on their usage in the system.
 data KeyDiscriminator
@@ -85,6 +87,8 @@ data KeyDiscriminator
   deriving (Show)
 
 newtype SKey dsignAlgo = SKey (SignKeyDSIGN dsignAlgo)
+
+deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (SKey dsignAlgo)
 
 deriving instance DSIGNAlgorithm dsignAlgo => Show (SKey dsignAlgo)
 deriving instance Num (SignKeyDSIGN dsignAlgo) => Num (SKey dsignAlgo)
@@ -95,7 +99,10 @@ newtype DiscVKey (kd :: KeyDiscriminator) dsignAlgo = DiscVKey (VerKeyDSIGN dsig
 deriving instance DSIGNAlgorithm dsignAlgo => Show (DiscVKey kd dsignAlgo)
 deriving instance DSIGNAlgorithm dsignAlgo => Eq   (DiscVKey kd dsignAlgo)
 deriving instance Num (VerKeyDSIGN dsignAlgo) => Num (DiscVKey kd dsignAlgo)
+deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (DiscVKey kd dsignAlgo)
 
+instance (DSIGNAlgorithm dsignAlgo, Typeable kd) => FromCBOR (DiscVKey kd dsignAlgo) where
+  fromCBOR = DiscVKey <$> DSIGN.decodeVerKeyDSIGN
 instance (DSIGNAlgorithm dsignAlgo, Typeable kd) => ToCBOR (DiscVKey kd dsignAlgo) where
   toCBOR (DiscVKey vk) = encodeVerKeyDSIGN vk
 
@@ -110,15 +117,21 @@ data KeyPair (kd :: KeyDiscriminator) dsignAlgo
   = KeyPair
       { vKey :: DiscVKey kd dsignAlgo
       , sKey :: SKey dsignAlgo
-      } deriving (Show)
+      } deriving (Generic, Show)
+
+instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (KeyPair kd dsignAlgo)
 
 newtype Sig dsignAlgo a = Sig (SignedDSIGN dsignAlgo a)
 
 deriving instance (DSIGNAlgorithm dsignAlgo) => Show (Sig dsignAlgo a)
 deriving instance (DSIGNAlgorithm dsignAlgo) => Eq   (Sig dsignAlgo a)
+deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (Sig dsignAlgo a)
 
+instance (DSIGNAlgorithm dsignAlgo, Typeable a) => FromCBOR (Sig dsignAlgo a) where
+  fromCBOR = Sig <$> DSIGN.decodeSignedDSIGN
 instance (DSIGNAlgorithm dsignAlgo, Typeable a) => ToCBOR (Sig dsignAlgo a) where
-  toCBOR (Sig (SignedDSIGN sigDSIGN)) = encodeSigDSIGN sigDSIGN
+  toCBOR (Sig s) = DSIGN.encodeSignedDSIGN s
+
 -- |Produce a digital signature
 sign
   :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a)
@@ -149,9 +162,12 @@ newtype VKeyES kesAlgo = VKeyES (VerKeyKES kesAlgo)
 
 deriving instance (KESAlgorithm kesAlgo) => Show (VKeyES kesAlgo)
 deriving instance (KESAlgorithm kesAlgo) => Eq   (VKeyES kesAlgo)
+deriving instance (KESAlgorithm kesAlgo) => NoUnexpectedThunks (VKeyES kesAlgo)
 
 instance KESAlgorithm kesAlgo => ToCBOR (VKeyES kesAlgo) where
   toCBOR (VKeyES vKeyES) = encodeVerKeyKES vKeyES
+instance KESAlgorithm kesAlgo => FromCBOR (VKeyES kesAlgo) where
+  fromCBOR = VKeyES <$> KES.decodeVerKeyKES
 
 type KESignable kesAlgo a = KES.Signable kesAlgo a
 
@@ -159,6 +175,7 @@ newtype KESig kesAlgo a = KESig (SignedKES kesAlgo a)
 
 deriving instance (KESAlgorithm kesAlgo) => Show (KESig kesAlgo a)
 deriving instance (KESAlgorithm kesAlgo) => Eq   (KESig kesAlgo a)
+deriving instance (KESAlgorithm kesAlgo) => NoUnexpectedThunks (KESig kesAlgo a)
 
 instance (KESAlgorithm kesAlgo, Typeable a) => ToCBOR (KESig kesAlgo a) where
   toCBOR (KESig (SignedKES sigKES)) = encodeSigKES sigKES
@@ -193,10 +210,10 @@ verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
 
 newtype Dms hashAlgo dsignAlgo =
   Dms (Map (GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo))
-  deriving (Show, Eq)
+  deriving (Show, Eq, NoUnexpectedThunks)
 
 newtype GKeys dsignAlgo = GKeys (Set (VKeyGenesis dsignAlgo))
-  deriving (Show, Eq)
+  deriving (Show, Eq, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------
 -- Key Hashes
@@ -205,7 +222,7 @@ newtype GKeys dsignAlgo = GKeys (Set (VKeyGenesis dsignAlgo))
 -- | Discriminated hash of public Key
 newtype DiscKeyHash (discriminator :: KeyDiscriminator) hashAlgo dsignAlgo =
   DiscKeyHash (Hash hashAlgo (VerKeyDSIGN dsignAlgo))
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
 
 type KeyHash hashAlgo dsignAlgo = DiscKeyHash 'Regular hashAlgo dsignAlgo
 pattern KeyHash
@@ -217,7 +234,7 @@ type GenKeyHash hashAlgo dsignAlgo = DiscKeyHash 'Genesis hashAlgo dsignAlgo
 -- | Discriminated hash of public Key
 newtype AnyKeyHash hashAlgo dsignAlgo =
   AnyKeyHash (Hash hashAlgo (VerKeyDSIGN dsignAlgo))
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
 
 undiscriminateKeyHash
   :: DiscKeyHash kd hashAlgo dsignAlgo
