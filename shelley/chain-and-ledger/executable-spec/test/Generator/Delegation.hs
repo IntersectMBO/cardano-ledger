@@ -22,7 +22,7 @@ import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, deca
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core (toCred)
 import           Ledger.Core (dom, (∈), (∉))
-import           LedgerState (dstate, keyRefund, stKeys, _dstate, _pstate, _stKeys, _stPools)
+import           LedgerState (dstate, keyRefund, stkCreds, _dstate, _pstate, _stkCreds, _stPools)
 import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (Epoch), Slot)
@@ -80,7 +80,7 @@ genDCerts keys pparams dpState slotWithTTL = do
              in keyRefund dval
                           dmin
                           lambda
-                          (dpState ^. dstate . stKeys)
+                          (dpState ^. dstate . stkCreds)
                           slotWithTTL
                           crt
           refunds_ = sum (rewardForCred <$> deRegStakeCreds)
@@ -115,7 +115,7 @@ genRegKeyCert keys delegSt =
            (_payKey, stakeKey) <- Gen.element availableKeys
            pure $ Just $ (RegKey (toCred stakeKey), stakeKey)
   where
-    notRegistered k = k ∉ dom (_stKeys delegSt)
+    notRegistered k = k ∉ dom (_stkCreds delegSt)
     availableKeys = filter (notRegistered . toCred . snd) keys
 
 -- | Generate a DeRegKey certificate along with the stake key, which is needed
@@ -131,5 +131,5 @@ genDeRegKeyCert keys delegSt =
            (_payKey, stakeKey) <- Gen.element availableKeys
            pure $ Just (DeRegKey (toCred stakeKey), stakeKey)
   where
-    registered k = k ∈ dom (_stKeys delegSt)
+    registered k = k ∈ dom (_stkCreds delegSt)
     availableKeys = filter (registered . toCred . snd) keys

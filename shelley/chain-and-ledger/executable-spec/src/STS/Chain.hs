@@ -95,10 +95,12 @@ chainTransition = do
 
   let NewEpochState _ eta0 _ bcur es _ _pd osched = nes'
   let EpochState (AccountState _ _reserves) _ ls pp                         = es
-  let LedgerState _ (DPState (DState _ _ _ _ _ _dms _) (PState _ _ _ cs)) _ = ls
+  let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _ cs)) _ = ls
 
   PrtclState cs' h' sL' etaV' etaC' <- trans @(PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    $ TRC (PrtclEnv (OverlayEnv pp osched eta0 _pd _dms) sNow, PrtclState cs h sL etaV etaC, bh)
+    $ TRC ( PrtclEnv (OverlayEnv pp osched eta0 _pd _genDelegs) sNow
+          , PrtclState cs h sL etaV etaC
+          , bh)
 
   let ls' = setIssueNumbers ls cs'
   BbodyState ls'' bcur' <- trans @(BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)

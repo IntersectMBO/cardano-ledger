@@ -84,21 +84,21 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
-import           Keys (pattern Dms, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
+import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
                      pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey, hashKeyVRF,
                      sKey, sign, signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
                      emptyPState, genesisCoins, genesisId, overlaySchedule, rs, updateIRwd,
-                     _cCounters, _delegations, _dms, _fdms, _pParams, _ptrs, _reserves, _retiring,
-                     _rewards, _stKeys, _stPools, _treasury)
+                     _cCounters, _delegations, _fGenDelegs, _genDelegs, _pParams, _ptrs, _reserves,
+                     _retiring, _rewards, _stkCreds, _stPools, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
 import           STS.Chain (pattern ChainState)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
-                     pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeKeys,
+                     pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _paymentObj, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolVrf)
@@ -179,8 +179,8 @@ coreNodeVKG = snd . fst . (coreNodes !!)
 coreNodeKeys :: Int -> AllPoolKeys
 coreNodeKeys = snd . (coreNodes !!)
 
-dms :: Map GenKeyHash KeyHash
-dms = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
+genDelegs :: Map GenKeyHash KeyHash
+genDelegs = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
 
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
@@ -326,10 +326,10 @@ utxostEx1 :: UTxOState
 utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
 dsEx1 :: DState
-dsEx1 = emptyDState { _dms = Dms dms }
+dsEx1 = emptyDState { _genDelegs = GenDelegs genDelegs }
 
 psEx1 :: PState
-psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems dms)) }
+psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems genDelegs)) }
   where f vk = (vk, 0)
 
 lsEx1 :: LedgerState
@@ -495,7 +495,7 @@ esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1
 overlayEx2A :: Map Slot (Maybe GenKeyHash)
 overlayEx2A = overlaySchedule
                     (Epoch 0)
-                    (Map.keysSet dms)
+                    (Map.keysSet genDelegs)
                     NeutralNonce
                     ppsEx1
 
@@ -530,7 +530,7 @@ dsEx2A :: DState
 dsEx2A = dsEx1
           { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK)
                                  , (Ptr (Slot 10) 0 1, bobSHK) ]
-          , _stKeys = StakeKeys $ Map.fromList [ (aliceSHK, Slot 10)
+          , _stkCreds = StakeCreds $ Map.fromList [ (aliceSHK, Slot 10)
                                                , (bobSHK, Slot 10) ]
           , _rewards = Map.fromList [ (RewardAcnt aliceSHK, Coin 0)
                                     , (RewardAcnt bobSHK, Coin 0) ]
@@ -704,7 +704,7 @@ blockEx2C = mkBlock
 epoch1OSchedEx2C :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2C = overlaySchedule
                     (Epoch 1)
-                    (Map.keysSet dms)
+                    (Map.keysSet genDelegs)
                     (mkNonce 0 ⭒ mkNonce 1)
                     ppsEx1
 
@@ -863,7 +863,7 @@ blockEx2E = mkBlock
 epoch1OSchedEx2E :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2E = overlaySchedule
                     (Epoch 2)
-                    (Map.keysSet dms)
+                    (Map.keysSet genDelegs)
                     (mkSeqNonce 3)
                     ppsEx1
 
@@ -983,7 +983,7 @@ blockEx2GHash = bhHash (bheader blockEx2G)
 epoch1OSchedEx2G :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2G = overlaySchedule
                     (Epoch 3)
-                    (Map.keysSet dms)
+                    (Map.keysSet genDelegs)
                     (mkSeqNonce 5)
                     ppsEx1
 
@@ -1094,7 +1094,7 @@ blockEx2IHash = bhHash (bheader blockEx2I)
 epoch1OSchedEx2I :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2I = overlaySchedule
                      (Epoch 4)
-                     (Map.keysSet dms)
+                     (Map.keysSet genDelegs)
                      (mkSeqNonce 7)
                      ppsEx1
 
@@ -1194,7 +1194,7 @@ utxoEx2J = UTxO . Map.fromList $
 dsEx2J :: DState
 dsEx2J = dsEx1
           { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK) ]
-          , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 10)
+          , _stkCreds = StakeCreds $ Map.singleton aliceSHK (Slot 10)
           , _delegations = Map.singleton aliceSHK (hk alicePool)
           , _rewards = Map.singleton (RewardAcnt aliceSHK) aliceRAcnt2H
           }
@@ -1342,7 +1342,7 @@ snapsEx2L = SnapShots { _pstakeMark =
 dsEx2L :: DState
 dsEx2L = dsEx1
           { _ptrs = Map.singleton (Ptr (Slot 10) 0 0) aliceSHK
-          , _stKeys = StakeKeys $ Map.singleton aliceSHK (Slot 10)
+          , _stkCreds = StakeCreds $ Map.singleton aliceSHK (Slot 10)
           , _rewards = Map.singleton (RewardAcnt aliceSHK) (aliceRAcnt2H + Coin 201)
                        -- Note the pool cert refund of 201
           }
@@ -1367,7 +1367,7 @@ expectedStEx2L = ChainState
      (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1)
      Nothing
      pdEx2F
-     (overlaySchedule (Epoch 5) (Map.keysSet dms) (mkSeqNonce 10) ppsEx1))
+     (overlaySchedule (Epoch 5) (Map.keysSet genDelegs) (mkSeqNonce 10) ppsEx1))
   (mkSeqNonce 12)
   (mkSeqNonce 12)
   blockEx2LHash
@@ -1578,7 +1578,7 @@ blockEx3CHash = bhHash (bheader blockEx3C)
 overlayEx3C :: Map Slot (Maybe GenKeyHash)
 overlayEx3C = overlaySchedule
                     (Epoch 1)
-                    (Map.keysSet dms)
+                    (Map.keysSet genDelegs)
                     (mkSeqNonce 2)
                     ppsEx1
 
@@ -1910,7 +1910,7 @@ blockEx5AHash :: HashHeader
 blockEx5AHash = bhHash (bheader blockEx5A)
 
 dsEx5A :: DState
-dsEx5A = dsEx1 { _fdms = Map.singleton
+dsEx5A = dsEx1 { _fGenDelegs = Map.singleton
                           ( Slot 43, hashKey $ coreNodeVKG 0 )
                           ( (hashKey . vKey) newGenDelegate ) }
 
@@ -1967,11 +1967,11 @@ blockEx5BHash :: HashHeader
 blockEx5BHash = bhHash (bheader blockEx5B)
 
 dsEx5B :: DState
-dsEx5B = dsEx5A { _fdms = Map.empty
-                , _dms = Dms $ Map.insert
+dsEx5B = dsEx5A { _fGenDelegs = Map.empty
+                , _genDelegs = GenDelegs $ Map.insert
                                  ((hashKey . coreNodeVKG) 0)
                                  ((hashKey . vKey) newGenDelegate)
-                                 dms }
+                                 genDelegs }
 
 psEx5B :: PState
 psEx5B = psEx1 { _cCounters =

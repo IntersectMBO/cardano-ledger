@@ -46,7 +46,7 @@ import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, Dms, GenKeyHash)
+import           Keys (DSIGNAlgorithm, GenDelegs, GenKeyHash)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot)
 
@@ -90,7 +90,7 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) => ToCBOR (Update ha
 
 data PPUpdateEnv hashAlgo dsignAlgo = PPUpdateEnv {
     slot :: Slot
-  , dms  :: Dms hashAlgo dsignAlgo
+  , genDelegs  :: GenDelegs hashAlgo dsignAlgo
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (PPUpdateEnv hashAlgo dsignAlgo)

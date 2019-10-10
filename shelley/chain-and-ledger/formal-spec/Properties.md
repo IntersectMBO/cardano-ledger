@@ -197,8 +197,8 @@ application version or protocol parameters.
 
 **Property**
 The keys (of type Slot) of the following two mappings are always past the current slot:
-the future application versions (favs) and the future genesis delegation mapping (fdms).
-The favs slots can appear in any current or future epoch, but the fdms slots
+the future application versions (favs) and the future genesis delegation mapping (fGenDelegs).
+The favs slots can appear in any current or future epoch, but the fGenDelegs slots
 can be at most one epoch into the future.
 
 **Property**
@@ -243,23 +243,23 @@ The sum of stake in the stake snapshots is always at most forty-five billion ADA
 
 **Property**
 The following delegation mappings always has the same size:
-`stdelegs`, `rewards`, and `ptrs`.
-Moreover, the key set of `stdelegs` is the same
+`stkCreds`, `rewards`, and `ptrs`.
+Moreover, the key set of `stkCreds` is the same
 as the range of `ptrs`, which also corresponds one-one with the reward addresses
-in `rewards`. Finally, the key set of `delegations` is a subset of that of `stdelegs`.
+in `rewards`. Finally, the key set of `delegations` is a subset of that of `stkCreds`.
 
 **Property**
 If all stake keys and pools deregister, then, assuming that no one registers anything,
 by epoch `e+1`, where `e` is the max epoch in the stake pool retirement mapping,
 the delegation state will be nearly empty. More precisely,
-the mappings `stDelegs`, `rewards`, `delegations`, `ptrs`, `stpools`, `poolParams`,
+the mappings `stkCreds`, `rewards`, `delegations`, `ptrs`, `stpools`, `poolParams`,
 and `retiring` are all the empty map.
 (The map `cs` will have size seven, for the genesis keys.)
 
 # Genesis Node Property
 
 **Property**
-The size of the genesis delegation mapping `dms` is always num-genesis.
+The size of the genesis delegation mapping `genDelegs` is always num-genesis.
 Note that the value num-genesis can be given as the size of the
 mapping inherited from Byron.
 
