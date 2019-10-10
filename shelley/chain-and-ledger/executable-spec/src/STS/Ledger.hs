@@ -67,7 +67,7 @@ ledgerTransition
 ledgerTransition = do
   TRC (LedgerEnv slot ix pp _reserves, (u, d), tx) <- judgmentContext
   utxo' <- trans @(UTXOW hashAlgo dsignAlgo vrfAlgo) $ TRC
-    ( UtxoEnv slot pp (d ^. dstate . stKeys) (d ^. pstate . stPools) (d ^. dstate . dms)
+    ( UtxoEnv slot pp (d ^. dstate . stkCreds) (d ^. pstate . stPools) (d ^. dstate . genDelegs)
     , u
     , tx
     )

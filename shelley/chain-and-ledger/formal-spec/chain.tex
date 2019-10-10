@@ -911,7 +911,7 @@ The environments for this transition are:
     responsible for producing the block.
   \item The epoch nonce $\eta_0$.
   \item The stake pool stake distribution $\var{pd}$.
-  \item The mapping $\var{dms}$ of genesis keys to their cold keys.
+  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys.
 \end{itemize}
 
 The states for this transition consist only of the mapping of certificate issue numbers.
@@ -946,7 +946,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -973,7 +973,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \\
       \bslot bhb \mapsto \var{gkh}\in\var{osched}
       &
-      \var{gkh}\mapsto\var{vkh}\in\var{dms}
+      \var{gkh}\mapsto\var{vkh}\in\var{genDelegs}
       \\~\\
       {
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
@@ -985,7 +985,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
          \var{osched} \\
          \eta_0 \\
          \var{pd} \\
-         \var{dms} \\
+         \var{genDelegs} \\
        \end{array}}
       \vdash
       \var{cs}
@@ -1015,7 +1015,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
          \var{osched} \\
          \eta_0 \\
          \var{pd} \\
-         \var{dms} \\
+         \var{genDelegs} \\
        \end{array}}
       \vdash
       \var{cs}
@@ -1362,7 +1362,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \emph{Chain Transition Helper Functions}
   \begin{align*}
       & \fun{getGKeys} \in \NewEpochState \to \powerset{\KeyHashGen} \\
-      & \fun{getGKeys}~\var{nes} = \dom{dms} \\
+      & \fun{getGKeys}~\var{nes} = \dom{genDelegs} \\
       &
       \begin{array}{lr@{~=~}l}
         \where
@@ -1372,7 +1372,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           & (\wcard,~\wcard,~\var{ls},~\wcard)
           & \var{es}
           \\
-          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard))
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~\wcard))
           & \var{ls}
       \end{array}
   \end{align*}
@@ -1423,7 +1423,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
-          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
           (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
           (\wcard, reserves) \leteq \var{acnt}\\
       {
@@ -1433,7 +1433,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
              \var{osched} \\
              \eta_0 \\
              \var{pd} \\
-             \var{dms} \\
+             \var{genDelegs} \\
            \end{array}\\
            \var{s_{now}} \\
          \end{array}}

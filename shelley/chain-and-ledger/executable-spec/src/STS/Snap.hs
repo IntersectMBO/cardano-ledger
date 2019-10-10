@@ -52,7 +52,7 @@ snapTransition = do
   TRC (SnapEnv pparams d p, SnapState s u, eNew) <- judgmentContext
   let pooledStake = stakeDistr (u ^. utxo) d p
   let _slot = firstSlot eNew
-  let oblg = obligation pparams (d ^. stKeys) (p ^. stPools) _slot
+  let oblg = obligation pparams (d ^. stkCreds) (p ^. stPools) _slot
   let decayed = (u ^. deposited) - oblg
   pure $ SnapState
     s { _pstakeMark = pooledStake

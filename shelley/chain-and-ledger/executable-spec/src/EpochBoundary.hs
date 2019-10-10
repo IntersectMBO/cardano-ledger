@@ -33,7 +33,7 @@ module EpochBoundary
   ) where
 
 import           Coin (Coin (..))
-import           Delegation.Certificates (StakeKeys (..), StakePools (..), decayKey, decayPool,
+import           Delegation.Certificates (StakeCreds (..), StakePools (..), decayKey, decayPool,
                      refund)
 import           Keys (KeyHash)
 import           PParams (PParams (..))
@@ -151,11 +151,11 @@ poolRefunds pp retirees cslot =
 -- | Calculate total possible refunds.
 obligation
   :: PParams
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> StakePools hashAlgo dsignAlgo
   -> Slot
   -> Coin
-obligation pc (StakeKeys stakeKeys) (StakePools stakePools) cslot =
+obligation pc (StakeCreds stakeKeys) (StakePools stakePools) cslot =
   sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
   sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
   where

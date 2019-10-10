@@ -84,21 +84,21 @@ ledgersTransition = do
 
   let ds = _dstate dw''
       ps = _pstate dw''
-      fdms_    = _fdms ds
-      Dms dms_ = _dms ds
-      (curr, fdms') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fdms_
+      fGenDelegs_    = _fGenDelegs ds
+      GenDelegs genDelegs_ = _genDelegs ds
+      (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
   let maxSlot = maximum . Set.map fst . Map.keysSet
   let latestPerGKey gk =
         ( (maxSlot . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
         , gk)
-  let dmsKeys = Set.map
+  let genDelegsKeys = Set.map
                   latestPerGKey
                   (Set.map snd (Map.keysSet curr))
-  let dms' = Map.mapKeys snd $ dmsKeys ◁ curr
-  let oldGenDelegs = range (dom dms' ◁ dms_)
-  let cs' = (oldGenDelegs ⋪ _cCounters ps) ⨃ fmap (\x -> (x, 0)) (Map.elems dms')
-  let dw''' = dw'' { _dstate = ds { _fdms = fdms'
-                                  , _dms = Dms $ dms_ ⨃ Map.toList dms'}
+  let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr
+  let oldGenDelegs = range (dom genDelegs' ◁ genDelegs_)
+  let cs' = (oldGenDelegs ⋪ _cCounters ps) ⨃ fmap (\x -> (x, 0)) (Map.elems genDelegs')
+  let dw''' = dw'' { _dstate = ds { _fGenDelegs = fGenDelegs'
+                                  , _genDelegs = GenDelegs $ genDelegs_ ⨃ Map.toList genDelegs'}
                    , _pstate = ps { _cCounters = cs' }
                    }
 

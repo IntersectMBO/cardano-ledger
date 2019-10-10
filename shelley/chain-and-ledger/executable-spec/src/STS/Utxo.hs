@@ -43,9 +43,9 @@ data UtxoEnv hashAlgo dsignAlgo
   = UtxoEnv
       Slot
       PParams
-      (StakeKeys hashAlgo dsignAlgo)
+      (StakeCreds hashAlgo dsignAlgo)
       (StakePools hashAlgo dsignAlgo)
-      (Dms hashAlgo dsignAlgo)
+      (GenDelegs hashAlgo dsignAlgo)
       deriving(Show)
 
 instance
@@ -82,7 +82,7 @@ utxoInductive
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
   => TransitionRule (UTXO hashAlgo dsignAlgo vrfAlgo)
 utxoInductive = do
-  TRC (UtxoEnv slot_ pp stakeKeys stakePools dms_, u, tx) <- judgmentContext
+  TRC (UtxoEnv slot_ pp stakeKeys stakePools genDelegs_, u, tx) <- judgmentContext
   let txBody = _body tx
 
   _ttl txBody >= slot_ ?! ExpiredUTxO (_ttl txBody) slot_
@@ -100,7 +100,7 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Update Proposals
-  ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC (UpdateEnv slot_ pp dms_, u ^. ups, txup tx)
+  ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC (UpdateEnv slot_ pp genDelegs_, u ^. ups, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
   all (0 <=) outputCoins ?! NegativeOutputsUTxO
