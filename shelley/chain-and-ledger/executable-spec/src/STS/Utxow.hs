@@ -20,7 +20,7 @@ import           BaseTypes (intervalValue, (==>))
 import           Delegation.Certificates (isInstantaneousRewards)
 import           Keys
 import           Ledger.Core (range, (∩))
-import           LedgerState hiding (dms)
+import           LedgerState hiding (genDelegs)
 import           PParams (_d)
 import           STS.Utxo
 import           Tx
@@ -66,8 +66,8 @@ initialLedgerStateUTXOW
      )
    => InitialRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakeKeys stakePools dms) <- judgmentContext
-  trans @(UTXO hashAlgo dsignAlgo vrfAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools dms)
+  IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs) <- judgmentContext
+  trans @(UTXO hashAlgo dsignAlgo vrfAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs)
 
 utxoWitnessed
   :: forall hashAlgo dsignAlgo vrfAlgo
@@ -78,11 +78,11 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
 utxoWitnessed = do
-  TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx@(Tx txbody wits _))
+  TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx@(Tx txbody wits _))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map witKeyHash wits
-  let needed = witsVKeyNeeded (_utxo u) tx _dms
+  let needed = witsVKeyNeeded (_utxo u) tx _genDelegs
   needed `Set.isSubsetOf` witnessKeys  ?! MissingVKeyWitnessesUTXOW
 
   -- check multi-signature scripts
@@ -97,14 +97,14 @@ utxoWitnessed = do
 
   -- check genesis keys signatures for instantaneous rewards certificates
   let mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
-      Dms genMapping = _dms
+      GenDelegs genMapping = _genDelegs
       genSig = (Set.map undiscriminateKeyHash $ range genMapping) ∩ Set.map witKeyHash wits
   (    (not $ null mirCerts)
    ==> (0 < intervalValue (_d pp) && Set.size genSig >= 5))
     ?! MIRInsufficientGenesisSigsUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo vrfAlgo)
-    $ TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx)
+    $ TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx)
 
 instance
   ( HashAlgorithm hashAlgo

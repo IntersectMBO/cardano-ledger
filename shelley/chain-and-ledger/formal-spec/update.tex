@@ -19,7 +19,7 @@ for a transaction, see \ref{sec:witnesses-shelley}.
 
 \textbf{Genesis Key Delegations.} The environment for both protocol parameter
 and application version updates contains
-the value $\var{dms}$, which is a finite map indexed by genesis key hashes.
+the value $\var{genDelegs}$, which is a finite map indexed by genesis key hashes.
 This is the genesis key delegations. During the Byron era, they are all
 already delegated to some $\KeyHash$, and these delegations are inherited
 through the Byron-Shelley transition (see \ref{sec:byron-to-shelley}).
@@ -63,7 +63,7 @@ This rule has the following predicate failures:
   $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
   a \emph{PPUpdateTooEarly} failure.
 \item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
-  \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
+  \dom genDelegs$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the protocol parameter update.
 \item If a protocol parameter update in \var{pup} cannot follow the current
   protocol parameter, there is a \emph{PVCannotFollow} failure.
@@ -88,7 +88,7 @@ and will be rejected otherwise.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -114,7 +114,7 @@ and will be rejected otherwise.
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash \var{pup_s}\trans{ppup}{pup}\var{pup_s}
     }
@@ -127,7 +127,7 @@ and will be rejected otherwise.
     {
       \var{pup}\neq\emptyset
       &
-      \dom{pup}\subseteq\dom{dms}
+      \dom{pup}\subseteq\dom{genDelegs}
       \\
       \forall\var{ps}\in\range{pup},~
         \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
@@ -138,7 +138,7 @@ and will be rejected otherwise.
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \var{pup_s}
@@ -277,7 +277,7 @@ All other update proposals are scrapped.
 The AVUP rule has three predicate failures:
 \begin{itemize}
 \item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
-  \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
+  \dom genDelegs$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the application version update.
 \item In the case of \var{aup} being non-empty, if any of the application names
   in the proposal are invalid, there is a \emph{InvalidName} failure.
@@ -296,7 +296,7 @@ The AVUP rule has three predicate failures:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -333,7 +333,7 @@ The AVUP rule has three predicate failures:
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(
@@ -361,7 +361,7 @@ The AVUP rule has three predicate failures:
     {
       \var{aup}\neq\emptyset
       &
-      \dom{\var{aup}}\subseteq\dom{\var{dms}}
+      \dom{\var{aup}}\subseteq\dom{\var{genDelegs}}
       \\
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
         \fun{apNameValid}~\var{v}
@@ -381,7 +381,7 @@ The AVUP rule has three predicate failures:
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(
@@ -409,7 +409,7 @@ The AVUP rule has three predicate failures:
     {
       \var{aup}\neq\emptyset
       &
-      \dom{\var{aup}}\subseteq\dom{\var{dms}}
+      \dom{\var{aup}}\subseteq\dom{\var{genDelegs}}
       \\
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
         \fun{apNameValid}~\var{v}
@@ -431,7 +431,7 @@ The AVUP rule has three predicate failures:
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(
@@ -472,7 +472,7 @@ update rules for each.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -511,7 +511,7 @@ update rules for each.
         \begin{array}{r}
           \var{slot} \\
           \var{pp} \\
-          \var{dms} \\
+          \var{genDelegs} \\
         \end{array}
       }
       \vdash
@@ -522,7 +522,7 @@ update rules for each.
       {
         \begin{array}{r}
           \var{slot} \\
-          \var{dms} \\
+          \var{genDelegs} \\
         \end{array}
       }
       \vdash
@@ -550,7 +550,7 @@ update rules for each.
       \begin{array}{r}
         \var{slot}\\
         \var{pp} \\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(

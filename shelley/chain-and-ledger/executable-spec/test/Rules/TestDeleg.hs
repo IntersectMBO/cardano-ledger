@@ -30,7 +30,7 @@ import           Generator.LedgerTrace ()
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 import           Coin (Coin, pattern Coin)
-import           LedgerState (_delegations, _rewards, _stKeys)
+import           LedgerState (_delegations, _rewards, _stkCreds)
 import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
 import           Test.Utils (assertAll)
 import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
@@ -40,7 +40,7 @@ import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation,
 -------------------------------
 
 getStDelegs :: DState -> Set StakeCredential
-getStDelegs = dom . _stKeys
+getStDelegs = dom . _stkCreds
 
 getRewards :: DState -> Map RewardAcnt Coin
 getRewards = _rewards

@@ -40,7 +40,7 @@ data OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
       (Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo)))
       Nonce
       (PoolDistr hashAlgo dsignAlgo vrfAlgo)
-      (Dms hashAlgo dsignAlgo)
+      (GenDelegs hashAlgo dsignAlgo)
   deriving Generic
 
 instance NoUnexpectedThunks (OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo)
@@ -88,7 +88,7 @@ overlayTransition
      )
   => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
 overlayTransition = do
-  TRC ( OverlayEnv pp osched eta0 pd (Dms dms)
+  TRC ( OverlayEnv pp osched eta0 pd (GenDelegs genDelegs)
       , cs
       , bh@(BHeader bhb _)) <- judgmentContext
   let vk = bvkcold bhb
@@ -100,11 +100,11 @@ overlayTransition = do
     Just Nothing ->
       failBecause NotActiveSlotOVERLAY
     Just (Just gkey) ->
-      case Map.lookup gkey dms of
+      case Map.lookup gkey genDelegs of
         Nothing ->
           failBecause NoGenesisStakingOVERLAY
-        Just dmsKey ->
-          vkh == dmsKey ?! WrongGenesisColdKeyOVERLAY vkh dmsKey
+        Just genDelegsKey ->
+          vkh == genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
 
   trans @(OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) $ TRC ((), cs, bh)
 

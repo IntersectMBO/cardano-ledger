@@ -41,13 +41,13 @@ import           Generator.Core (findPayKeyPair)
 import           Keys (pattern KeyPair, hashKey, hashKeyVRF, vKey)
 import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
                      asStateTransition, asStateTransition', dstate, genesisCoins, genesisState,
-                     stKeys, utxo, utxoState, _delegationState, _dstate)
+                     stkCreds, utxo, utxoState, _delegationState, _dstate)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
 import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, pattern Delegation,
                      pattern KeyHashObj, pattern PoolParams, pattern RegKey, pattern RegPool,
-                     pattern RetirePool, RewardAcnt (..), StakeKeys (..))
+                     pattern RetirePool, RewardAcnt (..), StakeCreds (..))
 import           Updates
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 
@@ -167,10 +167,10 @@ genLedgerStateTx :: KeyPairs -> Slot -> LedgerState ->
                     Gen (Coin, Tx, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList (Slot _slot) sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
-  let dms' = _dms $ _dstate $ _delegationState sourceState
+  let genDelegs' = _genDelegs $ _dstate $ _delegationState sourceState
   slot' <- genNatural _slot (_slot + 100)
   (txfee', tx) <- genTx keyList utxo' (Slot slot')
-  pure (txfee', tx, asStateTransition (Slot slot') defPCs sourceState tx dms')
+  pure (txfee', tx, asStateTransition (Slot slot') defPCs sourceState tx genDelegs')
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -279,13 +279,13 @@ genLedgerStateTx' :: KeyPairs -> LedgerState ->
                     Gen (Coin, Tx, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
-  let dms' = _dms $ _dstate $ _delegationState sourceState
+  let genDelegs' = _genDelegs $ _dstate $ _delegationState sourceState
   _slot <- genNatural 0 1000
   (txfee', tx) <- genTx keyList utxo' (Slot _slot)
   tx'          <- mutateTx tx
   pure (txfee'
        , tx'
-       , asStateTransition' (Slot _slot) defPCs (LedgerValidation [] sourceState) tx' dms')
+       , asStateTransition' (Slot _slot) defPCs (LedgerValidation [] sourceState) tx' genDelegs')
 
 -- Generators for 'DelegationData'
 
@@ -330,10 +330,10 @@ genStakePool skeys vrfKeys = do
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
-  poolKey      <- Gen.element $ Map.keys stKeys'
+  poolKey      <- Gen.element $ Map.keys stkCreds'
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
-       where (StakeKeys stKeys') = d ^. dstate . stKeys
+       where (StakeCreds stkCreds') = d ^. dstate . stkCreds
 
 genDCertRegPool :: KeyPairs -> [(SignKeyVRF, VerKeyVRF)] -> Gen DCert
 genDCertRegPool skeys vrfKeys = RegPool <$> genStakePool skeys vrfKeys
