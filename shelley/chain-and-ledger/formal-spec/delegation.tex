@@ -120,18 +120,22 @@ It does the following:
   %
   \emph{Derived types}
   \begin{equation*}
-    \begin{array}{l@{\qquad=\qquad}lr}
+    \begin{array}{lclr}
       \StakeCreds
+      & ~=~
       & \Credential \mapsto \Slot
       & \text{registered stake credential} \\
       %
       \StakePools
+      & ~=~
       & \KeyHash \mapsto \Slot
       & \text{registered stake pools} \\
       %
       \PoolParam
-      & \powerset{\KeyHash} \times \Coin \times \unitInterval \times \Coin \times \AddrRWD
+      & ~=~
+      & \powerset{\KeyHash} \times \Coin \times \unitInterval \times \Coin
       & \text{stake pool parameters} \\
+      & & \qquad \times \AddrRWD \times \KeyHash_{vrf}
     \end{array}
   \end{equation*}
   %
