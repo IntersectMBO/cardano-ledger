@@ -4,6 +4,7 @@
 
 module Generator.Core
   ( findPayKeyPair
+  , genCoin
   , genTxOut
   , genUtxo0
   , mkGenesisLedgerState
@@ -71,10 +72,11 @@ genTxOut addrs = do
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
 -- and with values between 'minCoin' and 'maxCoin'.
 genCoinList :: Integer -> Integer -> Int -> Int -> Gen [Coin]
-genCoinList minCoin maxCoin lower upper = do
-  xs <- Gen.list (Range.linear lower upper)
-        $ Gen.integral (Range.exponential minCoin maxCoin)
-  return (Coin <$> xs)
+genCoinList minCoin maxCoin lower upper =
+  Gen.list (Range.linear lower upper) $ genCoin minCoin maxCoin
+
+genCoin :: Integer -> Integer -> Gen Coin
+genCoin minCoin maxCoin = Coin <$> Gen.integral (Range.exponential minCoin maxCoin)
 
 genUtxo0 :: Int -> Int -> Gen UTxO
 genUtxo0 lower upper = do

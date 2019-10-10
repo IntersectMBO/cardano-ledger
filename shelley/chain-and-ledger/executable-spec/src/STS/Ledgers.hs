@@ -19,6 +19,8 @@ import           Data.Sequence (Seq)
 import qualified Data.Set as Set
 
 import           Control.State.Transition
+
+import           Coin (Coin)
 import           Keys
 import           Ledger.Core (dom, range, (⋪), (◁), (⨃))
 import           LedgerState
@@ -31,7 +33,11 @@ import           Updates (Applications (..), UpdateState (..), apps, newAVs)
 data LEDGERS hashAlgo dsignAlgo vrfAlgo
 
 data LedgersEnv
-  = LedgersEnv Slot PParams
+  = LedgersEnv
+    { ledgersSlot     :: Slot
+    , ledgersPp       :: PParams
+    , ledgersReserves :: Coin
+    }
 
 instance
   ( HashAlgorithm hashAlgo
@@ -60,13 +66,13 @@ ledgersTransition
      )
   => TransitionRule (LEDGERS hashAlgo dsignAlgo vrfAlgo)
 ledgersTransition = do
-  TRC (LedgersEnv slot pp, ls, txwits) <- judgmentContext
+  TRC (LedgersEnv slot pp _reserves, ls, txwits) <- judgmentContext
   let (u, dw) = (_utxoState ls, _delegationState ls)
   (u'', dw'') <-
     foldM
         (\(u', dw') (ix, tx) ->
           trans @(LEDGER hashAlgo dsignAlgo vrfAlgo)
-            $ TRC (LedgerEnv slot ix pp, (u', dw'), tx)
+            $ TRC (LedgerEnv slot ix pp _reserves, (u', dw'), tx)
         )
         (u, dw)
       $ zip [0 ..] $ toList txwits

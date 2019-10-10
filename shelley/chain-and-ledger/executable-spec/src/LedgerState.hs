@@ -37,6 +37,7 @@ module LedgerState
   , ptrs
   , fdms
   , dms
+  , irwd
   , PState(..)
   , cCounters
   , LedgerValidation(..)
@@ -57,9 +58,6 @@ module LedgerState
   , delegatedStake
   , retirePools
   , emptyDelegation
-  , applyDCert
-  , applyDCertDState
-  , applyDCertPState
   , applyUTxOUpdate
   -- * Genesis State
   , genesisId
@@ -120,7 +118,7 @@ module LedgerState
   , updateNES
   ) where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
@@ -136,6 +134,7 @@ import           Numeric.Natural (Natural)
 import           Lens.Micro (to, (%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 
+import           Address (mkRwdAcnt)
 import           Coin (Coin (..))
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
                      baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
@@ -249,6 +248,8 @@ data DState hashAlgo dsignAlgo = DState
     , _fdms        :: Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
       -- |Genesis key delegations
     , _dms         :: Dms hashAlgo dsignAlgo
+      -- | Instantaneous Rewards
+    , _irwd        :: Map (Credential hashAlgo dsignAlgo) Coin
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DState hashAlgo dsignAlgo)
@@ -277,16 +278,18 @@ data DPState hashAlgo dsignAlgo vrfAlgo =
 instance NoUnexpectedThunks (DPState hashAlgo dsignAlgo vrfAlgo)
 
 data RewardUpdate hashAlgo dsignAlgo = RewardUpdate
-  { deltaT :: Coin
-  , deltaR :: Coin
-  , rs     :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
-  , deltaF :: Coin
+  { deltaT        :: Coin
+  , deltaR        :: Coin
+  , rs            :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  , deltaF        :: Coin
+  , deltaDeposits :: Coin
+  , updateIRwd    :: Map (Credential hashAlgo dsignAlgo) Coin
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate hashAlgo dsignAlgo)
 
 emptyRewardUpdate :: RewardUpdate hashAlgo dsignAlgo
-emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) (Coin 0) Map.empty
 
 data AccountState = AccountState
   { _treasury  :: Coin
@@ -329,7 +332,7 @@ emptyDelegation =
 
 emptyDState :: DState hashAlgo dsignAlgo
 emptyDState =
-  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty Map.empty (Dms Map.empty)
+  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty Map.empty (Dms Map.empty) Map.empty
 
 emptyPState :: PState hashAlgo dsignAlgo vrfAlgo
 emptyPState =
@@ -374,7 +377,7 @@ getGKeys
 getGKeys nes = Map.keysSet dms
   where NewEpochState _ _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
-        LedgerState _ (DPState (DState _ _ _ _ _ (Dms dms)) _) _ = ls
+        LedgerState _ (DPState (DState _ _ _ _ _ (Dms dms) _) _) _ = ls
 
 data NewEpochEnv hashAlgo dsignAlgo =
   NewEpochEnv {
@@ -926,6 +929,8 @@ applyDCert ptr dcert@(RetirePool _ _) ds =
 
 applyDCert _ (GenesisDelegate _) ds = ds -- TODO: check this
 
+applyDCert _ (InstantaneousRewards _) _ = undefined
+
 -- TODO do we also have to check hashKey target?
 applyDCert ptr dcert@(Delegate _) ds =
   ds & dstate %~ applyDCertDState ptr dcert
@@ -1124,8 +1129,8 @@ stakeDistr
 stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
     where
-      DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ = ds
-      PState (StakePools stpools) _ _ _                   = ps
+      DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ _ = ds
+      PState (StakePools stpools) _ _ _                     = ps
       outs = aggregateOuts u
 
       stakeRelation :: [(StakeCredential hashAlgo dsignAlgo, Coin)]
@@ -1138,9 +1143,10 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
 -- | Apply a reward update
 applyRUpd
   :: RewardUpdate hashAlgo dsignAlgo
+  -> Epoch
   -> EpochState hashAlgo dsignAlgo vrfAlgo
   -> EpochState hashAlgo dsignAlgo vrfAlgo
-applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
+applyRUpd ru e (EpochState as ss ls pp) = EpochState as' ss ls' pp
   where utxoState_ = _utxoState ls
         delegState = _delegationState ls
         dState = _dstate delegState
@@ -1149,9 +1155,19 @@ applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
                  , _reserves = _reserves as + deltaR ru
                  }
         ls' = ls { _utxoState =
-                     utxoState_ {_fees = _fees utxoState_ + deltaF ru }
+                     utxoState_ { _fees = _fees utxoState_ + deltaF ru
+                                , _deposited = _deposited utxoState_ + deltaDeposits ru}
                  , _delegationState =
-                     delegState {_dstate = dState {_rewards = _rewards dState ∪+ rs ru}}}
+                     delegState
+                     {_dstate = dState
+                                { _rewards = (_rewards dState ∪+ rs ru) ∪+ updateRwd
+                                , _stKeys = StakeKeys $ updateDelegs ∪ stDelegs
+                                , _irwd = Map.empty
+                                }}}
+        StakeKeys stDelegs = _stKeys dState
+        rewMir = updateIRwd ru
+        updateDelegs = Map.fromList [(cred, firstSlot e) | cred <- Map.keys rewMir]
+        updateRwd = Map.mapKeys mkRwdAcnt rewMir
 
 -- | Create a reward update
 createRUpd
@@ -1159,22 +1175,45 @@ createRUpd
   -> EpochState hashAlgo dsignAlgo vrfAlgo
   -> RewardUpdate hashAlgo dsignAlgo
 createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
-  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss))
+  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) deltaD newIrwd
   where Coin reserves' = _reserves acnt
-        deltaR' =
-          floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'
-        Coin totalPot = _feeSS ss + deltaR'
-        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral totalPot
-        r@(Coin r') = Coin $ totalPot - deltaT1
-        rewards' = _rewards $ _dstate $ _delegationState ls
+
+        ds = _dstate $ _delegationState ls
+        rewards' = _rewards ds
         (stake', delegs') = _pstakeGo ss
         poolsSS' = _poolsSS ss
+        StakeKeys stDelegs = _stKeys ds
+
+        -- instantaneous rewards
+        unregistered = Map.filterWithKey (\cred _ -> cred `Map.member` stDelegs) (_irwd ds)
+        registered = Map.difference (_irwd ds) unregistered
+        rewardsInsufficient = Map.filter (<= _keyDeposit pp) unregistered
+        newlyRegister = Map.difference unregistered rewardsInsufficient
+
+        Coin rewardsMIR =   (Map.foldl (+) (Coin 0) registered)
+                          + (Map.foldl (+) (Coin 0) newlyRegister)
+
+        newlyRegister' = Map.map (flip (-) $ _keyDeposit pp) newlyRegister
+        reserves'' = reserves' - rewardsMIR
+        deltaD = Coin $ fromIntegral $ Map.size newlyRegister'
+        newIrwd = Map.union registered newlyRegister'
+
+        -- reserves and rewards change
+        deltaR' =
+            (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'')
+          + Coin rewardsMIR
+        eta = fromIntegral blocksMade / expectedBlocks
+
+        Coin rewardPot = _feeSS ss + deltaR'
+        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
+        r@(Coin r') = Coin $ rewardPot - deltaT1
+
         deltaT2 = r' - c'
         rs' = reward pp b r (Map.keysSet rewards') poolsSS' stake' delegs'
         Coin c' = Map.foldr (+) (Coin 0) rs'
+
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
         expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
-        eta = fromIntegral blocksMade / expectedBlocks
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.

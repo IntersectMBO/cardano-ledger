@@ -16,6 +16,7 @@ module Delegation.Certificates
   , decayPool
   , isRegKey
   , isDeRegKey
+  , isInstantaneousRewards
   ) where
 
 import           Coin (Coin (..))
@@ -43,6 +44,7 @@ cwitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
 cwitness (RetirePool k _)          = KeyHashObj k
 cwitness (Delegate delegation)     = delegation ^. delegator
 cwitness (GenesisDelegate (gk, _)) = GenesisHashObj gk
+cwitness (InstantaneousRewards _)  = error "no witness in MIR certificate"
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert hashAlgo dsignAlgo vrfAlgo -> PParams -> Coin
@@ -104,3 +106,7 @@ decayPool pc = (pval, pmin, lambdap)
 newtype PoolDistr hashAlgo dsignAlgo vrfAlgo =
   PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, Hash hashAlgo (VerKeyVRF vrfAlgo)))
   deriving (Show, Eq, NoUnexpectedThunks)
+
+isInstantaneousRewards :: (DCert hashAlgo dsignAlgo vrfAlgo) -> Bool
+isInstantaneousRewards (InstantaneousRewards _) = True
+isInstantaneousRewards _                        = False
