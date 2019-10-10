@@ -35,8 +35,8 @@ module LedgerState
   , dstate
   , pstate
   , ptrs
-  , fdms
-  , dms
+  , fGenDelegs
+  , genDelegs
   , irwd
   , PState(..)
   , cCounters
@@ -89,7 +89,7 @@ module LedgerState
   , ups
   -- DelegationState
   , rewards
-  , stKeys
+  , stkCreds
   , delegations
   , stPools
   , pParams
@@ -139,7 +139,7 @@ import           Coin (Coin (..))
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
                      baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
                      rewardStake)
-import           Keys (AnyKeyHash, DSIGNAlgorithm, Dms (..), GenKeyHash, HashAlgorithm,
+import           Keys (AnyKeyHash, DSIGNAlgorithm, GenDelegs (..), GenKeyHash, HashAlgorithm,
                      KeyDiscriminator (..), KeyHash, KeyPair, Signable, VRFAlgorithm, hash,
                      undiscriminateKeyHash)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
@@ -155,7 +155,7 @@ import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
 
-import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeKeys (..),
+import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeCreds (..),
                      StakePools (..), cwitness, decayKey, refund)
 import           Delegation.PoolParams (poolSpec)
 
@@ -237,7 +237,7 @@ mkStakeShare p =
 
 data DState hashAlgo dsignAlgo = DState
     {  -- |The active stake keys.
-      _stKeys      :: StakeKeys hashAlgo dsignAlgo
+      _stkCreds    :: StakeCreds hashAlgo dsignAlgo
       -- |The active accounts.
     ,  _rewards    :: RewardAccounts hashAlgo dsignAlgo
       -- |The current delegations.
@@ -245,9 +245,9 @@ data DState hashAlgo dsignAlgo = DState
       -- |The pointed to hash keys.
     , _ptrs        :: Map Ptr (StakeCredential hashAlgo dsignAlgo)
       -- | future genesis key delegations
-    , _fdms        :: Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+    , _fGenDelegs  :: Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
       -- |Genesis key delegations
-    , _dms         :: Dms hashAlgo dsignAlgo
+    , _genDelegs   :: GenDelegs hashAlgo dsignAlgo
       -- | Instantaneous Rewards
     , _irwd        :: Map (Credential hashAlgo dsignAlgo) Coin
     } deriving (Show, Eq, Generic)
@@ -332,7 +332,7 @@ emptyDelegation =
 
 emptyDState :: DState hashAlgo dsignAlgo
 emptyDState =
-  DState (StakeKeys Map.empty) Map.empty Map.empty Map.empty Map.empty (Dms Map.empty) Map.empty
+  DState (StakeCreds Map.empty) Map.empty Map.empty Map.empty Map.empty (GenDelegs Map.empty) Map.empty
 
 emptyPState :: PState hashAlgo dsignAlgo vrfAlgo
 emptyPState =
@@ -374,10 +374,10 @@ instance NoUnexpectedThunks (NewEpochState hashAlgo dsignAlgo vrfAlgo)
 getGKeys
   :: NewEpochState hashAlgo dsignAlgo vrfAlgo
   -> Set (GenKeyHash hashAlgo dsignAlgo)
-getGKeys nes = Map.keysSet dms
+getGKeys nes = Map.keysSet genDelegs
   where NewEpochState _ _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
-        LedgerState _ (DPState (DState _ _ _ _ _ (Dms dms) _) _) _ = ls
+        LedgerState _ (DPState (DState _ _ _ _ _ (GenDelegs genDelegs) _) _) _ = ls
 
 data NewEpochEnv hashAlgo dsignAlgo =
   NewEpochEnv {
@@ -501,7 +501,7 @@ produced pp stakePools tx =
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
   :: PParams
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> TxBody hashAlgo dsignAlgo vrfAlgo
   -> Coin
 keyRefunds pp stk tx =
@@ -513,13 +513,13 @@ keyRefund
   :: Coin
   -> UnitInterval
   -> Rational
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> Slot
   -> DCert hashAlgo dsignAlgo vrfAlgo
   -> Coin
-keyRefund dval dmin lambda (StakeKeys stkeys) slot c =
+keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
     case c of
-      DeRegKey key -> case Map.lookup key stkeys of
+      DeRegKey key -> case Map.lookup key stkcreds of
                         Nothing -> Coin 0
                         Just  s -> refund dval dmin lambda $ slot -* s
       _ -> Coin 0
@@ -527,16 +527,16 @@ keyRefund dval dmin lambda (StakeKeys stkeys) slot c =
 -- | Functions to calculate decayed deposits
 decayedKey
   :: PParams
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> Slot
   -> DCert hashAlgo dsignAlgo vrfAlgo
   -> Coin
-decayedKey pp stk@(StakeKeys stkeys) cslot cert =
+decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
     case cert of
       DeRegKey key ->
-          if Map.notMember key stkeys
+          if Map.notMember key stkcreds
           then 0
-          else let created'      = stkeys Map.! key in
+          else let created'      = stkcreds Map.! key in
                let start         = max (firstSlot $ epochFromSlot cslot) created' in
                let dval          = pp ^. keyDeposit in
                let dmin          = pp ^. keyMinRefund in
@@ -549,7 +549,7 @@ decayedKey pp stk@(StakeKeys stkeys) cslot cert =
 -- | Decayed deposit portions
 decayedTx
   :: PParams
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> TxBody hashAlgo dsignAlgo vrfAlgo
   -> Coin
 decayedTx pp stk tx =
@@ -559,7 +559,7 @@ decayedTx pp stk tx =
 consumed
   :: PParams
   -> UTxO hashAlgo dsignAlgo vrfAlgo
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> TxBody hashAlgo dsignAlgo vrfAlgo
   -> Coin
 consumed pp u stakeKeys tx =
@@ -573,7 +573,7 @@ consumed pp u stakeKeys tx =
 preserveBalance
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
   => StakePools hashAlgo dsignAlgo
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> PParams
   -> TxBody hashAlgo dsignAlgo vrfAlgo
   -> UTxOState hashAlgo dsignAlgo vrfAlgo
@@ -603,9 +603,9 @@ correctWithdrawals accs withdrawals =
 witsVKeyNeeded
   :: UTxO hashAlgo dsignAlgo vrfAlgo
   -> Tx hashAlgo dsignAlgo vrfAlgo
-  -> Dms hashAlgo dsignAlgo
+  -> GenDelegs hashAlgo dsignAlgo
   -> Set (AnyKeyHash hashAlgo dsignAlgo)
-witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
+witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
     certAuthors  `Set.union`
@@ -624,7 +624,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _dms =
                [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | RegPool pool <- toList $ txbody ^. certs]
     certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK (toList $ txbody ^. certs))
     getCertHK = cwitness
-    updateKeys = undiscriminateKeyHash `Set.map` propWits (txup tx) _dms
+    updateKeys = undiscriminateKeyHash `Set.map` propWits (txup tx) _genDelegs
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
@@ -647,7 +647,7 @@ verifiedWits (Tx tx wits _) =
 enoughWits
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => Tx hashAlgo dsignAlgo vrfAlgo
-  -> Dms hashAlgo dsignAlgo
+  -> GenDelegs hashAlgo dsignAlgo
   -> UTxOState hashAlgo dsignAlgo vrfAlgo
   -> Validity
 enoughWits tx@(Tx _ wits _) d' u =
@@ -661,7 +661,7 @@ validRuleUTXO
   :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
   => RewardAccounts hashAlgo dsignAlgo
   -> StakePools hashAlgo dsignAlgo
-  -> StakeKeys hashAlgo dsignAlgo
+  -> StakeCreds hashAlgo dsignAlgo
   -> PParams
   -> Slot
   -> TxBody hashAlgo dsignAlgo vrfAlgo
@@ -681,7 +681,7 @@ validRuleUTXOW
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
      )
   => Tx hashAlgo dsignAlgo vrfAlgo
-  -> Dms hashAlgo dsignAlgo
+  -> GenDelegs hashAlgo dsignAlgo
   -> LedgerState hashAlgo dsignAlgo vrfAlgo
   -> Validity
 validRuleUTXOW tx d' l = verifiedWits tx
@@ -691,11 +691,11 @@ validRuleUTXOW tx d' l = verifiedWits tx
 -- proposals.
 propWits
   :: Update hashAlgo dsignAlgo
-  -> Dms hashAlgo dsignAlgo
+  -> GenDelegs hashAlgo dsignAlgo
   -> Set (KeyHash hashAlgo dsignAlgo)
-propWits (Update (PPUpdate pup) (AVUpdate aup')) (Dms _dms) =
+propWits (Update (PPUpdate pup) (AVUpdate aup')) (GenDelegs _genDelegs) =
   Set.fromList $ Map.elems updateKeys
-  where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup') ◁ _dms
+  where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup') ◁ _genDelegs
 
 validTx
   :: ( HashAlgorithm hashAlgo
@@ -704,7 +704,7 @@ validTx
      , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
      )
   => Tx hashAlgo dsignAlgo vrfAlgo
-  -> Dms hashAlgo dsignAlgo
+  -> GenDelegs hashAlgo dsignAlgo
   -> Slot
   -> PParams
   -> LedgerState hashAlgo dsignAlgo vrfAlgo
@@ -712,7 +712,7 @@ validTx
 validTx tx d' slot pp l =
     validRuleUTXO  (l ^. delegationState . dstate . rewards)
                    (l ^. delegationState . pstate . stPools)
-                   (l ^. delegationState . dstate . stKeys)
+                   (l ^. delegationState . dstate . stkCreds)
                    pp
                    slot
                    (tx ^. body)
@@ -733,7 +733,7 @@ validKeyRegistration cert ds =
   case cert of
     RegKey key -> if not $ Map.member key stakeKeys
                   then Valid else Invalid [StakeKeyAlreadyRegistered]
-                   where (StakeKeys stakeKeys) = ds ^. stKeys
+                   where (StakeCreds stakeKeys) = ds ^. stkCreds
     _          -> Valid
 
 validKeyDeregistration
@@ -744,7 +744,7 @@ validKeyDeregistration cert ds =
   case cert of
     DeRegKey key -> if Map.member key stakeKeys
                     then Valid else Invalid [StakeKeyNotRegistered]
-                      where (StakeKeys stakeKeys) = ds ^. stKeys
+                      where (StakeCreds stakeKeys) = ds ^. stkCreds
     _            -> Valid
 
 validStakeDelegation
@@ -756,7 +756,7 @@ validStakeDelegation cert ds =
     Delegate (Delegation source _)
       -> if Map.member source stakeKeys
          then Valid else Invalid [StakeDelegationImpossible]
-           where (StakeKeys stakeKeys) = ds ^. stKeys
+           where (StakeCreds stakeKeys) = ds ^. stkCreds
     _ -> Valid
 
 -- there is currently no requirement that could make this invalid
@@ -801,7 +801,7 @@ asStateTransition
   -> PParams
   -> LedgerState hashAlgo dsignAlgo vrfAlgo
   -> Tx hashAlgo dsignAlgo vrfAlgo
-  -> Dms hashAlgo dsignAlgo
+  -> GenDelegs hashAlgo dsignAlgo
   -> Either [ValidationError] (LedgerState hashAlgo dsignAlgo vrfAlgo)
 asStateTransition slot pp ls tx d' =
   case validTx tx d' slot pp ls of
@@ -837,7 +837,7 @@ asStateTransition'
   -> PParams
   -> LedgerValidation hashAlgo dsignAlgo vrfAlgo
   -> Tx hashAlgo dsignAlgo vrfAlgo
-  -> Dms hashAlgo dsignAlgo
+  -> GenDelegs hashAlgo dsignAlgo
   -> LedgerValidation hashAlgo dsignAlgo vrfAlgo
 asStateTransition' slot pp (LedgerValidation valErrors ls) tx d' =
     let ls' = applyTxBody ls pp (tx ^. body) in
@@ -876,7 +876,7 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
     currentPool = ls ^. utxoState . deposited
     txDeposits =
       deposits pp (ls ^. delegationState . pstate . stPools) (toList $ tx ^. certs)
-    txRefunds = keyRefunds pp (ls ^. delegationState . dstate . stKeys) tx
+    txRefunds = keyRefunds pp (ls ^. delegationState . dstate . stkCreds) tx
 
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody
@@ -941,19 +941,19 @@ applyDCertDState
   -> DState hashAlgo dsignAlgo
   -> DState hashAlgo dsignAlgo
 applyDCertDState (Ptr slot txIx clx) (DeRegKey key) ds =
-    ds & stKeys      .~ (StakeKeys $ Map.delete hksk stkeys')
+    ds & stkCreds      .~ (StakeCreds $ Map.delete hksk stkcreds')
        & rewards     %~ Map.delete (RewardAcnt hksk)
        & delegations %~ Map.delete hksk
        & ptrs        %~ Map.delete (Ptr slot txIx clx)
         where hksk = key
-              (StakeKeys stkeys') = ds ^. stKeys
+              (StakeCreds stkcreds') = ds ^. stkCreds
 
 applyDCertDState (Ptr slot txIx clx) (RegKey key) ds =
-    ds & stKeys  .~ (StakeKeys $ Map.insert hksk slot stkeys')
+    ds & stkCreds  .~ (StakeCreds $ Map.insert hksk slot stkcreds')
        & rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
        & ptrs    %~ Map.insert (Ptr slot txIx clx) hksk
         where hksk = key
-              (StakeKeys stkeys') = ds ^. stKeys
+              (StakeCreds stkcreds') = ds ^. stkCreds
 
 applyDCertDState _ (Delegate (Delegation source target)) ds =
     ds & delegations %~ Map.insert source target
@@ -1129,14 +1129,14 @@ stakeDistr
 stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
     where
-      DState (StakeKeys stkeys) rewards' delegs ptrs' _ _ _ = ds
-      PState (StakePools stpools) _ _ _                     = ps
+      DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
+      PState (StakePools stpools) _ _ _                      = ps
       outs = aggregateOuts u
 
       stakeRelation :: [(StakeCredential hashAlgo dsignAlgo, Coin)]
       stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
 
-      activeDelegs = dom stkeys ◁ delegs ▷ dom stpools
+      activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools
 
       aggregatePlus = Map.fromListWith (+)
 
@@ -1161,10 +1161,10 @@ applyRUpd ru e (EpochState as ss ls pp) = EpochState as' ss ls' pp
                      delegState
                      {_dstate = dState
                                 { _rewards = (_rewards dState ∪+ rs ru) ∪+ updateRwd
-                                , _stKeys = StakeKeys $ updateDelegs ∪ stDelegs
+                                , _stkCreds = StakeCreds $ updateDelegs ∪ stkcreds
                                 , _irwd = Map.empty
                                 }}}
-        StakeKeys stDelegs = _stKeys dState
+        StakeCreds stkcreds = _stkCreds dState
         rewMir = updateIRwd ru
         updateDelegs = Map.fromList [(cred, firstSlot e) | cred <- Map.keys rewMir]
         updateRwd = Map.mapKeys mkRwdAcnt rewMir
@@ -1182,10 +1182,10 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
         rewards' = _rewards ds
         (stake', delegs') = _pstakeGo ss
         poolsSS' = _poolsSS ss
-        StakeKeys stDelegs = _stKeys ds
+        StakeCreds stkcreds = _stkCreds ds
 
         -- instantaneous rewards
-        unregistered = Map.filterWithKey (\cred _ -> cred `Map.member` stDelegs) (_irwd ds)
+        unregistered = Map.filterWithKey (\cred _ -> cred `Map.member` stkcreds) (_irwd ds)
         registered = Map.difference (_irwd ds) unregistered
         rewardsInsufficient = Map.filter (<= _keyDeposit pp) unregistered
         newlyRegister = Map.difference unregistered rewardsInsufficient

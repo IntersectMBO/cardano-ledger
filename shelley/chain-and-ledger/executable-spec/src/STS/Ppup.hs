@@ -26,7 +26,7 @@ import           Numeric.Natural (Natural)
 data PPUP hashAlgo dsignAlgo
 
 data PPUPEnv hashAlgo dsignAlgo
-  = PPUPEnv Slot PParams (Dms hashAlgo dsignAlgo)
+  = PPUPEnv Slot PParams (GenDelegs hashAlgo dsignAlgo)
 
 instance STS (PPUP hashAlgo dsignAlgo) where
   type State (PPUP hashAlgo dsignAlgo) = PPUpdate hashAlgo dsignAlgo
@@ -62,13 +62,13 @@ ppupTransitionEmpty = do
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP hashAlgo dsignAlgo)
 ppupTransitionNonEmpty = do
-  TRC (PPUPEnv s pp (Dms _dms), pupS, pup@(PPUpdate pup')) <- judgmentContext
+  TRC (PPUPEnv s pp (GenDelegs _genDelegs), pupS, pup@(PPUpdate pup')) <- judgmentContext
 
   pup' /= Map.empty ?! PPUpdateEmpty
 
   all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
 
-  (dom pup' ⊆ dom _dms) ?! NonGenesisUpdatePPUP (dom pup') (dom _dms)
+  (dom pup' ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup') (dom _genDelegs)
 
   let Epoch slotEpoch = epochFromSlot (Slot 1)
   s
