@@ -1869,6 +1869,8 @@ mkGoblinGens
 --
 tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
 tamperWithUpdateProposal env st uprop = do
+  -- The frequencies above were determined ad-hoc to get an even coverage in the
+  -- resulting predicate failures.
   let failureGenerators
         = [ (1, invalidProtocolVersion)
           , (1, invalidParametersUpdate)
@@ -1881,12 +1883,14 @@ tamperWithUpdateProposal env st uprop = do
           ] ++ (map (\sg -> (1, sg env st)) goblinGensUPIREG)
   tamperedUprop <- Gen.frequency failureGenerators
   -- We need to re-sign the update proposal since we changed the contents of
-  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
+  -- 'uprop', however in 10/n of the cases we want to trigger a 'DoesNotVerify'
   -- error (where 'n' is the total number of predicate failures, 'n = length
-  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
+  -- failureGenerators + 1'). Thus, in 1-/n of the cases we simply return the
   -- tampered proposal without re-signing it, which will cause the
   -- 'DoesNotVerify' failure.
   Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
+                -- Using 10 in the frequency below will give you us around 15%
+                -- of proposals with an invalid hash.
                 , (10, pure $! tamperedUprop)
                 ]
   where
