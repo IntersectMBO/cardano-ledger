@@ -14,6 +14,7 @@ import qualified Data.Set as Set
 
 import           Data.Sequence (Seq (..))
 
+import           Coin (Coin)
 import           Delegation.Certificates
 import           Keys
 import           LedgerState
@@ -34,7 +35,13 @@ import           Hedgehog (Gen)
 data DELEGS hashAlgo dsignAlgo vrfAlgo
 
 data DelegsEnv hashAlgo dsignAlgo vrfAlgo
-  = DelegsEnv Slot Ix PParams (Tx hashAlgo dsignAlgo vrfAlgo)
+  = DelegsEnv
+    { delegsSlot :: Slot
+    , delegsIx   :: Ix
+    , delegspp   :: PParams
+    , delegsTx   :: (Tx hashAlgo dsignAlgo vrfAlgo)
+    , delegsReserves :: Coin
+    }
   deriving Show
 
 instance
@@ -58,7 +65,7 @@ delegsTransition
    . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
   => TransitionRule (DELEGS hashAlgo dsignAlgo vrfAlgo)
 delegsTransition = do
-  TRC (env@(DelegsEnv _slot txIx pp (Tx txbody _ _)), dpstate, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv _slot txIx pp (Tx txbody _ _) _reserves), dpstate, certificates) <- judgmentContext
 
   case certificates of
     Empty -> do
@@ -87,7 +94,7 @@ delegsTransition = do
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
 
       trans @(DELPL hashAlgo dsignAlgo vrfAlgo)
-        $ TRC (DelplEnv _slot ptr pp, dpstate', cert)
+        $ TRC (DelplEnv _slot ptr pp _reserves, dpstate', cert)
 
 instance
   (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)

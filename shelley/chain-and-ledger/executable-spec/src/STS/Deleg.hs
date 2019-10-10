@@ -27,7 +27,11 @@ import           Hedgehog (Gen)
 data DELEG hashAlgo dsignAlgo vrfAlgo
 
 data DelegEnv
-  = DelegEnv Slot Ptr
+  = DelegEnv
+  { slot :: Slot
+  , ptr :: Ptr
+  , reserves :: Coin
+  }
   deriving (Show, Eq)
 
 instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
@@ -43,6 +47,7 @@ instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
     | WrongCertificateTypeDELEG
     | GenesisKeyNotInpMappingDELEG
     | DuplicateGenesisDelegateDELEG
+    | InsufficientForInstantaneousRewardsDELEG
     deriving (Show, Eq)
 
   initialRules = [pure emptyDState]
@@ -51,7 +56,7 @@ instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
 delegationTransition
   :: TransitionRule (DELEG hashAlgo dsignAlgo vrfAlgo)
 delegationTransition = do
-  TRC (DelegEnv slot_ ptr_, ds, c) <- judgmentContext
+  TRC (DelegEnv slot_ ptr_ reserves_, ds, c) <- judgmentContext
 
   case c of
     RegKey key -> do
@@ -90,6 +95,14 @@ delegationTransition = do
       vk ∉ range dms_ ?! DuplicateGenesisDelegateDELEG
       pure $ ds
         { _fdms = _fdms ds ⨃ [((s', gkey), vk)]}
+
+    InstantaneousRewards credCoinMap -> do
+      let combinedMap = Map.union credCoinMap (_irwd ds)
+          requiredForRewards = foldl (+) (Coin 0) (range combinedMap)
+
+      requiredForRewards <= reserves_ ?! InsufficientForInstantaneousRewardsDELEG
+
+      pure $ ds { _irwd = combinedMap }
 
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
