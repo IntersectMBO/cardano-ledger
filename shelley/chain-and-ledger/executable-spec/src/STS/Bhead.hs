@@ -7,6 +7,8 @@
 module STS.Bhead
   ( BHEAD
   , BheadEnv (..)
+  , PredicateFailure (..)
+  , State
   )
 where
 
