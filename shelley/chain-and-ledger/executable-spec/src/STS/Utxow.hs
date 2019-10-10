@@ -13,10 +13,15 @@ module STS.Utxow
 where
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq (filter)
 import qualified Data.Set as Set
 
+import           BaseTypes (intervalValue, (==>))
+import           Delegation.Certificates (isInstantaneousRewards)
 import           Keys
+import           Ledger.Core (range, (∩))
 import           LedgerState hiding (dms)
+import           PParams (_d)
 import           STS.Utxo
 import           Tx
 import           TxData
@@ -46,6 +51,7 @@ instance
     | MissingScriptWitnessesUTXOW
     | ScriptWitnessNotValidatingUTXOW
     | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo))
+    | MIRInsufficientGenesisSigsUTXOW
     deriving (Eq, Show)
 
   transitionRules = [utxoWitnessed]
@@ -72,7 +78,7 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
 utxoWitnessed = do
-  TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx@(Tx _ wits _))
+  TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx@(Tx txbody wits _))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map witKeyHash wits
@@ -88,6 +94,14 @@ utxoWitnessed = do
 
   scriptsNeeded utxo' tx == Map.keysSet (txwitsScript tx)
     ?! MissingScriptWitnessesUTXOW
+
+  -- check genesis keys signatures for instantaneous rewards certificates
+  let mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
+      Dms genMapping = _dms
+      genSig = (Set.map undiscriminateKeyHash $ range genMapping) ∩ Set.map witKeyHash wits
+  (    (not $ null mirCerts)
+   ==> (0 < intervalValue (_d pp) && Set.size genSig >= 5))
+    ?! MIRInsufficientGenesisSigsUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo vrfAlgo)
     $ TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx)
