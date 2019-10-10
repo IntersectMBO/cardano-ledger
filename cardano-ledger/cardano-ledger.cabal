@@ -45,6 +45,7 @@ library
                        Cardano.Chain.Update
                        Cardano.Chain.Update.Proposal
                        Cardano.Chain.Update.Validation.Interface
+                       Cardano.Chain.Update.Vote
                        Cardano.Chain.ValidationMode
 
   other-modules:
@@ -118,7 +119,6 @@ library
                        Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
                        Cardano.Chain.Update.Validation.Registration
                        Cardano.Chain.Update.Validation.Voting
-                       Cardano.Chain.Update.Vote
 
   build-depends:       base >=4.11 && <5
                      , base58-bytestring
