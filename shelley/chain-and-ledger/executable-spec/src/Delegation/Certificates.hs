@@ -16,6 +16,7 @@ module Delegation.Certificates
   , decayPool
   , isRegKey
   , isDeRegKey
+  , isInstantaneousRewards
   ) where
 
 import           Coin (Coin (..))
@@ -105,3 +106,7 @@ decayPool pc = (pval, pmin, lambdap)
 newtype PoolDistr hashAlgo dsignAlgo vrfAlgo =
   PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, Hash hashAlgo (VerKeyVRF vrfAlgo)))
   deriving (Show, Eq, NoUnexpectedThunks)
+
+isInstantaneousRewards :: (DCert hashAlgo dsignAlgo vrfAlgo) -> Bool
+isInstantaneousRewards (InstantaneousRewards _) = True
+isInstantaneousRewards _                        = False
