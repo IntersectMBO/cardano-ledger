@@ -7,11 +7,13 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.UTxO.TxAux
   ( TxAux
   , ATxAux(..)
   , mkTxAux
+  , annotateTxAux
   , taTx
   , taWitness
   , txaF
@@ -20,17 +22,23 @@ where
 
 import Cardano.Prelude
 
+import qualified Data.ByteString.Lazy as Lazy
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
   ( Annotated(..)
   , ByteSpan
+  , Decoded(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , annotatedDecoder
   , fromCBORAnnotated
   , encodeListLen
   , enforceSize
+  , serialize
+  , slice
+  , unsafeDeserialize
   )
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
@@ -40,13 +48,24 @@ import Cardano.Chain.UTxO.TxWitness (TxWitness)
 type TxAux = ATxAux ()
 
 mkTxAux :: Tx -> TxWitness -> TxAux
-mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ())
+mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ()) ()
+
+annotateTxAux :: TxAux -> ATxAux ByteString
+annotateTxAux ta = Lazy.toStrict . slice bs <$> ta'
+  where
+    bs  = serialize ta
+    ta' = unsafeDeserialize bs
 
 data ATxAux a = ATxAux
-  { aTaTx      :: !(Annotated Tx a)
-  , aTaWitness :: !(Annotated TxWitness a)
+  { aTaTx         :: !(Annotated Tx a)
+  , aTaWitness    :: !(Annotated TxWitness a)
+  , aTaAnnotation :: !a
   } deriving (Generic, Show, Eq, Functor)
     deriving anyclass NFData
+
+instance Decoded (ATxAux ByteString) where
+  type BaseType (ATxAux ByteString) = ATxAux ()
+  recoverBytes = aTaAnnotation
 
 taTx :: ATxAux a -> Tx
 taTx = unAnnotated . aTaTx
@@ -74,6 +93,9 @@ instance FromCBOR TxAux where
 
 instance FromCBOR (ATxAux ByteSpan) where
   fromCBOR = do
-    enforceSize "TxAux" 2
-    ATxAux <$> fromCBORAnnotated <*> fromCBORAnnotated
-
+    Annotated (tx, witness) byteSpan <- annotatedDecoder $ do
+      enforceSize "TxAux" 2
+      tx      <- fromCBORAnnotated
+      witness <- fromCBORAnnotated
+      pure (tx, witness)
+    pure $ ATxAux tx witness byteSpan
