@@ -136,7 +136,8 @@ type POOLREAP = STS.PoolReap.POOLREAP ShortHash MockDSIGN FakeVRF
 type Credential = TxData.Credential ShortHash MockDSIGN
 
 type StakeCredential = TxData.StakeCredential ShortHash MockDSIGN
-type StakeKeys = TxData.StakeKeys ShortHash MockDSIGN
+
+type StakeCreds = TxData.StakeCreds ShortHash MockDSIGN
 
 type MultiSig = TxData.MultiSig ShortHash MockDSIGN
 

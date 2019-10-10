@@ -37,7 +37,7 @@ module Keys
   , verify
 
   , GKeys(..)
-  , Dms(..)
+  , GenDelegs(..)
 
   , KESAlgorithm
   , KESignable
@@ -208,8 +208,8 @@ verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
   either (const False) (const True)
     $ verifySignedKES vKeyES n vd sigKES
 
-newtype Dms hashAlgo dsignAlgo =
-  Dms (Map (GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo))
+newtype GenDelegs hashAlgo dsignAlgo =
+  GenDelegs (Map (GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo))
   deriving (Show, Eq, NoUnexpectedThunks)
 
 newtype GKeys dsignAlgo = GKeys (Set (VKeyGenesis dsignAlgo))

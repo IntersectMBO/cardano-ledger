@@ -2,7 +2,7 @@
 module Delegation.Certificates
   (
     DCert(..)
-  , StakeKeys(..)
+  , StakeCreds(..)
   , StakePools(..)
   , PoolDistr(..)
   , cwitness
@@ -24,7 +24,7 @@ import           Keys (Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
-import           TxData (Credential (..), DCert (..), StakeCredential, StakeKeys (..),
+import           TxData (Credential (..), DCert (..), StakeCredential, StakeCreds (..),
                      StakePools (..), delegator, poolPubKey)
 
 import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)

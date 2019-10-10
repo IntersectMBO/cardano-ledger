@@ -224,8 +224,8 @@ data Tx hashAlgo dsignAlgo vrfAlgo
 instance (DSIGNAlgorithm dsignAlgo)
   => NoUnexpectedThunks (Tx hashAlgo dsignAlgo vrfAlgo)
 
-newtype StakeKeys hashAlgo dsignAlgo =
-  StakeKeys (Map (StakeCredential hashAlgo dsignAlgo) Slot)
+newtype StakeCreds hashAlgo dsignAlgo =
+  StakeCreds (Map (StakeCredential hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq, NoUnexpectedThunks)
 
 newtype StakePools hashAlgo dsignAlgo =
@@ -435,35 +435,35 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
     encodeListLen 1
       <> toCBOR (getRwdCred rwdAcnt)
 
-instance Relation (StakeKeys hashAlgo dsignAlgo) where
-  type Domain (StakeKeys hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo
-  type Range (StakeKeys hashAlgo dsignAlgo)  = Slot
+instance Relation (StakeCreds hashAlgo dsignAlgo) where
+  type Domain (StakeCreds hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo
+  type Range (StakeCreds hashAlgo dsignAlgo)  = Slot
 
-  singleton k v = StakeKeys $ Map.singleton k v
+  singleton k v = StakeCreds $ Map.singleton k v
 
-  dom (StakeKeys stKeys) = dom stKeys
+  dom (StakeCreds stkCreds) = dom stkCreds
 
-  range (StakeKeys stKeys) = range stKeys
+  range (StakeCreds stkCreds) = range stkCreds
 
-  s ◁ (StakeKeys stKeys) = StakeKeys $ s ◁ stKeys
+  s ◁ (StakeCreds stkCreds) = StakeCreds $ s ◁ stkCreds
 
-  s ⋪ (StakeKeys stKeys) = StakeKeys $ s ⋪ stKeys
+  s ⋪ (StakeCreds stkCreds) = StakeCreds $ s ⋪ stkCreds
 
-  (StakeKeys stKeys) ▷ s = StakeKeys $ stKeys ▷ s
+  (StakeCreds stkCreds) ▷ s = StakeCreds $ stkCreds ▷ s
 
-  (StakeKeys stKeys) ⋫ s = StakeKeys $ stKeys ⋫ s
+  (StakeCreds stkCreds) ⋫ s = StakeCreds $ stkCreds ⋫ s
 
-  (StakeKeys a) ∪ (StakeKeys b) = StakeKeys $ a ∪ b
+  (StakeCreds a) ∪ (StakeCreds b) = StakeCreds $ a ∪ b
 
-  (StakeKeys a) ⨃ b = StakeKeys $ a ⨃ b
+  (StakeCreds a) ⨃ b = StakeCreds $ a ⨃ b
 
-  vmax <=◁ (StakeKeys stKeys) = StakeKeys $ vmax <=◁ stKeys
+  vmax <=◁ (StakeCreds stkCreds) = StakeCreds $ vmax <=◁ stkCreds
 
-  (StakeKeys stKeys) ▷<= vmax = StakeKeys $ stKeys ▷<= vmax
+  (StakeCreds stkCreds) ▷<= vmax = StakeCreds $ stkCreds ▷<= vmax
 
-  (StakeKeys stKeys) ▷>= vmin = StakeKeys $ stKeys ▷>= vmin
+  (StakeCreds stkCreds) ▷>= vmin = StakeCreds $ stkCreds ▷>= vmin
 
-  size (StakeKeys stKeys) = size stKeys
+  size (StakeCreds stkCreds) = size stkCreds
 
 -- Lenses
 
