@@ -13,6 +13,7 @@ module Cardano.Chain.UTxO.TxAux
   ( TxAux
   , ATxAux(..)
   , mkTxAux
+  , annotateTxAux
   , taTx
   , taWitness
   , txaF
@@ -21,6 +22,7 @@ where
 
 import Cardano.Prelude
 
+import qualified Data.ByteString.Lazy as Lazy
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
 
@@ -34,6 +36,9 @@ import Cardano.Binary
   , fromCBORAnnotated
   , encodeListLen
   , enforceSize
+  , serialize
+  , slice
+  , unsafeDeserialize
   )
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
@@ -44,6 +49,12 @@ type TxAux = ATxAux ()
 
 mkTxAux :: Tx -> TxWitness -> TxAux
 mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ()) ()
+
+annotateTxAux :: TxAux -> ATxAux ByteString
+annotateTxAux ta = Lazy.toStrict . slice bs <$> ta'
+  where
+    bs  = serialize ta
+    ta' = unsafeDeserialize bs
 
 data ATxAux a = ATxAux
   { aTaTx         :: !(Annotated Tx a)
