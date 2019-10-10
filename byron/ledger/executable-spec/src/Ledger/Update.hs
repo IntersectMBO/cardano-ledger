@@ -1870,16 +1870,16 @@ mkGoblinGens
 tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
 tamperWithUpdateProposal env st uprop = do
   let failureGenerators
-        = [ invalidProtocolVersion
-          , invalidParametersUpdate
-          , duplicatedProtocolVersion
-          , duplicatedSoftwareVersion
-          , invalidSoftwareVersion
-          , invalidApplicationName
-          , invalidSystemTag
-          , invalidIssuer
-          ] ++ (map (\sg -> sg env st) goblinGensUPIREG)
-  tamperedUprop <- Gen.choice failureGenerators
+        = [ (1, invalidProtocolVersion)
+          , (1, invalidParametersUpdate)
+          , (5, duplicatedProtocolVersion)
+          , (5, duplicatedSoftwareVersion)
+          , (1, invalidSoftwareVersion)
+          , (1, invalidApplicationName)
+          , (1, invalidSystemTag)
+          , (1, invalidIssuer)
+          ] ++ (map (\sg -> (1, sg env st)) goblinGensUPIREG)
+  tamperedUprop <- Gen.frequency failureGenerators
   -- We need to re-sign the update proposal since we changed the contents of
   -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
   -- error (where 'n' is the total number of predicate failures, 'n = length
@@ -1887,7 +1887,7 @@ tamperWithUpdateProposal env st uprop = do
   -- tampered proposal without re-signing it, which will cause the
   -- 'DoesNotVerify' failure.
   Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
-                , (1, pure $! tamperedUprop)
+                , (10, pure $! tamperedUprop)
                 ]
   where
     ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
