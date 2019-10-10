@@ -34,6 +34,7 @@ data BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo
 
 data BbodyState hashAlgo dsignAlgo vrfAlgo
   = BbodyState (LedgerState hashAlgo dsignAlgo vrfAlgo) (BlocksMade hashAlgo dsignAlgo)
+  deriving (Eq, Show)
 
 data BbodyEnv
   = BbodyEnv
