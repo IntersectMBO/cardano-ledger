@@ -214,7 +214,7 @@ abstractTxFee
   -> Abstract.Lovelace
 abstractTxFee txIdMap tfp aUtxo aTx = do
   let aTxWits = Abstract.makeTxWits aUtxo aTx
-      ATxAux (Annotated _ txBytes) _ = elaborateTxWitsBS
+      ATxAux (Annotated _ txBytes) _ _ = elaborateTxWitsBS
         (elaborateTxId txIdMap)
         aTxWits
       cLovelace = case tfp of

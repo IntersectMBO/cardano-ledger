@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.UTxO.TxAux
   ( TxAux
@@ -26,8 +27,10 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary
   ( Annotated(..)
   , ByteSpan
+  , Decoded(..)
   , FromCBOR(..)
   , ToCBOR(..)
+  , annotatedDecoder
   , fromCBORAnnotated
   , encodeListLen
   , enforceSize
@@ -40,13 +43,18 @@ import Cardano.Chain.UTxO.TxWitness (TxWitness)
 type TxAux = ATxAux ()
 
 mkTxAux :: Tx -> TxWitness -> TxAux
-mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ())
+mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ()) ()
 
 data ATxAux a = ATxAux
-  { aTaTx      :: !(Annotated Tx a)
-  , aTaWitness :: !(Annotated TxWitness a)
+  { aTaTx         :: !(Annotated Tx a)
+  , aTaWitness    :: !(Annotated TxWitness a)
+  , aTaAnnotation :: !a
   } deriving (Generic, Show, Eq, Functor)
     deriving anyclass NFData
+
+instance Decoded (ATxAux ByteString) where
+  type BaseType (ATxAux ByteString) = ATxAux ()
+  recoverBytes = aTaAnnotation
 
 taTx :: ATxAux a -> Tx
 taTx = unAnnotated . aTaTx
@@ -74,6 +82,9 @@ instance FromCBOR TxAux where
 
 instance FromCBOR (ATxAux ByteSpan) where
   fromCBOR = do
-    enforceSize "TxAux" 2
-    ATxAux <$> fromCBORAnnotated <*> fromCBORAnnotated
-
+    Annotated (tx, witness) byteSpan <- annotatedDecoder $ do
+      enforceSize "TxAux" 2
+      tx      <- fromCBORAnnotated
+      witness <- fromCBORAnnotated
+      pure (tx, witness)
+    pure $ ATxAux tx witness byteSpan
