@@ -4,7 +4,6 @@
 \newcommand{\Proof}{\type{Proof}}
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
-\newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
 \newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 
@@ -107,8 +106,6 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     & 0_{seed} \in \Seed & \text{neutral seed element} \\
     & \Seedl \in \Seed & \text{leader seed constant} \\
     & \Seede \in \Seed & \text{nonce seed constant}\\
-    & \SlotsPrior \in \Duration & \tau\text{ in \cite{ouroboros_praos}}\\
-    & \StartRewards \in \Duration & \text{duration to start reward calculations}\\
   \end{align*}
 
   \caption{VRF definitions}
@@ -640,7 +637,7 @@ execution of the transition role is as follows:
 \subsection{Block Header Transition}
 \label{sec:block-header-trans}
 
-The Block Header Transition checks a couple sizes and performs some chain level upkeep.
+The Block Header Transition checks a couple of sizes and performs some chain level upkeep.
 The environment consists of a candidate nonce and a set of genesis keys, and the state is the
 epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 
@@ -779,8 +776,8 @@ transition which are the following:
 
 \begin{itemize}
 \item The KES period start \var{c_0} is greater than or equal to the KES period of
-  the slot of the block header body and less than 90 KES periods after \var{c_0}.
-  The value of 90 KES periods is the agreed-upon lifetime of an operational certificate,
+  the slot of the block header body and less than $\MaxKESEvo$-many KES periods after \var{c_0}.
+  The value of $\MaxKESEvo$ is the agreed-upon lifetime of an operational certificate,
   see \cite{delegation_design}.
 \item \var{hk} exists as key in the mapping of certificate issues numbers to a KES
   period \var{m} and that period is less than or equal to \var{n}.
@@ -808,7 +805,7 @@ of the key \var{hk} with the KES period \var{n}.
       &
       t \leteq \kesPeriod{s} - c_0
       \\~\\
-      c_0 \leq \kesPeriod{s} < c_0 + 90
+      c_0 \leq \kesPeriod{s} < c_0 + \MaxKESEvo
       \\
       \var{hk}\mapsto m\in\var{cs}
       &
@@ -1507,6 +1504,8 @@ This section describes how to transition the state held by the Byron ledger to t
 The Byron ledger state $\CEState$ is defined in \cite{byron_chain_spec}.
 Figure~\ref{fig:functions:to-shelley} defines a function $\fun{toShelley}$
 which takes the Byron ledger state and creates the Shelley ledger state.
+Note that we use the hash of the final Byron header as the first evolving and
+canditate nonces for Shelley.
 
 %%
 %% Figure - Byron to Shelley State Transition

@@ -38,6 +38,7 @@ that a transaction failed to be processed.
 \label{sec:utxo-trans}
 
 Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition system.
+See Figure~\ref{fig:defs:utxo-shelley} for most of the definitions used in the transition system.
 
 \begin{itemize}
 
@@ -144,6 +145,7 @@ The state needed for the UTxO transition $\UTxOState$, consists of:
   \item The current UTxO.
   \item The deposit pot.
   \item The fee pot.
+  \item The update state (see Figure~\ref{fig:ts-types:update}).
 \end{itemize}
 The signal for the UTxO transition is a transaction.
 
