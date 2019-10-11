@@ -20,6 +20,9 @@ of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
 The constants $\SlotsPrior$ and $\StartRewards$ concern the chain stability.
 The maximum number of time a KES key can be evolved before a pool operator
 must create a new operational certificate is given by $\MaxKESEvo$.
+\textbf{Note that if } $\MaxKESEvo$
+\textbf{is changed, the KES signature format may have to change as well.}
+
 Finally, $\Quorum$ determines the quorum amount needed for votes on the
 protocol parameter updates and the application version updates.
 
@@ -135,7 +138,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
       \SlotsPerKESPeriod & \N & \text{slots per KES period} \\
       \SlotsPrior & \Duration & \tau\text{ in \cite{ouroboros_praos}}\\
       \StartRewards & \Duration & \text{duration to start reward calculations}\\
-      \MaxKESEvo & \N & \text{duration to start reward calculations}\\
+      \MaxKESEvo & \N & \text{maximum KES key evolutions}\\
       \Quorum & \N & \text{quorum for update system votes}\\
     \end{array}
   \end{equation*}
