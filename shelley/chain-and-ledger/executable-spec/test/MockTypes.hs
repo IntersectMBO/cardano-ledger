@@ -95,6 +95,8 @@ type SignKeyVRF = Keys.SignKeyVRF FakeVRF
 
 type VerKeyVRF = Keys.VerKeyVRF FakeVRF
 
+type VrfKeyPairs = [(SignKeyVRF, VerKeyVRF)]
+
 type CertifiedVRF = Keys.CertifiedVRF FakeVRF
 
 type KESig = Keys.KESig MockKES BHBody
