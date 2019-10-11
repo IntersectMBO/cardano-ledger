@@ -24,7 +24,8 @@ import           Ledger.Core ((<|))
 import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (relevantCasesAreCovered)
-import           Rules.TestLedger (credentialRemovedAfterDereg, rewardZeroAfterReg)
+import           Rules.TestLedger (credentialRemovedAfterDereg, registeredPoolIsAdded,
+                     rewardZeroAfterReg)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -160,6 +161,9 @@ propertyTests = testGroup "Property-Based Testing"
                   [ testProperty "newly registered key has a reward of 0" rewardZeroAfterReg
                   , testProperty "deregistered key's credential is removed"
                                  credentialRemovedAfterDereg
+                  , testProperty "newly registered stake pool is added to \
+                                 \appropriate state mappings"
+                                 registeredPoolIsAdded
                   ]
                 , testGroup "Ledger Genesis State"
                   [testProperty

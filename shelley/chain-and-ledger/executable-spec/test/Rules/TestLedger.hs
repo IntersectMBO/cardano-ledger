@@ -7,27 +7,35 @@ module Rules.TestLedger
   ( rewardZeroAfterReg
   , credentialRemovedAfterDereg
   , consumedEqualsProduced
+  , registeredPoolIsAdded
   )
 where
 
 import           Data.Foldable (toList)
+import qualified Data.Map as M
+import           Data.Maybe (mapMaybe)
 import           Data.Word (Word64)
+import           Lens.Micro (to, (^.))
 
 import           Hedgehog (Property, forAll, property, withTests)
 
+import           Control.State.Transition (Environment)
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace,
                      traceOfLengthWithInitState)
 import           Control.State.Transition.Trace (SourceSignalTarget (..), source,
-                     sourceSignalTargets, target)
+                     sourceSignalTargets, target, traceEnv)
 import           Generator.Core (mkGenesisLedgerState)
 import           Generator.LedgerTrace ()
 
 import           Coin (pattern Coin)
-import           LedgerState (pattern DPState, pattern DState, pattern UTxOState, _deposited,
-                     _dstate, _fees, _rewards, _utxo)
-import           MockTypes (DELEG, LEDGER)
+import           Ledger.Core ((∈))
+import           LedgerState (pattern DPState, pattern DState, pattern UTxOState, cCounters,
+                     pParams, pstate, stPools, _deposited, _dstate, _fees, _rewards, _utxo)
+import           MockTypes (DCert, DELEG, LEDGER, PoolParams)
 import qualified Rules.TestDeleg as TestDeleg
-import           TxData (_body, _certs)
+import           STS.Ledger (LedgerEnv (ledgerSlot))
+import           TxData (pattern RegPool, StakePools (StakePools), body, certs, poolPubKey, _body,
+                     _certs)
 import           UTxO (balance)
 
 import           Test.Utils (assertAll)
@@ -102,6 +110,46 @@ consumedEqualsProduced = withTests (fromIntegral numberOfTests) . property $ do
 
           (balance u  + d  + fees  + foldl (+) (Coin 0) rewards ) ==
           (balance u' + d' + fees' + foldl (+) (Coin 0) rewards')
+
+
+-- | Check that a `RegPool` certificate properly adds a stake pool.
+registeredPoolIsAdded :: Property
+registeredPoolIsAdded = do
+  withTests (fromIntegral numberOfTests) . property $ do
+    tr <- forAll
+          $ traceOfLengthWithInitState @LEDGER
+                                     (fromIntegral traceLen)
+                                     mkGenesisLedgerState
+            `ofLengthAtLeast` 1
+    assertAll (addedRegPool (tr ^. traceEnv)) (sourceSignalTargets tr)
+
+ where
+
+  getTxRegPoolParams :: SourceSignalTarget LEDGER -> [PoolParams]
+  getTxRegPoolParams sst =
+    mapMaybe getPoolParams (toList (signal sst ^. body . certs))
+
+  getPoolParams :: DCert -> Maybe PoolParams
+  getPoolParams cert = case cert of
+                         RegPool pps -> Just pps
+                         _ -> Nothing
+
+  addedRegPool :: Environment LEDGER
+               -> SourceSignalTarget LEDGER
+               -> Bool
+  addedRegPool env sst = all check (getTxRegPoolParams sst)
+   where
+    check :: PoolParams -> Bool
+    check poolParams =
+      let hk = poolParams ^. poolPubKey
+          pSt = snd (target sst) ^. pstate
+          -- PoolParams are registered in pParams map
+       in M.lookup hk (pSt ^. pParams) == Just poolParams
+          -- Hashkey is registered in stPools map
+       && M.lookup hk (pSt ^. stPools . to (\(StakePools x) -> x))
+            == Just (ledgerSlot env)
+          -- Hashkey is registered in cCounters map
+       && hk ∈ M.keys (pSt ^. cCounters)
 
 
 -- | Transform LEDGER `sourceSignalTargets`s to DELEG ones.
