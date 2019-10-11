@@ -578,6 +578,7 @@ instance STS ADDVOTE where
   data PredicateFailure ADDVOTE
     = AVSigDoesNotVerify
     | NoUpdateProposal UpId
+    | VoteByNonGenesisDelegate VKey
     deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
@@ -593,6 +594,7 @@ instance STS ADDVOTE where
               case lookupR vk dms of
                 Just vks -> Set.singleton (pid, vks)
                 Nothing  -> Set.empty
+        vtsPid /= Set.empty ?! VoteByNonGenesisDelegate vk
         Set.member pid rups ?! NoUpdateProposal pid
         Core.verify vk pid (vote ^. vSig) ?! AVSigDoesNotVerify
         return $! vts <> vtsPid
