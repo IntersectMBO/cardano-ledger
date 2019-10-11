@@ -45,19 +45,19 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: e52fea6ecd6ccb227de8333b0cb7482e81879691
+  tag: 749b71269d8599a39817234b6a51788dd9fb57f4
   subdir: byron/semantics/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: e52fea6ecd6ccb227de8333b0cb7482e81879691
+  tag: 749b71269d8599a39817234b6a51788dd9fb57f4
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: e52fea6ecd6ccb227de8333b0cb7482e81879691
+  tag: 749b71269d8599a39817234b6a51788dd9fb57f4
   subdir: byron/chain/executable-spec
 
 source-repository-package
