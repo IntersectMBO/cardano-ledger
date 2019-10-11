@@ -7,7 +7,7 @@ The governance process includes a mechanism for core nodes to propose and vote o
 updates. In this chapter we
 outline rules for genesis keys \textit{proposing} both protocol parameter
 and application version updates, as well as voting on whether a particular
-software update is an acceptable future option (again, only genesis keys vote on this).
+software update is an acceptable future option.
 For rules regarding the \textit{adoption} of protocol
 parameter updates, see \ref{sec:pparam-update}. For rules regarding
 adoption of new software versions see \ref{sec:software-updates}.
@@ -36,6 +36,38 @@ For transparency in both voting mechanisms, the votes and proposals for updates
 are stored
 on the ledger in addition to the currently accepted protocol parameters and
 application versions.
+
+\subsection{Descriptions of the Data}
+\label{sec:update-types}
+
+The types were defined in Figure~\ref{fig:defs:utxo-shelley}.
+In the derived types, $\Metadata$ and $\Applications$ are values
+that contain versions of current and next versions of applications.
+The $\ApName$ uniquely identifies a specific kind of application (e.g.
+the wallet), and the associated $\ApVer$ is the specific version of that
+application. The associated $\Metadata$ value gives the \textit{next possible}
+versions of the given application. It is a mapping of system tags to hashes of
+installer binaries, and is needed for the update mechanism.
+The update proposal type $\Update$ is a pair of $\PPUpdate$ and $\AVUpdate$.
+$\PPUpdate$ allows for changing protocol parameters,
+and $\AVUpdate$ allows for updating the software versions.
+
+Note that both of these finite maps are indexed by the hashes of the keys of
+entities proposing the given updates, $\KeyHashGen$.
+We use the abstract type $\KeyHashGen$ to represent hashes of genesis
+(public verification) keys, which have type $\VKeyGen$.
+Genesis keys are the keys belonging to the federated
+nodes running the Cardano system currently (also referred to as core nodes).
+The the regular user verification keys are of a type $\VKey$, distinct from the
+genesis key type, $\VKeyGen$. Similarly, the type hashes of these
+are distinct, $\KeyHash$ and $\KeyHashGen$ respectively.
+
+Currently, updates can only be proposed and voted on by the owners of the genesis keys.
+The process of decentralization will result in the core nodes gradually giving up
+some of their priviledges and responsibilities to the network,
+eventually give them \textit{all} up.
+The update proposal mechanism will not be decentralization in the Shelley era, however.
+For more on the decentralization process, see \ref{sec:new-epoch-trans}.
 
 \subsection{Protocol Parameter Update Proposals}
 \label{sec:pp-proposals}
@@ -174,6 +206,10 @@ The function $\fun{newAVs}$ adds the most recent valid application
 versions to a finite map of applications using right override.
 This helper function will be used in the ledger update.
 
+\textbf{Note that} $\fun{votedValue}$
+\textbf{is only well-defined if } $\Quorum$
+\textbf{is greater than half the number of core nodes, i.e.}
+$\Quorum > |\var{genDelegs}|/2$ \textbf{.}
 %%
 %% Figure - Helper Function for Consensus of Update Proposals
 %%
@@ -182,7 +218,7 @@ This helper function will be used in the ledger update.
       & \fun{votedValue_T} \in (\KeyHashGen\mapsto\type{T}) \to \type{T}^?\\
       & \fun{votedValue_T}~\var{vs} =
         \begin{cases}
-          t & \exists t\in\range{vs}~(|vs\restrictrange t|\geq 5) \\
+          t & \exists t\in\range{vs}~(|vs\restrictrange t|\geq \Quorum) \\
           \Nothing & \text{otherwise} \\
         \end{cases}
   \end{align*}
