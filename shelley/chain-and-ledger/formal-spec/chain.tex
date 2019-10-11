@@ -830,7 +830,7 @@ The OCERT rule has six predicate failures:
 \item If the KES period is less than the KES period start in the certificate,
   there is a \emph{KESBeforeStart} failure.
 \item If the KES period is greater than or equal to the KES period end (start +
-  90) in the certificate, there is a \emph{KESAfterEnd} failure.
+  $\MaxKESEvo$) in the certificate, there is a \emph{KESAfterEnd} failure.
 \item If the period counter in the original key hash counter mapping is larger
   than the period number in the certificate, there is a \emph{KESPeriodWrong}
   failure.
