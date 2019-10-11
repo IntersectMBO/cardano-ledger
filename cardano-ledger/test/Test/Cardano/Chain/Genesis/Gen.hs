@@ -55,7 +55,7 @@ import Test.Cardano.Chain.Update.Gen
 import Test.Cardano.Crypto.Gen
   ( genProtocolMagic
   , genProtocolMagicId
-  , genRedeemVerificationKey
+  , genCompactRedeemVerificationKey
   , genTextHash
   )
 
@@ -143,7 +143,8 @@ genTestnetBalanceOptions =
 
 genGenesisAvvmBalances :: Gen GenesisAvvmBalances
 genGenesisAvvmBalances =
-  GenesisAvvmBalances <$> customMapGen genRedeemVerificationKey genLovelace
+  GenesisAvvmBalances
+    <$> customMapGen genCompactRedeemVerificationKey genLovelace
 
 genGenesisKeyHashes :: Gen GenesisKeyHashes
 genGenesisKeyHashes =

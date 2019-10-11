@@ -17,6 +17,7 @@ module Test.Cardano.Crypto.Gen
   -- * Redeem Key Generators
   , genRedeemKeypair
   , genRedeemVerificationKey
+  , genCompactRedeemVerificationKey
   , genRedeemSigningKey
 
   -- * Signature Generators
@@ -78,11 +79,13 @@ import Cardano.Crypto.Signing
   , signRaw
   )
 import Cardano.Crypto.Signing.Redeem
-  ( RedeemVerificationKey
+  ( CompactRedeemVerificationKey
+  , RedeemVerificationKey
   , RedeemSigningKey
   , RedeemSignature
   , redeemDeterministicKeyGen
   , redeemSign
+  , toCompactRedeemVerificationKey
   )
 import Test.Cardano.Crypto.Orphans ()
 
@@ -152,6 +155,10 @@ genRedeemKeypair = Gen.just $ redeemDeterministicKeyGen <$> gen32Bytes
 
 genRedeemVerificationKey :: Gen RedeemVerificationKey
 genRedeemVerificationKey = fst <$> genRedeemKeypair
+
+genCompactRedeemVerificationKey :: Gen CompactRedeemVerificationKey
+genCompactRedeemVerificationKey =
+  toCompactRedeemVerificationKey <$> genRedeemVerificationKey
 
 genRedeemSigningKey :: Gen RedeemSigningKey
 genRedeemSigningKey = snd <$> genRedeemKeypair

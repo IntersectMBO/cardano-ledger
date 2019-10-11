@@ -13,6 +13,7 @@ import Cardano.Chain.Genesis (unGenesisAvvmBalances, unGenesisNonAvvmBalances)
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.UTxO.UTxO (UTxO)
 import qualified Cardano.Chain.UTxO.UTxO as UTxO
+import Cardano.Crypto (fromCompactRedeemVerificationKey)
 
 
 -- | Create initial 'UTxO' from balances defined in the genesis config
@@ -23,7 +24,8 @@ genesisUtxo config = UTxO.fromBalances balances
   balances = avvmBalances <> nonAvvmBalances
 
   avvmBalances :: [(Address, Lovelace)]
-  avvmBalances = first (makeRedeemAddress networkMagic)
+  avvmBalances =
+    first (makeRedeemAddress networkMagic . fromCompactRedeemVerificationKey)
     <$> M.toList (unGenesisAvvmBalances $ Genesis.configAvvmDistr config)
 
   networkMagic :: NetworkMagic

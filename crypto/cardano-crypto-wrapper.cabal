@@ -41,10 +41,11 @@ library
                        Cardano.Crypto.Signing.SigningKey
                        Cardano.Crypto.Signing.Signature
 
+                       Cardano.Crypto.Signing.Redeem.Compact
                        Cardano.Crypto.Signing.Redeem.KeyGen
-                       Cardano.Crypto.Signing.Redeem.VerificationKey
                        Cardano.Crypto.Signing.Redeem.SigningKey
                        Cardano.Crypto.Signing.Redeem.Signature
+                       Cardano.Crypto.Signing.Redeem.VerificationKey
 
                        Cardano.Crypto.Signing.Safe.EncryptedSigningKey
                        Cardano.Crypto.Signing.Safe.KeyGen
@@ -55,6 +56,7 @@ library
                      , aeson
                      , base64-bytestring
                      , base64-bytestring-type
+                     , binary
                      , bytestring
                      , canonical-json
                      , cardano-binary
@@ -99,6 +101,7 @@ test-suite test
                        Test.Cardano.Crypto.Orphans
                        Test.Cardano.Crypto.Random
                        Test.Cardano.Crypto.Signing.Redeem
+                       Test.Cardano.Crypto.Signing.Redeem.Compact
                        Test.Cardano.Crypto.Signing.Safe
                        Test.Cardano.Crypto.Signing.Signing
 

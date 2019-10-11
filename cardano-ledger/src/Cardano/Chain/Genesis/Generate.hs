@@ -80,6 +80,7 @@ import Cardano.Crypto
   , noPassSafeSigner
   , redeemDeterministicKeyGen
   , safeKeyGen
+  , toCompactRedeemVerificationKey
   , toVerification
   )
 
@@ -207,7 +208,9 @@ generateGenesisData startTime genesisSpec = do
 
   -- Fake AVVM Balances
   fakeAvvmVerificationKeys <-
-    mapM (maybe (throwError GenesisDataGenerationRedeemKeyGen) (pure . fst))
+    mapM
+      (maybe (throwError GenesisDataGenerationRedeemKeyGen)
+             (pure . toCompactRedeemVerificationKey . fst))
       $ fmap redeemDeterministicKeyGen (gsFakeAvvmSeeds generatedSecrets)
   let
     fakeAvvmDistr = GenesisAvvmBalances . M.fromList $ map
