@@ -16,7 +16,7 @@ import           Cardano.Crypto.VRF.Fake (FakeVRF)
 
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Generator.Core (genCoin, traceKeyPairs)
-import           Generator.Delegation (genPParams)
+import           Generator.Update (genPParams)
 import           Generator.Utxo (genTx)
 import           Slot (Slot (..))
 import           STS.Ledger (LEDGER, LedgerEnv (..))

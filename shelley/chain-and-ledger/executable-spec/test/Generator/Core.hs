@@ -5,6 +5,7 @@
 module Generator.Core
   ( findPayKeyPair
   , genCoin
+  , genNatural
   , genTxOut
   , genUtxo0
   , mkGenesisLedgerState
@@ -28,8 +29,13 @@ import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
 import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, TxOut, UTxO, UTxOState,
                      VKey)
+import           Numeric.Natural (Natural)
 import           Tx (pattern TxOut)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
+
+-- | Generator for a natural number between 'lower' and 'upper'
+genNatural :: Natural -> Natural -> Gen Natural
+genNatural lower upper = Gen.integral $ Range.linear lower upper
 
 mkKeyPairs :: Word64 -> (KeyPair, KeyPair)
 mkKeyPairs n
