@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/001ec3576ef3bda04cf5bcccdd9a00991835d1a7/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/599d27a05597f96b9bfffa7920806fa638dcea10/snapshot.yaml
 
 packages:
   - cardano-ledger
@@ -15,13 +15,13 @@ extra-deps:
   - generic-monoid-0.1.0.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 001ec3576ef3bda04cf5bcccdd9a00991835d1a7
+    commit: 599d27a05597f96b9bfffa7920806fa638dcea10
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: c50bfdb129ae1eb319c9af3902674ef75b017fec
+    commit: 5c575d46afbfe333de0ccba70b084db8302abf42
     subdirs:
       - binary
       - binary/test
