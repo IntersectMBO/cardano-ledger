@@ -37,7 +37,7 @@ import qualified Hedgehog.Range as Range
 
 import           BaseTypes
 import           Coin
-import           Generator.Core (findPayKeyPair)
+import           Generator.Core (findPayKeyPair, genNatural)
 import           Keys (pattern KeyPair, hashKey, hashKeyVRF, vKey)
 import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
                      asStateTransition, asStateTransition', dstate, genesisCoins, genesisState,
@@ -89,10 +89,6 @@ addrTxins keyPairs = uncurry AddrBase <$> hashKeyPairs keyPairs
 
 genBool :: Gen Bool
 genBool = Gen.enumBounded
-
--- | Generator for a natural number between 'lower' and 'upper'.
-genNatural :: Natural -> Natural -> Gen Natural
-genNatural lower upper = Gen.integral $ Range.linear lower upper
 
 genInteger :: Integer -> Integer -> Gen Integer
 genInteger lower upper = Gen.integral $ Range.linear lower upper
