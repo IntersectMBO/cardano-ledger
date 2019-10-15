@@ -17,7 +17,7 @@ import qualified Hedgehog.Gen as Gen
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, mkNonce)
 import           Coin (Coin (..))
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core (genNatural)
+import           Generator.Core (genInteger, genNatural, increasingProbabilityAt)
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..))
@@ -39,19 +39,23 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        <*> pure 0 -- _minfeeB
                        <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
                        -- keyDeposit
-                       <*> (Coin <$> Gen.integral (Range.linear 0 50))
+                       <*> increasingProbabilityAt
+                             (Coin <$> genInteger 0 50)
+                             (Coin 0, Coin 50)
                        -- keyMinRefund: 0.1-0.5
                        <*> genIntervalInThousands 100 500
                        -- keyDecayRate: 0.001-0.1
                        <*> genRationalInThousands 1 100
                        -- poolDeposit
-                       <*> Gen.integral (Range.linear 0 500)
+                       <*> increasingProbabilityAt
+                             (Coin <$> genInteger 0 500)
+                             (Coin 0, Coin 500)
                        -- poolMinRefund: 0.1-0.7
                        <*> genIntervalInThousands 100 700
                        -- poolDecayRate: 0.001-0.1
                        <*> genRationalInThousands 1 100
-                       -- eMax
-                       <*> (Epoch <$> Gen.integral (Range.linear 20 500))
+                       -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
+                       <*> (Epoch <$> genNatural 6 500)
                        -- nOpt
                        <*> Gen.integral (Range.linear 1 100)
                        -- a0: 0.01-1.0
@@ -61,9 +65,11 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        -- tau: 0.1-0.3
                        <*> genIntervalInThousands 100 300
                        -- activeSlotCoeff: 0-1
-                       <*> genIntervalInThousands 0 1000
-                       -- decentralisation param: 0-1
-                       <*> genIntervalInThousands 0 1000
+                       <*> increasingProbabilityAt
+                             (genIntervalInThousands 0 1000)
+                             (unsafeMkUnitInterval 0, unsafeMkUnitInterval 1)
+                       -- decentralisation param: 0,0.1,0.2..1
+                       <*> (unsafeMkUnitInterval <$> Gen.element [0, 0.1 .. 1])
                        <*> genExtraEntropy
                        -- protocolVersion
                        <*> ((,,) <$> genNatural 1 10 <*> genNatural 1 50 <*> genNatural 1 100)

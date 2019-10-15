@@ -5,7 +5,6 @@ module Generator
     (
       utxoSize
     , utxoMap
-    , genBool
     , genNatural
     , genNonEmptyAndAdvanceTx
     , genNonEmptyAndAdvanceTx'
@@ -37,7 +36,7 @@ import qualified Hedgehog.Range as Range
 
 import           BaseTypes
 import           Coin
-import           Generator.Core (findPayKeyPair, genNatural)
+import           Generator.Core (findPayKeyPair, genInteger, genNatural)
 import           Keys (pattern KeyPair, hashKey, hashKeyVRF, vKey)
 import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
                      asStateTransition, asStateTransition', dstate, genesisCoins, genesisState,
@@ -86,12 +85,6 @@ hashKeyPairs keyPairs =
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
 addrTxins keyPairs = uncurry AddrBase <$> hashKeyPairs keyPairs
-
-genBool :: Gen Bool
-genBool = Gen.enumBounded
-
-genInteger :: Integer -> Integer -> Gen Integer
-genInteger lower upper = Gen.integral $ Range.linear lower upper
 
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
 -- coins, with values between 'minCoin' and 'maxCoin'.
