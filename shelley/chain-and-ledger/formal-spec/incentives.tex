@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper,dvipsnames,twosided]{article}
+\documentclass[11pt,a4paper,dvipsnames,twosided,final]{article}
 
 \usepackage[deliverable]{IOHKCoverPage}
 
@@ -9,11 +9,11 @@
 \EditorName{Kevin Hammond, \IOHK}
 \Authors{Kevin Hammond \quad \texttt{<kevin.hammond@iohk.io>}
 }
-\DueDate{10$^{\textrm{th}}$ October 2019}
-\SubmissionDate{10$^{\textrm{th}}$ October 2019}{2019/10/09}
+\DueDate{14$^{\textrm{th}}$ October 2019}
+\SubmissionDate{14$^{\textrm{th}}$ October 2019}{2019/10/14}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
-\Version{0.1}
+\Version{0.2}
 \Project{Shelley Ledger}
 \DisseminationDR
 
@@ -75,7 +75,8 @@
   \clearpage%
 
   \begin{changelog}
-        \change{2019/10/10}{Kevin Hammond}{FM (\IOHK)}{Initial Version.}
+        \change{2019/10/09}{Kevin Hammond}{FM (\IOHK)}{Initial Version.}
+        \change{2019/10/14}{Kevin Hammond}{FM (\IOHK)}{Polished slightly.}
       \end{changelog}
       \clearpage%
 \begin{landscape}
@@ -114,34 +115,40 @@
   protocol, including maintaining built-in defences against ``Sybil-in-Sybil'' security attacks
   that could lead to corruption of the blockchain.
   A simplified version of the incentives scheme is used for the Incentivised Testnet, using fixed rewards,
-  omitting fee calculations and ...
-  The document is based on SL-D1 (Delegation/Incentives Design)~\cite{delegation_design} and feeds in to SL-D5
-  (Formal Ledger Specification. Version 1)~\cite{shelley_ledger_spec} as well as the online rewards calculator and the Shelley Incentivised Testnet and Mainnet  implementations and quality assurance programmes.
+  omitting fee calculations, influence and apparent performance etc. (some of these features may be
+  added in later versions of the Incentivised Testnet).
+  This document is based on SL-D1 (Delegation/Incentives Design)~\cite{delegation_design} and feeds in to SL-D5
+  (Formal Ledger Specification. Version 1)~\cite{shelley_spec} as well as the online rewards calculator and the Shelley Incentivised Testnet and Mainnet  implementations and quality assurance programmes.
 \end{abstract}
 
+\clearpage
 \section{Introduction}
 \label{sec:introduction}
 
 Figure~\ref{fig:terminology} gives some basic terminology.
 The Shelley implementation rewards those \ada{} holders who either own active stake pools
 (\emph{Owners}) or who delegate stake to active stake pools (\emph{Delegators}).
-In line with the Ouroborous Protocol~\cite{ouroborous}, the Stakepool receives
+In line with the design of the Ouroborous protocol~\cite{ouroboros_classic}, the Stakepool receives
 rewards in proportion to the stake that it \emph{controls} (``proof of
 stake'') rather than in proportion to the work that it does (``proof of work'').
-This has cost and efficiency advantages.
-The level of rewards that the implemenation provides is designed to help ensure that no single entity can
+This has cost, efficiency and safety advantages.
+The level of rewards that the implementation provides is designed to help ensure that no single entity can
 dominate the system by \emph{controlling} excessive amounts of \ada{}.  This is achieved by creating intrinsic
-balancing mechanisms that will naturally spread stake among a large number of stakepools.
-In particular, rewards to any one \emph{Stakepool} may be capped to a pre-determined limit,
-meaning that both delegators and owners will receive less reward if too much stake is controlled.
+balancing mechanisms that will naturally spread all the active stake among a large number of stakepools.
+In particular, the rewards to any one \emph{Stakepool} may be capped to a pre-determined limit,
+meaning that both delegators and owners will receive less reward if too much stake is controlled by a single stakepool,
+so encouraging the creation of additional, smaller stakepools.
 % This includes limiting the amount of \ada{} that is delegated to any one \emph{stakepool}.
 The overall theory that ensures this is described in the Ouroborous Praos research
-paper~\cite{OP}. The design of the incentives and delegation scheme is described
-in~\cite{shelley_}.
+paper~\cite{ouroboros_praos}. The design of the incentives and delegation scheme is described
+in~\cite{delegation_design}.
+
+\textbf{\emph{Note: this document is subject to change.  In particular, it may be necessary to include a simplified fees calculation
+  in the incentivised testnet, where the fees are given to the treasury\khcomment{Check fees.}.}}
 
 \begin{figure}[t]
   \begin{center}
-\begin{tabular}{||l|l||}
+\begin{tabular}{||l|p{12cm}||}
   \hline \hline
 \textbf{Term} & \textbf{Definition} \\\hline
   Stakepool & A system that is actively participating in the creation of blocks on the \cardano{} blockchain  \\\hline
@@ -156,25 +163,26 @@ Owner(s) & The entities that \emph{pledge} stake to the Stakepool. \\\hline
   \hline
 \end{tabular}
 \end{center}
-\caption{Key Terminology}
+\caption{General Terminology}
 \label{fig:terminology}
 \end{figure}
 
 \newpage
-\subsection{Key General Parameters}
+\subsection{General Parameters}
 
 \begin{figure}[h!]
 \begin{center}
-\begin{tabular}{||l|l|p{6cm}|l||}
+\begin{tabular}{||l|l|p{10cm}|l||}
   \hline \hline
 \textbf{Parameter} & \textbf{Expected Value} & \textbf{Definition} \\\hline
 \emph{k} & 50-1000 & The Target Number of Stakepools \\\hline
 $T$ & 10\% & The Treasury Top Slice Percentage \\\hline
 $MER$ & 10\% &  The ``Monetary Expansion Rate'' per Year \\\hline
-$E$ & 1-5 &  Elapsed days per \cardano Epoch \\\hline
+$E$ & 1-5 &  Elapsed days per \cardano{} Epoch \\\hline
+  \hline
 \end{tabular}
 \end{center}
-\caption{Key Parameters that will be set by the community (initially determined by \IOHK).}
+\caption{Key Operational Parameters.}
 \end{figure}
 
 \noindent
@@ -187,7 +195,7 @@ $E$, the length of each epoch, in days.
 %
 The target number of Stakepools is used to cap the rewards that any individual stakepool can receive. The intention is to encourage the creation of more stakepools, and to avoid domination by any single stake holder.
 The \emph{treasury top slice percentage} is the fraction of reward that is allocated to the treasury to cover fixed operating costs, and
-ensure the long-term viability of the \cardano{} system.  It is initially set to a small percentage (10\%) of the rewards.
+ensure the long-term viability both of the \cardano{} system and of \ada{} as a currency.  It is initially set to a small percentage (10\%) of the rewards.
 The \emph{monetary expansion rate} is the rate at which rewards are allocated from the \emph{reserves} of \ada{}.
 
 \begin{figure}[h!]
@@ -195,21 +203,21 @@ The \emph{monetary expansion rate} is the rate at which rewards are allocated fr
 \begin{tabular}{||l|l|p{6cm}|l||}
   \hline \hline
 \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Calculated as} \\\hline
-$A_T$ & \ADA{45bn} & The total \ada{} that could ever be created & \\\hline
+${Ada}_{Tot}$ & \ADA{45bn} & The total \ada{} that could ever be created & \\\hline
 \emph{P} & 20\%-50\% & Participation Rate in the Shelley Incentivised Testnet & \\\hline
-$A_c$ & \ADA{31bn} & The total \ada{} in circulation at Shelley launch & \\\hline
-$A_r$ & \ADA{14bn} & The total \ada{} in the reserves at Shelley launch & $A_T - A_c$ \\\hline
+${Ada}_{circ}$ & \ADA{31bn} & The total \ada{} in circulation at Shelley launch & \\\hline
+${Ada}_{rsv}$ & \ADA{14bn} & The total \ada{} in the reserves at Shelley launch & ${Ada}_{Tot} - {Ada}_{circ}$ \\\hline
 \hline
 \end{tabular}
 \end{center}
-\caption{Parameters that are set by external factors (e.g. \ada{} holders).}
+\caption{Parameters that are set by External Factors (e.g. \ada{} holders).}
 \end{figure}
 
 \noindent
 Several parameters are pre-determined by external factors. These include the
-total \ada{} that could ever be created $A_T$;
+total \ada{} that could ever be created, ${Ada}_{Tot}$;
 the total \ada{} that is in \emph{circulation} when the Shelley system launches
-(i.e. all \ada{} that is held by any entity on the launch date), $A_c$;
+(i.e. all \ada{} that is held by any entity on the launch date), ${Ada}_{circ}$;
 and the \ada{} that is held in reserve when the system starts.
 These values are fixed and will not change.
 
@@ -220,11 +228,12 @@ These values are fixed and will not change.
 
 \begin{figure}[h!]
 \begin{center}
-\begin{tabular}{||l|p{6cm}|l||}
+\begin{tabular}{||l|l|p{9cm}||}
   \hline \hline
 \textbf{Parameter} & \textbf{Range} & \textbf{Description} \\\hline
-$SP_c$ &  & Cost per day in \ada{} \\\hline
-$SP_m$ &  0\%-100\% & Percentage fee on rewards (``margin'') \\\hline
+{\color{red} $\textit{Pool}_{cost}$} &  & {\color{red} Cost per day in \ada{}} \\\hline
+{\color{red} ${Pool}_{margin}$} &  {\color{red} 0\%-100\%} & {\color{red} Percentage fee on rewards (the ``margin'')} \\\hline
+  \hline
 \end{tabular}
 \end{center}
 \caption{Key Parameters that are set by the StakePool Operator.}
@@ -232,7 +241,7 @@ $SP_m$ &  0\%-100\% & Percentage fee on rewards (``margin'') \\\hline
 
 \noindent
 The two main parameters that need to be set by the \emph{operator} are the cost per day that will be charged to
-the pool (in \ada), $SP_c$; and the percentage of any rewards that will subsequently be taken as a fee, $SP_m$.
+the pool (in \ada), $\textit{Pool}_{cost}$; and the percentage of any rewards that will subsequently be taken as a fee, ${Pool}_{margin}$.
 The cost is subtracted from the total rewards that are earned by the pool before any rewards are distributed.
 These parameters are advertised by the stakepool and used as part of the public ranking scheme.
 
@@ -240,13 +249,14 @@ These parameters are advertised by the stakepool and used as part of the public 
 
 \begin{figure}[h!]
 \begin{center}
-\begin{tabular}{||l|p{6cm}|l||}
+\begin{tabular}{||l|p{9cm}|l||}
   \hline \hline
 \textbf{Parameter} & \textbf{Description} & \textbf{Calculated as} \\\hline
-$SP_p$ & \ada{} that is pledged to the Stakepool by the Owner(s) & \\\hline
-$SP_d$ & \ada{} that is delegated to the Stakepool & \\\hline
-$SP_T$ & All \ada{} that is controlled by the Stakepool & $SP_p + SP_d$ \\\hline
-$SP_F$ & Fraction of the \ada{} in circulation that is controlled by the Stakepool & {\large $\frac{SP_T}{A_c}$} \\\hline
+{\color{red} ${Pool}_\textit{pledge}$} & {\color{red} \ada{} that is pledged to the Stakepool by the Owner(s)} & \\\hline
+{\color{blue} ${Pool}_\textit{deleg}$} & {\color{blue}  \ada{} that is delegated to the Stakepool} & \\\hline
+${Pool}_{Tot}$ & All \ada{} that is controlled by the Stakepool & ${Pool}_\textit{pledge} + {Pool}_\textit{deleg}$ \\\hline
+${Pool}_\%$ & Fraction of the \ada{} in circulation that is controlled by the Stakepool & {\large $\frac{{Pool}_{Tot}}{{Ada}_{circ}}$} \\\hline
+  \hline
 \end{tabular}
 \end{center}
 \caption{The \ada{} that is controlled by a StakePool.}
@@ -260,6 +270,7 @@ they wish as well as \emph{pledging} to it, but would receive lower rewards.  In
 higher rewards, \emph{pledging} incurs higher risk, requiring owners to \emph{trust} each other.
 
 
+\clearpage
 \section{The Simplified Incentives Scheme (Shelley Incentived Testnet)}
 \label{sec:testnet}
 
@@ -276,7 +287,8 @@ stakepools.
   \hline \hline
 \textbf{Parameter} & \textbf{Expected Value} & \textbf{Description} & \textbf{Calculated as} \\\hline
 \emph{P} & 20\%-50\% & Participation Rate in the Testnet & \\\hline
-$A_i$ & \ADA{15.5bn} @ $P=50\%$ & The \ada{} circulating in the Testnet & $P \times A_c$ \\\hline
+${Ada}_{tnet}$ & \ADA{15.5bn} @ $P=50\%$ & The \ada{} circulating in the Testnet & $P \times {Ada}_{circ}$ \\\hline
+  \hline
 \end{tabular}
 \end{center}
 \caption{\ada{} in Circulation in the Incentivised Testnet.}
@@ -296,9 +308,10 @@ circulation.
   \hline \hline
 \textbf{Parameter} & \textbf{Expected Value} & \textbf{Description} & \textbf{Calculated as} \\\hline
 \emph{E} & 1 & Days per Epoch in the Testnet & \\\hline
-$D_E$ & \ADA{3.84M} & Distribution per Epoch in the Testnet & $\frac{\large A_r \times \textit{MER}}{\large 365 \div E}$ \\\hline
+${Distr}_E$ & \ADA{3.84M} & Distribution per Epoch in the Testnet & $\frac{\large {Ada}_{rsv} \times \textit{MER}}{\large 365 \div E}$ \\\hline
 $T_E$ & \ADA{384K} & Treasury Top Slice per Day & $R_E \times T$ \\\hline
-$R_E$ & \ADA{3.45M} & Total Rewards per Epoch & $D_E - T_E$ \\\hline
+$R_E$ & \ADA{3.45M} & Total Rewards per Epoch & ${Distr}_E - T_E$ \\\hline
+  \hline
 \end{tabular}
 \end{center}
 \caption{Total Distribution and Rewards per Epoch.}
@@ -306,8 +319,8 @@ $R_E$ & \ADA{3.45M} & Total Rewards per Epoch & $D_E - T_E$ \\\hline
 \end{figure}
 
 \noindent
-The total \ada{} that is distributed per epoch in the Incentivised Testnet ($D_E$) is calculated from the initial
-value of the \ada{} reserves, $A_r$ and the fixed monetary expansion rate, \textit{MER}.
+The total \ada{} that is distributed per epoch in the Incentivised Testnet (${Distr}_E$) is calculated from the initial
+value of the \ada{} reserves, ${Ada}_{rsv}$, and the fixed monetary expansion rate, \textit{MER}.
 An equal distribution is given per epoch.  The top slice that is allocated to the treasury ($T_E$) is
 deducted from this distribution, and the remainder is then allocated to the Stakepools as rewards ($R_E$).
 For simplicity, in the Incentivised Testnet, the length of each epoch has been set to 1 day.
@@ -320,43 +333,44 @@ For simplicity, in the Incentivised Testnet, the length of each epoch has been s
 \begin{tabular}{||l|l|p{6cm}|l||}
   \hline \hline
 \textbf{Parameter} & \textbf{Expected Value} & \textbf{Definition} & \textbf{Calculated as} \\\hline
-$SP_p$ & & \ada{} that is pledged to the Stakepool by the Owner(s) & \\\hline
-$SP_d$ & & \ada{} that is delegated to the Stakepool & \\\hline
-$SP_T$ & & All \ada{} that is controlled by the Stakepool & $SP_p + SP_d$ \\\hline
-  $SP_F$ & & Fraction of the \ada{} in circulation that is controlled by the Stakepool & {\large $\frac{SP_T}{A_c}$} \\\hline
+{\color{red} ${Pool}_\textit{pledge}$} & & {\color{red} \ada{} that is pledged to the Stakepool by the Owner(s)} & \\\hline
+{\color{blue} ${Pool}_\textit{deleg}$} & & {\color{blue} \ada{} that is delegated to the Stakepool} & \\\hline
+${Pool}_{Tot}$ & & All \ada{} that is controlled by the Stakepool & ${Pool}_\textit{pledge} + {Pool}_\textit{deleg}$ \\\hline
+  ${Pool}_\%$ & & Fraction of the \ada{} in circulation that is controlled by the Stakepool & {\large $\frac{{Pool}_{Tot}}{{Ada}_{tnet}}$} \\\hline
 &&&  \\\hline
-$R_E$ & \ADA{3.45M} & Total Rewards per Epoch & $D_E - T_E$ \\\hline
+$R_E$ & \ADA{3.45M} & Total Rewards per Epoch & ${Distr}_E - T_E$ \\\hline
 &&&  \\\hline
-$SP_c$ &  & Cost per day in \ada{} & \\\hline
-$SP_m$ &  0\%-100\% & Percentage fee on rewards (``margin'') & \\\hline
+{\color{red} $\textit{Pool}_{cost}$} &  & {\color{red} Cost per day in \ada{}} & \\\hline
+{\color{red} ${Pool}_{margin}$} &  {\color{red} 0\%-100\%} & {\color{red} Percentage fee on rewards (the ``margin'')} & \\\hline
+\emph{N} & & The Number of Blocks that were allocated to the StakePool & \\\hline
 \emph{n} & & The Number of Blocks actually Produced by the Stakepool & \\\hline
-\emph{N} & & The total Number of Blocks Produced in an Epoch & \\\hline
 \emph{k} & 50-1000 & The Target Number of Stakepools & \\\hline
 \emph{z} & 0.001-0.02 & The Rewards Limit Fraction & $\frac{1}{k}$ \\\hline
 \hline
 \end{tabular}
 \end{center}
-\caption{Key Parameters Governing the Rewards to a Stakepool.}
+\caption{Parameters Governing the Rewards to a Stakepool.}
 \label{fig:rewards}
 \end{figure}
 
 \noindent
-The key parameters governing the Stakepool reward calculation are shown above.  The only new
-parameter is $z$, which is calculated from the target number of blocks, $k$.  This is used
-to limit the rewards that can be received by any one Stakepool.
+The parameters governing the Stakepool reward calculation are shown above.  The only new
+parameters are $n$, $N$ and $z$. $n$ and $N$ are measured by the system; $z$ is calculated from the
+target number of StakePools, $k$.  These parameters limit the rewards that can be received by any Stakepool.
+\khcomment{Check that ${Ada}_{tnet}$ is a fixed value.}
 
 \begin{figure}[h!]
 \begin{center}
 \begin{tabular}{||l|p{6cm}|l||}
   \hline \hline
 \textbf{Parameter}  & \textbf{Definition} & \textbf{Calculated as} \\\hline
-$R_G'$ & The Average Gross Reward to the StakePool & $R_E \times \textrm{min} (z,s)$ \\\hline
-$R_G$ & The Actual Gross Reward to the StakePool & $R_E \times \textrm{min} (z,n \div N)$ \\\hline
-$SP_E$ & Pool Operator Costs for the Epoch & $SP_c \times E$ \\\hline
-$R_N$  & The Net Reward to the StakePool & $R_G - SP_E$ \\\hline
-$R_O$ & The Total Reward to the Owner(s) & $R_N \times SP_m $ \\\hline
-$R_D$ & The Total Reward to the Delegators & $R_N - R_O$ \\\hline
-$R_I$ & The Total Pool Owner Income & $SP_N - R_O$ \\\hline
+$R_{Gross}'$ & The Average Gross Reward to the StakePool & $R_E \times \textrm{min} (z,{Pool}_\%)$ \\\hline
+$R_{Gross}$ & The Actual Gross Reward to the StakePool & $R_{Gross}' \times \textrm{min} (100\%,\frac{n}{N})$ \\\hline
+${Pool}_{costE}$ & Pool Operator Costs for the Epoch & $\textrm{min}(\textit{Pool}_{cost} \times E,R_{Gross})$ \\\hline
+$R_{Net}$  & The Net Reward to the StakePool & $R_{Gross} - {Pool}_{costE}$ \\\hline
+$R_{Owner}$ & The Total Reward to the Owner(s) & $R_{Net} \times {Pool}_{margin} $ \\\hline
+$R_{Deleg}$ & The Total Reward to the Delegators & $R_{Net} - R_{Owner}$ \\\hline
+$\textit{Income}$ & The Total Pool Owner Income & ${Pool}_{costE} + R_{Owner}$ \\\hline
 \hline
 \end{tabular}
 \end{center}
@@ -366,9 +380,13 @@ $R_I$ & The Total Pool Owner Income & $SP_N - R_O$ \\\hline
 \noindent
 The gross reward that is received by the Stakepool is, on average, directly proportional to the
 stake that it controls, as a proportion of the total \ada{} that is in circulaton.
-It is limited by the rewards limit fraction.  Once the pool operator costs are subtracted,
+It is limited by the rewards limit fraction, and reduced in proportion to the ratio of blocks it produced
+to blocks it was allocated (the ``performance'' of the StakePool) to give $R_{Gross}$.
+Once the pool operator costs are subtracted,
 the net reward is then distributed to the owner(s) and delegators in proportion to the
-stake that each group controls.
+stake that each group controls.  The total pool income is then the sum of the operator costs and the pool owner rewards.
+Note that if there is insufficient gross reward to cover the operator costs, all the reward will be accrued to those
+costs, leaving no further reward to be distributed to the owners or delegators.
 
 \subsubsection*{The Rewards that are received by each Delegator}
 
@@ -377,11 +395,11 @@ stake that each group controls.
 \begin{tabular}{||l|p{6cm}|l||}
   \hline \hline
 \textbf{Parameter} & \textbf{Definition} & \textbf{Calculated as} \\\hline
-$SP_T$ & All \ada{} that is controlled by the Stakepool & $SP_p + SP_d$ \\\hline
-$R_D$ & The Total Reward to the Delegators & $R_N - R_O$ \\\hline
-$D_S$ & The \ada{} that is delegated by  $D$ & \\\hline
+${Pool}_{Tot}$ & All \ada{} that is controlled by the Stakepool & ${Pool}_\textit{pledge} + {Pool}_\textit{deleg}$ \\\hline
+$R_{Deleg}$ & The Total Reward to the Delegators & $R_{Net} - R_\textit{Owner}$ \\\hline
+$D_{Stake}$ & The \ada{} that is delegated by Delegator $D$ & \\\hline
 $D_\%$ & The proportion of \ada{} in the pool that is delegated by $D$ & \\\hline
-$D_R$ & The \ada{} rewards that are received by $D$ & $R_N \times R_O$ \\\hline
+$D_{Rewards}$ & The \ada{} rewards that are received by $D$ & $R_{Net} \times R_\textit{Owner}$ \\\hline
 \hline
 \end{tabular}
 \end{center}
@@ -390,18 +408,19 @@ $D_R$ & The \ada{} rewards that are received by $D$ & $R_N \times R_O$ \\\hline
 
 \noindent
 The rewards that are received by an individual delegator are directly proportional to the
-stake that the delegator has placed in the Stakepool, based on the net rewards.
+stake that that delegator has placed in the Stakepool, calculated from the net rewards to the
+Stakepool.
 
-\subsubsection*{The Rewards that are received by each Owner}
+\subsubsection*{The Rewards that are received by each StakePool Owner}
 
 \begin{figure}[h!]
 \begin{center}
 \begin{tabular}{||l|p{6cm}|l||}
   \hline \hline
 \textbf{Parameter}  & \textbf{Definition} & \textbf{Calculated as} \\\hline
-$R_O$ & The Total Reward to the Owner(s) & $R_N \times SP_m $ \\\hline
-$N$ & The number of Owners & \\\hline
-$O_R$ & The \ada{} rewards that are received by each owner & $R_O \div N$ \\\hline
+$R_\textit{Owner}$ & The Total Reward to the Owner(s) & $R_{Net} \times {Pool}_{margin} $ \\\hline
+$n_\textit{Owner}$ & The number of Owners & \\\hline
+$O_{Rewards}$ & The \ada{} rewards that are received by each owner & $R_\textit{Owner} \div n_\textit{Owner}$ \\\hline
 \hline
 \end{tabular}
 \end{center}
@@ -412,7 +431,7 @@ $O_R$ & The \ada{} rewards that are received by each owner & $R_O \div N$ \\\hli
 In the Incentivised Testnet, the owner rewards are divided equally among the
 owners, regardless of the proportion of stake that they pledge.  The assumption
 is that, in practice, each owner will pledge an equal amount of stake, but this
-is not enforced by the system.
+is not enforced by the \cardano{} system.
 
 \clearpage
 \subsection{Calculating Rewards in External Currencies}
@@ -423,8 +442,8 @@ is not enforced by the system.
   \hline \hline
 \textbf{Value} & \textbf{Description} & \textbf{Calculated as} \\\hline
 $R_A$ &  Rewards value in \ada{} &\\\hline
-$D$ &  Dollar Price per \ada{} &\\\hline
-$R_D$ &  Rewards value in dollars & $R_A \times D$ \\\hline
+$ER_D$ &  Dollar Price per \ada{} &\\\hline
+$R_D$ &  Rewards value in dollars & $R_A \times ER_D$ \\\hline
 \hline
 \end{tabular}
 \end{center}
@@ -433,10 +452,10 @@ $R_D$ &  Rewards value in dollars & $R_A \times D$ \\\hline
 \end{figure}
 
 \noindent
-As usual, rewards in \ada{} can easily be converted to a dollar or other equivalent using
-the current exchange rate, $D$, as shown % in Figure~\ref{fig:monetary}
+As usual, rewards in \ada{} can easily be converted to an external dollar or other currency equivalent using
+the current exchange rate, $ER_D$, as shown % in Figure~\ref{fig:monetary}
 above.  For example, if the rewards are \ADA{10,000} and the exchange rate is
-\$0.04 (1 \ada{} is worth 4 cents).  Realising this value would require an exchange,
+\$0.04 (1 \ada{} is worth 4 cents).  Realising this value would require the use of an \emph{exchange},
 of course.
 
 \clearpage
@@ -471,12 +490,12 @@ the $k$ parameter).
 \end{minipage}
 
 \noindent
-This diagrams shows the corresponding rewards that accrue to the owner(s) and delegators,
+This diagram shows the corresponding rewards that accrue to the owner(s) and delegators,
 plus a calculation of the total income that is received by the owners.  We will assume that the average
 and actual gross rewards are the same, i.e. if the Stakepool controls 1\% of the total \ada{} in
-circulation, it will produce exactly 1\% of the blocks, and receive exactly 1\% of the rewards.
+circulation, it will produce exactly 1\% of the blocks, that it has 100\% performance, and will therefore receive exactly 1\% of the rewards.
 In total, the
-owners and delegators to this Stakepool would receive a net reward that was equivalent to 8\% per year
+owners and delegators to this Stakepool would receive a net reward that was equivalent to almost 8\% per year
 (the ``staking yield'').  If there were 4 owners for the Stakepool, each would receive
 25\% of the operator rewards, i.e. $\ADA{158,121.42} \div 4 ~~=~~ \ADA{39,530.36}$.
 Similarly, a delegator contributing 10\% of the delegated stake would receive 10\% of
@@ -488,14 +507,14 @@ the delegator reward, i.e., $\ADA{12,096,288.83} \div 10 ~~=~~ \ADA{1,209,628.89
 Rewards are returned through transactions using the relevant public keys, following the end
 of each epoch (settlement may not be immediate, since the rewards may need to be audited).
 These rewards can then be stored within a wallet, recorded on an exchange etc., as required.
-In the Testnet, however, they cannot be used for further staking.
+In the Incentivised Testnet, however, they cannot be used for further staking.
 \khcomment{Jared - do you want to check this and flesh it out if needs be?}
 
 \clearpage
 \section{The Full  Scheme as used in the Shelley Mainnet Implementation}
 \label{sec:mainnet}
 
-To be added in version 0.2 of this document.
+To be added in version 0.3 of this document.
 
 %\clearpage
 \subsection{Summary of Differences between the Two Incentives Schemes}
@@ -509,7 +528,7 @@ To be added in version 0.2 of this document.
                                               \\\hline
 Treasury Top Slice Percentage
 & Fixed at 10\%
-& Initially set to 10\% but can be changed by a community vote
+& Initially set to 10\% but can be changed in future by a community vote
                                               \\\hline
 Monetary Expansion Rate per Year
 & fixed at 10\%
@@ -560,6 +579,7 @@ Epoch duration ($E$)
 \caption{Differences between the Incentivised Testnet and the Mainnet}
 \end{figure}
 
+\clearpage
 \bibliographystyle{habbrv}
 \bibliography{references}
 
