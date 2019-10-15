@@ -4,10 +4,13 @@
 
 module Generator.Core
   ( findPayKeyPair
+  , genBool
   , genCoin
+  , genInteger
   , genNatural
   , genTxOut
   , genUtxo0
+  , increasingProbabilityAt
   , mkGenesisLedgerState
   , traceKeyPairs
   , someKeyPairs
@@ -32,6 +35,12 @@ import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, TxOut, 
 import           Numeric.Natural (Natural)
 import           Tx (pattern TxOut)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
+
+genBool :: Gen Bool
+genBool = Gen.enumBounded
+
+genInteger :: Integer -> Integer -> Gen Integer
+genInteger lower upper = Gen.integral $ Range.linear lower upper
 
 -- | Generator for a natural number between 'lower' and 'upper'
 genNatural :: Natural -> Natural -> Gen Natural
@@ -97,3 +106,19 @@ mkGenesisLedgerState _ = do
   utxo0 <- genUtxo0 5 10
   let (LedgerState utxoSt dpSt _) = genesisState utxo0
   pure (utxoSt, dpSt)
+
+-- | Generate values the given distribution in 90% of the cases, and values at
+-- the bounds of the range in 10% of the cases.
+--
+-- This can be used to generate enough extreme values. The exponential and
+-- linear distributions provided by @hedgehog@ will generate a small percentage
+-- of these (0-1%).
+increasingProbabilityAt
+  :: Gen a
+  -> (a, a)
+  -> Gen a
+increasingProbabilityAt gen (lower, upper)
+  = Gen.frequency [ (5, pure lower)
+                  , (90, gen)
+                  , (5, pure upper)
+                  ]
