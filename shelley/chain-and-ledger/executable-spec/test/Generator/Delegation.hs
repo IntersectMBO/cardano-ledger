@@ -1,13 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Generator.Delegation
-  ( genDCerts
-  , genPParams
-  )
+  ( genDCerts )
   where
 
 import           Data.Sequence (Seq)
@@ -19,36 +18,13 @@ import qualified Hedgehog.Gen as Gen
 
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, decayKey, isDeRegKey)
-import           Examples (unsafeMkUnitInterval)
 import           Generator.Core (toCred)
 import           Ledger.Core (dom, (∈), (∉))
 import           LedgerState (dstate, keyRefund, stkCreds, _dstate, _pstate, _stkCreds, _stPools)
 import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs)
-import           PParams (PParams (..), emptyPParams)
-import           Slot (Epoch (Epoch), Slot)
+import           PParams (PParams (..))
+import           Slot (Slot)
 import           UTxO (deposits)
-
--- TODO @uroboros Generate a range of protocol params
--- TODO @uroboros for now, keeping minA/B at zero until we generate fees in genTx
-genPParams :: Gen PParams
-genPParams = pure $ emptyPParams {
-                                   _minfeeA = 0
-                                 , _minfeeB = 0
-                                 , _maxBBSize = 50000
-                                 , _maxBHSize = 10000
-                                 , _maxTxSize = 10000
-                                 , _eMax = Epoch 10000
-                                 , _keyDeposit = Coin 7
-                                 , _poolDeposit = Coin 250
-                                 , _d = unsafeMkUnitInterval 0.5
-                                 , _activeSlotCoeff = unsafeMkUnitInterval 0.1
-                                 , _tau = unsafeMkUnitInterval 0.2
-                                 , _rho = unsafeMkUnitInterval 0.0021
-                                 , _keyDecayRate = 0.002
-                                 , _keyMinRefund = unsafeMkUnitInterval 0.5
-                                 , _poolDecayRate = 0.001
-                                 , _poolMinRefund = unsafeMkUnitInterval 0.5
-                                 }
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
