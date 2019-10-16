@@ -147,15 +147,13 @@ slot is removed.
     \inference[Seq-ledger-base]
     {
       ((\var{utxo},~\var{deposits},~\var{fees},~\var{us})
-      ,~(\var{ds},~\var{ps}))
+      ,~(\var{ds}, \var{ps}))
       \leteq\var{ls}
       \\
       (\var{pup},~\var{aup},~\var{favs},~\var{avs}) \leteq\var{us}
       \\
       (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},~\var{fGenDelegs},~\var{genDelegs})
       \leteq\var{ds}
-      \\
-      (\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs})\leteq\var{ps}
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
         \var{favs'} & \{\var{s}\mapsto\var{v}\in\var{favs} ~\mid~ s>\var{slot}\}
@@ -188,14 +186,7 @@ slot is removed.
       (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
       ~\var{fGenDelegs}\setminus\var{curr},~\var{genDelegs}\unionoverrideRight\var{genDelegs'})
       \\
-      \var{oldGenDelegs}\leteq\range((\dom\var{genDelegs'})\restrictdom\var{genDelegs})
-      \\
-      \var{cs'}\leteq(\var{oldGenDelegs}\subtractdom\var{cs})\unionoverrideRight
-      \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{genDelegs'}\}
-      \\
-      \var{ps'}\leteq(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs'})
-      \\
-      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'},~\var{ps'}))
+      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'}, \var{ps}))
     }
     {
       \begin{array}{r}

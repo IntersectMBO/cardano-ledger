@@ -37,6 +37,7 @@
 \newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
 \newcommand{\overlaySchedule}[3]{\fun{overlaySchedule}~\var{#1}~\var{#2}~\var{#3}}
 
+\newcommand{\OCertEnv}{\type{OCertEnv}}
 \newcommand{\PrtclState}{\type{PrtclState}}
 \newcommand{\PrtclEnv}{\type{PrtclEnv}}
 \newcommand{\OverlayEnv}{\type{OverlayEnv}}
@@ -360,10 +361,6 @@ In the second case, the new epoch state is updated as follows:
             }
             \right\}\\
           \var{osched'} & \overlaySchedule{e}{gkeys}{pp} \\
-          \var{es''} & (\var{acnt},
-                       ~\var{ss},
-                       ~\var{ls},
-                       ~\var{pp}\unionoverrideRight\{\var{extraEntropy}\mapsto 0_{seed}\}) \\
        \end{array}}
     }
     {
@@ -386,7 +383,7 @@ In the second case, the new epoch state is updated as follows:
             \varUpdate{\var{e}} \\
             \varUpdate{\var{b_{cur}}} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}''} \\
+            \varUpdate{\var{es}'} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{osched}'} \\
@@ -788,15 +785,42 @@ The BHEAD rule has two predicate failures:
 \subsection{Operational Certificate Transition}
 \label{sec:oper-cert-trans}
 
-The Operational Certificate Transition contains no environments, and its state is the mapping of
-operation certificate issue numbers.  Its signal is a block header.
+The Operational Certificate Transition environment consists of the genesis key
+delegation map $\var{genDelegs}$ and the set of stake pools $\var{stpools}$. Its state
+is the mapping of operation certificate issue numbers.  Its signal is a block
+header.
 
 \begin{figure}
+  \emph{Operational Certificate environments}
+  \begin{equation*}
+    \OCertEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{stpools} & \powerset{\type{KeyHash}} & \text{stake pools} \\
+        \var{genDelegs} & \powerset{\type{KeyHash}} & \text{genesis key delegates}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Operational Certificate Transitions}
   \begin{equation*}
-    \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
-    \powerset (\KeyHash_{pool} \mapsto \N \times \BHeader \times \KeyHash_{pool} \mapsto \N)
+    \var{\_} \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
+    \powerset (\OCertEnv \times \KeyHash_{pool} \mapsto \N \times \BHeader \times \KeyHash_{pool} \mapsto \N)
   \end{equation*}
+  %
+  \emph{Operational Certificate helper function}
+  \begin{align*}
+      & \fun{currentIssueNo} \in \OCertEnv \to (\KeyHash_{pool} \mapsto \N)
+                                           \to \KeyHash_{pool}
+                                           \to \N^? \\
+      & \fun{currentIssueNo}~(\var{stpools}, \var{genDelegs})~ \var{cs} ~\var{hk} =
+      \begin{cases}
+        \var{hk}\mapsto \var{n} \in \var{cs} & n \\
+        \var{hk} \in \var{stpools} & 0 \\
+        \var{hk} \in \var{genDelegs} & 0 \\
+        \text{otherwise} & \Nothing
+      \end{cases}
+  \end{align*}
   \caption{OCert transition-system types}
   \label{fig:ts-types:ocert}
 \end{figure}
@@ -849,7 +873,7 @@ of the key \var{hk} with the KES period \var{n}.
       \\~\\
       c_0 \leq \kesPeriod{s} < c_0 + \MaxKESEvo
       \\
-      \var{hk}\mapsto m\in\var{cs}
+      \fun{currentIssueNo} ~ \var{oce} ~ \var{cs} ~ \var{hk} = m
       &
       m \leq n
       \\~\\
@@ -859,7 +883,7 @@ of the key \var{hk} with the KES period \var{n}.
       \\
     }
     {
-      \vdash\var{cs}
+      \var{oce}\vdash\var{cs}
       \trans{ocert}{\var{bh}}\varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}}
     }
   \end{equation}
@@ -1015,6 +1039,11 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \var{gkh}\mapsto\var{vkh}\in\var{genDelegs}
       \\~\\
       {
+        {\begin{array}{c}
+         \dom{\var{pd}} \\
+         \range{\var{genDelegs}} \\
+         \end{array}
+        }
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
       }
     }
@@ -1395,6 +1424,7 @@ following:
 
 \begin{itemize}
   \item The epoch specific state $\var{nes}$.
+  \item The operational certificate issue number map $\var{cs}$.
   \item The epoch nonce $\eta_0$.
   \item The evolving nonce $\eta_v$.
   \item The candidate nonce $\eta_c$.
@@ -1409,6 +1439,7 @@ following:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{nes} & \NewEpochState & \text{epoch specific state} \\
+        \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operaional certificate issue numbers} \\
         ~\eta_0 & \Seed & \text{epoch nonce} \\
         ~\eta_v & \Seed & \text{evolving nonce} \\
         ~\eta_c & \Seed & \text{candidate nonce} \\
@@ -1456,17 +1487,6 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \end{align*}
   %
   \begin{align*}
-      & \fun{setIssueNumbers} \in \LState \to (\KeyHash_{pool}\to\N) \to \LState \\
-      & \fun{setIssueNumbers}~
-          (\var{utxoSt},
-          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard)))
-          ~\var{cs} = \\
-      & ~~~~
-          (\var{utxoSt},
-          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs})))
-  \end{align*}
-  %
-  \begin{align*}
       & \fun{updateNES} \in \NewEpochState \to \BlocksMade \to \LState \to \NewEpochState \\
       & \fun{updateNES}~
       (\var{e_\ell},~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard,~\var{pp}),
@@ -1503,7 +1523,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         (\var{acnt},~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
           ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
-          (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
+          (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
           (\wcard, reserves) \leteq \var{acnt}\\
           \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
       {
@@ -1534,7 +1554,6 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
               \eta_c' \\
         \end{array}\right)}
       } \\~\\~\\
-      \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs'} \\~\\
       {
         {\begin{array}{c}
                  \dom{osched} \\
@@ -1543,22 +1562,23 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \end{array}}
         \vdash
         {\left(\begin{array}{c}
-              \var{ls}' \\
+              \var{ls} \\
               \var{b_{cur}} \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:bbody]{bbody}}{\var{block}}
         {\left(\begin{array}{c}
-              \var{ls}'' \\
+              \var{ls}' \\
               \var{b_{cur}'} \\
         \end{array}\right)}
       }\\~\\
-      \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls''} \\
+      \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls'} \\
     }
     {
       \var{s_{now}}
       \vdash
       {\left(\begin{array}{c}
             \var{nes} \\
+            \var{cs} \\
             \eta_0 \\
             \eta_v \\
             \eta_c \\
@@ -1568,6 +1588,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       \trans{chain}{\var{block}}
       {\left(\begin{array}{c}
             \varUpdate{\var{nes}''} \\
+            \varUpdate{\var{cs}'} \\
             \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
