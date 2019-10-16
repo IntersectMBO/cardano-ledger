@@ -1,0 +1,8 @@
+chapter Ledger_Rules
+
+session Ledger_Rules_Formalization(ledgerrules) = HOL +
+  description \<open>Formalization of Ledger Rules in Isabelle/HOL\<close>
+  theories
+    Ledger_Rules
+  document_files
+    "root.tex"
