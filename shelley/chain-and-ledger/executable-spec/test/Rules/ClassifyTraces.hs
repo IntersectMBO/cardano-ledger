@@ -39,8 +39,8 @@ relevantCasesAreCovered = withTests 500 $ property $ do
         (traceLength tr <= 5 * length (filter isDeRegKey certs_))
 
   cover 75
-        "there is at least 1 RegPool certificate for every 60 transactions"
-        (traceLength tr <= 60 * length (filter isRegPool certs_))
+        "there is at least 1 RegPool certificate for every 20 transactions"
+        (traceLength tr <= 20 * length (filter isRegPool certs_))
 
   cover 25
         "at most 75% of transactions have no certificates"

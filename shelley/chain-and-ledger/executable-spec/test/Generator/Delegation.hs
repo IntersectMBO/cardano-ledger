@@ -81,12 +81,11 @@ genDCert
   -> VrfKeyPairs
   -> DPState
   -> Gen (Maybe (DCert, KeyPair))
-  -- -> Gen (Maybe (DCert, DCertReturnStuff))
 genDCert keys vrfKeys dpState =
   -- TODO @uroboros Generate _RetirePool_ Certificates
   -- TODO @uroboros Generate _Delegate_ Certificates
-  Gen.frequency [ (2, genRegKeyCert keys dState)
-                , (3, genDeRegKeyCert keys dState)
+  Gen.frequency [ (3, genRegKeyCert keys dState)
+                , (4, genDeRegKeyCert keys dState)
                 , (3, genRegPool keys vrfKeys dpState)
                 , (1, pure Nothing)
                 ]
@@ -145,23 +144,26 @@ genRegPool keys vrfKeys dpState =
 
 -- | Generate PoolParams and the key witness.
 genStakePool :: KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
-genStakePool skeys vrfKeys = do
-  poolKeyPair   <- Gen.element skeys
-  vrfKey        <- snd <$> Gen.element vrfKeys
-  cost          <- Coin <$> genInteger 1 100
-  pledge        <- Coin <$> genInteger 1 100
-  marginPercent <- genNatural 0 100
-  acntKey       <- getAnyStakeKey skeys
-  let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
-  let pps = PoolParams
-              (hashKey . vKey . snd $ poolKeyPair)
-              (hashKeyVRF vrfKey)
-              pledge
-              cost
-              interval
-              (RewardAcnt $ KeyHashObj $ hashKey acntKey)
-              Set.empty
-  pure (pps, snd poolKeyPair)
+genStakePool skeys vrfKeys =
+  mkPoolParams
+    <$> (Gen.element skeys)
+    <*> (snd <$> Gen.element vrfKeys)
+    <*> (Coin <$> genInteger 1 100)
+    <*> (Coin <$> genInteger 1 100)
+    <*> (genNatural 0 100)
+    <*> (getAnyStakeKey skeys)
+ where
+  mkPoolParams poolKeyPair vrfKey cost pledge marginPercent acntKey =
+    let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
+        pps = PoolParams
+                (hashKey . vKey . snd $ poolKeyPair)
+                (hashKeyVRF vrfKey)
+                pledge
+                cost
+                interval
+                (RewardAcnt $ KeyHashObj $ hashKey acntKey)
+                Set.empty
+     in (pps, snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.
 genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, KeyPair)
