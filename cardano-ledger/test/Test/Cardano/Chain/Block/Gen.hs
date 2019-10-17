@@ -202,9 +202,15 @@ genBoundaryBlock =
     <*> pure ()
 
 genBoundaryHeader :: Gen (ABoundaryHeader ())
-genBoundaryHeader =
+genBoundaryHeader = do
+  epoch <- Gen.word64 (Range.exponential 0 maxBound)
   mkABoundaryHeader
-    <$> (Gen.choice [Right <$> genHeaderHash, Left . GenesisHash . coerce <$> genTextHash])
-    <*> (Gen.word64 (Range.constantFrom 10 0 1000))
+    <$> ( if epoch == 0
+          then Left . GenesisHash . coerce <$> genTextHash
+          else Gen.choice [ Right <$> genHeaderHash
+                          , Left . GenesisHash . coerce <$> genTextHash
+                          ]
+        )
+    <*> pure epoch
     <*> genChainDifficulty
     <*> pure ()

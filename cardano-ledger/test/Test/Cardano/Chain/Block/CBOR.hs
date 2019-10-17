@@ -107,7 +107,7 @@ goldenHeader = goldenTestCBORExplicit
 -- | Round-trip test the backwards compatible header encoding/decoding functions
 ts_roundTripHeaderCompat :: TSProperty
 ts_roundTripHeaderCompat = eachOfTS
-  10
+  300
   (feedPMEpochSlots $ genWithEpochSlots genHeader)
   roundTripsHeaderCompat
  where
@@ -126,7 +126,7 @@ ts_roundTripHeaderCompat = eachOfTS
 -- | Round-trip test the backwards compatible block encoding/decoding functions
 ts_roundTripBlockCompat :: TSProperty
 ts_roundTripBlockCompat = eachOfTS
-  10
+  300
   (feedPM genBlockWithEpochSlots)
   roundTripsBlockCompat
  where
@@ -149,7 +149,7 @@ goldenBlockSignature =
 
 ts_roundTripBlockSignatureCBOR :: TSProperty
 ts_roundTripBlockSignatureCBOR =
-  eachOfTS 10 (feedPMEpochSlots genBlockSignature) roundTripsCBORBuildable
+  eachOfTS 300 (feedPMEpochSlots genBlockSignature) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -164,7 +164,7 @@ goldenDeprecatedBoundaryBlockHeader = deprecatedGoldenDecode
 
 ts_roundTripBoundaryBlock :: TSProperty
 ts_roundTripBoundaryBlock = eachOfTS
-    10
+    300
     (feedPM genBVDWithPM)
     roundTripsBVD
   where
