@@ -45,6 +45,7 @@ main = defaultMain tests
       , testProperty "Relevant UTxO traces are generated" UTxO.relevantCasesAreCovered
       , testProperty "No double spending" UTxO.noDoubleSpending
       , testProperty "UTxO is outputs minus inputs" UTxO.utxoDiff
+      , testProperty "UTxO and txouts are disjoint" UTxO.utxoAndTxoutsMustBeDisjoint
       ]
     , testTxHasTypeReps
     , testGroup "Update examples" upiendExamples
