@@ -10,7 +10,7 @@
 \Authors{Kevin Hammond \quad \texttt{<kevin.hammond@iohk.io>}
 }
 \DueDate{31$^{\textrm{st}}$ October 2019}
-\SubmissionDate{15$^{\textrm{th}}$ October 2019}{2019/10/15}
+\SubmissionDate{17$^{\textrm{th}}$ October 2019}{2019/10/17}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
 \Version{0.3}
@@ -80,7 +80,7 @@
         \change{2019/10/14}{Kevin Hammond}{FM (\IOHK)}{Polished slightly.}
         \change{2019/10/15}{Kevin Hammond}{FM (\IOHK)}{First draft of main net calculation.  Fixed small error in Delegator calculation.}
         \change{2019/10/16}{Kevin Hammond}{FM (\IOHK)}{Checked against design document. Further clarifications.}
-        \change{2019/10/17}{Kevin Hammond}{FM (\IOHK)}{Further checking and clarification.}
+        \change{2019/10/17}{Kevin Hammond}{FM (\IOHK)}{Further checking and clarification. Added images.}
       \end{changelog}
       \clearpage%
 \begin{landscape}
@@ -199,6 +199,7 @@ Owner(s) & The entities that \emph{pledge} stake to the Stakepool when it is reg
 \subsubsection*{Notation}
 
 Throughout the document, the colour coding below is used to distinguish the sources of various parameters.
+A similar scheme is followed in the corresponding spreadsheets.
 
 \begin{tabular}{||l|l||}\hline\hline
   \textbf{\color{green} Green} & Parameters that are set by the \cardano{} system \\\hline
@@ -347,7 +348,7 @@ in proportion to their pledged/delegated stake.  The Incentivised Testnet uses a
 
 The simplified scheme calculates rewards based on the total number of blocks that each stake pool produces,
 and distributes a fixed amount of \ada{} per epoch.
-Since \cardano{} is based on \emph{proof of stake}, then on average, each stake pool will produce
+Since \cardano{} is based on \emph{proof of stake}, then on average, each stake pool will obtain
 rewards that are proportional to the stake that it holds.  So, if e.g. a pool holds 1\% of the total
 \ada{} in circulation, then it will receive, on average, 1\% of the total rewards that are allocated to all the
 Stakepools.
@@ -404,7 +405,7 @@ circulation.
 \textbf{Parameter} & \textbf{Expected Value} & \textbf{Description} & \textbf{Calculated as} \\\hline
 % $\textit{DPE}$ & 1 & Days per Epoch in the Testnet & \\\hline
 % $\textit{MER}$ & 10\% &  The ``Monetary Expansion Rate'' per Year & \\\hline
-$\textit{Distr}_E$ & \ADA{3.84M} & Distribution per Epoch in the Testnet & $\frac{\large \textit{Ada}^{\textit{Rsv}} \times \textit{MER}}{\large 365 \div \textit{DPE}}$ \\\hline
+$\textit{Distr}_E$ & \ADA{3.84M} & Distrib!ution per Epoch in the Testnet & $\frac{\textit{Ada}^{\textit{Rsv}} \times \textit{MER}}{365 \div \textit{DPE}}$ \\\hline
 $T_E$ & \ADA{384K} & Treasury Top Slice per Epoch & $\textit{Distr}_E \times T$ \\\hline
 $R_E$ & \ADA{3.45M} & Total Rewards per Epoch & $\textit{Distr}_E - T_E$ \\\hline
   \hline
@@ -485,9 +486,9 @@ $\textit{Owner}^\textit{Income}$ & The Total Pool Owner Income & ${\textit{Pool}
 \noindent
 The gross reward that is received by the Stakepool is, on average, directly proportional to the
 stake that it controls, as a proportion of the total \ada{} that is in circulaton.
-It is limited by the rewards limit fraction, and reduced in proportion to the ratio of blocks it produced
-to blocks it was allocated (the ``performance'' of the Stakepool) to give $R^{\textit{Gross}}$.
-\khcomment{Check this - not overall performance.}
+It is limited by the rewards limit fraction, and reduced in proportion to the ratio of blocks that it produced
+to the blocks that it was allocated (the ``performance'' of the Stakepool) to give $R^{\textit{Gross}}$.
+% \khcomment{Check this - not overall performance.}  Checked.
 Once the pool operator costs are subtracted,
 the net reward is then distributed to the owner(s) and delegators in proportion to the
 stake that each group controls.  The Stakepool owner income is then the sum of the operator costs and the pool owner rewards.
@@ -564,7 +565,7 @@ $R_D$ &  Rewards value in dollars & $R_A \times ER_D$ \\\hline
 As usual, rewards in \ada{} can easily be converted to an external dollar or other currency equivalent using
 the current exchange rate, $ER_D$, as shown % in Figure~\ref{fig:monetary}
 above.  For example, if the rewards are \ADA{10,000} and the exchange rate is
-\$0.04 (1 \ada{} is worth 4 cents).  Realising this value would require the use of an \emph{exchange},
+\$0.039 (1 \ada{} is worth 3.9 cents).  Realising this value would require the use of an \emph{exchange},
 of course.
 
 \clearpage
@@ -606,9 +607,9 @@ circulation, it will produce exactly 1\% of the blocks, that it has 100\% perfor
 In total, the
 owners and delegators to this Stakepool would receive a net reward that was equivalent to almost 8\% per year
 (the ``staking yield'').  If there were 4 owners for the Stakepool, each would receive
-25\% of the operator rewards, i.e. $\ADA{158,121.42} \div 4 ~~=~~ \ADA{39,530.36}$.
+25\% of the operator rewards, i.e. $\ADA{158,121.42} \div 4 ~~=~~ \ADA{39,530.355}$.
 Similarly, a delegator contributing 10\% of the delegated stake would receive 10\% of
-the delegator reward, i.e., $\ADA{12,096,288.83} \div 10 ~~=~~ \ADA{1,209,628.89}$.
+the delegator reward, i.e., $\ADA{12,096,288.83} \div 10 ~~=~~ \ADA{1,209,628.8883}$.
 
 
 \subsection{How rewards are returned to Owners and Delegators}
@@ -656,8 +657,6 @@ In addition, the number of days per epoch will be changed.  Collectively, these 
   This will be derived from the number of slots in the Epoch.} \\\hline
 \textbf{\color{cyan}$\textit{Fees}_E$} & \textbf{\color{cyan}All the transaction fees for Epoch $E$} \\\hline
 \textbf{\color{cyan}$\textit{Deposits}_E$} & \textbf{\color{cyan} The non-refundable deposits for Epoch $E$} \\\hline
-% $R^{\textit{Avg}}$ & & Expected average rewards per year per \ada{} & \\\hline
-% $\textit{EPY}$ & 73 & Epochs per year & $365 \div E$ \\\hline
 \textbf{\color{cyan} $\textit{MER}_E$} & \textbf{\color{cyan} The ``Monetary Expansion Rate'' for Epoch $E$}. \newline \textbf{\color{cyan} \emph{See Section~\ref{sec:expansion}.}} \\\hline
 \hline
 \end{tabular}
@@ -702,7 +701,7 @@ $\textit{E}$ & $0$ & The Current Mainnet Epoch, $0 \le E \le \infty$ & \\\hline
 \textbf{\color{cyan} $\textit{Deposits}_E$} & & \textbf{\color{cyan} The non-refundable deposits for Epoch $E$} & \\\hline
 $\textit{MER}_E$ & 10\%-15\% &  The ``Monetary Expansion Rate'' for Epoch $E$ & \emph{See Section~\ref{sec:expansion}.} \\\hline
 $\textit{Perf}_E$ & 80\%-100\% &  The Overall Performance of the Mainnet in Epoch $E$ &  \\\hline
-$\textit{Distr}_E$ & approx. \ADA{62M} & Gross Distribution for Epoch $E$ & $\textit{Ada}^{\textit{Rsv}}_E \times \textit{MER}_E \times \textrm{min}(\textit{Perf}_E, 100\%)$ \\\hline
+$\textit{Distr}_E$ & approx. \ADA{62M} & Gross Distribution for Epoch $E$ & \begin{flushleft}$\textit{Ada}^{\textit{Rsv}}_E \times \textit{MER}_E \times \textrm{min}(\textit{Perf}_E, 100\%)$ \end{flushleft} \\\hline
 $\textit{Ada}^{\textit{Circ}}_E$ & approx. \ADA{31.5bn}  & \ada{} in circulation in Epoch $E$ & $\textit{Ada}^{\textit{Circ}}_{E-1} + \textit{Distr}_E$ \\\hline
 $\textit{Ada}^{\textit{Rsv}}_E$ & approx. \ADA{14.5bn} & \ada{} in reserve in Epoch $E$ & $\textit{Ada}^{\textit{Rsv}}_{E-1} - \textit{Distr}_E$ \\\hline
 $R_E$ & approx. \ADA{56M} & Total Rewards per Epoch & $ (\textit{Distr}_E + \textit{Fees}_E + \textit{Deposits}_E) \div (\textit{inf}+1)$ \\\hline
@@ -733,33 +732,44 @@ Fees and non-returned deposits are added to the reward distribution.  This total
 % As before, the top slice that is allocated to the treasury ($T_E$) is
 % deducted from this distribution, and the remainder is then allocated to the Stakepools as rewards ($R_E$).
 
-\subsection{Variable Monetary Expansion Rate}
+\subsection{The Monetary Expansion Rate}
 \label{sec:expansion}
 
 \begin{figure}[h!]
   \begin{center}
-%    \includegraphics{}
+    \includegraphics[width=0.75\textwidth]{AdaPerYear.pdf}
+\\[2ex]
+    \includegraphics[width=0.75\textwidth]{Rewards.pdf}
   \end{center}
-  \caption{Monetary Expansion over Time}
+  \caption{Ada Rewards over Time, assuming $R^{\textit{Avg}}$=0.05, $\textit{Fee}_E$=2000, $\textit{Perf}_E=100\%$.}
 \end{figure}
 
+\noindent
 The monetary expansion rate for Epoch $E$ is determined by the following equation:
 
 $$
-  \textit{MER}_E = ...
+\textit{MER}_E ~~=~~ \frac{\textit{Ada}^{Circ}_E \times (\sqrt[\textit{EPY}]{1+R^{\textit{Avg}}} - 1) - (1- T) \times \textit{Fees}_E}
+                          {(1-T) \times \textit{min}(\textit{Perf}_E,100\%) \times (\textit{Ada}^{Tot} - Ada^{Circ}_E)}
 $$
+
+\noindent
+where $R^{\textit{Avg}}$ is the expected average rewards per \ada{} per year, and $\textit{EPY}$ is the number of epochs per year (73 in non-leap years if
+$\textit{DPE} = 5$). $T$ is the pre-defined Treasury Top Slice (initially 10\%).
+%
+Assuming $R^{\textit{Avg}}$=0.05, $\textit{Fee}_E$=2000, and $\textit{Perf}_E=100\%$, with the other values as above, then we obtain
+$\textit{MER}_0 = 0.0017686$, equating to monetary expansion of 12.9\% over a year.
 
 \subsection{Transaction Fees}
 \label{sec:fees}
 
-The fee for a transaction is calculated as follows.
+The fee for each transaction $t$ is calculated as follows:
 
 $$
 \textit{Fee} (t) ~=~ a + b \times \textit{size}(t)
 $$
 
 \noindent
-where $a$ is a fixed fee for each transaction, and $b$ calculates an additional fee from the transaction \emph{size}.
+where $a$ is a fixed fee for each transaction, and $b$ calculates an additional fee from the transaction size ($\textit{size}(t)$).
 
 \clearpage
 \subsection{The Rewards that are received by a Stakepool for Epoch $E$}
@@ -786,7 +796,7 @@ ${\textit{Pledge}}^\%$ & & Fraction of the \ada{} in circulation that is \emph{p
 \end{tabular}
 \end{center}
 \caption{Parameters Governing the Rewards to a Stakepool in a given Epoch, $E$.}
-\label{fig:rewards}
+\label{fig:rewards-mainnet}
 \end{figure}
 
 \noindent
