@@ -57,7 +57,7 @@ mkKeyPairs n
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 traceKeyPairs :: KeyPairs
-traceKeyPairs = mkKeyPairs <$> [1 .. 50]
+traceKeyPairs = mkKeyPairs <$> [1 .. 150]
 
 -- | Select between _lower_ and _upper_ keys from 'traceKeyPairs'
 someKeyPairs :: Int -> Int -> Gen KeyPairs
