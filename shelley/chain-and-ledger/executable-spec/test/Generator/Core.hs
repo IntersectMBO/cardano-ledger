@@ -13,12 +13,15 @@ module Generator.Core
   , increasingProbabilityAt
   , mkGenesisLedgerState
   , traceKeyPairs
+  , traceVRFKeyPairs
   , someKeyPairs
   , pickStakeKey
   , toAddr
   , toCred)
   where
 
+import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
+import           Crypto.Random (drgNewTest, withDRG)
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 import           Hedgehog (Gen)
@@ -30,8 +33,8 @@ import           Coin (Coin (..))
 import           Examples (mkKeyPair)
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
-import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, TxOut, UTxO, UTxOState,
-                     VKey)
+import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF, TxOut, UTxO,
+                     UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Tx (pattern TxOut)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
@@ -54,7 +57,7 @@ mkKeyPairs n
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 traceKeyPairs :: KeyPairs
-traceKeyPairs = mkKeyPairs <$> [1 .. 50]
+traceKeyPairs = mkKeyPairs <$> [1 .. 150]
 
 -- | Select between _lower_ and _upper_ keys from 'traceKeyPairs'
 someKeyPairs :: Int -> Int -> Gen KeyPairs
@@ -122,3 +125,11 @@ increasingProbabilityAt gen (lower, upper)
                   , (90, gen)
                   , (5, pure upper)
                   ]
+
+-- | A pre-populated space of VRF keys for use in the generators.
+traceVRFKeyPairs :: [(SignKeyVRF, VerKeyVRF)]
+traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
+ where
+  body seed = fst . withDRG (drgNewTest seed) $ do
+    sk <- genKeyVRF
+    return (sk, deriveVerKeyVRF sk)
