@@ -11,6 +11,7 @@ module Rules.TestLedger
   )
 where
 
+import           Data.Foldable (toList)
 import           Data.Word (Word64)
 import           Lens.Micro ((^.))
 
@@ -26,9 +27,10 @@ import           Generator.LedgerTrace ()
 import           Coin (pattern Coin)
 import           LedgerState (pattern DPState, pattern DState, pattern UTxOState, _deposited,
                      _dstate, _fees, _rewards, _utxo)
-import           MockTypes (LEDGER)
+import           MockTypes (DELEG, LEDGER, POOL)
 import qualified Rules.TestDeleg as TestDeleg
 import qualified Rules.TestPool as TestPool
+import           TxData (body, certs)
 import           UTxO (balance)
 
 import           Test.Utils (assertAll)
@@ -57,7 +59,7 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
         `ofLengthAtLeast` 1)
 
   TestDeleg.rewardZeroAfterReg
-    ((concatMap TestDeleg.ledgerToDelegSsts . sourceSignalTargets) t)
+    ((concatMap ledgerToDelegSsts . sourceSignalTargets) t)
 
 
 credentialRemovedAfterDereg :: Property
@@ -70,7 +72,7 @@ credentialRemovedAfterDereg =
                                      mkGenesisLedgerState
             `ofLengthAtLeast` 1
     TestDeleg.credentialRemovedAfterDereg
-      (concatMap TestDeleg.ledgerToDelegSsts tr)
+      (concatMap ledgerToDelegSsts tr)
 
 
 -- | Check that the value consumed by UTXO is equal to the value produced in
@@ -116,4 +118,20 @@ registeredPoolIsAdded = do
             `ofLengthAtLeast` 1
     TestPool.registeredPoolIsAdded
       (tr ^. traceEnv)
-      (concatMap TestPool.ledgerToPoolSsts (sourceSignalTargets tr))
+      (concatMap ledgerToPoolSsts (sourceSignalTargets tr))
+
+
+-- | Transform LEDGER `sourceSignalTargets`s to DELEG ones.
+ledgerToDelegSsts
+  :: SourceSignalTarget LEDGER
+  -> [SourceSignalTarget DELEG]
+ledgerToDelegSsts (SourceSignalTarget (_, DPState d _) (_, DPState d' _) tx) =
+  [SourceSignalTarget d d' cert | cert <- toList (tx ^. body . certs)]
+
+
+-- | Transform LEDGER `SourceSignalTargets`s to POOL ones.
+ledgerToPoolSsts
+  :: SourceSignalTarget LEDGER
+  -> [SourceSignalTarget POOL]
+ledgerToPoolSsts (SourceSignalTarget (_, DPState _ p) (_, DPState _ p') tx) =
+  [SourceSignalTarget p p' cert | cert <- toList (tx ^. body . certs)]
