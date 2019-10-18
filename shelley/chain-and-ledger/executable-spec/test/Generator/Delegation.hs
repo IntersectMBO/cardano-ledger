@@ -9,38 +9,49 @@ module Generator.Delegation
   ( genDCerts )
   where
 
+import qualified Data.Map as Map
+import           Data.Ratio ((%))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import           Hedgehog (Gen)
-import           Lens.Micro ((^.))
+import           Lens.Micro (to, (^.))
 
 import qualified Hedgehog.Gen as Gen
 
 import           Coin (Coin (..))
-import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, decayKey, isDeRegKey)
-import           Generator.Core (toCred)
+import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, pattern RegPool,
+                     decayKey, isDeRegKey)
+import           Examples (unsafeMkUnitInterval)
+import           Generator.Core (genInteger, genNatural, toCred)
+import           Keys (hashKey, hashKeyVRF, vKey)
 import           Ledger.Core (dom, (∈), (∉))
-import           LedgerState (dstate, keyRefund, stkCreds, _dstate, _pstate, _stkCreds, _stPools)
-import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs)
+import           LedgerState (dstate, keyRefund, pParams, pstate, stkCreds, _pstate, _stPools,
+                     _stkCreds)
+import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs, PoolParams, VrfKeyPairs)
+import           Mutator (getAnyStakeKey)
 import           PParams (PParams (..))
 import           Slot (Slot)
+import           TxData (Credential (KeyHashObj), pattern PoolParams, RewardAcnt (..), _poolPubKey,
+                     _poolVrf)
 import           UTxO (deposits)
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts
   :: KeyPairs
+  -> VrfKeyPairs
   -> PParams
   -> DPState
   -> Slot
   -> Gen (Seq DCert, [KeyPair], Coin, Coin)
-genDCerts keys pparams dpState slotWithTTL = do
+genDCerts keys vrfKeys pparams dpState slotWithTTL = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
   -- later traversals are done backwards, to be consistent with the executable
   -- spec (see `delegsTransition` in `STS.Delegs`) which consumes the list
   -- starting at the tail end.
-  cert <- genDCert keys (_dstate dpState)
+  cert <- genDCert keys vrfKeys dpState
   case cert of
     Nothing ->
       return (Seq.empty, [], Coin 0, Coin 0)
@@ -67,16 +78,19 @@ genDCerts keys pparams dpState slotWithTTL = do
 -- | Occasionally generate a valid certificate
 genDCert
   :: KeyPairs
-  -> DState
+  -> VrfKeyPairs
+  -> DPState
   -> Gen (Maybe (DCert, KeyPair))
-genDCert keys dState =
-  -- TODO @uroboros Generate _RegPool_ Certificates
+genDCert keys vrfKeys dpState =
   -- TODO @uroboros Generate _RetirePool_ Certificates
   -- TODO @uroboros Generate _Delegate_ Certificates
-  Gen.frequency [ (1, genRegKeyCert keys dState)
-                , (1, genDeRegKeyCert keys dState)
+  Gen.frequency [ (3, genRegKeyCert keys dState)
+                , (3, genDeRegKeyCert keys dState)
+                , (3, genRegPool keys vrfKeys dpState)
                 , (1, pure Nothing)
                 ]
+ where
+  dState = dpState ^. dstate
 
 -- | Generate a RegKey certificate along and also returns the stake key
 -- (needed to witness the certificate)
@@ -109,3 +123,50 @@ genDeRegKeyCert keys delegSt =
   where
     registered k = k ∈ dom (_stkCreds delegSt)
     availableKeys = filter (registered . toCred . snd) keys
+
+-- | Generate and return a RegPool certificate along with its witnessing key.
+genRegPool
+  :: KeyPairs
+  -> VrfKeyPairs
+  -> DPState
+  -> Gen (Maybe (DCert, KeyPair))
+genRegPool keys vrfKeys dpState =
+  if null availableKeys || null availableVrfKeys
+     then pure Nothing
+     else do
+       Just <$> genDCertRegPool availableKeys availableVrfKeys
+ where
+  notRegistered k = k `notElem` (dpState ^. pstate . pParams . to Map.elems . to (_poolPubKey <$>))
+  availableKeys = filter (notRegistered . hashKey . vKey . snd) keys
+
+  notRegisteredVrf k = k `notElem` (dpState ^. pstate . pParams . to Map.elems . to (_poolVrf <$>))
+  availableVrfKeys = filter (notRegisteredVrf . hashKeyVRF . snd) vrfKeys
+
+-- | Generate PoolParams and the key witness.
+genStakePool :: KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
+genStakePool skeys vrfKeys =
+  mkPoolParams
+    <$> (Gen.element skeys)
+    <*> (snd <$> Gen.element vrfKeys)
+    <*> (Coin <$> genInteger 1 100)
+    <*> (Coin <$> genInteger 1 100)
+    <*> (genNatural 0 100)
+    <*> (getAnyStakeKey skeys)
+ where
+  mkPoolParams poolKeyPair vrfKey cost pledge marginPercent acntKey =
+    let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
+        pps = PoolParams
+                (hashKey . vKey . snd $ poolKeyPair)
+                (hashKeyVRF vrfKey)
+                pledge
+                cost
+                interval
+                (RewardAcnt $ KeyHashObj $ hashKey acntKey)
+                Set.empty
+     in (pps, snd poolKeyPair)
+
+-- | Generate `RegPool` and the key witness.
+genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, KeyPair)
+genDCertRegPool skeys vrfKeys = do
+  (pps, poolKey) <- genStakePool skeys vrfKeys
+  pure (RegPool pps, poolKey)

@@ -7,24 +7,28 @@
 module Rules.TestPool where
 
 import           Data.Map (Map, (!?))
+import qualified Data.Map as M
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Word (Word64)
+import           Lens.Micro (to, (^.))
 
-import           Hedgehog (Property, forAll, property, withTests)
+import           Hedgehog (MonadTest, Property, forAll, property, withTests)
 
+import           Control.State.Transition (Environment)
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (pattern SourceSignalTarget, signal, source,
-                     sourceSignalTargets, target, _traceEnv)
+import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
+                     signal, source, sourceSignalTargets, target, _traceEnv)
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
-import           LedgerState (_retiring, _stPools)
-import           MockTypes (KeyHash, POOL, PState, StakePools)
+import           LedgerState (cCounters, pParams, stPools, _retiring, _stPools)
+import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (Epoch (..), epochFromSlot)
+import           STS.Ledger (LedgerEnv (ledgerSlot))
 import           STS.Pool (PoolEnv (..))
 import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool,
-                     pattern StakePools)
+                     pattern StakePools, poolPubKey)
 
 
 import           Ledger.Core (dom, (∈), (∉))
@@ -102,3 +106,33 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
                                     && Maybe.maybe False ((== e) . epochFromSlot) (stp' !? certWit))
             _                  -> False
         registeredPoolRetired _ _ _ = True
+
+-- | Check that a `RegPool` certificate properly adds a stake pool.
+registeredPoolIsAdded
+  :: MonadTest m
+  => Environment LEDGER
+  -> [SourceSignalTarget POOL]
+  -> m ()
+registeredPoolIsAdded env ssts =
+  assertAll addedRegPool ssts
+
+ where
+
+  addedRegPool :: SourceSignalTarget POOL
+               -> Bool
+  addedRegPool sst =
+    case signal sst of
+      RegPool poolParams -> check poolParams
+      _ -> True
+   where
+    check :: PoolParams -> Bool
+    check poolParams =
+      let hk = poolParams ^. poolPubKey
+          pSt = target sst
+          -- PoolParams are registered in pParams map
+       in M.lookup hk (pSt ^. pParams) == Just poolParams
+          -- Hashkey is registered in stPools map
+       && M.lookup hk (pSt ^. stPools . to (\(StakePools x) -> x))
+            == Just (ledgerSlot env)
+          -- Hashkey is registered in cCounters map
+       && hk ∈ M.keys (pSt ^. cCounters)

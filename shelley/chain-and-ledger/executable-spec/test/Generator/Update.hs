@@ -74,7 +74,7 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        -- protocolVersion
                        <*> ((,,) <$> genNatural 1 10 <*> genNatural 1 50 <*> genNatural 1 100)
   where
-    low = 1
+    low = 10000
     hi = 200000
 
     -- A wrapper to enable the dependent generators for the max sizes

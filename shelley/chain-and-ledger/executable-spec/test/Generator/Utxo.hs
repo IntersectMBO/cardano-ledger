@@ -24,7 +24,7 @@ import           Generator.Core (findPayKeyPair, toAddr)
 import           Generator.Delegation (genDCerts)
 import           LedgerState (pattern UTxOState)
 import           MockTypes (Addr, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn, TxOut, UTxO,
-                     UTxOState)
+                     UTxOState, VrfKeyPairs)
 import           Slot (Slot (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
@@ -38,8 +38,9 @@ import           UTxO (pattern UTxO, balance, makeWitnessesVKey)
 genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
+      -> VrfKeyPairs
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys = do
+genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys vrfKeys = do
   keys' <- Gen.shuffle keys
 
   -- inputs
@@ -54,7 +55,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys = do
 
   -- certificates
   (certs, certWitnesses, deposits_, refunds_)
-    <- genDCerts keys' pparams dpState slotWithTTL
+    <- genDCerts keys' vrfKeys pparams dpState slotWithTTL
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   when (spendingBalance < deposits_) Gen.discard
