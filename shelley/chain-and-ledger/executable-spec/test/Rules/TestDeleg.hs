@@ -9,11 +9,9 @@ module Rules.TestDeleg
   , credentialRemovedAfterDereg
   , rewardZeroAfterReg
   , rewardsSumInvariant
-  , ledgerToDelegSsts
   )
 where
 
-import           Data.Foldable (toList)
 import           Data.Map (Map)
 import qualified Data.Map.Strict as Map (difference, filter, lookup)
 import qualified Data.Maybe as Maybe (maybe)
@@ -21,7 +19,6 @@ import           Data.Set (Set)
 import qualified Data.Set as Set (singleton, size)
 import           Data.Word (Word64)
 import           Hedgehog (MonadTest, Property, TestLimit, forAll, property, withTests)
-import           Lens.Micro ((^.))
 
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
@@ -33,11 +30,10 @@ import           Generator.LedgerTrace ()
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 import           Coin (Coin, pattern Coin)
-import           LedgerState (pattern DPState, _delegations, _rewards, _stkCreds)
-import           MockTypes (DELEG, DState, KeyHash, LEDGER, RewardAcnt, StakeCredential)
+import           LedgerState (_delegations, _rewards, _stkCreds)
+import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
 import           Test.Utils (assertAll)
-import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey,
-                     body, certs)
+import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
 
 -------------------------------
 -- helper accessor functions --
@@ -137,10 +133,3 @@ rewardsSumInvariant = withTests (fromIntegral numberOfTests) . property $ do
              null (Map.filter (/= Coin 0) $ rew `Map.difference` rew')
           && -- added elements have a zero reward balance
              null (Map.filter (/= Coin 0) $ rew' `Map.difference` rew)
-
--- | Transform LEDGER `sourceSignalTargets`s to DELEG ones.
-ledgerToDelegSsts
-  :: SourceSignalTarget LEDGER
-  -> [SourceSignalTarget DELEG]
-ledgerToDelegSsts (SourceSignalTarget (_, DPState d _) (_, DPState d' _) tx) =
-  [SourceSignalTarget d d' cert | cert <- toList (tx ^. body . certs)]
