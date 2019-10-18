@@ -85,7 +85,7 @@ genDCert keys vrfKeys dpState =
   -- TODO @uroboros Generate _RetirePool_ Certificates
   -- TODO @uroboros Generate _Delegate_ Certificates
   Gen.frequency [ (3, genRegKeyCert keys dState)
-                , (4, genDeRegKeyCert keys dState)
+                , (3, genDeRegKeyCert keys dState)
                 , (3, genRegPool keys vrfKeys dpState)
                 , (1, pure Nothing)
                 ]

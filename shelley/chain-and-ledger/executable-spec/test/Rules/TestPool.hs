@@ -6,7 +6,6 @@
 
 module Rules.TestPool where
 
-import           Data.Foldable (toList)
 import           Data.Map (Map, (!?))
 import qualified Data.Map as M
 import qualified Data.Maybe as Maybe (maybe)
@@ -22,14 +21,14 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
-import           LedgerState (pattern DPState, cCounters, pParams, stPools, _retiring, _stPools)
+import           LedgerState (cCounters, pParams, stPools, _retiring, _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (Epoch (..), epochFromSlot)
 import           STS.Ledger (LedgerEnv (ledgerSlot))
 import           STS.Pool (PoolEnv (..))
-import           TxData (pattern KeyHashObj, pattern RegPool, pattern RegPool, pattern RetirePool,
-                     pattern StakePools, body, certs, poolPubKey)
+import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool,
+                     pattern StakePools, poolPubKey)
 
 
 import           Ledger.Core (dom, (∈), (∉))
@@ -137,10 +136,3 @@ registeredPoolIsAdded env ssts =
             == Just (ledgerSlot env)
           -- Hashkey is registered in cCounters map
        && hk ∈ M.keys (pSt ^. cCounters)
-
--- | Transform LEDGER `SourceSignalTargets`s to POOL ones.
-ledgerToPoolSsts
-  :: SourceSignalTarget LEDGER
-  -> [SourceSignalTarget POOL]
-ledgerToPoolSsts (SourceSignalTarget (_, DPState _ p) (_, DPState _ p') tx) =
-  [SourceSignalTarget p p' cert | cert <- toList (tx ^. body . certs)]
