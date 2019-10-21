@@ -8,6 +8,7 @@ module Rules.TestLedger
   , credentialRemovedAfterDereg
   , consumedEqualsProduced
   , registeredPoolIsAdded
+  , pStateIsInternallyConsistent
   )
 where
 
@@ -118,6 +119,18 @@ registeredPoolIsAdded = do
             `ofLengthAtLeast` 1
     TestPool.registeredPoolIsAdded
       (tr ^. traceEnv)
+      (concatMap ledgerToPoolSsts (sourceSignalTargets tr))
+
+
+pStateIsInternallyConsistent :: Property
+pStateIsInternallyConsistent = do
+  withTests (fromIntegral numberOfTests) . property $ do
+    tr <- forAll
+          $ traceOfLengthWithInitState @LEDGER
+                                     (fromIntegral traceLen)
+                                     mkGenesisLedgerState
+            `ofLengthAtLeast` 1
+    TestPool.pStateIsInternallyConsistent
       (concatMap ledgerToPoolSsts (sourceSignalTargets tr))
 
 

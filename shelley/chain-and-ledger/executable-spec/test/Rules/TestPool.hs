@@ -1,27 +1,30 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestPool where
 
+import           Data.Foldable (traverse_)
 import           Data.Map (Map, (!?))
 import qualified Data.Map as M
 import qualified Data.Maybe as Maybe (maybe)
+import qualified Data.Set as S
 import           Data.Word (Word64)
 import           Lens.Micro (to, (^.))
 
-import           Hedgehog (MonadTest, Property, forAll, property, withTests)
+import           Hedgehog (MonadTest, Property, assert, forAll, property, withTests, (===))
 
-import           Control.State.Transition (Environment)
+import           Control.State.Transition (Environment, State)
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, sourceSignalTargets, target, _traceEnv)
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
-import           LedgerState (cCounters, pParams, stPools, _retiring, _stPools)
+import           LedgerState (pattern PState, cCounters, pParams, stPools, _retiring, _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (Epoch (..), epochFromSlot)
@@ -136,3 +139,28 @@ registeredPoolIsAdded env ssts =
             == Just (ledgerSlot env)
           -- Hashkey is registered in cCounters map
        && hk ∈ M.keys (pSt ^. cCounters)
+
+-- | Assert that PState maps are in sync with each other after each `Signal
+-- POOL` transition.
+pStateIsInternallyConsistent
+  :: forall m
+   . MonadTest m
+  => [SourceSignalTarget POOL]
+  -> m ()
+pStateIsInternallyConsistent ssts =
+  traverse_ isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
+ where
+  isConsistent :: State POOL -> m ()
+  isConsistent (PState stPools_ pParams_ retiring_ cCounters_) = do
+    let StakePools stPoolsMap = stPools_
+        poolKeys = M.keysSet stPoolsMap
+        pParamKeys = M.keysSet pParams_
+        retiringKeys = M.keys retiring_
+        cCountersKeys = M.keysSet cCounters_
+
+    sequence_ [ -- These 3 key sets should be equal.
+                poolKeys === pParamKeys
+              , pParamKeys === cCountersKeys
+                -- A retiring pool should still be registered in `stPools`.
+              , traverse_ (assert . (`S.member` poolKeys)) retiringKeys
+              ]
