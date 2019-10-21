@@ -28,6 +28,7 @@ module Examples
   , ex4C
   , ex5A
   , ex5B
+  , ex6A
   , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
@@ -80,8 +81,8 @@ import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pat
                      seedEta, seedL)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern PoolDistr, pattern RegKey, pattern RegPool,
-                     pattern RetirePool)
+                     pattern GenesisDelegate, pattern InstantaneousRewards, pattern PoolDistr,
+                     pattern RegKey, pattern RegPool, pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
@@ -91,8 +92,8 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
                      emptyPState, genesisCoins, genesisId, overlaySchedule, rs, updateIRwd,
-                     _cCounters, _delegations, _fGenDelegs, _genDelegs, _pParams, _ptrs, _reserves,
-                     _retiring, _rewards, _stkCreds, _stPools, _treasury)
+                     _cCounters, _delegations, _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs,
+                     _reserves, _retiring, _rewards, _stPools, _stkCreds, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
@@ -2015,3 +2016,84 @@ expectedStEx5B = ChainState
 
 ex5B :: CHAINExample
 ex5B = CHAINExample (Slot 50) expectedStEx5A blockEx5B expectedStEx5B
+
+
+-- | Example 6A - Genesis key delegation
+
+
+ir :: Map Credential Coin
+ir = Map.fromList [(aliceSHK, Coin 100)]
+
+txbodyEx6A :: TxBody
+txbodyEx6A = TxBody
+              (Set.fromList [TxIn genesisId 0])
+              [TxOut aliceAddr (Coin 9999)]
+              (fromList [InstantaneousRewards ir])
+              Map.empty
+              (Coin 1)
+              (Slot 10)
+              emptyUpdate
+
+txEx6A :: Tx
+txEx6A = Tx
+           txbodyEx6A
+           (makeWitnessesVKey txbodyEx6A [ alicePay ] `Set.union` makeGenWitnessesVKey txbodyEx6A
+             [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
+             , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
+             , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
+             , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
+             , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
+           ])
+           Map.empty
+
+blockEx6A :: Block
+blockEx6A = mkBlock
+              lastByronHeaderHash
+              (coreNodeKeys 6)
+              [txEx6A]
+              (Slot 10)
+              (mkNonce 0)
+              (NatNonce 1)
+              zero
+              0
+
+blockEx6AHash :: HashHeader
+blockEx6AHash = bhHash (bheader blockEx6A)
+
+utxoEx6A :: UTxO
+utxoEx6A = UTxO . Map.fromList $
+                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
+                    , (TxIn (txid txbodyEx6A) 0, TxOut aliceAddr (Coin 9999))
+                    ]
+
+dsEx6A :: DState
+dsEx6A = dsEx1 { _irwd = Map.fromList [(aliceSHK, Coin 100)] }
+
+expectedLSEx6A :: LedgerState
+expectedLSEx6A = LedgerState
+               (UTxOState
+                 utxoEx6A
+                 (Coin 0)
+                 (Coin 1)
+                 (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
+               (DPState dsEx6A psEx1)
+               0
+
+expectedStEx6A :: ChainState
+expectedStEx6A = ChainState
+  (NewEpochState
+     (Epoch 0)
+     (mkNonce 0)
+     (BlocksMade Map.empty)
+     (BlocksMade Map.empty)
+     (EpochState acntEx2A emptySnapShots expectedLSEx6A ppsEx1)
+     Nothing
+     (PoolDistr Map.empty)
+     overlayEx2A)
+  (mkNonce 0 ⭒ mkNonce 1)
+  (mkNonce 0 ⭒ mkNonce 1)
+  blockEx6AHash
+  (Slot 10)
+
+ex6A :: CHAINExample
+ex6A = CHAINExample (Slot 10) initStEx2A blockEx6A expectedStEx6A
