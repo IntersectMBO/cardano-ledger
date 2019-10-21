@@ -161,8 +161,6 @@ pStateIsInternallyConsistent ssts =
     sequence_ [ -- These 3 key sets should be equal.
                 poolKeys === pParamKeys
               , pParamKeys === cCountersKeys
-              , cCountersKeys === poolKeys
                 -- A retiring pool should still be registered in `stPools`.
               , traverse_ (assert . (`S.member` poolKeys)) retiringKeys
               ]
-   where
