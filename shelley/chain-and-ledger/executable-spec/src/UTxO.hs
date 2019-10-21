@@ -56,7 +56,7 @@ import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential
                      inputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
-import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue)
+import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue, isInstantaneousRewards)
 
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo vrfAlgo
@@ -221,7 +221,7 @@ scriptsNeeded u tx =
   `Set.union`
   Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
-  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) certificates)
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter (not . isInstantaneousRewards) certificates))
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
