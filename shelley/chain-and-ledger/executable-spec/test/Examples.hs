@@ -29,6 +29,7 @@ module Examples
   , ex5A
   , ex5B
   , ex6A
+  , ex6B
   , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
@@ -67,7 +68,7 @@ import           Data.Sequence (empty, fromList)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
-import           MockTypes (AVUpdate, Addr, Applications, Block, CertifiedVRF, ChainState,
+import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, CertifiedVRF, ChainState,
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
                      LedgerState, Mdt, PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
                      SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update,
@@ -97,7 +98,11 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
-import           STS.Chain (pattern ChainState)
+import           STS.Bbody (pattern LedgersFailure)
+import           STS.Chain (pattern BbodyFailure, pattern ChainState)
+import           STS.Ledger (pattern UtxowFailure)
+import           STS.Ledgers (pattern LedgerFailure)
+import           STS.Utxow (pattern MIRInsufficientGenesisSigsUTXOW)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
@@ -109,8 +114,10 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      updatePPup)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
+import           Control.State.Transition (PredicateFailure)
 
-data CHAINExample = CHAINExample Slot ChainState Block ChainState
+data CHAINExample =
+  CHAINExample Slot ChainState Block (Either [[PredicateFailure CHAIN]] ChainState)
 
 -- | Set up keys for all the actors in the examples.
 
@@ -431,7 +438,7 @@ expectedStEx1 = ChainState
   (Slot 1)
 
 ex1 :: CHAINExample
-ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 expectedStEx1
+ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 (Right expectedStEx1)
 
 
 -- | Example 2A - apply CHAIN transition to register stake keys and a pool
@@ -584,7 +591,7 @@ expectedStEx2A = ChainState
   (Slot 10)
 
 ex2A :: CHAINExample
-ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A expectedStEx2A
+ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A (Right expectedStEx2A)
 
 
 -- | Example 2B - process a block late enough in the epoch in order to create a reward update.
@@ -685,7 +692,7 @@ expectedStEx2Bquater :: ChainState
 expectedStEx2Bquater = expectedStEx2Bgeneric ppsExInstantDecay
 
 ex2B :: CHAINExample
-ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B expectedStEx2B
+ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
 
 -- | Example 2C - process an empty block in the next epoch
 -- so that the (empty) reward update is applied and a stake snapshot is made.
@@ -788,17 +795,17 @@ expectedStEx2Cquater =
   expectedStEx2Cgeneric snapsEx2Cquater expectedLSEx2Cquater ppsExInstantDecay
 
 ex2C :: CHAINExample
-ex2C = CHAINExample (Slot 110) expectedStEx2B blockEx2C expectedStEx2C
+ex2C = CHAINExample (Slot 110) expectedStEx2B blockEx2C (Right expectedStEx2C)
 
 ex2Cbis :: CHAINExample
-ex2Cbis = CHAINExample (Slot 110) expectedStEx2Bbis blockEx2C expectedStEx2Cbis
+ex2Cbis = CHAINExample (Slot 110) expectedStEx2Bbis blockEx2C (Right expectedStEx2Cbis)
 
 ex2Cter :: CHAINExample
-ex2Cter = CHAINExample (Slot 110) expectedStEx2Bter blockEx2C expectedStEx2Cter
+ex2Cter = CHAINExample (Slot 110) expectedStEx2Bter blockEx2C (Right expectedStEx2Cter)
 
 ex2Cquater :: CHAINExample
 ex2Cquater =
-  CHAINExample (Slot 110) expectedStEx2Bquater blockEx2C expectedStEx2Cquater
+  CHAINExample (Slot 110) expectedStEx2Bquater blockEx2C (Right expectedStEx2Cquater)
 
 
 -- | Example 2D - process an empty block late enough
@@ -843,7 +850,7 @@ expectedStEx2D = ChainState
   (Slot 190)
 
 ex2D :: CHAINExample
-ex2D = CHAINExample (Slot 190) expectedStEx2C blockEx2D expectedStEx2D
+ex2D = CHAINExample (Slot 190) expectedStEx2C blockEx2D (Right expectedStEx2D)
 
 
 -- | Example 2E - create the first non-empty pool distribution
@@ -914,7 +921,7 @@ expectedStEx2E = ChainState
   (Slot 220)
 
 ex2E :: CHAINExample
-ex2E = CHAINExample (Slot 220) expectedStEx2D blockEx2E expectedStEx2E
+ex2E = CHAINExample (Slot 220) expectedStEx2D blockEx2E (Right expectedStEx2E)
 
 
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
@@ -960,7 +967,7 @@ expectedStEx2F = ChainState
   (Slot 295)
 
 ex2F :: CHAINExample
-ex2F = CHAINExample (Slot 295) expectedStEx2E blockEx2F expectedStEx2F
+ex2F = CHAINExample (Slot 295) expectedStEx2E blockEx2F (Right expectedStEx2F)
 
 
 -- | Example 2G - create an empty block in the next epoch
@@ -1019,7 +1026,7 @@ expectedStEx2G = ChainState
   (Slot 310)
 
 ex2G :: CHAINExample
-ex2G = CHAINExample (Slot 310) expectedStEx2F blockEx2G expectedStEx2G
+ex2G = CHAINExample (Slot 310) expectedStEx2F blockEx2G (Right expectedStEx2G)
 
 
 -- | Example 2H - create the first non-trivial reward update
@@ -1072,7 +1079,7 @@ expectedStEx2H = ChainState
   (Slot 390)
 
 ex2H :: CHAINExample
-ex2H = CHAINExample (Slot 390) expectedStEx2G blockEx2H expectedStEx2H
+ex2H = CHAINExample (Slot 390) expectedStEx2G blockEx2H (Right expectedStEx2H)
 
 
 -- | Example 2I - apply the first non-trivial reward update
@@ -1144,7 +1151,7 @@ expectedStEx2I = ChainState
   (Slot 410)
 
 ex2I :: CHAINExample
-ex2I = CHAINExample (Slot 410) expectedStEx2H blockEx2I expectedStEx2I
+ex2I = CHAINExample (Slot 410) expectedStEx2H blockEx2I (Right expectedStEx2I)
 
 
 -- | Example 2J - drain reward account and de-register stake key
@@ -1227,7 +1234,7 @@ expectedStEx2J = ChainState
   (Slot 420)
 
 ex2J :: CHAINExample
-ex2J = CHAINExample (Slot 420) expectedStEx2I blockEx2J expectedStEx2J
+ex2J = CHAINExample (Slot 420) expectedStEx2I blockEx2J (Right expectedStEx2J)
 
 
 -- | Example 2K - start stake pool retirement
@@ -1307,7 +1314,7 @@ expectedStEx2K = ChainState
   (Slot 490)
 
 ex2K :: CHAINExample
-ex2K = CHAINExample (Slot 490) expectedStEx2J blockEx2K expectedStEx2K
+ex2K = CHAINExample (Slot 490) expectedStEx2J blockEx2K (Right expectedStEx2K)
 
 
 -- | Example 2L - reap a stake pool
@@ -1375,7 +1382,7 @@ expectedStEx2L = ChainState
   (Slot 510)
 
 ex2L :: CHAINExample
-ex2L = CHAINExample (Slot 510) expectedStEx2K blockEx2L expectedStEx2L
+ex2L = CHAINExample (Slot 510) expectedStEx2K blockEx2L (Right expectedStEx2L)
 
 
 -- | Example 3A - Setting up for a successful protocol parameter update,
@@ -1467,7 +1474,7 @@ expectedStEx3A = ChainState
   (Slot 10)
 
 ex3A :: CHAINExample
-ex3A = CHAINExample (Slot 10) initStEx2A blockEx3A expectedStEx3A
+ex3A = CHAINExample (Slot 10) initStEx2A blockEx3A (Right expectedStEx3A)
 
 
 -- | Example 3B - Finish getting enough votes for the protocol parameter update.
@@ -1556,7 +1563,7 @@ expectedStEx3B = ChainState
   (Slot 20)
 
 ex3B :: CHAINExample
-ex3B = CHAINExample (Slot 20) expectedStEx3A blockEx3B expectedStEx3B
+ex3B = CHAINExample (Slot 20) expectedStEx3A blockEx3B (Right expectedStEx3B)
 
 
 -- | Example 3C - Adopt protocol parameter update
@@ -1617,7 +1624,7 @@ expectedStEx3C = ChainState
   (Slot 110)
 
 ex3C :: CHAINExample
-ex3C = CHAINExample (Slot 110) expectedStEx3B blockEx3C expectedStEx3C
+ex3C = CHAINExample (Slot 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
 
 
 -- | Example 4A - Setting up for a successful application version update,
@@ -1716,7 +1723,7 @@ expectedStEx4A = ChainState
   (Slot 10)
 
 ex4A :: CHAINExample
-ex4A = CHAINExample (Slot 10) initStEx2A blockEx4A expectedStEx4A
+ex4A = CHAINExample (Slot 10) initStEx2A blockEx4A (Right expectedStEx4A)
 
 
 -- | Example 4B - Finish getting enough votes for the application version update.
@@ -1804,7 +1811,7 @@ expectedStEx4B = ChainState
   (Slot 20)
 
 ex4B :: CHAINExample
-ex4B = CHAINExample (Slot 20) expectedStEx4A blockEx4B expectedStEx4B
+ex4B = CHAINExample (Slot 20) expectedStEx4A blockEx4B (Right expectedStEx4B)
 
 
 -- | Example 4C - Adopt application version update
@@ -1868,7 +1875,7 @@ expectedStEx4C = ChainState
 
 
 ex4C :: CHAINExample
-ex4C = CHAINExample (Slot 60) expectedStEx4B blockEx4C expectedStEx4C
+ex4C = CHAINExample (Slot 60) expectedStEx4B blockEx4C (Right expectedStEx4C)
 
 
 -- | Example 5A - Genesis key delegation
@@ -1948,7 +1955,7 @@ expectedStEx5A = ChainState
   (Slot 10)
 
 ex5A :: CHAINExample
-ex5A = CHAINExample (Slot 10) initStEx2A blockEx5A expectedStEx5A
+ex5A = CHAINExample (Slot 10) initStEx2A blockEx5A (Right expectedStEx5A)
 
 
 -- | Example 5B - New genesis key delegation updated from future delegations
@@ -2015,7 +2022,7 @@ expectedStEx5B = ChainState
   (Slot 50)
 
 ex5B :: CHAINExample
-ex5B = CHAINExample (Slot 50) expectedStEx5A blockEx5B expectedStEx5B
+ex5B = CHAINExample (Slot 50) expectedStEx5A blockEx5B (Right expectedStEx5B)
 
 
 -- | Example 6A - Genesis key delegation
@@ -2096,4 +2103,35 @@ expectedStEx6A = ChainState
   (Slot 10)
 
 ex6A :: CHAINExample
-ex6A = CHAINExample (Slot 10) initStEx2A blockEx6A expectedStEx6A
+ex6A = CHAINExample (Slot 10) initStEx2A blockEx6A (Right expectedStEx6A)
+
+
+-- | Example 6B - Instantaneous rewards with insufficient core node signatures
+
+txEx6B :: Tx
+txEx6B = Tx
+           txbodyEx6A
+           (makeWitnessesVKey txbodyEx6A [ alicePay ] `Set.union` makeGenWitnessesVKey txbodyEx6A
+             [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
+             , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
+             , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
+             , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
+           ])
+           Map.empty
+
+blockEx6B :: Block
+blockEx6B = mkBlock
+              lastByronHeaderHash
+              (coreNodeKeys 6)
+              [txEx6B]
+              (Slot 10)
+              (mkNonce 0)
+              (NatNonce 1)
+              zero
+              0
+
+expectedStEx6B :: PredicateFailure CHAIN
+expectedStEx6B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRInsufficientGenesisSigsUTXOW)))
+
+ex6B :: CHAINExample
+ex6B = CHAINExample (Slot 10) initStEx2A blockEx6B (Left [[expectedStEx6B]])

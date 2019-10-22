@@ -9,6 +9,7 @@
 module STS.Ledgers
   ( LEDGERS
   , LedgersEnv (..)
+  , PredicateFailure(..)
   )
 where
 

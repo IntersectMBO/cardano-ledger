@@ -9,6 +9,7 @@
 module STS.Chain
   ( CHAIN
   , ChainState (..)
+  , PredicateFailure(..)
   , totalAda
   )
 where
