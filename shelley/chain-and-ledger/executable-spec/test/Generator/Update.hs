@@ -74,6 +74,8 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        -- protocolVersion
                        <*> ((,,) <$> genNatural 1 10 <*> genNatural 1 50 <*> genNatural 1 100)
   where
+    -- Note: we keep the lower bound high enough so that we can more likely
+    -- generate valid transactions and blocks
     low = 10000
     hi = 200000
 
