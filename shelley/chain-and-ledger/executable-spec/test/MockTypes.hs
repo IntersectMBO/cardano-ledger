@@ -109,7 +109,7 @@ type OCert = OCert.OCert MockDSIGN MockKES
 
 type HashHeader = BlockChain.HashHeader ShortHash MockDSIGN MockKES FakeVRF
 
-type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN
+type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN FakeVRF
 
 type RewardUpdate = LedgerState.RewardUpdate ShortHash MockDSIGN
 

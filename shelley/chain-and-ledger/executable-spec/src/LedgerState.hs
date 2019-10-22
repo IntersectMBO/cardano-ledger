@@ -121,6 +121,7 @@ module LedgerState
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
+import           Delegation.Certificates (isInstantaneousRewards)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
@@ -622,8 +623,9 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
       Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (txbody ^. wdrls))
     owners = foldl Set.union Set.empty
                [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | RegPool pool <- toList $ txbody ^. certs]
-    certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK (toList $ txbody ^. certs))
+    certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK certificates)
     getCertHK = cwitness
+    certificates = filter (not . isInstantaneousRewards) (toList $ txbody ^. certs)
     updateKeys = undiscriminateKeyHash `Set.map` propWits (txup tx) _genDelegs
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
@@ -1199,12 +1201,12 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
         newIrwd = Map.union registered newlyRegister'
 
         -- reserves and rewards change
-        deltaR' =
+        deltaRl =
             (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'')
-          + Coin rewardsMIR
+        deltaR' = deltaRl + Coin rewardsMIR
         eta = fromIntegral blocksMade / expectedBlocks
 
-        Coin rewardPot = _feeSS ss + deltaR'
+        Coin rewardPot = _feeSS ss + deltaRl
         deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
         r@(Coin r') = Coin $ rewardPot - deltaT1
 

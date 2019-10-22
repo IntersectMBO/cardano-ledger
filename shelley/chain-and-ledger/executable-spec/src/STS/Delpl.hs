@@ -7,6 +7,7 @@
 module STS.Delpl
   ( DELPL
   , DelplEnv (..)
+  , PredicateFailure(..)
   )
 where
 

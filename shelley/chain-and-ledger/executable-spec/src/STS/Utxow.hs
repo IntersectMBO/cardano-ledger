@@ -19,7 +19,7 @@ import qualified Data.Set as Set
 import           BaseTypes (intervalValue, (==>))
 import           Delegation.Certificates (isInstantaneousRewards)
 import           Keys
-import           Ledger.Core (range, (∩))
+import           Ledger.Core (dom, (∩))
 import           LedgerState hiding (genDelegs)
 import           PParams (_d)
 import           STS.Utxo
@@ -52,6 +52,7 @@ instance
     | ScriptWitnessNotValidatingUTXOW
     | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo))
     | MIRInsufficientGenesisSigsUTXOW
+    | MIRImpossibleInDecentralizedNetUTXOW
     deriving (Eq, Show)
 
   transitionRules = [utxoWitnessed]
@@ -98,10 +99,13 @@ utxoWitnessed = do
   -- check genesis keys signatures for instantaneous rewards certificates
   let mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
       GenDelegs genMapping = _genDelegs
-      genSig = (Set.map undiscriminateKeyHash $ range genMapping) ∩ Set.map witKeyHash wits
+      genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
   (    (not $ null mirCerts)
-   ==> (0 < intervalValue (_d pp) && Set.size genSig >= 5))
-    ?! MIRInsufficientGenesisSigsUTXOW
+   ==> Set.size genSig >= 5)
+      ?! MIRInsufficientGenesisSigsUTXOW
+  (    (not $ null mirCerts)
+   ==> (0 < intervalValue (_d pp)))
+    ?! MIRImpossibleInDecentralizedNetUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo vrfAlgo)
     $ TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx)

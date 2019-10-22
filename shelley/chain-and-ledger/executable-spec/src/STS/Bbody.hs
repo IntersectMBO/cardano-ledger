@@ -10,6 +10,7 @@ module STS.Bbody
   ( BBODY
   , BbodyState (..)
   , BbodyEnv (..)
+  , PredicateFailure(..)
   )
 where
 
