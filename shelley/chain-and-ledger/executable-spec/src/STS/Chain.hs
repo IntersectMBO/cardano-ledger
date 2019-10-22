@@ -39,11 +39,12 @@ data CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo
 
 data ChainState hashAlgo dsignAlgo kesAlgo vrfAlgo
   = ChainState
-      (NewEpochState hashAlgo dsignAlgo vrfAlgo)
-      Nonce
-      Nonce
-      (HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
-      Slot
+    { chainNes            :: NewEpochState hashAlgo dsignAlgo vrfAlgo
+    , chainEvolvingNonce  :: Nonce
+    , chainCandidateNonce :: Nonce
+    , chainHashHeader     :: HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+    , chainSlot           :: Slot
+    }
   deriving (Show, Eq)
 
 instance
