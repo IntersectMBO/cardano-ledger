@@ -32,6 +32,7 @@ module Examples
   , ex6B
   , ex6C
   , ex6D
+  , ex6E
   , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
@@ -94,16 +95,19 @@ import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, p
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
-                     emptyPState, esPp, genesisCoins, genesisId, nesEs, overlaySchedule, rs,
-                     updateIRwd, _cCounters, _delegations, _fGenDelegs, _genDelegs, _irwd,
-                     _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools, _stkCreds,
-                     _treasury)
+                     emptyPState, esAccountState, esPp, genesisCoins, genesisId, nesEs,
+                     overlaySchedule, rs, updateIRwd, _cCounters, _delegations, _fGenDelegs,
+                     _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools,
+                     _stkCreds, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
 import           STS.Bbody (pattern LedgersFailure)
 import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes)
-import           STS.Ledger (pattern UtxowFailure)
+import           STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
+import           STS.Delegs (pattern DelplFailure)
+import           STS.Delpl (pattern DelegFailure)
+import           STS.Ledger (pattern DelegsFailure, pattern UtxowFailure)
 import           STS.Ledgers (pattern LedgerFailure)
 import           STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
                      pattern MIRInsufficientGenesisSigsUTXOW)
@@ -2158,7 +2162,7 @@ ex6C =
    (Left [[expectedStEx6C]])
 
 
--- | Example 6C - Instantaneous rewards in decentralized era and not enough core
+-- | Example 6D - Instantaneous rewards in decentralized era and not enough core
 -- signatures
 
 ex6D :: CHAINExample
@@ -2168,3 +2172,18 @@ ex6D =
    (initStEx2A { chainNes = initNesEx2A { nesEs = esEx2A { esPp = ppsEx1 { _d = unsafeMkUnitInterval 0 }}}})
    blockEx6B
    (Left [[expectedStEx6C, expectedStEx6B]])
+
+-- | Example 6E - Instantaneous rewards that overrun the available reserves
+
+ex6E :: CHAINExample
+ex6E =
+  CHAINExample
+   (Slot 10)
+   (initStEx2A { chainNes = initNesEx2A { nesEs = esEx2A { esAccountState = acntEx2A { _reserves = 99 }}}})
+   blockEx6A
+   (Left [[BbodyFailure
+           (LedgersFailure
+            (LedgerFailure
+             (DelegsFailure
+              (DelplFailure
+               (DelegFailure InsufficientForInstantaneousRewardsDELEG)))))]])
