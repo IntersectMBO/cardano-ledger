@@ -4,6 +4,7 @@
 module STS.Deleg
   ( DELEG
   , DelegEnv (..)
+  , PredicateFailure(..)
   )
 where
 

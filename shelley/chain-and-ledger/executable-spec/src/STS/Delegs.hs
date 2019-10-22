@@ -7,6 +7,7 @@
 module STS.Delegs
   ( DELEGS
   , DelegsEnv (..)
+  , PredicateFailure(..)
   )
 where
 
