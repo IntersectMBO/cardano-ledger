@@ -31,6 +31,7 @@ module Examples
   , ex6A
   , ex6B
   , ex6C
+  , ex6D
   , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
@@ -2155,3 +2156,15 @@ ex6C =
    (initStEx2A { chainNes = initNesEx2A { nesEs = esEx2A { esPp = ppsEx1 { _d = unsafeMkUnitInterval 0 }}}})
    blockEx6A
    (Left [[expectedStEx6C]])
+
+
+-- | Example 6C - Instantaneous rewards in decentralized era and not enough core
+-- signatures
+
+ex6D :: CHAINExample
+ex6D =
+  CHAINExample
+   (Slot 10)
+   (initStEx2A { chainNes = initNesEx2A { nesEs = esEx2A { esPp = ppsEx1 { _d = unsafeMkUnitInterval 0 }}}})
+   blockEx6B
+   (Left [[expectedStEx6C, expectedStEx6B]])
