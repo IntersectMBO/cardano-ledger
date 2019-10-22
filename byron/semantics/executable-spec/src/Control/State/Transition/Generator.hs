@@ -53,6 +53,7 @@ module Control.State.Transition.Generator
   -- * Trace properties
   , traceLengthsAreClassified
   , onlyValidSignalsAreGenerated
+  , onlyValidSignalsAreGeneratedForTrace
   , invalidSignalsAreGenerated
   -- * Helpers
   , tinkerWithSigGen
@@ -602,8 +603,18 @@ onlyValidSignalsAreGenerated
   => Word64
   -- ^ Maximum trace length.
   -> Property
-onlyValidSignalsAreGenerated maximumTraceLength = property $ do
-  tr <- forAll (trace @s maximumTraceLength)
+onlyValidSignalsAreGenerated maximumTraceLength =
+  onlyValidSignalsAreGeneratedForTrace (trace @s maximumTraceLength)
+
+-- | Check that the signal generator of 's' only generate valid signals.
+onlyValidSignalsAreGeneratedForTrace
+  :: forall s
+   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
+  => Gen (Trace s)
+  -- ^ Maximum trace length.
+  -> Property
+onlyValidSignalsAreGeneratedForTrace traceGen = property $ do
+  tr <- forAll traceGen
   let
     env :: Environment s
     env = _traceEnv tr
@@ -618,7 +629,6 @@ onlyValidSignalsAreGenerated maximumTraceLength = property $ do
   footnoteShow sig
   footnoteShow result
   void $ evalEither result
-
 
 coverFailures
   :: forall m s a
