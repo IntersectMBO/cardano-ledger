@@ -52,6 +52,7 @@ instance
     | ScriptWitnessNotValidatingUTXOW
     | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo))
     | MIRInsufficientGenesisSigsUTXOW
+    | MIRImpossibleInDecentralizedNetUTXOW
     deriving (Eq, Show)
 
   transitionRules = [utxoWitnessed]
@@ -100,8 +101,11 @@ utxoWitnessed = do
       GenDelegs genMapping = _genDelegs
       genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
   (    (not $ null mirCerts)
-   ==> (0 < intervalValue (_d pp) && Set.size genSig >= 5))
-    ?! MIRInsufficientGenesisSigsUTXOW
+   ==> Set.size genSig >= 5)
+      ?! MIRInsufficientGenesisSigsUTXOW
+  (    (not $ null mirCerts)
+   ==> (0 < intervalValue (_d pp)))
+    ?! MIRImpossibleInDecentralizedNetUTXOW
 
   trans @(UTXO hashAlgo dsignAlgo vrfAlgo)
     $ TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx)

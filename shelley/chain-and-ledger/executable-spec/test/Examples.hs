@@ -30,6 +30,7 @@ module Examples
   , ex5B
   , ex6A
   , ex6B
+  , ex6C
   , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
@@ -70,9 +71,9 @@ import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, CertifiedVRF, ChainState,
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
-                     LedgerState, Mdt, PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
-                     SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update,
-                     UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
+                     LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
+                     RewardAcnt, SKey, SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO,
+                     UTxOState, Update, UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
@@ -92,17 +93,19 @@ import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, p
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
-                     emptyPState, genesisCoins, genesisId, overlaySchedule, rs, updateIRwd,
-                     _cCounters, _delegations, _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs,
-                     _reserves, _retiring, _rewards, _stPools, _stkCreds, _treasury)
+                     emptyPState, esPp, genesisCoins, genesisId, nesEs, overlaySchedule, rs,
+                     updateIRwd, _cCounters, _delegations, _fGenDelegs, _genDelegs, _irwd,
+                     _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools, _stkCreds,
+                     _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..))
 import           STS.Bbody (pattern LedgersFailure)
-import           STS.Chain (pattern BbodyFailure, pattern ChainState)
+import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes)
 import           STS.Ledger (pattern UtxowFailure)
 import           STS.Ledgers (pattern LedgerFailure)
-import           STS.Utxow (pattern MIRInsufficientGenesisSigsUTXOW)
+import           STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
+                     pattern MIRInsufficientGenesisSigsUTXOW)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
@@ -507,17 +510,21 @@ overlayEx2A = overlaySchedule
                     NeutralNonce
                     ppsEx1
 
+initNesEx2A :: NewEpochState
+initNesEx2A = NewEpochState
+               (Epoch 0)
+               (mkNonce 0)
+               (BlocksMade Map.empty)
+               (BlocksMade Map.empty)
+               esEx2A
+               Nothing
+               (PoolDistr Map.empty)
+               overlayEx2A
+
+
 initStEx2A :: ChainState
 initStEx2A = ChainState
-  (NewEpochState
-      (Epoch 0)
-      (mkNonce 0)
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      esEx2A
-      Nothing
-      (PoolDistr Map.empty)
-      overlayEx2A)
+  initNesEx2A
   (mkNonce 0)
   (mkNonce 0)
   lastByronHeaderHash
@@ -2135,3 +2142,16 @@ expectedStEx6B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRIn
 
 ex6B :: CHAINExample
 ex6B = CHAINExample (Slot 10) initStEx2A blockEx6B (Left [[expectedStEx6B]])
+
+-- | Example 6C - Instantaneous rewards in decentralized era
+
+expectedStEx6C :: PredicateFailure CHAIN
+expectedStEx6C = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRImpossibleInDecentralizedNetUTXOW)))
+
+ex6C :: CHAINExample
+ex6C =
+  CHAINExample
+   (Slot 10)
+   (initStEx2A { chainNes = initNesEx2A { nesEs = esEx2A { esPp = ppsEx1 { _d = unsafeMkUnitInterval 0 }}}})
+   blockEx6A
+   (Left [[expectedStEx6C]])
