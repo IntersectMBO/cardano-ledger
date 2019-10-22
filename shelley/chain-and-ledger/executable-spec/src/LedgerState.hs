@@ -1201,12 +1201,12 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
         newIrwd = Map.union registered newlyRegister'
 
         -- reserves and rewards change
-        deltaR' =
+        deltaRl =
             (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'')
-          + Coin rewardsMIR
+        deltaR' = deltaRl + Coin rewardsMIR
         eta = fromIntegral blocksMade / expectedBlocks
 
-        Coin rewardPot = _feeSS ss + deltaR'
+        Coin rewardPot = _feeSS ss + deltaRl
         deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
         r@(Coin r') = Coin $ rewardPot - deltaT1
 
