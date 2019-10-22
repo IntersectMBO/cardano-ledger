@@ -38,7 +38,6 @@ that a transaction failed to be processed.
 \label{sec:utxo-trans}
 
 Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition system.
-See Figure~\ref{fig:defs:utxo-shelley} for most of the definitions used in the transition system.
 
 \begin{itemize}
 
@@ -60,7 +59,7 @@ See Figure~\ref{fig:defs:utxo-shelley} for most of the definitions used in the t
     withdrawals and stake credential deposit refunds. Some of the definitions
     used in this function will be defined in Section~\ref{sec:deps-refunds}. In
     particular, $\fun{keyRefunds}$ is defined in
-    Figure~\ref{fig:functions:deposits-refunds} and $\StakeCreds$ is defined in
+    Figure~\ref{fig:functions:deposits-refunds} and $\StakeDelegs$ is defined in
     Figure~\ref{fig:delegation-defs}.
 
   \item The calculation $\fun{produced}$ gives the value produced by the transaction $\var{tx}$
@@ -85,6 +84,50 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
 
 \begin{figure}[htb]
   \begin{align*}
+    & \fun{txinputs_v} \in \Tx \to \TxIn
+    & \text{tx VK inputs} \\
+    & \fun{txinputs_v} ~tx ~=~ \fun{txinputs} ~tx\cap \TxIn
+    \nextdef
+    & \fun{txinputs_s} \in \Tx \to \TxOutScr
+    & \text{tx script inputs} \\
+    & \fun{txinputs_s} ~tx ~=~ \fun{txinputs} ~tx\cap \TxInScr
+    \nextdef
+    & \fun{txouts_s} \in \Tx \to \TxOutScr
+    & \text{tx script outputs} \\
+    & \fun{txouts_s} ~ \var{tx} =
+        \left\{
+          \var{ix} \mapsto \var{txout}~\in ~\txouts{tx} ~
+          \middle|
+          \var{txout} \in \TxOutScr
+        \right\}
+    \nextdef
+    & \fun{txouts_v} \in \Tx \to \TxOutVK
+    & \text{tx vk outputs} \\
+    & \fun{txouts_v} ~ \var{tx} =
+      \left\{
+        \var{ix} \mapsto \var{txout} ~\in ~\txouts{tx}~
+        \middle|
+        \var{txout} \in \TxOutVK
+      \right\}
+    \nextdef
+    & \fun{utxo_v} \in \UTxO \to \TxIn \mapsto \TxOutVK
+    & \text{vk utxo entries} \\
+    & \fun{utxo_v} ~ \var{utxo} =
+        \left\{
+          \var{txin} \mapsto \var{txout} ~\in~ \var{utxo}  ~
+          \middle|
+          \var{txout} \in \TxOutVK
+        \right\}
+    \nextdef
+    & \fun{utxo_s} \in \UTxO \to \TxIn \mapsto \TxOutScr
+    & \text{script utxo entries} \\
+    & \fun{utxo_s} ~ \var{utxo} =
+        \left\{
+          \var{txin} \mapsto \var{txout} ~\in~ \var{utxo}~
+          \middle|
+          \var{txout} \in \TxOutScr
+        \right\}
+    \nextdef
     & \fun{outs} \in \Tx \to \UTxO
     & \text{tx outputs as UTxO} \\
     & \fun{outs} ~ \var{tx} =
@@ -92,36 +135,66 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
           (\fun{txid} ~ \var{tx}, \var{ix}) \mapsto \var{txout} ~
           \middle|
           \var{ix} \mapsto \var{txout} \in \txouts{tx}
-        \right\}
+        \right\} \\
+    \nextdef
+    & \fun{txins} \in \Tx \to \powerset{\TxIn} & \text{transaction inputs} \\
+    & \fun{txins} ~\var{tx} = \{(txid,ix) \mid (txid,ix,\wcard)\in\fun{txinputs_v} ~tx\} \\
+    & ~~\cup \{(txid,ix)\in\fun{txinputs_s}~ tx\} \\
     \nextdef
     & \fun{ubalance} \in \UTxO \to \Coin
     & \text{UTxO balance} \\
-    & \fun{ubalance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \var{utxo}} c
+    & \fun{ubalance} ~ utxo = \sum_{(~\wcard ~ \mapsto (\wcard, ~c)) \in \fun{utxo_v}~\var{utxo}} c \\
+    &~~ + \sum_{(~\wcard ~ \mapsto (\wcard, ~c,\wcard)) \in \fun{utxo_s}~\var{utxo}} c
     \nextdef
     & \fun{wbalance} \in \Wdrl \to \Coin
     & \text{withdrawal balance} \\
     & \fun{wbalance} ~ ws = \sum_{(\wcard\mapsto c)\in\var{ws}} c
     \nextdef
-    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \Tx \to \Coin
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeDelegs \to \Wdrl \to \Tx \to \Coin
     & \text{value consumed} \\
-    & \consumed{pp}{utxo}{stkCreds}{rewards}~{tx} = \\
+    & \consumed{pp}{utxo}{stdelegs}{rewards}~{tx} = \\
     & ~~\ubalance{(\txins{tx} \restrictdom \var{utxo})} +
         \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
-    & ~~ + \keyRefunds{pp}{stkCreds}{tx} \\
+    & ~~ + \keyRefunds{pp}{stdelegs}{tx} \\
     \nextdef
     & \fun{produced} \in \PParams \to \StakePools \to \Tx \to \Coin
     & \text{value produced} \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{tx} = \\
     &~~\ubalance{(\outs{tx})}
     + \txfee{tx} + \deposits{pp}{stpools}~{(\txcerts{tx})}\\
+    &~~+ \fun{scriptFees}~{pp}~\var{tx}~+~ \fun{dsDeps}~{pp}~tx
   \end{align*}
-
   \caption{Functions used in UTxO rules}
   \label{fig:functions:utxo}
 \end{figure}
 
 \clearpage
 
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{scriptFee} \in \PParams \to \N \to \N \to \Coin
+    & \text{script spending cost calculation} \\
+    & \fun{scriptFee} ~\var{pp}~ \var{exunits} ~=~ \\
+    \nextdef
+    & \fun{scriptFees} \in \PParams \to \Tx \to \Coin
+    & \text{fees for all scripts in Tx} \\
+    & \fun{scriptFees} ~\var{pp}~\var{tx}~=~\\
+    &  ~~\sum_{(\wcard,\wcard,(\wcard,\wcard,~\var{exunits})) \in(\fun{txinputs_s} ~tx)}
+      \fun{scriptFee} ~\var{pp}~ \var{exunits}
+    \nextdef
+    & \fun{dsDep} \in \PParams \to \N \to \Coin
+    & \text{deposit for script input} \\
+    & \fun{dsDep} ~\var{pp}~ \var{scrsize} = scrsize*\fun{scrExecDep}~\var{pp}
+    \nextdef
+    & \fun{dsDeps} \in \PParams \to \Tx \to \Coin
+    & \text{sum of script deposits} \\
+    & \fun{dsDeps} ~\var{pp}~ \var{tx} =
+      \sum_{(\wcard,script_d)\in\fun{txouts_s} ~tx}
+      \fun{dsDep} ~\var{pp}~ \fun{scrsize}~{script_d}
+  \end{align*}
+  \caption{Script Cost Calculations}
+  \label{fig:functions:script}
+\end{figure}
 
 The types for the UTxO transition are given in Figure~\ref{fig:ts-types:utxo-shelley}.
 The environment, $\UTxOEnv$, consists of:
@@ -145,7 +218,6 @@ The state needed for the UTxO transition $\UTxOState$, consists of:
   \item The current UTxO.
   \item The deposit pot.
   \item The fee pot.
-  \item The update state (see Figure~\ref{fig:ts-types:update}).
 \end{itemize}
 The signal for the UTxO transition is a transaction.
 
@@ -157,9 +229,9 @@ The signal for the UTxO transition is a transaction.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{stkCreds} & \StakeCreds & \text{stake credential}\\
+        \var{stdelegs} & \StakeDeleg & \text{stake credential}\\
         \var{stpools} & \StakePools & \text{stake pool}\\
-        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -186,6 +258,30 @@ The signal for the UTxO transition is a transaction.
   %
   \caption{UTxO transition-system types}
   \label{fig:ts-types:utxo-shelley}
+\end{figure}
+
+
+\begin{figure}[htb]
+  \emph{Script States}
+  \begin{equation*}
+    \SFState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{utxo} & \UTxO & \text{UTxO}\\
+        \var{fees} & \Coin & \text{fee pot}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Script transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{utxos}{\_} \var{\_}
+    \subseteq \powerset (\PParams \times \SFState \times \Tx \times \SFState)
+  \end{equation*}
+  %
+  \caption{UTxO script validation types}
+  \label{fig:ts-types:utxo-scripts}
 \end{figure}
 
 The UTxO transition system is given in Figure~\ref{fig:rules:utxo-shelley}.
@@ -287,6 +383,67 @@ boundary, the total decayed value for the whole epoch for both the individual
 and pool deposits is transferred into the fees (independent of refund
 requests).
 
+
+\begin{figure}[htb]
+  \begin{equation}
+    \inference[Scripts-Val]
+    {\{\fun{txinputs_s}~\var{tx}\} ~=~ \\
+    \{ (txid,ix,(\var{script_v},\var{script_r},\var{exunits})) \in
+      \fun{txinputs_s}~\var{tx} ~\vert~ \\
+      \llbracket \var{script_v} \rrbracket_{exunits} \var{script_r},\var{script_d},\fun{mkPendingTx}~\var{tx} ~\wedge ~ \\
+      \fun{validatorHash}~\var{a} = \fun{scriptHash}~\var{script_v}, \\
+      (a,script_d,\wcard) \in \var{(txid,ix)}\restrictdom\var{utxo} \} \\
+    }
+    {
+      \var{pp}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{fees} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{(\txins{tx} \subtractdom \var{utxo}) \cup \outs{tx}}}  \\
+        \varUpdate{\var{fees} + \fun{scriptFees}~{pp}~{tx}} \\
+      \end{array}
+      \right) \\
+    }
+  \end{equation}
+  \begin{equation}
+    \inference[Scripts-NotVal]
+    {\neg (\{\fun{txinputs_s}~\var{tx}\} ~=~ \\
+    \{ (txid,ix,(\var{script_v},\var{script_r},\var{exunits})) \in
+      \fun{txinputs_s}~\var{tx} ~\vert~ \\
+      \llbracket \var{script_v} \rrbracket_{exunits} \var{script_r},\var{script_d},\fun{mkPendingTx}~\var{tx} ~\wedge ~ \\
+      \fun{validatorHash}~\var{a} = \fun{scriptHash}~\var{script_v}, \\
+      (a,script_d,\wcard) \in \var{(txid,ix)}\restrictdom\var{utxo} \})
+    }
+    {
+      \var{pp}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{fees} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{\fun{txinputs_v}~{tx} \subtractdom \var{utxo}}}  \\
+        \varUpdate{\var{fees} + \fun{ubalance}~(\fun{utxo_v}~{utxo})} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Script validation inference rules}
+  \label{fig:rules:utxo-scrval}
+\end{figure}
+
+
 \begin{figure}[htb]
   \begin{equation}\label{eq:utxo-inductive-shelley}
     \inference[UTxO-inductive]
@@ -295,16 +452,18 @@ requests).
       & \minfee{pp}{tx} \leq \txfee{tx}
       & \txins{tx} \subseteq \dom \var{utxo}
       \\
-      \consumed{pp}{utxo}{stkCreds}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
+      \consumed{pp}{utxo}{stdelegs}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
       \\
       ~
       \\
       {
-        \begin{array}{r}
-          \var{slot} \\
-          \var{pp} \\
-          \var{genDelegs} \\
-        \end{array}
+        \left(
+          \begin{array}{r}
+            \var{slot} \\
+            \var{pp} \\
+            \var{dms} \\
+          \end{array}
+        \right)
       }
       \vdash \var{ups} \trans{\hyperref[fig:rules:update]{up}}{\fun{txup}~\var{tx}} \var{ups'}
       \\
@@ -316,20 +475,38 @@ requests).
       \\
       ~
       \\
-      \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{tx}
+      \var{refunded} \leteq \keyRefunds{pp}{stdelegs}~{tx}
       \\
-      \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{tx}
+      \var{decayed} \leteq \decayedTx{pp}{stdelegs}~{tx}
       \\
       \var{depositChange} \leteq
-        (\deposits{pp}~{stpools}~{\txcerts{tx}}) - (\var{refunded} + \var{decayed})
+        (\deposits{pp}~{stpools}~{\txcerts{tx}}) - (\var{refunded} + \var{decayed}) \\~\\
+      \var{pp} \vdash
+      {
+        \left(
+          \begin{array}{r}
+            \var{utxo} \\
+            \var{fees} \\
+          \end{array}
+        \right)
+      }
+      \trans{utxos}{\var{tx}}
+      {
+        \left(
+          \begin{array}{r}
+            \var{utxo'} \\
+            \var{fees'} \\
+          \end{array}
+        \right)
+      }
     }
     {
-      \begin{array}{r}
+      \begin{array}{l}
         \var{slot}\\
         \var{pp}\\
-        \var{stkCreds}\\
+        \var{stdelegs}\\
         \var{stpools}\\
-        \var{genDelegs}\\
+        \var{dms}\\
       \end{array}
       \vdash
       \left(
@@ -343,9 +520,9 @@ requests).
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{(\txins{tx} \subtractdom \var{utxo}) \cup \outs{tx}}  \\
+        \varUpdate{\var{utxo'}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
-        \varUpdate{\var{fees} + \txfee{tx} + \var{decayed}} \\
+        \varUpdate{\var{fees'} + \txfee{tx} + \var{decayed}} \\
         \varUpdate{ups'}\\
       \end{array}
       \right)
@@ -393,7 +570,7 @@ and refund functions.
   \item The function $\fun{keyRefund}$, calculates the refund for an individual
     stake credential registration deposit, based on the slot when it was created
     and the slot passed to the function. The creation slot should always exist
-    in the map $\var{stkCreds}$ passed to the function and this would be a good
+    in the map $\var{stdelegs}$ passed to the function and this would be a good
     property to prove about the transition system.
   \item The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
     the total value to be refunded to all individual key deregistration certificate authors
@@ -472,25 +649,25 @@ Section~\ref{sec:epoch}.
             \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
       \nextdef
       & \fun{keyRefund} \in \Coin \to \unitInterval \to \posReals \to \\
-      & ~~~~~\StakeCreds \to \Slot \to \DCertDeRegKey \to \Coin
+      & ~~~~~\StakeDelegs \to \Slot \to \DCertDeRegKey \to \Coin
       & \text{key refund for a certificate} \\
-      & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{slot}{c} =\\
+      & \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{slot}{c} =\\
       & ~~~~~\begin{cases}
-            0 & \text{if}~\cwitness c \notin \dom stkCreds \\
+            0 & \text{if}~\cwitness c \notin \dom stdelegs \\
             \refund{\dval}{d_{\min}}{\lambda}{\delta}
             & \text{otherwise}
         \end{cases}\\
       &
       \begin{array}{lr@{~=~}l}
         \where
-        &\delta & \slotminus{slot}{(stkCreds~(\cwitness c))}\\
+        &\delta & \slotminus{slot}{(stdelegs~(\cwitness c))}\\
       \end{array}\\
       \nextdef
-      & \fun{keyRefunds} \in \PParams \to \StakeCreds \to \Tx \to \Coin
+      & \fun{keyRefunds} \in \PParams \to \StakeDelegs \to \Tx \to \Coin
       & \text{key refunds for a transaction} \\
-      & \keyRefunds{pp}{stkCreds}{tx} =\\
+      & \keyRefunds{pp}{stdelegs}{tx} =\\
       & ~~~~~ \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
-              \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{(\txttl{tx})}{c}\\
+              \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{(\txttl{tx})}{c}\\
       &
       \begin{array}{lr@{~=~}l}
         \where \\
@@ -506,31 +683,31 @@ Section~\ref{sec:epoch}.
 \begin{figure}[htb]
   \begin{align*}
       & \fun{decayedKey} \in
-      \PParams \to \StakeCreds \to \Slot \to \DCertDeRegKey \to \Coin
+      \PParams \to \StakeDelegs \to \Slot \to \DCertDeRegKey \to \Coin
       & \text{decayed since epoch} \\
-      & \decayedKey{pp}{stkCreds}{cslot}{c} =\\
+      & \decayedKey{pp}{stdelegs}{cslot}{c} =\\
       & \begin{cases}
-            0 & \text{if}~\cwitness c \notin \dom stkCreds\\
+            0 & \text{if}~\cwitness c \notin \dom stdelegs\\
             \var{epochRefund} - \var{currentRefund}
             & \text{otherwise}
         \end{cases}\\
       &
       \begin{array}{lr@{~=~}l}
         \where
-          & \var{created} & \var{stkCreds}~(\cwitness~\var{c}) \\
+          & \var{created} & \var{stdelegs}~(\cwitness~\var{c}) \\
           & \var{start} & \mathsf{max}~(\firstSlot{\epoch{cslot}})~created \\
-          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{start}{c} \\
-          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{cslot}{c} \\
+          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{start}{c} \\
+          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stdelegs}{cslot}{c} \\
           & \dval & \fun{keyDeposit}~\var{pp}\\
           & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
           & \lambda & \fun{keyDecayRate}~\var{pp}\\
       \end{array}\\
       \nextdef
-      & \fun{decayedTx} \in \PParams \to \StakeCreds \to \Tx \to \Coin
+      & \fun{decayedTx} \in \PParams \to \StakeDelegs \to \Tx \to \Coin
       & \text{decayed deposit portions} \\
-      & \decayedTx{pp}{stkCreds}{tx} =\\
+      & \decayedTx{pp}{stdelegs}{tx} =\\
       &   \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
-          \decayedKey{pp}{stkCreds}{(\txttl{tx})}{c}\\
+          \decayedKey{pp}{stdelegs}{(\txttl{tx})}{c}\\
   \end{align*}
   \caption{Functions used in Deposits - Decay}
   \label{fig:functions:deposits-decay}
@@ -571,12 +748,12 @@ This consists of:
   \begin{align*}
     & \fun{propWits} \in \Update \to (\KeyHashGen\mapsto\VKey) \to \powerset{\KeyHash}
     & \text{hashkeys for proposals} \\
-    & \fun{propWits}~(\var{pup},~\var{aup})~\var{genDelegs} = \\
+    & \fun{propWits}~(\var{pup},~\var{aup})~\var{dms} = \\
     & ~~\left\{
       \hashKey{vkey}
       \mid
       \var{gkey}\mapsto\var{vkey}\in
-      \left(\left(\dom{\var{pup}}\cup\dom{\var{aup}}\right)\restrictdom\var{genDelegs}\right)
+      \left(\left(\dom{\var{pup}}\cup\dom{\var{aup}}\right)\restrictdom\var{dms}\right)
       \right\}
   \end{align*}
 
@@ -584,13 +761,13 @@ This consists of:
     & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\KeyHashGen\mapsto\VKey) \to
       \powerset{\KeyHash}
     & \text{required key hashes} \\
-    &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{genDelegs} = \\
+    &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{dms} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{txinsVKey}~{tx} \} \\
     \cup & ~~
            \{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
       \restrictdom \txwdrls{tx}\}\\
     \cup & ~~\{\cwitness{c} \mid c \in \txcerts{tx} \setminus \DCertMir\}~\cup \\
-    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{genDelegs} \\
+    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{dms} \\
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c}
   \end{align*}
   \begin{align*}
@@ -637,49 +814,45 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
     \label{eq:utxo-witness-inductive-shelley}
     \inference[UTxO-wit]
     {
-      (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\
-      \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
-      \dom (\txwitsVKey{tx}) \}\\~\\
-      \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{tx},\\
-      \fun{hashScript}~\var{validator} = \var{hs} \wedge
-      \fun{validateScript}~\var{validator}~\var{tx}\\~\\
-      \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{tx})
-      \\~\\
+      (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq witsKeyHashes
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{dms} \subseteq \{ \hashKey \var{vk} \mid
+      \var{vk}\in\dom{(\txwitsVKey{tx})} \}
       \\~\\
       genSig \leteq
       \left\{
-        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
+        \fun{hashKey}~vk \vert gkey\mapsto vk \in\var{dms}
       \right\}
       \cap
-      \var{witsKeyHashes}
+      \left\{
+        \fun{hashKey}~\var{vk} \vert \var{vk}\in\dom{(\txwitsVKey{tx})}
+      \right\}
       \\
       \left\{
         c\in\txcerts{tx}~\cap\DCertMir
-      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq 5 \wedge
       \fun{d}~\var{pp} > 0
       \\~\\
       {
-        \begin{array}{r}
+        \begin{array}{l}
           \var{slot}\\
           \var{pp}\\
-          \var{stkCreds}\\
+          \var{stdelegs}\\
           \var{stpools}\\
-          \var{genDelegs}\\
+          \var{dms}\\
         \end{array}
       }
       \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{tx}
       \var{utxoSt'}\\
     }
     {
-      \begin{array}{r}
+      \begin{array}{l}
         \var{slot}\\
         \var{pp}\\
-        \var{stkCreds}\\
+        \var{stdelegs}\\
         \var{stpools}\\
-        \var{genDelegs}\\
+        \var{dms}\\
       \end{array}
       \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
     }

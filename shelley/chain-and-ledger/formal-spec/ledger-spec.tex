@@ -36,7 +36,7 @@
 \newcommand{\Nothing}{\ensuremath{\Diamond}}
 \newcommand{\N}{\ensuremath{\mathbb{N}}}
 \newcommand{\Bool}{\type{Bool}}
-\newcommand{\Npos}{\ensuremath{\mathbb{N}^{>0}}}
+\newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
 \newcommand{\Z}{\ensuremath{\mathbb{Z}}}
 \newcommand{\R}{\ensuremath{\mathbb{R}}}
 \newcommand{\Rnn}{\ensuremath{\mathbb{R}^{\geq 0}}}
@@ -54,12 +54,10 @@
 \newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
-\newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
-\newcommand{\MaxKESEvo}{\ensuremath{\mathsf{MaxKESEvo}}}
-\newcommand{\Quorum}{\ensuremath{\mathsf{Quorum}}}
+\newcommand{\SlotsStabilityParam}{\fun{k}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
-\newcommand{\StakeCreds}{\type{StakeCreds}}
+\newcommand{\StakeDeleg}{\type{StakeDeleg}}
 \newcommand{\Seed}{\type{Seed}}
 \newcommand{\seedOp}{\star}
 \newcommand{\Ppm}{\type{Ppm}}
@@ -85,6 +83,7 @@
 \newcommand{\DCertMir}{\type{DCert_{mir}}}
 \newcommand{\PoolParam}{\type{PoolParam}}
 \newcommand{\UTxOState}{\ensuremath{\type{UTxOState}}}
+\newcommand{\SFState}{\ensuremath{\type{SFState}}}
 \newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
 
 \newcommand{\AddrRWD}{\type{Addr_{rwd}}}
@@ -109,6 +108,7 @@
 
 % multi-signature
 \newcommand{\StakeCredential}{\type{Credential}_{stake}}
+\newcommand{\StakeDelegs}{\type{StakeDelegs}}
 
 \newcommand{\txwitsVKey}[1]{\fun{txwitsVKey}~\var{#1}}
 \newcommand{\txwitsScript}[1]{\fun{txwitsScript}~\var{#1}}
@@ -126,12 +126,22 @@
 \newcommand{\AddrScrPtr}{\type{Addr_{ptr}^{script}}}
 \newcommand{\HashScr}{\type{ScriptHash}}
 \newcommand{\Script}{\type{Script}}
+\newcommand{\ScriptV}{\type{Script_{v}}}
+\newcommand{\ScriptD}{\type{Script_{d}}}
+\newcommand{\ScriptR}{\type{Script_{r}}}
+\newcommand{\PendingTx}{\type{PendingTx}}
 \newcommand{\MSig}{\type{MSig}}
 \newcommand{\Credential}{\type{Credential}}
 
 %% Adding witnesses
 \newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\TxInTx}{\type{TxInTx}}
+\newcommand{\TxInScr}{\type{TxInScr}}
+\newcommand{\Info}{\type{Info}}
+\newcommand{\ExUnits}{\type{ExUnits}}
 \newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\TxOutVK}{\type{TxOutVK}}
+\newcommand{\TxOutScr}{\type{TxOutScr}}
 \newcommand{\VKey}{\type{VKey}}
 \newcommand{\VKeyEv}{\type{VKey_{ev}}}
 \newcommand{\VKeyGen}{\type{VKey_G}}
@@ -258,28 +268,16 @@
 \tableofcontents
 \listoffigures
 
-\include{intro}
 \include{notation}
-\include{crypto-primitives}
+
 \include{address}
+
 \include{protocol-parameters}
+
 \include{transactions}
-\include{update}
+
 \include{utxo}
 \include{delegation}
-\include{ledger}
-\include{epoch}
-\include{chain}
-\include{software-updates}
-\include{sts-overview}
-\include{properties}
-\include{non-integral}
-
-\newpage
-
-\begin{appendix}
-  \input{appendix}
-\end{appendix}
 
 
 \addcontentsline{toc}{section}{References}

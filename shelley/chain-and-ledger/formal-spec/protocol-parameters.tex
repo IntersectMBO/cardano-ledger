@@ -12,20 +12,11 @@ The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
 and $\Z$ is only chosen over $\N$ for its additive inverses.
 
-Six global constants are defined.
-As global constants, these values can only be changed by updating the software.
-The constants $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$
-represent the number of slots in an epoch/KES period (for a brief explanation
+Two global constants are defined, $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$,
+representing the number of slots in an epoch/KES period (for a brief explanation
 of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
-The constants $\SlotsPrior$ and $\StartRewards$ concern the chain stability.
-The maximum number of time a KES key can be evolved before a pool operator
-must create a new operational certificate is given by $\MaxKESEvo$.
-\textbf{Note that if } $\MaxKESEvo$
-\textbf{is changed, the KES signature format may have to change as well.}
-
-Finally, $\Quorum$ determines the quorum amount needed for votes on the
-protocol parameter updates and the application version updates.
-
+As global constants, these values can only be
+changed by updating the software.
 
 Some helper functions are defined in Figure~\ref{fig:defs:protocol-parameters-helpers}.
 The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
@@ -75,6 +66,10 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
       \begin{array}{r@{~\in~}lr}
         \var{a} \mapsto \Z & \PParams & \text{min fee factor}\\
         \var{b} \mapsto \Z & \PParams & \text{min fee constant}\\
+        \var{c_{sdep}} \mapsto \Coin & \PParams & \text{deposit cost factor}\\
+        \var{c_{mem}} \mapsto \Coin & \PParams & \text{script exec memory cost factor}\\
+        \var{c_{stps}} \mapsto \Coin & \PParams & \text{script exec steps cost factor}\\
+        \var{scrExecDep} \mapsto \Coin & \PParams & \text{deposit for script execution}\\
         \var{maxBlockSize} \mapsto \N & \PParams & \text{max block body size}\\
         \var{maxTxSize} \mapsto \N & \PParams & \text{max transaction size}\\
         \var{maxHeaderSize} \mapsto \N & \PParams & \text{max block header size}\\
@@ -101,6 +96,10 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   \begin{center}
     \fun{a},
     \fun{b},
+    \fun{c_{sdep}},
+    \fun{c_{mem}},
+    \fun{c_{stps}},
+    \fun{scrExecDep},
     \fun{maxBlockSize},
     \fun{maxTxSize},
     \fun{maxHeaderSize},
@@ -136,10 +135,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \begin{array}{r@{~\in~}lr}
       \SlotsPerEpoch & \N & \text{slots per epoch} \\
       \SlotsPerKESPeriod & \N & \text{slots per KES period} \\
-      \SlotsPrior & \Duration & \tau\text{ in \cite{ouroboros_praos}}\\
-      \StartRewards & \Duration & \text{duration to start reward calculations}\\
-      \MaxKESEvo & \N & \text{maximum KES key evolutions}\\
-      \Quorum & \N & \text{quorum for update system votes}\\
+      \SlotsStabilityParam & \N & \text{stability parameter}
     \end{array}
   \end{equation*}
   %
@@ -153,12 +149,12 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   \begin{align*}
     \fun{minfee} & \in \PParams \to \Tx \to \Coin & \text{minimum fee}\\
     \fun{minfee} & ~\var{pp}~\var{tx} =
-    (\fun{a}~\var{pp}) \cdot \fun{txSize}~\var{tx} + (\fun{b}~\var{pp})
+    (\fun{a}~\var{pp}) * \fun{txSize}~\var{tx} + (\fun{b}~\var{pp})
     \\
     \\
     \fun{epoch} & \in ~ \Slot \to \Epoch & \text{epoch of a slot}
     \\
-    \fun{epoch} & ~\var{slot} = \var{slot}~/~\SlotsPerEpoch
+    \fun{epoch} & ~\var{slot} = \var{slot}~\mathsf{div}~\SlotsPerEpoch
     \\
     \\
     \fun{firstSlot} & \in ~ \Epoch \to \Slot
@@ -169,7 +165,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
     \\
     \fun{kesPeriod} & \in ~ \Slot \to \KESPeriod & \text{KES period of a slot}
     \\
-    \fun{kesPeriod} & ~\var{slot} = \var{slot}~/~\SlotsPerKESPeriod
+    \fun{kesPeriod} & ~\var{slot} = \var{slot}~\mathsf{div}~\SlotsPerKESPeriod
   \end{align*}
   %
   \caption{Helper functions for the Protocol Parameters}

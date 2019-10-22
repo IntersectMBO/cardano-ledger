@@ -22,20 +22,55 @@ A transaction body, $\TxBody$, is made up of seven pieces:
     For reward calculation rules, see Section \ref{sec:reward-overview},
     and for the rule for collecting rewards, see Section \ref{sec:utxo-trans}.
   \item Update proposals for protocol parameters and software.
-    The update system will be explained in Section \ref{sec:update}.
-  \item $\PPUpdate$, the protocol parameter upates.
-  \item $\AVUpdate$, the updates to Shelley software (applications).
 \end{itemize}
+
+In the derived types, $\Metadata$ and $\Applications$ are values
+that contain versions of current and next versions of applications.
+The $\ApName$ uniquely identifies a specific kind of application (e.g.
+the wallet), and the associated $\ApVer$ is the specific version of that
+application. The associated $\Metadata$ value gives the \textit{next possible}
+versions of the given application. It is a mapping of system tags to hashes of
+installer binaries, and is needed for the update mechanism.
+The update proposal type $\Update$ is a pair of
+
+\begin{itemize}
+  \item $\PPUpdate$, the protocol parameter upates
+  \item $\AVUpdate$, the updates to Shelley software (applications)
+\end{itemize}
+
+The $\PPUpdate$ has to do with changing rules and constants of the ledger
+protocol. The relationship between the rule update procedure and updating the
+node software that implements these rules is outlined in the next section
+(see Section \ref{sec:update}).
+
+Note that both of these finite maps are indexed by the hashes of the keys of
+entities proposing the given
+updates, $\KeyHashGen$.
+We use the abstract type $\KeyHashGen$ to represent hashes of genesis
+(public verification) keys, which have type $\VKeyGen$.
+Genesis keys are the keys belonging to the federated
+nodes running the Cardano system currently (also referred to as core nodes).
+The the regular user verification keys are of a type $\VKey$, distinct from the
+genesis key type, $\VKeyGen$. Similarly, the type hashes of these
+are distinct, $\KeyHash$ and $\KeyHashGen$ respectively.
+
+Currently, updates
+can only be proposed and voted on by the owners of the genesis keys.
+The process of decentralization will result in the core nodes gradually giving up
+some of their priviledges and responsibilities to the other system nodes.
+The aim is for these nodes to eventually give them \textit{all} up.
+The intent is that in the future, the update proposal mechanism will
+be decentralized as well, and allow all nodes to participate (but likely
+not as a feature in the Shelley release).
+For more on the decentralization process,
+see \ref{sec:new-epoch-trans}.
 
 A transaction, $\Tx$, consists of:
 
 \begin{itemize}
   \item The transaction body.
-  \item A pair of:
-    \begin{itemize}
-      \item A finite map from payment verification keys to signatures.
-      \item A finite map from script hashes to scripts.
-    \end{itemize}
+  \item A collection of witnesses, represented as a finite map from payment verification keys
+    to signatures.
 \end{itemize}
 
 Additionally, the $\UTxO$ type will be used by the ledger state to store all the
@@ -56,21 +91,68 @@ This function must produce a unique id for each unique transaction.
       \var{an} & \ApName & \text{application name}\\
       \var{st} & \SystemTag & \text{system tag}\\
       \var{ih} & \InstallerHash & \text{update data}\\
+      \var{exunits} & \ExUnits & \text{units of script execution} \\
     \end{array}
   \end{equation*}
+  \emph{Script types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{dat}
+      & \Data
+      & \mathbb{N}\uniondistinct\mathbb{H}\uniondistinct(\mathbb{N}\times\seqof{\Data})
+        \uniondistinct\seqof{\Data}\uniondistinct\seqof{\Data \times \Data}
+      & \text{the $\Data$ type}\\
+    \end{array}
+  \end{equation*}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l@{\subset}lr}
+      \var{script_v}&\ScriptV & \Script & \text{validator script}\\
+      \var{script_d}&\ScriptD & \Data & \text{data script}\\
+      \var{script_r}&\ScriptR & \Data & \text{redeemer script}\\
+      \var{txdat}&\PendingTx & \Data & \text{transaction data}\\
+    \end{array}
+  \end{equation*}
+%
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       (\var{txid}, \var{ix})
-      & \TxIn
+      & \type{TxIn}
       & \TxId \times \Ix
+      & \text{UTxO entry reference}
+      \\
+      \var{(\var{script_v}, \var{script_r},\var{exunits})}
+      & \Info
+      & \ScriptV \times \ScriptR \times \ExUnits
+      & \text{validation data}
+      \\
+      (\var{txid}, \var{ix}, \var{inf})
+      & \type{TxInScr}
+      & \TxIn \times \Info
+      & \text{script input}
+      \\
+      \var{txin}
+      & \TxInTx
+      & \TxIn \uniondistinct \TxInScr
       & \text{transaction input}
       \\
       (\var{addr}, c)
-      & \type{TxOut}
+      & \type{TxOutVK}
       & \Addr \times \Coin
-      & \text{transaction output}
+      & \text{vk address output}
+      \\
+      (\var{addr}, c)
+      & \type{TxOutScr}
+      & \type{TxOutVK} \times \ScriptD
+      & \text{script address output}
+      \\
+      \var{txout}
+      & \TxOut
+      & \TxOutVK \uniondistinct \TxOutScr
+      & \text{transaction outputs}
       \\
       \var{utxo}
       & \UTxO
@@ -81,16 +163,11 @@ This function must produce a unique id for each unique transaction.
       & \Wdrl
       & \AddrRWD \mapsto \Coin
       & \text{reward withdrawal}
-    \end{array}
-  \end{equation*}
-  \emph{Derived types (update system)}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \\
       \var{pup}
       & \PPUpdate
       & \KeyHashGen \mapsto \Ppm \mapsto \Seed
-      & \text{protocol parameter update}
+      & \text{PP update}
       \\
       \var{av}
       & \ApVer
@@ -118,14 +195,17 @@ This function must produce a unique id for each unique transaction.
       & \text{update proposal}
     \end{array}
   \end{equation*}
-  %
+  \label{fig:defs:utxo-shelley-1}
+\end{figure*}
+
+\begin{figure*}[htb]
   \emph{Transaction Types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}l}
       \var{txbody}
       & \TxBody
-      & \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
+      & \powerset{\TxInTx} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
         \times \Coin \times \Slot \times \Wdrl \times \Update
       \\
       \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \HashScr \mapsto \Script)
@@ -139,10 +219,12 @@ This function must produce a unique id for each unique transaction.
   \emph{Accessor Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{txins} & \Tx \to \powerset{\TxIn} & \text{transaction inputs} \\
+      \fun{txinputs} & \Tx \to \powerset{\TxInTx} & \text{transaction inputs} \\
       \fun{txouts} & \Tx \to (\Ix \mapsto \TxOut) & \text{transaction outputs} \\
       \fun{txcerts} & \Tx \to \seqof{\DCert} & \text{delegation certificates} \\
       \fun{txfee} & \Tx \to \Coin & \text{transaction fee} \\
+      \fun{txsize} & \Tx \to \Coin & \text{transaction size} \\
+      \fun{scrsize} & \ScriptD \to \Coin & \text{data size} \\
       \fun{txttl} & \Tx \to \Slot & \text{time to live} \\
       \fun{txwdrls} & \Tx \to \Wdrl & \text{withdrawals} \\
       \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
@@ -151,52 +233,34 @@ This function must produce a unique id for each unique transaction.
       \fun{txup} & \Tx \to \Update & \text{protocol parameter update}
     \end{array}
   \end{equation*}
-  %
-  \emph{Abstract Functions}
-  \begin{equation*}
-    \begin{array}{r@{~\in~}lr}
-      \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
-      \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}
-    \end{array}
-  \end{equation*}
   \caption{Definitions used in the UTxO transition system}
-  \label{fig:defs:utxo-shelley}
+  \label{fig:defs:utxo-shelley-2}
 \end{figure*}
 
 \begin{figure*}[htb]
-  \emph{Helper Functions}
+  \emph{Abstract Functions}
   %
   \begin{align*}
-    \fun{txinsVKey} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{VKey Tx inputs}\\
-    \fun{txinsVKey} & ~\var{txins}~\var{utxo} =
-    \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrVKey \times Coin))
-    \\
-    \\
-    \fun{txinsScript} & \in \powerset \TxIn \to \UTxO \to \powerset\TxIn & \text{Script Tx inputs}\\
-    \fun{txinsScript} & ~\var{txins}~\var{utxo} =
-                        \var{txins} \cap \dom (\var{utxo} \restrictrange (\AddrScr \times Coin))
+    \fun{valScriptUpTo} \in & \Script\to (\Data \times \Data \times \Data \times \N \times \N)
+    \to\Bool & \text{restricted validate script} \\
+    \fun{mkPendingTx} \in & \Tx\to \Data
+     & \text{make a PendingTx} \\
   \end{align*}
+  %
+  \emph{Notation}
   %
   \begin{align*}
-    \fun{validateScript} & \in\Script\to\Tx\to\Bool & \text{validate
-                                                      script} \\
-    \fun{validateScript} & ~\var{msig}~\var{tx}=
-                           \begin{cases}
-                             \fun{evalMultiSigScript}~msig~vhks & \text{if}~msig \in\MSig \\
-                             \mathsf{False} & \text{otherwise}
-                           \end{cases} \\
-                         & ~~~~\where \var{vhks}\leteq \{\fun{hashKey}~vk \vert
-                           vk \in \dom(\fun{txwitsVKey}~\var{tx})\}
+    \llbracket \var{script_v} \rrbracket_{\var{exunits}} \var{script_d}~\var{script_r}~\var{txdat}
+    &=& \fun{valScriptUpTo} ~\var{script_v} ~ \var{script_d}~\var{script_r}~\var{txdat}~
+    \var{exunits}
   \end{align*}
-  %
-  \caption{Helper Functions for Transaction Inputs}
-  \label{fig:defs:functions-txins}
+  \caption{Script Validation}
+  \label{fig:defs:functions-valid}
 \end{figure*}
 
 Figure~\ref{fig:defs:functions-txins} shows the helper functions
 $\fun{txinsVKey}$ and $\fun{txinsScript}$ which partition the set of transaction
 inputs of the transaction into those that are locked with a private key and
 those that are locked via a script.
-It also defines $\fun{validateScript}$, which validates the multisignature scripts.
 
 \clearpage
