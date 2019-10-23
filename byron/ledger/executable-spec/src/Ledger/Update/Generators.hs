@@ -9,7 +9,7 @@ where
 import           Data.Word (Word64)
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Gen.Aux (doubleInc)
+import           Hedgehog.Gen.Double (doubleInc)
 import qualified Hedgehog.Range as Range
 import           Ledger.Core (BlockCount (BlockCount), SlotCount (SlotCount), unBlockCount,
                      unSlotCount)
