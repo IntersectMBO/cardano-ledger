@@ -93,8 +93,6 @@ import qualified Hedgehog.Extra.Manual as Manual
 
 import           Test.Goblin (Goblin (..), GoblinData, SeedGoblin (..))
 
-import qualified Debug.Trace as D
-
 class STS s => HasTrace s where
   -- | Generate an initial environment that is based on the given trace length.
   envGen
@@ -332,7 +330,7 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
           loop (d - 1) sti acc
         Just sig ->
           case applySTS @s (TRC(env, sti, sig)) of
-            Left _err  -> D.trace (show _err) (loop (d - 1) sti acc)
+            Left _err  -> loop (d - 1) sti acc
             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
 
     interleaveSigs
