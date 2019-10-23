@@ -15,8 +15,8 @@ where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Numeric.Natural (Natural)
 import           GHC.Generics (Generic)
+import           Numeric.Natural (Natural)
 
 import           BaseTypes
 import           BlockChain
@@ -29,7 +29,7 @@ import           Slot
 import           STS.Ocert
 
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
 
 data OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo

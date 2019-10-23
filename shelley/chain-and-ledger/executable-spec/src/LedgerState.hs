@@ -121,7 +121,6 @@ module LedgerState
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
-import           Delegation.Certificates (isInstantaneousRewards)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
@@ -129,6 +128,7 @@ import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Delegation.Certificates (isInstantaneousRewards)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
