@@ -26,19 +26,19 @@ relevantKValuesAreGenerated = withTests 500 $ property $ do
       epochs :: Word64
       epochs = round $ fromIntegral chainLength / (fromIntegral slotsPerEpoch :: Double)
 
-    cover 10
+    cover 5
       "1 epochs "
       (epochs == 1)
 
-    cover 30
+    cover 20
       "epochs in [2, 25)"
       (2 <= epochs && epochs < 25)
 
-    cover 10
+    cover 5
       "epochs in [25, 50)"
       (25 <= epochs && epochs < 50)
 
-    cover 10
+    cover 5
       "50 epochs "
       (epochs == 50)
 
