@@ -10,7 +10,7 @@
 \Authors{Kevin Hammond \quad \texttt{<kevin.hammond@iohk.io>}
 }
 \DueDate{31$^{\textrm{st}}$ October 2019}
-\SubmissionDate{17$^{\textrm{th}}$ October 2019}{2019/10/17}
+\SubmissionDate{17$^{\textrm{th}}$ October 2019}{2019/10/23}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
 \Version{0.3}
@@ -54,6 +54,8 @@
 \usepackage{paralist}
 
 \usepackage{caption}
+
+\renewcommand{\floatpagefraction}{0.9}
 
 \begin{document}
 
@@ -391,11 +393,12 @@ $\textit{Ada}^{\textit{Circ}}_{\textit{Test}}$ & \ADA{15.5bn} @ $P=50\%$ & The \
 \end{figure}
 
 \noindent
-The total \ada{} that is circulating in the Testnet is derived from the \emph{participation rate} (the percentage of the total \ada{} in
-circulation that is available to be staked in the Incentivised Testnet). This will be determined at the date when the
-Testnet launches and will then remain fixed\khcomment{Check - no \ada{} can be transferred later -
-affects the calculations/reward?}.  It is assumed that this is likely to be 20\%-50\% of the total \ada{} in
-circulation.
+The \emph{participation rate} is used to calculate the total amount of \ada{} that will circulate in the Incentivised Testnet.
+This rate is simply the percentage of the total \ada{} in  circulation that is available to be staked in the Incentivised Testnet.
+It will be determined at the date when the
+Testnet launches and will then remain fixed.
+% \khcomment{Check - no \ada{} can be transferred later - affects the calculations/reward?}.
+It is assumed that this is likely to be 20\%-50\% of the total \ada{} in circulation.
 
 
 \begin{figure}[h!]
@@ -405,7 +408,7 @@ circulation.
 \textbf{Parameter} & \textbf{Expected Value} & \textbf{Description} & \textbf{Calculated as} \\\hline
 % $\textit{DPE}$ & 1 & Days per Epoch in the Testnet & \\\hline
 % $\textit{MER}$ & 10\% &  The ``Monetary Expansion Rate'' per Year & \\\hline
-$\textit{Distr}_E$ & \ADA{3.84M} & Distrib!ution per Epoch in the Testnet & $\frac{\textit{Ada}^{\textit{Rsv}} \times \textit{MER}}{365 \div \textit{DPE}}$ \\\hline
+$\textit{Distr}_E$ & \ADA{3.84M} & Distribution per Epoch in the Testnet & $\frac{\textit{Ada}^{\textit{Rsv}} \times \textit{MER}}{365 \div \textit{DPE}}$ \\\hline
 $T_E$ & \ADA{384K} & Treasury Top Slice per Epoch & $\textit{Distr}_E \times T$ \\\hline
 $R_E$ & \ADA{3.45M} & Total Rewards per Epoch & $\textit{Distr}_E - T_E$ \\\hline
   \hline
@@ -462,7 +465,7 @@ ${\textit{Pool}}^{Tot}$ & & All \ada{} that is controlled by the Stakepool & ${\
 The parameters governing the Stakepool reward calculation are shown above.  The only new
 parameters are $n$, $N$ and $z$. $n$ and $N$ are measured by the system; $z$ is calculated from the
 target number of Stakepools, $k$.  These parameters limit the rewards that can be received by any Stakepool.
-\khcomment{Check that $\textit{Ada}^{\textit{Circ}}_{\textit{Test}}$ is a fixed value.}
+% \khcomment{Check that $\textit{Ada}^{\textit{Circ}}_{\textit{Test}}$ is a fixed value.}
 
 \clearpage
 \begin{figure}[h!]
@@ -569,22 +572,35 @@ above.  For example, if the rewards are \ADA{10,000} and the exchange rate is
 of course.
 
 \clearpage
-\subsection{Worked Example}
+\subsection{Worked Example: Simplified Scheme}
 
 
-This example is taken from the \IOHK{} internal calculator at:
-\url{https://docs.google.com/spreadsheets/d/1c-KmCNBIMZjHN7wdsrNx3ac1zT8xEqodK1OyZxC_QIk/edit#gid=1365573139}
+\begin{minipage}{\textwidth}
+  This example is taken from the internal \IOHK{} spreadsheet calculator at
+\url{https://docs.google.com/spreadsheets/d/1c-KmCNBIMZjHN7wdsrNx3ac1zT8xEqodK1OyZxC_QIk/edit#gid=1365573139}.
+It has been used as the basis for the online calculator at \url{https://cardano-staking-site.netlify.com/en/}.
 
 \subsubsection*{Key Parameters}
-\includegraphics[height=6in]{RC1.pdf}
+
+\noindent
+\vspace{-0.5in}
+\includegraphics[height=6in]{RCT1.pdf}
+\vspace{-2in}
+
+\noindent
+\includegraphics[width=1.2\textwidth]{RCT2.pdf}
+\vspace{-1.9in}
 
 \noindent
 This diagram shows the key parameters and settings for the rewards system, including the
 rewards that are distributed from the reserves at each epoch.
+\end{minipage}
 
-
+\clearpage
 \subsubsection*{Stakepool Parameters}
-\includegraphics[width=\textwidth]{RC2.pdf}
+\includegraphics[width=1.2\textwidth]{RCT3.pdf}
+\vspace{-0.5in}
+
 \noindent
 This diagram shows the Stakepool-specific parameters, including the total controlled \ada{} and the
 division by owner(s) and delegators.  Here, 98.71\% of the Stakepool \ada{} is owned
@@ -592,11 +608,16 @@ by delegators.  The Stakepool receives all of its optimal rewards, since it cont
 exactly the required perecentage of stake (1.00\%, corresponding to the limit set from
 the $k$ parameter).
 
+\clearpage
 \subsubsection*{Calculated Rewards}
 
 \hspace{-0.65in}\begin{minipage}{\textwidth}
-  \includegraphics[width=1.2\textwidth]{RC3.pdf}
-  \includegraphics[width=1.2\textwidth]{RC4.pdf}
+%\vspace{-1in}
+  \includegraphics[width=1.2\textwidth]{RCT4.pdf}
+\vspace{-3.8in}
+
+\includegraphics[width=1.2\textwidth]{RCT4.pdf}
+\vspace{-3in}
 \end{minipage}
 
 \noindent
@@ -756,8 +777,8 @@ $$
 where $R^{\textit{Avg}}$ is the expected average rewards per \ada{} per year, and $\textit{EPY}$ is the number of epochs per year (73 in non-leap years if
 $\textit{DPE} = 5$). $T$ is the pre-defined Treasury Top Slice (initially 10\%).
 %
-Assuming $R^{\textit{Avg}}$=0.05, $\textit{Fee}_E$=2000, and $\textit{Perf}_E=100\%$, with the other values as above, then we obtain
-$\textit{MER}_0 = 0.0017686$, equating to monetary expansion of 12.9\% over a year.
+Assuming $R^{\textit{Avg}}$=0.05, $\textit{Fee}_E$=2000, and $\textit{Perf}_E=99\%$, with the other values as above, then we obtain
+$\textit{MER}_0 = 0.00178650067$, equating to monetary expansion of 13.04\% over a year.
 
 \subsection{Transaction Fees}
 \label{sec:fees}
@@ -810,7 +831,7 @@ by dividing the fraction of blocks that the Stakepool has created by the fractio
 \begin{tabular}{||l|p{6cm}|l||}
   \hline \hline
   \textbf{Parameter}  & \textbf{Definition} & \textbf{Calculated as} \\\hline
-  $s^\%$ &  & $\textrm{min} (z,{\textit{Pool}}^\%)$ \\\hline
+  $s^\%$ & The \emph{effective} stake & $\textrm{min} (z,{\textit{Pool}}^\%)$ \\\hline
   $p^\%$ & The \emph{effective} pledge  & $\textrm{min} (z,{\textit{Pledge}}^\%) $ \\\hline
   $\textit{R}^\textit{Factor}$ & Overall Stakepool rewards factor, taking into account the influence factor and rewards limit. & $s^\% \times \textit{inf} \times ((s^\% - p^\% \times (z - s^\%)) \div z)$ \\\hline
   $R^{Optimal}$ & The Optimal Gross Reward to the Stakepool.  \textbf{This will be reduced to 0 if any Owner(s)' \emph{pledge} is not honoured.} & $R_E \times \textit{R}^{Factor}$ \\\hline
@@ -868,6 +889,7 @@ the Incentivised Testnet.  Each delegator receives rewards that are directly pro
 stake that that delegator has placed in the Stakepool.  These are calculated from the net rewards to the
 Stakepool after deducting the owner rewards.
 
+\clearpage
 \subsubsection*{The Rewards that are received by each Stakepool Owner for Epoch $E$}
 
 % \khcomment{Check this, should be reduced by p^\%axxs.}  OK.
@@ -928,11 +950,79 @@ Rewards can be converted to other currencies using the current exchange rate, ex
 Section~\ref{sec:conversion}.  Realising these funds will require the use of an external \emph{exchange} service.
 
 \clearpage
-\subsection{Worked Example}
+\subsection{Worked Example: Full Scheme}
 
-This example is taken from the \IOHK{} internal calculator at:
-\url{...}
+This example is taken from the \IOHK{} internal calculator at
+\url{https://docs.google.com/spreadsheets/d/1m_CfNMdkxR_OrfRwThbU-6faxHUf7NdIhDLc6r-4lIM/edit#gid=1365573139}.
 
+\subsubsection*{Key Parameters}
+
+\hspace{-0.65in}\begin{minipage}{\textwidth}
+\noindent\includegraphics{RCM0.pdf}
+\vspace{-7in}
+
+\noindent\includegraphics{RCM1.pdf}
+\vspace{-3in}
+\end{minipage}
+
+\noindent
+This diagram shows the key parameters and settings for the rewards system, including the initially
+circulating and reserve \ada{}.  The monetary expansion rate is calculated as described above.
+The number of days per Epoch is set to 5, the influence factor to 0.1, the system performance
+to 99\%, the average transaction fees to \ADA{2,000} and the expected rewards rate to 0.05.
+These parameters are used as part of the monetary expansion rate calculation.
+
+
+\subsubsection*{Circulation and Distribution}
+
+\hspace{-0.65in}
+\includegraphics[width=1.6\textwidth]{RCM2.pdf}
+
+\noindent
+The upper part of this diagram shows the \ada{} that is distributed for Epoch E, assuming the overall system performance of 99\%,
+retained deposits of \ADA{500} and transaction fees of \ADA{2,000}.  The total distribution for the
+Epoch is \ADA{56,051,291.02}.  These are reduced by the Treasury Top Slice and the influence factor
+to give the rewards that are distributed to the pools of \ADA{46,323,360.35}.
+%
+The lower part of the diagram shows the \ada{} in circulation and the reserves at the start and end of the Epoch.
+
+\subsubsection*{Stakepool Parameters}
+
+\hspace{-0.65in}
+\includegraphics[width=1.25\textwidth]{RCM3.pdf}
+
+\noindent
+This diagram shows the Stakepool-specific parameters, including the total controlled \ada{} and the
+division by owner(s) and delegators.  In the mainnet, 99.37\% of the Stakepool \ada{} is owned
+by delegators.  As in the simplified scheme, the Stakepool receives all of its optimal rewards, since it controls
+exactly the required perecentage of stake (1.00\%, corresponding to the limit set from
+the $k$ parameter).
+
+\subsubsection*{Calculated Rewards}
+
+\hspace{-0.65in}\begin{minipage}{\textwidth}
+\noindent  \includegraphics[width=1.2\textwidth]{RCM4.pdf}
+\noindent  \includegraphics[width=1.2\textwidth]{RCM5.pdf}
+\end{minipage}
+
+\noindent
+This diagram shows the corresponding rewards that accrue to the owner(s) and delegators,
+plus a calculation of the total income that is received by the owners.  We will assume that the average
+and actual gross rewards are the same, i.e. if the Stakepool controls 1\% of the total \ada{} in
+circulation, it will produce exactly 1\% of the blocks, that it has 100\% performance, and will therefore receive exactly 1\% of the rewards.
+In total, the
+owners and delegators to this Stakepool would receive a net reward that was equivalent to almost 8\% per year
+(the ``staking yield'').  If there were 4 owners for the Stakepool, each would receive
+25\% of the operator rewards, i.e. $\ADA{158,121.42} \div 4 ~~=~~ \ADA{39,530.355}$.
+Similarly, a delegator contributing 10\% of the delegated stake would receive 10\% of
+the delegator reward, i.e., $\ADA{12,096,288.83} \div 10 ~~=~~ \ADA{1,209,628.8883}$.
+
+\subsubsection*{Delegator Rewards}
+
+\hspace{-0.65in}\begin{minipage}{\textwidth}
+  \includegraphics[width=1.2\textwidth]{RCM5.pdf}
+  \includegraphics[width=1.2\textwidth]{RCM6.pdf}
+\end{minipage}
 
 \clearpage
 \subsection{Summary of Differences between the Two Incentives Schemes}
