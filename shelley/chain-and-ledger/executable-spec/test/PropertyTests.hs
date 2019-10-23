@@ -23,7 +23,7 @@ import           Coin
 import           Ledger.Core ((<|))
 import           LedgerState hiding (genDelegs)
 import           PParams
-import           Rules.ClassifyTraces (relevantCasesAreCovered)
+import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
 import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
                      registeredPoolIsAdded, rewardZeroAfterReg)
 import           Slot
@@ -209,6 +209,11 @@ propertyTests = testGroup "Property-Based Testing"
                   , testProperty
                     "Classify double spend"
                     classifyInvalidDoubleSpend
+                  ]
+                , testGroup "Properties of Trace generators"
+                  [testProperty
+                   "Only valid LEDGER STS signals are generated"
+                   onlyValidLedgerSignalsAreGenerated
                   ]
                 ]
 
