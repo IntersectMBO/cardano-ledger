@@ -46,3 +46,6 @@ specs/**/result*
 result*
 specs/**/.ghc.environment.x86_64-linux-*
 .stack-to-nix.cache
+
+## Ignore PDFs
+*.pdf

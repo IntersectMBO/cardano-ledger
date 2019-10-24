@@ -20,16 +20,16 @@ import           BaseTypes
 import qualified Cardano.Crypto.VRF.Fake as FakeVRF
 import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey, pattern RegPool,
-                     pattern RetirePool, StakeKeys (..), StakePools (..))
+                     pattern RetirePool, StakeCreds (..), StakePools (..))
 import           TxData (pattern AddrBase, Credential (..), Delegation (..), pattern PoolParams,
                      pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
 
-import           Keys (pattern Dms, pattern KeyPair, hashKey, hashKeyVRF, vKey)
+import           Keys (pattern GenDelegs, pattern KeyPair, hashKey, hashKeyVRF, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
                      asStateTransition, cCounters, delegationState, delegations, dstate,
                      emptyDelegation, genesisId, genesisCoins, genesisState, minfee, pParams, pstate, ptrs,
-                     retiring, rewards, stKeys, stPools, _delegationState, _dms, _dstate)
+                     retiring, rewards, stkCreds, stPools, _delegationState, _genDelegs, _dstate)
 import           PParams
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, body, ttl)
@@ -90,8 +90,8 @@ stakePoolVRFKey1 = FakeVRF.VerKeyFakeVRF 15
 
 
 ledgerState :: [Tx] -> Either [ValidationError] LedgerState
-ledgerState = foldM (\l t -> asStateTransition (Slot 0) testPCs l t dms') genesis
-  where dms' = _dms $ _dstate $ _delegationState genesis
+ledgerState = foldM (\l t -> asStateTransition (Slot 0) testPCs l t genDelegs') genesis
+  where genDelegs' = _genDelegs $ _dstate $ _delegationState genesis
 
 
 testLedgerValidTransactions ::
@@ -170,7 +170,7 @@ testValidWithdrawal =
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (GenDelegs Map.empty)
     expectedDS = LedgerState.emptyDelegation & dstate . rewards .~
                    Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
@@ -207,7 +207,7 @@ testWithdrawalNoWit =
            (Slot 0)
            emptyUpdate
     wits = Set.singleton $ makeWitnessVKey tx alicePay
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (GenDelegs Map.empty)
   in ls @?= Left [MissingWitnesses]
 
 testWithdrawalWrongAmt :: Assertion
@@ -223,7 +223,7 @@ testWithdrawalWrongAmt =
            (Slot 0)
            emptyUpdate
     wits = makeWitnessesVKey tx [alicePay, bobStake]
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward (Tx tx wits Map.empty) (GenDelegs Map.empty)
   in ls @?= Left [IncorrectRewards]
 
 aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
@@ -318,7 +318,7 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
       Map.fromList [ (mkVKeyRwdAcnt aliceStake, Coin 0)
                    , (mkVKeyRwdAcnt bobStake, Coin 0)
                    , (mkVKeyRwdAcnt stakePoolKey1, Coin 0)]
-  & dstate . stKeys .~ (StakeKeys $
+  & dstate . stkCreds .~ (StakeCreds $
       Map.fromList [ (KeyHashObj $ hashKey $ vKey aliceStake, Slot 0)
                    , (KeyHashObj $ hashKey $ vKey bobStake, Slot 0)
                    , (KeyHashObj $ hashKey $ vKey stakePoolKey1, Slot 0)])
@@ -504,7 +504,7 @@ testEmptyInputSet =
            emptyUpdate
     wits = makeWitnessesVKey tx [aliceStake]
     genesisWithReward' = changeReward genesis (mkVKeyRwdAcnt aliceStake) (Coin 2000)
-    ls = asStateTransition (Slot 0) testPCs genesisWithReward' (Tx tx wits Map.empty) (Dms Map.empty)
+    ls = asStateTransition (Slot 0) testPCs genesisWithReward' (Tx tx wits Map.empty) (GenDelegs Map.empty)
   in ls @?= Left [ InputSetEmpty ]
 
 testFeeTooSmall :: Assertion
@@ -528,7 +528,7 @@ testExpiredTx =
            []
            (Slot 0)
            [alicePay]
-  in asStateTransition (Slot 1) testPCs genesis tx (Dms Map.empty) @?=
+  in asStateTransition (Slot 1) testPCs genesis tx (GenDelegs Map.empty) @?=
        Left [ Expired (Slot 0) (Slot 1) ]
 
 testsInvalidLedger :: TestTree

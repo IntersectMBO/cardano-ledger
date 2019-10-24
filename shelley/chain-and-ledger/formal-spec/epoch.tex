@@ -136,9 +136,9 @@ throughout the rest of the section.
 \begin{figure}[htb]
   \emph{Total possible refunds}
   \begin{align*}
-    & \fun{obligation} \in \PParams \to \StakeDelegs \to \StakePools \to \Slot \to \Coin \\
-    & \obligation{pp}{stdelegs}{stpools}{cslot} =\\
-    & \sum\limits_{(\_ \mapsto s) \in \var{stdelegs}}
+    & \fun{obligation} \in \PParams \to \StakeCreds \to \StakePools \to \Slot \to \Coin \\
+    & \obligation{pp}{stkCreds}{stpools}{cslot} =\\
+    & \sum\limits_{(\_ \mapsto s) \in \var{stkCreds}}
       \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})}
       + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
       \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
@@ -282,7 +282,7 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
       (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
       & \where \\
-      & ~~~~ (\var{stdelegs},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
+      & ~~~~ (\var{stkCreds},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
         = \var{dstate} \\
       & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
@@ -291,7 +291,7 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
         \right)
         \cup \left(\fun{stakeCred_r}^{-1}\circ\var{rewards}\right) \\
       & ~~~~ \var{activeDelegs} =
-               (\dom{stdelegs}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
+               (\dom{stkCreds}) \restrictdom \var{delegations} \restrictrange (\dom{stpools}) \\
   \end{align*}
 
   \caption{Stake Distribution Function}
@@ -396,11 +396,11 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{~\leteq~}l}
         (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \var{utxoSt}\\
-        (\var{stdelegs},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
+        (\var{stkCreds},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
         \var{slot} & \firstSlot{e} \\
-        \var{oblg} & \obligation{pp}{stdelegs}{stpools}{slot} \\
+        \var{oblg} & \obligation{pp}{stkCreds}{stpools}{slot} \\
         \var{decayed} & \var{deposits} - \var{oblg} \\
       \end{array}
       }
@@ -541,11 +541,11 @@ This transition has no preconditions and results in the following state change:
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stdelegs} \\
+          \var{stkCreds} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
-          \var{dms} \\
+          \var{genDelegs} \\
           ~ \\
           \var{stpools} \\
           \var{poolParams} \\
@@ -566,11 +566,11 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
           \var{reserves} \\
           ~ \\
-          \var{stdelegs} \\
+          \var{stkCreds} \\
           \varUpdate{\var{rewards}} & \varUpdate{\unionoverridePlus} & \varUpdate{\var{refunds}} \\
           \varUpdate{\var{delegations}} & \varUpdate{\subtractrange} & \varUpdate{\var{retired}} \\
           \var{ptrs} \\
-          \var{dms} \\
+          \var{genDelegs} \\
           ~ \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
@@ -679,8 +679,8 @@ for ease of reading.
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
          \var{slot} & \leteq & \firstSlot{e} \\
-         \var{oblg_{cur}} & \leteq & \obligation{pp}{stdelegs}{stpools}{slot} \\
-         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stdelegs}{stpools}{slot} \\
+         \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools}{slot} \\
+         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools}{slot} \\
          \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
                                                                                       \leteq
                               & \var{dstate}\\
@@ -759,8 +759,8 @@ for ease of reading.
       \\~\\~\\
       {\begin{array}{rcl}
           \var{slot} & \leteq & \firstSlot{e} \\
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stdelegs}{stpools}{slot} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stdelegs}{stpools}{slot} \\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools}{slot} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools}{slot} \\
          \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
                                                                                  \leteq
                               & \var{dstate}\\
@@ -1351,7 +1351,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\left(
       \wcard,~
       \left(
-      \left(\var{stDelegs},~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}}\right)~
+      \left(\var{stkCreds},~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}}\right)~
       \wcard
       \right)
       \right) = \var{ls} \\
@@ -1375,11 +1375,12 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \in newlyRegister
       \right\}\\
     & ~~~~~~~\Delta d = \vert newlyRegister \vert\cdot\fun{keydeposit}~\var{pp} \\
-    & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
-      \var{reserves'}} + rewards_{mir}
+    & ~~~~~~~\Delta r_{l} = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
+      \var{reserves'}}
     \\
+    & ~~~~~~~\Delta r = \Delta r_{l} + rewards_{mir}\\
     & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~{pp}} \\
-    & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
+    & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r_{l} \\
     & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
     & ~~~~~~~\var{rs}
@@ -1414,11 +1415,11 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{treasury} \\
           \var{reserves} \\
           ~ \\
-          \var{stdelegs} \\
+          \var{stkCreds} \\
           \var{rewards} \\
           \var{delegations} \\
           \var{ptrs} \\
-          \var{dms} \\
+          \var{genDelegs} \\
           \var{i_{rwd}}
           \\~ \\
           \var{stpools} \\
@@ -1438,11 +1439,11 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \varUpdate{\var{treasury} + \Delta t}\\
           \varUpdate{\var{reserves} + \Delta r}\\
           ~ \\
-          \varUpdate{\var{stdelegs}\unionoverrideLeft \var{update_{delegs}}} \\
+          \varUpdate{\var{stkCreds}\unionoverrideLeft \var{update_{delegs}}} \\
           \varUpdate{(\var{rewards}\unionoverridePlus\var{rs})\unionoverridePlus\var{update_{rwd}}} \\
           \var{delegations} \\
           \var{ptrs} \\
-          \var{dms} \\
+          \var{genDelegs} \\
           \varUpdate{\emptyset}
           \\~ \\
           \var{stpools} \\

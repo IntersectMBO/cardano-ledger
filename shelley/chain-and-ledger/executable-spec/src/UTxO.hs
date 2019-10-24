@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -37,6 +38,7 @@ module UTxO
 
 import           Lens.Micro ((^.))
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -54,12 +56,12 @@ import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential
                      inputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
-import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue)
+import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue, isInstantaneousRewards)
 
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo vrfAlgo
   = UTxO (Map (TxIn hashAlgo dsignAlgo vrfAlgo) (TxOut hashAlgo dsignAlgo))
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 instance Relation (UTxO hashAlgo dsignAlgo vrfAlgo) where
   type Domain (UTxO hashAlgo dsignAlgo vrfAlgo) = TxIn hashAlgo dsignAlgo vrfAlgo
@@ -219,7 +221,7 @@ scriptsNeeded u tx =
   `Set.union`
   Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
-  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) certificates)
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter (not . isInstantaneousRewards) certificates))
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u

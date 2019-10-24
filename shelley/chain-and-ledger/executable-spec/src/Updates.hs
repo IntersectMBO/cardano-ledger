@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 
@@ -37,13 +38,15 @@ import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
+import           GHC.Generics (Generic)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm)
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, Dms, GenKeyHash)
+import           Keys (DSIGNAlgorithm, GenDelegs, GenKeyHash)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot)
 
@@ -51,34 +54,35 @@ import           Numeric.Natural (Natural)
 
 import           Ledger.Core (dom, range, (∪), (◁))
 
-
 newtype ApVer = ApVer Natural
-  deriving (Show, Ord, Eq, ToCBOR)
+  deriving (Show, Ord, Eq, NoUnexpectedThunks, ToCBOR)
 
 newtype ApName = ApName ByteString
-  deriving (Show, Ord, Eq, ToCBOR)
+  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
 newtype SystemTag = SystemTag ByteString
-  deriving (Show, Ord, Eq, ToCBOR)
+  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
 newtype InstallerHash hashAlgo = InstallerHash (Hash hashAlgo ByteString)
-  deriving (Show, Ord, Eq, ToCBOR)
+  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
 newtype Mdt hashAlgo = Mdt (Map SystemTag (InstallerHash hashAlgo))
-  deriving (Show, Ord, Eq, ToCBOR)
+  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
 newtype Applications hashAlgo = Applications {
   apps :: Map ApName (ApVer, Mdt hashAlgo)
-  } deriving (Show, Ord, Eq, ToCBOR)
+  } deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
 newtype AVUpdate hashAlgo dsignAlgo = AVUpdate {
   aup :: Map (GenKeyHash hashAlgo dsignAlgo) (Applications hashAlgo)
-  } deriving (Show, Eq, ToCBOR)
+  } deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
 
 -- | Update Proposal
 data Update hashAlgo dsignAlgo
   = Update (PPUpdate hashAlgo dsignAlgo) (AVUpdate hashAlgo dsignAlgo)
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (Update hashAlgo dsignAlgo)
 
 instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) => ToCBOR (Update hashAlgo dsignAlgo) where
   toCBOR (Update ppUpdate avUpdate) =
@@ -86,8 +90,10 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) => ToCBOR (Update ha
 
 data PPUpdateEnv hashAlgo dsignAlgo = PPUpdateEnv {
     slot :: Slot
-  , dms  :: Dms hashAlgo dsignAlgo
-  } deriving (Show, Eq)
+  , genDelegs  :: GenDelegs hashAlgo dsignAlgo
+  } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (PPUpdateEnv hashAlgo dsignAlgo)
 
 data Ppm = MinFeeA Integer
   | MinFeeB Natural
@@ -108,7 +114,9 @@ data Ppm = MinFeeA Integer
   | D UnitInterval
   | ExtraEntropy Nonce
   | ProtocolVersion (Natural, Natural, Natural)
-  deriving (Show, Ord, Eq)
+  deriving (Show, Ord, Eq, Generic)
+
+instance NoUnexpectedThunks Ppm
 
 instance ToCBOR Ppm where
   toCBOR = \case
@@ -163,7 +171,7 @@ instance ToCBOR Ppm where
 
 newtype PPUpdate hashAlgo dsignAlgo
   = PPUpdate (Map (GenKeyHash hashAlgo dsignAlgo) (Set Ppm))
-  deriving (Show, Eq, ToCBOR)
+  deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
 
 -- | Update Protocol Parameter update with new values, prefer value from `pup1`
 -- in case of already existing value in `pup0`
@@ -261,4 +269,6 @@ data UpdateState hashAlgo dsignAlgo
       (AVUpdate hashAlgo dsignAlgo)
       (Map Slot (Applications hashAlgo))
       (Applications hashAlgo)
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (UpdateState hashAlgo dsignAlgo)
