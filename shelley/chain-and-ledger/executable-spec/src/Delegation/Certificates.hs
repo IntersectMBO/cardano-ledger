@@ -1,7 +1,8 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Delegation.Certificates
   (
     DCert(..)
-  , StakeKeys(..)
+  , StakeCreds(..)
   , StakePools(..)
   , PoolDistr(..)
   , cwitness
@@ -13,19 +14,24 @@ module Delegation.Certificates
   , dderegister
   , decayKey
   , decayPool
+  , isRegKey
+  , isDeRegKey
+  , isRegPool
+  , isInstantaneousRewards
   ) where
 
 import           Coin (Coin (..))
-import           Keys (Hash, KeyHash, VRFAlgorithm(VerKeyVRF))
+import           Keys (Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
-import           TxData (Credential (..), DCert (..), StakeCredential, StakeKeys (..),
+import           TxData (Credential (..), DCert (..), StakeCredential, StakeCreds (..),
                      StakePools (..), delegator, poolPubKey)
 
 import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           NonIntegral (exp')
 
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
 import           Data.Ratio (approxRational)
 
@@ -39,6 +45,7 @@ cwitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
 cwitness (RetirePool k _)          = KeyHashObj k
 cwitness (Delegate delegation)     = delegation ^. delegator
 cwitness (GenesisDelegate (gk, _)) = GenesisHashObj gk
+cwitness (InstantaneousRewards _)  = error "no witness in MIR certificate"
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert hashAlgo dsignAlgo vrfAlgo -> PParams -> Coin
@@ -75,6 +82,21 @@ allocating (RegKey _)  = True
 allocating (RegPool _) = True
 allocating _           = False
 
+-- | Check for `RegKey` constructor
+isRegKey :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
+isRegKey (RegKey _) = True
+isRegKey _ = False
+
+-- | Check for `DeRegKey` constructor
+isDeRegKey :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
+isDeRegKey (DeRegKey _) = True
+isDeRegKey _ = False
+
+-- | Check for `RegPool` constructor
+isRegPool :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
+isRegPool (RegPool _) = True
+isRegPool _ = False
+
 decayKey :: PParams -> (Coin, UnitInterval, Rational)
 decayKey pc = (dval, dmin, lambdad)
     where dval    = fromIntegral $ pc ^. keyDeposit
@@ -89,4 +111,8 @@ decayPool pc = (pval, pmin, lambdap)
 
 newtype PoolDistr hashAlgo dsignAlgo vrfAlgo =
   PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, Hash hashAlgo (VerKeyVRF vrfAlgo)))
-  deriving (Show, Eq)
+  deriving (Show, Eq, NoUnexpectedThunks)
+
+isInstantaneousRewards :: (DCert hashAlgo dsignAlgo vrfAlgo) -> Bool
+isInstantaneousRewards (InstantaneousRewards _) = True
+isInstantaneousRewards _                        = False

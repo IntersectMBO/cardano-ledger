@@ -578,6 +578,7 @@ instance STS ADDVOTE where
   data PredicateFailure ADDVOTE
     = AVSigDoesNotVerify
     | NoUpdateProposal UpId
+    | VoteByNonGenesisDelegate VKey
     deriving (Eq, Show, Data, Typeable)
 
   initialRules = []
@@ -593,6 +594,7 @@ instance STS ADDVOTE where
               case lookupR vk dms of
                 Just vks -> Set.singleton (pid, vks)
                 Nothing  -> Set.empty
+        vtsPid /= Set.empty ?! VoteByNonGenesisDelegate vk
         Set.member pid rups ?! NoUpdateProposal pid
         Core.verify vk pid (vote ^. vSig) ?! AVSigDoesNotVerify
         return $! vts <> vtsPid
@@ -1869,25 +1871,29 @@ mkGoblinGens
 --
 tamperWithUpdateProposal :: UPIEnv -> UPIState -> UProp -> Gen UProp
 tamperWithUpdateProposal env st uprop = do
+  -- The frequencies above were determined ad-hoc to get an even coverage in the
+  -- resulting predicate failures.
   let failureGenerators
-        = [ invalidProtocolVersion
-          , invalidParametersUpdate
-          , duplicatedProtocolVersion
-          , duplicatedSoftwareVersion
-          , invalidSoftwareVersion
-          , invalidApplicationName
-          , invalidSystemTag
-          , invalidIssuer
-          ] ++ (map (\sg -> sg env st) goblinGensUPIREG)
-  tamperedUprop <- Gen.choice failureGenerators
+        = [ (1, invalidProtocolVersion)
+          , (1, invalidParametersUpdate)
+          , (5, duplicatedProtocolVersion)
+          , (5, duplicatedSoftwareVersion)
+          , (1, invalidSoftwareVersion)
+          , (1, invalidApplicationName)
+          , (1, invalidSystemTag)
+          , (1, invalidIssuer)
+          ] ++ (map (\sg -> (1, sg env st)) goblinGensUPIREG)
+  tamperedUprop <- Gen.frequency failureGenerators
   -- We need to re-sign the update proposal since we changed the contents of
-  -- 'uprop', however in 1/n of the cases we want to trigger a 'DoesNotVerify'
+  -- 'uprop', however in 10/n of the cases we want to trigger a 'DoesNotVerify'
   -- error (where 'n' is the total number of predicate failures, 'n = length
-  -- failureGenerators + 1'). Thus, in 1/n of the cases we simply return the
+  -- failureGenerators + 1'). Thus, in 1-/n of the cases we simply return the
   -- tampered proposal without re-signing it, which will cause the
   -- 'DoesNotVerify' failure.
   Gen.frequency [ (length failureGenerators, pure $! reSign tamperedUprop)
-                , (1, pure $! tamperedUprop)
+                -- Using 10 in the frequency below will give you us around 15%
+                -- of proposals with an invalid hash.
+                , (10, pure $! tamperedUprop)
                 ]
   where
     ((_pv, _pps), _fads, _avs, rpus, raus, _cps, _vts, _bvs, _pws) = st
