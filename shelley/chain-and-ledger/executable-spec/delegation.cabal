@@ -94,6 +94,7 @@ test-suite delegation-test
                          Generator.Core
                          Generator.LedgerTrace
                          Generator.Delegation
+                         Generator.Update
                          Generator.Utxo
                          PropertyTests
                          STSTests

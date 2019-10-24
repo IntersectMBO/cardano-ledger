@@ -58,7 +58,7 @@
 \newcommand{\Nothing}{\ensuremath{\Diamond}}
 \newcommand{\N}{\ensuremath{\mathbb{N}}}
 \newcommand{\Bool}{\type{Bool}}
-\newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
+\newcommand{\Npos}{\ensuremath{\mathbb{N}^{>0}}}
 \newcommand{\Z}{\ensuremath{\mathbb{Z}}}
 \newcommand{\R}{\ensuremath{\mathbb{R}}}
 \newcommand{\Rnn}{\ensuremath{\mathbb{R}^{\geq 0}}}
@@ -76,10 +76,12 @@
 \newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
 \newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
-\newcommand{\SlotsStabilityParam}{\fun{k}}
+\newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
+\newcommand{\MaxKESEvo}{\ensuremath{\mathsf{MaxKESEvo}}}
+\newcommand{\Quorum}{\ensuremath{\mathsf{Quorum}}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
-\newcommand{\StakeDeleg}{\type{StakeDeleg}}
+\newcommand{\StakeCreds}{\type{StakeCreds}}
 \newcommand{\Seed}{\type{Seed}}
 \newcommand{\seedOp}{\star}
 \newcommand{\Ppm}{\type{Ppm}}
@@ -129,7 +131,6 @@
 
 % multi-signature
 \newcommand{\StakeCredential}{\type{Credential}_{stake}}
-\newcommand{\StakeDelegs}{\type{StakeDelegs}}
 
 \newcommand{\txwitsVKey}[1]{\fun{txwitsVKey}~\var{#1}}
 \newcommand{\txwitsScript}[1]{\fun{txwitsScript}~\var{#1}}

@@ -42,7 +42,7 @@ rewardsDecreasesByWithdrawals :: Property
 rewardsDecreasesByWithdrawals = withTests numberOfTests . property $ do
   t <- forAll $ trace @DELEGS traceLen `ofLengthAtLeast` 1
 
-  let DelegsEnv _ _ _ tx = _traceEnv t
+  let DelegsEnv _ _ _ tx _ = _traceEnv t
       tr = sourceSignalTargets t
 
   assertAll (rewardsPotdecreases $ _body tx) tr

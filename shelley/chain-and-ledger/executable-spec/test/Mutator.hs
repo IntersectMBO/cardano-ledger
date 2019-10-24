@@ -17,6 +17,8 @@ module Mutator
     , getAnyStakeKey
     ) where
 
+import qualified Data.List as List (map)
+import qualified Data.Map.Strict as Map (fromList, toList)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio
 import           Data.Set as Set
@@ -29,7 +31,8 @@ import qualified Hedgehog.Range as Range
 import           BaseTypes
 import           Coin
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern RegKey, pattern RegPool, pattern RetirePool)
+                     pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
+                     pattern RegPool, pattern RetirePool)
 import           Keys (hashKey, vKey)
 import           Updates
 
@@ -178,3 +181,9 @@ mutateDCert keys _ (Delegate (Delegation _ _)) = do
 mutateDCert keys _ (GenesisDelegate (gk, _)) = do
   _delegatee <- getAnyStakeKey keys
   pure $ GenesisDelegate (gk, hashKey _delegatee)
+
+mutateDCert _ _ (InstantaneousRewards credCoinMap) = do
+  let credCoinList = Map.toList credCoinMap
+      coins = List.map snd credCoinList
+  coins' <- mapM (mutateCoin 1 100) coins
+  pure $ InstantaneousRewards $ Map.fromList $ zip (List.map fst credCoinList) coins'

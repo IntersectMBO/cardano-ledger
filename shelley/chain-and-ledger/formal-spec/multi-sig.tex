@@ -81,7 +81,7 @@
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
 \newcommand{\Duration}{\type{Duration}}
 \newcommand{\StakePools}{\type{StakePools}}
-\newcommand{\StakeDelegs}{\type{StakeDelegs}}
+\newcommand{\StakeCreds}{\type{StakeCreds}}
 \newcommand{\StakeObject}{\type{StakeCredential}}
 
 \newcommand{\DCert}{\type{DCert}}
@@ -538,7 +538,7 @@ multi-signature scripts.
 
 Staking using multiple signatures requires a change to the type of staking reference from
 just a hashed key to either a hashed key or a hashed script. This is
-reflected in the type of $\StakeDelegs$ (which replaces the previous
+reflected in the type of $\StakeCreds$ (which replaces the previous
 $\type{StakeKeys}$ type) and the new $\StakeObject$ type, % (which describes either a key or a script used for staking),
 as shown in
 Figure~\ref{fig:delegation-state-type}.
@@ -549,7 +549,7 @@ Figure~\ref{fig:delegation-state-type}.
       \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
         \var{stakeCred} & \StakeObject & (\KeyHash_{stake} \uniondistinct
                                             \HashScr) \\
-        \var{stakeDelegator} & \StakeDelegs & \StakeObject \mapsto \Slot \\
+        \var{regCreds} & \StakeCreds & \StakeObject \mapsto \Slot \\
       \end{array}
     \end{equation*}
     %
@@ -559,12 +559,12 @@ Figure~\ref{fig:delegation-state-type}.
     \begin{array}{l}
     \DState =
     \left(\begin{array}{r@{~\in~}lr}
-      \var{stDelegs} & \StakeDelegs & \text{registered stake delegators}\\
+      \var{stkCreds} & \StakeCreds & \text{registered stake delegators}\\
       \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
       \var{delegations} & \StakeObject \mapsto \KeyHash_{pool} & \text{delegations}\\
       \var{ptrs} & \Ptr \mapsto \StakeObject & \text{pointer to staking reference}\\
-      \var{fdms} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
-      \var{dms} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
+      \var{fGenDelegs} & (\Slot\times\VKeyGen) \mapsto \VKey & \text{future genesis key delegations}\\
+      \var{genDelegs} & \VKeyGen \mapsto \VKey & \text{genesis key delegations}\\
           \end{array}\right)
     \end{array}
   \end{equation*}
@@ -573,7 +573,7 @@ Figure~\ref{fig:delegation-state-type}.
   %
   \begin{equation*}
   \begin{array}{r@{~\in~}lr}
-    \cwitness{} & \DCert \to \StakeDelegs & \text{certificate witness}
+    \cwitness{} & \DCert \to \StakeCreds & \text{certificate witness}
   \end{array}
   \end{equation*}
   \caption{Delegation State type}
