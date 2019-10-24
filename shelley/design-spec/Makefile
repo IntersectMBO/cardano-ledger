@@ -19,6 +19,9 @@ all: $(DOCNAME).pdf
 ##
 ## CUSTOM BUILD RULES
 ##
+delegation_design_spec.bbl:
+  touch delegation_design_spec.bbl
+
 
 ##
 ## MAIN LATEXMK RULE
