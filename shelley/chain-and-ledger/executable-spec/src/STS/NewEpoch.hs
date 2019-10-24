@@ -67,7 +67,7 @@ newEpochTransition = do
     else do
       let es_ = case ru of
             Nothing  -> es
-            Just ru' -> applyRUpd ru' es
+            Just ru' -> applyRUpd ru' e es
       es' <- trans @(EPOCH hashAlgo dsignAlgo vrfAlgo) $ TRC ((), es_, e)
       let EpochState acnt ss ls pp = es'
 
