@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Newpp
@@ -14,7 +16,8 @@ import           Lens.Micro ((^.))
 
 import           Coin
 import           EpochBoundary
-import           LedgerState hiding (reserves)
+import           LedgerState (AccountState, DState, PState, UTxOState, pattern UTxOState, clearPpup,
+                     emptyAccount, stkCreds, stPools, _deposited, _irwd, _reserves)
 import           PParams
 import           Slot
 import           Updates
@@ -54,12 +57,13 @@ newPpTransition = do
   case ppNew of
     Just ppNew' -> do
       let slot_ = firstSlot e
-          Coin oblgCurr = obligation pp (ds ^. stKeys) (ps ^. stPools) slot_
-          Coin oblgNew = obligation ppNew' (ds ^. stKeys) (ps ^. stPools) slot_
+          Coin oblgCurr = obligation pp (ds ^. stkCreds) (ps ^. stPools) slot_
+          Coin oblgNew = obligation ppNew' (ds ^. stkCreds) (ps ^. stPools) slot_
           diff = oblgCurr - oblgNew
+          Coin reserves = _reserves acnt
+          Coin requiredInstantaneousRewards = foldl (+) (Coin 0) $ _irwd ds
 
-      let Coin reserves = _reserves acnt
-      if reserves + diff >= 0
+      if reserves + diff >= requiredInstantaneousRewards
          && (_maxTxSize ppNew' + _maxBHSize ppNew') <  _maxBBSize ppNew'
         then
           let utxoSt' = utxoSt { _deposited = Coin oblgNew }
