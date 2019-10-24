@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module PParams
@@ -26,6 +27,8 @@ module PParams
   , protocolVersion
   ) where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (Nonce(NeutralNonce), UnitInterval, interval0)
@@ -75,7 +78,9 @@ data PParams = PParams
   , _extraEntropy    :: Nonce
     -- | Protocol version
   , _protocolVersion :: (Natural, Natural, Natural)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks PParams
 
 makeLenses ''PParams
 

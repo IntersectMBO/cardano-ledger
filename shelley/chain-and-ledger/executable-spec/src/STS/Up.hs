@@ -23,7 +23,7 @@ import           STS.Ppup
 data UP hashAlgo dsignAlgo
 
 data UpdateEnv hashAlgo dsignAlgo
-  = UpdateEnv Slot PParams (Dms hashAlgo dsignAlgo)
+  = UpdateEnv Slot PParams (GenDelegs hashAlgo dsignAlgo)
 
 instance DSIGNAlgorithm dsignAlgo => STS (UP hashAlgo dsignAlgo) where
   type State (UP hashAlgo dsignAlgo) = UpdateState hashAlgo dsignAlgo
@@ -43,11 +43,13 @@ upTransition
    . DSIGNAlgorithm dsignAlgo
   => TransitionRule (UP hashAlgo dsignAlgo)
 upTransition = do
-  TRC (UpdateEnv _slot pp _dms, UpdateState pupS aupS favs avs, Update pup _aup) <- judgmentContext
+  TRC ( UpdateEnv _slot pp _genDelegs
+      , UpdateState pupS aupS favs avs
+      , Update pup _aup) <- judgmentContext
 
-  pup' <- trans @(PPUP hashAlgo dsignAlgo) $ TRC (PPUPEnv _slot pp _dms, pupS, pup)
+  pup' <- trans @(PPUP hashAlgo dsignAlgo) $ TRC (PPUPEnv _slot pp _genDelegs, pupS, pup)
   AVUPState aup' favs' avs' <-
-    trans @(AVUP hashAlgo dsignAlgo) $ TRC (AVUPEnv _slot _dms, AVUPState aupS favs avs, _aup)
+    trans @(AVUP hashAlgo dsignAlgo) $ TRC (AVUPEnv _slot _genDelegs, AVUPState aupS favs avs, _aup)
 
   pure $ UpdateState pup' aup' favs' avs'
 

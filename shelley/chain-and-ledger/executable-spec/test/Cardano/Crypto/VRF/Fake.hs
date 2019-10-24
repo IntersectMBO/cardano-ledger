@@ -71,6 +71,7 @@ instance VRFAlgorithm FakeVRF where
   -- result of the sneaking.
   verifyVRF (VerKeyFakeVRF n) a c = snd (evalVRF' a (SignKeyFakeVRF n)) == snd c
   encodeVerKeyVRF = toCBOR
+  decodeVerKeyVRF = fromCBOR
 
 evalVRF' :: SneakilyContainResult a => a -> SignKeyVRF FakeVRF -> (Natural, CertVRF FakeVRF)
 evalVRF' a (SignKeyFakeVRF n) =

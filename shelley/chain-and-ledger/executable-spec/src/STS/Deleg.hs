@@ -4,6 +4,7 @@
 module STS.Deleg
   ( DELEG
   , DelegEnv (..)
+  , PredicateFailure(..)
   )
 where
 
@@ -27,7 +28,11 @@ import           Hedgehog (Gen)
 data DELEG hashAlgo dsignAlgo vrfAlgo
 
 data DelegEnv
-  = DelegEnv Slot Ptr
+  = DelegEnv
+  { slot :: Slot
+  , ptr :: Ptr
+  , reserves :: Coin
+  }
   deriving (Show, Eq)
 
 instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
@@ -43,6 +48,7 @@ instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
     | WrongCertificateTypeDELEG
     | GenesisKeyNotInpMappingDELEG
     | DuplicateGenesisDelegateDELEG
+    | InsufficientForInstantaneousRewardsDELEG
     deriving (Show, Eq)
 
   initialRules = [pure emptyDState]
@@ -51,45 +57,53 @@ instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
 delegationTransition
   :: TransitionRule (DELEG hashAlgo dsignAlgo vrfAlgo)
 delegationTransition = do
-  TRC (DelegEnv slot_ ptr_, ds, c) <- judgmentContext
+  TRC (DelegEnv slot_ ptr_ reserves_, ds, c) <- judgmentContext
 
   case c of
     RegKey key -> do
-      key ∉ dom (_stKeys ds) ?! StakeKeyAlreadyRegisteredDELEG
+      key ∉ dom (_stkCreds ds) ?! StakeKeyAlreadyRegisteredDELEG
 
       pure $ ds
-        { _stKeys  = _stKeys ds  ∪ singleton key slot_
+        { _stkCreds  = _stkCreds ds  ∪ singleton key slot_
         , _rewards = _rewards ds ∪ Map.singleton (RewardAcnt key) (Coin 0)
         , _ptrs    = _ptrs ds    ∪ Map.singleton ptr_ key
         }
 
     DeRegKey key -> do
-      key ∈ dom (_stKeys ds) ?! StakeKeyNotRegisteredDELEG
+      key ∈ dom (_stkCreds ds) ?! StakeKeyNotRegisteredDELEG
 
       let rewardCoin = Map.lookup (RewardAcnt key) (_rewards ds)
       rewardCoin == Just 0 ?! StakeKeyNonZeroAccountBalanceDELEG
 
       pure $ ds
-        { _stKeys      = Set.singleton key              ⋪ _stKeys ds
+        { _stkCreds      = Set.singleton key              ⋪ _stkCreds ds
         , _rewards     = Set.singleton (RewardAcnt key) ⋪ _rewards ds
         , _delegations = Set.singleton key              ⋪ _delegations ds
         , _ptrs        = _ptrs ds                       ⋫ Set.singleton key
         }
 
     Delegate (Delegation delegator_ delegatee_) -> do
-      delegator_ ∈ dom (_stKeys ds) ?! StakeDelegationImpossibleDELEG
+      delegator_ ∈ dom (_stkCreds ds) ?! StakeDelegationImpossibleDELEG
 
       pure $ ds
         { _delegations = _delegations ds ⨃ [(delegator_, delegatee_)] }
 
     GenesisDelegate (gkey, vk) -> do
       let s' = slot_ +* slotsPrior
-          (Dms dms_) = _dms ds
+          (GenDelegs genDelegs_) = _genDelegs ds
 
-      gkey ∈ dom dms_ ?! GenesisKeyNotInpMappingDELEG
-      vk ∉ range dms_ ?! DuplicateGenesisDelegateDELEG
+      gkey ∈ dom genDelegs_ ?! GenesisKeyNotInpMappingDELEG
+      vk ∉ range genDelegs_ ?! DuplicateGenesisDelegateDELEG
       pure $ ds
-        { _fdms = _fdms ds ⨃ [((s', gkey), vk)]}
+        { _fGenDelegs = _fGenDelegs ds ⨃ [((s', gkey), vk)]}
+
+    InstantaneousRewards credCoinMap -> do
+      let combinedMap = Map.union credCoinMap (_irwd ds)
+          requiredForRewards = foldl (+) (Coin 0) (range combinedMap)
+
+      requiredForRewards <= reserves_ ?! InsufficientForInstantaneousRewardsDELEG
+
+      pure $ ds { _irwd = combinedMap }
 
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails

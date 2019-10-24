@@ -1,3 +1,12 @@
+# Ledger and Epoch State Validity
+
+We only care that the properties below are satisfied for _valid_ ledger states, and
+more generally, valid _epoch_ states. Checking things for invalid states should
+not be performed. As the STS rule system we have defined
+is deterministic, all valid states can be reached using the transitions in the system,
+and the only states that are valid are those that can be described by a sequence
+of rule applications (i.e. a composition of valid transitions).
+
 # Preservation of Value
 
 Recall that there are six pots of money in the Shelley ledger:
@@ -9,9 +18,9 @@ Recall that there are six pots of money in the Shelley ledger:
 * Reserves
 * Treasury
 
-For each transition sytem, we will list what pots are in scope,
+For each transition system, we will list what pots are in scope,
 describe how value moves between the pots,
-and state any relevent properties (usually the preservation of ADA).
+and state any relevant properties (usually the preservation of ADA).
 
 ### Transitions with no pots in scope
 
@@ -28,8 +37,8 @@ and state any relevent properties (usually the preservation of ADA).
 
 Pots in scope: Circulation, Deposits, Fees
 
-Value can be transfered between Circulation and Deposits.
-Value can also be transfered to the Fees, but Fees can only
+Value can be transferred between Circulation and Deposits.
+Value can also be transferred to the Fees, but Fees can only
 be increased by this transition.
 
 **Property** The value (Circulation + Deposits + Fees) increases by the sum
@@ -106,7 +115,7 @@ the fee pot.
 
 Pots in scope: Circulation, Deposits, Fees, Treasury, Reserves
 
-The new protocol parameter transition adusts the deposit pot to meet
+The new protocol parameter transition adjusts the deposit pot to meet
 the current obligation, and the difference is made up by the reserves.
 
 **Property** The value (Deposits + Reserves) is the same
@@ -166,10 +175,10 @@ If there are no pending future application versions,
 there will not be a change to the version for at least SlotsPerEpoch.
 
 **Property**
-Updating the sofware versions, without updating the protocol version,
+Updating the software versions, without updating the protocol version,
 results in no change to the transition systems.
 Note that changes to the transition system resulting from a new
-protocol version will be difficult to state formally, since this 
+protocol version will be difficult to state formally, since this
 depends on logic in the software changing the ledger rules.
 
 **Definition**
@@ -181,15 +190,15 @@ Let **quorum** be the number of genesis nodes needed for consensus
 on votes (concretely this value is five).
 
 **Property**
-If there are only (quorum -1)-many gen keys acive, there can be no new future
+If there are only (quorum -1)-many gen keys active, there can be no new future
 application version or protocol parameters.
 
 **Property**
 
 **Property**
 The keys (of type Slot) of the following two mappings are always past the current slot:
-the future application versions (favs) and the future genesis delegation mapping (fdms).
-The favs slots can appear in any current or future epoch, but the fdms slots
+the future application versions (favs) and the future genesis delegation mapping (fGenDelegs).
+The favs slots can appear in any current or future epoch, but the fGenDelegs slots
 can be at most one epoch into the future.
 
 **Property**
@@ -197,6 +206,18 @@ The size of the mappings PPUpdate, inside the update state, is always at most (n
 
 **Property**
 The size of the mappings AVUpdate, inside the update state, is always at most num-genesis.
+
+# Epoch Boundary Transition Properties
+
+**Property** The `NEWEPOCH` transition can always be invoked at the epoch boundary
+(i.e. when `e = e_l + 1`). Thus, the transitions it depends on, `SNAP`, `POOLREAP`, `NEWPP`,
+and `EPOCH`, can always be invoked as well. Note that when no blocks are produced,
+the `CHAIN` rule is blocked and `NEWEPOCH` never fires.
+
+Transitions `SNAP`, `POOLREAP`, and `EPOCH` have no preconditions in the
+antecedents of their rules. `NEWPP` has two associated rules, and the disjunction of the
+preconditions in these rules is a tautology. We justify
+the non-blocking of these rules by this reasoning.
 
 # Deposits Properties
 
@@ -222,23 +243,23 @@ The sum of stake in the stake snapshots is always at most forty-five billion ADA
 
 **Property**
 The following delegation mappings always has the same size:
-`stdelegs`, `rewards`, and `ptrs`.
-Moreover, the key set of `stdelegs` is the same
+`stkCreds`, `rewards`, and `ptrs`.
+Moreover, the key set of `stkCreds` is the same
 as the range of `ptrs`, which also corresponds one-one with the reward addresses
-in `rewards`. Finally, the key set of `delegations` is a subset of that of `stdelegs`.
+in `rewards`. Finally, the key set of `delegations` is a subset of that of `stkCreds`.
 
 **Property**
 If all stake keys and pools deregister, then, assuming that no one registers anything,
 by epoch `e+1`, where `e` is the max epoch in the stake pool retirement mapping,
 the delegation state will be nearly empty. More precisely,
-the mappings `stDelegs`, `rewards`, `delegations`, `ptrs`, `stpools`, `poolParams`,
+the mappings `stkCreds`, `rewards`, `delegations`, `ptrs`, `stpools`, `poolParams`,
 and `retiring` are all the empty map.
 (The map `cs` will have size seven, for the genesis keys.)
 
 # Genesis Node Property
 
 **Property**
-The size of the genesis delegation mapping `dms` is always num-genesis.
+The size of the genesis delegation mapping `genDelegs` is always num-genesis.
 Note that the value num-genesis can be given as the size of the
 mapping inherited from Byron.
 
@@ -262,6 +283,10 @@ and only core nodes makes blocks on the overlay slots.
 At the start of each epoch, the reward update is set to NOTHING.
 Moreover, the reward update will change exactly once during the epoch,
 to a non-NOTHING value.
+
+**Property**
+All members of stake pools that did not meet their pledges will receive zero
+rewards for the epoch.
 
 # Block Header Properties
 
@@ -300,13 +325,13 @@ What are acceptable values for various system protocol parameters?
 
 The following are examples of things that should be part of some overview document
 
-(1) potentially, multiple slot leaders may be elected for a particular slot (forming a slot leader set); 
+(1) potentially, multiple slot leaders may be elected for a particular slot (forming a slot leader set);
 
-(2) frequently, slots will have no leaders assigned to them; and 
+(2) frequently, slots will have no leaders assigned to them; and
 
 (3) a priori, only a slot leader is aware that it is indeed a leader for a given slot; this assignment is unknown to all the other stakeholders—including other slot leaders of the same slot—until the other stakeholders receive a valid block from this slot leader.
 
-     
+
 
 **Independent aggregation property (Property 2)**
 
@@ -426,11 +451,8 @@ _These look like ways to drive test case generation_
 #Multi-signature properties
 
 **Sufficient Signatures are Provided to authorise Multi-Signature Transactions**
-	
+
 Outputs of transactions that require multiple signatures will be "locked" against use until at least the
 required number of signatures is provided.
 
 _This should come by construction from the rules in the multi-sig spec._
-
-
-  
