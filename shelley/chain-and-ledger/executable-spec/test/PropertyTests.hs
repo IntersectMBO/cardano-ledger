@@ -21,10 +21,11 @@ import qualified Hedgehog.Gen as Gen
 
 import           Coin
 import           Ledger.Core ((<|))
-import           LedgerState hiding (dms)
+import           LedgerState hiding (genDelegs)
 import           PParams
-import           Rules.TestLedger (rewardZeroAfterReg)
-import           Rules.ClassifyTraces (relevantCasesAreCovered)
+import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
+import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
+                     registeredPoolIsAdded, rewardZeroAfterReg)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -157,7 +158,17 @@ propertyTests = testGroup "Property-Based Testing"
                 [ testGroup "Classify Traces"
                   [testProperty "Ledger trace covers the relevant cases" relevantCasesAreCovered]
                 , testGroup "STS Rules - Delegation Properties"
-                  [testProperty "newly registered key has a reward of 0" rewardZeroAfterReg]
+                  [ testProperty "newly registered key has a reward of 0" rewardZeroAfterReg
+                  , testProperty "deregistered key's credential is removed"
+                                 credentialRemovedAfterDereg
+                  ]
+                , testGroup "STS Rules - Pool Properties"
+                  [ testProperty "newly registered stake pool is added to \
+                                 \appropriate state mappings"
+                                 registeredPoolIsAdded
+                  , testProperty "pool state is internally consistent"
+                                 pStateIsInternallyConsistent
+                  ]
                 , testGroup "Ledger Genesis State"
                   [testProperty
                     "non-empty genesis ledger state has non-zero balance"
@@ -198,6 +209,11 @@ propertyTests = testGroup "Property-Based Testing"
                   , testProperty
                     "Classify double spend"
                     classifyInvalidDoubleSpend
+                  ]
+                , testGroup "Properties of Trace generators"
+                  [testProperty
+                   "Only valid LEDGER STS signals are generated"
+                   onlyValidLedgerSignalsAreGenerated
                   ]
                 ]
 
@@ -243,8 +259,8 @@ propCheckRedundantWitnessSet = property $ do
   let tx                       = txwits ^. body
   let witness                  = makeWitnessVKey tx keyPair
   let txwits'                  = txwits & witnessVKeySet %~ Set.insert witness
-  let dms                      = _dms $ _dstate $ _delegationState l
-  let l''                      = asStateTransition (Slot steps) emptyPParams l txwits' dms
+  let genDelegs                      = _genDelegs $ _dstate $ _delegationState l
+  let l''                      = asStateTransition (Slot steps) emptyPParams l txwits' genDelegs
   classify "unneeded signature added"
     (not $ witness `Set.member` (txwits ^. witnessVKeySet))
   case l'' of
@@ -261,8 +277,8 @@ propCheckMissingWitness = property $ do
                                         Set.toList (txwits ^. witnessVKeySet))
   let witnessVKeySet''          = txwits ^. witnessVKeySet
   let witnessVKeySet'           = Set.fromList witnessList
-  let dms                   = _dms $ _dstate $ _delegationState l
-  let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessVKeySet .~ witnessVKeySet') dms
+  let genDelegs                   = _genDelegs $ _dstate $ _delegationState l
+  let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessVKeySet .~ witnessVKeySet') genDelegs
   let isRealSubset          = witnessVKeySet' `Set.isSubsetOf` witnessVKeySet'' &&
                               witnessVKeySet' /= witnessVKeySet''
   classify "real subset" isRealSubset
@@ -278,7 +294,7 @@ propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- forAll genValidStateTx
   let destroyed =
            balance (l ^. utxoState . utxo)
-        + (keyRefunds emptyPParams (l ^. delegationState . dstate . stKeys) $ tx ^. body)
+        + (keyRefunds emptyPParams (l ^. delegationState . dstate . stkCreds) $ tx ^. body)
   let created =
            balance (l' ^. utxoState . utxo)
         + fee

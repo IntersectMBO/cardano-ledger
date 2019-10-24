@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -38,9 +39,11 @@ import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Ratio (denominator, numerator)
 import           Data.Sequence (Seq)
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -59,7 +62,9 @@ import           NonIntegral ((***))
 -- |The hash of a Block Header
 newtype HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo =
   HashHeader (Hash hashAlgo (BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo))
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Generic, Ord, ToCBOR)
+
+instance NoUnexpectedThunks (HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
 
 newtype TxSeq hashAlgo dsignAlgo vrfAlgo
     = TxSeq (Seq (Tx hashAlgo dsignAlgo vrfAlgo))
@@ -76,7 +81,7 @@ instance
 -- | Hash of block body
 newtype HashBBody hashAlgo dsignAlgo kesAlgo vrfAlgo =
   HashBBody (Hash hashAlgo (TxSeq hashAlgo dsignAlgo vrfAlgo))
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
 
 -- |Hash a given block header
 bhHash
@@ -103,7 +108,15 @@ data BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
   = BHeader
       (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
       (KESig kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo))
-  deriving (Show, Eq)
+  deriving (Show, Generic, Eq)
+
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , KESAlgorithm kesAlgo
+  , VRFAlgorithm vrfAlgo
+  )
+  => NoUnexpectedThunks (BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
 
 instance
   ( HashAlgorithm hashAlgo
@@ -119,7 +132,9 @@ instance
        <> toCBOR kESig
 
 data ProtVer = ProtVer Natural Natural Natural
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Generic, Ord)
+
+instance NoUnexpectedThunks ProtVer
 
 instance ToCBOR ProtVer where
   toCBOR (ProtVer x y z) =
@@ -153,7 +168,15 @@ data BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo = BHBody
   , bheaderOCert          :: OCert dsignAlgo kesAlgo
     -- | protocol version
   , bprotvert          :: ProtVer
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
+
+instance
+  ( HashAlgorithm hashAlgo
+  , DSIGNAlgorithm dsignAlgo
+  , KESAlgorithm kesAlgo
+  , VRFAlgorithm vrfAlgo
+  )
+  => NoUnexpectedThunks (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
 
 instance
   ( HashAlgorithm hashAlgo

@@ -5,25 +5,20 @@ module Generator
     (
       utxoSize
     , utxoMap
-    , genBool
-    , genNatural
     , genNonEmptyAndAdvanceTx
     , genNonEmptyAndAdvanceTx'
     , genNonemptyGenesisState
-    , genStakePool
     , genStateTx
     , genValidStateTx
     , genValidStateTxKeys
     , genDelegationData
     , genDelegation
-    , genDCertRegPool
     , genDCertDelegate
     , genKeyPairs
     ) where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Ratio
 import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set
 
@@ -35,19 +30,17 @@ import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           BaseTypes
 import           Coin
-import           Generator.Core (findPayKeyPair)
-import           Keys (pattern KeyPair, hashKey, hashKeyVRF, vKey)
+import           Generator.Core (findPayKeyPair, genNatural)
+import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
                      asStateTransition, asStateTransition', dstate, genesisCoins, genesisState,
-                     stKeys, utxo, utxoState, _delegationState, _dstate)
+                     stkCreds, utxo, utxoState, _delegationState, _dstate)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
 import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, pattern Delegation,
-                     pattern KeyHashObj, pattern PoolParams, pattern RegKey, pattern RegPool,
-                     pattern RetirePool, RewardAcnt (..), StakeKeys (..))
+                     pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..))
 import           Updates
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 
@@ -86,16 +79,6 @@ hashKeyPairs keyPairs =
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
 addrTxins keyPairs = uncurry AddrBase <$> hashKeyPairs keyPairs
-
-genBool :: Gen Bool
-genBool = Gen.enumBounded
-
--- | Generator for a natural number between 'lower' and 'upper'.
-genNatural :: Natural -> Natural -> Gen Natural
-genNatural lower upper = Gen.integral $ Range.linear lower upper
-
-genInteger :: Integer -> Integer -> Gen Integer
-genInteger lower upper = Gen.integral $ Range.linear lower upper
 
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
 -- coins, with values between 'minCoin' and 'maxCoin'.
@@ -167,10 +150,10 @@ genLedgerStateTx :: KeyPairs -> Slot -> LedgerState ->
                     Gen (Coin, Tx, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList (Slot _slot) sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
-  let dms' = _dms $ _dstate $ _delegationState sourceState
+  let genDelegs' = _genDelegs $ _dstate $ _delegationState sourceState
   slot' <- genNatural _slot (_slot + 100)
   (txfee', tx) <- genTx keyList utxo' (Slot slot')
-  pure (txfee', tx, asStateTransition (Slot slot') defPCs sourceState tx dms')
+  pure (txfee', tx, asStateTransition (Slot slot') defPCs sourceState tx genDelegs')
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -279,13 +262,13 @@ genLedgerStateTx' :: KeyPairs -> LedgerState ->
                     Gen (Coin, Tx, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
-  let dms' = _dms $ _dstate $ _delegationState sourceState
+  let genDelegs' = _genDelegs $ _dstate $ _delegationState sourceState
   _slot <- genNatural 0 1000
   (txfee', tx) <- genTx keyList utxo' (Slot _slot)
   tx'          <- mutateTx tx
   pure (txfee'
        , tx'
-       , asStateTransition' (Slot _slot) defPCs (LedgerValidation [] sourceState) tx' dms')
+       , asStateTransition' (Slot _slot) defPCs (LedgerValidation [] sourceState) tx' genDelegs')
 
 -- Generators for 'DelegationData'
 
@@ -308,35 +291,12 @@ genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
   pure $ RetirePool (hashKey key) epoch
 
-genStakePool :: KeyPairs -> [(SignKeyVRF, VerKeyVRF)] -> Gen PoolParams
-genStakePool skeys vrfKeys = do
-  poolKey       <- getAnyStakeKey skeys
-  vrfKey        <- snd <$> Gen.element vrfKeys
-  cost          <- Coin <$> genInteger 1 100
-  pledge        <- Coin <$> genInteger 1 100
-  marginPercent <- genNatural 0 100
-  acntKey       <- getAnyStakeKey skeys
-  let interval = case mkUnitInterval $ fromIntegral marginPercent % 100 of
-                   Just i  -> i
-                   Nothing -> interval0
-  pure $ PoolParams
-           (hashKey poolKey)
-           (hashKeyVRF vrfKey)
-           pledge
-           cost
-           interval
-           (RewardAcnt $ KeyHashObj $ hashKey acntKey)
-           Set.empty
-
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
-  poolKey      <- Gen.element $ Map.keys stKeys'
+  poolKey      <- Gen.element $ Map.keys stkCreds'
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
-       where (StakeKeys stKeys') = d ^. dstate . stKeys
-
-genDCertRegPool :: KeyPairs -> [(SignKeyVRF, VerKeyVRF)] -> Gen DCert
-genDCertRegPool skeys vrfKeys = RegPool <$> genStakePool skeys vrfKeys
+       where (StakeCreds stkCreds') = d ^. dstate . stkCreds
 
 genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
 genDCertDelegate keys ds = Delegate <$> genDelegation keys ds

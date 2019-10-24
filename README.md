@@ -22,6 +22,8 @@ following links:
 - [Explanation of the Small-step-semantics Framework](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/semanticsSpec/latest/download-by-type/doc-pdf/semantics-spec)
 - [Simple Script-Based Multi-Signature Scheme](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/multi-sig)
 
+In addition, there is an Isabelle/HOL proof of the "no double-spending property" for the Byron Ledger Specification which can be found [here](./byron/ledger/formal-spec/Isabelle/Ledger_Rules.thy). The rendered PDF file can be found [here](./byron/ledger/formal-spec/Isabelle/Ledger_Rules_Formalization.pdf).
+
 # Repository structure
 
 This repo contains formal (LaTeX) and executable (Haskell model) specs for both

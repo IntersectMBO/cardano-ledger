@@ -21,7 +21,7 @@ import qualified Data.Set as Set (fromList)
 
 import           Coin
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
-import           Keys (pattern Dms, undiscriminateKeyHash)
+import           Keys (pattern GenDelegs, undiscriminateKeyHash)
 import           LedgerState (genesisId, genesisCoins, genesisState, _utxoState)
 import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody, TxId,
                      TxIn, UTXOW, UTxOState, Wdrl)
@@ -31,7 +31,7 @@ import           STS.Utxo (UtxoEnv (..))
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
-                     pattern ScriptHashObj, pattern StakeKeys, pattern StakePools, pattern Tx,
+                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools, pattern Tx,
                      pattern TxBody, pattern TxIn, pattern TxOut, _body)
 import           Updates (emptyUpdate)
 import           UTxO (makeWitnessesVKey, txid)
@@ -131,9 +131,9 @@ initialUTxOState aliceKeep msigs =
   (txid $ _body tx, applySTS @UTXOW (TRC( UtxoEnv
                                            (Slot 0)
                                            initPParams
-                                           (StakeKeys Map.empty)
+                                           (StakeCreds Map.empty)
                                            (StakePools Map.empty)
-                                           (Dms Map.empty)
+                                           (GenDelegs Map.empty)
                                          , _utxoState genesis
                                          , tx)))
 
@@ -168,8 +168,8 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         utxoSt' = applySTS @UTXOW (TRC( UtxoEnv
                                           (Slot 0)
                                           initPParams
-                                          (StakeKeys Map.empty)
+                                          (StakeCreds Map.empty)
                                           (StakePools Map.empty)
-                                          (Dms Map.empty)
+                                          (GenDelegs Map.empty)
                                       , utxoSt
                                       , tx))
