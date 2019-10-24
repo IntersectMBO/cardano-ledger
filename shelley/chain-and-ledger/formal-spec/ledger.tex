@@ -76,16 +76,16 @@ then calls the $\mathsf{DELEGS}$ transition.
                      \fun{txcerts}~\var{tx}} dpstate'
       \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-      (\var{stdelegs}, \_, \_, \_, \_, \var{dms}) \leteq \var{dstate} \\
+      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}) \leteq \var{dstate} \\
       (\var{stpools}, \_, \_, \_) \leteq \var{pstate} \\
       \\~\\
       {
         \begin{array}{c}
         \var{slot} \\
         \var{pp} \\
-        \var{stdelegs} \\
+        \var{stkCreds} \\
         \var{stpools} \\
-        \var{dms} \\
+        \var{genDelegs} \\
         \end{array}
       }
       \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxow-shelley]{utxow}}{tx} \var{utxoSt'}
@@ -126,7 +126,7 @@ and cleans up the future application versions mapping.
 Note that it is better to handle this logic here than in the $\mathsf{AVUP}$ transiton,
 because here it will happen even if the block contains no transactions.
 Similarly, the genesis key delegation mapping is updated according to the future delegation
-mapping. For each genesis key, we adopt the most recent delegation in $\var{fdms}$
+mapping. For each genesis key, we adopt the most recent delegation in $\var{fGenDelegs}$
 that is past the current slot, and any future genesis key delegations past the current
 slot is removed.
 
@@ -152,7 +152,7 @@ slot is removed.
       \\
       (\var{pup},~\var{aup},~\var{favs},~\var{avs}) \leteq\var{us}
       \\
-      (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},~\var{fdms},~\var{dms})
+      (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},~\var{fGenDelegs},~\var{genDelegs})
       \leteq\var{ds}
       \\
       (\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs})\leteq\var{ps}
@@ -166,11 +166,11 @@ slot is removed.
       \\~\\
       \var{curr}\leteq
       \{
-        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fdms}
+        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fGenDelegs}
         ~\mid~
         \var{s}\leq\var{slot}
       \}\\
-      \var{dms'}\leteq
+      \var{genDelegs'}\leteq
       \left\{
         \var{gkh}\mapsto\var{vkh}
         ~\mathrel{\Bigg|}~
@@ -186,12 +186,12 @@ slot is removed.
       \\
       \var{ds'}\leteq
       (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
-      ~\var{fdms}\setminus\var{curr},~\var{dms}\unionoverrideRight\var{dms'})
+      ~\var{fGenDelegs}\setminus\var{curr},~\var{genDelegs}\unionoverrideRight\var{genDelegs'})
       \\
-      \var{oldGenDelegs}\leteq\range((\dom\var{dms'})\restrictdom\var{dms})
+      \var{oldGenDelegs}\leteq\range((\dom\var{genDelegs'})\restrictdom\var{genDelegs})
       \\
-      \var{cs'}\leteq(\var{oldGenDelegs}\subtractdom\var{oldGenDelegs})\unionoverrideRight
-      \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{dms'}\}
+      \var{cs'}\leteq(\var{oldGenDelegs}\subtractdom\var{cs})\unionoverrideRight
+      \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{genDelegs'}\}
       \\
       \var{ps'}\leteq(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs'})
       \\
