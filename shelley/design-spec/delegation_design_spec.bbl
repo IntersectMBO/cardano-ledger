@@ -1,0 +1,44 @@
+\begin{thebibliography}{DGKR17}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname doi\endcsname\relax
+  \def\doi#1{\burlalt{doi:#1}{http://dx.doi.org/#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \def\href#1#2{#2}\fi
+\expandafter\ifx\csname burlalt\endcsname\relax
+  \def\burlalt#1#2{\href{#2}{#1}}\fi
+
+\bibitem[BKKS18]{bkks2018}
+L.~Bruenjes, A.~Kiayias, E.~Koutsoupias, and A.-P. Stouka.
+\newblock Reward sharing schemes for stake pools.
+\newblock Computer Science and Game Theory (cs.GT) arXiv:1807.11218, 2018.
+
+\bibitem[DGKR17]{ouroboros_praos}
+B.~M. David, P.~Gazi, A.~Kiayias, and A.~Russell.
+\newblock Ouroboros praos: An adaptively-secure, semi-synchronous
+  proof-of-stake protocol.
+\newblock {\em IACR Cryptology ePrint Archive}, 2017:573, 2017.
+
+\bibitem[KRDO17]{ouroboros_classic}
+A.~Kiayias, A.~Russell, B.~David, and R.~Oliynykov.
+\newblock Ouroboros: A provably secure proof-of-stake blockchain protocol.
+\newblock In {\em Advances in Cryptology -- CRYPTO 2017}, volume 10401 of {\em
+  Security and Cryptology}. Springer International Publishing, 2017.
+\newblock \doi{10.1007/978-3-319-63688-7}.
+
+\bibitem[MMM01]{cryptoeprint:2001:034}
+T.~Malkin, D.~Micciancio, and S.~Miner.
+\newblock Composition and efficiency tradeoffs for forward-secure digital
+  signatures.
+\newblock Cryptology ePrint Archive, Report 2001/034, 2001.
+\newblock \url{https://eprint.iacr.org/2001/034}.
+
+\bibitem[Wui12]{bip32}
+P.~Wuille.
+\newblock Hierarchical deterministic wallets, February 2012.
+\newblock
+  \urlprefix\url{https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki}.
+\newblock BIP-32.
+
+\end{thebibliography}

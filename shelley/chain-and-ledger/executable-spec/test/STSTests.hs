@@ -6,16 +6,17 @@ module STSTests (stsTests) where
 import           Data.Either (isRight)
 import qualified Data.Map.Strict as Map (empty, singleton)
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
+import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
 
 import           Examples (CHAINExample (..), alicePay, bobPay, carlPay, dariaPay, ex1, ex2A, ex2B,
                      ex2C, ex2Cbis, ex2Cquater, ex2Cter, ex2D, ex2E, ex2F, ex2G, ex2H, ex2I, ex2J,
-                     ex2K, ex2L, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C, ex5A, ex5B, maxLovelaceSupply)
+                     ex2K, ex2L, ex3A, ex3B, ex3C, ex4A, ex4B, ex4C, ex5A, ex5B, ex6A, ex6B, ex6C,
+                     ex6D, ex6E, maxLovelaceSupply)
 import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
 
-import           BaseTypes ((⭒), mkNonce)
+import           BaseTypes (mkNonce, (⭒))
 import           Control.State.Transition (TRC (..), applySTS)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           Slot (Slot (..))
@@ -49,12 +50,18 @@ testUPNLate =
     st @?= Right (UpdnState ((mkNonce 2) ⭒ (mkNonce 1)) (mkNonce 3))
 
 testCHAINExample :: CHAINExample -> Assertion
-testCHAINExample (CHAINExample slotNow initSt block expectedSt) = do
+testCHAINExample (CHAINExample slotNow initSt block (Right expectedSt)) = do
   checkTrace @CHAIN slotNow $ pure initSt .- block .-> expectedSt
+testCHAINExample (CHAINExample slotNow initSt block predicateFailure@(Left _)) = do
+  let
+    st = applySTS @CHAIN (TRC (slotNow, initSt, block))
+  st @?= predicateFailure
 
 testPreservationOfAda :: CHAINExample -> Assertion
-testPreservationOfAda (CHAINExample _ _ _ expectedSt) =
+testPreservationOfAda (CHAINExample _ _ _ (Right expectedSt)) =
   totalAda expectedSt @?= maxLovelaceSupply
+testPreservationOfAda (CHAINExample _ _ _ (Left predicateFailure)) =
+  assertFailure $ "Ada not preserved " ++ show predicateFailure
 
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
@@ -84,6 +91,11 @@ stsTests = testGroup "STS Tests"
   , testCase "CHAIN example 4C - adopt a future app version" $ testCHAINExample ex4C
   , testCase "CHAIN example 5A - stage genesis key delegation" $ testCHAINExample ex5A
   , testCase "CHAIN example 5B - adopt genesis key delegation" $ testCHAINExample ex5B
+  , testCase "CHAIN example 6A - create MIR cert" $ testCHAINExample ex6A
+  , testCase "CHAIN example 6B - FAIL: insufficient core node signatures" $ testCHAINExample ex6B
+  , testCase "CHAIN example 6C - FAIL: MIR impossible in decentralized network" $ testCHAINExample ex6C
+  , testCase "CHAIN example 6D - FAIL: MIR impossible (decentralized and insufficient sigs)" $ testCHAINExample ex6D
+  , testCase "CHAIN example 6E - FAIL: MIR insufficient reserves" $ testCHAINExample ex6E
   , testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda ex1
   , testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda ex2A
   , testCase "CHAIN example 2B - Preservation of ADA" $ testPreservationOfAda ex2B
