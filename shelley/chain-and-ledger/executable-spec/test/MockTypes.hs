@@ -95,6 +95,8 @@ type SignKeyVRF = Keys.SignKeyVRF FakeVRF
 
 type VerKeyVRF = Keys.VerKeyVRF FakeVRF
 
+type VrfKeyPairs = [(SignKeyVRF, VerKeyVRF)]
+
 type CertifiedVRF = Keys.CertifiedVRF FakeVRF
 
 type KESig = Keys.KESig MockKES BHBody
@@ -107,7 +109,7 @@ type OCert = OCert.OCert MockDSIGN MockKES
 
 type HashHeader = BlockChain.HashHeader ShortHash MockDSIGN MockKES FakeVRF
 
-type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN
+type NewEpochState = LedgerState.NewEpochState ShortHash MockDSIGN FakeVRF
 
 type RewardUpdate = LedgerState.RewardUpdate ShortHash MockDSIGN
 
@@ -136,7 +138,8 @@ type POOLREAP = STS.PoolReap.POOLREAP ShortHash MockDSIGN FakeVRF
 type Credential = TxData.Credential ShortHash MockDSIGN
 
 type StakeCredential = TxData.StakeCredential ShortHash MockDSIGN
-type StakeKeys = TxData.StakeKeys ShortHash MockDSIGN
+
+type StakeCreds = TxData.StakeCreds ShortHash MockDSIGN
 
 type MultiSig = TxData.MultiSig ShortHash MockDSIGN
 

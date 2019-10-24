@@ -4,7 +4,6 @@
 \newcommand{\Proof}{\type{Proof}}
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
-\newcommand{\StartRewards}{\ensuremath{\mathsf{StartRewards}}}
 \newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 
@@ -107,8 +106,6 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     & 0_{seed} \in \Seed & \text{neutral seed element} \\
     & \Seedl \in \Seed & \text{leader seed constant} \\
     & \Seede \in \Seed & \text{nonce seed constant}\\
-    & \SlotsPrior \in \Duration & \tau\text{ in \cite{ouroboros_praos}}\\
-    & \StartRewards \in \Duration & \text{duration to start reward calculations}\\
   \end{align*}
 
   \caption{VRF definitions}
@@ -640,7 +637,7 @@ execution of the transition role is as follows:
 \subsection{Block Header Transition}
 \label{sec:block-header-trans}
 
-The Block Header Transition checks a couple sizes and performs some chain level upkeep.
+The Block Header Transition checks a couple of sizes and performs some chain level upkeep.
 The environment consists of a candidate nonce and a set of genesis keys, and the state is the
 epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 
@@ -779,8 +776,8 @@ transition which are the following:
 
 \begin{itemize}
 \item The KES period start \var{c_0} is greater than or equal to the KES period of
-  the slot of the block header body and less than 90 KES periods after \var{c_0}.
-  The value of 90 KES periods is the agreed-upon lifetime of an operational certificate,
+  the slot of the block header body and less than $\MaxKESEvo$-many KES periods after \var{c_0}.
+  The value of $\MaxKESEvo$ is the agreed-upon lifetime of an operational certificate,
   see \cite{delegation_design}.
 \item \var{hk} exists as key in the mapping of certificate issues numbers to a KES
   period \var{m} and that period is less than or equal to \var{n}.
@@ -808,7 +805,7 @@ of the key \var{hk} with the KES period \var{n}.
       &
       t \leteq \kesPeriod{s} - c_0
       \\~\\
-      c_0 \leq \kesPeriod{s} < c_0 + 90
+      c_0 \leq \kesPeriod{s} < c_0 + \MaxKESEvo
       \\
       \var{hk}\mapsto m\in\var{cs}
       &
@@ -833,7 +830,7 @@ The OCERT rule has six predicate failures:
 \item If the KES period is less than the KES period start in the certificate,
   there is a \emph{KESBeforeStart} failure.
 \item If the KES period is greater than or equal to the KES period end (start +
-  90) in the certificate, there is a \emph{KESAfterEnd} failure.
+  $\MaxKESEvo$) in the certificate, there is a \emph{KESAfterEnd} failure.
 \item If the period counter in the original key hash counter mapping is larger
   than the period number in the certificate, there is a \emph{KESPeriodWrong}
   failure.
@@ -911,7 +908,7 @@ The environments for this transition are:
     responsible for producing the block.
   \item The epoch nonce $\eta_0$.
   \item The stake pool stake distribution $\var{pd}$.
-  \item The mapping $\var{dms}$ of genesis keys to their cold keys.
+  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys.
 \end{itemize}
 
 The states for this transition consist only of the mapping of certificate issue numbers.
@@ -946,7 +943,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -973,7 +970,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \\
       \bslot bhb \mapsto \var{gkh}\in\var{osched}
       &
-      \var{gkh}\mapsto\var{vkh}\in\var{dms}
+      \var{gkh}\mapsto\var{vkh}\in\var{genDelegs}
       \\~\\
       {
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
@@ -985,7 +982,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
          \var{osched} \\
          \eta_0 \\
          \var{pd} \\
-         \var{dms} \\
+         \var{genDelegs} \\
        \end{array}}
       \vdash
       \var{cs}
@@ -1015,7 +1012,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
          \var{osched} \\
          \eta_0 \\
          \var{pd} \\
-         \var{dms} \\
+         \var{genDelegs} \\
        \end{array}}
       \vdash
       \var{cs}
@@ -1362,7 +1359,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \emph{Chain Transition Helper Functions}
   \begin{align*}
       & \fun{getGKeys} \in \NewEpochState \to \powerset{\KeyHashGen} \\
-      & \fun{getGKeys}~\var{nes} = \dom{dms} \\
+      & \fun{getGKeys}~\var{nes} = \dom{genDelegs} \\
       &
       \begin{array}{lr@{~=~}l}
         \where
@@ -1372,7 +1369,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           & (\wcard,~\wcard,~\var{ls},~\wcard)
           & \var{es}
           \\
-          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~\wcard))
+          & (\wcard,~((\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~\wcard))
           & \var{ls}
       \end{array}
   \end{align*}
@@ -1423,7 +1420,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
-          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{dms}),~
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
           (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
           (\wcard, reserves) \leteq \var{acnt}\\
       {
@@ -1433,7 +1430,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
              \var{osched} \\
              \eta_0 \\
              \var{pd} \\
-             \var{dms} \\
+             \var{genDelegs} \\
            \end{array}\\
            \var{s_{now}} \\
          \end{array}}
@@ -1507,6 +1504,8 @@ This section describes how to transition the state held by the Byron ledger to t
 The Byron ledger state $\CEState$ is defined in \cite{byron_chain_spec}.
 Figure~\ref{fig:functions:to-shelley} defines a function $\fun{toShelley}$
 which takes the Byron ledger state and creates the Shelley ledger state.
+Note that we use the hash of the final Byron header as the first evolving and
+candidate nonces for Shelley.
 
 %%
 %% Figure - Byron to Shelley State Transition
