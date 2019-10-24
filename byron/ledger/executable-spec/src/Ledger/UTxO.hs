@@ -58,7 +58,7 @@ data TxOut = TxOut { addr  :: Addr
 newtype UTxO = UTxO
   { unUTxO :: Map TxIn TxOut
   } deriving stock (Show, Data, Typeable)
-    deriving newtype (Eq, Relation)
+    deriving newtype (Eq, Relation, Semigroup, Monoid)
 
 addValue :: TxOut -> Lovelace -> TxOut
 addValue tx@TxOut{ value } d = tx { value = value + d }

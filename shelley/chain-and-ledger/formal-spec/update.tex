@@ -7,7 +7,7 @@ The governance process includes a mechanism for core nodes to propose and vote o
 updates. In this chapter we
 outline rules for genesis keys \textit{proposing} both protocol parameter
 and application version updates, as well as voting on whether a particular
-software update is an acceptable future option (again, only genesis keys vote on this).
+software update is an acceptable future option.
 For rules regarding the \textit{adoption} of protocol
 parameter updates, see \ref{sec:pparam-update}. For rules regarding
 adoption of new software versions see \ref{sec:software-updates}.
@@ -19,7 +19,7 @@ for a transaction, see \ref{sec:witnesses-shelley}.
 
 \textbf{Genesis Key Delegations.} The environment for both protocol parameter
 and application version updates contains
-the value $\var{dms}$, which is a finite map indexed by genesis key hashes.
+the value $\var{genDelegs}$, which is a finite map indexed by genesis key hashes.
 This is the genesis key delegations. During the Byron era, they are all
 already delegated to some $\KeyHash$, and these delegations are inherited
 through the Byron-Shelley transition (see \ref{sec:byron-to-shelley}).
@@ -36,6 +36,38 @@ For transparency in both voting mechanisms, the votes and proposals for updates
 are stored
 on the ledger in addition to the currently accepted protocol parameters and
 application versions.
+
+\subsection{Descriptions of the Data}
+\label{sec:update-types}
+
+The types were defined in Figure~\ref{fig:defs:utxo-shelley}.
+In the derived types, $\Metadata$ and $\Applications$ are values
+that contain versions of current and next versions of applications.
+The $\ApName$ uniquely identifies a specific kind of application (e.g.
+the wallet), and the associated $\ApVer$ is the specific version of that
+application. The associated $\Metadata$ value gives the \textit{next possible}
+versions of the given application. It is a mapping of system tags to hashes of
+installer binaries, and is needed for the update mechanism.
+The update proposal type $\Update$ is a pair of $\PPUpdate$ and $\AVUpdate$.
+$\PPUpdate$ allows for changing protocol parameters,
+and $\AVUpdate$ allows for updating the software versions.
+
+Note that both of these finite maps are indexed by the hashes of the keys of
+entities proposing the given updates, $\KeyHashGen$.
+We use the abstract type $\KeyHashGen$ to represent hashes of genesis
+(public verification) keys, which have type $\VKeyGen$.
+Genesis keys are the keys belonging to the federated
+nodes running the Cardano system currently (also referred to as core nodes).
+The the regular user verification keys are of a type $\VKey$, distinct from the
+genesis key type, $\VKeyGen$. Similarly, the type hashes of these
+are distinct, $\KeyHash$ and $\KeyHashGen$ respectively.
+
+Currently, updates can only be proposed and voted on by the owners of the genesis keys.
+The process of decentralization will result in the core nodes gradually giving up
+some of their priviledges and responsibilities to the network,
+eventually give them \textit{all} up.
+The update proposal mechanism will not be decentralization in the Shelley era, however.
+For more on the decentralization process, see \ref{sec:new-epoch-trans}.
 
 \subsection{Protocol Parameter Update Proposals}
 \label{sec:pp-proposals}
@@ -63,7 +95,7 @@ This rule has the following predicate failures:
   $\fun{firstSlot}~((\fun{epoch}~\var{slot}) + 1) - \fun{SlotsPrior}$, there is
   a \emph{PPUpdateTooEarly} failure.
 \item In the case of \var{pup} being non-empty, if the check $\dom pup \subseteq
-  \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
+  \dom genDelegs$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the protocol parameter update.
 \item If a protocol parameter update in \var{pup} cannot follow the current
   protocol parameter, there is a \emph{PVCannotFollow} failure.
@@ -88,7 +120,7 @@ and will be rejected otherwise.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -114,7 +146,7 @@ and will be rejected otherwise.
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash \var{pup_s}\trans{ppup}{pup}\var{pup_s}
     }
@@ -127,7 +159,7 @@ and will be rejected otherwise.
     {
       \var{pup}\neq\emptyset
       &
-      \dom{pup}\subseteq\dom{dms}
+      \dom{pup}\subseteq\dom{genDelegs}
       \\
       \forall\var{ps}\in\range{pup},~
         \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
@@ -138,7 +170,7 @@ and will be rejected otherwise.
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \var{pup_s}
@@ -174,6 +206,10 @@ The function $\fun{newAVs}$ adds the most recent valid application
 versions to a finite map of applications using right override.
 This helper function will be used in the ledger update.
 
+\textbf{Note that} $\fun{votedValue}$
+\textbf{is only well-defined if } $\Quorum$
+\textbf{is greater than half the number of core nodes, i.e.}
+$\Quorum > |\var{genDelegs}|/2$ \textbf{.}
 %%
 %% Figure - Helper Function for Consensus of Update Proposals
 %%
@@ -182,7 +218,7 @@ This helper function will be used in the ledger update.
       & \fun{votedValue_T} \in (\KeyHashGen\mapsto\type{T}) \to \type{T}^?\\
       & \fun{votedValue_T}~\var{vs} =
         \begin{cases}
-          t & \exists t\in\range{vs}~(|vs\restrictrange t|\geq 5) \\
+          t & \exists t\in\range{vs}~(|vs\restrictrange t|\geq \Quorum) \\
           \Nothing & \text{otherwise} \\
         \end{cases}
   \end{align*}
@@ -277,7 +313,7 @@ All other update proposals are scrapped.
 The AVUP rule has three predicate failures:
 \begin{itemize}
 \item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
-  \dom dms$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
+  \dom genDelegs$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the application version update.
 \item In the case of \var{aup} being non-empty, if any of the application names
   in the proposal are invalid, there is a \emph{InvalidName} failure.
@@ -296,7 +332,7 @@ The AVUP rule has three predicate failures:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -333,7 +369,7 @@ The AVUP rule has three predicate failures:
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(
@@ -361,7 +397,7 @@ The AVUP rule has three predicate failures:
     {
       \var{aup}\neq\emptyset
       &
-      \dom{\var{aup}}\subseteq\dom{\var{dms}}
+      \dom{\var{aup}}\subseteq\dom{\var{genDelegs}}
       \\
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
         \fun{apNameValid}~\var{v}
@@ -381,7 +417,7 @@ The AVUP rule has three predicate failures:
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(
@@ -409,7 +445,7 @@ The AVUP rule has three predicate failures:
     {
       \var{aup}\neq\emptyset
       &
-      \dom{\var{aup}}\subseteq\dom{\var{dms}}
+      \dom{\var{aup}}\subseteq\dom{\var{genDelegs}}
       \\
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
         \fun{apNameValid}~\var{v}
@@ -431,7 +467,7 @@ The AVUP rule has three predicate failures:
     {
       \begin{array}{l}
         \var{slot}\\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(
@@ -472,7 +508,7 @@ update rules for each.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -511,7 +547,7 @@ update rules for each.
         \begin{array}{r}
           \var{slot} \\
           \var{pp} \\
-          \var{dms} \\
+          \var{genDelegs} \\
         \end{array}
       }
       \vdash
@@ -522,7 +558,7 @@ update rules for each.
       {
         \begin{array}{r}
           \var{slot} \\
-          \var{dms} \\
+          \var{genDelegs} \\
         \end{array}
       }
       \vdash
@@ -550,7 +586,7 @@ update rules for each.
       \begin{array}{r}
         \var{slot}\\
         \var{pp} \\
-        \var{dms}\\
+        \var{genDelegs}\\
       \end{array}
       \vdash
       \left(
