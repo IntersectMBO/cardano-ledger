@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Ledger.UTxO.Properties where
 
-import           Control.Arrow ((***))
+import           Control.Arrow (second, (***))
 import           Control.Lens (view, (&), (^.), _2)
 import           Control.Monad (when)
 import           Data.Foldable (foldl', traverse_)
@@ -66,6 +67,16 @@ utxoDiff = withTests 300 . property $ do
 
   allTxOuts :: [Tx] -> UTxO
   allTxOuts txs = foldl' (∪) (UTxO Map.empty) (map txouts txs)
+
+utxoAndTxoutsMustBeDisjoint :: Property
+utxoAndTxoutsMustBeDisjoint = withTests 300 . property $ do
+  t <- forAll (trace @UTXOW 100)
+  traverse_ utxoAndTxoutsAreDisjoint
+    $ fmap (second body)
+    $ preStatesAndSignals OldestFirst t
+  where
+    utxoAndTxoutsAreDisjoint (UTxOState {utxo}, tx) =
+      dom utxo ∩ dom (txouts tx) === mempty
 
 --------------------------------------------------------------------------------
 -- Coverage guarantees for UTxO traces

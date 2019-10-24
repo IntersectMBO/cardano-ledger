@@ -8,10 +8,11 @@ module Coin
     ) where
 
 import           Cardano.Binary (ToCBOR)
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 -- |The amount of value held by a transaction output.
 newtype Coin = Coin Integer
-  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, ToCBOR)
+  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks, ToCBOR)
 
 splitCoin :: Coin -> Integer -> (Coin, Coin)
 splitCoin (Coin n) 0 = (Coin 0, Coin n)

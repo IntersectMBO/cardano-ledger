@@ -77,7 +77,7 @@ state.
     \forall \var{l}, \var{l'} \in \LState: \applyFun{validLedgerstate}{l},
     l=(u,\wcard,\wcard,\wcard), l' = (u',\wcard,\wcard,\wcard)\\
     \implies \forall \var{tx} \in \Tx, lenv \in\LEnv, lenv \vdash\var{u} \trans{utxow}{tx} \var{u'} \\
-    \implies \applyFun{destroyed}{pc~utxo~stDelegs~rewards~tx} =
+    \implies \applyFun{destroyed}{pc~utxo~stkCreds~rewards~tx} =
     \applyFun{created}{pc~stPools~tx}
   \end{multline*}
   \label{prop:ledger-properties-1}
@@ -198,8 +198,8 @@ each output of a transition is spent at most once.
   \begin{align*}
     \fun{getStDelegs} & \in & \DState \to \powerset \Credential \\
     \fun{getStDelegs} & \coloneqq &
-                                    ((\var{stDelegs}, \wcard,
-                                    \wcard,\wcard,\wcard,\wcard) \to \var{stDelegs} \\
+                                    ((\var{stkCreds}, \wcard,
+                                    \wcard,\wcard,\wcard,\wcard) \to \var{stkCreds} \\
                       &&\\
     \fun{getRewards} & \in & \DState \to (\AddrRWD \mapsto \Coin) \\
     \fun{getRewards} & \coloneqq & (\wcard, \var{rewards},
@@ -287,7 +287,7 @@ delegation certificate in $l'$.
   \begin{multline*}
     \forall \var{l}, \var{l'} \in \LState: \applyFun{validLedgerstate}{l},\\
     \implies \forall \Gamma \in \seqof{\Tx}, env \in (\Slot \times \PParams), \\
-    env \vdash\var{l} \trans{ledgers}{\Gamma} \var{l'} \implies |dms| = 7
+    env \vdash\var{l} \trans{ledgers}{\Gamma} \var{l'} \implies |genDelegs| = 7
   \end{multline*}
 \end{property}
 
