@@ -20,7 +20,7 @@ all: $(DOCNAME).pdf
 ## CUSTOM BUILD RULES
 ##
 ${DOCNAMe}.bbl: $(DOCNAME).tex
-  touch  $(DOCNAME).bbl
+	touch  $(DOCNAME).bbl
 
 
 ##
