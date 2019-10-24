@@ -9,6 +9,7 @@
 module STS.Ledgers
   ( LEDGERS
   , LedgersEnv (..)
+  , PredicateFailure(..)
   )
 where
 
@@ -19,6 +20,8 @@ import           Data.Sequence (Seq)
 import qualified Data.Set as Set
 
 import           Control.State.Transition
+
+import           Coin (Coin)
 import           Keys
 import           Ledger.Core (dom, range, (⋪), (◁), (⨃))
 import           LedgerState
@@ -31,7 +34,11 @@ import           Updates (Applications (..), UpdateState (..), apps, newAVs)
 data LEDGERS hashAlgo dsignAlgo vrfAlgo
 
 data LedgersEnv
-  = LedgersEnv Slot PParams
+  = LedgersEnv
+    { ledgersSlot     :: Slot
+    , ledgersPp       :: PParams
+    , ledgersReserves :: Coin
+    }
 
 instance
   ( HashAlgorithm hashAlgo
@@ -60,13 +67,13 @@ ledgersTransition
      )
   => TransitionRule (LEDGERS hashAlgo dsignAlgo vrfAlgo)
 ledgersTransition = do
-  TRC (LedgersEnv slot pp, ls, txwits) <- judgmentContext
+  TRC (LedgersEnv slot pp _reserves, ls, txwits) <- judgmentContext
   let (u, dw) = (_utxoState ls, _delegationState ls)
   (u'', dw'') <-
     foldM
         (\(u', dw') (ix, tx) ->
           trans @(LEDGER hashAlgo dsignAlgo vrfAlgo)
-            $ TRC (LedgerEnv slot ix pp, (u', dw'), tx)
+            $ TRC (LedgerEnv slot ix pp _reserves, (u', dw'), tx)
         )
         (u, dw)
       $ zip [0 ..] $ toList txwits
@@ -78,21 +85,21 @@ ledgersTransition = do
 
   let ds = _dstate dw''
       ps = _pstate dw''
-      fdms_    = _fdms ds
-      Dms dms_ = _dms ds
-      (curr, fdms') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fdms_
+      fGenDelegs_    = _fGenDelegs ds
+      GenDelegs genDelegs_ = _genDelegs ds
+      (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
   let maxSlot = maximum . Set.map fst . Map.keysSet
   let latestPerGKey gk =
         ( (maxSlot . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
         , gk)
-  let dmsKeys = Set.map
+  let genDelegsKeys = Set.map
                   latestPerGKey
                   (Set.map snd (Map.keysSet curr))
-  let dms' = Map.mapKeys snd $ dmsKeys ◁ curr
-  let oldGenDelegs = range (dom dms' ◁ dms_)
-  let cs' = (oldGenDelegs ⋪ _cCounters ps) ⨃ fmap (\x -> (x, 0)) (Map.elems dms')
-  let dw''' = dw'' { _dstate = ds { _fdms = fdms'
-                                  , _dms = Dms $ dms_ ⨃ Map.toList dms'}
+  let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr
+  let oldGenDelegs = range (dom genDelegs' ◁ genDelegs_)
+  let cs' = (oldGenDelegs ⋪ _cCounters ps) ⨃ fmap (\x -> (x, 0)) (Map.elems genDelegs')
+  let dw''' = dw'' { _dstate = ds { _fGenDelegs = fGenDelegs'
+                                  , _genDelegs = GenDelegs $ genDelegs_ ⨃ Map.toList genDelegs'}
                    , _pstate = ps { _cCounters = cs' }
                    }
 

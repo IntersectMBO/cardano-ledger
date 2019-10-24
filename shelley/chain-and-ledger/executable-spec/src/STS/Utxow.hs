@@ -13,10 +13,15 @@ module STS.Utxow
 where
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq (filter)
 import qualified Data.Set as Set
 
+import           BaseTypes (intervalValue, (==>))
+import           Delegation.Certificates (isInstantaneousRewards)
 import           Keys
-import           LedgerState hiding (dms)
+import           Ledger.Core (dom, (∩))
+import           LedgerState hiding (genDelegs)
+import           PParams (_d)
 import           STS.Utxo
 import           Tx
 import           TxData
@@ -46,6 +51,8 @@ instance
     | MissingScriptWitnessesUTXOW
     | ScriptWitnessNotValidatingUTXOW
     | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo))
+    | MIRInsufficientGenesisSigsUTXOW
+    | MIRImpossibleInDecentralizedNetUTXOW
     deriving (Eq, Show)
 
   transitionRules = [utxoWitnessed]
@@ -60,8 +67,8 @@ initialLedgerStateUTXOW
      )
    => InitialRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakeKeys stakePools dms) <- judgmentContext
-  trans @(UTXO hashAlgo dsignAlgo vrfAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools dms)
+  IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs) <- judgmentContext
+  trans @(UTXO hashAlgo dsignAlgo vrfAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs)
 
 utxoWitnessed
   :: forall hashAlgo dsignAlgo vrfAlgo
@@ -72,11 +79,11 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
 utxoWitnessed = do
-  TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx@(Tx _ wits _))
+  TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx@(Tx txbody wits _))
     <- judgmentContext
   verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
   let witnessKeys = Set.map witKeyHash wits
-  let needed = witsVKeyNeeded (_utxo u) tx _dms
+  let needed = witsVKeyNeeded (_utxo u) tx _genDelegs
   needed `Set.isSubsetOf` witnessKeys  ?! MissingVKeyWitnessesUTXOW
 
   -- check multi-signature scripts
@@ -89,8 +96,19 @@ utxoWitnessed = do
   scriptsNeeded utxo' tx == Map.keysSet (txwitsScript tx)
     ?! MissingScriptWitnessesUTXOW
 
+  -- check genesis keys signatures for instantaneous rewards certificates
+  let mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
+      GenDelegs genMapping = _genDelegs
+      genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
+  (    (not $ null mirCerts)
+   ==> Set.size genSig >= 5)
+      ?! MIRInsufficientGenesisSigsUTXOW
+  (    (not $ null mirCerts)
+   ==> (0 < intervalValue (_d pp)))
+    ?! MIRImpossibleInDecentralizedNetUTXOW
+
   trans @(UTXO hashAlgo dsignAlgo vrfAlgo)
-    $ TRC (UtxoEnv slot pp stakeKeys stakePools _dms, u, tx)
+    $ TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx)
 
 instance
   ( HashAlgorithm hashAlgo

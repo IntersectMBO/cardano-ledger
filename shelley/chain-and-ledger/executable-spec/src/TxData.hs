@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -12,6 +13,7 @@ module TxData
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
                      encodeListLen, encodeWord)
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 
 import           Lens.Micro.TH (makeLenses)
 
@@ -23,13 +25,14 @@ import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
 import           Keys (AnyKeyHash, pattern AnyKeyHash, DSIGNAlgorithm, GenKeyHash, Hash,
-                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, hashAnyKey
-                     , VRFAlgorithm(VerKeyVRF))
+                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, VRFAlgorithm (VerKeyVRF),
+                     hashAnyKey)
 import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
 import           Updates (Update)
@@ -38,7 +41,9 @@ import           Updates (Update)
 data Delegation hashAlgo dsignAlgo = Delegation
   { _delegator :: Credential hashAlgo dsignAlgo
   , _delegatee :: KeyHash hashAlgo dsignAlgo
-  } deriving (Eq, Show)
+  } deriving (Eq, Generic, Show)
+
+instance NoUnexpectedThunks (Delegation hashAlgo dsignAlgo)
 
 -- |A stake pool.
 data PoolParams hashAlgo dsignAlgo vrfAlgo =
@@ -50,19 +55,23 @@ data PoolParams hashAlgo dsignAlgo vrfAlgo =
     , _poolMargin  :: UnitInterval
     , _poolRAcnt   :: RewardAcnt hashAlgo dsignAlgo
     , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
-    } deriving (Show, Eq)
+    } deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (PoolParams hashAlgo dsignAlgo vrfAlgo)
 
 -- |An account based address for rewards
 newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
   { getRwdCred :: StakeCredential hashAlgo signAlgo
-  } deriving (Show, Eq, Ord)
+  } deriving (Show, Eq, NoUnexpectedThunks, Ord)
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential hashAlgo dsignAlgo =
     ScriptHashObj { _validatorHash :: ScriptHash hashAlgo dsignAlgo }
   | KeyHashObj    { _vkeyHash      :: KeyHash hashAlgo dsignAlgo }
   | GenesisHashObj { _genKeyHash   :: GenKeyHash hashAlgo dsignAlgo }
-    deriving (Show, Eq, Ord)
+    deriving (Show, Eq, Generic, Ord)
+
+instance NoUnexpectedThunks (Credential hashAlgo dsignAlgo)
 
 -- |An address for UTxO.
 data Addr hashAlgo dsignAlgo
@@ -76,14 +85,18 @@ data Addr hashAlgo dsignAlgo
       { _paymentObjP :: Credential hashAlgo dsignAlgo
       , _stakePtr :: Ptr
       }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks (Addr hashAlgo dsignAlgo)
 
 type Ix  = Natural
 
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr
   = Ptr Slot Ix Ix
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks Ptr
 
 -- | A simple language for expressing conditions under which it is valid to
 -- withdraw from a normal UTxO payment address or to use a stake address.
@@ -113,28 +126,34 @@ data MultiSig hashAlgo dsignAlgo =
 
        -- | Require M of the given sub-terms to be satisfied.
      | RequireMOf    Int [MultiSig hashAlgo dsignAlgo]
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks (MultiSig hashAlgo dsignAlgo)
 
 newtype ScriptHash hashAlgo dsignAlgo =
   ScriptHash (Hash hashAlgo (MultiSig hashAlgo dsignAlgo))
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
 
 type Wdrl hashAlgo dsignAlgo = Map (RewardAcnt hashAlgo dsignAlgo) Coin
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId hashAlgo dsignAlgo vrfAlgo
   = TxId { _TxId :: Hash hashAlgo (TxBody hashAlgo dsignAlgo vrfAlgo) }
-  deriving (Show, Eq, Ord, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
 
 -- |The input of a UTxO.
 data TxIn hashAlgo dsignAlgo vrfAlgo
   = TxIn (TxId hashAlgo dsignAlgo vrfAlgo) Natural
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Generic, Ord)
+
+instance NoUnexpectedThunks (TxIn hashAlgo dsignAlgo vrfAlgo)
 
 -- |The output of a UTxO.
 data TxOut hashAlgo dsignAlgo
   = TxOut (Addr hashAlgo dsignAlgo) Coin
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Generic, Ord)
+
+instance NoUnexpectedThunks (TxOut hashAlgo dsignAlgo)
 
 type StakeCredential hashAlgo dsignAlgo = Credential hashAlgo dsignAlgo
 
@@ -152,7 +171,11 @@ data DCert hashAlgo dsignAlgo vrfAlgo
   | Delegate (Delegation hashAlgo dsignAlgo)
     -- | Genesis key delegation certificate
   | GenesisDelegate (GenKeyHash hashAlgo dsignAlgo, KeyHash hashAlgo dsignAlgo)
-  deriving (Show, Eq)
+    -- | Move instantaneous rewards certificate
+  | InstantaneousRewards (Map (Credential hashAlgo dsignAlgo) Coin)
+  deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (DCert hashAlgo dsignAlgo vrfAlgo)
 
 -- |A raw transaction
 data TxBody hashAlgo dsignAlgo vrfAlgo
@@ -164,13 +187,18 @@ data TxBody hashAlgo dsignAlgo vrfAlgo
       , _txfee    :: Coin
       , _ttl      :: Slot
       , _txUpdate :: Update hashAlgo dsignAlgo
-      } deriving (Show, Eq)
+      } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (TxBody hashAlgo dsignAlgo vrfAlgo)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey hashAlgo dsignAlgo vrfAlgo
   = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo))
   | WitGVKey (VKeyGenesis dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo))
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance (DSIGNAlgorithm dsignAlgo)
+  => NoUnexpectedThunks (WitVKey hashAlgo dsignAlgo vrfAlgo)
 
 witKeyHash
   :: forall hashAlgo dsignAlgo vrfAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
@@ -191,15 +219,18 @@ data Tx hashAlgo dsignAlgo vrfAlgo
       , _witnessVKeySet :: !(Set (WitVKey hashAlgo dsignAlgo vrfAlgo))
       , _witnessMSigMap ::
           Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
-      } deriving (Show, Eq)
+      } deriving (Show, Eq, Generic)
 
-newtype StakeKeys hashAlgo dsignAlgo =
-  StakeKeys (Map (StakeCredential hashAlgo dsignAlgo) Slot)
-  deriving (Show, Eq)
+instance (DSIGNAlgorithm dsignAlgo)
+  => NoUnexpectedThunks (Tx hashAlgo dsignAlgo vrfAlgo)
+
+newtype StakeCreds hashAlgo dsignAlgo =
+  StakeCreds (Map (StakeCredential hashAlgo dsignAlgo) Slot)
+  deriving (Show, Eq, NoUnexpectedThunks)
 
 newtype StakePools hashAlgo dsignAlgo =
   StakePools (Map (KeyHash hashAlgo dsignAlgo) Slot)
-  deriving (Show, Eq)
+  deriving (Show, Eq, NoUnexpectedThunks)
 
 
 -- CBOR
@@ -239,6 +270,11 @@ instance
       encodeListLen 2
         <> toCBOR (5 :: Word8)
         <> toCBOR keys
+
+    InstantaneousRewards credCoinMap ->
+      encodeListLen 2
+        <> toCBOR (6 :: Word8)
+        <> toCBOR credCoinMap
 
 instance
   (Typeable dsignAlgo, HashAlgorithm hashAlgo, VRFAlgorithm vrfAlgo)
@@ -399,35 +435,35 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
     encodeListLen 1
       <> toCBOR (getRwdCred rwdAcnt)
 
-instance Relation (StakeKeys hashAlgo dsignAlgo) where
-  type Domain (StakeKeys hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo
-  type Range (StakeKeys hashAlgo dsignAlgo)  = Slot
+instance Relation (StakeCreds hashAlgo dsignAlgo) where
+  type Domain (StakeCreds hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo
+  type Range (StakeCreds hashAlgo dsignAlgo)  = Slot
 
-  singleton k v = StakeKeys $ Map.singleton k v
+  singleton k v = StakeCreds $ Map.singleton k v
 
-  dom (StakeKeys stKeys) = dom stKeys
+  dom (StakeCreds stkCreds) = dom stkCreds
 
-  range (StakeKeys stKeys) = range stKeys
+  range (StakeCreds stkCreds) = range stkCreds
 
-  s ◁ (StakeKeys stKeys) = StakeKeys $ s ◁ stKeys
+  s ◁ (StakeCreds stkCreds) = StakeCreds $ s ◁ stkCreds
 
-  s ⋪ (StakeKeys stKeys) = StakeKeys $ s ⋪ stKeys
+  s ⋪ (StakeCreds stkCreds) = StakeCreds $ s ⋪ stkCreds
 
-  (StakeKeys stKeys) ▷ s = StakeKeys $ stKeys ▷ s
+  (StakeCreds stkCreds) ▷ s = StakeCreds $ stkCreds ▷ s
 
-  (StakeKeys stKeys) ⋫ s = StakeKeys $ stKeys ⋫ s
+  (StakeCreds stkCreds) ⋫ s = StakeCreds $ stkCreds ⋫ s
 
-  (StakeKeys a) ∪ (StakeKeys b) = StakeKeys $ a ∪ b
+  (StakeCreds a) ∪ (StakeCreds b) = StakeCreds $ a ∪ b
 
-  (StakeKeys a) ⨃ b = StakeKeys $ a ⨃ b
+  (StakeCreds a) ⨃ b = StakeCreds $ a ⨃ b
 
-  vmax <=◁ (StakeKeys stKeys) = StakeKeys $ vmax <=◁ stKeys
+  vmax <=◁ (StakeCreds stkCreds) = StakeCreds $ vmax <=◁ stkCreds
 
-  (StakeKeys stKeys) ▷<= vmax = StakeKeys $ stKeys ▷<= vmax
+  (StakeCreds stkCreds) ▷<= vmax = StakeCreds $ stkCreds ▷<= vmax
 
-  (StakeKeys stKeys) ▷>= vmin = StakeKeys $ stKeys ▷>= vmin
+  (StakeCreds stkCreds) ▷>= vmin = StakeCreds $ stkCreds ▷>= vmin
 
-  size (StakeKeys stKeys) = size stKeys
+  size (StakeCreds stkCreds) = size stkCreds
 
 -- Lenses
 

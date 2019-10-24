@@ -30,7 +30,7 @@ data AVUPState hashAlgo dsignAlgo
       (Applications hashAlgo)
 
 data AVUPEnv hashAlgo dsignAlgo
-  = AVUPEnv Slot (Dms hashAlgo dsignAlgo)
+  = AVUPEnv Slot (GenDelegs hashAlgo dsignAlgo)
 
 instance STS (AVUP hashAlgo dsignAlgo) where
   type State (AVUP hashAlgo dsignAlgo)
@@ -62,12 +62,12 @@ avUpdateEmpty = do
 
 avUpdateNoConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
 avUpdateNoConsensus = do
-  TRC (AVUPEnv _slot (Dms _dms), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
+  TRC (AVUPEnv _slot (GenDelegs _genDelegs), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
     judgmentContext
 
   not (Map.null _aup) ?! EmptyAVUP
 
-  dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
+  dom _aup ⊆ dom _genDelegs ?! NonGenesisUpdateAVUP
 
   all allApNamesValid (range _aup) ?! InvalidName
 
@@ -84,12 +84,12 @@ avUpdateNoConsensus = do
 
 avUpdateConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
 avUpdateConsensus = do
-  TRC (AVUPEnv _slot (Dms _dms), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
+  TRC (AVUPEnv _slot (GenDelegs _genDelegs), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
     judgmentContext
 
   not (Map.null _aup) ?! EmptyAVUP
 
-  dom _aup ⊆ dom _dms ?! NonGenesisUpdateAVUP
+  dom _aup ⊆ dom _genDelegs ?! NonGenesisUpdateAVUP
 
   all allApNamesValid (range _aup) ?! InvalidName
 

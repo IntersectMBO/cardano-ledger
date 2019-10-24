@@ -12,19 +12,19 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: bb262f466d659d94ed6e5500c2dc101f7c2c6b1e
+  tag: 5c575d46afbfe333de0ccba70b084db8302abf42
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: bb262f466d659d94ed6e5500c2dc101f7c2c6b1e
+  tag: 5c575d46afbfe333de0ccba70b084db8302abf42
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: b9bf62f2bab90539809bee13620fe7d29b35928d
+  tag: f12a60595dbc2436d99a198b717bf26a683b5eec
 
 source-repository-package
   type: git
