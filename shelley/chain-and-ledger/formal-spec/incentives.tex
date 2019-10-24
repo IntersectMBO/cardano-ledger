@@ -119,7 +119,7 @@
   differences between the two schemes.  It is intended to act as a
   simple, easy to follow, guide to the operation of each of the incentives schemes that explains each step of the calculation.
   It assumes a basic familiarity with the concepts of a \emph{blockchain} approach.
-  The incentives scheme is designed to ensure the correct operation of the Ouroborous Praos
+  The incentives scheme is designed to ensure the correct operation of the Ouroboros Praos
   protocol, including maintaining built-in defences against ``Sybil-in-Sybil'' security attacks
   that could lead to corruption of the blockchain.  It builds on sound economic theory.
   A simplified version of the incentives scheme is used for the Incentivised TestNet, using fixed rewards,
@@ -158,7 +158,7 @@ full scheme that will be used in the Shelley MainNet implementation.
 Figure~\ref{fig:terminology} gives some basic terminology that will be used in this document.
 The Shelley implementation rewards those \ada{} holders who either own active stake pools
 (\emph{Owners}) or who delegate stake to active stake pools (\emph{Delegators}).
-In line with the design of the Ouroborous protocol~\cite{ouroboros_classic}, the \emph{StakePool} receives
+In line with the design of the Ouroboros protocol~\cite{ouroboros_classic}, the \emph{StakePool} receives
 rewards in proportion to the stake that it \emph{controls} (``proof of
 stake'') rather than in proportion to the work that it does (``proof of work'').
 This has cost, efficiency and safety advantages.
@@ -171,7 +171,7 @@ so encouraging the creation of additional, smaller StakePools.
 It is also designed to ensure \emph{non-myopic} behaviour.  That is, it avoids chaotic system behaviour by encouraging the delegation of \ada{} to those StakePools that will provide
 the best overall returns over an extended period of time rather than over the short term.
 % This includes limiting the amount of \ada{} that is delegated to any one \emph{StakePool}.
-The overall theory that ensures this is described in the Ouroborous Praos research
+The overall theory that ensures this is described in the Ouroboros Praos research
 paper~\cite{ouroboros_praos}; Section~5 of SL-D1~\cite{delegation_design} provides the design rationale
 for the actual incentives scheme.
 
