@@ -30,7 +30,7 @@ import           STS.Overlay
 import           STS.Updn
 
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
 
 data PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo

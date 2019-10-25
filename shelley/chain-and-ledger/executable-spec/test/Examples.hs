@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Examples
   ( CHAINExample(..)
@@ -33,6 +34,7 @@ module Examples
   , ex6C
   , ex6D
   , ex6E
+  , test6F
   , maxLovelaceSupply
   -- key pairs and example addresses
   , alicePay
@@ -54,6 +56,8 @@ module Examples
   )
 where
 
+import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
+
 import           Cardano.Binary (ToCBOR)
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
@@ -64,8 +68,9 @@ import           Crypto.Random (drgNewTest, withDRG)
 import           Data.ByteString.Char8 (pack)
 import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (delete, elems, empty, fromList, insert, keysSet, singleton)
-import           Data.Maybe (fromMaybe)
+import qualified Data.Map.Strict as Map (delete, elems, empty, fromList, insert, keysSet, member,
+                     singleton, (!?))
+import           Data.Maybe (fromMaybe, isJust, maybe)
 import           Data.Ratio ((%))
 import           Data.Sequence (empty, fromList)
 import           Data.Set (Set)
@@ -79,10 +84,11 @@ import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, Certifie
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
+import           Address (mkRwdAcnt)
 import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, mkUnitInterval, (⭒))
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
                      ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, mkSeed,
-                     seedEta, seedL)
+                     seedEta, seedL, startRewards)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern InstantaneousRewards, pattern PoolDistr,
@@ -95,15 +101,15 @@ import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, p
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
-                     emptyPState, esAccountState, esPp, genesisCoins, genesisId, nesEs,
-                     overlaySchedule, rs, updateIRwd, _cCounters, _delegations, _fGenDelegs,
-                     _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools,
-                     _stkCreds, _treasury)
+                     emptyPState, esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
+                     overlaySchedule, rs, updateIRwd, _cCounters, _delegationState, _delegations,
+                     _dstate, _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves,
+                     _retiring, _rewards, _stPools, _stkCreds, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
-import           Slot (Epoch (..), Slot (..))
+import           Slot (Epoch (..), Slot (..), slotFromEpoch, (+*))
 import           STS.Bbody (pattern LedgersFailure)
-import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes)
+import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, totalAda)
 import           STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
 import           STS.Delegs (pattern DelplFailure)
 import           STS.Delpl (pattern DelegFailure)
@@ -122,10 +128,17 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      updatePPup)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
-import           Control.State.Transition (PredicateFailure)
+import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
 
 data CHAINExample =
   CHAINExample Slot ChainState Block (Either [[PredicateFailure CHAIN]] ChainState)
+
+data MIRExample =
+  MIRExample
+  { mirStkCred :: Credential
+  , mirRewards :: Coin
+  , target     :: Either [[PredicateFailure CHAIN]] ChainState
+  } deriving (Show, Eq)
 
 -- | Set up keys for all the actors in the examples.
 
@@ -620,7 +633,7 @@ txbodyEx2B = TxBody
            ])
            Map.empty
            (Coin 4)
-           (Slot 99)
+           (Slot 90)
            emptyUpdate
 
 txEx2B :: Tx
@@ -2187,3 +2200,126 @@ ex6E =
              (DelegsFailure
               (DelplFailure
                (DelegFailure InsufficientForInstantaneousRewardsDELEG)))))]])
+
+-- | Example 6F - Apply instantaneous rewards at epoch boundary
+
+
+-- | The first transaction adds the MIR certificate that transfers a value of
+-- 100 to Alice.
+
+txbodyEx6F :: TxBody
+txbodyEx6F = TxBody
+              (Set.fromList [TxIn genesisId 0])
+              [TxOut aliceAddr (Coin 9999)]
+              (fromList [InstantaneousRewards ir])
+              Map.empty
+              (Coin 1)
+              (Slot 99)
+              --(slotFromEpoch $ Epoch 1)
+              emptyUpdate
+
+txEx6F :: Tx
+txEx6F = Tx txbodyEx6F
+            (makeWitnessesVKey txbodyEx6F [ alicePay ]  `Set.union` makeGenWitnessesVKey txbodyEx6F
+             [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
+             , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
+             , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
+             , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
+             , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
+             ])
+            Map.empty
+
+blockEx6F :: Block
+blockEx6F = mkBlock
+              lastByronHeaderHash
+              (coreNodeKeys 3)
+              [txEx6F]
+              (Slot 90)
+              (mkNonce 0)
+              (NatNonce 1)
+              zero
+              1
+
+-- | The second transaction in the next epoch and at least `startRewards` slots
+-- after the transaction carrying the MIR certificate, then creates the rewards
+-- update that contains the transfer of `100` to Alice.
+
+txbodyEx6F' :: TxBody
+txbodyEx6F' = TxBody
+               (Set.fromList [TxIn (txid txbodyEx6F) 0])
+               [TxOut aliceAddr (Coin 9998)]
+               empty
+               Map.empty
+               (Coin 1)
+               ((slotFromEpoch $ Epoch 1) +* startRewards + Slot 7)
+               emptyUpdate
+
+txEx6F' :: Tx
+txEx6F' = Tx txbodyEx6F' (makeWitnessesVKey txbodyEx6F' [ alicePay ]) Map.empty
+
+blockEx6F' :: Block
+blockEx6F' = mkBlock
+              (bhHash (bheader blockEx6F))
+              (coreNodeKeys 1)
+              [txEx6F']
+              ((slotFromEpoch $ Epoch 1) +* startRewards + Slot 7)
+              (mkNonce 0)
+              (NatNonce 1)
+              zero
+              1
+
+-- | The third transaction in the next epoch applies the reward update to 1)
+-- register a staking credential for Alice, 2) deducing the key deposit from the
+-- 100 and to 3) create the reward account with an initial amount of 93.
+
+txbodyEx6F'' :: TxBody
+txbodyEx6F'' = TxBody
+                (Set.fromList [TxIn (txid txbodyEx6F') 0])
+                [TxOut aliceAddr (Coin 9997)]
+                empty
+                Map.empty
+                (Coin 1)
+                ((slotFromEpoch $ Epoch 2) + Slot 10)
+                emptyUpdate
+
+txEx6F'' :: Tx
+txEx6F'' = Tx txbodyEx6F'' (makeWitnessesVKey txbodyEx6F'' [ alicePay ]) Map.empty
+
+blockEx6F'' :: Block
+blockEx6F'' = mkBlock
+               (bhHash (bheader blockEx6F'))
+               (coreNodeKeys 6)
+               [txEx6F'']
+               ((slotFromEpoch $ Epoch 2) + Slot 10)
+               (mkNonce 0)
+               (NatNonce 1)
+               zero
+               2
+
+ex6F' :: Either [[PredicateFailure CHAIN]] ChainState
+ex6F' = do
+  nextState <- applySTS @CHAIN (TRC (Slot 90, initStEx2A, blockEx6F))
+  midState <-
+    applySTS @CHAIN (TRC (((slotFromEpoch $ Epoch 1) + Slot 7) +* startRewards, nextState, blockEx6F'))
+  finalState <-
+    applySTS @CHAIN (TRC (((slotFromEpoch $ Epoch 2) + Slot 10), midState, blockEx6F''))
+
+  pure finalState
+
+-- | Tests that after getting instantaneous rewards, creating the update and
+-- then applying the update, Alice's key is actually registered, the key deposit
+-- value deducted and the remaining value credited as reward.
+test6F :: Assertion
+test6F = do
+  case ex6F' of
+    Left _ -> assertFailure "encountered error state"
+    Right ex6FState -> do
+      let getDState = _dstate . _delegationState . esLState . nesEs . chainNes
+          ds = getDState ex6FState
+          StakeCreds stkCreds = _stkCreds ds
+          rews = _rewards ds
+          rewEntry = rews Map.!? (mkRwdAcnt aliceSHK)
+      assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
+      assertBool "Alice's reward account does not exist" $ isJust rewEntry
+      assertBool "Alice's rewards are wrong" $ maybe False (== Coin 93) rewEntry
+      assertBool "Total amount of ADA is not preserved" $ maxLovelaceSupply == totalAda ex6FState
