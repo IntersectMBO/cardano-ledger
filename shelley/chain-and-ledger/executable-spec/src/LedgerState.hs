@@ -1187,7 +1187,7 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
         StakeCreds stkcreds = _stkCreds ds
 
         -- instantaneous rewards
-        unregistered = Map.filterWithKey (\cred _ -> cred `Map.member` stkcreds) (_irwd ds)
+        unregistered = Map.filterWithKey (\cred _ -> cred `Map.notMember` stkcreds) (_irwd ds)
         registered = Map.difference (_irwd ds) unregistered
         rewardsInsufficient = Map.filter (<= _keyDeposit pp) unregistered
         newlyRegister = Map.difference unregistered rewardsInsufficient
@@ -1197,7 +1197,7 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
 
         newlyRegister' = Map.map (flip (-) $ _keyDeposit pp) newlyRegister
         reserves'' = reserves' - rewardsMIR
-        deltaD = Coin $ fromIntegral $ Map.size newlyRegister'
+        deltaD = _keyDeposit pp * Coin (fromIntegral $ Map.size newlyRegister')
         newIrwd = Map.union registered newlyRegister'
 
         -- reserves and rewards change
