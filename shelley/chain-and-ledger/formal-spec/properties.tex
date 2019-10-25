@@ -1,9 +1,349 @@
+\newcommand{\Val}{\fun{Val}}
+\newcommand{\POV}[1]{\ensuremath{\mathsf{PresOfVal}(\mathsf{#1})}}
+
 \section{Properties}
 \label{sec:properties}
 
-In this section we discuss the properties which we want the ledger to have. One
-goal is to include these properties in the executable specification for doing
+This section describes the properties that the ledger should have. The goal is to
+to include these properties in the executable specification to enable e.g.
 property-based testing or formal verification.
+
+\subsection{Preservation of Value}
+\label{sec:preservation-of-value}
+
+As visualized in Figure~\ref{fig:fund-preservation},
+the total amount of lovelace in any given chain state
+$\var{s}\in\ChainState$ is completely contained within the values of the six
+variables:
+
+\begin{tabular}{||l|l|l|l||}\hline\hline
+
+  \textbf{Variable} & \textbf{Name in Figure~\ref{fig:fund-preservation}}
+                    & \textbf{Nesting Inside Chain State} & \textbf{Kind} \\ \hline
+  utxo & circulation & s.nes.es.ls.utxoSt & Map over Lovelace Values  \\ \hline
+  deposits & deposits &  s.nes.es.ls.utxoSt & Lovelace Value ($\Coin$) \\ \hline
+  fees & fees &  s.nes.es.ls.utxoSt & Lovelace Value ($\Coin$) \\ \hline
+  rewards & reward accounts & s.nes.es.ls.dpstate.dstate  & Lovelace Value ($\Coin$)  \\ \hline
+  treasury & treasury &  s.nes.es.acnt  & Lovelace Value ($\Coin$) \\ \hline
+  reserves & reserves & s.nes.es.acnt & Map over Lovelace Values \\ \hline
+  \hline
+\end{tabular}
+
+\noindent
+Notice that $\var{deposits}$, $\var{fees}$, $\var{treasury}$, and $\var{reserves}$
+are all single lovelace values, while $\var{utxo}$, and $\var{rewards}$ are
+maps whose values are lovelace.
+
+We define the \emph{Lovelace Value} of a given chain state as:
+\begin{definition}[Lovelace Value]
+  \label{def:val}
+  \begin{equation*}
+    \Val(s~\in~\var{State}) =
+        \Val(\var{utxo}) +
+            \Val(\var{deposits}) +
+            \Val(\var{fees}) +
+            \Val(\var{reserves}) +
+            \Val(\var{treasury}) +
+            \Val(\var{rewards})
+  \end{equation*}
+  where
+  \begin{equation*}
+      \Val(x \in \Coin) = x
+  \end{equation*}
+  \begin{equation*}
+      \Val((\wcard\mapsto (y \in \Coin))^{*}) = \sum y
+  \end{equation*}
+\end{definition}
+
+\noindent
+For any state that is used in a given subtransition of $\mathsf{CHAIN}$,
+we define $\Val{}$ in an analogous way, setting the value of any variable that is not explicitly
+represented in the state to zero.
+For example, given $\var{utxoSt}\in\UTxOState$,
+\begin{equation*}
+  \Val(\var{utxoSt}) =
+  \left(\sum_{\wcard\mapsto v\in\var{utxo}}v\right) + \var{deposits} + \var{fees}
+\end{equation*}
+
+\noindent
+The key property that we want to prove is that no semantic transition changes the value that
+is captured in the state ($\Val{s}$).
+This property is easy to state: intuitively,
+the \emph{Lovelace Value}before the transition is the same as the
+\emph{Lovelace Value} after that transition.
+
+\begin{theorem}[Preservation of Value]
+  \label{thm:chain-pres-of-value}
+  For all environments $e$, blocks $b$, and states $s$, $s'$, if
+  \begin{equation*}
+    e\vdash s\trans{\hyperref[fig:rules:chain]{chain}}{b}s'
+  \end{equation*}
+  then
+  \begin{equation*}
+    \Val(s) = \Val(s')
+  \end{equation*}
+\end{theorem}
+
+\noindent
+We will prove the soundness of Theorem~\ref{thm:chain-pres-of-value} via a few lemmas.
+
+\begin{lemma}
+  \label{lemma:value-sum-pres-1}
+  For any mapping $m:A\mapsto\Coin$ and set $s\in\powerset{A}$,
+  \begin{equation*}
+    \Val(\var{m}) = \Val(s\subtractdom m) + \Val(s\restrictdom m)
+  \end{equation*}
+\end{lemma}
+\begin{proof}
+  easy
+\end{proof}
+
+\begin{lemma}
+  \label{lemma:value-sum-pres-2}
+  For any mappings $m_1, m_2:A\mapsto\Coin$,
+  if $\dom{m_1}\cap\dom{m_2}=\emptyset$,
+  then
+  \begin{equation*}
+    \Val(m_1\cup m_2) = \Val(m_1) + \Val(m_2)
+  \end{equation*}
+\end{lemma}
+\begin{proof}
+  easy
+\end{proof}
+
+\begin{lemma}
+  \label{lemma:utxo-pres-of-value}
+  For all environments $e$, transactions $t$, and states $s$, $s'$, if
+  \begin{equation*}
+    e\vdash s\trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{t}s'
+  \end{equation*}
+  then
+  \begin{equation*}
+    \Val(s) + w = \Val(s')
+  \end{equation*}
+  where $w = \fun{wbalance}~(\fun{txwdrls}~{t})$.
+\end{lemma}
+
+\begin{proof}
+  The proof is essentially unfolding the definition of the predicate
+  \begin{equation}
+    \label{cons-is-prod}
+    \consumed{pp}{utxo}{stkCreds}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
+  \end{equation}
+  and applying a little algebra.
+%
+If we let:
+  \begin{equation*}
+    \begin{array}{r@{~=~}l}
+      k & \keyRefunds{pp}{stkCreds}{tx} \\
+      f & \txfee{tx} \\
+      d & \deposits{pp}{stpools}~{(\txcerts{tx})} \\
+      c & \decayedTx{pp}{stkCreds}~{tx} \\
+    \end{array}
+  \end{equation*}
+  then equation~\ref{cons-is-prod} can be rewritten as:
+  \begin{equation*}
+    \Val(\txins{t} \restrictdom{\var{utxo}}) + w + k = \Val(\outs{t}) + f + d
+  \end{equation*}
+  where $\outs{}$ is defined in Figure~\ref{fig:functions:utxo} and returns a value of type $\UTxO$.
+  Therefore, moving $k$ to the right and adding $\txins{t} \subtractdom{\var{utxo}}$ to each side,
+  \begin{equation*}
+    \Val(\txins{t} \restrictdom{\var{utxo}}) + \Val(\txins{t} \subtractdom{\var{utxo}}) + w
+    = \Val(\outs{t}) + f + d - k + \Val(\txins{t} \subtractdom{\var{utxo}})
+  \end{equation*}
+  Note that $d-k-c$ is non-negative since the deposits will always be large enough to cover
+  the current obligation (a fact we will prove later).
+%
+  It then follows that:
+  \begin{equation*}
+    \begin{array}{r@{~=~}lr}
+      \Val(\var{utxo}) + w
+    & \Val(\outs{t}) + f + d - k + \Val(\txins{t} \subtractdom{\var{utxo}})
+    & \text{(by Lemma~\ref{lemma:value-sum-pres-1})}
+    \\
+    & \Val((\txins{t} \subtractdom{\var{utxo}})\cup\outs{t}) + f + d - k
+    & \text{(by Lemma~\ref{lemma:value-sum-pres-2})}
+    \\
+    & \Val((\txins{t} \subtractdom{\var{utxo}})\cup\outs{t}) + (d-k-c) + (f+c)
+    & \text{(by adding $c-c$)}
+    \end{array}
+  \end{equation*}
+  Therefore $\Val(s) + w = \Val(s')$.
+\end{proof}
+
+\begin{lemma}
+  \label{lemma:deleg-pres-of-value}
+  For all environments $e$, transactions $c$, and states $s$, $s'$, if
+  \begin{equation*}
+    e\vdash s\trans{\hyperref[fig:delegation-rules]{deleg}}{c}s'
+  \end{equation*}
+  then
+  \begin{equation*}
+    \Val(s) = \Val(s')
+  \end{equation*}
+\end{lemma}
+
+\begin{proof}
+  The only variable with value in this transition is \var{rewards}.
+  Only two of the rules in $\mathsf{DELEG}$ can change \var{rewards},
+  namely $\mathsf{Deleg{-}Reg}$ and $\mathsf{Deleg{-}Dereg}$.
+  However, $\mathsf{Deleg{-}Reg}$ only adds a zero value,
+  and $\mathsf{Deleg{-}Dereg}$ only removes a zero value.
+\end{proof}
+
+\begin{lemma}
+  \label{lemma:delegs-pres-of-value}
+  For all environments $e$, certificates $\Gamma$, and states $s$, $s'$, if
+  \begin{equation*}
+    e\vdash s\trans{\hyperref[fig:rules:delegation-sequence]{delegs}}{\Gamma}s'
+  \end{equation*}
+  then
+  \begin{equation*}
+    \Val(s) = \Val(s') + w
+  \end{equation*}
+  where $w = \fun{wbalance}~(\fun{txwdrls}~{t})$,
+  and $t$ is the transaction in the environment $e$.
+\end{lemma}
+
+\begin{proof}
+  The proof is by induction on the length of $\Gamma$.
+  Note that the only variable with value in this transition is \var{rewards}.
+
+  \vspace{2ex}
+  \noindent
+  \emph{In the base case}, we look at the rule $\mathsf{Seq{-}delg{-}base}$.
+  Since $\var{wdrls}\subseteq\var{rewards}$, then
+  $\var{rewards} = \var{wdrls}\cup\var{(\var{rewards}\setminus\var{wdrls})}$.
+%
+  Therefore
+  \begin{equation*}
+    \begin{array}{r@{~=~}lr}
+      \Val{(\var{rewards})}
+      & \Val{(\var{rewards}\setminus\var{wdrls})} + \Val{(\var{wdrls})}
+      & \text{by Lemma~\ref{lemma:value-sum-pres-2}}
+      \\
+      & \Val{(\var{rewards}\setminus\var{wdrls})} + w
+      & \text{by definition}
+      \\
+      & \Val\left(\var{rewards}\unionoverrideRight\{(w, 0) \mid w \in \dom \var{wdrls}\}\right) + w
+    \end{array}
+  \end{equation*}
+  Therefore $\Val(s) = \Val(s')$.
+
+  \vspace{2ex}
+  \noindent
+  \emph{In the inductive case}, we look at the rule $\mathsf{Seq{-}delg{-}ind}$.
+  In this case, the lemma then follows directly from Lemma~\ref{lemma:deleg-pres-of-value}.
+\end{proof}
+
+\begin{lemma}
+  \label{lemma:poolreap-pres-of-value}
+  For all environments $e$, epoch $\epsilon$, and states $s$, $s'$, if
+  \begin{equation*}
+    e\vdash s\trans{\hyperref[fig:rules:pool-reap]{poolreap}}{\epsilon}s'
+  \end{equation*}
+  then
+  \begin{equation*}
+    \Val(s) = \Val(s')
+  \end{equation*}
+\end{lemma}
+
+\begin{proof}
+  The $\mathsf{POOLREAP}$ value is contained in
+  $\var{deposits}$, $\var{treasury}$, and $\var{rewards}$.
+  Notice that $\var{unclaimed}$ is added to $\var{treasury}$
+  and subtracted from the $\var{deposits}$.
+  Moreover, $\var{refunded}$ is subtracted from $\var{deposits}$.
+  (We will prove that $\var{deposits}-\var{unclaimed}+\var{refunded}$
+  is non-negative in a subsequent theorem.)
+  It therefore suffices to show that
+  \begin{equation*}
+    \begin{array}{r@{~=~}l}
+    \Val(\var{rewards}\unionoverridePlus\var{refunds})
+    & \Val(\var{rewards}) + \Val(\var{refunds})
+    \\
+    & \Val(\var{rewards}) + \var{refunded}
+    \end{array}
+  \end{equation*}
+  But this is clear from the definition of $\unionoverridePlus$.
+\end{proof}
+
+\begin{lemma}
+  \label{lemma:ru-pres-of-value}
+  For all mappings $b$ of blocks made, epochs $\epsilon$, and epoch states $s$,
+  \begin{equation*}
+    \Val(s) = \Val(\fun{applyRUpd}~(\fun{createRUpd}~b~s)~\epsilon~s)
+  \end{equation*}
+\end{lemma}
+
+\begin{proof}
+  In the definition of $\fun{applyRUpd}$ in Figure~\ref{fig:functions:reward-update-application},
+  we see that:
+  \begin{equation*}
+      \Delta t + \Delta r + \Val(rs) + \Val(\var{update_{rwd}}) + \Delta d + \Delta f = 0
+  \end{equation*}
+  In the definition of $\fun{createRUpd}$ in Figure~\ref{fig:functions:reward-update-creation},
+  we see that:
+  \begin{equation*}
+    \begin{array}{r@{~=~}l}
+      \var{rewardPot} & \var{feeSS} + \Delta r_1 \\
+      \var{R} & \var{rewardPot} - \Delta t_1 \\
+      \Delta t_2 & R \\
+    \end{array}
+  \end{equation*}
+  Therefore
+  \begin{equation*}
+    \begin{array}{c}
+      (\var{feeSS} + \Delta r_1) - \Delta t_1 - \Val(rs) = \Delta t_2 \\
+      0 = (\Delta t_1 + \Delta t_2 ) - \Delta r_1 + \Val(rs)- \var{feeSS} \\
+    \end{array}
+  \end{equation*}
+  So it suffices to show that $\Delta d + \Val(\var{update_{rwd}}) = \var{rewards}_{\var{mir}}$.
+  Notice that
+  \begin{equation*}
+    \begin{array}{r@{~=~}l}
+      \Val(\var{update}_{rwd}) & \Val(registered) + \Val(newlyRegister')
+      \\
+      \var{rewards}_{mir} & \Val(registered) + \Val(newlyRegister)
+      \\
+      \Delta d + \Val(newlyRegister') & \Val(newlyRegister)
+    \end{array}
+  \end{equation*}
+  $\Delta d + \Val(\var{update_{rwd}}) = \var{rewards}_{\var{mir}}$
+  follows by adding $\Val(registered)$ to both sides of the third
+  equality above, and then substituting using the other two equalities.
+\end{proof}
+
+\noindent
+We are now ready to prove Theorem~\ref{thm:chain-pres-of-value}.
+
+\begin{proof}
+  For a given transition $\mathsf{TR}$, let \POV{TR}
+  be the statement:
+
+  \begin{tabular}{l}
+    for all environments $e$, signals $\sigma$, and states $s$, $s'$,
+    $$
+    $e\vdash s\trans{tr}{\sigma}s'~\implies~\Val(s) = \Val(s')$.
+    $$
+  \end{tabular}
+
+  \noindent
+  Our goal is to prove \POV{CHAIN}.
+  Lemmas~\ref{lemma:utxo-pres-of-value} and \ref{lemma:delegs-pres-of-value} imply \POV{LEDGER},
+  since $\mathsf{UTXOW}$ transforms state exactly as $\mathsf{UTXO}$ does.
+  \POV{LEDGERS} then follows by straightforward induction on the length of $\Gamma$:
+  the base case is trivial;
+  and the inductive case follows directly from \POV{LEDGER}.
+%
+  \POV{SNAP} holds since $\var{decayed}$ is added to $\var{fees}$
+  and subtracted from $\var{deposits}$.
+  Similarly, \POV{NEWPP} holds since $\var{diff}$ is added to $\var{reserves}$
+  and subtracted from $\var{deposits}$.
+  Therefore \POV{EPOCH} holds by Lemma~\ref{lemma:poolreap-pres-of-value}
+  and \POV{NEWEPOCH} holds by Lemma~\ref{lemma:ru-pres-of-value}.
+  \POV{CHAIN} easily follows from this.
+\end{proof}
 
 \subsection{Validity of a Ledger State}
 \label{sec:valid-ledg-state}
