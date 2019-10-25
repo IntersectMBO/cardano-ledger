@@ -109,7 +109,7 @@ import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (Epoch (..), Slot (..), slotFromEpoch, (+*))
 import           STS.Bbody (pattern LedgersFailure)
-import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes)
+import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, totalAda)
 import           STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
 import           STS.Delegs (pattern DelplFailure)
 import           STS.Delpl (pattern DelegFailure)
@@ -2322,3 +2322,4 @@ test6F = do
       assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 93) rewEntry
+      assertBool "Total amount of ADA is not preserved" $ maxLovelaceSupply == totalAda ex6FState
