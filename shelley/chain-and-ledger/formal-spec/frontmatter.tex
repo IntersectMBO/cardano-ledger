@@ -33,15 +33,6 @@
 \floatstyle{boxed}
 \restylefloat{figure}
 \cleardoublepage
-% \begin{center}
-%   \large{Executive Summary}
-% \end{center}
-
-% \noindent
-% This document provides a formal specification of the Cardano ledger for use in the Shelley implementation.
-% It is intended to form the basis for an executable specification that will be the basis of the initial
-% release.
-% \cleardoublepage
 \renewcommand{\thepage}{\arabic{page}}
 \setcounter{page}{1}
 
@@ -63,9 +54,8 @@ It will be used to define properties and tests, and to provide the basis for str
 using mathematical proof techniques.
 The document defines the rules for extending the ledger with transactions
 that will affect both UTxO and stake delegation.
-Key properties that have been identified include ...
-% This will serve as the specification for random generators of transactions
-% which adhere to the rules presented here, and that will.
+Key properties that have been identified include the preservation of balances, absence of double spend, stakepool registration,
+and reward splitting.
 \end{abstract}
 
 \section*{List of Contributors}
