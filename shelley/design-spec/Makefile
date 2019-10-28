@@ -19,6 +19,14 @@ all: $(DOCNAME).pdf
 ##
 ## CUSTOM BUILD RULES
 ##
+<<<<<<< HEAD
+${DOCNAMe}.bbl: $(DOCNAME).tex
+	touch  $(DOCNAME).bbl
+=======
+delegation_design_spec.bbl:
+  touch delegation_design_spec.bbl
+>>>>>>> 562f1bd... resolve biblio conflicts
+
 
 ##
 ## MAIN LATEXMK RULE
