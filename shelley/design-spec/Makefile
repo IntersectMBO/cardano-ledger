@@ -19,6 +19,9 @@ all: $(DOCNAME).pdf
 ##
 ## CUSTOM BUILD RULES
 ##
+$(DOCNAME).pdf: $(DOCNAME).bbl
+	touch  $(DOCNAME).bbl
+
 
 ##
 ## MAIN LATEXMK RULE
