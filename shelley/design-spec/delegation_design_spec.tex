@@ -1720,7 +1720,7 @@ already up to date and receives two conflicting blocks that add to its current
 chain, the length will of course always be the same. But this rule is important:
 if we did not compare the lengths of the chains before giving preference to the
 block with the newer operational certificate, it would be possible to force a
-node to do a rollback of arbitraty length, by sending it a block from a past
+node to do a rollback of arbitrary length, by sending it a block from a past
 slot, signed using a newer certificate than the block that the node already has
 in its chain for that slot. This would open up an attack where a stake pool
 operator could force nodes to do arbitrary rollbacks.
@@ -1811,7 +1811,7 @@ leader schedule for the next epoch:
 \subsubsection{Rewards during the Transition Phase}
 \label{rewards-during-the-transition-phase}
 
-We do this soft transition as a derisking strategy, so that we can intervene in
+We do this soft transition as a de-risking strategy, so that we can intervene in
 case we observe any difficulties in the decentralised system. But we do not want
 this to have an effect on the rewards that pools get. Operational difficulties
 of the overall system that cause us to slow down the transition should not
@@ -2111,7 +2111,7 @@ Doing all that \emph{at} the transition between two epochs is far from ideal. It
 creates a time period where all the nodes will need additional resources. It
 also requires that all nodes finish those calculations within a single slot
 length, and failure to do so will result in missed blocks and temporary forks.
-Worse, since this period of increased activity is perfectly predictble, any
+Worse, since this period of increased activity is perfectly predictable, any
 attacker of the system can leverage this, and time their attack appropriately to
 maximise impact. Effectively, a predetermined breaking point is introduced at
 the epoch boundary.
@@ -2397,7 +2397,7 @@ pointing to a JSON object with the following content:
   keywords that can be used to filter stake pools in the wallet UI. For example,
   a stake pool that gives their rewards to a charity might indicate this by
   using a ``charity'' tag. Other tags could specify the geographic location, or
-  whether a pool is running on cloud infrastructure or a physcial server owned
+  whether a pool is running on cloud infrastructure or a physical server owned
   by the pool operator.
 \end{description}
 All characters in the metadata will be UTF8 encoded. The metadata is restricted
@@ -2432,7 +2432,7 @@ Another function that the metadata proxy servers provide is filtering malicious
 entries: it is possible to embed a variety of malicious content in the metadata,
 and in particular via the link to the stake pool's homepage. Should it become
 known that a particular pool hosts dangerous or illegal
-content\footnote{for example phishing or trojan software, with the purpose of
+content\footnote{for example phishing or Trojan software, with the purpose of
   infecting the computer the wallet is running on}, maintainers of
 a metadata proxy can filter that entry and not provide it to wallets. This is an
 advantage over writing the metadata directly to the chain, in which case there
@@ -2821,7 +2821,7 @@ where
   which we want to calculate the rewards pot.
 \end{itemize}
 
-The dependece on \(\eta\) incentivises cooperative behaviour, and in particular
+The dependence on \(\eta\) incentivises cooperative behaviour, and in particular
 discourages the pools sabotaging each others blocks. Note that \(\eta\) can
 exceed \(1\) when there are more blocks produced in an epoch than would be
 expected on average. But the product \(\min(\eta, 1)\rho\) is always bounded by
@@ -2877,7 +2877,7 @@ the stake pledged by the owner(s)). This does eliminate any incentive for a pool
 to try to sabotage another pool (be it through ignoring their blocks, or even by
 mounting DoS attacks on their nodes). However, it does not incentivise pool
 operators to ensure that their pool performs well (i.e., produces most of the
-blocks it is eligible to create). This invites freeriders, pools that rely on
+blocks it is eligible to create). This invites free-riders, pools that rely on
 other pools to maintain the system, and collect rewards without doing any work.
 
 For Cardano, we will stay close to the scheme of~\citep{bkks2018}, but we will
@@ -3133,7 +3133,7 @@ the owner(s).
 \subsubsection{Non-Myopic Pool Stake}
 \label{non-myopic-pool-stake}
 
-Consider a pool with pleded owner stake \(s\), total stake \(\sigma\) and rank
+Consider a pool with pledged owner stake \(s\), total stake \(\sigma\) and rank
 \(r\). We define its \emph{non-myopic stake} \(\sigma_\mathrm{nm}\) as
 \[
     \sigma_\mathrm{nm}(s,\sigma,r) :=
@@ -3185,7 +3185,7 @@ of the owners' stake and the stake that this member chooses to delegate.
 Using the apparent performance of a pool \emph{within the last epoch} is not
 suitable for determining the long-term expected rewards for delegating to a
 pool. Rather, one should use the average apparent performance over several
-epochs. This avoids prefering or discarding a pool just because it performed
+epochs. This avoids preferring or discarding a pool just because it performed
 exceptionally well or bad in one particular epoch. If the ratio of the number of
 stake pools and the number of expected blocks per epoch is large, this becomes
 even more important, since the apparent performance in a single epoch would be
@@ -3853,7 +3853,7 @@ In the following, we describe how the requirements listed in
   fees for using multiple staking keys. This will give them a level of
   pseudonymity that is not worse than that in the Ethereum network.
 
-  They can also choose to use a distinct staking key per address, or addesses
+  They can also choose to use a distinct staking key per address, or addresses
   with no staking key at all, which gives pseudonymity that is no worse than in
   Bitcoin.
 
@@ -3894,7 +3894,7 @@ discarded for Cardano.
   \end{itemize}
 \item
   We wish to avoid arbitrary growth in the UTxO (or any other globally
-  replicated record, eg contents of epoch boundary blocks).
+  replicated record, e.g. contents of epoch boundary blocks).
 
   \begin{itemize}
   \item
@@ -4431,7 +4431,7 @@ there is no hope to achieve this, and the rational behaviour is to just play by
 the rules and include the certificate.
 
 The situation where each pool accepts submitted certificates is a \emph{Nash
-  Equlibrium}, where no player can benefit from deviating from this beaviour.
+  Equilibrium}, where no player can benefit from deviating from this behaviour.
 Such configurations are stable, since getting to a different state requires
 either collusion between a large number of players, or players acting
 irrationally against their own interests.
