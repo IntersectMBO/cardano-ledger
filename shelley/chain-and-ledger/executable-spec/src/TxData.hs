@@ -228,6 +228,9 @@ newtype StakeCreds hashAlgo dsignAlgo =
   StakeCreds (Map (StakeCredential hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq, NoUnexpectedThunks)
 
+addStakeCreds :: (StakeCredential hashAlgo dsignAlgo) -> Slot -> (StakeCreds hashAlgo dsignAlgo) -> StakeCreds hashAlgo dsignAlgo
+addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
+
 newtype StakePools hashAlgo dsignAlgo =
   StakePools (Map (KeyHash hashAlgo dsignAlgo) Slot)
   deriving (Show, Eq, NoUnexpectedThunks)

@@ -120,8 +120,8 @@ import           STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                     _paymentObj, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
-                     _poolRAcnt, _poolVrf)
+                     addStakeCreds, _paymentObj, _poolCost, _poolMargin, _poolOwners, _poolPledge,
+                     _poolPubKey, _poolRAcnt, _poolVrf)
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
                      pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState,
