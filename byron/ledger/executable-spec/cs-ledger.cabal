@@ -23,7 +23,7 @@ flag development
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Hedgehog.Gen.Aux
+  exposed-modules:     Hedgehog.Gen.Double
                      , Ledger.Core
                      , Ledger.Core.Generators
                      , Ledger.Core.Omniscient

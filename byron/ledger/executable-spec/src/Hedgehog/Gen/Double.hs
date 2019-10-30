@@ -1,6 +1,6 @@
 -- | Generally useful generators not present in the upstream release
 -- of Hedgehog
-module Hedgehog.Gen.Aux (doubleInc) where
+module Hedgehog.Gen.Double (doubleInc) where
 
 import           Data.Bits (shiftL)
 import           Data.Word (Word64)
