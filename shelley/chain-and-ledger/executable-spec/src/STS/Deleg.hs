@@ -49,6 +49,7 @@ instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
     | GenesisKeyNotInpMappingDELEG
     | DuplicateGenesisDelegateDELEG
     | InsufficientForInstantaneousRewardsDELEG
+    | MIRCertificateTooLateinEpochDELEG
     deriving (Show, Eq)
 
   initialRules = [pure emptyDState]
@@ -100,7 +101,9 @@ delegationTransition = do
     InstantaneousRewards credCoinMap -> do
       let combinedMap = Map.union credCoinMap (_irwd ds)
           requiredForRewards = foldl (+) (Coin 0) (range combinedMap)
-
+          Epoch currEpoch = epochFromSlot slot_
+      slot_ < (firstSlot $ Epoch (currEpoch + 1)) *- slotsPrior
+        ?! MIRCertificateTooLateinEpochDELEG
       requiredForRewards <= reserves_ ?! InsufficientForInstantaneousRewardsDELEG
 
       pure $ ds { _irwd = combinedMap }
