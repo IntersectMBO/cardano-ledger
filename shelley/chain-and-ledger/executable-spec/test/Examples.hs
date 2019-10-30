@@ -2246,7 +2246,6 @@ txbodyEx6F = TxBody
               Map.empty
               (Coin 1)
               (Slot 99)
-              --(slotFromEpoch $ Epoch 1)
               emptyUpdate
 
 txEx6F :: Tx
@@ -2263,13 +2262,13 @@ txEx6F = Tx txbodyEx6F
 blockEx6F :: Block
 blockEx6F = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 3)
+              (coreNodeKeys 6)
               [txEx6F]
-              (Slot 90)
+              (Slot 10)
               (mkNonce 0)
               (NatNonce 1)
               zero
-              1
+              0
 
 -- | The second transaction in the next epoch and at least `startRewards` slots
 -- after the transaction carrying the MIR certificate, then creates the rewards
