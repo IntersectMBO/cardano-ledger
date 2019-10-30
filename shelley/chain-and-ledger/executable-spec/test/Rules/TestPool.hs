@@ -112,33 +112,34 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
 
 -- | Check that a `RegPool` certificate properly adds a stake pool.
 registeredPoolIsAdded
-  :: MonadTest m
+  :: forall m
+   . MonadTest m
   => Environment LEDGER
   -> [SourceSignalTarget POOL]
   -> m ()
 registeredPoolIsAdded env ssts =
-  assertAll addedRegPool ssts
+  mapM_ addedRegPool ssts
 
  where
 
   addedRegPool :: SourceSignalTarget POOL
-               -> Bool
+               -> m ()
   addedRegPool sst =
     case signal sst of
       RegPool poolParams -> check poolParams
-      _ -> True
+      _ -> pure ()
    where
-    check :: PoolParams -> Bool
-    check poolParams =
+    check :: PoolParams -> m ()
+    check poolParams = do
       let hk = poolParams ^. poolPubKey
           pSt = target sst
-          -- PoolParams are registered in pParams map
-       in M.lookup hk (pSt ^. pParams) == Just poolParams
-          -- Hashkey is registered in stPools map
-       && M.lookup hk (pSt ^. stPools . to (\(StakePools x) -> x))
-            == Just (ledgerSlot env)
-          -- Hashkey is registered in cCounters map
-       && hk ∈ M.keys (pSt ^. cCounters)
+      -- PoolParams are registered in pParams map
+      M.lookup hk (pSt ^. pParams) === Just poolParams
+      -- Hashkey is registered in stPools map
+      M.lookup hk (pSt ^. stPools . to (\(StakePools x) -> x))
+        === Just (ledgerSlot env)
+      -- Hashkey is registered in cCounters map
+      assert (hk ∈ M.keys (pSt ^. cCounters))
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
