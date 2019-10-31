@@ -7,6 +7,7 @@
 
 module Rules.TestPool where
 
+import           Control.Monad (when)
 import           Data.Foldable (traverse_)
 import           Data.Map (Map, (!?))
 import qualified Data.Map as M
@@ -24,7 +25,8 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
-import           LedgerState (pattern PState, cCounters, pParams, stPools, _retiring, _stPools)
+import           LedgerState (pattern PState, cCounters, pParams, retiring, stPools, _retiring,
+                     _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (Epoch (..), epochFromSlot)
@@ -112,33 +114,41 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
 
 -- | Check that a `RegPool` certificate properly adds a stake pool.
 registeredPoolIsAdded
-  :: MonadTest m
+  :: forall m
+   . MonadTest m
   => Environment LEDGER
   -> [SourceSignalTarget POOL]
   -> m ()
 registeredPoolIsAdded env ssts =
-  assertAll addedRegPool ssts
+  mapM_ addedRegPool ssts
 
  where
 
   addedRegPool :: SourceSignalTarget POOL
-               -> Bool
+               -> m ()
   addedRegPool sst =
     case signal sst of
       RegPool poolParams -> check poolParams
-      _ -> True
+      _ -> pure ()
    where
-    check :: PoolParams -> Bool
-    check poolParams =
+    check :: PoolParams -> m ()
+    check poolParams = do
       let hk = poolParams ^. poolPubKey
-          pSt = target sst
-          -- PoolParams are registered in pParams map
-       in M.lookup hk (pSt ^. pParams) == Just poolParams
-          -- Hashkey is registered in stPools map
-       && M.lookup hk (pSt ^. stPools . to (\(StakePools x) -> x))
-            == Just (ledgerSlot env)
-          -- Hashkey is registered in cCounters map
-       && hk ∈ M.keys (pSt ^. cCounters)
+          sSt = source sst
+          tSt = target sst
+      -- Check for pool re-registration. If we register a pool which was already
+      -- registered (indicated by presence in `stPools`), then we check that it
+      -- is not in `retiring` after the signal has been processed.
+      when (hk ∈ dom (sSt ^. stPools . to (\(StakePools x) -> x))) $ do
+        assert (hk ∈ dom (sSt ^. retiring))
+        assert (hk ∉ dom (tSt ^. retiring))
+      -- PoolParams are registered in pParams map
+      M.lookup hk (tSt ^. pParams) === Just poolParams
+      -- Hashkey is registered in stPools map
+      M.lookup hk (tSt ^. stPools . to (\(StakePools x) -> x))
+        === Just (ledgerSlot env)
+      -- Hashkey is registered in cCounters map
+      assert (hk ∈ M.keys (tSt ^. cCounters))
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
