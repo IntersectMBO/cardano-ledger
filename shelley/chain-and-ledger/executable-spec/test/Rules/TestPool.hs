@@ -132,14 +132,14 @@ registeredPoolIsAdded env ssts =
     check :: PoolParams -> m ()
     check poolParams = do
       let hk = poolParams ^. poolPubKey
-          pSt = target sst
+          tSt = target sst
       -- PoolParams are registered in pParams map
-      M.lookup hk (pSt ^. pParams) === Just poolParams
+      M.lookup hk (tSt ^. pParams) === Just poolParams
       -- Hashkey is registered in stPools map
-      M.lookup hk (pSt ^. stPools . to (\(StakePools x) -> x))
+      M.lookup hk (tSt ^. stPools . to (\(StakePools x) -> x))
         === Just (ledgerSlot env)
       -- Hashkey is registered in cCounters map
-      assert (hk ∈ M.keys (pSt ^. cCounters))
+      assert (hk ∈ M.keys (tSt ^. cCounters))
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
