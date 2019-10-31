@@ -49,6 +49,8 @@ testUPNLate =
   in
     st @?= Right (UpdnState ((mkNonce 2) ⭒ (mkNonce 1)) (mkNonce 3))
 
+-- | Runs example, applies chain state transition system rule (STS),
+--   and checks that trace ends with expected state or expected error.
 testCHAINExample :: CHAINExample -> Assertion
 testCHAINExample (CHAINExample slotNow initSt block (Right expectedSt)) = do
   checkTrace @CHAIN slotNow $ pure initSt .- block .-> expectedSt
