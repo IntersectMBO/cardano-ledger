@@ -38,6 +38,7 @@ import Cardano.Binary
   , matchSize
   )
 
+import qualified Data.ByteString as ByteString (pack)
 
 --------------------------------------------------------------------------------
 -- SscPayload
@@ -89,7 +90,17 @@ data SscProof =
 
 instance ToCBOR SscProof where
   toCBOR _ =
-    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR (mempty :: ByteString)
+    encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR hashBytes
+    where
+    -- The VssCertificatesMap is encoded as a HashSet, so we want the hash of
+    -- the encoding of an empty HashSet. In hex that is
+    --   25777aca9e4a73d48fc73b4f961d345b06d4a6f349cb7916570d35537d53479f
+    hashBytes :: ByteString
+    hashBytes = ByteString.pack
+      [ 0x25, 0x77, 0x7a, 0xca, 0x9e, 0x4a, 0x73, 0xd4
+      , 0x8f, 0xc7, 0x3b, 0x4f, 0x96, 0x1d, 0x34, 0x5b
+      , 0x06, 0xd4, 0xa6, 0xf3, 0x49, 0xcb, 0x79, 0x16
+      , 0x57, 0x0d, 0x35, 0x53, 0x7d, 0x53, 0x47, 0x9f ]
 
 instance FromCBOR SscProof where
   fromCBOR = do
