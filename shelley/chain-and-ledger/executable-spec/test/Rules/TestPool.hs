@@ -7,6 +7,7 @@
 
 module Rules.TestPool where
 
+import           Control.Monad (when)
 import           Data.Foldable (traverse_)
 import           Data.Map (Map, (!?))
 import qualified Data.Map as M
@@ -24,7 +25,8 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
-import           LedgerState (pattern PState, cCounters, pParams, stPools, _retiring, _stPools)
+import           LedgerState (pattern PState, cCounters, pParams, retiring, stPools, _retiring,
+                     _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (Epoch (..), epochFromSlot)
@@ -132,7 +134,14 @@ registeredPoolIsAdded env ssts =
     check :: PoolParams -> m ()
     check poolParams = do
       let hk = poolParams ^. poolPubKey
+          sSt = source sst
           tSt = target sst
+      -- Check for pool re-registration. If we register a pool which was already
+      -- registered (indicated by presence in `stPools`), then we check that it
+      -- is not in `retiring` after the signal has been processed.
+      when (hk ∈ dom (sSt ^. stPools . to (\(StakePools x) -> x))) $ do
+        assert (hk ∈ dom (sSt ^. retiring))
+        assert (hk ∉ dom (tSt ^. retiring))
       -- PoolParams are registered in pParams map
       M.lookup hk (tSt ^. pParams) === Just poolParams
       -- Hashkey is registered in stPools map
