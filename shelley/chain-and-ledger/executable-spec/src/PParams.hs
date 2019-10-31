@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
-
+-- | This module contains just the type of protocol parameters.
 module PParams
   ( PParams(..)
   , emptyPParams
@@ -37,6 +37,7 @@ import           Slot (Epoch (..))
 
 import           Lens.Micro.TH (makeLenses)
 
+-- | Protocol parameters
 data PParams = PParams
   { -- |The linear factor for the minimum fee calculation
     _minfeeA         :: Integer
