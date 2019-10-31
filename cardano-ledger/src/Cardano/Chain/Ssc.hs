@@ -92,15 +92,17 @@ instance ToCBOR SscProof where
   toCBOR _ =
     encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR hashBytes
     where
-    -- The VssCertificatesMap is encoded as a HashSet, so we want the hash of
-    -- the encoding of an empty HashSet. In hex that is
-    --   25777aca9e4a73d48fc73b4f961d345b06d4a6f349cb7916570d35537d53479f
+    -- The VssCertificatesMap is encoded as a HashSet, so you'd think we want
+    -- the hash of the encoding of an empty HashSet. BUT NO! For the calculation
+    -- of the hashes in the header, it uses the encoding of the underlying
+    -- HashMap. The hash of the encoded empty HashMap is
+    --   d36a2619a672494604e11bb447cbcf5231e9f2ba25c2169177edc941bd50ad6c
     hashBytes :: ByteString
     hashBytes = ByteString.pack
-      [ 0x25, 0x77, 0x7a, 0xca, 0x9e, 0x4a, 0x73, 0xd4
-      , 0x8f, 0xc7, 0x3b, 0x4f, 0x96, 0x1d, 0x34, 0x5b
-      , 0x06, 0xd4, 0xa6, 0xf3, 0x49, 0xcb, 0x79, 0x16
-      , 0x57, 0x0d, 0x35, 0x53, 0x7d, 0x53, 0x47, 0x9f ]
+      [ 0xd3, 0x6a, 0x26, 0x19, 0xa6, 0x72, 0x49, 0x46
+      , 0x04, 0xe1, 0x1b, 0xb4, 0x47, 0xcb, 0xcf, 0x52
+      , 0x31, 0xe9, 0xf2, 0xba, 0x25, 0xc2, 0x16, 0x91
+      , 0x77, 0xed, 0xc9, 0x41, 0xbd, 0x50, 0xad, 0x6c ]
 
 instance FromCBOR SscProof where
   fromCBOR = do
