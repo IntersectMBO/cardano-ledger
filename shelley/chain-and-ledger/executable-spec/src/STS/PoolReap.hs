@@ -12,11 +12,11 @@ import qualified Data.Set as Set
 
 import           Lens.Micro ((^.))
 
-import           Coin
 import           Delegation.Certificates
 import           LedgerState
 import           PParams
 import           Slot
+import           TxData (_poolRAcnt)
 
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
@@ -50,20 +50,20 @@ poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
   let retired = dom $ (ps ^. retiring) ▷ Set.singleton e
-      relevant = retired ◁ (ps ^. pParams)
-      rewardAcnts = Map.intersectionWith (\_ v -> v ^. poolRAcnt) relevant (ps ^. pParams)
       StakePools stPools' = ps ^. stPools
       pr = poolRefunds pp (retired ◁ stPools') (firstSlot e)
-      refunds' = Map.fromList . Map.elems
-               $ Map.intersectionWith (\coin addr -> (addr,coin)) pr rewardAcnts
+      rewardAcnts = Map.map _poolRAcnt $ retired ◁ (ps ^. pParams)
+      rewardAcnts' = Map.fromList . Map.elems $ Map.intersectionWith (,) rewardAcnts pr
 
       domRewards = dom (ds ^. rewards)
-      (refunds, unclaimed') = Map.partitionWithKey (\k _ -> k ∈ domRewards) refunds'
+      (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈ domRewards) rewardAcnts'
+      refunded = sum $ Map.elems refunds
+      unclaimed = sum $ Map.elems mRefunds
 
-      unclaimed = Map.foldl (+) (Coin 0) unclaimed'
       StakePools stakePools = ps ^. stPools
+
   pure $ PoolreapState
-    us { _deposited = _deposited us - (unclaimed + sum (Map.elems refunds))}
+    us { _deposited = _deposited us - (unclaimed + refunded)}
     a { _treasury = _treasury a + unclaimed }
     ds { _rewards = _rewards ds ∪+ refunds
        , _delegations = _delegations ds ⋫ retired }
