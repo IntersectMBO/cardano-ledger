@@ -131,12 +131,13 @@ import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnesse
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
 
 data CHAINExample =
-  CHAINExample Slot       -- ^ Current slot
-               ChainState -- ^ State to start testing with
-               Block      -- ^ Block to add and process
-               (Either [[PredicateFailure CHAIN]] -- ^ type of fatal error, if failure expected
-                       ChainState                 --   final chain state if success expected
-               )
+  CHAINExample { currentSlot    :: Slot       -- ^ Current slot
+               , startState     :: ChainState -- ^ State to start testing with
+               , newBlock       :: Block      -- ^ Block to run chain state transition system on
+               , intendedResult :: (Either [[PredicateFailure CHAIN]] -- ^ type of fatal error, if failure expected
+                                           ChainState                 --   and final chain state if success expected
+                                   )
+               }
 
 data MIRExample =
   MIRExample
@@ -294,10 +295,10 @@ mkBlock
   -> AllPoolKeys  -- ^ All keys in the stake pool
   -> [Tx]         -- ^ Transactions to record
   -> Slot         -- ^ Current slot
-  -> Nonce
-  -> NatNonce
-  -> UnitInterval
-  -> Natural      -- ^ Ordinal number of the block
+  -> Nonce        -- ^ Epoch nonce
+  -> NatNonce     -- ^ Block nonce
+  -> UnitInterval -- ^ Praos leader value
+  -> Natural      -- ^ Period of KES (key evolving signature scheme)
   -> Block
 mkBlock prev pkeys txns s enonce (NatNonce bnonce) l kesPeriod =
   let
@@ -366,6 +367,7 @@ psEx1 :: PState
 psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems genDelegs)) }
   where f vk = (vk, 0)
 
+-- | Ledger state.
 lsEx1 :: LedgerState
 lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1) 0
 
@@ -402,14 +404,14 @@ ppsExInstantDecay = ppsEx1 { _keyDecayRate  = 1000
                            , _poolDecayRate = 1000 }
 
 
--- | Account with no money.
+-- | Account with empty treasury.
 acntEx1 :: AccountState
 acntEx1 = AccountState
             { _treasury = Coin 0
             , _reserves = maxLovelaceSupply
             }
 
--- | Empty epoch state, with no snapshots.
+-- | Epoch state with no snapshots.
 esEx1 :: EpochState
 esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1
 
@@ -420,7 +422,8 @@ esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1
 lastByronHeaderHash :: HashHeader
 lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
--- | Empty initial state with fake Byron hash and no blocks at all.
+-- | Empty initial Shelley state with fake Byron hash and no blocks at all.
+--   No blocks of Shelley have been processed yet.
 initStEx1 :: ChainState
 initStEx1 = ChainState
   (NewEpochState
