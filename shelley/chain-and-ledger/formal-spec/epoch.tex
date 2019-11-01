@@ -505,26 +505,23 @@ This transition has no preconditions and results in the following state change:
     {
       {
       \begin{array}{r@{~\leteq~}l}
-        \var{retired} & \var{retiring}^{-1}~\var{e} \\
-        \var{pr} & \poolRefunds{pp}{(\dom{\var{retired}}\restrictdom\var{stpools})}{(\firstSlot{e})} \\
+        \var{retired} & \dom{(\var{retiring}^{-1}~\var{e})} \\
+        \var{pr} & \poolRefunds{pp}{(\var{retired}\restrictdom\var{stpools})}{(\firstSlot{e})} \\
         \var{rewardAcnts}
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
                    \var{hk}\mapsto\var{pool} \in \var{retired}\restrictdom\var{poolParams} \} \\
-        \var{refunds} & \left\{
+        \var{rewardAcnts'} & \left\{
                         a \mapsto c
                         \mathrel{\Bigg|}
                         \begin{array}{r@{~\in~}l}
                           \var{hk} \mapsto c & \var{pr}, \\
-                          \var{hk}\mapsto\var{a} & \var{rewardAcnts}, \\
-                          \var{a} & \dom{\var{rewards}}
+                          \var{hk}\mapsto\var{a} & \var{rewardAcnts} \\
                         \end{array}
                       \right\} \\
-        \var{unclaimed} & \sum\limits_{\substack{
-                          hk \mapsto c \in \var{pr} \\
-                          \var{hk}\mapsto\var{a} \in \var{rewardAcnts}, \\
-                          \var{a} \notin \dom{\var{rewards}}
-                          }} c \\
-        \var{refunded} & \sum\limits_{c\in\range{\var{refunds}}} c
+        \var{refunds} & \dom{rewards}\restrictdom\var{rewardAcnts'} \\
+        \var{mRefunds} & \dom{rewards}\subtractdom\var{rewardAcnts'} \\
+        \var{refunded} & \sum\limits_{c\in\range{\var{refunds}}} c \\
+        \var{unclaimed} & \sum\limits_{c\in\range{\var{mRefunds}}} c \\
       \end{array}
       }
     }
@@ -1359,7 +1356,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \right) = \var{ls} \\
     & ~~~~~~~unregistered =
       \left\{
-      hk\mapsto val \vert hk\not\in\dom{stDeleg} \wedge \var{hk}\mapsto\var{val}\in \var{i_{rwd}}
+      hk\mapsto val \vert \dom{stkCreds} \subtractdom \var{i_{rwd}}
       \right\}\\
     & ~~~~~~~\var{registered} = \var{i_{rwd}} \setminus\var{unregistered} \\
     & ~~~~~~~\var{rewardsInsufficient} =
