@@ -520,8 +520,8 @@ This transition has no preconditions and results in the following state change:
                       \right\} \\
         \var{refunds} & \dom{rewards}\restrictdom\var{rewardAcnts'} \\
         \var{mRefunds} & \dom{rewards}\subtractdom\var{rewardAcnts'} \\
-        \var{refunded} & \sum\limits_{c\in\range{\var{refunds}}} c \\
-        \var{unclaimed} & \sum\limits_{c\in\range{\var{mRefunds}}} c \\
+        \var{refunded} & \sum\limits_{\wcard\mapsto c\in\var{refunds}} c \\
+        \var{unclaimed} & \sum\limits_{\wcard\mapsto c\in\var{mRefunds}} c \\
       \end{array}
       }
     }
