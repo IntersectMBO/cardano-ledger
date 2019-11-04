@@ -160,7 +160,7 @@ import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeCreds
                      StakePools (..), cwitness, decayKey, refund)
 import           Delegation.PoolParams (poolSpec)
 
-import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkUnitInterval)
+import           BaseTypes (UnitInterval, intervalValue, mkUnitInterval)
 
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 
@@ -361,7 +361,6 @@ instance NoUnexpectedThunks (UTxOState hashAlgo dsignAlgo vrfAlgo)
 data NewEpochState hashAlgo dsignAlgo vrfAlgo =
   NewEpochState {
     nesEL    :: Epoch
-  , nesEta0  :: Nonce
   , nesBprev :: BlocksMade hashAlgo dsignAlgo
   , nesBcur  :: BlocksMade hashAlgo dsignAlgo
   , nesEs    :: EpochState hashAlgo dsignAlgo vrfAlgo
@@ -376,14 +375,13 @@ getGKeys
   :: NewEpochState hashAlgo dsignAlgo vrfAlgo
   -> Set (GenKeyHash hashAlgo dsignAlgo)
 getGKeys nes = Map.keysSet genDelegs
-  where NewEpochState _ _ _ _ es _ _ _ = nes
+  where NewEpochState _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
         LedgerState _ (DPState (DState _ _ _ _ _ (GenDelegs genDelegs) _) _) _ = ls
 
 data NewEpochEnv hashAlgo dsignAlgo =
   NewEpochEnv {
-    neeEta1  :: Nonce
-  , neeS     :: Slot
+    neeS     :: Slot
   , neeGkeys :: Set (GenKeyHash hashAlgo dsignAlgo)
   } deriving (Show, Eq, Generic)
 
@@ -1223,10 +1221,9 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
 overlaySchedule
   :: Epoch
   -> Set (GenKeyHash hashAlgo dsignAlgo)
-  -> Nonce
   -> PParams
   -> Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
-overlaySchedule e gkeys _ pp = Map.union active inactive
+overlaySchedule e gkeys pp = Map.union active inactive
   where
     numActive = dval * fromIntegral slotsPerEpoch
     dval = intervalValue $ pp ^. d
@@ -1267,6 +1264,6 @@ updateNES
   -> BlocksMade hashAlgo dsignAlgo
   -> LedgerState hashAlgo dsignAlgo vrfAlgo
   -> NewEpochState hashAlgo dsignAlgo vrfAlgo
-updateNES (NewEpochState eL eta0 bprev _
+updateNES (NewEpochState eL bprev _
            (EpochState acnt ss _ pp) ru pd osched) bcur ls =
-  NewEpochState eL eta0 bprev bcur (EpochState acnt ss ls pp) ru pd osched
+  NewEpochState eL bprev bcur (EpochState acnt ss ls pp) ru pd osched

@@ -14,7 +14,6 @@ where
 
 import           Data.Set (Set)
 
-import           BaseTypes
 import           BlockChain
 import           Keys
 import           LedgerState
@@ -29,7 +28,7 @@ import           Control.State.Transition
 data BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo
 
 data BheadEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
-  = BheadEnv Nonce (Set (GenKeyHash hashAlgo dsignAlgo))
+  = BheadEnv (Set (GenKeyHash hashAlgo dsignAlgo))
 
 instance
   ( HashAlgorithm hashAlgo
@@ -63,7 +62,7 @@ bheadTransition
      )
   => TransitionRule (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
 bheadTransition = do
-  TRC (BheadEnv etaC gkeys, nes@(NewEpochState _ _ bprev _ es _ _ _), bh@(BHeader bhb _)) <-
+  TRC (BheadEnv gkeys, nes@(NewEpochState _ bprev _ es _ _ _), bh@(BHeader bhb _)) <-
     judgmentContext
   let slot                = bheaderSlot bhb
   let EpochState _ _ _ pp = es
@@ -72,7 +71,7 @@ bheadTransition = do
   fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
   nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
-    $ TRC (NewEpochEnv etaC slot gkeys, nes, epochFromSlot slot)
+    $ TRC (NewEpochEnv slot gkeys, nes, epochFromSlot slot)
 
   ru' <- trans @(RUPD hashAlgo dsignAlgo vrfAlgo) $ TRC (RupdEnv bprev es, nesRu nes', slot)
   let nes'' = nes' { nesRu = ru' }

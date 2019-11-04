@@ -22,8 +22,10 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes
 import           BlockChain
+import           Delegation.Certificates
 import           Keys
 import           OCert
+import           PParams
 import           Slot
 
 import           STS.Overlay
@@ -40,14 +42,21 @@ data PrtclState hashAlgo dsignAlgo kesAlgo vrfAlgo
       (Map (KeyHash hashAlgo dsignAlgo) Natural)
       (HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
       Slot
-      Nonce
-      Nonce
+      Nonce -- ^ Current epoch nonce
+      Nonce -- ^ Evolving nonce
+      Nonce -- ^ Candidate nonce
   deriving (Generic, Show)
 
 instance NoUnexpectedThunks (PrtclState hashAlgo dsignAlgo kesAlgo vrfAlgo)
 
 data PrtclEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
-  = PrtclEnv (OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo) Slot
+  = PrtclEnv
+      PParams
+      (Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo)))
+      (PoolDistr hashAlgo dsignAlgo vrfAlgo)
+      (GenDelegs hashAlgo dsignAlgo)
+      Slot
+      Bool -- ^ New epoch marker
   deriving (Generic)
 
 instance NoUnexpectedThunks (PrtclEnv hashAlgo dsignAlgo kesAlgo vrfAlgo)
@@ -95,17 +104,22 @@ prtclTransition
      )
   => TransitionRule (PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo)
 prtclTransition = do
-  TRC (PrtclEnv oe sNow, PrtclState cs h sL etaV etaC, bh) <- judgmentContext
+  TRC ( PrtclEnv pp osched pd dms sNow ne
+      , PrtclState cs h sL eta0 etaV etaC
+      , bh) <- judgmentContext
   let bhb  = bhbody bh
   let slot = bheaderSlot bhb
   let eta  = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
   sL < slot && slot <= sNow ?! WrongSlotIntervalPRTCL
   h == bheaderPrev bhb ?! WrongBlockSequencePRTCL
 
-  cs'            <- trans @(OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo) $ TRC (oe, cs, bh)
-  UpdnState etaV' etaC' <- trans @UPDN $ TRC (eta, UpdnState etaV etaC, slot)
+  UpdnState eta0' etaV' etaC'
+    <- trans @UPDN $ TRC (UpdnEnv eta pp ne, UpdnState eta0 etaV etaC, slot)
+  cs'
+    <- trans @(OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+        $ TRC (OverlayEnv pp osched eta0' pd dms, cs, bh)
 
-  pure $ PrtclState cs' (bhHash bh) slot etaV' etaC'
+  pure $ PrtclState cs' (bhHash bh) slot eta0' etaV' etaC'
 
 instance
   ( HashAlgorithm hashAlgo
