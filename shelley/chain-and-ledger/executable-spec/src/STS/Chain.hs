@@ -39,6 +39,7 @@ data CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo
 data ChainState hashAlgo dsignAlgo kesAlgo vrfAlgo
   = ChainState
     { chainNes            :: NewEpochState hashAlgo dsignAlgo vrfAlgo
+    , chainOCertIssue     :: Map.Map (KeyHash hashAlgo dsignAlgo) Natural
     , chainEpochNonce     :: Nonce
     , chainEvolvingNonce  :: Nonce
     , chainCandidateNonce :: Nonce
@@ -89,7 +90,7 @@ chainTransition
      )
   => TransitionRule (CHAIN hashAlgo dsignAlgo kesAlgo vrfAlgo)
 chainTransition = do
-  TRC (sNow, ChainState nes eta0 etaV etaC h sL, block@(Block bh _)) <- judgmentContext
+  TRC (sNow, ChainState nes cs eta0 etaV etaC h sL, block@(Block bh _)) <- judgmentContext
 
   let gkeys = getGKeys nes
   nes' <-
@@ -98,20 +99,19 @@ chainTransition = do
   let NewEpochState e1 _ _ _ _ _ _ = nes
       NewEpochState e2 _ bcur es _ _pd osched = nes'
   let EpochState (AccountState _ _reserves) _ ls pp                         = es
-  let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _ cs)) _ = ls
+  let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) _ = ls
 
   PrtclState cs' h' sL' eta0' etaV' etaC' <- trans @(PRTCL hashAlgo dsignAlgo kesAlgo vrfAlgo)
     $ TRC ( PrtclEnv pp osched _pd _genDelegs sNow (e1 /= e2)
           , PrtclState cs h sL eta0 etaV etaC
           , bh)
 
-  let ls' = setIssueNumbers ls cs'
-  BbodyState ls'' bcur' <- trans @(BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    $ TRC (BbodyEnv (Map.keysSet osched) pp _reserves, BbodyState ls' bcur, block)
+  BbodyState ls' bcur' <- trans @(BBODY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+    $ TRC (BbodyEnv (Map.keysSet osched) pp _reserves, BbodyState ls bcur, block)
 
-  let nes'' = updateNES nes' bcur' ls''
+  let nes'' = updateNES nes' bcur' ls'
 
-  pure $ ChainState nes'' eta0' etaV' etaC' h' sL'
+  pure $ ChainState nes'' cs' eta0' etaV' etaC' h' sL'
 
 instance
   ( HashAlgorithm hashAlgo
@@ -157,7 +157,7 @@ instance
 
 -- |Calculate the total ada in the chain state
 totalAda :: ChainState hashAlgo dsignAlgo kesAlgo vrfAlgo -> Coin
-totalAda (ChainState nes _ _ _ _ _) =
+totalAda (ChainState nes _ _ _ _ _ _) =
   treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _) = nesEs nes

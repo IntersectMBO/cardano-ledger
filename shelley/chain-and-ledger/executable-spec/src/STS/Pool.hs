@@ -56,7 +56,7 @@ poolDelegationTransition = do
         then -- register new
           pure $ ps { _stPools = StakePools $ stPools_ ∪ (hk, slot)
                     , _pParams = _pParams ps ∪ (hk, poolParam)
-                    , _cCounters = _cCounters ps ∪ (hk, 0)}
+                    }
         else -- re-register
           pure $ ps { _pParams = _pParams ps ⨃ (hk, poolParam)
                     , _retiring = Set.singleton hk ⋪ _retiring ps }

@@ -25,7 +25,7 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
-import           LedgerState (pattern PState, cCounters, pParams, retiring, stPools, _retiring,
+import           LedgerState (pattern PState, pParams, retiring, stPools, _retiring,
                      _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
@@ -147,8 +147,6 @@ registeredPoolIsAdded env ssts =
       -- Hashkey is registered in stPools map
       M.lookup hk (tSt ^. stPools . to (\(StakePools x) -> x))
         === Just (ledgerSlot env)
-      -- Hashkey is registered in cCounters map
-      assert (hk ∈ M.keys (tSt ^. cCounters))
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
@@ -161,16 +159,14 @@ pStateIsInternallyConsistent ssts =
   traverse_ isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
  where
   isConsistent :: State POOL -> m ()
-  isConsistent (PState stPools_ pParams_ retiring_ cCounters_) = do
+  isConsistent (PState stPools_ pParams_ retiring_) = do
     let StakePools stPoolsMap = stPools_
         poolKeys = M.keysSet stPoolsMap
         pParamKeys = M.keysSet pParams_
         retiringKeys = M.keys retiring_
-        cCountersKeys = M.keysSet cCounters_
 
-    sequence_ [ -- These 3 key sets should be equal.
+    sequence_ [ -- These 2 key sets should be equal.
                 poolKeys === pParamKeys
-              , pParamKeys === cCountersKeys
                 -- A retiring pool should still be registered in `stPools`.
               , traverse_ (assert . (`S.member` poolKeys)) retiringKeys
               ]

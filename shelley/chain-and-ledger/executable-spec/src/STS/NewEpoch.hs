@@ -13,12 +13,10 @@ where
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 
-import           BaseTypes
 import           Coin
 import           EpochBoundary
 import           Keys (DSIGNAlgorithm, HashAlgorithm, VRFAlgorithm)
 import           LedgerState
-import           PParams
 import           Slot
 import           TxData
 
@@ -68,7 +66,7 @@ newEpochTransition = do
             Nothing  -> es
             Just ru' -> applyRUpd ru' e es
       es' <- trans @(EPOCH hashAlgo dsignAlgo vrfAlgo) $ TRC ((), es_, e)
-      let EpochState acnt ss ls pp = es'
+      let EpochState _acnt ss _ls pp = es'
 
           (Stake stake, delegs) = _pstakeSet ss
 
@@ -82,12 +80,10 @@ newEpochTransition = do
 
           osched' = overlaySchedule e gkeys pp
 
-          es'' = EpochState acnt ss ls (pp { _extraEntropy = NeutralNonce })
-
       pure $ NewEpochState e
                            bcur
                            (BlocksMade Map.empty)
-                           es''
+                           es'
                            Nothing
                            (PoolDistr pd')
                            osched'

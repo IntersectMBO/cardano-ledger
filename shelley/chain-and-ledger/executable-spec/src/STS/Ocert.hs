@@ -34,7 +34,7 @@ instance
     = Map (KeyHash hashAlgo dsignAlgo) Natural
   type Signal (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
-  type Environment (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) = ()
+  type Environment (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) = OCertEnv hashAlgo dsignAlgo
   data PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
     = KESBeforeStartOCERT
     | KESAfterEndOCERT
@@ -56,7 +56,7 @@ ocertTransition
      )
   => TransitionRule (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
 ocertTransition = do
-  TRC (_, cs, BHeader bhb sigma) <- judgmentContext
+  TRC (env, cs, BHeader bhb sigma) <- judgmentContext
 
   let OCert vk_hot vk_cold n c0@(KESPeriod c0_) tau = bheaderOCert bhb
       hk = hashKey vk_cold
@@ -70,7 +70,7 @@ ocertTransition = do
   verify vk_cold (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
   verifyKES vk_hot bhb sigma t ?! InvalidKesSignatureOCERT
 
-  case Map.lookup hk cs of
+  case currentIssueNo env cs hk of
     Nothing -> do
       failBecause NoCounterForKeyHashOCERT
       pure cs

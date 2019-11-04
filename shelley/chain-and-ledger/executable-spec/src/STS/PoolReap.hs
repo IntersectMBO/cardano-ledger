@@ -70,7 +70,7 @@ poolReapTransition = do
     ps { _stPools = StakePools $ retired ⋪ stakePools
        , _pParams = retired ⋪ _pParams ps
        , _retiring = retired ⋪ _retiring ps
-       , _cCounters = retired ⋪ _cCounters ps}
+       }
 
 instance HasTrace (POOLREAP hashAlgo dsignAlgo vrfAlgo) where
   envGen _ = undefined :: Gen PParams

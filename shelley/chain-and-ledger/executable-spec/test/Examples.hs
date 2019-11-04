@@ -68,7 +68,7 @@ import           Crypto.Random (drgNewTest, withDRG)
 import           Data.ByteString.Char8 (pack)
 import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (delete, elems, empty, fromList, insert, keysSet, member,
+import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member,
                      singleton, (!?))
 import           Data.Maybe (fromMaybe, isJust, maybe)
 import           Data.Ratio ((%))
@@ -102,7 +102,7 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
                      emptyPState, esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
-                     overlaySchedule, rs, updateIRwd, _cCounters, _delegationState, _delegations,
+                     overlaySchedule, rs, updateIRwd, _delegationState, _delegations,
                      _dstate, _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves,
                      _retiring, _rewards, _stPools, _stkCreds, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
@@ -368,11 +368,14 @@ utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 dsEx1 :: DState
 dsEx1 = emptyDState { _genDelegs = GenDelegs genDelegs }
 
-psEx1 :: PState
-psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems genDelegs)) }
+oCertIssueNosEx1 :: Map KeyHash Natural
+oCertIssueNosEx1 = Map.fromList (fmap f (Map.elems genDelegs))
   where f vk = (vk, 0)
 
--- | Ledger state.
+psEx1 :: PState
+psEx1 = emptyPState
+
+-- | Ledger state
 lsEx1 :: LedgerState
 lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1) 0
 
@@ -440,6 +443,7 @@ initStEx1 = ChainState
      (PoolDistr Map.empty)
      (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0)))
     -- The overlay schedule has one entry, setting Core Node 1 to slot 1.
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0)
   (mkNonce 0)
@@ -474,6 +478,7 @@ expectedStEx1 = ChainState
      Nothing
      (PoolDistr Map.empty)
      (Map.singleton (Slot 1) (Just . hashKey $ coreNodeVKG 0)))
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
@@ -570,6 +575,7 @@ initNesEx2A = NewEpochState
 initStEx2A :: ChainState
 initStEx2A = ChainState
   initNesEx2A
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0)
   (mkNonce 0)
@@ -603,7 +609,6 @@ psEx2A :: PState
 psEx2A = psEx1
           { _stPools = StakePools $ Map.singleton (hk alicePool) (Slot 10)
           , _pParams = Map.singleton (hk alicePool) alicePoolParams
-          , _cCounters = Map.insert (hk alicePool) 0 (_cCounters psEx1)
           }
 
 updateStEx2A :: UpdateState
@@ -639,6 +644,11 @@ expectedStEx2A = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
+  -- Operational certificate issue numbers are now only updated during block
+  -- header processing (in the OCERT rule). As such, we will not see the
+  -- operational certificate issue number appear until the first time a block is
+  -- issued using the corresponding hot key.
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
@@ -730,6 +740,7 @@ expectedStEx2Bgeneric pp = ChainState
                         })
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1 ⭒ mkNonce 2)
   (mkNonce 0 ⭒ mkNonce 1)
@@ -836,6 +847,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
      Nothing
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
+  oCertIssueNosEx1
   (mkNonce 0 ⭒ mkNonce 1)
   (mkSeqNonce 3)
   (mkSeqNonce 3)
@@ -906,6 +918,7 @@ expectedStEx2D = ChainState
                         })
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
+  oCertIssueNosEx1
   (mkNonce 0 ⭒ mkNonce 1)
   (mkSeqNonce 4)
   (mkSeqNonce 3)
@@ -982,6 +995,7 @@ expectedStEx2E = ChainState
           (hk alicePool)
           (1, hashKeyVRF (snd $ vrf alicePool))))
      epoch1OSchedEx2E)
+  oCertIssueNosEx1
   (mkSeqNonce 3)
   (mkSeqNonce 5)
   (mkSeqNonce 5)
@@ -994,6 +1008,8 @@ ex2E = CHAINExample (Slot 220) expectedStEx2D blockEx2E (Right expectedStEx2E)
 
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
 
+oCertIssueNosEx2F :: Map KeyHash Natural
+oCertIssueNosEx2F = Map.insert (hk alicePool) 0 oCertIssueNosEx1
 
 blockEx2F :: Block
 blockEx2F = mkBlock
@@ -1029,6 +1045,7 @@ expectedStEx2F = ChainState
                         })
      pdEx2F
      epoch1OSchedEx2E)
+  oCertIssueNosEx2F
   (mkSeqNonce 3)
   (mkSeqNonce 6)
   (mkSeqNonce 5)
@@ -1093,6 +1110,7 @@ expectedStEx2G = ChainState
      Nothing
      pdEx2F
      epoch1OSchedEx2G)
+  oCertIssueNosEx2F
   (mkSeqNonce 5)
   (mkSeqNonce 7)
   (mkSeqNonce 7)
@@ -1147,6 +1165,7 @@ expectedStEx2H = ChainState
                         })
      pdEx2F
      epoch1OSchedEx2G)
+  oCertIssueNosEx2F
   (mkSeqNonce 5)
   (mkSeqNonce 8)
   (mkSeqNonce 7)
@@ -1222,6 +1241,7 @@ expectedStEx2I = ChainState
      Nothing
      pdEx2F
      epoch1OSchedEx2I)
+  oCertIssueNosEx2F
   (mkSeqNonce 7)
   (mkSeqNonce 9)
   (mkSeqNonce 9)
@@ -1306,6 +1326,7 @@ expectedStEx2J = ChainState
      Nothing
      pdEx2F
      epoch1OSchedEx2I)
+  oCertIssueNosEx2F
   (mkSeqNonce 7)
   (mkSeqNonce 10)
   (mkSeqNonce 10)
@@ -1387,6 +1408,7 @@ expectedStEx2K = ChainState
                         })
      pdEx2F
      epoch1OSchedEx2I)
+  oCertIssueNosEx2F
   (mkSeqNonce 7)
   (mkSeqNonce 11)
   (mkSeqNonce 10)
@@ -1457,6 +1479,7 @@ expectedStEx2L = ChainState
      Nothing
      pdEx2F
      (overlaySchedule (Epoch 5) (Map.keysSet genDelegs) ppsEx1))
+  oCertIssueNosEx2F
   (mkSeqNonce 10)
   (mkSeqNonce 12)
   (mkSeqNonce 12)
@@ -1550,6 +1573,7 @@ expectedStEx3A = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
@@ -1640,6 +1664,7 @@ expectedStEx3B = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkSeqNonce 2)
   (mkSeqNonce 2)
@@ -1688,8 +1713,7 @@ expectedLSEx3C = LedgerState
                0
 
 ppsEx3C :: PParams
-ppsEx3C = ppsEx1 { _poolDeposit = Coin 200 }
--- Note that _extraEntropy is still NeutralNonce
+ppsEx3C = ppsEx1 { _poolDeposit = Coin 200, _extraEntropy = mkNonce 123 }
 
 expectedStEx3C :: ChainState
 expectedStEx3C = ChainState
@@ -1701,6 +1725,7 @@ expectedStEx3C = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx3C)
+  oCertIssueNosEx1
   (mkSeqNonce 2 ⭒ mkNonce 123)
   (mkSeqNonce 3)
   (mkSeqNonce 3)
@@ -1801,6 +1826,7 @@ expectedStEx4A = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
@@ -1890,6 +1916,7 @@ expectedStEx4B = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkSeqNonce 2)
   (mkSeqNonce 2)
@@ -1954,6 +1981,7 @@ expectedStEx4C = ChainState
                         })
       (PoolDistr Map.empty)
       overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkSeqNonce 3)
   (mkSeqNonce 3)
@@ -2036,6 +2064,7 @@ expectedStEx5A = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
@@ -2070,14 +2099,6 @@ dsEx5B = dsEx5A { _fGenDelegs = Map.empty
                                  ((hashKey . vKey) newGenDelegate)
                                  genDelegs }
 
-psEx5B :: PState
-psEx5B = psEx1 { _cCounters =
-                              Map.insert
-                                ((hashKey . vKey) newGenDelegate)
-                                0
-                                (Map.delete (hk $ coreNodeKeys 0) (_cCounters psEx1))
-               }
-
 expectedLSEx5B :: LedgerState
 expectedLSEx5B = LedgerState
                (UTxOState
@@ -2085,7 +2106,7 @@ expectedLSEx5B = LedgerState
                  (Coin 0)
                  (Coin 1)
                  (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
-               (DPState dsEx5B psEx5B)
+               (DPState dsEx5B psEx1)
                0
 
 expectedStEx5B :: ChainState
@@ -2104,6 +2125,7 @@ expectedStEx5B = ChainState
                         })
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkSeqNonce 2)
   (mkSeqNonce 2)
@@ -2186,6 +2208,7 @@ expectedStEx6A = ChainState
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
+  oCertIssueNosEx1
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)

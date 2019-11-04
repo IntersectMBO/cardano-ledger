@@ -39,7 +39,6 @@ module LedgerState
   , genDelegs
   , irwd
   , PState(..)
-  , cCounters
   , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
@@ -114,7 +113,6 @@ module LedgerState
   , NewEpochEnv(..)
   , overlaySchedule
   , getGKeys
-  , setIssueNumbers
   , updateNES
   ) where
 
@@ -262,8 +260,6 @@ data PState hashAlgo dsignAlgo vrfAlgo = PState
     , _pParams     :: Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo vrfAlgo)
       -- |A map of retiring stake pools to the epoch when they retire.
     , _retiring    :: Map (KeyHash hashAlgo dsignAlgo) Epoch
-      -- | Operational Certificate Counters.
-    , _cCounters   :: Map (KeyHash hashAlgo dsignAlgo) Natural
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (PState hashAlgo dsignAlgo vrfAlgo)
@@ -337,7 +333,7 @@ emptyDState =
 
 emptyPState :: PState hashAlgo dsignAlgo vrfAlgo
 emptyPState =
-  PState (StakePools Map.empty) Map.empty Map.empty Map.empty
+  PState (StakePools Map.empty) Map.empty Map.empty
 
 -- |Clear the protocol parameter updates
 clearPpup
@@ -968,12 +964,10 @@ applyDCertPState
 applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
     ps & stPools  .~ (StakePools $ Map.insert hsk slot' pools)
        & pParams  %~ Map.insert hsk sp
-       & cCounters  %~ Map.insert hsk c
        & retiring %~ Map.delete hsk
   where hsk = sp ^. poolPubKey
         (StakePools pools) = ps ^. stPools
         slot' = fromMaybe slot (Map.lookup hsk pools)
-        c = fromMaybe 0 (Map.lookup hsk (ps ^. cCounters))
 
 -- TODO check epoch (not in new doc atm.)
 applyDCertPState _ (RetirePool key epoch) ps =
@@ -1130,7 +1124,7 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
     where
       DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
-      PState (StakePools stpools) _ _ _                      = ps
+      PState (StakePools stpools) _ _                          = ps
       outs = aggregateOuts u
 
       stakeRelation :: [(StakeCredential hashAlgo dsignAlgo, Coin)]
@@ -1247,16 +1241,6 @@ overlaySchedule e gkeys pp = Map.union active inactive
       Map.fromList $ fmap
         (\x -> (snd x, Nothing))
         (filter (not . fst) unassignedSched)
-
--- | Set issue numbers
-setIssueNumbers
-  :: LedgerState hashAlgo dsignAlgo vrfAlgo
-  -> Map (KeyHash hashAlgo dsignAlgo) Natural
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
-setIssueNumbers (LedgerState u
-                 (DPState _dstate
-                  (PState stpools poolParams _retiring _ )) i) cs =
-  LedgerState u (DPState _dstate (PState stpools poolParams _retiring cs)) i
 
 -- | Update new epoch state
 updateNES
