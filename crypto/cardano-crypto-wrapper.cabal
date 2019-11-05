@@ -23,7 +23,6 @@ library
                        Cardano.Crypto
 
                        Cardano.Crypto.Hashing
-                       Cardano.Crypto.HD
                        Cardano.Crypto.Orphans
                        Cardano.Crypto.ProtocolMagic
                        Cardano.Crypto.Random
@@ -94,7 +93,6 @@ test-suite test
                        Test.Cardano.Crypto.Example
                        Test.Cardano.Crypto.Gen
                        Test.Cardano.Crypto.Hashing
-                       Test.Cardano.Crypto.HD
                        Test.Cardano.Crypto.Json
                        Test.Cardano.Crypto.Keys
                        Test.Cardano.Crypto.Limits
