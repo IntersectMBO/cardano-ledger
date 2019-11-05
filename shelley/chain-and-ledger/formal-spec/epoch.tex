@@ -1257,7 +1257,6 @@ It consists of four pots:
   \item The change to the reserves. This will be a negative value.
   \item The map of new individual rewards (to be added to the existing rewards).
   \item The change to the fee pot. This will be a negative value.
-  \item The change to the deposits. This will be a positive value.
   \item The map from credentials to $\Coin$ values to pay out as instantaneous
     rewards.
 \end{itemize}
@@ -1324,6 +1323,9 @@ The $\fun{applyRUpd}$ function does the following:
     \begin{itemize}
       \item Adjust the treasury, reserves and fee pots by the appropriate amounts.
       \item Add each individual reward to the global reward mapping.
+      \item Apply the instantaneous rewards and pay back to the reserves the
+        amount that cannot be distributed because the corresponding stake
+        credentials have been de-registered in the meantime.
     \end{itemize}
 
 These two functions will be used in the blockchain transition systems in Section~\ref{sec:chain}.
