@@ -33,8 +33,6 @@ module Cardano.Chain.Common.Address
   -- * Utilities
   , addrAttributesUnwrapped
   , addrNetworkMagic
-  , deriveLvl2KeyPair
-  , deriveFirstHDAddress
   , unAddressHash
 
   -- * Pattern-matching helpers
@@ -45,8 +43,6 @@ module Cardano.Chain.Common.Address
   , makeVerKeyAddress
   , makeVerKeyHdwAddress
   , makeRedeemAddress
-  , createHDAddressNH
-  , createHDAddressH
   )
 where
 
@@ -88,23 +84,13 @@ import Cardano.Chain.Common.AddrSpendingData
   (AddrSpendingData(..), AddrType(..), addrSpendingDataToType)
 import Cardano.Chain.Common.Attributes (Attributes(..), mkAttributes)
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic(..))
-import Cardano.Chain.Constants (accountGenesisIndex, wAddressGenesisIndex)
 import Cardano.Crypto.Hashing (hashHexF)
 import Cardano.Crypto.HD
   ( HDAddressPayload
-  , HDPassphrase
-  , ShouldCheckPassphrase(..)
-  , deriveHDPassphrase
-  , deriveHDVerificationKey
-  , deriveHDSigningKey
-  , packHDAddressAttr
   )
 import Cardano.Crypto.Signing
-  ( EncryptedSigningKey
-  , PassPhrase
-  , VerificationKey
+  ( VerificationKey
   , RedeemVerificationKey
-  , encToVerification
   )
 
 
@@ -268,33 +254,6 @@ makeRedeemAddress nm key = makeAddress spendingData attrs
   attrs        = AddrAttributes { aaVKDerivationPath = Nothing
                                 , aaNetworkMagic = nm }
 
--- | Create address from signing key in hardened way
-createHDAddressH
-  :: NetworkMagic
-  -> ShouldCheckPassphrase
-  -> PassPhrase
-  -> HDPassphrase
-  -> EncryptedSigningKey
-  -> [Word32]
-  -> Word32
-  -> Maybe (Address, EncryptedSigningKey)
-createHDAddressH nm scp passphrase hdPassphrase parent parentPath childIndex = do
-  derivedSK <- deriveHDSigningKey scp passphrase parent childIndex
-  let
-    addressPayload =
-      packHDAddressAttr hdPassphrase $ parentPath ++ [childIndex]
-  let vk = encToVerification derivedSK
-  return (makeVerKeyHdwAddress nm addressPayload vk, derivedSK)
-
--- | Create address from verification key via non-hardened way
-createHDAddressNH
-  :: NetworkMagic -> HDPassphrase -> VerificationKey -> [Word32] -> Word32 -> (Address, VerificationKey)
-createHDAddressNH nm passphrase parent parentPath childIndex = do
-  let derivedVK = deriveHDVerificationKey parent childIndex
-  let
-    addressPayload = packHDAddressAttr passphrase $ parentPath ++ [childIndex]
-  (makeVerKeyHdwAddress nm addressPayload derivedVK, derivedVK)
-
 
 --------------------------------------------------------------------------------
 -- Checks
@@ -329,45 +288,6 @@ addrAttributesUnwrapped = attrData . addrAttributes
 -- | Get 'NetworkMagic' from 'Address'
 addrNetworkMagic :: Address -> NetworkMagic
 addrNetworkMagic = aaNetworkMagic . addrAttributesUnwrapped
-
--- | Makes account signing key for given wallet set
-deriveLvl2KeyPair
-  :: NetworkMagic
-  -> ShouldCheckPassphrase
-  -> PassPhrase
-  -> EncryptedSigningKey
-  -- ^ key of wallet
-  -> Word32
-  -- ^ account derivation index
-  -> Word32
-  -- ^ address derivation index
-  -> Maybe (Address, EncryptedSigningKey)
-deriveLvl2KeyPair nm scp passphrase wsKey accountIndex addressIndex = do
-  wKey <- deriveHDSigningKey scp passphrase wsKey accountIndex
-  let hdPass = deriveHDPassphrase $ encToVerification wsKey
-  -- We don't need to check passphrase twice
-  createHDAddressH
-    nm
-    (ShouldCheckPassphrase False)
-    passphrase
-    hdPass
-    wKey
-    [accountIndex]
-    addressIndex
-
-deriveFirstHDAddress
-  :: NetworkMagic
-  -> PassPhrase
-  -> EncryptedSigningKey
-  -- ^ key of wallet set
-  -> Maybe (Address, EncryptedSigningKey)
-deriveFirstHDAddress nm passphrase wsKey = deriveLvl2KeyPair
-  nm
-  (ShouldCheckPassphrase False)
-  passphrase
-  wsKey
-  accountGenesisIndex
-  wAddressGenesisIndex
 
 
 --------------------------------------------------------------------------------
