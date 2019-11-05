@@ -709,7 +709,7 @@ blockEx2B = mkBlock
              1
 =======
              blockEx2AHash    -- ^ Hash of previous block
-             (coreNodeKeys 3) -- ^ All keys in the stake pool
+             (coreNodeKeys 3) -- ^ Third node of genesis node list
              [txEx2B]         -- ^ Single transaction to record
              (Slot 90)        -- ^ Current slot
              (mkNonce 0)      -- ^ Epoch nonce

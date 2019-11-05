@@ -358,13 +358,15 @@ instance NoUnexpectedThunks (UTxOState hashAlgo dsignAlgo vrfAlgo)
 -- | New Epoch state and environment
 data NewEpochState hashAlgo dsignAlgo vrfAlgo =
   NewEpochState {
-    nesEL     :: Epoch                                   -- ^ Epoch index
+    nesEL     :: Epoch                                   -- ^ Last epoch
   , nesBprev  :: BlocksMade hashAlgo dsignAlgo           -- ^ Blocks made before current epoch
   , nesBcur   :: BlocksMade hashAlgo dsignAlgo           -- ^ Blocks made in current epoch
   , nesEs     :: EpochState hashAlgo dsignAlgo vrfAlgo   -- ^ Epoch state before current
   , nesRu     :: Maybe (RewardUpdate hashAlgo dsignAlgo) -- ^ Possible reward update
-  , nesPd     :: PoolDistr hashAlgo dsignAlgo vrfAlgo
-  , nesOsched :: Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
+  , nesPd     :: PoolDistr hashAlgo dsignAlgo vrfAlgo    -- ^ Stake distribution within the stake pool
+  , nesOsched :: Map Slot
+                     (Maybe
+                       (GenKeyHash hashAlgo dsignAlgo))  -- ^ Overlay schedule for PBFT vs Praos
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochState hashAlgo dsignAlgo vrfAlgo)
