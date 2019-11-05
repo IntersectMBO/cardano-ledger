@@ -676,18 +676,17 @@ ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A (Right expectedStEx2A)
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
 txbodyEx2B :: TxBody
-txbodyEx2B = TxBody {
-      { _inputs   = Set.fromList [TxIn (txid txbodyEx2A) 0]
-      , _outputs  = [ TxOut aliceAddr    (Coin 729)
-                    , TxOut alicePtrAddr (Coin 9000) ]
-      , _certs    = fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
-                             , Delegate $ Delegation bobSHK (hk alicePool)
-                             ]
-      , _wdrls    = Map.empty
-      , _txfee    = Coin 4
-      , _ttl      = Slot 90
-      , _txUpdate = emptyUpdate
-      }
+txbodyEx2B = TxBody
+               (Set.fromList [TxIn (txid txbodyEx2A) 0]) -- ^ inputs
+               [ TxOut aliceAddr    (Coin 729)
+               , TxOut alicePtrAddr (Coin 9000) ]        -- ^ outputs
+               (fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
+                         , Delegate $ Delegation bobSHK (hk alicePool)
+                         ]) -- ^ delegation certificates
+               Map.empty
+               (Coin 4)    -- ^ Transaction fee
+               (Slot 90)   -- ^ Slot
+               emptyUpdate -- ^ Empty update proposal
 
 txEx2B :: Tx
 txEx2B = Tx
