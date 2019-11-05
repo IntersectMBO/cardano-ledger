@@ -697,26 +697,15 @@ txEx2B = Tx
 
 blockEx2B :: Block
 blockEx2B = mkBlock
-<<<<<<< HEAD
-             blockEx2AHash
-             (coreNodeKeys 3)
-             [txEx2B]
-             (Slot 90)
-             (BlockNo 2)
-             (mkNonce 0)
-             (NatNonce 2)
-             zero
-             1
-=======
              blockEx2AHash    -- ^ Hash of previous block
              (coreNodeKeys 3) -- ^ Third node of genesis node list
              [txEx2B]         -- ^ Single transaction to record
              (Slot 90)        -- ^ Current slot
+             (BlockNo 2)
              (mkNonce 0)      -- ^ Epoch nonce
              (NatNonce 2)     -- ^ Block nonce
              zero             -- ^ Praos leader value
              1                -- ^ Period of KES (key evolving signature scheme)
->>>>>>> 4e069ae8... Documenting examples 2A and 2B.
 
 blockEx2BHash :: HashHeader
 blockEx2BHash = bhHash (bheader blockEx2B)
@@ -753,16 +742,9 @@ expectedStEx2Bgeneric :: PParams -> ChainState
 expectedStEx2Bgeneric pp = ChainState
   -- | New state of the epoch
   (NewEpochState
-<<<<<<< HEAD
-     (Epoch 0)
-     (BlocksMade Map.empty)
-     (BlocksMade Map.empty)
-=======
      (Epoch   0)            -- ^ First epoch
-     (mkNonce 0)            -- ^ Epoch nonce
      (BlocksMade Map.empty) -- ^ Blocks made before current
      (BlocksMade Map.empty) -- ^ Blocks made before current
->>>>>>> 4e069ae8... Documenting examples 2A and 2B.
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
                             -- ^ Previous epoch state
      (Just RewardUpdate { deltaT        = Coin 0
@@ -774,19 +756,12 @@ expectedStEx2Bgeneric pp = ChainState
                         })  -- ^ Update reward
      (PoolDistr Map.empty)
      overlayEx2A)
-<<<<<<< HEAD
   oCertIssueNosEx1
   (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1 ⭒ mkNonce 2)
-  (mkNonce 0 ⭒ mkNonce 1)
-  blockEx2BHash
-  (Slot 90)
-=======
   (mkNonce 0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- ^ Evolving nonce
   (mkNonce 0 ⭒ mkNonce 1)             -- ^ Candidate nonce
   blockEx2BHash                       -- ^ Hash header of the chain
   (Slot 90)                           -- ^ Current slot
->>>>>>> 4e069ae8... Documenting examples 2A and 2B.
 
 -- | Expected state after transition
 expectedStEx2B :: ChainState
