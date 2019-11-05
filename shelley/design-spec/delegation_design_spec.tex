@@ -1128,7 +1128,9 @@ This certificate contains:
   the public staking key \(vks\)
 \end{itemize}
 
-The certificate witness must contain a signature by \(sks\).
+We do not require a witness to register a stake key (besides, of course,
+any witnesses needed for the transaction that is used to post the
+certificate).
 \item[Stake key de-registration certificate]
 This certificate contains:
 
@@ -4188,13 +4190,10 @@ system implicitly issues a transaction/state-change to pay out rewards
 to each staking key reward account. These rewards accumulate if they are
 not withdrawn.
 
-It is to be decided if value held in a reward account contributes to
-stake that is delegated to a stake pool and hence itself attracts
-rewards. Doing so would reduce the incentive to withdraw early and would
-mean the stake corresponding to the reward is not effectively offline.
-It should be possible to do so since the value in the reward account is
-identified with the staking key, and the delegation of the staking key is
-known.
+Value held in a reward account contributes to stake that is delegated to a stake
+pool and hence itself attracts rewards. This reduces the incentive to withdraw
+early and means the stake corresponding to the reward is not effectively
+offline.
 
 Withdrawal of rewards is done similarly to the withdrawal transaction from the
 Chimeric Ledgers paper. This uses the staking key as the witness, which reveals
