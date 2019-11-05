@@ -13,12 +13,10 @@ where
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 
-import           BaseTypes
 import           Coin
 import           EpochBoundary
 import           Keys (DSIGNAlgorithm, HashAlgorithm, VRFAlgorithm)
 import           LedgerState
-import           PParams
 import           Slot
 import           TxData
 
@@ -46,7 +44,6 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo
     [ pure $
       NewEpochState
         (Epoch 0)
-        (mkNonce 0)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
         emptyEpochState
@@ -59,8 +56,8 @@ newEpochTransition :: forall hashAlgo dsignAlgo vrfAlgo
   .  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
   => TransitionRule (NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
 newEpochTransition = do
-  TRC ( NewEpochEnv eta1 _s gkeys
-      , src@(NewEpochState (Epoch eL) _ _ bcur es ru _pd _osched)
+  TRC ( NewEpochEnv _s gkeys
+      , src@(NewEpochState (Epoch eL) _ bcur es ru _pd _osched)
       , e@(Epoch e_)) <- judgmentContext
   if e_ /= eL + 1
     then pure src
@@ -69,7 +66,7 @@ newEpochTransition = do
             Nothing  -> es
             Just ru' -> applyRUpd ru' e es
       es' <- trans @(EPOCH hashAlgo dsignAlgo vrfAlgo) $ TRC ((), es_, e)
-      let EpochState acnt ss ls pp = es'
+      let EpochState _acnt ss _ls pp = es'
 
           (Stake stake, delegs) = _pstakeSet ss
 
@@ -81,17 +78,12 @@ newEpochTransition = do
 
           pd' = Map.intersectionWith (,) sd (Map.map _poolVrf (_poolsSS ss))
 
-          osched' = overlaySchedule e gkeys eta1 pp
-
-          etaE = _extraEntropy pp
-
-          es'' = EpochState acnt ss ls (pp { _extraEntropy = NeutralNonce })
+          osched' = overlaySchedule e gkeys pp
 
       pure $ NewEpochState e
-                           (eta1 ⭒ etaE)
                            bcur
                            (BlocksMade Map.empty)
-                           es''
+                           es'
                            Nothing
                            (PoolDistr pd')
                            osched'

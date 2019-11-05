@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -5,7 +6,9 @@
 module Slot
   ( Slot(..)
   , Duration(..)
-  , (-*), (+*), (*-)
+  , (-*)
+  , (+*)
+  , (*-)
   , Epoch(..)
   -- conversion functions
   , slotFromEpoch
@@ -15,14 +18,19 @@ module Slot
   -- conversion between Byron / Shelley
   , slotByronToShelley
   , slotShelleyToByron
-  ) where
+  -- Block number
+  , BlockNo(..)
+  )
+where
 
-import           Numeric.Natural (Natural)
+import           Data.Word                      ( Word64 )
+import           Numeric.Natural                ( Natural )
+import           GHC.Generics                   ( Generic )
+import           Cardano.Binary                 ( ToCBOR )
+import           Cardano.Prelude                ( NoUnexpectedThunks(..) )
 
-import           Cardano.Binary (ToCBOR)
-import           Cardano.Prelude (NoUnexpectedThunks(..))
-
-import qualified Ledger.Core as Byron (Slot (..))
+import qualified Ledger.Core                   as Byron
+                                                ( Slot(..) )
 
 -- |A Slot
 newtype Slot = Slot Natural
@@ -32,7 +40,7 @@ instance Semigroup Slot where
   (Slot x) <> (Slot y) = Slot $ x + y
 
 instance Monoid Slot where
-  mempty = Slot 0
+  mempty  = Slot 0
   mappend = (<>)
 
 newtype Duration = Duration Natural
@@ -42,7 +50,7 @@ instance Semigroup Duration where
   (Duration x) <> (Duration y) = Duration $ x + y
 
 instance Monoid Duration where
-  mempty = Duration 0
+  mempty  = Duration 0
   mappend = (<>)
 
 (-*) :: Slot -> Slot -> Duration
@@ -63,7 +71,7 @@ instance Semigroup Epoch where
   (Epoch x) <> (Epoch y) = Epoch $ x + y
 
 instance Monoid Epoch where
-  mempty = Epoch 0
+  mempty  = Epoch 0
   mappend = (<>)
 
 slotFromEpoch :: Epoch -> Slot
@@ -86,3 +94,7 @@ slotByronToShelley (Byron.Slot s) = Slot $ fromIntegral s
 
 slotShelleyToByron :: Slot -> Byron.Slot
 slotShelleyToByron (Slot s) = Byron.Slot $ fromIntegral s
+
+newtype BlockNo = BlockNo { unBlockNo :: Word64 }
+  deriving stock   (Show, Eq, Ord, Generic)
+  deriving newtype (Enum, Bounded, Num, NoUnexpectedThunks)

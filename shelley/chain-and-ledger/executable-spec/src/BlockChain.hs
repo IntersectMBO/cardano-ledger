@@ -54,7 +54,7 @@ import           EpochBoundary (BlocksMade (..))
 import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KESAlgorithm, KESig, KeyHash,
                      VKey, VRFAlgorithm, VRFValue(..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
-import           Slot (Duration, Slot (..))
+import           Slot (Duration, Slot (..), BlockNo(..))
 import           Tx (Tx (..))
 
 import           NonIntegral ((***))
@@ -156,6 +156,8 @@ data BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo = BHBody
   , bheaderVrfVk          :: VRF.VerKeyVRF vrfAlgo
     -- | block slot
   , bheaderSlot           :: Slot
+    -- | block number
+  , bheaderBlockNo        :: BlockNo
     -- | block nonce
   , bheaderEta            :: VRF.CertifiedVRF vrfAlgo Nonce
     -- | leader election value

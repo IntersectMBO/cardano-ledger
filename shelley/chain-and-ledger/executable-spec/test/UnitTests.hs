@@ -27,7 +27,7 @@ import           TxData (pattern AddrBase, Credential (..), Delegation (..), pat
 
 import           Keys (pattern GenDelegs, pattern KeyPair, hashKey, hashKeyVRF, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
-                     asStateTransition, cCounters, delegationState, delegations, dstate,
+                     asStateTransition, delegationState, delegations, dstate,
                      emptyDelegation, genesisId, genesisCoins, genesisState, minfee, pParams, pstate, ptrs,
                      retiring, rewards, stkCreds, stPools, _delegationState, _genDelegs, _dstate)
 import           PParams
@@ -125,7 +125,6 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
            & dstate . delegations .~
                 Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, Slot 0)])
-           & pstate . cCounters .~ (Map.fromList [(poolhk, 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)])
           (fromIntegral $ length txs))
 
@@ -142,7 +141,6 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
            & dstate . delegations .~
                 Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
            & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, Slot 0)])
-           & pstate . cCounters .~ (Map.fromList [(poolhk, 0)])
            & pstate . pParams .~ Map.fromList [(poolhk, pool)]
            & pstate . retiring .~ Map.fromList [(poolhk, e)])
           3)

@@ -35,14 +35,16 @@
 \newcommand{\bleader}[1]{\fun{bleader}~\var{#1}}
 \newcommand{\hBbsize}[1]{\fun{hBbsize}~\var{#1}}
 \newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
-\newcommand{\overlaySchedule}[4]{\fun{overlaySchedule}~\var{#1}~\var{#2}~{#3}~\var{#4}}
+\newcommand{\overlaySchedule}[3]{\fun{overlaySchedule}~\var{#1}~\var{#2}~\var{#3}}
 
+\newcommand{\OCertEnv}{\type{OCertEnv}}
 \newcommand{\PrtclState}{\type{PrtclState}}
 \newcommand{\PrtclEnv}{\type{PrtclEnv}}
 \newcommand{\OverlayEnv}{\type{OverlayEnv}}
 \newcommand{\VRFState}{\type{VRFState}}
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
+\newcommand{\UpdateNonceState}{\type{UpdateNonceState}}
 \newcommand{\PoolDistr}{\type{PoolDistr}}
 \newcommand{\BBodyEnv}{\type{BBodyEnv}}
 \newcommand{\BBodyState}{\type{BBodyState}}
@@ -226,7 +228,6 @@ For the transition to a new epoch ($\mathsf{NEWEPOCH}$), the environment is
 given in Figure~\ref{fig:ts-types:newepoch}, it consists of
 
 \begin{itemize}
-\item The epoch nonce.
 \item The current slot.
 \item The set of genesis keys.
 \end{itemize}
@@ -235,7 +236,6 @@ of
 
 \begin{itemize}
 \item The number of the last epoch.
-\item The old epoch nonce.
 \item The information about produced blocks for each stake pool during the previous epoch.
 \item The information about produced blocks for each stake pool during the current epoch.
 \item The old epoch state.
@@ -258,7 +258,6 @@ of which are active.
     \NewEpochEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \eta_1 & \Seed & \text{epoch nonce} \\
         \var{s} & \Slot & \text{current slot} \\
         \var{gkeys} & \powerset{\KeyHashGen} & \text{genesis key hashes} \\
       \end{array}
@@ -271,7 +270,6 @@ of which are active.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{e_\ell} & \Epoch & \text{last epoch} \\
-        \eta_0 & \Seed & \text{epoch nonce} \\
         \var{b_{prev}} & \BlocksMade & \text{blocks made last epoch} \\
         \var{b_{cur}} & \BlocksMade & \text{blocks made this epoch} \\
         \var{es} & \EpochState & \text{epoch state} \\
@@ -284,13 +282,13 @@ of which are active.
   %
   \emph{Abstract pseudorandom schedule function}
   \begin{align*}
-    & \fun{overlaySchedule} \in \Epoch \to \powerset{\KeyHashGen} \to \Seed \to \PParams
+    & \fun{overlaySchedule} \in \Epoch \to \powerset{\KeyHashGen} \to \PParams
         \to (\Slot\mapsto\KeyHashGen^?) \\
   \end{align*}
   %
   \emph{Constraints}
   \begin{align*}
-    \text{ given: }~\var{osched}\leteq\overlaySchedule{e}{gkeys}{\eta}{pp} \\
+    \text{ given: }~\var{osched}\leteq\overlaySchedule{e}{gkeys}{pp} \\
     \range{osched}\subseteq\var{gkeys} \\
     |\var{osched}| = \floor{(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
     |\{s\mapsto k\in\var{osched}~\mid~k\neq\Nothing\}| =
@@ -317,8 +315,6 @@ In the second case, the new epoch state is updated as follows:
 
 \begin{itemize}
 \item The epoch is set to the new epoch $e$.
-\item The epoch nonce is replaced with the combination of the new one from the
-  environment and any extra entropy present in the UTxO state.
 \item The mapping for the blocks produced by each stake pool for the previous epoch
   is set to the current such mapping.
 \item The mapping for the blocks produced by each stake pool for the current epoch
@@ -364,24 +360,17 @@ In the second case, the new epoch state is updated as follows:
               \end{array}
             }
             \right\}\\
-          \var{osched'} & \overlaySchedule{e}{gkeys}{\eta_1}{pp} \\
-          \eta_e & \fun{extraEntropy}~\var{pp} \\
-          \var{es''} & (\var{acnt},
-                       ~\var{ss},
-                       ~\var{ls},
-                       ~\var{pp}\unionoverrideRight\{\var{extraEntropy}\mapsto 0_{seed}\}) \\
+          \var{osched'} & \overlaySchedule{e}{gkeys}{pp} \\
        \end{array}}
     }
     {
       {\begin{array}{c}
-         \eta_1 \\
          \var{s} \\
          \var{gkeys} \\
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{e_\ell} \\
-            \eta_0 \\
             \var{b_{prev}} \\
             \var{b_{cur}} \\
             \var{es} \\
@@ -392,10 +381,9 @@ In the second case, the new epoch state is updated as follows:
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
             \varUpdate{\var{e}} \\
-            \varUpdate{\eta_1\seedOp\eta_e} \\
             \varUpdate{\var{b_{cur}}} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}''} \\
+            \varUpdate{\var{es}'} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{osched}'} \\
@@ -412,14 +400,12 @@ In the second case, the new epoch state is updated as follows:
     }
     {
       {\begin{array}{c}
-         \eta_1 \\
          \var{s} \\
          \var{gkeys} \\
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{e_\ell} \\
-            \eta_0 \\
             \var{b_{prev}} \\
             \var{b_{cur}} \\
             \var{es} \\
@@ -430,7 +416,6 @@ In the second case, the new epoch state is updated as follows:
       \trans{newepoch}{\var{e}}
       {\left(\begin{array}{c}
             \var{e_\ell} \\
-            \eta_0 \\
             \var{b_{prev}} \\
             \var{b_{cur}} \\
             \var{es} \\
@@ -449,33 +434,81 @@ In the second case, the new epoch state is updated as follows:
 \subsection{Update Nonce Transition}
 \label{sec:update-nonces-trans}
 
-The Update Nonce Transition updates the nonces until the randomness gets
-fixed. The environment is shown in Figure~\ref{fig:ts-types:updnonce} and
-consists of the epoch nonce $\eta$. The update nonce state is shown in
-Figure~\ref{fig:rules:update-nonce} and consists of the candidate nonce
-$\eta_c$ and the evolving nonce $\eta_v$.
+The Update Nonce Transition updates the nonces until the randomness gets fixed.
+The environment is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
+the block nonce $\eta$, the protocol parameters $\var{pp}$ and a marker
+$\var{ne}$ determining whether we are in a new epoch. The update nonce state is
+shown in Figure~\ref{fig:rules:update-nonce} and consists of the epoch nonce
+$\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
 
 \begin{figure}
+  \emph{Update Nonce states}
+  \begin{equation*}
+    \UpdateNonceState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \eta_0 & \Seed & \text{epoch nonce} \\
+        \eta_c & \Seed & \text{candidate nonce} \\
+        \eta_v & \Seed & \text{evolving nonce} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Update Nonce Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{updn}{\_} \var{\_} \subseteq
-    \powerset (\Seed \times (\Seed\times\Seed) \times \Slot \times (\Seed\times\Seed))
+    \powerset ((\Seed \times \PParams \times \Bool)
+               \times \UpdateNonceState
+               \times \Slot
+               \times \UpdateNonceState
+              )
   \end{equation*}
   \caption{UpdNonce transition-system types}
   \label{fig:ts-types:updnonce}
 \end{figure}
 
-The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal.
-There are two different cases for $\mathsf{UPDN}$, one where \var{s} is not yet
-\SlotsPrior{} slots from the beginning of the next epoch and one where \var{s} is at least
-\SlotsPrior{} slots after the first slot of the epoch.
+The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal. There are
+three different cases for $\mathsf{UPDN}$: one where we are in a new epoch, one
+where \var{s} is not yet \SlotsPrior{} slots from the beginning of the next
+epoch and one where \var{s} is less than \SlotsPrior{} slots until the start of
+the next epoch.
+
+This does assume that the first block in an epoch will occur before
+\SlotsPrior{} slots before the beginning of the next epoch.
 
 Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
-$\eta_v\star\eta$, not $\eta_c\star\eta$. The reason for this is that even though the nonce
-candidate is frozen sometime during the epoch, we want the two nonces to again be equal at the
-start of a new epoch (so that the entropy added near the end of the epoch is not discarded).
+$\eta_v\star\eta$, not $\eta_c\star\eta$. The reason for this is that even
+though the nonce candidate is frozen sometime during the epoch, we want the two
+nonces to again be equal at the start of a new epoch (so that the entropy added
+near the end of the epoch is not discarded).
 
 \begin{figure}[ht]
+   \begin{equation}\label{eq:update-all}
+    \inference[Update-All]
+    { }
+    {
+      {\begin{array}{c}
+         \eta \\
+         \var{pp} \\
+         \mathsf{True}
+       \end{array}}
+      \vdash
+      {\left(\begin{array}{c}
+            \eta_0 \\
+            \eta_v \\
+            \eta_c \\
+      \end{array}\right)}
+      \trans{updn}{\var{s}}
+      {\left(\begin{array}{c}
+            \varUpdate{\eta_c \seedOp \fun{extraEntropy}~\var{pp}} \\
+            \varUpdate{\eta_v\seedOp\eta} \\
+            \varUpdate{\eta_v\seedOp\eta} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+
+  \nextdef
+
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
     {
@@ -484,14 +517,18 @@ start of a new epoch (so that the entropy added near the end of the epoch is not
     {
       {\begin{array}{c}
          \eta \\
+         \var{pp} \\
+         \mathsf{False}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
+            \eta_0 \\
             \eta_v \\
             \eta_c \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
+            \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \varUpdate{\eta_v\seedOp\eta} \\
       \end{array}\right)}
@@ -508,14 +545,18 @@ start of a new epoch (so that the entropy added near the end of the epoch is not
     {
       {\begin{array}{c}
          \eta \\
+         \var{pp} \\
+         \mathsf{False}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
+            \eta_0 \\
             \eta_v \\
             \eta_c \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
+            \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \eta_c \\
       \end{array}\right)}
@@ -637,15 +678,15 @@ execution of the transition role is as follows:
 \subsection{Block Header Transition}
 \label{sec:block-header-trans}
 
-The Block Header Transition checks a couple of sizes and performs some chain level upkeep.
-The environment consists of a candidate nonce and a set of genesis keys, and the state is the
+The Block Header Transition checks a couple of sizes and performs some chain level
+upkeep. The environment consists of a set of genesis keys, and the state is the
 epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 
 \begin{figure}
   \emph{Block Header Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset ((\Seed\times\powerset{\KeyHashGen}) \times \NewEpochState \times \BHeader \times \NewEpochState)
+    \powerset (\powerset{\KeyHashGen} \times \NewEpochState \times \BHeader \times \NewEpochState)
   \end{equation*}
   \caption{BHeader transition-system types}
   \label{fig:ts-types:bheader}
@@ -695,7 +736,6 @@ If the size checks pass, then three transitions are done:
       \\
       {
         {\begin{array}{c}
-           \eta_c \\
            \var{s} \\
            \var{gkeys} \\
          \end{array}}
@@ -723,7 +763,6 @@ If the size checks pass, then three transitions are done:
     }
     {
       {\begin{array}{c}
-         \eta_c \\
          \var{gkeys} \\
        \end{array}}
       \vdash\var{nes}\trans{bhead}{\var{bh}}\varUpdate{\var{nes''}}
@@ -746,15 +785,42 @@ The BHEAD rule has two predicate failures:
 \subsection{Operational Certificate Transition}
 \label{sec:oper-cert-trans}
 
-The Operational Certificate Transition contains no environments, and its state is the mapping of
-operation certificate issue numbers.  Its signal is a block header.
+The Operational Certificate Transition environment consists of the genesis key
+delegation map $\var{genDelegs}$ and the set of stake pools $\var{stpools}$. Its state
+is the mapping of operation certificate issue numbers.  Its signal is a block
+header.
 
 \begin{figure}
+  \emph{Operational Certificate environments}
+  \begin{equation*}
+    \OCertEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{stpools} & \powerset{\type{KeyHash}} & \text{stake pools} \\
+        \var{genDelegs} & \powerset{\type{KeyHash}} & \text{genesis key delegates}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Operational Certificate Transitions}
   \begin{equation*}
-    \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
-    \powerset (\KeyHash_{pool} \mapsto \N \times \BHeader \times \KeyHash_{pool} \mapsto \N)
+    \var{\_} \vdash \var{\_} \trans{ocert}{\_} \var{\_} \subseteq
+    \powerset (\OCertEnv \times \KeyHash_{pool} \mapsto \N \times \BHeader \times \KeyHash_{pool} \mapsto \N)
   \end{equation*}
+  %
+  \emph{Operational Certificate helper function}
+  \begin{align*}
+      & \fun{currentIssueNo} \in \OCertEnv \to (\KeyHash_{pool} \mapsto \N)
+                                           \to \KeyHash_{pool}
+                                           \to \N^? \\
+      & \fun{currentIssueNo}~(\var{stpools}, \var{genDelegs})~ \var{cs} ~\var{hk} =
+      \begin{cases}
+        \var{hk}\mapsto \var{n} \in \var{cs} & n \\
+        \var{hk} \in \var{stpools} & 0 \\
+        \var{hk} \in \var{genDelegs} & 0 \\
+        \text{otherwise} & \Nothing
+      \end{cases}
+  \end{align*}
   \caption{OCert transition-system types}
   \label{fig:ts-types:ocert}
 \end{figure}
@@ -807,7 +873,7 @@ of the key \var{hk} with the KES period \var{n}.
       \\~\\
       c_0 \leq \kesPeriod{s} < c_0 + \MaxKESEvo
       \\
-      \var{hk}\mapsto m\in\var{cs}
+      \fun{currentIssueNo} ~ \var{oce} ~ \var{cs} ~ \var{hk} = m
       &
       m \leq n
       \\~\\
@@ -817,7 +883,7 @@ of the key \var{hk} with the KES period \var{n}.
       \\
     }
     {
-      \vdash\var{cs}
+      \var{oce}\vdash\var{cs}
       \trans{ocert}{\var{bh}}\varUpdate{\var{cs}\unionoverrideRight\{\var{hk}\mapsto n\}}
     }
   \end{equation}
@@ -973,6 +1039,11 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \var{gkh}\mapsto\var{vkh}\in\var{genDelegs}
       \\~\\
       {
+        {\begin{array}{c}
+         \dom{\var{pd}} \\
+         \range{\var{genDelegs}} \\
+         \end{array}
+        }
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
       }
     }
@@ -1054,8 +1125,12 @@ followed by the transition to update the evolving and candidate nonces.
     \PrtclEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{oe} & \OverlayEnv & \text{overlay environment} \\
+        \var{pp} & \PParams & \text{protocol parameters} \\
+        \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
+        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
+        \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
         \var{s_{now}} & \Slot & \text{current slot} \\
+        \var{ne} & \Bool & \text{new epoch marker} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1068,6 +1143,7 @@ followed by the transition to update the evolving and candidate nonces.
         \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
         \var{h} & \HashHeader & \text{latest header hash} \\
         \var{s_\ell} & \Slot & \text{last slot} \\
+        \eta_0 & \Seed & \text{current epoch nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
       \end{array}
@@ -1085,8 +1161,17 @@ followed by the transition to update the evolving and candidate nonces.
 
 The environments for this transition are:
 \begin{itemize}
-  \item The overlay environment $\var{oe}$.
+  \item The protocol parameters $\var{pp}$.
+  \item A mapping $\var{osched}$ of slots to an optional genesis key.
+    In the terminology of \cite{delegation_design},
+    the slots in $\var{osched}$ are the ``OBFT slots''.
+    A slot in this map with a value of $\Nothing$ is a non-active slot,
+    otherwise it is an active slot and its value designates the genesis key
+    responsible for producing the block.
+  \item The stake pool stake distribution $\var{pd}$.
+  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys.
   \item The current slot (as determined by wall-clock).
+  \item A marker indicating whether we are in a new epoch $\var{ne}$.
 \end{itemize}
 
 The states for this transition consists of:
@@ -1094,6 +1179,7 @@ The states for this transition consists of:
   \item The operational certificate issue number mapping.
   \item The slot of the last block header.
   \item The hash of last block header.
+  \item The current epoch nonce.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
 \end{itemize}
@@ -1113,31 +1199,52 @@ The states for this transition consists of:
       \var{h} = \bprev{bhb}
       \\~\\
       {
-        \var{oe}\vdash \var{cs}\trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}} \var{cs}'
-      }\\~\\
-      {
-        \eta\vdash
         {\left(\begin{array}{c}
+        \eta \\
+        \var{pp} \\
+        \var{ne}
+        \end{array}\right)}
+        \vdash
+        {\left(\begin{array}{c}
+        \eta_0 \\
         \eta_v \\
         \eta_c \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{slot}}
         {\left(\begin{array}{c}
+        \eta_0' \\
         \eta_v' \\
         \eta_c' \\
         \end{array}\right)}
+      }\\~\\
+      {
+        {\begin{array}{c}
+          \var{pp} \\
+          \var{osched} \\
+          \eta_0' \\
+          \var{pd} \\
+          \var{dms} \\
+          \var{s_{now}} \\
+        \end{array}
+        }
+        \vdash \var{cs}\trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}} \var{cs}'
       }
     }
     {
       {\begin{array}{c}
-         \var{oe} \\
+         \var{pp} \\
+         \var{osched} \\
+         \var{pd} \\
+         \var{dms} \\
          \var{s_{now}} \\
+         \var{ne}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{cs} \\
             \var{h} \\
             \var{s_\ell} \\
+            \eta_0 \\
             \eta_v \\
             \eta_c \\
       \end{array}\right)}
@@ -1146,6 +1253,7 @@ The states for this transition consists of:
             \varUpdate{cs'} \\
             \varUpdate{\bhHash{bh}} \\
             \varUpdate{slot} \\
+            \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
       \end{array}\right)}
@@ -1316,6 +1424,8 @@ following:
 
 \begin{itemize}
   \item The epoch specific state $\var{nes}$.
+  \item The operational certificate issue number map $\var{cs}$.
+  \item The epoch nonce $\eta_0$.
   \item The evolving nonce $\eta_v$.
   \item The candidate nonce $\eta_c$.
   \item The last header hash \var{h}.
@@ -1329,6 +1439,8 @@ following:
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{nes} & \NewEpochState & \text{epoch specific state} \\
+        \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operaional certificate issue numbers} \\
+        ~\eta_0 & \Seed & \text{epoch nonce} \\
         ~\eta_v & \Seed & \text{evolving nonce} \\
         ~\eta_c & \Seed & \text{candidate nonce} \\
         \var{h} & \HashHeader & \text{latest header hash} \\
@@ -1375,24 +1487,13 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \end{align*}
   %
   \begin{align*}
-      & \fun{setIssueNumbers} \in \LState \to (\KeyHash_{pool}\to\N) \to \LState \\
-      & \fun{setIssueNumbers}~
-          (\var{utxoSt},
-          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\wcard)))
-          ~\var{cs} = \\
-      & ~~~~
-          (\var{utxoSt},
-          ~(\var{dstate},~(\var{stpools},~\var{poolParams},~\var{retiring},~\var{cs})))
-  \end{align*}
-  %
-  \begin{align*}
       & \fun{updateNES} \in \NewEpochState \to \BlocksMade \to \LState \to \NewEpochState \\
       & \fun{updateNES}~
-      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard,~\var{pp}),
+      (\var{e_\ell},~\var{b_{prev}},~\wcard,~(\var{acnt},~\var{ss},~\wcard,~\var{pp}),
        ~\var{ru},~\var{pd},~\var{osched})
           ~\var{b_{cur}}~\var{ls} = \\
       & ~~~~
-      (\var{e_\ell},~\eta_0,~\var{b_{prev}},~\var{b_{cur}},
+      (\var{e_\ell},~\var{b_{prev}},~\var{b_{cur}},
        ~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}),~\var{ru},~\var{pd},~\var{osched})
   \end{align*}
   %
@@ -1411,34 +1512,35 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       \\~\\
       {
         {\begin{array}{c}
-           \eta_c \\
            \var{gkeys} \\
          \end{array}}
         \vdash\var{nes}\trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}\var{nes'}
       } \\~\\
-      (\wcard,~\eta_0,~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
+      (\var{e_1},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,\wcard)
+        \leteq\var{nes} \\
+      (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
         ( \wcard,
           ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
-          (\wcard,~\wcard,~\wcard,~\var{cs})))\leteq\var{ls}\\
+          (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
           (\wcard, reserves) \leteq \var{acnt}\\
+          \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
       {
         {\begin{array}{c}
-           \begin{array}{c}
-             \var{pp} \\
-             \var{osched} \\
-             \eta_0 \\
-             \var{pd} \\
-             \var{genDelegs} \\
-           \end{array}\\
-           \var{s_{now}} \\
+            \var{pp} \\
+            \var{osched} \\
+            \var{pd} \\
+            \var{genDelegs} \\
+            \var{s_{now}} \\
+            \var{ne}
          \end{array}}
         \vdash
         {\left(\begin{array}{c}
               \var{cs} \\
               \var{h} \\
               \var{s_\ell} \\
+              \eta_0 \\
               \eta_v \\
               \eta_c \\
         \end{array}\right)}
@@ -1447,11 +1549,11 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
               \var{cs'} \\
               \var{h'} \\
               \var{s_\ell'} \\
+              \eta_0' \\
               \eta_v' \\
               \eta_c' \\
         \end{array}\right)}
       } \\~\\~\\
-      \var{ls'}\leteq\fun{setIssueNumbers}~\var{ls}~\var{cs'} \\~\\
       {
         {\begin{array}{c}
                  \dom{osched} \\
@@ -1460,22 +1562,24 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \end{array}}
         \vdash
         {\left(\begin{array}{c}
-              \var{ls}' \\
+              \var{ls} \\
               \var{b_{cur}} \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:bbody]{bbody}}{\var{block}}
         {\left(\begin{array}{c}
-              \var{ls}'' \\
+              \var{ls}' \\
               \var{b_{cur}'} \\
         \end{array}\right)}
       }\\~\\
-      \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls''} \\
+      \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls'} \\
     }
     {
       \var{s_{now}}
       \vdash
       {\left(\begin{array}{c}
             \var{nes} \\
+            \var{cs} \\
+            \eta_0 \\
             \eta_v \\
             \eta_c \\
             \var{h} \\
@@ -1484,6 +1588,8 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       \trans{chain}{\var{block}}
       {\left(\begin{array}{c}
             \varUpdate{\var{nes}''} \\
+            \varUpdate{\var{cs}'} \\
+            \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
             \varUpdate{\var{h}'} \\

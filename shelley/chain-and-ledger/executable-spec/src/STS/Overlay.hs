@@ -17,6 +17,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
+import           Ledger.Core (dom, range)
 
 import           BaseTypes
 import           BlockChain
@@ -106,7 +107,11 @@ overlayTransition = do
         Just genDelegsKey ->
           vkh == genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
 
-  trans @(OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) $ TRC ((), cs, bh)
+  let
+    oce = OCertEnv
+      { ocertEnvStPools = dom pd, ocertEnvGenDelegs = range genDelegs }
+
+  trans @(OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) $ TRC (oce, cs, bh)
 
 instance
   ( HashAlgorithm hashAlgo

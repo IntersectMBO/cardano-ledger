@@ -23,7 +23,7 @@ import           Control.State.Transition
 
 import           Coin (Coin)
 import           Keys
-import           Ledger.Core (dom, range, (⋪), (◁), (⨃))
+import           Ledger.Core ((◁), (⨃))
 import           LedgerState
 import           PParams
 import           Slot
@@ -84,7 +84,6 @@ ledgersTransition = do
   let u''' = UTxOState utxo' dep fee (UpdateState ppup aup favs' avs')
 
   let ds = _dstate dw''
-      ps = _pstate dw''
       fGenDelegs_    = _fGenDelegs ds
       GenDelegs genDelegs_ = _genDelegs ds
       (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
@@ -96,11 +95,9 @@ ledgersTransition = do
                   latestPerGKey
                   (Set.map snd (Map.keysSet curr))
   let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr
-  let oldGenDelegs = range (dom genDelegs' ◁ genDelegs_)
-  let cs' = (oldGenDelegs ⋪ _cCounters ps) ⨃ fmap (\x -> (x, 0)) (Map.elems genDelegs')
   let dw''' = dw'' { _dstate = ds { _fGenDelegs = fGenDelegs'
-                                  , _genDelegs = GenDelegs $ genDelegs_ ⨃ Map.toList genDelegs'}
-                   , _pstate = ps { _cCounters = cs' }
+                                  , _genDelegs = GenDelegs $ genDelegs_ ⨃ Map.toList genDelegs'
+                                  }
                    }
 
   pure $ LedgerState u''' dw''' (_txSlotIx ls)

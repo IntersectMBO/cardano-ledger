@@ -4,6 +4,8 @@
 
 module OCert
   ( OCert(..)
+  , OCertEnv(..)
+  , currentIssueNo
   , KESPeriod(..)
   , slotsPerKESPeriod
   , kesPeriod)
@@ -12,12 +14,32 @@ where
 import           Cardano.Binary (FromCBOR(..), ToCBOR, encodeListLen
                                 , enforceSize, toCBOR)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
 
-import           Keys (DSIGNAlgorithm, KESAlgorithm, Sig, VKey, VKeyES)
+import           Keys (DSIGNAlgorithm, KESAlgorithm, KeyHash, Sig, VKey, VKeyES)
 import           Slot (Slot (..))
 
 import           Numeric.Natural (Natural)
+
+data OCertEnv hashAlgo dsignAlgo = OCertEnv
+  { ocertEnvStPools :: Set (KeyHash hashAlgo dsignAlgo)
+  , ocertEnvGenDelegs :: Set (KeyHash hashAlgo dsignAlgo)
+  } deriving (Show, Eq)
+
+currentIssueNo
+  :: OCertEnv hashAlgo dsignAlgo
+  -> (Map (KeyHash hashAlgo dsignAlgo) Natural)
+  -> KeyHash hashAlgo dsignAlgo -- ^ Pool hash
+  -> Maybe Natural
+currentIssueNo (OCertEnv stPools genDelegs) cs hk
+  | Map.member hk cs = Map.lookup hk cs
+  | Set.member hk stPools = Just 0
+  | Set.member hk genDelegs = Just 0
+  | otherwise = Nothing
 
 newtype KESPeriod = KESPeriod Natural
   deriving (Show, Eq, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)

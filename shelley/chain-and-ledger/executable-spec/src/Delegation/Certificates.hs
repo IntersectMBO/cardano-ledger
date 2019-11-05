@@ -1,4 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
+
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 module Delegation.Certificates
   (
     DCert(..)
@@ -22,6 +27,7 @@ module Delegation.Certificates
 
 import           Coin (Coin (..))
 import           Keys (Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
+import           Ledger.Core (Relation(..))
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
@@ -111,7 +117,7 @@ decayPool pc = (pval, pmin, lambdap)
 
 newtype PoolDistr hashAlgo dsignAlgo vrfAlgo =
   PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, Hash hashAlgo (VerKeyVRF vrfAlgo)))
-  deriving (Show, Eq, NoUnexpectedThunks)
+  deriving (Show, Eq, NoUnexpectedThunks, Relation)
 
 isInstantaneousRewards :: (DCert hashAlgo dsignAlgo vrfAlgo) -> Bool
 isInstantaneousRewards (InstantaneousRewards _) = True
