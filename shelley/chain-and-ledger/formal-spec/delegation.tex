@@ -568,7 +568,6 @@ concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-mir}
     \inference[Deleg-Mir]
     {
-      \dom{(\fun{moveRewards}~\var{c})} \subseteq \dom{stkCreds} \\
       \var{c}\in \DCertMir\\
       slot < \fun{firstSlot}((\fun{epoch}~\var{s} + 1)) - \fun{SlotsPrior}\\
       \left(
