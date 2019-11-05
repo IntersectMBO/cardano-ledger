@@ -234,10 +234,11 @@ mkStakeShare p =
     then Just $ StakeShare p
     else Nothing
 
+-- | State of staking pool delegations and rewards
 data DState hashAlgo dsignAlgo = DState
     {  -- |The active stake keys.
       _stkCreds    :: StakeCreds hashAlgo dsignAlgo
-      -- |The active accounts.
+      -- |The active reward accounts.
     ,  _rewards    :: RewardAccounts hashAlgo dsignAlgo
       -- |The current delegations.
     , _delegations :: Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
@@ -253,6 +254,7 @@ data DState hashAlgo dsignAlgo = DState
 
 instance NoUnexpectedThunks (DState hashAlgo dsignAlgo)
 
+-- | Current state of staking pools and their certificate counters.
 data PState hashAlgo dsignAlgo vrfAlgo = PState
     { -- |The active stake pools.
       _stPools     :: StakePools hashAlgo dsignAlgo
@@ -264,7 +266,7 @@ data PState hashAlgo dsignAlgo vrfAlgo = PState
 
 instance NoUnexpectedThunks (PState hashAlgo dsignAlgo vrfAlgo)
 
--- |The state associated with the current stake delegation.
+-- | The state associated with the current stake delegation.
 data DPState hashAlgo dsignAlgo vrfAlgo =
     DPState
     {
@@ -356,12 +358,12 @@ instance NoUnexpectedThunks (UTxOState hashAlgo dsignAlgo vrfAlgo)
 -- | New Epoch state and environment
 data NewEpochState hashAlgo dsignAlgo vrfAlgo =
   NewEpochState {
-    nesEL    :: Epoch
-  , nesBprev :: BlocksMade hashAlgo dsignAlgo
-  , nesBcur  :: BlocksMade hashAlgo dsignAlgo
-  , nesEs    :: EpochState hashAlgo dsignAlgo vrfAlgo
-  , nesRu    :: Maybe (RewardUpdate hashAlgo dsignAlgo)
-  , nesPd    :: PoolDistr hashAlgo dsignAlgo vrfAlgo
+    nesEL     :: Epoch                                   -- ^ Epoch index
+  , nesBprev  :: BlocksMade hashAlgo dsignAlgo           -- ^ Blocks made before current epoch
+  , nesBcur   :: BlocksMade hashAlgo dsignAlgo           -- ^ Blocks made in current epoch
+  , nesEs     :: EpochState hashAlgo dsignAlgo vrfAlgo   -- ^ Epoch state before current
+  , nesRu     :: Maybe (RewardUpdate hashAlgo dsignAlgo) -- ^ Possible reward update
+  , nesPd     :: PoolDistr hashAlgo dsignAlgo vrfAlgo
   , nesOsched :: Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
   } deriving (Show, Eq, Generic)
 

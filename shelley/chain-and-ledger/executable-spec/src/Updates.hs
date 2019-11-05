@@ -69,10 +69,12 @@ newtype InstallerHash hashAlgo = InstallerHash (Hash hashAlgo ByteString)
 newtype Mdt hashAlgo = Mdt (Map SystemTag (InstallerHash hashAlgo))
   deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
+-- | List of applications on the blockchain and their versions.
 newtype Applications hashAlgo = Applications {
   apps :: Map ApName (ApVer, Mdt hashAlgo)
   } deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
+-- | A single update of the @Applications list.
 newtype AVUpdate hashAlgo dsignAlgo = AVUpdate {
   aup :: Map (GenKeyHash hashAlgo dsignAlgo) (Applications hashAlgo)
   } deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
@@ -95,6 +97,8 @@ data PPUpdateEnv hashAlgo dsignAlgo = PPUpdateEnv {
 
 instance NoUnexpectedThunks (PPUpdateEnv hashAlgo dsignAlgo)
 
+-- | Protocol parameter selector, contains just a single field to be updated
+--   within @PPUpdate
 data Ppm = MinFeeA Integer
   | MinFeeB Natural
   | MaxBBSize Natural
@@ -169,6 +173,7 @@ instance ToCBOR Ppm where
     ProtocolVersion protocolVersion ->
       encodeListLen 2 <> toCBOR (18 :: Word8) <> toCBOR protocolVersion
 
+-- | Update operation for protocol parameters structure @PParams
 newtype PPUpdate hashAlgo dsignAlgo
   = PPUpdate (Map (GenKeyHash hashAlgo dsignAlgo) (Set Ppm))
   deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
