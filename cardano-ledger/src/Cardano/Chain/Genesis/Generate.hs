@@ -18,10 +18,6 @@ module Cardano.Chain.Genesis.Generate
   , generateGenesisData
   , generateGenesisConfig
   , GenesisDataGenerationError(..)
-
-  -- * Helpers which are also used by keygen.
-  , poorSecretToEncKey
-  , poorSecretToKey
   )
 where
 
@@ -42,7 +38,6 @@ import Cardano.Chain.Common
   , LovelaceError
   , addLovelace
   , applyLovelacePortionDown
-  , deriveFirstHDAddress
   , divLovelace
   , makeVerKeyAddress
   , mkKnownLovelace
@@ -67,26 +62,21 @@ import Cardano.Chain.Genesis.Config (Config(..))
 import Cardano.Chain.UTxO.UTxOConfiguration (defaultUTxOConfiguration)
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes(..))
 import Cardano.Crypto
-  ( EncryptedSigningKey
-  , SigningKey
+  ( SigningKey
   , deterministic
-  , emptyPassphrase
-  , encToSigning
   , getProtocolMagicId
   , getRequiresNetworkMagic
   , hash
   , keyGen
-  , noPassEncrypt
   , noPassSafeSigner
   , redeemDeterministicKeyGen
-  , safeKeyGen
   , toCompactRedeemVerificationKey
   , toVerification
   )
 
 
 -- | Poor node secret
-data PoorSecret = PoorSecret SigningKey | PoorEncryptedSecret EncryptedSigningKey
+newtype PoorSecret = PoorSecret { poorSecretToKey :: SigningKey }
   deriving (Generic, NoUnexpectedThunks)
 
 -- | Valuable secrets which can unlock genesis data.
@@ -222,9 +212,6 @@ generateGenesisData startTime genesisSpec = do
   let
     createAddressPoor
       :: MonadError GenesisDataGenerationError m => PoorSecret -> m Address
-    createAddressPoor (PoorEncryptedSecret hdwSk) =
-      maybe (throwError GenesisDataGenerationPassPhraseMismatch) (pure . fst)
-        $ deriveFirstHDAddress nm emptyPassphrase hdwSk
     createAddressPoor (PoorSecret secret) =
       pure $ makeVerKeyAddress nm (toVerification secret)
   let richAddresses = map (makeVerKeyAddress nm . toVerification) richSecrets
@@ -326,9 +313,7 @@ generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
   replicateRich = replicateM (fromIntegral $ tboRichmen tbo)
 
   genPoorSecret :: MonadRandom m => m PoorSecret
-  genPoorSecret = if tboUseHDAddresses tbo
-    then PoorEncryptedSecret . snd <$> safeKeyGen emptyPassphrase
-    else PoorSecret . snd <$> keyGen
+  genPoorSecret = PoorSecret . snd <$> keyGen
 
 
 ----------------------------------------------------------------------------
@@ -356,19 +341,6 @@ generateGenesisConfig startTime genesisSpec = do
     -- Anything will do for the genesis hash. A hash of "patak" was used before,
     -- and so it remains. Here lies the last of the Serokell code. RIP.
     genesisHash = GenesisHash $ coerce $ hash ("patak" :: Text)
-
-
-----------------------------------------------------------------------------
--- Exported helpers
-----------------------------------------------------------------------------
-
-poorSecretToKey :: PoorSecret -> SigningKey
-poorSecretToKey (PoorSecret          key   ) = key
-poorSecretToKey (PoorEncryptedSecret encKey) = encToSigning encKey
-
-poorSecretToEncKey :: PoorSecret -> EncryptedSigningKey
-poorSecretToEncKey (PoorSecret          key ) = noPassEncrypt key
-poorSecretToEncKey (PoorEncryptedSecret encr) = encr
 
 
 ----------------------------------------------------------------------------

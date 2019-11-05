@@ -131,7 +131,6 @@ dummyGenesisInitializer = GenesisInitializer
     , tboRichmen        = 4
     , tboTotalBalance   = mkKnownLovelace @6000000000000000
     , tboRichmenShare   = mkKnownLovelacePortion @990000000000000
-    , tboUseHDAddresses = True
     }
   , giFakeAvvmBalance = FakeAvvmOptions
     { faoCount      = 10

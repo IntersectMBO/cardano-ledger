@@ -39,8 +39,6 @@ data TestnetBalanceOptions = TestnetBalanceOptions
   -- ^ Total balance owned by these nodes.
   , tboRichmenShare   :: !LovelacePortion
   -- ^ Portion of stake owned by all richmen together.
-  , tboUseHDAddresses :: !Bool
-  -- ^ Whether generate plain addresses or with hd payload.
   } deriving (Eq, Show)
 
 
