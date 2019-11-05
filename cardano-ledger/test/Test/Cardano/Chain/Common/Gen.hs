@@ -30,6 +30,7 @@ module Test.Cardano.Chain.Common.Gen
 where
 
 import Cardano.Prelude
+import Test.Cardano.Prelude (gen32Bytes)
 
 import Formatting (build, sformat)
 
@@ -40,6 +41,7 @@ import qualified Hedgehog.Range as Range
 import Cardano.Binary (ToCBOR)
 import Cardano.Chain.Common
   ( AddrAttributes(..)
+  , HDAddressPayload(..)
   , AddrSpendingData(..)
   , AddrType(..)
   , Address(..)
@@ -67,8 +69,7 @@ import Cardano.Chain.Common
   , toCompactAddress
   )
 
-import Test.Cardano.Crypto.Gen
-  (genHDAddressPayload, genVerificationKey, genRedeemVerificationKey)
+import Test.Cardano.Crypto.Gen (genVerificationKey, genRedeemVerificationKey)
 
 
 genAddrAttributes :: Gen AddrAttributes
@@ -77,6 +78,9 @@ genAddrAttributes = genAddrAttributesWithNM =<< genNetworkMagic
 genAddrAttributesWithNM :: NetworkMagic -> Gen AddrAttributes
 genAddrAttributesWithNM nm = AddrAttributes <$> hap <*> pure nm
   where hap = Gen.maybe genHDAddressPayload
+
+genHDAddressPayload :: Gen HDAddressPayload
+genHDAddressPayload = HDAddressPayload <$> gen32Bytes
 
 genAddress :: Gen Address
 genAddress = makeAddress <$> genAddrSpendingData <*> genAddrAttributes

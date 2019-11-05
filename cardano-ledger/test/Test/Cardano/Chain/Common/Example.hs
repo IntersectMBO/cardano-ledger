@@ -19,6 +19,7 @@ import Cardano.Prelude
 
 import Cardano.Chain.Common
   ( AddrAttributes(..)
+  , HDAddressPayload(..)
   , AddrSpendingData(..)
   , Address
   , Attributes
@@ -29,7 +30,6 @@ import Cardano.Chain.Common
   , mkAttributes
   , hashKey
   )
-import Cardano.Crypto.HD (HDAddressPayload(..))
 
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example

@@ -78,16 +78,14 @@ import Cardano.Binary
   )
 import Cardano.Chain.Common.CBOR
   (encodeCrcProtected, encodedCrcProtectedSizeExpr, decodeCrcProtected)
-import Cardano.Chain.Common.AddrAttributes (AddrAttributes(..))
+import Cardano.Chain.Common.AddrAttributes
+  (AddrAttributes(..), HDAddressPayload)
 import Cardano.Chain.Common.AddressHash (AddressHash, addressHash)
 import Cardano.Chain.Common.AddrSpendingData
   (AddrSpendingData(..), AddrType(..), addrSpendingDataToType)
 import Cardano.Chain.Common.Attributes (Attributes(..), mkAttributes)
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic(..))
 import Cardano.Crypto.Hashing (hashHexF)
-import Cardano.Crypto.HD
-  ( HDAddressPayload
-  )
 import Cardano.Crypto.Signing
   ( VerificationKey
   , RedeemVerificationKey
