@@ -131,7 +131,13 @@ import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnesse
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
 
 data CHAINExample =
-  CHAINExample Slot ChainState Block (Either [[PredicateFailure CHAIN]] ChainState)
+  CHAINExample { currentSlot    :: Slot       -- ^ Current slot
+               , startState     :: ChainState -- ^ State to start testing with
+               , newBlock       :: Block      -- ^ Block to run chain state transition system on
+               , intendedResult :: (Either [[PredicateFailure CHAIN]] -- ^ type of fatal error, if failure expected
+                                           ChainState                 --   and final chain state if success expected
+                                   )
+               }
 
 data MIRExample =
   MIRExample
@@ -141,7 +147,6 @@ data MIRExample =
   } deriving (Show, Eq)
 
 -- | Set up keys for all the actors in the examples.
-
 mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKey)
 mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyDSIGN
@@ -286,14 +291,14 @@ unitIntervalToNatural :: UnitInterval -> Natural
 unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
 
 mkBlock
-  :: HashHeader
-  -> AllPoolKeys
-  -> [Tx]
-  -> Slot
-  -> Nonce
-  -> NatNonce
-  -> UnitInterval
-  -> Natural
+  :: HashHeader   -- ^ Hash of previous block
+  -> AllPoolKeys  -- ^ All keys in the stake pool
+  -> [Tx]         -- ^ Transactions to record
+  -> Slot         -- ^ Current slot
+  -> Nonce        -- ^ Epoch nonce
+  -> NatNonce     -- ^ Block nonce
+  -> UnitInterval -- ^ Praos leader value
+  -> Natural      -- ^ Period of KES (key evolving signature scheme)
   -> Block
 mkBlock prev pkeys txns s enonce (NatNonce bnonce) l kesPeriod =
   let
@@ -321,6 +326,7 @@ mkBlock prev pkeys txns s enonce (NatNonce bnonce) l kesPeriod =
   in
     Block bh (TxSeq $ fromList txns)
 
+-- | You vouch that argument is in [0; 1].
 unsafeMkUnitInterval :: Rational -> UnitInterval
 unsafeMkUnitInterval r =
   fromMaybe (error "could not construct unit interval") $ mkUnitInterval r
@@ -351,7 +357,7 @@ dariaStake = KeyPair vk sk
 dariaAddr :: Addr
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
--- | Example 1 - apply CHAIN transition to an empty block
+-- * Example 1 - apply CHAIN transition to an empty block
 
 
 utxostEx1 :: UTxOState
@@ -364,45 +370,51 @@ psEx1 :: PState
 psEx1 = emptyPState { _cCounters = Map.fromList (fmap f (Map.elems genDelegs)) }
   where f vk = (vk, 0)
 
+-- | Ledger state.
 lsEx1 :: LedgerState
 lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1) 0
 
 ppsEx1 :: PParams
-ppsEx1 = emptyPParams { _maxBBSize = 50000
-                   , _maxBHSize = 10000
-                   , _maxTxSize = 10000
-                   , _eMax = Epoch 10000
-                   , _keyDeposit = Coin 7
-                   , _poolDeposit = Coin 250
-                   , _d = unsafeMkUnitInterval 0.5
-                   , _activeSlotCoeff = unsafeMkUnitInterval 0.1
-                   , _tau = unsafeMkUnitInterval 0.2
-                   , _rho = unsafeMkUnitInterval 0.0021
-                   , _keyDecayRate = 0.002
-                   , _keyMinRefund = unsafeMkUnitInterval 0.5
-                   , _poolDecayRate = 0.001
-                   , _poolMinRefund = unsafeMkUnitInterval 0.5
-                   }
+ppsEx1 = emptyPParams { _maxBBSize       =       50000
+                      , _maxBHSize       =       10000
+                      , _maxTxSize       =       10000
+                      , _eMax            = Epoch 10000
+                      , _keyDeposit      = Coin      7
+                      , _poolDeposit     = Coin    250
+                      , _d               = unsafeMkUnitInterval 0.5
+                      , _activeSlotCoeff = unsafeMkUnitInterval 0.1
+                      , _tau             = unsafeMkUnitInterval 0.2
+                      , _rho             = unsafeMkUnitInterval 0.0021
+                      , _keyDecayRate    =                      0.002
+                      , _keyMinRefund    = unsafeMkUnitInterval 0.5
+                      , _poolDecayRate   =                      0.001
+                      , _poolMinRefund   = unsafeMkUnitInterval 0.5
+                      }
 
+-- | Never decay.
 ppsExNoDecay :: PParams
-ppsExNoDecay = ppsEx1 { _keyDecayRate = 0
+ppsExNoDecay = ppsEx1 { _keyDecayRate  = 0
                       , _poolDecayRate = 0 }
 
+-- | Refund everything.
 ppsExFullRefund :: PParams
-ppsExFullRefund = ppsEx1 { _keyMinRefund = unsafeMkUnitInterval 1
+ppsExFullRefund = ppsEx1 { _keyMinRefund  = unsafeMkUnitInterval 1
                          , _poolMinRefund = unsafeMkUnitInterval 1 }
 
+-- | Decay instantly within one cycle.
 ppsExInstantDecay :: PParams
-ppsExInstantDecay = ppsEx1 { _keyDecayRate = 1000
+ppsExInstantDecay = ppsEx1 { _keyDecayRate  = 1000
                            , _poolDecayRate = 1000 }
 
 
+-- | Account with empty treasury.
 acntEx1 :: AccountState
 acntEx1 = AccountState
             { _treasury = Coin 0
             , _reserves = maxLovelaceSupply
             }
 
+-- | Epoch state with no snapshots.
 esEx1 :: EpochState
 esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1
 
@@ -413,6 +425,8 @@ esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1
 lastByronHeaderHash :: HashHeader
 lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
+-- | Empty initial Shelley state with fake Byron hash and no blocks at all.
+--   No blocks of Shelley have been processed yet.
 initStEx1 :: ChainState
 initStEx1 = ChainState
   (NewEpochState
@@ -433,6 +447,7 @@ initStEx1 = ChainState
 zero :: UnitInterval
 zero = unsafeMkUnitInterval 0
 
+-- | Null initial block. Just records the Byron hash, and contains no transactions.
 blockEx1 :: Block
 blockEx1 = mkBlock
              lastByronHeaderHash
@@ -444,6 +459,7 @@ blockEx1 = mkBlock
              zero
              0
 
+-- | Expected chain state after successful processing of null block.
 expectedStEx1 :: ChainState
 expectedStEx1 = ChainState
   (NewEpochState
@@ -465,7 +481,7 @@ ex1 :: CHAINExample
 ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 (Right expectedStEx1)
 
 
--- | Example 2A - apply CHAIN transition to register stake keys and a pool
+-- * Example 2A - apply CHAIN transition to register stake keys and a pool
 
 
 utxoEx2A :: UTxO
