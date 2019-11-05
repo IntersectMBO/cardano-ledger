@@ -60,7 +60,7 @@ import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
 import Cardano.Crypto.Signing.SigningKey (SigningKey(..))
 import Cardano.Crypto.Signing.Tag (SignTag(..), signTag, signTagDecoded)
 import Cardano.Crypto.Signing.Safe
-  (SafeSigner(..), PassPhrase(..), EncryptedSigningKey(..))
+  (SafeSigner(..), PassPhrase(..))
 
 
 --------------------------------------------------------------------------------
@@ -172,7 +172,7 @@ safeSignRaw
   -> SafeSigner
   -> ByteString
   -> Signature Raw
-safeSignRaw pm mbTag (SafeSigner (EncryptedSigningKey sk _) (PassPhrase pp)) x =
+safeSignRaw pm mbTag (SafeSigner (SigningKey sk) (PassPhrase pp)) x =
   Signature (CC.sign pp sk (tag <> x))
   where tag = maybe mempty (signTag pm) mbTag
 

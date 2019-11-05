@@ -204,7 +204,7 @@ genPassPhrase = ByteArray.pack <$> genWord8List
 --------------------------------------------------------------------------------
 
 genSafeSigner :: Gen SafeSigner
-genSafeSigner = SafeSigner <$> genEncryptedSigningKey <*> pure emptyPassphrase
+genSafeSigner = SafeSigner <$> genSigningKey <*> pure emptyPassphrase
 
 
 --------------------------------------------------------------------------------
