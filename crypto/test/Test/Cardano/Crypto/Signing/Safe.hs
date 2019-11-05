@@ -9,7 +9,7 @@ where
 import Cardano.Prelude
 
 import Hedgehog
-  (Property, assert, checkParallel, discover, failure, forAll, property, (===))
+  (Property, checkParallel, discover, failure, forAll, property, (===))
 import qualified Hedgehog.Gen as Gen
 
 import Cardano.Crypto.Signing
@@ -20,7 +20,6 @@ import Cardano.Crypto.Signing
   , safeKeyGen
   , safeToVerification
   , toVerification
-  , withSafeSigner
   )
 
 import Test.Cardano.Crypto.Gen (genPassPhrase, genSigningKey)
@@ -37,21 +36,6 @@ tests = checkParallel $$discover
 --------------------------------------------------------------------------------
 -- Safe Signing Properties
 --------------------------------------------------------------------------------
-
--- | Constructing a 'SafeSigner' with a valid 'PassPhrase' works
-prop_validPassPhraseGivesJustSigner :: Property
-prop_validPassPhraseGivesJustSigner = property $ do
-  passPhrase <- forAll genPassPhrase
-  (_, key)   <- liftIO $ safeKeyGen passPhrase
-  withSafeSigner key (pure passPhrase) (assert . isJust)
-
--- | Constructing a 'SafeSigner' with an invalid 'PassPhrase' gives 'Nothing'
-prop_invalidPassPhraseGivesNothing :: Property
-prop_invalidPassPhraseGivesNothing = property $ do
-  passPhrase  <- forAll genPassPhrase
-  passPhrase' <- forAll $ Gen.filter (/= passPhrase) genPassPhrase
-  (_, key)    <- liftIO $ safeKeyGen passPhrase
-  withSafeSigner key (pure passPhrase') (assert . isNothing)
 
 -- | Changing the 'PassPhrase' of an 'EncryptedSigningKey' leaves the 'VerificationKey'
 --   the same
