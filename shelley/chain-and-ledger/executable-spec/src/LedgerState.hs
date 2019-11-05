@@ -126,7 +126,7 @@ import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Delegation.Certificates (isInstantaneousRewards)
+import           Delegation.Certificates (requiresVKeyWitness)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
@@ -618,7 +618,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
                [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | RegPool pool <- toList $ txbody ^. certs]
     certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK certificates)
     getCertHK = cwitness
-    certificates = filter (not . isInstantaneousRewards) (toList $ txbody ^. certs)
+    certificates = filter requiresVKeyWitness (toList $ txbody ^. certs)
     updateKeys = undiscriminateKeyHash `Set.map` propWits (txup tx) _genDelegs
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
