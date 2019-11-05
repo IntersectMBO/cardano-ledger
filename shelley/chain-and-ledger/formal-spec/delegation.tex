@@ -568,10 +568,11 @@ concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-mir}
     \inference[Deleg-Mir]
     {
+      \dom{(\fun{moveRewards}~\var{c})} \subseteq \dom{stkCreds} \\
       \var{c}\in \DCertMir\\
       slot < \fun{firstSlot}((\fun{epoch}~\var{s} + 1)) - \fun{SlotsPrior}\\
       \left(
-        \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i'_{rwd}})} val      \right)\leq\var{reserves}
+        \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i_{rwd}})} val      \right)\leq\var{reserves}
     }
     {
       \begin{array}{r}
