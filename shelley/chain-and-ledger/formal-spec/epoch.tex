@@ -1383,7 +1383,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \emph{Applying a reward update}
   %
   \begin{align*}
-      & \fun{applyRUpd} \in \RewardUpdate \to \Epoch\to\EpochState \to \EpochState \\
+      & \fun{applyRUpd} \in \RewardUpdate \to \EpochState \to \EpochState \\
       & \fun{applyRUpd}~
       \left(
         \begin{array}{c}
@@ -1391,11 +1391,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \Delta r \\
           \var{rs} \\
           \Delta f \\
-          \Delta d \\
           \var{rew_{mir}}
         \end{array}
     \right)
-    e
       \left(
         \begin{array}{c}
           \var{treasury} \\
@@ -1423,9 +1421,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \left(
         \begin{array}{c}
           \varUpdate{\var{treasury} + \Delta t}\\
-          \varUpdate{\var{reserves} + \Delta r}\\
+          \varUpdate{\var{reserves} + \Delta r + nonDistributed}\\
           ~ \\
-          \varUpdate{\var{stkCreds}\unionoverrideLeft \var{update_{delegs}}} \\
+          \var{\var{stkCreds}} \\
           \varUpdate{(\var{rewards}\unionoverridePlus\var{rs})\unionoverridePlus\var{update_{rwd}}} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -1438,20 +1436,19 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{cs} \\
           ~ \\
           \var{utxo} \\
-          \varUpdate{\var{deposits} + \Delta d} \\
           \varUpdate{\var{fees}+\Delta f} \\
           \var{up} \\
         \end{array}
     \right)\\
       & ~~~\where \\
-      & ~~~~~~~\var{slot} = \fun{firstSlot}~\var{e} \\
+      & ~~~~~~~\var{rew_{mir}'} =  \dom{\var{stkCreds}}\restrictdom\var{rew_{mir}} \\
+      & ~~~~~~~\var{unregistered} = \dom{\var{stkCreds}}\subtractdom\var{rew_{mir}'}
+    \\
+      & ~~~~~~~\var{nonDistributed} = \sum\limits_{\wcard\mapsto \var{val} \in
+                                      unregistered} \var{val}  \\
       & ~~~~~~~\var{update_{rwd}} =
         \left\{
-        \fun{add_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}}
-        \right\}\\
-      & ~~~~~~~\var{update_{delegs}} =
-        \left\{
-        \var{hk}\mapsto\var{slot}\vert\var{hk}\in\dom{rew_{mir}}
+        \fun{add_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}'}
         \right\}
   \end{align*}
 
