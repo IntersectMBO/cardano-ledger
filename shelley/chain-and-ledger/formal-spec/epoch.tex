@@ -1275,7 +1275,6 @@ It consists of four pots:
         \Delta r & \Coin & \text{change to the reserves} \\
         \var{rs} & \AddrRWD\mapsto\Coin & \text{new individual rewards} \\
         \Delta f & \Coin & \text{change to the fee pot} \\
-        \Delta deposits & \Coin & \text{change to the deposits} \\
         \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}
       \end{array}
     \right)
@@ -1341,7 +1340,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \begin{align*}
     & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
     & \createRUpd{b}{es} = \left(
-      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\Delta d,~\var{registered}\cup\var{newlyRegister'}\right) \\
+      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\var{registered}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
     & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
@@ -1359,21 +1358,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       hk\mapsto val \vert \dom{stkCreds} \subtractdom \var{i_{rwd}}
       \right\}\\
     & ~~~~~~~\var{registered} = \var{i_{rwd}} \setminus\var{unregistered} \\
-    & ~~~~~~~\var{rewardsInsufficient} =
-      \left\{
-      hk\mapsto val \vert hk\mapsto val \in\var{unregistered}\wedge val \leq \fun{keyDeposit}~{pp}
-      \right\} \\
-    & ~~~~~~~\var{newlyRegister} = \var{unregistered}\setminus\var{rewardsInsufficent}\\
     & ~~~~~~~\var{rewards_{mir}} =
-      \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} +
-      \sum\limits_{\wcard\mapsto\var{val}\in\var{newlyRegister}} \var{val}\\
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} \\
     & ~~~~~~~\var{reserves'} = \var{reserves} - \var{rewards_{mir}}\\
-    & ~~~~~~~\var{newlyRegister'} =
-      \left\{
-      hk\mapsto \var{val} - \fun{keyDeposit}~\var{pp} \vert hk\mapsto\var{val}
-      \in newlyRegister
-      \right\}\\
-    & ~~~~~~~\Delta d = \vert newlyRegister \vert\cdot\fun{keydeposit}~\var{pp} \\
     & ~~~~~~~\Delta r_{l} = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
       \var{reserves'}}
     \\
