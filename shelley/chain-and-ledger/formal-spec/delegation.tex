@@ -156,7 +156,7 @@ It does the following:
       \fun{genesisDeleg} & \DCertGen \to (\VKeyGen,~\VKey)
                                             & \text{genesis delegation}
       \\
-      \fun{moveRewards} & \DCertMir \to (\KeyHash \mapsto \Coin)
+      \fun{moveRewards} & \DCertMir \to (\StakeCredential \mapsto \Coin)
                                             & \text{moved instantaneous rewards}
     \end{array}
   \end{equation*}
@@ -272,7 +272,7 @@ and the protocol parameters.
             \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
             \var{fGenDelegs} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
             \var{genDelegs} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
-            \var{i_{rwd}} & \KeyHash \mapsto \Coin & \text{instantaneous rewards}\\
+            \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}\\
           \end{array}
       \right)
       \\
