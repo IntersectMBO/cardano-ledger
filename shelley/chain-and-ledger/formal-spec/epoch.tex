@@ -1257,7 +1257,6 @@ It consists of four pots:
   \item The change to the reserves. This will be a negative value.
   \item The map of new individual rewards (to be added to the existing rewards).
   \item The change to the fee pot. This will be a negative value.
-  \item The change to the deposits. This will be a positive value.
   \item The map from credentials to $\Coin$ values to pay out as instantaneous
     rewards.
 \end{itemize}
@@ -1275,8 +1274,7 @@ It consists of four pots:
         \Delta r & \Coin & \text{change to the reserves} \\
         \var{rs} & \AddrRWD\mapsto\Coin & \text{new individual rewards} \\
         \Delta f & \Coin & \text{change to the fee pot} \\
-        \Delta deposits & \Coin & \text{change to the deposits} \\
-        \var{i_{rwd}} & \Credential \mapsto \Coin & \text{instantaneous rewards}
+        \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}
       \end{array}
     \right)
   \end{equation*}
@@ -1325,6 +1323,9 @@ The $\fun{applyRUpd}$ function does the following:
     \begin{itemize}
       \item Adjust the treasury, reserves and fee pots by the appropriate amounts.
       \item Add each individual reward to the global reward mapping.
+      \item Apply the instantaneous rewards and pay back to the reserves the
+        amount that cannot be distributed because the corresponding stake
+        credentials have been de-registered in the meantime.
     \end{itemize}
 
 These two functions will be used in the blockchain transition systems in Section~\ref{sec:chain}.
@@ -1341,7 +1342,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \begin{align*}
     & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
     & \createRUpd{b}{es} = \left(
-      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\Delta d,~\var{registered}\cup\var{newlyRegister'}\right) \\
+      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\var{registered}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
     & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
@@ -1359,21 +1360,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       hk\mapsto val \vert \dom{stkCreds} \subtractdom \var{i_{rwd}}
       \right\}\\
     & ~~~~~~~\var{registered} = \var{i_{rwd}} \setminus\var{unregistered} \\
-    & ~~~~~~~\var{rewardsInsufficient} =
-      \left\{
-      hk\mapsto val \vert hk\mapsto val \in\var{unregistered}\wedge val \leq \fun{keyDeposit}~{pp}
-      \right\} \\
-    & ~~~~~~~\var{newlyRegister} = \var{unregistered}\setminus\var{rewardsInsufficent}\\
     & ~~~~~~~\var{rewards_{mir}} =
-      \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} +
-      \sum\limits_{\wcard\mapsto\var{val}\in\var{newlyRegister}} \var{val}\\
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} \\
     & ~~~~~~~\var{reserves'} = \var{reserves} - \var{rewards_{mir}}\\
-    & ~~~~~~~\var{newlyRegister'} =
-      \left\{
-      hk\mapsto \var{val} - \fun{keyDeposit}~\var{pp} \vert hk\mapsto\var{val}
-      \in newlyRegister
-      \right\}\\
-    & ~~~~~~~\Delta d = \vert newlyRegister \vert\cdot\fun{keydeposit}~\var{pp} \\
     & ~~~~~~~\Delta r_{l} = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
       \var{reserves'}}
     \\
@@ -1396,7 +1385,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \emph{Applying a reward update}
   %
   \begin{align*}
-      & \fun{applyRUpd} \in \RewardUpdate \to \Epoch\to\EpochState \to \EpochState \\
+      & \fun{applyRUpd} \in \RewardUpdate \to \EpochState \to \EpochState \\
       & \fun{applyRUpd}~
       \left(
         \begin{array}{c}
@@ -1404,11 +1393,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \Delta r \\
           \var{rs} \\
           \Delta f \\
-          \Delta d \\
           \var{rew_{mir}}
         \end{array}
     \right)
-    e
       \left(
         \begin{array}{c}
           \var{treasury} \\
@@ -1436,9 +1423,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \left(
         \begin{array}{c}
           \varUpdate{\var{treasury} + \Delta t}\\
-          \varUpdate{\var{reserves} + \Delta r}\\
+          \varUpdate{\var{reserves} + \Delta r + nonDistributed}\\
           ~ \\
-          \varUpdate{\var{stkCreds}\unionoverrideLeft \var{update_{delegs}}} \\
+          \var{\var{stkCreds}} \\
           \varUpdate{(\var{rewards}\unionoverridePlus\var{rs})\unionoverridePlus\var{update_{rwd}}} \\
           \var{delegations} \\
           \var{ptrs} \\
@@ -1451,20 +1438,19 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{cs} \\
           ~ \\
           \var{utxo} \\
-          \varUpdate{\var{deposits} + \Delta d} \\
           \varUpdate{\var{fees}+\Delta f} \\
           \var{up} \\
         \end{array}
     \right)\\
       & ~~~\where \\
-      & ~~~~~~~\var{slot} = \fun{firstSlot}~\var{e} \\
+      & ~~~~~~~\var{rew_{mir}'} =  \dom{\var{stkCreds}}\restrictdom\var{rew_{mir}} \\
+      & ~~~~~~~\var{unregistered} = \dom{\var{stkCreds}}\subtractdom\var{rew_{mir}'}
+    \\
+      & ~~~~~~~\var{nonDistributed} = \sum\limits_{\wcard\mapsto \var{val} \in
+                                      unregistered} \var{val}  \\
       & ~~~~~~~\var{update_{rwd}} =
         \left\{
-        \fun{add_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}}
-        \right\}\\
-      & ~~~~~~~\var{update_{delegs}} =
-        \left\{
-        \var{hk}\mapsto\var{slot}\vert\var{hk}\in\dom{rew_{mir}}
+        \fun{add_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}'}
         \right\}
   \end{align*}
 

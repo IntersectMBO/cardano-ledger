@@ -156,7 +156,7 @@ It does the following:
       \fun{genesisDeleg} & \DCertGen \to (\VKeyGen,~\VKey)
                                             & \text{genesis delegation}
       \\
-      \fun{moveRewards} & \DCertMir \to (\KeyHash \mapsto \Coin)
+      \fun{moveRewards} & \DCertMir \to (\StakeCredential \mapsto \Coin)
                                             & \text{moved instantaneous rewards}
     \end{array}
   \end{equation*}
@@ -272,7 +272,7 @@ and the protocol parameters.
             \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
             \var{fGenDelegs} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
             \var{genDelegs} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
-            \var{i_{rwd}} & \KeyHash \mapsto \Coin & \text{instantaneous rewards}\\
+            \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}\\
           \end{array}
       \right)
       \\
@@ -571,7 +571,7 @@ concerns are independent of the ledger rules.
       \var{c}\in \DCertMir\\
       slot < \fun{firstSlot}((\fun{epoch}~\var{s} + 1)) - \fun{SlotsPrior}\\
       \left(
-        \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i'_{rwd}})} val      \right)\leq\var{reserves}
+        \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i_{rwd}})} val      \right)\leq\var{reserves}
     }
     {
       \begin{array}{r}
@@ -610,7 +610,7 @@ concerns are independent of the ledger rules.
   \label{fig:dcert-mir}
 \end{figure}
 
-The DELEG rule has seven possible predicate failures:
+The DELEG rule has eight possible predicate failures:
 \begin{itemize}
 \item In the case of a key registration certificate, if the staking credential
   is already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
@@ -628,6 +628,8 @@ The DELEG rule has seven possible predicate failures:
   \emph{DuplicateGenesisDelegate} failure.
 \item In the case of insufficient reserves to pay the instantaneous rewards,
   there is a \emph{InsufficientForInstantaneousRewards} failure.
+\item In the case of instantaneous rewards to be paid to non-registered stake
+  credentials, there is a \emph{NonRegisteredStakeCredentials} failure.
 \end{itemize}
 
 \clearpage
