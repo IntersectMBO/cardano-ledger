@@ -68,8 +68,8 @@ import           Crypto.Random (drgNewTest, withDRG)
 import           Data.ByteString.Char8 (pack)
 import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member,
-                     singleton, (!?))
+import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
+                     (!?))
 import           Data.Maybe (fromMaybe, isJust, maybe)
 import           Data.Ratio ((%))
 import           Data.Sequence (empty, fromList)
@@ -100,14 +100,14 @@ import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, p
                      sKey, sign, signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
-                     pattern UTxOState, deltaDeposits, deltaF, deltaR, deltaT, emptyDState,
-                     emptyPState, esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
-                     overlaySchedule, rs, updateIRwd, _delegationState, _delegations,
-                     _dstate, _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves,
-                     _retiring, _rewards, _stPools, _stkCreds, _treasury)
+                     pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
+                     esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
+                     overlaySchedule, rs, updateIRwd, _delegationState, _delegations, _dstate,
+                     _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring,
+                     _rewards, _stPools, _stkCreds, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
-import           Slot (Epoch (..), Slot (..), BlockNo(..), slotFromEpoch, (+*))
+import           Slot (BlockNo (..), Epoch (..), Slot (..), slotFromEpoch, (+*))
 import           STS.Bbody (pattern LedgersFailure)
 import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, totalAda)
 import           STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
@@ -359,6 +359,9 @@ dariaStake = KeyPair vk sk
 dariaAddr :: Addr
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
+dariaSHK :: Credential
+dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
+
 -- * Example 1 - apply CHAIN transition to an empty block
 
 
@@ -506,11 +509,13 @@ updateEx2A = Update ppupEx2A (AVUpdate Map.empty)
 txbodyEx2A :: TxBody
 txbodyEx2A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [TxOut aliceAddr (Coin 9733)]
+           [TxOut aliceAddr (Coin 9726)]
            (fromList ([ RegKey aliceSHK
            , RegKey bobSHK
+           , RegKey carlSHK
            , RegPool alicePoolParams
-           ] ++ [InstantaneousRewards (Map.fromList [(carlSHK, 110)])]))
+           ] ++ [InstantaneousRewards (Map.fromList [ (carlSHK, 110)
+                                                    , (dariaSHK, 99)])]))
            Map.empty
            (Coin 3)
            (Slot 10)
@@ -521,7 +526,7 @@ txEx2A = Tx
           txbodyEx2A
           (makeWitnessesVKey
             txbodyEx2A
-            [alicePay, aliceStake, bobStake, cold alicePool, cold $ coreNodeKeys 0]
+            [alicePay, carlPay, carlStake, aliceStake, bobStake, cold alicePool, cold $ coreNodeKeys 0]
                      `Set.union`
            makeGenWitnessesVKey txbodyEx2A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
@@ -597,12 +602,16 @@ blockEx2A = mkBlock
 dsEx2A :: DState
 dsEx2A = dsEx1
           { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK)
-                                 , (Ptr (Slot 10) 0 1, bobSHK) ]
+                                 , (Ptr (Slot 10) 0 1, bobSHK)
+                                 , (Ptr (Slot 10) 0 2, carlSHK)]
           , _stkCreds = StakeCreds $ Map.fromList [ (aliceSHK, Slot 10)
-                                               , (bobSHK, Slot 10) ]
+                                                  , (bobSHK, Slot 10)
+                                                  , (carlSHK, Slot 10)]
           , _rewards = Map.fromList [ (RewardAcnt aliceSHK, Coin 0)
-                                    , (RewardAcnt bobSHK, Coin 0) ]
-          , _irwd = Map.fromList [(carlSHK, 110)]
+                                    , (RewardAcnt bobSHK, Coin 0)
+                                    , (RewardAcnt carlSHK, Coin 0)]
+          , _irwd = Map.fromList [ (carlSHK, 110)
+                                 , (dariaSHK, 99)]
           }
 
 psEx2A :: PState
@@ -623,9 +632,9 @@ expectedLSEx2A = LedgerState
                (UTxOState
                  (UTxO . Map.fromList $
                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx2A) 0, TxOut aliceAddr (Coin 9733))
+                   , (TxIn (txid txbodyEx2A) 0, TxOut aliceAddr (Coin 9726))
                    ])
-                 (Coin 264)
+                 (Coin 271)
                  (Coin 3)
                  updateStEx2A)
                (DPState dsEx2A psEx2A)
@@ -666,7 +675,7 @@ ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A (Right expectedStEx2A)
 txbodyEx2B :: TxBody
 txbodyEx2B = TxBody
            (Set.fromList [TxIn (txid txbodyEx2A) 0])
-           [ TxOut aliceAddr (Coin 729)
+           [ TxOut aliceAddr (Coin 722)
            , TxOut alicePtrAddr (Coin 9000) ]
            (fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
            , Delegate $ Delegation bobSHK (hk alicePool)
@@ -700,7 +709,7 @@ blockEx2BHash = bhHash (bheader blockEx2B)
 utxoEx2B :: UTxO
 utxoEx2B = UTxO . Map.fromList $
                    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr (Coin 729))
+                   , (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr (Coin 722))
                    , (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr (Coin 9000))
                    ]
 
@@ -712,13 +721,14 @@ delegsEx2B = Map.fromList
 
 dsEx2B :: DState
 dsEx2B = dsEx2A { _delegations = delegsEx2B
-                , _irwd = Map.fromList [(carlSHK, Coin 110)] }
+                , _irwd = Map.fromList [ (carlSHK, Coin 110)
+                                       , (dariaSHK, Coin 99)] }
 
 expectedLSEx2B :: LedgerState
 expectedLSEx2B = LedgerState
                (UTxOState
                  utxoEx2B
-                 (Coin 264)
+                 (Coin 271)
                  (Coin 7)
                  updateStEx2A)
                (DPState dsEx2B psEx2A)
@@ -735,8 +745,7 @@ expectedStEx2Bgeneric pp = ChainState
                         , deltaR        = Coin (-110)
                         , rs            = Map.empty
                         , deltaF        = Coin 0
-                        , deltaDeposits = Coin 7
-                        , updateIRwd    = Map.fromList [(carlSHK, 103)]
+                        , updateIRwd    = Map.fromList [(carlSHK, 110)]
                         })
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -785,7 +794,7 @@ epoch1OSchedEx2C = overlaySchedule
                     ppsEx1
 
 snapEx2C :: (Stake, Map Credential KeyHash)
-snapEx2C = ( Stake ( Map.fromList [(aliceSHK, Coin 9729), (bobSHK, bobInitCoin)])
+snapEx2C = ( Stake ( Map.fromList [(aliceSHK, Coin 9722), (bobSHK, bobInitCoin)])
           , delegsEx2B )
 
 snapsEx2Cgeneric :: Coin -> SnapShots
@@ -795,7 +804,7 @@ snapsEx2Cgeneric feeSnapShot = emptySnapShots { _pstakeMark = snapEx2C
                           }
 
 snapsEx2C :: SnapShots
-snapsEx2C = snapsEx2Cgeneric 20
+snapsEx2C = snapsEx2Cgeneric 21
 
 snapsEx2Cbis :: SnapShots
 snapsEx2Cbis = snapsEx2Cgeneric 7
@@ -804,7 +813,7 @@ snapsEx2Cter :: SnapShots
 snapsEx2Cter = snapsEx2Cgeneric 7
 
 snapsEx2Cquater :: SnapShots
-snapsEx2Cquater = snapsEx2Cgeneric 140
+snapsEx2Cquater = snapsEx2Cgeneric 144
 
 expectedLSEx2Cgeneric :: Coin -> Coin -> LedgerState
 expectedLSEx2Cgeneric lsDeposits lsFees =
@@ -816,14 +825,14 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
     usEx2A) -- Note that the ppup is gone now
   (DPState
     dsEx2B { _irwd = Map.empty
-           , _stkCreds = addStakeCreds carlSHK (Slot 100) $ _stkCreds dsEx2B
-           , _rewards = Map.insert (mkRwdAcnt carlSHK) 103 $ _rewards dsEx2B
+           , _stkCreds = addStakeCreds carlSHK (Slot 10) $ _stkCreds dsEx2B
+           , _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
            }
     psEx2A)
   0
 
 expectedLSEx2C :: LedgerState
-expectedLSEx2C = expectedLSEx2Cgeneric 258 20
+expectedLSEx2C = expectedLSEx2Cgeneric 257 21
 
 expectedLSEx2Cbis :: LedgerState
 expectedLSEx2Cbis = expectedLSEx2Cgeneric 271 7
@@ -832,7 +841,7 @@ expectedLSEx2Cter :: LedgerState
 expectedLSEx2Cter = expectedLSEx2Cgeneric 271 7
 
 expectedLSEx2Cquater :: LedgerState
-expectedLSEx2Cquater = expectedLSEx2Cgeneric 138 140
+expectedLSEx2Cquater = expectedLSEx2Cgeneric 134 144
 
 blockEx2CHash :: HashHeader
 blockEx2CHash = bhHash (bheader blockEx2C)
@@ -909,11 +918,10 @@ expectedStEx2D = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A { _reserves = _reserves acntEx2A - Coin 110} snapsEx2C expectedLSEx2C ppsEx1)
-     (Just RewardUpdate { deltaT        = Coin 20
+     (Just RewardUpdate { deltaT        = Coin 21
                         , deltaR        = Coin 0
                         , rs            = Map.empty
-                        , deltaF        = Coin (-20)
-                        , deltaDeposits = Coin 0
+                        , deltaF        = Coin (-21)
                         , updateIRwd    = Map.empty
                         })
      (PoolDistr Map.empty)
@@ -962,13 +970,13 @@ expectedLSEx2E :: LedgerState
 expectedLSEx2E = LedgerState
                (UTxOState
                  utxoEx2B
-                 (Coin 244)
+                 (Coin 243)
                  (Coin 14)
                  usEx2A)
                (DPState
                 dsEx2B { _irwd = Map.empty
-                       , _stkCreds = addStakeCreds carlSHK (Slot 100) $ _stkCreds dsEx2B
-                       , _rewards = Map.insert (mkRwdAcnt carlSHK) 103 $ _rewards dsEx2B
+                       , _stkCreds = addStakeCreds carlSHK (Slot 10) $ _stkCreds dsEx2B
+                       , _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
                        }
                  psEx2A)
                0
@@ -978,7 +986,7 @@ blockEx2EHash = bhHash (bheader blockEx2E)
 
 acntEx2E :: AccountState
 acntEx2E = AccountState
-            { _treasury = Coin 20
+            { _treasury = Coin 21
             , _reserves = maxLovelaceSupply - balance utxoEx2A - (Coin 110)
             }
 
@@ -1040,7 +1048,6 @@ expectedStEx2F = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin (-14)
-                        , deltaDeposits = Coin 0
                         , updateIRwd    = Map.empty
                         })
      pdEx2F
@@ -1083,19 +1090,19 @@ epoch1OSchedEx2G = overlaySchedule
 
 snapsEx2G :: SnapShots
 snapsEx2G = snapsEx2E { _pstakeGo = snapEx2C
-                      , _feeSS = 11}
+                      , _feeSS = 10}
 
 expectedLSEx2G :: LedgerState
 expectedLSEx2G = LedgerState
                (UTxOState
                  utxoEx2B
                  (Coin 233)
-                 (Coin 11)
+                 (Coin 10)
                  usEx2A)
                (DPState
                  dsEx2B { _irwd = Map.empty
-                        , _stkCreds = addStakeCreds carlSHK (Slot 100) $ _stkCreds dsEx2B
-                        , _rewards = Map.insert (mkRwdAcnt carlSHK) 103 $ _rewards dsEx2B
+                        , _stkCreds = addStakeCreds carlSHK (Slot 10) $ _stkCreds dsEx2B
+                        , _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
                         }
                  psEx2A)
                0
@@ -1106,7 +1113,7 @@ expectedStEx2G = ChainState
      (Epoch 3)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
-     (EpochState (acntEx2E { _treasury = 34}) snapsEx2G expectedLSEx2G ppsEx1)
+     (EpochState (acntEx2E { _treasury = 35}) snapsEx2G expectedLSEx2G ppsEx1)
      Nothing
      pdEx2F
      epoch1OSchedEx2G)
@@ -1140,10 +1147,10 @@ blockEx2HHash :: HashHeader
 blockEx2HHash = bhHash (bheader blockEx2H)
 
 aliceRAcnt2H :: Coin
-aliceRAcnt2H = Coin 69258309255
+aliceRAcnt2H = Coin 69254168998
 
 bobRAcnt2H :: Coin
-bobRAcnt2H = Coin 6341690744
+bobRAcnt2H = Coin 6345831001
 
 rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
@@ -1155,12 +1162,11 @@ expectedStEx2H = ChainState
      (Epoch 3)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
-     (EpochState (acntEx2E { _treasury = Coin 34 }) snapsEx2G expectedLSEx2G ppsEx1)
-     (Just RewardUpdate { deltaT        = Coin 9374400000009
+     (EpochState (acntEx2E { _treasury = Coin 35 }) snapsEx2G expectedLSEx2G ppsEx1)
+     (Just RewardUpdate { deltaT        = Coin 9374400000008
                         , deltaR        = Coin (-9449999999997)
                         , rs            = rewardsEx2H
-                        , deltaF        = Coin (-11)
-                        , deltaDeposits = Coin 0
+                        , deltaF        = Coin (-10)
                         , updateIRwd    = Map.empty
                         })
      pdEx2F
@@ -1208,8 +1214,8 @@ acntEx2I = AccountState
 
 dsEx2I :: DState
 dsEx2I = dsEx2B { _irwd = Map.empty
-                , _stkCreds = addStakeCreds carlSHK (Slot 100) $ _stkCreds dsEx2B
-                , _rewards = Map.insert (mkRwdAcnt carlSHK) 103 rewardsEx2H
+                , _stkCreds = addStakeCreds carlSHK (Slot 10) $ _stkCreds dsEx2B
+                , _rewards = Map.insert (mkRwdAcnt carlSHK) 110 rewardsEx2H
                 }
 
 expectedLSEx2I :: LedgerState
@@ -1225,7 +1231,7 @@ expectedLSEx2I = LedgerState
 snapsEx2I :: SnapShots
 snapsEx2I = snapsEx2G { _pstakeMark =
                           (Stake ( Map.fromList [ (bobSHK, Coin 1000 + bobRAcnt2H)
-                                                , (aliceSHK, Coin 9729 + aliceRAcnt2H)])
+                                                , (aliceSHK, Coin 9722 + aliceRAcnt2H)])
                           , delegsEx2B )
                         -- The stake snapshots have bigger values now, due to the new rewards
                       , _feeSS = Coin 9
@@ -1294,16 +1300,17 @@ blockEx2JHash = bhHash (bheader blockEx2J)
 utxoEx2J :: UTxO
 utxoEx2J = UTxO . Map.fromList $
                    [ (TxIn (txid txbodyEx2J) 0, TxOut bobAddr bobAda2J)
-                   , (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr (Coin 729))
+                   , (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr (Coin 722))
                    , (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr (Coin 9000))
                    ]
 
 dsEx2J :: DState
 dsEx2J = dsEx1
-          { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK) ]
-          , _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, Slot 10), (carlSHK, Slot 100)]
+          { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK)
+                                 , (Ptr (Slot 10) 0 2, carlSHK)]
+          , _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, Slot 10), (carlSHK, Slot 10)]
           , _delegations = Map.singleton aliceSHK (hk alicePool)
-          , _rewards = Map.fromList [(RewardAcnt aliceSHK, aliceRAcnt2H), (RewardAcnt carlSHK, Coin 103)]
+          , _rewards = Map.fromList [(RewardAcnt aliceSHK, aliceRAcnt2H), (RewardAcnt carlSHK, Coin 110)]
           }
 
 expectedLSEx2J :: LedgerState
@@ -1343,7 +1350,7 @@ ex2J = CHAINExample (Slot 420) expectedStEx2I blockEx2J (Right expectedStEx2J)
 txbodyEx2K :: TxBody
 txbodyEx2K = TxBody
            (Set.fromList [TxIn (txid txbodyEx2B) 0])
-           [TxOut alicePtrAddr 727]
+           [TxOut alicePtrAddr 720]
            (fromList [RetirePool (hk alicePool) (Epoch 5)])
            Map.empty
            (Coin 2)
@@ -1374,7 +1381,7 @@ blockEx2KHash = bhHash (bheader blockEx2K)
 utxoEx2K :: UTxO
 utxoEx2K = UTxO . Map.fromList $
                    [ (TxIn (txid txbodyEx2J) 0, TxOut bobAddr bobAda2J)
-                   , (TxIn (txid txbodyEx2K) 0, TxOut alicePtrAddr (Coin 727))
+                   , (TxIn (txid txbodyEx2K) 0, TxOut alicePtrAddr (Coin 720))
                    , (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr (Coin 9000))
                    ]
 
@@ -1403,7 +1410,6 @@ expectedStEx2K = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin (-9)
-                        , deltaDeposits = Coin 0
                         , updateIRwd    = Map.empty
                         })
      pdEx2F
@@ -1443,19 +1449,21 @@ acntEx2L = acntEx2I { _treasury =  _treasury acntEx2I --previous amount
 
 snapsEx2L :: SnapShots
 snapsEx2L = SnapShots { _pstakeMark =
-                          (Stake ( Map.fromList [ (aliceSHK, aliceRAcnt2H + 9000 + 727) ])
+                          (Stake ( Map.fromList [ (aliceSHK, aliceRAcnt2H + 9000 + 720) ])
                           , Map.singleton aliceSHK (hk alicePool))
                       , _pstakeSet = _pstakeMark snapsEx2I
                       , _pstakeGo = _pstakeSet snapsEx2I
                       , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
-                      , _feeSS = Coin 21
+                      , _feeSS = Coin 22
                       }
 dsEx2L :: DState
 dsEx2L = dsEx1
-          { _ptrs = Map.singleton (Ptr (Slot 10) 0 0) aliceSHK
-          , _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, Slot 10), (carlSHK, Slot 100)]
+          { _ptrs = Map.fromList [ (Ptr (Slot 10) 0 0, aliceSHK)
+                                 , (Ptr (Slot 10) 0 2, carlSHK)
+                                 ]
+          , _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, Slot 10), (carlSHK, Slot 10)]
           , _rewards = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H + Coin 201)
-                                    , (RewardAcnt carlSHK, Coin 103)]
+                                    , (RewardAcnt carlSHK, Coin 110)]
                        -- Note the pool cert refund of 201
           }
 
@@ -1463,8 +1471,8 @@ expectedLSEx2L :: LedgerState
 expectedLSEx2L = LedgerState
                (UTxOState
                  utxoEx2K
-                 (Coin 4 + 5)
-                 (Coin 21)
+                 (Coin 4 + 4)
+                 (Coin 22)
                  usEx2A)
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped
                0
@@ -1976,7 +1984,6 @@ expectedStEx4C = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin 0
-                        , deltaDeposits = Coin 0
                         , updateIRwd    = Map.empty
                         })
       (PoolDistr Map.empty)
@@ -2120,7 +2127,6 @@ expectedStEx5B = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin 0
-                        , deltaDeposits = Coin 0
                         , updateIRwd    = Map.empty
                         })
      (PoolDistr Map.empty)
@@ -2299,8 +2305,8 @@ ex6E =
 txbodyEx6F :: TxBody
 txbodyEx6F = TxBody
               (Set.fromList [TxIn genesisId 0])
-              [TxOut aliceAddr (Coin 9999)]
-              (fromList [InstantaneousRewards ir])
+              [TxOut aliceAddr (Coin 9992)]
+              (fromList [RegKey aliceSHK, InstantaneousRewards ir])
               Map.empty
               (Coin 1)
               (Slot 99)
@@ -2308,7 +2314,7 @@ txbodyEx6F = TxBody
 
 txEx6F :: Tx
 txEx6F = Tx txbodyEx6F
-            (makeWitnessesVKey txbodyEx6F [ alicePay ]  `Set.union` makeGenWitnessesVKey txbodyEx6F
+            (makeWitnessesVKey txbodyEx6F [ alicePay, aliceStake ]  `Set.union` makeGenWitnessesVKey txbodyEx6F
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
@@ -2336,7 +2342,7 @@ blockEx6F = mkBlock
 txbodyEx6F' :: TxBody
 txbodyEx6F' = TxBody
                (Set.fromList [TxIn (txid txbodyEx6F) 0])
-               [TxOut aliceAddr (Coin 9998)]
+               [TxOut aliceAddr (Coin 9991)]
                empty
                Map.empty
                (Coin 1)
@@ -2365,7 +2371,7 @@ blockEx6F' = mkBlock
 txbodyEx6F'' :: TxBody
 txbodyEx6F'' = TxBody
                 (Set.fromList [TxIn (txid txbodyEx6F') 0])
-                [TxOut aliceAddr (Coin 9997)]
+                [TxOut aliceAddr (Coin 9990)]
                 empty
                 Map.empty
                 (Coin 1)
@@ -2412,5 +2418,5 @@ test6F = do
           rewEntry = rews Map.!? (mkRwdAcnt aliceSHK)
       assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
-      assertBool "Alice's rewards are wrong" $ maybe False (== Coin 93) rewEntry
+      assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
       assertBool "Total amount of ADA is not preserved" $ maxLovelaceSupply == totalAda ex6FState
