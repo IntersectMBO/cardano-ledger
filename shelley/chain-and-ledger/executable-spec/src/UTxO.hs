@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- for the Relation instance
@@ -38,7 +38,7 @@ module UTxO
 
 import           Lens.Micro ((^.))
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -48,7 +48,7 @@ import qualified Data.Set as Set
 
 import           Coin (Coin (..))
 import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyDiscriminator (..), KeyPair, Signable,
-                       VRFAlgorithm, hash, sKey, sign, vKey, verify)
+                     VRFAlgorithm, hash, sKey, sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
@@ -56,7 +56,8 @@ import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential
                      inputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
-import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue, isInstantaneousRewards)
+import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue,
+                     requiresVKeyWitness)
 
 -- |The unspent transaction outputs.
 newtype UTxO hashAlgo dsignAlgo vrfAlgo
@@ -221,7 +222,7 @@ scriptsNeeded u tx =
   `Set.union`
   Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
-  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter (not . isInstantaneousRewards) certificates))
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter requiresVKeyWitness certificates))
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u

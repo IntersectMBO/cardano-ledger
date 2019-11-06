@@ -526,7 +526,10 @@ txEx2A = Tx
           txbodyEx2A
           (makeWitnessesVKey
             txbodyEx2A
-            [alicePay, carlPay, carlStake, aliceStake, bobStake, cold alicePool, cold $ coreNodeKeys 0]
+            [alicePay, carlPay, aliceStake, cold alicePool, cold $ coreNodeKeys 0]
+            -- Note that Alice's stake key needs to sign this transaction
+            -- since it is an owner of the stake pool being registered,
+            -- and *not* because of the stake key registration.
                      `Set.union`
            makeGenWitnessesVKey txbodyEx2A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)

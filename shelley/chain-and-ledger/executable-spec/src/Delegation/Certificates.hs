@@ -1,5 +1,5 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
@@ -23,11 +23,12 @@ module Delegation.Certificates
   , isDeRegKey
   , isRegPool
   , isInstantaneousRewards
+  , requiresVKeyWitness
   ) where
 
 import           Coin (Coin (..))
 import           Keys (Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
-import           Ledger.Core (Relation(..))
+import           Ledger.Core (Relation (..))
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
@@ -45,7 +46,7 @@ import           Lens.Micro ((^.))
 
 -- |Determine the certificate author
 cwitness :: DCert hashAlgo dsignAlgo vrfAlgo -> StakeCredential hashAlgo dsignAlgo
-cwitness (RegKey hk)               = hk
+cwitness (RegKey _)                = error "no witness in key registration certificate"
 cwitness (DeRegKey hk)             = hk
 cwitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
 cwitness (RetirePool k _)          = KeyHashObj k
@@ -119,6 +120,14 @@ newtype PoolDistr hashAlgo dsignAlgo vrfAlgo =
   PoolDistr (Map (KeyHash hashAlgo dsignAlgo) (Rational, Hash hashAlgo (VerKeyVRF vrfAlgo)))
   deriving (Show, Eq, NoUnexpectedThunks, Relation)
 
-isInstantaneousRewards :: (DCert hashAlgo dsignAlgo vrfAlgo) -> Bool
+isInstantaneousRewards :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
 isInstantaneousRewards (InstantaneousRewards _) = True
 isInstantaneousRewards _                        = False
+
+-- | Returns True for delegation certificates that require at least
+-- one witness, and False otherwise. It is mainly used to ensure
+-- that calling `cwitness` is safe.
+requiresVKeyWitness :: DCert hashAlgo dsignAlgo vrfAlgo -> Bool
+requiresVKeyWitness (InstantaneousRewards _) = False
+requiresVKeyWitness (RegKey _) = False
+requiresVKeyWitness _ = True
