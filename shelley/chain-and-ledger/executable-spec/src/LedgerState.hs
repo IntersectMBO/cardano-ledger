@@ -279,14 +279,13 @@ data RewardUpdate hashAlgo dsignAlgo = RewardUpdate
   , deltaR        :: Coin
   , rs            :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
   , deltaF        :: Coin
-  , deltaDeposits :: Coin
   , updateIRwd    :: Map (Credential hashAlgo dsignAlgo) Coin
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate hashAlgo dsignAlgo)
 
 emptyRewardUpdate :: RewardUpdate hashAlgo dsignAlgo
-emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) (Coin 0) Map.empty
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) Map.empty
 
 data AccountState = AccountState
   { _treasury  :: Coin
@@ -1137,31 +1136,30 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
 -- | Apply a reward update
 applyRUpd
   :: RewardUpdate hashAlgo dsignAlgo
-  -> Epoch
   -> EpochState hashAlgo dsignAlgo vrfAlgo
   -> EpochState hashAlgo dsignAlgo vrfAlgo
-applyRUpd ru e (EpochState as ss ls pp) = EpochState as' ss ls' pp
+applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
   where utxoState_ = _utxoState ls
         delegState = _delegationState ls
         dState = _dstate delegState
 
         as' = as { _treasury = _treasury as + deltaT ru
-                 , _reserves = _reserves as + deltaR ru
+                 , _reserves = _reserves as + deltaR ru + nonDistributed
                  }
         ls' = ls { _utxoState =
                      utxoState_ { _fees = _fees utxoState_ + deltaF ru
-                                , _deposited = _deposited utxoState_ + deltaDeposits ru}
+                                , _deposited = _deposited utxoState_ }
                  , _delegationState =
                      delegState
                      {_dstate = dState
                                 { _rewards = (_rewards dState ∪+ rs ru) ∪+ updateRwd
-                                , _stkCreds = StakeCreds $ updateDelegs ∪ stkcreds
                                 , _irwd = Map.empty
                                 }}}
         StakeCreds stkcreds = _stkCreds dState
-        rewMir = updateIRwd ru
-        updateDelegs = Map.fromList [(cred, firstSlot e) | cred <- Map.keys rewMir]
-        updateRwd = Map.mapKeys mkRwdAcnt rewMir
+        (rewMir', unregistered) =
+          Map.partitionWithKey (\cred _ -> cred `Map.member` stkcreds) $ updateIRwd ru
+        nonDistributed = Map.foldl (+) (Coin 0) unregistered
+        updateRwd = Map.mapKeys mkRwdAcnt rewMir'
 
 -- | Create a reward update
 createRUpd
@@ -1169,7 +1167,7 @@ createRUpd
   -> EpochState hashAlgo dsignAlgo vrfAlgo
   -> RewardUpdate hashAlgo dsignAlgo
 createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
-  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) deltaD newIrwd
+  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) registered
   where Coin reserves' = _reserves acnt
 
         ds = _dstate $ _delegationState ls
@@ -1179,18 +1177,10 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
         StakeCreds stkcreds = _stkCreds ds
 
         -- instantaneous rewards
-        unregistered = Map.filterWithKey (\cred _ -> cred `Map.notMember` stkcreds) (_irwd ds)
-        registered = Map.difference (_irwd ds) unregistered
-        rewardsInsufficient = Map.filter (<= _keyDeposit pp) unregistered
-        newlyRegister = Map.difference unregistered rewardsInsufficient
+        registered = Map.filterWithKey (\cred _ -> cred `Map.member` stkcreds) (_irwd ds)
 
-        Coin rewardsMIR =   (Map.foldl (+) (Coin 0) registered)
-                          + (Map.foldl (+) (Coin 0) newlyRegister)
-
-        newlyRegister' = Map.map (flip (-) $ _keyDeposit pp) newlyRegister
+        Coin rewardsMIR = Map.foldl (+) (Coin 0) registered
         reserves'' = reserves' - rewardsMIR
-        deltaD = _keyDeposit pp * Coin (fromIntegral $ Map.size newlyRegister')
-        newIrwd = Map.union registered newlyRegister'
 
         -- reserves and rewards change
         deltaRl =
