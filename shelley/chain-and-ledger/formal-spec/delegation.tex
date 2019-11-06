@@ -266,7 +266,7 @@ and the protocol parameters.
             \var{stkCreds} & \StakeCreds & \text{registered stake delegators}\\
             \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
             \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
-            \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
+            \var{ptrs} & \Ptr \mapsto \StakeCredential & \text{pointer to stake credential}\\
             \var{fGenDelegs} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
             \var{genDelegs} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
             \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}\\
