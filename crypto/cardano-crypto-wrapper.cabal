@@ -31,8 +31,6 @@ library
                        Cardano.Crypto.Signing.Safe
 
   other-modules:
-                       Cardano.Crypto.Scrypt
-
                        Cardano.Crypto.Signing.Tag
 
                        Cardano.Crypto.Signing.KeyGen
@@ -66,7 +64,6 @@ library
                      , formatting
                      , memory
                      , mtl
-                     , scrypt
                      , text
 
   default-language:    Haskell2010

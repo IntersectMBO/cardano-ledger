@@ -10,7 +10,6 @@ import Cardano.Prelude
 
 import Crypto.Error (CryptoFailable(..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import Crypto.Scrypt (EncryptedPass(..))
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
@@ -99,9 +98,3 @@ instance FromCBOR Ed25519.Signature where
 -- Helper for encodedSizeExpr in ToCBOR instances
 bsSize :: Int -> Size
 bsSize x = fromIntegral (x + withWordSize x)
-
-instance ToCBOR EncryptedPass where
-  toCBOR (EncryptedPass ep) = toCBOR ep
-
-instance FromCBOR EncryptedPass where
-  fromCBOR = EncryptedPass <$> fromCBOR
