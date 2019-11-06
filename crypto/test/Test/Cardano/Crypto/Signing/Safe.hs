@@ -9,20 +9,17 @@ where
 import Cardano.Prelude
 
 import Hedgehog
-  (Property, checkParallel, discover, failure, forAll, property, (===))
-import qualified Hedgehog.Gen as Gen
+  (Property, checkParallel, discover, forAll, property, (===))
 
 import Cardano.Crypto.Signing
-  ( changeEncPassphrase
-  , encToVerification
+  ( encToVerification
   , noPassEncrypt
   , noPassSafeSigner
-  , safeKeyGen
   , safeToVerification
   , toVerification
   )
 
-import Test.Cardano.Crypto.Gen (genPassPhrase, genSigningKey)
+import Test.Cardano.Crypto.Gen (genSigningKey)
 
 
 --------------------------------------------------------------------------------
@@ -36,17 +33,6 @@ tests = checkParallel $$discover
 --------------------------------------------------------------------------------
 -- Safe Signing Properties
 --------------------------------------------------------------------------------
-
--- | Changing the 'PassPhrase' of an 'EncryptedSigningKey' leaves the 'VerificationKey'
---   the same
-prop_changingPassPhraseKeepsAddress :: Property
-prop_changingPassPhraseKeepsAddress = property $ do
-  passPhrase  <- forAll genPassPhrase
-  passPhrase' <- forAll $ Gen.filter (/= passPhrase) genPassPhrase
-  (_, oldKey) <- liftIO $ safeKeyGen passPhrase
-  liftIO (changeEncPassphrase passPhrase passPhrase' oldKey) >>= \case
-    Nothing     -> failure
-    Just newKey -> encToVerification oldKey === encToVerification newKey
 
 -- | Encrypting a 'SigningKey' preserves the corresponding 'VerificationKey'
 prop_encryptionPreservesVerificationKey :: Property

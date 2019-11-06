@@ -11,8 +11,6 @@ module Cardano.Crypto.Signing.Safe.EncryptedSigningKey
   , encToSigning
   , encToVerification
   , noPassEncrypt
-  , checkPassMatches
-  , changeEncPassphrase
   )
 where
 
@@ -111,23 +109,3 @@ noPassEncrypt (SigningKey k) =
 emptyEncryptedPass :: S.EncryptedPass
 emptyEncryptedPass =
   S.encryptPassWithSalt passScryptParam S.emptySalt emptyPassphrase
-
-
--- Here with types to avoid module import cycles:
-checkPassMatches :: (Alternative f) => PassPhrase -> EncryptedSigningKey -> f ()
-checkPassMatches pp (EncryptedSigningKey _ pph) =
-  guard (S.verifyPass passScryptParam pp pph)
-
--- | Regenerates signing key with new passphrase.
---   Note: This operation keeps corresponding verification key and derived (child)
---   keys unchanged.
-changeEncPassphrase
-  :: MonadRandom m
-  => PassPhrase
-  -> PassPhrase
-  -> EncryptedSigningKey
-  -> m (Maybe EncryptedSigningKey)
-changeEncPassphrase oldPass newPass esk@(EncryptedSigningKey sk _)
-  | isJust $ checkPassMatches oldPass esk = Just
-  <$> mkEncSecretUnsafe newPass (CC.xPrvChangePass oldPass newPass sk)
-  | otherwise = return Nothing
