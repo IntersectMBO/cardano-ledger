@@ -155,7 +155,7 @@ If we let:
     = \Val(\outs{t}) + f + d - k + \Val(\txins{t} \subtractdom{\var{utxo}})
   \end{equation*}
   Note that $d-k-c$ is non-negative since the deposits will always be large enough to cover
-  the current obligation (a fact we will prove later).
+  the current obligation (see Theorem~\ref{thm:non-neg-deposits}).
 %
   It then follows that:
   \begin{equation*}
@@ -257,8 +257,8 @@ If we let:
   Notice that $\var{unclaimed}$ is added to $\var{treasury}$
   and subtracted from the $\var{deposits}$.
   Moreover, $\var{refunded}$ is subtracted from $\var{deposits}$.
-  (We will prove that $\var{deposits}-\var{unclaimed}+\var{refunded}$
-  is non-negative in a subsequent theorem.)
+  (Note that $\var{deposits}-\var{unclaimed}+\var{refunded}$
+  is non-negative by Theorem~\ref{thm:non-neg-deposits}.)
   It therefore suffices to show that
   \begin{equation*}
     \begin{array}{r@{~=~}l}
@@ -281,9 +281,9 @@ If we let:
 
 \begin{proof}
   In the definition of $\fun{applyRUpd}$ in Figure~\ref{fig:functions:reward-update-application},
-  we see that:
+  we see that we must show that:
   \begin{equation*}
-      \Delta t + \Delta r + \Val(rs) + \Val(\var{update_{rwd}}) + \Delta d + \Delta f = 0
+    \Delta t + \Delta r + \Val(rs) + \Val(\var{update_{rwd}}) + \var{nonDistributed} + \Delta f = 0
   \end{equation*}
   In the definition of $\fun{createRUpd}$ in Figure~\ref{fig:functions:reward-update-creation},
   we see that:
@@ -291,30 +291,33 @@ If we let:
     \begin{array}{r@{~=~}l}
       \var{rewardPot} & \var{feeSS} + \Delta r_1 \\
       \var{R} & \var{rewardPot} - \Delta t_1 \\
-      \Delta t_2 & R \\
+      \Delta t_2 & R - \Val(\var{rs})\\
+      \Delta r & - (\Delta r_1+\Val(registered)) \\
     \end{array}
   \end{equation*}
   Therefore
   \begin{equation*}
     \begin{array}{c}
-      (\var{feeSS} + \Delta r_1) - \Delta t_1 - \Val(rs) = \Delta t_2 \\
+      (\var{feeSS} + \Delta r_1) = \var{rewardPot} = R + \Delta t_1 = \Delta t_2 + \Val(rs) + \Delta r_1  \\
       0 = (\Delta t_1 + \Delta t_2 ) - \Delta r_1 + \Val(rs)- \var{feeSS} \\
     \end{array}
   \end{equation*}
-  So it suffices to show that $\Delta d + \Val(\var{update_{rwd}}) = \var{rewards}_{\var{mir}}$.
-  Notice that
+  So it suffices to show that:
+  \begin{equation*}
+    -\Val(registered) + \Val(\var{update_{rwd}}) + \var{nonDistributed} = 0
+  \end{equation*}
+  Notice that $\var{rew}_{\var{mir}} = \var{registered}$
+    (the name is different between $\fun{applyRUpd}$ and $\fun{createRUpd}$)
+    and that $\var{rew}_{\var{mir}}$ is the disjoint union of
+    $\var{rew'}_{\var{mir}}$ and $\var{unregistered}$.
+    Therefore
   \begin{equation*}
     \begin{array}{r@{~=~}l}
-      \Val(\var{update}_{rwd}) & \Val(registered) + \Val(newlyRegister')
-      \\
-      \var{rewards}_{mir} & \Val(registered) + \Val(newlyRegister)
-      \\
-      \Delta d + \Val(newlyRegister') & \Val(newlyRegister)
+      \Val(\var{registered}) & \Val(\var{rew}_{\var{mir}}) \\
+                             & \Val(\var{rew'}_{\var{mir}}) + \Val(\var{unregistered}) \\
+                             & \Val(\var{update}_{rwd}) + \var{nonDistributed}
     \end{array}
   \end{equation*}
-  $\Delta d + \Val(\var{update_{rwd}}) = \var{rewards}_{\var{mir}}$
-  follows by adding $\Val(registered)$ to both sides of the third
-  equality above, and then substituting using the other two equalities.
 \end{proof}
 
 \noindent
@@ -477,11 +480,10 @@ and will always be large enough to meet all of its obligations.
   The difference between the left and right hand sides of the inequality
   corresponds to the lovelace value in $c_{i+1}$ that decays between $s_i$ and $s_{i+1}$.
 
-  There are five sub-transitions where $\var{deposits}$ is changed:
+  There are four sub-transitions where $\var{deposits}$ is changed:
   $\mathsf{SNAP}$ (Figure~\ref{fig:rules:snapshot}),
   $\mathsf{POOLREAP}$ (Figure~\ref{fig:rules:pool-reap}),
   $\mathsf{NEWPP}$ (Figure~\ref{fig:rules:new-proto-param}),
-  $\mathsf{NEWEPOCH}$ (via $\fun{applyRUpd}$ in Figure~\ref{fig:functions:reward-update-application}).
   $\mathsf{UTXO}$ (Figure~\ref{fig:rules:utxo-shelley}).
   This ordering is also the order in which $\var{deposits}$ is changed.
   Of these sub-transitions, only $\mathsf{UTXO}$ actually changes the value of $\var{deposits}$
@@ -498,7 +500,6 @@ and will always be large enough to meet all of its obligations.
       If \DGO{c_i}{s_i}, then \DBE{c}{s_i} holds.
     \item $\mathsf{POOLREAP}$ preserves \ref{DBE}.
     \item $\mathsf{NEWPP}$ preserves \ref{DBE}.
-    \item $\mathsf{NEWEPOCH}$ preserves \ref{DBE}.
     \item The property for $\mathsf{UTXO}$ requires a bit of explanation.
       Let $\var{nes}\in\NewEpochState$ be the new epoch state in $c_i$.
       Note that the property \ref{DBE} makes sense for values of $\NewEpochState$
@@ -588,30 +589,6 @@ and will always be large enough to meet all of its obligations.
   and $\var{deposits}$ do not change.
   As in the $\mathsf{SNAP}$ case, \DBE{c}{s_i} holds trivially,
   since it is set to the value that is determined by $\fun{obligation}$.
-  \\~\\
-  Case $\hyperref[fig:rules:new-epoch]{\mathsf{NEWEPOCH}}$.
-  We must show that \ref{DBE} is preserved.
-%
-  We again assume that $s_i$ crosses the epoch boundary.
-  We must show that $\fun{applyRUpd}$, from Figure~\ref{fig:functions:reward-update-application},
-  preserves \ref{DBE}.
-  It suffices to show that $\Delta d$ is equal to $|C_{new}|\cdot d_{val}$
-  where $C_{new} = \dom{(\var{update}_{delegs})}\setminus\dom{(\var{stkCreds})}$.
-  Rewards updates are only ever created with $\fun{createRUpd}$
-  from Figure~\ref{fig:functions:reward-update-creation},
-  in which $\Delta d$ is defined as $|newlyRegister|\cdot d_{val}$,
-  so it suffices to show that $\dom{(\var{newlyRegister})} = C_{new}$.
-  But $\dom{(\var{update}_{delegs})} = \dom{(\var{rew}_{mir})}$
-  and $\var{newlyRegister} = \dom{(stkCreds)}\subtractdom \var{rew}_{mir}$.
-  Therefore
-  \begin{equation}
-    \begin{array}{r@{~=~}l}
-      \dom{(\var{newlyRegister})} & \dom{(\var{rew}_{mir})}\setminus  \dom{(\var{stkCreds})} \\
-                                  & \dom{(\var{update}_{delegs})}\setminus  \dom{(\var{stkCreds})} \\
-                                & C_{new}, \\
-    \end{array}
-  \end{equation}
-  and so \ref{DBE} is preserved.
   \\~\\
   Case $\hyperref[fig:rules:utxo-shelley]{\mathsf{UTXO}}$.
   We assume that \DBE{\var{nes'}}{s_i} holds, where $\var{nes'}$
