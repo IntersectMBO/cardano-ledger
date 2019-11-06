@@ -12,9 +12,7 @@ import Hedgehog
   (Property, checkParallel, discover, forAll, property, (===))
 
 import Cardano.Crypto.Signing
-  ( encToVerification
-  , noPassEncrypt
-  , noPassSafeSigner
+  ( noPassSafeSigner
   , safeToVerification
   , toVerification
   )
@@ -33,12 +31,6 @@ tests = checkParallel $$discover
 --------------------------------------------------------------------------------
 -- Safe Signing Properties
 --------------------------------------------------------------------------------
-
--- | Encrypting a 'SigningKey' preserves the corresponding 'VerificationKey'
-prop_encryptionPreservesVerificationKey :: Property
-prop_encryptionPreservesVerificationKey = property $ do
-  sk <- forAll genSigningKey
-  encToVerification (noPassEncrypt sk) === toVerification sk
 
 -- | Making a 'SafeSigner' from a 'SigningKey' preserves the 'VerificationKey'
 prop_safeSignerPreservesVerificationKey :: Property

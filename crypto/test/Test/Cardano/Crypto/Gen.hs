@@ -12,7 +12,6 @@ module Test.Cardano.Crypto.Gen
   , genKeypair
   , genVerificationKey
   , genSigningKey
-  , genEncryptedSigningKey
 
   -- * Redeem Key Generators
   , genRedeemKeypair
@@ -61,15 +60,13 @@ import Cardano.Crypto.ProtocolMagic
   , RequiresNetworkMagic(..)
   )
 import Cardano.Crypto.Signing
-  ( EncryptedSigningKey
-  , VerificationKey
+  ( VerificationKey
   , SafeSigner(..)
   , SigningKey
   , SignTag(..)
   , Signature
   , deterministicKeyGen
   , emptyPassphrase
-  , noPassEncrypt
   , sign
   , signRaw
   )
@@ -136,9 +133,6 @@ genVerificationKey = fst <$> genKeypair
 
 genSigningKey :: Gen SigningKey
 genSigningKey = snd <$> genKeypair
-
-genEncryptedSigningKey :: Gen EncryptedSigningKey
-genEncryptedSigningKey = noPassEncrypt <$> genSigningKey
 
 
 --------------------------------------------------------------------------------

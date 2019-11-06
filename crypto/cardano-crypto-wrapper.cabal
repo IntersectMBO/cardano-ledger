@@ -46,7 +46,6 @@ library
                        Cardano.Crypto.Signing.Redeem.Signature
                        Cardano.Crypto.Signing.Redeem.VerificationKey
 
-                       Cardano.Crypto.Signing.Safe.EncryptedSigningKey
                        Cardano.Crypto.Signing.Safe.KeyGen
                        Cardano.Crypto.Signing.Safe.PassPhrase
                        Cardano.Crypto.Signing.Safe.SafeSigner

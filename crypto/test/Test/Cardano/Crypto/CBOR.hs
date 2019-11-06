@@ -16,7 +16,7 @@ where
 import Cardano.Prelude
 import Test.Cardano.Prelude
 
-import Cardano.Crypto.Wallet (XPrv, unXPrv, xprv, xpub)
+import Cardano.Crypto.Wallet (xprv, xpub)
 import Crypto.Hash (Blake2b_224, Blake2b_256, Blake2b_384, Blake2b_512, SHA1)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
@@ -35,7 +35,6 @@ import Cardano.Crypto
   , SignTag(SignForTestingOnly)
   , Signature
   , hash
-  , noPassEncrypt
   , redeemDeterministicKeyGen
   , redeemSign
   , sign
@@ -105,24 +104,6 @@ roundTripSignatureCBOR = eachOf 1000 genUnitSignature roundTripsCBORBuildable
 
 roundTripSignatureAeson :: Property
 roundTripSignatureAeson = eachOf 1000 genUnitSignature roundTripsAesonBuildable
-
-
---------------------------------------------------------------------------------
--- EncryptedSigningKey
---------------------------------------------------------------------------------
-
--- | This instance is unsafe, as it allows a timing attack. But it's OK for
--- tests.
-instance Eq XPrv where
-  (==) = (==) `on` unXPrv
-
-goldenEncryptedSigningKey :: Property
-goldenEncryptedSigningKey = goldenTestCBOR esk "test/golden/EncryptedSigningKey"
-  where Right esk = noPassEncrypt . SigningKey <$> xprv (getBytes 10 128)
-
-roundTripEncryptedSigningKeysCBOR :: Property
-roundTripEncryptedSigningKeysCBOR =
-  eachOf 100 genEncryptedSigningKey roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
