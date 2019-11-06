@@ -359,6 +359,9 @@ dariaStake = KeyPair vk sk
 dariaAddr :: Addr
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
+dariaSHK :: Credential
+dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
+
 -- * Example 1 - apply CHAIN transition to an empty block
 
 
@@ -511,7 +514,8 @@ txbodyEx2A = TxBody
            , RegKey bobSHK
            , RegKey carlSHK
            , RegPool alicePoolParams
-           ] ++ [InstantaneousRewards (Map.fromList [(carlSHK, 110)])]))
+           ] ++ [InstantaneousRewards (Map.fromList [ (carlSHK, 110)
+                                                    , (dariaSHK, 99)])]))
            Map.empty
            (Coin 3)
            (Slot 10)
@@ -606,7 +610,8 @@ dsEx2A = dsEx1
           , _rewards = Map.fromList [ (RewardAcnt aliceSHK, Coin 0)
                                     , (RewardAcnt bobSHK, Coin 0)
                                     , (RewardAcnt carlSHK, Coin 0)]
-          , _irwd = Map.fromList [(carlSHK, 110)]
+          , _irwd = Map.fromList [ (carlSHK, 110)
+                                 , (dariaSHK, 99)]
           }
 
 psEx2A :: PState
@@ -716,7 +721,8 @@ delegsEx2B = Map.fromList
 
 dsEx2B :: DState
 dsEx2B = dsEx2A { _delegations = delegsEx2B
-                , _irwd = Map.fromList [(carlSHK, Coin 110)] }
+                , _irwd = Map.fromList [ (carlSHK, Coin 110)
+                                       , (dariaSHK, Coin 99)] }
 
 expectedLSEx2B :: LedgerState
 expectedLSEx2B = LedgerState
