@@ -66,8 +66,8 @@ traceFrom
   -> State sts
   -> QuickCheck.Gen (Trace sts)
 traceFrom maxTraceLength traceGenEnv env st0 = do
-  choosenTraceLength <- QuickCheck.choose (0, maxTraceLength)
-  Trace.mkTrace env st0 <$> loop choosenTraceLength st0 []
+  chosenTraceLength <- QuickCheck.choose (0, maxTraceLength)
+  Trace.mkTrace env st0 <$> loop chosenTraceLength st0 []
   where
     loop
       :: Word64
