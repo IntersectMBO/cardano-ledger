@@ -67,6 +67,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."lens" or (buildDepError "lens"))
           (hsPkgs."mtl" or (buildDepError "mtl"))
           (hsPkgs."transformers" or (buildDepError "transformers"))
+          (hsPkgs."QuickCheck" or (buildDepError "QuickCheck"))
           (hsPkgs."cardano-crypto-class" or (buildDepError "cardano-crypto-class"))
           ];
         buildable = true;
@@ -100,6 +101,11 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
             (hsPkgs."tasty" or (buildDepError "tasty"))
             (hsPkgs."tasty-hedgehog" or (buildDepError "tasty-hedgehog"))
             (hsPkgs."tasty-expected-failure" or (buildDepError "tasty-expected-failure"))
+            (hsPkgs."QuickCheck" or (buildDepError "QuickCheck"))
+            (hsPkgs."tasty-quickcheck" or (buildDepError "tasty-quickcheck"))
+            (hsPkgs."Unique" or (buildDepError "Unique"))
+            (hsPkgs."cardano-crypto-class" or (buildDepError "cardano-crypto-class"))
+            (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
             (hsPkgs."small-steps" or (buildDepError "small-steps"))
             ];
           buildable = true;

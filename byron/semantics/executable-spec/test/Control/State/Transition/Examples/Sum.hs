@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -10,9 +11,13 @@ import           Hedgehog (Property, assert, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
+import qualified Test.QuickCheck as QC
+
 import           Control.State.Transition
 import           Control.State.Transition.Generator
 import           Control.State.Transition.Trace
+
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 
 
 data SUM
@@ -48,10 +53,38 @@ prop_Bounded = property $ do
   tr <- forAll (trace @SUM 100)
   assert (lastState tr < 10)
 
+prop_onlyValidTracesAreGenerated :: Property
+prop_onlyValidTracesAreGenerated =
+  withTests 300 $ onlyValidSignalsAreGenerated @SUM 100
+
 -- | Property that simply classifies the trace length distribution.
 prop_Classified :: Property
 prop_Classified = withTests 300 $ property $ do
-  let tl = 200
+  let tl = 100
   tr <- forAll (trace @SUM tl)
   classifyTraceLength tr tl 10
   assert True
+
+-- | See 'prop_Bounded'
+prop_qc_Bounded :: QC.Property
+prop_qc_Bounded =
+  STS.Gen.forAllTrace @SUM @()
+    100 () ((< 10) . lastState)
+
+-- | See 'prop_Classified'.
+prop_qc_Classified :: QC.Property
+prop_qc_Classified
+  = STS.Gen.traceLengthsAreClassified @SUM 100 10 ()
+
+prop_qc_onlyValidSignalsAreGenerated :: QC.Property
+prop_qc_onlyValidSignalsAreGenerated
+  = QC.withMaxSuccess 300
+  $ STS.Gen.onlyValidSignalsAreGenerated @SUM @() 100 ()
+
+instance STS.Gen.HasTrace SUM () where
+
+    envGen _ = pure ()
+
+    sigGen _traceEnv _env _st = QC.arbitrary
+
+    shrinkSignal = QC.shrink

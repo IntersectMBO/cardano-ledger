@@ -26,6 +26,7 @@ library
                      , Control.State.Transition.Invalid.Trace
                      , Control.State.Transition.Generator
                      , Control.State.Transition.Trace
+                     , Control.State.Transition.Trace.Generator.QuickCheck
                      , Hedgehog.Extra.Manual
                      , Data.AbstractSize
   -- other-modules:
@@ -40,6 +41,7 @@ library
                      , lens
                      , mtl
                      , transformers >= 0.5
+                     , QuickCheck
                      -- IOHK deps
                      , cardano-crypto-class
   hs-source-dirs:      src
@@ -87,6 +89,7 @@ test-suite examples
   hs-source-dirs:      test
   main-is:             examples/Main.hs
   other-modules:       Control.State.Transition.Examples.Sum
+                     , Control.State.Transition.Examples.CommitReveal
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
@@ -95,7 +98,13 @@ test-suite examples
                      , tasty
                      , tasty-hedgehog
                      , tasty-expected-failure
-                     --
+                     , QuickCheck
+                     , tasty-quickcheck
+                     , Unique
+                     -- IOHK deps
+                     , cardano-crypto-class
+                     , cardano-binary
+                     -- Local deps
                      , small-steps
   ghc-options:        -Wall
                       -Wcompat
