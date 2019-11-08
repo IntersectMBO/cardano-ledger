@@ -12,15 +12,16 @@
 --
 -- from the @skeleton@ folder.
 
-import           Build (LibraryName (LibraryName), Optimizations (Standard), ShouldUploadCoverage(ShouldUploadCoverage)
+import           Build (LibraryName (LibraryName), Optimizations (Standard),
+                     ShouldUploadCoverage (ShouldUploadCoverage),
                      StackExtraTestArgs (StackExtraTestArgs), TestRun (TestRun), doBuild)
 import           BuildArgs (BuildArgs (BuildArgs, command, options),
                      Command (Build, CleanupCache, PurgeCache),
                      RebuildOpts (RebuildOpts, optBuildDirectory, optCacheDirectory, optDryRun),
                      parseArgs)
-import           CommonBuild (CoverallsConfig (CoverallsConfig),
+import           CommonBuild (Bool (True), CoverallsConfig (CoverallsConfig),
                      CoverallsTokenEnvVar (CoverallsTokenEnvVar), ExtraShcArgs (ExtraShcArgs),
-                     ExtraTixFilesDirectory (ExtraTixFilesDirectory), IO, const, ($), Bool (True))
+                     ExtraTixFilesDirectory (ExtraTixFilesDirectory), IO, const, ($))
 
 import           Data.Maybe (fromMaybe)
 import           System.Exit (exitWith)
