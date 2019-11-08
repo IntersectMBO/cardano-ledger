@@ -1,22 +1,34 @@
+# The Buildkite pipeline definition.
+# See https://buildkite.com/docs/pipelines for documentation.
+
+env:
+  BUILD_DIR: "/build/cardano-ledger-specs"
+  STACK_ROOT: "/build/cardano-ledger-specs.stack"
+  CACHE_DIR: "/cache/cardano-ledger-specs"
+
 steps:
-  - label: 'stack rebuild'
-    command:
-      # cache-s3 needs a build directory that is the same across all buildkite agents.
-      # so copy the source into /build/cardano-ledger-specs
-      - "rm -rf /build/cardano-ledger-specs"
-      - "cp -R . /build/cardano-ledger-specs"
-      - "cd /build/cardano-ledger-specs"
-      - "nix-build ci/buildkite -o stack-rebuild"
-      - "./stack-rebuild"
+  - label: Check Hydra evaluation of release.nix
+    commands:
+      - "nix-build -A iohkLib.check-hydra -o check-hydra.sh"
+      - "./check-hydra.sh"
     agents:
       system: x86_64-linux
 
-  - label: 'check-hydra'
-    command: 'ci/check-hydra.sh'
+  # This will ensure that the generated Nix code is kept up to date.
+  - label: Check auto-generated Nix
+    commands:
+      - "nix-build -A iohkLib.check-nix-tools -o check-nix-tools.sh"
+      - "./check-nix-tools.sh"
     agents:
       system: x86_64-linux
 
-  - label: 'stack2nix'
-    command: 'ci/check-stack2nix.sh'
+  # Imperative build steps
+  - label: Stack build
+    commands:
+      - "nix-build .buildkite/default.nix -o sr"
+      - "./sr/bin/rebuild --build-dir=$BUILD_DIR --cache-dir=$CACHE_DIR"
     agents:
       system: x86_64-linux
+    timeout_in_minutes: 120
+    artifact_paths:
+      - "/build/cardano-ledger-specs/.stack-work/logs/cardano-ledger-specs*.log"
