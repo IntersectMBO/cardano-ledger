@@ -1,6 +1,6 @@
-{ iohkSkeletonPackages ? import ../default.nix {}
-, pkgs ? iohkSkeletonPackages.pkgs
-, iohkLib ? iohkSkeletonPackages.iohkLib
+{ iohkCardanoLedgerSpecsPackages ? import ../default.nix {}
+, pkgs ? iohkCardanoLedgerSpecsPackages.pkgs
+, iohkLib ? iohkCardanoLedgerSpecsPackages.iohkLib
 }:
 
 iohkLib.haskellBuildUtils.stackRebuild {
