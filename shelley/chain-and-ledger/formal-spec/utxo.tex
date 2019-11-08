@@ -518,7 +518,7 @@ Section~\ref{sec:epoch}.
       \begin{array}{lr@{~=~}l}
         \where
           & \var{created} & \var{stkCreds}~(\cwitness~\var{c}) \\
-          & \var{start} & \mathsf{max}~(\firstSlot{\epoch{cslot}})~created \\
+          & \var{start} & \mathsf{max}~(\fun{firstSlot}~(\epoch{cslot}))~created \\
           & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{start}{c} \\
           & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{cslot}{c} \\
           & \dval & \fun{keyDeposit}~\var{pp}\\
