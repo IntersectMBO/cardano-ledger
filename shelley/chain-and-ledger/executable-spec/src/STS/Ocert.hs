@@ -17,25 +17,24 @@ import           Keys
 import           Ledger.Core ((⨃))
 import           OCert
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 
-data OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo
+data OCERT crypto
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , KESignable crypto (BHBody crypto)
   )
-  => STS (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  => STS (OCERT crypto)
  where
-  type State (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    = Map (KeyHash hashAlgo dsignAlgo) Natural
-  type Signal (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    = BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
-  type Environment (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) = OCertEnv hashAlgo dsignAlgo
-  data PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  type State (OCERT crypto)
+    = Map (KeyHash crypto) Natural
+  type Signal (OCERT crypto)
+    = BHeader crypto
+  type Environment (OCERT crypto) = OCertEnv crypto
+  data PredicateFailure (OCERT crypto)
     = KESBeforeStartOCERT
     | KESAfterEndOCERT
     | KESPeriodWrongOCERT
@@ -48,13 +47,11 @@ instance
   transitionRules = [ocertTransition]
 
 ocertTransition
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-     , KESAlgorithm kesAlgo
-     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+     , KESignable crypto (BHBody crypto)
      )
-  => TransitionRule (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  => TransitionRule (OCERT crypto)
 ocertTransition = do
   TRC (env, cs, BHeader bhb sigma) <- judgmentContext
 

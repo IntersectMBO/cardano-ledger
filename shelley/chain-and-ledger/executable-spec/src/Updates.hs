@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Updates
   ( Ppm(..)
@@ -39,14 +40,14 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
-
+import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
-import           Cardano.Crypto.Hash (Hash, HashAlgorithm)
+import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
-import           Keys (DSIGNAlgorithm, GenDelegs, GenKeyHash)
+import           Keys (GenDelegs, GenKeyHash)
 import           PParams (PParams (..))
 import           Slot (Epoch, Slot)
 
@@ -63,37 +64,41 @@ newtype ApName = ApName ByteString
 newtype SystemTag = SystemTag ByteString
   deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
-newtype InstallerHash hashAlgo = InstallerHash (Hash hashAlgo ByteString)
-  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+newtype InstallerHash crypto = InstallerHash (Hash (HASH crypto) ByteString)
+  deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
-newtype Mdt hashAlgo = Mdt (Map SystemTag (InstallerHash hashAlgo))
-  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+deriving instance Crypto crypto => ToCBOR (InstallerHash crypto)
 
-newtype Applications hashAlgo = Applications {
-  apps :: Map ApName (ApVer, Mdt hashAlgo)
+newtype Mdt crypto = Mdt (Map SystemTag (InstallerHash crypto))
+  deriving (Show, Ord, Eq, NoUnexpectedThunks)
+
+deriving instance Crypto crypto => ToCBOR (Mdt crypto)
+
+newtype Applications crypto = Applications {
+  apps :: Map ApName (ApVer, Mdt crypto)
   } deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
-newtype AVUpdate hashAlgo dsignAlgo = AVUpdate {
-  aup :: Map (GenKeyHash hashAlgo dsignAlgo) (Applications hashAlgo)
+newtype AVUpdate crypto = AVUpdate {
+  aup :: Map (GenKeyHash crypto) (Applications crypto)
   } deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
 
 -- | Update Proposal
-data Update hashAlgo dsignAlgo
-  = Update (PPUpdate hashAlgo dsignAlgo) (AVUpdate hashAlgo dsignAlgo)
+data Update crypto
+  = Update (PPUpdate crypto) (AVUpdate crypto)
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (Update hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (Update crypto)
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) => ToCBOR (Update hashAlgo dsignAlgo) where
+instance Crypto crypto => ToCBOR (Update crypto) where
   toCBOR (Update ppUpdate avUpdate) =
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR avUpdate
 
-data PPUpdateEnv hashAlgo dsignAlgo = PPUpdateEnv {
+data PPUpdateEnv crypto = PPUpdateEnv {
     slot :: Slot
-  , genDelegs  :: GenDelegs hashAlgo dsignAlgo
+  , genDelegs  :: GenDelegs crypto
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PPUpdateEnv hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (PPUpdateEnv crypto)
 
 data Ppm = MinFeeA Integer
   | MinFeeB Natural
@@ -169,16 +174,16 @@ instance ToCBOR Ppm where
     ProtocolVersion protocolVersion ->
       encodeListLen 2 <> toCBOR (18 :: Word8) <> toCBOR protocolVersion
 
-newtype PPUpdate hashAlgo dsignAlgo
-  = PPUpdate (Map (GenKeyHash hashAlgo dsignAlgo) (Set Ppm))
+newtype PPUpdate crypto
+  = PPUpdate (Map (GenKeyHash crypto) (Set Ppm))
   deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
 
 -- | Update Protocol Parameter update with new values, prefer value from `pup1`
 -- in case of already existing value in `pup0`
 updatePPup
-  :: PPUpdate hashAlgo dsignAlgo
-  -> PPUpdate hashAlgo dsignAlgo
-  -> PPUpdate hashAlgo dsignAlgo
+  :: PPUpdate crypto
+  -> PPUpdate crypto
+  -> PPUpdate crypto
 updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate (pup1' ∪ pup0')
 
 -- | This is just an example and not neccessarily how we will actually validate names
@@ -191,35 +196,35 @@ sTagValid :: SystemTag -> Bool
 sTagValid (SystemTag st) = all isAscii cs && length cs <= 10
   where cs = unpack st
 
-sTagsValid :: Mdt hashAlgo -> Bool
+sTagsValid :: Mdt crypto -> Bool
 sTagsValid (Mdt md) = all sTagValid (dom md)
 
-type Favs hashAlgo = Map Slot (Applications hashAlgo)
+type Favs crypto = Map Slot (Applications crypto)
 
-maxVer :: ApName -> Applications hashAlgo -> Favs hashAlgo -> (ApVer, Mdt hashAlgo)
+maxVer :: ApName -> Applications crypto -> Favs crypto -> (ApVer, Mdt crypto)
 maxVer an avs favs =
   maximum $ vs an avs : fmap (vs an) (Set.toList (range favs))
     where
       vs n (Applications as) =
         Map.foldr max (ApVer 0, Mdt Map.empty) (Set.singleton n ◁ as)
 
-svCanFollow :: Applications hashAlgo -> Favs hashAlgo -> (ApName, (ApVer, Mdt hashAlgo)) -> Bool
+svCanFollow :: Applications crypto -> Favs crypto -> (ApName, (ApVer, Mdt crypto)) -> Bool
 svCanFollow avs favs (an, (ApVer v, _)) = v == 1 + m
   where (ApVer m) = fst $ maxVer an avs favs
 
-allNames :: Applications hashAlgo -> Favs hashAlgo -> Set ApName
+allNames :: Applications crypto -> Favs crypto -> Set ApName
 allNames (Applications avs) favs =
   Prelude.foldr
     (\(Applications fav) acc -> acc `Set.union` Map.keysSet fav)
     (Map.keysSet avs)
     (Map.elems favs)
 
-newAVs :: Applications hashAlgo -> Favs hashAlgo -> Applications hashAlgo
+newAVs :: Applications crypto -> Favs crypto -> Applications crypto
 newAVs avs favs = Applications $
                     Map.fromList [(an, maxVer an avs favs) | an <- Set.toList $ allNames avs favs]
 
 votedValue
-  :: Eq a => Map (GenKeyHash hashAlgo dsignAlgo) a -> Maybe a
+  :: Eq a => Map (GenKeyHash crypto) a -> Maybe a
 votedValue vs | null elemLists = Nothing
               | otherwise      = Just $ (head . head) elemLists  -- elemLists contains an element
                                                -- and that list contains at
@@ -230,14 +235,14 @@ votedValue vs | null elemLists = Nothing
   elemLists =
     filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
 
-emptyUpdateState :: UpdateState hashAlgo dsignAlgo
+emptyUpdateState :: UpdateState crypto
 emptyUpdateState = UpdateState
                      (PPUpdate Map.empty)
                      (AVUpdate Map.empty)
                      Map.empty
                      (Applications Map.empty)
 
-emptyUpdate :: Update hashAlgo dsignAlgo
+emptyUpdate :: Update crypto
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)
 
 updatePParams :: PParams -> Set Ppm -> PParams
@@ -263,12 +268,12 @@ updatePParams = Set.foldr updatePParams'
   updatePParams' (ExtraEntropy          p) pps = pps { _extraEntropy = p }
   updatePParams' (ProtocolVersion       p) pps = pps { _protocolVersion = p }
 
-data UpdateState hashAlgo dsignAlgo
+data UpdateState crypto
   = UpdateState
-      (PPUpdate hashAlgo dsignAlgo)
-      (AVUpdate hashAlgo dsignAlgo)
-      (Map Slot (Applications hashAlgo))
-      (Applications hashAlgo)
+      (PPUpdate crypto)
+      (AVUpdate crypto)
+      (Map Slot (Applications crypto))
+      (Applications crypto)
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (UpdateState hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (UpdateState crypto)

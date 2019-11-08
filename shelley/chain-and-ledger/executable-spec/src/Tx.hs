@@ -35,13 +35,9 @@ where
 import           Keys (AnyKeyHash, undiscriminateKeyHash)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
-
-import           Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
-
-import           Cardano.Crypto.DSIGN (DSIGNAlgorithm)
-
+import           Cardano.Crypto.Hash (hashWithSerialiser)
+import           Cardano.Ledger.Shelley.Crypto
 import           Data.Word (Word8)
-
 import           Data.Map.Strict (Map)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
@@ -54,16 +50,16 @@ import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeC
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
-class (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, ToCBOR a) =>
-  MultiSignatureScript a hashAlgo dsignAlgo where
-  validateScript :: a -> Tx hashAlgo dsignAlgo vrfAlgo -> Bool
-  hashScript :: a -> ScriptHash hashAlgo dsignAlgo
+class (Crypto crypto, ToCBOR a) =>
+  MultiSignatureScript a crypto where
+  validateScript :: a -> Tx crypto -> Bool
+  hashScript :: a -> ScriptHash crypto
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript
-  :: MultiSig hashAlgo dsignAlgo
-  -> Set (AnyKeyHash hashAlgo dsignAlgo)
+  :: MultiSig crypto
+  -> Set (AnyKeyHash crypto)
   -> Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -75,9 +71,9 @@ evalNativeMultiSigScript (RequireMOf m msigs) vhks =
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => MultiSig hashAlgo dsignAlgo
-  -> Tx hashAlgo dsignAlgo vrfAlgo
+  :: (Crypto crypto)
+  => MultiSig crypto
+  -> Tx crypto
   -> Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig vhks
@@ -87,9 +83,9 @@ validateNativeMultiSigScript msig tx =
 -- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
 -- front and then calling the script CBOR function.
 hashNativeMultiSigScript
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => MultiSig hashAlgo dsignAlgo
-  -> ScriptHash hashAlgo dsignAlgo
+  :: Crypto crypto
+  => MultiSig crypto
+  -> ScriptHash crypto
 hashNativeMultiSigScript msig =
   ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
                                           <> toCBOR x) msig
@@ -100,20 +96,20 @@ hashNativeMultiSigScript msig =
 nativeMultiSigTag :: Word8
 nativeMultiSigTag = 0
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
-  MultiSignatureScript (MultiSig hashAlgo dsignAlgo) hashAlgo dsignAlgo where
+instance Crypto crypto =>
+  MultiSignatureScript (MultiSig crypto) crypto where
   validateScript = validateNativeMultiSigScript
   hashScript = hashNativeMultiSigScript
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript
-  :: Tx hashAlgo dsignAlgo vrfAlgo
-  -> Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
+  :: Tx crypto
+  -> Map (ScriptHash crypto) (MultiSig crypto)
 txwitsScript = _witnessMSigMap
 
 extractKeyHash
-  :: [StakeCredential hashAlgo dsignAlgo]
-  -> [AnyKeyHash hashAlgo dsignAlgo]
+  :: [StakeCredential crypto]
+  -> [AnyKeyHash crypto]
 extractKeyHash =
   mapMaybe (\case
                 KeyHashObj hk -> Just $ undiscriminateKeyHash hk
@@ -121,8 +117,8 @@ extractKeyHash =
                 _ -> Nothing)
 
 extractScriptHash
-  :: [StakeCredential hashAlgo dsignAlgo]
-  -> [ScriptHash hashAlgo dsignAlgo]
+  :: [StakeCredential crypto]
+  -> [ScriptHash crypto]
 extractScriptHash =
   mapMaybe (\case
                 ScriptHashObj hk -> Just hk

@@ -1,7 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -62,7 +64,7 @@ import           Data.Ratio ((%))
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
-
+import           Cardano.Ledger.Shelley.Crypto
 import           Data.Map.Strict (Map)
 import           Data.Set (Set)
 
@@ -86,58 +88,58 @@ data KeyDiscriminator
   | Regular
   deriving (Show)
 
-newtype SKey dsignAlgo = SKey (SignKeyDSIGN dsignAlgo)
+newtype SKey crypto = SKey (SignKeyDSIGN (DSIGN crypto))
 
-deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (SKey dsignAlgo)
+deriving instance Crypto crypto => NoUnexpectedThunks (SKey crypto)
 
-deriving instance DSIGNAlgorithm dsignAlgo => Show (SKey dsignAlgo)
-deriving instance Num (SignKeyDSIGN dsignAlgo) => Num (SKey dsignAlgo)
+deriving instance Crypto crypto => Show (SKey crypto)
+deriving instance Num (SignKeyDSIGN (DSIGN crypto)) => Num (SKey crypto)
 
 -- | Discriminated verification key
-newtype DiscVKey (kd :: KeyDiscriminator) dsignAlgo = DiscVKey (VerKeyDSIGN dsignAlgo)
+newtype DiscVKey (kd :: KeyDiscriminator) crypto = DiscVKey (VerKeyDSIGN (DSIGN crypto))
 
-deriving instance DSIGNAlgorithm dsignAlgo => Show (DiscVKey kd dsignAlgo)
-deriving instance DSIGNAlgorithm dsignAlgo => Eq   (DiscVKey kd dsignAlgo)
-deriving instance Num (VerKeyDSIGN dsignAlgo) => Num (DiscVKey kd dsignAlgo)
-deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (DiscVKey kd dsignAlgo)
+deriving instance Crypto crypto => Show (DiscVKey kd crypto)
+deriving instance Crypto crypto => Eq   (DiscVKey kd crypto)
+deriving instance Num (VerKeyDSIGN (DSIGN crypto)) => Num (DiscVKey kd crypto)
+deriving instance Crypto crypto => NoUnexpectedThunks (DiscVKey kd crypto)
 
-instance (DSIGNAlgorithm dsignAlgo, Typeable kd) => FromCBOR (DiscVKey kd dsignAlgo) where
+instance (Crypto crypto, Typeable kd) => FromCBOR (DiscVKey kd crypto) where
   fromCBOR = DiscVKey <$> DSIGN.decodeVerKeyDSIGN
-instance (DSIGNAlgorithm dsignAlgo, Typeable kd) => ToCBOR (DiscVKey kd dsignAlgo) where
+instance (Crypto crypto, Typeable kd) => ToCBOR (DiscVKey kd crypto) where
   toCBOR (DiscVKey vk) = encodeVerKeyDSIGN vk
 
 type VKey = DiscVKey 'Regular
-pattern VKey :: VerKeyDSIGN dsignAlgo -> DiscVKey 'Regular dsignAlgo
+pattern VKey :: VerKeyDSIGN (DSIGN crypto) -> DiscVKey 'Regular crypto
 pattern VKey a = DiscVKey a
 type VKeyGenesis = DiscVKey 'Genesis
-pattern VKeyGenesis :: VerKeyDSIGN dsignAlgo -> DiscVKey 'Genesis dsignAlgo
+pattern VKeyGenesis :: VerKeyDSIGN (DSIGN crypto) -> DiscVKey 'Genesis crypto
 pattern VKeyGenesis a = DiscVKey a
 
-data KeyPair (kd :: KeyDiscriminator) dsignAlgo
+data KeyPair (kd :: KeyDiscriminator) crypto
   = KeyPair
-      { vKey :: DiscVKey kd dsignAlgo
-      , sKey :: SKey dsignAlgo
+      { vKey :: DiscVKey kd crypto
+      , sKey :: SKey crypto
       } deriving (Generic, Show)
 
-instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (KeyPair kd dsignAlgo)
+instance Crypto crypto => NoUnexpectedThunks (KeyPair kd crypto)
 
-newtype Sig dsignAlgo a = Sig (SignedDSIGN dsignAlgo a)
+newtype Sig crypto a = Sig (SignedDSIGN (DSIGN crypto) a)
 
-deriving instance (DSIGNAlgorithm dsignAlgo) => Show (Sig dsignAlgo a)
-deriving instance (DSIGNAlgorithm dsignAlgo) => Eq   (Sig dsignAlgo a)
-deriving instance DSIGNAlgorithm dsignAlgo => NoUnexpectedThunks (Sig dsignAlgo a)
+deriving instance (Crypto crypto) => Show (Sig crypto a)
+deriving instance (Crypto crypto) => Eq   (Sig crypto a)
+deriving instance Crypto crypto => NoUnexpectedThunks (Sig crypto a)
 
-instance (DSIGNAlgorithm dsignAlgo, Typeable a) => FromCBOR (Sig dsignAlgo a) where
+instance (Crypto crypto, Typeable a) => FromCBOR (Sig crypto a) where
   fromCBOR = Sig <$> DSIGN.decodeSignedDSIGN
-instance (DSIGNAlgorithm dsignAlgo, Typeable a) => ToCBOR (Sig dsignAlgo a) where
+instance (Crypto crypto, Typeable a) => ToCBOR (Sig crypto a) where
   toCBOR (Sig s) = DSIGN.encodeSignedDSIGN s
 
 -- |Produce a digital signature
 sign
-  :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a)
-  => SKey dsignAlgo
+  :: (Crypto crypto, Signable (DSIGN crypto) a)
+  => SKey crypto
   -> a
-  -> Sig dsignAlgo a
+  -> Sig crypto a
 sign (SKey k) d =
   Sig
     . fst
@@ -146,48 +148,48 @@ sign (SKey k) d =
 
 -- |Verify a digital signature
 verify
-  :: (DSIGNAlgorithm dsignAlgo, Signable dsignAlgo a)
-  => DiscVKey kd dsignAlgo
+  :: (Crypto crypto, Signable (DSIGN crypto) a)
+  => DiscVKey kd crypto
   -> a
-  -> Sig dsignAlgo a
+  -> Sig crypto a
   -> Bool
 verify (DiscVKey vk) vd (Sig sigDSIGN) =
   either (const False) (const True) $ verifySignedDSIGN vk vd sigDSIGN
 
-newtype SKeyES kesAlgo = SKeyES (SignKeyKES kesAlgo)
+newtype SKeyES crypto = SKeyES (SignKeyKES (KES crypto))
 
-deriving instance (KESAlgorithm kesAlgo) => Show (SKeyES kesAlgo)
+deriving instance (KESAlgorithm (KES crypto)) => Show (SKeyES crypto)
 
-newtype VKeyES kesAlgo = VKeyES (VerKeyKES kesAlgo)
+newtype VKeyES crypto = VKeyES (VerKeyKES (KES crypto))
 
-deriving instance (KESAlgorithm kesAlgo) => Show (VKeyES kesAlgo)
-deriving instance (KESAlgorithm kesAlgo) => Eq   (VKeyES kesAlgo)
-deriving instance (KESAlgorithm kesAlgo) => NoUnexpectedThunks (VKeyES kesAlgo)
+deriving instance (KESAlgorithm (KES crypto)) => Show (VKeyES crypto)
+deriving instance (KESAlgorithm (KES crypto)) => Eq   (VKeyES crypto)
+deriving instance (KESAlgorithm (KES crypto)) => NoUnexpectedThunks (VKeyES crypto)
 
-instance KESAlgorithm kesAlgo => ToCBOR (VKeyES kesAlgo) where
+instance Crypto crypto => ToCBOR (VKeyES crypto) where
   toCBOR (VKeyES vKeyES) = encodeVerKeyKES vKeyES
-instance KESAlgorithm kesAlgo => FromCBOR (VKeyES kesAlgo) where
+instance Crypto crypto => FromCBOR (VKeyES crypto) where
   fromCBOR = VKeyES <$> KES.decodeVerKeyKES
 
-type KESignable kesAlgo a = KES.Signable kesAlgo a
+type KESignable crypto a = KES.Signable (KES crypto) a
 
-newtype KESig kesAlgo a = KESig (SignedKES kesAlgo a)
+newtype KESig crypto a = KESig (SignedKES (KES crypto) a)
 
-deriving instance (KESAlgorithm kesAlgo) => Show (KESig kesAlgo a)
-deriving instance (KESAlgorithm kesAlgo) => Eq   (KESig kesAlgo a)
-deriving instance (KESAlgorithm kesAlgo) => NoUnexpectedThunks (KESig kesAlgo a)
+deriving instance (Crypto crypto) => Show (KESig crypto a)
+deriving instance (Crypto crypto) => Eq   (KESig crypto a)
+deriving instance (Crypto crypto) => NoUnexpectedThunks (KESig crypto a)
 
-instance (KESAlgorithm kesAlgo, Typeable a) => ToCBOR (KESig kesAlgo a) where
+instance (Crypto crypto, Typeable a) => ToCBOR (KESig crypto a) where
   toCBOR (KESig (SignedKES sigKES)) = encodeSigKES sigKES
 
 
 -- |Produce a key evolving signature
 signKES
-  :: (KESAlgorithm kesAlgo, KES.Signable kesAlgo a)
-  => SKeyES kesAlgo
+  :: (Crypto crypto, KES.Signable (KES crypto) a)
+  => SKeyES crypto
   -> a
   -> Natural
-  -> KESig kesAlgo a
+  -> KESig crypto a
 signKES (SKeyES k) d n =
   KESig
     . fst
@@ -198,21 +200,21 @@ signKES (SKeyES k) d n =
 
 -- |Verify a key evolving signature
 verifyKES
-  :: (KESAlgorithm kesAlgo, KES.Signable kesAlgo a)
-  => VKeyES kesAlgo
+  :: (Crypto crypto, KES.Signable (KES crypto) a)
+  => VKeyES crypto
   -> a
-  -> KESig kesAlgo a
+  -> KESig crypto a
   -> Natural
   -> Bool
 verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
   either (const False) (const True)
     $ verifySignedKES vKeyES n vd sigKES
 
-newtype GenDelegs hashAlgo dsignAlgo =
-  GenDelegs (Map (GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo))
+newtype GenDelegs crypto =
+  GenDelegs (Map (GenKeyHash crypto) (KeyHash crypto))
   deriving (Show, Eq, NoUnexpectedThunks)
 
-newtype GKeys dsignAlgo = GKeys (Set (VKeyGenesis dsignAlgo))
+newtype GKeys crypto = GKeys (Set (VKeyGenesis crypto))
   deriving (Show, Eq, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------
@@ -220,52 +222,57 @@ newtype GKeys dsignAlgo = GKeys (Set (VKeyGenesis dsignAlgo))
 --------------------------------------------------------------------------------
 
 -- | Discriminated hash of public Key
-newtype DiscKeyHash (discriminator :: KeyDiscriminator) hashAlgo dsignAlgo =
-  DiscKeyHash (Hash hashAlgo (VerKeyDSIGN dsignAlgo))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
+newtype DiscKeyHash (discriminator :: KeyDiscriminator) crypto =
+  DiscKeyHash (Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto)))
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
-type KeyHash hashAlgo dsignAlgo = DiscKeyHash 'Regular hashAlgo dsignAlgo
+deriving instance (Crypto crypto, Typeable disc) => ToCBOR (DiscKeyHash disc crypto)
+
+type KeyHash crypto = DiscKeyHash 'Regular crypto
 pattern KeyHash
-  :: Hash hashAlgo (VerKeyDSIGN dsignAlgo)
-  -> DiscKeyHash 'Regular hashAlgo dsignAlgo
+  :: Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto))
+  -> DiscKeyHash 'Regular crypto
 pattern KeyHash a = DiscKeyHash a
-type GenKeyHash hashAlgo dsignAlgo = DiscKeyHash 'Genesis hashAlgo dsignAlgo
+type GenKeyHash crypto = DiscKeyHash 'Genesis crypto
 
 -- | Discriminated hash of public Key
-newtype AnyKeyHash hashAlgo dsignAlgo =
-  AnyKeyHash (Hash hashAlgo (VerKeyDSIGN dsignAlgo))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
+newtype AnyKeyHash crypto =
+  AnyKeyHash (Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto)))
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+
+deriving instance Crypto crypto => ToCBOR (AnyKeyHash crypto)
 
 undiscriminateKeyHash
-  :: DiscKeyHash kd hashAlgo dsignAlgo
-  -> AnyKeyHash hashAlgo dsignAlgo
+  :: DiscKeyHash kd crypto
+  -> AnyKeyHash crypto
 undiscriminateKeyHash (DiscKeyHash x) = AnyKeyHash x
 
 -- |Hash a given public key
 hashKey
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => DiscVKey kd dsignAlgo
-  -> DiscKeyHash kd hashAlgo dsignAlgo
+  :: Crypto crypto
+  => DiscVKey kd crypto
+  -> DiscKeyHash kd crypto
 hashKey (DiscVKey vk) = DiscKeyHash $ hashWithSerialiser encodeVerKeyDSIGN vk
 
 -- | Hash a given public key and forget about what it's a hash of
 hashAnyKey
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => DiscVKey kd dsignAlgo
-  -> AnyKeyHash hashAlgo dsignAlgo
+  :: Crypto crypto
+  => DiscVKey kd crypto
+  -> AnyKeyHash crypto
 hashAnyKey = undiscriminateKeyHash . hashKey
 
 -- |The hash of KES verification Key
-newtype KeyHashES hashAlgo kesAlgo =
-  KeyHashES (Hash hashAlgo (VerKeyKES kesAlgo))
-  deriving (Show, Eq, Ord, ToCBOR)
+newtype KeyHashES crypto =
+  KeyHashES (Hash (HASH crypto) (VerKeyKES (KES crypto)))
+  deriving (Show, Eq, Ord)
 
+deriving instance Crypto crypto => ToCBOR (KeyHashES crypto)
 
 -- |Hash a given public key
 hashKeyES
-  :: (HashAlgorithm hashAlgo, KESAlgorithm kesAlgo)
-  => VKeyES kesAlgo
-  -> KeyHashES hashAlgo kesAlgo
+  :: Crypto crypto
+  => VKeyES crypto
+  -> KeyHashES crypto
 hashKeyES (VKeyES vKeyES) =
   KeyHashES $ hashWithSerialiser encodeVerKeyKES vKeyES
 
@@ -283,7 +290,7 @@ instance VRFValue UnitInterval where
   fromNatural k = truncateUnitInterval $ toInteger (k `mod` 10000) % 10000
 
 hashKeyVRF
-  :: (HashAlgorithm hashAlgo, VRFAlgorithm vrfAlgo)
-  => VRF.VerKeyVRF vrfAlgo
-  -> Hash hashAlgo (VerKeyVRF vrfAlgo)
+  :: Crypto crypto
+  => VRF.VerKeyVRF (VRF crypto)
+  -> Hash (HASH crypto) (VerKeyVRF (VRF crypto))
 hashKeyVRF = hashWithSerialiser VRF.encodeVerKeyVRF

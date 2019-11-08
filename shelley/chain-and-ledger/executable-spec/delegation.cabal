@@ -57,6 +57,8 @@ library
                      STS.Updn
                      STS.Utxo
                      STS.Utxow
+
+                     Cardano.Ledger.Shelley.Crypto
   hs-source-dirs: src
   ghc-options:
     -Wall

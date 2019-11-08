@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -24,11 +25,11 @@ import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, patt
                      decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core (genInteger, genNatural, toCred)
-import           Keys (hashKey, hashKeyVRF, vKey)
+import           Keys (hashKey, vKey)
 import           Ledger.Core (dom, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stkCreds, _pstate, _stPools,
                      _stkCreds)
-import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs, PoolParams, VrfKeyPairs)
+import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs, PoolParams, VrfKeyPairs, hashKeyVRF)
 import           Mutator (getAnyStakeKey)
 import           PParams (PParams (..))
 import           Slot (Slot)

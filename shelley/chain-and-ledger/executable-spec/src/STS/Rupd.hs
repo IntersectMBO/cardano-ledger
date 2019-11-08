@@ -14,23 +14,23 @@ import           Slot
 
 import           Control.State.Transition
 
-data RUPD hashAlgo dsignAlgo vrfAlgo
+data RUPD crypto
 
-data RupdEnv hashAlgo dsignAlgo vrfAlgo
-  = RupdEnv (BlocksMade hashAlgo dsignAlgo) (EpochState hashAlgo dsignAlgo vrfAlgo)
+data RupdEnv crypto
+  = RupdEnv (BlocksMade crypto) (EpochState crypto)
 
-instance STS (RUPD hashAlgo dsignAlgo vrfAlgo) where
-  type State (RUPD hashAlgo dsignAlgo vrfAlgo) = Maybe (RewardUpdate hashAlgo dsignAlgo)
-  type Signal (RUPD hashAlgo dsignAlgo vrfAlgo) = Slot.Slot
-  type Environment (RUPD hashAlgo dsignAlgo vrfAlgo) = RupdEnv hashAlgo dsignAlgo vrfAlgo
-  data PredicateFailure (RUPD hashAlgo dsignAlgo vrfAlgo)
+instance STS (RUPD crypto) where
+  type State (RUPD crypto) = Maybe (RewardUpdate crypto)
+  type Signal (RUPD crypto) = Slot.Slot
+  type Environment (RUPD crypto) = RupdEnv crypto
+  data PredicateFailure (RUPD crypto)
     = FailureRUPD
     deriving (Show, Eq)
 
   initialRules = [pure Nothing]
   transitionRules = [rupdTransition]
 
-rupdTransition :: TransitionRule (RUPD hashAlgo dsignAlgo vrfAlgo)
+rupdTransition :: TransitionRule (RUPD crypto)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   let slot = firstSlot (epochFromSlot s) +* startRewards

@@ -129,17 +129,16 @@ import qualified Data.Set as Set
 import           Delegation.Certificates (requiresVKeyWitness)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
-
 import           Lens.Micro (to, (%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
-
+import           Cardano.Ledger.Shelley.Crypto
 import           Address (mkRwdAcnt)
 import           Coin (Coin (..))
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
                      baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
                      rewardStake)
-import           Keys (AnyKeyHash, DSIGNAlgorithm, GenDelegs (..), GenKeyHash, HashAlgorithm,
-                     KeyDiscriminator (..), KeyHash, KeyPair, Signable, VRFAlgorithm, hash,
+import           Keys (AnyKeyHash, GenDelegs (..), GenKeyHash,
+                     KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
                      undiscriminateKeyHash)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
                      keyMinRefund, minfeeA, minfeeB)
@@ -163,15 +162,15 @@ import           BaseTypes (UnitInterval, intervalValue, mkUnitInterval)
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs dsignAlgo = [(KeyPair 'Regular dsignAlgo, KeyPair 'Regular dsignAlgo)]
+type KeyPairs crypto = [(KeyPair 'Regular crypto, KeyPair 'Regular crypto)]
 
 -- | A ledger validation state consists of a ledger state 't' and the list of
 -- validation errors that occurred from a valid 's' to reach 't'.
-data LedgerValidation hashAlgo dsignAlgo vrfAlgo
-  = LedgerValidation [ValidationError] (LedgerState hashAlgo dsignAlgo vrfAlgo)
+data LedgerValidation crypto
+  = LedgerValidation [ValidationError] (LedgerState crypto)
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (LedgerValidation hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (LedgerValidation crypto)
 
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
@@ -219,8 +218,8 @@ instance Monoid Validity where
   mempty = Valid
   mappend = (<>)
 
-type RewardAccounts hashAlgo dsignAlgo
-  = Map (RewardAcnt hashAlgo dsignAlgo) Coin
+type RewardAccounts crypto
+  = Map (RewardAcnt crypto) Coin
 
 -- | StakeShare type
 newtype StakeShare =
@@ -234,57 +233,57 @@ mkStakeShare p =
     then Just $ StakeShare p
     else Nothing
 
-data DState hashAlgo dsignAlgo = DState
+data DState crypto= DState
     {  -- |The active stake keys.
-      _stkCreds    :: StakeCreds hashAlgo dsignAlgo
+      _stkCreds    :: StakeCreds crypto
       -- |The active accounts.
-    ,  _rewards    :: RewardAccounts hashAlgo dsignAlgo
+    ,  _rewards    :: RewardAccounts crypto
       -- |The current delegations.
-    , _delegations :: Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+    , _delegations :: Map (StakeCredential crypto) (KeyHash crypto)
       -- |The pointed to hash keys.
-    , _ptrs        :: Map Ptr (StakeCredential hashAlgo dsignAlgo)
+    , _ptrs        :: Map Ptr (StakeCredential crypto)
       -- | future genesis key delegations
-    , _fGenDelegs  :: Map (Slot, GenKeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+    , _fGenDelegs  :: Map (Slot, GenKeyHash crypto) (KeyHash crypto)
       -- |Genesis key delegations
-    , _genDelegs   :: GenDelegs hashAlgo dsignAlgo
+    , _genDelegs   :: GenDelegs crypto
       -- | Instantaneous Rewards
-    , _irwd        :: Map (Credential hashAlgo dsignAlgo) Coin
+    , _irwd        :: Map (Credential crypto) Coin
     } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (DState hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (DState crypto)
 
-data PState hashAlgo dsignAlgo vrfAlgo = PState
+data PState crypto= PState
     { -- |The active stake pools.
-      _stPools     :: StakePools hashAlgo dsignAlgo
+      _stPools     :: StakePools crypto
       -- |The pool parameters.
-    , _pParams     :: Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo vrfAlgo)
+    , _pParams     :: Map (KeyHash crypto) (PoolParams crypto)
       -- |A map of retiring stake pools to the epoch when they retire.
-    , _retiring    :: Map (KeyHash hashAlgo dsignAlgo) Epoch
+    , _retiring    :: Map (KeyHash crypto) Epoch
     } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PState hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (PState crypto)
 
 -- |The state associated with the current stake delegation.
-data DPState hashAlgo dsignAlgo vrfAlgo =
+data DPState crypto=
     DPState
     {
-      _dstate :: DState hashAlgo dsignAlgo
-    , _pstate :: PState hashAlgo dsignAlgo vrfAlgo
+      _dstate :: DState crypto
+    , _pstate :: PState crypto
     } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (DPState hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (DPState crypto)
 
-data RewardUpdate hashAlgo dsignAlgo = RewardUpdate
+data RewardUpdate crypto= RewardUpdate
   { deltaT        :: Coin
   , deltaR        :: Coin
-  , rs            :: Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  , rs            :: Map (RewardAcnt crypto) Coin
   , deltaF        :: Coin
-  , updateIRwd    :: Map (Credential hashAlgo dsignAlgo) Coin
+  , updateIRwd    :: Map (Credential crypto) Coin
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (RewardUpdate hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (RewardUpdate crypto)
 
-emptyRewardUpdate :: RewardUpdate hashAlgo dsignAlgo
+emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) Map.empty
 
 data AccountState = AccountState
@@ -294,25 +293,25 @@ data AccountState = AccountState
 
 instance NoUnexpectedThunks AccountState
 
-data EpochState hashAlgo dsignAlgo vrfAlgo
+data EpochState crypto
   = EpochState
     { esAccountState :: AccountState
-    , esSnapshots :: SnapShots hashAlgo dsignAlgo vrfAlgo
-    , esLState :: LedgerState hashAlgo dsignAlgo vrfAlgo
+    , esSnapshots :: SnapShots crypto
+    , esLState :: LedgerState crypto
     , esPp :: PParams
     }
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (EpochState hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (EpochState crypto)
 
-emptyUTxOState :: UTxOState hashAlgo dsignAlgo vrfAlgo
+emptyUTxOState :: UTxOState crypto
 emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
-emptyEpochState :: EpochState hashAlgo dsignAlgo vrfAlgo
+emptyEpochState :: EpochState crypto
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
 
-emptyLedgerState :: LedgerState hashAlgo dsignAlgo vrfAlgo
+emptyLedgerState :: LedgerState crypto
 emptyLedgerState =
   LedgerState
   emptyUTxOState
@@ -322,78 +321,78 @@ emptyLedgerState =
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0)
 
-emptyDelegation :: DPState hashAlgo dsignAlgo vrfAlgo
+emptyDelegation :: DPState crypto
 emptyDelegation =
     DPState emptyDState emptyPState
 
-emptyDState :: DState hashAlgo dsignAlgo
+emptyDState :: DState crypto
 emptyDState =
   DState (StakeCreds Map.empty) Map.empty Map.empty Map.empty Map.empty (GenDelegs Map.empty) Map.empty
 
-emptyPState :: PState hashAlgo dsignAlgo vrfAlgo
+emptyPState :: PState crypto
 emptyPState =
   PState (StakePools Map.empty) Map.empty Map.empty
 
 -- |Clear the protocol parameter updates
 clearPpup
-  :: UTxOState hashAlgo dsignAlgo vrfAlgo
-  -> UTxOState hashAlgo dsignAlgo vrfAlgo
+  :: UTxOState crypto
+  -> UTxOState crypto
 clearPpup utxoSt =
   let UpdateState _ avup faps aps = _ups utxoSt
   in utxoSt {_ups = UpdateState (PPUpdate Map.empty) avup faps aps}
 
-data UTxOState hashAlgo dsignAlgo vrfAlgo =
+data UTxOState crypto=
     UTxOState
-    { _utxo      :: !(UTxO hashAlgo dsignAlgo vrfAlgo)
+    { _utxo      :: !(UTxO crypto)
     , _deposited :: Coin
     , _fees      :: Coin
-    , _ups       :: UpdateState hashAlgo dsignAlgo
+    , _ups       :: UpdateState crypto
     } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (UTxOState hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (UTxOState crypto)
 
 -- | New Epoch state and environment
-data NewEpochState hashAlgo dsignAlgo vrfAlgo =
+data NewEpochState crypto=
   NewEpochState {
     nesEL    :: Epoch
-  , nesBprev :: BlocksMade hashAlgo dsignAlgo
-  , nesBcur  :: BlocksMade hashAlgo dsignAlgo
-  , nesEs    :: EpochState hashAlgo dsignAlgo vrfAlgo
-  , nesRu    :: Maybe (RewardUpdate hashAlgo dsignAlgo)
-  , nesPd    :: PoolDistr hashAlgo dsignAlgo vrfAlgo
-  , nesOsched :: Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
+  , nesBprev :: BlocksMade crypto
+  , nesBcur  :: BlocksMade crypto
+  , nesEs    :: EpochState crypto
+  , nesRu    :: Maybe (RewardUpdate crypto)
+  , nesPd    :: PoolDistr crypto
+  , nesOsched :: Map Slot (Maybe (GenKeyHash crypto))
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (NewEpochState hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (NewEpochState crypto)
 
 getGKeys
-  :: NewEpochState hashAlgo dsignAlgo vrfAlgo
-  -> Set (GenKeyHash hashAlgo dsignAlgo)
+  :: NewEpochState crypto
+  -> Set (GenKeyHash crypto)
 getGKeys nes = Map.keysSet genDelegs
   where NewEpochState _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
         LedgerState _ (DPState (DState _ _ _ _ _ (GenDelegs genDelegs) _) _) _ = ls
 
-data NewEpochEnv hashAlgo dsignAlgo =
+data NewEpochEnv crypto=
   NewEpochEnv {
     neeS     :: Slot
-  , neeGkeys :: Set (GenKeyHash hashAlgo dsignAlgo)
+  , neeGkeys :: Set (GenKeyHash crypto)
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (NewEpochEnv hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (NewEpochEnv crypto)
 
 -- |The state associated with a 'Ledger'.
-data LedgerState hashAlgo dsignAlgo vrfAlgo =
+data LedgerState crypto=
   LedgerState
   { -- |The current unspent transaction outputs.
-    _utxoState         :: !(UTxOState hashAlgo dsignAlgo vrfAlgo)
+    _utxoState         :: !(UTxOState crypto)
     -- |The current delegation state
-  , _delegationState   :: !(DPState hashAlgo dsignAlgo vrfAlgo)
+  , _delegationState   :: !(DPState crypto)
     -- |The current transaction index in the current slot.
   , _txSlotIx          :: Ix
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (LedgerState hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (LedgerState crypto)
 
 makeLenses ''DPState
 makeLenses ''DState
@@ -404,8 +403,8 @@ makeLenses ''LedgerState
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
 genesisId
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => TxId hashAlgo dsignAlgo vrfAlgo
+  :: (Crypto crypto)
+  => TxId crypto
 genesisId =
   TxId $ hash
   (TxBody
@@ -419,17 +418,17 @@ genesisId =
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => [TxOut hashAlgo dsignAlgo]
-  -> UTxO hashAlgo dsignAlgo vrfAlgo
+  :: (Crypto crypto)
+  => [TxOut crypto]
+  -> UTxO crypto
 genesisCoins outs = UTxO $
   Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
 genesisState
-  :: UTxO hashAlgo dsignAlgo vrfAlgo
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
+  :: UTxO crypto
+  -> LedgerState crypto
 genesisState utxo0 = LedgerState
   (UTxOState
     utxo0
@@ -440,7 +439,7 @@ genesisState utxo0 = LedgerState
   0
 
 -- | Determine if the transaction has expired
-current :: TxBody hashAlgo dsignAlgo vrfAlgo -> Slot -> Validity
+current :: TxBody crypto-> Slot -> Validity
 current tx slot =
     if tx ^. ttl < slot
     then Invalid [Expired (tx ^. ttl) slot]
@@ -448,7 +447,7 @@ current tx slot =
 
 -- | Determine if the input set of a transaction consumes at least one input,
 -- else it would be possible to do a replay attack using this transaction.
-validNoReplay :: TxBody hashAlgo dsignAlgo vrfAlgo -> Validity
+validNoReplay :: TxBody crypto-> Validity
 validNoReplay tx =
     if txins tx == Set.empty
     then Invalid [InputSetEmpty]
@@ -456,8 +455,8 @@ validNoReplay tx =
 
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
 validInputs
-  :: TxBody hashAlgo dsignAlgo vrfAlgo
-  -> UTxOState hashAlgo dsignAlgo vrfAlgo
+  :: TxBody crypto
+  -> UTxOState crypto
   -> Validity
 validInputs tx u =
   if txins tx `Set.isSubsetOf` dom (u ^. utxo)
@@ -465,15 +464,15 @@ validInputs tx u =
     else Invalid [BadInputs]
 
 -- |Implementation of abstract transaction size
-txsize :: TxBody hashAlgo dsignAlgo vrfAlgo -> Integer
+txsize :: TxBody crypto-> Integer
 txsize = toEnum . length . show
 
 -- |Minimum fee calculation
-minfee :: PParams -> TxBody hashAlgo dsignAlgo vrfAlgo -> Coin
+minfee :: PParams -> TxBody crypto-> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
 
 -- |Determine if the fee is large enough
-validFee :: PParams -> TxBody hashAlgo dsignAlgo vrfAlgo -> Validity
+validFee :: PParams -> TxBody crypto-> Validity
 validFee pc tx =
   if needed <= given
     then Valid
@@ -484,10 +483,10 @@ validFee pc tx =
 
 -- |Compute the lovelace which are created by the transaction
 produced
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
+  :: (Crypto crypto)
   => PParams
-  -> StakePools hashAlgo dsignAlgo
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
+  -> StakePools crypto
+  -> TxBody crypto
   -> Coin
 produced pp stakePools tx =
     balance (txouts tx) + tx ^. txfee + deposits pp stakePools (toList $ tx ^. certs)
@@ -495,8 +494,8 @@ produced pp stakePools tx =
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
   :: PParams
-  -> StakeCreds hashAlgo dsignAlgo
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
+  -> StakeCreds crypto
+  -> TxBody crypto
   -> Coin
 keyRefunds pp stk tx =
   sum [keyRefund dval dmin lambda stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
@@ -507,9 +506,9 @@ keyRefund
   :: Coin
   -> UnitInterval
   -> Rational
-  -> StakeCreds hashAlgo dsignAlgo
+  -> StakeCreds crypto
   -> Slot
-  -> DCert hashAlgo dsignAlgo vrfAlgo
+  -> DCert crypto
   -> Coin
 keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
     case c of
@@ -521,9 +520,9 @@ keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
 -- | Functions to calculate decayed deposits
 decayedKey
   :: PParams
-  -> StakeCreds hashAlgo dsignAlgo
+  -> StakeCreds crypto
   -> Slot
-  -> DCert hashAlgo dsignAlgo vrfAlgo
+  -> DCert crypto
   -> Coin
 decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
     case cert of
@@ -543,8 +542,8 @@ decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
 -- | Decayed deposit portions
 decayedTx
   :: PParams
-  -> StakeCreds hashAlgo dsignAlgo
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
+  -> StakeCreds crypto
+  -> TxBody crypto
   -> Coin
 decayedTx pp stk tx =
     sum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
@@ -552,9 +551,9 @@ decayedTx pp stk tx =
 -- |Compute the lovelace which are destroyed by the transaction
 consumed
   :: PParams
-  -> UTxO hashAlgo dsignAlgo vrfAlgo
-  -> StakeCreds hashAlgo dsignAlgo
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
+  -> UTxO crypto
+  -> StakeCreds crypto
+  -> TxBody crypto
   -> Coin
 consumed pp u stakeKeys tx =
     balance (txins tx ◁ u) + refunds + withdrawals
@@ -565,12 +564,12 @@ consumed pp u stakeKeys tx =
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
 preserveBalance
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => StakePools hashAlgo dsignAlgo
-  -> StakeCreds hashAlgo dsignAlgo
+  :: (Crypto crypto)
+  => StakePools crypto
+  -> StakeCreds crypto
   -> PParams
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
-  -> UTxOState hashAlgo dsignAlgo vrfAlgo
+  -> TxBody crypto
+  -> UTxOState crypto
   -> Validity
 preserveBalance stakePools stakeKeys pp tx u =
   if destroyed' == created'
@@ -583,8 +582,8 @@ preserveBalance stakePools stakeKeys pp tx u =
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
 correctWithdrawals
-  :: RewardAccounts hashAlgo dsignAlgo
-  -> RewardAccounts hashAlgo dsignAlgo
+  :: RewardAccounts crypto
+  -> RewardAccounts crypto
   -> Validity
 correctWithdrawals accs withdrawals =
   if withdrawals `Map.isSubmapOf` accs
@@ -595,10 +594,10 @@ correctWithdrawals accs withdrawals =
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded
-  :: UTxO hashAlgo dsignAlgo vrfAlgo
-  -> Tx hashAlgo dsignAlgo vrfAlgo
-  -> GenDelegs hashAlgo dsignAlgo
-  -> Set (AnyKeyHash hashAlgo dsignAlgo)
+  :: UTxO crypto
+  -> Tx crypto
+  -> GenDelegs crypto
+  -> Set (AnyKeyHash crypto)
 witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
@@ -624,10 +623,10 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
 verifiedWits
-  :: ( DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => Tx hashAlgo dsignAlgo vrfAlgo
+  => Tx crypto
   -> Validity
 verifiedWits (Tx tx wits _) =
   if all (verifyWitVKey tx) wits
@@ -640,10 +639,10 @@ verifiedWits (Tx tx wits _) =
 -- from the same address are used, it is not strictly necessary to include more
 -- than one witness.
 enoughWits
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Tx hashAlgo dsignAlgo vrfAlgo
-  -> GenDelegs hashAlgo dsignAlgo
-  -> UTxOState hashAlgo dsignAlgo vrfAlgo
+  :: Crypto crypto
+  => Tx crypto
+  -> GenDelegs crypto
+  -> UTxOState crypto
   -> Validity
 enoughWits tx@(Tx _ wits _) d' u =
   if witsVKeyNeeded (u ^. utxo) tx d' `Set.isSubsetOf` signers
@@ -653,14 +652,14 @@ enoughWits tx@(Tx _ wits _) d' u =
     signers = Set.map witKeyHash wits
 
 validRuleUTXO
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => RewardAccounts hashAlgo dsignAlgo
-  -> StakePools hashAlgo dsignAlgo
-  -> StakeCreds hashAlgo dsignAlgo
+  :: (Crypto crypto)
+  => RewardAccounts crypto
+  -> StakePools crypto
+  -> StakeCreds crypto
   -> PParams
   -> Slot
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
-  -> UTxOState hashAlgo dsignAlgo vrfAlgo
+  -> TxBody crypto
+  -> UTxOState crypto
   -> Validity
 validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                           validInputs tx u
@@ -671,13 +670,12 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                        <> correctWithdrawals accs (tx ^. wdrls)
 
 validRuleUTXOW
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => Tx hashAlgo dsignAlgo vrfAlgo
-  -> GenDelegs hashAlgo dsignAlgo
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
+  => Tx crypto
+  -> GenDelegs crypto
+  -> LedgerState crypto
   -> Validity
 validRuleUTXOW tx d' l = verifiedWits tx
                    <> enoughWits tx d' (l ^. utxoState)
@@ -685,24 +683,22 @@ validRuleUTXOW tx d' l = verifiedWits tx
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits
-  :: Update hashAlgo dsignAlgo
-  -> GenDelegs hashAlgo dsignAlgo
-  -> Set (KeyHash hashAlgo dsignAlgo)
+  :: Update crypto
+  -> GenDelegs crypto
+  -> Set (KeyHash crypto)
 propWits (Update (PPUpdate pup) (AVUpdate aup')) (GenDelegs _genDelegs) =
   Set.fromList $ Map.elems updateKeys
   where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup') ◁ _genDelegs
 
 validTx
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , VRFAlgorithm vrfAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => Tx hashAlgo dsignAlgo vrfAlgo
-  -> GenDelegs hashAlgo dsignAlgo
+  => Tx crypto
+  -> GenDelegs crypto
   -> Slot
   -> PParams
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
+  -> LedgerState crypto
   -> Validity
 validTx tx d' slot pp l =
     validRuleUTXO  (l ^. delegationState . dstate . rewards)
@@ -721,8 +717,8 @@ validTx tx d' slot pp l =
 
 -- | Checks whether a key registration certificat is valid.
 validKeyRegistration
-  :: DCert hashAlgo dsignAlgo vrfAlgo
-  -> DState hashAlgo dsignAlgo
+  :: DCert crypto
+  -> DState crypto
   -> Validity
 validKeyRegistration cert ds =
   case cert of
@@ -732,8 +728,8 @@ validKeyRegistration cert ds =
     _          -> Valid
 
 validKeyDeregistration
-  :: DCert hashAlgo dsignAlgo vrfAlgo
-  -> DState hashAlgo dsignAlgo
+  :: DCert crypto
+  -> DState crypto
   -> Validity
 validKeyDeregistration cert ds =
   case cert of
@@ -743,8 +739,8 @@ validKeyDeregistration cert ds =
     _            -> Valid
 
 validStakeDelegation
-  ::  DCert hashAlgo dsignAlgo vrfAlgo
-  -> DState hashAlgo dsignAlgo
+  ::  DCert crypto
+  -> DState crypto
   -> Validity
 validStakeDelegation cert ds =
   case cert of
@@ -756,14 +752,14 @@ validStakeDelegation cert ds =
 
 -- there is currently no requirement that could make this invalid
 validStakePoolRegister
-  :: DCert hashAlgo dsignAlgo vrfAlgo
-  -> DPState hashAlgo dsignAlgo vrfAlgo
+  :: DCert crypto
+  -> DPState crypto
   -> Validity
 validStakePoolRegister _ _ = Valid
 
 validStakePoolRetire
-  :: DCert hashAlgo dsignAlgo vrfAlgo
-  -> PState hashAlgo dsignAlgo vrfAlgo
+  :: DCert crypto
+  -> PState crypto
   -> Validity
 validStakePoolRetire cert ps =
   case cert of
@@ -773,8 +769,8 @@ validStakePoolRetire cert ps =
     _                -> Valid
 
 validDelegation
-  :: DCert hashAlgo dsignAlgo vrfAlgo
-  -> DPState hashAlgo dsignAlgo vrfAlgo
+  :: DCert crypto
+  -> DPState crypto
   -> Validity
 validDelegation cert ds =
      validKeyRegistration cert (ds ^. dstate)
@@ -787,17 +783,15 @@ validDelegation cert ds =
 -- apply the transaction as a state transition function on the ledger state.
 -- Otherwise, return a list of validation errors.
 asStateTransition
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , VRFAlgorithm vrfAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
   => Slot
   -> PParams
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
-  -> Tx hashAlgo dsignAlgo vrfAlgo
-  -> GenDelegs hashAlgo dsignAlgo
-  -> Either [ValidationError] (LedgerState hashAlgo dsignAlgo vrfAlgo)
+  -> LedgerState crypto
+  -> Tx crypto
+  -> GenDelegs crypto
+  -> Either [ValidationError] (LedgerState crypto)
 asStateTransition slot pp ls tx d' =
   case validTx tx d' slot pp ls of
     Invalid errors -> Left errors
@@ -812,9 +806,9 @@ asStateTransition slot pp ls tx d' =
 certAsStateTransition
   :: Slot
   -> Ix
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
-  -> (Ix, DCert hashAlgo dsignAlgo vrfAlgo)
-  -> Either [ValidationError] (LedgerState hashAlgo dsignAlgo vrfAlgo)
+  -> LedgerState crypto
+  -> (Ix, DCert crypto)
+  -> Either [ValidationError] (LedgerState crypto)
 certAsStateTransition slot txIx ls (clx, cert) =
   case validDelegation cert (ls ^. delegationState) of
     Invalid errors -> Left errors
@@ -823,17 +817,15 @@ certAsStateTransition slot txIx ls (clx, cert) =
 -- | Apply transition independent of validity, collect validation errors on the
 -- way.
 asStateTransition'
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , VRFAlgorithm vrfAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
   => Slot
   -> PParams
-  -> LedgerValidation hashAlgo dsignAlgo vrfAlgo
-  -> Tx hashAlgo dsignAlgo vrfAlgo
-  -> GenDelegs hashAlgo dsignAlgo
-  -> LedgerValidation hashAlgo dsignAlgo vrfAlgo
+  -> LedgerValidation crypto
+  -> Tx crypto
+  -> GenDelegs crypto
+  -> LedgerValidation crypto
 asStateTransition' slot pp (LedgerValidation valErrors ls) tx d' =
     let ls' = applyTxBody ls pp (tx ^. body) in
     case validTx tx d' slot pp ls of
@@ -844,9 +836,9 @@ asStateTransition' slot pp (LedgerValidation valErrors ls) tx d' =
 
 -- |Retire the appropriate stake pools when the epoch changes.
 retirePools
-  :: LedgerState hashAlgo dsignAlgo vrfAlgo
+  :: LedgerState crypto
   -> Epoch
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
+  -> LedgerState crypto
 retirePools ls@(LedgerState _ ds _) epoch =
     ls & delegationState .~
            (ds & pstate . stPools .~
@@ -859,9 +851,9 @@ retirePools ls@(LedgerState _ ds _) epoch =
 
 -- |Calculate the change to the deposit pool for a given transaction.
 depositPoolChange
-  :: LedgerState hashAlgo dsignAlgo vrfAlgo
+  :: LedgerState crypto
   -> PParams
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
+  -> TxBody crypto
   -> Coin
 depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
   -- Note that while (currentPool + txDeposits) >= txRefunds,
@@ -875,11 +867,11 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
 
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => LedgerState hashAlgo dsignAlgo vrfAlgo
+  :: (Crypto crypto)
+  => LedgerState crypto
   -> PParams
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
+  -> TxBody crypto
+  -> LedgerState crypto
 applyTxBody ls pp tx =
     ls & utxoState %~ flip applyUTxOUpdate tx
        & utxoState . deposited .~ depositPoolChange ls pp tx
@@ -890,26 +882,26 @@ applyTxBody ls pp tx =
     newAccounts = reapRewards (ls ^. delegationState . dstate. rewards) (tx ^. wdrls)
 
 reapRewards
-  :: RewardAccounts hashAlgo dsignAlgo
-  -> RewardAccounts hashAlgo dsignAlgo
-  -> RewardAccounts hashAlgo dsignAlgo
+  :: RewardAccounts crypto
+  -> RewardAccounts crypto
+  -> RewardAccounts crypto
 reapRewards dStateRewards withdrawals =
     Map.mapWithKey removeRewards dStateRewards
     where removeRewards k v = if k `Map.member` withdrawals then Coin 0 else v
 
 applyUTxOUpdate
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => UTxOState hashAlgo dsignAlgo vrfAlgo
-  -> TxBody hashAlgo dsignAlgo vrfAlgo
-  -> UTxOState hashAlgo dsignAlgo vrfAlgo
+  :: (Crypto crypto)
+  => UTxOState crypto
+  -> TxBody crypto
+  -> UTxOState crypto
 applyUTxOUpdate u tx = u & utxo .~ txins tx ⋪ (u ^. utxo) ∪ txouts tx
 
 -- |Apply a delegation certificate as a state transition function on the ledger state.
 applyDCert
   :: Ptr
-  -> DCert hashAlgo dsignAlgo vrfAlgo
-  -> DPState hashAlgo dsignAlgo vrfAlgo
-  -> DPState hashAlgo dsignAlgo vrfAlgo
+  -> DCert crypto
+  -> DPState crypto
+  -> DPState crypto
 
 applyDCert ptr dcert@(RegKey _) ds =
   ds & dstate %~ applyDCertDState ptr dcert
@@ -932,9 +924,9 @@ applyDCert ptr dcert@(Delegate _) ds =
 
 applyDCertDState
   :: Ptr
-  -> DCert hashAlgo dsignAlgo vrfAlgo
-  -> DState hashAlgo dsignAlgo
-  -> DState hashAlgo dsignAlgo
+  -> DCert crypto
+  -> DState crypto
+  -> DState crypto
 applyDCertDState (Ptr slot txIx clx) (DeRegKey key) ds =
     ds & stkCreds      .~ (StakeCreds $ Map.delete hksk stkcreds')
        & rewards     %~ Map.delete (RewardAcnt hksk)
@@ -957,9 +949,9 @@ applyDCertDState _ _ ds = ds
 
 applyDCertPState
   :: Ptr
-  -> DCert hashAlgo dsignAlgo vrfAlgo
-  -> PState hashAlgo dsignAlgo vrfAlgo
-  -> PState hashAlgo dsignAlgo vrfAlgo
+  -> DCert crypto
+  -> PState crypto
+  -> PState crypto
 applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
     ps & stPools  .~ (StakePools $ Map.insert hsk slot' pools)
        & pParams  %~ Map.insert hsk sp
@@ -977,8 +969,8 @@ applyDCertPState _ _ ps = ps
 
 -- |Compute how much stake each active stake pool controls.
 delegatedStake
-  :: LedgerState hashAlgo dsignAlgo vrfAlgo
-  -> Map (KeyHash hashAlgo dsignAlgo) Coin
+  :: LedgerState crypto
+  -> Map (KeyHash crypto) Coin
 delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
   where
     getOutputs (UTxO utxo') = Map.elems utxo'
@@ -1017,7 +1009,7 @@ poolRewards d_ sigma blocksN blocksTotal (Coin maxP) =
 -- | Calculate pool leader reward
 leaderRew
   :: Coin
-  -> PoolParams hashAlgo dsignAlgo vrfAlgo
+  -> PoolParams crypto
   -> StakeShare
   -> StakeShare
   -> Coin
@@ -1032,7 +1024,7 @@ leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
 -- | Calculate pool member reward
 memberRew
   :: Coin
-  -> PoolParams hashAlgo dsignAlgo vrfAlgo
+  -> PoolParams crypto
   -> StakeShare
   -> StakeShare
   -> Coin
@@ -1049,12 +1041,12 @@ rewardOnePool
   -> Coin
   -> Natural
   -> Natural
-  -> StakeCredential hashAlgo dsignAlgo
-  -> PoolParams hashAlgo dsignAlgo vrfAlgo
-  -> Stake hashAlgo dsignAlgo
+  -> StakeCredential crypto
+  -> PoolParams crypto
+  -> Stake crypto
   -> Coin
-  -> Set (RewardAcnt hashAlgo dsignAlgo)
-  -> Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  -> Set (RewardAcnt crypto)
+  -> Map (RewardAcnt crypto) Coin
 rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) addrsRew =
   rewards'
   where
@@ -1083,13 +1075,13 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
 
 reward
   :: PParams
-  -> BlocksMade hashAlgo dsignAlgo
+  -> BlocksMade crypto
   -> Coin
-  -> Set (RewardAcnt hashAlgo dsignAlgo)
-  -> Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo vrfAlgo)
-  -> Stake hashAlgo dsignAlgo
-  -> Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
-  -> Map (RewardAcnt hashAlgo dsignAlgo) Coin
+  -> Set (RewardAcnt crypto)
+  -> Map (KeyHash crypto) (PoolParams crypto)
+  -> Stake crypto
+  -> Map (StakeCredential crypto) (KeyHash crypto)
+  -> Map (RewardAcnt crypto) Coin
 reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
   rewards'
   where
@@ -1112,12 +1104,12 @@ reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
 
 -- | Stake distribution
 stakeDistr
-  :: forall hashAlgo dsignAlgo vrfAlgo
-   . UTxO hashAlgo dsignAlgo vrfAlgo
-  -> DState hashAlgo dsignAlgo
-  -> PState hashAlgo dsignAlgo vrfAlgo
-  -> ( Stake hashAlgo dsignAlgo
-     , Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+  :: forall crypto
+   . UTxO crypto
+  -> DState crypto
+  -> PState crypto
+  -> ( Stake crypto
+     , Map (StakeCredential crypto) (KeyHash crypto)
      )
 stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
@@ -1126,7 +1118,7 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
       PState (StakePools stpools) _ _                          = ps
       outs = aggregateOuts u
 
-      stakeRelation :: [(StakeCredential hashAlgo dsignAlgo, Coin)]
+      stakeRelation :: [(StakeCredential crypto, Coin)]
       stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
 
       activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools
@@ -1135,9 +1127,9 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
 
 -- | Apply a reward update
 applyRUpd
-  :: RewardUpdate hashAlgo dsignAlgo
-  -> EpochState hashAlgo dsignAlgo vrfAlgo
-  -> EpochState hashAlgo dsignAlgo vrfAlgo
+  :: RewardUpdate crypto
+  -> EpochState crypto
+  -> EpochState crypto
 applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
   where utxoState_ = _utxoState ls
         delegState = _delegationState ls
@@ -1163,9 +1155,9 @@ applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
 
 -- | Create a reward update
 createRUpd
-  :: BlocksMade hashAlgo dsignAlgo
-  -> EpochState hashAlgo dsignAlgo vrfAlgo
-  -> RewardUpdate hashAlgo dsignAlgo
+  :: BlocksMade crypto
+  -> EpochState crypto
+  -> RewardUpdate crypto
 createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
   RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) registered
   where Coin reserves' = _reserves acnt
@@ -1204,9 +1196,9 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
 -- The real implementation should probably use randomization.
 overlaySchedule
   :: Epoch
-  -> Set (GenKeyHash hashAlgo dsignAlgo)
+  -> Set (GenKeyHash crypto)
   -> PParams
-  -> Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo))
+  -> Map Slot (Maybe (GenKeyHash crypto))
 overlaySchedule e gkeys pp = Map.union active inactive
   where
     numActive = dval * fromIntegral slotsPerEpoch
@@ -1234,10 +1226,10 @@ overlaySchedule e gkeys pp = Map.union active inactive
 
 -- | Update new epoch state
 updateNES
-  :: NewEpochState hashAlgo dsignAlgo vrfAlgo
-  -> BlocksMade hashAlgo dsignAlgo
-  -> LedgerState hashAlgo dsignAlgo vrfAlgo
-  -> NewEpochState hashAlgo dsignAlgo vrfAlgo
+  :: NewEpochState crypto
+  -> BlocksMade crypto
+  -> LedgerState crypto
+  -> NewEpochState crypto
 updateNES (NewEpochState eL bprev _
            (EpochState acnt ss _ pp) ru pd osched) bcur ls =
   NewEpochState eL bprev bcur (EpochState acnt ss ls pp) ru pd osched

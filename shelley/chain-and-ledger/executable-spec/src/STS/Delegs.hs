@@ -17,7 +17,6 @@ import           Data.Sequence (Seq (..))
 
 import           Coin (Coin)
 import           Delegation.Certificates
-import           Keys
 import           LedgerState
 import           PParams
 import           Slot
@@ -26,6 +25,7 @@ import           TxData
 
 import           STS.Delpl
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
@@ -33,38 +33,38 @@ import           Ledger.Core (dom, (∈), (⊆), (⨃))
 
 import           Hedgehog (Gen)
 
-data DELEGS hashAlgo dsignAlgo vrfAlgo
+data DELEGS crypto
 
-data DelegsEnv hashAlgo dsignAlgo vrfAlgo
+data DelegsEnv crypto
   = DelegsEnv
     { delegsSlot :: Slot
     , delegsIx   :: Ix
     , delegspp   :: PParams
-    , delegsTx   :: (Tx hashAlgo dsignAlgo vrfAlgo)
+    , delegsTx   :: (Tx crypto)
     , delegsReserves :: Coin
     }
   deriving Show
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => STS (DELEGS hashAlgo dsignAlgo vrfAlgo)
+  Crypto crypto
+  => STS (DELEGS crypto)
  where
-  type State (DELEGS hashAlgo dsignAlgo vrfAlgo) = DPState hashAlgo dsignAlgo vrfAlgo
-  type Signal (DELEGS hashAlgo dsignAlgo vrfAlgo) = Seq (DCert hashAlgo dsignAlgo vrfAlgo)
-  type Environment (DELEGS hashAlgo dsignAlgo vrfAlgo) = DelegsEnv hashAlgo dsignAlgo vrfAlgo
-  data PredicateFailure (DELEGS hashAlgo dsignAlgo vrfAlgo)
+  type State (DELEGS crypto) = DPState crypto
+  type Signal (DELEGS crypto) = Seq (DCert crypto)
+  type Environment (DELEGS crypto) = DelegsEnv crypto
+  data PredicateFailure (DELEGS crypto)
     = DelegateeNotRegisteredDELEG
     | WithrawalsNotInRewardsDELEGS
-    | DelplFailure (PredicateFailure (DELPL hashAlgo dsignAlgo vrfAlgo))
+    | DelplFailure (PredicateFailure (DELPL crypto))
     deriving (Show, Eq)
 
   initialRules    = [ pure emptyDelegation ]
   transitionRules = [ delegsTransition     ]
 
 delegsTransition
-  :: forall hashAlgo dsignAlgo vrfAlgo
-   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => TransitionRule (DELEGS hashAlgo dsignAlgo vrfAlgo)
+  :: forall crypto
+   . Crypto crypto
+  => TransitionRule (DELEGS crypto)
 delegsTransition = do
   TRC (env@(DelegsEnv _slot txIx pp (Tx txbody _ _) _reserves), dpstate, certificates) <- judgmentContext
 
@@ -82,7 +82,7 @@ delegsTransition = do
 
     certs_ :|> cert -> do
       dpstate' <-
-        trans @(DELEGS hashAlgo dsignAlgo vrfAlgo) $ TRC (env, dpstate, certs_)
+        trans @(DELEGS crypto) $ TRC (env, dpstate, certs_)
 
       let ptr = Ptr _slot txIx (fromIntegral $ length certs_)
 
@@ -94,17 +94,17 @@ delegsTransition = do
 
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
 
-      trans @(DELPL hashAlgo dsignAlgo vrfAlgo)
+      trans @(DELPL crypto)
         $ TRC (DelplEnv _slot ptr pp _reserves, dpstate', cert)
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => Embed (DELPL hashAlgo dsignAlgo vrfAlgo) (DELEGS hashAlgo dsignAlgo vrfAlgo)
+  Crypto crypto
+  => Embed (DELPL crypto) (DELEGS crypto)
  where
   wrapFailed = DelplFailure
 
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => HasTrace (DELEGS hashAlgo dsignAlgo vrfAlgo) where
-  envGen _ = undefined :: Gen (DelegsEnv hashAlgo dsignAlgo vrfAlgo)
-  sigGen _ _ = undefined :: Gen (Seq (DCert hashAlgo dsignAlgo vrfAlgo))
+instance Crypto crypto
+  => HasTrace (DELEGS crypto) where
+  envGen _ = undefined :: Gen (DelegsEnv crypto)
+  sigGen _ _ = undefined :: Gen (Seq (DCert crypto))

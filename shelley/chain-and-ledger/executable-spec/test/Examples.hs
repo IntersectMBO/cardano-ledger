@@ -80,7 +80,7 @@ import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, Certifie
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
                      LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
                      RewardAcnt, SKey, SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
+                     UTxOState, Update, UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
@@ -96,7 +96,7 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
-                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey, hashKeyVRF,
+                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey,
                      sKey, sign, signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
