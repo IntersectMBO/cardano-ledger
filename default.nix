@@ -48,7 +48,7 @@ in {
     # List all local packages in the project.
     packages = ps: with ps; [
         small-steps
-        cs-leddger
+        cs-ledger
         cs-blockchain
         delegation
         non-integer
