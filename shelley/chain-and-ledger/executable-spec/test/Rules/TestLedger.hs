@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -8,6 +10,7 @@ module Rules.TestLedger
   , credentialRemovedAfterDereg
   , consumedEqualsProduced
   , registeredPoolIsAdded
+  , retiredPoolIsRemoved
   , pStateIsInternallyConsistent
   )
 where
@@ -17,13 +20,17 @@ import           Data.Word (Word64)
 import           Lens.Micro ((^.))
 
 import           Hedgehog (Property, forAll, property, withTests)
+import qualified Test.QuickCheck as QC
 
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace,
                      traceOfLengthWithInitState)
 import           Control.State.Transition.Trace (SourceSignalTarget (..), source,
                      sourceSignalTargets, target, traceEnv)
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import           Generator.Core (mkGenesisLedgerState)
+import qualified Generator.Core.QuickCheck as GQ
 import           Generator.LedgerTrace ()
+import           Generator.LedgerTrace.QuickCheck ()
 
 import           Coin (pattern Coin)
 import           LedgerState (pattern DPState, pattern DState, pattern UTxOState, _deposited,
@@ -31,6 +38,7 @@ import           LedgerState (pattern DPState, pattern DState, pattern UTxOState
 import           MockTypes (DELEG, LEDGER, POOL)
 import qualified Rules.TestDeleg as TestDeleg
 import qualified Rules.TestPool as TestPool
+import           Shrinkers (shrinkDCert)
 import           TxData (body, certs)
 import           UTxO (balance)
 
@@ -121,6 +129,27 @@ registeredPoolIsAdded = do
       (tr ^. traceEnv)
       (concatMap ledgerToPoolSsts (sourceSignalTargets tr))
 
+
+-- | Check that a `RetirePool` certificate properly removes a stake pool.
+retiredPoolIsRemoved :: QC.Property
+retiredPoolIsRemoved = do
+  QC.withMaxSuccess (fromIntegral numberOfTests) . QC.property $ do
+    let gen = do env0 <- TQC.envGen @LEDGER traceLen
+                 st0 <- GQ.mkGenesisLedgerState env0
+                 tr <- TQC.traceFrom @LEDGER
+                         traceLen
+                         traceLen
+                         env0
+                         st0
+                 pure (concatMap ledgerToPoolSsts (sourceSignalTargets tr))
+    QC.forAllShrink gen shrinkPoolSST TestPool.retiredPoolIsRemoved
+
+shrinkPoolSST :: [SourceSignalTarget POOL] -> [[SourceSignalTarget POOL]]
+shrinkPoolSST = QC.shrinkList shrinker
+ where
+  shrinker :: SourceSignalTarget POOL -> [SourceSignalTarget POOL]
+  shrinker (SourceSignalTarget src tgt sig) =
+    [ SourceSignalTarget src tgt sig' | sig' <- shrinkDCert sig ]
 
 pStateIsInternallyConsistent :: Property
 pStateIsInternallyConsistent = do

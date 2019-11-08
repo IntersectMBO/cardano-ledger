@@ -58,19 +58,20 @@ module Keys
   )
 where
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
+import           Data.Map.Strict (Map)
 import           Data.Maybe (fromJust)
 import           Data.Ratio ((%))
+import           Data.Set (Set)
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
-import           Cardano.Ledger.Shelley.Crypto
-import           Data.Map.Strict (Map)
-import           Data.Set (Set)
 
 import           BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
-import           Cardano.Binary (ToCBOR (toCBOR), FromCBOR(..))
-import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeVerKeyDSIGN),
+import           Cardano.Binary (FromCBOR (..), ToCBOR (toCBOR))
+import           Cardano.Crypto.DSIGN
+                     (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeVerKeyDSIGN),
                      SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
@@ -80,7 +81,7 @@ import           Cardano.Crypto.KES
 import qualified Cardano.Crypto.KES as KES
 import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 
 -- | Discriminate between keys based on their usage in the system.
 data KeyDiscriminator

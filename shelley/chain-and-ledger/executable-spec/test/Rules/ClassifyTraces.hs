@@ -15,7 +15,7 @@ import           Control.State.Transition.Generator (onlyValidSignalsAreGenerate
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
 
-import           Delegation.Certificates (isDeRegKey, isRegKey, isRegPool)
+import           Delegation.Certificates (isDeRegKey, isRegKey, isRegPool, isRetirePool)
 import           Generator.Core (mkGenesisLedgerState)
 import           Generator.LedgerTrace ()
 import           MockTypes (DCert, LEDGER, Tx)
@@ -38,12 +38,16 @@ relevantCasesAreCovered = withTests 500 $ property $ do
         (traceLength tr <= 5 * length (filter isRegKey certs_))
 
   cover 75
-        "there is at least 1 DeRegKey certificate for every 5 transactions"
-        (traceLength tr <= 5 * length (filter isDeRegKey certs_))
+        "there is at least 1 DeRegKey certificate for every 20 transactions"
+        (traceLength tr <= 20 * length (filter isDeRegKey certs_))
 
   cover 75
         "there is at least 1 RegPool certificate for every 20 transactions"
         (traceLength tr <= 20 * length (filter isRegPool certs_))
+
+  cover 75
+        "there is at least 1 RetirePool certificate for every 20 transactions"
+        (traceLength tr <= 20 * length (filter isRetirePool certs_))
 
   cover 25
         "at most 75% of transactions have no certificates"
