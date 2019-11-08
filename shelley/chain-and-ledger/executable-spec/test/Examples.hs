@@ -698,7 +698,7 @@ txEx2B = Tx
 blockEx2B :: Block
 blockEx2B = mkBlock
              blockEx2AHash    -- ^ Hash of previous block
-             (coreNodeKeys 3) -- ^ Third node of genesis node list
+             (coreNodeKeys 3) -- ^ Third genesis node
              [txEx2B]         -- ^ Single transaction to record
              (Slot 90)        -- ^ Current slot
              (BlockNo 2)
