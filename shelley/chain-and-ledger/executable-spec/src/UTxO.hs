@@ -46,9 +46,10 @@ import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin (..))
-import           Keys (DSIGNAlgorithm, HashAlgorithm, KeyDiscriminator (..), KeyPair, Signable,
-                     VRFAlgorithm, hash, sKey, sign, vKey, verify)
+import           Keys (KeyDiscriminator (..), KeyPair, Signable,
+                     hash, sKey, sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
@@ -60,13 +61,13 @@ import           Delegation.Certificates (DCert (..), StakePools (..), cwitness,
                      requiresVKeyWitness)
 
 -- |The unspent transaction outputs.
-newtype UTxO hashAlgo dsignAlgo vrfAlgo
-  = UTxO (Map (TxIn hashAlgo dsignAlgo vrfAlgo) (TxOut hashAlgo dsignAlgo))
+newtype UTxO crypto
+  = UTxO (Map (TxIn crypto) (TxOut crypto))
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
-instance Relation (UTxO hashAlgo dsignAlgo vrfAlgo) where
-  type Domain (UTxO hashAlgo dsignAlgo vrfAlgo) = TxIn hashAlgo dsignAlgo vrfAlgo
-  type Range (UTxO hashAlgo dsignAlgo vrfAlgo)  = TxOut hashAlgo dsignAlgo
+instance Relation (UTxO crypto) where
+  type Domain (UTxO crypto) = TxIn crypto
+  type Range (UTxO crypto)  = TxOut crypto
 
   singleton k v = UTxO $ Map.singleton k v
 
@@ -96,22 +97,22 @@ instance Relation (UTxO hashAlgo dsignAlgo vrfAlgo) where
 
 -- |Compute the id of a transaction.
 txid
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => TxBody hashAlgo dsignAlgo vrfAlgo
-  -> TxId hashAlgo dsignAlgo vrfAlgo
+  :: Crypto crypto
+  => TxBody crypto
+  -> TxId crypto
 txid = TxId . hash
 
 -- |Compute the UTxO inputs of a transaction.
 txins
-  :: TxBody hashAlgo dsignAlgo vrfAlgo
-  -> Set (TxIn hashAlgo dsignAlgo vrfAlgo)
+  :: TxBody crypto
+  -> Set (TxIn crypto)
 txins = flip (^.) inputs
 
 -- |Compute the transaction outputs of a transaction.
 txouts
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => TxBody hashAlgo dsignAlgo vrfAlgo
-  -> UTxO hashAlgo dsignAlgo vrfAlgo
+  :: Crypto crypto
+  => TxBody crypto
+  -> UTxO crypto
 txouts tx = UTxO $
   Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (tx ^. outputs) [0..]]
   where
@@ -119,74 +120,72 @@ txouts tx = UTxO $
 
 -- |Lookup a txin for a given UTxO collection
 txinLookup
-  :: TxIn hashAlgo dsignAlgo vrfAlgo
-  -> UTxO hashAlgo dsignAlgo vrfAlgo
-  -> Maybe (TxOut hashAlgo dsignAlgo)
+  :: TxIn crypto
+  -> UTxO crypto
+  -> Maybe (TxOut crypto)
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- |Verify a transaction body witness
 verifyWitVKey
-  :: ( DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => TxBody hashAlgo dsignAlgo vrfAlgo
-  -> WitVKey hashAlgo dsignAlgo vrfAlgo
+  => TxBody crypto
+  -> WitVKey crypto
   -> Bool
 verifyWitVKey tx (WitVKey vkey sig) = verify vkey tx sig
 verifyWitVKey tx (WitGVKey vkey sig) = verify vkey tx sig
 
 -- |Create a witness for transaction
 makeWitnessVKey
-  :: ( DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => TxBody hashAlgo dsignAlgo vrfAlgo
-  -> KeyPair 'Regular dsignAlgo
-  -> WitVKey hashAlgo dsignAlgo vrfAlgo
+  => TxBody crypto
+  -> KeyPair 'Regular crypto
+  -> WitVKey crypto
 makeWitnessVKey tx keys = WitVKey (vKey keys) (sign (sKey keys) tx)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
-  :: ( DSIGNAlgorithm dsignAlgo
-     , HashAlgorithm hashAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => TxBody hashAlgo dsignAlgo vrfAlgo
-  -> [KeyPair 'Regular dsignAlgo]
-  -> Set (WitVKey hashAlgo dsignAlgo vrfAlgo)
+  => TxBody crypto
+  -> [KeyPair 'Regular crypto]
+  -> Set (WitVKey crypto)
 makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
 
 -- |Create a genesis witness for transaction
 makeGenWitnessVKey
-  :: ( DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => TxBody hashAlgo dsignAlgo vrfAlgo
-  -> KeyPair 'Genesis dsignAlgo
-  -> WitVKey hashAlgo dsignAlgo vrfAlgo
+  => TxBody crypto
+  -> KeyPair 'Genesis crypto
+  -> WitVKey crypto
 makeGenWitnessVKey tx keys = WitGVKey (vKey keys) (sign (sKey keys) tx)
 
 -- |Create genesis witnesses for transaction
 makeGenWitnessesVKey
-  :: ( DSIGNAlgorithm dsignAlgo
-     , HashAlgorithm hashAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => TxBody hashAlgo dsignAlgo vrfAlgo
-  -> [KeyPair 'Genesis dsignAlgo]
-  -> Set (WitVKey hashAlgo dsignAlgo vrfAlgo)
+  => TxBody crypto
+  -> [KeyPair 'Genesis crypto]
+  -> Set (WitVKey crypto)
 makeGenWitnessesVKey tx = Set.fromList . fmap (makeGenWitnessVKey tx)
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO hashAlgo dsignAlgo vrfAlgo -> Coin
+balance :: UTxO crypto -> Coin
 balance (UTxO utxo) = foldr addCoins 0 utxo
   where addCoins (TxOut _ a) b = a + b
 
 -- |Determine the total deposit amount needed
 deposits
   :: PParams
-  -> StakePools hashAlgo dsignAlgo
-  -> [DCert hashAlgo dsignAlgo vrfAlgo]
+  -> StakePools crypto
+  -> [DCert crypto]
   -> Coin
 deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
@@ -195,18 +194,18 @@ deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
-txup :: Tx hashAlgo dsignAlgo vrfAlgo -> Update hashAlgo dsignAlgo
+txup :: Tx crypto -> Update crypto
 txup (Tx txbody _ _) = _txUpdate txbody
 
 -- | Extract script hash from value address with script.
-getScriptHash :: Addr hashAlgo dsignAlgo -> Maybe (ScriptHash hashAlgo dsignAlgo)
+getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
 getScriptHash (AddrBase (ScriptHashObj hs) _)     = Just hs
 getScriptHash (AddrEnterprise (ScriptHashObj hs)) = Just hs
 getScriptHash _                                   = Nothing
 
 scriptStakeCred
-  :: StakeCredential hashAlgo dsignAlgo
-  -> Maybe (ScriptHash hashAlgo dsignAlgo)
+  :: StakeCredential crypto
+  -> Maybe (ScriptHash crypto)
 scriptStakeCred (KeyHashObj _ )    =  Nothing
 scriptStakeCred (GenesisHashObj _ )    =  Nothing
 scriptStakeCred (ScriptHashObj hs) = Just hs
@@ -214,9 +213,9 @@ scriptStakeCred (ScriptHashObj hs) = Just hs
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
 scriptsNeeded
-  :: UTxO hashAlgo dsignAlgo vrfAlgo
-  -> Tx hashAlgo dsignAlgo vrfAlgo
-  -> Set (ScriptHash hashAlgo dsignAlgo)
+  :: UTxO crypto
+  -> Tx crypto
+  -> Set (ScriptHash crypto)
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
   `Set.union`
@@ -231,9 +230,9 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript
-  :: Set (TxIn hashAlgo dsignAlgo vrfAlgo)
-  -> UTxO hashAlgo dsignAlgo vrfAlgo
-  -> Set (TxIn hashAlgo dsignAlgo vrfAlgo)
+  :: Set (TxIn crypto)
+  -> UTxO crypto
+  -> Set (TxIn crypto)
 txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
   Map.keysSet (Map.filter (\(TxOut a _) ->

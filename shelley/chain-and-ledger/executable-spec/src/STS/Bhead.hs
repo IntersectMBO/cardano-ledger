@@ -19,48 +19,38 @@ import           Keys
 import           LedgerState
 import           PParams
 import           Slot
-
 import           STS.NewEpoch
 import           STS.Rupd
-
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 
-data BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo
+data BHEAD crypto
 
-data BheadEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
-  = BheadEnv (Set (GenKeyHash hashAlgo dsignAlgo))
+data BheadEnv crypto
+  = BheadEnv (Set (GenKeyHash crypto))
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , VRFAlgorithm vrfAlgo
-  , KESAlgorithm kesAlgo
-  )
-  => STS (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance Crypto crypto
+  => STS (BHEAD crypto)
  where
-  type State (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    = NewEpochState hashAlgo dsignAlgo vrfAlgo
-  type Signal (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    = BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
-  type Environment (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo) = BheadEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
-  data PredicateFailure (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  type State (BHEAD crypto)
+    = NewEpochState crypto
+  type Signal (BHEAD crypto)
+    = BHeader crypto
+  type Environment (BHEAD crypto) = BheadEnv crypto
+  data PredicateFailure (BHEAD crypto)
     = HeaderSizeTooLargeBHEAD
     | BlockSizeTooLargeBHEAD
-    | NewEpochFailure (PredicateFailure (NEWEPOCH hashAlgo dsignAlgo vrfAlgo))
-    | RupdFailure (PredicateFailure (RUPD hashAlgo dsignAlgo vrfAlgo))
+    | NewEpochFailure (PredicateFailure (NEWEPOCH crypto))
+    | RupdFailure (PredicateFailure (RUPD crypto))
     deriving (Show, Eq)
 
   initialRules = []
   transitionRules = [bheadTransition]
 
 bheadTransition
-  :: forall hashAlgo dsignAlgo kesAlgo vrfAlgo
-   . ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , VRFAlgorithm vrfAlgo
-     , KESAlgorithm kesAlgo
-     )
-  => TransitionRule (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  :: forall crypto
+   . ( Crypto crypto)
+  => TransitionRule (BHEAD crypto)
 bheadTransition = do
   TRC (BheadEnv gkeys, nes@(NewEpochState _ bprev _ es _ _ _), bh@(BHeader bhb _)) <-
     judgmentContext
@@ -70,29 +60,19 @@ bheadTransition = do
   fromIntegral (bHeaderSize bh) < _maxBHSize pp ?! HeaderSizeTooLargeBHEAD
   fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeBHEAD
 
-  nes' <- trans @(NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
+  nes' <- trans @(NEWEPOCH crypto)
     $ TRC (NewEpochEnv slot gkeys, nes, epochFromSlot slot)
 
-  ru' <- trans @(RUPD hashAlgo dsignAlgo vrfAlgo) $ TRC (RupdEnv bprev es, nesRu nes', slot)
+  ru' <- trans @(RUPD crypto) $ TRC (RupdEnv bprev es, nesRu nes', slot)
   let nes'' = nes' { nesRu = ru' }
   pure nes''
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , VRFAlgorithm vrfAlgo
-  , KESAlgorithm kesAlgo
-  )
-  => Embed (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance Crypto crypto
+  => Embed (NEWEPOCH crypto) (BHEAD crypto)
  where
   wrapFailed = NewEpochFailure
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , KESAlgorithm kesAlgo
-  , VRFAlgorithm vrfAlgo
-  )
-  => Embed (RUPD hashAlgo dsignAlgo vrfAlgo) (BHEAD hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance Crypto crypto
+  => Embed (RUPD crypto) (BHEAD crypto)
  where
   wrapFailed = RupdFailure

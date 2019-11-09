@@ -30,6 +30,7 @@ import           Tx
 import           Updates
 import           UTxO
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
@@ -37,25 +38,25 @@ import           STS.Up
 
 import           Hedgehog (Gen)
 
-data UTXO hashAlgo dsignAlgo vrfAlgo
+data UTXO crypto
 
-data UtxoEnv hashAlgo dsignAlgo
+data UtxoEnv crypto
   = UtxoEnv
       Slot
       PParams
-      (StakeCreds hashAlgo dsignAlgo)
-      (StakePools hashAlgo dsignAlgo)
-      (GenDelegs hashAlgo dsignAlgo)
+      (StakeCreds crypto)
+      (StakePools crypto)
+      (GenDelegs crypto)
       deriving(Show)
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => STS (UTXO hashAlgo dsignAlgo vrfAlgo)
+  Crypto crypto
+  => STS (UTXO crypto)
  where
-  type State (UTXO hashAlgo dsignAlgo vrfAlgo) = UTxOState hashAlgo dsignAlgo vrfAlgo
-  type Signal (UTXO hashAlgo dsignAlgo vrfAlgo) = Tx hashAlgo dsignAlgo vrfAlgo
-  type Environment (UTXO hashAlgo dsignAlgo vrfAlgo) = UtxoEnv hashAlgo dsignAlgo
-  data PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo)
+  type State (UTXO crypto) = UTxOState crypto
+  type Signal (UTXO crypto) = Tx crypto
+  type Environment (UTXO crypto) = UtxoEnv crypto
+  data PredicateFailure (UTXO crypto)
     = BadInputsUTxO
     | ExpiredUTxO Slot Slot
     | MaxTxSizeUTxO Integer Integer
@@ -67,20 +68,20 @@ instance
                                               -- to prevent these predicate
                                               -- failures?
     | UnexpectedSuccessUTXO
-    | UpdateFailure (PredicateFailure (UP hashAlgo dsignAlgo))
+    | UpdateFailure (PredicateFailure (UP crypto))
     deriving (Eq, Show)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 
-initialLedgerState :: InitialRule (UTXO hashAlgo dsignAlgo vrfAlgo)
+initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
 utxoInductive
-  :: forall hashAlgo dsignAlgo vrfAlgo
-   . (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => TransitionRule (UTXO hashAlgo dsignAlgo vrfAlgo)
+  :: forall crypto
+   . Crypto crypto
+  => TransitionRule (UTXO crypto)
 utxoInductive = do
   TRC (UtxoEnv slot_ pp stakeKeys stakePools genDelegs_, u, tx) <- judgmentContext
   let txBody = _body tx
@@ -100,7 +101,7 @@ utxoInductive = do
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Update Proposals
-  ups' <- trans @(UP hashAlgo dsignAlgo) $ TRC (UpdateEnv slot_ pp genDelegs_, u ^. ups, txup tx)
+  ups' <- trans @(UP crypto) $ TRC (UpdateEnv slot_ pp genDelegs_, u ^. ups, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
   all (0 <=) outputCoins ?! NegativeOutputsUTxO
@@ -122,18 +123,15 @@ utxoInductive = do
         , _ups       = ups'
         }
 
-instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => Embed (UP hashAlgo dsignAlgo) (UTXO hashAlgo dsignAlgo vrfAlgo)
+instance Crypto crypto
+  => Embed (UP crypto) (UTXO crypto)
  where
   wrapFailed = UpdateFailure
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , VRFAlgorithm vrfAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => HasTrace (UTXO hashAlgo dsignAlgo vrfAlgo) where
-  envGen _ = undefined :: Gen (UtxoEnv hashAlgo dsignAlgo)
-  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo vrfAlgo)
+  => HasTrace (UTXO crypto) where
+  envGen _ = undefined :: Gen (UtxoEnv crypto)
+  sigGen _ _ = undefined :: Gen (Tx crypto)

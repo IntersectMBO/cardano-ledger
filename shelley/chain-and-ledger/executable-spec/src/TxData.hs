@@ -7,6 +7,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module TxData
   where
@@ -14,7 +15,7 @@ module TxData
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
                      encodeListLen, encodeWord)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-
+import           Cardano.Ledger.Shelley.Crypto
 import           Lens.Micro.TH (makeLenses)
 
 import           Data.Foldable (toList)
@@ -30,64 +31,64 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (UnitInterval)
 import           Coin (Coin)
-import           Keys (AnyKeyHash, pattern AnyKeyHash, DSIGNAlgorithm, GenKeyHash, Hash,
-                     HashAlgorithm, KeyHash, Sig, VKey, VKeyGenesis, VRFAlgorithm (VerKeyVRF),
+import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash,
+                     KeyHash, Sig, VKey, VKeyGenesis, VerKeyVRF,
                      hashAnyKey)
 import           Ledger.Core (Relation (..))
 import           Slot (Epoch, Slot)
 import           Updates (Update)
 
 -- |The delegation of one stake key to another.
-data Delegation hashAlgo dsignAlgo = Delegation
-  { _delegator :: Credential hashAlgo dsignAlgo
-  , _delegatee :: KeyHash hashAlgo dsignAlgo
+data Delegation crypto = Delegation
+  { _delegator :: Credential crypto
+  , _delegatee :: KeyHash crypto
   } deriving (Eq, Generic, Show)
 
-instance NoUnexpectedThunks (Delegation hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (Delegation crypto)
 
 -- |A stake pool.
-data PoolParams hashAlgo dsignAlgo vrfAlgo =
+data PoolParams crypto =
   PoolParams
-    { _poolPubKey  :: KeyHash hashAlgo dsignAlgo
-    , _poolVrf     :: Hash hashAlgo (VerKeyVRF vrfAlgo)
+    { _poolPubKey  :: KeyHash crypto
+    , _poolVrf     :: Hash (HASH crypto) (VerKeyVRF (VRF crypto))
     , _poolPledge  :: Coin
     , _poolCost    :: Coin
     , _poolMargin  :: UnitInterval
-    , _poolRAcnt   :: RewardAcnt hashAlgo dsignAlgo
-    , _poolOwners  :: Set (KeyHash hashAlgo dsignAlgo)
+    , _poolRAcnt   :: RewardAcnt crypto
+    , _poolOwners  :: Set (KeyHash crypto)
     } deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (PoolParams hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (PoolParams crypto)
 
 -- |An account based address for rewards
-newtype RewardAcnt hashAlgo signAlgo = RewardAcnt
-  { getRwdCred :: StakeCredential hashAlgo signAlgo
+newtype RewardAcnt crypto = RewardAcnt
+  { getRwdCred :: StakeCredential crypto
   } deriving (Show, Eq, NoUnexpectedThunks, Ord)
 
 -- | Script hash or key hash for a payment or a staking object.
-data Credential hashAlgo dsignAlgo =
-    ScriptHashObj { _validatorHash :: ScriptHash hashAlgo dsignAlgo }
-  | KeyHashObj    { _vkeyHash      :: KeyHash hashAlgo dsignAlgo }
-  | GenesisHashObj { _genKeyHash   :: GenKeyHash hashAlgo dsignAlgo }
+data Credential crypto =
+    ScriptHashObj { _validatorHash :: ScriptHash crypto }
+  | KeyHashObj    { _vkeyHash      :: KeyHash crypto }
+  | GenesisHashObj { _genKeyHash   :: GenKeyHash crypto }
     deriving (Show, Eq, Generic, Ord)
 
-instance NoUnexpectedThunks (Credential hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (Credential crypto)
 
 -- |An address for UTxO.
-data Addr hashAlgo dsignAlgo
+data Addr crypto
   = AddrBase
-      { _paymentObj :: Credential hashAlgo dsignAlgo
-      , _stakingObj :: Credential hashAlgo dsignAlgo
+      { _paymentObj :: Credential crypto
+      , _stakingObj :: Credential crypto
       }
   | AddrEnterprise
-    { _enterprisePayment :: Credential hashAlgo dsignAlgo }
+    { _enterprisePayment :: Credential crypto }
   | AddrPtr
-      { _paymentObjP :: Credential hashAlgo dsignAlgo
+      { _paymentObjP :: Credential crypto
       , _stakePtr :: Ptr
       }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoUnexpectedThunks (Addr hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (Addr crypto)
 
 type Ix  = Natural
 
@@ -113,134 +114,136 @@ instance NoUnexpectedThunks Ptr
 -- extension point to express other validity conditions, e.g., as needed for
 -- locking funds used with lightning.
 --
-data MultiSig hashAlgo dsignAlgo =
+data MultiSig crypto =
        -- | Require the redeeming transaction be witnessed by the spending key
        --   corresponding to the given verification key hash.
-       RequireSignature   (AnyKeyHash hashAlgo dsignAlgo)
+       RequireSignature   (AnyKeyHash crypto)
 
        -- | Require all the sub-terms to be satisfied.
-     | RequireAllOf      [MultiSig hashAlgo dsignAlgo]
+     | RequireAllOf      [MultiSig crypto]
 
        -- | Require any one of the sub-terms to be satisfied.
-     | RequireAnyOf      [MultiSig hashAlgo dsignAlgo]
+     | RequireAnyOf      [MultiSig crypto]
 
        -- | Require M of the given sub-terms to be satisfied.
-     | RequireMOf    Int [MultiSig hashAlgo dsignAlgo]
+     | RequireMOf    Int [MultiSig crypto]
   deriving (Show, Eq, Ord, Generic)
 
-instance NoUnexpectedThunks (MultiSig hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (MultiSig crypto)
 
-newtype ScriptHash hashAlgo dsignAlgo =
-  ScriptHash (Hash hashAlgo (MultiSig hashAlgo dsignAlgo))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
+newtype ScriptHash crypto =
+  ScriptHash (Hash (HASH crypto) (MultiSig crypto))
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
-type Wdrl hashAlgo dsignAlgo = Map (RewardAcnt hashAlgo dsignAlgo) Coin
+deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
+
+type Wdrl crypto = Map (RewardAcnt crypto) Coin
 
 -- |A unique ID of a transaction, which is computable from the transaction.
-newtype TxId hashAlgo dsignAlgo vrfAlgo
-  = TxId { _TxId :: Hash hashAlgo (TxBody hashAlgo dsignAlgo vrfAlgo) }
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
+newtype TxId crypto
+  = TxId { _TxId :: Hash (HASH crypto) (TxBody crypto) }
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+
+deriving instance Crypto crypto => ToCBOR (TxId crypto)
 
 -- |The input of a UTxO.
-data TxIn hashAlgo dsignAlgo vrfAlgo
-  = TxIn (TxId hashAlgo dsignAlgo vrfAlgo) Natural
+data TxIn crypto
+  = TxIn (TxId crypto) Natural
   deriving (Show, Eq, Generic, Ord)
 
-instance NoUnexpectedThunks (TxIn hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (TxIn crypto)
 
 -- |The output of a UTxO.
-data TxOut hashAlgo dsignAlgo
-  = TxOut (Addr hashAlgo dsignAlgo) Coin
+data TxOut crypto
+  = TxOut (Addr crypto) Coin
   deriving (Show, Eq, Generic, Ord)
 
-instance NoUnexpectedThunks (TxOut hashAlgo dsignAlgo)
+instance NoUnexpectedThunks (TxOut crypto)
 
-type StakeCredential hashAlgo dsignAlgo = Credential hashAlgo dsignAlgo
+type StakeCredential crypto = Credential crypto
 
 -- | A heavyweight certificate.
-data DCert hashAlgo dsignAlgo vrfAlgo
+data DCert crypto
     -- | A stake key registration certificate.
-  = RegKey (StakeCredential hashAlgo dsignAlgo)
+  = RegKey (StakeCredential crypto)
     -- | A stake key deregistration certificate.
-  | DeRegKey (StakeCredential hashAlgo dsignAlgo)
+  | DeRegKey (StakeCredential crypto)
     -- | A stake pool registration certificate.
-  | RegPool (PoolParams hashAlgo dsignAlgo vrfAlgo)
+  | RegPool (PoolParams crypto)
     -- | A stake pool retirement certificate.
-  | RetirePool (KeyHash hashAlgo dsignAlgo) Epoch
+  | RetirePool (KeyHash crypto) Epoch
     -- | A stake delegation certificate.
-  | Delegate (Delegation hashAlgo dsignAlgo)
+  | Delegate (Delegation crypto)
     -- | Genesis key delegation certificate
-  | GenesisDelegate (GenKeyHash hashAlgo dsignAlgo, KeyHash hashAlgo dsignAlgo)
+  | GenesisDelegate (GenKeyHash crypto, KeyHash crypto)
     -- | Move instantaneous rewards certificate
-  | InstantaneousRewards (Map (Credential hashAlgo dsignAlgo) Coin)
+  | InstantaneousRewards (Map (Credential crypto) Coin)
   deriving (Show, Generic, Eq)
 
-instance NoUnexpectedThunks (DCert hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (DCert crypto)
 
 -- |A raw transaction
-data TxBody hashAlgo dsignAlgo vrfAlgo
+data TxBody crypto
   = TxBody
-      { _inputs   :: !(Set (TxIn hashAlgo dsignAlgo vrfAlgo))
-      , _outputs  :: [TxOut hashAlgo dsignAlgo]
-      , _certs    :: Seq (DCert hashAlgo dsignAlgo vrfAlgo)
-      , _wdrls    :: Wdrl hashAlgo dsignAlgo
+      { _inputs   :: !(Set (TxIn crypto))
+      , _outputs  :: [TxOut crypto]
+      , _certs    :: Seq (DCert crypto)
+      , _wdrls    :: Wdrl crypto
       , _txfee    :: Coin
       , _ttl      :: Slot
-      , _txUpdate :: Update hashAlgo dsignAlgo
+      , _txUpdate :: Update crypto
       } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (TxBody hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (TxBody crypto)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey hashAlgo dsignAlgo vrfAlgo
-  = WitVKey (VKey dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo))
-  | WitGVKey (VKeyGenesis dsignAlgo) !(Sig dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo))
+data WitVKey crypto
+  = WitVKey (VKey crypto) !(Sig crypto (TxBody crypto))
+  | WitGVKey (VKeyGenesis crypto) !(Sig crypto (TxBody crypto))
   deriving (Show, Eq, Generic)
 
-instance (DSIGNAlgorithm dsignAlgo)
-  => NoUnexpectedThunks (WitVKey hashAlgo dsignAlgo vrfAlgo)
+instance Crypto crypto => NoUnexpectedThunks (WitVKey crypto)
 
 witKeyHash
-  :: forall hashAlgo dsignAlgo vrfAlgo. (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
-  => WitVKey hashAlgo dsignAlgo vrfAlgo
-  -> AnyKeyHash hashAlgo dsignAlgo
+  :: forall crypto. ( Crypto crypto)
+  => WitVKey crypto
+  -> AnyKeyHash crypto
 witKeyHash (WitVKey key _) = hashAnyKey key
 witKeyHash (WitGVKey key _) = hashAnyKey key
 
-instance forall hashAlgo dsignAlgo vrfAlgo
-  . (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo)
-  => Ord (WitVKey hashAlgo dsignAlgo vrfAlgo) where
+instance forall crypto
+  . ( Crypto crypto)
+  => Ord (WitVKey crypto) where
     compare = comparing witKeyHash
 
 -- |A fully formed transaction.
-data Tx hashAlgo dsignAlgo vrfAlgo
+data Tx crypto
   = Tx
-      { _body           :: !(TxBody hashAlgo dsignAlgo vrfAlgo)
-      , _witnessVKeySet :: !(Set (WitVKey hashAlgo dsignAlgo vrfAlgo))
+      { _body           :: !(TxBody crypto)
+      , _witnessVKeySet :: !(Set (WitVKey crypto))
       , _witnessMSigMap ::
-          Map (ScriptHash hashAlgo dsignAlgo) (MultiSig hashAlgo dsignAlgo)
+          Map (ScriptHash crypto) (MultiSig crypto)
       } deriving (Show, Eq, Generic)
 
-instance (DSIGNAlgorithm dsignAlgo)
-  => NoUnexpectedThunks (Tx hashAlgo dsignAlgo vrfAlgo)
+instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
 
-newtype StakeCreds hashAlgo dsignAlgo =
-  StakeCreds (Map (StakeCredential hashAlgo dsignAlgo) Slot)
+newtype StakeCreds crypto =
+  StakeCreds (Map (StakeCredential crypto) Slot)
   deriving (Show, Eq, NoUnexpectedThunks)
 
-addStakeCreds :: (StakeCredential hashAlgo dsignAlgo) -> Slot -> (StakeCreds hashAlgo dsignAlgo) -> StakeCreds hashAlgo dsignAlgo
+addStakeCreds :: (StakeCredential crypto) -> Slot -> (StakeCreds crypto) -> StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
-newtype StakePools hashAlgo dsignAlgo =
-  StakePools (Map (KeyHash hashAlgo dsignAlgo) Slot)
+newtype StakePools crypto =
+  StakePools (Map (KeyHash crypto) Slot)
   deriving (Show, Eq, NoUnexpectedThunks)
 
 
 -- CBOR
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => ToCBOR (DCert hashAlgo dsignAlgo vrfAlgo)
+  (Crypto crypto)
+  => ToCBOR (DCert crypto)
  where
   toCBOR = \case
     RegKey vk ->
@@ -280,8 +283,8 @@ instance
         <> toCBOR credCoinMap
 
 instance
-  (Typeable dsignAlgo, HashAlgorithm hashAlgo, VRFAlgorithm vrfAlgo)
-  => ToCBOR (TxIn hashAlgo dsignAlgo vrfAlgo)
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (TxIn crypto)
  where
   toCBOR (TxIn txId index) =
     encodeListLen 2
@@ -289,8 +292,8 @@ instance
       <> toCBOR index
 
 instance
-  (Typeable dsignAlgo, HashAlgorithm hashAlgo)
-  => ToCBOR (TxOut hashAlgo dsignAlgo)
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (TxOut crypto)
  where
   toCBOR (TxOut addr coin) =
     encodeListLen 2
@@ -298,8 +301,8 @@ instance
       <> toCBOR coin
 
 instance
-  (Typeable hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => ToCBOR (WitVKey hashAlgo dsignAlgo vrfAlgo)
+  Crypto crypto
+  => ToCBOR (WitVKey crypto)
  where
   toCBOR (WitVKey vk sig) =
     encodeListLen 2
@@ -312,8 +315,8 @@ instance
 
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => ToCBOR (Tx hashAlgo dsignAlgo vrfAlgo)
+  (Crypto crypto)
+  => ToCBOR (Tx crypto)
  where
   toCBOR tx =
     encodeListLen 2
@@ -322,8 +325,8 @@ instance
       <> toCBOR (_witnessMSigMap tx)
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => ToCBOR (TxBody hashAlgo dsignAlgo vrfAlgo)
+  (Crypto crypto)
+  => ToCBOR (TxBody crypto)
  where
   toCBOR txbody =
     encodeListLen 6
@@ -335,8 +338,8 @@ instance
       <> toCBOR (_ttl txbody)
       <> toCBOR (_txUpdate txbody)
 
-instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
-  ToCBOR (MultiSig hashAlgo dsignAlgo) where
+instance ( Crypto crypto) =>
+  ToCBOR (MultiSig crypto) where
   toCBOR (RequireSignature hk) =
     encodeListLen 2 <> encodeWord 0 <> toCBOR hk
   toCBOR (RequireAllOf msigs) =
@@ -346,8 +349,8 @@ instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
   toCBOR (RequireMOf m msigs) =
     encodeListLen 3 <> encodeWord 3 <> toCBOR m <> toCBOR msigs
 
-instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
-  FromCBOR (MultiSig hashAlgo dsignAlgo) where
+instance ( Crypto crypto) =>
+  FromCBOR (MultiSig crypto) where
   fromCBOR = do
     _ <- decodeListLen
     ctor <- decodeWord
@@ -367,8 +370,8 @@ instance (DSIGNAlgorithm dsignAlgo, HashAlgorithm hashAlgo) =>
         pure $ RequireMOf m msigs
       _ -> error "pattern no supported"
 
-instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
-  => ToCBOR (Credential hashAlgo dsignAlgo) where
+instance (Typeable crypto, Crypto crypto)
+  => ToCBOR (Credential crypto) where
   toCBOR = \case
     ScriptHashObj hs ->
       encodeListLen 2
@@ -384,8 +387,8 @@ instance (Typeable dsignAlgo, HashAlgorithm hashAlgo)
       <> toCBOR kh
 
 instance
-  (Typeable dsignAlgo, HashAlgorithm hashAlgo)
-  => ToCBOR (Addr hashAlgo dsignAlgo)
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (Addr crypto)
  where
   toCBOR = \case
     AddrBase pay stake ->
@@ -410,8 +413,8 @@ instance ToCBOR Ptr where
       <> toCBOR txIx
       <> toCBOR certIx
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
-  ToCBOR (Delegation hashAlgo dsignAlgo) where
+instance Crypto crypto =>
+  ToCBOR (Delegation crypto) where
   toCBOR delegation =
     encodeListLen 2
       <> toCBOR (_delegator delegation)
@@ -419,8 +422,8 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo) =>
 
 
 instance
-  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => ToCBOR (PoolParams hashAlgo dsignAlgo vrfAlgo)
+  (Crypto crypto)
+  => ToCBOR (PoolParams crypto)
  where
   toCBOR poolParams =
     encodeListLen 7
@@ -432,15 +435,15 @@ instance
       <> toCBOR (_poolRAcnt poolParams)
       <> toCBOR (_poolOwners poolParams)
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => ToCBOR (RewardAcnt hashAlgo dsignAlgo) where
+instance Crypto crypto
+  => ToCBOR (RewardAcnt crypto) where
   toCBOR rwdAcnt =
     encodeListLen 1
       <> toCBOR (getRwdCred rwdAcnt)
 
-instance Relation (StakeCreds hashAlgo dsignAlgo) where
-  type Domain (StakeCreds hashAlgo dsignAlgo) = StakeCredential hashAlgo dsignAlgo
-  type Range (StakeCreds hashAlgo dsignAlgo)  = Slot
+instance Relation (StakeCreds crypto) where
+  type Domain (StakeCreds crypto) = StakeCredential crypto
+  type Range (StakeCreds crypto)  = Slot
 
   singleton k v = StakeCreds $ Map.singleton k v
 

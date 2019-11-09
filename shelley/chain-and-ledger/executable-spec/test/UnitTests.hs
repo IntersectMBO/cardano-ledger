@@ -25,7 +25,7 @@ import           TxData (pattern AddrBase, Credential (..), Delegation (..), pat
                      pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
 
-import           Keys (pattern GenDelegs, pattern KeyPair, hashKey, hashKeyVRF, vKey)
+import           Keys (pattern GenDelegs, pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
                      asStateTransition, delegationState, delegations, dstate,
                      emptyDelegation, genesisId, genesisCoins, genesisState, minfee, pParams, pstate, ptrs,

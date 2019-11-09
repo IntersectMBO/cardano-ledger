@@ -8,35 +8,32 @@ module Address
   )
 where
 
-import           Cardano.Crypto.Hash (HashAlgorithm)
-
-import           Keys (DSIGNAlgorithm, KeyDiscriminator (..), KeyPair, hashKey, vKey)
+import           Cardano.Ledger.Shelley.Crypto
+import           Keys (KeyDiscriminator (..), KeyPair, hashKey, vKey)
 import           TxData (Addr (..), Credential (..), RewardAcnt (..))
 
 mkVKeyRwdAcnt
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     )
-  => KeyPair 'Regular dsignAlgo
-  -> RewardAcnt hashAlgo dsignAlgo
+  :: Crypto crypto
+  => KeyPair 'Regular crypto
+  -> RewardAcnt crypto
 mkVKeyRwdAcnt keys = RewardAcnt $ KeyHashObj (hashKey $ vKey keys)
 
 mkRwdAcnt
-  :: Credential hashAlgo dsignAlgo
-  -> RewardAcnt hashAlgo dsignAlgo
+  :: Credential crypto
+  -> RewardAcnt crypto
 mkRwdAcnt script@(ScriptHashObj _) = RewardAcnt script
 mkRwdAcnt key@(KeyHashObj _) = RewardAcnt key
 mkRwdAcnt (GenesisHashObj _) =
   error "cannot construct reward account with genesis key"
 
 toAddr
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => (KeyPair 'Regular dsignAlgo, KeyPair 'Regular dsignAlgo)
-  -> Addr hashAlgo dsignAlgo
+  :: Crypto crypto
+  => (KeyPair 'Regular crypto, KeyPair 'Regular crypto)
+  -> Addr crypto
 toAddr (payKey, stakeKey) = AddrBase (toCred payKey) (toCred stakeKey)
 
 toCred
-  :: (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => KeyPair 'Regular dsignAlgo
-  -> Credential hashAlgo dsignAlgo
+  :: Crypto crypto
+  => KeyPair 'Regular crypto
+  -> Credential crypto
 toCred k = KeyHashObj . hashKey $ vKey k

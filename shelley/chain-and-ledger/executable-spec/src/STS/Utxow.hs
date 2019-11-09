@@ -27,30 +27,29 @@ import           Tx
 import           TxData
 import           UTxO
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data UTXOW hashAlgo dsignAlgo vrfAlgo
+data UTXOW crypto
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , VRFAlgorithm vrfAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => STS (UTXOW hashAlgo dsignAlgo vrfAlgo)
+  => STS (UTXOW crypto)
  where
-  type State (UTXOW hashAlgo dsignAlgo vrfAlgo) = UTxOState hashAlgo dsignAlgo vrfAlgo
-  type Signal (UTXOW hashAlgo dsignAlgo vrfAlgo) = Tx hashAlgo dsignAlgo vrfAlgo
-  type Environment (UTXOW hashAlgo dsignAlgo vrfAlgo) = UtxoEnv hashAlgo dsignAlgo
-  data PredicateFailure (UTXOW hashAlgo dsignAlgo vrfAlgo)
+  type State (UTXOW crypto) = UTxOState crypto
+  type Signal (UTXOW crypto) = Tx crypto
+  type Environment (UTXOW crypto) = UtxoEnv crypto
+  data PredicateFailure (UTXOW crypto)
     = InvalidWitnessesUTXOW
     | MissingVKeyWitnessesUTXOW
     | MissingScriptWitnessesUTXOW
     | ScriptWitnessNotValidatingUTXOW
-    | UtxoFailure (PredicateFailure (UTXO hashAlgo dsignAlgo vrfAlgo))
+    | UtxoFailure (PredicateFailure (UTXO crypto))
     | MIRInsufficientGenesisSigsUTXOW
     | MIRImpossibleInDecentralizedNetUTXOW
     deriving (Eq, Show)
@@ -59,25 +58,21 @@ instance
   initialRules = [initialLedgerStateUTXOW]
 
 initialLedgerStateUTXOW
-  :: forall hashAlgo dsignAlgo vrfAlgo
-   . ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , VRFAlgorithm vrfAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: forall crypto
+   . ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-   => InitialRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
+   => InitialRule (UTXOW crypto)
 initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs) <- judgmentContext
-  trans @(UTXO hashAlgo dsignAlgo vrfAlgo) $ IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs)
+  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs)
 
 utxoWitnessed
-  :: forall hashAlgo dsignAlgo vrfAlgo
-   . ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , VRFAlgorithm vrfAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  :: forall crypto
+   . ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-   => TransitionRule (UTXOW hashAlgo dsignAlgo vrfAlgo)
+   => TransitionRule (UTXOW crypto)
 utxoWitnessed = do
   TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx@(Tx txbody wits _))
     <- judgmentContext
@@ -107,25 +102,21 @@ utxoWitnessed = do
    ==> (0 < intervalValue (_d pp)))
     ?! MIRImpossibleInDecentralizedNetUTXOW
 
-  trans @(UTXO hashAlgo dsignAlgo vrfAlgo)
+  trans @(UTXO crypto)
     $ TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx)
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , VRFAlgorithm vrfAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => Embed (UTXO hashAlgo dsignAlgo vrfAlgo) (UTXOW hashAlgo dsignAlgo vrfAlgo)
+  => Embed (UTXO crypto) (UTXOW crypto)
  where
   wrapFailed = UtxoFailure
 
 instance
-    ( HashAlgorithm hashAlgo
-    , DSIGNAlgorithm dsignAlgo
-    , VRFAlgorithm vrfAlgo
-    , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
+    ( Crypto crypto
+    , Signable (DSIGN crypto) (TxBody crypto)
     )
-  => HasTrace (UTXOW hashAlgo dsignAlgo vrfAlgo) where
-  envGen _ = undefined :: Gen (UtxoEnv hashAlgo dsignAlgo)
-  sigGen _ _ = undefined :: Gen (Tx hashAlgo dsignAlgo vrfAlgo)
+  => HasTrace (UTXOW crypto) where
+  envGen _ = undefined :: Gen (UtxoEnv crypto)
+  sigGen _ _ = undefined :: Gen (Tx crypto)

@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 module BlockChain
@@ -47,12 +49,12 @@ import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
-
+import           Cardano.Ledger.Shelley.Crypto
 import           BaseTypes (Nonce (..), Seed(..), UnitInterval, intervalValue, mkNonce)
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
-import           Keys (DSIGNAlgorithm, Hash, HashAlgorithm, KESAlgorithm, KESig, KeyHash,
-                     VKey, VRFAlgorithm, VRFValue(..), hash, hashKey, hashKeyVRF)
+import           Keys (Hash, KESig, KeyHash,
+                     VKey, VRFValue(..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
 import           Slot (Duration, Slot (..), BlockNo(..))
 import           Tx (Tx (..))
@@ -60,71 +62,54 @@ import           Tx (Tx (..))
 import           NonIntegral ((***))
 
 -- |The hash of a Block Header
-newtype HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo =
-  HashHeader (Hash hashAlgo (BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo))
-  deriving (Show, Eq, Generic, Ord, ToCBOR)
+newtype HashHeader crypto =
+  HashHeader (Hash (HASH crypto) (BHeader crypto))
+  deriving (Show, Eq, Generic, Ord)
 
-instance NoUnexpectedThunks (HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
+deriving instance Crypto crypto => ToCBOR (HashHeader crypto)
 
-newtype TxSeq hashAlgo dsignAlgo vrfAlgo
-    = TxSeq (Seq (Tx hashAlgo dsignAlgo vrfAlgo))
+instance NoUnexpectedThunks (HashHeader crypto)
+
+newtype TxSeq crypto
+    = TxSeq (Seq (Tx crypto))
   deriving (Eq, Show)
 
-instance
-    ( HashAlgorithm hashAlgo
-    , DSIGNAlgorithm dsignAlgo
-    , VRFAlgorithm vrfAlgo
-    ) =>
-  ToCBOR (TxSeq hashAlgo dsignAlgo vrfAlgo)  where
+instance Crypto crypto =>
+  ToCBOR (TxSeq crypto)  where
   toCBOR (TxSeq s) = toCBOR $ toList s
 
 -- | Hash of block body
-newtype HashBBody hashAlgo dsignAlgo kesAlgo vrfAlgo =
-  HashBBody (Hash hashAlgo (TxSeq hashAlgo dsignAlgo vrfAlgo))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, ToCBOR)
+newtype HashBBody crypto =
+  HashBBody (Hash (HASH crypto) (TxSeq crypto))
+  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+
+deriving instance Crypto crypto => ToCBOR (HashBBody crypto)
 
 -- |Hash a given block header
 bhHash
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , KESAlgorithm kesAlgo
-     , VRFAlgorithm vrfAlgo
-     )
-  => BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
-  -> HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+  :: Crypto crypto
+  => BHeader crypto
+  -> HashHeader crypto
 bhHash = HashHeader . hash
 
 -- |Hash a given block body
 bhbHash
-  :: (HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , VRFAlgorithm vrfAlgo
-     )
-  => TxSeq hashAlgo dsignAlgo vrfAlgo
-  -> HashBBody hashAlgo dsignAlgo kesAlgo vrfAlgo
+  :: Crypto crypto
+  => TxSeq crypto
+  -> HashBBody crypto
 bhbHash = HashBBody . hash
 
-data BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+data BHeader crypto
   = BHeader
-      (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
-      (KESig kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo))
+      (BHBody crypto)
+      (KESig crypto (BHBody crypto))
   deriving (Show, Generic, Eq)
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , KESAlgorithm kesAlgo
-  , VRFAlgorithm vrfAlgo
-  )
-  => NoUnexpectedThunks (BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance Crypto crypto
+  => NoUnexpectedThunks (BHeader crypto)
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , KESAlgorithm kesAlgo
-  , VRFAlgorithm vrfAlgo
-  )
-  => ToCBOR (BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance Crypto crypto
+  => ToCBOR (BHeader crypto)
  where
    toCBOR (BHeader bHBody kESig) =
      encodeListLen 2
@@ -143,50 +128,40 @@ instance ToCBOR ProtVer where
        <> toCBOR y
        <> toCBOR z
 
-data BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo = BHBody
+data BHBody crypto = BHBody
   { -- | Hash of the previous block header
     -- The first block in a chain will set this field to Nothing.
     -- TODO Since the Shelley chain will begins with blocks from
     -- the Byron era, we should probably use a sum type here,
     -- so that the first shelley block can point to the last Byron block.
-    bheaderPrev           :: HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+    bheaderPrev           :: HashHeader crypto
     -- | verification key of block issuer
-  , bheaderVk             :: VKey dsignAlgo
+  , bheaderVk             :: VKey crypto
     -- | VRF verification key for block issuer
-  , bheaderVrfVk          :: VRF.VerKeyVRF vrfAlgo
+  , bheaderVrfVk          :: VRF.VerKeyVRF (VRF crypto)
     -- | block slot
   , bheaderSlot           :: Slot
     -- | block number
   , bheaderBlockNo        :: BlockNo
     -- | block nonce
-  , bheaderEta            :: VRF.CertifiedVRF vrfAlgo Nonce
+  , bheaderEta            :: VRF.CertifiedVRF (VRF crypto) Nonce
     -- | leader election value
-  , bheaderL              :: VRF.CertifiedVRF vrfAlgo UnitInterval
+  , bheaderL              :: VRF.CertifiedVRF (VRF crypto) UnitInterval
     -- | Size of the block body
   , bsize                 :: Natural
     -- | Hash of block body
-  , bhash                 :: HashBBody hashAlgo dsignAlgo kesAlgo vrfAlgo
+  , bhash                 :: HashBBody crypto
     -- | operational certificate
-  , bheaderOCert          :: OCert dsignAlgo kesAlgo
+  , bheaderOCert          :: OCert crypto
     -- | protocol version
   , bprotvert          :: ProtVer
   } deriving (Show, Eq, Generic)
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , KESAlgorithm kesAlgo
-  , VRFAlgorithm vrfAlgo
-  )
-  => NoUnexpectedThunks (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance Crypto crypto
+  => NoUnexpectedThunks (BHBody crypto)
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , KESAlgorithm kesAlgo
-  , VRFAlgorithm vrfAlgo
-  )
-  => ToCBOR (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance Crypto crypto
+  => ToCBOR (BHBody crypto)
  where
   toCBOR bhBody =
     encodeListLen 10
@@ -201,40 +176,40 @@ instance
       <> toCBOR (bheaderOCert bhBody)
       <> toCBOR (bprotvert bhBody)
 
-data Block hashAlgo dsignAlgo kesAlgo vrfAlgo
+data Block crypto
   = Block
-    (BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    (TxSeq hashAlgo dsignAlgo vrfAlgo)
+    (BHeader crypto)
+    (TxSeq crypto)
   deriving (Show, Eq)
 
 bHeaderSize
-  :: (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo, VRFAlgorithm vrfAlgo)
-  => BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+  :: ( Crypto crypto)
+  => BHeader crypto
   -> Int
 bHeaderSize = BS.length . BS.pack . show
 
-bBodySize :: DSIGNAlgorithm dsignAlgo => TxSeq hashAlgo dsignAlgo vrfAlgo -> Int
+bBodySize :: Crypto crypto => TxSeq crypto-> Int
 bBodySize (TxSeq txs) = sum (map (BS.length . BS.pack . show) $ toList txs)
 
 slotToNonce :: Slot -> Nonce
 slotToNonce (Slot s) = mkNonce (fromIntegral s)
 
 bheader
-  :: Block hashAlgo dsignAlgo kesAlgo vrfAlgo
-  -> BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+  :: Block crypto
+  -> BHeader crypto
 bheader (Block bh _) = bh
 
-bbody :: Block hashAlgo dsignAlgo kesAlgo vrfAlgo -> TxSeq hashAlgo dsignAlgo vrfAlgo
+bbody :: Block crypto -> TxSeq crypto
 bbody (Block _ txs) = txs
 
 bhbody
-  :: BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
-  -> BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo
+  :: BHeader crypto
+  -> BHBody crypto
 bhbody (BHeader b _) = b
 
 hsig
-  :: BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
-  -> KESig kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  :: BHeader crypto
+  -> KESig crypto (BHBody crypto)
 hsig (BHeader _ s) = s
 
 slotsPrior :: Duration
@@ -245,15 +220,11 @@ startRewards = 33 -- see above
 
 -- | Construct a seed to use in the VRF computation.
 mkSeed
-  :: ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , KESAlgorithm kesAlgo
-     , VRFAlgorithm vrfAlgo
-     )
+  :: Crypto crypto
   => Nonce -- ^ Universal constant
   -> Slot
   -> Nonce -- ^ Epoch nonce
-  -> HashHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+  -> HashHeader crypto
   -> Seed
 mkSeed (Nonce uc) slot nonce lastHash =
   Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce, lastHash))
@@ -262,23 +233,21 @@ mkSeed NeutralNonce slot nonce lastHash =
 
 
 vrfChecks
-  ::  ( HashAlgorithm hashAlgo
-      , DSIGNAlgorithm dsignAlgo
-      , KESAlgorithm kesAlgo
-      , VRFAlgorithm vrfAlgo
-      , VRF.Signable vrfAlgo Seed
-      )
+  ::  forall crypto
+  . ( Crypto crypto
+    , VRF.Signable (VRF crypto) Seed
+    )
   => Nonce
-  -> PoolDistr hashAlgo dsignAlgo vrfAlgo
+  -> PoolDistr crypto
   -> UnitInterval
-  -> BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo
+  -> BHBody crypto
   -> Bool
 vrfChecks eta0 (PoolDistr pd) f bhb =
   let sigma' = Map.lookup hk pd
   in  case sigma' of
         Nothing -> False
         Just (sigma, vrfHK) ->
-          vrfHK == hashKeyVRF vrfK
+          vrfHK == hashKeyVRF @crypto vrfK
             && VRF.verifyCertified vrfK
                          (mkSeed seedEta slot eta0 prevHash)
                          (coerce $ bheaderEta bhb)
@@ -303,17 +272,17 @@ seedEta = mkNonce 0
 seedL :: Nonce
 seedL = mkNonce 1
 
-bvkcold :: BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo -> VKey dsignAlgo
+bvkcold :: BHBody crypto -> VKey crypto
 bvkcold bhb = ocertVkCold $ bheaderOCert bhb
 
-hBbsize :: BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo -> Natural
+hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize
 
 incrBlocks
   :: Bool
-  -> KeyHash hashAlgo dsignAlgo
-  -> BlocksMade hashAlgo dsignAlgo
-  -> BlocksMade hashAlgo dsignAlgo
+  -> KeyHash crypto
+  -> BlocksMade crypto
+  -> BlocksMade crypto
 incrBlocks isOverlay hk b'@(BlocksMade b)
   | isOverlay = b'
   | otherwise = BlocksMade $ case hkVal of

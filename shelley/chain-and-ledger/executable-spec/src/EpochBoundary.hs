@@ -56,70 +56,70 @@ import           Lens.Micro.TH (makeLenses)
 import           Ledger.Core (dom, (▷), (◁))
 
 -- | Blocks made
-newtype BlocksMade hashAlgo dsignAlgo
-  = BlocksMade (Map (KeyHash hashAlgo dsignAlgo) Natural)
+newtype BlocksMade crypto
+  = BlocksMade (Map (KeyHash crypto) Natural)
   deriving (Show, Eq, NoUnexpectedThunks)
 
 -- | Type of stake as map from hash key to coins associated.
-newtype Stake hashAlgo dsignAlgo
-  = Stake (Map (StakeCredential hashAlgo dsignAlgo) Coin)
+newtype Stake crypto
+  = Stake (Map (StakeCredential crypto) Coin)
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 -- | Add two stake distributions
 (⊎)
-  :: Stake hashAlgo dsignAlgo
-  -> Stake hashAlgo dsignAlgo
-  -> Stake hashAlgo dsignAlgo
+  :: Stake crypto
+  -> Stake crypto
+  -> Stake crypto
 (Stake lhs) ⊎ (Stake rhs) = Stake $ Map.unionWith (+) lhs rhs
 
 -- | Extract hash of staking key from base address.
-getStakeHK :: Addr hashAlgo dsignAlgo -> Maybe (StakeCredential hashAlgo dsignAlgo)
+getStakeHK :: Addr crypto -> Maybe (StakeCredential crypto)
 getStakeHK (AddrBase _ hk) = Just hk
 getStakeHK _               = Nothing
 
-aggregateOuts :: UTxO hashAlgo dsignAlgo vrfAlgo -> Map (Addr hashAlgo dsignAlgo) Coin
+aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
 aggregateOuts (UTxO u) =
   Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
 baseStake
-  :: Map (Addr hashAlgo dsignAlgo) Coin
-  -> [(StakeCredential hashAlgo dsignAlgo, Coin)]
+  :: Map (Addr crypto) Coin
+  -> [(StakeCredential crypto, Coin)]
 baseStake vals =
   mapMaybe convert $ Map.toList vals
   where
    convert
-     :: (Addr hashAlgo dsignAlgo, Coin)
-     -> Maybe (StakeCredential hashAlgo dsignAlgo, Coin)
+     :: (Addr crypto, Coin)
+     -> Maybe (StakeCredential crypto, Coin)
    convert (a, c) =
      (,c) <$> getStakeHK a
 
 -- | Extract pointer from pointer address.
-getStakePtr :: Addr hashAlgo dsignAlgo -> Maybe Ptr
+getStakePtr :: Addr crypto -> Maybe Ptr
 getStakePtr (AddrPtr _ ptr) = Just ptr
 getStakePtr _               = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.
 ptrStake
-  :: forall hashAlgo dsignAlgo
-   . Map (Addr hashAlgo dsignAlgo) Coin
-  -> Map Ptr (StakeCredential hashAlgo dsignAlgo)
-  -> [(StakeCredential hashAlgo dsignAlgo, Coin)]
+  :: forall crypto
+   . Map (Addr crypto) Coin
+  -> Map Ptr (StakeCredential crypto)
+  -> [(StakeCredential crypto, Coin)]
 ptrStake vals pointers =
   mapMaybe convert $ Map.toList vals
   where
     convert
-      :: (Addr hashAlgo dsignAlgo, Coin)
-      -> Maybe (StakeCredential hashAlgo dsignAlgo, Coin)
+      :: (Addr crypto, Coin)
+      -> Maybe (StakeCredential crypto, Coin)
     convert (a, c) =
       case getStakePtr a of
         Nothing -> Nothing
         Just s -> (,c) <$> Map.lookup s pointers
 
 rewardStake
-  :: forall hashAlgo dsignAlgo
-   . Map (RewardAcnt hashAlgo dsignAlgo) Coin
-  -> [(StakeCredential hashAlgo dsignAlgo, Coin)]
+  :: forall crypto
+   . Map (RewardAcnt crypto) Coin
+  -> [(StakeCredential crypto, Coin)]
 rewardStake rewards =
   map convert $ Map.toList rewards
   where
@@ -127,19 +127,19 @@ rewardStake rewards =
 
 -- | Get stake of one pool
 poolStake
-  :: KeyHash hashAlgo dsignAlgo
-  -> Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
-  -> Stake hashAlgo dsignAlgo
-  -> Stake hashAlgo dsignAlgo
+  :: KeyHash crypto
+  -> Map (StakeCredential crypto) (KeyHash crypto)
+  -> Stake crypto
+  -> Stake crypto
 poolStake hk delegs (Stake stake) =
   Stake $ dom (delegs ▷ Set.singleton hk) ◁ stake
 
 -- | Calculate pool refunds
 poolRefunds
   :: PParams
-  -> Map (KeyHash hashAlgo dsignAlgo) Slot
+  -> Map (KeyHash crypto) Slot
   -> Slot
-  -> Map (KeyHash hashAlgo dsignAlgo) Coin
+  -> Map (KeyHash crypto) Coin
 poolRefunds pp retirees cslot =
   Map.map
     (\s ->
@@ -151,8 +151,8 @@ poolRefunds pp retirees cslot =
 -- | Calculate total possible refunds.
 obligation
   :: PParams
-  -> StakeCreds hashAlgo dsignAlgo
-  -> StakePools hashAlgo dsignAlgo
+  -> StakeCreds crypto
+  -> StakePools crypto
   -> Slot
   -> Coin
 obligation pc (StakeCreds stakeKeys) (StakePools stakePools) cslot =
@@ -178,11 +178,11 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
 
 -- | Pool individual reward
 groupByPool
-  :: Map (KeyHash hashAlgo dsignAlgo) Coin
-  -> Map (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+  :: Map (KeyHash crypto) Coin
+  -> Map (KeyHash crypto) (KeyHash crypto)
   -> Map
-       (KeyHash hashAlgo dsignAlgo)
-       (Map (KeyHash hashAlgo dsignAlgo) Coin)
+       (KeyHash crypto)
+       (Map (KeyHash crypto) Coin)
 groupByPool active delegs =
   Map.fromListWith
     Map.union
@@ -190,30 +190,30 @@ groupByPool active delegs =
     | hk <- Map.keys delegs
     ]
 
-data SnapShots hashAlgo dsignAlgo vrfAlgo
+data SnapShots crypto
   = SnapShots
     { _pstakeMark
-      :: ( Stake hashAlgo dsignAlgo
-         , Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+      :: ( Stake crypto
+         , Map (StakeCredential crypto) (KeyHash crypto)
          )
     , _pstakeSet
-      :: ( Stake hashAlgo dsignAlgo
-         , Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+      :: ( Stake crypto
+         , Map (StakeCredential crypto) (KeyHash crypto)
          )
     , _pstakeGo
-      :: ( Stake hashAlgo dsignAlgo
-         , Map (StakeCredential hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+      :: ( Stake crypto
+         , Map (StakeCredential crypto) (KeyHash crypto)
          )
     , _poolsSS
-      :: Map (KeyHash hashAlgo dsignAlgo) (PoolParams hashAlgo dsignAlgo vrfAlgo)
+      :: Map (KeyHash crypto) (PoolParams crypto)
     , _feeSS :: Coin
     } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (SnapShots hashAlgo dsignAlgo vrfAlgo)
+instance NoUnexpectedThunks (SnapShots crypto)
 
 makeLenses ''SnapShots
 
-emptySnapShots :: SnapShots hashAlgo dsignAlgo vrfAlgo
+emptySnapShots :: SnapShots crypto
 emptySnapShots =
     SnapShots snapEmpty snapEmpty snapEmpty Map.empty (Coin 0)
     where pooledEmpty = Map.empty
