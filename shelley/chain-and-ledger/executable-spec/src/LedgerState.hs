@@ -962,7 +962,7 @@ applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
 applyDCertPState _ (RetirePool key epoch) ps =
   ps & retiring %~ Map.insert key epoch
 
--- | Use onlt pool registration or retirement certificates
+-- | Use only pool registration or retirement certificates
 applyDCertPState _ _ ps = ps
 
 ---------------------------------
