@@ -16,27 +16,18 @@ let
   src = iohkLib.cleanSourceHaskell ./.;
   util = pkgs.callPackage ./nix/util.nix {};
 
-  # Example of using a package from iohk-nix
-  # inherit (iohkLib.rust-packages.pkgs) jormungandr;
-
   # Import the Haskell package set.
   haskellPackages = import ./nix/pkgs.nix {
     inherit pkgs haskell src;
-    # Pass in any extra programs necessary for the build as function arguments.
-    # Examples:
-    # inherit jormungandr;
-    # inherit (pkgs) cowsay;
     # Provide cross-compiling secret sauce
     inherit (iohkLib.nix-tools) iohk-extras iohk-module;
   };
 
 in {
   inherit pkgs iohkLib src haskellPackages;
-  inherit (haskellPackages.cardano-ledger-specs.identifier) version;
 
-  # Grab the executable component of our package.
-  inherit (haskellPackages.cardano-ledger-specs.components.exes)
-    cardano-ledger-specs;
+  # Grab the executable components of our packages.
+  inherit (haskellPackages.non-integer.components.exes) nonInt;
 
   tests = util.collectComponents "tests" util.isCardanoLedgerSpecs haskellPackages;
   benchmarks = util.collectComponents "benchmarks" util.isCardanoLedgerSpecs haskellPackages;
@@ -55,16 +46,16 @@ in {
     ];
     # These programs will be available inside the nix-shell.
     buildInputs =
-      with pkgs.haskellPackages; [ hlint stylish-haskell weeder ghcid lentil ]
+      with pkgs.haskellPackages; [ hlint stylish-haskell weeder ]
       # Add your own packages to the shell.
       ++ [ ];
   };
 
   # Attributes of PDF builds of LaTeX documentation.
-  byronLedgerSpec = import ./byron/ledger/formal-spec {};
-  byronChainSpec = import ./byron/chain/formal-spec {};
-  semanticsSpec = import ./byron/semantics/formal-spec {};
-  shelleyLedgerSpec = import ./shelley/chain-and-ledger/formal-spec {};
-  delegationDesignSpec = import ./shelley/design-spec {};
-  nonIntegerCalculations = import ./shelley/chain-and-ledger/dependencies/non-integer/doc {};
+  byronLedgerSpec = import ./byron/ledger/formal-spec { inherit pkgs; };
+  byronChainSpec = import ./byron/chain/formal-spec { inherit pkgs; };
+  semanticsSpec = import ./byron/semantics/formal-spec { inherit pkgs; };
+  shelleyLedgerSpec = import ./shelley/chain-and-ledger/formal-spec { inherit pkgs; };
+  delegationDesignSpec = import ./shelley/design-spec { inherit pkgs; };
+  nonIntegerCalculations = import ./shelley/chain-and-ledger/dependencies/non-integer/doc {inherit pkgs; };
 }

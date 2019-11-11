@@ -5,7 +5,7 @@ with pkgs.lib;
 {
   # Function that identifies packages from your project.
   isCardanoLedgerSpecs = package:
-    (hasPrefix "cardano-ledger-specs" package.identifier.name);
+    (elem package.identifier.name ["cs-blockchain" "cs-ledger" "small-steps" "non-integer" "delegation"]);
 
   # fixme: upstream to iohk-nix
   collectComponents = group: packageSel: haskellPackages:

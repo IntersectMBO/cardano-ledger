@@ -40,24 +40,29 @@ let
   testsSupportedSystems = [ "x86_64-linux" ];
   collectTests = ds: filter (d: elem d.system testsSupportedSystems) (collect isDerivation ds);
 
-  inherit (systems.examples) mingwW64 musl64;
-
   jobs = {
     native = mapTestOn (packagePlatforms project);
-    "${mingwW64.config}" = mapTestOnCross mingwW64 (packagePlatformsCross project);
   } // (mkRequiredJob (
-      collectTests jobs.native.tests ++
-      collectTests jobs.native.benchmarks ++
-      # Add your project executables to this list
-      [ # jobs.native.cardano-ledger-specs.x86_64-linux
-        jobs.byronLedgerSpec
-        jobs.byronChainSpec
-        jobs.semanticsSpec
-        jobs.shelleyLedgerSpec
-        jobs.delegationDesignSpec
-        jobs.nonIntegerCalculations
+      # collectTests jobs.native.tests ++
+      # collectTests jobs.native.benchmarks ++
+      [ jobs.native.byronLedgerSpec.x86_64-linux
+        jobs.native.byronChainSpec.x86_64-linux
+        jobs.native.semanticsSpec.x86_64-linux
+        jobs.native.shelleyLedgerSpec.x86_64-linux
+        jobs.native.delegationDesignSpec.x86_64-linux
+        jobs.native.nonIntegerCalculations.x86_64-linux
       ]
     ))
+
+  # Collect all spec PDFs, without system suffix
+  // { inherit (project)
+         byronLedgerSpec
+         byronChainSpec
+         semanticsSpec
+         shelleyLedgerSpec
+         delegationDesignSpec
+         nonIntegerCalculations; }
+
   # Build the shell derivation in Hydra so that all its dependencies
   # are cached.
   // mapTestOn (packagePlatforms { inherit (project) shell; });
