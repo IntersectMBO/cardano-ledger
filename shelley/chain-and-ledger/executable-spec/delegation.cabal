@@ -59,6 +59,9 @@ library
                      STS.Utxow
 
                      Cardano.Ledger.Shelley.Crypto
+
+                     Cardano.Ledger.Shelley.API
+  other-modules:     Cardano.Ledger.Shelley.API.Validation
   hs-source-dirs: src
   ghc-options:
     -Wall
@@ -78,6 +81,7 @@ library
     small-steps,
     microlens,
     microlens-th,
+    mtl,
     non-integer,
     cs-ledger,
     cardano-binary,
