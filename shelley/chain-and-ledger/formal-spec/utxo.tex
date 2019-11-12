@@ -321,7 +321,7 @@ requests).
       \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{tx}
       \\
       \var{depositChange} \leteq
-        (\deposits{pp}~{stpools}~{\txcerts{tx}}) - (\var{refunded} + \var{decayed})
+        \deposits{pp}~{stpools}~{(\txcerts{tx})} - (\var{refunded} + \var{decayed})
     }
     {
       \begin{array}{r}
