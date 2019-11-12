@@ -30,6 +30,7 @@ import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
 import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey)
+import           Validation (ValidationError (..))
 
 import           Generator
 import           MockTypes

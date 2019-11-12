@@ -33,9 +33,9 @@ import qualified Hedgehog.Range as Range
 import           Coin
 import           Generator.Core (findPayKeyPair, genNatural)
 import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (DState (..), pattern LedgerValidation, ValidationError (..),
-                     asStateTransition, asStateTransition', dstate, genesisCoins, genesisState,
-                     stkCreds, utxo, utxoState, _delegationState, _dstate)
+import           LedgerState (DState (..), pattern LedgerValidation, asStateTransition,
+                     asStateTransition', dstate, genesisCoins, genesisState, stkCreds, utxo,
+                     utxoState, _delegationState, _dstate)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
@@ -43,6 +43,7 @@ import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, p
                      pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..))
 import           Updates
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
+import           Validation (ValidationError (..))
 
 import           MockTypes
 import           Mutator

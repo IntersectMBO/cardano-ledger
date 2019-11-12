@@ -64,10 +64,6 @@ instance
     | FeeTooSmallUTxO Coin Coin
     | ValueNotConservedUTxO Coin Coin
     | NegativeOutputsUTxO
-    | UnexpectedFailureUTXO [ValidationError] -- TODO maybe restructure Validity
-                                              -- to prevent these predicate
-                                              -- failures?
-    | UnexpectedSuccessUTXO
     | UpdateFailure (PredicateFailure (UP crypto))
     deriving (Eq, Show)
   transitionRules = [utxoInductive]

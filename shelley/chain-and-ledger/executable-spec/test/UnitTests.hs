@@ -24,12 +24,13 @@ import           Delegation.Certificates (pattern Delegate, pattern RegKey, patt
 import           TxData (pattern AddrBase, Credential (..), Delegation (..), pattern PoolParams,
                      pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
+import           Validation (ValidationError (..))
 
 import           Keys (pattern GenDelegs, pattern KeyPair, hashKey, vKey)
-import           LedgerState (pattern LedgerState, pattern UTxOState, ValidationError (..),
-                     asStateTransition, delegationState, delegations, dstate,
-                     emptyDelegation, genesisId, genesisCoins, genesisState, minfee, pParams, pstate, ptrs,
-                     retiring, rewards, stkCreds, stPools, _delegationState, _genDelegs, _dstate)
+import           LedgerState (pattern LedgerState, pattern UTxOState, asStateTransition,
+                     delegationState, delegations, dstate, emptyDelegation, genesisCoins,
+                     genesisId, genesisState, minfee, pParams, pstate, ptrs, retiring, rewards,
+                     stPools, stkCreds, _delegationState, _dstate, _genDelegs)
 import           PParams
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, body, ttl)
