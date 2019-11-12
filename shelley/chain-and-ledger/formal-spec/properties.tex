@@ -624,7 +624,7 @@ may either be from the current epoch or an earlier one, so we split them using $
   \end{equation*}
   Looking at the $\mathsf{UTXO}$ transition in Figure~\ref{fig:rules:utxo-shelley},
   \begin{equation*}
-    \var{deposits}' = \var{deposits} + (\deposits{pp}~{stpools}~{\txcerts{tx}})
+    \var{deposits}' = \var{deposits} + \deposits{pp}~{stpools}~{(\txcerts{tx})}
     - (\var{refunded} + \var{decayed})
   \end{equation*}
   The function $\fun{deposits}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
