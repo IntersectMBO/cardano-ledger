@@ -34,7 +34,7 @@ instance STS (PPUP crypto) where
   type Environment (PPUP crypto) = PPUPEnv crypto
   data PredicateFailure (PPUP crypto)
     = NonGenesisUpdatePPUP (Set (GenKeyHash crypto)) (Set (GenKeyHash crypto))
-    | PPUpdateTooEarlyPPUP
+    | PPUpdateTooLatePPUP
     | PPUpdateEmpty
     | PPUpdateNonEmpty
     | PVCannotFollowPPUP
@@ -73,6 +73,6 @@ ppupTransitionNonEmpty = do
   let Epoch slotEpoch = epochFromSlot (Slot 1)
   s
     <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
-    ?! PPUpdateTooEarlyPPUP
+    ?! PPUpdateTooLatePPUP
 
   pure $ updatePPup pupS pup
