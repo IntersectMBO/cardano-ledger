@@ -60,7 +60,8 @@ poolDelegationTransition = do
                     }
         else -- re-register
           pure $ ps { _pParams = _pParams ps ⨃ (hk, poolParam)
-                    , _retiring = Set.singleton hk ⋪ _retiring ps }
+                    , _retiring = Set.singleton hk ⋪ _retiring ps
+                    }
 
     RetirePool hk (Epoch e) -> do
       let Epoch cepoch   = epochFromSlot slot

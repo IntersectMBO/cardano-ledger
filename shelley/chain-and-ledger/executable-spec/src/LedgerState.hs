@@ -54,7 +54,6 @@ module LedgerState
   -- * state transitions
   , asStateTransition
   , asStateTransition'
-  , delegatedStake
   , retirePools
   , emptyDelegation
   , applyUTxOUpdate
@@ -116,30 +115,29 @@ module LedgerState
   , updateNES
   ) where
 
+import           Address (mkRwdAcnt)
+import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Coin (Coin (..))
 import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Delegation.Certificates (requiresVKeyWitness)
-import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
-import           Lens.Micro (to, (%~), (&), (.~), (^.))
-import           Lens.Micro.TH (makeLenses)
-import           Cardano.Ledger.Shelley.Crypto
-import           Address (mkRwdAcnt)
-import           Coin (Coin (..))
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
                      baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
                      rewardStake)
-import           Keys (AnyKeyHash, GenDelegs (..), GenKeyHash,
-                     KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
-                     undiscriminateKeyHash)
+import           GHC.Generics (Generic)
+import           Keys (AnyKeyHash, GenDelegs (..), GenKeyHash, KeyDiscriminator (..), KeyHash,
+                     KeyPair, Signable, hash, undiscriminateKeyHash)
+import           Lens.Micro (to, (%~), (&), (.~), (^.))
+import           Lens.Micro.TH (makeLenses)
+import           Numeric.Natural (Natural)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
                      keyMinRefund, minfeeA, minfeeB)
 import           Slot (Duration (..), Epoch (..), Slot (..), epochFromSlot, firstSlot,
@@ -964,27 +962,8 @@ applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
 applyDCertPState _ (RetirePool key epoch) ps =
   ps & retiring %~ Map.insert key epoch
 
--- | Use onlt pool registration or retirement certificates
+-- | Use only pool registration or retirement certificates
 applyDCertPState _ _ ps = ps
-
--- |Compute how much stake each active stake pool controls.
-delegatedStake
-  :: LedgerState crypto
-  -> Map (KeyHash crypto) Coin
-delegatedStake ls@(LedgerState _ ds _) = Map.fromListWith (+) delegatedOutputs
-  where
-    getOutputs (UTxO utxo') = Map.elems utxo'
-    addStake delegs (TxOut (AddrBase _ (KeyHashObj hsk)) c) = do
-      pool <- Map.lookup (KeyHashObj hsk) delegs
-      return (pool, c)
-    addStake _ (TxOut (AddrBase _ _) _) = undefined -- TODO: script addresses
-    addStake _ (TxOut (AddrEnterprise _) _) = undefined -- TODO: script addresses
-    addStake delegs (TxOut (AddrPtr _ ptr) c) = do
-      key  <- Map.lookup ptr $ ds ^. dstate . ptrs
-      pool <- Map.lookup key delegs
-      return (pool, c)
-    outs = getOutputs $ ls ^. utxoState . utxo
-    delegatedOutputs = mapMaybe (addStake $ ds ^. dstate . delegations) outs
 
 ---------------------------------
 -- epoch boundary calculations --
