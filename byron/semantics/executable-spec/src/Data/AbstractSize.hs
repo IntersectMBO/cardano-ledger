@@ -27,7 +27,7 @@ import           GHC.Generics ((:*:) ((:*:)), (:+:) (L1, R1), Generic, K1 (K1), 
                      U1 (U1), from)
 import           GHC.Natural (Natural)
 
-import           Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN))
+import           Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN), VerKeyDSIGN)
 import           Cardano.Crypto.DSIGN.Mock (MockDSIGN, SigDSIGN (SigMockDSIGN))
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Crypto.Hash.Short (ShortHash)
@@ -197,3 +197,7 @@ instance HasTypeReps (SignedDSIGN MockDSIGN a) where
   -- per byte.
   typeReps (SignedDSIGN (SigMockDSIGN bs i)) =
     typeOf i <| Seq.replicate (BS.length bs) (typeOf (undefined :: Char))
+
+instance HasTypeReps (VerKeyDSIGN MockDSIGN) where
+  -- A mock verification key is just an 'Int'.
+  typeReps _ = [typeOf (undefined :: Int)]
