@@ -192,6 +192,8 @@ instance Typeable a => HasTypeReps (Hash ShortHash a) where
   typeReps x = [typeOf x]
 
 instance HasTypeReps (SignedDSIGN MockDSIGN a) where
-  -- A mock signature consists of a short hash and an Int.
+  -- A mock signature consists of a 'ByteString' (which is in turn a short hash)
+  -- and an 'Int'. For the 'ByteString' representation we return one character
+  -- per byte.
   typeReps (SignedDSIGN (SigMockDSIGN bs i)) =
     typeOf i <| Seq.replicate (BS.length bs) (typeOf (undefined :: Char))
