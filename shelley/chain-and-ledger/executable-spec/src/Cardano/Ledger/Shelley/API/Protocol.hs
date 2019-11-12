@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Integration between the Shelley ledger and its corresponding (Transitional
 -- Praos) protocol.
@@ -11,25 +14,32 @@ module Cardano.Ledger.Shelley.API.Protocol
   ( STS.Prtcl.PrtclEnv,
     mkPrtclEnv,
     LedgerView,
-    view,
+    futureLedgerView,
   )
 where
 
 import Cardano.Ledger.Shelley.API.Validation
+import Cardano.Ledger.Shelley.Crypto
+import Control.Arrow (left, right)
+import Control.Monad.Except
+import Control.State.Transition (PredicateFailure, TRC (..), applySTS)
 import Data.Map.Strict (Map)
 import Delegation.Certificates (PoolDistr)
 import GHC.Generics (Generic)
 import Keys (GenDelegs, GenKeyHash)
 import LedgerState
   ( EpochState (..),
+    NewEpochEnv(..),
     NewEpochState (..),
+    getGKeys,
     _delegationState,
     _dstate,
     _genDelegs,
   )
 import PParams (PParams)
+import STS.NewEpoch (NEWEPOCH)
 import qualified STS.Prtcl
-import Slot (Slot)
+import Slot (Slot, epochFromSlot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto
@@ -263,3 +273,35 @@ view
 --  Proof: Apply axiom 1 to translate the chain of blocks into a chain of
 --  headers. Apply lemma 2 on the right of the chain and lemma 5 on the left of
 --  the chain. Apply lemma 3 in the middle.
+
+newtype FutureLedgerViewError crypto
+  = FutureLedgerViewError [PredicateFailure (NEWEPOCH crypto)]
+  deriving (Eq, Show)
+
+-- | Anachronistic ledger view
+--
+--   Given a slot within a 2k-slot future window of our current slot (the slot
+--   corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
+--   appropriate to that slot.
+--
+--   This 'LedgerView' will in fact be valid for the entire epoch containing
+--   that slot. As such (and because we do not store the current slot in the
+--   'ShelleyState')
+futureLedgerView ::
+  forall crypto m.
+  ( Crypto crypto,
+    MonadError (FutureLedgerViewError crypto) m
+  ) =>
+  ShelleyState crypto ->
+  Slot ->
+  m (LedgerView crypto)
+futureLedgerView ss slot =
+  liftEither
+    . right view
+    . left (FutureLedgerViewError . join)
+    . applySTS @(NEWEPOCH crypto)
+    $ TRC (mkNewEpochEnv, ss, epochFromSlot slot)
+  where
+    mkNewEpochEnv = NewEpochEnv
+      slot
+      (getGKeys ss)
