@@ -406,7 +406,7 @@ and will always be large enough to meet all of its obligations.
   These stronger invariants will require a few additional definitions.
 %
   Given a slot $s$, let $\ell(s)$ be the first slot of the epoch that $s$ occurs in,
-  that is $\ell = \firstSlot{}\circ\epoch{}$.
+  that is $\ell = \fun{firstSlot}\circ\fun{epoch}$.
   Given a mapping $m\in\mathsf{T}\to\Slot$ and a slot $s\in\Slot$,
   let $\fun{sep}$ be the function that separates $m$ into two maps,
   those whose value is strictly less than $s$ and those whose value is at least $s$.

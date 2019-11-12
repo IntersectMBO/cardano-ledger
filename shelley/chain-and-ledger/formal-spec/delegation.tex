@@ -566,7 +566,7 @@ concerns are independent of the ledger rules.
     \inference[Deleg-Mir]
     {
       \var{c}\in \DCertMir\\
-      slot < \fun{firstSlot}((\fun{epoch}~\var{s} + 1)) - \fun{SlotsPrior}\\
+      slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{SlotsPrior}\\
       \left(
         \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i_{rwd}})} val      \right)\leq\var{reserves}
     }
