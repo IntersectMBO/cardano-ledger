@@ -11,6 +11,7 @@ import           Cardano.Crypto.KES (MockKES)
 import           Cardano.Crypto.VRF.Fake (FakeVRF)
 
 import qualified BlockChain
+import           Cardano.Ledger.Shelley.Crypto
 import qualified Delegation.Certificates
 import qualified EpochBoundary
 import qualified Keys
@@ -29,7 +30,6 @@ import qualified Tx
 import qualified TxData
 import qualified Updates
 import qualified UTxO
-import           Cardano.Ledger.Shelley.Crypto
 
 data MockCrypto
 

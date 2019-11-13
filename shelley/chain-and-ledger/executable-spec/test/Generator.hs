@@ -33,11 +33,11 @@ import qualified Hedgehog.Range as Range
 import           Coin
 import           Generator.Core (findPayKeyPair, genNatural)
 import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (DState (..), pattern LedgerValidation, asStateTransition,
-                     asStateTransition', dstate, genesisCoins, genesisState, stkCreds, utxo,
-                     utxoState, _delegationState, _dstate)
+import           LedgerState (DState (..), pattern LedgerValidation, dstate, genesisCoins,
+                     genesisState, stkCreds, utxo, utxoState, _delegationState, _dstate)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
+import           STS.Ledger (asStateTransition, asStateTransition')
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
 import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, pattern Delegation,
                      pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..))
@@ -151,10 +151,9 @@ genLedgerStateTx :: KeyPairs -> Slot -> LedgerState ->
                     Gen (Coin, Tx, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList (Slot _slot) sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
-  let genDelegs' = _genDelegs $ _dstate $ _delegationState sourceState
   slot' <- genNatural _slot (_slot + 100)
   (txfee', tx) <- genTx keyList utxo' (Slot slot')
-  pure (txfee', tx, asStateTransition (Slot slot') defPCs sourceState tx genDelegs')
+  pure (txfee', tx, asStateTransition (Slot slot') defPCs sourceState tx (Coin 0))
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -263,13 +262,12 @@ genLedgerStateTx' :: KeyPairs -> LedgerState ->
                     Gen (Coin, Tx, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
   let utxo' = sourceState ^. utxoState . utxo
-  let genDelegs' = _genDelegs $ _dstate $ _delegationState sourceState
   _slot <- genNatural 0 1000
   (txfee', tx) <- genTx keyList utxo' (Slot _slot)
   tx'          <- mutateTx tx
   pure (txfee'
        , tx'
-       , asStateTransition' (Slot _slot) defPCs (LedgerValidation [] sourceState) tx' genDelegs')
+       , asStateTransition' (Slot _slot) defPCs (LedgerValidation [] sourceState) tx' (Coin 0))
 
 -- Generators for 'DelegationData'
 

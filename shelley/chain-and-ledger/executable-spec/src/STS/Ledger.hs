@@ -1,6 +1,7 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,11 +11,14 @@ module STS.Ledger
   ( LEDGER
   , LedgerEnv (..)
   , PredicateFailure(..)
+  , asStateTransition
+  , asStateTransition'
   )
 where
 
 import           Lens.Micro ((^.))
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin)
 import           Control.State.Transition
 import           Keys
@@ -22,10 +26,12 @@ import           LedgerState
 import           PParams hiding (d)
 import           Slot
 import           STS.Delegs
-import           STS.Utxo (UtxoEnv (..))
+import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern FeeTooSmallUTxO,
+                     pattern InputSetEmptyUTxO, pattern MaxTxSizeUTxO, pattern NegativeOutputsUTxO,
+                     pattern UpdateFailure, UtxoEnv (..), pattern ValueNotConservedUTxO)
 import           STS.Utxow
 import           Tx
-import           Cardano.Ledger.Shelley.Crypto
+import           Validation (ValidationError (..))
 
 data LEDGER crypto
 
@@ -89,3 +95,81 @@ instance
   => Embed (UTXOW crypto) (LEDGER crypto)
  where
   wrapFailed = UtxowFailure
+
+-- |In the case where a transaction is valid for a given ledger state,
+-- apply the transaction as a state transition function on the ledger state.
+-- Otherwise, return a list of validation errors.
+asStateTransition
+  :: forall crypto .
+     ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
+     )
+  => Slot
+  -> PParams
+  -> LedgerState crypto
+  -> Tx crypto
+  -> Coin
+  -> Either [ValidationError] (LedgerState crypto)
+asStateTransition slot pp ls tx res =
+  let next = applySTS @(LEDGER crypto) (TRC ((LedgerEnv slot (_txSlotIx ls) pp res)
+                                         , (_utxoState ls, _delegationState ls)
+                                         , tx))
+  in
+  case next of
+    Left pfs -> Left $ convertPredicateFailuresToValidationErrors pfs
+    Right (u, d)  -> Right $ ls { _utxoState = u
+                                , _delegationState = d
+                                , _txSlotIx = 1 + _txSlotIx ls
+                                }
+
+-- | Apply transition independent of validity, collect validation errors on the
+-- way.
+asStateTransition'
+  :: ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
+     )
+  => Slot
+  -> PParams
+  -> LedgerValidation crypto
+  -> Tx crypto
+  -> Coin
+  -> LedgerValidation crypto
+asStateTransition' = undefined
+
+convertPredicateFailuresToValidationErrors :: [[PredicateFailure (LEDGER c)]] -> [ValidationError]
+convertPredicateFailuresToValidationErrors pfs =
+  map predicateFailureToValidationError $ foldr (++) [] pfs
+
+predicateFailureToValidationError :: PredicateFailure (LEDGER c) -> ValidationError
+
+predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW))
+  = MissingWitnesses
+predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW))
+  = MissingWitnesses
+
+predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW))
+  = InvalidWitness
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure InputSetEmptyUTxO))
+  = InputSetEmpty
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ExpiredUTxO a b)))
+  = Expired a b
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure BadInputsUTxO))
+  = BadInputs
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (FeeTooSmallUTxO a b)))
+  = FeeTooSmall a b
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO a b)))
+  = ValueNotConserved a b
+
+predicateFailureToValidationError (DelegsFailure DelegateeNotRegisteredDELEG)
+  = StakeDelegationImpossible
+
+predicateFailureToValidationError (DelegsFailure WithrawalsNotInRewardsDELEGS)
+  = IncorrectRewards
+
+predicateFailureToValidationError _
+  = UnknownValidationError

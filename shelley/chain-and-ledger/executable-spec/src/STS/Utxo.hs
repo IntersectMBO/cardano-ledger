@@ -9,6 +9,7 @@
 module STS.Utxo
   ( UTXO
   , UtxoEnv (..)
+  , PredicateFailure(..)
   )
 where
 
