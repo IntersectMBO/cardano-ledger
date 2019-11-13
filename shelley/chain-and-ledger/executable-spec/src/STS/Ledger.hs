@@ -31,7 +31,7 @@ import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern F
                      pattern UpdateFailure, UtxoEnv (..), pattern ValueNotConservedUTxO)
 import           STS.Utxow
 import           Tx
-import           Validation (ValidationError (..))
+import           Validation (ValidationError (..), Validity (..))
 
 data LEDGER crypto
 
@@ -134,7 +134,14 @@ asStateTransition'
   -> Tx crypto
   -> Coin
   -> LedgerValidation crypto
-asStateTransition' = undefined
+--asStateTransition' = undefined
+asStateTransition' slot pp (LedgerValidation valErrors ls) tx _ =
+    let ls' = applyTxBody ls pp (tx ^. body)
+        d'  = (_genDelegs . _dstate . _delegationState) ls
+    in
+    case validTx tx d' slot pp ls of
+      Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
+      Valid          -> LedgerValidation valErrors ls'
 
 convertPredicateFailuresToValidationErrors :: [[PredicateFailure (LEDGER c)]] -> [ValidationError]
 convertPredicateFailuresToValidationErrors pfs =

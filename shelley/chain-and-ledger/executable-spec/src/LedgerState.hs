@@ -55,6 +55,7 @@ module LedgerState
   , retirePools
   , emptyDelegation
   , applyUTxOUpdate
+  , applyTxBody
   -- * Genesis State
   , genesisId
   , genesisCoins
@@ -70,6 +71,7 @@ module LedgerState
   , validKeyRegistration
   , validKeyDeregistration
   , validStakeDelegation
+  , validTx
   , preserveBalance
   , produced
   , consumed
