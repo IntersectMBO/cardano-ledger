@@ -15,9 +15,11 @@ module Data.AbstractSize
   ) where
 
 import qualified Crypto.Hash as Crypto
+import qualified Data.ByteString as BS
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq, empty, (<|), (><))
+import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import           Data.Typeable (TypeRep, Typeable, typeOf)
 import           Data.Word (Word64)
@@ -25,6 +27,8 @@ import           GHC.Generics ((:*:) ((:*:)), (:+:) (L1, R1), Generic, K1 (K1), 
                      U1 (U1), from)
 import           GHC.Natural (Natural)
 
+import           Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN), VerKeyDSIGN)
+import           Cardano.Crypto.DSIGN.Mock (MockDSIGN, SigDSIGN (SigMockDSIGN))
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Crypto.Hash.Short (ShortHash)
 
@@ -186,3 +190,14 @@ instance HasTypeReps ShortHash where
 
 instance Typeable a => HasTypeReps (Hash ShortHash a) where
   typeReps x = [typeOf x]
+
+instance HasTypeReps (SignedDSIGN MockDSIGN a) where
+  -- A mock signature consists of a 'ByteString' (which is in turn a short hash)
+  -- and an 'Int'. For the 'ByteString' representation we return one character
+  -- per byte.
+  typeReps (SignedDSIGN (SigMockDSIGN bs i)) =
+    typeOf i <| Seq.replicate (BS.length bs) (typeOf (undefined :: Char))
+
+instance HasTypeReps (VerKeyDSIGN MockDSIGN) where
+  -- A mock verification key is just an 'Int'.
+  typeReps _ = [typeOf (undefined :: Int)]
