@@ -62,6 +62,7 @@ library
 
                      Cardano.Ledger.Shelley.API
   other-modules:     Cardano.Ledger.Shelley.API.Validation
+                     Cardano.Ledger.Shelley.API.Mempool
                      Cardano.Ledger.Shelley.API.Protocol
   hs-source-dirs: src
   ghc-options:

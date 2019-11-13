@@ -14,6 +14,7 @@ module Cardano.Ledger.Shelley.API.Protocol
   ( STS.Prtcl.PrtclEnv,
     mkPrtclEnv,
     LedgerView,
+    -- $timetravel
     futureLedgerView,
   )
 where
@@ -29,12 +30,12 @@ import GHC.Generics (Generic)
 import Keys (GenDelegs, GenKeyHash)
 import LedgerState
   ( EpochState (..),
-    NewEpochEnv(..),
+    NewEpochEnv (..),
     NewEpochState (..),
-    getGKeys,
     _delegationState,
     _dstate,
     _genDelegs,
+    getGKeys,
   )
 import PParams (PParams)
 import STS.NewEpoch (NEWEPOCH)
@@ -302,6 +303,7 @@ futureLedgerView ss slot =
     . applySTS @(NEWEPOCH crypto)
     $ TRC (mkNewEpochEnv, ss, epochFromSlot slot)
   where
-    mkNewEpochEnv = NewEpochEnv
-      slot
-      (getGKeys ss)
+    mkNewEpochEnv =
+      NewEpochEnv
+        slot
+        (getGKeys ss)
