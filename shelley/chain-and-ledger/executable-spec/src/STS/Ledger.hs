@@ -178,5 +178,4 @@ predicateFailureToValidationError (DelegsFailure DelegateeNotRegisteredDELEG)
 predicateFailureToValidationError (DelegsFailure WithrawalsNotInRewardsDELEGS)
   = IncorrectRewards
 
-predicateFailureToValidationError _
-  = UnknownValidationError
+predicateFailureToValidationError _ = UnknownValidationError

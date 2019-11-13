@@ -5,7 +5,7 @@ import           STSTests (stsTests)
 import           UnitTests (unitTests)
 
 tests :: TestTree
-tests = testGroup "Ledger with Delegation" [unitTests] --, propertyTests, stsTests]
+tests = testGroup "Ledger with Delegation" [unitTests, propertyTests, stsTests]
 
 -- main entry point
 main :: IO ()

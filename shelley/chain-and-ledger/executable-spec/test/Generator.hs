@@ -33,8 +33,8 @@ import qualified Hedgehog.Range as Range
 import           Coin
 import           Generator.Core (findPayKeyPair, genNatural)
 import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (DState (..), pattern LedgerValidation, dstate, genesisCoins,
-                     genesisState, stkCreds, utxo, utxoState, _delegationState, _dstate)
+import           LedgerState (pattern LedgerValidation, dstate, genesisCoins, genesisState,
+                     stkCreds, utxo, utxoState)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
 import           STS.Ledger (asStateTransition, asStateTransition')

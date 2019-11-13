@@ -119,7 +119,6 @@ import           Address (mkRwdAcnt)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
-import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -146,7 +145,7 @@ import           Tx (extractKeyHash)
 import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolParams, Ptr (..),
                      RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..),
                      TxOut (..), body, certs, getRwdCred, inputs, poolOwners, poolPledge,
-                     poolPubKey, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+                     poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
@@ -703,12 +702,6 @@ validStakeDelegation cert ds =
            where (StakeCreds stakeKeys) = ds ^. stkCreds
     _ -> Valid
 
--- there is currently no requirement that could make this invalid
-validStakePoolRegister
-  :: DCert crypto
-  -> DPState crypto
-  -> Validity
-validStakePoolRegister _ _ = Valid
 
 validStakePoolRetire
   :: DCert crypto
@@ -720,70 +713,6 @@ validStakePoolRetire cert ps =
                         then Valid else Invalid [StakePoolNotRegisteredOnKey]
                          where (StakePools stakePools) = ps ^. stPools
     _                -> Valid
-
-validDelegation
-  :: DCert crypto
-  -> DPState crypto
-  -> Validity
-validDelegation cert ds =
-     validKeyRegistration cert (ds ^. dstate)
-  <> validKeyDeregistration cert (ds ^. dstate)
-  <> validStakeDelegation cert (ds ^. dstate)
-  <> validStakePoolRegister cert ds
-  <> validStakePoolRetire cert (ds ^. pstate)
-
--- |In the case where a transaction is valid for a given ledger state,
--- apply the transaction as a state transition function on the ledger state.
--- Otherwise, return a list of validation errors.
-asStateTransition
-  :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
-     )
-  => Slot
-  -> PParams
-  -> LedgerState crypto
-  -> Tx crypto
-  -> GenDelegs crypto
-  -> Either [ValidationError] (LedgerState crypto)
-asStateTransition slot pp ls tx d' =
-  case validTx tx d' slot pp ls of
-    Invalid errors -> Left errors
-    Valid          -> foldM (certAsStateTransition slot (ls ^. txSlotIx)) ls' cs
-      where
-        ls' = applyTxBody ls pp (tx ^. body)
-        cs = zip [0..] (toList $ tx ^. body . certs) -- index certificates
-
--- |In the case where a certificate is valid for a given ledger state,
--- apply the certificate as a state transition function on the ledger state.
--- Otherwise, return a list of validation errors.
-certAsStateTransition
-  :: Slot
-  -> Ix
-  -> LedgerState crypto
-  -> (Ix, DCert crypto)
-  -> Either [ValidationError] (LedgerState crypto)
-certAsStateTransition slot txIx ls (clx, cert) =
-  case validDelegation cert (ls ^. delegationState) of
-    Invalid errors -> Left errors
-    Valid          -> Right $ ls & delegationState %~ applyDCert (Ptr slot txIx clx) cert
-
--- | Apply transition independent of validity, collect validation errors on the
--- way.
-asStateTransition'
-  :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
-     )
-  => Slot
-  -> PParams
-  -> LedgerValidation crypto
-  -> Tx crypto
-  -> GenDelegs crypto
-  -> LedgerValidation crypto
-asStateTransition' slot pp (LedgerValidation valErrors ls) tx d' =
-    let ls' = applyTxBody ls pp (tx ^. body) in
-    case validTx tx d' slot pp ls of
-      Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
-      Valid          -> LedgerValidation valErrors ls'
 
 -- Functions for stake delegation model
 

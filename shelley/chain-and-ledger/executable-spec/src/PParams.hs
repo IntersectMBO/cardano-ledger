@@ -27,11 +27,11 @@ module PParams
   , protocolVersion
   ) where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Nonce(NeutralNonce), UnitInterval, interval0)
+import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
 import           Coin (Coin (..))
 import           Slot (Epoch (..))
 
