@@ -13,6 +13,7 @@ import qualified Data.Set as Set
 import           Lens.Micro ((^.))
 
 import           Delegation.Certificates
+import           EpochBoundary (poolRefunds)
 import           LedgerState
 import           PParams
 import           Slot
