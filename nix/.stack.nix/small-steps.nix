@@ -47,7 +47,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
       copyright = "";
       maintainer = "formal.methods@iohk.io";
       author = "IOHK Formal Methods Team";
-      homepage = "https://github.com/input-output-hk/cardano-chain";
+      homepage = "https://github.com/input-output-hk/cardano-legder-specs";
       url = "";
       synopsis = "Small step semantics";
       description = "";
