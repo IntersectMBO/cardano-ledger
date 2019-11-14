@@ -27,11 +27,11 @@ module PParams
   , protocolVersion
   ) where
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Nonce(NeutralNonce), UnitInterval, interval0)
+import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
 import           Coin (Coin (..))
 import           Slot (Epoch (..))
 
@@ -92,7 +92,7 @@ emptyPParams =
        _minfeeA = 0
      , _minfeeB = 0
      , _maxBBSize = 0
-     , _maxTxSize = 0
+     , _maxTxSize = 2048
      , _maxBHSize = 0
      , _keyDeposit = Coin 0
      , _keyMinRefund = interval0

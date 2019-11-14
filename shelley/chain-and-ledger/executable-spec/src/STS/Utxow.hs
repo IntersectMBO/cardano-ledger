@@ -26,6 +26,7 @@ import           STS.Utxo
 import           Tx
 import           TxData
 import           UTxO
+import           Validation (Validity (..))
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition

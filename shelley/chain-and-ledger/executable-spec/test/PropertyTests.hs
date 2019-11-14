@@ -30,6 +30,7 @@ import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
 import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey)
+import           Validation (ValidationError (..))
 
 import           Generator
 import           MockTypes
@@ -259,8 +260,7 @@ propCheckRedundantWitnessSet = property $ do
   let tx                       = txwits ^. body
   let witness                  = makeWitnessVKey tx keyPair
   let txwits'                  = txwits & witnessVKeySet %~ Set.insert witness
-  let genDelegs                      = _genDelegs $ _dstate $ _delegationState l
-  let l''                      = asStateTransition (Slot steps) emptyPParams l txwits' genDelegs
+  let l''                      = asStateTransition (Slot steps) emptyPParams l txwits' (Coin 0)
   classify "unneeded signature added"
     (not $ witness `Set.member` (txwits ^. witnessVKeySet))
   case l'' of
@@ -277,8 +277,7 @@ propCheckMissingWitness = property $ do
                                         Set.toList (txwits ^. witnessVKeySet))
   let witnessVKeySet''          = txwits ^. witnessVKeySet
   let witnessVKeySet'           = Set.fromList witnessList
-  let genDelegs                   = _genDelegs $ _dstate $ _delegationState l
-  let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessVKeySet .~ witnessVKeySet') genDelegs
+  let l'                    = asStateTransition (Slot steps) emptyPParams l (txwits & witnessVKeySet .~ witnessVKeySet') (Coin 0)
   let isRealSubset          = witnessVKeySet' `Set.isSubsetOf` witnessVKeySet'' &&
                               witnessVKeySet' /= witnessVKeySet''
   classify "real subset" isRealSubset

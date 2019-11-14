@@ -1,6 +1,7 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,6 +16,7 @@ where
 
 import           Lens.Micro ((^.))
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin)
 import           Control.State.Transition
 import           Keys
@@ -22,10 +24,11 @@ import           LedgerState
 import           PParams hiding (d)
 import           Slot
 import           STS.Delegs
-import           STS.Utxo (UtxoEnv (..))
+import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern FeeTooSmallUTxO,
+                     pattern InputSetEmptyUTxO, pattern MaxTxSizeUTxO, pattern NegativeOutputsUTxO,
+                     pattern UpdateFailure, UtxoEnv (..), pattern ValueNotConservedUTxO)
 import           STS.Utxow
 import           Tx
-import           Cardano.Ledger.Shelley.Crypto
 
 data LEDGER crypto
 

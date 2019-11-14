@@ -39,12 +39,9 @@ module LedgerState
   , genDelegs
   , irwd
   , PState(..)
-  , LedgerValidation(..)
   , KeyPairs
   , UTxOState(..)
   , StakeShare(..)
-  , Validity(..)
-  , mkStakeShare
   , emptyAccount
   , emptyPState
   , emptyDState
@@ -52,27 +49,17 @@ module LedgerState
   , treasury
   , reserves
   -- * state transitions
-  , asStateTransition
-  , asStateTransition'
-  , retirePools
   , emptyDelegation
-  , applyUTxOUpdate
+  , applyTxBody
   -- * Genesis State
   , genesisId
   , genesisCoins
   , genesisState
   -- * Validation
-  , ValidationError (..)
+  , LedgerValidation(..)
   , minfee
   , txsize
-  , validStakePoolRetire
-  , validInputs
-  , validNoReplay
-  , validFee
-  , validKeyRegistration
-  , validKeyDeregistration
-  , validStakeDelegation
-  , preserveBalance
+  , validTx
   , produced
   , consumed
   , verifiedWits
@@ -95,15 +82,9 @@ module LedgerState
   -- refunds
   , keyRefunds
   , keyRefund
-  , decayedKey
   , decayedTx
-  , poolRefunds
   -- epoch boundary
-  , poolRewards
-  , leaderRew
   , memberRew
-  , rewardOnePool
-  , reward
   , stakeDistr
   , applyRUpd
   , createRUpd
@@ -119,7 +100,6 @@ import           Address (mkRwdAcnt)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
-import           Control.Monad (foldM)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -130,8 +110,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Delegation.Certificates (requiresVKeyWitness)
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
-                     baseStake, emptySnapShots, maxPool, poolRefunds, poolStake, ptrStake,
-                     rewardStake)
+                     baseStake, emptySnapShots, maxPool, poolStake, ptrStake, rewardStake)
 import           GHC.Generics (Generic)
 import           Keys (AnyKeyHash, GenDelegs (..), GenKeyHash, KeyDiscriminator (..), KeyHash,
                      KeyPair, Signable, hash, undiscriminateKeyHash)
@@ -143,13 +122,14 @@ import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDec
 import           Slot (Duration (..), Epoch (..), Slot (..), epochFromSlot, firstSlot,
                      slotsPerEpoch, (+*), (-*))
 import           Tx (extractKeyHash)
-import           TxData (Addr (..), Credential (..), Delegation (..), Ix, PoolParams, Ptr (..),
-                     RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..),
-                     TxOut (..), body, certs, getRwdCred, inputs, poolOwners, poolPledge,
-                     poolPubKey, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+import           TxData (Addr (..), Credential (..), Ix, PoolParams, Ptr (..), RewardAcnt (..),
+                     StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), body,
+                     certs, getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee,
+                     wdrls, witKeyHash)
 import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
+import           Validation
 
 import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeCreds (..),
                      StakePools (..), cwitness, decayKey, refund)
@@ -170,52 +150,6 @@ data LedgerValidation crypto
 
 instance NoUnexpectedThunks (LedgerValidation crypto)
 
--- |Validation errors represent the failures of a transaction to be valid
--- for a given ledger state.
-data ValidationError =
-  -- | The transaction inputs are not valid.
-    BadInputs
-  -- | The transaction has expired
-  | Expired Slot Slot
-  -- | Pool Retirement Certificate expired
-  | RetirementCertExpired Slot Slot
-  -- | The transaction fee is too small
-  | FeeTooSmall Coin Coin
-  -- | Value is not conserved
-  | ValueNotConserved Coin Coin
-  -- | Unknown reward account
-  | IncorrectRewards
-  -- | One of the transaction witnesses is invalid.
-  | InvalidWitness
-  -- | The transaction does not have the required witnesses.
-  | MissingWitnesses
-  -- | Missing Replay Attack Protection, at least one input must be spent.
-  | InputSetEmpty
-  -- | A stake key cannot be registered again.
-  | StakeKeyAlreadyRegistered
-  -- | A stake key must be registered to be used or deregistered.
-  | StakeKeyNotRegistered
-  -- | The stake key to which is delegated is not known.
-  | StakeDelegationImpossible
-  -- | Stake pool not registered for key, cannot be retired.
-  | StakePoolNotRegisteredOnKey
-    deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks ValidationError
-
--- |The validity of a transaction, where an invalid transaction
--- is represented by list of errors.
-data Validity = Valid | Invalid [ValidationError] deriving (Show, Eq)
-
-instance Semigroup Validity where
-  Valid <> b                 = b
-  a <> Valid                 = a
-  (Invalid a) <> (Invalid b) = Invalid (a ++ b)
-
-instance Monoid Validity where
-  mempty = Valid
-  mappend = (<>)
-
 type RewardAccounts crypto
   = Map (RewardAcnt crypto) Coin
 
@@ -223,13 +157,6 @@ type RewardAccounts crypto
 newtype StakeShare =
   StakeShare Rational
   deriving (Show, Ord, Eq, NoUnexpectedThunks)
-
--- | Construct an optional probability value
-mkStakeShare :: Rational -> Maybe StakeShare
-mkStakeShare p =
-  if 0 <= p
-    then Just $ StakeShare p
-    else Nothing
 
 data DState crypto= DState
     {  -- |The active stake keys.
@@ -708,144 +635,7 @@ validTx tx d' slot pp l =
                    (l ^. utxoState)
  <> validRuleUTXOW tx d' l
 
--- The rules for checking validiy of stake delegation transitions return
--- `certificate_type_correct(cert) -> valid_cert(cert)`, i.e., if the
--- certificate is of a different type, it's considered to be valid due to the
--- falsified hypothesis.
-
--- | Checks whether a key registration certificat is valid.
-validKeyRegistration
-  :: DCert crypto
-  -> DState crypto
-  -> Validity
-validKeyRegistration cert ds =
-  case cert of
-    RegKey key -> if not $ Map.member key stakeKeys
-                  then Valid else Invalid [StakeKeyAlreadyRegistered]
-                   where (StakeCreds stakeKeys) = ds ^. stkCreds
-    _          -> Valid
-
-validKeyDeregistration
-  :: DCert crypto
-  -> DState crypto
-  -> Validity
-validKeyDeregistration cert ds =
-  case cert of
-    DeRegKey key -> if Map.member key stakeKeys
-                    then Valid else Invalid [StakeKeyNotRegistered]
-                      where (StakeCreds stakeKeys) = ds ^. stkCreds
-    _            -> Valid
-
-validStakeDelegation
-  ::  DCert crypto
-  -> DState crypto
-  -> Validity
-validStakeDelegation cert ds =
-  case cert of
-    Delegate (Delegation source _)
-      -> if Map.member source stakeKeys
-         then Valid else Invalid [StakeDelegationImpossible]
-           where (StakeCreds stakeKeys) = ds ^. stkCreds
-    _ -> Valid
-
--- there is currently no requirement that could make this invalid
-validStakePoolRegister
-  :: DCert crypto
-  -> DPState crypto
-  -> Validity
-validStakePoolRegister _ _ = Valid
-
-validStakePoolRetire
-  :: DCert crypto
-  -> PState crypto
-  -> Validity
-validStakePoolRetire cert ps =
-  case cert of
-    RetirePool key _ -> if Map.member key stakePools
-                        then Valid else Invalid [StakePoolNotRegisteredOnKey]
-                         where (StakePools stakePools) = ps ^. stPools
-    _                -> Valid
-
-validDelegation
-  :: DCert crypto
-  -> DPState crypto
-  -> Validity
-validDelegation cert ds =
-     validKeyRegistration cert (ds ^. dstate)
-  <> validKeyDeregistration cert (ds ^. dstate)
-  <> validStakeDelegation cert (ds ^. dstate)
-  <> validStakePoolRegister cert ds
-  <> validStakePoolRetire cert (ds ^. pstate)
-
--- |In the case where a transaction is valid for a given ledger state,
--- apply the transaction as a state transition function on the ledger state.
--- Otherwise, return a list of validation errors.
-asStateTransition
-  :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
-     )
-  => Slot
-  -> PParams
-  -> LedgerState crypto
-  -> Tx crypto
-  -> GenDelegs crypto
-  -> Either [ValidationError] (LedgerState crypto)
-asStateTransition slot pp ls tx d' =
-  case validTx tx d' slot pp ls of
-    Invalid errors -> Left errors
-    Valid          -> foldM (certAsStateTransition slot (ls ^. txSlotIx)) ls' cs
-      where
-        ls' = applyTxBody ls pp (tx ^. body)
-        cs = zip [0..] (toList $ tx ^. body . certs) -- index certificates
-
--- |In the case where a certificate is valid for a given ledger state,
--- apply the certificate as a state transition function on the ledger state.
--- Otherwise, return a list of validation errors.
-certAsStateTransition
-  :: Slot
-  -> Ix
-  -> LedgerState crypto
-  -> (Ix, DCert crypto)
-  -> Either [ValidationError] (LedgerState crypto)
-certAsStateTransition slot txIx ls (clx, cert) =
-  case validDelegation cert (ls ^. delegationState) of
-    Invalid errors -> Left errors
-    Valid          -> Right $ ls & delegationState %~ applyDCert (Ptr slot txIx clx) cert
-
--- | Apply transition independent of validity, collect validation errors on the
--- way.
-asStateTransition'
-  :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
-     )
-  => Slot
-  -> PParams
-  -> LedgerValidation crypto
-  -> Tx crypto
-  -> GenDelegs crypto
-  -> LedgerValidation crypto
-asStateTransition' slot pp (LedgerValidation valErrors ls) tx d' =
-    let ls' = applyTxBody ls pp (tx ^. body) in
-    case validTx tx d' slot pp ls of
-      Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
-      Valid          -> LedgerValidation valErrors ls'
-
 -- Functions for stake delegation model
-
--- |Retire the appropriate stake pools when the epoch changes.
-retirePools
-  :: LedgerState crypto
-  -> Epoch
-  -> LedgerState crypto
-retirePools ls@(LedgerState _ ds _) epoch =
-    ls & delegationState .~
-           (ds & pstate . stPools .~
-                 (StakePools $ Map.filterWithKey
-                        (\hk _ -> Map.notMember hk retiring')
-                        stakePools)
-               & pstate . retiring .~ active)
-  where (active, retiring') = Map.partition (epoch /=) (ds ^. pstate . retiring)
-        (StakePools stakePools) = ds ^. pstate . stPools
 
 -- |Calculate the change to the deposit pool for a given transaction.
 depositPoolChange
@@ -893,77 +683,6 @@ applyUTxOUpdate
   -> TxBody crypto
   -> UTxOState crypto
 applyUTxOUpdate u tx = u & utxo .~ txins tx ⋪ (u ^. utxo) ∪ txouts tx
-
--- |Apply a delegation certificate as a state transition function on the ledger state.
-applyDCert
-  :: Ptr
-  -> DCert crypto
-  -> DPState crypto
-  -> DPState crypto
-
-applyDCert ptr dcert@(RegKey _) ds =
-  ds & dstate %~ applyDCertDState ptr dcert
-
-applyDCert ptr dcert@(DeRegKey _) ds =
-  ds & dstate %~ applyDCertDState ptr dcert
-
-applyDCert ptr dcert@(RegPool _) ds = ds & pstate %~ applyDCertPState ptr dcert
-
-applyDCert ptr dcert@(RetirePool _ _) ds =
-  ds & pstate %~ applyDCertPState ptr dcert
-
-applyDCert _ (GenesisDelegate _) ds = ds -- TODO: check this
-
-applyDCert _ (InstantaneousRewards _) _ = undefined
-
--- TODO do we also have to check hashKey target?
-applyDCert ptr dcert@(Delegate _) ds =
-  ds & dstate %~ applyDCertDState ptr dcert
-
-applyDCertDState
-  :: Ptr
-  -> DCert crypto
-  -> DState crypto
-  -> DState crypto
-applyDCertDState (Ptr slot txIx clx) (DeRegKey key) ds =
-    ds & stkCreds      .~ (StakeCreds $ Map.delete hksk stkcreds')
-       & rewards     %~ Map.delete (RewardAcnt hksk)
-       & delegations %~ Map.delete hksk
-       & ptrs        %~ Map.delete (Ptr slot txIx clx)
-        where hksk = key
-              (StakeCreds stkcreds') = ds ^. stkCreds
-
-applyDCertDState (Ptr slot txIx clx) (RegKey key) ds =
-    ds & stkCreds  .~ (StakeCreds $ Map.insert hksk slot stkcreds')
-       & rewards %~ Map.insert (RewardAcnt hksk) (Coin 0)
-       & ptrs    %~ Map.insert (Ptr slot txIx clx) hksk
-        where hksk = key
-              (StakeCreds stkcreds') = ds ^. stkCreds
-
-applyDCertDState _ (Delegate (Delegation source target)) ds =
-    ds & delegations %~ Map.insert source target
-
-applyDCertDState _ _ ds = ds
-
-applyDCertPState
-  :: Ptr
-  -> DCert crypto
-  -> PState crypto
-  -> PState crypto
-applyDCertPState (Ptr slot _ _ ) (RegPool sp) ps =
-    ps & stPools  .~ (StakePools $ Map.insert hsk slot' pools)
-       & pParams  %~ Map.insert hsk sp
-       & retiring %~ Map.delete hsk
-  where hsk = sp ^. poolPubKey
-        (StakePools pools) = ps ^. stPools
-        slot' = fromMaybe slot (Map.lookup hsk pools)
-
--- TODO check epoch (not in new doc atm.)
-applyDCertPState _ (RetirePool key epoch) ps =
-  ps & retiring %~ Map.insert key epoch
-
--- | Use only pool registration or retirement certificates
-applyDCertPState _ _ ps = ps
 
 ---------------------------------
 -- epoch boundary calculations --
