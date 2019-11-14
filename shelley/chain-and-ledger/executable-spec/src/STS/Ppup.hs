@@ -64,15 +64,13 @@ ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
   TRC (PPUPEnv s pp (GenDelegs _genDelegs), pupS, pup@(PPUpdate pup')) <- judgmentContext
 
-  pup' /= Map.empty ?! PPUpdateEmpty
+  not (Map.null pup') ?! PPUpdateEmpty
 
   all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
 
   (dom pup' ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup') (dom _genDelegs)
 
-  let Epoch slotEpoch = epochFromSlot (Slot 1)
-  s
-    <  (firstSlot (Epoch $ slotEpoch + 1) *- slotsPrior)
-    ?! PPUpdateTooLatePPUP
+  let Epoch e = epochFromSlot s
+  s < firstSlot (Epoch $ e + 1) *- slotsPrior ?! PPUpdateTooLatePPUP
 
   pure $ updatePPup pupS pup
