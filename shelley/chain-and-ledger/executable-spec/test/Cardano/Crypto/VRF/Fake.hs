@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -22,11 +23,13 @@ import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (nonNegIntR)
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm(..))
+import Data.Data (Data)
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 
 data FakeVRF
+  deriving Data
 
 -- | A class for seeds which sneakily contain the certified natural we wish to
 -- "randomly" derive from them.

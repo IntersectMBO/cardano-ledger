@@ -3,7 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Generator.Core
-  ( findPayKeyPair
+  ( GenValidity (..)
+  , findPayKeyPair
   , genBool
   , genCoin
   , genInteger
@@ -38,6 +39,9 @@ import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, SignKey
 import           Numeric.Natural (Natural)
 import           Tx (pattern TxOut)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
+
+-- | Switch between generating Valid or Invalid values
+data GenValidity = GenValid | GenInvalid
 
 genBool :: Gen Bool
 genBool = Gen.enumBounded

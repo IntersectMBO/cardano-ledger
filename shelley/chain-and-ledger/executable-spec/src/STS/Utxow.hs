@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -12,6 +13,7 @@ module STS.Utxow
   )
 where
 
+import           Data.Data (Data)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Set as Set
@@ -34,6 +36,7 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Hedgehog (Gen)
 
 data UTXOW crypto
+  deriving Data
 
 instance
   ( Crypto crypto
@@ -52,7 +55,7 @@ instance
     | UtxoFailure (PredicateFailure (UTXO crypto))
     | MIRInsufficientGenesisSigsUTXOW
     | MIRImpossibleInDecentralizedNetUTXOW
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
 
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]

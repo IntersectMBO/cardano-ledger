@@ -12,20 +12,19 @@ import qualified Data.Set as Set
 
 import           Lens.Micro ((%~), (&), (.~), (^.))
 
+import           Hedgehog
+import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (LabelName (..))
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
-
-import           Hedgehog
-import qualified Hedgehog.Gen as Gen
 
 import           Coin
 import           Ledger.Core ((<|))
 import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
-import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
-                     registeredPoolIsAdded, rewardZeroAfterReg)
+import           Rules.TestLedger (credentialRemovedAfterDereg, invalidDelegSignalsAreGenerated,
+                     pStateIsInternallyConsistent, registeredPoolIsAdded, rewardZeroAfterReg)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -211,9 +210,12 @@ propertyTests = testGroup "Property-Based Testing"
                     classifyInvalidDoubleSpend
                   ]
                 , testGroup "Properties of Trace generators"
-                  [testProperty
-                   "Only valid LEDGER STS signals are generated"
-                   onlyValidLedgerSignalsAreGenerated
+                  [ testProperty
+                    "Only valid LEDGER STS signals are generated"
+                    onlyValidLedgerSignalsAreGenerated
+                  , testProperty
+                    "Invalid LEDGER STS signals are generated when required"
+                    invalidDelegSignalsAreGenerated
                   ]
                 ]
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -13,8 +14,10 @@ module STS.Ledger
   )
 where
 
+import           Data.Data (Data)
 import           Lens.Micro ((^.))
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin)
 import           Control.State.Transition
 import           Keys
@@ -25,9 +28,9 @@ import           STS.Delegs
 import           STS.Utxo (UtxoEnv (..))
 import           STS.Utxow
 import           Tx
-import           Cardano.Ledger.Shelley.Crypto
 
 data LEDGER crypto
+  deriving Data
 
 data LedgerEnv
   = LedgerEnv
@@ -51,7 +54,7 @@ instance
   data PredicateFailure (LEDGER crypto)
     = UtxowFailure (PredicateFailure (UTXOW crypto))
     | DelegsFailure (PredicateFailure (DELEGS crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules = []
   transitionRules = [ledgerTransition]

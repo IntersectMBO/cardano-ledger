@@ -31,6 +31,7 @@ module Control.State.Transition.Generator
   , traceWithProfile
   , traceOfLength
   , traceOfLengthWithInitState
+  , traceSigGenWithProfileAndInitState
   , traceSuchThat
   , ofLengthAtLeast
   , suchThatLastState
@@ -55,6 +56,7 @@ module Control.State.Transition.Generator
   , onlyValidSignalsAreGenerated
   , onlyValidSignalsAreGeneratedForTrace
   , invalidSignalsAreGenerated
+  , invalidSignalsAreGeneratedForTrace
   -- * Helpers
   , tinkerWithSigGen
   , coverFailures
@@ -128,9 +130,9 @@ class STS s => HasTrace s where
   traceOfLengthWithInitState
     :: Word64
     -- ^ Desired length of the generated trace. If the signal generator can generate invalid signals
-    -- then the resulting trace might not have the given length.
     -> (Environment s -> Gen (State s))
     -- ^ A generator for Initial State, given the STS environment
+    -- then the resulting trace might not have the given length.
     -> Gen (Trace s)
   traceOfLengthWithInitState n mkSt0
     = traceSigGenWithProfileAndInitState (Desired n) allValid (sigGen @s) mkSt0
@@ -363,18 +365,18 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
         signalShrinksChilren = nodeChildren $ fromMaybe err $ Manual.unwrapTreeT signalShrinks
 
 
--- | Generate an invalid trace
+-- | Given a valid trace generator, Generate an invalid trace
 --
 invalidTrace
   :: forall s
    . HasTrace s
-  => Word64
-  -- ^ Maximum length of the generated traces.
+  => Gen (Trace s)
+  -- ^ Valid Trace generator
   -> [(Int, SignalGenerator s)]
   -- ^ Trace failure profile to be used to get an invalid signal.
   -> Gen (Invalid.Trace s)
-invalidTrace maxTraceLength failureProfile = do
-  tr <- trace @s maxTraceLength
+invalidTrace trGen failureProfile = do
+  tr <- trGen
   let env = _traceEnv tr
       st = lastState tr
   iSig <- generateSignalWithFailureProportions @s failureProfile env st
@@ -641,7 +643,7 @@ coverFailures
   -> a
   -- ^ Structure containing the failures
   -> m ()
-coverFailures coverPercentage targetFailures failureStructure = do
+coverFailures coverPercentage targetFailures failureStructure =
   traverse_ coverFailure (toConstr <$> targetFailures)
   where
     coverFailure predicateFailureConstructor =
@@ -656,26 +658,40 @@ coverFailures coverPercentage targetFailures failureStructure = do
         failuresConstructors = toConstr <$> subFailures
 
 
+invalidSignalsAreGeneratedForTrace
+  :: forall s
+   . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
+  => Gen (Trace s)
+  -- ^ Trace generator.
+  -> [(Int, SignalGenerator s)]
+  -- ^ Failure profile.
+  -> ([[PredicateFailure s]] -> PropertyT IO ())
+  -- ^ Action to run when the an invalid signal is generated.
+  -> CoverPercentage
+  -- ^ Required coverage percentage of STS failures
+  -> Property
+invalidSignalsAreGeneratedForTrace genValidTrace failureProfile checkFailures coverPercentage
+  = property $ do
+    tr <- forAll (invalidTrace genValidTrace failureProfile)
+
+    cover coverPercentage
+      "Invalid signals are generated when requested"
+      (isLeft $ Invalid.errorOrLastState tr)
+
+    either checkFailures (const success) (Invalid.errorOrLastState tr)
+
 invalidSignalsAreGenerated
   :: forall s
    . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
   => [(Int, SignalGenerator s)]
   -- ^ Failure profile.
   -> Word64
-  -- ^ Maximum trace length.
+  -- ^ Maximum length of the generated traces.
   -> ([[PredicateFailure s]] -> PropertyT IO ())
-  -- ^ Action to run when the an invalid signal is generated.
+  -- ^ Action to run when an invalid signal is generated.
   -> Property
-invalidSignalsAreGenerated failureProfile maximumTraceLength checkFailures = property $ do
-
-  tr <- forAll (invalidTrace @s maximumTraceLength failureProfile)
-
-  cover 80
-    "Invalid signals are generated when requested"
-    (isLeft $ Invalid.errorOrLastState tr)
-
-  either checkFailures (const success) (Invalid.errorOrLastState tr)
-
+invalidSignalsAreGenerated failureProfile maximumTraceLength checkFailures =
+  invalidSignalsAreGeneratedForTrace (trace @s maximumTraceLength) failureProfile checkFailures 80
 
 --------------------------------------------------------------------------------
 -- Helpers

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -6,7 +7,7 @@ module STS.Pool
   , PoolEnv (..)
   )
 where
-
+import           Data.Data (Data)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -26,6 +27,7 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Hedgehog (Gen)
 
 data POOL crypto
+  deriving Data
 
 data PoolEnv =
   PoolEnv Slot PParams
@@ -40,7 +42,7 @@ instance STS (POOL crypto)
     = StakePoolNotRegisteredOnKeyPOOL
     | StakePoolRetirementWrongEpochPOOL
     | WrongCertificateTypePOOL
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules = [pure emptyPState]
   transitionRules = [poolDelegationTransition]

@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -12,11 +13,15 @@ module STS.Utxo
   )
 where
 
+import           Data.Data (Data)
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-
+import           Hedgehog (Gen)
 import           Lens.Micro ((^.))
+
+import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Coin
 import           Delegation.Certificates
@@ -25,20 +30,15 @@ import           Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import           LedgerState
 import           PParams
 import           Slot
+import           STS.Up
 import           Tx
-
 import           Updates
 import           UTxO
 
 import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
-
-import           STS.Up
-
-import           Hedgehog (Gen)
 
 data UTXO crypto
+  deriving Data
 
 data UtxoEnv crypto
   = UtxoEnv
@@ -69,7 +69,8 @@ instance
                                               -- failures?
     | UnexpectedSuccessUTXO
     | UpdateFailure (PredicateFailure (UP crypto))
-    deriving (Eq, Show)
+    deriving (Eq, Show, Data)
+
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
 

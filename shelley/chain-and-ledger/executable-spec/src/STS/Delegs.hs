@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,9 +12,9 @@ module STS.Delegs
   )
 where
 
-import qualified Data.Set as Set
-
+import           Data.Data (Data)
 import           Data.Sequence (Seq (..))
+import qualified Data.Set as Set
 
 import           Coin (Coin)
 import           Delegation.Certificates
@@ -34,6 +35,7 @@ import           Ledger.Core (dom, (∈), (⊆), (⨃))
 import           Hedgehog (Gen)
 
 data DELEGS crypto
+  deriving Data
 
 data DelegsEnv crypto
   = DelegsEnv
@@ -56,7 +58,7 @@ instance
     = DelegateeNotRegisteredDELEG
     | WithrawalsNotInRewardsDELEGS
     | DelplFailure (PredicateFailure (DELPL crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules    = [ pure emptyDelegation ]
   transitionRules = [ delegsTransition     ]

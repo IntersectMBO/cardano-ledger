@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -8,8 +9,9 @@ module STS.Ppup
   )
 where
 
+import           Data.Data (Data)
+import           Data.Ix (inRange)
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
 
 import           BaseTypes
 import           BlockChain
@@ -20,10 +22,10 @@ import           Slot
 import           Updates
 
 import           Control.State.Transition
-import           Data.Ix (inRange)
 import           Numeric.Natural (Natural)
 
 data PPUP crypto
+  deriving Data
 
 data PPUPEnv crypto
   = PPUPEnv Slot PParams (GenDelegs crypto)
@@ -33,12 +35,14 @@ instance STS (PPUP crypto) where
   type Signal (PPUP crypto) = PPUpdate crypto
   type Environment (PPUP crypto) = PPUPEnv crypto
   data PredicateFailure (PPUP crypto)
-    = NonGenesisUpdatePPUP (Set (GenKeyHash crypto)) (Set (GenKeyHash crypto))
+    = NonGenesisUpdatePPUP String String
+    -- ^ we use string representations of (dom pup) (dom delegs) to
+    -- avoid the need for Data instances on the underlying crypto types
     | PPUpdateTooLatePPUP
     | PPUpdateEmpty
     | PPUpdateNonEmpty
     | PVCannotFollowPPUP
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules = []
 
@@ -68,7 +72,7 @@ ppupTransitionNonEmpty = do
 
   all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
 
-  (dom pup' ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup') (dom _genDelegs)
+  (dom pup' ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (show (dom pup')) (show (dom _genDelegs))
 
   let Epoch slotEpoch = epochFromSlot (Slot 1)
   s

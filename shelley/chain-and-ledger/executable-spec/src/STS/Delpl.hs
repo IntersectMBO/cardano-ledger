@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,6 +11,8 @@ module STS.Delpl
   , PredicateFailure(..)
   )
 where
+
+import           Data.Data (Data)
 
 import           Coin (Coin)
 import           Delegation.Certificates
@@ -25,6 +28,7 @@ import           STS.Deleg
 import           STS.Pool
 
 data DELPL crypto
+  deriving Data
 
 data DelplEnv
   = DelplEnv
@@ -47,7 +51,7 @@ instance
     | ScriptNotInWitnessDELPL
     | ScriptHashNotMatchDELPL
     | ScriptDoesNotValidateDELPL
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules    = [ pure emptyDelegation ]
   transitionRules = [ delplTransition      ]

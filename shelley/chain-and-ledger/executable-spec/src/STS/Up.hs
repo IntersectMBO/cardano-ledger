@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,6 +10,8 @@ module STS.Up
   , UpdateEnv(..)
   )
 where
+
+import           Data.Data (Data)
 
 import           Keys
 import           PParams
@@ -22,6 +25,7 @@ import           STS.Avup
 import           STS.Ppup
 
 data UP crypto
+  deriving Data
 
 data UpdateEnv crypto
   = UpdateEnv Slot PParams (GenDelegs crypto)
@@ -34,7 +38,7 @@ instance Crypto crypto => STS (UP crypto) where
     = NonGenesisUpdateUP
     | AvupFailure (PredicateFailure (AVUP crypto))
     | PpupFailure (PredicateFailure (PPUP crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules = []
   transitionRules = [upTransition]

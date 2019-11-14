@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -8,6 +9,7 @@ module STS.Deleg
   )
 where
 
+import           Data.Data (Data)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
@@ -27,6 +29,7 @@ import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 import           Hedgehog (Gen)
 
 data DELEG crypto
+  deriving Data
 
 data DelegEnv
   = DelegEnv
@@ -51,7 +54,7 @@ instance STS (DELEG crypto)
     | DuplicateGenesisDelegateDELEG
     | InsufficientForInstantaneousRewardsDELEG
     | MIRCertificateTooLateinEpochDELEG
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]

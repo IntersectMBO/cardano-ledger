@@ -20,7 +20,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           Coin (Coin (..), splitCoin)
-import           Generator.Core (findPayKeyPair, toAddr)
+import           Generator.Core (GenValidity, findPayKeyPair, toAddr)
 import           Generator.Delegation (genDCerts)
 import           LedgerState (pattern UTxOState)
 import           MockTypes (Addr, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn, TxOut, UTxO,
@@ -39,8 +39,9 @@ genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
       -> VrfKeyPairs
+      -> GenValidity
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys vrfKeys = do
+genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys vrfKeys validity = do
   keys' <- Gen.shuffle keys
 
   -- inputs
@@ -55,7 +56,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys vrfKeys 
 
   -- certificates
   (certs, certWitnesses, deposits_, refunds_)
-    <- genDCerts keys' vrfKeys pparams dpState slotWithTTL
+    <- genDCerts keys' vrfKeys pparams dpState slotWithTTL validity
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   when (spendingBalance < deposits_) Gen.discard

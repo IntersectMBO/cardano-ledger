@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -23,18 +24,19 @@ module Slot
   )
 where
 
-import           Data.Word                      ( Word64 )
-import           Numeric.Natural                ( Natural )
-import           GHC.Generics                   ( Generic )
-import           Cardano.Binary                 ( ToCBOR )
-import           Cardano.Prelude                ( NoUnexpectedThunks(..) )
+import           Data.Data (Data)
+import           Numeric.Natural (Natural)
+import           Data.Word ( Word64 )
+import           GHC.Generics ( Generic )
 
-import qualified Ledger.Core                   as Byron
-                                                ( Slot(..) )
+import           Cardano.Binary (ToCBOR)
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+
+import qualified Ledger.Core as Byron (Slot (..))
 
 -- |A Slot
 newtype Slot = Slot Natural
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, ToCBOR)
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, ToCBOR, Data)
 
 instance Semigroup Slot where
   (Slot x) <> (Slot y) = Slot $ x + y

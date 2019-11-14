@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -9,6 +10,7 @@ module STS.Avup
   )
 where
 
+import           Data.Data (Data)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
@@ -22,6 +24,7 @@ import           Data.Maybe
 import           Ledger.Core (dom, range, (⊆), (⨃))
 
 data AVUP crypto
+  deriving Data
 
 data AVUPState crypto
   = AVUPState
@@ -46,7 +49,7 @@ instance STS (AVUP crypto) where
     | CannotFollow
     | InvalidName
     | InvalidSystemTags
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
   initialRules = []
 

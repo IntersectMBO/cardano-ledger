@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -120,6 +121,7 @@ import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
 import           Control.Monad (foldM)
+import           Data.Data (Data)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -199,7 +201,7 @@ data ValidationError =
   | StakeDelegationImpossible
   -- | Stake pool not registered for key, cannot be retired.
   | StakePoolNotRegisteredOnKey
-    deriving (Show, Eq, Generic)
+    deriving (Show, Eq, Generic, Data)
 
 instance NoUnexpectedThunks ValidationError
 
