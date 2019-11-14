@@ -34,8 +34,18 @@ type MempoolEnv = Ledgers.LedgersEnv
 type MempoolState = LedgerState.LedgerState
 
 -- | Construct the environment used to validate transactions from the full
--- ledger state. Note that this also requires the slot in which transactions are
--- being submitted.
+-- ledger state.
+--
+-- Note that this function also takes a slot. During slot validation, the slot
+-- given here is the slot of the block containing the transactions. This slot is
+-- used for quite a number of things, but in general these do not determine the
+-- validity of the transaction. There are two exceptions:
+--
+-- - Each transaction has a ttl (time-to-live) value. If the slot is beyond this
+--   value, then the transaction is invalid.
+-- - If the transaction contains a protocol update proposal, then it may only be
+--   included until a certain number of slots before the end of the epoch. A
+--   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
   ShelleyState crypto ->
   Slot ->

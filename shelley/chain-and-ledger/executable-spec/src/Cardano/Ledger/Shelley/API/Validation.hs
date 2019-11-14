@@ -7,8 +7,6 @@
 -- API.
 module Cardano.Ledger.Shelley.API.Validation
   ( ShelleyState,
-    mkBbodyEnv,
-    mkBheadEnv,
     applyHeaderTransition,
     applyBlockTransition,
   )
@@ -39,7 +37,6 @@ mkBheadEnv ::
 mkBheadEnv = STS.BheadEnv . LedgerState.getGKeys
 
 mkBbodyEnv ::
-  -- | @NewEpochState@ is also the state of the @BHEAD@ transition system.
   ShelleyState crypto ->
   STS.BbodyEnv
 mkBbodyEnv
