@@ -1,9 +1,17 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+
 
 module Generator
-    (
-      utxoSize
+    ( utxoSize
     , utxoMap
     , genNonEmptyAndAdvanceTx
     , genNonEmptyAndAdvanceTx'
@@ -15,6 +23,8 @@ module Generator
     , genDelegation
     , genDCertDelegate
     , genKeyPairs
+    , asStateTransition
+    , asStateTransition'
     ) where
 
 import           Data.Map.Strict (Map)
@@ -30,20 +40,30 @@ import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
+
 import           Coin
+import           Control.State.Transition (TRC (..), applySTS)
 import           Generator.Core (findPayKeyPair, genNatural)
 import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (pattern LedgerValidation, dstate, genesisCoins, genesisState,
-                     stkCreds, utxo, utxoState)
+import           LedgerState (pattern LedgerValidation, applyTxBody, dstate, genesisCoins,
+                     genesisState, stkCreds, utxo, utxoState, validTx, _delegationState, _dstate,
+                     _genDelegs, _txSlotIx, _utxoState)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
-import           STS.Ledger (asStateTransition, asStateTransition')
-import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
+import           STS.Delegs (pattern DelegateeNotRegisteredDELEG, PredicateFailure (..),
+                     pattern WithrawalsNotInRewardsDELEGS)
+import           STS.Ledger (LedgerEnv (..), PredicateFailure (..))
+import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern FeeTooSmallUTxO,
+                     pattern InputSetEmptyUTxO, pattern ValueNotConservedUTxO)
+import           STS.Utxow (pattern InvalidWitnessesUTXOW, pattern MissingScriptWitnessesUTXOW,
+                     pattern MissingVKeyWitnessesUTXOW, PredicateFailure (..))
+import           Tx (pattern Tx, pattern TxBody, pattern TxOut, body)
 import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, pattern Delegation,
                      pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..))
 import           Updates
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
-import           Validation (ValidationError (..))
+import           Validation (ValidationError (..), Validity (..))
+
 
 import           MockTypes
 import           Mutator
@@ -299,3 +319,83 @@ genDelegation keys d = do
 
 genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
 genDCertDelegate keys ds = Delegate <$> genDelegation keys ds
+
+-- |In the case where a transaction is valid for a given ledger state,
+-- apply the transaction as a state transition function on the ledger state.
+-- Otherwise, return a list of validation errors.
+asStateTransition
+  :: Slot
+  -> PParams
+  -> LedgerState
+  -> Tx
+  -> Coin
+  -> Either [ValidationError] LedgerState
+asStateTransition _slot pp ls tx res =
+  let next = applySTS @LEDGER (TRC ((LedgerEnv _slot (_txSlotIx ls) pp res)
+                                   , (_utxoState ls, _delegationState ls)
+                                   , tx))
+  in
+  case next of
+    Left pfs -> Left $ convertPredicateFailuresToValidationErrors pfs
+    Right (u, d)  -> Right $ ls { _utxoState = u
+                                , _delegationState = d
+                                , _txSlotIx = 1 + _txSlotIx ls
+                                }
+
+-- | Apply transition independent of validity, collect validation errors on the
+-- way.
+asStateTransition'
+  -- :: ( Crypto crypto
+  --    , Signable (DSIGN crypto) (TxBody crypto)
+  --    )
+  -- =>
+  :: Slot
+  -> PParams
+  -> LedgerValidation
+  -> Tx
+  -> Coin
+  -> LedgerValidation
+asStateTransition' _slot pp (LedgerValidation valErrors ls) tx _ =
+    let ls' = applyTxBody ls pp (tx ^. body)
+        d'  = (_genDelegs . _dstate . _delegationState) ls
+    in
+    case validTx tx d' _slot pp ls of
+      Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
+      Valid          -> LedgerValidation valErrors ls'
+
+convertPredicateFailuresToValidationErrors :: [[PredicateFailure LEDGER]] -> [ValidationError]
+convertPredicateFailuresToValidationErrors pfs =
+  map predicateFailureToValidationError $ foldr (++) [] pfs
+
+predicateFailureToValidationError :: PredicateFailure LEDGER -> ValidationError
+
+predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW))
+  = MissingWitnesses
+predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW))
+  = MissingWitnesses
+
+predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW))
+  = InvalidWitness
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure InputSetEmptyUTxO))
+  = InputSetEmpty
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ExpiredUTxO a b)))
+  = Expired a b
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure BadInputsUTxO))
+  = BadInputs
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (FeeTooSmallUTxO a b)))
+  = FeeTooSmall a b
+
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO a b)))
+  = ValueNotConserved a b
+
+predicateFailureToValidationError (DelegsFailure DelegateeNotRegisteredDELEG)
+  = StakeDelegationImpossible
+
+predicateFailureToValidationError (DelegsFailure WithrawalsNotInRewardsDELEGS)
+  = IncorrectRewards
+
+predicateFailureToValidationError _ = UnknownValidationError

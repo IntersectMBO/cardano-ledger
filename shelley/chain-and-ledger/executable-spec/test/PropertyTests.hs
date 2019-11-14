@@ -27,7 +27,6 @@ import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relev
 import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
                      registeredPoolIsAdded, rewardZeroAfterReg)
 import           Slot
-import           STS.Ledger (asStateTransition)
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
 import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey)

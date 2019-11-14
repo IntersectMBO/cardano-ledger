@@ -21,6 +21,7 @@ import qualified Cardano.Crypto.VRF.Fake as FakeVRF
 import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey, pattern RegPool,
                      pattern RetirePool, StakeCreds (..), StakePools (..))
+import           Generator (asStateTransition)
 import           TxData (pattern AddrBase, Credential (..), Delegation (..), pattern PoolParams,
                      pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
@@ -32,7 +33,6 @@ import           LedgerState (pattern LedgerState, pattern UTxOState, delegation
                      pParams, pstate, ptrs, retiring, rewards, stPools, stkCreds)
 import           PParams
 import           Slot
-import           STS.Ledger (asStateTransition)
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, body, ttl)
 import           Updates
 import           UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
