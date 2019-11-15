@@ -190,6 +190,7 @@ groupByPool active delegs =
     | hk <- Map.keys delegs
     ]
 
+-- | Snapshot of the stake pools, and pool parameters.
 data SnapShots crypto
   = SnapShots
     { _pstakeMark
