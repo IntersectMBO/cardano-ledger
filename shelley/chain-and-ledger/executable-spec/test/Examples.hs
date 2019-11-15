@@ -122,6 +122,7 @@ import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, 
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      addStakeCreds, _paymentObj, _poolCost, _poolMargin, _poolOwners, _poolPledge,
                      _poolPubKey, _poolRAcnt, _poolVrf)
+import qualified TxData(TxBody(..))
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
                      pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState,
@@ -216,6 +217,7 @@ coreNodeKeys = snd . (coreNodes !!)
 genDelegs :: Map GenKeyHash KeyHash
 genDelegs = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
 
+-- | There are only two applications on test Byron blockchain:
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
                             [ (ApName $ pack "Daedalus", (ApVer 16, Mdt Map.empty))
@@ -364,7 +366,7 @@ dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
 
 -- * Example 1 - apply CHAIN transition to an empty block
 
-
+-- | Empty set of UTxOs. No coins to be spent.
 utxostEx1 :: UTxOState
 utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
@@ -488,24 +490,33 @@ expectedStEx1 = ChainState
   (bhHash (bheader blockEx1))
   (Slot 1)
 
+-- | Wraps example all together.
 ex1 :: CHAINExample
 ex1 = CHAINExample (Slot 1) initStEx1 blockEx1 (Right expectedStEx1)
 
 
 -- * Example 2A - apply CHAIN transition to register stake keys and a pool
 
-
+-- | Unspent transaction output for example 2A,
+--   so that users actually have coins to spend.
 utxoEx2A :: UTxO
 utxoEx2A = genesisCoins
        [ TxOut aliceAddr aliceInitCoin
-       , TxOut bobAddr bobInitCoin]
+       , TxOut bobAddr   bobInitCoin
+       ]
 
+-- | Register a single pool with 255 coins of deposit
 ppupEx2A :: PPUpdate
-ppupEx2A = PPUpdate $ Map.singleton (hashKey $ coreNodeVKG 0) (Set.singleton (PoolDeposit 255))
+ppupEx2A = PPUpdate $ Map.singleton
+                        (hashKey $ coreNodeVKG 0) -- stake key
+                        (Set.singleton (PoolDeposit 255))
 
+-- | Update proposal that just changes protocol parameters,
+--   and does not change applications.
 updateEx2A :: Update
 updateEx2A = Update ppupEx2A (AVUpdate Map.empty)
 
+-- | Transaction body to be processed.
 txbodyEx2A :: TxBody
 txbodyEx2A = TxBody
            (Set.fromList [TxIn genesisId 0])
@@ -539,6 +550,7 @@ txEx2A = Tx
              ])
           Map.empty
 
+-- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
 alicePtrAddr = AddrPtr (_paymentObj aliceAddr) (Ptr (Slot 10) 0 0)
 
@@ -646,12 +658,13 @@ expectedLSEx2A = LedgerState
 blockEx2AHash :: HashHeader
 blockEx2AHash = bhHash (bheader blockEx2A)
 
+-- | Expected state after update is processed and STS applied.
 expectedStEx2A :: ChainState
 expectedStEx2A = ChainState
   (NewEpochState
-     (Epoch 0)
-     (BlocksMade Map.empty)
-     (BlocksMade Map.empty)
+     (Epoch   0)
+     (BlocksMade Map.empty) -- ^ Still no blocks
+     (BlocksMade Map.empty) -- ^ Still no blocks
      (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1)
      Nothing
      (PoolDistr Map.empty)
@@ -671,55 +684,59 @@ ex2A :: CHAINExample
 ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A (Right expectedStEx2A)
 
 
--- | Example 2B - process a block late enough in the epoch in order to create a reward update.
--- The block delegates Alice's and Bob's stake to Alice's pool.
--- Additionally, we split Alice's ADA between a base address and a pointer address.
+-- * Example 2B - process a block late enough in the epoch in order to create a reward update.
 
+-- | The transaction delegates Alice's and Bob's stake to Alice's pool.
+--   Additionally, we split Alice's ADA between a base address and a pointer address.
 txbodyEx2B :: TxBody
 txbodyEx2B = TxBody
-           (Set.fromList [TxIn (txid txbodyEx2A) 0])
-           [ TxOut aliceAddr (Coin 722)
-           , TxOut alicePtrAddr (Coin 9000) ]
-           (fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
-           , Delegate $ Delegation bobSHK (hk alicePool)
-           ])
-           Map.empty
-           (Coin 4)
-           (Slot 90)
-           emptyUpdate
+      { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2A) 0]
+      , TxData._outputs  = [ TxOut aliceAddr    (Coin 722)
+                           , TxOut alicePtrAddr (Coin 9000) ]
+      -- | Delegation certificates
+      , TxData._certs    = fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
+                                    , Delegate $ Delegation bobSHK   (hk alicePool)
+                                    ]
+      , TxData._wdrls    = Map.empty
+      , TxData._txfee    = Coin 4
+      , TxData._ttl      = Slot 90
+      , TxData._txUpdate = emptyUpdate
+      }
 
 txEx2B :: Tx
 txEx2B = Tx
-          txbodyEx2B
+          txbodyEx2B -- ^ Body of the transaction
           (makeWitnessesVKey txbodyEx2B [alicePay, aliceStake, bobStake, cold $ coreNodeKeys 0])
-          Map.empty
+                     -- ^ Witness verification key set
+          Map.empty  -- ^ Witness signature map
 
 blockEx2B :: Block
 blockEx2B = mkBlock
-             blockEx2AHash
-             (coreNodeKeys 3)
-             [txEx2B]
-             (Slot 90)
+             blockEx2AHash    -- ^ Hash of previous block
+             (coreNodeKeys 3) -- ^ Third genesis node
+             [txEx2B]         -- ^ Single transaction to record
+             (Slot 90)        -- ^ Current slot
              (BlockNo 2)
-             (mkNonce 0)
-             (NatNonce 2)
-             zero
-             1
+             (mkNonce 0)      -- ^ Epoch nonce
+             (NatNonce 2)     -- ^ Block nonce
+             zero             -- ^ Praos leader value
+             1                -- ^ Period of KES (key evolving signature scheme)
 
 blockEx2BHash :: HashHeader
 blockEx2BHash = bhHash (bheader blockEx2B)
 
 utxoEx2B :: UTxO
 utxoEx2B = UTxO . Map.fromList $
-                   [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr (Coin 722))
-                   , (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr (Coin 9000))
+                   [ (TxIn genesisId 1,         TxOut bobAddr      bobInitCoin) -- ^ Pay Bob from Genesis transaction
+                   , (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr    (Coin  722)) -- ^ Pay alice 722 coins from txEx2B
+                   , (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr (Coin 9000)) -- ^ And reward Alice's pointer address with 9000 coins
                    ]
 
+-- | Both Alice and Bob delegate to the Alice pool
 delegsEx2B :: Map Credential KeyHash
 delegsEx2B = Map.fromList
               [ (aliceSHK, hk alicePool)
-              , (bobSHK, hk alicePool)
+              , (bobSHK,   hk alicePool)
               ]
 
 dsEx2B :: DState
@@ -739,38 +756,45 @@ expectedLSEx2B = LedgerState
 
 expectedStEx2Bgeneric :: PParams -> ChainState
 expectedStEx2Bgeneric pp = ChainState
+  -- | New state of the epoch
   (NewEpochState
-     (Epoch 0)
-     (BlocksMade Map.empty)
-     (BlocksMade Map.empty)
+     (Epoch   0)            -- ^ First epoch
+     (BlocksMade Map.empty) -- ^ Blocks made before current
+     (BlocksMade Map.empty) -- ^ Blocks made before current
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
+                            -- ^ Previous epoch state
      (Just RewardUpdate { deltaT        = Coin 0
                         , deltaR        = Coin (-110)
                         , rs            = Map.empty
                         , deltaF        = Coin 0
                         , updateIRwd    = Map.fromList [(carlSHK, 110)]
-                        })
+                        })  -- ^ Update reward
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
   (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1 ⭒ mkNonce 2)
-  (mkNonce 0 ⭒ mkNonce 1)
-  blockEx2BHash
-  (Slot 90)
+  (mkNonce 0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- ^ Evolving nonce
+  (mkNonce 0 ⭒ mkNonce 1)             -- ^ Candidate nonce
+  blockEx2BHash                       -- ^ Hash header of the chain
+  (Slot 90)                           -- ^ Current slot
 
+-- | Expected state after transition
 expectedStEx2B :: ChainState
 expectedStEx2B = expectedStEx2Bgeneric ppsEx1
 
+-- | Expected state after transition, variant with no decay
 expectedStEx2Bbis :: ChainState
 expectedStEx2Bbis = expectedStEx2Bgeneric ppsExNoDecay
 
+-- | Expected state after transition, variant with full refund
 expectedStEx2Bter :: ChainState
 expectedStEx2Bter = expectedStEx2Bgeneric ppsExFullRefund
 
+-- | Expected state after transtion, variant with instant decay
 expectedStEx2Bquater :: ChainState
 expectedStEx2Bquater = expectedStEx2Bgeneric ppsExInstantDecay
 
+-- | Wrap plain example
 ex2B :: CHAINExample
 ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
 

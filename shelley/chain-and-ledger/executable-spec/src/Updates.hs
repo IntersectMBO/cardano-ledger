@@ -74,10 +74,12 @@ newtype Mdt crypto = Mdt (Map SystemTag (InstallerHash crypto))
 
 deriving instance Crypto crypto => ToCBOR (Mdt crypto)
 
+-- | List of applications on the blockchain and their versions.
 newtype Applications crypto = Applications {
   apps :: Map ApName (ApVer, Mdt crypto)
   } deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
 
+-- | A single update of the @Applications list.
 newtype AVUpdate crypto = AVUpdate {
   aup :: Map (GenKeyHash crypto) (Applications crypto)
   } deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
@@ -100,6 +102,8 @@ data PPUpdateEnv crypto = PPUpdateEnv {
 
 instance NoUnexpectedThunks (PPUpdateEnv crypto)
 
+-- | Protocol parameter selector, contains just a single field to be updated
+--   within @PPUpdate
 data Ppm = MinFeeA Integer
   | MinFeeB Natural
   | MaxBBSize Natural
@@ -174,6 +178,7 @@ instance ToCBOR Ppm where
     ProtocolVersion protocolVersion ->
       encodeListLen 2 <> toCBOR (18 :: Word8) <> toCBOR protocolVersion
 
+-- | Update operation for protocol parameters structure @PParams
 newtype PPUpdate crypto
   = PPUpdate (Map (GenKeyHash crypto) (Set Ppm))
   deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)

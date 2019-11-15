@@ -158,11 +158,12 @@ newtype StakeShare =
   StakeShare Rational
   deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
-data DState crypto= DState
+-- | State of staking pool delegations and rewards
+data DState crypto = DState
     {  -- |The active stake keys.
-      _stkCreds    :: StakeCreds crypto
-      -- |The active accounts.
-    ,  _rewards    :: RewardAccounts crypto
+      _stkCreds    :: StakeCreds           crypto
+      -- |The active reward accounts.
+    ,  _rewards    :: RewardAccounts       crypto
       -- |The current delegations.
     , _delegations :: Map (StakeCredential crypto) (KeyHash crypto)
       -- |The pointed to hash keys.
@@ -177,7 +178,8 @@ data DState crypto= DState
 
 instance NoUnexpectedThunks (DState crypto)
 
-data PState crypto= PState
+-- | Current state of staking pools and their certificate counters.
+data PState crypto = PState
     { -- |The active stake pools.
       _stPools     :: StakePools crypto
       -- |The pool parameters.
@@ -188,8 +190,8 @@ data PState crypto= PState
 
 instance NoUnexpectedThunks (PState crypto)
 
--- |The state associated with the current stake delegation.
-data DPState crypto=
+-- | The state associated with the current stake delegation.
+data DPState crypto =
     DPState
     {
       _dstate :: DState crypto
@@ -279,13 +281,15 @@ instance NoUnexpectedThunks (UTxOState crypto)
 -- | New Epoch state and environment
 data NewEpochState crypto=
   NewEpochState {
-    nesEL    :: Epoch
-  , nesBprev :: BlocksMade crypto
-  , nesBcur  :: BlocksMade crypto
-  , nesEs    :: EpochState crypto
-  , nesRu    :: Maybe (RewardUpdate crypto)
-  , nesPd    :: PoolDistr crypto
-  , nesOsched :: Map Slot (Maybe (GenKeyHash crypto))
+    nesEL     :: Epoch                       -- ^ Last epoch
+  , nesBprev  :: BlocksMade          crypto  -- ^ Blocks made before current epoch
+  , nesBcur   :: BlocksMade          crypto  -- ^ Blocks made in current epoch
+  , nesEs     :: EpochState          crypto  -- ^ Epoch state before current
+  , nesRu     :: Maybe (RewardUpdate crypto) -- ^ Possible reward update
+  , nesPd     :: PoolDistr           crypto  -- ^ Stake distribution within the stake pool
+  , nesOsched :: Map  Slot
+                     (Maybe
+                       (GenKeyHash   crypto))  -- ^ Overlay schedule for PBFT vs Praos
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochState crypto)
