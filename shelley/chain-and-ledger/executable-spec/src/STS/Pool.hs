@@ -19,23 +19,24 @@ import           PParams
 import           Slot
 import           TxData
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data POOL hashAlgo dsignAlgo vrfAlgo
+data POOL crypto
 
 data PoolEnv =
   PoolEnv Slot PParams
   deriving (Show, Eq)
 
-instance STS (POOL hashAlgo dsignAlgo vrfAlgo)
+instance STS (POOL crypto)
  where
-  type State (POOL hashAlgo dsignAlgo vrfAlgo) = PState hashAlgo dsignAlgo vrfAlgo
-  type Signal (POOL hashAlgo dsignAlgo vrfAlgo) = DCert hashAlgo dsignAlgo vrfAlgo
-  type Environment (POOL hashAlgo dsignAlgo vrfAlgo) = PoolEnv
-  data PredicateFailure (POOL hashAlgo dsignAlgo vrfAlgo)
+  type State (POOL crypto) = PState crypto
+  type Signal (POOL crypto) = DCert crypto
+  type Environment (POOL crypto) = PoolEnv
+  data PredicateFailure (POOL crypto)
     = StakePoolNotRegisteredOnKeyPOOL
     | StakePoolRetirementWrongEpochPOOL
     | WrongCertificateTypePOOL
@@ -44,7 +45,7 @@ instance STS (POOL hashAlgo dsignAlgo vrfAlgo)
   initialRules = [pure emptyPState]
   transitionRules = [poolDelegationTransition]
 
-poolDelegationTransition :: TransitionRule (POOL hashAlgo dsignAlgo vrfAlgo)
+poolDelegationTransition :: TransitionRule (POOL crypto)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let StakePools stPools_ = _stPools ps
@@ -59,7 +60,8 @@ poolDelegationTransition = do
                     }
         else -- re-register
           pure $ ps { _pParams = _pParams ps ⨃ (hk, poolParam)
-                    , _retiring = Set.singleton hk ⋪ _retiring ps }
+                    , _retiring = Set.singleton hk ⋪ _retiring ps
+                    }
 
     RetirePool hk (Epoch e) -> do
       let Epoch cepoch   = epochFromSlot slot
@@ -79,17 +81,17 @@ poolDelegationTransition = do
 -- would require an Ord instance for PParams, which we don't need otherwise.
 -- Instead, we just define these operators here.
 
-(⨃) :: Map (KeyHash hashAlgo dsignAlgo) a
-    -> (KeyHash hashAlgo dsignAlgo, a)
-    -> Map (KeyHash hashAlgo dsignAlgo) a
+(⨃) :: Map (KeyHash crypto) a
+    -> (KeyHash crypto, a)
+    -> Map (KeyHash crypto) a
 m ⨃ (k,v) = Map.union (Map.singleton k v) m
 
-(∪) :: Map (KeyHash hashAlgo dsignAlgo) a
-    -> (KeyHash hashAlgo dsignAlgo, a)
-    -> Map (KeyHash hashAlgo dsignAlgo) a
+(∪) :: Map (KeyHash crypto) a
+    -> (KeyHash crypto, a)
+    -> Map (KeyHash crypto) a
 m ∪ (k,v) = Map.union m (Map.singleton k v)
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => HasTrace (POOL hashAlgo dsignAlgo vrfAlgo) where
+instance Crypto crypto
+  => HasTrace (POOL crypto) where
   envGen _ = undefined :: Gen PoolEnv
-  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo vrfAlgo)
+  sigGen _ _ = undefined :: Gen (DCert crypto)

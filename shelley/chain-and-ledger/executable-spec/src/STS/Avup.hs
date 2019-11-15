@@ -21,23 +21,23 @@ import           Control.State.Transition
 import           Data.Maybe
 import           Ledger.Core (dom, range, (⊆), (⨃))
 
-data AVUP hashAlgo dsignAlgo
+data AVUP crypto
 
-data AVUPState hashAlgo dsignAlgo
+data AVUPState crypto
   = AVUPState
-      (AVUpdate hashAlgo dsignAlgo)
-      (Map Slot (Applications hashAlgo))
-      (Applications hashAlgo)
+      (AVUpdate crypto)
+      (Map Slot (Applications crypto))
+      (Applications crypto)
 
-data AVUPEnv hashAlgo dsignAlgo
-  = AVUPEnv Slot (GenDelegs hashAlgo dsignAlgo)
+data AVUPEnv crypto
+  = AVUPEnv Slot (GenDelegs crypto)
 
-instance STS (AVUP hashAlgo dsignAlgo) where
-  type State (AVUP hashAlgo dsignAlgo)
-    = AVUPState hashAlgo dsignAlgo
-  type Signal (AVUP hashAlgo dsignAlgo) = AVUpdate hashAlgo dsignAlgo
-  type Environment (AVUP hashAlgo dsignAlgo) = AVUPEnv hashAlgo dsignAlgo
-  data PredicateFailure (AVUP hashAlgo dsignAlgo)
+instance STS (AVUP crypto) where
+  type State (AVUP crypto)
+    = AVUPState crypto
+  type Signal (AVUP crypto) = AVUpdate crypto
+  type Environment (AVUP crypto) = AVUPEnv crypto
+  data PredicateFailure (AVUP crypto)
     = EmptyAVUP
     | NonEmptyAVUP
     | NoAVConsensus
@@ -52,7 +52,7 @@ instance STS (AVUP hashAlgo dsignAlgo) where
 
   transitionRules = [avUpdateEmpty, avUpdateNoConsensus, avUpdateConsensus]
 
-avUpdateEmpty :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateEmpty :: TransitionRule (AVUP crypto)
 avUpdateEmpty = do
   TRC (_, src, AVUpdate _aup) <-
     judgmentContext
@@ -60,7 +60,7 @@ avUpdateEmpty = do
   Map.null _aup ?! NonEmptyAVUP
   pure src
 
-avUpdateNoConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateNoConsensus :: TransitionRule (AVUP crypto)
 avUpdateNoConsensus = do
   TRC (AVUPEnv _slot (GenDelegs _genDelegs), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
     judgmentContext
@@ -82,7 +82,7 @@ avUpdateNoConsensus = do
 
   pure $ AVUPState (AVUpdate aup') favs avs
 
-avUpdateConsensus :: TransitionRule (AVUP hashAlgo dsignAlgo)
+avUpdateConsensus :: TransitionRule (AVUP crypto)
 avUpdateConsensus = do
   TRC (AVUPEnv _slot (GenDelegs _genDelegs), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
     judgmentContext
@@ -110,11 +110,11 @@ avUpdateConsensus = do
     (favs ⨃ [(s, fav')])
     avs
 
-allApNamesValid :: Applications hashAlgo -> Bool
+allApNamesValid :: Applications crypto -> Bool
 allApNamesValid = all apNameValid . dom . apps
 
-allSvCanFollow_ :: Applications hashAlgo -> Favs hashAlgo -> Applications hashAlgo -> Bool
+allSvCanFollow_ :: Applications crypto -> Favs crypto -> Applications crypto -> Bool
 allSvCanFollow_ avs favs = all (svCanFollow avs favs) . Map.toList . apps
 
-allTagsValid :: Applications hashAlgo -> Bool
+allTagsValid :: Applications crypto -> Bool
 allTagsValid = all sTagsValid . range . range . apps

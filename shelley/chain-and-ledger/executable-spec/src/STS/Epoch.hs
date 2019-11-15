@@ -27,27 +27,27 @@ import           STS.Newpp
 import           STS.PoolReap
 import           STS.Snap
 
-data EPOCH hashAlgo dsignAlgo vrfAlgo
+data EPOCH crypto
 
-instance STS (EPOCH hashAlgo dsignAlgo vrfAlgo) where
-    type State (EPOCH hashAlgo dsignAlgo vrfAlgo) = EpochState hashAlgo dsignAlgo vrfAlgo
-    type Signal (EPOCH hashAlgo dsignAlgo vrfAlgo) = Epoch
-    type Environment (EPOCH hashAlgo dsignAlgo vrfAlgo) = ()
-    data PredicateFailure (EPOCH hashAlgo dsignAlgo vrfAlgo)
-      = PoolReapFailure (PredicateFailure (POOLREAP hashAlgo dsignAlgo vrfAlgo))
-      | SnapFailure (PredicateFailure (SNAP hashAlgo dsignAlgo vrfAlgo))
-      | NewPpFailure (PredicateFailure (NEWPP hashAlgo dsignAlgo vrfAlgo))
+instance STS (EPOCH crypto) where
+    type State (EPOCH crypto) = EpochState crypto
+    type Signal (EPOCH crypto) = Epoch
+    type Environment (EPOCH crypto) = ()
+    data PredicateFailure (EPOCH crypto)
+      = PoolReapFailure (PredicateFailure (POOLREAP crypto))
+      | SnapFailure (PredicateFailure (SNAP crypto))
+      | NewPpFailure (PredicateFailure (NEWPP crypto))
       deriving (Show, Eq)
 
     initialRules = [ initialEpoch ]
     transitionRules = [ epochTransition ]
 
-initialEpoch :: InitialRule (EPOCH hashAlgo dsignAlgo vrfAlgo)
+initialEpoch :: InitialRule (EPOCH crypto)
 initialEpoch =
   pure $ EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams
 
 votedValuePParams
-  :: PPUpdate hashAlgo dsignAlgo
+  :: PPUpdate crypto
   -> PParams
   -> Maybe PParams
 votedValuePParams (PPUpdate ppup) pps =
@@ -63,7 +63,7 @@ votedValuePParams (PPUpdate ppup) pps =
       1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
       _ -> Nothing
 
-epochTransition :: forall hashAlgo dsignAlgo vrfAlgo . TransitionRule (EPOCH hashAlgo dsignAlgo vrfAlgo)
+epochTransition :: forall crypto . TransitionRule (EPOCH crypto)
 epochTransition = do
   TRC (_, EpochState { esAccountState = as
                      , esSnapshots = ss
@@ -73,12 +73,12 @@ epochTransition = do
   let UpdateState ppup _ _ _ = _ups us
   let DPState ds ps = _delegationState ls
   SnapState ss' us' <-
-    trans @(SNAP hashAlgo dsignAlgo vrfAlgo) $ TRC (SnapEnv pp ds ps, SnapState ss us, e)
+    trans @(SNAP crypto) $ TRC (SnapEnv pp ds ps, SnapState ss us, e)
   PoolreapState us'' as' ds' ps' <-
-    trans @(POOLREAP hashAlgo dsignAlgo vrfAlgo) $ TRC (pp, PoolreapState us' as ds ps, e)
+    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState us' as ds ps, e)
   let ppNew = votedValuePParams ppup pp
   NewppState us''' as'' pp' <-
-    trans @(NEWPP hashAlgo dsignAlgo vrfAlgo)
+    trans @(NEWPP crypto)
       $ TRC (NewppEnv ppNew ds' ps', NewppState us'' as' pp, e)
   pure $ EpochState
     as''
@@ -86,11 +86,11 @@ epochTransition = do
     (ls { _utxoState = us''', _delegationState = DPState ds' ps' })
     pp'
 
-instance Embed (SNAP hashAlgo dsignAlgo vrfAlgo) (EPOCH hashAlgo dsignAlgo vrfAlgo) where
+instance Embed (SNAP crypto) (EPOCH crypto) where
     wrapFailed = SnapFailure
 
-instance Embed (POOLREAP hashAlgo dsignAlgo vrfAlgo) (EPOCH hashAlgo dsignAlgo vrfAlgo) where
+instance Embed (POOLREAP crypto) (EPOCH crypto) where
     wrapFailed = PoolReapFailure
 
-instance Embed (NEWPP hashAlgo dsignAlgo vrfAlgo) (EPOCH hashAlgo dsignAlgo vrfAlgo) where
+instance Embed (NEWPP crypto) (EPOCH crypto) where
     wrapFailed = NewPpFailure

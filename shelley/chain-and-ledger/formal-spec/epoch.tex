@@ -1438,13 +1438,14 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{cs} \\
           ~ \\
           \var{utxo} \\
+          \var{deposits} \\
           \varUpdate{\var{fees}+\Delta f} \\
           \var{up} \\
         \end{array}
     \right)\\
       & ~~~\where \\
       & ~~~~~~~\var{rew_{mir}'} =  \dom{\var{stkCreds}}\restrictdom\var{rew_{mir}} \\
-      & ~~~~~~~\var{unregistered} = \dom{\var{stkCreds}}\subtractdom\var{rew_{mir}'}
+      & ~~~~~~~\var{unregistered} = \dom{\var{stkCreds}}\subtractdom\var{rew_{mir}}
     \\
       & ~~~~~~~\var{nonDistributed} = \sum\limits_{\wcard\mapsto \var{val} \in
                                       unregistered} \var{val}  \\

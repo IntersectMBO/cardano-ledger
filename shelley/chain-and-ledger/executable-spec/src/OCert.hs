@@ -19,21 +19,21 @@ import qualified Data.Set as Set
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
-
-import           Keys (DSIGNAlgorithm, KESAlgorithm, KeyHash, Sig, VKey, VKeyES)
+import           Cardano.Ledger.Shelley.Crypto
+import           Keys (KeyHash, Sig, VKey, VKeyES)
 import           Slot (Slot (..))
 
 import           Numeric.Natural (Natural)
 
-data OCertEnv hashAlgo dsignAlgo = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash hashAlgo dsignAlgo)
-  , ocertEnvGenDelegs :: Set (KeyHash hashAlgo dsignAlgo)
+data OCertEnv crypto = OCertEnv
+  { ocertEnvStPools :: Set (KeyHash crypto)
+  , ocertEnvGenDelegs :: Set (KeyHash crypto)
   } deriving (Show, Eq)
 
 currentIssueNo
-  :: OCertEnv hashAlgo dsignAlgo
-  -> (Map (KeyHash hashAlgo dsignAlgo) Natural)
-  -> KeyHash hashAlgo dsignAlgo -- ^ Pool hash
+  :: OCertEnv crypto
+  -> (Map (KeyHash crypto) Natural)
+  -> KeyHash crypto -- ^ Pool hash
   -> Maybe Natural
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs
@@ -44,27 +44,24 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
 newtype KESPeriod = KESPeriod Natural
   deriving (Show, Eq, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
 
-data OCert dsignAlgo kesAlgo = OCert
+data OCert crypto = OCert
   { -- | The operational hot key
-    ocertVkHot     :: VKeyES kesAlgo
+    ocertVkHot     :: VKeyES crypto
     -- | The cold key
-  , ocertVkCold    :: VKey dsignAlgo
+  , ocertVkCold    :: VKey crypto
     -- | counter
   , ocertN         :: Natural
     -- | Start of key evolving signature period
   , ocertKESPeriod :: KESPeriod
     -- | Signature of block operational certificate content
-  , ocertSigma     :: Sig dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
+  , ocertSigma     :: Sig crypto (VKeyES crypto, Natural, KESPeriod)
   } deriving (Show, Eq, Generic)
 
-instance
-  ( DSIGNAlgorithm dsignAlgo
-  , KESAlgorithm kesAlgo
-  ) => NoUnexpectedThunks (OCert dsignAlgo kesAlgo)
+instance Crypto crypto => NoUnexpectedThunks (OCert crypto)
 
 instance
-  (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
-  => ToCBOR (OCert dsignAlgo kesAlgo)
+  (Crypto crypto)
+  => ToCBOR (OCert crypto)
  where
   toCBOR ocert =
     encodeListLen 5
@@ -75,8 +72,8 @@ instance
       <> toCBOR (ocertSigma ocert)
 
 instance
-  (DSIGNAlgorithm dsignAlgo, KESAlgorithm kesAlgo)
-  => FromCBOR (OCert dsignAlgo kesAlgo)
+  (Crypto crypto)
+  => FromCBOR (OCert crypto)
  where
   fromCBOR = enforceSize "OCert should have 5 fields" 5 >>
     OCert

@@ -79,8 +79,8 @@ Accessor functions for certificates and pool parameters are also defined, but
 only the $\cwitness{}$ accessor function needs explanation.
 It does the following:
 \begin{itemize}
-  \item For a $\DCertRegKey$ certificate, $\fun{cwitness}$ returns the hashkey
-  of the key being registered.
+  \item For a $\DCertRegKey$ certificate, $\fun{cwitness}$ is not defined as
+  stake key registrations do not require a witness.
 \item For a $\DCertDeRegKey$ certificate, $\fun{cwitness}$ returns the hashkey
   of the key being de-registered.
 \item For a $\DCertDeleg$ certificate, $\fun{cwitness}$ returns the hashkey
@@ -143,7 +143,8 @@ It does the following:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \cwitness{} & \DCert\setminus\DCertMir \to \StakeCreds & \text{certificate witness} \\
+      \cwitness{} & \DCert\setminus(\DCertRegKey\cup\DCertMir) \to \powerset{\Credential} & \text{certificate witness} \\
+      \fun{regCred} & \DCertRegPool \to \Credential & \text{registered credential} \\
       \fun{dpool} & \DCertDeleg \to \KeyHash
                                             & \text{pool being delegated to}
       \\
@@ -157,7 +158,7 @@ It does the following:
                                             & \text{genesis delegation}
       \\
       \fun{moveRewards} & \DCertMir \to (\StakeCredential \mapsto \Coin)
-                                            & \text{moved instantaneous rewards}
+                                            & \text{moved inst. rewards}
     \end{array}
   \end{equation*}
   %
@@ -266,7 +267,7 @@ and the protocol parameters.
             \var{stkCreds} & \StakeCreds & \text{registered stake delegators}\\
             \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
             \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
-            \var{ptrs} & \Ptr \mapsto \KeyHash & \text{pointer to hashkey}\\
+            \var{ptrs} & \Ptr \mapsto \StakeCredential & \text{pointer to stake credential}\\
             \var{fGenDelegs} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
             \var{genDelegs} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
             \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}\\
@@ -395,7 +396,7 @@ concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-    \var{c}\in\DCertRegKey & hk \leteq \cwitness{c} & hk \notin \dom \var{stkCreds}
+      \var{c}\in\DCertRegKey & hk \leteq \fun{regCred}~{c} & hk \notin \dom \var{stkCreds}
     }
     {
       \begin{array}{r}
@@ -565,7 +566,7 @@ concerns are independent of the ledger rules.
     \inference[Deleg-Mir]
     {
       \var{c}\in \DCertMir\\
-      slot < \fun{firstSlot}((\fun{epoch}~\var{s} + 1)) - \fun{SlotsPrior}\\
+      slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{SlotsPrior}\\
       \left(
         \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i_{rwd}})} val      \right)\leq\var{reserves}
     }
@@ -606,7 +607,7 @@ concerns are independent of the ledger rules.
   \label{fig:dcert-mir}
 \end{figure}
 
-The DELEG rule has eight possible predicate failures:
+The DELEG rule has seven possible predicate failures:
 \begin{itemize}
 \item In the case of a key registration certificate, if the staking credential
   is already registered, there is a a \emph{StakeKeyAlreadyRegistered} failure.
@@ -624,8 +625,6 @@ The DELEG rule has eight possible predicate failures:
   \emph{DuplicateGenesisDelegate} failure.
 \item In the case of insufficient reserves to pay the instantaneous rewards,
   there is a \emph{InsufficientForInstantaneousRewards} failure.
-\item In the case of instantaneous rewards to be paid to non-registered stake
-  credentials, there is a \emph{NonRegisteredStakeCredentials} failure.
 \end{itemize}
 
 \clearpage

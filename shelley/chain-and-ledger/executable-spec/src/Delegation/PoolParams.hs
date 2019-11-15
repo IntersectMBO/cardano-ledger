@@ -8,5 +8,5 @@ import           BaseTypes (UnitInterval)
 import           Coin (Coin)
 import           TxData (PoolParams, poolCost, poolMargin, poolPledge)
 
-poolSpec :: PoolParams hashAlgo dsignAlgo vrfAlgo -> (Coin, UnitInterval, Coin)
+poolSpec :: PoolParams crypto -> (Coin, UnitInterval, Coin)
 poolSpec pool = (pool ^. poolCost, pool ^. poolMargin, pool ^. poolPledge)

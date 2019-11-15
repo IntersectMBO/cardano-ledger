@@ -20,12 +20,13 @@ import           LedgerState
 import           Slot
 import           TxData
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data DELEG hashAlgo dsignAlgo vrfAlgo
+data DELEG crypto
 
 data DelegEnv
   = DelegEnv
@@ -35,12 +36,12 @@ data DelegEnv
   }
   deriving (Show, Eq)
 
-instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
+instance STS (DELEG crypto)
  where
-  type State (DELEG hashAlgo dsignAlgo vrfAlgo) = DState hashAlgo dsignAlgo
-  type Signal (DELEG hashAlgo dsignAlgo vrfAlgo) = DCert hashAlgo dsignAlgo vrfAlgo
-  type Environment (DELEG hashAlgo dsignAlgo vrfAlgo) = DelegEnv
-  data PredicateFailure (DELEG hashAlgo dsignAlgo vrfAlgo)
+  type State (DELEG crypto) = DState crypto
+  type Signal (DELEG crypto) = DCert crypto
+  type Environment (DELEG crypto) = DelegEnv
+  data PredicateFailure (DELEG crypto)
     = StakeKeyAlreadyRegisteredDELEG
     | StakeKeyNotRegisteredDELEG
     | StakeKeyNonZeroAccountBalanceDELEG
@@ -56,7 +57,7 @@ instance STS (DELEG hashAlgo dsignAlgo vrfAlgo)
   transitionRules = [delegationTransition]
 
 delegationTransition
-  :: TransitionRule (DELEG hashAlgo dsignAlgo vrfAlgo)
+  :: TransitionRule (DELEG crypto)
 delegationTransition = do
   TRC (DelegEnv slot_ ptr_ reserves_, ds, c) <- judgmentContext
 
@@ -113,7 +114,7 @@ delegationTransition = do
       pure ds
 
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo)
-  => HasTrace (DELEG hashAlgo dsignAlgo vrfAlgo) where
+instance Crypto crypto
+  => HasTrace (DELEG crypto) where
   envGen _ = undefined :: Gen DelegEnv
-  sigGen _ _ = undefined :: Gen (DCert hashAlgo dsignAlgo vrfAlgo)
+  sigGen _ _ = undefined :: Gen (DCert crypto)

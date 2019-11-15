@@ -15,7 +15,6 @@ import           Data.Maybe (catMaybes)
 
 import           Coin
 import           EpochBoundary
-import           Keys (DSIGNAlgorithm, HashAlgorithm, VRFAlgorithm)
 import           LedgerState
 import           Slot
 import           TxData
@@ -24,20 +23,21 @@ import           STS.Epoch
 
 import           Delegation.Certificates
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
 
 import           Hedgehog (Gen)
 
-data NEWEPOCH hashAlgo dsignAlgo vrfAlgo
+data NEWEPOCH crypto
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-    => STS (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) where
-  type State (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) = NewEpochState hashAlgo dsignAlgo vrfAlgo
-  type Signal (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) = Epoch
-  type Environment (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) = NewEpochEnv hashAlgo dsignAlgo
-  data PredicateFailure (NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
-    = EpochFailure (PredicateFailure (EPOCH hashAlgo dsignAlgo vrfAlgo))
+instance Crypto crypto
+    => STS (NEWEPOCH crypto) where
+  type State (NEWEPOCH crypto) = NewEpochState crypto
+  type Signal (NEWEPOCH crypto) = Epoch
+  type Environment (NEWEPOCH crypto) = NewEpochEnv crypto
+  data PredicateFailure (NEWEPOCH crypto)
+    = EpochFailure (PredicateFailure (EPOCH crypto))
     deriving (Show, Eq)
 
   initialRules =
@@ -52,9 +52,9 @@ instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo
         Map.empty]
   transitionRules = [newEpochTransition]
 
-newEpochTransition :: forall hashAlgo dsignAlgo vrfAlgo
-  .  (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-  => TransitionRule (NEWEPOCH hashAlgo dsignAlgo vrfAlgo)
+newEpochTransition :: forall crypto
+  .  Crypto crypto
+  => TransitionRule (NEWEPOCH crypto)
 newEpochTransition = do
   TRC ( NewEpochEnv _s gkeys
       , src@(NewEpochState (Epoch eL) _ bcur es ru _pd _osched)
@@ -64,8 +64,8 @@ newEpochTransition = do
     else do
       let es_ = case ru of
             Nothing  -> es
-            Just ru' -> applyRUpd ru' e es
-      es' <- trans @(EPOCH hashAlgo dsignAlgo vrfAlgo) $ TRC ((), es_, e)
+            Just ru' -> applyRUpd ru' es
+      es' <- trans @(EPOCH crypto) $ TRC ((), es_, e)
       let EpochState _acnt ss _ls pp = es'
 
           (Stake stake, delegs) = _pstakeSet ss
@@ -90,15 +90,11 @@ newEpochTransition = do
      where
        aggregatePlus = Map.fromListWith (+)
 
-instance (HashAlgorithm hashAlgo, DSIGNAlgorithm dsignAlgo, VRFAlgorithm vrfAlgo)
-    => Embed (EPOCH hashAlgo dsignAlgo vrfAlgo) (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) where
+instance Crypto crypto
+    => Embed (EPOCH crypto) (NEWEPOCH crypto) where
   wrapFailed = EpochFailure
 
-instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , VRFAlgorithm vrfAlgo
-  )
-  => HasTrace (NEWEPOCH hashAlgo dsignAlgo vrfAlgo) where
-  envGen _ = undefined :: Gen (NewEpochEnv hashAlgo dsignAlgo)
+instance Crypto crypto
+  => HasTrace (NEWEPOCH crypto) where
+  envGen _ = undefined :: Gen (NewEpochEnv crypto)
   sigGen _ _ = undefined :: Gen Epoch

@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -19,13 +20,11 @@ module Control.State.Transition.Trace
   , (.->)
   , checkTrace
     -- * Trace
-  , Trace
+  , Trace (..)
   , TraceOrder (NewestFirst, OldestFirst)
   , mkTrace
   , traceEnv
-  , _traceEnv
   , traceInitState
-  , _traceInitState
   , traceSignals
   , traceStates
   , preStatesAndSignals

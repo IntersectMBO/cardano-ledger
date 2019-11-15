@@ -21,6 +21,7 @@ import qualified Data.Set as Set
 
 import           Control.State.Transition
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin)
 import           Keys
 import           Ledger.Core ((◁), (⨃))
@@ -31,7 +32,7 @@ import           STS.Ledger
 import           Tx
 import           Updates (Applications (..), UpdateState (..), apps, newAVs)
 
-data LEDGERS hashAlgo dsignAlgo vrfAlgo
+data LEDGERS crypto
 
 data LedgersEnv
   = LedgersEnv
@@ -41,38 +42,34 @@ data LedgersEnv
     }
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
-  , VRFAlgorithm vrfAlgo
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => STS (LEDGERS hashAlgo dsignAlgo vrfAlgo)
+  => STS (LEDGERS crypto)
  where
-  type State (LEDGERS hashAlgo dsignAlgo vrfAlgo) = LedgerState hashAlgo dsignAlgo vrfAlgo
-  type Signal (LEDGERS hashAlgo dsignAlgo vrfAlgo) = Seq (Tx hashAlgo dsignAlgo vrfAlgo)
-  type Environment (LEDGERS hashAlgo dsignAlgo vrfAlgo) = LedgersEnv
-  data PredicateFailure (LEDGERS hashAlgo dsignAlgo vrfAlgo)
-    = LedgerFailure (PredicateFailure (LEDGER hashAlgo dsignAlgo vrfAlgo))
+  type State (LEDGERS crypto) = LedgerState crypto
+  type Signal (LEDGERS crypto) = Seq (Tx crypto)
+  type Environment (LEDGERS crypto) = LedgersEnv
+  data PredicateFailure (LEDGERS crypto)
+    = LedgerFailure (PredicateFailure (LEDGER crypto))
     deriving (Show, Eq)
 
   initialRules = [pure emptyLedgerState]
   transitionRules = [ledgersTransition]
 
 ledgersTransition
-  :: forall hashAlgo dsignAlgo vrfAlgo
-   . ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
-     , VRFAlgorithm vrfAlgo
+  :: forall crypto
+   . ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => TransitionRule (LEDGERS hashAlgo dsignAlgo vrfAlgo)
+  => TransitionRule (LEDGERS crypto)
 ledgersTransition = do
   TRC (LedgersEnv slot pp _reserves, ls, txwits) <- judgmentContext
   let (u, dw) = (_utxoState ls, _delegationState ls)
   (u'', dw'') <-
     foldM
         (\(u', dw') (ix, tx) ->
-          trans @(LEDGER hashAlgo dsignAlgo vrfAlgo)
+          trans @(LEDGER crypto)
             $ TRC (LedgerEnv slot ix pp _reserves, (u', dw'), tx)
         )
         (u, dw)
@@ -103,11 +100,9 @@ ledgersTransition = do
   pure $ LedgerState u''' dw''' (_txSlotIx ls)
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
-  , VRFAlgorithm vrfAlgo
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => Embed (LEDGER hashAlgo dsignAlgo vrfAlgo) (LEDGERS hashAlgo dsignAlgo vrfAlgo)
+  => Embed (LEDGER crypto) (LEDGERS crypto)
  where
   wrapFailed = LedgerFailure

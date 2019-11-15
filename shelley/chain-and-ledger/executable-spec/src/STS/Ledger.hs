@@ -1,6 +1,7 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,6 +16,7 @@ where
 
 import           Lens.Micro ((^.))
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin)
 import           Control.State.Transition
 import           Keys
@@ -22,11 +24,13 @@ import           LedgerState
 import           PParams hiding (d)
 import           Slot
 import           STS.Delegs
-import           STS.Utxo (UtxoEnv (..))
+import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern FeeTooSmallUTxO,
+                     pattern InputSetEmptyUTxO, pattern MaxTxSizeUTxO, pattern NegativeOutputsUTxO,
+                     pattern UpdateFailure, UtxoEnv (..), pattern ValueNotConservedUTxO)
 import           STS.Utxow
 import           Tx
 
-data LEDGER hashAlgo dsignAlgo vrfAlgo
+data LEDGER crypto
 
 data LedgerEnv
   = LedgerEnv
@@ -38,61 +42,53 @@ data LedgerEnv
   deriving (Show)
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
-  , VRFAlgorithm vrfAlgo
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => STS (LEDGER hashAlgo dsignAlgo vrfAlgo)
+  => STS (LEDGER crypto)
  where
-  type State (LEDGER hashAlgo dsignAlgo vrfAlgo)
-    = (UTxOState hashAlgo dsignAlgo vrfAlgo, DPState hashAlgo dsignAlgo vrfAlgo)
-  type Signal (LEDGER hashAlgo dsignAlgo vrfAlgo) = Tx hashAlgo dsignAlgo vrfAlgo
-  type Environment (LEDGER hashAlgo dsignAlgo vrfAlgo) = LedgerEnv
-  data PredicateFailure (LEDGER hashAlgo dsignAlgo vrfAlgo)
-    = UtxowFailure (PredicateFailure (UTXOW hashAlgo dsignAlgo vrfAlgo))
-    | DelegsFailure (PredicateFailure (DELEGS hashAlgo dsignAlgo vrfAlgo))
+  type State (LEDGER crypto)
+    = (UTxOState crypto, DPState crypto)
+  type Signal (LEDGER crypto) = Tx crypto
+  type Environment (LEDGER crypto) = LedgerEnv
+  data PredicateFailure (LEDGER crypto)
+    = UtxowFailure (PredicateFailure (UTXOW crypto))
+    | DelegsFailure (PredicateFailure (DELEGS crypto))
     deriving (Show, Eq)
 
   initialRules = []
   transitionRules = [ledgerTransition]
 
 ledgerTransition
-  :: forall hashAlgo dsignAlgo vrfAlgo
-   . ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
-     , VRFAlgorithm vrfAlgo
+  :: forall crypto
+   . ( Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto)
      )
-  => TransitionRule (LEDGER hashAlgo dsignAlgo vrfAlgo)
+  => TransitionRule (LEDGER crypto)
 ledgerTransition = do
   TRC (LedgerEnv slot ix pp _reserves, (u, d), tx) <- judgmentContext
-  utxo' <- trans @(UTXOW hashAlgo dsignAlgo vrfAlgo) $ TRC
+  utxo' <- trans @(UTXOW crypto) $ TRC
     ( UtxoEnv slot pp (d ^. dstate . stkCreds) (d ^. pstate . stPools) (d ^. dstate . genDelegs)
     , u
     , tx
     )
   deleg' <-
-    trans @(DELEGS hashAlgo dsignAlgo vrfAlgo)
+    trans @(DELEGS crypto)
       $ TRC (DelegsEnv slot ix pp tx _reserves, d, tx ^. body . certs)
   pure (utxo', deleg')
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
-  , VRFAlgorithm vrfAlgo
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => Embed (DELEGS hashAlgo dsignAlgo vrfAlgo) (LEDGER hashAlgo dsignAlgo vrfAlgo)
+  => Embed (DELEGS crypto) (LEDGER crypto)
  where
   wrapFailed = DelegsFailure
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (TxBody hashAlgo dsignAlgo vrfAlgo)
-  , VRFAlgorithm vrfAlgo
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (TxBody crypto)
   )
-  => Embed (UTXOW hashAlgo dsignAlgo vrfAlgo) (LEDGER hashAlgo dsignAlgo vrfAlgo)
+  => Embed (UTXOW crypto) (LEDGER crypto)
  where
   wrapFailed = UtxowFailure

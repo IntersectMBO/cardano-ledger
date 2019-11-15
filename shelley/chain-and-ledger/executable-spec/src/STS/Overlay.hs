@@ -29,48 +29,46 @@ import           Slot
 
 import           STS.Ocert
 
+import           Cardano.Ledger.Shelley.Crypto
 import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
 
-data OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo
+data OVERLAY crypto
 
-data OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
+data OverlayEnv crypto
   = OverlayEnv
       PParams
-      (Map Slot (Maybe (GenKeyHash hashAlgo dsignAlgo)))
+      (Map Slot (Maybe (GenKeyHash crypto)))
       Nonce
-      (PoolDistr hashAlgo dsignAlgo vrfAlgo)
-      (GenDelegs hashAlgo dsignAlgo)
+      (PoolDistr crypto)
+      (GenDelegs crypto)
   deriving Generic
 
-instance NoUnexpectedThunks (OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo)
+instance NoUnexpectedThunks (OverlayEnv crypto)
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
-  , VRFAlgorithm vrfAlgo
-  , VRF.Signable vrfAlgo Seed
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , KESignable crypto (BHBody crypto)
+  , VRF.Signable (VRF crypto) Seed
   )
-  => STS (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  => STS (OVERLAY crypto)
  where
-  type State (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    = Map (KeyHash hashAlgo dsignAlgo) Natural
+  type State (OVERLAY crypto)
+    = Map (KeyHash crypto) Natural
 
-  type Signal (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
-    = BHeader hashAlgo dsignAlgo kesAlgo vrfAlgo
+  type Signal (OVERLAY crypto)
+    = BHeader crypto
 
-  type Environment (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo) = OverlayEnv hashAlgo dsignAlgo kesAlgo vrfAlgo
+  type Environment (OVERLAY crypto) = OverlayEnv crypto
 
-  data PredicateFailure (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  data PredicateFailure (OVERLAY crypto)
     = NotPraosLeaderOVERLAY
     | NotActiveSlotOVERLAY
-    | WrongGenesisColdKeyOVERLAY (KeyHash hashAlgo dsignAlgo) (KeyHash hashAlgo dsignAlgo)
+    | WrongGenesisColdKeyOVERLAY (KeyHash crypto) (KeyHash crypto)
     | NoGenesisStakingOVERLAY
-    | OcertFailure (PredicateFailure (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo))
+    | OcertFailure (PredicateFailure (OCERT crypto))
     deriving (Show, Eq)
 
   initialRules = []
@@ -78,16 +76,13 @@ instance
   transitionRules = [overlayTransition]
 
 overlayTransition
-  :: forall hashAlgo dsignAlgo kesAlgo vrfAlgo
-   . ( HashAlgorithm hashAlgo
-     , DSIGNAlgorithm dsignAlgo
-     , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-     , KESAlgorithm kesAlgo
-     , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
-     , VRFAlgorithm vrfAlgo
-     , VRF.Signable vrfAlgo Seed
+  :: forall crypto
+   . ( Crypto crypto
+     , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+     , KESignable crypto (BHBody crypto)
+     , VRF.Signable (VRF crypto) Seed
      )
-  => TransitionRule (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  => TransitionRule (OVERLAY crypto)
 overlayTransition = do
   TRC ( OverlayEnv pp osched eta0 pd (GenDelegs genDelegs)
       , cs
@@ -111,17 +106,14 @@ overlayTransition = do
     oce = OCertEnv
       { ocertEnvStPools = dom pd, ocertEnvGenDelegs = range genDelegs }
 
-  trans @(OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) $ TRC (oce, cs, bh)
+  trans @(OCERT crypto) $ TRC (oce, cs, bh)
 
 instance
-  ( HashAlgorithm hashAlgo
-  , DSIGNAlgorithm dsignAlgo
-  , Signable dsignAlgo (VKeyES kesAlgo, Natural, KESPeriod)
-  , KESAlgorithm kesAlgo
-  , KESignable kesAlgo (BHBody hashAlgo dsignAlgo kesAlgo vrfAlgo)
-  , VRFAlgorithm vrfAlgo
-  , VRF.Signable vrfAlgo Seed
+  ( Crypto crypto
+  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , KESignable crypto (BHBody crypto)
+  , VRF.Signable (VRF crypto) Seed
   )
-  => Embed (OCERT hashAlgo dsignAlgo kesAlgo vrfAlgo) (OVERLAY hashAlgo dsignAlgo kesAlgo vrfAlgo)
+  => Embed (OCERT crypto) (OVERLAY crypto)
  where
   wrapFailed = OcertFailure

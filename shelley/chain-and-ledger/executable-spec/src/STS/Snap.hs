@@ -22,24 +22,24 @@ import           UTxO
 
 import           Control.State.Transition
 
-data SNAP hashAlgo dsignAlgo vrfAlgo
+data SNAP crypto
 
-data SnapState hashAlgo dsignAlgo vrfAlgo
+data SnapState crypto
   = SnapState
-      (SnapShots hashAlgo dsignAlgo vrfAlgo)
-      (UTxOState hashAlgo dsignAlgo vrfAlgo)
+      (SnapShots crypto)
+      (UTxOState crypto)
 
-data SnapEnv hashAlgo dsignAlgo vrfAlgo
+data SnapEnv crypto
   = SnapEnv
       PParams
-      (DState hashAlgo dsignAlgo)
-      (PState hashAlgo dsignAlgo vrfAlgo)
+      (DState crypto)
+      (PState crypto)
 
-instance STS (SNAP hashAlgo dsignAlgo vrfAlgo) where
-  type State (SNAP hashAlgo dsignAlgo vrfAlgo) = SnapState hashAlgo dsignAlgo vrfAlgo
-  type Signal (SNAP hashAlgo dsignAlgo vrfAlgo) = Epoch
-  type Environment (SNAP hashAlgo dsignAlgo vrfAlgo) = SnapEnv hashAlgo dsignAlgo vrfAlgo
-  data PredicateFailure (SNAP hashAlgo dsignAlgo vrfAlgo)
+instance STS (SNAP crypto) where
+  type State (SNAP crypto) = SnapState crypto
+  type Signal (SNAP crypto) = Epoch
+  type Environment (SNAP crypto) = SnapEnv crypto
+  data PredicateFailure (SNAP crypto)
     = FailureSNAP
     deriving (Show, Eq)
 
@@ -47,7 +47,7 @@ instance STS (SNAP hashAlgo dsignAlgo vrfAlgo) where
     [pure $ SnapState emptySnapShots (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)]
   transitionRules = [snapTransition]
 
-snapTransition :: TransitionRule (SNAP hashAlgo dsignAlgo vrfAlgo)
+snapTransition :: TransitionRule (SNAP crypto)
 snapTransition = do
   TRC (SnapEnv pparams d p, SnapState s u, eNew) <- judgmentContext
   let pooledStake = stakeDistr (u ^. utxo) d p
