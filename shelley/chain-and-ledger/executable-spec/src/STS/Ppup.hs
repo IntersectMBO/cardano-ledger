@@ -14,7 +14,7 @@ import           Data.Set (Set)
 import           BaseTypes
 import           BlockChain
 import           Keys
-import           Ledger.Core (dom, (⊆))
+import           Ledger.Core (dom, (⊆), (⨃))
 import           PParams
 import           Slot
 import           Updates
@@ -62,15 +62,15 @@ ppupTransitionEmpty = do
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
-  TRC (PPUPEnv s pp (GenDelegs _genDelegs), pupS, pup@(PPUpdate pup')) <- judgmentContext
+  TRC (PPUPEnv s pp (GenDelegs _genDelegs), PPUpdate pupS, PPUpdate pup) <- judgmentContext
 
-  not (Map.null pup') ?! PPUpdateEmpty
+  not (Map.null pup) ?! PPUpdateEmpty
 
-  all (all (pvCanFollow (_protocolVersion pp))) pup' ?! PVCannotFollowPPUP
+  all (all (pvCanFollow (_protocolVersion pp))) pup ?! PVCannotFollowPPUP
 
-  (dom pup' ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup') (dom _genDelegs)
+  (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
 
   let Epoch e = epochFromSlot s
   s < firstSlot (Epoch $ e + 1) *- slotsPrior ?! PPUpdateTooLatePPUP
 
-  pure $ updatePPup pupS pup
+  pure $ PPUpdate (pupS ⨃  Map.toList pup)

@@ -80,7 +80,8 @@ import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, Certifie
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
                      LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
                      RewardAcnt, SKey, SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
+                     UTxOState, Update, UpdateState, VKey, VKeyES, VKeyGenesis, VerKeyVRF,
+                     hashKeyVRF)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
@@ -96,8 +97,8 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKey, pattern SKeyES,
-                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey,
-                     sKey, sign, signKES, vKey)
+                     pattern VKey, pattern VKeyES, pattern VKeyGenesis, hash, hashKey, sKey, sign,
+                     signKES, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
@@ -124,8 +125,7 @@ import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, 
                      _poolPubKey, _poolRAcnt, _poolVrf)
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
-                     pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState,
-                     updatePPup)
+                     pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
@@ -1641,7 +1641,8 @@ blockEx3B = mkBlock
 
 updateStEx3B :: UpdateState
 updateStEx3B = UpdateState
-  (ppupEx3A `updatePPup` ppupEx3B)
+  (PPUpdate $ Map.fromList $ fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A))
+    [0, 1, 3, 4, 5])
   (AVUpdate Map.empty)
   Map.empty
   byronApps
