@@ -65,6 +65,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."small-steps" or (buildDepError "small-steps"))
           (hsPkgs."microlens" or (buildDepError "microlens"))
           (hsPkgs."microlens-th" or (buildDepError "microlens-th"))
+          (hsPkgs."mtl" or (buildDepError "mtl"))
           (hsPkgs."non-integer" or (buildDepError "non-integer"))
           (hsPkgs."cs-ledger" or (buildDepError "cs-ledger"))
           (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
