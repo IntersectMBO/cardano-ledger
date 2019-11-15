@@ -122,6 +122,7 @@ import           TxData (pattern AddrBase, pattern AddrPtr, pattern Delegation, 
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      addStakeCreds, _paymentObj, _poolCost, _poolMargin, _poolOwners, _poolPledge,
                      _poolPubKey, _poolRAcnt, _poolVrf)
+import qualified TxData(TxBody(..))
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
                      pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState,
@@ -677,16 +678,18 @@ ex2A = CHAINExample (Slot 10) initStEx2A blockEx2A (Right expectedStEx2A)
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
 txbodyEx2B :: TxBody
 txbodyEx2B = TxBody
-               (Set.fromList [TxIn (txid txbodyEx2A) 0]) -- ^ inputs
-               [ TxOut aliceAddr    (Coin 729)
-               , TxOut alicePtrAddr (Coin 9000) ]        -- ^ outputs
-               (fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
-                         , Delegate $ Delegation bobSHK (hk alicePool)
-                         ]) -- ^ delegation certificates
-               Map.empty
-               (Coin 4)    -- ^ Transaction fee
-               (Slot 90)   -- ^ Slot
-               emptyUpdate -- ^ Empty update proposal
+      { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2A) 0]
+      , TxData._outputs  = [ TxOut aliceAddr    (Coin 729)
+                           , TxOut alicePtrAddr (Coin 9000) ]
+      -- | Delegation certificates
+      , TxData._certs    = fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
+                                    , Delegate $ Delegation bobSHK   (hk alicePool)
+                                    ]
+      , TxData._wdrls    = Map.empty
+      , TxData._txfee    = Coin 4
+      , TxData._ttl      = Slot 90
+      , TxData._txUpdate = emptyUpdate
+      }
 
 txEx2B :: Tx
 txEx2B = Tx
