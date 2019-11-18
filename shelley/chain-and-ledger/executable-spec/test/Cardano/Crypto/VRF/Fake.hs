@@ -65,11 +65,11 @@ instance VRFAlgorithm FakeVRF where
   maxVRF _ = 2 ^ (8 * byteCount (Proxy :: Proxy MD5)) - 1
   genKeyVRF = SignKeyFakeVRF <$> nonNegIntR
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
-  evalVRF a sk = return $ evalVRF' a sk
+  evalVRF () a sk = return $ evalVRF' a sk
   -- This implementation of `verifyVRF` checks the real result, which is hidden
   -- in the certificate, but ignores the produced value, which is set to be the
   -- result of the sneaking.
-  verifyVRF (VerKeyFakeVRF n) a c = snd (evalVRF' a (SignKeyFakeVRF n)) == snd c
+  verifyVRF () (VerKeyFakeVRF n) a c = snd (evalVRF' a (SignKeyFakeVRF n)) == snd c
   encodeVerKeyVRF = toCBOR
   decodeVerKeyVRF = fromCBOR
 

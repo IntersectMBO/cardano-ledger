@@ -144,7 +144,7 @@ sign (SKey k) d =
   Sig
     . fst
     . withDRG (drgNewSeed (seedFromInteger 0))
-    $ signedDSIGN d k
+    $ signedDSIGN () d k
 
 -- |Verify a digital signature
 verify
@@ -154,7 +154,7 @@ verify
   -> Sig crypto a
   -> Bool
 verify (DiscVKey vk) vd (Sig sigDSIGN) =
-  either (const False) (const True) $ verifySignedDSIGN vk vd sigDSIGN
+  either (const False) (const True) $ verifySignedDSIGN () vk vd sigDSIGN
 
 newtype SKeyES crypto = SKeyES (SignKeyKES (KES crypto))
 
@@ -196,7 +196,7 @@ signKES (SKeyES k) d n =
     . fromJust
     . fst
     . withDRG (drgNewSeed (seedFromInteger 0))
-    $ signedKES n d k
+    $ signedKES () n d k
 
 -- |Verify a key evolving signature
 verifyKES
@@ -208,7 +208,7 @@ verifyKES
   -> Bool
 verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
   either (const False) (const True)
-    $ verifySignedKES vKeyES n vd sigKES
+    $ verifySignedKES () vKeyES n vd sigKES
 
 newtype GenDelegs crypto =
   GenDelegs (Map (GenKeyHash crypto) (KeyHash crypto))

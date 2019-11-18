@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module BlockChain
   ( HashHeader(..)
@@ -236,6 +237,7 @@ vrfChecks
   ::  forall crypto
   . ( Crypto crypto
     , VRF.Signable (VRF crypto) Seed
+    , VRF.ContextVRF (VRF crypto) ~ ()
     )
   => Nonce
   -> PoolDistr crypto
@@ -248,10 +250,10 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
         Nothing -> False
         Just (sigma, vrfHK) ->
           vrfHK == hashKeyVRF @crypto vrfK
-            && VRF.verifyCertified vrfK
+            && VRF.verifyCertified () vrfK
                          (mkSeed seedEta slot eta0 prevHash)
                          (coerce $ bheaderEta bhb)
-            && VRF.verifyCertified vrfK
+            && VRF.verifyCertified () vrfK
                          (mkSeed seedL slot eta0 prevHash)
                          (coerce $ bheaderL bhb)
             && intervalValue (fromNatural . VRF.certifiedNatural $ bheaderL bhb)
