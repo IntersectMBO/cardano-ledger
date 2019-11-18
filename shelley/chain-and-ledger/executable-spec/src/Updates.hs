@@ -7,7 +7,6 @@ module Updates
   ( Ppm(..)
   , PPUpdateEnv(..)
   , PPUpdate(..)
-  , updatePPup
   , ApName(..)
   , ApVer(..)
   , Mdt(..)
@@ -30,6 +29,10 @@ module Updates
   )
 where
 
+import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
+import           Cardano.Crypto.Hash (Hash)
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 (unpack)
 import           Data.Char (isAscii)
@@ -40,10 +43,6 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
-import           Cardano.Ledger.Shelley.Crypto
-import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
-import           Cardano.Crypto.Hash (Hash)
-import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
@@ -53,7 +52,7 @@ import           Slot (Epoch, Slot)
 
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (dom, range, (∪), (◁))
+import           Ledger.Core (dom, range, (◁))
 
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, NoUnexpectedThunks, ToCBOR)
@@ -182,14 +181,6 @@ instance ToCBOR Ppm where
 newtype PPUpdate crypto
   = PPUpdate (Map (GenKeyHash crypto) (Set Ppm))
   deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
-
--- | Update Protocol Parameter update with new values, prefer value from `pup1`
--- in case of already existing value in `pup0`
-updatePPup
-  :: PPUpdate crypto
-  -> PPUpdate crypto
-  -> PPUpdate crypto
-updatePPup (PPUpdate pup0') (PPUpdate pup1') = PPUpdate (pup1' ∪ pup0')
 
 -- | This is just an example and not neccessarily how we will actually validate names
 apNameValid :: ApName -> Bool
