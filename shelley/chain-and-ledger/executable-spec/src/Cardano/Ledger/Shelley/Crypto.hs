@@ -16,6 +16,9 @@ class
     DSIGNAlgorithm (DSIGN c),
     KESAlgorithm (KES c),
     VRFAlgorithm (VRF c),
+    ContextDSIGN (DSIGN c) ~ (),
+    ContextKES (KES c) ~ (),
+    ContextVRF (VRF c) ~ (),
     Typeable c
   ) =>
   Crypto c where

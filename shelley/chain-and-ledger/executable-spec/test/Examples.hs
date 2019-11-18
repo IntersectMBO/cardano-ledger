@@ -164,7 +164,7 @@ mkCertifiedVRF
   -> SignKeyVRF
   -> CertifiedVRF a
 mkCertifiedVRF a sk = fst . withDRG (drgNewTest seed) $
-    coerce <$> evalCertified a sk
+    coerce <$> evalCertified () a sk
   where
     seed = (4,0,0,0,1)
 
