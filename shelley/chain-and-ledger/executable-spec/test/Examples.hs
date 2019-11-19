@@ -804,15 +804,15 @@ ex2B = CHAINExample (Slot 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
 
 blockEx2C :: Block
 blockEx2C = mkBlock
-             blockEx2BHash
-             (coreNodeKeys 6)
-             []
-             (Slot 110)
-             (BlockNo 2)
-             (mkNonce 0)
-             (NatNonce 3)
-             zero
-             1
+             blockEx2BHash    -- ^ Hash of previous block
+             (coreNodeKeys 6) -- ^ Sixth genesis node
+             []               -- ^ No transactions at all (empty block)
+             (Slot 110)       -- ^ Current slot
+             (BlockNo 2)      -- ^ Second block within the epoch
+             (mkNonce 0)      -- ^ Epoch nonce
+             (NatNonce 3)     -- ^ Block nonce
+             zero             -- ^ Praos leader value
+             1                -- ^ Period of KES (key evolving signature scheme)
 
 epoch1OSchedEx2C :: Map Slot (Maybe GenKeyHash)
 epoch1OSchedEx2C = overlaySchedule
@@ -820,16 +820,20 @@ epoch1OSchedEx2C = overlaySchedule
                     (Map.keysSet genDelegs)
                     ppsEx1
 
+-- | Snapshot of stakes for Alice and Bob
 snapEx2C :: (Stake, Map Credential KeyHash)
 snapEx2C = ( Stake ( Map.fromList [(aliceSHK, Coin 9722), (bobSHK, bobInitCoin)])
           , delegsEx2B )
 
+-- | Make a snapshot for a given fee.
 snapsEx2Cgeneric :: Coin -> SnapShots
-snapsEx2Cgeneric feeSnapShot = emptySnapShots { _pstakeMark = snapEx2C
-                          , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
-                          , _feeSS = feeSnapShot
-                          }
+snapsEx2Cgeneric feeSnapShot = emptySnapShots {
+    _pstakeMark = snapEx2C -- ^ snapshot of stake pools and parameters
+  , _poolsSS    = Map.singleton (hk alicePool) alicePoolParams -- ^ single pool of Alice
+  , _feeSS      = feeSnapShot
+  }
 
+-- | Snapshots with given fees.
 snapsEx2C :: SnapShots
 snapsEx2C = snapsEx2Cgeneric 21
 
@@ -851,9 +855,9 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
     lsFees
     usEx2A) -- Note that the ppup is gone now
   (DPState
-    dsEx2B { _irwd = Map.empty
-           , _stkCreds = addStakeCreds carlSHK (Slot 10) $ _stkCreds dsEx2B
-           , _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
+    dsEx2B { _irwd     = Map.empty
+           , _stkCreds = addStakeCreds carlSHK (Slot 10)   $ _stkCreds dsEx2B
+           , _rewards  = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
            }
     psEx2A)
   0
@@ -890,6 +894,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
   blockEx2CHash
   (Slot 110)
 
+-- ** Expected chain state after STS
 expectedStEx2C :: ChainState
 expectedStEx2C = expectedStEx2Cgeneric snapsEx2C expectedLSEx2C ppsEx1
 
@@ -904,15 +909,19 @@ expectedStEx2Cquater :: ChainState
 expectedStEx2Cquater =
   expectedStEx2Cgeneric snapsEx2Cquater expectedLSEx2Cquater ppsExInstantDecay
 
+-- | Example 2C with standard decay.
 ex2C :: CHAINExample
 ex2C = CHAINExample (Slot 110) expectedStEx2B blockEx2C (Right expectedStEx2C)
 
+-- | Example 2C with no decay.
 ex2Cbis :: CHAINExample
 ex2Cbis = CHAINExample (Slot 110) expectedStEx2Bbis blockEx2C (Right expectedStEx2Cbis)
 
+-- | Example 2C with full refund.
 ex2Cter :: CHAINExample
 ex2Cter = CHAINExample (Slot 110) expectedStEx2Bter blockEx2C (Right expectedStEx2Cter)
 
+-- | Example 2C with instant decay.
 ex2Cquater :: CHAINExample
 ex2Cquater =
   CHAINExample (Slot 110) expectedStEx2Bquater blockEx2C (Right expectedStEx2Cquater)
