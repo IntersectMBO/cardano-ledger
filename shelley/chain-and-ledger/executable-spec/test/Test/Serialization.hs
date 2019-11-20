@@ -116,21 +116,6 @@ getRawInstallerHash (InstallerHash hsh) = getHash hsh
 testScript :: MultiSig
 testScript = RequireSignature $ undiscriminateKeyHash testKeyHash1
 
---data ToTokens where
---  T :: Encoding -> ToTokens
---  S :: ToCBOR a => a -> ToTokens
---  Plus :: ToTokens -> ToTokens -> ToTokens
-
---tokens :: ToTokens -> Encoding
---tokens (T xs) = xs
---tokens (S s) = tokens s
---tokens (Plus a b) = tokens a <> tokens b
-
---instance Monoid ToTokens where
---  mappend = Plus
---  mempty =
-
-
 serializationTests :: TestTree
 serializationTests = testGroup "Serialization Tests" $ checkEncoding <$>
   [ Coin 30 #> Encoding (TkWord64 30)
@@ -180,34 +165,6 @@ serializationTests = testGroup "Serialization Tests" $ checkEncoding <$>
           . TkWord64 500
       )
   , Tx -- minimal transaction
-      (TxBody
-        (Set.fromList [TxIn genesisId 1])
-        [TxOut testAddrE (Coin 2)]
-        Seq.empty
-        Map.empty
-        (Coin 9)
-        (Slot 500)
-        emptyUpdate)
-      Set.empty
-      Map.empty #>
-
-      Encoding (TkListLen 3
-        . TkMapLen 6 -- Transaction
-          . TkWord 0 -- Tx Ins
-            . TkTag 258 . TkListLen 1 -- one input
-              . TkListLen 2 . TkBytes (getRawTxId genesisId) . TkInteger 1
-          . TkWord 1 -- Tx Outs
-            . TkListBegin
-              . TkListLen 2 . TkWord 6 . TkBytes (getRawKeyHash testKeyHash1) . TkWord64 2
-            . TkBreak
-          . TkWord 2 -- Tx Fee
-            . TkWord64 9
-          . TkWord 3 -- Tx TTL
-            . TkWord64 500
-        . TkTag 258 . TkListLen 0 -- no key witnesses
-        . TkMapLen 0 -- no scripts
-      )
-  , Tx -- minimal transaction with witnesses
       (TxBody
         (Set.fromList [TxIn genesisId 1])
         [TxOut testAddrE (Coin 2)]
