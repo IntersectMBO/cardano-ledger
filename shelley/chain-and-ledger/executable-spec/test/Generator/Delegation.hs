@@ -182,6 +182,12 @@ genDCertRegPool skeys vrfKeys = do
   pure (RegPool pps, poolKey)
 
 -- | Generate a RetirePool along with the keypair which registered it.
+--
+-- Choose a `KeyHash` to retire, by pulling from the set of registered
+-- `KeyHash`s in the `stakePools` mapping. Generate a random epoch within an
+-- acceptable range of the current epoch. In addition to the `RetirePool`
+-- constructed value, return the keypair which corresponds to the selected
+-- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool
   :: KeyPairs
   -> PParams
@@ -193,8 +199,8 @@ genRetirePool availableKeys pp pState slot =
      then pure Nothing
      else (\keyHash epoch ->
               Just (RetirePool keyHash epoch, findKeyPair keyHash))
-            <$> Gen.element poolHashKeys
-            <*> (Epoch <$> Gen.integral (Range.constant epochLow epochHigh))
+                <$> Gen.element poolHashKeys
+                <*> (Epoch <$> Gen.integral (Range.constant epochLow epochHigh))
  where
   stakePools = pState ^. (stPools . to (\(StakePools x) -> x))
   poolHashKeys = Set.toList (Map.keysSet stakePools)

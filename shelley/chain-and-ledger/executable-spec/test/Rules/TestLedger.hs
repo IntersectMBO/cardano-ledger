@@ -10,7 +10,7 @@ module Rules.TestLedger
   , credentialRemovedAfterDereg
   , consumedEqualsProduced
   , registeredPoolIsAdded
-  , retiredPoolIsRemoved
+  , poolIsMarkedForRetirement
   , pStateIsInternallyConsistent
   )
 where
@@ -131,8 +131,8 @@ registeredPoolIsAdded = do
 
 
 -- | Check that a `RetirePool` certificate properly removes a stake pool.
-retiredPoolIsRemoved :: QC.Property
-retiredPoolIsRemoved = do
+poolIsMarkedForRetirement :: QC.Property
+poolIsMarkedForRetirement = do
   QC.withMaxSuccess (fromIntegral numberOfTests) . QC.property $ do
     let gen = do env0 <- TQC.envGen @LEDGER traceLen
                  st0 <- GQ.mkGenesisLedgerState env0
@@ -142,7 +142,7 @@ retiredPoolIsRemoved = do
                          env0
                          st0
                  pure (concatMap ledgerToPoolSsts (sourceSignalTargets tr))
-    QC.forAllShrink gen shrinkPoolSST TestPool.retiredPoolIsRemoved
+    QC.forAllShrink gen shrinkPoolSST TestPool.poolIsMarkedForRetirement
 
 shrinkPoolSST :: [SourceSignalTarget POOL] -> [[SourceSignalTarget POOL]]
 shrinkPoolSST = QC.shrinkList shrinker

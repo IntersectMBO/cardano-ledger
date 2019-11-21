@@ -148,11 +148,12 @@ registeredPoolIsAdded env ssts =
       M.lookup hk (tSt ^. stPools . to (\(StakePools x) -> x))
         === Just (ledgerSlot env)
 
--- | Check that a `RetirePool` certificate properly retires a stake pool.
-retiredPoolIsRemoved
+-- | Check that a `RetirePool` certificate properly marks a stake pool for
+-- retirement.
+poolIsMarkedForRetirement
   :: [SourceSignalTarget POOL]
   -> QC.Property
-retiredPoolIsRemoved ssts =
+poolIsMarkedForRetirement ssts =
   QC.conjoin (map check ssts)
  where
   check :: SourceSignalTarget POOL
