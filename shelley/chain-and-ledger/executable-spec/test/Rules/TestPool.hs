@@ -168,10 +168,6 @@ retiredPoolIsRemoved ssts =
     wasRemoved hk = QC.conjoin
       [ QC.counterexample "hk not in stPools"
           (hk ∈ dom (source sst ^. (stPools . to (\(StakePools x) -> x))))
-      -- mhueschen: this property fails, likely because the spec allows us to
-      -- retire something which is already in the retiring list.
-      -- , QC.counterexample "hk is already in source's retiring"
-      --     (hk ∉ dom (source sst ^. retiring))
       , QC.counterexample "hk is not in target's retiring"
           (hk ∈ dom (target sst ^. retiring))
       ]
