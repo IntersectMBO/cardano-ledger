@@ -22,21 +22,22 @@ module Delegation.Certificates
   , isRegKey
   , isDeRegKey
   , isRegPool
+  , isRetirePool
   , isInstantaneousRewards
   , requiresVKeyWitness
   ) where
 
+import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin (..))
 import           Keys (Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
 import           Ledger.Core (Relation (..))
+import           NonIntegral (exp')
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
 import           TxData (Credential (..), DCert (..), StakeCredential, StakeCreds (..),
                      StakePools (..), delegator, poolPubKey)
-import           Cardano.Ledger.Shelley.Crypto
-import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
-import           NonIntegral (exp')
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
@@ -103,6 +104,11 @@ isDeRegKey _ = False
 isRegPool :: DCert crypto-> Bool
 isRegPool (RegPool _) = True
 isRegPool _ = False
+
+-- | Check for `RetirePool` constructor
+isRetirePool :: DCert crypto -> Bool
+isRetirePool (RetirePool _ _) = True
+isRetirePool _ = False
 
 decayKey :: PParams -> (Coin, UnitInterval, Rational)
 decayKey pc = (dval, dmin, lambdad)

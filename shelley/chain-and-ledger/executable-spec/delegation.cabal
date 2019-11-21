@@ -81,6 +81,7 @@ library
     containers,
     cryptonite,
     hedgehog,
+    QuickCheck,
     small-steps,
     microlens,
     microlens-th,
@@ -101,11 +102,17 @@ test-suite delegation-test
                          Mutator
                          Generator
                          Generator.Core
+                         Generator.Core.QuickCheck
                          Generator.LedgerTrace
+                         Generator.LedgerTrace.QuickCheck
                          Generator.Delegation
+                         Generator.Delegation.QuickCheck
                          Generator.Update
+                         Generator.Update.QuickCheck
                          Generator.Utxo
+                         Generator.Utxo.QuickCheck
                          PropertyTests
+                         Shrinkers
                          STSTests
                          Examples
                          Rules.ClassifyTraces
@@ -144,7 +151,9 @@ test-suite delegation-test
       tasty,
       tasty-hunit,
       tasty-hedgehog,
+      tasty-quickcheck,
       hedgehog,
+      QuickCheck,
       delegation,
       containers,
       multiset,

@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Generator.Delegation
+module Generator.Delegation.QuickCheck
   ( genDCerts )
   where
 
@@ -16,25 +16,23 @@ import           Data.Ratio ((%))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
-import           Hedgehog (Gen)
 import           Lens.Micro (to, (^.))
 import           Numeric.Natural (Natural)
 
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import           Test.QuickCheck (Gen)
+import qualified Test.QuickCheck as QC
 
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, pattern RegPool,
                      pattern RetirePool, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core (genInteger, genNatural, toCred)
+import           Generator.Core.QuickCheck (genInteger, genNatural, toCred)
 import           Keys (hashKey, vKey)
 import           Ledger.Core (dom, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _pstate,
                      _stPools, _stkCreds)
-import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs, PState, PoolParams,
+import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs, PState, PoolParams, VKey,
                      VrfKeyPairs, hashKeyVRF)
-import           Mutator (getAnyStakeKey)
 import           PParams (PParams (..), eMax)
 import           Slot (Epoch (Epoch), Slot (Slot), epochFromSlot)
 import           TxData (Credential (KeyHashObj), pattern PoolParams, RewardAcnt (..),
@@ -92,12 +90,12 @@ genDCert
   -> Gen (Maybe (DCert, KeyPair))
 genDCert keys vrfKeys pparams dpState slot =
   -- TODO @uroboros Generate _Delegate_ Certificates
-  Gen.frequency [ (3, genRegKeyCert keys dState)
-                , (3, genDeRegKeyCert keys dState)
-                , (3, genRegPool keys vrfKeys dpState)
-                , (3, genRetirePool keys pparams pState slot)
-                , (1, pure Nothing)
-                ]
+  QC.frequency [ (3, genRegKeyCert keys dState)
+               , (3, genDeRegKeyCert keys dState)
+               , (3, genRegPool keys vrfKeys dpState)
+               , (3, genRetirePool keys pparams pState slot)
+               , (1, pure Nothing)
+               ]
  where
   dState = dpState ^. dstate
   pState = dpState ^. pstate
@@ -112,7 +110,7 @@ genRegKeyCert keys delegSt =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
-           (_payKey, stakeKey) <- Gen.element availableKeys
+           (_payKey, stakeKey) <- QC.elements availableKeys
            pure $ Just $ (RegKey (toCred stakeKey), stakeKey)
   where
     notRegistered k = k ∉ dom (_stkCreds delegSt)
@@ -128,7 +126,7 @@ genDeRegKeyCert keys delegSt =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
-           (_payKey, stakeKey) <- Gen.element availableKeys
+           (_payKey, stakeKey) <- QC.elements availableKeys
            pure $ Just (DeRegKey (toCred stakeKey), stakeKey)
   where
     registered k = k ∈ dom (_stkCreds delegSt)
@@ -156,13 +154,16 @@ genRegPool keys vrfKeys dpState =
 genStakePool :: KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
 genStakePool skeys vrfKeys =
   mkPoolParams
-    <$> (Gen.element skeys)
-    <*> (snd <$> Gen.element vrfKeys)
+    <$> (QC.elements skeys)
+    <*> (snd <$> QC.elements vrfKeys)
     <*> (Coin <$> genInteger 1 100)
     <*> (Coin <$> genInteger 1 100)
-    <*> (genNatural 0 100)
+    <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> (getAnyStakeKey skeys)
  where
+  getAnyStakeKey :: KeyPairs -> Gen VKey
+  getAnyStakeKey keys = vKey . snd <$> QC.elements keys
+
   mkPoolParams poolKeyPair vrfKey cost pledge marginPercent acntKey =
     let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
         pps = PoolParams
@@ -199,8 +200,8 @@ genRetirePool availableKeys pp pState slot =
      then pure Nothing
      else (\keyHash epoch ->
               Just (RetirePool keyHash epoch, findKeyPair keyHash))
-                <$> Gen.element poolHashKeys
-                <*> (Epoch <$> Gen.integral (Range.constant epochLow epochHigh))
+                <$> QC.elements poolHashKeys
+                <*> (Epoch <$> genNatural epochLow epochHigh)
  where
   stakePools = pState ^. (stPools . to (\(StakePools x) -> x))
   poolHashKeys = Set.toList (Map.keysSet stakePools)

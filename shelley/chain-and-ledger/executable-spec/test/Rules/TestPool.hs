@@ -17,6 +17,7 @@ import           Data.Word (Word64)
 import           Lens.Micro (to, (^.))
 
 import           Hedgehog (MonadTest, Property, assert, forAll, property, withTests, (===))
+import qualified Test.QuickCheck as QC
 
 import           Control.State.Transition (Environment, State)
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
@@ -25,8 +26,7 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 
 import           BaseTypes ((==>))
 import           Delegation.Certificates (cwitness)
-import           LedgerState (pattern PState, pParams, retiring, stPools, _retiring,
-                     _stPools)
+import           LedgerState (pattern PState, pParams, retiring, stPools, _retiring, _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (Epoch (..), epochFromSlot)
@@ -147,6 +147,31 @@ registeredPoolIsAdded env ssts =
       -- Hashkey is registered in stPools map
       M.lookup hk (tSt ^. stPools . to (\(StakePools x) -> x))
         === Just (ledgerSlot env)
+
+-- | Check that a `RetirePool` certificate properly marks a stake pool for
+-- retirement.
+poolIsMarkedForRetirement
+  :: [SourceSignalTarget POOL]
+  -> QC.Property
+poolIsMarkedForRetirement ssts =
+  QC.conjoin (map check ssts)
+ where
+  check :: SourceSignalTarget POOL
+        -> QC.Property
+  check sst =
+    case signal sst of
+      -- We omit a well-formedness check for `epoch`, because the executable
+      -- spec will throw a PredicateFailure in that case.
+      RetirePool hk _epoch -> wasRemoved hk
+      _ -> QC.property ()
+   where
+    wasRemoved :: KeyHash -> QC.Property
+    wasRemoved hk = QC.conjoin
+      [ QC.counterexample "hk not in stPools"
+          (hk ∈ dom (source sst ^. (stPools . to (\(StakePools x) -> x))))
+      , QC.counterexample "hk is not in target's retiring"
+          (hk ∈ dom (target sst ^. retiring))
+      ]
 
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.

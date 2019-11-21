@@ -15,6 +15,7 @@ import           Lens.Micro ((%~), (&), (.~), (^.))
 import           Hedgehog.Internal.Property (LabelName (..))
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
+import qualified Test.Tasty.QuickCheck as TQC
 
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -25,7 +26,7 @@ import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
 import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
-                     registeredPoolIsAdded, rewardZeroAfterReg)
+                     poolIsMarkedForRetirement, registeredPoolIsAdded, rewardZeroAfterReg)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -167,6 +168,10 @@ propertyTests = testGroup "Property-Based Testing"
                   [ testProperty "newly registered stake pool is added to \
                                  \appropriate state mappings"
                                  registeredPoolIsAdded
+                  , TQC.testProperty "retired stake pool is removed from \
+                                     \appropriate state mappings and marked \
+                                     \ for retiring"
+                                     poolIsMarkedForRetirement
                   , testProperty "pool state is internally consistent"
                                  pStateIsInternallyConsistent
                   ]

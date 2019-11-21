@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Generator.Utxo
+module Generator.Utxo.QuickCheck
   ( genTx
   )
   where
@@ -15,13 +15,14 @@ import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Hedgehog (Gen)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+
+import           Test.QuickCheck (Gen)
+import qualified Test.QuickCheck as QC
 
 import           Coin (Coin (..), splitCoin)
 import           Generator.Core (findPayKeyPair, toAddr)
-import           Generator.Delegation (genDCerts)
+import           Generator.Core.QuickCheck (genNatural)
+import           Generator.Delegation.QuickCheck (genDCerts)
 import           LedgerState (pattern UTxOState)
 import           MockTypes (Addr, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn, TxOut, UTxO,
                      UTxOState, VrfKeyPairs)
@@ -41,7 +42,7 @@ genTx :: LedgerEnv
       -> VrfKeyPairs
       -> Gen Tx
 genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys vrfKeys = do
-  keys' <- Gen.shuffle keys
+  keys' <- QC.shuffle keys
 
   -- inputs
   (witnessedInputs, spendingBalance) <- pickSpendingInputs keys' utxo
@@ -50,7 +51,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys vrfKeys 
   -- output addresses
   recipientAddrs <- genRecipients keys'
 
-  ttl <- Gen.integral $ Range.linear 1 100
+  ttl <- genNatural 1 100
   let slotWithTTL = slot + Slot ttl
 
   -- certificates
@@ -58,7 +59,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys vrfKeys 
     <- genDCerts keys' vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
-  when (spendingBalance < deposits_) Gen.discard
+  when (spendingBalance < deposits_) QC.discard
   let balance_ = spendingBalance - deposits_ + refunds_
 
   -- calc. fees and output amounts
@@ -124,8 +125,8 @@ pickSpendingInputs
   -> UTxO
   -> Gen ([(TxIn, KeyPair)], Coin)
 pickSpendingInputs keys (UTxO utxo) = do
-  selectedUtxo <- take <$> Gen.integral (Range.linear 1 5)
-                       <*> Gen.shuffle (Map.toList utxo)
+  selectedUtxo <- take <$> QC.choose (1, 5)
+                       <*> QC.shuffle (Map.toList utxo)
 
   return ( witnessedInput <$> selectedUtxo
          , balance (UTxO (Map.fromList selectedUtxo)))
