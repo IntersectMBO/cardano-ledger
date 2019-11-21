@@ -17,7 +17,7 @@ header =
   , slot             : uint
   , nonce            : uint
   , nonce_proof      : $vrf_proof
-  , leader_value     : ~rational
+  , leader_value     : ~unit_interval
   , leader_proof     : $vrf_proof
   , size             : uint
   , block_body_hash  : $hash            ; merkle pair root
@@ -88,14 +88,14 @@ credential =
   // 2, genesishash
   )
 
-coin = uint
+coin = int
 
 epoch = uint
 
 keyhash = $hash
 scripthash = $hash
 
-pool_params = [[* keyhash], coin, rational, coin, credential, $vrf_keyhash]
+pool_params = [[* keyhash], coin, unit_interval, coin, credential, $vrf_keyhash]
 
 withdrawal = (reward_acct : credential, amount : uint)
 
@@ -130,7 +130,7 @@ $kes_signature /= bytes
 
 ; Numeric Types
 
-rational =
+unit_interval =
   [ numerator   : uint
   , denominator : uint
   ]
