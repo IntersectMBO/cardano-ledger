@@ -36,6 +36,7 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
 import           Coin (Coin (..))
+import           CostModel
 import           Slot (EpochNo (..))
 
 import           Lens.Micro.TH (makeLenses)
@@ -82,6 +83,14 @@ data PParams = PParams
   , _extraEntropy    :: Nonce
     -- | Protocol version
   , _protocolVersion :: (Natural, Natural, Natural)
+    -- | maximum allowable resources for script validation
+  , _maxUnits        :: ExUnits
+    -- | Coefficients for conversion of resources needed for script execution into fees
+  , _costm           :: Map PlutusVer CostMod
+    -- | Coefficients for conversion of resource primitives (used during
+    -- script execution) into abstract execution units
+  , _prices           :: Prices
+    -- | Coefficients for conversion of resources needed for script execution into fees
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks PParams
@@ -184,4 +193,6 @@ emptyPParams =
      , _d = interval0
      , _extraEntropy = NeutralNonce
      , _protocolVersion = (0, 0, 0)
+     , _maxUnits = defaultUnits -- no scripts can be run
+     , _costm = defaultModel -- but they're also free
      }

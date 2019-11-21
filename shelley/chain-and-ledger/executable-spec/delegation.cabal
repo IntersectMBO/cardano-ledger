@@ -35,6 +35,7 @@ library
                      TxData
                      Updates
                      Validation
+                     CostModel
                      STS.Avup
                      STS.Bbody
                      STS.Tick
