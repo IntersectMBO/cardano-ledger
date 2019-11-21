@@ -1,17 +1,16 @@
 {-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE PatternSynonyms    #-}
 {-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.Update.Payload
-  ( APayload(..)
-  , Payload
-  , payload
+  ( Payload(payloadProposal, payloadVotes, payloadSerialized)
+  , pattern Payload
   )
 where
 
@@ -21,43 +20,46 @@ import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( Annotated(..)
-  , ByteSpan
-  , Decoded(..)
-  , FromCBOR(..)
+  ( Decoded(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
-  , annotatedDecoder
   , encodeListLen
+  , encodePreEncoded
   , enforceSize
+  , serializeEncoding'
+  , withSlice'
   )
 import Cardano.Chain.Update.Proposal
-  ( AProposal
-  , Proposal
+  ( Proposal
   , formatMaybeProposal
   )
 import Cardano.Chain.Update.Vote
-  ( AVote
-  , Vote
+  ( Vote
   , formatVoteShort
   )
 
 
+{-# COMPLETE Payload #-}
+pattern Payload :: Maybe Proposal -> [Vote] -> Payload
+pattern Payload{payloadProposal, payloadVotes} <- 
+  Payload' payloadProposal payloadVotes _
+  where
+    Payload pp pv =
+      let bytes = serializeEncoding' $
+            encodeListLen 2 <> toCBOR pp <> toCBOR pv
+      in Payload' pp pv bytes
+
 -- | Update System payload
-data APayload a = APayload
-  { payloadProposal   :: !(Maybe (AProposal a))
-  , payloadVotes      :: ![AVote a]
-  , payloadAnnotation :: a
-  } deriving (Eq, Show, Generic, Functor)
+data Payload = Payload'
+  { payloadProposal'  :: !(Maybe Proposal)
+  , payloadVotes'     :: ![Vote]
+  , payloadSerialized :: ByteString
+  } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
-type Payload = APayload ()
-
-payload :: Maybe Proposal -> [Vote] -> Payload
-payload p v = APayload p v ()
-
-instance Decoded (APayload ByteString) where
-  type BaseType (APayload ByteString) = Payload
-  recoverBytes = payloadAnnotation
+instance Decoded Payload where
+  type BaseType Payload = Payload
+  recoverBytes = payloadSerialized
 
 instance B.Buildable Payload where
   build p
@@ -69,15 +71,10 @@ instance B.Buildable Payload where
       (map formatVoteShort (payloadVotes p))
 
 instance ToCBOR Payload where
-  toCBOR p =
-    encodeListLen 2 <> toCBOR (payloadProposal p) <> toCBOR (payloadVotes p)
+  toCBOR = encodePreEncoded . payloadSerialized
 
-instance FromCBOR Payload where
-  fromCBOR = void <$> fromCBOR @(APayload ByteSpan)
-
-instance FromCBOR (APayload ByteSpan) where
-  fromCBOR = do
-    Annotated (proposal, votes) byteSpan <- annotatedDecoder $ do
-      enforceSize "Update.Payload" 2
-      (,) <$> fromCBOR <*> fromCBOR
-    pure $ APayload proposal votes byteSpan
+instance FromCBORAnnotated Payload where
+  fromCBORAnnotated' = withSlice' $
+    Payload' <$ lift (enforceSize "Update.Payload" 2)
+      <*> fromCBORAnnotated'
+      <*> fromCBORAnnotated'

@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE UndecidableInstances       #-}
@@ -48,8 +47,7 @@ import qualified Data.Foldable as Foldable
 import Formatting.Buildable (Buildable(..))
 import qualified Prelude
 
-import Cardano.Binary
-  (Annotated(..), FromCBOR(..), Raw, ToCBOR(..), serializeBuilder)
+import Cardano.Binary (Annotated(..), FromCBOR(..), Raw, ToCBOR(..), serializeBuilder)
 import Cardano.Crypto (AbstractHash(..), Hash, hashDecoded, hashRaw)
 
 
@@ -70,7 +68,7 @@ instance Buildable (MerkleRoot a) where
 instance ToCBOR a => ToCBOR (MerkleRoot a) where
   toCBOR = toCBOR . getMerkleRoot
 
-instance FromCBOR a => FromCBOR (MerkleRoot a) where
+instance Typeable a => FromCBOR (MerkleRoot a) where
   fromCBOR = MerkleRoot <$> fromCBOR
 
 merkleRootToBuilder :: MerkleRoot a -> Builder

@@ -4,11 +4,12 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE PatternSynonyms     #-}
 
 module Cardano.Chain.UTxO.TxWitness
-  ( TxWitness
+  ( TxWitness(txInWitnesses, txWitnessSerialized)
+  , pattern TxWitness
   , TxInWitness(..)
   , TxSigData(..)
   , TxSig
@@ -16,7 +17,7 @@ module Cardano.Chain.UTxO.TxWitness
   )
 where
 
-import Cardano.Prelude
+import Cardano.Prelude as P
 
 import Data.Vector (Vector)
 import Formatting (bprint, build)
@@ -27,12 +28,16 @@ import Cardano.Binary
   , Case(..)
   , DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
+  , FromCBORAnnotated(..)
   , ToCBOR(..)
   , decodeListLen
   , encodeListLen
+  , encodePreEncoded
   , matchSize
   , serialize'
   , szCases
+  , withSlice'
+  , serializeEncoding'
   )
 import Cardano.Chain.Common.CBOR
   (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
@@ -44,7 +49,7 @@ import Cardano.Crypto
   , RedeemVerificationKey
   , RedeemSignature
   , Signature
-  , hashDecoded
+  , hash
   , shortHashF
   )
 
@@ -52,7 +57,25 @@ import Cardano.Crypto
 -- | A witness is a proof that a transaction is allowed to spend the funds it
 --   spends (by providing signatures, redeeming scripts, etc). A separate proof
 --   is provided for each input.
-type TxWitness = Vector TxInWitness
+data TxWitness = TxWitness'
+  { txInWitnesses' :: !(Vector TxInWitness)
+  , txWitnessSerialized :: ByteString
+  } deriving (Eq, Show, Generic)
+    deriving anyclass NFData
+
+instance ToCBOR TxWitness where
+  toCBOR = encodePreEncoded . txWitnessSerialized
+
+  encodedSizeExpr size _ = encodedSizeExpr size (Proxy :: Proxy (Vector TxInWitness))
+
+pattern TxWitness :: Vector TxInWitness -> TxWitness
+pattern TxWitness{ txInWitnesses } <- TxWitness' txInWitnesses _
+  where
+  TxWitness wits = TxWitness' wits (serializeEncoding' $ toCBOR wits)
+
+instance FromCBORAnnotated TxWitness where
+  fromCBORAnnotated' = withSlice' . lift $
+    TxWitness' <$> fromCBOR
 
 -- | A witness for a single input
 data TxInWitness
@@ -116,10 +139,10 @@ newtype TxSigData = TxSigData
   { txSigTxHash :: Hash Tx
   } deriving (Eq, Show, Generic)
 
-recoverSigData :: Annotated Tx ByteString -> Annotated TxSigData ByteString
-recoverSigData atx =
+recoverSigData :: Tx -> Annotated TxSigData ByteString
+recoverSigData tx =
   let
-    txHash      = hashDecoded atx
+    txHash      = hash tx
     signedBytes = serialize' txHash --TODO: make the prefix bytes explicit
   in Annotated (TxSigData txHash) signedBytes
 
@@ -132,4 +155,3 @@ instance FromCBOR TxSigData where
 
 -- | 'Signature' of addrId
 type TxSig = Signature TxSigData
-

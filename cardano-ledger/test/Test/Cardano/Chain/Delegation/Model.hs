@@ -118,7 +118,7 @@ commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
       result = Scheduling.scheduleCertificate
         (E.elaborateDSEnv abstractEnv)
         concreteState
-        (E.elaborateDCertAnnotated Dummy.protocolMagicId cert)
+        (E.elaborateDCert Dummy.protocolMagicId cert)
 
     liftIO . writeIORef concreteRef $ fromRight concreteState result
 

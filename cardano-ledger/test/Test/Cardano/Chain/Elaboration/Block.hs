@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE PatternSynonyms    #-}
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
@@ -13,7 +14,6 @@
 module Test.Cardano.Chain.Elaboration.Block
   ( abEnvToCfg
   , elaborate
-  , elaborateBS
   , rcDCert
   , AbstractToConcreteIdMaps
     ( AbstractToConcreteIdMaps
@@ -28,7 +28,6 @@ import Cardano.Prelude hiding (to)
 import Control.Arrow ((&&&))
 import Control.Lens ((^.), to, (^..))
 import Data.Bimap (Bimap)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Map as Map
 import Data.Monoid.Generic (GenericSemigroup (GenericSemigroup), GenericMonoid (GenericMonoid))
@@ -36,7 +35,6 @@ import qualified Data.Set as Set
 import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 import GHC.Generics (Generic)
 
-import qualified Cardano.Binary as Binary
 import qualified Cardano.Crypto.Hashing as H
 import Cardano.Crypto.ProtocolMagic (AProtocolMagic(..))
 
@@ -94,11 +92,7 @@ elaborate
   -> Abstract.Block
   -> (Concrete.Block, AbstractToConcreteIdMaps)
 elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
-  ( Concrete.ABlock
-    { Concrete.blockHeader = recomputeHashes bh0
-    , Concrete.blockBody = bb0
-    , Concrete.blockAnnotation = ()
-    }
+  ( Concrete.Block (recomputeHashes bh0) bb0
   , AbstractToConcreteIdMaps
     { transactionIds = txIdMap'
     , proposalIds = proposalsIdMap'
@@ -109,11 +103,13 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
   pm = Genesis.configProtocolMagicId config
 
+  epochSlots = Genesis.configEpochSlots config
+
   bh0 = Concrete.mkHeaderExplicit
     pm
     prevHash
     (ChainDifficulty 0)
-    (Genesis.configEpochSlots config)
+    epochSlots
     sid
     ssk
     cDCert
@@ -136,12 +132,11 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
   cDCert :: Delegation.Certificate
   cDCert = elaborateDCert pm dCert
 
-  bb0    = Concrete.ABody
-    { Concrete.bodyTxPayload     = UTxO.ATxPayload txPayload
-    , Concrete.bodySscPayload    = Ssc.SscPayload
-    , Concrete.bodyDlgPayload    = Delegation.UnsafeAPayload dcerts ()
-    , Concrete.bodyUpdatePayload = updatePayload
-    }
+  bb0    = Concrete.Body
+             (UTxO.TxPayload txPayload)
+             Ssc.SscPayload
+             (Delegation.UnsafePayload dcerts)
+             updatePayload
 
   dcerts =
     abstractBlock
@@ -149,19 +144,18 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
             (elaborateDCert pm)
           )
 
-  (txPayload, txIdMap') = first (fmap void) $ elaborateTxWitnesses
+  (txPayload, txIdMap') = elaborateTxWitnesses
     txIdMap
     (abstractBlock ^. Abstract.bBody . Abstract.bUtxo)
 
-  updatePayload :: Update.APayload ()
+  updatePayload :: Update.Payload
   updatePayload =
-    Update.APayload
+    Update.Payload
       (fmap snd maybeProposals)
       (fmap (elaborateVote pm proposalsIdMap')
       $ Abstract._bUpdVotes
       $ Abstract._bBody abstractBlock
       )
-      () -- Update payload annotation
 
   maybeProposals :: Maybe (Abstract.Update.UProp, Update.Proposal)
   maybeProposals
@@ -181,9 +175,9 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
   -- | Recompute the block header hashes (which correspond to the block
   -- payload) if the abstract hashes don't match the abstract payload.
-  recomputeHashes :: Concrete.AHeader () -> Concrete.AHeader ()
+  recomputeHashes :: Concrete.Header -> Concrete.Header
   recomputeHashes concreteHeader =
-    concreteHeader {Concrete.aHeaderProof = Binary.Annotated alteredHdrProof ()}
+    concreteHeader {Concrete.headerProof = alteredHdrProof}
     where
       alteredHdrProof :: Concrete.Proof
       alteredHdrProof =
@@ -194,8 +188,7 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
           }
         where
           originalHeaderProof :: Concrete.Proof
-          originalHeaderProof =
-            Binary.unAnnotated (Concrete.aHeaderProof concreteHeader)
+          originalHeaderProof = Concrete.headerProof concreteHeader
 
           possiblyAlteredUTxOProof :: UTxO.TxProof
           possiblyAlteredUTxOProof =
@@ -220,42 +213,6 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
 
       dummyHash :: H.Hash Int
       dummyHash = H.hash 0
-
-elaborateBS
-  :: AbstractToConcreteIdMaps
-  -> Genesis.Config -- TODO: Do we want this to come from the abstract
-                    -- environment? (in such case we wouldn't need this
-                    -- parameter)
-  -> DCert
-  -> Concrete.ChainValidationState
-  -> Abstract.Block
-  -> (Concrete.ABlock ByteString, AbstractToConcreteIdMaps)
-elaborateBS txIdMap config dCert st ab =
-  first (annotateBlock (Genesis.configEpochSlots config))
-    $ elaborate txIdMap config dCert st ab
-
-annotateBlock :: Slotting.EpochSlots -> Concrete.Block -> Concrete.ABlock ByteString
-annotateBlock epochSlots block =
-  let
-    decodedABlockOrBoundary =
-      case
-          Binary.decodeFullDecoder
-            "Block"
-            (Concrete.fromCBORABlockOrBoundary epochSlots) bytes
-        of
-          Left err ->
-            panic
-              $  "This function should be able to decode the block it encoded"
-              <> ". Instead I got: "
-              <> show err
-          Right abobb -> map (LBS.toStrict . Binary.slice bytes) abobb
-  in
-    case decodedABlockOrBoundary of
-      Concrete.ABOBBlock bk -> bk
-      Concrete.ABOBBoundary _ ->
-        panic "This function should have decoded a block."
-  where bytes = Binary.serializeEncoding (Concrete.toCBORABOBBlock epochSlots block)
-
 -- | Re-construct an abstract delegation certificate from the abstract state.
 --
 -- We need to do this because the delegation certificate is included in the

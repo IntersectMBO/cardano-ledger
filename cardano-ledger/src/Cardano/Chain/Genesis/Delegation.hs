@@ -26,8 +26,7 @@ import Text.JSON.Canonical (FromJSON(..), ReportSchemaErrors(..), ToJSON(..))
 
 import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate
-  ( ACertificate(delegateVK, issuerVK)
-  , Certificate
+  ( Certificate(delegateVK, issuerVK)
   )
 
 

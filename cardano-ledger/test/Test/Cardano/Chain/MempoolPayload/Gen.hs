@@ -8,7 +8,7 @@ import Cardano.Prelude
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 
-import Cardano.Chain.MempoolPayload (AMempoolPayload (..), MempoolPayload)
+import Cardano.Chain.MempoolPayload (MempoolPayload (..))
 import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Delegation.Gen as Delegation (genCertificate)

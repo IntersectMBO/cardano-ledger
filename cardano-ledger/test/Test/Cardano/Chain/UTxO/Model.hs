@@ -28,7 +28,7 @@ import Cardano.Chain.UTxO
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import Cardano.Chain.ValidationMode (ValidationMode (..))
-import Cardano.Crypto (hash, hashDecoded)
+import Cardano.Crypto (hash)
 
 import qualified Cardano.Ledger.Spec.STS.UTXO as Abstract
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
@@ -121,21 +121,21 @@ elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
 elaborateTxWitnesses
   :: Map Abstract.TxId Concrete.TxId
   -> [Abstract.TxWits]
-  -> ([Concrete.ATxAux ByteString], Map Abstract.TxId Concrete.TxId)
+  -> ([Concrete.TxAux], Map Abstract.TxId Concrete.TxId)
 elaborateTxWitnesses txIdMap = first reverse . foldl' step ([], txIdMap)
   where step (acc, m) = first (: acc) . elaborateTxWitsBSWithMap m
 
 elaborateTxWitsBSWithMap
   :: Map Abstract.TxId Concrete.TxId
   -> Abstract.TxWits
-  -> (Concrete.ATxAux ByteString, Map Abstract.TxId Concrete.TxId)
+  -> (Concrete.TxAux, Map Abstract.TxId Concrete.TxId)
 elaborateTxWitsBSWithMap txIdMap abstractTxWits = (concreteTxWitness, txIdMap')
  where
-  concreteTxWitness = E.elaborateTxWitsBS
+  concreteTxWitness = E.elaborateTxWits
     (elaborateTxId txIdMap)
     abstractTxWits
 
-  concreteTxId = hashDecoded $ Concrete.aTaTx concreteTxWitness
+  concreteTxId = hash $ Concrete.taTx concreteTxWitness
 
   txIdMap'     = M.insert
     (Abstract.txid $ Abstract.body abstractTxWits)

@@ -7,11 +7,11 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE PatternSynonyms            #-}
 
 module Cardano.Chain.Delegation.Payload
-  ( APayload(..)
-  , Payload
-  , unsafePayload
+  ( Payload( getPayload, serializePayload )
+  , pattern UnsafePayload
   )
 where
 
@@ -21,45 +21,41 @@ import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
 
 import Cardano.Binary
-  ( Annotated(..)
-  , ByteSpan
-  , Decoded(..)
-  , FromCBOR(..)
+  ( Decoded(..)
   , ToCBOR(..)
-  , annotatedDecoder
+  , FromCBORAnnotated (..)
+  , serialize'
+  , encodePreEncoded
+  , withSlice'
   )
 import qualified Cardano.Chain.Delegation.Certificate as Delegation
 
 
 -- | The delegation 'Payload' contains a list of delegation 'Certificate's
-data APayload a = UnsafeAPayload
-  { getPayload    :: [Delegation.ACertificate a]
-  , getAnnotation :: a
-  } deriving (Show, Eq, Generic, Functor)
+data Payload = UnsafePayload'
+  { getPayload'      :: ![Delegation.Certificate]
+  , serializePayload :: ByteString
+  } deriving (Show, Eq, Generic)
     deriving anyclass NFData
 
-type Payload = APayload ()
+{-# COMPLETE UnsafePayload #-}
+pattern UnsafePayload :: [Delegation.Certificate] -> Payload
+pattern UnsafePayload { getPayload } <- UnsafePayload' getPayload _
+  where
+  UnsafePayload sks = UnsafePayload' sks (serialize' sks)
 
-unsafePayload :: [Delegation.Certificate] -> Payload
-unsafePayload sks = UnsafeAPayload sks ()
+instance Decoded Payload where
+  type BaseType Payload = Payload
+  recoverBytes = serializePayload
 
-instance Decoded (APayload ByteString) where
-  type BaseType (APayload ByteString)  = Payload
-  recoverBytes = getAnnotation
-
-instance Buildable (APayload a) where
-  build (UnsafeAPayload psks _) = bprint
+instance Buildable Payload where
+  build (UnsafePayload psks) = bprint
     ("proxy signing keys (" . int . " items): " . listJson . "\n")
     (length psks)
     psks
 
 instance ToCBOR Payload where
-  toCBOR = toCBOR . getPayload
+  toCBOR = encodePreEncoded . serializePayload
 
-instance FromCBOR Payload where
-  fromCBOR = void <$> fromCBOR @(APayload ByteSpan)
-
-instance FromCBOR (APayload ByteSpan) where
-  fromCBOR = do
-    (Annotated p a) <- annotatedDecoder fromCBOR
-    pure (UnsafeAPayload p a)
+instance FromCBORAnnotated Payload where
+  fromCBORAnnotated' = withSlice' $ UnsafePayload' <$> fromCBORAnnotated'

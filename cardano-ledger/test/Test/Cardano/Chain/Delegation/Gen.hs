@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 module Test.Cardano.Chain.Delegation.Gen
   ( genCanonicalCertificate
   , genCertificate
@@ -15,11 +16,10 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Delegation
-  ( ACertificate(delegateVK, issuerVK)
-  , Certificate
+  ( Certificate(delegateVK, issuerVK)
   , Payload
   , signCertificate
-  , unsafePayload
+  , pattern UnsafePayload
   )
 import Cardano.Chain.Delegation.Validation.Scheduling (Error(..))
 import Cardano.Chain.Slotting (EpochNumber(..))
@@ -77,4 +77,4 @@ genError = Gen.choice
 
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm =
-  unsafePayload <$> Gen.list (Range.linear 0 5) (genCertificate pm)
+  UnsafePayload <$> Gen.list (Range.linear 0 5) (genCertificate pm)

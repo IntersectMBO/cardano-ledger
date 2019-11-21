@@ -51,7 +51,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
-  ( ABlock
+  ( Block
   , BlockValidationMode(..)
   , ChainValidationError(ChainValidationBlockTooLarge,
                      ChainValidationHeaderTooLarge, ChainValidationProofValidationError)
@@ -142,7 +142,7 @@ import qualified Ledger.Update.Test as Update.Test
 import Test.Cardano.Chain.Elaboration.Block
   ( AbstractToConcreteIdMaps
   , abEnvToCfg
-  , elaborateBS
+  , elaborate
   , rcDCert
   , transactionIds
   )
@@ -194,7 +194,7 @@ elaborateAndUpdate
 elaborateAndUpdate config (cvs, abstractToConcreteIdMaps) (ast, ab) =
   (, abstractToConcreteIdMaps') <$> runReaderT (updateBlock config cvs concreteBlock) vMode
  where
-  (concreteBlock, abstractToConcreteIdMaps') = elaborateBS abstractToConcreteIdMaps config dCert cvs ab
+  (concreteBlock, abstractToConcreteIdMaps') = elaborate abstractToConcreteIdMaps config dCert cvs ab
 
   dCert = rcDCert (ab ^. Abstract.bHeader . Abstract.bhIssuer) stableAfter ast
 
@@ -209,7 +209,7 @@ elaborateBlock
   -> AbstractToConcreteIdMaps
   -> State CHAIN
   -> Abstract.Block
-  -> ABlock ByteString
+  -> Block
 elaborateBlock
   config
   chainValidationState
@@ -217,7 +217,7 @@ elaborateBlock
   abstractState
   abstractBlock = concreteBlock
   where
-    (concreteBlock, _) = elaborateBS
+    (concreteBlock, _) = elaborate
                            abstractToConcreteIdMaps
                            config
                            dCert
@@ -536,7 +536,7 @@ invalidSizesAreRejected
   -- ^ Function used to compute the size of the abstract-block's component.
   -> (ProtocolParameters -> Natural -> ProtocolParameters)
   -- ^ Setter for the concrete protocol parameters.
-  -> (ABlock ByteString -> Natural)
+  -> (Block -> Natural)
   -- ^ Function used to compute the size of the concrete-block's component.
   -> ([[PredicateFailure CHAIN]] -> ChainValidationError -> PropertyT IO ())
   -- ^ Function to check agreement of concrete and abstract failures.

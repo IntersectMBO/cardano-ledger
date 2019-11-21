@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE PatternSynonyms   #-}
 
 module Test.Cardano.Chain.UTxO.ValidationMode
   ( tests
@@ -14,7 +15,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 
-import Cardano.Binary (Annotated (..))
+import Cardano.Binary (serialize')
 import Cardano.Chain.Block (BlockValidationMode (..))
 import Cardano.Chain.Common
   ( TxFeePolicy (..)
@@ -23,9 +24,10 @@ import Cardano.Chain.Common
   )
 import Cardano.Chain.Update (ProtocolParameters (..))
 import Cardano.Chain.UTxO
-  ( ATxAux (..)
+  ( TxAux (..)
   , Environment (..)
   , TxId
+  , pattern TxWitness
   , TxValidationError (..)
   , TxValidationMode (..)
   , UTxOValidationError (..)
@@ -46,7 +48,7 @@ import qualified Ledger.UTxO as Abstract
 import qualified Ledger.UTxO.Generators as Abstract
 
 import Test.Cardano.Chain.Elaboration.Update (elaboratePParams)
-import Test.Cardano.Chain.Elaboration.UTxO (elaborateTxWitsBS)
+import Test.Cardano.Chain.Elaboration.UTxO (elaborateTxWits)
 import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
@@ -73,7 +75,7 @@ ts_prop_updateUTxO_Valid =
 
       -- Generate abstract transaction and elaborate.
       abstractTxWits <- forAll $ genValidTxWits ppau txIdMap
-      let tx = elaborateTxWitsBS
+      let tx = elaborateTxWits
             (elaborateTxId txIdMap)
             abstractTxWits
 
@@ -106,7 +108,7 @@ ts_prop_updateUTxO_InvalidWit =
 
       -- Generate abstract transaction and elaborate.
       abstractTxWits <- forAll $ genValidTxWits ppau txIdMap
-      let tx = elaborateTxWitsBS
+      let tx = elaborateTxWits
             (elaborateTxId txIdMap)
             abstractTxWits
 
@@ -114,13 +116,11 @@ ts_prop_updateUTxO_InvalidWit =
       -- transaction generated above.
       let pm = Dummy.aProtocolMagic
       invalidWitness <- forAll $
-        Annotated
-          <$> (V.fromList
+        TxWitness
+          <$> V.fromList
                 <$> Gen.list (Range.linear 1 10)
                              (genVKWitness (getProtocolMagicId pm))
-              )
-          <*> genBytes 32
-      let txInvalidWit = tx { aTaWitness = invalidWitness }
+      let txInvalidWit = tx { taWitness = invalidWitness }
 
       -- Validate the generated concrete transaction
       let env = Environment pm pparams UTxO.defaultUTxOConfiguration
@@ -213,10 +213,10 @@ abstractTxFee
   -> Abstract.Tx
   -> Abstract.Lovelace
 abstractTxFee txIdMap tfp aUtxo aTx = do
-  let aTxWits = Abstract.makeTxWits aUtxo aTx
-      ATxAux (Annotated _ txBytes) _ _ = elaborateTxWitsBS
+  let txWits = Abstract.makeTxWits aUtxo aTx
+      txBytes = serialize' $ elaborateTxWits
         (elaborateTxId txIdMap)
-        aTxWits
+        txWits
       cLovelace = case tfp of
         TxFeePolicyTxSizeLinear txSizeLinear ->
           either (panic . show)

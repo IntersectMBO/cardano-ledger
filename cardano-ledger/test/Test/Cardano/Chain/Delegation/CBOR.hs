@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Chain.Delegation.CBOR
   ( tests
@@ -12,10 +13,10 @@ import Data.List ((!!))
 
 import Hedgehog (Property)
 
-import Cardano.Chain.Delegation (unsafePayload)
+import Cardano.Chain.Delegation (pattern UnsafePayload)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  (goldenTestCBOR, roundTripsCBORBuildable, roundTripsCBORShow)
+  (goldenTestCBORAnnotated, roundTripsCBORAnnotatedBuildable, roundTripsCBORShow)
 import Test.Cardano.Chain.Delegation.Example (exampleCertificates)
 import Test.Cardano.Chain.Delegation.Gen
   (genCertificate, genError, genPayload)
@@ -28,14 +29,14 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 --------------------------------------------------------------------------------
 
 goldenCertificate :: Property
-goldenCertificate = goldenTestCBOR
+goldenCertificate = goldenTestCBORAnnotated
   cert
   "test/golden/cbor/delegation/Certificate"
   where cert = exampleCertificates !! 0
 
 ts_roundTripCertificateCBOR :: TSProperty
 ts_roundTripCertificateCBOR =
-  eachOfTS 200 (feedPM genCertificate) roundTripsCBORBuildable
+  eachOfTS 200 (feedPM genCertificate) roundTripsCBORAnnotatedBuildable
 
 
 --------------------------------------------------------------------------------
@@ -43,12 +44,12 @@ ts_roundTripCertificateCBOR =
 --------------------------------------------------------------------------------
 
 goldenDlgPayload :: Property
-goldenDlgPayload = goldenTestCBOR dp "test/golden/cbor/delegation/DlgPayload"
-  where dp = unsafePayload (take 4 exampleCertificates)
+goldenDlgPayload = goldenTestCBORAnnotated dp "test/golden/cbor/delegation/DlgPayload"
+  where dp = UnsafePayload (take 4 exampleCertificates)
 
 ts_roundTripDlgPayloadCBOR :: TSProperty
 ts_roundTripDlgPayloadCBOR =
-  eachOfTS 100 (feedPM genPayload) roundTripsCBORBuildable
+  eachOfTS 100 (feedPM genPayload) roundTripsCBORAnnotatedBuildable
 
 
 --------------------------------------------------------------------------------
