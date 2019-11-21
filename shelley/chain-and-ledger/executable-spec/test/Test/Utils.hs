@@ -4,17 +4,19 @@ module Test.Utils
   ( assertAll
   , mkGenKeys
   , mkKeyPair
+  , mkVRFKeyPair
   , mkAddr
   , unsafeMkUnitInterval
   ) where
 
 import           BaseTypes (UnitInterval, mkUnitInterval)
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
+import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Crypto.Random (drgNewTest, withDRG)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
 import           Keys (pattern SKey, pattern VKey, pattern VKeyGenesis, hashKey, vKey)
-import           MockTypes (Addr, KeyPair, SKey, VKey, VKeyGenesis)
+import           MockTypes (Addr, KeyPair, SKey, SignKeyVRF, VKey, VKeyGenesis, VerKeyVRF)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
 
 import           Hedgehog (MonadTest, (===))
@@ -33,6 +35,11 @@ mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKey)
 mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyDSIGN
   return (SKey sk, VKey $ deriveVerKeyDSIGN sk)
+
+mkVRFKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF, VerKeyVRF)
+mkVRFKeyPair seed = fst . withDRG (drgNewTest seed) $ do
+  sk <- genKeyVRF
+  return (sk, deriveVerKeyVRF sk)
 
 mkAddr :: (KeyPair, KeyPair) -> Addr
 mkAddr (payKey, stakeKey) =

@@ -179,7 +179,9 @@ type PPUpdate = Updates.PPUpdate MockCrypto
 
 type AVUpdate = Updates.AVUpdate MockCrypto
 
+type VRFKeyHash = Keys.Hash ShortHash (Keys.VerKeyVRF FakeVRF)
+
 hashKeyVRF
   :: Keys.VerKeyVRF FakeVRF
-  -> Keys.Hash ShortHash (Keys.VerKeyVRF FakeVRF)
+  -> VRFKeyHash
 hashKeyVRF = Keys.hashKeyVRF @MockCrypto
