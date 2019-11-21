@@ -3,9 +3,6 @@
 
 module Test.Serialization where
 
---import Cardano.Prelude
---import Test.Cardano.Prelude
-
 import           Cardano.Binary (ToCBOR, toCBOR)
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (encodeVerKeyDSIGN), encodeSignedDSIGN)
 import           Cardano.Crypto.Hash (getHash)
