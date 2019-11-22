@@ -80,6 +80,8 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           depends = [
             (hsPkgs."base" or (buildDepError "base"))
             (hsPkgs."bytestring" or (buildDepError "bytestring"))
+            (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
+            (hsPkgs."cborg" or (buildDepError "cborg"))
             (hsPkgs."cryptonite" or (buildDepError "cryptonite"))
             (hsPkgs."tasty" or (buildDepError "tasty"))
             (hsPkgs."tasty-hunit" or (buildDepError "tasty-hunit"))

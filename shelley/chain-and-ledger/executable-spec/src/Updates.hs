@@ -23,6 +23,7 @@ module Updates
   , votedValue
   , emptyUpdateState
   , emptyUpdate
+  , updateNull
   , updatePParams
   , svCanFollow
   , sTagsValid
@@ -87,6 +88,9 @@ newtype AVUpdate crypto = AVUpdate {
 data Update crypto
   = Update (PPUpdate crypto) (AVUpdate crypto)
   deriving (Show, Eq, Generic)
+
+updateNull :: Update crypto -> Bool
+updateNull (Update (PPUpdate ppup) (AVUpdate avup)) = null ppup && null avup
 
 instance NoUnexpectedThunks (Update crypto)
 

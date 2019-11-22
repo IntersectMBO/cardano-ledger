@@ -28,11 +28,12 @@ module Keys
   , KeyHash
   , pattern KeyHash
   , GenKeyHash
-  , pattern AnyKeyHash
+  , pattern GenKeyHash
   , AnyKeyHash
+  , pattern AnyKeyHash
   , undiscriminateKeyHash
   , KeyPair(..)
-  , Sig
+  , Sig(..)
   , hashKey
   , hashAnyKey
   , sign
@@ -124,16 +125,16 @@ data KeyPair (kd :: KeyDiscriminator) crypto
 
 instance Crypto crypto => NoUnexpectedThunks (KeyPair kd crypto)
 
-newtype Sig crypto a = Sig (SignedDSIGN (DSIGN crypto) a)
+newtype Sig crypto a = UnsafeSig (SignedDSIGN (DSIGN crypto) a)
 
 deriving instance (Crypto crypto) => Show (Sig crypto a)
 deriving instance (Crypto crypto) => Eq   (Sig crypto a)
 deriving instance Crypto crypto => NoUnexpectedThunks (Sig crypto a)
 
 instance (Crypto crypto, Typeable a) => FromCBOR (Sig crypto a) where
-  fromCBOR = Sig <$> DSIGN.decodeSignedDSIGN
+  fromCBOR = UnsafeSig <$> DSIGN.decodeSignedDSIGN
 instance (Crypto crypto, Typeable a) => ToCBOR (Sig crypto a) where
-  toCBOR (Sig s) = DSIGN.encodeSignedDSIGN s
+  toCBOR (UnsafeSig s) = DSIGN.encodeSignedDSIGN s
 
 -- |Produce a digital signature
 sign
@@ -142,7 +143,7 @@ sign
   -> a
   -> Sig crypto a
 sign (SKey k) d =
-  Sig
+  UnsafeSig
     . fst
     . withDRG (drgNewSeed (seedFromInteger 0))
     $ signedDSIGN () d k
@@ -154,7 +155,7 @@ verify
   -> a
   -> Sig crypto a
   -> Bool
-verify (DiscVKey vk) vd (Sig sigDSIGN) =
+verify (DiscVKey vk) vd (UnsafeSig sigDSIGN) =
   either (const False) (const True) $ verifySignedDSIGN () vk vd sigDSIGN
 
 newtype SKeyES crypto = SKeyES (SignKeyKES (KES crypto))
@@ -230,11 +231,17 @@ newtype DiscKeyHash (discriminator :: KeyDiscriminator) crypto =
 deriving instance (Crypto crypto, Typeable disc) => ToCBOR (DiscKeyHash disc crypto)
 
 type KeyHash crypto = DiscKeyHash 'Regular crypto
+{-# COMPLETE KeyHash #-}
 pattern KeyHash
   :: Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto))
   -> DiscKeyHash 'Regular crypto
 pattern KeyHash a = DiscKeyHash a
 type GenKeyHash crypto = DiscKeyHash 'Genesis crypto
+{-# COMPLETE GenKeyHash #-}
+pattern GenKeyHash
+  :: Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto))
+  -> DiscKeyHash 'Genesis crypto
+pattern GenKeyHash a = DiscKeyHash a
 
 -- | Discriminated hash of public Key
 newtype AnyKeyHash crypto =
