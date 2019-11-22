@@ -139,7 +139,6 @@ genTestnetBalanceOptions =
     <*> Gen.word Range.constantBounded
     <*> genLovelace
     <*> genLovelacePortion
-    <*> Gen.bool
 
 genGenesisAvvmBalances :: Gen GenesisAvvmBalances
 genGenesisAvvmBalances =

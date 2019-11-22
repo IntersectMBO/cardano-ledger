@@ -1,10 +1,13 @@
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.Common.AddrAttributes
   ( AddrAttributes(..)
+  , HDAddressPayload(..)
   )
 where
 
@@ -21,12 +24,12 @@ import Cardano.Binary
   , decodeFull
   , decodeFullDecoder
   , decodeWord32Canonical
+  , decodeBytesCanonical
   , serialize
   )
 import Cardano.Chain.Common.Attributes
   (Attributes(..), fromCBORAttributes, toCBORAttributes)
 import Cardano.Chain.Common.NetworkMagic (NetworkMagic(..))
-import Cardano.Crypto.HD (HDAddressPayload)
 
 
 -- | Additional information stored along with address. It's intended
@@ -113,3 +116,31 @@ instance FromCBOR (Attributes AddrAttributes) where
           <$> toCborError
                 (decodeFullDecoder "NetworkMagic" decodeWord32Canonical v)
       _ -> pure Nothing
+
+
+-- | Passphrase is a hash of root verification key.
+data HDPassphrase = HDPassphrase !ByteString
+  deriving (Eq, Show)
+
+-- | HDAddressPayload is a specific address attribute that was used by the
+-- Cardano wallet at mainnet launch, prior to moving to a BIP-44 style scheme.
+--
+-- It consisted of
+--
+--   * serialiazed and encrypted using HDPassphrase derivation path from the
+--   root key to given descendant key (using ChaChaPoly1305 algorithm)
+--
+--   * cryptographic tag
+--
+-- It is still distinguished as an attribute, but not used by the ledger,
+-- because the attributes size limits treat this attribute specially.
+--
+newtype HDAddressPayload = HDAddressPayload
+  { getHDAddressPayload :: ByteString
+  } deriving (Eq, Ord, Show, Generic)
+    deriving newtype (ToCBOR, HeapWords)
+    deriving anyclass (NFData, NoUnexpectedThunks)
+
+instance FromCBOR HDAddressPayload where
+  fromCBOR = HDAddressPayload <$> decodeBytesCanonical
+

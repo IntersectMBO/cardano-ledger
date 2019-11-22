@@ -34,10 +34,6 @@ module Test.Cardano.Crypto.Gen
   -- * PassPhrase Generators
   , genPassPhrase
 
-  -- * HD Generators
-  , genHDPassphrase
-  , genHDAddressPayload
-
   -- * Helper Generators
   , genHashRaw
   , genTextHash
@@ -58,7 +54,6 @@ import Cardano.Binary (Annotated(..), Raw(..), ToCBOR)
 import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing
   (AbstractHash(..), Hash, HashAlgorithm, abstractHash, hash)
-import Cardano.Crypto.HD (HDAddressPayload(..), HDPassphrase(..))
 import Cardano.Crypto.ProtocolMagic
   ( AProtocolMagic(..)
   , ProtocolMagic
@@ -210,17 +205,6 @@ genPassPhrase = ByteArray.pack <$> genWord8List
 
 genSafeSigner :: Gen SafeSigner
 genSafeSigner = SafeSigner <$> genEncryptedSigningKey <*> pure emptyPassphrase
-
-
---------------------------------------------------------------------------------
--- HD Generators
---------------------------------------------------------------------------------
-
-genHDPassphrase :: Gen HDPassphrase
-genHDPassphrase = HDPassphrase <$> gen32Bytes
-
-genHDAddressPayload :: Gen HDAddressPayload
-genHDAddressPayload = HDAddressPayload <$> gen32Bytes
 
 
 --------------------------------------------------------------------------------

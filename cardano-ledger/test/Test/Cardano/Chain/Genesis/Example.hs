@@ -150,7 +150,6 @@ exampleGenesisInitializer = GenesisInitializer
     , tboRichmen        = 14071205313513960321
     , tboTotalBalance   = mkKnownLovelace @10953275486128625
     , tboRichmenShare   = mkKnownLovelacePortion @366832547637728
-    , tboUseHDAddresses = True
     }
   , giFakeAvvmBalance = FakeAvvmOptions
     { faoCount      = 17853231730478779264

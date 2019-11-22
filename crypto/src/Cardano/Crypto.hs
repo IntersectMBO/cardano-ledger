@@ -4,7 +4,6 @@ module Cardano.Crypto
 where
 
 import Cardano.Crypto.Hashing as X
-import Cardano.Crypto.HD as X
 import Cardano.Crypto.ProtocolMagic as X
 import Cardano.Crypto.Random as X
 import Cardano.Crypto.Scrypt as X

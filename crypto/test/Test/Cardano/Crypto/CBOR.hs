@@ -34,10 +34,8 @@ import Cardano.Crypto
   , SigningKey(..)
   , SignTag(SignForTestingOnly)
   , Signature
-  , deriveHDPassphrase
   , hash
   , noPassEncrypt
-  , packHDAddressAttr
   , redeemDeterministicKeyGen
   , redeemSign
   , sign
@@ -48,7 +46,6 @@ import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( deprecatedGoldenDecode
   , goldenTestCBOR
   , roundTripsCBORBuildable
-  , roundTripsCBORShow
   )
 import Test.Cardano.Crypto.Gen
 
@@ -265,25 +262,6 @@ goldenPassPhrase = goldenTestCBOR passphrase "test/golden/PassPhrase"
 
 roundTripPassPhraseCBOR :: Property
 roundTripPassPhraseCBOR = eachOf 1000 genPassPhrase roundTripsCBORBuildable
-
---------------------------------------------------------------------------------
--- HDAddressPayload
---------------------------------------------------------------------------------
-
-goldenHDAddressPayload :: Property
-goldenHDAddressPayload = goldenTestCBOR hdap "test/golden/HDAddressPayload"
- where
-  Right hdap =
-    flip packHDAddressAttr [] . deriveHDPassphrase . VerificationKey <$> xpub
-      (getBytes 0 64)
-
-roundTripHDAddressPayloadCBOR :: Property
-roundTripHDAddressPayloadCBOR =
-  eachOf 1000 genHDAddressPayload roundTripsCBORShow
-
-roundTripHDAddressPayloadAeson :: Property
-roundTripHDAddressPayloadAeson =
-  eachOf 1000 genHDAddressPayload roundTripsAesonShow
 
 --------------------------------------------------------------------------------
 
