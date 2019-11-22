@@ -33,7 +33,6 @@
           (hsPkgs.formatting)
           (hsPkgs.memory)
           (hsPkgs.mtl)
-          (hsPkgs.scrypt)
           (hsPkgs.text)
           ];
         };

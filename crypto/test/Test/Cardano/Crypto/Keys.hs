@@ -16,7 +16,6 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Crypto.Signing
   ( deterministicKeyGen
-  , encToVerification
   , fullVerificationKeyF
   , parseFullVerificationKey
   , redeemDeterministicKeyGen
@@ -67,4 +66,4 @@ prop_safeVerKeyDerivedGenerated = property $ do
   pp   <- forAll genPassPhrase
   seed <- forAll $ Gen.bytes (Range.singleton 32)
   let (vk, sk) = safeDeterministicKeyGen seed pp
-  vk === encToVerification sk
+  vk === toVerification sk
