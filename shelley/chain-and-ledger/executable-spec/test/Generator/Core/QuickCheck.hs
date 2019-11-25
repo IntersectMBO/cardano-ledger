@@ -31,12 +31,12 @@ import qualified Test.QuickCheck as QC
 
 import           Address (toAddr, toCred)
 import           Coin (Coin (..))
-import           Examples (mkKeyPair)
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
 import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF, TxOut, UTxO,
                      UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
+import           Test.Utils (mkKeyPair)
 import           Tx (pattern TxOut)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
 
