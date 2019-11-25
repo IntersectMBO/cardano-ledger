@@ -5,6 +5,7 @@ ghcid: ## Run ghcid
 	ghcid
 
 ghcid-test: ## Have ghcid run the test suite
+# Note, to run just tests matching the pattern "foo", run "TASTY_PATTERN=foo make ghcid-test"
 	ghcid \
           --command "stack ghci delegation:lib delegation:test:delegation-test --ghci-options=-fobject-code" \
           --test "main"

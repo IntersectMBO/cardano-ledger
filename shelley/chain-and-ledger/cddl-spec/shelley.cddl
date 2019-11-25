@@ -8,50 +8,52 @@ block =
   , transaction_witness_sets   : [* transaction_witness_set]
   ]
 
-; TODO: Replace direct inlining with unwrap operator (~) for closer correspondence to Haskell types
-; Inlining the header body here to save word, but this would mean no valid CBOR instance for header body...
 header =
-  [ prev_hash        : $hash
+  [ header_body
+  , body_signature : $kes_signature
+  ]
+
+header_body =
+  ( prev_hash        : $hash
   , issuer_vkey      : $vkey
   , vrf_vkey         : $vrf_vkey
   , slot             : uint
   , nonce            : uint
   , nonce_proof      : $vrf_proof
-  , leader_value     : ~unit_interval
+  , leader_value     : unit_interval
   , leader_proof     : $vrf_proof
   , size             : uint
   , block_body_hash  : $hash            ; merkle pair root
-  , operational_cert : operational_cert
-  , protocol_version : protocol_version
-  , body_signature   : $kes_signature
-  ]
+  , operational_cert
+  , protocol_version
+  )
 
 operational_cert =
-  [ hot_vkey        : $kes_vkey
+  ( hot_vkey        : $kes_vkey
   , cold_vkey       : $vkey
   , sequence_number : uint
   , kes_period      : uint
   , sigma           : $signature
-  ]
+  )
 
-protocol_version = [uint, uint, uint]
+protocol_version = (uint, uint, uint)
 
 ; Do we want to use a Map here? Is it actually cheaper?
 ; Do we want to add extension points here?
 transaction_body =
-  { 0 : #6.258([* transaction_input]) ; x
-  , 1 : [* transaction_output]        ; x
+  { 0 : #6.258([* transaction_input])
+  , 1 : [* transaction_output]
   , 2 : [* delegation_certificate]
   , 3 : [* withdrawal]
-  , 4 : coin ; fee                    ; x
-  , 5 : uint ; ttl                    ; x
+  , 4 : coin ; fee
+  , 5 : uint ; ttl
   , 6 : update
   }
 
 ; Is it okay to have this as a group? Is it valid CBOR?! Does it need to be?
-transaction_input = (transaction_id : $hash, index : uint)
+transaction_input = [transaction_id : $hash, index : uint]
 
-transaction_output = (address : address, amount : uint)
+transaction_output = [address, amount : uint]
 
 address =
  (  0, keyhash, keyhash       ; base address
@@ -65,19 +67,25 @@ address =
  // 8, keyhash                ; bootstrap address
  )
 
+
 delegation_certificate =
-  (  0, keyhash         ; stake key registration
-  // 1, keyhash         ; stake key de-registration
-  // 2                  ; stake key delegation
+  [( 0, keyhash         ; stake key registration
+  // 1, scripthash      ; stake script registration
+  // 2, keyhash         ; stake key de-registration
+  // 3, scripthash      ; stake script de-registration
+  // 4                  ; stake key delegation
       , keyhash         ; delegating key
       , keyhash         ; key delegated to
-  // 3, keyhash, pool_params  ; stake pool registration
-  // 4, keyhash, epoch  ; stake pool retirement
-  // 5 ; genesis key delegation
-      , keyhash ; delegating key
-      , key     ; key delegated to
-  // 6, [* move_instantaneous_reward] ; move instantaneous rewards
-  )
+  // 5                  ; stake script delegation
+      , scripthash      ; delegating script
+      , keyhash         ; key delegated to
+  // 6, keyhash, pool_params  ; stake pool registration
+  // 7, keyhash, epoch  ; stake pool retirement
+  // 8                  ; genesis key delegation
+      , genesishash     ; delegating key
+      , keyhash         ; key delegated to
+  // 9, [* move_instantaneous_reward] ; move instantaneous rewards
+ ) ]
 
 move_instantaneous_reward = ( keyhash, coin )
 pointer = (uint, uint, uint)
@@ -88,31 +96,39 @@ credential =
   // 2, genesishash
   )
 
-coin = int
+coin = uint
 
 epoch = uint
 
 keyhash = $hash
 scripthash = $hash
 
-pool_params = [[* keyhash], coin, unit_interval, coin, credential, $vrf_keyhash]
+pool_params = ( #6.258([* keyhash])
+              , coin               ; cost
+              , unit_interval      ; margin
+              , coin               ; pledge
+              , keyhash            ; operator
+              , $vrf_keyhash       ; vrf keyhash
+              , [credential]       ; reward_account
+              )
 
-withdrawal = (reward_acct : credential, amount : uint)
+withdrawal = [credential, amount : uint]
 
-update = [* update_part]
+update = undefined
 
 transaction_witness_set =
   (  0, vkeywitness
-  // 1, scriptwitness
+  // 1, $script
   // 2, [* vkeywitness]
-  // 3, [* scriptwitness]
-  // 4, [* vkeywitness],[* scriptwitness]
+  // 3, [* $script]
+  // 4, [* vkeywitness],[* $script]
   )
 
-vkeywitness = [vkey, signature]
-scriptwitness = script
+vkeywitness = [$vkey, $signature]
 
 ; Crypto Types will be defined for mock and real crypto in separate files using this syntax
+
+genesishash = $hash
 
 $hash /= bytes
 
@@ -122,6 +138,7 @@ $signature /= bytes
 
 $vrf_keyhash /= bytes
 
+$vrf_vkey /= bytes
 $vrf_proof /= bytes
 
 $kes_vkey /= bytes
