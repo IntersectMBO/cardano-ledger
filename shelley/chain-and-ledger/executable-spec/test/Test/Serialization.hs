@@ -14,25 +14,29 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (assertEqual, testCase)
 
 
-import           BaseTypes (UnitInterval (..))
+import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
 import           Coin (Coin (..))
 import           Data.Ratio ((%))
-import           Delegation.Certificates (pattern RegKey)
+import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
+                     pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
+                     pattern RegPool, pattern RetirePool)
 import           Keys (DiscVKey (..), pattern GenKeyHash, pattern KeyHash, pattern KeyPair,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, undiscriminateKeyHash, vKey)
 import           LedgerState (genesisId)
-import           Slot (Slot (..))
+import           Slot (Epoch (..), Slot (..))
 import           Test.Utils
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
-                     Ptr (..), pattern RequireSignature, pattern RewardAcnt, pattern ScriptHash,
-                     pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, _TxId)
+                     pattern Delegation, pattern PoolParams, Ptr (..), pattern RequireSignature,
+                     pattern RewardAcnt, pattern ScriptHash, pattern Tx, pattern TxBody,
+                     pattern TxIn, pattern TxOut, _TxId, _poolCost, _poolMargin, _poolOwners,
+                     _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      pattern InstallerHash, pattern Mdt, pattern PPUpdate, Ppm (..),
                      SystemTag (..), pattern Update, emptyUpdate)
 
 import           MockTypes (Addr, GenKeyHash, InstallerHash, KeyHash, KeyPair, MultiSig, ScriptHash,
-                     Sig, TxBody, TxId, TxIn, TxOut, VKey, WitVKey)
+                     Sig, TxBody, TxId, TxIn, TxOut, VKey, VRFKeyHash, WitVKey, hashKeyVRF)
 import           UTxO (makeWitnessVKey)
 
 import qualified Data.Map.Strict as Map
@@ -70,8 +74,15 @@ getRawScriptHash (ScriptHash hsh) = getHash hsh
 getRawTxId :: TxId -> ByteString
 getRawTxId = getHash . _TxId
 
+getRawNonce :: Nonce -> ByteString
+getRawNonce (Nonce hsh) = getHash hsh
+getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
+
 testGKeyHash :: GenKeyHash
 testGKeyHash = (hashKey . snd . mkGenKeys) (0, 0, 0, 0, 0)
+
+testVRFHK :: VRFKeyHash
+testVRFHK = hashKeyVRF . snd $ mkVRFKeyPair (0, 0, 0, 0, 5)
 
 testTxb :: TxBody
 testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (Slot 0) emptyUpdate
@@ -118,6 +129,8 @@ serializationTests = testGroup "Serialization Tests" $ checkEncoding <$>
   [ Coin 30 #> Encoding (TkWord64 30)
   , UnsafeUnitInterval (1 % 2) #> Encoding (TkWord64 1 . TkWord64 2)
   , Slot 7 #> Encoding (TkWord64 7)
+  , NeutralNonce #> Encoding (TkListLen 1 . TkWord 0)
+  , mkNonce 99 #> Encoding (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonce 99))
   , testKeyHash1 #> Encoding (TkBytes (getRawKeyHash testKeyHash1))
   , KeyHashObj testKeyHash1 #>
       Encoding (TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1))
@@ -261,5 +274,56 @@ serializationTests = testGroup "Serialization Tests" $ checkEncoding <$>
                     . TkBytes (pack "DOS") -- system tag
                     . TkBytes (getRawInstallerHash testInstallerHash)
       )
-  ]
+  , DeRegKey (KeyHashObj testKeyHash1) #>
+      Encoding (TkListLen 2
+                  . TkWord 1 -- DeReg cert
+                  . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1)) -- address
+  , RegPool (PoolParams
+               { _poolPubKey = testKeyHash1
+               , _poolVrf = testVRFHK
+               , _poolPledge = Coin 11
+               , _poolCost = Coin 55
+               , _poolMargin = unsafeMkUnitInterval 0.7
+               , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
+               , _poolOwners = Set.singleton testKeyHash2
+               }) #>
+    Encoding (TkListLen 2
+                . TkWord 2 -- Reg Pool
+                . TkListLen 7
+                  . TkBytes (getRawKeyHash testKeyHash1) -- pool vkey
+                  . TkBytes (getHash testVRFHK) -- vrf
+                  . TkWord64 11 -- pledge
+                  . TkWord64 55 -- cost
+                  . TkWord64 7 . TkWord64 10 -- margin
+                  . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1) -- reward account
+                  . TkTag 258 . TkListLen 1 . TkBytes (getRawKeyHash testKeyHash2) -- owners
+    )
+  , RetirePool testKeyHash1 (Epoch 1729) #>
+    Encoding (TkListLen 3
+                . TkWord 3 -- Pool Retire
+                . TkBytes (getRawKeyHash testKeyHash1) -- key hash
+                . TkInteger 1729 -- epoch
+    )
+  , Delegate (Delegation (KeyHashObj testKeyHash1) testKeyHash2) #>
+    Encoding (TkListLen 2
+      . TkWord 4 -- delegation cert
+      . TkListLen 2
+          . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1) -- delegator credential
+          . TkBytes (getRawKeyHash testKeyHash2) -- delegatee key hash
+    )
+  , GenesisDelegate (testGKeyHash, testKeyHash1) #>
+    Encoding (TkListLen 2
+      . TkWord 5 -- genesis delegation cert
+      . TkListLen 2
+          . TkBytes (getRawGenKeyHash testGKeyHash) -- delegator credential
+          . TkBytes (getRawKeyHash testKeyHash1) -- delegatee key hash
+    )
+  , InstantaneousRewards (Map.singleton (KeyHashObj testKeyHash1) 77) #>
+    Encoding (TkListLen 2
+      . TkWord 6 -- make instantaneous rewards cert
+      . TkMapLen 1
+        . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1) -- credential hash
+        . TkWord64 77 -- reward value
+    )
+ ]
 

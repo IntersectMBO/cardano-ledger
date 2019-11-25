@@ -60,7 +60,7 @@ import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 import           Cardano.Binary (ToCBOR)
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
-import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
+import           Cardano.Crypto.VRF (evalCertified)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Crypto.Random (drgNewTest, withDRG)
 import           Data.ByteString.Char8 (pack)
@@ -118,9 +118,9 @@ import           Test.Utils
 import           TxData (pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                     addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge,
-                     _poolPubKey, _poolRAcnt, _poolVrf)
-import qualified TxData(TxBody(..))
+                     addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
+                     _poolRAcnt, _poolVrf)
+import qualified TxData (TxBody (..))
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
                      pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState)
@@ -159,11 +159,6 @@ mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKeyES, VKeyES)
 mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyKES 90
   return (SKeyES sk, VKeyES $ deriveVerKeyKES sk)
-
-mkVRFKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF, VerKeyVRF)
-mkVRFKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyVRF
-  return (sk, deriveVerKeyVRF sk)
 
 data AllPoolKeys = AllPoolKeys
   { cold :: KeyPair
