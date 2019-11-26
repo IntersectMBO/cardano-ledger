@@ -67,6 +67,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import           Data.Word
 import           GHC.Generics (Generic)
 
@@ -412,7 +413,7 @@ mkUpdateEnvironment cfg state = U.Iface.Environment {
     -- function can just be used directly.
     toNumGenKeys :: Int -> Word8
     toNumGenKeys n
-      | n > fromIntegral (maxBound :: Word8) = error $
+      | n > fromIntegral (maxBound :: Word8) = panic $
         "toNumGenKeys: Too many genesis keys"
       | otherwise = fromIntegral n
 
@@ -584,8 +585,8 @@ reAnnotateUsing encoder decoder =
        | otherwise      = roundtripFailure "leftover bytes"
     splice _ (Left err) = roundtripFailure $ show err
 
-    roundtripFailure :: forall x. String -> x
-    roundtripFailure err = error $ intercalate ": " $ [
+    roundtripFailure :: forall x. T.Text -> x
+    roundtripFailure err = panic $ T.intercalate ": " $ [
           "annotateBoundary"
         , "serialization roundtrip failure"
         , show err
@@ -609,7 +610,7 @@ fromCBORABlockOrBoundaryHdr epochSlots = do
     fromCBOR @Word >>= \case
       0 -> ABOBBoundaryHdr <$> CC.fromCBORABoundaryHeader
       1 -> ABOBBlockHdr    <$> CC.fromCBORAHeader epochSlots
-      t -> error $ "Unknown tag in encoded HeaderOrBoundary" <> show t
+      t -> panic $ "Unknown tag in encoded HeaderOrBoundary" <> show t
 
 -- | The analogue of 'Data.Either.either'
 aBlockOrBoundaryHdr :: (CC.AHeader         a -> b)
