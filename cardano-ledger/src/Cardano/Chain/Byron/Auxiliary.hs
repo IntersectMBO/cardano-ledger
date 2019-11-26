@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 
+-- | Auxiliary definitions to make working with the Byron ledger easier
 module Cardano.Chain.Byron.Auxiliary (
     -- * Extract info from genesis config
     allowedDelegators
@@ -46,6 +47,8 @@ module Cardano.Chain.Byron.Auxiliary (
   , abobMatchesBody
   ) where
 
+import           Prelude (String)
+
 import           Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
@@ -69,7 +72,7 @@ import           GHC.Generics (Generic)
 
 import           Cardano.Binary
 import           Cardano.Crypto.ProtocolMagic
-import           Cardano.Prelude (NoUnexpectedThunks, cborError, wrapError)
+import           Cardano.Prelude
 
 import qualified Cardano.Chain.Block as CC
 import qualified Cardano.Chain.Common as CC
@@ -84,9 +87,6 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Validation.Interface as U.Iface
 import qualified Cardano.Chain.UTxO as Utxo
 import qualified Cardano.Chain.ValidationMode as CC
-
--- NOTE: NO dependencies on ouroboros-network or ouroboros-consensus here!
--- This stuff could/should eventually be moved to cardano-ledger.
 
 {-------------------------------------------------------------------------------
   Extract info from genesis config
