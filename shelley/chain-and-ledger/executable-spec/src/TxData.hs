@@ -15,16 +15,17 @@ module TxData
   where
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
-                     encodeListLen, encodeMapLen, encodeWord)
+                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord)
 import           Cardano.Ledger.Shelley.Crypto
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Prelude (NoUnexpectedThunks (..), Word64)
 import           Lens.Micro.TH (makeLenses)
 
-import           Data.Foldable (toList)
+import           Data.Foldable (foldMap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
 import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
@@ -60,6 +61,7 @@ data PoolParams crypto =
     , _poolRAcnt   :: RewardAcnt crypto
     , _poolOwners  :: Set (KeyHash crypto)
     } deriving (Show, Generic, Eq)
+      deriving ToCBOR via CBORGroup (PoolParams crypto)
 
 instance NoUnexpectedThunks (PoolParams crypto)
 
@@ -147,7 +149,7 @@ deriving instance Crypto crypto => ToCBOR (TxId crypto)
 
 -- |The input of a UTxO.
 data TxIn crypto
-  = TxIn (TxId crypto) Natural
+  = TxIn (TxId crypto) Natural -- TODO use our own Natural type
   deriving (Show, Eq, Generic, Ord)
 
 instance NoUnexpectedThunks (TxIn crypto)
@@ -245,40 +247,58 @@ instance
   => ToCBOR (DCert crypto)
  where
   toCBOR = \case
-    RegKey vk ->
+    RegKey (KeyHashObj h) ->
       encodeListLen 2
         <> toCBOR (0 :: Word8)
-        <> toCBOR vk
-
-    DeRegKey vk ->
+        <> toCBOR h
+    RegKey (ScriptHashObj h) ->
       encodeListLen 2
         <> toCBOR (1 :: Word8)
-        <> toCBOR vk
+        <> toCBOR h
+    RegKey (GenesisHashObj _) -> error "We need to fix credential type"
 
-    RegPool poolParams ->
+    DeRegKey (KeyHashObj h) ->
       encodeListLen 2
         <> toCBOR (2 :: Word8)
-        <> toCBOR poolParams
+        <> toCBOR h
+    DeRegKey (ScriptHashObj h) ->
+      encodeListLen 2
+        <> toCBOR (3 :: Word8)
+        <> toCBOR h
+    DeRegKey (GenesisHashObj _) -> error "We need to fix credential type"
+
+    Delegate (Delegation (KeyHashObj h) poolkh) ->
+      encodeListLen 3
+        <> toCBOR (4 :: Word8)
+        <> toCBOR h
+        <> toCBOR poolkh
+    Delegate (Delegation (ScriptHashObj h) poolkh) ->
+      encodeListLen 3
+        <> toCBOR (5 :: Word8)
+        <> toCBOR h
+        <> toCBOR poolkh
+    Delegate (Delegation (GenesisHashObj _) _) -> error "We need to fix credential type"
+
+    RegPool poolParams ->
+      encodeListLen (1 + listLen poolParams)
+        <> toCBOR (6 :: Word8)
+        <> toCBORGroup poolParams
 
     RetirePool vk epoch ->
       encodeListLen 3
-        <> toCBOR (3 :: Word8)
+        <> toCBOR (7 :: Word8)
         <> toCBOR vk
         <> toCBOR epoch
 
-    Delegate delegation ->
-      encodeListLen 2
-        <> toCBOR (4 :: Word8)
-        <> toCBOR delegation
-
-    GenesisDelegate keys ->
-      encodeListLen 2
-        <> toCBOR (5 :: Word8)
-        <> toCBOR keys
+    GenesisDelegate (gk, dk) ->
+      encodeListLen 3
+        <> toCBOR (8 :: Word8)
+        <> toCBOR gk
+        <> toCBOR dk
 
     InstantaneousRewards credCoinMap ->
       encodeListLen 2
-        <> toCBOR (6 :: Word8)
+        <> toCBOR (9 :: Word8)
         <> toCBOR credCoinMap
 
 instance
@@ -288,7 +308,7 @@ instance
   toCBOR (TxIn txId index) =
     encodeListLen 2
       <> toCBOR txId
-      <> toCBOR index
+      <> toCBOR (fromIntegral index :: Word64)
 
 instance
   (Typeable crypto, Crypto crypto)
@@ -323,21 +343,37 @@ instance
       <> toCBOR (_witnessVKeySet tx)
       <> toCBOR (_witnessMSigMap tx)
 
+newtype CborSeq a = CborSeq (Seq a)
+
+instance ToCBOR a => ToCBOR (CborSeq a) where
+  toCBOR (CborSeq xs) =
+    let l = fromIntegral $ Seq.length xs
+        contents = foldMap toCBOR xs
+    in
+    if l <= 23
+    then encodeListLen l <> contents
+    else encodeListLenIndef <> contents <> encodeBreak
+
 instance
   (Crypto crypto)
   => ToCBOR (TxBody crypto)
  where
   toCBOR txbody =
-    encodeMapLen 6
-      <> encodeWord 0 <> toCBOR (_inputs txbody)
-      <> encodeWord 1 <> toCBOR (_outputs txbody)
-      <> encodeWord 2 <> toCBOR (_txfee txbody)
-      <> encodeWord 3 <> toCBOR (_ttl txbody)
-      <> if null cs then mempty else encodeWord 4 <> toCBOR cs
-      <> if null ws then mempty else encodeWord 5 <> toCBOR ws
-      <> if updateNull us then mempty else encodeWord 6 <> toCBOR us
+    let l = toList $
+              single (encodeWord 0 <> toCBOR (_inputs txbody))
+            . single (encodeWord 1 <> toCBOR (_outputs txbody))
+            . single (encodeWord 2 <> toCBOR (_txfee txbody))
+            . single (encodeWord 3 <> toCBOR (_ttl txbody))
+            . if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs))
+            . if null ws then none else single (encodeWord 5 <> toCBOR ws)
+            . if updateNull us then none else single (encodeWord 6 <> toCBOR us)
+        toList xs = xs []
+        single x = (x:)
+        none = id
+        n = fromIntegral $ length l
+    in encodeMapLen n <> foldr (<>) mempty l
     where
-      cs = toList $ _certs txbody
+      cs = _certs txbody
       ws = _wdrls txbody
       us = _txUpdate txbody
 
@@ -387,24 +423,30 @@ instance
   => ToCBOR (Addr crypto)
  where
   toCBOR (AddrBase       (KeyHashObj a)    (KeyHashObj b))      =
-    toCBOR (0 :: Word8)  <> toCBOR a       <> toCBOR b
+    encodeListLen 3 <> toCBOR (0 :: Word8)  <> toCBOR a       <> toCBOR b
   toCBOR (AddrBase       (KeyHashObj a)     (ScriptHashObj b))  =
-    toCBOR (1 :: Word8)  <> toCBOR a       <> toCBOR b
+    encodeListLen 3 <> toCBOR (1 :: Word8)  <> toCBOR a       <> toCBOR b
   toCBOR (AddrBase       (ScriptHashObj a)  (KeyHashObj b))     =
-    toCBOR (2 :: Word8)  <> toCBOR a       <> toCBOR b
+    encodeListLen 3 <> toCBOR (2 :: Word8)  <> toCBOR a       <> toCBOR b
   toCBOR (AddrBase       (ScriptHashObj a) (ScriptHashObj b))   =
-    toCBOR (3 :: Word8)  <> toCBOR a       <> toCBOR b
+    encodeListLen 3 <> toCBOR (3 :: Word8)  <> toCBOR a       <> toCBOR b
   toCBOR (AddrPtr        (KeyHashObj a)    pointer)             =
-    toCBOR (4 :: Word8)  <> toCBOR a       <> toCBORGroup pointer
+    encodeListLen (2 + listLen pointer)
+    <> toCBOR (4 :: Word8)
+    <> toCBOR a
+    <> toCBORGroup pointer
   toCBOR (AddrPtr        (ScriptHashObj a)  pointer)            =
-    toCBOR (5 :: Word8)  <> toCBOR a       <> toCBORGroup pointer
+    encodeListLen (2 + listLen pointer)
+    <> toCBOR (5 :: Word8)
+    <> toCBOR a
+    <> toCBORGroup pointer
   toCBOR (AddrEnterprise (KeyHashObj a))                        =
-    toCBOR (6 :: Word8)  <> toCBOR a
+    encodeListLen 2 <> toCBOR (6 :: Word8)  <> toCBOR a
   toCBOR (AddrEnterprise (ScriptHashObj a))                     =
-    toCBOR (7 :: Word8)  <> toCBOR a
+    encodeListLen 2 <> toCBOR (7 :: Word8)  <> toCBOR a
   toCBOR (AddrBootstrap  a)                                     =
-    toCBOR (8 :: Word8)  <> toCBOR a
-  toCBOR _ = error "wat"
+    encodeListLen 2 <> toCBOR (8 :: Word8)  <> toCBOR a
+  toCBOR _ = error "this should be unreachable" -- TODO fix me
 
 
 instance ToCBORGroup Ptr where
@@ -414,27 +456,20 @@ instance ToCBORGroup Ptr where
       <> toCBOR (fromInteger (toInteger certIx) :: Word)
   listLen _ = 3
 
-instance Crypto crypto =>
-  ToCBOR (Delegation crypto) where
-  toCBOR delegation =
-    encodeListLen 2
-      <> toCBOR (_delegator delegation)
-      <> toCBOR (_delegatee delegation)
-
 
 instance
   (Crypto crypto)
-  => ToCBOR (PoolParams crypto)
+  => ToCBORGroup (PoolParams crypto)
  where
-  toCBOR poolParams =
-    encodeListLen 7
-      <> toCBOR (_poolPubKey poolParams)
-      <> toCBOR (_poolVrf poolParams)
-      <> toCBOR (_poolPledge poolParams)
+  toCBORGroup poolParams =
+         toCBOR (_poolOwners poolParams)
       <> toCBOR (_poolCost poolParams)
       <> toCBOR (_poolMargin poolParams)
+      <> toCBOR (_poolPledge poolParams)
+      <> toCBOR (_poolPubKey poolParams)
+      <> toCBOR (_poolVrf poolParams)
       <> toCBOR (_poolRAcnt poolParams)
-      <> toCBOR (_poolOwners poolParams)
+  listLen _ = 7
 
 instance Crypto crypto
   => ToCBOR (RewardAcnt crypto) where

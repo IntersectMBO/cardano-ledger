@@ -23,44 +23,42 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
 import           Keys (DiscVKey (..), pattern GenKeyHash, pattern KeyHash, pattern KeyPair,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, undiscriminateKeyHash, vKey)
 import           LedgerState (genesisId)
+import           Serialization (ToCBORGroup (..))
 import           Slot (Epoch (..), Slot (..))
 import           Test.Utils
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
                      pattern Delegation, pattern PoolParams, Ptr (..), pattern RequireSignature,
-                     pattern RewardAcnt, pattern ScriptHash, pattern Tx, pattern TxBody,
-                     pattern TxIn, pattern TxOut, _TxId, _poolCost, _poolMargin, _poolOwners,
+                     pattern RewardAcnt, pattern ScriptHash, pattern TxBody, pattern TxIn,
+                     pattern TxOut, WitVKey (..), _TxId, _poolCost, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      pattern InstallerHash, pattern Mdt, pattern PPUpdate, Ppm (..),
                      SystemTag (..), pattern Update, emptyUpdate)
 
 import           MockTypes (Addr, GenKeyHash, InstallerHash, KeyHash, KeyPair, MultiSig, ScriptHash,
-                     Sig, TxBody, TxId, TxIn, TxOut, VKey, VRFKeyHash, WitVKey, hashKeyVRF)
+                     Sig, TxBody, TxId, TxIn, VKey, VRFKeyHash, hashKeyVRF)
 import           UTxO (makeWitnessVKey)
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
-import           Data.Typeable (Typeable, typeOf)
 
 
-
-data EncodingPair where
-  EncodePair :: (Typeable a, ToCBOR a) => a -> Encoding -> EncodingPair
-
-(#>) :: (ToCBOR a) => a -> Encoding -> EncodingPair
-(#>) = EncodePair
-
-checkEncoding :: EncodingPair -> TestTree
-checkEncoding (EncodePair x t) = testCase testName $
-  assertEqual typeName (fromEncoding t) (fromEncoding $ toCBOR x)
+checkEncoding :: ToCBOR a => String -> a -> ToTokens -> TestTree
+checkEncoding name x t = testCase testName $
+  assertEqual testName (fromEncoding $ tokens t) (fromEncoding $ toCBOR x)
   where
-   typeName = show (typeOf x)
-   testName = "prop_serialize_" <> map (\c -> if c == ' ' then '-' else c) typeName
+   testName = "prop_serialize_" <> name
+   tokens :: ToTokens -> Encoding
+   tokens (T xs) = Encoding xs
+   tokens (S s) = toCBOR s
+   tokens (G g) = toCBORGroup g
+   tokens (Plus a b) = tokens a <> tokens b
 
-fromEncoding :: Encoding -> Tokens
-fromEncoding (Encoding e) = e TkEnd
+   fromEncoding :: Encoding -> Tokens
+   fromEncoding (Encoding e) = e TkEnd
+
 
 getRawKeyHash :: KeyHash -> ByteString
 getRawKeyHash (KeyHash hsh) = getHash hsh
@@ -81,8 +79,8 @@ getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 testGKeyHash :: GenKeyHash
 testGKeyHash = (hashKey . snd . mkGenKeys) (0, 0, 0, 0, 0)
 
-testVRFHK :: VRFKeyHash
-testVRFHK = hashKeyVRF . snd $ mkVRFKeyPair (0, 0, 0, 0, 5)
+testVRFKH :: VRFKeyHash
+testVRFKH = hashKeyVRF . snd $ mkVRFKeyPair (0, 0, 0, 0, 5)
 
 testTxb :: TxBody
 testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (Slot 0) emptyUpdate
@@ -90,9 +88,6 @@ testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (Slot 0) emptyUpdate
 testKey1 :: KeyPair
 testKey1 = KeyPair vk sk
   where (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
-
-testKeyWit1 :: WitVKey
-testKeyWit1 = makeWitnessVKey testTxb testKey1
 
 testKey1Token :: Tokens -> Tokens
 testKey1Token = e
@@ -124,206 +119,243 @@ getRawInstallerHash (InstallerHash hsh) = getHash hsh
 testScript :: MultiSig
 testScript = RequireSignature $ undiscriminateKeyHash testKeyHash1
 
+testScriptHash :: ScriptHash
+testScriptHash = hashScript testScript
+
+data ToTokens where
+  T :: (Tokens -> Tokens) -> ToTokens
+  S :: ToCBOR a => a -> ToTokens
+  G :: ToCBORGroup a => a -> ToTokens
+  Plus :: ToTokens -> ToTokens -> ToTokens
+
+instance Semigroup ToTokens where
+  (<>) = Plus
+
+instance Monoid ToTokens where
+  mempty = T id
+
 serializationTests :: TestTree
-serializationTests = testGroup "Serialization Tests" $ checkEncoding <$>
-  [ Coin 30 #> Encoding (TkWord64 30)
-  , UnsafeUnitInterval (1 % 2) #> Encoding (TkWord64 1 . TkWord64 2)
-  , Slot 7 #> Encoding (TkWord64 7)
-  , NeutralNonce #> Encoding (TkListLen 1 . TkWord 0)
-  , mkNonce 99 #> Encoding (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonce 99))
-  , testKeyHash1 #> Encoding (TkBytes (getRawKeyHash testKeyHash1))
-  , KeyHashObj testKeyHash1 #>
-      Encoding (TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1))
-  , AddrBase (KeyHashObj testKeyHash1) (KeyHashObj testKeyHash2) #>
-      Encoding (TkWord 0
-        . TkBytes (getRawKeyHash testKeyHash1)
-        . TkBytes (getRawKeyHash testKeyHash2))
-  , AddrPtr (KeyHashObj testKeyHash1) (Ptr (Slot 12) 0 3) #>
-      Encoding (TkWord 4
-        . TkBytes (getRawKeyHash testKeyHash1)
-        . TkWord64 12 . TkWord 0 . TkWord 3)
-  , AddrEnterprise (KeyHashObj testKeyHash1) #>
-      Encoding (TkWord 6
-        . TkBytes (getRawKeyHash testKeyHash1))
-  , (TxIn genesisId 0 :: TxIn) #>
-      Encoding (TkListLen 2 . TkBytes (getRawTxId genesisId) . TkInteger 0)
-  , (TxOut (AddrEnterprise (KeyHashObj testKeyHash1)) (Coin 2) :: TxOut) #>
-      Encoding (TkListLen 2 . TkWord 6
-        . TkBytes (getRawKeyHash testKeyHash1) . TkWord64  2)
-  , (Map.fromList [(10, 1), (20, 2), (30, 3)] :: (Map.Map Int Int)) #>
-      Encoding (TkMapLen 3 . TkInt 10 . TkInt 1 . TkInt 20 . TkInt 2 . TkInt 30 . TkInt 3)
-  , TxBody -- minimal transaction body
-      (Set.fromList [TxIn genesisId 1])
-      [TxOut testAddrE (Coin 2)]
+serializationTests = testGroup "Serialization Tests"
+  [ checkEncoding "list"
+    [1::Integer]
+    (T (TkListBegin . TkInteger 1 . TkBreak))
+  , checkEncoding "set"
+    (Set.singleton (1 :: Integer))
+    (T (TkTag 258 . TkListLen 1 . TkInteger 1))
+  , checkEncoding "map"
+    (Map.singleton (1 :: Integer) (1 :: Integer))
+    (T (TkMapLen 1 . TkInteger 1 . TkInteger 1))
+  , checkEncoding "coin"
+    (Coin 30)
+    (T (TkWord64 30))
+  , checkEncoding "rational"
+    (UnsafeUnitInterval (1 % 2))
+    (T (TkWord64 1 . TkWord64 2))
+  , checkEncoding "slot"
+    (Slot 7)
+    (T (TkWord64 7))
+  , checkEncoding "neutral_nonce"
+    NeutralNonce
+    (T (TkListLen 1 . TkWord 0))
+  , checkEncoding "nonce"
+    (mkNonce 99)
+    (T (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonce 99)))
+  , checkEncoding "key_hash"
+    testKeyHash1
+    (T (TkBytes (getRawKeyHash testKeyHash1)))
+  , checkEncoding "credential_key_hash"
+    (KeyHashObj testKeyHash1)
+    (T (TkListLen 2 . TkWord 0) <> S testKeyHash1)
+  , checkEncoding "base_address"
+    (AddrBase (KeyHashObj testKeyHash1) (KeyHashObj testKeyHash2))
+    ( (T $ TkListLen 3)
+        <> (T $ TkWord 0)
+        <> S testKeyHash1
+        <> S testKeyHash2
+    )
+  , let ptr = Ptr (Slot 12) 0 3 in
+    checkEncoding "pointer_address"
+    (AddrPtr (KeyHashObj testKeyHash1) ptr)
+    ( (T $ TkListLen (2 + fromIntegral (listLen ptr)))
+       <> T (TkWord 4)
+       <> S testKeyHash1
+       <> G ptr
+    )
+  , checkEncoding "enterprise_address"
+    (AddrEnterprise (KeyHashObj testKeyHash1))
+    (T (TkListLen 2) <> T (TkWord 6) <> S testKeyHash1)
+  , checkEncoding "txin"
+    (TxIn genesisId 0 :: TxIn)
+    (T (TkListLen 2) <> S (genesisId :: TxId) <> T (TkWord64 0))
+  , let a = AddrEnterprise (KeyHashObj testKeyHash1) in
+    checkEncoding "txout"
+    (TxOut a (Coin 2))
+    (T (TkListLen 2)
+      <> S a
+      <> S (Coin 2)
+    )
+  , let
+      tin = Set.fromList [TxIn genesisId 1]
+      tout = [TxOut testAddrE (Coin 2)]
+    in checkEncoding "txbody"
+    ( TxBody -- minimal transaction body
+      tin
+      tout
       Seq.empty
       Map.empty
       (Coin 9)
       (Slot 500)
-      emptyUpdate #>
-
-      Encoding (TkMapLen 6
-        . TkWord 0 -- Tx Ins
-          . TkTag 258 . TkListLen 1 -- one input
-            . TkListLen 2 . TkBytes (getRawTxId genesisId) . TkInteger 1
-        . TkWord 1 -- Tx Outs
-          . TkListBegin
-            . TkListLen 2 . TkWord 6 . TkBytes (getRawKeyHash testKeyHash1) . TkWord64 2
-          . TkBreak
-        . TkWord 2 -- Tx Fee
-          . TkWord64 9
-        . TkWord 3 -- Tx TTL
-          . TkWord64 500
+      emptyUpdate
+    )
+    ( T (TkMapLen 4)
+      <> T (TkWord 0) -- Tx Ins
+      <> S tin
+      <> T (TkWord 1) -- Tx Outs
+      <> S tout
+      <> T (TkWord 2) -- Tx Fee
+      <> T (TkWord64 9)
+      <> T (TkWord 3) -- Tx TTL
+      <> T (TkWord64 500)
+    )
+  , case makeWitnessVKey testTxb testKey1 of
+    (WitGVKey _ _) -> error "unreachable"
+    w@(WitVKey vk sig) ->
+      checkEncoding "vkey_witnesses"
+      w  -- Transaction _witnessVKeySet element
+      ( T (TkListLen 2)
+        <> S vk -- vkey
+        <> S sig -- signature
       )
-  , Tx -- minimal transaction
-      (TxBody
-        (Set.fromList [TxIn genesisId 1])
-        [TxOut testAddrE (Coin 2)]
-        Seq.empty
-        Map.empty
+  , checkEncoding "script_hash_to_scripts"
+    (Map.singleton (hashScript testScript :: ScriptHash) testScript)  -- Transaction _witnessMSigMap
+    ( T (TkMapLen 1)
+      <> S (hashScript testScript :: ScriptHash)
+      <> S testScript
+    )
+  , let
+      tin = Set.fromList [TxIn genesisId 1]
+      tout = [TxOut testAddrE (Coin 2)]
+      reg = RegKey (KeyHashObj testKeyHash1)
+      ra = RewardAcnt (KeyHashObj testKeyHash2)
+      ras = Map.singleton ra (Coin 123)
+      up = Update
+             (PPUpdate (Map.singleton
+                         testGKeyHash
+                         (Set.singleton (Nopt 100))))
+             (AVUpdate (Map.singleton
+                         testGKeyHash
+                         (Applications (Map.singleton
+                                (ApName $ pack "Daedalus")
+                                (ApVer 17
+                                , Mdt $ Map.singleton
+                                    (SystemTag $ pack "DOS")
+                                    testInstallerHash
+                                )))))
+    in checkEncoding "txbody_full"
+    ( TxBody -- transaction body with all components
+        tin
+        tout
+        (Seq.fromList [ reg ])
+        ras
         (Coin 9)
         (Slot 500)
-        emptyUpdate)
-      Set.empty
-      Map.empty #>
-
-      Encoding (TkListLen 3
-        . TkMapLen 6 -- Transaction
-          . TkWord 0 -- Tx Ins
-            . TkTag 258 . TkListLen 1 -- one input
-              . TkListLen 2 . TkBytes (getRawTxId genesisId) . TkInteger 1
-          . TkWord 1 -- Tx Outs
-            . TkListBegin
-              . TkListLen 2 . TkWord 6 . TkBytes (getRawKeyHash testKeyHash1) . TkWord64 2
-            . TkBreak
-          . TkWord 2 -- Tx Fee
-            . TkWord64 9
-          . TkWord 3 -- Tx TTL
-            . TkWord64 500
-        . TkTag 258 . TkListLen 0 -- no key witnesses
-        . TkMapLen 0 -- no scripts
+        up
+     )
+     ( T (TkMapLen 7)
+       <> T (TkWord 0) -- Tx Ins
+       <> S tin
+       <> T (TkWord 1) -- Tx Outs
+       <> S tout
+       <> T (TkWord 2) -- Tx Fee
+       <> S (Coin 9)
+       <> T (TkWord 3) -- Tx TTL
+       <> S (Slot 500)
+       <> T (TkWord 4) -- Tx Certs
+       <> T (TkListLen 1) -- Seq list begin
+       <> S reg
+       <> T (TkWord 5) -- Tx Reward Withdrawals
+       <> S ras
+       <> T (TkWord 6) -- Tx Update
+       <> S up
       )
-  , Set.singleton testKeyWit1 #> -- Transaction _witnessVKeySet
-      Encoding (TkTag 258  . TkListLen 1 -- one vkey witness
-        . TkListLen 2
-        . testKey1Token -- vkey
-        . testKey1SigToken -- signature
-      )
-  , Map.singleton (hashScript testScript :: ScriptHash) testScript #> -- Transaction _witnessMSigMap
-      Encoding (TkMapLen 1
-        . TkBytes (getRawScriptHash $ hashScript testScript)
-        . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1)
-      )
-  , TxBody -- transaction body with all components
-      (Set.fromList [TxIn genesisId 1])
-      [TxOut testAddrE (Coin 2)]
-      (Seq.fromList [ RegKey (KeyHashObj testKeyHash1) ])
-      (Map.singleton (RewardAcnt (KeyHashObj testKeyHash2)) (Coin 123))
-      (Coin 9)
-      (Slot 500)
-      (Update
-        (PPUpdate (Map.singleton
-                     testGKeyHash
-                     (Set.singleton (Nopt 100))))
-        (AVUpdate (Map.singleton
-                     testGKeyHash
-                     (Applications (Map.singleton
-                            (ApName $ pack "Daedalus")
-                            (ApVer 17
-                            , Mdt $ Map.singleton
-                                (SystemTag $ pack "DOS")
-                                testInstallerHash
-                            )))))
-      ) #>
-
-      Encoding (TkMapLen 6
-        . TkWord 0 -- Tx Ins
-          . TkTag 258 . TkListLen 1 -- one input
-            . TkListLen 2 . TkBytes (getRawTxId genesisId) . TkInteger 1
-        . TkWord 1 -- Tx Outs
-          . TkListBegin
-            . TkListLen 2 . TkWord 6 . TkBytes (getRawKeyHash testKeyHash1) . TkWord64 2
-          . TkBreak
-        . TkWord 2 -- Tx Fee
-          . TkWord64 9
-        . TkWord 3 -- Tx TTL
-          . TkWord64 500
-        . TkWord 4 -- Tx Certs
-          . TkListBegin
-            -- A stake key registration certificate
-            . TkListLen 2
-              . TkWord 0 -- Reg Cert
-              . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1)
-          . TkBreak
-        . TkWord 5 -- Tx Reward Withdrawals
-          . TkMapLen 1 -- one withdrawal
-            . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash2)
-            . TkWord64 123
-        . TkWord 6 -- Tx Reward Withdrawals
-          . TkListLen 2
-            . TkMapLen 1 -- one protocol parameter update
-              . TkBytes (getRawGenKeyHash testGKeyHash)
-              . TkTag 258 . TkListLen 1 -- one paratemer change
-                . TkListLen 2 . TkWord 11 . TkInteger 100 -- set nopt (word 11) to 100
-            . TkMapLen 1 -- one software version update
-              . TkBytes (getRawGenKeyHash testGKeyHash) -- genesis key hash
-              . TkMapLen 1 -- one application
-                . TkBytes (pack "Daedalus")
-                . TkListLen 2
-                  . TkInteger 17 -- version 17
-                  . TkMapLen 1 -- metadata
-                    . TkBytes (pack "DOS") -- system tag
-                    . TkBytes (getRawInstallerHash testInstallerHash)
-      )
-  , DeRegKey (KeyHashObj testKeyHash1) #>
-      Encoding (TkListLen 2
-                  . TkWord 1 -- DeReg cert
-                  . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1)) -- address
-  , RegPool (PoolParams
+  , checkEncoding "register script"
+    (DeRegKey (ScriptHashObj testScriptHash))
+    ( T (TkListLen 2)
+      <> T (TkWord 3) -- DeReg cert
+      <> S testScriptHash -- keyhash
+    )
+  , checkEncoding "deregister_key"
+    (DeRegKey (KeyHashObj testKeyHash1))
+    ( T (TkListLen 2)
+      <> T (TkWord 2) -- DeReg cert
+      <> S testKeyHash1 -- keyhash
+    )
+  , checkEncoding "deregister_script"
+    (DeRegKey (ScriptHashObj testScriptHash))
+    ( T (TkListLen 2)
+      <> T (TkWord 3) -- DeReg cert
+      <> S testScriptHash -- script hash
+    )
+  , let poolOwner = testKeyHash2
+        poolMargin = unsafeMkUnitInterval 0.7
+        poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
+        poolPledge = Coin 11
+        poolCost = Coin 55
+    in
+    checkEncoding "register-pool"
+    (RegPool (PoolParams
                { _poolPubKey = testKeyHash1
-               , _poolVrf = testVRFHK
-               , _poolPledge = Coin 11
-               , _poolCost = Coin 55
-               , _poolMargin = unsafeMkUnitInterval 0.7
-               , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
-               , _poolOwners = Set.singleton testKeyHash2
-               }) #>
-    Encoding (TkListLen 2
-                . TkWord 2 -- Reg Pool
-                . TkListLen 7
-                  . TkBytes (getRawKeyHash testKeyHash1) -- pool vkey
-                  . TkBytes (getHash testVRFHK) -- vrf
-                  . TkWord64 11 -- pledge
-                  . TkWord64 55 -- cost
-                  . TkWord64 7 . TkWord64 10 -- margin
-                  . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1) -- reward account
-                  . TkTag 258 . TkListLen 1 . TkBytes (getRawKeyHash testKeyHash2) -- owners
+               , _poolVrf = testVRFKH
+               , _poolPledge = poolPledge
+               , _poolCost = poolCost
+               , _poolMargin = poolMargin
+               , _poolRAcnt = poolRAcnt
+               , _poolOwners = Set.singleton poolOwner
+               }))
+    ( T (TkListLen 8)
+      <> T (TkWord 6) -- Reg Pool
+      <> T (TkTag 258 . TkListLen 1) <> S poolOwner   -- owners
+      <> S poolCost     -- cost
+      <> S poolMargin   -- margin
+      <> S poolPledge   -- pledge
+      <> S testKeyHash1 -- operator
+      <> S testVRFKH    -- vrf keyhash
+      <> S poolRAcnt    -- reward acct
     )
-  , RetirePool testKeyHash1 (Epoch 1729) #>
-    Encoding (TkListLen 3
-                . TkWord 3 -- Pool Retire
-                . TkBytes (getRawKeyHash testKeyHash1) -- key hash
-                . TkInteger 1729 -- epoch
+  , checkEncoding "retire_pool"
+    (RetirePool testKeyHash1 (Epoch 1729))
+    ( T (TkListLen 3
+      . TkWord 7) -- Pool Retire
+      <> S testKeyHash1 -- key hash
+      <> S (Epoch 1729) -- epoch
     )
-  , Delegate (Delegation (KeyHashObj testKeyHash1) testKeyHash2) #>
-    Encoding (TkListLen 2
-      . TkWord 4 -- delegation cert
-      . TkListLen 2
-          . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1) -- delegator credential
-          . TkBytes (getRawKeyHash testKeyHash2) -- delegatee key hash
+  , checkEncoding "Key delegation"
+    (Delegate (Delegation (KeyHashObj testKeyHash1) testKeyHash2))
+    ( T (TkListLen 3
+      . TkWord 4) -- delegation cert with key
+      <> S testKeyHash1
+      <> S testKeyHash2
     )
-  , GenesisDelegate (testGKeyHash, testKeyHash1) #>
-    Encoding (TkListLen 2
-      . TkWord 5 -- genesis delegation cert
-      . TkListLen 2
-          . TkBytes (getRawGenKeyHash testGKeyHash) -- delegator credential
-          . TkBytes (getRawKeyHash testKeyHash1) -- delegatee key hash
+  , checkEncoding "script delegation"
+    (Delegate (Delegation (ScriptHashObj testScriptHash) testKeyHash2))
+    ( T (TkListLen 3
+      . TkWord 5) -- delegation cert with script
+      <> S testScriptHash
+      <> S testKeyHash2
     )
-  , InstantaneousRewards (Map.singleton (KeyHashObj testKeyHash1) 77) #>
-    Encoding (TkListLen 2
-      . TkWord 6 -- make instantaneous rewards cert
-      . TkMapLen 1
-        . TkListLen 2 . TkWord 0 . TkBytes (getRawKeyHash testKeyHash1) -- credential hash
-        . TkWord64 77 -- reward value
+  , checkEncoding "genesis-delegation"
+    (GenesisDelegate (testGKeyHash, testKeyHash1))
+    ( T (TkListLen 3
+      . TkWord 8) -- genesis delegation cert
+      <> S testGKeyHash -- delegator credential
+      <> S testKeyHash1 -- delegatee key hash
+    )
+  , let rs = Map.singleton (KeyHashObj testKeyHash1) 77
+    in
+    checkEncoding "mir"
+    (InstantaneousRewards rs)
+    ( T (TkListLen 2
+       . TkWord 9) -- make instantaneous rewards cert
+      <> S rs
     )
  ]
-
