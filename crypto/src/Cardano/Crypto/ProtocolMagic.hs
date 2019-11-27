@@ -29,7 +29,14 @@ import qualified Data.Aeson as A
 import Data.Aeson ((.:), (.=))
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..), serialize', FromCBORAnnotated(..), withSlice', encodePreEncoded)
+import Cardano.Binary 
+  ( FromCBOR(..)
+  , FromCBORAnnotated(..)
+  , ToCBOR(..)
+  , encodePreEncoded
+  , serialize'
+  , withSlice'
+  )
 
 
 -- | Magic number which should differ for different clusters. It's
