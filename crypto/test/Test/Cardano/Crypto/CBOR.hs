@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -28,7 +29,7 @@ import Cardano.Binary (Dropper, ToCBOR, dropBytes, dropList, enforceSize)
 import Cardano.Crypto
   ( AbstractHash
   , PassPhrase
-  , ProtocolMagicId(..)
+  , pattern ProtocolMagicId
   , VerificationKey(..)
   , RedeemSignature
   , SigningKey(..)

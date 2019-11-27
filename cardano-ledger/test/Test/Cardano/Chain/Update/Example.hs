@@ -51,7 +51,7 @@ import Cardano.Chain.Update
   , signVote
   , signProposal
   )
-import Cardano.Crypto (ProtocolMagicId(..), hash)
+import Cardano.Crypto (pattern ProtocolMagicId, hash)
 
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleSafeSigner)

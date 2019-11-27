@@ -156,7 +156,7 @@ certificateId = hash
 
 -- | A 'Certificate' is valid if the 'Signature' is valid
 isValid
-  :: Annotated ProtocolMagicId ByteString
+  :: ProtocolMagicId
   -> Certificate
   -> Bool
 isValid pm cert =

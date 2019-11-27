@@ -41,7 +41,7 @@ prop_certificateCorrect = property $ do
     <*> genEpochNumber
     <*> genSafeSigner
 
-  assert $ isValid Dummy.annotatedProtocolMagicId cert
+  assert $ isValid Dummy.protocolMagicId cert
 
 -- | Cannot validate 'Certificate's with incorrect verification keys
 prop_certificateIncorrect :: Property
@@ -57,4 +57,4 @@ prop_certificateIncorrect = property $ do
   let
     badCert  = cert { delegateVK = badDelegateVK }
 
-  assert . not $ isValid Dummy.annotatedProtocolMagicId badCert
+  assert . not $ isValid Dummy.protocolMagicId badCert

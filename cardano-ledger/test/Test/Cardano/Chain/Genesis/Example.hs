@@ -22,7 +22,6 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 
-import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , LovelacePortion(..)
@@ -44,8 +43,8 @@ import Cardano.Chain.Genesis
   )
 import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto
-  ( AProtocolMagic(..)
-  , ProtocolMagicId(..)
+  ( ProtocolMagic(..)
+  , pattern ProtocolMagicId
   , CompactRedeemVerificationKey
   , RequiresNetworkMagic(..)
   , Signature(..)
@@ -71,7 +70,7 @@ exampleGenesisSpec = UnsafeGenesisSpec
   exampleGenesisDelegation
   exampleProtocolParameters
   (BlockCount 37)
-  (AProtocolMagic (Annotated (ProtocolMagicId 1783847074) ()) RequiresMagic)
+  (ProtocolMagic (ProtocolMagicId 1783847074) RequiresMagic)
   exampleGenesisInitializer
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances

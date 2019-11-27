@@ -28,8 +28,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
 import Cardano.Binary
-  ( Annotated
-  , Decoder
+  ( Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -76,7 +75,7 @@ import Cardano.Crypto
 
 
 data Environment = Environment
-  { protocolMagic             :: !(Annotated ProtocolMagicId ByteString)
+  { protocolMagic             :: !ProtocolMagicId
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
   , appVersions               :: !ApplicationVersions

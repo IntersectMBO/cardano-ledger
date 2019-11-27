@@ -22,7 +22,7 @@ import Cardano.Binary (ToCBOR, Case(..), LengthOf, SizeOverride(..), szCases)
 import Cardano.Chain.Common (AddrAttributes(..), Attributes(..), mkAttributes)
 import Cardano.Chain.UTxO
   (Tx(..), pattern Tx,  TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness, txInWitnesses)
-import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
+import Cardano.Crypto (pattern ProtocolMagicId, SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip

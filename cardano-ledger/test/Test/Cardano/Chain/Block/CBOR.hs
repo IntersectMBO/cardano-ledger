@@ -65,6 +65,7 @@ import Cardano.Chain.Slotting
 import Cardano.Chain.Ssc (SscPayload(..), SscProof(..))
 import Cardano.Crypto
   ( ProtocolMagicId(..)
+  , pattern ProtocolMagicId
   , SignTag(..)
   , abstractHash
   , hash

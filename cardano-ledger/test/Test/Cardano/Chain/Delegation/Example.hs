@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Test.Cardano.Chain.Delegation.Example
   ( exampleCertificates
   )
@@ -9,7 +11,7 @@ import Data.List (zipWith4)
 
 import Cardano.Chain.Delegation (Certificate, signCertificate)
 import Cardano.Chain.Slotting (EpochNumber(..))
-import Cardano.Crypto (ProtocolMagicId(..))
+import Cardano.Crypto (ProtocolMagicId(..), pattern ProtocolMagicId)
 
 import Test.Cardano.Crypto.Example (exampleVerificationKeys, staticSafeSigners)
 

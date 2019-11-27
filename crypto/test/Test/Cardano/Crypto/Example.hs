@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Crypto.Example
   ( exampleProtocolMagic0
@@ -23,11 +24,10 @@ import qualified Cardano.Crypto.Wallet as CC
 import Data.List ((!!))
 import Data.Maybe (fromJust)
 
-import Cardano.Binary (Annotated(..))
 import Cardano.Crypto
-  ( AProtocolMagic(..)
-  , ProtocolMagic
+  ( ProtocolMagic(..)
   , ProtocolMagicId(..)
+  , pattern ProtocolMagicId
   , VerificationKey(..)
   , RedeemVerificationKey
   , RequiresNetworkMagic(..)
@@ -45,23 +45,23 @@ exampleProtocolMagicId0 = ProtocolMagicId 31337
 
 exampleProtocolMagic0 :: ProtocolMagic
 exampleProtocolMagic0 =
-  AProtocolMagic (Annotated exampleProtocolMagicId0 ()) RequiresMagic
+  ProtocolMagic exampleProtocolMagicId0 RequiresMagic
 
 exampleProtocolMagic1 :: ProtocolMagic
 exampleProtocolMagic1 =
-  AProtocolMagic (Annotated (ProtocolMagicId 2147000001) ()) RequiresMagic
+  ProtocolMagic (ProtocolMagicId 2147000001) RequiresMagic
 
 exampleProtocolMagic2 :: ProtocolMagic
 exampleProtocolMagic2 =
-  AProtocolMagic (Annotated (ProtocolMagicId 58952) ()) RequiresMagic
+  ProtocolMagic (ProtocolMagicId 58952) RequiresMagic
 
 exampleProtocolMagic3 :: ProtocolMagic
 exampleProtocolMagic3 =
-  AProtocolMagic (Annotated (ProtocolMagicId 31337) ()) RequiresMagic
+  ProtocolMagic (ProtocolMagicId 31337) RequiresMagic
 
 exampleProtocolMagic4 :: ProtocolMagic
 exampleProtocolMagic4 =
-  AProtocolMagic (Annotated (ProtocolMagicId 500) ()) RequiresNoMagic
+  ProtocolMagic (ProtocolMagicId 500) RequiresNoMagic
 
 exampleVerificationKey :: VerificationKey
 exampleVerificationKey = vk where [vk] = exampleVerificationKeys 16 1 -- 16 could be any number, as we take the first key

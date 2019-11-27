@@ -24,8 +24,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
 import Cardano.Binary
-  ( Annotated(..)
-  , FromCBOR(..)
+  ( FromCBOR(..)
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
@@ -48,7 +47,7 @@ import Cardano.Crypto (ProtocolMagicId, VerificationKey)
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic      :: !(Annotated ProtocolMagicId ByteString)
+  { protocolMagic      :: !ProtocolMagicId
   , allowedDelegators  :: !(Set KeyHash)
   , k                  :: !BlockCount
   , currentEpoch       :: !EpochNumber

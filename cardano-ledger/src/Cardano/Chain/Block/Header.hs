@@ -41,7 +41,6 @@ module Cardano.Chain.Block.Header
   , headerIssuer
   , headerLength
   , headerToSign
-  , aHeaderProtocolMagicId
 
   -- * Header Binary Serialization
   , toCBORHeaderToHash
@@ -144,7 +143,7 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 
 data Header = Header'
-  { aHeaderProtocolMagicId' :: !(Annotated ProtocolMagicId ByteString)
+  { headerProtocolMagicId'  :: !ProtocolMagicId
   , aHeaderPrevHash         :: !(Annotated HeaderHash ByteString)
   -- ^ Pointer to the header of the previous block
   , aHeaderSlot             :: !(Annotated SlotNumber ByteString)
@@ -196,7 +195,7 @@ pattern UnsafeHeader
   , headerSignature
   , headerEpochSlots
   } <- Header'
-    (unAnnotated -> headerProtocolMagicId)
+    headerProtocolMagicId
     (unAnnotated -> headerPrevHash)
     (unAnnotated -> headerSlot)
     (unAnnotated -> headerDifficulty)
@@ -210,14 +209,13 @@ pattern UnsafeHeader
   where
   UnsafeHeader pm prevHash slotNumber difficulty pv sv proof genesisVK sig
     epochSlots =
-    let pmBytes = serialize' pm
-        prevHashBytes = serialize' prevHash
+    let prevHashBytes = serialize' prevHash
         slotNumberBytes = serialize' (fromSlotNumber epochSlots $ slotNumber)
         difficultyBytes = serialize' difficulty
         headerExtraBytes = serializeEncoding' $ toCBORBlockVersions pv sv
         headerBytes = serializeEncoding' $
           encodeListLen 5
-            <> encodePreEncoded pmBytes
+            <> toCBOR pm
             <> encodePreEncoded prevHashBytes
             <> encodePreEncoded (serialize' proof)
             <> (  encodeListLen 4
@@ -228,7 +226,7 @@ pattern UnsafeHeader
                )
             <> encodePreEncoded headerExtraBytes
     in Header'
-          (Annotated pm pmBytes)
+          pm
           (Annotated prevHash prevHashBytes)
           (Annotated slotNumber slotNumberBytes)
           (Annotated difficulty difficultyBytes)
@@ -331,9 +329,6 @@ headerToSign epochSlots h = ToSign
 
 headerLength :: Header -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation
-
-aHeaderProtocolMagicId :: Header -> Annotated ProtocolMagicId ByteString
-aHeaderProtocolMagicId = aHeaderProtocolMagicId'
 
 --------------------------------------------------------------------------------
 -- Header Binary Serialization
