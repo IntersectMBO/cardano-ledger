@@ -33,6 +33,6 @@ instance TQC.HasTrace LEDGER Word64 where
               <*> genCoin 0 1000
 
   sigGen _ ledgerEnv ledgerSt =
-    genTx ledgerEnv ledgerSt traceKeyPairs traceVRFKeyPairs
+    genTx ledgerEnv ledgerSt traceKeyPairs [] traceVRFKeyPairs
 
   shrinkSignal = shrinkTx
