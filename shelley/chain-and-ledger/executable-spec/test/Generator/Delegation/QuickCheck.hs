@@ -23,20 +23,20 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Coin (Coin (..))
-import           Delegation.Certificates (pattern DeRegKey, pattern RegKey, pattern RegPool,
-                     pattern RetirePool, decayKey, isDeRegKey)
+import           Delegation.Certificates (pattern DeRegKey, pattern Delegate, pattern RegKey,
+                     pattern RegPool, pattern RetirePool, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.QuickCheck (genInteger, genNatural, toCred)
 import           Keys (hashKey, vKey)
 import           Ledger.Core (dom, (∈), (∉))
-import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _pstate,
-                     _stPools, _stkCreds)
+import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
+                     _pstate, _stPools, _stkCreds)
 import           MockTypes (DCert, DPState, DState, KeyPair, KeyPairs, PState, PoolParams, VKey,
                      VrfKeyPairs, hashKeyVRF)
 import           PParams (PParams (..), eMax)
 import           Slot (Epoch (Epoch), Slot (Slot), epochFromSlot)
-import           TxData (Credential (KeyHashObj), pattern PoolParams, RewardAcnt (..),
-                     StakePools (StakePools), _poolPubKey, _poolVrf)
+import           TxData (Credential (KeyHashObj), pattern Delegation, pattern PoolParams,
+                     RewardAcnt (..), StakePools (StakePools), _poolPubKey, _poolVrf)
 import           UTxO (deposits)
 
 -- | Generate certificates and also return the associated witnesses and
@@ -81,6 +81,9 @@ genDCerts keys vrfKeys pparams dpState slot ttl = do
 
 
 -- | Occasionally generate a valid certificate
+--
+-- Note: we register keys and pools more often than deregistering/retiring them,
+-- and we generate more delegations than registrations of keys/pools.
 genDCert
   :: KeyPairs
   -> VrfKeyPairs
@@ -89,12 +92,11 @@ genDCert
   -> Slot
   -> Gen (Maybe (DCert, KeyPair))
 genDCert keys vrfKeys pparams dpState slot =
-  -- TODO @uroboros Generate _Delegate_ Certificates
-  QC.frequency [ (3, genRegKeyCert keys dState)
-               , (3, genDeRegKeyCert keys dState)
-               , (3, genRegPool keys vrfKeys dpState)
-               , (3, genRetirePool keys pparams pState slot)
-               , (1, pure Nothing)
+  QC.frequency [ (2, genRegKeyCert keys dState)
+               , (2, genRegPool keys vrfKeys dpState)
+               , (3, genDelegation keys dpState)
+               , (1, genDeRegKeyCert keys dState)
+               , (1, genRetirePool keys pparams pState slot)
                ]
  where
   dState = dpState ^. dstate
@@ -111,7 +113,7 @@ genRegKeyCert keys delegSt =
     [] -> pure Nothing
     _ -> do
            (_payKey, stakeKey) <- QC.elements availableKeys
-           pure $ Just $ (RegKey (toCred stakeKey), stakeKey)
+           pure $ Just (RegKey (toCred stakeKey), stakeKey)
   where
     notRegistered k = k ∉ dom (_stkCreds delegSt)
     availableKeys = filter (notRegistered . toCred . snd) keys
@@ -122,15 +124,42 @@ genDeRegKeyCert
   :: KeyPairs
   -> DState
   -> Gen (Maybe (DCert, KeyPair))
-genDeRegKeyCert keys delegSt =
+genDeRegKeyCert keys dState =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
            (_payKey, stakeKey) <- QC.elements availableKeys
            pure $ Just (DeRegKey (toCred stakeKey), stakeKey)
   where
-    registered k = k ∈ dom (_stkCreds delegSt)
+    registered k = k ∈ dom (_stkCreds dState)
     availableKeys = filter (registered . toCred . snd) keys
+
+-- | Generate a new delegation certificate by picking a registered key
+-- and pool. The delegation is witnessed by the delegator's key, which
+-- we return along with the certificate.
+--
+-- Returns nothing if there are no active keys or pools.
+genDelegation
+  :: KeyPairs
+  -> DPState
+  -> Gen (Maybe (DCert, KeyPair))
+genDelegation keys dpState =
+  if null availableDelegates || null availablePools
+    then
+      pure Nothing
+    else
+      mkCert <$> QC.elements availableDelegates
+             <*> QC.elements availablePools
+  where
+    mkCert (_, delegatorKey) poolKey = Just (cert, delegatorKey)
+      where
+        cert = Delegate (Delegation (toCred delegatorKey) poolKey)
+
+    registeredDelegate k = k ∈ dom (_stkCreds (_dstate dpState))
+    availableDelegates = filter (registeredDelegate . toCred . snd) keys
+
+    (StakePools registeredPools) = _stPools (_pstate dpState)
+    availablePools = Map.keys registeredPools
 
 -- | Generate and return a RegPool certificate along with its witnessing key.
 genRegPool
@@ -141,7 +170,7 @@ genRegPool
 genRegPool keys vrfKeys dpState =
   if null availableKeys || null availableVrfKeys
      then pure Nothing
-     else do
+     else
        Just <$> genDCertRegPool availableKeys availableVrfKeys
  where
   notRegistered k = k `notElem` (dpState ^. pstate . pParams . to Map.elems . to (_poolPubKey <$>))

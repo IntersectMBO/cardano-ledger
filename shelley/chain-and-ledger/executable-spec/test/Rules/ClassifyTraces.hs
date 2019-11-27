@@ -8,50 +8,59 @@ module Rules.ClassifyTraces
   where
 
 import           Data.Foldable (toList)
-import           Hedgehog (Property, cover, forAll, property, withTests)
+import           Data.Word (Word64)
+import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
-import           Control.State.Transition.Generator (onlyValidSignalsAreGeneratedForTrace,
-                     traceOfLengthWithInitState)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
-
-import           Delegation.Certificates (isDeRegKey, isRegKey, isRegPool, isRetirePool)
-import           Generator.Core (mkGenesisLedgerState)
-import           Generator.LedgerTrace ()
+import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState,
+                     onlyValidSignalsAreGeneratedFromInitState)
+import           Delegation.Certificates (isDeRegKey, isDelegation, isRegKey, isRegPool,
+                     isRetirePool)
+import           Generator.Core.QuickCheck (mkGenesisLedgerState)
+import           Generator.LedgerTrace.QuickCheck ()
 import           MockTypes (DCert, LEDGER, Tx)
 import           TxData (_body, _certs)
 
 relevantCasesAreCovered :: Property
-relevantCasesAreCovered = withTests 500 $ property $ do
+relevantCasesAreCovered = withMaxSuccess 500 . property $ do
   let tl = 100
-  tr <- forAll (traceOfLengthWithInitState @LEDGER tl mkGenesisLedgerState)
+  forAllTraceFromInitState @LEDGER tl tl (Just mkGenesisLedgerState) $ \tr -> do
+    let txs :: [Tx]
+        txs = traceSignals OldestFirst tr
+        certs_ = allCerts txs
 
-  let txs = traceSignals OldestFirst tr
-      certs_ = allCerts txs
+    checkCoverage $ conjoin [
+       cover_ 75
+             (traceLength tr <= 5 * length certs_)
+             "there is at least 1 certificate for every 5 transactions"
 
-  cover 75
-        "there is at least 1 certificate for every 5 transactions"
-        (traceLength tr <= 5 * length certs_)
+     , cover_ 75
+              (traceLength tr <= 20 * length (filter isRegKey certs_))
+              "there is at least 1 RegKey certificate for every 10 transactions"
 
-  cover 75
-        "there is at least 1 RegKey certificate for every 20 transactions"
-        (traceLength tr <= 20 * length (filter isRegKey certs_))
+     , cover_ 75
+              (traceLength tr <= 20 * length (filter isDeRegKey certs_))
+              "there is at least 1 DeRegKey certificate for every 20 transactions"
 
-  cover 75
-        "there is at least 1 DeRegKey certificate for every 20 transactions"
-        (traceLength tr <= 20 * length (filter isDeRegKey certs_))
+     , cover_ 75
+              (traceLength tr <= 20 * length (filter isDelegation certs_))
+              "there is at least 1 Delegation certificate for every 10 transactions"
 
-  cover 75
-        "there is at least 1 RegPool certificate for every 20 transactions"
-        (traceLength tr <= 20 * length (filter isRegPool certs_))
+     , cover_ 75
+              (traceLength tr <= 20 * length (filter isRegPool certs_))
+              "there is at least 1 RegPool certificate for every 10 transactions"
 
-  cover 75
-        "there is at least 1 RetirePool certificate for every 20 transactions"
-        (traceLength tr <= 20 * length (filter isRetirePool certs_))
+     , cover_ 75
+              (traceLength tr <= 20 * length (filter isRetirePool certs_))
+              "there is at least 1 RetirePool certificate for every 20 transactions"
 
-  cover 25
-        "at most 75% of transactions have no certificates"
-        (0.75 >= noCertsRatio (certsByTx txs))
+     , cover_ 25
+              (0.75 >= noCertsRatio (certsByTx txs))
+              "at most 75% of transactions have no certificates"
+     ]
+    where
+      cover_ pc b s = cover pc b s (property ())
 
 -- | Extract the certificates from the transactions
 certsByTx :: [Tx] -> [[DCert]]
@@ -77,8 +86,5 @@ lenRatio f xs
              (length xs)
 
 onlyValidLedgerSignalsAreGenerated :: Property
-onlyValidLedgerSignalsAreGenerated =
-  withTests 200 $
-    onlyValidSignalsAreGeneratedForTrace traceGen
-  where
-    traceGen = traceOfLengthWithInitState @LEDGER 100 mkGenesisLedgerState
+onlyValidLedgerSignalsAreGenerated = withMaxSuccess 200 $
+    onlyValidSignalsAreGeneratedFromInitState @LEDGER 100 (100::Word64) (Just mkGenesisLedgerState)
