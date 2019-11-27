@@ -11,8 +11,7 @@
 module Cardano.Chain.Update.Proposal
   (
   -- * Proposal
-    Proposal(proposalBody, proposalIssuer, proposalSignature, proposalSerialized)
-  , pattern UnsafeProposal
+    Proposal(UnsafeProposal, proposalBody, proposalIssuer, proposalSignature, proposalSerialized)
   , UpId
 
   -- * Proposal Constructors
@@ -24,13 +23,13 @@ module Cardano.Chain.Update.Proposal
 
   -- * ProposalBody
   , ProposalBody
-    ( proposalBodyProtocolVersion
+    ( ProposalBody
+    , proposalBodyProtocolVersion
     , proposalBodyProtocolParametersUpdate
     , proposalBodySoftwareVersion
     , proposalBodyMetadata
     , proposalBodySerialized
     )
-  , pattern ProposalBody
   )
 where
 

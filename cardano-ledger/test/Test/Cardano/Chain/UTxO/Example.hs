@@ -41,8 +41,7 @@ import Cardano.Chain.Common
   , mtRoot
   )
 import Cardano.Chain.UTxO
-  ( Tx
-  , pattern Tx
+  ( Tx(..)
   , TxAux(..)
   , TxId
   , TxIn(..)
@@ -52,13 +51,12 @@ import Cardano.Chain.UTxO
   , TxProof(..)
   , TxSig
   , TxSigData(..)
-  , TxWitness
-  , pattern TxWitness
+  , TxWitness(..)
   )
 import Cardano.Crypto
   ( AbstractHash(..)
   , Hash
-  , pattern ProtocolMagicId
+  , ProtocolMagicId(..)
   , VerificationKey(..)
   , RedeemSignature
   , SignTag(..)

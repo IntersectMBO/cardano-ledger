@@ -32,12 +32,10 @@ import Cardano.Chain.Common
 import Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
-  , Payload
-  , pattern Payload
+  , Payload(..)
   , Proof
   , Proposal
   , ProposalBody(..)
-  , pattern ProposalBody
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)

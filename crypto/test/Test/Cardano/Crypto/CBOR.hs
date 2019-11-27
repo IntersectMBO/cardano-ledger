@@ -29,7 +29,7 @@ import Cardano.Binary (Dropper, ToCBOR, dropBytes, dropList, enforceSize)
 import Cardano.Crypto
   ( AbstractHash
   , PassPhrase
-  , pattern ProtocolMagicId
+  , ProtocolMagicId(..)
   , VerificationKey(..)
   , RedeemSignature
   , SigningKey(..)

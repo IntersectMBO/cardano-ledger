@@ -47,7 +47,6 @@ import qualified Cardano.Chain.Update.Proposal as Proposal
 import Cardano.Chain.Update.Proposal
   ( Proposal(..)
   , ProposalBody(..)
-  , pattern ProposalBody
   , UpId
   )
 import Cardano.Chain.Update.ProtocolParameters

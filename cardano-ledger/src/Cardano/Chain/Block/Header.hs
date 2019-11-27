@@ -20,7 +20,8 @@ module Cardano.Chain.Block.Header
   (
   -- * Header
   Header
-    ( headerProtocolMagicId
+    ( UnsafeHeader
+    , headerProtocolMagicId
     , headerPrevHash
     , headerSlot
     , headerDifficulty
@@ -31,7 +32,6 @@ module Cardano.Chain.Block.Header
     , headerSignature
     , headerEpochSlots
     )
-  , pattern UnsafeHeader
 
   -- * Header Constructors
   , mkHeader
@@ -53,11 +53,11 @@ module Cardano.Chain.Block.Header
 
   -- * Boundary Header
   , BoundaryHeader
-    ( boundaryPrevHash
+    ( BoundaryHeader
+    , boundaryPrevHash
     , boundaryEpoch
     , boundaryDifficulty
     )
-  , pattern BoundaryHeader
   , mkBoundaryHeader
   , boundaryHeaderHashAnnotated
   , wrapBoundaryBytes

@@ -21,12 +21,11 @@
 module Cardano.Chain.Delegation.Certificate
   (
   -- * Certificate
-    Certificate(epoch, issuerVK, delegateVK, signature, serialize)
+    Certificate(UnsafeCertificate, epoch, issuerVK, delegateVK, signature, serialize)
   , CertificateId
 
   -- * Certificate Constructors
   , signCertificate
-  , pattern UnsafeCertificate
 
   -- * Certificate Accessor
   , certificateId

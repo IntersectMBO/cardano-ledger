@@ -27,7 +27,6 @@ import Data.Maybe (fromJust)
 import Cardano.Crypto
   ( ProtocolMagic(..)
   , ProtocolMagicId(..)
-  , pattern ProtocolMagicId
   , VerificationKey(..)
   , RedeemVerificationKey
   , RequiresNetworkMagic(..)

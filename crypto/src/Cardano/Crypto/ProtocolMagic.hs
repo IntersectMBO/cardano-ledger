@@ -15,11 +15,10 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Crypto.ProtocolMagic
-  ( ProtocolMagicId(unProtocolMagicId)
+  ( ProtocolMagicId(unProtocolMagicId, ProtocolMagicId)
   , ProtocolMagic(..)
   , RequiresNetworkMagic(..)
   , getProtocolMagic
-  , pattern ProtocolMagicId
   )
 where
 
@@ -29,7 +28,7 @@ import qualified Data.Aeson as A
 import Data.Aeson ((.:), (.=))
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
-import Cardano.Binary 
+import Cardano.Binary
   ( FromCBOR(..)
   , FromCBORAnnotated(..)
   , ToCBOR(..)

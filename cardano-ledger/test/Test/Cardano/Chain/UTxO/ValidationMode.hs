@@ -27,7 +27,7 @@ import Cardano.Chain.UTxO
   ( TxAux (..)
   , Environment (..)
   , TxId
-  , pattern TxWitness
+  , TxWitness (..)
   , TxValidationError (..)
   , TxValidationMode (..)
   , UTxOValidationError (..)

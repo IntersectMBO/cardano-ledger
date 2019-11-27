@@ -44,7 +44,7 @@ import Cardano.Chain.Genesis
 import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto
   ( ProtocolMagic(..)
-  , pattern ProtocolMagicId
+  , ProtocolMagicId(..)
   , CompactRedeemVerificationKey
   , RequiresNetworkMagic(..)
   , Signature(..)

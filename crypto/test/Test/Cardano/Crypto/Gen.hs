@@ -58,7 +58,6 @@ import Cardano.Crypto.ProtocolMagic
   ( ProtocolMagic(..)
   , ProtocolMagicId(..)
   , RequiresNetworkMagic(..)
-  , pattern ProtocolMagicId
   )
 import Cardano.Crypto.Signing
   ( VerificationKey

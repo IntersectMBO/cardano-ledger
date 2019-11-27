@@ -10,7 +10,6 @@ where
 import Cardano.Crypto
   ( ProtocolMagic(..)
   , ProtocolMagicId(..)
-  , pattern ProtocolMagicId
   , RequiresNetworkMagic(..)
   )
 
