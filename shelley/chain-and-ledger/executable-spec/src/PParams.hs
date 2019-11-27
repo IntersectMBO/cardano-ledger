@@ -82,10 +82,7 @@ data PParams = PParams
     -- | Extra entropy
   , _extraEntropy    :: Nonce
     -- | Protocol version
-<<<<<<< HEAD
   , _protocolVersion :: (Natural, Natural)
-=======
-  , _protocolVersion :: (Natural, Natural, Natural)
     -- | maximum allowable resources for script validation
   , _maxUnits        :: ExUnits
     -- | Coefficients for conversion of resources needed for script execution into fees
@@ -94,7 +91,6 @@ data PParams = PParams
     -- script execution) into abstract execution units
   , _prices           :: Prices
     -- | Coefficients for conversion of resources needed for script execution into fees
->>>>>>> adding a stand-in for cost model
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks PParams
@@ -196,11 +192,7 @@ emptyPParams =
      , _activeSlotCoeff = interval0
      , _d = interval0
      , _extraEntropy = NeutralNonce
-<<<<<<< HEAD
      , _protocolVersion = (0, 0)
-=======
-     , _protocolVersion = (0, 0, 0)
      , _maxUnits = defaultUnits -- no scripts can be run
      , _costm = defaultModel -- but they're also free
->>>>>>> adding a stand-in for cost model
      }
