@@ -74,6 +74,7 @@ data CostModMSIG = CostModMSIG
 data CostMod = CostMod CostModPLC CostModMSIG
   deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
+
 -- | Default values
 -- | Default execution units
 defaultUnits :: ExUnits

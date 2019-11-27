@@ -633,9 +633,13 @@ txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _)
                              + (toInteger $ length m) * (sysTagSize + hashObj)
     uSize = arrayPrefix + ppupSize + avupSize + smallArray + uint
 
--- |Minimum fee calculation
-minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
-minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
+-- |Minimum fee calculation including script fees
+minfee :: PParams -> TxBody crypto-> Coin
+minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB) + scriptFees (pc ^. costm) tx
+
+-- | Script fee (Temporarily 0 until cost model is decided on)
+scriptFees :: CostMod -> TxBody crypto -> Integer
+scriptFees cm tx = TODO
 
 -- |Determine if the fee is large enough
 validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Validity
