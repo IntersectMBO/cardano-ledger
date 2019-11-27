@@ -10,6 +10,7 @@ module Generator.Core
   , genNatural
   , genTxOut
   , genUtxo0
+  , genCoinList
   , increasingProbabilityAt
   , mkGenesisLedgerState
   , traceKeyPairs
