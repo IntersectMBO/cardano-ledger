@@ -38,7 +38,6 @@ import           LedgerState (pattern DPState, pattern DState, pattern UTxOState
 import           MockTypes (DELEG, LEDGER, POOL)
 import qualified Rules.TestDeleg as TestDeleg
 import qualified Rules.TestPool as TestPool
-import           Shrinkers (shrinkDCert)
 import           TxData (body, certs)
 import           UTxO (balance)
 
@@ -134,22 +133,9 @@ registeredPoolIsAdded = do
 poolIsMarkedForRetirement :: QC.Property
 poolIsMarkedForRetirement = do
   QC.withMaxSuccess (fromIntegral numberOfTests) . QC.property $ do
-    let gen = do env0 <- TQC.envGen @LEDGER traceLen
-                 st0 <- GQ.mkGenesisLedgerState env0
-                 tr <- TQC.traceFrom @LEDGER
-                         traceLen
-                         traceLen
-                         env0
-                         st0
-                 pure (concatMap ledgerToPoolSsts (sourceSignalTargets tr))
-    QC.forAllShrink gen shrinkPoolSST TestPool.poolIsMarkedForRetirement
-
-shrinkPoolSST :: [SourceSignalTarget POOL] -> [[SourceSignalTarget POOL]]
-shrinkPoolSST = QC.shrinkList shrinker
- where
-  shrinker :: SourceSignalTarget POOL -> [SourceSignalTarget POOL]
-  shrinker (SourceSignalTarget src tgt sig) =
-    [ SourceSignalTarget src tgt sig' | sig' <- shrinkDCert sig ]
+    TQC.forAllTraceFromInitState traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
+      let sst = concatMap ledgerToPoolSsts (sourceSignalTargets tr)
+        in TestPool.poolIsMarkedForRetirement sst
 
 pStateIsInternallyConsistent :: Property
 pStateIsInternallyConsistent = do

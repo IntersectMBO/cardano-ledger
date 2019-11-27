@@ -31,9 +31,10 @@ import qualified Test.QuickCheck as QC
 
 import           Address (toAddr, toCred)
 import           Coin (Coin (..))
+import           Control.State.Transition (IRC)
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
-import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF, TxOut, UTxO,
+import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LEDGER, SignKeyVRF, TxOut, UTxO,
                      UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Test.Utils (mkKeyPair)
@@ -109,12 +110,12 @@ genUtxo0 lower upper = do
   return (genesisCoins outs)
 
 mkGenesisLedgerState
-  :: LedgerEnv
-  -> Gen (UTxOState, DPState)
+  :: IRC LEDGER
+  -> Gen (Either a (UTxOState, DPState))
 mkGenesisLedgerState _ = do
   utxo0 <- genUtxo0 5 10
   let (LedgerState utxoSt dpSt _) = genesisState utxo0
-  pure (utxoSt, dpSt)
+  pure $ Right (utxoSt, dpSt)
 
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.

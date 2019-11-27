@@ -14,11 +14,14 @@
 module Control.State.Transition.Trace.Generator.QuickCheck
   ( HasTrace (envGen, sigGen, shrinkSignal)
   , traceFrom
+  , traceFromInitState
   , trace
   , shrinkTrace
   -- * Trace generator properties
   , forAllTrace
+  , forAllTraceFromInitState
   , onlyValidSignalsAreGenerated
+  , onlyValidSignalsAreGeneratedFromInitState
   -- * Trace classification
   , traceLengthsAreClassified
   , classifyTraceLength
@@ -28,7 +31,9 @@ module Control.State.Transition.Trace.Generator.QuickCheck
   )
 where
 
+import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
+
 import qualified Test.QuickCheck as QuickCheck
 
 import           Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC),
@@ -91,13 +96,55 @@ trace
   -- ^ Maximum trace length.
   -> traceGenEnv
   -> QuickCheck.Gen (Trace sts)
-trace maxTraceLength traceGenEnv = do
+trace maxTraceLength traceGenEnv =
+  traceFromInitState maxTraceLength traceGenEnv Nothing
+
+-- | Generate a random trace given a generator for initial state.
+--
+-- Takes an optional generator for initial state, or defaults to 'applySTS'
+-- if no initial state is required by the STS.
+traceFromInitState
+  :: forall sts traceGenEnv
+   . (HasTrace sts traceGenEnv, Show (Environment sts))
+  => Word64
+  -- ^ Maximum trace length.
+  -> traceGenEnv
+  -> Maybe (IRC sts -> QuickCheck.Gen (Either [[STS.PredicateFailure sts]] (State sts)))
+  -- ^ Optional generator of STS initial state
+  -> QuickCheck.Gen (Trace sts)
+traceFromInitState maxTraceLength traceGenEnv genSt0 = do
   env <- envGen @sts @traceGenEnv traceGenEnv
-  case STS.applySTS @sts (IRC env) of
+  res <- fromMaybe (pure . STS.applySTS) genSt0 $ (IRC env)
+
+  case res of
     Left pf -> error $ "Failed to apply the initial rule to the generated environment.\n"
                      ++ "Generated environment: " ++ show env
                      ++ "Failure: " ++ show pf
     Right st0 -> traceFrom maxTraceLength traceGenEnv env st0
+
+-- | Check a property on the 'sts' traces.
+--
+-- Takes an optional generator for initial state of the STS.
+forAllTraceFromInitState
+  :: forall sts traceGenEnv prop
+   . ( HasTrace sts traceGenEnv
+     , QuickCheck.Testable prop
+     , Show (Environment sts)
+     , Show (State sts)
+     , Show (Signal sts)
+     )
+  => Word64
+  -- ^ Maximum trace length.
+  -> traceGenEnv
+  -> Maybe (IRC sts -> QuickCheck.Gen (Either [[STS.PredicateFailure sts]] (State sts)))
+  -- ^ Optional generator of STS initial state
+  -> (Trace sts -> prop)
+  -> QuickCheck.Property
+forAllTraceFromInitState maxTraceLength traceGenEnv genSt0 prop =
+  QuickCheck.forAllShrink
+    (traceFromInitState @sts @traceGenEnv maxTraceLength traceGenEnv genSt0)
+    (shrinkTrace @sts @traceGenEnv)
+    prop
 
 -- | Check a property on the 'sts' traces.
 forAllTrace
@@ -113,11 +160,8 @@ forAllTrace
   -> traceGenEnv
   -> (Trace sts -> prop)
   -> QuickCheck.Property
-forAllTrace maxTraceLength traceGenEnv prop =
-  QuickCheck.forAllShrink
-    (trace @sts @traceGenEnv maxTraceLength traceGenEnv)
-    (shrinkTrace @sts @traceGenEnv)
-    prop
+forAllTrace maxTraceLength traceGenEnv =
+  forAllTraceFromInitState maxTraceLength traceGenEnv Nothing
 
 -- | See 'Test.QuickCheck.shrink'.
 shrinkTrace
@@ -144,7 +188,26 @@ onlyValidSignalsAreGenerated
   -> traceGenEnv
   -> QuickCheck.Property
 onlyValidSignalsAreGenerated maxTraceLength traceGenEnv =
-  forAllTrace maxTraceLength traceGenEnv validSignalsAreGenerated
+  onlyValidSignalsAreGeneratedFromInitState @sts maxTraceLength traceGenEnv Nothing
+
+-- | Property that asserts that only valid signals are generated.
+--
+-- Takes an optional generator for initial state of the STS.
+onlyValidSignalsAreGeneratedFromInitState
+  :: forall sts traceGenEnv
+   . ( HasTrace sts traceGenEnv
+     , Show (Environment sts)
+     , Show (State sts)
+     , Show (Signal sts)
+     )
+  => Word64
+  -- ^ Maximum trace length.
+  -> traceGenEnv
+  -> Maybe (IRC sts -> QuickCheck.Gen (Either [[STS.PredicateFailure sts]] (State sts)))
+  -- ^ Optional generator of STS initial state
+  -> QuickCheck.Property
+onlyValidSignalsAreGeneratedFromInitState maxTraceLength traceGenEnv genSt0 =
+  forAllTraceFromInitState maxTraceLength traceGenEnv genSt0 validSignalsAreGenerated
   where
     validSignalsAreGenerated
       :: Trace sts
