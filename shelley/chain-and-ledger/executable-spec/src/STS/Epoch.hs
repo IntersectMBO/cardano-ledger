@@ -12,7 +12,6 @@ where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
 import           EpochBoundary
 import           LedgerState (pattern DPState, EpochState, pattern EpochState, emptyAccount,
                      emptyLedgerState, esAccountState, esLState, esPp, esSnapshots,
@@ -55,7 +54,7 @@ votedValuePParams (PPUpdate ppup) pps =
     incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
     votes = Map.foldr
               (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-              (Map.empty :: Map (Set Ppm) Int)
+              (Map.empty :: Map PParamsUpdate Int)
               ppup
     consensus = Map.filter (>= 5) votes
   in

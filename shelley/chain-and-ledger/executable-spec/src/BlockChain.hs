@@ -165,7 +165,7 @@ instance Crypto crypto
   => ToCBOR (BHBody crypto)
  where
   toCBOR bhBody =
-    encodeListLen 10
+    encodeListLen 11
       <> toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
       <> VRF.encodeVerKeyVRF (bheaderVrfVk bhBody)
@@ -173,6 +173,7 @@ instance Crypto crypto
       <> toCBOR (bheaderEta bhBody)
       <> toCBOR (bheaderL bhBody)
       <> toCBOR (bsize bhBody)
+      <> toCBOR (bheaderBlockNo bhBody)
       <> toCBOR (bhash bhBody)
       <> toCBOR (bheaderOCert bhBody)
       <> toCBOR (bprotvert bhBody)

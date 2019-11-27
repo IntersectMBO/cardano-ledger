@@ -66,7 +66,7 @@ ppupTransitionNonEmpty = do
 
   not (Map.null pup) ?! PPUpdateEmpty
 
-  all (all (pvCanFollow (_protocolVersion pp))) pup ?! PVCannotFollowPPUP
+  all (all (pvCanFollow (_protocolVersion pp)) . ppmSet) pup ?! PVCannotFollowPPUP
 
   (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
 
