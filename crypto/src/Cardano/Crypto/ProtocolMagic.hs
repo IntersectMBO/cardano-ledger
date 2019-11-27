@@ -61,7 +61,7 @@ data ProtocolMagicId = ProtocolMagicId'
 {-# COMPLETE ProtocolMagicId #-}
 pattern ProtocolMagicId :: Word32 -> ProtocolMagicId
 pattern ProtocolMagicId { unProtocolMagicId } <- ProtocolMagicId' unProtocolMagicId _
-  where
+ where
   ProtocolMagicId w = ProtocolMagicId' w (serialize' w)
 
 instance FromCBORAnnotated ProtocolMagicId where
