@@ -109,6 +109,12 @@ genUtxo0 lower upper = do
   outs <- genTxOut (fmap toAddr genesisKeys)
   return (genesisCoins outs)
 
+-- | Generate initial state for the LEDGER STS using the STS environment.
+--
+-- Note: this function must be usable in place of 'applySTS' and needs to align
+-- with the signature 'RuleContext sts -> Gen (Either [[PredicateFailure sts]] (State sts))'.
+-- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
+-- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState
   :: IRC LEDGER
   -> Gen (Either a (UTxOState, DPState))
