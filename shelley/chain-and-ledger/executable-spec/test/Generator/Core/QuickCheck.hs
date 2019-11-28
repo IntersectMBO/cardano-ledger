@@ -6,6 +6,7 @@ module Generator.Core.QuickCheck
   ( findPayKeyPair
   , genBool
   , genCoin
+  , genCoinList
   , genInteger
   , genNatural
   , genTxOut

@@ -23,10 +23,11 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Coin (Coin (..))
-import           Delegation.Certificates (pattern DeRegKey, pattern Delegate, pattern RegKey,
-                     pattern RegPool, pattern RetirePool, decayKey, isDeRegKey)
+import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
+                     pattern InstantaneousRewards, pattern RegKey, pattern RegPool,
+                     pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core.QuickCheck (genInteger, genNatural, toCred)
+import           Generator.Core.QuickCheck (genCoinList, genInteger, genNatural, toCred)
 import           Keys (hashKey, vKey)
 import           Ledger.Core (dom, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
@@ -50,17 +51,17 @@ genDCerts
   -> Slot
   -> Natural
   -> Gen (Seq DCert, [KeyPair], CoreKeyPairs, Coin, Coin)
-genDCerts keys _ vrfKeys pparams dpState slot ttl = do
+genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
   -- later traversals are done backwards, to be consistent with the executable
   -- spec (see `delegsTransition` in `STS.Delegs`) which consumes the list
   -- starting at the tail end.
-  cert <- genDCert keys vrfKeys pparams dpState slot
+  cert <- genDCert keys coreKeys vrfKeys pparams dpState slot
   case cert of
     Nothing ->
       return (Seq.empty, [], [], Coin 0, Coin 0)
-    Just (cert_, witKey', coreKeys) -> do
+    Just (cert_, witKey', coreSignKeys) -> do
       let certs = [cert_]
           deposits_ = deposits pparams (_stPools (_pstate dpState)) certs
 
@@ -81,7 +82,7 @@ genDCerts keys _ vrfKeys pparams dpState slot ttl = do
           let witKeys = [witKey]
           return (Seq.fromList certs, witKeys, [], deposits_, refunds_)
         Nothing ->
-          pure (Seq.fromList certs, [], coreKeys, deposits_, refunds_)
+          pure (Seq.fromList certs, [], coreSignKeys, deposits_, refunds_)
 
 -- | Occasionally generate a valid certificate
 --
@@ -89,17 +90,19 @@ genDCerts keys _ vrfKeys pparams dpState slot ttl = do
 -- and we generate more delegations than registrations of keys/pools.
 genDCert
   :: KeyPairs
+  -> CoreKeyPairs
   -> VrfKeyPairs
   -> PParams
   -> DPState
   -> Slot
   -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
-genDCert keys vrfKeys pparams dpState slot =
+genDCert keys coreKeys vrfKeys pparams dpState slot =
   QC.frequency [ (2, genRegKeyCert keys dState)
                , (2, genRegPool keys vrfKeys dpState)
                , (3, genDelegation keys dpState)
                , (1, genDeRegKeyCert keys dState)
                , (1, genRetirePool keys pparams pState slot)
+               , (1, genInstantaneousRewards keys coreKeys dState)
                ]
  where
   dState = dpState ^. dstate
@@ -246,3 +249,25 @@ genRetirePool availableKeys pp pState slot =
   Epoch maxEpoch = pp ^. eMax
   epochLow = cepoch + 1
   epochHigh = cepoch + maxEpoch - 1
+
+-- | Generate an InstantaneousRewards Transfer certificate
+genInstantaneousRewards
+  :: KeyPairs
+  -> CoreKeyPairs
+  -> DState
+  -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
+
+genInstantaneousRewards _ coreKeys delegSt = do
+  let StakeCreds credentials = _stkCreds delegSt
+
+  winnerCreds <- take <$> QC.elements [0 .. (max 0 $ (Map.size credentials) - 1)]
+                      <*> QC.shuffle (Map.keys credentials)
+  coins <- genCoinList 1 1000 (length winnerCreds) (length winnerCreds)
+
+  coreSigners <- take <$> QC.elements [0.. (max 0 $ (length coreKeys) - 1)]
+                      <*> QC.shuffle coreKeys
+
+  let credCoinMap = Map.fromList $ zip winnerCreds coins
+  pure $ Just ( InstantaneousRewards credCoinMap
+              , Nothing
+              , coreSigners)
