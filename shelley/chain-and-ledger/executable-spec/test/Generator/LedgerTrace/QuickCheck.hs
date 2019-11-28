@@ -32,6 +32,7 @@ instance TQC.HasTrace LEDGER Word64 where
               <*> genPParams
               <*> genCoin 0 1000
 
+  -- TODO pass core node keys as inputs
   sigGen _ ledgerEnv ledgerSt =
     genTx ledgerEnv ledgerSt traceKeyPairs [] traceVRFKeyPairs
 

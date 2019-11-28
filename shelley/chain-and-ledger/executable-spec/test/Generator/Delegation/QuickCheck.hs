@@ -102,7 +102,10 @@ genDCert keys coreKeys vrfKeys pparams dpState slot =
                , (3, genDelegation keys dpState)
                , (1, genDeRegKeyCert keys dState)
                , (1, genRetirePool keys pparams pState slot)
-               , (1, genInstantaneousRewards keys coreKeys dState)
+               -- TODO mgudemann
+               -- needs to sign transaction with `coreKeys`
+               -- tends to generate Txs without input which leads to error
+               , (0, genInstantaneousRewards coreKeys dState)
                ]
  where
   dState = dpState ^. dstate
@@ -252,12 +255,11 @@ genRetirePool availableKeys pp pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards
-  :: KeyPairs
-  -> CoreKeyPairs
+  :: CoreKeyPairs
   -> DState
   -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
 
-genInstantaneousRewards _ coreKeys delegSt = do
+genInstantaneousRewards coreKeys delegSt = do
   let StakeCreds credentials = _stkCreds delegSt
 
   winnerCreds <- take <$> QC.elements [0 .. (max 0 $ (Map.size credentials) - 1)]
