@@ -62,7 +62,7 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
   case cert of
     Nothing ->
       return (Seq.empty, [], [], Coin 0, Coin 0)
-    Just (cert_, witKey', coreKeys') -> do
+    Just (cert_, witnessOrCoreKeys) -> do
       let certs = [cert_]
 
           deposits_ = deposits pparams (_stPools (_pstate dpState)) certs
@@ -79,11 +79,11 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
                           crt
           refunds_ = sum (rewardForCred <$> deRegStakeCreds)
 
-      case witKey' of
-        Just witKey -> do
+      case witnessOrCoreKeys of
+        Left witKey -> do
           let witKeys = [witKey]
           return (Seq.fromList certs, witKeys, [], deposits_, refunds_)
-        Nothing ->
+        Right coreKeys' ->
           pure (Seq.fromList certs, [], coreKeys', deposits_, refunds_)
 
 -- | Occasionally generate a valid certificate
@@ -94,7 +94,7 @@ genDCert
   -> PParams
   -> DPState
   -> Slot
-  -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
+  -> Gen (Maybe (DCert, Either KeyPair CoreKeyPairs))
 genDCert keys coreKeys vrfKeys pparams dpState slot =
   -- TODO @uroboros Generate _Delegate_ Certificates
   Gen.frequency [ (3, genRegKeyCert keys dState)
@@ -113,13 +113,13 @@ genDCert keys coreKeys vrfKeys pparams dpState slot =
 genRegKeyCert
   :: KeyPairs
   -> DState
-  -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
+  -> Gen (Maybe (DCert, Either KeyPair CoreKeyPairs))
 genRegKeyCert keys delegSt =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
            (_payKey, stakeKey) <- Gen.element availableKeys
-           pure $ Just $ (RegKey (toCred stakeKey), Just stakeKey, [])
+           pure $ Just $ (RegKey (toCred stakeKey), Left stakeKey)
   where
     notRegistered k = k ∉ dom (_stkCreds delegSt)
     availableKeys = filter (notRegistered . toCred . snd) keys
@@ -129,7 +129,7 @@ genInstantaneousRewards
   :: KeyPairs
   -> CoreKeyPairs
   -> DState
-  -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
+  -> Gen (Maybe (DCert, Either KeyPair CoreKeyPairs))
 
 genInstantaneousRewards _ coreKeys delegSt = do
   let StakeCreds credentials = _stkCreds delegSt
@@ -142,21 +142,20 @@ genInstantaneousRewards _ coreKeys delegSt = do
                       <*> Gen.shuffle coreKeys
 
   pure $ Just ( InstantaneousRewards (Map.fromList $ zip winnerCreds coins)
-              , Nothing
-              , coreSigners)
+              , Right coreSigners)
 
 -- | Generate a DeRegKey certificate along with the stake key, which is needed
 -- to witness the certificate.
 genDeRegKeyCert
   :: KeyPairs
   -> DState
-  -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
+  -> Gen (Maybe (DCert, Either KeyPair CoreKeyPairs))
 genDeRegKeyCert keys delegSt =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
            (_payKey, stakeKey) <- Gen.element availableKeys
-           pure $ Just (DeRegKey (toCred stakeKey), Just stakeKey, [])
+           pure $ Just (DeRegKey (toCred stakeKey), Left stakeKey)
   where
     registered k = k ∈ dom (_stkCreds delegSt)
     availableKeys = filter (registered . toCred . snd) keys
@@ -166,7 +165,7 @@ genRegPool
   :: KeyPairs
   -> VrfKeyPairs
   -> DPState
-  -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
+  -> Gen (Maybe (DCert, Either KeyPair CoreKeyPairs))
 genRegPool keys vrfKeys dpState =
   if null availableKeys || null availableVrfKeys
      then pure Nothing
@@ -203,10 +202,10 @@ genStakePool skeys vrfKeys =
      in (pps, snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.
-genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, Maybe KeyPair, CoreKeyPairs)
+genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, Either KeyPair CoreKeyPairs)
 genDCertRegPool skeys vrfKeys = do
   (pps, poolKey) <- genStakePool skeys vrfKeys
-  pure (RegPool pps, Just poolKey, [])
+  pure (RegPool pps, Left poolKey)
 
 -- | Generate a RetirePool along with the keypair which registered it.
 --
@@ -220,12 +219,12 @@ genRetirePool
   -> PParams
   -> PState
   -> Slot
-  -> Gen (Maybe (DCert, Maybe KeyPair, CoreKeyPairs))
+  -> Gen (Maybe (DCert, Either KeyPair CoreKeyPairs))
 genRetirePool availableKeys pp pState slot =
   if (null availableKeys || null poolHashKeys)
      then pure Nothing
      else (\keyHash epoch ->
-              Just (RetirePool keyHash epoch, Just $ findKeyPair keyHash, []))
+              Just (RetirePool keyHash epoch, Left $ findKeyPair keyHash))
                 <$> Gen.element poolHashKeys
                 <*> (Epoch <$> Gen.integral (Range.constant epochLow epochHigh))
  where
