@@ -25,10 +25,12 @@ module Cardano.Chain.Common.Address
   , checkVerKeyAddress
   , checkRedeemAddress
 
-  -- * Encoding
+  -- * Encoding/Decoding
   , addrToBase58
   , toCBORAddr
   , toCBORAddrCRC32
+  , decodeAddressBase58
+  , encodeAddressBase58
 
   -- * Utilities
   , addrAttributesUnwrapped
@@ -90,7 +92,6 @@ import Cardano.Crypto.Signing
   ( VerificationKey
   , RedeemVerificationKey
   )
-
 
 -- | Hash of this data is stored in 'Address'. This type exists mostly
 --   for internal usage.
@@ -196,6 +197,7 @@ addressF :: Format r (Address -> r)
 addressF = build
 
 -- | A function which decodes base58-encoded 'Address'
+{-# DEPRECATED fromCBORTextAddress "Use decodeAddressBase58 instead" #-}
 fromCBORTextAddress :: Text -> Either DecoderError Address
 fromCBORTextAddress = fromCBORAddress . encodeUtf8
  where
@@ -207,6 +209,15 @@ fromCBORTextAddress = fromCBORAddress . encodeUtf8
         "Invalid base58 representation of address"
     dbs <- maybeToRight base58Err $ decodeBase58 addrAlphabet bs
     decodeFull' dbs
+
+-- | Decode an address from Base58 encoded Text.
+decodeAddressBase58 :: Text -> Either DecoderError Address
+decodeAddressBase58 = fromCBORTextAddress
+
+-- | Encode an address to Text.
+-- `decodeAddressBase58 (encodeAddressBase58 x) === Right x`
+encodeAddressBase58 :: Address -> Text
+encodeAddressBase58 = decodeUtf8 . addrToBase58
 
 --------------------------------------------------------------------------------
 -- Constructors

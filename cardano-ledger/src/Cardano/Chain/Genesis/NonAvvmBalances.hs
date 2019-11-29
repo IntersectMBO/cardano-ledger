@@ -28,7 +28,7 @@ import Cardano.Chain.Common
   , Lovelace
   , LovelaceError
   , addLovelace
-  , fromCBORTextAddress
+  , decodeAddressBase58
   , integerToLovelace
   )
 
@@ -90,6 +90,6 @@ convertNonAvvmDataToBalances balances = fmap GenesisNonAvvmBalances $ do
 
   convert :: (Text, Integer) -> m (Address, Lovelace)
   convert (txt, i) = do
-    addr <- fromCBORTextAddress txt `wrapError` NonAvvmBalancesDecoderError
+    addr <- decodeAddressBase58 txt `wrapError` NonAvvmBalancesDecoderError
     lovelace <-integerToLovelace i `wrapError` NonAvvmBalancesLovelaceError
     return (addr, lovelace)
