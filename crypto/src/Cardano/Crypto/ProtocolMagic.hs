@@ -1,17 +1,15 @@
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE PatternSynonyms            #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE ViewPatterns               #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Crypto.ProtocolMagic
@@ -46,8 +44,8 @@ import Cardano.Binary
 -- order to pipe configuration to functions which must generate & verify
 -- Addresses (which now must be aware of `NetworkMagic`).
 data ProtocolMagic = ProtocolMagic
-  { getProtocolMagicId       :: !ProtocolMagicId
-  , getRequiresNetworkMagic  :: !RequiresNetworkMagic
+  { getProtocolMagicId      :: !ProtocolMagicId
+  , getRequiresNetworkMagic :: !RequiresNetworkMagic
   } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
 data ProtocolMagicId = ProtocolMagicId'
