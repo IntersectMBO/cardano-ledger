@@ -4,8 +4,8 @@
 # many reviewers which often leads to nobody feeling responsible to actually
 # perform the review.
 
-crypto/  @ruhatch @dnadales
-nix/     @ruhatch @nc6
-scripts/ @ruhatch @nc6
-src/     @ruhatch @dnadales
-test/    @ruhatch @dnadales
+crypto/  @dnadales
+nix/     @nc6
+scripts/ @nc6
+src/     @dnadales
+test/    @dnadales

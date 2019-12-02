@@ -27,10 +27,13 @@ import Cardano.Chain.Common
   , LovelacePortion(..)
   , TxFeePolicy(..)
   , TxSizeLinear(..)
+  , isRedeemAddress
   , mkAttributes
   , mkKnownLovelace
   , mkMerkleTree
   , mtRoot
+  , decodeAddressBase58
+  , encodeAddressBase58
   )
 import Cardano.Crypto
   ( Hash
@@ -80,7 +83,7 @@ import Cardano.Chain.Common
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Gen (genHashRaw)
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
-import Hedgehog  (property, forAll, (===))
+import Hedgehog  ((===), cover, forAll, property)
 
 
 --------------------------------------------------------------------------------
@@ -116,8 +119,21 @@ golden_Address4 :: Property
 golden_Address4 =
   goldenTestCBOR exampleAddress4 "test/golden/cbor/common/Address4"
 
+golden_isRedeemAddrees :: Property
+golden_isRedeemAddrees =
+  H.withTests 1 . property $ do
+    H.assert $ not (isRedeemAddress exampleAddress1)
+    H.assert $ isRedeemAddress exampleAddress2
+
 ts_roundTripAddressCBOR :: TSProperty
 ts_roundTripAddressCBOR = eachOfTS 1000 genAddress roundTripsCBORBuildable
+
+ts_roundTripAddress :: TSProperty
+ts_roundTripAddress =
+  eachOfTS 1000 genAddress $ \ addr -> do
+    cover 30 "Redeem Address" $ isRedeemAddress addr
+    cover 30 "Pubkey Address" $ not (isRedeemAddress addr)
+    decodeAddressBase58 (encodeAddressBase58 addr) === Right addr
 
 --------------------------------------------------------------------------------
 -- AddrSpendingData
