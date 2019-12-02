@@ -37,6 +37,7 @@ library
                      Updates
                      Validation
                      CostModel
+                     Value
                      STS.Avup
                      STS.Bbody
                      STS.Tick
