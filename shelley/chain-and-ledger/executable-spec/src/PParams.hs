@@ -27,6 +27,7 @@ module PParams
   , d
   , extraEntropy
   , protocolVersion
+  , costm
   ) where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)

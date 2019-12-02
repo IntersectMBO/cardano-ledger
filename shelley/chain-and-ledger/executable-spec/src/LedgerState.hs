@@ -146,6 +146,9 @@ import           Delegation.PoolParams (poolSpec)
 import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, intervalValue, mkUnitInterval)
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 
+import           CostModel
+import           PParams
+
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Regular crypto, KeyPair 'Regular crypto)]
 
@@ -639,7 +642,7 @@ minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB) +
 
 -- | Script fee (Temporarily 0 until cost model is decided on)
 scriptFees :: CostMod -> TxBody crypto -> Integer
-scriptFees cm tx = TODO
+scriptFees cm tx = 0
 
 -- |Determine if the fee is large enough
 validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Validity
