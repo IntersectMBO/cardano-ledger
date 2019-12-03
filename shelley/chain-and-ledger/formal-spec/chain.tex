@@ -675,41 +675,25 @@ execution of the transition role is as follows:
   \label{fig:rules:reward-update}
 \end{figure}
 
-\subsection{Block Header Transition}
-\label{sec:block-header-trans}
+\subsection{Chain Tick Transition}
+\label{sec:tick-trans}
 
-The Block Header Transition checks a couple of sizes and performs some chain level
+The Chain Tick Transition checks a couple of sizes and performs some chain level
 upkeep. The environment consists of a set of genesis keys, and the state is the
 epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 
 \begin{figure}
-  \emph{Block Header Transitions}
+  \emph{Chain Tick Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{bhead}{\_} \var{\_} \subseteq
-    \powerset (\powerset{\KeyHashGen} \times \NewEpochState \times \BHeader \times \NewEpochState)
+    \_ \vdash \var{\_} \trans{tick}{\_} \var{\_} \subseteq
+    \powerset (\powerset{\KeyHashGen} \times \NewEpochState \times \Slot \times \NewEpochState)
   \end{equation*}
-  \caption{BHeader transition-system types}
-  \label{fig:ts-types:bheader}
+  \caption{Tick transition-system types}
+  \label{fig:ts-types:tick}
 \end{figure}
 
-The $\mathsf{BHEAD}$ transition rule is shown in Figure~\ref{fig:rules:bhead}.
-The signal is a new block header \var{bh}, from which we extract:
-
-\begin{itemize}
-\item The block header body \var{bhb}.
-\item The slot \var{slot} of the block header.
-\end{itemize}
-
-The transition rule is executed, if the following conditions are satisfied:
-
-\begin{itemize}
-\item The size of \var{bh} is less than or equal to the maximal size that the
-  protocol parameters allow for block headers.
-\item The size of the block body, as claimed by the block header, is less than or equal to the
-  maximal size that the protocol parameters allow for block bodies.
-  It will later be verified that the size of the block body matches the size claimed
-  in the header (see Figure~\ref{fig:rules:bbody}).
-\end{itemize}
+The $\mathsf{TICK}$ transition rule is shown in Figure~\ref{fig:rules:tick}.
+The signal is a slot \var{s}.
 
 If the size checks pass, then three transitions are done:
 
@@ -723,17 +707,9 @@ If the size checks pass, then three transitions are done:
 \end{itemize}
 
 \begin{figure}[ht]
-  \begin{equation}\label{eq:bheader}
-    \inference[BHead]
+  \begin{equation}\label{eq:tick}
+    \inference[Tick]
     {
-      \var{bhb} \leteq \bhbody{bh}
-      &
-      \var{s} \leteq \bslot{bhb}
-      \\
-      \bHeaderSize{bh} \leq \fun{maxHeaderSize}~\var{pp}
-      &
-      \hBbsize{bhb} \leq \fun{maxBlockSize}~\var{pp}
-      \\
       {
         {\begin{array}{c}
            \var{s} \\
@@ -748,8 +724,6 @@ If the size checks pass, then three transitions are done:
       (\wcard,~\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)\leteq\var{nes} \\
       \\
       (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{ru},~\wcard,~\wcard)\leteq\var{nes'} \\
-      \\
-      (\wcard,~\wcard,~\wcard,~\var{pp})\leteq\var{es} \\
       \\~\\
       {
         {\begin{array}{c}
@@ -765,20 +739,12 @@ If the size checks pass, then three transitions are done:
       {\begin{array}{c}
          \var{gkeys} \\
        \end{array}}
-      \vdash\var{nes}\trans{bhead}{\var{bh}}\varUpdate{\var{nes''}}
+      \vdash\var{nes}\trans{tick}{\var{bh}}\varUpdate{\var{nes''}}
     }
   \end{equation}
-  \caption{BHeader rules}
-  \label{fig:rules:bhead}
+  \caption{Tick rules}
+  \label{fig:rules:tick}
 \end{figure}
-
-The BHEAD rule has two predicate failures:
-\begin{itemize}
-\item If the size of the block header is larger than the maximally allowed size,
-  there is a \emph{HeaderSizeTooLarge} failure.
-\item If the size of the block body is larger than the maximally allowed size,
-  there is a \emph{BlockSizeTooLarge} failure.
-\end{itemize}
 
 \clearpage
 
@@ -1419,6 +1385,17 @@ part of the STS. It calls $\mathsf{BHEAD}$, $\mathsf{PRTCL}$, and $\mathsf{BBODY
 
 The environment for the chain rule is the current slot number \var{s_{now}}.
 
+The transition checks two properties of the block header \var{bh}:
+\begin{itemize}
+\item The size of \var{bh} is less than or equal to the maximal size that the
+  protocol parameters allow for block headers.
+\item The size of the block body, as claimed by the block header, is less than or equal to the
+  maximal size that the protocol parameters allow for block bodies.
+  It will later be verified that the size of the block body matches the size claimed
+  in the header (see Figure~\ref{fig:rules:bbody}).
+\end{itemize}
+
+
 The chain state is shown in Figure~\ref{fig:ts-types:chain}, it consists of the
 following:
 
@@ -1508,19 +1485,30 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
     {
       \var{bh} \leteq \bheader{block}
       &
+      \var{bhb} \leteq \bhbody{bh}
+      \\
       \var{gkeys} \leteq \fun{getGKeys}~\var{nes}
+      &
+      \var{s} \leteq \bslot{bhb}
+      \\
+      (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard,\wcard) \leteq \var{nes}
+      \\
+      \bHeaderSize{bh} \leq \fun{maxHeaderSize}~\var{pp}
+      &
+      \hBbsize{bhb} \leq \fun{maxBlockSize}~\var{pp}
+      \\
       \\~\\
       {
         {\begin{array}{c}
            \var{gkeys} \\
          \end{array}}
-        \vdash\var{nes}\trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}\var{nes'}
+        \vdash\var{nes}\trans{\hyperref[fig:rules:tick]{tick}}{\var{s}}\var{nes'}
       } \\~\\
       (\var{e_1},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,\wcard)
         \leteq\var{nes} \\
       (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
         \leteq\var{nes'} \\
-        (\var{acnt},~\wcard,\var{ls},~\var{pp})\leteq\var{es}\\
+        (\var{acnt},~\wcard,\var{ls},~\var{pp'})\leteq\var{es}\\
         ( \wcard,
           ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
           (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
@@ -1528,7 +1516,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
       {
         {\begin{array}{c}
-            \var{pp} \\
+            \var{pp'} \\
             \var{osched} \\
             \var{pd} \\
             \var{genDelegs} \\
@@ -1557,7 +1545,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       {
         {\begin{array}{c}
                  \dom{osched} \\
-                 \var{pp} \\
+                 \var{pp'} \\
                  \var{reserves}
         \end{array}}
         \vdash
@@ -1600,6 +1588,14 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \caption{Chain rules}
   \label{fig:rules:chain}
 \end{figure}
+
+The CHAIN rule has two predicate failures:
+\begin{itemize}
+\item If the size of the block header is larger than the maximally allowed size,
+  there is a \emph{HeaderSizeTooLarge} failure.
+\item If the size of the block body is larger than the maximally allowed size,
+  there is a \emph{BlockSizeTooLarge} failure.
+\end{itemize}
 
 \clearpage
 

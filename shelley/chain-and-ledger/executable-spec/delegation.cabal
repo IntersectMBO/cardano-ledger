@@ -37,7 +37,7 @@ library
                      Validation
                      STS.Avup
                      STS.Bbody
-                     STS.Bhead
+                     STS.Tick
                      STS.Chain
                      STS.Deleg
                      STS.Delegs

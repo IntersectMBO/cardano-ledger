@@ -113,7 +113,7 @@ view
 --    be predictable for up to 2k slots.
 --
 --  In Shelley, there are two transition systems which operate during header
---  processing (the BHEAD rule itself merely applying checks and delegating
+--  processing (the TICK rule itself merely applying checks and delegating
 --  these systems):
 --  - The RUPD rule deals with creating the reward update at an appropriate
 --    point.
@@ -138,7 +138,7 @@ view
 --  ```
 --          h_s
 --  ls ------------> ls' => view ls == view ls'
---         BHEAD
+--         TICK
 --  ```
 --
 --  Proof:
@@ -148,27 +148,27 @@ view
 --  component of 'NewEpochState', which is thrown away by 'view'.
 --
 --  Lemma 2: Let `h_0, ..., h_n` be a valid set of headers continuing from
---  ledger state `ls` (that is, there is a valid transition under the BHEAD
+--  ledger state `ls` (that is, there is a valid transition under the TICK
 --  system for each header). Let `h_e` be the header which first transitions to
 --  a new epoch. Then:
 --
 --  ```
 --           h_e                                       h_n
 --  ls_i ------------> ls_e -----------> ls_{n-1} ------------> ls' => view ls' == view ls_e
---          BHEAD             .....                   BHEAD
+--          TICK             .....                    TICK
 --  ```
 --
 --  Proof: By induction on the chain, applying lemma 1.
 --
 --  Lemma 3: Let `h_0, h_e` be a valid set of headers continuing from ledger
---  state `ls` (that is, there is a valid transition under the BHEAD system for
+--  state `ls` (that is, there is a valid transition under the TICK system for
 --  each header). Let `h_e` be the header which first transitions to a new
 --  epoch. Then given:
 --
 --  ```
 --         h_0                h_e
 --  ls ------------> ls_0 -----------> ls_e
---        BHEAD              BHEAD
+--        TICK               TICK
 --  ```
 --  ```
 --       slot h_e
@@ -183,7 +183,7 @@ view
 --  ```
 --
 --  Proof: Since `h_e` marks the start of a new epoch (and we are within the 2k
---  window), the BHEAD transition under `h_0` must be a RUPD transition and only
+--  window), the TICK transition under `h_0` must be a RUPD transition and only
 --  effect that component of the state.
 --
 --  The NEWEPOCH rule applies that reward update by calling 'applyRUpd' before
@@ -225,7 +225,7 @@ view
 --  non-empty value.
 --
 --  Lemma 5: For successive slots `s`, `s1` such that neither marks the
---  beginning of a new epoch, BHEAD is idempotent.
+--  beginning of a new epoch, TICK is idempotent.
 --
 --  Proof: Since neither slot marks the beginning of a new epoch, in neither
 --  slot does NEWEPOCH make any changes. As such both transitions only involve
@@ -247,7 +247,7 @@ view
 --  ```
 --         h_0                                       h_n
 --  cs ------------> hs_0 -----------> hs_{n-1} ------------> hs_n
---        BHEAD             .....                   BHEAD
+--        TICK             .....                    TICK
 --  ```
 --
 --  we have that

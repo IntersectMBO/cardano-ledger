@@ -1,10 +1,10 @@
 digraph STS {
         CHAIN -> BBODY
         CHAIN -> PRTCL
-        CHAIN -> BHEAD
+        CHAIN -> TICK
         BBODY -> PRTCL [style=dotted]
-        BBODY -> BHEAD [style=dotted]
-        PRTCL -> BHEAD [style=dotted]
+        BBODY -> TICK [style=dotted]
+        PRTCL -> TICK [style=dotted]
 
         UTXOW -> UTXO
         UTXOW -> DELEGS [style=dotted]
@@ -35,8 +35,8 @@ digraph STS {
 
         NEWEPOCH -> EPOCH
 
-        BHEAD -> RUPD
-        BHEAD -> NEWEPOCH
+        TICK -> RUPD
+        TICK -> NEWEPOCH
         RUPD -> NEWEPOCH [style=dotted]
 
         OVERLAY -> OCERT

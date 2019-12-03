@@ -23,6 +23,7 @@ import           Coin (Coin (..))
 import           Keys
 import           LedgerState
 import           OCert
+import           PParams
 import           Slot
 import           Tx
 import           UTxO (balance)
@@ -32,7 +33,7 @@ import           Control.State.Transition
 import           Cardano.Ledger.Shelley.Crypto
 
 import           STS.Bbody
-import           STS.Bhead
+import           STS.Tick
 import           STS.Prtcl
 
 data CHAIN crypto
@@ -67,8 +68,10 @@ instance
   type Environment (CHAIN crypto) = Slot
 
   data PredicateFailure (CHAIN crypto)
-    = BbodyFailure (PredicateFailure (BBODY crypto))
-    | BheadFailure (PredicateFailure (BHEAD crypto))
+    = HeaderSizeTooLargeTICK
+    | BlockSizeTooLargeTICK
+    | BbodyFailure (PredicateFailure (BBODY crypto))
+    | TickFailure (PredicateFailure (TICK crypto))
     | PrtclFailure (PredicateFailure (PRTCL crypto))
     deriving (Show, Eq)
 
@@ -87,22 +90,28 @@ chainTransition
 chainTransition = do
   TRC (sNow, ChainState nes cs eta0 etaV etaC h sL, block@(Block bh _)) <- judgmentContext
 
+  let NewEpochState _ _ _ (EpochState _ _ _ pp) _ _ _ = nes
+  let bhb = bhbody bh
+  let s = bheaderSlot bhb
+  fromIntegral (bHeaderSize bh) < _maxBHSize pp ?! HeaderSizeTooLargeTICK
+  fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeTICK
   let gkeys = getGKeys nes
+
   nes' <-
-    trans @(BHEAD crypto) $ TRC (BheadEnv gkeys, nes, bh)
+    trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
 
   let NewEpochState e1 _ _ _ _ _ _ = nes
       NewEpochState e2 _ bcur es _ _pd osched = nes'
-  let EpochState (AccountState _ _reserves) _ ls pp                         = es
+  let EpochState (AccountState _ _reserves) _ ls pp'                         = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) _ = ls
 
   PrtclState cs' h' sL' eta0' etaV' etaC' <- trans @(PRTCL crypto)
-    $ TRC ( PrtclEnv pp osched _pd _genDelegs sNow (e1 /= e2)
+    $ TRC ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2)
           , PrtclState cs h sL eta0 etaV etaC
           , bh)
 
   BbodyState ls' bcur' <- trans @(BBODY crypto)
-    $ TRC (BbodyEnv (Map.keysSet osched) pp _reserves, BbodyState ls bcur, block)
+    $ TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
 
   let nes'' = updateNES nes' bcur' ls'
 
@@ -126,9 +135,9 @@ instance
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )
-  => Embed (BHEAD crypto) (CHAIN crypto)
+  => Embed (TICK crypto) (CHAIN crypto)
  where
-  wrapFailed = BheadFailure
+  wrapFailed = TickFailure
 
 instance
   ( Crypto crypto

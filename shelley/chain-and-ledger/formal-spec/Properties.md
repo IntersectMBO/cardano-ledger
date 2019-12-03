@@ -133,11 +133,11 @@ once: SNAP, POOLREAP, and NEWPP.
 
 **Property (Full Preservation of ADA)**
 
-### BHEAD
+### TICK
 
 Pots in scope: All
 
-With respect to the pots, the BHEAD transition uses each of the following
+With respect to the pots, the TICK transition uses each of the following
 once: NEWEPOCH and RU.
 
 **Property (Full Preservation of ADA)**
