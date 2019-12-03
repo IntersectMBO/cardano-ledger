@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Crypto.Example
   ( exampleProtocolMagic0

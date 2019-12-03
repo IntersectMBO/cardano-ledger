@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
-
 module Test.Cardano.Chain.Delegation.Example
   ( exampleCertificates
   )

@@ -1,7 +1,6 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE PatternSynonyms   #-}
 
 module Test.Cardano.Chain.UTxO.ValidationMode
   ( tests

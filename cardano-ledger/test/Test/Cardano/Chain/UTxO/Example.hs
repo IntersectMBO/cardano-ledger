@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE PatternSynonyms  #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 

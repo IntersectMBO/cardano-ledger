@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE PatternSynonyms  #-}
 
 module Test.Cardano.Chain.Update.Example
   ( exampleApplicationName
@@ -49,7 +48,7 @@ import Cardano.Chain.Update
   , signVote
   , signProposal
   )
-import Cardano.Crypto (pattern ProtocolMagicId, hash)
+import Cardano.Crypto (ProtocolMagicId(..), hash)
 
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleSafeSigner)

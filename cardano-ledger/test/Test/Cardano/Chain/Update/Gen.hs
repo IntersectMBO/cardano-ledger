@@ -1,5 +1,3 @@
-{-# Language PatternSynonyms #-}
-
 module Test.Cardano.Chain.Update.Gen
   ( genCanonicalProtocolParameters
   , genApplicationName

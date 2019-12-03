@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
 -- | Dummy values used in tests (replacing `configuration.yaml`)
 
 module Test.Cardano.Crypto.Dummy

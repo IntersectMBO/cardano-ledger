@@ -8,7 +8,6 @@
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE PatternSynonyms            #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody

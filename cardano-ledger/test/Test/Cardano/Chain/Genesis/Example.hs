@@ -2,7 +2,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE TypeApplications          #-}
-{-# LANGUAGE PatternSynonyms           #-}
 
 module Test.Cardano.Chain.Genesis.Example
   ( exampleGenesisAvvmBalances
@@ -29,7 +28,7 @@ import Cardano.Chain.Common
   , mkKnownLovelacePortion
   , hashKey
   )
-import Cardano.Chain.Delegation (pattern UnsafeCertificate)
+import Cardano.Chain.Delegation (Certificate(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisNonAvvmBalances(..)

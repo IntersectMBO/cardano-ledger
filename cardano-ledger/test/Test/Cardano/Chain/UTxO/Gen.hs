@@ -1,5 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
-
 module Test.Cardano.Chain.UTxO.Gen
   ( genCompactTxId
   , genCompactTxIn

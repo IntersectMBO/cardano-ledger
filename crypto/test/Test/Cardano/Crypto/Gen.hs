@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
 module Test.Cardano.Crypto.Gen
   (
   -- * Protocol Magic Generator

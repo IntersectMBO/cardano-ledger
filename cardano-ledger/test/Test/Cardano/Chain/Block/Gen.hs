@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Chain.Block.Gen
   ( genBlockSignature

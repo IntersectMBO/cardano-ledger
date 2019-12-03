@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
 module Test.Cardano.Chain.Delegation.Gen
   ( genCanonicalCertificate
   , genCertificate
