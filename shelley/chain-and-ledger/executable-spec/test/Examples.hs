@@ -179,7 +179,7 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 coreNodes :: [((SKey, VKeyGenesis), AllPoolKeys)]
-coreNodes = [(mkGenKeys (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..100+numCoreNodes]]
+coreNodes = [(mkGenKey (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..100+numCoreNodes]]
 
 coreNodeSKG :: Int -> SKey
 coreNodeSKG = fst . fst . (coreNodes !!)

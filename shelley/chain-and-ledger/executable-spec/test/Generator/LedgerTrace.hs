@@ -11,7 +11,7 @@
 module Generator.LedgerTrace where
 
 import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
-import           Generator.Core (genCoin, traceKeyPairs, traceVRFKeyPairs)
+import           Generator.Core (genCoin, traceCoreKeyPairs, traceKeyPairs, traceVRFKeyPairs)
 import           Generator.Update (genPParams)
 import           Generator.Utxo (genTx)
 import           MockTypes (MockCrypto)
@@ -29,4 +29,4 @@ instance HasTrace (LEDGER MockCrypto)
                 <*> genCoin 0 1000
 
     sigGen ledgerEnv ledgerSt =
-      genTx ledgerEnv ledgerSt traceKeyPairs [] traceVRFKeyPairs
+      genTx ledgerEnv ledgerSt traceKeyPairs traceCoreKeyPairs traceVRFKeyPairs
