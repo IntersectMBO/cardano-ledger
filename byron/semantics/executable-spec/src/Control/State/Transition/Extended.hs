@@ -111,6 +111,11 @@ instance STS sts => Embed sts sts where
   wrapFailed = id
 
 data Clause sts (rtype :: RuleType) a where
+  Lift
+    :: STS sts
+    => (BaseM sts) a
+    -> (a -> b)
+    -> Clause sts rtype b
   GetCtx :: (RuleContext rtype sts -> a)
          -> Clause sts rtype a
   SubTrans :: Embed sub sts
@@ -118,7 +123,7 @@ data Clause sts (rtype :: RuleType) a where
               -- Subsequent computation with state introduced
            -> (State sub -> a)
            -> Clause sts rtype a
-  Predicate :: (BaseM sts) Bool
+  Predicate :: Bool
                -- Type of failure to return if the predicate fails
             -> PredicateFailure sts
             -> a
@@ -132,17 +137,23 @@ type Rule sts rtype = F (Clause sts rtype)
 --
 --   This takes a condition (a boolean expression) and a failure and results in
 --   a clause which will throw that failure if the condition fails.
-(?!) :: (BaseM sts) Bool -> PredicateFailure sts -> Rule sts ctx ()
+(?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
 cond ?! orElse = wrap $ Predicate cond orElse (pure ())
 
 infix 1 ?!
 
-failBecause :: STS sts => PredicateFailure sts -> Rule sts ctx ()
-failBecause = (pure False ?!)
+failBecause :: PredicateFailure sts -> Rule sts ctx ()
+failBecause = (False ?!)
 
 trans
   :: Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
 trans ctx = wrap $ SubTrans ctx pure
+
+liftSTS
+  :: STS sts
+  => (BaseM sts) a
+  -> Rule sts ctx a
+liftSTS f = wrap $ Lift f pure
 
 -- | Get the judgment context
 judgmentContext :: Rule sts rtype (RuleContext rtype sts)
@@ -161,10 +172,10 @@ applyRuleIndifferently
 applyRuleIndifferently jc r = flip runStateT [] $ foldF runClause r
  where
   runClause :: Clause s rtype a -> MonadState.StateT [PredicateFailure s] m a
+  runClause (Lift f next) = next <$> lift f
   runClause (GetCtx next              ) = next <$> pure jc
   runClause (Predicate cond orElse val) = do
-    c <- lift cond
-    unless c $ modify (orElse :)
+    unless cond $ modify (orElse :)
     pure val
   runClause (SubTrans subCtx next) = do
     (ss, sfails) <- lift $ applySTSIndifferently subCtx

@@ -4,10 +4,7 @@
 
 -- | Simple state transition system over the Identity monad.
 module Control.State.Transition.Simple
-  ( (?!)
-  , failBecause
-  , trans
-  , applyRuleIndifferently
+  ( applyRuleIndifferently
   , applySTSIndifferently
   , applySTS
   , module Extended
@@ -15,25 +12,8 @@ module Control.State.Transition.Simple
 where
 
 import           Control.Monad.Identity (Identity(..))
-import           Control.Monad.Free.Church
 import qualified Control.State.Transition.Extended as X
-import           Control.State.Transition.Extended as Extended hiding ((?!), failBecause, trans, applySTS, applySTSIndifferently, applyRuleIndifferently)
-
--- | Oh noes!
---
---   This takes a condition (a boolean expression) and a failure and results in
---   a clause which will throw that failure if the condition fails.
-(?!) :: STS sts => Bool -> PredicateFailure sts -> Rule sts ctx ()
-cond ?! orElse = (pure cond) X.?! orElse
-
-infix 1 ?!
-
-failBecause :: STS sts => PredicateFailure sts -> Rule sts ctx ()
-failBecause = (False ?!)
-
-trans
-  :: Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
-trans ctx = wrap $ SubTrans ctx pure
+import           Control.State.Transition.Extended as Extended hiding (applySTS, applySTSIndifferently, applyRuleIndifferently)
 
 -- | Apply a rule even if its predicates fail.
 --
