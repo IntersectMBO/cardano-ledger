@@ -2,7 +2,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE TypeApplications          #-}
-{-# LANGUAGE PatternSynonyms           #-}
 
 module Test.Cardano.Chain.Genesis.Example
   ( exampleGenesisAvvmBalances
@@ -22,7 +21,6 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 
-import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , LovelacePortion(..)
@@ -30,7 +28,7 @@ import Cardano.Chain.Common
   , mkKnownLovelacePortion
   , hashKey
   )
-import Cardano.Chain.Delegation (pattern UnsafeCertificate)
+import Cardano.Chain.Delegation (Certificate(..))
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisNonAvvmBalances(..)
@@ -44,7 +42,7 @@ import Cardano.Chain.Genesis
   )
 import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto
-  ( AProtocolMagic(..)
+  ( ProtocolMagic(..)
   , ProtocolMagicId(..)
   , CompactRedeemVerificationKey
   , RequiresNetworkMagic(..)
@@ -71,7 +69,7 @@ exampleGenesisSpec = UnsafeGenesisSpec
   exampleGenesisDelegation
   exampleProtocolParameters
   (BlockCount 37)
-  (AProtocolMagic (Annotated (ProtocolMagicId 1783847074) ()) RequiresMagic)
+  (ProtocolMagic (ProtocolMagicId 1783847074) RequiresMagic)
   exampleGenesisInitializer
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances

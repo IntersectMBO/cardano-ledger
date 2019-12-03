@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
 module Test.Cardano.Chain.Delegation.Gen
   ( genCanonicalCertificate
   , genCertificate
@@ -17,9 +16,8 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Delegation
   ( Certificate(delegateVK, issuerVK)
-  , Payload
+  , Payload(..)
   , signCertificate
-  , pattern UnsafePayload
   )
 import Cardano.Chain.Delegation.Validation.Scheduling (Error(..))
 import Cardano.Chain.Slotting (EpochNumber(..))

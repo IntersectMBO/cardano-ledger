@@ -1,7 +1,6 @@
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE PatternSynonyms   #-}
 
 module Test.Cardano.Chain.UTxO.ValidationMode
   ( tests
@@ -27,7 +26,7 @@ import Cardano.Chain.UTxO
   ( TxAux (..)
   , Environment (..)
   , TxId
-  , pattern TxWitness
+  , TxWitness (..)
   , TxValidationError (..)
   , TxValidationMode (..)
   , UTxOValidationError (..)
@@ -80,7 +79,7 @@ ts_prop_updateUTxO_Valid =
             abstractTxWits
 
       -- Validate the generated concrete transaction
-      let pm = Dummy.aProtocolMagic
+      let pm = Dummy.protocolMagic
           env = Environment pm pparams UTxO.defaultUTxOConfiguration
       vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
       updateRes <- (`runReaderT` vMode) . runExceptT $
@@ -114,7 +113,7 @@ ts_prop_updateUTxO_InvalidWit =
 
       -- Generate an invalid 'TxWitness' and utilize it in the valid
       -- transaction generated above.
-      let pm = Dummy.aProtocolMagic
+      let pm = Dummy.protocolMagic
       invalidWitness <- forAll $
         TxWitness
           <$> V.fromList

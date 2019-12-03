@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE PatternSynonyms   #-}
 
 module Test.Cardano.Chain.UTxO.CBOR
   ( tests
@@ -21,7 +20,7 @@ import qualified Hedgehog as H
 import Cardano.Binary (ToCBOR, Case(..), LengthOf, SizeOverride(..), szCases)
 import Cardano.Chain.Common (AddrAttributes(..), Attributes(..), mkAttributes)
 import Cardano.Chain.UTxO
-  (Tx(..), pattern Tx,  TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness, txInWitnesses)
+  (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness, txInWitnesses)
 import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)

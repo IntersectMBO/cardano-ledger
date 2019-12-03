@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE PatternSynonyms  #-}
 
 module Test.Cardano.Chain.Update.Example
   ( exampleApplicationName
@@ -32,12 +31,10 @@ import Cardano.Chain.Common
 import Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
-  , Payload
-  , pattern Payload
+  , Payload(..)
   , Proof
   , Proposal
   , ProposalBody(..)
-  , pattern ProposalBody
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)

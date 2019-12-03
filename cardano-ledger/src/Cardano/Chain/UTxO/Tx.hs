@@ -7,8 +7,7 @@
 {-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.UTxO.Tx
-  ( Tx(txInputs, txOutputs, txAttributes, txSerialized)
-  , pattern Tx
+  ( Tx(Tx, txInputs, txOutputs, txAttributes, txSerialized)
   , txF
   , TxId
   , TxAttributes

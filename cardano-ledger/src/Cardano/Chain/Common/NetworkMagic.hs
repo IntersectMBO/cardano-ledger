@@ -16,7 +16,7 @@ import qualified Formatting.Buildable as B
 
 import           Cardano.Binary (DecoderError(..), FromCBOR(..), ToCBOR(..),
                      decodeListLen, decodeWord8, encodeListLen , matchSize)
-import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..),
+import           Cardano.Crypto.ProtocolMagic (ProtocolMagic (..),
                      RequiresNetworkMagic (..), getProtocolMagic)
 
 
@@ -53,7 +53,7 @@ instance FromCBOR NetworkMagic where
       1 -> matchSize "NetworkMagic" 2 len >> NetworkTestnet <$> fromCBOR
       _ -> cborError $ DecoderErrorUnknownTag "NetworkMagic" tag
 
-makeNetworkMagic :: AProtocolMagic a -> NetworkMagic
+makeNetworkMagic :: ProtocolMagic -> NetworkMagic
 makeNetworkMagic pm = case getRequiresNetworkMagic pm of
     RequiresNoMagic -> NetworkMainOrStage
     RequiresMagic   -> NetworkTestnet (getProtocolMagic pm)

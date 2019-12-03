@@ -8,8 +8,7 @@
 {-# LANGUAGE PatternSynonyms     #-}
 
 module Cardano.Chain.UTxO.TxWitness
-  ( TxWitness(txInWitnesses, txWitnessSerialized)
-  , pattern TxWitness
+  ( TxWitness(TxWitness, txInWitnesses, txWitnessSerialized)
   , TxInWitness(..)
   , TxSigData(..)
   , TxSig

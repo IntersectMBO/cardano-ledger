@@ -1,4 +1,3 @@
-{-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Chain.Block.Gen
   ( genBlockSignature
@@ -24,17 +23,14 @@ import qualified Hedgehog.Range as Range
 import Cardano.Chain.Block
   ( BlockSignature(..)
   , Block
-  , Body
+  , Body (..)
   , BoundaryBlock(..)
-  , pattern BoundaryBlock
-  , pattern BoundaryBody
+  , BoundaryBody(..)
   , BoundaryHeader(..)
   , mkBoundaryHeader
-  , pattern Body
   , Header
   , HeaderHash
   , Proof(..)
-  , pattern Proof
   , ToSign(..)
   , hashHeader
   , mkBlockExplicit

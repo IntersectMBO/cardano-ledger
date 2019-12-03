@@ -21,12 +21,11 @@
 module Cardano.Chain.Delegation.Certificate
   (
   -- * Certificate
-    Certificate(epoch, issuerVK, delegateVK, signature, serialize)
+    Certificate(UnsafeCertificate, epoch, issuerVK, delegateVK, signature, serialize)
   , CertificateId
 
   -- * Certificate Constructors
   , signCertificate
-  , pattern UnsafeCertificate
 
   -- * Certificate Accessor
   , certificateId
@@ -156,7 +155,7 @@ certificateId = hash
 
 -- | A 'Certificate' is valid if the 'Signature' is valid
 isValid
-  :: Annotated ProtocolMagicId ByteString
+  :: ProtocolMagicId
   -> Certificate
   -> Bool
 isValid pm cert =

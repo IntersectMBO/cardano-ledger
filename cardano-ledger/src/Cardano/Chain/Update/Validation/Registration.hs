@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE PatternSynonyms            #-}
 
 -- | Validation rules for registering updates
 --
@@ -28,8 +27,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
 import Cardano.Binary
-  ( Annotated
-  , Decoder
+  ( Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -48,7 +46,6 @@ import qualified Cardano.Chain.Update.Proposal as Proposal
 import Cardano.Chain.Update.Proposal
   ( Proposal(..)
   , ProposalBody(..)
-  , pattern ProposalBody
   , UpId
   )
 import Cardano.Chain.Update.ProtocolParameters
@@ -76,7 +73,7 @@ import Cardano.Crypto
 
 
 data Environment = Environment
-  { protocolMagic             :: !(Annotated ProtocolMagicId ByteString)
+  { protocolMagic             :: !ProtocolMagicId
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
   , appVersions               :: !ApplicationVersions

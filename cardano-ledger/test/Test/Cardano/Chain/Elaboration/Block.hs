@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE PatternSynonyms    #-}
 
 -- | This module provides functionality for translating abstract blocks into
 -- concrete blocks. The abstract blocks are generated according the small-step
@@ -36,7 +35,7 @@ import Data.Time (Day(ModifiedJulianDay), UTCTime(UTCTime))
 import GHC.Generics (Generic)
 
 import qualified Cardano.Crypto.Hashing as H
-import Cardano.Crypto.ProtocolMagic (AProtocolMagic(..))
+import Cardano.Crypto.ProtocolMagic (ProtocolMagic(..))
 
 import qualified Cardano.Chain.Block as Concrete
 import qualified Cardano.Chain.Common as Common
@@ -253,7 +252,7 @@ abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stabl
     , Genesis.configUTxOConfiguration = UTxO.defaultUTxOConfiguration
     }
  where
-  rnm = getRequiresNetworkMagic Dummy.aProtocolMagic
+  rnm = getRequiresNetworkMagic Dummy.protocolMagic
 
   genesisData = Genesis.GenesisData
     { Genesis.gdGenesisKeyHashes = Genesis.GenesisKeyHashes genesisKeyHashes

@@ -38,7 +38,7 @@ import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 elaborateUTxOEnv :: Abstract.UTxOEnv -> Concrete.UTxO.Environment
 elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
-  { Concrete.UTxO.protocolMagic      = Dummy.aProtocolMagic
+  { Concrete.UTxO.protocolMagic      = Dummy.protocolMagic
   , Concrete.UTxO.protocolParameters = dummyProtocolParameters
     { Concrete.ppTxFeePolicy =
       Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear
