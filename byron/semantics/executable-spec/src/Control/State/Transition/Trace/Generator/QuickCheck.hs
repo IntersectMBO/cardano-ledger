@@ -31,6 +31,7 @@ module Control.State.Transition.Trace.Generator.QuickCheck
   )
 where
 
+import           Control.Monad.Identity (Identity)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
 
@@ -63,7 +64,9 @@ class STS sts => HasTrace sts traceGenEnv where
 -- | Generate a random trace starting in the given environment and initial state.
 traceFrom
   :: forall sts traceGenEnv
-   . (HasTrace sts traceGenEnv)
+   . ( HasTrace sts traceGenEnv
+     , STS.BaseM sts ~ Identity
+     )
   => Word64
   -- ^ Maximum trace length.
   -> traceGenEnv
@@ -91,7 +94,9 @@ traceFrom maxTraceLength traceGenEnv env st0 = do
 -- | Generate a random trace.
 trace
   :: forall sts traceGenEnv
-   . (HasTrace sts traceGenEnv, Show (Environment sts))
+   . (HasTrace sts traceGenEnv, Show (Environment sts)
+     , STS.BaseM sts ~ Identity
+     )
   => Word64
   -- ^ Maximum trace length.
   -> traceGenEnv
@@ -105,7 +110,9 @@ trace maxTraceLength traceGenEnv =
 -- if no initial state is required by the STS.
 traceFromInitState
   :: forall sts traceGenEnv
-   . (HasTrace sts traceGenEnv, Show (Environment sts))
+   . ( HasTrace sts traceGenEnv, Show (Environment sts)
+     , STS.BaseM sts ~ Identity
+     )
   => Word64
   -- ^ Maximum trace length.
   -> traceGenEnv
@@ -132,6 +139,7 @@ forAllTraceFromInitState
      , Show (Environment sts)
      , Show (State sts)
      , Show (Signal sts)
+     , STS.BaseM sts ~ Identity
      )
   => Word64
   -- ^ Maximum trace length.
@@ -154,6 +162,7 @@ forAllTrace
      , Show (Environment sts)
      , Show (State sts)
      , Show (Signal sts)
+     , STS.BaseM sts ~ Identity
      )
   => Word64
   -- ^ Maximum trace length.
@@ -166,7 +175,10 @@ forAllTrace maxTraceLength traceGenEnv =
 -- | See 'Test.QuickCheck.shrink'.
 shrinkTrace
   :: forall sts traceGenEnv
-   . (HasTrace sts traceGenEnv) => Trace sts -> [Trace sts]
+   . (HasTrace sts traceGenEnv
+     , STS.BaseM sts ~ Identity
+     )
+  => Trace sts -> [Trace sts]
 shrinkTrace tr = Trace.closure env st0 <$> traceSignalsShrinks
   where
     env = Trace._traceEnv tr
@@ -182,6 +194,7 @@ onlyValidSignalsAreGenerated
      , Show (Environment sts)
      , Show (State sts)
      , Show (Signal sts)
+     , STS.BaseM sts ~ Identity
      )
   => Word64
   -- ^ Maximum trace length.
@@ -199,6 +212,7 @@ onlyValidSignalsAreGeneratedFromInitState
      , Show (Environment sts)
      , Show (State sts)
      , Show (Signal sts)
+     , STS.BaseM sts ~ Identity
      )
   => Word64
   -- ^ Maximum trace length.
@@ -236,6 +250,7 @@ traceLengthsAreClassified
      , Show (Environment sts)
      , Show (State sts)
      , Show (Signal sts)
+     , STS.BaseM sts ~ Identity
      )
   => Word64
   -- ^ Maximum trace length that the signal generator of 's' can generate.

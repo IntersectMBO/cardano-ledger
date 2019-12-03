@@ -23,6 +23,8 @@ flag development
 
 library
   exposed-modules:     Control.State.Transition
+                     , Control.State.Transition.Extended
+                     , Control.State.Transition.Simple
                      , Control.State.Transition.Invalid.Trace
                      , Control.State.Transition.Generator
                      , Control.State.Transition.Trace

@@ -43,6 +43,7 @@ where
 
 import           Control.Lens (makeLenses, to, (^.), (^..), _1, _2)
 import           Control.Monad (void)
+import           Control.Monad.Identity (Identity)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
@@ -50,7 +51,7 @@ import           Data.Maybe (catMaybes)
 import           GHC.Stack (HasCallStack)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
 
-import           Control.State.Transition (Environment, PredicateFailure, STS, Signal, State,
+import           Control.State.Transition (BaseM, Environment, PredicateFailure, STS, Signal, State,
                      TRC (TRC), applySTS)
 
 -- | A successful trace of a transition system.
@@ -324,7 +325,7 @@ preStatesAndSignals NewestFirst tr
 --
 closure
   :: forall s
-   . STS s
+   . (STS s, BaseM s ~ Identity)
    => Environment s
    -> State s
    -> [Signal s]
@@ -373,7 +374,7 @@ mSt .-> stExpected = do
 
 checkTrace
   :: forall s
-   . (STS s)
+   . (STS s, BaseM s ~ Identity)
   => Environment s
   -> ReaderT (State s -> Signal s -> Either [[PredicateFailure s]] (State s)) IO (State s)
   -> IO ()

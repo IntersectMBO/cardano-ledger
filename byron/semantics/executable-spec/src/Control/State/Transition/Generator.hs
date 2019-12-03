@@ -83,7 +83,7 @@ import qualified Hedgehog.Range as Range
 import           Hedgehog.Internal.Gen (integral_, runDiscardEffectT)
 import           Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 
-import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
+import           Control.State.Transition (BaseM, Environment, IRC (IRC), PredicateFailure, STS, Signal,
                      State, TRC (TRC), applySTS)
 import qualified Control.State.Transition.Invalid.Trace as Invalid
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
@@ -93,7 +93,7 @@ import qualified Hedgehog.Extra.Manual as Manual
 
 import           Test.Goblin (Goblin (..), GoblinData, SeedGoblin (..))
 
-class STS s => HasTrace s where
+class (STS s, BaseM s ~ Identity) => HasTrace s where
   -- | Generate an initial environment that is based on the given trace length.
   envGen
     :: Word64
@@ -235,7 +235,7 @@ genTraceOfMaxOrDesiredLength aTraceLength profile env st0 gen =
 --
 genTrace
   :: forall s
-   . STS s
+   . (STS s, BaseM s ~ Identity)
   => Word64
   -- ^ Trace upper bound. This will be linearly scaled as a function of the
   -- generator size.
@@ -253,7 +253,7 @@ genTrace ub = genTraceWithProfile ub allValid
 --
 genTraceWithProfile
   :: forall s
-   . STS s
+   . (STS s, BaseM s ~ Identity)
   => Word64
   -- ^ Trace upper bound. This will be linearly scaled as a function of the
   -- generator size.
@@ -290,7 +290,7 @@ genTraceWithProfile ub profile env st0 aSigGen =
 --
 genTraceOfLength
   :: forall s
-   . STS s
+   . (STS s, BaseM s ~ Identity)
   => Word64
   -- ^ Desired trace length.
   -> TraceProfile s
