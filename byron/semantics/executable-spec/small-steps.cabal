@@ -23,6 +23,8 @@ flag development
 
 library
   exposed-modules:     Control.State.Transition
+                     , Control.State.Transition.Extended
+                     , Control.State.Transition.Simple
                      , Control.State.Transition.Invalid.Trace
                      , Control.State.Transition.Generator
                      , Control.State.Transition.Trace
@@ -90,17 +92,20 @@ test-suite examples
   hs-source-dirs:      test
   main-is:             examples/Main.hs
   other-modules:       Control.State.Transition.Examples.Sum
+  other-modules:       Control.State.Transition.Examples.GlobalSum
                      , Control.State.Transition.Examples.CommitReveal
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
                      , containers
                      , hedgehog >= 1.0
+                     , mtl
                      , tasty
                      , tasty-hedgehog
                      , tasty-expected-failure
                      , QuickCheck
                      , tasty-quickcheck
+                     , tasty-hunit
                      , Unique
                      -- IOHK deps
                      , cardano-crypto-class
