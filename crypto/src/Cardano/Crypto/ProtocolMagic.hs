@@ -13,7 +13,7 @@
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Crypto.ProtocolMagic
-  ( ProtocolMagicId(unProtocolMagicId, ProtocolMagicId)
+  ( ProtocolMagicId(ProtocolMagicId, unProtocolMagicId)
   , ProtocolMagic(..)
   , RequiresNetworkMagic(..)
   , getProtocolMagic
