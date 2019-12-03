@@ -23,7 +23,7 @@ import           Coin (Coin (..), splitCoin)
 import           Generator.Core (findPayKeyPair, toAddr)
 import           Generator.Delegation (genDCerts)
 import           LedgerState (pattern UTxOState)
-import           MockTypes (Addr, CoreKeyPairs, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn,
+import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn,
                      TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           Slot (Slot (..))
 import           STS.Ledger (LedgerEnv (..))
@@ -38,7 +38,7 @@ import           UTxO (pattern UTxO, balance, makeWitnessesVKey)
 genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
-      -> CoreKeyPairs
+      -> [CoreKeyPair]
       -> VrfKeyPairs
       -> Gen Tx
 genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys vrfKeys = do

@@ -34,8 +34,8 @@ import           Address (toAddr, toCred)
 import           Coin (Coin (..))
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
-import           MockTypes (Addr, CoreKeyPair, CoreKeyPairs, DPState, KeyPair, KeyPairs, LedgerEnv,
-                     SignKeyVRF, TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
+import           MockTypes (Addr, CoreKeyPair, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF,
+                     TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Test.Utils (mkGenKey, mkKeyPair)
 import           Tx (pattern TxOut)
@@ -137,7 +137,7 @@ traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
     return (sk, deriveVerKeyVRF sk)
 
 -- | A pre-populated space of core node keys
-traceCoreKeyPairs :: CoreKeyPairs
+traceCoreKeyPairs :: [CoreKeyPair]
 traceCoreKeyPairs = mkGenKeys <$> [1..7]
 
 mkGenKeys :: Word64 -> CoreKeyPair

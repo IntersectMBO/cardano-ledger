@@ -59,8 +59,6 @@ type KeyPair = Keys.KeyPair 'Keys.Regular MockCrypto
 
 type CoreKeyPair = Keys.KeyPair 'Keys.Genesis MockCrypto
 
-type CoreKeyPairs = [CoreKeyPair]
-
 type VKey = Keys.VKey MockCrypto
 
 type SKey = Keys.SKey MockCrypto
