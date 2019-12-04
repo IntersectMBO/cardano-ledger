@@ -678,7 +678,7 @@ execution of the transition role is as follows:
 \subsection{Chain Tick Transition}
 \label{sec:tick-trans}
 
-The Chain Tick Transition checks a couple of sizes and performs some chain level
+The Chain Tick Transition performs some chain level
 upkeep. The environment consists of a set of genesis keys, and the state is the
 epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 
@@ -695,7 +695,7 @@ epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 The $\mathsf{TICK}$ transition rule is shown in Figure~\ref{fig:rules:tick}.
 The signal is a slot \var{s}.
 
-If the size checks pass, then three transitions are done:
+Three transitions are done:
 
 \begin{itemize}
   \item The $\mathsf{NEWEPOCH}$ transition performs any state change needed if it is the first
