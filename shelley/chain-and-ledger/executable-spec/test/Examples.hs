@@ -80,8 +80,8 @@ import           Unsafe.Coerce (unsafeCoerce)
 import           Address (mkRwdAcnt)
 import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, (⭒))
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader, mkSeed,
-                     seedEta, seedL, startRewards)
+                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader,
+                     hashHeaderToNonce, mkSeed, seedEta, seedL, startRewards)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern InstantaneousRewards, pattern PoolDistr,
@@ -403,6 +403,7 @@ initStEx1 = ChainState
   (mkNonce 0)
   (mkNonce 0)
   (mkNonce 0)
+  NeutralNonce
   lastByronHeaderHash
   (Slot 0)
 
@@ -438,6 +439,7 @@ expectedStEx1 = ChainState
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
+  NeutralNonce
   (bhHash (bheader blockEx1))
   (Slot 1)
 
@@ -550,6 +552,7 @@ initStEx2A = ChainState
   (mkNonce 0)
   (mkNonce 0)
   (mkNonce 0)
+  NeutralNonce
   lastByronHeaderHash
   (Slot 0)
 
@@ -628,6 +631,7 @@ expectedStEx2A = ChainState
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
+  NeutralNonce
   blockEx2AHash
   (Slot 10)
 
@@ -726,6 +730,7 @@ expectedStEx2Bgeneric pp = ChainState
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- ^ Evolving nonce
   (mkNonce 0 ⭒ mkNonce 1)             -- ^ Candidate nonce
+  NeutralNonce
   blockEx2BHash                       -- ^ Hash header of the chain
   (Slot 90)                           -- ^ Current slot
 
@@ -842,6 +847,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
   (mkNonce 0 ⭒ mkNonce 1)
   (mkSeqNonce 3)
   (mkSeqNonce 3)
+  (hashHeaderToNonce blockEx2BHash)
   blockEx2CHash
   (Slot 110)
 
@@ -917,6 +923,7 @@ expectedStEx2D = ChainState
   (mkNonce 0 ⭒ mkNonce 1)
   (mkSeqNonce 4)
   (mkSeqNonce 3)
+  (hashHeaderToNonce blockEx2BHash)
   blockEx2DHash
   (Slot 190)
 
@@ -935,7 +942,7 @@ blockEx2E = mkBlock
              []
              (Slot 220)
              (BlockNo 2)
-             (mkSeqNonce 3)
+             ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
              (NatNonce 5)
              zero
              2
@@ -991,9 +998,10 @@ expectedStEx2E = ChainState
           (1, hashKeyVRF (snd $ vrf alicePool))))
      epoch1OSchedEx2E)
   oCertIssueNosEx1
-  (mkSeqNonce 3)
+  ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
   (mkSeqNonce 5)
   (mkSeqNonce 5)
+  (hashHeaderToNonce blockEx2DHash)
   blockEx2EHash
   (Slot 220)
 
@@ -1013,7 +1021,7 @@ blockEx2F = mkBlock
              []
              (Slot 295) -- odd slots open for decentralization in epoch1OSchedEx2E
              (BlockNo 2)
-             (mkSeqNonce 3)
+             ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
              (NatNonce 6)
              zero
              3
@@ -1040,9 +1048,10 @@ expectedStEx2F = ChainState
      pdEx2F
      epoch1OSchedEx2E)
   oCertIssueNosEx2F
-  (mkSeqNonce 3)
+  ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
   (mkSeqNonce 6)
   (mkSeqNonce 5)
+  (hashHeaderToNonce blockEx2DHash)
   blockEx2FHash
   (Slot 295)
 
@@ -1105,9 +1114,10 @@ expectedStEx2G = ChainState
      pdEx2F
      epoch1OSchedEx2G)
   oCertIssueNosEx2F
-  (mkSeqNonce 5)
+  ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
   (mkSeqNonce 7)
   (mkSeqNonce 7)
+  (hashHeaderToNonce blockEx2FHash)
   blockEx2GHash
   (Slot 310)
 
@@ -1159,9 +1169,10 @@ expectedStEx2H = ChainState
      pdEx2F
      epoch1OSchedEx2G)
   oCertIssueNosEx2F
-  (mkSeqNonce 5)
+  ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
   (mkSeqNonce 8)
   (mkSeqNonce 7)
+  (hashHeaderToNonce blockEx2FHash)
   blockEx2HHash
   (Slot 390)
 
@@ -1235,9 +1246,10 @@ expectedStEx2I = ChainState
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2F
-  (mkSeqNonce 7)
+  ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 9)
   (mkSeqNonce 9)
+  (hashHeaderToNonce blockEx2HHash)
   blockEx2IHash
   (Slot 410)
 
@@ -1321,9 +1333,10 @@ expectedStEx2J = ChainState
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2F
-  (mkSeqNonce 7)
+  ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 10)
   (mkSeqNonce 10)
+  (hashHeaderToNonce blockEx2HHash)
   blockEx2JHash
   (Slot 420)
 
@@ -1402,9 +1415,10 @@ expectedStEx2K = ChainState
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2F
-  (mkSeqNonce 7)
+  ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 11)
   (mkSeqNonce 10)
+  (hashHeaderToNonce blockEx2HHash)
   blockEx2KHash
   (Slot 490)
 
@@ -1475,9 +1489,10 @@ expectedStEx2L = ChainState
      pdEx2F
      (overlaySchedule (Epoch 5) (Map.keysSet genDelegs) ppsEx1))
   oCertIssueNosEx2F
-  (mkSeqNonce 10)
+  ((mkSeqNonce 10) ⭒ (hashHeaderToNonce blockEx2HHash))
   (mkSeqNonce 12)
   (mkSeqNonce 12)
+  (hashHeaderToNonce blockEx2KHash)
   blockEx2LHash
   (Slot 510)
 
@@ -1572,6 +1587,7 @@ expectedStEx3A = ChainState
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
+  NeutralNonce
   blockEx3AHash
   (Slot 10)
 
@@ -1664,6 +1680,7 @@ expectedStEx3B = ChainState
   (mkNonce 0)
   (mkSeqNonce 2)
   (mkSeqNonce 2)
+  NeutralNonce
   blockEx3BHash
   (Slot 20)
 
@@ -1725,6 +1742,7 @@ expectedStEx3C = ChainState
   (mkSeqNonce 2 ⭒ mkNonce 123)
   (mkSeqNonce 3)
   (mkSeqNonce 3)
+  (hashHeaderToNonce blockEx3BHash)
   blockEx3CHash
   (Slot 110)
 
@@ -1826,6 +1844,7 @@ expectedStEx4A = ChainState
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
+  NeutralNonce
   blockEx4AHash
   (Slot 10)
 
@@ -1916,6 +1935,7 @@ expectedStEx4B = ChainState
   (mkNonce 0)
   (mkSeqNonce 2)
   (mkSeqNonce 2)
+  NeutralNonce
   blockEx4BHash
   (Slot 20)
 
@@ -1980,6 +2000,7 @@ expectedStEx4C = ChainState
   (mkNonce 0)
   (mkSeqNonce 3)
   (mkSeqNonce 3)
+  NeutralNonce
   blockEx4CHash
   (Slot 60)
 
@@ -2063,6 +2084,7 @@ expectedStEx5A = ChainState
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
+  NeutralNonce
   blockEx5AHash
   (Slot 10)
 
@@ -2123,6 +2145,7 @@ expectedStEx5B = ChainState
   (mkNonce 0)
   (mkSeqNonce 2)
   (mkSeqNonce 2)
+  NeutralNonce
   blockEx5BHash
   (Slot 50)
 
@@ -2206,6 +2229,7 @@ expectedStEx6A = ChainState
   (mkNonce 0)
   (mkNonce 0 ⭒ mkNonce 1)
   (mkNonce 0 ⭒ mkNonce 1)
+  NeutralNonce
   blockEx6AHash
   (Slot 10)
 

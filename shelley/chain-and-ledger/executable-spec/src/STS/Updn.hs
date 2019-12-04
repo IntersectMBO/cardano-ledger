@@ -13,31 +13,35 @@ import           BlockChain
 import           PParams
 import           Slot
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 
-data UPDN
+data UPDN crypto
 
-data UpdnEnv = UpdnEnv Nonce PParams Bool
-data UpdnState = UpdnState Nonce Nonce Nonce
+data UpdnEnv crypto = UpdnEnv Nonce PParams (HashHeader crypto) Bool
+data UpdnState = UpdnState Nonce Nonce Nonce Nonce
   deriving (Show, Eq)
 
-instance STS UPDN where
-  type State UPDN = UpdnState
-  type Signal UPDN = Slot.Slot
-  type Environment UPDN = UpdnEnv
-  data PredicateFailure UPDN = FailureUPDN
+instance
+  (Crypto crypto)
+  => STS (UPDN crypto) where
+  type State (UPDN crypto) = UpdnState
+  type Signal (UPDN crypto) = Slot.Slot
+  type Environment (UPDN crypto) = UpdnEnv crypto
+  data PredicateFailure (UPDN crypto) = FailureUPDN
                                deriving (Show, Eq)
-  initialRules = [pure (UpdnState (mkNonce 0) (mkNonce 0) (mkNonce 0))]
+  initialRules = [pure (UpdnState (mkNonce 0) (mkNonce 0) (mkNonce 0) (mkNonce 0))]
   transitionRules = [updTransition]
 
-updTransition :: TransitionRule UPDN
+updTransition :: TransitionRule (UPDN crypto)
 updTransition = do
-  TRC (UpdnEnv eta pp ne, UpdnState eta_0 eta_v eta_c, s) <- judgmentContext
+  TRC (UpdnEnv eta pp h ne, UpdnState eta_0 eta_v eta_c eta_h, s) <- judgmentContext
   let Epoch e = epochFromSlot s
   pure $ UpdnState
-    (if ne then eta_c ⭒ _extraEntropy pp else eta_0)
+    (if ne then eta_c ⭒ eta_h ⭒ _extraEntropy pp else eta_0)
     (eta_v ⭒ eta)
     (if s +* slotsPrior < firstSlot (Epoch (e + 1))
       then eta_v ⭒ eta
       else eta_c
     )
+    (if ne then (hashHeaderToNonce h) else eta_h)

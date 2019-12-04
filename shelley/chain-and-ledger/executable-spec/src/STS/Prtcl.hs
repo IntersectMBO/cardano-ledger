@@ -32,9 +32,9 @@ import           STS.Overlay
 import           STS.Updn
 
 import qualified Cardano.Crypto.VRF as VRF
+import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
-import           Cardano.Ledger.Shelley.Crypto
 
 data PRTCL crypto
 
@@ -46,6 +46,7 @@ data PrtclState crypto
       Nonce -- ^ Current epoch nonce
       Nonce -- ^ Evolving nonce
       Nonce -- ^ Candidate nonce
+      Nonce -- ^ Prev epoch hash nonce
   deriving (Generic, Show)
 
 instance NoUnexpectedThunks (PrtclState crypto)
@@ -83,7 +84,7 @@ instance
     = WrongSlotIntervalPRTCL
     | WrongBlockSequencePRTCL
     | OverlayFailure (PredicateFailure (OVERLAY crypto))
-    | UpdnFailure (PredicateFailure UPDN)
+    | UpdnFailure (PredicateFailure (UPDN crypto))
     deriving (Show, Eq)
 
   initialRules = []
@@ -100,7 +101,7 @@ prtclTransition
   => TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC ( PrtclEnv pp osched pd dms sNow ne
-      , PrtclState cs h sL eta0 etaV etaC
+      , PrtclState cs h sL eta0 etaV etaC etaH
       , bh) <- judgmentContext
   let bhb  = bhbody bh
   let slot = bheaderSlot bhb
@@ -108,13 +109,13 @@ prtclTransition = do
   sL < slot && slot <= sNow ?! WrongSlotIntervalPRTCL
   h == bheaderPrev bhb ?! WrongBlockSequencePRTCL
 
-  UpdnState eta0' etaV' etaC'
-    <- trans @UPDN $ TRC (UpdnEnv eta pp ne, UpdnState eta0 etaV etaC, slot)
+  UpdnState eta0' etaV' etaC' etaH'
+    <- trans @(UPDN crypto) $ TRC (UpdnEnv eta pp h ne, UpdnState eta0 etaV etaC etaH, slot)
   cs'
     <- trans @(OVERLAY crypto)
         $ TRC (OverlayEnv pp osched eta0' pd dms, cs, bh)
 
-  pure $ PrtclState cs' (bhHash bh) slot eta0' etaV' etaC'
+  pure $ PrtclState cs' (bhHash bh) slot eta0' etaV' etaC' etaH'
 
 instance
   ( Crypto crypto
@@ -132,6 +133,6 @@ instance
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )
-  => Embed UPDN (PRTCL crypto)
+  => Embed (UPDN crypto) (PRTCL crypto)
  where
   wrapFailed = UpdnFailure
