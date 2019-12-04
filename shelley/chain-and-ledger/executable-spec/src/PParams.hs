@@ -33,7 +33,7 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
 import           Coin (Coin (..))
-import           Slot (Epoch (..))
+import           Slot (EpochNo (..))
 
 import           Lens.Micro.TH (makeLenses)
 
@@ -62,7 +62,7 @@ data PParams = PParams
     -- | Decay rate for pool deposits
   , _poolDecayRate   :: Rational
     -- | epoch bound on pool retirement
-  , _eMax            :: Epoch
+  , _eMax            :: EpochNo
     -- | Desired number of pools
   , _nOpt            :: Natural
     -- | Pool influence
@@ -100,7 +100,7 @@ emptyPParams =
      , _poolDeposit = Coin 0
      , _poolMinRefund = interval0
      , _poolDecayRate = 0
-     , _eMax = Epoch 0
+     , _eMax = EpochNo 0
      , _nOpt = 100
      , _a0 = 0
      , _rho = interval0

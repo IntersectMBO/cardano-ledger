@@ -11,7 +11,7 @@ module STS.Newpp
 where
 
 import qualified Data.Map.Strict as Map
-
+import           BaseTypes
 import           Lens.Micro ((^.))
 
 import           Coin
@@ -22,6 +22,7 @@ import           PParams
 import           Slot
 import           Updates
 import           UTxO
+import           Control.Monad.Trans.Reader (asks)
 
 import           Control.State.Transition
 
@@ -35,8 +36,9 @@ data NewppEnv crypto
 
 instance STS (NEWPP crypto) where
   type State (NEWPP crypto) = NewppState crypto
-  type Signal (NEWPP crypto) = Epoch
+  type Signal (NEWPP crypto) = EpochNo
   type Environment (NEWPP crypto) = NewppEnv crypto
+  type BaseM (NEWPP crypto) = ShelleyBase
   data PredicateFailure (NEWPP crypto)
     = FailureNEWPP
     deriving (Show, Eq)
@@ -56,8 +58,10 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let slot_ = firstSlot e
-          Coin oblgCurr = obligation pp (ds ^. stkCreds) (ps ^. stPools) slot_
+      slot_ <- liftSTS $ do
+        ei <- asks epochInfo
+        epochInfoFirst ei e
+      let Coin oblgCurr = obligation pp (ds ^. stkCreds) (ps ^. stPools) slot_
           Coin oblgNew = obligation ppNew' (ds ^. stkCreds) (ps ^. stPools) slot_
           diff = oblgCurr - oblgNew
           Coin reserves = _reserves acnt

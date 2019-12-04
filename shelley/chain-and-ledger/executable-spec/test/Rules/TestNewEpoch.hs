@@ -22,7 +22,7 @@ import           LedgerState (pattern AccountState, pattern DPState, pattern DSt
 import           MockTypes (NEWEPOCH)
 import           UTxO (balance)
 
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals)
 
 
 ------------------------------
@@ -45,7 +45,7 @@ rewardDecreaseEqualsTreasuryRewardPot :: Property
 rewardDecreaseEqualsTreasuryRewardPot = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
         $ forAll
-        $ trace @NEWEPOCH traceLen `ofLengthAtLeast` 1
+        $ trace @NEWEPOCH testGlobals traceLen `ofLengthAtLeast` 1
 
   assertAll rewardsDecreaseBalanced tr
 
@@ -100,7 +100,7 @@ circulationDepositsInvariant :: Property
 circulationDepositsInvariant = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
         $ forAll
-        $ trace @NEWEPOCH traceLen `ofLengthAtLeast` 1
+        $ trace @NEWEPOCH testGlobals traceLen `ofLengthAtLeast` 1
 
   assertAll circulationDepositsNoChange tr
 

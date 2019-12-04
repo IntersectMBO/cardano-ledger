@@ -18,7 +18,7 @@ import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import qualified Data.Set as Set
-
+import           BaseTypes
 import           Control.State.Transition
 
 import           Cardano.Ledger.Shelley.Crypto
@@ -36,7 +36,7 @@ data LEDGERS crypto
 
 data LedgersEnv
   = LedgersEnv
-    { ledgersSlot     :: Slot
+    { ledgersSlotNo     :: SlotNo
     , ledgersPp       :: PParams
     , ledgersReserves :: Coin
     }
@@ -50,6 +50,7 @@ instance
   type State (LEDGERS crypto) = LedgerState crypto
   type Signal (LEDGERS crypto) = Seq (Tx crypto)
   type Environment (LEDGERS crypto) = LedgersEnv
+  type BaseM (LEDGERS crypto) = ShelleyBase
   data PredicateFailure (LEDGERS crypto)
     = LedgerFailure (PredicateFailure (LEDGER crypto))
     deriving (Show, Eq)
@@ -84,9 +85,9 @@ ledgersTransition = do
       fGenDelegs_    = _fGenDelegs ds
       GenDelegs genDelegs_ = _genDelegs ds
       (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
-  let maxSlot = maximum . Set.map fst . Map.keysSet
+  let maxSlotNo = maximum . Set.map fst . Map.keysSet
   let latestPerGKey gk =
-        ( (maxSlot . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
+        ( (maxSlotNo . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
         , gk)
   let genDelegsKeys = Set.map
                   latestPerGKey

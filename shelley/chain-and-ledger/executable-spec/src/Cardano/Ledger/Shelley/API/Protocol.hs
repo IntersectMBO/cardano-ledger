@@ -19,11 +19,15 @@ module Cardano.Ledger.Shelley.API.Protocol
   )
 where
 
+import BaseTypes (Globals (epochInfo))
 import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.Crypto
+import Cardano.Slotting.EpochInfo (epochInfoEpoch)
 import Control.Arrow (left, right)
 import Control.Monad.Except
-import Control.State.Transition (PredicateFailure, TRC (..), applySTS)
+import Control.Monad.Reader.Class
+import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import Delegation.Certificates (PoolDistr)
 import GHC.Generics (Generic)
@@ -40,13 +44,13 @@ import LedgerState
 import PParams (PParams)
 import STS.NewEpoch (NEWEPOCH)
 import qualified STS.Prtcl
-import Slot (Slot, epochFromSlot)
+import Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto
   = LedgerView
       { lvProtParams :: PParams,
-        lvOverlaySched :: Map Slot (Maybe (GenKeyHash crypto)),
+        lvOverlaySched :: Map SlotNo (Maybe (GenKeyHash crypto)),
         lvPoolDistr :: PoolDistr crypto,
         lvGenDelegs :: GenDelegs crypto
       }
@@ -57,7 +61,7 @@ data LedgerView crypto
 -- epoch.
 mkPrtclEnv ::
   LedgerView crypto ->
-  Slot ->
+  SlotNo ->
   -- | New epoch marker. This should be true iff this execution of the PRTCL
   -- rule is being run on the first block in a new epoch.
   Bool ->
@@ -291,17 +295,24 @@ newtype FutureLedgerViewError crypto
 futureLedgerView ::
   forall crypto m.
   ( Crypto crypto,
-    MonadError (FutureLedgerViewError crypto) m
+    MonadError (FutureLedgerViewError crypto) m,
+    MonadReader Globals m
   ) =>
   ShelleyState crypto ->
-  Slot ->
+  SlotNo ->
   m (LedgerView crypto)
-futureLedgerView ss slot =
+futureLedgerView ss slot = do
+  epoch <- do
+    ei <- asks epochInfo
+    pure . runIdentity $ epochInfoEpoch ei slot
+  res <-
+    liftShelleyBase
+      . applySTS @(NEWEPOCH crypto)
+      $ TRC (mkNewEpochEnv, ss, epoch)
   liftEither
     . right view
     . left (FutureLedgerViewError . join)
-    . applySTS @(NEWEPOCH crypto)
-    $ TRC (mkNewEpochEnv, ss, epochFromSlot slot)
+    $ res
   where
     mkNewEpochEnv =
       NewEpochEnv

@@ -11,7 +11,7 @@ where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-
+import           BaseTypes
 import           BlockChain
 import           Keys
 import           Slot
@@ -26,17 +26,18 @@ data AVUP crypto
 data AVUPState crypto
   = AVUPState
       (AVUpdate crypto)
-      (Map Slot (Applications crypto))
+      (Map SlotNo (Applications crypto))
       (Applications crypto)
 
 data AVUPEnv crypto
-  = AVUPEnv Slot (GenDelegs crypto)
+  = AVUPEnv SlotNo (GenDelegs crypto)
 
 instance STS (AVUP crypto) where
   type State (AVUP crypto)
     = AVUPState crypto
   type Signal (AVUP crypto) = AVUpdate crypto
   type Environment (AVUP crypto) = AVUPEnv crypto
+  type BaseM (AVUP crypto) = ShelleyBase
   data PredicateFailure (AVUP crypto)
     = EmptyAVUP
     | NonEmptyAVUP

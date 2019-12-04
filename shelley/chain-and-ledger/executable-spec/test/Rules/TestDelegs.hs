@@ -20,7 +20,7 @@ import           MockTypes (DELEGS)
 import           STS.Delegs (pattern DelegsEnv)
 import           TxData (_body, _wdrls)
 
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals)
 
 ------------------------------
 -- Constants for Properties --
@@ -40,7 +40,7 @@ traceLen = 100
 -- transaction.
 rewardsDecreasesByWithdrawals :: Property
 rewardsDecreasesByWithdrawals = withTests numberOfTests . property $ do
-  t <- forAll $ trace @DELEGS traceLen `ofLengthAtLeast` 1
+  t <- forAll $ trace @DELEGS testGlobals traceLen `ofLengthAtLeast` 1
 
   let DelegsEnv _ _ _ tx _ = _traceEnv t
       tr = sourceSignalTargets t

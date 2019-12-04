@@ -26,7 +26,7 @@ import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
 
 import           Ledger.Core (dom, (<|))
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals, runShelleyBase)
 
 ------------------------------
 -- Constants for Properties --
@@ -46,7 +46,7 @@ traceLen = 100
 -- equals the sum of the created value.
 preserveBalance :: Property
 preserveBalance = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW traceLen `ofLengthAtLeast` 1)
+  t <- forAll (trace @UTXOW testGlobals traceLen `ofLengthAtLeast` 1)
   let
     tr = sourceSignalTargets t
     UtxoEnv _ pp stk stp _ = _traceEnv t
@@ -69,7 +69,7 @@ preserveBalance = withTests (fromIntegral numberOfTests) . property $ do
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted :: Property
 preserveBalanceRestricted = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW traceLen `ofLengthAtLeast` 1)
+  t <- forAll (trace @UTXOW testGlobals traceLen `ofLengthAtLeast` 1)
   let
     tr = sourceSignalTargets t
     UtxoEnv _ pp stk stp _ = _traceEnv t
@@ -91,12 +91,12 @@ preserveBalanceRestricted = withTests (fromIntegral numberOfTests) . property $ 
             deposits pp stp certs
           - (refunded pp stk txb + decayed pp stk txb)
         refunded pp stk txb = keyRefunds pp stk txb
-        decayed pp stk txb  = decayedTx pp stk txb
+        decayed pp stk txb  = runShelleyBase $ decayedTx pp stk txb
 
 -- | Preserve outputs of Txs
 preserveOutputsTx :: Property
 preserveOutputsTx = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  t <- forAll (trace @UTXOW testGlobals $ fromIntegral traceLen)
   let
     n :: Integer
     n = fromIntegral $ traceLength t
@@ -114,7 +114,7 @@ preserveOutputsTx = withTests (fromIntegral numberOfTests) . property $ do
 -- | Check that consumed inputs are elimiated from the resulting UTxO
 eliminateTxInputs :: Property
 eliminateTxInputs = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  t <- forAll (trace @UTXOW testGlobals $ fromIntegral traceLen)
   let
     n :: Integer
     n = fromIntegral $ traceLength t
@@ -132,7 +132,7 @@ eliminateTxInputs = withTests (fromIntegral numberOfTests) . property $ do
 -- all TxIds are new.
 newEntriesAndUniqueTxIns :: Property
 newEntriesAndUniqueTxIns = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  t <- forAll (trace @UTXOW testGlobals $ fromIntegral traceLen)
   let
     n :: Integer
     n = fromIntegral $ traceLength t
@@ -155,7 +155,7 @@ newEntriesAndUniqueTxIns = withTests (fromIntegral numberOfTests) . property $ d
 -- | Check for absence of double spend
 noDoubleSpend :: Property
 noDoubleSpend = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @UTXOW $ fromIntegral traceLen)
+  t <- forAll (trace @UTXOW testGlobals $ fromIntegral traceLen)
   let
     sigs = traceSignals OldestFirst t
 

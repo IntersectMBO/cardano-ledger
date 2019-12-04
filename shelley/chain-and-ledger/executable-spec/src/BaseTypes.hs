@@ -20,18 +20,24 @@ module BaseTypes
   , mkNonce
   , (⭒)
   , (==>)
+    -- * STS Base
+  , Globals (..)
+  , ShelleyBase
   ) where
 
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Slotting.EpochInfo
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
+import           Data.Functor.Identity
 import           Data.Ratio (denominator, numerator, (%))
 import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
+import           Control.Monad.Trans.Reader
 
 data E34
 
@@ -111,3 +117,14 @@ newtype Seed = Seed (Hash SHA256 Seed)
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
 infix 1 ==>
+
+--------------------------------------------------------------------------------
+-- Base monad for all STS systems
+--------------------------------------------------------------------------------
+
+data Globals = Globals
+  { epochInfo :: EpochInfo Identity
+  , slotsPerKESPeriod :: Word64
+  }
+
+type ShelleyBase = ReaderT Globals Identity

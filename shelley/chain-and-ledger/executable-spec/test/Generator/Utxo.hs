@@ -29,7 +29,7 @@ import           LedgerState (pattern UTxOState)
 import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn,
                      TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           PParams (_d)
-import           Slot (Slot (..))
+import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
 import           Updates (emptyUpdate)
@@ -58,7 +58,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys
   recipientAddrs <- genRecipients keys'
 
   ttl <- Gen.integral $ Range.linear 1 100
-  let slotWithTTL = slot + Slot ttl
+  let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
   -- certificates
   (certs, certWitnesses, genesisWitnesses, deposits_, refunds_)
@@ -90,7 +90,7 @@ genTxBody
   -> [TxOut]
   -> Seq DCert
   -> Coin
-  -> Slot
+  -> SlotNo
   -> Gen TxBody
 genTxBody inputs outputs certs fee slotWithTTL = do
   return $ TxBody

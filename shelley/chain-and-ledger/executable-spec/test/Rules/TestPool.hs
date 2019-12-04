@@ -15,10 +15,8 @@ import qualified Data.Maybe as Maybe (maybe)
 import qualified Data.Set as S
 import           Data.Word (Word64)
 import           Lens.Micro (to, (^.))
-
 import           Hedgehog (MonadTest, Property, assert, forAll, property, withTests, (===))
 import qualified Test.QuickCheck as QC
-
 import           Control.State.Transition (Environment, State)
 import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
@@ -29,21 +27,21 @@ import           Delegation.Certificates (cwitness)
 import           LedgerState (pattern PState, pParams, retiring, stPools, _retiring, _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
-import           Slot (Epoch (..), epochFromSlot)
-import           STS.Ledger (LedgerEnv (ledgerSlot))
+import           Slot (EpochNo (..))
+import           STS.Ledger (LedgerEnv (ledgerSlotNo))
 import           STS.Pool (PoolEnv (..))
 import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool,
                      pattern StakePools, poolPubKey)
 
 
 import           Ledger.Core (dom, (∈), (∉))
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals, epochFromSlotNo)
 
 -------------------------------
 -- helper accessor functions --
 -------------------------------
 
-getRetiring :: PState -> Map KeyHash Epoch
+getRetiring :: PState -> Map KeyHash EpochNo
 getRetiring = _retiring
 
 getStPools :: PState -> StakePools
@@ -68,7 +66,7 @@ rewardZeroAfterReg :: Property
 rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
         $ forAll
-        $ trace @POOL traceLen `ofLengthAtLeast` 1
+        $ trace @POOL testGlobals traceLen `ofLengthAtLeast` 1
 
   assertAll registeredPoolNotRetiring tr
 
@@ -87,7 +85,7 @@ rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
 -- in the set of stake pools.
 poolRetireInEpoch :: Property
 poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll (trace @POOL traceLen `ofLengthAtLeast` 1)
+  t <- forAll (trace @POOL testGlobals traceLen `ofLengthAtLeast` 1)
   let
     tr = sourceSignalTargets t
     PoolEnv s pp = _traceEnv t
@@ -101,14 +99,14 @@ poolRetireInEpoch = withTests (fromIntegral numberOfTests) . property $ do
           case cwitness c of
             KeyHashObj certWit -> let StakePools stp  = getStPools p
                                       StakePools stp' = getStPools p'
-                                      cepoch          = epochFromSlot s
-                                      Epoch ce        = cepoch
-                                      Epoch emax'     = _eMax pp in
+                                      cepoch          = epochFromSlotNo s
+                                      EpochNo ce        = cepoch
+                                      EpochNo emax'     = _eMax pp in
                                     (  cepoch < e
-                                    && e < Epoch (ce + emax')) ==>
+                                    && e < EpochNo (ce + emax')) ==>
                                     (  certWit ∈ dom stp
                                     && certWit ∈ dom stp'
-                                    && Maybe.maybe False ((== e) . epochFromSlot) (stp' !? certWit))
+                                    && Maybe.maybe False ((== e) . epochFromSlotNo) (stp' !? certWit))
             _                  -> False
         registeredPoolRetired _ _ _ = True
 
@@ -146,7 +144,7 @@ registeredPoolIsAdded env ssts =
       M.lookup hk (tSt ^. pParams) === Just poolParams
       -- Hashkey is registered in stPools map
       M.lookup hk (tSt ^. stPools . to (\(StakePools x) -> x))
-        === Just (ledgerSlot env)
+        === Just (ledgerSlotNo env)
 
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.

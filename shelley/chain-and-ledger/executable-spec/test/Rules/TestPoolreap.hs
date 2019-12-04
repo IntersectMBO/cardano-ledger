@@ -25,7 +25,7 @@ import           UTxO (balance)
 
 import           Ledger.Core (dom, (▷))
 import           Rules.TestPool (getRetiring, getStPools)
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals)
 
 
 ------------------------------
@@ -48,7 +48,7 @@ removedAfterPoolreap :: Property
 removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
         $ forAll
-        $ trace @POOLREAP traceLen `ofLengthAtLeast` 1
+        $ trace @POOLREAP testGlobals traceLen `ofLengthAtLeast` 1
 
   assertAll poolRemoved tr
 
@@ -70,7 +70,7 @@ removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
 -- | Check that deposits are always non-negative
 nonNegativeDeposits :: Property
 nonNegativeDeposits = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll $ trace @POOLREAP traceLen
+  t <- forAll $ trace @POOLREAP testGlobals traceLen
   let states = traceStates NewestFirst t
 
   assertAll (\PoolreapState
@@ -84,7 +84,7 @@ constantSumPots :: Property
 constantSumPots = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
         $ forAll
-        $ trace @POOLREAP traceLen `ofLengthAtLeast` 1
+        $ trace @POOLREAP testGlobals traceLen `ofLengthAtLeast` 1
 
   assertAll potsSumEqual tr
 

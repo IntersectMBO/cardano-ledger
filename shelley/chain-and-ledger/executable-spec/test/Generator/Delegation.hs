@@ -22,7 +22,7 @@ import           Numeric.Natural (Natural)
 
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
+import           Test.Utils (epochFromSlotNo)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern InstantaneousRewards,
                      pattern RegKey, pattern RegPool, pattern RetirePool, decayKey, isDeRegKey)
@@ -36,7 +36,7 @@ import           MockTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPai
                      PoolParams, VrfKeyPairs, hashKeyVRF)
 import           Mutator (getAnyStakeKey)
 import           PParams (PParams (..), eMax)
-import           Slot (Epoch (Epoch), Slot (Slot), epochFromSlot)
+import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           TxData (Credential (KeyHashObj), pattern PoolParams, RewardAcnt (..),
                      pattern StakeCreds, StakePools (StakePools), _poolPubKey, _poolVrf)
 import           UTxO (deposits)
@@ -49,7 +49,7 @@ genDCerts
   -> VrfKeyPairs
   -> PParams
   -> DPState
-  -> Slot
+  -> SlotNo
   -> Natural
   -> Gen (Seq DCert, [KeyPair], [CoreKeyPair], Coin, Coin)
 genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
@@ -68,7 +68,7 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
           deposits_ = deposits pparams (_stPools (_pstate dpState)) certs
 
           deRegStakeCreds = filter isDeRegKey certs
-          slotWithTTL = slot + Slot ttl
+          slotWithTTL = slot + SlotNo (fromIntegral ttl)
           rewardForCred crt =
             let (dval, dmin, lambda) = decayKey pparams
              in keyRefund dval
@@ -102,7 +102,7 @@ genDCert
   -> VrfKeyPairs
   -> PParams
   -> DPState
-  -> Slot
+  -> SlotNo
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
 genDCert keys coreKeys vrfKeys pparams dpState slot =
   -- TODO @uroboros Generate _Delegate_ Certificates
@@ -228,7 +228,7 @@ genRetirePool
   :: KeyPairs
   -> PParams
   -> PState
-  -> Slot
+  -> SlotNo
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
 genRetirePool availableKeys pp pState slot =
   if (null availableKeys || null poolHashKeys)
@@ -236,7 +236,7 @@ genRetirePool availableKeys pp pState slot =
      else (\keyHash epoch ->
               Just (RetirePool keyHash epoch, Left $ findKeyPair keyHash))
                 <$> Gen.element poolHashKeys
-                <*> (Epoch <$> Gen.integral (Range.constant epochLow epochHigh))
+                <*> (EpochNo <$> Gen.integral (Range.constant epochLow epochHigh))
  where
   stakePools = pState ^. (stPools . to (\(StakePools x) -> x))
   poolHashKeys = Set.toList (Map.keysSet stakePools)
@@ -245,7 +245,7 @@ genRetirePool availableKeys pp pState slot =
       Nothing ->
         error "genRetirePool: impossible: keyHash doesn't match availableKeys"
       Just ks -> snd ks
-  Epoch cepoch = epochFromSlot slot
-  Epoch maxEpoch = pp ^. eMax
+  EpochNo cepoch = epochFromSlotNo slot
+  EpochNo maxEpoch = pp ^. eMax
   epochLow = cepoch + 1
   epochHigh = cepoch + maxEpoch - 1

@@ -20,21 +20,22 @@ import           Numeric.Natural (Natural)
 
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
+import           Test.Utils
 
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
                      pattern RegPool, pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core.QuickCheck (genCoinList, genInteger, genNatural, toCred)
-import           Keys (GenDelegs (..), hashKey, vKey)
-import           Ledger.Core (dom, range, (∈), (∉))
+import           Generator.Core.QuickCheck (genInteger, genWord64, toCred, genCoinList)
+import           Keys (GenDelegs(..), hashKey, vKey)
+import           Ledger.Core (range, dom, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
                      _genDelegs, _pstate, _stPools, _stkCreds)
 import           MockTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs, PState,
                      PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
 import           PParams (PParams (..), eMax)
-import           Slot (Epoch (Epoch), Slot (Slot), epochFromSlot)
+import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           TxData (Credential (KeyHashObj), pattern Delegation, pattern PoolParams,
                      RewardAcnt (..), StakePools (StakePools), _poolPubKey, _poolVrf)
 import           UTxO (deposits)
@@ -47,7 +48,7 @@ genDCerts
   -> VrfKeyPairs
   -> PParams
   -> DPState
-  -> Slot
+  -> SlotNo
   -> Natural
   -> Gen (Seq DCert, [KeyPair], [CoreKeyPair], Coin, Coin)
 genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
@@ -65,7 +66,7 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
           deposits_ = deposits pparams (_stPools (_pstate dpState)) certs
 
           deRegStakeCreds = filter isDeRegKey certs
-          slotWithTTL = slot + Slot ttl
+          slotWithTTL = slot + SlotNo (fromIntegral ttl)
           rewardForCred crt =
             let (dval, dmin, lambda) = decayKey pparams
              in keyRefund dval
@@ -99,7 +100,7 @@ genDCert
   -> VrfKeyPairs
   -> PParams
   -> DPState
-  -> Slot
+  -> SlotNo
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
 genDCert keys coreKeys vrfKeys pparams dpState slot =
   QC.frequency [ (2, genRegKeyCert keys dState)
@@ -263,7 +264,7 @@ genRetirePool
   :: KeyPairs
   -> PParams
   -> PState
-  -> Slot
+  -> SlotNo
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
 genRetirePool availableKeys pp pState slot =
   if (null availableKeys || null poolHashKeys)
@@ -271,7 +272,7 @@ genRetirePool availableKeys pp pState slot =
      else (\keyHash epoch ->
               Just (RetirePool keyHash epoch, Left $ findKeyPair keyHash))
                 <$> QC.elements poolHashKeys
-                <*> (Epoch <$> genNatural epochLow epochHigh)
+                <*> (EpochNo <$> genWord64 epochLow epochHigh)
  where
   stakePools = pState ^. (stPools . to (\(StakePools x) -> x))
   poolHashKeys = Set.toList (Map.keysSet stakePools)
@@ -280,8 +281,8 @@ genRetirePool availableKeys pp pState slot =
       Nothing ->
         error "genRetirePool: impossible: keyHash doesn't match availableKeys"
       Just ks -> snd ks
-  Epoch cepoch = epochFromSlot slot
-  Epoch maxEpoch = pp ^. eMax
+  EpochNo cepoch = epochFromSlotNo slot
+  EpochNo maxEpoch = pp ^. eMax
   epochLow = cepoch + 1
   epochHigh = cepoch + maxEpoch - 1
 

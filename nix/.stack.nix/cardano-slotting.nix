@@ -39,18 +39,18 @@ let
       '';
 in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
   {
-    flags = { development = false; };
+    flags = {};
     package = {
       specVersion = "1.10";
-      identifier = { name = "cardano-binary"; version = "1.5.0"; };
-      license = "MIT";
-      copyright = "2019 IOHK";
-      maintainer = "operations@iohk.io";
-      author = "IOHK";
+      identifier = { name = "cardano-slotting"; version = "0.1.0.0"; };
+      license = "NONE";
+      copyright = "IOHK";
+      maintainer = "formal.methods@iohk.io";
+      author = "IOHK Formal Methods Team";
       homepage = "";
       url = "";
-      synopsis = "Binary serialization for Cardano";
-      description = "This package includes the binary serialization format for Cardano";
+      synopsis = "Key slotting types for cardano libraries";
+      description = "";
       buildType = "Simple";
       isLocal = true;
       };
@@ -58,44 +58,16 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
       "library" = {
         depends = [
           (hsPkgs."base" or (buildDepError "base"))
-          (hsPkgs."aeson" or (buildDepError "aeson"))
-          (hsPkgs."bytestring" or (buildDepError "bytestring"))
           (hsPkgs."cardano-prelude" or (buildDepError "cardano-prelude"))
+          (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
           (hsPkgs."cborg" or (buildDepError "cborg"))
           (hsPkgs."containers" or (buildDepError "containers"))
-          (hsPkgs."digest" or (buildDepError "digest"))
-          (hsPkgs."formatting" or (buildDepError "formatting"))
-          (hsPkgs."recursion-schemes" or (buildDepError "recursion-schemes"))
-          (hsPkgs."safe-exceptions" or (buildDepError "safe-exceptions"))
-          (hsPkgs."tagged" or (buildDepError "tagged"))
-          (hsPkgs."text" or (buildDepError "text"))
-          (hsPkgs."time" or (buildDepError "time"))
-          (hsPkgs."vector" or (buildDepError "vector"))
+          (hsPkgs."mmorph" or (buildDepError "mmorph"))
+          (hsPkgs."mtl" or (buildDepError "mtl"))
+          (hsPkgs."serialise" or (buildDepError "serialise"))
+          (hsPkgs."transformers" or (buildDepError "transformers"))
           ];
         buildable = true;
-        };
-      tests = {
-        "test" = {
-          depends = [
-            (hsPkgs."base" or (buildDepError "base"))
-            (hsPkgs."bytestring" or (buildDepError "bytestring"))
-            (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
-            (hsPkgs."cardano-prelude" or (buildDepError "cardano-prelude"))
-            (hsPkgs."cardano-prelude-test" or (buildDepError "cardano-prelude-test"))
-            (hsPkgs."cborg" or (buildDepError "cborg"))
-            (hsPkgs."containers" or (buildDepError "containers"))
-            (hsPkgs."formatting" or (buildDepError "formatting"))
-            (hsPkgs."hedgehog" or (buildDepError "hedgehog"))
-            (hsPkgs."hspec" or (buildDepError "hspec"))
-            (hsPkgs."pretty-show" or (buildDepError "pretty-show"))
-            (hsPkgs."QuickCheck" or (buildDepError "QuickCheck"))
-            (hsPkgs."quickcheck-instances" or (buildDepError "quickcheck-instances"))
-            (hsPkgs."tagged" or (buildDepError "tagged"))
-            (hsPkgs."text" or (buildDepError "text"))
-            (hsPkgs."vector" or (buildDepError "vector"))
-            ];
-          buildable = true;
-          };
         };
       };
     } // {
@@ -104,5 +76,5 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
       rev = "d733bbc887d800c387b7ef4ed0a23225fca28d02";
       sha256 = "1ndwi2vmaaf0x2jlmyikrvjgxmqif7v4bcyfxz6d8lq0clzck96y";
       });
-    postUnpack = "sourceRoot+=/binary; echo source root reset to \$sourceRoot";
+    postUnpack = "sourceRoot+=/slotting; echo source root reset to \$sourceRoot";
     }

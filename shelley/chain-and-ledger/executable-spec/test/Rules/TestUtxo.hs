@@ -21,7 +21,7 @@ import           UTxO (balance)
 import           LedgerState (pattern UTxOState, _deposited, _fees, _utxo)
 import           MockTypes (UTXO)
 
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals)
 
 ------------------------------
 -- Constants for Properties --
@@ -40,7 +40,8 @@ traceLen = 100
 -- | Property that checks that the fees are non-decreasing
 feesNonDecreasing :: Property
 feesNonDecreasing = withTests (fromIntegral numberOfTests) . property $ do
-  tr <- fmap sourceSignalTargets $ forAll (trace @UTXO traceLen `ofLengthAtLeast` 1)
+  tr <- fmap sourceSignalTargets
+        $ forAll (trace @UTXO testGlobals traceLen `ofLengthAtLeast` 1)
 
   assertAll feesDoNotIncrease tr
 
@@ -54,7 +55,8 @@ feesNonDecreasing = withTests (fromIntegral numberOfTests) . property $ do
 potsSumIncreaseWdrls :: Property
 potsSumIncreaseWdrls = withTests (fromIntegral numberOfTests) . property $ do
   tr <-
-    fmap sourceSignalTargets $ forAll (trace @UTXO traceLen `ofLengthAtLeast` 1)
+    fmap sourceSignalTargets
+      $ forAll (trace @UTXO testGlobals traceLen `ofLengthAtLeast` 1)
 
   assertAll potsIncreaseWithWdrlsSum tr
 

@@ -6,7 +6,7 @@ import           GHC.Generics (Generic)
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
-import           Slot (Slot)
+import           Slot (SlotNo)
 
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
@@ -14,9 +14,9 @@ data ValidationError =
   -- | The transaction inputs are not valid.
     BadInputs
   -- | The transaction has expired
-  | Expired Slot Slot
+  | Expired SlotNo SlotNo
   -- | Pool Retirement Certificate expired
-  | RetirementCertExpired Slot Slot
+  | RetirementCertExpired SlotNo SlotNo
   -- | The transaction fee is too small
   | FeeTooSmall Coin Coin
   -- | Value is not conserved

@@ -13,37 +13,34 @@ module STS.Utxo
   )
 where
 
+import           BaseTypes
+import           Cardano.Ledger.Shelley.Crypto
+import           Coin
+import           Control.Monad.Trans.Reader (runReaderT)
+import           Control.State.Transition
+import           Control.State.Transition.Generator
 import           Data.Foldable (toList)
+import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-
-import           Lens.Micro ((^.))
-
-import           Coin
 import           Delegation.Certificates
+import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import           LedgerState
+import           Lens.Micro ((^.))
 import           PParams
 import           Slot
+import           STS.Up
 import           Tx
-
 import           Updates
 import           UTxO
-
-import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
-
-import           STS.Up
-
-import           Hedgehog (Gen)
 
 data UTXO crypto
 
 data UtxoEnv crypto
   = UtxoEnv
-      Slot
+      SlotNo
       PParams
       (StakeCreds crypto)
       (StakePools crypto)
@@ -57,9 +54,10 @@ instance
   type State (UTXO crypto) = UTxOState crypto
   type Signal (UTXO crypto) = Tx crypto
   type Environment (UTXO crypto) = UtxoEnv crypto
+  type BaseM (UTXO crypto) = ShelleyBase
   data PredicateFailure (UTXO crypto)
     = BadInputsUTxO
-    | ExpiredUTxO Slot Slot
+    | ExpiredUTxO SlotNo SlotNo
     | MaxTxSizeUTxO Integer Integer
     | InputSetEmptyUTxO
     | FeeTooSmallUTxO Coin Coin
@@ -108,8 +106,8 @@ utxoInductive = do
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
   let refunded = keyRefunds pp stakeKeys txBody
-      decayed = decayedTx pp stakeKeys txBody
-      txCerts = toList $ txBody ^. certs
+  decayed <- liftSTS $ decayedTx pp stakeKeys txBody
+  let txCerts = toList $ txBody ^. certs
 
       depositChange = deposits pp stakePools txCerts - (refunded + decayed)
 
@@ -132,3 +130,6 @@ instance
   => HasTrace (UTXO crypto) where
   envGen _ = undefined :: Gen (UtxoEnv crypto)
   sigGen _ _ = undefined :: Gen (Tx crypto)
+
+  type BaseEnv (UTXO crypto) = Globals
+  interpretSTS globals act = runIdentity $ runReaderT act globals

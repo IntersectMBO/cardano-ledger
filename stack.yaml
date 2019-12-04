@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/3c40edcf5bdba8721d3430d0aaaeea8770ce9bec/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/7a8755b6988a9dd137f3f61a77c6d51e4eafa781/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
@@ -12,15 +12,17 @@ extra-deps:
 - tasty-hedgehog-1.0.0.1 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
 - Unique-0.4.7.6
 - bimap-0.4.0
+- monad-stm-0.1.0.2
 
 - git: https://github.com/input-output-hk/cardano-prelude
-  commit: 3c40edcf5bdba8721d3430d0aaaeea8770ce9bec
+  commit: 7a8755b6988a9dd137f3f61a77c6d51e4eafa781
 
 - git: https://github.com/input-output-hk/cardano-base
-  commit: 057d8a9a3e751f88fc7677df5713c5ecc47a37c4
+  commit: eb78b47bc089b381562abd052bcb26beb2ac8141
   subdirs:
     - binary
     - cardano-crypto-class
+    - slotting
 
 - git: https://github.com/input-output-hk/goblins
   commit: 26d35ad52fe9ade3391532dbfeb2f416f07650bc

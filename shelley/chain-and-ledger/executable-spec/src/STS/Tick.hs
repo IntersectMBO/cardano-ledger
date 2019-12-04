@@ -13,7 +13,7 @@ module STS.Tick
 where
 
 import           Data.Set (Set)
-
+import           BaseTypes
 import           Keys
 import           LedgerState
 import           Slot
@@ -21,6 +21,7 @@ import           STS.NewEpoch
 import           STS.Rupd
 import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
+import           Control.Monad.Trans.Reader (asks)
 
 data TICK crypto
 
@@ -33,8 +34,9 @@ instance Crypto crypto
   type State (TICK crypto)
     = NewEpochState crypto
   type Signal (TICK crypto)
-    = Slot
+    = SlotNo
   type Environment (TICK crypto) = TickEnv crypto
+  type BaseM (TICK crypto) = ShelleyBase
   data PredicateFailure (TICK crypto)
     = NewEpochFailure (PredicateFailure (NEWEPOCH crypto))
     | RupdFailure (PredicateFailure (RUPD crypto))
@@ -51,8 +53,12 @@ bheadTransition = do
   TRC (TickEnv gkeys, nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
 
+  epoch <- liftSTS $ do
+    ei <- asks epochInfo
+    epochInfoEpoch ei slot
+
   nes' <- trans @(NEWEPOCH crypto)
-    $ TRC (NewEpochEnv slot gkeys, nes, epochFromSlot slot)
+    $ TRC (NewEpochEnv slot gkeys, nes, epoch)
 
   ru' <- trans @(RUPD crypto) $ TRC (RupdEnv bprev es, nesRu nes', slot)
   let nes'' = nes' { nesRu = ru' }

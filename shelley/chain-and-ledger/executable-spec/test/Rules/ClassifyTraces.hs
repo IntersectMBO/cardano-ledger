@@ -21,11 +21,12 @@ import           Generator.Core.QuickCheck (mkGenesisLedgerState)
 import           Generator.LedgerTrace.QuickCheck ()
 import           MockTypes (DCert, LEDGER, Tx)
 import           TxData (_body, _certs)
+import Test.Utils
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 500 . property $ do
   let tl = 100
-  forAllTraceFromInitState @LEDGER tl tl (Just mkGenesisLedgerState) $ \tr -> do
+  forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
         certs_ = allCerts txs
@@ -95,4 +96,4 @@ lenRatio f xs
 
 onlyValidLedgerSignalsAreGenerated :: Property
 onlyValidLedgerSignalsAreGenerated = withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState @LEDGER 100 (100::Word64) (Just mkGenesisLedgerState)
+    onlyValidSignalsAreGeneratedFromInitState @LEDGER testGlobals 100 (100::Word64) (Just mkGenesisLedgerState)

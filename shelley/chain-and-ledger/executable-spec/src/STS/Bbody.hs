@@ -18,7 +18,7 @@ where
 import           Data.Set (Set)
 
 import           Control.State.Transition
-
+import           BaseTypes
 import           BlockChain
 import           Coin (Coin)
 import           EpochBoundary
@@ -39,7 +39,7 @@ data BbodyState crypto
 
 data BbodyEnv
   = BbodyEnv
-    { bbodySlots    :: (Set Slot)
+    { bbodySlots    :: (Set SlotNo)
     , bbodyPp       :: PParams
     , bbodyReserves :: Coin
     }
@@ -57,6 +57,8 @@ instance
     = Block crypto
 
   type Environment (BBODY crypto) = BbodyEnv
+
+  type BaseM (BBODY crypto) = ShelleyBase
 
   data PredicateFailure (BBODY crypto)
     = WrongBlockBodySizeBBODY
@@ -84,9 +86,9 @@ bbodyTransition = do
   bhbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
 
   ls' <- trans @(LEDGERS crypto)
-         $ TRC (LedgersEnv (bheaderSlot bhb) pp _reserves, ls, txs)
+         $ TRC (LedgersEnv (bheaderSlotNo bhb) pp _reserves, ls, txs)
 
-  pure $ BbodyState ls' (incrBlocks (bheaderSlot bhb ∈ oslots) hk b)
+  pure $ BbodyState ls' (incrBlocks (bheaderSlotNo bhb ∈ oslots) hk b)
 
 instance
   ( Crypto crypto

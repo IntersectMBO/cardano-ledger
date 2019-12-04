@@ -10,6 +10,7 @@ module STS.Up
   )
 where
 
+import           BaseTypes
 import           Keys
 import           PParams
 import           Slot
@@ -24,12 +25,13 @@ import           STS.Ppup
 data UP crypto
 
 data UpdateEnv crypto
-  = UpdateEnv Slot PParams (GenDelegs crypto)
+  = UpdateEnv SlotNo PParams (GenDelegs crypto)
 
 instance Crypto crypto => STS (UP crypto) where
   type State (UP crypto) = UpdateState crypto
   type Signal (UP crypto) = Update crypto
   type Environment (UP crypto) = UpdateEnv crypto
+  type BaseM (UP crypto) = ShelleyBase
   data PredicateFailure (UP crypto)
     = NonGenesisUpdateUP
     | AvupFailure (PredicateFailure (AVUP crypto))

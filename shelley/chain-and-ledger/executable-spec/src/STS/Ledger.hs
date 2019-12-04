@@ -15,7 +15,7 @@ module STS.Ledger
 where
 
 import           Lens.Micro ((^.))
-
+import           BaseTypes
 import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin)
 import           Control.State.Transition
@@ -34,7 +34,7 @@ data LEDGER crypto
 
 data LedgerEnv
   = LedgerEnv
-    { ledgerSlot     :: Slot
+    { ledgerSlotNo     :: SlotNo
     , ledgerIx       :: Ix
     , ledgerPp       :: PParams
     , ledgerReserves :: Coin
@@ -51,6 +51,7 @@ instance
     = (UTxOState crypto, DPState crypto)
   type Signal (LEDGER crypto) = Tx crypto
   type Environment (LEDGER crypto) = LedgerEnv
+  type BaseM (LEDGER crypto) = ShelleyBase
   data PredicateFailure (LEDGER crypto)
     = UtxowFailure (PredicateFailure (UTXOW crypto))
     | DelegsFailure (PredicateFailure (DELEGS crypto))

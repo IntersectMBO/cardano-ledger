@@ -23,9 +23,11 @@ import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
 import           Cardano.Ledger.Shelley.Crypto
 import           Keys (KeyHash, Sig, VKey, VKeyES)
-import           Slot (Slot (..))
-
+import           Slot (SlotNo (..))
+import           BaseTypes
 import           Numeric.Natural (Natural)
+import           Control.Monad.Trans.Reader (asks)
+import           Data.Functor ((<&>))
 
 import           Serialization (ToCBORGroup (..), CBORGroup (..))
 
@@ -88,8 +90,6 @@ instance
       <*> fromCBOR
       <*> fromCBOR
 
-slotsPerKESPeriod :: Natural
-slotsPerKESPeriod = 90
-
-kesPeriod :: Slot -> KESPeriod
-kesPeriod (Slot s) = KESPeriod $ s `div` slotsPerKESPeriod
+kesPeriod :: SlotNo -> ShelleyBase KESPeriod
+kesPeriod (SlotNo s) = asks slotsPerKESPeriod <&> \spkp ->
+  KESPeriod . fromIntegral $ s `div` spkp
