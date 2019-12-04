@@ -1,53 +1,73 @@
 {-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveFunctor      #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Cardano.Chain.UTxO.TxPayload
-  ( TxPayload(..)
+  ( TxPayload
+  , ATxPayload(..)
+  , mkTxPayload
   , recoverHashedBytes
+  , txpAnnotatedTxs
   , txpTxs
   , txpWitnesses
+  , unTxPayload
   )
 where
 
 import Cardano.Prelude
 
-import Cardano.Binary (Annotated(..), FromCBORAnnotated(..), ToCBOR(..))
+import Cardano.Binary (Annotated(..), ByteSpan, FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.UTxO.Tx (Tx)
-import Cardano.Chain.UTxO.TxAux (TxAux(..))
-import Cardano.Chain.UTxO.TxWitness (TxWitness(..))
+import Cardano.Chain.UTxO.TxAux (ATxAux(..), TxAux, taTx, taWitness)
+import Cardano.Chain.UTxO.TxWitness (TxWitness)
 
 
 -- | Payload of UTxO component which is part of the block body
-newtype TxPayload = TxPayload
-  { unTxPayload :: [TxAux]
-  } deriving (Show, Eq, Generic)
+type TxPayload = ATxPayload ()
+
+mkTxPayload :: [TxAux] -> TxPayload
+mkTxPayload = ATxPayload
+
+newtype ATxPayload a = ATxPayload
+  { aUnTxPayload :: [ATxAux a]
+  } deriving (Show, Eq, Generic, Functor)
     deriving anyclass NFData
+
+unTxPayload :: ATxPayload a -> [TxAux]
+unTxPayload = fmap void . aUnTxPayload
 
 instance ToCBOR TxPayload where
   toCBOR = toCBOR . unTxPayload
 
-instance FromCBORAnnotated TxPayload where
-  fromCBORAnnotated' = TxPayload <$> fromCBORAnnotated'
+instance FromCBOR TxPayload where
+  fromCBOR = void <$> fromCBOR @(ATxPayload ByteSpan)
 
-txpTxs :: TxPayload -> [Tx]
+instance FromCBOR (ATxPayload ByteSpan) where
+  fromCBOR = ATxPayload <$> fromCBOR
+
+txpAnnotatedTxs :: ATxPayload a -> [Annotated Tx a]
+txpAnnotatedTxs = fmap aTaTx . aUnTxPayload
+
+txpTxs :: ATxPayload a -> [Tx]
 txpTxs = fmap taTx . unTxPayload
 
 txpWitnesses :: TxPayload -> [TxWitness]
 txpWitnesses = fmap taWitness . unTxPayload
 
-recoverHashedBytes :: TxPayload -> Annotated [TxWitness] ByteString
-recoverHashedBytes (TxPayload auxs) =
+recoverHashedBytes :: ATxPayload ByteString -> Annotated [TxWitness] ByteString
+recoverHashedBytes (ATxPayload auxs) =
   let
-    witnesses  = taWitness <$> auxs
+    aWitnesses  = aTaWitness <$> auxs
     prefix      = "\159" :: ByteString
     -- This is the value of Codec.CBOR.Write.toLazyByteString encodeListLenIndef
     suffix      = "\255" :: ByteString
     -- This is the value of Codec.CBOR.Write.toLazyByteString encodeBreak
     -- They are hard coded here because the hashed bytes included them as an
     -- implementation artifact
-    hashedByted = prefix <> mconcat (txWitnessSerialized <$> witnesses) <> suffix
-  in Annotated witnesses hashedByted
+    hashedByted = prefix <> mconcat (annotation <$> aWitnesses) <> suffix
+  in Annotated (unAnnotated <$> aWitnesses) hashedByted

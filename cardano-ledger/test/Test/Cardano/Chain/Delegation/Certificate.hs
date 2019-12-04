@@ -8,12 +8,14 @@ where
 
 import Cardano.Prelude
 
+import qualified Data.ByteString.Lazy as BSL
 
 import Hedgehog (Group, Property, assert, discover, forAll, property)
 import qualified Hedgehog.Gen as Gen
 
+import Cardano.Binary (decodeFull, serialize, slice)
 import Cardano.Chain.Delegation
-  (Certificate(delegateVK), isValid, signCertificate)
+  (ACertificate(delegateVK), Certificate, isValid, signCertificate)
 
 import Test.Cardano.Chain.Slotting.Gen (genEpochNumber)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
@@ -41,7 +43,9 @@ prop_certificateCorrect = property $ do
     <*> genEpochNumber
     <*> genSafeSigner
 
-  assert $ isValid Dummy.annotatedProtocolMagicId cert
+  let aCert = annotateCert cert
+
+  assert $ isValid Dummy.annotatedProtocolMagicId aCert
 
 -- | Cannot validate 'Certificate's with incorrect verification keys
 prop_certificateIncorrect :: Property
@@ -56,5 +60,14 @@ prop_certificateIncorrect = property $ do
 
   let
     badCert  = cert { delegateVK = badDelegateVK }
+    aBadCert = annotateCert badCert
 
-  assert . not $ isValid Dummy.annotatedProtocolMagicId badCert
+  assert . not $ isValid Dummy.annotatedProtocolMagicId aBadCert
+
+annotateCert :: Certificate -> ACertificate ByteString
+annotateCert cert =
+  fmap (BSL.toStrict . slice bytes)
+    . fromRight
+        (panic "prop_certificateCorrect: Round trip broken for Certificate")
+    $ decodeFull bytes
+  where bytes = serialize cert

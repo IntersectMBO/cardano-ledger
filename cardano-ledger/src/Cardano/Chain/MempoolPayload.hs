@@ -5,36 +5,44 @@
 {-# LANGUAGE TypeApplications  #-}
 
 module Cardano.Chain.MempoolPayload
-  ( MempoolPayload (..)
+  ( MempoolPayload
+  , AMempoolPayload (..)
   )
 where
 
 import Cardano.Prelude
 
 import Cardano.Binary
-  ( DecoderError(..)
-  , FromCBORAnnotated(..)
+  ( ByteSpan
+  , DecoderError(..)
+  , FromCBOR(..)
   , ToCBOR(..)
   , decodeWord8
   , encodeListLen
+  , encodePreEncoded
   , enforceSize
+  , recoverBytes
   )
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.UTxO (TxAux)
+import Cardano.Chain.UTxO (ATxAux)
 import qualified Cardano.Chain.Update as Update
 
 -- | A payload which can be submitted into or between mempools via the
 -- transaction submission protocol.
-data MempoolPayload
-  = MempoolTx !(TxAux)
+type MempoolPayload = AMempoolPayload ()
+
+-- | A payload which can be submitted into or between mempools via the
+-- transaction submission protocol.
+data AMempoolPayload a
+  = MempoolTx !(ATxAux a)
   -- ^ A transaction payload (transaction and witness).
-  | MempoolDlg !(Delegation.Certificate)
+  | MempoolDlg !(Delegation.ACertificate a)
   -- ^ A delegation certificate payload.
-  | MempoolUpdateProposal !(Update.Proposal)
+  | MempoolUpdateProposal !(Update.AProposal a)
   -- ^ An update proposal payload.
-  | MempoolUpdateVote !(Update.Vote)
+  | MempoolUpdateVote !(Update.AVote a)
   -- ^ An update vote payload.
-  deriving (Eq, Show)
+  deriving (Eq, Show, Functor)
 
 instance ToCBOR MempoolPayload where
   toCBOR (MempoolTx tp) =
@@ -46,12 +54,25 @@ instance ToCBOR MempoolPayload where
   toCBOR (MempoolUpdateVote upv) =
     encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR upv
 
-instance FromCBORAnnotated MempoolPayload where
-  fromCBORAnnotated' = do
-    lift $ enforceSize "MempoolPayload" 2
-    (lift decodeWord8) >>= \case
-      0   -> MempoolTx             <$> fromCBORAnnotated'
-      1   -> MempoolDlg            <$> fromCBORAnnotated'
-      2   -> MempoolUpdateProposal <$> fromCBORAnnotated'
-      3   -> MempoolUpdateVote     <$> fromCBORAnnotated'
-      tag -> lift $ cborError $ DecoderErrorUnknownTag "MempoolPayload" tag
+instance ToCBOR (AMempoolPayload ByteString) where
+  toCBOR (MempoolTx tp) =
+    encodeListLen 2 <> toCBOR (0 :: Word8) <> encodePreEncoded (recoverBytes tp)
+  toCBOR (MempoolDlg dp) =
+    encodeListLen 2 <> toCBOR (1 :: Word8) <> encodePreEncoded (recoverBytes dp)
+  toCBOR (MempoolUpdateProposal upp) =
+    encodeListLen 2 <> toCBOR (2 :: Word8) <> encodePreEncoded (recoverBytes upp)
+  toCBOR (MempoolUpdateVote upv) =
+    encodeListLen 2 <> toCBOR (3 :: Word8) <> encodePreEncoded (recoverBytes upv)
+
+instance FromCBOR MempoolPayload where
+  fromCBOR = void <$> fromCBOR @(AMempoolPayload ByteSpan)
+
+instance FromCBOR (AMempoolPayload ByteSpan) where
+  fromCBOR = do
+    enforceSize "MempoolPayload" 2
+    decodeWord8 >>= \case
+      0   -> MempoolTx             <$> fromCBOR
+      1   -> MempoolDlg            <$> fromCBOR
+      2   -> MempoolUpdateProposal <$> fromCBOR
+      3   -> MempoolUpdateVote     <$> fromCBOR
+      tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" tag

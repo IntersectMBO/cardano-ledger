@@ -1,5 +1,3 @@
-{-# Language PatternSynonyms #-}
-
 module Test.Cardano.Chain.Update.Gen
   ( genCanonicalProtocolParameters
   , genApplicationName
@@ -30,12 +28,9 @@ import qualified Hedgehog.Range as Range
 import Cardano.Chain.Update
   ( ApplicationName(..)
   , Payload
-  , pattern Payload
   , Proof
   , Proposal
-  , pattern UnsafeProposal
   , ProposalBody(..)
-  , pattern ProposalBody
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)
@@ -46,7 +41,9 @@ import Cardano.Chain.Update
   , InstallerHash(..)
   , Vote
   , applicationNameMaxLength
+  , unsafeProposal
   , mkVote
+  , payload
   , systemTagMaxLength
   )
 import Cardano.Crypto (ProtocolMagicId)
@@ -153,7 +150,7 @@ genInstallerHash :: Gen InstallerHash
 genInstallerHash = InstallerHash <$> genHashRaw
 
 genPayload :: ProtocolMagicId -> Gen Payload
-genPayload pm = Payload <$> Gen.maybe (genProposal pm) <*> Gen.list
+genPayload pm = payload <$> Gen.maybe (genProposal pm) <*> Gen.list
   (Range.linear 0 10)
   (genVote pm)
 
@@ -162,7 +159,7 @@ genProof pm = genAbstractHash (genPayload pm)
 
 genProposal :: ProtocolMagicId -> Gen Proposal
 genProposal pm =
-  UnsafeProposal
+  unsafeProposal
     <$> genProposalBody
     <*> genVerificationKey
     <*> genSignature pm genProposalBody

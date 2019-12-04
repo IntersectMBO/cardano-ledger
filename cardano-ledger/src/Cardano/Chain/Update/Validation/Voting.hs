@@ -39,7 +39,7 @@ import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.Vote
-  ( Vote(..)
+  ( AVote(..)
   , recoverSignedBytes
   , proposalId
   )
@@ -114,7 +114,7 @@ registerVoteWithConfirmation
   => Annotated ProtocolMagicId ByteString
   -> Environment
   -> State
-  -> Vote
+  -> AVote ByteString
   -> m State
 registerVoteWithConfirmation pm votingEnv vs vote = do
 
@@ -159,7 +159,7 @@ registerVote
   => Annotated ProtocolMagicId ByteString
   -> RegistrationEnvironment
   -> RegisteredVotes
-  -> Vote
+  -> AVote ByteString
   -> m RegisteredVotes
 registerVote pm vre votes vote = do
   -- Check that the proposal being voted on is registered
@@ -172,7 +172,7 @@ registerVote pm vre votes vote = do
     Just d  -> pure d
 
   -- Check that the signature is valid
-  verifySignatureDecoded pm SignUSVote vk signedBytes (signature vote)
+  verifySignatureDecoded pm SignUSVote voterVK signedBytes signature
     `orThrowError` VotingInvalidSignature
 
   -- Add the delegators to the set of votes for this proposal
@@ -180,9 +180,9 @@ registerVote pm vre votes vote = do
  where
   RegistrationEnvironment registeredProposals delegationMap = vre
 
-  vk          = voterVK vote
+  UnsafeVote { voterVK, signature } = vote
 
-  voter       = hashKey vk
+  voter       = hashKey voterVK
 
   upId        = proposalId vote
 

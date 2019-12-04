@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE PatternSynonyms  #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
@@ -41,19 +40,19 @@ import Cardano.Chain.Common
   , mtRoot
   )
 import Cardano.Chain.UTxO
-  ( Tx
-  , pattern Tx
-  , TxAux(..)
+  ( Tx(..)
+  , TxAux
   , TxId
   , TxIn(..)
   , TxInWitness(..)
   , TxOut(..)
-  , TxPayload(..)
+  , TxPayload
   , TxProof(..)
   , TxSig
   , TxSigData(..)
   , TxWitness
-  , pattern TxWitness
+  , mkTxAux
+  , mkTxPayload
   )
 import Cardano.Crypto
   ( AbstractHash(..)
@@ -74,12 +73,12 @@ import Test.Cardano.Crypto.Example (exampleVerificationKey, exampleSigningKey)
 
 
 exampleTxAux :: TxAux
-exampleTxAux = TxAux tx exampleTxWitness
-  where tx = Tx exampleTxInList exampleTxOutList (mkAttributes ())
+exampleTxAux = mkTxAux tx exampleTxWitness
+  where tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
 exampleTxAux1 :: TxAux
-exampleTxAux1 = TxAux tx exampleTxWitness
-  where tx = Tx exampleTxInList1 exampleTxOutList1 (mkAttributes ())
+exampleTxAux1 = mkTxAux tx exampleTxWitness
+  where tx = UnsafeTx exampleTxInList1 exampleTxOutList1 (mkAttributes ())
 
 exampleTxId :: TxId
 exampleTxId = exampleHashTx
@@ -112,17 +111,17 @@ exampleTxOutList1 :: (NonEmpty TxOut)
 exampleTxOutList1 = fromList [exampleTxOut, exampleTxOut1]
 
 exampleTxPayload :: TxPayload
-exampleTxPayload = TxPayload [exampleTxAux]
+exampleTxPayload = mkTxPayload [exampleTxAux]
 
 exampleTxPayload1 :: TxPayload
-exampleTxPayload1 = TxPayload [exampleTxAux, exampleTxAux1]
+exampleTxPayload1 = mkTxPayload [exampleTxAux, exampleTxAux1]
 
 exampleTxProof :: TxProof
 exampleTxProof = TxProof 32 mroot hashWit
  where
   mroot = mtRoot $ mkMerkleTree
-    [(Tx exampleTxInList exampleTxOutList (mkAttributes ()))]
-  hashWit = hash $ TxWitness <$> [(V.fromList [(VKWitness exampleVerificationKey exampleTxSig)])]
+    [(UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ()))]
+  hashWit = hash $ [(V.fromList [(VKWitness exampleVerificationKey exampleTxSig)])]
 
 exampleTxSig :: TxSig
 exampleTxSig =
@@ -132,7 +131,7 @@ exampleTxSigData :: TxSigData
 exampleTxSigData = TxSigData exampleHashTx
 
 exampleTxWitness :: TxWitness
-exampleTxWitness = TxWitness $ V.fromList [(VKWitness exampleVerificationKey exampleTxSig)]
+exampleTxWitness = V.fromList [(VKWitness exampleVerificationKey exampleTxSig)]
 
 exampleRedeemSignature :: RedeemSignature TxSigData
 exampleRedeemSignature = redeemSign

@@ -18,7 +18,7 @@ import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
 import Cardano.Chain.Block
-  ( BlockOrBoundary(..)
+  ( ABlockOrBoundary(..)
   , ChainValidationError
   , ChainValidationState(..)
   , blockSlot
@@ -84,7 +84,7 @@ validateEpochFiles vMode config cvs fps =
 foldChainValidationState
   :: Genesis.Config
   -> ChainValidationState
-  -> Stream (Of BlockOrBoundary) (ExceptT ParseError ResIO) ()
+  -> Stream (Of (ABlockOrBoundary ByteString)) (ExceptT ParseError ResIO) ()
   -> ExceptT EpochError (ReaderT ValidationMode ResIO) ChainValidationState
 foldChainValidationState config chainValState blocks = S.foldM_
   (\cvs block ->
@@ -94,7 +94,7 @@ foldChainValidationState config chainValState blocks = S.foldM_
   (pure chainValState)
   pure (pure (hoist (withExceptT EpochParseError) blocks))
  where
-  blockOrBoundarySlot :: BlockOrBoundary -> Maybe EpochAndSlotCount
+  blockOrBoundarySlot :: ABlockOrBoundary a -> Maybe EpochAndSlotCount
   blockOrBoundarySlot = \case
-    BOBBoundary _     -> Nothing
-    BOBBlock    block -> Just . fromSlotNumber mainnetEpochSlots $ blockSlot block
+    ABOBBoundary _     -> Nothing
+    ABOBBlock    block -> Just . fromSlotNumber mainnetEpochSlots $ blockSlot block

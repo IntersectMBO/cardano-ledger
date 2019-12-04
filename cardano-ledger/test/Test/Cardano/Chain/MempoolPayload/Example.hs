@@ -10,7 +10,7 @@ where
 
 import Data.List ((!!))
 
-import Cardano.Chain.MempoolPayload (MempoolPayload (..), MempoolPayload)
+import Cardano.Chain.MempoolPayload (AMempoolPayload (..), MempoolPayload)
 
 import Test.Cardano.Chain.Delegation.Example as Delegation
     (exampleCertificates)

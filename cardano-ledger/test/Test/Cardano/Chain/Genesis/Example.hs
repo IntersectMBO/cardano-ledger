@@ -2,7 +2,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE TypeApplications          #-}
-{-# LANGUAGE PatternSynonyms           #-}
 
 module Test.Cardano.Chain.Genesis.Example
   ( exampleGenesisAvvmBalances
@@ -30,7 +29,7 @@ import Cardano.Chain.Common
   , mkKnownLovelacePortion
   , hashKey
   )
-import Cardano.Chain.Delegation (pattern UnsafeCertificate)
+import Cardano.Chain.Delegation (unsafeCertificate)
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisNonAvvmBalances(..)
@@ -100,7 +99,7 @@ exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
     [ ( hashKey issueVerKey
-      , UnsafeCertificate
+      , unsafeCertificate
         (EpochNumber 68300481033)
         issueVerKey
         (VerificationKey
