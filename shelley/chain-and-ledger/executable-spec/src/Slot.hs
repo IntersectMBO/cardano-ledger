@@ -100,4 +100,4 @@ slotShelleyToByron (Slot s) = Byron.Slot $ fromIntegral s
 
 newtype BlockNo = BlockNo { unBlockNo :: Word64 }
   deriving stock   (Show, Eq, Ord, Generic)
-  deriving newtype (Enum, Bounded, Num, NoUnexpectedThunks)
+  deriving newtype (Enum, Bounded, Num, NoUnexpectedThunks, ToCBOR)

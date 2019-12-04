@@ -23,6 +23,7 @@ header_body =
   , leader_value     : unit_interval
   , leader_proof     : $vrf_proof
   , size             : uint
+  , block_number     : uint
   , block_body_hash  : $hash            ; merkle pair root
   , operational_cert
   , protocol_version
@@ -43,11 +44,11 @@ protocol_version = (uint, uint, uint)
 transaction_body =
   { 0 : #6.258([* transaction_input])
   , 1 : [* transaction_output]
-  , 2 : [* delegation_certificate]
-  , 3 : [* withdrawal]
+  , ? 2 : [* delegation_certificate]
+  , ? 3 : [* withdrawal]
   , 4 : coin ; fee
   , 5 : uint ; ttl
-  , 6 : update
+  , ? 6 : full_update
   }
 
 ; Is it okay to have this as a group? Is it valid CBOR?! Does it need to be?
@@ -67,23 +68,22 @@ address =
  // 8, keyhash                ; bootstrap address
  )
 
-
 delegation_certificate =
-  [( 0, keyhash         ; stake key registration
-  // 1, scripthash      ; stake script registration
-  // 2, keyhash         ; stake key de-registration
-  // 3, scripthash      ; stake script de-registration
-  // 4                  ; stake key delegation
-      , keyhash         ; delegating key
-      , keyhash         ; key delegated to
-  // 5                  ; stake script delegation
-      , scripthash      ; delegating script
-      , keyhash         ; key delegated to
-  // 6, keyhash, pool_params  ; stake pool registration
-  // 7, keyhash, epoch  ; stake pool retirement
-  // 8                  ; genesis key delegation
-      , genesishash     ; delegating key
-      , keyhash         ; key delegated to
+  [( 0, keyhash                       ; stake key registration
+  // 1, scripthash                    ; stake script registration
+  // 2, keyhash                       ; stake key de-registration
+  // 3, scripthash                    ; stake script de-registration
+  // 4                                ; stake key delegation
+      , keyhash                       ; delegating key
+      , keyhash                       ; key delegated to
+  // 5                                ; stake script delegation
+      , scripthash                    ; delegating script
+      , keyhash                       ; key delegated to
+  // 6, keyhash, pool_params          ; stake pool registration
+  // 7, keyhash, epoch                ; stake pool retirement
+  // 8                                ; genesis key delegation
+      , genesishash                   ; delegating key
+      , keyhash                       ; key delegated to
   // 9, [* move_instantaneous_reward] ; move instantaneous rewards
  ) ]
 
@@ -96,25 +96,53 @@ credential =
   // 2, genesishash
   )
 
-coin = uint
-
-epoch = uint
-
-keyhash = $hash
-scripthash = $hash
-
-pool_params = ( #6.258([* keyhash])
-              , coin               ; cost
-              , unit_interval      ; margin
-              , coin               ; pledge
-              , keyhash            ; operator
-              , $vrf_keyhash       ; vrf keyhash
-              , [credential]       ; reward_account
+pool_params = ( #6.258([* keyhash]) ; pool owners
+              , coin                ; cost
+              , unit_interval       ; margin
+              , coin                ; pledge
+              , keyhash             ; operator
+              , $vrf_keyhash        ; vrf keyhash
+              , [credential]        ; reward_account
               )
 
 withdrawal = [credential, amount : uint]
 
-update = undefined
+full_update = [ protocol_param_update_votes, application_version_update_votes ]
+
+protocol_param_update_votes =
+  { * genesishash => protocol_param_update }
+
+protocol_param_update =
+  { ? 0:  uint               ; minfee A
+  , ? 1:  uint               ; minfee B
+  , ? 2:  uint               ; max block body size
+  , ? 3:  uint               ; max transaction size
+  , ? 4:  uint               ; max block header size
+  , ? 5:  coin               ; key deposit
+  , ? 6:  unit_interval      ; key deposit min refund
+  , ? 7:  rational           ; key deposit decay rate
+  , ? 8:  coin               ; pool deposit
+  , ? 9:  unit_interval      ; pool deposit min refund
+  , ? 10: rational           ; pool deposit decay rate
+  , ? 11: epoch              ; maximum epoch
+  , ? 12: uint               ; n_optimal. desired number of stake pools
+  , ? 13: rational           ; pool pledge influence
+  , ? 14: unit_interval      ; expansion rate
+  , ? 15: unit_interval      ; treasury growth rate
+  , ? 16: unit_interval      ; active slot coefficient
+  , ? 17: unit_interval      ; d. decentralization constant
+  , ? 18: uint               ; extra entropy
+  , ? 19: [protocol_version] ; protocol version
+  }
+
+application_version_update_votes = { * genesishash => application_version_update }
+
+application_version_update = { * application_name =>  [uint, application_metadata] }
+
+application_metadata = { * system_tag => installerhash }
+
+application_name = tstr
+system_tag = tstr
 
 transaction_witness_set =
   (  0, vkeywitness
@@ -126,9 +154,23 @@ transaction_witness_set =
 
 vkeywitness = [$vkey, $signature]
 
-; Crypto Types will be defined for mock and real crypto in separate files using this syntax
+unit_interval = rational
+
+rational =  #6.30(
+   [ numerator   : uint
+   , denominator : uint
+   ])
+
+coin = uint
+epoch = uint
+
+keyhash = $hash
+
+scripthash = $hash
 
 genesishash = $hash
+
+installerhash = $hash
 
 $hash /= bytes
 
@@ -145,9 +187,3 @@ $kes_vkey /= bytes
 
 $kes_signature /= bytes
 
-; Numeric Types
-
-unit_interval =
-  [ numerator   : uint
-  , denominator : uint
-  ]

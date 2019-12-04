@@ -7,6 +7,7 @@ module Updates
   ( Ppm(..)
   , PPUpdateEnv(..)
   , PPUpdate(..)
+  , PParamsUpdate(..)
   , ApName(..)
   , ApVer(..)
   , Mdt(..)
@@ -30,7 +31,7 @@ module Updates
   )
 where
 
-import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
+import           Cardano.Binary (Encoding, ToCBOR (toCBOR), encodeListLen, encodeMapLen)
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -111,6 +112,7 @@ data Ppm = MinFeeA Integer
   | MinFeeB Natural
   | MaxBBSize Natural
   | MaxTxSize Natural
+  | MaxBHSize Natural
   | KeyDeposit Coin
   | KeyMinRefund UnitInterval
   | KeyDecayRate Rational
@@ -130,60 +132,42 @@ data Ppm = MinFeeA Integer
 
 instance NoUnexpectedThunks Ppm
 
-instance ToCBOR Ppm where
-  toCBOR = \case
-    MinFeeA a -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
+newtype PParamsUpdate = PParamsUpdate { ppmSet :: Set Ppm }
+  deriving (Show, Eq, Generic, Ord)
 
-    MinFeeB b -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR b
+instance NoUnexpectedThunks PParamsUpdate
 
-    MaxBBSize maxBBSize ->
-      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR maxBBSize
-
-    MaxTxSize maxTxSize ->
-      encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR maxTxSize
-
-    KeyDeposit keyDeposit ->
-      encodeListLen 2 <> toCBOR (4 :: Word8) <> toCBOR keyDeposit
-
-    KeyMinRefund keyMinRefund ->
-      encodeListLen 2 <> toCBOR (5 :: Word8) <> toCBOR keyMinRefund
-
-    KeyDecayRate keyDecayRate ->
-      encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR keyDecayRate
-
-    PoolDeposit poolDeposit ->
-      encodeListLen 2 <> toCBOR (7 :: Word8) <> toCBOR poolDeposit
-
-    PoolMinRefund poolMinRefund ->
-      encodeListLen 2 <> toCBOR (8 :: Word8) <> toCBOR poolMinRefund
-
-    PoolDecayRate poolDecayRate ->
-      encodeListLen 2 <> toCBOR (9 :: Word8) <> toCBOR poolDecayRate
-
-    EMax eMax -> encodeListLen 2 <> toCBOR (10 :: Word8) <> toCBOR eMax
-
-    Nopt nopt -> encodeListLen 2 <> toCBOR (11 :: Word8) <> toCBOR nopt
-
-    A0   a0   -> encodeListLen 2 <> toCBOR (12 :: Word8) <> toCBOR a0
-
-    Rho  rho  -> encodeListLen 2 <> toCBOR (13 :: Word8) <> toCBOR rho
-
-    Tau  tau  -> encodeListLen 2 <> toCBOR (14 :: Word8) <> toCBOR tau
-
-    ActiveSlotCoefficient activeSlotCoeff ->
-      encodeListLen 2 <> toCBOR (15 :: Word8) <> toCBOR activeSlotCoeff
-
-    D d -> encodeListLen 2 <> toCBOR (16 :: Word8) <> toCBOR d
-
-    ExtraEntropy extraEntropy ->
-      encodeListLen 2 <> toCBOR (17 :: Word8) <> toCBOR extraEntropy
-
-    ProtocolVersion protocolVersion ->
-      encodeListLen 2 <> toCBOR (18 :: Word8) <> toCBOR protocolVersion
+instance ToCBOR PParamsUpdate where
+  toCBOR (PParamsUpdate ppms) = encodeMapLen l <> foldMap f ppms
+    where
+      l = fromIntegral $ Set.size ppms
+      word :: Word8 -> Encoding
+      word = toCBOR
+      f = \case
+        MinFeeA x               -> word  0 <> toCBOR x
+        MinFeeB x               -> word  1 <> toCBOR x
+        MaxBBSize x             -> word  2 <> toCBOR x
+        MaxTxSize x             -> word  3 <> toCBOR x
+        MaxBHSize x             -> word  4 <> toCBOR x
+        KeyDeposit x            -> word  5 <> toCBOR x
+        KeyMinRefund x          -> word  6 <> toCBOR x
+        KeyDecayRate x          -> word  7 <> toCBOR x
+        PoolDeposit x           -> word  8 <> toCBOR x
+        PoolMinRefund x         -> word  9 <> toCBOR x
+        PoolDecayRate x         -> word 10 <> toCBOR x
+        EMax x                  -> word 11 <> toCBOR x
+        Nopt x                  -> word 12 <> toCBOR x
+        A0   x                  -> word 13 <> toCBOR x
+        Rho  x                  -> word 14 <> toCBOR x
+        Tau  x                  -> word 15 <> toCBOR x
+        ActiveSlotCoefficient x -> word 16 <> toCBOR x
+        D x                     -> word 17 <> toCBOR x
+        ExtraEntropy x          -> word 18 <> toCBOR x
+        ProtocolVersion x       -> word 19 <> toCBOR x
 
 -- | Update operation for protocol parameters structure @PParams
 newtype PPUpdate crypto
-  = PPUpdate (Map (GenKeyHash crypto) (Set Ppm))
+  = PPUpdate (Map (GenKeyHash crypto) PParamsUpdate)
   deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
 
 -- | This is just an example and not neccessarily how we will actually validate names
@@ -245,13 +229,14 @@ emptyUpdateState = UpdateState
 emptyUpdate :: Update crypto
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)
 
-updatePParams :: PParams -> Set Ppm -> PParams
-updatePParams = Set.foldr updatePParams'
+updatePParams :: PParams -> PParamsUpdate -> PParams
+updatePParams ppms (PParamsUpdate up) = Set.foldr updatePParams' ppms up
  where
   updatePParams' (MinFeeA               p) pps = pps { _minfeeA = p }
   updatePParams' (MinFeeB               p) pps = pps { _minfeeB = p }
   updatePParams' (MaxBBSize             p) pps = pps { _maxBBSize = p }
   updatePParams' (MaxTxSize             p) pps = pps { _maxTxSize = p }
+  updatePParams' (MaxBHSize             p) pps = pps { _maxBHSize = p }
   updatePParams' (KeyDeposit            p) pps = pps { _keyDeposit = p }
   updatePParams' (KeyMinRefund          p) pps = pps { _keyMinRefund = p }
   updatePParams' (KeyDecayRate          p) pps = pps { _keyDecayRate = p }

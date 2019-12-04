@@ -57,12 +57,8 @@ where
 
 import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 
-import           Cardano.Binary (ToCBOR)
 import           Cardano.Crypto.Hash (ShortHash)
-import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
-import           Cardano.Crypto.VRF (evalCertified)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
-import           Crypto.Random (drgNewTest, withDRG)
 import           Data.ByteString.Char8 (pack)
 import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
@@ -71,14 +67,13 @@ import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet
 import           Data.Maybe (isJust, maybe)
 import           Data.Ratio ((%))
 import           Data.Sequence (empty, fromList)
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
-import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, CertifiedVRF, ChainState,
-                     Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
-                     LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
-                     RewardAcnt, SKey, SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, UpdateState, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
+import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, ChainState, Credential,
+                     DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState,
+                     Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
+                     SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update,
+                     UpdateState, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
@@ -93,8 +88,8 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
-import           Keys (pattern GenDelegs, Hash, pattern KeyPair, pattern SKeyES, pattern VKeyES,
-                     hash, hashKey, sKey, sign, signKES, vKey)
+import           Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey, sKey, sign, signKES,
+                     vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
@@ -122,8 +117,9 @@ import           TxData (pattern AddrPtr, pattern Delegation, pattern KeyHashObj
                      _poolRAcnt, _poolVrf)
 import qualified TxData (TxBody (..))
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
-                     InstallerHash (..), pattern Mdt, pattern PPUpdate, Ppm (..), SystemTag (..),
-                     pattern Update, pattern UpdateState, emptyUpdate, emptyUpdateState)
+                     InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
+                     Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, emptyUpdate,
+                     emptyUpdateState)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
@@ -143,22 +139,6 @@ data MIRExample =
   , mirRewards :: Coin
   , target     :: Either [[PredicateFailure CHAIN]] ChainState
   } deriving (Show, Eq)
-
-mkCertifiedVRF
-  :: ToCBOR a
-  => WithResult a
-  -> SignKeyVRF
-  -> CertifiedVRF a
-mkCertifiedVRF a sk = fst . withDRG (drgNewTest seed) $
-    coerce <$> evalCertified () a sk
-  where
-    seed = (4,0,0,0,1)
-
--- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKeyES, VKeyES)
-mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyKES 90
-  return (SKeyES sk, VKeyES $ deriveVerKeyKES sk)
 
 data AllPoolKeys = AllPoolKeys
   { cold :: KeyPair
@@ -480,7 +460,7 @@ utxoEx2A = genesisCoins
 ppupEx2A :: PPUpdate
 ppupEx2A = PPUpdate $ Map.singleton
                         (hashKey $ coreNodeVKG 0) -- stake key
-                        (Set.singleton (PoolDeposit 255))
+                        (PParamsUpdate $ Set.singleton (PoolDeposit 255))
 
 -- | Update proposal that just changes protocol parameters,
 --   and does not change applications.
@@ -1509,8 +1489,8 @@ ex2L = CHAINExample (Slot 510) expectedStEx2K blockEx2L (Right expectedStEx2L)
 -- have three genesis keys vote on the same new parameters
 
 
-ppVote3A :: Set Ppm
-ppVote3A = Set.fromList [ExtraEntropy (mkNonce 123), PoolDeposit 200]
+ppVote3A :: PParamsUpdate
+ppVote3A = PParamsUpdate $ Set.fromList [ExtraEntropy (mkNonce 123), PoolDeposit 200]
 
 ppupEx3A :: PPUpdate
 ppupEx3A = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, ppVote3A)
