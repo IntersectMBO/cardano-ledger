@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -35,12 +36,14 @@ import Cardano.Binary
 import Cardano.Chain.Block
   ( BlockSignature(..)
   , Block
-  , Body (..)
+  , Body
+  , pattern Body
   , BoundaryBlock
   , BoundaryHeader
   , Header
   , HeaderHash
   , Proof(..)
+  , pattern Proof
   , ToSign(..)
   , dropBoundaryBody
   , fromCBORBoundaryConsensusData

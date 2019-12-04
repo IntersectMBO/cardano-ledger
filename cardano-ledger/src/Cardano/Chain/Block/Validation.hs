@@ -8,6 +8,7 @@
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 
 module Cardano.Chain.Block.Validation
   ( updateBody
@@ -43,17 +44,19 @@ import Streaming (Of(..), Stream, hoist)
 import qualified Streaming.Prelude as S
 
 import Cardano.Binary
-  ( FromCBOR(..)
+  ( Annotated(..)
+  , FromCBOR(..)
   , ToCBOR(..)
   , encodeListLen
   , enforceSize
+  , serialize'
   )
 import Cardano.Chain.Block.Body (Body (..))
 import Cardano.Chain.Block.Block
   ( Block(..)
   , BlockOrBoundary(..)
   , BoundaryBlock(..)
-  , blockProtocolMagicId
+  , blockAProtocolMagicId
   , blockDlgPayload
   , blockHashAnnotated
   , blockHeader
@@ -104,7 +107,7 @@ import qualified Cardano.Chain.Update as Update
 import Cardano.Chain.Update.Validation.Endorsement (Endorsement(..))
 import qualified Cardano.Chain.Update.Validation.Interface as UPI
 import Cardano.Crypto
-  ( ProtocolMagic(..)
+  ( AProtocolMagic(..)
   , ProtocolMagicId
   , VerificationKey
   , hashDecoded
@@ -171,7 +174,7 @@ initialChainValidationState config = do
     }
  where
   delegationEnv = DI.Environment
-    { DI.protocolMagic = pm
+    { DI.protocolMagic = Annotated pm (serialize' pm)
     , DI.allowedDelegators = unGenesisKeyHashes $ configGenesisKeyHashes config
     , DI.k           = configK config
     , DI.currentEpoch = EpochNumber 0
@@ -329,7 +332,7 @@ validateBlockProofs b =
   validateHeaderMatchesBody (blockHeader b) (blockBody b)
 
 data BodyEnvironment = BodyEnvironment
-  { protocolMagic      :: !ProtocolMagic
+  { protocolMagic      :: !(AProtocolMagic ByteString)
   , utxoConfiguration  :: !UTxOConfiguration
   , k                  :: !BlockCount
   , allowedDelegators  :: !(Set KeyHash)
@@ -400,7 +403,7 @@ updateBody env bs b = do
   txs           = unTxPayload $ blockTxPayload b
 
   delegationEnv = DI.Environment
-    { DI.protocolMagic = getProtocolMagicId protocolMagic
+    { DI.protocolMagic = getAProtocolMagicId protocolMagic
     , DI.allowedDelegators = allowedDelegators
     , DI.k = k
     , DI.currentEpoch = currentEpoch
@@ -414,7 +417,7 @@ updateBody env bs b = do
     }
 
   updateEnv = UPI.Environment
-    { UPI.protocolMagic = getProtocolMagicId protocolMagic
+    { UPI.protocolMagic = getAProtocolMagicId protocolMagic
     , UPI.k = k
     , UPI.currentSlot = currentSlot
     , UPI.numGenKeys = toNumGenKeys $ Set.size allowedDelegators
@@ -451,7 +454,7 @@ headerIsValid updateState h =
 
 
 data EpochEnvironment = EpochEnvironment
-  { protocolMagic     :: !ProtocolMagicId
+  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
   , k                 :: !BlockCount
   , allowedDelegators :: !(Set KeyHash)
   , delegationMap     :: !Delegation.Map
@@ -517,8 +520,8 @@ updateBlock config cvs b = do
 
   let
     bodyEnv = BodyEnvironment
-      { protocolMagic = ProtocolMagic
-        (blockProtocolMagicId b)
+      { protocolMagic = AProtocolMagic
+        (blockAProtocolMagicId b)
         (configReqNetMagic config)
       , k          = configK config
       , allowedDelegators
@@ -544,7 +547,7 @@ updateBlock config cvs b = do
     }
  where
   epochEnv = EpochEnvironment
-    { protocolMagic = blockProtocolMagicId b
+    { protocolMagic = blockAProtocolMagicId b
     , k = configK config
     , allowedDelegators
     , delegationMap

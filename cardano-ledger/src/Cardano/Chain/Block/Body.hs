@@ -9,13 +9,13 @@
 
 module Cardano.Chain.Block.Body
   ( Body
-    ( Body
-    , bodyTxPayload
+    ( bodyTxPayload
     , bodySscPayload
     , bodyDlgPayload
     , bodyUpdatePayload
     , bodySerialized
     )
+  , pattern Body
   , bodyTxs
   , bodyWitnesses
   )

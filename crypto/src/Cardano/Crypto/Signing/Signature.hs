@@ -45,7 +45,8 @@ import Text.JSON.Canonical (JSValue(..), toJSString)
 import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary
-  ( Decoded(..)
+  ( Annotated(..)
+  , Decoded(..)
   , Decoder
   , Encoding
   , FromCBOR(..)
@@ -195,7 +196,7 @@ verifySignature toEnc pm tag vk x sig =
 -- | Verify a signature
 verifySignatureDecoded
   :: Decoded t
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> SignTag
   -> VerificationKey
   -> t

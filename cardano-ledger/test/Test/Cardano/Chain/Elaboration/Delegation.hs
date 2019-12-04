@@ -14,6 +14,7 @@ import Test.Cardano.Prelude
 import qualified Data.Set as Set
 import Hedgehog (assert, forAll, property, success, cover)
 
+import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Chain.Common (hashKey)
 import qualified Cardano.Chain.Common as Concrete
 import qualified Cardano.Chain.Delegation as Concrete
@@ -69,7 +70,7 @@ ts_prop_elaboratedCertsValid =
           Just cert ->
             let concreteCert = elaborateDCert pm cert in
             assert
-              $ Concrete.Certificate.isValid pm concreteCert
+              $ Concrete.Certificate.isValid (Annotated pm (serialize' pm)) concreteCert
  where
   env = DSEnv
     { _dSEnvAllowedDelegators = Set.fromList
@@ -99,7 +100,7 @@ elaborateDCert pm cert = Concrete.signCertificate
 
 elaborateDSEnv :: DSEnv -> Scheduling.Environment
 elaborateDSEnv abstractEnv = Scheduling.Environment
-  { Scheduling.protocolMagic = Dummy.protocolMagicId
+  { Scheduling.protocolMagic = Dummy.annotatedProtocolMagicId
   , Scheduling.allowedDelegators = Set.fromList
     $   hashKey
     .   elaborateVKeyGenesis

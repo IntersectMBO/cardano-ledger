@@ -9,13 +9,13 @@
 
 module Cardano.Chain.Block.Proof
   ( Proof
-    ( Proof
-    , proofUTxO
+    ( proofUTxO
     , proofSsc
     , proofDelegation
     , proofUpdate
     , proofSerialized
     )
+  , pattern Proof
   , ProofValidationError (..)
   , mkProof
   , recoverProof

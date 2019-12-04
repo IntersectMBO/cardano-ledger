@@ -27,7 +27,7 @@ import Cardano.Prelude
 import Control.Monad.Except (MonadError(..))
 import Data.Time (UTCTime)
 
-import Cardano.Binary (Raw)
+import Cardano.Binary (Annotated(..), Raw)
 import Cardano.Chain.Block.Header (HeaderHash, genesisHeaderHash)
 import Cardano.Chain.Common (BlockCount)
 import Cardano.Chain.Genesis.Data
@@ -44,7 +44,7 @@ import Cardano.Chain.Update (ProtocolParameters)
 import Cardano.Chain.UTxO.UTxOConfiguration
   (UTxOConfiguration, defaultUTxOConfiguration)
 import Cardano.Crypto
-  ( ProtocolMagic(..)
+  ( AProtocolMagic(..)
   , Hash
   , ProtocolMagic
   , ProtocolMagicId(..)
@@ -87,7 +87,7 @@ configEpochSlots = kEpochSlots . configK
 -- @ProtocolMagicId@ and @RequiresNetworkMagic@ are stored separately.
 -- We use them to construct and return a @ProtocolMagic@.
 configProtocolMagic :: Config -> ProtocolMagic
-configProtocolMagic config = ProtocolMagic pmi rnm
+configProtocolMagic config = AProtocolMagic (Annotated pmi ()) rnm
  where
   pmi = configProtocolMagicId config
   rnm = configReqNetMagic config

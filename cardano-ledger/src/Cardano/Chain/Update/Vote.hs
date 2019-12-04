@@ -13,13 +13,14 @@
 module Cardano.Chain.Update.Vote
   (
   -- * Vote
-    Vote(UnsafeVote, voterVK, proposalId, signature, serializeVote)
+    Vote(voterVK, proposalId, signature, serializeVote)
   , VoteId
 
   -- * Vote Constructors
   , mkVote
   , signVote
   , signatureForVote
+  , pattern UnsafeVote
 
   -- * Vote Accessors
   , aProposalId

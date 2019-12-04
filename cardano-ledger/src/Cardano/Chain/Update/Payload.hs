@@ -9,7 +9,8 @@
 {-# LANGUAGE TypeFamilies       #-}
 
 module Cardano.Chain.Update.Payload
-  ( Payload(Payload, payloadProposal, payloadVotes, payloadSerialized)
+  ( Payload(payloadProposal, payloadVotes, payloadSerialized)
+  , pattern Payload
   )
 where
 

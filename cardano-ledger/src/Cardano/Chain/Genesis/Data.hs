@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE PatternSynonyms  #-}
 
 module Cardano.Chain.Genesis.Data
   ( GenesisData(..)
@@ -44,7 +45,11 @@ import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
-import Cardano.Crypto (ProtocolMagicId (..), hashRaw)
+import Cardano.Crypto
+  ( ProtocolMagicId (..)
+  , pattern ProtocolMagicId
+  , hashRaw
+  )
 
 
 -- | Genesis data contains all data which determines consensus rules. It must be

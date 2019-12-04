@@ -49,12 +49,13 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import Cardano.Binary (Raw(..), ToCBOR)
+import Cardano.Binary (Annotated(..), Raw(..), ToCBOR)
 import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing
   (AbstractHash(..), Hash, HashAlgorithm, abstractHash, hash)
 import Cardano.Crypto.ProtocolMagic
-  ( ProtocolMagic(..)
+  ( AProtocolMagic(..)
+  , ProtocolMagic
   , ProtocolMagicId(..)
   , RequiresNetworkMagic(..)
   )
@@ -87,8 +88,8 @@ import Test.Cardano.Crypto.Orphans ()
 
 genProtocolMagic :: Gen ProtocolMagic
 genProtocolMagic =
-  ProtocolMagic
-    <$> genProtocolMagicId
+  AProtocolMagic
+    <$> (Annotated <$> genProtocolMagicId <*> pure ())
     <*> genRequiresNetworkMagic
 
 -- | Whilst 'ProtocolMagicId' is represented as a 'Word32' in cardano-ledger,

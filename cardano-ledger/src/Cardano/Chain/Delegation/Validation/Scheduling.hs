@@ -22,7 +22,8 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
 import Cardano.Binary
-  ( Decoder
+  ( Annotated(..)
+  , Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -49,7 +50,7 @@ import Cardano.Crypto (ProtocolMagicId)
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic     :: !ProtocolMagicId
+  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators :: !(Set KeyHash)
   , currentEpoch      :: !EpochNumber
   , currentSlot       :: !SlotNumber

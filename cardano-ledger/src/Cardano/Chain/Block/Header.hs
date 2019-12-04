@@ -20,8 +20,7 @@ module Cardano.Chain.Block.Header
   (
   -- * Header
   Header
-    ( UnsafeHeader
-    , headerProtocolMagicId
+    ( headerProtocolMagicId
     , headerPrevHash
     , headerSlot
     , headerDifficulty
@@ -32,6 +31,7 @@ module Cardano.Chain.Block.Header
     , headerSignature
     , headerEpochSlots
     )
+  , pattern UnsafeHeader
 
   -- * Header Constructors
   , mkHeader
@@ -41,6 +41,7 @@ module Cardano.Chain.Block.Header
   , headerIssuer
   , headerLength
   , headerToSign
+  , aHeaderProtocolMagicId
 
   -- * Header Binary Serialization
   , toCBORHeaderToHash
@@ -53,11 +54,11 @@ module Cardano.Chain.Block.Header
 
   -- * Boundary Header
   , BoundaryHeader
-    ( BoundaryHeader
-    , boundaryPrevHash
+    ( boundaryPrevHash
     , boundaryEpoch
     , boundaryDifficulty
     )
+  , pattern BoundaryHeader
   , mkBoundaryHeader
   , boundaryHeaderHashAnnotated
   , wrapBoundaryBytes
@@ -143,7 +144,7 @@ import Cardano.Crypto
 --------------------------------------------------------------------------------
 
 data Header = Header'
-  { headerProtocolMagicId'  :: !ProtocolMagicId
+  { aHeaderProtocolMagicId' :: !(Annotated ProtocolMagicId ByteString)
   , aHeaderPrevHash         :: !(Annotated HeaderHash ByteString)
   -- ^ Pointer to the header of the previous block
   , aHeaderSlot             :: !(Annotated SlotNumber ByteString)
@@ -195,7 +196,7 @@ pattern UnsafeHeader
   , headerSignature
   , headerEpochSlots
   } <- Header'
-    headerProtocolMagicId
+    (unAnnotated -> headerProtocolMagicId)
     (unAnnotated -> headerPrevHash)
     (unAnnotated -> headerSlot)
     (unAnnotated -> headerDifficulty)
@@ -209,13 +210,14 @@ pattern UnsafeHeader
   where
   UnsafeHeader pm prevHash slotNumber difficulty pv sv proof genesisVK sig
     epochSlots =
-    let prevHashBytes = serialize' prevHash
+    let pmBytes = serialize' pm
+        prevHashBytes = serialize' prevHash
         slotNumberBytes = serialize' (fromSlotNumber epochSlots $ slotNumber)
         difficultyBytes = serialize' difficulty
         headerExtraBytes = serializeEncoding' $ toCBORBlockVersions pv sv
         headerBytes = serializeEncoding' $
           encodeListLen 5
-            <> toCBOR pm
+            <> encodePreEncoded pmBytes
             <> encodePreEncoded prevHashBytes
             <> encodePreEncoded (serialize' proof)
             <> (  encodeListLen 4
@@ -226,7 +228,7 @@ pattern UnsafeHeader
                )
             <> encodePreEncoded headerExtraBytes
     in Header'
-          pm
+          (Annotated pm pmBytes)
           (Annotated prevHash prevHashBytes)
           (Annotated slotNumber slotNumberBytes)
           (Annotated difficulty difficultyBytes)
@@ -329,6 +331,9 @@ headerToSign epochSlots h = ToSign
 
 headerLength :: Header -> Natural
 headerLength = fromIntegral . BS.length . headerAnnotation
+
+aHeaderProtocolMagicId :: Header -> Annotated ProtocolMagicId ByteString
+aHeaderProtocolMagicId = aHeaderProtocolMagicId'
 
 --------------------------------------------------------------------------------
 -- Header Binary Serialization

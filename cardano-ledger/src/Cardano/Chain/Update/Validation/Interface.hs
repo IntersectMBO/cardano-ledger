@@ -39,7 +39,8 @@ import Data.Set (union)
 import qualified Data.Set as S
 
 import Cardano.Binary
-  ( Decoder
+  ( Annotated
+  , Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -82,7 +83,7 @@ import Cardano.Crypto (ProtocolMagicId, hash)
 
 
 data Environment = Environment
-  { protocolMagic :: !ProtocolMagicId
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
   , k             :: !BlockCount
   -- ^ TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
   -- of our protocol parameters, so it seems that we need to pass it in the

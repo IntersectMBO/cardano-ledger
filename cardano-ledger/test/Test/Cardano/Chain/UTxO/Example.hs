@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE PatternSynonyms  #-}
 
 {-# OPTIONS_GHC -fno-warn-incomplete-uni-patterns #-}
 
@@ -40,7 +41,8 @@ import Cardano.Chain.Common
   , mtRoot
   )
 import Cardano.Chain.UTxO
-  ( Tx(..)
+  ( Tx
+  , pattern Tx
   , TxAux(..)
   , TxId
   , TxIn(..)
@@ -50,7 +52,8 @@ import Cardano.Chain.UTxO
   , TxProof(..)
   , TxSig
   , TxSigData(..)
-  , TxWitness(..)
+  , TxWitness
+  , pattern TxWitness
   )
 import Cardano.Crypto
   ( AbstractHash(..)

@@ -24,7 +24,8 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 
 import Cardano.Binary
-  ( Decoder
+  ( Annotated
+  , Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -110,7 +111,7 @@ instance FromCBOR Error where
 --   voting threshold. This corresponds to the @UPVOTE@ rules in the spec.
 registerVoteWithConfirmation
   :: MonadError Error m
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> Environment
   -> State
   -> Vote
@@ -155,7 +156,7 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
 --   This corresponds to the `ADDVOTE` rule in the spec.
 registerVote
   :: MonadError Error m
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> RegistrationEnvironment
   -> RegisteredVotes
   -> Vote

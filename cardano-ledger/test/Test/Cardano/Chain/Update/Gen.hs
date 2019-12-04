@@ -1,3 +1,5 @@
+{-# Language PatternSynonyms #-}
+
 module Test.Cardano.Chain.Update.Gen
   ( genCanonicalProtocolParameters
   , genApplicationName
@@ -27,10 +29,13 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Update
   ( ApplicationName(..)
-  , Payload(..)
+  , Payload
+  , pattern Payload
   , Proof
-  , Proposal(..)
+  , Proposal
+  , pattern UnsafeProposal
   , ProposalBody(..)
+  , pattern ProposalBody
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
   , ProtocolVersion(..)

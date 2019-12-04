@@ -10,7 +10,8 @@
 {-# LANGUAGE PatternSynonyms            #-}
 
 module Cardano.Chain.Delegation.Payload
-  ( Payload( UnsafePayload, getPayload, serializePayload )
+  ( Payload( getPayload, serializePayload )
+  , pattern UnsafePayload
   )
 where
 

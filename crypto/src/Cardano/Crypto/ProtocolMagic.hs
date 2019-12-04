@@ -1,22 +1,21 @@
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE PatternSynonyms            #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
 module Cardano.Crypto.ProtocolMagic
-  ( ProtocolMagicId(ProtocolMagicId, unProtocolMagicId)
-  , ProtocolMagic(..)
+  ( ProtocolMagicId(..)
+  , ProtocolMagic
+  , AProtocolMagic(..)
   , RequiresNetworkMagic(..)
   , getProtocolMagic
+  , getProtocolMagicId
   )
 where
 
@@ -26,14 +25,7 @@ import qualified Data.Aeson as A
 import Data.Aeson ((.:), (.=))
 import Text.JSON.Canonical (FromJSON(..), JSValue(..), ToJSON(..), expected)
 
-import Cardano.Binary
-  ( FromCBOR(..)
-  , FromCBORAnnotated(..)
-  , ToCBOR(..)
-  , encodePreEncoded
-  , serialize'
-  , withSlice'
-  )
+import Cardano.Binary (Annotated(..), FromCBOR, ToCBOR)
 
 
 -- | Magic number which should differ for different clusters. It's
@@ -43,29 +35,18 @@ import Cardano.Binary
 -- mhueschen: As part of CO-353 I am adding `getRequiresNetworkMagic` in
 -- order to pipe configuration to functions which must generate & verify
 -- Addresses (which now must be aware of `NetworkMagic`).
-data ProtocolMagic = ProtocolMagic
-  { getProtocolMagicId      :: !ProtocolMagicId
+data AProtocolMagic a = AProtocolMagic
+  { getAProtocolMagicId      :: !(Annotated ProtocolMagicId a)
   , getRequiresNetworkMagic :: !RequiresNetworkMagic
   } deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
 
-data ProtocolMagicId = ProtocolMagicId'
-  { unProtocolMagicId'       :: !Word32
-  , serializeProtocolMagicId :: ByteString
+type ProtocolMagic = AProtocolMagic ()
+
+newtype ProtocolMagicId = ProtocolMagicId
+  { unProtocolMagicId :: Word32
   } deriving (Show, Eq, Generic)
-    deriving anyclass (NFData)
-    deriving NoUnexpectedThunks via AllowThunksIn '["serializeProtocolMagicId"] ProtocolMagicId
-
-{-# COMPLETE ProtocolMagicId #-}
-pattern ProtocolMagicId :: Word32 -> ProtocolMagicId
-pattern ProtocolMagicId { unProtocolMagicId } <- ProtocolMagicId' unProtocolMagicId _
- where
-  ProtocolMagicId w = ProtocolMagicId' w (serialize' w)
-
-instance FromCBORAnnotated ProtocolMagicId where
-  fromCBORAnnotated' = withSlice' $ ProtocolMagicId' <$> (lift fromCBOR)
-
-instance ToCBOR ProtocolMagicId where
-  toCBOR = encodePreEncoded . serializeProtocolMagicId
+    deriving newtype (FromCBOR, ToCBOR)
+    deriving anyclass (NFData, NoUnexpectedThunks)
 
 instance A.ToJSON ProtocolMagicId where
   toJSON = A.toJSON . unProtocolMagicId
@@ -73,18 +54,21 @@ instance A.ToJSON ProtocolMagicId where
 instance A.FromJSON ProtocolMagicId where
   parseJSON v = ProtocolMagicId <$> A.parseJSON v
 
+getProtocolMagicId :: AProtocolMagic a -> ProtocolMagicId
+getProtocolMagicId = unAnnotated . getAProtocolMagicId
+
 -- mhueschen: For backwards-compatibility reasons, I redefine this function
 -- in terms of the two record accessors.
-getProtocolMagic :: ProtocolMagic -> Word32
+getProtocolMagic :: AProtocolMagic a -> Word32
 getProtocolMagic = unProtocolMagicId . getProtocolMagicId
 
 instance A.ToJSON ProtocolMagic where
-  toJSON (ProtocolMagic ident rnm) =
+  toJSON (AProtocolMagic (Annotated (ProtocolMagicId ident) ()) rnm) =
     A.object ["pm" .= ident, "requiresNetworkMagic" .= rnm]
 
 instance A.FromJSON ProtocolMagic where
   parseJSON = A.withObject "ProtocolMagic" $ \o ->
-    ProtocolMagic
+    AProtocolMagic
       <$> o .: "pm"
       <*> o .: "requiresNetworkMagic"
 

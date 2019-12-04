@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Chain.Delegation.CBOR
   ( tests
@@ -12,7 +13,7 @@ import Data.List ((!!))
 
 import Hedgehog (Property)
 
-import Cardano.Chain.Delegation (Payload(..))
+import Cardano.Chain.Delegation (pattern UnsafePayload)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   (goldenTestCBORAnnotated, roundTripsCBORAnnotatedBuildable, roundTripsCBORShow)

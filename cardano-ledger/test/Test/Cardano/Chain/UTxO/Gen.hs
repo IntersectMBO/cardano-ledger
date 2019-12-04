@@ -1,3 +1,5 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Test.Cardano.Chain.UTxO.Gen
   ( genCompactTxId
   , genCompactTxIn
@@ -43,7 +45,8 @@ import Cardano.Chain.UTxO
   ( CompactTxId
   , CompactTxIn
   , CompactTxOut
-  , Tx(..)
+  , Tx
+  , pattern Tx
   , TxAttributes
   , TxAux(..)
   , TxId
@@ -55,7 +58,8 @@ import Cardano.Chain.UTxO
   , TxSig
   , TxSigData(..)
   , TxValidationError(..)
-  , TxWitness(..)
+  , TxWitness
+  , pattern TxWitness
   , UTxOConfiguration(..)
   , UTxO
   , UTxOError(..)

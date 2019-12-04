@@ -21,7 +21,7 @@ import Data.Coerce (coerce)
 import qualified Formatting.Buildable as B (Buildable(..))
 
 import Cardano.Binary
-  (Decoded(..), FromCBOR, Raw, ToCBOR, serialize')
+  (Annotated, Decoded(..), FromCBOR, Raw, ToCBOR, serialize')
 import Cardano.Crypto.Orphans ()
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId)
 import Cardano.Crypto.Signing.Redeem.VerificationKey (RedeemVerificationKey(..))
@@ -77,7 +77,7 @@ verifyRedeemSig pm tag k x s =
 
 verifyRedeemSigDecoded
   :: Decoded t
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> SignTag
   -> RedeemVerificationKey
   -> t
