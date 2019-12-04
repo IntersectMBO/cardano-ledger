@@ -11,30 +11,30 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 3c40edcf5bdba8721d3430d0aaaeea8770ce9bec
+  tag: 7a8755b6988a9dd137f3f61a77c6d51e4eafa781
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 3c40edcf5bdba8721d3430d0aaaeea8770ce9bec
+  tag: 7a8755b6988a9dd137f3f61a77c6d51e4eafa781
   subdir: test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 057d8a9a3e751f88fc7677df5713c5ecc47a37c4
+  tag: d733bbc887d800c387b7ef4ed0a23225fca28d02
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 057d8a9a3e751f88fc7677df5713c5ecc47a37c4
+  tag: d733bbc887d800c387b7ef4ed0a23225fca28d02
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 057d8a9a3e751f88fc7677df5713c5ecc47a37c4
+  tag: d733bbc887d800c387b7ef4ed0a23225fca28d02
   subdir: binary/test
 
 source-repository-package
@@ -45,26 +45,26 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: c1f9d85f50a6e71b2376618cb57656a1b7192ef1
+  tag: 203ec5b7ac22f8d44fc2d6a44ea1233962c2c0e6
   subdir: byron/semantics/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: c1f9d85f50a6e71b2376618cb57656a1b7192ef1
+  tag: 203ec5b7ac22f8d44fc2d6a44ea1233962c2c0e6
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: c1f9d85f50a6e71b2376618cb57656a1b7192ef1
+  tag: 203ec5b7ac22f8d44fc2d6a44ea1233962c2c0e6
   subdir: byron/chain/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
   subdir:   contra-tracer
-  tag: 4956b32f039579a0e7e4fd10793f65b4c77d9044
+  tag: a71addb2c45a8e116c2a57385b67812d51352a7a
 
 source-repository-package
   type: git
