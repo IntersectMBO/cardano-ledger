@@ -77,7 +77,7 @@ getRawNonce (Nonce hsh) = getHash hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
 testGKeyHash :: GenKeyHash
-testGKeyHash = (hashKey . snd . mkGenKeys) (0, 0, 0, 0, 0)
+testGKeyHash = (hashKey . snd . mkGenKey) (0, 0, 0, 0, 0)
 
 testVRFKH :: VRFKeyHash
 testVRFKH = hashKeyVRF . snd $ mkVRFKeyPair (0, 0, 0, 0, 5)

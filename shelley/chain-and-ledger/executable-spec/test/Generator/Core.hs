@@ -10,8 +10,10 @@ module Generator.Core
   , genNatural
   , genTxOut
   , genUtxo0
+  , genCoinList
   , increasingProbabilityAt
   , mkGenesisLedgerState
+  , traceCoreKeyPairs
   , traceKeyPairs
   , traceVRFKeyPairs
   , someKeyPairs
@@ -32,10 +34,10 @@ import           Address (toAddr, toCred)
 import           Coin (Coin (..))
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
-import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF, TxOut, UTxO,
-                     UTxOState, VKey, VerKeyVRF)
+import           MockTypes (Addr, CoreKeyPair, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF,
+                     TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
-import           Test.Utils (mkKeyPair)
+import           Test.Utils (mkGenKey, mkKeyPair)
 import           Tx (pattern TxOut)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
 
@@ -133,3 +135,10 @@ traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
   body seed = fst . withDRG (drgNewTest seed) $ do
     sk <- genKeyVRF
     return (sk, deriveVerKeyVRF sk)
+
+-- | A pre-populated space of core node keys
+traceCoreKeyPairs :: [CoreKeyPair]
+traceCoreKeyPairs = mkGenKeys <$> [1..7]
+
+mkGenKeys :: Word64 -> CoreKeyPair
+mkGenKeys n = (uncurry KeyPair . swap) (mkGenKey (n, n , n, n, n))

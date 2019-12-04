@@ -2,7 +2,7 @@
 
 module Test.Utils
   ( assertAll
-  , mkGenKeys
+  , mkGenKey
   , mkKeyPair
   , mkVRFKeyPair
   , mkAddr
@@ -25,8 +25,8 @@ import           Hedgehog (MonadTest, (===))
 assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
 assertAll p xs = [] === filter (not . p) xs
 
-mkGenKeys :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKeyGenesis)
-mkGenKeys seed = fst . withDRG (drgNewTest seed) $ do
+mkGenKey :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKeyGenesis)
+mkGenKey seed = fst . withDRG (drgNewTest seed) $ do
   sk <- genKeyDSIGN
   return (SKey sk, VKeyGenesis $ deriveVerKeyDSIGN sk)
 
