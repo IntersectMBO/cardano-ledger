@@ -24,6 +24,7 @@ module Generator.Core
 
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Crypto.Random (drgNewTest, withDRG)
+import qualified Data.Map.Strict as Map
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 import           Hedgehog (Gen)
@@ -84,9 +85,13 @@ pickStakeKey :: KeyPairs -> Gen VKey
 pickStakeKey keys = vKey . snd <$> Gen.element keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
+--
+-- Note: we need to keep the initial utxo coin sizes large enough so that
+-- when we simulate sequences of transactions, we have enough funds available
+-- to include certificates that require deposits.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 100 10000 (length addrs) (length addrs)
+  ys <- genCoinList 1000 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
@@ -109,7 +114,7 @@ mkGenesisLedgerState
   -> Gen (UTxOState, DPState)
 mkGenesisLedgerState _ = do
   utxo0 <- genUtxo0 5 10
-  let (LedgerState utxoSt dpSt _) = genesisState utxo0
+  let (LedgerState utxoSt dpSt _) = genesisState Map.empty utxo0
   pure (utxoSt, dpSt)
 
 -- | Generate values the given distribution in 90% of the cases, and values at

@@ -25,6 +25,8 @@ module Generator.Core.QuickCheck
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Control.Monad (replicateM)
 import           Crypto.Random (drgNewTest, withDRG)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 
@@ -34,10 +36,10 @@ import qualified Test.QuickCheck as QC
 import           Address (toAddr, toCred)
 import           Coin (Coin (..))
 import           Control.State.Transition (IRC)
-import           Keys (pattern KeyPair, hashKey, vKey)
+import           Keys (pattern KeyPair, hashKey, sKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
-import           MockTypes (Addr, CoreKeyPair, DPState, KeyPair, KeyPairs, LEDGER, SignKeyVRF,
-                     TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
+import           MockTypes (Addr, CoreKeyPair, DPState, GenKeyHash, KeyHash, KeyPair, KeyPairs,
+                     LEDGER, SignKeyVRF, TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Test.Utils (mkGenKey, mkKeyPair)
 import           Tx (pattern TxOut)
@@ -66,6 +68,16 @@ mkKeyPairs n
 traceKeyPairs :: KeyPairs
 traceKeyPairs = mkKeyPairs <$> [1 .. 150]
 
+numCoreNodes :: Word64
+numCoreNodes = 7
+
+coreNodes :: [(CoreKeyPair, KeyPair)]
+coreNodes = [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0)
+              , (toKeyPair . mkKeyPair) (x, 0, 0, 0, 1))
+            | x <- [1001..1000+numCoreNodes]]
+          where
+            toKeyPair (sk,vk) = KeyPair {sKey = sk, vKey = vk}
+
 -- | Select between _lower_ and _upper_ keys from 'traceKeyPairs'
 someKeyPairs :: Int -> Int -> Gen KeyPairs
 someKeyPairs lower upper =
@@ -89,9 +101,13 @@ pickStakeKey :: KeyPairs -> Gen VKey
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
+--
+-- Note: we need to keep the initial utxo coin sizes large enough so that
+-- when we simulate sequences of transactions, we have enough funds available
+-- to include certificates that require deposits.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 100 10000 (length addrs) (length addrs)
+  ys <- genCoinList 1000 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
@@ -111,6 +127,14 @@ genUtxo0 lower upper = do
   outs <- genTxOut (fmap toAddr genesisKeys)
   return (genesisCoins outs)
 
+genesisDelegs0 :: Map GenKeyHash KeyHash
+genesisDelegs0
+  = Map.fromList
+      [ (hashVKey gkey, hashVKey pkey)
+      | (gkey, pkey) <- coreNodes]
+  where
+    hashVKey = hashKey . vKey
+
 -- | Generate initial state for the LEDGER STS using the STS environment.
 --
 -- Note: this function must be usable in place of 'applySTS' and needs to align
@@ -122,7 +146,7 @@ mkGenesisLedgerState
   -> Gen (Either a (UTxOState, DPState))
 mkGenesisLedgerState _ = do
   utxo0 <- genUtxo0 5 10
-  let (LedgerState utxoSt dpSt _) = genesisState utxo0
+  let (LedgerState utxoSt dpSt _) = genesisState genesisDelegs0 utxo0
   pure $ Right (utxoSt, dpSt)
 
 -- | Generate values the given distribution in 90% of the cases, and values at

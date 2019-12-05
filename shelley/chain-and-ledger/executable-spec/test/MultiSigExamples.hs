@@ -22,7 +22,7 @@ import qualified Data.Set as Set (fromList)
 import           Coin
 import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
 import           Keys (pattern GenDelegs, undiscriminateKeyHash)
-import           LedgerState (genesisId, genesisCoins, genesisState, _utxoState)
+import           LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
 import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody, TxId,
                      TxIn, UTXOW, UTxOState, Wdrl)
 import           PParams (PParams (..), emptyPParams)
@@ -102,9 +102,12 @@ bobInitCoin :: Coin
 bobInitCoin = 1000
 
 genesis :: LedgerState
-genesis = (genesisState . genesisCoins)
-           [ TxOut aliceAddr aliceInitCoin
-           , TxOut bobAddr bobInitCoin]
+genesis = genesisState genDelegs0 utxo0
+  where
+    genDelegs0 = Map.empty
+    utxo0 = genesisCoins
+              [ TxOut aliceAddr aliceInitCoin
+              , TxOut bobAddr bobInitCoin]
 
 initPParams :: PParams
 initPParams = emptyPParams {_maxTxSize = 1000}

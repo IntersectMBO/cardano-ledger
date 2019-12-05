@@ -356,16 +356,22 @@ genesisCoins outs = UTxO $
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
 genesisState
-  :: UTxO crypto
+  :: Map (GenKeyHash crypto) (KeyHash crypto)
+  -> UTxO crypto
   -> LedgerState crypto
-genesisState utxo0 = LedgerState
+genesisState genDelegs0 utxo0 = LedgerState
   (UTxOState
     utxo0
     (Coin 0)
     (Coin 0)
     emptyUpdateState)
-  emptyDelegation
+  (DPState dState emptyPState)
   0
+  where
+    dState = DState (StakeCreds Map.empty)
+                    Map.empty Map.empty Map.empty Map.empty
+                    (GenDelegs genDelegs0)
+                    Map.empty
 
 -- | Determine if the transaction has expired
 current :: TxBody crypto-> Slot -> Validity

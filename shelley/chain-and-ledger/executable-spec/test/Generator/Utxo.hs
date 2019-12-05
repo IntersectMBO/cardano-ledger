@@ -29,7 +29,9 @@ import           Slot (Slot (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
 import           Updates (emptyUpdate)
-import           UTxO (pattern UTxO, balance, makeWitnessesVKey)
+import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey)
+
+import qualified Debug.Trace as D
 
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
@@ -55,11 +57,12 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys
   let slotWithTTL = slot + Slot ttl
 
   -- certificates
-  (certs, certWitnesses, _, deposits_, refunds_)
+  (certs, certWitnesses, genesisWitnesses, deposits_, refunds_)
     <- genDCerts keys' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
-  when (spendingBalance < deposits_) Gen.discard
+  when (spendingBalance < deposits_)
+       (D.trace ("(HH) GenTx Discarded - " <> show (spendingBalance, deposits_, refunds_)) Gen.discard)
   let balance_ = spendingBalance - deposits_ + refunds_
 
   -- calc. fees and output amounts
@@ -68,6 +71,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys
   -- witnessed transaction
   txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
   let !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
+              `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
       multiSig = Map.empty -- TODO @uroboros Generate multi-sig transactions
 
   return (Tx txBody wits multiSig)

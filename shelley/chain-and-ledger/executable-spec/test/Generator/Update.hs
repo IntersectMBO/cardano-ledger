@@ -39,17 +39,23 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        <*> pure 0 -- _minfeeB
                        <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
                        -- keyDeposit
+                       -- NOTE: we need to keep these deposits small, otherwise
+                       -- when we generate sequences of transactions we will bleed too
+                       -- much funds into the deposit pool (i.e. funds not available as utxo)
                        <*> increasingProbabilityAt
-                             (Coin <$> genInteger 0 50)
-                             (Coin 0, Coin 50)
+                             (Coin <$> genInteger 0 20)
+                             (Coin 0, Coin 20)
                        -- keyMinRefund: 0.1-0.5
                        <*> genIntervalInThousands 100 500
                        -- keyDecayRate: 0.001-0.1
                        <*> genRationalInThousands 1 100
                        -- poolDeposit
+                       -- NOTE: we need to keep these deposits small, otherwise
+                       -- when we generate sequences of transactions we will bleed too
+                       -- much funds into the deposit pool (i.e. funds not available as utxo)
                        <*> increasingProbabilityAt
-                             (Coin <$> genInteger 0 500)
-                             (Coin 0, Coin 500)
+                             (Coin <$> genInteger 0 100)
+                             (Coin 0, Coin 100)
                        -- poolMinRefund: 0.1-0.7
                        <*> genIntervalInThousands 100 700
                        -- poolDecayRate: 0.001-0.1

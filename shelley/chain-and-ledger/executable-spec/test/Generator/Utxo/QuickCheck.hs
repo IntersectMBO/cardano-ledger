@@ -32,6 +32,8 @@ import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
 import           Updates (emptyUpdate)
 import           UTxO (pattern UTxO, balance, makeWitnessesVKey)
 
+import qualified Debug.Trace as D
+
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
 -- Selects unspent outputs and spends the funds on a some valid addresses.
@@ -60,7 +62,8 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys
     <- genDCerts keys' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
-  when (spendingBalance < deposits_) QC.discard
+  when (spendingBalance < deposits_)
+       (D.trace ("(QC) GenTx Discarded - " <> show (spendingBalance, deposits_, refunds_)) QC.discard)
   let balance_ = spendingBalance - deposits_ + refunds_
 
   -- calc. fees and output amounts

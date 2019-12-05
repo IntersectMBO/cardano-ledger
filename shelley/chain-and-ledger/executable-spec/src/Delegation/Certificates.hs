@@ -22,6 +22,7 @@ module Delegation.Certificates
   , isRegKey
   , isDeRegKey
   , isDelegation
+  , isGenesisDelegation
   , isRegPool
   , isRetirePool
   , isInstantaneousRewards
@@ -105,6 +106,11 @@ isDeRegKey _ = False
 isDelegation :: DCert crypto-> Bool
 isDelegation (Delegate _) = True
 isDelegation _ = False
+
+-- | Check for `GenesisDelegate` constructor
+isGenesisDelegation :: DCert crypto-> Bool
+isGenesisDelegation (GenesisDelegate _) = True
+isGenesisDelegation _ = False
 
 -- | Check for `RegPool` constructor
 isRegPool :: DCert crypto-> Bool
