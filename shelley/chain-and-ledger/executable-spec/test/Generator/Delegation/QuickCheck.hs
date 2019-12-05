@@ -111,7 +111,7 @@ genDCert keys coreKeys vrfKeys pparams dpState slot =
                -- TODO mgudemann
                -- needs to sign transaction with `coreKeys`
                -- tends to generate Txs without input which leads to error
-               , (0, genInstantaneousRewards coreKeys dState)
+               , (1, genInstantaneousRewards coreKeys dState)
                ]
  where
   dState = dpState ^. dstate
