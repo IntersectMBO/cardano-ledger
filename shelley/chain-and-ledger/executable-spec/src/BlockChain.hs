@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -45,22 +47,22 @@ import           Data.Sequence (Seq)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
+import           BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, mkNonce)
 import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
-import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Shelley.Crypto
-import           BaseTypes (Nonce (..), Seed(..), UnitInterval, intervalValue, mkNonce)
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
-import           Keys (Hash, KESig, KeyHash,
-                     VKey, VRFValue(..), hash, hashKey, hashKeyVRF)
+import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
-import           Slot (Duration, Slot (..), BlockNo(..))
+import           Slot (BlockNo (..), Duration, Slot (..))
 import           Tx (Tx (..))
 
 import           NonIntegral ((***))
+import           Serialization (CBORGroup (..), ToCBORGroup (..))
 
 -- |The hash of a Block Header
 newtype HashHeader crypto =
@@ -119,15 +121,16 @@ instance Crypto crypto
 
 data ProtVer = ProtVer Natural Natural Natural
   deriving (Show, Eq, Generic, Ord)
+  deriving ToCBOR via (CBORGroup ProtVer)
 
 instance NoUnexpectedThunks ProtVer
 
-instance ToCBOR ProtVer where
-  toCBOR (ProtVer x y z) =
-     encodeListLen 3
-       <> toCBOR x
+instance ToCBORGroup ProtVer where
+  toCBORGroup (ProtVer x y z) =
+          toCBOR x
        <> toCBOR y
        <> toCBOR z
+  listLen _ = 3
 
 data BHBody crypto = BHBody
   { -- | Hash of the previous block header
@@ -175,8 +178,8 @@ instance Crypto crypto
       <> toCBOR (bsize bhBody)
       <> toCBOR (bheaderBlockNo bhBody)
       <> toCBOR (bhash bhBody)
-      <> toCBOR (bheaderOCert bhBody)
-      <> toCBOR (bprotvert bhBody)
+      <> toCBORGroup (bheaderOCert bhBody)
+      <> toCBORGroup (bprotvert bhBody)
 
 data Block crypto
   = Block

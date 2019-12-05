@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -11,7 +13,7 @@ module OCert
   , kesPeriod)
 where
 
-import           Cardano.Binary (FromCBOR(..), ToCBOR, encodeListLen
+import           Cardano.Binary (FromCBOR(..), ToCBOR
                                 , enforceSize, toCBOR)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Data.Set (Set)
@@ -24,6 +26,8 @@ import           Keys (KeyHash, Sig, VKey, VKeyES)
 import           Slot (Slot (..))
 
 import           Numeric.Natural (Natural)
+
+import           Serialization (ToCBORGroup (..), CBORGroup (..))
 
 data OCertEnv crypto = OCertEnv
   { ocertEnvStPools :: Set (KeyHash crypto)
@@ -56,20 +60,21 @@ data OCert crypto = OCert
     -- | Signature of block operational certificate content
   , ocertSigma     :: Sig crypto (VKeyES crypto, Natural, KESPeriod)
   } deriving (Show, Eq, Generic)
+    deriving ToCBOR via (CBORGroup (OCert crypto))
 
 instance Crypto crypto => NoUnexpectedThunks (OCert crypto)
 
 instance
   (Crypto crypto)
-  => ToCBOR (OCert crypto)
+  => ToCBORGroup (OCert crypto)
  where
-  toCBOR ocert =
-    encodeListLen 5
-      <> toCBOR (ocertVkHot ocert)
+  toCBORGroup ocert =
+         toCBOR (ocertVkHot ocert)
       <> toCBOR (ocertVkCold ocert)
       <> toCBOR (ocertN ocert)
       <> toCBOR (ocertKESPeriod ocert)
       <> toCBOR (ocertSigma ocert)
+  listLen _ = 5
 
 instance
   (Crypto crypto)
