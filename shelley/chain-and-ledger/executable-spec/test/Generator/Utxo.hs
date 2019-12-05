@@ -13,18 +13,22 @@ module Generator.Utxo
 import           Control.Monad (when)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq (filter)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
+import           BaseTypes (interval0)
 import           Coin (Coin (..), splitCoin)
+import           Delegation.Certificates (isInstantaneousRewards)
 import           Generator.Core (findPayKeyPair, toAddr)
 import           Generator.Delegation (genDCerts)
 import           LedgerState (pattern UTxOState)
 import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn,
                      TxOut, UTxO, UTxOState, VrfKeyPairs)
+import           PParams (_d)
 import           Slot (Slot (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
@@ -63,6 +67,10 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   when (spendingBalance < deposits_)
        (D.trace ("(HH) GenTx Discarded - " <> show (spendingBalance, deposits_, refunds_)) Gen.discard)
+
+  when (_d pparams == interval0 && (not $ null $ Seq.filter isInstantaneousRewards certs))
+    (D.trace ("(QC) GenTx Discarded - no MIR in decentralized system") Gen.discard)
+
   let balance_ = spendingBalance - deposits_ + refunds_
 
   -- calc. fees and output amounts

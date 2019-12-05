@@ -30,7 +30,7 @@ instance TQC.HasTrace LEDGER Word64 where
     LedgerEnv <$> pure (Slot 0)
               <*> pure 0
               <*> genPParams
-              <*> genCoin 0 1000
+              <*> genCoin 1000000 10000000
 
   sigGen _ ledgerEnv ledgerSt =
     genTx ledgerEnv ledgerSt traceKeyPairs coreKeyPairs traceVRFKeyPairs

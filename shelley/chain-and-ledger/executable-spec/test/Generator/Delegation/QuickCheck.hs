@@ -26,7 +26,8 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
                      pattern RegPool, pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core.QuickCheck (genCoinList, genInteger, genNatural, toCred)
+import           Generator.Core.QuickCheck (genCoinList, genInteger, genNatural, numCoreNodes,
+                     toCred)
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
@@ -298,7 +299,7 @@ genInstantaneousRewards coreKeys delegSt = do
                       <*> QC.shuffle (Map.keys credentials)
   coins <- genCoinList 1 1000 (length winnerCreds) (length winnerCreds)
 
-  coreSigners <- take <$> QC.elements [0.. (max 0 $ (length coreKeys) - 1)]
+  coreSigners <- take <$> QC.elements [5 .. (max 0 $ (length coreKeys) - 1)]
                       <*> QC.shuffle coreKeys
 
   let credCoinMap = Map.fromList $ zip winnerCreds coins
