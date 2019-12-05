@@ -368,10 +368,7 @@ genesisState genDelegs0 utxo0 = LedgerState
   (DPState dState emptyPState)
   0
   where
-    dState = DState (StakeCreds Map.empty)
-                    Map.empty Map.empty Map.empty Map.empty
-                    (GenDelegs genDelegs0)
-                    Map.empty
+    dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
 -- | Determine if the transaction has expired
 current :: TxBody crypto-> Slot -> Validity

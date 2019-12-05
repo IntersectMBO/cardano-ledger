@@ -47,7 +47,7 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
               (traceLength tr <= 20 * length (filter isDelegation certs_))
               "there is at least 1 Delegation certificate for every 10 transactions"
 
-     , cover_ 0 -- TODO @uroboros (currently not producing any Genesis Deleg certs)
+     , cover_ 75
               (traceLength tr <= 40 * length (filter isGenesisDelegation certs_))
               "there is at least 1 Genesis Delegation certificate for every 40 transactions"
 

@@ -13,6 +13,7 @@ module Generator.Core.QuickCheck
   , genUtxo0
   , increasingProbabilityAt
   , mkGenesisLedgerState
+  , coreKeyPairs
   , traceCoreKeyPairs
   , traceKeyPairs
   , traceVRFKeyPairs
@@ -26,7 +27,7 @@ import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Control.Monad (replicateM)
 import           Crypto.Random (drgNewTest, withDRG)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
+import qualified Data.Map.Strict as Map (fromList)
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 
@@ -71,12 +72,19 @@ traceKeyPairs = mkKeyPairs <$> [1 .. 150]
 numCoreNodes :: Word64
 numCoreNodes = 7
 
+-- Pairs of (genesis key, node cold key)
+--
+-- NOTE: we use a seed range in the [1000...] range
+-- to create keys that don't overlap with any of the other generated keys
 coreNodes :: [(CoreKeyPair, KeyPair)]
 coreNodes = [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0)
               , (toKeyPair . mkKeyPair) (x, 0, 0, 0, 1))
             | x <- [1001..1000+numCoreNodes]]
           where
             toKeyPair (sk,vk) = KeyPair {sKey = sk, vKey = vk}
+
+coreKeyPairs :: [CoreKeyPair]
+coreKeyPairs = fst . unzip $ coreNodes
 
 -- | Select between _lower_ and _upper_ keys from 'traceKeyPairs'
 someKeyPairs :: Int -> Int -> Gen KeyPairs

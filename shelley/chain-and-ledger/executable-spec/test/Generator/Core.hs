@@ -24,7 +24,7 @@ module Generator.Core
 
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Crypto.Random (drgNewTest, withDRG)
-import qualified Data.Map.Strict as Map
+import qualified Data.Map.Strict as Map (empty)
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 import           Hedgehog (Gen)

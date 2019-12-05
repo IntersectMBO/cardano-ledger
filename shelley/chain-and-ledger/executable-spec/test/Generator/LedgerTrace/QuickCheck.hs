@@ -14,7 +14,7 @@ module Generator.LedgerTrace.QuickCheck where
 import           Data.Word (Word64)
 
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
-import           Generator.Core.QuickCheck (genCoin, traceKeyPairs, traceVRFKeyPairs)
+import           Generator.Core.QuickCheck (coreKeyPairs, genCoin, traceKeyPairs, traceVRFKeyPairs)
 import           Generator.Update.QuickCheck (genPParams)
 import           Generator.Utxo.QuickCheck (genTx)
 import           MockTypes (LEDGER)
@@ -32,8 +32,7 @@ instance TQC.HasTrace LEDGER Word64 where
               <*> genPParams
               <*> genCoin 0 1000
 
-  -- TODO pass core node keys as inputs
   sigGen _ ledgerEnv ledgerSt =
-    genTx ledgerEnv ledgerSt traceKeyPairs [] traceVRFKeyPairs
+    genTx ledgerEnv ledgerSt traceKeyPairs coreKeyPairs traceVRFKeyPairs
 
   shrinkSignal = shrinkTx
