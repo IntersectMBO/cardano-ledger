@@ -21,20 +21,21 @@ import Control.State.Transition (TRC (..), applySTS)
 import Ledger.Core (Relation (..))
 import qualified LedgerState
 import qualified STS.Bbody as STS
-import qualified STS.Bhead as STS
+import qualified STS.Tick as STS
 import qualified TxData as Tx
+import Slot (Slot)
 
--- | Type alias for the state updated by BHEAD and BBODY rules
+-- | Type alias for the state updated by TICK and BBODY rules
 type ShelleyState = LedgerState.NewEpochState
 
 {-------------------------------------------------------------------------------
   Applying blocks
 -------------------------------------------------------------------------------}
 
-mkBheadEnv ::
+mkTickEnv ::
   ShelleyState crypto ->
-  STS.BheadEnv crypto
-mkBheadEnv = STS.BheadEnv . LedgerState.getGKeys
+  STS.TickEnv crypto
+mkTickEnv = STS.TickEnv . LedgerState.getGKeys
 
 mkBbodyEnv ::
   ShelleyState crypto ->
@@ -53,7 +54,7 @@ mkBbodyEnv
     }
 
 newtype HeaderTransitionError crypto
-  = HeaderTransitionError [STS.PredicateFailure (STS.BHEAD crypto)]
+  = HeaderTransitionError [STS.PredicateFailure (STS.TICK crypto)]
   deriving (Eq, Show)
 
 -- | Apply the header level ledger transition.
@@ -66,13 +67,13 @@ applyHeaderTransition ::
     MonadError (HeaderTransitionError crypto) m
   ) =>
   ShelleyState crypto ->
-  BHeader crypto ->
+  Slot ->
   m (ShelleyState crypto)
 applyHeaderTransition state hdr =
   liftEither
     . left (HeaderTransitionError . join)
-    . applySTS @(STS.BHEAD crypto)
-    $ TRC (mkBheadEnv state, state, hdr)
+    . applySTS @(STS.TICK crypto)
+    $ TRC (mkTickEnv state, state, hdr)
 
 newtype BlockTransitionError crypto
   = BlockTransitionError [STS.PredicateFailure (STS.BBODY crypto)]

@@ -511,7 +511,7 @@ and will always be large enough to meet all of its obligations.
            \eta_c \\
            \var{gkeys} \\
          \end{array}}
-        \vdash\var{nes}\trans{\hyperref[fig:rules:bhead]{bhead}}{\var{bh}}\var{nes'}
+        \vdash\var{nes}\trans{\hyperref[fig:rules:tick]{tick}}{\var{bh}}\var{nes'}
       $$
       be the first sub-transition of
       $s_i\vdash c_i\trans{\hyperref[fig:rules:chain]{chain}}{b_i}c_{i+1}$.
@@ -534,7 +534,7 @@ and will always be large enough to meet all of its obligations.
 %
   We can assume that $s_i$ crosses the epoch boundary,
   since otherwise the $\mathsf{SNAP}$ transition will not occur.
-  Since the $\mathsf{SNAP}$ transition only happens within the $\mathsf{BHEAD}$ transition
+  Since the $\mathsf{SNAP}$ transition only happens within the $\mathsf{TICK}$ transition
   on the epoch boundary, it follows that
   $c_i$ does not contain any stake credentials or pools from the current epoch,
   and so \ref{DBE} will be equivalent to \ref{DEO} (the current epoch is $\epoch{s_i}$).
@@ -592,7 +592,7 @@ and will always be large enough to meet all of its obligations.
   \\~\\
   Case $\hyperref[fig:rules:utxo-shelley]{\mathsf{UTXO}}$.
   We assume that \DBE{\var{nes'}}{s_i} holds, where $\var{nes'}$
-  is the new epoch state after the $\mathsf{BHEAD}$ transition.
+  is the new epoch state after the $\mathsf{TICK}$ transition.
   We must show that \ref{DBE} is preserved after each $\mathsf{UTXO}$ transition.
 %
   The $\mathsf{DELEGS}$ transition can result in values being
