@@ -16,8 +16,8 @@ import           Test.Tasty.HUnit (assertEqual, testCase)
 
 
 import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
-import           BlockChain (BHBody (..), pattern HashHeader, ProtVer (..), TxSeq (..), bhbHash,
-                     mkSeed, seedEta, seedL)
+import           BlockChain (BHBody (..), pattern BHeader, pattern HashHeader, ProtVer (..),
+                     TxSeq (..), bhbHash, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
 import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
@@ -25,7 +25,8 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
 import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash, pattern KeyPair,
-                     pattern UnsafeSig, hash, hashKey, sKey, sign, undiscriminateKeyHash, vKey)
+                     pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
+                     vKey)
 import           LedgerState (genesisId)
 import           Serialization (ToCBORGroup (..))
 import           Slot (BlockNo (..), Epoch (..), Slot (..))
@@ -152,6 +153,7 @@ instance Monoid ToTokens where
 
 serializationTests :: TestTree
 serializationTests = testGroup "Serialization Tests"
+
   [ checkEncoding "list"
     [1::Integer]
     (T (TkListBegin . TkInteger 1 . TkBreak))
@@ -248,6 +250,8 @@ serializationTests = testGroup "Serialization Tests"
       <> S (hashScript testScript :: ScriptHash)
       <> S testScript
     )
+
+  -- checkEncoding "avupdate"
   , let
       appName   = ApName $ pack "Daedalus"
       systemTag = SystemTag $ pack "DOS"
@@ -273,6 +277,8 @@ serializationTests = testGroup "Serialization Tests"
         <> S systemTag
         <> S testInstallerHash
     )
+
+    -- checkEncoding "full_update"
   , let
       ppup = (PPUpdate (Map.singleton
                   testGKeyHash
@@ -293,6 +299,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S avup
     )
 
+  -- checkEncoding "block_header_body"
   , let
       tin = Set.fromList [TxIn genesisId 1]
       tout = [TxOut testAddrE (Coin 2)]
@@ -339,24 +346,29 @@ serializationTests = testGroup "Serialization Tests"
        <> T (TkWord 6) -- Tx Update
        <> S up
       )
+
   , checkEncoding "register script"
     (DeRegKey (ScriptHashObj testScriptHash))
     ( T (TkListLen 2)
       <> T (TkWord 3) -- DeReg cert
       <> S testScriptHash -- keyhash
     )
+
   , checkEncoding "deregister_key"
     (DeRegKey (KeyHashObj testKeyHash1))
     ( T (TkListLen 2)
       <> T (TkWord 2) -- DeReg cert
       <> S testKeyHash1 -- keyhash
     )
+
   , checkEncoding "deregister_script"
     (DeRegKey (ScriptHashObj testScriptHash))
     ( T (TkListLen 2)
       <> T (TkWord 3) -- DeReg cert
       <> S testScriptHash -- script hash
     )
+
+    -- checkEncoding "register-pool"
   , let poolOwner = testKeyHash2
         poolMargin = unsafeMkUnitInterval 0.7
         poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
@@ -383,6 +395,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S testVRFKH    -- vrf keyhash
       <> S poolRAcnt    -- reward acct
     )
+
   , checkEncoding "retire_pool"
     (RetirePool testKeyHash1 (Epoch 1729))
     ( T (TkListLen 3
@@ -390,6 +403,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S testKeyHash1 -- key hash
       <> S (Epoch 1729) -- epoch
     )
+
   , checkEncoding "Key_delegation"
     (Delegate (Delegation (KeyHashObj testKeyHash1) testKeyHash2))
     ( T (TkListLen 3
@@ -397,6 +411,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S testKeyHash1
       <> S testKeyHash2
     )
+
   , checkEncoding "script_delegation"
     (Delegate (Delegation (ScriptHashObj testScriptHash) testKeyHash2))
     ( T (TkListLen 3
@@ -404,6 +419,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S testScriptHash
       <> S testKeyHash2
     )
+
   , checkEncoding "genesis_delegation"
     (GenesisDelegate (testGKeyHash, testKeyHash1))
     ( T (TkListLen 3
@@ -411,6 +427,8 @@ serializationTests = testGroup "Serialization Tests"
       <> S testGKeyHash -- delegator credential
       <> S testKeyHash1 -- delegatee key hash
     )
+
+    -- checkEncoding "mir"
     , let rs = Map.singleton (KeyHashObj testKeyHash1) 77
     in
     checkEncoding "mir"
@@ -419,9 +437,12 @@ serializationTests = testGroup "Serialization Tests"
        . TkWord 9) -- make instantaneous rewards cert
       <> S rs
     )
+
   , checkEncoding "pparams_update_key_deposit_only"
     (PParamsUpdate $ Set.singleton (KeyDeposit (Coin 5)))
     ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
+
+  -- checkEncoding "pparams_update_all"
   , let minfeea               = 0
         minfeeb               = 1
         maxbbsize             = 2
@@ -443,7 +464,6 @@ serializationTests = testGroup "Serialization Tests"
         extraEntropy          = NeutralNonce
         protocolVersion       = (0,1,2)
     in
-
     checkEncoding "pparams_update_all"
     (PParamsUpdate $ Set.fromList
       [ MinFeeA               minfeea
@@ -488,6 +508,8 @@ serializationTests = testGroup "Serialization Tests"
       <> (T $ TkWord 17) <> S d
       <> (T $ TkWord 18) <> S extraEntropy
       <> (T $ TkWord 19) <> S protocolVersion)
+
+-- checkEncoding "block_header_body"
   , let
       prevhash = testHeaderHash
       issuerVkey = vKey testKey1
@@ -533,7 +555,50 @@ serializationTests = testGroup "Serialization Tests"
       <> S size
       <> S blockNo
       <> S bbhash
-      <> S ocert
-      <> S protover
+      <> G ocert
+      <> G protover
+    )
+
+  -- checkEncoding "operational_cert"
+  , let vkHot     = snd testKESKeys
+        vkCol     = vKey testKey1
+        counter   = 0
+        kesperiod = KESPeriod 0
+        signature = sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0)
+    in
+    checkEncoding "operational_cert"
+    (OCert vkHot vkCol counter kesperiod signature)
+    ( (T $ TkListLen 5)
+      <> S vkHot
+      <> S vkCol
+      <> S counter
+      <> S kesperiod
+      <> S signature
+    )
+
+    -- checkEncoding "block_header"
+  , let bhb = BHBody
+              { bheaderPrev    = testHeaderHash
+              , bheaderVk      = vKey testKey1
+              , bheaderVrfVk   = snd testVRF
+              , bheaderSlot    = Slot 33
+              , bheaderEta     = coerce $ mkCertifiedVRF (WithResult
+                (mkSeed seedEta (Slot 33) (mkNonce 0) testHeaderHash)1) (fst testVRF)
+              , bheaderL       = coerce $ mkCertifiedVRF (WithResult
+                (mkSeed seedL (Slot 33) (mkNonce 0) testHeaderHash) 1) (fst testVRF)
+              , bsize          = 0
+              , bheaderBlockNo = BlockNo 44
+              , bhash          = bhbHash $ TxSeq Seq.empty
+              , bheaderOCert   = OCert (snd testKESKeys) (vKey testKey1)
+                0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
+              , bprotvert      = ProtVer 0 0 0
+              }
+        sig = Keys.signKES (fst testKESKeys) bhb 0
+    in
+    checkEncoding "block_header"
+    (BHeader bhb sig)
+    ( (T $ TkListLen 2)
+        <> S bhb
+        <> S sig
     )
  ]

@@ -1,17 +1,15 @@
 ; Shelley Types
 
-; When you have something that is always length 2, why do you need the header?
-; Would using a map here make it cheaper?
 block =
-  [ header                     : header
+  [ header
   , transaction_bodies         : [* transaction_body]
   , transaction_witness_sets   : [* transaction_witness_set]
   ]
 
 header =
-  [ header_body
+  ( header_body
   , body_signature : $kes_signature
-  ]
+  )
 
 header_body =
   ( prev_hash        : $hash
