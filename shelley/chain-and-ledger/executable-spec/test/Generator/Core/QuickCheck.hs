@@ -115,7 +115,7 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- to include certificates that require deposits.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 1000 10000 (length addrs) (length addrs)
+  ys <- genCoinList 10000 100000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
