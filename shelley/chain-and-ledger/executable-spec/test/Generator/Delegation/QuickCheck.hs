@@ -9,7 +9,6 @@
 module Generator.Delegation.QuickCheck
   ( genDCerts )
   where
-
 import           Data.Foldable (find)
 import qualified Data.Map as Map
 import           Data.Ratio ((%))
@@ -24,14 +23,14 @@ import qualified Test.QuickCheck as QC
 
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern InstantaneousRewards, pattern RegKey, pattern RegPool,
-                     pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
+                     pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
+                     pattern RegPool, pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genNatural, toCred)
-import           Keys (hashKey, vKey)
-import           Ledger.Core (dom, (∈), (∉))
+import           Keys (GenDelegs (..), hashKey, vKey)
+import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
-                     _pstate, _stPools, _stkCreds)
+                     _genDelegs, _pstate, _stPools, _stkCreds)
 import           MockTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs, PState,
                      PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
 import           PParams (PParams (..), eMax)
@@ -86,6 +85,12 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
 
 -- | Occasionally generate a valid certificate
 --
+-- Returning `Nothing` indicates a failure to generate a value, usually due to lack of
+-- available values from the pre-populated (e.g. key) spaces.
+-- A `Just` represents a successfully generated value.
+--
+-- Different generators return witnesses that are either genesis or regular keys.
+--
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
 genDCert
@@ -100,6 +105,7 @@ genDCert keys coreKeys vrfKeys pparams dpState slot =
   QC.frequency [ (2, genRegKeyCert keys dState)
                , (2, genRegPool keys vrfKeys dpState)
                , (3, genDelegation keys dpState)
+               , (1, genGenesisDelegation keys coreKeys dpState)
                , (1, genDeRegKeyCert keys dState)
                , (1, genRetirePool keys pparams pState slot)
                -- TODO mgudemann
@@ -169,6 +175,32 @@ genDelegation keys dpState =
 
     (StakePools registeredPools) = _stPools (_pstate dpState)
     availablePools = Map.keys registeredPools
+
+genGenesisDelegation
+  :: KeyPairs
+  -> [CoreKeyPair]
+  -> DPState
+  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+genGenesisDelegation keys coreKeys dpState =
+  if null genesisDelegators || null availableDelegatees
+    then
+      pure Nothing
+    else
+      mkCert <$> QC.elements genesisDelegators
+             <*> QC.elements availableDelegatees
+  where
+    hashVKey = hashKey . vKey
+    mkCert gkey key = Just
+      ( GenesisDelegate (hashVKey gkey, (hashVKey . snd) key)
+      , Right [gkey])
+
+    (GenDelegs genDelegs_) = _genDelegs $ dpState ^. dstate
+
+    genesisDelegator k = k ∈ dom genDelegs_
+    genesisDelegators = filter (genesisDelegator . hashVKey) coreKeys
+
+    notDelegatee k = k ∉ range genDelegs_
+    availableDelegatees = filter (notDelegatee . hashVKey . snd) keys
 
 -- | Generate and return a RegPool certificate along with its witnessing key.
 genRegPool

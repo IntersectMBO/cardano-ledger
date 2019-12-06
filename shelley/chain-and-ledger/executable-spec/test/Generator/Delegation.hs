@@ -87,6 +87,15 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
           pure (Seq.fromList certs, [], coreKeys', deposits_, refunds_)
 
 -- | Occasionally generate a valid certificate
+--
+-- Returning `Nothing` indicates a failure to generate a value, usually due to lack of
+-- available values from the pre-populated (e.g. key) spaces.
+-- A `Just` represents a successfully generated value.
+--
+-- Different generators return witnesses that are either genesis or regular keys.
+--
+-- Note: we register keys and pools more often than deregistering/retiring them,
+-- and we generate more delegations than registrations of keys/pools.
 genDCert
   :: KeyPairs
   -> [CoreKeyPair]

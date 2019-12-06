@@ -77,7 +77,7 @@ bobInitCoin :: Coin
 bobInitCoin = Coin 1000
 
 genesis :: LedgerState
-genesis = (genesisState . genesisCoins)
+genesis = (genesisState Map.empty . genesisCoins)
             [ TxOut aliceAddr aliceInitCoin
             , TxOut bobAddr bobInitCoin ]
 
