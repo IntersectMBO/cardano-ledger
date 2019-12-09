@@ -29,8 +29,8 @@ import           Tx
 import           UTxO (balance)
 
 import qualified Cardano.Crypto.VRF as VRF
-import           Control.State.Transition
 import           Cardano.Ledger.Shelley.Crypto
+import           Control.State.Transition
 
 import           STS.Bbody
 import           STS.Tick
@@ -45,6 +45,7 @@ data ChainState crypto
     , chainEpochNonce     :: Nonce
     , chainEvolvingNonce  :: Nonce
     , chainCandidateNonce :: Nonce
+    , chainPrevEpochNonce :: Nonce
     , chainHashHeader     :: HashHeader crypto
     , chainSlot           :: Slot
     }
@@ -88,7 +89,7 @@ chainTransition
      )
   => TransitionRule (CHAIN crypto)
 chainTransition = do
-  TRC (sNow, ChainState nes cs eta0 etaV etaC h sL, block@(Block bh _)) <- judgmentContext
+  TRC (sNow, ChainState nes cs eta0 etaV etaC etaH h sL, block@(Block bh _)) <- judgmentContext
 
   let NewEpochState _ _ _ (EpochState _ _ _ pp) _ _ _ = nes
   let bhb = bhbody bh
@@ -105,9 +106,9 @@ chainTransition = do
   let EpochState (AccountState _ _reserves) _ ls pp'                         = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) _ = ls
 
-  PrtclState cs' h' sL' eta0' etaV' etaC' <- trans @(PRTCL crypto)
+  PrtclState cs' h' sL' eta0' etaV' etaC' etaH' <- trans @(PRTCL crypto)
     $ TRC ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2)
-          , PrtclState cs h sL eta0 etaV etaC
+          , PrtclState cs h sL eta0 etaV etaC etaH
           , bh)
 
   BbodyState ls' bcur' <- trans @(BBODY crypto)
@@ -115,7 +116,7 @@ chainTransition = do
 
   let nes'' = updateNES nes' bcur' ls'
 
-  pure $ ChainState nes'' cs' eta0' etaV' etaC' h' sL'
+  pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' h' sL'
 
 instance
   ( Crypto crypto
@@ -152,7 +153,7 @@ instance
 
 -- |Calculate the total ada in the chain state
 totalAda :: ChainState crypto -> Coin
-totalAda (ChainState nes _ _ _ _ _ _) =
+totalAda (ChainState nes _ _ _ _ _ _ _) =
   treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _) = nesEs nes

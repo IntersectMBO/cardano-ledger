@@ -6,6 +6,7 @@
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
 \newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
+\newcommand{\hashToSeed}[1]{\fun{hashToSeed}~ \var{#1}}
 
 \newcommand{\T}{\type{T}}
 \newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
@@ -45,6 +46,7 @@
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
 \newcommand{\UpdateNonceState}{\type{UpdateNonceState}}
+\newcommand{\UpdateNonceEnv}{\type{UpdateNonceEnv}}
 \newcommand{\PoolDistr}{\type{PoolDistr}}
 \newcommand{\BBodyEnv}{\type{BBodyEnv}}
 \newcommand{\BBodyState}{\type{BBodyState}}
@@ -191,6 +193,8 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
                    & \text{size of a block body} \\
       \slotToSeed{} & \Slot \to \Seed
                     & \text{convert a slot to a seed} \\
+      \hashToSeed{} & \HashHeader \to \Seed
+                    & \text{convert a header hash to a seed} \\
     \end{array}
   \end{equation*}
   %
@@ -436,12 +440,25 @@ In the second case, the new epoch state is updated as follows:
 
 The Update Nonce Transition updates the nonces until the randomness gets fixed.
 The environment is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
-the block nonce $\eta$, the protocol parameters $\var{pp}$ and a marker
-$\var{ne}$ determining whether we are in a new epoch. The update nonce state is
-shown in Figure~\ref{fig:rules:update-nonce} and consists of the epoch nonce
-$\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
+the block nonce $\eta$, the protocol parameters $\var{pp}$, the current previous hash $h_c$,
+and a marker $\var{ne}$ determining whether we are in a new epoch.
+The update nonce state is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
+the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
 
 \begin{figure}
+  \emph{Update Nonce environments}
+  \begin{equation*}
+    \UpdateNonceEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \eta & \Seed & \text{new nonce} \\
+        \var{pp} & \PParams & \text{protocol parameters} \\
+        h_c & \HashHeader & \text{current previous hash} \\
+        b & \Bool & \text{is new epoch} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
   \emph{Update Nonce states}
   \begin{equation*}
     \UpdateNonceState =
@@ -450,6 +467,7 @@ $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
         \eta_0 & \Seed & \text{epoch nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
+        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -457,7 +475,7 @@ $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
   \emph{Update Nonce Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{updn}{\_} \var{\_} \subseteq
-    \powerset ((\Seed \times \PParams \times \Bool)
+    \powerset (\UpdateNonceEnv
                \times \UpdateNonceState
                \times \Slot
                \times \UpdateNonceState
@@ -485,11 +503,15 @@ near the end of the epoch is not discarded).
 \begin{figure}[ht]
    \begin{equation}\label{eq:update-all}
     \inference[Update-All]
-    { }
+    { \eta_e \leteq \fun{extraEntropy}~\var{pp}
+      &
+      \eta_p \leteq \hashToSeed h_c
+    }
     {
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
+         h_c \\
          \mathsf{True}
        \end{array}}
       \vdash
@@ -497,12 +519,14 @@ near the end of the epoch is not discarded).
             \eta_0 \\
             \eta_v \\
             \eta_c \\
+            \eta_h \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
-            \varUpdate{\eta_c \seedOp \fun{extraEntropy}~\var{pp}} \\
+            \varUpdate{\eta_c \seedOp \eta_h \seedOp \eta_e} \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \varUpdate{\eta_v\seedOp\eta} \\
+            \varUpdate{\eta_p} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -518,6 +542,7 @@ near the end of the epoch is not discarded).
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
+         h_c \\
          \mathsf{False}
        \end{array}}
       \vdash
@@ -525,12 +550,14 @@ near the end of the epoch is not discarded).
             \eta_0 \\
             \eta_v \\
             \eta_c \\
+            \eta_h \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
             \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \varUpdate{\eta_v\seedOp\eta} \\
+            \eta_h \\
       \end{array}\right)}
     }
   \end{equation}
@@ -546,6 +573,7 @@ near the end of the epoch is not discarded).
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
+         h_c \\
          \mathsf{False}
        \end{array}}
       \vdash
@@ -553,12 +581,14 @@ near the end of the epoch is not discarded).
             \eta_0 \\
             \eta_v \\
             \eta_c \\
+            \eta_h \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
             \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \eta_c \\
+            \eta_h \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1112,6 +1142,7 @@ followed by the transition to update the evolving and candidate nonces.
         \eta_0 & \Seed & \text{current epoch nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
+        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1148,6 +1179,7 @@ The states for this transition consists of:
   \item The current epoch nonce.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
+  \item The nonce for hash of the last epoch.
 \end{itemize}
 
 \begin{figure}[ht]
@@ -1168,19 +1200,22 @@ The states for this transition consists of:
         {\left(\begin{array}{c}
         \eta \\
         \var{pp} \\
-        \var{ne}
+        h \\
+        \var{ne} \\
         \end{array}\right)}
         \vdash
         {\left(\begin{array}{c}
         \eta_0 \\
         \eta_v \\
         \eta_c \\
+        \eta_h \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{slot}}
         {\left(\begin{array}{c}
         \eta_0' \\
         \eta_v' \\
         \eta_c' \\
+        \eta_h' \\
         \end{array}\right)}
       }\\~\\
       {
@@ -1213,6 +1248,7 @@ The states for this transition consists of:
             \eta_0 \\
             \eta_v \\
             \eta_c \\
+            \eta_h \\
       \end{array}\right)}
       \trans{prtcl}{\var{bh}}
       {\left(\begin{array}{c}
@@ -1222,6 +1258,7 @@ The states for this transition consists of:
             \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
+            \varUpdate{\eta_h'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1405,6 +1442,7 @@ following:
   \item The epoch nonce $\eta_0$.
   \item The evolving nonce $\eta_v$.
   \item The candidate nonce $\eta_c$.
+  \item The previous epoch hash nonce $\eta_h$.
   \item The last header hash \var{h}.
   \item The last slot \var{s_\ell}.
 \end{itemize}
@@ -1420,6 +1458,7 @@ following:
         ~\eta_0 & \Seed & \text{epoch nonce} \\
         ~\eta_v & \Seed & \text{evolving nonce} \\
         ~\eta_c & \Seed & \text{candidate nonce} \\
+        ~\eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
         \var{h} & \HashHeader & \text{latest header hash} \\
         \var{s_\ell} & \Slot & \text{last slot} \\
       \end{array}
@@ -1531,6 +1570,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
               \eta_0 \\
               \eta_v \\
               \eta_c \\
+              \eta_h \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:prtcl]{prtcl}}{\var{bh}}
         {\left(\begin{array}{c}
@@ -1540,6 +1580,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
               \eta_0' \\
               \eta_v' \\
               \eta_c' \\
+              \eta_h' \\
         \end{array}\right)}
       } \\~\\~\\
       {
@@ -1570,6 +1611,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
             \eta_0 \\
             \eta_v \\
             \eta_c \\
+            \eta_h \\
             \var{h} \\
             \var{s_\ell} \\
       \end{array}\right)}
@@ -1580,6 +1622,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
             \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
+            \varUpdate{\eta_h'} \\
             \varUpdate{\var{h}'} \\
             \varUpdate{\var{s_\ell}'} \\
       \end{array}\right)}
@@ -1705,8 +1748,9 @@ candidate nonces for Shelley.
               \emptyset \\
             \end{array}
           \right) \\
-          \fun{hash}~{h} \\
-          \fun{hash}~{h} \\
+          \hashToSeed(\fun{hash}~{h}) \\
+          \hashToSeed(\fun{hash}~{h}) \\
+          0_{seed} \\
           \var{h} \\
           \var{s_{last}} \\
         \end{array}

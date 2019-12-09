@@ -17,6 +17,7 @@ module BlockChain
   , TxSeq(..)
   , bhHash
   , bhbHash
+  , hashHeaderToNonce
   , bHeaderSize
   , bBodySize
   , slotToNonce
@@ -101,6 +102,10 @@ bhbHash
   => TxSeq crypto
   -> HashBBody crypto
 bhbHash = HashBBody . hash
+
+-- |HashHeader to Nonce
+hashHeaderToNonce :: HashHeader crypto -> Nonce
+hashHeaderToNonce = Nonce . coerce
 
 data BHeader crypto
   = BHeader

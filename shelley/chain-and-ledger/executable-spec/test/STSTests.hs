@@ -16,48 +16,13 @@ import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
 
-import           BaseTypes (mkNonce, (⭒))
 import           Control.State.Transition (TRC (..), applySTS)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
-import           Slot (Slot (..))
 import           STS.Chain (totalAda)
-import           STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import           STS.Utxow (PredicateFailure (..))
 import           Tx (hashScript)
 import           TxData (pattern RewardAcnt, pattern ScriptHashObj)
 
--- | The UPDN transition should update both the evolving nonce and
--- the candidate nonce during the first two-thirds of the epoch.
--- In order for the candidate nonce to catch up with the evolving
--- nonce after an epoch change, the candidate nonce is set to
--- the same value as the evolving nonce during this time.
--- Note that the number of slots per epoch is hard-coded in the Slot module.
-testUPNEarly :: Assertion
-testUPNEarly =
-  let
-    st = applySTS @UPDN
-        ( TRC ( UpdnEnv (mkNonce 1) (error "Not needed now") False
-              , UpdnState (mkNonce 0) (mkNonce 2) (mkNonce 3)
-              , Slot.Slot 5
-              )
-        )
-  in
-    st @?= Right (UpdnState (mkNonce 0) (mkNonce 2 ⭒ mkNonce 1) (mkNonce 2 ⭒ mkNonce 1))
-
--- | The UPDN transition should update only the evolving nonce
--- in the last thirds of the epoch.
--- Note that the number of slots per epoch is hard-coded in the Slot module.
-testUPNLate :: Assertion
-testUPNLate =
-  let
-    st = applySTS @UPDN
-          ( TRC ( UpdnEnv (mkNonce 1) (error "Not needed now") False
-                , UpdnState (mkNonce 0) (mkNonce 2) (mkNonce 3)
-                , Slot.Slot 85
-                )
-          )
-  in
-    st @?= Right (UpdnState (mkNonce 0) ((mkNonce 2) ⭒ (mkNonce 1)) (mkNonce 3))
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
@@ -77,9 +42,7 @@ testPreservationOfAda (CHAINExample _ _ _ (Left predicateFailure)) =
 
 stsTests :: TestTree
 stsTests = testGroup "STS Tests"
-  [ testCase "update nonce early in the epoch" testUPNEarly
-  , testCase "update nonce late in the epoch" testUPNLate
-  , testCase "CHAIN example 1 - empty block" $ testCHAINExample ex1
+  [ testCase "CHAIN example 1 - empty block" $ testCHAINExample ex1
   , testCase "CHAIN example 2A - register stake key" $ testCHAINExample ex2A
   , testCase "CHAIN example 2B - delegate stake and create reward update" $ testCHAINExample ex2B
   , testCase "CHAIN example 2C - new epoch changes" $ testCHAINExample ex2C
