@@ -24,6 +24,8 @@
 module Control.State.Transition.Generator
   ( HasTrace
   , SignalGenerator
+  , BaseEnv
+  , interpretSTS
   , envGen
   , sigGen
   , traceSigGen

@@ -152,7 +152,7 @@ propMultipleOfSizesBlock b =
 propBlockAbstractSize :: Property
 propBlockAbstractSize
   = withTests 50 $ property $ do
-    tr <- forAll (trace @CHAIN 100)
+    tr <- forAll (trace @CHAIN () 100)
     let blocks = traceSignals OldestFirst tr :: [Block]
     mapM_ propMultipleOfSizesBlock blocks
 

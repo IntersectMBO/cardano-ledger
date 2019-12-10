@@ -15,7 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Control.State.Transition.Trace.Generator.QuickCheck
-  ( HasTrace (envGen, sigGen, shrinkSignal)
+  ( HasTrace (BaseEnv, envGen, sigGen, shrinkSignal, interpretSTS)
   , traceFrom
   , traceFromInitState
   , trace

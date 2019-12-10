@@ -224,7 +224,7 @@ expectedDms s d sbs =
 dcertsAreNotReplayed :: Property
 dcertsAreNotReplayed = withTests 300 $ property $ do
   let (thisTraceLength, step) = (100, 10)
-  sample <- forAll (traceWithProfile @DBLOCK thisTraceLength profile)
+  sample <- forAll (traceWithProfile @DBLOCK () thisTraceLength profile)
   classifyTraceLength sample thisTraceLength step
   dcertsAreNotReplayedInTrace sample
   where
@@ -302,12 +302,12 @@ dcertsAreTriggered :: Property
 dcertsAreTriggered = withTests 300 $ property $
   -- The number of tests was determined ad-hoc, since the default failed to
   -- uncover the presence of errors.
-  forAll (nonTrivialTrace 100) >>= dcertsAreTriggeredInTrace
+  forAll (nonTrivialTrace () 100) >>= dcertsAreTriggeredInTrace
 
 dblockTracesAreClassified :: Property
 dblockTracesAreClassified = withTests 200 $ property $ do
   let (tl, step) = (100, 10)
-  tr <- forAll (trace @DBLOCK tl)
+  tr <- forAll (trace @DBLOCK () tl)
   classifyTraceLength tr tl step
   -- Classify the traces by the total number of delegation certificates on
   -- them.
@@ -326,7 +326,7 @@ traceDCerts = concat . traceDCertsByBlock
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 400 $ property $ do
   let tl = 100
-  tr <- forAll (trace @DBLOCK tl)
+  tr <- forAll (trace @DBLOCK () tl)
 
   -- 40% of the traces must contain as many delegation certificates as blocks.
   cover 40
@@ -370,7 +370,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @DBLOCK 100
+  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @DBLOCK () 100
 
 --------------------------------------------------------------------------------
 -- Properties related to the transition rules
@@ -386,7 +386,7 @@ onlyValidSignalsAreGenerated =
 rejectDupSchedDelegs :: Property
 rejectDupSchedDelegs = withTests 300 $ property $ do
   (tr, dcert) <- forAll $ do
-    tr <- trace @DELEG 100
+    tr <- trace @DELEG () 100
           `suchThatLastState` (not . null . view scheduledDelegations)
     let vkS =
           case lastState tr ^. scheduledDelegations of
@@ -404,7 +404,7 @@ rejectDupSchedDelegs = withTests 300 $ property $ do
 
 -- | Classify the traces.
 tracesAreClassified :: Property
-tracesAreClassified = traceLengthsAreClassified @DELEG 1000 100
+tracesAreClassified = traceLengthsAreClassified @DELEG () 1000 100
 
 -- | The signal generator generates invalid signals with high probability when
 -- invalid signals are requested.
@@ -413,6 +413,7 @@ invalidSignalsAreGenerated =
   withTests 300
     $ Transition.Generator.invalidSignalsAreGenerated
       @DBLOCK
+      ()
       (failures profile)
       100
       -- We have 6 failures we're interested in. However demanding an uniform

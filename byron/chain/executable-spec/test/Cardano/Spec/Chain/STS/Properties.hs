@@ -30,7 +30,7 @@ import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
 slotsIncrease :: Property
 slotsIncrease = property $ do
   let (maxTraceLength, step) = (100, 10)
-  tr <- forAll $ traceSigGen
+  tr <- forAll $ traceSigGen ()
                    (Maximum maxTraceLength)
                    (sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate)
   classifyTraceLength tr maxTraceLength step
@@ -45,7 +45,7 @@ blockIssuersAreDelegates :: Property
 blockIssuersAreDelegates =
   withTests 300 $ property $ do
     let (maxTraceLength, step) = (100, 10)
-    tr <- forAll $ traceSigGen
+    tr <- forAll $ traceSigGen ()
                      (Maximum maxTraceLength)
                      (sigGenChain GenDelegation NoGenUTxO GenUpdate)
     classifyTraceLength tr maxTraceLength step
@@ -66,12 +66,13 @@ blockIssuersAreDelegates =
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 200 $ Transition.Generator.onlyValidSignalsAreGenerated @CHAIN 100
+  withTests 200 $ Transition.Generator.onlyValidSignalsAreGenerated @CHAIN () 100
 
 signersListIsBoundedByK :: Property
 signersListIsBoundedByK =  withTests 300 $ property $ do
   let maxTraceLength = 100
   tr <- forAll $ traceSigGen
+                   ()
                    (Maximum maxTraceLength)
                    (sigGenChain GenDelegation NoGenUTxO GenUpdate)
   signersListIsBoundedByKInTrace tr
@@ -89,7 +90,7 @@ signersListIsBoundedByK =  withTests 300 $ property $ do
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withTests 200 $ property $ do
-  tr <- forAll $ traceSigGen (Desired 200) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
+  tr <- forAll $ traceSigGen () (Desired 200) (sigGenChain GenDelegation NoGenUTxO NoGenUpdate)
   let certs = traceDCerts tr
 
   -- for at least 1% of traces...
@@ -197,6 +198,7 @@ invalidSignalsAreGenerated =
   withTests 100
     $ Transition.Generator.invalidSignalsAreGenerated
         @CHAIN
+        ()
         [(1, invalidProofsBlockGen)]
         50
         (coverInvalidBlockProofs 20)

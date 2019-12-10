@@ -5,7 +5,7 @@
 module Ledger.Update.Examples where
 
 import           GHC.Exts (fromList)
-
+import           Data.Functor.Identity (runIdentity)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (testCase)
 
@@ -55,6 +55,7 @@ upiendExamples =
           }
       in
         checkTrace @UPIEND
+          runIdentity
           ( Slot { unSlot = 15 }
           , [ ( VKeyGenesis { unVKeyGenesis = VKey Owner { unOwner = 0 } }
               , VKey Owner { unOwner = 0 }

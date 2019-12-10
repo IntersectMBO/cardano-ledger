@@ -376,11 +376,12 @@ mSt .-> stExpected = do
 checkTrace
   :: forall s m
    . (STS s, BaseM s ~ m)
-  => Environment s
-  -> ReaderT (State s -> Signal s -> m (Either [[PredicateFailure s]] (State s))) IO (State s)
+  => (forall a. m a -> a)
+  -> Environment s
+  -> ReaderT (State s -> Signal s -> (Either [[PredicateFailure s]] (State s))) IO (State s)
   -> IO ()
-checkTrace env act =
-  void $ runReaderT act (\st sig -> applySTS (TRC(env, st, sig)))
+checkTrace interp env act =
+  void $ runReaderT act (\st sig -> interp $ applySTS (TRC(env, st, sig)))
 
 -- | Extract all the values of a given type.
 --

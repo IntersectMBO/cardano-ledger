@@ -145,7 +145,7 @@ propMultipleOfSizes txw =
 propTxAbstractSize :: Property
 propTxAbstractSize
   = withTests 50 $ property $ do
-    tr <- forAll (trace @UTXOW 100)
+    tr <- forAll (trace @UTXOW () 100)
     let txs = traceSignals OldestFirst tr :: [TxWits]
     mapM_ propSize txs
   where
