@@ -15,8 +15,8 @@ import           Control.State.Transition.Trace (TraceOrder (OldestFirst), trace
                      traceSignals)
 import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState,
                      onlyValidSignalsAreGeneratedFromInitState)
-import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDelegation, isRegKey,
-                     isRegPool, isRetirePool)
+import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDelegation,
+                     isInstantaneousRewards, isRegKey, isRegPool, isRetirePool)
 import           Generator.Core.QuickCheck (mkGenesisLedgerState)
 import           Generator.LedgerTrace.QuickCheck ()
 import           MockTypes (DCert, LEDGER, Tx)
@@ -31,33 +31,37 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
         certs_ = allCerts txs
 
     checkCoverage $ conjoin [
-       cover_ 75
+       cover_ 60
              (traceLength tr <= 5 * length certs_)
              "there is at least 1 certificate for every 5 transactions"
 
-     , cover_ 75
+     , cover_ 60
               (traceLength tr <= 20 * length (filter isRegKey certs_))
               "there is at least 1 RegKey certificate for every 10 transactions"
 
-     , cover_ 75
+     , cover_ 60
               (traceLength tr <= 20 * length (filter isDeRegKey certs_))
               "there is at least 1 DeRegKey certificate for every 20 transactions"
 
-     , cover_ 75
+     , cover_ 60
               (traceLength tr <= 20 * length (filter isDelegation certs_))
               "there is at least 1 Delegation certificate for every 10 transactions"
 
-     , cover_ 75
+     , cover_ 60
               (traceLength tr <= 40 * length (filter isGenesisDelegation certs_))
               "there is at least 1 Genesis Delegation certificate for every 40 transactions"
 
-     , cover_ 75
+     , cover_ 60
               (traceLength tr <= 20 * length (filter isRegPool certs_))
               "there is at least 1 RegPool certificate for every 10 transactions"
 
-     , cover_ 75
+     , cover_ 60
               (traceLength tr <= 20 * length (filter isRetirePool certs_))
               "there is at least 1 RetirePool certificate for every 20 transactions"
+
+     , cover_ 60
+              (traceLength tr <= 20 * length (filter isInstantaneousRewards certs_))
+              "there is at least 1 MIR certificate for every 20 transactions"
 
      , cover_ 25
               (0.75 >= noCertsRatio (certsByTx txs))

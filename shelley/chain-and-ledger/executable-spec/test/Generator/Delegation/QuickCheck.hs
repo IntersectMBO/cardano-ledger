@@ -26,8 +26,7 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
                      pattern RegPool, pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core.QuickCheck (genCoinList, genInteger, genNatural, numCoreNodes,
-                     toCred)
+import           Generator.Core.QuickCheck (genCoinList, genInteger, genNatural, toCred)
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,

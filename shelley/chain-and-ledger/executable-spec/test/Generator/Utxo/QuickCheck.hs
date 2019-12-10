@@ -13,23 +13,19 @@ module Generator.Utxo.QuickCheck
 import           Control.Monad (when)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq (filter)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
-import           BaseTypes (interval0)
 import           Coin (Coin (..), splitCoin)
-import           Delegation.Certificates (isInstantaneousRewards)
 import           Generator.Core (findPayKeyPair, toAddr)
 import           Generator.Core.QuickCheck (genNatural)
 import           Generator.Delegation.QuickCheck (genDCerts)
 import           LedgerState (pattern UTxOState)
 import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn,
                      TxOut, UTxO, UTxOState, VrfKeyPairs)
-import           PParams (_d)
 import           Slot (Slot (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
