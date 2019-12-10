@@ -50,18 +50,18 @@ instance HasTrace SUM where
 -- counterexamples that we get.
 prop_Bounded :: Property
 prop_Bounded = property $ do
-  tr <- forAll (trace @SUM 100)
+  tr <- forAll (trace @SUM () 100)
   assert (lastState tr < 10)
 
 prop_onlyValidTracesAreGenerated :: Property
 prop_onlyValidTracesAreGenerated =
-  withTests 300 $ onlyValidSignalsAreGenerated @SUM 100
+  withTests 300 $ onlyValidSignalsAreGenerated @SUM () 100
 
 -- | Property that simply classifies the trace length distribution.
 prop_Classified :: Property
 prop_Classified = withTests 300 $ property $ do
   let tl = 100
-  tr <- forAll (trace @SUM tl)
+  tr <- forAll (trace @SUM () tl)
   classifyTraceLength tr tl 10
   assert True
 
@@ -69,17 +69,17 @@ prop_Classified = withTests 300 $ property $ do
 prop_qc_Bounded :: QC.Property
 prop_qc_Bounded =
   STS.Gen.forAllTrace @SUM @()
-    100 () ((< 10) . lastState)
+    () 100 () ((< 10) . lastState)
 
 -- | See 'prop_Classified'.
 prop_qc_Classified :: QC.Property
 prop_qc_Classified
-  = STS.Gen.traceLengthsAreClassified @SUM 100 10 ()
+  = STS.Gen.traceLengthsAreClassified @SUM () 100 10 ()
 
 prop_qc_onlyValidSignalsAreGenerated :: QC.Property
 prop_qc_onlyValidSignalsAreGenerated
   = QC.withMaxSuccess 300
-  $ STS.Gen.onlyValidSignalsAreGenerated @SUM @() 100 ()
+  $ STS.Gen.onlyValidSignalsAreGenerated @SUM @() () 100 ()
 
 instance STS.Gen.HasTrace SUM () where
 

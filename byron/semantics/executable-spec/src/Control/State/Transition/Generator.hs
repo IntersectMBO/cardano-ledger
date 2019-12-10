@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -68,7 +69,8 @@ import           Control.Monad.Trans.State.Strict (evalState)
 import           Data.Data (Constr, Data, toConstr)
 import           Data.Either (isLeft)
 import           Data.Foldable (traverse_)
-import           Data.Functor.Identity (Identity)
+import           Data.Functor.Identity (Identity(..))
+import           Data.Kind (Type)
 import           Data.Maybe (fromMaybe)
 import           Data.String (fromString)
 import           Data.Word (Word64)
@@ -83,7 +85,7 @@ import qualified Hedgehog.Range as Range
 import           Hedgehog.Internal.Gen (integral_, runDiscardEffectT)
 import           Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 
-import           Control.State.Transition (BaseM, Environment, IRC (IRC), PredicateFailure, STS, Signal,
+import           Control.State.Transition.Extended (BaseM, Environment, IRC (IRC), PredicateFailure, STS, Signal,
                      State, TRC (TRC), applySTS)
 import qualified Control.State.Transition.Invalid.Trace as Invalid
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
@@ -93,7 +95,18 @@ import qualified Hedgehog.Extra.Manual as Manual
 
 import           Test.Goblin (Goblin (..), GoblinData, SeedGoblin (..))
 
-class (STS s, BaseM s ~ Identity) => HasTrace s where
+class STS s => HasTrace s where
+
+  type BaseEnv s :: Type
+  type BaseEnv s = ()
+
+  -- | Interpret the action from the base monad into a pure value, given some
+  -- initial environment. This obviously places some contraints on the nature of
+  -- the base monad for a trace to be completed.
+  interpretSTS :: forall a. (BaseEnv s -> BaseM s a -> a)
+  default interpretSTS :: (BaseM s ~ Identity) => forall a. BaseEnv s -> BaseM s a -> a
+  interpretSTS _ (Identity x) = x
+
   -- | Generate an initial environment that is based on the given trace length.
   envGen
     :: Word64
@@ -106,34 +119,38 @@ class (STS s, BaseM s ~ Identity) => HasTrace s where
     :: SignalGenerator s
 
   trace
-    :: Word64
+    :: BaseEnv s
+    -> Word64
     -- ^ Maximum length of the generated traces. The actual length will be
     -- between 0 and this maximum.
     -> Gen (Trace s)
-  trace n = traceWithProfile @s n allValid
+  trace baseEnv n = traceWithProfile @s baseEnv n allValid
 
   traceWithProfile
-    :: Word64
+    :: BaseEnv s
+    -> Word64
     -> TraceProfile s
     -> Gen (Trace s)
-  traceWithProfile n p = traceSigGenWithProfile (Maximum n) p (sigGen @s)
+  traceWithProfile baseEnv n p = traceSigGenWithProfile baseEnv (Maximum n) p (sigGen @s)
 
   traceOfLength
-    :: Word64
+    :: BaseEnv s
+    -> Word64
     -- ^ Desired length of the generated trace. If the signal generator can generate invalid signals
     -- then the resulting trace might not have the given length.
     -> Gen (Trace s)
-  traceOfLength n = traceSigGenWithProfile (Desired n) allValid (sigGen @s)
+  traceOfLength baseEnv n = traceSigGenWithProfile baseEnv (Desired n) allValid (sigGen @s)
 
   traceOfLengthWithInitState
-    :: Word64
+    :: BaseEnv s
+    -> Word64
     -- ^ Desired length of the generated trace. If the signal generator can generate invalid signals
     -- then the resulting trace might not have the given length.
     -> (Environment s -> Gen (State s))
     -- ^ A generator for Initial State, given the STS environment
     -> Gen (Trace s)
-  traceOfLengthWithInitState n mkSt0
-    = traceSigGenWithProfileAndInitState (Desired n) allValid (sigGen @s) mkSt0
+  traceOfLengthWithInitState baseEnv n mkSt0
+    = traceSigGenWithProfileAndInitState baseEnv (Desired n) allValid (sigGen @s) mkSt0
 
 type SignalGenerator s = Environment s -> State s -> Gen (Signal s)
 
@@ -177,66 +194,71 @@ traceLengthValue (Desired n) = n
 traceSigGen
   :: forall s
    . HasTrace s
-  => TraceLength
+  => BaseEnv s
+  -> TraceLength
   -> SignalGenerator s
   -> Gen (Trace s)
-traceSigGen aTraceLength = traceSigGenWithProfile aTraceLength allValid
+traceSigGen baseEnv aTraceLength = traceSigGenWithProfile baseEnv aTraceLength allValid
 
 traceSigGenWithProfile
   :: forall s
    . HasTrace s
-  => TraceLength
+  => BaseEnv s
+  -> TraceLength
   -> TraceProfile s
   -> SignalGenerator s
   -> Gen (Trace s)
-traceSigGenWithProfile aTraceLength profile gen = do
+traceSigGenWithProfile baseEnv aTraceLength profile gen = do
   env <- envGen @s (traceLengthValue aTraceLength)
-  case applySTS @s (IRC env) of
+  case interpretSTS @s baseEnv $ applySTS @s (IRC env) of
     -- Hedgehog will give up if the generators fail to produce any valid
     -- initial state, hence we don't have a risk of entering an infinite
     -- recursion.
-    Left _pf -> traceSigGen aTraceLength gen
+    Left _pf -> traceSigGen baseEnv aTraceLength gen
     -- Applying an initial rule with an environment and state will simply
     -- validate that state, so we do not care which state 'applySTS' returns.
-    Right st -> genTraceOfMaxOrDesiredLength aTraceLength profile env st gen
+    Right st -> genTraceOfMaxOrDesiredLength baseEnv aTraceLength profile env st gen
 
 -- | A variation of 'traceSigGenWithProfile' which takes an argument generator
 -- for the initial state of the given trace
 traceSigGenWithProfileAndInitState
   :: forall s
    . HasTrace s
-  => TraceLength
+  => BaseEnv s
+  -> TraceLength
   -> TraceProfile s
   -> SignalGenerator s
   -> (Environment s -> Gen (State s))
   -> Gen (Trace s)
-traceSigGenWithProfileAndInitState aTraceLength profile gen mkSt0 = do
+traceSigGenWithProfileAndInitState baseEnv aTraceLength profile gen mkSt0 = do
   env <- envGen @s (traceLengthValue aTraceLength)
   st0 <- mkSt0 env
 
-  genTraceOfMaxOrDesiredLength aTraceLength profile env st0 gen
+  genTraceOfMaxOrDesiredLength baseEnv aTraceLength profile env st0 gen
 
 genTraceOfMaxOrDesiredLength
   :: forall s
    . HasTrace s
-  => TraceLength
+  => BaseEnv s
+  -> TraceLength
   -> TraceProfile s
   -> Environment s
   -> State s
   -> SignalGenerator s
   -> Gen (Trace s)
-genTraceOfMaxOrDesiredLength aTraceLength profile env st0 gen =
+genTraceOfMaxOrDesiredLength baseEnv aTraceLength profile env st0 gen =
   case aTraceLength of
-    Maximum n -> genTraceWithProfile n profile env st0 gen
-    Desired n -> genTraceOfLength n profile env st0 gen
+    Maximum n -> genTraceWithProfile baseEnv n profile env st0 gen
+    Desired n -> genTraceOfLength baseEnv n profile env st0 gen
 
 -- | Return a (valid) trace generator given an initial state, environment, and
 -- signal generator.
 --
 genTrace
   :: forall s
-   . (STS s, BaseM s ~ Identity)
-  => Word64
+   . (HasTrace s)
+  => BaseEnv s
+  -> Word64
   -- ^ Trace upper bound. This will be linearly scaled as a function of the
   -- generator size.
   -> Environment s
@@ -247,14 +269,15 @@ genTrace
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
-genTrace ub = genTraceWithProfile ub allValid
+genTrace baseEnv ub = genTraceWithProfile baseEnv ub allValid
 
 -- | Return a trace generator given an initial state, environment, and signal generator.
 --
 genTraceWithProfile
   :: forall s
-   . (STS s, BaseM s ~ Identity)
-  => Word64
+   . (HasTrace s)
+  => BaseEnv s
+  -> Word64
   -- ^ Trace upper bound. This will be linearly scaled as a function of the
   -- generator size.
   -> TraceProfile s
@@ -266,7 +289,7 @@ genTraceWithProfile
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
-genTraceWithProfile ub profile env st0 aSigGen =
+genTraceWithProfile baseEnv ub profile env st0 aSigGen =
   do
   -- Generate the initial size of the trace, but don't shrink it (notice the
   -- use of 'integral_') since we will be shrinking the traces manually (so it
@@ -283,15 +306,16 @@ genTraceWithProfile ub profile env st0 aSigGen =
                      , (85, integral_ $ Range.linear 1 ub)
                      , (5, pure ub)
                      ]
-  genTraceOfLength n profile env st0 aSigGen
+  genTraceOfLength baseEnv n profile env st0 aSigGen
 
 -- | Return a (valid) trace generator that generates traces of the given size. If the signal
 -- generator can generate invalid signals, then the size of resulting trace is not guaranteed.
 --
 genTraceOfLength
   :: forall s
-   . (STS s, BaseM s ~ Identity)
-  => Word64
+   . (HasTrace s)
+  => BaseEnv s
+  -> Word64
   -- ^ Desired trace length.
   -> TraceProfile s
   -> Environment s
@@ -302,7 +326,7 @@ genTraceOfLength
   -- ^ Signal generator. This generator relies on an environment and a state to
   -- generate a signal.
   -> Gen (Trace s)
-genTraceOfLength aTraceLength profile env st0 aSigGen =
+genTraceOfLength baseEnv aTraceLength profile env st0 aSigGen =
   Manual.fromManual $ fmap interleaveSigs $ loop aTraceLength st0 []
   where
     loop
@@ -329,7 +353,7 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
         Nothing ->
           loop (d - 1) sti acc
         Just sig ->
-          case applySTS @s (TRC(env, sti, sig)) of
+          case interpretSTS @s baseEnv $ applySTS @s (TRC(env, sti, sig)) of
             Left _err  -> loop (d - 1) sti acc
             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
 
@@ -341,7 +365,7 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
       $ Just
       $ NodeT
           rootTrace
-          (fmap (fmap (closure @s env st0)) signalShrinksChilren)
+          (fmap (fmap (interpretSTS @s baseEnv . closure @s env st0 )) signalShrinksChilren)
       where
         rootStates :: [State s]
         signalTrees :: [TreeT (MaybeT Identity) (Signal s)]
@@ -368,17 +392,18 @@ genTraceOfLength aTraceLength profile env st0 aSigGen =
 invalidTrace
   :: forall s
    . HasTrace s
-  => Word64
+  => BaseEnv s
+  -> Word64
   -- ^ Maximum length of the generated traces.
   -> [(Int, SignalGenerator s)]
   -- ^ Trace failure profile to be used to get an invalid signal.
   -> Gen (Invalid.Trace s)
-invalidTrace maxTraceLength failureProfile = do
-  tr <- trace @s maxTraceLength
+invalidTrace baseEnv maxTraceLength failureProfile = do
+  tr <- trace @s baseEnv maxTraceLength
   let env = _traceEnv tr
       st = lastState tr
   iSig <- generateSignalWithFailureProportions @s failureProfile env st
-  let est' = applySTS @s $ TRC (env, st, iSig)
+  let est' = interpretSTS @s baseEnv $ applySTS @s $ TRC (env, st, iSig)
   pure $! Invalid.Trace
             { Invalid.validPrefix = tr
             , Invalid.signal = iSig
@@ -389,10 +414,11 @@ invalidTrace maxTraceLength failureProfile = do
 traceSuchThat
   :: forall s
    . HasTrace s
-  => Word64
+  => BaseEnv s
+  -> Word64
   -> (Trace s -> Bool)
   -> Gen (Trace s)
-traceSuchThat n cond = Gen.filter cond (trace @s n)
+traceSuchThat baseEnv n cond = Gen.filter cond (trace @s baseEnv n)
 
 
 ofLengthAtLeast :: Gen (Trace s) -> Int -> Gen (Trace s)
@@ -412,10 +438,11 @@ suchThatLastState traceGen cond = Gen.filter (cond . lastState) traceGen
 nonTrivialTrace
   :: forall s
    . (HasTrace s, HasSizeInfo (Signal s))
-  => Word64
+  => BaseEnv s
+  -> Word64
   -> Gen (Trace s)
-nonTrivialTrace ub =
-  Gen.filter (any (not . isTrivial) . traceSignals OldestFirst) (trace ub)
+nonTrivialTrace baseEnv ub =
+  Gen.filter (any (not . isTrivial) . traceSignals OldestFirst) (trace baseEnv ub)
 
 class HasSizeInfo sig where
   isTrivial :: sig -> Bool
@@ -432,31 +459,34 @@ instance HasSizeInfo [a] where
 sampleMaxTraceSize
   :: forall s
    . HasTrace s
-  => Word64
+  => BaseEnv s
+  -> Word64
   -- ^ Trace's upper bound
   -> Int
   -- ^ Generator size
   -> Word64
   -- ^ Number of samples to take
   -> IO Int
-sampleMaxTraceSize ub d n =
+sampleMaxTraceSize baseEnv ub d n =
   maximum <$>
-    forM [0..n] (const $ traceLength <$> Gen.sample (Gen.resize (Size d) (trace @s ub)))
+    forM [0..n] (const $ traceLength <$> Gen.sample (Gen.resize (Size d) (trace @s baseEnv ub)))
 
 randomTrace
   :: forall s
    . HasTrace s
-  => Word64
+  => BaseEnv s
+  -> Word64
   -> IO (Trace s)
-randomTrace ub = Gen.sample (trace ub)
+randomTrace baseEnv ub = Gen.sample (trace baseEnv ub)
 
 
 randomTraceOfSize
   :: forall s
    . HasTrace s
-  => Word64
+  => BaseEnv s
+  -> Word64
   -> IO (Trace s)
-randomTraceOfSize desiredTraceLength = Gen.sample (traceOfLength desiredTraceLength)
+randomTraceOfSize baseEnv desiredTraceLength = Gen.sample (traceOfLength baseEnv desiredTraceLength)
 
 
 --------------------------------------------------------------------------------
@@ -584,14 +614,15 @@ ratio f tr = fromIntegral (f tr) / fromIntegral (traceLength tr)
 traceLengthsAreClassified
   :: forall s
    . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s))
-  => Word64
+  => BaseEnv s
+  -> Word64
   -- ^ Maximum trace length that the signal generator of 's' can generate.
   -> Word64
   -- ^ Lengths of the intervals in which the lengths range should be split.
   -> Property
-traceLengthsAreClassified maximumTraceLength intervalSize =
+traceLengthsAreClassified baseEnv maximumTraceLength intervalSize =
   property $ do
-    traceSample <- forAll (trace @s maximumTraceLength)
+    traceSample <- forAll (trace @s baseEnv maximumTraceLength)
     classifyTraceLength traceSample maximumTraceLength intervalSize
     success
 
@@ -599,19 +630,21 @@ traceLengthsAreClassified maximumTraceLength intervalSize =
 onlyValidSignalsAreGenerated
   :: forall s
    . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
-  => Word64
+  => BaseEnv s
+  -> Word64
   -- ^ Maximum trace length.
   -> Property
-onlyValidSignalsAreGenerated maximumTraceLength =
-  onlyValidSignalsAreGeneratedForTrace (trace @s maximumTraceLength)
+onlyValidSignalsAreGenerated baseEnv maximumTraceLength =
+  onlyValidSignalsAreGeneratedForTrace baseEnv (trace @s baseEnv maximumTraceLength)
 
 -- | Check that the signal generator of 's' only generate valid signals.
 onlyValidSignalsAreGeneratedForTrace
   :: forall s
    . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
-  => Gen (Trace s)
+  => BaseEnv s
+  -> Gen (Trace s)
   -> Property
-onlyValidSignalsAreGeneratedForTrace traceGen = property $ do
+onlyValidSignalsAreGeneratedForTrace baseEnv traceGen = property $ do
   tr <- forAll traceGen
   let
     env :: Environment s
@@ -620,7 +653,7 @@ onlyValidSignalsAreGeneratedForTrace traceGen = property $ do
     st' :: State s
     st' = lastState tr
   sig <- forAll (sigGen @s env st')
-  let result = applySTS @s (TRC(env, st', sig))
+  let result = interpretSTS @s baseEnv $ applySTS @s (TRC(env, st', sig))
   -- TODO: For some reason the result that led to the failure is not shown
   -- (even without using tasty, and setting the condition to True === False)
   footnoteShow st'
@@ -659,16 +692,17 @@ coverFailures coverPercentage targetFailures failureStructure = do
 invalidSignalsAreGenerated
   :: forall s
    . (HasTrace s, Show (Environment s), Show (State s), Show (Signal s), HasCallStack)
-  => [(Int, SignalGenerator s)]
+  => BaseEnv s
+  -> [(Int, SignalGenerator s)]
   -- ^ Failure profile.
   -> Word64
   -- ^ Maximum trace length.
   -> ([[PredicateFailure s]] -> PropertyT IO ())
   -- ^ Action to run when the an invalid signal is generated.
   -> Property
-invalidSignalsAreGenerated failureProfile maximumTraceLength checkFailures = property $ do
+invalidSignalsAreGenerated baseEnv failureProfile maximumTraceLength checkFailures = property $ do
 
-  tr <- forAll (invalidTrace @s maximumTraceLength failureProfile)
+  tr <- forAll (invalidTrace @s baseEnv maximumTraceLength failureProfile)
 
   cover 80
     "Invalid signals are generated when requested"
