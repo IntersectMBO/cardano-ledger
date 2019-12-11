@@ -111,7 +111,7 @@ genDCert keys coreKeys vrfKeys pparams dpState slot =
                -- TODO mgudemann
                -- needs to sign transaction with `coreKeys`
                -- tends to generate Txs without input which leads to error
-               , (0, genInstantaneousRewards coreKeys dState)
+               , (1, genInstantaneousRewards coreKeys dState)
                ]
  where
   dState = dpState ^. dstate
@@ -298,7 +298,7 @@ genInstantaneousRewards coreKeys delegSt = do
                       <*> QC.shuffle (Map.keys credentials)
   coins <- genCoinList 1 1000 (length winnerCreds) (length winnerCreds)
 
-  coreSigners <- take <$> QC.elements [0.. (max 0 $ (length coreKeys) - 1)]
+  coreSigners <- take <$> QC.elements [5 .. (max 0 $ (length coreKeys) - 1)]
                       <*> QC.shuffle coreKeys
 
   let credCoinMap = Map.fromList $ zip winnerCreds coins

@@ -13,7 +13,6 @@ module Generator.Core
   , genCoinList
   , increasingProbabilityAt
   , mkGenesisLedgerState
-  , traceCoreKeyPairs
   , traceKeyPairs
   , traceVRFKeyPairs
   , someKeyPairs
@@ -35,10 +34,10 @@ import           Address (toAddr, toCred)
 import           Coin (Coin (..))
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
-import           MockTypes (Addr, CoreKeyPair, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF,
-                     TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
+import           MockTypes (Addr, DPState, KeyPair, KeyPairs, LedgerEnv, SignKeyVRF, TxOut, UTxO,
+                     UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
-import           Test.Utils (mkGenKey, mkKeyPair)
+import           Test.Utils (mkKeyPair)
 import           Tx (pattern TxOut)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
 
@@ -91,7 +90,7 @@ pickStakeKey keys = vKey . snd <$> Gen.element keys
 -- to include certificates that require deposits.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 1000 10000 (length addrs) (length addrs)
+  ys <- genCoinList 10000 100000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
@@ -140,10 +139,3 @@ traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
   body seed = fst . withDRG (drgNewTest seed) $ do
     sk <- genKeyVRF
     return (sk, deriveVerKeyVRF sk)
-
--- | A pre-populated space of core node keys
-traceCoreKeyPairs :: [CoreKeyPair]
-traceCoreKeyPairs = mkGenKeys <$> [1..7]
-
-mkGenKeys :: Word64 -> CoreKeyPair
-mkGenKeys n = (uncurry KeyPair . swap) (mkGenKey (n, n , n, n, n))

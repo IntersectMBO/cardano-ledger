@@ -73,7 +73,8 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                              (genIntervalInThousands 0 1000)
                              (unsafeMkUnitInterval 0, unsafeMkUnitInterval 1)
                        -- decentralisation param: 0,0.1,0.2..1
-                       <*> (unsafeMkUnitInterval <$> QC.elements [0, 0.1 .. 1])
+                             -- TODO: mgudemann, allow 0 despite MIR cert generation
+                       <*> (unsafeMkUnitInterval <$> QC.elements [0.1,0.2 .. 1])
                        <*> genExtraEntropy
                        -- protocolVersion
                        <*> ((,,) <$> genNatural 1 10 <*> genNatural 1 50 <*> genNatural 1 100)

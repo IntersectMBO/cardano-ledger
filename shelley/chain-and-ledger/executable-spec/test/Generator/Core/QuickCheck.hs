@@ -13,8 +13,8 @@ module Generator.Core.QuickCheck
   , genUtxo0
   , increasingProbabilityAt
   , mkGenesisLedgerState
+  , numCoreNodes
   , coreKeyPairs
-  , traceCoreKeyPairs
   , traceKeyPairs
   , traceVRFKeyPairs
   , someKeyPairs
@@ -180,10 +180,3 @@ traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
   body seed = fst . withDRG (drgNewTest seed) $ do
     sk <- genKeyVRF
     return (sk, deriveVerKeyVRF sk)
-
--- | A pre-populated space of core node keys
-traceCoreKeyPairs :: [CoreKeyPair]
-traceCoreKeyPairs = mkGenKeys <$> [1..7]
-
-mkGenKeys :: Word64 -> CoreKeyPair
-mkGenKeys n = (uncurry KeyPair . swap) (mkGenKey (n, n , n, n, n))

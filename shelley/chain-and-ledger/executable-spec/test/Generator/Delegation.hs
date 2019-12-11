@@ -147,8 +147,9 @@ genInstantaneousRewards _ coreKeys delegSt = do
                       <*> Gen.shuffle (Map.keys credentials)
   coins <- genCoinList 1 1000 (length winnerCreds) (length winnerCreds)
 
-  coreSigners <- take <$> Gen.integral (Range.linear 0 $ length coreKeys)
-                      <*> Gen.shuffle coreKeys
+  coreSigners <-
+    take <$> Gen.integral (Range.linear (div (length coreKeys) 2) $ length coreKeys)
+         <*> Gen.shuffle coreKeys
 
   pure $ Just ( InstantaneousRewards (Map.fromList $ zip winnerCreds coins)
               , Right coreSigners)
