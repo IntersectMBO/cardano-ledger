@@ -10,11 +10,12 @@ module Rules.TestDeleg
   , rewardZeroAfterReg
   , rewardsSumInvariant
   , instantaneousRewardsAdded
+  , instantaneousRewardsValue
   )
 where
 
 import           Data.Map (Map)
-import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup)
+import qualified Data.Map.Strict as Map (difference, filter, foldl, keysSet, lookup, (\\))
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
@@ -147,4 +148,21 @@ instantaneousRewardsAdded ssts =
     checkMIR (SourceSignalTarget _ t sig) =
       case sig of
         InstantaneousRewards irwd -> QC.property $ Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (_irwd t)
+        _                         -> QC.property ()
+
+-- | Check that an accepted MIR certificate adds the overall value in the
+-- certificate to the existing value in the `irwd` map, overwriting any entries
+-- that already existed.
+instantaneousRewardsValue ::  [SourceSignalTarget DELEG] -> QC.Property
+instantaneousRewardsValue ssts =
+  QC.conjoin (map checkMIR ssts)
+  where
+    checkMIR :: SourceSignalTarget DELEG -> QC.Property
+    checkMIR (SourceSignalTarget s t sig) =
+      case sig of
+        InstantaneousRewards irwd ->
+          QC.property $
+          ((Map.foldl (+) (Coin 0) $ _irwd s Map.\\ irwd) +
+           (Map.foldl (+) (Coin 0) $ irwd) ==
+           (Map.foldl (+) (Coin 0) $ _irwd t))
         _                         -> QC.property ()

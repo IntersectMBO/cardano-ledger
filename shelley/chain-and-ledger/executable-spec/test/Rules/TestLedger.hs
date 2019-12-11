@@ -13,6 +13,7 @@ module Rules.TestLedger
   , poolIsMarkedForRetirement
   , pStateIsInternallyConsistent
   , prop_MIRentriesEndUpInMap
+  , prop_MIRValuesEndUpInMap
   )
 where
 
@@ -146,6 +147,15 @@ prop_MIRentriesEndUpInMap =
   TQC.forAllTraceFromInitState traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
     let sst = concatMap ledgerToDelegSsts (sourceSignalTargets tr)
     in  TestDeleg.instantaneousRewardsAdded sst
+
+-- | Check that the coin values in `InstantaneousRewards` certificate entries
+-- are added to the Instantaneous Rewards map.
+prop_MIRValuesEndUpInMap :: QC.Property
+prop_MIRValuesEndUpInMap =
+  QC.withMaxSuccess (fromIntegral numberOfTests) . QC.property $ do
+  TQC.forAllTraceFromInitState traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
+    let sst = concatMap ledgerToDelegSsts (sourceSignalTargets tr)
+    in  TestDeleg.instantaneousRewardsValue sst
 
 pStateIsInternallyConsistent :: Property
 pStateIsInternallyConsistent = do

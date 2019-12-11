@@ -26,8 +26,8 @@ import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
 import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
-                     poolIsMarkedForRetirement, prop_MIRentriesEndUpInMap, registeredPoolIsAdded,
-                     rewardZeroAfterReg)
+                     poolIsMarkedForRetirement, prop_MIRValuesEndUpInMap,
+                     prop_MIRentriesEndUpInMap, registeredPoolIsAdded, rewardZeroAfterReg)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -180,6 +180,9 @@ propertyTests = testGroup "Property-Based Testing"
                   [ TQC.testProperty "entries of MIR certificate are added to\
                                  \ irwd mapping"
                     prop_MIRentriesEndUpInMap
+                  , TQC.testProperty "coin values of entries of a MIR certificate\
+                                     \ are added to the irwd mapping"
+                    prop_MIRValuesEndUpInMap
                   ]
                 , testGroup "Ledger Genesis State"
                   [testProperty
