@@ -9,16 +9,19 @@ module Rules.TestDeleg
   , credentialRemovedAfterDereg
   , rewardZeroAfterReg
   , rewardsSumInvariant
+  , instantaneousRewardsAdded
   )
 where
 
 import           Data.Map (Map)
-import qualified Data.Map.Strict as Map (difference, filter, lookup)
+import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup)
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
-import qualified Data.Set as Set (singleton, size)
+import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import           Data.Word (Word64)
 import           Hedgehog (MonadTest, Property, TestLimit, forAll, property, withTests)
+
+import qualified Test.QuickCheck as QC
 
 import           Address (mkRwdAcnt)
 import           BaseTypes ((==>))
@@ -30,10 +33,11 @@ import           Generator.LedgerTrace ()
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 import           Coin (Coin, pattern Coin)
-import           LedgerState (_delegations, _rewards, _stkCreds)
+import           LedgerState (_delegations, _irwd, _rewards, _stkCreds)
 import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
 import           Test.Utils (assertAll)
-import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation, pattern RegKey)
+import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation,
+                     pattern InstantaneousRewards, pattern RegKey)
 
 -------------------------------
 -- helper accessor functions --
@@ -133,3 +137,14 @@ rewardsSumInvariant = withTests (fromIntegral numberOfTests) . property $ do
              null (Map.filter (/= Coin 0) $ rew `Map.difference` rew')
           && -- added elements have a zero reward balance
              null (Map.filter (/= Coin 0) $ rew' `Map.difference` rew)
+
+-- | Check that an accepted MIR certificate adds all entries to the `irwd` mapping
+instantaneousRewardsAdded ::  [SourceSignalTarget DELEG] -> QC.Property
+instantaneousRewardsAdded ssts =
+  QC.conjoin (map checkMIR ssts)
+  where
+    checkMIR :: SourceSignalTarget DELEG -> QC.Property
+    checkMIR (SourceSignalTarget _ t sig) =
+      case sig of
+        InstantaneousRewards irwd -> QC.property $ Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (_irwd t)
+        _                         -> QC.property ()

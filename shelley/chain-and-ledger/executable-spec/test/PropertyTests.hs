@@ -26,7 +26,8 @@ import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
 import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
-                     poolIsMarkedForRetirement, registeredPoolIsAdded, rewardZeroAfterReg)
+                     poolIsMarkedForRetirement, prop_MIRentriesEndUpInMap, registeredPoolIsAdded,
+                     rewardZeroAfterReg)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -174,6 +175,11 @@ propertyTests = testGroup "Property-Based Testing"
                                      poolIsMarkedForRetirement
                   , testProperty "pool state is internally consistent"
                                  pStateIsInternallyConsistent
+                  ]
+                , testGroup "STS Rules - MIR certificates"
+                  [ TQC.testProperty "entries of MIR certificate are added to\
+                                 \ irwd mapping"
+                    prop_MIRentriesEndUpInMap
                   ]
                 , testGroup "Ledger Genesis State"
                   [testProperty
