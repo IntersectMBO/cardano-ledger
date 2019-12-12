@@ -7,13 +7,13 @@ module Coin
     , splitCoin
     ) where
 
-import           Cardano.Binary (ToCBOR (toCBOR))
+import           Cardano.Binary (FromCBOR, ToCBOR (toCBOR))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Word (Word64)
-import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 -- |The amount of value held by a transaction output.
 newtype Coin = Coin Integer
-  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks, FromCBOR)
 
 instance ToCBOR Coin where
   toCBOR (Coin c) = toCBOR (fromInteger c :: Word64)

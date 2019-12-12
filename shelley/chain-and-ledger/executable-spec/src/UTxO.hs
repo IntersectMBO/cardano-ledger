@@ -30,6 +30,7 @@ module UTxO
   , deposits
   , makeWitnessVKey
   , makeWitnessesVKey
+  , makeGenWitnessVKey
   , makeGenWitnessesVKey
   , verifyWitVKey
   , scriptsNeeded
@@ -48,8 +49,7 @@ import qualified Data.Set as Set
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin (..))
-import           Keys (KeyDiscriminator (..), KeyPair, Signable,
-                     hash, sKey, sign, vKey, verify)
+import           Keys (KeyDiscriminator (..), KeyPair, Signable, hash, sKey, sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),

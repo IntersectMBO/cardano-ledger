@@ -3,41 +3,45 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module BaseTypes
   ( FixedPoint
-  , fpPrecision
-  , fpEpsilon
+  , (==>)
+  , (⭒)
+  , Nonce(..)
+  , Seed(..)
   , UnitInterval(..)
-  , mkUnitInterval
-  , truncateUnitInterval
-  , intervalValue
+  , fpEpsilon
+  , fpPrecision
   , interval0
   , interval1
-  , Seed(..)
-  , Nonce(..)
+  , intervalValue
+  , invalidKey
   , mkNonce
-  , (⭒)
-  , (==>)
+  , mkUnitInterval
+  , truncateUnitInterval
     -- * STS Base
   , Globals (..)
   , ShelleyBase
   ) where
 
 
-import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
+import           Cardano.Binary (Decoder, DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR),
+                     decodeListLen, decodeWord, encodeListLen, matchSize)
 import           Cardano.Crypto.Hash
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Cardano.Slotting.EpochInfo
+import           Control.Monad.Trans.Reader
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Functor.Identity
 import           Data.Ratio (denominator, numerator, (%))
+import qualified Data.Text as Text
 import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
-import           Control.Monad.Trans.Reader
 
 data E34
 
@@ -69,6 +73,14 @@ instance ToCBOR UnitInterval where
 mkUnitInterval :: Rational -> Maybe UnitInterval
 mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Nothing
 
+instance FromCBOR UnitInterval where
+  fromCBOR = do
+    n <- decodeWord
+    d <- decodeWord
+    case mkUnitInterval (toInteger n % toInteger d) of
+      Nothing -> cborError ("not a unit interval value" :: String)
+      Just u -> pure u
+
 -- | Convert a rational to a `UnitInterval` by ignoring its integer part.
 truncateUnitInterval :: Rational -> UnitInterval
 truncateUnitInterval r = case (numerator r, denominator r) of
@@ -96,6 +108,21 @@ instance NoUnexpectedThunks Nonce
 instance ToCBOR Nonce where
   toCBOR NeutralNonce = encodeListLen 1 <> toCBOR (0 :: Word8)
   toCBOR (Nonce n) = encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR n
+
+invalidKey :: Word -> Decoder s a
+invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
+
+instance FromCBOR Nonce where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "NeutralNonce" 1 n
+        pure NeutralNonce
+      1 -> do
+        matchSize "Nonce" 2 n
+        Nonce <$> fromCBOR
+      k -> invalidKey k
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce

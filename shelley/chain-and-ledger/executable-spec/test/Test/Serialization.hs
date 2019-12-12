@@ -1,9 +1,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Test.Serialization where
 
-import           Cardano.Binary (ToCBOR, toCBOR)
+import           Data.String (fromString)
+
+import           Cardano.Binary (Decoder, FromCBOR (..), ToCBOR (..), decodeFullDecoder,
+                     serializeEncoding, toCBOR)
 import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (encodeVerKeyDSIGN), encodeSignedDSIGN)
 import           Cardano.Crypto.Hash (ShortHash, getHash)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
@@ -12,7 +16,7 @@ import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 (pack)
 
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.HUnit (assertEqual, testCase)
+import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
 
 
 import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
@@ -28,8 +32,8 @@ import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
                      vKey)
 import           LedgerState (genesisId)
-import           Serialization (ToCBORGroup (..))
-import           Slot (BlockNo(..), EpochNo (..), SlotNo (..))
+import           Serialization (FromCBORGroup (..), ToCBORGroup (..))
+import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Test.Utils
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
@@ -41,21 +45,34 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      pattern InstallerHash, pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
                      Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 
-import           MockTypes (Addr, GenKeyHash, HashHeader, InstallerHash, KeyHash, KeyPair, MultiSig,
-                     SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn, VKey, VKeyES,
-                     VRFKeyHash, VerKeyVRF, hashKeyVRF)
+import           MockTypes (Addr, CoreKeyPair, GenKeyHash, HashHeader, InstallerHash, KeyHash,
+                     KeyPair, MultiSig, SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn,
+                     VKey, VKeyES, VRFKeyHash, VerKeyVRF, hashKeyVRF)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Unsafe.Coerce (unsafeCoerce)
-import           UTxO (makeWitnessVKey)
+import           UTxO (makeGenWitnessVKey, makeWitnessVKey)
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
+roundTrip :: (Show a, Eq a) => (a -> Encoding) -> (forall s. Decoder s a) -> String -> a -> Assertion
+roundTrip encode decode name x =
+  case (decodeFullDecoder (fromString name) decode . serializeEncoding . encode) x of
+    Left e -> assertFailure $ "could not decode serialization of " ++ show x ++ ", " ++ show e
+    Right y -> y @?= x
 
-checkEncoding :: ToCBOR a => String -> a -> ToTokens -> TestTree
-checkEncoding name x t = testCase testName $
-  assertEqual testName (fromEncoding $ tokens t) (fromEncoding $ toCBOR x)
+checkEncoding
+  :: (Show a, Eq a)
+    => (a -> Encoding)
+    -> (forall s. Decoder s a)
+    -> String
+    -> a
+    -> ToTokens
+    -> TestTree
+checkEncoding encode decode name x t = testCase testName $
+  assertEqual testName (fromEncoding $ tokens t) (fromEncoding $ encode x)
+    >> roundTrip encode decode (name ++ "_rt") x
   where
    testName = "prop_serialize_" <> name
    tokens :: ToTokens -> Encoding
@@ -66,6 +83,22 @@ checkEncoding name x t = testCase testName $
 
    fromEncoding :: Encoding -> Tokens
    fromEncoding (Encoding e) = e TkEnd
+
+checkEncodingCBOR
+  :: (FromCBOR a, ToCBOR a, Show a, Eq a)
+  => String
+  -> a
+  -> ToTokens
+  -> TestTree
+checkEncodingCBOR = checkEncoding toCBOR fromCBOR
+
+checkEncodingCBORCBORGroup
+  :: (FromCBORGroup a, ToCBORGroup a, Show a, Eq a)
+  => String
+  -> a
+  -> ToTokens
+  -> TestTree
+checkEncodingCBORCBORGroup = checkEncoding toCBORGroup fromCBORGroup
 
 
 getRawKeyHash :: KeyHash -> ByteString
@@ -84,8 +117,12 @@ getRawNonce :: Nonce -> ByteString
 getRawNonce (Nonce hsh) = getHash hsh
 getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 
+testGKey :: CoreKeyPair
+testGKey = KeyPair vk sk
+  where (sk, vk) = mkGenKey (0, 0, 0, 0, 0)
+
 testGKeyHash :: GenKeyHash
-testGKeyHash = (hashKey . snd . mkGenKey) (0, 0, 0, 0, 0)
+testGKeyHash = (hashKey . vKey) testGKey
 
 testVRF :: (SignKeyVRF, VerKeyVRF)
 testVRF = mkVRFKeyPair (0, 0, 0, 0, 5)
@@ -136,6 +173,9 @@ testScript = RequireSignature $ undiscriminateKeyHash testKeyHash1
 testScriptHash :: ScriptHash
 testScriptHash = hashScript testScript
 
+testScriptHash2 :: ScriptHash
+testScriptHash2 = hashScript (RequireSignature $ undiscriminateKeyHash testKeyHash2)
+
 testHeaderHash :: HashHeader
 testHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
@@ -154,228 +194,181 @@ instance Monoid ToTokens where
 serializationTests :: TestTree
 serializationTests = testGroup "Serialization Tests"
 
-  [ checkEncoding "list"
+  [ checkEncodingCBOR "list"
     [1::Integer]
     (T (TkListBegin . TkInteger 1 . TkBreak))
-  , checkEncoding "set"
+  , checkEncodingCBOR "set"
     (Set.singleton (1 :: Integer))
     (T (TkTag 258 . TkListLen 1 . TkInteger 1))
-  , checkEncoding "map"
+  , checkEncodingCBOR "map"
     (Map.singleton (1 :: Integer) (1 :: Integer))
     (T (TkMapLen 1 . TkInteger 1 . TkInteger 1))
-  , checkEncoding "coin"
+  , checkEncodingCBOR "coin"
     (Coin 30)
     (T (TkWord64 30))
-  , checkEncoding "rational"
+  , checkEncodingCBOR "rational"
     (UnsafeUnitInterval (1 % 2))
     (T (TkWord64 1 . TkWord64 2))
-  , checkEncoding "slot"
+  , checkEncodingCBOR "slot"
     (SlotNo 7)
     (T (TkWord64 7))
-  , checkEncoding "neutral_nonce"
+  , checkEncodingCBOR "neutral_nonce"
     NeutralNonce
     (T (TkListLen 1 . TkWord 0))
-  , checkEncoding "nonce"
+  , checkEncodingCBOR "nonce"
     (mkNonce 99)
     (T (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonce 99)))
-  , checkEncoding "key_hash"
+  , checkEncodingCBOR "key_hash"
     testKeyHash1
     (T (TkBytes (getRawKeyHash testKeyHash1)))
-  , checkEncoding "credential_key_hash"
+  , checkEncodingCBOR "credential_key_hash"
     (KeyHashObj testKeyHash1)
     (T (TkListLen 2 . TkWord 0) <> S testKeyHash1)
-  , checkEncoding "base_address"
+  , checkEncodingCBOR "base_address_key_key"
     (AddrBase (KeyHashObj testKeyHash1) (KeyHashObj testKeyHash2))
     ( (T $ TkListLen 3)
         <> (T $ TkWord 0)
         <> S testKeyHash1
         <> S testKeyHash2
     )
+  , checkEncodingCBOR "base_address_key_script"
+    (AddrBase (KeyHashObj testKeyHash1) (ScriptHashObj testScriptHash))
+    ( (T $ TkListLen 3)
+        <> (T $ TkWord 1)
+        <> S testKeyHash1
+        <> S testScriptHash
+    )
+  , checkEncodingCBOR "base_address_script_key"
+    (AddrBase (ScriptHashObj testScriptHash) (KeyHashObj testKeyHash2))
+    ( (T $ TkListLen 3)
+        <> (T $ TkWord 2)
+        <> S testScriptHash
+        <> S testKeyHash2
+    )
+  , checkEncodingCBOR "base_address_script_script"
+    (AddrBase (ScriptHashObj testScriptHash) (ScriptHashObj testScriptHash2))
+    ( (T $ TkListLen 3)
+        <> (T $ TkWord 3)
+        <> S testScriptHash
+        <> S testScriptHash2
+    )
   , let ptr = Ptr (SlotNo 12) 0 3 in
-    checkEncoding "pointer_address"
+    checkEncodingCBOR "pointer_address_key"
     (AddrPtr (KeyHashObj testKeyHash1) ptr)
     ( (T $ TkListLen (2 + fromIntegral (listLen ptr)))
        <> T (TkWord 4)
        <> S testKeyHash1
        <> G ptr
     )
-  , checkEncoding "enterprise_address"
+  , let ptr = Ptr (SlotNo 12) 0 3 in
+    checkEncodingCBOR "pointer_address_script"
+    (AddrPtr (ScriptHashObj testScriptHash) ptr)
+    ( (T $ TkListLen (2 + fromIntegral (listLen ptr)))
+       <> T (TkWord 5)
+       <> S testScriptHash
+       <> G ptr
+    )
+  , checkEncodingCBOR "enterprise_address_key"
     (AddrEnterprise (KeyHashObj testKeyHash1))
     (T (TkListLen 2) <> T (TkWord 6) <> S testKeyHash1)
-  , checkEncoding "txin"
+  , checkEncodingCBOR "enterprise_address_script"
+    (AddrEnterprise (ScriptHashObj testScriptHash))
+    (T (TkListLen 2) <> T (TkWord 7) <> S testScriptHash)
+  , checkEncodingCBOR "txin"
     (TxIn genesisId 0 :: TxIn)
     (T (TkListLen 2) <> S (genesisId :: TxId) <> T (TkWord64 0))
   , let a = AddrEnterprise (KeyHashObj testKeyHash1) in
-    checkEncoding "txout"
+    checkEncodingCBOR "txout"
     (TxOut a (Coin 2))
     (T (TkListLen 2)
       <> S a
       <> S (Coin 2)
     )
-  , let
-      tin = Set.fromList [TxIn genesisId 1]
-      tout = [TxOut testAddrE (Coin 2)]
-    in checkEncoding "txbody"
-    ( TxBody -- minimal transaction body
-      tin
-      tout
-      Seq.empty
-      Map.empty
-      (Coin 9)
-      (SlotNo 500)
-      emptyUpdate
-    )
-    ( T (TkMapLen 4)
-      <> T (TkWord 0) -- Tx Ins
-      <> S tin
-      <> T (TkWord 1) -- Tx Outs
-      <> S tout
-      <> T (TkWord 2) -- Tx Fee
-      <> T (TkWord64 9)
-      <> T (TkWord 3) -- Tx TTL
-      <> T (TkWord64 500)
-    )
   , case makeWitnessVKey testTxb testKey1 of
     (WitGVKey _ _) -> error "unreachable"
     w@(WitVKey vk sig) ->
-      checkEncoding "vkey_witnesses"
+      checkEncodingCBOR "vkey_witnesses"
       w  -- Transaction _witnessVKeySet element
-      ( T (TkListLen 2)
+      ( T (TkListLen 3 . TkWord 0)
         <> S vk -- vkey
         <> S sig -- signature
       )
-  , checkEncoding "script_hash_to_scripts"
+  , case makeGenWitnessVKey testTxb testGKey of
+    (WitVKey _ _) -> error "unreachable"
+    w@(WitGVKey vk sig) ->
+      checkEncodingCBOR "genesis_vkey_witnesses"
+      w  -- Transaction _witnessVKeySet element
+      ( T (TkListLen 3 . TkWord 1)
+        <> S vk -- vkey
+        <> S sig -- signature
+      )
+  , checkEncodingCBOR "script_hash_to_scripts"
     (Map.singleton (hashScript testScript :: ScriptHash) testScript)  -- Transaction _witnessMSigMap
     ( T (TkMapLen 1)
       <> S (hashScript testScript :: ScriptHash)
       <> S testScript
     )
 
-  -- checkEncoding "avupdate"
-  , let
-      appName   = ApName $ pack "Daedalus"
-      systemTag = SystemTag $ pack "DOS"
-      apVer    = ApVer 17
-    in
-    checkEncoding "avupdate"
-    (AVUpdate (Map.singleton
-                testGKeyHash
-                (Applications (Map.singleton
-                       appName
-                       (apVer
-                       , Mdt $ Map.singleton
-                           systemTag
-                           testInstallerHash
-                       )))))
-    ( (T $ TkMapLen 1 )
-      <> S testGKeyHash
-      <> (T $ TkMapLen 1 )
-        <> S appName
-        <> (T $ TkListLen 2)
-        <> S apVer
-        <> (T $ TkMapLen 1 )
-        <> S systemTag
-        <> S testInstallerHash
+  -- checkEncodingCBOR "withdrawal_key"
+  , checkEncodingCBOR "withdrawal"
+    (Map.singleton (RewardAcnt (KeyHashObj testKeyHash1)) (Coin 123))
+    ( (T $ TkMapLen 1 . TkListLen 2)
+        <> (T $ TkWord 0)
+        <> S testKeyHash1
+        <> S (Coin 123)
     )
 
-    -- checkEncoding "full_update"
-  , let
-      ppup = (PPUpdate (Map.singleton
-                  testGKeyHash
-                  (PParamsUpdate $ Set.singleton (Nopt 100))))
-      avup = (AVUpdate (Map.singleton
-                  testGKeyHash
-                  (Applications (Map.singleton
-                         (ApName $ pack "Daedalus")
-                         (ApVer 17
-                         , Mdt $ Map.singleton
-                             (SystemTag $ pack "DOS")
-                             testInstallerHash
-                         )))))
-    in checkEncoding "full_update"
-    (Update ppup avup)
-    ( (T $ TkListLen 2)
-      <> S ppup
-      <> S avup
+  -- checkEncodingCBOR "withdrawal_script"
+  , checkEncodingCBOR "withdrawal"
+    (Map.singleton (RewardAcnt (ScriptHashObj testScriptHash)) (Coin 123))
+    ( (T $ TkMapLen 1 . TkListLen 2)
+        <> (T $ TkWord 1)
+        <> S testScriptHash
+        <> S (Coin 123)
     )
 
-  -- checkEncoding "block_header_body"
-  , let
-      tin = Set.fromList [TxIn genesisId 1]
-      tout = [TxOut testAddrE (Coin 2)]
-      reg = RegKey (KeyHashObj testKeyHash1)
-      ra = RewardAcnt (KeyHashObj testKeyHash2)
-      ras = Map.singleton ra (Coin 123)
-      up = Update
-             (PPUpdate (Map.singleton
-                         testGKeyHash
-                         (PParamsUpdate $ Set.singleton (Nopt 100))))
-             (AVUpdate (Map.singleton
-                         testGKeyHash
-                         (Applications (Map.singleton
-                                (ApName $ pack "Daedalus")
-                                (ApVer 17
-                                , Mdt $ Map.singleton
-                                    (SystemTag $ pack "DOS")
-                                    testInstallerHash
-                                )))))
-    in checkEncoding "txbody_full"
-    ( TxBody -- transaction body with all components
-        tin
-        tout
-        (Seq.fromList [ reg ])
-        ras
-        (Coin 9)
-        (SlotNo 500)
-        up
-     )
-     ( T (TkMapLen 7)
-       <> T (TkWord 0) -- Tx Ins
-       <> S tin
-       <> T (TkWord 1) -- Tx Outs
-       <> S tout
-       <> T (TkWord 2) -- Tx Fee
-       <> S (Coin 9)
-       <> T (TkWord 3) -- Tx TTL
-       <> S (SlotNo 500)
-       <> T (TkWord 4) -- Tx Certs
-       <> T (TkListLen 1) -- Seq list begin
-       <> S reg
-       <> T (TkWord 5) -- Tx Reward Withdrawals
-       <> S ras
-       <> T (TkWord 6) -- Tx Update
-       <> S up
-      )
-
-  , checkEncoding "register script"
-    (DeRegKey (ScriptHashObj testScriptHash))
+  , checkEncodingCBOR "register_key"
+    (RegKey (KeyHashObj testKeyHash1))
     ( T (TkListLen 2)
-      <> T (TkWord 3) -- DeReg cert
-      <> S testScriptHash -- keyhash
+      <> T (TkWord 0) -- Reg cert
+      <> S testKeyHash1 -- keyhash
     )
 
-  , checkEncoding "deregister_key"
+  , checkEncodingCBOR "register_script"
+    (RegKey (ScriptHashObj testScriptHash))
+    ( T (TkListLen 2)
+      <> T (TkWord 1) -- Reg cert
+      <> S testScriptHash -- scripthash
+    )
+
+  , checkEncodingCBOR "deregister_key"
+    (DeRegKey (KeyHashObj testKeyHash1))
+    ( T (TkListLen 2)
+      <> T (TkWord 2) -- DeReg cert
+      <> S testKeyHash1 -- keyhash
+    )
+  , checkEncodingCBOR "deregister_key"
     (DeRegKey (KeyHashObj testKeyHash1))
     ( T (TkListLen 2)
       <> T (TkWord 2) -- DeReg cert
       <> S testKeyHash1 -- keyhash
     )
 
-  , checkEncoding "deregister_script"
+  , checkEncodingCBOR "deregister_script"
     (DeRegKey (ScriptHashObj testScriptHash))
     ( T (TkListLen 2)
       <> T (TkWord 3) -- DeReg cert
       <> S testScriptHash -- script hash
     )
 
-    -- checkEncoding "register-pool"
+    -- checkEncodingCBOR "register-pool"
   , let poolOwner = testKeyHash2
         poolMargin = unsafeMkUnitInterval 0.7
         poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
         poolPledge = Coin 11
         poolCost = Coin 55
     in
-    checkEncoding "register-pool"
+    checkEncodingCBOR "register_pool"
     (RegPool (PoolParams
                { _poolPubKey = testKeyHash1
                , _poolVrf = testVRFKH
@@ -396,7 +389,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S poolRAcnt    -- reward acct
     )
 
-  , checkEncoding "retire_pool"
+  , checkEncodingCBOR "retire_pool"
     (RetirePool testKeyHash1 (EpochNo 1729))
     ( T (TkListLen 3
       . TkWord 7) -- Pool Retire
@@ -404,7 +397,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S (EpochNo 1729) -- epoch
     )
 
-  , checkEncoding "Key_delegation"
+  , checkEncodingCBOR "Key_delegation"
     (Delegate (Delegation (KeyHashObj testKeyHash1) testKeyHash2))
     ( T (TkListLen 3
       . TkWord 4) -- delegation cert with key
@@ -412,7 +405,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S testKeyHash2
     )
 
-  , checkEncoding "script_delegation"
+  , checkEncodingCBOR "script_delegation"
     (Delegate (Delegation (ScriptHashObj testScriptHash) testKeyHash2))
     ( T (TkListLen 3
       . TkWord 5) -- delegation cert with script
@@ -420,7 +413,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S testKeyHash2
     )
 
-  , checkEncoding "genesis_delegation"
+  , checkEncodingCBOR "genesis_delegation"
     (GenesisDelegate (testGKeyHash, testKeyHash1))
     ( T (TkListLen 3
       . TkWord 8) -- genesis delegation cert
@@ -428,21 +421,21 @@ serializationTests = testGroup "Serialization Tests"
       <> S testKeyHash1 -- delegatee key hash
     )
 
-    -- checkEncoding "mir"
+    -- checkEncodingCBOR "mir"
     , let rs = Map.singleton (KeyHashObj testKeyHash1) 77
     in
-    checkEncoding "mir"
+    checkEncodingCBOR "mir"
     (InstantaneousRewards rs)
     ( T (TkListLen 2
        . TkWord 9) -- make instantaneous rewards cert
       <> S rs
     )
 
-  , checkEncoding "pparams_update_key_deposit_only"
+  , checkEncodingCBOR "pparams_update_key_deposit_only"
     (PParamsUpdate $ Set.singleton (KeyDeposit (Coin 5)))
     ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
 
-  -- checkEncoding "pparams_update_all"
+  -- checkEncodingCBOR "pparams_update_all"
   , let minfeea               = 0
         minfeeb               = 1
         maxbbsize             = 2
@@ -464,7 +457,7 @@ serializationTests = testGroup "Serialization Tests"
         extraEntropy          = NeutralNonce
         protocolVersion       = (0,1,2)
     in
-    checkEncoding "pparams_update_all"
+    checkEncodingCBOR "pparams_update_all"
     (PParamsUpdate $ Set.fromList
       [ MinFeeA               minfeea
       , MinFeeB               minfeeb
@@ -509,7 +502,172 @@ serializationTests = testGroup "Serialization Tests"
       <> (T $ TkWord 18) <> S extraEntropy
       <> (T $ TkWord 19) <> S protocolVersion)
 
--- checkEncoding "block_header_body"
+  -- checkEncodingCBOR "avupdate"
+  , let
+      appName   = ApName $ pack "Daedalus"
+      systemTag = SystemTag $ pack "DOS"
+      apVer    = ApVer 17
+    in
+    checkEncodingCBOR "avupdate"
+    (AVUpdate (Map.singleton
+                testGKeyHash
+                (Applications (Map.singleton
+                       appName
+                       (apVer
+                       , Mdt $ Map.singleton
+                           systemTag
+                           testInstallerHash
+                       )))))
+    ( (T $ TkMapLen 1 )
+      <> S testGKeyHash
+      <> (T $ TkMapLen 1 )
+        <> S appName
+        <> (T $ TkListLen 2)
+        <> S apVer
+        <> (T $ TkMapLen 1 )
+        <> S systemTag
+        <> S testInstallerHash
+    )
+
+    -- checkEncodingCBOR "full_update"
+  , let
+      ppup = PPUpdate (Map.singleton
+                  testGKeyHash
+                  (PParamsUpdate $ Set.singleton (Nopt 100)))
+      avup = AVUpdate (Map.singleton
+                  testGKeyHash
+                  (Applications (Map.singleton
+                         (ApName $ pack "Daedalus")
+                         (ApVer 17
+                         , Mdt $ Map.singleton
+                             (SystemTag $ pack "DOS")
+                             testInstallerHash
+                         ))))
+    in checkEncodingCBOR "full_update"
+    (Update ppup avup)
+    ( (T $ TkListLen 2)
+      <> S ppup
+      <> S avup
+    )
+
+  -- checkEncodingCBOR "minimal_txn"
+  , let
+      tin = Set.fromList [TxIn genesisId 1]
+      tout = [TxOut testAddrE (Coin 2)]
+    in checkEncodingCBOR "txbody"
+    ( TxBody -- minimal transaction body
+      tin
+      tout
+      Seq.empty
+      Map.empty
+      (Coin 9)
+      (SlotNo 500)
+      emptyUpdate
+    )
+    ( T (TkMapLen 4)
+      <> T (TkWord 0) -- Tx Ins
+      <> S tin
+      <> T (TkWord 1) -- Tx Outs
+      <> S tout
+      <> T (TkWord 2) -- Tx Fee
+      <> T (TkWord64 9)
+      <> T (TkWord 3) -- Tx TTL
+      <> T (TkWord64 500)
+    )
+
+  -- checkEncodingCBOR "transaction_mixed"
+  , let
+      tin = Set.fromList [TxIn genesisId 1]
+      tout = [TxOut testAddrE (Coin 2)]
+      ra = RewardAcnt (KeyHashObj testKeyHash2)
+      ras = Map.singleton ra (Coin 123)
+      up = Update
+             (PPUpdate (Map.singleton
+                         testGKeyHash
+                         (PParamsUpdate $ Set.singleton (Nopt 100))))
+             (AVUpdate (Map.singleton
+                         testGKeyHash
+                         (Applications (Map.singleton
+                                (ApName $ pack "Daedalus")
+                                (ApVer 17
+                                , Mdt $ Map.singleton
+                                    (SystemTag $ pack "DOS")
+                                    testInstallerHash
+                                )))))
+    in checkEncodingCBOR "txbody_partial"
+    ( TxBody -- transaction body with some optional components
+        tin
+        tout
+        mempty
+        ras
+        (Coin 9)
+        (SlotNo 500)
+        up
+     )
+     ( T (TkMapLen 6)
+       <> T (TkWord 0) -- Tx Ins
+       <> S tin
+       <> T (TkWord 1) -- Tx Outs
+       <> S tout
+       <> T (TkWord 2) -- Tx Fee
+       <> S (Coin 9)
+       <> T (TkWord 3) -- Tx TTL
+       <> S (SlotNo 500)
+       <> T (TkWord 5) -- Tx Reward Withdrawals
+       <> S ras
+       <> T (TkWord 6) -- Tx Update
+       <> S up
+      )
+
+  -- checkEncodingCBOR "full_txn"
+  , let
+      tin = Set.fromList [TxIn genesisId 1]
+      tout = [TxOut testAddrE (Coin 2)]
+      reg = RegKey (KeyHashObj testKeyHash1)
+      ra = RewardAcnt (KeyHashObj testKeyHash2)
+      ras = Map.singleton ra (Coin 123)
+      up = Update
+             (PPUpdate (Map.singleton
+                         testGKeyHash
+                         (PParamsUpdate $ Set.singleton (Nopt 100))))
+             (AVUpdate (Map.singleton
+                         testGKeyHash
+                         (Applications (Map.singleton
+                                (ApName $ pack "Daedalus")
+                                (ApVer 17
+                                , Mdt $ Map.singleton
+                                    (SystemTag $ pack "DOS")
+                                    testInstallerHash
+                                )))))
+    in checkEncodingCBOR "txbody_full"
+    ( TxBody -- transaction body with all components
+        tin
+        tout
+        (Seq.fromList [ reg ])
+        ras
+        (Coin 9)
+        (SlotNo 500)
+        up
+     )
+     ( T (TkMapLen 7)
+       <> T (TkWord 0) -- Tx Ins
+       <> S tin
+       <> T (TkWord 1) -- Tx Outs
+       <> S tout
+       <> T (TkWord 2) -- Tx Fee
+       <> S (Coin 9)
+       <> T (TkWord 3) -- Tx TTL
+       <> S (SlotNo 500)
+       <> T (TkWord 4) -- Tx Certs
+       <> T (TkListLen 1) -- Seq list begin
+       <> S reg
+       <> T (TkWord 5) -- Tx Reward Withdrawals
+       <> S ras
+       <> T (TkWord 6) -- Tx Update
+       <> S up
+      )
+
+-- checkEncodingCBOR "block_header_body"
   , let
       prevhash = testHeaderHash
       issuerVkey = vKey testKey1
@@ -530,7 +688,7 @@ serializationTests = testGroup "Serialization Tests"
                 (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
       protover = ProtVer 0 0 0
     in
-    checkEncoding "block_header_body"
+    checkEncodingCBOR "block_header_body"
     ( BHBody
       { bheaderPrev    = prevhash
       , bheaderVk      = issuerVkey
@@ -545,7 +703,7 @@ serializationTests = testGroup "Serialization Tests"
       , bprotvert      = protover
       }
     )
-    ( T (TkListLen 11)
+    ( T (TkListLen $ 9 + 5 + 3)
       <> S prevhash
       <> S issuerVkey
       <> S vrfVkey
@@ -555,28 +713,27 @@ serializationTests = testGroup "Serialization Tests"
       <> S size
       <> S blockNo
       <> S bbhash
-      <> G ocert
-      <> G protover
+      <> G ocert    -- 5
+      <> G protover -- 3
     )
 
-  -- checkEncoding "operational_cert"
+  -- checkEncodingCBOR "operational_cert"
   , let vkHot     = snd testKESKeys
         vkCol     = vKey testKey1
         counter   = 0
         kesperiod = KESPeriod 0
         signature = sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0)
     in
-    checkEncoding "operational_cert"
+    checkEncodingCBORCBORGroup "operational_cert"
     (OCert vkHot vkCol counter kesperiod signature)
-    ( (T $ TkListLen 5)
-      <> S vkHot
+    (    S vkHot
       <> S vkCol
       <> S counter
       <> S kesperiod
       <> S signature
     )
 
-    -- checkEncoding "block_header"
+    -- checkEncodingCBOR "block_header"
   , let bhb = BHBody
               { bheaderPrev    = testHeaderHash
               , bheaderVk      = vKey testKey1
@@ -595,7 +752,7 @@ serializationTests = testGroup "Serialization Tests"
               }
         sig = Keys.signKES (fst testKESKeys) bhb 0
     in
-    checkEncoding "block_header"
+    checkEncodingCBOR "block_header"
     (BHeader bhb sig)
     ( (T $ TkListLen 2)
         <> S bhb

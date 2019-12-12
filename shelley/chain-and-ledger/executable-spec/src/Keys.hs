@@ -78,7 +78,7 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
 import           Cardano.Crypto.KES
                      (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES),
-                     SignedKES (SignedKES), signedKES, verifySignedKES)
+                     SignedKES (SignedKES), decodeSignedKES, signedKES, verifySignedKES)
 import qualified Cardano.Crypto.KES as KES
 import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
 import qualified Cardano.Crypto.VRF as VRF
@@ -183,6 +183,8 @@ deriving instance (Crypto crypto) => NoUnexpectedThunks (KESig crypto a)
 
 instance (Crypto crypto, Typeable a) => ToCBOR (KESig crypto a) where
   toCBOR (KESig (SignedKES sigKES)) = encodeSigKES sigKES
+instance (Crypto crypto, Typeable a) => FromCBOR (KESig crypto a) where
+  fromCBOR = KESig <$> decodeSignedKES
 
 
 -- |Produce a key evolving signature
@@ -229,6 +231,7 @@ newtype DiscKeyHash (discriminator :: KeyDiscriminator) crypto =
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 deriving instance (Crypto crypto, Typeable disc) => ToCBOR (DiscKeyHash disc crypto)
+deriving instance (Crypto crypto, Typeable disc) => FromCBOR (DiscKeyHash disc crypto)
 
 type KeyHash crypto = DiscKeyHash 'Regular crypto
 {-# COMPLETE KeyHash #-}

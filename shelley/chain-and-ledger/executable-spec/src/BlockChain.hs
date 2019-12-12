@@ -3,6 +3,8 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -49,7 +51,8 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, mkNonce)
-import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, encodeListLen,
+                     enforceSize, matchSize)
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -59,11 +62,11 @@ import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
-import           Slot (Duration, SlotNo (..), BlockNo(..))
+import           Slot (BlockNo (..), Duration, SlotNo (..))
 import           Tx (Tx (..))
 
 import           NonIntegral ((***))
-import           Serialization (CBORGroup (..), ToCBORGroup (..))
+import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
 
 -- |The hash of a Block Header
 newtype HashHeader crypto =
@@ -71,6 +74,7 @@ newtype HashHeader crypto =
   deriving (Show, Eq, Generic, Ord)
 
 deriving instance Crypto crypto => ToCBOR (HashHeader crypto)
+deriving instance Crypto crypto => FromCBOR (HashHeader crypto)
 
 instance NoUnexpectedThunks (HashHeader crypto)
 
@@ -88,6 +92,7 @@ newtype HashBBody crypto =
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (HashBBody crypto)
+deriving instance Crypto crypto => FromCBOR (HashBBody crypto)
 
 -- |Hash a given block header
 bhHash
@@ -124,6 +129,15 @@ instance Crypto crypto
        <> toCBOR bHBody
        <> toCBOR kESig
 
+instance Crypto crypto
+  => FromCBOR (BHeader crypto)
+ where
+   fromCBOR = do
+     enforceSize "Block Header" 2
+     bhb <- fromCBOR
+     sig <- fromCBOR
+     pure $ BHeader bhb sig
+
 data ProtVer = ProtVer Natural Natural Natural
   deriving (Show, Eq, Generic, Ord)
   deriving ToCBOR via (CBORGroup ProtVer)
@@ -136,6 +150,13 @@ instance ToCBORGroup ProtVer where
        <> toCBOR y
        <> toCBOR z
   listLen _ = 3
+
+instance FromCBORGroup ProtVer where
+  fromCBORGroup = do
+    x <- fromCBOR
+    y <- fromCBOR
+    z <- fromCBOR
+    pure $ ProtVer x y z
 
 data BHBody crypto = BHBody
   { -- | Hash of the previous block header
@@ -173,7 +194,7 @@ instance Crypto crypto
   => ToCBOR (BHBody crypto)
  where
   toCBOR bhBody =
-    encodeListLen 11
+    encodeListLen (9 + listLen (bheaderOCert bhBody)  + listLen (bprotvert bhBody))
       <> toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
       <> VRF.encodeVerKeyVRF (bheaderVrfVk bhBody)
@@ -185,6 +206,37 @@ instance Crypto crypto
       <> toCBOR (bhash bhBody)
       <> toCBORGroup (bheaderOCert bhBody)
       <> toCBORGroup (bprotvert bhBody)
+
+instance Crypto crypto
+  => FromCBOR (BHBody crypto)
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    bheaderPrev <- fromCBOR
+    bheaderVk <- fromCBOR
+    bheaderVrfVk <- VRF.decodeVerKeyVRF
+    bheaderSlotNo <- fromCBOR
+    bheaderEta <- fromCBOR
+    bheaderL  <- fromCBOR
+    bsize <- fromCBOR
+    bheaderBlockNo <- fromCBOR
+    bhash <- fromCBOR
+    bheaderOCert <- fromCBORGroup
+    bprotvert <- fromCBORGroup
+    matchSize "Block header body" (fromIntegral $ 9 + listLen bheaderOCert + listLen bprotvert) n
+    pure $ BHBody
+           { bheaderPrev
+           , bheaderVk
+           , bheaderVrfVk
+           , bheaderSlotNo
+           , bheaderEta
+           , bheaderL
+           , bsize
+           , bheaderBlockNo
+           , bhash
+           , bheaderOCert
+           , bprotvert
+           }
 
 data Block crypto
   = Block

@@ -69,6 +69,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."mtl" or (buildDepError "mtl"))
           (hsPkgs."non-integer" or (buildDepError "non-integer"))
           (hsPkgs."stm" or (buildDepError "stm"))
+          (hsPkgs."text" or (buildDepError "text"))
           (hsPkgs."transformers" or (buildDepError "transformers"))
           (hsPkgs."cs-ledger" or (buildDepError "cs-ledger"))
           (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
