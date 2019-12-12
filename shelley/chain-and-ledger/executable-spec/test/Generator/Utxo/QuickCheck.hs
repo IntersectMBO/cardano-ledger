@@ -20,12 +20,11 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Coin (Coin (..), splitCoin)
-import           Generator.Core (findPayKeyPair, toAddr)
-import           Generator.Core.QuickCheck (genNatural)
+import           Generator.Core.QuickCheck (findPayKeyPair, genNatural, toAddr)
 import           Generator.Delegation.QuickCheck (genDCerts)
 import           LedgerState (pattern UTxOState)
-import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn, TxOut, UTxO,
-                     UTxOState, VrfKeyPairs)
+import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn,
+                     TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut)

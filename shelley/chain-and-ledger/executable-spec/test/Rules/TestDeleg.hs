@@ -27,7 +27,6 @@ import           BaseTypes ((==>))
 
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
-import           Generator.LedgerTrace ()
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 import           Coin (Coin, pattern Coin)

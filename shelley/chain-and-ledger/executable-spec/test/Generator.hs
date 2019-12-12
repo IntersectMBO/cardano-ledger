@@ -31,6 +31,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set
+import           Data.Word (Word64)
 
 import           Lens.Micro ((^.))
 
@@ -43,7 +44,6 @@ import qualified Hedgehog.Range as Range
 
 import           Coin
 import           Control.State.Transition.Extended (TRC (..), applySTS)
-import           Generator.Core (findPayKeyPair, genNatural, genWord64)
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerValidation, applyTxBody, dstate, genesisCoins,
                      genesisState, stkCreds, utxo, utxoState, validTx, _delegationState, _dstate,
@@ -67,6 +67,25 @@ import           Test.Utils
 
 import           MockTypes
 import           Mutator
+
+-- | Find first matching key pair for address. Returns the matching key pair
+-- where the first element of the pair matched the hash in 'addr'.
+findPayKeyPair :: Addr -> KeyPairs -> KeyPair
+findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
+    case matches of
+      []    -> error "findPayKeyPair: could not find a match for the given address"
+      (x:_) -> fst x
+    where
+      matches = filter (\(pay, _) -> addr == hashKey (vKey pay)) keyList
+findPayKeyPair _ _ = error "findPayKeyPair: expects only AddrBase addresses"
+
+-- | Generator for a natural number between 'lower' and 'upper'
+genNatural :: Natural -> Natural -> Gen Natural
+genNatural lower upper = Gen.integral $ Range.linear lower upper
+
+-- | Generator for a natural number between 'lower' and 'upper'
+genWord64 :: Word64 -> Word64 -> Gen Word64
+genWord64 lower upper = Gen.integral $ Range.linear lower upper
 
 -- | Returns the number of entries of the UTxO set.
 utxoSize :: UTxO -> Int
