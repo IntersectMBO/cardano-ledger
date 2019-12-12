@@ -39,7 +39,7 @@ data OVERLAY crypto
 data OverlayEnv crypto
   = OverlayEnv
       PParams
-      (Map Slot (Maybe (GenKeyHash crypto)))
+      (Map SlotNo (Maybe (GenKeyHash crypto)))
       Nonce
       (PoolDistr crypto)
       (GenDelegs crypto)
@@ -62,6 +62,7 @@ instance
     = BHeader crypto
 
   type Environment (OVERLAY crypto) = OverlayEnv crypto
+  type BaseM (OVERLAY crypto) = ShelleyBase
 
   data PredicateFailure (OVERLAY crypto)
     = NotPraosLeaderOVERLAY
@@ -90,7 +91,7 @@ overlayTransition = do
   let vk = bvkcold bhb
       vkh = hashKey vk
 
-  case Map.lookup (bheaderSlot bhb) osched of
+  case Map.lookup (bheaderSlotNo bhb) osched of
     Nothing ->
       vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
     Just Nothing ->

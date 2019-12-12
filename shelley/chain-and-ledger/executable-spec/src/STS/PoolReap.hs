@@ -7,20 +7,22 @@ module STS.PoolReap
   )
 where
 
+import           Control.Monad.Trans.Reader (runReaderT)
+import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
 import           Lens.Micro ((^.))
-
+import           BaseTypes
 import           Delegation.Certificates
 import           EpochBoundary (poolRefunds)
 import           LedgerState
 import           PParams
 import           Slot
 import           TxData (_poolRAcnt)
-
+import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace(..), envGen, sigGen)
 
 import           Hedgehog (Gen)
 
@@ -38,8 +40,9 @@ data PoolreapState crypto = PoolreapState
 
 instance STS (POOLREAP crypto) where
   type State (POOLREAP crypto) = PoolreapState crypto
-  type Signal (POOLREAP crypto) = Epoch
+  type Signal (POOLREAP crypto) = EpochNo
   type Environment (POOLREAP crypto) = PParams
+  type BaseM (POOLREAP crypto) = ShelleyBase
   data PredicateFailure (POOLREAP crypto)
     = FailurePOOLREAP
     deriving (Show, Eq)
@@ -50,9 +53,12 @@ poolReapTransition :: TransitionRule (POOLREAP crypto)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
+  firstSlot <- liftSTS $ do
+    ei <- asks epochInfo
+    epochInfoFirst ei e
   let retired = dom $ (ps ^. retiring) ▷ Set.singleton e
       StakePools stPools' = ps ^. stPools
-      pr = poolRefunds pp (retired ◁ stPools') (firstSlot e)
+      pr = poolRefunds pp (retired ◁ stPools') firstSlot
       rewardAcnts = Map.map _poolRAcnt $ retired ◁ (ps ^. pParams)
       rewardAcnts' = Map.fromList . Map.elems $ Map.intersectionWith (,) rewardAcnts pr
 
@@ -75,4 +81,7 @@ poolReapTransition = do
 
 instance HasTrace (POOLREAP crypto) where
   envGen _ = undefined :: Gen PParams
-  sigGen _ _ = undefined :: Gen Epoch
+  sigGen _ _ = undefined :: Gen EpochNo
+
+  type BaseEnv (POOLREAP crypto) = Globals
+  interpretSTS globals act = runIdentity $ runReaderT act globals

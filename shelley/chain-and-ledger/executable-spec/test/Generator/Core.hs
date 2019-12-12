@@ -8,6 +8,7 @@ module Generator.Core
   , genCoin
   , genInteger
   , genNatural
+  , genWord64
   , genTxOut
   , genUtxo0
   , genCoinList
@@ -50,6 +51,10 @@ genInteger lower upper = Gen.integral $ Range.linear lower upper
 -- | Generator for a natural number between 'lower' and 'upper'
 genNatural :: Natural -> Natural -> Gen Natural
 genNatural lower upper = Gen.integral $ Range.linear lower upper
+
+-- | Generator for a natural number between 'lower' and 'upper'
+genWord64 :: Word64 -> Word64 -> Gen Word64
+genWord64 lower upper = Gen.integral $ Range.linear lower upper
 
 mkKeyPairs :: Word64 -> (KeyPair, KeyPair)
 mkKeyPairs n

@@ -10,7 +10,7 @@ where
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-
+import           BaseTypes
 import           BlockChain (slotsPrior)
 import           Coin (Coin (..))
 import           Delegation.Certificates
@@ -20,9 +20,12 @@ import           LedgerState
 import           Slot
 import           TxData
 
+import           Control.Monad.Trans.Reader (asks)
 import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+import           Control.State.Transition.Generator
+import           Control.Monad.Trans.Reader (runReaderT)
+import           Data.Functor.Identity (runIdentity)
 
 import           Hedgehog (Gen)
 
@@ -30,7 +33,7 @@ data DELEG crypto
 
 data DelegEnv
   = DelegEnv
-  { slot :: Slot
+  { slot :: SlotNo
   , ptr :: Ptr
   , reserves :: Coin
   }
@@ -41,6 +44,7 @@ instance STS (DELEG crypto)
   type State (DELEG crypto) = DState crypto
   type Signal (DELEG crypto) = DCert crypto
   type Environment (DELEG crypto) = DelegEnv
+  type BaseM (DELEG crypto) = ShelleyBase
   data PredicateFailure (DELEG crypto)
     = StakeKeyAlreadyRegisteredDELEG
     | StakeKeyNotRegisteredDELEG
@@ -102,8 +106,11 @@ delegationTransition = do
     InstantaneousRewards credCoinMap -> do
       let combinedMap = Map.union credCoinMap (_irwd ds)
           requiredForRewards = foldl (+) (Coin 0) (range combinedMap)
-          Epoch currEpoch = epochFromSlot slot_
-      slot_ < (firstSlot $ Epoch (currEpoch + 1)) *- slotsPrior
+      firstSlot <- liftSTS $ do
+        ei <- asks epochInfo
+        EpochNo currEpoch <- epochInfoEpoch ei slot_
+        epochInfoFirst ei $ EpochNo (currEpoch + 1)
+      slot_ < firstSlot *- slotsPrior
         ?! MIRCertificateTooLateinEpochDELEG
       requiredForRewards <= reserves_ ?! InsufficientForInstantaneousRewardsDELEG
 
@@ -118,3 +125,6 @@ instance Crypto crypto
   => HasTrace (DELEG crypto) where
   envGen _ = undefined :: Gen DelegEnv
   sigGen _ _ = undefined :: Gen (DCert crypto)
+
+  type BaseEnv (DELEG crypto) = Globals
+  interpretSTS globals act = runIdentity $ runReaderT act globals

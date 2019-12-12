@@ -10,8 +10,9 @@ where
 
 import qualified Data.Map.Strict as Map
 
+import           Control.Monad.Trans.Reader (asks)
 import           Lens.Micro ((^.))
-
+import           BaseTypes
 import           Coin
 import           EpochBoundary
 import           LedgerState
@@ -37,8 +38,9 @@ data SnapEnv crypto
 
 instance STS (SNAP crypto) where
   type State (SNAP crypto) = SnapState crypto
-  type Signal (SNAP crypto) = Epoch
+  type Signal (SNAP crypto) = EpochNo
   type Environment (SNAP crypto) = SnapEnv crypto
+  type BaseM (SNAP crypto) = ShelleyBase
   data PredicateFailure (SNAP crypto)
     = FailureSNAP
     deriving (Show, Eq)
@@ -51,7 +53,9 @@ snapTransition :: TransitionRule (SNAP crypto)
 snapTransition = do
   TRC (SnapEnv pparams d p, SnapState s u, eNew) <- judgmentContext
   let pooledStake = stakeDistr (u ^. utxo) d p
-  let _slot = firstSlot eNew
+  _slot <- liftSTS $ do
+    ei <- asks epochInfo
+    epochInfoFirst ei eNew
   let oblg = obligation pparams (d ^. stkCreds) (p ^. stPools) _slot
   let decayed = (u ^. deposited) - oblg
   pure $ SnapState

@@ -15,8 +15,10 @@ where
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Set as Set
+import           Control.Monad.Trans.Reader (runReaderT)
+import           Data.Functor.Identity (runIdentity)
 
-import           BaseTypes (intervalValue, (==>))
+import           BaseTypes (Globals, ShelleyBase, intervalValue, (==>))
 import           Delegation.Certificates (isInstantaneousRewards)
 import           Keys
 import           Ledger.Core (dom, (∩))
@@ -30,7 +32,7 @@ import           Validation (Validity (..))
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+import           Control.State.Transition.Generator (HasTrace(..), envGen, sigGen)
 
 import           Hedgehog (Gen)
 
@@ -45,6 +47,7 @@ instance
   type State (UTXOW crypto) = UTxOState crypto
   type Signal (UTXOW crypto) = Tx crypto
   type Environment (UTXOW crypto) = UtxoEnv crypto
+  type BaseM (UTXOW crypto) = ShelleyBase
   data PredicateFailure (UTXOW crypto)
     = InvalidWitnessesUTXOW
     | MissingVKeyWitnessesUTXOW
@@ -121,3 +124,6 @@ instance
   => HasTrace (UTXOW crypto) where
   envGen _ = undefined :: Gen (UtxoEnv crypto)
   sigGen _ _ = undefined :: Gen (Tx crypto)
+
+  type BaseEnv (UTXOW crypto) = Globals
+  interpretSTS globals act = runIdentity $ runReaderT act globals

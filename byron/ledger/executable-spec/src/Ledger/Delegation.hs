@@ -544,7 +544,7 @@ dcertsGen env st =
   -- This generator can result in an empty list of delegation certificates if
   -- no delegation certificates can be produced, according to the delegation
   -- rules, given the initial state and environment.
-  catMaybes . traceSignals OldestFirst <$> genTrace @MSDELEG n env subSt (sigGen @MSDELEG)
+  catMaybes . traceSignals OldestFirst <$> genTrace @MSDELEG () n env subSt (sigGen @MSDELEG)
   where n = env ^. allowedDelegators . to length . to fromIntegral
         subSt = DSState
           { _dSStateScheduledDelegations = _dIStateScheduledDelegations st

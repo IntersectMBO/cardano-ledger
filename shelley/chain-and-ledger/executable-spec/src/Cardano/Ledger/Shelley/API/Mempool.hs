@@ -15,17 +15,19 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
+import BaseTypes (Globals)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.Crypto
 import Control.Arrow (left)
 import Control.Monad.Except
-import Control.State.Transition (PredicateFailure, TRC (..), applySTS)
+import Control.Monad.Reader.Class
+import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Sequence (Seq)
 import qualified LedgerState
 import STS.Ledgers (LEDGERS)
 import qualified STS.Ledgers as Ledgers
-import Slot (Slot)
+import Slot (SlotNo)
 import TxData (Tx)
 import qualified TxData as Tx
 
@@ -48,7 +50,7 @@ type MempoolState = LedgerState.LedgerState
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
   ShelleyState crypto ->
-  Slot ->
+  SlotNo ->
   MempoolEnv
 mkMempoolEnv
   LedgerState.NewEpochState
@@ -56,7 +58,7 @@ mkMempoolEnv
     }
   slot =
     Ledgers.LedgersEnv
-      { Ledgers.ledgersSlot = slot,
+      { Ledgers.ledgersSlotNo = slot,
         Ledgers.ledgersPp = LedgerState.esPp nesEs,
         Ledgers.ledgersReserves =
           LedgerState._reserves $
@@ -78,14 +80,17 @@ applyTxs ::
   forall crypto m.
   ( Crypto crypto,
     MonadError (ApplyTxError crypto) m,
-    DSIGN.Signable (DSIGN crypto) (Tx.TxBody crypto)
+    DSIGN.Signable (DSIGN crypto) (Tx.TxBody crypto),
+    MonadReader Globals m
   ) =>
   MempoolEnv ->
   MempoolState crypto ->
   Seq (Tx crypto) ->
   m (MempoolState crypto)
-applyTxs env state txs =
+applyTxs env state txs = do
+  res <-
+    liftShelleyBase . applySTS @(LEDGERS crypto) $
+      TRC (env, state, txs)
   liftEither
     . left (ApplyTxError . join)
-    . applySTS @(LEDGERS crypto)
-    $ TRC (env, state, txs)
+    $ res

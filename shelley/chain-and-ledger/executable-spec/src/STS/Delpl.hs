@@ -11,6 +11,7 @@ module STS.Delpl
   )
 where
 
+import           BaseTypes
 import           Coin (Coin)
 import           Delegation.Certificates
 import           LedgerState
@@ -28,7 +29,7 @@ data DELPL crypto
 
 data DelplEnv
   = DelplEnv
-    { delplSlot     :: Slot
+    { delplSlotNo     :: SlotNo
     , delPlPtr      :: Ptr
     , delPlPp       :: PParams
     , delPlReserves :: Coin
@@ -41,6 +42,7 @@ instance
   type State (DELPL crypto)       = DPState crypto
   type Signal (DELPL crypto)      = DCert crypto
   type Environment (DELPL crypto) = DelplEnv
+  type BaseM (DELPL crypto) = ShelleyBase
   data PredicateFailure (DELPL crypto)
     = PoolFailure (PredicateFailure (POOL crypto))
     | DelegFailure (PredicateFailure (DELEG crypto))

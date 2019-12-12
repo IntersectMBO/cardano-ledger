@@ -32,7 +32,6 @@ import qualified Control.State.Transition.Trace as Trace
 
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 
-
 -- | Commit-reveal transition system, where data hashes are committed and then
 -- revealed.
 --
@@ -188,7 +187,7 @@ instance
 prop_qc_UniqueData :: QC.Property
 prop_qc_UniqueData =
   STS.Gen.forAllTrace @(CR ShortHash Map Data) @()
-    100 () (noDuplicatedData . Trace.traceSignals Trace.OldestFirst)
+    () 100 () (noDuplicatedData . Trace.traceSignals Trace.OldestFirst)
   where
     noDuplicatedData :: [CRSignal ShortHash Data] -> Bool
     noDuplicatedData = allUnique . filter isCommit
@@ -208,4 +207,4 @@ prop_qc_OnlyValidSignals = QC.withMaxSuccess 1000 -- We need to test a large
                                                   -- number of times to make sure
                                                   -- we get a collision in the
                                                   -- generated data
-  $ STS.Gen.onlyValidSignalsAreGenerated @(CR ShortHash Map Data) @() 100 ()
+  $ STS.Gen.onlyValidSignalsAreGenerated @(CR ShortHash Map Data) @() () 100 ()

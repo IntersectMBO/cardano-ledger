@@ -8,6 +8,7 @@ import qualified Test.Tasty.QuickCheck as Tasty.QuickCheck
 
 import qualified Control.State.Transition.Examples.CommitReveal as CommitReveal
 import qualified Control.State.Transition.Examples.Sum as Sum
+import qualified Control.State.Transition.Examples.GlobalSum as GSum
 
 main :: IO ()
 main = do
@@ -47,4 +48,5 @@ main = do
               "Only valid signals are generated (QuickCheck)"
               CommitReveal.prop_qc_OnlyValidSignals
        ]
+      , GSum.tests
       ]

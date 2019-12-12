@@ -33,7 +33,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu) =
   [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
   [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
   [ TxBody is os cs ws tf' tl tu | tf' <- shrinkCoin tf ] ++
-  [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlot tl ] ++
+  [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
   [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
@@ -55,8 +55,8 @@ shrinkWdrl = shrinkMap shrinkRewardAcnt shrinkCoin
 shrinkRewardAcnt :: RewardAcnt crypto -> [RewardAcnt crypto]
 shrinkRewardAcnt = const []
 
-shrinkSlot :: Slot -> [Slot]
-shrinkSlot (Slot x) = Slot <$> shrinkIntegral x
+shrinkSlotNo :: SlotNo -> [SlotNo]
+shrinkSlotNo (SlotNo x) = SlotNo <$> shrinkIntegral x
 
 shrinkUpdate :: Update crypto -> [Update crypto]
 shrinkUpdate = const []

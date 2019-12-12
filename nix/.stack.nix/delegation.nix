@@ -68,10 +68,13 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."microlens-th" or (buildDepError "microlens-th"))
           (hsPkgs."mtl" or (buildDepError "mtl"))
           (hsPkgs."non-integer" or (buildDepError "non-integer"))
+          (hsPkgs."stm" or (buildDepError "stm"))
+          (hsPkgs."transformers" or (buildDepError "transformers"))
           (hsPkgs."cs-ledger" or (buildDepError "cs-ledger"))
           (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
           (hsPkgs."cardano-crypto-class" or (buildDepError "cardano-crypto-class"))
           (hsPkgs."cardano-prelude" or (buildDepError "cardano-prelude"))
+          (hsPkgs."cardano-slotting" or (buildDepError "cardano-slotting"))
           ];
         buildable = true;
         };
@@ -87,6 +90,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
             (hsPkgs."tasty-hunit" or (buildDepError "tasty-hunit"))
             (hsPkgs."tasty-hedgehog" or (buildDepError "tasty-hedgehog"))
             (hsPkgs."tasty-quickcheck" or (buildDepError "tasty-quickcheck"))
+            (hsPkgs."transformers" or (buildDepError "transformers"))
             (hsPkgs."hedgehog" or (buildDepError "hedgehog"))
             (hsPkgs."QuickCheck" or (buildDepError "QuickCheck"))
             (hsPkgs."delegation" or (buildDepError "delegation"))
@@ -98,6 +102,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
             (hsPkgs."cardano-binary" or (buildDepError "cardano-binary"))
             (hsPkgs."cardano-crypto-class" or (buildDepError "cardano-crypto-class"))
             (hsPkgs."cardano-prelude" or (buildDepError "cardano-prelude"))
+            (hsPkgs."cardano-slotting" or (buildDepError "cardano-slotting"))
             (hsPkgs."small-steps" or (buildDepError "small-steps"))
             ];
           buildable = true;

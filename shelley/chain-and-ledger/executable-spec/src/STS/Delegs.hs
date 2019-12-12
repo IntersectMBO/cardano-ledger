@@ -11,33 +11,30 @@ module STS.Delegs
   )
 where
 
-import qualified Data.Set as Set
-
-import           Data.Sequence (Seq (..))
-
+import           BaseTypes
+import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin)
+import           Control.Monad.Trans.Reader (runReaderT)
+import           Control.State.Transition
+import           Control.State.Transition.Generator
+import           Data.Functor.Identity (runIdentity)
+import           Data.Sequence (Seq (..))
+import qualified Data.Set as Set
 import           Delegation.Certificates
+import           Hedgehog (Gen)
+import           Ledger.Core (dom, (∈), (⊆), (⨃))
 import           LedgerState
 import           PParams
 import           Slot
+import           STS.Delpl
 import           Tx
 import           TxData
-
-import           STS.Delpl
-
-import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
-
-import           Ledger.Core (dom, (∈), (⊆), (⨃))
-
-import           Hedgehog (Gen)
 
 data DELEGS crypto
 
 data DelegsEnv crypto
   = DelegsEnv
-    { delegsSlot :: Slot
+    { delegsSlotNo :: SlotNo
     , delegsIx   :: Ix
     , delegspp   :: PParams
     , delegsTx   :: (Tx crypto)
@@ -52,6 +49,7 @@ instance
   type State (DELEGS crypto) = DPState crypto
   type Signal (DELEGS crypto) = Seq (DCert crypto)
   type Environment (DELEGS crypto) = DelegsEnv crypto
+  type BaseM (DELEGS crypto) = ShelleyBase
   data PredicateFailure (DELEGS crypto)
     = DelegateeNotRegisteredDELEG
     | WithrawalsNotInRewardsDELEGS
@@ -108,3 +106,6 @@ instance Crypto crypto
   => HasTrace (DELEGS crypto) where
   envGen _ = undefined :: Gen (DelegsEnv crypto)
   sigGen _ _ = undefined :: Gen (Seq (DCert crypto))
+
+  type BaseEnv (DELEGS crypto) = Globals
+  interpretSTS globals act = runIdentity $ runReaderT act globals

@@ -37,7 +37,7 @@ import           Delegation.Certificates (StakeCreds (..), StakePools (..), deca
                      refund)
 import           Keys (KeyHash)
 import           PParams (PParams (..))
-import           Slot (Slot, (-*))
+import           Slot (SlotNo, (-*))
 import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential, TxOut (..),
                      getRwdCred)
 import           UTxO (UTxO (..))
@@ -137,8 +137,8 @@ poolStake hk delegs (Stake stake) =
 -- | Calculate pool refunds
 poolRefunds
   :: PParams
-  -> Map (KeyHash crypto) Slot
-  -> Slot
+  -> Map (KeyHash crypto) SlotNo
+  -> SlotNo
   -> Map (KeyHash crypto) Coin
 poolRefunds pp retirees cslot =
   Map.map
@@ -153,7 +153,7 @@ obligation
   :: PParams
   -> StakeCreds crypto
   -> StakePools crypto
-  -> Slot
+  -> SlotNo
   -> Coin
 obligation pc (StakeCreds stakeKeys) (StakePools stakePools) cslot =
   sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +

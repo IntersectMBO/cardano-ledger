@@ -36,7 +36,7 @@ import           Ledger.Core (dom, range, (∈), (∉), (◁))
 import           Coin (Coin, pattern Coin)
 import           LedgerState (_delegations, _irwd, _rewards, _stkCreds)
 import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals)
 import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation,
                      pattern InstantaneousRewards, pattern RegKey)
 
@@ -104,7 +104,7 @@ credentialMappingAfterDelegation :: Property
 credentialMappingAfterDelegation = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
      $ forAll
-     $ trace @DELEG  traceLen `ofLengthAtLeast` 1
+     $ trace @DELEG testGlobals traceLen `ofLengthAtLeast` 1
   assertAll delegatedCredential tr
 
   where delegatedCredential (SourceSignalTarget
@@ -122,7 +122,7 @@ rewardsSumInvariant :: Property
 rewardsSumInvariant = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
      $ forAll
-     $ trace @DELEG  traceLen `ofLengthAtLeast` 1
+     $ trace @DELEG testGlobals traceLen `ofLengthAtLeast` 1
   assertAll rewardsSumZeroDiff tr
 
   where rewardsSumZeroDiff (SourceSignalTarget

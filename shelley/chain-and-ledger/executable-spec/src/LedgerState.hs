@@ -100,6 +100,7 @@ import           Address (mkRwdAcnt)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
+import           Control.Monad.Trans.Reader (asks, ReaderT(..))
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -119,8 +120,7 @@ import           Lens.Micro.TH (makeLenses)
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
                      keyMinRefund, minfeeA, minfeeB)
-import           Slot (Duration (..), Epoch (..), Slot (..), epochFromSlot, firstSlot,
-                     slotsPerEpoch, (+*), (-*))
+import           Slot (Duration (..), EpochNo (..), SlotNo (..), (+*), (-*), epochInfoFirst, epochInfoSize, epochInfoEpoch)
 import           Tx (extractKeyHash)
 import           TxData (Addr (..), Credential (..), Ix, PoolParams, Ptr (..), RewardAcnt (..),
                      StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), body,
@@ -135,8 +135,7 @@ import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeCreds
                      StakePools (..), cwitness, decayKey, refund)
 import           Delegation.PoolParams (poolSpec)
 
-import           BaseTypes (UnitInterval, intervalValue, mkUnitInterval)
-
+import           BaseTypes (ShelleyBase, Globals(..), UnitInterval, intervalValue, mkUnitInterval)
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -169,7 +168,7 @@ data DState crypto = DState
       -- |The pointed to hash keys.
     , _ptrs        :: Map Ptr (StakeCredential crypto)
       -- | future genesis key delegations
-    , _fGenDelegs  :: Map (Slot, GenKeyHash crypto) (KeyHash crypto)
+    , _fGenDelegs  :: Map (SlotNo, GenKeyHash crypto) (KeyHash crypto)
       -- |Genesis key delegations
     , _genDelegs   :: GenDelegs crypto
       -- | Instantaneous Rewards
@@ -185,7 +184,7 @@ data PState crypto = PState
       -- |The pool parameters.
     , _pParams     :: Map (KeyHash crypto) (PoolParams crypto)
       -- |A map of retiring stake pools to the epoch when they retire.
-    , _retiring    :: Map (KeyHash crypto) Epoch
+    , _retiring    :: Map (KeyHash crypto) EpochNo
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (PState crypto)
@@ -281,13 +280,13 @@ instance NoUnexpectedThunks (UTxOState crypto)
 -- | New Epoch state and environment
 data NewEpochState crypto=
   NewEpochState {
-    nesEL     :: Epoch                       -- ^ Last epoch
+    nesEL     :: EpochNo                       -- ^ Last epoch
   , nesBprev  :: BlocksMade          crypto  -- ^ Blocks made before current epoch
   , nesBcur   :: BlocksMade          crypto  -- ^ Blocks made in current epoch
   , nesEs     :: EpochState          crypto  -- ^ Epoch state before current
   , nesRu     :: Maybe (RewardUpdate crypto) -- ^ Possible reward update
   , nesPd     :: PoolDistr           crypto  -- ^ Stake distribution within the stake pool
-  , nesOsched :: Map  Slot
+  , nesOsched :: Map  SlotNo
                      (Maybe
                        (GenKeyHash   crypto))  -- ^ Overlay schedule for PBFT vs Praos
   } deriving (Show, Eq, Generic)
@@ -304,7 +303,7 @@ getGKeys nes = Map.keysSet genDelegs
 
 data NewEpochEnv crypto=
   NewEpochEnv {
-    neeS     :: Slot
+    neeS     :: SlotNo
   , neeGkeys :: Set (GenKeyHash crypto)
   } deriving (Show, Eq, Generic)
 
@@ -342,7 +341,7 @@ genesisId =
    Seq.Empty
    Map.empty
    (Coin 0)
-   (Slot 0)
+   (SlotNo 0)
    emptyUpdate)
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
@@ -371,7 +370,7 @@ genesisState genDelegs0 utxo0 = LedgerState
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
 -- | Determine if the transaction has expired
-current :: TxBody crypto-> Slot -> Validity
+current :: TxBody crypto-> SlotNo -> Validity
 current tx slot =
     if tx ^. ttl < slot
     then Invalid [Expired (tx ^. ttl) slot]
@@ -439,7 +438,7 @@ keyRefund
   -> UnitInterval
   -> Rational
   -> StakeCreds crypto
-  -> Slot
+  -> SlotNo
   -> DCert crypto
   -> Coin
 keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
@@ -453,32 +452,38 @@ keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
 decayedKey
   :: PParams
   -> StakeCreds crypto
-  -> Slot
+  -> SlotNo
   -> DCert crypto
-  -> Coin
+  -> ShelleyBase Coin
 decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
     case cert of
       DeRegKey key ->
           if Map.notMember key stkcreds
-          then 0
-          else let created'      = stkcreds Map.! key in
-               let start         = max (firstSlot $ epochFromSlot cslot) created' in
-               let dval          = pp ^. keyDeposit in
-               let dmin          = pp ^. keyMinRefund in
-               let lambda        = pp ^. keyDecayRate in
-               let epochRefund   = keyRefund dval dmin lambda stk start cert in
-               let currentRefund = keyRefund dval dmin lambda stk cslot cert in
-               epochRefund - currentRefund
-      _ -> 0
+          then pure 0
+          else do
+            let created'      = stkcreds Map.! key
+            start <- do
+              ei <- asks epochInfo
+              fs <- epochInfoFirst ei =<< epochInfoEpoch ei cslot
+              pure $ max fs created'
+            let dval          = pp ^. keyDeposit
+                dmin          = pp ^. keyMinRefund
+                lambda        = pp ^. keyDecayRate
+                epochRefund   = keyRefund dval dmin lambda stk start cert
+                currentRefund = keyRefund dval dmin lambda stk cslot cert
+            pure $ epochRefund - currentRefund
+      _ -> pure 0
 
 -- | Decayed deposit portions
 decayedTx
   :: PParams
   -> StakeCreds crypto
   -> TxBody crypto
-  -> Coin
+  -> ShelleyBase Coin
 decayedTx pp stk tx =
-    sum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
+      lsum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
+    where
+      lsum xs = ReaderT $ \s -> sum $ fmap (flip runReaderT s) xs
 
 -- |Compute the lovelace which are destroyed by the transaction
 consumed
@@ -589,7 +594,7 @@ validRuleUTXO
   -> StakePools crypto
   -> StakeCreds crypto
   -> PParams
-  -> Slot
+  -> SlotNo
   -> TxBody crypto
   -> UTxOState crypto
   -> Validity
@@ -628,7 +633,7 @@ validTx
      )
   => Tx crypto
   -> GenDelegs crypto
-  -> Slot
+  -> SlotNo
   -> PParams
   -> LedgerState crypto
   -> Validity
@@ -860,12 +865,14 @@ applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
 
 -- | Create a reward update
 createRUpd
-  :: BlocksMade crypto
+  :: EpochNo
+  -> BlocksMade crypto
   -> EpochState crypto
-  -> RewardUpdate crypto
-createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
-  RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) registered
-  where Coin reserves' = _reserves acnt
+  -> ShelleyBase (RewardUpdate crypto)
+createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
+    ei <- asks epochInfo
+    slotsPerEpoch <- epochInfoSize ei e
+    let Coin reserves' = _reserves acnt
 
         ds = _dstate $ _delegationState ls
         rewards' = _rewards ds
@@ -895,26 +902,30 @@ createRUpd b@(BlocksMade b') (EpochState acnt ss ls pp) =
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
         expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
+    pure $ RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) registered
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.
 -- The real implementation should probably use randomization.
 overlaySchedule
-  :: Epoch
+  :: EpochNo
   -> Set (GenKeyHash crypto)
   -> PParams
-  -> Map Slot (Maybe (GenKeyHash crypto))
-overlaySchedule e gkeys pp = Map.union active inactive
-  where
+  -> ShelleyBase (Map SlotNo (Maybe (GenKeyHash crypto)))
+overlaySchedule e gkeys pp = do
+  ei <- asks epochInfo
+  slotsPerEpoch <- epochInfoSize ei e
+  firstSlotNo <- epochInfoFirst ei e
+  let
     numActive = dval * fromIntegral slotsPerEpoch
     dval = intervalValue $ pp ^. d
     dInv = 1 / dval
     asc = intervalValue $ pp ^. activeSlotCoeff
 
-    toRelativeSlot x = (Duration . floor) (dInv * fromInteger x)
-    toSlot x = firstSlot e +* toRelativeSlot x
+    toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
+    toSlotNo x = firstSlotNo +* toRelativeSlotNo x
 
-    genesisSlots = [ toSlot x | x <-[0..(floor numActive)] ]
+    genesisSlots = [ toSlotNo x | x <-[0..(floor numActive)] ]
 
     numInactivePerActive = floor (asc * fromRational numActive) - 1
     activitySchedule =  cycle (True:replicate numInactivePerActive False)
@@ -928,6 +939,7 @@ overlaySchedule e gkeys pp = Map.union active inactive
       Map.fromList $ fmap
         (\x -> (snd x, Nothing))
         (filter (not . fst) unassignedSched)
+  pure $ Map.union active inactive
 
 -- | Update new epoch state
 updateNES

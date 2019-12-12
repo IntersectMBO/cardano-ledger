@@ -144,8 +144,9 @@ getAnyStakeKey :: KeyPairs -> Gen VKey
 getAnyStakeKey keys = vKey . snd <$> Gen.element keys
 
 -- | Mutate 'Epoch' analogously to 'Coin' data.
-mutateEpoch :: Natural -> Natural -> Epoch -> Gen Epoch
-mutateEpoch lower upper (Epoch val) = Epoch <$> mutateNat lower upper val
+mutateEpoch :: Natural -> Natural -> EpochNo -> Gen EpochNo
+mutateEpoch lower upper (EpochNo val) = EpochNo . fromIntegral
+  <$> mutateNat lower upper (fromIntegral val)
 
 -- | Mutator for delegation certificates.
 -- A 'RegKey' and 'DeRegKey' select randomly a key fomr the supplied list of
@@ -161,8 +162,8 @@ mutateDCert keys _ (RegKey _) =
 mutateDCert keys _ (DeRegKey _) =
   DeRegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 
-mutateDCert keys _ (RetirePool _ epoch@(Epoch e)) = do
-    epoch' <- mutateEpoch 0 e epoch
+mutateDCert keys _ (RetirePool _ epoch@(EpochNo e)) = do
+    epoch' <- mutateEpoch 0 (fromIntegral e) epoch
     key'   <- getAnyStakeKey keys
     pure $ RetirePool (hashKey key') epoch'
 

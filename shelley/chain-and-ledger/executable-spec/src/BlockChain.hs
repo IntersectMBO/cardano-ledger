@@ -59,7 +59,7 @@ import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
-import           Slot (BlockNo (..), Duration, Slot (..))
+import           Slot (Duration, SlotNo (..), BlockNo(..))
 import           Tx (Tx (..))
 
 import           NonIntegral ((***))
@@ -149,7 +149,7 @@ data BHBody crypto = BHBody
     -- | VRF verification key for block issuer
   , bheaderVrfVk          :: VRF.VerKeyVRF (VRF crypto)
     -- | block slot
-  , bheaderSlot           :: Slot
+  , bheaderSlotNo           :: SlotNo
     -- | block number
   , bheaderBlockNo        :: BlockNo
     -- | block nonce
@@ -177,7 +177,7 @@ instance Crypto crypto
       <> toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
       <> VRF.encodeVerKeyVRF (bheaderVrfVk bhBody)
-      <> toCBOR (bheaderSlot bhBody)
+      <> toCBOR (bheaderSlotNo bhBody)
       <> toCBOR (bheaderEta bhBody)
       <> toCBOR (bheaderL bhBody)
       <> toCBOR (bsize bhBody)
@@ -201,8 +201,8 @@ bHeaderSize = BS.length . BS.pack . show
 bBodySize :: Crypto crypto => TxSeq crypto-> Int
 bBodySize (TxSeq txs) = sum (map (BS.length . BS.pack . show) $ toList txs)
 
-slotToNonce :: Slot -> Nonce
-slotToNonce (Slot s) = mkNonce (fromIntegral s)
+slotToNonce :: SlotNo -> Nonce
+slotToNonce (SlotNo s) = mkNonce (fromIntegral s)
 
 bheader
   :: Block crypto
@@ -232,7 +232,7 @@ startRewards = 33 -- see above
 mkSeed
   :: Crypto crypto
   => Nonce -- ^ Universal constant
-  -> Slot
+  -> SlotNo
   -> Nonce -- ^ Epoch nonce
   -> HashHeader crypto
   -> Seed
@@ -272,7 +272,7 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
   hk = hashKey $ bvkcold bhb
   vrfK = bheaderVrfVk bhb
   prevHash = bheaderPrev bhb
-  slot = bheaderSlot bhb
+  slot = bheaderSlotNo bhb
   f' = intervalValue f
   activeSlotsCoeff =
     fromIntegral (numerator f') / fromIntegral (denominator f')

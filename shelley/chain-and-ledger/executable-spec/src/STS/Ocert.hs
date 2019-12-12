@@ -11,7 +11,7 @@ where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
-
+import           BaseTypes
 import           BlockChain
 import           Keys
 import           Ledger.Core ((⨃))
@@ -34,6 +34,7 @@ instance
   type Signal (OCERT crypto)
     = BHeader crypto
   type Environment (OCERT crypto) = OCertEnv crypto
+  type BaseM (OCERT crypto) = ShelleyBase
   data PredicateFailure (OCERT crypto)
     = KESBeforeStartOCERT
     | KESAfterEndOCERT
@@ -57,9 +58,10 @@ ocertTransition = do
 
   let OCert vk_hot vk_cold n c0@(KESPeriod c0_) tau = bheaderOCert bhb
       hk = hashKey vk_cold
-      s = bheaderSlot bhb
-      kp@(KESPeriod kp_) = kesPeriod s
-      t = kp_ - c0_
+      s = bheaderSlotNo bhb
+  kp@(KESPeriod kp_) <- liftSTS $ kesPeriod s
+
+  let t = kp_ - c0_
 
   c0 <= kp ?! KESBeforeStartOCERT
   kp_ < c0_ + 90 ?! KESAfterEndOCERT

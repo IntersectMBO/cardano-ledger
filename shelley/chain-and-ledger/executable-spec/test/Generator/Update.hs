@@ -17,11 +17,11 @@ import qualified Hedgehog.Gen as Gen
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, mkNonce)
 import           Coin (Coin (..))
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core (genInteger, genNatural, increasingProbabilityAt)
+import           Generator.Core (genInteger, genNatural, genWord64, increasingProbabilityAt)
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..))
-import           Slot (Epoch (Epoch))
+import           Slot (EpochNo (EpochNo))
 
 
 genRationalInThousands :: Integer -> Integer -> Gen Rational
@@ -61,7 +61,7 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        -- poolDecayRate: 0.001-0.1
                        <*> genRationalInThousands 1 100
                        -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
-                       <*> (Epoch <$> genNatural 6 500)
+                       <*> (EpochNo <$> genWord64 6 500)
                        -- nOpt
                        <*> Gen.integral (Range.linear 1 100)
                        -- a0: 0.01-1.0

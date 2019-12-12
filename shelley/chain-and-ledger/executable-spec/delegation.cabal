@@ -88,10 +88,13 @@ library
     microlens-th,
     mtl,
     non-integer,
+    stm,
+    transformers,
     cs-ledger,
     cardano-binary,
     cardano-crypto-class,
-    cardano-prelude
+    cardano-prelude,
+    cardano-slotting
 
 test-suite delegation-test
     type:                exitcode-stdio-1.0
@@ -157,6 +160,7 @@ test-suite delegation-test
       tasty-hunit,
       tasty-hedgehog,
       tasty-quickcheck,
+      transformers,
       hedgehog,
       QuickCheck,
       delegation,
@@ -168,4 +172,5 @@ test-suite delegation-test
       cardano-binary,
       cardano-crypto-class,
       cardano-prelude,
+      cardano-slotting,
       small-steps

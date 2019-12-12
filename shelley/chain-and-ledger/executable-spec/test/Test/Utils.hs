@@ -2,32 +2,39 @@
 
 module Test.Utils
   ( assertAll
-  , mkGenKey
   , mkCertifiedVRF
+  , epochFromSlotNo
+  , slotFromEpoch
   , mkKeyPair
+  , mkGenKey
   , mkKESKeyPair
   , mkVRFKeyPair
   , mkAddr
+  , runShelleyBase
+  , testGlobals
   , unsafeMkUnitInterval
   ) where
 
-import           BaseTypes (UnitInterval, mkUnitInterval)
-import           Cardano.Binary (ToCBOR)
+import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, mkUnitInterval)
+import           Cardano.Binary (ToCBOR (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
+import           Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
+import           Control.Monad.Trans.Reader (runReaderT)
 import           Crypto.Random (drgNewTest, withDRG)
 import           Data.Coerce (coerce)
+import           Data.Functor.Identity (runIdentity)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
+import           Hedgehog (MonadTest, (===))
 import           Keys (pattern SKey, pattern SKeyES, pattern VKey, pattern VKeyES,
                      pattern VKeyGenesis, hashKey, vKey)
 import           MockTypes (Addr, CertifiedVRF, KeyPair, SKey, SKeyES, SignKeyVRF, VKey, VKeyES,
                      VKeyGenesis, VerKeyVRF)
+import           Slot (EpochNo, EpochSize (..), SlotNo)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
-
-import           Hedgehog (MonadTest, (===))
 
 
 assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
@@ -78,3 +85,18 @@ mkAddr (payKey, stakeKey) =
 unsafeMkUnitInterval :: Rational -> UnitInterval
 unsafeMkUnitInterval r =
   fromMaybe (error "could not construct unit interval") $ mkUnitInterval r
+
+testGlobals :: Globals
+testGlobals = Globals
+  { epochInfo = fixedSizeEpochInfo $ EpochSize 100
+  , slotsPerKESPeriod = 90
+  }
+
+runShelleyBase :: ShelleyBase a -> a
+runShelleyBase act = runIdentity $ runReaderT act testGlobals
+
+epochFromSlotNo :: SlotNo -> EpochNo
+epochFromSlotNo = runIdentity . epochInfoEpoch (epochInfo testGlobals)
+
+slotFromEpoch :: EpochNo -> SlotNo
+slotFromEpoch = runIdentity  . epochInfoFirst (epochInfo testGlobals)

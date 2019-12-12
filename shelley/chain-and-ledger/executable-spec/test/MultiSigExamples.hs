@@ -20,14 +20,15 @@ import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set (fromList)
 
 import           Coin
-import           Control.State.Transition (PredicateFailure, TRC (..), applySTS)
+import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Keys (pattern GenDelegs, undiscriminateKeyHash)
 import           LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
 import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody, TxId,
                      TxIn, UTXOW, UTxOState, Wdrl)
 import           PParams (PParams (..), emptyPParams)
-import           Slot (Slot (..))
+import           Slot (SlotNo (..))
 import           STS.Utxo (UtxoEnv (..))
+import           Test.Utils
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
@@ -77,7 +78,7 @@ initTxBody addrs = TxBody
         Empty
         Map.empty
         (Coin 0)
-        (Slot 0)
+        (SlotNo 0)
         emptyUpdate
 
 makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
@@ -88,7 +89,7 @@ makeTxBody inp addrCs wdrl =
     Empty
     wdrl
     (Coin 0)
-    (Slot 10)
+    (SlotNo 10)
     emptyUpdate
 
 makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Tx
@@ -131,8 +132,8 @@ initialUTxOState aliceKeep msigs =
   let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]
                   Map.empty in
-  (txid $ _body tx, applySTS @UTXOW (TRC( UtxoEnv
-                                           (Slot 0)
+  (txid $ _body tx, runShelleyBase $ applySTS @UTXOW (TRC( UtxoEnv
+                                           (SlotNo 0)
                                            initPParams
                                            (StakeCreds Map.empty)
                                            (StakePools Map.empty)
@@ -168,8 +169,8 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
               txbody
               signers
               (Map.fromList $ map (\scr -> (hashScript scr, scr)) unlockScripts)
-        utxoSt' = applySTS @UTXOW (TRC( UtxoEnv
-                                          (Slot 0)
+        utxoSt' = runShelleyBase $ applySTS @UTXOW (TRC( UtxoEnv
+                                          (SlotNo 0)
                                           initPParams
                                           (StakeCreds Map.empty)
                                           (StakePools Map.empty)

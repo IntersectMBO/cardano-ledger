@@ -4,49 +4,38 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Slot
-  ( Slot(..)
+  ( SlotNo(..)
   , Duration(..)
   , (-*)
   , (+*)
   , (*-)
-  , Epoch(..)
-  -- conversion functions
-  , slotFromEpoch
-  , epochFromSlot
-  , slotsPerEpoch
-  , firstSlot
+  , EpochNo(..)
+  , EpochSize(..)
+  , EpochInfo
   -- conversion between Byron / Shelley
   , slotByronToShelley
   , slotShelleyToByron
   -- Block number
   , BlockNo(..)
+  , epochInfoEpoch
+  , epochInfoFirst
+  , epochInfoSize
   )
 where
 
+import           BaseTypes                      ( ShelleyBase )
+import           Data.Functor.Identity          ( Identity )
 import           Data.Word                      ( Word64 )
-import           Numeric.Natural                ( Natural )
-import           GHC.Generics                   ( Generic )
-import           Cardano.Binary                 (ToCBOR(..))
 import           Cardano.Prelude                ( NoUnexpectedThunks(..) )
-
+import           Cardano.Slotting.Block         ( BlockNo(..) )
+import           Cardano.Slotting.Slot          ( SlotNo(..), EpochNo(..), EpochSize(..) )
+import           Cardano.Slotting.EpochInfo     ( EpochInfo )
+import qualified Cardano.Slotting.EpochInfo as EI
+import           Control.Monad.Trans (lift)
 import qualified Ledger.Core                   as Byron
                                                 ( Slot(..) )
 
--- |A Slot
-newtype Slot = Slot Natural
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num)
-
-instance ToCBOR Slot where
-  toCBOR (Slot s) = toCBOR (fromInteger (toInteger s) :: Word64)
-
-instance Semigroup Slot where
-  (Slot x) <> (Slot y) = Slot $ x + y
-
-instance Monoid Slot where
-  mempty  = Slot 0
-  mappend = (<>)
-
-newtype Duration = Duration Natural
+newtype Duration = Duration Word64
   deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, Integral, Real, Enum)
 
 instance Semigroup Duration where
@@ -56,48 +45,28 @@ instance Monoid Duration where
   mempty  = Duration 0
   mappend = (<>)
 
-(-*) :: Slot -> Slot -> Duration
-(Slot s) -* (Slot t) = Duration (if s > t then s - t else t - s)
+(-*) :: SlotNo -> SlotNo -> Duration
+(SlotNo s) -* (SlotNo t) = Duration (if s > t then s - t else t - s)
 
-(+*) :: Slot -> Duration -> Slot
-(Slot s) +* (Duration d) = Slot (s + d)
+(+*) :: SlotNo -> Duration -> SlotNo
+(SlotNo s) +* (Duration d) = SlotNo (s + d)
 
 -- | Subtract a duration from a slot
-(*-) :: Slot -> Duration -> Slot
-(Slot s) *- (Duration d) = Slot (if s > d then s - d else 0)
+(*-) :: SlotNo -> Duration -> SlotNo
+(SlotNo s) *- (Duration d) = SlotNo (if s > d then s - d else 0)
 
--- |An Epoch
-newtype Epoch = Epoch Natural
-  deriving (Show, Eq, NoUnexpectedThunks, Ord, ToCBOR)
+-- | Convert `SlotNo` data from Byron to Shelley.
+slotByronToShelley :: Byron.Slot -> SlotNo
+slotByronToShelley (Byron.Slot s) = SlotNo s
 
-instance Semigroup Epoch where
-  (Epoch x) <> (Epoch y) = Epoch $ x + y
+slotShelleyToByron :: SlotNo -> Byron.Slot
+slotShelleyToByron (SlotNo s) = Byron.Slot s
 
-instance Monoid Epoch where
-  mempty  = Epoch 0
-  mappend = (<>)
+epochInfoEpoch :: EpochInfo Identity -> SlotNo -> ShelleyBase EpochNo
+epochInfoEpoch ei = lift . EI.epochInfoEpoch ei
 
-slotFromEpoch :: Epoch -> Slot
-slotFromEpoch (Epoch n) = Slot $ slotsPerEpoch * n
+epochInfoFirst :: EpochInfo Identity -> EpochNo -> ShelleyBase SlotNo
+epochInfoFirst ei = lift . EI.epochInfoFirst ei
 
-epochFromSlot :: Slot -> Epoch
-epochFromSlot (Slot n) = Epoch $ n `div` slotsPerEpoch
-
-firstSlot :: Epoch -> Slot
-firstSlot = slotFromEpoch
-
--- | Hard coded global constant for number of slots per epoch
-slotsPerEpoch :: Natural
-slotsPerEpoch = 100
-
--- | Convert `Slot` data from Byron to Shelley, there should be a check that
--- Shelley slots fit into `Word64` used in Byron.
-slotByronToShelley :: Byron.Slot -> Slot
-slotByronToShelley (Byron.Slot s) = Slot $ fromIntegral s
-
-slotShelleyToByron :: Slot -> Byron.Slot
-slotShelleyToByron (Slot s) = Byron.Slot $ fromIntegral s
-
-newtype BlockNo = BlockNo { unBlockNo :: Word64 }
-  deriving stock   (Show, Eq, Ord, Generic)
-  deriving newtype (Enum, Bounded, Num, NoUnexpectedThunks, ToCBOR)
+epochInfoSize :: EpochInfo Identity -> EpochNo -> ShelleyBase EpochSize
+epochInfoSize ei = lift . EI.epochInfoSize ei

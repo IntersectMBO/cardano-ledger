@@ -4,6 +4,6 @@ module Cardano.Ledger.Shelley.API
   )
 where
 
-import Cardano.Ledger.Shelley.API.Protocol as X
 import Cardano.Ledger.Shelley.API.Mempool as X
+import Cardano.Ledger.Shelley.API.Protocol as X
 import Cardano.Ledger.Shelley.API.Validation as X

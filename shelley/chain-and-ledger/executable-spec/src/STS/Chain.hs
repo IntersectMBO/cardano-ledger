@@ -47,7 +47,7 @@ data ChainState crypto
     , chainCandidateNonce :: Nonce
     , chainPrevEpochNonce :: Nonce
     , chainHashHeader     :: HashHeader crypto
-    , chainSlot           :: Slot
+    , chainSlotNo           :: SlotNo
     }
   deriving (Show, Eq)
 
@@ -66,7 +66,8 @@ instance
   type Signal (CHAIN crypto)
     = Block crypto
 
-  type Environment (CHAIN crypto) = Slot
+  type Environment (CHAIN crypto) = SlotNo
+  type BaseM (CHAIN crypto) = ShelleyBase
 
   data PredicateFailure (CHAIN crypto)
     = HeaderSizeTooLargeCHAIN
@@ -93,7 +94,7 @@ chainTransition = do
 
   let NewEpochState _ _ _ (EpochState _ _ _ pp) _ _ _ = nes
   let bhb = bhbody bh
-  let s = bheaderSlot bhb
+  let s = bheaderSlotNo bhb
   fromIntegral (bHeaderSize bh) < _maxBHSize pp ?! HeaderSizeTooLargeCHAIN
   fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeCHAIN
   let gkeys = getGKeys nes

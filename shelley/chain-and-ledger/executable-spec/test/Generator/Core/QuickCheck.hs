@@ -9,6 +9,7 @@ module Generator.Core.QuickCheck
   , genCoinList
   , genInteger
   , genNatural
+  , genWord64
   , genTxOut
   , genUtxo0
   , increasingProbabilityAt
@@ -58,6 +59,11 @@ genNatural lower upper = fromInteger <$> QC.choose (lower', upper')
  where
   lower' = fromIntegral lower
   upper' = fromIntegral upper
+
+-- | Generator for a Word64 between 'lower' and 'upper'
+genWord64 :: Word64 -> Word64 -> Gen Word64
+genWord64 lower upper = fromIntegral
+  <$> genNatural (fromIntegral lower) (fromIntegral upper)
 
 mkKeyPairs :: Word64 -> (KeyPair, KeyPair)
 mkKeyPairs n

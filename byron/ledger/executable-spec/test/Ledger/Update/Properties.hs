@@ -56,11 +56,11 @@ import qualified Ledger.Update.Test as Update.Test
 
 upiregTracesAreClassified :: Property
 upiregTracesAreClassified =
-  withTests 100 $ traceLengthsAreClassified @UPIREG 100 10
+  withTests 100 $ traceLengthsAreClassified @UPIREG () 100 10
 
 upiregRelevantTracesAreCovered :: Property
 upiregRelevantTracesAreCovered = withTests 300 $ property $ do
-  sample <- forAll (trace @UPIREG 200)
+  sample <- forAll (trace @UPIREG () 200)
 
   cover 40
     "at least 30% of the update proposals increase the major version"
@@ -266,7 +266,7 @@ data Change = Increases | Decreases | RemainsTheSame
 
 onlyValidSignalsAreGenerated :: Property
 onlyValidSignalsAreGenerated =
-  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @UPIREG 100
+  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @UPIREG () 100
 
 
 -- | Dummy transition system to test blocks with update payload only.
@@ -399,15 +399,15 @@ instance HasTrace UBLOCK where
 
 ublockTraceLengthsAreClassified :: Property
 ublockTraceLengthsAreClassified =
-  withTests 100 $ traceLengthsAreClassified @UBLOCK 100 10
+  withTests 100 $ traceLengthsAreClassified @UBLOCK () 100 10
 
 ublockOnlyValidSignalsAreGenerated :: HasCallStack => Property
 ublockOnlyValidSignalsAreGenerated =
-  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @UBLOCK 100
+  withTests 300 $ Transition.Generator.onlyValidSignalsAreGenerated @UBLOCK () 100
 
 ublockRelevantTracesAreCovered :: Property
 ublockRelevantTracesAreCovered = withTests 300 $ property $ do
-  sample <- forAll (traceOfLength @UBLOCK 100)
+  sample <- forAll (traceOfLength @UBLOCK () 100)
 
   -- Since we generate votes on the most voted proposals, we do not expect a very large percentage
   -- of confirmed proposals. As a reference, in the runs that were performed manually, for a trace
@@ -519,7 +519,7 @@ proposalsScheduledForAdoption sample = traceStates OldestFirst sample
 -- useful for understanding the traces produced by the 'UBLOCK' transition system.
 ublockSampleTraceMetrics :: Word64 -> IO ()
 ublockSampleTraceMetrics maxTraceSize = do
-  sample <- randomTraceOfSize @UBLOCK maxTraceSize
+  sample <- randomTraceOfSize @UBLOCK () maxTraceSize
   let
     (_slot, _dms, k, numberOfGenesisKeys) = _traceEnv sample
   traverse_ print [ "k = "
@@ -567,6 +567,7 @@ invalidRegistrationsAreGenerated =
   withTests 300
     $ Transition.Generator.invalidSignalsAreGenerated
         @UPIREG
+        ()
         [(1, invalidUPropGen)]
         100
         (Update.Test.coverUpiregFailures 2)
@@ -582,6 +583,7 @@ invalidSignalsAreGenerated =
   withTests 300
     $ Transition.Generator.invalidSignalsAreGenerated
         @UBLOCK
+        ()
         [(1, invalidUBlockGen)]
         100
         (Update.Test.coverUpivoteFailures 2)

@@ -16,10 +16,11 @@ import           MockTypes (CHAIN)
 import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOrCarlAndDaria,
                      aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob, applyTxWithScript, bobOnly)
 
-import           Control.State.Transition (TRC (..), applySTS)
+import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           STS.Chain (totalAda)
 import           STS.Utxow (PredicateFailure (..))
+import           Test.Utils
 import           Tx (hashScript)
 import           TxData (pattern RewardAcnt, pattern ScriptHashObj)
 
@@ -28,10 +29,10 @@ import           TxData (pattern RewardAcnt, pattern ScriptHashObj)
 --   and checks that trace ends with expected state or expected error.
 testCHAINExample :: CHAINExample -> Assertion
 testCHAINExample (CHAINExample slotNow initSt block (Right expectedSt)) = do
-  checkTrace @CHAIN slotNow $ pure initSt .- block .-> expectedSt
+  checkTrace @CHAIN runShelleyBase slotNow $ pure initSt .- block .-> expectedSt
 testCHAINExample (CHAINExample slotNow initSt block predicateFailure@(Left _)) = do
   let
-    st = applySTS @CHAIN (TRC (slotNow, initSt, block))
+    st = runShelleyBase $ applySTS @CHAIN (TRC (slotNow, initSt, block))
   st @?= predicateFailure
 
 testPreservationOfAda :: CHAINExample -> Assertion

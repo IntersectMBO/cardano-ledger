@@ -12,7 +12,7 @@ import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (testCase)
-
+import           Data.Functor.Identity (runIdentity)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           Ledger.Core (BlockCount (BlockCount), Epoch (Epoch), Owner (Owner), Sig (Sig),
                      Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis), owner)
@@ -26,7 +26,7 @@ import           Ledger.Delegation (ADELEG, ADELEGS, DCert (DCert), DELEG, DISta
 deleg :: [TestTree]
 deleg =
   [ testGroup "Activation"
-    [ testCase "Example 0" $ checkTrace @ADELEG genKeys $
+    [ testCase "Example 0" $ checkTrace @ADELEG runIdentity genKeys $
 
       pure (DState [] [])
 
@@ -44,7 +44,7 @@ deleg =
       .- (s 3, (gk 2, k 12)) .-> DState [(gk 0, k 10), (gk 1, k 11), (gk 2, k 12)]
                                         [(gk 0, s 0), (gk 1, s 1), (gk 2, s 3)]
 
-    , testCase "Example 1" $ checkTrace @ADELEG genKeys $
+    , testCase "Example 1" $ checkTrace @ADELEG runIdentity genKeys $
 
       pure (DState [] [])
 
@@ -55,7 +55,7 @@ deleg =
       -- should be a no-op on the delegation state.
       .- (s 1, (gk 1, k 2)) .-> DState [(gk 0, k 2)]
                                        [(gk 0, s 0)]
-    , testCase "Example 2" $ checkTrace @ADELEG genKeys $
+    , testCase "Example 2" $ checkTrace @ADELEG runIdentity genKeys $
 
       pure (DState [] [])
 
@@ -74,7 +74,7 @@ deleg =
     ]
 
   , testGroup "Multiple Activations"
-    [ testCase "Example 0" $ checkTrace @ADELEGS genKeys $
+    [ testCase "Example 0" $ checkTrace @ADELEGS runIdentity genKeys $
 
       pure (DState [] [])
 
@@ -86,7 +86,7 @@ deleg =
     ]
 
   , testGroup "Scheduling"
-    [ testCase "Example 0" $ checkTrace @SDELEG (DSEnv [gk 0, gk 1, gk 2] (e 8) (s 2) (bk 2160)) $
+    [ testCase "Example 0" $ checkTrace @SDELEG runIdentity (DSEnv [gk 0, gk 1, gk 2] (e 8) (s 2) (bk 2160)) $
 
       pure (DSState [] [])
 
@@ -146,7 +146,7 @@ deleg =
                     ]
               }
       in
-      checkTrace @DELEG env $
+      checkTrace @DELEG runIdentity env $
         pure st .- [] .-> st { _dIStateScheduledDelegations = [] }
 
     ]

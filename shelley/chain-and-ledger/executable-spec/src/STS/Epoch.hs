@@ -10,6 +10,7 @@ module STS.Epoch
   )
 where
 
+import           BaseTypes
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           EpochBoundary
@@ -30,8 +31,9 @@ data EPOCH crypto
 
 instance STS (EPOCH crypto) where
     type State (EPOCH crypto) = EpochState crypto
-    type Signal (EPOCH crypto) = Epoch
+    type Signal (EPOCH crypto) = EpochNo
     type Environment (EPOCH crypto) = ()
+    type BaseM (EPOCH crypto) = ShelleyBase
     data PredicateFailure (EPOCH crypto)
       = PoolReapFailure (PredicateFailure (POOLREAP crypto))
       | SnapFailure (PredicateFailure (SNAP crypto))

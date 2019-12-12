@@ -42,7 +42,7 @@ data PrtclState crypto
   = PrtclState
       (Map (KeyHash crypto) Natural)
       (HashHeader crypto)
-      Slot
+      SlotNo
       Nonce -- ^ Current epoch nonce
       Nonce -- ^ Evolving nonce
       Nonce -- ^ Candidate nonce
@@ -54,10 +54,10 @@ instance NoUnexpectedThunks (PrtclState crypto)
 data PrtclEnv crypto
   = PrtclEnv
       PParams
-      (Map Slot (Maybe (GenKeyHash crypto)))
+      (Map SlotNo (Maybe (GenKeyHash crypto)))
       (PoolDistr crypto)
       (GenDelegs crypto)
-      Slot
+      SlotNo
       Bool -- ^ New epoch marker
   deriving (Generic)
 
@@ -79,6 +79,8 @@ instance
 
   type Environment (PRTCL crypto)
     = PrtclEnv crypto
+
+  type BaseM (PRTCL crypto) = ShelleyBase
 
   data PredicateFailure (PRTCL crypto)
     = WrongSlotIntervalPRTCL
@@ -104,7 +106,7 @@ prtclTransition = do
       , PrtclState cs h sL eta0 etaV etaC etaH
       , bh) <- judgmentContext
   let bhb  = bhbody bh
-  let slot = bheaderSlot bhb
+  let slot = bheaderSlotNo bhb
   let eta  = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
   sL < slot && slot <= sNow ?! WrongSlotIntervalPRTCL
   h == bheaderPrev bhb ?! WrongBlockSequencePRTCL

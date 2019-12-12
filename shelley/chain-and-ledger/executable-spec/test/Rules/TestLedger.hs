@@ -43,7 +43,7 @@ import qualified Rules.TestPool as TestPool
 import           TxData (body, certs)
 import           UTxO (balance)
 
-import           Test.Utils (assertAll)
+import           Test.Utils (assertAll, testGlobals)
 
 ------------------------------
 -- Constants for Properties --
@@ -64,6 +64,7 @@ rewardZeroAfterReg :: Property
 rewardZeroAfterReg = withTests (fromIntegral numberOfTests) . property $ do
   t <- forAll
        (traceOfLengthWithInitState @LEDGER
+                                   testGlobals
                                    (fromIntegral traceLen)
                                    mkGenesisLedgerState
         `ofLengthAtLeast` 1)
@@ -78,6 +79,7 @@ credentialRemovedAfterDereg =
     tr <- fmap sourceSignalTargets
           $ forAll
           $ traceOfLengthWithInitState @LEDGER
+                                     testGlobals
                                      (fromIntegral traceLen)
                                      mkGenesisLedgerState
             `ofLengthAtLeast` 1
@@ -91,7 +93,7 @@ consumedEqualsProduced :: Property
 consumedEqualsProduced = withTests (fromIntegral numberOfTests) . property $ do
   tr <- fmap sourceSignalTargets
         $ forAll
-        $ trace @LEDGER traceLen `ofLengthAtLeast` 1
+        $ trace @LEDGER testGlobals traceLen `ofLengthAtLeast` 1
 
   assertAll consumedSameAsGained tr
 
@@ -123,6 +125,7 @@ registeredPoolIsAdded = do
   withTests (fromIntegral numberOfTests) . property $ do
     tr <- forAll
           $ traceOfLengthWithInitState @LEDGER
+                                     testGlobals
                                      (fromIntegral traceLen)
                                      mkGenesisLedgerState
             `ofLengthAtLeast` 1
@@ -135,7 +138,7 @@ registeredPoolIsAdded = do
 poolIsMarkedForRetirement :: QC.Property
 poolIsMarkedForRetirement = do
   QC.withMaxSuccess (fromIntegral numberOfTests) . QC.property $ do
-    TQC.forAllTraceFromInitState traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
+    TQC.forAllTraceFromInitState testGlobals traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
       let sst = concatMap ledgerToPoolSsts (sourceSignalTargets tr)
         in TestPool.poolIsMarkedForRetirement sst
 
@@ -144,7 +147,7 @@ poolIsMarkedForRetirement = do
 prop_MIRentriesEndUpInMap :: QC.Property
 prop_MIRentriesEndUpInMap =
   QC.withMaxSuccess (fromIntegral numberOfTests) . QC.property $ do
-  TQC.forAllTraceFromInitState traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
+  TQC.forAllTraceFromInitState testGlobals traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
     let sst = concatMap ledgerToDelegSsts (sourceSignalTargets tr)
     in  TestDeleg.instantaneousRewardsAdded sst
 
@@ -153,7 +156,7 @@ prop_MIRentriesEndUpInMap =
 prop_MIRValuesEndUpInMap :: QC.Property
 prop_MIRValuesEndUpInMap =
   QC.withMaxSuccess (fromIntegral numberOfTests) . QC.property $ do
-  TQC.forAllTraceFromInitState traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
+  TQC.forAllTraceFromInitState testGlobals traceLen traceLen (Just GQ.mkGenesisLedgerState) $ \tr ->
     let sst = concatMap ledgerToDelegSsts (sourceSignalTargets tr)
     in  TestDeleg.instantaneousRewardsValue sst
 
@@ -162,6 +165,7 @@ pStateIsInternallyConsistent = do
   withTests (fromIntegral numberOfTests) . property $ do
     tr <- forAll
           $ traceOfLengthWithInitState @LEDGER
+                                     testGlobals
                                      (fromIntegral traceLen)
                                      mkGenesisLedgerState
             `ofLengthAtLeast` 1

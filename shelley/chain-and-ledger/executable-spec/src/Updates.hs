@@ -50,7 +50,7 @@ import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
 import           Keys (GenDelegs, GenKeyHash)
 import           PParams (PParams (..))
-import           Slot (Epoch, Slot)
+import           Slot (EpochNo, SlotNo)
 
 import           Numeric.Natural (Natural)
 
@@ -100,7 +100,7 @@ instance Crypto crypto => ToCBOR (Update crypto) where
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR avUpdate
 
 data PPUpdateEnv crypto = PPUpdateEnv {
-    slot :: Slot
+    slot :: SlotNo
   , genDelegs  :: GenDelegs crypto
   } deriving (Show, Eq, Generic)
 
@@ -119,7 +119,7 @@ data Ppm = MinFeeA Integer
   | PoolDeposit Coin
   | PoolMinRefund UnitInterval
   | PoolDecayRate Rational
-  | EMax Epoch
+  | EMax EpochNo
   | Nopt Natural
   | A0 Rational
   | Rho UnitInterval
@@ -183,7 +183,7 @@ sTagValid (SystemTag st) = all isAscii cs && length cs <= 10
 sTagsValid :: Mdt crypto -> Bool
 sTagsValid (Mdt md) = all sTagValid (dom md)
 
-type Favs crypto = Map Slot (Applications crypto)
+type Favs crypto = Map SlotNo (Applications crypto)
 
 maxVer :: ApName -> Applications crypto -> Favs crypto -> (ApVer, Mdt crypto)
 maxVer an avs favs =
@@ -257,7 +257,7 @@ data UpdateState crypto
   = UpdateState
       (PPUpdate crypto)
       (AVUpdate crypto)
-      (Map Slot (Applications crypto))
+      (Map SlotNo (Applications crypto))
       (Applications crypto)
   deriving (Show, Eq, Generic)
 

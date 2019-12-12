@@ -29,7 +29,7 @@ import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
                      vKey)
 import           LedgerState (genesisId)
 import           Serialization (ToCBORGroup (..))
-import           Slot (BlockNo (..), Epoch (..), Slot (..))
+import           Slot (BlockNo(..), EpochNo (..), SlotNo (..))
 import           Test.Utils
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
@@ -94,7 +94,7 @@ testVRFKH :: VRFKeyHash
 testVRFKH = hashKeyVRF $ snd testVRF
 
 testTxb :: TxBody
-testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (Slot 0) emptyUpdate
+testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (SlotNo 0) emptyUpdate
 
 testKey1 :: KeyPair
 testKey1 = KeyPair vk sk
@@ -170,7 +170,7 @@ serializationTests = testGroup "Serialization Tests"
     (UnsafeUnitInterval (1 % 2))
     (T (TkWord64 1 . TkWord64 2))
   , checkEncoding "slot"
-    (Slot 7)
+    (SlotNo 7)
     (T (TkWord64 7))
   , checkEncoding "neutral_nonce"
     NeutralNonce
@@ -191,7 +191,7 @@ serializationTests = testGroup "Serialization Tests"
         <> S testKeyHash1
         <> S testKeyHash2
     )
-  , let ptr = Ptr (Slot 12) 0 3 in
+  , let ptr = Ptr (SlotNo 12) 0 3 in
     checkEncoding "pointer_address"
     (AddrPtr (KeyHashObj testKeyHash1) ptr)
     ( (T $ TkListLen (2 + fromIntegral (listLen ptr)))
@@ -222,7 +222,7 @@ serializationTests = testGroup "Serialization Tests"
       Seq.empty
       Map.empty
       (Coin 9)
-      (Slot 500)
+      (SlotNo 500)
       emptyUpdate
     )
     ( T (TkMapLen 4)
@@ -326,7 +326,7 @@ serializationTests = testGroup "Serialization Tests"
         (Seq.fromList [ reg ])
         ras
         (Coin 9)
-        (Slot 500)
+        (SlotNo 500)
         up
      )
      ( T (TkMapLen 7)
@@ -337,7 +337,7 @@ serializationTests = testGroup "Serialization Tests"
        <> T (TkWord 2) -- Tx Fee
        <> S (Coin 9)
        <> T (TkWord 3) -- Tx TTL
-       <> S (Slot 500)
+       <> S (SlotNo 500)
        <> T (TkWord 4) -- Tx Certs
        <> T (TkListLen 1) -- Seq list begin
        <> S reg
@@ -397,11 +397,11 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncoding "retire_pool"
-    (RetirePool testKeyHash1 (Epoch 1729))
+    (RetirePool testKeyHash1 (EpochNo 1729))
     ( T (TkListLen 3
       . TkWord 7) -- Pool Retire
       <> S testKeyHash1 -- key hash
-      <> S (Epoch 1729) -- epoch
+      <> S (EpochNo 1729) -- epoch
     )
 
   , checkEncoding "Key_delegation"
@@ -454,7 +454,7 @@ serializationTests = testGroup "Serialization Tests"
         pooldeposit           = Coin 6
         poolminrefund         = UnsafeUnitInterval $ 1 % 4
         pooldecayrate         = 1 % 5
-        emax                  = Epoch 7
+        emax                  = EpochNo 7
         nopt                  = 8
         a0                    = 1 % 6
         rho                   = UnsafeUnitInterval $ 1 % 6
@@ -514,10 +514,10 @@ serializationTests = testGroup "Serialization Tests"
       prevhash = testHeaderHash
       issuerVkey = vKey testKey1
       vrfVkey = snd testVRF
-      slot = Slot 33
-      nonce = mkSeed seedEta (Slot 33) (mkNonce 0) testHeaderHash
+      slot = SlotNo 33
+      nonce = mkSeed seedEta (SlotNo 33) (mkNonce 0) testHeaderHash
       nonceProof = coerce $ mkCertifiedVRF (WithResult nonce 1) (fst testVRF)
-      leaderValue = mkSeed seedL (Slot 33) (mkNonce 0) testHeaderHash
+      leaderValue = mkSeed seedL (SlotNo 33) (mkNonce 0) testHeaderHash
       leaderProof = coerce $ mkCertifiedVRF (WithResult leaderValue 1) (fst testVRF)
       size = 0
       blockNo = BlockNo 44
@@ -535,7 +535,7 @@ serializationTests = testGroup "Serialization Tests"
       { bheaderPrev    = prevhash
       , bheaderVk      = issuerVkey
       , bheaderVrfVk   = vrfVkey
-      , bheaderSlot    = slot
+      , bheaderSlotNo  = slot
       , bheaderEta     = nonceProof
       , bheaderL       = leaderProof
       , bsize          = size
@@ -581,11 +581,11 @@ serializationTests = testGroup "Serialization Tests"
               { bheaderPrev    = testHeaderHash
               , bheaderVk      = vKey testKey1
               , bheaderVrfVk   = snd testVRF
-              , bheaderSlot    = Slot 33
+              , bheaderSlotNo  = SlotNo 33
               , bheaderEta     = coerce $ mkCertifiedVRF (WithResult
-                (mkSeed seedEta (Slot 33) (mkNonce 0) testHeaderHash)1) (fst testVRF)
+                (mkSeed seedEta (SlotNo 33) (mkNonce 0) testHeaderHash)1) (fst testVRF)
               , bheaderL       = coerce $ mkCertifiedVRF (WithResult
-                (mkSeed seedL (Slot 33) (mkNonce 0) testHeaderHash) 1) (fst testVRF)
+                (mkSeed seedL (SlotNo 33) (mkNonce 0) testHeaderHash) 1) (fst testVRF)
               , bsize          = 0
               , bheaderBlockNo = BlockNo 44
               , bhash          = bhbHash $ TxSeq Seq.empty

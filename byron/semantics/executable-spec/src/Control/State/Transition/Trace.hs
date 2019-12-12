@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -50,7 +52,7 @@ import           Data.Maybe (catMaybes)
 import           GHC.Stack (HasCallStack)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
 
-import           Control.State.Transition (Environment, PredicateFailure, STS, Signal, State,
+import           Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State,
                      TRC (TRC), applySTS)
 
 -- | A successful trace of a transition system.
@@ -301,6 +303,7 @@ preStatesAndSignals NewestFirst tr
 -- >>> :set -XTypeFamilies
 -- >>> :set -XTypeApplications
 -- >>> import Control.State.Transition (initialRules, transitionRules, judgmentContext)
+-- >>> import Data.Functor.Identity
 -- >>> :{
 -- data ADDER
 -- instance STS ADDER where
@@ -316,25 +319,25 @@ preStatesAndSignals NewestFirst tr
 --     ]
 -- :}
 --
--- >>> closure @ADDER () 0 [3, 2, 1]
+-- >>> runIdentity $ closure @ADDER () 0 [3, 2, 1]
 -- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = [(6,3),(3,2),(1,1)]}
 --
--- >>> closure @ADDER () 10 [-3, -2, -1]
+-- >>> runIdentity $ closure @ADDER () 10 [-3, -2, -1]
 -- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = [(4,-3),(7,-2),(9,-1)]}
 --
 closure
-  :: forall s
-   . STS s
+  :: forall s m
+   . (STS s, m ~ BaseM s)
    => Environment s
    -> State s
    -> [Signal s]
    -- ^ List of signals to apply, where the newest signal comes first.
-   -> Trace s
-closure env st0 sigs = mkTrace env st0 $ loop st0 (reverse sigs) []
+   -> m (Trace s)
+closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
   where
-    loop _ [] acc = acc
+    loop _ [] acc = pure acc
     loop sti (sig : sigs') acc =
-      case applySTS @s (TRC(env, sti, sig)) of
+      applySTS @s (TRC(env, sti, sig)) >>= \case
         Left _ -> loop sti sigs' acc
         Right sti' -> loop sti' sigs' ((sti', sig) : acc)
 
@@ -372,13 +375,14 @@ mSt .-> stExpected = do
   return stActual
 
 checkTrace
-  :: forall s
-   . (STS s)
-  => Environment s
-  -> ReaderT (State s -> Signal s -> Either [[PredicateFailure s]] (State s)) IO (State s)
+  :: forall s m
+   . (STS s, BaseM s ~ m)
+  => (forall a. m a -> a)
+  -> Environment s
+  -> ReaderT (State s -> Signal s -> (Either [[PredicateFailure s]] (State s))) IO (State s)
   -> IO ()
-checkTrace env act =
-  void $ runReaderT act (\st sig -> applySTS (TRC(env, st, sig)))
+checkTrace interp env act =
+  void $ runReaderT act (\st sig -> interp $ applySTS (TRC(env, st, sig)))
 
 -- | Extract all the values of a given type.
 --

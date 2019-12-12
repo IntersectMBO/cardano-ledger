@@ -9,24 +9,37 @@ module Cardano.Ledger.Shelley.API.Validation
   ( ShelleyState,
     applyHeaderTransition,
     applyBlockTransition,
+    liftShelleyBase,
   )
 where
 
+import BaseTypes (Globals, ShelleyBase)
 import BlockChain
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Shelley.Crypto
 import Control.Arrow (left, right)
 import Control.Monad.Except
-import Control.State.Transition (TRC (..), applySTS)
+import Control.Monad.Reader.Class
+import Control.Monad.Trans.Reader (runReaderT)
+import Control.State.Transition.Extended (TRC (..), applySTS)
+import Data.Functor.Identity
 import Ledger.Core (Relation (..))
 import qualified LedgerState
 import qualified STS.Bbody as STS
 import qualified STS.Tick as STS
+import Slot (SlotNo)
 import qualified TxData as Tx
-import Slot (Slot)
 
 -- | Type alias for the state updated by TICK and BBODY rules
 type ShelleyState = LedgerState.NewEpochState
+
+liftShelleyBase ::
+  (MonadReader Globals m) =>
+  ShelleyBase a ->
+  m a
+liftShelleyBase act = do
+  globs <- ask
+  pure . runIdentity $ runReaderT act globs
 
 {-------------------------------------------------------------------------------
   Applying blocks
@@ -64,16 +77,19 @@ newtype HeaderTransitionError crypto
 applyHeaderTransition ::
   forall crypto m.
   ( Crypto crypto,
-    MonadError (HeaderTransitionError crypto) m
+    MonadError (HeaderTransitionError crypto) m,
+    MonadReader Globals m
   ) =>
   ShelleyState crypto ->
-  Slot ->
+  SlotNo ->
   m (ShelleyState crypto)
-applyHeaderTransition state hdr =
+applyHeaderTransition state hdr = do
+  res <-
+    liftShelleyBase . applySTS @(STS.TICK crypto) $
+      TRC (mkTickEnv state, state, hdr)
   liftEither
     . left (HeaderTransitionError . join)
-    . applySTS @(STS.TICK crypto)
-    $ TRC (mkTickEnv state, state, hdr)
+    $ res
 
 newtype BlockTransitionError crypto
   = BlockTransitionError [STS.PredicateFailure (STS.BBODY crypto)]
@@ -84,17 +100,20 @@ applyBlockTransition ::
   forall crypto m.
   ( Crypto crypto,
     MonadError (BlockTransitionError crypto) m,
+    MonadReader Globals m,
     DSIGN.Signable (DSIGN crypto) (Tx.TxBody crypto)
   ) =>
   ShelleyState crypto ->
   Block crypto ->
   m (ShelleyState crypto)
-applyBlockTransition state blk =
+applyBlockTransition state blk = do
+  res <-
+    liftShelleyBase . applySTS @(STS.BBODY crypto) $
+      TRC (mkBbodyEnv state, bbs, blk)
   liftEither
     . right (updateShelleyState state)
     . left (BlockTransitionError . join)
-    . applySTS @(STS.BBODY crypto)
-    $ TRC (mkBbodyEnv state, bbs, blk)
+    $ res
   where
     updateShelleyState ::
       ShelleyState crypto ->
