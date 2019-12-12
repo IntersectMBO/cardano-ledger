@@ -102,9 +102,9 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
     & \text{withdrawal balance} \\
     & \fun{wbalance} ~ ws = \sum_{(\wcard\mapsto c)\in\var{ws}} c
     \nextdef
-    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \Tx \to \Coin
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Tx \to \Coin
     & \text{value consumed} \\
-    & \consumed{pp}{utxo}{stkCreds}{rewards}~{tx} = \\
+    & \consumed{pp}{utxo}{stkCreds}{tx} = \\
     & ~~\ubalance{(\txins{tx} \restrictdom \var{utxo})} +
         \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
     & ~~ + \keyRefunds{pp}{stkCreds}{tx} \\
