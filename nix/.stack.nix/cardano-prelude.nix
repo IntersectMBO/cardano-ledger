@@ -65,7 +65,9 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."canonical-json" or (buildDepError "canonical-json"))
           (hsPkgs."cborg" or (buildDepError "cborg"))
           (hsPkgs."containers" or (buildDepError "containers"))
+          (hsPkgs."fingertree" or (buildDepError "fingertree"))
           (hsPkgs."formatting" or (buildDepError "formatting"))
+          (hsPkgs."generic-deriving" or (buildDepError "generic-deriving"))
           (hsPkgs."ghc-heap" or (buildDepError "ghc-heap"))
           (hsPkgs."ghc-prim" or (buildDepError "ghc-prim"))
           (hsPkgs."hashable" or (buildDepError "hashable"))
@@ -73,6 +75,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."mtl" or (buildDepError "mtl"))
           (hsPkgs."nonempty-containers" or (buildDepError "nonempty-containers"))
           (hsPkgs."protolude" or (buildDepError "protolude"))
+          (hsPkgs."serialise" or (buildDepError "serialise"))
           (hsPkgs."tagged" or (buildDepError "tagged"))
           (hsPkgs."text" or (buildDepError "text"))
           (hsPkgs."time" or (buildDepError "time"))
@@ -113,7 +116,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-prelude";
-      rev = "3c40edcf5bdba8721d3430d0aaaeea8770ce9bec";
-      sha256 = "1z77nwjxj0v9gxhs3mlmqfq705mkkcpnwgr0d8shykjvf0iqdkcn";
+      rev = "cb54482c7e3d45f6c1aac490dc937ed835de0333";
+      sha256 = "1fg8rkzfxm05bm1mrax5icq1rq9yj7cl70r2114rkpcj2v874q3f";
       });
     }
