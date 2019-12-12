@@ -303,6 +303,7 @@ preStatesAndSignals NewestFirst tr
 -- >>> :set -XTypeFamilies
 -- >>> :set -XTypeApplications
 -- >>> import Control.State.Transition (initialRules, transitionRules, judgmentContext)
+-- >>> import Data.Functor.Identity
 -- >>> :{
 -- data ADDER
 -- instance STS ADDER where
@@ -318,10 +319,10 @@ preStatesAndSignals NewestFirst tr
 --     ]
 -- :}
 --
--- >>> closure @ADDER () 0 [3, 2, 1]
+-- >>> runIdentity $ closure @ADDER () 0 [3, 2, 1]
 -- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = [(6,3),(3,2),(1,1)]}
 --
--- >>> closure @ADDER () 10 [-3, -2, -1]
+-- >>> runIdentity $ closure @ADDER () 10 [-3, -2, -1]
 -- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = [(4,-3),(7,-2),(9,-1)]}
 --
 closure
