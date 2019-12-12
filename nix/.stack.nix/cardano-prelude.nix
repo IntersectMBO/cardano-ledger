@@ -67,6 +67,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."containers" or (buildDepError "containers"))
           (hsPkgs."fingertree" or (buildDepError "fingertree"))
           (hsPkgs."formatting" or (buildDepError "formatting"))
+          (hsPkgs."generic-deriving" or (buildDepError "generic-deriving"))
           (hsPkgs."ghc-heap" or (buildDepError "ghc-heap"))
           (hsPkgs."ghc-prim" or (buildDepError "ghc-prim"))
           (hsPkgs."hashable" or (buildDepError "hashable"))
@@ -115,7 +116,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-prelude";
-      rev = "7a8755b6988a9dd137f3f61a77c6d51e4eafa781";
-      sha256 = "1h5x2hmwh6ppxpf8h2papypzdl59x87xcldfi6v50q90zjnd0l1i";
+      rev = "cb54482c7e3d45f6c1aac490dc937ed835de0333";
+      sha256 = "1fg8rkzfxm05bm1mrax5icq1rq9yj7cl70r2114rkpcj2v874q3f";
       });
     }
