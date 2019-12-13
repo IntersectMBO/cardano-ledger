@@ -9,11 +9,10 @@ module Rules.TestPoolreap where
 import qualified Data.Set as Set (intersection, isSubsetOf, null, singleton)
 import           Data.Word (Word64)
 
-import           Hedgehog (Property, forAll, property, withTests)
+import           Test.QuickCheck (Property, conjoin)
 
-import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (pattern NewestFirst, pattern SourceSignalTarget,
-                     signal, source, sourceSignalTargets, target, traceStates)
+import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
+                     signal, source, target)
 
 import           Coin (pattern Coin)
 import           LedgerState (pattern AccountState, pattern DState, pattern UTxOState, _deposited,
@@ -25,8 +24,6 @@ import           UTxO (balance)
 
 import           Ledger.Core (dom, (▷))
 import           Rules.TestPool (getRetiring, getStPools)
-import           Test.Utils (assertAll, testGlobals)
-
 
 ------------------------------
 -- Constants for Properties --
@@ -44,13 +41,12 @@ traceLen = 100
 
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
-removedAfterPoolreap :: Property
-removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
-  tr <- fmap sourceSignalTargets
-        $ forAll
-        $ trace @POOLREAP testGlobals traceLen `ofLengthAtLeast` 1
-
-  assertAll poolRemoved tr
+removedAfterPoolreap
+  :: [SourceSignalTarget POOLREAP]
+  -> Property
+removedAfterPoolreap tr =
+  conjoin $
+    map poolRemoved tr
 
   where poolRemoved (SourceSignalTarget
                       { source = PoolreapState { prPState = p }
@@ -68,25 +64,24 @@ removedAfterPoolreap = withTests (fromIntegral numberOfTests) . property $ do
 
 
 -- | Check that deposits are always non-negative
-nonNegativeDeposits :: Property
-nonNegativeDeposits = withTests (fromIntegral numberOfTests) . property $ do
-  t <- forAll $ trace @POOLREAP testGlobals traceLen
-  let states = traceStates NewestFirst t
-
-  assertAll (\PoolreapState
-              { prUTxOSt =
-                  UTxOState { _deposited = deposit} } -> deposit >= 0) states
-
+nonNegativeDeposits
+  :: [SourceSignalTarget POOLREAP]
+  -> Property
+nonNegativeDeposits tr =
+  conjoin $
+    map (\PoolreapState
+           { prUTxOSt =
+                UTxOState { _deposited = deposit} } -> deposit >= 0)
+        (map source tr)
 
 -- | Check that the sum of circulation, deposits, fees, treasury, rewards and
 -- reserves is constant.
-constantSumPots :: Property
-constantSumPots = withTests (fromIntegral numberOfTests) . property $ do
-  tr <- fmap sourceSignalTargets
-        $ forAll
-        $ trace @POOLREAP testGlobals traceLen `ofLengthAtLeast` 1
-
-  assertAll potsSumEqual tr
+constantSumPots
+  :: [SourceSignalTarget POOLREAP]
+  -> Property
+constantSumPots tr =
+  conjoin $
+    map potsSumEqual tr
 
   where potsSumEqual (SourceSignalTarget
                       { source = PoolreapState

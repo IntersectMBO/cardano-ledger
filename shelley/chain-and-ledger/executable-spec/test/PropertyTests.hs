@@ -25,9 +25,14 @@ import           Ledger.Core ((<|))
 import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
-import           Rules.TestLedger (credentialRemovedAfterDereg, pStateIsInternallyConsistent,
-                     poolIsMarkedForRetirement, prop_MIRValuesEndUpInMap,
-                     prop_MIRentriesEndUpInMap, registeredPoolIsAdded, rewardZeroAfterReg)
+import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfterDelegation,
+                     credentialRemovedAfterDereg, eliminateTxInputs, feesNonDecreasing,
+                     newEntriesAndUniqueTxIns, noDoubleSpend, pStateIsInternallyConsistent,
+                     poolIsMarkedForRetirement, poolRetireInEpoch, potsSumIncreaseWdrls,
+                     preserveBalance, preserveBalanceRestricted, preserveOutputsTx,
+                     prop_MIRValuesEndUpInMap, prop_MIRentriesEndUpInMap, registeredPoolIsAdded,
+                     rewardZeroAfterRegKey, rewardZeroAfterRegPool, rewardsDecreasesByWithdrawals,
+                     rewardsSumInvariant)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -161,20 +166,37 @@ propertyTests = testGroup "Property-Based Testing"
                 [ testGroup "Classify Traces"
                   [TQC.testProperty "Ledger trace covers the relevant cases" relevantCasesAreCovered]
                 , testGroup "STS Rules - Delegation Properties"
-                  [ testProperty "newly registered key has a reward of 0" rewardZeroAfterReg
-                  , testProperty "deregistered key's credential is removed"
-                                 credentialRemovedAfterDereg
+                  [ TQC.testProperty "newly registered key has a reward of 0" rewardZeroAfterRegKey
+                  , TQC.testProperty "deregistered key's credential is removed" credentialRemovedAfterDereg
+                  , TQC.testProperty "registered stake credential is correctly delegated" credentialMappingAfterDelegation
+                  , TQC.testProperty "sum of rewards does not change" rewardsSumInvariant
+                  , TQC.testProperty "rewards pot decreases by the sum of tx withdrawals" rewardsDecreasesByWithdrawals
+                  ]
+                , testGroup "STS Rules - Utxo Properties"
+                  [ TQC.testProperty "the value consumed by UTXO is equal to the value produced in DELEGS" consumedEqualsProduced
+                  , TQC.testProperty "transaction fees are non-decreasing" feesNonDecreasing
+                  , TQC.testProperty "sum of circulation, deposits and fees increases by the sum of tx withdrawals" potsSumIncreaseWdrls
+                  , TQC.testProperty "preserve the balance in a transaction" preserveBalance
+                  , TQC.testProperty "preserve tx balance restricted to TxIns and TxOuts" preserveBalanceRestricted
+                  , TQC.testProperty "preserve transaction outputs" preserveOutputsTx
+                  , TQC.testProperty "consumed inputs are eliminated" eliminateTxInputs
+                  , TQC.testProperty "new tx entries are included and all txIds are new" newEntriesAndUniqueTxIns
+                  , TQC.testProperty "no double spend" noDoubleSpend
                   ]
                 , testGroup "STS Rules - Pool Properties"
-                  [ testProperty "newly registered stake pool is added to \
-                                 \appropriate state mappings"
-                                 registeredPoolIsAdded
+                  [ TQC.testProperty "newly registered stake pool is added to \
+                                     \appropriate state mappings"
+                                     registeredPoolIsAdded
+                  , TQC.testProperty "newly registered pool key is not in the retiring map"
+                                     rewardZeroAfterRegPool
                   , TQC.testProperty "retired stake pool is removed from \
                                      \appropriate state mappings and marked \
                                      \ for retiring"
                                      poolIsMarkedForRetirement
-                  , testProperty "pool state is internally consistent"
-                                 pStateIsInternallyConsistent
+                  , TQC.testProperty "pool state is internally consistent"
+                                     pStateIsInternallyConsistent
+                  , TQC.testProperty "executing a pool retirement certificate adds to 'retiring'"
+                                     poolRetireInEpoch
                   ]
                 , testGroup "STS Rules - MIR certificates"
                   [ TQC.testProperty "entries of MIR certificate are added to\

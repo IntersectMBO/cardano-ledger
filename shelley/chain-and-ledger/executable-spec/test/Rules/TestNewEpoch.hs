@@ -1,18 +1,17 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Rules.TestNewEpoch where
+module Rules.TestNewEpoch
+  ( rewardDecreaseEqualsTreasuryRewardPot
+  , circulationDepositsInvariant)
+where
 
-import           Data.Word (Word64)
+import           Test.QuickCheck (Property, conjoin)
 
-import           Hedgehog (Property, forAll, property, withTests)
-
-import           Control.State.Transition.Generator (ofLengthAtLeast, trace)
-import           Control.State.Transition.Trace (pattern SourceSignalTarget, source,
-                     sourceSignalTargets, target)
+import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
+                     source, target)
 
 import           Coin (pattern Coin)
 import           LedgerState (pattern AccountState, pattern DPState, pattern DState,
@@ -22,32 +21,18 @@ import           LedgerState (pattern AccountState, pattern DPState, pattern DSt
 import           MockTypes (NEWEPOCH)
 import           UTxO (balance)
 
-import           Test.Utils (assertAll, testGlobals)
-
-
-------------------------------
--- Constants for Properties --
-------------------------------
-
-numberOfTests :: Word64
-numberOfTests = 300
-
-traceLen :: Word64
-traceLen = 100
-
 -----------------------------
 -- Properties for NEWEPOCH --
 -----------------------------
 
 -- | Check that the rewards decrease by the increase of the treasury and the
 -- rewards.
-rewardDecreaseEqualsTreasuryRewardPot :: Property
-rewardDecreaseEqualsTreasuryRewardPot = withTests (fromIntegral numberOfTests) . property $ do
-  tr <- fmap sourceSignalTargets
-        $ forAll
-        $ trace @NEWEPOCH testGlobals traceLen `ofLengthAtLeast` 1
-
-  assertAll rewardsDecreaseBalanced tr
+rewardDecreaseEqualsTreasuryRewardPot
+  :: [SourceSignalTarget NEWEPOCH]
+  -> Property
+rewardDecreaseEqualsTreasuryRewardPot tr =
+  conjoin $
+    map rewardsDecreaseBalanced tr
 
   where rewardsDecreaseBalanced
           (SourceSignalTarget
@@ -96,13 +81,12 @@ rewardDecreaseEqualsTreasuryRewardPot = withTests (fromIntegral numberOfTests) .
 
 -- | Check that the circulation and deposits do not change in a NEWEPOCH
 -- transition.
-circulationDepositsInvariant :: Property
-circulationDepositsInvariant = withTests (fromIntegral numberOfTests) . property $ do
-  tr <- fmap sourceSignalTargets
-        $ forAll
-        $ trace @NEWEPOCH testGlobals traceLen `ofLengthAtLeast` 1
-
-  assertAll circulationDepositsNoChange tr
+circulationDepositsInvariant
+  :: [SourceSignalTarget NEWEPOCH]
+  -> Property
+circulationDepositsInvariant tr =
+  conjoin $
+    map circulationDepositsNoChange tr
 
   where circulationDepositsNoChange
           (SourceSignalTarget
