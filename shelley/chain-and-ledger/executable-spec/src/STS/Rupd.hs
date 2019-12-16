@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Rupd
@@ -9,12 +11,14 @@ where
 
 import           BaseTypes
 import           BlockChain
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.Monad.Trans.Reader (asks)
+import           Control.State.Transition
+import           Data.Functor ((<&>))
 import           EpochBoundary
+import           GHC.Generics (Generic)
 import           LedgerState
 import           Slot
-import           Data.Functor ((<&>))
-import           Control.State.Transition
-import           Control.Monad.Trans.Reader (asks)
 
 data RUPD crypto
 
@@ -28,10 +32,12 @@ instance STS (RUPD crypto) where
   type BaseM (RUPD crypto) = ShelleyBase
   data PredicateFailure (RUPD crypto)
     = FailureRUPD
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = [pure Nothing]
   transitionRules = [rupdTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
 
 rupdTransition :: TransitionRule (RUPD crypto)
 rupdTransition = do

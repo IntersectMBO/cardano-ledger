@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,13 +16,15 @@ module STS.Ledger
   )
 where
 
-import           Lens.Micro ((^.))
 import           BaseTypes
 import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
 import           Control.State.Transition
+import           GHC.Generics (Generic)
 import           Keys
 import           LedgerState
+import           Lens.Micro ((^.))
 import           PParams hiding (d)
 import           Slot
 import           STS.Delegs
@@ -34,7 +38,7 @@ data LEDGER crypto
 
 data LedgerEnv
   = LedgerEnv
-    { ledgerSlotNo     :: SlotNo
+    { ledgerSlotNo   :: SlotNo
     , ledgerIx       :: Ix
     , ledgerPp       :: PParams
     , ledgerReserves :: Coin
@@ -55,10 +59,12 @@ instance
   data PredicateFailure (LEDGER crypto)
     = UtxowFailure (PredicateFailure (UTXOW crypto))
     | DelegsFailure (PredicateFailure (DELEGS crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [ledgerTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
 
 ledgerTransition
   :: forall crypto

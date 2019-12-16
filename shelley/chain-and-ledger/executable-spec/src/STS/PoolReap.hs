@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.PoolReap
@@ -7,26 +9,25 @@ module STS.PoolReap
   )
 where
 
+import           BaseTypes
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (runReaderT)
+import           Control.Monad.Trans.Reader (asks)
+import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace (..), envGen, sigGen)
 import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-
-import           Lens.Micro ((^.))
-import           BaseTypes
 import           Delegation.Certificates
 import           EpochBoundary (poolRefunds)
+import           GHC.Generics (Generic)
+import           Hedgehog (Gen)
+import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import           LedgerState
+import           Lens.Micro ((^.))
 import           PParams
 import           Slot
 import           TxData (_poolRAcnt)
-import           Control.Monad.Trans.Reader (asks)
-import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace(..), envGen, sigGen)
-
-import           Hedgehog (Gen)
-
-import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 
 data POOLREAP crypto
 
@@ -45,9 +46,11 @@ instance STS (POOLREAP crypto) where
   type BaseM (POOLREAP crypto) = ShelleyBase
   data PredicateFailure (POOLREAP crypto)
     = FailurePOOLREAP
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
   initialRules = [pure $ PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState]
   transitionRules = [poolReapTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (POOLREAP crypto))
 
 poolReapTransition :: TransitionRule (POOLREAP crypto)
 poolReapTransition = do

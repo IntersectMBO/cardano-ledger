@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -10,21 +12,21 @@ module STS.Newpp
   )
 where
 
-import qualified Data.Map.Strict as Map
 import           BaseTypes
-import           Lens.Micro ((^.))
-
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin
+import           Control.Monad.Trans.Reader (asks)
+import           Control.State.Transition
+import qualified Data.Map.Strict as Map
 import           EpochBoundary
+import           GHC.Generics (Generic)
 import           LedgerState (AccountState, DState, PState, UTxOState, pattern UTxOState, clearPpup,
-                     emptyAccount, stkCreds, stPools, _deposited, _irwd, _reserves)
+                     emptyAccount, stPools, stkCreds, _deposited, _irwd, _reserves)
+import           Lens.Micro ((^.))
 import           PParams
 import           Slot
 import           Updates
 import           UTxO
-import           Control.Monad.Trans.Reader (asks)
-
-import           Control.State.Transition
 
 data NEWPP crypto
 
@@ -41,10 +43,12 @@ instance STS (NEWPP crypto) where
   type BaseM (NEWPP crypto) = ShelleyBase
   data PredicateFailure (NEWPP crypto)
     = FailureNEWPP
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = [initialNewPp]
   transitionRules = [newPpTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (NEWPP crypto))
 
 initialNewPp :: InitialRule (NEWPP crypto)
 initialNewPp = pure $ NewppState

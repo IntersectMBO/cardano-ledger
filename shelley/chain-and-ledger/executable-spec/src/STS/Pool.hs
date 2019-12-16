@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Pool
@@ -9,6 +11,7 @@ where
 
 import           BaseTypes
 import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks, runReaderT)
 import           Control.State.Transition
 import           Control.State.Transition.Generator
@@ -17,6 +20,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Delegation.Certificates
+import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, (∈), (∉), (⋪))
@@ -46,11 +50,13 @@ instance STS (POOL crypto) where
     = StakePoolNotRegisteredOnKeyPOOL
     | StakePoolRetirementWrongEpochPOOL
     | WrongCertificateTypePOOL
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyPState]
 
   transitionRules = [poolDelegationTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
 
 poolDelegationTransition :: TransitionRule (POOL crypto)
 poolDelegationTransition = do

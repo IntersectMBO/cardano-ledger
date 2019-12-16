@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Updn
@@ -10,12 +12,13 @@ where
 
 import           BaseTypes
 import           BlockChain
-import           PParams
-import           Slot
-
 import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks)
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
+import           GHC.Generics (Generic)
+import           PParams
+import           Slot
 
 data UPDN crypto
 
@@ -31,9 +34,11 @@ instance
   type Environment (UPDN crypto) = UpdnEnv crypto
   type BaseM (UPDN crypto) = ShelleyBase
   data PredicateFailure (UPDN crypto) = FailureUPDN
-                               deriving (Show, Eq)
+                               deriving (Generic, Show, Eq)
   initialRules = [pure (UpdnState (mkNonce 0) (mkNonce 0) (mkNonce 0) (mkNonce 0))]
   transitionRules = [updTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (UPDN crypto))
 
 updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
 updTransition = do

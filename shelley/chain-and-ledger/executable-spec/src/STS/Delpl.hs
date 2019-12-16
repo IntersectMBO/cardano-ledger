@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,24 +14,24 @@ module STS.Delpl
 where
 
 import           BaseTypes
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
+import           Control.State.Transition
 import           Delegation.Certificates
+import           GHC.Generics (Generic)
 import           LedgerState
 import           PParams hiding (d)
 import           Slot
-import           TxData
-
-import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
-
 import           STS.Deleg
 import           STS.Pool
+import           TxData
 
 data DELPL crypto
 
 data DelplEnv
   = DelplEnv
-    { delplSlotNo     :: SlotNo
+    { delplSlotNo   :: SlotNo
     , delPlPtr      :: Ptr
     , delPlPp       :: PParams
     , delPlReserves :: Coin
@@ -49,10 +51,12 @@ instance
     | ScriptNotInWitnessDELPL
     | ScriptHashNotMatchDELPL
     | ScriptDoesNotValidateDELPL
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules    = [ pure emptyDelegation ]
   transitionRules = [ delplTransition      ]
+
+instance NoUnexpectedThunks (PredicateFailure (DELPL crypto))
 
 delplTransition
   :: forall crypto

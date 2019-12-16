@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,6 +17,7 @@ where
 
 import           BaseTypes
 import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
@@ -24,6 +27,7 @@ import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Delegation.Certificates
+import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, range, (∪), (⊆), (⋪))
@@ -64,9 +68,11 @@ instance
     | ValueNotConservedUTxO Coin Coin
     | NegativeOutputsUTxO
     | UpdateFailure (PredicateFailure (UP crypto))
-    deriving (Eq, Show)
+    deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
+
+instance NoUnexpectedThunks (PredicateFailure (UTXO crypto))
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do

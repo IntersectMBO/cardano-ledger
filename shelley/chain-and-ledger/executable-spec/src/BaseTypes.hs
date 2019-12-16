@@ -30,6 +30,7 @@ import           Cardano.Binary (ToCBOR (toCBOR), encodeListLen)
 import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Cardano.Slotting.EpochInfo
+import           Control.Monad.Trans.Reader
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Functor.Identity
@@ -37,7 +38,6 @@ import           Data.Ratio (denominator, numerator, (%))
 import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
-import           Control.Monad.Trans.Reader
 
 data E34
 

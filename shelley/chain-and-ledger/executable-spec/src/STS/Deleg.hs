@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Deleg
@@ -8,33 +10,32 @@ module STS.Deleg
   )
 where
 
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 import           BaseTypes
 import           BlockChain (slotsPrior)
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
+import           Control.Monad.Trans.Reader (asks, runReaderT)
+import           Control.State.Transition
+import           Control.State.Transition.Generator
+import           Data.Functor.Identity (runIdentity)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import           Delegation.Certificates
+import           GHC.Generics (Generic)
+import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import           LedgerState
 import           Slot
 import           TxData
 
-import           Control.Monad.Trans.Reader (asks)
-import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
-import           Control.State.Transition.Generator
-import           Control.Monad.Trans.Reader (runReaderT)
-import           Data.Functor.Identity (runIdentity)
-
-import           Hedgehog (Gen)
-
 data DELEG crypto
 
 data DelegEnv
   = DelegEnv
-  { slot :: SlotNo
-  , ptr :: Ptr
+  { slot     :: SlotNo
+  , ptr      :: Ptr
   , reserves :: Coin
   }
   deriving (Show, Eq)
@@ -55,10 +56,12 @@ instance STS (DELEG crypto)
     | DuplicateGenesisDelegateDELEG
     | InsufficientForInstantaneousRewardsDELEG
     | MIRCertificateTooLateinEpochDELEG
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (DELEG crypto))
 
 delegationTransition
   :: TransitionRule (DELEG crypto)

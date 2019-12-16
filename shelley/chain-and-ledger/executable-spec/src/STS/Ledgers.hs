@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,16 +15,17 @@ module STS.Ledgers
   )
 where
 
+import           BaseTypes
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Coin (Coin)
 import           Control.Monad (foldM)
+import           Control.State.Transition
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import qualified Data.Set as Set
-import           BaseTypes
-import           Control.State.Transition
-
-import           Cardano.Ledger.Shelley.Crypto
-import           Coin (Coin)
+import           GHC.Generics (Generic)
 import           Keys
 import           Ledger.Core ((◁), (⨃))
 import           LedgerState
@@ -36,7 +39,7 @@ data LEDGERS crypto
 
 data LedgersEnv
   = LedgersEnv
-    { ledgersSlotNo     :: SlotNo
+    { ledgersSlotNo   :: SlotNo
     , ledgersPp       :: PParams
     , ledgersReserves :: Coin
     }
@@ -53,10 +56,12 @@ instance
   type BaseM (LEDGERS crypto) = ShelleyBase
   data PredicateFailure (LEDGERS crypto)
     = LedgerFailure (PredicateFailure (LEDGER crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyLedgerState]
   transitionRules = [ledgersTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (LEDGERS crypto))
 
 ledgersTransition
   :: forall crypto

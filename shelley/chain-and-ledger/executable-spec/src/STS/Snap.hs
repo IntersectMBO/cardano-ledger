@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Snap
@@ -8,20 +10,20 @@ module STS.Snap
   )
 where
 
-import qualified Data.Map.Strict as Map
-
-import           Control.Monad.Trans.Reader (asks)
-import           Lens.Micro ((^.))
 import           BaseTypes
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin
+import           Control.Monad.Trans.Reader (asks)
+import           Control.State.Transition
+import qualified Data.Map.Strict as Map
 import           EpochBoundary
+import           GHC.Generics (Generic)
 import           LedgerState
+import           Lens.Micro ((^.))
 import           PParams hiding (d)
 import           Slot
 import           Updates
 import           UTxO
-
-import           Control.State.Transition
 
 data SNAP crypto
 
@@ -43,11 +45,13 @@ instance STS (SNAP crypto) where
   type BaseM (SNAP crypto) = ShelleyBase
   data PredicateFailure (SNAP crypto)
     = FailureSNAP
-    deriving (Show, Eq)
+    deriving (Show, Generic, Eq)
 
   initialRules =
     [pure $ SnapState emptySnapShots (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)]
   transitionRules = [snapTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
 
 snapTransition :: TransitionRule (SNAP crypto)
 snapTransition = do

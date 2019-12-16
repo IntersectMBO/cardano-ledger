@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,6 +15,7 @@ where
 
 import           BaseTypes
 import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
@@ -21,6 +24,7 @@ import           Data.Functor.Identity (runIdentity)
 import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set
 import           Delegation.Certificates
+import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import           Ledger.Core (dom, (∈), (⊆), (⨃))
 import           LedgerState
@@ -34,10 +38,10 @@ data DELEGS crypto
 
 data DelegsEnv crypto
   = DelegsEnv
-    { delegsSlotNo :: SlotNo
-    , delegsIx   :: Ix
-    , delegspp   :: PParams
-    , delegsTx   :: (Tx crypto)
+    { delegsSlotNo   :: SlotNo
+    , delegsIx       :: Ix
+    , delegspp       :: PParams
+    , delegsTx       :: (Tx crypto)
     , delegsReserves :: Coin
     }
   deriving Show
@@ -54,10 +58,12 @@ instance
     = DelegateeNotRegisteredDELEG
     | WithrawalsNotInRewardsDELEGS
     | DelplFailure (PredicateFailure (DELPL crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules    = [ pure emptyDelegation ]
   transitionRules = [ delegsTransition     ]
+
+instance NoUnexpectedThunks (PredicateFailure (DELEGS crypto))
 
 delegsTransition
   :: forall crypto
