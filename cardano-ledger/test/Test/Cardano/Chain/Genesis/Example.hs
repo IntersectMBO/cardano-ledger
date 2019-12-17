@@ -21,6 +21,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 
+import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
   , LovelacePortion(..)
@@ -28,7 +29,7 @@ import Cardano.Chain.Common
   , mkKnownLovelacePortion
   , hashKey
   )
-import Cardano.Chain.Delegation (Certificate(..))
+import Cardano.Chain.Delegation (unsafeCertificate)
 import Cardano.Chain.Genesis
   ( FakeAvvmOptions(..)
   , GenesisNonAvvmBalances(..)
@@ -42,7 +43,7 @@ import Cardano.Chain.Genesis
   )
 import Cardano.Chain.Slotting (EpochNumber(..))
 import Cardano.Crypto
-  ( ProtocolMagic(..)
+  ( AProtocolMagic(..)
   , ProtocolMagicId(..)
   , CompactRedeemVerificationKey
   , RequiresNetworkMagic(..)
@@ -69,7 +70,7 @@ exampleGenesisSpec = UnsafeGenesisSpec
   exampleGenesisDelegation
   exampleProtocolParameters
   (BlockCount 37)
-  (ProtocolMagic (ProtocolMagicId 1783847074) RequiresMagic)
+  (AProtocolMagic (Annotated (ProtocolMagicId 1783847074) ()) RequiresMagic)
   exampleGenesisInitializer
 
 exampleGenesisAvvmBalances :: GenesisAvvmBalances
@@ -98,7 +99,7 @@ exampleGenesisDelegation :: GenesisDelegation
 exampleGenesisDelegation = UnsafeGenesisDelegation
   (M.fromList
     [ ( hashKey issueVerKey
-      , UnsafeCertificate
+      , unsafeCertificate
         (EpochNumber 68300481033)
         issueVerKey
         (VerificationKey

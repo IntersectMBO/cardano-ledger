@@ -15,9 +15,11 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Delegation
-  ( Certificate(delegateVK, issuerVK)
-  , Payload(..)
+  ( ACertificate(delegateVK, issuerVK)
+  , Certificate
+  , Payload
   , signCertificate
+  , unsafePayload
   )
 import Cardano.Chain.Delegation.Validation.Scheduling (Error(..))
 import Cardano.Chain.Slotting (EpochNumber(..))
@@ -75,4 +77,4 @@ genError = Gen.choice
 
 genPayload :: ProtocolMagicId -> Gen Payload
 genPayload pm =
-  UnsafePayload <$> Gen.list (Range.linear 0 5) (genCertificate pm)
+  unsafePayload <$> Gen.list (Range.linear 0 5) (genCertificate pm)

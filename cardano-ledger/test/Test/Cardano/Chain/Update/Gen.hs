@@ -27,9 +27,9 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Update
   ( ApplicationName(..)
-  , Payload(..)
+  , Payload
   , Proof
-  , Proposal(..)
+  , Proposal
   , ProposalBody(..)
   , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
@@ -41,7 +41,9 @@ import Cardano.Chain.Update
   , InstallerHash(..)
   , Vote
   , applicationNameMaxLength
+  , unsafeProposal
   , mkVote
+  , payload
   , systemTagMaxLength
   )
 import Cardano.Crypto (ProtocolMagicId)
@@ -148,7 +150,7 @@ genInstallerHash :: Gen InstallerHash
 genInstallerHash = InstallerHash <$> genHashRaw
 
 genPayload :: ProtocolMagicId -> Gen Payload
-genPayload pm = Payload <$> Gen.maybe (genProposal pm) <*> Gen.list
+genPayload pm = payload <$> Gen.maybe (genProposal pm) <*> Gen.list
   (Range.linear 0 10)
   (genVote pm)
 
@@ -157,7 +159,7 @@ genProof pm = genAbstractHash (genPayload pm)
 
 genProposal :: ProtocolMagicId -> Gen Proposal
 genProposal pm =
-  UnsafeProposal
+  unsafeProposal
     <$> genProposalBody
     <*> genVerificationKey
     <*> genSignature pm genProposalBody

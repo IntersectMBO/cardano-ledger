@@ -15,7 +15,7 @@ import qualified Cardano.Crypto.Wallet as CC
 import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 
-import Cardano.Binary (serialize')
+import Cardano.Binary (Annotated(..), serialize')
 import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
 import Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 
@@ -62,8 +62,8 @@ instance Buildable SignTag where
 
 -- | Get magic bytes corresponding to a 'SignTag', taking `ProtocolMagic` bytes
 --   from the annotation
-signTagDecoded :: ProtocolMagicId -> SignTag -> ByteString
-signTagDecoded = signTagRaw . serialize'
+signTagDecoded :: Annotated ProtocolMagicId ByteString -> SignTag -> ByteString
+signTagDecoded = signTagRaw . annotation
 
 -- | Get magic bytes corresponding to a 'SignTag'. Guaranteed to be different
 --   (and begin with a different byte) for different tags.

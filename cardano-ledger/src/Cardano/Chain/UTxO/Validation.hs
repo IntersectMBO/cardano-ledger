@@ -30,7 +30,6 @@ import Cardano.Binary
   , Decoder
   , DecoderError(DecoderErrorUnknownTag)
   , FromCBOR(..)
-  , FromCBORAnnotated(..)
   , ToCBOR(..)
   , decodeListLen
   , decodeWord8
@@ -55,9 +54,9 @@ import Cardano.Chain.Common
   )
 import Cardano.Chain.UTxO.Tx (Tx(..), TxIn, TxOut(..))
 import Cardano.Chain.UTxO.Compact (CompactTxOut(..), toCompactTxIn)
-import Cardano.Chain.UTxO.TxAux (TxAux(..))
+import Cardano.Chain.UTxO.TxAux (ATxAux, aTaTx, taWitness)
 import Cardano.Chain.UTxO.TxWitness
-  (TxInWitness(..), TxSigData(..), TxWitness(..), recoverSigData)
+  (TxInWitness(..), TxSigData(..), recoverSigData)
 import Cardano.Chain.UTxO.UTxO
   (UTxO, UTxOError, balance, isRedeemUTxO, txOutputUTxO, (</|), (<|))
 import qualified Cardano.Chain.UTxO.UTxO as UTxO
@@ -70,9 +69,8 @@ import Cardano.Chain.ValidationMode
   , wrapErrorWithValidationMode
   )
 import Cardano.Crypto
-  ( ProtocolMagic(..)
+  ( AProtocolMagic(..)
   , ProtocolMagicId
-  , getProtocolMagicId
   , SignTag(..)
   , verifySignatureDecoded
   , verifyRedeemSigDecoded
@@ -137,28 +135,23 @@ instance ToCBOR TxValidationError where
       encodeListLen 1
         <> toCBOR @Word8 8
 
-instance FromCBORAnnotated TxValidationError where
-  fromCBORAnnotated' = do
-    len <- lift $ decodeListLen
+instance FromCBOR TxValidationError where
+  fromCBOR = do
+    len <- decodeListLen
     let checkSize :: forall s. Int -> Decoder s ()
         checkSize size = matchSize "TxValidationError" size len
-    tag <- lift $ decodeWord8
+    tag <- decodeWord8
     case tag of
-      0 -> lift $ checkSize 3 >> TxValidationLovelaceError <$> fromCBOR <*> fromCBOR
-      1 -> lift (checkSize 4) >>
-             TxValidationFeeTooSmall <$> fromCBORAnnotated' <*> lift fromCBOR <*> lift fromCBOR
-      2 -> lift (checkSize 4) >>
-             TxValidationWitnessWrongSignature
-             <$> lift fromCBOR
-             <*> fromCBORAnnotated'
-             <*> lift fromCBOR
-      3 -> lift $ checkSize 3 >> TxValidationWitnessWrongKey <$> fromCBOR <*> fromCBOR
-      4 -> lift $ checkSize 2 >> TxValidationMissingInput <$> fromCBOR
-      5 -> lift $ checkSize 3 >> TxValidationNetworkMagicMismatch <$> fromCBOR <*> fromCBOR
-      6 -> lift $ checkSize 3 >> TxValidationTxTooLarge <$> fromCBOR <*> fromCBOR
-      7 -> lift $ checkSize 1 $> TxValidationUnknownAddressAttributes
-      8 -> lift $ checkSize 1 $> TxValidationUnknownAttributes
-      _ -> lift $ cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
+      0 -> checkSize 3 >> TxValidationLovelaceError <$> fromCBOR <*> fromCBOR
+      1 -> checkSize 4 >> TxValidationFeeTooSmall   <$> fromCBOR <*> fromCBOR <*> fromCBOR
+      2 -> checkSize 4 >> TxValidationWitnessWrongSignature <$> fromCBOR <*> fromCBOR <*> fromCBOR
+      3 -> checkSize 3 >> TxValidationWitnessWrongKey <$> fromCBOR <*> fromCBOR
+      4 -> checkSize 2 >> TxValidationMissingInput <$> fromCBOR
+      5 -> checkSize 3 >> TxValidationNetworkMagicMismatch <$> fromCBOR <*> fromCBOR
+      6 -> checkSize 3 >> TxValidationTxTooLarge <$> fromCBOR <*> fromCBOR
+      7 -> checkSize 1 $> TxValidationUnknownAddressAttributes
+      8 -> checkSize 1 $> TxValidationUnknownAttributes
+      _ -> cborError   $  DecoderErrorUnknownTag "TxValidationError" tag
 
 -- | Validate that:
 --
@@ -172,9 +165,9 @@ validateTx
   :: MonadError TxValidationError m
   => Environment
   -> UTxO
-  -> Tx
+  -> Annotated Tx ByteString
   -> m ()
-validateTx env utxo tx = do
+validateTx env utxo (Annotated tx txBytes) = do
 
   -- Check that the size of the transaction is less than the maximum
   txSize <= maxTxSize
@@ -217,7 +210,7 @@ validateTx env utxo tx = do
   feePolicy = ppTxFeePolicy protocolParameters
 
   txSize :: Natural
-  txSize = fromIntegral $ BS.length (txSerialized tx)
+  txSize = fromIntegral $ BS.length txBytes
 
   inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
 
@@ -270,7 +263,7 @@ validateTxOutNM nm txOut = do
 -- | Verify that a 'TxInWitness' is a valid witness for the supplied 'TxSigData'
 validateWitness
   :: MonadError TxValidationError m
-  => ProtocolMagicId
+  => Annotated ProtocolMagicId ByteString
   -> Annotated TxSigData ByteString
   -> Address
   -> TxInWitness
@@ -279,7 +272,7 @@ validateWitness pmi sigData addr witness = case witness of
   VKWitness vk sig -> do
     verifySignatureDecoded pmi SignTx vk sigData sig
       `orThrowError` TxValidationWitnessWrongSignature
-      witness pmi (unAnnotated sigData)
+      witness (unAnnotated pmi) (unAnnotated sigData)
     checkVerKeyAddress vk addr
       `orThrowError` TxValidationWitnessWrongKey
       witness addr
@@ -287,12 +280,12 @@ validateWitness pmi sigData addr witness = case witness of
   RedeemWitness vk sig -> do
     verifyRedeemSigDecoded pmi SignRedeemTx vk sigData sig
       `orThrowError` TxValidationWitnessWrongSignature
-      witness pmi (unAnnotated sigData)
+      witness (unAnnotated pmi) (unAnnotated sigData)
     checkRedeemAddress vk addr
-      `orThrowError` TxValidationWitnessWrongKey witness addr
+      `orThrowError` TxValidationWitnessWrongKey       witness addr
 
 data Environment = Environment
-  { protocolMagic      :: !ProtocolMagic
+  { protocolMagic      :: !(AProtocolMagic ByteString)
   , protocolParameters :: !ProtocolParameters
   , utxoConfiguration  :: !UTxOConfiguration
   } deriving (Eq, Show)
@@ -309,23 +302,23 @@ instance ToCBOR UTxOValidationError where
     UTxOValidationUTxOError uTxOError ->
       encodeListLen 2 <> toCBOR @Word8 1 <> toCBOR uTxOError
 
-instance FromCBORAnnotated UTxOValidationError where
-  fromCBORAnnotated' = do
-    lift $ enforceSize "UTxOValidationError" 2
-    lift decodeWord8 >>= \case
-      0   -> UTxOValidationTxValidationError <$> fromCBORAnnotated'
-      1   -> UTxOValidationUTxOError <$> lift fromCBOR
-      tag -> lift $ cborError $ DecoderErrorUnknownTag "UTxOValidationError" tag
+instance FromCBOR UTxOValidationError where
+  fromCBOR = do
+    enforceSize "UTxOValidationError" 2
+    decodeWord8 >>= \case
+      0   -> UTxOValidationTxValidationError <$> fromCBOR
+      1   -> UTxOValidationUTxOError <$> fromCBOR
+      tag -> cborError $ DecoderErrorUnknownTag "UTxOValidationError" tag
 
 -- | Validate a transaction and use it to update the 'UTxO'
 updateUTxOTx
   :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
-  -> Tx
+  -> Annotated Tx ByteString
   -> m UTxO
-updateUTxOTx env utxo tx = do
-  unlessNoTxValidation (validateTx env utxo tx)
+updateUTxOTx env utxo aTx@(Annotated tx _) = do
+  unlessNoTxValidation (validateTx env utxo aTx)
     `wrapErrorWithValidationMode` UTxOValidationTxValidationError
 
   UTxO.union (S.fromList (NE.toList (txInputs tx)) </| utxo) (txOutputUTxO tx)
@@ -337,7 +330,7 @@ updateUTxOTxWitness
   :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
-  -> TxAux
+  -> ATxAux ByteString
   -> m UTxO
 updateUTxOTxWitness env utxo ta = do
   whenTxValidation $ do
@@ -349,17 +342,18 @@ updateUTxOTxWitness env utxo ta = do
     -- Validate witnesses and their signing addresses
     mapM_
         (uncurry $ validateWitness pmi sigData)
-        (zip addresses (V.toList $ txInWitnesses witness))
+        (zip addresses (V.toList witness))
       `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
-  updateUTxOTx env utxo tx
+  updateUTxOTx env utxo aTx
  where
   Environment { protocolMagic } = env
-  pmi = getProtocolMagicId protocolMagic
+  pmi = getAProtocolMagicId protocolMagic
 
-  TxAux { taTx = tx, taWitness = witness} = ta
-  sigData = recoverSigData tx
+  aTx@(Annotated tx _) = aTaTx ta
+  witness = taWitness ta
+  sigData = recoverSigData aTx
 
 
 -- | Update UTxO with a list of transactions
@@ -367,6 +361,6 @@ updateUTxO
   :: (MonadError UTxOValidationError m, MonadReader ValidationMode m)
   => Environment
   -> UTxO
-  -> [TxAux]
+  -> [ATxAux ByteString]
   -> m UTxO
 updateUTxO env as = foldM (updateUTxOTxWitness env) as

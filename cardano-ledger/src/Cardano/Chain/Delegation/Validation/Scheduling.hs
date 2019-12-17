@@ -22,7 +22,8 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
 import Cardano.Binary
-  ( Decoder
+  ( Annotated(..)
+  , Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -33,7 +34,7 @@ import Cardano.Binary
   , matchSize
   )
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
-import Cardano.Chain.Delegation.Certificate (Certificate)
+import Cardano.Chain.Delegation.Certificate (ACertificate)
 import qualified Cardano.Chain.Delegation.Certificate as Certificate
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
@@ -49,7 +50,7 @@ import Cardano.Crypto (ProtocolMagicId)
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic     :: !ProtocolMagicId
+  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
   , allowedDelegators :: !(Set KeyHash)
   , currentEpoch      :: !EpochNumber
   , currentSlot       :: !SlotNumber
@@ -160,7 +161,7 @@ scheduleCertificate
   :: MonadError Error m
   => Environment
   -> State
-  -> Certificate
+  -> ACertificate ByteString
   -> m State
 scheduleCertificate env st cert = do
   -- Check that the delegator is a genesis key

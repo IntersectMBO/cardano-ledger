@@ -39,7 +39,8 @@ import Data.Set (union)
 import qualified Data.Set as S
 
 import Cardano.Binary
-  ( Decoder
+  ( Annotated
+  , Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -54,7 +55,7 @@ import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
 import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotCount, SlotCount(SlotCount), unSlotNumber)
-import Cardano.Chain.Update.Proposal (Proposal, UpId)
+import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
   , ppUpdateProposalTTL
@@ -77,12 +78,12 @@ import Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
 import qualified Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump as PVBump
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
-import Cardano.Chain.Update.Vote (Vote)
-import Cardano.Crypto (ProtocolMagicId, hash)
+import Cardano.Chain.Update.Vote (AVote)
+import Cardano.Crypto (ProtocolMagicId)
 
 
 data Environment = Environment
-  { protocolMagic :: !ProtocolMagicId
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString)
   , k             :: !BlockCount
   -- ^ TODO: this is the chain security parameter, a.k.a. @stableAfter@, it is not part
   -- of our protocol parameters, so it seems that we need to pass it in the
@@ -195,8 +196,8 @@ instance FromCBOR Error where
 
 -- | Signal combining signals from various rules
 data Signal = Signal
-  { proposal    :: !(Maybe Proposal)
-  , votes       :: ![Vote]
+  { proposal    :: !(Maybe (AProposal ByteString))
+  , votes       :: ![AVote ByteString]
   , endorsement :: !Endorsement
   }
 
@@ -242,7 +243,7 @@ registerProposal
   :: MonadError Error m
   => Environment
   -> State
-  -> Proposal
+  -> AProposal ByteString
   -> m State
 registerProposal env st proposal = do
   Registration.State registeredProtocolUpdateProposals' registeredSoftwareUpdateProposals'
@@ -252,7 +253,7 @@ registerProposal env st proposal = do
     st { registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
        , registeredSoftwareUpdateProposals = registeredSoftwareUpdateProposals'
        , proposalRegistrationSlot =
-           M.insert (hash proposal) currentSlot proposalRegistrationSlot
+           M.insert (recoverUpId proposal) currentSlot proposalRegistrationSlot
        }
 
   where
@@ -297,7 +298,7 @@ registerVotes
   :: MonadError Error m
   => Environment
   -> State
-  -> [Vote]
+  -> [AVote ByteString]
   -> m State
 registerVotes env st votes = do
   st' <- foldM (registerVote env) st votes
@@ -343,7 +344,7 @@ registerVote
   :: MonadError Error m
   => Environment
   -> State
-  -> Vote
+  -> AVote ByteString
   -> m State
 registerVote env st vote = do
   Voting.State proposalVotes' confirmedProposals'

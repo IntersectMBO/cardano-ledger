@@ -8,18 +8,20 @@ module Test.Cardano.Chain.Elaboration.UTxO
   ( elaborateUTxOEnv
   , elaborateUTxO
   , elaborateTx
+  , elaborateTxWitsBS
   , elaborateTxOut
-  , elaborateTxWits
   )
 where
 
 import Cardano.Prelude
 
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Vector as V
 import Formatting hiding (bytes)
 
+import qualified Cardano.Binary as CBOR
 import qualified Cardano.Chain.Common as Concrete
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
@@ -38,7 +40,7 @@ import qualified Test.Cardano.Crypto.Dummy as Dummy
 
 elaborateUTxOEnv :: Abstract.UTxOEnv -> Concrete.UTxO.Environment
 elaborateUTxOEnv _abstractEnv = Concrete.UTxO.Environment
-  { Concrete.UTxO.protocolMagic      = Dummy.protocolMagic
+  { Concrete.UTxO.protocolMagic      = Dummy.aProtocolMagic
   , Concrete.UTxO.protocolParameters = dummyProtocolParameters
     { Concrete.ppTxFeePolicy =
       Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear
@@ -68,21 +70,36 @@ elaborateUTxOEntry elaborateTxId (abstractTxIn, abstractTxOut) =
   concreteTxOut = elaborateTxOut abstractTxOut
   concreteTxIn  = elaborateTxIn elaborateTxId abstractTxIn
 
+elaborateTxWitsBS
+  :: (Abstract.TxId -> Concrete.TxId)
+  -> Abstract.TxWits
+  -> Concrete.ATxAux ByteString
+elaborateTxWitsBS elaborateTxId =
+  annotateTxAux . elaborateTxWits elaborateTxId
+ where
+  annotateTxAux :: Concrete.TxAux -> Concrete.ATxAux ByteString
+  annotateTxAux txAux =
+    map (LBS.toStrict . CBOR.slice bytes)
+      . fromRight (panic "elaborateTxWitsBS: Error decoding TxAux")
+      $ CBOR.decodeFull bytes
+    where bytes = CBOR.serialize txAux
+
 elaborateTxWits
   :: (Abstract.TxId -> Concrete.TxId) -> Abstract.TxWits -> Concrete.TxAux
 elaborateTxWits elaborateTxId (Abstract.TxWits tx witnesses) =
-  Concrete.TxAux concreteTx (elaborateWitnesses concreteTx witnesses)
+  Concrete.mkTxAux concreteTx (elaborateWitnesses concreteTx witnesses)
   where concreteTx = elaborateTx elaborateTxId tx
 
 elaborateTx :: (Abstract.TxId -> Concrete.TxId) -> Abstract.Tx -> Concrete.Tx
 elaborateTx elaborateTxId (Abstract.Tx inputs outputs) =
-  Concrete.Tx
-    (elaborateTxIns elaborateTxId inputs)
-    (elaborateTxOuts outputs)
-    (Concrete.mkAttributes ())
+  Concrete.UnsafeTx
+    { Concrete.txInputs     = elaborateTxIns elaborateTxId inputs
+    , Concrete.txOutputs    = elaborateTxOuts outputs
+    , Concrete.txAttributes = Concrete.mkAttributes ()
+    }
 
 elaborateWitnesses :: Concrete.Tx -> [Abstract.Wit] -> Concrete.TxWitness
-elaborateWitnesses concreteTx = Concrete.TxWitness . V.fromList . fmap (elaborateWitness concreteTx)
+elaborateWitnesses concreteTx = V.fromList . fmap (elaborateWitness concreteTx)
 
 elaborateWitness :: Concrete.Tx -> Abstract.Wit -> Concrete.TxInWitness
 elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.VKWitness

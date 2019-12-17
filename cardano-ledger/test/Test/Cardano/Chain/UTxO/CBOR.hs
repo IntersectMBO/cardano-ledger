@@ -20,12 +20,12 @@ import qualified Hedgehog as H
 import Cardano.Binary (ToCBOR, Case(..), LengthOf, SizeOverride(..), szCases)
 import Cardano.Chain.Common (AddrAttributes(..), Attributes(..), mkAttributes)
 import Cardano.Chain.UTxO
-  (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness, txInWitnesses)
+  (Tx(..), TxIn(..), TxInWitness(..), TxOut(..), TxSigData(..), taTx, taWitness)
 import Cardano.Crypto (ProtocolMagicId(..), SignTag(..), Signature, sign)
 
 import Test.Cardano.Binary.Helpers (SizeTestConfig(..), scfg, sizeTest)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  (goldenTestCBOR, goldenTestCBORAnnotated, roundTripsCBORBuildable, roundTripsCBORAnnotatedBuildable, roundTripsCBORShow, roundTripsCBORAnnotatedShow)
+  (goldenTestCBOR, roundTripsCBORBuildable, roundTripsCBORShow)
 import Test.Cardano.Chain.UTxO.Example
   ( exampleHashTx
   , exampleRedeemSignature
@@ -72,11 +72,11 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 --------------------------------------------------------------------------------
 
 goldenTx :: Property
-goldenTx = goldenTestCBORAnnotated tx "test/golden/cbor/utxo/Tx"
-  where tx = Tx exampleTxInList exampleTxOutList (mkAttributes ())
+goldenTx = goldenTestCBOR tx "test/golden/cbor/utxo/Tx"
+  where tx = UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ())
 
 ts_roundTripTx :: TSProperty
-ts_roundTripTx = eachOfTS 50 genTx roundTripsCBORAnnotatedBuildable
+ts_roundTripTx = eachOfTS 50 genTx roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ ts_roundTripTxAttributes = eachOfTS 10 genTxAttributes roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 ts_roundTripTxAux :: TSProperty
-ts_roundTripTxAux = eachOfTS 100 (feedPM genTxAux) roundTripsCBORAnnotatedBuildable
+ts_roundTripTxAux = eachOfTS 100 (feedPM genTxAux) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -198,10 +198,10 @@ ts_roundTripTxOut = eachOfTS 50 genTxOut roundTripsCBORBuildable
 
 goldenTxPayload1 :: Property
 goldenTxPayload1 =
-  goldenTestCBORAnnotated exampleTxPayload1 "test/golden/cbor/utxo/TxPayload1"
+  goldenTestCBOR exampleTxPayload1 "test/golden/cbor/utxo/TxPayload1"
 
 ts_roundTripTxPayload :: TSProperty
-ts_roundTripTxPayload = eachOfTS 50 (feedPM genTxPayload) roundTripsCBORAnnotatedShow
+ts_roundTripTxPayload = eachOfTS 50 (feedPM genTxPayload) roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
@@ -209,10 +209,10 @@ ts_roundTripTxPayload = eachOfTS 50 (feedPM genTxPayload) roundTripsCBORAnnotate
 --------------------------------------------------------------------------------
 
 goldenTxProof :: Property
-goldenTxProof = goldenTestCBORAnnotated exampleTxProof "test/golden/cbor/utxo/TxProof"
+goldenTxProof = goldenTestCBOR exampleTxProof "test/golden/cbor/utxo/TxProof"
 
 ts_roundTripTxProof :: TSProperty
-ts_roundTripTxProof = eachOfTS 50 (feedPM genTxProof) roundTripsCBORAnnotatedBuildable
+ts_roundTripTxProof = eachOfTS 50 (feedPM genTxProof) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -250,7 +250,7 @@ ts_roundTripTxSigData = eachOfTS 50 genTxSigData roundTripsCBORShow
 
 ts_roundTripTxValidationError :: TSProperty
 ts_roundTripTxValidationError =
-  eachOfTS 50 genTxValidationError roundTripsCBORAnnotatedShow
+  eachOfTS 50 genTxValidationError roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
@@ -259,10 +259,10 @@ ts_roundTripTxValidationError =
 
 goldenTxWitness :: Property
 goldenTxWitness =
-  goldenTestCBORAnnotated exampleTxWitness "test/golden/cbor/utxo/TxWitness"
+  goldenTestCBOR exampleTxWitness "test/golden/cbor/utxo/TxWitness"
 
 ts_roundTripTxWitness :: TSProperty
-ts_roundTripTxWitness = eachOfTS 20 (feedPM genTxWitness) roundTripsCBORAnnotatedShow
+ts_roundTripTxWitness = eachOfTS 20 (feedPM genTxWitness) roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
@@ -280,7 +280,7 @@ ts_roundTripUTxOError =
 
 ts_roundTripUTxOValidationError :: TSProperty
 ts_roundTripUTxOValidationError =
-  eachOfTS 50 genUTxOValidationError roundTripsCBORAnnotatedShow
+  eachOfTS 50 genUTxOValidationError roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
@@ -332,7 +332,7 @@ sizeEstimates
               , SizeConstant (fromIntegral $ length $ txInputs $ taTx ta)
               )
             , ( typeRep (Proxy @(LengthOf (Vector TxInWitness)))
-              , SizeConstant (fromIntegral $ length $ txInWitnesses $ taWitness ta)
+              , SizeConstant (fromIntegral $ length $ taWitness ta)
               )
             , ( typeRep (Proxy @(LengthOf [TxOut]))
               , SizeConstant (fromIntegral $ length $ txOutputs $ taTx ta)

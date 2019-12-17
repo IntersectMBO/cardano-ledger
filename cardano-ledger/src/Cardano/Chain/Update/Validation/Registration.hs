@@ -27,7 +27,8 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
 import Cardano.Binary
-  ( Decoder
+  ( Annotated
+  , Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -44,9 +45,14 @@ import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
 import qualified Cardano.Chain.Update.Proposal as Proposal
 import Cardano.Chain.Update.Proposal
-  ( Proposal(..)
+  ( AProposal(..)
   , ProposalBody(..)
   , UpId
+  , protocolParametersUpdate
+  , protocolVersion
+  , recoverProposalSignedBytes
+  , recoverUpId
+  , softwareVersion
   )
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
@@ -67,13 +73,12 @@ import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag, SystemTag
 import Cardano.Crypto
   ( ProtocolMagicId
   , SignTag(SignUSProposal)
-  , hash
   , verifySignatureDecoded
   )
 
 
 data Environment = Environment
-  { protocolMagic             :: !ProtocolMagicId
+  { protocolMagic             :: !(Annotated ProtocolMagicId ByteString)
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
   , appVersions               :: !ApplicationVersions
@@ -215,7 +220,7 @@ registerProposal
   :: MonadError Error m
   => Environment
   -> State
-  -> Proposal
+  -> AProposal ByteString
   -> m State
 registerProposal env rs proposal = do
   -- Check that the proposer is delegated to by a genesis key
@@ -227,8 +232,7 @@ registerProposal env rs proposal = do
       protocolMagic
       SignUSProposal
       issuer
-      -- (recoverProposalSignedBytes aBody)
-      body
+      (recoverProposalSignedBytes aBody)
       signature
     `orThrowError` InvalidSignature
 
@@ -240,11 +244,7 @@ registerProposal env rs proposal = do
     rs
     proposal
  where
-  Proposal.UnsafeProposal
-    { proposalBody = body
-    , proposalIssuer = issuer
-    , proposalSignature = signature
-    } = proposal
+  AProposal { aBody, issuer, signature } = proposal
 
   proposerId = hashKey issuer
 
@@ -267,7 +267,7 @@ registerProposalComponents
   -> ProtocolParameters
   -> ApplicationVersions
   -> State
-  -> Proposal
+  -> AProposal ByteString
   -> m State
 registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
 
@@ -284,10 +284,10 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
   pure $ State registeredPUPs' registeredSUPs'
  where
   ProposalBody
-    { proposalBodyProtocolVersion = protocolVersion
-    , proposalBodyProtocolParametersUpdate = ppu
-    , proposalBodySoftwareVersion = softwareVersion
-    } = Proposal.proposalBody proposal
+    { protocolVersion
+    , protocolParametersUpdate = ppu
+    , softwareVersion
+    } = Proposal.body proposal
 
   SoftwareVersion appName appVersion = softwareVersion
 
@@ -317,7 +317,7 @@ registerProtocolUpdate
   => ProtocolVersion
   -> ProtocolParameters
   -> ProtocolUpdateProposals
-  -> Proposal
+  -> AProposal ByteString
   -> m ProtocolUpdateProposals
 registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
@@ -331,13 +331,11 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
   canUpdate adoptedPP newPP proposal
 
-  pure $ M.insert (hash proposal) (newPV, newPP) registeredPUPs
+  pure $ M.insert (recoverUpId proposal) (newPV, newPP) registeredPUPs
  where
-  ProposalBody { proposalBodyProtocolVersion = newPV
-               , proposalBodyProtocolParametersUpdate = pu
-               } =
-    Proposal.proposalBody proposal
-  newPP = PPU.apply pu adoptedPP
+  ProposalBody { protocolVersion = newPV, protocolParametersUpdate } =
+    Proposal.body proposal
+  newPP = PPU.apply protocolParametersUpdate adoptedPP
 
 
 -- | Check that the new 'ProtocolVersion' is a valid next version
@@ -362,7 +360,7 @@ canUpdate
   :: MonadError Error m
   => ProtocolParameters
   -> ProtocolParameters
-  -> Proposal
+  -> AProposal ByteString
   -> m ()
 canUpdate adoptedPP proposedPP proposal = do
 
@@ -386,7 +384,7 @@ canUpdate adoptedPP proposedPP proposal = do
                      adoptedScriptVersion newScriptVersion
  where
   proposalSize :: Natural
-  proposalSize         = fromIntegral . BS.length $ proposalSerialized proposal
+  proposalSize         = fromIntegral . BS.length $ Proposal.annotation proposal
   maxProposalSize      = ppMaxProposalSize adoptedPP
 
   adoptedMaxBlockSize  = ppMaxBlockSize adoptedPP
@@ -412,7 +410,7 @@ registerSoftwareUpdate
   :: MonadError Error m
   => ApplicationVersions
   -> SoftwareUpdateProposals
-  -> Proposal
+  -> AProposal ByteString
   -> m SoftwareUpdateProposals
 registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
@@ -431,10 +429,8 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
     `orThrowError` InvalidSoftwareVersion appVersions softwareVersion
 
   -- Add to the list of registered software update proposals
-  pure $ M.insert (hash proposal) (softwareVersion, metadata) registeredSUPs
-  where ProposalBody { proposalBodySoftwareVersion = softwareVersion
-                     , proposalBodyMetadata = metadata
-                     } = Proposal.proposalBody proposal
+  pure $ M.insert (recoverUpId proposal) (softwareVersion, metadata) registeredSUPs
+  where ProposalBody { softwareVersion, metadata } = Proposal.body proposal
 
 
 -- | Check that a new 'SoftwareVersion' is a valid next version

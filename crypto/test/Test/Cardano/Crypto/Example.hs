@@ -23,8 +23,10 @@ import qualified Cardano.Crypto.Wallet as CC
 import Data.List ((!!))
 import Data.Maybe (fromJust)
 
+import Cardano.Binary (Annotated(..))
 import Cardano.Crypto
-  ( ProtocolMagic(..)
+  ( AProtocolMagic(..)
+  , ProtocolMagic
   , ProtocolMagicId(..)
   , VerificationKey(..)
   , RedeemVerificationKey
@@ -43,23 +45,23 @@ exampleProtocolMagicId0 = ProtocolMagicId 31337
 
 exampleProtocolMagic0 :: ProtocolMagic
 exampleProtocolMagic0 =
-  ProtocolMagic exampleProtocolMagicId0 RequiresMagic
+  AProtocolMagic (Annotated exampleProtocolMagicId0 ()) RequiresMagic
 
 exampleProtocolMagic1 :: ProtocolMagic
 exampleProtocolMagic1 =
-  ProtocolMagic (ProtocolMagicId 2147000001) RequiresMagic
+  AProtocolMagic (Annotated (ProtocolMagicId 2147000001) ()) RequiresMagic
 
 exampleProtocolMagic2 :: ProtocolMagic
 exampleProtocolMagic2 =
-  ProtocolMagic (ProtocolMagicId 58952) RequiresMagic
+  AProtocolMagic (Annotated (ProtocolMagicId 58952) ()) RequiresMagic
 
 exampleProtocolMagic3 :: ProtocolMagic
 exampleProtocolMagic3 =
-  ProtocolMagic (ProtocolMagicId 31337) RequiresMagic
+  AProtocolMagic (Annotated (ProtocolMagicId 31337) ()) RequiresMagic
 
 exampleProtocolMagic4 :: ProtocolMagic
 exampleProtocolMagic4 =
-  ProtocolMagic (ProtocolMagicId 500) RequiresNoMagic
+  AProtocolMagic (Annotated (ProtocolMagicId 500) ()) RequiresNoMagic
 
 exampleVerificationKey :: VerificationKey
 exampleVerificationKey = vk where [vk] = exampleVerificationKeys 16 1 -- 16 could be any number, as we take the first key

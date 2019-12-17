@@ -17,7 +17,7 @@ import Cardano.Chain.Update (ApplicationName(..), SoftforkRule(..))
 import Cardano.Crypto (Hash, abstractHash)
 
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  (goldenTestCBOR, goldenTestCBORAnnotated, roundTripsCBORBuildable, roundTripsCBORShow, roundTripsCBORAnnotatedShow, roundTripsCBORAnnotatedBuildable)
+  (goldenTestCBOR, roundTripsCBORBuildable, roundTripsCBORShow)
 import Test.Cardano.Chain.Update.Example
   ( exampleProtocolParametersUpdate
   , examplePayload
@@ -184,11 +184,11 @@ ts_roundTripInstallerHash = eachOfTS 20 genInstallerHash roundTripsCBORBuildable
 
 goldenUpdatePayload :: Property
 goldenUpdatePayload =
-  goldenTestCBORAnnotated examplePayload "test/golden/cbor/update/Payload"
+  goldenTestCBOR examplePayload "test/golden/cbor/update/Payload"
 
 ts_roundTripUpdatePayload :: TSProperty
 ts_roundTripUpdatePayload =
-  eachOfTS 20 (feedPM genPayload) roundTripsCBORAnnotatedBuildable
+  eachOfTS 20 (feedPM genPayload) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -208,11 +208,11 @@ ts_roundTripUpdateProof = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
 
 goldenUpdateProposal :: Property
 goldenUpdateProposal =
-  goldenTestCBORAnnotated exampleProposal "test/golden/cbor/update/Proposal"
+  goldenTestCBOR exampleProposal "test/golden/cbor/update/Proposal"
 
 ts_roundTripUpdateProposal :: TSProperty
 ts_roundTripUpdateProposal =
-  eachOfTS 20 (feedPM genProposal) roundTripsCBORAnnotatedBuildable
+  eachOfTS 20 (feedPM genProposal) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------
@@ -221,10 +221,10 @@ ts_roundTripUpdateProposal =
 
 goldenProposalBody :: Property
 goldenProposalBody =
-  goldenTestCBORAnnotated exampleProposalBody "test/golden/cbor/update/ProposalBody"
+  goldenTestCBOR exampleProposalBody "test/golden/cbor/update/ProposalBody"
 
 ts_roundTripProposalBody :: TSProperty
-ts_roundTripProposalBody = eachOfTS 20 genProposalBody roundTripsCBORAnnotatedShow
+ts_roundTripProposalBody = eachOfTS 20 genProposalBody roundTripsCBORShow
 
 
 --------------------------------------------------------------------------------
@@ -232,10 +232,10 @@ ts_roundTripProposalBody = eachOfTS 20 genProposalBody roundTripsCBORAnnotatedSh
 --------------------------------------------------------------------------------
 
 goldenUpdateVote :: Property
-goldenUpdateVote = goldenTestCBORAnnotated exampleVote "test/golden/cbor/update/Vote"
+goldenUpdateVote = goldenTestCBOR exampleVote "test/golden/cbor/update/Vote"
 
 ts_roundTripUpdateVote :: TSProperty
-ts_roundTripUpdateVote = eachOfTS 20 (feedPM genVote) roundTripsCBORAnnotatedBuildable
+ts_roundTripUpdateVote = eachOfTS 20 (feedPM genVote) roundTripsCBORBuildable
 
 
 --------------------------------------------------------------------------------

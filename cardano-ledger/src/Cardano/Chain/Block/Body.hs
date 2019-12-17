@@ -1,21 +1,16 @@
 {-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms   #-}
 {-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE ViewPatterns      #-}
 
 module Cardano.Chain.Block.Body
   ( Body
-    ( Body
-    , bodyTxPayload
-    , bodySscPayload
-    , bodyDlgPayload
-    , bodyUpdatePayload
-    , bodySerialized
-    )
+  , pattern Body
+  , ABody(..)
   , bodyTxs
   , bodyWitnesses
   )
@@ -24,65 +19,52 @@ where
 import Cardano.Prelude
 
 import Cardano.Binary
-  (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize,
-  FromCBORAnnotated(..), serializeEncoding', encodePreEncoded, serialize',
-  withSlice')
+  (ByteSpan, FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscPayload(..))
 import Cardano.Chain.UTxO.Tx (Tx)
-import Cardano.Chain.UTxO.TxPayload (TxPayload, txpTxs, txpWitnesses)
+import Cardano.Chain.UTxO.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
 
+-- | 'Body' consists of payloads of all block components
+type Body = ABody ()
+
 -- | Constructor for 'Body'
-{-# COMPLETE Body #-}
 pattern Body :: TxPayload -> SscPayload -> Delegation.Payload -> Update.Payload -> Body
-pattern Body
-  { bodyTxPayload
-  , bodySscPayload
-  , bodyDlgPayload
-  , bodyUpdatePayload
-  } <- Body'
-    bodyTxPayload
-    bodySscPayload
-    bodyDlgPayload
-    bodyUpdatePayload
-    _
-  where
-  Body tx ssc dlg upd =
-    let bytes = serializeEncoding' $ encodeListLen 4
-          <> toCBOR tx
-          <> encodePreEncoded sscBytes
-          <> encodePreEncoded dlgBytes
-          <> encodePreEncoded updBytes
-        sscBytes = serialize' ssc
-        dlgBytes = serialize' dlg
-        updBytes = serialize' upd
-    in Body' tx ssc dlg upd bytes
+pattern Body tx ssc dlg upd = ABody tx ssc dlg upd
 
 -- | 'Body' consists of payloads of all block components
-data Body = Body'
-  { bodyTxPayload'    :: !TxPayload
+data ABody a = ABody
+  { bodyTxPayload     :: !(ATxPayload a)
   -- ^ UTxO payload
-  , bodySscPayload'   :: !SscPayload
+  , bodySscPayload    :: !SscPayload
   -- ^ Ssc payload
-  , bodyDlgPayload'   :: !Delegation.Payload
+  , bodyDlgPayload    :: !(Delegation.APayload a)
   -- ^ Heavyweight delegation payload (no-ttl certificates)
-  , bodyUpdatePayload':: !Update.Payload
+  , bodyUpdatePayload :: !(Update.APayload a)
   -- ^ Additional update information for the update system
-  , bodySerialized    :: ByteString
-  } deriving (Eq, Show, Generic, NFData)
+  } deriving (Eq, Show, Generic, Functor, NFData)
 
 instance ToCBOR Body where
-  toCBOR = encodePreEncoded . bodySerialized
+  toCBOR bc =
+    encodeListLen 4
+      <> toCBOR (bodyTxPayload bc)
+      <> toCBOR (bodySscPayload bc)
+      <> toCBOR (bodyDlgPayload bc)
+      <> toCBOR (bodyUpdatePayload bc)
 
-instance FromCBORAnnotated Body where
-  fromCBORAnnotated' = withSlice' $
-    Body' <$ lift (enforceSize "Body" 4)
-      <*> fromCBORAnnotated'
-      <*> lift fromCBOR
-      <*> fromCBORAnnotated'
-      <*> fromCBORAnnotated'
+instance FromCBOR Body where
+  fromCBOR = void <$> fromCBOR @(ABody ByteSpan)
+
+instance FromCBOR (ABody ByteSpan) where
+  fromCBOR = do
+    enforceSize "Body" 4
+    ABody
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 bodyTxs :: Body -> [Tx]
 bodyTxs = txpTxs . bodyTxPayload

@@ -112,9 +112,9 @@ elaborateSoftwareVersion abstractVersion =
 elaborateUpdateProposal
   :: ProtocolMagicId
   -> Abstract.UProp
-  -> Concrete.Proposal
+  -> Concrete.AProposal ()
 elaborateUpdateProposal protocolMagicId abstractProposal =
-  Concrete.UnsafeProposal
+  Concrete.unsafeProposal
     body
     issuer
     proposalSignature
@@ -153,10 +153,15 @@ elaborateUpSD ( protocolVersion
               , systemTags
               , _metadata) =
   Proposal.ProposalBody
-      (elaborateProtocolVersion protocolVersion)
-      (justifyProtocolParameters $ elaboratePParams protocolParameters)
-      (elaborateSoftwareVersion softwareVersion)
-      (Map.fromList $ zip concreteSystemTags concreteSystemHashes)
+  { Proposal.protocolVersion =
+      elaborateProtocolVersion protocolVersion
+  , Proposal.protocolParametersUpdate =
+      justifyProtocolParameters $ elaboratePParams protocolParameters
+  , Proposal.softwareVersion =
+      elaborateSoftwareVersion softwareVersion
+  , Proposal.metadata =
+      Map.fromList $ zip concreteSystemTags concreteSystemHashes
+  }
   where
     concreteSystemTags =
       fmap elaborateSystemTag $ Set.toList systemTags
@@ -198,9 +203,9 @@ elaborateVote
   :: ProtocolMagicId
   -> Map Abstract.UpId Concrete.UpId
   -> Abstract.Vote
-  -> Concrete.Vote
+  -> Concrete.AVote ()
 elaborateVote protocolMagicId proposalsIdMap abstractVote =
-  Concrete.UnsafeVote
+  Concrete.unsafeVote
     issuer
     (elaborateProposalId proposalsIdMap abstractProposalId)
     voteSignature

@@ -45,22 +45,24 @@ import Cardano.Chain.UTxO
   , CompactTxOut
   , Tx(..)
   , TxAttributes
-  , TxAux(..)
+  , TxAux
   , TxId
   , TxIn(..)
   , TxInWitness(..)
   , TxOut(..)
-  , TxPayload(..)
+  , TxPayload
   , TxProof(..)
   , TxSig
   , TxSigData(..)
   , TxValidationError(..)
-  , TxWitness(..)
+  , TxWitness
   , UTxOConfiguration(..)
   , UTxO
   , UTxOError(..)
   , UTxOValidationError(..)
   , fromList
+  , mkTxAux
+  , mkTxPayload
   , mkUTxOConfiguration
   , toCompactTxId
   , toCompactTxIn
@@ -99,13 +101,13 @@ genRedeemWitness pm =
   RedeemWitness <$> genRedeemVerificationKey <*> genRedeemSignature pm genTxSigData
 
 genTx :: Gen Tx
-genTx = Tx <$> genTxInList <*> genTxOutList <*> genTxAttributes
+genTx = UnsafeTx <$> genTxInList <*> genTxOutList <*> genTxAttributes
 
 genTxAttributes :: Gen TxAttributes
 genTxAttributes = pure $ mkAttributes ()
 
 genTxAux :: ProtocolMagicId -> Gen TxAux
-genTxAux pm = TxAux <$> genTx <*> (genTxWitness pm)
+genTxAux pm = mkTxAux <$> genTx <*> (genTxWitness pm)
 
 genTxHash :: Gen (Hash Tx)
 genTxHash = coerce <$> genTextHash
@@ -135,7 +137,7 @@ genUTxOConfiguration =
     <$> Gen.list (Range.linear 0 50) genAddress
 
 genTxPayload :: ProtocolMagicId -> Gen TxPayload
-genTxPayload pm = TxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
+genTxPayload pm = mkTxPayload <$> Gen.list (Range.linear 0 10) (genTxAux pm)
 
 genTxProof :: ProtocolMagicId -> Gen TxProof
 genTxProof pm =
@@ -177,7 +179,7 @@ genTxInWitness pm = Gen.choice [genVKWitness pm, genRedeemWitness pm]
 
 genTxWitness :: ProtocolMagicId -> Gen TxWitness
 genTxWitness pm =
-  TxWitness . V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
+  V.fromList <$> Gen.list (Range.linear 1 10) (genTxInWitness pm)
 
 genUTxO :: Gen UTxO
 genUTxO = fromList <$> Gen.list (Range.constant 0 1000) genTxInTxOut

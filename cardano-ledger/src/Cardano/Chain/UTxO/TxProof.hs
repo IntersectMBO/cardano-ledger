@@ -15,18 +15,15 @@ import Cardano.Prelude
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary
-  ( FromCBOR(..)
-  , FromCBORAnnotated(..)
-  , ToCBOR(..)
-  , encodeListLen
-  , enforceSize
-  )
-import Cardano.Chain.Common.Merkle (MerkleRoot, mkMerkleTree, mtRoot)
+import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
+import Cardano.Chain.Common.Merkle
+  (MerkleRoot, mkMerkleTree, mkMerkleTreeDecoded, mtRoot)
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxPayload
-  ( TxPayload
+  ( ATxPayload
+  , TxPayload
   , recoverHashedBytes
+  , txpAnnotatedTxs
   , txpTxs
   , txpWitnesses
   )
@@ -55,12 +52,10 @@ instance ToCBOR TxProof where
       <> toCBOR (txpRoot proof)
       <> toCBOR (txpWitnessesHash proof)
 
-instance FromCBORAnnotated TxProof where
-  fromCBORAnnotated' =
-    TxProof <$ lift (enforceSize "TxProof" 3)
-      <*> lift fromCBOR
-      <*> lift fromCBOR
-      <*> lift fromCBOR
+instance FromCBOR TxProof where
+  fromCBOR = do
+    enforceSize "TxProof" 3
+    TxProof <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 -- | Construct 'TxProof' which proves given 'TxPayload'
 --
@@ -73,9 +68,9 @@ mkTxProof payload = TxProof
   , txpWitnessesHash = hash $ txpWitnesses payload
   }
 
-recoverTxProof :: TxPayload -> TxProof
+recoverTxProof :: ATxPayload ByteString -> TxProof
 recoverTxProof payload = TxProof
   { txpNumber        = fromIntegral (length $ txpTxs payload)
-  , txpRoot          = mtRoot (mkMerkleTree $ txpTxs payload)
+  , txpRoot          = mtRoot (mkMerkleTreeDecoded $ txpAnnotatedTxs payload)
   , txpWitnessesHash = hashDecoded $ recoverHashedBytes payload
   }

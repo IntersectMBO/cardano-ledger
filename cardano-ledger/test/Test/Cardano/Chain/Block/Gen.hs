@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 
 module Test.Cardano.Chain.Block.Gen
   ( genBlockSignature
@@ -21,13 +22,15 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
-  ( BlockSignature(..)
+  ( ABlockSignature(..)
   , Block
-  , Body (..)
-  , BoundaryBlock(..)
-  , BoundaryBody(..)
-  , BoundaryHeader(..)
-  , mkBoundaryHeader
+  , BlockSignature
+  , Body
+  , ABoundaryBlock(..)
+  , ABoundaryBody(..)
+  , ABoundaryHeader(..)
+  , mkABoundaryHeader
+  , pattern Body
   , Header
   , HeaderHash
   , Proof(..)
@@ -79,7 +82,7 @@ genBlockSignature pm epochSlots =
         signCertificate pm (toVerification delegateSK) epoch issuerSafeSigner
       issuerVK = safeToVerification issuerSafeSigner
       sig      = sign pm (SignBlock issuerVK) delegateSK toSign
-    in BlockSignature cert sig
+    in ABlockSignature cert sig
 
 genHeaderHash :: Gen HeaderHash
 genHeaderHash = coerce <$> genTextHash
@@ -139,12 +142,15 @@ genProof pm =
 genToSign :: ProtocolMagicId -> EpochSlots -> Gen ToSign
 genToSign pm epochSlots =
   ToSign
-    <$> (hashHeader <$> genHeader pm epochSlots)
+    <$> (mkAbstractHash <$> genHeader pm epochSlots)
     <*> genProof pm
     <*> genEpochAndSlotCount epochSlots
     <*> genChainDifficulty
     <*> Update.genProtocolVersion
     <*> Update.genSoftwareVersion
+ where
+  mkAbstractHash :: Header -> HeaderHash
+  mkAbstractHash = hashHeader epochSlots
 
 genBlockWithEpochSlots :: ProtocolMagicId -> Gen (WithEpochSlots Block)
 genBlockWithEpochSlots pm = do
@@ -187,16 +193,18 @@ genBlock protocolMagicId epochSlots =
         )
         body
 
-genBoundaryBlock :: ProtocolMagicId -> Gen BoundaryBlock
-genBoundaryBlock pm =
-  BoundaryBlock
-    <$> genBoundaryHeader pm
-    <*> pure BoundaryBody
+genBoundaryBlock :: Gen (ABoundaryBlock ())
+genBoundaryBlock =
+  ABoundaryBlock
+    <$> pure 0
+    <*> genBoundaryHeader
+    <*> pure (ABoundaryBody ())
+    <*> pure ()
 
-genBoundaryHeader :: ProtocolMagicId -> Gen BoundaryHeader
-genBoundaryHeader pm = do
+genBoundaryHeader :: Gen (ABoundaryHeader ())
+genBoundaryHeader = do
   epoch <- Gen.word64 (Range.exponential 0 maxBound)
-  mkBoundaryHeader pm
+  mkABoundaryHeader
     <$> ( if epoch == 0
           then Left . GenesisHash . coerce <$> genTextHash
           else Gen.choice [ Right <$> genHeaderHash
@@ -205,3 +213,4 @@ genBoundaryHeader pm = do
         )
     <*> pure epoch
     <*> genChainDifficulty
+    <*> pure ()
