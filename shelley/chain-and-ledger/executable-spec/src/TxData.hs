@@ -11,6 +11,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+<<<<<<< HEAD
+=======
+{-# LANGUAGE StandaloneDeriving #-}
+-- {-# LANGUAGE DeriveAnyClass #-}
+>>>>>>> TxData changed to support Plutus
 
 module TxData
   where
@@ -40,10 +45,19 @@ import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
 import           Ledger.Core (Relation (..))
+<<<<<<< HEAD
 import           Slot (EpochNo (..), SlotNo (..))
 import           Updates (Update, emptyUpdate, updateNull)
 
 import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
+=======
+import           Slot (Epoch, Slot)
+import           Updates (Update)
+import           Scripts
+import           Value
+import           CostModel
+import           PParams (PlutusPP)
+>>>>>>> TxData changed to support Plutus
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -146,19 +160,40 @@ data MultiSig crypto =
 
 instance NoUnexpectedThunks (MultiSig crypto)
 
-newtype ScriptHash crypto =
-  ScriptHash (Hash (HASH crypto) (MultiSig crypto))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+data Script crypto =
+  MSig (MultiSig crypto) | SPLC (ScriptPLC crypto)
+  deriving (Show, Eq, Generic)
 
-deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
-deriving instance Crypto crypto => FromCBOR (ScriptHash crypto)
+instance NoUnexpectedThunks (Script crypto)
 
--- | Count nodes and leaves of multi signature script
-countMSigNodes :: MultiSig crypto -> Int
-countMSigNodes (RequireSignature _) = 1
-countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
-countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
-countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
+newtype ScriptHashMSig crypto =
+  ScriptHashMSig (Hash (HASH crypto) (MultiSig crypto))
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, Generic)
+
+deriving instance Crypto crypto => ToCBOR (ScriptHashMSig crypto)
+
+  deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
+  deriving instance Crypto crypto => FromCBOR (ScriptHash crypto)
+
+  -- | Count nodes and leaves of multi signature script
+  countMSigNodes :: MultiSig crypto -> Int
+  countMSigNodes (RequireSignature _) = 1
+  countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
+  countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
+  countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
+
+newtype ScriptHashPLC crypto =
+  ScriptHashPLC (Hash (HASH crypto) (ScriptPLC crypto))
+  deriving (Show, Eq, Ord, NoUnexpectedThunks, Generic)
+
+-- deriving instance Crypto crypto => ToCBOR (ScriptHashPLC crypto)
+
+data ScriptHash crypto =
+  SHM (ScriptHashMSig crypto)
+  | SHP (ScriptHashMSig crypto)
+  deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks (ScriptHash crypto)
 
 type Wdrl crypto = Map (RewardAcnt crypto) Coin
 
@@ -170,6 +205,11 @@ newtype TxId crypto
 deriving instance Crypto crypto => ToCBOR (TxId crypto)
 deriving instance Crypto crypto => FromCBOR (TxId crypto)
 
+-- data Info crypto
+--   = TxBody
+--     { _rdmrhash   :: DataHash crypto
+--     } deriving (Show, Eq, Generic)
+
 -- |The input of a UTxO.
 data TxIn crypto
   = TxIn (TxId crypto) Natural -- TODO use our own Natural type
@@ -177,10 +217,48 @@ data TxIn crypto
 
 instance NoUnexpectedThunks (TxIn crypto)
 
+-- | the current item being passed to the Plutus interpreter
+data CurItem crypto =
+  CITxInScr (TxIn crypto) | CIWdrl (Wdrl crypto) | CIDeRegKey (DCert crypto)
+  deriving (Show, Eq, Generic)
+
+data ScrInData crypto =
+    NoDtRdmr { _vData   :: Data crypto }
+  | VldDrRdm { _vData   :: Data crypto
+             , _dataValue        :: Data crypto
+             , _rdmrValue        :: Data crypto
+             }
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (CurItem crypto)
+
+-- |The input of a UTxO.
+data TxInTx crypto
+  =  TxInVK   { _txin   :: TxIn crypto
+              , _isfee  ::  IsFee
+              }
+    | TxInScr { _txin   :: TxIn crypto
+              , _rdmrhash :: DataHash crypto
+              }
+  deriving (Show, Eq, Generic, Ord)
+
+
+instance NoUnexpectedThunks (TxInTx crypto)
+
 -- |The output of a UTxO.
 data TxOut crypto
-  = TxOut (Addr crypto) Coin
+  =   TxOutVK { _addr   :: Addr crypto
+              , _value  :: Value (ScriptHash crypto) (ScriptHash crypto)
+              }
+    | TxOutScr { _addr     :: Addr crypto
+               , _value    :: Value (ScriptHash crypto) (ScriptHash crypto)
+               , _datahash :: DataHash crypto
+               }
   deriving (Show, Eq, Generic, Ord)
+
+-- | Accessors for different types
+
+--deriving instance Crypto crypto => ToCBOR (ScriptHashPLC crypto)
 
 instance NoUnexpectedThunks (TxOut crypto)
 
@@ -222,16 +300,26 @@ instance NoUnexpectedThunks (GenesisDelegate crypto)
 instance NoUnexpectedThunks (MIRCert crypto)
 instance NoUnexpectedThunks (DCert crypto)
 
+-- | Hash of protocol parameters relevant to Plutus evaluation
+newtype HashPP crypto = HashPP (Hash (HASH crypto) PlutusPP)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord)
+
+deriving instance Crypto crypto => ToCBOR (HashPP crypto)
+
 -- |A raw transaction
 data TxBody crypto
   = TxBody
-      { _inputs   :: !(Set (TxIn crypto))
+      { _txinputs :: !(Set (TxInTx crypto))
       , _outputs  :: [TxOut crypto]
       , _certs    :: Seq (DCert crypto)
       , _wdrls    :: Wdrl crypto
       , _txfee    :: Coin
       , _ttl      :: SlotNo
       , _txUpdate :: Update crypto
+      , _txlst    :: Slot
+      , _forged   :: Value (ScriptHash crypto) (ScriptHash crypto)
+      , _txexunits:: ExUnits
+      , _hashPP   :: Maybe (HashPP crypto)
       } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (TxBody crypto)
@@ -256,16 +344,19 @@ instance forall crypto
   => Ord (WitVKey crypto) where
     compare = comparing witKeyHash
 
+type Vlds crypto = Map (ScriptHash crypto) (Script crypto)
+
 -- |A fully formed transaction.
 data Tx crypto
   = Tx
       { _body           :: !(TxBody crypto)
       , _witnessVKeySet :: !(Set (WitVKey crypto))
-      , _witnessMSigMap ::
-          Map (ScriptHash crypto) (MultiSig crypto)
+      , _txvlds         :: Vlds crypto
+      , _txdats         :: Map (DataHash crypto) (Data crypto)
+      , _txvaltag       :: IsValidating
       } deriving (Show, Eq, Generic)
 
-instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
+-- deriving instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
 
 newtype StakeCreds crypto =
   StakeCreds (Map (Credential crypto) SlotNo)
@@ -280,6 +371,77 @@ newtype StakePools crypto =
 
 
 -- CBOR
+
+instance
+  (Crypto crypto)
+  => ToCBOR (ScrInData crypto)
+ where
+  toCBOR = \case
+    NoDtRdmr vd ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR vd
+
+    VldDrRdm vd dv rd ->
+      encodeListLen 4
+        <> toCBOR (1 :: Word8)
+        <> toCBOR vd
+        <> toCBOR dv
+        <> toCBOR rd
+
+instance
+  (Crypto crypto)
+  => ToCBOR (CurItem crypto)
+ where
+  toCBOR = \case
+    CITxInScr txin ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR txin
+
+    CIWdrl wdrl ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR wdrl
+
+    CIDeRegKey dcr ->
+      encodeListLen 2
+        <> toCBOR (2 :: Word8)
+        <> toCBOR dcr
+
+instance
+  (Crypto crypto)
+  => ToCBOR (TxOut crypto)
+ where
+  toCBOR = \case
+    TxOutVK a v ->
+      encodeListLen 3
+        <> toCBOR (0 :: Word8)
+        <> toCBOR a
+        <> toCBOR v
+
+
+    TxOutScr a v dh ->
+      encodeListLen 4
+        <> toCBOR (1 :: Word8)
+        <> toCBOR a
+        <> toCBOR v
+        <> toCBOR dh
+
+instance
+  (Crypto crypto)
+  => ToCBOR (ScriptHash crypto)
+ where
+  toCBOR = \case
+    SHM hs ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR hs
+
+    SHP hs ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR hs
 
 instance
   (Crypto crypto)
@@ -393,14 +555,41 @@ instance (Crypto crypto) =>
     (b :: Word64) <- fromCBOR
     pure $ TxIn a (fromInteger $ toInteger b)
 
+-- instance
+--   ToCBOR IsThing
+--  where
+--   toCBOR = \case
+--     Yes ->
+--       encodeListLen 1
+--        <> toCBOR True
+--
+--     Nope ->
+--       encodeListLen 1
+--        <> toCBOR False
+
 instance
   (Typeable crypto, Crypto crypto)
-  => ToCBOR (TxOut crypto)
+  => ToCBOR (TxInTx crypto)
  where
-  toCBOR (TxOut addr coin) =
-    encodeListLen 2
-      <> toCBOR addr
-      <> toCBOR coin
+  toCBOR = \case
+    TxInVK txin isfee ->
+      encodeListLen 2
+       <> toCBOR txin
+       <> toCBOR isfee
+
+    TxInScr txin dh ->
+      encodeListLen 2
+       <> toCBOR txin
+       <> toCBOR dh
+
+-- instance
+--   (Typeable crypto, Crypto crypto)
+--   => ToCBOR (TxOutVK crypto)
+--  where
+--   toCBOR (TxOut addr vl) =
+--     encodeListLen 2
+--       <> toCBOR addr
+--       <> toCBOR vl
 
 instance (Crypto crypto) =>
   FromCBOR (TxOut crypto) where
@@ -449,7 +638,6 @@ instance
     encodeListLen 3
       <> toCBOR (_body tx)
       <> toCBOR (_witnessVKeySet tx)
-      <> toCBOR (_witnessMSigMap tx)
 
 instance Crypto crypto => FromCBOR (Tx crypto) where
   fromCBOR = decodeListLenOf 3 >>
@@ -460,6 +648,7 @@ instance
   => ToCBOR (TxBody crypto)
  where
   toCBOR txbody =
+<<<<<<< HEAD
     let l = toList $
               single (encodeWord 0 <> toCBOR (_inputs txbody))
             . single (encodeWord 1 <> toCBOR (_outputs txbody))
@@ -527,6 +716,18 @@ instance
           }
 
 instance (Crypto crypto) =>
+=======
+    encodeListLen 6
+      <> toCBOR (_txinputs txbody)
+      <> toCBOR (_outputs txbody)
+      <> toCBOR (toList $ _certs txbody)
+      <> toCBOR (_wdrls txbody)
+      <> toCBOR (_txfee txbody)
+      <> toCBOR (_ttl txbody)
+      <> toCBOR (_txUpdate txbody)
+
+instance ( Crypto crypto) =>
+>>>>>>> TxData changed to support Plutus
   ToCBOR (MultiSig crypto) where
   toCBOR (RequireSignature hk) =
     encodeListLen 2 <> encodeWord 0 <> toCBOR hk
@@ -734,9 +935,15 @@ instance Relation (StakeCreds crypto) where
 
 -- Lenses
 
+makeLenses ''TxInTx
+
+makeLenses ''CurItem
+
+makeLenses ''TxOut
+
 makeLenses ''TxBody
 
-makeLenses ''Tx
+makeLenses ''ScrInData
 
 makeLenses ''Delegation
 

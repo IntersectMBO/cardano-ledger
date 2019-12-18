@@ -12,8 +12,14 @@ module CostModel
     , CostModMSIG(..)
     , CostModPLC(..)
     , CostMod(..)
+    , PricesMSIG(..)
+    , PricesPLC(..)
+    , Prices(..)
+    , ExUnitsAllTypes(..)
     , defaultUnits
     , defaultModel
+    , defaultPrices
+    , scriptFee
     ) where
 
 import           Cardano.Binary (ToCBOR)
@@ -54,36 +60,65 @@ data ExUnits =
   deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
 
--- | Temporary stand-in for actual types in the cost model "prices"
+-- | Temporary stand-in for actual types in the cost model
 -- for Plutus script execution
 data CostModPLC = CostModPLC
+  { -- | The types of computational resources relevant to the cost model
+      stepPrim             :: ExUnitsPLC
+    , memPim               :: ExUnitsPLC
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+
+-- | Temporary stand-in for actual types in the cost model
+-- for MSIG script execution
+data CostModMSIG = CostModMSIG
+  { -- | The types of computational resources relevant to the cost model
+      sigPrim           :: ExUnitsMSIG
+    , smtPrim           :: ExUnitsMSIG
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+
+-- | The cost model for plc or msig scripts
+data CostMod = CostMod CostModPLC CostModMSIG
+  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+
+-- | Default values
+-- | Default execution units
+defaultUnits :: ExUnitsAllTypes
+defaultUnits = ExUnitsAllTypes (ExUnitsPLC 0 0) (ExUnitsMSIG 0 0)
+
+-- | Default cost model
+defaultModel :: CostMod
+defaultModel = CostMod (CostModPLC (ExUnitsPLC 0 0) (ExUnitsPLC 0 0))
+  (CostModMSIG (ExUnitsMSIG 0 0) (ExUnitsMSIG 0 0))
+
+-- | The formula for conversion of execution cost into Ada
+-- Needs to be defined
+scriptFee :: Prices -> ExUnits -> Integer
+scriptFee _ _ = 0
+
+-- | Temporary stand-in for actual types in the "prices"
+-- for Plutus script execution
+data PricesPLC = PricesPLC
   { -- | The types of computational resources relevant to the cost model
       stepPrice             :: Coin
     , memPrice              :: Coin
   } deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
--- | Temporary stand-in for actual types in the cost model "prices"
+-- | Temporary stand-in for actual types in the "prices"
 -- for MSIG script execution
-data CostModMSIG = CostModMSIG
+data PricesMSIG = PricesMSIG
   { -- | The types of computational resources relevant to the cost model
       sigPrice           :: Coin
     , smtPrice           :: Coin
   } deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
--- | The "prices" of the resources in ExUnits (i.e. coefficients for conversion to Ada)
-data CostMod = CostMod CostModPLC CostModMSIG
+-- | The prices for plc or msig scripts
+data Prices = Prices PricesPLC PricesMSIG
   deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
+-- | All types of ex units limit
+data ExUnitsAllTypes = ExUnitsAllTypes ExUnitsPLC ExUnitsMSIG
+  deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
--- | Default values
--- | Default execution units
-defaultUnits :: ExUnits
-defaultUnits = PLCUnits (ExUnitsPLC 0 0)
-
--- | Default prices
-defaultModel :: CostMod
-defaultModel = CostMod (CostModPLC 0 0) (CostModMSIG 0 0)
-
--- -- | The formula for conversion of execution cost into Ada
--- scriptFee :: CostMod -> ExUnits -> Coin
--- scriptFee (CostModPLC sp mp) (CostModPLC sp mp)
+-- | Default cost model
+defaultPrices :: Prices
+defaultPrices = Prices (PricesPLC 0 0) (PricesMSIG 0 0)
