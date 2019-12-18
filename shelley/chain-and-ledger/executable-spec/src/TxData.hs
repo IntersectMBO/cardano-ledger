@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,10 +15,13 @@
 module TxData
   where
 
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
-                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord)
+import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
+                     decodeListLen, decodeListLenOrIndef, decodeMapLenOrIndef, decodeWord,
+                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord,
+                     enforceSize, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), Word64)
+import           Control.Monad (replicateM, unless)
 import           Lens.Micro.TH (makeLenses)
 
 import           Data.Foldable (foldMap)
@@ -27,20 +31,22 @@ import           Data.Ord (comparing)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (UnitInterval)
-import           Coin (Coin)
-import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, Sig, VKey,
-                     VKeyGenesis, VerKeyVRF, hashAnyKey)
+import           BaseTypes (UnitInterval, invalidKey)
+import           Coin (Coin (..))
+import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
+                     Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
 import           Ledger.Core (Relation (..))
-import           Slot (EpochNo, SlotNo)
-import           Updates (Update, updateNull)
+import           Slot (EpochNo (..), SlotNo (..))
+import           Updates (Update, emptyUpdate, updateNull)
 
-import           Serialization (CBORGroup (..), ToCBORGroup (..))
+import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
+
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -68,7 +74,7 @@ instance NoUnexpectedThunks (PoolParams crypto)
 -- |An account based address for rewards
 newtype RewardAcnt crypto = RewardAcnt
   { getRwdCred :: StakeCredential crypto
-  } deriving (Show, Eq, NoUnexpectedThunks, Ord)
+  } deriving (Show, Eq, NoUnexpectedThunks, Ord, FromCBOR, ToCBOR)
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential crypto =
@@ -137,6 +143,7 @@ newtype ScriptHash crypto =
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
+deriving instance Crypto crypto => FromCBOR (ScriptHash crypto)
 
 type Wdrl crypto = Map (RewardAcnt crypto) Coin
 
@@ -146,6 +153,7 @@ newtype TxId crypto
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (TxId crypto)
+deriving instance Crypto crypto => FromCBOR (TxId crypto)
 
 -- |The input of a UTxO.
 data TxIn crypto
@@ -302,6 +310,44 @@ instance
         <> toCBOR credCoinMap
 
 instance
+  (Crypto crypto)
+  => FromCBOR (DCert crypto)
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> matchSize "RegKey" 2 n >> (RegKey . KeyHashObj) <$> fromCBOR
+      1 -> matchSize "RegKey" 2 n >> (RegKey . ScriptHashObj) <$> fromCBOR
+      2 -> matchSize "DeRegKey" 2 n >> (DeRegKey . KeyHashObj) <$> fromCBOR
+      3 -> matchSize "DeRegKey" 2 n >> (DeRegKey . ScriptHashObj) <$> fromCBOR
+      4 -> do
+        matchSize "Delegate" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ Delegate (Delegation (KeyHashObj a) b)
+      5 -> do
+        matchSize "Delegate" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ Delegate (Delegation (ScriptHashObj a) b)
+      6 -> do
+        group <- fromCBORGroup
+        matchSize "RegPool" (fromIntegral $ 1 + listLen group) n
+        pure $ RegPool group
+      7 -> do
+        matchSize "RetirePool" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ RetirePool a (EpochNo b)
+      8 -> do
+        matchSize "GenesisDelegate" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ GenesisDelegate (a, b)
+      9 -> matchSize "InstantaneousRewards" 2 n >> InstantaneousRewards <$> fromCBOR
+      k -> invalidKey k
+
+instance
   (Typeable crypto, Crypto crypto)
   => ToCBOR (TxIn crypto)
  where
@@ -309,6 +355,14 @@ instance
     encodeListLen 2
       <> toCBOR txId
       <> toCBOR (fromIntegral index :: Word64)
+
+instance (Crypto crypto) =>
+  FromCBOR (TxIn crypto) where
+  fromCBOR = do
+    enforceSize "TxIn" 2
+    a <- fromCBOR
+    (b :: Word64) <- fromCBOR
+    pure $ TxIn a (fromInteger $ toInteger b)
 
 instance
   (Typeable crypto, Crypto crypto)
@@ -319,18 +373,43 @@ instance
       <> toCBOR addr
       <> toCBOR coin
 
+instance (Crypto crypto) =>
+  FromCBOR (TxOut crypto) where
+  fromCBOR = do
+    enforceSize "TxOut" 2
+    a <- fromCBOR
+    (b :: Word64) <- fromCBOR
+    pure $ TxOut a (Coin $ toInteger b)
+
 instance
   Crypto crypto
   => ToCBOR (WitVKey crypto)
  where
   toCBOR (WitVKey vk sig) =
-    encodeListLen 2
+    encodeListLen 3
+      <> toCBOR (0 :: Word8)
       <> toCBOR vk
       <> toCBOR sig
   toCBOR (WitGVKey vk sig) =
-    encodeListLen 2
+    encodeListLen 3
+      <> toCBOR (1 :: Word8)
       <> toCBOR vk
       <> toCBOR sig
+
+instance
+  Crypto crypto
+  => FromCBOR (WitVKey crypto)
+ where
+  fromCBOR = enforceSize "WitVKey" 3  >> decodeWord >>= \case
+    0 -> do
+      a <- fromCBOR
+      b <- fromCBOR
+      pure $ WitVKey a b
+    1 -> do
+      a <- fromCBOR
+      b <- fromCBOR
+      pure $ WitGVKey a b
+    k -> invalidKey k
 
 
 instance
@@ -343,7 +422,7 @@ instance
       <> toCBOR (_witnessVKeySet tx)
       <> toCBOR (_witnessMSigMap tx)
 
-newtype CborSeq a = CborSeq (Seq a)
+newtype CborSeq a = CborSeq { unwrapCborSeq :: Seq a }
 
 instance ToCBOR a => ToCBOR (CborSeq a) where
   toCBOR (CborSeq xs) =
@@ -353,6 +432,16 @@ instance ToCBOR a => ToCBOR (CborSeq a) where
     if l <= 23
     then encodeListLen l <> contents
     else encodeListLenIndef <> contents <> encodeBreak
+
+instance FromCBOR a => FromCBOR (CborSeq a) where
+  fromCBOR = CborSeq . Seq.fromList <$> do
+    decodeListLenOrIndef >>= \case
+      Just len -> replicateM len fromCBOR
+      Nothing -> loop [] (not <$> decodeBreakOr) fromCBOR
+    where
+    loop acc condition action = condition >>= \case
+      False -> pure acc
+      True -> action >>= \v -> loop (v:acc) condition action
 
 instance
   (Crypto crypto)
@@ -364,9 +453,9 @@ instance
             . single (encodeWord 1 <> toCBOR (_outputs txbody))
             . single (encodeWord 2 <> toCBOR (_txfee txbody))
             . single (encodeWord 3 <> toCBOR (_ttl txbody))
-            . if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs))
-            . if null ws then none else single (encodeWord 5 <> toCBOR ws)
-            . if updateNull us then none else single (encodeWord 6 <> toCBOR us)
+            . (if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs)))
+            . (if null ws then none else single (encodeWord 5 <> toCBOR ws))
+            . (if updateNull us then none else single (encodeWord 6 <> toCBOR us))
         toList xs = xs []
         single x = (x:)
         none = id
@@ -377,7 +466,55 @@ instance
       ws = _wdrls txbody
       us = _txUpdate txbody
 
-instance ( Crypto crypto) =>
+mapHelper :: Decoder s b -> Decoder s [b]
+mapHelper decodePart = decodeMapLenOrIndef >>= \case
+  Just len -> replicateM len decodePart
+  Nothing  -> loop [] (not <$> decodeBreakOr) decodePart
+  where
+  loop acc condition action = condition >>= \case
+    False -> pure acc
+    True -> action >>= \v -> loop (v:acc) condition action
+
+
+instance
+  (Crypto crypto)
+  => FromCBOR (TxBody crypto)
+  where
+   fromCBOR = do
+     mapParts <- mapHelper $
+       decodeWord >>= \case
+         0 -> fromCBOR                     >>= \x -> pure (0, \t -> t { _inputs   = x })
+         1 -> fromCBOR                     >>= \x -> pure (1, \t -> t { _outputs  = x })
+         2 -> fromCBOR                     >>= \x -> pure (2, \t -> t { _txfee    = x })
+         3 -> fromCBOR                     >>= \x -> pure (3, \t -> t { _ttl      = x })
+         4 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
+         5 -> fromCBOR                     >>= \x -> pure (5, \t -> t { _wdrls    = x })
+         6 -> fromCBOR                     >>= \x -> pure (6, \t -> t { _txUpdate = x })
+         k -> invalidKey k
+     let requiredFields :: Map Int String
+         requiredFields = Map.fromList $
+           [ (0, "inputs")
+           , (1, "outputs")
+           , (2, "fee")
+           , (3, "ttl")
+           ]
+         fields = fst <$> mapParts
+         missingFields = Map.filterWithKey (\k _ -> notElem k fields) requiredFields
+     unless (null missingFields)
+       (fail $ "missing required transaction component(s): " <> show missingFields)
+     pure $ foldr ($) basebody (snd <$> mapParts)
+     where
+       basebody = TxBody
+          { _inputs   = Set.empty
+          , _outputs  = []
+          , _txfee    = Coin 0
+          , _ttl      = SlotNo 0
+          , _certs    = Seq.empty
+          , _wdrls    = Map.empty
+          , _txUpdate = emptyUpdate
+          }
+
+instance (Crypto crypto) =>
   ToCBOR (MultiSig crypto) where
   toCBOR (RequireSignature hk) =
     encodeListLen 2 <> encodeWord 0 <> toCBOR hk
@@ -388,26 +525,20 @@ instance ( Crypto crypto) =>
   toCBOR (RequireMOf m msigs) =
     encodeListLen 3 <> encodeWord 3 <> toCBOR m <> toCBOR msigs
 
-instance ( Crypto crypto) =>
+instance (Crypto crypto) =>
   FromCBOR (MultiSig crypto) where
   fromCBOR = do
-    _ <- decodeListLen
-    ctor <- decodeWord
-    case ctor of
-      0 -> do
-       hk <- AnyKeyHash <$> fromCBOR
-       pure $ RequireSignature hk
-      1 -> do
-        msigs <- fromCBOR
-        pure $ RequireAllOf msigs
-      2 -> do
-        msigs <- fromCBOR
-        pure $ RequireAnyOf msigs
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> matchSize "RequireSignature" 2 n >> (RequireSignature . AnyKeyHash) <$> fromCBOR
+      1 -> matchSize "RequireAllOf" 2 n >> RequireAllOf <$> fromCBOR
+      2 -> matchSize "RequireAnyOf" 2 n >> RequireAnyOf <$> fromCBOR
       3 -> do
+        matchSize "RequireMOf" 3 n
         m     <- fromCBOR
         msigs <- fromCBOR
         pure $ RequireMOf m msigs
-      _ -> error "pattern no supported"
+      k -> invalidKey k
 
 
 instance (Typeable crypto, Crypto crypto)
@@ -417,6 +548,16 @@ instance (Typeable crypto, Crypto crypto)
     KeyHashObj     kh -> toCBOR (0 :: Word8) <> toCBOR kh
     ScriptHashObj  hs -> toCBOR (1 :: Word8) <> toCBOR hs
     GenesisHashObj kh -> toCBOR (2 :: Word8) <> toCBOR kh
+
+instance (Crypto crypto) =>
+  FromCBOR (Credential crypto) where
+  fromCBOR = do
+    enforceSize "Credential" 2
+    decodeWord >>= \case
+      0 -> KeyHashObj <$> fromCBOR
+      1 -> ScriptHashObj <$> fromCBOR
+      2 -> GenesisHashObj <$> fromCBOR
+      k -> invalidKey k
 
 instance
   (Typeable crypto, Crypto crypto)
@@ -448,6 +589,58 @@ instance
     encodeListLen 2 <> toCBOR (8 :: Word8)  <> toCBOR a
   toCBOR _ = error "this should be unreachable" -- TODO fix me
 
+instance (Crypto crypto) =>
+  FromCBOR (Addr crypto) where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "AddrBase" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ AddrBase (KeyHashObj a) (KeyHashObj b)
+      1 -> do
+        matchSize "AddrBase" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ AddrBase (KeyHashObj a) (ScriptHashObj b)
+      2 -> do
+        matchSize "AddrBase" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ AddrBase (ScriptHashObj a) (KeyHashObj b)
+      3 -> do
+        matchSize "AddrBase" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ AddrBase (ScriptHashObj a) (ScriptHashObj b)
+      4 -> do
+        matchSize "AddrPtr" 5 n
+        a <- fromCBOR
+        x <- fromCBOR
+        y <- fromCBOR
+        z <- fromCBOR
+        pure $ AddrPtr (KeyHashObj a) (Ptr x y z)
+      5 -> do
+        matchSize "AddrPtr" 5 n
+        a <- fromCBOR
+        x <- fromCBOR
+        y <- fromCBOR
+        z <- fromCBOR
+        pure $ AddrPtr (ScriptHashObj a) (Ptr x y z)
+      6 -> do
+        matchSize "AddrEnterprise" 2 n
+        a <- fromCBOR
+        pure $ AddrEnterprise (KeyHashObj a)
+      7 -> do
+        matchSize "AddrEnterprise" 2 n
+        a <- fromCBOR
+        pure $ AddrEnterprise (ScriptHashObj a)
+      8 -> do
+        matchSize "AddrBootstrap" 2 n
+        a <- fromCBOR
+        pure $ AddrBootstrap (KeyHash a)
+      k -> invalidKey k
 
 instance ToCBORGroup Ptr where
   toCBORGroup (Ptr sl txIx certIx) =
@@ -471,9 +664,27 @@ instance
       <> toCBOR (_poolRAcnt poolParams)
   listLen _ = 7
 
-instance Crypto crypto
-  => ToCBOR (RewardAcnt crypto) where
-  toCBOR (RewardAcnt ra) = toCBOR ra
+instance
+  (Crypto crypto)
+  => FromCBORGroup (PoolParams crypto)
+ where
+  fromCBORGroup = do
+    owners <- fromCBOR
+    cost <- fromCBOR
+    margin <- fromCBOR
+    pledge <- fromCBOR
+    vk <- fromCBOR
+    vrf <- fromCBOR
+    ra <- fromCBOR
+    pure $ PoolParams
+            { _poolPubKey = vk
+            , _poolVrf    = vrf
+            , _poolPledge = pledge
+            , _poolCost   = cost
+            , _poolMargin = margin
+            , _poolRAcnt  = ra
+            , _poolOwners = owners
+            }
 
 instance Relation (StakeCreds crypto) where
   type Domain (StakeCreds crypto) = StakeCredential crypto

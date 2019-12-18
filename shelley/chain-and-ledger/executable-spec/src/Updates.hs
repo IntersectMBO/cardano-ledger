@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Updates
   ( Ppm(..)
@@ -31,10 +33,12 @@ module Updates
   )
 where
 
-import           Cardano.Binary (Encoding, ToCBOR (toCBOR), encodeListLen, encodeMapLen)
+import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), decodeMapLen, encodeListLen,
+                     encodeMapLen, enforceSize)
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.Monad (replicateM)
 import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 (unpack)
 import           Data.Char (isAscii)
@@ -50,40 +54,42 @@ import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
 import           Keys (GenDelegs, GenKeyHash)
 import           PParams (PParams (..))
-import           Slot (EpochNo, SlotNo)
+import           Slot (EpochNo (..), SlotNo)
 
 import           Numeric.Natural (Natural)
 
 import           Ledger.Core (dom, range, (◁))
 
 newtype ApVer = ApVer Natural
-  deriving (Show, Ord, Eq, NoUnexpectedThunks, ToCBOR)
+  deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 newtype ApName = ApName ByteString
-  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+  deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 newtype SystemTag = SystemTag ByteString
-  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+  deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 newtype InstallerHash crypto = InstallerHash (Hash (HASH crypto) ByteString)
   deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (InstallerHash crypto)
+deriving instance Crypto crypto => FromCBOR (InstallerHash crypto)
 
 newtype Mdt crypto = Mdt (Map SystemTag (InstallerHash crypto))
   deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (Mdt crypto)
+deriving instance Crypto crypto => FromCBOR (Mdt crypto)
 
 -- | List of applications on the blockchain and their versions.
 newtype Applications crypto = Applications {
   apps :: Map ApName (ApVer, Mdt crypto)
-  } deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+  } deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 -- | A single update of the @Applications list.
 newtype AVUpdate crypto = AVUpdate {
   aup :: Map (GenKeyHash crypto) (Applications crypto)
-  } deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
+  } deriving (Show, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 -- | Update Proposal
 data Update crypto
@@ -98,6 +104,12 @@ instance NoUnexpectedThunks (Update crypto)
 instance Crypto crypto => ToCBOR (Update crypto) where
   toCBOR (Update ppUpdate avUpdate) =
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR avUpdate
+
+instance Crypto crypto => FromCBOR (Update crypto) where
+  fromCBOR =
+    Update <$ enforceSize "Update" 2
+      <*> fromCBOR
+      <*> fromCBOR
 
 data PPUpdateEnv crypto = PPUpdateEnv {
     slot :: SlotNo
@@ -165,10 +177,37 @@ instance ToCBOR PParamsUpdate where
         ExtraEntropy x          -> word 18 <> toCBOR x
         ProtocolVersion x       -> word 19 <> toCBOR x
 
+instance FromCBOR PParamsUpdate where
+  fromCBOR = do
+    n <- decodeMapLen
+    fmap (PParamsUpdate . Set.fromList) $ replicateM n $
+      fromCBOR @Word8 >>= \case
+         0  -> MinFeeA <$> fromCBOR
+         1  -> MinFeeB <$> fromCBOR
+         2  -> MaxBBSize <$> fromCBOR
+         3  -> MaxTxSize <$> fromCBOR
+         4  -> MaxBHSize <$> fromCBOR
+         5  -> KeyDeposit <$> fromCBOR
+         6  -> KeyMinRefund <$> fromCBOR
+         7  -> KeyDecayRate <$> fromCBOR
+         8  -> PoolDeposit <$> fromCBOR
+         9  -> PoolMinRefund <$> fromCBOR
+         10 -> PoolDecayRate <$> fromCBOR
+         11 -> (EMax . EpochNo) <$> fromCBOR
+         12 -> Nopt <$> fromCBOR
+         13 -> A0   <$> fromCBOR
+         14 -> Rho  <$> fromCBOR
+         15 -> Tau  <$> fromCBOR
+         16 -> ActiveSlotCoefficient <$> fromCBOR
+         17 -> D <$> fromCBOR
+         18 -> ExtraEntropy <$> fromCBOR
+         19 -> ProtocolVersion <$> fromCBOR
+         k -> fail $ "not a valid key: " ++ show k
+
 -- | Update operation for protocol parameters structure @PParams
 newtype PPUpdate crypto
   = PPUpdate (Map (GenKeyHash crypto) PParamsUpdate)
-  deriving (Show, Eq, ToCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 -- | This is just an example and not neccessarily how we will actually validate names
 apNameValid :: ApName -> Bool

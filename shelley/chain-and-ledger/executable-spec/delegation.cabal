@@ -89,6 +89,7 @@ library
     mtl,
     non-integer,
     stm,
+    text,
     transformers,
     cs-ledger,
     cardano-binary,
