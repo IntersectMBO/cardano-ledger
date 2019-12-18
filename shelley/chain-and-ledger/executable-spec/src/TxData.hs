@@ -321,7 +321,7 @@ data TxBody crypto
       , _txfee    :: Coin
       , _ttl      :: SlotNo
       , _txUpdate :: Update crypto
-      , _txlst    :: Slot
+      , _txlst    :: SlotNo
       , _forged   :: Value (ScriptHash crypto) (ScriptHash crypto)
       , _txexunits:: ExUnits
       , _hashPP   :: Maybe (HashPP crypto)
@@ -719,6 +719,10 @@ instance
           , _certs    = Seq.empty
           , _wdrls    = Wdrl Map.empty
           , _txUpdate = emptyUpdate
+          , _txlst     = SlotNo 0
+          , _forged    = defaultValue
+          , _txexunits = PLCUnits (ExUnitsPLC 0 0)
+          , _hashPP    = hash emptyPlutusPP
           , _mdHash   = Nothing
           }
 
