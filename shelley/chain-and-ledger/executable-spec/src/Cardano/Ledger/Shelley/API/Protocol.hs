@@ -25,7 +25,7 @@ import Cardano.Ledger.Shelley.Crypto
 import Cardano.Slotting.EpochInfo (epochInfoEpoch)
 import Control.Arrow (left, right)
 import Control.Monad.Except
-import Control.Monad.Reader.Class
+import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
@@ -295,25 +295,23 @@ newtype FutureLedgerViewError crypto
 futureLedgerView ::
   forall crypto m.
   ( Crypto crypto,
-    MonadError (FutureLedgerViewError crypto) m,
-    MonadReader Globals m
+    MonadError (FutureLedgerViewError crypto) m
   ) =>
+  Globals ->
   ShelleyState crypto ->
   SlotNo ->
   m (LedgerView crypto)
-futureLedgerView ss slot = do
-  epoch <- do
-    ei <- asks epochInfo
-    pure . runIdentity $ epochInfoEpoch ei slot
-  res <-
-    liftShelleyBase
-      . applySTS @(NEWEPOCH crypto)
-      $ TRC (mkNewEpochEnv, ss, epoch)
+futureLedgerView globals ss slot =
   liftEither
     . right view
     . left (FutureLedgerViewError . join)
     $ res
   where
+    epoch = runIdentity $ epochInfoEpoch (epochInfo globals) slot
+    res =
+      flip runReader globals
+        . applySTS @(NEWEPOCH crypto)
+        $ TRC (mkNewEpochEnv, ss, epoch)
     mkNewEpochEnv =
       NewEpochEnv
         slot
