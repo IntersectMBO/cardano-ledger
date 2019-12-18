@@ -20,8 +20,10 @@ import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCa
 
 
 import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
-import           BlockChain (BHBody (..), pattern BHeader, pattern HashHeader, ProtVer (..),
-                     TxSeq (..), bhbHash, mkSeed, seedEta, seedL)
+import           BlockChain (pattern BHBody, pattern BHeader, Block (..), pattern HashHeader,
+                     ProtVer (..), TxSeq (..), bhash, bhbHash, bheaderBlockNo, bheaderEta,
+                     bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk,
+                     bprotvert, bsize, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
 import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
@@ -35,7 +37,7 @@ import           LedgerState (genesisId)
 import           Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Test.Utils
-import           Tx (hashScript)
+import           Tx (Tx (..), hashScript)
 import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
                      pattern Delegation, pattern PoolParams, Ptr (..), pattern RequireSignature,
                      pattern RewardAcnt, pattern ScriptHash, pattern TxBody, pattern TxIn,
@@ -45,9 +47,9 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      pattern InstallerHash, pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
                      Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 
-import           MockTypes (Addr, CoreKeyPair, GenKeyHash, HashHeader, InstallerHash, KeyHash,
-                     KeyPair, MultiSig, SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn,
-                     VKey, VKeyES, VRFKeyHash, VerKeyVRF, hashKeyVRF)
+import           MockTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, HashHeader, InstallerHash,
+                     KeyHash, KeyPair, MultiSig, SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId,
+                     TxIn, VKey, VKeyES, VRFKeyHash, VerKeyVRF, hashKeyVRF)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Unsafe.Coerce (unsafeCoerce)
 import           UTxO (makeGenWitnessVKey, makeWitnessVKey)
@@ -137,6 +139,10 @@ testKey1 :: KeyPair
 testKey1 = KeyPair vk sk
   where (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
+testKey2 :: KeyPair
+testKey2 = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (0, 0, 0, 0, 2)
+
 testKey1Token :: Tokens -> Tokens
 testKey1Token = e
   where
@@ -150,10 +156,10 @@ testKey1SigToken = e
     Encoding e = encodeSignedDSIGN s
 
 testKeyHash1 :: KeyHash
-testKeyHash1 = (hashKey . snd . mkKeyPair) (0, 0, 0, 0, 1)
+testKeyHash1 = (hashKey . vKey) testKey1
 
 testKeyHash2 :: KeyHash
-testKeyHash2 = (hashKey . snd . mkKeyPair) (0, 0, 0, 0, 2)
+testKeyHash2 = (hashKey . vKey) testKey2
 
 testKESKeys :: (SKeyES, VKeyES)
 testKESKeys = mkKESKeyPair (0, 0, 0, 0, 3)
@@ -173,11 +179,32 @@ testScript = RequireSignature $ undiscriminateKeyHash testKeyHash1
 testScriptHash :: ScriptHash
 testScriptHash = hashScript testScript
 
+testScript2 :: MultiSig
+testScript2 = RequireSignature $ undiscriminateKeyHash testKeyHash2
+
 testScriptHash2 :: ScriptHash
-testScriptHash2 = hashScript (RequireSignature $ undiscriminateKeyHash testKeyHash2)
+testScriptHash2 = hashScript testScript2
 
 testHeaderHash :: HashHeader
 testHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
+
+testBHB :: BHBody
+testBHB = BHBody
+          { bheaderPrev    = testHeaderHash
+          , bheaderVk      = vKey testKey1
+          , bheaderVrfVk   = snd testVRF
+          , bheaderSlotNo  = SlotNo 33
+          , bheaderEta     = coerce $ mkCertifiedVRF (WithResult
+            (mkSeed seedEta (SlotNo 33) (mkNonce 0) testHeaderHash)1) (fst testVRF)
+          , bheaderL       = coerce $ mkCertifiedVRF (WithResult
+            (mkSeed seedL (SlotNo 33) (mkNonce 0) testHeaderHash) 1) (fst testVRF)
+          , bsize          = 0
+          , bheaderBlockNo = BlockNo 44
+          , bhash          = bhbHash $ TxSeq Seq.empty
+          , bheaderOCert   = OCert (snd testKESKeys) (vKey testKey1)
+            0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
+          , bprotvert      = ProtVer 0 0 0
+          }
 
 data ToTokens where
   T :: (Tokens -> Tokens) -> ToTokens
@@ -734,28 +761,82 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "block_header"
-  , let bhb = BHBody
-              { bheaderPrev    = testHeaderHash
-              , bheaderVk      = vKey testKey1
-              , bheaderVrfVk   = snd testVRF
-              , bheaderSlotNo  = SlotNo 33
-              , bheaderEta     = coerce $ mkCertifiedVRF (WithResult
-                (mkSeed seedEta (SlotNo 33) (mkNonce 0) testHeaderHash)1) (fst testVRF)
-              , bheaderL       = coerce $ mkCertifiedVRF (WithResult
-                (mkSeed seedL (SlotNo 33) (mkNonce 0) testHeaderHash) 1) (fst testVRF)
-              , bsize          = 0
-              , bheaderBlockNo = BlockNo 44
-              , bhash          = bhbHash $ TxSeq Seq.empty
-              , bheaderOCert   = OCert (snd testKESKeys) (vKey testKey1)
-                0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
-              , bprotvert      = ProtVer 0 0 0
-              }
-        sig = Keys.signKES (fst testKESKeys) bhb 0
+  , let sig = Keys.signKES (fst testKESKeys) testBHB 0
     in
     checkEncodingCBOR "block_header"
-    (BHeader bhb sig)
+    (BHeader testBHB sig)
     ( (T $ TkListLen 2)
-        <> S bhb
+        <> S testBHB
         <> S sig
+    )
+
+    -- checkEncodingCBOR "empty_block"
+  , let sig = Keys.signKES (fst testKESKeys) testBHB 0
+        bh = BHeader testBHB sig
+        txns = TxSeq mempty
+    in
+    checkEncodingCBOR "empty_block"
+    (Block bh txns)
+    ( (T $ TkListLen 3)
+        <> S bh
+        <> T (TkListLen 0 . TkListLen 0)
+    )
+
+    -- checkEncodingCBOR "rich_block"
+  , let sig = Keys.signKES (fst testKESKeys) testBHB 0
+        bh = BHeader testBHB sig
+        tin = Set.fromList [TxIn genesisId 1]
+        tout = [TxOut testAddrE (Coin 2)]
+        txb s = TxBody tin tout Seq.empty Map.empty (Coin 9) (SlotNo s) emptyUpdate
+        txb1 = txb 500
+        txb2 = txb 501
+        txb3 = txb 502
+        txb4 = txb 503
+        txb5 = txb 504
+        w1 = makeWitnessVKey txb1 testKey1
+        w2 = makeWitnessVKey txb1 testKey2
+        ws = Set.fromList [w1, w2]
+        tx1 = Tx txb1 (Set.singleton w1) mempty
+        tx2 = Tx txb2 ws mempty
+        tx3 = Tx txb3 mempty (Map.singleton (hashScript testScript) testScript)
+        ss = Map.fromList [ (hashScript testScript, testScript)
+                          , (hashScript testScript2, testScript2)]
+        tx4 = Tx txb4 mempty ss
+        tx5 = Tx txb5 ws ss
+        txns = TxSeq $ Seq.fromList [tx1, tx2, tx3, tx4, tx5]
+    in
+    checkEncodingCBOR "rich_block"
+    (Block bh txns)
+    ( (T $ TkListLen 3)
+        -- header
+        <> S bh
+
+        -- bodies
+        <> T (TkListLen 5)
+        <> S txb1 <> S txb2 <> S txb3 <> S txb4 <> S txb5
+
+        -- witnesses
+        <> T (TkListLen 5)
+          -- tx 1, one key
+          <> T (TkListLen 2 . TkWord 0)
+          <> S w1
+
+          -- tx 2, two keys
+          <> T (TkListLen 2 . TkWord 1)
+          <> S ws
+
+          -- tx 3, one script
+          <> T (TkListLen 3 . TkWord 2)
+          <> S (hashScript testScript :: ScriptHash)
+          <> S testScript
+
+          -- tx 4, two scripts
+          <> T (TkListLen 2 . TkWord 3)
+          <> S ss
+
+          -- tx 5, two keys and two scripts
+          <> T (TkListLen 3 . TkWord 4)
+          <> S ws
+          <> S ss
     )
  ]

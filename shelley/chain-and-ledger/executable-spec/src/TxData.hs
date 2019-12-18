@@ -16,15 +16,13 @@ module TxData
   where
 
 import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
-                     decodeListLen, decodeListLenOrIndef, decodeMapLenOrIndef, decodeWord,
-                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord,
-                     enforceSize, matchSize)
+                     decodeListLen, decodeMapLenOrIndef, decodeWord, encodeListLen, encodeMapLen,
+                     encodeWord, enforceSize, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), Word64)
 import           Control.Monad (replicateM, unless)
 import           Lens.Micro.TH (makeLenses)
 
-import           Data.Foldable (foldMap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
@@ -37,7 +35,7 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (UnitInterval, invalidKey)
+import           BaseTypes (CborSeq (..), UnitInterval, invalidKey)
 import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
@@ -421,27 +419,6 @@ instance
       <> toCBOR (_body tx)
       <> toCBOR (_witnessVKeySet tx)
       <> toCBOR (_witnessMSigMap tx)
-
-newtype CborSeq a = CborSeq { unwrapCborSeq :: Seq a }
-
-instance ToCBOR a => ToCBOR (CborSeq a) where
-  toCBOR (CborSeq xs) =
-    let l = fromIntegral $ Seq.length xs
-        contents = foldMap toCBOR xs
-    in
-    if l <= 23
-    then encodeListLen l <> contents
-    else encodeListLenIndef <> contents <> encodeBreak
-
-instance FromCBOR a => FromCBOR (CborSeq a) where
-  fromCBOR = CborSeq . Seq.fromList <$> do
-    decodeListLenOrIndef >>= \case
-      Just len -> replicateM len fromCBOR
-      Nothing -> loop [] (not <$> decodeBreakOr) fromCBOR
-    where
-    loop acc condition action = condition >>= \case
-      False -> pure acc
-      True -> action >>= \v -> loop (v:acc) condition action
 
 instance
   (Crypto crypto)
