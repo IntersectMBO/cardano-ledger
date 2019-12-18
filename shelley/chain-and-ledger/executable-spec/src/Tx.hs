@@ -257,6 +257,10 @@ extractGenKeyHash
   -> [AnyKeyHash crypto]
 extractGenKeyHash = map undiscriminateKeyHash
 
+-- | make validation data to pass to Plutus validator
+validationData :: UTxO -> Tx -> CurItem -> Data
+validationData _ _ _ = 1
+
 -- Lenses
 
 makeLenses ''Tx
