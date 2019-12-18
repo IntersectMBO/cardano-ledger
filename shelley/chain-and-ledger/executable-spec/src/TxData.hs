@@ -316,7 +316,7 @@ data TxBody crypto
       , _txfee    :: Coin
       , _ttl      :: SlotNo
       , _txUpdate :: Update crypto
-      , _txlst    :: Slot
+      , _txlst    :: SlotNo
       , _forged   :: Value (ScriptHash crypto) (ScriptHash crypto)
       , _txexunits:: ExUnits
       , _hashPP   :: Maybe (HashPP crypto)
@@ -650,10 +650,14 @@ instance
   toCBOR txbody =
 <<<<<<< HEAD
     let l = toList $
-              single (encodeWord 0 <> toCBOR (_inputs txbody))
+              single (encodeWord 0 <> toCBOR (_txinputs txbody))
             . single (encodeWord 1 <> toCBOR (_outputs txbody))
             . single (encodeWord 2 <> toCBOR (_txfee txbody))
             . single (encodeWord 3 <> toCBOR (_ttl txbody))
+            . single (encodeWord 4 <> toCBOR (_txlst txbody))
+            . single (encodeWord 5 <> toCBOR (_forged txbody))
+            . single (encodeWord 6 <> toCBOR (_txexunits txbody))
+            . single (encodeWord 7 <> toCBOR (_hashPP txbody))
             . (if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs)))
             . (if null ws then none else single (encodeWord 5 <> toCBOR ws))
             . (if updateNull us then none else single (encodeWord 6 <> toCBOR us))
@@ -684,7 +688,7 @@ instance
    fromCBOR = do
      mapParts <- mapHelper $
        decodeWord >>= \case
-         0 -> fromCBOR                     >>= \x -> pure (0, \t -> t { _inputs   = x })
+         0 -> fromCBOR                     >>= \x -> pure (0, \t -> t { _txinputs   = x })
          1 -> fromCBOR                     >>= \x -> pure (1, \t -> t { _outputs  = x })
          2 -> fromCBOR                     >>= \x -> pure (2, \t -> t { _txfee    = x })
          3 -> fromCBOR                     >>= \x -> pure (3, \t -> t { _ttl      = x })
@@ -706,13 +710,17 @@ instance
      pure $ foldr ($) basebody (snd <$> mapParts)
      where
        basebody = TxBody
-          { _inputs   = Set.empty
-          , _outputs  = []
-          , _txfee    = Coin 0
-          , _ttl      = SlotNo 0
-          , _certs    = Seq.empty
-          , _wdrls    = Map.empty
-          , _txUpdate = emptyUpdate
+          { _txinputs   = Set.empty
+          , _outputs   = []
+          , _txfee     = Coin 0
+          , _ttl       = SlotNo 0
+          , _certs     = Seq.empty
+          , _wdrls     = Map.empty
+          , _txUpdate  = emptyUpdate
+          , _txlst     = SlotNo 0
+          , _forged    = defaultValue
+          , _txexunits = PLCUnits (ExUnitsPLC 0 0)
+          , _hashPP    = hash emptyPlutusPP
           }
 
 instance (Crypto crypto) =>

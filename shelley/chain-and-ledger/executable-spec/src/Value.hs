@@ -33,5 +33,8 @@ type Quantity = Integer
 type Value currencyId tokenId = Map currencyId (Map tokenId Quantity)
 --  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR)
 
+defaultValue :: Value
+defaultValue = 
+
 -- | Overloaded functions for operations on underlying numeric Quantity in
 -- | the Value type (in a scalar way)
