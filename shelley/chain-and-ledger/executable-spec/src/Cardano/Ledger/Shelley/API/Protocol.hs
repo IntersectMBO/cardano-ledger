@@ -13,7 +13,8 @@
 module Cardano.Ledger.Shelley.API.Protocol
   ( STS.Prtcl.PrtclEnv,
     mkPrtclEnv,
-    LedgerView,
+    LedgerView (..),
+    currentLedgerView,
     -- $timetravel
     futureLedgerView,
   )
@@ -22,6 +23,7 @@ where
 import BaseTypes (Globals (epochInfo))
 import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.Crypto
+import Cardano.Prelude (NoUnexpectedThunks (..))
 import Cardano.Slotting.EpochInfo (epochInfoEpoch)
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -55,6 +57,8 @@ data LedgerView crypto
         lvGenDelegs :: GenDelegs crypto
       }
   deriving (Eq, Show, Generic)
+
+instance NoUnexpectedThunks (LedgerView crypto)
 
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
@@ -95,6 +99,10 @@ view
           . _delegationState
           $ esLState nesEs
     }
+
+-- | Alias of 'view' for export
+currentLedgerView :: ShelleyState crypto -> LedgerView crypto
+currentLedgerView = view
 
 -- $timetravel
 --
