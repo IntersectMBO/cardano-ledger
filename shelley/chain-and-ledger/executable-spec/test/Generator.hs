@@ -57,13 +57,14 @@ import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern F
                      pattern InputSetEmptyUTxO, pattern ValueNotConservedUTxO)
 import           STS.Utxow (pattern InvalidWitnessesUTXOW, pattern MissingScriptWitnessesUTXOW,
                      pattern MissingVKeyWitnessesUTXOW, PredicateFailure (..))
+import           Test.Utils
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, body)
-import           TxData (pattern AddrBase, pattern DeRegKey, pattern Delegate, pattern Delegation,
-                     pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..))
+import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DCertPool, pattern DeRegKey,
+                     pattern Delegate, pattern Delegation, pattern KeyHashObj, pattern RegKey,
+                     pattern RetirePool, StakeCreds (..))
 import           Updates
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 import           Validation (ValidationError (..), Validity (..))
-import           Test.Utils
 
 import           MockTypes
 import           Mutator
@@ -318,16 +319,16 @@ genDelegationData keys epoch =
 
 genDCertRegKey :: KeyPairs -> Gen DCert
 genDCertRegKey keys =
-  RegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
+  DCertDeleg . RegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
 genDCertDeRegKey :: KeyPairs -> Gen DCert
 genDCertDeRegKey keys =
-    DeRegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
+    DCertDeleg . DeRegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
 genDCertRetirePool :: KeyPairs -> EpochNo -> Gen DCert
 genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
-  pure $ RetirePool (hashKey key) epoch
+  pure $ DCertPool $ RetirePool (hashKey key) epoch
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
@@ -337,7 +338,7 @@ genDelegation keys d = do
        where (StakeCreds stkCreds') = d ^. dstate . stkCreds
 
 genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
-genDCertDelegate keys ds = Delegate <$> genDelegation keys ds
+genDCertDelegate keys ds = (DCertDeleg . Delegate) <$> genDelegation keys ds
 
 -- |In the case where a transaction is valid for a given ledger state,
 -- apply the transaction as a state transition function on the ledger state.

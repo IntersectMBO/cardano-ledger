@@ -109,7 +109,8 @@ import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Delegation.Certificates (delegCWitness, poolCWitness, requiresVKeyWitness)
+import           Delegation.Certificates (delegCWitness, genesisCWitness, poolCWitness,
+                     requiresVKeyWitness)
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
                      baseStake, emptySnapShots, maxPool, poolStake, ptrStake, rewardStake)
 import           GHC.Generics (Generic)
@@ -122,7 +123,7 @@ import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDec
                      keyMinRefund, minfeeA, minfeeB)
 import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch, epochInfoFirst,
                      epochInfoSize, (+*), (-*))
-import           Tx (extractKeyHash)
+import           Tx (extractGenKeyHash, extractKeyHash)
 import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCert (..), PoolParams,
                      Ptr (..), RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..),
                      TxIn (..), TxOut (..), body, certs, getRwdCred, inputs, poolOwners,
@@ -553,12 +554,14 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
       Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (txbody ^. wdrls))
     owners = foldl Set.union Set.empty
                [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | DCertPool (RegPool pool) <- toList $ txbody ^. certs]
-    certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK certificates)
+    certAuthors = Set.fromList $ foldl (++) [] $ fmap getCertHK certificates
     getCertHK = cwitness
-    cwitness (DCertDeleg dc) = delegCWitness dc -- | key reg requires no witness
-                               -- but this is already filtered out before the
-                               -- call to `cwitness`
-    cwitness (DCertPool pc) = poolCWitness pc
+
+    -- key reg requires no witness but this is already filtered out before the
+    -- call to `cwitness`
+    cwitness (DCertDeleg dc) = extractKeyHash $ [delegCWitness dc]
+    cwitness (DCertPool pc) = extractKeyHash $ [poolCWitness pc]
+    cwitness (DCertGenesis gc) = extractGenKeyHash $ [genesisCWitness gc]
     cwitness c = error $ show c ++ " does not have a witness"
 
     certificates = filter requiresVKeyWitness (toList $ txbody ^. certs)

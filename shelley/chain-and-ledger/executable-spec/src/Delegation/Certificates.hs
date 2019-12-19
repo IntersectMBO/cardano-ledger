@@ -6,6 +6,10 @@
 
 module Delegation.Certificates
   ( DCert(..)
+  , DelegCert(..)
+  , PoolCert(..)
+  , GenesisDelegate(..)
+  , MIRCert(..)
   , StakeCreds(..)
   , StakePools(..)
   , PoolDistr(..)

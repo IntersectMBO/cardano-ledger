@@ -22,9 +22,10 @@ import           Coin
 import           Delegation.Certificates (pattern Delegate, pattern RegKey, pattern RegPool,
                      pattern RetirePool, StakeCreds (..), StakePools (..))
 import           Generator (asStateTransition)
-import           TxData (pattern AddrBase, Credential (..), Delegation (..), pattern PoolParams,
-                     pattern Ptr, pattern RewardAcnt, _poolCost, _poolMargin, _poolOwners,
-                     _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
+import           TxData (pattern AddrBase, Credential (..), pattern DCertDeleg, pattern DCertPool,
+                     Delegation (..), pattern PoolParams, pattern Ptr, pattern RewardAcnt,
+                     _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt,
+                     _poolVrf)
 import           Validation (ValidationError (..))
 
 import           Keys (pattern KeyPair, hashKey, vKey)
@@ -267,9 +268,9 @@ tx2 :: Tx
 tx2 = aliceGivesBobLovelace
         (TxIn genesisId 0)
         (Coin 3000) (Coin 1300) (Coin 3*100) (Coin 0)
-        [ RegKey $ (KeyHashObj . hashKey) $ vKey aliceStake
-        , RegKey $ (KeyHashObj . hashKey) $ vKey bobStake
-        , RegKey $ (KeyHashObj . hashKey) $ vKey stakePoolKey1]
+        [ DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey aliceStake)
+        , DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey bobStake)
+        , DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey stakePoolKey1)]
         (SlotNo 100)
         [alicePay, aliceStake, bobStake, stakePoolKey1]
 
@@ -288,10 +289,10 @@ tx3Body :: TxBody
 tx3Body = TxBody
           (Set.fromList [TxIn (txid $ tx2 ^. body) 0])
           [ TxOut aliceAddr (Coin 3950) ]
-          (fromList [ RegPool stakePool
-                    , Delegate (Delegation
-                                (KeyHashObj $ hashKey $ vKey aliceStake)
-                                (hashKey $ vKey stakePoolKey1))])
+          (fromList [ DCertPool (RegPool stakePool)
+                    , DCertDeleg (Delegate (Delegation
+                                            (KeyHashObj $ hashKey $ vKey aliceStake)
+                                            (hashKey $ vKey stakePoolKey1)))])
           Map.empty
           (Coin 1200)
           (SlotNo 100)
@@ -359,7 +360,7 @@ tx4Body :: TxBody
 tx4Body = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
-          (fromList [ RegPool stakePoolUpdate ])
+          (fromList [ DCertPool (RegPool stakePoolUpdate) ])
           Map.empty
           (Coin 1000)
           (SlotNo 100)
@@ -392,7 +393,7 @@ tx5Body :: EpochNo -> TxBody
 tx5Body e = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
           [ TxOut aliceAddr (Coin 2950) ]
-          (fromList [ RetirePool (hashKey $ vKey stakePoolKey1) e ])
+          (fromList [ DCertPool (RetirePool (hashKey $ vKey stakePoolKey1) e) ])
           Map.empty
           (Coin 1000)
           (SlotNo 100)

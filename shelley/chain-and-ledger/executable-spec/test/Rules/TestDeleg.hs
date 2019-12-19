@@ -32,8 +32,8 @@ import           Ledger.Core (dom, range, (∈), (∉), (◁))
 import           Coin (Coin, pattern Coin)
 import           LedgerState (_delegations, _irwd, _rewards, _stkCreds)
 import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
-import           TxData (pattern DeRegKey, pattern Delegate, pattern Delegation,
-                     pattern InstantaneousRewards, pattern RegKey)
+import           TxData (pattern DCertDeleg, pattern DCertMir, pattern DeRegKey, pattern Delegate,
+                     pattern Delegation, pattern MIRCert, pattern RegKey)
 
 -------------------------------
 -- helper accessor functions --
@@ -60,7 +60,7 @@ rewardZeroAfterReg tr =
   conjoin $
     map credNewlyRegisteredAndRewardZero tr
 
-  where credNewlyRegisteredAndRewardZero (SourceSignalTarget d d' (RegKey hk)) =
+  where credNewlyRegisteredAndRewardZero (SourceSignalTarget d d' (DCertDeleg (RegKey hk))) =
           counterexample "a newly registered key should have a reward of 0"
           ((hk ∉ getStDelegs d) ==>
            (hk ∈ getStDelegs d'
@@ -78,7 +78,7 @@ credentialRemovedAfterDereg tr =
 
   where
     removedDeregCredential SourceSignalTarget
-                             { signal = DeRegKey cred
+                             { signal = DCertDeleg (DeRegKey cred)
                              , target = d'} =
       counterexample "a deregistered stake key should not be in the reward and delegation mappings"
         ( cred ∉ getStDelegs d'
@@ -98,7 +98,7 @@ credentialMappingAfterDelegation tr =
 
   where
     delegatedCredential SourceSignalTarget
-                          { signal = Delegate (Delegation cred to)
+                          { signal = DCertDeleg (Delegate (Delegation cred to))
                           , target = d'} =
       let credImage = range (Set.singleton cred ◁ getDelegations d') in
          cred ∈ getStDelegs d'
@@ -141,7 +141,7 @@ instantaneousRewardsAdded ssts =
     checkMIR :: SourceSignalTarget DELEG -> Property
     checkMIR (SourceSignalTarget _ t sig) =
       case sig of
-        InstantaneousRewards irwd -> property $ Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (_irwd t)
+        DCertMir (MIRCert irwd) -> property $ Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (_irwd t)
         _                         -> property ()
 
 -- | Check that an accepted MIR certificate adds the overall value in the
@@ -156,7 +156,7 @@ instantaneousRewardsValue ssts =
     checkMIR :: SourceSignalTarget DELEG -> Property
     checkMIR (SourceSignalTarget s t sig) =
       case sig of
-        InstantaneousRewards irwd ->
+        DCertMir (MIRCert irwd) ->
           property $
           ((Map.foldl (+) (Coin 0) $ _irwd s Map.\\ irwd) +
            (Map.foldl (+) (Coin 0) $ irwd) ==

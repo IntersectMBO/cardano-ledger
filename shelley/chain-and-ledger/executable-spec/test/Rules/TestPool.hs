@@ -20,13 +20,13 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      signal, source, target)
 
 import           BaseTypes ((==>))
-import           Delegation.Certificates (cwitness)
+import           Delegation.Certificates (poolCWitness)
 import           LedgerState (pattern PState, pParams, retiring, stPools, _retiring, _stPools)
 import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (EpochNo (..))
 import           STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
-import           TxData (pattern KeyHashObj, pattern RegPool, pattern RetirePool,
+import           TxData (pattern DCertPool, pattern KeyHashObj, pattern RegPool, pattern RetirePool,
                      pattern StakePools, poolPubKey)
 
 import           Ledger.Core (dom, (∈), (∉))
@@ -65,9 +65,9 @@ rewardZeroAfterReg ssts =
     map registeredPoolNotRetiring ssts
   where
     registeredPoolNotRetiring SourceSignalTarget
-                                { signal = c@(RegPool _)
+                                { signal = (DCertPool c@(RegPool _))
                                 , target = p'} =
-      case cwitness c of
+      case poolCWitness c of
         KeyHashObj certWit -> let StakePools stp = getStPools p' in
                                   (  certWit ∈ dom stp
                                   && certWit ∉ dom (getRetiring p'))
@@ -88,8 +88,8 @@ poolRetireInEpoch env ssts =
     registeredPoolRetired s pp SourceSignalTarget
                                 { source = p
                                 , target = p'
-                                , signal = c@(RetirePool _ e)} =
-      case cwitness c of
+                                , signal = (DCertPool c@(RetirePool _ e))} =
+      case poolCWitness c of
         KeyHashObj certWit -> let StakePools stp  = getStPools p
                                   StakePools stp' = getStPools p'
                                   cepoch          = epochFromSlotNo s
@@ -116,7 +116,7 @@ registeredPoolIsAdded env ssts =
                -> Property
   addedRegPool sst =
     case signal sst of
-      RegPool poolParams -> check poolParams
+      DCertPool (RegPool poolParams) -> check poolParams
       _ -> property ()
    where
     check :: PoolParams -> Property
@@ -161,7 +161,7 @@ poolIsMarkedForRetirement ssts =
     case signal sst of
       -- We omit a well-formedness check for `epoch`, because the executable
       -- spec will throw a PredicateFailure in that case.
-      RetirePool hk _epoch -> wasRemoved hk
+      DCertPool (RetirePool hk _epoch) -> wasRemoved hk
       _ -> property ()
    where
     wasRemoved :: KeyHash -> Property

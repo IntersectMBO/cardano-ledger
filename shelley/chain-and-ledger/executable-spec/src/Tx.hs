@@ -28,11 +28,12 @@ module Tx
   , txwitsScript
   , extractKeyHash
   , extractScriptHash
+  , extractGenKeyHash
   )
 where
 
 
-import           Keys (AnyKeyHash, undiscriminateKeyHash)
+import           Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
@@ -122,3 +123,8 @@ extractScriptHash =
   mapMaybe (\case
                 ScriptHashObj hk -> Just hk
                 _ -> Nothing)
+
+extractGenKeyHash
+  :: [GenKeyHash crypto]
+  -> [AnyKeyHash crypto]
+extractGenKeyHash = map undiscriminateKeyHash

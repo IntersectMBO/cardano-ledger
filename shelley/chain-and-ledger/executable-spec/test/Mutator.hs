@@ -31,15 +31,16 @@ import qualified Hedgehog.Range as Range
 import           BaseTypes
 import           Coin
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
-                     pattern RegPool, pattern RetirePool)
+                     pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
+                     pattern RetirePool)
 import           Keys (hashKey, vKey)
 import           Updates
 
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, _body, _certs,
                      _inputs, _outputs, _ttl, _txfee, _wdrls, _witnessMSigMap, _witnessVKeySet)
-import           TxData (Credential (..), pattern Delegation, PoolParams (..))
+import           TxData (Credential (..), pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation, PoolParams (..))
 
 import           MockTypes
 
@@ -156,35 +157,35 @@ mutateEpoch lower upper (EpochNo val) = EpochNo . fromIntegral
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
 mutateDCert :: KeyPairs -> DPState -> DCert -> Gen DCert
-mutateDCert keys _ (RegKey _) =
-  RegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
+mutateDCert keys _ (DCertDeleg (RegKey _)) =
+  DCertDeleg . RegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 
-mutateDCert keys _ (DeRegKey _) =
-  DeRegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
+mutateDCert keys _ (DCertDeleg (DeRegKey _)) =
+  DCertDeleg . DeRegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 
-mutateDCert keys _ (RetirePool _ epoch@(EpochNo e)) = do
+mutateDCert keys _ (DCertPool (RetirePool _ epoch@(EpochNo e))) = do
     epoch' <- mutateEpoch 0 (fromIntegral e) epoch
     key'   <- getAnyStakeKey keys
-    pure $ RetirePool (hashKey key') epoch'
+    pure $ DCertPool (RetirePool (hashKey key') epoch')
 
-mutateDCert keys _ (RegPool (PoolParams _ vrfHk pledge cost margin rwdacnt owners)) = do
+mutateDCert keys _ (DCertPool (RegPool (PoolParams _ vrfHk pledge cost margin rwdacnt owners))) = do
   key'    <- getAnyStakeKey keys
   cost'   <- mutateCoin 0 100 cost
   p'      <- mutateNat 0 100 (fromIntegral $ numerator $ intervalValue margin)
   let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
-  pure $ RegPool (PoolParams (hashKey key') vrfHk pledge cost' interval rwdacnt owners)
+  pure $ (DCertPool . RegPool) (PoolParams (hashKey key') vrfHk pledge cost' interval rwdacnt owners)
 
-mutateDCert keys _ (Delegate (Delegation _ _)) = do
+mutateDCert keys _ (DCertDeleg (Delegate (Delegation _ _))) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
-  pure $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (hashKey delegatee')
+  pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (hashKey delegatee')
 
-mutateDCert keys _ (GenesisDelegate (gk, _)) = do
+mutateDCert keys _ (DCertGenesis (GenesisDelegate (gk, _))) = do
   _delegatee <- getAnyStakeKey keys
-  pure $ GenesisDelegate (gk, hashKey _delegatee)
+  pure $ DCertGenesis $ GenesisDelegate (gk, hashKey _delegatee)
 
-mutateDCert _ _ (InstantaneousRewards credCoinMap) = do
+mutateDCert _ _ (DCertMir (MIRCert credCoinMap)) = do
   let credCoinList = Map.toList credCoinMap
       coins = List.map snd credCoinList
   coins' <- mapM (mutateCoin 1 100) coins
-  pure $ InstantaneousRewards $ Map.fromList $ zip (List.map fst credCoinList) coins'
+  pure $ DCertMir $ MIRCert $ Map.fromList $ zip (List.map fst credCoinList) coins'
