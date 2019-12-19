@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,13 +17,15 @@ module STS.Bbody
   )
 where
 
-import           Data.Set (Set)
-
-import           Control.State.Transition
 import           BaseTypes
 import           BlockChain
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
+import           Control.State.Transition
+import           Data.Set (Set)
 import           EpochBoundary
+import           GHC.Generics (Generic)
 import           Keys
 import           Ledger.Core ((∈))
 import           LedgerState
@@ -29,7 +33,6 @@ import           PParams
 import           Slot
 import           STS.Ledgers
 import           Tx
-import           Cardano.Ledger.Shelley.Crypto
 
 data BBODY crypto
 
@@ -64,10 +67,12 @@ instance
     = WrongBlockBodySizeBBODY
     | InvalidBodyHashBBODY
     | LedgersFailure (PredicateFailure (LEDGERS crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [bbodyTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (BBODY crypto))
 
 bbodyTransition
   :: forall crypto

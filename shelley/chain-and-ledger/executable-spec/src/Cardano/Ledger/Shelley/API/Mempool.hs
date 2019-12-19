@@ -21,7 +21,7 @@ import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.Crypto
 import Control.Arrow (left)
 import Control.Monad.Except
-import Control.Monad.Reader.Class
+import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Sequence (Seq)
 import qualified LedgerState
@@ -80,17 +80,16 @@ applyTxs ::
   forall crypto m.
   ( Crypto crypto,
     MonadError (ApplyTxError crypto) m,
-    DSIGN.Signable (DSIGN crypto) (Tx.TxBody crypto),
-    MonadReader Globals m
+    DSIGN.Signable (DSIGN crypto) (Tx.TxBody crypto)
   ) =>
+  Globals ->
   MempoolEnv ->
   MempoolState crypto ->
   Seq (Tx crypto) ->
   m (MempoolState crypto)
-applyTxs env state txs = do
-  res <-
-    liftShelleyBase . applySTS @(LEDGERS crypto) $
-      TRC (env, state, txs)
-  liftEither
+applyTxs globals env state txs = let
+    res = flip runReader globals
+        . applySTS @(LEDGERS crypto) $ TRC (env, state, txs)
+  in liftEither
     . left (ApplyTxError . join)
     $ res

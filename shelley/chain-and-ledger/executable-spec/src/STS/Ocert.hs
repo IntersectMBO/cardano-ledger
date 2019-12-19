@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -8,17 +10,18 @@ module STS.Ocert
   )
 where
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           Numeric.Natural (Natural)
 import           BaseTypes
 import           BlockChain
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks)
+import           Control.State.Transition
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           GHC.Generics (Generic)
 import           Keys
 import           Ledger.Core ((⨃))
+import           Numeric.Natural (Natural)
 import           OCert
-
-import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
 
 data OCERT crypto
 
@@ -42,10 +45,12 @@ instance
     | InvalidSignatureOCERT
     | InvalidKesSignatureOCERT
     | NoCounterForKeyHashOCERT
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (OCERT crypto))
 
 ocertTransition
   :: ( Crypto crypto

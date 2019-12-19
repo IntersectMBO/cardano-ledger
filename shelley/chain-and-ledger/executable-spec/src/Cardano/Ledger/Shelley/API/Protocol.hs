@@ -13,7 +13,8 @@
 module Cardano.Ledger.Shelley.API.Protocol
   ( STS.Prtcl.PrtclEnv,
     mkPrtclEnv,
-    LedgerView,
+    LedgerView (..),
+    currentLedgerView,
     -- $timetravel
     futureLedgerView,
   )
@@ -22,10 +23,11 @@ where
 import BaseTypes (Globals (epochInfo))
 import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.Crypto
+import Cardano.Prelude (NoUnexpectedThunks (..))
 import Cardano.Slotting.EpochInfo (epochInfoEpoch)
 import Control.Arrow (left, right)
 import Control.Monad.Except
-import Control.Monad.Reader.Class
+import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
@@ -55,6 +57,8 @@ data LedgerView crypto
         lvGenDelegs :: GenDelegs crypto
       }
   deriving (Eq, Show, Generic)
+
+instance NoUnexpectedThunks (LedgerView crypto)
 
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
@@ -95,6 +99,10 @@ view
           . _delegationState
           $ esLState nesEs
     }
+
+-- | Alias of 'view' for export
+currentLedgerView :: ShelleyState crypto -> LedgerView crypto
+currentLedgerView = view
 
 -- $timetravel
 --
@@ -295,25 +303,23 @@ newtype FutureLedgerViewError crypto
 futureLedgerView ::
   forall crypto m.
   ( Crypto crypto,
-    MonadError (FutureLedgerViewError crypto) m,
-    MonadReader Globals m
+    MonadError (FutureLedgerViewError crypto) m
   ) =>
+  Globals ->
   ShelleyState crypto ->
   SlotNo ->
   m (LedgerView crypto)
-futureLedgerView ss slot = do
-  epoch <- do
-    ei <- asks epochInfo
-    pure . runIdentity $ epochInfoEpoch ei slot
-  res <-
-    liftShelleyBase
-      . applySTS @(NEWEPOCH crypto)
-      $ TRC (mkNewEpochEnv, ss, epoch)
+futureLedgerView globals ss slot =
   liftEither
     . right view
     . left (FutureLedgerViewError . join)
     $ res
   where
+    epoch = runIdentity $ epochInfoEpoch (epochInfo globals) slot
+    res =
+      flip runReader globals
+        . applySTS @(NEWEPOCH crypto)
+        $ TRC (mkNewEpochEnv, ss, epoch)
     mkNewEpochEnv =
       NewEpochEnv
         slot

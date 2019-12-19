@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,9 +13,11 @@ module STS.Epoch
 where
 
 import           BaseTypes
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           EpochBoundary
+import           GHC.Generics (Generic)
 import           LedgerState (pattern DPState, EpochState, pattern EpochState, emptyAccount,
                      emptyLedgerState, esAccountState, esLState, esPp, esSnapshots,
                      _delegationState, _ups, _utxoState)
@@ -38,10 +42,12 @@ instance STS (EPOCH crypto) where
       = PoolReapFailure (PredicateFailure (POOLREAP crypto))
       | SnapFailure (PredicateFailure (SNAP crypto))
       | NewPpFailure (PredicateFailure (NEWPP crypto))
-      deriving (Show, Eq)
+      deriving (Show, Generic, Eq)
 
     initialRules = [ initialEpoch ]
     transitionRules = [ epochTransition ]
+
+instance NoUnexpectedThunks (PredicateFailure (EPOCH crypto))
 
 initialEpoch :: InitialRule (EPOCH crypto)
 initialEpoch =

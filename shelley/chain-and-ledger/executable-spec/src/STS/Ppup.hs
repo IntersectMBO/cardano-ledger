@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -8,21 +10,21 @@ module STS.Ppup
   )
 where
 
-import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
-
 import           BaseTypes
 import           BlockChain
-import           Keys
-import           Ledger.Core (dom, (⊆), (⨃))
-import           PParams
-import           Slot
-import           Updates
-
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
 import           Data.Ix (inRange)
+import qualified Data.Map.Strict as Map
+import           Data.Set (Set)
+import           GHC.Generics (Generic)
+import           Keys
+import           Ledger.Core (dom, (⊆), (⨃))
 import           Numeric.Natural (Natural)
+import           PParams
+import           Slot
+import           Updates
 
 data PPUP crypto
 
@@ -40,11 +42,13 @@ instance STS (PPUP crypto) where
     | PPUpdateEmpty
     | PPUpdateNonEmpty
     | PVCannotFollowPPUP
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = []
 
   transitionRules = [ppupTransitionEmpty, ppupTransitionNonEmpty]
+
+instance NoUnexpectedThunks (PredicateFailure (PPUP crypto))
 
 pvCanFollow :: (Natural, Natural, Natural) -> Ppm -> Bool
 pvCanFollow (mjp, mip, ap) (ProtocolVersion (mjn, mn, an))

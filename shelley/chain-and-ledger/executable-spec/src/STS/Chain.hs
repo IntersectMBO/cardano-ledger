@@ -33,8 +33,8 @@ import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
 
 import           STS.Bbody
-import           STS.Tick
 import           STS.Prtcl
+import           STS.Tick
 
 data CHAIN crypto
 

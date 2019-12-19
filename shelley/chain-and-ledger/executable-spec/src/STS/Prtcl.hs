@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -87,7 +88,7 @@ instance
     | WrongBlockSequencePRTCL
     | OverlayFailure (PredicateFailure (OVERLAY crypto))
     | UpdnFailure (PredicateFailure (UPDN crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = []
 
@@ -118,6 +119,8 @@ prtclTransition = do
         $ TRC (OverlayEnv pp osched eta0' pd dms, cs, bh)
 
   pure $ PrtclState cs' (bhHash bh) slot eta0' etaV' etaC' etaH'
+
+instance NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
 
 instance
   ( Crypto crypto

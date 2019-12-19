@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -12,6 +14,7 @@ where
 
 import           BaseTypes
 import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
@@ -21,6 +24,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import           Delegation.Certificates
 import           EpochBoundary
+import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import           LedgerState
 import           Slot
@@ -44,7 +48,7 @@ instance
 
   data PredicateFailure (NEWEPOCH crypto)
     = EpochFailure (PredicateFailure (EPOCH crypto))
-    deriving (Show, Eq)
+    deriving (Show, Generic, Eq)
 
   initialRules =
     [ pure $
@@ -59,6 +63,8 @@ instance
     ]
 
   transitionRules = [newEpochTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (NEWEPOCH crypto))
 
 newEpochTransition ::
   forall crypto.
@@ -75,7 +81,7 @@ newEpochTransition = do
     then pure src
     else do
       let es_ = case ru of
-            Nothing -> es
+            Nothing  -> es
             Just ru' -> applyRUpd ru' es
       es' <- trans @(EPOCH crypto) $ TRC ((), es_, e)
       let EpochState _acnt ss _ls pp = es'

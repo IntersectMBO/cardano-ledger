@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -16,8 +17,8 @@ where
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
 import           Ledger.Core (dom, range)
+import           Numeric.Natural (Natural)
 
 import           BaseTypes
 import           BlockChain
@@ -29,8 +30,8 @@ import           Slot
 
 import           STS.Ocert
 
-import           Cardano.Ledger.Shelley.Crypto
 import qualified Cardano.Crypto.VRF as VRF
+import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
 
@@ -70,7 +71,7 @@ instance
     | WrongGenesisColdKeyOVERLAY (KeyHash crypto) (KeyHash crypto)
     | NoGenesisStakingOVERLAY
     | OcertFailure (PredicateFailure (OCERT crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = []
 
@@ -108,6 +109,8 @@ overlayTransition = do
       { ocertEnvStPools = dom pd, ocertEnvGenDelegs = range genDelegs }
 
   trans @(OCERT crypto) $ TRC (oce, cs, bh)
+
+instance NoUnexpectedThunks (PredicateFailure (OVERLAY crypto))
 
 instance
   ( Crypto crypto

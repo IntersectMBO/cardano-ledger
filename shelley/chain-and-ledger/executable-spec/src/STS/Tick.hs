@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,16 +14,18 @@ module STS.Tick
   )
 where
 
-import           Data.Set (Set)
 import           BaseTypes
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.Monad.Trans.Reader (asks)
+import           Control.State.Transition
+import           Data.Set (Set)
+import           GHC.Generics (Generic)
 import           Keys
 import           LedgerState
 import           Slot
 import           STS.NewEpoch
 import           STS.Rupd
-import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
-import           Control.Monad.Trans.Reader (asks)
 
 data TICK crypto
 
@@ -40,10 +44,12 @@ instance Crypto crypto
   data PredicateFailure (TICK crypto)
     = NewEpochFailure (PredicateFailure (NEWEPOCH crypto))
     | RupdFailure (PredicateFailure (RUPD crypto))
-    deriving (Show, Eq)
+    deriving (Show, Generic, Eq)
 
   initialRules = []
   transitionRules = [bheadTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (TICK crypto))
 
 bheadTransition
   :: forall crypto

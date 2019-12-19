@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -9,17 +11,18 @@ module STS.Avup
   )
 where
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import           BaseTypes
 import           BlockChain
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.State.Transition
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe
+import           GHC.Generics (Generic)
 import           Keys
+import           Ledger.Core (dom, range, (⊆), (⨃))
 import           Slot
 import           Updates
-
-import           Control.State.Transition
-import           Data.Maybe
-import           Ledger.Core (dom, range, (⊆), (⨃))
 
 data AVUP crypto
 
@@ -47,11 +50,13 @@ instance STS (AVUP crypto) where
     | CannotFollow
     | InvalidName
     | InvalidSystemTags
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = []
 
   transitionRules = [avUpdateEmpty, avUpdateNoConsensus, avUpdateConsensus]
+
+instance NoUnexpectedThunks (PredicateFailure (AVUP crypto))
 
 avUpdateEmpty :: TransitionRule (AVUP crypto)
 avUpdateEmpty = do

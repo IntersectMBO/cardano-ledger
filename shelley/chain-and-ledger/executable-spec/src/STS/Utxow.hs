@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,14 +14,19 @@ module STS.Utxow
   )
 where
 
+import           BaseTypes (Globals, ShelleyBase, intervalValue, (==>))
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.Monad.Trans.Reader (runReaderT)
+import           Control.State.Transition
+import           Control.State.Transition.Generator (HasTrace (..), envGen, sigGen)
+import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Set as Set
-import           Control.Monad.Trans.Reader (runReaderT)
-import           Data.Functor.Identity (runIdentity)
-
-import           BaseTypes (Globals, ShelleyBase, intervalValue, (==>))
 import           Delegation.Certificates (isInstantaneousRewards)
+import           GHC.Generics (Generic)
+import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, (∩))
 import           LedgerState hiding (genDelegs)
@@ -29,12 +36,6 @@ import           Tx
 import           TxData
 import           UTxO
 import           Validation (Validity (..))
-
-import           Cardano.Ledger.Shelley.Crypto
-import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace(..), envGen, sigGen)
-
-import           Hedgehog (Gen)
 
 data UTXOW crypto
 
@@ -56,10 +57,12 @@ instance
     | UtxoFailure (PredicateFailure (UTXO crypto))
     | MIRInsufficientGenesisSigsUTXOW
     | MIRImpossibleInDecentralizedNetUTXOW
-    deriving (Eq, Show)
+    deriving (Eq, Generic, Show)
 
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
+
+instance NoUnexpectedThunks (PredicateFailure (UTXOW crypto))
 
 initialLedgerStateUTXOW
   :: forall crypto

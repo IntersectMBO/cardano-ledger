@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -11,16 +13,16 @@ module STS.Up
 where
 
 import           BaseTypes
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.State.Transition
+import           GHC.Generics (Generic)
 import           Keys
 import           PParams
 import           Slot
-import           Updates
-
-import           Control.State.Transition
-
-import           Cardano.Ledger.Shelley.Crypto
 import           STS.Avup
 import           STS.Ppup
+import           Updates
 
 data UP crypto
 
@@ -36,10 +38,12 @@ instance Crypto crypto => STS (UP crypto) where
     = NonGenesisUpdateUP
     | AvupFailure (PredicateFailure (AVUP crypto))
     | PpupFailure (PredicateFailure (PPUP crypto))
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [upTransition]
+
+instance NoUnexpectedThunks (PredicateFailure (UP crypto))
 
 upTransition
   :: forall crypto
