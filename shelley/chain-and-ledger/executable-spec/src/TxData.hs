@@ -276,86 +276,62 @@ newtype StakePools crypto =
 
 -- CBOR
 
-instance (Crypto crypto)
-  => ToCBOR (DelegCert crypto)
- where toCBOR = \case
-         RegKey (KeyHashObj h) ->
-           encodeListLen 2
-           <> toCBOR (0 :: Word8)
-           <> toCBOR h
-         RegKey (ScriptHashObj h) ->
-           encodeListLen 2
-           <> toCBOR (1 :: Word8)
-           <> toCBOR h
-         DeRegKey (KeyHashObj h) ->
-           encodeListLen 2
-           <> toCBOR (2 :: Word8)
-           <> toCBOR h
-         DeRegKey (ScriptHashObj h) ->
-           encodeListLen 2
-           <> toCBOR (3 :: Word8)
-           <> toCBOR h
-         Delegate (Delegation (KeyHashObj h) poolkh) ->
-           encodeListLen 3
-           <> toCBOR (4 :: Word8)
-           <> toCBOR h
-           <> toCBOR poolkh
-         Delegate (Delegation (ScriptHashObj h) poolkh) ->
-           encodeListLen 3
-           <> toCBOR (5 :: Word8)
-           <> toCBOR h
-           <> toCBOR poolkh
-
-instance (Crypto crypto)
-  => ToCBOR (PoolCert crypto)
- where toCBOR = \case
-         RegPool poolParams ->
-           encodeListLen (1 + listLen poolParams)
-           <> toCBOR (0 :: Word8)
-           <> toCBORGroup poolParams
-         RetirePool vk epoch ->
-           encodeListLen 3
-           <> toCBOR (1 :: Word8)
-           <> toCBOR vk
-           <> toCBOR epoch
-
-instance (Crypto crypto)
-  => ToCBOR (GenesisDelegate crypto)
-  where toCBOR (GenesisDelegate (gk, kh)) =
-         encodeListLen 2
-         <> toCBOR gk
-         <> toCBOR kh
-
-instance (Crypto crypto)
-  => ToCBOR (MIRCert crypto)
-  where toCBOR (MIRCert credCoinMap) =
-          toCBOR credCoinMap
-
-
 instance
   (Crypto crypto)
   => ToCBOR (DCert crypto)
  where
    toCBOR = \case
-     DCertDeleg dcert ->
-       encodeListLen 2
-       <> toCBOR (0 :: Word8)
-       <> toCBOR dcert
+           -- DCertDeleg
+     DCertDeleg (RegKey (KeyHashObj h)) ->
+           encodeListLen 2
+           <> toCBOR (0 :: Word8)
+           <> toCBOR h
+     DCertDeleg (RegKey (ScriptHashObj h)) ->
+           encodeListLen 2
+           <> toCBOR (1 :: Word8)
+           <> toCBOR h
+     DCertDeleg (DeRegKey (KeyHashObj h)) ->
+           encodeListLen 2
+           <> toCBOR (2 :: Word8)
+           <> toCBOR h
+     DCertDeleg (DeRegKey (ScriptHashObj h)) ->
+           encodeListLen 2
+           <> toCBOR (3 :: Word8)
+           <> toCBOR h
+     DCertDeleg (Delegate (Delegation (KeyHashObj h) poolkh)) ->
+           encodeListLen 3
+           <> toCBOR (4 :: Word8)
+           <> toCBOR h
+           <> toCBOR poolkh
+     DCertDeleg (Delegate (Delegation (ScriptHashObj h) poolkh)) ->
+           encodeListLen 3
+           <> toCBOR (5 :: Word8)
+           <> toCBOR h
+           <> toCBOR poolkh
 
-     DCertPool pcert ->
-       encodeListLen 2
-       <> toCBOR (1 :: Word8)
-       <> toCBOR pcert
+           -- DCertPool
+     DCertPool (RegPool poolParams) ->
+           encodeListLen (1 + listLen poolParams)
+           <> toCBOR (6 :: Word8)
+           <> toCBORGroup poolParams
+     DCertPool (RetirePool vk epoch) ->
+           encodeListLen 3
+           <> toCBOR (7 :: Word8)
+           <> toCBOR vk
+           <> toCBOR epoch
 
-     DCertGenesis gcert ->
-       encodeListLen 2
-       <> toCBOR (2 :: Word8)
-       <> toCBOR gcert
+           -- DCertGenesis
+     DCertGenesis (GenesisDelegate (gk, kh)) ->
+           encodeListLen 3
+           <> toCBOR (8 :: Word8)
+           <> toCBOR gk
+           <> toCBOR kh
 
-     DCertMir mcert ->
-       encodeListLen 2
-       <> toCBOR (3 :: Word8)
-       <> toCBOR mcert
+           -- DCertMIR
+     DCertMir (MIRCert credCoinMap) ->
+           encodeListLen 2
+           <> toCBOR (9 :: Word8)
+           <> toCBOR credCoinMap
 
 instance
   (Crypto crypto)
@@ -392,7 +368,7 @@ instance
         a <- fromCBOR
         b <- fromCBOR
         pure $ DCertGenesis $ GenesisDelegate (a, b)
-      9 -> matchSize "InstantaneousRewards" 2 n >> (DCertMir . MIRCert) <$> fromCBOR
+      9 -> matchSize "MIRCert" 2 n >> (DCertMir . MIRCert) <$> fromCBOR
       k -> invalidKey k
 
 instance
