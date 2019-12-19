@@ -125,9 +125,9 @@ import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoSize, (+*), (-*))
 import           Tx (extractGenKeyHash, extractKeyHash)
 import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCert (..), PoolParams,
-                     Ptr (..), RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..),
-                     TxIn (..), TxOut (..), body, certs, getRwdCred, inputs, poolOwners,
-                     poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+                     Ptr (..), RewardAcnt (..), Tx (..), TxBody (..), TxId (..), TxIn (..),
+                     TxOut (..), body, certs, getRwdCred, inputs, poolOwners, poolPledge,
+                     poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
@@ -166,9 +166,9 @@ data DState crypto = DState
       -- |The active reward accounts.
     ,  _rewards    :: RewardAccounts       crypto
       -- |The current delegations.
-    , _delegations :: Map (StakeCredential crypto) (KeyHash crypto)
+    , _delegations :: Map (Credential crypto) (KeyHash crypto)
       -- |The pointed to hash keys.
-    , _ptrs        :: Map Ptr (StakeCredential crypto)
+    , _ptrs        :: Map Ptr (Credential crypto)
       -- | future genesis key delegations
     , _fGenDelegs  :: Map (SlotNo, GenKeyHash crypto) (KeyHash crypto)
       -- |Genesis key delegations
@@ -761,7 +761,7 @@ rewardOnePool
   -> Coin
   -> Natural
   -> Natural
-  -> StakeCredential crypto
+  -> Credential crypto
   -> PoolParams crypto
   -> Stake crypto
   -> Coin
@@ -800,7 +800,7 @@ reward
   -> Set (RewardAcnt crypto)
   -> Map (KeyHash crypto) (PoolParams crypto)
   -> Stake crypto
-  -> Map (StakeCredential crypto) (KeyHash crypto)
+  -> Map (Credential crypto) (KeyHash crypto)
   -> Map (RewardAcnt crypto) Coin
 reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
   rewards'
@@ -829,7 +829,7 @@ stakeDistr
   -> DState crypto
   -> PState crypto
   -> ( Stake crypto
-     , Map (StakeCredential crypto) (KeyHash crypto)
+     , Map (Credential crypto) (KeyHash crypto)
      )
 stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
                      , delegs)
@@ -838,7 +838,7 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
       PState (StakePools stpools) _ _                          = ps
       outs = aggregateOuts u
 
-      stakeRelation :: [(StakeCredential crypto, Coin)]
+      stakeRelation :: [(Credential crypto, Coin)]
       stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
 
       activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools

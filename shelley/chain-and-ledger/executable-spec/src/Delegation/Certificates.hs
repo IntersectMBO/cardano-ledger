@@ -44,8 +44,8 @@ import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, 
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
 import           TxData (Credential (..), DCert (..), DelegCert (..), GenesisDelegate (..),
-                     MIRCert (..), PoolCert (..), StakeCredential, StakeCreds (..),
-                     StakePools (..), delegator, poolPubKey)
+                     MIRCert (..), PoolCert (..), StakeCreds (..), StakePools (..), delegator,
+                     poolPubKey)
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
@@ -54,7 +54,7 @@ import           Data.Ratio (approxRational)
 import           Lens.Micro ((^.))
 
 -- |Determine the certificate author
-delegCWitness :: DelegCert crypto-> StakeCredential crypto
+delegCWitness :: DelegCert crypto-> Credential crypto
 delegCWitness (RegKey _)            = error "no witness in key registration certificate"
 delegCWitness (DeRegKey hk)         = hk
 delegCWitness (Delegate delegation) = delegation ^. delegator

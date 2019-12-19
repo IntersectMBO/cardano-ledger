@@ -44,10 +44,9 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 
-import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs,
-                     inputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap,
-                     witnessVKeySet)
+import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
+                     TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
+                     ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -109,7 +108,7 @@ txwitsScript
 txwitsScript = _witnessMSigMap
 
 extractKeyHash
-  :: [StakeCredential crypto]
+  :: [Credential crypto]
   -> [AnyKeyHash crypto]
 extractKeyHash =
   mapMaybe (\case
@@ -117,7 +116,7 @@ extractKeyHash =
                 _ -> Nothing)
 
 extractScriptHash
-  :: [StakeCredential crypto]
+  :: [Credential crypto]
   -> [ScriptHash crypto]
 extractScriptHash =
   mapMaybe (\case

@@ -73,7 +73,7 @@ instance NoUnexpectedThunks (PoolParams crypto)
 
 -- |An account based address for rewards
 newtype RewardAcnt crypto = RewardAcnt
-  { getRwdCred :: StakeCredential crypto
+  { getRwdCred :: Credential crypto
   } deriving (Show, Eq, NoUnexpectedThunks, Ord, FromCBOR, ToCBOR)
 
 -- | Script hash or key hash for a payment or a staking object.
@@ -177,13 +177,11 @@ data TxOut crypto
 
 instance NoUnexpectedThunks (TxOut crypto)
 
-type StakeCredential crypto = Credential crypto
-
 data DelegCert crypto =
     -- | A stake key registration certificate.
-    RegKey (StakeCredential crypto)
+    RegKey (Credential crypto)
     -- | A stake key deregistration certificate.
-  | DeRegKey (StakeCredential crypto)
+  | DeRegKey (Credential crypto)
     -- | A stake delegation certificate.
   | Delegate (Delegation crypto)
   deriving (Show, Generic, Eq)
@@ -263,10 +261,10 @@ data Tx crypto
 instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
 
 newtype StakeCreds crypto =
-  StakeCreds (Map (StakeCredential crypto) SlotNo)
+  StakeCreds (Map (Credential crypto) SlotNo)
   deriving (Show, Eq, NoUnexpectedThunks)
 
-addStakeCreds :: (StakeCredential crypto) -> SlotNo -> (StakeCreds crypto) -> StakeCreds crypto
+addStakeCreds :: (Credential crypto) -> SlotNo -> (StakeCreds crypto) -> StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
 newtype StakePools crypto =
@@ -713,7 +711,7 @@ instance
             }
 
 instance Relation (StakeCreds crypto) where
-  type Domain (StakeCreds crypto) = StakeCredential crypto
+  type Domain (StakeCreds crypto) = Credential crypto
   type Range (StakeCreds crypto)  = SlotNo
 
   singleton k v = StakeCreds $ Map.singleton k v

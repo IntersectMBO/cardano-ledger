@@ -255,7 +255,7 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
     repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx:txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: StakeCredential -> KeyPairs -> KeyPair
+findStakeKeyPair :: Credential -> KeyPairs -> KeyPair
 findStakeKeyPair (KeyHashObj hk) keyList =
     snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case

@@ -31,7 +31,7 @@ import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 import           Coin (Coin, pattern Coin)
 import           LedgerState (_delegations, _irwd, _rewards, _stkCreds)
-import           MockTypes (DELEG, DState, KeyHash, RewardAcnt, StakeCredential)
+import           MockTypes (Credential, DELEG, DState, KeyHash, RewardAcnt)
 import           TxData (pattern DCertDeleg, pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern Delegation, pattern MIRCert, pattern RegKey)
 
@@ -39,13 +39,13 @@ import           TxData (pattern DCertDeleg, pattern DCertMir, pattern DeRegKey,
 -- helper accessor functions --
 -------------------------------
 
-getStDelegs :: DState -> Set StakeCredential
+getStDelegs :: DState -> Set Credential
 getStDelegs = dom . _stkCreds
 
 getRewards :: DState -> Map RewardAcnt Coin
 getRewards = _rewards
 
-getDelegations :: DState -> Map StakeCredential KeyHash
+getDelegations :: DState -> Map Credential KeyHash
 getDelegations = _delegations
 
 --------------------------
