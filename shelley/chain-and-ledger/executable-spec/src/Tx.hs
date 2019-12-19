@@ -37,11 +37,11 @@ import           Keys (AnyKeyHash, undiscriminateKeyHash)
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Ledger.Shelley.Crypto
-import           Data.Word (Word8)
 import           Data.Map.Strict (Map)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Word (Word8)
 
 import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
                      TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs,
@@ -113,7 +113,6 @@ extractKeyHash
 extractKeyHash =
   mapMaybe (\case
                 KeyHashObj hk -> Just $ undiscriminateKeyHash hk
-                GenesisHashObj hk -> Just $ undiscriminateKeyHash hk
                 _ -> Nothing)
 
 extractScriptHash

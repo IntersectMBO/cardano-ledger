@@ -69,7 +69,7 @@ delegationTransition = do
   TRC (DelegEnv slot_ ptr_ reserves_, ds, c) <- judgmentContext
 
   case c of
-    RegKey key -> do
+    DCertDeleg (RegKey key) -> do
       key ∉ dom (_stkCreds ds) ?! StakeKeyAlreadyRegisteredDELEG
 
       pure $ ds
@@ -78,7 +78,7 @@ delegationTransition = do
         , _ptrs    = _ptrs ds    ∪ Map.singleton ptr_ key
         }
 
-    DeRegKey key -> do
+    DCertDeleg (DeRegKey key) -> do
       key ∈ dom (_stkCreds ds) ?! StakeKeyNotRegisteredDELEG
 
       let rewardCoin = Map.lookup (RewardAcnt key) (_rewards ds)
@@ -91,13 +91,13 @@ delegationTransition = do
         , _ptrs        = _ptrs ds                       ⋫ Set.singleton key
         }
 
-    Delegate (Delegation delegator_ delegatee_) -> do
+    DCertDeleg (Delegate (Delegation delegator_ delegatee_)) -> do
       delegator_ ∈ dom (_stkCreds ds) ?! StakeDelegationImpossibleDELEG
 
       pure $ ds
         { _delegations = _delegations ds ⨃ [(delegator_, delegatee_)] }
 
-    GenesisDelegate (gkey, vk) -> do
+    DCertGenesis (GenesisDelegate (gkey, vk)) -> do
       let s' = slot_ +* slotsPrior
           (GenDelegs genDelegs_) = _genDelegs ds
 
@@ -106,7 +106,7 @@ delegationTransition = do
       pure $ ds
         { _fGenDelegs = _fGenDelegs ds ⨃ [((s', gkey), vk)]}
 
-    InstantaneousRewards credCoinMap -> do
+    DCertMir (MIRCert credCoinMap) -> do
       let combinedMap = Map.union credCoinMap (_irwd ds)
           requiredForRewards = foldl (+) (Coin 0) (range combinedMap)
       firstSlot <- liftSTS $ do

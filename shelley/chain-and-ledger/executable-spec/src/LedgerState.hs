@@ -100,7 +100,7 @@ import           Address (mkRwdAcnt)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
-import           Control.Monad.Trans.Reader (asks, ReaderT(..))
+import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -109,7 +109,7 @@ import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Delegation.Certificates (requiresVKeyWitness)
+import           Delegation.Certificates (delegCWitness, poolCWitness, requiresVKeyWitness)
 import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..), aggregateOuts,
                      baseStake, emptySnapShots, maxPool, poolStake, ptrStake, rewardStake)
 import           GHC.Generics (Generic)
@@ -120,22 +120,23 @@ import           Lens.Micro.TH (makeLenses)
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
                      keyMinRefund, minfeeA, minfeeB)
-import           Slot (Duration (..), EpochNo (..), SlotNo (..), (+*), (-*), epochInfoFirst, epochInfoSize, epochInfoEpoch)
+import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch, epochInfoFirst,
+                     epochInfoSize, (+*), (-*))
 import           Tx (extractKeyHash)
-import           TxData (Addr (..), Credential (..), Ix, PoolParams, Ptr (..), RewardAcnt (..),
-                     StakeCredential, Tx (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), body,
-                     certs, getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee,
-                     wdrls, witKeyHash)
+import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCert (..), PoolParams,
+                     Ptr (..), RewardAcnt (..), StakeCredential, Tx (..), TxBody (..), TxId (..),
+                     TxIn (..), TxOut (..), body, certs, getRwdCred, inputs, poolOwners,
+                     poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
 import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
 import           Validation
 
 import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeCreds (..),
-                     StakePools (..), cwitness, decayKey, refund)
+                     StakePools (..), decayKey, refund)
 import           Delegation.PoolParams (poolSpec)
 
-import           BaseTypes (ShelleyBase, Globals(..), UnitInterval, intervalValue, mkUnitInterval)
+import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, intervalValue, mkUnitInterval)
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -429,7 +430,7 @@ keyRefunds
   -> TxBody crypto
   -> Coin
 keyRefunds pp stk tx =
-  sum [keyRefund dval dmin lambda stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
+  sum [keyRefund dval dmin lambda stk (tx ^. ttl) c | c@(DCertDeleg (DeRegKey _)) <- toList $ tx ^. certs]
   where (dval, dmin, lambda) = decayKey pp
 
 -- | Key refund for a deregistration certificate.
@@ -443,9 +444,9 @@ keyRefund
   -> Coin
 keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
     case c of
-      DeRegKey key -> case Map.lookup key stkcreds of
-                        Nothing -> Coin 0
-                        Just  s -> refund dval dmin lambda $ slot -* s
+      DCertDeleg (DeRegKey key) -> case Map.lookup key stkcreds of
+                                     Nothing -> Coin 0
+                                     Just  s -> refund dval dmin lambda $ slot -* s
       _ -> Coin 0
 
 -- | Functions to calculate decayed deposits
@@ -457,7 +458,7 @@ decayedKey
   -> ShelleyBase Coin
 decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
     case cert of
-      DeRegKey key ->
+      DCertDeleg (DeRegKey key) ->
           if Map.notMember key stkcreds
           then pure 0
           else do
@@ -481,7 +482,7 @@ decayedTx
   -> TxBody crypto
   -> ShelleyBase Coin
 decayedTx pp stk tx =
-      lsum [decayedKey pp stk (tx ^. ttl) c | c@(DeRegKey _) <- toList $ tx ^. certs]
+      lsum [decayedKey pp stk (tx ^. ttl) c | c@(DCertDeleg (DeRegKey _)) <- toList $ tx ^. certs]
     where
       lsum xs = ReaderT $ \s -> sum $ fmap (flip runReaderT s) xs
 
@@ -551,9 +552,15 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
     wdrlAuthors =
       Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (txbody ^. wdrls))
     owners = foldl Set.union Set.empty
-               [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | RegPool pool <- toList $ txbody ^. certs]
+               [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | DCertPool (RegPool pool) <- toList $ txbody ^. certs]
     certAuthors = Set.fromList $ extractKeyHash (fmap getCertHK certificates)
     getCertHK = cwitness
+    cwitness (DCertDeleg dc) = delegCWitness dc -- | key reg requires no witness
+                               -- but this is already filtered out before the
+                               -- call to `cwitness`
+    cwitness (DCertPool pc) = poolCWitness pc
+    cwitness c = error $ show c ++ " does not have a witness"
+
     certificates = filter requiresVKeyWitness (toList $ txbody ^. certs)
     updateKeys = undiscriminateKeyHash `Set.map` propWits (txup tx) _genDelegs
 

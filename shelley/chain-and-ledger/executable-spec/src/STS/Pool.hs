@@ -63,7 +63,7 @@ poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let StakePools stPools_ = _stPools ps
   case c of
-    RegPool poolParam -> do
+    DCertPool (RegPool poolParam) -> do
       let hk = poolParam ^. poolPubKey
       if hk ∉ dom stPools_
         then-- register new
@@ -80,7 +80,7 @@ poolDelegationTransition = do
               { _pParams = _pParams ps ⨃ (hk, poolParam),
                 _retiring = Set.singleton hk ⋪ _retiring ps
               }
-    RetirePool hk (EpochNo e) -> do
+    DCertPool (RetirePool hk (EpochNo e)) -> do
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoEpoch ei slot

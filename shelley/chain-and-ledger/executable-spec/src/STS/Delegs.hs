@@ -91,7 +91,7 @@ delegsTransition = do
       let ptr = Ptr _slot txIx (fromIntegral $ length certs_)
 
           isDelegationRegistered = case cert of
-            Delegate deleg ->
+            DCertDeleg (Delegate deleg) ->
               let StakePools stPools_ = _stPools $ _pstate dpstate' in
               _delegatee deleg ∈ dom stPools_
             _ -> True

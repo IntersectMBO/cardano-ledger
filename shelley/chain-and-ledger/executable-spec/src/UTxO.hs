@@ -52,13 +52,13 @@ import           Coin (Coin (..))
 import           Keys (KeyDiscriminator (..), KeyPair, Signable, hash, sKey, sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
-import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred,
-                     inputs, outputs, poolPubKey, txUpdate)
+import           TxData (Addr (..), Credential (..), PoolCert (..), ScriptHash, StakeCredential,
+                     Tx (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..),
+                     getRwdCred, inputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
-import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue,
-                     requiresVKeyWitness)
+import           Delegation.Certificates (DCert (..), StakePools (..), delegCWitness, dvalue,
+                     poolCWitness, requiresVKeyWitness)
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto
@@ -190,7 +190,8 @@ deposits
 deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (pool ^. poolPubKey) stpools
+    notRegisteredPool (DCertPool (RegPool pool)) =
+      Map.notMember (pool ^. poolPubKey) stpools
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
@@ -207,7 +208,6 @@ scriptStakeCred
   :: StakeCredential crypto
   -> Maybe (ScriptHash crypto)
 scriptStakeCred (KeyHashObj _ )    =  Nothing
-scriptStakeCred (GenesisHashObj _ )    =  Nothing
 scriptStakeCred (ScriptHashObj hs) = Just hs
 
 -- | Computes the set of script hashes required to unlock the transcation inputs
@@ -226,6 +226,13 @@ scriptsNeeded u tx =
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = (toList . _certs . _body) tx
+        cwitness (DCertDeleg dc) = delegCWitness dc -- | key reg requires no
+                                                    -- witness but this is
+                                                    -- already filtered out
+                                                    -- before the call to
+                                                    -- `cwitness`
+        cwitness (DCertPool pc) = poolCWitness pc
+        cwitness c = error $ show c ++ " does not have a witness"
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.

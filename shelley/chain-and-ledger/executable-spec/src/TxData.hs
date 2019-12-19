@@ -80,9 +80,17 @@ newtype RewardAcnt crypto = RewardAcnt
 data Credential crypto =
     ScriptHashObj (ScriptHash crypto)
   | KeyHashObj    (KeyHash crypto)
-  | GenesisHashObj (GenKeyHash crypto)
     deriving (Show, Eq, Generic, Ord)
     deriving ToCBOR via (CBORGroup (Credential crypto))
+
+newtype GenesisCredential crypto = GenesisCredential (GenKeyHash crypto)
+  deriving (Show, Generic)
+
+instance Ord (GenesisCredential crypto)
+  where compare (GenesisCredential gh) (GenesisCredential gh')  = compare gh gh'
+
+instance Eq (GenesisCredential crypto)
+  where (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
 
 instance NoUnexpectedThunks (Credential crypto)
 
@@ -171,24 +179,42 @@ instance NoUnexpectedThunks (TxOut crypto)
 
 type StakeCredential crypto = Credential crypto
 
--- | A heavyweight certificate.
-data DCert crypto
+data DelegCert crypto =
     -- | A stake key registration certificate.
-  = RegKey (StakeCredential crypto)
+    RegKey (StakeCredential crypto)
     -- | A stake key deregistration certificate.
   | DeRegKey (StakeCredential crypto)
-    -- | A stake pool registration certificate.
-  | RegPool (PoolParams crypto)
-    -- | A stake pool retirement certificate.
-  | RetirePool (KeyHash crypto) EpochNo
     -- | A stake delegation certificate.
   | Delegate (Delegation crypto)
-    -- | Genesis key delegation certificate
-  | GenesisDelegate (GenKeyHash crypto, KeyHash crypto)
-    -- | Move instantaneous rewards certificate
-  | InstantaneousRewards (Map (Credential crypto) Coin)
   deriving (Show, Generic, Eq)
 
+data PoolCert crypto =
+    -- | A stake pool registration certificate.
+    RegPool (PoolParams crypto)
+    -- | A stake pool retirement certificate.
+  | RetirePool (KeyHash crypto) EpochNo
+  deriving (Show, Generic, Eq)
+
+-- | Genesis key delegation certificate
+newtype GenesisDelegate crypto = GenesisDelegate (GenKeyHash crypto, KeyHash crypto)
+  deriving (Show, Generic, Eq)
+
+-- | Move instantaneous rewards certificate
+newtype MIRCert crypto = MIRCert (Map (Credential crypto) Coin)
+  deriving (Show, Generic, Eq)
+
+-- | A heavyweight certificate.
+data DCert crypto =
+    DCertDeleg (DelegCert crypto)
+  | DCertPool (PoolCert crypto)
+  | DCertGenesis (GenesisDelegate crypto)
+  | DCertMir (MIRCert crypto)
+  deriving (Show, Generic, Eq)
+
+instance NoUnexpectedThunks (DelegCert crypto)
+instance NoUnexpectedThunks (PoolCert crypto)
+instance NoUnexpectedThunks (GenesisDelegate crypto)
+instance NoUnexpectedThunks (MIRCert crypto)
 instance NoUnexpectedThunks (DCert crypto)
 
 -- |A raw transaction
@@ -250,64 +276,86 @@ newtype StakePools crypto =
 
 -- CBOR
 
+instance (Crypto crypto)
+  => ToCBOR (DelegCert crypto)
+ where toCBOR = \case
+         RegKey (KeyHashObj h) ->
+           encodeListLen 2
+           <> toCBOR (0 :: Word8)
+           <> toCBOR h
+         RegKey (ScriptHashObj h) ->
+           encodeListLen 2
+           <> toCBOR (1 :: Word8)
+           <> toCBOR h
+         DeRegKey (KeyHashObj h) ->
+           encodeListLen 2
+           <> toCBOR (2 :: Word8)
+           <> toCBOR h
+         DeRegKey (ScriptHashObj h) ->
+           encodeListLen 2
+           <> toCBOR (3 :: Word8)
+           <> toCBOR h
+         Delegate (Delegation (KeyHashObj h) poolkh) ->
+           encodeListLen 3
+           <> toCBOR (4 :: Word8)
+           <> toCBOR h
+           <> toCBOR poolkh
+         Delegate (Delegation (ScriptHashObj h) poolkh) ->
+           encodeListLen 3
+           <> toCBOR (5 :: Word8)
+           <> toCBOR h
+           <> toCBOR poolkh
+
+instance (Crypto crypto)
+  => ToCBOR (PoolCert crypto)
+ where toCBOR = \case
+         RegPool poolParams ->
+           encodeListLen (1 + listLen poolParams)
+           <> toCBOR (0 :: Word8)
+           <> toCBORGroup poolParams
+         RetirePool vk epoch ->
+           encodeListLen 3
+           <> toCBOR (1 :: Word8)
+           <> toCBOR vk
+           <> toCBOR epoch
+
+instance (Crypto crypto)
+  => ToCBOR (GenesisDelegate crypto)
+  where toCBOR (GenesisDelegate (gk, kh)) =
+         encodeListLen 2
+         <> toCBOR gk
+         <> toCBOR kh
+
+instance (Crypto crypto)
+  => ToCBOR (MIRCert crypto)
+  where toCBOR (MIRCert credCoinMap) =
+          toCBOR credCoinMap
+
+
 instance
   (Crypto crypto)
   => ToCBOR (DCert crypto)
  where
-  toCBOR = \case
-    RegKey (KeyHashObj h) ->
-      encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR h
-    RegKey (ScriptHashObj h) ->
-      encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR h
-    RegKey (GenesisHashObj _) -> error "We need to fix credential type"
+   toCBOR = \case
+     DCertDeleg dcert ->
+       encodeListLen 2
+       <> toCBOR (0 :: Word8)
+       <> toCBOR dcert
 
-    DeRegKey (KeyHashObj h) ->
-      encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR h
-    DeRegKey (ScriptHashObj h) ->
-      encodeListLen 2
-        <> toCBOR (3 :: Word8)
-        <> toCBOR h
-    DeRegKey (GenesisHashObj _) -> error "We need to fix credential type"
+     DCertPool pcert ->
+       encodeListLen 2
+       <> toCBOR (1 :: Word8)
+       <> toCBOR pcert
 
-    Delegate (Delegation (KeyHashObj h) poolkh) ->
-      encodeListLen 3
-        <> toCBOR (4 :: Word8)
-        <> toCBOR h
-        <> toCBOR poolkh
-    Delegate (Delegation (ScriptHashObj h) poolkh) ->
-      encodeListLen 3
-        <> toCBOR (5 :: Word8)
-        <> toCBOR h
-        <> toCBOR poolkh
-    Delegate (Delegation (GenesisHashObj _) _) -> error "We need to fix credential type"
+     DCertGenesis gcert ->
+       encodeListLen 2
+       <> toCBOR (2 :: Word8)
+       <> toCBOR gcert
 
-    RegPool poolParams ->
-      encodeListLen (1 + listLen poolParams)
-        <> toCBOR (6 :: Word8)
-        <> toCBORGroup poolParams
-
-    RetirePool vk epoch ->
-      encodeListLen 3
-        <> toCBOR (7 :: Word8)
-        <> toCBOR vk
-        <> toCBOR epoch
-
-    GenesisDelegate (gk, dk) ->
-      encodeListLen 3
-        <> toCBOR (8 :: Word8)
-        <> toCBOR gk
-        <> toCBOR dk
-
-    InstantaneousRewards credCoinMap ->
-      encodeListLen 2
-        <> toCBOR (9 :: Word8)
-        <> toCBOR credCoinMap
+     DCertMir mcert ->
+       encodeListLen 2
+       <> toCBOR (3 :: Word8)
+       <> toCBOR mcert
 
 instance
   (Crypto crypto)
@@ -316,35 +364,35 @@ instance
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
-      0 -> matchSize "RegKey" 2 n >> (RegKey . KeyHashObj) <$> fromCBOR
-      1 -> matchSize "RegKey" 2 n >> (RegKey . ScriptHashObj) <$> fromCBOR
-      2 -> matchSize "DeRegKey" 2 n >> (DeRegKey . KeyHashObj) <$> fromCBOR
-      3 -> matchSize "DeRegKey" 2 n >> (DeRegKey . ScriptHashObj) <$> fromCBOR
+      0 -> matchSize "RegKey" 2 n >> (DCertDeleg . RegKey . KeyHashObj) <$> fromCBOR
+      1 -> matchSize "RegKey" 2 n >> (DCertDeleg . RegKey . ScriptHashObj) <$> fromCBOR
+      2 -> matchSize "DeRegKey" 2 n >> (DCertDeleg . DeRegKey . KeyHashObj) <$> fromCBOR
+      3 -> matchSize "DeRegKey" 2 n >> (DCertDeleg . DeRegKey . ScriptHashObj) <$> fromCBOR
       4 -> do
         matchSize "Delegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ Delegate (Delegation (KeyHashObj a) b)
+        pure $ DCertDeleg $ Delegate (Delegation (KeyHashObj a) b)
       5 -> do
         matchSize "Delegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ Delegate (Delegation (ScriptHashObj a) b)
+        pure $ DCertDeleg $ Delegate (Delegation (ScriptHashObj a) b)
       6 -> do
         group <- fromCBORGroup
         matchSize "RegPool" (fromIntegral $ 1 + listLen group) n
-        pure $ RegPool group
+        pure $ DCertPool $ RegPool group
       7 -> do
         matchSize "RetirePool" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ RetirePool a (EpochNo b)
+        pure $ DCertPool $ RetirePool a (EpochNo b)
       8 -> do
         matchSize "GenesisDelegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ GenesisDelegate (a, b)
-      9 -> matchSize "InstantaneousRewards" 2 n >> InstantaneousRewards <$> fromCBOR
+        pure $ DCertGenesis $ GenesisDelegate (a, b)
+      9 -> matchSize "InstantaneousRewards" 2 n >> (DCertMir . MIRCert) <$> fromCBOR
       k -> invalidKey k
 
 instance
@@ -547,7 +595,11 @@ instance (Typeable crypto, Crypto crypto)
   toCBORGroup = \case
     KeyHashObj     kh -> toCBOR (0 :: Word8) <> toCBOR kh
     ScriptHashObj  hs -> toCBOR (1 :: Word8) <> toCBOR hs
-    GenesisHashObj kh -> toCBOR (2 :: Word8) <> toCBOR kh
+
+instance (Typeable crypto, Crypto crypto)
+  => ToCBOR (GenesisCredential crypto)
+  where toCBOR (GenesisCredential kh) =
+          toCBOR kh
 
 instance (Crypto crypto) =>
   FromCBOR (Credential crypto) where
@@ -556,7 +608,6 @@ instance (Crypto crypto) =>
     decodeWord >>= \case
       0 -> KeyHashObj <$> fromCBOR
       1 -> ScriptHashObj <$> fromCBOR
-      2 -> GenesisHashObj <$> fromCBOR
       k -> invalidKey k
 
 instance
@@ -587,7 +638,6 @@ instance
     encodeListLen 2 <> toCBOR (7 :: Word8)  <> toCBOR a
   toCBOR (AddrBootstrap  a)                                     =
     encodeListLen 2 <> toCBOR (8 :: Word8)  <> toCBOR a
-  toCBOR _ = error "this should be unreachable" -- TODO fix me
 
 instance (Crypto crypto) =>
   FromCBOR (Addr crypto) where
