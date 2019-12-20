@@ -26,7 +26,6 @@ module Cardano.Chain.Common.LovelacePortion
   , mkLovelacePortion
   , mkKnownLovelacePortion
   , lovelacePortionDenominator
-  , lovelacePortionFromDouble
   , lovelacePortionToDouble
   , applyLovelacePortionDown
   )
@@ -117,20 +116,7 @@ mkKnownLovelacePortion
   :: forall n . (KnownNat n, n <= 1000000000000000) => LovelacePortion
 mkKnownLovelacePortion = LovelacePortion . fromIntegral . natVal $ Proxy @n
 
--- | Make LovelacePortion from Double. Caller must ensure that value is in [0..1].
---   Internally 'LovelacePortion' stores 'Word64' which is divided by
---   'lovelacePortionDenominator' to get actual value. So some rounding may take
---   place.
-lovelacePortionFromDouble
-  :: Double -> Either LovelacePortionError LovelacePortion
-lovelacePortionFromDouble x
-  | 0 <= x && x <= 1 = Right (LovelacePortion v)
-  | otherwise        = Left (LovelacePortionDoubleOutOfRange x)
- where
-  v :: Word64
-  v = round $ realToFrac lovelacePortionDenominator * x
-{-# INLINE lovelacePortionFromDouble #-}
-
+--FIXME: Use of 'Double' here is highly dubious.
 lovelacePortionToDouble :: LovelacePortion -> Double
 lovelacePortionToDouble (getLovelacePortion -> x) =
   realToFrac x / realToFrac lovelacePortionDenominator
