@@ -1,7 +1,5 @@
 module Shrinkers where
 
-import           Cardano.Ledger.Shelley.Crypto
-
 import           Data.Foldable (toList)
 import           Data.Map (Map)
 import qualified Data.Map as M
@@ -18,13 +16,14 @@ import           TxData
 import           Updates
 
 shrinkTx
-  :: Crypto crypto
-  => Tx crypto
+  :: Tx crypto
   -> [Tx crypto]
-shrinkTx (Tx b ws wm) =
+shrinkTx (Tx _b _ws _wm) = []
+  {- TODO @uroboros write shrinker that shrinks to valid transactions
   [ Tx b' ws wm | b' <- shrinkTxBody b ] ++
   [ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++
   [ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
+  -}
 
 shrinkTxBody :: TxBody crypto -> [TxBody crypto]
 shrinkTxBody (TxBody is os cs ws tf tl tu) =

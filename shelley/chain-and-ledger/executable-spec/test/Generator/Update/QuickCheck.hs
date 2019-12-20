@@ -28,15 +28,15 @@ import           Cardano.Ledger.Shelley.Crypto (HASH)
 import           Coin (Coin (..))
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.QuickCheck (genInteger, genNatural, genWord64,
-                                            increasingProbabilityAt)
+                     increasingProbabilityAt)
 import           Keys (hash)
 import           Keys (GenKeyHash)
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..))
 import           Slot (EpochNo (EpochNo))
 import           Updates (AVUpdate (..), ApName (..), ApVer (..), Applications (..),
-                          InstallerHash (..), Mdt (..), PPUpdate (..), PParamsUpdate (..), Ppm (..),
-                          SystemTag (..), Update (..))
+                     InstallerHash (..), Mdt (..), PPUpdate (..), PParamsUpdate (..), Ppm (..),
+                     SystemTag (..), Update (..))
 
 genRationalInThousands :: Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
@@ -159,10 +159,8 @@ genActiveSlotCoeff  = increasingProbabilityAt
                         (unsafeMkUnitInterval   0,
                          unsafeMkUnitInterval   1)
 
--- | decentralisation param: 0,0.1,0.2..1
--- TODO: mgudemann, allow 0 despite MIR cert generation
 genDecentralisationParam :: Gen UnitInterval
-genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1,0.2 .. 1]
+genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0,0.1 .. 1]
 
 -- | protocolVersion is a triple of numbers
 genProtocolVersion :: Gen (Natural, Natural, Natural)

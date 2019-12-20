@@ -60,9 +60,9 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
               (traceLength tr <= 20 * length (filter isRetirePool certs_))
               "there is at least 1 RetirePool certificate for every 20 transactions"
 
-     , cover_ 60
-              (traceLength tr <= 20 * length (filter isInstantaneousRewards certs_))
-              "there is at least 1 MIR certificate for every 20 transactions"
+     , cover_ 40
+              (traceLength tr <= 50 * length (filter isInstantaneousRewards certs_))
+              "there is at least 1 MIR certificate for every 50 transactions"
 
      , cover_ 25
               (0.75 >= noCertsRatio (certsByTx txs))
