@@ -88,7 +88,7 @@ bbodyTransition = do
 
   bBodySize txsSeq == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
 
-  bhbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
+  bbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
 
   ls' <- trans @(LEDGERS crypto)
          $ TRC (LedgersEnv (bheaderSlotNo bhb) pp _reserves, ls, txs)

@@ -19,7 +19,7 @@ module BlockChain
   , ProtVer(..)
   , TxSeq(..)
   , bhHash
-  , bhbHash
+  , bbHash
   , hashHeaderToNonce
   , bHeaderSize
   , bBodySize
@@ -39,6 +39,7 @@ module BlockChain
   , mkSeed
   )
 where
+
 
 import qualified Data.ByteString.Char8 as BS
 import           Data.Coerce (coerce)
@@ -89,10 +90,6 @@ newtype TxSeq crypto
     = TxSeq (Seq (Tx crypto))
   deriving (Eq, Show)
 
-instance Crypto crypto =>
-  ToCBOR (TxSeq crypto)  where
-  toCBOR (TxSeq s) = toCBOR $ toList s
-
 -- | Hash of block body
 newtype HashBBody crypto =
   HashBBody (Hash (HASH crypto) (TxSeq crypto))
@@ -109,11 +106,14 @@ bhHash
 bhHash = HashHeader . hash
 
 -- |Hash a given block body
-bhbHash
+bbHash
   :: Crypto crypto
   => TxSeq crypto
   -> HashBBody crypto
-bhbHash = HashBBody . hash
+bbHash (TxSeq txns) = HashBBody $ Hash.hashPair (hash bodies) (hash wits)
+  where
+  bodies = CborSeq $ fmap _body txns
+  wits = CborSeq $ fmap txToSegWit txns
 
 -- |HashHeader to Nonce
 hashHeaderToNonce :: HashHeader crypto -> Nonce
