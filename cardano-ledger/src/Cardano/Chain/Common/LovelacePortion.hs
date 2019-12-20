@@ -29,7 +29,6 @@ module Cardano.Chain.Common.LovelacePortion
   , lovelacePortionFromDouble
   , lovelacePortionToDouble
   , applyLovelacePortionDown
-  , applyLovelacePortionUp
   )
 where
 
@@ -155,18 +154,3 @@ applyLovelacePortionDown (getLovelacePortion -> p) (unsafeGetLovelace -> c) =
       *     toInteger c
       `div` toInteger lovelacePortionDenominator
 
--- | Apply LovelacePortion to Lovelace (with rounding up)
---
---   Use it for calculating thresholds.
-applyLovelacePortionUp :: LovelacePortion -> Lovelace -> Lovelace
-applyLovelacePortionUp (getLovelacePortion -> p) (unsafeGetLovelace -> c) =
-  case mkLovelace c' of
-    Right lovelace -> lovelace
-    Left  err      -> panic $ sformat
-      ("The impossible happened in applyLovelacePortionUp: " . build)
-      err
- where
-  (d, m) =
-    divMod (toInteger p * toInteger c) (toInteger lovelacePortionDenominator)
-  c' :: Word64
-  c' = if m > 0 then fromInteger (d + 1) else fromInteger d
