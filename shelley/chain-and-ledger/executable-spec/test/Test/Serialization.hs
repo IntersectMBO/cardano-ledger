@@ -26,8 +26,8 @@ import           Coin (Coin (..))
 import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern InstantaneousRewards, pattern RegKey,
-                     pattern RegPool, pattern RetirePool)
+                     pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
+                     pattern RetirePool)
 import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash, pattern KeyPair,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
                      vKey)
@@ -37,6 +37,7 @@ import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Test.Utils
 import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
+                     pattern DCertDeleg, pattern DCertGenesis, pattern DCertMir, pattern DCertPool,
                      pattern Delegation, pattern PoolParams, Ptr (..), pattern RequireSignature,
                      pattern RewardAcnt, pattern ScriptHash, pattern TxBody, pattern TxIn,
                      pattern TxOut, WitVKey (..), _TxId, _poolCost, _poolMargin, _poolOwners,
@@ -328,34 +329,34 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncodingCBOR "register_key"
-    (RegKey (KeyHashObj testKeyHash1))
+    (DCertDeleg (RegKey (KeyHashObj testKeyHash1)))
     ( T (TkListLen 2)
       <> T (TkWord 0) -- Reg cert
       <> S testKeyHash1 -- keyhash
     )
 
   , checkEncodingCBOR "register_script"
-    (RegKey (ScriptHashObj testScriptHash))
+    (DCertDeleg (RegKey (ScriptHashObj testScriptHash)))
     ( T (TkListLen 2)
       <> T (TkWord 1) -- Reg cert
       <> S testScriptHash -- scripthash
     )
 
   , checkEncodingCBOR "deregister_key"
-    (DeRegKey (KeyHashObj testKeyHash1))
+    (DCertDeleg (DeRegKey (KeyHashObj testKeyHash1)))
     ( T (TkListLen 2)
       <> T (TkWord 2) -- DeReg cert
       <> S testKeyHash1 -- keyhash
     )
   , checkEncodingCBOR "deregister_key"
-    (DeRegKey (KeyHashObj testKeyHash1))
+    (DCertDeleg (DeRegKey (KeyHashObj testKeyHash1)))
     ( T (TkListLen 2)
       <> T (TkWord 2) -- DeReg cert
       <> S testKeyHash1 -- keyhash
     )
 
   , checkEncodingCBOR "deregister_script"
-    (DeRegKey (ScriptHashObj testScriptHash))
+    (DCertDeleg (DeRegKey (ScriptHashObj testScriptHash)))
     ( T (TkListLen 2)
       <> T (TkWord 3) -- DeReg cert
       <> S testScriptHash -- script hash
@@ -369,7 +370,7 @@ serializationTests = testGroup "Serialization Tests"
         poolCost = Coin 55
     in
     checkEncodingCBOR "register_pool"
-    (RegPool (PoolParams
+    (DCertPool (RegPool (PoolParams
                { _poolPubKey = testKeyHash1
                , _poolVrf = testVRFKH
                , _poolPledge = poolPledge
@@ -377,7 +378,7 @@ serializationTests = testGroup "Serialization Tests"
                , _poolMargin = poolMargin
                , _poolRAcnt = poolRAcnt
                , _poolOwners = Set.singleton poolOwner
-               }))
+               })))
     ( T (TkListLen 8)
       <> T (TkWord 6) -- Reg Pool
       <> T (TkTag 258 . TkListLen 1) <> S poolOwner   -- owners
@@ -390,7 +391,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncodingCBOR "retire_pool"
-    (RetirePool testKeyHash1 (EpochNo 1729))
+    (DCertPool (RetirePool testKeyHash1 (EpochNo 1729)))
     ( T (TkListLen 3
       . TkWord 7) -- Pool Retire
       <> S testKeyHash1 -- key hash
@@ -398,7 +399,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncodingCBOR "Key_delegation"
-    (Delegate (Delegation (KeyHashObj testKeyHash1) testKeyHash2))
+    (DCertDeleg (Delegate (Delegation (KeyHashObj testKeyHash1) testKeyHash2)))
     ( T (TkListLen 3
       . TkWord 4) -- delegation cert with key
       <> S testKeyHash1
@@ -406,7 +407,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncodingCBOR "script_delegation"
-    (Delegate (Delegation (ScriptHashObj testScriptHash) testKeyHash2))
+    (DCertDeleg (Delegate (Delegation (ScriptHashObj testScriptHash) testKeyHash2)))
     ( T (TkListLen 3
       . TkWord 5) -- delegation cert with script
       <> S testScriptHash
@@ -414,7 +415,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncodingCBOR "genesis_delegation"
-    (GenesisDelegate (testGKeyHash, testKeyHash1))
+    (DCertGenesis (GenesisDelegate (testGKeyHash, testKeyHash1)))
     ( T (TkListLen 3
       . TkWord 8) -- genesis delegation cert
       <> S testGKeyHash -- delegator credential
@@ -425,7 +426,7 @@ serializationTests = testGroup "Serialization Tests"
     , let rs = Map.singleton (KeyHashObj testKeyHash1) 77
     in
     checkEncodingCBOR "mir"
-    (InstantaneousRewards rs)
+    (DCertMir (MIRCert rs))
     ( T (TkListLen 2
        . TkWord 9) -- make instantaneous rewards cert
       <> S rs
@@ -623,7 +624,7 @@ serializationTests = testGroup "Serialization Tests"
   , let
       tin = Set.fromList [TxIn genesisId 1]
       tout = [TxOut testAddrE (Coin 2)]
-      reg = RegKey (KeyHashObj testKeyHash1)
+      reg = DCertDeleg (RegKey (KeyHashObj testKeyHash1))
       ra = RewardAcnt (KeyHashObj testKeyHash2)
       ras = Map.singleton ra (Coin 123)
       up = Update

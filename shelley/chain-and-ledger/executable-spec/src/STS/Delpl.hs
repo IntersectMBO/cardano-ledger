@@ -65,35 +65,35 @@ delplTransition
 delplTransition = do
   TRC (DelplEnv slotIx _ptr pp _reserves, d, c) <- judgmentContext
   case c of
-    RegPool _ -> do
+    DCertPool (RegPool _) -> do
       ps <-
         trans @(POOL crypto) $ TRC (PoolEnv slotIx pp, _pstate d, c)
       pure $ d { _pstate = ps }
-    RetirePool _ _ -> do
+    DCertPool (RetirePool _ _) -> do
       ps <-
         trans @(POOL crypto) $ TRC (PoolEnv slotIx pp, _pstate d, c)
       pure $ d { _pstate = ps }
-    GenesisDelegate _ -> do
+    DCertGenesis (GenesisDelegate _) -> do
       ds <-
         trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
-    RegKey _ -> do
+    DCertDeleg (RegKey _) -> do
       ds <-
         trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
-    DeRegKey _ -> do
+    DCertDeleg (DeRegKey _) -> do
       ds <-
         trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
-    Delegate _ -> do
+    DCertDeleg (Delegate _) -> do
       ds <-
         trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves , _dstate d, c)
       pure $ d { _dstate = ds }
 
-    InstantaneousRewards _ -> do
+    DCertMir _ -> do
       ds <- trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves , _dstate d, c)
       pure $ d { _dstate = ds }
 

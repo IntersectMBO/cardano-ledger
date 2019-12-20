@@ -5,12 +5,17 @@
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Delegation.Certificates
-  (
-    DCert(..)
+  ( DCert(..)
+  , DelegCert(..)
+  , PoolCert(..)
+  , GenesisDelegate(..)
+  , MIRCert(..)
   , StakeCreds(..)
   , StakePools(..)
   , PoolDistr(..)
-  , cwitness
+  , delegCWitness
+  , poolCWitness
+  , genesisCWitness
   , dvalue
   , refund
   , releasing
@@ -32,14 +37,15 @@ module Delegation.Certificates
 import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin (..))
-import           Keys (Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
+import           Keys (GenKeyHash, Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
 import           Ledger.Core (Relation (..))
 import           NonIntegral (exp')
 import           PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund, poolDecayRate,
                      poolDeposit, poolMinRefund)
 import           Slot (Duration (..))
-import           TxData (Credential (..), DCert (..), StakeCredential, StakeCreds (..),
-                     StakePools (..), delegator, poolPubKey)
+import           TxData (Credential (..), DCert (..), DelegCert (..), GenesisDelegate (..),
+                     MIRCert (..), PoolCert (..), StakeCreds (..), StakePools (..), delegator,
+                     poolPubKey)
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
@@ -48,19 +54,22 @@ import           Data.Ratio (approxRational)
 import           Lens.Micro ((^.))
 
 -- |Determine the certificate author
-cwitness :: DCert crypto-> StakeCredential crypto
-cwitness (RegKey _)                = error "no witness in key registration certificate"
-cwitness (DeRegKey hk)             = hk
-cwitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
-cwitness (RetirePool k _)          = KeyHashObj k
-cwitness (Delegate delegation)     = delegation ^. delegator
-cwitness (GenesisDelegate (gk, _)) = GenesisHashObj gk
-cwitness (InstantaneousRewards _)  = error "no witness in MIR certificate"
+delegCWitness :: DelegCert crypto-> Credential crypto
+delegCWitness (RegKey _)            = error "no witness in key registration certificate"
+delegCWitness (DeRegKey hk)         = hk
+delegCWitness (Delegate delegation) = delegation ^. delegator
+
+poolCWitness :: PoolCert crypto -> Credential crypto
+poolCWitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
+poolCWitness (RetirePool k _)          = KeyHashObj k
+
+genesisCWitness :: GenesisDelegate crypto -> GenKeyHash crypto
+genesisCWitness (GenesisDelegate (gk, _)) = gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert crypto-> PParams -> Coin
-dvalue (RegKey _)  = flip (^.) keyDeposit
-dvalue (RegPool _) = flip (^.) poolDeposit
+dvalue (DCertDeleg (RegKey _))  = flip (^.) keyDeposit
+dvalue (DCertPool (RegPool _)) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
@@ -78,48 +87,48 @@ releasing :: DCert crypto-> Bool
 releasing c = dderegister c || dretire c
 
 dderegister :: DCert crypto-> Bool
-dderegister (DeRegKey _) = True
+dderegister (DCertDeleg (DeRegKey _)) = True
 dderegister _            = False
 
 dretire :: DCert crypto-> Bool
-dretire (RetirePool _ _) = True
+dretire (DCertPool (RetirePool _ _)) = True
 dretire _                = False
 
 -- | Check whether certificate is of allocating type, i.e, key or pool
 -- registration.
 allocating :: DCert crypto-> Bool
-allocating (RegKey _)  = True
-allocating (RegPool _) = True
+allocating (DCertDeleg _)  = True
+allocating (DCertPool _) = True
 allocating _           = False
 
 -- | Check for `RegKey` constructor
 isRegKey :: DCert crypto-> Bool
-isRegKey (RegKey _) = True
+isRegKey (DCertDeleg (RegKey _)) = True
 isRegKey _ = False
 
 -- | Check for `DeRegKey` constructor
 isDeRegKey :: DCert crypto-> Bool
-isDeRegKey (DeRegKey _) = True
+isDeRegKey (DCertDeleg (DeRegKey _)) = True
 isDeRegKey _ = False
 
 -- | Check for `Delegation` constructor
 isDelegation :: DCert crypto-> Bool
-isDelegation (Delegate _) = True
+isDelegation (DCertDeleg (Delegate _)) = True
 isDelegation _ = False
 
 -- | Check for `GenesisDelegate` constructor
 isGenesisDelegation :: DCert crypto-> Bool
-isGenesisDelegation (GenesisDelegate _) = True
+isGenesisDelegation (DCertGenesis (GenesisDelegate _)) = True
 isGenesisDelegation _ = False
 
 -- | Check for `RegPool` constructor
 isRegPool :: DCert crypto-> Bool
-isRegPool (RegPool _) = True
+isRegPool (DCertPool (RegPool _)) = True
 isRegPool _ = False
 
 -- | Check for `RetirePool` constructor
 isRetirePool :: DCert crypto -> Bool
-isRetirePool (RetirePool _ _) = True
+isRetirePool (DCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
 decayKey :: PParams -> (Coin, UnitInterval, Rational)
@@ -139,13 +148,13 @@ newtype PoolDistr crypto=
   deriving (Show, Eq, NoUnexpectedThunks, Relation)
 
 isInstantaneousRewards :: DCert crypto-> Bool
-isInstantaneousRewards (InstantaneousRewards _) = True
-isInstantaneousRewards _                        = False
+isInstantaneousRewards (DCertMir _) = True
+isInstantaneousRewards _       = False
 
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure
--- that calling `cwitness` is safe.
+-- that calling a variant of `cwitness` is safe.
 requiresVKeyWitness :: DCert crypto-> Bool
-requiresVKeyWitness (InstantaneousRewards _) = False
-requiresVKeyWitness (RegKey _) = False
+requiresVKeyWitness (DCertMir (MIRCert _)) = False
+requiresVKeyWitness (DCertDeleg (RegKey _)) = False
 requiresVKeyWitness _ = True

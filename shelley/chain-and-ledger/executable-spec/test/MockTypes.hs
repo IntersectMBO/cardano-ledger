@@ -151,8 +151,6 @@ type POOLREAP = STS.PoolReap.POOLREAP MockCrypto
 
 type Credential = TxData.Credential MockCrypto
 
-type StakeCredential = TxData.StakeCredential MockCrypto
-
 type StakeCreds = TxData.StakeCreds MockCrypto
 
 type MultiSig = TxData.MultiSig MockCrypto

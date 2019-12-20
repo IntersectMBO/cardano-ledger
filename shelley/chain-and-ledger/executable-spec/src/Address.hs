@@ -23,8 +23,6 @@ mkRwdAcnt
   -> RewardAcnt crypto
 mkRwdAcnt script@(ScriptHashObj _) = RewardAcnt script
 mkRwdAcnt key@(KeyHashObj _) = RewardAcnt key
-mkRwdAcnt (GenesisHashObj _) =
-  error "cannot construct reward account with genesis key"
 
 toAddr
   :: Crypto crypto

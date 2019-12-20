@@ -38,20 +38,19 @@ import           Delegation.Certificates (StakeCreds (..), StakePools (..), deca
 import           Keys (KeyHash)
 import           PParams (PParams (..))
 import           Slot (SlotNo, (-*))
-import           TxData (Addr (..), PoolParams, Ptr, RewardAcnt, StakeCredential, TxOut (..),
-                     getRwdCred)
+import           TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt, TxOut (..), getRwdCred)
 import           UTxO (UTxO (..))
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Ratio ((%))
 import qualified Data.Set as Set
 
-import           Numeric.Natural (Natural)
 import           GHC.Generics (Generic)
 import           Lens.Micro.TH (makeLenses)
+import           Numeric.Natural (Natural)
 
 import           Ledger.Core (dom, (▷), (◁))
 
@@ -62,7 +61,7 @@ newtype BlocksMade crypto
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto
-  = Stake (Map (StakeCredential crypto) Coin)
+  = Stake (Map (Credential crypto) Coin)
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 -- | Add two stake distributions
@@ -73,7 +72,7 @@ newtype Stake crypto
 (Stake lhs) ⊎ (Stake rhs) = Stake $ Map.unionWith (+) lhs rhs
 
 -- | Extract hash of staking key from base address.
-getStakeHK :: Addr crypto -> Maybe (StakeCredential crypto)
+getStakeHK :: Addr crypto -> Maybe (Credential crypto)
 getStakeHK (AddrBase _ hk) = Just hk
 getStakeHK _               = Nothing
 
@@ -84,13 +83,13 @@ aggregateOuts (UTxO u) =
 -- | Get Stake of base addresses in TxOut set.
 baseStake
   :: Map (Addr crypto) Coin
-  -> [(StakeCredential crypto, Coin)]
+  -> [(Credential crypto, Coin)]
 baseStake vals =
   mapMaybe convert $ Map.toList vals
   where
    convert
      :: (Addr crypto, Coin)
-     -> Maybe (StakeCredential crypto, Coin)
+     -> Maybe (Credential crypto, Coin)
    convert (a, c) =
      (,c) <$> getStakeHK a
 
@@ -103,14 +102,14 @@ getStakePtr _               = Nothing
 ptrStake
   :: forall crypto
    . Map (Addr crypto) Coin
-  -> Map Ptr (StakeCredential crypto)
-  -> [(StakeCredential crypto, Coin)]
+  -> Map Ptr (Credential crypto)
+  -> [(Credential crypto, Coin)]
 ptrStake vals pointers =
   mapMaybe convert $ Map.toList vals
   where
     convert
       :: (Addr crypto, Coin)
-      -> Maybe (StakeCredential crypto, Coin)
+      -> Maybe (Credential crypto, Coin)
     convert (a, c) =
       case getStakePtr a of
         Nothing -> Nothing
@@ -119,7 +118,7 @@ ptrStake vals pointers =
 rewardStake
   :: forall crypto
    . Map (RewardAcnt crypto) Coin
-  -> [(StakeCredential crypto, Coin)]
+  -> [(Credential crypto, Coin)]
 rewardStake rewards =
   map convert $ Map.toList rewards
   where
@@ -128,7 +127,7 @@ rewardStake rewards =
 -- | Get stake of one pool
 poolStake
   :: KeyHash crypto
-  -> Map (StakeCredential crypto) (KeyHash crypto)
+  -> Map (Credential crypto) (KeyHash crypto)
   -> Stake crypto
   -> Stake crypto
 poolStake hk delegs (Stake stake) =
@@ -195,15 +194,15 @@ data SnapShots crypto
   = SnapShots
     { _pstakeMark
       :: ( Stake crypto
-         , Map (StakeCredential crypto) (KeyHash crypto)
+         , Map (Credential crypto) (KeyHash crypto)
          )
     , _pstakeSet
       :: ( Stake crypto
-         , Map (StakeCredential crypto) (KeyHash crypto)
+         , Map (Credential crypto) (KeyHash crypto)
          )
     , _pstakeGo
       :: ( Stake crypto
-         , Map (StakeCredential crypto) (KeyHash crypto)
+         , Map (Credential crypto) (KeyHash crypto)
          )
     , _poolsSS
       :: Map (KeyHash crypto) (PoolParams crypto)

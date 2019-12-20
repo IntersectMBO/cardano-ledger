@@ -84,8 +84,8 @@ import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pat
                      hashHeaderToNonce, mkSeed, seedEta, seedL, startRewards)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern InstantaneousRewards, pattern PoolDistr,
-                     pattern RegKey, pattern RegPool, pattern RetirePool)
+                     pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
+                     pattern RegPool, pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey, sKey, sign, signKES,
@@ -110,7 +110,8 @@ import           STS.Ledgers (pattern LedgerFailure)
 import           STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
                      pattern MIRInsufficientGenesisSigsUTXOW)
 import           Test.Utils
-import           TxData (pattern AddrPtr, pattern Delegation, pattern KeyHashObj,
+import           TxData (pattern AddrPtr, pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
@@ -474,12 +475,12 @@ txbodyEx2A :: TxBody
 txbodyEx2A = TxBody
            (Set.fromList [TxIn genesisId 0])
            [TxOut aliceAddr (Coin 9726)]
-           (fromList ([ RegKey aliceSHK
-           , RegKey bobSHK
-           , RegKey carlSHK
-           , RegPool alicePoolParams
-           ] ++ [InstantaneousRewards (Map.fromList [ (carlSHK, 110)
-                                                    , (dariaSHK, 99)])]))
+           (fromList ([ DCertDeleg (RegKey aliceSHK)
+           , DCertDeleg (RegKey bobSHK)
+           , DCertDeleg (RegKey carlSHK)
+           , DCertPool (RegPool alicePoolParams)
+           ] ++ [DCertMir (MIRCert (Map.fromList [ (carlSHK, 110)
+                                                 , (dariaSHK, 99)]))]))
            Map.empty
            (Coin 3)
            (SlotNo 10)
@@ -650,9 +651,9 @@ txbodyEx2B = TxBody
       , TxData._outputs  = [ TxOut aliceAddr    (Coin 722)
                            , TxOut alicePtrAddr (Coin 9000) ]
       -- | Delegation certificates
-      , TxData._certs    = fromList [ Delegate $ Delegation aliceSHK (hk alicePool)
-                                    , Delegate $ Delegation bobSHK   (hk alicePool)
-                                    ]
+      , TxData._certs    =
+        fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
+                 , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
       , TxData._wdrls    = Map.empty
       , TxData._txfee    = Coin 4
       , TxData._ttl      = SlotNo 90
@@ -1270,7 +1271,7 @@ txbodyEx2J :: TxBody
 txbodyEx2J = TxBody
            (Set.fromList [TxIn genesisId 1]) --
            [TxOut bobAddr bobAda2J]
-           (fromList [DeRegKey bobSHK])
+           (fromList [DCertDeleg (DeRegKey bobSHK)])
            (Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
            (Coin 9)
            (SlotNo 500)
@@ -1352,7 +1353,7 @@ txbodyEx2K :: TxBody
 txbodyEx2K = TxBody
            (Set.fromList [TxIn (txid txbodyEx2B) 0])
            [TxOut alicePtrAddr 720]
-           (fromList [RetirePool (hk alicePool) (EpochNo 5)])
+           (fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
            Map.empty
            (Coin 2)
            (SlotNo 500)
@@ -2021,9 +2022,9 @@ txbodyEx5A :: TxBody
 txbodyEx5A = TxBody
               (Set.fromList [TxIn genesisId 0])
               [TxOut aliceAddr (Coin 9999)]
-              (fromList [GenesisDelegate
-                          ( (hashKey . coreNodeVKG) 0
-                          , (hashKey . vKey) newGenDelegate)])
+              (fromList [DCertGenesis (GenesisDelegate
+                                       ( (hashKey . coreNodeVKG) 0
+                                       , (hashKey . vKey) newGenDelegate))])
               Map.empty
               (Coin 1)
               (SlotNo 10)
@@ -2164,7 +2165,7 @@ txbodyEx6A :: TxBody
 txbodyEx6A = TxBody
               (Set.fromList [TxIn genesisId 0])
               [TxOut aliceAddr (Coin 9999)]
-              (fromList [InstantaneousRewards ir])
+              (fromList [DCertMir (MIRCert ir)])
               Map.empty
               (Coin 1)
               (SlotNo 10)
@@ -2319,7 +2320,7 @@ txbodyEx6F :: TxBody
 txbodyEx6F = TxBody
               (Set.fromList [TxIn genesisId 0])
               [TxOut aliceAddr (Coin 9992)]
-              (fromList [RegKey aliceSHK, InstantaneousRewards ir])
+              (fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert ir)])
               Map.empty
               (Coin 1)
               (SlotNo 99)

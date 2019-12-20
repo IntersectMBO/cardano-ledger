@@ -28,25 +28,25 @@ module Tx
   , txwitsScript
   , extractKeyHash
   , extractScriptHash
+  , extractGenKeyHash
   )
 where
 
 
-import           Keys (AnyKeyHash, undiscriminateKeyHash)
+import           Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
 
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Ledger.Shelley.Crypto
-import           Data.Word (Word8)
 import           Data.Map.Strict (Map)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Word (Word8)
 
-import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs,
-                     inputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap,
-                     witnessVKeySet)
+import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
+                     TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
+                     ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -108,18 +108,22 @@ txwitsScript
 txwitsScript = _witnessMSigMap
 
 extractKeyHash
-  :: [StakeCredential crypto]
+  :: [Credential crypto]
   -> [AnyKeyHash crypto]
 extractKeyHash =
   mapMaybe (\case
                 KeyHashObj hk -> Just $ undiscriminateKeyHash hk
-                GenesisHashObj hk -> Just $ undiscriminateKeyHash hk
                 _ -> Nothing)
 
 extractScriptHash
-  :: [StakeCredential crypto]
+  :: [Credential crypto]
   -> [ScriptHash crypto]
 extractScriptHash =
   mapMaybe (\case
                 ScriptHashObj hk -> Just hk
                 _ -> Nothing)
+
+extractGenKeyHash
+  :: [GenKeyHash crypto]
+  -> [AnyKeyHash crypto]
+extractGenKeyHash = map undiscriminateKeyHash

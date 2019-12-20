@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- for the Relation instance
@@ -52,13 +53,13 @@ import           Coin (Coin (..))
 import           Keys (KeyDiscriminator (..), KeyPair, Signable, hash, sKey, sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
-import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred,
-                     inputs, outputs, poolPubKey, txUpdate)
+import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
+                     pattern Delegation, PoolCert (..), ScriptHash, Tx (..), TxBody (..),
+                     TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred, inputs, outputs,
+                     poolPubKey, txUpdate)
 import           Updates (Update)
 
-import           Delegation.Certificates (DCert (..), StakePools (..), cwitness, dvalue,
-                     requiresVKeyWitness)
+import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto
@@ -190,7 +191,8 @@ deposits
 deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (pool ^. poolPubKey) stpools
+    notRegisteredPool (DCertPool (RegPool pool)) =
+      Map.notMember (pool ^. poolPubKey) stpools
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
@@ -204,11 +206,20 @@ getScriptHash (AddrEnterprise (ScriptHashObj hs)) = Just hs
 getScriptHash _                                   = Nothing
 
 scriptStakeCred
-  :: StakeCredential crypto
+  :: DCert crypto
   -> Maybe (ScriptHash crypto)
-scriptStakeCred (KeyHashObj _ )    =  Nothing
-scriptStakeCred (GenesisHashObj _ )    =  Nothing
-scriptStakeCred (ScriptHashObj hs) = Just hs
+scriptStakeCred (DCertDeleg (DeRegKey (KeyHashObj _)))    =  Nothing
+scriptStakeCred (DCertDeleg (DeRegKey (ScriptHashObj hs))) = Just hs
+scriptStakeCred (DCertDeleg (Delegate (Delegation (KeyHashObj _) _)))    =  Nothing
+scriptStakeCred (DCertDeleg (Delegate (Delegation (ScriptHashObj hs) _))) = Just hs
+scriptStakeCred _ = Nothing
+
+scriptCred
+  :: Credential crypto
+  -> Maybe (ScriptHash crypto)
+scriptCred (KeyHashObj _)  = Nothing
+scriptCred (ScriptHashObj hs) = Just hs
+
 
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
@@ -219,9 +230,9 @@ scriptsNeeded
 scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
   `Set.union`
-  Set.fromList (Maybe.mapMaybe (scriptStakeCred . getRwdCred) $ Map.keys withdrawals)
+  Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
-  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter requiresVKeyWitness certificates))
+  Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
