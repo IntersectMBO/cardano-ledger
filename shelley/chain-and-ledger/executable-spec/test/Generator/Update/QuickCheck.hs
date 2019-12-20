@@ -12,12 +12,12 @@ module Generator.Update.QuickCheck
   )
   where
 
-import           Control.Monad(join)
+import           Control.Monad (join)
+import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.Map.Strict as Map (fromList)
 import           Data.Ratio ((%))
 import           Data.Set (Set)
-import qualified Data.Set   as Set (fromList)
-import qualified Data.Map.Strict as Map (fromList)
-import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.Set as Set (fromList)
 
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -27,24 +27,16 @@ import           Cardano.Crypto.Hash (HashAlgorithm)
 import           Cardano.Ledger.Shelley.Crypto (HASH)
 import           Coin (Coin (..))
 import           Examples (unsafeMkUnitInterval)
-import           Keys (hash)
 import           Generator.Core.QuickCheck (genInteger, genNatural, genWord64,
-                     increasingProbabilityAt)
+                                            increasingProbabilityAt)
+import           Keys (hash)
+import           Keys (GenKeyHash)
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..))
 import           Slot (EpochNo (EpochNo))
-import           Updates (Ppm (..)
-                         ,PParamsUpdate(..)
-                         ,PPUpdate(..)
-                         ,SystemTag(..)
-                         ,InstallerHash(..)
-                         ,ApVer(..)
-                         ,ApName(..)
-                         ,Applications(..)
-                         ,Mdt(..)
-                         ,AVUpdate(..)
-                         ,Update(..))
-import           Keys (GenKeyHash)
+import           Updates (AVUpdate (..), ApName (..), ApVer (..), Applications (..),
+                          InstallerHash (..), Mdt (..), PPUpdate (..), PParamsUpdate (..), Ppm (..),
+                          SystemTag (..), Update (..))
 
 genRationalInThousands :: Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
