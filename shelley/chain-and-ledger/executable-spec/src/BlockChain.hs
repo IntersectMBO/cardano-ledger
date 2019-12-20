@@ -57,7 +57,7 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (CborSeq (..), Nonce (..), Seed (..), UnitInterval, intervalValue,
-                     mkNonce)
+                     invalidKey, mkNonce)
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
                      encodeListLen, enforceSize, matchSize)
 import           Cardano.Crypto.Hash (SHA256)
@@ -336,19 +336,32 @@ instance Crypto crypto
 instance Crypto crypto
   => FromCBOR (SegWits crypto)
  where
-  fromCBOR = decodeListLen >> decodeWord >>= \case
-    0 -> SegWitsVKey <$> fromCBOR
-    1 -> SegWitsVKeys <$> fromCBOR
-    2 -> do
-      a <- fromCBOR
-      b <- fromCBOR
-      pure $ SegWitsScript a b
-    3 -> SegWitsScripts <$> fromCBOR
-    4 -> do
-      a <- fromCBOR
-      b <- fromCBOR
-      pure $ SegWitsAll a b
-    k -> fail $ "not a valid key: " ++ show k
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "SegWitsVKey" 2 n
+        a <- fromCBOR
+        pure $ SegWitsVKey a
+      1 -> do
+        a <- fromCBOR
+        matchSize "SegWitsVKeys" 2 n
+        pure $ SegWitsVKeys a
+      2 -> do
+        matchSize "SegWitsScript" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ SegWitsScript a b
+      3 -> do
+        a <- fromCBOR
+        matchSize "SegWitsScripts" 2 n
+        pure $ SegWitsScripts a
+      4 -> do
+        a <- fromCBOR
+        b <- fromCBOR
+        matchSize "SegWitsAll" 3 n
+        pure $ SegWitsAll a b
+      k -> invalidKey k
 
 instance Crypto crypto
   => ToCBOR (Block crypto)
@@ -366,7 +379,7 @@ instance Crypto crypto
   => FromCBOR (Block crypto)
  where
   fromCBOR = do
-    _ <- decodeListLen
+    enforceSize "Block" 3
     header <- fromCBOR
     bodies <- (toList . unwrapCborSeq <$> fromCBOR)
     wits <- (toList . unwrapCborSeq <$> fromCBOR)
