@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -44,26 +45,34 @@ where
 import qualified Data.ByteString.Char8 as BS
 import           Data.Coerce (coerce)
 import           Data.Foldable (toList)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ratio (denominator, numerator)
 import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import           Data.Set (Set)
+import qualified Data.Set as Set
+import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, mkNonce)
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, encodeListLen,
-                     enforceSize, matchSize)
+import           BaseTypes (CborSeq (..), Nonce (..), Seed (..), UnitInterval, intervalValue,
+                     invalidKey, mkNonce)
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
+                     encodeListLen, enforceSize, matchSize)
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.Monad (unless)
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
 import           Slot (BlockNo (..), Duration, SlotNo (..))
-import           Tx (Tx (..))
+import           Tx (Tx (..), TxBody (..), WitVKey (..))
+import           TxData (MultiSig (..), ScriptHash (..))
 
 import           NonIntegral ((***))
 import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
@@ -244,6 +253,147 @@ data Block crypto
     (TxSeq crypto)
   deriving (Show, Eq)
 
+-- The SegWits data type is only used for serializing and deserializing
+-- blocks using a "segregated witness" format:
+--
+--   block =
+--     [ header
+--     , transaction_bodies         : [* transaction_body]
+--     , transaction_witness_sets   : [* transaction_witness_set]
+--     ]
+--
+--     and transaction_witness_set is serialized depending on what
+--     values are present:
+--
+--  transaction_witness_set =
+--    (  0, vkeywitness
+--    // 1, $script
+--    // 2, [* vkeywitness]
+--    // 3, [* $script]
+--    // 4, [* vkeywitness],[* $script]
+--    )
+data SegWits crypto
+  = SegWitsVKey (WitVKey crypto)
+  | SegWitsVKeys (Set (WitVKey crypto))
+  | SegWitsScript (ScriptHash crypto) (MultiSig crypto)
+  | SegWitsScripts (Map (ScriptHash crypto) (MultiSig crypto))
+  | SegWitsAll (Set (WitVKey crypto)) (Map (ScriptHash crypto) (MultiSig crypto))
+  deriving (Show, Eq)
+
+segWitToTx
+  :: (Crypto crypto)
+  => (TxBody crypto, SegWits crypto)
+  -> Tx crypto
+segWitToTx (body, SegWitsVKey w) = Tx body (Set.singleton w) mempty
+segWitToTx (body, SegWitsVKeys ws) = Tx body ws mempty
+segWitToTx (body, SegWitsScript s m) = Tx body mempty (Map.singleton s m)
+segWitToTx (body, SegWitsScripts ss) = Tx body mempty ss
+segWitToTx (body, SegWitsAll ws ss) = Tx body ws ss
+
+txToSegWit
+  :: (Crypto crypto)
+  => Tx crypto
+  -> SegWits crypto
+txToSegWit (Tx _ ws ss) =
+  case (Set.toList ws, Map.toList ss) of
+    ([x]      , [])        -> SegWitsVKey x
+    (zs@(_:_), [])        -> SegWitsVKeys $ Set.fromList zs
+    ([]       , [p])       -> uncurry SegWitsScript p
+    ([]       , qs@(_:_)) -> SegWitsScripts $ Map.fromList qs
+    (zs       , qs)        -> SegWitsAll (Set.fromList zs) (Map.fromList qs)
+
+instance Crypto crypto
+  => ToCBOR (SegWits crypto)
+ where
+  toCBOR = \case
+    SegWitsVKey w ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR w
+
+    SegWitsVKeys ws ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR ws
+
+    SegWitsScript s m ->
+      encodeListLen 3
+        <> toCBOR (2 :: Word8)
+        <> toCBOR s
+        <> toCBOR m
+
+    SegWitsScripts ss ->
+      encodeListLen 2
+        <> toCBOR (3 :: Word8)
+        <> toCBOR ss
+
+    SegWitsAll ws ss ->
+      encodeListLen 3
+        <> toCBOR (4 :: Word8)
+        <> toCBOR ws
+        <> toCBOR ss
+
+instance Crypto crypto
+  => FromCBOR (SegWits crypto)
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "SegWitsVKey" 2 n
+        a <- fromCBOR
+        pure $ SegWitsVKey a
+      1 -> do
+        a <- fromCBOR
+        matchSize "SegWitsVKeys" 2 n
+        pure $ SegWitsVKeys a
+      2 -> do
+        matchSize "SegWitsScript" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ SegWitsScript a b
+      3 -> do
+        a <- fromCBOR
+        matchSize "SegWitsScripts" 2 n
+        pure $ SegWitsScripts a
+      4 -> do
+        a <- fromCBOR
+        b <- fromCBOR
+        matchSize "SegWitsAll" 3 n
+        pure $ SegWitsAll a b
+      k -> invalidKey k
+
+instance Crypto crypto
+  => ToCBOR (Block crypto)
+ where
+  toCBOR (Block h (TxSeq txns)) =
+      encodeListLen 3
+        <> toCBOR h
+        <> toCBOR bodies
+        <> toCBOR wits
+      where
+        bodies = CborSeq $ fmap _body txns
+        wits = CborSeq $ fmap txToSegWit txns
+
+instance Crypto crypto
+  => FromCBOR (Block crypto)
+ where
+  fromCBOR = do
+    enforceSize "Block" 3
+    header <- fromCBOR
+    bodies <- (toList . unwrapCborSeq <$> fromCBOR)
+    wits <- (toList . unwrapCborSeq <$> fromCBOR)
+    let b = length bodies
+        w = length wits
+    unless (b == w)
+      (fail $ "different number of transaction bodies ("
+        <> show b <> ") and witness sets ("
+        <> show w <> ")"
+      )
+    let txns = Seq.fromList $ fmap segWitToTx (zip bodies wits)
+    pure $ Block header (TxSeq txns)
+
+
 bHeaderSize
   :: ( Crypto crypto)
   => BHeader crypto
@@ -291,7 +441,7 @@ mkSeed
 mkSeed (Nonce uc) slot nonce lastHash =
   Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce, lastHash))
 mkSeed NeutralNonce slot nonce lastHash =
-  Seed . coerce $ (hash @SHA256 (slot, nonce, lastHash))
+  Seed . coerce $ hash @SHA256 (slot, nonce, lastHash)
 
 
 vrfChecks

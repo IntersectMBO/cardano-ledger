@@ -22,6 +22,7 @@ module BaseTypes
   , mkNonce
   , mkUnitInterval
   , truncateUnitInterval
+  , CborSeq(..)
     -- * STS Base
   , Globals (..)
   , ShelleyBase
@@ -29,15 +30,19 @@ module BaseTypes
 
 
 import           Cardano.Binary (Decoder, DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR),
-                     decodeListLen, decodeWord, encodeListLen, matchSize)
+                     decodeBreakOr, decodeListLen, decodeListLenOrIndef, decodeWord, encodeBreak,
+                     encodeListLen, encodeListLenIndef, matchSize)
 import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Cardano.Slotting.EpochInfo
-import           Control.Monad.Trans.Reader
+import           Control.Monad (replicateM)
+import           Control.Monad.Trans.Reader (ReaderT)
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Functor.Identity
 import           Data.Ratio (denominator, numerator, (%))
+import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
@@ -144,6 +149,28 @@ newtype Seed = Seed (Hash SHA256 Seed)
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
 infix 1 ==>
+
+newtype CborSeq a = CborSeq { unwrapCborSeq :: Seq a }
+
+instance ToCBOR a => ToCBOR (CborSeq a) where
+  toCBOR (CborSeq xs) =
+    let l = fromIntegral $ Seq.length xs
+        contents = foldMap toCBOR xs
+    in
+    if l <= 23
+    then encodeListLen l <> contents
+    else encodeListLenIndef <> contents <> encodeBreak
+
+instance FromCBOR a => FromCBOR (CborSeq a) where
+  fromCBOR = CborSeq . Seq.fromList <$> do
+    decodeListLenOrIndef >>= \case
+      Just len -> replicateM len fromCBOR
+      Nothing -> loop [] (not <$> decodeBreakOr) fromCBOR
+    where
+    loop acc condition action = condition >>= \case
+      False -> pure acc
+      True -> action >>= \v -> loop (v:acc) condition action
+
 
 --------------------------------------------------------------------------------
 -- Base monad for all STS systems
