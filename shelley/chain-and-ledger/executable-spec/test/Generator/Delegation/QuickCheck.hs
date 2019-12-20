@@ -22,6 +22,7 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Test.Utils
 
+import           BaseTypes (interval0)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
@@ -34,7 +35,7 @@ import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCr
                      _genDelegs, _pstate, _stPools, _stkCreds)
 import           MockTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs, PState,
                      PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
-import           PParams (PParams (..), eMax)
+import           PParams (PParams (..), d, eMax)
 import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           TxData (Credential (KeyHashObj), pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertPool, pattern Delegation, pattern PoolParams, RewardAcnt (..),
@@ -110,10 +111,7 @@ genDCert keys coreKeys vrfKeys pparams dpState slot =
                , (1, genGenesisDelegation keys coreKeys dpState)
                , (1, genDeRegKeyCert keys dState)
                , (1, genRetirePool keys pparams pState slot)
-               -- TODO mgudemann
-               -- needs to sign transaction with `coreKeys`
-               -- tends to generate Txs without input which leads to error
-               , (1, genInstantaneousRewards coreKeys dState)
+               , (1, genInstantaneousRewards coreKeys pparams dState)
                ]
  where
   dState = dpState ^. dstate
@@ -291,10 +289,10 @@ genRetirePool availableKeys pp pState slot =
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards
   :: [CoreKeyPair]
+  -> PParams
   -> DState
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
-
-genInstantaneousRewards coreKeys delegSt = do
+genInstantaneousRewards coreKeys pparams delegSt = do
   let StakeCreds credentials = _stkCreds delegSt
 
   winnerCreds <- take <$> QC.elements [0 .. (max 0 $ (Map.size credentials) - 1)]
@@ -305,5 +303,13 @@ genInstantaneousRewards coreKeys delegSt = do
                       <*> QC.shuffle coreKeys
 
   let credCoinMap = Map.fromList $ zip winnerCreds coins
-  pure $ Just ( DCertMir (MIRCert credCoinMap)
-              , Right coreSigners)
+  pure $ if (-- Discard this generator (by returning Nothing) if:
+             -- we are in full decentralisation mode (d=0) when IR certs are not allowed
+             pparams ^. d == interval0
+             -- or when we don't have keys available for generating an IR cert
+             || null credCoinMap)
+    then
+      Nothing
+    else
+      Just ( DCertMir (MIRCert credCoinMap)
+           , Right coreSigners)
