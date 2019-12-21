@@ -27,20 +27,18 @@ module Cardano.Chain.Common.LovelacePortion
   , mkKnownLovelacePortion
   , lovelacePortionDenominator
   , lovelacePortionToDouble
-  , applyLovelacePortionDown
   )
 where
 
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
-import Formatting (bprint, build, float, int, sformat)
+import Formatting (bprint, build, float, int)
 import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
-import Cardano.Chain.Common.Lovelace
 
 
 -- | LovelacePortion is some portion of Lovelace; it is interpreted as a fraction with
@@ -121,22 +119,4 @@ lovelacePortionToDouble :: LovelacePortion -> Double
 lovelacePortionToDouble (getLovelacePortion -> x) =
   realToFrac x / realToFrac lovelacePortionDenominator
 {-# INLINE lovelacePortionToDouble #-}
-
--- | Apply LovelacePortion to Lovelace (with rounding down)
---
---   Use it for calculating lovelace amounts.
-applyLovelacePortionDown :: LovelacePortion -> Lovelace -> Lovelace
-applyLovelacePortionDown (getLovelacePortion -> p) (unsafeGetLovelace -> c) =
-  case c' of
-    Right lovelace -> lovelace
-    Left  err      -> panic $ sformat
-      ("The impossible happened in applyLovelacePortionDown: " . build)
-      err
- where
-  c' =
-    mkLovelace
-      .     fromInteger
-      $     toInteger p
-      *     toInteger c
-      `div` toInteger lovelacePortionDenominator
 
