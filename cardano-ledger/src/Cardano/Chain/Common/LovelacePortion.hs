@@ -27,6 +27,8 @@ module Cardano.Chain.Common.LovelacePortion
   , mkKnownLovelacePortion
   , lovelacePortionDenominator
   , lovelacePortionToDouble
+  , rationalToLovelacePortion
+  , lovelacePortionToRational
   )
 where
 
@@ -82,6 +84,16 @@ instance MonadError SchemaError m => FromJSON m LovelacePortion where
 -- | Denominator used by 'LovelacePortion'.
 lovelacePortionDenominator :: Word64
 lovelacePortionDenominator = 1e15
+
+rationalToLovelacePortion :: Rational -> LovelacePortion
+rationalToLovelacePortion r
+  | r >= 0 && r <= 1 = LovelacePortion
+                         (ceiling (r * toRational lovelacePortionDenominator))
+  | otherwise        = panic "rationalToLovelacePortion: out of range [0..1]"
+
+lovelacePortionToRational :: LovelacePortion -> Rational
+lovelacePortionToRational (LovelacePortion n) =
+  toInteger n % toInteger lovelacePortionDenominator
 
 data LovelacePortionError
   = LovelacePortionDoubleOutOfRange Double
