@@ -13,7 +13,6 @@ where
 
 import Cardano.Prelude
 
-import Control.Arrow ((|||))
 import Data.Coerce (coerce)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -55,10 +54,9 @@ elaboratePParams pps = Concrete.ProtocolParameters
     Concrete.SoftforkRule
       { Concrete.srInitThd = Concrete.mkKnownLovelacePortion @0
       -- See 'upAdptThd' in 'module Cardano.Chain.Update.ProtocolParameters'
-      , Concrete.srMinThd = panic . show ||| identity
-                          $ Concrete.mkLovelacePortion
-                          $ floor
-                          $ Abstract._upAdptThd pps * 1e15
+      , Concrete.srMinThd = Concrete.rationalToLovelacePortion
+                          $ realToFrac
+                          $ Abstract._upAdptThd pps
       , Concrete.srThdDecrement  = Concrete.mkKnownLovelacePortion @0
       }
   , Concrete.ppTxFeePolicy        =
