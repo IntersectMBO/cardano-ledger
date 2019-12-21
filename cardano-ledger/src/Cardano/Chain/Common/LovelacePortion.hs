@@ -24,16 +24,24 @@ import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 
--- | LovelacePortion is some portion of Lovelace; it is interpreted as a fraction with
---   denominator of 'lovelacePortionDenominator'. The numerator must be in the
---   interval of [0, lovelacePortionDenominator].
+-- | 'LovelacePortion' is a legacy Byron type that we keep only for
+-- compatibility. It was originally intended to represent a fraction of stake
+-- in the system. It is used only for the thresholds used in the update system
+-- rules, most of which are now themselves unused. The remaining case is no
+-- longer interpreted as a fraction of all stake, but as a fraction of the
+-- number of genesis keys.
 --
---   Usually 'LovelacePortion' is used to determine some threshold expressed as
---   portion of total stake.
+-- It has enormous precision, due to the fact that it was originally intended
+-- to represent a fraction of all stake and can cover the precision of all the
+-- Lovelace in the system.
 --
---   To multiply a lovelace portion by 'Lovelace', use 'applyLovelacePortionDown' (when
---   calculating number of lovelace) or 'applyLovelacePortionUp' (when calculating a
---   threshold).
+-- It is represented as a rational nominator with a fixed implicit denominator
+-- of 1e15. So the nominator must be in the range @[0..1e15]@. This is also the
+-- representation used on-chain (in update proposals) and in the JSON
+-- genesis file.
+--
+-- It is interpreted as a 'Rational' via the provided conversion functions.
+--
 newtype LovelacePortion = LovelacePortion
   { getLovelacePortion :: Word64
   } deriving (Show, Ord, Eq, Generic, HeapWords, NFData, NoUnexpectedThunks)
@@ -55,8 +63,8 @@ instance FromCBOR LovelacePortion where
       fail "LovelacePortion: value out of bounds [0..1e15]"
     return (LovelacePortion nominator)
 
--- The Canonical and Aeson instances for LovelacePortion are inconsistent -
--- Canonical reads/writes an integer, but Aeson reads/write a Real in range [0,1]
+-- The canonical JSON instance for LovelacePortion uses only the nominator in
+-- the external representation,  rather than a real in the range [0,1].
 -- This is because 'canonical-json' only supports numbers of type @Int54@.
 instance Monad m => ToJSON m LovelacePortion where
   toJSON = toJSON . getLovelacePortion
@@ -75,12 +83,17 @@ instance MonadError SchemaError m => FromJSON m LovelacePortion where
 lovelacePortionDenominator :: Word64
 lovelacePortionDenominator = 1e15
 
+-- | Make a 'LovelacePortion' from a 'Rational'
+-- which must be in the range @[0..1]@.
+--
 rationalToLovelacePortion :: Rational -> LovelacePortion
 rationalToLovelacePortion r
   | r >= 0 && r <= 1 = LovelacePortion
                          (ceiling (r * toRational lovelacePortionDenominator))
   | otherwise        = panic "rationalToLovelacePortion: out of range [0..1]"
 
+-- | Turn a 'LovelacePortion' into a 'Rational' in the range @[0..1]@.
+--
 lovelacePortionToRational :: LovelacePortion -> Rational
 lovelacePortionToRational (LovelacePortion n) =
   toInteger n % toInteger lovelacePortionDenominator
