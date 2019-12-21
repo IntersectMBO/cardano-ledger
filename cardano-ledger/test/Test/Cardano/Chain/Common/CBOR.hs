@@ -24,7 +24,6 @@ import Cardano.Chain.Common
   , Attributes(..)
   , BlockCount(..)
   , ChainDifficulty(..)
-  , LovelacePortion(..)
   , TxFeePolicy(..)
   , TxSizeLinear(..)
   , isRedeemAddress
@@ -34,6 +33,7 @@ import Cardano.Chain.Common
   , mtRoot
   , decodeAddressBase58
   , encodeAddressBase58
+  , rationalToLovelacePortion
   )
 import Cardano.Crypto
   ( Hash
@@ -216,7 +216,7 @@ golden_LovelacePortion :: Property
 golden_LovelacePortion =
   goldenTestCBOR c "test/golden/cbor/common/LovelacePortion"
  where
-  c = LovelacePortion 9702
+  c = rationalToLovelacePortion 9702e-15
 
 ts_roundTripLovelacePortionCBOR :: TSProperty
 ts_roundTripLovelacePortionCBOR =

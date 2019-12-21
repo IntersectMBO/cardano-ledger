@@ -12,7 +12,7 @@ import Test.Cardano.Prelude
 import Hedgehog (Property)
 
 import Cardano.Binary (Raw(..))
-import Cardano.Chain.Common (LovelacePortion(..))
+import Cardano.Chain.Common (rationalToLovelacePortion)
 import Cardano.Chain.Update (ApplicationName(..), SoftforkRule(..))
 import Cardano.Crypto (Hash, abstractHash)
 
@@ -132,9 +132,9 @@ goldenSoftforkRule :: Property
 goldenSoftforkRule = goldenTestCBOR sfR "test/golden/cbor/update/SoftforkRule"
  where
   sfR = SoftforkRule
-    (LovelacePortion 99)
-    (LovelacePortion 99)
-    (LovelacePortion 99)
+    (rationalToLovelacePortion 99e-15)
+    (rationalToLovelacePortion 99e-15)
+    (rationalToLovelacePortion 99e-15)
 
 ts_roundTripSoftforkRule :: TSProperty
 ts_roundTripSoftforkRule = eachOfTS 10 genSoftforkRule roundTripsCBORBuildable

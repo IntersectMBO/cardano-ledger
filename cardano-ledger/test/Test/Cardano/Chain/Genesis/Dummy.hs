@@ -31,7 +31,7 @@ import Cardano.Chain.Common
   , TxFeePolicy(..)
   , TxSizeLinear(..)
   , mkKnownLovelace
-  , mkKnownLovelacePortion
+  , rationalToLovelacePortion
   )
 import Cardano.Chain.Genesis
   ( Config(..)
@@ -110,15 +110,16 @@ dummyProtocolParameters = ProtocolParameters
   , ppMaxHeaderSize     = 2000000
   , ppMaxTxSize         = 4096
   , ppMaxProposalSize   = 700
-  , ppMpcThd            = mkKnownLovelacePortion @10000000000000
-  , ppHeavyDelThd       = mkKnownLovelacePortion @5000000000000
-  , ppUpdateVoteThd     = mkKnownLovelacePortion @1000000000000
-  , ppUpdateProposalThd = mkKnownLovelacePortion @100000000000000
+  , ppMpcThd            = rationalToLovelacePortion 0.01
+  , ppHeavyDelThd       = rationalToLovelacePortion 0.005
+  , ppUpdateVoteThd     = rationalToLovelacePortion 0.001
+  , ppUpdateProposalThd = rationalToLovelacePortion 0.1
   , ppUpdateProposalTTL = 10
   , ppSoftforkRule      = SoftforkRule
-    (mkKnownLovelacePortion @900000000000000)
-    (mkKnownLovelacePortion @600000000000000)
-    (mkKnownLovelacePortion @50000000000000)
+    { srInitThd      = rationalToLovelacePortion 0.9
+    , srMinThd       = rationalToLovelacePortion 0.6
+    , srThdDecrement = rationalToLovelacePortion 0.05
+    }
   , ppTxFeePolicy       = TxFeePolicyTxSizeLinear
     (TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44))
   , ppUnlockStakeEpoch  = EpochNumber maxBound

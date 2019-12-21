@@ -51,14 +51,14 @@ import Cardano.Chain.Common
   , CompactAddress
   , Lovelace
   , LovelaceError(..)
-  , LovelacePortion(..)
+  , LovelacePortion
   , MerkleRoot(..)
   , MerkleTree
   , NetworkMagic(..)
   , KeyHash
   , TxFeePolicy(..)
   , TxSizeLinear(..)
-  , lovelacePortionDenominator
+  , rationalToLovelacePortion
   , makeAddress
   , maxLovelaceVal
   , mkAttributes
@@ -169,7 +169,7 @@ genLovelaceWithRange r =
 
 genLovelacePortion :: Gen LovelacePortion
 genLovelacePortion =
-  LovelacePortion <$> Gen.word64 (Range.constant 0 lovelacePortionDenominator)
+  rationalToLovelacePortion . realToFrac <$> Gen.double (Range.constant 0 1)
 
 -- slow
 genMerkleTree :: ToCBOR a => Gen a -> Gen (MerkleTree a)

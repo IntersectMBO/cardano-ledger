@@ -43,21 +43,21 @@ elaboratePParams pps = Concrete.ProtocolParameters
   , Concrete.ppMaxHeaderSize      = 95 * Abstract._maxHdrSz pps
   , Concrete.ppMaxTxSize          = 4096 * Abstract._maxTxSz pps
   , Concrete.ppMaxProposalSize    = 4096 * Abstract._maxPropSz pps
-  , Concrete.ppMpcThd             = Concrete.mkKnownLovelacePortion @0
-  , Concrete.ppHeavyDelThd        = Concrete.mkKnownLovelacePortion @0
-  , Concrete.ppUpdateVoteThd      = Concrete.mkKnownLovelacePortion @0
-  , Concrete.ppUpdateProposalThd  = Concrete.mkKnownLovelacePortion @0
+  , Concrete.ppMpcThd             = Concrete.rationalToLovelacePortion 0
+  , Concrete.ppHeavyDelThd        = Concrete.rationalToLovelacePortion 0
+  , Concrete.ppUpdateVoteThd      = Concrete.rationalToLovelacePortion 0
+  , Concrete.ppUpdateProposalThd  = Concrete.rationalToLovelacePortion 0
   , Concrete.ppUpdateProposalTTL  = Concrete.SlotNumber
                                   $ unSlotCount
                                   $ Abstract._upTtl pps
   , Concrete.ppSoftforkRule       =
     Concrete.SoftforkRule
-      { Concrete.srInitThd = Concrete.mkKnownLovelacePortion @0
+      { Concrete.srInitThd = Concrete.rationalToLovelacePortion 0
       -- See 'upAdptThd' in 'module Cardano.Chain.Update.ProtocolParameters'
       , Concrete.srMinThd = Concrete.rationalToLovelacePortion
                           $ realToFrac
                           $ Abstract._upAdptThd pps
-      , Concrete.srThdDecrement  = Concrete.mkKnownLovelacePortion @0
+      , Concrete.srThdDecrement  = Concrete.rationalToLovelacePortion 0
       }
   , Concrete.ppTxFeePolicy        =
       elaborateFeePolicy

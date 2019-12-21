@@ -27,7 +27,8 @@ import qualified Data.Map.Strict as Map
 
 import Cardano.Binary (Raw(..))
 import Cardano.Chain.Common
-  (LovelacePortion(..), TxFeePolicy(..), TxSizeLinear(..), mkKnownLovelace)
+  ( mkKnownLovelace, rationalToLovelacePortion
+  , TxFeePolicy(..), TxSizeLinear(..) )
 import Cardano.Chain.Slotting (EpochNumber(..), SlotNumber(..))
 import Cardano.Chain.Update
   ( ApplicationName(..)
@@ -69,10 +70,10 @@ exampleProtocolParameters = ProtocolParameters
   (999 :: Natural)
   (999 :: Natural)
   (999 :: Natural)
-  (LovelacePortion 99)
-  (LovelacePortion 99)
-  (LovelacePortion 99)
-  (LovelacePortion 99)
+  (rationalToLovelacePortion 99e-15)
+  (rationalToLovelacePortion 99e-15)
+  (rationalToLovelacePortion 99e-15)
+  (rationalToLovelacePortion 99e-15)
   (SlotNumber 99)
   sfrule
   (TxFeePolicyTxSizeLinear tslin)
@@ -82,9 +83,9 @@ exampleProtocolParameters = ProtocolParameters
   c1'    = mkKnownLovelace @999
   c2'    = mkKnownLovelace @77
   sfrule = SoftforkRule
-    (LovelacePortion 99)
-    (LovelacePortion 99)
-    (LovelacePortion 99)
+    (rationalToLovelacePortion 99e-15)
+    (rationalToLovelacePortion 99e-15)
+    (rationalToLovelacePortion 99e-15)
 
 exampleProtocolParametersUpdate :: ProtocolParametersUpdate
 exampleProtocolParametersUpdate = ProtocolParametersUpdate
@@ -94,10 +95,10 @@ exampleProtocolParametersUpdate = ProtocolParametersUpdate
   (Just (999 :: Natural))
   (Just (999 :: Natural))
   (Just (999 :: Natural))
-  (Just $ LovelacePortion 99)
-  (Just $ LovelacePortion 99)
-  (Just $ LovelacePortion 99)
-  (Just $ LovelacePortion 99)
+  (Just $ rationalToLovelacePortion 99e-15)
+  (Just $ rationalToLovelacePortion 99e-15)
+  (Just $ rationalToLovelacePortion 99e-15)
+  (Just $ rationalToLovelacePortion 99e-15)
   (Just $ SlotNumber 99)
   (Just sfrule')
   (Just $ TxFeePolicyTxSizeLinear tslin')
@@ -107,9 +108,9 @@ exampleProtocolParametersUpdate = ProtocolParametersUpdate
   co1     = mkKnownLovelace @999
   co2     = mkKnownLovelace @77
   sfrule' = SoftforkRule
-    (LovelacePortion 99)
-    (LovelacePortion 99)
-    (LovelacePortion 99)
+    (rationalToLovelacePortion 99e-15)
+    (rationalToLovelacePortion 99e-15)
+    (rationalToLovelacePortion 99e-15)
 
 exampleSystemTag :: SystemTag
 exampleSystemTag = exampleSystemTags 0 1 !! 0
