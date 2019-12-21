@@ -47,7 +47,7 @@ import Cardano.Crypto (ProtocolMagicId, Signature(..))
 import qualified Cardano.Crypto.Wallet as CC
 
 import Test.Cardano.Chain.Common.Gen
-  (genAddress, genBlockCount, genLovelace, genLovelacePortion, genKeyHash)
+  (genAddress, genBlockCount, genLovelace, genKeyHash)
 import Test.Cardano.Chain.Delegation.Gen
   (genCanonicalCertificateDistinctList, genCertificateDistinctList)
 import Test.Cardano.Chain.Update.Gen
@@ -111,7 +111,7 @@ genGenesisInitializer =
   GenesisInitializer
     <$> genTestnetBalanceOptions
     <*> genFakeAvvmOptions
-    <*> genLovelacePortion
+    <*> (realToFrac <$> Gen.double (Range.constant 0 1))
     <*> Gen.bool
     <*> Gen.integral (Range.constant 0 10)
 
@@ -138,7 +138,7 @@ genTestnetBalanceOptions =
     <$> Gen.word Range.constantBounded
     <*> Gen.word Range.constantBounded
     <*> genLovelace
-    <*> genLovelacePortion
+    <*> (realToFrac <$> Gen.double (Range.constant 0 1))
 
 genGenesisAvvmBalances :: Gen GenesisAvvmBalances
 genGenesisAvvmBalances =

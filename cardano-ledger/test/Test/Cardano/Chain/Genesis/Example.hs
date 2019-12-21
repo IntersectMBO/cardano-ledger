@@ -24,9 +24,7 @@ import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 import Cardano.Binary (Annotated(..))
 import Cardano.Chain.Common
   ( BlockCount(..)
-  , LovelacePortion(..)
   , mkKnownLovelace
-  , mkKnownLovelacePortion
   , hashKey
   )
 import Cardano.Chain.Delegation (unsafeCertificate)
@@ -148,13 +146,13 @@ exampleGenesisInitializer = GenesisInitializer
     { tboPoors          = 2448641325904532856
     , tboRichmen        = 14071205313513960321
     , tboTotalBalance   = mkKnownLovelace @10953275486128625
-    , tboRichmenShare   = mkKnownLovelacePortion @366832547637728
+    , tboRichmenShare   = 0.366832547637728 :: Rational
     }
   , giFakeAvvmBalance = FakeAvvmOptions
     { faoCount      = 17853231730478779264
     , faoOneBalance = mkKnownLovelace @15087947214890024
     }
-  , giAvvmBalanceFactor = LovelacePortion {getLovelacePortion = 366832547637728}
+  , giAvvmBalanceFactor = 0.366832547637728 :: Rational
   , giUseHeavyDlg = False
   , giSeed        = 0
   }

@@ -130,13 +130,13 @@ dummyGenesisInitializer = GenesisInitializer
     { tboPoors          = 12
     , tboRichmen        = 4
     , tboTotalBalance   = mkKnownLovelace @6000000000000000
-    , tboRichmenShare   = mkKnownLovelacePortion @990000000000000
+    , tboRichmenShare   = 0.99 :: Rational
     }
   , giFakeAvvmBalance = FakeAvvmOptions
     { faoCount      = 10
     , faoOneBalance = mkKnownLovelace @100000
     }
-  , giAvvmBalanceFactor = mkKnownLovelacePortion @1000000000000000
+  , giAvvmBalanceFactor = 1.0 :: Rational
   , giUseHeavyDlg = True
   , giSeed        = 0
   }

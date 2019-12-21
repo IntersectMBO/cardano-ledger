@@ -37,13 +37,13 @@ import Cardano.Chain.Common
   , Lovelace
   , LovelaceError
   , addLovelace
-  , applyLovelacePortionDown
   , divLovelace
   , makeVerKeyAddress
   , mkKnownLovelace
   , hashKey
   , modLovelace
   , scaleLovelace
+  , scaleLovelaceRational
   , subLovelace
   , sumLovelace
   )
@@ -189,7 +189,7 @@ generateGenesisData startTime genesisSpec = do
   let
     applyAvvmBalanceFactor :: Map k Lovelace -> Map k Lovelace
     applyAvvmBalanceFactor =
-      map (applyLovelacePortionDown $ giAvvmBalanceFactor gi)
+      map (flip scaleLovelaceRational (giAvvmBalanceFactor gi))
 
     realAvvmMultiplied :: GenesisAvvmBalances
     realAvvmMultiplied =
@@ -394,5 +394,4 @@ genTestnetDistribution tbo testBalance = do
  where
   TestnetBalanceOptions { tboPoors, tboRichmen } = tbo
 
-  desiredRichBalance =
-    applyLovelacePortionDown (tboRichmenShare tbo) testBalance
+  desiredRichBalance = scaleLovelaceRational testBalance (tboRichmenShare tbo)

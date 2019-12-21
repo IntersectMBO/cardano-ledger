@@ -10,13 +10,13 @@ where
 
 import Cardano.Prelude
 
-import Cardano.Chain.Common (Lovelace, LovelacePortion)
+import Cardano.Chain.Common (Lovelace)
 
 -- | Options determining generated genesis stakes, balances, and delegation
 data GenesisInitializer = GenesisInitializer
   { giTestBalance       :: !TestnetBalanceOptions
   , giFakeAvvmBalance   :: !FakeAvvmOptions
-  , giAvvmBalanceFactor :: !LovelacePortion
+  , giAvvmBalanceFactor :: !Rational
   -- ^ Avvm balances will be multiplied by this factor
   , giUseHeavyDlg       :: !Bool
   -- ^ Whether to use heavyweight delegation for genesis keys
@@ -37,7 +37,7 @@ data TestnetBalanceOptions = TestnetBalanceOptions
   -- ^ Number of rich nodes (with huge balance).
   , tboTotalBalance   :: !Lovelace
   -- ^ Total balance owned by these nodes.
-  , tboRichmenShare   :: !LovelacePortion
+  , tboRichmenShare   :: !Rational
   -- ^ Portion of stake owned by all richmen together.
   } deriving (Eq, Show)
 
