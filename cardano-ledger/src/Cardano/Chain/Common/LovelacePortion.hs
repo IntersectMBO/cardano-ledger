@@ -21,12 +21,7 @@
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Chain.Common.LovelacePortion
-  ( LovelacePortion(..)
-  , LovelacePortionError
-  , mkLovelacePortion
-  , mkKnownLovelacePortion
-  , lovelacePortionDenominator
-  , lovelacePortionToDouble
+  ( LovelacePortion
   , rationalToLovelacePortion
   , lovelacePortionToRational
   )
@@ -35,9 +30,8 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(..))
-import Formatting (bprint, build, float, int)
+import Formatting (bprint, float, int)
 import qualified Formatting.Buildable as B
-import GHC.TypeLits (type (<=))
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..))
@@ -94,41 +88,4 @@ rationalToLovelacePortion r
 lovelacePortionToRational :: LovelacePortion -> Rational
 lovelacePortionToRational (LovelacePortion n) =
   toInteger n % toInteger lovelacePortionDenominator
-
-data LovelacePortionError
-  = LovelacePortionDoubleOutOfRange Double
-  | LovelacePortionTooLarge Word64
-  deriving Show
-
-instance B.Buildable LovelacePortionError where
-  build = \case
-    LovelacePortionDoubleOutOfRange d -> bprint
-      ( "Double, "
-      . build
-      . " , out of range [0, 1] when constructing LovelacePortion"
-      )
-      d
-    LovelacePortionTooLarge c -> bprint
-      ("LovelacePortion, " . build . ", exceeds maximum, " . build)
-      c
-      lovelacePortionDenominator
-
--- | Constructor for 'LovelacePortion', returning 'LovelacePortionError' when @c@
---   exceeds 'lovelacePortionDenominator'
-mkLovelacePortion :: Word64 -> Either LovelacePortionError LovelacePortion
-mkLovelacePortion c
-  | c <= lovelacePortionDenominator = Right (LovelacePortion c)
-  | otherwise                       = Left (LovelacePortionTooLarge c)
-
--- | Construct a 'LovelacePortion' from a 'KnownNat', known to be less than
---   'lovelacePortionDenominator'
-mkKnownLovelacePortion
-  :: forall n . (KnownNat n, n <= 1000000000000000) => LovelacePortion
-mkKnownLovelacePortion = LovelacePortion . fromIntegral . natVal $ Proxy @n
-
---FIXME: Use of 'Double' here is highly dubious.
-lovelacePortionToDouble :: LovelacePortion -> Double
-lovelacePortionToDouble (getLovelacePortion -> x) =
-  realToFrac x / realToFrac lovelacePortionDenominator
-{-# INLINE lovelacePortionToDouble #-}
 
