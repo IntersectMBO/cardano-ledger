@@ -62,7 +62,7 @@ instance B.Buildable LovelacePortion where
     (int . "/" . int . " (approx. " . float . ")")
     x
     lovelacePortionDenominator
-    (lovelacePortionToDouble cp)
+    (fromRational (lovelacePortionToRational cp) :: Double)
 
 instance ToCBOR LovelacePortion where
   toCBOR = toCBOR . getLovelacePortion
