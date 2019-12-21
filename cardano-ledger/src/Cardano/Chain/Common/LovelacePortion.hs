@@ -1,24 +1,10 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE ExplicitNamespaces         #-}
-{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NumDecimals                #-}
 {-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE ViewPatterns               #-}
-
--- This is for 'mkKnownLovelacePortion''s @n <= 45000000000000000@ constraint,
--- which is considered redundant. TODO: investigate this.
-{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Chain.Common.LovelacePortion
   ( LovelacePortion
@@ -53,7 +39,7 @@ newtype LovelacePortion = LovelacePortion
   } deriving (Show, Ord, Eq, Generic, HeapWords, NFData, NoUnexpectedThunks)
 
 instance B.Buildable LovelacePortion where
-  build cp@(getLovelacePortion -> x) = bprint
+  build cp@(LovelacePortion x) = bprint
     (int . "/" . int . " (approx. " . float . ")")
     x
     lovelacePortionDenominator
