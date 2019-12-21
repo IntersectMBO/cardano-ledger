@@ -87,10 +87,6 @@ instance MonadError SchemaError m => FromJSON m LovelacePortion where
 lovelacePortionDenominator :: Word64
 lovelacePortionDenominator = 1e15
 
-instance Bounded LovelacePortion where
-  minBound = LovelacePortion 0
-  maxBound = LovelacePortion lovelacePortionDenominator
-
 data LovelacePortionError
   = LovelacePortionDoubleOutOfRange Double
   | LovelacePortionTooLarge Word64
