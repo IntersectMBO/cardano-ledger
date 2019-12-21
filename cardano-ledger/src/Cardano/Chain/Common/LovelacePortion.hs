@@ -29,8 +29,9 @@ where
 
 import Cardano.Prelude
 
+import Control.Monad (fail)
 import Control.Monad.Except (MonadError(..))
-import Formatting (bprint, float, int)
+import Formatting (sformat, build, bprint, float, int)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
@@ -62,7 +63,11 @@ instance ToCBOR LovelacePortion where
   toCBOR = toCBOR . getLovelacePortion
 
 instance FromCBOR LovelacePortion where
-  fromCBOR = LovelacePortion <$> fromCBOR
+  fromCBOR = do
+    nominator <- fromCBOR
+    when (nominator > lovelacePortionDenominator) $
+      fail "LovelacePortion: value out of bounds [0..1e15]"
+    return (LovelacePortion nominator)
 
 -- The Canonical and Aeson instances for LovelacePortion are inconsistent -
 -- Canonical reads/writes an integer, but Aeson reads/write a Real in range [0,1]
@@ -72,8 +77,13 @@ instance Monad m => ToJSON m LovelacePortion where
 
 instance MonadError SchemaError m => FromJSON m LovelacePortion where
   fromJSON val = do
-    number <- fromJSON val
-    pure $ LovelacePortion number
+    nominator <- fromJSON val
+    when (nominator > lovelacePortionDenominator) $
+      throwError SchemaError {
+        seExpected = "LovelacePortion integer in bounds [0..1e15]",
+        seActual   = Just (sformat build nominator)
+      }
+    pure (LovelacePortion nominator)
 
 -- | Denominator used by 'LovelacePortion'.
 lovelacePortionDenominator :: Word64
