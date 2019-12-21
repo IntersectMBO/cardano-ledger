@@ -43,6 +43,7 @@ module Cardano.Chain.Common.Lovelace
   , addLovelace
   , subLovelace
   , scaleLovelace
+  , scaleLovelaceRational
   , divLovelace
   , modLovelace
   )
@@ -201,6 +202,15 @@ subLovelace (Lovelace a) (Lovelace b)
 scaleLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
 scaleLovelace (Lovelace a) b = integerToLovelace $ toInteger a * toInteger b
 {-# INLINE scaleLovelace #-}
+
+-- | Scale a 'Lovelace' by a rational factor between @0..1@, rounding down.
+scaleLovelaceRational :: Lovelace -> Rational -> Lovelace
+scaleLovelaceRational (Lovelace a) b =
+    Lovelace $ fromInteger $ toInteger a * n `div` d
+  where
+    n, d :: Integer
+    n = numerator b
+    d = denominator b
 
 -- | Integer division of a 'Lovelace' by an 'Integral' factor
 divLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
