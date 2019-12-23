@@ -70,15 +70,17 @@ delegationTransition = do
 
   case c of
     DCertDeleg (RegKey key) -> do
+      -- note that pattern match is used instead of regCred, as in the spec
       key ∉ dom (_stkCreds ds) ?! StakeKeyAlreadyRegisteredDELEG
 
       pure $ ds
         { _stkCreds  = _stkCreds ds  ∪ singleton key slot_
-        , _rewards = _rewards ds ∪ Map.singleton (RewardAcnt key) (Coin 0)
+        , _rewards = _rewards ds ∪ Map.singleton (RewardAcnt key) (Coin 0) -- ∪ is override left
         , _ptrs    = _ptrs ds    ∪ Map.singleton ptr_ key
         }
 
     DCertDeleg (DeRegKey key) -> do
+      -- note that pattern match is used instead of cwitness, as in the spec
       key ∈ dom (_stkCreds ds) ?! StakeKeyNotRegisteredDELEG
 
       let rewardCoin = Map.lookup (RewardAcnt key) (_rewards ds)
@@ -92,12 +94,14 @@ delegationTransition = do
         }
 
     DCertDeleg (Delegate (Delegation delegator_ delegatee_)) -> do
+      -- note that pattern match is used instead of cwitness, as in the spec
       delegator_ ∈ dom (_stkCreds ds) ?! StakeDelegationImpossibleDELEG
 
       pure $ ds
         { _delegations = _delegations ds ⨃ [(delegator_, delegatee_)] }
 
     DCertGenesis (GenesisDelegate (gkey, vk)) -> do
+      -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot_ +* slotsPrior
           (GenDelegs genDelegs_) = _genDelegs ds
 
