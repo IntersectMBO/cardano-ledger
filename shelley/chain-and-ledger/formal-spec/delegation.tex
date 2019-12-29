@@ -143,8 +143,8 @@ It does the following:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \cwitness{} & \DCert\setminus(\DCertRegKey\cup\DCertMir) \to \powerset{\Credential} & \text{certificate witness} \\
-      \fun{regCred} & \DCertRegPool \to \Credential & \text{registered credential} \\
+      \cwitness{} & \DCert\setminus(\DCertRegKey\cup\DCertMir) \to \Credential & \text{certificate witness} \\
+      \fun{regCred} & \DCertRegKey \to \Credential & \text{registered credential} \\
       \fun{dpool} & \DCertDeleg \to \KeyHash
                                             & \text{pool being delegated to}
       \\
@@ -348,6 +348,12 @@ concerns are independent of the ledger rules.
     \begin{itemize}
     \item The key is added to the set of registered stake credentials.
       \item A reward account is created for this key, with a starting balance of zero.
+        Note that \cref{eq:deleg-reg} uses a union override left to add
+        a zero balance reward account.
+        We could have used a normal union, since the system as a whole enjoys the property that
+        $\var{hk}\in\dom{\var{stkCreds}}\iff \addrRw \var{hk}\in\dom{\var{rewards}}$.
+        The union override left, however, gives us a \textit{local}
+        preservation of value property. See \cref{sec:preservation-of-value}.
       \item The certificate pointer is mapped to the new stake credential.
     \end{itemize}
 
@@ -420,7 +426,7 @@ concerns are independent of the ledger rules.
       \left(
       \begin{array}{rcl}
         \varUpdate{\var{stkCreds}} & \varUpdate{\union} & \varUpdate{\{\var{hk} \mapsto slot\}} \\
-        \varUpdate{\var{rewards}} & \varUpdate{\union} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
+        \varUpdate{\var{rewards}} & \varUpdate{\unionoverrideLeft} & \varUpdate{\{\addrRw \var{hk} \mapsto 0\}}\\
         \var{delegations} \\
         \varUpdate{\var{ptrs}} & \varUpdate{\union} & \varUpdate{\{ptr \mapsto \var{hk}\}} \\
         \var{fGenDelegs} \\

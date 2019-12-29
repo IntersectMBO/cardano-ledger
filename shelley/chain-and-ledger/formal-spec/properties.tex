@@ -154,8 +154,9 @@ If we let:
     \Val(\txins{t} \restrictdom{\var{utxo}}) + \Val(\txins{t} \subtractdom{\var{utxo}}) + w
     = \Val(\outs{t}) + f + d - k + \Val(\txins{t} \subtractdom{\var{utxo}})
   \end{equation*}
-  Note that $d-k-c$ is non-negative since the deposits will always be large enough to cover
-  the current obligation (see Theorem~\ref{thm:non-neg-deposits}).
+  (Though not needed for the proof at hand,
+  note that $d-k-c$ is non-negative since the deposits will always be large enough to cover
+  the current obligation. See Theorem~\ref{thm:non-neg-deposits}.)
 %
   It then follows that:
   \begin{equation*}

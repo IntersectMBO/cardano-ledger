@@ -64,6 +64,7 @@ poolDelegationTransition = do
   let StakePools stPools_ = _stPools ps
   case c of
     DCertPool (RegPool poolParam) -> do
+      -- note that pattern match is used instead of cwitness, as in the spec
       let hk = poolParam ^. poolPubKey
       if hk ∉ dom stPools_
         then-- register new
@@ -81,6 +82,7 @@ poolDelegationTransition = do
                 _retiring = Set.singleton hk ⋪ _retiring ps
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
+      -- note that pattern match is used instead of cwitness, as in the spec
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoEpoch ei slot
