@@ -25,7 +25,6 @@ import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, (∈), (∉), (⋪))
 import           LedgerState
-import           Lens.Micro ((^.))
 import           PParams
 import           Slot
 import           TxData
@@ -61,20 +60,20 @@ instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
 poolDelegationTransition :: TransitionRule (POOL crypto)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
-  let StakePools stPools_ = _stPools ps
+  let StakePools stpools = _stPools ps
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      let hk = poolParam ^. poolPubKey
-      if hk ∉ dom stPools_
-        then-- register new
+      let hk = _poolPubKey poolParam
+      if hk ∉ dom stpools
+        then-- register new, Pool-Reg
 
           pure $
             ps
-              { _stPools = StakePools $ stPools_ ∪ (hk, slot),
+              { _stPools = StakePools $ stpools ∪ (hk, slot),
                 _pParams = _pParams ps ∪ (hk, poolParam)
               }
-        else-- re-register
+        else-- re-register, Pool-reReg
 
           pure $
             ps
@@ -83,11 +82,11 @@ poolDelegationTransition = do
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
+      hk ∈ dom stpools ?! StakePoolNotRegisteredOnKeyPOOL
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoEpoch ei slot
-      let EpochNo maxEpoch = pp ^. eMax
-      hk ∈ dom stPools_ ?! StakePoolNotRegisteredOnKeyPOOL
+      let EpochNo maxEpoch = _eMax pp
       cepoch < e && e < cepoch + maxEpoch ?! StakePoolRetirementWrongEpochPOOL
       pure $ ps {_retiring = _retiring ps ⨃ (hk, EpochNo e)}
     _ -> do

@@ -27,7 +27,7 @@ import           Delegation.Certificates
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import           Ledger.Core (dom, (∈), (⊆), (⨃))
-import           LedgerState
+import           LedgerState (DPState (..), emptyDelegation, _dstate, _rewards, _stPools)
 import           PParams
 import           Slot
 import           STS.Delpl
@@ -70,36 +70,34 @@ delegsTransition
    . Crypto crypto
   => TransitionRule (DELEGS crypto)
 delegsTransition = do
-  TRC (env@(DelegsEnv _slot txIx pp (Tx txbody _ _) _reserves), dpstate, certificates) <- judgmentContext
+  TRC (env@(DelegsEnv slot txIx pp tx reserves), dpstate, certificates) <- judgmentContext
 
   case certificates of
     Empty -> do
       let ds       = _dstate dpstate
-          rewards_ = _rewards ds
-          wdrls_   = _wdrls txbody
+          wdrls_   = _wdrls (_body tx)
+          rewards = _rewards ds
 
-      wdrls_ ⊆ rewards_ ?! WithrawalsNotInRewardsDELEGS
+      wdrls_ ⊆ rewards ?! WithrawalsNotInRewardsDELEGS
 
-      let rewards' = rewards_ ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
+      let rewards' = rewards ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
 
       pure $ dpstate { _dstate = ds { _rewards = rewards' } }
 
-    certs_ :|> cert -> do
+    gamma :|> c -> do
       dpstate' <-
-        trans @(DELEGS crypto) $ TRC (env, dpstate, certs_)
+        trans @(DELEGS crypto) $ TRC (env, dpstate, gamma)
 
-      let ptr = Ptr _slot txIx (fromIntegral $ length certs_)
-
-          isDelegationRegistered = case cert of
+      let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
               let StakePools stPools_ = _stPools $ _pstate dpstate' in
               _delegatee deleg ∈ dom stPools_
             _ -> True
-
       isDelegationRegistered ?! DelegateeNotRegisteredDELEG
 
+      let ptr = Ptr slot txIx (fromIntegral $ length gamma)
       trans @(DELPL crypto)
-        $ TRC (DelplEnv _slot ptr pp _reserves, dpstate', cert)
+        $ TRC (DelplEnv slot ptr pp reserves, dpstate', c)
 
 instance
   Crypto crypto

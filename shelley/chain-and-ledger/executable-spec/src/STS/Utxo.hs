@@ -31,13 +31,14 @@ import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, range, (∪), (⊆), (⋪))
-import           LedgerState
+import           LedgerState (UTxOState (..), consumed, decayedTx, keyRefunds, minfee, produced,
+                     txsize)
 import           Lens.Micro ((^.))
 import           PParams
 import           Slot
 import           STS.Up
 import           Tx
-import           Updates
+import           Updates (emptyUpdateState)
 import           UTxO
 
 data UTXO crypto
@@ -84,43 +85,45 @@ utxoInductive
    . Crypto crypto
   => TransitionRule (UTXO crypto)
 utxoInductive = do
-  TRC (UtxoEnv slot_ pp stakeKeys stakePools genDelegs_, u, tx) <- judgmentContext
-  let txBody = _body tx
+  TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx) <- judgmentContext
+  let UTxOState utxo deposits' fees ups = u
+  let txb = _body tx
 
-  _ttl txBody >= slot_ ?! ExpiredUTxO (_ttl txBody) slot_
+  _ttl txb >= slot ?! ExpiredUTxO (_ttl txb) slot
 
-  txins txBody /= Set.empty ?! InputSetEmptyUTxO
+  txins txb /= Set.empty ?! InputSetEmptyUTxO
 
-  let minFee = minfee pp txBody
-      txFee  = txBody ^. txfee
+  let minFee = minfee pp txb
+      txFee  = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  txins txBody ⊆ dom (u ^. utxo) ?! BadInputsUTxO
+  txins txb ⊆ dom utxo ?! BadInputsUTxO
 
-  let consumed_ = consumed pp (u ^. utxo) stakeKeys txBody
-      produced_ = produced pp stakePools txBody
+  let consumed_ = consumed pp utxo stakeCreds txb
+      produced_ = produced pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Update Proposals
-  ups' <- trans @(UP crypto) $ TRC (UpdateEnv slot_ pp genDelegs_, u ^. ups, txup tx)
+  ups' <- trans @(UP crypto) $ TRC (UpdateEnv slot pp genDelegs, ups, txup tx)
 
-  let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txBody))]
+  let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
   all (0 <=) outputCoins ?! NegativeOutputsUTxO
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
-      txSize_ = txsize txBody
+      txSize_ = txsize txb
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
-  let refunded = keyRefunds pp stakeKeys txBody
-  decayed <- liftSTS $ decayedTx pp stakeKeys txBody
-  let txCerts = toList $ txBody ^. certs
-
-      depositChange = deposits pp stakePools txCerts - (refunded + decayed)
+  let refunded = keyRefunds pp stakeCreds txb
+  decayed <- liftSTS $ decayedTx pp stakeCreds txb
+  let txCerts = toList $ txb ^. certs
+  let depositChange = deposits pp stakepools txCerts - (refunded + decayed)
 
   pure UTxOState
-        { _utxo      = (txins txBody ⋪ (u ^. utxo)) ∪ txouts txBody
-        , _deposited = _deposited u + depositChange
-        , _fees      = _fees u + (txBody ^. txfee) + decayed
+        { _utxo      = (txins txb ⋪ utxo) ∪ txouts txb
+        , _deposited = deposits' + depositChange
+          -- TODO change variable "deposits" to "deposited" in formal and exec spec,
+          -- in order to not clash with the function of the same name
+        , _fees      = fees + (_txfee txb) + decayed
         , _ups       = ups'
         }
 

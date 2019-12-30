@@ -29,7 +29,7 @@ import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, (∩))
-import           LedgerState hiding (genDelegs)
+import           LedgerState (UTxOState (..), verifiedWits, witsVKeyNeeded)
 import           PParams (_d)
 import           STS.Utxo
 import           Tx
@@ -71,8 +71,8 @@ initialLedgerStateUTXOW
      )
    => InitialRule (UTXOW crypto)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs) <- judgmentContext
-  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakeKeys stakePools genDelegs)
+  IRC (UtxoEnv slots pp stakeCreds stakepools genDelegs) <- judgmentContext
+  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakeCreds stakepools genDelegs)
 
 utxoWitnessed
   :: forall crypto
@@ -81,27 +81,30 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW crypto)
 utxoWitnessed = do
-  TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx@(Tx txbody wits _))
+  TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx@(Tx txbody wits _))
     <- judgmentContext
-  verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
-  let witnessKeys = Set.map witKeyHash wits
-  let needed = witsVKeyNeeded (_utxo u) tx _genDelegs
-  needed `Set.isSubsetOf` witnessKeys  ?! MissingVKeyWitnessesUTXOW
+
+  let utxo = _utxo u
+  let witsKeyHashes = Set.map witKeyHash wits
 
   -- check multi-signature scripts
-  let utxo' = _utxo u
-
   all (\(hs, validator) -> hashScript validator == hs
       && validateScript validator tx) (Map.toList $ txwitsScript tx)
     ?!ScriptWitnessNotValidatingUTXOW
 
-  scriptsNeeded utxo' tx == Map.keysSet (txwitsScript tx)
+  scriptsNeeded utxo tx == Map.keysSet (txwitsScript tx)
     ?! MissingScriptWitnessesUTXOW
 
+  -- check VKey witnesses
+  verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
+
+  let needed = witsVKeyNeeded utxo tx genDelegs
+  needed `Set.isSubsetOf` witsKeyHashes  ?! MissingVKeyWitnessesUTXOW
+
   -- check genesis keys signatures for instantaneous rewards certificates
-  let mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
-      GenDelegs genMapping = _genDelegs
-      genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
+  let genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
+      mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
+      GenDelegs genMapping = genDelegs
   (    (not $ null mirCerts)
    ==> Set.size genSig >= 5)
       ?! MIRInsufficientGenesisSigsUTXOW
@@ -110,7 +113,7 @@ utxoWitnessed = do
     ?! MIRImpossibleInDecentralizedNetUTXOW
 
   trans @(UTXO crypto)
-    $ TRC (UtxoEnv slot pp stakeKeys stakePools _genDelegs, u, tx)
+    $ TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx)
 
 instance
   ( Crypto crypto

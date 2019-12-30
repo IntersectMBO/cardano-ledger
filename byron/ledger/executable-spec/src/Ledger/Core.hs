@@ -288,7 +288,7 @@ class Relation m where
   -- | Union
   (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
 
-  -- | Union Override
+  -- | Union Override Right
   (⨃) :: (Ord (Domain m), Ord (Range m), Foldable f) => m -> f (Domain m, Range m) -> m
 
   -- | Restrict domain to values less or equal than the given value.

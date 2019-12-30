@@ -47,7 +47,7 @@ import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerValidation, applyTxBody, dstate, genesisCoins,
                      genesisState, stkCreds, utxo, utxoState, validTx, _delegationState, _dstate,
-                     _genDelegs, _txSlotIx, _utxoState)
+                     _genDelegs, _utxoState)
 import           PParams (PParams (..), emptyPParams)
 import           Slot
 import           STS.Delegs (pattern DelegateeNotRegisteredDELEG, PredicateFailure (..),
@@ -352,7 +352,7 @@ asStateTransition
   -> Either [ValidationError] LedgerState
 asStateTransition _slot pp ls tx res =
   let next = runShelleyBase $ applySTS @LEDGER
-              (TRC ((LedgerEnv _slot (_txSlotIx ls) pp res)
+              (TRC ((LedgerEnv _slot 0 pp res)
               , (_utxoState ls, _delegationState ls)
               , tx))
   in
@@ -360,7 +360,6 @@ asStateTransition _slot pp ls tx res =
     Left pfs -> Left $ convertPredicateFailuresToValidationErrors pfs
     Right (u, d)  -> Right $ ls { _utxoState = u
                                 , _delegationState = d
-                                , _txSlotIx = 1 + _txSlotIx ls
                                 }
 
 -- | Apply transition independent of validity, collect validation errors on the

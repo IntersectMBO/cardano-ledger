@@ -60,24 +60,20 @@ poolReapTransition = do
     ei <- asks epochInfo
     epochInfoFirst ei e
   let retired = dom $ (ps ^. retiring) ▷ Set.singleton e
-      StakePools stPools' = ps ^. stPools
-      pr = poolRefunds pp (retired ◁ stPools') firstSlot
+      StakePools stpools = _stPools ps
+      pr = poolRefunds pp (retired ◁ stpools) firstSlot
       rewardAcnts = Map.map _poolRAcnt $ retired ◁ (ps ^. pParams)
       rewardAcnts' = Map.fromList . Map.elems $ Map.intersectionWith (,) rewardAcnts pr
-
-      domRewards = dom (ds ^. rewards)
-      (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈ domRewards) rewardAcnts'
+      (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈  dom (_rewards ds)) rewardAcnts'
       refunded = sum $ Map.elems refunds
       unclaimed = sum $ Map.elems mRefunds
-
-      StakePools stakePools = ps ^. stPools
 
   pure $ PoolreapState
     us { _deposited = _deposited us - (unclaimed + refunded)}
     a { _treasury = _treasury a + unclaimed }
     ds { _rewards = _rewards ds ∪+ refunds
        , _delegations = _delegations ds ⋫ retired }
-    ps { _stPools = StakePools $ retired ⋪ stakePools
+    ps { _stPools = StakePools $ retired ⋪ stpools
        , _pParams = retired ⋪ _pParams ps
        , _retiring = retired ⋪ _retiring ps
        }

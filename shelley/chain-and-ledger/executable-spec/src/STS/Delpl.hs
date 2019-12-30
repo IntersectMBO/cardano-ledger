@@ -20,10 +20,10 @@ import           Coin (Coin)
 import           Control.State.Transition
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
-import           LedgerState
+import           LedgerState (DPState, emptyDelegation, _dstate, _pstate)
 import           PParams hiding (d)
 import           Slot
-import           STS.Deleg
+import           STS.Deleg (DELEG, DelegEnv (..))
 import           STS.Pool
 import           TxData
 
@@ -63,38 +63,38 @@ delplTransition
    . Crypto crypto
   => TransitionRule (DELPL crypto)
 delplTransition = do
-  TRC (DelplEnv slotIx _ptr pp _reserves, d, c) <- judgmentContext
+  TRC (DelplEnv slot ptr pp reserves, d, c) <- judgmentContext
   case c of
     DCertPool (RegPool _) -> do
       ps <-
-        trans @(POOL crypto) $ TRC (PoolEnv slotIx pp, _pstate d, c)
+        trans @(POOL crypto) $ TRC (PoolEnv slot pp, _pstate d, c)
       pure $ d { _pstate = ps }
     DCertPool (RetirePool _ _) -> do
       ps <-
-        trans @(POOL crypto) $ TRC (PoolEnv slotIx pp, _pstate d, c)
+        trans @(POOL crypto) $ TRC (PoolEnv slot pp, _pstate d, c)
       pure $ d { _pstate = ps }
     DCertGenesis (GenesisDelegate _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
     DCertDeleg (RegKey _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
     DCertDeleg (DeRegKey _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves, _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
       pure $ d { _dstate = ds }
 
     DCertDeleg (Delegate _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves , _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves , _dstate d, c)
       pure $ d { _dstate = ds }
 
     DCertMir _ -> do
-      ds <- trans @(DELEG crypto) $ TRC (DelegEnv slotIx _ptr _reserves , _dstate d, c)
+      ds <- trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves , _dstate d, c)
       pure $ d { _dstate = ds }
 
 

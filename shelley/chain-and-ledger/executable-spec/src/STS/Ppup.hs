@@ -60,26 +60,26 @@ pvCanFollow _ _ = True
 
 ppupTransitionEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionEmpty = do
-  TRC (_, pupS, PPUpdate pup') <- judgmentContext
+  TRC (_, pupS, PPUpdate pup) <- judgmentContext
 
-  Map.null pup' ?! PPUpdateNonEmpty
+  Map.null pup ?! PPUpdateNonEmpty
 
   pure pupS
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
-  TRC (PPUPEnv s pp (GenDelegs _genDelegs), PPUpdate pupS, PPUpdate pup) <- judgmentContext
+  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), PPUpdate pupS, PPUpdate pup) <- judgmentContext
 
   not (Map.null pup) ?! PPUpdateEmpty
 
-  all (all (pvCanFollow (_protocolVersion pp)) . ppmSet) pup ?! PVCannotFollowPPUP
-
   (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
+
+  all (all (pvCanFollow (_protocolVersion pp)) . ppmSet) pup ?! PVCannotFollowPPUP
 
   firstSlotNextEpoch <- liftSTS $ do
     ei <- asks epochInfo
-    EpochNo e <- epochInfoEpoch ei s
+    EpochNo e <- epochInfoEpoch ei slot
     epochInfoFirst ei (EpochNo $ e + 1)
-  s < firstSlotNextEpoch *- slotsPrior ?! PPUpdateTooLatePPUP
+  slot < firstSlotNextEpoch *- slotsPrior ?! PPUpdateTooLatePPUP
 
   pure $ PPUpdate (pupS ⨃  Map.toList pup)

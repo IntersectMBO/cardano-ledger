@@ -105,7 +105,7 @@ chainTransition = do
   let NewEpochState e1 _ _ _ _ _ _ = nes
       NewEpochState e2 _ bcur es _ _pd osched = nes'
   let EpochState (AccountState _ _reserves) _ ls pp'                         = es
-  let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) _ = ls
+  let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
   PrtclState cs' h' sL' eta0' etaV' etaC' etaH' <- trans @(PRTCL crypto)
     $ TRC ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2)

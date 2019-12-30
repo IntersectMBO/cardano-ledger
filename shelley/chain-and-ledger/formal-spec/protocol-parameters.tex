@@ -154,7 +154,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   \emph{Helper Functions}
   %
   \begin{align*}
-    \fun{minfee} & \in \PParams \to \Tx \to \Coin & \text{minimum fee}\\
+    \fun{minfee} & \in \PParams \to \TxBody \to \Coin & \text{minimum fee}\\
     \fun{minfee} & ~\var{pp}~\var{tx} =
     (\fun{a}~\var{pp}) \cdot \fun{txSize}~\var{tx} + (\fun{b}~\var{pp})
     \\

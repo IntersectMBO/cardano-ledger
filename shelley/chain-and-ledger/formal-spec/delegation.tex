@@ -154,7 +154,7 @@ It does the following:
       \fun{retire} & \DCertRetirePool \to \Epoch
                                             & \text{epoch of pool retirement}
       \\
-      \fun{genesisDeleg} & \DCertGen \to (\VKeyGen,~\VKey)
+      \fun{genesisDeleg} & \DCertGen \to (\KeyHashGen,~\KeyHash)
                                             & \text{genesis delegation}
       \\
       \fun{moveRewards} & \DCertMir \to (\StakeCredential \mapsto \Coin)
@@ -519,10 +519,7 @@ concerns are independent of the ledger rules.
     \inference[Deleg-Gen]
     {
       \var{c}\in \DCertGen
-      & (\var{gkey},~\var{vk})\leteq\fun{genesisDeleg}~{c}
-      \\
-      \var{gkh} \leteq \hashKey{gkey}
-      & \var{vkh} \leteq \hashKey{vk}
+      & (\var{gkh},~\var{vkh})\leteq\fun{genesisDeleg}~{c}
       \\
       s'\leteq\var{slot}+\SlotsPrior
       & \var{gkh}\in\dom{genDelegs}
@@ -1003,7 +1000,7 @@ will be invalid.
     \label{eq:delegs-base}
     \inference[Seq-delg-base]
     {
-      \var{wdrls} \leteq \txwdrls{tx}
+      \var{wdrls} \leteq \txwdrls{(\txbody{tx})}
       &
       \var{wdrls} \subseteq \var{rewards}
       \\
@@ -1072,8 +1069,6 @@ will be invalid.
     \label{eq:delegs-induct}
     \inference[Seq-delg-ind]
     {
-      \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{stpools} \\
-      ptr \leteq (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma) \\~\\
         {
           \begin{array}{c}
             \var{slot}\\
@@ -1088,6 +1083,8 @@ will be invalid.
       \trans{delegs}{\Gamma}
       \var{dpstate'}
     \\~\\~\\
+      \var{c}\in\DCertDeleg \Rightarrow \fun{dpool}~{c} \in \dom \var{stpools} \\
+      ptr \leteq (\var{slot},~\var{txIx},~\mathsf{len}~\Gamma) \\~\\
     {
       \begin{array}{c}
         \var{slot}\\
