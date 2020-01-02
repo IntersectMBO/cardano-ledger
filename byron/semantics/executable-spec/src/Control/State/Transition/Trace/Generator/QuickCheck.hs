@@ -38,6 +38,7 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.Kind (Type)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
+import Data.List (sortBy)
 
 import qualified Test.QuickCheck as QuickCheck
 
@@ -196,14 +197,27 @@ shrinkTrace
   => BaseEnv sts
   -> Trace sts
   -> [Trace sts]
-shrinkTrace baseEnv tr = interpretSTS @sts @traceGenEnv baseEnv
-    $ Trace.closure env st0 `traverse` traceSignalsShrinks
+shrinkTrace baseEnv tr =
+    interpretSTS @sts @traceGenEnv baseEnv
+    $ Trace.closure env st0 `traverse` shrunk
   where
     env = Trace._traceEnv tr
     st0 = Trace._traceInitState tr
-    signals = Trace.traceSignals Trace.OldestFirst tr
-    traceSignalsShrinks =
-      QuickCheck.shrinkList (shrinkSignal @sts @traceGenEnv) signals
+    signals = Trace.traceSignals Trace.NewestFirst tr
+
+    compareLen a b = compare (length a) (length b) -- ascending sort 
+    shrunk = sortBy compareLen (shrinkSignals signals)
+
+    shrinkSignals (sn:_last:[]) =
+      [[sn]]
+    shrinkSignals (sn:sm:sigs) =
+      [[sn]] -- a trace with only the most recent signal
+      ++ [sn:sigs] -- discard the second most recent signal
+      ++ ((sn:) <$> shrinkSignals (sm:sigs)) -- shrink the tail
+
+    -- shrink to [] if there is one or no signals
+    shrinkSignals _  = []
+
 
 -- | Property that asserts that only valid signals are generated.
 onlyValidSignalsAreGenerated
