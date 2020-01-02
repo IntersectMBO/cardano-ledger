@@ -82,7 +82,7 @@ ts_prop_updateBlock_Valid =
       let traceLength = 10 :: Word64 -- TODO: check that the @k@ value is not important
                            -- in this test, in that case we can get away with
                            -- generating small traces.
-      sampleTrace <- forAll $ trace @CHAIN traceLength
+      sampleTrace <- forAll $ trace @CHAIN () traceLength
       let
         lastState = Trace.lastState sampleTrace
         chainEnv@( _currentSlot
@@ -129,7 +129,7 @@ ts_prop_updateBlock_InvalidProof =
     . property
     $ do
       let traceLength = 10 :: Word64
-      sampleTrace <- forAll $ trace @CHAIN traceLength
+      sampleTrace <- forAll $ trace @CHAIN () traceLength
       let
         chainEnv@(_, abstractInitialUTxO, _, _, stableAfter) = Trace._traceEnv sampleTrace
         lastState = Trace.lastState sampleTrace
