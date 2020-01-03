@@ -38,7 +38,7 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.Kind (Type)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
-import Data.List (sortBy)
+import Data.List (sortOn)
 
 import qualified Test.QuickCheck as QuickCheck
 
@@ -189,7 +189,12 @@ forAllTrace
 forAllTrace baseEnv maxTraceLength traceGenEnv =
   forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv Nothing
 
--- | See 'Test.QuickCheck.shrink'.
+-- | Shrink a trace by shrinking the list of signals and reconstructing traces from these
+-- shrunk lists of signals. 
+--
+-- When shrinking a trace that is failing some property (often stated in terms of a signal in the trace)
+-- then the most recent signal is likely crucial to the failure of the property and must be preserved
+-- in the shrunk traces.
 shrinkTrace
   :: forall sts traceGenEnv
    . (HasTrace sts traceGenEnv
@@ -205,9 +210,13 @@ shrinkTrace baseEnv tr =
     st0 = Trace._traceInitState tr
     signals = Trace.traceSignals Trace.NewestFirst tr
 
-    compareLen a b = compare (length a) (length b) -- ascending sort 
-    shrunk = sortBy compareLen (shrinkSignals signals)
+    shrunk = sortOn length (shrinkSignals signals)
 
+    -- Shrink a list of signals such that we preserve the most recent signal in the shrunk lists.
+    -- This shrinker
+    --   - recursively omits all but the most recent signal
+    --   - builds up lists of signals starting with the most recent signal and
+    --     building up a list excluding the first (oldest) signal
     shrinkSignals (sn:_last:[]) =
       [[sn]]
     shrinkSignals (sn:sm:sigs) =
