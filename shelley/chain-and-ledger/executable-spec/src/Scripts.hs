@@ -8,7 +8,7 @@
 module Scripts
   where
 
-import           Cardano.Binary (ToCBOR)
+import           Cardano.Binary (ToCBOR, FromCBOR)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Coin (Coin (..))
 import           GHC.Generics (Generic)
@@ -26,7 +26,7 @@ newtype IsValidating = IsValidating IsThing
   deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR)
 -- | For-fee tag
 newtype IsFee = IsFee IsThing
-  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR, FromCBOR)
 
 newtype DataHash crypto = DataHash (Hash (HASH crypto) (Data crypto))
   deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR)

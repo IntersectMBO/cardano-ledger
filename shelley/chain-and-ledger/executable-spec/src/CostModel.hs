@@ -22,10 +22,14 @@ module CostModel
     , scriptFee
     ) where
 
-import           Cardano.Binary (ToCBOR)
+
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Coin (Coin (..))
 import           GHC.Generics (Generic)
+import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
+                     decodeListLen, decodeListLenOrIndef, decodeMapLenOrIndef, decodeWord,
+                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord,
+                     enforceSize, matchSize)
 
 -- | comparing required resources for Plutus scripts
 instance Ord ExUnitsPLC where
@@ -43,7 +47,7 @@ data ExUnitsPLC = ExUnitsPLC
   { -- | The types of computational resources relevant to the cost model
       reductionSteps           :: Integer
     , memoryUnits              :: Integer
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | Temporary stand-in for actual types in the execution cost
 -- for MSIG script execution
@@ -51,7 +55,7 @@ data ExUnitsMSIG = ExUnitsMSIG
   { -- | The types of computational resources relevant to the cost model
       numSigs                  :: Integer
     , maybeSomething           :: Integer
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | The execution units of arbitrary scripts (MSIG, PLC so far)
 data ExUnits =
@@ -66,7 +70,7 @@ data CostModPLC = CostModPLC
   { -- | The types of computational resources relevant to the cost model
       stepPrim             :: ExUnitsPLC
     , memPim               :: ExUnitsPLC
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | Temporary stand-in for actual types in the cost model
 -- for MSIG script execution
@@ -74,11 +78,11 @@ data CostModMSIG = CostModMSIG
   { -- | The types of computational resources relevant to the cost model
       sigPrim           :: ExUnitsMSIG
     , smtPrim           :: ExUnitsMSIG
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | The cost model for plc or msig scripts
 data CostMod = CostMod CostModPLC CostModMSIG
-  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | Default values
 -- | Default execution units
@@ -101,7 +105,7 @@ data PricesPLC = PricesPLC
   { -- | The types of computational resources relevant to the cost model
       stepPrice             :: Coin
     , memPrice              :: Coin
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | Temporary stand-in for actual types in the "prices"
 -- for MSIG script execution
@@ -109,15 +113,15 @@ data PricesMSIG = PricesMSIG
   { -- | The types of computational resources relevant to the cost model
       sigPrice           :: Coin
     , smtPrice           :: Coin
-  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | The prices for plc or msig scripts
 data Prices = Prices PricesPLC PricesMSIG
-  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | All types of ex units limit
 data ExUnitsAllTypes = ExUnitsAllTypes ExUnitsPLC ExUnitsMSIG
-  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | Default cost model
 defaultPrices :: Prices

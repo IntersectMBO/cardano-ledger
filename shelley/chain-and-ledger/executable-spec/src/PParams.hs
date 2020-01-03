@@ -42,13 +42,19 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enfo
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
+import           Data.Map
 
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
 import           Coin (Coin (..))
 import           CostModel
 import           Slot (EpochNo (..))
+import           Value
 
 import           Lens.Micro.TH (makeLenses)
+import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
+                     decodeListLen, decodeListLenOrIndef, decodeMapLenOrIndef, decodeWord,
+                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord,
+                     enforceSize, matchSize)
 
 -- | Plutus version
 type PlutusVer = (Natural, Natural, Natural)
@@ -239,3 +245,30 @@ emptyPParams =
      , _protocolVersion = (0, 0, 0)
      , _plutusPP = emptyPlutusPP
      }
+
+
+-- CBOR
+
+instance
+  ToCBOR PlutusPP
+  where
+    toCBOR plpp =
+      encodeListLen 7
+        <> toCBOR (_maxPlutusVer plpp)
+        <> toCBOR (_minPlutusVer plpp)
+        <> toCBOR (_maxTxExUnits plpp)
+        <> toCBOR (_maxBlockExUnits plpp)
+        <> toCBOR (_costm plpp)
+        <> toCBOR (_prices plpp)
+
+instance
+  FromCBOR PlutusPP
+  where
+    fromCBOR = do
+      a <- fromCBOR
+      b <- fromCBOR
+      c <- fromCBOR
+      de <- fromCBOR
+      e <- fromCBOR
+      f <- fromCBOR
+      pure $ PlutusPP a b c de e f

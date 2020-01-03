@@ -56,13 +56,21 @@ import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, has
                      verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
-import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
-                     pattern Delegation, PoolCert (..), ScriptHash, Tx (..), TxBody (..),
-                     TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred, inputs, outputs,
-                     poolPubKey, txUpdate)
+-- import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
+--                        pattern Delegation, PoolCert (..), ScriptHash, Tx (..), TxBody (..),
+--                        TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred, inputs, outputs,
+--                        poolPubKey, txUpdate)
+import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), CurItem(..),
+                     getRwdCred,
+                     txinputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
+import           Tx (addrTxOut, getrefs)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)
+
+import           Scripts
+import           Value
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto
@@ -110,7 +118,7 @@ txid = TxId . hash
 txins
   :: TxBody crypto
   -> Set (TxIn crypto)
-txins = flip (^.) inputs
+txins = getrefs . (flip (^.) txinputs)
 
 -- |Compute the transaction outputs of a transaction.
 txouts
@@ -194,17 +202,21 @@ makeWitnessesFromScriptKeys txb hashKeyMap scriptHashes =
   in  makeWitnessesVKey txb (Map.elems witKeys)
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO crypto -> Coin
-balance (UTxO utxo) = foldr addCoins 0 utxo
-  where addCoins (TxOut _ a) b = a + b
+balance :: UTxO crypto -> Value
+balance (UTxO utxo) = foldr addValue zeroAda utxo
 
 -- |Determine the total deposit amount needed
 totalDeposits
   :: PParams
   -> StakePools crypto
   -> [DCert crypto]
+<<<<<<< HEAD
   -> Coin
 totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
+=======
+  -> Value
+deposits pc (StakePools stpools) cs = foldl f (Value 0) cs'
+>>>>>>> mid transition from coin to value
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (DCertPool (RegPool pool)) =
@@ -245,13 +257,18 @@ scriptsNeeded
   -> Tx crypto
   -> Set (ScriptHash crypto)
 scriptsNeeded u tx =
-  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
+  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . addrTxOut) u'')
   `Set.union`
   Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
+<<<<<<< HEAD
   Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
   where unTxOut (TxOut a _) = a
         withdrawals = _wdrls $ _body tx
+=======
+  Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter requiresVKeyWitness certificates))
+  where withdrawals = _wdrls $ _body tx
+>>>>>>> mid transition from coin to value
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = (toList . _certs . _body) tx
 
@@ -263,9 +280,14 @@ txinsScript
   -> Set (TxIn crypto)
 txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
-  Map.keysSet (Map.filter (\(TxOut a _) ->
-                               case a of
+  Map.keysSet (Map.filter (\txout ->
+                               case (addrTxOut txout) of
                                  AddrBase (ScriptHashObj _) _     -> True
                                  AddrEnterprise (ScriptHashObj _) -> True
                                  AddrPtr (ScriptHashObj _) _      -> True
                                  _                                -> False) u)
+
+
+-- | make validation data to pass to Plutus validator
+validationData :: UTxO crypto -> Tx crypto -> CurItem crypto -> Data crypto
+validationData _ _ _ = Data 1

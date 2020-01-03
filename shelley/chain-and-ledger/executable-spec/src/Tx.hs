@@ -11,7 +11,7 @@ module Tx
   , TxIn(..)
   , TxId(..)
   , txUpdate
-  , inputs
+  , txinputs
   , outputs
   , certs
   , wdrls
@@ -19,18 +19,16 @@ module Tx
   , ttl
   , body
   , witnessVKeySet
-  , witnessMSigMap
+--  , witnessMSigMap
     -- witness data
   , WitVKey(..)
   , MultiSignatureScript
   , validateScript
   , hashScript
-  , txwitsScript
+--  , txwitsScript
   , extractKeyHash
   , extractScriptHash
-  , extractGenKeyHash
-  , getKeyCombinations
-  , getKeyCombination
+
   )
 where
 
@@ -47,9 +45,14 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 
-import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
-                     TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
-                     ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
+  -- import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
+  --                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
+  --                      ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
+import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..),
+                     Addr, body, certs,
+                     txinputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash,
+                     witnessVKeySet, txlst, forged, txexunits, hashPP)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -90,7 +93,7 @@ hashNativeMultiSigScript
   => MultiSig crypto
   -> ScriptHash crypto
 hashNativeMultiSigScript msig =
-  ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
+  ScriptHashMSig $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
                                           <> toCBOR x) msig
 
 -- | Get one possible combination of keys for multi signature script
@@ -133,11 +136,11 @@ instance Crypto crypto =>
   validateScript = validateNativeMultiSigScript
   hashScript = hashNativeMultiSigScript
 
--- | Multi-signature script witness accessor function for Transactions
-txwitsScript
-  :: Tx crypto
-  -> Map (ScriptHash crypto) (MultiSig crypto)
-txwitsScript = _witnessMSigMap
+-- -- | Multi-signature script witness accessor function for Transactions
+-- txwitsScript
+--   :: Tx crypto
+--   -> Map (ScriptHash crypto) (MultiSig crypto)
+-- txwitsScript = _witnessMSigMap
 
 extractKeyHash
   :: [Credential crypto]
@@ -159,11 +162,21 @@ extractScriptHash =
     :: [GenKeyHash crypto]
     -> [AnyKeyHash crypto]
   extractGenKeyHash = map undiscriminateKeyHash
-  
+
 -- | make validation data to pass to Plutus validator
 validationData :: UTxO -> Tx -> CurItem -> Data
 validationData _ _ _ = 1
 
+-- accessors of data in TxIn and TxOut
+getref :: TxInTx crypto -> TxIn crypto
+getref (TxInVK  ref _) = ref
+getref (TxInScr ref _) = ref
+
 -- | access only the output reference part of a TxInTx
--- inputs :: !(Set (TxInTx crypto)) -> !(Set (TxInTx crypto))
--- inputs _ = "change this"
+getrefs :: (Set (TxInTx crypto)) -> (Set (TxIn crypto))
+getrefs = Set.map getref
+
+-- | return the address in an output
+addrTxOut :: TxOut crypto -> Addr crypto
+addrTxOut (TxOutVK  a _  ) = a
+addrTxOut (TxOutScr a _ _) = a

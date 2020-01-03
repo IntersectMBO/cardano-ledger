@@ -28,6 +28,11 @@ import           Cardano.Prelude (NoUnexpectedThunks (..), Word64)
 import           Control.Monad (replicateM, unless)
 import           Lens.Micro.TH (makeLenses)
 
+<<<<<<< HEAD
+=======
+import           Data.Foldable (foldMap)
+import qualified Data.Map as DM
+>>>>>>> mid transition from coin to value
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
@@ -43,7 +48,7 @@ import           Numeric.Natural (Natural)
 import           BaseTypes (CborSeq (..), UnitInterval, invalidKey)
 import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
-                     Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
+                     Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey, hash)
 import           Ledger.Core (Relation (..))
 <<<<<<< HEAD
 import           Slot (EpochNo (..), SlotNo (..))
@@ -56,8 +61,12 @@ import           Updates (Update)
 import           Scripts
 import           Value
 import           CostModel
+<<<<<<< HEAD
 import           PParams (PlutusPP)
 >>>>>>> TxData changed to support Plutus
+=======
+import           PParams (emptyPlutusPP, PlutusPP)
+>>>>>>> mid transition from coin to value
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -189,13 +198,13 @@ newtype ScriptHashPLC crypto =
 -- deriving instance Crypto crypto => ToCBOR (ScriptHashPLC crypto)
 
 data ScriptHash crypto =
-  SHM (ScriptHashMSig crypto)
-  | SHP (ScriptHashMSig crypto)
+  ScriptHashMSig (Hash (HASH crypto) (MultiSig crypto))
+  | ScriptHashPLC (Hash (HASH crypto) (ScriptPLC crypto))
   deriving (Show, Eq, Ord, Generic)
 
 instance NoUnexpectedThunks (ScriptHash crypto)
 
-type Wdrl crypto = Map (RewardAcnt crypto) Coin
+type Wdrl crypto = Map (RewardAcnt crypto) (Value (ScriptHash crypto) (ScriptHash crypto))
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto
@@ -256,9 +265,16 @@ data TxOut crypto
                }
   deriving (Show, Eq, Generic, Ord)
 
--- | Accessors for different types
+-- | native currency (Ada)
+adaID :: Hash (HASH crypto) (ScriptPLC crypto)
+adaID =  (hash (ScriptPLC 1))
 
---deriving instance Crypto crypto => ToCBOR (ScriptHashPLC crypto)
+adaToken :: Hash (HASH crypto) (ScriptPLC crypto)
+adaToken =  (hash (ScriptPLC 2))
+
+-- | 0 Ada
+zeroAda :: Value (ScriptHash crypto) (ScriptHash crypto)
+zeroAda = DM.singleton adaID (DM.singleton adaToken 0)
 
 instance NoUnexpectedThunks (TxOut crypto)
 
@@ -313,13 +329,13 @@ data TxBody crypto
       , _outputs  :: [TxOut crypto]
       , _certs    :: Seq (DCert crypto)
       , _wdrls    :: Wdrl crypto
-      , _txfee    :: Coin
+      , _txfee    :: Value (ScriptHash crypto) (ScriptHash crypto)
       , _ttl      :: SlotNo
       , _txUpdate :: Update crypto
       , _txlst    :: SlotNo
       , _forged   :: Value (ScriptHash crypto) (ScriptHash crypto)
       , _txexunits:: ExUnits
-      , _hashPP   :: Maybe (HashPP crypto)
+      , _hashPP   :: Maybe (Hash (HASH crypto) PlutusPP)
       } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (TxBody crypto)
@@ -372,6 +388,10 @@ newtype StakePools crypto =
 
 -- CBOR
 
+-- | TODO make this a proper function
+toValue :: Word8 -> Value (ScriptHash crypto) (ScriptHash crypto)
+toValue _ = DM.empty
+
 instance
   (Crypto crypto)
   => ToCBOR (ScrInData crypto)
@@ -388,6 +408,32 @@ instance
         <> toCBOR vd
         <> toCBOR dv
         <> toCBOR rd
+
+instance ToCBOR ExUnits
+ where
+   toCBOR = \case
+     PLCUnits exu ->
+       encodeListLen 1
+        <> toCBOR exu
+
+     MSIGUnits exu ->
+       encodeListLen 1
+        <> toCBOR exu
+
+instance FromCBOR ExUnits
+ where
+   fromCBOR = do
+     n <- decodeListLen
+     decodeWord >>= \case
+       0 -> do
+         matchSize "PLCUnits" 1 n
+         a <- fromCBOR
+         pure $ PLCUnits a
+       1 -> do
+         matchSize "MSIGUnits" 1 n
+         a <- fromCBOR
+         pure $ MSIGUnits a
+       k -> invalidKey k
 
 instance
   (Crypto crypto)
@@ -428,17 +474,29 @@ instance
         <> toCBOR v
         <> toCBOR dh
 
+instance (Crypto crypto) =>
+  FromCBOR (ScriptHash crypto) where
+  fromCBOR = enforceSize "ScriptHash" 2  >> decodeWord >>= \case
+    0 -> do
+      a <- fromCBOR
+      pure $ ScriptHashMSig a
+    1 -> do
+      a <- fromCBOR
+      pure $ ScriptHashPLC a
+    k -> invalidKey k
+
+
 instance
   (Crypto crypto)
   => ToCBOR (ScriptHash crypto)
  where
   toCBOR = \case
-    SHM hs ->
+    ScriptHashMSig hs ->
       encodeListLen 2
         <> toCBOR (0 :: Word8)
         <> toCBOR hs
 
-    SHP hs ->
+    ScriptHashPLC hs ->
       encodeListLen 2
         <> toCBOR (1 :: Word8)
         <> toCBOR hs
@@ -582,22 +640,41 @@ instance
        <> toCBOR txin
        <> toCBOR dh
 
--- instance
---   (Typeable crypto, Crypto crypto)
---   => ToCBOR (TxOutVK crypto)
---  where
---   toCBOR (TxOut addr vl) =
---     encodeListLen 2
---       <> toCBOR addr
---       <> toCBOR vl
+instance (Crypto crypto) =>
+  FromCBOR (TxInTx crypto) where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "TxInVK" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ TxInVK a b
+      1 -> do
+        matchSize "TxInScr" 3 n
+        a <- fromCBOR
+        (b ) <- fromCBOR
+        pure $ TxInScr a (DataHash b)
+      k -> invalidKey k
+
 
 instance (Crypto crypto) =>
   FromCBOR (TxOut crypto) where
   fromCBOR = do
-    enforceSize "TxOut" 2
-    a <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxOut a (Coin $ toInteger b)
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "TxOutVK" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ TxOutVK a (toValue b)
+      1 -> do
+        matchSize "TxOutVK" 4 n
+        a <- fromCBOR
+        (b ) <- fromCBOR
+        (c ) <- fromCBOR
+        pure $ TxOutScr a (toValue  b) (DataHash c)
+      k -> invalidKey k
 
 instance
   Crypto crypto
@@ -648,19 +725,18 @@ instance
   => ToCBOR (TxBody crypto)
  where
   toCBOR txbody =
-<<<<<<< HEAD
     let l = toList $
               single (encodeWord 0 <> toCBOR (_txinputs txbody))
             . single (encodeWord 1 <> toCBOR (_outputs txbody))
             . single (encodeWord 2 <> toCBOR (_txfee txbody))
             . single (encodeWord 3 <> toCBOR (_ttl txbody))
-            . single (encodeWord 4 <> toCBOR (_txlst txbody))
-            . single (encodeWord 5 <> toCBOR (_forged txbody))
-            . single (encodeWord 6 <> toCBOR (_txexunits txbody))
-            . single (encodeWord 7 <> toCBOR (_hashPP txbody))
             . (if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs)))
             . (if null ws then none else single (encodeWord 5 <> toCBOR ws))
             . (if updateNull us then none else single (encodeWord 6 <> toCBOR us))
+            . single (encodeWord 7 <> toCBOR (_txlst txbody))
+            . (if null fg then none else single (encodeWord 8 <> toCBOR fg))
+            . (if null cs then none else single (encodeWord 9 <> toCBOR ex))
+            . (if null cs then none else single (encodeWord 10 <> toCBOR hp))
         toList xs = xs []
         single x = (x:)
         none = id
@@ -670,6 +746,9 @@ instance
       cs = _certs txbody
       ws = _wdrls txbody
       us = _txUpdate txbody
+      fg = _forged txbody
+      ex = _txexunits txbody
+      hp = _hashPP txbody
 
 mapHelper :: Decoder s b -> Decoder s [b]
 mapHelper decodePart = decodeMapLenOrIndef >>= \case
@@ -689,12 +768,16 @@ instance
      mapParts <- mapHelper $
        decodeWord >>= \case
          0 -> fromCBOR                     >>= \x -> pure (0, \t -> t { _txinputs   = x })
-         1 -> fromCBOR                     >>= \x -> pure (1, \t -> t { _outputs  = x })
-         2 -> fromCBOR                     >>= \x -> pure (2, \t -> t { _txfee    = x })
-         3 -> fromCBOR                     >>= \x -> pure (3, \t -> t { _ttl      = x })
-         4 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
-         5 -> fromCBOR                     >>= \x -> pure (5, \t -> t { _wdrls    = x })
-         6 -> fromCBOR                     >>= \x -> pure (6, \t -> t { _txUpdate = x })
+         1 -> fromCBOR                     >>= \x -> pure (1, \t -> t { _outputs    = x })
+         2 -> fromCBOR                     >>= \x -> pure (2, \t -> t { _txfee      = x })
+         3 -> fromCBOR                     >>= \x -> pure (3, \t -> t { _ttl        = x })
+         4 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs      = x })
+         5 -> fromCBOR                     >>= \x -> pure (5, \t -> t { _wdrls      = x })
+         6 -> fromCBOR                     >>= \x -> pure (6, \t -> t { _txUpdate   = x })
+         7 -> fromCBOR                     >>= \x -> pure (7, \t -> t { _txlst      = x })
+         8 -> fromCBOR                     >>= \x -> pure (8, \t -> t { _forged     = x })
+         9 -> fromCBOR                     >>= \x -> pure (9, \t -> t { _txexunits  = x })
+         10-> fromCBOR                     >>= \x -> pure (10, \t -> t { _hashPP     = x })
          k -> invalidKey k
      let requiredFields :: Map Int String
          requiredFields = Map.fromList $
@@ -702,6 +785,7 @@ instance
            , (1, "outputs")
            , (2, "fee")
            , (3, "ttl")
+           , (4, "lst")
            ]
          fields = fst <$> mapParts
          missingFields = Map.filterWithKey (\k _ -> notElem k fields) requiredFields
@@ -712,30 +796,27 @@ instance
        basebody = TxBody
           { _txinputs   = Set.empty
           , _outputs   = []
-          , _txfee     = Coin 0
+          , _txfee     = DM.empty
           , _ttl       = SlotNo 0
           , _certs     = Seq.empty
           , _wdrls     = Map.empty
           , _txUpdate  = emptyUpdate
           , _txlst     = SlotNo 0
-          , _forged    = defaultValue
+          , _forged    = DM.empty
           , _txexunits = PLCUnits (ExUnitsPLC 0 0)
-          , _hashPP    = hash emptyPlutusPP
+          , _hashPP    = Just $ hash emptyPlutusPP
           }
 
 instance (Crypto crypto) =>
-=======
-    encodeListLen 6
-      <> toCBOR (_txinputs txbody)
-      <> toCBOR (_outputs txbody)
-      <> toCBOR (toList $ _certs txbody)
-      <> toCBOR (_wdrls txbody)
-      <> toCBOR (_txfee txbody)
-      <> toCBOR (_ttl txbody)
-      <> toCBOR (_txUpdate txbody)
 
-instance ( Crypto crypto) =>
->>>>>>> TxData changed to support Plutus
+-- encodeListLen 6
+--   <> toCBOR (_txinputs txbody)
+--   <> toCBOR (_outputs txbody)
+--   <> toCBOR (toList $ _certs txbody)
+--   <> toCBOR (_wdrls txbody)
+--   <> toCBOR (_txfee txbody)
+--   <> toCBOR (_ttl txbody)
+--   <> toCBOR (_txUpdate txbody)
   ToCBOR (MultiSig crypto) where
   toCBOR (RequireSignature hk) =
     encodeListLen 2 <> encodeWord 0 <> toCBOR hk
@@ -950,6 +1031,8 @@ makeLenses ''CurItem
 makeLenses ''TxOut
 
 makeLenses ''TxBody
+
+makeLenses ''Tx
 
 makeLenses ''ScrInData
 
