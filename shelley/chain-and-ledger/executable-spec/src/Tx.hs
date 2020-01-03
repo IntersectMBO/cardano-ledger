@@ -14,7 +14,7 @@ module Tx
   , TxIn(..)
   , TxId(..)
   , txUpdate
-  , inputs
+  , txinputs
   , outputs
   , certs
   , wdrls
@@ -23,13 +23,13 @@ module Tx
   , body
   , metadata
   , witnessVKeySet
-  , witnessMSigMap
+--  , witnessMSigMap
     -- witness data
   , WitVKey(..)
   , MultiSignatureScript
   , validateScript
   , hashScript
-  , txwitsScript
+--  , txwitsScript
   , extractKeyHash
   , extractScriptHash
   , extractGenKeyHash
@@ -152,6 +152,14 @@ instance Crypto crypto => FromCBOR (Tx crypto) where
   fromCBOR = decodeListLenOf 3 >>
     cborWitsToTx <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
+  -- import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
+  --                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
+  --                      ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
+import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..),
+                     Addr, body, certs,
+                     txinputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash,
+                     witnessVKeySet, txlst, forged, txexunits, hashPP)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -230,11 +238,11 @@ instance Crypto crypto =>
   validateScript = validateNativeMultiSigScript
   hashScript = \x -> hashAnyScript (MultiSigScript x)
 
--- | Multi-signature script witness accessor function for Transactions
-txwitsScript
-  :: Tx crypto
-  -> Map (ScriptHash crypto) (MultiSig crypto)
-txwitsScript = _witnessMSigMap
+-- -- | Multi-signature script witness accessor function for Transactions
+-- txwitsScript
+--   :: Tx crypto
+--   -> Map (ScriptHash crypto) (MultiSig crypto)
+-- txwitsScript = _witnessMSigMap
 
 extractKeyHash
   :: [Credential crypto]
@@ -261,6 +269,18 @@ extractGenKeyHash = map undiscriminateKeyHash
 validationData :: UTxO -> Tx -> CurItem -> Data
 validationData _ _ _ = 1
 
--- Lenses
-
 makeLenses ''Tx
+
+-- accessors of data in TxIn and TxOut
+getref :: TxInTx crypto -> TxIn crypto
+getref (TxInVK  ref _) = ref
+getref (TxInScr ref _) = ref
+
+-- | access only the output reference part of a TxInTx
+getrefs :: (Set (TxInTx crypto)) -> (Set (TxIn crypto))
+getrefs = Set.map getref
+
+-- | return the address in an output
+addrTxOut :: TxOut crypto -> Addr crypto
+addrTxOut (TxOutVK  a _  ) = a
+addrTxOut (TxOutScr a _ _) = a

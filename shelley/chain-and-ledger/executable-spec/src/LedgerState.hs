@@ -651,6 +651,7 @@ txsize (Tx
                                   + uint * (toInteger $ length md')
 
 -- |Minimum fee calculation including script fees
+-- | TODO make this correct calculation
 minfee :: PParams -> TxBody crypto -> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
   + scriptFee (pc ^. plutusPP ^. prices) (txexunits tx)
