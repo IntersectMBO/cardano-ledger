@@ -38,7 +38,6 @@ import           Data.Functor.Identity (Identity(..))
 import           Data.Kind (Type)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
-import Data.List (sortOn)
 
 import qualified Test.QuickCheck as QuickCheck
 
@@ -190,7 +189,7 @@ forAllTrace baseEnv maxTraceLength traceGenEnv =
   forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv Nothing
 
 -- | Shrink a trace by shrinking the list of signals and reconstructing traces from these
--- shrunk lists of signals. 
+-- shrunk lists of signals.
 --
 -- When shrinking a trace that is failing some property (often stated in terms of a signal in the trace)
 -- then the most recent signal is likely crucial to the failure of the property and must be preserved
@@ -204,25 +203,25 @@ shrinkTrace
   -> [Trace sts]
 shrinkTrace baseEnv tr =
     interpretSTS @sts @traceGenEnv baseEnv
-    $ Trace.closure env st0 `traverse` shrunk
+    $ Trace.closure env st0 `traverse` shrinkSignals signals
   where
     env = Trace._traceEnv tr
     st0 = Trace._traceInitState tr
     signals = Trace.traceSignals Trace.NewestFirst tr
 
-    shrunk = sortOn length (shrinkSignals signals)
-
     -- Shrink a list of signals such that we preserve the most recent signal in the shrunk lists.
     -- This shrinker
     --   - recursively omits all but the most recent signal
     --   - builds up lists of signals starting with the most recent signal and
-    --     building up a list excluding the first (oldest) signal
+    --     building up to a list excluding the first (oldest) signal
+    --   - explicitly shrinks in order from small to larger lists of signals
+    --     (i.e. ordered by most to least aggressive shrinking)
     shrinkSignals (sn:_last:[]) =
       [[sn]]
     shrinkSignals (sn:sm:sigs) =
       [[sn]] -- a trace with only the most recent signal
-      ++ [sn:sigs] -- discard the second most recent signal
       ++ ((sn:) <$> shrinkSignals (sm:sigs)) -- shrink the tail
+      ++ [sn:sigs] -- discard the second most recent signal
 
     -- shrink to [] if there is one or no signals
     shrinkSignals _  = []
