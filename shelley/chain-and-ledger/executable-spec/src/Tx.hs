@@ -29,6 +29,7 @@ module Tx
   , extractKeyHash
   , extractScriptHash
   , extractGenKeyHash
+  , getKeyCombinations
   )
 where
 
@@ -38,6 +39,7 @@ import           Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
 import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Ledger.Shelley.Crypto
+import qualified Data.List as List (concat, concatMap, permutations)
 import           Data.Map.Strict (Map)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
@@ -89,6 +91,21 @@ hashNativeMultiSigScript
 hashNativeMultiSigScript msig =
   ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
                                           <> toCBOR x) msig
+
+-- | Get all valid combinations of keys for given multi signature. This is
+-- mainly useful for testing.
+getKeyCombinations :: MultiSig crypto -> [[AnyKeyHash crypto]]
+
+getKeyCombinations (RequireSignature hk) = [[hk]]
+
+getKeyCombinations (RequireAllOf msigs) = [List.concat $
+  List.concatMap getKeyCombinations msigs]
+
+getKeyCombinations (RequireAnyOf msigs) = List.concatMap getKeyCombinations msigs
+
+getKeyCombinations (RequireMOf m msigs) =
+  let perms = map (take m) $ List.permutations msigs in
+    map (concat . List.concatMap getKeyCombinations) perms
 
 -- | Magic number representing the tag of the native multi-signature script
 -- language. For each script language included, a new tag is chosen and the tag
