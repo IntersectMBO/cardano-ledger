@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,6 +13,7 @@ module Generator.Utxo.QuickCheck
 
 import           Control.Monad (when)
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -20,14 +22,15 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Coin (Coin (..), splitCoin)
-import           Generator.Core.QuickCheck (findPayKeyPair, genNatural, toAddr)
+import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural, toAddr)
 import           Generator.Delegation.QuickCheck (genDCerts)
 import           LedgerState (pattern UTxOState)
-import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, Tx, TxBody, TxIn,
-                     TxOut, UTxO, UTxOState, VrfKeyPairs)
+import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, MultiSig, Tx,
+                     TxBody, TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
-import           Tx (pattern Tx, pattern TxBody, pattern TxOut)
+import           Tx (pattern Tx, pattern TxBody, pattern TxOut, hashScript)
+import           TxData (pattern AddrBase, pattern KeyHashObj, pattern ScriptHashObj)
 import           Updates (emptyUpdate)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey)
 
@@ -40,15 +43,25 @@ import qualified Debug.Trace as D
 genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
+      -> [(MultiSig, MultiSig)]
       -> [CoreKeyPair]
       -> VrfKeyPairs
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys vrfKeys = do
+genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts coreKeys vrfKeys = do
   keys' <- QC.shuffle keys
+  scripts' <- QC.shuffle scripts
 
   -- inputs
-  (witnessedInputs, spendingBalance) <- pickSpendingInputs keys' utxo
-  let (inputs, spendWitnesses) = unzip witnessedInputs
+  (witnessedInputs, spendingBalance) <- pickSpendingInputs keys' scripts' utxo
+  let (inputs, spendCredentials) = unzip witnessedInputs
+      spendWitnesses = Maybe.catMaybes $
+        map (\case
+                Left kp -> Just kp
+                _       -> Nothing) spendCredentials
+      spendScripts = Maybe.catMaybes $
+        map (\case
+                Right sp -> Just sp
+                _        -> Nothing) spendCredentials
 
   -- output addresses
   recipientAddrs <- genRecipients keys'
@@ -72,7 +85,9 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys coreKeys
   txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
   let !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
               `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
-      multiSig = Map.empty -- TODO @uroboros Generate multi-sig transactions
+              -- TODO: sign with required signatures for scripts
+      multiSig = Map.fromList $
+        map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts
 
   return (Tx txBody wits multiSig)
 
@@ -126,16 +141,21 @@ calcFeeAndOutputs balance_ addrs =
 -- If this is not the case, findPayKeyPair will fail by not finding the matching keys.
 pickSpendingInputs
   :: KeyPairs
+  -> [(MultiSig, MultiSig)]
   -> UTxO
-  -> Gen ([(TxIn, KeyPair)], Coin)
-pickSpendingInputs keys (UTxO utxo) = do
+  -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
+pickSpendingInputs keys scripts (UTxO utxo) = do
   selectedUtxo <- take <$> QC.choose (1, 5)
                        <*> QC.shuffle (Map.toList utxo)
 
   return ( witnessedInput <$> selectedUtxo
          , balance (UTxO (Map.fromList selectedUtxo)))
   where
-    witnessedInput (input, TxOut addr _) = (input, findPayKeyPair addr keys)
+    witnessedInput (input, TxOut addr@(AddrBase (KeyHashObj _) (KeyHashObj _)) _) =
+      (input, Left $ findPayKeyPair addr keys)
+    witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) (ScriptHashObj _)) _) =
+      (input, Right $ findPayScript addr scripts)
+    witnessedInput _ = error "unsupported address"
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients

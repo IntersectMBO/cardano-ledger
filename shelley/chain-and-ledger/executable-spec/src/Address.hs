@@ -3,6 +3,8 @@
 module Address
   ( mkVKeyRwdAcnt
   , mkRwdAcnt
+  , scriptsToAddr
+  , scriptToCred
   , toAddr
   , toCred
   )
@@ -10,7 +12,8 @@ where
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Keys (KeyDiscriminator (..), KeyPair, hashKey, vKey)
-import           TxData (Addr (..), Credential (..), RewardAcnt (..))
+import           Tx (hashScript)
+import           TxData (Addr (..), Credential (..), MultiSig, RewardAcnt (..))
 
 mkVKeyRwdAcnt
   :: Crypto crypto
@@ -35,3 +38,10 @@ toCred
   => KeyPair 'Regular crypto
   -> Credential crypto
 toCred k = KeyHashObj . hashKey $ vKey k
+
+scriptToCred :: Crypto crypto => MultiSig crypto -> Credential crypto
+scriptToCred = ScriptHashObj . hashScript
+
+scriptsToAddr :: Crypto crypto => (MultiSig crypto, MultiSig crypto) -> Addr crypto
+scriptsToAddr (payScript, stakeScript) =
+  AddrBase (scriptToCred payScript) (scriptToCred stakeScript)

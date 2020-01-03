@@ -4,6 +4,7 @@
 
 module Generator.Core.QuickCheck
   ( findPayKeyPair
+  , findPayScript
   , genBool
   , genCoin
   , genCoinList
@@ -21,6 +22,7 @@ module Generator.Core.QuickCheck
   , traceMSigScripts
   , traceMSigCombinations
   , someKeyPairs
+  , someScripts
   , pickStakeKey
   , toAddr
   , toCred)
@@ -29,7 +31,7 @@ module Generator.Core.QuickCheck
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Control.Monad (replicateM)
 import           Crypto.Random (drgNewTest, withDRG)
-import qualified Data.List as List ((\\))
+import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (fromList)
 import           Data.Tuple (swap)
@@ -38,7 +40,7 @@ import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
-import           Address (toAddr, toCred)
+import           Address (scriptsToAddr, toAddr, toCred)
 import           Coin (Coin (..))
 import           Control.State.Transition (IRC)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, vKey)
@@ -47,9 +49,10 @@ import           MockTypes (Addr, CoreKeyPair, DPState, GenKeyHash, KeyHash, Key
                      LEDGER, MultiSig, SignKeyVRF, TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Test.Utils (mkGenKey, mkKeyPair)
-import           Tx (pattern TxOut)
+import           Tx (pattern TxOut, hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
-                     pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature)
+                     pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
+                     pattern ScriptHashObj)
 
 genBool :: Gen Bool
 genBool = QC.arbitraryBoundedRandom
@@ -134,6 +137,12 @@ someKeyPairs lower upper =
     <$> QC.choose (lower, upper)
     <*> QC.shuffle traceKeyPairs
 
+someScripts :: Int -> Int -> Gen [(MultiSig, MultiSig)]
+someScripts lower upper =
+  take
+  <$> QC.choose (lower, upper)
+  <*> QC.shuffle (traceMSigCombinations $ take 5 traceMSigScripts)
+
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
@@ -144,6 +153,14 @@ findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
     where
       matches = filter (\(pay, _) -> addr == hashKey (vKey pay)) keyList
 findPayKeyPair _ _ = error "findPayKeyPair: expects only AddrBase addresses"
+
+-- | Find first matching script for address.
+findPayScript :: Addr -> [(MultiSig, MultiSig)] -> (MultiSig, MultiSig)
+findPayScript (AddrBase (ScriptHashObj scriptHash) _) scripts =
+  case List.findIndex (\(pay, _) -> scriptHash == hashScript pay) scripts of
+    Nothing -> error "findPayScript: could not find matching script for given address"
+    Just i  -> scripts !! i
+findPayScript _ _ = error "findPayScript: unsupported address format"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
 pickStakeKey :: KeyPairs -> Gen VKey
@@ -173,7 +190,8 @@ genCoin minCoin maxCoin = Coin <$> QC.choose (minCoin, maxCoin)
 genUtxo0 :: Int -> Int -> Gen UTxO
 genUtxo0 lower upper = do
   genesisKeys <- someKeyPairs lower upper
-  outs <- genTxOut (fmap toAddr genesisKeys)
+  genesisScripts <- someScripts lower upper
+  outs <- genTxOut (fmap toAddr genesisKeys ++ fmap scriptsToAddr genesisScripts)
   return (genesisCoins outs)
 
 genesisDelegs0 :: Map GenKeyHash KeyHash
