@@ -161,7 +161,7 @@ ts_prop_generatedChainsAreValidated :: TSProperty
 ts_prop_generatedChainsAreValidated =
   withTestsTS 300  $ property $ do
     let (traceLength, step) = (200 :: Word64, 10 :: Word64)
-    tr <- forAll $ trace @CHAIN traceLength
+    tr <- forAll $ trace @CHAIN () traceLength
     classifyTraceLength tr traceLength step
     printAdditionalInfoOnFailure tr
     passConcreteValidation tr
@@ -305,7 +305,7 @@ invalidChainTracesAreRejected
 invalidChainTracesAreRejected numberOfTests failureProfile onFailureAgreement =
   withTestsTS numberOfTests $ property $ do
     let traceLength = 100 :: Word64
-    tr <- forAll $ invalidTrace @CHAIN traceLength failureProfile
+    tr <- forAll $ invalidTrace @CHAIN () traceLength failureProfile
     let ValidationOutput { elaboratedConfig, result } =
           applyTrace (Invalid.Trace.validPrefix tr)
     case result of
@@ -548,7 +548,7 @@ invalidSizesAreRejected
   concreteBlockComponentSize
   checkFailures =
   withTestsTS 300 $ property $ do
-  tr <- forAll $ trace @CHAIN 100 `ofLengthAtLeast` 1
+  tr <- forAll $ trace @CHAIN () 100 `ofLengthAtLeast` 1
   let
     ValidationOutput { elaboratedConfig, result } =
       applyTrace initTr
