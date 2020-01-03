@@ -160,7 +160,7 @@ mkGenesisLedgerState
   -> Gen (Either a (UTxOState, DPState))
 mkGenesisLedgerState _ = do
   utxo0 <- genUtxo0 5 10
-  let (LedgerState utxoSt dpSt _) = genesisState genesisDelegs0 utxo0
+  let (LedgerState utxoSt dpSt) = genesisState genesisDelegs0 utxo0
   pure $ Right (utxoSt, dpSt)
 
 -- | Generate values the given distribution in 90% of the cases, and values at

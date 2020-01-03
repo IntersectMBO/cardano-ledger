@@ -73,11 +73,11 @@ then calls the $\mathsf{DELEGS}$ transition.
       }
       \vdash
       dpstate \trans{\hyperref[fig:rules:delegation-sequence]{delegs}}{
-                     \fun{txcerts}~\var{tx}} dpstate'
+        \fun{txcerts}~\var{(\txbody{tx})}} dpstate'
       \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
-      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}) \leteq \var{dstate} \\
-      (\var{stpools}, \_, \_, \_) \leteq \var{pstate} \\
+      (\var{stkCreds}, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
+      (\var{stpools}, \_, \_) \leteq \var{pstate} \\
       \\~\\
       {
         \begin{array}{c}
@@ -152,7 +152,8 @@ slot is removed.
       \\
       (\var{pup},~\var{aup},~\var{favs},~\var{avs}) \leteq\var{us}
       \\
-      (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},~\var{fGenDelegs},~\var{genDelegs})
+      (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},
+      ~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
       \leteq\var{ds}
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
@@ -162,12 +163,18 @@ slot is removed.
         & \var{avs}\unionoverrideRight\fun{newAVs}~\var{avs}~(\var{favs}\setminus\var{favs'})
       \end{array}}
       \\~\\
-      \var{curr}\leteq
-      \{
-        (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fGenDelegs}
-        ~\mid~
-        \var{s}\leq\var{slot}
-      \}\\
+      {\begin{array}{r@{~\leteq~}l}
+          \var{curr}
+          &
+          \{
+            (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fGenDelegs}
+            ~\mid~
+            \var{s}\leq\var{slot}
+          \}\\
+          \var{fGenDelegs'}
+          &
+          \var{fGenDelegs}\setminus\var{curr}\\
+      \end{array}}\\
       \var{genDelegs'}\leteq
       \left\{
         \var{gkh}\mapsto\var{vkh}
@@ -184,7 +191,7 @@ slot is removed.
       \\
       \var{ds'}\leteq
       (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
-      ~\var{fGenDelegs}\setminus\var{curr},~\var{genDelegs}\unionoverrideRight\var{genDelegs'})
+      ~\var{fGenDelegs'},~\var{genDelegs}\unionoverrideRight\var{genDelegs'},~\var{i_{rwd}})
       \\
       \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'}, \var{ps}))
     }
@@ -226,7 +233,7 @@ slot is removed.
       }
       \vdash
         \var{ls'}
-        \trans{\hyperref[fig:rules:ledger]{ledger}}{c}
+        \trans{\hyperref[fig:rules:ledger]{ledger}}{\var{tx}}
         \var{ls''}
     }
     {
@@ -237,7 +244,7 @@ slot is removed.
       \end{array}
     \vdash
       \var{ls}
-      \trans{ledgers}{\Gamma; c}
+      \trans{ledgers}{\Gamma;~\var{tx}}
       \varUpdate{\var{ls''}}
     }
   \end{equation}

@@ -20,9 +20,8 @@ import           Control.State.Transition
 import qualified Data.Map.Strict as Map
 import           EpochBoundary
 import           GHC.Generics (Generic)
-import           LedgerState (AccountState, DState, PState, UTxOState, pattern UTxOState, clearPpup,
-                     emptyAccount, stPools, stkCreds, _deposited, _irwd, _reserves)
-import           Lens.Micro ((^.))
+import           LedgerState (AccountState, DState (..), PState (..), UTxOState, pattern UTxOState,
+                     clearPpup, emptyAccount, _deposited, _irwd, _reserves)
 import           PParams
 import           Slot
 import           Updates
@@ -58,26 +57,26 @@ initialNewPp = pure $ NewppState
 
 newPpTransition :: TransitionRule (NEWPP crypto)
 newPpTransition = do
-  TRC (NewppEnv ppNew ds ps, NewppState utxoSt acnt pp, e) <- judgmentContext
+  TRC (NewppEnv ppNew dstate pstate, NewppState utxoSt acnt pp, e) <- judgmentContext
 
   case ppNew of
     Just ppNew' -> do
-      slot_ <- liftSTS $ do
+      slot <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoFirst ei e
-      let Coin oblgCurr = obligation pp (ds ^. stkCreds) (ps ^. stPools) slot_
-          Coin oblgNew = obligation ppNew' (ds ^. stkCreds) (ps ^. stPools) slot_
+      let Coin oblgCurr = obligation pp (_stkCreds dstate) (_stPools pstate) slot
+          Coin oblgNew = obligation ppNew' (_stkCreds dstate) (_stPools pstate) slot
           diff = oblgCurr - oblgNew
           Coin reserves = _reserves acnt
-          Coin requiredInstantaneousRewards = foldl (+) (Coin 0) $ _irwd ds
+          Coin requiredInstantaneousRewards = foldl (+) (Coin 0) $ _irwd dstate
 
       if reserves + diff >= requiredInstantaneousRewards
          && (_maxTxSize ppNew' + _maxBHSize ppNew') <  _maxBBSize ppNew'
         then
           let utxoSt' = utxoSt { _deposited = Coin oblgNew }
-          in  -- TODO: update mechanism
-              let acnt' = acnt { _reserves = Coin $ reserves + diff }
-              in pure $ NewppState (clearPpup utxoSt') acnt' ppNew'
+          in
+            let acnt' = acnt { _reserves = Coin $ reserves + diff }
+            in pure $ NewppState (clearPpup utxoSt') acnt' ppNew'
         else
           pure $ NewppState (clearPpup utxoSt) acnt pp
     Nothing -> pure $ NewppState (clearPpup utxoSt) acnt pp

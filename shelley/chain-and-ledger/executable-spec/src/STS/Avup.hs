@@ -77,11 +77,11 @@ avUpdateNoConsensus = do
 
   all allApNamesValid (range _aup) ?! InvalidName
 
-  all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
+  all (allSvCanFollow avs favs) (range _aup) ?! CannotFollow
 
   all allTagsValid (range _aup) ?! InvalidSystemTags
 
-  let aup' = _aup ⨃ Map.toList aupS
+  let aup' = aupS ⨃ Map.toList _aup
   let fav  = votedValue aup'
 
   fav == Nothing ?! AVConsensus
@@ -90,7 +90,7 @@ avUpdateNoConsensus = do
 
 avUpdateConsensus :: TransitionRule (AVUP crypto)
 avUpdateConsensus = do
-  TRC (AVUPEnv _slot (GenDelegs _genDelegs), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
+  TRC (AVUPEnv slot (GenDelegs _genDelegs), AVUPState (AVUpdate aupS) favs avs, AVUpdate _aup) <-
     judgmentContext
 
   not (Map.null _aup) ?! EmptyAVUP
@@ -99,17 +99,17 @@ avUpdateConsensus = do
 
   all allApNamesValid (range _aup) ?! InvalidName
 
-  all (allSvCanFollow_ avs favs) (range _aup) ?! CannotFollow
+  all (allSvCanFollow avs favs) (range _aup) ?! CannotFollow
 
   all allTagsValid (range _aup) ?! InvalidSystemTags
 
-  let aup' = _aup ⨃ Map.toList aupS
+  let aup' = aupS ⨃ Map.toList _aup
   let fav  = votedValue aup'
 
   fav /= Nothing ?! NoAVConsensus
   let fav' = fromMaybe (Applications Map.empty) fav
 
-  let s = _slot +* slotsPrior
+  let s = slot +* slotsPrior
 
   pure $ AVUPState
     (AVUpdate Map.empty)
@@ -119,8 +119,8 @@ avUpdateConsensus = do
 allApNamesValid :: Applications crypto -> Bool
 allApNamesValid = all apNameValid . dom . apps
 
-allSvCanFollow_ :: Applications crypto -> Favs crypto -> Applications crypto -> Bool
-allSvCanFollow_ avs favs = all (svCanFollow avs favs) . Map.toList . apps
+allSvCanFollow :: Applications crypto -> Favs crypto -> Applications crypto -> Bool
+allSvCanFollow avs favs = all (svCanFollow avs favs) . Map.toList . apps
 
 allTagsValid :: Applications crypto -> Bool
 allTagsValid = all sTagsValid . range . range . apps

@@ -85,7 +85,7 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{outs} \in \Tx \to \UTxO
+    & \fun{outs} \in \TxBody \to \UTxO
     & \text{tx outputs as UTxO} \\
     & \fun{outs} ~ \var{tx} =
         \left\{
@@ -102,14 +102,14 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
     & \text{withdrawal balance} \\
     & \fun{wbalance} ~ ws = \sum_{(\wcard\mapsto c)\in\var{ws}} c
     \nextdef
-    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Tx \to \Coin
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \TxBody \to \Coin
     & \text{value consumed} \\
     & \consumed{pp}{utxo}{stkCreds}{tx} = \\
     & ~~\ubalance{(\txins{tx} \restrictdom \var{utxo})} +
         \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
     & ~~ + \keyRefunds{pp}{stkCreds}{tx} \\
     \nextdef
-    & \fun{produced} \in \PParams \to \StakePools \to \Tx \to \Coin
+    & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \Coin
     & \text{value produced} \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{tx} = \\
     &~~\ubalance{(\outs{tx})}
@@ -290,12 +290,13 @@ requests).
 \begin{figure}[htb]
   \begin{equation}\label{eq:utxo-inductive-shelley}
     \inference[UTxO-inductive]
-    { \txttl tx \geq \var{slot}
-      & \txins{tx} \neq \emptyset
-      & \minfee{pp}{tx} \leq \txfee{tx}
-      & \txins{tx} \subseteq \dom \var{utxo}
+    { \var{txb}\leteq\txbody{tx}
+      & \txttl txb \geq \var{slot}
+      \\ \txins{txb} \neq \emptyset
+      & \minfee{pp}{txb} \leq \txfee{txb}
+      & \txins{txb} \subseteq \dom \var{utxo}
       \\
-      \consumed{pp}{utxo}{stkCreds}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
+      \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \produced{pp}{stpools}~{txb}
       \\
       ~
       \\
@@ -310,18 +311,18 @@ requests).
       \\
       ~
       \\
-      \forall (\_\mapsto (\_, c)) \in \txouts{tx}, c \geq 0
+      \forall (\_\mapsto (\_, c)) \in \txouts{txb}, c \geq 0
       \\
-      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
+      \fun{txsize}~{txb}\leq\fun{maxTxSize}~\var{pp}
       \\
       ~
       \\
-      \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{tx}
+      \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
       \\
-      \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{tx}
+      \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{txb}
       \\
       \var{depositChange} \leteq
-        \deposits{pp}~{stpools}~{(\txcerts{tx})} - (\var{refunded} + \var{decayed})
+        \deposits{pp}~{stpools}~{(\txcerts{txb})} - (\var{refunded} + \var{decayed})
     }
     {
       \begin{array}{r}
@@ -343,9 +344,9 @@ requests).
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{(\txins{tx} \subtractdom \var{utxo}) \cup \outs{tx}}  \\
+        \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
-        \varUpdate{\var{fees} + \txfee{tx} + \var{decayed}} \\
+        \varUpdate{\var{fees} + \txfee{txb} + \var{decayed}} \\
         \varUpdate{ups'}\\
       \end{array}
       \right)
@@ -486,7 +487,7 @@ Section~\ref{sec:epoch}.
         &\delta & \slotminus{slot}{(stkCreds~(\cwitness c))}\\
       \end{array}\\
       \nextdef
-      & \fun{keyRefunds} \in \PParams \to \StakeCreds \to \Tx \to \Coin
+      & \fun{keyRefunds} \in \PParams \to \StakeCreds \to \TxBody \to \Coin
       & \text{key refunds for a transaction} \\
       & \keyRefunds{pp}{stkCreds}{tx} =\\
       & ~~~~~ \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
@@ -526,7 +527,7 @@ Section~\ref{sec:epoch}.
           & \lambda & \fun{keyDecayRate}~\var{pp}\\
       \end{array}\\
       \nextdef
-      & \fun{decayedTx} \in \PParams \to \StakeCreds \to \Tx \to \Coin
+      & \fun{decayedTx} \in \PParams \to \StakeCreds \to \TxBody \to \Coin
       & \text{decayed deposit portions} \\
       & \decayedTx{pp}{stkCreds}{tx} =\\
       &   \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
@@ -643,7 +644,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
     \label{eq:utxo-witness-inductive-shelley}
     \inference[UTxO-wit]
     {
-      (utxo, \wcard, \wcard) \leteq \var{utxoSt} \\
+      (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
       \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
       \dom (\txwitsVKey{tx}) \}\\~\\
       \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{tx},\\

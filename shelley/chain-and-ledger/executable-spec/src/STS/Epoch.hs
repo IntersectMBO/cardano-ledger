@@ -72,25 +72,25 @@ votedValuePParams (PPUpdate ppup) pps =
 
 epochTransition :: forall crypto . TransitionRule (EPOCH crypto)
 epochTransition = do
-  TRC (_, EpochState { esAccountState = as
+  TRC (_, EpochState { esAccountState = acnt
                      , esSnapshots = ss
                      , esLState = ls
                      , esPp = pp}, e) <- judgmentContext
-  let us = _utxoState ls
-  let UpdateState ppup _ _ _ = _ups us
-  let DPState ds ps = _delegationState ls
-  SnapState ss' us' <-
-    trans @(SNAP crypto) $ TRC (SnapEnv pp ds ps, SnapState ss us, e)
-  PoolreapState us'' as' ds' ps' <-
-    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState us' as ds ps, e)
+  let utxoSt = _utxoState ls
+  let DPState dstate pstate = _delegationState ls
+  SnapState ss' utxoSt' <-
+    trans @(SNAP crypto) $ TRC (SnapEnv pp dstate pstate, SnapState ss utxoSt, e)
+  PoolreapState utxoSt'' acnt' dstate' pstate' <-
+    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt' acnt dstate pstate, e)
+  let UpdateState ppup _ _ _ = _ups utxoSt
   let ppNew = votedValuePParams ppup pp
-  NewppState us''' as'' pp' <-
+  NewppState utxoSt''' acnt'' pp' <-
     trans @(NEWPP crypto)
-      $ TRC (NewppEnv ppNew ds' ps', NewppState us'' as' pp, e)
+      $ TRC (NewppEnv ppNew dstate' pstate', NewppState utxoSt'' acnt' pp, e)
   pure $ EpochState
-    as''
+    acnt''
     ss'
-    (ls { _utxoState = us''', _delegationState = DPState ds' ps' })
+    (ls { _utxoState = utxoSt''', _delegationState = DPState dstate' pstate' })
     pp'
 
 instance Embed (SNAP crypto) (EPOCH crypto) where

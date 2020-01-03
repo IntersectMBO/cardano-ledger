@@ -244,7 +244,6 @@ emptyLedgerState =
   LedgerState
   emptyUTxOState
   emptyDelegation
-  0
 
 emptyAccount :: AccountState
 emptyAccount = AccountState (Coin 0) (Coin 0)
@@ -301,7 +300,7 @@ getGKeys
 getGKeys nes = Map.keysSet genDelegs
   where NewEpochState _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ = es
-        LedgerState _ (DPState (DState _ _ _ _ _ (GenDelegs genDelegs) _) _) _ = ls
+        LedgerState _ (DPState (DState _ _ _ _ _ (GenDelegs genDelegs) _) _) = ls
 
 data NewEpochEnv crypto=
   NewEpochEnv {
@@ -318,8 +317,6 @@ data LedgerState crypto=
     _utxoState         :: !(UTxOState crypto)
     -- |The current delegation state
   , _delegationState   :: !(DPState crypto)
-    -- |The current transaction index in the current slot.
-  , _txSlotIx          :: Ix
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (LedgerState crypto)
@@ -367,7 +364,6 @@ genesisState genDelegs0 utxo0 = LedgerState
     (Coin 0)
     emptyUpdateState)
   (DPState dState emptyPState)
-  0
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
@@ -687,7 +683,6 @@ applyTxBody ls pp tx =
        & utxoState . deposited .~ depositPoolChange ls pp tx
        & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
        & delegationState . dstate . rewards .~ newAccounts
-       & txSlotIx  %~ (+) 1
   where
     newAccounts = reapRewards (ls ^. delegationState . dstate. rewards) (tx ^. wdrls)
 

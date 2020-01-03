@@ -395,7 +395,6 @@ This transition has no preconditions and results in the following state change:
     {
       {
       \begin{array}{r@{~\leteq~}l}
-        (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \var{utxoSt}\\
         (\var{stkCreds},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
         (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
@@ -548,7 +547,6 @@ This transition has no preconditions and results in the following state change:
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
-          \var{cs} \\
         \end{array}
       \right)
       \trans{poolreap}{e}
@@ -574,7 +572,6 @@ This transition has no preconditions and results in the following state change:
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{stpools}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{poolParams}} \\
           \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
-          \varUpdate{\var{retired}} & \varUpdate{\subtractdom} & \varUpdate{\var{cs}} \\
         \end{array}
       \right)
     }
@@ -896,6 +893,7 @@ in sequence.
       \left(
         {
           \begin{array}{r}
+            \var{utxoSt'} \\
             \var{acnt} \\
             \var{dstate} \\
             \var{pstate} \\
@@ -906,6 +904,7 @@ in sequence.
       \left(
       {
         \begin{array}{rcl}
+            \var{utxoSt''} \\
             \var{acnt'} \\
             \var{dstate'} \\
             \var{pstate'} \\
@@ -913,8 +912,9 @@ in sequence.
       }
       \right)
       \\~\\~\\
-      \var{(\wcard,~\wcard,~\wcard,~(\var{pup},~\wcard,~\wcard,~\wcard))}\leteq\var{utxoSt'}\\
-      \var{pp_{new}}\leteq\fun{votedValue_{PParams}}~\var{pup}\\
+      \var{(\wcard,~\wcard,~\wcard,~(\var{ppup},~\wcard,~\wcard,~\wcard))}\leteq\var{utxoSt'}\\
+      \var{pp_{new}}\leteq\var{pp}\unionoverrideRight
+      \fun{votedValue_{(\Ppm\to\mathsf{T_{ppm}})}}~\var{ppup}\\
       {
         \begin{array}{r}
           \var{pp_{new}}\\
@@ -926,7 +926,7 @@ in sequence.
       \left(
         {
           \begin{array}{r}
-            \var{utxoSt'} \\
+            \var{utxoSt''} \\
             \var{acnt'} \\
             \var{pp}\\
           \end{array}
@@ -936,14 +936,14 @@ in sequence.
       \left(
       {
         \begin{array}{rcl}
-            \var{utxoSt''} \\
+            \var{utxoSt'''} \\
             \var{acnt''} \\
             \var{pp'}\\
         \end{array}
       }
       \right)
       \\~\\~\\
-      \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}'))
+      \var{ls}' \leteq (\var{utxoSt}''',~(\var{dstate}',~\var{pstate}'))
     }
     {
       \vdash

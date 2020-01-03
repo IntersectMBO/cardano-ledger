@@ -23,8 +23,7 @@ import           Coin (Coin)
 import           Control.State.Transition
 import           GHC.Generics (Generic)
 import           Keys
-import           LedgerState
-import           Lens.Micro ((^.))
+import           LedgerState (DPState (..), DState (..), Ix, PState (..), UTxOState)
 import           PParams hiding (d)
 import           Slot
 import           STS.Delegs
@@ -73,16 +72,23 @@ ledgerTransition
      )
   => TransitionRule (LEDGER crypto)
 ledgerTransition = do
-  TRC (LedgerEnv slot ix pp _reserves, (u, d), tx) <- judgmentContext
-  utxo' <- trans @(UTXOW crypto) $ TRC
-    ( UtxoEnv slot pp (d ^. dstate . stkCreds) (d ^. pstate . stPools) (d ^. dstate . genDelegs)
-    , u
+  TRC (LedgerEnv slot txIx pp reserves, (utxoSt, dpstate), tx) <- judgmentContext
+
+  dpstate' <-
+    trans @(DELEGS crypto)
+      $ TRC (DelegsEnv slot txIx pp tx reserves, dpstate, _certs $ _body tx)
+
+  let
+    DPState dstate pstate = dpstate
+    DState stkCreds _ _ _ _ genDelegs _ = dstate
+    PState stpools _ _ = pstate
+
+  utxoSt' <- trans @(UTXOW crypto) $ TRC
+    ( UtxoEnv slot pp stkCreds stpools genDelegs
+    , utxoSt
     , tx
     )
-  deleg' <-
-    trans @(DELEGS crypto)
-      $ TRC (DelegsEnv slot ix pp tx _reserves, d, tx ^. body . certs)
-  pure (utxo', deleg')
+  pure (utxoSt', dpstate')
 
 instance
   ( Crypto crypto

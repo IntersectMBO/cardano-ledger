@@ -112,7 +112,7 @@ instance Crypto crypto => FromCBOR (Update crypto) where
       <*> fromCBOR
 
 data PPUpdateEnv crypto = PPUpdateEnv {
-    slot :: SlotNo
+    slotNo :: SlotNo
   , genDelegs  :: GenDelegs crypto
   } deriving (Show, Eq, Generic)
 

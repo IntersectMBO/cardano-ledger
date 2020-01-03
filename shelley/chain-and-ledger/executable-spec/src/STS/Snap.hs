@@ -18,8 +18,8 @@ import           Control.State.Transition
 import qualified Data.Map.Strict as Map
 import           EpochBoundary
 import           GHC.Generics (Generic)
-import           LedgerState
-import           Lens.Micro ((^.))
+import           LedgerState (DState (..), PState (..), UTxOState (..), stakeDistr, _deposited,
+                     _fees)
 import           PParams hiding (d)
 import           Slot
 import           Updates
@@ -55,18 +55,22 @@ instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
 
 snapTransition :: TransitionRule (SNAP crypto)
 snapTransition = do
-  TRC (SnapEnv pparams d p, SnapState s u, eNew) <- judgmentContext
-  let pooledStake = stakeDistr (u ^. utxo) d p
+  TRC (SnapEnv pp dstate pstate, SnapState s u, eNew) <- judgmentContext
+
+  let UTxOState utxo deposits' fees _ = u
+  let DState stkCreds _ _ _ _ _ _ = dstate
+  let PState stpools poolParams _ = pstate
+  let stake = stakeDistr utxo dstate pstate
   _slot <- liftSTS $ do
     ei <- asks epochInfo
     epochInfoFirst ei eNew
-  let oblg = obligation pparams (d ^. stkCreds) (p ^. stPools) _slot
-  let decayed = (u ^. deposited) - oblg
+  let oblg = obligation pp stkCreds stpools _slot
+  let decayed = deposits' - oblg
   pure $ SnapState
-    s { _pstakeMark = pooledStake
-      , _pstakeSet = s ^. pstakeMark
-      , _pstakeGo = s ^. pstakeSet
-      , _poolsSS = p ^. pParams
-      , _feeSS = (u ^. fees) + decayed}
+    s { _pstakeMark = stake
+      , _pstakeSet = _pstakeMark s
+      , _pstakeGo = _pstakeSet s
+      , _poolsSS = poolParams
+      , _feeSS = fees + decayed}
     u { _deposited = oblg
-      , _fees = (u ^. fees) + decayed}
+      , _fees = fees + decayed}

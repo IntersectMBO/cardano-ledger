@@ -334,7 +334,7 @@ psEx1 = emptyPState
 
 -- | Ledger state
 lsEx1 :: LedgerState
-lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1) 0
+lsEx1 = LedgerState utxostEx1 (DPState dsEx1 psEx1)
 
 ppsEx1 :: PParams
 ppsEx1 = emptyPParams { _maxBBSize       =       50000
@@ -515,7 +515,7 @@ utxostEx2A :: UTxOState
 utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) usEx2A
 
 lsEx2A :: LedgerState
-lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1) 0
+lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1)
 
 maxLovelaceSupply :: Coin
 maxLovelaceSupply = Coin 45*1000*1000*1000*1000*1000
@@ -609,7 +609,6 @@ expectedLSEx2A = LedgerState
                  (Coin 3)
                  updateStEx2A)
                (DPState dsEx2A psEx2A)
-               0
 
 blockEx2AHash :: HashHeader
 blockEx2AHash = bhHash (bheader blockEx2A)
@@ -709,7 +708,6 @@ expectedLSEx2B = LedgerState
                  (Coin 7)
                  updateStEx2A)
                (DPState dsEx2B psEx2A)
-               0
 
 expectedStEx2Bgeneric :: PParams -> ChainState
 expectedStEx2Bgeneric pp = ChainState
@@ -818,7 +816,6 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
            , _rewards  = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
            }
     psEx2A)
-  0
 
 expectedLSEx2C :: LedgerState
 expectedLSEx2C = expectedLSEx2Cgeneric 257 21
@@ -975,7 +972,6 @@ expectedLSEx2E = LedgerState
                        , _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
                        }
                  psEx2A)
-               0
 
 blockEx2EHash :: HashHeader
 blockEx2EHash = bhHash (bheader blockEx2E)
@@ -1103,7 +1099,6 @@ expectedLSEx2G = LedgerState
                         , _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
                         }
                  psEx2A)
-               0
 
 expectedStEx2G :: ChainState
 expectedStEx2G = ChainState
@@ -1226,7 +1221,6 @@ expectedLSEx2I = LedgerState
                  (Coin 9)
                  usEx2A)
                (DPState dsEx2I psEx2A)
-               0
 
 snapsEx2I :: SnapShots
 snapsEx2I = snapsEx2G { _pstakeMark =
@@ -1322,7 +1316,6 @@ expectedLSEx2J = LedgerState
                  (Coin 18)
                  usEx2A)
                (DPState dsEx2J psEx2A)
-               0
 
 expectedStEx2J :: ChainState
 expectedStEx2J = ChainState
@@ -1398,8 +1391,6 @@ expectedLSEx2K = LedgerState
                  (Coin 20)
                  usEx2A)
                (DPState dsEx2J psEx2K)
-               0
-
 
 expectedStEx2K :: ChainState
 expectedStEx2K = ChainState
@@ -1478,7 +1469,6 @@ expectedLSEx2L = LedgerState
                  (Coin 22)
                  usEx2A)
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped
-               0
 
 expectedStEx2L :: ChainState
 expectedStEx2L = ChainState
@@ -1570,7 +1560,6 @@ expectedLSEx3A = LedgerState
                  (Coin 1)
                  updateStEx3A)
                (DPState dsEx1 psEx1)
-               0
 
 blockEx3AHash :: HashHeader
 blockEx3AHash = bhHash (bheader blockEx3A)
@@ -1663,7 +1652,6 @@ expectedLSEx3B = LedgerState
                  (Coin 2)
                  updateStEx3B)
                (DPState dsEx1 psEx1)
-               0
 
 blockEx3BHash :: HashHeader
 blockEx3BHash = bhHash (bheader blockEx3B)
@@ -1725,7 +1713,6 @@ expectedLSEx3C = LedgerState
                  (Coin 2)
                  usEx2A)
                (DPState dsEx1 psEx1)
-               0
 
 ppsEx3C :: PParams
 ppsEx3C = ppsEx1 { _poolDeposit = Coin 200, _extraEntropy = mkNonce 123 }
@@ -1827,7 +1814,6 @@ expectedLSEx4A = LedgerState
                  (Coin 1)
                  updateStEx4A)
                (DPState dsEx1 psEx1)
-               0
 
 blockEx4AHash :: HashHeader
 blockEx4AHash = bhHash (bheader blockEx4A)
@@ -1918,7 +1904,6 @@ expectedLSEx4B = LedgerState
                  (Coin 2)
                  updateStEx4B)
                (DPState dsEx1 psEx1)
-               0
 
 blockEx4BHash :: HashHeader
 blockEx4BHash = bhHash (bheader blockEx4B)
@@ -1978,7 +1963,6 @@ expectedLSEx4C = LedgerState
                  (Coin 2)
                  updateStEx4C)
                (DPState dsEx1 psEx1)
-               0
 
 blockEx4CHash :: HashHeader
 blockEx4CHash = bhHash (bheader blockEx4C)
@@ -2070,7 +2054,6 @@ expectedLSEx5A = LedgerState
                  (Coin 1)
                  (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
                (DPState dsEx5A psEx1)
-               0
 
 expectedStEx5A :: ChainState
 expectedStEx5A = ChainState
@@ -2126,7 +2109,6 @@ expectedLSEx5B = LedgerState
                  (Coin 1)
                  (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
                (DPState dsEx5B psEx1)
-               0
 
 expectedStEx5B :: ChainState
 expectedStEx5B = ChainState
@@ -2215,7 +2197,6 @@ expectedLSEx6A = LedgerState
                  (Coin 1)
                  (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
                (DPState dsEx6A psEx1)
-               0
 
 expectedStEx6A :: ChainState
 expectedStEx6A = ChainState

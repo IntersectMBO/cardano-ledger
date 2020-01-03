@@ -22,7 +22,7 @@ import           PParams
 import           Slot
 import           STS.Avup
 import           STS.Ppup
-import           Updates
+import           Updates (Update (..), UpdateState (..))
 
 data UP crypto
 
@@ -50,13 +50,13 @@ upTransition
    . Crypto crypto
   => TransitionRule (UP crypto)
 upTransition = do
-  TRC ( UpdateEnv _slot pp _genDelegs
-      , UpdateState pupS aupS favs avs
-      , Update pup _aup) <- judgmentContext
+  TRC ( UpdateEnv slot pp _genDelegs
+      , UpdateState pup aup favs avs
+      , Update pupU aupU) <- judgmentContext
 
-  pup' <- trans @(PPUP crypto) $ TRC (PPUPEnv _slot pp _genDelegs, pupS, pup)
+  pup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp _genDelegs, pup, pupU)
   AVUPState aup' favs' avs' <-
-    trans @(AVUP crypto) $ TRC (AVUPEnv _slot _genDelegs, AVUPState aupS favs avs, _aup)
+    trans @(AVUP crypto) $ TRC (AVUPEnv slot _genDelegs, AVUPState aup favs avs, aupU)
 
   pure $ UpdateState pup' aup' favs' avs'
 

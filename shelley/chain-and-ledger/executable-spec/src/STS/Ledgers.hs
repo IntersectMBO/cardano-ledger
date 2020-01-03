@@ -28,10 +28,11 @@ import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Keys
 import           Ledger.Core ((◁), (⨃))
-import           LedgerState
+import           LedgerState (DState (..), LedgerState (..), UTxOState (..), emptyLedgerState,
+                     _delegationState, _dstate, _fGenDelegs, _genDelegs, _utxoState)
 import           PParams
 import           Slot
-import           STS.Ledger
+import           STS.Ledger (LEDGER, LedgerEnv (..))
 import           Tx
 import           Updates (Applications (..), UpdateState (..), apps, newAVs)
 
@@ -70,26 +71,25 @@ ledgersTransition
      )
   => TransitionRule (LEDGERS crypto)
 ledgersTransition = do
-  TRC (LedgersEnv slot pp _reserves, ls, txwits) <- judgmentContext
-  let (u, dw) = (_utxoState ls, _delegationState ls)
-  (u'', dw'') <-
+  TRC (LedgersEnv slot pp reserves, ls, txwits) <- judgmentContext
+  let (u, dp) = (_utxoState ls, _delegationState ls)
+  (u'', dp'') <-
     foldM
-        (\(u', dw') (ix, tx) ->
+        (\(u', dp') (ix, tx) ->
           trans @(LEDGER crypto)
-            $ TRC (LedgerEnv slot ix pp _reserves, (u', dw'), tx)
+            $ TRC (LedgerEnv slot ix pp reserves, (u', dp'), tx)
         )
-        (u, dw)
+        (u, dp)
       $ zip [0 ..] $ toList txwits
 
-  let UTxOState utxo' dep fee (UpdateState ppup aup favs avs) = u''
+  let UTxOState utxo deposits fee us = u''
+  let UpdateState ppup aup favs avs = us
+  let ds = _dstate dp''
+  let DState _ _ _ _ fGenDelegs_ (GenDelegs genDelegs_) _ = ds
+
   let (favs', ready) = Map.partitionWithKey (\s _ -> s > slot) favs
   let avs' = Applications $ apps avs ⨃ (Map.toList . apps $ newAVs avs ready)
-  let u''' = UTxOState utxo' dep fee (UpdateState ppup aup favs' avs')
-
-  let ds = _dstate dw''
-      fGenDelegs_    = _fGenDelegs ds
-      GenDelegs genDelegs_ = _genDelegs ds
-      (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
+  let (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
   let maxSlotNo = maximum . Set.map fst . Map.keysSet
   let latestPerGKey gk =
         ( (maxSlotNo . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
@@ -98,12 +98,14 @@ ledgersTransition = do
                   latestPerGKey
                   (Set.map snd (Map.keysSet curr))
   let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr
-  let dw''' = dw'' { _dstate = ds { _fGenDelegs = fGenDelegs'
+
+  let u''' = UTxOState utxo deposits fee (UpdateState ppup aup favs' avs')
+  let dp''' = dp'' { _dstate = ds { _fGenDelegs = fGenDelegs'
                                   , _genDelegs = GenDelegs $ genDelegs_ ⨃ Map.toList genDelegs'
                                   }
                    }
 
-  pure $ LedgerState u''' dw''' (_txSlotIx ls)
+  pure $ LedgerState u''' dp'''
 
 instance
   ( Crypto crypto
