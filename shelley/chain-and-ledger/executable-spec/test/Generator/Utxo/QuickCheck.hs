@@ -87,10 +87,10 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   let multiSig = Map.fromList $
         map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts
 
-      msigSignatures = foldl Set.union Set.empty $
-        map (Set.fromList . head . getKeyCombinations) $
-        Map.elems multiSig
+  -- choose any possible combination of keys for multi-sig scripts
+  keysLists <- mapM QC.elements (map getKeyCombinations $ Map.elems multiSig)
 
+  let msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
       !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
               `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
               `Set.union` makeWitnessesFromScriptKeys txBody keys msigSignatures
