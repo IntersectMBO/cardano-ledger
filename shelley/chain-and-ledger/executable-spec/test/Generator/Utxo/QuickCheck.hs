@@ -29,10 +29,11 @@ import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs
                      TxBody, TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
-import           Tx (pattern Tx, pattern TxBody, pattern TxOut, hashScript)
+import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombinations, hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern ScriptHashObj)
 import           Updates (emptyUpdate)
-import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey)
+import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
+                     makeWitnessesVKey)
 
 import qualified Debug.Trace as D
 
@@ -83,11 +84,16 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
 
   -- witnessed transaction
   txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
-  let !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
-              `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
-              -- TODO: sign with required signatures for scripts
-      multiSig = Map.fromList $
+  let multiSig = Map.fromList $
         map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts
+
+      msigSignatures = foldl Set.union Set.empty $
+        map (Set.fromList . head . getKeyCombinations) $
+        Map.elems multiSig
+
+      !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
+              `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
+              `Set.union` makeWitnessesFromScriptKeys txBody keys msigSignatures
 
   return (Tx txBody wits multiSig)
 
