@@ -137,6 +137,8 @@ someKeyPairs lower upper =
     <$> QC.choose (lower, upper)
     <*> QC.shuffle traceKeyPairs
 
+-- | Select between _lower_ and _upper_ scripts from the possible combinations
+-- of the first 5 multi-sig scripts of `traceMSigScripts`.
 someScripts :: Int -> Int -> Gen [(MultiSig, MultiSig)]
 someScripts lower upper =
   take

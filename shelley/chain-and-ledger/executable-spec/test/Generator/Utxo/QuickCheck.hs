@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,8 +11,8 @@ module Generator.Utxo.QuickCheck
   where
 
 import           Control.Monad (when)
+import qualified Data.Either as Either (lefts, rights)
 import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -55,14 +54,8 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   -- inputs
   (witnessedInputs, spendingBalance) <- pickSpendingInputs keys' scripts' utxo
   let (inputs, spendCredentials) = unzip witnessedInputs
-      spendWitnesses = Maybe.catMaybes $
-        map (\case
-                Left kp -> Just kp
-                _       -> Nothing) spendCredentials
-      spendScripts = Maybe.catMaybes $
-        map (\case
-                Right sp -> Just sp
-                _        -> Nothing) spendCredentials
+      spendWitnesses = Either.lefts spendCredentials
+      spendScripts   = Either.rights spendCredentials
 
   -- output addresses
   recipientAddrs <- genRecipients keys'
@@ -138,13 +131,14 @@ calcFeeAndOutputs balance_ addrs =
 
 -- | Select unspent output(s) to serve as inputs for a new transaction
 --
--- Returns the inputs, paired with the KeyPair required to witness the
--- spending of the input.
+-- Returns the inputs, paired with the KeyPair or multi-sig script required to
+-- witness the spending of the input.
 -- Also returns the total spendable balance.
 
--- NOTE: this function needs access to the keys that the given utxo originated
--- from (in order to produce the appropriate witnesses to spend these outputs)
--- If this is not the case, findPayKeyPair will fail by not finding the matching keys.
+-- NOTE: this function needs access to the keys and multi-sig scripts that the
+-- given UTxO originated from (in order to produce the appropriate witnesses to
+-- spend these outputs). If this is not the case, `findPayKeyPair` /
+-- `findPayScript` will fail by not finding the matching keys or scripts.
 pickSpendingInputs
   :: KeyPairs
   -> [(MultiSig, MultiSig)]

@@ -179,6 +179,8 @@ makeGenWitnessesVKey
   -> Set (WitVKey crypto)
 makeGenWitnessesVKey tx = Set.fromList . fmap (makeGenWitnessVKey tx)
 
+-- | From a list of key pairs and a set of key hashes required for a multi-sig
+-- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys
   :: (Crypto crypto
      , Signable (DSIGN crypto) (TxBody crypto))

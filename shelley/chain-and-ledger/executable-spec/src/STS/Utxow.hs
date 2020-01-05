@@ -37,8 +37,6 @@ import           TxData
 import           UTxO
 import           Validation (Validity (..))
 
-import qualified Debug.Trace as D
-
 data UTXOW crypto
 
 instance
@@ -92,7 +90,7 @@ utxoWitnessed = do
   -- check multi-signature scripts
   all (\(hs, validator) -> hashScript validator == hs
       && validateScript validator tx) (Map.toList $ txwitsScript tx)
-    ?! ((D.trace (show $ Map.toList $ txwitsScript tx)) $ ScriptWitnessNotValidatingUTXOW)
+    ?! ScriptWitnessNotValidatingUTXOW
 
   scriptsNeeded utxo tx == Map.keysSet (txwitsScript tx)
     ?! MissingScriptWitnessesUTXOW
