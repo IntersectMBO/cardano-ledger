@@ -179,6 +179,18 @@ instance FromCBOR a => FromCBOR (CborSeq a) where
 data Globals = Globals
   { epochInfo :: EpochInfo Identity
   , slotsPerKESPeriod :: Word64
+    -- | Number of slots before the end of the epoch at which we stop updating
+    --   the candidate nonce for the next epoch.
+    --
+    --   This value is also used in a number of other places; for example,
+    --   protocol updates must be submitted at least this many slots before an
+    --   epoch boundary.
+  , slotsPrior :: Word64
+    -- | Number of slots after the beginning of an epoch when we may begin to
+    --   distribute rewards.
+  , startRewards :: Word64
+    -- | Maximum number of blocks we are allowed to roll back
+  , securityParameter :: Word64
   }
 
 type ShelleyBase = ReaderT Globals Identity

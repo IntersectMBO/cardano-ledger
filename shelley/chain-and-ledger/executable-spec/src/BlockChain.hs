@@ -31,8 +31,6 @@ module BlockChain
   , bbody
   , hsig
     --
-  , slotsPrior
-  , startRewards
   , seedEta
   , seedL
   , bvkcold
@@ -70,7 +68,7 @@ import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
-import           Slot (BlockNo (..), Duration, SlotNo (..))
+import           Slot (BlockNo (..), SlotNo (..))
 import           Tx (Tx (..), TxBody (..), WitVKey (..))
 import           TxData (MultiSig (..), ScriptHash (..))
 
@@ -424,12 +422,6 @@ hsig
   -> KESig crypto (BHBody crypto)
 hsig (BHeader _ s) = s
 
-slotsPrior :: Duration
-slotsPrior = 33 -- one third of slots per epoch
-
-startRewards :: Duration
-startRewards = 33 -- see above
-
 -- | Construct a seed to use in the VRF computation.
 mkSeed
   :: Crypto crypto
@@ -442,7 +434,6 @@ mkSeed (Nonce uc) slot nonce lastHash =
   Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce, lastHash))
 mkSeed NeutralNonce slot nonce lastHash =
   Seed . coerce $ hash @SHA256 (slot, nonce, lastHash)
-
 
 vrfChecks
   ::  forall crypto

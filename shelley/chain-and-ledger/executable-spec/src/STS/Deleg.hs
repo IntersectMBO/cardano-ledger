@@ -11,7 +11,6 @@ module STS.Deleg
 where
 
 import           BaseTypes
-import           BlockChain (slotsPrior)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
@@ -102,8 +101,9 @@ delegationTransition = do
         { _delegations = _delegations ds ⨃ [(hk, dpool)] }
 
     DCertGenesis (GenesisDelegate (gkh, vkh)) -> do
+      sp <- liftSTS $ asks slotsPrior
       -- note that pattern match is used instead of genesisDeleg, as in the spec
-      let s' = slot +* slotsPrior
+      let s' = slot +* Duration sp
           (GenDelegs genDelegs) = _genDelegs ds
 
       gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG
@@ -112,11 +112,12 @@ delegationTransition = do
         { _fGenDelegs = _fGenDelegs ds ⨃ [((s', gkh), vkh)]}
 
     DCertMir (MIRCert credCoinMap) -> do
+      sp <- liftSTS $ asks slotsPrior
       firstSlot <- liftSTS $ do
         ei <- asks epochInfo
         EpochNo currEpoch <- epochInfoEpoch ei slot
         epochInfoFirst ei $ EpochNo (currEpoch + 1)
-      slot < firstSlot *- slotsPrior
+      slot < firstSlot *- Duration sp
         ?! MIRCertificateTooLateinEpochDELEG
 
       let combinedMap = Map.union credCoinMap (_irwd ds)

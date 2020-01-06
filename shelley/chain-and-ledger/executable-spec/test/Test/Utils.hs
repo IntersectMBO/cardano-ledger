@@ -90,6 +90,9 @@ testGlobals :: Globals
 testGlobals = Globals
   { epochInfo = fixedSizeEpochInfo $ EpochSize 100
   , slotsPerKESPeriod = 90
+  , startRewards = 33
+  , slotsPrior = 33
+  , securityParameter = 10
   }
 
 runShelleyBase :: ShelleyBase a -> a

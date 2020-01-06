@@ -10,7 +10,6 @@ module STS.Rupd
 where
 
 import           BaseTypes
-import           BlockChain
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
@@ -44,8 +43,9 @@ rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (epoch, slot) <- liftSTS $ do
     ei <- asks epochInfo
+    sr <- asks startRewards
     e <- epochInfoEpoch ei s
-    slot <- epochInfoFirst ei e <&> (+* startRewards)
+    slot <- epochInfoFirst ei e <&> (+* (Duration sr))
     return (e, slot)
   if s <= slot
     then pure ru

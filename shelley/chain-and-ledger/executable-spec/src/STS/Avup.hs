@@ -12,9 +12,9 @@ module STS.Avup
 where
 
 import           BaseTypes
-import           BlockChain
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
+import           Control.Monad.Trans.Reader (asks)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
@@ -109,7 +109,9 @@ avUpdateConsensus = do
   fav /= Nothing ?! NoAVConsensus
   let fav' = fromMaybe (Applications Map.empty) fav
 
-  let s = slot +* slotsPrior
+  s <- do
+    sp <- liftSTS $ asks slotsPrior
+    return $! slot +* Duration sp
 
   pure $ AVUPState
     (AVUpdate Map.empty)
