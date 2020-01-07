@@ -232,6 +232,21 @@ getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs in
     map (concat . List.concatMap getKeyCombinations) perms
 
+-- | Hashes plutus script, appending the 'plutusTag' in
+-- front and then calling the script CBOR function.
+hashPLCScript
+  :: Crypto crypto
+  => ScriptPLC crypto
+  -> ScriptHash crypto
+hashPLCScript plc =
+  ScriptHashPLC $ hashWithSerialiser (\x -> encodeWord8 plutusTag
+                                          <> toCBOR x) plc
+
+-- | Magic number representing the tag of the native multi-signature script
+-- language. For each script language included, a new tag is chosen and the tag
+-- is included in the script hash for a script.
+nativeMultiSigTag :: Word8
+nativeMultiSigTag = 0
 
 instance Crypto crypto =>
   MultiSignatureScript (MultiSig crypto) crypto where

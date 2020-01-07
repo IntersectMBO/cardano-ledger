@@ -265,15 +265,15 @@ data TxOut crypto
   deriving (Show, Eq, Generic, Ord)
 
 -- | native currency (Ada)
-adaID :: Hash (HASH crypto) (ScriptPLC crypto)
-adaID =  (hash (ScriptPLC 1))
+-- adaID :: Hash (HASH crypto) (ScriptPLC crypto)
+-- adaID =  (hash (ScriptPLC 1))
 
-adaToken :: Hash (HASH crypto) (ScriptPLC crypto)
-adaToken =  (hash (ScriptPLC 2))
+adaToken :: String
+adaToken =  "Ada"
 
 -- | 0 Ada
-zeroAda :: Value (ScriptHash crypto) (ScriptHash crypto)
-zeroAda = DM.singleton adaID (DM.singleton adaToken 0)
+zeroAda :: ScriptHash crypto -- Value (Hash (HASH crypto) (Script crypto)) String
+zeroAda = (hash (SPLC (ScriptPLC 1))) -- DM.singleton (hash (SPLC (ScriptPLC 1))) (DM.singleton adaToken 0)
 
 instance NoUnexpectedThunks (TxOut crypto)
 
