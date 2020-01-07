@@ -36,7 +36,7 @@ import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfte
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
-import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey)
+import           UTxO (balance, makeWitnessVKey, totalDeposits, txid, txins, txouts, verifyWitVKey)
 import           Validation (ValidationError (..))
 
 import           Generator
@@ -333,5 +333,5 @@ propPreserveBalance = property $ do
   let created =
            balance (l' ^. utxoState . utxo)
         + fee
-        + (deposits emptyPParams (l' ^. delegationState . pstate . stPools) $ toList $ tx ^.body . certs)
+        + (totalDeposits emptyPParams (l' ^. delegationState . pstate . stPools) $ toList $ tx ^.body . certs)
   destroyed === created

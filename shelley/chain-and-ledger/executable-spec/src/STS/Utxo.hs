@@ -116,13 +116,11 @@ utxoInductive = do
   let refunded = keyRefunds pp stakeCreds txb
   decayed <- liftSTS $ decayedTx pp stakeCreds txb
   let txCerts = toList $ txb ^. certs
-  let depositChange = deposits pp stakepools txCerts - (refunded + decayed)
+  let depositChange = totalDeposits pp stakepools txCerts - (refunded + decayed)
 
   pure UTxOState
         { _utxo      = (txins txb ⋪ utxo) ∪ txouts txb
         , _deposited = deposits' + depositChange
-          -- TODO change variable "deposits" to "deposited" in formal and exec spec,
-          -- in order to not clash with the function of the same name
         , _fees      = fees + (_txfee txb) + decayed
         , _ups       = ups'
         }

@@ -28,7 +28,7 @@ module UTxO
   , txUpdate
   , txup
   , balance
-  , deposits
+  , totalDeposits
   , makeWitnessVKey
   , makeWitnessesVKey
   , makeGenWitnessVKey
@@ -200,12 +200,12 @@ balance (UTxO utxo) = foldr addCoins 0 utxo
   where addCoins (TxOut _ a) b = a + b
 
 -- |Determine the total deposit amount needed
-deposits
+totalDeposits
   :: PParams
   -> StakePools crypto
   -> [DCert crypto]
   -> Coin
-deposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
+totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (DCertPool (RegPool pool)) =

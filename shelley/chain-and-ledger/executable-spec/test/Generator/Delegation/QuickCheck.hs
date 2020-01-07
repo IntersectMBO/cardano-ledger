@@ -40,7 +40,7 @@ import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           TxData (Credential (KeyHashObj), pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertPool, pattern Delegation, pattern PoolParams, RewardAcnt (..),
                      StakePools (StakePools), _poolPubKey, _poolVrf)
-import           UTxO (deposits)
+import           UTxO (totalDeposits)
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
@@ -65,7 +65,7 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
       return (Seq.empty, [], [], Coin 0, Coin 0)
     Just (cert_, witnessOrCoreKeys) -> do
       let certs = [cert_]
-          deposits_ = deposits pparams (_stPools (_pstate dpState)) certs
+          deposits_ = totalDeposits pparams (_stPools (_pstate dpState)) certs
 
           deRegStakeCreds = filter isDeRegKey certs
           slotWithTTL = slot + SlotNo (fromIntegral ttl)
