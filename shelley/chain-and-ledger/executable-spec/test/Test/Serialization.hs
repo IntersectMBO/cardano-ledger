@@ -48,9 +48,10 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      pattern InstallerHash, pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
                      Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 
-import           MockTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, HashHeader, InstallerHash,
-                     KeyHash, KeyPair, MultiSig, SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId,
-                     TxIn, VKey, VKeyES, VRFKeyHash, VerKeyVRF, hashKeyVRF)
+import           ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, HashHeader,
+                     InstallerHash, KeyHash, KeyPair, MultiSig, SKeyES, ScriptHash, Sig,
+                     SignKeyVRF, TxBody, TxId, TxIn, VKey, VKeyES, VRFKeyHash, VerKeyVRF,
+                     hashKeyVRF)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Unsafe.Coerce (unsafeCoerce)
 import           UTxO (makeGenWitnessVKey, makeWitnessVKey)

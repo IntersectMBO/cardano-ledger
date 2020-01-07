@@ -42,9 +42,10 @@ import           Generator.Core.QuickCheck (mkGenesisLedgerState)
 import           Generator.LedgerTrace.QuickCheck ()
 
 import           Coin (pattern Coin)
+import           ConcreteCryptoTypes (DELEG, DELEGS, LEDGER, POOL, StakeCreds, StakePools, UTXO,
+                     UTXOW, Wdrl)
 import           LedgerState (pattern DPState, pattern DState, pattern UTxOState, dstate, pstate,
                      stPools, stkCreds, _deposited, _dstate, _fees, _rewards, _utxo)
-import           MockTypes (DELEG, DELEGS, LEDGER, POOL, StakeCreds, StakePools, UTXO, UTXOW, Wdrl)
 import qualified Rules.TestDeleg as TestDeleg
 import qualified Rules.TestDelegs as TestDelegs
 import qualified Rules.TestPool as TestPool

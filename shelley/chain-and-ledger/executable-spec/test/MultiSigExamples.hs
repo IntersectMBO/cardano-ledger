@@ -20,11 +20,11 @@ import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set (fromList)
 
 import           Coin
+import           ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody,
+                     TxId, TxIn, UTXOW, UTxOState, Wdrl)
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Keys (pattern GenDelegs, undiscriminateKeyHash)
 import           LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
-import           MockTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody, TxId,
-                     TxIn, UTXOW, UTxOState, Wdrl)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (SlotNo (..))
 import           STS.Utxo (UtxoEnv (..))

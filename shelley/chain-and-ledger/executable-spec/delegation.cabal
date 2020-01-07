@@ -102,7 +102,7 @@ test-suite delegation-test
     main-is:             Tests.hs
     other-modules:       UnitTests
                          Test.Utils
-                         MockTypes
+                         ConcreteCryptoTypes
                          MultiSigExamples
                          Mutator
                          Generator

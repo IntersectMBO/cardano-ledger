@@ -66,7 +66,7 @@ import           Updates
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 import           Validation (ValidationError (..), Validity (..))
 
-import           MockTypes
+import           ConcreteCryptoTypes
 import           Mutator
 
 -- | Find first matching key pair for address. Returns the matching key pair

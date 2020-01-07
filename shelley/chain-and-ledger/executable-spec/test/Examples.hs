@@ -59,6 +59,11 @@ import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
+import           ConcreteCryptoTypes (AVUpdate, Addr, Applications, Block, CHAIN, ChainState,
+                     Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
+                     LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
+                     RewardAcnt, SKey, SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO,
+                     UTxOState, Update, UpdateState, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
 import           Data.ByteString.Char8 (pack)
 import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
@@ -69,11 +74,6 @@ import           Data.Ratio ((%))
 import           Data.Sequence (empty, fromList)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
-import           MockTypes (AVUpdate, Addr, Applications, Block, CHAIN, ChainState, Credential,
-                     DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair, LedgerState,
-                     Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams, RewardAcnt, SKey,
-                     SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update,
-                     UpdateState, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 

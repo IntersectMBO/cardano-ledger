@@ -16,8 +16,8 @@ import           Coin (pattern Coin)
 import           TxData (pattern Tx, _body, _wdrls)
 import           UTxO (balance)
 
+import           ConcreteCryptoTypes (UTXO)
 import           LedgerState (pattern UTxOState, _deposited, _fees, _utxo)
-import           MockTypes (UTXO)
 
 --------------------------
 -- Properties for UTXOW --

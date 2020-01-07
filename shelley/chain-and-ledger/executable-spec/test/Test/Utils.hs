@@ -22,6 +22,8 @@ import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
+import           ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair, SKey, SKeyES, SignKeyVRF, VKey,
+                     VKeyES, VKeyGenesis, VerKeyVRF)
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Crypto.Random (drgNewTest, withDRG)
 import           Data.Coerce (coerce)
@@ -31,8 +33,6 @@ import           Data.Word (Word64)
 import           Hedgehog (MonadTest, (===))
 import           Keys (pattern SKey, pattern SKeyES, pattern VKey, pattern VKeyES,
                      pattern VKeyGenesis, hashKey, vKey)
-import           MockTypes (Addr, CertifiedVRF, KeyPair, SKey, SKeyES, SignKeyVRF, VKey, VKeyES,
-                     VKeyGenesis, VerKeyVRF)
 import           Slot (EpochNo, EpochSize (..), SlotNo)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
 

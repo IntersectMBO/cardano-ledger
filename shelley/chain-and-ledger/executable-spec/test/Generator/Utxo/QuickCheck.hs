@@ -21,11 +21,11 @@ import qualified Test.QuickCheck as QC
 
 import           Address (scriptsToAddr)
 import           Coin (Coin (..), splitCoin)
+import           ConcreteCryptoTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs,
+                     MultiSig, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural, toAddr)
 import           Generator.Delegation.QuickCheck (genDCerts)
 import           LedgerState (pattern UTxOState)
-import           MockTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs, MultiSig, Tx,
-                     TxBody, TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombinations, hashScript)

@@ -12,8 +12,8 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 import           Test.QuickCheck (Property, conjoin)
 
 import           Coin (pattern Coin)
+import           ConcreteCryptoTypes (DELEGS, Wdrl)
 import           LedgerState (_dstate, _rewards)
-import           MockTypes (DELEGS, Wdrl)
 
 ---------------------------
 -- Properties for DELEGS --
