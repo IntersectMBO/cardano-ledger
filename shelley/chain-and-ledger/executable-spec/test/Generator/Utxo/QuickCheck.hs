@@ -10,7 +10,6 @@ module Generator.Utxo.QuickCheck
   )
   where
 
-import           Control.Monad (when)
 import qualified Data.Either as Either (lefts, rights)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
@@ -20,6 +19,7 @@ import qualified Data.Set as Set
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
+import           Address (scriptsToAddr)
 import           Coin (Coin (..), splitCoin)
 import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural, toAddr)
 import           Generator.Delegation.QuickCheck (genDCerts)
@@ -33,8 +33,6 @@ import           TxData (pattern AddrBase, pattern KeyHashObj, pattern ScriptHas
 import           Updates (emptyUpdate)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
-
-import qualified Debug.Trace as D
 
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
@@ -58,7 +56,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
       spendScripts   = Either.rights spendCredentials
 
   -- output addresses
-  recipientAddrs <- genRecipients keys'
+  recipientAddrs <- genRecipients keys' scripts'
 
   ttl <- genNatural 1 100
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
@@ -68,8 +66,6 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
     <- genDCerts keys' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
-  when (spendingBalance < deposits_)
-       (D.trace ("(QC) GenTx Discarded - " <> show (spendingBalance, deposits_, refunds_)) QC.discard)
   let balance_ = spendingBalance - deposits_ + refunds_
 
   -- calc. fees and output amounts
@@ -88,7 +84,10 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
               `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
               `Set.union` makeWitnessesFromScriptKeys txBody keys msigSignatures
 
-  return (Tx txBody wits multiSig)
+  -- discard if balance is negative, i.e., deposits exceed spending balance
+  if spendingBalance < deposits_
+    then QC.discard
+    else pure (Tx txBody wits multiSig)
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
@@ -160,9 +159,20 @@ pickSpendingInputs keys scripts (UTxO utxo) = do
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients
   :: KeyPairs
+  -> [(MultiSig, MultiSig)]
   -> Gen [Addr]
-genRecipients keys = do
-  let n = 1 -- TODO @uroboros select _multiple_ recipients
-      recipients = take n keys
+genRecipients keys scripts = do
+  n' <- QC.choose (1, 3)
 
-  return $ toAddr <$> recipients
+  -- choose m scripts and n keys as recipients
+  m  <- QC.choose (0, n' - 1)
+  let n = n' - m
+  recipientKeys    <- take n <$> QC.shuffle keys
+  recipientScripts <- take m <$> QC.shuffle scripts
+
+  let keyAddrs    = toAddr <$> recipientKeys
+      scriptAddrs = scriptsToAddr <$> recipientScripts
+
+  recipients <- QC.shuffle (keyAddrs ++ scriptAddrs)
+
+  return recipients
