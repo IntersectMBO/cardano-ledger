@@ -33,6 +33,7 @@ module UTxO
   , makeWitnessesVKey
   , makeGenWitnessVKey
   , makeGenWitnessesVKey
+  , makeWitnessesFromScriptKeys
   , verifyWitVKey
   , scriptsNeeded
   , txinsScript
@@ -50,7 +51,8 @@ import qualified Data.Set as Set
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin (..))
-import           Keys (KeyDiscriminator (..), KeyPair, Signable, hash, sKey, sign, vKey, verify)
+import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, hash, hashAnyKey, sKey,
+                     sign, vKey, verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
@@ -176,6 +178,21 @@ makeGenWitnessesVKey
   -> [KeyPair 'Genesis crypto]
   -> Set (WitVKey crypto)
 makeGenWitnessesVKey tx = Set.fromList . fmap (makeGenWitnessVKey tx)
+
+-- | From a list of key pairs and a set of key hashes required for a multi-sig
+-- scripts, return the set of required keys.
+makeWitnessesFromScriptKeys
+  :: (Crypto crypto
+     , Signable (DSIGN crypto) (TxBody crypto))
+  => TxBody crypto
+  -> [(KeyPair 'Regular crypto, KeyPair 'Regular crypto)]
+  -> Set (AnyKeyHash crypto)
+  -> Set (WitVKey crypto)
+makeWitnessesFromScriptKeys txb keys scriptHashes =
+  let hashKeyMap = Map.fromList $ map (\(k, _) -> (hashAnyKey $ vKey k, k)) keys
+      witKeys    = Map.restrictKeys hashKeyMap scriptHashes
+  in  makeWitnessesVKey txb (Map.elems witKeys)
+
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO crypto -> Coin

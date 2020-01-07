@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,9 +20,10 @@ import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDel
                      isInstantaneousRewards, isRegKey, isRegPool, isRetirePool)
 import           Generator.Core.QuickCheck (mkGenesisLedgerState)
 import           Generator.LedgerTrace.QuickCheck ()
-import           MockTypes (DCert, LEDGER, Tx)
-import           TxData (_body, _certs)
-import Test.Utils
+import           MockTypes (DCert, LEDGER, Tx, TxOut)
+import           Test.Utils
+import           TxData (pattern AddrBase, pattern ScriptHashObj, pattern TxOut, _body, _certs,
+                     _outputs)
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 500 . property $ do
@@ -67,6 +69,9 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
      , cover_ 25
               (0.75 >= noCertsRatio (certsByTx txs))
               "at most 75% of transactions have no certificates"
+     , cover_ 25
+              (0.25 >= txScriptOutputsRatio (map (_outputs . _body) txs))
+              "at least 25% of transactions have script TxOuts"
      ]
     where
       cover_ pc b s = cover pc b s (property ())
@@ -86,6 +91,17 @@ noCertsRatio = lenRatio (filter null)
 ratioInt :: Int -> Int -> Double
 ratioInt x y
   = fromIntegral x / fromIntegral y
+
+-- | Transaction has script locked TxOuts
+txScriptOutputsRatio :: [[TxOut]] -> Double
+txScriptOutputsRatio txoutsList =
+  ratioInt
+   (sum (map countScriptOuts txoutsList))
+   (sum (map length txoutsList))
+  where countScriptOuts txouts =
+          sum $ map (\case
+                        TxOut (AddrBase (ScriptHashObj _) _) _ -> 1
+                        _ -> 0) txouts
 
 -- | Transforms the list and returns the ratio of lengths of
 -- the transformed and original lists.

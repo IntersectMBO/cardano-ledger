@@ -17,7 +17,8 @@ import           Control.Monad.Trans.Reader (runReaderT)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import           Data.Functor.Identity (runIdentity)
 import           Data.Word (Word64)
-import           Generator.Core.QuickCheck (coreKeyPairs, genCoin, traceKeyPairs, traceVRFKeyPairs)
+import           Generator.Core.QuickCheck (coreKeyPairs, genCoin, traceKeyPairs,
+                     traceMSigCombinations, traceMSigScripts, traceVRFKeyPairs)
 import           Generator.Update.QuickCheck (genPParams)
 import           Generator.Utxo.QuickCheck (genTx)
 import           MockTypes (LEDGER)
@@ -36,7 +37,13 @@ instance TQC.HasTrace LEDGER Word64 where
               <*> genCoin 1000000 10000000
 
   sigGen _ ledgerEnv ledgerSt =
-    genTx ledgerEnv ledgerSt traceKeyPairs coreKeyPairs traceVRFKeyPairs
+    genTx
+     ledgerEnv
+     ledgerSt
+     traceKeyPairs
+     (traceMSigCombinations $ take 5 traceMSigScripts)
+     coreKeyPairs
+     traceVRFKeyPairs
 
   shrinkSignal = shrinkTx
 
