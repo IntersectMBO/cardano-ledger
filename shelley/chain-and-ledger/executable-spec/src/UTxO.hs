@@ -45,6 +45,7 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
+import           Data.Map (empty, elems)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
@@ -66,7 +67,7 @@ import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern D
 --                      getRwdCred,
 --                      txinputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
-import           Tx (addrTxOut, getrefs)
+import           Tx (addrTxOut, getrefs, makeAdaValue)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)
 
@@ -203,8 +204,8 @@ makeWitnessesFromScriptKeys txb hashKeyMap scriptHashes =
   in  makeWitnessesVKey txb (Map.elems witKeys)
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO crypto -> Value
-balance (UTxO utxo) = foldr addValue zeroAda utxo
+balance :: UTxO crypto -> Value crypto
+balance (UTxO utxo) = foldr (+) (Value empty) (((fmap _value) . elems) utxo)
 
 -- |Determine the total deposit amount needed
 totalDeposits
@@ -217,6 +218,17 @@ totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (DCertPool (RegPool pool)) =
       Map.notMember (pool ^. poolPubKey) stpools
+=======
+deposits
+  :: PParams crypto
+  -> StakePools crypto
+  -> [DCert crypto]
+  -> Value crypto
+deposits pc (StakePools stpools) cs = foldl f (Value empty) cs'
+  where
+    f v cert = v + dvalue cert pc
+    notRegisteredPool (RegPool pool) = Map.notMember (pool ^. poolPubKey) stpools
+>>>>>>> UTxO loads
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
@@ -258,10 +270,8 @@ scriptsNeeded u tx =
   Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
         withdrawals = _wdrls $ _body tx
-=======
   Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter requiresVKeyWitness certificates))
   where withdrawals = _wdrls $ _body tx
->>>>>>> mid transition from coin to value
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = (toList . _certs . _body) tx
 

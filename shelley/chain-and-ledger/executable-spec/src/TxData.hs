@@ -22,11 +22,8 @@ import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, catMaybes)
 import           Control.Monad (unless)
 import           Lens.Micro.TH (makeLenses)
 
-<<<<<<< HEAD
-=======
 import           Data.Foldable (fold, foldMap)
 import qualified Data.Map as DM
->>>>>>> mid transition from coin to value
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
@@ -44,23 +41,16 @@ import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey, hash)
 import           Ledger.Core (Relation (..))
-import           Updates (Update)
+
 import           Scripts
 import           Value
 import           CostModel
 import           PParams (PlutusPP)
-<<<<<<< HEAD
-import           MetaData (MetaDataHash)
-import           Slot (EpochNo (..), SlotNo (..))
-import           Updates (Update, emptyUpdate, updateNull)
 
-import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
-                     ToCBORGroup (..), mapHelper)
-
-=======
 import           PParams (emptyPlutusPP, PlutusPP)
->>>>>>> mid transition from coin to value
->>>>>>> mid transition from coin to value
+
+
+
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -75,8 +65,8 @@ data PoolParams crypto =
   PoolParams
     { _poolPubKey  :: KeyHash crypto
     , _poolVrf     :: Hash (HASH crypto) (VerKeyVRF (VRF crypto))
-    , _poolPledge  :: Coin
-    , _poolCost    :: Coin
+    , _poolPledge  :: Value crypto
+    , _poolCost    :: Value crypto
     , _poolMargin  :: UnitInterval
     , _poolRAcnt   :: RewardAcnt crypto
     , _poolOwners  :: Set (KeyHash crypto)
@@ -256,26 +246,26 @@ instance NoUnexpectedThunks (TxInTx crypto)
 -- |The output of a UTxO.
 data TxOut crypto
   =   TxOutVK { _addr   :: Addr crypto
-              , _value  :: Value (ScriptHash crypto) (ScriptHash crypto)
+              , _value  :: Value crypto
+--              , _slot   :: SlotNo
               }
     | TxOutScr { _addr     :: Addr crypto
-               , _value    :: Value (ScriptHash crypto) (ScriptHash crypto)
+               , _value    :: Value crypto
                , _datahash :: DataHash crypto
+--               , _slot     :: SlotNo
                }
   deriving (Show, Eq, Generic, Ord)
 
--- | native currency (Ada)
--- adaID :: Hash (HASH crypto) (ScriptPLC crypto)
--- adaID =  (hash (ScriptPLC 1))
-
-adaToken :: String
-adaToken =  "Ada"
-
--- | 0 Ada
-zeroAda :: ScriptHash crypto -- Value (Hash (HASH crypto) (Script crypto)) String
-zeroAda = (hash (SPLC (ScriptPLC 1))) -- DM.singleton (hash (SPLC (ScriptPLC 1))) (DM.singleton adaToken 0)
-
 instance NoUnexpectedThunks (TxOut crypto)
+
+-- getValue :: TxOut crypto -> Value crypto
+-- getValue (TxOutVK  a v) = v
+-- getValue (TxOutScr a v d) = v
+
+type StakeCredential crypto = Credential crypto
+
+-- | A heavyweight certificate.
+data DCert crypto
 
 data DelegCert crypto =
     -- | A stake key registration certificate.
@@ -334,11 +324,11 @@ data TxBody crypto
       , _outputs  :: Seq (TxOut crypto)
       , _certs    :: Seq (DCert crypto)
       , _wdrls    :: Wdrl crypto
-      , _txfee    :: Value (ScriptHash crypto) (ScriptHash crypto)
+      , _txfee    :: Value crypto
       , _ttl      :: SlotNo
       , _txUpdate :: Update crypto
       , _txlst    :: SlotNo
-      , _forged   :: Value (ScriptHash crypto) (ScriptHash crypto)
+      , _forged   :: Value crypto
       , _txexunits:: ExUnits
       , _hashPP   :: Maybe (Hash (HASH crypto) PlutusPP)
       , _mdHash   :: Maybe (MetaDataHash crypto)
@@ -366,19 +356,25 @@ instance forall crypto
   => Ord (WitVKey crypto) where
     compare = comparing witKeyHash
 
-type Vlds crypto = Map (ScriptHash crypto) (Script crypto)
+newtype Vlds crypto = Vlds (Map (ScriptHash crypto) (Script crypto))
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- |A fully formed transaction.
 data Tx crypto
   = Tx
       { _body           :: !(TxBody crypto)
-      , _witnessVKeySet :: !(Set (WitVKey crypto))
+      , _unsignedData   :: !(UnsignedData crypto)
+      } deriving (Show, Eq, Generic)
+
+data UnsignedData crypto
+  = UnsignedData
+      { _witnessVKeySet :: !(Set (WitVKey crypto))
       , _txvlds         :: Vlds crypto
       , _txdats         :: Map (DataHash crypto) (Data crypto)
       , _txvaltag       :: IsValidating
       } deriving (Show, Eq, Generic)
 
--- deriving instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
+-- instance NoUnexpectedThunks (UnsignedData crypto)
 
 newtype StakeCreds crypto =
   StakeCreds (Map (Credential crypto) SlotNo)
@@ -395,8 +391,8 @@ newtype StakePools crypto =
 -- CBOR
 
 -- | TODO make this a proper function
-toValue :: Word8 -> Value (ScriptHash crypto) (ScriptHash crypto)
-toValue _ = DM.empty
+-- toValue :: Word8 -> Value crypto
+-- toValue _ = Value DM.empty
 
 instance
   (Crypto crypto)
@@ -678,13 +674,13 @@ instance (Crypto crypto) =>
         matchSize "TxOutVK" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ TxOutVK a (toValue b)
+        pure $ TxOutVK a b
       1 -> do
         matchSize "TxOutVK" 4 n
         a <- fromCBOR
         (b ) <- fromCBOR
         (c ) <- fromCBOR
-        pure $ TxOutScr a (toValue  b) (DataHash c)
+        pure $ TxOutScr a b (DataHash c)
       k -> invalidKey k
 
 instance
@@ -720,12 +716,59 @@ instance
 
 instance
   (Crypto crypto)
+  => ToCBOR (Script crypto)
+ where
+  toCBOR = \case
+    MSig ms ->
+      encodeListLen 1
+       <> toCBOR ms
+
+    SPLC plc ->
+      encodeListLen 1
+       <> toCBOR plc
+
+instance
+  Crypto crypto
+  => FromCBOR (Script crypto)
+ where
+  fromCBOR = enforceSize "Script" 2  >> decodeWord >>= \case
+    0 -> do
+      a <- fromCBOR
+      pure $ MSig a
+    1 -> do
+      a <- fromCBOR
+      pure $ SPLC a
+    k -> invalidKey k
+
+instance
+  (Crypto crypto)
   => ToCBOR (Tx crypto)
  where
   toCBOR tx =
     encodeListLen 3
       <> toCBOR (_body tx)
-      <> toCBOR (_witnessVKeySet tx)
+      <> toCBOR (_unsignedData tx)
+
+instance
+  (Crypto crypto)
+  => ToCBOR (UnsignedData crypto)
+ where
+  toCBOR ud =
+    encodeListLen 5
+      <> toCBOR (_witnessVKeySet ud)
+      <> toCBOR (_txvlds ud)
+      <> toCBOR (_txdats ud)
+      <> toCBOR (_txvaltag ud)
+
+instance (Crypto crypto) =>
+  FromCBOR (UnsignedData crypto) where
+  fromCBOR = do
+    enforceSize "UnsignedData" 4
+    a <- fromCBOR
+    b <- fromCBOR
+    c <- fromCBOR
+    d <- fromCBOR
+    pure $ UnsignedData a b c d
 
 instance Crypto crypto => FromCBOR (Tx crypto) where
   fromCBOR = decodeListLenOf 3 >>
@@ -767,12 +810,10 @@ instance
       then Nothing
       else encodeMapElement ix x
 
-      
+
       cs = _certs txbody
       ws = _wdrls txbody
       us = _txUpdate txbody
-      fg = _forged txbody
-      ex = _txexunits txbody
       hp = _hashPP txbody
 
 mapHelper :: Decoder s b -> Decoder s [b]
@@ -828,7 +869,7 @@ instance
           , _wdrls    = Wdrl Map.empty
           , _txUpdate = emptyUpdate
           , _txlst     = SlotNo 0
-          , _forged    = DM.empty
+          , _forged    = Value DM.empty
           , _txexunits = PLCUnits (ExUnitsPLC 0 0)
           , _hashPP    = Just $ hash emptyPlutusPP
           , _mdHash   = Nothing
@@ -1060,6 +1101,8 @@ makeLenses ''TxOut
 makeLenses ''TxBody
 
 makeLenses ''Tx
+
+makeLenses ''UnsignedData
 
 makeLenses ''ScrInData
 

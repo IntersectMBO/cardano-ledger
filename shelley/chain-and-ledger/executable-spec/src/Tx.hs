@@ -13,6 +13,8 @@ module Tx
   , TxOut(..)
   , TxIn(..)
   , TxId(..)
+  , Value(..)
+  , makeAdaValue
   , txUpdate
   , txinputs
   , outputs
@@ -23,6 +25,7 @@ module Tx
   , body
   , metadata
   , witnessVKeySet
+  , unsignedData
 --  , witnessMSigMap
     -- witness data
   , WitVKey(..)
@@ -40,6 +43,7 @@ module Tx
   )
 where
 
+import           Numeric.Natural (Natural)
 
 import           BaseTypes (invalidKey)
 import           Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
@@ -155,11 +159,16 @@ instance Crypto crypto => FromCBOR (Tx crypto) where
   -- import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
   --                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
   --                      ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
+import           TxData (Credential (..), StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..), UnsignedData (..),
 import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
                      TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..),
                      Addr, body, certs,
-                     txinputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash,
-                     witnessVKeySet, txlst, forged, txexunits, hashPP)
+                     txinputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash, unsignedData,
+                     witnessVKeySet, txlst, forged, txexunits, hashPP, txvlds, txdats,
+                     txvaltag)
+import           Scripts
+import           Value
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -190,8 +199,7 @@ validateNativeMultiSigScript
   -> Bool
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig vhks
-  where witsSet = _witnessVKeySet tx
-        vhks    = Set.map witKeyHash witsSet
+  where vhks    = Set.map witKeyHash (_witnessVKeySet (_unsignedData tx))
 
 -- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
 -- front and then calling the script CBOR function.
@@ -242,11 +250,30 @@ hashPLCScript plc =
   ScriptHashPLC $ hashWithSerialiser (\x -> encodeWord8 plutusTag
                                           <> toCBOR x) plc
 
+
+-- | native currency (Ada)
+-- adaID :: Hash (HASH crypto) (ScriptPLC crypto)
+-- adaID =  (hash (ScriptPLC 1))
+
+adaToken :: String
+adaToken =  "Ada"
+
+-- | 0 Ada
+makeAdaValue :: Crypto crypto => Natural -> Value crypto
+makeAdaValue q = Value (singleton (hashPLCScript (ScriptPLC 1)) (singleton adaToken (Quantity q)))
+
+
 -- | Magic number representing the tag of the native multi-signature script
 -- language. For each script language included, a new tag is chosen and the tag
 -- is included in the script hash for a script.
 nativeMultiSigTag :: Word8
 nativeMultiSigTag = 0
+
+-- | Magic number representing the tag of the Plutus script
+-- language. For each script language included, a new tag is chosen and the tag
+-- is included in the script hash for a script.
+plutusTag :: Word8
+plutusTag = 1
 
 instance Crypto crypto =>
   MultiSignatureScript (MultiSig crypto) crypto where

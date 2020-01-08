@@ -79,7 +79,7 @@ data PlutusPP = PlutusPP
 instance NoUnexpectedThunks PlutusPP
 
 -- | Protocol parameters
-data PParams = PParams
+data PParams crypto = PParams
   { -- |The linear factor for the minimum fee calculation
     _minfeeA         :: Integer
     -- |The constant factor for the minimum fee calculation
@@ -91,13 +91,13 @@ data PParams = PParams
     -- | Maximal block header size
   , _maxBHSize       :: Natural
     -- |The amount of a key registration deposit
-  , _keyDeposit      :: Coin
+  , _keyDeposit      :: Value crypto
     -- |The minimum percent refund guarantee
   , _keyMinRefund    :: UnitInterval
     -- |The deposit decay rate
   , _keyDecayRate    :: Rational
     -- |The amount of a pool registration deposit
-  , _poolDeposit     :: Coin
+  , _poolDeposit     :: Value crypto
     -- | The minimum percent pool refund
   , _poolMinRefund   :: UnitInterval
     -- | Decay rate for pool deposits
@@ -130,7 +130,7 @@ data PParams = PParams
     -- | Coefficients for conversion of resources needed for script execution into fees
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks PParams
+instance NoUnexpectedThunks (PParams crypto)
 
 instance ToCBOR PParams
  where
@@ -220,7 +220,7 @@ emptyPlutusPP =
      }
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
-emptyPParams :: PParams
+emptyPParams :: PParams crypto
 emptyPParams =
     PParams {
        _minfeeA = 0
@@ -228,10 +228,10 @@ emptyPParams =
      , _maxBBSize = 0
      , _maxTxSize = 2048
      , _maxBHSize = 0
-     , _keyDeposit = Coin 0
+     , _keyDeposit = Value empty
      , _keyMinRefund = interval0
      , _keyDecayRate = 0
-     , _poolDeposit = Coin 0
+     , _poolDeposit = Value empty
      , _poolMinRefund = interval0
      , _poolDecayRate = 0
      , _eMax = EpochNo 0
