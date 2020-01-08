@@ -47,7 +47,7 @@ module Keys
   , SKeyES(..)
   , VKeyES(..)
   , KeyHashES(..)
-  , KESig
+  , KESig(..)
   , hashKeyES
   , signKES
   , verifyKES
