@@ -11,7 +11,6 @@ module STS.Ppup
 where
 
 import           BaseTypes
-import           BlockChain
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
@@ -76,10 +75,11 @@ ppupTransitionNonEmpty = do
 
   all (all (pvCanFollow (_protocolVersion pp)) . ppmSet) pup ?! PVCannotFollowPPUP
 
+  sp <- liftSTS $ asks slotsPrior
   firstSlotNextEpoch <- liftSTS $ do
     ei <- asks epochInfo
     EpochNo e <- epochInfoEpoch ei slot
     epochInfoFirst ei (EpochNo $ e + 1)
-  slot < firstSlotNextEpoch *- slotsPrior ?! PPUpdateTooLatePPUP
+  slot < firstSlotNextEpoch *- (Duration sp) ?! PPUpdateTooLatePPUP
 
   pure $ PPUpdate (pupS ⨃  Map.toList pup)

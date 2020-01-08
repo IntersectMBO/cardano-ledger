@@ -78,10 +78,10 @@ import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Address (mkRwdAcnt)
-import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, (⭒))
+import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, (⭒), startRewards)
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
                      ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader,
-                     hashHeaderToNonce, mkSeed, seedEta, seedL, startRewards)
+                     hashHeaderToNonce, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
@@ -99,7 +99,7 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      _rewards, _stPools, _stkCreds, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
-import           Slot (BlockNo (..), EpochNo (..), SlotNo (..), (+*))
+import           Slot (BlockNo (..), EpochNo (..), SlotNo (..), Duration(..), (+*))
 import           STS.Bbody (pattern LedgersFailure)
 import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, totalAda)
 import           STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
@@ -2341,7 +2341,8 @@ txbodyEx6F' = TxBody
                empty
                Map.empty
                (Coin 1)
-               ((slotFromEpoch $ EpochNo 1) +* startRewards + SlotNo 7)
+               ((slotFromEpoch $ EpochNo 1)
+                +* Duration (startRewards testGlobals) + SlotNo 7)
                emptyUpdate
 
 txEx6F' :: Tx
@@ -2352,7 +2353,8 @@ blockEx6F' = mkBlock
               (bhHash (bheader blockEx6F))
               (coreNodeKeys 1)
               [txEx6F']
-              ((slotFromEpoch $ EpochNo 1) +* startRewards + SlotNo 7)
+              ((slotFromEpoch $ EpochNo 1)
+                +* Duration (startRewards testGlobals) + SlotNo 7)
               (BlockNo 1)
               (mkNonce 0)
               (NatNonce 1)
@@ -2392,7 +2394,11 @@ ex6F' :: Either [[PredicateFailure CHAIN]] ChainState
 ex6F' = do
   nextState <- runShelleyBase $ applySTS @CHAIN (TRC (SlotNo 90, initStEx2A, blockEx6F))
   midState <-
-    runShelleyBase $ applySTS @CHAIN (TRC (((slotFromEpoch $ EpochNo 1) + SlotNo 7) +* startRewards, nextState, blockEx6F'))
+    runShelleyBase $ applySTS @CHAIN
+      (TRC (((slotFromEpoch $ EpochNo 1) + SlotNo 7) +* Duration (startRewards testGlobals)
+           , nextState
+           , blockEx6F')
+      )
   finalState <-
     runShelleyBase $ applySTS @CHAIN (TRC (((slotFromEpoch $ EpochNo 2) + SlotNo 10), midState, blockEx6F''))
 
