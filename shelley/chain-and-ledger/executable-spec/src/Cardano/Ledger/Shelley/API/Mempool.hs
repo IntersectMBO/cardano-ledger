@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,6 +13,7 @@ module Cardano.Ledger.Shelley.API.Mempool
     mkMempoolState,
     ApplyTxError (..),
     applyTxs,
+    overShelleyState,
   )
 where
 
@@ -84,12 +86,29 @@ applyTxs ::
   ) =>
   Globals ->
   MempoolEnv ->
-  MempoolState crypto ->
   Seq (Tx crypto) ->
+  MempoolState crypto ->
   m (MempoolState crypto)
-applyTxs globals env state txs = let
-    res = flip runReader globals
-        . applySTS @(LEDGERS crypto) $ TRC (env, state, txs)
-  in liftEither
-    . left (ApplyTxError . join)
-    $ res
+applyTxs globals env txs state =
+  let res =
+        flip runReader globals
+          . applySTS @(LEDGERS crypto)
+          $ TRC (env, state, txs)
+   in liftEither
+        . left (ApplyTxError . join)
+        $ res
+
+-- | Transform a function over mempool states to one over the full Shelley
+-- state.
+overShelleyState ::
+  Applicative f =>
+  (MempoolState c -> f (MempoolState c)) ->
+  ShelleyState c ->
+  f (ShelleyState c)
+overShelleyState f st = do
+  res <- f $ mkMempoolState st
+  pure $
+    st
+      { LedgerState.nesEs =
+          (LedgerState.nesEs st) {LedgerState.esLState = res}
+      }
