@@ -46,9 +46,12 @@ import           TxData (Credential (..), DCert (..), DelegCert (..), GenesisDel
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
+import           Data.Map (empty, map)
 import           Data.Ratio (approxRational)
 
 import           Lens.Micro ((^.))
+import           Value
+import           Tx (makeAdaValue)
 
 -- |Determine the certificate author
 delegCWitness :: DelegCert crypto-> Credential crypto
@@ -70,11 +73,11 @@ dvalue (DCertPool (RegPool _)) = flip (^.) poolDeposit
 dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
-refund :: Coin -> UnitInterval -> Rational -> Duration -> Coin
-refund (Coin dval) dmin lambda delta = floor refund'
+refund :: Value crypto -> UnitInterval -> Rational -> Duration -> Value crypto
+refund (Value dval) dmin lambda delta = Value refund'
   where
     pow     = fromRational (-lambda * fromIntegral delta) :: FixedPoint
-    refund' = fromIntegral dval * (dmin' + (1 - dmin') * dCay)
+    refund' = Data.Map.map (Data.Map.map (Quantity . floor. (*) (dmin' + (1 - dmin') * dCay) . fromIntegral )) dval
     dmin'   = intervalValue dmin
     dCay    = approxRational (exp' pow) fpEpsilon
 
@@ -108,15 +111,15 @@ isRetirePool :: DCert crypto -> Bool
 isRetirePool (DCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-decayKey :: PParams -> (Coin, UnitInterval, Rational)
+decayKey :: PParams crypto -> (Value crypto, UnitInterval, Rational)
 decayKey pc = (dval, dmin, lambdad)
-    where dval    = fromIntegral $ pc ^. keyDeposit
+    where dval    = pc ^. keyDeposit
           dmin    = pc ^. keyMinRefund
           lambdad = pc ^. keyDecayRate
 
-decayPool :: PParams -> (Coin, UnitInterval, Rational)
+decayPool :: PParams crypto -> (Value crypto, UnitInterval, Rational)
 decayPool pc = (pval, pmin, lambdap)
-    where pval    = fromIntegral $ pc ^. poolDeposit
+    where pval    = pc ^. poolDeposit
           pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
 

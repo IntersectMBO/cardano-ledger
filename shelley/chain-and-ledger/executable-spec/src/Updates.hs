@@ -59,6 +59,7 @@ import           Slot (EpochNo (..), SlotNo)
 import           Numeric.Natural (Natural)
 
 import           Ledger.Core (dom, range, (◁))
+import           Value
 
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
@@ -121,15 +122,15 @@ instance NoUnexpectedThunks (PPUpdateEnv crypto)
 
 -- | Protocol parameter selector, contains just a single field to be updated
 --   within @PPUpdate
-data Ppm = MinFeeA Integer
+data Ppm crypto = MinFeeA Integer
   | MinFeeB Natural
   | MaxBBSize Natural
   | MaxTxSize Natural
   | MaxBHSize Natural
-  | KeyDeposit Coin
+  | KeyDeposit (Value crypto)
   | KeyMinRefund UnitInterval
   | KeyDecayRate Rational
-  | PoolDeposit Coin
+  | PoolDeposit (Value crypto)
   | PoolMinRefund UnitInterval
   | PoolDecayRate Rational
   | EMax EpochNo
@@ -143,14 +144,14 @@ data Ppm = MinFeeA Integer
   | ProtocolVersion (Natural, Natural, Natural)
   deriving (Show, Ord, Eq, Generic)
 
-instance NoUnexpectedThunks Ppm
+instance NoUnexpectedThunks (Ppm crypto)
 
-newtype PParamsUpdate = PParamsUpdate { ppmSet :: Set Ppm }
+newtype PParamsUpdate crypto = PParamsUpdate { ppmSet :: Set (Ppm crypto) }
   deriving (Show, Eq, Generic, Ord)
 
-instance NoUnexpectedThunks PParamsUpdate
+instance NoUnexpectedThunks (PParamsUpdate crypto)
 
-instance ToCBOR PParamsUpdate where
+instance (Crypto crypto) => ToCBOR (PParamsUpdate crypto) where
   toCBOR (PParamsUpdate ppms) = encodeMapLen l <> foldMap f ppms
     where
       l = fromIntegral $ Set.size ppms
@@ -178,7 +179,7 @@ instance ToCBOR PParamsUpdate where
         ExtraEntropy x          -> word 18 <> toCBOR x
         ProtocolVersion x       -> word 19 <> toCBOR x
 
-instance FromCBOR PParamsUpdate where
+instance (Crypto crypto) => FromCBOR (PParamsUpdate crypto) where
   fromCBOR = do
     n <- decodeMapLen
     fmap (PParamsUpdate . Set.fromList) $ replicateM n $
@@ -207,7 +208,7 @@ instance FromCBOR PParamsUpdate where
 
 -- | Update operation for protocol parameters structure @PParams
 newtype PPUpdate crypto
-  = PPUpdate (Map (GenKeyHash crypto) PParamsUpdate)
+  = PPUpdate (Map (GenKeyHash crypto) (PParamsUpdate crypto))
   deriving (Show, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 -- | This is just an example and not neccessarily how we will actually validate names
@@ -269,7 +270,7 @@ emptyUpdateState = UpdateState
 emptyUpdate :: Update crypto
 emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty) Nothing
 
-updatePParams :: PParams -> PParamsUpdate -> PParams
+updatePParams :: PParams crypto -> (PParamsUpdate crypto) -> PParams crypto
 updatePParams ppms (PParamsUpdate up) = Set.foldr updatePParams' ppms up
  where
   updatePParams' (MinFeeA               p) pps = pps { _minfeeA = p }

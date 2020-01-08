@@ -45,6 +45,7 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
+import           Data.Map (empty, elems)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
@@ -60,12 +61,13 @@ import           PParams (PParams (..))
 --                        pattern Delegation, PoolCert (..), ScriptHash, Tx (..), TxBody (..),
 --                        TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred, inputs, outputs,
 --                        poolPubKey, txUpdate)
+--import           TxData (Addr (..), Credential (..), StakeCredential, Tx (..),
 import           TxData (Addr (..), Credential (..), ScriptHash, StakeCredential, Tx (..),
                      TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..), CurItem(..),
                      getRwdCred,
                      txinputs, outputs, poolPubKey, txUpdate)
 import           Updates (Update)
-import           Tx (addrTxOut, getrefs)
+import           Tx (addrTxOut, getrefs, makeAdaValue)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)
 
@@ -202,8 +204,8 @@ makeWitnessesFromScriptKeys txb hashKeyMap scriptHashes =
   in  makeWitnessesVKey txb (Map.elems witKeys)
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO crypto -> Value
-balance (UTxO utxo) = foldr addValue zeroAda utxo
+balance :: UTxO crypto -> Value crypto
+balance (UTxO utxo) = foldr (+) (Value empty) (((fmap _value) . elems) utxo)
 
 -- |Determine the total deposit amount needed
 totalDeposits
@@ -213,19 +215,26 @@ totalDeposits
 <<<<<<< HEAD
   -> Coin
 totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
-=======
-  -> Value
-deposits pc (StakePools stpools) cs = foldl f (Value 0) cs'
->>>>>>> mid transition from coin to value
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (DCertPool (RegPool pool)) =
       Map.notMember (pool ^. poolPubKey) stpools
+=======
+deposits
+  :: PParams crypto
+  -> StakePools crypto
+  -> [DCert crypto]
+  -> Value crypto
+deposits pc (StakePools stpools) cs = foldl f (Value empty) cs'
+  where
+    f v cert = v + dvalue cert pc
+    notRegisteredPool (RegPool pool) = Map.notMember (pool ^. poolPubKey) stpools
+>>>>>>> UTxO loads
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
 txup :: Tx crypto -> Update crypto
-txup (Tx txbody _ _) = _txUpdate txbody
+txup (Tx txbody _) = _txUpdate txbody
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
@@ -261,14 +270,8 @@ scriptsNeeded u tx =
   `Set.union`
   Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
-<<<<<<< HEAD
-  Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
-  where unTxOut (TxOut a _) = a
-        withdrawals = _wdrls $ _body tx
-=======
   Set.fromList (Maybe.mapMaybe (scriptStakeCred . cwitness) (filter requiresVKeyWitness certificates))
   where withdrawals = _wdrls $ _body tx
->>>>>>> mid transition from coin to value
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = (toList . _certs . _body) tx
 
