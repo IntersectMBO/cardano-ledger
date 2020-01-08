@@ -25,7 +25,7 @@ import           Test.Utils
 import           BaseTypes (interval0)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs,
-                     PState, PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
+                     MultiSig, PState, PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
 import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
@@ -46,6 +46,7 @@ import           UTxO (totalDeposits)
 -- deposits and refunds required.
 genDCerts
   :: KeyPairs
+  -> [(MultiSig, MultiSig)]
   -> [CoreKeyPair]
   -> VrfKeyPairs
   -> PParams
@@ -53,13 +54,13 @@ genDCerts
   -> SlotNo
   -> Natural
   -> Gen (Seq DCert, [KeyPair], [CoreKeyPair], Coin, Coin)
-genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
+genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
   -- later traversals are done backwards, to be consistent with the executable
   -- spec (see `delegsTransition` in `STS.Delegs`) which consumes the list
   -- starting at the tail end.
-  cert <- genDCert keys coreKeys vrfKeys pparams dpState slot
+  cert <- genDCert keys scripts coreKeys vrfKeys pparams dpState slot
   case cert of
     Nothing ->
       return (Seq.empty, [], [], Coin 0, Coin 0)
@@ -98,18 +99,19 @@ genDCerts keys coreKeys vrfKeys pparams dpState slot ttl = do
 -- and we generate more delegations than registrations of keys/pools.
 genDCert
   :: KeyPairs
+  -> [(MultiSig, MultiSig)]
   -> [CoreKeyPair]
   -> VrfKeyPairs
   -> PParams
   -> DPState
   -> SlotNo
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
-genDCert keys coreKeys vrfKeys pparams dpState slot =
-  QC.frequency [ (2, genRegKeyCert keys dState)
+genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
+  QC.frequency [ (2, genRegKeyCert keys scripts dState)
                , (2, genRegPool keys vrfKeys dpState)
-               , (3, genDelegation keys dpState)
+               , (3, genDelegation keys scripts dpState)
                , (1, genGenesisDelegation keys coreKeys dpState)
-               , (1, genDeRegKeyCert keys dState)
+               , (1, genDeRegKeyCert keys scripts dState)
                , (1, genRetirePool keys pparams pState slot)
                , (1, genInstantaneousRewards coreKeys pparams dState)
                ]
@@ -121,9 +123,10 @@ genDCert keys coreKeys vrfKeys pparams dpState slot =
 -- (needed to witness the certificate)
 genRegKeyCert
   :: KeyPairs
+  -> [(MultiSig, MultiSig)]
   -> DState
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
-genRegKeyCert keys delegSt =
+genRegKeyCert keys _ delegSt =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
@@ -137,9 +140,10 @@ genRegKeyCert keys delegSt =
 -- to witness the certificate.
 genDeRegKeyCert
   :: KeyPairs
+  -> [(MultiSig, MultiSig)]
   -> DState
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
-genDeRegKeyCert keys dState =
+genDeRegKeyCert keys _ dState =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
@@ -156,9 +160,10 @@ genDeRegKeyCert keys dState =
 -- Returns nothing if there are no active keys or pools.
 genDelegation
   :: KeyPairs
+  -> [(MultiSig, MultiSig)]
   -> DPState
   -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
-genDelegation keys dpState =
+genDelegation keys _ dpState =
   if null availableDelegates || null availablePools
     then
       pure Nothing

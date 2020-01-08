@@ -63,7 +63,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
 
   -- certificates
   (certs, certWitnesses, genesisWitnesses, deposits_, refunds_)
-    <- genDCerts keys' coreKeys vrfKeys pparams dpState slot ttl
+    <- genDCerts keys' scripts' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   let balance_ = spendingBalance - deposits_ + refunds_
