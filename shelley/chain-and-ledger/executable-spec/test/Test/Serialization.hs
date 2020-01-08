@@ -21,7 +21,7 @@ import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCa
 
 import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
 import           BlockChain (pattern BHBody, pattern BHeader, Block (..), pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bhash, bhbHash, bheaderBlockNo, bheaderEta,
+                     ProtVer (..), TxSeq (..), bhash, bbHash, bheaderBlockNo, bheaderEta,
                      bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk,
                      bprotvert, bsize, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
@@ -202,7 +202,7 @@ testBHB = BHBody
             (mkSeed seedL (SlotNo 33) (mkNonce 0) testHeaderHash) 1) (fst testVRF)
           , bsize          = 0
           , bheaderBlockNo = BlockNo 44
-          , bhash          = bhbHash $ TxSeq Seq.empty
+          , bhash          = bbHash $ TxSeq Seq.empty
           , bheaderOCert   = OCert (snd testKESKeys) (vKey testKey1)
             0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
           , bprotvert      = ProtVer 0 0 0
@@ -708,7 +708,7 @@ serializationTests = testGroup "Serialization Tests"
       leaderProof = coerce $ mkCertifiedVRF (WithResult leaderValue 1) (fst testVRF)
       size = 0
       blockNo = BlockNo 44
-      bbhash = bhbHash $ TxSeq Seq.empty
+      bbhash = bbHash $ TxSeq Seq.empty
       ocert = OCert
                 (snd testKESKeys)
                 (vKey testKey1)

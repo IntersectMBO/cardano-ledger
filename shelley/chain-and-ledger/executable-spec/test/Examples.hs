@@ -80,7 +80,7 @@ import           Unsafe.Coerce (unsafeCoerce)
 import           Address (mkRwdAcnt)
 import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, (⭒), startRewards)
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bhbHash, bheader,
+                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bbHash, bheader,
                      hashHeaderToNonce, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
@@ -274,7 +274,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
             (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
             (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
             (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
-            (bhbHash $ TxSeq $ fromList txns)
+            (bbHash $ TxSeq $ fromList txns)
             (OCert
               vhot
               (vKey $ cold pkeys)

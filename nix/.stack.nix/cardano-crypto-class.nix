@@ -90,8 +90,8 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-base";
-      rev = "0fc0af253df8be5ca6bf60c92bcd2e514b40a47c";
-      sha256 = "12ca90jrp77p18gnkcl0wb39pljfw6avs2736xsfy7nmr02sj13r";
+      rev = "9e41a682fcffc696f599f83d8372c40c9c609578";
+      sha256 = "1x3jacfggim9ynnw8rzaswhbvmhk13hid44k91a8137fv0jg6l14";
       });
     postUnpack = "sourceRoot+=/cardano-crypto-class; echo source root reset to \$sourceRoot";
     }
