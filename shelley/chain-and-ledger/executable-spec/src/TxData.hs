@@ -219,14 +219,6 @@ data CurItem crypto =
   CITxInScr (TxIn crypto) | CIWdrl (Wdrl crypto) | CIDeRegKey (DCert crypto)
   deriving (Show, Eq, Generic)
 
-data ScrInData crypto =
-    NoDtRdmr { _vData   :: Data crypto }
-  | VldDrRdm { _vData   :: Data crypto
-             , _dataValue        :: Data crypto
-             , _rdmrValue        :: Data crypto
-             }
-  deriving (Show, Eq, Generic)
-
 instance NoUnexpectedThunks (CurItem crypto)
 
 -- |The input of a UTxO.
@@ -263,8 +255,6 @@ instance NoUnexpectedThunks (TxOut crypto)
 
 type StakeCredential crypto = Credential crypto
 
--- | A heavyweight certificate.
-data DCert crypto
 
 data DelegCert crypto =
     -- | A stake key registration certificate.
@@ -386,22 +376,22 @@ newtype StakePools crypto =
 -- toValue :: Word8 -> Value crypto
 -- toValue _ = Value DM.empty
 
-instance
-  (Crypto crypto)
-  => ToCBOR (ScrInData crypto)
- where
-  toCBOR = \case
-    NoDtRdmr vd ->
-      encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR vd
-
-    VldDrRdm vd dv rd ->
-      encodeListLen 4
-        <> toCBOR (1 :: Word8)
-        <> toCBOR vd
-        <> toCBOR dv
-        <> toCBOR rd
+-- instance
+--   (Crypto crypto)
+--   => ToCBOR (ScrInData crypto)
+--  where
+--   toCBOR = \case
+--     NoDtRdmr vd ->
+--       encodeListLen 2
+--         <> toCBOR (0 :: Word8)
+--         <> toCBOR vd
+--
+--     VldDrRdm vd dv rd ->
+--       encodeListLen 4
+--         <> toCBOR (1 :: Word8)
+--         <> toCBOR vd
+--         <> toCBOR dv
+--         <> toCBOR rd
 
 instance ToCBOR ExUnits
  where
@@ -1074,8 +1064,6 @@ makeLenses ''TxBody
 makeLenses ''Tx
 
 makeLenses ''UnsignedData
-
-makeLenses ''ScrInData
 
 makeLenses ''Delegation
 

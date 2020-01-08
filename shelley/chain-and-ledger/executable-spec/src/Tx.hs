@@ -46,7 +46,7 @@ import qualified Data.List as List (concat, concatMap, permutations)
 import           Data.Map.Strict (Map)
 import           Data.Map (singleton)
 import           Data.Maybe (mapMaybe)
-import           Data.Set (Set)
+import           Data.Set (Set, filter)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 
@@ -211,8 +211,17 @@ getref (TxInVK  ref _) = ref
 getref (TxInScr ref _) = ref
 
 -- | access only the output reference part of a TxInTx
-getrefs :: (Set (TxInTx crypto)) -> (Set (TxIn crypto))
+getrefs :: (Set (TxInTx crypto)) -> Set (TxIn crypto)
 getrefs = Set.map getref
+
+-- | an input is a fee
+inputisfee                        :: (TxInTx crypto) -> Bool
+inputisfee (TxInVK _ (IsFee Yes)) = True
+inputisfee _                      = True
+
+-- | just the for-fee-payment inputs
+txinputs_vf    :: Tx crypto -> Set (TxIn crypto)
+txinputs_vf tx =  getrefs $ Data.Set.filter inputisfee (_txinputs (_body tx))
 
 -- | return the address in an output
 addrTxOut :: TxOut crypto -> Addr crypto

@@ -33,7 +33,7 @@ module UTxO
   , makeWitnessesVKey
   , makeGenWitnessVKey
   , makeGenWitnessesVKey
-  , makeWitnessesFromScriptKeys
+--  , makeWitnessesFromScriptKeys
   , verifyWitVKey
   , scriptsNeeded
   , txinsScript
@@ -212,24 +212,12 @@ totalDeposits
   :: PParams
   -> StakePools crypto
   -> [DCert crypto]
-<<<<<<< HEAD
   -> Coin
 totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (DCertPool (RegPool pool)) =
       Map.notMember (pool ^. poolPubKey) stpools
-=======
-deposits
-  :: PParams crypto
-  -> StakePools crypto
-  -> [DCert crypto]
-  -> Value crypto
-deposits pc (StakePools stpools) cs = foldl f (Value empty) cs'
-  where
-    f v cert = v + dvalue cert pc
-    notRegisteredPool (RegPool pool) = Map.notMember (pool ^. poolPubKey) stpools
->>>>>>> UTxO loads
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
