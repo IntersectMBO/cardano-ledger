@@ -42,7 +42,7 @@ import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, _b
 import           TxData (Credential (..), pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertMir, pattern DCertPool, pattern Delegation, PoolParams (..))
 
-import           MockTypes
+import           ConcreteCryptoTypes
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a

@@ -13,6 +13,7 @@
 module Generator.LedgerTrace.QuickCheck where
 
 import           BaseTypes (Globals)
+import           ConcreteCryptoTypes (LEDGER)
 import           Control.Monad.Trans.Reader (runReaderT)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import           Data.Functor.Identity (runIdentity)
@@ -21,7 +22,6 @@ import           Generator.Core.QuickCheck (coreKeyPairs, genCoin, traceKeyPairs
                      traceMSigCombinations, traceMSigScripts, traceVRFKeyPairs)
 import           Generator.Update.QuickCheck (genPParams)
 import           Generator.Utxo.QuickCheck (genTx)
-import           MockTypes (LEDGER)
 import           Shrinkers (shrinkTx)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))

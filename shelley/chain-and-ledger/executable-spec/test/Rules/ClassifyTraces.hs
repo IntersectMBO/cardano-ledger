@@ -12,6 +12,7 @@ import           Data.Foldable (toList)
 import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
+import           ConcreteCryptoTypes (DCert, LEDGER, Tx, TxOut)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
 import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState,
@@ -20,7 +21,6 @@ import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDel
                      isInstantaneousRewards, isRegKey, isRegPool, isRetirePool)
 import           Generator.Core.QuickCheck (mkGenesisLedgerState)
 import           Generator.LedgerTrace.QuickCheck ()
-import           MockTypes (DCert, LEDGER, Tx, TxOut)
 import           Test.Utils
 import           TxData (pattern AddrBase, pattern ScriptHashObj, pattern TxOut, _body, _certs,
                      _outputs)

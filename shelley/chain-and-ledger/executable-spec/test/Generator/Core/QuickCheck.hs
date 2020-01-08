@@ -42,11 +42,12 @@ import qualified Test.QuickCheck as QC
 
 import           Address (scriptsToAddr, toAddr, toCred)
 import           Coin (Coin (..))
+import           ConcreteCryptoTypes (Addr, CoreKeyPair, DPState, GenKeyHash, KeyHash, KeyPair,
+                     KeyPairs, LEDGER, MultiSig, SignKeyVRF, TxOut, UTxO, UTxOState, VKey,
+                     VerKeyVRF)
 import           Control.State.Transition (IRC)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
-import           MockTypes (Addr, CoreKeyPair, DPState, GenKeyHash, KeyHash, KeyPair, KeyPairs,
-                     LEDGER, MultiSig, SignKeyVRF, TxOut, UTxO, UTxOState, VKey, VerKeyVRF)
 import           Numeric.Natural (Natural)
 import           Test.Utils (mkGenKey, mkKeyPair)
 import           Tx (pattern TxOut, hashScript)

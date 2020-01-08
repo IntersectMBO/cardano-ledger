@@ -24,6 +24,8 @@ import           Test.Utils
 
 import           BaseTypes (interval0)
 import           Coin (Coin (..))
+import           ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs,
+                     PState, PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
 import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
@@ -33,8 +35,6 @@ import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
                      _genDelegs, _pstate, _stPools, _stkCreds)
-import           MockTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs, PState,
-                     PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
 import           PParams (PParams (..), d, eMax)
 import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           TxData (Credential (KeyHashObj), pattern DCertDeleg, pattern DCertGenesis,

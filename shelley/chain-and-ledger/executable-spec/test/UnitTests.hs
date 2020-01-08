@@ -38,7 +38,7 @@ import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, bo
 import           Updates
 import           UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
 
-import           MockTypes
+import           ConcreteCryptoTypes
 
 alicePay :: KeyPair
 alicePay = KeyPair 1 1

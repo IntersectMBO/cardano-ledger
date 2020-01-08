@@ -39,8 +39,8 @@ import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, 
 import           UTxO (balance, deposits, makeWitnessVKey, txid, txins, txouts, verifyWitVKey)
 import           Validation (ValidationError (..))
 
+import           ConcreteCryptoTypes
 import           Generator
-import           MockTypes
 
 
 -- | Take 'addr |-> c' pair from 'TxOut' and insert into map or add 'c' to value

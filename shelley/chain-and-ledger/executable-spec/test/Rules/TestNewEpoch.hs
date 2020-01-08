@@ -14,11 +14,11 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      source, target)
 
 import           Coin (pattern Coin)
+import           ConcreteCryptoTypes (NEWEPOCH)
 import           LedgerState (pattern AccountState, pattern DPState, pattern DState,
                      pattern EpochState, pattern LedgerState, pattern NewEpochState,
                      pattern UTxOState, esAccountState, esLState, nesEs, _delegationState,
                      _deposited, _dstate, _fees, _reserves, _rewards, _treasury, _utxo, _utxoState)
-import           MockTypes (NEWEPOCH)
 import           UTxO (balance)
 
 -----------------------------

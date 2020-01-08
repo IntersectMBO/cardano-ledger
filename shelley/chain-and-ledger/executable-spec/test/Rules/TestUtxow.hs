@@ -21,9 +21,9 @@ import           Test.QuickCheck (Property, conjoin, (===))
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
 
+import           ConcreteCryptoTypes (StakeCreds, StakePools, Tx, UTXO, UTXOW)
 import           Ledger.Core (dom, (<|))
 import           LedgerState (pattern UTxOState, keyRefunds)
-import           MockTypes (StakeCreds, StakePools, Tx, UTXO, UTXOW)
 import           PParams (PParams)
 import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, deposits, txins, txouts)

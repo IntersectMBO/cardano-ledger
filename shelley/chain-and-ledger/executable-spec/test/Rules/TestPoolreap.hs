@@ -15,9 +15,9 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      signal, source, target)
 
 import           Coin (pattern Coin)
+import           ConcreteCryptoTypes (POOLREAP)
 import           LedgerState (pattern AccountState, pattern DState, pattern UTxOState, _deposited,
                      _fees, _reserves, _rewards, _treasury, _utxo)
-import           MockTypes (POOLREAP)
 import           STS.PoolReap (pattern PoolreapState, prAcnt, prDState, prPState, prUTxOSt)
 import           TxData (pattern StakePools)
 import           UTxO (balance)

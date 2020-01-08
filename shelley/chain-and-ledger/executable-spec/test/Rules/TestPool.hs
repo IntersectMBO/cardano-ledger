@@ -20,9 +20,9 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      signal, source, target)
 
 import           BaseTypes ((==>))
+import           ConcreteCryptoTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           Delegation.Certificates (poolCWitness)
 import           LedgerState (pattern PState, pParams, retiring, stPools, _retiring, _stPools)
-import           MockTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
 import           PParams (_eMax)
 import           Slot (EpochNo (..))
 import           STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
