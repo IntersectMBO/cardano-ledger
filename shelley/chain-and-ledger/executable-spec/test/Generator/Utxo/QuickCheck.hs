@@ -22,7 +22,8 @@ import qualified Test.QuickCheck as QC
 import           Address (scriptsToAddr)
 import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs,
-                     MultiSig, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
+                     MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
+                     VrfKeyPairs)
 import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural, toAddr)
 import           Generator.Delegation.QuickCheck (genDCerts)
 import           LedgerState (pattern UTxOState)
@@ -41,7 +42,7 @@ import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnesse
 genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
-      -> [(MultiSig, MultiSig)]
+      -> MultiSigPairs
       -> [CoreKeyPair]
       -> VrfKeyPairs
       -> Gen Tx
@@ -140,7 +141,7 @@ calcFeeAndOutputs balance_ addrs =
 -- `findPayScript` will fail by not finding the matching keys or scripts.
 pickSpendingInputs
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> UTxO
   -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
 pickSpendingInputs keys scripts (UTxO utxo) = do
@@ -159,7 +160,7 @@ pickSpendingInputs keys scripts (UTxO utxo) = do
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> Gen [Addr]
 genRecipients keys scripts = do
   n' <- QC.choose (1, 3)

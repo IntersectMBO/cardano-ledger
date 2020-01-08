@@ -22,31 +22,38 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Test.Utils
 
+import           Address (scriptToCred)
 import           BaseTypes (interval0)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs,
-                     MultiSig, PState, PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
+                     MultiSig, MultiSigPairs, PState, PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
 import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred)
-import           Keys (GenDelegs (..), hashKey, vKey)
+import           Keys (GenDelegs (..), hashAnyKey, hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
                      _genDelegs, _pstate, _stPools, _stkCreds)
 import           PParams (PParams (..), d, eMax)
 import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
-import           TxData (Credential (KeyHashObj), pattern DCertDeleg, pattern DCertGenesis,
-                     pattern DCertPool, pattern Delegation, pattern PoolParams, RewardAcnt (..),
-                     StakePools (StakePools), _poolPubKey, _poolVrf)
+import           Tx (getKeyCombinations)
+import           TxData (pattern DCertDeleg, pattern DCertGenesis, pattern DCertPool,
+                     pattern Delegation, pattern KeyHashObj, pattern PoolParams, RewardAcnt (..),
+                     pattern StakePools, _poolPubKey, _poolVrf)
 import           UTxO (totalDeposits)
+
+data CertCred = CoreKeyCred [CoreKeyPair]
+              | KeyCred KeyPair
+              | ScriptCred (MultiSig, MultiSig)
+              deriving (Show)
 
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> [CoreKeyPair]
   -> VrfKeyPairs
   -> PParams
@@ -81,11 +88,18 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
           refunds_ = sum (rewardForCred <$> deRegStakeCreds)
 
       case witnessOrCoreKeys of
-        Left witKey -> do
+        KeyCred witKey -> do
           let witKeys = [witKey]
           return (Seq.fromList certs, witKeys, [], deposits_, refunds_)
-        Right coreSignKeys ->
+        CoreKeyCred coreSignKeys ->
           pure (Seq.fromList certs, [], coreSignKeys, deposits_, refunds_)
+        ScriptCred (_, stakeScript) -> do
+          witnessHashes <- QC.elements (getKeyCombinations stakeScript)
+          let witnessHashSet = Set.fromList witnessHashes
+              witnesses =
+                filter (\k -> (hashAnyKey $ vKey k) `Set.member` witnessHashSet)
+                (map snd keys)
+          pure (Seq.fromList certs, witnesses, [], deposits_, refunds_)
 
 -- | Occasionally generate a valid certificate
 --
@@ -99,13 +113,13 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
 -- and we generate more delegations than registrations of keys/pools.
 genDCert
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> [CoreKeyPair]
   -> VrfKeyPairs
   -> PParams
   -> DPState
   -> SlotNo
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+  -> Gen (Maybe (DCert, CertCred))
 genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
   QC.frequency [ (2, genRegKeyCert keys scripts dState)
                , (2, genRegPool keys vrfKeys dpState)
@@ -123,32 +137,41 @@ genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
 -- (needed to witness the certificate)
 genRegKeyCert
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> DState
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
-genRegKeyCert keys _ delegSt =
-  case availableKeys of
-    [] -> pure Nothing
-    _ -> do
-           (_payKey, stakeKey) <- QC.elements availableKeys
-           pure $ Just (DCertDeleg (RegKey (toCred stakeKey)), Left stakeKey)
+  -> Gen (Maybe (DCert, CertCred))
+genRegKeyCert keys scripts delegSt =
+  QC.oneof
+    [ case availableKeys of
+       [] -> pure Nothing
+       _  -> do
+         (_payKey, stakeKey) <- QC.elements availableKeys
+         pure $ Just (DCertDeleg (RegKey (toCred stakeKey)), KeyCred stakeKey)
+    , case availableScripts of
+        [] -> pure Nothing
+        _  -> do
+          scriptPair@(_, stakeScript) <- QC.elements availableScripts
+          pure $ Just (DCertDeleg (RegKey (scriptToCred stakeScript))
+                      , ScriptCred scriptPair)
+    ]
   where
     notRegistered k = k ∉ dom (_stkCreds delegSt)
     availableKeys = filter (notRegistered . toCred . snd) keys
+    availableScripts = filter (notRegistered . scriptToCred . snd) scripts
 
 -- | Generate a DeRegKey certificate along with the stake key, which is needed
 -- to witness the certificate.
 genDeRegKeyCert
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> DState
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+  -> Gen (Maybe (DCert, CertCred))
 genDeRegKeyCert keys _ dState =
   case availableKeys of
     [] -> pure Nothing
     _ -> do
            (_payKey, stakeKey) <- QC.elements availableKeys
-           pure $ Just (DCertDeleg (DeRegKey (toCred stakeKey)), Left stakeKey)
+           pure $ Just (DCertDeleg (DeRegKey (toCred stakeKey)), KeyCred stakeKey)
   where
     registered k = k ∈ dom (_stkCreds dState)
     availableKeys = filter (registered . toCred . snd) keys
@@ -160,9 +183,9 @@ genDeRegKeyCert keys _ dState =
 -- Returns nothing if there are no active keys or pools.
 genDelegation
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> DPState
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+  -> Gen (Maybe (DCert, CertCred))
 genDelegation keys _ dpState =
   if null availableDelegates || null availablePools
     then
@@ -171,7 +194,7 @@ genDelegation keys _ dpState =
       mkCert <$> QC.elements availableDelegates
              <*> QC.elements availablePools
   where
-    mkCert (_, delegatorKey) poolKey = Just (cert, Left delegatorKey)
+    mkCert (_, delegatorKey) poolKey = Just (cert, KeyCred delegatorKey)
       where
         cert = DCertDeleg (Delegate (Delegation (toCred delegatorKey) poolKey))
 
@@ -185,7 +208,7 @@ genGenesisDelegation
   :: KeyPairs
   -> [CoreKeyPair]
   -> DPState
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+  -> Gen (Maybe (DCert, CertCred))
 genGenesisDelegation keys coreKeys dpState =
   if null genesisDelegators || null availableDelegatees
     then
@@ -197,7 +220,7 @@ genGenesisDelegation keys coreKeys dpState =
     hashVKey = hashKey . vKey
     mkCert gkey key = Just
       ( DCertGenesis (GenesisDelegate (hashVKey gkey, (hashVKey . snd) key))
-      , Right [gkey])
+      , CoreKeyCred [gkey])
 
     (GenDelegs genDelegs_) = _genDelegs $ dpState ^. dstate
 
@@ -212,7 +235,7 @@ genRegPool
   :: KeyPairs
   -> VrfKeyPairs
   -> DPState
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+  -> Gen (Maybe (DCert, CertCred))
 genRegPool keys vrfKeys dpState =
   if null availableKeys || null availableVrfKeys
      then pure Nothing
@@ -252,10 +275,10 @@ genStakePool skeys vrfKeys =
      in (pps, snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.
-genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, Either KeyPair [CoreKeyPair])
+genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, CertCred)
 genDCertRegPool skeys vrfKeys = do
   (pps, poolKey) <- genStakePool skeys vrfKeys
-  pure (DCertPool (RegPool pps), Left poolKey)
+  pure (DCertPool (RegPool pps), KeyCred poolKey)
 
 -- | Generate a RetirePool along with the keypair which registered it.
 --
@@ -269,13 +292,13 @@ genRetirePool
   -> PParams
   -> PState
   -> SlotNo
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+  -> Gen (Maybe (DCert, CertCred))
 genRetirePool availableKeys pp pState slot =
   if (null availableKeys || null poolHashKeys)
      then pure Nothing
      else (\keyHash epoch ->
               Just ( DCertPool (RetirePool keyHash epoch)
-                   , Left $ findKeyPair keyHash))
+                   , KeyCred $ findKeyPair keyHash))
                 <$> QC.elements poolHashKeys
                 <*> (EpochNo <$> genWord64 epochLow epochHigh)
  where
@@ -296,7 +319,7 @@ genInstantaneousRewards
   :: [CoreKeyPair]
   -> PParams
   -> DState
-  -> Gen (Maybe (DCert, Either KeyPair [CoreKeyPair]))
+  -> Gen (Maybe (DCert, CertCred))
 genInstantaneousRewards coreKeys pparams delegSt = do
   let StakeCreds credentials = _stkCreds delegSt
 
@@ -317,4 +340,4 @@ genInstantaneousRewards coreKeys pparams delegSt = do
       Nothing
     else
       Just ( DCertMir (MIRCert credCoinMap)
-           , Right coreSigners)
+           , CoreKeyCred coreSigners)

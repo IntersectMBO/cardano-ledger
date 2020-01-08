@@ -43,8 +43,8 @@ import qualified Test.QuickCheck as QC
 import           Address (scriptsToAddr, toAddr, toCred)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (Addr, CoreKeyPair, DPState, GenKeyHash, KeyHash, KeyPair,
-                     KeyPairs, LEDGER, MultiSig, SignKeyVRF, TxOut, UTxO, UTxOState, VKey,
-                     VerKeyVRF)
+                     KeyPairs, LEDGER, MultiSig, MultiSigPairs, SignKeyVRF, TxOut, UTxO, UTxOState,
+                     VKey, VerKeyVRF)
 import           Control.State.Transition (IRC)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
@@ -87,13 +87,13 @@ numCoreNodes :: Word64
 numCoreNodes = 7
 
 -- | Multi-Sig Scripts based on the `traceKeyPairs` key pairs
-traceMSigScripts :: [(MultiSig, MultiSig)]
+traceMSigScripts :: MultiSigPairs
 traceMSigScripts = map mkScriptsFromKeyPair traceKeyPairs
 
 -- | Combine a list of multisig pairs into hierarchically structured multi-sig
 -- scripts, list must have at least length 3. Be careful not to call with too
 -- many pairs in order not to create too many of the possible combinations.
-traceMSigCombinations :: [(MultiSig, MultiSig)] -> [(MultiSig, MultiSig)]
+traceMSigCombinations :: MultiSigPairs -> MultiSigPairs
 traceMSigCombinations msigs =
   if length msigs < 3 then error "length of input msigs must be at least 3"
   else foldl (++) [] $
@@ -140,7 +140,7 @@ someKeyPairs lower upper =
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first 5 multi-sig scripts of `traceMSigScripts`.
-someScripts :: Int -> Int -> Gen [(MultiSig, MultiSig)]
+someScripts :: Int -> Int -> Gen MultiSigPairs
 someScripts lower upper =
   take
   <$> QC.choose (lower, upper)
@@ -158,7 +158,7 @@ findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
 findPayKeyPair _ _ = error "findPayKeyPair: expects only AddrBase addresses"
 
 -- | Find first matching script for address.
-findPayScript :: Addr -> [(MultiSig, MultiSig)] -> (MultiSig, MultiSig)
+findPayScript :: Addr -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScript (AddrBase (ScriptHashObj scriptHash) _) scripts =
   case List.findIndex (\(pay, _) -> scriptHash == hashScript pay) scripts of
     Nothing -> error "findPayScript: could not find matching script for given address"
