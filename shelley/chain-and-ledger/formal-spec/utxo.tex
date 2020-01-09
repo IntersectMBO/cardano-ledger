@@ -69,7 +69,7 @@ See Figure~\ref{fig:defs:utxo-shelley} for most of the definitions used in the t
     the transaction fee and all needed deposits.
     Some of the definitions used in this function will be defined in
     Section~\ref{sec:deps-refunds}.
-    In particular, $\fun{deposits}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
+    In particular, $\fun{totalDeposits}$ is defined in Figure~\ref{fig:functions:deposits-refunds}
     and $\StakePools$ is defined in Figure~\ref{fig:delegation-defs}.
 \end{itemize}
 
@@ -113,7 +113,7 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
     & \text{value produced} \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{tx} = \\
     &~~\ubalance{(\outs{tx})}
-    + \txfee{tx} + \deposits{pp}{stpools}~{(\txcerts{tx})}\\
+    + \txfee{tx} + \totalDeposits{pp}{stpools}{(\txcerts{tx})}\\
   \end{align*}
 
   \caption{Functions used in UTxO rules}
@@ -322,7 +322,7 @@ requests).
       \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{txb}
       \\
       \var{depositChange} \leteq
-        \deposits{pp}~{stpools}~{(\txcerts{txb})} - (\var{refunded} + \var{decayed})
+        \totalDeposits{pp}{stpools}{(\txcerts{txb})} - (\var{refunded} + \var{decayed})
     }
     {
       \begin{array}{r}
@@ -384,7 +384,7 @@ $\cwitness{}$, which gets the certificate witness from a certificate, will be
 defined later.  Figure~\ref{fig:functions:deposits-refunds} defines the deposit
 and refund functions.
 \begin{itemize}
-\item The function $\fun{deposits}$ returns the total deposits that have to be
+\item The function $\fun{totalDeposits}$ returns the total deposits that have to be
   made by a transaction.  This calculation is based on the protocol parameters.
   Specifically, for a given transaction, it sums up the values of the stake
   credential deposits and the stake pool deposits. Those certificates which are
@@ -457,9 +457,9 @@ Section~\ref{sec:epoch}.
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{deposits} \in \PParams \to \StakePools \to \seqof{\DCert} \to \Coin
+    & \fun{totalDeposits} \in \PParams \to \StakePools \to \seqof{\DCert} \to \Coin
     & \text{total deposits for transaction} \\
-    & \fun{deposits}~{pp}~{stpools}~{certs} = \\
+    & \totalDeposits{pp}{stpools}{certs} = \\
     &  \sum\limits_{c\in\var{certs} \cap \DCertRegKey}(\fun{keyDeposit}~pp)
     +  \sum\limits_{\substack{
          c\in\var{certs}\cap\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}

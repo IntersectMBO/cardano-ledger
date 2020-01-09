@@ -26,7 +26,7 @@ import           Ledger.Core (dom, (<|))
 import           LedgerState (pattern UTxOState, keyRefunds)
 import           PParams (PParams)
 import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
-import           UTxO (pattern UTxO, balance, deposits, txins, txouts)
+import           UTxO (pattern UTxO, balance, totalDeposits, txins, txouts)
 
 --------------------------
 -- Properties for UTXOW --
@@ -51,7 +51,7 @@ preserveBalance pp tr =
     created u stp_ tx =
         balance u
       + _txfee (_body tx)
-      + deposits pp stp_ (toList $ _certs $ _body tx)
+      + totalDeposits pp stp_ (toList $ _certs $ _body tx)
 
     consumed u stk_ tx =
         balance u
@@ -80,7 +80,7 @@ preserveBalanceRestricted pp tr =
       + depositChange stk_ stp_ (toList $ _certs tx) tx
 
     depositChange stk_ stp_ certs txb =
-        deposits pp stp_ certs
+        totalDeposits pp stp_ certs
       - (keyRefunds pp stk_ txb)
 
 -- | Preserve outputs of Txs

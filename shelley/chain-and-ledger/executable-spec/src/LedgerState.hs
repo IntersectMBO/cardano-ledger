@@ -130,7 +130,8 @@ import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCer
                      poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
-import           UTxO (UTxO (..), balance, deposits, txinLookup, txins, txouts, txup, verifyWitVKey)
+import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
+                     verifyWitVKey)
 import           Validation
 
 import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeCreds (..),
@@ -418,7 +419,7 @@ produced
   -> TxBody crypto
   -> Coin
 produced pp stakePools tx =
-    balance (txouts tx) + tx ^. txfee + deposits pp stakePools (toList $ tx ^. certs)
+    balance (txouts tx) + tx ^. txfee + totalDeposits pp stakePools (toList $ tx ^. certs)
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
@@ -668,7 +669,7 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
   where
     currentPool = ls ^. utxoState . deposited
     txDeposits =
-      deposits pp (ls ^. delegationState . pstate . stPools) (toList $ tx ^. certs)
+      totalDeposits pp (ls ^. delegationState . pstate . stPools) (toList $ tx ^. certs)
     txRefunds = keyRefunds pp (ls ^. delegationState . dstate . stkCreds) tx
 
 -- |Apply a transaction body as a state transition function on the ledger state.
