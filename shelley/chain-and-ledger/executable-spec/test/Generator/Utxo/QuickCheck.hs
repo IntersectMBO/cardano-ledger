@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,6 +13,7 @@ module Generator.Utxo.QuickCheck
 
 import qualified Data.Either as Either (lefts, rights)
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -22,9 +24,10 @@ import qualified Test.QuickCheck as QC
 import           Address (scriptsToAddr)
 import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs,
-                     MultiSig, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
+                     MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
+                     VrfKeyPairs)
 import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural, toAddr)
-import           Generator.Delegation.QuickCheck (genDCerts)
+import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
 import           LedgerState (pattern UTxOState)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
@@ -41,7 +44,7 @@ import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnesse
 genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
-      -> [(MultiSig, MultiSig)]
+      -> MultiSigPairs
       -> [CoreKeyPair]
       -> VrfKeyPairs
       -> Gen Tx
@@ -62,11 +65,24 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
   -- certificates
-  (certs, certWitnesses, genesisWitnesses, deposits_, refunds_)
-    <- genDCerts keys' coreKeys vrfKeys pparams dpState slot ttl
+  --(certs, certWitnesses, genesisWitnesses, stakeScripts, deposits_, refunds_)
+  (certs, certCreds, deposits_, refunds_)
+    <- genDCerts keys' scripts' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   let balance_ = spendingBalance - deposits_ + refunds_
+      stakeScripts = Maybe.catMaybes $ map (\case
+                                               ScriptCred c -> Just c
+                                               _            -> Nothing) certCreds
+      genesisWitnesses = foldl (++) [] $
+        Maybe.catMaybes $
+        map (\case
+                CoreKeyCred c -> Just c
+                _             -> Nothing) certCreds
+      certWitnesses = Maybe.catMaybes $ map (\case
+                                                KeyCred c -> Just c
+                                                _         -> Nothing) certCreds
+
 
   -- calc. fees and output amounts
   let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
@@ -74,7 +90,8 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   -- witnessed transaction
   txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
   let multiSig = Map.fromList $
-        map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts
+        (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
+        (map (\(_, sScript) -> (hashScript sScript, sScript)) stakeScripts)
 
   -- choose any possible combination of keys for multi-sig scripts
   keysLists <- mapM QC.elements (map getKeyCombinations $ Map.elems multiSig)
@@ -140,7 +157,7 @@ calcFeeAndOutputs balance_ addrs =
 -- `findPayScript` will fail by not finding the matching keys or scripts.
 pickSpendingInputs
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> UTxO
   -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
 pickSpendingInputs keys scripts (UTxO utxo) = do
@@ -159,7 +176,7 @@ pickSpendingInputs keys scripts (UTxO utxo) = do
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients
   :: KeyPairs
-  -> [(MultiSig, MultiSig)]
+  -> MultiSigPairs
   -> Gen [Addr]
 genRecipients keys scripts = do
   n' <- QC.choose (1, 3)

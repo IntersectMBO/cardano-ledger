@@ -65,6 +65,8 @@ type SKey = Keys.SKey ConcreteCrypto
 
 type KeyPairs = LedgerState.KeyPairs ConcreteCrypto
 
+type MultiSigPairs = [(MultiSig, MultiSig)]
+
 type VKeyGenesis = Keys.VKeyGenesis ConcreteCrypto
 
 type EpochState = LedgerState.EpochState ConcreteCrypto

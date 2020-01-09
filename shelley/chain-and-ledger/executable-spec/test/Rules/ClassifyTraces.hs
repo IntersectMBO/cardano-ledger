@@ -22,8 +22,9 @@ import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDel
 import           Generator.Core.QuickCheck (mkGenesisLedgerState)
 import           Generator.LedgerTrace.QuickCheck ()
 import           Test.Utils
-import           TxData (pattern AddrBase, pattern ScriptHashObj, pattern TxOut, _body, _certs,
-                     _outputs)
+import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
+                     pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
+                     _body, _certs, _outputs)
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 500 . property $ do
@@ -72,9 +73,31 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
      , cover_ 25
               (0.25 >= txScriptOutputsRatio (map (_outputs . _body) txs))
               "at least 25% of transactions have script TxOuts"
+     , cover_ 10
+              (0.25 <= scriptCredentialCertsRatio certs_)
+              "at least 25% of `DCertDeleg` certificates have script credentials"
      ]
     where
       cover_ pc b s = cover pc b s (property ())
+
+
+-- | Ratio of certificates with script credentials to the number of certificates
+-- that could have script credentials.
+scriptCredentialCertsRatio :: [DCert] -> Double
+scriptCredentialCertsRatio certs =
+  ratioInt haveScriptCerts couldhaveScriptCerts
+  where haveScriptCerts =
+          (length $ filter
+            (\case
+                DCertDeleg (RegKey (ScriptHashObj _))                  -> True
+                DCertDeleg (DeRegKey (ScriptHashObj _))                -> True
+                DCertDeleg (Delegate (Delegation (ScriptHashObj _) _)) -> True
+                _                                                      -> False)
+            certs)
+        couldhaveScriptCerts =
+          length $ filter (\case
+                               DCertDeleg _ -> True
+                               _            -> False) certs
 
 -- | Extract the certificates from the transactions
 certsByTx :: [Tx] -> [[DCert]]
