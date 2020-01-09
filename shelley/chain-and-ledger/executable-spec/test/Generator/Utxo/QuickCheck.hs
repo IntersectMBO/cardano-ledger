@@ -63,7 +63,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
   -- certificates
-  (certs, certWitnesses, genesisWitnesses, deposits_, refunds_)
+  (certs, certWitnesses, genesisWitnesses, stakeScripts, deposits_, refunds_)
     <- genDCerts keys' scripts' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
@@ -75,7 +75,8 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   -- witnessed transaction
   txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
   let multiSig = Map.fromList $
-        map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts
+        (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
+        (map (\sScript -> (hashScript sScript, sScript)) stakeScripts)
 
   -- choose any possible combination of keys for multi-sig scripts
   keysLists <- mapM QC.elements (map getKeyCombinations $ Map.elems multiSig)

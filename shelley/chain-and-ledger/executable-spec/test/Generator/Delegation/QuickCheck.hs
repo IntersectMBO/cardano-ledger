@@ -60,7 +60,7 @@ genDCerts
   -> DPState
   -> SlotNo
   -> Natural
-  -> Gen (Seq DCert, [KeyPair], [CoreKeyPair], Coin, Coin)
+  -> Gen (Seq DCert, [KeyPair], [CoreKeyPair], [MultiSig], Coin, Coin)
 genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
@@ -70,7 +70,7 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
   cert <- genDCert keys scripts coreKeys vrfKeys pparams dpState slot
   case cert of
     Nothing ->
-      return (Seq.empty, [], [], Coin 0, Coin 0)
+      return (Seq.empty, [], [], [], Coin 0, Coin 0)
     Just (cert_, witnessOrCoreKeys) -> do
       let certs = [cert_]
           deposits_ = totalDeposits pparams (_stPools (_pstate dpState)) certs
@@ -90,16 +90,23 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
       case witnessOrCoreKeys of
         KeyCred witKey -> do
           let witKeys = [witKey]
-          return (Seq.fromList certs, witKeys, [], deposits_, refunds_)
+          return (Seq.fromList certs, witKeys, [], [], deposits_, refunds_)
         CoreKeyCred coreSignKeys ->
-          pure (Seq.fromList certs, [], coreSignKeys, deposits_, refunds_)
+          pure (Seq.fromList certs, [], coreSignKeys, [], deposits_, refunds_)
         ScriptCred (_, stakeScript) -> do
           witnessHashes <- QC.elements (getKeyCombinations stakeScript)
           let witnessHashSet = Set.fromList witnessHashes
               witnesses =
                 filter (\k -> (hashAnyKey $ vKey k) `Set.member` witnessHashSet)
                 (map snd keys)
-          pure (Seq.fromList certs, witnesses, [], deposits_, refunds_)
+          pure ( Seq.fromList certs
+               , witnesses
+               , []
+               , (case cert_ of
+                    DCertDeleg (RegKey _) -> []
+                    _        -> [stakeScript])
+               , deposits_
+               , refunds_)
 
 -- | Occasionally generate a valid certificate
 --
@@ -133,7 +140,7 @@ genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
   dState = dpState ^. dstate
   pState = dpState ^. pstate
 
--- | Generate a RegKey certificate along and also returns the stake key
+-- | Generate a RegKey certificate along and also returns the staking credential
 -- (needed to witness the certificate)
 genRegKeyCert
   :: KeyPairs
@@ -159,22 +166,31 @@ genRegKeyCert keys scripts delegSt =
     availableKeys = filter (notRegistered . toCred . snd) keys
     availableScripts = filter (notRegistered . scriptToCred . snd) scripts
 
--- | Generate a DeRegKey certificate along with the stake key, which is needed
--- to witness the certificate.
+-- | Generate a DeRegKey certificate along with the staking credential, which is
+-- needed to witness the certificate.
 genDeRegKeyCert
   :: KeyPairs
   -> MultiSigPairs
   -> DState
   -> Gen (Maybe (DCert, CertCred))
-genDeRegKeyCert keys _ dState =
-  case availableKeys of
-    [] -> pure Nothing
-    _ -> do
-           (_payKey, stakeKey) <- QC.elements availableKeys
-           pure $ Just (DCertDeleg (DeRegKey (toCred stakeKey)), KeyCred stakeKey)
+genDeRegKeyCert keys scripts dState =
+  QC.oneof
+  [ case availableKeys of
+      [] -> pure Nothing
+      _ -> do
+        (_payKey, stakeKey) <- QC.elements availableKeys
+        pure $ Just (DCertDeleg (DeRegKey (toCred stakeKey)), KeyCred stakeKey)
+  , case availableScripts of
+      [] -> pure Nothing
+      _  -> do
+          scriptPair@(_, stakeScript) <- QC.elements availableScripts
+          pure $ Just (DCertDeleg (DeRegKey (scriptToCred stakeScript))
+                      , ScriptCred scriptPair)
+  ]
   where
     registered k = k ∈ dom (_stkCreds dState)
     availableKeys = filter (registered . toCred . snd) keys
+    availableScripts = filter (registered . scriptToCred . snd) scripts
 
 -- | Generate a new delegation certificate by picking a registered key
 -- and pool. The delegation is witnessed by the delegator's key, which
