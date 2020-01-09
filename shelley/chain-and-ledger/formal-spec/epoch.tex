@@ -1355,11 +1355,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \wcard
       \right)
       \right) = \var{ls} \\
-    & ~~~~~~~unregistered =
-      \left\{
-      hk\mapsto val \vert \dom{stkCreds} \subtractdom \var{i_{rwd}}
-      \right\}\\
-    & ~~~~~~~\var{registered} = \var{i_{rwd}} \setminus\var{unregistered} \\
+    & ~~~~~~~unregistered = \dom{i_{rwd}} \setminus \dom{stkCreds}\\
+    & ~~~~~~~\var{registered} = \var{unregistered}\subtractdom i_{rwd} \\
     & ~~~~~~~\var{rewards_{mir}} =
       \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} \\
     & ~~~~~~~\var{reserves'} = \var{reserves} - \var{rewards_{mir}}\\
@@ -1451,7 +1448,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
                                       unregistered} \var{val}  \\
       & ~~~~~~~\var{update_{rwd}} =
         \left\{
-        \fun{add_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}'}
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}'}
         \right\}
   \end{align*}
 

@@ -276,7 +276,7 @@ If we let:
   \label{lemma:ru-pres-of-value}
   For all mappings $b$ of blocks made, epochs $\epsilon$, and epoch states $s$,
   \begin{equation*}
-    \Val(s) = \Val(\fun{applyRUpd}~(\fun{createRUpd}~b~s)~\epsilon~s)
+    \Val(s) = \Val(\fun{applyRUpd}~(\fun{createRUpd}~b~s)~s)
   \end{equation*}
 \end{lemma}
 
@@ -290,17 +290,17 @@ If we let:
   we see that:
   \begin{equation*}
     \begin{array}{r@{~=~}l}
-      \var{rewardPot} & \var{feeSS} + \Delta r_1 \\
+      \var{rewardPot} & \var{feeSS} + \Delta r_l \\
       \var{R} & \var{rewardPot} - \Delta t_1 \\
       \Delta t_2 & R - \Val(\var{rs})\\
-      \Delta r & - (\Delta r_1+\Val(registered)) \\
+      \Delta r & - (\Delta r_l+\Val(registered)) \\
     \end{array}
   \end{equation*}
   Therefore
   \begin{equation*}
     \begin{array}{c}
-      (\var{feeSS} + \Delta r_1) = \var{rewardPot} = R + \Delta t_1 = \Delta t_2 + \Val(rs) + \Delta r_1  \\
-      0 = (\Delta t_1 + \Delta t_2 ) - \Delta r_1 + \Val(rs)- \var{feeSS} \\
+      (\var{feeSS} + \Delta r_l) = \var{rewardPot} = R + \Delta t_1 = \Delta t_2 + \Val(rs) + \Delta r_l  \\
+      0 = (\Delta t_1 + \Delta t_2 ) - \Delta r_l + \Val(rs)- \var{feeSS} \\
     \end{array}
   \end{equation*}
   So it suffices to show that:
