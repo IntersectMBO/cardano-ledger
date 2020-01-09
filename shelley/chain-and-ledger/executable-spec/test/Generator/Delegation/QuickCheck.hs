@@ -192,30 +192,46 @@ genDeRegKeyCert keys scripts dState =
     availableKeys = filter (registered . toCred . snd) keys
     availableScripts = filter (registered . scriptToCred . snd) scripts
 
--- | Generate a new delegation certificate by picking a registered key
--- and pool. The delegation is witnessed by the delegator's key, which
--- we return along with the certificate.
+-- | Generate a new delegation certificate by picking a registered staking
+-- credential and pool. The delegation is witnessed by the delegator's
+-- credential which we return along with the certificate.
 --
--- Returns nothing if there are no active keys or pools.
+-- Returns nothing if there are no registered staking credentials or no
+-- registered pools.
 genDelegation
   :: KeyPairs
   -> MultiSigPairs
   -> DPState
   -> Gen (Maybe (DCert, CertCred))
-genDelegation keys _ dpState =
-  if null availableDelegates || null availablePools
+genDelegation keys scripts dpState =
+  if null availablePools
     then
       pure Nothing
     else
-      mkCert <$> QC.elements availableDelegates
-             <*> QC.elements availablePools
+    QC.oneof
+    [ if null availableDelegates
+      then pure Nothing
+      else mkCert <$> QC.elements availableDelegates
+                  <*> QC.elements availablePools
+    , if null availableDelegatesScripts
+      then pure Nothing
+      else mkCertFromScript <$> QC.elements availableDelegatesScripts
+                            <*> QC.elements availablePools
+    ]
   where
     mkCert (_, delegatorKey) poolKey = Just (cert, KeyCred delegatorKey)
       where
         cert = DCertDeleg (Delegate (Delegation (toCred delegatorKey) poolKey))
+    mkCertFromScript (s, delegatorScript) poolKey =
+      Just (scriptCert, ScriptCred (s, delegatorScript))
+      where
+        scriptCert =
+          DCertDeleg (Delegate (Delegation (scriptToCred delegatorScript) poolKey))
 
     registeredDelegate k = k ∈ dom (_stkCreds (_dstate dpState))
     availableDelegates = filter (registeredDelegate . toCred . snd) keys
+    availableDelegatesScripts =
+      filter (registeredDelegate . scriptToCred . snd) scripts
 
     (StakePools registeredPools) = _stPools (_pstate dpState)
     availablePools = Map.keys registeredPools
