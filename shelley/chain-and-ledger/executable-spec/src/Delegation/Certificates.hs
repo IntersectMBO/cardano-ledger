@@ -18,10 +18,6 @@ module Delegation.Certificates
   , genesisCWitness
   , dvalue
   , refund
-  , releasing
-  , allocating
-  , dretire
-  , dderegister
   , decayKey
   , decayPool
   , isRegKey
@@ -80,26 +76,6 @@ refund (Coin dval) dmin lambda delta = floor refund'
     refund' = fromIntegral dval * (dmin' + (1 - dmin') * dCay)
     dmin'   = intervalValue dmin
     dCay    = approxRational (exp' pow) fpEpsilon
-
--- | Check whether certificate is of releasing type, i.e., key deregistration or
--- pool retirement.
-releasing :: DCert crypto-> Bool
-releasing c = dderegister c || dretire c
-
-dderegister :: DCert crypto-> Bool
-dderegister (DCertDeleg (DeRegKey _)) = True
-dderegister _            = False
-
-dretire :: DCert crypto-> Bool
-dretire (DCertPool (RetirePool _ _)) = True
-dretire _                = False
-
--- | Check whether certificate is of allocating type, i.e, key or pool
--- registration.
-allocating :: DCert crypto-> Bool
-allocating (DCertDeleg _)  = True
-allocating (DCertPool _) = True
-allocating _           = False
 
 -- | Check for `RegKey` constructor
 isRegKey :: DCert crypto-> Bool
