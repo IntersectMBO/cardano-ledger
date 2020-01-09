@@ -33,19 +33,20 @@ module EpochBoundary
   , (⊎)
   ) where
 
-import           Coin (Coin (..))
+--import           Coin (Coin (..))
 import           Delegation.Certificates (StakeCreds (..), StakePools (..), decayKey, decayPool,
                      refund)
 import           Keys (KeyHash)
 import           PParams (PParams (..))
 import           Slot (SlotNo, (-*))
-import           TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt, TxOut (..), getRwdCred)
+import           TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt, TxOut (..),
+                  addr, value, getRwdCred)
 import           UTxO (UTxO (..))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Data.Map.Strict (Map)
+import           Data.Map.Strict (Map, empty)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Ratio ((%))
@@ -57,12 +58,14 @@ import           Numeric.Natural (Natural)
 
 import           Ledger.Core (dom, (▷), (◁))
 
+import           Scripts
+
 -- | Blocks made
 newtype BlocksMade crypto
   = BlocksMade (Map (KeyHash crypto) Natural)
   deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
--- | Type of stake as map from hash key to coins associated.
+-- | Type of stake as map from hash key to values associated.
 newtype Stake crypto
   = Stake (Map (Credential crypto) Coin)
   deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
@@ -79,20 +82,20 @@ getStakeHK :: Addr crypto -> Maybe (Credential crypto)
 getStakeHK (AddrBase _ hk) = Just hk
 getStakeHK _               = Nothing
 
-aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
+aggregateOuts :: UTxO crypto -> Map (Addr crypto) (Value crypto)
 aggregateOuts (UTxO u) =
-  Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
+  Map.fromListWith (+) (map (\(_, txout) -> (_addr txout, _value txout)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
 baseStake
-  :: Map (Addr crypto) Coin
-  -> [(Credential crypto, Coin)]
+  :: Map (Addr crypto) (Value crypto)
+  -> [(Credential crypto, Value crypto)]
 baseStake vals =
   mapMaybe convert $ Map.toList vals
   where
    convert
-     :: (Addr crypto, Coin)
-     -> Maybe (Credential crypto, Coin)
+     :: (Addr crypto, Value crypto)
+     -> Maybe (Credential crypto, Value crypto)
    convert (a, c) =
      (,c) <$> getStakeHK a
 
@@ -104,15 +107,15 @@ getStakePtr _               = Nothing
 -- | Calculate stake of pointer addresses in TxOut set.
 ptrStake
   :: forall crypto
-   . Map (Addr crypto) Coin
+   . Map (Addr crypto) (Value crypto)
   -> Map Ptr (Credential crypto)
-  -> [(Credential crypto, Coin)]
+  -> [(Credential crypto, Value crypto)]
 ptrStake vals pointers =
   mapMaybe convert $ Map.toList vals
   where
     convert
-      :: (Addr crypto, Coin)
-      -> Maybe (Credential crypto, Coin)
+      :: (Addr crypto, Value crypto)
+      -> Maybe (Credential crypto, Value crypto)
     convert (a, c) =
       case getStakePtr a of
         Nothing -> Nothing
@@ -120,8 +123,8 @@ ptrStake vals pointers =
 
 rewardStake
   :: forall crypto
-   . Map (RewardAcnt crypto) Coin
-  -> [(Credential crypto, Coin)]
+   . Map (RewardAcnt crypto) (Value crypto)
+  -> [(Credential crypto, Value crypto)]
 rewardStake rewards =
   map convert $ Map.toList rewards
   where
@@ -138,10 +141,10 @@ poolStake hk delegs (Stake stake) =
 
 -- | Calculate pool refunds
 poolRefunds
-  :: PParams
+  :: PParams crypto
   -> Map (KeyHash crypto) SlotNo
   -> SlotNo
-  -> Map (KeyHash crypto) Coin
+  -> Map (KeyHash crypto) (Value crypto)
 poolRefunds pp retirees cslot =
   Map.map
     (\s ->
@@ -152,11 +155,11 @@ poolRefunds pp retirees cslot =
 
 -- | Calculate total possible refunds.
 obligation
-  :: PParams
+  :: PParams crypto
   -> StakeCreds crypto
   -> StakePools crypto
   -> SlotNo
-  -> Coin
+  -> (Value crypto)
 obligation pc (StakeCreds stakeKeys) (StakePools stakePools) cslot =
   sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
   sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
@@ -165,8 +168,8 @@ obligation pc (StakeCreds stakeKeys) (StakePools stakePools) cslot =
     (pval, pmin, lambdap) = decayPool pc
 
 -- | Calculate maximal pool reward
-maxPool :: PParams -> Coin -> Rational -> Rational -> Coin
-maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
+maxPool :: (PParams crypto) -> (Value crypto) -> Rational -> Rational -> (Value crypto)
+maxPool pc (Value r) sigma pR = floor $ factor1 * factor2
   where
     a0 = _a0 pc
     nOpt = _nOpt pc
@@ -180,11 +183,11 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
 
 -- | Pool individual reward
 groupByPool
-  :: Map (KeyHash crypto) Coin
+  :: Map (KeyHash crypto) (Value crypto)
   -> Map (KeyHash crypto) (KeyHash crypto)
   -> Map
        (KeyHash crypto)
-       (Map (KeyHash crypto) Coin)
+       (Map (KeyHash crypto) (Value crypto))
 groupByPool active delegs =
   Map.fromListWith
     Map.union
@@ -209,7 +212,7 @@ data SnapShots crypto
          )
     , _poolsSS
       :: Map (KeyHash crypto) (PoolParams crypto)
-    , _feeSS :: Coin
+    , _feeSS :: Value crypto
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShots crypto)
@@ -243,7 +246,7 @@ makeLenses ''SnapShots
 
 emptySnapShots :: SnapShots crypto
 emptySnapShots =
-    SnapShots snapEmpty snapEmpty snapEmpty Map.empty (Coin 0)
+    SnapShots snapEmpty snapEmpty snapEmpty Map.empty (Value empty)
     where pooledEmpty = Map.empty
           stakeEmpty  = Stake Map.empty
           snapEmpty   = (stakeEmpty, pooledEmpty)

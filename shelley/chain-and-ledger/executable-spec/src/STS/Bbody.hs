@@ -33,6 +33,7 @@ import           PParams
 import           Slot
 import           STS.Ledgers
 import           Tx
+import           Scripts
 
 data BBODY crypto
 
@@ -40,11 +41,11 @@ data BbodyState crypto
   = BbodyState (LedgerState crypto) (BlocksMade crypto)
   deriving (Eq, Show)
 
-data BbodyEnv
+data BbodyEnv crypto
   = BbodyEnv
     { bbodySlots    :: (Set SlotNo)
-    , bbodyPp       :: PParams
-    , bbodyReserves :: Coin
+    , bbodyPp       :: PParams crypto
+    , bbodyReserves :: Value crypto
     }
 
 instance

@@ -10,7 +10,7 @@ module Tx
   , TxOut(..)
   , TxIn(..)
   , TxId(..)
-  , Value(..)
+  , Value
   , makeAdaValue
   , txUpdate
   , txinputs
@@ -43,8 +43,8 @@ import           Cardano.Binary (ToCBOR (toCBOR), encodeWord8)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Ledger.Shelley.Crypto
 import qualified Data.List as List (concat, concatMap, permutations)
-import           Data.Map.Strict (Map)
-import           Data.Map (singleton)
+import           Data.Map.Strict (Map, singleton)
+--import           Data.Map (singleton)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set, filter)
 import qualified Data.Set as Set
@@ -62,7 +62,7 @@ import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeC
                      witnessVKeySet, txlst, forged, txexunits, hashPP, txvlds, txdats,
                      txvaltag)
 import           Scripts
-import           Value
+import           CostModel
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -227,3 +227,9 @@ txinputs_vf tx =  getrefs $ Data.Set.filter inputisfee (_txinputs (_body tx))
 addrTxOut :: TxOut crypto -> Addr crypto
 addrTxOut (TxOutVK  a _  ) = a
 addrTxOut (TxOutScr a _ _) = a
+
+
+-- | temporary validator always returns true and same amount of resources
+valPLCupTo :: CostMod -> ScriptPLC crypto -> ([Data crypto], ExUnits)
+  -> (IsValidating, ExUnits)
+valPLCupTo _ _ _ = (IsValidating Yes, (PLCUnits (ExUnitsPLC 0 0)))

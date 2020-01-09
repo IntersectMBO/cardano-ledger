@@ -102,7 +102,7 @@ import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Coin (Coin (..))
+--import           Coin (Coin (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)

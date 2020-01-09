@@ -51,7 +51,7 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 
 import           BaseTypes (Nonce, UnitInterval)
-import           Coin (Coin)
+-- import           Coin (Coin)
 import           Keys (GenDelegs, GenKeyHash)
 import           PParams (PParams (..))
 import           Slot (EpochNo (..), SlotNo)
@@ -59,7 +59,7 @@ import           Slot (EpochNo (..), SlotNo)
 import           Numeric.Natural (Natural)
 
 import           Ledger.Core (dom, range, (◁))
-import           Value
+import           Scripts
 
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)

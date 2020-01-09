@@ -25,7 +25,7 @@ import           Lens.Micro.TH (makeLenses)
 
 import           Data.Foldable (foldMap)
 import qualified Data.Map as DM
-import           Data.Map.Strict (Map)
+import           Data.Map.Strict (Map, empty)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
 import           Data.Sequence (Seq)
@@ -38,7 +38,6 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (CborSeq (..), UnitInterval, invalidKey)
-import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey, hash)
 import           Ledger.Core (Relation (..))
@@ -47,7 +46,6 @@ import           Updates (Update, emptyUpdate, updateNull)
 
 import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
 import           Scripts
-import           Value
 import           CostModel
 import           PParams (PlutusPP)
 =======
@@ -277,7 +275,7 @@ newtype GenesisDelegate crypto = GenesisDelegate (GenKeyHash crypto, KeyHash cry
   deriving (Show, Generic, Eq)
 
 -- | Move instantaneous rewards certificate
-newtype MIRCert crypto = MIRCert (Map (Credential crypto) Coin)
+newtype MIRCert crypto = MIRCert (Map (Credential crypto) (Value crypto))
   deriving (Show, Generic, Eq)
 
 -- | A heavyweight certificate.
@@ -295,7 +293,7 @@ instance NoUnexpectedThunks (MIRCert crypto)
 instance NoUnexpectedThunks (DCert crypto)
 
 -- | Hash of protocol parameters relevant to Plutus evaluation
-newtype HashPP crypto = HashPP (Hash (HASH crypto) PlutusPP)
+newtype HashPP crypto = HashPP (Hash (HASH crypto) (PlutusPP crypto))
   deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord)
 
 deriving instance Crypto crypto => ToCBOR (HashPP crypto)
@@ -313,7 +311,7 @@ data TxBody crypto
       , _txlst    :: SlotNo
       , _forged   :: Value crypto
       , _txexunits:: ExUnits
-      , _hashPP   :: Maybe (Hash (HASH crypto) PlutusPP)
+      , _hashPP   :: Maybe (Hash (HASH crypto) (PlutusPP crypto))
       } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (TxBody crypto)
@@ -372,52 +370,7 @@ newtype StakePools crypto =
 
 -- CBOR
 
--- | TODO make this a proper function
--- toValue :: Word8 -> Value crypto
--- toValue _ = Value DM.empty
 
--- instance
---   (Crypto crypto)
---   => ToCBOR (ScrInData crypto)
---  where
---   toCBOR = \case
---     NoDtRdmr vd ->
---       encodeListLen 2
---         <> toCBOR (0 :: Word8)
---         <> toCBOR vd
---
---     VldDrRdm vd dv rd ->
---       encodeListLen 4
---         <> toCBOR (1 :: Word8)
---         <> toCBOR vd
---         <> toCBOR dv
---         <> toCBOR rd
-
-instance ToCBOR ExUnits
- where
-   toCBOR = \case
-     PLCUnits exu ->
-       encodeListLen 1
-        <> toCBOR exu
-
-     MSIGUnits exu ->
-       encodeListLen 1
-        <> toCBOR exu
-
-instance FromCBOR ExUnits
- where
-   fromCBOR = do
-     n <- decodeListLen
-     decodeWord >>= \case
-       0 -> do
-         matchSize "PLCUnits" 1 n
-         a <- fromCBOR
-         pure $ PLCUnits a
-       1 -> do
-         matchSize "MSIGUnits" 1 n
-         a <- fromCBOR
-         pure $ MSIGUnits a
-       k -> invalidKey k
 
 instance
   (Crypto crypto)
@@ -469,21 +422,6 @@ instance (Crypto crypto) =>
       pure $ ScriptHashPLC a
     k -> invalidKey k
 
-
-instance
-  (Crypto crypto)
-  => ToCBOR (ScriptHash crypto)
- where
-  toCBOR = \case
-    ScriptHashMSig hs ->
-      encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR hs
-
-    ScriptHashPLC hs ->
-      encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR hs
 
 instance
   (Crypto crypto)
@@ -597,17 +535,7 @@ instance (Crypto crypto) =>
     (b :: Word64) <- fromCBOR
     pure $ TxIn a (fromInteger $ toInteger b)
 
--- instance
---   ToCBOR IsThing
---  where
---   toCBOR = \case
---     Yes ->
---       encodeListLen 1
---        <> toCBOR True
---
---     Nope ->
---       encodeListLen 1
---        <> toCBOR False
+
 
 instance
   (Typeable crypto, Crypto crypto)
@@ -615,12 +543,14 @@ instance
  where
   toCBOR = \case
     TxInVK txin isfee ->
-      encodeListLen 2
+      encodeListLen 3
+       <> toCBOR (0 :: Word8)
        <> toCBOR txin
        <> toCBOR isfee
 
     TxInScr txin dh ->
-      encodeListLen 2
+      encodeListLen 3
+       <> toCBOR (1 :: Word8)
        <> toCBOR txin
        <> toCBOR dh
 
@@ -630,12 +560,12 @@ instance (Crypto crypto) =>
     n <- decodeListLen
     decodeWord >>= \case
       0 -> do
-        matchSize "TxInVK" 3 n
+        matchSize "TxInVK" 2 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ TxInVK a b
       1 -> do
-        matchSize "TxInScr" 3 n
+        matchSize "TxInScr" 2 n
         a <- fromCBOR
         (b ) <- fromCBOR
         pure $ TxInScr a (DataHash b)
@@ -648,12 +578,12 @@ instance (Crypto crypto) =>
     n <- decodeListLen
     decodeWord >>= \case
       0 -> do
-        matchSize "TxOutVK" 3 n
+        matchSize "TxOutVK" 2 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ TxOutVK a b
       1 -> do
-        matchSize "TxOutVK" 4 n
+        matchSize "TxOutVK" 3 n
         a <- fromCBOR
         (b ) <- fromCBOR
         (c ) <- fromCBOR
@@ -693,36 +623,10 @@ instance
 
 instance
   (Crypto crypto)
-  => ToCBOR (Script crypto)
- where
-  toCBOR = \case
-    MSig ms ->
-      encodeListLen 1
-       <> toCBOR ms
-
-    SPLC plc ->
-      encodeListLen 1
-       <> toCBOR plc
-
-instance
-  Crypto crypto
-  => FromCBOR (Script crypto)
- where
-  fromCBOR = enforceSize "Script" 2  >> decodeWord >>= \case
-    0 -> do
-      a <- fromCBOR
-      pure $ MSig a
-    1 -> do
-      a <- fromCBOR
-      pure $ SPLC a
-    k -> invalidKey k
-
-instance
-  (Crypto crypto)
   => ToCBOR (Tx crypto)
  where
   toCBOR tx =
-    encodeListLen 3
+    encodeListLen 2
       <> toCBOR (_body tx)
       <> toCBOR (_unsignedData tx)
 
@@ -731,7 +635,7 @@ instance
   => ToCBOR (UnsignedData crypto)
  where
   toCBOR ud =
-    encodeListLen 5
+    encodeListLen 4
       <> toCBOR (_witnessVKeySet ud)
       <> toCBOR (_txvlds ud)
       <> toCBOR (_txdats ud)
@@ -825,17 +729,18 @@ instance
        basebody = TxBody
           { _txinputs   = Set.empty
           , _outputs   = []
-          , _txfee     = Value DM.empty
+          , _txfee     = Value empty
           , _ttl       = SlotNo 0
           , _certs     = Seq.empty
           , _wdrls     = Map.empty
           , _txUpdate  = emptyUpdate
           , _txlst     = SlotNo 0
-          , _forged    = Value DM.empty
+          , _forged    = Value empty
           , _txexunits = PLCUnits (ExUnitsPLC 0 0)
           , _hashPP    = Just $ hash emptyPlutusPP
           }
 
+<<<<<<< HEAD
 instance (Crypto crypto) =>
 
 -- encodeListLen 6
@@ -870,6 +775,8 @@ instance (Crypto crypto) =>
         msigs <- fromCBOR
         pure $ RequireMOf m msigs
       k -> invalidKey k
+=======
+>>>>>>> UTxO loads
 
 
 instance (Typeable crypto, Crypto crypto)

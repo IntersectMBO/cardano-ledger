@@ -42,13 +42,14 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enfo
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
-import           Data.Map
+import           Data.Map.Strict
+import           Cardano.Ledger.Shelley.Crypto
 
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
-import           Coin (Coin (..))
+-- import           Coin (Coin (..))
 import           CostModel
 import           Slot (EpochNo (..))
-import           Value
+import           Scripts
 
 import           Lens.Micro.TH (makeLenses)
 import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
@@ -61,7 +62,7 @@ type PlutusVer = (Natural, Natural, Natural)
 
 
 -- | Plutus-specific parameter set
-data PlutusPP = PlutusPP
+data (PlutusPP crypto) = PlutusPP
   { -- | the most recent supported version of the Plutus interpreter
     _maxPlutusVer    :: PlutusVer
     -- | the oldest Plutus version scripts that we allow paying to
@@ -73,10 +74,10 @@ data PlutusPP = PlutusPP
     -- | Coefficients for conversion of resource primitives into abstract resource units
   , _costm            :: CostMod
     -- | Prices of abstract resource units
-  , _prices           :: Prices
+  , _prices           :: Prices crypto
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks PlutusPP
+instance NoUnexpectedThunks (PlutusPP crypto)
 
 -- | Protocol parameters
 data PParams crypto = PParams
@@ -208,7 +209,7 @@ makeLenses ''PParams
 makeLenses ''PlutusPP
 
 -- | Returns a basic "empty" `PlutusPP` structure with all zero values.
-emptyPlutusPP :: PlutusPP
+emptyPlutusPP :: PlutusPP crypto
 emptyPlutusPP =
      PlutusPP {
        _minPlutusVer = (0, 0, 0)
@@ -250,10 +251,11 @@ emptyPParams =
 -- CBOR
 
 instance
-  ToCBOR PlutusPP
+  (Crypto crypto)
+  => ToCBOR (PlutusPP crypto)
   where
     toCBOR plpp =
-      encodeListLen 7
+      encodeListLen 6
         <> toCBOR (_maxPlutusVer plpp)
         <> toCBOR (_minPlutusVer plpp)
         <> toCBOR (_maxTxExUnits plpp)
@@ -262,7 +264,8 @@ instance
         <> toCBOR (_prices plpp)
 
 instance
-  FromCBOR PlutusPP
+  (Crypto crypto)
+  => FromCBOR (PlutusPP crypto)
   where
     fromCBOR = do
       a <- fromCBOR

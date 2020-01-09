@@ -44,17 +44,22 @@ import           Lens.Micro ((^.))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Foldable (toList)
-import           Data.Map.Strict (Map)
-import           Data.Map (empty, elems)
+import           Data.Map.Strict (Map, empty, elems)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Cardano.Ledger.Shelley.Crypto
+<<<<<<< HEAD
 import           Coin (Coin (..))
 import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, hash, sKey, sign, vKey,
                      verify)
+=======
+--import           Coin (Coin (..))
+import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, hash, hashAnyKey, sKey,
+                     sign, vKey, verify)
+>>>>>>> UTxO loads
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 -- import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
@@ -72,7 +77,6 @@ import           Tx (addrTxOut, getrefs, makeAdaValue)
 import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)
 
 import           Scripts
-import           Value
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto

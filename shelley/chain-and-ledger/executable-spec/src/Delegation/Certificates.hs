@@ -33,7 +33,7 @@ module Delegation.Certificates
 import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Ledger.Shelley.Crypto
-import           Coin (Coin (..))
+--import           Coin (Coin (..))
 import           Keys (GenKeyHash, Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
 import           Ledger.Core (Relation (..))
 import           NonIntegral (exp')
@@ -50,8 +50,8 @@ import           Data.Map (empty, map)
 import           Data.Ratio (approxRational)
 
 import           Lens.Micro ((^.))
-import           Value
-import           Tx (makeAdaValue)
+import           Scripts
+--import           Tx (makeAdaValue)
 
 -- |Determine the certificate author
 delegCWitness :: DelegCert crypto-> Credential crypto
