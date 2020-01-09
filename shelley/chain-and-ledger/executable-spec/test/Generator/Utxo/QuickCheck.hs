@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -12,6 +13,7 @@ module Generator.Utxo.QuickCheck
 
 import qualified Data.Either as Either (lefts, rights)
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -25,7 +27,7 @@ import           ConcreteCryptoTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair
                      MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
                      VrfKeyPairs)
 import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural, toAddr)
-import           Generator.Delegation.QuickCheck (genDCerts)
+import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
 import           LedgerState (pattern UTxOState)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
@@ -63,11 +65,24 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
   -- certificates
-  (certs, certWitnesses, genesisWitnesses, stakeScripts, deposits_, refunds_)
+  --(certs, certWitnesses, genesisWitnesses, stakeScripts, deposits_, refunds_)
+  (certs, certCreds, deposits_, refunds_)
     <- genDCerts keys' scripts' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   let balance_ = spendingBalance - deposits_ + refunds_
+      stakeScripts = Maybe.catMaybes $ map (\case
+                                               ScriptCred c -> Just c
+                                               _            -> Nothing) certCreds
+      genesisWitnesses = foldl (++) [] $
+        Maybe.catMaybes $
+        map (\case
+                CoreKeyCred c -> Just c
+                _             -> Nothing) certCreds
+      certWitnesses = Maybe.catMaybes $ map (\case
+                                                KeyCred c -> Just c
+                                                _         -> Nothing) certCreds
+
 
   -- calc. fees and output amounts
   let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
@@ -76,7 +91,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
   let multiSig = Map.fromList $
         (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
-        (map (\sScript -> (hashScript sScript, sScript)) stakeScripts)
+        (map (\(_, sScript) -> (hashScript sScript, sScript)) stakeScripts)
 
   -- choose any possible combination of keys for multi-sig scripts
   keysLists <- mapM QC.elements (map getKeyCombinations $ Map.elems multiSig)

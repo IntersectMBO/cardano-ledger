@@ -7,7 +7,8 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Generator.Delegation.QuickCheck
-  ( genDCerts )
+  ( genDCerts
+  , CertCred (..))
   where
 import           Data.Foldable (find)
 import qualified Data.Map as Map
@@ -60,7 +61,7 @@ genDCerts
   -> DPState
   -> SlotNo
   -> Natural
-  -> Gen (Seq DCert, [KeyPair], [CoreKeyPair], [MultiSig], Coin, Coin)
+  -> Gen (Seq DCert, [CertCred], Coin, Coin)
 genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
@@ -70,7 +71,7 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
   cert <- genDCert keys scripts coreKeys vrfKeys pparams dpState slot
   case cert of
     Nothing ->
-      return (Seq.empty, [], [], [], Coin 0, Coin 0)
+      return (Seq.empty, [], Coin 0, Coin 0)
     Just (cert_, witnessOrCoreKeys) -> do
       let certs = [cert_]
           deposits_ = totalDeposits pparams (_stPools (_pstate dpState)) certs
@@ -88,11 +89,6 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
           refunds_ = sum (rewardForCred <$> deRegStakeCreds)
 
       case witnessOrCoreKeys of
-        KeyCred witKey -> do
-          let witKeys = [witKey]
-          return (Seq.fromList certs, witKeys, [], [], deposits_, refunds_)
-        CoreKeyCred coreSignKeys ->
-          pure (Seq.fromList certs, [], coreSignKeys, [], deposits_, refunds_)
         ScriptCred (_, stakeScript) -> do
           witnessHashes <- QC.elements (getKeyCombinations stakeScript)
           let witnessHashSet = Set.fromList witnessHashes
@@ -100,13 +96,14 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
                 filter (\k -> (hashAnyKey $ vKey k) `Set.member` witnessHashSet)
                 (map snd keys)
           pure ( Seq.fromList certs
-               , witnesses
-               , []
-               , (case cert_ of
+               , (map KeyCred witnesses) ++
+                 (case cert_ of
                     DCertDeleg (RegKey _) -> []
-                    _        -> [stakeScript])
+                    _        -> [witnessOrCoreKeys])
                , deposits_
                , refunds_)
+        _ -> return (Seq.fromList certs, [witnessOrCoreKeys], deposits_, refunds_)
+
 
 -- | Occasionally generate a valid certificate
 --
