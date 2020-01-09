@@ -18,22 +18,32 @@ import           Updates
 shrinkTx
   :: Tx crypto
   -> [Tx crypto]
-shrinkTx (Tx _b _ws _wm) = []
+shrinkTx (Tx _b _ws _wm) =
+  [ Tx b' _ws _wm | b' <- shrinkTxBody _b ]
   {- TODO @uroboros write shrinker that shrinks to valid transactions
-  [ Tx b' ws wm | b' <- shrinkTxBody b ] ++
   [ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++
   [ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
   -}
 
 shrinkTxBody :: TxBody crypto -> [TxBody crypto]
 shrinkTxBody (TxBody is os cs ws tf tl tu) =
-  [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
-  [ TxBody is os' cs ws tf tl tu | os' <- shrinkList shrinkTxOut os ] ++
-  [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
-  [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
-  [ TxBody is os cs ws tf' tl tu | tf' <- shrinkCoin tf ] ++
-  [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
-  [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
+  -- shrinking inputs is probably not very beneficial
+  -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
+
+  -- Shrink outputs, add the differing balance of the original and new outputs
+  -- to the fees in order to preserve the invariant
+  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu |
+    os' <- shrinkList shrinkTxOut os ]
+
+  -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
+  -- [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
+  -- [ TxBody is os cs ws tf' tl tu | tf' <- shrinkCoin tf ] ++
+  -- [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
+  -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
+  where outBalance = outputBalance os
+
+outputBalance :: [TxOut crypto] -> Coin
+outputBalance = foldl (\v (TxOut _ c) -> v + c) (Coin 0)
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
 shrinkTxIn = const []
