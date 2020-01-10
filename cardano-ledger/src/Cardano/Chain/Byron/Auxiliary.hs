@@ -47,8 +47,6 @@ module Cardano.Chain.Byron.Auxiliary (
   , abobMatchesBody
   ) where
 
-import           Prelude (String)
-
 import           Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
@@ -62,7 +60,6 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Either (isRight)
 import qualified Data.Foldable as Foldable
-import           Data.List (intercalate)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
@@ -130,15 +127,15 @@ getScheduledDelegations =
 
 setUTxO :: Utxo.UTxO
         -> CC.ChainValidationState -> CC.ChainValidationState
-setUTxO newUTxO state = state { CC.cvsUtxo = newUTxO }
+setUTxO newUTxO cvs = cvs { CC.cvsUtxo = newUTxO }
 
 setDelegationState :: D.Iface.State
                    -> CC.ChainValidationState -> CC.ChainValidationState
-setDelegationState newDlg state = state { CC.cvsDelegationState = newDlg }
+setDelegationState newDlg cvs = cvs { CC.cvsDelegationState = newDlg }
 
 setUpdateState :: U.Iface.State
                -> CC.ChainValidationState -> CC.ChainValidationState
-setUpdateState newUpdate state = state { CC.cvsUpdateState = newUpdate }
+setUpdateState newUpdate cvs = cvs { CC.cvsUpdateState = newUpdate }
 
 {-------------------------------------------------------------------------------
   Tick the delegation state
@@ -182,7 +179,7 @@ tickDelegation epochSlots currentSlot is =
 mkEpochEnvironment :: Gen.Config
                    -> CC.ChainValidationState
                    -> CC.EpochEnvironment
-mkEpochEnvironment cfg state = CC.EpochEnvironment {
+mkEpochEnvironment cfg cvs = CC.EpochEnvironment {
       CC.protocolMagic     = reAnnotateMagicId $
                                Gen.configProtocolMagicId cfg
     , CC.k                 = Gen.configK cfg
@@ -193,17 +190,17 @@ mkEpochEnvironment cfg state = CC.EpochEnvironment {
       -- the new epoch indeed is after the old.
     , CC.currentEpoch      = CC.slotNumberEpoch
                                (Gen.configEpochSlots cfg)
-                               (CC.cvsLastSlot state)
+                               (CC.cvsLastSlot cvs)
     }
   where
     delegationMap :: Delegation.Map
-    delegationMap = D.Iface.delegationMap $ CC.cvsDelegationState state
+    delegationMap = D.Iface.delegationMap $ CC.cvsDelegationState cvs
 
 mkBodyState :: CC.ChainValidationState -> CC.BodyState
-mkBodyState state = CC.BodyState {
-      CC.utxo            = CC.cvsUtxo            state
-    , CC.updateState     = CC.cvsUpdateState     state
-    , CC.delegationState = CC.cvsDelegationState state
+mkBodyState cvs = CC.BodyState {
+      CC.utxo            = CC.cvsUtxo            cvs
+    , CC.updateState     = CC.cvsUpdateState     cvs
+    , CC.delegationState = CC.cvsDelegationState cvs
     }
 
 -- TODO: Unlike 'mkEpochEnvironment' and 'mkDelegationEnvironment', for the
@@ -248,16 +245,16 @@ applyChainTick :: Gen.Config
                -> CC.SlotNumber
                -> CC.ChainValidationState
                -> CC.ChainValidationState
-applyChainTick cfg slotNo state = state {
+applyChainTick cfg slotNo cvs = cvs {
       CC.cvsLastSlot        = slotNo
     , CC.cvsUpdateState     = CC.epochTransition
-                                (mkEpochEnvironment cfg state)
-                                (CC.cvsUpdateState state)
+                                (mkEpochEnvironment cfg cvs)
+                                (CC.cvsUpdateState cvs)
                                 slotNo
     , CC.cvsDelegationState = tickDelegation
                                 (Gen.configEpochSlots cfg)
                                 slotNo
-                                (CC.cvsDelegationState state)
+                                (CC.cvsDelegationState cvs)
     }
 
 -- | Validate header
@@ -285,7 +282,7 @@ validateBlock :: MonadError CC.ChainValidationError m
               -> CC.ABlock ByteString
               -> CC.HeaderHash
               -> CC.ChainValidationState -> m CC.ChainValidationState
-validateBlock cfg validationMode block blkHash state = do
+validateBlock cfg validationMode block blkHash cvs = do
 
     -- TODO: How come this check isn't done in 'updateBlock'
     -- (but it /is/ done in 'updateChainBoundary')?
@@ -293,7 +290,7 @@ validateBlock cfg validationMode block blkHash state = do
     -- TODO: It could be argued that hash checking isn't part of consensus /or/
     -- the ledger. If we take that point of view serious, we should think about
     -- what that third thing is precisely and what its responsibilities are.
-    case ( CC.cvsPreviousHash state
+    case ( CC.cvsPreviousHash cvs
          , unAnnotated $ CC.aHeaderPrevHash (CC.blockHeader block)
          ) of
       (Left gh, hh) ->
@@ -304,7 +301,7 @@ validateBlock cfg validationMode block blkHash state = do
 
     validateHeader validationMode updState (CC.blockHeader block)
     bodyState' <- validateBody validationMode block bodyEnv bodyState
-    return state {
+    return cvs {
           CC.cvsLastSlot        = CC.blockSlot block
         , CC.cvsPreviousHash    = Right blkHash
         , CC.cvsUtxo            = CC.utxo            bodyState'
@@ -312,12 +309,12 @@ validateBlock cfg validationMode block blkHash state = do
         , CC.cvsDelegationState = CC.delegationState bodyState'
         }
   where
-    updState  = CC.cvsUpdateState state
+    updState  = CC.cvsUpdateState cvs
     bodyEnv   = mkBodyEnvironment
                   cfg
-                  (getProtocolParams state)
+                  (getProtocolParams cvs)
                   (CC.blockSlot block)
-    bodyState = mkBodyState state
+    bodyState = mkBodyState cvs
 
 -- | Apply a boundary block
 --
@@ -326,13 +323,13 @@ validateBoundary :: MonadError CC.ChainValidationError m
                  => Gen.Config
                  -> CC.ABoundaryBlock ByteString
                  -> CC.ChainValidationState -> m CC.ChainValidationState
-validateBoundary cfg blk state = do
+validateBoundary cfg blk cvs = do
     -- TODO: Unfortunately, 'updateChainBoundary' doesn't take a hash as an
     -- argument but recomputes it.
-    state' <- CC.updateChainBoundary state blk
+    cvs' <- CC.updateChainBoundary cvs blk
     -- TODO: For some reason 'updateChainBoundary' does not set the slot when
     -- applying an EBB, so we do it here. Could that cause problems??
-    return state' {
+    return cvs' {
         CC.cvsLastSlot = boundaryBlockSlot epochSlots (CC.boundaryEpoch hdr)
       }
   where
@@ -359,19 +356,19 @@ applyScheduledDelegations update (Delegation.Map del) =
 mkUtxoEnvironment :: Gen.Config
                   -> CC.ChainValidationState
                   -> Utxo.Environment
-mkUtxoEnvironment cfg state = Utxo.Environment {
+mkUtxoEnvironment cfg cvs = Utxo.Environment {
       Utxo.protocolMagic      = protocolMagic
     , Utxo.protocolParameters = U.Iface.adoptedProtocolParameters updateState
     , Utxo.utxoConfiguration  = Gen.configUTxOConfiguration cfg
     }
   where
     protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
-    updateState   = CC.cvsUpdateState state
+    updateState   = CC.cvsUpdateState cvs
 
 mkDelegationEnvironment :: Gen.Config
                         -> CC.ChainValidationState
                         -> D.Iface.Environment
-mkDelegationEnvironment cfg state = D.Iface.Environment {
+mkDelegationEnvironment cfg cvs = D.Iface.Environment {
       D.Iface.protocolMagic     = getAProtocolMagicId protocolMagic
     , D.Iface.allowedDelegators = allowedDelegators cfg
     , D.Iface.k                 = k
@@ -387,13 +384,13 @@ mkDelegationEnvironment cfg state = D.Iface.Environment {
   where
     k             = Gen.configK cfg
     protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
-    currentSlot   = CC.cvsLastSlot state
+    currentSlot   = CC.cvsLastSlot cvs
     currentEpoch  = CC.slotNumberEpoch (Gen.configEpochSlots cfg) currentSlot
 
 mkUpdateEnvironment :: Gen.Config
                     -> CC.ChainValidationState
                     -> U.Iface.Environment
-mkUpdateEnvironment cfg state = U.Iface.Environment {
+mkUpdateEnvironment cfg cvs = U.Iface.Environment {
       U.Iface.protocolMagic = getAProtocolMagicId protocolMagic
     , U.Iface.k             = k
     , U.Iface.currentSlot   = currentSlot
@@ -403,9 +400,9 @@ mkUpdateEnvironment cfg state = U.Iface.Environment {
   where
     k             = Gen.configK cfg
     protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
-    currentSlot   = CC.cvsLastSlot state
+    currentSlot   = CC.cvsLastSlot cvs
     numGenKeys    = toNumGenKeys $ Set.size (allowedDelegators cfg)
-    delegationMap = getDelegationMap state
+    delegationMap = getDelegationMap cvs
 
     -- TODO: This function comes straight from cardano-ledger, which however
     -- does not export it. We should either export it, or -- preferably -- when
@@ -422,46 +419,46 @@ applyTxAux :: MonadError Utxo.UTxOValidationError m
            -> Gen.Config
            -> [Utxo.ATxAux ByteString]
            -> CC.ChainValidationState -> m CC.ChainValidationState
-applyTxAux validationMode cfg txs state =
+applyTxAux validationMode cfg txs cvs =
     flip runReaderT validationMode $
-      (`setUTxO` state) <$>
+      (`setUTxO` cvs) <$>
         Utxo.updateUTxO utxoEnv utxo txs
   where
-    utxoEnv = mkUtxoEnvironment cfg state
-    utxo    = CC.cvsUtxo state
+    utxoEnv = mkUtxoEnvironment cfg cvs
+    utxo    = CC.cvsUtxo cvs
 
 applyCertificate :: MonadError D.Sched.Error m
                  => Gen.Config
                  -> [Delegation.ACertificate ByteString]
                  -> CC.ChainValidationState -> m CC.ChainValidationState
-applyCertificate cfg certs state =
-    (`setDelegationState` state) <$>
+applyCertificate cfg certs cvs =
+    (`setDelegationState` cvs) <$>
       D.Iface.updateDelegation dlgEnv dlgState certs
   where
-    dlgEnv   = mkDelegationEnvironment cfg state
-    dlgState = CC.cvsDelegationState state
+    dlgEnv   = mkDelegationEnvironment cfg cvs
+    dlgState = CC.cvsDelegationState cvs
 
 applyUpdateProposal :: MonadError U.Iface.Error m
                     => Gen.Config
                     -> Update.AProposal ByteString
                     -> CC.ChainValidationState -> m CC.ChainValidationState
-applyUpdateProposal cfg proposal state =
-    (`setUpdateState` state) <$>
+applyUpdateProposal cfg proposal cvs =
+    (`setUpdateState` cvs) <$>
       U.Iface.registerProposal updateEnv updateState proposal
   where
-    updateEnv   = mkUpdateEnvironment cfg state
-    updateState = CC.cvsUpdateState state
+    updateEnv   = mkUpdateEnvironment cfg cvs
+    updateState = CC.cvsUpdateState cvs
 
 applyUpdateVote :: MonadError U.Iface.Error m
                 => Gen.Config
                 -> Update.AVote ByteString
                 -> CC.ChainValidationState -> m CC.ChainValidationState
-applyUpdateVote cfg vote state =
-    (`setUpdateState` state) <$>
+applyUpdateVote cfg vote cvs =
+    (`setUpdateState` cvs) <$>
       U.Iface.registerVote updateEnv updateState vote
   where
-    updateEnv   = mkUpdateEnvironment cfg state
-    updateState = CC.cvsUpdateState state
+    updateEnv   = mkUpdateEnvironment cfg cvs
+    updateState = CC.cvsUpdateState cvs
 
 {-------------------------------------------------------------------------------
   Apply any kind of transactions
@@ -534,6 +531,7 @@ mempoolPayloadRecoverBytes = go
 mempoolPayloadReencode :: CC.AMempoolPayload a -> ByteString
 mempoolPayloadReencode = go
   where
+    go :: forall a. CC.AMempoolPayload a -> ByteString
     go (CC.MempoolTx             payload) = reencode payload
     go (CC.MempoolDlg            payload) = reencode payload
     go (CC.MempoolUpdateProposal payload) = reencode payload
