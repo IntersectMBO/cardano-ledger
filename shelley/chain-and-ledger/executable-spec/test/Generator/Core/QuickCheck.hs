@@ -104,14 +104,16 @@ traceMSigCombinations msigs =
          (k3, k4) <- msigs List.\\ [(k1, k2)]
          (k5, k6) <- msigs List.\\ [(k1, k2), (k3, k4)]
 
-         let payOneOf   = RequireAnyOf [k1, k3, k5]
-             stakeOneOf = RequireAnyOf [k2, k4, k6]
-             payAllOf   = RequireAllOf [k1, k3, k5]
-             stakeAllOf = RequireAllOf [k2, k4, k6]
-             payMOf     = RequireMOf 2 [k1, k3, k5] -- TODO create from 1 to all
-             stakeMOf   = RequireMOf 2 [k2, k4, k6]
-
-         pure [(payOneOf, stakeOneOf), (payAllOf, stakeAllOf), (payMOf, stakeMOf)]
+         pure [(pay, stake) | pay <- [ RequireAnyOf [k1, k3, k5]
+                                     , RequireAllOf [k1, k3, k5]
+                                     , RequireMOf 1 [k1, k3, k5]
+                                     , RequireMOf 2 [k1, k3, k5]
+                                     , RequireMOf 3 [k1, k3, k5]]
+                            , stake <- [ RequireAnyOf [k2, k4, k6]
+                                       , RequireAllOf [k2, k4, k6]
+                                       , RequireMOf 1 [k2, k4, k6]
+                                       , RequireMOf 2 [k2, k4, k6]
+                                       , RequireMOf 3 [k2, k4, k6]]]
 
 mkScriptsFromKeyPair :: (KeyPair, KeyPair) -> (MultiSig, MultiSig)
 mkScriptsFromKeyPair (k0, k1) = (mkScriptFromKey k0, mkScriptFromKey k1)
