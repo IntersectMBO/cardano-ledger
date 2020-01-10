@@ -46,6 +46,8 @@ import           ConcreteCryptoTypes (Addr, CoreKeyPair, DPState, GenKeyHash, Ke
                      KeyPairs, LEDGER, MultiSig, MultiSigPairs, SignKeyVRF, TxOut, UTxO, UTxOState,
                      VKey, VerKeyVRF)
 import           Control.State.Transition (IRC)
+import           Generator.Core.Constants (maxGenesisOutputVal, maxGenesisUTxOouts, maxNumKeyPairs,
+                     minGenesisOutputVal, minGenesisUTxOouts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
 import           Numeric.Natural (Natural)
@@ -81,7 +83,7 @@ mkKeyPairs n
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 traceKeyPairs :: KeyPairs
-traceKeyPairs = mkKeyPairs <$> [1 .. 150]
+traceKeyPairs = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 numCoreNodes :: Word64
 numCoreNodes = 7
@@ -102,14 +104,16 @@ traceMSigCombinations msigs =
          (k3, k4) <- msigs List.\\ [(k1, k2)]
          (k5, k6) <- msigs List.\\ [(k1, k2), (k3, k4)]
 
-         let payOneOf   = RequireAnyOf [k1, k3, k5]
-             stakeOneOf = RequireAnyOf [k2, k4, k6]
-             payAllOf   = RequireAllOf [k1, k3, k5]
-             stakeAllOf = RequireAllOf [k2, k4, k6]
-             payMOf     = RequireMOf 2 [k1, k3, k5] -- TODO create from 1 to all
-             stakeMOf   = RequireMOf 2 [k2, k4, k6]
-
-         pure [(payOneOf, stakeOneOf), (payAllOf, stakeAllOf), (payMOf, stakeMOf)]
+         pure [(pay, stake) | pay <- [ RequireAnyOf [k1, k3, k5]
+                                     , RequireAllOf [k1, k3, k5]
+                                     , RequireMOf 1 [k1, k3, k5]
+                                     , RequireMOf 2 [k1, k3, k5]
+                                     , RequireMOf 3 [k1, k3, k5]]
+                            , stake <- [ RequireAnyOf [k2, k4, k6]
+                                       , RequireAllOf [k2, k4, k6]
+                                       , RequireMOf 1 [k2, k4, k6]
+                                       , RequireMOf 2 [k2, k4, k6]
+                                       , RequireMOf 3 [k2, k4, k6]]]
 
 mkScriptsFromKeyPair :: (KeyPair, KeyPair) -> (MultiSig, MultiSig)
 mkScriptsFromKeyPair (k0, k1) = (mkScriptFromKey k0, mkScriptFromKey k1)
@@ -176,7 +180,7 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- to include certificates that require deposits.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 1000 10000 (length addrs) (length addrs)
+  ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
@@ -215,7 +219,7 @@ mkGenesisLedgerState
   :: IRC LEDGER
   -> Gen (Either a (UTxOState, DPState))
 mkGenesisLedgerState _ = do
-  utxo0 <- genUtxo0 5 10
+  utxo0 <- genUtxo0 minGenesisUTxOouts maxGenesisUTxOouts
   let (LedgerState utxoSt dpSt) = genesisState genesisDelegs0 utxo0
   pure $ Right (utxoSt, dpSt)
 

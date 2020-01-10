@@ -26,6 +26,8 @@ import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs,
                      MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
                      VrfKeyPairs)
+import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
+                     minNumGenInputs)
 import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
 import           LedgerState (pattern UTxOState)
@@ -160,7 +162,7 @@ pickSpendingInputs
   -> UTxO
   -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
 pickSpendingInputs keys scripts (UTxO utxo) = do
-  selectedUtxo <- take <$> QC.choose (1, 5)
+  selectedUtxo <- take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
                        <*> QC.shuffle (Map.toList utxo)
 
   return ( witnessedInput <$> selectedUtxo
@@ -178,7 +180,7 @@ genRecipients
   -> MultiSigPairs
   -> Gen [Addr]
 genRecipients keys scripts = do
-  n' <- QC.choose (1, 3)
+  n' <- QC.choose (minNumGenAddr, maxNumGenAddr)
 
   -- choose m scripts and n keys as recipients
   m  <- QC.choose (0, n' - 1)
