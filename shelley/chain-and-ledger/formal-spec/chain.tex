@@ -337,13 +337,15 @@ In the second case, the new epoch state is updated as follows:
     \inference[New-Epoch]
     {
       e = e_\ell + 1
-      \\
+      &
+      \var{ru} \neq \Nothing
+      \\~\\
       {
         \vdash
         (\fun{applyRUpd}~\var{ru}~\var{e}~\var{es})
           \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'}
       }
-      \\~\\~\\
+      \\~\\
       {\begin{array}{r@{~\leteq~}l}
           (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es'} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\var{pools},~\wcard) & \var{ss} \\
@@ -404,29 +406,28 @@ In the second case, the new epoch state is updated as follows:
     }
     {
       {\begin{array}{c}
-         \var{s} \\
-         \var{gkeys} \\
-       \end{array}}
-      \vdash
-      {\left(\begin{array}{c}
-            \var{e_\ell} \\
-            \var{b_{prev}} \\
-            \var{b_{cur}} \\
-            \var{es} \\
-            \var{ru} \\
-            \var{pd} \\
-            \var{osched}
-      \end{array}\right)}
-      \trans{newepoch}{\var{e}}
-      {\left(\begin{array}{c}
-            \var{e_\ell} \\
-            \var{b_{prev}} \\
-            \var{b_{cur}} \\
-            \var{es} \\
-            \var{ru} \\
-            \var{pd} \\
-            \var{osched}
-      \end{array}\right)}
+          \var{s} \\
+          \var{gkeys} \\
+      \end{array}}
+      \vdash\var{nes}\trans{newepoch}{\var{e}} \var{nes}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:no-reward-update}
+    \inference[No-Reward-Update]
+    {
+      e = e_\ell + 1
+      &
+      \var{ru} = \Nothing
+    }
+    {
+      {\begin{array}{c}
+          \var{s} \\
+          \var{gkeys} \\
+      \end{array}}
+      \vdash\var{nes}\trans{newepoch}{\var{e}} \var{nes}
     }
   \end{equation}
   \caption{New Epoch rules}
