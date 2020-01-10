@@ -45,3 +45,33 @@ frequencyRetirePoolCert = 1
 -- | Relative frequency of generated MIR certificates
 frequencyMIRCert :: Int
 frequencyMIRCert = 1
+
+-- | Relative frequency of script credentials in credential registration
+-- certificates
+frequencyScriptCredReg :: Int
+frequencyScriptCredReg = 1
+
+-- | Relative frequency of key credentials in credential registration
+-- certificates
+frequencyKeyCredReg :: Int
+frequencyKeyCredReg = 2
+
+-- | Relative frequency of script credentials in credential de-registration
+-- certificates
+frequencyScriptCredDeReg :: Int
+frequencyScriptCredDeReg = 1
+
+-- | Relative frequency of key credentials in credential de-registration
+-- certificates
+frequencyKeyCredDeReg :: Int
+frequencyKeyCredDeReg = 2
+
+-- | Relative frequency of script credentials in credential delegation
+-- certificates
+frequencyScriptCredDelegation :: Int
+frequencyScriptCredDelegation = 1
+
+-- | Relative frequency of key credentials in credential delegation
+-- certificates
+frequencyKeyCredDelegation :: Int
+frequencyKeyCredDelegation = 2

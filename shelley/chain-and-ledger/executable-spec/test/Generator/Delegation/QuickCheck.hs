@@ -33,8 +33,11 @@ import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pa
                      pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDelegationCert,
-                     frequencyGenesisDelegationCert, frequencyRegKeyCert, frequencyRegPoolCert,
-                     frequencyRetirePoolCert)
+                     frequencyGenesisDelegationCert, frequencyKeyCredDeReg,
+                     frequencyKeyCredDelegation, frequencyKeyCredReg, frequencyMIRCert,
+                     frequencyRegKeyCert, frequencyRegPoolCert, frequencyRetirePoolCert,
+                     frequencyScriptCredDeReg, frequencyScriptCredDelegation,
+                     frequencyScriptCredReg)
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred)
 import           Keys (GenDelegs (..), hashAnyKey, hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
@@ -134,7 +137,7 @@ genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
                , (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState)
                , (frequencyDeRegKeyCert, genDeRegKeyCert keys scripts dState)
                , (frequencyRetirePoolCert, genRetirePool keys pparams pState slot)
-               , (frequencyRetirePoolCert, genInstantaneousRewards coreKeys pparams dState)
+               , (frequencyMIRCert, genInstantaneousRewards coreKeys pparams dState)
                ]
  where
   dState = dpState ^. dstate
@@ -148,18 +151,20 @@ genRegKeyCert
   -> DState
   -> Gen (Maybe (DCert, CertCred))
 genRegKeyCert keys scripts delegSt =
-  QC.oneof
-    [ case availableKeys of
-       [] -> pure Nothing
-       _  -> do
-         (_payKey, stakeKey) <- QC.elements availableKeys
-         pure $ Just (DCertDeleg (RegKey (toCred stakeKey)), KeyCred stakeKey)
-    , case availableScripts of
-        [] -> pure Nothing
-        _  -> do
-          scriptPair@(_, stakeScript) <- QC.elements availableScripts
-          pure $ Just (DCertDeleg (RegKey (scriptToCred stakeScript))
-                      , ScriptCred scriptPair)
+  QC.frequency
+    [ ( frequencyKeyCredReg
+      , case availableKeys of
+          [] -> pure Nothing
+          _  -> do
+            (_payKey, stakeKey) <- QC.elements availableKeys
+            pure $ Just (DCertDeleg (RegKey (toCred stakeKey)), KeyCred stakeKey))
+    , ( frequencyScriptCredReg
+      , case availableScripts of
+          [] -> pure Nothing
+          _  -> do
+            scriptPair@(_, stakeScript) <- QC.elements availableScripts
+            pure $ Just (DCertDeleg (RegKey (scriptToCred stakeScript))
+                        , ScriptCred scriptPair))
     ]
   where
     notRegistered k = k ∉ dom (_stkCreds delegSt)
@@ -174,18 +179,20 @@ genDeRegKeyCert
   -> DState
   -> Gen (Maybe (DCert, CertCred))
 genDeRegKeyCert keys scripts dState =
-  QC.oneof
-  [ case availableKeys of
-      [] -> pure Nothing
-      _ -> do
-        (_payKey, stakeKey) <- QC.elements availableKeys
-        pure $ Just (DCertDeleg (DeRegKey (toCred stakeKey)), KeyCred stakeKey)
-  , case availableScripts of
+  QC.frequency
+  [ ( frequencyKeyCredDeReg
+    , case availableKeys of
+        [] -> pure Nothing
+        _ -> do
+          (_payKey, stakeKey) <- QC.elements availableKeys
+          pure $ Just (DCertDeleg (DeRegKey (toCred stakeKey)), KeyCred stakeKey))
+  , ( frequencyScriptCredDeReg
+    , case availableScripts of
       [] -> pure Nothing
       _  -> do
           scriptPair@(_, stakeScript) <- QC.elements availableScripts
           pure $ Just (DCertDeleg (DeRegKey (scriptToCred stakeScript))
-                      , ScriptCred scriptPair)
+                      , ScriptCred scriptPair))
   ]
   where
     registered k = k ∈ dom (_stkCreds dState)
@@ -208,15 +215,17 @@ genDelegation keys scripts dpState =
     then
       pure Nothing
     else
-    QC.oneof
-    [ if null availableDelegates
-      then pure Nothing
-      else mkCert <$> QC.elements availableDelegates
-                  <*> QC.elements availablePools
-    , if null availableDelegatesScripts
-      then pure Nothing
-      else mkCertFromScript <$> QC.elements availableDelegatesScripts
-                            <*> QC.elements availablePools
+    QC.frequency
+    [ ( frequencyKeyCredDelegation
+      , if null availableDelegates
+        then pure Nothing
+        else mkCert <$> QC.elements availableDelegates
+                    <*> QC.elements availablePools)
+    , ( frequencyScriptCredDelegation
+      , if null availableDelegatesScripts
+        then pure Nothing
+        else mkCertFromScript <$> QC.elements availableDelegatesScripts
+                              <*> QC.elements availablePools)
     ]
   where
     mkCert (_, delegatorKey) poolKey = Just (cert, KeyCred delegatorKey)
