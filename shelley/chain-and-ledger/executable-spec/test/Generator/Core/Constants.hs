@@ -2,6 +2,8 @@ module Generator.Core.Constants
 
 where
 
+import           Data.Word (Word64)
+
 -- | minimal number of addresses for transaction outputs
 minNumGenAddr :: Int
 minNumGenAddr = 1
@@ -75,3 +77,23 @@ frequencyScriptCredDelegation = 1
 -- certificates
 frequencyKeyCredDelegation :: Int
 frequencyKeyCredDelegation = 2
+
+-- | minimal number of genesis UTxO outputs
+minGenesisUTxOouts :: Int
+minGenesisUTxOouts = 1
+
+-- | maximal number of genesis UTxO outputs
+maxGenesisUTxOouts :: Int
+maxGenesisUTxOouts = 5
+
+-- | maximal numbers of generated keypairs
+maxNumKeyPairs :: Word64
+maxNumKeyPairs = 150
+
+-- | minimal coin value for generated genesis outputs
+minGenesisOutputVal :: Integer
+minGenesisOutputVal = 1000
+
+-- | maximal coin value for generated genesis outputs
+maxGenesisOutputVal :: Integer
+maxGenesisOutputVal = 10000

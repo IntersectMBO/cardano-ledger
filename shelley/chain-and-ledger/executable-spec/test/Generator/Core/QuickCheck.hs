@@ -46,6 +46,8 @@ import           ConcreteCryptoTypes (Addr, CoreKeyPair, DPState, GenKeyHash, Ke
                      KeyPairs, LEDGER, MultiSig, MultiSigPairs, SignKeyVRF, TxOut, UTxO, UTxOState,
                      VKey, VerKeyVRF)
 import           Control.State.Transition (IRC)
+import           Generator.Core.Constants (maxGenesisOutputVal, maxGenesisUTxOouts, maxNumKeyPairs,
+                     minGenesisOutputVal, minGenesisUTxOouts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
 import           Numeric.Natural (Natural)
@@ -81,7 +83,7 @@ mkKeyPairs n
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 traceKeyPairs :: KeyPairs
-traceKeyPairs = mkKeyPairs <$> [1 .. 150]
+traceKeyPairs = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 numCoreNodes :: Word64
 numCoreNodes = 7
@@ -176,7 +178,7 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- to include certificates that require deposits.
 genTxOut :: [Addr] -> Gen [TxOut]
 genTxOut addrs = do
-  ys <- genCoinList 1000 10000 (length addrs) (length addrs)
+  ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
@@ -215,7 +217,7 @@ mkGenesisLedgerState
   :: IRC LEDGER
   -> Gen (Either a (UTxOState, DPState))
 mkGenesisLedgerState _ = do
-  utxo0 <- genUtxo0 5 10
+  utxo0 <- genUtxo0 minGenesisUTxOouts maxGenesisUTxOouts
   let (LedgerState utxoSt dpSt) = genesisState genesisDelegs0 utxo0
   pure $ Right (utxoSt, dpSt)
 
