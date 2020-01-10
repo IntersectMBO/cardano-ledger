@@ -32,6 +32,9 @@ import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pa
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
+import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDelegationCert,
+                     frequencyGenesisDelegationCert, frequencyRegKeyCert, frequencyRegPoolCert,
+                     frequencyRetirePoolCert)
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred)
 import           Keys (GenDelegs (..), hashAnyKey, hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
@@ -125,13 +128,13 @@ genDCert
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
 genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
-  QC.frequency [ (2, genRegKeyCert keys scripts dState)
-               , (2, genRegPool keys vrfKeys dpState)
-               , (3, genDelegation keys scripts dpState)
-               , (1, genGenesisDelegation keys coreKeys dpState)
-               , (1, genDeRegKeyCert keys scripts dState)
-               , (1, genRetirePool keys pparams pState slot)
-               , (1, genInstantaneousRewards coreKeys pparams dState)
+  QC.frequency [ (frequencyRegKeyCert, genRegKeyCert keys scripts dState)
+               , (frequencyRegPoolCert, genRegPool keys vrfKeys dpState)
+               , (frequencyDelegationCert, genDelegation keys scripts dpState)
+               , (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState)
+               , (frequencyDeRegKeyCert, genDeRegKeyCert keys scripts dState)
+               , (frequencyRetirePoolCert, genRetirePool keys pparams pState slot)
+               , (frequencyRetirePoolCert, genInstantaneousRewards coreKeys pparams dState)
                ]
  where
   dState = dpState ^. dstate
