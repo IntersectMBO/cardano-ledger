@@ -21,12 +21,12 @@ import qualified Data.Set as Set
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
-import           Address (scriptsToAddr)
+import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs,
                      MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
                      VrfKeyPairs)
-import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural, toAddr)
+import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
 import           LedgerState (pattern UTxOState)
 import           Slot (SlotNo (..))
@@ -65,7 +65,6 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
   -- certificates
-  --(certs, certWitnesses, genesisWitnesses, stakeScripts, deposits_, refunds_)
   (certs, certCreds, deposits_, refunds_)
     <- genDCerts keys' scripts' coreKeys vrfKeys pparams dpState slot ttl
 
@@ -167,9 +166,9 @@ pickSpendingInputs keys scripts (UTxO utxo) = do
   return ( witnessedInput <$> selectedUtxo
          , balance (UTxO (Map.fromList selectedUtxo)))
   where
-    witnessedInput (input, TxOut addr@(AddrBase (KeyHashObj _) (KeyHashObj _)) _) =
+    witnessedInput (input, TxOut addr@(AddrBase (KeyHashObj _) _) _) =
       (input, Left $ findPayKeyPair addr keys)
-    witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) (ScriptHashObj _)) _) =
+    witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) _) _) =
       (input, Right $ findPayScript addr scripts)
     witnessedInput _ = error "unsupported address"
 
@@ -187,9 +186,13 @@ genRecipients keys scripts = do
   recipientKeys    <- take n <$> QC.shuffle keys
   recipientScripts <- take m <$> QC.shuffle scripts
 
-  let keyAddrs    = toAddr <$> recipientKeys
-      scriptAddrs = scriptsToAddr <$> recipientScripts
+  let payKeys      = (toCred . fst) <$> recipientKeys
+      stakeKeys    = (toCred . snd) <$> recipientKeys
+      payScripts   = (scriptToCred . fst) <$> recipientScripts
+      stakeScripts = (scriptToCred . fst) <$> recipientScripts
 
-  recipients <- QC.shuffle (keyAddrs ++ scriptAddrs)
+  -- shuffle and zip keys and scripts together as base addresses
+  payCreds   <- QC.shuffle (payKeys ++ payScripts)
+  stakeCreds <- QC.shuffle (stakeKeys ++ stakeScripts)
 
-  return recipients
+  return (zipWith AddrBase payCreds stakeCreds)
