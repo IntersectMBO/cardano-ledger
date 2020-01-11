@@ -6,7 +6,7 @@
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
 \newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
-\newcommand{\hashToSeed}[1]{\fun{hashToSeed}~ \var{#1}}
+\newcommand{\hashHeaderToNonce}[1]{\fun{hashHeaderToNonce}~ \var{#1}}
 
 \newcommand{\T}{\type{T}}
 \newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
@@ -193,7 +193,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
                    & \text{size of a block body} \\
       \slotToSeed{} & \Slot \to \Seed
                     & \text{convert a slot to a seed} \\
-      \hashToSeed{} & \HashHeader \to \Seed
+      \hashHeaderToNonce{} & \HashHeader \to \Seed
                     & \text{convert a header hash to a seed} \\
     \end{array}
   \end{equation*}
@@ -506,7 +506,7 @@ near the end of the epoch is not discarded).
     \inference[Update-All]
     { \eta_e \leteq \fun{extraEntropy}~\var{pp}
       &
-      \eta_p \leteq \hashToSeed h_c
+      \eta_p \leteq \hashHeaderToNonce h_c
     }
     {
       {\begin{array}{c}
@@ -1646,30 +1646,37 @@ The CHAIN rule has two predicate failures:
 \subsection{Byron to Shelley Transition}
 \label{sec:byron-to-shelley}
 
-This section describes how to transition the state held by the Byron ledger to the Shelley ledger.
+This section defines the valid initial Shelley ledger states and
+describes how to transition the state held by the Byron ledger to Shelley.
 The Byron ledger state $\CEState$ is defined in \cite{byron_chain_spec}.
-Figure~\ref{fig:functions:to-shelley} defines a function $\fun{toShelley}$
-which takes the Byron ledger state and creates the Shelley ledger state.
+The valid initial Shelley ledger states are exactly the range of
+the function $\fun{initialShelleyState}$ defined in Figure~\ref{fig:functions:initial-shelley-states}.
+Figure~\ref{fig:functions:to-shelley} defines the transition function from Byron.
 Note that we use the hash of the final Byron header as the first evolving and
 candidate nonces for Shelley.
 
 %%
-%% Figure - Byron to Shelley State Transition
+%% Figure - Shelley Initial States
 %%
 \begin{figure}[htb]
-  \emph{Byron to Shelley Transition}
+  \emph{Shelley Initial States}
   %
   \begin{align*}
-      & \fun{toShelley} \in \CEState \to \ChainState \\
-      & \fun{toShelley}~
+      & \fun{initialShelleyState} \in \Slot \to \Epoch \to\HashHeader \to \UTxO
+        \to \Coin \to (\KeyHashGen \mapsto \KeyHash) \\
+      & ~~~\to (\Slot\mapsto\KeyHashGen^?) \to \Applications \to  \PParams \to \ChainState \\
+      & \fun{initialShelleyState}~
       \left(
         \begin{array}{c}
-          \var{s_{last}} \\
-          \wcard \\
+          \var{s} \\
+          \var{e} \\
           \var{h} \\
-          (\var{utxo},~\var{reserves}) \\
-          \var{ds} \\
-          \var{us}
+          \var{utxo} \\
+          \var{reserves} \\
+          \var{genDelegs} \\
+          \var{os} \\
+          \var{apps} \\
+          \var{pp} \\
         \end{array}
       \right)
       =
@@ -1677,8 +1684,7 @@ candidate nonces for Shelley.
         \begin{array}{c}
           \left(
             \begin{array}{c}
-              \epoch{s_{last}} \\
-              \fun{hash}~{h} \\
+              \var{e} \\
               \emptyset \\
               \emptyset \\
               \left(
@@ -1711,7 +1717,7 @@ candidate nonces for Shelley.
                               \emptyset \\
                               \emptyset \\
                               \emptyset \\
-                              \fun{avs}~\var{us}\\
+                              \var{apps}\\
                             \end{array}
                           \right) \\
                         \end{array}
@@ -1725,7 +1731,7 @@ candidate nonces for Shelley.
                             \emptyset \\
                             \emptyset \\
                             \emptyset \\
-                            \fun{dms}~\var{ds} \\
+                            \var{genDelegs} \\
                           \end{array}
                         \right) \\
                         \left(
@@ -1733,30 +1739,75 @@ candidate nonces for Shelley.
                             \emptyset \\
                             \emptyset \\
                             \emptyset \\
-                            \var{cs} \\
                           \end{array}
                         \right) \\
                         \end{array}
                       \right) \\
                     \end{array}
                   \right) \\
-                  \pps{us} \\
+                  \var{pp} \\
                 \end{array}
               \right) \\
               \\
               \Nothing \\
               \emptyset \\
-              \emptyset \\
+              \var{os} \\
             \end{array}
           \right) \\
-          \hashToSeed(\fun{hash}~{h}) \\
-          \hashToSeed(\fun{hash}~{h}) \\
+          \var{cs} \\
+          \hashHeaderToNonce{h} \\
+          \hashHeaderToNonce{h} \\
+          \hashHeaderToNonce{h} \\
           0_{seed} \\
           \var{h} \\
-          \var{s_{last}} \\
+          \var{s} \\
         \end{array}
       \right) \\
-      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{(\fun{dms}~\var{ds})}\} \\
+      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{genDelegs}\} \\
+  \end{align*}
+
+  \caption{Initial Shelley States}
+  \label{fig:functions:initial-shelley-states}
+\end{figure}
+
+%%
+%% Figure - Byron to Shelley State Transition
+%%
+\begin{figure}[htb]
+  \emph{Byron to Shelley Transition}
+  %
+  \begin{align*}
+      & \fun{toShelley} \in \CEState \to \ChainState \\
+      & \fun{toShelley}~
+      \left(
+        \begin{array}{c}
+          \var{s_{last}} \\
+          \wcard \\
+          \var{h} \\
+          (\var{utxo},~\var{reserves}) \\
+          \var{ds} \\
+          \var{us}
+        \end{array}
+      \right)
+      =
+      \fun{initialShelleyState}~
+      \left(
+        \begin{array}{c}
+          \var{s_{last}} \\
+          e \\
+          \fun{hash}~{h} \\
+          \var{utxo} \\
+          \var{reserves} \\
+          \var{gd} \\
+          \overlaySchedule{e}{(\dom{gd})}{pp} \\
+          \fun{avs}~\var{us} \\
+          \var{pp} \\
+        \end{array}
+      \right) \\
+      & ~~~~\where \\
+      & ~~~~~~~~~e = \epoch{s_{last}} \\
+      & ~~~~~~~~~gd = \fun{dms}~\var{ds} \\
+      & ~~~~~~~~~pp = \pps{us} \\
   \end{align*}
 
   \caption{Byron to Shelley State Transtition}
