@@ -912,7 +912,6 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.
--- The real implementation should probably use randomization.
 overlaySchedule
   :: EpochNo
   -> Set (GenKeyHash crypto)

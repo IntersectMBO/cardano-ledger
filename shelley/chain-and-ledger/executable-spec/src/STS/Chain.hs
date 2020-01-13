@@ -10,23 +10,31 @@ module STS.Chain
   ( CHAIN
   , ChainState (..)
   , PredicateFailure(..)
+  , initialShelleyState
   , totalAda
   )
 where
 
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
 
-import           BaseTypes
-import           BlockChain
+import           BaseTypes (Nonce (..), Seed (..), ShelleyBase)
+import           BlockChain (BHBody, Block (..), HashHeader, bHeaderSize, bhbody, bheaderSlotNo,
+                     hBbsize, hashHeaderToNonce)
 import           Coin (Coin (..))
-import           Keys
-import           LedgerState
-import           OCert
-import           PParams
-import           Slot
-import           Tx
-import           UTxO (balance)
+import           Delegation.Certificates (PoolDistr (..))
+import           EpochBoundary (BlocksMade (..), emptySnapShots)
+import           Keys (GenDelegs (..), GenKeyHash, KESignable, KeyHash, Signable, VKeyES)
+import           LedgerState (AccountState (..), DPState (..), DState (..), EpochState (..),
+                     LedgerState (..), NewEpochState (..), PState (..), UTxOState (..),
+                     emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
+import           OCert (KESPeriod)
+import           PParams (PParams, _maxBBSize, _maxBHSize)
+import           Slot (EpochNo, SlotNo)
+import           Tx (TxBody)
+import           Updates (AVUpdate (..), Applications, PPUpdate (..), UpdateState (..))
+import           UTxO (UTxO (..), balance)
 
 import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Ledger.Shelley.Crypto
@@ -50,6 +58,52 @@ data ChainState crypto
     , chainSlotNo           :: SlotNo
     }
   deriving (Show, Eq)
+
+-- |Creates a valid initial chain state
+initialShelleyState
+  :: SlotNo
+  -> EpochNo
+  -> HashHeader crypto
+  -> UTxO crypto
+  -> Coin
+  -> Map (GenKeyHash crypto) (KeyHash crypto)
+  -> Map SlotNo (Maybe (GenKeyHash crypto))
+  -> Applications crypto
+  -> PParams
+  -> ChainState crypto
+initialShelleyState s e h utxo reserves genDelegs os apps pp =
+  ChainState
+    (NewEpochState
+       e
+       (BlocksMade Map.empty)
+       (BlocksMade Map.empty)
+       (EpochState
+         (AccountState (Coin 0) reserves)
+         emptySnapShots
+         (LedgerState
+           (UTxOState
+             utxo
+             (Coin 0)
+             (Coin 0)
+             (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty apps)
+           )
+           (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
+         )
+         pp
+       )
+       Nothing
+       (PoolDistr Map.empty)
+       os
+    )
+    cs
+    (hashHeaderToNonce h)
+    (hashHeaderToNonce h)
+    (hashHeaderToNonce h)
+    NeutralNonce
+    h
+    s
+  where
+    cs = Map.fromList (fmap (\hk -> (hk,0)) (Map.elems genDelegs))
 
 instance
   ( Crypto crypto

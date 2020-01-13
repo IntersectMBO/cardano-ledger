@@ -78,9 +78,9 @@ import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Address (mkRwdAcnt)
-import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, (⭒), startRewards)
+import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, startRewards, (⭒))
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bBodySize, bhHash, bbHash, bheader,
+                     ProtVer (..), TxSeq (..), bBodySize, bbHash, bhHash, bheader,
                      hashHeaderToNonce, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
@@ -99,9 +99,10 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      _rewards, _stPools, _stkCreds, _treasury)
 import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
-import           Slot (BlockNo (..), EpochNo (..), SlotNo (..), Duration(..), (+*))
+import           Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..), (+*))
 import           STS.Bbody (pattern LedgersFailure)
-import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, totalAda)
+import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, initialShelleyState,
+                     totalAda)
 import           STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
 import           STS.Delegs (pattern DelplFailure)
 import           STS.Delpl (pattern DelegFailure)
@@ -233,8 +234,18 @@ alicePoolParams =
 
 -- | Helper Functions
 
+-- |The first block of the Shelley era will point back to the last block of the Byron era.
+-- For our purposes in this test we can bootstrap the chain by just coercing the value.
+-- When this transition actually occurs, the consensus layer will do the work of making
+-- sure that the hash gets translated across the fork
+lastByronHeaderHash :: HashHeader
+lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
+
+nonce0 :: Nonce
+nonce0 = hashHeaderToNonce lastByronHeaderHash
+
 mkSeqNonce :: Natural -> Nonce
-mkSeqNonce m = foldl (\c x -> c ⭒ mkNonce x) NeutralNonce [0.. m]
+mkSeqNonce m = foldl (\c x -> c ⭒ mkNonce x) nonce0 [1.. m]
 
 -- | We provide our own nonces to 'mkBlock', which we then wish to recover as
 -- the output of the VRF functions. In general, however, we just derive them
@@ -380,33 +391,19 @@ acntEx1 = AccountState
 esEx1 :: EpochState
 esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1
 
--- |The first block of the Shelley era will point back to the last block of the Byron era.
--- For our purposes in this test we can bootstrap the chain by just coercing the value.
--- When this transition actually occurs, the consensus layer will do the work of making
--- sure that the hash gets translated across the fork
-lastByronHeaderHash :: HashHeader
-lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
-
 -- | Empty initial Shelley state with fake Byron hash and no blocks at all.
 --   No blocks of Shelley have been processed yet.
 initStEx1 :: ChainState
-initStEx1 = ChainState
-  (NewEpochState
-     (EpochNo 0)
-     (BlocksMade Map.empty)
-     (BlocksMade Map.empty)
-     esEx1
-     Nothing
-     (PoolDistr Map.empty)
-     (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0)))
-    -- The overlay schedule has one entry, setting Core Node 1 to slot 1.
-  oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0)
-  (mkNonce 0)
-  NeutralNonce
-  lastByronHeaderHash
+initStEx1 = initialShelleyState
   (SlotNo 0)
+  (EpochNo 0)
+  lastByronHeaderHash
+  (UTxO Map.empty)
+  maxLovelaceSupply
+  genDelegs
+  (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0))
+  (Applications Map.empty)
+  ppsEx1
 
 zero :: UnitInterval
 zero = unsafeMkUnitInterval 0
@@ -437,9 +434,9 @@ expectedStEx1 = ChainState
      (PoolDistr Map.empty)
      (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0)))
   oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1)
-  (mkNonce 0 ⭒ mkNonce 1)
+  nonce0
+  (nonce0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   NeutralNonce
   (bhHash (bheader blockEx1))
   (SlotNo 1)
@@ -548,15 +545,16 @@ initNesEx2A = NewEpochState
 
 
 initStEx2A :: ChainState
-initStEx2A = ChainState
-  initNesEx2A
-  oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0)
-  (mkNonce 0)
-  NeutralNonce
-  lastByronHeaderHash
+initStEx2A = initialShelleyState
   (SlotNo 0)
+  (EpochNo 0)
+  lastByronHeaderHash
+  utxoEx2A
+  (maxLovelaceSupply - balance utxoEx2A)
+  genDelegs
+  overlayEx2A
+  byronApps
+  ppsEx1
 
 blockEx2A :: Block
 blockEx2A = mkBlock
@@ -629,9 +627,9 @@ expectedStEx2A = ChainState
   -- operational certificate issue number appear until the first time a block is
   -- issued using the corresponding hot key.
   oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1)
-  (mkNonce 0 ⭒ mkNonce 1)
+  nonce0
+  (nonce0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   NeutralNonce
   blockEx2AHash
   (SlotNo 10)
@@ -727,9 +725,9 @@ expectedStEx2Bgeneric pp = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- ^ Evolving nonce
-  (mkNonce 0 ⭒ mkNonce 1)             -- ^ Candidate nonce
+  nonce0
+  (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- ^ Evolving nonce
+  (nonce0 ⭒ mkNonce 1)             -- ^ Candidate nonce
   NeutralNonce
   blockEx2BHash                       -- ^ Hash header of the chain
   (SlotNo 90)                           -- ^ Current slot
@@ -843,7 +841,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
   oCertIssueNosEx1
-  (mkNonce 0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   (mkSeqNonce 3)
   (mkSeqNonce 3)
   (hashHeaderToNonce blockEx2BHash)
@@ -919,7 +917,7 @@ expectedStEx2D = ChainState
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
   oCertIssueNosEx1
-  (mkNonce 0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   (mkSeqNonce 4)
   (mkSeqNonce 3)
   (hashHeaderToNonce blockEx2BHash)
@@ -1575,9 +1573,9 @@ expectedStEx3A = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1)
-  (mkNonce 0 ⭒ mkNonce 1)
+  nonce0
+  (nonce0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   NeutralNonce
   blockEx3AHash
   (SlotNo 10)
@@ -1667,7 +1665,7 @@ expectedStEx3B = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
+  nonce0
   (mkSeqNonce 2)
   (mkSeqNonce 2)
   NeutralNonce
@@ -1829,9 +1827,9 @@ expectedStEx4A = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1)
-  (mkNonce 0 ⭒ mkNonce 1)
+  nonce0
+  (nonce0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   NeutralNonce
   blockEx4AHash
   (SlotNo 10)
@@ -1919,7 +1917,7 @@ expectedStEx4B = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
+  nonce0
   (mkSeqNonce 2)
   (mkSeqNonce 2)
   NeutralNonce
@@ -1983,7 +1981,7 @@ expectedStEx4C = ChainState
       (PoolDistr Map.empty)
       overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
+  nonce0
   (mkSeqNonce 3)
   (mkSeqNonce 3)
   NeutralNonce
@@ -2066,9 +2064,9 @@ expectedStEx5A = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1)
-  (mkNonce 0 ⭒ mkNonce 1)
+  nonce0
+  (nonce0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   NeutralNonce
   blockEx5AHash
   (SlotNo 10)
@@ -2126,7 +2124,7 @@ expectedStEx5B = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
+  nonce0
   (mkSeqNonce 2)
   (mkSeqNonce 2)
   NeutralNonce
@@ -2209,9 +2207,9 @@ expectedStEx6A = ChainState
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
-  (mkNonce 0)
-  (mkNonce 0 ⭒ mkNonce 1)
-  (mkNonce 0 ⭒ mkNonce 1)
+  nonce0
+  (nonce0 ⭒ mkNonce 1)
+  (nonce0 ⭒ mkNonce 1)
   NeutralNonce
   blockEx6AHash
   (SlotNo 10)
