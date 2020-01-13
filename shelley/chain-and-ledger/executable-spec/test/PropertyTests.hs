@@ -31,8 +31,8 @@ import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfte
                      poolIsMarkedForRetirement, poolRetireInEpoch, potsSumIncreaseWdrls,
                      preserveBalance, preserveBalanceRestricted, preserveOutputsTx,
                      prop_MIRValuesEndUpInMap, prop_MIRentriesEndUpInMap, registeredPoolIsAdded,
-                     rewardZeroAfterRegKey, rewardZeroAfterRegPool, rewardsDecreasesByWithdrawals,
-                     rewardsSumInvariant)
+                     requiredMSigSignaturesSubset, rewardZeroAfterRegKey, rewardZeroAfterRegPool,
+                     rewardsDecreasesByWithdrawals, rewardsSumInvariant)
 import           Slot
 import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
                      _body, _witnessVKeySet)
@@ -182,6 +182,7 @@ propertyTests = testGroup "Property-Based Testing"
                   , TQC.testProperty "consumed inputs are eliminated" eliminateTxInputs
                   , TQC.testProperty "new tx entries are included and all txIds are new" newEntriesAndUniqueTxIns
                   , TQC.testProperty "no double spend" noDoubleSpend
+                  , TQC.testProperty "required keys for multi-sig are subset of keys with signatures" requiredMSigSignaturesSubset
                   ]
                 , testGroup "STS Rules - Pool Properties"
                   [ TQC.testProperty "newly registered stake pool is added to \

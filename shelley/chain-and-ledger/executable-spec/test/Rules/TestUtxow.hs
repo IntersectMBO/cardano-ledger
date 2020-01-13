@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -9,12 +10,13 @@ module Rules.TestUtxow
   , preserveOutputsTx
   , eliminateTxInputs
   , newEntriesAndUniqueTxIns
-  , noDoubleSpend)
+  , noDoubleSpend
+  , requiredMSigSignaturesSubset)
 where
 
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
-import qualified Data.Set as Set (intersection, isSubsetOf, map, null)
+import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
 
 import           Test.QuickCheck (Property, conjoin, (===))
 
@@ -22,10 +24,13 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      signal, source, target)
 
 import           ConcreteCryptoTypes (StakeCreds, StakePools, Tx, UTXO, UTXOW)
+import           Keys (hashAnyKey)
 import           Ledger.Core (dom, (<|))
 import           LedgerState (pattern UTxOState, keyRefunds)
 import           PParams (PParams)
-import           TxData (pattern TxIn, _body, _certs, _inputs, _txfee)
+import           Tx (getKeyCombinations)
+import           TxData (pattern TxIn, pattern WitGVKey, pattern WitVKey, _body, _certs, _inputs,
+                     _txfee, _witnessMSigMap, _witnessVKeySet)
 import           UTxO (pattern UTxO, balance, totalDeposits, txins, txouts)
 
 --------------------------
@@ -151,3 +156,21 @@ noDoubleSpend tr =
               filter (\tx_i -> (not . Set.null)
                        (inps_j `Set.intersection` _inputs (_body tx_i))) ts
             inps_j = _inputs $ _body tx_j
+
+-- | Check for required signatures in case of Multi-Sig. There has to be one set
+-- of possible signatures for a multi-sig script which is a sub-set of the
+-- signatures of the tansaction.
+requiredMSigSignaturesSubset :: [SourceSignalTarget UTXOW] -> Property
+requiredMSigSignaturesSubset tr =
+  conjoin $
+  map signaturesSubset tr
+  where
+    signaturesSubset sst =
+      let khs = keyHashSet sst in
+      all (existsReqKeyComb khs) (_witnessMSigMap $ signal sst)
+    existsReqKeyComb keyHashes msig  =
+      any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (getKeyCombinations msig)
+    keyHashSet sst =
+      Set.map (\case
+                  WitVKey vk _   -> hashAnyKey vk
+                  WitGVKey vkg _ -> hashAnyKey vkg) (_witnessVKeySet $ signal sst)
