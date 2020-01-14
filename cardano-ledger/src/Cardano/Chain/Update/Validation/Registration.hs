@@ -68,6 +68,7 @@ import Cardano.Chain.Update.SoftwareVersion
   , SoftwareVersion(SoftwareVersion)
   , SoftwareVersionError
   , checkSoftwareVersion
+  , svAppName
   )
 import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag, SystemTag)
 import Cardano.Crypto
@@ -418,7 +419,7 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
   mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
 
   -- Check that this software version isn't already registered
-  null (M.filter ((== softwareVersion) . fst) registeredSUPs)
+  null (M.filter ((== svAppName softwareVersion) . svAppName . fst) registeredSUPs)
     `orThrowError` DuplicateSoftwareVersion softwareVersion
 
   -- Check that the software version is valid
@@ -435,10 +436,13 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
 
 -- | Check that a new 'SoftwareVersion' is a valid next version
 --
---   The new version is valid for a given application if it is the same or one
+--   The new version is valid for a given application if it is exactly one
 --   more than the current version
 svCanFollow :: ApplicationVersions -> SoftwareVersion -> Bool
-svCanFollow avs softwareVersion = case M.lookup appName avs of
-  Nothing -> appVersion == 1
-  Just (currentAppVersion, _, _) -> appVersion == currentAppVersion + 1
-  where SoftwareVersion appName appVersion = softwareVersion
+svCanFollow avs (SoftwareVersion appName appVersion) =
+  case M.lookup appName avs of
+    -- For new apps, the version must start at 0 or 1.
+    Nothing -> appVersion == 0 || appVersion == 1
+
+    -- For existing apps, it must be exactly one more than the current version
+    Just (currentAppVersion, _, _) -> appVersion == currentAppVersion + 1
