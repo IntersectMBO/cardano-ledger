@@ -41,6 +41,7 @@ module UTxO
 
 import           Lens.Micro ((^.))
 
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
@@ -66,7 +67,7 @@ import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, r
 -- |The unspent transaction outputs.
 newtype UTxO crypto
   = UTxO (Map (TxIn crypto) (TxOut crypto))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 instance Relation (UTxO crypto) where
   type Domain (UTxO crypto) = TxIn crypto

@@ -216,7 +216,7 @@ verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
 
 newtype GenDelegs crypto =
   GenDelegs (Map (GenKeyHash crypto) (KeyHash crypto))
-  deriving (Show, Eq, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 newtype GKeys crypto = GKeys (Set (VKeyGenesis crypto))
   deriving (Show, Eq, NoUnexpectedThunks)

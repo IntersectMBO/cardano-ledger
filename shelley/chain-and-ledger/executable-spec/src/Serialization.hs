@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 
 module Serialization where
 
-import           Cardano.Binary (Decoder, Encoding, ToCBOR (..), encodeListLen)
+import           Cardano.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..), decodeListLen,
+                     encodeListLen, matchSize)
 import           Data.Typeable
 
 class Typeable a => ToCBORGroup a where
@@ -15,3 +17,10 @@ instance ToCBORGroup a => ToCBOR (CBORGroup a) where
 
 class Typeable a => FromCBORGroup a where
   fromCBORGroup :: Decoder s a
+
+instance (FromCBORGroup a, ToCBORGroup a) => FromCBOR (CBORGroup a) where
+  fromCBOR = do
+    n <- decodeListLen
+    x <- fromCBORGroup
+    matchSize "CBORGroup" ((fromIntegral . toInteger . listLen) x) n
+    pure $ CBORGroup x

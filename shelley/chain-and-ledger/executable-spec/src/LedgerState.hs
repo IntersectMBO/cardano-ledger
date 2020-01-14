@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -97,6 +98,7 @@ module LedgerState
   ) where
 
 import           Address (mkRwdAcnt)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -182,6 +184,25 @@ data DState crypto = DState
 
 instance NoUnexpectedThunks (DState crypto)
 
+instance Crypto crypto => ToCBOR (DState crypto)
+ where
+  toCBOR (DState sc rw dlg p fgs gs ir) =
+    encodeListLen 7 <> toCBOR sc <> toCBOR rw <> toCBOR dlg <> toCBOR p
+      <> toCBOR fgs <> toCBOR gs <> toCBOR ir
+
+instance Crypto crypto => FromCBOR (DState crypto)
+ where
+  fromCBOR = do
+    enforceSize "DState" 7
+    sc <- fromCBOR
+    rw <- fromCBOR
+    dlg <- fromCBOR
+    p <- fromCBOR
+    fgs <- fromCBOR
+    gs <- fromCBOR
+    ir <- fromCBOR
+    pure $ DState sc rw dlg p fgs gs ir
+
 -- | Current state of staking pools and their certificate counters.
 data PState crypto = PState
     { -- |The active stake pools.
@@ -194,6 +215,20 @@ data PState crypto = PState
 
 instance NoUnexpectedThunks (PState crypto)
 
+instance Crypto crypto => ToCBOR (PState crypto)
+ where
+  toCBOR (PState a b c) =
+    encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
+
+instance Crypto crypto => FromCBOR (PState crypto)
+ where
+  fromCBOR = do
+    enforceSize "PState" 3
+    a <- fromCBOR
+    b <- fromCBOR
+    c <- fromCBOR
+    pure $ PState a b c
+
 -- | The state associated with the current stake delegation.
 data DPState crypto =
     DPState
@@ -203,6 +238,19 @@ data DPState crypto =
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DPState crypto)
+
+instance Crypto crypto => ToCBOR (DPState crypto)
+ where
+  toCBOR (DPState ds ps) =
+    encodeListLen 2 <> toCBOR ds <> toCBOR ps
+
+instance Crypto crypto => FromCBOR (DPState crypto)
+ where
+  fromCBOR = do
+    enforceSize "DPState" 2
+    ds <- fromCBOR
+    ps <- fromCBOR
+    pure $ DPState ds ps
 
 data RewardUpdate crypto= RewardUpdate
   { deltaT        :: Coin
@@ -214,6 +262,27 @@ data RewardUpdate crypto= RewardUpdate
 
 instance NoUnexpectedThunks (RewardUpdate crypto)
 
+instance Crypto crypto => ToCBOR (RewardUpdate crypto)
+ where
+  toCBOR (RewardUpdate dt dr rw df irw) =
+    encodeListLen 5
+      <> toCBOR dt
+      <> toCBOR (-dr) -- TODO change Coin serialization to use integers?
+      <> toCBOR rw
+      <> toCBOR (-df) -- TODO change Coin serialization to use integers?
+      <> toCBOR irw
+
+instance Crypto crypto => FromCBOR (RewardUpdate crypto)
+ where
+  fromCBOR = do
+    enforceSize "RewardUpdate" 5
+    dt <- fromCBOR
+    dr <- fromCBOR -- TODO change Coin serialization to use integers?
+    rw <- fromCBOR
+    df <- fromCBOR -- TODO change Coin serialization to use integers?
+    irw <- fromCBOR
+    pure $ RewardUpdate dt (-dr) rw (-df) irw
+
 emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) Map.empty
 
@@ -221,6 +290,19 @@ data AccountState = AccountState
   { _treasury  :: Coin
   , _reserves  :: Coin
   } deriving (Show, Eq, Generic)
+
+instance ToCBOR AccountState
+ where
+  toCBOR (AccountState t r) =
+    encodeListLen 2 <> toCBOR t <> toCBOR r
+
+instance FromCBOR AccountState
+ where
+  fromCBOR = do
+    enforceSize "AccountState" 2
+    t <- fromCBOR
+    r <- fromCBOR
+    pure $ AccountState t r
 
 instance NoUnexpectedThunks AccountState
 
@@ -234,6 +316,21 @@ data EpochState crypto
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (EpochState crypto)
+
+instance Crypto crypto => ToCBOR (EpochState crypto)
+ where
+  toCBOR (EpochState a s l p) =
+    encodeListLen 4 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR p
+
+instance Crypto crypto => FromCBOR (EpochState crypto)
+ where
+  fromCBOR = do
+    enforceSize "EpochState" 4
+    a <- fromCBOR
+    s <- fromCBOR
+    l <- fromCBOR
+    p <- fromCBOR
+    pure $ EpochState a s l p
 
 emptyUTxOState :: UTxOState crypto
 emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
@@ -281,6 +378,21 @@ data UTxOState crypto=
 
 instance NoUnexpectedThunks (UTxOState crypto)
 
+instance Crypto crypto => ToCBOR (UTxOState crypto)
+ where
+  toCBOR (UTxOState ut dp fs us) =
+    encodeListLen 4 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us
+
+instance Crypto crypto => FromCBOR (UTxOState crypto)
+ where
+  fromCBOR = do
+    enforceSize "UTxOState" 4
+    ut <- fromCBOR
+    dp <- fromCBOR
+    fs <- fromCBOR
+    us <- fromCBOR
+    pure $ UTxOState ut dp fs us
+
 -- | New Epoch state and environment
 data NewEpochState crypto=
   NewEpochState {
@@ -296,6 +408,25 @@ data NewEpochState crypto=
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochState crypto)
+
+instance Crypto crypto => ToCBOR (NewEpochState crypto)
+ where
+  toCBOR (NewEpochState e bp bc es ru pd os) =
+    encodeListLen 7 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
+      <> toCBOR ru <> toCBOR pd <> toCBOR os
+
+instance Crypto crypto => FromCBOR (NewEpochState crypto)
+ where
+  fromCBOR = do
+    enforceSize "NewEpochState" 7
+    e <- fromCBOR
+    bp <- fromCBOR
+    bc <- fromCBOR
+    es <- fromCBOR
+    ru <- fromCBOR
+    pd <- fromCBOR
+    os <- fromCBOR
+    pure $ NewEpochState e bp bc es ru pd os
 
 getGKeys
   :: NewEpochState crypto
@@ -323,6 +454,19 @@ data LedgerState crypto=
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (LedgerState crypto)
+
+instance Crypto crypto => ToCBOR (LedgerState crypto)
+ where
+  toCBOR (LedgerState u dp) =
+    encodeListLen 2 <> toCBOR u <> toCBOR dp
+
+instance Crypto crypto => FromCBOR (LedgerState crypto)
+ where
+  fromCBOR = do
+    enforceSize "LedgerState" 2
+    u <- fromCBOR
+    dp <- fromCBOR
+    pure $ LedgerState u dp
 
 makeLenses ''DPState
 makeLenses ''DState
@@ -407,16 +551,16 @@ txsize (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) =
     arrayPrefix = 2
     smallArray = 1
     mapPrefix = 2
-    label = 1
+    labelSize = 1
     cborTag = 2
     address = 2 * hashObj
-    credential = label + hashObj
+    credential = labelSize + hashObj
     unitInterval = cborTag + smallArray + uint + uint
-    feeSize = label + uint
-    ttlSize = label + uint
-    iSize = label + cborTag + arrayPrefix
+    feeSize = labelSize + uint
+    ttlSize = labelSize + uint
+    iSize = labelSize + cborTag + arrayPrefix
             + (toInteger $ length ins) * (smallArray + uint + hashObj)
-    oSize = label + arrayPrefix
+    oSize = labelSize + arrayPrefix
             + (toInteger $ length outs) * (smallArray + uint + address)
 
     numPoolOwners = toInteger . length . _poolOwners
@@ -427,39 +571,39 @@ txsize (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) =
                 + hashObj -- operator
                 + hashObj -- vrf keyhash
                 + credential -- reward account
-    certSize (DCertDeleg (RegKey _)) = smallArray + label + hashObj
-    certSize (DCertDeleg (DeRegKey _)) = smallArray + label + hashObj
-    certSize (DCertDeleg (Delegate _ )) = smallArray + label + 2 * hashObj
-    certSize (DCertPool (RegPool pps)) = smallArray + label + hashObj + pparams pps
-    certSize (DCertPool (RetirePool _ _)) = smallArray + label + uint + hashObj
-    certSize (DCertGenesis _) = smallArray + label + 2 * hashObj
-    certSize (DCertMir (MIRCert m)) = smallArray + label + mapPrefix
+    certSize (DCertDeleg (RegKey _)) = smallArray + labelSize + hashObj
+    certSize (DCertDeleg (DeRegKey _)) = smallArray + labelSize + hashObj
+    certSize (DCertDeleg (Delegate _ )) = smallArray + labelSize + 2 * hashObj
+    certSize (DCertPool (RegPool pps)) = smallArray + labelSize + hashObj + pparams pps
+    certSize (DCertPool (RetirePool _ _)) = smallArray + labelSize + uint + hashObj
+    certSize (DCertGenesis _) = smallArray + labelSize + 2 * hashObj
+    certSize (DCertMir (MIRCert m)) = smallArray + labelSize + mapPrefix
                                     + (toInteger $ length m)*(uint + hashObj)
     cSize = sum $ fmap certSize cs
-    wSize = label + mapPrefix + (toInteger $ length ws) * (uint + credential)
+    wSize = labelSize + mapPrefix + (toInteger $ length ws) * (uint + credential)
 
     protoVersion = (smallArray + uint + uint + uint)
     params = mapPrefix
-               + label + uint         -- minfee A
-               + label + uint         -- minfee B
-               + label + uint         -- max block body size
-               + label + uint         -- max transaction size
-               + label + uint         -- max block header size
-               + label + uint         -- key deposit
-               + label + unitInterval -- key deposit min refund
-               + label + unitInterval -- key deposit decay rate
-               + label + uint         -- pool deposit
-               + label + unitInterval -- pool deposit min refund
-               + label + unitInterval -- pool deposit decay rate
-               + label + uint         -- maximum epoch
-               + label + uint         -- n_optimal. desired number of stake pools
-               + label + unitInterval -- pool pledge influence
-               + label + unitInterval -- expansion rate
-               + label + unitInterval -- treasury growth rate
-               + label + unitInterval -- active slot coefficient
-               + label + unitInterval -- d. decentralization constant
-               + label + uint         -- extra entropy
-               + label + protoVersion -- protocol version
+               + labelSize + uint         -- minfee A
+               + labelSize + uint         -- minfee B
+               + labelSize + uint         -- max block body size
+               + labelSize + uint         -- max transaction size
+               + labelSize + uint         -- max block header size
+               + labelSize + uint         -- key deposit
+               + labelSize + unitInterval -- key deposit min refund
+               + labelSize + unitInterval -- key deposit decay rate
+               + labelSize + uint         -- pool deposit
+               + labelSize + unitInterval -- pool deposit min refund
+               + labelSize + unitInterval -- pool deposit decay rate
+               + labelSize + uint         -- maximum epoch
+               + labelSize + uint         -- n_optimal. desired number of stake pools
+               + labelSize + unitInterval -- pool pledge influence
+               + labelSize + unitInterval -- expansion rate
+               + labelSize + unitInterval -- treasury growth rate
+               + labelSize + unitInterval -- active slot coefficient
+               + labelSize + unitInterval -- d. decentralization constant
+               + labelSize + uint         -- extra entropy
+               + labelSize + protoVersion -- protocol version
     ppupSize = mapPrefix + (toInteger $ length ppup) * (hashObj + params)
     avupSize = mapPrefix + (sum $ fmap appsSize avup)
     appsSize as = hashObj + mapPrefix + (sum $ fmap mdSize (apps as))
