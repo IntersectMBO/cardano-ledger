@@ -352,7 +352,7 @@ svCanFollow avs (an,av) =
     (case Map.lookup an avs of
       Nothing -> True
       Just (x, _, _) -> av == x + 1
-    ) && (an `Set.notMember` dom avs ==> av == ApVer 1)
+    ) && (an `Set.notMember` dom avs ==> (av == ApVer 0 || av == ApVer 1))
   where
 
 ------------------------------------------------------------------------
@@ -384,18 +384,16 @@ instance STS UPSVV where
         let SwVer an av = up ^. upSwVer
         apNameValid an ?! InvalidApplicationName
         svCanFollow avs (an,av) ?! CannotFollowSv
-        (an, av) `notElem` fmap fstSnd (Map.elems raus) ?! AlreadyProposedSv
+        an `notElem` fmap fst' (Map.elems raus) ?! AlreadyProposedSv
         all sTagValid (up ^. upSTags) ?! InvalidSystemTags
         return $! raus ⨃ [(up ^. upId, (an, av, up ^. upMdt))]
     ]
     where
+      fst' (x, _, _) = x
+
       apNameValid (ApName n) = all isAscii n && length n <= 12
 
       sTagValid tag = all isAscii tag && length tag <= 10
-
-fstSnd :: (a, b, c) -> (a, b)
-fstSnd (x, y, _) = (x, y)
-
 
 data UPPVV deriving (Generic, Data, Typeable)
 
@@ -1930,6 +1928,10 @@ tamperWithUpdateProposal env st uprop = do
           else do
             (an, av) <- Gen.element registeredVersions
             pure $! uprop & upSwVer .~ SwVer { _svName = an, _svVer = av }
+      where
+        fstSnd :: (a, b, c) -> (a, b)
+        fstSnd (x, y, _) = (x, y)
+
 
     invalidSoftwareVersion :: Gen UProp
     invalidSoftwareVersion =

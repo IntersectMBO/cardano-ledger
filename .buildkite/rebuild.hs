@@ -14,7 +14,8 @@
 
 import           Build (LibraryName (LibraryName), Optimizations (Standard),
                      ShouldUploadCoverage (ShouldUploadCoverage),
-                     StackExtraTestArgs (StackExtraTestArgs), TestRun (TestRun), doBuild)
+                     StackExtraTestArgs (StackExtraTestArgs), TestRun (TestRun), Timeout (Timeout),
+                     doBuild)
 import           BuildArgs (BuildArgs (BuildArgs, command, options),
                      Command (Build, CleanupCache, PurgeCache),
                      RebuildOpts (RebuildOpts, optBuildDirectory, optCacheDirectory, optDryRun),
@@ -41,3 +42,4 @@ main =
        (ExtraShcArgs [])
        (ExtraTixFilesDirectory ".")
     )
+    (Timeout 45)
