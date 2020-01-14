@@ -193,7 +193,7 @@ important files are:
 
 - `nix/regenerate.sh`, which generates `nix` expressions for all the Haskell
   dependencies in the Stack project
-  
+
 - `nix/update-iohk-nix.sh`, which updates the `iohk-nix-src.json` according to
 the latest version of [`iohk-nix`](https://github.com/input-output-hk/iohk-nix/)
 
@@ -241,6 +241,6 @@ There are a couple of common issues that developers run into while working with
 
 <p align="center">
   <a href="https://github.com/input-output-hk/cardano-wallet/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/input-output-hk/cardano-wallet.svg?style=for-the-badge"/>
+    <img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger?style=for-the-badge"/>
   </a>
 </p>

@@ -68,6 +68,7 @@ import Cardano.Chain.Update.SoftwareVersion
   , SoftwareVersion(SoftwareVersion)
   , SoftwareVersionError
   , checkSoftwareVersion
+  , svAppName
   )
 import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag, SystemTag)
 import Cardano.Crypto
@@ -418,7 +419,7 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
   mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
 
   -- Check that this software version isn't already registered
-  null (M.filter ((== softwareVersion) . fst) registeredSUPs)
+  null (M.filter ((== svAppName softwareVersion) . svAppName . fst) registeredSUPs)
     `orThrowError` DuplicateSoftwareVersion softwareVersion
 
   -- Check that the software version is valid
