@@ -342,7 +342,7 @@ functions:
       \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av}) & =
       & (\var{an} \mapsto (\var{av_c}, \wcard, \wcard) \in \var{avs}
         \Rightarrow \var{av} = \var{av_c} + 1)\\
-      & \wedge & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 1)
+      & \wedge & (\var{an} \notin \dom~\var{avs} \Rightarrow \var{av} = 0 \vee \var{av} = 1)
     \end{array}
   \end{equation}
   \caption{Update validity functions}
@@ -356,7 +356,7 @@ functions:
       (\var{an}, \var{av}) \leteq \upSwVer{up}
       & \fun{apNameValid}~\var{an}\\
       & \fun{svCanFollow}~\var{avs}~(\var{an}, \var{av})
-      & (\var{an}, \var{av}, \wcard) \notin \range~\var{raus}\\
+      & (\var{an}, \wcard, \wcard) \notin \range~\var{raus}\\
       \forall \var{t} \in \fun{upSTags}~\var{up} \cdot \fun{sTagValid}~t
     }
     {
