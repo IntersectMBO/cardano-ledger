@@ -143,7 +143,6 @@ dummyGenesisInitializer = GenesisInitializer
     }
   , giAvvmBalanceFactor = 1.0 :: Rational
   , giUseHeavyDlg = True
-  , giSeed        = 0
   }
 
 dummyGenesisData :: GenesisData

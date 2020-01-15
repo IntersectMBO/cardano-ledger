@@ -113,7 +113,6 @@ genGenesisInitializer =
     <*> genFakeAvvmOptions
     <*> (realToFrac <$> Gen.double (Range.constant 0 1))
     <*> Gen.bool
-    <*> Gen.integral (Range.constant 0 10)
 
 genGenesisNonAvvmBalances :: Gen GenesisNonAvvmBalances
 genGenesisNonAvvmBalances = GenesisNonAvvmBalances . M.fromList <$> Gen.list
