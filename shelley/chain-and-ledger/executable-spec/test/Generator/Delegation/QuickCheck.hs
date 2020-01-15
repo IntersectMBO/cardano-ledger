@@ -11,7 +11,9 @@ module Generator.Delegation.QuickCheck
   , CertCred (..))
   where
 import           Data.Foldable (find)
-import qualified Data.Map as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map (elems, fromList, keys, keysSet, lookup, size)
+import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Ratio ((%))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -26,8 +28,9 @@ import           Test.Utils
 import           Address (scriptToCred)
 import           BaseTypes (interval0)
 import           Coin (Coin (..))
-import           ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState, KeyPair, KeyPairs,
-                     MultiSig, MultiSigPairs, PState, PoolParams, VKey, VrfKeyPairs, hashKeyVRF)
+import           ConcreteCryptoTypes (AnyKeyHash, CoreKeyPair, DCert, DPState, DState, KeyPair,
+                     KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey, VrfKeyPairs,
+                     hashKeyVRF)
 import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
@@ -39,7 +42,7 @@ import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDeleg
                      frequencyScriptCredDeReg, frequencyScriptCredDelegation,
                      frequencyScriptCredReg)
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred)
-import           Keys (GenDelegs (..), hashAnyKey, hashKey, vKey)
+import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
                      _genDelegs, _pstate, _stPools, _stkCreds)
@@ -60,6 +63,7 @@ data CertCred = CoreKeyCred [CoreKeyPair]
 -- deposits and refunds required.
 genDCerts
   :: KeyPairs
+  -> Map AnyKeyHash KeyPair
   -> MultiSigPairs
   -> [CoreKeyPair]
   -> VrfKeyPairs
@@ -68,7 +72,7 @@ genDCerts
   -> SlotNo
   -> Natural
   -> Gen (Seq DCert, [CertCred], Coin, Coin)
-genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
+genDCerts keys keyHashMap scripts coreKeys vrfKeys pparams dpState slot ttl = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
   -- later traversals are done backwards, to be consistent with the executable
@@ -97,10 +101,8 @@ genDCerts keys scripts coreKeys vrfKeys pparams dpState slot ttl = do
       case witnessOrCoreKeys of
         ScriptCred (_, stakeScript) -> do
           witnessHashes <- QC.elements (getKeyCombinations stakeScript)
-          let witnessHashSet = Set.fromList witnessHashes
-              witnesses =
-                filter (\k -> (hashAnyKey $ vKey k) `Set.member` witnessHashSet)
-                (map snd keys)
+          let witnesses =
+                Maybe.catMaybes (map (flip Map.lookup keyHashMap) witnessHashes)
           pure ( Seq.fromList certs
                , (map KeyCred witnesses) ++
                  (case cert_ of

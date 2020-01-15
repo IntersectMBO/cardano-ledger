@@ -12,7 +12,8 @@ module Generator.Utxo.QuickCheck
   where
 
 import qualified Data.Either as Either (lefts, rights)
-import qualified Data.Map.Strict as Map
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map (elems, empty, fromList, toList)
 import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
@@ -23,8 +24,8 @@ import qualified Test.QuickCheck as QC
 
 import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
-import           ConcreteCryptoTypes (Addr, CoreKeyPair, DCert, DPState, KeyPair, KeyPairs,
-                     MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
+import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DCert, DPState, KeyPair,
+                     KeyPairs, MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
                      VrfKeyPairs)
 import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
                      minNumGenInputs)
@@ -46,11 +47,12 @@ import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnesse
 genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
+      -> Map AnyKeyHash KeyPair
       -> MultiSigPairs
       -> [CoreKeyPair]
       -> VrfKeyPairs
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts coreKeys vrfKeys = do
+genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashMap scripts coreKeys vrfKeys = do
   keys' <- QC.shuffle keys
   scripts' <- QC.shuffle scripts
 
@@ -68,7 +70,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
 
   -- certificates
   (certs, certCreds, deposits_, refunds_)
-    <- genDCerts keys' scripts' coreKeys vrfKeys pparams dpState slot ttl
+    <- genDCerts keys' keyHashMap scripts' coreKeys vrfKeys pparams dpState slot ttl
 
   -- attempt to make provision for certificate deposits (otherwise discard this generator)
   let balance_ = spendingBalance - deposits_ + refunds_
@@ -100,7 +102,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys scripts 
   let msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
       !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
               `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
-              `Set.union` makeWitnessesFromScriptKeys txBody keys msigSignatures
+              `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
 
   -- discard if balance is negative, i.e., deposits exceed spending balance
   if spendingBalance < deposits_
