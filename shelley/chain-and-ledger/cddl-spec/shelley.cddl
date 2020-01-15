@@ -43,7 +43,7 @@ transaction_body =
   { 0 : #6.258([* transaction_input])
   , 1 : [* transaction_output]
   , ? 2 : [* delegation_certificate]
-  , ? 3 : [* withdrawal]
+  , ? 3 : withdrawals
   , 4 : coin ; fee
   , 5 : uint ; ttl
   , ? 6 : full_update
@@ -82,10 +82,10 @@ delegation_certificate =
   // 8                                ; genesis key delegation
       , genesishash                   ; delegating key
       , keyhash                       ; key delegated to
-  // 9, [* move_instantaneous_reward] ; move instantaneous rewards
+  // 9, move_instantaneous_reward ; move instantaneous rewards
  ) ]
 
-move_instantaneous_reward = ( keyhash, coin )
+move_instantaneous_reward = { * keyhash => coin }
 pointer = (uint, uint, uint)
 
 credential =
@@ -100,10 +100,10 @@ pool_params = ( #6.258([* keyhash]) ; pool owners
               , coin                ; pledge
               , keyhash             ; operator
               , $vrf_keyhash        ; vrf keyhash
-              , [credential]        ; reward_account
+              , credential          ; reward account
               )
 
-withdrawal = [credential, amount : uint]
+withdrawals = { * credential => coin }
 
 full_update = [ protocol_param_update_votes, application_version_update_votes ]
 
@@ -139,8 +139,8 @@ application_version_update = { * application_name =>  [uint, application_metadat
 
 application_metadata = { * system_tag => installerhash }
 
-application_name = tstr
-system_tag = tstr
+application_name = tstr .size 12
+system_tag = tstr .size 10
 
 transaction_witness_set =
   (  0, vkeywitness
