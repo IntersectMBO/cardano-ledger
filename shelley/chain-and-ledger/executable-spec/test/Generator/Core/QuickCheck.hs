@@ -34,7 +34,7 @@ import           Control.Monad (replicateM)
 import           Crypto.Random (drgNewTest, withDRG)
 import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (empty, fromList, insert)
+import qualified Data.Map.Strict as Map (empty, fromList, insert, lookup)
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 
@@ -49,7 +49,7 @@ import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DPState, Ge
 import           Control.State.Transition (IRC)
 import           Generator.Core.Constants (maxGenesisOutputVal, maxGenesisUTxOouts, maxNumKeyPairs,
                      minGenesisOutputVal, minGenesisUTxOouts)
-import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, vKey)
+import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, undiscriminateKeyHash, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
 import           Numeric.Natural (Natural)
 import           Test.Utils (mkGenKey, mkKeyPair)
@@ -161,11 +161,11 @@ someScripts lower upper =
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPair :: Addr -> KeyPairs -> KeyPair
-findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
-    case List.findIndex (\(pay, _) -> addr == hashKey (vKey pay)) keyList of
+findPayKeyPair :: Addr -> Map AnyKeyHash KeyPair -> KeyPair
+findPayKeyPair (AddrBase (KeyHashObj addr) _) keyHashMap =
+    case Map.lookup (undiscriminateKeyHash addr) keyHashMap of
       Nothing -> error "findPayKeyPair: could not find a match for the given address"
-      Just i  -> fst $ keyList !! i
+      Just kp -> kp
 findPayKeyPair _ _ = error "findPayKeyPair: expects only AddrBase addresses"
 
 -- | Find first matching script for address.

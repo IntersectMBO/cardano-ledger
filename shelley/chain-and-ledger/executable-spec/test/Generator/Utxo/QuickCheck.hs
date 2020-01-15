@@ -57,7 +57,8 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
   scripts' <- QC.shuffle scripts
 
   -- inputs
-  (witnessedInputs, spendingBalance) <- pickSpendingInputs keys' scripts' utxo
+  (witnessedInputs, spendingBalance) <-
+    pickSpendingInputs scripts' keyHashMap utxo
   let (inputs, spendCredentials) = unzip witnessedInputs
       spendWitnesses = Either.lefts spendCredentials
       spendScripts   = Either.rights spendCredentials
@@ -159,11 +160,11 @@ calcFeeAndOutputs balance_ addrs =
 -- spend these outputs). If this is not the case, `findPayKeyPair` /
 -- `findPayScript` will fail by not finding the matching keys or scripts.
 pickSpendingInputs
-  :: KeyPairs
-  -> MultiSigPairs
+  :: MultiSigPairs
+  -> Map AnyKeyHash KeyPair
   -> UTxO
   -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
-pickSpendingInputs keys scripts (UTxO utxo) = do
+pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
   selectedUtxo <- take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
                        <*> QC.shuffle (Map.toList utxo)
 
@@ -171,7 +172,7 @@ pickSpendingInputs keys scripts (UTxO utxo) = do
          , balance (UTxO (Map.fromList selectedUtxo)))
   where
     witnessedInput (input, TxOut addr@(AddrBase (KeyHashObj _) _) _) =
-      (input, Left $ findPayKeyPair addr keys)
+      (input, Left $ findPayKeyPair addr keyHashMap)
     witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) _) _) =
       (input, Right $ findPayScript addr scripts)
     witnessedInput _ = error "unsupported address"
