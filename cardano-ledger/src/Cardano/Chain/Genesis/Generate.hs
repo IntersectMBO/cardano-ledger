@@ -152,6 +152,21 @@ generateGenesisData
   -> GenesisSpec
   -> m (GenesisData, GeneratedSecrets)
 generateGenesisData startTime genesisSpec = do
+
+  let
+    pm  = gsProtocolMagic genesisSpec
+    nm  = makeNetworkMagic pm
+    gi  = gsInitializer genesisSpec
+    fao = giFakeAvvmBalance gi
+    tbo = giTestBalance gi
+
+  -- Generate all the private keys
+  let generatedSecrets = generateSecrets gi
+  let
+    dlgIssuersSecrets = gsDlgIssuersSecrets generatedSecrets
+    richSecrets = gsRichSecrets generatedSecrets
+    poorSecrets = gsPoorSecrets generatedSecrets
+
   -- Genesis Keys
   let
     genesisSecrets =
@@ -192,9 +207,11 @@ generateGenesisData startTime genesisSpec = do
       map (flip scaleLovelaceRational (giAvvmBalanceFactor gi))
 
     realAvvmMultiplied :: GenesisAvvmBalances
-    realAvvmMultiplied =
-      GenesisAvvmBalances . applyAvvmBalanceFactor $ unGenesisAvvmBalances
-        realAvvmBalances
+    realAvvmMultiplied = GenesisAvvmBalances
+                       . applyAvvmBalanceFactor
+                       . unGenesisAvvmBalances
+                       . gsAvvmDistr
+                       $ genesisSpec
 
   -- Fake AVVM Balances
   fakeAvvmVerificationKeys <-
@@ -268,20 +285,6 @@ generateGenesisData startTime genesisSpec = do
       }
 
   pure (genesisData, generatedSecrets)
- where
-  pm          = gsProtocolMagic genesisSpec
-  nm          = makeNetworkMagic pm
-  realAvvmBalances = gsAvvmDistr genesisSpec
-
-  gi          = gsInitializer genesisSpec
-
-  generatedSecrets = generateSecrets gi
-  dlgIssuersSecrets = gsDlgIssuersSecrets generatedSecrets
-  richSecrets = gsRichSecrets generatedSecrets
-  poorSecrets = gsPoorSecrets generatedSecrets
-
-  fao         = giFakeAvvmBalance gi
-  tbo         = giTestBalance gi
 
 
 generateSecrets :: GenesisInitializer -> GeneratedSecrets
