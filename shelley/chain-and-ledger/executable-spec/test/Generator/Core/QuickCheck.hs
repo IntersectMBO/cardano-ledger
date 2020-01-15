@@ -48,7 +48,7 @@ import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DPState, Ge
                      UTxOState, VKey, VerKeyVRF)
 import           Control.State.Transition (IRC)
 import           Generator.Core.Constants (maxGenesisOutputVal, maxGenesisUTxOouts, maxNumKeyPairs,
-                     minGenesisOutputVal, minGenesisUTxOouts)
+                     minGenesisOutputVal, minGenesisUTxOouts, numBaseScripts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, undiscriminateKeyHash, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
 import           Numeric.Natural (Natural)
@@ -152,12 +152,12 @@ someKeyPairs lower upper =
     <*> QC.shuffle traceKeyPairs
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
--- of the first 5 multi-sig scripts of `traceMSigScripts`.
+-- of the first `numBaseScripts` multi-sig scripts of `traceMSigScripts`.
 someScripts :: Int -> Int -> Gen MultiSigPairs
 someScripts lower upper =
   take
   <$> QC.choose (lower, upper)
-  <*> QC.shuffle (traceMSigCombinations $ take 3 traceMSigScripts)
+  <*> QC.shuffle (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.

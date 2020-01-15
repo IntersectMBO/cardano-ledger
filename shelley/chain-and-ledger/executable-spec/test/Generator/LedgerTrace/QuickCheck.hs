@@ -18,6 +18,7 @@ import           Control.Monad.Trans.Reader (runReaderT)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import           Data.Functor.Identity (runIdentity)
 import           Data.Word (Word64)
+import           Generator.Core.Constants (numBaseScripts)
 import           Generator.Core.QuickCheck (coreKeyPairs, genCoin, traceKeyHashMap, traceKeyPairs,
                      traceMSigCombinations, traceMSigScripts, traceVRFKeyPairs)
 import           Generator.Update.QuickCheck (genPParams)
@@ -42,7 +43,7 @@ instance TQC.HasTrace LEDGER Word64 where
      ledgerSt
      traceKeyPairs
      traceKeyHashMap
-     (traceMSigCombinations $ take 3 traceMSigScripts)
+     (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
      coreKeyPairs
      traceVRFKeyPairs
 

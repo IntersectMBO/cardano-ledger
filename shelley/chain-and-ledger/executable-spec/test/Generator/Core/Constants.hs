@@ -97,3 +97,7 @@ minGenesisOutputVal = 1000
 -- | maximal coin value for generated genesis outputs
 maxGenesisOutputVal :: Integer
 maxGenesisOutputVal = 10000
+
+-- | Number of base scripts from which multi sig scripts are built.
+numBaseScripts :: Int
+numBaseScripts = 5
