@@ -47,12 +47,12 @@ import Cardano.Chain.Genesis
   , TestnetBalanceOptions(..)
   , gsSigningKeys
   , gsSigningKeysPoor
-  , generateGenesisConfig
+  , generateGenesisConfigWithEntropy
   )
 import Cardano.Chain.ProtocolConstants (kEpochSlots, kSlotSecurityParam)
 import Cardano.Chain.Slotting (EpochNumber(..), EpochSlots, SlotCount)
 import Cardano.Chain.Update (ProtocolParameters(..), SoftforkRule(..))
-import Cardano.Crypto (SigningKey)
+import Cardano.Crypto as Crypto (SigningKey, deterministic)
 
 import qualified Test.Cardano.Crypto.Dummy as Dummy
 
@@ -61,8 +61,12 @@ dummyConfig           :: Config
 dummyGeneratedSecrets :: GeneratedSecrets
 (dummyConfig, dummyGeneratedSecrets) =
     either (panic . show) identity $
-      generateGenesisConfig startTime dummyGenesisSpec
+      Crypto.deterministic seed $ -- supply fake entropy to make this pure
+        runExceptT $
+          generateGenesisConfigWithEntropy startTime dummyGenesisSpec
   where
+    seed :: ByteString
+    seed      = "\0"
     startTime = UTCTime (ModifiedJulianDay 0) 0
 
 dummyK :: BlockCount

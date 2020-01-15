@@ -16,7 +16,9 @@ module Cardano.Chain.Genesis.Generate
   , gsSigningKeysPoor
   , PoorSecret(..)
   , generateGenesisData
+  , generateGenesisDataWithEntropy
   , generateGenesisConfig
+  , generateGenesisConfigWithEntropy
   , GenesisDataGenerationError(..)
   )
 where
@@ -31,7 +33,6 @@ import Data.Coerce (coerce)
 import Formatting (build, bprint, int, stext)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary (serialize')
 import Cardano.Chain.Common
   ( Address
   , Lovelace
@@ -61,9 +62,9 @@ import Cardano.Chain.Genesis.Spec (GenesisSpec(..))
 import Cardano.Chain.Genesis.Config (Config(..))
 import Cardano.Chain.UTxO.UTxOConfiguration (defaultUTxOConfiguration)
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes(..))
-import Cardano.Crypto
+import Cardano.Crypto as Crypto
   ( SigningKey
-  , deterministic
+  , runSecureRandom
   , getProtocolMagicId
   , getRequiresNetworkMagic
   , hash
@@ -147,11 +148,25 @@ instance B.Buildable GenesisDataGenerationError where
 
 
 generateGenesisData
-  :: MonadError GenesisDataGenerationError m
+  :: UTCTime
+  -> GenesisSpec
+  -> ExceptT GenesisDataGenerationError IO (GenesisData, GeneratedSecrets)
+generateGenesisData startTime genesisSpec =
+  -- Use a sensible choice of random entropy for key generation, which then
+  -- requires that the whole thing is actually in IO.
+  mapExceptT Crypto.runSecureRandom $
+    generateGenesisDataWithEntropy startTime genesisSpec
+
+-- | A version of 'generateGenesisData' parametrised over 'Crypto.MonadRandom'.
+-- For testing purposes this allows using a completely pure deterministic
+-- entropy source, rather than a cryptographically secure entropy source.
+--
+generateGenesisDataWithEntropy
+  :: Crypto.MonadRandom m
   => UTCTime
   -> GenesisSpec
-  -> m (GenesisData, GeneratedSecrets)
-generateGenesisData startTime genesisSpec = do
+  -> ExceptT GenesisDataGenerationError m (GenesisData, GeneratedSecrets)
+generateGenesisDataWithEntropy startTime genesisSpec = do
 
   let
     pm  = gsProtocolMagic genesisSpec
@@ -161,7 +176,7 @@ generateGenesisData startTime genesisSpec = do
     tbo = giTestBalance gi
 
   -- Generate all the private keys
-  let generatedSecrets = generateSecrets gi
+  generatedSecrets <- lift $ generateSecrets gi
   let
     dlgIssuersSecrets = gsDlgIssuersSecrets generatedSecrets
     richSecrets = gsRichSecrets generatedSecrets
@@ -287,8 +302,9 @@ generateGenesisData startTime genesisSpec = do
   pure (genesisData, generatedSecrets)
 
 
-generateSecrets :: GenesisInitializer -> GeneratedSecrets
-generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
+generateSecrets :: Crypto.MonadRandom m
+                => GenesisInitializer -> m GeneratedSecrets
+generateSecrets gi = do
 
   -- Generate fake AVVM seeds
   fakeAvvmSeeds <- replicateM (fromIntegral $ faoCount fao)
@@ -328,10 +344,27 @@ generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
 -- tests. For the real node we always generate an external JSON genesis file.
 --
 generateGenesisConfig
-  :: MonadError GenesisDataGenerationError m
-  => UTCTime -> GenesisSpec -> m (Config, GeneratedSecrets)
-generateGenesisConfig startTime genesisSpec = do
-    (genesisData, generatedSecrets) <- generateGenesisData startTime genesisSpec
+  :: UTCTime
+  -> GenesisSpec
+  -> ExceptT GenesisDataGenerationError IO (Config, GeneratedSecrets)
+generateGenesisConfig startTime genesisSpec =
+  -- Use a sensible choice of random entropy for key generation, which then
+  -- requires that the whole thing is actually in IO.
+  mapExceptT Crypto.runSecureRandom $
+    generateGenesisConfigWithEntropy startTime genesisSpec
+
+-- | A version of 'generateGenesisConfig' parametrised over 'Crypto.MonadRandom'.
+-- For testing purposes this allows using a completely pure deterministic
+-- entropy source, rather than a cryptographically secure entropy source.
+--
+generateGenesisConfigWithEntropy
+  :: Crypto.MonadRandom m
+  => UTCTime
+  -> GenesisSpec
+  -> ExceptT GenesisDataGenerationError m (Config, GeneratedSecrets)
+generateGenesisConfigWithEntropy startTime genesisSpec = do
+    (genesisData, generatedSecrets) <-
+      generateGenesisDataWithEntropy startTime genesisSpec
 
     let config = Config
           { configGenesisData       = genesisData
