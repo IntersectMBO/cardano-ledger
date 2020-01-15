@@ -23,7 +23,7 @@ where
 
 import Cardano.Prelude
 
-import Crypto.Random (MonadRandom, getRandomBytes)
+import qualified Crypto.Random as Crypto (MonadRandom, getRandomBytes)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Data.Time (UTCTime)
@@ -291,7 +291,8 @@ generateSecrets :: GenesisInitializer -> GeneratedSecrets
 generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
 
   -- Generate fake AVVM seeds
-  fakeAvvmSeeds <- replicateM (fromIntegral $ faoCount fao) (getRandomBytes 32)
+  fakeAvvmSeeds <- replicateM (fromIntegral $ faoCount fao)
+                              (Crypto.getRandomBytes 32)
 
   -- Generate secret keys
   dlgIssuersSecrets <- if giUseHeavyDlg gi
@@ -315,7 +316,7 @@ generateSecrets gi = deterministic (serialize' $ giSeed gi) $ do
   replicateRich :: Applicative m => m a -> m [a]
   replicateRich = replicateM (fromIntegral $ tboRichmen tbo)
 
-  genPoorSecret :: MonadRandom m => m PoorSecret
+  genPoorSecret :: Crypto.MonadRandom m => m PoorSecret
   genPoorSecret = PoorSecret . snd <$> keyGen
 
 
