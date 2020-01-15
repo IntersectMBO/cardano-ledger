@@ -32,7 +32,7 @@ where
 
 import Cardano.Prelude
 
-import qualified Crypto.Random as Crypto (MonadRandom, getRandomBytes)
+import qualified Crypto.Random as Crypto (MonadRandom)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
 import Data.Time (UTCTime)
@@ -77,9 +77,11 @@ import Cardano.Crypto as Crypto
   , hash
   , keyGen
   , noPassSafeSigner
-  , redeemDeterministicKeyGen
-  , toCompactRedeemVerificationKey
   , toVerification
+  , RedeemSigningKey
+  , redeemKeyGen
+  , redeemToVerification
+  , toCompactRedeemVerificationKey
   )
 
 
@@ -97,8 +99,8 @@ data GeneratedSecrets = GeneratedSecrets
     -- ^ All secrets of rich nodes.
     , gsPoorSecrets       :: ![PoorSecret]
     -- ^ Keys for HD addresses of poor nodes.
-    , gsFakeAvvmSeeds     :: ![ByteString]
-    -- ^ Fake avvm seeds.
+    , gsFakeAvvmSecrets   :: ![RedeemSigningKey]
+    -- ^ Fake avvm secrets.
     }
   deriving (Generic, NoUnexpectedThunks)
 
@@ -241,12 +243,10 @@ generateGenesisDataWithEntropy startTime genesisSpec = do
                        $ genesisSpec
 
   -- Fake AVVM Balances
-  fakeAvvmVerificationKeys <-
-    mapM
-      (maybe (throwError GenesisDataGenerationRedeemKeyGen)
-             (pure . toCompactRedeemVerificationKey . fst))
-      $ fmap redeemDeterministicKeyGen (gsFakeAvvmSeeds generatedSecrets)
   let
+    fakeAvvmVerificationKeys =
+      map (toCompactRedeemVerificationKey . redeemToVerification)
+          (gsFakeAvvmSecrets generatedSecrets)
     fakeAvvmDistr = GenesisAvvmBalances . M.fromList $ map
       (, faoOneBalance fao)
       fakeAvvmVerificationKeys
@@ -318,9 +318,9 @@ generateSecrets :: Crypto.MonadRandom m
                 => GenesisInitializer -> m GeneratedSecrets
 generateSecrets gi = do
 
-  -- Generate fake AVVM seeds
-  fakeAvvmSeeds <- replicateM (fromIntegral $ faoCount fao)
-                              (Crypto.getRandomBytes 32)
+  -- Generate fake AVVM secrets
+  fakeAvvmSecrets <- replicateM (fromIntegral $ faoCount fao)
+                                (snd <$> redeemKeyGen)
 
   -- Generate secret keys
   dlgIssuersSecrets <- if giUseHeavyDlg gi
@@ -335,7 +335,7 @@ generateSecrets gi = do
     { gsDlgIssuersSecrets = dlgIssuersSecrets
     , gsRichSecrets       = richSecrets
     , gsPoorSecrets       = poorSecrets
-    , gsFakeAvvmSeeds     = fakeAvvmSeeds
+    , gsFakeAvvmSecrets   = fakeAvvmSecrets
     }
  where
   fao = giFakeAvvmBalance gi
