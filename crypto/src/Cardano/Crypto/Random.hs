@@ -7,7 +7,6 @@
 
 module Cardano.Crypto.Random
   ( SecureRandom(..)
-  , secureRandomBS
   , deterministic
   , randomNumber
   , randomNumberInRange
@@ -18,6 +17,7 @@ import Cardano.Prelude
 
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (os2ip)
+import Crypto.Random.Entropy (getEntropy)
 import Crypto.Random
   ( ChaChaDRG
   , MonadPseudoRandom
@@ -27,21 +27,22 @@ import Crypto.Random
   , seedFromInteger
   , withDRG
   )
-import qualified Data.ByteArray as ByteArray (convert)
 
 
--- | Generate a cryptographically random 'ByteString' of specific length
-secureRandomBS :: MonadIO m => Int -> m ByteString
-secureRandomBS = liftIO . getRandomBytes
-
--- | You can use 'runSecureRandom' on any 'MonadRandom' computation to make
---   it use a Really Secure™ randomness source (that is, OpenSSL)
+-- | You can use 'runSecureRandom' on any 'MonadRandom' computation to
+-- use the operating  system entropy source to satisfy every request for
+-- randomness. That is, this does not use a fixed entropy pool shared across
+-- all requests; it gets entropy from the operating  system for every request.
+--
+-- This is suitable for key generation but is inappropriate for other uses
+-- since it can quickly drain the operating system entropy.
+--
 newtype SecureRandom a = SecureRandom
   { runSecureRandom :: IO a
   } deriving (Functor, Applicative, Monad)
 
 instance MonadRandom SecureRandom where
-  getRandomBytes n = SecureRandom (ByteArray.convert <$> secureRandomBS n)
+  getRandomBytes n = SecureRandom (getEntropy n)
 
 -- | You can use 'deterministic' on any 'MonadRandom' computation to make it use
 --   a seed (hopefully produced by a Really Secure™ randomness source). The seed
