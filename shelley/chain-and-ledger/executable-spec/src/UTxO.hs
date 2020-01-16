@@ -51,8 +51,8 @@ import qualified Data.Set as Set
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin (..))
-import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, hash, hashAnyKey, sKey,
-                     sign, vKey, verify)
+import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, hash, sKey, sign, vKey,
+                     verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
@@ -185,14 +185,12 @@ makeWitnessesFromScriptKeys
   :: (Crypto crypto
      , Signable (DSIGN crypto) (TxBody crypto))
   => TxBody crypto
-  -> [(KeyPair 'Regular crypto, KeyPair 'Regular crypto)]
+  -> Map (AnyKeyHash crypto) (KeyPair 'Regular crypto)
   -> Set (AnyKeyHash crypto)
   -> Set (WitVKey crypto)
-makeWitnessesFromScriptKeys txb keys scriptHashes =
-  let hashKeyMap = Map.fromList $ map (\(k, _) -> (hashAnyKey $ vKey k, k)) keys
-      witKeys    = Map.restrictKeys hashKeyMap scriptHashes
+makeWitnessesFromScriptKeys txb hashKeyMap scriptHashes =
+  let witKeys    = Map.restrictKeys hashKeyMap scriptHashes
   in  makeWitnessesVKey txb (Map.elems witKeys)
-
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO crypto -> Coin

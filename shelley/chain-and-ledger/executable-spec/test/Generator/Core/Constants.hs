@@ -10,7 +10,7 @@ minNumGenAddr = 1
 
 -- | minimal number of addresses for transaction outputs
 maxNumGenAddr :: Int
-maxNumGenAddr = 3
+maxNumGenAddr = 2
 
 -- | minimal number of transaction inputs to select
 minNumGenInputs :: Int
@@ -97,3 +97,7 @@ minGenesisOutputVal = 1000
 -- | maximal coin value for generated genesis outputs
 maxGenesisOutputVal :: Integer
 maxGenesisOutputVal = 10000
+
+-- | Number of base scripts from which multi sig scripts are built.
+numBaseScripts :: Int
+numBaseScripts = 5

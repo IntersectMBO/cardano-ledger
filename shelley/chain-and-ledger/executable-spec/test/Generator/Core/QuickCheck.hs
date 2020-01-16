@@ -18,6 +18,7 @@ module Generator.Core.QuickCheck
   , numCoreNodes
   , coreKeyPairs
   , traceKeyPairs
+  , traceKeyHashMap
   , traceVRFKeyPairs
   , traceMSigScripts
   , traceMSigCombinations
@@ -33,7 +34,7 @@ import           Control.Monad (replicateM)
 import           Crypto.Random (drgNewTest, withDRG)
 import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (fromList)
+import qualified Data.Map.Strict as Map (empty, fromList, insert, lookup)
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 
@@ -42,13 +43,13 @@ import qualified Test.QuickCheck as QC
 
 import           Address (scriptsToAddr, toAddr, toCred)
 import           Coin (Coin (..))
-import           ConcreteCryptoTypes (Addr, CoreKeyPair, DPState, GenKeyHash, KeyHash, KeyPair,
-                     KeyPairs, LEDGER, MultiSig, MultiSigPairs, SignKeyVRF, TxOut, UTxO, UTxOState,
-                     VKey, VerKeyVRF)
+import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DPState, GenKeyHash, KeyHash,
+                     KeyPair, KeyPairs, LEDGER, MultiSig, MultiSigPairs, SignKeyVRF, TxOut, UTxO,
+                     UTxOState, VKey, VerKeyVRF)
 import           Control.State.Transition (IRC)
 import           Generator.Core.Constants (maxGenesisOutputVal, maxGenesisUTxOouts, maxNumKeyPairs,
-                     minGenesisOutputVal, minGenesisUTxOouts)
-import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, vKey)
+                     minGenesisOutputVal, minGenesisUTxOouts, numBaseScripts)
+import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, undiscriminateKeyHash, vKey)
 import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
 import           Numeric.Natural (Natural)
 import           Test.Utils (mkGenKey, mkKeyPair)
@@ -84,6 +85,14 @@ mkKeyPairs n
 -- | Constant list of KeyPairs intended to be used in the generators.
 traceKeyPairs :: KeyPairs
 traceKeyPairs = mkKeyPairs <$> [1 .. maxNumKeyPairs]
+
+-- | Mapping from key hash to key pair
+traceKeyHashMap :: Map AnyKeyHash KeyPair
+traceKeyHashMap =
+  foldl (\m (payKey, stakeKey) ->
+           let m' = Map.insert (hashAnyKey $ vKey payKey) payKey m
+           in       Map.insert (hashAnyKey $ vKey stakeKey) stakeKey m')
+  Map.empty traceKeyPairs
 
 numCoreNodes :: Word64
 numCoreNodes = 7
@@ -143,22 +152,20 @@ someKeyPairs lower upper =
     <*> QC.shuffle traceKeyPairs
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
--- of the first 5 multi-sig scripts of `traceMSigScripts`.
+-- of the first `numBaseScripts` multi-sig scripts of `traceMSigScripts`.
 someScripts :: Int -> Int -> Gen MultiSigPairs
 someScripts lower upper =
   take
   <$> QC.choose (lower, upper)
-  <*> QC.shuffle (traceMSigCombinations $ take 5 traceMSigScripts)
+  <*> QC.shuffle (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPair :: Addr -> KeyPairs -> KeyPair
-findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
-    case matches of
-      []    -> error "findPayKeyPair: could not find a match for the given address"
-      (x:_) -> fst x
-    where
-      matches = filter (\(pay, _) -> addr == hashKey (vKey pay)) keyList
+findPayKeyPair :: Addr -> Map AnyKeyHash KeyPair -> KeyPair
+findPayKeyPair (AddrBase (KeyHashObj addr) _) keyHashMap =
+    case Map.lookup (undiscriminateKeyHash addr) keyHashMap of
+      Nothing -> error "findPayKeyPair: could not find a match for the given address"
+      Just kp -> kp
 findPayKeyPair _ _ = error "findPayKeyPair: expects only AddrBase addresses"
 
 -- | Find first matching script for address.

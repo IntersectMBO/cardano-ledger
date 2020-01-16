@@ -51,6 +51,8 @@ type RewardAcnt = TxData.RewardAcnt ConcreteCrypto
 
 type StakePools = TxData.StakePools ConcreteCrypto
 
+type AnyKeyHash = Keys.AnyKeyHash ConcreteCrypto
+
 type KeyHash = Keys.KeyHash ConcreteCrypto
 
 type GenKeyHash = Keys.GenKeyHash ConcreteCrypto

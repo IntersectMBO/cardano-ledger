@@ -26,6 +26,7 @@ module Rules.TestLedger
   , pStateIsInternallyConsistent
   , prop_MIRentriesEndUpInMap
   , prop_MIRValuesEndUpInMap
+  , requiredMSigSignaturesSubset
   )
 where
 
@@ -186,6 +187,12 @@ noDoubleSpend =
   forAllLedgerTrace $ \tr ->
     let ssts = map ledgerToUtxoSsts (sourceSignalTargets tr)
     in TestUtxow.noDoubleSpend ssts
+
+requiredMSigSignaturesSubset :: Property
+requiredMSigSignaturesSubset =
+  forAllLedgerTrace $ \tr ->
+  let ssts = map (\(_, _, s) -> s) $ map ledgerToUtxowSsts (sourceSignalTargets tr)
+  in  TestUtxow.requiredMSigSignaturesSubset ssts
 
 ----------------------------------------------------------------------
 -- Properties for Pool (using the LEDGER Trace) --
