@@ -261,7 +261,8 @@ annotateBlock epochSlots block =
 -- We need to do this because the delegation certificate is included in the
 -- block.
 rcDCert
-  :: Abstract.VKey
+  :: HasCallStack
+  => Abstract.VKey
   -- ^ Key for which the delegation certificate is being constructed.
   -> Abstract.BlockCount
   -- ^ Chain stability parameter
