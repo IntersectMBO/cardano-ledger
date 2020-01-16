@@ -104,7 +104,10 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
           (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
           (map (\(_, sScript) -> (hashScript sScript, sScript)) stakeScripts)
 
-    -- choose any possible combination of keys for multi-sig scripts
+    -- choose one possible combination of keys for multi-sig scripts
+    --
+    -- TODO mgudemann due to problems with time-outs, we select one combination
+    -- deterministically for each script. Varying the script is possible though.
     let keysLists = map getKeyCombination $ Map.elems multiSig
         msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
         !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)

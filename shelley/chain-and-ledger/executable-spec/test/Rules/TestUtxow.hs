@@ -160,6 +160,10 @@ noDoubleSpend tr =
 -- | Check for required signatures in case of Multi-Sig. There has to be one set
 -- of possible signatures for a multi-sig script which is a sub-set of the
 -- signatures of the tansaction.
+--
+-- TODO @mgudemann
+-- This property is currenty disabled du to time-out problems with getting all
+-- possible combinations for multi-sig.
 requiredMSigSignaturesSubset :: [SourceSignalTarget UTXOW] -> Property
 requiredMSigSignaturesSubset tr =
   conjoin $
