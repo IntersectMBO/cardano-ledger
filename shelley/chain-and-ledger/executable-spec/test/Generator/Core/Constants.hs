@@ -10,7 +10,7 @@ minNumGenAddr = 1
 
 -- | minimal number of addresses for transaction outputs
 maxNumGenAddr :: Int
-maxNumGenAddr = 3
+maxNumGenAddr = 2
 
 -- | minimal number of transaction inputs to select
 minNumGenInputs :: Int

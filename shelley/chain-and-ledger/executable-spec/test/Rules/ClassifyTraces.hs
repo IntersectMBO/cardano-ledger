@@ -71,11 +71,11 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
               (0.75 >= noCertsRatio (certsByTx txs))
               "at most 75% of transactions have no certificates"
      , cover_ 25
-              (0.25 <= txScriptOutputsRatio (map (_outputs . _body) txs))
-              "at least 25% of transactions have script TxOuts"
+              (0.1 <= txScriptOutputsRatio (map (_outputs . _body) txs))
+              "at least 10% of transactions have script TxOuts"
      , cover_ 10
-              (0.25 <= scriptCredentialCertsRatio certs_)
-              "at least 25% of `DCertDeleg` certificates have script credentials"
+              (0.1 <= scriptCredentialCertsRatio certs_)
+              "at least 10% of `DCertDeleg` certificates have script credentials"
      ]
     where
       cover_ pc b s = cover pc b s (property ())

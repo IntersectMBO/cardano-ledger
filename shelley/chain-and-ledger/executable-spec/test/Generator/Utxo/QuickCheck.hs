@@ -40,6 +40,8 @@ import           Updates (emptyUpdate)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
+import           Debug.Trace as D
+
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
 -- Selects unspent outputs and spends the funds on a some valid addresses.
@@ -59,6 +61,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
   -- inputs
   (witnessedInputs, spendingBalance) <-
     pickSpendingInputs scripts' keyHashMap utxo
+
   let (inputs, spendCredentials) = unzip witnessedInputs
       spendWitnesses = Either.lefts spendCredentials
       spendScripts   = Either.rights spendCredentials
@@ -73,42 +76,44 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
   (certs, certCreds, deposits_, refunds_)
     <- genDCerts keys' keyHashMap scripts' coreKeys vrfKeys pparams dpState slot ttl
 
-  -- attempt to make provision for certificate deposits (otherwise discard this generator)
-  let balance_ = spendingBalance - deposits_ + refunds_
-      stakeScripts = Maybe.catMaybes $ map (\case
-                                               ScriptCred c -> Just c
-                                               _            -> Nothing) certCreds
-      genesisWitnesses = foldl (++) [] $
-        Maybe.catMaybes $
-        map (\case
-                CoreKeyCred c -> Just c
-                _             -> Nothing) certCreds
-      certWitnesses = Maybe.catMaybes $ map (\case
-                                                KeyCred c -> Just c
-                                                _         -> Nothing) certCreds
-
-
-  -- calc. fees and output amounts
-  let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
-
-  -- witnessed transaction
-  txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
-  let multiSig = Map.fromList $
-        (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
-        (map (\(_, sScript) -> (hashScript sScript, sScript)) stakeScripts)
-
-  -- choose any possible combination of keys for multi-sig scripts
-  keysLists <- mapM QC.elements (map getKeyCombinations $ Map.elems multiSig)
-
-  let msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
-      !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
-              `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
-              `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
-
-  -- discard if balance is negative, i.e., deposits exceed spending balance
   if spendingBalance < deposits_
-    then QC.discard
-    else pure (Tx txBody wits multiSig)
+    then D.trace ("discarded") QC.discard
+    else do
+
+    -- attempt to make provision for certificate deposits (otherwise discard this generator)
+    let balance_ = spendingBalance - deposits_ + refunds_
+        stakeScripts = Maybe.catMaybes $ map (\case
+                                                 ScriptCred c -> Just c
+                                                 _            -> Nothing) certCreds
+        genesisWitnesses = foldl (++) [] $
+          Maybe.catMaybes $
+          map (\case
+                  CoreKeyCred c -> Just c
+                  _             -> Nothing) certCreds
+        certWitnesses = Maybe.catMaybes $ map (\case
+                                                  KeyCred c -> Just c
+                                                  _         -> Nothing) certCreds
+
+
+    -- calc. fees and output amounts
+    let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
+
+    -- witnessed transaction
+    txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
+    let multiSig = Map.fromList $
+          (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
+          (map (\(_, sScript) -> (hashScript sScript, sScript)) stakeScripts)
+
+    -- choose any possible combination of keys for multi-sig scripts
+    keysLists <- mapM QC.elements (map getKeyCombinations $ Map.elems multiSig)
+
+    let msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
+        !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
+                `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
+                `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
+
+    -- discard if balance is negative, i.e., deposits exceed spending balance
+    pure (Tx txBody wits multiSig)
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
@@ -187,9 +192,10 @@ genRecipients keys scripts = do
 
   -- choose m scripts and n keys as recipients
   m  <- QC.choose (0, n' - 1)
+  -- keys and scripts are shuffled before
   let n = n' - m
-  recipientKeys    <- take n <$> QC.shuffle keys
-  recipientScripts <- take m <$> QC.shuffle scripts
+      recipientKeys    = take n keys
+      recipientScripts = take m scripts
 
   let payKeys      = (toCred . fst) <$> recipientKeys
       stakeKeys    = (toCred . snd) <$> recipientKeys
