@@ -30,6 +30,7 @@ module Tx
   , extractScriptHash
   , extractGenKeyHash
   , getKeyCombinations
+  , getKeyCombination
   )
 where
 
@@ -91,6 +92,20 @@ hashNativeMultiSigScript
 hashNativeMultiSigScript msig =
   ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
                                           <> toCBOR x) msig
+
+-- | Get one possible combination of keys for multi signature script
+getKeyCombination :: MultiSig crypto -> [AnyKeyHash crypto]
+
+getKeyCombination (RequireSignature hk) = [hk]
+getKeyCombination (RequireAllOf msigs) =
+  List.concatMap getKeyCombination msigs
+getKeyCombination (RequireAnyOf msigs) =
+  case msigs of
+    []  -> []
+    x:_ -> getKeyCombination x
+getKeyCombination (RequireMOf m msigs) =
+  List.concatMap getKeyCombination (take m msigs)
+
 
 -- | Get all valid combinations of keys for given multi signature. This is
 -- mainly useful for testing.

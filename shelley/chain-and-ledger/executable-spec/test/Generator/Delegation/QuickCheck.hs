@@ -48,7 +48,7 @@ import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCr
                      _genDelegs, _pstate, _stPools, _stkCreds)
 import           PParams (PParams (..), d, eMax)
 import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
-import           Tx (getKeyCombinations)
+import           Tx (getKeyCombination)
 import           TxData (pattern DCertDeleg, pattern DCertGenesis, pattern DCertPool,
                      pattern Delegation, pattern KeyHashObj, pattern PoolParams, RewardAcnt (..),
                      pattern StakePools, _poolPubKey, _poolVrf)
@@ -100,7 +100,7 @@ genDCerts keys keyHashMap scripts coreKeys vrfKeys pparams dpState slot ttl = do
 
       case witnessOrCoreKeys of
         ScriptCred (_, stakeScript) -> do
-          witnessHashes <- QC.elements (getKeyCombinations stakeScript)
+          let witnessHashes = getKeyCombination stakeScript
           let witnesses =
                 Maybe.catMaybes (map (flip Map.lookup keyHashMap) witnessHashes)
           pure ( Seq.fromList certs
