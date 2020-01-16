@@ -438,11 +438,28 @@ txsize (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) =
     cSize = sum $ fmap certSize cs
     wSize = label + mapPrefix + (toInteger $ length ws) * (uint + credential)
 
-    params = uint + uint + uint + uint + uint + uint
-               + unitInterval + unitInterval + uint + unitInterval
-               + unitInterval + uint + uint + unitInterval
-               + unitInterval + unitInterval + unitInterval + unitInterval
-               + uint + (arrayPrefix + uint + uint + uint)
+    protoVersion = (smallArray + uint + uint + uint)
+    params = mapPrefix
+               + label + uint         -- minfee A
+               + label + uint         -- minfee B
+               + label + uint         -- max block body size
+               + label + uint         -- max transaction size
+               + label + uint         -- max block header size
+               + label + uint         -- key deposit
+               + label + unitInterval -- key deposit min refund
+               + label + unitInterval -- key deposit decay rate
+               + label + uint         -- pool deposit
+               + label + unitInterval -- pool deposit min refund
+               + label + unitInterval -- pool deposit decay rate
+               + label + uint         -- maximum epoch
+               + label + uint         -- n_optimal. desired number of stake pools
+               + label + unitInterval -- pool pledge influence
+               + label + unitInterval -- expansion rate
+               + label + unitInterval -- treasury growth rate
+               + label + unitInterval -- active slot coefficient
+               + label + unitInterval -- d. decentralization constant
+               + label + uint         -- extra entropy
+               + label + protoVersion -- protocol version
     ppupSize = mapPrefix + (toInteger $ length ppup) * (hashObj + params)
     avupSize = mapPrefix + (sum $ fmap appsSize avup)
     appsSize as = hashObj + mapPrefix + (sum $ fmap mdSize (apps as))
