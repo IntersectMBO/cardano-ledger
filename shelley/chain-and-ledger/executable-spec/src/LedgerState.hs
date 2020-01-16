@@ -97,6 +97,7 @@ module LedgerState
   ) where
 
 import           Address (mkRwdAcnt)
+import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
@@ -105,6 +106,7 @@ import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Proxy (Proxy (..))
 import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
@@ -124,12 +126,12 @@ import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDec
 import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch, epochInfoFirst,
                      epochInfoSize, (+*), (-*))
 import           Tx (extractGenKeyHash, extractKeyHash)
-import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCert (..), PoolParams,
-                     Ptr (..), RewardAcnt (..), Tx (..), TxBody (..), TxId (..), TxIn (..),
-                     TxOut (..), body, certs, getRwdCred, inputs, poolOwners, poolPledge,
-                     poolRAcnt, ttl, txfee, wdrls, witKeyHash)
-import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
-                     emptyUpdateState)
+import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
+                     PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, getRwdCred,
+                     inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
+                     apps, emptyUpdate, emptyUpdateState)
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
                      verifyWitVKey)
 import           Validation
@@ -394,15 +396,85 @@ validInputs tx u =
     else Invalid [BadInputs]
 
 -- |Implementation of abstract transaction size
-txsize :: TxBody crypto-> Integer
-txsize = toEnum . length . show
+-- TODO we still need to account for the witnesses, see github issue #812
+txsize :: forall crypto . (Crypto crypto) => TxBody crypto-> Integer
+txsize (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) =
+  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize
+  where
+    hl = toInteger $ byteCount (Proxy :: Proxy (HASH crypto))
+    hashObj = 2 + hl
+    uint = 5
+    arrayPrefix = 2
+    smallArray = 1
+    mapPrefix = 2
+    label = 1
+    cborTag = 2
+    address = 2 * hashObj
+    credential = label + hashObj
+    unitInterval = cborTag + smallArray + uint + uint
+    feeSize = label + uint
+    ttlSize = label + uint
+    iSize = label + cborTag + arrayPrefix
+            + (toInteger $ length ins) * (smallArray + uint + hashObj)
+    oSize = label + arrayPrefix
+            + (toInteger $ length outs) * (smallArray + uint + address)
+
+    numPoolOwners = toInteger . length . _poolOwners
+    pparams pps = cborTag + arrayPrefix + (numPoolOwners pps)*(hashObj) -- pool owners
+                + uint -- cost
+                + unitInterval -- margin
+                + uint -- pledge
+                + hashObj -- operator
+                + hashObj -- vrf keyhash
+                + credential -- reward account
+    certSize (DCertDeleg (RegKey _)) = smallArray + label + hashObj
+    certSize (DCertDeleg (DeRegKey _)) = smallArray + label + hashObj
+    certSize (DCertDeleg (Delegate _ )) = smallArray + label + 2 * hashObj
+    certSize (DCertPool (RegPool pps)) = smallArray + label + hashObj + pparams pps
+    certSize (DCertPool (RetirePool _ _)) = smallArray + label + uint + hashObj
+    certSize (DCertGenesis _) = smallArray + label + 2 * hashObj
+    certSize (DCertMir (MIRCert m)) = smallArray + label + mapPrefix
+                                    + (toInteger $ length m)*(uint + hashObj)
+    cSize = sum $ fmap certSize cs
+    wSize = label + mapPrefix + (toInteger $ length ws) * (uint + credential)
+
+    protoVersion = (smallArray + uint + uint + uint)
+    params = mapPrefix
+               + label + uint         -- minfee A
+               + label + uint         -- minfee B
+               + label + uint         -- max block body size
+               + label + uint         -- max transaction size
+               + label + uint         -- max block header size
+               + label + uint         -- key deposit
+               + label + unitInterval -- key deposit min refund
+               + label + unitInterval -- key deposit decay rate
+               + label + uint         -- pool deposit
+               + label + unitInterval -- pool deposit min refund
+               + label + unitInterval -- pool deposit decay rate
+               + label + uint         -- maximum epoch
+               + label + uint         -- n_optimal. desired number of stake pools
+               + label + unitInterval -- pool pledge influence
+               + label + unitInterval -- expansion rate
+               + label + unitInterval -- treasury growth rate
+               + label + unitInterval -- active slot coefficient
+               + label + unitInterval -- d. decentralization constant
+               + label + uint         -- extra entropy
+               + label + protoVersion -- protocol version
+    ppupSize = mapPrefix + (toInteger $ length ppup) * (hashObj + params)
+    avupSize = mapPrefix + (sum $ fmap appsSize avup)
+    appsSize as = hashObj + mapPrefix + (sum $ fmap mdSize (apps as))
+    nameSize = 12
+    sysTagSize = 10
+    mdSize (_av, (Mdt m)) = nameSize + arrayPrefix + uint + mapPrefix
+                             + (toInteger $ length m) * (sysTagSize + hashObj)
+    uSize = arrayPrefix + ppupSize + avupSize
 
 -- |Minimum fee calculation
-minfee :: PParams -> TxBody crypto-> Coin
+minfee :: forall crypto . (Crypto crypto) => PParams -> TxBody crypto-> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
 
 -- |Determine if the fee is large enough
-validFee :: PParams -> TxBody crypto-> Validity
+validFee :: forall crypto . (Crypto crypto) => PParams -> TxBody crypto-> Validity
 validFee pc tx =
   if needed <= given
     then Valid

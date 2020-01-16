@@ -24,7 +24,9 @@ import           Coin
 import           Ledger.Core ((<|))
 import           LedgerState hiding (genDelegs)
 import           PParams
-import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
+import           Rules.ClassifyTraces (onlyValidLedgerSignalsAreGenerated,
+                     propAbstractSizeBoundsBytes, propAbstractSizeNotTooBig,
+                     relevantCasesAreCovered)
 import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfterDelegation,
                      credentialRemovedAfterDereg, eliminateTxInputs, feesNonDecreasing,
                      newEntriesAndUniqueTxIns, noDoubleSpend, pStateIsInternallyConsistent,
@@ -238,6 +240,12 @@ propertyTests = testGroup "Property-Based Testing"
                   , testProperty
                     "Correctly preserve balance"
                     propPreserveBalance
+                  , TQC.testProperty
+                    "abstract tx size bounds bytes"
+                    propAbstractSizeBoundsBytes
+                  , TQC.testProperty
+                    "abstract tx size not too big"
+                    propAbstractSizeNotTooBig
                   ]
                 , testGroup "Property tests with mutated transactions"
                   [testProperty

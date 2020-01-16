@@ -5,13 +5,17 @@
 
 module Rules.ClassifyTraces
   ( onlyValidLedgerSignalsAreGenerated
-  , relevantCasesAreCovered)
+  , relevantCasesAreCovered
+  , propAbstractSizeBoundsBytes
+  , propAbstractSizeNotTooBig)
   where
 
+import qualified Data.ByteString as BS
 import           Data.Foldable (toList)
 import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
+import           Cardano.Binary (serialize')
 import           ConcreteCryptoTypes (DCert, LEDGER, Tx, TxOut)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
@@ -21,6 +25,7 @@ import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDel
                      isInstantaneousRewards, isRegKey, isRegPool, isRetirePool)
 import           Generator.Core.QuickCheck (mkGenesisLedgerState)
 import           Generator.LedgerTrace.QuickCheck ()
+import           LedgerState (txsize)
 import           Test.Utils
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
                      pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
@@ -136,3 +141,32 @@ lenRatio f xs
 onlyValidLedgerSignalsAreGenerated :: Property
 onlyValidLedgerSignalsAreGenerated = withMaxSuccess 200 $
     onlyValidSignalsAreGeneratedFromInitState @LEDGER testGlobals 100 (100::Word64) (Just mkGenesisLedgerState)
+
+-- | Check that the abstract transaction size function
+-- actually bounds the number of bytes in the serialized transaction.
+propAbstractSizeBoundsBytes :: Property
+propAbstractSizeBoundsBytes = property $ do
+  let tl = 100
+      numBytes = toInteger . BS.length . serialize'
+  forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
+    let txs :: [Tx]
+        txs = traceSignals OldestFirst tr
+    all (\txb -> txsize txb >= numBytes txb) (fmap _body txs)
+
+-- | Check that the abstract transaction size function
+-- is not off by an acceptable order of magnitude.
+propAbstractSizeNotTooBig :: Property
+propAbstractSizeNotTooBig = property $ do
+  let tl = 100
+      -- The below acceptable order of magnitude may not actually be large enough.
+      -- For small transactions, estimating the size of an encoded uint as 5
+      -- may mean that our size is more like five times too big.
+      -- It will be interesting to see the test fail with
+      -- an acceptableMagnitude of three, though.
+      acceptableMagnitude = (3 :: Integer)
+      numBytes = toInteger . BS.length . serialize'
+      notTooBig txb = txsize txb <= acceptableMagnitude * numBytes txb
+  forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
+    let txs :: [Tx]
+        txs = traceSignals OldestFirst tr
+    all notTooBig (fmap _body txs)
