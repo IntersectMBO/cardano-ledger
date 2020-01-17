@@ -16,8 +16,8 @@ module TxData
   where
 
 import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
-                     decodeListLen, decodeMapLenOrIndef, decodeWord, encodeListLen, encodeMapLen,
-                     encodeWord, enforceSize, matchSize)
+                     decodeListLen, decodeListLenOf, decodeMapLenOrIndef, decodeWord,
+                     encodeListLen, encodeMapLen, encodeWord, enforceSize, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), Word64)
 import           Control.Monad (replicateM, unless)
@@ -44,7 +44,6 @@ import           Slot (EpochNo (..), SlotNo (..))
 import           Updates (Update, emptyUpdate, updateNull)
 
 import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
-
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -444,6 +443,10 @@ instance
       <> toCBOR (_body tx)
       <> toCBOR (_witnessVKeySet tx)
       <> toCBOR (_witnessMSigMap tx)
+
+instance Crypto crypto => FromCBOR (Tx crypto) where
+  fromCBOR = decodeListLenOf 3 >>
+    Tx <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 instance
   (Crypto crypto)

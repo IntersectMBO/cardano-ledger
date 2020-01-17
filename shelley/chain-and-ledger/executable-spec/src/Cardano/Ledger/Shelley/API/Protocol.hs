@@ -21,6 +21,7 @@ module Cardano.Ledger.Shelley.API.Protocol
 where
 
 import BaseTypes (Globals (epochInfo))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
 import Cardano.Ledger.Shelley.API.Validation
 import Cardano.Ledger.Shelley.Crypto
 import Cardano.Prelude (NoUnexpectedThunks (..))
@@ -60,6 +61,31 @@ data LedgerView crypto
 
 instance NoUnexpectedThunks (LedgerView crypto)
 
+instance Crypto crypto => FromCBOR (LedgerView crypto) where
+  fromCBOR =
+    decodeListLenOf 4
+      >> LedgerView
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance Crypto crypto => ToCBOR (LedgerView crypto) where
+  toCBOR
+    LedgerView
+      { lvProtParams,
+        lvOverlaySched,
+        lvPoolDistr,
+        lvGenDelegs
+      } =
+      mconcat
+        [ encodeListLen 4,
+          toCBOR lvProtParams,
+          toCBOR lvOverlaySched,
+          toCBOR lvPoolDistr,
+          toCBOR lvGenDelegs
+        ]
+
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
 -- epoch.
@@ -89,16 +115,17 @@ view
     { nesPd,
       nesOsched,
       nesEs
-    } = LedgerView
-    { lvProtParams = esPp nesEs,
-      lvOverlaySched =
-        nesOsched,
-      lvPoolDistr = nesPd,
-      lvGenDelegs =
-        _genDelegs . _dstate
-          . _delegationState
-          $ esLState nesEs
-    }
+    } =
+    LedgerView
+      { lvProtParams = esPp nesEs,
+        lvOverlaySched =
+          nesOsched,
+        lvPoolDistr = nesPd,
+        lvGenDelegs =
+          _genDelegs . _dstate
+            . _delegationState
+            $ esLState nesEs
+      }
 
 -- | Alias of 'view' for export
 currentLedgerView :: ShelleyState crypto -> LedgerView crypto

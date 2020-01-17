@@ -32,6 +32,8 @@ import           Slot
 import           STS.Overlay
 import           STS.Updn
 
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLenOf,
+                     encodeListLen)
 import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -49,6 +51,29 @@ data PrtclState crypto
       Nonce -- ^ Candidate nonce
       Nonce -- ^ Prev epoch hash nonce
   deriving (Generic, Show)
+
+instance Crypto crypto => ToCBOR (PrtclState crypto) where
+  toCBOR (PrtclState m hh sn n1 n2 n3 n4) = mconcat
+    [ encodeListLen 7
+    , toCBOR m
+    , toCBOR hh
+    , toCBOR sn
+    , toCBOR n1
+    , toCBOR n2
+    , toCBOR n3
+    , toCBOR n4
+    ]
+
+instance Crypto crypto => FromCBOR (PrtclState crypto) where
+  fromCBOR = decodeListLenOf 7 >>
+    PrtclState
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
 
 instance NoUnexpectedThunks (PrtclState crypto)
 
