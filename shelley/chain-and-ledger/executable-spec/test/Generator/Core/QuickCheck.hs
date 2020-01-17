@@ -3,7 +3,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Generator.Core.QuickCheck
-  ( findPayKeyPair
+  ( AllPoolKeys (..)
+  , NatNonce (..)
+  , coreNodeVKG
+  , findPayKeyPair
   , findPayScript
   , genBool
   , genCoin
@@ -13,10 +16,13 @@ module Generator.Core.QuickCheck
   , genWord64
   , genTxOut
   , genUtxo0
+  , genesisAccountState
+  , genesisDelegs0
   , increasingProbabilityAt
-  , mkGenesisLedgerState
+  , maxLovelaceSupply
   , numCoreNodes
   , coreKeyPairs
+  , coreNodeKeys
   , traceKeyPairs
   , traceKeyHashMap
   , traceVRFKeyPairs
@@ -26,33 +32,46 @@ module Generator.Core.QuickCheck
   , someScripts
   , pickStakeKey
   , toAddr
-  , toCred)
+  , toCred
+  , zero
+  , unitIntervalToNatural
+  , mkBlock)
   where
 
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Control.Monad (replicateM)
 import           Crypto.Random (drgNewTest, withDRG)
+import           Data.Coerce (coerce)
 import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList, insert, lookup)
+import           Data.Ratio ((%))
+import           Data.Sequence (fromList)
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 
+import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Address (scriptsToAddr, toAddr, toCred)
+import           BaseTypes (Nonce (..), UnitInterval, intervalValue)
+import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, ProtVer (..),
+                     TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
-import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DPState, GenKeyHash, KeyHash,
-                     KeyPair, KeyPairs, LEDGER, MultiSig, MultiSigPairs, SignKeyVRF, TxOut, UTxO,
-                     UTxOState, VKey, VerKeyVRF)
-import           Control.State.Transition (IRC)
-import           Generator.Core.Constants (maxGenesisOutputVal, maxGenesisUTxOouts, maxNumKeyPairs,
-                     minGenesisOutputVal, minGenesisUTxOouts, numBaseScripts)
-import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, undiscriminateKeyHash, vKey)
-import           LedgerState (pattern LedgerState, genesisCoins, genesisState)
+import           ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair, GenKeyHash, HashHeader,
+                     KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, SKeyES, SignKeyVRF, Tx,
+                     TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
+import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, minGenesisOutputVal,
+                     numBaseScripts)
+import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign, signKES,
+                     undiscriminateKeyHash, vKey)
+import           LedgerState (AccountState (..), genesisCoins)
 import           Numeric.Natural (Natural)
-import           Test.Utils (mkGenKey, mkKeyPair)
+import           OCert (KESPeriod (..), pattern OCert)
+import           Slot (BlockNo (..), SlotNo (..))
+import           Test.Utils (mkCertifiedVRF, mkGenKey, mkKESKeyPair, mkKeyPair, mkVRFKeyPair,
+                     unsafeMkUnitInterval)
 import           Tx (pattern TxOut, hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
@@ -130,19 +149,38 @@ mkScriptsFromKeyPair (k0, k1) = (mkScriptFromKey k0, mkScriptFromKey k1)
 mkScriptFromKey :: KeyPair -> MultiSig
 mkScriptFromKey = (RequireSignature . hashAnyKey . vKey)
 
--- Pairs of (genesis key, node cold key)
+data AllPoolKeys = AllPoolKeys
+  { cold :: KeyPair
+  , vrf :: (SignKeyVRF, VerKeyVRF)
+  , hot :: (SKeyES, VKeyES)
+  , hk  :: KeyHash
+  } deriving (Show)
+
+-- Pairs of (genesis key, node keys)
 --
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
-coreNodes :: [(CoreKeyPair, KeyPair)]
-coreNodes = [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0)
-              , (toKeyPair . mkKeyPair) (x, 0, 0, 0, 1))
-            | x <- [1001..1000+numCoreNodes]]
-          where
-            toKeyPair (sk,vk) = KeyPair {sKey = sk, vKey = vk}
+coreNodeKeys :: [(CoreKeyPair, AllPoolKeys)]
+coreNodeKeys =
+  [ ( (toKeyPair . mkGenKey)  (x, 0, 0, 0, 0)
+    , let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, 1) in
+        AllPoolKeys
+          (toKeyPair (skCold, vkCold))
+          (mkVRFKeyPair (x, 0, 0, 0, 2))
+          (mkKESKeyPair (x, 0, 0, 0, 3))
+          (hashKey vkCold)
+    )
+  | x <- [1001..1000+numCoreNodes]
+  ]
+  where
+    toKeyPair (sk,vk) = KeyPair {sKey = sk, vKey = vk}
+
+-- Pairs of (genesis key, node cold key)
+coreNodeVKG :: Int -> VKeyGenesis
+coreNodeVKG = vKey . fst . (coreNodeKeys !!)
 
 coreKeyPairs :: [CoreKeyPair]
-coreKeyPairs = fst . unzip $ coreNodes
+coreKeyPairs = fst . unzip $ coreNodeKeys
 
 -- | Select between _lower_ and _upper_ keys from 'traceKeyPairs'
 someKeyPairs :: Int -> Int -> Gen KeyPairs
@@ -211,24 +249,21 @@ genUtxo0 lower upper = do
 genesisDelegs0 :: Map GenKeyHash KeyHash
 genesisDelegs0
   = Map.fromList
-      [ (hashVKey gkey, hashVKey pkey)
-      | (gkey, pkey) <- coreNodes]
+      [ (hashVKey gkey, hashVKey (cold pkeys))
+      | (gkey, pkeys) <- coreNodeKeys]
   where
     hashVKey = hashKey . vKey
 
--- | Generate initial state for the LEDGER STS using the STS environment.
---
--- Note: this function must be usable in place of 'applySTS' and needs to align
--- with the signature 'RuleContext sts -> Gen (Either [[PredicateFailure sts]] (State sts))'.
--- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
--- and (2) always return Right (since this function does not raise predicate failures).
-mkGenesisLedgerState
-  :: IRC LEDGER
-  -> Gen (Either a (UTxOState, DPState))
-mkGenesisLedgerState _ = do
-  utxo0 <- genUtxo0 minGenesisUTxOouts maxGenesisUTxOouts
-  let (LedgerState utxoSt dpSt) = genesisState genesisDelegs0 utxo0
-  pure $ Right (utxoSt, dpSt)
+-- | Account with empty treasury
+genesisAccountState :: AccountState
+genesisAccountState =
+  AccountState
+  { _treasury = Coin 0
+  , _reserves = maxLovelaceSupply
+  }
+
+maxLovelaceSupply :: Coin
+maxLovelaceSupply = Coin 45*1000*1000*1000*1000*1000
 
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.
@@ -253,3 +288,58 @@ traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
   body seed = fst . withDRG (drgNewTest seed) $ do
     sk <- genKeyVRF
     return (sk, deriveVerKeyVRF sk)
+
+zero :: UnitInterval
+zero = unsafeMkUnitInterval 0
+
+-- | Try to map the unit interval to a natural number. We don't care whether
+-- this is surjective. But it should be right inverse to `fromNatural` - that
+-- is, one should be able to recover the `UnitInterval` value used here.
+unitIntervalToNatural :: UnitInterval -> Natural
+unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
+
+mkBlock
+  :: HashHeader   -- ^ Hash of previous block
+  -> AllPoolKeys  -- ^ All keys in the stake pool
+  -> [Tx]         -- ^ Transactions to record
+  -> SlotNo       -- ^ Current slot
+  -> BlockNo      -- ^ Block number/chain length/chain "difficulty"
+  -> Nonce        -- ^ EpochNo nonce
+  -> NatNonce     -- ^ Block nonce
+  -> UnitInterval -- ^ Praos leader value
+  -> Natural      -- ^ Period of KES (key evolving signature scheme)
+  -> Block
+mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
+  let
+    (shot, vhot) = hot pkeys
+    nonceNonce = mkSeed seedEta s enonce prev
+    leaderNonce = mkSeed seedL s enonce prev
+    bhb = BHBody
+            prev
+            (vKey $ cold pkeys)
+            (snd $ vrf pkeys)
+            s
+            blockNo
+            (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
+            (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
+            (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
+            (bbHash $ TxSeq $ fromList txns)
+            (OCert
+              vhot
+              (vKey $ cold pkeys)
+              0
+              (KESPeriod 0)
+              (sign (sKey $ cold pkeys) (vhot, 0, KESPeriod 0))
+            )
+            (ProtVer 0 0 0)
+    bh = BHeader bhb (signKES shot bhb kesPeriod)
+  in
+    Block bh (TxSeq $ fromList txns)
+
+-- | We provide our own nonces to 'mkBlock', which we then wish to recover as
+-- the output of the VRF functions. In general, however, we just derive them
+-- from a natural. Since the nonce is a hash, we do not want to recover it to
+-- find a preimage. In testing, therefore, we just wrap the raw natural, which
+-- we then encode into the fake VRF implementation.
+newtype NatNonce = NatNonce Natural
+

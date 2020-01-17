@@ -5,6 +5,7 @@
 
 module Rules.ClassifyTraces
   ( onlyValidLedgerSignalsAreGenerated
+  , onlyValidChainSignalsAreGenerated
   , relevantCasesAreCovered
   , propAbstractSizeBoundsBytes
   , propAbstractSizeNotTooBig)
@@ -16,15 +17,15 @@ import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
 import           Cardano.Binary (serialize')
-import           ConcreteCryptoTypes (DCert, LEDGER, Tx, TxOut)
+import           ConcreteCryptoTypes (CHAIN, DCert, LEDGER, Tx, TxOut)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
 import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState,
                      onlyValidSignalsAreGeneratedFromInitState)
 import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDelegation,
                      isInstantaneousRewards, isRegKey, isRegPool, isRetirePool)
-import           Generator.Core.QuickCheck (mkGenesisLedgerState)
-import           Generator.LedgerTrace.QuickCheck ()
+import           Generator.ChainTrace (mkGenesisChainState)
+import           Generator.LedgerTrace.QuickCheck (mkGenesisLedgerState)
 import           LedgerState (txsize)
 import           Test.Utils
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
@@ -170,3 +171,7 @@ propAbstractSizeNotTooBig = property $ do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
     all notTooBig (fmap _body txs)
+
+onlyValidChainSignalsAreGenerated :: Property
+onlyValidChainSignalsAreGenerated = withMaxSuccess 20 $
+  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 10 (10::Word64) (Just mkGenesisChainState)

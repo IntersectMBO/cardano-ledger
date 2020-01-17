@@ -58,19 +58,16 @@ where
 import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 
 import           Cardano.Crypto.Hash (ShortHash)
-import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           ConcreteCryptoTypes (AVUpdate, Addr, Applications, Block, CHAIN, ChainState,
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
                      LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
-                     RewardAcnt, SKey, SKeyES, SignKeyVRF, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, UpdateState, VKeyES, VKeyGenesis, VerKeyVRF, hashKeyVRF)
+                     RewardAcnt, SKey, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update,
+                     UpdateState, VKeyGenesis, hashKeyVRF)
 import           Data.ByteString.Char8 (pack)
-import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
                      (!?))
 import           Data.Maybe (isJust, maybe)
-import           Data.Ratio ((%))
 import           Data.Sequence (empty, fromList)
 import qualified Data.Set as Set
 import           Data.Word (Word64)
@@ -78,18 +75,18 @@ import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Address (mkRwdAcnt)
-import           BaseTypes (Nonce (..), UnitInterval, intervalValue, mkNonce, startRewards, (⭒))
-import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bBodySize, bbHash, bhHash, bheader,
-                     hashHeaderToNonce, mkSeed, seedEta, seedL)
+import           BaseTypes (Nonce (..), mkNonce, startRewards, (⭒))
+import           BlockChain (pattern HashHeader, bhHash, bheader, hashHeaderToNonce)
 import           Coin (Coin (..))
+import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
-import           Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey, sKey, sign, signKES,
-                     vKey)
+import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genesisAccountState,
+                     maxLovelaceSupply, mkBlock, zero)
+import           Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
@@ -97,7 +94,6 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      overlaySchedule, rs, updateIRwd, _delegationState, _delegations, _dstate,
                      _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring,
                      _rewards, _stPools, _stkCreds, _treasury)
-import           OCert (KESPeriod (..), pattern OCert)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..), (+*))
 import           STS.Bbody (pattern LedgersFailure)
@@ -124,8 +120,6 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      emptyUpdateState)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
-import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-
 data CHAINExample =
   CHAINExample { currentSlotNo    :: SlotNo       -- ^ Current slot
                , startState     :: ChainState -- ^ State to start testing with
@@ -141,13 +135,6 @@ data MIRExample =
   , mirRewards :: Coin
   , target     :: Either [[PredicateFailure CHAIN]] ChainState
   } deriving (Show, Eq)
-
-data AllPoolKeys = AllPoolKeys
-  { cold :: KeyPair
-  , vrf :: (SignKeyVRF, VerKeyVRF)
-  , hot :: (SKeyES, VKeyES)
-  , hk  :: KeyHash
-  } deriving (Show)
 
 mkAllPoolKeys :: Word64 -> AllPoolKeys
 mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
@@ -247,57 +234,6 @@ nonce0 = hashHeaderToNonce lastByronHeaderHash
 mkSeqNonce :: Natural -> Nonce
 mkSeqNonce m = foldl (\c x -> c ⭒ mkNonce x) nonce0 [1.. m]
 
--- | We provide our own nonces to 'mkBlock', which we then wish to recover as
--- the output of the VRF functions. In general, however, we just derive them
--- from a natural. Since the nonce is a hash, we do not want to recover it to
--- find a preimage. In testing, therefore, we just wrap the raw natural, which
--- we then encode into the fake VRF implementation.
-newtype NatNonce = NatNonce Natural
-
--- | Try to map the unit interval to a natural number. We don't care whether
--- this is surjective. But it should be right inverse to `fromNatural` - that
--- is, one should be able to recover the `UnitInterval` value used here.
-unitIntervalToNatural :: UnitInterval -> Natural
-unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
-
-mkBlock
-  :: HashHeader   -- ^ Hash of previous block
-  -> AllPoolKeys  -- ^ All keys in the stake pool
-  -> [Tx]         -- ^ Transactions to record
-  -> SlotNo         -- ^ Current slot
-  -> BlockNo      -- ^ Block number/chain length/chain "difficulty"
-  -> Nonce        -- ^ EpochNo nonce
-  -> NatNonce     -- ^ Block nonce
-  -> UnitInterval -- ^ Praos leader value
-  -> Natural      -- ^ Period of KES (key evolving signature scheme)
-  -> Block
-mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
-  let
-    (shot, vhot) = hot pkeys
-    nonceNonce = mkSeed seedEta s enonce prev
-    leaderNonce = mkSeed seedL s enonce prev
-    bhb = BHBody
-            prev
-            (vKey $ cold pkeys)
-            (snd $ vrf pkeys)
-            s
-            blockNo
-            (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
-            (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
-            (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
-            (bbHash $ TxSeq $ fromList txns)
-            (OCert
-              vhot
-              (vKey $ cold pkeys)
-              0
-              (KESPeriod 0)
-              (sign (sKey $ cold pkeys) (vhot, 0, KESPeriod 0))
-            )
-            (ProtVer 0 0 0)
-    bh = BHeader bhb (Keys.signKES shot bhb kesPeriod)
-  in
-    Block bh (TxSeq $ fromList txns)
-
 carlPay :: KeyPair
 carlPay = KeyPair vk sk
   where (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
@@ -382,10 +318,7 @@ ppsExInstantDecay = ppsEx1 { _keyDecayRate  = 1000
 
 -- | Account with empty treasury.
 acntEx1 :: AccountState
-acntEx1 = AccountState
-            { _treasury = Coin 0
-            , _reserves = maxLovelaceSupply
-            }
+acntEx1 = genesisAccountState
 
 -- | Epoch state with no snapshots.
 esEx1 :: EpochState
@@ -404,9 +337,6 @@ initStEx1 = initialShelleyState
   (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0))
   (Applications Map.empty)
   ppsEx1
-
-zero :: UnitInterval
-zero = unsafeMkUnitInterval 0
 
 -- | Null initial block. Just records the Byron hash, and contains no transactions.
 blockEx1 :: Block
@@ -513,9 +443,6 @@ utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) usEx2A
 
 lsEx2A :: LedgerState
 lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1)
-
-maxLovelaceSupply :: Coin
-maxLovelaceSupply = Coin 45*1000*1000*1000*1000*1000
 
 acntEx2A :: AccountState
 acntEx2A = AccountState

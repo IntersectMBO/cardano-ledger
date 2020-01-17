@@ -107,7 +107,9 @@ test-suite delegation-test
                          Mutator
                          Generator
                          Generator.Core.Constants
+                         Generator.Block
                          Generator.Core.QuickCheck
+                         Generator.ChainTrace
                          Generator.LedgerTrace.QuickCheck
                          Generator.Delegation.QuickCheck
                          Generator.Update.QuickCheck
