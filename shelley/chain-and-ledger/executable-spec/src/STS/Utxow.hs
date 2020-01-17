@@ -2,7 +2,9 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,7 +16,9 @@ module STS.Utxow
   )
 where
 
-import           BaseTypes (Globals, ShelleyBase, intervalValue, (==>))
+import           BaseTypes (Globals, ShelleyBase, intervalValue, invalidKey, (==>))
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
+                     encodeListLen, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (runReaderT)
@@ -24,6 +28,8 @@ import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           Delegation.Certificates (isInstantaneousRewards)
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
@@ -63,6 +69,42 @@ instance
   initialRules = [initialLedgerStateUTXOW]
 
 instance NoUnexpectedThunks (PredicateFailure (UTXOW crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (UTXOW crypto))
+ where
+   toCBOR = \case
+      InvalidWitnessesUTXOW                -> encodeListLen 1 <> toCBOR (0 :: Word8)
+      MissingVKeyWitnessesUTXOW            -> encodeListLen 1 <> toCBOR (1 :: Word8)
+      MissingScriptWitnessesUTXOW          -> encodeListLen 1 <> toCBOR (2 :: Word8)
+      ScriptWitnessNotValidatingUTXOW      -> encodeListLen 1 <> toCBOR (3 :: Word8)
+      (UtxoFailure a)                      -> encodeListLen 2 <> toCBOR (4 :: Word8)
+                                                <> toCBOR a
+      MIRInsufficientGenesisSigsUTXOW      -> encodeListLen 1 <> toCBOR (5 :: Word8)
+      MIRImpossibleInDecentralizedNetUTXOW -> encodeListLen 1 <> toCBOR (6 :: Word8)
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (UTXOW crypto))
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> matchSize "InvalidWitnessesUTXOW" 1 n >> pure InvalidWitnessesUTXOW
+      1 -> matchSize "MissingVKeyWitnessesUTXOW" 1 n >> pure MissingVKeyWitnessesUTXOW
+      2 -> matchSize "MissingScriptWitnessesUTXOW" 1 n >> pure MissingScriptWitnessesUTXOW
+      3 -> matchSize "ScriptWitnessNotValidatingUTXOW" 1 n >>
+             pure ScriptWitnessNotValidatingUTXOW
+      4 -> do
+        matchSize "UtxoFailure" 2 n
+        a <- fromCBOR
+        pure $ UtxoFailure a
+      5 -> matchSize "MIRInsufficientGenesisSigsUTXOW" 1 n >>
+             pure MIRInsufficientGenesisSigsUTXOW
+      6 -> matchSize "MIRImpossibleInDecentralizedNetUTXOW" 1 n >>
+             pure MIRImpossibleInDecentralizedNetUTXOW
+      k -> invalidKey k
 
 initialLedgerStateUTXOW
   :: forall crypto

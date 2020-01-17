@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Pool
@@ -10,6 +12,7 @@ module STS.Pool
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks, runReaderT)
@@ -19,6 +22,8 @@ import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
@@ -56,6 +61,26 @@ instance STS (POOL crypto) where
   transitionRules = [poolDelegationTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (POOL crypto))
+ where
+   toCBOR = \case
+      StakePoolNotRegisteredOnKeyPOOL   -> toCBOR (0 :: Word8)
+      StakePoolRetirementWrongEpochPOOL -> toCBOR (1 :: Word8)
+      WrongCertificateTypePOOL          -> toCBOR (2 :: Word8)
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (POOL crypto))
+ where
+  fromCBOR = do
+    decodeWord >>= \case
+      0 -> pure StakePoolNotRegisteredOnKeyPOOL
+      1 -> pure StakePoolRetirementWrongEpochPOOL
+      2 -> pure WrongCertificateTypePOOL
+      k -> invalidKey k
 
 poolDelegationTransition :: TransitionRule (POOL crypto)
 poolDelegationTransition = do

@@ -17,20 +17,22 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
-import BaseTypes (Globals)
+import           BaseTypes (Globals)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import Cardano.Ledger.Shelley.API.Validation
-import Cardano.Ledger.Shelley.Crypto
-import Control.Arrow (left)
-import Control.Monad.Except
-import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-import Data.Sequence (Seq)
+import           Cardano.Ledger.Shelley.API.Validation
+import           Cardano.Ledger.Shelley.Crypto
+import           Control.Arrow (left)
+import           Control.Monad.Except
+import           Control.Monad.Trans.Reader (runReader)
+import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import           Data.Sequence (Seq)
+import           Data.Typeable (Typeable)
 import qualified LedgerState
-import STS.Ledgers (LEDGERS)
+import           Slot (SlotNo)
+import           STS.Ledgers (LEDGERS)
 import qualified STS.Ledgers as Ledgers
-import Slot (SlotNo)
-import TxData (Tx)
+import           TxData (Tx)
 import qualified TxData as Tx
 
 type MempoolEnv = Ledgers.LedgersEnv
@@ -77,6 +79,19 @@ mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
 data ApplyTxError crypto = ApplyTxError [PredicateFailure (LEDGERS crypto)]
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (ApplyTxError crypto)
+ where
+   toCBOR (ApplyTxError es) = toCBOR es
+
+instance
+  (Crypto crypto)
+  => FromCBOR (ApplyTxError crypto)
+ where
+  fromCBOR = ApplyTxError <$> fromCBOR
+
 
 applyTxs ::
   forall crypto m.
