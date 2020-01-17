@@ -21,6 +21,7 @@ import qualified STS.Chain
 import qualified STS.Deleg
 import qualified STS.Delegs
 import qualified STS.Ledger
+import qualified STS.Ledgers
 import qualified STS.NewEpoch
 import qualified STS.Pool
 import qualified STS.PoolReap
@@ -56,6 +57,8 @@ type AnyKeyHash = Keys.AnyKeyHash ConcreteCrypto
 type KeyHash = Keys.KeyHash ConcreteCrypto
 
 type GenKeyHash = Keys.GenKeyHash ConcreteCrypto
+
+type GenDelegs = Keys.GenDelegs ConcreteCrypto
 
 type KeyPair = Keys.KeyPair 'Keys.Regular ConcreteCrypto
 
@@ -144,6 +147,8 @@ type UtxoEnv = STS.Utxo.UtxoEnv ConcreteCrypto
 type DELEG = STS.Deleg.DELEG ConcreteCrypto
 
 type LEDGER = STS.Ledger.LEDGER ConcreteCrypto
+
+type LEDGERS = STS.Ledgers.LEDGERS ConcreteCrypto
 
 type LedgerEnv = STS.Ledger.LedgerEnv
 

@@ -39,8 +39,7 @@ import           Test.QuickCheck (Property, Testable, conjoin, property, withMax
 import           Control.State.Transition.Trace (SourceSignalTarget (..), Trace, source,
                      sourceSignalTargets, target, traceEnv)
 import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
-import           Generator.Core.QuickCheck (mkGenesisLedgerState)
-import           Generator.LedgerTrace.QuickCheck ()
+import           Generator.LedgerTrace.QuickCheck (mkGenesisLedgerState)
 
 import           Coin (pattern Coin)
 import           ConcreteCryptoTypes (DELEG, DELEGS, LEDGER, POOL, StakeCreds, StakePools, UTXO,

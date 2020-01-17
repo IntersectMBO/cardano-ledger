@@ -9,11 +9,17 @@ import           Data.Set (Set)
 import qualified Data.Set as S
 import           Test.QuickCheck (shrinkIntegral, shrinkList)
 
+import           ConcreteCryptoTypes (Block)
 import           Coin
 import           Slot
 import           Tx
 import           TxData
 import           Updates
+
+shrinkBlock
+  :: Block
+  -> [Block]
+shrinkBlock _ = []
 
 shrinkTx
   :: Tx crypto

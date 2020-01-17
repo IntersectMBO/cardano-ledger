@@ -166,7 +166,7 @@ classifyInvalidDoubleSpend = withTests 1000 $ property $ do
 propertyTests :: TestTree
 propertyTests = testGroup "Property-Based Testing"
                 [ testGroup "Classify Traces"
-                  [TQC.testProperty "Ledger trace covers the relevant cases" relevantCasesAreCovered]
+                  [TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered]
                 , testGroup "STS Rules - Delegation Properties"
                   [ TQC.testProperty "newly registered key has a reward of 0" rewardZeroAfterRegKey
                   , TQC.testProperty "deregistered key's credential is removed" credentialRemovedAfterDereg
@@ -256,9 +256,9 @@ propertyTests = testGroup "Property-Based Testing"
                     classifyInvalidDoubleSpend
                   ]
                 , testGroup "Properties of Trace generators"
-                  [TQC.testProperty
-                      "Only valid LEDGER STS signals are generated"
-                      onlyValidLedgerSignalsAreGenerated
+                  [ TQC.testProperty
+                       "Only valid LEDGER STS signals are generated"
+                       onlyValidLedgerSignalsAreGenerated
                   ]
                 ]
 
