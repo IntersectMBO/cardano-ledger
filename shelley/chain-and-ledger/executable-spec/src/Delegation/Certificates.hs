@@ -31,6 +31,7 @@ module Delegation.Certificates
   ) where
 
 import           BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Ledger.Shelley.Crypto
 import           Coin (Coin (..))
 import           Keys (GenKeyHash, Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
@@ -121,7 +122,7 @@ decayPool pc = (pval, pmin, lambdap)
 
 newtype PoolDistr crypto=
   PoolDistr (Map (KeyHash crypto) (Rational, Hash (HASH crypto) (VerKeyVRF (VRF crypto))))
-  deriving (Show, Eq, NoUnexpectedThunks, Relation)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Relation)
 
 isInstantaneousRewards :: DCert crypto-> Bool
 isInstantaneousRewards (DCertMir _) = True

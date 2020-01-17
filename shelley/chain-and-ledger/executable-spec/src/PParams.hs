@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+
 -- | This module contains just the type of protocol parameters.
 module PParams
   ( PParams(..)
@@ -27,6 +29,7 @@ module PParams
   , protocolVersion
   ) where
 
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
@@ -82,6 +85,99 @@ data PParams = PParams
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks PParams
+
+instance ToCBOR PParams
+ where
+  toCBOR (PParams
+    { _minfeeA         = minfeeA'
+    , _minfeeB         = minfeeB'
+    , _maxBBSize       = maxBBSize'
+    , _maxTxSize       = maxTxSize'
+    , _maxBHSize       = maxBHSize'
+    , _keyDeposit      = keyDeposit'
+    , _keyMinRefund    = keyMinRefund'
+    , _keyDecayRate    = keyDecayRate'
+    , _poolDeposit     = poolDeposit'
+    , _poolMinRefund   = poolMinRefund'
+    , _poolDecayRate   = poolDecayRate'
+    , _eMax            = eMax'
+    , _nOpt            = nOpt'
+    , _a0              = a0'
+    , _rho             = rho'
+    , _tau             = tau'
+    , _activeSlotCoeff = activeSlotCoeff'
+    , _d               = d'
+    , _extraEntropy    = extraEntropy'
+    , _protocolVersion = protocolVersion'
+    }) =
+      encodeListLen 20
+        <> toCBOR minfeeA'
+        <> toCBOR minfeeB'
+        <> toCBOR maxBBSize'
+        <> toCBOR maxTxSize'
+        <> toCBOR maxBHSize'
+        <> toCBOR keyDeposit'
+        <> toCBOR keyMinRefund'
+        <> toCBOR keyDecayRate'
+        <> toCBOR poolDeposit'
+        <> toCBOR poolMinRefund'
+        <> toCBOR poolDecayRate'
+        <> toCBOR eMax'
+        <> toCBOR nOpt'
+        <> toCBOR a0'
+        <> toCBOR rho'
+        <> toCBOR tau'
+        <> toCBOR activeSlotCoeff'
+        <> toCBOR d'
+        <> toCBOR extraEntropy'
+        <> toCBOR protocolVersion'
+
+instance FromCBOR PParams
+ where
+  fromCBOR = do
+    enforceSize "PParams" 20
+    minfeeA' <- fromCBOR
+    minfeeB' <- fromCBOR
+    maxBBSize' <- fromCBOR
+    maxTxSize' <- fromCBOR
+    maxBHSize' <- fromCBOR
+    keyDeposit' <- fromCBOR
+    keyMinRefund' <- fromCBOR
+    keyDecayRate' <- fromCBOR
+    poolDeposit' <- fromCBOR
+    poolMinRefund' <- fromCBOR
+    poolDecayRate' <- fromCBOR
+    eMax' <- fromCBOR
+    nOpt' <- fromCBOR
+    a0' <- fromCBOR
+    rho' <- fromCBOR
+    tau' <- fromCBOR
+    activeSlotCoeff' <- fromCBOR
+    d' <- fromCBOR
+    extraEntropy' <- fromCBOR
+    protocolVersion' <- fromCBOR
+    pure $ PParams
+      { _minfeeA         = minfeeA'
+      , _minfeeB         = minfeeB'
+      , _maxBBSize       = maxBBSize'
+      , _maxTxSize       = maxTxSize'
+      , _maxBHSize       = maxBHSize'
+      , _keyDeposit      = keyDeposit'
+      , _keyMinRefund    = keyMinRefund'
+      , _keyDecayRate    = keyDecayRate'
+      , _poolDeposit     = poolDeposit'
+      , _poolMinRefund   = poolMinRefund'
+      , _poolDecayRate   = poolDecayRate'
+      , _eMax            = eMax'
+      , _nOpt            = nOpt'
+      , _a0              = a0'
+      , _rho             = rho'
+      , _tau             = tau'
+      , _activeSlotCoeff = activeSlotCoeff'
+      , _d               = d'
+      , _extraEntropy    = extraEntropy'
+      , _protocolVersion = protocolVersion'
+      }
 
 makeLenses ''PParams
 

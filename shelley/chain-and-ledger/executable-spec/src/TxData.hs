@@ -66,6 +66,7 @@ data PoolParams crypto =
     , _poolOwners  :: Set (KeyHash crypto)
     } deriving (Show, Generic, Eq)
       deriving ToCBOR via CBORGroup (PoolParams crypto)
+      deriving FromCBOR via CBORGroup (PoolParams crypto)
 
 instance NoUnexpectedThunks (PoolParams crypto)
 
@@ -109,6 +110,8 @@ type Ix  = Natural
 data Ptr
   = Ptr SlotNo Ix Ix
   deriving (Show, Eq, Ord, Generic)
+  deriving ToCBOR via CBORGroup Ptr
+  deriving FromCBOR via CBORGroup Ptr
 
 instance NoUnexpectedThunks Ptr
 
@@ -260,14 +263,14 @@ instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
 
 newtype StakeCreds crypto =
   StakeCreds (Map (Credential crypto) SlotNo)
-  deriving (Show, Eq, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 addStakeCreds :: (Credential crypto) -> SlotNo -> (StakeCreds crypto) -> StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
 newtype StakePools crypto =
   StakePools (Map (KeyHash crypto) SlotNo)
-  deriving (Show, Eq, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 
 -- CBOR
@@ -650,6 +653,8 @@ instance ToCBORGroup Ptr where
       <> toCBOR (fromInteger (toInteger certIx) :: Word)
   listLen _ = 3
 
+instance FromCBORGroup Ptr where
+  fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 instance
   (Crypto crypto)

@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
@@ -41,6 +42,8 @@ import           Slot (SlotNo, (-*))
 import           TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt, TxOut (..), getRwdCred)
 import           UTxO (UTxO (..))
 
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -57,12 +60,12 @@ import           Ledger.Core (dom, (▷), (◁))
 -- | Blocks made
 newtype BlocksMade crypto
   = BlocksMade (Map (KeyHash crypto) Natural)
-  deriving (Show, Eq, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto
   = Stake (Map (Credential crypto) Coin)
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 -- | Add two stake distributions
 (⊎)
@@ -210,6 +213,31 @@ data SnapShots crypto
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShots crypto)
+
+instance
+  Crypto crypto
+  => ToCBOR (SnapShots crypto)
+  where
+    toCBOR (SnapShots mark set go ps fs) =
+      encodeListLen 5
+      <> toCBOR mark
+      <> toCBOR set
+      <> toCBOR go
+      <> toCBOR ps
+      <> toCBOR fs
+
+instance
+  Crypto crypto
+  => FromCBOR (SnapShots crypto)
+  where
+    fromCBOR = do
+      enforceSize "SnapShots" 5
+      mark <- fromCBOR
+      set <- fromCBOR
+      go <- fromCBOR
+      ps <- fromCBOR
+      f <- fromCBOR
+      pure $ SnapShots mark set go ps f
 
 makeLenses ''SnapShots
 

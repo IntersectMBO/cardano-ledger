@@ -21,19 +21,24 @@ import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCa
 
 import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
 import           BlockChain (pattern BHBody, pattern BHeader, Block (..), pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bhash, bbHash, bheaderBlockNo, bheaderEta,
-                     bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk,
-                     bprotvert, bsize, mkSeed, seedEta, seedL)
+                     ProtVer (..), TxSeq (..), bbHash, bhash, bheaderBlockNo, bheaderEta, bheaderL,
+                     bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk, bprotvert,
+                     bsize, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
 import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
 import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
-                     pattern RetirePool)
+                     pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
+                     pattern RegPool, pattern RetirePool)
+import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..))
 import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash, pattern KeyPair,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
                      vKey)
-import           LedgerState (genesisId)
+import           LedgerState (AccountState (..), EpochState (..), NewEpochState (..),
+                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs,
+                     updateIRwd)
+import           Numeric.Natural (Natural)
+import           PParams (emptyPParams)
 import           Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Test.Utils
@@ -49,9 +54,9 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 
 import           ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, HashHeader,
-                     InstallerHash, KeyHash, KeyPair, MultiSig, SKeyES, ScriptHash, Sig,
-                     SignKeyVRF, TxBody, TxId, TxIn, VKey, VKeyES, VRFKeyHash, VerKeyVRF,
-                     hashKeyVRF)
+                     InstallerHash, KeyHash, KeyPair, MultiSig, PoolDistr, RewardUpdate, SKeyES,
+                     ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn, VKey, VKeyES, VRFKeyHash,
+                     VerKeyVRF, hashKeyVRF)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Unsafe.Coerce (unsafeCoerce)
 import           UTxO (makeGenWitnessVKey, makeWitnessVKey)
@@ -145,6 +150,10 @@ testKey2 :: KeyPair
 testKey2 = KeyPair vk sk
   where (sk, vk) = mkKeyPair (0, 0, 0, 0, 2)
 
+testKey3 :: KeyPair
+testKey3 = KeyPair vk sk
+  where (sk, vk) = mkKeyPair (0, 0, 0, 0, 3)
+
 testKey1Token :: Tokens -> Tokens
 testKey1Token = e
   where
@@ -162,6 +171,9 @@ testKeyHash1 = (hashKey . vKey) testKey1
 
 testKeyHash2 :: KeyHash
 testKeyHash2 = (hashKey . vKey) testKey2
+
+testKeyHash3 :: KeyHash
+testKeyHash3 = (hashKey . vKey) testKey3
 
 testKESKeys :: (SKeyES, VKeyES)
 testKESKeys = mkKESKeyPair (0, 0, 0, 0, 3)
@@ -451,13 +463,13 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "mir"
-    , let rs = Map.singleton (KeyHashObj testKeyHash1) 77
+    , let rws = Map.singleton (KeyHashObj testKeyHash1) 77
     in
     checkEncodingCBOR "mir"
-    (DCertMir (MIRCert rs))
+    (DCertMir (MIRCert rws))
     ( T (TkListLen 2
        . TkWord 9) -- make instantaneous rewards cert
-      <> S rs
+      <> S rws
     )
 
   , checkEncodingCBOR "pparams_update_key_deposit_only"
@@ -840,5 +852,108 @@ serializationTests = testGroup "Serialization Tests"
           <> T (TkListLen 3 . TkWord 4)
           <> S ws
           <> S ss
+    )
+  , checkEncodingCBOR "epoch"
+    (EpochNo 13)
+    (T (TkWord64 13))
+  , let n = (17 :: Natural)
+        bs = Map.singleton testKeyHash1 n
+    in
+    checkEncodingCBOR "blocks_made"
+    (BlocksMade bs)
+    ( T (TkMapLen 1)
+      <> S testKeyHash1
+      <> S n)
+  , checkEncodingCBOR "account_state"
+    (AccountState (Coin 1) (Coin 2))
+    ( T (TkListLen 2)
+      <> S (Coin 1)
+      <> S (Coin 2))
+  , let stk = Map.singleton (KeyHashObj testKeyHash1) (Coin 13)
+    in
+    checkEncodingCBOR "stake"
+    (Stake stk)
+    ( T (TkMapLen 1)
+      <> S (KeyHashObj testKeyHash1)
+      <> S (Coin 13))
+  , let mark = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 11)
+               , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+        set  = ( Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22)
+               , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+        go   = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 33)
+               , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+        p = PoolParams
+              { _poolPubKey = testKeyHash1
+              , _poolVrf = testVRFKH
+              , _poolPledge = Coin 5
+              , _poolCost = Coin 4
+              , _poolMargin = unsafeMkUnitInterval 0.7
+              , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
+              , _poolOwners = Set.singleton testKeyHash2
+              }
+        ps = Map.singleton testKeyHash1 p
+        fs = Coin 123
+    in
+    checkEncodingCBOR "snapshots"
+    (SnapShots mark set go ps fs)
+    ( T (TkListLen 5)
+      <> S mark
+      <> S set
+      <> S go
+      <> S ps
+      <> S fs )
+  , let
+      e  = EpochNo 0
+      ac = AccountState (Coin 100) (Coin 100)
+      mark = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 11)
+             , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+      set  = ( Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22)
+             , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+      go   = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 33)
+             , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+      p = PoolParams
+            { _poolPubKey = testKeyHash1
+            , _poolVrf = testVRFKH
+            , _poolPledge = Coin 5
+            , _poolCost = Coin 4
+            , _poolMargin = unsafeMkUnitInterval 0.7
+            , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
+            , _poolOwners = Set.singleton testKeyHash2
+            }
+      ps = Map.singleton testKeyHash1 p
+      fs = Coin 123
+      ss = SnapShots mark set go ps fs
+      ls = emptyLedgerState
+      pps = emptyPParams
+      bs = Map.singleton testKeyHash1 1
+      es = EpochState ac ss ls pps
+      ru = (Just RewardUpdate
+             { deltaT        = Coin 100
+             , deltaR        = Coin (-200)
+             , rs            = Map.empty
+             , deltaF        = Coin (-10)
+             , updateIRwd    = Map.empty
+             }) :: Maybe RewardUpdate
+      pd = (PoolDistr Map.empty) :: PoolDistr
+      os = Map.singleton (SlotNo 1) (Just testGKeyHash)
+      nes = NewEpochState
+              e
+              (BlocksMade bs)
+              (BlocksMade bs)
+              es
+              ru
+              pd
+              os
+    in
+    checkEncodingCBOR "new_epoch_state"
+    nes
+    ( T (TkListLen 7)
+      <> S e
+      <> S (BlocksMade bs)
+      <> S (BlocksMade bs)
+      <> S es
+      <> S ru
+      <> S pd
+      <> S os
     )
  ]

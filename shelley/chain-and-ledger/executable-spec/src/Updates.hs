@@ -301,3 +301,18 @@ data UpdateState crypto
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (UpdateState crypto)
+
+instance Crypto crypto => ToCBOR (UpdateState crypto)
+ where
+  toCBOR (UpdateState a b c d) =
+    encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
+
+instance Crypto crypto => FromCBOR (UpdateState crypto)
+ where
+  fromCBOR = do
+    enforceSize "UpdateState" 4
+    a <- fromCBOR
+    b <- fromCBOR
+    c <- fromCBOR
+    d <- fromCBOR
+    pure $ UpdateState a b c d
