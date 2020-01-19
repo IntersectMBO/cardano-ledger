@@ -26,6 +26,7 @@ module Tx
   , metadata
   , witnessVKeySet
   , unsignedData
+  , txinputs_vf
 --  , witnessMSigMap
     -- witness data
   , WitVKey(..)
@@ -40,6 +41,13 @@ module Tx
   , getKeyCombination
   , txToCBORWits
   , cborWitsToTx
+  , getrefs
+  , addrTxOut
+  , extractGenKeyHash
+  , getKeyCombinations
+  , getKeyCombination
+  , adaID
+  , adaToken
   )
 where
 
@@ -69,7 +77,19 @@ import           Serialization (CborSeq (..), mapHelper)
 import           TxData (Credential (..), MultiSig (..), Script (..), ScriptHash (..), TxBody (..),
                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), certs, inputs,
                      nativeMultiSigTag, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash)
-
+import           TxData (Credential (..), StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..), UnsignedData (..),
+import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
+                     TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..),
+                     Addr, body, certs,
+                     txinputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash, unsignedData,
+                     witnessVKeySet, txlst, forged, txexunits, hashPP, txvlds, txdats,
+                     txvaltag)
+import           Scripts
+import           CostModel
+import           Data.Word (Word8)
+--import           Data.ByteString.Internal (unpackBytes)
+import           Data.ByteString.Char8 (ByteString, pack)
 
 -- |A fully formed transaction.
 data Tx crypto
@@ -156,19 +176,7 @@ instance Crypto crypto => FromCBOR (Tx crypto) where
   fromCBOR = decodeListLenOf 3 >>
     cborWitsToTx <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
-  -- import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
-  --                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
-  --                      ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
-import           TxData (Credential (..), StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..), UnsignedData (..),
-import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..),
-                     Addr, body, certs,
-                     txinputs, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash, unsignedData,
-                     witnessVKeySet, txlst, forged, txexunits, hashPP, txvlds, txdats,
-                     txvaltag)
-import           Scripts
-import           CostModel
+
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -210,6 +218,29 @@ hashAnyScript
 hashAnyScript (MultiSigScript msig) =
   ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
                                           <> toCBOR x) (MultiSigScript msig)
+
+
+-- | Hashes plutus script, appending the 'plutusTag' in
+-- front and then calling the script CBOR function.
+hashPLCScript
+  :: Crypto crypto
+  => ScriptPLC crypto
+  -> ScriptHash crypto
+hashPLCScript plc =
+  ScriptHashPLC $ hashWithSerialiser (\x -> encodeWord8 plutusTag
+                                          <> toCBOR x) plc
+
+
+-- | native currency (Ada) currencyID
+adaID :: (Crypto crypto) => ScriptHash crypto
+adaID = hashPLCScript (ScriptPLC 1)
+
+adaToken :: ByteString
+adaToken =  pack "Ada"
+
+-- | returns a Value representing the given amount of Ada
+makeAdaValue :: Crypto crypto => Integer -> Value crypto
+makeAdaValue q = Value (singleton adaID (singleton adaToken (Quantity q)))
 
 -- | Get one possible combination of keys for multi signature script
 getKeyCombination :: MultiSig crypto -> [AnyKeyHash crypto]
@@ -328,8 +359,8 @@ inputisfee (TxInVK _ (IsFee Yes)) = True
 inputisfee _                      = True
 
 -- | just the for-fee-payment inputs
-txinputs_vf    :: Tx crypto -> Set (TxIn crypto)
-txinputs_vf tx =  getrefs $ Data.Set.filter inputisfee (_txinputs (_body tx))
+txinputs_vf    :: TxBody crypto -> Set (TxIn crypto)
+txinputs_vf tx =  getrefs $ Data.Set.filter inputisfee (_txinputs tx)
 
 -- | return the address in an output
 addrTxOut :: TxOut crypto -> Addr crypto

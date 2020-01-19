@@ -46,7 +46,6 @@ import           Data.Map.Strict
 import           Cardano.Ledger.Shelley.Crypto
 
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
--- import           Coin (Coin (..))
 import           CostModel
 import           Slot (EpochNo (..))
 import           Scripts
@@ -56,9 +55,6 @@ import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), 
                      decodeListLen, decodeListLenOrIndef, decodeMapLenOrIndef, decodeWord,
                      encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord,
                      enforceSize, matchSize)
-
--- | Plutus version
-type PlutusVer = (Natural, Natural, Natural)
 
 
 -- | Plutus-specific parameter set

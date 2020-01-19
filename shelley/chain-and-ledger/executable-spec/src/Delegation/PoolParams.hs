@@ -5,7 +5,6 @@ module Delegation.PoolParams
 import           Lens.Micro ((^.))
 
 import           BaseTypes (UnitInterval)
--- import           Coin (Coin)
 import           TxData (PoolParams, poolCost, poolMargin, poolPledge)
 import           Scripts
 

@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
---{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE LambdaCase #-}
@@ -12,12 +11,9 @@ module Scripts
 
 import           Cardano.Binary (ToCBOR, FromCBOR)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
--- import           Coin (Coin (..))
 import           GHC.Generics (Generic)
--- import           Data.Map
 import           Cardano.Ledger.Shelley.Crypto
 import           Keys (Hash)
---import           CostModel
 
 import           Data.Word (Word8)
 import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
@@ -25,9 +21,8 @@ import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), 
                      encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord,
                      enforceSize, matchSize)
 import           BaseTypes (CborSeq (..), UnitInterval, invalidKey)
---import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
-import           Keys (AnyKeyHash, pattern AnyKeyHash) --, GenKeyHash, Hash, KeyHash, pattern KeyHash,
--- --                     Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey, hash)
+import           Keys (AnyKeyHash, pattern AnyKeyHash)
+import           Data.ByteString.Char8 (ByteString, pack)
 
 import           Data.Map.Strict (Map, empty, unionWith)
 import qualified Data.Map.Strict as Map
@@ -67,7 +62,7 @@ data MultiSig crypto =
 instance NoUnexpectedThunks (MultiSig crypto)
 
 data Script crypto =
-  MSig (MultiSig crypto) | SPLC (ScriptPLC crypto)
+  MSig (MultiSig crypto) | SPLC (ScriptPLC crypto) PlutusVer
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (Script crypto)
@@ -86,64 +81,79 @@ data IsThing = Yes | Nope
 instance NoUnexpectedThunks IsThing
 
 -- | Validation tag
+-- | this tag is for the creator of the block to add to every transaction
+-- to mark whether the *scripts* in it validate (a transaction where not all
+-- scripts validate can still be processed/pay fees)
 newtype IsValidating = IsValidating IsThing
-  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR, FromCBOR)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord)
+
+deriving instance ToCBOR IsValidating
+deriving instance FromCBOR IsValidating
 
 -- | For-fee tag
+-- | this is a tag the author of the transactions must add to each input
+-- which spends a non-script output to indicate whether it is used to
+-- pay for script execution/transaction fees
 newtype IsFee = IsFee IsThing
-  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR, FromCBOR)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord)
 
+deriving instance ToCBOR IsFee
+deriving instance FromCBOR IsFee
+
+-- | This will be the Data type from the Plutus library
 newtype DataHash crypto = DataHash (Hash (HASH crypto) (Data crypto))
   deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord)
 
 deriving instance Crypto crypto => ToCBOR (DataHash crypto)
 deriving instance Crypto crypto => FromCBOR (DataHash crypto)
 
+-- | Plutus version
+type PlutusVer = (Natural, Natural, Natural)
+
 -- STAND-IN things!!
 -- temp plc script! Use these from Plutus
 newtype ScriptPLC crypto = ScriptPLC Integer
   deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR, FromCBOR)
-
 
 -- | Use these from Plutus
 newtype Data crypto = Data Integer
   deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR, FromCBOR)
 
 -- | Quantity
-newtype Quantity = Quantity Natural
+newtype Quantity = Quantity Integer
   deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Num, Ord, Real, Integral, Enum, NoUnexpectedThunks)
 
 
--- | Value type
-data Value crypto = Value (Map (ScriptHash crypto) (Map String Quantity))
+-- | Value represents a collection of tokens/currencies
+-- the ScriptHash parameter is the hash of the script used to model the
+-- monetary policy of the currency
+data Value crypto = Value (Map (ScriptHash crypto) (Map ByteString Quantity))
   deriving (Show, Eq, Generic, Ord)
 
 instance NoUnexpectedThunks (Value crypto)
 
 -- | Overloaded functions for operations on underlying numeric Quantity in
 -- | the Value type (in a scalar way)
-
 instance Num (Value crypto) where
    (Value v1) + (Value v2) = Value ((unionWith (unionWith (+))) v1 v2)
    (Value v1) * (Value v2) = Value ((unionWith (unionWith (*))) v1 v2)
    (Value v1) - (Value v2) = Value ((unionWith (unionWith (-))) v1 v2)
 
-
 -- | CBOR temp
-
 
 instance
   (Crypto crypto)
   => ToCBOR (Value crypto)
   where
-    toCBOR v = toCBOR (1 :: Word8)
+    toCBOR (Value v) = toCBOR v
 
 instance
   Crypto crypto
   => FromCBOR (Value crypto)
  where
-  fromCBOR =
-      pure $ (Value empty)
+  fromCBOR = do
+    v <- fromCBOR
+    pure $ (Value v)
 
 instance
   ToCBOR IsThing
@@ -187,24 +197,41 @@ instance
        <> toCBOR (0 :: Word8)
        <> toCBOR ms
 
-    SPLC plc ->
-      encodeListLen 2
+    SPLC plc ver ->
+      encodeListLen 3
        <> toCBOR (1 :: Word8)
        <> toCBOR plc
+       <> toCBOR ver
 
 instance
   Crypto crypto
   => FromCBOR (Script crypto)
  where
-  fromCBOR = enforceSize "Script" 2  >> decodeWord >>= \case
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "MSig" 1 n
+        a <- fromCBOR
+        pure $ MSig a
+      0 -> do
+        matchSize "SPLC" 2 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ SPLC a b
+      k -> invalidKey k
+
+
+instance (Crypto crypto) =>
+  FromCBOR (ScriptHash crypto) where
+  fromCBOR = enforceSize "ScriptHash" 2  >> decodeWord >>= \case
     0 -> do
       a <- fromCBOR
-      pure $ MSig a
+      pure $ ScriptHashMSig a
     1 -> do
       a <- fromCBOR
-      pure $ SPLC a
+      pure $ ScriptHashPLC a
     k -> invalidKey k
-
 
 instance (Crypto crypto) =>
   ToCBOR (MultiSig crypto) where

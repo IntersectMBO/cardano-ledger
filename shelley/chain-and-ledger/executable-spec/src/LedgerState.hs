@@ -101,10 +101,9 @@ import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
---import           Coin (Coin (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import           Data.Foldable (toList)
-import           Data.Map.Strict (Map)
+import           Data.Map.Strict (Map, empty)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Proxy (Proxy (..))
@@ -134,8 +133,24 @@ import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert
                      inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
                      apps, emptyUpdate, emptyUpdateState)
+=======
+  -- import           Tx (extractGenKeyHash, extractKeyHash)
+  -- import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
+  --                      PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
+  --                      TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, getRwdCred,
+  --                      inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+  -- import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
+  --                      apps, emptyUpdate, emptyUpdateState)
+import           Tx (extractGenKeyHash, extractKeyHash, makeAdaValue, getrefs, txinputs_vf)
+import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCert (..), PoolParams,
+                     Ptr (..), RewardAcnt (..), Tx (..), TxBody (..), TxId (..), TxIn (..),
+                     TxOut (..), UnsignedData(..), body, certs, getRwdCred, txinputs, poolOwners, poolPledge,
+                     poolRAcnt, ttl, txfee, wdrls, witKeyHash, txexunits, forged)
+import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
+                     emptyUpdateState)
+>>>>>>> more rebase
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
-                     verifyWitVKey)
+                     verifyWitVKey, adaAllUTxO)
 import           Validation
 
 import           Delegation.Certificates (DCert (..), PoolDistr (..), StakeCreds (..),
@@ -147,6 +162,7 @@ import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 
 import           CostModel
 import           PParams
+import           Scripts
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Regular crypto, KeyPair 'Regular crypto)]
@@ -160,7 +176,7 @@ data LedgerValidation crypto
 instance NoUnexpectedThunks (LedgerValidation crypto)
 
 type RewardAccounts crypto
-  = Map (RewardAcnt crypto) Coin
+  = Map (RewardAcnt crypto) (Value crypto)
 
 -- | StakeShare type
 newtype StakeShare =
@@ -182,7 +198,7 @@ data DState crypto = DState
       -- |Genesis key delegations
     , _genDelegs   :: GenDelegs crypto
       -- | Instantaneous Rewards
-    , _irwd        :: Map (Credential crypto) Coin
+    , _irwd        :: Map (Credential crypto) (Value crypto)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DState crypto)
@@ -286,9 +302,9 @@ instance Crypto crypto => FromCBOR (RewardUpdate crypto)
 emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
 
-data AccountState = AccountState
-  { _treasury  :: Coin
-  , _reserves  :: Coin
+data AccountState crypto = AccountState
+  { _treasury  :: Value crypto
+  , _reserves  :: Value crypto
   } deriving (Show, Eq, Generic)
 
 instance ToCBOR AccountState
@@ -304,14 +320,14 @@ instance FromCBOR AccountState
     r <- fromCBOR
     pure $ AccountState t r
 
-instance NoUnexpectedThunks AccountState
+instance NoUnexpectedThunks AccountState (AccountState crypto)
 
 data EpochState crypto
   = EpochState
-    { esAccountState :: AccountState
+    { esAccountState :: AccountState crypto
     , esSnapshots :: SnapShots crypto
     , esLState :: LedgerState crypto
-    , esPp :: PParams
+    , esPp :: PParams crypto
     }
   deriving (Show, Eq, Generic)
 
@@ -332,10 +348,10 @@ instance Crypto crypto => FromCBOR (EpochState crypto)
     p <- fromCBOR
     pure $ EpochState a s l p
 
-emptyUTxOState :: UTxOState crypto
-emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
+emptyUTxOState :: (Crypto crypto) => UTxOState crypto
+emptyUTxOState = UTxOState (UTxO Map.empty) (Value Map.empty) (Value Map.empty) emptyUpdateState
 
-emptyEpochState :: EpochState crypto
+emptyEpochState :: (Crypto crypto) => EpochState crypto
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
 
@@ -348,8 +364,8 @@ emptyLedgerState =
   emptyUTxOState
   emptyDelegation
 
-emptyAccount :: AccountState
-emptyAccount = AccountState (Coin 0) (Coin 0)
+emptyAccount :: (Crypto crypto) => AccountState crypto
+emptyAccount = AccountState (Value Map.empty) (Value Map.empty)
 
 emptyDelegation :: DPState crypto
 emptyDelegation =
@@ -374,8 +390,8 @@ clearPpup utxoSt =
 data UTxOState crypto=
     UTxOState
     { _utxo      :: !(UTxO crypto)
-    , _deposited :: Coin
-    , _fees      :: Coin
+    , _deposited :: Value crypto
+    , _fees      :: Value crypto
     , _ups       :: UpdateState crypto
     } deriving (Show, Eq, Generic)
 
@@ -491,15 +507,19 @@ genesisId =
    (Coin 0)
    (SlotNo 0)
    emptyUpdate
+   (SlotNo 0)
+   (Value Map.empty)
+   defaultUnits
    Nothing)
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
+-- TODO should this be SlotNo 0 in the outputs?
 genesisCoins
   :: (Crypto crypto)
   => [TxOut crypto]
   -> UTxO crypto
 genesisCoins outs = UTxO $
-  Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0..] outs]
+  Map.fromList [(TxIn genesisId idx, (out, 0)) | (idx, out) <- zip [0..] outs]
 
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
@@ -510,8 +530,8 @@ genesisState
 genesisState genDelegs0 utxo0 = LedgerState
   (UTxOState
     utxo0
-    (Coin 0)
-    (Coin 0)
+    (Value Map.empty)
+    (Value Map.empty)
     emptyUpdateState)
   (DPState dState emptyPState)
   where
@@ -670,46 +690,48 @@ validFee pc tx =
 -- |Compute the lovelace which are created by the transaction
 produced
   :: (Crypto crypto)
-  => PParams
+  => SlotNo
+  -> PParams crypto
   -> StakePools crypto
   -> TxBody crypto
-  -> Coin
-produced pp stakePools tx =
-    balance (txouts tx) + tx ^. txfee + totalDeposits pp stakePools (toList $ tx ^. certs)
+  -> Value crypto
+produced slot pp stakePools tx =
+    balance (txouts slot tx) + tx ^. txfee + totalDeposits pp stakePools (toList $ tx ^. certs)
+    + scriptFee (pp ^. plutusPP ^. prices) (tx ^. txexunits)
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
-  :: PParams
+  :: PParams crypto
   -> StakeCreds crypto
   -> TxBody crypto
-  -> Coin
+  -> Value crypto
 keyRefunds pp stk tx =
   sum [keyRefund dval dmin lambda stk (tx ^. ttl) c | c@(DCertDeleg (DeRegKey _)) <- toList $ tx ^. certs]
   where (dval, dmin, lambda) = decayKey pp
 
 -- | Key refund for a deregistration certificate.
 keyRefund
-  :: Coin
+  :: Value crypto
   -> UnitInterval
   -> Rational
   -> StakeCreds crypto
   -> SlotNo
   -> DCert crypto
-  -> Coin
+  -> Value crypto
 keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
     case c of
       DCertDeleg (DeRegKey key) -> case Map.lookup key stkcreds of
-                                     Nothing -> Coin 0
+                                     Nothing -> Value Map.empty
                                      Just  s -> refund dval dmin lambda $ slot -* s
-      _ -> Coin 0
+      _ -> Value Map.empty
 
 -- | Functions to calculate decayed deposits
 decayedKey
-  :: PParams
+  :: PParams crypto
   -> StakeCreds crypto
   -> SlotNo
   -> DCert crypto
-  -> ShelleyBase Coin
+  -> ShelleyBase (Value crypto)
 decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
     case cert of
       DCertDeleg (DeRegKey key) ->
@@ -731,10 +753,10 @@ decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
 
 -- | Decayed deposit portions
 decayedTx
-  :: PParams
+  :: PParams crypto
   -> StakeCreds crypto
   -> TxBody crypto
-  -> ShelleyBase Coin
+  -> ShelleyBase (Value crypto)
 decayedTx pp stk tx =
       lsum [decayedKey pp stk (tx ^. ttl) c | c@(DCertDeleg (DeRegKey _)) <- toList $ tx ^. certs]
     where
@@ -742,13 +764,13 @@ decayedTx pp stk tx =
 
 -- |Compute the lovelace which are destroyed by the transaction
 consumed
-  :: PParams
+  :: PParams crypto
   -> UTxO crypto
   -> StakeCreds crypto
   -> TxBody crypto
-  -> Coin
+  -> Value crypto
 consumed pp u stakeKeys tx =
-    balance (txins tx ◁ u) + refunds + withdrawals
+    balance (txins tx ◁ u) + refunds + withdrawals + tx ^. forged
   where
     refunds = keyRefunds pp stakeKeys tx
     withdrawals = sum . unWdrl $ tx ^. wdrls
@@ -757,19 +779,22 @@ consumed pp u stakeKeys tx =
 -- in an acceptable way by a transaction.
 preserveBalance
   :: (Crypto crypto)
-  => StakePools crypto
+  => SlotNo
+  -> StakePools crypto
   -> StakeCreds crypto
-  -> PParams
+  -> PParams crypto
   -> TxBody crypto
   -> UTxOState crypto
   -> Validity
-preserveBalance stakePools stakeKeys pp tx u =
+preserveBalance slot stakePools stakeKeys pp tx u =
   if destroyed' == created'
     then Valid
-    else Invalid [ValueNotConserved destroyed' created']
+    else Invalid [ValueNotConserved qd qc]
   where
-    destroyed' = consumed pp (u ^. utxo) stakeKeys tx
-    created' = produced pp stakePools tx
+    Value destroyed' = consumed pp (u ^. utxo) stakeKeys tx
+    Value created' = produced slot pp stakePools tx
+    qd = foldr (+) (Quantity 0) $ fmap ((foldr (+) (Quantity 0)) . Map.elems) destroyed'
+    qc = foldr (+) (Quantity 0) $ fmap ((foldr (+) (Quantity 0)) . Map.elems) created'
 
 -- |Determine if the reward witdrawals correspond
 -- to the rewards in the ledger state
@@ -786,7 +811,8 @@ correctWithdrawals accs withdrawals =
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded
-  :: UTxO crypto
+  :: (Crypto crypto) =>
+  UTxO crypto
   -> Tx crypto
   -> GenDelegs crypto
   -> Set (AnyKeyHash crypto)
@@ -797,10 +823,10 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     updateKeys   `Set.union`
     owners
   where
-    inputAuthors = undiscriminateKeyHash `Set.map` Set.foldr insertHK Set.empty (txbody ^. inputs)
+    inputAuthors = undiscriminateKeyHash `Set.map` Set.foldr insertHK Set.empty (getrefs $ txbody ^. txinputs)
     insertHK txin hkeys =
       case txinLookup txin utxo' of
-        Just (TxOut (AddrBase (KeyHashObj pay) _) _) -> Set.insert pay hkeys
+        Just (TxOutVK (AddrBase (KeyHashObj pay) _) _) -> Set.insert pay hkeys
         _                               -> hkeys
 
     wdrlAuthors =
@@ -856,7 +882,7 @@ validRuleUTXO
   => RewardAccounts crypto
   -> StakePools crypto
   -> StakeCreds crypto
-  -> PParams
+  -> PParams crypto
   -> SlotNo
   -> Tx crypto
   -> UTxOState crypto
@@ -898,7 +924,7 @@ validTx
   => Tx crypto
   -> GenDelegs crypto
   -> SlotNo
-  -> PParams
+  -> PParams crypto
   -> LedgerState crypto
   -> Validity
 validTx tx d' slot pp l =
@@ -916,9 +942,9 @@ validTx tx d' slot pp l =
 -- |Calculate the change to the deposit pool for a given transaction.
 depositPoolChange
   :: LedgerState crypto
-  -> PParams
+  -> PParams crypto
   -> TxBody crypto
-  -> Coin
+  -> Value crypto
 depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
   -- Note that while (currentPool + txDeposits) >= txRefunds,
   -- it could be that txDeposits < txRefunds. We keep the parenthesis above
@@ -932,12 +958,14 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
 -- |Apply a transaction body as a state transition function on the ledger state.
 applyTxBody
   :: (Crypto crypto)
-  => LedgerState crypto
-  -> PParams
+  => SlotNo
+  -> IsValidating
+  -> LedgerState crypto
+  -> PParams crypto
   -> TxBody crypto
   -> LedgerState crypto
-applyTxBody ls pp tx =
-    ls & utxoState %~ flip applyUTxOUpdate tx
+applyTxBody slot vtag ls pp tx =
+    ls & utxoState %~ flip (applyUTxOUpdate slot vtag) tx
        & utxoState . deposited .~ depositPoolChange ls pp tx
        & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
        & delegationState . dstate . rewards .~ newAccounts
@@ -952,135 +980,150 @@ reapRewards
   -> RewardAccounts crypto
 reapRewards dStateRewards withdrawals =
     Map.mapWithKey removeRewards dStateRewards
-    where removeRewards k v = if k `Map.member` withdrawals then Coin 0 else v
+    where removeRewards k v = if k `Map.member` withdrawals then Value Map.empty else v
 
+-- | UTxO update when all scripts validate
+--
+-- | TODO make this correct
 applyUTxOUpdate
   :: (Crypto crypto)
-  => UTxOState crypto
+  => SlotNo
+  -> IsValidating
+  -> UTxOState crypto
   -> TxBody crypto
   -> UTxOState crypto
-applyUTxOUpdate u tx = u & utxo .~ txins tx ⋪ (u ^. utxo) ∪ txouts tx
+applyUTxOUpdate slot vtag u tx
+  | vtag == IsValidating Yes  = u & utxo .~ txins tx ⋪ (u ^. utxo) ∪ txouts slot tx
+  | vtag == IsValidating Nope = u & utxo .~ txinputs_vf tx ⋪ (u ^. utxo)
 
 ---------------------------------
 -- epoch boundary calculations --
 ---------------------------------
 
 -- | Calculate pool reward
+-- TODO rewrite calc for Value
 poolRewards
   :: UnitInterval
   -> UnitInterval
   -> Natural
   -> Natural
-  -> Coin
-  -> Coin
-poolRewards d_ sigma blocksN blocksTotal (Coin maxP) =
-  if intervalValue d_ < 0.8
-    then floor (p * fromIntegral maxP)
-    else 1
-  where
-    p = beta / intervalValue sigma
-    beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
+  -> Value crypto
+  -> Value crypto
+poolRewards d_ sigma blocksN blocksTotal (Value maxP) = Value Map.empty
+  -- if intervalValue d_ < 0.8
+  --   then floor (p * fromIntegral maxP)
+  --   else 1
+  -- where
+  --   p = beta / intervalValue sigma
+  --   beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
 
 -- | Calculate pool leader reward
+-- TODO rewrite calc for Value
 leaderRew
-  :: Coin
+  :: Value crypto
   -> PoolParams crypto
   -> StakeShare
   -> StakeShare
-  -> Coin
-leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
-  | f' <= c = f
-  | otherwise =
-    Coin $ c + floor (fromIntegral (f' - c) * (m' + (1 - m') * s / sigma))
-  where
-    (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
+  -> Value crypto
+leaderRew f@(Value f') pool (StakeShare s) (StakeShare sigma)
+  = Value Map.empty
+  -- | f' <= c = f
+  -- | otherwise =
+  --    c + floor (fromIntegral (f' - c) * (m' + (1 - m') * s / sigma))
+  -- where
+  --   (c, m, _) = poolSpec pool
+  --   m' = intervalValue m
 
 -- | Calculate pool member reward
+-- TODO rewrite calc for Value
 memberRew
-  :: Coin
+  :: Value crypto
   -> PoolParams crypto
   -> StakeShare
   -> StakeShare
-  -> Coin
-memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
-  | f' <= c = 0
-  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * t / sigma
-  where
-    (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
+  -> Value crypto
+memberRew (Value f') pool (StakeShare t) (StakeShare sigma)
+  = Value Map.empty
+  -- | f' <= c = 0
+  -- | otherwise =  floor $ fromIntegral (f' - c) * (1 - m') * t / sigma
+  -- where
+  --   (Value c, m, _) = poolSpec pool
+  --   m' = intervalValue m
 
 -- | Reward one pool
+-- TODO make this correct
 rewardOnePool
-  :: PParams
-  -> Coin
+  :: PParams crypto
+  -> Value crypto
   -> Natural
   -> Natural
   -> Credential crypto
   -> PoolParams crypto
   -> Stake crypto
-  -> Coin
+  -> Value crypto
   -> Set (RewardAcnt crypto)
-  -> Map (RewardAcnt crypto) Coin
-rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) addrsRew =
-  rewards'
-  where
-    Coin pstake = Map.foldl (+) (Coin 0) stake
-    Coin ostake = Set.foldl
-                    (\c o -> c + (stake Map.! KeyHashObj o))
-                    (Coin 0)
-                    (pool ^. poolOwners)
-    sigma = fromIntegral pstake % fromIntegral total
-    Coin pledge = pool ^. poolPledge
-    pr = fromIntegral pledge % fromIntegral total
-    maxP =
-      if pledge <= ostake
-        then maxPool pp r sigma pr
-        else 0
-    s' = fromMaybe (error "LedgerState.rewardOnePool: Unexpected Nothing") $ mkUnitInterval sigma
-    poolR = poolRewards (_d pp) s' blocksN blocksTotal maxP
-    tot = fromIntegral total
-    mRewards = Map.fromList
-     [(RewardAcnt hk,
-       memberRew poolR pool (StakeShare (fromIntegral c% tot)) (StakeShare sigma))
-     | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
-    iReward  = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
-    potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
-    rewards' = addrsRew ◁ potentialRewards
+  -> Map (RewardAcnt crypto) (Value crypto)
+rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Value total) addrsRew = Map.empty
+  -- rewards'
+  -- where
+  --   pstake = Map.foldl (+) Map.empty stake
+  --   ostake = Set.foldl
+  --                   (\c o -> c + (stake Map.! KeyHashObj o))
+  --                   Map.empty
+  --                   (pool ^. poolOwners)
+  --   sigma = fromIntegral pstake % fromIntegral total
+  --   Value pledge = pool ^. poolPledge
+  --   pr = fromIntegral pledge % fromIntegral total
+  --   maxP =
+  --     if pledge <= ostake
+  --       then maxPool pp r sigma pr
+  --       else 0
+  --   s' = fromMaybe (error "LedgerState.rewardOnePool: Unexpected Nothing") $ mkUnitInterval sigma
+  --   poolR = poolRewards (_d pp) s' blocksN blocksTotal maxP
+  --   tot = fromIntegral total
+  --   mRewards = Map.fromList
+  --    [(RewardAcnt hk,
+  --      memberRew poolR pool (StakeShare (fromIntegral c% tot)) (StakeShare sigma))
+  --    | (hk, Value c) <- Map.toList stake, hk /= poolHK]
+  --   iReward  = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
+  --   potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
+  --   rewards' = addrsRew ◁ potentialRewards
 
+-- TODO make this calculation
 reward
-  :: PParams
+  :: PParams crypto
   -> BlocksMade crypto
-  -> Coin
+  -> Value crypto
   -> Set (RewardAcnt crypto)
   -> Map (KeyHash crypto) (PoolParams crypto)
   -> Stake crypto
   -> Map (Credential crypto) (KeyHash crypto)
-  -> Map (RewardAcnt crypto) Coin
-reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
-  rewards'
-  where
-    total = Map.foldl (+) (Coin 0) stake'
-    pdata =
-      [ ( hk
-        , ( poolParams Map.! hk
-          , b Map.! hk
-          , poolStake hk delegs stake))
-      | hk <-
-          Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet b
-      ]
-    results =
-      [ ( hk
-        , rewardOnePool pp r n totalBlocks (KeyHashObj hk) pool actgr total addrsRew)
-      | (hk, (pool, n, actgr)) <- pdata
-      ]
-    rewards' = foldl (\m (_, r') -> Map.union m r') Map.empty results
-    totalBlocks = Map.foldr (+) 0 b
+  -> Map (RewardAcnt crypto) (Value crypto)
+reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs = Map.empty
+  -- rewards'
+  -- where
+  --   total = Map.foldl (+) (Value 0) stake'
+  --   pdata =
+  --     [ ( hk
+  --       , ( poolParams Map.! hk
+  --         , b Map.! hk
+  --         , poolStake hk delegs stake))
+  --     | hk <-
+  --         Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet b
+  --     ]
+  --   results =
+  --     [ ( hk
+  --       , rewardOnePool pp r n totalBlocks (KeyHashObj hk) pool actgr total addrsRew)
+  --     | (hk, (pool, n, actgr)) <- pdata
+  --     ]
+  --   rewards' = foldl (\m (_, r') -> Map.union m r') Map.empty results
+  --   totalBlocks = Map.foldr (+) 0 b
 
 -- | Stake distribution
 stakeDistr
   :: forall crypto
-   . UTxO crypto
+   . Crypto crypto
+   => UTxO crypto
   -> DState crypto
   -> PState crypto
   -> ( Stake crypto
@@ -1091,9 +1134,9 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
     where
       DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
       PState (StakePools stpools) _ _                          = ps
-      outs = aggregateOuts u
+      outs = aggregateOuts $ adaAllUTxO u
 
-      stakeRelation :: [(Credential crypto, Coin)]
+      stakeRelation :: [(Credential crypto, Value crypto)]
       stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
 
       activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools
@@ -1101,6 +1144,7 @@ stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
       aggregatePlus = Map.fromListWith (+)
 
 -- | Apply a reward update
+-- TODO fix this
 applyRUpd
   :: RewardUpdate crypto
   -> EpochState crypto
@@ -1155,7 +1199,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
 overlaySchedule
   :: EpochNo
   -> Set (GenKeyHash crypto)
-  -> PParams
+  -> PParams crypto
   -> ShelleyBase (Map SlotNo (Maybe (GenKeyHash crypto)))
 overlaySchedule e gkeys pp = do
   let dval = intervalValue $ pp ^. d

@@ -33,7 +33,6 @@ module EpochBoundary
   , (⊎)
   ) where
 
---import           Coin (Coin (..))
 import           Delegation.Certificates (StakeCreds (..), StakePools (..), decayKey, decayPool,
                      refund)
 import           Keys (KeyHash)
@@ -43,10 +42,13 @@ import           TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt, TxO
                   addr, value, getRwdCred)
 import           UTxO (UTxO (..))
 
+<<<<<<< HEAD
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+=======
+>>>>>>> c550fd04... LedgerState loads, many Value calcs trivial
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Data.Map.Strict (Map, empty)
+import           Data.Map.Strict (Map, empty, map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Ratio ((%))
@@ -84,7 +86,7 @@ getStakeHK _               = Nothing
 
 aggregateOuts :: UTxO crypto -> Map (Addr crypto) (Value crypto)
 aggregateOuts (UTxO u) =
-  Map.fromListWith (+) (map (\(_, txout) -> (_addr txout, _value txout)) $ Map.toList u)
+  Map.fromListWith (+) (fmap (\(_, (txout, _)) -> (_addr txout, _value txout)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
 baseStake
@@ -126,7 +128,7 @@ rewardStake
    . Map (RewardAcnt crypto) (Value crypto)
   -> [(Credential crypto, Value crypto)]
 rewardStake rewards =
-  map convert $ Map.toList rewards
+  fmap convert $ Map.toList rewards
   where
     convert (rwdKey, c) = (getRwdCred rwdKey, c)
 
@@ -161,25 +163,26 @@ obligation
   -> SlotNo
   -> (Value crypto)
 obligation pc (StakeCreds stakeKeys) (StakePools stakePools) cslot =
-  sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
-  sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
+  sum (fmap (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys) +
+  sum (fmap (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
   where
     (dval, dmin, lambdad) = decayKey pc
     (pval, pmin, lambdap) = decayPool pc
 
 -- | Calculate maximal pool reward
 maxPool :: (PParams crypto) -> (Value crypto) -> Rational -> Rational -> (Value crypto)
-maxPool pc (Value r) sigma pR = floor $ factor1 * factor2
+maxPool pc (Value r) sigma pR = Value (Map.map (Map.map (floor . ((*) factor2))) factor1 )
   where
     a0 = _a0 pc
     nOpt = _nOpt pc
     z0 = 1 % fromIntegral nOpt
     sigma' = min sigma z0
     p' = min pR z0
-    factor1 = fromIntegral r / (1 + a0)
+    factor1 = Map.map (Map.map calc) r
     factor2 = sigma' + p' * a0 * factor3
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
+    calc q = fromIntegral q / (1 + a0)
 
 -- | Pool individual reward
 groupByPool

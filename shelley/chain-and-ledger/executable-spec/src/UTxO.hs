@@ -51,15 +51,9 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Cardano.Ledger.Shelley.Crypto
-<<<<<<< HEAD
 import           Coin (Coin (..))
 import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, hash, sKey, sign, vKey,
                      verify)
-=======
---import           Coin (Coin (..))
-import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, hash, hashAnyKey, sKey,
-                     sign, vKey, verify)
->>>>>>> UTxO loads
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           Tx (Tx (..))

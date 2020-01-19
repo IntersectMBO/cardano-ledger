@@ -67,7 +67,7 @@ instance
     | ExpiredUTxO SlotNo SlotNo
     | MaxTxSizeUTxO Integer Integer
     | InputSetEmptyUTxO
-    | FeeTooSmallUTxO Coin Coin
+    | FeeTooSmallUTxO Value Value
     | ValueNotConservedUTxO Coin Coin
     | NegativeOutputsUTxO
     | UpdateFailure (PredicateFailure (UP crypto))
