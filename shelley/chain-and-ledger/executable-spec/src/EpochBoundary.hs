@@ -42,10 +42,9 @@ import           TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt, TxO
                   addr, value, getRwdCred)
 import           UTxO (UTxO (..))
 
-<<<<<<< HEAD
+
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
-=======
->>>>>>> c550fd04... LedgerState loads, many Value calcs trivial
+
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map, empty, map)
