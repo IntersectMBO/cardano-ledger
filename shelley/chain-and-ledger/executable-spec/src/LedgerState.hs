@@ -142,11 +142,11 @@ import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), U
   -- import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
   --                      apps, emptyUpdate, emptyUpdateState)
 import           Tx (extractGenKeyHash, extractKeyHash, makeAdaValue, getrefs, txinputs_vf)
-import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCert (..), PoolParams,
+import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..), PoolCert (..), PoolParams,
                      Ptr (..), RewardAcnt (..), Tx (..), TxBody (..), TxId (..), TxIn (..),
                      TxOut (..), UnsignedData(..), body, certs, getRwdCred, txinputs, poolOwners, poolPledge,
                      poolRAcnt, ttl, txfee, wdrls, witKeyHash, txexunits, forged)
-import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
+import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
 >>>>>>> more rebase
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
@@ -307,12 +307,16 @@ data AccountState crypto = AccountState
   , _reserves  :: Value crypto
   } deriving (Show, Eq, Generic)
 
-instance ToCBOR AccountState
+instance
+  (Crypto crypto)
+  => ToCBOR (AccountState crypto)
  where
   toCBOR (AccountState t r) =
     encodeListLen 2 <> toCBOR t <> toCBOR r
 
-instance FromCBOR AccountState
+instance
+  (Crypto crypto)
+  => FromCBOR (AccountState crypto)
  where
   fromCBOR = do
     enforceSize "AccountState" 2
@@ -320,7 +324,7 @@ instance FromCBOR AccountState
     r <- fromCBOR
     pure $ AccountState t r
 
-instance NoUnexpectedThunks AccountState (AccountState crypto)
+instance NoUnexpectedThunks (AccountState crypto)
 
 data EpochState crypto
   = EpochState

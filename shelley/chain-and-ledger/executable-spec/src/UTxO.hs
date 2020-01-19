@@ -74,7 +74,7 @@ import           Scripts
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto
-  = UTxO (Map (TxIn crypto) (TxOut crypto))
+  = UTxO (Map (TxIn crypto) ((TxOut crypto), SlotNo))
   deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 instance Relation (UTxO crypto) where
