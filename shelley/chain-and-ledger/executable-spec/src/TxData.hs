@@ -190,7 +190,7 @@ data ScriptHash crypto =
 
 instance NoUnexpectedThunks (ScriptHash crypto)
 
-type Wdrl crypto = Map (RewardAcnt crypto) (Value (ScriptHash crypto) (ScriptHash crypto))
+type Wdrl crypto = Map (RewardAcnt crypto) Coin
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto
@@ -200,10 +200,6 @@ newtype TxId crypto
 deriving instance Crypto crypto => ToCBOR (TxId crypto)
 deriving instance Crypto crypto => FromCBOR (TxId crypto)
 
--- data Info crypto
---   = TxBody
---     { _rdmrhash   :: DataHash crypto
---     } deriving (Show, Eq, Generic)
 
 -- |The input of a UTxO.
 data TxIn crypto
@@ -214,12 +210,12 @@ instance NoUnexpectedThunks (TxIn crypto)
 
 -- | the current item being passed to the Plutus interpreter
 data CurItem crypto =
-  CITxInScr (TxIn crypto) | CIWdrl (Wdrl crypto) | CIDeRegKey (DCert crypto)
+  CINothing | CITxInScr (TxIn crypto) | CIWdrl (Wdrl crypto) | CIDeRegKey (DCert crypto)
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (CurItem crypto)
 
--- |The input of a UTxO.
+-- |The input of a Tx.
 data TxInTx crypto
   =  TxInVK   { _txin   :: TxIn crypto
               , _isfee  ::  IsFee
@@ -236,12 +232,10 @@ instance NoUnexpectedThunks (TxInTx crypto)
 data TxOut crypto
   =   TxOutVK { _addr   :: Addr crypto
               , _value  :: Value crypto
---              , _slot   :: SlotNo
               }
     | TxOutScr { _addr     :: Addr crypto
                , _value    :: Value crypto
                , _datahash :: DataHash crypto
---               , _slot     :: SlotNo
                }
   deriving (Show, Eq, Generic, Ord)
 
@@ -310,7 +304,7 @@ data TxBody crypto
       , _txUpdate :: Update crypto
       , _txlst    :: SlotNo
       , _forged   :: Value crypto
-      , _txexunits:: ExUnits
+      , _txexunits:: ExUnitsAllTypes
       , _hashPP   :: Maybe (Hash (HASH crypto) (PlutusPP crypto))
       } deriving (Show, Eq, Generic)
 
@@ -346,6 +340,8 @@ data Tx crypto
       , _unsignedData   :: !(UnsignedData crypto)
       } deriving (Show, Eq, Generic)
 
+-- | Things like metadata, scripts, tags and VK witnesses
+-- that must go outside the body of the transaction
 data UnsignedData crypto
   = UnsignedData
       { _witnessVKeySet :: !(Set (WitVKey crypto))
@@ -370,27 +366,30 @@ newtype StakePools crypto =
 
 -- CBOR
 
+-- instance
+--   (Crypto crypto)
+--   => ToCBOR (CurItem crypto)
+--  where
+--   toCBOR = \case
+--     CITxInScr txin ->
+--       encodeListLen 2
+--         <> toCBOR (0 :: Word8)
+--
+--     CITxInScr txin ->
+--       encodeListLen 2
+--         <> toCBOR (1 :: Word8)
+--         <> toCBOR txin
+--
+--     CIWdrl wdrl ->
+--       encodeListLen 2
+--         <> toCBOR (2 :: Word8)
+--         <> toCBOR wdrl
+--
+--     CIDeRegKey dcr ->
+--       encodeListLen 2
+--         <> toCBOR (3 :: Word8)
+--         <> toCBOR dcr
 
-
-instance
-  (Crypto crypto)
-  => ToCBOR (CurItem crypto)
- where
-  toCBOR = \case
-    CITxInScr txin ->
-      encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR txin
-
-    CIWdrl wdrl ->
-      encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR wdrl
-
-    CIDeRegKey dcr ->
-      encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR dcr
 
 instance
   (Crypto crypto)
@@ -410,17 +409,6 @@ instance
         <> toCBOR a
         <> toCBOR v
         <> toCBOR dh
-
-instance (Crypto crypto) =>
-  FromCBOR (ScriptHash crypto) where
-  fromCBOR = enforceSize "ScriptHash" 2  >> decodeWord >>= \case
-    0 -> do
-      a <- fromCBOR
-      pure $ ScriptHashMSig a
-    1 -> do
-      a <- fromCBOR
-      pure $ ScriptHashPLC a
-    k -> invalidKey k
 
 
 instance
@@ -583,7 +571,7 @@ instance (Crypto crypto) =>
         b <- fromCBOR
         pure $ TxOutVK a b
       1 -> do
-        matchSize "TxOutVK" 3 n
+        matchSize "TxOutScr" 3 n
         a <- fromCBOR
         (b ) <- fromCBOR
         (c ) <- fromCBOR
@@ -736,11 +724,10 @@ instance
           , _txUpdate  = emptyUpdate
           , _txlst     = SlotNo 0
           , _forged    = Value empty
-          , _txexunits = PLCUnits (ExUnitsPLC 0 0)
+          , _txexunits = defaultUnits
           , _hashPP    = Just $ hash emptyPlutusPP
           }
 
-<<<<<<< HEAD
 instance (Crypto crypto) =>
 
 -- encodeListLen 6
@@ -775,8 +762,6 @@ instance (Crypto crypto) =>
         msigs <- fromCBOR
         pure $ RequireMOf m msigs
       k -> invalidKey k
-=======
->>>>>>> UTxO loads
 
 
 instance (Typeable crypto, Crypto crypto)

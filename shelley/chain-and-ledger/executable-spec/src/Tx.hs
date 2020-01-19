@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 
 module Tx
@@ -22,6 +23,7 @@ module Tx
   , body
   , witnessVKeySet
   , unsignedData
+  , txinputs_vf
 --  , witnessMSigMap
     -- witness data
   , WitVKey(..)
@@ -31,7 +33,13 @@ module Tx
 --  , txwitsScript
   , extractKeyHash
   , extractScriptHash
--- TODO what goes here
+  , getrefs
+  , addrTxOut
+  , extractGenKeyHash
+  , getKeyCombinations
+  , getKeyCombination
+  , adaID
+  , adaToken
   )
 where
 
@@ -44,15 +52,14 @@ import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Ledger.Shelley.Crypto
 import qualified Data.List as List (concat, concatMap, permutations)
 import           Data.Map.Strict (Map, singleton)
---import           Data.Map (singleton)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set, filter)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
+--import           Data.ByteString.Internal (unpackBytes)
+import           Data.ByteString.Char8 (ByteString, pack)
+--import           Data.ByteString.Lazy.Char8 (ByteString, append)
 
-  -- import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
-  --                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
-  --                      ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
 import           TxData (Credential (..), StakeCredential, Tx (..),
                      TxBody (..), TxId (..), TxIn (..), TxInTx (..), TxOut (..), WitVKey (..), UnsignedData (..),
 import           TxData (Credential (..), MultiSig (..), ScriptHash (..), StakeCredential, Tx (..),
@@ -104,6 +111,29 @@ hashNativeMultiSigScript
 hashNativeMultiSigScript msig =
   ScriptHashMSig $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
                                           <> toCBOR x) msig
+
+
+-- | Hashes plutus script, appending the 'plutusTag' in
+-- front and then calling the script CBOR function.
+hashPLCScript
+  :: Crypto crypto
+  => ScriptPLC crypto
+  -> ScriptHash crypto
+hashPLCScript plc =
+  ScriptHashPLC $ hashWithSerialiser (\x -> encodeWord8 plutusTag
+                                          <> toCBOR x) plc
+
+
+-- | native currency (Ada) currencyID
+adaID :: (Crypto crypto) => ScriptHash crypto
+adaID = hashPLCScript (ScriptPLC 1)
+
+adaToken :: ByteString
+adaToken =  pack "Ada"
+
+-- | returns a Value representing the given amount of Ada
+makeAdaValue :: Crypto crypto => Integer -> Value crypto
+makeAdaValue q = Value (singleton adaID (singleton adaToken (Quantity q)))
 
 -- | Get one possible combination of keys for multi signature script
 getKeyCombination :: MultiSig crypto -> [AnyKeyHash crypto]
@@ -220,8 +250,8 @@ inputisfee (TxInVK _ (IsFee Yes)) = True
 inputisfee _                      = True
 
 -- | just the for-fee-payment inputs
-txinputs_vf    :: Tx crypto -> Set (TxIn crypto)
-txinputs_vf tx =  getrefs $ Data.Set.filter inputisfee (_txinputs (_body tx))
+txinputs_vf    :: TxBody crypto -> Set (TxIn crypto)
+txinputs_vf tx =  getrefs $ Data.Set.filter inputisfee (_txinputs tx)
 
 -- | return the address in an output
 addrTxOut :: TxOut crypto -> Addr crypto

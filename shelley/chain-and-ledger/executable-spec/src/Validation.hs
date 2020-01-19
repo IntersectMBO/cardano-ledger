@@ -5,8 +5,8 @@ module Validation where
 import           GHC.Generics (Generic)
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Coin (Coin)
 import           Slot (SlotNo)
+import           Scripts (Quantity)
 
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
@@ -18,9 +18,9 @@ data ValidationError =
   -- | Pool Retirement Certificate expired
   | RetirementCertExpired SlotNo SlotNo
   -- | The transaction fee is too small
-  | FeeTooSmall Coin Coin
+  | FeeTooSmall Quantity Quantity
   -- | Value is not conserved
-  | ValueNotConserved Coin Coin
+  | ValueNotConserved Quantity Quantity
   -- | Unknown reward account
   | IncorrectRewards
   -- | One of the transaction witnesses is invalid.

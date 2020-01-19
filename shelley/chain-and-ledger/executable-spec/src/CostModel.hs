@@ -1,20 +1,19 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
---{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 module CostModel
     (
-      ExUnitsMSIG(..)
+      ExUnitsMSig(..)
     , ExUnitsPLC(..)
     , ExUnits(..)
-    , CostModMSIG(..)
+    , CostModMSig(..)
     , CostModPLC(..)
     , CostMod(..)
-    , PricesMSIG(..)
+    , PricesMSig(..)
     , PricesPLC(..)
     , Prices(..)
     , ExUnitsAllTypes(..)
@@ -33,8 +32,7 @@ import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), 
                      encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen, encodeWord,
                      enforceSize, matchSize)
 import           BaseTypes (CborSeq (..), UnitInterval, invalidKey)
---import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
---import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import           Data.Map.Strict (Map, empty)
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Scripts
@@ -44,9 +42,9 @@ instance Ord ExUnitsPLC where
    (<=) (ExUnitsPLC rs1 mu1) (ExUnitsPLC rs2 mu2) =
      ((<=) rs1 rs2) && ((<=) mu1 mu2)
 
--- | comparing required resources for MSIG scripts
-instance Ord ExUnitsMSIG where
-  (<=) (ExUnitsMSIG ns1 m1) (ExUnitsMSIG ns2 m2) =
+-- | comparing required resources for MSig scripts
+instance Ord ExUnitsMSig where
+  (<=) (ExUnitsMSig ns1 m1) (ExUnitsMSig ns2 m2) =
     ((<=) ns1 ns2) && ((<=) m1 m2)
 
 -- | Temporary stand-in for actual types in the execution cost
@@ -60,19 +58,19 @@ data ExUnitsPLC = ExUnitsPLC
 instance NoUnexpectedThunks ExUnitsPLC
 
 -- | Temporary stand-in for actual types in the execution cost
--- for MSIG script execution
-data ExUnitsMSIG = ExUnitsMSIG
+-- for MSig script execution
+data ExUnitsMSig = ExUnitsMSig
   { -- | The types of computational resources relevant to the cost model
       numSigs                  :: Integer
     , maybeSomething           :: Integer
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks ExUnitsMSIG
+instance NoUnexpectedThunks ExUnitsMSig
 
--- | The execution units of arbitrary scripts (MSIG, PLC so far)
+-- | The execution units of arbitrary scripts (MSig, PLC so far)
 data ExUnits =
        PLCUnits ExUnitsPLC
-    |  MSIGUnits ExUnitsMSIG
+    |  MSigUnits ExUnitsMSig
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks ExUnits
@@ -88,20 +86,20 @@ data CostModPLC = CostModPLC
 instance NoUnexpectedThunks CostModPLC
 
 -- | Temporary stand-in for actual types in the cost model
--- for MSIG script execution
-data CostModMSIG = CostModMSIG
+-- for MSig script execution
+data CostModMSig = CostModMSig
   { -- | The types of computational resources relevant to the cost model
-      sigPrim           :: ExUnitsMSIG
-    , smtPrim           :: ExUnitsMSIG
+      sigPrim           :: ExUnitsMSig
+    , smtPrim           :: ExUnitsMSig
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks CostModMSIG
+instance NoUnexpectedThunks CostModMSig
 
 -- | The cost model for plc or msig scripts
 data CostMod = CostMod
   { -- | The types of computational resources relevant to the cost model
       costModPLC            :: CostModPLC
-    , costModMSIG           :: CostModMSIG
+    , costModMSig           :: CostModMSig
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks CostMod
@@ -109,17 +107,13 @@ instance NoUnexpectedThunks CostMod
 -- | Default values
 -- | Default execution units
 defaultUnits :: ExUnitsAllTypes
-defaultUnits = ExUnitsAllTypes (ExUnitsPLC 0 0) (ExUnitsMSIG 0 0)
+defaultUnits = ExUnitsAllTypes (ExUnitsPLC 0 0) (ExUnitsMSig 0 0)
 
 -- | Default cost model
 defaultModel :: CostMod
 defaultModel = CostMod (CostModPLC (ExUnitsPLC 0 0) (ExUnitsPLC 0 0))
-  (CostModMSIG (ExUnitsMSIG 0 0) (ExUnitsMSIG 0 0))
+  (CostModMSig (ExUnitsMSig 0 0) (ExUnitsMSig 0 0))
 
--- | The formula for conversion of execution cost into Ada
--- Needs to be defined
-scriptFee :: (Prices crypto) -> ExUnits -> Integer
-scriptFee _ _ = 0
 
 -- | Temporary stand-in for actual types in the "prices"
 -- for Plutus script execution
@@ -132,20 +126,20 @@ data PricesPLC crypto = PricesPLC
 instance NoUnexpectedThunks (PricesPLC crypto)
 
 -- | Temporary stand-in for actual types in the "prices"
--- for MSIG script execution
-data PricesMSIG  crypto = PricesMSIG
+-- for MSig script execution
+data PricesMSig  crypto = PricesMSig
   { -- | The types of computational resources relevant to the cost model
       sigPrice           :: Value crypto
     , smtPrice           :: Value crypto
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PricesMSIG crypto)
+instance NoUnexpectedThunks (PricesMSig crypto)
 
 -- | The prices for plc or msig scripts
 data Prices crypto = Prices
   {
       pricesPLC            :: PricesPLC  crypto
-    , pricesMSIG           :: PricesMSIG crypto
+    , pricesMSig           :: PricesMSig crypto
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (Prices crypto)
@@ -154,14 +148,19 @@ instance NoUnexpectedThunks (Prices crypto)
 data ExUnitsAllTypes = ExUnitsAllTypes
   {
       exUnitsPLC            :: ExUnitsPLC
-    , exUnitsMSIG           :: ExUnitsMSIG
+    , exUnitsMSig           :: ExUnitsMSig
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks ExUnitsAllTypes
 
 -- | Default cost model
 defaultPrices :: Prices crypto
-defaultPrices = Prices (PricesPLC 0 0) (PricesMSIG 0 0)
+defaultPrices = Prices (PricesPLC 0 0) (PricesMSig 0 0)
+
+-- | The formula for conversion of execution cost into Ada
+-- Needs to be defined TODO
+scriptFee :: (Prices crypto) -> ExUnitsAllTypes -> Value crypto
+scriptFee _ _ = Value empty
 
 
 -- | CBOR temp
@@ -174,7 +173,7 @@ instance ToCBOR ExUnits
         <> toCBOR (0 :: Word8)
         <> toCBOR exu
 
-     MSIGUnits exu ->
+     MSigUnits exu ->
        encodeListLen 2
         <> toCBOR (1 :: Word8)
         <> toCBOR exu
@@ -189,23 +188,29 @@ instance FromCBOR ExUnits
          a <- fromCBOR
          pure $ PLCUnits a
        1 -> do
-         matchSize "MSIGUnits" 1 n
+         matchSize "MSigUnits" 1 n
          a <- fromCBOR
-         pure $ MSIGUnits a
+         pure $ MSigUnits a
        k -> invalidKey k
 
 
-instance FromCBOR ExUnitsMSIG
+instance FromCBOR ExUnitsMSig
  where
-   fromCBOR =
-     pure $ (ExUnitsMSIG 0 0)
+   fromCBOR = do
+     enforceSize "ExUnitsMSig" 2
+     a <- fromCBOR
+     b <- fromCBOR
+     pure $ ExUnitsMSig a b
 
 instance FromCBOR ExUnitsPLC
  where
-   fromCBOR =
-     pure $ (ExUnitsPLC 0 0)
+   fromCBOR = do
+     enforceSize "ExUnitsPLC" 2
+     a <- fromCBOR
+     b <- fromCBOR
+     pure $ ExUnitsPLC a b
 
-instance ToCBOR ExUnitsMSIG
+instance ToCBOR ExUnitsMSig
  where
    toCBOR exu =
      encodeListLen 2
@@ -219,18 +224,24 @@ instance ToCBOR ExUnitsPLC
        <> toCBOR (reductionSteps exu)
        <> toCBOR (memoryUnits exu)
 
-instance FromCBOR CostModMSIG
+instance FromCBOR CostModMSig
  where
-   fromCBOR =
-     pure $ (CostModMSIG (ExUnitsMSIG 0 0) (ExUnitsMSIG 0 0))
+   fromCBOR = do
+     enforceSize "CostModMSig" 2
+     a <- fromCBOR
+     b <- fromCBOR
+     pure $ CostModMSig a b
 
 instance FromCBOR CostModPLC
  where
-   fromCBOR =
-     pure $ (CostModPLC (ExUnitsPLC 0 0) (ExUnitsPLC 0 0))
+   fromCBOR = do
+     enforceSize "CostModPLC" 2
+     a <- fromCBOR
+     b <- fromCBOR
+     pure $ CostModPLC a b
 
 
-instance ToCBOR CostModMSIG
+instance ToCBOR CostModMSig
  where
    toCBOR cm =
      encodeListLen 2
@@ -249,7 +260,7 @@ instance ToCBOR CostMod
    toCBOR cm =
      encodeListLen 2
        <> toCBOR (costModPLC cm)
-       <> toCBOR (costModMSIG cm)
+       <> toCBOR (costModMSig cm)
 
 instance FromCBOR CostMod
  where
@@ -266,11 +277,11 @@ instance
    toCBOR pr =
      encodeListLen 2
        <> toCBOR (pricesPLC pr)
-       <> toCBOR (pricesMSIG pr)
+       <> toCBOR (pricesMSig pr)
 
 instance
   (Crypto crypto)
-  => ToCBOR (PricesMSIG crypto)
+  => ToCBOR (PricesMSig crypto)
  where
    toCBOR pr =
      encodeListLen 2
@@ -288,13 +299,13 @@ instance
 
 instance
   (Crypto crypto)
-  => FromCBOR (PricesMSIG crypto)
+  => FromCBOR (PricesMSig crypto)
  where
    fromCBOR = do
-     enforceSize "PricesMSIG" 2
+     enforceSize "PricesMSig" 2
      a <- fromCBOR
      b <- fromCBOR
-     pure $ PricesMSIG a b
+     pure $ PricesMSig a b
 
 instance
   (Crypto crypto)
@@ -321,7 +332,7 @@ instance ToCBOR ExUnitsAllTypes
    toCBOR ex =
      encodeListLen 2
        <> toCBOR (exUnitsPLC ex)
-       <> toCBOR (exUnitsMSIG ex)
+       <> toCBOR (exUnitsMSig ex)
 
 instance FromCBOR ExUnitsAllTypes
  where

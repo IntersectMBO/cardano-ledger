@@ -13,7 +13,8 @@ where
 import           Cardano.Ledger.Shelley.Crypto
 import           Keys (KeyDiscriminator (..), KeyPair, hashKey, vKey)
 import           Tx (hashScript)
-import           TxData (Addr (..), Credential (..), MultiSig, RewardAcnt (..))
+import           TxData (Addr (..), Credential (..), RewardAcnt (..))
+import           Scripts
 
 mkVKeyRwdAcnt
   :: Crypto crypto
