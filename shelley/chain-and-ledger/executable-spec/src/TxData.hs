@@ -641,7 +641,7 @@ instance (Crypto crypto) =>
 
 instance Crypto crypto => FromCBOR (Tx crypto) where
   fromCBOR = decodeListLenOf 3 >>
-    Tx <$> fromCBOR <*> fromCBOR <*> fromCBOR
+    Tx <$> fromCBOR <*> fromCBOR 
 
 instance
   (Crypto crypto)

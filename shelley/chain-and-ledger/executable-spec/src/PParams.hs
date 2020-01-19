@@ -129,7 +129,9 @@ data PParams crypto = PParams
 
 instance NoUnexpectedThunks (PParams crypto)
 
-instance ToCBOR PParams
+instance
+  (Crypto crypto)
+  => ToCBOR (PParams crypto)
  where
   toCBOR (PParams
     { _minfeeA         = minfeeA'
@@ -175,7 +177,9 @@ instance ToCBOR PParams
         <> toCBOR extraEntropy'
         <> toCBOR protocolVersion'
 
-instance FromCBOR PParams
+instance
+  (Crypto crypto)
+  => FromCBOR (PParams crypto)
  where
   fromCBOR = do
     enforceSize "PParams" 20

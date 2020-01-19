@@ -146,11 +146,11 @@ import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), U
   -- import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
   --                      apps, emptyUpdate, emptyUpdateState)
 import           Tx (extractGenKeyHash, extractKeyHash, makeAdaValue, getrefs, txinputs_vf)
-import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, PoolCert (..), PoolParams,
+import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..), PoolCert (..), PoolParams,
                      Ptr (..), RewardAcnt (..), Tx (..), TxBody (..), TxId (..), TxIn (..),
                      TxOut (..), UnsignedData(..), body, certs, getRwdCred, txinputs, poolOwners, poolPledge,
                      poolRAcnt, ttl, txfee, wdrls, witKeyHash, txexunits, forged)
-import           Updates (AVUpdate (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
+import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
 >>>>>>> more rebase
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
@@ -315,12 +315,16 @@ data AccountState crypto = AccountState
   , _reserves  :: Value crypto
   } deriving (Show, Eq, Generic)
 
-instance ToCBOR AccountState
+instance
+  (Crypto crypto)
+  => ToCBOR (AccountState crypto)
  where
   toCBOR (AccountState t r) =
     encodeListLen 2 <> toCBOR t <> toCBOR r
 
-instance FromCBOR AccountState
+instance
+  (Crypto crypto)
+  => FromCBOR (AccountState crypto)
  where
   fromCBOR = do
     enforceSize "AccountState" 2
@@ -328,7 +332,7 @@ instance FromCBOR AccountState
     r <- fromCBOR
     pure $ AccountState t r
 
-instance NoUnexpectedThunks AccountState (AccountState crypto)
+instance NoUnexpectedThunks (AccountState crypto)
 
 data EpochState crypto
   = EpochState
@@ -673,25 +677,14 @@ minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
 
 
 -- |Determine if the fee is large enough
-<<<<<<< HEAD
 validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Validity
-=======
-validFee :: forall crypto . (Crypto crypto) => PParams crypto -> TxBody crypto-> Validity
->>>>>>> more rebase
 validFee pc tx =
   if needed <= given
     then Valid
     else Invalid [FeeTooSmall needed given]
       where
-<<<<<<< HEAD
         needed = minfee pc tx
         given  = tx ^. body . txfee
-=======
-        Value mf = minfee pc tx
-        Value tf = tx ^. txfee
-        needed = foldr (+) (Quantity 0) $ fmap ((foldr (+) (Quantity 0)) . Map.elems) mf
-        given  = foldr (+) (Quantity 0) $ fmap ((foldr (+) (Quantity 0)) . Map.elems) tf
->>>>>>> more rebase
 
 -- |Compute the lovelace which are created by the transaction
 produced
@@ -898,14 +891,9 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                        <> current txb slot
                        <> validNoReplay txb
                        <> validFee pc tx
-<<<<<<< HEAD
                        <> preserveBalance stakePools stakeKeys pc txb u
                        <> correctWithdrawals accs (txb ^. wdrls)
   where txb = _body tx
-=======
-                       <> preserveBalance slot stakePools stakeKeys pc tx u
-                       <> correctWithdrawals accs (tx ^. wdrls)
->>>>>>> more rebase
 
 validRuleUTXOW
   :: ( Crypto crypto
