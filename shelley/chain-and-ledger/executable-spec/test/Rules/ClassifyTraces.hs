@@ -152,7 +152,7 @@ propAbstractSizeBoundsBytes = property $ do
   forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
-    all (\txb -> txsize txb >= numBytes txb) (fmap _body txs)
+    all (\tx -> txsize tx >= numBytes tx) txs
 
 -- | Check that the abstract transaction size function
 -- is not off by an acceptable order of magnitude.
@@ -170,7 +170,7 @@ propAbstractSizeNotTooBig = property $ do
   forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
-    all notTooBig (fmap _body txs)
+    all notTooBig txs
 
 onlyValidChainSignalsAreGenerated :: Property
 onlyValidChainSignalsAreGenerated = withMaxSuccess 20 $
