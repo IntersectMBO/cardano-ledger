@@ -77,8 +77,8 @@ k chainLength maxNumberOfEpochs =
 -- So the resulting @k@ value will be directly proportional to the @chainLength@ and inversely
 -- proportional to the chosen @numberOfEpochs@.
 --
--- When the number of epochs is greater or equal than the @chainLength@ the resulting @k@ parameter
--- will be 0.
+-- The minimum value for @k@ will be 1. In particular, this will be the value
+-- returned when the number of epochs is greater or equal than @chainLength@.
 kForNumberOfEpochs
   :: Word64
   -- ^ Chain length
@@ -86,7 +86,7 @@ kForNumberOfEpochs
   -- ^ Desired number of epochs
   -> BlockCount
 kForNumberOfEpochs chainLength numberOfEpochs =
-  slotsPerEpochToK slotsPerEpoch
+  max 1 (slotsPerEpochToK slotsPerEpoch)
   where
     slotsPerEpoch :: Word64
     slotsPerEpoch = round $ fromIntegral chainLength / (fromIntegral numberOfEpochs :: Double)
