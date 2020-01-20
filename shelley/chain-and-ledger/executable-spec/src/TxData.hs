@@ -153,6 +153,13 @@ newtype ScriptHash crypto =
 deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
 deriving instance Crypto crypto => FromCBOR (ScriptHash crypto)
 
+-- | Count nodes and leaves of multi signature script
+countMSigNodes :: MultiSig crypto -> Int
+countMSigNodes (RequireSignature _) = 1
+countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
+countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
+countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
+
 type Wdrl crypto = Map (RewardAcnt crypto) Coin
 
 -- |A unique ID of a transaction, which is computable from the transaction.

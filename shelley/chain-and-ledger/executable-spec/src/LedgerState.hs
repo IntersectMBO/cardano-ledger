@@ -130,8 +130,9 @@ import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
 import           Tx (extractGenKeyHash, extractKeyHash)
 import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
                      PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, getRwdCred,
-                     inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, countMSigNodes,
+                     getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls,
+                     witKeyHash)
 import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
                      apps, emptyUpdate, emptyUpdateState)
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
@@ -540,11 +541,21 @@ validInputs tx u =
     else Invalid [BadInputs]
 
 -- |Implementation of abstract transaction size
--- TODO we still need to account for the witnesses, see github issue #812
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
-txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) _ _) =
-  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize
+txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) vKeySigs msigScripts) =
+  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize + witnessSize
   where
+    -- vkey signatures
+    signatures = Set.size vKeySigs
+
+    -- multi-signature scripts
+    scriptNodes = Map.foldl (+) 0 (Map.map countMSigNodes msigScripts)
+
+    -- TODO witness size is currently
+    --  (#vkeywitness + #all msigNodes + #msigscripts) * size(hash)
+    witnessSize = hl * fromIntegral (signatures + Map.size msigScripts + scriptNodes)
+
+    -- hash
     hl = toInteger $ byteCount (Proxy :: Proxy (HASH crypto))
     hashObj = 2 + hl
     uint = 5
