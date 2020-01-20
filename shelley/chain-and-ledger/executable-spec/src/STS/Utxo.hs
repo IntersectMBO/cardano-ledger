@@ -2,7 +2,9 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,6 +18,8 @@ module STS.Utxo
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
+                     encodeListLen, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin
@@ -26,6 +30,8 @@ import           Data.Foldable (toList)
 import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
@@ -74,6 +80,61 @@ instance
   initialRules = [initialLedgerState]
 
 instance NoUnexpectedThunks (PredicateFailure (UTXO crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (UTXO crypto))
+ where
+   toCBOR = \case
+     BadInputsUTxO               -> encodeListLen 1 <> toCBOR (0 :: Word8)
+     (ExpiredUTxO a b)           -> encodeListLen 3 <> toCBOR (1 :: Word8)
+                                      <> toCBOR a <> toCBOR b
+     (MaxTxSizeUTxO a b)         -> encodeListLen 3 <> toCBOR (2 :: Word8)
+                                      <> toCBOR a <> toCBOR b
+     InputSetEmptyUTxO           -> encodeListLen 1 <> toCBOR (3 :: Word8)
+     (FeeTooSmallUTxO a b)       -> encodeListLen 3 <> toCBOR (4 :: Word8)
+                                      <> toCBOR a <> toCBOR b
+     (ValueNotConservedUTxO a b) -> encodeListLen 3 <> toCBOR (5 :: Word8)
+                                      <> toCBOR a <> toCBOR b
+     NegativeOutputsUTxO         -> encodeListLen 1 <> toCBOR (6 :: Word8)
+     (UpdateFailure a)           -> encodeListLen 2 <> toCBOR (7 :: Word8)
+                                      <> toCBOR a
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (UTXO crypto))
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> matchSize "BadInputsUTxO" 1 n >> pure BadInputsUTxO
+      1 -> do
+        matchSize "ExpiredUTxO" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ ExpiredUTxO a b
+      2 -> do
+        matchSize "MaxTxSizeUTxO" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ MaxTxSizeUTxO a b
+      3 -> matchSize "InputSetEmptyUTxO" 1 n >> pure InputSetEmptyUTxO
+      4 -> do
+        matchSize "FeeTooSmallUTxO" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ FeeTooSmallUTxO a b
+      5 -> do
+        matchSize "ValueNotConservedUTxO" 3 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ ValueNotConservedUTxO a b
+      6 -> matchSize "NegativeOutputsUTxO" 1 n >> pure NegativeOutputsUTxO
+      7 -> do
+        matchSize "UpdateFailure" 2 n
+        a <- fromCBOR
+        pure $ UpdateFailure a
+      k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do

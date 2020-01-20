@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,6 +16,8 @@ module STS.Delegs
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
+                     encodeListLen, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
@@ -23,6 +27,8 @@ import           Control.State.Transition.Generator
 import           Data.Functor.Identity (runIdentity)
 import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
@@ -64,6 +70,33 @@ instance
   transitionRules = [ delegsTransition     ]
 
 instance NoUnexpectedThunks (PredicateFailure (DELEGS crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (DELEGS crypto))
+ where
+   toCBOR = \case
+      DelegateeNotRegisteredDELEG  -> encodeListLen 1 <> toCBOR (0 :: Word8)
+      WithrawalsNotInRewardsDELEGS -> encodeListLen 1 <> toCBOR (1 :: Word8)
+      (DelplFailure a)             -> encodeListLen 2 <> toCBOR (2 :: Word8)
+                                        <> toCBOR a
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (DELEGS crypto))
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> matchSize "DelegateeNotRegisteredDELEG" 1 n >>
+             pure DelegateeNotRegisteredDELEG
+      1 -> matchSize "WithrawalsNotInRewardsDELEGS" 1 n >>
+             pure WithrawalsNotInRewardsDELEGS
+      2 -> do
+        matchSize "DelplFailure" 2 n
+        a <- fromCBOR
+        pure $ DelplFailure a
+      k -> invalidKey k
 
 delegsTransition
   :: forall crypto

@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -12,12 +13,16 @@ module STS.Avup
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
+import           Cardano.Ledger.Shelley.Crypto (Crypto)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.State.Transition
 import           Control.Monad.Trans.Reader (asks)
+import           Control.State.Transition
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Keys
 import           Ledger.Core (dom, range, (⊆), (⨃))
@@ -57,6 +62,36 @@ instance STS (AVUP crypto) where
   transitionRules = [avUpdateEmpty, avUpdateNoConsensus, avUpdateConsensus]
 
 instance NoUnexpectedThunks (PredicateFailure (AVUP crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (AVUP crypto))
+ where
+   toCBOR = \case
+     EmptyAVUP            -> toCBOR (0 :: Word8)
+     NonEmptyAVUP         -> toCBOR (1 :: Word8)
+     NoAVConsensus        -> toCBOR (2 :: Word8)
+     AVConsensus          -> toCBOR (3 :: Word8)
+     NonGenesisUpdateAVUP -> toCBOR (4 :: Word8)
+     CannotFollow         -> toCBOR (5 :: Word8)
+     InvalidName          -> toCBOR (6 :: Word8)
+     InvalidSystemTags    -> toCBOR (7 :: Word8)
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (AVUP crypto))
+ where
+  fromCBOR = do
+    decodeWord >>= \case
+      0 -> pure EmptyAVUP
+      1 -> pure NonEmptyAVUP
+      2 -> pure NoAVConsensus
+      3 -> pure AVConsensus
+      4 -> pure NonGenesisUpdateAVUP
+      5 -> pure CannotFollow
+      6 -> pure InvalidName
+      7 -> pure InvalidSystemTags
+      k -> invalidKey k
 
 avUpdateEmpty :: TransitionRule (AVUP crypto)
 avUpdateEmpty = do

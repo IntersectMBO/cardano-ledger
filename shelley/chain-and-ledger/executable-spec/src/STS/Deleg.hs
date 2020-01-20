@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module STS.Deleg
@@ -11,6 +13,7 @@ module STS.Deleg
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
@@ -20,6 +23,8 @@ import           Control.State.Transition.Generator
 import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
 import           Hedgehog (Gen)
@@ -62,6 +67,38 @@ instance STS (DELEG crypto)
   transitionRules = [delegationTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (DELEG crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (DELEG crypto))
+ where
+   toCBOR = \case
+      StakeKeyAlreadyRegisteredDELEG           -> toCBOR (0 :: Word8)
+      StakeKeyNotRegisteredDELEG               -> toCBOR (1 :: Word8)
+      StakeKeyNonZeroAccountBalanceDELEG       -> toCBOR (2 :: Word8)
+      StakeDelegationImpossibleDELEG           -> toCBOR (3 :: Word8)
+      WrongCertificateTypeDELEG                -> toCBOR (4 :: Word8)
+      GenesisKeyNotInpMappingDELEG             -> toCBOR (5 :: Word8)
+      DuplicateGenesisDelegateDELEG            -> toCBOR (6 :: Word8)
+      InsufficientForInstantaneousRewardsDELEG -> toCBOR (7 :: Word8)
+      MIRCertificateTooLateinEpochDELEG        -> toCBOR (8 :: Word8)
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (DELEG crypto))
+ where
+  fromCBOR = do
+    decodeWord >>= \case
+      0 -> pure StakeKeyAlreadyRegisteredDELEG
+      1 -> pure StakeKeyNotRegisteredDELEG
+      2 -> pure StakeKeyNonZeroAccountBalanceDELEG
+      3 -> pure StakeDelegationImpossibleDELEG
+      4 -> pure WrongCertificateTypeDELEG
+      5 -> pure GenesisKeyNotInpMappingDELEG
+      6 -> pure DuplicateGenesisDelegateDELEG
+      7 -> pure InsufficientForInstantaneousRewardsDELEG
+      8 -> pure MIRCertificateTooLateinEpochDELEG
+      k -> invalidKey k
 
 delegationTransition
   :: TransitionRule (DELEG crypto)

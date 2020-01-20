@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,10 +16,14 @@ module STS.Delpl
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
+                     encodeListLen, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
 import           Control.State.Transition
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
 import           LedgerState (DPState, emptyDelegation, _dstate, _pstate)
@@ -57,6 +63,43 @@ instance
   transitionRules = [ delplTransition      ]
 
 instance NoUnexpectedThunks (PredicateFailure (DELPL crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (DELPL crypto))
+ where
+   toCBOR = \case
+      (PoolFailure a)            -> encodeListLen 2 <> toCBOR (0 :: Word8)
+                                      <> toCBOR a
+      (DelegFailure a)           -> encodeListLen 2 <> toCBOR (1 :: Word8)
+                                      <> toCBOR a
+      ScriptNotInWitnessDELPL    -> encodeListLen 1 <> toCBOR (2 :: Word8)
+      ScriptHashNotMatchDELPL    -> encodeListLen 1 <> toCBOR (3 :: Word8)
+      ScriptDoesNotValidateDELPL -> encodeListLen 1 <> toCBOR (4 :: Word8)
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (DELPL crypto))
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "PoolFailure" 2 n
+        a <- fromCBOR
+        pure $ PoolFailure a
+      1 -> do
+        matchSize "DelegFailure" 2 n
+        a <- fromCBOR
+        pure $ DelegFailure a
+      2 -> matchSize "ScriptNotInWitnessDELPL" 1 n >>
+             pure ScriptNotInWitnessDELPL
+      3 -> matchSize "ScriptHashNotMatchDELPL" 1 n >>
+             pure ScriptHashNotMatchDELPL
+      4 -> matchSize "ScriptDoesNotValidateDELPL" 1 n >>
+             pure ScriptDoesNotValidateDELPL
+      k -> invalidKey k
+
 
 delplTransition
   :: forall crypto

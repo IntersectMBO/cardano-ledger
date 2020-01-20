@@ -2,7 +2,9 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,10 +19,14 @@ module STS.Ledger
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
+                     encodeListLen, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
 import           Control.State.Transition
+import           Data.Typeable (Typeable)
+import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Keys
 import           LedgerState (DPState (..), DState (..), Ix, PState (..), UTxOState)
@@ -64,6 +70,31 @@ instance
   transitionRules = [ledgerTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (LEDGER crypto))
+ where
+   toCBOR = \case
+      (UtxowFailure a)  -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR a
+      (DelegsFailure a) -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR a
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (LEDGER crypto))
+ where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "UtxowFailure" 2 n
+        a <- fromCBOR
+        pure $ UtxowFailure a
+      1 -> do
+        matchSize "DelegsFailure" 2 n
+        a <- fromCBOR
+        pure $ DelegsFailure a
+      k -> invalidKey k
 
 ledgerTransition
   :: forall crypto

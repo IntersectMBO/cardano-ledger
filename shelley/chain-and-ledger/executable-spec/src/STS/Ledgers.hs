@@ -16,6 +16,7 @@ module STS.Ledgers
 where
 
 import           BaseTypes
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
@@ -25,6 +26,7 @@ import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import           Keys
 import           Ledger.Core ((◁), (⨃))
@@ -63,6 +65,18 @@ instance
   transitionRules = [ledgersTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (LEDGERS crypto))
+
+instance
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (PredicateFailure (LEDGERS crypto))
+ where
+   toCBOR (LedgerFailure e) = toCBOR e
+
+instance
+  (Crypto crypto)
+  => FromCBOR (PredicateFailure (LEDGERS crypto))
+ where
+  fromCBOR = LedgerFailure <$> fromCBOR
 
 ledgersTransition
   :: forall crypto
