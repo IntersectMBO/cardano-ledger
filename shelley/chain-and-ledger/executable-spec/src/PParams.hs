@@ -132,10 +132,11 @@ instance ToCBOR PParams
         <> toCBOR extraEntropy'
         <> toCBOR protocolVersion'
 
-instance FromCBOR PParams
- where
-  fromCBOR = do
-    enforceSize "PParams" 20
+
+newtype FirstPartPParams = FirstPartPParams (Integer, Natural, Natural, Natural, Natural, Coin, UnitInterval, Rational, Coin, UnitInterval, Rational, EpochNo)
+
+instance FromCBOR FirstPartPParams where
+  fromCBOR= do
     minfeeA' <- fromCBOR
     minfeeB' <- fromCBOR
     maxBBSize' <- fromCBOR
@@ -148,6 +149,17 @@ instance FromCBOR PParams
     poolMinRefund' <- fromCBOR
     poolDecayRate' <- fromCBOR
     eMax' <- fromCBOR
+    pure $ FirstPartPParams (
+      minfeeA', minfeeB', maxBBSize', maxTxSize', maxBHSize', keyDeposit', keyMinRefund', keyDecayRate'
+      , poolDeposit', poolMinRefund', poolDecayRate', eMax')
+
+instance FromCBOR PParams
+ where
+  fromCBOR = do
+    enforceSize "PParams" 20
+    FirstPartPParams (
+      minfeeA', minfeeB', maxBBSize', maxTxSize', maxBHSize', keyDeposit', keyMinRefund', keyDecayRate'
+      , poolDeposit', poolMinRefund', poolDecayRate', eMax') <- fromCBOR
     nOpt' <- fromCBOR
     a0' <- fromCBOR
     rho' <- fromCBOR
