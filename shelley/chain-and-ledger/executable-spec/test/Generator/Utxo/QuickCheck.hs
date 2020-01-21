@@ -69,6 +69,9 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
   -- output addresses
   recipientAddrs <- genRecipients keys' scripts'
 
+  -- pointers
+  --let _ = (_ptrs . _dstate) dpState
+
   ttl <- genNatural 50 100
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 

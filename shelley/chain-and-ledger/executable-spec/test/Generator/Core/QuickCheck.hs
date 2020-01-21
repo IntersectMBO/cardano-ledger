@@ -73,9 +73,9 @@ import           Slot (BlockNo (..), SlotNo (..))
 import           Test.Utils (mkCertifiedVRF, mkGenKey, mkKESKeyPair, mkKeyPair, mkVRFKeyPair,
                      unsafeMkUnitInterval)
 import           Tx (pattern TxOut, hashScript)
-import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
-                     pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
-                     pattern ScriptHashObj)
+import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
+                     pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
+                     pattern RequireSignature, pattern ScriptHashObj)
 
 genBool :: Gen Bool
 genBool = QC.arbitraryBoundedRandom
@@ -200,11 +200,16 @@ someScripts lower upper =
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> Map AnyKeyHash KeyPair -> KeyPair
-findPayKeyPair (AddrBase (KeyHashObj addr) _) keyHashMap =
-    case Map.lookup (undiscriminateKeyHash addr) keyHashMap of
-      Nothing -> error "findPayKeyPair: could not find a match for the given address"
-      Just kp -> kp
-findPayKeyPair _ _ = error "findPayKeyPair: expects only AddrBase addresses"
+findPayKeyPair a keyHashMap =
+  case a of
+    AddrBase (KeyHashObj addr) _ -> lookforKeyHash addr
+    AddrPtr (KeyHashObj addr) _  -> lookforKeyHash addr
+    _                            -> error "findPayKeyPair: expects only AddrBase addresses"
+  where
+    lookforKeyHash addr' =
+      case Map.lookup (undiscriminateKeyHash addr') keyHashMap of
+        Nothing -> error "findPayKeyPair: could not find a match for the given address"
+        Just kp -> kp
 
 -- | Find first matching script for address.
 findPayScript :: Addr -> MultiSigPairs -> (MultiSig, MultiSig)
@@ -342,4 +347,3 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
 -- find a preimage. In testing, therefore, we just wrap the raw natural, which
 -- we then encode into the fake VRF implementation.
 newtype NatNonce = NatNonce Natural
-
