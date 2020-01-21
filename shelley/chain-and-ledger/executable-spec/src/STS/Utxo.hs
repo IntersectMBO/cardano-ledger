@@ -154,7 +154,7 @@ utxoInductive = do
 
   txins txb /= Set.empty ?! InputSetEmptyUTxO
 
-  let minFee = minfee pp txb
+  let minFee = minfee pp tx
       txFee  = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
@@ -171,7 +171,7 @@ utxoInductive = do
   all (0 <=) outputCoins ?! NegativeOutputsUTxO
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
-      txSize_ = txsize txb
+      txSize_ = txsize tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
   let refunded = keyRefunds pp stakeCreds txb

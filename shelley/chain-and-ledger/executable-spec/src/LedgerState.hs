@@ -130,8 +130,9 @@ import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
 import           Tx (extractGenKeyHash, extractKeyHash)
 import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
                      PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, getRwdCred,
-                     inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, countMSigNodes,
+                     getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls,
+                     witKeyHash)
 import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
                      apps, emptyUpdate, emptyUpdateState)
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
@@ -540,11 +541,29 @@ validInputs tx u =
     else Invalid [BadInputs]
 
 -- |Implementation of abstract transaction size
--- TODO we still need to account for the witnesses, see github issue #812
-txsize :: forall crypto . (Crypto crypto) => TxBody crypto-> Integer
-txsize (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) =
-  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize
+txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
+txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) vKeySigs msigScripts) =
+  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize + witnessSize
   where
+    -- vkey signatures
+    signatures = Set.size vKeySigs
+
+    -- multi-signature scripts
+    scriptNodes = Map.foldl (+) 0 (Map.map countMSigNodes msigScripts)
+
+    -- TODO witness size is currently
+    --  (5 * #vkeywitness + 2 * #all msigNodes + 5 * #msigscripts) * size(hash)
+    --
+    -- while hashes have a specific bytecount, the DSIGNAlgorithm class does not
+    -- provide a similar function. Also, vkeys for mock are potentiall unbounded
+    -- in length. Therefore the above constants have been chosen to give an
+    -- abstract size estimation in terms of the size of hash.
+    witnessSize = hl * fromIntegral (
+      5 * signatures +
+      2 * Map.size msigScripts +
+      5 * scriptNodes)
+
+    -- hash
     hl = toInteger $ byteCount (Proxy :: Proxy (HASH crypto))
     hashObj = 2 + hl
     uint = 5
@@ -614,18 +633,18 @@ txsize (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) =
     uSize = arrayPrefix + ppupSize + avupSize
 
 -- |Minimum fee calculation
-minfee :: forall crypto . (Crypto crypto) => PParams -> TxBody crypto-> Coin
+minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
 
 -- |Determine if the fee is large enough
-validFee :: forall crypto . (Crypto crypto) => PParams -> TxBody crypto-> Validity
+validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Validity
 validFee pc tx =
   if needed <= given
     then Valid
     else Invalid [FeeTooSmall needed given]
       where
         needed = minfee pc tx
-        given  = tx ^. txfee
+        given  = tx ^. body . txfee
 
 -- |Compute the lovelace which are created by the transaction
 produced
@@ -818,16 +837,17 @@ validRuleUTXO
   -> StakeCreds crypto
   -> PParams
   -> SlotNo
-  -> TxBody crypto
+  -> Tx crypto
   -> UTxOState crypto
   -> Validity
 validRuleUTXO accs stakePools stakeKeys pc slot tx u =
-                          validInputs tx u
-                       <> current tx slot
-                       <> validNoReplay tx
+                          validInputs txb u
+                       <> current txb slot
+                       <> validNoReplay txb
                        <> validFee pc tx
-                       <> preserveBalance stakePools stakeKeys pc tx u
-                       <> correctWithdrawals accs (tx ^. wdrls)
+                       <> preserveBalance stakePools stakeKeys pc txb u
+                       <> correctWithdrawals accs (txb ^. wdrls)
+  where txb = _body tx
 
 validRuleUTXOW
   :: ( Crypto crypto
@@ -866,7 +886,7 @@ validTx tx d' slot pp l =
                    (l ^. delegationState . dstate . stkCreds)
                    pp
                    slot
-                   (tx ^. body)
+                   tx
                    (l ^. utxoState)
  <> validRuleUTXOW tx d' l
 

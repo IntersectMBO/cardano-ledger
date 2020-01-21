@@ -517,7 +517,7 @@ testFeeTooSmall =
            (SlotNo 100)
            [alicePay]
   in ledgerState [tx] @?=
-       Left [ FeeTooSmall (minfee testPCs $ tx ^. body) (Coin 1) ]
+       Left [ FeeTooSmall (minfee testPCs tx) (Coin 1) ]
 
 testExpiredTx :: Assertion
 testExpiredTx =

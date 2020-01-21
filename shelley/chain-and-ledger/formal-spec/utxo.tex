@@ -293,7 +293,7 @@ requests).
     { \var{txb}\leteq\txbody{tx}
       & \txttl txb \geq \var{slot}
       \\ \txins{txb} \neq \emptyset
-      & \minfee{pp}{txb} \leq \txfee{txb}
+      & \minfee{pp}{tx} \leq \txfee{txb}
       & \txins{txb} \subseteq \dom \var{utxo}
       \\
       \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \produced{pp}{stpools}~{txb}
@@ -313,7 +313,7 @@ requests).
       \\
       \forall (\_\mapsto (\_, c)) \in \txouts{txb}, c \geq 0
       \\
-      \fun{txsize}~{txb}\leq\fun{maxTxSize}~\var{pp}
+      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
       \\
       ~
       \\
