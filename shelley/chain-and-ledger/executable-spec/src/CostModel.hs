@@ -24,7 +24,7 @@ module CostModel
     ) where
 
 
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks(..), fmap, foldr)
 import           GHC.Generics (Generic)
 import           Data.Word (Word8)
 import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
@@ -66,6 +66,13 @@ data ExUnitsMSig = ExUnitsMSig
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks ExUnitsMSig
+
+-- | calculate the number of signatures needed by the MSig script (this is ExUnitsMSig)
+mSigExUnits :: MultiSig crypto -> ExUnitsMSig
+mSigExUnits (RequireSignature _)  = ExUnitsMSig 1 0
+mSigExUnits (RequireAllOf msl)    = ExUnitsMSig (foldr (+) 0 (fmap (numSigs . mSigExUnits) msl)) 0
+mSigExUnits (RequireAnyOf _)      = ExUnitsMSig 1 0
+mSigExUnits (RequireMOf m _)      = ExUnitsMSig (toInteger m) 0
 
 -- | The execution units of arbitrary scripts (MSig, PLC so far)
 data ExUnits =
