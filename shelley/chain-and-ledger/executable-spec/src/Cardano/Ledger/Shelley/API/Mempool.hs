@@ -79,6 +79,7 @@ mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
   LedgerState.esLState nesEs
 
 data ApplyTxError crypto = ApplyTxError [PredicateFailure (LEDGERS crypto)]
+  deriving (Eq, Show)
 
 instance
   (Typeable crypto, Crypto crypto)
