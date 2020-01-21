@@ -179,6 +179,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.Model.Examples
                        Test.Cardano.Chain.Block.Validation
                        Test.Cardano.Chain.Block.ValidationMode
+                       Test.Cardano.Chain.Byron.Auxiliary
 
                        Test.Cardano.Chain.Buildable
 

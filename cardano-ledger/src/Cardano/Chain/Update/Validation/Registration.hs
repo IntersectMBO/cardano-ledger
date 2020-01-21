@@ -9,7 +9,7 @@
 --   This is an implementation of the rules defined in the Byron ledger
 --   specification
 module Cardano.Chain.Update.Validation.Registration
-  ( Error
+  ( Error (..)
   , Environment (..)
   , State (..)
   , ApplicationVersions
@@ -18,6 +18,7 @@ module Cardano.Chain.Update.Validation.Registration
   , SoftwareUpdateProposals
   , registerProposal
   , TooLarge (..)
+  , Adopted (..)
   )
 where
 

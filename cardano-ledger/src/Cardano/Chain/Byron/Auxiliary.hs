@@ -276,6 +276,19 @@ validateBody validationMode block bodyEnv bodyState =
     flip runReaderT validationMode $
       CC.updateBody bodyEnv bodyState block
 
+validatePrevHashMatch :: MonadError CC.ChainValidationError m
+                      => CC.ABlock ByteString
+                      -> CC.ChainValidationState -> m ()
+validatePrevHashMatch block cvs = do
+    case ( CC.cvsPreviousHash cvs
+         , unAnnotated $ CC.aHeaderPrevHash (CC.blockHeader block)
+         ) of
+      (Left gh, hh) ->
+         throwError $ CC.ChainValidationExpectedGenesisHash gh hh
+      (Right expected, actual) ->
+         unless (expected == actual) $
+           throwError $ CC.ChainValidationInvalidHash expected actual
+
 validateBlock :: MonadError CC.ChainValidationError m
               => Gen.Config
               -> CC.ValidationMode
@@ -290,15 +303,7 @@ validateBlock cfg validationMode block blkHash cvs = do
     -- TODO: It could be argued that hash checking isn't part of consensus /or/
     -- the ledger. If we take that point of view serious, we should think about
     -- what that third thing is precisely and what its responsibilities are.
-    case ( CC.cvsPreviousHash cvs
-         , unAnnotated $ CC.aHeaderPrevHash (CC.blockHeader block)
-         ) of
-      (Left gh, hh) ->
-         throwError $ CC.ChainValidationExpectedGenesisHash gh hh
-      (Right expected, actual) ->
-         unless (expected == actual) $
-           throwError $ CC.ChainValidationInvalidHash expected actual
-
+    validatePrevHashMatch block cvs
     validateHeader validationMode updState (CC.blockHeader block)
     bodyState' <- validateBody validationMode block bodyEnv bodyState
     return cvs {

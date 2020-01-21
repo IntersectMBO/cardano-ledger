@@ -1,6 +1,7 @@
 module Test.Cardano.Chain.Update.Gen
   ( genCanonicalProtocolParameters
   , genApplicationName
+  , genError
   , genProtocolVersion
   , genProtocolParameters
   , genProtocolParametersUpdate
@@ -46,6 +47,15 @@ import Cardano.Chain.Update
   , payload
   , systemTagMaxLength
   )
+import Cardano.Chain.Update.Validation.Interface (Error(..))
+import qualified Cardano.Chain.Update.Validation.Registration as Registration
+import qualified Cardano.Chain.Update.Validation.Voting as Voting
+import qualified Cardano.Chain.Update.Validation.Endorsement as Endorsement
+import Cardano.Chain.Update.SoftwareVersion (SoftwareVersionError(..))
+import Cardano.Chain.Update.SystemTag (SystemTagError(..))
+import Cardano.Chain.Slotting.SlotNumber (SlotNumber(..))
+
+
 import Cardano.Crypto (ProtocolMagicId)
 
 import Test.Cardano.Chain.Common.Gen
@@ -53,6 +63,7 @@ import Test.Cardano.Chain.Common.Gen
   , genLovelacePortion
   , genScriptVersion
   , genTxFeePolicy
+  , genKeyHash
   )
 import Test.Cardano.Chain.Slotting.Gen
   (genEpochNumber, genSlotNumber)
@@ -63,6 +74,9 @@ import Test.Cardano.Crypto.Gen
   , genSigningKey
   , genSignature
   )
+
+import Cardano.Chain.Update.ApplicationName (ApplicationNameError(..))
+
 
 
 genApplicationName :: Gen ApplicationName
@@ -181,3 +195,61 @@ genUpsData =
 
 genVote :: ProtocolMagicId -> Gen Vote
 genVote pm = mkVote pm <$> genSigningKey <*> genUpId pm <*> Gen.bool
+
+genError :: ProtocolMagicId -> Gen Error
+genError pm = Gen.choice
+  [ Registration <$> genRegistrationError
+  , Voting <$> genVotingError pm
+  , Endorsement <$> genEndorsementError
+  , NumberOfGenesisKeysTooLarge <$> genRegistrationTooLarge
+  ]
+
+genRegistrationError :: Gen Registration.Error
+genRegistrationError = Gen.choice
+  [ Registration.DuplicateProtocolVersion <$> genProtocolVersion
+  , Registration.DuplicateSoftwareVersion <$> genSoftwareVersion
+  , Registration.InvalidProposer <$> genKeyHash
+  , Registration.InvalidProtocolVersion
+      <$> genProtocolVersion
+      <*> (Registration.Adopted <$> genProtocolVersion)
+  , Registration.InvalidScriptVersion <$> genWord16 <*> genWord16
+  , pure Registration.InvalidSignature
+  , Registration.InvalidSoftwareVersion <$>
+    ( Gen.map (Range.linear 1 20) $ do
+        name <- genApplicationName
+        version <- genWord32
+        slotNo <- SlotNumber <$> Gen.word64 Range.constantBounded
+        meta <- Gen.map (Range.linear 1 10) $
+          (,) <$> genSystemTag <*> genInstallerHash
+        pure (name, (version, slotNo, meta))
+    ) <*> genSoftwareVersion
+  , Registration.MaxBlockSizeTooLarge <$> (Registration.TooLarge <$> genNatural <*> genNatural)
+  , Registration.MaxTxSizeTooLarge <$> (Registration.TooLarge <$> genNatural <*> genNatural)
+  , pure Registration.ProposalAttributesUnknown
+  , Registration.ProposalTooLarge <$> (Registration.TooLarge <$> genNatural <*> genNatural)
+  , (Registration.SoftwareVersionError . SoftwareVersionApplicationNameError)
+      <$> Gen.choice
+      [ ApplicationNameTooLong <$> Gen.text (Range.linear 0 20) Gen.alphaNum
+      , ApplicationNameNotAscii <$> Gen.text (Range.linear 0 20) Gen.alphaNum
+      ]
+  , Registration.SystemTagError <$> Gen.choice
+      [ SystemTagNotAscii <$> Gen.text (Range.linear 0 20) Gen.alphaNum
+      , SystemTagTooLong <$> Gen.text (Range.linear 0 20) Gen.alphaNum
+      ]
+  ]
+
+genVotingError :: ProtocolMagicId -> Gen Voting.Error
+genVotingError pm = Gen.choice
+  [ pure Voting.VotingInvalidSignature
+  , Voting.VotingProposalNotRegistered <$> genUpId pm
+  , Voting.VotingVoterNotDelegate <$> genKeyHash
+  ]
+
+genEndorsementError :: Gen Endorsement.Error
+genEndorsementError = Endorsement.MultipleProposalsForProtocolVersion <$>
+  genProtocolVersion
+
+genRegistrationTooLarge :: Gen (Registration.TooLarge Int)
+genRegistrationTooLarge = Registration.TooLarge 
+  <$> Gen.int Range.constantBounded
+  <*> Gen.int Range.constantBounded
