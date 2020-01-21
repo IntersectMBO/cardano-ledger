@@ -51,7 +51,7 @@ import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGobli
 newtype Hash = Hash
   { unHash :: Maybe Int
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable)
+    deriving newtype (Eq, Ord, Hashable, ToCBOR)
     deriving anyclass (HasTypeReps)
 
 isValid :: Hash -> Bool
@@ -78,7 +78,7 @@ class HasOwner a where
 -- |Signing Key.
 newtype SKey = SKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord)
+  deriving newtype (Eq, Ord, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner SKey where
@@ -99,7 +99,7 @@ instance HasOwner VKey where
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasHash)
+  deriving newtype (Eq, Ord, Hashable, HasHash, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner VKeyGenesis where
@@ -129,7 +129,6 @@ instance HasTypeReps KeyPair
 keyPair :: Owner -> KeyPair
 keyPair o = KeyPair (SKey o) (VKey o)
 
-
 -- |A digital signature.
 data Sig a = Sig a Owner deriving (Show, Eq, Ord, Generic, Hashable, Typeable, Data)
 
@@ -155,12 +154,12 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
 newtype Epoch = Epoch { unEpoch :: Word64 }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, Num)
+  deriving newtype (Eq, Ord, Hashable, Num, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 newtype Slot = Slot { unSlot :: Word64 }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 -- | A number of slots.
@@ -170,13 +169,19 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  of blocks.
 newtype SlotCount = SlotCount { unSlotCount :: Word64 }
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Num, Hashable)
+  deriving newtype (Eq, Ord, Num, Hashable, ToCBOR)
 
 instance HasTypeReps SlotCount
 
 -- | Add a slot count to a slot.
 addSlot :: Slot -> SlotCount -> Slot
 addSlot (Slot n) (SlotCount m) = Slot $ m + n
+
+-- | An alias for 'addSlot'
+(+.) :: Slot -> SlotCount -> Slot
+(+.) = addSlot
+
+infixl 6 +.
 
 -- | Subtract a slot count from a slot.
 --
@@ -214,7 +219,6 @@ newtype BlockCount = BlockCount { unBlockCount :: Word64 }
 
 instance HasTypeReps BlockCount
 
-
 ---------------------------------------------------------------------------------
 -- Transactions
 ---------------------------------------------------------------------------------
@@ -222,7 +226,7 @@ instance HasTypeReps BlockCount
 -- |The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasOwner)
+  deriving newtype (Eq, Ord, Hashable, HasOwner, ToCBOR)
   deriving anyclass (HasTypeReps)
 
 -- | Create an address from a number.
@@ -237,7 +241,7 @@ instance HasHash Addr where
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral)
+    deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, ToCBOR)
     deriving (Semigroup, Monoid) via (Sum Integer)
     deriving anyclass (HasTypeReps)
 
