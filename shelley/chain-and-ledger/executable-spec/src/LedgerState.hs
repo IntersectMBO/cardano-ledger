@@ -552,8 +552,16 @@ txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) 
     scriptNodes = Map.foldl (+) 0 (Map.map countMSigNodes msigScripts)
 
     -- TODO witness size is currently
-    --  (#vkeywitness + #all msigNodes + #msigscripts) * size(hash)
-    witnessSize = hl * fromIntegral (signatures + Map.size msigScripts + scriptNodes)
+    --  (5 * #vkeywitness + 2 * #all msigNodes + 5 * #msigscripts) * size(hash)
+    --
+    -- while hashes have a specific bytecount, the DSIGNAlgorithm class does not
+    -- provide a similar function. Also, vkeys for mock are potentiall unbounded
+    -- in length. Therefore the above constants have been chosen to give an
+    -- abstract size estimation in terms of the size of hash.
+    witnessSize = hl * fromIntegral (
+      5 * signatures +
+      2 * Map.size msigScripts +
+      5 * scriptNodes)
 
     -- hash
     hl = toInteger $ byteCount (Proxy :: Proxy (HASH crypto))
