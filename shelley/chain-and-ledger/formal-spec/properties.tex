@@ -65,7 +65,7 @@ represented in the state to zero.
 For example, given $\var{utxoSt}\in\UTxOState$,
 \begin{equation*}
   \Val(\var{utxoSt}) =
-  \left(\sum_{\wcard\mapsto v\in\var{utxo}}v\right) + \var{deposits} + \var{fees}
+  \left(\sum_{\wcard\mapsto(\wcard,~v)\in\var{utxo}}v\right) + \var{deposits} + \var{fees}
 \end{equation*}
 
 \noindent

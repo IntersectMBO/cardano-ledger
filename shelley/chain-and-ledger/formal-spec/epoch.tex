@@ -284,7 +284,7 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
       & \where \\
       & ~~~~ (\var{stkCreds},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
         = \var{dstate} \\
-      & ~~~~ (\var{stpools},~\wcard,~\wcard,~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (\var{stpools},~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
@@ -396,7 +396,7 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{~\leteq~}l}
         (\var{stkCreds},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
-        (\var{stpools},~\var{poolParams},~\wcard,~\wcard) & \var{pstate}\\
+        (\var{stpools},~\var{poolParams},~\wcard) & \var{pstate}\\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
         \var{slot} & \firstSlot{e} \\
         \var{oblg} & \obligation{pp}{stkCreds}{stpools}{slot} \\
@@ -680,39 +680,22 @@ for ease of reading.
          \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
                                                                                       \leteq
                               & \var{dstate}\\
-         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
+         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}\\
+         (\var{utxo},~\var{deposits},~\var{fees},~\var{ups}) & \leteq & \var{utxoSt} \\
+         (\var{pup},~\var{aup},~\var{favs},~\var{avs}) & \leteq & \var{ups} \\
       \end{array}}
       \\~\\~\\
+      \var{oblg_{cur}} = \var{deposits} \\
       \var{reserves} + \var{diff} \geq \sum\limits_{\wcard\mapsto\var{val}\in\var{i_{rwd}}} val \\
       \fun{maxTxSize}~\var{pp_{new}} + \fun{maxHeaderSize}~\var{pp_{new}} <
         \fun{maxBlockSize}~\var{pp_{new}}
       \\~\\
-      \var{utxoSt'} \leteq
-      \left(
-        {
-          \begin{array}{r}
-            \var{utxo} \\
-            \varUpdate{oblg_{new}} \\
-            \var{fees} \\
-            \left(\begin{array}{r}
-              \varUpdate{\emptyset} \\
-              \var{aup} \\
-              \var{favs} \\
-              \var{avs} \\
-          \end{array}\right)
-          \end{array}
-        }
-      \right)
-      &
-      \var{acnt'} \leteq
-      \left(
-        {
-          \begin{array}{r}
-            \var{treasury} \\
-            \varUpdate{reserves + diff} \\
-          \end{array}
-        }
-      \right)
+        \var{utxoSt'} \leteq
+        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees}
+        \left(\varUpdate{\emptyset},~\var{aup},~\var{favs},~\var{avs}\right)\right)
+      \\~\\
+      (\var{treasury},~\var{reserves})\leteq \var{acnt} \\
+      \var{acnt'} \leteq (\var{treasury},~\varUpdate{reserves + diff}) \\
     }
     {
       \begin{array}{l}
@@ -763,22 +746,12 @@ for ease of reading.
          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
       \end{array}}
       \\~\\~\\
-      \var{utxoSt'} \leteq
-      \left(
-        {
-          \begin{array}{r}
-            \var{utxo} \\
-            \var{deposits} \\
-            \var{fees} \\
-            \left(\begin{array}{r}
-              \varUpdate{\emptyset} \\
-              \var{aup} \\
-              \var{favs} \\
-              \var{avs} \\
-          \end{array}\right)
-          \end{array}
-        }
-      \right)
+      \left(\var{utxo},~\var{oblg},~\var{fees}
+        \left(\var{pup},~\var{aup},~\var{favs},~\var{avs}\right)\right)
+        \leteq \var{utxoSt} \\
+        \var{utxoSt'} \leteq
+        \left(\var{utxo},~\var{oblg},~\var{fees}
+        \left(\varUpdate{\emptyset},~\var{aup},~\var{favs},~\var{avs}\right)\right)
     }
     {
       \begin{array}{l}
@@ -850,6 +823,13 @@ protocol parameters.
 
 The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$ and $\mathsf{NEWPP}$
 in sequence.
+The ordering of these rules is important.
+The stake pools which will be reaped during the $\mathsf{POOLREAP}$ transition must still be a
+part of the new snapshot, and so $\mathsf{SNAP}$ must occur before $\mathsf{POOLREAP}$.
+Moreover, $\mathsf{SNAP}$ sets the deposit pot equal to current obligation,
+which is a property that is preserved by $\mathsf{POOLREAP}$ and which
+is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ transition.
+
 %%
 %% Figure - Epoch Rule
 %%
