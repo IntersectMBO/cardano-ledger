@@ -7,8 +7,8 @@ import           Test.Tasty.Hedgehog (testProperty)
 import qualified Test.Tasty.QuickCheck as Tasty.QuickCheck
 
 import qualified Control.State.Transition.Examples.CommitReveal as CommitReveal
-import qualified Control.State.Transition.Examples.Sum as Sum
 import qualified Control.State.Transition.Examples.GlobalSum as GSum
+import qualified Control.State.Transition.Examples.Sum as Sum
 
 main :: IO ()
 main = do
@@ -43,7 +43,7 @@ main = do
               "Unique Data (QuickCheck)"
               CommitReveal.prop_qc_UniqueData
         , expectFailBecause
-            "we're inspecting generated counterexamples"
+            "a counterexample of an invalid signal should be found"
           $ Tasty.QuickCheck.testProperty
               "Only valid signals are generated (QuickCheck)"
               CommitReveal.prop_qc_OnlyValidSignals
