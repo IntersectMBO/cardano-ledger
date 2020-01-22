@@ -98,6 +98,7 @@ module LedgerState
 
 import           Address (mkRwdAcnt)
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -552,17 +553,16 @@ txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _)
     -- multi-signature scripts
     scriptNodes = Map.foldl (+) 0 (Map.map countMSigNodes msigScripts)
 
-    -- TODO witness size is currently
-    --  (5 * #vkeywitness + 2 * #all msigNodes + 5 * #msigscripts) * size(hash)
-    --
-    -- while hashes have a specific bytecount, the DSIGNAlgorithm class does not
-    -- provide a similar function. Also, vkeys for mock are potentiall unbounded
-    -- in length. Therefore the above constants have been chosen to give an
-    -- abstract size estimation in terms of the size of hash.
-    witnessSize = hl * fromIntegral (
-      5 * signatures +
-      2 * Map.size msigScripts +
-      5 * scriptNodes)
+    -- The abstract size of the witnesses is caclucated as the sum of the sizes
+    -- of the vkey witnesses (vkey + signature size) and the size of the
+    -- scripts. For each script, the abstract size is calculated as the number
+    -- of nodes and leaves in the multi-signature script times the size of a
+    -- `hashObj`.
+    witnessSize =
+      (fromIntegral signatures) * ((toInteger . abstractSizeVKey) (Proxy :: Proxy (DSIGN crypto)) +
+                                    (toInteger . abstractSizeSig) (Proxy :: Proxy (DSIGN crypto))) +
+      hashObj * (fromIntegral scriptNodes) +
+      smallArray + labelSize + mapPrefix + (hashObj * fromIntegral (Map.size msigScripts))
 
     -- hash
     hl = toInteger $ byteCount (Proxy :: Proxy (HASH crypto))
