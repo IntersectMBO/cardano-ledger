@@ -195,6 +195,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
                     & \text{convert a slot to a seed} \\
       \hashHeaderToNonce{} & \HashHeader \to \Seed
                     & \text{convert a header hash to a seed} \\
+      \fun{bbodyhash} & \seqof{\Tx} \to \HashBBody \\
     \end{array}
   \end{equation*}
   %
@@ -214,7 +215,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{bleader} & \BHBody \to \unitInterval\\
       \fun{\bprfl{}} & \BHBody \to \Proof\\
       \fun{hBbsize} & \BHBody \to \N \\
-      \fun{bbodyhash} & \seqof{\Tx} \to \HashBBody \\
+      \fun{bhash} & \BHBody \to \HashBBody \\
       \fun{bocert} & \BHBody \to \OCert \\
     \end{array}
   \end{equation*}
@@ -342,7 +343,7 @@ In the second case, the new epoch state is updated as follows:
       \\~\\
       {
         \vdash
-        (\fun{applyRUpd}~\var{ru}~\var{e}~\var{es})
+        (\fun{applyRUpd}~\var{ru}~\var{es})
           \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'}
       }
       \\~\\
@@ -752,25 +753,28 @@ Three transitions are done:
         \var{nes}'
       }
       \\~\\
-      (\wcard,~\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)\leteq\var{nes} \\
+      (\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)\leteq\var{nes} \\
       \\
-      (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{ru},~\wcard,~\wcard)\leteq\var{nes'} \\
+      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru'},~\var{pd'},\var{osched'})
+      \leteq\var{nes'}
       \\~\\
       {
         {\begin{array}{c}
            \var{b_{prev}} \\
            \var{es} \\
          \end{array}}
-        \vdash \var{ru}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru}'
+        \vdash \var{ru'}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru''}
       }
       \\~\\
-      \var{nes}''\leteq\var{nes'}\unionoverrideRight\{\var{ru'}\}
+      \var{nes''}\leteq
+      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru''},~\var{pd'},\var{osched'})
+      \\~\\
     }
     {
       {\begin{array}{c}
          \var{gkeys} \\
        \end{array}}
-      \vdash\var{nes}\trans{tick}{\var{bh}}\varUpdate{\var{nes''}}
+      \vdash\var{nes}\trans{tick}{\var{s}}\varUpdate{\var{nes''}}
     }
   \end{equation}
   \caption{Tick rules}
@@ -1364,13 +1368,13 @@ current slot is not an overlay slot.
     {
       \var{txs} \leteq \bbody{block}
       &
-      \var{bhb} \leteq \bhbody\bheader{block}
+      \var{bhb} \leteq \bhbody{(\bheader{block})}
       &
-      \var{hk} \leteq \hashKey\bvkcold{bhb}
+      \var{hk} \leteq \hashKey{(\bvkcold{bhb})}
       \\~\\
       \bBodySize{txs} = \hBbsize{bhb}
       &
-      \fun{hash}~{txs} = \bbodyhash{bhb}
+      \fun{bbodyhash}~{txs} = \bhash{bhb}
       \\~\\
       {
         {\begin{array}{c}
