@@ -1134,33 +1134,37 @@ overlaySchedule
   -> PParams
   -> ShelleyBase (Map SlotNo (Maybe (GenKeyHash crypto)))
 overlaySchedule e gkeys pp = do
-  ei <- asks epochInfo
-  slotsPerEpoch <- epochInfoSize ei e
-  firstSlotNo <- epochInfoFirst ei e
-  let
-    numActive = dval * fromIntegral slotsPerEpoch
-    dval = intervalValue $ pp ^. d
-    dInv = 1 / dval
-    asc = intervalValue $ pp ^. activeSlotCoeff
+  let dval = intervalValue $ pp ^. d
+  if dval == 0
+    then
+      pure Map.empty
+    else do
+      ei <- asks epochInfo
+      slotsPerEpoch <- epochInfoSize ei e
+      firstSlotNo <- epochInfoFirst ei e
+      let
+        numActive = dval * fromIntegral slotsPerEpoch
+        dInv = 1 / dval
+        asc = intervalValue $ pp ^. activeSlotCoeff
 
-    toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
-    toSlotNo x = firstSlotNo +* toRelativeSlotNo x
+        toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
+        toSlotNo x = firstSlotNo +* toRelativeSlotNo x
 
-    genesisSlots = [ toSlotNo x | x <-[0..(floor numActive)] ]
+        genesisSlots = [ toSlotNo x | x <-[0..(floor numActive)] ]
 
-    numInactivePerActive = floor (asc * fromRational numActive) - 1
-    activitySchedule =  cycle (True:replicate numInactivePerActive False)
-    unassignedSched = zip activitySchedule genesisSlots
+        numInactivePerActive = floor (asc * fromRational numActive) - 1
+        activitySchedule =  cycle (True:replicate numInactivePerActive False)
+        unassignedSched = zip activitySchedule genesisSlots
 
-    active =
-      Map.fromList $ fmap
-        (\(gk,(_,s))->(s, Just gk))
-        (zip (cycle (Set.toList gkeys)) (filter fst unassignedSched))
-    inactive =
-      Map.fromList $ fmap
-        (\x -> (snd x, Nothing))
-        (filter (not . fst) unassignedSched)
-  pure $ Map.union active inactive
+        active =
+          Map.fromList $ fmap
+            (\(gk,(_,s))->(s, Just gk))
+            (zip (cycle (Set.toList gkeys)) (filter fst unassignedSched))
+        inactive =
+          Map.fromList $ fmap
+            (\x -> (snd x, Nothing))
+            (filter (not . fst) unassignedSched)
+      pure $ Map.union active inactive
 
 -- | Update new epoch state
 updateNES
