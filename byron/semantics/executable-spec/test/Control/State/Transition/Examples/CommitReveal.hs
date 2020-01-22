@@ -162,7 +162,7 @@ instance
     where
       genCommit = do
         id <- Id <$> QC.arbitrary
-        n <- QC.choose (-10, 10)
+        n <- QC.choose (-2, 2)
         let newData = Data (id, n)
         pure $! Commit (hash newData) newData
       genReveal = do
@@ -203,8 +203,8 @@ prop_qc_UniqueData =
 -- where it shouldn't be possible to shrink @d0@ any further.
 --
 prop_qc_OnlyValidSignals :: QC.Property
-prop_qc_OnlyValidSignals = QC.withMaxSuccess 1000 -- We need to test a large
+prop_qc_OnlyValidSignals = QC.withMaxSuccess 5000 -- We need to test a large
                                                   -- number of times to make sure
                                                   -- we get a collision in the
                                                   -- generated data
-  $ STS.Gen.onlyValidSignalsAreGenerated @(CR ShortHash Map Data) @() () 100 ()
+  $ STS.Gen.onlyValidSignalsAreGenerated @(CR ShortHash Map Data) @() () 150 ()
