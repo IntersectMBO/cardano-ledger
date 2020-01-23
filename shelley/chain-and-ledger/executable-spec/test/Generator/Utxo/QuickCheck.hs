@@ -186,6 +186,10 @@ pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
       (input, Left $ findPayKeyPair addr keyHashMap)
     witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) _) _) =
       (input, Right $ findPayScript addr scripts)
+    witnessedInput (input, TxOut addr@(AddrPtr (KeyHashObj _) _) _) =
+      (input, Left $ findPayKeyPair addr keyHashMap)
+    witnessedInput (input, TxOut addr@(AddrPtr (ScriptHashObj _) _) _) =
+      (input, Right $ findPayScript addr scripts)
     witnessedInput _ = error "unsupported address"
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
