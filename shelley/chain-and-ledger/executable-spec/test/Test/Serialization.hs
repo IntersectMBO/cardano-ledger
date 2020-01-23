@@ -584,11 +584,13 @@ serializationTests = testGroup "Serialization Tests"
                              (SystemTag $ pack "DOS")
                              testInstallerHash
                          ))))
+      e = Just $ EpochNo 0
     in checkEncodingCBOR "full_update"
-    (Update ppup avup)
-    ( (T $ TkListLen 2)
+    (Update ppup avup e)
+    ( (T $ TkListLen 3)
       <> S ppup
       <> S avup
+      <> S e
     )
 
   -- checkEncodingCBOR "minimal_txn"
@@ -635,6 +637,7 @@ serializationTests = testGroup "Serialization Tests"
                                     (SystemTag $ pack "DOS")
                                     testInstallerHash
                                 )))))
+             (Just $ EpochNo 0)
     in checkEncodingCBOR "txbody_partial"
     ( TxBody -- transaction body with some optional components
         tin
@@ -680,6 +683,7 @@ serializationTests = testGroup "Serialization Tests"
                                     (SystemTag $ pack "DOS")
                                     testInstallerHash
                                 )))))
+             (Just $ EpochNo 0)
     in checkEncodingCBOR "txbody_full"
     ( TxBody -- transaction body with all components
         tin

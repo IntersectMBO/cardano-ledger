@@ -39,7 +39,7 @@ data PPUPEnv crypto
 
 instance STS (PPUP crypto) where
   type State (PPUP crypto) = PPUpdate crypto
-  type Signal (PPUP crypto) = PPUpdate crypto
+  type Signal (PPUP crypto) = (PPUpdate crypto, Maybe EpochNo)
   type Environment (PPUP crypto) = PPUPEnv crypto
   type BaseM (PPUP crypto) = ShelleyBase
   data PredicateFailure (PPUP crypto)
@@ -47,6 +47,7 @@ instance STS (PPUP crypto) where
     | PPUpdateTooLatePPUP
     | PPUpdateEmpty
     | PPUpdateNonEmpty
+    | PPUpdateNoEpoch (Maybe EpochNo)
     | PVCannotFollowPPUP
     deriving (Show, Eq, Generic)
 
@@ -69,7 +70,8 @@ instance
      PPUpdateTooLatePPUP  -> encodeListLen 1 <> toCBOR (1 :: Word8)
      PPUpdateEmpty        -> encodeListLen 1 <> toCBOR (2 :: Word8)
      PPUpdateNonEmpty     -> encodeListLen 1 <> toCBOR (3 :: Word8)
-     PVCannotFollowPPUP   -> encodeListLen 1 <> toCBOR (4 :: Word8)
+     (PPUpdateNoEpoch e)  -> encodeListLen 2 <> toCBOR (4 :: Word8) <> toCBOR e
+     PVCannotFollowPPUP   -> encodeListLen 1 <> toCBOR (5 :: Word8)
 
 instance
   (Crypto crypto)
@@ -86,7 +88,11 @@ instance
       1 -> matchSize "PPUpdateTooLatePPUP" 1 n >> pure PPUpdateTooLatePPUP
       2 -> matchSize "PPUpdateEmpty" 1 n >> pure PPUpdateEmpty
       3 -> matchSize "PPUpdateNonEmpty" 1 n >> pure PPUpdateNonEmpty
-      4 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
+      4 -> do
+        matchSize "PPUpdateNoEpoch" 2 n
+        a <- fromCBOR
+        pure $ PPUpdateNoEpoch a
+      5 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
       k -> invalidKey k
 
 pvCanFollow :: (Natural, Natural, Natural) -> Ppm -> Bool
@@ -99,7 +105,7 @@ pvCanFollow _ _ = True
 
 ppupTransitionEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionEmpty = do
-  TRC (_, pupS, PPUpdate pup) <- judgmentContext
+  TRC (_, pupS, (PPUpdate pup, _)) <- judgmentContext
 
   Map.null pup ?! PPUpdateNonEmpty
 
@@ -107,7 +113,7 @@ ppupTransitionEmpty = do
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
-  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), PPUpdate pupS, PPUpdate pup) <- judgmentContext
+  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), PPUpdate pupS, (PPUpdate pup, te)) <- judgmentContext
 
   not (Map.null pup) ?! PPUpdateEmpty
 
@@ -121,5 +127,10 @@ ppupTransitionNonEmpty = do
     EpochNo e <- epochInfoEpoch ei slot
     epochInfoFirst ei (EpochNo $ e + 1)
   slot < firstSlotNextEpoch *- (Duration sp) ?! PPUpdateTooLatePPUP
+
+  currentEpoch <- liftSTS $ do
+    ei <- asks epochInfo
+    epochInfoEpoch ei slot
+  Just currentEpoch == te ?! PPUpdateNoEpoch te
 
   pure $ PPUpdate (pupS ⨃  Map.toList pup)

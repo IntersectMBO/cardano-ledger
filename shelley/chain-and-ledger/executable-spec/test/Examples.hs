@@ -395,7 +395,7 @@ ppupEx2A = PPUpdate $ Map.singleton
 -- | Update proposal that just changes protocol parameters,
 --   and does not change applications.
 updateEx2A :: Update
-updateEx2A = Update ppupEx2A (AVUpdate Map.empty)
+updateEx2A = Update ppupEx2A (AVUpdate Map.empty) (Just $ EpochNo 0)
 
 -- | Transaction body to be processed.
 txbodyEx2A :: TxBody
@@ -1431,7 +1431,7 @@ ppupEx3A = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, ppVote3A)
                                    ]
 
 updateEx3A :: Update
-updateEx3A = Update ppupEx3A (AVUpdate Map.empty)
+updateEx3A = Update ppupEx3A (AVUpdate Map.empty) (Just $ EpochNo 0)
 
 txbodyEx3A :: TxBody
 txbodyEx3A = TxBody
@@ -1520,7 +1520,7 @@ ppupEx3B = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, ppVote3A)
                                    ]
 
 updateEx3B :: Update
-updateEx3B = Update ppupEx3B (AVUpdate Map.empty)
+updateEx3B = Update ppupEx3B (AVUpdate Map.empty) (Just $ EpochNo 0)
 
 txbodyEx3B :: TxBody
 txbodyEx3B = TxBody
@@ -1685,7 +1685,7 @@ avupEx4A = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, appsEx4A)
                                    ]
 
 updateEx4A :: Update
-updateEx4A = Update (PPUpdate Map.empty) avupEx4A
+updateEx4A = Update (PPUpdate Map.empty) avupEx4A Nothing
 
 txbodyEx4A :: TxBody
 txbodyEx4A = TxBody
@@ -1773,7 +1773,7 @@ avupEx4B = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, appsEx4A)
                                    ]
 
 updateEx4B :: Update
-updateEx4B = Update (PPUpdate Map.empty) avupEx4B
+updateEx4B = Update (PPUpdate Map.empty) avupEx4B Nothing
 
 txbodyEx4B :: TxBody
 txbodyEx4B = TxBody

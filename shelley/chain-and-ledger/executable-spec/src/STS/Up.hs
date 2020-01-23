@@ -87,9 +87,9 @@ upTransition
 upTransition = do
   TRC ( UpdateEnv slot pp _genDelegs
       , UpdateState pup aup favs avs
-      , Update pupU aupU) <- judgmentContext
+      , Update pupU aupU e) <- judgmentContext
 
-  pup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp _genDelegs, pup, pupU)
+  pup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp _genDelegs, pup, (pupU, e))
   AVUPState aup' favs' avs' <-
     trans @(AVUP crypto) $ TRC (AVUPEnv slot _genDelegs, AVUPState aup favs avs, aupU)
 

@@ -255,7 +255,9 @@ genApplications =
 
 -- | Generate entire @Update of protocol parameters
 genUpdate :: HashAlgorithm (HASH crypto)
-          => [GenKeyHash         crypto]
+          => EpochNo -- to be valid, this must be the current epoch
+          -> [GenKeyHash         crypto]
           ->  Gen (Update        crypto)
-genUpdate genesisKeys = Update <$> genPPUpdate genesisKeys
-                               <*> genAVUpdate genesisKeys
+genUpdate e genesisKeys = Update <$> genPPUpdate genesisKeys
+                                 <*> genAVUpdate genesisKeys
+                                 <*> pure (Just e)

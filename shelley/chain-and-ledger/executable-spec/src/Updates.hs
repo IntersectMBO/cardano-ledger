@@ -93,21 +93,22 @@ newtype AVUpdate crypto = AVUpdate {
 
 -- | Update Proposal
 data Update crypto
-  = Update (PPUpdate crypto) (AVUpdate crypto)
+  = Update (PPUpdate crypto) (AVUpdate crypto) (Maybe EpochNo)
   deriving (Show, Eq, Generic)
 
 updateNull :: Update crypto -> Bool
-updateNull (Update (PPUpdate ppup) (AVUpdate avup)) = null ppup && null avup
+updateNull (Update (PPUpdate ppup) (AVUpdate avup) _e) = null ppup && null avup
 
 instance NoUnexpectedThunks (Update crypto)
 
 instance Crypto crypto => ToCBOR (Update crypto) where
-  toCBOR (Update ppUpdate avUpdate) =
-    encodeListLen 2 <> toCBOR ppUpdate <> toCBOR avUpdate
+  toCBOR (Update ppUpdate avUpdate e) =
+    encodeListLen 3 <> toCBOR ppUpdate <> toCBOR avUpdate <> toCBOR e
 
 instance Crypto crypto => FromCBOR (Update crypto) where
   fromCBOR =
-    Update <$ enforceSize "Update" 2
+    Update <$ enforceSize "Update" 3
+      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
 
@@ -266,7 +267,7 @@ emptyUpdateState = UpdateState
                      (Applications Map.empty)
 
 emptyUpdate :: Update crypto
-emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty)
+emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty) Nothing
 
 updatePParams :: PParams -> PParamsUpdate -> PParams
 updatePParams ppms (PParamsUpdate up) = Set.foldr updatePParams' ppms up
