@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -204,7 +205,8 @@ findPayKeyPair a keyHashMap =
   case a of
     AddrBase (KeyHashObj addr) _ -> lookforKeyHash addr
     AddrPtr (KeyHashObj addr) _  -> lookforKeyHash addr
-    _                            -> error "findPayKeyPair: expects only AddrBase addresses"
+    _                            ->
+      error "findPayKeyPair: expects only AddrBase or AddrPtr addresses"
   where
     lookforKeyHash addr' =
       case Map.lookup (undiscriminateKeyHash addr') keyHashMap of
@@ -213,11 +215,17 @@ findPayKeyPair a keyHashMap =
 
 -- | Find first matching script for address.
 findPayScript :: Addr -> MultiSigPairs -> (MultiSig, MultiSig)
-findPayScript (AddrBase (ScriptHashObj scriptHash) _) scripts =
-  case List.findIndex (\(pay, _) -> scriptHash == hashScript pay) scripts of
-    Nothing -> error "findPayScript: could not find matching script for given address"
-    Just i  -> scripts !! i
-findPayScript _ _ = error "findPayScript: unsupported address format"
+findPayScript a scripts =
+  case a of
+    AddrBase (ScriptHashObj scriptHash) _ -> lookForScriptHash scriptHash
+    AddrPtr (ScriptHashObj scriptHash) _  -> lookForScriptHash scriptHash
+    _                                     ->
+      error "findPayScript: expects only AddrBase addresses"
+  where
+    lookForScriptHash scriptHash =
+      case List.findIndex (\(pay, _) -> scriptHash == hashScript pay) scripts of
+        Nothing -> error "findPayScript: could not find matching script for given address"
+        Just i  -> scripts !! i
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
 pickStakeKey :: KeyPairs -> Gen VKey
