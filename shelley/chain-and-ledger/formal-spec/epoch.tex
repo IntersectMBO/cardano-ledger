@@ -28,6 +28,7 @@
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~{#2}~\var{#3}~\var{#4}~\var{#5}}
 \newcommand{\createRUpd}[2]{\fun{createRUpd}~\var{#1}~\var{#2}}
+\newcommand{\getIR}[1]{\fun{getIR}~\var{#1}}
 
 This chapter introduces the epoch boundary transition system and the related reward calculation.
 
@@ -816,6 +817,14 @@ protocol parameters.
     \subseteq \powerset (\EpochState \times \Epoch \times \EpochState)
   \end{equation*}
   %
+  \emph{Accessor Functions}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}lr}
+      \fun{getIR} & \EpochState \to (\StakeCredential \mapsto \Coin)
+                  & \text{get instantaneous rewards} \\
+    \end{array}
+  \end{equation*}
+  %
   \caption{Epoch transition-system types}
   \label{fig:ts-types:epoch}
 \end{figure}
@@ -1292,6 +1301,9 @@ The $\fun{createRUpd}$ function does the following:
     performance.  The difference between the maximal amount and the actual amount received is
     added to the amount moved to the treasury.
   \item The fee pot will be reduced by $\var{feeSS}$.
+  \item The instantaneous rewards $\var{i_{rwd}}$ are stored. This is not neccessary,
+    but ensuring that they will not have changed when the reward update is applied
+    makes for better local properties.
 \end{itemize}
 
 Note that fees are not explicitly removed from any account:
@@ -1322,7 +1334,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \begin{align*}
     & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
     & \createRUpd{b}{es} = \left(
-      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\var{registered}\right) \\
+      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\var{i_{rwd}}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
     & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
@@ -1331,14 +1343,12 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\left(
       \wcard,~
       \left(
-      \left(\var{stkCreds},~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}}\right)~
+      \left(\wcard,~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}}\right)~
       \wcard
       \right)
       \right) = \var{ls} \\
-    & ~~~~~~~unregistered = \dom{i_{rwd}} \setminus \dom{stkCreds}\\
-    & ~~~~~~~\var{registered} = \var{unregistered}\subtractdom i_{rwd} \\
     & ~~~~~~~\var{rewards_{mir}} =
-      \sum\limits_{\wcard\mapsto\var{val}\in\var{registered}}\var{val} \\
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{i_{rwd}}}\var{val} \\
     & ~~~~~~~\var{reserves'} = \var{reserves} - \var{rewards_{mir}}\\
     & ~~~~~~~\Delta r_{l} = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
       \var{reserves'}}
@@ -1370,7 +1380,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \Delta r \\
           \var{rs} \\
           \Delta f \\
-          \var{rew_{mir}}
+          \var{i_{rwd}'} \\
         \end{array}
     \right)
       \left(
@@ -1388,7 +1398,6 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
-          \var{cs} \\
           ~ \\
           \var{utxo} \\
           \var{deposits} \\
@@ -1412,7 +1421,6 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{stpools} \\
           \var{poolParams} \\
           \var{retiring} \\
-          \var{cs} \\
           ~ \\
           \var{utxo} \\
           \var{deposits} \\
@@ -1421,8 +1429,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
         \end{array}
     \right)\\
       & ~~~\where \\
-      & ~~~~~~~\var{rew_{mir}'} =  \dom{\var{stkCreds}}\restrictdom\var{rew_{mir}} \\
-      & ~~~~~~~\var{unregistered} = \dom{\var{stkCreds}}\subtractdom\var{rew_{mir}}
+      & ~~~~~~~\var{rew_{mir}'} =  \dom{\var{stkCreds}}\restrictdom\var{i_{rwd}'} \\
+      & ~~~~~~~\var{unregistered} = \dom{\var{stkCreds}}\subtractdom\var{i_{rwd}'}
     \\
       & ~~~~~~~\var{nonDistributed} = \sum\limits_{\wcard\mapsto \var{val} \in
                                       unregistered} \var{val}  \\

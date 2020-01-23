@@ -644,10 +644,11 @@ expectedStEx2Bgeneric pp = ChainState
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
                             -- ^ Previous epoch state
      (Just RewardUpdate { deltaT        = Coin 0
-                        , deltaR        = Coin (-110)
+                        , deltaR        = Coin (-209)
                         , rs            = Map.empty
                         , deltaF        = Coin 0
-                        , updateIRwd    = Map.fromList [(carlSHK, 110)]
+                        , updateIRwd    = Map.fromList [ (carlSHK, Coin 110)
+                                                       , (dariaSHK, Coin 99)]
                         })  -- ^ Update reward
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -2335,7 +2336,7 @@ ex6F' = do
 test6F :: Assertion
 test6F = do
   case ex6F' of
-    Left _ -> assertFailure "encountered error state"
+    Left e -> assertFailure (show e)
     Right ex6FState -> do
       let getDState = _dstate . _delegationState . esLState . nesEs . chainNes
           ds = getDState ex6FState
