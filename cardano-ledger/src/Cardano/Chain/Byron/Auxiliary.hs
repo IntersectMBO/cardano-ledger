@@ -26,6 +26,7 @@ module Cardano.Chain.Byron.Auxiliary (
   , validateBlock
   , validateBoundary
   , applyScheduledDelegations
+  , previewDelegationMap
     -- * Applying transactions
   , ApplyMempoolPayloadErr(..)
   , applyMempoolPayload
@@ -276,19 +277,6 @@ validateBody validationMode block bodyEnv bodyState =
     flip runReaderT validationMode $
       CC.updateBody bodyEnv bodyState block
 
-validatePrevHashMatch :: MonadError CC.ChainValidationError m
-                      => CC.ABlock ByteString
-                      -> CC.ChainValidationState -> m ()
-validatePrevHashMatch block cvs = do
-    case ( CC.cvsPreviousHash cvs
-         , unAnnotated $ CC.aHeaderPrevHash (CC.blockHeader block)
-         ) of
-      (Left gh, hh) ->
-         throwError $ CC.ChainValidationExpectedGenesisHash gh hh
-      (Right expected, actual) ->
-         unless (expected == actual) $
-           throwError $ CC.ChainValidationInvalidHash expected actual
-
 validateBlock :: MonadError CC.ChainValidationError m
               => Gen.Config
               -> CC.ValidationMode
@@ -304,6 +292,7 @@ validateBlock cfg validationMode block blkHash cvs = do
     -- the ledger. If we take that point of view serious, we should think about
     -- what that third thing is precisely and what its responsibilities are.
     validatePrevHashMatch block cvs
+
     validateHeader validationMode updState (CC.blockHeader block)
     bodyState' <- validateBody validationMode block bodyEnv bodyState
     return cvs {
@@ -320,6 +309,19 @@ validateBlock cfg validationMode block blkHash cvs = do
                   (getProtocolParams cvs)
                   (CC.blockSlot block)
     bodyState = mkBodyState cvs
+
+validatePrevHashMatch :: MonadError CC.ChainValidationError m
+                      => CC.ABlock ByteString
+                      -> CC.ChainValidationState -> m ()
+validatePrevHashMatch block cvs = do
+    case ( CC.cvsPreviousHash cvs
+         , unAnnotated $ CC.aHeaderPrevHash (CC.blockHeader block)
+         ) of
+      (Left gh, hh) ->
+         throwError $ CC.ChainValidationExpectedGenesisHash gh hh
+      (Right expected, actual) ->
+         unless (expected == actual) $
+           throwError $ CC.ChainValidationInvalidHash expected actual
 
 -- | Apply a boundary block
 --
@@ -353,6 +355,13 @@ applyScheduledDelegations update (Delegation.Map del) =
              -> Bimap CC.KeyHash CC.KeyHash
     applyOne x = Bimap.insert (D.Sched.sdDelegator x)
                               (D.Sched.sdDelegate  x)
+
+previewDelegationMap :: CC.SlotNumber -> CC.ChainValidationState -> Delegation.Map
+previewDelegationMap slot cvs =
+  let delegs = getScheduledDelegations cvs
+      (current, _rest) = Seq.spanl ((<= slot) . D.Sched.sdSlot) delegs
+      delegationMap = getDelegationMap cvs
+   in applyScheduledDelegations current delegationMap
 
 {-------------------------------------------------------------------------------
   Applying transactions

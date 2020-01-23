@@ -28,32 +28,33 @@ import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Update
   ( ApplicationName(..)
+  , ApplicationNameError(..)
+  , InstallerHash(..)
   , Payload
   , Proof
   , Proposal
   , ProposalBody(..)
-  , ProtocolParametersUpdate(..)
   , ProtocolParameters(..)
+  , ProtocolParametersUpdate(..)
   , ProtocolVersion(..)
   , SoftforkRule(..)
   , SoftwareVersion(..)
+  , SoftwareVersionError(..)
   , SystemTag(..)
+  , SystemTagError(..)
   , UpId
-  , InstallerHash(..)
   , Vote
   , applicationNameMaxLength
-  , unsafeProposal
   , mkVote
   , payload
   , systemTagMaxLength
+  , unsafeProposal
   )
 import Cardano.Chain.Update.Validation.Interface (Error(..))
 import qualified Cardano.Chain.Update.Validation.Registration as Registration
 import qualified Cardano.Chain.Update.Validation.Voting as Voting
 import qualified Cardano.Chain.Update.Validation.Endorsement as Endorsement
-import Cardano.Chain.Update.SoftwareVersion (SoftwareVersionError(..))
-import Cardano.Chain.Update.SystemTag (SystemTagError(..))
-import Cardano.Chain.Slotting.SlotNumber (SlotNumber(..))
+import Cardano.Chain.Slotting (SlotNumber(..))
 
 
 import Cardano.Crypto (ProtocolMagicId)
@@ -75,7 +76,6 @@ import Test.Cardano.Crypto.Gen
   , genSignature
   )
 
-import Cardano.Chain.Update.ApplicationName (ApplicationNameError(..))
 
 
 

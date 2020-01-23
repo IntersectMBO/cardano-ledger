@@ -45,7 +45,10 @@ library
                        Cardano.Chain.UTxO.Validation
                        Cardano.Chain.Update
                        Cardano.Chain.Update.Proposal
+                       Cardano.Chain.Update.Validation.Endorsement
                        Cardano.Chain.Update.Validation.Interface
+                       Cardano.Chain.Update.Validation.Registration
+                       Cardano.Chain.Update.Validation.Voting
                        Cardano.Chain.Update.Vote
                        Cardano.Chain.ValidationMode
 
@@ -116,10 +119,7 @@ library
                        Cardano.Chain.Update.SoftforkRule
                        Cardano.Chain.Update.SoftwareVersion
                        Cardano.Chain.Update.SystemTag
-                       Cardano.Chain.Update.Validation.Endorsement
                        Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
-                       Cardano.Chain.Update.Validation.Registration
-                       Cardano.Chain.Update.Validation.Voting
 
   build-depends:       base >=4.11 && <5
                      , base58-bytestring
