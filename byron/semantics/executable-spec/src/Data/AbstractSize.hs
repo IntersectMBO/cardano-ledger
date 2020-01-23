@@ -22,7 +22,7 @@ import           Data.Sequence (Seq, empty, (<|), (><))
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import           Data.Typeable (TypeRep, Typeable, typeOf)
-import           Data.Word (Word64)
+import           Data.Word (Word16, Word32, Word64, Word8)
 import           GHC.Generics ((:*:) ((:*:)), (:+:) (L1, R1), Generic, K1 (K1), M1 (M1), Rep,
                      U1 (U1), from)
 import           GHC.Natural (Natural)
@@ -177,6 +177,18 @@ instance HasTypeReps Double where
   typeReps x = [typeOf x]
 
 instance HasTypeReps Natural where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps Word where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps Word8 where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps Word16 where
+  typeReps x = [typeOf x]
+
+instance HasTypeReps Word32 where
   typeReps x = [typeOf x]
 
 instance HasTypeReps Word64 where
