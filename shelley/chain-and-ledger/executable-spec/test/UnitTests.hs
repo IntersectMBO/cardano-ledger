@@ -14,6 +14,7 @@ import           Lens.Micro ((&), (.~), (^.))
 
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import           Test.Utils
 
 import           Address
 import           BaseTypes
@@ -31,7 +32,7 @@ import           Validation (ValidationError (..))
 import           Keys (pattern KeyPair, hashKey, vKey)
 import           LedgerState (pattern LedgerState, pattern UTxOState, delegationState, delegations,
                      dstate, emptyDelegation, genesisCoins, genesisId, genesisState, minfee,
-                     pParams, pstate, ptrs, retiring, rewards, stPools, stkCreds)
+                     overlaySchedule, pParams, pstate, ptrs, retiring, rewards, stPools, stkCreds)
 import           PParams
 import           Slot
 import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, body, ttl)
@@ -423,6 +424,24 @@ testsValidLedger =
           ]
     ]
 
+testOverlayScheduleDZero :: Assertion
+testOverlayScheduleDZero =
+  let
+    os = runShelleyBase
+      $ overlaySchedule
+        (EpochNo 0)
+        mempty
+        (emptyPParams {_d = unsafeMkUnitInterval 0})
+  in os @?= Map.empty
+
+
+testsDParam :: TestTree
+testsDParam =
+  testGroup "Test the d parameter."
+    [ testCase "Overlay Schedule when d is zero" $
+        testOverlayScheduleDZero
+    ]
+
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   let
@@ -547,4 +566,4 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
 
 unitTests :: TestTree
 unitTests = testGroup "Unit Tests"
-  [ testsValidLedger, testsInvalidLedger ]
+  [ testsValidLedger, testsInvalidLedger, testsDParam ]
