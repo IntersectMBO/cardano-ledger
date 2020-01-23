@@ -86,7 +86,7 @@ newEpochTransition = do
                Nothing  -> pure es
                Just ru' -> do
                  let irwd' = updateIRwd ru'
-                 let irwd_ = getIR es
+                     irwd_ = getIR es
                  irwd' == irwd_ ?! CorruptIRWDs irwd' irwd_
                  pure $ applyRUpd ru' es
 
