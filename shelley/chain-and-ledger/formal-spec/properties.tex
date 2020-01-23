@@ -274,9 +274,9 @@ If we let:
 
 \begin{lemma}
   \label{lemma:ru-pres-of-value}
-  For all mappings $b$ of blocks made, epochs $\epsilon$, and epoch states $s$,
+  For all mappings $b$ of blocks made, and epoch states $s_1$ and $s_2$,
   \begin{equation*}
-    \Val(s) = \Val(\fun{applyRUpd}~(\fun{createRUpd}~b~s)~s)
+    \Val(s_2) = \Val(\fun{applyRUpd}~(\fun{createRUpd}~b~s_1)~s_2)
   \end{equation*}
 \end{lemma}
 
@@ -286,32 +286,34 @@ If we let:
   \begin{equation*}
     \Delta t + \Delta r + \Val(rs) + \Val(\var{update_{rwd}}) + \var{nonDistributed} + \Delta f = 0
   \end{equation*}
+  Note that only $\var{nonDistributed}$ and $\var{update_{rwd}}$ depend on $s_2$,
+  as all the other values are pure computations based on $s_1$.
+
   In the definition of $\fun{createRUpd}$ in Figure~\ref{fig:functions:reward-update-creation},
+  using only variable names for values in $s_1$,
   we see that:
   \begin{equation*}
     \begin{array}{r@{~=~}l}
       \var{rewardPot} & \var{feeSS} + \Delta r_l \\
       \var{R} & \var{rewardPot} - \Delta t_1 \\
       \Delta t_2 & R - \Val(\var{rs})\\
-      \Delta r & - (\Delta r_l+\Val(registered)) \\
+      \Delta r & - (\Delta r_l+\Val(i_{rwd})) \\
     \end{array}
   \end{equation*}
   Therefore
   \begin{equation*}
     \begin{array}{c}
-      (\var{feeSS} + \Delta r_l) = \var{rewardPot} = R + \Delta t_1 = \Delta t_2 + \Val(rs) + \Delta r_l  \\
+      (\var{feeSS} + \Delta r_l) = \var{rewardPot} = R + \Delta t_1 = \Delta t_2 + \Val(rs) + \Delta t_1  \\
       0 = (\Delta t_1 + \Delta t_2 ) - \Delta r_l + \Val(rs)- \var{feeSS} \\
     \end{array}
   \end{equation*}
-  So it suffices to show that:
+  It then suffices to show that:
   \begin{equation*}
-    -\Val(registered) + \Val(\var{update_{rwd}}) + \var{nonDistributed} = 0
+    -\Val(i_{rwd}) + \Val(\var{update_{rwd}}) + \var{nonDistributed} = 0
   \end{equation*}
-  Notice that $\var{rew}_{\var{mir}} = \var{registered}$
-    (the name is different between $\fun{applyRUpd}$ and $\fun{createRUpd}$)
-    and that $\var{rew}_{\var{mir}}$ is the disjoint union of
-    $\var{rew'}_{\var{mir}}$ and $\var{unregistered}$.
-    Therefore
+  Notice that $\var{i}_{rwd}$ (from $s_1$) is the disjoint union of
+  $\var{rew'}_{\var{mir}}$ and $\var{unregistered}$.
+  Therefore
   \begin{equation*}
     \begin{array}{r@{~=~}l}
       \Val(\var{registered}) & \Val(\var{rew}_{\var{mir}}) \\

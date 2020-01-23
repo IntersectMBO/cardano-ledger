@@ -35,8 +35,7 @@ import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
                      vKey)
 import           LedgerState (AccountState (..), EpochState (..), NewEpochState (..),
-                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs,
-                     updateIRwd)
+                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs, updateIRwd)
 import           Numeric.Natural (Natural)
 import           PParams (emptyPParams)
 import           Serialization (FromCBORGroup (..), ToCBORGroup (..))

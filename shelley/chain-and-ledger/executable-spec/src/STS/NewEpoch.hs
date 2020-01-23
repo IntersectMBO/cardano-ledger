@@ -21,6 +21,7 @@ import           Control.State.Transition
 import           Control.State.Transition.Generator
 import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
+import           Data.Map.Strict (Map)
 import           Data.Maybe (catMaybes)
 import           Delegation.Certificates
 import           EpochBoundary
@@ -48,6 +49,7 @@ instance
 
   data PredicateFailure (NEWEPOCH crypto)
     = EpochFailure (PredicateFailure (EPOCH crypto))
+    | CorruptIRWDs (Map (Credential crypto) Coin) (Map (Credential crypto) Coin)
     deriving (Show, Generic, Eq)
 
   initialRules =
@@ -80,11 +82,16 @@ newEpochTransition = do
   if e_ /= eL + 1
     then pure src
     else do
-      let es_ = case ru of
-            Nothing  -> es
-            Just ru' -> applyRUpd ru' es
-      es' <- trans @(EPOCH crypto) $ TRC ((), es_, e)
-      let EpochState _acnt ss _ls pp = es'
+      es' <- case ru of
+               Nothing  -> pure es
+               Just ru' -> do
+                 let irwd' = updateIRwd ru'
+                     irwd_ = getIR es
+                 irwd' == irwd_ ?! CorruptIRWDs irwd' irwd_
+                 pure $ applyRUpd ru' es
+
+      es'' <- trans @(EPOCH crypto) $ TRC ((), es', e)
+      let EpochState _acnt ss _ls pp = es''
           (Stake stake, delegs) = _pstakeSet ss
           Coin total = Map.foldl (+) (Coin 0) stake
           sd =
@@ -100,7 +107,7 @@ newEpochTransition = do
           e
           bcur
           (BlocksMade Map.empty)
-          es'
+          es''
           Nothing
           (PoolDistr pd')
           osched'

@@ -30,6 +30,7 @@ module LedgerState
   , emptyRewardUpdate
   , EpochState(..)
   , emptyEpochState
+  , getIR
   , emptyLedgerState
   , emptyUTxOState
   , clearPpup
@@ -47,8 +48,6 @@ module LedgerState
   , emptyPState
   , emptyDState
   , poolRAcnt
-  , treasury
-  , reserves
   -- * state transitions
   , emptyDelegation
   , applyTxBody
@@ -340,6 +339,9 @@ emptyEpochState :: EpochState crypto
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
 
+getIR :: EpochState crypto -> Map (Credential crypto) Coin
+getIR = _irwd . _dstate . _delegationState . esLState
+
 emptyLedgerState :: LedgerState crypto
 emptyLedgerState =
   LedgerState
@@ -473,7 +475,6 @@ makeLenses ''DPState
 makeLenses ''DState
 makeLenses ''PState
 makeLenses ''UTxOState
-makeLenses ''AccountState
 makeLenses ''LedgerState
 
 -- |The transaction Id for 'UTxO' included at the beginning of a new ledger.
@@ -1091,8 +1092,7 @@ applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
                  , _reserves = _reserves as + deltaR ru + nonDistributed
                  }
         ls' = ls { _utxoState =
-                     utxoState_ { _fees = _fees utxoState_ + deltaF ru
-                                , _deposited = _deposited utxoState_ }
+                     utxoState_ { _fees = _fees utxoState_ + deltaF ru }
                  , _delegationState =
                      delegState
                      {_dstate = dState
@@ -1114,37 +1114,30 @@ createRUpd
 createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
     ei <- asks epochInfo
     slotsPerEpoch <- epochInfoSize ei e
-    let Coin reserves' = _reserves acnt
-
-        ds = _dstate $ _delegationState ls
-        rewards' = _rewards ds
-        (stake', delegs') = _pstakeGo ss
+    let (stake', delegs') = _pstakeGo ss
         poolsSS' = _poolsSS ss
-        StakeCreds stkcreds = _stkCreds ds
+        Coin reserves = _reserves acnt
+        ds = _dstate $ _delegationState ls
 
         -- instantaneous rewards
-        registered = Map.filterWithKey (\cred _ -> cred `Map.member` stkcreds) (_irwd ds)
-
-        Coin rewardsMIR = Map.foldl (+) (Coin 0) registered
-        reserves'' = reserves' - rewardsMIR
+        Coin rewardsMIR = Map.foldl (+) (Coin 0) (_irwd ds)
+        reserves' = reserves - rewardsMIR
 
         -- reserves and rewards change
-        deltaRl =
-            (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves'')
-        deltaR' = deltaRl + Coin rewardsMIR
+        deltaRl = (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves')
+        deltaR_ = deltaRl + Coin rewardsMIR
+        expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
         eta = fromIntegral blocksMade / expectedBlocks
 
         Coin rewardPot = _feeSS ss + deltaRl
         deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
-        r@(Coin r') = Coin $ rewardPot - deltaT1
+        _R = Coin $ rewardPot - deltaT1
 
-        deltaT2 = r' - c'
-        rs' = reward pp b r (Map.keysSet rewards') poolsSS' stake' delegs'
-        Coin c' = Map.foldr (+) (Coin 0) rs'
+        rs_ = reward pp b _R (Map.keysSet $ _rewards ds) poolsSS' stake' delegs'
+        deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
-        expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
-    pure $ RewardUpdate (Coin $ deltaT1 + deltaT2) (-deltaR') rs' (-(_feeSS ss)) registered
+    pure $ RewardUpdate (Coin deltaT1 + deltaT2) (-deltaR_) rs_ (-(_feeSS ss)) (_irwd ds)
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.

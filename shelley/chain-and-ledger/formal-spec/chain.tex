@@ -310,13 +310,19 @@ of which are active.
   \label{fig:ts-types:newepoch}
 \end{figure}
 
-Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It has two rules.
+Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It has three rules.
 The first rule describes the change in the case of $e$ being equal to the next epoch
-$e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule.
-The second one deals with the case when the epoch signal $e$ is not one greater than the
+$e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule and checks that the
+instantaneous rewards stored in the reward update is the same as the instantaneous rewards 
+stored in the current epoch state.
+This should always hold and is present only for extra assurance and for help in proving
+that Ada is preserved by reward updates.
+The second rule deals with the case when the epoch signal $e$ is not one greater than the
 current epoch \var{e_\ell}. This rule does not change the state.
+The third one deals with the case when the reward update is equal to $\Nothing$.
+This rule also does not change the state.
 
-In the second case, the new epoch state is updated as follows:
+In the first case, the new epoch state is updated as follows:
 
 \begin{itemize}
 \item The epoch is set to the new epoch $e$.
@@ -340,15 +346,21 @@ In the second case, the new epoch state is updated as follows:
       e = e_\ell + 1
       &
       \var{ru} \neq \Nothing
-      \\~\\
+      \\
+      (\wcard,~\wcard,~\wcard,~\wcard,~\var{irwd'})\leteq\var{ru}
+      &
+      \var{irwd'} = \getIR{es}
+      \\
+      \var{es'}\leteq\fun{applyRUpd}~\var{ru}~\var{es}
+      &
       {
         \vdash
-        (\fun{applyRUpd}~\var{ru}~\var{es})
-          \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'}
+        \var{es'}
+          \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es''}
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-          (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es'} \\
+          (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\var{pools},~\wcard) & \var{ss} \\
          (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
          total & \sum_{\_ \mapsto c\in\var{stake}} c \\
@@ -390,7 +402,7 @@ In the second case, the new epoch state is updated as follows:
             \varUpdate{\var{e}} \\
             \varUpdate{\var{b_{cur}}} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es}'} \\
+            \varUpdate{\var{es''}} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{osched}'} \\
