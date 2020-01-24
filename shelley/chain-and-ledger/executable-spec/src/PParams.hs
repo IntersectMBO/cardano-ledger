@@ -132,6 +132,9 @@ instance ToCBOR PParams
         <> toCBOR extraEntropy'
         <> toCBOR protocolVersion'
 
+instance FromCBOR PParams
+ where
+  fromCBOR = do
     enforceSize "PParams" 20
     PParams
       <$> fromCBOR
