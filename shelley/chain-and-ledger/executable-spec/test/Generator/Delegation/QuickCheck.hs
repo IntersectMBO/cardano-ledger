@@ -10,6 +10,7 @@ module Generator.Delegation.QuickCheck
   ( genDCerts
   , CertCred (..))
   where
+import           Control.Monad.Trans.Reader (asks)
 import           Data.Foldable (find)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, fromList, keys, keysSet, lookup, size)
@@ -26,7 +27,7 @@ import qualified Test.QuickCheck as QC
 import           Test.Utils
 
 import           Address (scriptToCred)
-import           BaseTypes (interval0)
+import           BaseTypes (epochInfo, interval0, slotsPrior)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (AnyKeyHash, CoreKeyPair, DCert, DPState, DState, KeyPair,
                      KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey, VrfKeyPairs,
@@ -47,7 +48,7 @@ import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
                      _genDelegs, _pstate, _stPools, _stkCreds)
 import           PParams (PParams (..), d, eMax)
-import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
+import           Slot (Duration (..), EpochNo (EpochNo), SlotNo (SlotNo), epochInfoFirst, (*-))
 import           Tx (getKeyCombination)
 import           TxData (pattern DCertDeleg, pattern DCertGenesis, pattern DCertPool,
                      pattern Delegation, pattern KeyHashObj, pattern PoolParams, RewardAcnt (..),
@@ -139,7 +140,7 @@ genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
                , (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState)
                , (frequencyDeRegKeyCert, genDeRegKeyCert keys scripts dState)
                , (frequencyRetirePoolCert, genRetirePool keys pparams pState slot)
-               , (frequencyMIRCert, genInstantaneousRewards coreKeys pparams dState)
+               , (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
                ]
  where
   dState = dpState ^. dstate
@@ -359,11 +360,12 @@ genRetirePool availableKeys pp pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards
-  :: [CoreKeyPair]
+  :: SlotNo
+  -> [CoreKeyPair]
   -> PParams
   -> DState
   -> Gen (Maybe (DCert, CertCred))
-genInstantaneousRewards coreKeys pparams delegSt = do
+genInstantaneousRewards s coreKeys pparams delegSt = do
   let StakeCreds credentials = _stkCreds delegSt
 
   winnerCreds <- take <$> QC.elements [0 .. (max 0 $ (Map.size credentials) - 1)]
@@ -374,13 +376,24 @@ genInstantaneousRewards coreKeys pparams delegSt = do
                       <*> QC.shuffle coreKeys
 
   let credCoinMap = Map.fromList $ zip winnerCreds coins
+
   pure $ if (-- Discard this generator (by returning Nothing) if:
              -- we are in full decentralisation mode (d=0) when IR certs are not allowed
              pparams ^. d == interval0
              -- or when we don't have keys available for generating an IR cert
-             || null credCoinMap)
+             || null credCoinMap
+             -- or it's too late in the epoch for IR certs
+             || tooLateInEpoch)
     then
       Nothing
     else
       Just ( DCertMir (MIRCert credCoinMap)
            , CoreKeyCred coreSigners)
+
+  where
+    tooLateInEpoch = runShelleyBase $ do
+      ei <- asks epochInfo
+      firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
+      slotsPrior_ <- asks slotsPrior
+
+      return (s >= firstSlotNo *- Duration slotsPrior_)

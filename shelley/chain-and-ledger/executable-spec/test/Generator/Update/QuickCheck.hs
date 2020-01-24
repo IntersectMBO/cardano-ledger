@@ -116,7 +116,7 @@ genExtraEntropy  = QC.frequency [ (1, pure NeutralNonce)
 -- Note: we keep the lower bound high enough so that we can more likely
 -- generate valid transactions and blocks
 low, hi :: Natural
-low = 10000
+low = 20000
 hi = 200000
 
 -- keyMinRefund: 0.1-0.5
