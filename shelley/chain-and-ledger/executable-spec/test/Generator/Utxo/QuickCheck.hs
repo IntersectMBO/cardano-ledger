@@ -13,7 +13,7 @@ module Generator.Utxo.QuickCheck
 
 import qualified Data.Either as Either (lefts, rights)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, empty, fromList, toList)
+import qualified Data.Map.Strict as Map (elems, empty, fromList, keys, size, toList)
 import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
@@ -24,18 +24,19 @@ import qualified Test.QuickCheck as QC
 
 import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
-import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DCert, DPState, KeyPair,
-                     KeyPairs, MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState,
-                     VrfKeyPairs)
+import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DCert, DPState, DState,
+                     KeyPair, KeyPairs, MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO,
+                     UTxOState, VrfKeyPairs)
 import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
                      minNumGenInputs)
 import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
-import           LedgerState (pattern UTxOState)
+import           LedgerState (pattern UTxOState, _dstate, _ptrs)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
-import           TxData (pattern AddrBase, pattern KeyHashObj, pattern ScriptHashObj)
+import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
+                     pattern ScriptHashObj)
 import           Updates (emptyUpdate)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
@@ -67,7 +68,10 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
       spendScripts   = Either.rights spendCredentials
 
   -- output addresses
-  recipientAddrs <- genRecipients keys' scripts'
+  recipientAddrs' <- genRecipients keys' scripts'
+
+  -- maybe convert some addresss to pointer addresses
+  recipientAddrs  <- genPtrAddrs (_dstate dpState) recipientAddrs'
 
   ttl <- genNatural 50 100
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
@@ -182,6 +186,10 @@ pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
       (input, Left $ findPayKeyPair addr keyHashMap)
     witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) _) _) =
       (input, Right $ findPayScript addr scripts)
+    witnessedInput (input, TxOut addr@(AddrPtr (KeyHashObj _) _) _) =
+      (input, Left $ findPayKeyPair addr keyHashMap)
+    witnessedInput (input, TxOut addr@(AddrPtr (ScriptHashObj _) _) _) =
+      (input, Right $ findPayScript addr scripts)
     witnessedInput _ = error "unsupported address"
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
@@ -209,3 +217,18 @@ genRecipients keys scripts = do
   stakeCreds <- QC.shuffle (stakeKeys ++ stakeScripts)
 
   return (zipWith AddrBase payCreds stakeCreds)
+
+genPtrAddrs :: DState -> [Addr] -> Gen [Addr]
+genPtrAddrs ds addrs = do
+  let pointers = _ptrs ds
+
+  n <- QC.choose (0, min (Map.size pointers) (length addrs))
+  pointerList <- take n <$> QC.shuffle (Map.keys pointers)
+
+  let addrs' = zipWith baseAddrToPtrAddr (take n addrs) pointerList
+
+  pure (addrs' ++ (drop n addrs))
+    where
+      baseAddrToPtrAddr a p = case a of
+        AddrBase pay _ -> AddrPtr pay p
+        _              -> a
