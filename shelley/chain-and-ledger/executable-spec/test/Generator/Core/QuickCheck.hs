@@ -25,6 +25,7 @@ module Generator.Core.QuickCheck
   , coreKeyPairs
   , coreNodeKeys
   , traceKeyPairs
+  , traceKeyPairsByStakeHash
   , traceKeyHashMap
   , traceVRFKeyPairs
   , traceMSigScripts
@@ -105,6 +106,13 @@ mkKeyPairs n
 -- | Constant list of KeyPairs intended to be used in the generators.
 traceKeyPairs :: KeyPairs
 traceKeyPairs = mkKeyPairs <$> [1 .. maxNumKeyPairs]
+
+traceKeyPairsByStakeHash
+  :: Map KeyHash KeyPair
+traceKeyPairsByStakeHash =
+  Map.fromList (f <$> traceKeyPairs)
+  where
+    f (_payK, stakeK) = ((hashKey . vKey) stakeK, stakeK)
 
 -- | Mapping from key hash to key pair
 traceKeyHashMap :: Map AnyKeyHash KeyPair
@@ -325,11 +333,12 @@ mkBlock
 mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
   let
     (shot, vhot) = hot pkeys
+    KeyPair vKeyCold sKeyCold = cold pkeys
     nonceNonce = mkSeed seedEta s enonce prev
     leaderNonce = mkSeed seedL s enonce prev
     bhb = BHBody
             prev
-            (vKey $ cold pkeys)
+            vKeyCold
             (snd $ vrf pkeys)
             s
             blockNo
@@ -337,17 +346,19 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
             (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
             (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
             (bbHash $ TxSeq $ fromList txns)
-            (OCert
-              vhot
-              (vKey $ cold pkeys)
-              0
-              (KESPeriod 0)
-              (sign (sKey $ cold pkeys) (vhot, 0, KESPeriod 0))
-            )
+            (mkOCert vhot vKeyCold sKeyCold)
             (ProtVer 0 0 0)
     bh = BHeader bhb (signKES shot bhb kesPeriod)
   in
     Block bh (TxSeq $ fromList txns)
+  where
+    mkOCert vKeyHot vKeyCold sKeyCold =
+      OCert
+        vKeyHot
+        vKeyCold
+        0
+        (KESPeriod 0)
+        (sign sKeyCold (vKeyHot, 0, KESPeriod 0))
 
 -- | We provide our own nonces to 'mkBlock', which we then wish to recover as
 -- the output of the VRF functions. In general, however, we just derive them
