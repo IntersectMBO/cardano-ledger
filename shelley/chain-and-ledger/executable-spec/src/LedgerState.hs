@@ -543,7 +543,7 @@ validInputs tx u =
 
 -- |Implementation of abstract transaction size
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
-txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) vKeySigs msigScripts) =
+txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _)) vKeySigs msigScripts) =
   iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize + witnessSize
   where
     -- vkey signatures
@@ -631,7 +631,7 @@ txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup))) 
     sysTagSize = 10
     mdSize (_av, (Mdt m)) = nameSize + arrayPrefix + uint + mapPrefix
                              + (toInteger $ length m) * (sysTagSize + hashObj)
-    uSize = arrayPrefix + ppupSize + avupSize
+    uSize = arrayPrefix + ppupSize + avupSize + smallArray + uint
 
 -- |Minimum fee calculation
 minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
@@ -867,7 +867,7 @@ propWits
   :: Update crypto
   -> GenDelegs crypto
   -> Set (KeyHash crypto)
-propWits (Update (PPUpdate pup) (AVUpdate aup')) (GenDelegs _genDelegs) =
+propWits (Update (PPUpdate pup) (AVUpdate aup') _) (GenDelegs _genDelegs) =
   Set.fromList $ Map.elems updateKeys
   where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup') ◁ _genDelegs
 
