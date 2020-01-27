@@ -60,6 +60,13 @@ newtype UTxO = UTxO
   } deriving stock (Show, Data, Typeable)
     deriving newtype (Eq, Relation, Semigroup, Monoid)
 
+-- | Apply function uniformly across all outputs
+mapUTxOValues :: (Lovelace -> Lovelace) -> UTxO -> UTxO
+mapUTxOValues f (UTxO utxo) = UTxO (f' <$> utxo)
+  where
+    f' :: TxOut -> TxOut
+    f' (TxOut addr value) = TxOut addr (f value)
+
 addValue :: TxOut -> Lovelace -> TxOut
 addValue tx@TxOut{ value } d = tx { value = value + d }
 
