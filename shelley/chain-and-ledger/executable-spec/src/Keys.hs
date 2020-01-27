@@ -196,7 +196,6 @@ signKES
   -> KESig crypto a
 signKES (SKeyES k) d n =
   KESig
-    . fst
     . fromJust
     . fst
     . withDRG (drgNewSeed (seedFromInteger 0))
