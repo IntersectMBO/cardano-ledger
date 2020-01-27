@@ -34,9 +34,10 @@ import           Control.State.Transition.Generator
 import           Ledger.Core
 import qualified Ledger.Core.Generators as CoreGen
 import           Ledger.Delegation
+import qualified Ledger.GlobalParams as GP
 import           Ledger.Update hiding (delegationMap)
 import qualified Ledger.Update as Update
-import           Ledger.UTxO (UTxO)
+import           Ledger.UTxO (UTxO, mapUTxOValues)
 
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.BBody
@@ -192,7 +193,7 @@ instance HasTrace CHAIN where
     sigCntT <- SigCntGen.sigCntT k ngk
     (,,,,)
       <$> gCurrentSlot
-      <*> (utxo0 <$> envGen @UTXOWS chainLength)
+      <*> (adjustUTxO . utxo0 <$> envGen @UTXOWS chainLength)
       <*> pure (mkVkGenesisSet ngk)
       -- TODO: for now we're returning a constant set of parameters, where only '_bkSgnCntT' varies.
       <*> pure initialPParams { _bkSgnCntT = Update.BkSgnCntT sigCntT }
@@ -201,6 +202,20 @@ instance HasTrace CHAIN where
       -- If we want to generate large traces, we need to set up the value of the
       -- current slot to a sufficiently large value.
       gCurrentSlot = Slot <$> Gen.integral (Range.constant 32768 2147483648)
+
+      -- The UTXOW generators assume the @b@ fee parameter to be @0 <= b <= 10@,
+      -- and pick UTxO values that are correspondingly small. In order to allow
+      -- for a difference in real transaction size between the spec and impl,
+      -- however, the `initialParams` pick a value of @10 * GP.c@ for @b@
+      -- instead. This @c@ correction factor allows real transactions to be
+      -- @c@ times larger than the spec ones and still guarantee that the real
+      -- transaction will have sufficient fees when the abstract tx does.
+      -- If we don't apply this same correction factor to the generated UTxO,
+      -- however, we will be unable to generate any /abstract/ transactions,
+      -- because the UTxO values will not be large enough to cover tx fees.
+      adjustUTxO :: UTxO -> UTxO
+      adjustUTxO = mapUTxOValues $ \(Lovelace v) ->
+                     Lovelace $ v * fromIntegral GP.c
 
   sigGen = sigGenChain GenDelegation GenUTxO GenUpdate
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,6 +14,7 @@ import           Control.Lens (makeLenses, view, (^.))
 import           Data.AbstractSize
 import           Data.ByteString (ByteString)
 import           Data.Data (Data, Typeable)
+import           Data.Function (on)
 import qualified Data.Hashable as H
 import qualified Data.Map.Strict as Map
 import           Data.Sequence ((<|))
@@ -242,6 +244,90 @@ updateBody block bodyUpdate =
     (_bUtxo newBody)
   where
     newBody = bodyUpdate (_bBody block)
+
+--------------------------------------------------------------------------------
+-- Block statistics
+--------------------------------------------------------------------------------
+
+data BlockStats = BlockStats {
+      -- | Number of regular transactions
+      blockStatsUtxo :: Word
+
+      -- | Number of delegation certificates
+    , blockStatsDCerts :: Word
+
+      -- | Number of update votes
+    , blockStatsUpdVotes :: Word
+
+      -- | Number of update proposals
+      --
+      -- For a single block this will be 0 or 1.
+    , blockStatsUpdProp :: Word
+    }
+  deriving (Show)
+
+-- | Count number of transactions in the block
+--
+-- Returns the number of
+--
+-- * Regular transactions
+-- * Delegation certificates
+-- * Update votes
+-- * Update proposals (0 or 1)
+blockStats :: Block -> BlockStats
+blockStats (Block _header body) = BlockStats {
+      blockStatsUtxo     = fromIntegral . length $ _bUtxo     body
+    , blockStatsDCerts   = fromIntegral . length $ _bDCerts   body
+    , blockStatsUpdVotes = fromIntegral . length $ _bUpdVotes body
+    , blockStatsUpdProp  = maybe 0 (const 1)     $ _bUpdProp  body
+    }
+
+-- | Block stats for an entire chain
+--
+-- Computes minimum, maximum, and average values.
+--
+-- Returns 'Nothing' for the empty chain.
+chainBlockStats :: [BlockStats] -> Maybe (BlockStats, BlockStats, BlockStats)
+chainBlockStats []     = Nothing
+chainBlockStats (b:bs) = Just $ go b b b 1 bs
+  where
+    go :: BlockStats -- Minimum
+       -> BlockStats -- Maximum
+       -> BlockStats -- Sum
+       -> Word       -- Count
+       -> [BlockStats] -> (BlockStats, BlockStats, BlockStats)
+    go !sMin !sMax !sSum !cnt [] = (
+          sMin
+        , sMax
+        , BlockStats {
+              blockStatsUtxo     = blockStatsUtxo     sSum `div` cnt
+            , blockStatsDCerts   = blockStatsDCerts   sSum `div` cnt
+            , blockStatsUpdVotes = blockStatsUpdVotes sSum `div` cnt
+            , blockStatsUpdProp  = blockStatsUpdProp  sSum `div` cnt
+            }
+        )
+    go !sMin !sMax !sSum !cnt (b':bs') =
+        go
+          BlockStats {
+              blockStatsUtxo     = (min `on` blockStatsUtxo)     sMin b'
+            , blockStatsDCerts   = (min `on` blockStatsDCerts)   sMin b'
+            , blockStatsUpdVotes = (min `on` blockStatsUpdVotes) sMin b'
+            , blockStatsUpdProp  = (min `on` blockStatsUpdProp)  sMin b'
+            }
+          BlockStats {
+              blockStatsUtxo     = (max `on` blockStatsUtxo)     sMax b'
+            , blockStatsDCerts   = (max `on` blockStatsDCerts)   sMax b'
+            , blockStatsUpdVotes = (max `on` blockStatsUpdVotes) sMax b'
+            , blockStatsUpdProp  = (max `on` blockStatsUpdProp)  sMax b'
+            }
+          BlockStats {
+              blockStatsUtxo     = ((+) `on` blockStatsUtxo)     sSum b'
+            , blockStatsDCerts   = ((+) `on` blockStatsDCerts)   sSum b'
+            , blockStatsUpdVotes = ((+) `on` blockStatsUpdVotes) sSum b'
+            , blockStatsUpdProp  = ((+) `on` blockStatsUpdProp)  sSum b'
+            }
+          (cnt + 1)
+          bs'
 
 --------------------------------------------------------------------------------
 -- Goblins instances
