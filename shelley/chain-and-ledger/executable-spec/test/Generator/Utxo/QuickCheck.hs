@@ -211,9 +211,7 @@ pickWithdrawals wdrls = QC.frequency
   [ (frequencyNoWithdrawals,
      pure Map.empty)
   , (frequencyAFewWithdrawals,
-     QC.suchThat
-       (Map.fromList <$> (QC.sublistOf . (take maxAFewWithdrawals) . Map.toList) wdrls)
-       (not . Map.null)
+     Map.fromList <$> (QC.sublistOf . (take maxAFewWithdrawals) . Map.toList) wdrls
     )
   , (frequencyPotentiallyManyWithdrawals,
      Map.fromList <$> (QC.sublistOf . Map.toList) wdrls)

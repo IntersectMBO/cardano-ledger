@@ -30,7 +30,7 @@ import           LedgerState (txsize)
 import           Test.Utils
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
                      pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
-                     _body, _certs, _outputs)
+                     _body, _certs, _outputs, _wdrls)
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 500 . property $ do
@@ -82,6 +82,9 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
      , cover_ 10
               (0.1 <= scriptCredentialCertsRatio certs_)
               "at least 10% of `DCertDeleg` certificates have script credentials"
+     , cover_ 60
+              (0.1 <= withdrawalRatio txs)
+              "at least 10% of transactions have a reward withdrawal"
      ]
     where
       cover_ pc b s = cover pc b s (property ())
@@ -131,6 +134,10 @@ txScriptOutputsRatio txoutsList =
           sum $ map (\case
                         TxOut (AddrBase (ScriptHashObj _) _) _ -> 1
                         _ -> 0) txouts
+
+-- | Transaction has a reward withdrawal
+withdrawalRatio :: [Tx] -> Double
+withdrawalRatio = lenRatio (filter $ not . null . _wdrls . _body)
 
 -- | Transforms the list and returns the ratio of lengths of
 -- the transformed and original lists.
