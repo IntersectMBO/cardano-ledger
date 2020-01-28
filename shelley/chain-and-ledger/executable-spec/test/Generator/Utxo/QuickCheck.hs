@@ -13,7 +13,7 @@ module Generator.Utxo.QuickCheck
 
 import qualified Data.Either as Either (lefts, rights)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, empty, fromList, keys, size, toList)
+import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import           Data.Set (Set)
@@ -24,19 +24,22 @@ import qualified Test.QuickCheck as QC
 
 import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
-import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, DCert, DPState, DState,
-                     KeyPair, KeyPairs, MultiSig, MultiSigPairs, Tx, TxBody, TxIn, TxOut, UTxO,
-                     UTxOState, VrfKeyPairs)
+import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, Credential, DCert, DPState,
+                     DState, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx, TxBody,
+                     TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
 import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
                      minNumGenInputs)
-import           Generator.Core.QuickCheck (findPayKeyPair, findPayScript, genNatural)
+import           Generator.Core.Constants (frequencyAFewWithdrawals, frequencyNoWithdrawals,
+                     frequencyPotentiallyManyWithdrawals, maxAFewWithdrawals)
+import           Generator.Core.QuickCheck (findPayKeyPairAddr, findPayKeyPairCred,
+                     findPayScriptFromAddr, findStakeScriptFromCred, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
-import           LedgerState (pattern UTxOState, _dstate, _ptrs)
+import           LedgerState (pattern UTxOState, _dstate, _ptrs, _rewards)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
-                     pattern ScriptHashObj)
+                     pattern ScriptHashObj, getRwdCred)
 import           Updates (emptyUpdate)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
@@ -60,8 +63,15 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
   scripts' <- QC.shuffle scripts
 
   -- inputs
-  (witnessedInputs, spendingBalance) <-
+  (witnessedInputs, spendingBalanceUtxo) <-
     pickSpendingInputs scripts' keyHashMap utxo
+
+  wdrls <- pickWithdrawals (_rewards . _dstate $ dpState)
+  let wdrlCredentials = fmap (mkWdrlWits scripts' keyHashMap) (fmap getRwdCred (Map.keys wdrls))
+      wdrlWitnesses = Either.lefts wdrlCredentials
+      wdrlScripts   = Either.rights wdrlCredentials
+
+  let spendingBalance = spendingBalanceUtxo + (sum wdrls)
 
   let (inputs, spendCredentials) = unzip witnessedInputs
       spendWitnesses = Either.lefts spendCredentials
@@ -103,10 +113,10 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
     let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
 
     -- witnessed transaction
-    txBody <- genTxBody (Set.fromList inputs) outputs certs fee slotWithTTL
+    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls fee slotWithTTL
     let multiSig = Map.fromList $
           (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
-          (map (\(_, sScript) -> (hashScript sScript, sScript)) stakeScripts)
+          (map (\(_, sScript) -> (hashScript sScript, sScript)) (stakeScripts ++ wdrlScripts))
 
     -- choose one possible combination of keys for multi-sig scripts
     --
@@ -114,7 +124,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
     -- deterministically for each script. Varying the script is possible though.
     let keysLists = map getKeyCombination $ Map.elems multiSig
         msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
-        !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses)
+        !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses ++ wdrlWitnesses)
                 `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
                 `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
 
@@ -126,15 +136,16 @@ genTxBody
   :: Set TxIn
   -> [TxOut]
   -> Seq DCert
+  -> Map RewardAcnt Coin
   -> Coin
   -> SlotNo
   -> Gen TxBody
-genTxBody inputs outputs certs fee slotWithTTL = do
+genTxBody inputs outputs certs wdrls fee slotWithTTL = do
   return $ TxBody
              inputs
              outputs
              certs
-             Map.empty -- TODO @uroboros generate withdrawals
+             wdrls
              fee
              slotWithTTL
              emptyUpdate -- TODO @uroboros generate updates
@@ -168,8 +179,8 @@ calcFeeAndOutputs balance_ addrs =
 
 -- NOTE: this function needs access to the keys and multi-sig scripts that the
 -- given UTxO originated from (in order to produce the appropriate witnesses to
--- spend these outputs). If this is not the case, `findPayKeyPair` /
--- `findPayScript` will fail by not finding the matching keys or scripts.
+-- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
+-- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 pickSpendingInputs
   :: MultiSigPairs
   -> Map AnyKeyHash KeyPair
@@ -183,14 +194,37 @@ pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
          , balance (UTxO (Map.fromList selectedUtxo)))
   where
     witnessedInput (input, TxOut addr@(AddrBase (KeyHashObj _) _) _) =
-      (input, Left $ findPayKeyPair addr keyHashMap)
+      (input, Left $ findPayKeyPairAddr addr keyHashMap)
     witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) _) _) =
-      (input, Right $ findPayScript addr scripts)
+      (input, Right $ findPayScriptFromAddr addr scripts)
     witnessedInput (input, TxOut addr@(AddrPtr (KeyHashObj _) _) _) =
-      (input, Left $ findPayKeyPair addr keyHashMap)
+      (input, Left $ findPayKeyPairAddr addr keyHashMap)
     witnessedInput (input, TxOut addr@(AddrPtr (ScriptHashObj _) _) _) =
-      (input, Right $ findPayScript addr scripts)
+      (input, Right $ findPayScriptFromAddr addr scripts)
     witnessedInput _ = error "unsupported address"
+
+-- | Select a subset of the reward accounts to use for reward withdrawals.
+pickWithdrawals
+  :: Map RewardAcnt Coin
+  -> Gen (Map RewardAcnt Coin)
+pickWithdrawals wdrls = QC.frequency
+  [ (frequencyNoWithdrawals,
+     pure Map.empty)
+  , (frequencyAFewWithdrawals,
+     Map.fromList <$> (QC.sublistOf . (take maxAFewWithdrawals) . Map.toList) wdrls
+    )
+  , (frequencyPotentiallyManyWithdrawals,
+     Map.fromList <$> (QC.sublistOf . Map.toList) wdrls)
+  ]
+
+-- | Collect witnesses needed for reward withdrawals.
+mkWdrlWits
+  :: MultiSigPairs
+  -> Map AnyKeyHash KeyPair
+  -> Credential
+  -> Either KeyPair (MultiSig, MultiSig)
+mkWdrlWits scripts _ c@(ScriptHashObj _) = Right $ findStakeScriptFromCred c scripts
+mkWdrlWits _ keyHashMap c@(KeyHashObj _)    = Left $ findPayKeyPairCred c keyHashMap
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients
