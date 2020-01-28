@@ -21,6 +21,7 @@ module Cardano.Chain.Byron.Auxiliary (
   , getDelegationMap
   , getProtocolParams
   , getScheduledDelegations
+  , getMaxBlockSize
     -- * Applying blocks
   , applyChainTick
   , validateBlock
@@ -121,6 +122,12 @@ getScheduledDelegations =
       D.Sched.scheduledDelegations
     . D.Iface.schedulingState
     . CC.cvsDelegationState
+
+getMaxBlockSize :: CC.ChainValidationState -> Word32
+getMaxBlockSize =
+      fromIntegral
+    . Update.ppMaxBlockSize
+    . getProtocolParams
 
 {-------------------------------------------------------------------------------
   Update parts of the chain state
