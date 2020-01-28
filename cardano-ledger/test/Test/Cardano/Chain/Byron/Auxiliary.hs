@@ -53,7 +53,7 @@ tests :: TSGroup
 tests scenario = Group "Test.Cardano.Chain.Byron.Auxiliary"
   [ ( "ts_chainTick", ts_chainTick scenario)
   , ( "ts_roundTripApplyMempoolPayloadErrCompat", ts_roundTripApplyMempoolPayloadErrCompat scenario)
-  , ( "ts_scheduledDelegations", ts_scheduledDelegations scenario)
+  --, ( "ts_scheduledDelegations", ts_scheduledDelegations scenario)
   ]
 
 ts_roundTripApplyMempoolPayloadErrCompat :: TSProperty
@@ -88,7 +88,7 @@ setupChainValidationState sampleTrace =
 -- | getDelegationMap . applyChainTick slot == previewDelegationMap slot
 ts_scheduledDelegations :: TSProperty
  --FIXME: This is a failing test.
-ts_scheduledDelegations = withTestsTS 0 . property $ do
+ts_scheduledDelegations = withTestsTS 100 . property $ do
   let traceLength = 10 :: Word64
   sampleTrace <- forAll $ STS.trace @CHAIN () traceLength
   let (cvs, config) = setupChainValidationState sampleTrace
