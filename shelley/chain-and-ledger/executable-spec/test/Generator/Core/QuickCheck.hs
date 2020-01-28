@@ -7,8 +7,11 @@ module Generator.Core.QuickCheck
   ( AllPoolKeys (..)
   , NatNonce (..)
   , coreNodeVKG
-  , findPayKeyPair
-  , findPayScript
+  , findPayKeyPairAddr
+  , findPayKeyPairCred
+  , findPayScriptFromCred
+  , findStakeScriptFromCred
+  , findPayScriptFromAddr
   , genBool
   , genCoin
   , genCoinList
@@ -61,9 +64,9 @@ import           BaseTypes (Nonce (..), UnitInterval, intervalValue)
 import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, ProtVer (..),
                      TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
-import           ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair, GenKeyHash, HashHeader,
-                     KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, SKeyES, SignKeyVRF, Tx,
-                     TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
+import           ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair, Credential, GenKeyHash,
+                     HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, SKeyES,
+                     SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
 import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, minGenesisOutputVal,
                      numBaseScripts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign, signKES,
@@ -206,34 +209,65 @@ someScripts lower upper =
   <$> QC.choose (lower, upper)
   <*> QC.shuffle (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
 
--- | Find first matching key pair for address. Returns the matching key pair
+-- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPair :: Addr -> Map AnyKeyHash KeyPair -> KeyPair
-findPayKeyPair a keyHashMap =
-  case a of
-    AddrBase (KeyHashObj addr) _ -> lookforKeyHash addr
-    AddrPtr (KeyHashObj addr) _  -> lookforKeyHash addr
+findPayKeyPairCred :: Credential -> Map AnyKeyHash KeyPair -> KeyPair
+findPayKeyPairCred c keyHashMap =
+  case c of
+    KeyHashObj addr -> lookforKeyHash addr
     _                            ->
-      error "findPayKeyPair: expects only AddrBase or AddrPtr addresses"
+      error "findPayKeyPairCred: expects only KeyHashObj"
   where
     lookforKeyHash addr' =
       case Map.lookup (undiscriminateKeyHash addr') keyHashMap of
-        Nothing -> error "findPayKeyPair: could not find a match for the given address"
+        Nothing -> error "findPayKeyPairCred: could not find a match for the given credential"
         Just kp -> kp
 
--- | Find first matching script for address.
-findPayScript :: Addr -> MultiSigPairs -> (MultiSig, MultiSig)
-findPayScript a scripts =
+-- | Find first matching key pair for address. Returns the matching key pair
+-- where the first element of the pair matched the hash in 'addr'.
+findPayKeyPairAddr :: Addr -> Map AnyKeyHash KeyPair -> KeyPair
+findPayKeyPairAddr a keyHashMap =
   case a of
-    AddrBase (ScriptHashObj scriptHash) _ -> lookForScriptHash scriptHash
-    AddrPtr (ScriptHashObj scriptHash) _  -> lookForScriptHash scriptHash
-    _                                     ->
-      error "findPayScript: expects only AddrBase addresses"
+    AddrBase addr _ -> findPayKeyPairCred addr keyHashMap
+    AddrPtr addr _  -> findPayKeyPairCred addr keyHashMap
+    _                            ->
+      error "findPayKeyPairAddr: expects only AddrBase or AddrPtr addresses"
+
+-- | Find first matching script for a credential.
+findPayScriptFromCred :: Credential -> MultiSigPairs -> (MultiSig, MultiSig)
+findPayScriptFromCred c scripts =
+  case c of
+    ScriptHashObj scriptHash -> lookForScriptHash scriptHash
+    _                        ->
+      error "findPayScriptFromCred: expects only ScriptHashObj"
   where
     lookForScriptHash scriptHash =
       case List.findIndex (\(pay, _) -> scriptHash == hashScript pay) scripts of
-        Nothing -> error "findPayScript: could not find matching script for given address"
+        Nothing -> error "findPayScript: could not find matching script for given credential"
         Just i  -> scripts !! i
+
+-- | Find first matching script for a credential.
+findStakeScriptFromCred :: Credential -> MultiSigPairs -> (MultiSig, MultiSig)
+findStakeScriptFromCred c scripts =
+  case c of
+    ScriptHashObj scriptHash -> lookForScriptHash scriptHash
+    _                        ->
+      error "findStakeScriptFromCred: expects only ScriptHashObj"
+  where
+    lookForScriptHash scriptHash =
+      case List.findIndex (\(_, scr) -> scriptHash == hashScript scr) scripts of
+        Nothing -> error "findStakeScriptFromCred: could not find matching script for given credential"
+        Just i  -> scripts !! i
+
+
+-- | Find first matching script for address.
+findPayScriptFromAddr :: Addr -> MultiSigPairs -> (MultiSig, MultiSig)
+findPayScriptFromAddr a scripts =
+  case a of
+    AddrBase scriptHash _ -> findPayScriptFromCred scriptHash scripts
+    AddrPtr scriptHash _  -> findPayScriptFromCred scriptHash scripts
+    _                     ->
+      error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
 pickStakeKey :: KeyPairs -> Gen VKey

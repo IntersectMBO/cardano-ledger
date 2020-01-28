@@ -101,3 +101,21 @@ maxGenesisOutputVal = 10000
 -- | Number of base scripts from which multi sig scripts are built.
 numBaseScripts :: Int
 numBaseScripts = 5
+
+-- | Relative frequency that a transaction does not include any reward withdrawals
+frequencyNoWithdrawals :: Int
+frequencyNoWithdrawals = 75
+
+-- | Relative frequency that a transaction includes a small number of
+-- reward withdrawals, bounded by 'maxAFewWithdrawals'.
+frequencyAFewWithdrawals :: Int
+frequencyAFewWithdrawals = 20
+
+-- | Maximum number of reward withdrawals that counts as a small number.
+maxAFewWithdrawals :: Int
+maxAFewWithdrawals = 10
+
+-- | Relative frequency that a transaction includes any positive number of
+-- reward withdrawals
+frequencyPotentiallyManyWithdrawals :: Int
+frequencyPotentiallyManyWithdrawals = 5
