@@ -26,6 +26,8 @@ import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidChainSignalsAreGenerated,
                      onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
+import           Rules.TestChain (constantSumPots, nonNegativeDeposits, preservationOfAda,
+                     removedAfterPoolreap)
 import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfterDelegation,
                      credentialRemovedAfterDereg, eliminateTxInputs, feesNonDecreasing,
                      newEntriesAndUniqueTxIns, noDoubleSpend, pStateIsInternallyConsistent,
@@ -198,6 +200,18 @@ propertyTests = testGroup "Property-Based Testing"
                                      pStateIsInternallyConsistent
                   , TQC.testProperty "executing a pool retirement certificate adds to 'retiring'"
                                      poolRetireInEpoch
+                  ]
+                , testGroup "STS Rules - Poolreap Properties"
+                  [ TQC.testProperty "circulation+deposits+fees+treasury+rewards+reserves is constant."
+                                     constantSumPots
+                  , TQC.testProperty "deposits are always non-negative"
+                                     nonNegativeDeposits
+                  , TQC.testProperty "pool is removed from stake pool and retiring maps"
+                                     removedAfterPoolreap
+                  ]
+                , testGroup "STS Rules - NewEpoch Properties"
+                  [ TQC.testProperty "total amount of Ada is preserved"
+                                     preservationOfAda
                   ]
                 , testGroup "STS Rules - MIR certificates"
                   [ TQC.testProperty "entries of MIR certificate are added to\

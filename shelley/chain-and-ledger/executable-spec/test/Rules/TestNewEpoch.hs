@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestNewEpoch
-  ( rewardDecreaseEqualsTreasuryRewardPot
+  ( preservationOfAda
   , circulationDepositsInvariant)
 where
 
@@ -27,14 +27,16 @@ import           UTxO (balance)
 
 -- | Check that the rewards decrease by the increase of the treasury and the
 -- rewards.
-rewardDecreaseEqualsTreasuryRewardPot
+preservationOfAda
   :: [SourceSignalTarget NEWEPOCH]
   -> Property
-rewardDecreaseEqualsTreasuryRewardPot tr =
+preservationOfAda tr =
   conjoin $
     map rewardsDecreaseBalanced tr
 
-  where rewardsDecreaseBalanced
+  where sum_ = foldl (+) (Coin 0)
+
+        rewardsDecreaseBalanced
           (SourceSignalTarget
             {
               source = NewEpochState
@@ -47,7 +49,7 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
                                    }
                 , esLState = LedgerState
                              {
-                               _utxoState = UTxOState { _fees = fees }
+                               _utxoState = UTxOState { _utxo = utxo,_fees = fees, _deposited = deposits_ }
                              , _delegationState = DPState
                                                   { _dstate = DState
                                                               { _rewards = rewards }
@@ -65,7 +67,7 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
                                    }
                 , esLState = LedgerState
                              {
-                               _utxoState = UTxOState { _fees = fees' }
+                               _utxoState = UTxOState { _utxo = utxo', _fees = fees', _deposited = deposits' }
                              , _delegationState = DPState
                                                   { _dstate = DState
                                                               { _rewards = rewards' }
@@ -75,9 +77,8 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
               }
             }
           ) =
-          (reserves  + fees  + treasury  + foldl (+) (Coin 0) rewards) ==
-          (reserves' + fees' + treasury' + foldl (+) (Coin 0) rewards')
-
+          reserves + treasury + sum_ rewards + balance utxo + fees + deposits_
+          == reserves' + treasury' + sum_ rewards' + balance utxo' + fees' + deposits'
 
 -- | Check that the circulation and deposits do not change in a NEWEPOCH
 -- transition.

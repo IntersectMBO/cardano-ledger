@@ -4,10 +4,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Rules.TestPoolreap where
+module Rules.TestPoolreap
+  ( constantSumPots
+  , nonNegativeDeposits
+  , removedAfterPoolreap)
+where
 
 import qualified Data.Set as Set (intersection, isSubsetOf, null, singleton)
-import           Data.Word (Word64)
 
 import           Test.QuickCheck (Property, conjoin)
 
@@ -24,16 +27,6 @@ import           UTxO (balance)
 
 import           Ledger.Core (dom, (▷))
 import           Rules.TestPool (getRetiring, getStPools)
-
-------------------------------
--- Constants for Properties --
-------------------------------
-
-numberOfTests :: Word64
-numberOfTests = 300
-
-traceLen :: Word64
-traceLen = 100
 
 -----------------------------
 -- Properties for POOLREAP --
@@ -57,8 +50,8 @@ removedAfterPoolreap tr =
               retiring        = getRetiring p
               retiring'       = getRetiring p'
               retire          = dom $ retiring ▷ Set.singleton e in
-             (not . null) retire
-          && (retire `Set.isSubsetOf` dom stp)
+
+          (retire `Set.isSubsetOf` dom stp)
           && Set.null (retire `Set.intersection` dom stp')
           && Set.null (retire `Set.intersection` dom retiring')
 
