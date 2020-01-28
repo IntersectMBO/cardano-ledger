@@ -120,6 +120,7 @@ test-suite delegation-test
                          Examples
                          Rules.ClassifyTraces
                          Cardano.Crypto.VRF.Fake
+                         Rules.TestChain
                          Rules.TestDeleg
                          Rules.TestLedger
                          Rules.TestNewEpoch

@@ -26,6 +26,9 @@ import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidChainSignalsAreGenerated,
                      onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
+import           Rules.TestChain (circulationDepositsInvariant, constantSumPots,
+                     nonNegativeDeposits, removedAfterPoolreap,
+                     rewardDecreaseEqualsTreasuryRewardPot)
 import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfterDelegation,
                      credentialRemovedAfterDereg, eliminateTxInputs, feesNonDecreasing,
                      newEntriesAndUniqueTxIns, noDoubleSpend, pStateIsInternallyConsistent,
@@ -198,6 +201,20 @@ propertyTests = testGroup "Property-Based Testing"
                                      pStateIsInternallyConsistent
                   , TQC.testProperty "executing a pool retirement certificate adds to 'retiring'"
                                      poolRetireInEpoch
+                  ]
+                , testGroup "STS Rules - Poolreap Properties"
+                  [ TQC.testProperty "circulation+deposits+fees+treasury+rewards+reserves is constant."
+                                     constantSumPots
+                  , TQC.testProperty "deposits are always non-negative"
+                                     nonNegativeDeposits
+                  , TQC.testProperty "pool is removed from stake pool and retiring maps"
+                                     removedAfterPoolreap
+                  ]
+                , testGroup "STS Rules - NewEpoch Properties"
+                  [ TQC.testProperty "circulation and deposits do not change in NEWEPOCH transition"
+                                     circulationDepositsInvariant
+                  , TQC.testProperty "rewards decrease by the increase of treasury and rewards"
+                                     rewardDecreaseEqualsTreasuryRewardPot
                   ]
                 , testGroup "STS Rules - MIR certificates"
                   [ TQC.testProperty "entries of MIR certificate are added to\

@@ -18,7 +18,7 @@ import           ConcreteCryptoTypes (NEWEPOCH)
 import           LedgerState (pattern AccountState, pattern DPState, pattern DState,
                      pattern EpochState, pattern LedgerState, pattern NewEpochState,
                      pattern UTxOState, esAccountState, esLState, nesEs, _delegationState,
-                     _deposited, _dstate, _fees, _reserves, _rewards, _treasury, _utxo, _utxoState)
+                     _deposited, _dstate, _reserves, _rewards, _treasury, _utxo, _utxoState)
 import           UTxO (balance)
 
 -----------------------------
@@ -34,7 +34,9 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
   conjoin $
     map rewardsDecreaseBalanced tr
 
-  where rewardsDecreaseBalanced
+  where sum_ = foldl (+) (Coin 0)
+
+        rewardsDecreaseBalanced
           (SourceSignalTarget
             {
               source = NewEpochState
@@ -47,11 +49,10 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
                                    }
                 , esLState = LedgerState
                              {
-                               _utxoState = UTxOState { _fees = fees }
-                             , _delegationState = DPState
-                                                  { _dstate = DState
-                                                              { _rewards = rewards }
-                                                  }
+                             _delegationState = DPState
+                                                { _dstate = DState
+                                                            { _rewards = rewards }
+                                                }
                              }
                 }
               }
@@ -65,19 +66,16 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
                                    }
                 , esLState = LedgerState
                              {
-                               _utxoState = UTxOState { _fees = fees' }
-                             , _delegationState = DPState
-                                                  { _dstate = DState
-                                                              { _rewards = rewards' }
-                                                  }
+                             _delegationState = DPState
+                                                { _dstate = DState
+                                                            { _rewards = rewards' }
+                                                }
                              }
                 }
               }
             }
           ) =
-          (reserves  + fees  + treasury  + foldl (+) (Coin 0) rewards) ==
-          (reserves' + fees' + treasury' + foldl (+) (Coin 0) rewards')
-
+          reserves + treasury + sum_ rewards == reserves' + treasury' + sum_ rewards'
 
 -- | Check that the circulation and deposits do not change in a NEWEPOCH
 -- transition.
