@@ -47,6 +47,7 @@ import           Data.Coerce (coerce)
 import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList, insert, lookup)
+import qualified Data.Maybe as Maybe (fromJust)
 import           Data.Ratio ((%))
 import           Data.Sequence (fromList)
 import           Data.Tuple (swap)
@@ -348,7 +349,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
             (bbHash $ TxSeq $ fromList txns)
             (mkOCert vhot vKeyCold sKeyCold)
             (ProtVer 0 0 0)
-    bh = BHeader bhb (signKES shot bhb kesPeriod)
+    bh = BHeader bhb (Maybe.fromJust $ signKES shot bhb kesPeriod)
   in
     Block bh (TxSeq $ fromList txns)
   where

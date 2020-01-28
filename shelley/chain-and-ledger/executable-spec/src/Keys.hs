@@ -62,7 +62,6 @@ where
 import           Cardano.Ledger.Shelley.Crypto
 import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
 import           Data.Map.Strict (Map)
-import           Data.Maybe (fromJust)
 import           Data.Ratio ((%))
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
@@ -193,13 +192,14 @@ signKES
   => SKeyES crypto
   -> a
   -> Natural
-  -> KESig crypto a
+  -> Maybe (KESig crypto a)
 signKES (SKeyES k) d n =
-  KESig
-    . fromJust
-    . fst
-    . withDRG (drgNewSeed (seedFromInteger 0))
-    $ signedKES () n d k
+  let retval = signedKES () n d k
+      sig    = (fst . withDRG (drgNewSeed (seedFromInteger 0))) retval
+  in
+    case sig of
+      Nothing -> Nothing
+      Just sig' -> (Just . KESig) sig'
 
 -- |Verify a key evolving signature
 verifyKES
