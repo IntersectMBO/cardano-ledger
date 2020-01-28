@@ -26,9 +26,8 @@ import           LedgerState hiding (genDelegs)
 import           PParams
 import           Rules.ClassifyTraces (onlyValidChainSignalsAreGenerated,
                      onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
-import           Rules.TestChain (circulationDepositsInvariant, constantSumPots,
-                     nonNegativeDeposits, removedAfterPoolreap,
-                     rewardDecreaseEqualsTreasuryRewardPot)
+import           Rules.TestChain (constantSumPots, nonNegativeDeposits, preservationOfAda,
+                     removedAfterPoolreap)
 import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfterDelegation,
                      credentialRemovedAfterDereg, eliminateTxInputs, feesNonDecreasing,
                      newEntriesAndUniqueTxIns, noDoubleSpend, pStateIsInternallyConsistent,
@@ -211,10 +210,8 @@ propertyTests = testGroup "Property-Based Testing"
                                      removedAfterPoolreap
                   ]
                 , testGroup "STS Rules - NewEpoch Properties"
-                  [ TQC.testProperty "circulation and deposits do not change in NEWEPOCH transition"
-                                     circulationDepositsInvariant
-                  , TQC.testProperty "rewards decrease by the increase of treasury and rewards"
-                                     rewardDecreaseEqualsTreasuryRewardPot
+                  [ TQC.testProperty "total amount of Ada is preserved"
+                                     preservationOfAda
                   ]
                 , testGroup "STS Rules - MIR certificates"
                   [ TQC.testProperty "entries of MIR certificate are added to\

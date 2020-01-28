@@ -7,7 +7,7 @@ module Rules.TestChain
   , removedAfterPoolreap
     -- TestNewEpoch
   , circulationDepositsInvariant
-  , rewardDecreaseEqualsTreasuryRewardPot)
+  , preservationOfAda)
 where
 
 import           Control.Monad.Trans.Reader (asks)
@@ -68,17 +68,17 @@ removedAfterPoolreap =
 -- Properties for NewEpoch (using the CHAIN Trace) --
 ----------------------------------------------------------------------
 
-rewardDecreaseEqualsTreasuryRewardPot :: Property
-rewardDecreaseEqualsTreasuryRewardPot =
+preservationOfAda :: Property
+preservationOfAda =
   forAllChainTrace $ \tr ->
     let sst = map chainToNewEpochSst (sourceSignalTargets tr)
-    in TestNewEpoch.rewardDecreaseEqualsTreasuryRewardPot sst
+    in TestNewEpoch.preservationOfAda sst
 
 circulationDepositsInvariant :: Property
 circulationDepositsInvariant =
   forAllChainTrace $ \tr ->
     let sst = map chainToNewEpochSst (sourceSignalTargets tr)
-    in TestNewEpoch.rewardDecreaseEqualsTreasuryRewardPot sst
+    in TestNewEpoch.circulationDepositsInvariant sst
 
 ---------------------------
 -- Utils --
@@ -133,4 +133,3 @@ chainToNewEpochSst (SourceSignalTarget ChainState {chainNes = nes}
   SourceSignalTarget nes nes' (epochFromSlot s)
   where
     s = (bheaderSlotNo . bhbody) bh
-

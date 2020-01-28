@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Rules.TestNewEpoch
-  ( rewardDecreaseEqualsTreasuryRewardPot
+  ( preservationOfAda
   , circulationDepositsInvariant)
 where
 
@@ -18,7 +18,7 @@ import           ConcreteCryptoTypes (NEWEPOCH)
 import           LedgerState (pattern AccountState, pattern DPState, pattern DState,
                      pattern EpochState, pattern LedgerState, pattern NewEpochState,
                      pattern UTxOState, esAccountState, esLState, nesEs, _delegationState,
-                     _deposited, _dstate, _reserves, _rewards, _treasury, _utxo, _utxoState)
+                     _deposited, _dstate, _fees, _reserves, _rewards, _treasury, _utxo, _utxoState)
 import           UTxO (balance)
 
 -----------------------------
@@ -27,10 +27,10 @@ import           UTxO (balance)
 
 -- | Check that the rewards decrease by the increase of the treasury and the
 -- rewards.
-rewardDecreaseEqualsTreasuryRewardPot
+preservationOfAda
   :: [SourceSignalTarget NEWEPOCH]
   -> Property
-rewardDecreaseEqualsTreasuryRewardPot tr =
+preservationOfAda tr =
   conjoin $
     map rewardsDecreaseBalanced tr
 
@@ -49,10 +49,11 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
                                    }
                 , esLState = LedgerState
                              {
-                             _delegationState = DPState
-                                                { _dstate = DState
-                                                            { _rewards = rewards }
-                                                }
+                               _utxoState = UTxOState { _utxo = utxo,_fees = fees, _deposited = deposits_ }
+                             , _delegationState = DPState
+                                                  { _dstate = DState
+                                                              { _rewards = rewards }
+                                                  }
                              }
                 }
               }
@@ -66,16 +67,18 @@ rewardDecreaseEqualsTreasuryRewardPot tr =
                                    }
                 , esLState = LedgerState
                              {
-                             _delegationState = DPState
-                                                { _dstate = DState
-                                                            { _rewards = rewards' }
-                                                }
+                               _utxoState = UTxOState { _utxo = utxo', _fees = fees', _deposited = deposits' }
+                             , _delegationState = DPState
+                                                  { _dstate = DState
+                                                              { _rewards = rewards' }
+                                                  }
                              }
                 }
               }
             }
           ) =
-          reserves + treasury + sum_ rewards == reserves' + treasury' + sum_ rewards'
+          reserves + treasury + sum_ rewards + balance utxo + fees + deposits_
+          == reserves' + treasury' + sum_ rewards' + balance utxo' + fees' + deposits'
 
 -- | Check that the circulation and deposits do not change in a NEWEPOCH
 -- transition.
