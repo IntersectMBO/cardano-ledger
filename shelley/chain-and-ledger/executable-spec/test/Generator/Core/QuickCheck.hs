@@ -75,8 +75,8 @@ import           LedgerState (AccountState (..), genesisCoins)
 import           Numeric.Natural (Natural)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Slot (BlockNo (..), SlotNo (..))
-import           Test.Utils (mkCertifiedVRF, mkGenKey, mkKESKeyPair, mkKeyPair, mkVRFKeyPair,
-                     unsafeMkUnitInterval)
+import           Test.Utils (evolveKESUntil, mkCertifiedVRF, mkGenKey, mkKESKeyPair, mkKeyPair,
+                     mkVRFKeyPair, unsafeMkUnitInterval)
 import           Tx (pattern TxOut, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
                      pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
@@ -366,7 +366,7 @@ mkBlock
   -> Block
 mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
   let
-    (shot, vhot) = hot pkeys
+    (sHot, vhot) = hot pkeys
     KeyPair vKeyCold sKeyCold = cold pkeys
     nonceNonce = mkSeed seedEta s enonce prev
     leaderNonce = mkSeed seedL s enonce prev
@@ -382,7 +382,14 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
             (bbHash $ TxSeq $ fromList txns)
             (mkOCert vhot vKeyCold sKeyCold)
             (ProtVer 0 0 0)
-    bh = BHeader bhb (signKES shot bhb kesPeriod)
+    hotKey = case evolveKESUntil sHot (KESPeriod kesPeriod) of
+               Nothing ->
+                 error ("could not evolve key to iteration " ++ show kesPeriod)
+               Just hkey -> hkey
+    sig = case signKES hotKey bhb kesPeriod of
+            Nothing -> error ("could not sign with KES key " ++ show hotKey)
+            Just sig' -> sig'
+    bh = BHeader bhb sig
   in
     Block bh (TxSeq $ fromList txns)
   where

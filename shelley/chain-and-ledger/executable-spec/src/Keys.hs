@@ -51,6 +51,8 @@ module Keys
   , hashKeyES
   , signKES
   , verifyKES
+  , updateKESKey
+  , iterationCountKESKey
 
   , VRFAlgorithm(SignKeyVRF, VerKeyVRF)
   , VRFValue(..)
@@ -62,7 +64,6 @@ where
 import           Cardano.Ledger.Shelley.Crypto
 import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
 import           Data.Map.Strict (Map)
-import           Data.Maybe (fromJust)
 import           Data.Ratio ((%))
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
@@ -76,8 +77,7 @@ import           Cardano.Crypto.DSIGN
                      SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
-import           Cardano.Crypto.KES
-                     (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES),
+import           Cardano.Crypto.KES (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES, iterationCountKES, updateKES),
                      SignedKES (SignedKES), decodeSignedKES, signedKES, verifySignedKES)
 import qualified Cardano.Crypto.KES as KES
 import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
@@ -193,13 +193,33 @@ signKES
   => SKeyES crypto
   -> a
   -> Natural
-  -> KESig crypto a
+  -> Maybe (KESig crypto a)
 signKES (SKeyES k) d n =
-  KESig
-    . fromJust
-    . fst
-    . withDRG (drgNewSeed (seedFromInteger 0))
-    $ signedKES () n d k
+  let retval = signedKES () n d k
+      sig    = (fst . withDRG (drgNewSeed (seedFromInteger 0))) retval
+  in
+    case sig of
+      Nothing -> Nothing
+      Just sig' -> (Just . KESig) sig'
+
+updateKESKey
+  :: Crypto crypto
+  => SKeyES crypto
+  -> Maybe (SKeyES crypto)
+updateKESKey (SKeyES k) =
+  let newSeed = iterationCountKES () k
+      k' = (fst . withDRG (drgNewSeed (seedFromInteger $ fromIntegral newSeed))) $
+        updateKES () k
+  in
+    case k' of
+      Nothing  -> Nothing
+      Just k'' -> (Just . SKeyES) k''
+
+iterationCountKESKey
+  :: Crypto crypto
+  => SKeyES crypto
+  -> Natural
+iterationCountKESKey (SKeyES k) = iterationCountKES () k
 
 -- |Verify a key evolving signature
 verifyKES

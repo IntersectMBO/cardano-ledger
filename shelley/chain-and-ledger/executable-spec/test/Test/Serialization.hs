@@ -4,6 +4,7 @@
 
 module Test.Serialization where
 
+import qualified Data.Maybe as Maybe (fromJust)
 import           Data.String (fromString)
 
 import           Cardano.Binary (Decoder, FromCBOR (..), ToCBOR (..), decodeFullDecoder,
@@ -35,7 +36,8 @@ import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
                      vKey)
 import           LedgerState (AccountState (..), EpochState (..), NewEpochState (..),
-                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs, updateIRwd)
+                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs,
+                     updateIRwd)
 import           Numeric.Natural (Natural)
 import           PParams (emptyPParams)
 import           Serialization (FromCBORGroup (..), ToCBORGroup (..))
@@ -778,7 +780,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "block_header"
-  , let sig = Keys.signKES (fst testKESKeys) testBHB 0
+  , let sig = Maybe.fromJust $ Keys.signKES (fst testKESKeys) testBHB 0
     in
     checkEncodingCBOR "block_header"
     (BHeader testBHB sig)
@@ -788,7 +790,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "empty_block"
-  , let sig = Keys.signKES (fst testKESKeys) testBHB 0
+  , let sig = Maybe.fromJust $ Keys.signKES (fst testKESKeys) testBHB 0
         bh = BHeader testBHB sig
         txns = TxSeq mempty
     in
@@ -800,7 +802,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "rich_block"
-  , let sig = Keys.signKES (fst testKESKeys) testBHB 0
+  , let sig = Maybe.fromJust $ Keys.signKES (fst testKESKeys) testBHB 0
         bh = BHeader testBHB sig
         tin = Set.fromList [TxIn genesisId 1]
         tout = [TxOut testAddrE (Coin 2)]
