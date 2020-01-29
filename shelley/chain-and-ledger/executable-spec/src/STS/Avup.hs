@@ -116,8 +116,10 @@ avUpdateNoConsensus = do
 
   all allTagsValid (range _aup) ?! InvalidSystemTags
 
+  coreNodeQuorum <- liftSTS $ asks quorum
+
   let aup' = aupS ⨃ Map.toList _aup
-  let fav  = votedValue aup'
+  let fav  = votedValue aup' (fromIntegral coreNodeQuorum)
 
   fav == Nothing ?! AVConsensus
 
@@ -138,8 +140,10 @@ avUpdateConsensus = do
 
   all allTagsValid (range _aup) ?! InvalidSystemTags
 
+  coreNodeQuorum <- liftSTS $ asks quorum
+
   let aup' = aupS ⨃ Map.toList _aup
-  let fav  = votedValue aup'
+  let fav  = votedValue aup' (fromIntegral coreNodeQuorum)
 
   fav /= Nothing ?! NoAVConsensus
   let fav' = fromMaybe (Applications Map.empty) fav

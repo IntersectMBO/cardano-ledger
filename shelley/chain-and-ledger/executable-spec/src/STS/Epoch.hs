@@ -13,7 +13,7 @@ module STS.Epoch
 where
 
 import           BaseTypes
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           EpochBoundary
@@ -56,15 +56,16 @@ initialEpoch =
 votedValuePParams
   :: PPUpdate crypto
   -> PParams
+  -> Int
   -> Maybe PParams
-votedValuePParams (PPUpdate ppup) pps =
+votedValuePParams (PPUpdate ppup) pps quorumN =
   let
     incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
     votes = Map.foldr
               (\vote tally -> Map.insert vote (incrTally vote tally) tally)
               (Map.empty :: Map PParamsUpdate Int)
               ppup
-    consensus = Map.filter (>= 5) votes
+    consensus = Map.filter (>= quorumN) votes
   in
     case length consensus of
       1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
@@ -82,8 +83,11 @@ epochTransition = do
     trans @(SNAP crypto) $ TRC (SnapEnv pp dstate pstate, SnapState ss utxoSt, e)
   PoolreapState utxoSt'' acnt' dstate' pstate' <-
     trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt' acnt dstate pstate, e)
+
+  coreNodeQuorum <- liftSTS $ asks quorum
+
   let UpdateState ppup _ _ _ = _ups utxoSt
-  let ppNew = votedValuePParams ppup pp
+  let ppNew = votedValuePParams ppup pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt''' acnt'' pp' <-
     trans @(NEWPP crypto)
       $ TRC (NewppEnv ppNew dstate' pstate', NewppState utxoSt'' acnt' pp, e)

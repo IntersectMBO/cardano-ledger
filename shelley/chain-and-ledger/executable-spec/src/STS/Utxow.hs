@@ -16,11 +16,11 @@ module STS.Utxow
   )
 where
 
-import           BaseTypes (Globals, ShelleyBase, intervalValue, invalidKey, (==>))
+import           BaseTypes (Globals, ShelleyBase, intervalValue, invalidKey, quorum, (==>))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
                      encodeListLen, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
 import           Control.State.Transition.Generator (HasTrace (..), envGen, sigGen)
@@ -147,8 +147,10 @@ utxoWitnessed = do
   let genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
       mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
       GenDelegs genMapping = genDelegs
+
+  coreNodeQuorum <- liftSTS $ asks quorum
   (    (not $ null mirCerts)
-   ==> Set.size genSig >= 5)
+   ==> Set.size genSig >= fromIntegral coreNodeQuorum)
       ?! MIRInsufficientGenesisSigsUTXOW
   (    (not $ null mirCerts)
    ==> (0 < intervalValue (_d pp)))

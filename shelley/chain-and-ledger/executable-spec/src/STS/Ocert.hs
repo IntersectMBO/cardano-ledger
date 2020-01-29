@@ -13,7 +13,7 @@ where
 import           BaseTypes
 import           BlockChain
 import           Cardano.Ledger.Shelley.Crypto
-import           Cardano.Prelude (NoUnexpectedThunks)
+import           Cardano.Prelude (NoUnexpectedThunks, asks)
 import           Control.State.Transition
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -66,10 +66,17 @@ ocertTransition = do
       s = bheaderSlotNo bhb
   kp@(KESPeriod kp_) <- liftSTS $ kesPeriod s
 
-  let t = kp_ - c0_
+  maxKESiterations <- liftSTS $ asks maxKESEvo
 
   c0 <= kp ?! KESBeforeStartOCERT
-  kp_ < c0_ + 90 ?! KESAfterEndOCERT
+  kp_ < c0_ + (fromIntegral maxKESiterations) ?! KESAfterEndOCERT
+
+  let t = if kp_ >= c0_ then kp_ - c0_ else 0 -- this is required to prevent an
+                                              -- arithmetic underflow, in the
+                                              -- case of kp_ < c0_ we get the
+                                              -- above `KESBeforeStartOCERT`
+                                              -- predicate failure in the
+                                              -- transition.
 
   verify vk_cold (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
   verifyKES vk_hot bhb sigma t ?! InvalidKesSignatureOCERT
