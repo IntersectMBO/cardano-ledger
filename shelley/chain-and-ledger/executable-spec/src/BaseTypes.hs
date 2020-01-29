@@ -191,6 +191,10 @@ data Globals = Globals
   , startRewards :: Word64
     -- | Maximum number of blocks we are allowed to roll back
   , securityParameter :: Word64
+    -- | Maximum number of KES iterations
+  , maxKESEvo :: Word64
+    -- | Quorum for update system votes and MIR certificates
+  , quorum :: Word64
   }
 
 type ShelleyBase = ReaderT Globals Identity

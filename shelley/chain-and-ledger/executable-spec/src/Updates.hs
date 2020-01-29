@@ -248,16 +248,16 @@ newAVs avs favs = Applications $
                     Map.fromList [(an, maxVer an avs favs) | an <- Set.toList $ allNames avs favs]
 
 votedValue
-  :: Eq a => Map (GenKeyHash crypto) a -> Maybe a
-votedValue vs | null elemLists = Nothing
-              | otherwise      = Just $ (head . head) elemLists  -- elemLists contains an element
+  :: Eq a => Map (GenKeyHash crypto) a -> Int -> Maybe a
+votedValue vs quorum | null elemLists = Nothing
+                     | otherwise      = Just $ (head . head) elemLists  -- elemLists contains an element
                                                -- and that list contains at
                                                -- least 5 elements
 
 
  where
   elemLists =
-    filter (\l -> length l >= 5) $ List.group $ map snd $ Map.toList vs
+    filter (\l -> length l >= quorum) $ List.group $ map snd $ Map.toList vs
 
 emptyUpdateState :: UpdateState crypto
 emptyUpdateState = UpdateState

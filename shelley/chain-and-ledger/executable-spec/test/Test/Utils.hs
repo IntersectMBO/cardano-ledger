@@ -93,6 +93,8 @@ testGlobals = Globals
   , startRewards = 33
   , slotsPrior = 33
   , securityParameter = 10
+  , maxKESEvo = 90
+  , quorum = 5
   }
 
 runShelleyBase :: ShelleyBase a -> a
