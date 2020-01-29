@@ -4,6 +4,7 @@ module Test.Utils
   ( assertAll
   , mkCertifiedVRF
   , epochFromSlotNo
+  , evolveKESUntil
   , slotFromEpoch
   , mkKeyPair
   , mkGenKey
@@ -32,10 +33,10 @@ import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
 import           Hedgehog (MonadTest, (===))
 import           Keys (pattern SKey, pattern SKeyES, pattern VKey, pattern VKeyES,
-                     pattern VKeyGenesis, hashKey, vKey)
+                     pattern VKeyGenesis, hashKey, iterationCountKESKey, updateKESKey, vKey)
+import           OCert (KESPeriod (..))
 import           Slot (EpochNo, EpochSize (..), SlotNo)
 import           TxData (pattern AddrBase, pattern KeyHashObj)
-
 
 assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
 assertAll p xs = [] === filter (not . p) xs
@@ -103,3 +104,13 @@ epochFromSlotNo = runIdentity . epochInfoEpoch (epochInfo testGlobals)
 
 slotFromEpoch :: EpochNo -> SlotNo
 slotFromEpoch = runIdentity  . epochInfoFirst (epochInfo testGlobals)
+
+-- | Try to evolve KES key until specific KES period is reached.
+evolveKESUntil :: SKeyES -> KESPeriod -> Maybe SKeyES
+evolveKESUntil k p'@(KESPeriod p) =
+  if p == iterationCountKESKey k then Just k
+  else
+    let k' = updateKESKey k
+    in  case k' of
+          Nothing  -> Nothing
+          Just k'' -> evolveKESUntil k'' p'
