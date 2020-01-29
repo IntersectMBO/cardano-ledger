@@ -26,7 +26,6 @@ module Cardano.Chain.Byron.Auxiliary (
   , applyChainTick
   , validateBlock
   , validateBoundary
-  , applyScheduledDelegations
   , previewDelegationMap
     -- * Applying transactions
   , ApplyMempoolPayloadErr(..)
@@ -56,14 +55,10 @@ import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import           Control.Monad.Except
 import           Control.Monad.Reader
-import           Data.Bimap (Bimap)
-import qualified Data.Bimap as Bimap
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Either (isRight)
-import qualified Data.Foldable as Foldable
 import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -77,7 +72,6 @@ import           Cardano.Prelude
 import qualified Cardano.Chain.Block as CC
 import qualified Cardano.Chain.Common as CC
 import qualified Cardano.Chain.Delegation as Delegation
-import qualified Cardano.Chain.Delegation.Validation.Activation as D.Act
 import qualified Cardano.Chain.Delegation.Validation.Interface as D.Iface
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as D.Sched
 import qualified Cardano.Chain.Genesis as Gen
@@ -144,41 +138,6 @@ setDelegationState newDlg cvs = cvs { CC.cvsDelegationState = newDlg }
 setUpdateState :: U.Iface.State
                -> CC.ChainValidationState -> CC.ChainValidationState
 setUpdateState newUpdate cvs = cvs { CC.cvsUpdateState = newUpdate }
-
-{-------------------------------------------------------------------------------
-  Tick the delegation state
-
-  See 'applyChainTick' for discussion.
--------------------------------------------------------------------------------}
-
--- | Update the delegation state (without applying new certs)
---
--- This is adapted from 'updateDelegation'.
-tickDelegation :: CC.EpochSlots
-               -> CC.SlotNumber -> D.Iface.State -> D.Iface.State
-tickDelegation epochSlots currentSlot is =
-  let
-    D.Sched.State delegations keyEpochs = D.Iface.schedulingState is
-
-  -- Activate certificates up to this slot
-    as = foldl
-      D.Act.activateDelegation
-      (D.Iface.activationState is)
-      (Seq.filter ((<= currentSlot) . D.Sched.sdSlot) delegations)
-
-  -- Remove stale values from 'Scheduling.State'
-    ss' = D.Sched.State
-      { D.Sched.scheduledDelegations = Seq.filter
-        ((currentSlot + 1 <=) . D.Sched.sdSlot)
-        delegations
-      , D.Sched.keyEpochDelegations = Set.filter
-        ((>= currentEpoch) . fst)
-        keyEpochs
-      }
-
-  in D.Iface.State {schedulingState = ss', activationState = as}
- where
-   currentEpoch = CC.slotNumberEpoch epochSlots currentSlot
 
 {-------------------------------------------------------------------------------
   Applying blocks
@@ -259,11 +218,14 @@ applyChainTick cfg slotNo cvs = cvs {
                                 (mkEpochEnvironment cfg cvs)
                                 (CC.cvsUpdateState cvs)
                                 slotNo
-    , CC.cvsDelegationState = tickDelegation
-                                (Gen.configEpochSlots cfg)
+    , CC.cvsDelegationState = D.Iface.tickDelegation
+                                currentEpoch
                                 slotNo
                                 (CC.cvsDelegationState cvs)
     }
+
+  where
+   currentEpoch = CC.slotNumberEpoch (Gen.configEpochSlots cfg) slotNo
 
 -- | Validate header
 --
@@ -350,25 +312,14 @@ validateBoundary cfg blk cvs = do
     hdr        = CC.boundaryHeader blk
     epochSlots = Gen.configEpochSlots cfg
 
-applyScheduledDelegations :: Seq D.Sched.ScheduledDelegation
-                          -> Delegation.Map -> Delegation.Map
-applyScheduledDelegations update (Delegation.Map del) =
-    -- The order in which we apply the updates does not matter, because the spec
-    -- says: "Any given key can issue at most one certificate in a given slot."
-    Delegation.Map $ Foldable.foldl' (flip applyOne) del update
-  where
-    applyOne :: D.Sched.ScheduledDelegation
-             -> Bimap CC.KeyHash CC.KeyHash
-             -> Bimap CC.KeyHash CC.KeyHash
-    applyOne x = Bimap.insert (D.Sched.sdDelegator x)
-                              (D.Sched.sdDelegate  x)
-
-previewDelegationMap :: CC.SlotNumber -> CC.ChainValidationState -> Delegation.Map
+-- | Preview the delegation map at a slot assuming no new delegations are
+-- | scheduled.
+previewDelegationMap :: CC.SlotNumber
+                     -> CC.ChainValidationState
+                     -> Delegation.Map
 previewDelegationMap slot cvs =
-  let delegs = getScheduledDelegations cvs
-      (current, _rest) = Seq.spanl ((<= slot) . D.Sched.sdSlot) delegs
-      delegationMap = getDelegationMap cvs
-   in applyScheduledDelegations current delegationMap
+  let ds = D.Iface.activateDelegations slot $ CC.cvsDelegationState cvs
+   in D.Iface.delegationMap ds
 
 {-------------------------------------------------------------------------------
   Applying transactions

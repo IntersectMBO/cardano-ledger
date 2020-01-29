@@ -10,9 +10,11 @@ module Cardano.Chain.Delegation.Validation.Interface
   -- * Blockchain Interface
     Environment(..)
   , State(..)
+  , activateDelegations
+  , delegates
   , delegationMap
   , initialState
-  , delegates
+  , tickDelegation
   , updateDelegation
   )
 where
@@ -139,30 +141,13 @@ updateDelegation
   -> m State
 updateDelegation env is certificates = do
   -- Schedule new certificates
-  Scheduling.State delegations keyEpochs <- foldM
+  ss' <- foldM
     (Scheduling.scheduleCertificate schedulingEnv)
     (schedulingState is)
     certificates
 
-  -- Activate certificates up to this slot
-  let
-    as = foldl
-      Activation.activateDelegation
-      (activationState is)
-      (Seq.filter ((<= currentSlot) . Scheduling.sdSlot) delegations)
-
-  -- Remove stale values from 'Scheduling.State'
-  let
-    ss' = Scheduling.State
-      { Scheduling.scheduledDelegations = Seq.filter
-        ((currentSlot + 1 <=) . Scheduling.sdSlot)
-        delegations
-      , Scheduling.keyEpochDelegations = Set.filter
-        ((>= currentEpoch) . fst)
-        keyEpochs
-      }
-
-  pure $ State {schedulingState = ss', activationState = as}
+  pure $ tickDelegation currentEpoch currentSlot
+    is { schedulingState = ss' }
  where
   Environment { protocolMagic, allowedDelegators, k, currentEpoch, currentSlot }
     = env
@@ -174,3 +159,37 @@ updateDelegation env is certificates = do
     , Scheduling.currentSlot = currentSlot
     , Scheduling.k           = k
     }
+
+-- | Perform delegation update without adding certificates
+tickDelegation :: EpochNumber -> SlotNumber -> State -> State
+tickDelegation currentEpoch currentSlot =
+  prune . activateDelegations currentSlot
+  where
+   prune s =
+     let ss' = pruneScheduledDelegations currentEpoch currentSlot (schedulingState s)
+      in s{ schedulingState = ss'}
+
+-- Activate certificates up to this slot
+activateDelegations :: SlotNumber -> State -> State
+activateDelegations currentSlot s@(State ss as) =
+  let Scheduling.State delegations _keyEpochs = ss
+      as' = foldl Activation.activateDelegation as
+        (Seq.filter ((<= currentSlot) . Scheduling.sdSlot) delegations)
+   in s { activationState = as' }
+
+-- Remove stale values from 'Scheduling.State'
+pruneScheduledDelegations
+  :: EpochNumber
+  -> SlotNumber
+  -> Scheduling.State
+  -> Scheduling.State
+pruneScheduledDelegations currentEpoch currentSlot ss =
+  let Scheduling.State delegations keyEpochs = ss
+   in Scheduling.State
+        { Scheduling.scheduledDelegations = Seq.filter
+          ((currentSlot + 1 <=) . Scheduling.sdSlot)
+          delegations
+        , Scheduling.keyEpochDelegations = Set.filter
+          ((>= currentEpoch) . fst)
+          keyEpochs
+        }

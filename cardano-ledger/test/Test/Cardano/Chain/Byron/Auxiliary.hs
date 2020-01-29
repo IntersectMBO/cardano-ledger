@@ -53,7 +53,7 @@ tests :: TSGroup
 tests scenario = Group "Test.Cardano.Chain.Byron.Auxiliary"
   [ ( "ts_chainTick", ts_chainTick scenario)
   , ( "ts_roundTripApplyMempoolPayloadErrCompat", ts_roundTripApplyMempoolPayloadErrCompat scenario)
-  --, ( "ts_scheduledDelegations", ts_scheduledDelegations scenario)
+  , ( "ts_scheduledDelegations", ts_scheduledDelegations scenario)
   ]
 
 ts_roundTripApplyMempoolPayloadErrCompat :: TSProperty
