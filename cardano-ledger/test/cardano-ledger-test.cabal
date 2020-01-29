@@ -25,7 +25,7 @@ library
                        Test.Cardano.Chain.Block.Validation
                        Test.Cardano.Chain.Block.ValidationMode
 
-                       Test.Cardano.Chain.Byron.Auxiliary
+                       Test.Cardano.Chain.Byron.API
 
                        Test.Cardano.Chain.Buildable
 

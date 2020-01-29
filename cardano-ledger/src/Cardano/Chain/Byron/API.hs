@@ -1,19 +1,19 @@
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveFunctor       #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE DeriveAnyClass           #-}
+{-# LANGUAGE DeriveFunctor            #-}
+{-# LANGUAGE DeriveGeneric            #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE FlexibleContexts         #-}
+{-# LANGUAGE FlexibleInstances        #-}
+{-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE NamedFieldPuns           #-}
+{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE RankNTypes               #-}
+{-# LANGUAGE ScopedTypeVariables      #-}
+{-# LANGUAGE TypeApplications         #-}
+{-# LANGUAGE TypeFamilies             #-}
 
 -- | Auxiliary definitions to make working with the Byron ledger easier
-module Cardano.Chain.Byron.Auxiliary (
+module Cardano.Chain.Byron.API (
     -- * Extract info from genesis config
     allowedDelegators
   , boundaryBlockSlot
@@ -213,8 +213,7 @@ applyChainTick :: Gen.Config
                -> CC.ChainValidationState
                -> CC.ChainValidationState
 applyChainTick cfg slotNo cvs = cvs {
-      CC.cvsLastSlot        = slotNo
-    , CC.cvsUpdateState     = CC.epochTransition
+      CC.cvsUpdateState     = CC.epochTransition
                                 (mkEpochEnvironment cfg cvs)
                                 (CC.cvsUpdateState cvs)
                                 slotNo
@@ -580,7 +579,7 @@ fromCBORABlockOrBoundaryHdr epochSlots = do
     fromCBOR @Word >>= \case
       0 -> ABOBBoundaryHdr <$> CC.fromCBORABoundaryHeader
       1 -> ABOBBlockHdr    <$> CC.fromCBORAHeader epochSlots
-      t -> panic $ "Unknown tag in encoded HeaderOrBoundary" <> show t
+      t -> fail $ "Unknown tag in encoded HeaderOrBoundary" <> show t
 
 -- | The analogue of 'Data.Either.either'
 aBlockOrBoundaryHdr :: (CC.AHeader         a -> b)

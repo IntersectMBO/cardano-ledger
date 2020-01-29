@@ -26,7 +26,7 @@ library
   hs-source-dirs:      src
   exposed-modules:
                        Cardano.Chain.Block
-                       Cardano.Chain.Byron.Auxiliary
+                       Cardano.Chain.Byron.API
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
                        Cardano.Chain.Delegation
@@ -179,7 +179,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.Model.Examples
                        Test.Cardano.Chain.Block.Validation
                        Test.Cardano.Chain.Block.ValidationMode
-                       Test.Cardano.Chain.Byron.Auxiliary
+                       Test.Cardano.Chain.Byron.API
 
                        Test.Cardano.Chain.Buildable
 

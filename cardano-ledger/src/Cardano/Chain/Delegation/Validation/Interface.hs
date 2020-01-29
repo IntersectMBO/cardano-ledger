@@ -169,7 +169,7 @@ tickDelegation currentEpoch currentSlot =
      let ss' = pruneScheduledDelegations currentEpoch currentSlot (schedulingState s)
       in s{ schedulingState = ss'}
 
--- Activate certificates up to this slot
+-- | Activate certificates up to this slot
 activateDelegations :: SlotNumber -> State -> State
 activateDelegations currentSlot s@(State ss as) =
   let Scheduling.State delegations _keyEpochs = ss
@@ -177,7 +177,7 @@ activateDelegations currentSlot s@(State ss as) =
         (Seq.filter ((<= currentSlot) . Scheduling.sdSlot) delegations)
    in s { activationState = as' }
 
--- Remove stale values from 'Scheduling.State'
+-- | Remove stale values from 'Scheduling.State'
 pruneScheduledDelegations
   :: EpochNumber
   -> SlotNumber

@@ -28,6 +28,7 @@
           (hsPkgs.cardano-crypto)
           (hsPkgs.cardano-crypto-wrapper)
           (hsPkgs.cardano-prelude)
+          (hsPkgs.cborg)
           (hsPkgs.containers)
           (hsPkgs.contra-tracer)
           (hsPkgs.concurrency)

@@ -3,7 +3,7 @@
 {-# Language RankNTypes #-}
 
 
-module Test.Cardano.Chain.Byron.Auxiliary
+module Test.Cardano.Chain.Byron.API
   ( genApplyMempoolPayloadErr
   , ts_roundTripApplyMempoolPayloadErrCompat
   , ts_scheduledDelegations
@@ -12,10 +12,9 @@ module Test.Cardano.Chain.Byron.Auxiliary
   where
 
 import Cardano.Prelude
-  -- import Test.Cardano.Prelude
 
 import Cardano.Crypto (ProtocolMagicId)
-import Cardano.Chain.Byron.Auxiliary
+import Cardano.Chain.Byron.API
   ( ApplyMempoolPayloadErr (..)
   , getDelegationMap
   , applyChainTick
@@ -50,7 +49,7 @@ import Cardano.Chain.Genesis (configSlotSecurityParam)
 import qualified Cardano.Chain.Genesis as Genesis
 
 tests :: TSGroup
-tests scenario = Group "Test.Cardano.Chain.Byron.Auxiliary"
+tests scenario = Group "Test.Cardano.Chain.Byron.API"
   [ ( "ts_chainTick", ts_chainTick scenario)
   , ( "ts_roundTripApplyMempoolPayloadErrCompat", ts_roundTripApplyMempoolPayloadErrCompat scenario)
   , ( "ts_scheduledDelegations", ts_scheduledDelegations scenario)
@@ -87,7 +86,6 @@ setupChainValidationState sampleTrace =
 
 -- | getDelegationMap . applyChainTick slot == previewDelegationMap slot
 ts_scheduledDelegations :: TSProperty
- --FIXME: This is a failing test.
 ts_scheduledDelegations = withTestsTS 100 . property $ do
   let traceLength = 10 :: Word64
   sampleTrace <- forAll $ STS.trace @CHAIN () traceLength
