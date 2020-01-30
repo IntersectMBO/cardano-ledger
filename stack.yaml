@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/cb54482c7e3d45f6c1aac490dc937ed835de0333/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/00487726c4bc21b4744e59d913334ebfeac7d68e/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
@@ -15,7 +15,7 @@ extra-deps:
 - monad-stm-0.1.0.2
 
 - git: https://github.com/input-output-hk/cardano-prelude
-  commit: cb54482c7e3d45f6c1aac490dc937ed835de0333
+  commit: 00487726c4bc21b4744e59d913334ebfeac7d68e
 
 - git: https://github.com/input-output-hk/cardano-base
   commit: 965b8b143632faea16680a195e6de57091382700
