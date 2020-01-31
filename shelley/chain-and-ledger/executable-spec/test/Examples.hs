@@ -291,7 +291,7 @@ ppsEx1 = emptyPParams { _maxBBSize       =       50000
                       , _keyDeposit      = Coin      7
                       , _poolDeposit     = Coin    250
                       , _d               = unsafeMkUnitInterval 0.5
-                      , _activeSlotCoeff = unsafeMkUnitInterval 0.1
+                      , _activeSlotCoeff = unsafeMkUnitInterval 0.9
                       , _tau             = unsafeMkUnitInterval 0.2
                       , _rho             = unsafeMkUnitInterval 0.0021
                       , _keyDecayRate    =                      0.002
