@@ -42,7 +42,7 @@ import           PParams (PParams (_activeSlotCoeff, _d))
 import           Shrinkers (shrinkBlock)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (initialShelleyState)
-import           Test.Utils (runShelleyBase)
+import           Test.Utils (runShelleyBase, unsafeMkUnitInterval)
 import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
@@ -50,7 +50,7 @@ import           Updates (ApName (..), ApVer (..), pattern Applications, pattern
 instance HasTrace CHAIN Word64 where
   -- the current slot needs to be large enough to allow for many blocks
   -- to be processed (in large CHAIN traces)
-  envGen _ = SlotNo <$> QC.choose (90, 100)
+  envGen _ = SlotNo <$> QC.choose (10, 100)
 
   sigGen _ env st =
     genBlock
@@ -91,7 +91,7 @@ mkGenesisChainState (IRC _slotNo) = do
   -- TODO @uroboros remove d=1 restriction when using LedgerState.overlaySchedule
   -- TODO @mgu remove active slot coefficient 1
   let pParamsCentralised = pParams { _d = interval1
-                                   , _activeSlotCoeff = interval1}
+                                   , _activeSlotCoeff = unsafeMkUnitInterval 1.0 }
       osched_ = runShelleyBase $ overlaySchedule
                 epoch0
                 (Map.keysSet delegs0)

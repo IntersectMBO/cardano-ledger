@@ -36,21 +36,27 @@ genBlock
   -> Gen Block
 genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
   nextSlot <- genNextSlot
-  if nextSlot > sNow
-    then QC.discard
-    else do
-    let KESPeriod _kesPeriod = runShelleyBase (kesPeriod $ nextSlot)
+  case Map.lookup nextSlot osched of
+      Nothing -> QC.discard
+        -- TODO @uroboros make Praos block
+      Just Nothing -> QC.discard
+        -- TODO @uroboros don't make a block in a NonActive Slot
+      Just (Just gkey) -> do
+        if nextSlot > sNow
+          then QC.discard
+          else do
+          let KESPeriod _kesPeriod = runShelleyBase (kesPeriod $ nextSlot)
 
-    mkBlock
-      <$> pure (chainHashHeader chainSt)
-      <*> pure (issuerKeys nextSlot)
-      <*> toList <$> genTxs nextSlot
-      <*> pure nextSlot
-      <*> pure chainDifficulty
-      <*> pure (chainEpochNonce chainSt)
-      <*> genBlockNonce
-      <*> genPraosLeader
-      <*> pure _kesPeriod
+          mkBlock
+            <$> pure (chainHashHeader chainSt)
+            <*> pure (issuerKeys gkey)
+            <*> toList <$> genTxs nextSlot
+            <*> pure nextSlot
+            <*> pure chainDifficulty
+            <*> pure (chainEpochNonce chainSt)
+            <*> genBlockNonce
+            <*> genPraosLeader
+            <*> pure _kesPeriod
   where
     ledgerSt = (esLState . nesEs . chainNes) chainSt
     osched = (nesOsched . chainNes) chainSt
@@ -60,12 +66,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
     origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) coreNodeKeys of
                          Nothing -> error "couldn't find corresponding core node key"
                          Just k  -> snd k
-    issuerKeys sNumber = case Map.lookup sNumber osched of
-      Nothing ->
-        error "TODO @uroboros make Praos block"
-      Just Nothing ->
-        error "TODO @uroboros don't make a block in a NonActive Slot"
-      Just (Just gkey) ->
+    issuerKeys gkey =
         case Map.lookup gkey genesisDelegs of
           Nothing ->
             error "genBlock: NoGenesisStakingOVERLAY"
