@@ -7,10 +7,12 @@ module Generator.Block
   where
 
 import           Data.Foldable (toList)
+import qualified Data.List as List (find)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (lookup)
 import           Data.Word (Word64)
-import           Test.QuickCheck (Gen, choose)
+import           Test.QuickCheck (Gen)
+import qualified Test.QuickCheck as QC (choose, discard)
 
 import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, KeyHash, KeyPair, LEDGERS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
@@ -20,9 +22,11 @@ import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           LedgerState (esAccountState, esLState, esPp, nesEs, nesOsched, _delegationState,
                      _dstate, _genDelegs, _reserves)
+import           OCert (KESPeriod (..), kesPeriod)
 import           Slot (BlockNo (..), SlotNo (..))
 import           STS.Chain (chainEpochNonce, chainHashHeader, chainNes, chainSlotNo)
 import           STS.Ledgers (LedgersEnv (..))
+import           Test.Utils (runShelleyBase)
 
 genBlock
   :: SlotNo
@@ -30,26 +34,33 @@ genBlock
   -> [(CoreKeyPair, AllPoolKeys)] -- core node keys
   -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> Gen Block
-genBlock _slotNo chainSt coreNodeKeys keysByStakeHash = do
+genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
   nextSlot <- genNextSlot
-  mkBlock
-    <$> pure (chainHashHeader chainSt)
-    <*> pure issuerKeys
-    <*> toList <$> genTxs nextSlot
-    <*> pure nextSlot
-    <*> pure chainDifficulty
-    <*> pure (chainEpochNonce chainSt)
-    <*> genBlockNonce
-    <*> genPraosLeader
-    <*> pure kesPeriod
+  if nextSlot > sNow
+    then QC.discard
+    else do
+    let KESPeriod _kesPeriod = runShelleyBase (kesPeriod $ nextSlot)
+
+    mkBlock
+      <$> pure (chainHashHeader chainSt)
+      <*> pure (issuerKeys nextSlot)
+      <*> toList <$> genTxs nextSlot
+      <*> pure nextSlot
+      <*> pure chainDifficulty
+      <*> pure (chainEpochNonce chainSt)
+      <*> genBlockNonce
+      <*> genPraosLeader
+      <*> pure _kesPeriod
   where
     ledgerSt = (esLState . nesEs . chainNes) chainSt
     osched = (nesOsched . chainNes) chainSt
     (GenDelegs genesisDelegs) = (_genDelegs . _dstate . _delegationState) ledgerSt
 
     -- TODO @uroboros pick the first core node each time for now
-    origIssuerKeys = snd (coreNodeKeys !! 0)
-    issuerKeys = case Map.lookup (chainSlotNo chainSt) osched of
+    origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) coreNodeKeys of
+                         Nothing -> error "couldn't find corresponding core node key"
+                         Just k  -> snd k
+    issuerKeys sNumber = case Map.lookup sNumber osched of
       Nothing ->
         error "TODO @uroboros make Praos block"
       Just Nothing ->
@@ -63,13 +74,10 @@ genBlock _slotNo chainSt coreNodeKeys keysByStakeHash = do
             case Map.lookup gKeyHash keysByStakeHash of
               Nothing ->
                 -- then we use the original keys (which have not been changed by a genesis delegation)
-                origIssuerKeys
+                origIssuerKeys gkey
               Just updatedCold ->
                 -- if we find the pre-hashed key in keysByStakeHash, we use it instead of the original cold key
-                origIssuerKeys {cold = updatedCold, hk = (hashKey . vKey) updatedCold}
-
-    -- TODO @uroboros "90 days of slots" (constant)
-    kesPeriod = 0
+                (origIssuerKeys gkey) {cold = updatedCold, hk = (hashKey . vKey) updatedCold}
 
     -- TODO @uroboros
     genPraosLeader = pure zero
@@ -77,7 +85,9 @@ genBlock _slotNo chainSt coreNodeKeys keysByStakeHash = do
     chainDifficulty = BlockNo 1 -- used only in consensus
 
     -- we assume small gaps in slot numbers
-    genNextSlot = SlotNo . (unSlotNo (chainSlotNo chainSt) +) <$> choose (1, 5)
+    genNextSlot = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
+    lastSlotNo = unSlotNo (chainSlotNo chainSt)
+    --currentSlotNo = SlotNo (lastSlotNo + 1)
 
     genBlockNonce = NatNonce <$> genNatural 1 100
 
@@ -86,5 +96,5 @@ genBlock _slotNo chainSt coreNodeKeys keysByStakeHash = do
           reserves = (_reserves . esAccountState . nesEs . chainNes) chainSt
           ledgerEnv = LedgersEnv s pParams reserves
 
-      n <- choose (1, 10)
+      n <- QC.choose (1, 10)
       sigGen @LEDGERS (n :: Word64) ledgerEnv ledgerSt

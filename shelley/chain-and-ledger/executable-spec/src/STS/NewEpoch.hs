@@ -20,8 +20,8 @@ import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
 import           Control.State.Transition.Generator
 import           Data.Functor.Identity (runIdentity)
-import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import           Delegation.Certificates
 import           EpochBoundary

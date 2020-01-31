@@ -15,33 +15,34 @@ module Generator.ChainTrace where
 import           Data.ByteString.Char8 (pack)
 import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, empty, fromList)
+import qualified Data.Map.Strict as Map (elems, empty, fromList, keysSet)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Unsafe.Coerce (unsafeCoerce)
 
-import           BaseTypes (Globals)
+import           BaseTypes (Globals, interval1)
 import           BlockChain (pattern HashHeader)
 import           Cardano.Crypto.Hash (ShortHash)
 import           ConcreteCryptoTypes (Applications, CHAIN, ChainState, GenDelegs, HashHeader,
                      KeyHash)
 import           Control.Monad.Trans.Reader (runReaderT)
-import           Control.State.Transition (IRC)
+import           Control.State.Transition (IRC (..))
 import           Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace, envGen,
                      interpretSTS, shrinkSignal, sigGen)
 import           Generator.Block (genBlock)
 import           Generator.Core.Constants (maxGenesisUTxOouts, minGenesisUTxOouts)
-import           Generator.Core.QuickCheck (coreNodeKeys, coreNodeVKG, genUtxo0, genesisDelegs0,
+import           Generator.Core.QuickCheck (coreNodeKeys, genUtxo0, genesisDelegs0,
                      maxLovelaceSupply, traceKeyPairsByStakeHash)
 import           Generator.Update.QuickCheck (genPParams)
-import           Keys (pattern GenDelegs, Hash, hash, hashKey)
-import           PParams (PParams (_d))
+import           Keys (pattern GenDelegs, Hash, hash)
+import           LedgerState (overlaySchedule)
+import           PParams (PParams (_activeSlotCoeff, _d))
 import           Shrinkers (shrinkBlock)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (initialShelleyState)
-import           Test.Utils (unsafeMkUnitInterval)
+import           Test.Utils (runShelleyBase)
 import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
@@ -49,7 +50,7 @@ import           Updates (ApName (..), ApVer (..), pattern Applications, pattern
 instance HasTrace CHAIN Word64 where
   -- the current slot needs to be large enough to allow for many blocks
   -- to be processed (in large CHAIN traces)
-  envGen _ = SlotNo <$> QC.choose (10000, 100000)
+  envGen _ = SlotNo <$> QC.choose (90, 100)
 
   sigGen _ env st =
     genBlock
@@ -83,12 +84,18 @@ byronApps = Applications $ Map.fromList
 mkGenesisChainState
   :: IRC CHAIN
   -> Gen (Either a ChainState)
-mkGenesisChainState _chainEnv = do
+mkGenesisChainState (IRC _slotNo) = do
   utxo0 <- genUtxo0 minGenesisUTxOouts maxGenesisUTxOouts
 
   pParams <- genPParams
   -- TODO @uroboros remove d=1 restriction when using LedgerState.overlaySchedule
-  let pParamsCentralised = pParams {_d = unsafeMkUnitInterval 1}
+  -- TODO @mgu remove active slot coefficient 1
+  let pParamsCentralised = pParams { _d = interval1
+                                   , _activeSlotCoeff = interval1}
+      osched_ = runShelleyBase $ overlaySchedule
+                epoch0
+                (Map.keysSet delegs0)
+                pParamsCentralised
 
   pure . Right $ initialShelleyState
     (SlotNo 0)
@@ -97,22 +104,12 @@ mkGenesisChainState _chainEnv = do
     utxo0
     maxLovelaceSupply
     delegs0
-    (leaderSchedule 300)
+    osched_
     byronApps
     pParamsCentralised
   where
     epoch0 = EpochNo 0
     delegs0 = genesisDelegs0
-
-    {- TODO @uroboros replace with LedgerState.overlaySchedule
-      osched_ = runShelleyBase $ overlaySchedule
-                  epoch0
-                  (Map.keysSet delegs0)
-                  pParamsCentralised
-    -}
-    leaderSchedule n = Map.fromList $
-      zip ((SlotNo . fromIntegral) <$> [0..n])
-          (replicate n ((Just . hashKey) (coreNodeVKG 0)))
 
 mkOCertIssueNos
   :: GenDelegs
