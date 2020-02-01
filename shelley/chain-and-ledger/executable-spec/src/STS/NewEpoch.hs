@@ -20,7 +20,6 @@ import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
 import           Control.State.Transition.Generator
 import           Data.Functor.Identity (runIdentity)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import           Delegation.Certificates
@@ -49,7 +48,6 @@ instance
 
   data PredicateFailure (NEWEPOCH crypto)
     = EpochFailure (PredicateFailure (EPOCH crypto))
-    | CorruptIRWDs (Map (Credential crypto) Coin) (Map (Credential crypto) Coin)
     deriving (Show, Generic, Eq)
 
   initialRules =
@@ -85,9 +83,6 @@ newEpochTransition = do
       es' <- case ru of
                Nothing  -> pure es
                Just ru' -> do
-                 let irwd' = updateIRwd ru'
-                     irwd_ = getIR es
-                 irwd' == irwd_ ?! CorruptIRWDs irwd' irwd_
                  pure $ applyRUpd ru' es
 
       es'' <- trans @(EPOCH crypto) $ TRC ((), es', e)

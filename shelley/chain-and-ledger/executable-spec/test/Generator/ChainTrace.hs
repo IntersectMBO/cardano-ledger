@@ -22,7 +22,7 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Unsafe.Coerce (unsafeCoerce)
 
-import           BaseTypes (Globals, interval1)
+import           BaseTypes (Globals)
 import           BlockChain (pattern HashHeader)
 import           Cardano.Crypto.Hash (ShortHash)
 import           ConcreteCryptoTypes (Applications, CHAIN, ChainState, GenDelegs, HashHeader,
@@ -38,12 +38,12 @@ import           Generator.Core.QuickCheck (coreNodeKeys, genUtxo0, genesisDeleg
 import           Generator.Update.QuickCheck (genPParams)
 import           Keys (pattern GenDelegs, Hash, hash)
 import           LedgerState (overlaySchedule)
-import           PParams (PParams (_activeSlotCoeff, _d))
 import           Shrinkers (shrinkBlock)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (initialShelleyState)
-import           Test.Utils (runShelleyBase, unsafeMkUnitInterval)
+import           Test.Utils (runShelleyBase)
 import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
+import           UTxO (balance)
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
@@ -88,25 +88,21 @@ mkGenesisChainState (IRC _slotNo) = do
   utxo0 <- genUtxo0 minGenesisUTxOouts maxGenesisUTxOouts
 
   pParams <- genPParams
-  -- TODO @uroboros remove d=1 restriction when using LedgerState.overlaySchedule
-  -- TODO @mgu remove active slot coefficient 1
-  let pParamsCentralised = pParams { _d = interval1
-                                   , _activeSlotCoeff = unsafeMkUnitInterval 1.0 }
-      osched_ = runShelleyBase $ overlaySchedule
+  let osched_ = runShelleyBase $ overlaySchedule
                 epoch0
                 (Map.keysSet delegs0)
-                pParamsCentralised
+                pParams
 
   pure . Right $ initialShelleyState
     (SlotNo 0)
     epoch0
     lastByronHeaderHash
     utxo0
-    maxLovelaceSupply
+    (maxLovelaceSupply - balance utxo0)
     delegs0
     osched_
     byronApps
-    pParamsCentralised
+    pParams
   where
     epoch0 = EpochNo 0
     delegs0 = genesisDelegs0

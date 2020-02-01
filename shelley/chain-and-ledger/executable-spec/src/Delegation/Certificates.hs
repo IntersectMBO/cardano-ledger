@@ -120,9 +120,9 @@ decayPool pc = (pval, pmin, lambdap)
           pmin    = pc ^. poolMinRefund
           lambdap = pc ^. poolDecayRate
 
-newtype PoolDistr crypto=
-  PoolDistr (Map (KeyHash crypto) (Rational, Hash (HASH crypto) (VerKeyVRF (VRF crypto))))
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Relation)
+newtype PoolDistr crypto = PoolDistr
+  { unPoolDistr :: (Map (KeyHash crypto) (Rational, Hash (HASH crypto) (VerKeyVRF (VRF crypto))))
+  } deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Relation)
 
 isInstantaneousRewards :: DCert crypto-> Bool
 isInstantaneousRewards (DCertMir _) = True

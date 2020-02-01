@@ -31,6 +31,7 @@ module Generator.Core.QuickCheck
   , traceKeyPairsByStakeHash
   , traceKeyHashMap
   , traceVRFKeyPairs
+  , traceVRFKeyPairsByHash
   , traceMSigScripts
   , traceMSigCombinations
   , someKeyPairs
@@ -66,7 +67,8 @@ import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, Pro
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair, Credential, GenKeyHash,
                      HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, SKeyES,
-                     SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
+                     SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VRFKeyHash, VerKeyVRF,
+                     hashKeyVRF)
 import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, minGenesisOutputVal,
                      numBaseScripts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign, signKES,
@@ -343,6 +345,9 @@ traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
   body seed = fst . withDRG (drgNewTest seed) $ do
     sk <- genKeyVRF
     return (sk, deriveVerKeyVRF sk)
+
+traceVRFKeyPairsByHash :: Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
+traceVRFKeyPairsByHash = Map.fromList $ fmap (\p -> (hashKeyVRF (snd p), p)) traceVRFKeyPairs
 
 zero :: UnitInterval
 zero = unsafeMkUnitInterval 0
