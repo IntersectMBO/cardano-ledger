@@ -200,7 +200,9 @@ genDeRegKeyCert keys scripts dState =
   ]
   where
     registered k = k ∈ dom (_stkCreds dState)
-    availableKeys = filter (registered . toCred . snd) keys
+    availableKeys =
+      filter (\(_, k) -> let cred = toCred k in
+                           ((&&) <$> registered <*> zeroRewards) cred) keys
     availableScripts =
       filter (\(_, s) -> let cred = scriptToCred s in
                       ((&&) <$> registered <*> zeroRewards) cred) scripts
