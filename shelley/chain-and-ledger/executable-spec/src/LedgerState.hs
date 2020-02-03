@@ -128,23 +128,6 @@ import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDec
                      keyMinRefund, minfeeA, minfeeB)
 import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch, epochInfoFirst,
                      epochInfoSize, (+*), (-*))
-<<<<<<< HEAD
-import           Tx (extractGenKeyHash, extractKeyHash)
-import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
-                     PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, countMSigNodes,
-                     getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls,
-                     witKeyHash)
-import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
-                     apps, emptyUpdate, emptyUpdateState)
-=======
-  -- import           Tx (extractGenKeyHash, extractKeyHash)
-  -- import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
-  --                      PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
-  --                      TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, getRwdCred,
-  --                      inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
-  -- import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
-  --                      apps, emptyUpdate, emptyUpdateState)
 import           Tx (extractGenKeyHash, extractKeyHash, makeAdaValue, getrefs, txinputs_vf)
 import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..), PoolCert (..), PoolParams,
                      Ptr (..), RewardAcnt (..), Tx (..), TxBody (..), TxId (..), TxIn (..),
@@ -152,7 +135,7 @@ import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert
                      poolRAcnt, ttl, txfee, wdrls, witKeyHash, txexunits, forged)
 import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..), emptyUpdate,
                      emptyUpdateState)
->>>>>>> more rebase
+
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
                      verifyWitVKey, adaAllUTxO)
 import           Validation
@@ -163,6 +146,7 @@ import           Delegation.PoolParams (poolSpec)
 
 import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, intervalValue, mkUnitInterval)
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
+import           Coin
 
 import           CostModel
 import           PParams

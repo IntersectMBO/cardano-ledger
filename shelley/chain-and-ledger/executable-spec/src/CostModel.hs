@@ -7,16 +7,9 @@
 
 module CostModel
     (
-      ExUnitsMSig(..)
-    , ExUnitsPLC(..)
     , ExUnits(..)
-    , CostModMSig(..)
-    , CostModPLC(..)
     , CostMod(..)
-    , PricesMSig(..)
-    , PricesPLC(..)
     , Prices(..)
-    , ExUnitsAllTypes(..)
     , defaultUnits
     , defaultModel
     , defaultPrices
@@ -36,77 +29,30 @@ import           Data.Map.Strict (Map, empty)
 
 import           Cardano.Ledger.Shelley.Crypto
 import           Scripts
+import           Coin
 
 -- | comparing required resources for Plutus scripts
-instance Ord ExUnitsPLC where
-   (<=) (ExUnitsPLC rs1 mu1) (ExUnitsPLC rs2 mu2) =
+instance Ord ExUnits where
+   (<=) (ExUnits rs1 mu1) (ExUnits rs2 mu2) =
      ((<=) rs1 rs2) && ((<=) mu1 mu2)
 
--- | comparing required resources for MSig scripts
-instance Ord ExUnitsMSig where
-  (<=) (ExUnitsMSig ns1 m1) (ExUnitsMSig ns2 m2) =
-    ((<=) ns1 ns2) && ((<=) m1 m2)
 
 -- | Temporary stand-in for actual types in the execution cost
 -- for Plutus script execution
-data ExUnitsPLC = ExUnitsPLC
+data ExUnits = ExUnits
   { -- | The types of computational resources relevant to the cost model
       reductionSteps           :: Integer
     , memoryUnits              :: Integer
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks ExUnitsPLC
-
--- | Temporary stand-in for actual types in the execution cost
--- for MSig script execution
-data ExUnitsMSig = ExUnitsMSig
-  { -- | The types of computational resources relevant to the cost model
-      numSigs                  :: Integer
-    , maybeSomething           :: Integer
-  } deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks ExUnitsMSig
-
--- | calculate the number of signatures needed by the MSig script (this is ExUnitsMSig)
-mSigExUnits :: MultiSig crypto -> ExUnitsMSig
-mSigExUnits (RequireSignature _)  = ExUnitsMSig 1 0
-mSigExUnits (RequireAllOf msl)    = ExUnitsMSig (foldr (+) 0 (fmap (numSigs . mSigExUnits) msl)) 0
-mSigExUnits (RequireAnyOf _)      = ExUnitsMSig 1 0
-mSigExUnits (RequireMOf m _)      = ExUnitsMSig (toInteger m) 0
-
--- | The execution units of arbitrary scripts (MSig, PLC so far)
-data ExUnits =
-       PLCUnits ExUnitsPLC
-    |  MSigUnits ExUnitsMSig
-  deriving (Show, Eq, Generic)
-
 instance NoUnexpectedThunks ExUnits
 
 -- | Temporary stand-in for actual types in the cost model
 -- for Plutus script execution
-data CostModPLC = CostModPLC
-  { -- | The types of computational resources relevant to the cost model
-      stepPrim              :: ExUnitsPLC
-    , memPrim               :: ExUnitsPLC
-  } deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks CostModPLC
-
--- | Temporary stand-in for actual types in the cost model
--- for MSig script execution
-data CostModMSig = CostModMSig
-  { -- | The types of computational resources relevant to the cost model
-      sigPrim           :: ExUnitsMSig
-    , smtPrim           :: ExUnitsMSig
-  } deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks CostModMSig
-
--- | The cost model for plc or msig scripts
 data CostMod = CostMod
   { -- | The types of computational resources relevant to the cost model
-      costModPLC            :: CostModPLC
-    , costModMSig           :: CostModMSig
+    , memPrim                :: ExUnits
+    , stepPrim               :: ExUnits
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks CostMod
@@ -114,60 +60,33 @@ instance NoUnexpectedThunks CostMod
 -- | Default values
 -- | Default execution units
 defaultUnits :: ExUnitsAllTypes
-defaultUnits = ExUnitsAllTypes (ExUnitsPLC 0 0) (ExUnitsMSig 0 0)
+defaultUnits = ExUnits 0 0
 
 -- | Default cost model
 defaultModel :: CostMod
-defaultModel = CostMod (CostModPLC (ExUnitsPLC 0 0) (ExUnitsPLC 0 0))
-  (CostModMSig (ExUnitsMSig 0 0) (ExUnitsMSig 0 0))
+defaultModel = CostMod (ExUnits 0 0) (ExUnits 0 0)
 
 
--- | Temporary stand-in for actual types in the "prices"
--- for Plutus script execution
-data PricesPLC crypto = PricesPLC
+-- | Prices for Plutus script execution
+data Prices = Prices
   { -- | The types of computational resources relevant to the cost model
-      stepPrice             :: Value crypto
-    , memPrice              :: Value crypto
+    initPrim               :: Coin
+  , memPrim                :: Coin
+  , stepPrim               :: Coin
   } deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PricesPLC crypto)
+instance NoUnexpectedThunks Prices
 
--- | Temporary stand-in for actual types in the "prices"
--- for MSig script execution
-data PricesMSig  crypto = PricesMSig
-  { -- | The types of computational resources relevant to the cost model
-      sigPrice           :: Value crypto
-    , smtPrice           :: Value crypto
-  } deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks (PricesMSig crypto)
-
--- | The prices for plc or msig scripts
-data Prices crypto = Prices
-  {
-      pricesPLC            :: PricesPLC  crypto
-    , pricesMSig           :: PricesMSig crypto
-  } deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks (Prices crypto)
-
--- | All types of ex units limit
-data ExUnitsAllTypes = ExUnitsAllTypes
-  {
-      exUnitsPLC            :: ExUnitsPLC
-    , exUnitsMSig           :: ExUnitsMSig
-  } deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks ExUnitsAllTypes
 
 -- | Default cost model
-defaultPrices :: Prices crypto
-defaultPrices = Prices (PricesPLC 0 0) (PricesMSig 0 0)
+defaultPrices :: Prices
+defaultPrices = Prices (Coin 0) (Coin 0) (Coin 0)
 
 -- | The formula for conversion of execution cost into Ada
 -- Needs to be defined TODO
-scriptFee :: (Prices crypto) -> ExUnitsAllTypes -> Value crypto
-scriptFee _ _ = Value empty
+scriptFee :: Prices -> ExUnits -> Coin
+scriptFee (Prices (Coin i) (Coin m) (Coin s)) (ExUnits mu su) =
+  Coin (i + m*mu + s*su)
 
 
 -- | CBOR temp
