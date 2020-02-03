@@ -13,7 +13,8 @@ module Generator.Delegation.QuickCheck
 import           Control.Monad.Trans.Reader (asks)
 import           Data.Foldable (find)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, fromList, keys, keysSet, lookup, size)
+import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, keysSet, lookup,
+                     size)
 import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Ratio ((%))
 import           Data.Sequence (Seq)
@@ -26,7 +27,7 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Test.Utils
 
-import           Address (scriptToCred)
+import           Address (mkRwdAcnt, scriptToCred)
 import           BaseTypes (epochInfo, interval0, slotsPrior)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (AnyKeyHash, CoreKeyPair, DCert, DPState, DState, KeyPair,
@@ -46,7 +47,7 @@ import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, 
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
-                     _genDelegs, _pstate, _stPools, _stkCreds)
+                     _genDelegs, _pstate, _rewards, _stPools, _stkCreds)
 import           PParams (PParams (..), d, eMax)
 import           Slot (Duration (..), EpochNo (EpochNo), SlotNo (SlotNo), epochInfoFirst, (*-))
 import           Tx (getKeyCombination)
@@ -200,7 +201,11 @@ genDeRegKeyCert keys scripts dState =
   where
     registered k = k ∈ dom (_stkCreds dState)
     availableKeys = filter (registered . toCred . snd) keys
-    availableScripts = filter (registered . scriptToCred . snd) scripts
+    availableScripts =
+      filter (\(_, s) -> let cred = scriptToCred s in
+                      ((&&) <$> registered <*> zeroRewards) cred) scripts
+    zeroRewards k =
+      (Coin 0) == (Map.findWithDefault (Coin 1) (mkRwdAcnt k) (_rewards dState))
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's
