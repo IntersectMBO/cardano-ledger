@@ -11,7 +11,7 @@ module Cardano.Chain.Update.Validation.Endorsement
   , Endorsement (..)
   , CandidateProtocolUpdate (..)
   , register
-  , Error
+  , Error (..)
   )
 where
 

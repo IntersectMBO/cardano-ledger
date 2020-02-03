@@ -34,6 +34,7 @@ import qualified Test.Cardano.Chain.UTxO.ValidationMode
 import qualified Test.Cardano.Chain.Update.CBOR
 import qualified Test.Cardano.Chain.Update.Properties
 import qualified Test.Cardano.Chain.Elaboration.Delegation
+import qualified Test.Cardano.Chain.Byron.API
 
 main :: IO ()
 main =
@@ -65,4 +66,5 @@ main =
         , Test.Cardano.Chain.UTxO.ValidationMode.tests
         , Test.Cardano.Chain.Update.CBOR.tests
         , Test.Cardano.Chain.Update.Properties.tests
+        , Test.Cardano.Chain.Byron.API.tests
         ]

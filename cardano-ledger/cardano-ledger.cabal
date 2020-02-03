@@ -26,6 +26,7 @@ library
   hs-source-dirs:      src
   exposed-modules:
                        Cardano.Chain.Block
+                       Cardano.Chain.Byron.API
                        Cardano.Chain.Common
                        Cardano.Chain.Constants
                        Cardano.Chain.Delegation
@@ -44,7 +45,10 @@ library
                        Cardano.Chain.UTxO.Validation
                        Cardano.Chain.Update
                        Cardano.Chain.Update.Proposal
+                       Cardano.Chain.Update.Validation.Endorsement
                        Cardano.Chain.Update.Validation.Interface
+                       Cardano.Chain.Update.Validation.Registration
+                       Cardano.Chain.Update.Validation.Voting
                        Cardano.Chain.Update.Vote
                        Cardano.Chain.ValidationMode
 
@@ -115,10 +119,7 @@ library
                        Cardano.Chain.Update.SoftforkRule
                        Cardano.Chain.Update.SoftwareVersion
                        Cardano.Chain.Update.SystemTag
-                       Cardano.Chain.Update.Validation.Endorsement
                        Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
-                       Cardano.Chain.Update.Validation.Registration
-                       Cardano.Chain.Update.Validation.Voting
 
   build-depends:       base >=4.11 && <5
                      , base58-bytestring
@@ -131,6 +132,7 @@ library
                      , cardano-crypto
                      , cardano-crypto-wrapper
                      , cardano-prelude
+                     , cborg
                      , containers
                      , contra-tracer
                      , concurrency
@@ -177,6 +179,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.Model.Examples
                        Test.Cardano.Chain.Block.Validation
                        Test.Cardano.Chain.Block.ValidationMode
+                       Test.Cardano.Chain.Byron.API
 
                        Test.Cardano.Chain.Buildable
 
