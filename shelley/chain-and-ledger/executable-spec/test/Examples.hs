@@ -486,7 +486,7 @@ initStEx2A = initialShelleyState
 blockEx2A :: Block
 blockEx2A = mkBlock
              lastByronHeaderHash
-             (coreNodeKeys 6)
+             (coreNodeKeys 2)
              [txEx2A]
              (SlotNo 10)
              (BlockNo 10)
@@ -594,7 +594,7 @@ txEx2B = Tx
 blockEx2B :: Block
 blockEx2B = mkBlock
              blockEx2AHash    -- ^ Hash of previous block
-             (coreNodeKeys 3) -- ^ Third genesis node
+             (coreNodeKeys 5)
              [txEx2B]         -- ^ Single transaction to record
              (SlotNo 90)        -- ^ Current slot
              (BlockNo 2)
@@ -687,7 +687,7 @@ ex2B = CHAINExample (SlotNo 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
 blockEx2C :: Block
 blockEx2C = mkBlock
              blockEx2BHash    -- ^ Hash of previous block
-             (coreNodeKeys 6) -- ^ Sixth genesis node
+             (coreNodeKeys 2)
              []               -- ^ No transactions at all (empty block)
              (SlotNo 110)       -- ^ Current slot
              (BlockNo 2)      -- ^ Second block within the epoch
@@ -817,7 +817,7 @@ ex2Cquater =
 blockEx2D :: Block
 blockEx2D = mkBlock
              blockEx2CHash
-             (coreNodeKeys 3)
+             (coreNodeKeys 5)
              []
              (SlotNo 190)
              (BlockNo 2)
@@ -863,7 +863,7 @@ ex2D = CHAINExample (SlotNo 190) expectedStEx2C blockEx2D (Right expectedStEx2D)
 blockEx2E :: Block
 blockEx2E = mkBlock
              blockEx2DHash
-             (coreNodeKeys 3)
+             (coreNodeKeys 5)
              []
              (SlotNo 220)
              (BlockNo 2)
@@ -990,7 +990,7 @@ ex2F = CHAINExample (SlotNo 295) expectedStEx2E blockEx2F (Right expectedStEx2F)
 blockEx2G :: Block
 blockEx2G = mkBlock
              blockEx2FHash
-             (coreNodeKeys 6)
+             (coreNodeKeys 2)
              []
              (SlotNo 310)
              (BlockNo 2)
@@ -1054,7 +1054,7 @@ ex2G = CHAINExample (SlotNo 310) expectedStEx2F blockEx2G (Right expectedStEx2G)
 blockEx2H :: Block
 blockEx2H = mkBlock
              blockEx2GHash
-             (coreNodeKeys 3)
+             (coreNodeKeys 5)
              []
              (SlotNo 390)
              (BlockNo 2)
@@ -1109,7 +1109,7 @@ ex2H = CHAINExample (SlotNo 390) expectedStEx2G blockEx2H (Right expectedStEx2H)
 blockEx2I :: Block
 blockEx2I = mkBlock
               blockEx2HHash
-              (coreNodeKeys 6)
+              (coreNodeKeys 2)
               []
               (SlotNo 410)
               (BlockNo 2)
@@ -1206,7 +1206,7 @@ txEx2J = Tx
 blockEx2J :: Block
 blockEx2J = mkBlock
               blockEx2IHash
-              (coreNodeKeys 3)
+              (coreNodeKeys 5)
               [txEx2J]
               (SlotNo 420)
               (BlockNo 2)
@@ -1287,7 +1287,7 @@ txEx2K = Tx
 blockEx2K :: Block
 blockEx2K = mkBlock
               blockEx2JHash
-              (coreNodeKeys 3)
+              (coreNodeKeys 5)
               [txEx2K]
               (SlotNo 490)
               (BlockNo 2)
@@ -1351,7 +1351,7 @@ ex2K = CHAINExample (SlotNo 490) expectedStEx2J blockEx2K (Right expectedStEx2K)
 blockEx2L :: Block
 blockEx2L = mkBlock
               blockEx2KHash
-              (coreNodeKeys 6)
+              (coreNodeKeys 2)
               []
               (SlotNo 510)
               (BlockNo 2)
@@ -1459,7 +1459,7 @@ txEx3A = Tx
 blockEx3A :: Block
 blockEx3A = mkBlock
              lastByronHeaderHash
-             (coreNodeKeys 6)
+             (coreNodeKeys 2)
              [txEx3A]
              (SlotNo 10)
              (BlockNo 2)
@@ -1547,7 +1547,7 @@ txEx3B = Tx
 blockEx3B :: Block
 blockEx3B = mkBlock
              blockEx3AHash
-             (coreNodeKeys 3)
+             (coreNodeKeys 5)
              [txEx3B]
              (SlotNo 20)
              (BlockNo 2)
@@ -1610,7 +1610,7 @@ ex3B = CHAINExample (SlotNo 20) expectedStEx3A blockEx3B (Right expectedStEx3B)
 blockEx3C :: Block
 blockEx3C = mkBlock
              blockEx3BHash
-             (coreNodeKeys 6)
+             (coreNodeKeys 2)
              []
              (SlotNo 110)
              (BlockNo 2)
@@ -1713,7 +1713,7 @@ txEx4A = Tx
 blockEx4A :: Block
 blockEx4A = mkBlock
              lastByronHeaderHash
-             (coreNodeKeys 6)
+             (coreNodeKeys 2)
              [txEx4A]
              (SlotNo 10)
              (BlockNo 2)
@@ -1800,7 +1800,7 @@ txEx4B = Tx
 blockEx4B :: Block
 blockEx4B = mkBlock
              blockEx4AHash
-             (coreNodeKeys 3)
+             (coreNodeKeys 5)
              [txEx4B]
              (SlotNo 20)
              (BlockNo 2)
@@ -1862,7 +1862,7 @@ ex4B = CHAINExample (SlotNo 20) expectedStEx4A blockEx4B (Right expectedStEx4B)
 blockEx4C :: Block
 blockEx4C = mkBlock
              blockEx4BHash
-             (coreNodeKeys 0)
+             (coreNodeKeys 3)
              []
              (SlotNo 60)
              (BlockNo 2)
@@ -1949,7 +1949,7 @@ txEx5A = Tx
 blockEx5A :: Block
 blockEx5A = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 6)
+              (coreNodeKeys 2)
               [txEx5A]
               (SlotNo 10)
               (BlockNo 2)
@@ -2008,7 +2008,7 @@ ex5A = CHAINExample (SlotNo 10) initStEx2A blockEx5A (Right expectedStEx5A)
 blockEx5B :: Block
 blockEx5B = mkBlock
              blockEx5AHash
-             (coreNodeKeys 2)
+             (coreNodeKeys 1)
              []
              (SlotNo 50)
              (BlockNo 2)
@@ -2094,7 +2094,7 @@ txEx6A = Tx
 blockEx6A :: Block
 blockEx6A = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 6)
+              (coreNodeKeys 2)
               [txEx6A]
               (SlotNo 10)
               (BlockNo 1)
@@ -2162,7 +2162,7 @@ txEx6B = Tx
 blockEx6B :: Block
 blockEx6B = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 6)
+              (coreNodeKeys 2)
               [txEx6B]
               (SlotNo 10)
               (BlockNo 1)
@@ -2247,7 +2247,7 @@ txEx6F = Tx txbodyEx6F
 blockEx6F :: Block
 blockEx6F = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 6)
+              (coreNodeKeys 2)
               [txEx6F]
               (SlotNo 10)
               (BlockNo 1)
@@ -2277,7 +2277,7 @@ txEx6F' = Tx txbodyEx6F' (makeWitnessesVKey txbodyEx6F' [ alicePay ]) Map.empty
 blockEx6F' :: Block
 blockEx6F' = mkBlock
               (bhHash (bheader blockEx6F))
-              (coreNodeKeys 1)
+              (coreNodeKeys 0)
               [txEx6F']
               ((slotFromEpoch $ EpochNo 1)
                 +* Duration (startRewards testGlobals) + SlotNo 7)
@@ -2307,7 +2307,7 @@ txEx6F'' = Tx txbodyEx6F'' (makeWitnessesVKey txbodyEx6F'' [ alicePay ]) Map.emp
 blockEx6F'' :: Block
 blockEx6F'' = mkBlock
                (bhHash (bheader blockEx6F'))
-               (coreNodeKeys 6)
+               (coreNodeKeys 2)
                [txEx6F'']
                ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
                (BlockNo 1)

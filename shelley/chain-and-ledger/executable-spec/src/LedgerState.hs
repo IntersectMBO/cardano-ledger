@@ -1163,9 +1163,9 @@ overlaySchedule e gkeys pp = do
         toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
         toSlotNo x = firstSlotNo +* toRelativeSlotNo x
 
-        genesisSlots = [ toSlotNo x | x <-[0..(floor numActive)] ]
+        genesisSlots = [ toSlotNo x | x <-[0..(floor numActive - 1)] ]
 
-        numInactivePerActive = floor ((1 - asc) * fromRational numActive) - 1
+        numInactivePerActive = floor (1 / asc) - 1
         activitySchedule = cycle (True:replicate numInactivePerActive False)
         unassignedSched = zip activitySchedule genesisSlots
 

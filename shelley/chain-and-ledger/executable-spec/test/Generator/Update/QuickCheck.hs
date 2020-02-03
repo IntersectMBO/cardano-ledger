@@ -152,15 +152,18 @@ genRho = genIntervalInThousands 1 9
 genTau :: Gen UnitInterval
 genTau = genIntervalInThousands 100 300
 
--- | activeSlotCoeff: 0-1
+-- | activeSlotCoeff: 0.1-1
 genActiveSlotCoeff :: Gen UnitInterval
-genActiveSlotCoeff  = increasingProbabilityAt
-                        (genIntervalInThousands 0 1000)
-                        (unsafeMkUnitInterval   0,
-                         unsafeMkUnitInterval   1)
+genActiveSlotCoeff = unsafeMkUnitInterval <$> QC.elements [0.025, 0.05, 0.075, 0.1, 0.2, 0.5]
+-- ^^ This is a somewhat arbitrary group of values.
+-- In the real system, we will probably be using a value near 1/10,
+-- and we know that we would not ever choose values too small (say below 1/40)
+-- or greater than a 1/2.
 
 genDecentralisationParam :: Gen UnitInterval
-genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0,0.1 .. 1]
+genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
+-- ^^ TODO jc - generating d=0 takes some care, if there are no registered
+-- stake pools then d=0 deadlocks the system.
 
 -- | protocolVersion is a triple of numbers
 genProtocolVersion :: Gen (Natural, Natural, Natural)

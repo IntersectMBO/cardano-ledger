@@ -9,24 +9,55 @@ module Generator.Block
 import           Data.Foldable (toList)
 import qualified Data.List as List (find)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (lookup)
+import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
-import qualified Test.QuickCheck as QC (choose, discard)
+import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
-import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, KeyHash, KeyPair, LEDGERS)
+import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, GenKeyHash, KeyHash, KeyPair,
+                     LEDGERS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
+import           Delegation.Certificates (PoolDistr (..))
 import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural, mkBlock,
-                     zero)
+                     traceVRFKeyPairsByHash, zero)
 import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
-import           LedgerState (esAccountState, esLState, esPp, nesEs, nesOsched, _delegationState,
-                     _dstate, _genDelegs, _reserves)
+import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
+                     overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
 import           OCert (KESPeriod (..), kesPeriod)
-import           Slot (BlockNo (..), SlotNo (..))
+import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           STS.Chain (chainEpochNonce, chainHashHeader, chainNes, chainSlotNo)
 import           STS.Ledgers (LedgersEnv (..))
 import           Test.Utils (runShelleyBase)
+
+
+nextCoreNode
+  :: Map SlotNo (Maybe GenKeyHash)
+  -> Map SlotNo (Maybe GenKeyHash)
+  -> SlotNo
+  -> (SlotNo, GenKeyHash)
+nextCoreNode os nextOs s =
+  let getNextOSlot os' =
+        let osGen = Map.toAscList $ Map.mapMaybe id os'
+            nextSlots = filter ((> s) . fst) osGen
+        in if null nextSlots then Nothing else Just $ head nextSlots
+  in
+  case getNextOSlot os of
+    Nothing -> -- there are no more active overlay slots this epoch
+      case getNextOSlot nextOs of
+        Nothing -> error "TODO - handle d=0"
+        Just n -> n
+    Just n -> n
+
+getPraosSlot
+  :: SlotNo
+  -> SlotNo
+  -> Map SlotNo (Maybe GenKeyHash)
+  -> Map SlotNo (Maybe GenKeyHash)
+  -> Maybe SlotNo
+getPraosSlot start tooFar os nos =
+  let schedules = os `Map.union` nos
+  in List.find (not . (`Map.member` schedules)) [start .. tooFar-1]
 
 genBlock
   :: SlotNo
@@ -35,38 +66,69 @@ genBlock
   -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> Gen Block
 genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
-  nextSlot <- genNextSlot
-  case Map.lookup nextSlot osched of
-      Nothing -> QC.discard
-        -- TODO @uroboros make Praos block
-      Just Nothing -> QC.discard
-        -- TODO @uroboros don't make a block in a NonActive Slot
-      Just (Just gkey) -> do
-        if nextSlot > sNow
-          then QC.discard
-          else do
-          let KESPeriod _kesPeriod = runShelleyBase (kesPeriod $ nextSlot)
+  let os = (nesOsched . chainNes) chainSt
+      s = chainSlotNo chainSt
+      dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
+      pp = (esPp . nesEs . chainNes) chainSt
+      (EpochNo e) = (nesEL . chainNes) chainSt
+      (GenDelegs cores) = (_genDelegs . _dstate) dpstate
+      nextOs = runShelleyBase $ overlaySchedule
+        (EpochNo $ e + 1) (Map.keysSet cores) pp
+      (nextOSlot, gkey) = nextCoreNode os nextOs s
 
-          mkBlock
-            <$> pure (chainHashHeader chainSt)
-            <*> pure (issuerKeys gkey)
-            <*> toList <$> genTxs nextSlot
-            <*> pure nextSlot
-            <*> pure chainDifficulty
-            <*> pure (chainEpochNonce chainSt)
-            <*> genBlockNonce
-            <*> genPraosLeader
-            <*> pure _kesPeriod
+  {- Our slot selection strategy uses the overlay schedule.
+   - Above we calculated the next available core node slot
+   - Note that we will need to do something different
+   - when we start allowing d=0, and there is no such next core slot.
+   - If there are no current stake pools, as determined by the pd mapping
+   - (pools to relative stake), then we take the next core node slot.
+   - Note that the mapping of registered stake pools is different, ie
+   - the one in PState, since news pools will not yet be a part of
+   - a snapshot and are therefore not yet ready to make blocks.
+   - Otherwise, if there are active pools, we generate a small increase
+   - from the current slot, and then take the first slot from this point
+   - that is either available for Praos or is a core node slot.
+   -}
+
+  lookForPraosStart <- genSlotIncrease
+  let poolParams = (Map.toList . unPoolDistr . nesPd . chainNes) chainSt
+  poolParams' <- take 1 <$> QC.shuffle poolParams
+  let (nextSlot, keys) = case poolParams' of
+        []       -> (nextOSlot, gkeys gkey)
+        (pkh, (_, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
+                      Nothing -> (nextOSlot, gkeys gkey)
+                      Just ps -> let apks = AllPoolKeys
+                                       { cold = (keysByStakeHash Map.! pkh)
+                                       , vrf  = (traceVRFKeyPairsByHash Map.! vrfkey)
+                                       , hot  = (hot $ gkeys gkey)
+                                                -- ^^ TODO @jc - don't use the genesis hot key
+                                       , hk   = pkh
+                                       }
+                                 in (ps, apks)
+
+  if nextOSlot > sNow
+    then QC.discard
+    else do
+    let KESPeriod _kesPeriod = runShelleyBase (kesPeriod $ nextOSlot)
+
+    mkBlock
+      <$> pure (chainHashHeader chainSt)
+      <*> pure keys
+      <*> toList <$> genTxs nextSlot
+      <*> pure nextSlot
+      <*> pure chainDifficulty
+      <*> pure (chainEpochNonce chainSt)
+      <*> genBlockNonce
+      <*> genPraosLeader
+      <*> pure _kesPeriod
   where
     ledgerSt = (esLState . nesEs . chainNes) chainSt
-    osched = (nesOsched . chainNes) chainSt
     (GenDelegs genesisDelegs) = (_genDelegs . _dstate . _delegationState) ledgerSt
 
-    -- TODO @uroboros pick the first core node each time for now
     origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) coreNodeKeys of
                          Nothing -> error "couldn't find corresponding core node key"
                          Just k  -> snd k
-    issuerKeys gkey =
+    gkeys gkey =
         case Map.lookup gkey genesisDelegs of
           Nothing ->
             error "genBlock: NoGenesisStakingOVERLAY"
@@ -86,9 +148,8 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
     chainDifficulty = BlockNo 1 -- used only in consensus
 
     -- we assume small gaps in slot numbers
-    genNextSlot = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
+    genSlotIncrease = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
     lastSlotNo = unSlotNo (chainSlotNo chainSt)
-    --currentSlotNo = SlotNo (lastSlotNo + 1)
 
     genBlockNonce = NatNonce <$> genNatural 1 100
 
