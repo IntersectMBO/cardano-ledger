@@ -491,7 +491,7 @@ This transition has no preconditions and results in the following state change:
     pool's registered reward account, provided the reward account is still registered.
   \item The sum of all the refunds attached to unregistered reward accounts are added to the
     treasury.
-  \item The deposit pool is reduced by the amonut of claimed and unclaimed refunds.
+  \item The deposit pool is reduced by the amount of claimed and unclaimed refunds.
   \item Any delegation to a retiring pool is removed.
   \item Each retiring pool is removed from all four maps in the pool state.
 \end{itemize}
@@ -1246,7 +1246,6 @@ It consists of four pots:
   \item The change to the reserves. This will be a negative value.
   \item The map of new individual rewards (to be added to the existing rewards).
   \item The change to the fee pot. This will be a negative value.
-  \item The map from credentials to $\Coin$ values to pay out as instantaneous
     rewards.
 \end{itemize}
 
@@ -1263,7 +1262,6 @@ It consists of four pots:
         \Delta r & \Coin & \text{change to the reserves} \\
         \var{rs} & \AddrRWD\mapsto\Coin & \text{new individual rewards} \\
         \Delta f & \Coin & \text{change to the fee pot} \\
-        \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}
       \end{array}
     \right)
   \end{equation*}
@@ -1281,8 +1279,7 @@ reward update to an instance of $\EpochState$.
 The $\fun{createRUpd}$ function does the following:
 \begin{itemize}
   \item First we calculate the change to the reserves,
-    as determined by the $\rho$ protocol parameter and the amount that must be
-    paid for instantaneous rewards in the map $i_{rwd}$
+    as determined by the $\rho$ protocol parameter.
   \item Next we calculate $\var{rewardPot}$, the total amount of coin available for rewards this
     epoch, as described in section 6.4 of \cite{delegation_design}. It consists of four pots:
     \begin{itemize}
@@ -1301,9 +1298,6 @@ The $\fun{createRUpd}$ function does the following:
     performance.  The difference between the maximal amount and the actual amount received is
     added to the amount moved to the treasury.
   \item The fee pot will be reduced by $\var{feeSS}$.
-  \item The instantaneous rewards $\var{i_{rwd}}$ are stored. This is not neccessary,
-    but ensuring that they will not have changed when the reward update is applied
-    makes for better local properties.
 \end{itemize}
 
 Note that fees are not explicitly removed from any account:
@@ -1315,9 +1309,6 @@ The $\fun{applyRUpd}$ function does the following:
     \begin{itemize}
       \item Adjust the treasury, reserves and fee pots by the appropriate amounts.
       \item Add each individual reward to the global reward mapping.
-      \item Apply the instantaneous rewards and pay back to the reserves the
-        amount that cannot be distributed because the corresponding stake
-        credentials have been de-registered in the meantime.
     \end{itemize}
 
 These two functions will be used in the blockchain transition systems in Section~\ref{sec:chain}.
@@ -1334,7 +1325,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \begin{align*}
     & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
     & \createRUpd{b}{es} = \left(
-      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS},~\var{i_{rwd}}\right) \\
+      \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
     & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
@@ -1343,19 +1334,15 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\left(
       \wcard,~
       \left(
-      \left(\wcard,~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}}\right)~
+      \left(\wcard,~\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard\right)~
       \wcard
       \right)
       \right) = \var{ls} \\
-    & ~~~~~~~\var{rewards_{mir}} =
-      \sum\limits_{\wcard\mapsto\var{val}\in\var{i_{rwd}}}\var{val} \\
-    & ~~~~~~~\var{reserves'} = \var{reserves} - \var{rewards_{mir}}\\
-    & ~~~~~~~\Delta r_{l} = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
-      \var{reserves'}}
+    & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
+      \var{reserves}}
     \\
-    & ~~~~~~~\Delta r = \Delta r_{l} + rewards_{mir}\\
     & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~{pp}} \\
-    & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r_{l} \\
+    & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
     & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
     & ~~~~~~~\var{rs}
@@ -1380,7 +1367,6 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \Delta r \\
           \var{rs} \\
           \Delta f \\
-          \var{i_{rwd}'} \\
         \end{array}
     \right)
       \left(
@@ -1403,20 +1389,22 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{deposits} \\
           \var{fees} \\
           \var{up} \\
+          ~ \\
+          \var{pp} \\
         \end{array}
       \right)
       =
       \left(
         \begin{array}{c}
           \varUpdate{\var{treasury} + \Delta t}\\
-          \varUpdate{\var{reserves} + \Delta r + nonDistributed}\\
+          \varUpdate{\var{reserves} + \Delta r}\\
           ~ \\
           \var{\var{stkCreds}} \\
-          \varUpdate{(\var{rewards}\unionoverridePlus\var{rs})\unionoverridePlus\var{update_{rwd}}} \\
+          \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
           \var{delegations} \\
           \var{ptrs} \\
           \var{genDelegs} \\
-          \varUpdate{\emptyset}
+          \var{i_{rwd}}
           \\~ \\
           \var{stpools} \\
           \var{poolParams} \\
@@ -1426,18 +1414,10 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{deposits} \\
           \varUpdate{\var{fees}+\Delta f} \\
           \var{up} \\
+          ~ \\
+          \var{pp} \\
         \end{array}
-    \right)\\
-      & ~~~\where \\
-      & ~~~~~~~\var{rew_{mir}'} =  \dom{\var{stkCreds}}\restrictdom\var{i_{rwd}'} \\
-      & ~~~~~~~\var{unregistered} = \dom{\var{stkCreds}}\subtractdom\var{i_{rwd}'}
-    \\
-      & ~~~~~~~\var{nonDistributed} = \sum\limits_{\wcard\mapsto \var{val} \in
-                                      unregistered} \var{val}  \\
-      & ~~~~~~~\var{update_{rwd}} =
-        \left\{
-        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}\vert\var{hk}\mapsto\var{val}\in\var{rew_{mir}'}
-        \right\}
+    \right)
   \end{align*}
 
   \caption{Reward Update Application}

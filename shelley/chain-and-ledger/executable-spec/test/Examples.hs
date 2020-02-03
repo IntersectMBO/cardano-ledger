@@ -91,9 +91,9 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
                      pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
                      esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
-                     overlaySchedule, rs, updateIRwd, _delegationState, _delegations, _dstate,
-                     _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring,
-                     _rewards, _stPools, _stkCreds, _treasury)
+                     overlaySchedule, rs, _delegationState, _delegations, _dstate, _fGenDelegs,
+                     _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools,
+                     _stkCreds, _treasury)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..), (+*))
 import           STS.Bbody (pattern LedgersFailure)
@@ -644,11 +644,9 @@ expectedStEx2Bgeneric pp = ChainState
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp)
                             -- ^ Previous epoch state
      (Just RewardUpdate { deltaT        = Coin 0
-                        , deltaR        = Coin (-209)
+                        , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin 0
-                        , updateIRwd    = Map.fromList [ (carlSHK, Coin 110)
-                                                       , (dariaSHK, Coin 99)]
                         })  -- ^ Update reward
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -840,7 +838,6 @@ expectedStEx2D = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin (-21)
-                        , updateIRwd    = Map.empty
                         })
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
@@ -967,7 +964,6 @@ expectedStEx2F = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin (-14)
-                        , updateIRwd    = Map.empty
                         })
      pdEx2F
      epoch1OSchedEx2E)
@@ -1087,7 +1083,6 @@ expectedStEx2H = ChainState
                         , deltaR        = Coin (-1049999999999)
                         , rs            = rewardsEx2H
                         , deltaF        = Coin (-10)
-                        , updateIRwd    = Map.empty
                         })
      pdEx2F
      epoch1OSchedEx2G)
@@ -1329,7 +1324,6 @@ expectedStEx2K = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin (-9)
-                        , updateIRwd    = Map.empty
                         })
      pdEx2F
      epoch1OSchedEx2I)
@@ -1904,7 +1898,6 @@ expectedStEx4C = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin 0
-                        , updateIRwd    = Map.empty
                         })
       (PoolDistr Map.empty)
       overlayEx2A)
@@ -2047,7 +2040,6 @@ expectedStEx5B = ChainState
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin 0
-                        , updateIRwd    = Map.empty
                         })
      (PoolDistr Map.empty)
      overlayEx2A)

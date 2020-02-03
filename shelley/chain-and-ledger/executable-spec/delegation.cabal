@@ -45,6 +45,7 @@ library
                      STS.Epoch
                      STS.Ledger
                      STS.Ledgers
+                     STS.Mir
                      STS.NewEpoch
                      STS.Newpp
                      STS.Ocert

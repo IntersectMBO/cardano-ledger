@@ -36,8 +36,7 @@ import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
                      pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
                      vKey)
 import           LedgerState (AccountState (..), EpochState (..), NewEpochState (..),
-                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs,
-                     updateIRwd)
+                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs)
 import           Numeric.Natural (Natural)
 import           PParams (emptyPParams)
 import           Serialization (FromCBORGroup (..), ToCBORGroup (..))
@@ -937,7 +936,6 @@ serializationTests = testGroup "Serialization Tests"
              , deltaR        = Coin (-200)
              , rs            = Map.empty
              , deltaF        = Coin (-10)
-             , updateIRwd    = Map.empty
              }) :: Maybe RewardUpdate
       pd = (PoolDistr Map.empty) :: PoolDistr
       os = Map.singleton (SlotNo 1) (Just testGKeyHash)

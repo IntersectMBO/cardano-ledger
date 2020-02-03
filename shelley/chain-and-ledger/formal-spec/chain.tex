@@ -226,6 +226,114 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
 
 \clearpage
 
+\subsection{MIR Transition}
+\label{sec:mir-trans}
+
+The transition which moves the instantaneous rewards is $\mathsf{MIR}$.
+Figure~\ref{fig:ts-types:mir} defines the types for the transition.
+It has no environment or signal, and the state is $\EpochState$.
+
+\begin{figure}
+  \emph{MIR Transitions}
+  \begin{equation*}
+    \vdash \var{\_} \trans{mir}{} \var{\_} \subseteq
+    \powerset (\EpochState \times \EpochState)
+  \end{equation*}
+  \caption{MIR transition-system types}
+  \label{fig:ts-types:mir}
+\end{figure}
+
+Figure~\ref{fig:rules:mir} defines the MIR state transition.
+The transition first restricts the instantaneous rewards to those which
+correspond to registered stake keys.
+If the reserve pot is large enough to cover the sum of these rewards,
+the corresponding reward accounts are increased by the appropriate amount
+and the reserve pot is proportionally decreased.
+In either case, if the reserve pot was large enough or not,
+we reset the instantaneous rewards back to the empty mapping.
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:mir}
+    \inference[MIR]
+    {
+      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
+        \leteq \var{ds}
+      \\
+      (\var{treasury},~\var{reserves})\leteq\var{acnt}
+      &
+      \var{i_{rwd}'}\leteq (\dom{stkCreds})\restrictdom\var{i_{rwd}}
+      &
+      \var{tot}\leteq\sum\limits_{\wcard\mapsto v\in\var{i_{rwd}'}}v
+      \\
+      \var{tot}\leq\var{reserves}
+      \\~\\
+      \var{acnt'}\leteq(\var{treasury},~\varUpdate{\var{reserves}-\var{tot}})
+      \\
+      \var{ds'} \leteq
+      (\var{stkCreds},~
+      \varUpdate{\var{rewards}\unionoverridePlus\var{i_{rwd}'}},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\varUpdate{\emptyset})
+    }
+    {
+      \vdash
+      {\left(\begin{array}{c}
+            \var{acnt} \\
+            \var{ss} \\
+            (\var{ds},~\var{ps}) \\
+            \var{pp} \\
+      \end{array}\right)}
+      \trans{mir}{}
+      {\left(\begin{array}{c}
+            \varUpdate{\var{acnt'}} \\
+            \var{ss} \\
+            (\varUpdate{\var{ds'}},~\var{ps}) \\
+            \var{pp} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+
+  \nextdef
+
+  \begin{equation}\label{eq:mir-skip}
+    \inference[MIR-Skip]
+    {
+      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
+        \leteq \var{ds}
+      \\
+      (\wcard,~\var{reserves})\leteq\var{acnt}
+      &
+      \var{i_{rwd}'}\leteq (\dom{stkCreds})\restrictdom\var{i_{rwd}}
+      &
+      \var{tot}\leteq\sum\limits_{\wcard\mapsto v\in\var{i_{rwd}'}}v
+      \\
+      \var{tot}>\var{reserves}
+      \\~\\
+      \var{ds'} \leteq (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\varUpdate{\emptyset})
+    }
+    {
+      \vdash
+      {\left(\begin{array}{c}
+            \var{acnt} \\
+            \var{ss} \\
+            (\var{ds},~\var{ps}) \\
+            \var{pp} \\
+      \end{array}\right)}
+      \trans{mir}{}
+      {\left(\begin{array}{c}
+            \var{acnt} \\
+            \var{ss} \\
+            (\varUpdate{\var{ds'}},~\var{ps}) \\
+            \var{pp} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{MIR rules}
+  \label{fig:rules:mir}
+\end{figure}
+
 \subsection{New Epoch Transition}
 \label{sec:new-epoch-trans}
 
@@ -311,12 +419,12 @@ of which are active.
 \end{figure}
 
 Figure~\ref{fig:rules:new-epoch} defines the new epoch state transition. It has three rules.
-The first rule describes the change in the case of $e$ being equal to the next epoch
-$e_\ell+ 1$. It also calls the $\mathsf{EPOCH}$ rule and checks that the
-instantaneous rewards stored in the reward update is the same as the instantaneous rewards 
-stored in the current epoch state.
-This should always hold and is present only for extra assurance and for help in proving
-that Ada is preserved by reward updates.
+The first rule describes the change in the case of $e$ being equal to the next epoch $e_\ell+ 1$.
+It also calls the $\mathsf{MIR}$ and $\mathsf{EPOCH}$ rules and checks that the reward update
+is net neutral with respect to the Ada in the system.
+This should always hold (by the definition of the $\fun{createRUpd}$ function)
+and is present only for extra assurance and for help in proving
+that Ada is preserved by this transition.
 The second rule deals with the case when the epoch signal $e$ is not one greater than the
 current epoch \var{e_\ell}. This rule does not change the state.
 The third one deals with the case when the reward update is equal to $\Nothing$.
@@ -331,8 +439,8 @@ In the first case, the new epoch state is updated as follows:
 \item The mapping for the blocks produced by each stake pool for the current epoch
   is set to the empty map.
 \item The epoch state is updated with: first applying the rewards update \var{ru},
-  then calling the $\mathsf{EPOCH}$ transition, updating the update state, and finally
-  resetting the extra entropy mapping.
+  then calling the $\mathsf{MIR}$ transition, and finally by calling the
+  $\mathsf{EPOCH}$ transition.
 \item The rewards update is set to \Nothing.
 \item The new pool distribution \var{pd}' is calculated from the delegation map and
   stake allocation of the previous epoch.
@@ -346,21 +454,27 @@ In the first case, the new epoch state is updated as follows:
       e = e_\ell + 1
       &
       \var{ru} \neq \Nothing
-      \\
-      (\wcard,~\wcard,~\wcard,~\wcard,~\var{irwd'})\leteq\var{ru}
       &
-      \var{irwd'} = \getIR{es}
+      (\Delta t,~\Delta r,~\var{rs},~\Delta f)\leteq\var{ru}
+      \\
+      \Delta t+~\Delta r+\left(\sum\limits_{\wcard\mapsto v\in\var{rs}}\right)v+\Delta f=0
       \\
       \var{es'}\leteq\fun{applyRUpd}~\var{ru}~\var{es}
       &
       {
         \vdash
         \var{es'}
-          \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es''}
+          \trans{\hyperref[fig:rules:mir]{mir}}{}\var{es''}
+      }
+      &
+      {
+        \vdash
+        \var{es''}
+          \trans{\hyperref[fig:rules:epoch]{epoch}}{\var{e}}\var{es'''}
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-          (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es''} \\
+          (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es'''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\var{pools},~\wcard) & \var{ss} \\
          (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
          total & \sum_{\_ \mapsto c\in\var{stake}} c \\
@@ -402,7 +516,7 @@ In the first case, the new epoch state is updated as follows:
             \varUpdate{\var{e}} \\
             \varUpdate{\var{b_{cur}}} \\
             \varUpdate{\emptyset} \\
-            \varUpdate{\var{es''}} \\
+            \varUpdate{\var{es'''}} \\
             \varUpdate{\Nothing} \\
             \varUpdate{\var{pd}'} \\
             \varUpdate{\var{osched}'} \\
