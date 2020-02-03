@@ -19,7 +19,7 @@ import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, GenKeyHash
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import           Delegation.Certificates (PoolDistr (..))
 import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural, mkBlock,
-                     traceVRFKeyPairsByHash, zero)
+                     mkOCert, traceVRFKeyPairsByHash, zero)
 import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
@@ -109,7 +109,8 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
   if nextOSlot > sNow
     then QC.discard
     else do
-    let KESPeriod _kesPeriod = runShelleyBase (kesPeriod $ nextOSlot)
+    let KESPeriod kesPeriod_ = runShelleyBase (kesPeriod $ nextOSlot)
+        oCert = mkOCert keys 0 kesPeriod_
 
     mkBlock
       <$> pure (chainHashHeader chainSt)
@@ -120,7 +121,8 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
       <*> pure (chainEpochNonce chainSt)
       <*> genBlockNonce
       <*> genPraosLeader
-      <*> pure _kesPeriod
+      <*> pure kesPeriod_
+      <*> pure oCert
   where
     ledgerSt = (esLState . nesEs . chainNes) chainSt
     (GenDelegs genesisDelegs) = (_genDelegs . _dstate . _delegationState) ledgerSt

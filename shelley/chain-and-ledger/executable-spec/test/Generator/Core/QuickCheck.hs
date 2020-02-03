@@ -41,7 +41,8 @@ module Generator.Core.QuickCheck
   , toCred
   , zero
   , unitIntervalToNatural
-  , mkBlock)
+  , mkBlock
+  , mkOCert)
   where
 
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
@@ -66,9 +67,9 @@ import           BlockChain (pattern BHBody, pattern BHeader, pattern Block, Pro
                      TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair, Credential, GenKeyHash,
-                     HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, SKeyES,
-                     SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VRFKeyHash, VerKeyVRF,
-                     hashKeyVRF)
+                     HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, OCert,
+                     SKeyES, SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VRFKeyHash,
+                     VerKeyVRF, hashKeyVRF)
 import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, minGenesisOutputVal,
                      numBaseScripts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign, signKES,
@@ -368,11 +369,12 @@ mkBlock
   -> NatNonce     -- ^ Block nonce
   -> UnitInterval -- ^ Praos leader value
   -> Natural      -- ^ Period of KES (key evolving signature scheme)
+  -> OCert        -- ^ Operational certificate
   -> Block
-mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
+mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod oCert =
   let
-    (sHot, vhot) = hot pkeys
-    KeyPair vKeyCold sKeyCold = cold pkeys
+    (sHot, _) = hot pkeys
+    KeyPair vKeyCold _ = cold pkeys
     nonceNonce = mkSeed seedEta s enonce prev
     leaderNonce = mkSeed seedL s enonce prev
     bhb = BHBody
@@ -385,7 +387,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
             (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
             (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
             (bbHash $ TxSeq $ fromList txns)
-            (mkOCert vhot vKeyCold sKeyCold)
+            oCert
             (ProtVer 0 0 0)
     hotKey = case evolveKESUntil sHot (KESPeriod kesPeriod) of
                Nothing ->
@@ -397,14 +399,6 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
     bh = BHeader bhb sig
   in
     Block bh (TxSeq $ fromList txns)
-  where
-    mkOCert vKeyHot vKeyCold sKeyCold =
-      OCert
-        vKeyHot
-        vKeyCold
-        0
-        (KESPeriod 0)
-        (sign sKeyCold (vKeyHot, 0, KESPeriod 0))
 
 -- | We provide our own nonces to 'mkBlock', which we then wish to recover as
 -- the output of the VRF functions. In general, however, we just derive them
@@ -412,3 +406,14 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod =
 -- find a preimage. In testing, therefore, we just wrap the raw natural, which
 -- we then encode into the fake VRF implementation.
 newtype NatNonce = NatNonce Natural
+
+mkOCert :: AllPoolKeys -> Natural -> Natural -> OCert
+mkOCert pkeys c0 kp =
+  let (_, vKeyHot) = hot pkeys
+      KeyPair vKeyCold sKeyCold = cold pkeys in
+  OCert
+   vKeyHot
+   vKeyCold
+   c0
+   (KESPeriod kp)
+   (sign sKeyCold (vKeyHot, c0, KESPeriod kp))
