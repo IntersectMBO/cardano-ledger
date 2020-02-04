@@ -171,15 +171,15 @@ data Script crypto = MultiSigScript (MultiSig crypto)
 deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
 deriving instance Crypto crypto => FromCBOR (ScriptHash crypto)
 
-newtype ScriptHashPLC crypto =
-  ScriptHashPLC (Hash (HASH crypto) (ScriptPLC crypto))
+newtype ScriptHashPlutus crypto =
+  ScriptHashPlutus (Hash (HASH crypto) (ScriptPLC crypto))
   deriving (Show, Eq, Ord, NoUnexpectedThunks, Generic)
 
--- deriving instance Crypto crypto => ToCBOR (ScriptHashPLC crypto)
+-- deriving instance Crypto crypto => ToCBOR (ScriptHashPlutus crypto)
 
 data ScriptHash crypto =
   ScriptHashMSig (Hash (HASH crypto) (MultiSig crypto))
-  | ScriptHashPLC (Hash (HASH crypto) (ScriptPLC crypto))
+  | ScriptHashPlutus (Hash (HASH crypto) (ScriptPLC crypto))
   deriving (Show, Eq, Ord, Generic)
 
 instance NoUnexpectedThunks (ScriptHash crypto)
@@ -212,18 +212,15 @@ instance NoUnexpectedThunks (TxIn crypto)
 
 -- | the current item being passed to the Plutus interpreter
 data CurItem crypto =
-  CINothing | CITxInScr (TxIn crypto) | CIWdrl (Wdrl crypto) | CIDeRegKey (DCert crypto)
+  CIForgedHash (ScriptHash crypto) | CITxInScr (TxIn crypto) | CIWdrl (Wdrl crypto) | CIDeRegKey (DCert crypto)
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (CurItem crypto)
 
 -- |The input of a Tx.
 data TxInTx crypto
-  =  TxInVK   { _txin   :: TxIn crypto
+  =  TxIn     { _txin   ::  TxIn crypto
               , _isfee  ::  IsFee
-              }
-    | TxInScr { _txin   :: TxIn crypto
-              , _rdmrhash :: DataHash crypto
               }
   deriving (Show, Eq, Generic, Ord)
 
@@ -307,10 +304,10 @@ data TxBody crypto
       , _outputs  :: Seq (TxOut crypto)
       , _certs    :: Seq (DCert crypto)
       , _wdrls    :: Wdrl crypto
-      , _txfee    :: Value crypto
+      , _txfee    :: Coin
       , _ttl      :: SlotNo
-      , _txUpdate :: Update crypto
       , _txlst    :: SlotNo
+      , _txUpdate :: Update crypto
       , _forged   :: Value crypto
       , _txexunits:: ExUnits
       , _hashPP   :: Maybe (Hash (HASH crypto) PlutusPP)
@@ -655,7 +652,7 @@ instance (Crypto crypto) =>
 
 instance Crypto crypto => FromCBOR (Tx crypto) where
   fromCBOR = decodeListLenOf 3 >>
-    Tx <$> fromCBOR <*> fromCBOR 
+    Tx <$> fromCBOR <*> fromCBOR
 
 instance
   (Crypto crypto)
