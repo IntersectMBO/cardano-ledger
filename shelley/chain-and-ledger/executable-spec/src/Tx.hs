@@ -112,7 +112,7 @@ hashNativeMultiSigScript msig =
 hashPLCScript :: Crypto crypto
   => ScriptPLC crypto
   -> ScriptHash crypto
-hashPLCScript (ScriptPlutus pv plc) =
+hashPLCScript (ScriptPLC pv plc) =
   ScriptHashPlutus (hashWithSerialiser (\x -> encodeWord8 plutusTag
                                           <> toCBOR x) plc)
 
@@ -125,13 +125,13 @@ adaToken :: ByteString
 adaToken =  pack "Ada"
 
 -- | returns a Value representing the given amount of Ada
-makeAdaValue :: Crypto crypto => Coin -> Value crypto
-makeAdaValue (Coin c) = Value (singleton adaID (singleton adaToken (Quantity c)))
+toValue :: Crypto crypto => Coin -> Value crypto
+toValue (Coin c) = Value (singleton adaID (singleton adaToken (Quantity c)))
 
 
 -- | 0 Ada
-makeAdaValue :: Crypto crypto => Value crypto
-makeAdaValue = Value (singleton (hashPLCScript (ScriptPLC (0,0,0) 1)) (singleton adaToken (Quantity 0)))
+zeroValue :: Crypto crypto => Value crypto
+zeroValue = Value (singleton (hashPLCScript (ScriptPLC (0,0,0) 1)) (singleton adaToken (Quantity 0)))
 
 -- | Get one possible combination of keys for multi signature script
 getKeyCombination :: MultiSig crypto -> [AnyKeyHash crypto]

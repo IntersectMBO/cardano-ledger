@@ -654,7 +654,7 @@ txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _)
 -- | TODO make this correct calculation
 minfee :: PParams -> TxBody crypto -> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
-  + scriptFee (pc ^. prices) (txexunits tx)
+  + scriptFee (pc ^. prices) (tx ^. txexunits)
 
 
 -- |Determine if the fee is large enough
@@ -676,8 +676,8 @@ produced
   -> TxBody crypto
   -> Value crypto
 produced slot pp stakePools tx =
-    balance (txouts slot tx) + tx ^. txfee + totalDeposits pp stakePools (toList $ tx ^. certs)
-    + scriptFee (pp ^. plutusPP ^. prices) (tx ^. txexunits)
+    balance (txouts slot tx) + toValue (tx ^. txfee + totalDeposits pp stakePools (toList $ tx ^. certs)
+    + scriptFee (pp ^. plutusPP ^. prices) (tx ^. txexunits))
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
@@ -748,9 +748,9 @@ consumed
   -> UTxO crypto
   -> StakeCreds crypto
   -> TxBody crypto
-  -> Value crypto
+  -> Coin
 consumed pp u stakeKeys tx =
-    balance (txins tx ◁ u) + refunds + withdrawals + tx ^. forged
+    balance (txins tx ◁ u) + toValue (refunds + withdrawals + tx ^. forged)
   where
     refunds = keyRefunds pp stakeKeys tx
     withdrawals = sum $ tx ^. wdrls

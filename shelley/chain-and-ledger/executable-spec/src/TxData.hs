@@ -302,6 +302,7 @@ data TxBody crypto
       , _txUpdate :: Update crypto
       , _forged   :: Value crypto
       , _txexunits:: ExUnits
+      , _rdmrs    :: Map (CurItem crypto) (DataHash crypto)
       , _hashPP   :: Maybe (Hash (HASH crypto) (PlutusPP crypto))
       } deriving (Show, Eq, Generic)
 
