@@ -62,7 +62,7 @@ data MultiSig crypto =
 instance NoUnexpectedThunks (MultiSig crypto)
 
 data Script crypto =
-  MSig (MultiSig crypto) | SPLC (ScriptPLC crypto) PlutusVer
+  MSig (MultiSig crypto) | SPLC (ScriptPLC crypto)
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (Script crypto)
@@ -111,9 +111,11 @@ deriving instance Crypto crypto => FromCBOR (DataHash crypto)
 type PlutusVer = (Natural, Natural, Natural)
 
 -- STAND-IN things!!
--- temp plc script! Use these from Plutus
-newtype ScriptPLC crypto = ScriptPLC Integer
-  deriving (Show, Eq, Generic, NoUnexpectedThunks, Ord, ToCBOR, FromCBOR)
+-- temp plc script! TODO should be Plutus script type instead of integer
+data ScriptPLC crypto = ScriptPLC PlutusVer Integer
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (ScriptPLC crypto)
 
 -- | Use these from Plutus
 newtype Data crypto = Data Integer
@@ -140,6 +142,22 @@ instance Num (Value crypto) where
    (Value v1) - (Value v2) = Value ((unionWith (unionWith (-))) v1 v2)
 
 -- | CBOR temp
+instance
+  (Crypto crypto)
+  => ToCBOR (ScriptPLC crypto)
+ where
+  toCBOR (ScriptPLC pv scr) =
+      encodeListLen 2
+       <> toCBOR pv
+       <> toCBOR scr
+
+instance (Crypto crypto) =>
+  FromCBOR (ScriptPLC crypto) where
+  fromCBOR = do
+    enforceSize "ScriptPLC" 2
+    a <- fromCBOR
+    b <- fromCBOR
+    pure $ ScriptPLC a b
 
 instance
   (Crypto crypto)
@@ -197,11 +215,10 @@ instance
        <> toCBOR (0 :: Word8)
        <> toCBOR ms
 
-    SPLC plc ver ->
-      encodeListLen 3
+    SPLC plc ->
+      encodeListLen 2
        <> toCBOR (1 :: Word8)
        <> toCBOR plc
-       <> toCBOR ver
 
 instance
   Crypto crypto
@@ -215,10 +232,9 @@ instance
         a <- fromCBOR
         pure $ MSig a
       0 -> do
-        matchSize "SPLC" 2 n
+        matchSize "SPLC" 1 n
         a <- fromCBOR
-        b <- fromCBOR
-        pure $ SPLC a b
+        pure $ SPLC a
       k -> invalidKey k
 
 

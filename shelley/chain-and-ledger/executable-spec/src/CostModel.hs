@@ -7,7 +7,7 @@
 
 module CostModel
     (
-    , ExUnits(..)
+      ExUnits(..)
     , CostMod(..)
     , Prices(..)
     , defaultUnits
@@ -51,15 +51,15 @@ instance NoUnexpectedThunks ExUnits
 -- for Plutus script execution
 data CostMod = CostMod
   { -- | The types of computational resources relevant to the cost model
-    , memPrim                :: ExUnits
-    , stepPrim               :: ExUnits
+      smt                   :: ExUnits
+    , smtElse               :: ExUnits
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks CostMod
 
 -- | Default values
 -- | Default execution units
-defaultUnits :: ExUnitsAllTypes
+defaultUnits :: ExUnits
 defaultUnits = ExUnits 0 0
 
 -- | Default cost model
@@ -91,102 +91,28 @@ scriptFee (Prices (Coin i) (Coin m) (Coin s)) (ExUnits mu su) =
 
 -- | CBOR temp
 
-instance ToCBOR ExUnits
- where
-   toCBOR = \case
-     PLCUnits exu ->
-       encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR exu
-
-     MSigUnits exu ->
-       encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR exu
-
 instance FromCBOR ExUnits
  where
    fromCBOR = do
-     n <- decodeListLen
-     decodeWord >>= \case
-       0 -> do
-         matchSize "PLCUnits" 1 n
-         a <- fromCBOR
-         pure $ PLCUnits a
-       1 -> do
-         matchSize "MSigUnits" 1 n
-         a <- fromCBOR
-         pure $ MSigUnits a
-       k -> invalidKey k
-
-
-instance FromCBOR ExUnitsMSig
- where
-   fromCBOR = do
-     enforceSize "ExUnitsMSig" 2
+     enforceSize "ExUnits" 2
      a <- fromCBOR
      b <- fromCBOR
-     pure $ ExUnitsMSig a b
+     pure $ ExUnits a b
 
-instance FromCBOR ExUnitsPLC
- where
-   fromCBOR = do
-     enforceSize "ExUnitsPLC" 2
-     a <- fromCBOR
-     b <- fromCBOR
-     pure $ ExUnitsPLC a b
 
-instance ToCBOR ExUnitsMSig
- where
-   toCBOR exu =
-     encodeListLen 2
-       <> toCBOR (numSigs exu)
-       <> toCBOR (maybeSomething exu)
-
-instance ToCBOR ExUnitsPLC
+instance ToCBOR ExUnits
  where
    toCBOR exu =
      encodeListLen 2
        <> toCBOR (reductionSteps exu)
        <> toCBOR (memoryUnits exu)
 
-instance FromCBOR CostModMSig
- where
-   fromCBOR = do
-     enforceSize "CostModMSig" 2
-     a <- fromCBOR
-     b <- fromCBOR
-     pure $ CostModMSig a b
-
-instance FromCBOR CostModPLC
- where
-   fromCBOR = do
-     enforceSize "CostModPLC" 2
-     a <- fromCBOR
-     b <- fromCBOR
-     pure $ CostModPLC a b
-
-
-instance ToCBOR CostModMSig
- where
-   toCBOR cm =
-     encodeListLen 2
-       <> toCBOR (sigPrim cm)
-       <> toCBOR (smtPrim cm)
-
-instance ToCBOR CostModPLC
- where
-   toCBOR cm =
-     encodeListLen 2
-       <> toCBOR (stepPrim cm)
-       <> toCBOR (memPrim cm)
-
 instance ToCBOR CostMod
  where
    toCBOR cm =
      encodeListLen 2
-       <> toCBOR (costModPLC cm)
-       <> toCBOR (costModMSig cm)
+       <> toCBOR (smt cm)
+       <> toCBOR (smtElse cm)
 
 instance FromCBOR CostMod
  where
@@ -196,74 +122,23 @@ instance FromCBOR CostMod
      b <- fromCBOR
      pure $ CostMod a b
 
+
 instance
-  (Crypto crypto)
-  => ToCBOR (Prices crypto)
+ ToCBOR Prices
  where
    toCBOR pr =
      encodeListLen 2
-       <> toCBOR (pricesPLC pr)
-       <> toCBOR (pricesMSig pr)
+       <> toCBOR (initPrim pr)
+       <> toCBOR (memPrim pr)
+       <> toCBOR (stepPrim pr)
+
 
 instance
-  (Crypto crypto)
-  => ToCBOR (PricesMSig crypto)
- where
-   toCBOR pr =
-     encodeListLen 2
-       <> toCBOR (sigPrice pr)
-       <> toCBOR (smtPrice pr)
-
-instance
-  (Crypto crypto)
-  => ToCBOR (PricesPLC crypto)
- where
-   toCBOR pr =
-     encodeListLen 2
-       <> toCBOR (stepPrice pr)
-       <> toCBOR (memPrice pr)
-
-instance
-  (Crypto crypto)
-  => FromCBOR (PricesMSig crypto)
+ FromCBOR Prices
  where
    fromCBOR = do
-     enforceSize "PricesMSig" 2
+     enforceSize "Prices" 3
      a <- fromCBOR
      b <- fromCBOR
-     pure $ PricesMSig a b
-
-instance
-  (Crypto crypto)
-  => FromCBOR (PricesPLC crypto)
- where
-   fromCBOR = do
-     enforceSize "PricesPLC" 2
-     a <- fromCBOR
-     b <- fromCBOR
-     pure $ PricesPLC a b
-
-instance
-  (Crypto crypto)
-  => FromCBOR (Prices crypto)
- where
-   fromCBOR = do
-     enforceSize "Prices" 2
-     a <- fromCBOR
-     b <- fromCBOR
-     pure $ Prices a b
-
-instance ToCBOR ExUnitsAllTypes
- where
-   toCBOR ex =
-     encodeListLen 2
-       <> toCBOR (exUnitsPLC ex)
-       <> toCBOR (exUnitsMSig ex)
-
-instance FromCBOR ExUnitsAllTypes
- where
-   fromCBOR = do
-     enforceSize "ExUnitsAllTypes" 2
-     a <- fromCBOR
-     b <- fromCBOR
-     pure $ ExUnitsAllTypes a b
+     c <- fromCBOR
+     pure $ Prices a b c
