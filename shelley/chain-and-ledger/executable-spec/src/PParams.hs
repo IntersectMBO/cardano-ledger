@@ -112,6 +112,13 @@ data PParams = PParams
 
 instance NoUnexpectedThunks PParams
 
+inVersions :: [PlutusVer] -> PlutusVer -> CostMod -> Bool
+inVersions lk k a = elem k lk
+
+-- | hash Plutus-relevant parameters
+hashPlutusPP :: PParams -> [PlutusVer] -> HashPP
+hashPlutusPP pp pvl = hash $ elements $ filterWithKey (inVersions pvl) pc ^. costm
+
 -- CBOR
 -- TODO plutus stuff
 

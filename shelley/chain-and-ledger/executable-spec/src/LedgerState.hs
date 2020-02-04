@@ -654,7 +654,7 @@ txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _)
 -- | TODO make this correct calculation
 minfee :: PParams -> TxBody crypto -> Coin
 minfee pc tx = Coin $ pc ^. minfeeA * txsize tx + fromIntegral (pc ^. minfeeB)
-  + scriptFee (pc ^. plutusPP ^. prices) (txexunits tx)
+  + scriptFee (pc ^. prices) (txexunits tx)
 
 
 -- |Determine if the fee is large enough
