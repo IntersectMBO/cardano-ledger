@@ -29,6 +29,7 @@ import           Hedgehog (Gen)
 import           LedgerState
 import           Slot
 import           STS.Epoch
+import           STS.Mir
 import           TxData
 
 data NEWEPOCH crypto
@@ -48,6 +49,8 @@ instance
 
   data PredicateFailure (NEWEPOCH crypto)
     = EpochFailure (PredicateFailure (EPOCH crypto))
+    | CorruptRewardUpdate (RewardUpdate crypto)
+    | MirFailure (PredicateFailure (MIR crypto))
     deriving (Show, Generic, Eq)
 
   initialRules =
@@ -83,10 +86,13 @@ newEpochTransition = do
       es' <- case ru of
                Nothing  -> pure es
                Just ru' -> do
+                 let RewardUpdate dt dr rs_ df = ru'
+                 dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
                  pure $ applyRUpd ru' es
 
-      es'' <- trans @(EPOCH crypto) $ TRC ((), es', e)
-      let EpochState _acnt ss _ls pp = es''
+      es'' <- trans @(MIR crypto) $ TRC ((), es', ())
+      es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
+      let EpochState _acnt ss _ls pp = es'''
           (Stake stake, delegs) = _pstakeSet ss
           Coin total = Map.foldl (+) (Coin 0) stake
           sd =
@@ -102,7 +108,7 @@ newEpochTransition = do
           e
           bcur
           (BlocksMade Map.empty)
-          es''
+          es'''
           Nothing
           (PoolDistr pd')
           osched'
@@ -114,6 +120,12 @@ instance
   Embed (EPOCH crypto) (NEWEPOCH crypto)
   where
   wrapFailed = EpochFailure
+
+instance
+  Crypto crypto =>
+  Embed (MIR crypto) (NEWEPOCH crypto)
+  where
+  wrapFailed = MirFailure
 
 instance
   Crypto crypto =>

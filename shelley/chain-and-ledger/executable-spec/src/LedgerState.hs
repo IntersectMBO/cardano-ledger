@@ -96,7 +96,6 @@ module LedgerState
   , updateNES
   ) where
 
-import           Address (mkRwdAcnt)
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
@@ -258,34 +257,31 @@ data RewardUpdate crypto= RewardUpdate
   , deltaR        :: Coin
   , rs            :: Map (RewardAcnt crypto) Coin
   , deltaF        :: Coin
-  , updateIRwd    :: Map (Credential crypto) Coin
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate crypto)
 
 instance Crypto crypto => ToCBOR (RewardUpdate crypto)
  where
-  toCBOR (RewardUpdate dt dr rw df irw) =
-    encodeListLen 5
+  toCBOR (RewardUpdate dt dr rw df) =
+    encodeListLen 4
       <> toCBOR dt
       <> toCBOR (-dr) -- TODO change Coin serialization to use integers?
       <> toCBOR rw
       <> toCBOR (-df) -- TODO change Coin serialization to use integers?
-      <> toCBOR irw
 
 instance Crypto crypto => FromCBOR (RewardUpdate crypto)
  where
   fromCBOR = do
-    enforceSize "RewardUpdate" 5
+    enforceSize "RewardUpdate" 4
     dt <- fromCBOR
     dr <- fromCBOR -- TODO change Coin serialization to use integers?
     rw <- fromCBOR
     df <- fromCBOR -- TODO change Coin serialization to use integers?
-    irw <- fromCBOR
-    pure $ RewardUpdate dt (-dr) rw (-df) irw
+    pure $ RewardUpdate dt (-dr) rw (-df)
 
 emptyRewardUpdate :: RewardUpdate crypto
-emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) Map.empty
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
 
 data AccountState = AccountState
   { _treasury  :: Coin
@@ -1089,21 +1085,15 @@ applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
         dState = _dstate delegState
 
         as' = as { _treasury = _treasury as + deltaT ru
-                 , _reserves = _reserves as + deltaR ru + nonDistributed
+                 , _reserves = _reserves as + deltaR ru
                  }
         ls' = ls { _utxoState =
                      utxoState_ { _fees = _fees utxoState_ + deltaF ru }
                  , _delegationState =
                      delegState
                      {_dstate = dState
-                                { _rewards = (_rewards dState ∪+ rs ru) ∪+ updateRwd
-                                , _irwd = Map.empty
+                                { _rewards = _rewards dState ∪+ rs ru
                                 }}}
-        StakeCreds stkcreds = _stkCreds dState
-        (rewMir', unregistered) =
-          Map.partitionWithKey (\cred _ -> cred `Map.member` stkcreds) $ updateIRwd ru
-        nonDistributed = Map.foldl (+) (Coin 0) unregistered
-        updateRwd = Map.mapKeys mkRwdAcnt rewMir'
 
 -- | Create a reward update
 createRUpd
@@ -1119,17 +1109,12 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
         Coin reserves = _reserves acnt
         ds = _dstate $ _delegationState ls
 
-        -- instantaneous rewards
-        Coin rewardsMIR = Map.foldl (+) (Coin 0) (_irwd ds)
-        reserves' = reserves - rewardsMIR
-
         -- reserves and rewards change
-        deltaRl = (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves')
-        deltaR_ = deltaRl + Coin rewardsMIR
+        deltaR_ = (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves)
         expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
         eta = fromIntegral blocksMade / expectedBlocks
 
-        Coin rewardPot = _feeSS ss + deltaRl
+        Coin rewardPot = _feeSS ss + deltaR_
         deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
         _R = Coin $ rewardPot - deltaT1
 
@@ -1137,7 +1122,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
         deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
-    pure $ RewardUpdate (Coin deltaT1 + deltaT2) (-deltaR_) rs_ (-(_feeSS ss)) (_irwd ds)
+    pure $ RewardUpdate (Coin deltaT1 + deltaT2) (-deltaR_) rs_ (-(_feeSS ss))
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.
