@@ -22,6 +22,7 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(throwError))
+import Data.Aeson (ToJSON, ToJSONKey)
 import Data.Char (isAscii)
 import Data.Data (Data)
 import qualified Data.Text as T
@@ -48,6 +49,12 @@ newtype SystemTag = SystemTag
   } deriving (Eq, Ord, Show, Generic)
     deriving newtype B.Buildable
     deriving anyclass (NFData, NoUnexpectedThunks)
+
+-- Used for debugging purposes only
+instance ToJSON SystemTag where
+
+-- Used for debugging purposes only
+instance ToJSONKey SystemTag where
 
 instance ToCBOR SystemTag where
   toCBOR = toCBOR . getSystemTag

@@ -18,6 +18,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (Format, bprint, build, builder, int)
 import qualified Formatting.Buildable as B
 
@@ -78,6 +79,9 @@ instance B.Buildable Tx where
       | attributesAreKnown attrs = mempty
       | otherwise                = bprint (", attributes: " . build) attrs
 
+-- Used for debugging purposes only
+instance ToJSON Tx where
+
 instance ToCBOR Tx where
   toCBOR tx =
     encodeListLen 3 <> toCBOR (txInputs tx) <> toCBOR (txOutputs tx) <> toCBOR
@@ -131,6 +135,9 @@ instance B.Buildable TxIn where
   build (TxInUtxo txInHash txInIndex) =
     bprint ("TxInUtxo " . shortHashF . " #" . int) txInHash txInIndex
 
+-- Used for debugging purposes only
+instance ToJSON TxIn where
+
 instance ToCBOR TxIn where
   toCBOR (TxInUtxo txInHash txInIndex) =
     encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeKnownCborDataItem
@@ -168,6 +175,9 @@ instance B.Buildable TxOut where
     (txOutValue txOut)
     (txOutAddress txOut)
 
+-- Used for debugging purposes only
+instance ToJSON TxOut where
+
 instance ToCBOR TxOut where
   toCBOR txOut =
     encodeListLen 2 <> toCBOR (txOutAddress txOut) <> toCBOR (txOutValue txOut)
@@ -182,4 +192,3 @@ instance FromCBOR TxOut where
 
 instance HeapWords TxOut where
   heapWords (TxOut address _) = 3 + heapWords address
-

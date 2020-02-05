@@ -15,6 +15,7 @@ where
 
 import Cardano.Prelude
 
+import qualified Data.Aeson as Aeson
 import Control.Monad (fail)
 import Control.Monad.Except (MonadError(..))
 import Formatting (sformat, build, bprint, float, int)
@@ -52,6 +53,9 @@ instance B.Buildable LovelacePortion where
     x
     lovelacePortionDenominator
     (fromRational (lovelacePortionToRational cp) :: Double)
+
+-- Used for debugging purposes only
+instance Aeson.ToJSON LovelacePortion where
 
 instance ToCBOR LovelacePortion where
   toCBOR = toCBOR . getLovelacePortion
@@ -97,4 +101,3 @@ rationalToLovelacePortion r
 lovelacePortionToRational :: LovelacePortion -> Rational
 lovelacePortionToRational (LovelacePortion n) =
   toInteger n % toInteger lovelacePortionDenominator
-

@@ -77,7 +77,9 @@ module Cardano.Chain.Block.Block
 where
 
 import Cardano.Prelude
+
 import Control.Monad.Fail (fail)
+import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import Data.Text.Lazy.Builder (Builder, fromText)
 import Formatting (bprint, build, int, later, shown)
@@ -166,6 +168,8 @@ data ABlock a = ABlock
   , blockAnnotation :: a
   } deriving (Eq, Show, Generic, NFData, Functor)
 
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ABlock a) where
 
 --------------------------------------------------------------------------------
 -- Block Constructors
@@ -355,7 +359,10 @@ renderBlock es block =
 data ABlockOrBoundary a
   = ABOBBlock (ABlock a)
   | ABOBBoundary (ABoundaryBlock a)
-  deriving (Eq, Show, Functor)
+  deriving (Eq, Generic, Show, Functor)
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ABlockOrBoundary a) where
 
 -- | Encode a 'Block' accounting for deprecated epoch boundary blocks
 toCBORABOBBlock :: EpochSlots -> ABlock a -> Encoding
@@ -408,11 +415,14 @@ toCBORABlockOrBoundary pm epochSlots abob = case abob of
 -- extra body data.
 data ABoundaryBody a = ABoundaryBody
   { boundaryBodyAnnotation :: !a
-  } deriving (Eq, Show, Functor)
+  } deriving (Eq, Generic, Show, Functor)
 
 instance Decoded (ABoundaryBody ByteString) where
   type BaseType (ABoundaryBody ByteString) = ABoundaryBody ()
   recoverBytes = boundaryBodyAnnotation
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ABoundaryBody a) where
 
 fromCBORABoundaryBody :: Decoder s (ABoundaryBody ByteSpan)
 fromCBORABoundaryBody = do
@@ -437,11 +447,14 @@ data ABoundaryBlock a = ABoundaryBlock
   , boundaryHeader          :: !(ABoundaryHeader a)
   , boundaryBody            :: !(ABoundaryBody a)
   , boundaryAnnotation      :: !a
-  } deriving (Eq, Show, Functor)
+  } deriving (Eq, Generic, Show, Functor)
 
 instance Decoded (ABoundaryBlock ByteString) where
   type BaseType (ABoundaryBlock ByteString) = ABoundaryBlock ()
   recoverBytes = boundaryAnnotation
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ABoundaryBlock a) where
 
 -- | Extract the hash of a boundary block from its annotation.
 boundaryHashAnnotated :: ABoundaryBlock ByteString -> HeaderHash

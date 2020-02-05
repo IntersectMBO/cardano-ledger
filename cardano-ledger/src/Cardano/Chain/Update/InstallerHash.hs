@@ -10,6 +10,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
@@ -32,6 +33,9 @@ newtype InstallerHash = InstallerHash
 
 instance B.Buildable InstallerHash where
   build (InstallerHash h) = bprint ("{ installer hash: " . build . " }") h
+
+-- Used for debugging purposes only
+instance ToJSON InstallerHash where
 
 instance ToCBOR InstallerHash where
   toCBOR (InstallerHash h) =

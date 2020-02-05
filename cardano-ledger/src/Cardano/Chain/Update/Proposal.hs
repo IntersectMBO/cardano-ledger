@@ -37,6 +37,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import qualified Data.Map.Strict as M
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, build)
@@ -91,6 +92,8 @@ data AProposal a = AProposal
 
 type Proposal = AProposal ()
 
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (AProposal a) where
 
 --------------------------------------------------------------------------------
 -- Proposal Constructors
@@ -216,6 +219,8 @@ data ProposalBody = ProposalBody
   } deriving (Eq, Show, Generic)
     deriving anyclass NFData
 
+-- Used for debugging purposes only
+instance ToJSON ProposalBody where
 
 --------------------------------------------------------------------------------
 -- ProposalBody Binary Serialization

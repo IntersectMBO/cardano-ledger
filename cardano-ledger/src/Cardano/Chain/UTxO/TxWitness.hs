@@ -18,6 +18,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Data.Vector (Vector)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
@@ -78,6 +79,9 @@ instance B.Buildable TxInWitness where
   build (RedeemWitness key sig) =
     bprint ("VKWitness: key = " . build . ", sig = " . build) key sig
 
+-- Used for debugging purposes only
+instance ToJSON TxInWitness where
+
 instance ToCBOR TxInWitness where
   toCBOR input = case input of
     VKWitness key sig ->
@@ -123,6 +127,9 @@ recoverSigData atx =
     signedBytes = serialize' txHash --TODO: make the prefix bytes explicit
   in Annotated (TxSigData txHash) signedBytes
 
+-- Used for debugging purposes only
+instance ToJSON TxSigData where
+
 instance ToCBOR TxSigData where
   toCBOR txSigData = toCBOR (txSigTxHash txSigData)
   encodedSizeExpr size pxy = size (txSigTxHash <$> pxy)
@@ -132,4 +139,3 @@ instance FromCBOR TxSigData where
 
 -- | 'Signature' of addrId
 type TxSig = Signature TxSigData
-

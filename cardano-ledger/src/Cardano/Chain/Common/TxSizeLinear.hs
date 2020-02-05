@@ -14,6 +14,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Data.Fixed (Nano)
 import Formatting (bprint, build, sformat)
 import qualified Formatting.Buildable as B
@@ -46,6 +47,9 @@ data TxSizeLinear =
 
 instance B.Buildable TxSizeLinear where
   build (TxSizeLinear a b) = bprint (build . " + " . build . "*s") a b
+
+-- Used for debugging purposes only
+instance ToJSON TxSizeLinear where
 
 instance ToCBOR TxSizeLinear where
   -- We encode as 'Nano' for backwards compatibility

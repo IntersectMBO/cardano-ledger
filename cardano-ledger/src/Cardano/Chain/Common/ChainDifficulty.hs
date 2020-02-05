@@ -11,6 +11,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting.Buildable (Buildable)
 
 import Cardano.Binary
@@ -22,6 +23,9 @@ import Cardano.Binary
 newtype ChainDifficulty = ChainDifficulty
   { unChainDifficulty :: Word64
   } deriving (Show, Eq, Ord, Enum, Generic, Buildable, NFData, NoUnexpectedThunks)
+
+-- Used for debugging purposes only
+instance ToJSON ChainDifficulty where
 
 instance ToCBOR ChainDifficulty where
     toCBOR cd = encodeListLen 1 <> toCBOR (unChainDifficulty cd)

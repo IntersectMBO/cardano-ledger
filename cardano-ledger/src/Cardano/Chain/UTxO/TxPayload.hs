@@ -21,6 +21,8 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
+
 import Cardano.Binary (Annotated(..), ByteSpan, FromCBOR(..), ToCBOR(..))
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxAux (ATxAux(..), TxAux, taTx, taWitness)
@@ -40,6 +42,9 @@ newtype ATxPayload a = ATxPayload
 
 unTxPayload :: ATxPayload a -> [TxAux]
 unTxPayload = fmap void . aUnTxPayload
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ATxPayload a) where
 
 instance ToCBOR TxPayload where
   toCBOR = toCBOR . unTxPayload

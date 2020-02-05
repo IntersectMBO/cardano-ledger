@@ -13,6 +13,8 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON(..), object, (.=))
+import qualified Data.ByteString.Char8 as Char8
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, builder)
 import qualified Formatting.Buildable as B
@@ -53,6 +55,9 @@ instance B.Buildable AddrAttributes where
     derivationPathBuilder = case aaVKDerivationPath aa of
       Nothing -> "{}"
       Just _  -> "{path is encrypted}"
+
+-- Used for debugging purposes only
+instance ToJSON AddrAttributes where
 
 {- NOTE: Address attributes serialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -141,6 +146,9 @@ newtype HDAddressPayload = HDAddressPayload
     deriving newtype (ToCBOR, HeapWords)
     deriving anyclass (NFData, NoUnexpectedThunks)
 
+-- Used for debugging purposes only
+instance ToJSON HDAddressPayload where
+  toJSON (HDAddressPayload bs) = object ["HDAddressPayload" .= Char8.unpack bs]
+
 instance FromCBOR HDAddressPayload where
   fromCBOR = HDAddressPayload <$> decodeBytesCanonical
-

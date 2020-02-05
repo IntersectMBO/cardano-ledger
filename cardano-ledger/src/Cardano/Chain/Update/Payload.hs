@@ -17,6 +17,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
@@ -67,6 +68,9 @@ instance B.Buildable Payload where
     = formatMaybeProposal (payloadProposal p) <> bprint
       ("\n    votes: " . listJson)
       (map formatVoteShort (payloadVotes p))
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (APayload a) where
 
 instance ToCBOR Payload where
   toCBOR p =

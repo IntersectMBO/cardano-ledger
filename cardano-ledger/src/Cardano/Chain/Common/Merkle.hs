@@ -38,6 +38,7 @@ where
 -- what's going on.
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Data.Bits (Bits(..))
 import Data.ByteArray (ByteArrayAccess, convert)
 import Data.ByteString.Builder (Builder, byteString, word8)
@@ -66,6 +67,9 @@ newtype MerkleRoot a = MerkleRoot
 
 instance Buildable (MerkleRoot a) where
   build (MerkleRoot h) = "MerkleRoot|" <> build h
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (MerkleRoot a) where
 
 instance ToCBOR a => ToCBOR (MerkleRoot a) where
   toCBOR = toCBOR . getMerkleRoot

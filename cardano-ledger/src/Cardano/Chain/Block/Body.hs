@@ -18,6 +18,8 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
+
 import Cardano.Binary
   (ByteSpan, FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
 import qualified Cardano.Chain.Delegation.Payload as Delegation
@@ -45,6 +47,9 @@ data ABody a = ABody
   , bodyUpdatePayload :: !(Update.APayload a)
   -- ^ Additional update information for the update system
   } deriving (Eq, Show, Generic, Functor, NFData)
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ABody a) where
 
 instance ToCBOR Body where
   toCBOR bc =

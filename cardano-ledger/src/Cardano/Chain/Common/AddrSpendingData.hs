@@ -14,6 +14,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
@@ -77,6 +78,9 @@ data AddrType
   | ATRedeem
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass (NFData, NoUnexpectedThunks)
+
+-- Used for debugging purposes only
+instance ToJSON AddrType where
 
 -- Tag 1 was previously used for scripts, but never appeared on the chain
 instance ToCBOR AddrType where

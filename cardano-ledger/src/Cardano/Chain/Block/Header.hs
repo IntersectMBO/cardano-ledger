@@ -70,6 +70,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map (singleton)
@@ -157,6 +158,8 @@ data AHeader a = AHeader
   -- ^ An annotation that captures the bytes from the deprecated ExtraHeaderData
   } deriving (Eq, Show, Generic, NFData, Functor, NoUnexpectedThunks)
 
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (AHeader a) where
 
 --------------------------------------------------------------------------------
 -- Header Constructors
@@ -452,6 +455,9 @@ data ABoundaryHeader a = UnsafeABoundaryHeader
   , boundaryHeaderAnnotation :: !a
   } deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
 
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ABoundaryHeader a) where
+
 -- | Smart constructor for 'ABoundaryHeader'
 --
 -- Makes sure that the hash is forced.
@@ -557,6 +563,9 @@ instance B.Buildable BlockSignature where
     . "  Delegation certificate: " . build
     )
     cert
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ABlockSignature a) where
 
 instance ToCBOR BlockSignature where
   toCBOR (ABlockSignature cert sig) =

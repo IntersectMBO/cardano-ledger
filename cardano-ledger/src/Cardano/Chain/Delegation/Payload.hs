@@ -17,6 +17,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (bprint, int)
 import Formatting.Buildable (Buildable(..))
 
@@ -52,6 +53,9 @@ instance Buildable (APayload a) where
     ("proxy signing keys (" . int . " items): " . listJson . "\n")
     (length psks)
     psks
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (APayload a) where
 
 instance ToCBOR Payload where
   toCBOR = toCBOR . getPayload

@@ -127,6 +127,7 @@ library
                        Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
 
   build-depends:       base >=4.11 && <5
+                     , aeson
                      , base58-bytestring
                      , base64-bytestring-type
                      , bimap >=0.4 && <0.5

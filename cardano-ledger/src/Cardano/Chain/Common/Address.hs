@@ -53,6 +53,7 @@ import Cardano.Prelude
 import qualified Data.ByteArray
 
 import Control.Monad.Except (MonadError)
+import qualified Data.Aeson as Aeson
 import Data.ByteString.Base58
   (Alphabet(..), bitcoinAlphabet, decodeBase58, encodeBase58)
 import Data.Text.Internal.Builder (Builder)
@@ -125,6 +126,9 @@ data Address = Address
   -- spending data is hashed.
   } deriving (Eq, Ord, Generic, Show)
     deriving anyclass (NFData, NoUnexpectedThunks)
+
+-- Used for debugging purposes only
+instance Aeson.ToJSON Address where
 
 instance ToCBOR Address where
   toCBOR addr =

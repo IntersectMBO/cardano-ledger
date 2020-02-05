@@ -14,6 +14,7 @@ where
 
 import Cardano.Prelude hiding (empty)
 
+import Data.Aeson (ToJSON)
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, bytes, later, shortest)
 import qualified Formatting.Buildable as B
@@ -82,6 +83,9 @@ instance B.Buildable ProtocolParametersUpdate where
 
     bytes' :: Format r (Natural -> r)
     bytes' = bytes (shortest @Double)
+
+-- Used for debugging purposes only
+instance ToJSON ProtocolParametersUpdate where
 
 instance ToCBOR ProtocolParametersUpdate where
   toCBOR ppu =
