@@ -6,6 +6,7 @@ module Test.Serialization where
 
 import qualified Data.Maybe as Maybe (fromJust)
 import           Data.String (fromString)
+import qualified MetaData as MD
 
 import           Cardano.Binary (Decoder, FromCBOR (..), ToCBOR (..), decodeFullDecoder,
                      serializeEncoding, toCBOR)
@@ -140,7 +141,7 @@ testVRFKH :: VRFKeyHash
 testVRFKH = hashKeyVRF $ snd testVRF
 
 testTxb :: TxBody
-testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (SlotNo 0) emptyUpdate
+testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (SlotNo 0) emptyUpdate Nothing
 
 testKey1 :: KeyPair
 testKey1 = KeyPair vk sk
@@ -606,6 +607,7 @@ serializationTests = testGroup "Serialization Tests"
       (Coin 9)
       (SlotNo 500)
       emptyUpdate
+      Nothing
     )
     ( T (TkMapLen 4)
       <> T (TkWord 0) -- Tx Ins
@@ -647,6 +649,7 @@ serializationTests = testGroup "Serialization Tests"
         (Coin 9)
         (SlotNo 500)
         up
+        Nothing
      )
      ( T (TkMapLen 6)
        <> T (TkWord 0) -- Tx Ins
@@ -684,6 +687,7 @@ serializationTests = testGroup "Serialization Tests"
                                     testInstallerHash
                                 )))))
              (Just $ EpochNo 0)
+      mdh = MD.hashMetaData $ Map.singleton 13 (MD.I 17)
     in checkEncodingCBOR "txbody_full"
     ( TxBody -- transaction body with all components
         tin
@@ -693,8 +697,9 @@ serializationTests = testGroup "Serialization Tests"
         (Coin 9)
         (SlotNo 500)
         up
+        (Just mdh)
      )
-     ( T (TkMapLen 7)
+     ( T (TkMapLen 8)
        <> T (TkWord 0) -- Tx Ins
        <> S tin
        <> T (TkWord 1) -- Tx Outs
@@ -710,6 +715,8 @@ serializationTests = testGroup "Serialization Tests"
        <> S ras
        <> T (TkWord 6) -- Tx Update
        <> S up
+       <> T (TkWord 7) -- Tx Metadata
+       <> S mdh
       )
 
 -- checkEncodingCBOR "block_header_body"
@@ -795,9 +802,9 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "empty_block"
     (Block bh txns)
-    ( (T $ TkListLen 3)
+    ( (T $ TkListLen 4)
         <> S bh
-        <> T (TkListLen 0 . TkListLen 0)
+        <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
     )
 
     -- checkEncodingCBOR "rich_block"
@@ -805,7 +812,7 @@ serializationTests = testGroup "Serialization Tests"
         bh = BHeader testBHB sig
         tin = Set.fromList [TxIn genesisId 1]
         tout = [TxOut testAddrE (Coin 2)]
-        txb s = TxBody tin tout Seq.empty Map.empty (Coin 9) (SlotNo s) emptyUpdate
+        txb s = TxBody tin tout Seq.empty Map.empty (Coin 9) (SlotNo s) emptyUpdate Nothing
         txb1 = txb 500
         txb2 = txb 501
         txb3 = txb 502
@@ -814,18 +821,19 @@ serializationTests = testGroup "Serialization Tests"
         w1 = makeWitnessVKey txb1 testKey1
         w2 = makeWitnessVKey txb1 testKey2
         ws = Set.fromList [w1, w2]
-        tx1 = Tx txb1 (Set.singleton w1) mempty
-        tx2 = Tx txb2 ws mempty
-        tx3 = Tx txb3 mempty (Map.singleton (hashScript testScript) testScript)
+        tx1 = Tx txb1 (Set.singleton w1) mempty Nothing
+        tx2 = Tx txb2 ws mempty Nothing
+        tx3 = Tx txb3 mempty (Map.singleton (hashScript testScript) testScript) Nothing
         ss = Map.fromList [ (hashScript testScript, testScript)
                           , (hashScript testScript2, testScript2)]
-        tx4 = Tx txb4 mempty ss
-        tx5 = Tx txb5 ws ss
+        tx4 = Tx txb4 mempty ss Nothing
+        tx5MD = Map.singleton 17 (MD.I 42)
+        tx5 = Tx txb5 ws ss (Just tx5MD)
         txns = TxSeq $ Seq.fromList [tx1, tx2, tx3, tx4, tx5]
     in
     checkEncodingCBOR "rich_block"
     (Block bh txns)
-    ( (T $ TkListLen 3)
+    ( (T $ TkListLen 4)
         -- header
         <> S bh
 
@@ -856,6 +864,11 @@ serializationTests = testGroup "Serialization Tests"
           <> T (TkListLen 3 . TkWord 4)
           <> S ws
           <> S ss
+
+        -- metadata
+        <> T (TkMapLen 1)
+          <> T (TkInt 4)
+          <> S tx5MD
     )
   , checkEncodingCBOR "epoch"
     (EpochNo 13)

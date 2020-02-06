@@ -2,7 +2,7 @@
 \label{sec:transactions}
 
 Transactions are defined in Figure~\ref{fig:defs:utxo-shelley}.
-A transaction body, $\TxBody$, is made up of seven pieces:
+A transaction body, $\TxBody$, is made up of eight pieces:
 
 \begin{itemize}
   \item A set of transaction inputs.
@@ -23,18 +23,18 @@ A transaction body, $\TxBody$, is made up of seven pieces:
     and for the rule for collecting rewards, see Section \ref{sec:utxo-trans}.
   \item Update proposals for protocol parameters and software.
     The update system will be explained in Section \ref{sec:update}.
-  \item $\PPUpdate$, the protocol parameter upates.
-  \item $\AVUpdate$, the updates to Shelley software (applications).
+  \item An optional metadata hash.
 \end{itemize}
 
 A transaction, $\Tx$, consists of:
 
 \begin{itemize}
   \item The transaction body.
-  \item A pair of:
+  \item A triple of:
     \begin{itemize}
       \item A finite map from payment verification keys to signatures.
       \item A finite map from script hashes to scripts.
+      \item Optional metadata.
     \end{itemize}
 \end{itemize}
 
@@ -56,6 +56,8 @@ This function must produce a unique id for each unique transaction.
       \var{an} & \ApName & \text{application name}\\
       \var{st} & \SystemTag & \text{system tag}\\
       \var{ih} & \InstallerHash & \text{update data}\\
+      \var{m} & \MetaDatum & \text{metadatum}\\
+      \var{mdh} & \MetaDataHash & \text{hash of transaction metadata}\\
     \end{array}
   \end{equation*}
   \emph{Derived types}
@@ -81,6 +83,11 @@ This function must produce a unique id for each unique transaction.
       & \Wdrl
       & \AddrRWD \mapsto \Coin
       & \text{reward withdrawal}
+      \\
+      \var{md}
+      & \MetaData
+      & \N \mapsto \MetaDatum
+      & \text{metadata}
     \end{array}
   \end{equation*}
   \emph{Derived types (update system)}
@@ -125,14 +132,17 @@ This function must produce a unique id for each unique transaction.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}l}
       \var{txbody}
       & \TxBody
-      & \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
-        \times \Coin \times \Slot \times \Wdrl \times \Update
+      & \begin{array}{l}
+        \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
+        \times \Coin \times \Slot \times \Wdrl
+        \\ ~~~~\times \Update \times \MetaDataHash^?
+        \end{array}
       \\
       \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \HashScr \mapsto \Script)
       \\
       \var{tx}
       & \Tx
-      & \TxBody \times \TxWitness
+      & \TxBody \times \TxWitness \times \MetaData^?
     \end{array}
   \end{equation*}
   %
@@ -148,7 +158,9 @@ This function must produce a unique id for each unique transaction.
       \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
       \fun{txwitsScript} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}\\
-      \fun{txup} & \Tx \to \Update & \text{protocol parameter update}
+      \fun{txup} & \Tx \to \Update & \text{protocol parameter update}\\
+      \fun{txMD} & \Tx \to \MetaData & \text{metadata}\\
+      \fun{txMDhash} & \Tx \to \MetaDataHash & \text{metadata hash}\\
     \end{array}
   \end{equation*}
   %
@@ -156,7 +168,8 @@ This function must produce a unique id for each unique transaction.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
-      \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}
+      \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}\\
+      \fun{hashMD} & \MetaData \to \MetaDataHash & \text{hash the metadata}\\
     \end{array}
   \end{equation*}
   \caption{Definitions used in the UTxO transition system}

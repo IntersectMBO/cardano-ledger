@@ -4,6 +4,7 @@ block =
   [ header
   , transaction_bodies         : [* transaction_body]
   , transaction_witness_sets   : [* transaction_witness_set]
+  , transaction_metadata_set   : { * uint => transaction_metadata }
   ]
 
 header =
@@ -47,6 +48,7 @@ transaction_body =
   , 4 : coin ; fee
   , 5 : uint ; ttl
   , ? 6 : full_update
+  , ? 7 : metadata_hash
   }
 
 ; Is it okay to have this as a group? Is it valid CBOR?! Does it need to be?
@@ -148,6 +150,14 @@ transaction_witness_set =
   // 2, [* vkeywitness]
   // 3, [* $script]
   // 4, [* vkeywitness],[* $script]
+  )
+
+transaction_metadata =
+  (  { *transaction_metadata => transaction_metadata }
+  // [* transaction_metadata ]
+  // int
+  // bytes
+  // string
   )
 
 vkeywitness = [$vkey, $signature]

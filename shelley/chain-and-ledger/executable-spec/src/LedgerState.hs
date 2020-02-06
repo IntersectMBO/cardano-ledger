@@ -121,6 +121,7 @@ import           Keys (AnyKeyHash, GenDelegs (..), GenKeyHash, KeyDiscriminator 
                      KeyPair, Signable, hash, undiscriminateKeyHash)
 import           Lens.Micro (to, (%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
+import qualified MetaData as MD
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
                      keyMinRefund, minfeeA, minfeeB)
@@ -487,7 +488,8 @@ genesisId =
    Map.empty
    (Coin 0)
    (SlotNo 0)
-   emptyUpdate)
+   emptyUpdate
+   Nothing)
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins
@@ -540,8 +542,12 @@ validInputs tx u =
 
 -- |Implementation of abstract transaction size
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
-txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _)) vKeySigs msigScripts) =
-  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize + witnessSize
+txsize (Tx
+          (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _) mdh)
+          vKeySigs
+          msigScripts
+          md) =
+  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize + mdhSize + witnessSize + mdSize
   where
     -- vkey signatures
     signatures = Set.size vKeySigs
@@ -622,12 +628,25 @@ txsize (Tx (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _)
                + labelSize + protoVersion -- protocol version
     ppupSize = mapPrefix + (toInteger $ length ppup) * (hashObj + params)
     avupSize = mapPrefix + (sum $ fmap appsSize avup)
-    appsSize as = hashObj + mapPrefix + (sum $ fmap mdSize (apps as))
+    appsSize as = hashObj + mapPrefix + (sum $ fmap appMDSize (apps as))
     nameSize = 12
     sysTagSize = 10
-    mdSize (_av, (Mdt m)) = nameSize + arrayPrefix + uint + mapPrefix
+    appMDSize (_av, (Mdt m)) = nameSize + arrayPrefix + uint + mapPrefix
                              + (toInteger $ length m) * (sysTagSize + hashObj)
     uSize = arrayPrefix + ppupSize + avupSize + smallArray + uint
+
+    mdhSize = if mdh == Nothing then arrayPrefix else arrayPrefix + hashObj
+
+    datumSize (MD.Map m) = mapPrefix + sum (fmap (\(x, y) -> smallArray + datumSize x + datumSize y) m)
+    datumSize (MD.List d_) = arrayPrefix + sum (fmap datumSize d_)
+    datumSize (MD.I _) = 64
+    datumSize (MD.B _) = 64
+    datumSize (MD.S _) = 64
+
+    mdSize = case md of
+      Nothing -> arrayPrefix
+      Just md' -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
+                    + uint * (toInteger $ length md')
 
 -- |Minimum fee calculation
 minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
@@ -766,7 +785,7 @@ witsVKeyNeeded
   -> Tx crypto
   -> GenDelegs crypto
   -> Set (AnyKeyHash crypto)
-witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
+witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
     certAuthors  `Set.union`
@@ -804,7 +823,7 @@ verifiedWits
      )
   => Tx crypto
   -> Validity
-verifiedWits (Tx tx wits _) =
+verifiedWits (Tx tx wits _ _) =
   if all (verifyWitVKey tx) wits
     then Valid
     else Invalid [InvalidWitness]
@@ -820,7 +839,7 @@ enoughWits
   -> GenDelegs crypto
   -> UTxOState crypto
   -> Validity
-enoughWits tx@(Tx _ wits _) d' u =
+enoughWits tx@(Tx _ wits _ _) d' u =
   if witsVKeyNeeded (u ^. utxo) tx d' `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]

@@ -213,7 +213,7 @@ totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
     cs' = filter notRegisteredPool cs
 
 txup :: Tx crypto -> Update crypto
-txup (Tx txbody _ _) = _txUpdate txbody
+txup (Tx txbody _ _ _) = _txUpdate txbody
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)

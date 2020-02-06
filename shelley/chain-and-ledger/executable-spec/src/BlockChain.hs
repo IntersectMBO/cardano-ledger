@@ -46,6 +46,7 @@ import           Data.Coerce (coerce)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Proxy (Proxy (..))
 import           Data.Ratio (denominator, numerator)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -53,7 +54,9 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
+import           MetaData (MetaData)
 import           Numeric.Natural (Natural)
+import           Unsafe.Coerce (unsafeCoerce)
 
 import           BaseTypes (CborSeq (..), Nonce (..), Seed (..), UnitInterval, intervalValue,
                      invalidKey, mkNonce)
@@ -107,13 +110,21 @@ bhHash = HashHeader . hash
 
 -- |Hash a given block body
 bbHash
-  :: Crypto crypto
+  :: forall crypto
+   . Crypto crypto
   => TxSeq crypto
   -> HashBBody crypto
-bbHash (TxSeq txns) = HashBBody $ Hash.hashPair (hash bodies) (hash wits)
+bbHash (TxSeq txns) = (HashBBody . unsafeCoerce) $ -- TODO is unsafeCoerce okay here?
+  Hash.digest
+    (Proxy :: Proxy (HASH crypto))
+    (bodies <> wits <> md)
   where
-  bodies = CborSeq $ fmap _body txns
-  wits = CborSeq $ fmap txToSegWit txns
+  bodies = Hash.getHash ((
+    hash . CborSeq) $ fmap _body txns :: Hash (HASH crypto) (CborSeq (TxBody crypto)))
+  wits = Hash.getHash ((
+    hash . CborSeq) $ fmap txToSegWit txns :: Hash (HASH crypto) (CborSeq (SegWits crypto)))
+  md = Hash.getHash ((
+    hash . CborSeq) $ fmap _metadata txns :: Hash (HASH crypto) (CborSeq (Maybe MetaData)))
 
 -- |HashHeader to Nonce
 hashHeaderToNonce :: HashHeader crypto -> Nonce
@@ -258,6 +269,7 @@ data Block crypto
 --     [ header
 --     , transaction_bodies         : [* transaction_body]
 --     , transaction_witness_sets   : [* transaction_witness_set]
+--     , transaction_metadata_set   : { * uint => transaction_metadata }
 --     ]
 --
 --     and transaction_witness_set is serialized depending on what
@@ -280,19 +292,19 @@ data SegWits crypto
 
 segWitToTx
   :: (Crypto crypto)
-  => (TxBody crypto, SegWits crypto)
+  => (TxBody crypto, SegWits crypto, Maybe MetaData)
   -> Tx crypto
-segWitToTx (body, SegWitsVKey w) = Tx body (Set.singleton w) mempty
-segWitToTx (body, SegWitsVKeys ws) = Tx body ws mempty
-segWitToTx (body, SegWitsScript s m) = Tx body mempty (Map.singleton s m)
-segWitToTx (body, SegWitsScripts ss) = Tx body mempty ss
-segWitToTx (body, SegWitsAll ws ss) = Tx body ws ss
+segWitToTx (body, (SegWitsVKey w), md) = Tx body (Set.singleton w) mempty md
+segWitToTx (body, (SegWitsVKeys ws), md) = Tx body ws mempty md
+segWitToTx (body, (SegWitsScript s m), md) = Tx body mempty (Map.singleton s m) md
+segWitToTx (body, (SegWitsScripts ss), md) = Tx body mempty ss md
+segWitToTx (body, (SegWitsAll ws ss), md) = Tx body ws ss md
 
 txToSegWit
   :: (Crypto crypto)
   => Tx crypto
   -> SegWits crypto
-txToSegWit (Tx _ ws ss) =
+txToSegWit (Tx _ ws ss _) =
   case (Set.toList ws, Map.toList ss) of
     ([x]      , [])        -> SegWitsVKey x
     (zs@(_:_), [])        -> SegWitsVKeys $ Set.fromList zs
@@ -361,34 +373,58 @@ instance Crypto crypto
         pure $ SegWitsAll a b
       k -> invalidKey k
 
+-- |Given a sequence of transactions, return a mapping
+-- from indices in the original sequence to the non-Nothing metadata value
+extractMetaData :: Seq (Tx crypto) -> Map Int MetaData
+extractMetaData txns =
+  let metadata = Seq.mapWithIndex (\i -> \t -> (i, _metadata t)) txns
+  in ((Map.mapMaybe id) . Map.fromList . toList) metadata
+
+-- |Given a size and a mapping from indices to maybe metadata,
+-- return a sequence whose size is the size paramater and
+-- whose non-Nothing values correspond no the values in the mapping.
+constructMetaData :: Int -> Map Int MetaData -> Seq (Maybe MetaData)
+constructMetaData n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n-1])
+
 instance Crypto crypto
   => ToCBOR (Block crypto)
  where
   toCBOR (Block h (TxSeq txns)) =
-      encodeListLen 3
+      encodeListLen 4
         <> toCBOR h
         <> toCBOR bodies
         <> toCBOR wits
+        <> toCBOR metadata
       where
         bodies = CborSeq $ fmap _body txns
         wits = CborSeq $ fmap txToSegWit txns
+        metadata = extractMetaData txns
 
 instance Crypto crypto
   => FromCBOR (Block crypto)
  where
   fromCBOR = do
-    enforceSize "Block" 3
+    enforceSize "Block" 4
     header <- fromCBOR
-    bodies <- (toList . unwrapCborSeq <$> fromCBOR)
-    wits <- (toList . unwrapCborSeq <$> fromCBOR)
+    bodies <- unwrapCborSeq <$> fromCBOR
+    wits <- unwrapCborSeq <$> fromCBOR
     let b = length bodies
         w = length wits
+
+    metadata <- constructMetaData b <$> fromCBOR
+    let m = length metadata
+
     unless (b == w)
       (fail $ "different number of transaction bodies ("
         <> show b <> ") and witness sets ("
         <> show w <> ")"
       )
-    let txns = Seq.fromList $ fmap segWitToTx (zip bodies wits)
+    unless (b == m)
+      (fail $ "mismatch between transaction bodies ("
+        <> show b <> ") and metadata ("
+        <> show w <> ")"
+      )
+    let txns = fmap segWitToTx (Seq.zip3 bodies wits metadata)
     pure $ Block header (TxSeq txns)
 
 

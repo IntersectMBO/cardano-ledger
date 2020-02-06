@@ -59,6 +59,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
         depends = [
           (hsPkgs."base" or (buildDepError "base"))
           (hsPkgs."bytestring" or (buildDepError "bytestring"))
+          (hsPkgs."cborg" or (buildDepError "cborg"))
           (hsPkgs."containers" or (buildDepError "containers"))
           (hsPkgs."cryptonite" or (buildDepError "cryptonite"))
           (hsPkgs."hedgehog" or (buildDepError "hedgehog"))

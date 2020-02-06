@@ -9,8 +9,8 @@ import           Data.Set (Set)
 import qualified Data.Set as S
 import           Test.QuickCheck (shrinkIntegral, shrinkList)
 
-import           ConcreteCryptoTypes (Block)
 import           Coin
+import           ConcreteCryptoTypes (Block)
 import           Slot
 import           Tx
 import           TxData
@@ -24,21 +24,21 @@ shrinkBlock _ = []
 shrinkTx
   :: Tx crypto
   -> [Tx crypto]
-shrinkTx (Tx _b _ws _wm) =
-  [ Tx b' _ws _wm | b' <- shrinkTxBody _b ]
+shrinkTx (Tx _b _ws _wm _md) =
+  [ Tx b' _ws _wm _md | b' <- shrinkTxBody _b ]
   {- TODO @uroboros write shrinker that shrinks to valid transactions
   [ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++
   [ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
   -}
 
 shrinkTxBody :: TxBody crypto -> [TxBody crypto]
-shrinkTxBody (TxBody is os cs ws tf tl tu) =
+shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu |
+  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md |
     os' <- shrinkList shrinkTxOut os ]
 
   -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++

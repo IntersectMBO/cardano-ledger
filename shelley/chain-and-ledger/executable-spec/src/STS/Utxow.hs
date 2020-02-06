@@ -36,6 +36,7 @@ import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, (∩))
 import           LedgerState (UTxOState (..), verifiedWits, witsVKeyNeeded)
+import           MetaData (hashMetaData)
 import           PParams (_d)
 import           STS.Utxo
 import           Tx
@@ -63,6 +64,7 @@ instance
     | UtxoFailure (PredicateFailure (UTXO crypto))
     | MIRInsufficientGenesisSigsUTXOW
     | MIRImpossibleInDecentralizedNetUTXOW
+    | BadMetaDataHashUTXOW
     deriving (Eq, Generic, Show)
 
   transitionRules = [utxoWitnessed]
@@ -83,6 +85,7 @@ instance
                                                 <> toCBOR a
       MIRInsufficientGenesisSigsUTXOW      -> encodeListLen 1 <> toCBOR (5 :: Word8)
       MIRImpossibleInDecentralizedNetUTXOW -> encodeListLen 1 <> toCBOR (6 :: Word8)
+      BadMetaDataHashUTXOW                 -> encodeListLen 1 <> toCBOR (7 :: Word8)
 
 instance
   (Crypto crypto)
@@ -104,6 +107,8 @@ instance
              pure MIRInsufficientGenesisSigsUTXOW
       6 -> matchSize "MIRImpossibleInDecentralizedNetUTXOW" 1 n >>
              pure MIRImpossibleInDecentralizedNetUTXOW
+      7 -> matchSize "BadMetaDataHashUTXOW" 1 n >>
+             pure BadMetaDataHashUTXOW
       k -> invalidKey k
 
 initialLedgerStateUTXOW
@@ -123,7 +128,7 @@ utxoWitnessed
      )
    => TransitionRule (UTXOW crypto)
 utxoWitnessed = do
-  TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx@(Tx txbody wits _))
+  TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx@(Tx txbody wits _ md))
     <- judgmentContext
 
   let utxo = _utxo u
@@ -142,6 +147,13 @@ utxoWitnessed = do
 
   let needed = witsVKeyNeeded utxo tx genDelegs
   needed `Set.isSubsetOf` witsKeyHashes  ?! MissingVKeyWitnessesUTXOW
+
+  -- check metadata hash
+  case (_mdHash txbody) of
+    Nothing  -> md == Nothing ?! BadMetaDataHashUTXOW
+    Just mdh -> case md of
+                  Nothing  -> failBecause BadMetaDataHashUTXOW
+                  Just md' -> hashMetaData md' == mdh ?! BadMetaDataHashUTXOW
 
   -- check genesis keys signatures for instantaneous rewards certificates
   let genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
