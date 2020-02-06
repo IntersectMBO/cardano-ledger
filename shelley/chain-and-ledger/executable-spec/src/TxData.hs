@@ -48,7 +48,7 @@ import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup 
 import           Scripts
 import           CostModel
 import           PParams (PlutusPP)
-=======
+
 import           PParams (emptyPlutusPP, PlutusPP)
 
 
