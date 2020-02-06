@@ -58,4 +58,5 @@ in {
   shelleyLedgerSpec = import ./shelley/chain-and-ledger/formal-spec { inherit pkgs; };
   delegationDesignSpec = import ./shelley/design-spec { inherit pkgs; };
   nonIntegerCalculations = import ./shelley/chain-and-ledger/dependencies/non-integer/doc {inherit pkgs; };
+  blocksCDDLSpec = import ./byron/cddl-spec {inherit pkgs; };
 }

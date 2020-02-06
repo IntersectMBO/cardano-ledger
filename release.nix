@@ -51,6 +51,7 @@ let
         jobs.native.shelleyLedgerSpec.x86_64-linux
         jobs.native.delegationDesignSpec.x86_64-linux
         jobs.native.nonIntegerCalculations.x86_64-linux
+        jobs.native.blocksCDDLSpec.x86_64-linux
       ]
     ))
 
@@ -61,7 +62,9 @@ let
          semanticsSpec
          shelleyLedgerSpec
          delegationDesignSpec
-         nonIntegerCalculations; }
+         nonIntegerCalculations
+         blocksCDDLSpec
+       ; }
 
   # Build the shell derivation in Hydra so that all its dependencies
   # are cached.
