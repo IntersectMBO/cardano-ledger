@@ -45,11 +45,10 @@ import           Data.Map.Strict (Map)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Word (Word8)
 
-import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..),
+import           TxData (Credential (..), MultiSig (..), ScriptHash (..), Tx (..), TxBody (..), Script (..),
                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), body, certs, inputs, outputs,
-                     ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet)
+                     ttl, txUpdate, txfee, wdrls, witKeyHash, witnessMSigMap, witnessVKeySet, nativeMultiSigTag)
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -85,13 +84,13 @@ validateNativeMultiSigScript msig tx =
 
 -- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
 -- front and then calling the script CBOR function.
-hashNativeMultiSigScript
+hashAnyScript
   :: Crypto crypto
-  => MultiSig crypto
+  => Script crypto
   -> ScriptHash crypto
-hashNativeMultiSigScript msig =
+hashAnyScript (MultiSigScript msig) =
   ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
-                                          <> toCBOR x) msig
+                                          <> toCBOR x) (MultiSigScript msig)
 
 -- | Get one possible combination of keys for multi signature script
 getKeyCombination :: MultiSig crypto -> [AnyKeyHash crypto]
@@ -122,16 +121,11 @@ getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs in
     map (concat . List.concatMap getKeyCombinations) perms
 
--- | Magic number representing the tag of the native multi-signature script
--- language. For each script language included, a new tag is chosen and the tag
--- is included in the script hash for a script.
-nativeMultiSigTag :: Word8
-nativeMultiSigTag = 0
 
 instance Crypto crypto =>
   MultiSignatureScript (MultiSig crypto) crypto where
   validateScript = validateNativeMultiSigScript
-  hashScript = hashNativeMultiSigScript
+  hashScript = \x -> hashAnyScript (MultiSigScript x)
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript

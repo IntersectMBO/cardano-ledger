@@ -146,9 +146,20 @@ data MultiSig crypto =
 
 instance NoUnexpectedThunks (MultiSig crypto)
 
+-- | Magic number representing the tag of the native multi-signature script
+-- language. For each script language included, a new tag is chosen and the tag
+-- is included in the script hash for a script.
+nativeMultiSigTag :: Word8
+nativeMultiSigTag = 0
+
 newtype ScriptHash crypto =
-  ScriptHash (Hash (HASH crypto) (MultiSig crypto))
+  ScriptHash (Hash (HASH crypto) (Script crypto))
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
+
+data Script crypto = MultiSigScript (MultiSig crypto)
+                  -- constructors for new languages go here
+                   -- e.g | PlutusScriptV1 ScriptPLC
+  deriving (Show, Eq, Ord, Generic)
 
 deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
 deriving instance Crypto crypto => FromCBOR (ScriptHash crypto)
@@ -552,6 +563,17 @@ instance (Crypto crypto) =>
         pure $ RequireMOf m msigs
       k -> invalidKey k
 
+instance (Crypto crypto) =>
+  ToCBOR (Script crypto) where
+  toCBOR (MultiSigScript msig) =
+    toCBOR nativeMultiSigTag <> toCBOR msig
+
+instance (Crypto crypto) =>
+  FromCBOR (Script crypto) where
+  fromCBOR = do
+    decodeWord >>= \case
+      0 -> MultiSigScript <$> fromCBOR
+      k -> invalidKey k
 
 instance (Typeable crypto, Crypto crypto)
   => ToCBORGroup (Credential crypto) where
