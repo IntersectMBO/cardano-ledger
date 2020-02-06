@@ -14,22 +14,28 @@ import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
+import           Cardano.Prelude (asks)
 import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, GenKeyHash, KeyHash, KeyPair,
-                     LEDGERS)
+                     LEDGERS, OCertEnv)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import           Delegation.Certificates (PoolDistr (..))
-import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural, mkBlock,
-                     mkOCert, traceVRFKeyPairsByHash, zero)
+import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural,
+                     getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash, zero)
 import           Generator.LedgerTrace.QuickCheck ()
-import           Keys (GenDelegs (..), hashKey, vKey)
+import           Keys (GenDelegs (..), pattern KeyPair, hashKey, vKey)
+import           Ledger.Core (dom, range)
 import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
-                     overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
-import           OCert (KESPeriod (..), kesPeriod)
+                     overlaySchedule, _delegationState, _dstate, _genDelegs, _pParams, _pstate,
+                     _reserves)
+import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
-import           STS.Chain (chainEpochNonce, chainHashHeader, chainNes, chainSlotNo)
+import           STS.Chain (chainEpochNonce, chainHashHeader, chainNes, chainOCertIssue,
+                     chainSlotNo)
 import           STS.Ledgers (LedgersEnv (..))
-import           Test.Utils (runShelleyBase)
+import           STS.Ocert (pattern OCertEnv)
+import           Test.Utils (maxKESIterations, runShelleyBase)
 
+import           Debug.Trace as D
 
 nextCoreNode
   :: Map SlotNo (Maybe GenKeyHash)
@@ -109,19 +115,43 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
   if nextOSlot > sNow
     then QC.discard
     else do
-    let KESPeriod kesPeriod_ = runShelleyBase (kesPeriod $ nextOSlot)
-        oCert = mkOCert keys 0 kesPeriod_
+
+    let kp@(KESPeriod kesPeriod_) = runShelleyBase (kesPeriod $ nextOSlot)
+        cs = chainOCertIssue chainSt
+        KeyPair vKeyCold _ = cold $ gkeys gkey
+
+        -- poolParams in SNAP (_, poolParams, _) in pstate
+        poolKeys = dom $ (_pParams . _pstate) dpstate
+
+        -- ran genDelegs
+        genDelegationKeys = range cores
+
+        n' = currentIssueNo
+             (OCertEnv poolKeys genDelegationKeys)
+             cs
+             ((hashKey . vKey . cold) $ gkeys gkey)
+
+        m = getKESPeriodRenewalNo (gkeys gkey) kp
+
+        hotKeys = drop (fromIntegral m) (hot $ gkeys gkey)
+        keys' = (gkeys gkey) { hot = hotKeys }
+        oCert =
+          case n' of
+            Nothing -> error "no issue number available"
+            Just _ ->
+              mkOCert keys' (fromIntegral m) ((fst . head) hotKeys)
 
     mkBlock
       <$> pure (chainHashHeader chainSt)
-      <*> pure keys
-      <*> toList <$> genTxs nextSlot
-      <*> pure nextSlot
+      <*> pure keys'
+      <*> toList <$> genTxs nextOSlot
+      <*> pure nextOSlot
       <*> pure chainDifficulty
       <*> pure (chainEpochNonce chainSt)
       <*> genBlockNonce
       <*> genPraosLeader
       <*> pure kesPeriod_
+      <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
       <*> pure oCert
   where
     ledgerSt = (esLState . nesEs . chainNes) chainSt

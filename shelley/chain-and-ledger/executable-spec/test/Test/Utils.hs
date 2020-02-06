@@ -13,6 +13,7 @@ module Test.Utils
   , mkAddr
   , runShelleyBase
   , testGlobals
+  , maxKESIterations
   , unsafeMkUnitInterval
   ) where
 
@@ -91,11 +92,11 @@ unsafeMkUnitInterval r =
 testGlobals :: Globals
 testGlobals = Globals
   { epochInfo = fixedSizeEpochInfo $ EpochSize 100
-  , slotsPerKESPeriod = 90
+  , slotsPerKESPeriod = 20
   , startRewards = 33
   , slotsPrior = 33
   , securityParameter = 10
-  , maxKESEvo = 90
+  , maxKESEvo = 10
   , quorum = 5
   }
 
@@ -117,3 +118,6 @@ evolveKESUntil k p'@(KESPeriod p) =
     in  case k' of
           Nothing  -> Nothing
           Just k'' -> evolveKESUntil k'' p'
+
+maxKESIterations :: Word64
+maxKESIterations = runShelleyBase (asks maxKESEvo)

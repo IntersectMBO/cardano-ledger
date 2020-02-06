@@ -66,7 +66,8 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
   (witnessedInputs, spendingBalanceUtxo) <-
     pickSpendingInputs scripts' keyHashMap utxo
 
-  wdrls <- pickWithdrawals (_rewards . _dstate $ dpState)
+  wdrls <- pure Map.empty -- TODO mgudemann re-enable withdrawal generation
+                          -- pickWithdrawals (_rewards . _dstate $ dpState)
   let wdrlCredentials = fmap (mkWdrlWits scripts' keyHashMap) (fmap getRwdCred (Map.keys wdrls))
       wdrlWitnesses = Either.lefts wdrlCredentials
       wdrlScripts   = Either.rights wdrlCredentials

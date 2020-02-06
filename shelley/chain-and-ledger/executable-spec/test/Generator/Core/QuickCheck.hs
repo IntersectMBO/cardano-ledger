@@ -42,7 +42,8 @@ module Generator.Core.QuickCheck
   , zero
   , unitIntervalToNatural
   , mkBlock
-  , mkOCert)
+  , mkOCert
+  , getKESPeriodRenewalNo)
   where
 
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
@@ -78,8 +79,8 @@ import           LedgerState (AccountState (..), genesisCoins)
 import           Numeric.Natural (Natural)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Slot (BlockNo (..), SlotNo (..))
-import           Test.Utils (evolveKESUntil, mkCertifiedVRF, mkGenKey, mkKESKeyPair, mkKeyPair,
-                     mkVRFKeyPair, unsafeMkUnitInterval)
+import           Test.Utils (evolveKESUntil, maxKESIterations, mkCertifiedVRF, mkGenKey,
+                     mkKESKeyPair, mkKeyPair, mkVRFKeyPair, unsafeMkUnitInterval)
 import           Tx (pattern TxOut, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
                      pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
@@ -167,8 +168,9 @@ mkScriptFromKey = (RequireSignature . hashAnyKey . vKey)
 data AllPoolKeys = AllPoolKeys
   { cold :: KeyPair
   , vrf :: (SignKeyVRF, VerKeyVRF)
-  , hot :: (SKeyES, VKeyES)
+  , hot :: [(KESPeriod, (SKeyES, VKeyES))]
   , hk  :: KeyHash
+  , startKESPeriod :: KESPeriod
   } deriving (Show)
 
 -- Pairs of (genesis key, node keys)
@@ -182,8 +184,11 @@ coreNodeKeys =
         AllPoolKeys
           (toKeyPair (skCold, vkCold))
           (mkVRFKeyPair (x, 0, 0, 0, 2))
-          (mkKESKeyPair (x, 0, 0, 0, 3))
+          [( KESPeriod (iter * fromIntegral maxKESIterations)
+           , mkKESKeyPair (x, 0, 0, fromIntegral iter, 3)
+           ) | iter <- [0 .. 100]]
           (hashKey vkCold)
+          (KESPeriod 0)
     )
   | x <- [1001..1000+numCoreNodes]
   ]
@@ -369,11 +374,12 @@ mkBlock
   -> NatNonce     -- ^ Block nonce
   -> UnitInterval -- ^ Praos leader value
   -> Natural      -- ^ Period of KES (key evolving signature scheme)
+  -> Natural      -- ^ KES period of key registration
   -> OCert        -- ^ Operational certificate
   -> Block
-mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod oCert =
+mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
   let
-    (sHot, _) = hot pkeys
+    (_, (sHot, _)) = head $ hot pkeys
     KeyPair vKeyCold _ = cold pkeys
     nonceNonce = mkSeed seedEta s enonce prev
     leaderNonce = mkSeed seedL s enonce prev
@@ -389,11 +395,12 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod oCert =
             (bbHash $ TxSeq $ fromList txns)
             oCert
             (ProtVer 0 0 0)
-    hotKey = case evolveKESUntil sHot (KESPeriod kesPeriod) of
+    kpDiff = kesPeriod - c0
+    hotKey = case evolveKESUntil sHot (KESPeriod kpDiff) of
                Nothing ->
                  error ("could not evolve key to iteration " ++ show kesPeriod)
                Just hkey -> hkey
-    sig = case signKES hotKey bhb kesPeriod of
+    sig = case signKES hotKey bhb kpDiff of
             Nothing -> error ("could not sign with KES key " ++ show hotKey)
             Just sig' -> sig'
     bh = BHeader bhb sig
@@ -407,13 +414,22 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod oCert =
 -- we then encode into the fake VRF implementation.
 newtype NatNonce = NatNonce Natural
 
-mkOCert :: AllPoolKeys -> Natural -> Natural -> OCert
-mkOCert pkeys c0 kp =
-  let (_, vKeyHot) = hot pkeys
+mkOCert :: AllPoolKeys -> Natural -> KESPeriod -> OCert
+mkOCert pkeys n c0 =
+  let (_, (_, vKeyHot)) = head $ hot pkeys
       KeyPair vKeyCold sKeyCold = cold pkeys in
   OCert
    vKeyHot
    vKeyCold
+   n
    c0
-   (KESPeriod kp)
-   (sign sKeyCold (vKeyHot, c0, KESPeriod kp))
+   (sign sKeyCold (vKeyHot, n, c0))
+
+getKESPeriodRenewalNo :: AllPoolKeys -> KESPeriod -> Integer
+getKESPeriodRenewalNo keys (KESPeriod kp) =
+  go (hot keys) 0 kp
+  where go [] _ _ = error "did not find enough KES renewals"
+        go ((KESPeriod p, _):rest) n k =
+          if p <= k && k < p + fromIntegral maxKESIterations
+          then n
+          else go rest (n + 1) k

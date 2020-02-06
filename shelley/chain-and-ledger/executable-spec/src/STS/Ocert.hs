@@ -7,6 +7,7 @@
 
 module STS.Ocert
   ( OCERT
+  , OCertEnv(..)
   )
 where
 

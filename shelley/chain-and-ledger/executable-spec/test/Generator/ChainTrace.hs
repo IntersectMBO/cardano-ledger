@@ -50,7 +50,7 @@ import           UTxO (balance)
 instance HasTrace CHAIN Word64 where
   -- the current slot needs to be large enough to allow for many blocks
   -- to be processed (in large CHAIN traces)
-  envGen _ = SlotNo <$> QC.choose (10, 100)
+  envGen _ = SlotNo <$> QC.choose (1000, 5000)
 
   sigGen _ env st =
     genBlock
