@@ -1,11 +1,10 @@
-{ iohkCardanoLedgerSpecsPackages ? import ../default.nix {}
-, pkgs ? iohkCardanoLedgerSpecsPackages.pkgs
-, iohkLib ? iohkCardanoLedgerSpecsPackages.iohkLib
+{ pkgs ? import ../nix {}
+, commonLib ? pkgs.commonLib
 }:
 
-iohkLib.haskellBuildUtils.stackRebuild {
+commonLib.haskellBuildUtils.stackRebuild {
   script = ./rebuild.hs;
   buildTools = [];
   libs = ps: [];
-  shell = import ../nix/stack-shell.nix {};
+  shell = import ../nix/stack-shell.nix;
 }

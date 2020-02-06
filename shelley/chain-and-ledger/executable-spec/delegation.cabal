@@ -156,7 +156,6 @@ test-suite delegation-test
     build-depends:
       base,
       bytestring,
-      cardano-binary,
       cborg,
       cryptonite,
       tasty,
