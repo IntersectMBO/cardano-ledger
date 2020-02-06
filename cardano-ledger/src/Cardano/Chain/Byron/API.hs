@@ -337,25 +337,21 @@ mkUtxoEnvironment cfg cvs = Utxo.Environment {
     updateState   = CC.cvsUpdateState cvs
 
 mkDelegationEnvironment :: Gen.Config
-                        -> CC.ChainValidationState
+                        -> CC.SlotNumber
                         -> D.Iface.Environment
-mkDelegationEnvironment cfg cvs = D.Iface.Environment {
+mkDelegationEnvironment cfg currentSlot = D.Iface.Environment {
       D.Iface.protocolMagic     = getAProtocolMagicId protocolMagic
     , D.Iface.allowedDelegators = allowedDelegators cfg
     , D.Iface.k                 = k
-      -- By rights the 'currentEpoch' for checking a delegation certificate
-      -- should be the epoch of the block in which the delegation certificate
-      -- is included. However, we don't have such a block yet, and so we can
-      -- only use the epoch from the ledger state. This does mean that we might
-      -- say a transaction is valid now, but will become invalid by the time we
-      -- actually include it in a block.
+      -- The @currentSlot@/@currentEpoch@ for checking a delegation certificate
+      -- must be that of the block in which the delegation certificate is/will
+      -- be included.
     , D.Iface.currentEpoch      = currentEpoch
     , D.Iface.currentSlot       = currentSlot
     }
   where
     k             = Gen.configK cfg
     protocolMagic = reAnnotateMagic (Gen.configProtocolMagic cfg)
-    currentSlot   = CC.cvsLastSlot cvs
     currentEpoch  = CC.slotNumberEpoch (Gen.configEpochSlots cfg) currentSlot
 
 mkUpdateEnvironment :: Gen.Config
@@ -400,13 +396,14 @@ applyTxAux validationMode cfg txs cvs =
 
 applyCertificate :: MonadError D.Sched.Error m
                  => Gen.Config
+                 -> CC.SlotNumber
                  -> [Delegation.ACertificate ByteString]
                  -> CC.ChainValidationState -> m CC.ChainValidationState
-applyCertificate cfg certs cvs =
+applyCertificate cfg currentSlot certs cvs =
     (`setDelegationState` cvs) <$>
       D.Iface.updateDelegation dlgEnv dlgState certs
   where
-    dlgEnv   = mkDelegationEnvironment cfg cvs
+    dlgEnv   = mkDelegationEnvironment cfg currentSlot
     dlgState = CC.cvsDelegationState cvs
 
 applyUpdateProposal :: MonadError U.Iface.Error m
@@ -471,16 +468,17 @@ instance FromCBOR ApplyMempoolPayloadErr where
 applyMempoolPayload :: MonadError ApplyMempoolPayloadErr m
                     => CC.ValidationMode
                     -> Gen.Config
+                    -> CC.SlotNumber
                     -> CC.AMempoolPayload ByteString
                     -> CC.ChainValidationState -> m CC.ChainValidationState
-applyMempoolPayload validationMode cfg payload =
+applyMempoolPayload validationMode cfg currentSlot payload =
     case payload of
       CC.MempoolTx tx ->
         (`wrapError` MempoolTxErr) .
           applyTxAux validationMode cfg [tx]
       CC.MempoolDlg cert ->
         (`wrapError` MempoolDlgErr) .
-          applyCertificate cfg [cert]
+          applyCertificate cfg currentSlot [cert]
       CC.MempoolUpdateProposal proposal ->
         (`wrapError` MempoolUpdateProposalErr) .
           applyUpdateProposal cfg proposal
