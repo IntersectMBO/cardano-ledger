@@ -8,6 +8,7 @@
 
 module Cardano.Chain.UTxO.Validation
   ( validateTx
+  , validateTxAux
   , updateUTxO
   , updateUTxOTxWitness
   , updateUTxOTx
@@ -54,7 +55,7 @@ import Cardano.Chain.Common
   )
 import Cardano.Chain.UTxO.Tx (Tx(..), TxIn, TxOut(..))
 import Cardano.Chain.UTxO.Compact (CompactTxOut(..), toCompactTxIn)
-import Cardano.Chain.UTxO.TxAux (ATxAux, aTaTx, taWitness)
+import Cardano.Chain.UTxO.TxAux (ATxAux(..), aTaTx, taWitness)
 import Cardano.Chain.UTxO.TxWitness
   (TxInWitness(..), TxSigData(..), recoverSigData)
 import Cardano.Chain.UTxO.UTxO
@@ -155,23 +156,76 @@ instance FromCBOR TxValidationError where
 
 -- | Validate that:
 --
---   1. All @TxIn@s are in domain of @Utxo@
---   2. The fee is not less than the minimum fee
+--   1. The fee for a transaction is not less than the minimum fee.
+--   2. The size of the transaction is below the maximum size.
 --   3. Output balance + fee = input balance
 --
---   These are the conditions of the UTxO inference rule in the spec. We
---   actually assume 3 by calculating the fee as output balance - input balance.
+--   The transaction size must be calculated _including the witnesses_. As such
+--   this cannot be part of 'validateTx'. We actually assume 3 by calculating
+--   the fee as output balance - input balance.
+validateTxAux
+  :: MonadError TxValidationError m
+  => Environment
+  -> UTxO
+  -> ATxAux ByteString
+  -> m ()
+validateTxAux env utxo (ATxAux (Annotated tx _) _ txBytes) = do
+
+    -- Check that the size of the transaction is less than the maximum
+    txSize <= maxTxSize
+      `orThrowError` TxValidationTxTooLarge txSize maxTxSize
+
+    -- Calculate the minimum fee from the 'TxFeePolicy'
+    minFee <- if isRedeemUTxO inputUTxO
+      then pure $ mkKnownLovelace @0
+      else calculateMinimumFee feePolicy
+
+    -- Calculate the balance of the output 'UTxO'
+    balanceOut <- balance (txOutputUTxO tx)
+      `wrapError` TxValidationLovelaceError "Output Balance"
+
+    -- Calculate the balance of the restricted input 'UTxO'
+    balanceIn <- balance inputUTxO
+      `wrapError` TxValidationLovelaceError "Input Balance"
+
+    -- Calculate the 'fee' as the difference of the balances
+    fee <- subLovelace balanceIn balanceOut
+      `wrapError` TxValidationLovelaceError "Fee"
+
+    -- Check that the fee is greater than the minimum
+    (minFee <= fee) `orThrowError` TxValidationFeeTooSmall tx minFee fee
+
+  where
+    Environment { protocolParameters } = env
+
+    maxTxSize = ppMaxTxSize protocolParameters
+    feePolicy = ppTxFeePolicy protocolParameters
+
+    txSize :: Natural
+    txSize = fromIntegral $ BS.length txBytes
+
+    inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
+
+    calculateMinimumFee
+      :: MonadError TxValidationError m => TxFeePolicy -> m Lovelace
+    calculateMinimumFee = \case
+
+      TxFeePolicyTxSizeLinear txSizeLinear ->
+        calculateTxSizeLinear txSizeLinear txSize
+          `wrapError` TxValidationLovelaceError "Minimum Fee"
+
+-- | Validate that:
+--
+--   1. All @TxIn@s are in domain of @Utxo@
+--
+--   These are the conditions of the UTxO inference rule in the spec.
 validateTx
   :: MonadError TxValidationError m
   => Environment
   -> UTxO
   -> Annotated Tx ByteString
   -> m ()
-validateTx env utxo (Annotated tx txBytes) = do
-
-  -- Check that the size of the transaction is less than the maximum
-  txSize <= maxTxSize
-    `orThrowError` TxValidationTxTooLarge txSize maxTxSize
+validateTx env utxo (Annotated tx _) = do
 
   -- Check that the transaction attributes are less than the max size
   unknownAttributesLength (txAttributes tx) < 128
@@ -184,44 +238,8 @@ validateTx env utxo (Annotated tx txBytes) = do
   -- Check that every input is in the domain of 'utxo'
   txInputs tx `forM_` validateTxIn utxoConfiguration utxo
 
-  -- Calculate the minimum fee from the 'TxFeePolicy'
-  minFee <- if isRedeemUTxO inputUTxO
-    then pure $ mkKnownLovelace @0
-    else calculateMinimumFee feePolicy
-
-  -- Calculate the balance of the output 'UTxO'
-  balanceOut <- balance (txOutputUTxO tx)
-    `wrapError` TxValidationLovelaceError "Output Balance"
-
-  -- Calculate the balance of the restricted input 'UTxO'
-  balanceIn <- balance inputUTxO
-    `wrapError` TxValidationLovelaceError "Input Balance"
-
-  -- Calculate the 'fee' as the difference of the balances
-  fee <- subLovelace balanceIn balanceOut
-    `wrapError` TxValidationLovelaceError "Fee"
-
-  -- Check that the fee is greater than the minimum
-  (minFee <= fee) `orThrowError` TxValidationFeeTooSmall tx minFee fee
  where
-  Environment { protocolMagic, protocolParameters, utxoConfiguration } = env
-
-  maxTxSize = ppMaxTxSize protocolParameters
-  feePolicy = ppTxFeePolicy protocolParameters
-
-  txSize :: Natural
-  txSize = fromIntegral $ BS.length txBytes
-
-  inputUTxO = S.fromList (NE.toList (txInputs tx)) <| utxo
-
-  calculateMinimumFee
-    :: MonadError TxValidationError m => TxFeePolicy -> m Lovelace
-  calculateMinimumFee = \case
-
-    TxFeePolicyTxSizeLinear txSizeLinear ->
-      calculateTxSizeLinear txSizeLinear txSize
-        `wrapError` TxValidationLovelaceError "Minimum Fee"
-
+  Environment { protocolMagic, utxoConfiguration } = env
 
 -- | Validate that 'TxIn' is in the domain of 'UTxO'
 validateTxIn
@@ -343,6 +361,10 @@ updateUTxOTxWitness env utxo ta = do
     mapM_
         (uncurry $ validateWitness pmi sigData)
         (zip addresses (V.toList witness))
+      `wrapError` UTxOValidationTxValidationError
+
+    -- Validate the tx including witnesses
+    validateTxAux env utxo ta
       `wrapError` UTxOValidationTxValidationError
 
   -- Update 'UTxO' ignoring witnesses
