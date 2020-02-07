@@ -46,7 +46,6 @@ import           Data.Coerce (coerce)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Proxy (Proxy (..))
 import           Data.Ratio (denominator, numerator)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -56,7 +55,6 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           MetaData (MetaData)
 import           Numeric.Natural (Natural)
-import           Unsafe.Coerce (unsafeCoerce)
 
 import           BaseTypes (CborSeq (..), Nonce (..), Seed (..), UnitInterval, intervalValue,
                      invalidKey, mkNonce)
