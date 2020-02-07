@@ -300,15 +300,16 @@ updateChainBoundary cvs bvd = do
 
   -- Update the previous hash
   pure $ cvs
-    { cvsPreviousHash =
-      Right
-      . coerce
-      . hashRaw
-      . BSL.fromStrict
-      . wrapBoundaryBytes
-      $ boundaryHeaderAnnotation (boundaryHeader bvd)
+    { cvsPreviousHash = Right $! previousHash
     }
-
+ where
+   previousHash :: HeaderHash
+   previousHash =
+       coerce
+     . hashRaw
+     . BSL.fromStrict
+     . wrapBoundaryBytes
+     $ boundaryHeaderAnnotation (boundaryHeader bvd)
 
 validateHeaderMatchesBody
   :: MonadError ProofValidationError m
