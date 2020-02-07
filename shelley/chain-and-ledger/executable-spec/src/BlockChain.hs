@@ -114,17 +114,14 @@ bbHash
    . Crypto crypto
   => TxSeq crypto
   -> HashBBody crypto
-bbHash (TxSeq txns) = (HashBBody . unsafeCoerce) $ -- TODO is unsafeCoerce okay here?
-  Hash.digest
-    (Proxy :: Proxy (HASH crypto))
-    (bodies <> wits <> md)
+bbHash (TxSeq txns) = (HashBBody . coerce) $
+  hash @(HASH crypto) (bodies <> wits <> md)
   where
-  bodies = Hash.getHash ((
-    hash . CborSeq) $ fmap _body txns :: Hash (HASH crypto) (CborSeq (TxBody crypto)))
-  wits = Hash.getHash ((
-    hash . CborSeq) $ fmap txToSegWit txns :: Hash (HASH crypto) (CborSeq (SegWits crypto)))
-  md = Hash.getHash ((
-    hash . CborSeq) $ fmap _metadata txns :: Hash (HASH crypto) (CborSeq (Maybe MetaData)))
+    hashBytes :: forall a. ToCBOR a => a -> Hash.ByteString
+    hashBytes = Hash.getHash . hash @(HASH crypto)
+    bodies = hashBytes . CborSeq $ _body       <$> txns
+    wits =   hashBytes . CborSeq $ txToSegWit  <$> txns
+    md =     hashBytes           $ extractMetaData txns
 
 -- |HashHeader to Nonce
 hashHeaderToNonce :: HashHeader crypto -> Nonce
