@@ -47,7 +47,7 @@ import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, 
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
-                     _genDelegs, _pstate, _rewards, _stPools, _stkCreds)
+                     _genDelegs, _irwd, _pstate, _rewards, _stPools, _stkCreds)
 import           PParams (PParams (..), d, eMax)
 import           Slot (Duration (..), EpochNo (EpochNo), SlotNo (SlotNo), epochInfoFirst, (*-))
 import           Tx (getKeyCombination)
@@ -207,7 +207,10 @@ genDeRegKeyCert keys scripts dState =
       filter (\(_, s) -> let cred = scriptToCred s in
                       ((&&) <$> registered <*> zeroRewards) cred) scripts
     zeroRewards k =
-      (Coin 0) == (Map.findWithDefault (Coin 1) (mkRwdAcnt k) (_rewards dState))
+         (Coin 0) == (Map.findWithDefault (Coin 1) (mkRwdAcnt k) (_rewards dState))
+      && noIRWaiting  k
+
+    noIRWaiting k = not $ k ∈ dom (_irwd dState)
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's
