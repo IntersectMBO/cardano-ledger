@@ -34,7 +34,8 @@ import           Generator.Core.Constants (frequencyAFewWithdrawals, frequencyNo
 import           Generator.Core.QuickCheck (findPayKeyPairAddr, findPayKeyPairCred,
                      findPayScriptFromAddr, findStakeScriptFromCred, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
-import           LedgerState (pattern UTxOState, _dstate, _ptrs, _rewards)
+import           Ledger.Core ((∈))
+import           LedgerState (pattern UTxOState, _dstate, _irwd, _ptrs, _rewards)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
@@ -66,8 +67,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
   (witnessedInputs, spendingBalanceUtxo) <-
     pickSpendingInputs scripts' keyHashMap utxo
 
-  wdrls <- pure Map.empty -- TODO mgudemann re-enable withdrawal generation
-                          -- pickWithdrawals (_rewards . _dstate $ dpState)
+  wdrls <- pickWithdrawals (_rewards . _dstate $ dpState) (_irwd . _dstate $ dpState)
   let wdrlCredentials = fmap (mkWdrlWits scripts' keyHashMap) (fmap getRwdCred (Map.keys wdrls))
       wdrlWitnesses = Either.lefts wdrlCredentials
       wdrlScripts   = Either.rights wdrlCredentials
@@ -207,16 +207,19 @@ pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 pickWithdrawals
   :: Map RewardAcnt Coin
+  -> Map Credential Coin
   -> Gen (Map RewardAcnt Coin)
-pickWithdrawals wdrls = QC.frequency
+pickWithdrawals wdrls irwd_ = QC.frequency
   [ (frequencyNoWithdrawals,
      pure Map.empty)
   , (frequencyAFewWithdrawals,
-     Map.fromList <$> (QC.sublistOf . (take maxAFewWithdrawals) . Map.toList) wdrls
+     Map.fromList <$> (QC.sublistOf . (take maxAFewWithdrawals) . Map.toList) wdrls'
     )
   , (frequencyPotentiallyManyWithdrawals,
-     Map.fromList <$> (QC.sublistOf . Map.toList) wdrls)
+     Map.fromList <$> (QC.sublistOf . Map.toList) wdrls')
   ]
+  where wdrls' = Map.filterWithKey (\k _ -> not $ (getRwdCred k) ∈ receipientsIR) wdrls
+        receipientsIR = Map.keysSet irwd_
 
 -- | Collect witnesses needed for reward withdrawals.
 mkWdrlWits
