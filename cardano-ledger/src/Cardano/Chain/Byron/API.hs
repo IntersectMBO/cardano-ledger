@@ -265,7 +265,7 @@ validateBlock cfg validationMode block blkHash cvs = do
     bodyState' <- validateBody validationMode block bodyEnv bodyState
     return cvs {
           CC.cvsLastSlot        = CC.blockSlot block
-        , CC.cvsPreviousHash    = Right blkHash
+        , CC.cvsPreviousHash    = Right $! blkHash
         , CC.cvsUtxo            = CC.utxo            bodyState'
         , CC.cvsUpdateState     = CC.updateState     bodyState'
         , CC.cvsDelegationState = CC.delegationState bodyState'
