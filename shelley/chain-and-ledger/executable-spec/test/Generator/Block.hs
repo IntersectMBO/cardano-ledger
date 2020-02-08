@@ -14,15 +14,14 @@ import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
-import           Cardano.Prelude (asks)
 import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, GenKeyHash, KeyHash, KeyPair,
-                     LEDGERS, OCertEnv)
+                     LEDGERS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import           Delegation.Certificates (PoolDistr (..))
 import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural,
                      getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash, zero)
 import           Generator.LedgerTrace.QuickCheck ()
-import           Keys (GenDelegs (..), pattern KeyPair, hashKey, vKey)
+import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range)
 import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
                      overlaySchedule, _delegationState, _dstate, _genDelegs, _pParams, _pstate,
@@ -34,8 +33,6 @@ import           STS.Chain (chainEpochNonce, chainHashHeader, chainNes, chainOCe
 import           STS.Ledgers (LedgersEnv (..))
 import           STS.Ocert (pattern OCertEnv)
 import           Test.Utils (maxKESIterations, runShelleyBase)
-
-import           Debug.Trace as D
 
 nextCoreNode
   :: Map SlotNo (Maybe GenKeyHash)
@@ -99,7 +96,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
   lookForPraosStart <- genSlotIncrease
   let poolParams = (Map.toList . unPoolDistr . nesPd . chainNes) chainSt
   poolParams' <- take 1 <$> QC.shuffle poolParams
-  let (nextSlot, keys) = case poolParams' of
+  let (_nextSlot, _keys) = case poolParams' of
         []       -> (nextOSlot, gkeys gkey)
         (pkh, (_, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
                       Nothing -> (nextOSlot, gkeys gkey)
@@ -118,7 +115,6 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
 
     let kp@(KESPeriod kesPeriod_) = runShelleyBase (kesPeriod $ nextOSlot)
         cs = chainOCertIssue chainSt
-        KeyPair vKeyCold _ = cold $ gkeys gkey
 
         -- poolParams in SNAP (_, poolParams, _) in pstate
         poolKeys = dom $ (_pParams . _pstate) dpstate
