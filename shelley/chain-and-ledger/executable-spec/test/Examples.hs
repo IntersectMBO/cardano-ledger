@@ -143,7 +143,6 @@ mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
                               [(KESPeriod 0, mkKESKeyPair (w, 0, 0, 0, 3))]
                   -- TODO mgudemann
                               (hashKey vkCold)
-                              (KESPeriod 0)
   where
     (skCold, vkCold) = mkKeyPair (w, 0, 0, 0, 1)
 

@@ -170,7 +170,6 @@ data AllPoolKeys = AllPoolKeys
   , vrf :: (SignKeyVRF, VerKeyVRF)
   , hot :: [(KESPeriod, (SKeyES, VKeyES))]
   , hk  :: KeyHash
-  , startKESPeriod :: KESPeriod
   } deriving (Show)
 
 -- Pairs of (genesis key, node keys)
@@ -188,7 +187,6 @@ coreNodeKeys =
            , mkKESKeyPair (x, 0, 0, fromIntegral iter, 3)
            ) | iter <- [0 .. 100]]
           (hashKey vkCold)
-          (KESPeriod 0)
     )
   | x <- [1001..1000+numCoreNodes]
   ]
