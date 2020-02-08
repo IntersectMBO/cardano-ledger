@@ -45,9 +45,9 @@ import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDeleg
                      frequencyScriptCredReg)
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred)
 import           Keys (GenDelegs (..), hashKey, vKey)
-import           Ledger.Core (dom, range, (∈), (∉))
+import           Ledger.Core (dom, range, (</|), (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
-                     _genDelegs, _irwd, _pstate, _rewards, _stPools, _stkCreds)
+                     _genDelegs, _irwd, _pstate, _retiring, _rewards, _stPools, _stkCreds)
 import           PParams (PParams (..), d, eMax)
 import           Slot (Duration (..), EpochNo (EpochNo), SlotNo (SlotNo), epochInfoFirst, (*-))
 import           Tx (getKeyCombination)
@@ -256,7 +256,8 @@ genDelegation keys scripts dpState =
       filter (registeredDelegate . scriptToCred . snd) scripts
 
     (StakePools registeredPools) = _stPools (_pstate dpState)
-    availablePools = Map.keys registeredPools
+    availablePools =
+      Set.toList $ dom (dom ((_retiring . _pstate) dpState) </| registeredPools)
 
 genGenesisDelegation
   :: KeyPairs
