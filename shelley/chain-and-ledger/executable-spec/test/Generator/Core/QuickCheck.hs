@@ -71,8 +71,8 @@ import           ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair, Cred
                      HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, OCert,
                      SKeyES, SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VRFKeyHash,
                      VerKeyVRF, hashKeyVRF)
-import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, minGenesisOutputVal,
-                     numBaseScripts)
+import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, maxSlotTrace,
+                     minGenesisOutputVal, numBaseScripts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign, signKES,
                      undiscriminateKeyHash, vKey)
 import           LedgerState (AccountState (..), genesisCoins)
@@ -80,7 +80,8 @@ import           Numeric.Natural (Natural)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Slot (BlockNo (..), SlotNo (..))
 import           Test.Utils (evolveKESUntil, maxKESIterations, mkCertifiedVRF, mkGenKey,
-                     mkKESKeyPair, mkKeyPair, mkVRFKeyPair, unsafeMkUnitInterval)
+                     mkKESKeyPair, mkKeyPair, mkVRFKeyPair, slotsPerKESIteration,
+                     unsafeMkUnitInterval)
 import           Tx (pattern TxOut, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
                      pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
@@ -183,9 +184,9 @@ coreNodeKeys =
         AllPoolKeys
           (toKeyPair (skCold, vkCold))
           (mkVRFKeyPair (x, 0, 0, 0, 2))
-          [( KESPeriod (iter * fromIntegral maxKESIterations)
+          [( KESPeriod (fromIntegral (iter * fromIntegral maxKESIterations))
            , mkKESKeyPair (x, 0, 0, fromIntegral iter, 3)
-           ) | iter <- [0 .. 100]]
+           ) | iter <- [0 .. (1 + div maxSlotTrace (fromIntegral (maxKESIterations * slotsPerKESIteration)))]]
           (hashKey vkCold)
     )
   | x <- [1001..1000+numCoreNodes]

@@ -119,3 +119,11 @@ maxAFewWithdrawals = 10
 -- reward withdrawals
 frequencyPotentiallyManyWithdrawals :: Int
 frequencyPotentiallyManyWithdrawals = 5
+
+-- | Minimal slot for CHAIN trace generation.
+minSlotTrace :: Int
+minSlotTrace = 1000
+
+-- | Maximal slot for CHAIN trace generation.
+maxSlotTrace :: Int
+maxSlotTrace = 5000

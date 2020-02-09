@@ -49,7 +49,7 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
               (traceLength tr <= 20 * length (filter isRegKey certs_))
               "there is at least 1 RegKey certificate for every 10 transactions"
 
-     , cover_ 60
+     , cover_ 40
               (traceLength tr <= 20 * length (filter isDeRegKey certs_))
               "there is at least 1 DeRegKey certificate for every 20 transactions"
 

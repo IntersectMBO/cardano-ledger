@@ -15,6 +15,7 @@ module Test.Utils
   , testGlobals
   , maxKESIterations
   , unsafeMkUnitInterval
+  , slotsPerKESIteration
   ) where
 
 import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, mkUnitInterval)
@@ -121,3 +122,6 @@ evolveKESUntil k p'@(KESPeriod p) =
 
 maxKESIterations :: Word64
 maxKESIterations = runShelleyBase (asks maxKESEvo)
+
+slotsPerKESIteration :: Word64
+slotsPerKESIteration = runShelleyBase (asks slotsPerKESPeriod)
