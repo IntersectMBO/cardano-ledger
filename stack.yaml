@@ -1,33 +1,35 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/00487726c4bc21b4744e59d913334ebfeac7d68e/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/c40175657bc8134e0561d9b6e6334728c19112e4/snapshot.yaml
+
+allow-newer: true
 
 packages:
-- shelley/chain-and-ledger/executable-spec
-- byron/chain/executable-spec
-- byron/ledger/executable-spec
-- byron/semantics/executable-spec
-- shelley/chain-and-ledger/dependencies/non-integer
+  - shelley/chain-and-ledger/executable-spec
+  - byron/chain/executable-spec
+  - byron/ledger/executable-spec
+  - byron/semantics/executable-spec
+  - shelley/chain-and-ledger/dependencies/non-integer
 
 extra-deps:
-- sequence-0.9.8
-- tasty-hedgehog-1.0.0.1 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
-- Unique-0.4.7.6
-- bimap-0.4.0
-- monad-stm-0.1.0.2
+  - sequence-0.9.8
+  - tasty-hedgehog-1.0.0.1 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
+  - Unique-0.4.7.6
+  - bimap-0.4.0
+  - monad-stm-0.1.0.2
+  - moo-1.2
+  - gray-code-0.3.1
 
-- git: https://github.com/input-output-hk/cardano-prelude
-  commit: 00487726c4bc21b4744e59d913334ebfeac7d68e
+  - git: https://github.com/input-output-hk/cardano-prelude
+    commit: c40175657bc8134e0561d9b6e6334728c19112e4
 
-- git: https://github.com/input-output-hk/cardano-base
-  commit: 965b8b143632faea16680a195e6de57091382700
-  subdirs:
-    - binary
-    - cardano-crypto-class
-    - slotting
+  - git: https://github.com/input-output-hk/cardano-base
+    commit: 4f24cf8d6686ac764c6ddbc188c88d9296497a50
+    subdirs:
+      - binary
+      - cardano-crypto-class
+      - slotting
 
-- git: https://github.com/input-output-hk/goblins
-  commit: 26d35ad52fe9ade3391532dbfeb2f416f07650bc
-- moo-1.2
-- gray-code-0.3.1
+  - git: https://github.com/input-output-hk/goblins
+    commit: 26d35ad52fe9ade3391532dbfeb2f416f07650bc
 
 nix:
   shell-file: nix/stack-shell.nix
