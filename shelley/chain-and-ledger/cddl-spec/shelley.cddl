@@ -4,6 +4,7 @@ block =
   [ header
   , transaction_bodies         : [* transaction_body]
   , transaction_witness_sets   : [* transaction_witness_set]
+  , transaction_metadata_set   : { * uint => transaction_metadata }
   ]
 
 header =
@@ -47,6 +48,7 @@ transaction_body =
   , 4 : coin ; fee
   , 5 : uint ; ttl
   , ? 6 : full_update
+  , ? 7 : metadata_hash
   }
 
 ; Is it okay to have this as a group? Is it valid CBOR?! Does it need to be?
@@ -100,10 +102,10 @@ pool_params = ( #6.258([* keyhash]) ; pool owners
               , coin                ; pledge
               , keyhash             ; operator
               , $vrf_keyhash        ; vrf keyhash
-              , credential          ; reward account
+              , [credential]        ; reward account
               )
 
-withdrawals = { * credential => coin }
+withdrawals = { * [credential] => coin }
 
 full_update = [ protocol_param_update_votes, application_version_update_votes ]
 
@@ -150,6 +152,13 @@ transaction_witness_set =
   // 4, [* vkeywitness],[* $script]
   )
 
+transaction_metadata =
+    { * transaction_metadata => transaction_metadata }
+  / [ * transaction_metadata ]
+  / int
+  / bytes
+  / text
+
 vkeywitness = [$vkey, $signature]
 
 unit_interval = rational
@@ -169,6 +178,8 @@ scripthash = $hash
 genesishash = $hash
 
 installerhash = $hash
+
+metadata_hash = $hash
 
 $hash /= bytes
 

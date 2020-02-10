@@ -631,11 +631,18 @@ Figure~\ref{fig:ts-types:utxow-shelley} defines the type for this transition.
 \end{figure}
 
 Figure~\ref{fig:rules:utxow-shelley} defines UTxOW transition.
-It has two predicates:
+It has six predicates:
 \begin{itemize}
   \item Every signature in the transaction is a valid signature of the transaction body.
-  \item The set of (hashes of) verification keys given by the transaction is exactly
+  \item The set of (hashes of) verification keys given by the transaction is a subset of
     the set of needed (hashes of) verification keys.
+  \item Every multisignature script is valid.
+  \item The set of scripts given by the transaction is equal to the set of required scripts.
+  \item Any instantaneous reward certificates have quorum agreement from the genesis nodes.
+  \item No instantaneous reward certificates are allowed when
+    the decentralization parameter is equal to zero.
+  \item Either the transaction metadata hash and the transaction metadata are both absent,
+    or the hash present in the body is actually equal to the hash of the metadata.
 \end{itemize}
 If the predicates are satisfied, the state is transitioned by the UTxO transition rule.
 
@@ -668,6 +675,14 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
       \fun{d}~\var{pp} > 0
       \\~\\
+      \var{mdh}\leteq\fun{txMDhash}~\var{tx}
+      &
+      \var{md}\leteq\fun{txMD}~\var{tx}
+      \\
+      (\var{mdh}=\Nothing \land \var{md}=\Nothing)
+      \lor
+      (\var{mdh}=\fun{hashMD}~\var{md})
+      \\~\\
       {
         \begin{array}{r}
           \var{slot}\\
@@ -695,12 +710,24 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
   \label{fig:rules:utxow-shelley}
 \end{figure}
 
-The UTXOW rule has two predicate failures:
+The UTXOW rule has eight predicate failures:
 \begin{itemize}                 %TODO: add multi-sig script failure predicates
-\item In the case of an incorrect witness, there is a \emph{InvalidWitnesses}
-  failure.
-\item In the case of a missing witness, there is a \emph{MissingVKeyWitnesses}
-  failure.
+\item In the case of an incorrect witness,
+  there is a \emph{InvalidWitnesses} failure.
+\item In the case of a missing witness,
+  there is a \emph{MissingVKeyWitnesses} failure.
+\item In the case of missing scripts,
+  there is a \emph{MissingScriptWitnesses} failure.
+\item In the case of an invalid script,
+  there is a \emph{ScriptWitnessNotValidating} failure.
+\item In the case that the $\mathsf{}$ rule fails,
+  there is a \emph{UtxoFailure} failure.
+\item In the case of a lack of quorum on an instantaneous reward certificate,
+  there is a \emph{MIRInsufficientGenesisSigs} failure.
+\item In the case of an instantaneous reward certificate after decentralization,
+  there is a \emph{MIRImpossibleInDecentralizedNet} failure.
+\item In the case of inconsist metadata hashes,
+  there is a \emph{BadMetaDataHash} failure.
 \end{itemize}
 
 \clearpage

@@ -128,8 +128,9 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
                 `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
                 `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
 
+    let metadata = Nothing -- TODO generate metadata
     -- discard if balance is negative, i.e., deposits exceed spending balance
-    pure (Tx txBody wits multiSig)
+    pure (Tx txBody wits multiSig metadata)
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
@@ -149,6 +150,7 @@ genTxBody inputs outputs certs wdrls fee slotWithTTL = do
              fee
              slotWithTTL
              emptyUpdate -- TODO @uroboros generate updates
+             Nothing -- TODO generate metadata
 
 -- | Calculate the fee and distribute the remainder of the balance
 -- to the given addresses (as transaction outputs)

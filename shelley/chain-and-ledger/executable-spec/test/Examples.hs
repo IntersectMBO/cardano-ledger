@@ -412,6 +412,7 @@ txbodyEx2A = TxBody
            (Coin 3)
            (SlotNo 10)
            updateEx2A
+           Nothing
 
 txEx2A :: Tx
 txEx2A = Tx
@@ -430,6 +431,7 @@ txEx2A = Tx
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
              ])
           Map.empty
+          Nothing
 
 -- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
@@ -582,6 +584,7 @@ txbodyEx2B = TxBody
       , TxData._txfee    = Coin 4
       , TxData._ttl      = SlotNo 90
       , TxData._txUpdate = emptyUpdate
+      , TxData._mdHash   = Nothing
       }
 
 txEx2B :: Tx
@@ -590,6 +593,7 @@ txEx2B = Tx
           (makeWitnessesVKey txbodyEx2B [alicePay, aliceStake, bobStake, cold $ coreNodeKeys 0])
                      -- ^ Witness verification key set
           Map.empty  -- ^ Witness signature map
+          Nothing
 
 blockEx2B :: Block
 blockEx2B = mkBlock
@@ -1191,12 +1195,14 @@ txbodyEx2J = TxBody
            (Coin 9)
            (SlotNo 500)
            emptyUpdate
+           Nothing
 
 txEx2J :: Tx
 txEx2J = Tx
           txbodyEx2J
           (makeWitnessesVKey txbodyEx2J [bobPay, bobStake])
           Map.empty
+          Nothing
 
 blockEx2J :: Block
 blockEx2J = mkBlock
@@ -1272,12 +1278,14 @@ txbodyEx2K = TxBody
            (Coin 2)
            (SlotNo 500)
            emptyUpdate
+           Nothing
 
 txEx2K :: Tx
 txEx2K = Tx
           txbodyEx2K
           (makeWitnessesVKey txbodyEx2K [cold alicePool, alicePay])
           Map.empty
+          Nothing
 
 blockEx2K :: Block
 blockEx2K = mkBlock
@@ -1437,6 +1445,7 @@ txbodyEx3A = TxBody
            (Coin 1)
            (SlotNo 10)
            updateEx3A
+           Nothing
 
 txEx3A :: Tx
 txEx3A = Tx
@@ -1449,6 +1458,7 @@ txEx3A = Tx
             , cold $ coreNodeKeys 4
             ])
           Map.empty
+          Nothing
 
 blockEx3A :: Block
 blockEx3A = mkBlock
@@ -1526,6 +1536,7 @@ txbodyEx3B = TxBody
            (Coin 1)
            (SlotNo 31)
            updateEx3B
+           Nothing
 
 txEx3B :: Tx
 txEx3B = Tx
@@ -1537,6 +1548,7 @@ txEx3B = Tx
             , cold $ coreNodeKeys 5
             ])
           Map.empty
+          Nothing
 
 blockEx3B :: Block
 blockEx3B = mkBlock
@@ -1691,6 +1703,7 @@ txbodyEx4A = TxBody
            (Coin 1)
            (SlotNo 10)
            updateEx4A
+           Nothing
 
 txEx4A :: Tx
 txEx4A = Tx
@@ -1703,6 +1716,7 @@ txEx4A = Tx
             , cold $ coreNodeKeys 4
             ])
           Map.empty
+          Nothing
 
 blockEx4A :: Block
 blockEx4A = mkBlock
@@ -1779,6 +1793,7 @@ txbodyEx4B = TxBody
            (Coin 1)
            (SlotNo 31)
            updateEx4B
+           Nothing
 
 txEx4B :: Tx
 txEx4B = Tx
@@ -1790,6 +1805,7 @@ txEx4B = Tx
             , cold $ coreNodeKeys 5
             ])
           Map.empty
+          Nothing
 
 blockEx4B :: Block
 blockEx4B = mkBlock
@@ -1932,12 +1948,14 @@ txbodyEx5A = TxBody
               (Coin 1)
               (SlotNo 10)
               emptyUpdate
+              Nothing
 
 txEx5A :: Tx
 txEx5A = Tx
            txbodyEx5A
            (makeWitnessesVKey txbodyEx5A [ alicePay ] `Set.union` makeGenWitnessesVKey txbodyEx5A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
            Map.empty
+           Nothing
 
 blockEx5A :: Block
 blockEx5A = mkBlock
@@ -2070,6 +2088,7 @@ txbodyEx6A = TxBody
               (Coin 1)
               (SlotNo 10)
               emptyUpdate
+              Nothing
 
 txEx6A :: Tx
 txEx6A = Tx
@@ -2082,6 +2101,7 @@ txEx6A = Tx
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
            ])
            Map.empty
+           Nothing
 
 blockEx6A :: Block
 blockEx6A = mkBlock
@@ -2150,6 +2170,7 @@ txEx6B = Tx
              , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
            ])
            Map.empty
+           Nothing
 
 blockEx6B :: Block
 blockEx6B = mkBlock
@@ -2224,6 +2245,7 @@ txbodyEx6F = TxBody
               (Coin 1)
               (SlotNo 99)
               emptyUpdate
+              Nothing
 
 txEx6F :: Tx
 txEx6F = Tx txbodyEx6F
@@ -2235,6 +2257,7 @@ txEx6F = Tx txbodyEx6F
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
              ])
             Map.empty
+            Nothing
 
 blockEx6F :: Block
 blockEx6F = mkBlock
@@ -2262,9 +2285,10 @@ txbodyEx6F' = TxBody
                ((slotFromEpoch $ EpochNo 1)
                 +* Duration (startRewards testGlobals) + SlotNo 7)
                emptyUpdate
+               Nothing
 
 txEx6F' :: Tx
-txEx6F' = Tx txbodyEx6F' (makeWitnessesVKey txbodyEx6F' [ alicePay ]) Map.empty
+txEx6F' = Tx txbodyEx6F' (makeWitnessesVKey txbodyEx6F' [ alicePay ]) Map.empty Nothing
 
 blockEx6F' :: Block
 blockEx6F' = mkBlock
@@ -2292,9 +2316,10 @@ txbodyEx6F'' = TxBody
                 (Coin 1)
                 ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
                 emptyUpdate
+                Nothing
 
 txEx6F'' :: Tx
-txEx6F'' = Tx txbodyEx6F'' (makeWitnessesVKey txbodyEx6F'' [ alicePay ]) Map.empty
+txEx6F'' = Tx txbodyEx6F'' (makeWitnessesVKey txbodyEx6F'' [ alicePay ]) Map.empty Nothing
 
 blockEx6F'' :: Block
 blockEx6F'' = mkBlock

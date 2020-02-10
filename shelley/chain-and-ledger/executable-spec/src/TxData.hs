@@ -40,6 +40,7 @@ import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
 import           Ledger.Core (Relation (..))
+import           MetaData
 import           Slot (EpochNo (..), SlotNo (..))
 import           Updates (Update, emptyUpdate, updateNull)
 
@@ -243,6 +244,7 @@ data TxBody crypto
       , _txfee    :: Coin
       , _ttl      :: SlotNo
       , _txUpdate :: Update crypto
+      , _mdHash   :: Maybe (MetaDataHash crypto)
       } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (TxBody crypto)
@@ -274,6 +276,7 @@ data Tx crypto
       , _witnessVKeySet :: !(Set (WitVKey crypto))
       , _witnessMSigMap ::
           Map (ScriptHash crypto) (MultiSig crypto)
+      , _metadata       :: Maybe MetaData
       } deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
@@ -457,14 +460,15 @@ instance
   => ToCBOR (Tx crypto)
  where
   toCBOR tx =
-    encodeListLen 3
+    encodeListLen 4
       <> toCBOR (_body tx)
       <> toCBOR (_witnessVKeySet tx)
       <> toCBOR (_witnessMSigMap tx)
+      <> toCBOR (_metadata tx)
 
 instance Crypto crypto => FromCBOR (Tx crypto) where
-  fromCBOR = decodeListLenOf 3 >>
-    Tx <$> fromCBOR <*> fromCBOR <*> fromCBOR
+  fromCBOR = decodeListLenOf 4 >>
+    Tx <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
 
 instance
   (Crypto crypto)
@@ -479,15 +483,18 @@ instance
             . (if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs)))
             . (if null ws then none else single (encodeWord 5 <> toCBOR ws))
             . (if updateNull us then none else single (encodeWord 6 <> toCBOR us))
+            . (encodeMDH $ _mdHash txbody)
         toList xs = xs []
-        single x = (x:)
-        none = id
         n = fromIntegral $ length l
     in encodeMapLen n <> foldr (<>) mempty l
     where
       cs = _certs txbody
       ws = _wdrls txbody
       us = _txUpdate txbody
+      single x = (x:)
+      none = id
+      encodeMDH Nothing   = none
+      encodeMDH (Just md) = single $ encodeWord 7 <> toCBOR md
 
 mapHelper :: Decoder s b -> Decoder s [b]
 mapHelper decodePart = decodeMapLenOrIndef >>= \case
@@ -513,6 +520,7 @@ instance
          4 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
          5 -> fromCBOR                     >>= \x -> pure (5, \t -> t { _wdrls    = x })
          6 -> fromCBOR                     >>= \x -> pure (6, \t -> t { _txUpdate = x })
+         7 -> fromCBOR                     >>= \x -> pure (7, \t -> t { _mdHash   = Just x })
          k -> invalidKey k
      let requiredFields :: Map Int String
          requiredFields = Map.fromList $
@@ -535,6 +543,7 @@ instance
           , _certs    = Seq.empty
           , _wdrls    = Map.empty
           , _txUpdate = emptyUpdate
+          , _mdHash   = Nothing
           }
 
 instance (Crypto crypto) =>

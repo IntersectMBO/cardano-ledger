@@ -25,6 +25,7 @@ import           ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig, Scri
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Keys (pattern GenDelegs, undiscriminateKeyHash)
 import           LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
+import           MetaData (MetaData)
 import           PParams (PParams (..), emptyPParams)
 import           Slot (SlotNo (..))
 import           STS.Utxo (UtxoEnv (..))
@@ -80,6 +81,7 @@ initTxBody addrs = TxBody
         (Coin 0)
         (SlotNo 0)
         emptyUpdate
+        Nothing
 
 makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
 makeTxBody inp addrCs wdrl =
@@ -91,8 +93,9 @@ makeTxBody inp addrCs wdrl =
     (Coin 0)
     (SlotNo 10)
     emptyUpdate
+    Nothing
 
-makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Tx
+makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
 makeTx txBody keyPairs =
   Tx txBody (makeWitnessesVKey txBody keyPairs)
 
@@ -131,7 +134,7 @@ initialUTxOState aliceKeep msigs =
   in
   let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]
-                  Map.empty in
+                  Map.empty Nothing in
   (txid $ _body tx, runShelleyBase $ applySTS @UTXOW (TRC( UtxoEnv
                                            (SlotNo 0)
                                            initPParams
@@ -169,6 +172,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
               txbody
               signers
               (Map.fromList $ map (\scr -> (hashScript scr, scr)) unlockScripts)
+              Nothing
         utxoSt' = runShelleyBase $ applySTS @UTXOW (TRC( UtxoEnv
                                           (SlotNo 0)
                                           initPParams
