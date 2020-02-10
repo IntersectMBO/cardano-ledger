@@ -40,7 +40,7 @@ import           Generator.Update.QuickCheck (genPParams)
 import           Keys (pattern GenDelegs, Hash, hash)
 import           LedgerState (overlaySchedule)
 import           Shrinkers (shrinkBlock)
-import           Slot (EpochNo (..), SlotNo (..))
+import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           STS.Chain (initialShelleyState)
 import           Test.Utils (runShelleyBase)
 import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
@@ -96,6 +96,7 @@ mkGenesisChainState (IRC _slotNo) = do
 
   pure . Right $ initialShelleyState
     (SlotNo 0)
+    (BlockNo 0)
     epoch0
     lastByronHeaderHash
     utxo0

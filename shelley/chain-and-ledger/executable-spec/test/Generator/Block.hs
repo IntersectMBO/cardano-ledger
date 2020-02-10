@@ -27,9 +27,9 @@ import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesO
                      overlaySchedule, _delegationState, _dstate, _genDelegs, _pParams, _pstate,
                      _reserves)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
-import           STS.Chain (chainEpochNonce, chainHashHeader, chainNes, chainOCertIssue,
-                     chainSlotNo)
+import           Slot (EpochNo (..), SlotNo (..))
+import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
+                     chainOCertIssue, chainSlotNo)
 import           STS.Ledgers (LedgersEnv (..))
 import           STS.Ocert (pattern OCertEnv)
 import           Test.Utils (maxKESIterations, runShelleyBase)
@@ -142,7 +142,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
       <*> pure keys'
       <*> toList <$> genTxs nextOSlot
       <*> pure nextOSlot
-      <*> pure chainDifficulty
+      <*> pure (chainBlockNo chainSt + 1)
       <*> pure (chainEpochNonce chainSt)
       <*> genBlockNonce
       <*> genPraosLeader
@@ -172,8 +172,6 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
 
     -- TODO @uroboros
     genPraosLeader = pure zero
-
-    chainDifficulty = BlockNo 1 -- used only in consensus
 
     -- we assume small gaps in slot numbers
     genSlotIncrease = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
