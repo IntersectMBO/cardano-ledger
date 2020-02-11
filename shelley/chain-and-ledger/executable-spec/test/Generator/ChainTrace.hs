@@ -32,7 +32,8 @@ import           Control.State.Transition (IRC (..))
 import           Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace, envGen,
                      interpretSTS, shrinkSignal, sigGen)
 import           Generator.Block (genBlock)
-import           Generator.Core.Constants (maxGenesisUTxOouts, minGenesisUTxOouts)
+import           Generator.Core.Constants (maxGenesisUTxOouts, maxSlotTrace, minGenesisUTxOouts,
+                     minSlotTrace)
 import           Generator.Core.QuickCheck (coreNodeKeys, genUtxo0, genesisDelegs0,
                      maxLovelaceSupply, traceKeyPairsByStakeHash)
 import           Generator.Update.QuickCheck (genPParams)
@@ -50,7 +51,7 @@ import           UTxO (balance)
 instance HasTrace CHAIN Word64 where
   -- the current slot needs to be large enough to allow for many blocks
   -- to be processed (in large CHAIN traces)
-  envGen _ = SlotNo <$> QC.choose (10, 100)
+  envGen _ = SlotNo <$> QC.choose (fromIntegral minSlotTrace, fromIntegral maxSlotTrace)
 
   sigGen _ env st =
     genBlock

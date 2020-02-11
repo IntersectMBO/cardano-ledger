@@ -85,7 +85,7 @@ import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
 import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
                      _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
 import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genesisAccountState,
-                     maxLovelaceSupply, mkBlock, zero)
+                     maxLovelaceSupply, mkBlock, mkOCert, zero)
 import           Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey, vKey)
 import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
                      pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
@@ -94,6 +94,7 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      overlaySchedule, rs, _delegationState, _delegations, _dstate, _fGenDelegs,
                      _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools,
                      _stkCreds, _treasury)
+import           OCert (KESPeriod (..))
 import           PParams (PParams (..), emptyPParams)
 import           Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..), (+*))
 import           STS.Bbody (pattern LedgersFailure)
@@ -139,7 +140,8 @@ data MIRExample =
 mkAllPoolKeys :: Word64 -> AllPoolKeys
 mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
                               (mkVRFKeyPair (w, 0, 0, 0, 2))
-                              (mkKESKeyPair (w, 0, 0, 0, 3))
+                              [(KESPeriod 0, mkKESKeyPair (w, 0, 0, 0, 3))]
+                  -- TODO mgudemann
                               (hashKey vkCold)
   where
     (skCold, vkCold) = mkKeyPair (w, 0, 0, 0, 1)
@@ -350,6 +352,8 @@ blockEx1 = mkBlock
              (NatNonce 1)
              zero
              0
+             0
+             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 -- | Expected chain state after successful processing of null block.
 expectedStEx1 :: ChainState
@@ -496,6 +500,8 @@ blockEx2A = mkBlock
              (NatNonce 1)
              zero
              0
+             0
+             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 dsEx2A :: DState
 dsEx2A = dsEx1
@@ -605,7 +611,9 @@ blockEx2B = mkBlock
              (mkNonce 0)      -- ^ Epoch nonce
              (NatNonce 2)     -- ^ Block nonce
              zero             -- ^ Praos leader value
-             1                -- ^ Period of KES (key evolving signature scheme)
+             4                -- ^ Period of KES (key evolving signature scheme)
+             0
+             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
 
 blockEx2BHash :: HashHeader
 blockEx2BHash = bhHash (bheader blockEx2B)
@@ -696,7 +704,9 @@ blockEx2C = mkBlock
              (mkNonce 0)      -- ^ Epoch nonce
              (NatNonce 3)     -- ^ Block nonce
              zero             -- ^ Praos leader value
-             1                -- ^ Period of KES (key evolving signature scheme)
+             5                -- ^ Period of KES (key evolving signature scheme)
+             0
+             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 epoch1OSchedEx2C :: Map SlotNo (Maybe GenKeyHash)
 epoch1OSchedEx2C = runShelleyBase $ overlaySchedule
@@ -826,7 +836,9 @@ blockEx2D = mkBlock
              (mkNonce 0 ⭒ mkNonce 1)
              (NatNonce 4)
              zero
-             2
+             9
+             0
+             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
 
 blockEx2DHash :: HashHeader
 blockEx2DHash = bhHash (bheader blockEx2D)
@@ -871,7 +883,9 @@ blockEx2E = mkBlock
              ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
              (NatNonce 5)
              zero
-             2
+             11
+             10
+             (mkOCert (coreNodeKeys 5) 1 (KESPeriod 10))
 
 epoch1OSchedEx2E :: Map SlotNo (Maybe GenKeyHash)
 epoch1OSchedEx2E = runShelleyBase $ overlaySchedule
@@ -909,6 +923,10 @@ acntEx2E = AccountState
             , _reserves = maxLovelaceSupply - balance utxoEx2A - (Coin 110)
             }
 
+oCertIssueNosEx2 :: Map KeyHash Natural
+oCertIssueNosEx2 =
+  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 5) 1 oCertIssueNosEx1
+
 expectedStEx2E :: ChainState
 expectedStEx2E = ChainState
   (NewEpochState
@@ -922,7 +940,7 @@ expectedStEx2E = ChainState
           (hk alicePool)
           (1, hashKeyVRF (snd $ vrf alicePool))))
      epoch1OSchedEx2E)
-  oCertIssueNosEx1
+  oCertIssueNosEx2
   ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
   (mkSeqNonce 5)
   (mkSeqNonce 5)
@@ -937,7 +955,7 @@ ex2E = CHAINExample (SlotNo 220) expectedStEx2D blockEx2E (Right expectedStEx2E)
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
 
 oCertIssueNosEx2F :: Map KeyHash Natural
-oCertIssueNosEx2F = Map.insert (hk alicePool) 0 oCertIssueNosEx1
+oCertIssueNosEx2F = Map.insert (hk alicePool) 0 oCertIssueNosEx2
 
 blockEx2F :: Block
 blockEx2F = mkBlock
@@ -949,7 +967,9 @@ blockEx2F = mkBlock
              ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
              (NatNonce 6)
              zero
-             3
+             14
+             14
+             (mkOCert alicePool 0 (KESPeriod 14))
 
 blockEx2FHash :: HashHeader
 blockEx2FHash = bhHash (bheader blockEx2F)
@@ -997,7 +1017,9 @@ blockEx2G = mkBlock
              (mkSeqNonce 5)
              (NatNonce 7)
              zero
-             3
+             15
+             15
+             (mkOCert (coreNodeKeys 2) 1 (KESPeriod 15))
 
 blockEx2GHash :: HashHeader
 blockEx2GHash = bhHash (bheader blockEx2G)
@@ -1026,6 +1048,10 @@ expectedLSEx2G = LedgerState
                         }
                  psEx2A)
 
+oCertIssueNosEx2G :: Map KeyHash Natural
+oCertIssueNosEx2G =
+  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 1 oCertIssueNosEx2F
+
 expectedStEx2G :: ChainState
 expectedStEx2G = ChainState
   (NewEpochState
@@ -1036,7 +1062,7 @@ expectedStEx2G = ChainState
      Nothing
      pdEx2F
      epoch1OSchedEx2G)
-  oCertIssueNosEx2F
+  oCertIssueNosEx2G
   ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
   (mkSeqNonce 7)
   (mkSeqNonce 7)
@@ -1061,7 +1087,9 @@ blockEx2H = mkBlock
              (mkSeqNonce 5)
              (NatNonce 8)
              zero
-             4
+             19
+             19
+             (mkOCert (coreNodeKeys 5) 2 (KESPeriod 19))
 
 blockEx2HHash :: HashHeader
 blockEx2HHash = bhHash (bheader blockEx2H)
@@ -1075,6 +1103,10 @@ bobRAcnt2H = Coin 705092333
 rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
                           , (RewardAcnt bobSHK, bobRAcnt2H) ]
+
+oCertIssueNosEx2H :: Map KeyHash Natural
+oCertIssueNosEx2H =
+  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 5) 2 oCertIssueNosEx2G
 
 expectedStEx2H :: ChainState
 expectedStEx2H = ChainState
@@ -1090,7 +1122,7 @@ expectedStEx2H = ChainState
                         })
      pdEx2F
      epoch1OSchedEx2G)
-  oCertIssueNosEx2F
+  oCertIssueNosEx2H
   ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
   (mkSeqNonce 8)
   (mkSeqNonce 7)
@@ -1115,7 +1147,9 @@ blockEx2I = mkBlock
               (mkSeqNonce 7)
               (NatNonce 9)
               zero
-              4
+              20
+              20
+              (mkOCert (coreNodeKeys 2) 2 (KESPeriod 20))
 
 blockEx2IHash :: HashHeader
 blockEx2IHash = bhHash (bheader blockEx2I)
@@ -1156,6 +1190,10 @@ snapsEx2I = snapsEx2G { _pstakeMark =
                       , _feeSS = Coin 9
                       }
 
+oCertIssueNosEx2I :: Map KeyHash Natural
+oCertIssueNosEx2I =
+  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 2 oCertIssueNosEx2H
+
 expectedStEx2I :: ChainState
 expectedStEx2I = ChainState
   (NewEpochState
@@ -1166,7 +1204,7 @@ expectedStEx2I = ChainState
      Nothing
      pdEx2F
      epoch1OSchedEx2I)
-  oCertIssueNosEx2F
+  oCertIssueNosEx2I
   ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 9)
   (mkSeqNonce 9)
@@ -1214,7 +1252,9 @@ blockEx2J = mkBlock
               (mkSeqNonce 7)
               (NatNonce 10)
               zero
-              4
+              21
+              19
+              (mkOCert (coreNodeKeys 5) 2 (KESPeriod 19))
 
 blockEx2JHash :: HashHeader
 blockEx2JHash = bhHash (bheader blockEx2J)
@@ -1244,6 +1284,10 @@ expectedLSEx2J = LedgerState
                  usEx2A)
                (DPState dsEx2J psEx2A)
 
+oCertIssueNosEx2J :: Map KeyHash Natural
+oCertIssueNosEx2J =
+  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 2 oCertIssueNosEx2H
+
 expectedStEx2J :: ChainState
 expectedStEx2J = ChainState
   (NewEpochState
@@ -1254,7 +1298,7 @@ expectedStEx2J = ChainState
      Nothing
      pdEx2F
      epoch1OSchedEx2I)
-  oCertIssueNosEx2F
+  oCertIssueNosEx2J
   ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 10)
   (mkSeqNonce 10)
@@ -1297,7 +1341,9 @@ blockEx2K = mkBlock
               (mkSeqNonce 7)
               (NatNonce 11)
               zero
-              5
+              24
+              19
+              (mkOCert (coreNodeKeys 5) 2 (KESPeriod 19))
 
 blockEx2KHash :: HashHeader
 blockEx2KHash = bhHash (bheader blockEx2K)
@@ -1335,7 +1381,7 @@ expectedStEx2K = ChainState
                         })
      pdEx2F
      epoch1OSchedEx2I)
-  oCertIssueNosEx2F
+  oCertIssueNosEx2J
   ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 11)
   (mkSeqNonce 10)
@@ -1360,7 +1406,9 @@ blockEx2L = mkBlock
               (mkSeqNonce 10)
               (NatNonce 12)
               zero
-              5
+              25
+              25
+              (mkOCert (coreNodeKeys 2) 3 (KESPeriod 25))
 
 blockEx2LHash :: HashHeader
 blockEx2LHash = bhHash (bheader blockEx2L)
@@ -1398,6 +1446,11 @@ expectedLSEx2L = LedgerState
                  usEx2A)
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped
 
+
+oCertIssueNosEx2L :: Map KeyHash Natural
+oCertIssueNosEx2L =
+  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 3 oCertIssueNosEx2J
+
 expectedStEx2L :: ChainState
 expectedStEx2L = ChainState
   (NewEpochState
@@ -1408,7 +1461,7 @@ expectedStEx2L = ChainState
      Nothing
      pdEx2F
      (runShelleyBase $ overlaySchedule (EpochNo 5) (Map.keysSet genDelegs) ppsEx1))
-  oCertIssueNosEx2F
+  oCertIssueNosEx2L
   ((mkSeqNonce 10) ⭒ (hashHeaderToNonce blockEx2HHash))
   (mkSeqNonce 12)
   (mkSeqNonce 12)
@@ -1471,6 +1524,8 @@ blockEx3A = mkBlock
              (NatNonce 1)
              zero
              0
+             0
+             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 updateStEx3A :: UpdateState
 updateStEx3A = UpdateState
@@ -1560,7 +1615,9 @@ blockEx3B = mkBlock
              (mkNonce 0)
              (NatNonce 2)
              zero
+             1
              0
+             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
 
 updateStEx3B :: UpdateState
 updateStEx3B = UpdateState
@@ -1623,7 +1680,9 @@ blockEx3C = mkBlock
              (mkSeqNonce 2)
              (NatNonce 3)
              zero
-             1
+             5
+             0
+             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 blockEx3CHash :: HashHeader
 blockEx3CHash = bhHash (bheader blockEx3C)
@@ -1729,6 +1788,8 @@ blockEx4A = mkBlock
              (NatNonce 1)
              zero
              0
+             0
+             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 updateStEx4A :: UpdateState
 updateStEx4A = UpdateState
@@ -1817,7 +1878,9 @@ blockEx4B = mkBlock
              (mkNonce 0)
              (NatNonce 2)
              zero
+             1
              0
+             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
 
 updateStEx4B :: UpdateState
 updateStEx4B = UpdateState
@@ -1879,7 +1942,9 @@ blockEx4C = mkBlock
              (mkNonce 0)
              (NatNonce 3)
              zero
+             3
              0
+             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
 
 updateStEx4C :: UpdateState
 updateStEx4C = UpdateState
@@ -1968,6 +2033,8 @@ blockEx5A = mkBlock
               (NatNonce 1)
               zero
               0
+              0
+              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 blockEx5AHash :: HashHeader
 blockEx5AHash = bhHash (bheader blockEx5A)
@@ -2026,7 +2093,9 @@ blockEx5B = mkBlock
              (mkNonce 0)
              (NatNonce 2)
              zero
+             2
              0
+             (mkOCert (coreNodeKeys 1) 0 (KESPeriod 0))
 
 blockEx5BHash :: HashHeader
 blockEx5BHash = bhHash (bheader blockEx5B)
@@ -2114,6 +2183,8 @@ blockEx6A = mkBlock
               (NatNonce 1)
               zero
               0
+              0
+              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 blockEx6AHash :: HashHeader
 blockEx6AHash = bhHash (bheader blockEx6A)
@@ -2183,6 +2254,8 @@ blockEx6B = mkBlock
               (NatNonce 1)
               zero
               0
+              0
+              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 expectedStEx6B :: PredicateFailure CHAIN
 expectedStEx6B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRInsufficientGenesisSigsUTXOW)))
@@ -2270,6 +2343,8 @@ blockEx6F = mkBlock
               (NatNonce 1)
               zero
               0
+              0
+              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
 -- | The second transaction in the next epoch and at least `startRewards` slots
 -- after the transaction carrying the MIR certificate, then creates the rewards
@@ -2301,7 +2376,9 @@ blockEx6F' = mkBlock
               (mkNonce 0)
               (NatNonce 1)
               zero
-              1
+              7
+              0
+              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 -- | The third transaction in the next epoch applies the reward update to 1)
 -- register a staking credential for Alice, 2) deducing the key deposit from the
@@ -2331,7 +2408,9 @@ blockEx6F'' = mkBlock
                (mkNonce 0)
                (NatNonce 1)
                zero
-               2
+               10
+               10
+               (mkOCert (coreNodeKeys 2) 0 (KESPeriod 10))
 
 ex6F' :: Either [[PredicateFailure CHAIN]] ChainState
 ex6F' = do

@@ -13,7 +13,9 @@ module Test.Utils
   , mkAddr
   , runShelleyBase
   , testGlobals
+  , maxKESIterations
   , unsafeMkUnitInterval
+  , slotsPerKESIteration
   ) where
 
 import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, mkUnitInterval)
@@ -22,6 +24,7 @@ import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
+import           Cardano.Prelude (asks)
 import           Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
 import           ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair, SKey, SKeyES, SignKeyVRF, VKey,
                      VKeyES, VKeyGenesis, VerKeyVRF)
@@ -74,7 +77,7 @@ mkCertifiedVRF a sk = fst . withDRG (drgNewTest seed) $
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
 mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKeyES, VKeyES)
 mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyKES 90
+  sk <- genKeyKES $ fromIntegral (runShelleyBase (asks maxKESEvo))
   return (SKeyES sk, VKeyES $ deriveVerKeyKES sk)
 
 mkAddr :: (KeyPair, KeyPair) -> Addr
@@ -90,11 +93,11 @@ unsafeMkUnitInterval r =
 testGlobals :: Globals
 testGlobals = Globals
   { epochInfo = fixedSizeEpochInfo $ EpochSize 100
-  , slotsPerKESPeriod = 90
+  , slotsPerKESPeriod = 20
   , startRewards = 33
   , slotsPrior = 33
   , securityParameter = 10
-  , maxKESEvo = 90
+  , maxKESEvo = 10
   , quorum = 5
   }
 
@@ -116,3 +119,9 @@ evolveKESUntil k p'@(KESPeriod p) =
     in  case k' of
           Nothing  -> Nothing
           Just k'' -> evolveKESUntil k'' p'
+
+maxKESIterations :: Word64
+maxKESIterations = runShelleyBase (asks maxKESEvo)
+
+slotsPerKESIteration :: Word64
+slotsPerKESIteration = runShelleyBase (asks slotsPerKESPeriod)

@@ -51,7 +51,7 @@ import           LedgerState (pattern LedgerValidation, applyTxBody, dstate, gen
 import           PParams (PParams (..), emptyPParams)
 import           Slot
 import           STS.Delegs (pattern DelegateeNotRegisteredDELEG, PredicateFailure (..),
-                     pattern WithrawalsNotInRewardsDELEGS)
+                     pattern WithdrawalsNotInRewardsDELEGS)
 import           STS.Ledger (LedgerEnv (..), PredicateFailure (..))
 import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern FeeTooSmallUTxO,
                      pattern InputSetEmptyUTxO, pattern ValueNotConservedUTxO)
@@ -416,7 +416,7 @@ predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedU
 predicateFailureToValidationError (DelegsFailure DelegateeNotRegisteredDELEG)
   = StakeDelegationImpossible
 
-predicateFailureToValidationError (DelegsFailure WithrawalsNotInRewardsDELEGS)
+predicateFailureToValidationError (DelegsFailure WithdrawalsNotInRewardsDELEGS)
   = IncorrectRewards
 
 predicateFailureToValidationError _ = UnknownValidationError

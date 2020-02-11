@@ -23,6 +23,7 @@ import qualified STS.Delegs
 import qualified STS.Ledger
 import qualified STS.Ledgers
 import qualified STS.NewEpoch
+import qualified STS.Ocert
 import qualified STS.Pool
 import qualified STS.PoolReap
 import qualified STS.Utxo
@@ -127,6 +128,8 @@ type Sig a = Keys.Sig ConcreteCrypto a
 type BHeader = BlockChain.BHeader ConcreteCrypto
 
 type OCert = OCert.OCert ConcreteCrypto
+
+type OCertEnv = STS.Ocert.OCertEnv ConcreteCrypto
 
 type HashHeader = BlockChain.HashHeader ConcreteCrypto
 

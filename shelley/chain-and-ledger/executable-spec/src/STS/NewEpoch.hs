@@ -98,7 +98,9 @@ newEpochTransition = do
           sd =
             aggregatePlus $
               catMaybes
-                [ (,fromIntegral c / fromIntegral total) <$> Map.lookup hk delegs
+                [ (,fromIntegral c / fromIntegral (if total == 0 then 1 else total)) <$>
+                  Map.lookup hk delegs -- TODO mgudemann total could be zero (in
+                                       -- particular when shrinking)
                   | (hk, Coin c) <- Map.toList stake
                 ]
           pd' = Map.intersectionWith (,) sd (Map.map _poolVrf (_poolsSS ss))

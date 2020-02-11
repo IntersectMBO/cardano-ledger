@@ -62,7 +62,7 @@ instance
   type BaseM (DELEGS crypto) = ShelleyBase
   data PredicateFailure (DELEGS crypto)
     = DelegateeNotRegisteredDELEG
-    | WithrawalsNotInRewardsDELEGS
+    | WithdrawalsNotInRewardsDELEGS
     | DelplFailure (PredicateFailure (DELPL crypto))
     deriving (Show, Eq, Generic)
 
@@ -76,9 +76,9 @@ instance
   => ToCBOR (PredicateFailure (DELEGS crypto))
  where
    toCBOR = \case
-      DelegateeNotRegisteredDELEG  -> encodeListLen 1 <> toCBOR (0 :: Word8)
-      WithrawalsNotInRewardsDELEGS -> encodeListLen 1 <> toCBOR (1 :: Word8)
-      (DelplFailure a)             -> encodeListLen 2 <> toCBOR (2 :: Word8)
+      DelegateeNotRegisteredDELEG   -> encodeListLen 1 <> toCBOR (0 :: Word8)
+      WithdrawalsNotInRewardsDELEGS -> encodeListLen 1 <> toCBOR (1 :: Word8)
+      (DelplFailure a)              -> encodeListLen 2 <> toCBOR (2 :: Word8)
                                         <> toCBOR a
 
 instance
@@ -90,8 +90,8 @@ instance
     decodeWord >>= \case
       0 -> matchSize "DelegateeNotRegisteredDELEG" 1 n >>
              pure DelegateeNotRegisteredDELEG
-      1 -> matchSize "WithrawalsNotInRewardsDELEGS" 1 n >>
-             pure WithrawalsNotInRewardsDELEGS
+      1 -> matchSize "WithdrawalsNotInRewardsDELEGS" 1 n >>
+             pure WithdrawalsNotInRewardsDELEGS
       2 -> do
         matchSize "DelplFailure" 2 n
         a <- fromCBOR
@@ -111,7 +111,7 @@ delegsTransition = do
           wdrls_   = _wdrls (_body tx)
           rewards = _rewards ds
 
-      wdrls_ ⊆ rewards ?! WithrawalsNotInRewardsDELEGS
+      wdrls_ ⊆ rewards ?! WithdrawalsNotInRewardsDELEGS
 
       let rewards' = rewards ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
 
