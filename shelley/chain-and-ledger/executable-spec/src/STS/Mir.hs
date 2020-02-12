@@ -58,14 +58,14 @@ mirTransition = do
       irwd' = (dom stkcreds) ◁ (_irwd dState)
       tot = sum irwd'
       reserves = _reserves acnt
-      rs = Map.mapKeys mkRwdAcnt irwd'
+      update = Map.mapKeys mkRwdAcnt irwd'
   if tot <= reserves
     then pure $ EpochState
                   acnt { _reserves = reserves - tot }
                   ss
                   ls { _delegationState =
                          dpState {  _dstate =
-                           dState  { _rewards = (_rewards dState) ∪+ rs
+                           dState  { _rewards = (_rewards dState) ∪+ update
                                    , _irwd = Map.empty } } }
                   pp
     else pure $ EpochState

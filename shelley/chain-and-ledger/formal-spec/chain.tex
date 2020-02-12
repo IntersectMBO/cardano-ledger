@@ -263,8 +263,14 @@ we reset the instantaneous rewards back to the empty mapping.
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
       \var{i_{rwd}'}\leteq (\dom{stkCreds})\restrictdom\var{i_{rwd}}
-      &
+      \\
       \var{tot}\leteq\sum\limits_{\wcard\mapsto v\in\var{i_{rwd}'}}v
+      &
+      \var{update} =
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in\var{i_{rwd}'}
+        \right\}
       \\
       \var{tot}\leq\var{reserves}
       \\~\\
@@ -272,7 +278,7 @@ we reset the instantaneous rewards back to the empty mapping.
       \\
       \var{ds'} \leteq
       (\var{stkCreds},~
-      \varUpdate{\var{rewards}\unionoverridePlus\var{i_{rwd}'}},~\var{delegations},~
+      \varUpdate{\var{rewards}\unionoverridePlus\var{update}},~\var{delegations},~
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\varUpdate{\emptyset})
     }
     {
@@ -280,14 +286,14 @@ we reset the instantaneous rewards back to the empty mapping.
       {\left(\begin{array}{c}
             \var{acnt} \\
             \var{ss} \\
-            (\var{ds},~\var{ps}) \\
+            (\var{us},~(\var{ds},~\var{ps})) \\
             \var{pp} \\
       \end{array}\right)}
       \trans{mir}{}
       {\left(\begin{array}{c}
             \varUpdate{\var{acnt'}} \\
             \var{ss} \\
-            (\varUpdate{\var{ds'}},~\var{ps}) \\
+            (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
             \var{pp} \\
       \end{array}\right)}
     }
@@ -318,14 +324,14 @@ we reset the instantaneous rewards back to the empty mapping.
       {\left(\begin{array}{c}
             \var{acnt} \\
             \var{ss} \\
-            (\var{ds},~\var{ps}) \\
+            (\var{us},~(\var{ds},~\var{ps})) \\
             \var{pp} \\
       \end{array}\right)}
       \trans{mir}{}
       {\left(\begin{array}{c}
             \var{acnt} \\
             \var{ss} \\
-            (\varUpdate{\var{ds'}},~\var{ps}) \\
+            (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
             \var{pp} \\
       \end{array}\right)}
     }
