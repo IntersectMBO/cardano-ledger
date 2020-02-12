@@ -58,8 +58,8 @@ import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
 import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
                      pattern Delegation, PoolCert (..), ScriptHash, Tx (..), TxBody (..),
-                     TxId (..), TxIn (..), TxOut (..), WitVKey (..), getRwdCred, inputs, outputs,
-                     poolPubKey, txUpdate)
+                     TxId (..), TxIn (..), TxOut (..), Wdrl (..), WitVKey (..), getRwdCred, inputs,
+                     outputs, poolPubKey, txUpdate)
 import           Updates (Update)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)
@@ -118,7 +118,7 @@ txouts
   => TxBody crypto
   -> UTxO crypto
 txouts tx = UTxO $
-  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (tx ^. outputs) [0..]]
+  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (toList $ tx ^. outputs) [0..]]
   where
     transId = txid tx
 
@@ -251,7 +251,7 @@ scriptsNeeded u tx =
   `Set.union`
   Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
   where unTxOut (TxOut a _) = a
-        withdrawals = _wdrls $ _body tx
+        withdrawals = unWdrl $ _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = (toList . _certs . _body) tx
 

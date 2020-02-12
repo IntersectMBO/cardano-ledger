@@ -12,10 +12,10 @@
 
 module Generator.ChainTrace where
 
-import           Data.ByteString.Char8 (pack)
 import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, keysSet)
+import qualified Data.Text as T (pack)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
@@ -74,11 +74,11 @@ lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
-                            [ (ApName $ pack "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (ApName $ pack "Yoroi", (ApVer 4, Mdt Map.empty))
-                            , (ApName $ pack "Ahoy", (ApVer 7, Mdt Map.empty))
-                            , (ApName $ pack "Shebang", (ApVer 11, Mdt Map.empty))
-                            , (ApName $ pack "Icarus", (ApVer 13, Mdt Map.empty))
+                            [ (ApName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
+                            , (ApName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                            , (ApName $ T.pack "Ahoy", (ApVer 7, Mdt Map.empty))
+                            , (ApName $ T.pack "Shebang", (ApVer 11, Mdt Map.empty))
+                            , (ApName $ T.pack "Icarus", (ApVer 13, Mdt Map.empty))
                             ]
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align

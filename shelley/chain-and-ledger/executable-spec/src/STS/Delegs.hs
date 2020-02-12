@@ -108,7 +108,7 @@ delegsTransition = do
   case certificates of
     Empty -> do
       let ds       = _dstate dpstate
-          wdrls_   = _wdrls (_body tx)
+          wdrls_   = unWdrl $ _wdrls (_body tx)
           rewards = _rewards ds
 
       wdrls_ ⊆ rewards ?! WithdrawalsNotInRewardsDELEGS

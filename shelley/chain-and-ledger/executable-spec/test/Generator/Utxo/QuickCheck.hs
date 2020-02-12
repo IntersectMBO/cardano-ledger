@@ -16,6 +16,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (catMaybes)
 import           Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -41,7 +42,7 @@ import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
-                     pattern ScriptHashObj, getRwdCred)
+                     pattern ScriptHashObj, Wdrl (..), getRwdCred)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
@@ -141,7 +142,7 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
   :: Set TxIn
-  -> [TxOut]
+  -> Seq TxOut
   -> Seq DCert
   -> Map RewardAcnt Coin
   -> Update
@@ -153,7 +154,7 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
              inputs
              outputs
              certs
-             wdrls
+             (Wdrl wdrls)
              fee
              slotWithTTL
              update
@@ -164,10 +165,10 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
 calcFeeAndOutputs
   :: Coin
   -> [Addr]
-  -> (Coin, [TxOut])
+  -> (Coin, Seq TxOut)
 calcFeeAndOutputs balance_ addrs =
   ( fee + splitCoinRem
-  , (`TxOut` amountPerOutput) <$> addrs)
+  , (`TxOut` amountPerOutput) <$> Seq.fromList addrs)
   where
     -- TODO @uroboros fee=0 works for now since PParams minFeeA/B == 0.
     --      We need to instead add a "draft" TxBody as argument, which will

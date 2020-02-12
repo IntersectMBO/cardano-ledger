@@ -15,7 +15,8 @@ import           Cardano.Crypto.Hash (ShortHash, getHash)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import           Data.ByteString (ByteString)
-import           Data.ByteString.Char8 (pack)
+import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.Text as T (pack)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
@@ -48,8 +49,8 @@ import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrP
                      pattern DCertDeleg, pattern DCertGenesis, pattern DCertMir, pattern DCertPool,
                      pattern Delegation, pattern PoolParams, Ptr (..), pattern RequireSignature,
                      pattern RewardAcnt, pattern ScriptHash, pattern TxBody, pattern TxIn,
-                     pattern TxOut, WitVKey (..), _TxId, _poolCost, _poolMargin, _poolOwners,
-                     _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
+                     pattern TxOut, Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMargin,
+                     _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      pattern InstallerHash, pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
                      Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
@@ -141,7 +142,7 @@ testVRFKH :: VRFKeyHash
 testVRFKH = hashKeyVRF $ snd testVRF
 
 testTxb :: TxBody
-testTxb = TxBody Set.empty [] Seq.empty Map.empty (Coin 0) (SlotNo 0) emptyUpdate Nothing
+testTxb = TxBody Set.empty Seq.empty Seq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) emptyUpdate Nothing
 
 testKey1 :: KeyPair
 testKey1 = KeyPair vk sk
@@ -183,7 +184,7 @@ testAddrE :: Addr
 testAddrE = AddrEnterprise (KeyHashObj testKeyHash1)
 
 testInstallerHash :: InstallerHash
-testInstallerHash = (InstallerHash . hash . pack) "ABC"
+testInstallerHash = (InstallerHash . hash . BS.pack) "ABC"
 
 getRawInstallerHash :: InstallerHash -> ByteString
 getRawInstallerHash (InstallerHash hsh) = getHash hsh
@@ -250,7 +251,7 @@ serializationTests = testGroup "Serialization Tests"
     (T (TkWord64 30))
   , checkEncodingCBOR "rational"
     (UnsafeUnitInterval (1 % 2))
-    (T (TkWord64 1 . TkWord64 2))
+    (T (TkListLen 2 . TkInteger 1 . TkInteger 2))
   , checkEncodingCBOR "slot"
     (SlotNo 7)
     (T (TkWord64 7))
@@ -322,8 +323,8 @@ serializationTests = testGroup "Serialization Tests"
   , let a = AddrEnterprise (KeyHashObj testKeyHash1) in
     checkEncodingCBOR "txout"
     (TxOut a (Coin 2))
-    (T (TkListLen 2)
-      <> S a
+    (T (TkListLen 3)
+      <> G a
       <> S (Coin 2)
     )
   , case makeWitnessVKey testTxb testKey1 of
@@ -422,13 +423,13 @@ serializationTests = testGroup "Serialization Tests"
                })))
     ( T (TkListLen 8)
       <> T (TkWord 6) -- Reg Pool
-      <> T (TkTag 258 . TkListLen 1) <> S poolOwner   -- owners
-      <> S poolCost     -- cost
-      <> S poolMargin   -- margin
-      <> S poolPledge   -- pledge
       <> S testKeyHash1 -- operator
       <> S testVRFKH    -- vrf keyhash
+      <> S poolPledge   -- pledge
+      <> S poolCost     -- cost
+      <> S poolMargin   -- margin
       <> S poolRAcnt    -- reward acct
+      <> T (TkTag 258 . TkListLen 1) <> S poolOwner   -- owners
     )
 
   , checkEncodingCBOR "retire_pool"
@@ -546,8 +547,8 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "avupdate"
   , let
-      appName   = ApName $ pack "Daedalus"
-      systemTag = SystemTag $ pack "DOS"
+      appName   = ApName $ T.pack "Daedalus"
+      systemTag = SystemTag $ T.pack "DOS"
       apVer    = ApVer 17
     in
     checkEncodingCBOR "avupdate"
@@ -579,10 +580,10 @@ serializationTests = testGroup "Serialization Tests"
       avup = AVUpdate (Map.singleton
                   testGKeyHash
                   (Applications (Map.singleton
-                         (ApName $ pack "Daedalus")
+                         (ApName $ T.pack "Daedalus")
                          (ApVer 17
                          , Mdt $ Map.singleton
-                             (SystemTag $ pack "DOS")
+                             (SystemTag $ T.pack "DOS")
                              testInstallerHash
                          ))))
       e = Just $ EpochNo 0
@@ -597,13 +598,13 @@ serializationTests = testGroup "Serialization Tests"
   -- checkEncodingCBOR "minimal_txn"
   , let
       tin = Set.fromList [TxIn genesisId 1]
-      tout = [TxOut testAddrE (Coin 2)]
+      tout = TxOut testAddrE (Coin 2)
     in checkEncodingCBOR "txbody"
     ( TxBody -- minimal transaction body
       tin
-      tout
+      (Seq.singleton tout)
       Seq.empty
-      Map.empty
+      (Wdrl Map.empty)
       (Coin 9)
       (SlotNo 500)
       emptyUpdate
@@ -613,6 +614,7 @@ serializationTests = testGroup "Serialization Tests"
       <> T (TkWord 0) -- Tx Ins
       <> S tin
       <> T (TkWord 1) -- Tx Outs
+      <> T (TkListLen 1)
       <> S tout
       <> T (TkWord 2) -- Tx Fee
       <> T (TkWord64 9)
@@ -623,7 +625,7 @@ serializationTests = testGroup "Serialization Tests"
   -- checkEncodingCBOR "transaction_mixed"
   , let
       tin = Set.fromList [TxIn genesisId 1]
-      tout = [TxOut testAddrE (Coin 2)]
+      tout = TxOut testAddrE (Coin 2)
       ra = RewardAcnt (KeyHashObj testKeyHash2)
       ras = Map.singleton ra (Coin 123)
       up = Update
@@ -633,19 +635,19 @@ serializationTests = testGroup "Serialization Tests"
              (AVUpdate (Map.singleton
                          testGKeyHash
                          (Applications (Map.singleton
-                                (ApName $ pack "Daedalus")
+                                (ApName $ T.pack "Daedalus")
                                 (ApVer 17
                                 , Mdt $ Map.singleton
-                                    (SystemTag $ pack "DOS")
+                                    (SystemTag $ T.pack "DOS")
                                     testInstallerHash
                                 )))))
              (Just $ EpochNo 0)
     in checkEncodingCBOR "txbody_partial"
     ( TxBody -- transaction body with some optional components
         tin
-        tout
+        (Seq.singleton tout)
         mempty
-        ras
+        (Wdrl ras)
         (Coin 9)
         (SlotNo 500)
         up
@@ -655,6 +657,7 @@ serializationTests = testGroup "Serialization Tests"
        <> T (TkWord 0) -- Tx Ins
        <> S tin
        <> T (TkWord 1) -- Tx Outs
+       <> T (TkListLen 1)
        <> S tout
        <> T (TkWord 2) -- Tx Fee
        <> S (Coin 9)
@@ -669,7 +672,7 @@ serializationTests = testGroup "Serialization Tests"
   -- checkEncodingCBOR "full_txn"
   , let
       tin = Set.fromList [TxIn genesisId 1]
-      tout = [TxOut testAddrE (Coin 2)]
+      tout = TxOut testAddrE (Coin 2)
       reg = DCertDeleg (RegKey (KeyHashObj testKeyHash1))
       ra = RewardAcnt (KeyHashObj testKeyHash2)
       ras = Map.singleton ra (Coin 123)
@@ -680,20 +683,20 @@ serializationTests = testGroup "Serialization Tests"
              (AVUpdate (Map.singleton
                          testGKeyHash
                          (Applications (Map.singleton
-                                (ApName $ pack "Daedalus")
+                                (ApName $ T.pack "Daedalus")
                                 (ApVer 17
                                 , Mdt $ Map.singleton
-                                    (SystemTag $ pack "DOS")
+                                    (SystemTag $ T.pack "DOS")
                                     testInstallerHash
                                 )))))
              (Just $ EpochNo 0)
-      mdh = MD.hashMetaData $ Map.singleton 13 (MD.I 17)
+      mdh = MD.hashMetaData $ MD.MetaData $ Map.singleton 13 (MD.I 17)
     in checkEncodingCBOR "txbody_full"
     ( TxBody -- transaction body with all components
         tin
-        tout
+        (Seq.singleton tout)
         (Seq.fromList [ reg ])
-        ras
+        (Wdrl ras)
         (Coin 9)
         (SlotNo 500)
         up
@@ -703,6 +706,7 @@ serializationTests = testGroup "Serialization Tests"
        <> T (TkWord 0) -- Tx Ins
        <> S tin
        <> T (TkWord 1) -- Tx Outs
+       <> T (TkListLen 1)
        <> S tout
        <> T (TkWord 2) -- Tx Fee
        <> S (Coin 9)
@@ -790,8 +794,8 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "block_header"
     (BHeader testBHB sig)
-    ( (T $ TkListLen 2)
-        <> S testBHB
+    ( (T $ TkListLen 18)
+        <> G testBHB
         <> S sig
     )
 
@@ -802,8 +806,8 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "empty_block"
     (Block bh txns)
-    ( (T $ TkListLen 4)
-        <> S bh
+    ( (T $ TkListLen 21)
+        <> G bh
         <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
     )
 
@@ -811,8 +815,8 @@ serializationTests = testGroup "Serialization Tests"
   , let sig = Maybe.fromJust $ Keys.signKES (fst testKESKeys) testBHB 0
         bh = BHeader testBHB sig
         tin = Set.fromList [TxIn genesisId 1]
-        tout = [TxOut testAddrE (Coin 2)]
-        txb s = TxBody tin tout Seq.empty Map.empty (Coin 9) (SlotNo s) emptyUpdate Nothing
+        tout = Seq.singleton $ TxOut testAddrE (Coin 2)
+        txb s = TxBody tin tout Seq.empty (Wdrl Map.empty) (Coin 9) (SlotNo s) emptyUpdate Nothing
         txb1 = txb 500
         txb2 = txb 501
         txb3 = txb 502
@@ -827,15 +831,15 @@ serializationTests = testGroup "Serialization Tests"
         ss = Map.fromList [ (hashScript testScript, testScript)
                           , (hashScript testScript2, testScript2)]
         tx4 = Tx txb4 mempty ss Nothing
-        tx5MD = Map.singleton 17 (MD.I 42)
+        tx5MD = MD.MetaData $ Map.singleton 17 (MD.I 42)
         tx5 = Tx txb5 ws ss (Just tx5MD)
         txns = TxSeq $ Seq.fromList [tx1, tx2, tx3, tx4, tx5]
     in
     checkEncodingCBOR "rich_block"
     (Block bh txns)
-    ( (T $ TkListLen 4)
+    ( (T $ TkListLen 21)
         -- header
-        <> S bh
+        <> G bh
 
         -- bodies
         <> T (TkListLen 5)
@@ -852,13 +856,12 @@ serializationTests = testGroup "Serialization Tests"
           <> S ws
 
           -- tx 3, one script
-          <> T (TkListLen 3 . TkWord 2)
-          <> S (hashScript testScript :: ScriptHash)
+          <> T (TkListLen 2 . TkWord 2)
           <> S testScript
 
           -- tx 4, two scripts
           <> T (TkListLen 2 . TkWord 3)
-          <> S ss
+          <> S (Map.elems ss)
 
           -- tx 5, two keys and two scripts
           <> T (TkListLen 3 . TkWord 4)

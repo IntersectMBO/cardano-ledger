@@ -8,7 +8,7 @@
 
 module MetaData
   ( MetaDatum (..)
-  , MetaData
+  , MetaData (..)
   , MetaDataHash (..)
   , hashMetaData
 ) where
@@ -27,7 +27,8 @@ import qualified Data.Text.Lazy as TL
 
 import qualified Codec.CBOR.Term as CBOR
 
-import           GHC.Generics
+import           GHC.Generics (Generic)
+import           Serialization (CBORMap (..))
 
 -- | A generic metadatum type.
 data MetaDatum
@@ -40,7 +41,14 @@ data MetaDatum
 
 instance NoUnexpectedThunks MetaDatum
 
-type MetaData = Map Word64 MetaDatum
+newtype MetaData = MetaData (Map Word64 MetaDatum)
+  deriving (Eq, Show, Generic, NoUnexpectedThunks)
+
+instance ToCBOR MetaData where
+  toCBOR (MetaData m) = toCBOR (CBORMap m)
+
+instance FromCBOR MetaData where
+  fromCBOR = MetaData . unwrapCBORMap <$> fromCBOR
 
 type CBORToDataError = String
 

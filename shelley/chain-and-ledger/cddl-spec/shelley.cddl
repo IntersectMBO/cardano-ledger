@@ -1,52 +1,56 @@
 ; Shelley Types
 
+output = transaction_metadata
+
 block =
   [ header
-  , transaction_bodies         : [* transaction_body]
-  , transaction_witness_sets   : [* transaction_witness_set]
-  , transaction_metadata_set   : { * uint => transaction_metadata }
+  , transaction_bodies         : [* transaction_body]  ; 19
+  , transaction_witness_sets   : [* transaction_witness_set] ; 20
+  , transaction_metadata_set   : { * transaction_index => transaction_metadata }
   ]
+
+transaction = [transaction_body, transaction_witness_set, [?transaction_metadata]]
+
+transaction_index = uint
 
 header =
   ( header_body
-  , body_signature : $kes_signature
+  , body_signature : $kes_signature  ; 18
   )
 
 header_body =
-  ( prev_hash        : $hash
-  , issuer_vkey      : $vkey
-  , vrf_vkey         : $vrf_vkey
-  , slot             : uint
-  , nonce            : uint
-  , nonce_proof      : $vrf_proof
-  , leader_value     : unit_interval
-  , leader_proof     : $vrf_proof
-  , size             : uint
-  , block_number     : uint
-  , block_body_hash  : $hash            ; merkle pair root
+  ( prev_hash        : $hash       ; 1
+  , issuer_vkey      : $vkey       ; 2
+  , vrf_vkey         : $vrf_vkey   ; 3
+  , slot             : uint        ; 4
+  , nonce_vrf        : $vrf_cert   ; 5
+  , leader_vrf       : $vrf_cert   ; 6
+  , size             : uint        ; 7
+  , block_number     : uint        ; 8
+  , block_body_hash  : $hash       ; 9    ; merkle triple root
   , operational_cert
   , protocol_version
   )
 
 operational_cert =
-  ( hot_vkey        : $kes_vkey
-  , cold_vkey       : $vkey
-  , sequence_number : uint
-  , kes_period      : uint
-  , sigma           : $signature
+  ( hot_vkey        : $kes_vkey    ; 10
+  , cold_vkey       : $vkey        ; 11
+  , sequence_number : uint         ; 12
+  , kes_period      : uint         ; 13
+  , sigma           : $signature   ; 14
   )
 
-protocol_version = (uint, uint, uint)
+protocol_version = (uint, uint, uint)   ; 15 16 17
 
 ; Do we want to use a Map here? Is it actually cheaper?
 ; Do we want to add extension points here?
 transaction_body =
-  { 0 : #6.258([* transaction_input])
+  { 0 : finite_set<transaction_input>
   , 1 : [* transaction_output]
-  , ? 2 : [* delegation_certificate]
-  , ? 3 : withdrawals
-  , 4 : coin ; fee
-  , 5 : uint ; ttl
+  , 2 : coin ; fee
+  , 3 : uint ; ttl
+  , 4 : [* delegation_certificate]
+  , ? 5 : withdrawals
   , ? 6 : full_update
   , ? 7 : metadata_hash
   }
@@ -69,7 +73,7 @@ address =
  )
 
 delegation_certificate =
-  [( 0, keyhash                       ; stake key registration
+  [  0, keyhash                       ; stake key registration
   // 1, scripthash                    ; stake script registration
   // 2, keyhash                       ; stake key de-registration
   // 3, scripthash                    ; stake script de-registration
@@ -79,35 +83,37 @@ delegation_certificate =
   // 5                                ; stake script delegation
       , scripthash                    ; delegating script
       , keyhash                       ; key delegated to
-  // 6, keyhash, pool_params          ; stake pool registration
+  // 6, pool_params                   ; stake pool registration
   // 7, keyhash, epoch                ; stake pool retirement
   // 8                                ; genesis key delegation
       , genesishash                   ; delegating key
       , keyhash                       ; key delegated to
-  // 9, move_instantaneous_reward ; move instantaneous rewards
- ) ]
+  // 9, move_instantaneous_reward     ; move instantaneous rewards
+  ]
 
-move_instantaneous_reward = { * keyhash => coin }
+move_instantaneous_reward = { * [credential] => coin }
 pointer = (uint, uint, uint)
 
 credential =
   (  0, keyhash
   // 1, scripthash
-  // 2, genesishash
   )
 
-pool_params = ( #6.258([* keyhash]) ; pool owners
+pool_params = ( keyhash             ; operator
+              , $vrf_keyhash        ; vrf keyhash
+              , coin                ; pledge
               , coin                ; cost
               , unit_interval       ; margin
-              , coin                ; pledge
-              , keyhash             ; operator
-              , $vrf_keyhash        ; vrf keyhash
               , [credential]        ; reward account
+              , finite_set<keyhash> ; pool owners
               )
 
 withdrawals = { * [credential] => coin }
 
-full_update = [ protocol_param_update_votes, application_version_update_votes ]
+full_update = [ protocol_param_update_votes
+              , application_version_update_votes
+              , [?epoch]
+              ]
 
 protocol_param_update_votes =
   { * genesishash => protocol_param_update }
@@ -131,9 +137,10 @@ protocol_param_update =
   , ? 15: unit_interval      ; treasury growth rate
   , ? 16: unit_interval      ; active slot coefficient
   , ? 17: unit_interval      ; d. decentralization constant
-  , ? 18: uint               ; extra entropy
+  , ? 18: $nonce             ; extra entropy
   , ? 19: [protocol_version] ; protocol version
   }
+
 
 application_version_update_votes = { * genesishash => application_version_update }
 
@@ -145,28 +152,33 @@ application_name = tstr .size 12
 system_tag = tstr .size 10
 
 transaction_witness_set =
-  (  0, vkeywitness
+  [  0, vkeywitness
   // 1, $script
   // 2, [* vkeywitness]
   // 3, [* $script]
   // 4, [* vkeywitness],[* $script]
-  )
+  ]
 
-transaction_metadata =
-    { * transaction_metadata => transaction_metadata }
-  / [ * transaction_metadata ]
+transaction_metadatum =
+    { * transaction_metadatum => transaction_metadatum }
+  / [ * transaction_metadatum ]
   / int
-  / bytes
-  / text
+  / bytes .size 64
+  / text .size 64
+
+transaction_metadadum_label = uint
+
+transaction_metadata = { * transaction_metadadum_label => transaction_metadatum }
+
 
 vkeywitness = [$vkey, $signature]
 
-unit_interval = rational
+unit_interval = rational    ; FIXME: replace with uint for fixed precision
 
-rational =  #6.30(
+rational =                  ; FIXME: replace with uint for fixed precision
    [ numerator   : uint
    , denominator : uint
-   ])
+   ]
 
 coin = uint
 epoch = uint
@@ -180,19 +192,3 @@ genesishash = $hash
 installerhash = $hash
 
 metadata_hash = $hash
-
-$hash /= bytes
-
-$vkey /= bytes
-
-$signature /= bytes
-
-$vrf_keyhash /= bytes
-
-$vrf_vkey /= bytes
-$vrf_proof /= bytes
-
-$kes_vkey /= bytes
-
-$kes_signature /= bytes
-

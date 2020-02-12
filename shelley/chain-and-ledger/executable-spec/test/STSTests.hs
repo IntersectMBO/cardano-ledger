@@ -22,7 +22,7 @@ import           STS.Chain (totalAda)
 import           STS.Utxow (PredicateFailure (..))
 import           Test.Utils
 import           Tx (hashScript)
-import           TxData (pattern RewardAcnt, pattern ScriptHashObj)
+import           TxData (pattern RewardAcnt, pattern ScriptHashObj, Wdrl (..))
 
 
 -- | Runs example, applies chain state transition system rule (STS),
@@ -126,108 +126,108 @@ testAliceSignsAlone :: Assertion
 testAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] Map.empty 0 [alicePay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl Map.empty) 0 [alicePay]
         s = "problem: " ++ show utxoSt'
 
 testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] Map.empty 0 [bobPay, carlPay, dariaPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl Map.empty) 0 [bobPay, carlPay, dariaPay]
 
 testEverybodySigns :: Assertion
 testEverybodySigns =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] Map.empty 0 [alicePay, bobPay, carlPay, dariaPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl Map.empty) 0 [alicePay, bobPay, carlPay, dariaPay]
         s = "problem: " ++ show utxoSt'
 
 testWrongScript :: Assertion
 testWrongScript =
   utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOrBob] Map.empty 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOrBob] (Wdrl Map.empty) 0 [alicePay, bobPay]
 
 testAliceOrBob :: Assertion
 testAliceOrBob =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOrBob, 11000)] [aliceOrBob] Map.empty 0 [alicePay]
+          applyTxWithScript [(aliceOrBob, 11000)] [aliceOrBob] (Wdrl Map.empty) 0 [alicePay]
         s = "problem: " ++ show utxoSt'
 
 testAliceOrBob' :: Assertion
 testAliceOrBob' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOrBob, 11000)] [aliceOrBob] Map.empty 0 [bobPay]
+          applyTxWithScript [(aliceOrBob, 11000)] [aliceOrBob] (Wdrl Map.empty) 0 [bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBob :: Assertion
 testAliceAndBob =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] Map.empty 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBob' :: Assertion
 testAliceAndBob' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] Map.empty 0 [alicePay]
+          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [alicePay]
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] Map.empty 0 [bobPay]
+          applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [bobPay]
 
 testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBobOrCarl, 11000)] [aliceAndBobOrCarl] Map.empty 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBobOrCarl, 11000)] [aliceAndBobOrCarl] (Wdrl Map.empty) 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarl' :: Assertion
 testAliceAndBobOrCarl' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBobOrCarl, 11000)] [aliceAndBobOrCarl] Map.empty 0 [carlPay]
+          applyTxWithScript [(aliceAndBobOrCarl, 11000)] [aliceAndBobOrCarl] (Wdrl Map.empty) 0 [carlPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria :: Assertion
 testAliceAndBobOrCarlAndDaria =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBobOrCarlAndDaria, 11000)] [aliceAndBobOrCarlAndDaria] Map.empty 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBobOrCarlAndDaria, 11000)] [aliceAndBobOrCarlAndDaria] (Wdrl Map.empty) 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlAndDaria' :: Assertion
 testAliceAndBobOrCarlAndDaria' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBobOrCarlAndDaria, 11000)] [aliceAndBobOrCarlAndDaria] Map.empty 0 [carlPay, dariaPay]
+          applyTxWithScript [(aliceAndBobOrCarlAndDaria, 11000)] [aliceAndBobOrCarlAndDaria] (Wdrl Map.empty) 0 [carlPay, dariaPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria :: Assertion
 testAliceAndBobOrCarlOrDaria =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] Map.empty 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] (Wdrl Map.empty) 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria' :: Assertion
 testAliceAndBobOrCarlOrDaria' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] Map.empty 0 [carlPay]
+          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] (Wdrl Map.empty) 0 [carlPay]
         s = "problem: " ++ show utxoSt'
 
 testAliceAndBobOrCarlOrDaria'' :: Assertion
 testAliceAndBobOrCarlOrDaria'' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] Map.empty 0 [dariaPay]
+          applyTxWithScript [(aliceAndBobOrCarlOrDaria, 11000)] [aliceAndBobOrCarlOrDaria] (Wdrl Map.empty) 0 [dariaPay]
         s = "problem: " ++ show utxoSt'
 
 -- multiple script-locked outputs
@@ -239,7 +239,7 @@ testTwoScripts =
                    [ (aliceOrBob, 10000)
                    , (aliceAndBobOrCarl, 1000)]
                    [ aliceOrBob
-                   , aliceAndBobOrCarl] Map.empty 0 [bobPay, carlPay]
+                   , aliceAndBobOrCarl] (Wdrl Map.empty) 0 [bobPay, carlPay]
         s = "problem: " ++ show utxoSt'
 
 testTwoScripts' :: Assertion
@@ -249,7 +249,7 @@ testTwoScripts' =
                    [ (aliceAndBob, 10000)
                    , (aliceAndBobOrCarl, 1000)]
                    [ aliceAndBob
-                   , aliceAndBobOrCarl] Map.empty 0 [bobPay, carlPay]
+                   , aliceAndBobOrCarl] (Wdrl Map.empty) 0 [bobPay, carlPay]
 
 -- script and skey locked
 
@@ -258,7 +258,7 @@ testScriptAndSKey =
   assertBool s (isRight utxoSt')
   where utxoSt' = applyTxWithScript
                    [(aliceAndBob, 10000)]
-                   [aliceAndBob] Map.empty 1000 [alicePay, bobPay]
+                   [aliceAndBob] (Wdrl Map.empty) 1000 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testScriptAndSKey' :: Assertion
@@ -266,14 +266,14 @@ testScriptAndSKey' =
   utxoSt' @?= Left [[MissingVKeyWitnessesUTXOW]]
   where utxoSt' = applyTxWithScript
                    [(aliceOrBob, 10000)]
-                   [aliceOrBob] Map.empty 1000 [bobPay]
+                   [aliceOrBob] (Wdrl Map.empty) 1000 [bobPay]
 
 testScriptAndSKey'' :: Assertion
 testScriptAndSKey'' =
   assertBool s (isRight utxoSt')
   where utxoSt' = applyTxWithScript
                    [(aliceOrBob, 10000)]
-                   [aliceOrBob] Map.empty 1000 [alicePay]
+                   [aliceOrBob] (Wdrl Map.empty) 1000 [alicePay]
         s = "problem: " ++ show utxoSt'
 
 testScriptAndSKey''' :: Assertion
@@ -281,7 +281,7 @@ testScriptAndSKey''' =
   assertBool s (isRight utxoSt')
   where utxoSt' = applyTxWithScript
                    [(aliceAndBobOrCarl, 10000)]
-                   [aliceAndBobOrCarl] Map.empty 1000 [alicePay, carlPay]
+                   [aliceAndBobOrCarl] (Wdrl Map.empty) 1000 [alicePay, carlPay]
         s = "problem: " ++ show utxoSt'
 
 -- Withdrawals
@@ -290,24 +290,24 @@ testRwdAliceSignsAlone :: Assertion
 testRwdAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript aliceOnly)) 1000) 0 [alicePay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript aliceOnly)) 1000) 0 [alicePay]
         s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay]
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
   assertBool s (isRight utxoSt')
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
         s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
   utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
   where utxoSt' =
-          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]
+          applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [alicePay, bobPay]

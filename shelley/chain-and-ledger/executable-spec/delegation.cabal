@@ -79,9 +79,11 @@ library
     ghc-options:
       -Werror
   build-depends:
+    aeson,
     base >= 4.7 && < 5,
     bytestring,
     cborg,
+    cborg-json,
     containers,
     cryptonite,
     hedgehog,

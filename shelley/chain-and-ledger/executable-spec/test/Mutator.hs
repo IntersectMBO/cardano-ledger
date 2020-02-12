@@ -21,6 +21,8 @@ import qualified Data.List as List (map)
 import qualified Data.Map.Strict as Map (fromList, toList)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio
+import           Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
 import           Data.Set as Set
 import           Numeric.Natural
 
@@ -120,13 +122,13 @@ mutateInput (TxIn idx index) = do
   pure $ TxIn idx index'
 
 -- | Mutator for a list of 'TxOut'.
-mutateOutputs :: [TxOut] -> Gen [TxOut]
-mutateOutputs [] = pure []
-mutateOutputs (txout:txouts) = do
+mutateOutputs :: Seq TxOut -> Gen (Seq TxOut)
+mutateOutputs Seq.Empty = pure Seq.Empty
+mutateOutputs (txout :<| txouts) = do
   mtxout    <- mutateOutput txout
   mtxouts   <- mutateOutputs txouts
   dropTxOut <- Gen.enumBounded
-  pure $ if dropTxOut then mtxouts else mtxout:mtxouts
+  pure $ if dropTxOut then mtxouts else mtxout :<| mtxouts
 
 -- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
 -- the output.

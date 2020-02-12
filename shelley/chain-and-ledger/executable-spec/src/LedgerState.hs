@@ -130,9 +130,9 @@ import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
 import           Tx (extractGenKeyHash, extractKeyHash)
 import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
                      PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), body, certs, countMSigNodes,
-                     getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls,
-                     witKeyHash)
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..), body, certs,
+                     countMSigNodes, getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl,
+                     txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
                      apps, emptyUpdate, emptyUpdateState)
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,
@@ -483,9 +483,9 @@ genesisId =
   TxId $ hash
   (TxBody
    Set.empty
-   []
    Seq.Empty
-   Map.empty
+   Seq.Empty
+   (Wdrl Map.empty)
    (Coin 0)
    (SlotNo 0)
    emptyUpdate
@@ -602,7 +602,7 @@ txsize (Tx
     certSize (DCertMir (MIRCert m)) = smallArray + labelSize + mapPrefix
                                     + (toInteger $ length m)*(uint + hashObj)
     cSize = sum $ fmap certSize cs
-    wSize = labelSize + mapPrefix + (toInteger $ length ws) * (uint + credential)
+    wSize = labelSize + mapPrefix + (toInteger . length . unWdrl $ ws) * (uint + credential)
 
     protoVersion = (smallArray + uint + uint + uint)
     params = mapPrefix
@@ -645,8 +645,8 @@ txsize (Tx
 
     mdSize = case md of
       Nothing -> arrayPrefix
-      Just md' -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
-                    + uint * (toInteger $ length md')
+      Just (MD.MetaData md') -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
+                                  + uint * (toInteger $ length md')
 
 -- |Minimum fee calculation
 minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
@@ -746,7 +746,7 @@ consumed pp u stakeKeys tx =
     balance (txins tx ◁ u) + refunds + withdrawals
   where
     refunds = keyRefunds pp stakeKeys tx
-    withdrawals = sum $ tx ^. wdrls
+    withdrawals = sum . unWdrl $ tx ^. wdrls
 
 -- |Determine if the balance of the ledger state would be effected
 -- in an acceptable way by a transaction.
@@ -799,7 +799,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
         _                               -> hkeys
 
     wdrlAuthors =
-      Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (txbody ^. wdrls))
+      Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (unWdrl $ txbody ^. wdrls))
     owners = foldl Set.union Set.empty
                [pool ^. poolOwners . to (Set.map undiscriminateKeyHash) | DCertPool (RegPool pool) <- toList $ txbody ^. certs]
     certAuthors = Set.fromList $ foldl (++) [] $ fmap getCertHK certificates
@@ -862,7 +862,7 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                        <> validNoReplay txb
                        <> validFee pc tx
                        <> preserveBalance stakePools stakeKeys pc txb u
-                       <> correctWithdrawals accs (txb ^. wdrls)
+                       <> correctWithdrawals accs (unWdrl $ txb ^. wdrls)
   where txb = _body tx
 
 validRuleUTXOW
@@ -937,7 +937,9 @@ applyTxBody ls pp tx =
        & utxoState . fees .~ (tx ^. txfee) + (ls ^. utxoState . fees)
        & delegationState . dstate . rewards .~ newAccounts
   where
-    newAccounts = reapRewards (ls ^. delegationState . dstate. rewards) (tx ^. wdrls)
+    newAccounts = reapRewards
+      (ls ^. delegationState . dstate. rewards)
+      (unWdrl $ tx ^. wdrls)
 
 reapRewards
   :: RewardAccounts crypto
