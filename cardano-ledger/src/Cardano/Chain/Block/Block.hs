@@ -60,13 +60,24 @@ module Cardano.Chain.Block.Block
   , fromCBORABoundaryBlock
   , toCBORABoundaryBlock
   , toCBORABOBBoundary
+  , boundaryBlockSlot
 
   , ABoundaryBody(..)
+
+  -- * ABlockOrBoundaryHdr
+  , ABlockOrBoundaryHdr(..)
+  , aBlockOrBoundaryHdr
+  , fromCBORABlockOrBoundaryHdr
+  , abobHdrFromBlock
+  , abobHdrSlotNo
+  , abobHdrChainDifficulty
+  , abobHdrHash
+  , abobHdrPrevHash
   )
 where
 
 import Cardano.Prelude
-
+import Control.Monad.Fail (fail)
 import qualified Data.ByteString as BS
 import Data.Text.Lazy.Builder (Builder, fromText)
 import Formatting (bprint, build, int, later, shown)
@@ -131,8 +142,8 @@ import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Genesis.Hash (GenesisHash(..))
 import Cardano.Chain.Slotting
-  ( EpochSlots
-  , SlotNumber
+  ( EpochSlots(..)
+  , SlotNumber(..)
   , WithEpochSlots(WithEpochSlots)
   )
 import Cardano.Chain.Ssc (SscPayload)
@@ -477,3 +488,65 @@ instance B.Buildable (ABoundaryBlock a) where
       buildBoundaryHash :: Either GenesisHash HeaderHash -> Builder
       buildBoundaryHash (Left (GenesisHash _)) = fromText "Genesis"
       buildBoundaryHash (Right h) = B.build h
+
+-- | Compute the slot number assigned to a boundary block
+boundaryBlockSlot
+  :: EpochSlots
+  -> Word64 -- ^ Epoch number
+  -> SlotNumber
+boundaryBlockSlot (EpochSlots es) epoch =
+    SlotNumber $ es * epoch
+
+{-------------------------------------------------------------------------------
+  Header of a regular block or EBB
+-------------------------------------------------------------------------------}
+
+data ABlockOrBoundaryHdr a =
+    ABOBBlockHdr    !(AHeader         a)
+  | ABOBBoundaryHdr !(ABoundaryHeader a)
+  deriving (Eq, Show, Functor, Generic, NoUnexpectedThunks)
+
+fromCBORABlockOrBoundaryHdr :: EpochSlots
+                            -> Decoder s (ABlockOrBoundaryHdr ByteSpan)
+fromCBORABlockOrBoundaryHdr epochSlots = do
+    enforceSize "ABlockOrBoundaryHdr" 2
+    fromCBOR @Word >>= \case
+      0 -> ABOBBoundaryHdr <$> fromCBORABoundaryHeader
+      1 -> ABOBBlockHdr    <$> fromCBORAHeader epochSlots
+      t -> fail $ "Unknown tag in encoded HeaderOrBoundary" <> show t
+
+-- | The analogue of 'Data.Either.either'
+aBlockOrBoundaryHdr :: (AHeader         a -> b)
+                    -> (ABoundaryHeader a -> b)
+                    -> ABlockOrBoundaryHdr a -> b
+aBlockOrBoundaryHdr f _ (ABOBBlockHdr    hdr) = f hdr
+aBlockOrBoundaryHdr _ g (ABOBBoundaryHdr hdr) = g hdr
+
+abobHdrFromBlock :: ABlockOrBoundary a -> ABlockOrBoundaryHdr a
+abobHdrFromBlock (ABOBBlock    blk) = ABOBBlockHdr    $ blockHeader    blk
+abobHdrFromBlock (ABOBBoundary blk) = ABOBBoundaryHdr $ boundaryHeader blk
+
+-- | Slot number of the header
+--
+-- NOTE: Epoch slot number calculation must match the one in 'applyBoundary'.
+abobHdrSlotNo :: EpochSlots -> ABlockOrBoundaryHdr a -> SlotNumber
+abobHdrSlotNo epochSlots =
+    aBlockOrBoundaryHdr
+      headerSlot
+      (boundaryBlockSlot epochSlots . boundaryEpoch)
+
+abobHdrChainDifficulty :: ABlockOrBoundaryHdr a -> ChainDifficulty
+abobHdrChainDifficulty =
+    aBlockOrBoundaryHdr
+      headerDifficulty
+      boundaryDifficulty
+
+abobHdrHash :: ABlockOrBoundaryHdr ByteString -> HeaderHash
+abobHdrHash (ABOBBoundaryHdr hdr) = boundaryHeaderHashAnnotated hdr
+abobHdrHash (ABOBBlockHdr    hdr) = headerHashAnnotated         hdr
+
+abobHdrPrevHash :: ABlockOrBoundaryHdr a -> Maybe HeaderHash
+abobHdrPrevHash =
+    aBlockOrBoundaryHdr
+      (Just                        . headerPrevHash)
+      (either (const Nothing) Just . boundaryPrevHash)

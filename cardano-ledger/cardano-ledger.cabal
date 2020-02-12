@@ -61,6 +61,11 @@ library
                        Cardano.Chain.Block.Validation
                        Cardano.Chain.Block.ValidationMode
 
+                       Cardano.Chain.Byron.API.Common
+                       Cardano.Chain.Byron.API.Mempool
+                       Cardano.Chain.Byron.API.Protocol
+                       Cardano.Chain.Byron.API.Validation
+
                        Cardano.Chain.Common.AddrAttributes
                        Cardano.Chain.Common.AddrSpendingData
                        Cardano.Chain.Common.Address
