@@ -46,6 +46,7 @@ data PrtclState crypto
       (Map (KeyHash crypto) Natural)
       (HashHeader crypto)
       SlotNo
+      BlockNo
       Nonce -- ^ Current epoch nonce
       Nonce -- ^ Evolving nonce
       Nonce -- ^ Candidate nonce
@@ -53,11 +54,12 @@ data PrtclState crypto
   deriving (Generic, Show)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m hh sn n1 n2 n3 n4) = mconcat
-    [ encodeListLen 7
+  toCBOR (PrtclState m hh sn bn n1 n2 n3 n4) = mconcat
+    [ encodeListLen 8
     , toCBOR m
     , toCBOR hh
     , toCBOR sn
+    , toCBOR bn
     , toCBOR n1
     , toCBOR n2
     , toCBOR n3
@@ -65,9 +67,10 @@ instance Crypto crypto => ToCBOR (PrtclState crypto) where
     ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
-  fromCBOR = decodeListLenOf 7 >>
+  fromCBOR = decodeListLenOf 8 >>
     PrtclState
       <$> fromCBOR
+      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
@@ -110,6 +113,7 @@ instance
 
   data PredicateFailure (PRTCL crypto)
     = WrongSlotIntervalPRTCL
+    | WrongBlockNoPRTCL BlockNo BlockNo
     | WrongBlockSequencePRTCL
     | OverlayFailure (PredicateFailure (OVERLAY crypto))
     | UpdnFailure (PredicateFailure (UPDN crypto))
@@ -129,12 +133,14 @@ prtclTransition
   => TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC ( PrtclEnv pp osched pd dms sNow ne
-      , PrtclState cs h sL eta0 etaV etaC etaH
+      , PrtclState cs h sL bL eta0 etaV etaC etaH
       , bh) <- judgmentContext
   let bhb  = bhbody bh
-  let slot = bheaderSlotNo bhb
-  let eta  = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
+      bn = bheaderBlockNo bhb
+      slot = bheaderSlotNo bhb
+      eta  = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
   sL < slot && slot <= sNow ?! WrongSlotIntervalPRTCL
+  bL + 1 == bn ?! WrongBlockNoPRTCL bL bn
   h == bheaderPrev bhb ?! WrongBlockSequencePRTCL
 
   UpdnState eta0' etaV' etaC' etaH'
@@ -143,7 +149,7 @@ prtclTransition = do
     <- trans @(OVERLAY crypto)
         $ TRC (OverlayEnv pp osched eta0' pd dms, cs, bh)
 
-  pure $ PrtclState cs' (bhHash bh) slot eta0' etaV' etaC' etaH'
+  pure $ PrtclState cs' (bhHash bh) slot bn eta0' etaV' etaC' etaH'
 
 instance NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
 
