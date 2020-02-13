@@ -22,6 +22,7 @@ module Updates
   , Favs
   , apNameValid
   , allNames
+  , maxVer
   , newAVs
   , votedValue
   , emptyUpdateState

@@ -46,8 +46,8 @@ import           Test.Utils (runShelleyBase)
 import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
 import           UTxO (balance)
 
--- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
--- with meaningful delegation certificates.
+-- The CHAIN STS at the root of the STS allows for generating blocks of transactions
+-- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance HasTrace CHAIN Word64 where
   -- the current slot needs to be large enough to allow for many blocks
   -- to be processed (in large CHAIN traces)
@@ -76,6 +76,9 @@ byronApps :: Applications
 byronApps = Applications $ Map.fromList
                             [ (ApName $ pack "Daedalus", (ApVer 16, Mdt Map.empty))
                             , (ApName $ pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                            , (ApName $ pack "Ahoy", (ApVer 7, Mdt Map.empty))
+                            , (ApName $ pack "Shebang", (ApVer 11, Mdt Map.empty))
+                            , (ApName $ pack "Icarus", (ApVer 13, Mdt Map.empty))
                             ]
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align

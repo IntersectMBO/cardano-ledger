@@ -78,6 +78,10 @@ frequencyScriptCredDelegation = 1
 frequencyKeyCredDelegation :: Int
 frequencyKeyCredDelegation = 2
 
+-- | Relative frequency of Prototol/Application Updates in a transaction
+frequencyTxUpdates :: Int
+frequencyTxUpdates = 10
+
 -- | minimal number of genesis UTxO outputs
 minGenesisUTxOouts :: Int
 minGenesisUTxOouts = 1

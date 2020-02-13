@@ -13,15 +13,17 @@ module Rules.ClassifyTraces
 
 import qualified Data.ByteString as BS
 import           Data.Foldable (toList)
+import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
+import           BlockChain (pattern Block, pattern TxSeq)
 import           Cardano.Binary (serialize')
-import           ConcreteCryptoTypes (CHAIN, DCert, LEDGER, Tx, TxOut)
+import           ConcreteCryptoTypes (Applications, CHAIN, DCert, LEDGER, Tx, TxOut)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
-import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState,
-                     onlyValidSignalsAreGeneratedFromInitState)
+import           Control.State.Transition.Trace.Generator.QuickCheck (classifyTraceLength,
+                     forAllTraceFromInitState, onlyValidSignalsAreGeneratedFromInitState)
 import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDelegation,
                      isInstantaneousRewards, isRegKey, isRegPool, isRetirePool)
 import           Generator.ChainTrace (mkGenesisChainState)
@@ -30,20 +32,24 @@ import           LedgerState (txsize)
 import           Test.Utils
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
                      pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
-                     _body, _certs, _outputs, _wdrls)
+                     _body, _certs, _outputs, _txUpdate, _wdrls)
+import           Updates (pattern AVUpdate, pattern PPUpdate, PParamsUpdate, pattern Update)
 
 relevantCasesAreCovered :: Property
-relevantCasesAreCovered = withMaxSuccess 500 . property $ do
-  let tl = 100
-  forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
-    let txs :: [Tx]
-        txs = traceSignals OldestFirst tr
+relevantCasesAreCovered = withMaxSuccess 200 . property $ do
+  let tl = 20
+  forAllTraceFromInitState @CHAIN testGlobals tl tl (Just mkGenesisChainState) $ \tr -> do
+    let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
+        bs = traceSignals OldestFirst tr
+        txs = concat (blockTxs <$> bs)
         certs_ = allCerts txs
 
     checkCoverage $ conjoin [
-       cover_ 60
-             (traceLength tr <= 5 * length certs_)
-             "there is at least 1 certificate for every 5 transactions"
+       classifyTraceLength tl 5 tr
+
+     , cover_ 60
+              (traceLength tr <= 5 * length certs_)
+              "there is at least 1 certificate for every 5 transactions"
 
      , cover_ 60
               (traceLength tr <= 20 * length (filter isRegKey certs_))
@@ -82,9 +88,18 @@ relevantCasesAreCovered = withMaxSuccess 500 . property $ do
      , cover_ 10
               (0.1 <= scriptCredentialCertsRatio certs_)
               "at least 10% of `DCertDeleg` certificates have script credentials"
-     , cover_ 60
+     , cover_ 50
               (0.1 <= withdrawalRatio txs)
               "at least 10% of transactions have a reward withdrawal"
+
+     , cover_ 60
+              (0.99 >= noPPUpdateRatio (ppUpdatesByTx txs))
+              "at least 1% of transactions have non-trivial protocol param updates"
+
+     , cover_ 60
+              (0.99 >= noAVUpdateRatio (avUpdatesByTx txs))
+              "at least 1% of transactions have non-trivial application updates"
+
      ]
     where
       cover_ pc b s = cover pc b s (property ())
@@ -119,6 +134,26 @@ allCerts = concat . certsByTx
 -- | Ratio of the number of empty certificate groups and the number of groups
 noCertsRatio :: [[DCert]] -> Double
 noCertsRatio = lenRatio (filter null)
+
+-- | Extract non-trivial protocol param  updates from the given transactions
+ppUpdatesByTx :: [Tx] -> [[PParamsUpdate]]
+ppUpdatesByTx txs = ppUpdates . _txUpdate . _body <$> txs
+  where
+    ppUpdates (Update (PPUpdate ppUpd) _ _) = Map.elems ppUpd
+
+-- | Ratio of the number of empty PParamsUpdate to Updates
+noPPUpdateRatio :: [[PParamsUpdate]] -> Double
+noPPUpdateRatio = lenRatio (filter null)
+
+-- | Extract non-trivial application  updates from the given transactions
+avUpdatesByTx :: [Tx] -> [[Applications]]
+avUpdatesByTx txs = avUpdates . _txUpdate . _body <$> txs
+  where
+    avUpdates (Update _ (AVUpdate avUpd) _) = Map.elems avUpd
+
+-- | Ratio of the number of empty Application updates to Updates
+noAVUpdateRatio :: [[Applications]] -> Double
+noAVUpdateRatio = lenRatio (filter null)
 
 ratioInt :: Int -> Int -> Double
 ratioInt x y
@@ -180,5 +215,5 @@ propAbstractSizeNotTooBig = property $ do
     all notTooBig txs
 
 onlyValidChainSignalsAreGenerated :: Property
-onlyValidChainSignalsAreGenerated = withMaxSuccess 300 $
-  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 300 (10::Word64) (Just mkGenesisChainState)
+onlyValidChainSignalsAreGenerated = withMaxSuccess 100 $
+  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 200 (200::Word64) (Just mkGenesisChainState)

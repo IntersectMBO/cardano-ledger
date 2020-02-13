@@ -10,7 +10,6 @@ module Generator.Delegation.QuickCheck
   ( genDCerts
   , CertCred (..))
   where
-import           Control.Monad.Trans.Reader (asks)
 import           Data.Foldable (find)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, keysSet, lookup,
@@ -28,7 +27,7 @@ import qualified Test.QuickCheck as QC
 import           Test.Utils
 
 import           Address (mkRwdAcnt, scriptToCred)
-import           BaseTypes (epochInfo, interval0, slotsPrior)
+import           BaseTypes (interval0)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (AnyKeyHash, CoreKeyPair, DCert, DPState, DState, KeyPair,
                      KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey, VrfKeyPairs,
@@ -43,13 +42,14 @@ import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDeleg
                      frequencyRegKeyCert, frequencyRegPoolCert, frequencyRetirePoolCert,
                      frequencyScriptCredDeReg, frequencyScriptCredDelegation,
                      frequencyScriptCredReg)
-import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred)
+import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred,
+                     tooLateInEpoch)
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (</|), (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
                      _genDelegs, _irwd, _pstate, _retiring, _rewards, _stPools, _stkCreds)
 import           PParams (PParams (..), d, eMax)
-import           Slot (Duration (..), EpochNo (EpochNo), SlotNo (SlotNo), epochInfoFirst, (*-))
+import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           Tx (getKeyCombination)
 import           TxData (pattern DCertDeleg, pattern DCertGenesis, pattern DCertPool,
                      pattern Delegation, pattern KeyHashObj, pattern PoolParams, RewardAcnt (..),
@@ -396,17 +396,9 @@ genInstantaneousRewards s coreKeys pparams delegSt = do
              -- or when we don't have keys available for generating an IR cert
              || null credCoinMap
              -- or it's too late in the epoch for IR certs
-             || tooLateInEpoch)
+             || tooLateInEpoch s)
     then
       Nothing
     else
       Just ( DCertMir (MIRCert credCoinMap)
            , CoreKeyCred coreSigners)
-
-  where
-    tooLateInEpoch = runShelleyBase $ do
-      ei <- asks epochInfo
-      firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
-      slotsPrior_ <- asks slotsPrior
-
-      return (s >= firstSlotNo *- Duration slotsPrior_)
