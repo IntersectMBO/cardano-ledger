@@ -17,6 +17,7 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
+import qualified Data.Aeson as Aeson
 import Data.Data (Data)
 import Data.Ix (Ix)
 import Formatting (bprint, int)
@@ -46,6 +47,9 @@ newtype EpochNumber = EpochNumber
 
 instance Buildable EpochNumber where
   build = bprint ("#" . int)
+
+-- Used for debugging purposes only
+instance Aeson.ToJSON EpochNumber where
 
 instance ToCBOR EpochNumber where
   toCBOR (EpochNumber epoch) = toCBOR epoch

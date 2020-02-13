@@ -19,6 +19,7 @@ import Cardano.Prelude
 import qualified Prelude
 
 import Control.Monad.Except (MonadError)
+import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import Formatting (bprint, build, formatToString, int, stext)
 import qualified Formatting.Buildable as B (Buildable(..))
@@ -50,6 +51,9 @@ instance B.Buildable SoftwareVersion where
 
 instance Show SoftwareVersion where
   show = formatToString build
+
+-- Used for debugging purposes only
+instance ToJSON SoftwareVersion where
 
 instance ToCBOR SoftwareVersion where
   toCBOR sv = encodeListLen 2 <> toCBOR (svAppName sv) <> toCBOR (svNumber sv)

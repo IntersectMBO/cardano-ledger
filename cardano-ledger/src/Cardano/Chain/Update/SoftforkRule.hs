@@ -15,6 +15,7 @@ where
 
 import Cardano.Prelude
 
+import qualified Data.Aeson as Aeson
 import Control.Monad.Except (MonadError)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
@@ -49,6 +50,9 @@ instance B.Buildable SoftforkRule where
     (srInitThd sr)
     (srMinThd sr)
     (srThdDecrement sr)
+
+-- Used for debugging purposes only
+instance Aeson.ToJSON SoftforkRule where
 
 instance ToCBOR SoftforkRule where
   toCBOR sr =

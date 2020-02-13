@@ -17,6 +17,7 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError(throwError))
+import Data.Aeson (ToJSON)
 import Data.Char (isAscii)
 import Data.Data (Data)
 import qualified Data.Text as T
@@ -49,6 +50,9 @@ data ApplicationNameError
   = ApplicationNameTooLong Text
   | ApplicationNameNotAscii Text
   deriving (Data, Eq, Show)
+
+-- Used for debugging purposes only
+instance ToJSON ApplicationName where
 
 instance ToCBOR ApplicationNameError where
   toCBOR err = case err of

@@ -37,6 +37,7 @@ where
 import Cardano.Prelude
 
 import qualified Cardano.Crypto.Wallet as CC
+import qualified Data.Aeson as Aeson
 import Data.Coerce (coerce)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
@@ -99,6 +100,8 @@ data ACertificate a = UnsafeACertificate
   } deriving (Eq, Ord, Show, Generic, Functor)
     deriving anyclass (NFData, NoUnexpectedThunks)
 
+-- Used for debugging purposes only
+instance Aeson.ToJSON a => Aeson.ToJSON (ACertificate a) where
 
 --------------------------------------------------------------------------------
 -- Certificate Constructors

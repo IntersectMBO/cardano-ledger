@@ -11,6 +11,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (bprint, shown)
 import Formatting.Buildable (Buildable(..))
 import qualified Prelude
@@ -32,6 +33,9 @@ instance Show ProtocolVersion where
 
 instance Buildable ProtocolVersion where
   build = bprint shown
+
+-- Used for debugging purposes only
+instance ToJSON ProtocolVersion where
 
 instance ToCBOR ProtocolVersion where
   toCBOR pv =

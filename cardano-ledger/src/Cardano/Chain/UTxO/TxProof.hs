@@ -12,6 +12,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 
@@ -37,6 +38,9 @@ data TxProof = TxProof
   , txpWitnessesHash :: !(Hash [TxWitness])
   } deriving (Show, Eq, Generic, NoUnexpectedThunks)
     deriving anyclass NFData
+
+-- Used for debugging purposes only
+instance ToJSON TxProof where
 
 instance B.Buildable TxProof where
   build proof = bprint

@@ -10,6 +10,7 @@ module Cardano.Chain.Genesis.Hash
 where
 
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON)
 
 import Cardano.Prelude
 
@@ -21,3 +22,6 @@ newtype GenesisHash = GenesisHash
   } deriving (Eq, Generic, NFData, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 deriving instance Show GenesisHash
+
+-- Used for debugging purposes only
+instance ToJSON GenesisHash where

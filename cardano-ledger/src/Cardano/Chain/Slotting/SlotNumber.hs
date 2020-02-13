@@ -16,6 +16,7 @@ where
 
 import Cardano.Prelude
 
+import qualified Data.Aeson as Aeson
 import Formatting (bprint, int)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
@@ -33,6 +34,10 @@ newtype SlotNumber = SlotNumber
   } deriving (Eq, Generic, Ord, Show)
     deriving newtype Num
     deriving anyclass (NFData, NoUnexpectedThunks)
+
+
+-- Used for debugging purposes only
+instance Aeson.ToJSON SlotNumber where
 
 instance ToCBOR SlotNumber where
   toCBOR = toCBOR . unSlotNumber

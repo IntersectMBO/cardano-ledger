@@ -13,6 +13,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Formatting (bprint, build, shown)
 import qualified Formatting.Buildable as B
 
@@ -41,6 +42,9 @@ instance B.Buildable Proof where
     (proofSsc proof)
     (proofDelegation proof)
     (proofUpdate proof)
+
+-- Used for debugging purposes only
+instance ToJSON Proof where
 
 instance ToCBOR Proof where
   toCBOR bc =

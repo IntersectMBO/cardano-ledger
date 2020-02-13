@@ -51,6 +51,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import Formatting (Format, bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
@@ -80,6 +81,9 @@ instance B.Buildable Lovelace where
 instance Bounded Lovelace where
   minBound = Lovelace 0
   maxBound = Lovelace maxLovelaceVal
+
+-- Used for debugging purposes only
+instance ToJSON Lovelace where
 
 instance ToCBOR Lovelace where
   toCBOR = toCBOR . unsafeGetLovelace

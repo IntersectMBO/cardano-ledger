@@ -22,6 +22,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import qualified Data.ByteString.Lazy as Lazy
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
@@ -66,6 +67,9 @@ data ATxAux a = ATxAux
 instance Decoded (ATxAux ByteString) where
   type BaseType (ATxAux ByteString) = ATxAux ()
   recoverBytes = aTaAnnotation
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (ATxAux a) where
 
 taTx :: ATxAux a -> Tx
 taTx = unAnnotated . aTaTx

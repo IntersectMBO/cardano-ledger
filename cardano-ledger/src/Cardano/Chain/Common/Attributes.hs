@@ -30,7 +30,9 @@ where
 import Cardano.Prelude
 import qualified Prelude
 
+import Data.Aeson (ToJSON(..))
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Char8 as LChar8
 import qualified Data.Map.Strict as M
 import Formatting (bprint, build, int)
 import Formatting.Buildable (Buildable)
@@ -49,7 +51,6 @@ import Cardano.Binary
   , dropWord8
   )
 
-
 -- | Representation of unparsed fields in Attributes. Newtype wrapper is used
 --   for clear backward compatibility between previous representation (which was
 --   just a single ByteString) during transition from Store to CBOR.
@@ -58,6 +59,11 @@ newtype UnparsedFields =
   deriving (Eq, Ord, Show, Generic)
   deriving newtype HeapWords
   deriving anyclass (NFData, NoUnexpectedThunks)
+
+-- Used for debugging purposes only
+instance ToJSON UnparsedFields where
+    toJSON (UnparsedFields map') = toJSON $ M.map LChar8.unpack map'
+
 
 fromUnparsedFields :: UnparsedFields -> Map Word8 LBS.ByteString
 fromUnparsedFields (UnparsedFields m) = m
@@ -102,6 +108,9 @@ instance Buildable (Attributes ()) where
     | otherwise = bprint
       ("Attributes { data: (), remain: <" . int . " bytes> }")
       (unknownAttributesLength attr)
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (Attributes a) where
 
 instance ToCBOR (Attributes ()) where
   toCBOR = toCBORAttributes []

@@ -11,6 +11,7 @@ module Cardano.Chain.Common.NetworkMagic
 
 import Cardano.Prelude hiding ((%))
 
+import           Data.Aeson (ToJSON)
 import           Formatting (bprint, build, (%))
 import qualified Formatting.Buildable as B
 
@@ -32,6 +33,9 @@ data NetworkMagic
 instance B.Buildable NetworkMagic where
     build NetworkMainOrStage = "NetworkMainOrStage"
     build (NetworkTestnet n) = bprint ("NetworkTestnet ("%build%")") n
+
+-- Used for debugging purposes only
+instance ToJSON NetworkMagic where
 
 instance HeapWords NetworkMagic where
   heapWords NetworkMainOrStage = 0

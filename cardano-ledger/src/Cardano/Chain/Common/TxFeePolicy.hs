@@ -19,6 +19,7 @@ where
 import Cardano.Prelude
 
 import Control.Monad.Except (MonadError)
+import qualified Data.Aeson as Aeson
 import Formatting (bprint, build, formatToString)
 import qualified Formatting.Buildable as B
 import Text.JSON.Canonical
@@ -61,6 +62,9 @@ data TxFeePolicy
 instance B.Buildable TxFeePolicy where
     build (TxFeePolicyTxSizeLinear tsp) =
         bprint ("policy(tx-size-linear): ".build) tsp
+
+-- Used for debugging purposes only
+instance Aeson.ToJSON TxFeePolicy where
 
 instance ToCBOR TxFeePolicy where
     toCBOR policy = case policy of

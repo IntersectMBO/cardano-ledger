@@ -21,6 +21,8 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
+
 import Cardano.Binary
   ( DecoderError(..)
   , Dropper
@@ -47,6 +49,9 @@ import qualified Data.ByteString as ByteString (pack)
 data SscPayload =
   SscPayload
   deriving (Eq, Show, Generic, NFData)
+
+-- Used for debugging purposes only
+instance ToJSON SscPayload where
 
 instance ToCBOR SscPayload where
   toCBOR _ = encodeListLen 2
@@ -87,6 +92,9 @@ dropSscPayload = do
 data SscProof =
   SscProof
   deriving (Eq, Show, Generic, NFData, NoUnexpectedThunks)
+
+-- Used for debugging purposes only
+instance ToJSON SscProof where
 
 instance ToCBOR SscProof where
   toCBOR _ =

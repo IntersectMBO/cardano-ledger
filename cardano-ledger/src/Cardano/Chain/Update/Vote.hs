@@ -38,6 +38,7 @@ where
 
 import Cardano.Prelude
 
+import Data.Aeson (ToJSON)
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
@@ -96,6 +97,9 @@ data AVote a = UnsafeVote
   , annotation  :: !a
   } deriving (Eq, Show, Generic, Functor)
     deriving anyclass NFData
+
+-- Used for debugging purposes only
+instance ToJSON a => ToJSON (AVote a) where
 
 
 --------------------------------------------------------------------------------
