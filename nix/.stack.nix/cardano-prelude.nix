@@ -116,7 +116,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
     } // {
     src = (pkgs.lib).mkDefault (pkgs.fetchgit {
       url = "https://github.com/input-output-hk/cardano-prelude";
-      rev = "00487726c4bc21b4744e59d913334ebfeac7d68e";
-      sha256 = "0v4fcq5kdd2r5dgwys8kv46ff33qp756n26ycxrca10wq14zkwm5";
+      rev = "fa7a16291d3e93b068d9b13620fc81c88b5600f0";
+      sha256 = "1gaj8k5kjdkmnc0l569asc0fwxi0413v1r0piccg8kyscwvhvcwz";
       });
     }
