@@ -4,7 +4,7 @@
     package = {
       specVersion = "1.10";
       identifier = { name = "cardano-crypto-wrapper"; version = "1.3.0"; };
-      license = "MIT";
+      license = "Apache-2.0";
       copyright = "2019 IOHK";
       maintainer = "operations@iohk.io";
       author = "IOHK";
