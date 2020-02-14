@@ -27,7 +27,7 @@ import           Control.State.Transition.Generator
 import           Ledger.Core (Hash (Hash), Sig (Sig), Slot, VKey, hash, owner)
 import           Ledger.Delegation
 import           Ledger.Update (ProtVer, STag, UProp, Vote)
-import           Ledger.UTxO (TxIn, TxOut, TxWits, Wit)
+import           Ledger.UTxO (TxIn, TxOut, Tx, Wit)
 
 import           Test.Goblin (AddShrinks (..), Goblin (..))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin)
@@ -73,7 +73,7 @@ data BlockBody
   = BlockBody
   { _bDCerts :: ![DCert]
   -- ^ Delegation certificates
-  , _bUtxo :: ![TxWits]
+  , _bUtxo :: ![Tx]
   -- ^ UTxO payload
   , _bUpdProp :: !(Maybe UProp)
   -- ^ Update proposal payload
@@ -120,7 +120,7 @@ mkBlock
   -- ^ Update proposal
   -> [Vote]
   -- ^ Votes on update proposals
-  -> [TxWits]
+  -> [Tx]
   -- ^ UTxO payload
   -> Block
 mkBlock
@@ -189,7 +189,7 @@ bBodySize = fromIntegral . abstractSize costs
                          , (typeOf (undefined::ProtVer), 1)
                          , (typeOf (undefined::DCert), 1)
                          , (typeOf (undefined::Vote), 1)
-                         , (typeOf (undefined::TxWits), 1)
+                         , (typeOf (undefined::Tx), 1)
                          , (typeOf (undefined::Wit), 1)
                          , (typeOf (undefined::TxIn), 1)
                          , (typeOf (undefined::TxOut), 1)]

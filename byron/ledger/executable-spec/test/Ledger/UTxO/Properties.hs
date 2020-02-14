@@ -22,8 +22,8 @@ import           Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set, empty, fromList, union)
 import           Ledger.Core (Lovelace, dom, unLovelace, (∩), (∪), (⋪), (◁))
-import           Ledger.UTxO (Tx (Tx), TxIn (TxIn), TxOut (TxOut), TxWits, UTxO (UTxO), balance,
-                     body, inputs, outputs, pcMinFee, txins, txouts)
+import           Ledger.UTxO (Tx (..), TxBody (TxBody), TxIn (TxIn), TxOut (TxOut), UTxO (UTxO),
+                     balance, body, inputs, outputs, pcMinFee, txins, txouts)
 
 --------------------------------------------------------------------------------
 -- UTxO Properties
@@ -45,11 +45,11 @@ noDoubleSpending = withTests 300 . property $ do
   when (all (\ti -> dom (txouts ti) ∩ dom utxo0 == empty) txs) $
     traverse_ (noCommonInputsTxs txs) (zip txs [0 .. ])
    where
-    noCommonInputsTxs :: MonadTest m => [Tx] -> (Tx, Int) -> m ()
+    noCommonInputsTxs :: MonadTest m => [TxBody] -> (TxBody, Int) -> m ()
     noCommonInputsTxs txs (tx, i) =
       traverse_ (\txj -> txins' txj ∩ txins' tx === empty) (take i txs)
 
-    txins' :: Tx -> Set TxIn
+    txins' :: TxBody -> Set TxIn
     txins' = fromList . txins
 
 -- | Check that UTxO is outputs minus inputs
@@ -62,10 +62,10 @@ utxoDiff = withTests 300 . property $ do
   when (all (\ti -> dom (txouts ti) ∩ dom utxo0 == empty) txs) $
     foldl' union' empty txs ⋪ (utxo0 ∪ allTxOuts txs) === utxoSt
  where
-  union' :: Set TxIn -> Tx -> Set TxIn
+  union' :: Set TxIn -> TxBody -> Set TxIn
   union' s tx = s `union` fromList (txins tx)
 
-  allTxOuts :: [Tx] -> UTxO
+  allTxOuts :: [TxBody] -> UTxO
   allTxOuts txs = foldl' (∪) (UTxO Map.empty) (map txouts txs)
 
 utxoAndTxoutsMustBeDisjoint :: Property
@@ -120,15 +120,15 @@ relevantCasesAreCovered = withTests 400 $ property $ do
       where
         pps_ = pps (tr ^. traceEnv)
 
-    -- | The difference between the Tx Fee and the Min Fee
-    txFeeSurplus :: (Tx -> Lovelace) -> (UTxOState, TxWits) -> Integer
+    -- | The difference between the TxBody Fee and the Min Fee
+    txFeeSurplus :: (Tx -> Lovelace) -> (UTxOState, Tx) -> Integer
     txFeeSurplus txMinFee (st, txw)
       = fee - minFee
       where
           tx_ = body txw
           utxo_ = utxo st
           fee = unLovelace $ balance (txins tx_ ◁ utxo_) - balance (txouts tx_)
-          minFee = unLovelace $ txMinFee tx_
+          minFee = unLovelace $ txMinFee txw
 
     -- | The intersection of the starting UTxO and each transaction in
     -- a trace
@@ -141,7 +141,7 @@ relevantCasesAreCovered = withTests 400 $ property $ do
         (\ti -> dom (txouts ti) ∩ dom utxo0) <$> txs
 
 -- | Returns the average number of inputs and outputs for a list of transactions.
-avgInputsOutputs :: [Tx] -> (Double, Double)
+avgInputsOutputs :: [TxBody] -> (Double, Double)
 avgInputsOutputs txs
   = case length txs of
       0 -> (0,0)
@@ -176,8 +176,8 @@ tracesAreClassified = withTests 200 . property $ do
 
   let
     pparams = pps (tr ^. traceEnv)
-    -- Transaction with one input and one output
-    unitTx = Tx [TxIn undefined 0] [TxOut undefined 100]
+    -- Transaction with one input, one output and no witnesses
+    unitTx = Tx (TxBody [TxIn undefined 0] [TxOut undefined 100]) []
     unitTxFee = pcMinFee pparams unitTx
   classify "Unit transaction cost == 0" $ unitTxFee == 0
   classify "Unit transaction cost == 1" $ unitTxFee == 1

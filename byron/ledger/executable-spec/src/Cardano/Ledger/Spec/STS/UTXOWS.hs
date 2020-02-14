@@ -19,13 +19,13 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      transitionRules, wrapFailed)
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
-import           Ledger.UTxO (TxWits)
+import           Ledger.UTxO (Tx)
 
 data UTXOWS deriving (Data, Typeable)
 
 instance STS UTXOWS where
   type State UTXOWS = UTxOState
-  type Signal UTXOWS = [TxWits]
+  type Signal UTXOWS = [Tx]
   type Environment UTXOWS = UTxOEnv
   data PredicateFailure UTXOWS
     = UtxowFailure (PredicateFailure UTXOW)
@@ -40,7 +40,7 @@ instance STS UTXOWS where
   transitionRules =
     [ do
         TRC (env, utxo, txWits) <- judgmentContext
-        case (txWits :: [TxWits]) of
+        case (txWits :: [Tx]) of
           []     -> return utxo
           (tx:gamma) -> do
             utxo'  <- trans @UTXOW  $ TRC (env, utxo, tx)

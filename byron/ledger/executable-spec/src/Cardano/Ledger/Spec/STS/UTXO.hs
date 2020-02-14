@@ -26,7 +26,7 @@ import           Control.State.Transition (Environment, IRC (IRC), PredicateFail
 import           Ledger.Core (Lovelace, dom, range, (∪), (⊆), (⋪), (◁))
 import           Ledger.GlobalParams (lovelaceCap)
 import           Ledger.Update (PParams)
-import           Ledger.UTxO (Tx, UTxO, balance, pcMinFee, txins, txouts, unUTxO, value)
+import           Ledger.UTxO (Tx, UTxO, balance, body, pcMinFee, txins, txouts, unUTxO, value)
 
 import           Test.Goblin (SeedGoblin (..))
 import           Test.Goblin.TH (deriveSeedGoblin)
@@ -77,21 +77,24 @@ instance STS UTXO where
             , tx
             ) <- judgmentContext
 
-        txins tx ⊆ dom utxo ?! InputsNotInUTxO
+        let ins = txins $ body tx
+            outs = txouts $ body tx
 
-        let fee = balance (txins tx ◁ utxo) - balance (txouts tx)
+        ins ⊆ dom utxo ?! InputsNotInUTxO
+
+        let fee = balance (ins ◁ utxo) - balance outs
 
         pcMinFee pps tx <= fee ?! FeeTooLow
 
-        (not . null) (txins tx) ?! EmptyTxInputs
+        (not . null) ins ?! EmptyTxInputs
 
-        (not . null . unUTxO) (txouts tx) ?! EmptyTxOutputs
+        (not . null . unUTxO) outs ?! EmptyTxOutputs
 
         let
-          outputValues = fmap value $ Set.toList $ range (txouts tx)
+          outputValues = fmap value $ Set.toList $ range outs
         all (0<) outputValues ?! NonPositiveOutputs
 
-        return $ UTxOState { utxo     = (txins tx ⋪ utxo) ∪ txouts tx
+        return $ UTxOState { utxo     = (ins ⋪ utxo) ∪ outs
                            , reserves = reserves + fee
                            }
 
