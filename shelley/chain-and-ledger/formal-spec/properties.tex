@@ -131,17 +131,17 @@ We will prove the soundness of Theorem~\ref{thm:chain-pres-of-value} via a few l
   The proof is essentially unfolding the definition of the predicate
   \begin{equation}
     \label{cons-is-prod}
-    \consumed{pp}{utxo}{stkCreds}{rewards}~{tx} = \produced{pp}{stpools}~{tx}
+    \consumed{pp}{utxo}{stkCreds}{rewards}~{t} = \produced{pp}{stpools}~{t}
   \end{equation}
   and applying a little algebra.
 %
 If we let:
   \begin{equation*}
     \begin{array}{r@{~=~}l}
-      k & \keyRefunds{pp}{stkCreds}{tx} \\
-      f & \txfee{tx} \\
-      d & \totalDeposits{pp}{stpools}{(\txcerts{tx})} \\
-      c & \decayedTx{pp}{stkCreds}~{tx} \\
+      k & \keyRefunds{pp}{stkCreds}{t} \\
+      f & \txfee{t} \\
+      d & \totalDeposits{pp}{stpools}{(\txcerts{t})} \\
+      c & \decayedTx{pp}{stkCreds}~{t} \\
     \end{array}
   \end{equation*}
   then equation~\ref{cons-is-prod} can be rewritten as:
@@ -172,7 +172,12 @@ If we let:
     & \text{(by adding $c-c$)}
     \end{array}
   \end{equation*}
-  Therefore $\Val(s) + w = \Val(s')$.
+  Note that in order to apply Lemma~\ref{lemma:value-sum-pres-2} above,
+  it must be true that $(\txins{t} \subtractdom{\var{utxo}})$ and $(\outs{t})$
+  have disjoint domains, which follows from the uniqueness of the transaction IDs.
+
+  Therefore, by adding the deposits and fees from $s$ to the equality above,
+  it follows that $\Val(s) + w = \Val(s')$.
 \end{proof}
 
 \begin{lemma}
@@ -258,7 +263,7 @@ If we let:
   Notice that $\var{unclaimed}$ is added to $\var{treasury}$
   and subtracted from the $\var{deposits}$.
   Moreover, $\var{refunded}$ is subtracted from $\var{deposits}$.
-  (Note that $\var{deposits}-\var{unclaimed}+\var{refunded}$
+  (Note that $\var{deposits}-(\var{unclaimed}+\var{refunded})$
   is non-negative by Theorem~\ref{thm:non-neg-deposits}.)
   It therefore suffices to show that
   \begin{equation*}
@@ -274,56 +279,42 @@ If we let:
 
 \begin{lemma}
   \label{lemma:ru-pres-of-value}
-  For all mappings $b$ of blocks made, and epoch states $s_1$ and $s_2$,
+  For every $(\Delta t,~\Delta r,~\var{rs},~\Delta f)$ in the range of $\fun{createRUpd}$,
   \begin{equation*}
-    \Val(s_2) = \Val(\fun{applyRUpd}~(\fun{createRUpd}~b~s_1)~s_2)
+    \Delta t + \Delta r + \Val(rs) + \Delta f = 0
   \end{equation*}
 \end{lemma}
 
 \begin{proof}
-  In the definition of $\fun{applyRUpd}$ in Figure~\ref{fig:functions:reward-update-application},
-  we see that we must show that:
-  \begin{equation*}
-    \Delta t + \Delta r + \Val(rs) + \Val(\var{update_{rwd}}) + \var{nonDistributed} + \Delta f = 0
-  \end{equation*}
-  Note that only $\var{nonDistributed}$ and $\var{update_{rwd}}$ depend on $s_2$,
-  as all the other values are pure computations based on $s_1$.
-
   In the definition of $\fun{createRUpd}$ in Figure~\ref{fig:functions:reward-update-creation},
-  using only variable names for values in $s_1$,
-  we see that:
+  We see that:
   \begin{equation*}
     \begin{array}{r@{~=~}l}
-      \var{rewardPot} & \var{feeSS} + \Delta r_l \\
+      \var{rewardPot} & \var{feeSS} + \Delta r \\
       \var{R} & \var{rewardPot} - \Delta t_1 \\
       \Delta t_2 & R - \Val(\var{rs})\\
-      \Delta r & - (\Delta r_l+\Val(i_{rwd})) \\
+      \Delta t & \Delta t_1 + \Delta t_2 \\
     \end{array}
   \end{equation*}
-  Therefore
-  \begin{equation*}
-    \begin{array}{c}
-      (\var{feeSS} + \Delta r_l) = \var{rewardPot} = R + \Delta t_1 = \Delta t_2 + \Val(rs) + \Delta t_1  \\
-      0 = (\Delta t_1 + \Delta t_2 ) - \Delta r_l + \Val(rs)- \var{feeSS} \\
-    \end{array}
-  \end{equation*}
-  It then suffices to show that:
-  \begin{equation*}
-    -\Val(i_{rwd}) + \Val(\var{update_{rwd}}) + \var{nonDistributed} = 0
-  \end{equation*}
-  Notice that $\var{i}_{rwd}$ (from $s_1$) is the disjoint union of
-  $\var{rew'}_{\var{mir}}$ and $\var{unregistered}$.
   Therefore
   \begin{equation*}
     \begin{array}{r@{~=~}l}
-      \Val(\var{registered}) & \Val(\var{rew}_{\var{mir}}) \\
-                             & \Val(\var{rew'}_{\var{mir}}) + \Val(\var{unregistered}) \\
-                             & \Val(\var{update}_{rwd}) + \var{nonDistributed}
+      (\var{feeSS} + \Delta r) & \var{rewardPot} = R + \Delta t_1 = \Delta t_2 + \Val(rs) + \Delta t_1  \\
+      0 & (\Delta t_1 + \Delta t_2 ) - \Delta r + \Val(rs)- \var{feeSS} \\
+      0 & \Delta t - \Delta r + \Val(rs)- \var{feeSS} \\
     \end{array}
   \end{equation*}
+  It then suffices to notice that $\fun{createRUpd}$ returns
+  $(\Delta t,-~\Delta r,~\var{rs},~-\var{feeSS})$.
 \end{proof}
 
 \noindent
+
+Note that Lemma~\ref{lemma:ru-pres-of-value} is not strictly need for the proof of
+Theorem~\ref{thm:chain-pres-of-value}, since the $\mathsf{NEWEPOCH}$ transition
+requires that $\Delta t + \Delta r + \Val(rs) + \Delta f = 0$ holds.
+It does, however, give us confidence that the $\mathsf{CHAIN}$ transition can proceed.
+
 We are now ready to prove Theorem~\ref{thm:chain-pres-of-value}.
 
 \begin{proof}
@@ -349,8 +340,11 @@ We are now ready to prove Theorem~\ref{thm:chain-pres-of-value}.
   and subtracted from $\var{deposits}$.
   Similarly, \POV{NEWPP} holds since $\var{diff}$ is added to $\var{reserves}$
   and subtracted from $\var{deposits}$.
-  Therefore \POV{EPOCH} holds by Lemma~\ref{lemma:poolreap-pres-of-value}
-  and \POV{NEWEPOCH} holds by Lemma~\ref{lemma:ru-pres-of-value}.
+  Therefore \POV{EPOCH} holds by Lemma~\ref{lemma:poolreap-pres-of-value}.
+  \POV{MIR} holds since
+  $\Val{i_{rwd}'}=\var{tot}$ in Figure~\ref{fig:rules:mir}.
+  Morover, \POV{NEWEPOCH} holds in the presence of $\fun{applyRUpd}$
+  since the transition requires $\Delta t + \Delta r + \Val(rs) + \Delta f = 0$.
   \POV{CHAIN} easily follows from this.
 \end{proof}
 
