@@ -172,11 +172,13 @@ To add a new Haskell project, you should do the following:
    ``cardano-prelude`](https://github.com/input-output-hk/cardano-prelude/blob/master/snapshot.yaml),
    then you may have to submit a PR there to update that snapshot.
 3. At this point, test that your new project builds using `stack build <project_name>`.
-4. Run the [regenerate](./nix/regenerate.sh) script to
-   rebuild the nix configuration from your stack.yaml file.
+4. Run [nix-shell ./nix -A iohkNix.stack-cabal-sync-shell --run scripts/stack-cabal_config_check.sh](./scripts/stack-cabal_config_check.sh)
+  script to check and report your change from stack.yaml to cabal.project.
+5. Run the [regenerate](./nix/regenerate.sh) script to
+   update sha256 checksums in cabal.project.
 5. Test that you can build your new project by running the following: `nix build
-   -f default.nix nix-tools.libs.<project_name>`. If you have executables, then
-   you may also try building these using the `nix-tools.exes.<executable_name>`
+   -f default.nix libs.<project_name>`. If you have executables, then
+   you may also try building these using the `exes.<executable_name>`
    attribute path. A good way to see what's available is to execute `:l
    default.nix` in `nix repl`. This will allow you to explore the potential
    attribute names.

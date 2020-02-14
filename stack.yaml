@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/00487726c4bc21b4744e59d913334ebfeac7d68e/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/51a6c139f6d70515a99681b88fd90e5d2adb65b6/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
@@ -7,9 +7,14 @@ packages:
 - byron/semantics/executable-spec
 - shelley/chain-and-ledger/dependencies/non-integer
 
+ghc-options:
+  "$everything": -Wall -fwarn-redundant-constraints
+
+allow-newer: true
+
 extra-deps:
 - sequence-0.9.8
-- tasty-hedgehog-1.0.0.1 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
+- tasty-hedgehog-1.0.0.2 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
 - Unique-0.4.7.6
 - bimap-0.4.0
 - monad-stm-0.1.0.2

@@ -1,4 +1,4 @@
 let
   pkgs = import ../../../default.nix {};
 in
-  pkgs.nix-tools.libs.cs-ledger
+  pkgs.libs.cs-ledger
