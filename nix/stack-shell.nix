@@ -1,14 +1,10 @@
-with import ./lib.nix;
-with pkgs;
 
-let
-  stack-pkgs = import ./.stack.nix;
-  compiler = (stack-pkgs.extras {}).compiler.nix-name;
+with import ./. {};
 
-in haskell.lib.buildStackProject {
-  name = "cardano-ledger-env";
-  buildInputs = [ zlib openssl gmp libffi git systemd.dev systemd.lib ];
-  ghc = haskell.packages.${compiler}.ghc;
+haskell.lib.buildStackProject {
+  name = "stack-env";
+  buildInputs = [ zlib openssl gmp libffi git haskellPackages.happy ];
+  ghc = (import ../shell.nix { inherit pkgs; }).ghc.baseGhc;
   CARDANO_MAINNET_MIRROR =
     "${import ./cardano-mainnet-mirror.nix {inherit pkgs;}}/epochs";
 }

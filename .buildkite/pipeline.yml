@@ -1,10 +1,13 @@
 steps:
+  - label: 'hydra-eval-errors'
+    command: 'nix-build ./nix -A iohkNix.hydraEvalErrors && ./result/bin/hydra-eval-errors.py'
+    agents:
+      system: x86_64-linux
+
   - label: 'stack rebuild'
     env:
       STACK_ROOT: "/build/cardano-ledger.stack"
     command:
-      # cache-s3 needs a build directory that is the same across all buildkite agents.
-      # so copy the source into /build/cardano-ledger
       - "rm -rf /build/cardano-ledger"
       - "cp -R . /build/cardano-ledger"
       - "cd /build/cardano-ledger"
@@ -13,17 +16,12 @@ steps:
     agents:
       system: x86_64-linux
 
-  - label: Check Hydra evaluation of release.nix
-    command: 'nix-build -A _lib.check-hydra -o check-hydra.sh && ./check-hydra.sh'
+  - label: 'stack-cabal-sync'
+    command: 'nix-shell ./nix -A iohkNix.stack-cabal-sync-shell --run scripts/buildkite/stack-cabal-sync.sh'
     agents:
       system: x86_64-linux
 
-  - label: Check auto-generated Nix
-    command: 'nix-build -A _lib.check-nix-tools -o check-nix-tools.sh && ./check-nix-tools.sh'
-    agents:
-      system: x86_64-linux
-
-  - label: Check that cabal.project and stack.yaml have consistent git hashes for dependencies
-    command: 'nix-shell --run scripts/buildkite/stack-cabal_config_check.sh'
+  - label: 'check-cabal-project'
+    command: 'nix-build ./nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh'
     agents:
       system: x86_64-linux

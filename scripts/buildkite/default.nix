@@ -1,17 +1,13 @@
-with import ../../nix/lib.nix;
-with pkgs;
+with import ../../nix {};
 
 let
-
-  stack-hpc-coveralls = pkgs.haskell.lib.dontCheck
-    (haskellPackages.callPackage ./stack-hpc-coveralls.nix {});
-
+  stack-hpc-coveralls = iohkNix.stack-hpc-coveralls;
   stackRebuild = runCommand "stack-rebuild" {} ''
     ${haskellPackages.ghcWithPackages (ps: [ps.turtle ps.safe ps.transformers])}/bin/ghc -o $out ${./rebuild.hs}
   '';
 
   buildTools =
-    [ git nix gnumake stack gnused gnutar coreutils stack-hpc-coveralls ];
+    [ git nix gnumake stack gnused gnutar coreutils stack-hpc-coveralls systemd ];
 
 in
   writeScript "stack-rebuild-wrapped" ''

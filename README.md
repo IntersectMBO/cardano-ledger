@@ -45,12 +45,12 @@ build` or `cabal new-build`.
 Alternatively you can use `nix` to install the external dependencies. For
 `stack` simply add the `--nix` flag to your invocation of `stack build`. If
 you're on `NixOS` this will happen automatically. For `cabal`, you can run
-`nix-shell nix/stack-shell.nix` to enter a shell with the dependencies,
+`nix-shell` to enter a shell with the dependencies,
 and use `cabal new-build` as normal from there.
 
 You can build directly with `nix`, by running `nix-build -A
-nix-tools.libs.cardano-ledger`. To run the test executable you must first build
-it with `nix-build -A nix-tools.tests.cardano-ledger.cardano-ledger-test -o
+libs.cardano-ledger`. To run the test executable you must first build
+it with `nix-build -A tests.cardano-ledger.cardano-ledger-test -o
 cardano-ledger-test` and then run it with `./cardano-ledger-test`.
 
 
@@ -116,7 +116,7 @@ particular needs of the work being done. Such file would be a copy of the
 
 ## Updating GHC and Package Dependencies
 
-`nix` building is handled by `nix-tools`, which generates `nix` infrastructure
+`nix` building is handled by `haskell.nix`, which generates `nix` infrastructure
 from `stack` and `cabal` files. To generate the infrastructure, run
 `nix/regenerate.sh`.
 
@@ -186,19 +186,18 @@ The `nix` directory contains files related to `iohk-nix`, the `nix`-based
 infrastructure were using to manage our dependencies and build on hydra. The
 important files are:
 
-- `nix/iohk-nix-src.json`, which contains JSON pointing to the `iohk-nix` source
+- `nix/sources.json`, which contains JSON pointing to external nix
+  dependencies (eg. `iohk-nix`), designed to be updated with `niv`
+  (available in `nix-shell`).
 
-- `nix/lib.nix`, which imports `iohk-nix` and creates and attribute set
-  containing its `lib`, `pkgs`, and `nix-tools` attributes
+- `nix/default.nix`, which imports `nixpkgs` with overlays
+  including `iohkNix`, `commonLib` and `cardanoLedgerHaskellPackages`.
 
-- `nix/regenerate.sh`, which generates `nix` expressions for all the Haskell
-  dependencies in the Stack project
+- `nix/regenerate.sh`, which update `--sha256` in `cabal.project`.
 
-- `nix/update-iohk-nix.sh`, which updates the `iohk-nix-src.json` according to
-the latest version of [`iohk-nix`](https://github.com/input-output-hk/iohk-nix/)
-
-- `nix/pkgs.nix`, which creates a package set from the generated `nix`
-  expressions
+- `nix/haskell.nix`, which creates a package set from the cabal.project
+  using the [haskell.nix](https://github.com/input-output-hk/haskell.nix#quickstart)
+  `cabalProject` function.
 
 - `default.nix`, the top-level `nix` expression for the project, based on the
   generated package set
@@ -206,35 +205,23 @@ the latest version of [`iohk-nix`](https://github.com/input-output-hk/iohk-nix/)
 - `release.nix`, the specification for which packages to build on hydra
 
 There are a couple of common issues that developers run into while working with
-`iohk-nix`:
+`haskell.nix`:
 
-- `error: attribute 'ghc864' missing, at (string):1:43` is an error that you
-  will usually get if you're trying to evaluate some `nix` expression using your
-  system-wide `nixpkgs` and the version of `ghc` there doesn't match the one
-  that you're trying to build with. This is usually solved by getting the
-  offending `.nix` file to `import ./nix/lib.nix`. Sometime this occurs while
-  running `stack` and this means `stack` is running with the `--nix` flag. In
-  this case, you need to make sure you have a `shell.nix` file for `stack` that
-  points to `nix/lib.nix`. Then add:
+- While evaluating `release.nix` or `default.nix`, you might see
   ```
-  nix:
-    shell-file: nix/stack-shell.nix
+  "error": "attribute '1.0.0.0' missing, at /nix/store/.../default.nix:6:30"
   ```
-  to your `stack.yaml`.
-
-- While evaluating `release.nix`, e.g. using the
-  `scripts/buildkite/check-hydra.sh` script, you might see
-  ```
-  "error": "attribute '1.0.0.0' missing, at /path/to/nix/.stack.nix/default.nix:6:30"
-  ```
-  which indicates that a package version is missing from the `iohk-nix` package
-  set. This is usually because the version is new to Hackage, and so it has only
-  recently made it into
+  which indicates that a package version is missing from the `hackage.nix`
+  package set. This is usually because the version is new to Hackage, and so
+  it has only recently made it into
   [`hackage.nix`](https://github.com/input-output-hk/hackage.nix/), a set of
-  `nix` expressions for all the packages on Hackage. This is pinned in
-  `iohk-nix`, so to solve this, submit a PR to `iohk-nix` updating the revision
-  of `pins/haskell-nix.json`, or get IOHK DevOps to submit this PR for you if
-  you're unsure how to do that.
+  `nix` expressions for all the packages on Hackage.
+  `haskell.nix` is regularly updated with latest version of `hackage.nix`, so
+  to solve this error use the following command:
+  ```
+  nix-shell -A devops --run 'niv update haskell.nix'
+  ```
+
 
 
 <hr/>
