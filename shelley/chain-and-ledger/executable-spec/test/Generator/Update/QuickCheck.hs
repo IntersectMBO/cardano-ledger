@@ -29,7 +29,7 @@ import           Coin (Coin (..))
 import           ConcreteCryptoTypes (AVUpdate, Applications, CoreKeyPair, DPState, GenKeyHash,
                      KeyHash, KeyPair, Mdt, PPUpdate, UTxOState, Update)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core.Constants (frequencyTxUpdates)
+import           Generator.Core.Constants (frequencyLowMaxEpoch, frequencyTxUpdates)
 import           Generator.Core.QuickCheck (AllPoolKeys (cold), genInteger, genNatural, genWord64,
                      increasingProbabilityAt, tooLateInEpoch)
 import           Keys (GenDelegs (..), hash, hashKey, vKey)
@@ -43,8 +43,6 @@ import           Updates (pattern AVUpdate, pattern ApName, pattern ApVer, patte
                      emptyUpdate, maxVer)
 
 import           Test.Utils (epochFromSlotNo)
-
-import Debug.Trace as D
 
 genRationalInThousands :: Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
@@ -63,7 +61,7 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        <*> genKeyMinRefund
                        <*> genKeyDecayRate
                        <*> genPoolDeposit
-                       <*> genIntervalInThousands 100 700
+                       <*> genPoolMinRefund
                        <*> genPoolDecayRate
                        <*> genEMax
                        <*> genNOpt
@@ -133,7 +131,7 @@ genKeyMinRefund = genIntervalInThousands 100 500
 
 -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
 genEMax :: Gen EpochNo
-genEMax = EpochNo <$> genWord64 6 500
+genEMax = EpochNo <$> genWord64 frequencyLowMaxEpoch 500
 
 -- | nOpt
 genNOpt :: Gen Natural

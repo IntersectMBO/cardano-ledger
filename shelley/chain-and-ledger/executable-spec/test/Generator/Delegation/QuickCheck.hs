@@ -38,10 +38,10 @@ import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pa
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDelegationCert,
                      frequencyGenesisDelegationCert, frequencyKeyCredDeReg,
-                     frequencyKeyCredDelegation, frequencyKeyCredReg, frequencyMIRCert,
-                     frequencyRegKeyCert, frequencyRegPoolCert, frequencyRetirePoolCert,
-                     frequencyScriptCredDeReg, frequencyScriptCredDelegation,
-                     frequencyScriptCredReg)
+                     frequencyKeyCredDelegation, frequencyKeyCredReg, frequencyLowMaxEpoch,
+                     frequencyMIRCert, frequencyRegKeyCert, frequencyRegPoolCert,
+                     frequencyRetirePoolCert, frequencyScriptCredDeReg,
+                     frequencyScriptCredDelegation, frequencyScriptCredReg)
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred,
                      tooLateInEpoch)
 import           Keys (GenDelegs (..), hashKey, vKey)
@@ -350,7 +350,7 @@ genRetirePool
   -> PState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
-genRetirePool availableKeys pp pState slot =
+genRetirePool availableKeys pState slot =
   if (null availableKeys || null poolHashKeys)
      then pure Nothing
      else (\keyHash epoch ->
@@ -367,9 +367,8 @@ genRetirePool availableKeys pp pState slot =
         error "genRetirePool: impossible: keyHash doesn't match availableKeys"
       Just ks -> ks
   EpochNo cepoch = epochFromSlotNo slot
-  EpochNo maxEpoch = pp ^. eMax
   epochLow = cepoch + 1
-  epochHigh = cepoch + maxEpoch - 1
+  epochHigh = cepoch + frequencyLowMaxEpoch - 1
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards
