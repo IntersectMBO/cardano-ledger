@@ -27,7 +27,7 @@ import           Data.Word (Word64)
 import           Generator.Core.Constants (maxGenesisUTxOouts, minGenesisUTxOouts, numBaseScripts)
 import           Generator.Core.QuickCheck (coreKeyPairs, genCoin, genUtxo0, genesisDelegs0,
                      traceKeyHashMap, traceKeyPairs, traceMSigCombinations, traceMSigScripts,
-                     traceVRFKeyPairs)
+                     tracePoolKeys, traceVRFKeyPairs)
 import           Generator.Update.QuickCheck (genPParams)
 import           Generator.Utxo.QuickCheck (genTx)
 import           LedgerState (pattern LedgerState, genesisState)
@@ -52,6 +52,7 @@ instance TQC.HasTrace LEDGER Word64 where
      ledgerSt
      traceKeyPairs
      traceKeyHashMap
+     tracePoolKeys
      (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
      coreKeyPairs
      traceVRFKeyPairs

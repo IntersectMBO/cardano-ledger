@@ -127,3 +127,6 @@ minSlotTrace = 1000
 -- | Maximal slot for CHAIN trace generation.
 maxSlotTrace :: Int
 maxSlotTrace = 5000
+
+maxPoolKeys :: Word64
+maxPoolKeys = 50

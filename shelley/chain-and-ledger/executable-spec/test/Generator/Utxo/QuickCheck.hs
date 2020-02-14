@@ -55,11 +55,12 @@ genTx :: LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
       -> Map AnyKeyHash KeyPair
+      -> [KeyPair]
       -> MultiSigPairs
       -> [CoreKeyPair]
       -> VrfKeyPairs
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashMap scripts coreKeys vrfKeys = do
+genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashMap poolKeys scripts coreKeys vrfKeys = do
   keys' <- QC.shuffle keys
   scripts' <- QC.shuffle scripts
 
@@ -89,7 +90,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
 
   -- certificates
   (certs, certCreds, deposits_, refunds_)
-    <- genDCerts keys' keyHashMap scripts' coreKeys vrfKeys pparams dpState slot ttl
+    <- genDCerts keys' keyHashMap scripts' poolKeys coreKeys vrfKeys pparams dpState slot ttl
 
   if spendingBalance < deposits_
     then D.trace ("discarded") QC.discard

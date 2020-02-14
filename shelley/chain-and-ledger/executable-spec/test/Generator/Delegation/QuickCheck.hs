@@ -67,6 +67,7 @@ genDCerts
   :: KeyPairs
   -> Map AnyKeyHash KeyPair
   -> MultiSigPairs
+  -> [KeyPair]
   -> [CoreKeyPair]
   -> VrfKeyPairs
   -> PParams
@@ -74,13 +75,13 @@ genDCerts
   -> SlotNo
   -> Natural
   -> Gen (Seq DCert, [CertCred], Coin, Coin)
-genDCerts keys keyHashMap scripts coreKeys vrfKeys pparams dpState slot ttl = do
+genDCerts keys keyHashMap scripts poolKeys coreKeys vrfKeys pparams dpState slot ttl = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
   -- later traversals are done backwards, to be consistent with the executable
   -- spec (see `delegsTransition` in `STS.Delegs`) which consumes the list
   -- starting at the tail end.
-  cert <- genDCert keys scripts coreKeys vrfKeys pparams dpState slot
+  cert <- genDCert keys scripts poolKeys coreKeys vrfKeys pparams dpState slot
   case cert of
     Nothing ->
       return (Seq.empty, [], Coin 0, Coin 0)
@@ -128,19 +129,20 @@ genDCerts keys keyHashMap scripts coreKeys vrfKeys pparams dpState slot ttl = do
 genDCert
   :: KeyPairs
   -> MultiSigPairs
+  -> [KeyPair]
   -> [CoreKeyPair]
   -> VrfKeyPairs
   -> PParams
   -> DPState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
-genDCert keys scripts coreKeys vrfKeys pparams dpState slot =
+genDCert keys scripts poolKeys coreKeys vrfKeys pparams dpState slot =
   QC.frequency [ (frequencyRegKeyCert, genRegKeyCert keys scripts dState)
-               , (frequencyRegPoolCert, genRegPool keys vrfKeys dpState)
+               , (frequencyRegPoolCert, genRegPool poolKeys vrfKeys dpState)
                , (frequencyDelegationCert, genDelegation keys scripts dpState)
-               , (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState)
+               , (frequencyGenesisDelegationCert, genGenesisDelegation poolKeys coreKeys dpState)
                , (frequencyDeRegKeyCert, genDeRegKeyCert keys scripts dState)
-               , (frequencyRetirePoolCert, genRetirePool keys pparams pState slot)
+               , (frequencyRetirePoolCert, genRetirePool poolKeys pparams pState slot)
                , (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
                ]
  where
@@ -260,11 +262,11 @@ genDelegation keys scripts dpState =
       Set.toList $ dom (dom ((_retiring . _pstate) dpState) </| registeredPools)
 
 genGenesisDelegation
-  :: KeyPairs
+  :: [KeyPair]
   -> [CoreKeyPair]
   -> DPState
   -> Gen (Maybe (DCert, CertCred))
-genGenesisDelegation keys coreKeys dpState =
+genGenesisDelegation poolKeys coreKeys dpState =
   if null genesisDelegators || null availableDelegatees
     then
       pure Nothing
@@ -274,7 +276,7 @@ genGenesisDelegation keys coreKeys dpState =
   where
     hashVKey = hashKey . vKey
     mkCert gkey key = Just
-      ( DCertGenesis (GenesisDelegate (hashVKey gkey, (hashVKey . snd) key))
+      ( DCertGenesis (GenesisDelegate (hashVKey gkey, hashVKey key))
       , CoreKeyCred [gkey])
 
     (GenDelegs genDelegs_) = _genDelegs $ dpState ^. dstate
@@ -283,28 +285,28 @@ genGenesisDelegation keys coreKeys dpState =
     genesisDelegators = filter (genesisDelegator . hashVKey) coreKeys
 
     notDelegatee k = k ∉ range genDelegs_
-    availableDelegatees = filter (notDelegatee . hashVKey . snd) keys
+    availableDelegatees = filter (notDelegatee . hashVKey) poolKeys
 
 -- | Generate and return a RegPool certificate along with its witnessing key.
 genRegPool
-  :: KeyPairs
+  :: [KeyPair]
   -> VrfKeyPairs
   -> DPState
   -> Gen (Maybe (DCert, CertCred))
-genRegPool keys vrfKeys dpState =
+genRegPool poolKeys vrfKeys dpState =
   if null availableKeys || null availableVrfKeys
      then pure Nothing
      else
        Just <$> genDCertRegPool availableKeys availableVrfKeys
  where
   notRegistered k = k `notElem` (dpState ^. pstate . pParams . to Map.elems . to (_poolPubKey <$>))
-  availableKeys = filter (notRegistered . hashKey . vKey . snd) keys
+  availableKeys = filter (notRegistered . hashKey . vKey) poolKeys
 
   notRegisteredVrf k = k `notElem` (dpState ^. pstate . pParams . to Map.elems . to (_poolVrf <$>))
   availableVrfKeys = filter (notRegisteredVrf . hashKeyVRF . snd) vrfKeys
 
 -- | Generate PoolParams and the key witness.
-genStakePool :: KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
+genStakePool :: [KeyPair] -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
 genStakePool skeys vrfKeys =
   mkPoolParams
     <$> (QC.elements skeys)
@@ -314,23 +316,23 @@ genStakePool skeys vrfKeys =
     <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> (getAnyStakeKey skeys)
  where
-  getAnyStakeKey :: KeyPairs -> Gen VKey
-  getAnyStakeKey keys = vKey . snd <$> QC.elements keys
+  getAnyStakeKey :: [KeyPair] -> Gen VKey
+  getAnyStakeKey keys = vKey <$> QC.elements keys
 
-  mkPoolParams poolKeyPair vrfKey cost pledge marginPercent acntKey =
+  mkPoolParams poolKey vrfKey cost pledge marginPercent acntKey =
     let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
         pps = PoolParams
-                (hashKey . vKey . snd $ poolKeyPair)
+                (hashKey . vKey $ poolKey)
                 (hashKeyVRF vrfKey)
                 pledge
                 cost
                 interval
                 (RewardAcnt $ KeyHashObj $ hashKey acntKey)
                 Set.empty
-     in (pps, snd poolKeyPair)
+     in (pps, poolKey)
 
 -- | Generate `RegPool` and the key witness.
-genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, CertCred)
+genDCertRegPool :: [KeyPair] -> VrfKeyPairs -> Gen (DCert, CertCred)
 genDCertRegPool skeys vrfKeys = do
   (pps, poolKey) <- genStakePool skeys vrfKeys
   pure (DCertPool (RegPool pps), KeyCred poolKey)
@@ -343,7 +345,7 @@ genDCertRegPool skeys vrfKeys = do
 -- constructed value, return the keypair which corresponds to the selected
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool
-  :: KeyPairs
+  :: [KeyPair]
   -> PParams
   -> PState
   -> SlotNo
@@ -360,10 +362,10 @@ genRetirePool availableKeys pp pState slot =
   stakePools = pState ^. (stPools . to (\(StakePools x) -> x))
   poolHashKeys = Set.toList (Map.keysSet stakePools)
   findKeyPair keyHash =
-    case find (\x -> hashKey (vKey (snd x)) == keyHash) availableKeys of
+    case find (\x -> hashKey (vKey x) == keyHash) availableKeys of
       Nothing ->
         error "genRetirePool: impossible: keyHash doesn't match availableKeys"
-      Just ks -> snd ks
+      Just ks -> ks
   EpochNo cepoch = epochFromSlotNo slot
   EpochNo maxEpoch = pp ^. eMax
   epochLow = cepoch + 1

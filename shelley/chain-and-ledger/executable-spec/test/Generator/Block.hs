@@ -22,10 +22,10 @@ import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), gen
                      getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash, zero)
 import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
-import           Ledger.Core (dom, range)
+import           Ledger.Core (dom, range, (∉))
 import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
-                     overlaySchedule, _delegationState, _dstate, _genDelegs, _pParams, _pstate,
-                     _reserves)
+                     overlaySchedule, _delegationState, _dstate, _genDelegs, _pstate, _reserves,
+                     _retiring)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
@@ -52,6 +52,7 @@ nextCoreNode os nextOs s =
         Just n -> n
     Just n -> n
 
+-- | Find the next active Praos slot.
 getPraosSlot
   :: SlotNo
   -> SlotNo
@@ -94,9 +95,14 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
    -}
 
   lookForPraosStart <- genSlotIncrease
-  let poolParams = (Map.toList . unPoolDistr . nesPd . chainNes) chainSt
+  let poolParams = ( Map.toList
+                   . Map.filterWithKey (\k _ -> k ∉ (dom $ (_retiring . _pstate) dpstate))
+                   . Map.filter ((> 0) . fst)
+                   . unPoolDistr
+                   . nesPd
+                   . chainNes) chainSt
   poolParams' <- take 1 <$> QC.shuffle poolParams
-  let (_nextSlot, _keys) = case poolParams' of
+  let (nextSlot, keys) = case poolParams' of
         []       -> (nextOSlot, gkeys gkey)
         (pkh, (_, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
                       Nothing -> (nextOSlot, gkeys gkey)
@@ -109,28 +115,25 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
                                        }
                                  in (ps, apks)
 
-  if nextOSlot > sNow
+  if nextSlot > sNow
     then QC.discard
     else do
 
-    let kp@(KESPeriod kesPeriod_) = runShelleyBase (kesPeriod $ nextOSlot)
+    let kp@(KESPeriod kesPeriod_) = runShelleyBase (kesPeriod $ nextSlot)
         cs = chainOCertIssue chainSt
-
-        -- poolParams in SNAP (_, poolParams, _) in pstate
-        poolKeys = dom $ (_pParams . _pstate) dpstate
 
         -- ran genDelegs
         genDelegationKeys = range cores
 
         n' = currentIssueNo
-             (OCertEnv poolKeys genDelegationKeys)
+             (OCertEnv (dom poolParams) genDelegationKeys)
              cs
-             ((hashKey . vKey . cold) $ gkeys gkey)
+             ((hashKey . vKey . cold) keys)
 
-        m = getKESPeriodRenewalNo (gkeys gkey) kp
+        m = getKESPeriodRenewalNo keys kp
 
-        hotKeys = drop (fromIntegral m) (hot $ gkeys gkey)
-        keys' = (gkeys gkey) { hot = hotKeys }
+        hotKeys = drop (fromIntegral m) (hot keys)
+        keys' = keys { hot = hotKeys }
         oCert =
           case n' of
             Nothing -> error "no issue number available"
@@ -140,8 +143,8 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
     mkBlock
       <$> pure (chainHashHeader chainSt)
       <*> pure keys'
-      <*> toList <$> genTxs nextOSlot
-      <*> pure nextOSlot
+      <*> toList <$> genTxs nextSlot
+      <*> pure nextSlot
       <*> pure (chainBlockNo chainSt + 1)
       <*> pure (chainEpochNonce chainSt)
       <*> genBlockNonce

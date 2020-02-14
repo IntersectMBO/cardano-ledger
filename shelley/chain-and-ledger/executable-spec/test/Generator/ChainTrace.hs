@@ -35,7 +35,7 @@ import           Generator.Block (genBlock)
 import           Generator.Core.Constants (maxGenesisUTxOouts, maxSlotTrace, minGenesisUTxOouts,
                      minSlotTrace)
 import           Generator.Core.QuickCheck (coreNodeKeys, genUtxo0, genesisDelegs0,
-                     maxLovelaceSupply, traceKeyPairsByStakeHash)
+                     maxLovelaceSupply, tracePoolKeysMap)
 import           Generator.Update.QuickCheck (genPParams)
 import           Keys (pattern GenDelegs, Hash, hash)
 import           LedgerState (overlaySchedule)
@@ -58,7 +58,7 @@ instance HasTrace CHAIN Word64 where
       env
       st
       coreNodeKeys
-      traceKeyPairsByStakeHash
+      tracePoolKeysMap
 
   shrinkSignal = shrinkBlock
 
