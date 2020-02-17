@@ -14,42 +14,42 @@ constraints:
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 965b8b143632faea16680a195e6de57091382700
-  --sha256: 0x3cy5xa9mqdqnavs45assmmcrzw07qcwsv95capqwa6awz1plhh
+  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
+  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 965b8b143632faea16680a195e6de57091382700
-  --sha256: 0x3cy5xa9mqdqnavs45assmmcrzw07qcwsv95capqwa6awz1plhh
+  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
+  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 965b8b143632faea16680a195e6de57091382700
-  --sha256: 0x3cy5xa9mqdqnavs45assmmcrzw07qcwsv95capqwa6awz1plhh
+  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
+  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 965b8b143632faea16680a195e6de57091382700
-  --sha256: 0x3cy5xa9mqdqnavs45assmmcrzw07qcwsv95capqwa6awz1plhh
+  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
+  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
   subdir: slotting
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 00487726c4bc21b4744e59d913334ebfeac7d68e
-  --sha256: 0v4fcq5kdd2r5dgwys8kv46ff33qp756n26ycxrca10wq14zkwm5
+  tag: fa7a16291d3e93b068d9b13620fc81c88b5600f0
+  --sha256: 1gaj8k5kjdkmnc0l569asc0fwxi0413v1r0piccg8kyscwvhvcwz
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 00487726c4bc21b4744e59d913334ebfeac7d68e
-  --sha256: 0v4fcq5kdd2r5dgwys8kv46ff33qp756n26ycxrca10wq14zkwm5
+  tag: fa7a16291d3e93b068d9b13620fc81c88b5600f0
+  --sha256: 1gaj8k5kjdkmnc0l569asc0fwxi0413v1r0piccg8kyscwvhvcwz
   subdir: test
 
 source-repository-package
