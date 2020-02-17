@@ -90,9 +90,8 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
   -- certificates
-  let coreKeys = (fst . unzip) coreKeyPairs
   (certs, certCreds, deposits_, refunds_)
-    <- genDCerts keys' keyHashMap scripts' poolKeys coreKeys vrfKeys pparams dpState slot ttl
+    <- genDCerts keys' keyHashMap scripts' poolKeys (fst <$> coreKeys) vrfKeys keysByStakeHash pparams dpState slot ttl
 
   if spendingBalance < deposits_
     then D.trace ("discarded") QC.discard
@@ -118,7 +117,7 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
-      genUpdate slot coreKeyPairs keysByStakeHash pparams (utxoSt, dpState)
+      genUpdate slot coreKeys keysByStakeHash pparams (utxoSt, dpState)
 
     -- witnessed transaction
     txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update fee slotWithTTL
