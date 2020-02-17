@@ -26,12 +26,11 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
 import           Control.State.Transition.Generator (HasTrace, SignalGenerator, coverFailures,
                      envGen, sigGen, tinkerWithSigGen)
 
-import           Ledger.Core (Addr (Addr), KeyPair (KeyPair), VKey, keyPair, mkAddr, owner, sign,
-                     verify)
+import           Ledger.Core (Addr (Addr),VKey, mkAddr, verify)
 import qualified Ledger.Update.Generators as UpdateGen
 import           Ledger.Util (mkGoblinGens)
-import           Ledger.UTxO (Tx, TxIn, TxOut (TxOut), TxWits (TxWits), UTxO (UTxO), Wit (Wit),
-                     body, fromTxOuts, inputs, pcMinFee)
+import           Ledger.UTxO (Tx(..), TxIn, TxOut (TxOut), UTxO (UTxO), Wit (Wit),
+                      fromTxOuts, inputs, pcMinFee)
 import qualified Ledger.UTxO.Generators as UTxOGen
 
 import           Cardano.Ledger.Spec.STS.UTXO
@@ -46,7 +45,7 @@ instance STS UTXOW where
 
   type Environment UTXOW = UTxOEnv
   type State UTXOW = UTxOState
-  type Signal UTXOW = TxWits
+  type Signal UTXOW = Tx
 
   -- | These `PredicateFailure`s are all throwable.
   data PredicateFailure UTXOW
@@ -64,7 +63,7 @@ instance STS UTXOW where
     [ do
         TRC (env, utxoSt@UTxOState {utxo}, tw) <- judgmentContext
         witnessed tw utxo ?! InsufficientWitnesses
-        utxoSt' <- trans @UTXO $ TRC (env, utxoSt, body tw)
+        utxoSt' <- trans @UTXO $ TRC (env, utxoSt, tw)
         return utxoSt'
     ]
 
@@ -77,8 +76,8 @@ authTxin key txin (UTxO utxo) = case Map.lookup txin utxo of
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are sufficient.
 -- TODO - should we only check for one witness for each unique input address?
-witnessed :: TxWits -> UTxO -> Bool
-witnessed (TxWits tx wits) utxo =
+witnessed :: Tx -> UTxO -> Bool
+witnessed (Tx tx wits) utxo =
   length wits == length ins && all (isWitness tx utxo) (zip ins wits)
  where
   ins = inputs tx
@@ -104,21 +103,8 @@ instance HasTrace UTXOW where
         -- come from we use the hash of the address as transaction id.
         pure $ fromTxOuts txOuts
 
-  sigGen UTxOEnv { pps } st = do
-    tx <- UTxOGen.genTxFromUTxO traceAddrs (pcMinFee pps) (utxo st)
-    let wits = witnessForTxIn tx (utxo st) <$> inputs tx
-    pure $ TxWits tx wits
-
-witnessForTxIn :: Tx -> UTxO -> TxIn -> Wit
-witnessForTxIn tx (UTxO utxo) txin =
-  case Map.lookup txin utxo of
-    Just (TxOut (Addr pay) _) ->
-      witnessForTx (keyPair $ owner pay) tx
-    Nothing                   ->
-      error "The generators must ensure that we are spending unspent inputs"
-
-witnessForTx :: KeyPair -> Tx -> Wit
-witnessForTx (KeyPair sk vk) tx = Wit vk (sign sk tx)
+  sigGen UTxOEnv { pps } st =
+    UTxOGen.genTxFromUTxO traceAddrs (pcMinFee pps) (utxo st)
 
 
 --------------------------------------------------------------------------------
@@ -135,8 +121,8 @@ mkGoblinGens
   , "UtxoFailure_NonPositiveOutputs"
   ]
 
-tamperedTxWitsList :: UTxOEnv -> UTxOState -> Gen [TxWits]
-tamperedTxWitsList env st = do
+tamperedTxList :: UTxOEnv -> UTxOState -> Gen [Tx]
+tamperedTxList env st = do
   gen <- Gen.element (map (\sg -> sg env st) goblinGensUTXOW)
   Gen.list (Range.linear 1 10) gen
 

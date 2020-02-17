@@ -31,7 +31,7 @@ import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
 -- Example HasTypeReps.typeReps for TxIn, Tx
 --------------------------------------------------------------------------------
 
-aTx :: Tx
+aTx :: TxBody
 aTx = undefined
 
 aTxId :: TxId
@@ -59,9 +59,9 @@ exampleTypeRepsTx =
     (in0,in1) = (TxIn aTxId 0, TxIn aTxId 1)
     outs = []
     wits = []
-    tx = TxWits (Tx [in0, in1] outs) wits
-  in typeReps tx @?= typeOf (undefined::TxWits)
-                       <| typeOf (undefined::Tx)
+    tx = Tx (TxBody [in0, in1] outs) wits
+  in typeReps tx @?= typeOf (undefined::Tx)
+                       <| typeOf (undefined::TxBody)
                        <| typeOf (undefined::[TxIn])
                        <| typeReps in0
                        >< typeReps in1
@@ -79,9 +79,9 @@ mkCost = Map.singleton (typeOf (undefined::a)) 1
 -- | Tests that the size of a 'TxWits' term, computed with the combined costs
 --   of 'TxIn/TxOut/Wit', is the sum of costs of all 'TxIn/TxOut/Wit' contained
 --   in the 'TxWits'.
-propSumOfSizesTxWits
-  :: MonadTest m => TxWits -> m ()
-propSumOfSizesTxWits txw
+propSumOfSizesTx
+  :: MonadTest m => Tx -> m ()
+propSumOfSizesTx txw
   = abstractSize (txInCosts <> txOutCosts <> witCosts) txw
          === abstractSize txInCosts (body txw)
              + abstractSize txOutCosts (body txw)
@@ -94,7 +94,7 @@ propSumOfSizesTxWits txw
     txOutCosts = Map.unions [ mkCost @TxOut, mkCost @Addr, mkCost @VKey, mkCost @Lovelace ]
 
     witCosts :: Map TypeRep Size
-    witCosts = Map.unions [ mkCost @Wit, mkCost @VKey, mkCost @(Sig Tx) ]
+    witCosts = Map.unions [ mkCost @Wit, mkCost @VKey, mkCost @(Sig TxBody) ]
 
 -- | A TxWits contains multiple inputs, outputs and witnesses.
 --   This property tests that
@@ -103,7 +103,7 @@ propSumOfSizesTxWits txw
 --   - types that are shared (e.g. VKey appears in both TxOut and Wit)
 --     should be counted for each appearance
 propMultipleOfSizes
-  :: MonadTest m => TxWits -> m ()
+  :: MonadTest m => Tx -> m ()
 propMultipleOfSizes txw =
   let
     body_ = body txw
@@ -131,11 +131,11 @@ propMultipleOfSizes txw =
 
     -- we should account for each Wit/Sig in a TxWits's size
     abstractSize (mkCost @Wit)      txw === length wits_
-    abstractSize (mkCost @(Sig Tx)) txw === length wits_
+    abstractSize (mkCost @(Sig TxBody)) txw === length wits_
     -- the combined cost is the sum of individual costs
-    abstractSize (Map.unions [ mkCost @Wit, mkCost @(Sig Tx) ]) txw
+    abstractSize (Map.unions [ mkCost @Wit, mkCost @(Sig TxBody) ]) txw
        === abstractSize (mkCost @Wit) txw
-           + abstractSize (mkCost @(Sig Tx)) txw
+           + abstractSize (mkCost @(Sig TxBody)) txw
 
     -- since Vkey appears in each input _and_ each witness, the size of
     -- TxWits should be the total number of inputs and wits
@@ -146,10 +146,10 @@ propTxAbstractSize :: Property
 propTxAbstractSize
   = withTests 50 $ property $ do
     tr <- forAll (trace @UTXOW () 100)
-    let txs = traceSignals OldestFirst tr :: [TxWits]
+    let txs = traceSignals OldestFirst tr :: [Tx]
     mapM_ propSize txs
   where
-    propSize txw = propSumOfSizesTxWits txw >> propMultipleOfSizes txw
+    propSize txw = propSumOfSizesTx txw >> propMultipleOfSizes txw
 
 testTxHasTypeReps :: TestTree
 testTxHasTypeReps = testGroup "Test HasTypeReps instances"

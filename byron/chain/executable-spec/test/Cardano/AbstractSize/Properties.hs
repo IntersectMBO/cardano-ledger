@@ -37,7 +37,7 @@ import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
 -- Example typeReps for Block/Header/Body
 --------------------------------------------------------------------------------
 
-aTx :: Tx
+aTx :: TxBody
 aTx = undefined
 
 aTxId :: TxId
@@ -54,12 +54,12 @@ aHeader = BlockHeader {
         , _bhUpdHash = undefined :: Hash
      }
 
-aTxWits :: TxWits
+aTxWits :: Tx
 aTxWits =
   let (in0,in1) = (TxIn aTxId 0, TxIn aTxId 1)
       outs = []
       wits = []
-   in TxWits (Tx [in0, in1] outs) wits
+   in Tx (TxBody [in0, in1] outs) wits
 
 aBody :: BlockBody
 aBody = BlockBody
@@ -99,7 +99,7 @@ exampleTypeRepsBlockBody =
         Seq.fromList [
             typeOf (undefined::BlockBody)
           , typeOf (undefined::[DCert])
-          , typeOf (undefined::[TxWits]) ]
+          , typeOf (undefined::[Tx]) ]
         >< typeReps aTxWits
         >< typeReps aTxWits
         >< Seq.fromList [
@@ -133,7 +133,7 @@ propMultipleOfSizesBlock b =
     body_ = _bBody b
   in do
     abstractSize (mkCost @DCert)  b === length (_bDCerts body_)
-    abstractSize (mkCost @TxWits) b === length (_bUtxo body_)
+    abstractSize (mkCost @Tx)     b === length (_bUtxo body_)
     abstractSize (mkCost @Vote)   b === length (_bUpdVotes body_)
     abstractSize (mkCost @UProp)  b === length (maybeToList (_bUpdProp body_))
     -- A STag is a string, so we need to make sure that all the characters are

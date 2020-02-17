@@ -76,24 +76,24 @@ fromTxOuts = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
   where mkId = TxId . hash . addr
 
 -- | A raw transaction
-data Tx = Tx
+data TxBody = TxBody
   { inputs  :: [TxIn]
   , outputs :: [TxOut]
   } deriving (Eq, Show, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
 
-txid :: Tx -> TxId
+txid :: TxBody -> TxId
 txid = TxId . hash
 
 -- | Total value of a transaction.
-txValue :: Tx -> Lovelace
-txValue Tx { outputs } = sum $ fmap value outputs
+txValue :: TxBody -> Lovelace
+txValue TxBody { outputs } = sum $ fmap value outputs
 
 -- |Compute the UTxO inputs of a transaction.
-txins :: Tx -> [TxIn]
+txins :: TxBody -> [TxIn]
 txins = inputs
 
 -- |Compute the UTxO outputs of a transaction.
-txouts :: Tx -> UTxO
+txouts :: TxBody -> UTxO
 txouts tx = UTxO $ Map.fromList
   [ (TxIn transId idx, out) | (out, idx) <- zip (outputs tx) [0 ..] ]
   where transId = txid tx
@@ -103,7 +103,7 @@ balance :: UTxO -> Lovelace
 balance (UTxO utxo) = Map.foldl' addValues mempty utxo
   where addValues b (TxOut _ a) = b <> a
 
-instance Ledger.Core.HasHash Tx where
+instance Ledger.Core.HasHash TxBody where
   hash = Hash . Just . H.hash
 
 ---------------------------------------------------------------------------------
@@ -118,6 +118,7 @@ txsize :: Tx -> Int
 txsize = abstractSize costs
   where costs = Map.fromList [ (typeOf (undefined :: TxIn) , 1)
                              , (typeOf (undefined :: TxOut), 1)
+                             , (typeOf (undefined :: Wit), 1)
                              ]
 
 
@@ -126,26 +127,24 @@ txsize = abstractSize costs
 ---------------------------------------------------------------------------------
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
-data Wit = Wit VKey (Sig Tx)
+data Wit = Wit VKey (Sig TxBody)
   deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
 
 -- |A fully formed transaction.
---
---     * __TODO__ - Would it be better to name this type Tx, and rename Tx to TxBody?
-data TxWits = TxWits
-  { body      :: Tx
+data Tx = Tx
+  { body      :: TxBody
   , witnesses :: [Wit]
   } deriving (Show, Eq, Generic, Hashable, HasTypeReps, Data, Typeable)
 
-instance HasHash [TxWits] where
+instance HasHash [Tx] where
   hash = Hash . Just . H.hash
 
 -- |Create a witness for transaction
-makeWitness :: KeyPair -> Tx -> Wit
+makeWitness :: KeyPair -> TxBody -> Wit
 makeWitness keys tx = Wit (vKey keys) (sign (sKey keys) tx)
 
-makeTxWits :: UTxO -> Tx -> TxWits
-makeTxWits (UTxO utxo) tx = TxWits
+makeTxWits :: UTxO -> TxBody -> Tx
+makeTxWits (UTxO utxo) tx = Tx
   { body      = tx
   , witnesses = wits
   }
@@ -167,22 +166,22 @@ makeTxWits (UTxO utxo) tx = TxWits
 
 deriveGoblin ''TxIn
 deriveGoblin ''TxOut
-deriveGoblin ''TxWits
+deriveGoblin ''Tx
 deriveGoblin ''Wit
 deriveGoblin ''TxId
 
-instance GeneOps g => Goblin g Tx where
+instance GeneOps g => Goblin g TxBody where
   tinker gen = do
     fIs <- fillEmptyList
     fOs <- fillEmptyList
     is <- tinkerRummagedOrConjureOrSave
             (fIs <$$>
-              (tinker ((\(Tx x _) -> x) <$> gen)))
+              (tinker ((\(TxBody x _) -> x) <$> gen)))
     os <- tinkerRummagedOrConjureOrSave
             (fOs <$$>
-              (tinker ((\(Tx _ x) -> x) <$> gen)))
+              (tinker ((\(TxBody _ x) -> x) <$> gen)))
     tinkerRummagedOrConjureOrSave
-      (pure (Tx <$> is <*> os))
+      (pure (TxBody <$> is <*> os))
    where
     -- This function will insert a conjured value to an empty list. We can
     -- thus use it to ensure that the `txIns` and `txOuts` will never be
@@ -200,17 +199,17 @@ instance GeneOps g => Goblin g Tx where
     listLenO <- (+1) <$> transcribeGenesAsInt 15
     inputs <- replicateM listLenI conjure
     outputs <- replicateM listLenO conjure
-    pure (Tx inputs outputs)
+    pure (TxBody inputs outputs)
 
 --------------------------------------------------------------------------------
 -- AddShrinks instances
 --------------------------------------------------------------------------------
 
-deriveAddShrinks ''Tx
+deriveAddShrinks ''TxBody
 deriveAddShrinks ''TxId
 deriveAddShrinks ''TxIn
 deriveAddShrinks ''TxOut
-deriveAddShrinks ''TxWits
+deriveAddShrinks ''Tx
 deriveAddShrinks ''Wit
 
 
