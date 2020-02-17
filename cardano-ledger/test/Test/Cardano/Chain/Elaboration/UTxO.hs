@@ -7,8 +7,8 @@
 module Test.Cardano.Chain.Elaboration.UTxO
   ( elaborateUTxOEnv
   , elaborateUTxO
-  , elaborateTx
-  , elaborateTxWitsBS
+  , elaborateTxBody
+  , elaborateTxBS
   , elaborateTxOut
   )
 where
@@ -70,28 +70,28 @@ elaborateUTxOEntry elaborateTxId (abstractTxIn, abstractTxOut) =
   concreteTxOut = elaborateTxOut abstractTxOut
   concreteTxIn  = elaborateTxIn elaborateTxId abstractTxIn
 
-elaborateTxWitsBS
+elaborateTxBS
   :: (Abstract.TxId -> Concrete.TxId)
-  -> Abstract.TxWits
+  -> Abstract.Tx
   -> Concrete.ATxAux ByteString
-elaborateTxWitsBS elaborateTxId =
-  annotateTxAux . elaborateTxWits elaborateTxId
+elaborateTxBS elaborateTxId =
+  annotateTxAux . elaborateTx elaborateTxId
  where
   annotateTxAux :: Concrete.TxAux -> Concrete.ATxAux ByteString
   annotateTxAux txAux =
     map (LBS.toStrict . CBOR.slice bytes)
-      . fromRight (panic "elaborateTxWitsBS: Error decoding TxAux")
+      . fromRight (panic "elaborateTxBS: Error decoding TxAux")
       $ CBOR.decodeFull bytes
     where bytes = CBOR.serialize txAux
 
-elaborateTxWits
-  :: (Abstract.TxId -> Concrete.TxId) -> Abstract.TxWits -> Concrete.TxAux
-elaborateTxWits elaborateTxId (Abstract.TxWits tx witnesses) =
+elaborateTx
+  :: (Abstract.TxId -> Concrete.TxId) -> Abstract.Tx -> Concrete.TxAux
+elaborateTx elaborateTxId (Abstract.Tx tx witnesses) =
   Concrete.mkTxAux concreteTx (elaborateWitnesses concreteTx witnesses)
-  where concreteTx = elaborateTx elaborateTxId tx
+  where concreteTx = elaborateTxBody elaborateTxId tx
 
-elaborateTx :: (Abstract.TxId -> Concrete.TxId) -> Abstract.Tx -> Concrete.Tx
-elaborateTx elaborateTxId (Abstract.Tx inputs outputs) =
+elaborateTxBody :: (Abstract.TxId -> Concrete.TxId) -> Abstract.TxBody -> Concrete.Tx
+elaborateTxBody elaborateTxId (Abstract.TxBody inputs outputs) =
   Concrete.UnsafeTx
     { Concrete.txInputs     = elaborateTxIns elaborateTxId inputs
     , Concrete.txOutputs    = elaborateTxOuts outputs

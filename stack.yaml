@@ -28,7 +28,7 @@ extra-deps:
       - cardano-crypto-class
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 2aa807f4a4b6fd0ae0a511289586a2c2d18b56fb
+    commit: 93ff3480b9585bf1b7a9bd4013d7baed48135521
     subdirs:
       - byron/semantics/executable-spec
       - byron/ledger/executable-spec

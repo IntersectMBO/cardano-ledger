@@ -77,7 +77,7 @@ import Cardano.Chain.Update
 import Cardano.Chain.Update.Validation.Interface (adoptedProtocolParameters)
 
 import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(..))
-import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxWitsList)
+import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxList)
 import Cardano.Spec.Chain.STS.Rule.BBody
   ( PredicateFailure(InvalidBlockSize, InvalidDelegationHash,
                  InvalidUpdateProposalHash, InvalidUtxoHash)
@@ -410,7 +410,7 @@ ts_prop_invalidTxWitsAreRejected =
     block <- sigGenChain NoGenDelegation NoGenUTxO NoGenUpdate env st
     let (_slot, _sgs, _h, utxoSt, _delegSt, _upiSt) = st
         utxoEnv = UTxOEnv { utxo0 = utxo, pps = pparams }
-    txWitsList <- tamperedTxWitsList utxoEnv utxoSt
+    txWitsList <- tamperedTxList utxoEnv utxoSt
     pure $! Abstract.updateBody
               block
               (\body -> body { Abstract._bUtxo = txWitsList })

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TupleSections     #-}
@@ -13,7 +14,7 @@ module Test.Cardano.Chain.UTxO.Model
   )
 where
 
-import Cardano.Prelude hiding (trace)
+import Cardano.Prelude hiding (trace, traceM, traceShow)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
@@ -40,7 +41,6 @@ import qualified Ledger.UTxO as Abstract
 import qualified Test.Cardano.Chain.Elaboration.UTxO as E
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 
-
 tests :: TSGroup
 tests = $$discoverPropArg
 
@@ -57,7 +57,7 @@ ts_prop_generatedUTxOChainsAreValidated =
 
 
 passConcreteValidation :: MonadTest m => Trace UTXOW -> m ()
-passConcreteValidation tr = void $ evalEither res
+passConcreteValidation !tr = void $ evalEither res
  where
   res = foldM (elaborateAndUpdate abstractEnv) initSt
     $ traceSignals OldestFirst tr
@@ -96,14 +96,14 @@ elaborateInitialUTxO abstractUtxo = foldr
 elaborateAndUpdate
   :: Abstract.UTxOEnv
   -> (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
-  -> Abstract.TxWits
+  -> Abstract.Tx
   -> Either
        Concrete.UTxOValidationError
        (Concrete.UTxO, Map Abstract.TxId Concrete.TxId)
 elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
   (, txIdMap')
     <$> runReaderT
-      (updateUTxOTxWitness
+      ( updateUTxOTxWitness
           (E.elaborateUTxOEnv abstractEnv)
           utxo
           concreteTxWitness
@@ -120,18 +120,18 @@ elaborateAndUpdate abstractEnv (utxo, txIdMap) abstractTxWits =
 
 elaborateTxWitnesses
   :: Map Abstract.TxId Concrete.TxId
-  -> [Abstract.TxWits]
+  -> [Abstract.Tx]
   -> ([Concrete.ATxAux ByteString], Map Abstract.TxId Concrete.TxId)
 elaborateTxWitnesses txIdMap = first reverse . foldl' step ([], txIdMap)
   where step (acc, m) = first (: acc) . elaborateTxWitsBSWithMap m
 
 elaborateTxWitsBSWithMap
   :: Map Abstract.TxId Concrete.TxId
-  -> Abstract.TxWits
+  -> Abstract.Tx
   -> (Concrete.ATxAux ByteString, Map Abstract.TxId Concrete.TxId)
 elaborateTxWitsBSWithMap txIdMap abstractTxWits = (concreteTxWitness, txIdMap')
  where
-  concreteTxWitness = E.elaborateTxWitsBS
+  concreteTxWitness = E.elaborateTxBS
     (elaborateTxId txIdMap)
     abstractTxWits
 

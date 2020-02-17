@@ -46,7 +46,7 @@ import qualified Ledger.UTxO as Abstract
 import qualified Ledger.UTxO.Generators as Abstract
 
 import Test.Cardano.Chain.Elaboration.Update (elaboratePParams)
-import Test.Cardano.Chain.Elaboration.UTxO (elaborateTxWitsBS)
+import Test.Cardano.Chain.Elaboration.UTxO (elaborateTxBS)
 import Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
 import qualified Test.Cardano.Crypto.Dummy as Dummy
@@ -73,7 +73,7 @@ ts_prop_updateUTxO_Valid =
 
       -- Generate abstract transaction and elaborate.
       abstractTxWits <- forAll $ genValidTxWits ppau txIdMap
-      let tx = elaborateTxWitsBS
+      let tx = elaborateTxBS
             (elaborateTxId txIdMap)
             abstractTxWits
 
@@ -106,7 +106,7 @@ ts_prop_updateUTxO_InvalidWit =
 
       -- Generate abstract transaction and elaborate.
       abstractTxWits <- forAll $ genValidTxWits ppau txIdMap
-      let tx = elaborateTxWitsBS
+      let tx = elaborateTxBS
             (elaborateTxId txIdMap)
             abstractTxWits
 
@@ -167,13 +167,12 @@ genPParamsAddrsAndUTxO addrRange = do
 genValidTxWits
   :: PParamsAddrsAndUTxO
   -> Map Abstract.TxId TxId
-  -> Gen Abstract.TxWits
+  -> Gen Abstract.Tx
 genValidTxWits ppau txIdMap = do
-  abstractTx <- Abstract.genTxFromUTxO
+  Abstract.genTxFromUTxO
     ppauAddrs
-    (abstractTxFee txIdMap (ppTxFeePolicy pparams) ppauUTxO)
+    (abstractTxFee txIdMap (ppTxFeePolicy pparams))
     ppauUTxO
-  pure $ Abstract.makeTxWits ppauUTxO abstractTx
  where
   PParamsAddrsAndUTxO
     { ppauPParams
@@ -209,14 +208,12 @@ data PParamsAddrsAndUTxO = PParamsAddrsAndUTxO
 abstractTxFee
   :: Map Abstract.TxId UTxO.TxId
   -> TxFeePolicy
-  -> Abstract.UTxO
   -> Abstract.Tx
   -> Abstract.Lovelace
-abstractTxFee txIdMap tfp aUtxo aTx = do
-  let aTxWits = Abstract.makeTxWits aUtxo aTx
-      ATxAux (Annotated _ txBytes) _ _ = elaborateTxWitsBS
+abstractTxFee txIdMap tfp aTx = do
+  let ATxAux (Annotated _ txBytes) _ _ = elaborateTxBS
         (elaborateTxId txIdMap)
-        aTxWits
+        aTx
       cLovelace = case tfp of
         TxFeePolicyTxSizeLinear txSizeLinear ->
           either (panic . show)
