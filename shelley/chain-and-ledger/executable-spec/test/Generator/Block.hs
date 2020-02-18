@@ -117,14 +117,11 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
     let kp@(KESPeriod kesPeriod_) = runShelleyBase (kesPeriod $ nextSlot)
         cs = chainOCertIssue chainSt
 
-        -- poolParams in SNAP (_, poolParams, _) in pstate
-        poolKeys = dom $ (_pParams . _pstate) dpstate
-
         -- ran genDelegs
         genDelegationKeys = range cores
 
         n' = currentIssueNo
-             (OCertEnv poolKeys genDelegationKeys)
+             (OCertEnv (dom poolParams) genDelegationKeys)
              cs
              ((hashKey . vKey . cold) keys)
 
