@@ -24,8 +24,7 @@ import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range)
 import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
-                     overlaySchedule, _delegationState, _dstate, _genDelegs, _pParams, _pstate,
-                     _reserves)
+                     overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
