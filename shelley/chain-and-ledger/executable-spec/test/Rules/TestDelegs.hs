@@ -14,6 +14,7 @@ import           Test.QuickCheck (Property, conjoin)
 import           Coin (pattern Coin)
 import           ConcreteCryptoTypes (DELEGS, Wdrl)
 import           LedgerState (_dstate, _rewards)
+import qualified TxData as T
 
 ---------------------------
 -- Properties for DELEGS --
@@ -28,7 +29,7 @@ rewardsDecreasesByWithdrawals tr =
   conjoin $
     map (uncurry rewardsPotdecreases) tr
   where
-    rewardsPotdecreases wdrls SourceSignalTarget
+    rewardsPotdecreases (T.Wdrl wdrls) SourceSignalTarget
                                 { source = d
                                 , target = d'} =
       let rewards  = (_rewards . _dstate) d

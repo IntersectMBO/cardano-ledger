@@ -30,6 +30,7 @@ module Generator
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -61,7 +62,7 @@ import           Test.Utils
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, body)
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DCertPool, pattern DeRegKey,
                      pattern Delegate, pattern Delegation, pattern KeyHashObj, pattern RegKey,
-                     pattern RetirePool, StakeCreds (..))
+                     pattern RetirePool, StakeCreds (..), Wdrl (..))
 import           Updates
 import           UTxO (pattern UTxO, balance, makeWitnessVKey)
 import           Validation (ValidationError (..), Validity (..))
@@ -164,7 +165,7 @@ genTx keyList (UTxO m) cslot = do
 
   -- select receipients, distribute balance of selected UTxO set
   n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
-  receipients <- take (fromIntegral n) <$> Gen.shuffle keyList
+  receipients <- Seq.fromList . take (fromIntegral n) <$> Gen.shuffle keyList
   let realN                = length receipients
   let (perReceipient, txfee') = splitCoin selectedBalance (fromIntegral realN)
   let !receipientAddrs      = fmap
@@ -174,7 +175,7 @@ genTx keyList (UTxO m) cslot = do
            (Map.keysSet selectedUTxO)
            ((`TxOut` perReceipient) <$> receipientAddrs)
            Empty
-           Map.empty -- TODO generate witdrawals
+           (Wdrl Map.empty) -- TODO generate witdrawals
            txfee'
            (cslot + SlotNo txttl)
            emptyUpdate

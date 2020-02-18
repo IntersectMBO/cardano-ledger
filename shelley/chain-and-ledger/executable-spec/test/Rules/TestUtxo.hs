@@ -13,7 +13,7 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 import           Test.QuickCheck (Property, conjoin)
 
 import           Coin (pattern Coin)
-import           TxData (pattern Tx, _body, _wdrls)
+import           TxData (pattern Tx, Wdrl (..), _body, _wdrls)
 import           UTxO (balance)
 
 import           ConcreteCryptoTypes (UTXO)
@@ -57,7 +57,7 @@ potsSumIncreaseWdrls ssts =
                                , signal = Tx { _body = txbody }} =
       let circulation  = balance u
           circulation' = balance u'
-          withdrawals  = foldl (+) (Coin 0) $ _wdrls txbody
+          withdrawals  = foldl (+) (Coin 0) $ unWdrl $ _wdrls txbody
       in
          withdrawals >= Coin 0
       && circulation' + d' + fees' == circulation + d + fees + withdrawals

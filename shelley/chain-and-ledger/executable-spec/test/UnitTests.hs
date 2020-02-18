@@ -7,7 +7,8 @@ import           Control.Monad (foldM)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
-import           Data.Sequence (Seq (..), fromList)
+import           Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
 import           Lens.Micro ((&), (.~), (^.))
@@ -25,8 +26,8 @@ import           Delegation.Certificates (pattern Delegate, pattern RegKey, patt
 import           Generator (asStateTransition)
 import           TxData (pattern AddrBase, Credential (..), pattern DCertDeleg, pattern DCertPool,
                      Delegation (..), pattern PoolParams, pattern Ptr, pattern RewardAcnt,
-                     _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt,
-                     _poolVrf)
+                     Wdrl (..), _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
+                     _poolRAcnt, _poolVrf)
 import           Validation (ValidationError (..))
 
 import           Keys (pattern KeyPair, hashKey, vKey)
@@ -159,10 +160,10 @@ testValidWithdrawal =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [ TxOut aliceAddr (Coin 6000)
-           , TxOut bobAddr (Coin 3010) ]
+           (Seq.fromList [ TxOut aliceAddr (Coin 6000)
+                         , TxOut bobAddr (Coin 3010) ])
            Empty
-           bobWithdrawal
+           (Wdrl bobWithdrawal)
            (Coin 1000)
            (SlotNo 0)
            emptyUpdate
@@ -186,10 +187,11 @@ testInvalidWintess =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [ TxOut aliceAddr (Coin 6000)
-           , TxOut bobAddr (Coin 3000) ]
+           (Seq.fromList
+              [ TxOut aliceAddr (Coin 6000)
+              , TxOut bobAddr (Coin 3000) ])
            Empty
-           Map.empty
+           (Wdrl Map.empty)
            (Coin 1000)
            (SlotNo 1)
            emptyUpdate
@@ -203,10 +205,11 @@ testWithdrawalNoWit =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [ TxOut aliceAddr (Coin 6000)
-           , TxOut bobAddr (Coin 3010) ]
+           (Seq.fromList
+             [ TxOut aliceAddr (Coin 6000)
+             , TxOut bobAddr (Coin 3010) ])
            Empty
-           bobWithdrawal
+           (Wdrl bobWithdrawal)
            (Coin 1000)
            (SlotNo 0)
            emptyUpdate
@@ -221,10 +224,11 @@ testWithdrawalWrongAmt =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [ TxOut aliceAddr (Coin 6000)
-           , TxOut bobAddr (Coin 3011) ]
+           (Seq.fromList
+             [ TxOut aliceAddr (Coin 6000)
+             , TxOut bobAddr (Coin 3011) ])
            Empty
-           (Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
+           (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
            (Coin 1000)
            (SlotNo 0)
            emptyUpdate
@@ -241,10 +245,11 @@ aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits 
     aliceCoin = aliceInitCoin + txrefs - (coin + fee + txdeps)
     txbody = TxBody
                (Set.fromList [txin])
-               [ TxOut aliceAddr aliceCoin
-               , TxOut bobAddr coin ]
-               (fromList cs)
-               Map.empty
+               (Seq.fromList
+                 [ TxOut aliceAddr aliceCoin
+                 , TxOut bobAddr coin ])
+               (Seq.fromList cs)
+               (Wdrl Map.empty)
                fee
                s
                emptyUpdate
@@ -297,12 +302,12 @@ utxoSt2 = UTxOState
 tx3Body :: TxBody
 tx3Body = TxBody
           (Set.fromList [TxIn (txid $ tx2 ^. body) 0])
-          [ TxOut aliceAddr (Coin 3950) ]
-          (fromList [ DCertPool (RegPool stakePool)
-                    , DCertDeleg (Delegate (Delegation
+          (Seq.singleton $ TxOut aliceAddr (Coin 3950))
+          (Seq.fromList [ DCertPool (RegPool stakePool)
+                        , DCertDeleg (Delegate (Delegation
                                             (KeyHashObj $ hashKey $ vKey aliceStake)
                                             (hashKey $ vKey stakePoolKey1)))])
-          Map.empty
+          (Wdrl Map.empty)
           (Coin 1200)
           (SlotNo 100)
           emptyUpdate
@@ -369,9 +374,9 @@ stakePoolUpdate = PoolParams
 tx4Body :: TxBody
 tx4Body = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
-          [ TxOut aliceAddr (Coin 2950) ] -- Note the deposit is not charged
-          (fromList [ DCertPool (RegPool stakePoolUpdate) ])
-          Map.empty
+          (Seq.singleton $ TxOut aliceAddr (Coin 2950)) -- Note the deposit is not charged
+          (Seq.fromList [ DCertPool (RegPool stakePoolUpdate) ])
+          (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 100)
           emptyUpdate
@@ -403,9 +408,9 @@ utxo5 e = UTxOState
 tx5Body :: EpochNo -> TxBody
 tx5Body e = TxBody
           (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
-          [ TxOut aliceAddr (Coin 2950) ]
-          (fromList [ DCertPool (RetirePool (hashKey $ vKey stakePoolKey1) e) ])
-          Map.empty
+          (Seq.singleton $ TxOut aliceAddr (Coin 2950))
+          (Seq.fromList [ DCertPool (RetirePool (hashKey $ vKey stakePoolKey1) e) ])
+          (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 100)
           emptyUpdate
@@ -471,10 +476,11 @@ testWitnessNotIncluded =
   let
     txbody = TxBody
               (Set.fromList [TxIn genesisId 0])
-              [ TxOut aliceAddr (Coin 6404)
-              , TxOut bobAddr (Coin 3000) ]
+              (Seq.fromList
+                [ TxOut aliceAddr (Coin 6404)
+                , TxOut bobAddr (Coin 3000) ])
               Empty
-              Map.empty
+              (Wdrl Map.empty)
               (Coin 596)
               (SlotNo 100)
               emptyUpdate
@@ -487,9 +493,9 @@ testSpendNotOwnedUTxO =
   let
     txbody = TxBody
               (Set.fromList [TxIn genesisId 1])
-              [ TxOut aliceAddr (Coin 232)]
+              (Seq.singleton $ TxOut aliceAddr (Coin 232))
               Empty
-              Map.empty
+              (Wdrl Map.empty)
               (Coin 768)
               (SlotNo 100)
               emptyUpdate
@@ -503,18 +509,18 @@ testWitnessWrongUTxO =
   let
     txbody = TxBody
               (Set.fromList [TxIn genesisId 1])
-              [ TxOut aliceAddr (Coin 230)]
+              (Seq.singleton $ TxOut aliceAddr (Coin 230))
               Empty
-              Map.empty
+              (Wdrl Map.empty)
               (Coin 770)
               (SlotNo 100)
               emptyUpdate
               Nothing
     tx2body = TxBody
               (Set.fromList [TxIn genesisId 1])
-              [ TxOut aliceAddr (Coin 230)]
+              (Seq.singleton $ TxOut aliceAddr (Coin 230))
               Empty
-              Map.empty
+              (Wdrl Map.empty)
               (Coin 770)
               (SlotNo 101)
               emptyUpdate
@@ -530,9 +536,9 @@ testEmptyInputSet =
     aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt aliceStake) (Coin 2000)
     tx = TxBody
            Set.empty
-           [ TxOut aliceAddr (Coin 1000) ]
+           (Seq.singleton $ TxOut aliceAddr (Coin 1000))
            Empty
-           aliceWithdrawal
+           (Wdrl aliceWithdrawal)
            (Coin 1000)
            (SlotNo 0)
            emptyUpdate

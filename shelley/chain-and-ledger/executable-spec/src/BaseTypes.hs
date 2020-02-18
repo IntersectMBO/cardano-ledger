@@ -22,7 +22,6 @@ module BaseTypes
   , mkNonce
   , mkUnitInterval
   , truncateUnitInterval
-  , CborSeq(..)
     -- * STS Base
   , Globals (..)
   , ShelleyBase
@@ -30,19 +29,15 @@ module BaseTypes
 
 
 import           Cardano.Binary (Decoder, DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR),
-                     decodeBreakOr, decodeListLen, decodeListLenOrIndef, decodeWord, encodeBreak,
-                     encodeListLen, encodeListLenIndef, matchSize)
+                     decodeListLen, decodeWord, encodeListLen, matchSize)
 import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Cardano.Slotting.EpochInfo
-import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Functor.Identity
 import           Data.Ratio (denominator, numerator, (%))
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
@@ -64,27 +59,12 @@ fpEpsilon :: FixedPoint
 fpEpsilon = (10::FixedPoint)^(17::Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
-newtype UnitInterval = UnsafeUnitInterval Rational
-    deriving (Show, Ord, Eq, NoUnexpectedThunks)
-
-instance ToCBOR UnitInterval where
-  toCBOR (UnsafeUnitInterval r) =
-    (convert . numerator) r <>
-    (convert. denominator) r
-   where
-    convert = toCBOR . fromInteger @Word64
+newtype UnitInterval = UnsafeUnitInterval Rational   -- TODO: Fixed precision
+    deriving (Show, Ord, Eq, NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
 mkUnitInterval :: Rational -> Maybe UnitInterval
 mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Nothing
-
-instance FromCBOR UnitInterval where
-  fromCBOR = do
-    n <- decodeWord
-    d <- decodeWord
-    case mkUnitInterval (toInteger n % toInteger d) of
-      Nothing -> cborError ("not a unit interval value" :: String)
-      Just u -> pure u
 
 -- | Convert a rational to a `UnitInterval` by ignoring its integer part.
 truncateUnitInterval :: Rational -> UnitInterval
@@ -149,28 +129,6 @@ newtype Seed = Seed (Hash SHA256 Seed)
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
 infix 1 ==>
-
-newtype CborSeq a = CborSeq { unwrapCborSeq :: Seq a }
-
-instance ToCBOR a => ToCBOR (CborSeq a) where
-  toCBOR (CborSeq xs) =
-    let l = fromIntegral $ Seq.length xs
-        contents = foldMap toCBOR xs
-    in
-    if l <= 23
-    then encodeListLen l <> contents
-    else encodeListLenIndef <> contents <> encodeBreak
-
-instance FromCBOR a => FromCBOR (CborSeq a) where
-  fromCBOR = CborSeq . Seq.fromList <$> do
-    decodeListLenOrIndef >>= \case
-      Just len -> replicateM len fromCBOR
-      Nothing -> loop [] (not <$> decodeBreakOr) fromCBOR
-    where
-    loop acc condition action = condition >>= \case
-      False -> pure acc
-      True -> action >>= \v -> loop (v:acc) condition action
-
 
 --------------------------------------------------------------------------------
 -- Base monad for all STS systems

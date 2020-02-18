@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -34,20 +36,19 @@ module Updates
   )
 where
 
-import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), decodeMapLen, encodeListLen,
-                     encodeMapLen, enforceSize)
+import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), decodeMapLenOrIndef,
+                     encodeListLen, encodeMapLen, enforceSize)
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad (replicateM)
 import           Data.ByteString (ByteString)
-import           Data.ByteString.Char8 (unpack)
 import           Data.Char (isAscii)
 import qualified Data.List as List (group)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 
@@ -55,6 +56,7 @@ import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
 import           Keys (GenDelegs, GenKeyHash)
 import           PParams (PParams (..))
+import           Serialization (CBORMap (..), decodeCollection)
 import           Slot (EpochNo (..), SlotNo)
 
 import           Numeric.Natural (Natural)
@@ -64,10 +66,10 @@ import           Ledger.Core (dom, range, (◁))
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
-newtype ApName = ApName ByteString
+newtype ApName = ApName T.Text
   deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
-newtype SystemTag = SystemTag ByteString
+newtype SystemTag = SystemTag T.Text
   deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 newtype InstallerHash crypto = InstallerHash (Hash (HASH crypto) ByteString)
@@ -79,18 +81,34 @@ deriving instance Crypto crypto => FromCBOR (InstallerHash crypto)
 newtype Mdt crypto = Mdt (Map SystemTag (InstallerHash crypto))
   deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
-deriving instance Crypto crypto => ToCBOR (Mdt crypto)
-deriving instance Crypto crypto => FromCBOR (Mdt crypto)
+instance Crypto crypto => ToCBOR (Mdt crypto) where
+  toCBOR (Mdt m) = toCBOR (CBORMap m)
+
+instance Crypto crypto => FromCBOR (Mdt crypto) where
+  fromCBOR = Mdt .  unwrapCBORMap <$> fromCBOR
+
 
 -- | List of applications on the blockchain and their versions.
 newtype Applications crypto = Applications {
   apps :: Map ApName (ApVer, Mdt crypto)
-  } deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
+  } deriving (Show, Ord, Eq, NoUnexpectedThunks)
+
+instance Crypto crypto => ToCBOR (Applications crypto) where
+  toCBOR (Applications m) = toCBOR (CBORMap m)
+
+instance Crypto crypto => FromCBOR (Applications crypto) where
+  fromCBOR = Applications .  unwrapCBORMap <$> fromCBOR
 
 -- | A single update of the @Applications list.
 newtype AVUpdate crypto = AVUpdate {
   aup :: Map (GenKeyHash crypto) (Applications crypto)
-  } deriving (Show, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
+  } deriving (Show, Eq, NoUnexpectedThunks)
+
+instance Crypto crypto => ToCBOR (AVUpdate crypto) where
+  toCBOR (AVUpdate m) = toCBOR (CBORMap m)
+
+instance Crypto crypto => FromCBOR (AVUpdate crypto) where
+  fromCBOR = AVUpdate .  unwrapCBORMap <$> fromCBOR
 
 -- | Update Proposal
 data Update crypto
@@ -180,10 +198,9 @@ instance ToCBOR PParamsUpdate where
         ProtocolVersion x       -> word 19 <> toCBOR x
 
 instance FromCBOR PParamsUpdate where
-  fromCBOR = do
-    n <- decodeMapLen
-    fmap (PParamsUpdate . Set.fromList) $ replicateM n $
-      fromCBOR @Word8 >>= \case
+  fromCBOR = fmap (PParamsUpdate . Set.fromList)
+    $ decodeCollection decodeMapLenOrIndef
+    $ fromCBOR @Word8 >>= \case
          0  -> MinFeeA <$> fromCBOR
          1  -> MinFeeB <$> fromCBOR
          2  -> MaxBBSize <$> fromCBOR
@@ -209,17 +226,23 @@ instance FromCBOR PParamsUpdate where
 -- | Update operation for protocol parameters structure @PParams
 newtype PPUpdate crypto
   = PPUpdate (Map (GenKeyHash crypto) PParamsUpdate)
-  deriving (Show, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, NoUnexpectedThunks)
+
+instance Crypto crypto => ToCBOR (PPUpdate crypto) where
+  toCBOR (PPUpdate m) = toCBOR (CBORMap m)
+
+instance Crypto crypto => FromCBOR (PPUpdate crypto) where
+  fromCBOR = PPUpdate .  unwrapCBORMap <$> fromCBOR
 
 -- | This is just an example and not neccessarily how we will actually validate names
 apNameValid :: ApName -> Bool
 apNameValid (ApName an) = all isAscii cs && length cs <= 12
-  where cs = unpack an
+  where cs = T.unpack an
 
 -- | This is just an example and not neccessarily how we will actually validate system tags
 sTagValid :: SystemTag -> Bool
 sTagValid (SystemTag st) = all isAscii cs && length cs <= 10
-  where cs = unpack st
+  where cs = T.unpack st
 
 sTagsValid :: Mdt crypto -> Bool
 sTagsValid (Mdt md) = all sTagValid (dom md)

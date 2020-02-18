@@ -16,6 +16,7 @@ module MultiSigExamples
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import           Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
 
 import qualified Data.Set as Set (fromList)
 
@@ -34,7 +35,7 @@ import           Tx (hashScript)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
                      pattern ScriptHashObj, pattern StakeCreds, pattern StakePools, pattern Tx,
-                     pattern TxBody, pattern TxIn, pattern TxOut, _body)
+                     pattern TxBody, pattern TxIn, pattern TxOut, pattern Wdrl, unWdrl, _body)
 import           Updates (emptyUpdate)
 import           UTxO (makeWitnessesVKey, txid)
 
@@ -75,9 +76,9 @@ aliceAndBobOrCarlOrDaria =
 initTxBody :: [(Addr, Coin)] -> TxBody
 initTxBody addrs = TxBody
         (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
-        (map (uncurry TxOut) addrs)
+        (Seq.fromList $ map (uncurry TxOut) addrs)
         Empty
-        Map.empty
+        (Wdrl Map.empty)
         (Coin 0)
         (SlotNo 0)
         emptyUpdate
@@ -87,7 +88,7 @@ makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
-    [uncurry TxOut addrC | addrC <- addrCs]
+    (Seq.fromList [uncurry TxOut addrC | addrC <- addrCs])
     Empty
     wdrl
     (Coin 0)
@@ -164,7 +165,8 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
                    Right utxoSt'' -> utxoSt''
                    _                      -> error ("must fail test before: "
                                                    ++ show initUtxo)
-        txbody = makeTxBody inputs [(aliceAddr, aliceInitCoin + bobInitCoin + sum wdrl)] wdrl
+        txbody = makeTxBody inputs 
+          [(aliceAddr, aliceInitCoin + bobInitCoin + sum (unWdrl wdrl))] wdrl
         inputs = [TxIn txId (fromIntegral n) | n <-
                      [0..length lockScripts - (if aliceKeep > 0 then 0 else 1)]]
                                  -- alice? + scripts

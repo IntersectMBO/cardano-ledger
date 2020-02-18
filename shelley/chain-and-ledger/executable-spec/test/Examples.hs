@@ -63,13 +63,14 @@ import           ConcreteCryptoTypes (AVUpdate, Addr, Applications, Block, CHAIN
                      LedgerState, Mdt, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
                      RewardAcnt, SKey, SnapShots, Stake, Tx, TxBody, UTxO, UTxOState, Update,
                      UpdateState, VKeyGenesis, hashKeyVRF)
-import           Data.ByteString.Char8 (pack)
+import qualified Data.ByteString.Char8 as BS (pack)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
                      (!?))
 import           Data.Maybe (isJust, maybe)
-import           Data.Sequence (empty, fromList)
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
+import qualified Data.Text as T (pack)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
@@ -112,8 +113,8 @@ import           TxData (pattern AddrPtr, pattern DCertDeleg, pattern DCertGenes
                      pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
                      pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                     addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
-                     _poolRAcnt, _poolVrf)
+                     Wdrl (..), addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge,
+                     _poolPubKey, _poolRAcnt, _poolVrf)
 import qualified TxData (TxBody (..))
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
@@ -167,8 +168,8 @@ genDelegs = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (
 -- | There are only two applications on test Byron blockchain:
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
-                            [ (ApName $ pack "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (ApName $ pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                            [ (ApName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
+                            , (ApName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
                             ]
 
 alicePay :: KeyPair
@@ -407,14 +408,14 @@ updateEx2A = Update ppupEx2A (AVUpdate Map.empty) (Just $ EpochNo 0)
 txbodyEx2A :: TxBody
 txbodyEx2A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [TxOut aliceAddr (Coin 9726)]
-           (fromList ([ DCertDeleg (RegKey aliceSHK)
+           (Seq.fromList [TxOut aliceAddr (Coin 9726)])
+           (Seq.fromList ([ DCertDeleg (RegKey aliceSHK)
            , DCertDeleg (RegKey bobSHK)
            , DCertDeleg (RegKey carlSHK)
            , DCertPool (RegPool alicePoolParams)
            ] ++ [DCertMir (MIRCert (Map.fromList [ (carlSHK, 110)
                                                  , (dariaSHK, 99)]))]))
-           Map.empty
+           (Wdrl Map.empty)
            (Coin 3)
            (SlotNo 10)
            updateEx2A
@@ -584,13 +585,13 @@ ex2A = CHAINExample (SlotNo 10) initStEx2A blockEx2A (Right expectedStEx2A)
 txbodyEx2B :: TxBody
 txbodyEx2B = TxBody
       { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2A) 0]
-      , TxData._outputs  = [ TxOut aliceAddr    (Coin 722)
-                           , TxOut alicePtrAddr (Coin 9000) ]
+      , TxData._outputs  = Seq.fromList [ TxOut aliceAddr    (Coin 722)
+                                        , TxOut alicePtrAddr (Coin 9000) ]
       -- | Delegation certificates
       , TxData._certs    =
-        fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
-                 , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
-      , TxData._wdrls    = Map.empty
+        Seq.fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
+                     , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
+      , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 4
       , TxData._ttl      = SlotNo 90
       , TxData._txUpdate = emptyUpdate
@@ -1298,9 +1299,9 @@ bobAda2J = bobRAcnt2H -- reward account
 txbodyEx2J :: TxBody
 txbodyEx2J = TxBody
            (Set.fromList [TxIn genesisId 1]) --
-           [TxOut bobAddr bobAda2J]
-           (fromList [DCertDeleg (DeRegKey bobSHK)])
-           (Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
+           (Seq.singleton $ TxOut bobAddr bobAda2J)
+           (Seq.fromList [DCertDeleg (DeRegKey bobSHK)])
+           (Wdrl $ Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
            (Coin 9)
            (SlotNo 500)
            emptyUpdate
@@ -1388,8 +1389,9 @@ ex2J = CHAINExample (SlotNo 420) expectedStEx2I blockEx2J (Right expectedStEx2J)
 txbodyEx2K :: TxBody
 txbodyEx2K = TxBody
            (Set.fromList [TxIn (txid txbodyEx2D) 0])
-           [TxOut alicePtrAddr 715]
+           (Seq.singleton $ TxOut alicePtrAddr 715)
            (fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
+           (Wdrl Map.empty)
            Map.empty
            (Coin 2)
            (SlotNo 500)
@@ -1568,9 +1570,9 @@ updateEx3A = Update ppupEx3A (AVUpdate Map.empty) (Just $ EpochNo 0)
 txbodyEx3A :: TxBody
 txbodyEx3A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [TxOut aliceAddr (Coin 9999)]
-           Data.Sequence.empty
-           Map.empty
+           (Seq.singleton $ TxOut aliceAddr (Coin 9999))
+           Seq.empty
+           (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 10)
            updateEx3A
@@ -1662,9 +1664,9 @@ updateEx3B = Update ppupEx3B (AVUpdate Map.empty) (Just $ EpochNo 0)
 txbodyEx3B :: TxBody
 txbodyEx3B = TxBody
            (Set.fromList [TxIn (txid txbodyEx3A) 0])
-           [TxOut aliceAddr (Coin 9998)]
-           Data.Sequence.empty
-           Map.empty
+           (Seq.singleton $ TxOut aliceAddr (Coin 9998))
+           Seq.empty
+           (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 31)
            updateEx3B
@@ -1815,12 +1817,12 @@ ex3C = CHAINExample (SlotNo 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
 
 daedalusMDEx4A :: Mdt
 daedalusMDEx4A = Mdt $ Map.singleton
-                              (SystemTag $ pack "DOS")
-                              (InstallerHash $ hash $ pack "ABC")
+                              (SystemTag $ T.pack "DOS")
+                              (InstallerHash $ hash $ BS.pack "ABC")
 
 appsEx4A :: Applications
 appsEx4A = Applications $ Map.singleton
-                            (ApName $ pack "Daedalus")
+                            (ApName $ T.pack "Daedalus")
                             (ApVer 17, daedalusMDEx4A)
 
 avupEx4A :: AVUpdate
@@ -1835,9 +1837,9 @@ updateEx4A = Update (PPUpdate Map.empty) avupEx4A Nothing
 txbodyEx4A :: TxBody
 txbodyEx4A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           [TxOut aliceAddr (Coin 9999)]
-           Data.Sequence.empty
-           Map.empty
+           (Seq.singleton $ TxOut aliceAddr (Coin 9999))
+           Seq.empty
+           (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 10)
            updateEx4A
@@ -1928,9 +1930,9 @@ updateEx4B = Update (PPUpdate Map.empty) avupEx4B Nothing
 txbodyEx4B :: TxBody
 txbodyEx4B = TxBody
            (Set.fromList [TxIn (txid txbodyEx4A) 0])
-           [TxOut aliceAddr (Coin 9998)]
-           Data.Sequence.empty
-           Map.empty
+           (Seq.singleton $ TxOut aliceAddr (Coin 9998))
+           Seq.empty
+           (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 31)
            updateEx4B
@@ -2033,8 +2035,8 @@ updateStEx4C = UpdateState
   (AVUpdate Map.empty)
   Map.empty
   (Applications $ Map.fromList
-                     [ (ApName $ pack "Daedalus", (ApVer 17, daedalusMDEx4A))
-                     , (ApName $ pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                     [ (ApName $ T.pack "Daedalus", (ApVer 17, daedalusMDEx4A))
+                     , (ApName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
                      ])
 
 expectedLSEx4C :: LedgerState
@@ -2087,11 +2089,11 @@ newGenDelegate  = KeyPair vkCold skCold
 txbodyEx5A :: TxBody
 txbodyEx5A = TxBody
               (Set.fromList [TxIn genesisId 0])
-              [TxOut aliceAddr (Coin 9999)]
-              (fromList [DCertGenesis (GenesisDelegate
+              (Seq.singleton $ TxOut aliceAddr (Coin 9999))
+              (Seq.fromList [DCertGenesis (GenesisDelegate
                                        ( (hashKey . coreNodeVKG) 0
                                        , (hashKey . vKey) newGenDelegate))])
-              Map.empty
+              (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
               emptyUpdate
@@ -2235,9 +2237,9 @@ ir = Map.fromList [(aliceSHK, Coin 100)]
 txbodyEx6A :: TxBody
 txbodyEx6A = TxBody
               (Set.fromList [TxIn genesisId 0])
-              [TxOut aliceAddr (Coin 9999)]
-              (fromList [DCertMir (MIRCert ir)])
-              Map.empty
+              (Seq.singleton $ TxOut aliceAddr (Coin 9999))
+              (Seq.fromList [DCertMir (MIRCert ir)])
+              (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
               emptyUpdate
@@ -2397,9 +2399,9 @@ ex6E =
 txbodyEx6F :: TxBody
 txbodyEx6F = TxBody
               (Set.fromList [TxIn genesisId 0])
-              [TxOut aliceAddr (Coin 9992)]
-              (fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert ir)])
-              Map.empty
+              (Seq.singleton $ TxOut aliceAddr (Coin 9992))
+              (Seq.fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert ir)])
+              (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 99)
               emptyUpdate
@@ -2438,9 +2440,9 @@ blockEx6F = mkBlock
 txbodyEx6F' :: TxBody
 txbodyEx6F' = TxBody
                (Set.fromList [TxIn (txid txbodyEx6F) 0])
-               [TxOut aliceAddr (Coin 9991)]
-               empty
-               Map.empty
+               (Seq.singleton $ TxOut aliceAddr (Coin 9991))
+               Seq.empty
+               (Wdrl Map.empty)
                (Coin 1)
                ((slotFromEpoch $ EpochNo 1)
                 +* Duration (startRewards testGlobals) + SlotNo 7)
@@ -2472,9 +2474,9 @@ blockEx6F' = mkBlock
 txbodyEx6F'' :: TxBody
 txbodyEx6F'' = TxBody
                 (Set.fromList [TxIn (txid txbodyEx6F') 0])
-                [TxOut aliceAddr (Coin 9990)]
-                empty
-                Map.empty
+                (Seq.singleton $ TxOut aliceAddr (Coin 9990))
+                Seq.empty
+                (Wdrl Map.empty)
                 (Coin 1)
                 ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
                 emptyUpdate

@@ -35,7 +35,7 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (CborSeq (..), UnitInterval, invalidKey)
+import           BaseTypes (UnitInterval, invalidKey)
 import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
@@ -44,7 +44,8 @@ import           MetaData
 import           Slot (EpochNo (..), SlotNo (..))
 import           Updates (Update, emptyUpdate, updateNull)
 
-import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
+import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
+                     ToCBORGroup (..))
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -101,6 +102,7 @@ data Addr crypto
   | AddrPtr (Credential crypto) Ptr
   | AddrBootstrap (KeyHash crypto)
   deriving (Show, Eq, Ord, Generic)
+  deriving (ToCBOR, FromCBOR) via (CBORGroup (Addr crypto))
 
 instance NoUnexpectedThunks (Addr crypto)
 
@@ -110,8 +112,7 @@ type Ix  = Natural
 data Ptr
   = Ptr SlotNo Ix Ix
   deriving (Show, Eq, Ord, Generic)
-  deriving ToCBOR via CBORGroup Ptr
-  deriving FromCBOR via CBORGroup Ptr
+  deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
 instance NoUnexpectedThunks Ptr
 
@@ -172,7 +173,15 @@ countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
 
-type Wdrl crypto = Map (RewardAcnt crypto) Coin
+newtype Wdrl crypto = Wdrl { unWdrl :: Map (RewardAcnt crypto) Coin }
+  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+
+instance Crypto crypto => ToCBOR (Wdrl crypto) where
+  toCBOR = toCBOR . CBORMap . unWdrl
+
+instance Crypto crypto => FromCBOR (Wdrl crypto) where
+  fromCBOR = Wdrl . unwrapCBORMap <$> fromCBOR
+
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto
@@ -220,6 +229,12 @@ newtype GenesisDelegate crypto = GenesisDelegate (GenKeyHash crypto, KeyHash cry
 newtype MIRCert crypto = MIRCert (Map (Credential crypto) Coin)
   deriving (Show, Generic, Eq)
 
+instance Crypto crypto => FromCBOR (MIRCert crypto) where
+  fromCBOR = MIRCert . unwrapCBORMap <$> fromCBOR
+
+instance Crypto crypto => ToCBOR (MIRCert crypto) where
+  toCBOR (MIRCert c) = toCBOR (CBORMap c)
+
 -- | A heavyweight certificate.
 data DCert crypto =
     DCertDeleg (DelegCert crypto)
@@ -238,7 +253,7 @@ instance NoUnexpectedThunks (DCert crypto)
 data TxBody crypto
   = TxBody
       { _inputs   :: !(Set (TxIn crypto))
-      , _outputs  :: [TxOut crypto]
+      , _outputs  :: Seq (TxOut crypto)
       , _certs    :: Seq (DCert crypto)
       , _wdrls    :: Wdrl crypto
       , _txfee    :: Coin
@@ -347,10 +362,10 @@ instance
            <> toCBOR kh
 
            -- DCertMIR
-     DCertMir (MIRCert credCoinMap) ->
+     DCertMir mir ->
            encodeListLen 2
            <> toCBOR (9 :: Word8)
-           <> toCBOR credCoinMap
+           <> toCBOR mir
 
 instance
   (Crypto crypto)
@@ -387,7 +402,7 @@ instance
         a <- fromCBOR
         b <- fromCBOR
         pure $ DCertGenesis $ GenesisDelegate (a, b)
-      9 -> matchSize "MIRCert" 2 n >> (DCertMir . MIRCert) <$> fromCBOR
+      9 -> matchSize "MIRCert" 2 n >> DCertMir <$> fromCBOR
       k -> invalidKey k
 
 instance
@@ -412,17 +427,18 @@ instance
   => ToCBOR (TxOut crypto)
  where
   toCBOR (TxOut addr coin) =
-    encodeListLen 2
-      <> toCBOR addr
+    encodeListLen (listLen addr + 1)
+      <> toCBORGroup addr
       <> toCBOR coin
 
 instance (Crypto crypto) =>
   FromCBOR (TxOut crypto) where
   fromCBOR = do
-    enforceSize "TxOut" 2
-    a <- fromCBOR
+    n <- decodeListLen
+    addr <- fromCBORGroup
     (b :: Word64) <- fromCBOR
-    pure $ TxOut a (Coin $ toInteger b)
+    matchSize "TxOut" ((fromIntegral . toInteger . listLen) addr + 1) n
+    pure $ TxOut addr (Coin $ toInteger b)
 
 instance
   Crypto crypto
@@ -477,11 +493,11 @@ instance
   toCBOR txbody =
     let l = toList $
               single (encodeWord 0 <> toCBOR (_inputs txbody))
-            . single (encodeWord 1 <> toCBOR (_outputs txbody))
+            . single (encodeWord 1 <> toCBOR (CborSeq $ _outputs txbody))
             . single (encodeWord 2 <> toCBOR (_txfee txbody))
             . single (encodeWord 3 <> toCBOR (_ttl txbody))
             . (if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs)))
-            . (if null ws then none else single (encodeWord 5 <> toCBOR ws))
+            . (if null (unWdrl ws) then none else single (encodeWord 5 <> toCBOR ws))
             . (if updateNull us then none else single (encodeWord 6 <> toCBOR us))
             . (encodeMDH $ _mdHash txbody)
         toList xs = xs []
@@ -514,7 +530,7 @@ instance
      mapParts <- mapHelper $
        decodeWord >>= \case
          0 -> fromCBOR                     >>= \x -> pure (0, \t -> t { _inputs   = x })
-         1 -> fromCBOR                     >>= \x -> pure (1, \t -> t { _outputs  = x })
+         1 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs  = x })
          2 -> fromCBOR                     >>= \x -> pure (2, \t -> t { _txfee    = x })
          3 -> fromCBOR                     >>= \x -> pure (3, \t -> t { _ttl      = x })
          4 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
@@ -537,11 +553,11 @@ instance
      where
        basebody = TxBody
           { _inputs   = Set.empty
-          , _outputs  = []
+          , _outputs  = Seq.empty
           , _txfee    = Coin 0
           , _ttl      = SlotNo 0
           , _certs    = Seq.empty
-          , _wdrls    = Map.empty
+          , _wdrls    = Wdrl Map.empty
           , _txUpdate = emptyUpdate
           , _mdHash   = Nothing
           }
@@ -607,82 +623,71 @@ instance (Crypto crypto) =>
 
 instance
   (Typeable crypto, Crypto crypto)
-  => ToCBOR (Addr crypto)
+  => ToCBORGroup (Addr crypto)
  where
-  toCBOR (AddrBase       (KeyHashObj a)    (KeyHashObj b))      =
-    encodeListLen 3 <> toCBOR (0 :: Word8)  <> toCBOR a       <> toCBOR b
-  toCBOR (AddrBase       (KeyHashObj a)     (ScriptHashObj b))  =
-    encodeListLen 3 <> toCBOR (1 :: Word8)  <> toCBOR a       <> toCBOR b
-  toCBOR (AddrBase       (ScriptHashObj a)  (KeyHashObj b))     =
-    encodeListLen 3 <> toCBOR (2 :: Word8)  <> toCBOR a       <> toCBOR b
-  toCBOR (AddrBase       (ScriptHashObj a) (ScriptHashObj b))   =
-    encodeListLen 3 <> toCBOR (3 :: Word8)  <> toCBOR a       <> toCBOR b
-  toCBOR (AddrPtr        (KeyHashObj a)    pointer)             =
-    encodeListLen (2 + listLen pointer)
-    <> toCBOR (4 :: Word8)
-    <> toCBOR a
-    <> toCBORGroup pointer
-  toCBOR (AddrPtr        (ScriptHashObj a)  pointer)            =
-    encodeListLen (2 + listLen pointer)
-    <> toCBOR (5 :: Word8)
-    <> toCBOR a
-    <> toCBORGroup pointer
-  toCBOR (AddrEnterprise (KeyHashObj a))                        =
-    encodeListLen 2 <> toCBOR (6 :: Word8)  <> toCBOR a
-  toCBOR (AddrEnterprise (ScriptHashObj a))                     =
-    encodeListLen 2 <> toCBOR (7 :: Word8)  <> toCBOR a
-  toCBOR (AddrBootstrap  a)                                     =
-    encodeListLen 2 <> toCBOR (8 :: Word8)  <> toCBOR a
+  listLen (AddrBase _ _) = 3
+  listLen (AddrPtr _ pointer) = 2 + listLen pointer
+  listLen (AddrEnterprise _) = 2
+  listLen (AddrBootstrap  _) = 2
+
+  toCBORGroup (AddrBase (KeyHashObj a) (KeyHashObj b)) =
+    toCBOR (0 :: Word8) <> toCBOR a <> toCBOR b
+  toCBORGroup (AddrBase (KeyHashObj a) (ScriptHashObj b)) =
+    toCBOR (1 :: Word8) <> toCBOR a <> toCBOR b
+  toCBORGroup (AddrBase (ScriptHashObj a) (KeyHashObj b)) =
+    toCBOR (2 :: Word8) <> toCBOR a <> toCBOR b
+  toCBORGroup (AddrBase (ScriptHashObj a) (ScriptHashObj b)) =
+    toCBOR (3 :: Word8) <> toCBOR a <> toCBOR b
+  toCBORGroup (AddrPtr (KeyHashObj a) pointer) =
+    toCBOR (4 :: Word8) <> toCBOR a <> toCBORGroup pointer
+  toCBORGroup (AddrPtr (ScriptHashObj a) pointer) =
+    toCBOR (5 :: Word8) <> toCBOR a <> toCBORGroup pointer
+  toCBORGroup (AddrEnterprise (KeyHashObj a)) =
+    toCBOR (6 :: Word8) <> toCBOR a
+  toCBORGroup (AddrEnterprise (ScriptHashObj a)) =
+    toCBOR (7 :: Word8) <> toCBOR a
+  toCBORGroup (AddrBootstrap a) =
+    toCBOR (8 :: Word8) <> toCBOR a
 
 instance (Crypto crypto) =>
-  FromCBOR (Addr crypto) where
-  fromCBOR = do
-    n <- decodeListLen
+  FromCBORGroup (Addr crypto) where
+  fromCBORGroup = do
     decodeWord >>= \case
       0 -> do
-        matchSize "AddrBase" 3 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ AddrBase (KeyHashObj a) (KeyHashObj b)
       1 -> do
-        matchSize "AddrBase" 3 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ AddrBase (KeyHashObj a) (ScriptHashObj b)
       2 -> do
-        matchSize "AddrBase" 3 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ AddrBase (ScriptHashObj a) (KeyHashObj b)
       3 -> do
-        matchSize "AddrBase" 3 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ AddrBase (ScriptHashObj a) (ScriptHashObj b)
       4 -> do
-        matchSize "AddrPtr" 5 n
         a <- fromCBOR
         x <- fromCBOR
         y <- fromCBOR
         z <- fromCBOR
         pure $ AddrPtr (KeyHashObj a) (Ptr x y z)
       5 -> do
-        matchSize "AddrPtr" 5 n
         a <- fromCBOR
         x <- fromCBOR
         y <- fromCBOR
         z <- fromCBOR
         pure $ AddrPtr (ScriptHashObj a) (Ptr x y z)
       6 -> do
-        matchSize "AddrEnterprise" 2 n
         a <- fromCBOR
         pure $ AddrEnterprise (KeyHashObj a)
       7 -> do
-        matchSize "AddrEnterprise" 2 n
         a <- fromCBOR
         pure $ AddrEnterprise (ScriptHashObj a)
       8 -> do
-        matchSize "AddrBootstrap" 2 n
         a <- fromCBOR
         pure $ AddrBootstrap (KeyHash a)
       k -> invalidKey k
@@ -702,13 +707,13 @@ instance
   => ToCBORGroup (PoolParams crypto)
  where
   toCBORGroup poolParams =
-         toCBOR (_poolOwners poolParams)
+         toCBOR (_poolPubKey poolParams)
+      <> toCBOR (_poolVrf poolParams)
+      <> toCBOR (_poolPledge poolParams)
       <> toCBOR (_poolCost poolParams)
       <> toCBOR (_poolMargin poolParams)
-      <> toCBOR (_poolPledge poolParams)
-      <> toCBOR (_poolPubKey poolParams)
-      <> toCBOR (_poolVrf poolParams)
       <> toCBOR (_poolRAcnt poolParams)
+      <> toCBOR (_poolOwners poolParams)
   listLen _ = 7
 
 instance
@@ -716,13 +721,13 @@ instance
   => FromCBORGroup (PoolParams crypto)
  where
   fromCBORGroup = do
-    owners <- fromCBOR
-    cost <- fromCBOR
-    margin <- fromCBOR
-    pledge <- fromCBOR
     vk <- fromCBOR
     vrf <- fromCBOR
+    pledge <- fromCBOR
+    cost <- fromCBOR
+    margin <- fromCBOR
     ra <- fromCBOR
+    owners <- fromCBOR
     pure $ PoolParams
             { _poolPubKey = vk
             , _poolVrf    = vrf

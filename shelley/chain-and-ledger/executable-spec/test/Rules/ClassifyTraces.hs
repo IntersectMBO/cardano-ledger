@@ -14,6 +14,7 @@ module Rules.ClassifyTraces
 import qualified Data.ByteString as BS
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import           Data.Sequence (Seq)
 import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
@@ -32,7 +33,7 @@ import           LedgerState (txsize)
 import           Test.Utils
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
                      pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
-                     _body, _certs, _outputs, _txUpdate, _wdrls)
+                     Wdrl (..), _body, _certs, _outputs, _txUpdate, _wdrls)
 import           Updates (pattern AVUpdate, pattern PPUpdate, PParamsUpdate, pattern Update)
 
 relevantCasesAreCovered :: Property
@@ -160,19 +161,19 @@ ratioInt x y
   = fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: [[TxOut]] -> Double
+txScriptOutputsRatio :: [Seq TxOut] -> Double
 txScriptOutputsRatio txoutsList =
   ratioInt
    (sum (map countScriptOuts txoutsList))
    (sum (map length txoutsList))
   where countScriptOuts txouts =
-          sum $ map (\case
+          sum $ fmap (\case
                         TxOut (AddrBase (ScriptHashObj _) _) _ -> 1
                         _ -> 0) txouts
 
 -- | Transaction has a reward withdrawal
 withdrawalRatio :: [Tx] -> Double
-withdrawalRatio = lenRatio (filter $ not . null . _wdrls . _body)
+withdrawalRatio = lenRatio (filter $ not . null . unWdrl . _wdrls . _body)
 
 -- | Transforms the list and returns the ratio of lengths of
 -- the transformed and original lists.

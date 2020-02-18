@@ -1,0 +1,18 @@
+$hash /= bytes .size 4
+
+$vkey /= uint
+
+$vrf_keyhash /= bytes .size 4
+
+$vrf_vkey /= int
+$vrf_cert /= [uint, [int, natural]]
+natural = #6.2(bytes)
+
+$kes_vkey /= int
+$kes_signature /= [natural,signkeyKES]
+signkeyKES = [int, natural, natural] ; publishing the private key because this is fake
+
+
+$signature /= [bytes, int]
+
+$nonce /= [ 0 // 1, bytes .size 32 ]

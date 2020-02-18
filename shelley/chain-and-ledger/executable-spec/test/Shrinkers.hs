@@ -39,7 +39,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
   [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md |
-    os' <- shrinkList shrinkTxOut os ]
+    os' <- toList $ shrinkSeq shrinkTxOut os ]
 
   -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
   -- [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
@@ -48,7 +48,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
   where outBalance = outputBalance os
 
-outputBalance :: [TxOut crypto] -> Coin
+outputBalance :: Seq (TxOut crypto) -> Coin
 outputBalance = foldl (\v (TxOut _ c) -> v + c) (Coin 0)
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
@@ -65,7 +65,7 @@ shrinkDCert :: DCert crypto -> [DCert crypto]
 shrinkDCert = const []
 
 shrinkWdrl :: Wdrl crypto -> [Wdrl crypto]
-shrinkWdrl = shrinkMap shrinkRewardAcnt shrinkCoin
+shrinkWdrl (Wdrl m) = Wdrl <$> shrinkMap shrinkRewardAcnt shrinkCoin m
 
 shrinkRewardAcnt :: RewardAcnt crypto -> [RewardAcnt crypto]
 shrinkRewardAcnt = const []

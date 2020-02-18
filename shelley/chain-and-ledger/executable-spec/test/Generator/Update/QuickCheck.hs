@@ -20,6 +20,7 @@ import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
 import           Data.Set (Set)
 import qualified Data.Set as Set (fromList)
+import qualified Data.Text as T (pack)
 
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -275,7 +276,7 @@ genApplications utxoSt = do
     genInstallers i =
       Mdt <$> Map.fromList
           <$> QC.vectorOf i
-                          ((,) <$> (SystemTag . BS.pack <$> genShortAscii)
+                          ((,) <$> (SystemTag . T.pack <$> genShortAscii)
                                <*> (InstallerHash . hash . BS.pack <$> genShortAscii))
 
     genApplication i = QC.frequency [ (2, genNewApp i)
@@ -289,7 +290,7 @@ genApplications utxoSt = do
     incrVersion (apName, (ApVer apVer, mdt)) = (apName, (ApVer (apVer+1), mdt))
 
     genNewApp i = (,) <$> genNewAppName <*> ((ApVer 1,) <$> (genInstallers i))
-    genNewAppName = ApName . BS.pack <$> genShortAscii
+    genNewAppName = ApName . T.pack <$> genShortAscii
 
     genShortAscii = QC.vectorOf 5 QC.arbitraryASCIIChar
 

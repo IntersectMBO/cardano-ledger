@@ -56,10 +56,9 @@ import           GHC.Generics (Generic)
 import           MetaData (MetaData)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (CborSeq (..), Nonce (..), Seed (..), UnitInterval, intervalValue,
-                     invalidKey, mkNonce)
+import           BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, invalidKey, mkNonce)
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
-                     encodeListLen, enforceSize, matchSize)
+                     encodeListLen, matchSize)
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -71,11 +70,12 @@ import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
 import           Slot (BlockNo (..), SlotNo (..))
-import           Tx (Tx (..), TxBody (..), WitVKey (..))
+import           Tx (Tx (..), TxBody (..), WitVKey (..), hashScript)
 import           TxData (MultiSig (..), ScriptHash (..))
 
 import           NonIntegral ((***))
-import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
+import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
+                     ToCBORGroup (..))
 
 -- |The hash of a Block Header
 newtype HashHeader crypto =
@@ -130,24 +130,23 @@ data BHeader crypto
       (BHBody crypto)
       (KESig crypto (BHBody crypto))
   deriving (Show, Generic, Eq)
+  deriving ToCBOR via (CBORGroup (BHeader crypto))
+  deriving FromCBOR via (CBORGroup (BHeader crypto))
 
 instance Crypto crypto
   => NoUnexpectedThunks (BHeader crypto)
 
 instance Crypto crypto
-  => ToCBOR (BHeader crypto)
- where
-   toCBOR (BHeader bHBody kESig) =
-     encodeListLen 2
-       <> toCBOR bHBody
-       <> toCBOR kESig
+  => ToCBORGroup (BHeader crypto)
+  where
+    listLen (BHeader bHBody _kESig) = listLen bHBody + 1
+    toCBORGroup (BHeader bHBody kESig) = toCBORGroup bHBody <> toCBOR kESig
 
 instance Crypto crypto
-  => FromCBOR (BHeader crypto)
+  => FromCBORGroup (BHeader crypto)
  where
-   fromCBOR = do
-     enforceSize "Block Header" 2
-     bhb <- fromCBOR
+   fromCBORGroup = do
+     bhb <- fromCBORGroup
      sig <- fromCBOR
      pure $ BHeader bhb sig
 
@@ -199,16 +198,18 @@ data BHBody crypto = BHBody
     -- | protocol version
   , bprotvert          :: ProtVer
   } deriving (Show, Eq, Generic)
+    deriving ToCBOR via (CBORGroup (BHBody crypto))
+    deriving FromCBOR via (CBORGroup (BHBody crypto))
 
 instance Crypto crypto
   => NoUnexpectedThunks (BHBody crypto)
 
 instance Crypto crypto
-  => ToCBOR (BHBody crypto)
+  => ToCBORGroup (BHBody crypto)
  where
-  toCBOR bhBody =
-    encodeListLen (9 + listLen (bheaderOCert bhBody)  + listLen (bprotvert bhBody))
-      <> toCBOR (bheaderPrev bhBody)
+  listLen bhBody =  9 + listLen (bheaderOCert bhBody)  + listLen (bprotvert bhBody)
+  toCBORGroup bhBody =
+         toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
       <> VRF.encodeVerKeyVRF (bheaderVrfVk bhBody)
       <> toCBOR (bheaderSlotNo bhBody)
@@ -221,10 +222,9 @@ instance Crypto crypto
       <> toCBORGroup (bprotvert bhBody)
 
 instance Crypto crypto
-  => FromCBOR (BHBody crypto)
+  => FromCBORGroup (BHBody crypto)
  where
-  fromCBOR = do
-    n <- decodeListLen
+  fromCBORGroup = do
     bheaderPrev <- fromCBOR
     bheaderVk <- fromCBOR
     bheaderVrfVk <- VRF.decodeVerKeyVRF
@@ -236,7 +236,6 @@ instance Crypto crypto
     bhash <- fromCBOR
     bheaderOCert <- fromCBORGroup
     bprotvert <- fromCBORGroup
-    matchSize "Block header body" (fromIntegral $ 9 + listLen bheaderOCert + listLen bprotvert) n
     pure $ BHBody
            { bheaderPrev
            , bheaderVk
@@ -321,16 +320,15 @@ instance Crypto crypto
         <> toCBOR (1 :: Word8)
         <> toCBOR ws
 
-    SegWitsScript s m ->
-      encodeListLen 3
+    SegWitsScript _ m ->
+      encodeListLen 2
         <> toCBOR (2 :: Word8)
-        <> toCBOR s
         <> toCBOR m
 
     SegWitsScripts ss ->
       encodeListLen 2
         <> toCBOR (3 :: Word8)
-        <> toCBOR ss
+        <> toCBOR (Map.elems ss)
 
     SegWitsAll ws ss ->
       encodeListLen 3
@@ -353,14 +351,13 @@ instance Crypto crypto
         matchSize "SegWitsVKeys" 2 n
         pure $ SegWitsVKeys a
       2 -> do
-        matchSize "SegWitsScript" 3 n
+        matchSize "SegWitsScript" 2 n
         a <- fromCBOR
-        b <- fromCBOR
-        pure $ SegWitsScript a b
+        pure $ SegWitsScript (hashScript a) a
       3 -> do
         a <- fromCBOR
         matchSize "SegWitsScripts" 2 n
-        pure $ SegWitsScripts a
+        (pure . SegWitsScripts . Map.fromList) $ fmap (\x -> (hashScript x, x)) a
       4 -> do
         a <- fromCBOR
         b <- fromCBOR
@@ -370,10 +367,10 @@ instance Crypto crypto
 
 -- |Given a sequence of transactions, return a mapping
 -- from indices in the original sequence to the non-Nothing metadata value
-extractMetaData :: Seq (Tx crypto) -> Map Int MetaData
+extractMetaData :: Seq (Tx crypto) -> CBORMap Int MetaData
 extractMetaData txns =
   let metadata = Seq.mapWithIndex (\i -> \t -> (i, _metadata t)) txns
-  in ((Map.mapMaybe id) . Map.fromList . toList) metadata
+  in CBORMap $ ((Map.mapMaybe id) . Map.fromList . toList) metadata
 
 -- |Given a size and a mapping from indices to maybe metadata,
 -- return a sequence whose size is the size paramater and
@@ -385,8 +382,8 @@ instance Crypto crypto
   => ToCBOR (Block crypto)
  where
   toCBOR (Block h (TxSeq txns)) =
-      encodeListLen 4
-        <> toCBOR h
+      encodeListLen (listLen h + 3)
+        <> toCBORGroup h
         <> toCBOR bodies
         <> toCBOR wits
         <> toCBOR metadata
@@ -399,14 +396,15 @@ instance Crypto crypto
   => FromCBOR (Block crypto)
  where
   fromCBOR = do
-    enforceSize "Block" 4
-    header <- fromCBOR
+    n <- decodeListLen
+    header <- fromCBORGroup
+    matchSize "Block" ((fromIntegral . toInteger . listLen) header + 3) n
     bodies <- unwrapCborSeq <$> fromCBOR
     wits <- unwrapCborSeq <$> fromCBOR
     let b = length bodies
         w = length wits
 
-    metadata <- constructMetaData b <$> fromCBOR
+    metadata <- constructMetaData b . unwrapCBORMap <$> fromCBOR
     let m = length metadata
 
     unless (b == w)
