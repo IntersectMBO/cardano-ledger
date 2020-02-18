@@ -28,8 +28,7 @@ module Generator.Core.QuickCheck
   , coreKeyPairs
   , coreNodeKeys
   , traceKeyPairs
-  , tracePoolKeys
-  , tracePoolKeysMap
+  , traceKeyPairsByStakeHash
   , traceKeyHashMap
   , traceVRFKeyPairs
   , traceVRFKeyPairsByHash
@@ -74,8 +73,8 @@ import           ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair, Cred
                      HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, OCert,
                      SKeyES, SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES, VKeyGenesis, VRFKeyHash,
                      VerKeyVRF, hashKeyVRF)
-import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, maxPoolKeys,
-                     maxSlotTrace, minGenesisOutputVal, numBaseScripts)
+import           Generator.Core.Constants (maxGenesisOutputVal, maxNumKeyPairs, maxSlotTrace,
+                     minGenesisOutputVal, numBaseScripts)
 import           Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign, signKES,
                      undiscriminateKeyHash, vKey)
 import           LedgerState (AccountState (..), genesisCoins)
@@ -120,13 +119,12 @@ mkKeyPairs n
 traceKeyPairs :: KeyPairs
 traceKeyPairs = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
--- | Constant list of keys intended to be used as pool keys in the generators.
-tracePoolKeys :: [KeyPair]
-tracePoolKeys = (fst . mkKeyPairs) <$> ((maxNumKeyPairs +) <$> [1 .. maxPoolKeys])
-
-tracePoolKeysMap :: Map KeyHash KeyPair
-tracePoolKeysMap =
-  Map.fromList ((\k -> ((hashKey . vKey) k, k)) <$> tracePoolKeys)
+traceKeyPairsByStakeHash
+  :: Map KeyHash KeyPair
+traceKeyPairsByStakeHash =
+  Map.fromList (f <$> traceKeyPairs)
+  where
+    f (_payK, stakeK) = ((hashKey . vKey) stakeK, stakeK)
 
 -- | Mapping from key hash to key pair
 traceKeyHashMap :: Map AnyKeyHash KeyPair

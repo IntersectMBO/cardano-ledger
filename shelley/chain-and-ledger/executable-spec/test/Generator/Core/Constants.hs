@@ -132,9 +132,6 @@ minSlotTrace = 1000
 maxSlotTrace :: Int
 maxSlotTrace = 5000
 
-maxPoolKeys :: Word64
-maxPoolKeys = 50
-
 -- | Lower bound of the MaxEpoch protocol parameter
 frequencyLowMaxEpoch :: Word64
 frequencyLowMaxEpoch = 6

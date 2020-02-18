@@ -22,10 +22,10 @@ import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), gen
                      getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash, zero)
 import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
-import           Ledger.Core (dom, range, (∉))
+import           Ledger.Core (dom, range)
 import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
-                     overlaySchedule, _delegationState, _dstate, _genDelegs, _pstate, _reserves,
-                     _retiring)
+                     overlaySchedule, _delegationState, _dstate, _genDelegs, _pParams, _pstate,
+                     _reserves)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
@@ -95,12 +95,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
    -}
 
   lookForPraosStart <- genSlotIncrease
-  let poolParams = ( Map.toList
-                   . Map.filterWithKey (\k _ -> k ∉ (dom $ (_retiring . _pstate) dpstate))
-                   . Map.filter ((> 0) . fst)
-                   . unPoolDistr
-                   . nesPd
-                   . chainNes) chainSt
+  let poolParams = (Map.toList . Map.filter ((> 0) . fst) . unPoolDistr . nesPd . chainNes) chainSt
   poolParams' <- take 1 <$> QC.shuffle poolParams
   let (nextSlot, keys) = case poolParams' of
         []       -> (nextOSlot, gkeys gkey)
@@ -122,11 +117,14 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
     let kp@(KESPeriod kesPeriod_) = runShelleyBase (kesPeriod $ nextSlot)
         cs = chainOCertIssue chainSt
 
+        -- poolParams in SNAP (_, poolParams, _) in pstate
+        poolKeys = dom $ (_pParams . _pstate) dpstate
+
         -- ran genDelegs
         genDelegationKeys = range cores
 
         n' = currentIssueNo
-             (OCertEnv (dom poolParams) genDelegationKeys)
+             (OCertEnv poolKeys genDelegationKeys)
              cs
              ((hashKey . vKey . cold) keys)
 
