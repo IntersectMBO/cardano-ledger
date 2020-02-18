@@ -11,32 +11,35 @@ constraints:
   hashable < 1.3,
   primitive < 0.7
 
+-- Always wrtie GHC env files, because they are needed by the doctests.
+write-ghc-environment-files: always
+
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
-  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
+  tag: 42ca7aca6d054f62bdeb4254a7580ac0571f27a6
+  --sha256: 0yiv4drn7h7zz5hmdsji1r43j94i6p8mg315k64s2g5gdrl3b378
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
-  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
+  tag: 42ca7aca6d054f62bdeb4254a7580ac0571f27a6
+  --sha256: 0yiv4drn7h7zz5hmdsji1r43j94i6p8mg315k64s2g5gdrl3b378
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
-  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
+  tag: 42ca7aca6d054f62bdeb4254a7580ac0571f27a6
+  --sha256: 0yiv4drn7h7zz5hmdsji1r43j94i6p8mg315k64s2g5gdrl3b378
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 3c2791584d3f43aa18e9cc13c490239b4c3dcbd2
-  --sha256: 1gk55jb9gk6c6h3bwwgbfyj8czx253p9kswcrcgmbiy99d8y9lx4
+  tag: 42ca7aca6d054f62bdeb4254a7580ac0571f27a6
+  --sha256: 0yiv4drn7h7zz5hmdsji1r43j94i6p8mg315k64s2g5gdrl3b378
   subdir: slotting
 
 source-repository-package
