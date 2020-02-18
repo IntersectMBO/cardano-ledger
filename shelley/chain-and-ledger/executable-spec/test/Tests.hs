@@ -1,6 +1,6 @@
 import           Test.Tasty
 
---import           PropertyTests (propertyTests)
+import           PropertyTests (minimalPropertyTests)
 import           STSTests (stsTests)
 import           Test.Serialization (serializationTests)
 import           UnitTests (unitTests)
@@ -8,7 +8,7 @@ import           UnitTests (unitTests)
 tests :: TestTree
 tests = testGroup "Ledger with Delegation"
   [ unitTests
-  --, propertyTests
+  , minimalPropertyTests
   , stsTests
   , serializationTests
   ]

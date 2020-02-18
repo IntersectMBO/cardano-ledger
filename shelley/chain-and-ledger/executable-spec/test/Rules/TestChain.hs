@@ -37,7 +37,7 @@ numberOfTests :: Word64
 numberOfTests = 300
 
 traceLen :: Word64
-traceLen = 10 -- TODO @uroboros use short traces while we implement proper KES block signatures
+traceLen = 20 -- TODO @uroboros use short CHAIN traces until we have complete Epoch-boundary-proof Update generation
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --

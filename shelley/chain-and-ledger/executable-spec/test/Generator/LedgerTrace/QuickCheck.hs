@@ -24,10 +24,11 @@ import           Control.State.Transition.Trace (TraceOrder (OldestFirst), trace
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import           Data.Functor.Identity (runIdentity)
 import           Data.Word (Word64)
+
 import           Generator.Core.Constants (maxGenesisUTxOouts, minGenesisUTxOouts, numBaseScripts)
-import           Generator.Core.QuickCheck (coreKeyPairs, genCoin, genUtxo0, genesisDelegs0,
+import           Generator.Core.QuickCheck (coreNodeKeys, genCoin, genUtxo0, genesisDelegs0,
                      traceKeyHashMap, traceKeyPairs, traceMSigCombinations, traceMSigScripts,
-                     tracePoolKeys, traceVRFKeyPairs)
+                     tracePoolKeys, tracePoolKeysMap, traceVRFKeyPairs)
 import           Generator.Update.QuickCheck (genPParams)
 import           Generator.Utxo.QuickCheck (genTx)
 import           LedgerState (pattern LedgerState, genesisState)
@@ -54,7 +55,8 @@ instance TQC.HasTrace LEDGER Word64 where
      traceKeyHashMap
      tracePoolKeys
      (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
-     coreKeyPairs
+     coreNodeKeys
+     tracePoolKeysMap
      traceVRFKeyPairs
 
   shrinkSignal = shrinkTx
@@ -73,7 +75,7 @@ instance TQC.HasTrace LEDGERS Word64 where
     Seq.fromList . traceSignals OldestFirst <$>
       TQC.traceFrom @LEDGER testGlobals maxTxs maxTxs ledgerEnv (utxoSt, dpSt)
     where
-      ix = 0 -- TODO @uroboros
+      ix = 0 -- TODO @uroboros - zip [0 ..] $ toList txwits
       ledgerEnv = LedgerEnv slotNo ix pParams reserves
 
   shrinkSignal = const []

@@ -25,15 +25,16 @@ import qualified Test.QuickCheck as QC
 import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, Credential, DCert, DPState,
-                     DState, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx, TxBody,
-                     TxIn, TxOut, UTxO, UTxOState, VrfKeyPairs)
+                     DState, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx,
+                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, VrfKeyPairs)
 import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
                      minNumGenInputs)
 import           Generator.Core.Constants (frequencyAFewWithdrawals, frequencyNoWithdrawals,
                      frequencyPotentiallyManyWithdrawals, maxAFewWithdrawals)
-import           Generator.Core.QuickCheck (findPayKeyPairAddr, findPayKeyPairCred,
+import           Generator.Core.QuickCheck (AllPoolKeys, findPayKeyPairAddr, findPayKeyPairCred,
                      findPayScriptFromAddr, findStakeScriptFromCred, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
+import           Generator.Update.QuickCheck (genUpdate)
 import           Ledger.Core ((∈))
 import           LedgerState (pattern UTxOState, _dstate, _irwd, _ptrs, _rewards)
 import           Slot (SlotNo (..))
@@ -41,7 +42,6 @@ import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
                      pattern ScriptHashObj, getRwdCred)
-import           Updates (emptyUpdate)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
@@ -57,10 +57,11 @@ genTx :: LedgerEnv
       -> Map AnyKeyHash KeyPair
       -> [KeyPair]
       -> MultiSigPairs
-      -> [CoreKeyPair]
+      -> [(CoreKeyPair, AllPoolKeys)]
+      -> Map KeyHash KeyPair -- indexed keys By StakeHash
       -> VrfKeyPairs
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashMap poolKeys scripts coreKeys vrfKeys = do
+genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys keyHashMap poolKeys scripts coreKeys keysByStakeHash vrfKeys = do
   keys' <- QC.shuffle keys
   scripts' <- QC.shuffle scripts
 
@@ -90,7 +91,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
 
   -- certificates
   (certs, certCreds, deposits_, refunds_)
-    <- genDCerts keys' keyHashMap scripts' poolKeys coreKeys vrfKeys pparams dpState slot ttl
+    <- genDCerts keys' keyHashMap scripts' poolKeys (fst <$> coreKeys) vrfKeys keysByStakeHash pparams dpState slot ttl
 
   if spendingBalance < deposits_
     then D.trace ("discarded") QC.discard
@@ -114,8 +115,12 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
     -- calc. fees and output amounts
     let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
 
+    --- PParam + AV Updates
+    (update, updateWitnesses) <-
+      genUpdate slot coreKeys keysByStakeHash pparams (utxoSt, dpState)
+
     -- witnessed transaction
-    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls fee slotWithTTL
+    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update fee slotWithTTL
     let multiSig = Map.fromList $
           (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
           (map (\(_, sScript) -> (hashScript sScript, sScript)) (stakeScripts ++ wdrlScripts))
@@ -126,7 +131,7 @@ genTx (LedgerEnv slot _ pparams _) (UTxOState utxo _ _ _, dpState) keys keyHashM
     -- deterministically for each script. Varying the script is possible though.
     let keysLists = map getKeyCombination $ Map.elems multiSig
         msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
-        !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses ++ wdrlWitnesses)
+        !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
                 `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
                 `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
 
@@ -140,10 +145,11 @@ genTxBody
   -> [TxOut]
   -> Seq DCert
   -> Map RewardAcnt Coin
+  -> Update
   -> Coin
   -> SlotNo
   -> Gen TxBody
-genTxBody inputs outputs certs wdrls fee slotWithTTL = do
+genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
   return $ TxBody
              inputs
              outputs
@@ -151,7 +157,7 @@ genTxBody inputs outputs certs wdrls fee slotWithTTL = do
              wdrls
              fee
              slotWithTTL
-             emptyUpdate -- TODO @uroboros generate updates
+             update
              Nothing -- TODO generate metadata
 
 -- | Calculate the fee and distribute the remainder of the balance

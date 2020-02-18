@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
-module PropertyTests (propertyTests) where
+module PropertyTests (propertyTests, minimalPropertyTests) where
 
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
@@ -162,6 +162,14 @@ classifyInvalidDoubleSpend = withTests 1000 $ property $ do
       classify "multi-spend, validation KO" (isMultiSpend && validationErrors /= [])
       classify "multi-spend" isMultiSpend
       True === (not isMultiSpend || validationErrors /= [])
+
+minimalPropertyTests :: TestTree
+minimalPropertyTests =
+  testGroup "Minimal Property Tests"
+    [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered
+    , TQC.testProperty "total amount of Ada is preserved" preservationOfAda
+    , TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated]
+
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree

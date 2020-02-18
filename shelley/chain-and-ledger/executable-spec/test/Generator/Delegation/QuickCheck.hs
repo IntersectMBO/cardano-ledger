@@ -10,15 +10,14 @@ module Generator.Delegation.QuickCheck
   ( genDCerts
   , CertCred (..))
   where
-import           Control.Monad.Trans.Reader (asks)
-import           Data.Foldable (find)
+
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, keysSet, lookup,
-                     size)
-import qualified Data.Maybe as Maybe (catMaybes)
+import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
+import           Data.Maybe (catMaybes, fromMaybe)
 import           Data.Ratio ((%))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import           Data.Set ((\\))
 import qualified Data.Set as Set
 import           Lens.Micro (to, (^.))
 import           Numeric.Natural (Natural)
@@ -28,28 +27,29 @@ import qualified Test.QuickCheck as QC
 import           Test.Utils
 
 import           Address (mkRwdAcnt, scriptToCred)
-import           BaseTypes (epochInfo, interval0, slotsPrior)
+import           BaseTypes (interval0)
 import           Coin (Coin (..))
-import           ConcreteCryptoTypes (AnyKeyHash, CoreKeyPair, DCert, DPState, DState, KeyPair,
-                     KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey, VrfKeyPairs,
-                     hashKeyVRF)
+import           ConcreteCryptoTypes (AnyKeyHash, CoreKeyPair, DCert, DPState, DState, KeyHash,
+                     KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
+                     VrfKeyPairs, hashKeyVRF)
 import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDelegationCert,
                      frequencyGenesisDelegationCert, frequencyKeyCredDeReg,
-                     frequencyKeyCredDelegation, frequencyKeyCredReg, frequencyMIRCert,
-                     frequencyRegKeyCert, frequencyRegPoolCert, frequencyRetirePoolCert,
-                     frequencyScriptCredDeReg, frequencyScriptCredDelegation,
-                     frequencyScriptCredReg)
-import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred)
+                     frequencyKeyCredDelegation, frequencyKeyCredReg, frequencyLowMaxEpoch,
+                     frequencyMIRCert, frequencyRegKeyCert, frequencyRegPoolCert,
+                     frequencyRetirePoolCert, frequencyScriptCredDeReg,
+                     frequencyScriptCredDelegation, frequencyScriptCredReg)
+import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred,
+                     tooLateInEpoch)
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (</|), (∈), (∉))
-import           LedgerState (dstate, keyRefund, pParams, pstate, stPools, stkCreds, _dstate,
-                     _genDelegs, _irwd, _pstate, _retiring, _rewards, _stPools, _stkCreds)
-import           PParams (PParams (..), d, eMax)
-import           Slot (Duration (..), EpochNo (EpochNo), SlotNo (SlotNo), epochInfoFirst, (*-))
+import           LedgerState (dstate, keyRefund, pParams, pstate, retiring, stPools, stkCreds,
+                     _dstate, _genDelegs, _irwd, _pstate, _retiring, _rewards, _stPools, _stkCreds)
+import           PParams (PParams (..), d)
+import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           Tx (getKeyCombination)
 import           TxData (pattern DCertDeleg, pattern DCertGenesis, pattern DCertPool,
                      pattern Delegation, pattern KeyHashObj, pattern PoolParams, RewardAcnt (..),
@@ -70,18 +70,19 @@ genDCerts
   -> [KeyPair]
   -> [CoreKeyPair]
   -> VrfKeyPairs
+  -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> PParams
   -> DPState
   -> SlotNo
   -> Natural
   -> Gen (Seq DCert, [CertCred], Coin, Coin)
-genDCerts keys keyHashMap scripts poolKeys coreKeys vrfKeys pparams dpState slot ttl = do
+genDCerts keys keyHashMap scripts poolKeys coreKeys vrfKeys keysByStakeHash pparams dpState slot ttl = do
   -- TODO @uroboros Generate _multiple_ certs per Tx
   -- TODO ensure that the `Seq` is constructed with the list reversed, or that
   -- later traversals are done backwards, to be consistent with the executable
   -- spec (see `delegsTransition` in `STS.Delegs`) which consumes the list
   -- starting at the tail end.
-  cert <- genDCert keys scripts poolKeys coreKeys vrfKeys pparams dpState slot
+  cert <- genDCert keys scripts poolKeys coreKeys vrfKeys keysByStakeHash pparams dpState slot
   case cert of
     Nothing ->
       return (Seq.empty, [], Coin 0, Coin 0)
@@ -105,7 +106,7 @@ genDCerts keys keyHashMap scripts poolKeys coreKeys vrfKeys pparams dpState slot
         ScriptCred (_, stakeScript) -> do
           let witnessHashes = getKeyCombination stakeScript
           let witnesses =
-                Maybe.catMaybes (map (flip Map.lookup keyHashMap) witnessHashes)
+                catMaybes (map (flip Map.lookup keyHashMap) witnessHashes)
           pure ( Seq.fromList certs
                , (map KeyCred witnesses) ++
                  (case cert_ of
@@ -132,17 +133,18 @@ genDCert
   -> [KeyPair]
   -> [CoreKeyPair]
   -> VrfKeyPairs
+  -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> PParams
   -> DPState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
-genDCert keys scripts poolKeys coreKeys vrfKeys pparams dpState slot =
+genDCert keys scripts poolKeys coreKeys vrfKeys keysByStakeHash pparams dpState slot =
   QC.frequency [ (frequencyRegKeyCert, genRegKeyCert keys scripts dState)
                , (frequencyRegPoolCert, genRegPool poolKeys vrfKeys dpState)
                , (frequencyDelegationCert, genDelegation keys scripts dpState)
                , (frequencyGenesisDelegationCert, genGenesisDelegation poolKeys coreKeys dpState)
                , (frequencyDeRegKeyCert, genDeRegKeyCert keys scripts dState)
-               , (frequencyRetirePoolCert, genRetirePool poolKeys pparams pState slot)
+               , (frequencyRetirePoolCert, genRetirePool keysByStakeHash pState slot)
                , (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
                ]
  where
@@ -345,31 +347,35 @@ genDCertRegPool skeys vrfKeys = do
 -- constructed value, return the keypair which corresponds to the selected
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool
-  :: [KeyPair]
-  -> PParams
+  :: Map KeyHash KeyPair -- indexed keys By StakeHash
   -> PState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
-genRetirePool availableKeys pp pState slot =
-  if (null availableKeys || null poolHashKeys)
+genRetirePool keysByStakeHash pState slot =
+  if (null retireable)
      then pure Nothing
      else (\keyHash epoch ->
               Just ( DCertPool (RetirePool keyHash epoch)
-                   , KeyCred $ findKeyPair keyHash))
-                <$> QC.elements poolHashKeys
+                   , KeyCred (lookupHash keyHash)))
+                <$> QC.elements retireable
                 <*> (EpochNo <$> genWord64 epochLow epochHigh)
  where
   stakePools = pState ^. (stPools . to (\(StakePools x) -> x))
-  poolHashKeys = Set.toList (Map.keysSet stakePools)
-  findKeyPair keyHash =
-    case find (\x -> hashKey (vKey x) == keyHash) availableKeys of
-      Nothing ->
-        error "genRetirePool: impossible: keyHash doesn't match availableKeys"
-      Just ks -> ks
+  registered_ = dom stakePools
+  retiring_ = dom (pState ^. retiring)
+  retireable = Set.toList (registered_ \\ retiring_)
+
+  lookupHash hk = fromMaybe (error "genRetirePool: could not find keyHash")
+                            (Map.lookup hk keysByStakeHash)
+
+
   EpochNo cepoch = epochFromSlotNo slot
-  EpochNo maxEpoch = pp ^. eMax
   epochLow = cepoch + 1
-  epochHigh = cepoch + maxEpoch - 1
+  -- we use the lower bound of MaxEpoch as the high mark so that all possible
+  -- future updates of the protocol parameter, MaxEpoch, will not decrease
+  -- the cut-off for pool-retirement and render this RetirePool
+  -- "too late in the epoch" when it is retired
+  epochHigh = cepoch + frequencyLowMaxEpoch - 1
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards
@@ -396,17 +402,9 @@ genInstantaneousRewards s coreKeys pparams delegSt = do
              -- or when we don't have keys available for generating an IR cert
              || null credCoinMap
              -- or it's too late in the epoch for IR certs
-             || tooLateInEpoch)
+             || tooLateInEpoch s)
     then
       Nothing
     else
       Just ( DCertMir (MIRCert credCoinMap)
            , CoreKeyCred coreSigners)
-
-  where
-    tooLateInEpoch = runShelleyBase $ do
-      ei <- asks epochInfo
-      firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
-      slotsPrior_ <- asks slotsPrior
-
-      return (s >= firstSlotNo *- Duration slotsPrior_)

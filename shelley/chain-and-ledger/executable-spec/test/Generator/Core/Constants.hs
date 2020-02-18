@@ -78,6 +78,10 @@ frequencyScriptCredDelegation = 1
 frequencyKeyCredDelegation :: Int
 frequencyKeyCredDelegation = 2
 
+-- | Relative frequency of Prototol/Application Updates in a transaction
+frequencyTxUpdates :: Int
+frequencyTxUpdates = 10
+
 -- | minimal number of genesis UTxO outputs
 minGenesisUTxOouts :: Int
 minGenesisUTxOouts = 1
@@ -130,3 +134,7 @@ maxSlotTrace = 5000
 
 maxPoolKeys :: Word64
 maxPoolKeys = 50
+
+-- | Lower bound of the MaxEpoch protocol parameter
+frequencyLowMaxEpoch :: Word64
+frequencyLowMaxEpoch = 6

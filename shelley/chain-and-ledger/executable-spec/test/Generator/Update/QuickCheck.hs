@@ -12,9 +12,11 @@ module Generator.Update.QuickCheck
   )
   where
 
-import           Control.Monad (join)
+import           Control.Monad (join, replicateM)
 import qualified Data.ByteString.Char8 as BS (pack)
-import qualified Data.Map.Strict as Map (fromList)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
 import           Data.Set (Set)
 import qualified Data.Set as Set (fromList)
@@ -23,20 +25,24 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           BaseTypes (Nonce (NeutralNonce), UnitInterval, mkNonce)
-import           Cardano.Crypto.Hash (HashAlgorithm)
-import           Cardano.Ledger.Shelley.Crypto (HASH)
 import           Coin (Coin (..))
+import           ConcreteCryptoTypes (AVUpdate, Applications, CoreKeyPair, DPState, GenKeyHash,
+                     KeyHash, KeyPair, Mdt, PPUpdate, UTxOState, Update)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core.QuickCheck (genInteger, genNatural, genWord64,
-                     increasingProbabilityAt)
-import           Keys (hash)
-import           Keys (GenKeyHash)
+import           Generator.Core.Constants (frequencyLowMaxEpoch, frequencyTxUpdates)
+import           Generator.Core.QuickCheck (AllPoolKeys (cold), genInteger, genNatural, genWord64,
+                     increasingProbabilityAt, tooLateInEpoch)
+import           Keys (GenDelegs (..), hash, hashKey, vKey)
+import           LedgerState (_dstate, _genDelegs, _ups)
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..))
-import           Slot (EpochNo (EpochNo))
-import           Updates (AVUpdate (..), ApName (..), ApVer (..), Applications (..),
-                     InstallerHash (..), Mdt (..), PPUpdate (..), PParamsUpdate (..), Ppm (..),
-                     SystemTag (..), Update (..))
+import           Slot (EpochNo (EpochNo), SlotNo)
+import           Updates (pattern AVUpdate, pattern ApName, pattern ApVer, pattern Applications,
+                     InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
+                     Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, apps,
+                     emptyUpdate, maxVer)
+
+import           Test.Utils (epochFromSlotNo)
 
 genRationalInThousands :: Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
@@ -55,7 +61,7 @@ genPParams = mkPParams <$> pure 0 -- _minfeeA
                        <*> genKeyMinRefund
                        <*> genKeyDecayRate
                        <*> genPoolDeposit
-                       <*> genIntervalInThousands 100 700
+                       <*> genPoolMinRefund
                        <*> genPoolDecayRate
                        <*> genEMax
                        <*> genNOpt
@@ -116,7 +122,7 @@ genExtraEntropy  = QC.frequency [ (1, pure NeutralNonce)
 -- Note: we keep the lower bound high enough so that we can more likely
 -- generate valid transactions and blocks
 low, hi :: Natural
-low = 20000
+low = 30000
 hi = 200000
 
 -- keyMinRefund: 0.1-0.5
@@ -125,7 +131,7 @@ genKeyMinRefund = genIntervalInThousands 100 500
 
 -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
 genEMax :: Gen EpochNo
-genEMax = EpochNo <$> genWord64 6 500
+genEMax = EpochNo <$> genWord64 frequencyLowMaxEpoch 500
 
 -- | nOpt
 genNOpt :: Gen Natural
@@ -165,23 +171,40 @@ genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 -- ^^ TODO jc - generating d=0 takes some care, if there are no registered
 -- stake pools then d=0 deadlocks the system.
 
--- | protocolVersion is a triple of numbers
 genProtocolVersion :: Gen (Natural, Natural, Natural)
 genProtocolVersion  = ((,,) <$> genNatural 1 10 <*> genNatural 1 50 <*> genNatural 1 100)
 
--- | Generate a subset of protocol parameter assignments.
-genSetOfPpm :: Gen (Set Ppm)
-genSetOfPpm =
-  subsetOf [
-        MinFeeB               <$> genNatural 0 10
+-- | Generate a possible next Protocol version based on the previous version.
+-- Increments the Major or Minor versions and possibly the Alt version.
+genNextProtocolVersion
+  :: PParams
+  -> Gen (Natural, Natural, Natural)
+genNextProtocolVersion pp = do
+  n <- genNatural 1 100
+  QC.elements
+    [ (major + 1, 0        , 0)
+    , (major    , minor + 1, alt)
+    , (major    , minor + 1, alt + n)]
+  where
+    (major, minor, alt) = _protocolVersion pp
+
+-- | Given the current protocol params generates a subset of protocol parameter assignments.
+genSetOfPpm
+  :: PParams -- existing params
+  -> Gen (Set Ppm)
+genSetOfPpm pp = do
+  n <- QC.elements [1 .. 3] -- pick up to three param updates
+  subsetOf n [
+        MinFeeB               <$> pure 0 -- TODO @uroboros disable until tx fees are dealt with (genNatural 0 10)
       , MaxBBSize             <$> genSize
       , MaxTxSize             <$> genSize
       , MaxBHSize             <$> genSize
-      , KeyDeposit            <$> genKeyDeposit
-      , KeyMinRefund          <$> genKeyMinRefund
-      , KeyDecayRate          <$> genKeyDecayRate
-      , PoolDeposit           <$> genPoolDeposit
-      , PoolMinRefund         <$> genPoolMinRefund
+      -- TODO @uroboros - these params lead to ValueNotConserved predicate failures
+      -- , KeyDeposit            <$> genKeyDeposit
+      -- , KeyMinRefund          <$> genKeyMinRefund
+      -- , KeyDecayRate          <$> genKeyDecayRate
+      -- , PoolDeposit           <$> genPoolDeposit
+      -- , PoolMinRefund         <$> genPoolMinRefund
       , PoolDecayRate         <$> genPoolDecayRate
       , EMax                  <$> genEMax
       , Nopt                  <$> genNOpt
@@ -191,76 +214,137 @@ genSetOfPpm =
       , ActiveSlotCoefficient <$> genActiveSlotCoeff
       , D                     <$> genDecentralisationParam
       , ExtraEntropy          <$> genExtraEntropy
-      , ProtocolVersion       <$> genProtocolVersion
+      , ProtocolVersion       <$> genNextProtocolVersion pp
       ]
   where
     genSize = genNatural low hi
 
--- | Generate subset from a list of generators for each element.
-subsetOf :: Ord a => [Gen a] -> Gen (Set a)
-subsetOf = fmap Set.fromList
-         . join
-         . fmap sequence
-         . QC.sublistOf
+-- | Pick a subset (size n) of the given generators and produce a set of generated values.
+subsetOf :: Ord a => Int -> [Gen a] -> Gen (Set a)
+subsetOf n =
+  fmap Set.fromList
+  . join
+  . fmap sequence
+  . (take n <$>)
+  . QC.shuffle
 
--- | Generate a proposal for protocol parameters update from a subset
---   of genesis nodes.
-genPPUpdate :: [GenKeyHash crypto] -> Gen (PPUpdate crypto)
-genPPUpdate =
-       fmap (PPUpdate . Map.fromList)
-    .  (>>=mapM genPpmKV)
-    .  QC.sublistOf
+-- | Generate a proposal for protocol parameter updates for all the given genesis keys.
+-- Return an empty update if it is too late in the epoch for updates.
+genPPUpdate
+  :: SlotNo
+  -> PParams
+  -> [GenKeyHash]
+  -> Gen PPUpdate
+genPPUpdate s pp genesisKeys =
+  if (tooLateInEpoch s)
+    then
+      pure (PPUpdate Map.empty)
+    else do
+      pps <- PParamsUpdate <$> genSetOfPpm pp
+      let ppUpdate = zip genesisKeys (repeat pps)
+      pure $
+        (PPUpdate . Map.fromList) ppUpdate
+
+-- | Generate a proposal for application updates for all the given genesis keys.
+genAVUpdate
+  :: UTxOState
+  -> [GenKeyHash]
+  ->  Gen AVUpdate
+genAVUpdate utxoSt genesisKeys =do
+  apps_ <- genApplications utxoSt
+  let avUpdate = zip genesisKeys (repeat apps_)
+  pure $
+    (AVUpdate . Map.fromList) avUpdate
+
+-- | Generate a mix of
+-- * new applications
+-- * version updates of existing applications
+genApplications
+  :: UTxOState
+  -> Gen Applications
+genApplications utxoSt = do
+  n <- QC.elements [1,2] -- one or two application updates per Update
+  Applications . Map.fromList <$>
+    replicateM n (genApplication n)
   where
-    genPpmKV :: GenKeyHash crypto -> Gen (GenKeyHash crypto, PParamsUpdate)
-    genPpmKV genesisKey = (genesisKey,) <$>
-                          PParamsUpdate <$> genSetOfPpm
+    (UpdateState _ _ favs avs) = _ups utxoSt
+    avs_ = Map.toList (apps avs)
+    favs_ = concat (Map.toList . apps <$> Map.elems favs)
 
--- | Generate application version assignment update.
-genAVUpdate :: HashAlgorithm (HASH crypto)
-            => [GenKeyHash         crypto]
-            ->  Gen (AVUpdate      crypto)
-genAVUpdate  =
-       fmap (AVUpdate . Map.fromList)
-    .  (>>=mapM genApplicationKV)
-    .  QC.sublistOf
+    genInstallers :: Int -> Gen Mdt
+    genInstallers i =
+      Mdt <$> Map.fromList
+          <$> QC.vectorOf i
+                          ((,) <$> (SystemTag . BS.pack <$> genShortAscii)
+                               <*> (InstallerHash . hash . BS.pack <$> genShortAscii))
+
+    genApplication i = QC.frequency [ (2, genNewApp i)
+                                    , (8, genNextApp i)]
+
+    genNextApp i = case avs_ ++ favs_ of
+        [] -> genNewApp i
+        avs' -> do
+          (an, (_, _)) <- QC.elements avs'
+          pure . incrVersion . (an,) $ maxVer an avs favs
+    incrVersion (apName, (ApVer apVer, mdt)) = (apName, (ApVer (apVer+1), mdt))
+
+    genNewApp i = (,) <$> genNewAppName <*> ((ApVer 1,) <$> (genInstallers i))
+    genNewAppName = ApName . BS.pack <$> genShortAscii
+
+    genShortAscii = QC.vectorOf 5 QC.arbitraryASCIIChar
+
+-- | Generate an @Update (where all the given nodes participate)
+-- with a 50% chance of having non-empty PPUpdates or AVUpdates
+-- and a 25% chance of both being empty or non-empty
+genUpdateForNodes
+  :: SlotNo
+  -> EpochNo -- current epoch
+  -> [CoreKeyPair]
+  -> PParams
+  -> UTxOState
+  -> Gen Update
+genUpdateForNodes s e coreKeys pp utxoSt =
+  Update <$> genPPUpdate_ <*> genAVUpdate_ <*> pure (Just e)
   where
-    genApplicationKV :: HashAlgorithm (HASH crypto)
-                     =>      GenKeyHash     crypto
-                     -> Gen (GenKeyHash     crypto
-                            ,Applications   crypto)
-    genApplicationKV genesisKey = (genesisKey,) <$>
-                                   genApplications
+    genesisKeys = hashKey . vKey <$> coreKeys
 
--- | Generate a list of applications, their versions,
---   and installer hashes.
-genApplications :: HashAlgorithm (HASH crypto)
-                => Gen (Applications  crypto)
-genApplications =
-  (Applications . Map.fromList) <$>
-    QC.listOf genApEntry
+    genPPUpdate_ = QC.frequency [ (50, pure (PPUpdate Map.empty))
+                                , (50, genPPUpdate s pp genesisKeys)]
+
+    genAVUpdate_ = QC.frequency [ (50, pure (AVUpdate Map.empty))
+                                , (50, genAVUpdate utxoSt genesisKeys)]
+
+-- | Occasionally generate an update and return with the witness keys
+genUpdate
+  :: SlotNo
+  -> [(CoreKeyPair, AllPoolKeys)]
+  -> Map KeyHash KeyPair -- indexed keys By StakeHash
+  -> PParams
+  -> (UTxOState, DPState)
+  -> Gen (Update, [KeyPair])
+genUpdate s coreKeyPairs keysByStakeHash pp (utxoSt, delegPoolSt) = do
+  nodes <- take 5 <$> QC.shuffle coreKeyPairs
+
+  let e = epochFromSlotNo s
+      (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
+      genesisKeys = (fst . unzip) nodes
+      updateWitnesses = latestPoolColdKey genDelegs <$> nodes
+
+  QC.frequency [ ( frequencyTxUpdates
+                 , (,updateWitnesses) <$> genUpdateForNodes s e genesisKeys pp utxoSt)
+               , ( 100 - frequencyTxUpdates
+                 , pure (emptyUpdate, []))]
+
   where
-    genApEntry =
-      (,) <$> genApName <*> ((,) <$> (ApVer <$> genNatural 1 1000)
-                                 <*> genInstallers
-                            )
-    genApName = do
-      tf <- QC.arbitrary
-      (ApName . BS.pack) <$> case tf of
-        True  -> pure "Daedalus"
-        False -> QC.arbitrary
-    genInstallers :: HashAlgorithm (HASH crypto)
-                  => Gen (Mdt            crypto)
-    genInstallers = Mdt          <$>
-                    Map.fromList <$>
-                    QC.listOf
-                      ((,) <$> ((SystemTag     .        BS.pack) <$> QC.arbitrary)
-                           <*> ((InstallerHash . hash . BS.pack) <$> QC.arbitrary))
-
--- | Generate entire @Update of protocol parameters
-genUpdate :: HashAlgorithm (HASH crypto)
-          => EpochNo -- to be valid, this must be the current epoch
-          -> [GenKeyHash         crypto]
-          ->  Gen (Update        crypto)
-genUpdate e genesisKeys = Update <$> genPPUpdate genesisKeys
-                                 <*> genAVUpdate genesisKeys
-                                 <*> pure (Just e)
+    -- | Lookup the cold key for the given node in the genesis delegations map.
+    -- Then lookup the cold key hash in the `keysByStakeHash` reverse index.
+    -- If we find the key there, we can assume that a GenesisDeleg certificate
+    -- has changed the cold key, in which case we use the new key (otherwise we
+    -- can use the original cold key)
+    latestPoolColdKey genDelegs_ (gkey, pkeys) =
+      case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
+          Nothing ->
+            error "genUpdate: NoGenesisStaking"
+          Just gkeyHash ->
+            fromMaybe (cold pkeys)
+                      (Map.lookup gkeyHash keysByStakeHash)
