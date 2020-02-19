@@ -26,6 +26,7 @@ import qualified STS.NewEpoch
 import qualified STS.Ocert
 import qualified STS.Pool
 import qualified STS.PoolReap
+import qualified STS.Tick
 import qualified STS.Utxo
 import qualified STS.Utxow
 import qualified Tx
@@ -140,6 +141,10 @@ type RewardUpdate = LedgerState.RewardUpdate ConcreteCrypto
 type ChainState = STS.Chain.ChainState ConcreteCrypto
 
 type CHAIN = STS.Chain.CHAIN ConcreteCrypto
+
+type TICK = STS.Tick.TICK ConcreteCrypto
+
+type TickEnv = STS.Tick.TickEnv ConcreteCrypto
 
 type UTXOW = STS.Utxow.UTXOW ConcreteCrypto
 

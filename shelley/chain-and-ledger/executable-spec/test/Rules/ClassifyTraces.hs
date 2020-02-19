@@ -38,7 +38,7 @@ import           Updates (pattern AVUpdate, pattern PPUpdate, PParamsUpdate, pat
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 200 . property $ do
-  let tl = 20
+  let tl = 100
   forAllTraceFromInitState @CHAIN testGlobals tl tl (Just mkGenesisChainState) $ \tr -> do
     let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
         bs = traceSignals OldestFirst tr
@@ -217,4 +217,4 @@ propAbstractSizeNotTooBig = property $ do
 
 onlyValidChainSignalsAreGenerated :: Property
 onlyValidChainSignalsAreGenerated = withMaxSuccess 100 $
-  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 100 (100::Word64) (Just mkGenesisChainState)
+  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 200 (200::Word64) (Just mkGenesisChainState)

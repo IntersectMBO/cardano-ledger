@@ -15,7 +15,8 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
 import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, GenKeyHash, KeyHash, KeyPair,
-                     LEDGERS)
+                     LEDGERS, TICK)
+import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import           Delegation.Certificates (PoolDistr (..))
 import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural,
@@ -23,14 +24,16 @@ import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), gen
 import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range)
-import           LedgerState (esAccountState, esLState, esPp, nesEL, nesEs, nesOsched, nesPd,
-                     overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
+import           LedgerState (pattern EpochState, pattern NewEpochState, esAccountState, esLState,
+                     esPp, getGKeys, nesEL, nesEs, nesOsched, nesPd, overlaySchedule,
+                     _delegationState, _dstate, _genDelegs, _reserves)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
                      chainOCertIssue, chainSlotNo)
 import           STS.Ledgers (LedgersEnv (..))
 import           STS.Ocert (pattern OCertEnv)
+import           STS.Tick (TickEnv (..))
 import           Test.Utils (maxKESIterations, runShelleyBase)
 
 nextCoreNode
@@ -134,18 +137,26 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
             Just _ ->
               mkOCert keys' (fromIntegral m) ((fst . head) hotKeys)
 
-    mkBlock
-      <$> pure (chainHashHeader chainSt)
-      <*> pure keys'
-      <*> toList <$> genTxs nextSlot
-      <*> pure nextSlot
-      <*> pure (chainBlockNo chainSt + 1)
-      <*> pure (chainEpochNonce chainSt)
-      <*> genBlockNonce
-      <*> genPraosLeader
-      <*> pure kesPeriod_
-      <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
-      <*> pure oCert
+    let nes  = chainNes chainSt
+        nes' = runShelleyBase $ (applySTS @TICK $ TRC (TickEnv (getGKeys nes), nes, nextSlot))
+
+    case nes' of
+      Left _ -> QC.discard
+      Right _nes' -> do
+        let NewEpochState _ _ _ es _ _ _ = _nes'
+            EpochState _ _ ls _          = es
+        mkBlock
+          <$> pure (chainHashHeader chainSt)
+          <*> pure keys'
+          <*> toList <$> genTxs ls nextSlot
+          <*> pure nextSlot
+          <*> pure (chainBlockNo chainSt + 1)
+          <*> pure (chainEpochNonce chainSt)
+          <*> genBlockNonce
+          <*> genPraosLeader
+          <*> pure kesPeriod_
+          <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
+          <*> pure oCert
   where
     ledgerSt = (esLState . nesEs . chainNes) chainSt
     (GenDelegs genesisDelegs) = (_genDelegs . _dstate . _delegationState) ledgerSt
@@ -176,10 +187,10 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
 
     genBlockNonce = NatNonce <$> genNatural 1 100
 
-    genTxs s = do
+    genTxs ls s = do
       let pParams = (esPp . nesEs . chainNes) chainSt
           reserves = (_reserves . esAccountState . nesEs . chainNes) chainSt
           ledgerEnv = LedgersEnv s pParams reserves
 
       n <- QC.choose (1, 10)
-      sigGen @LEDGERS (n :: Word64) ledgerEnv ledgerSt
+      sigGen @LEDGERS (n :: Word64) ledgerEnv ls
