@@ -152,12 +152,9 @@ application_name = tstr .size 12
 system_tag = tstr .size 10
 
 transaction_witness_set =
-  [  0, vkeywitness
-  // 1, $script
-  // 2, [* vkeywitness]
-  // 3, [* $script]
-  // 4, [* vkeywitness],[* $script]
-  ]
+  { ?0 => [* pubkey_witness]
+  , ?1 => [* script]
+  }
 
 transaction_metadatum =
     { * transaction_metadatum => transaction_metadatum }

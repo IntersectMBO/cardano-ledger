@@ -32,8 +32,8 @@ import qualified LedgerState
 import           Slot (SlotNo)
 import           STS.Ledgers (LEDGERS)
 import qualified STS.Ledgers as Ledgers
-import           TxData (Tx)
-import qualified TxData as Tx
+import           Tx (Tx)
+import qualified Tx as Tx
 
 type MempoolEnv = Ledgers.LedgersEnv
 

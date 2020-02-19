@@ -56,10 +56,11 @@ import           Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable, has
                      verify)
 import           Ledger.Core (Relation (..))
 import           PParams (PParams (..))
+import           Tx (Tx (..))
 import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern Delegate,
-                     pattern Delegation, PoolCert (..), ScriptHash, Tx (..), TxBody (..),
-                     TxId (..), TxIn (..), TxOut (..), Wdrl (..), WitVKey (..), getRwdCred, inputs,
-                     outputs, poolPubKey, txUpdate)
+                     pattern Delegation, PoolCert (..), ScriptHash, TxBody (..), TxId (..),
+                     TxIn (..), TxOut (..), Wdrl (..), WitVKey (..), getRwdCred, inputs, outputs,
+                     poolPubKey, txUpdate)
 import           Updates (Update)
 
 import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)

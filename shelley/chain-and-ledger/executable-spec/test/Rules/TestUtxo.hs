@@ -13,7 +13,8 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 import           Test.QuickCheck (Property, conjoin)
 
 import           Coin (pattern Coin)
-import           TxData (pattern Tx, Wdrl (..), _body, _wdrls)
+import           Tx (pattern Tx, _body)
+import           TxData (Wdrl (..), _wdrls)
 import           UTxO (balance)
 
 import           ConcreteCryptoTypes (UTXO)

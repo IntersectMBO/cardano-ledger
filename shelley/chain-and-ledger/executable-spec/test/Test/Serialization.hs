@@ -595,7 +595,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S e
     )
 
-  -- checkEncodingCBOR "minimal_txn"
+  -- checkEncodingCBOR "minimal_txn_body"
   , let
       tin = Set.fromList [TxIn genesisId 1]
       tout = TxOut testAddrE (Coin 2)
@@ -669,7 +669,7 @@ serializationTests = testGroup "Serialization Tests"
        <> S up
       )
 
-  -- checkEncodingCBOR "full_txn"
+  -- checkEncodingCBOR "full_txn_body"
   , let
       tin = Set.fromList [TxIn genesisId 1]
       tout = TxOut testAddrE (Coin 2)
@@ -723,7 +723,60 @@ serializationTests = testGroup "Serialization Tests"
        <> S mdh
       )
 
--- checkEncodingCBOR "block_header_body"
+  -- checkEncodingCBOR "minimal_txn"
+  , let txb = TxBody
+                (Set.fromList [TxIn genesisId 1])
+                (Seq.singleton $ TxOut testAddrE (Coin 2))
+                Seq.empty
+                (Wdrl Map.empty)
+                (Coin 9)
+                (SlotNo 500)
+                emptyUpdate
+                Nothing
+        w = makeWitnessVKey txb testKey1
+        md = Nothing :: Maybe MD.MetaData
+    in
+    checkEncodingCBOR "tx_min"
+    ( Tx txb (Set.singleton w) Map.empty md )
+    ( T (TkListLen 3)
+      <> S txb
+      <> T (TkMapLen 1)
+       <> T (TkWord 0)
+       <> T (TkListLen 1)
+         <> S w
+      <> S md
+    )
+
+  -- checkEncodingCBOR "full_txn"
+  , let txb = TxBody
+                (Set.fromList [TxIn genesisId 1])
+                (Seq.singleton $ TxOut testAddrE (Coin 2))
+                Seq.empty
+                (Wdrl Map.empty)
+                (Coin 9)
+                (SlotNo 500)
+                emptyUpdate
+                Nothing
+        w = makeWitnessVKey txb testKey1
+        s = Map.singleton (hashScript testScript) testScript
+        md = Just $ MD.MetaData $ Map.singleton 17 (MD.I 42)
+    in
+    checkEncodingCBOR "tx_full"
+    ( Tx txb (Set.singleton w) s md )
+    ( T (TkListLen 3)
+      <> S txb
+      <> T (TkMapLen 2)
+       <> T (TkWord 0)
+       <> T (TkListLen 1)
+         <> S w
+       <> T (TkWord 1)
+       <> T (TkListLen 1)
+         <> S testScript
+      <> S md
+    )
+
+
+  -- checkEncodingCBOR "block_header_body"
   , let
       prevhash = testHeaderHash
       issuerVkey = vKey testKey1
@@ -848,25 +901,37 @@ serializationTests = testGroup "Serialization Tests"
         -- witnesses
         <> T (TkListLen 5)
           -- tx 1, one key
-          <> T (TkListLen 2 . TkWord 0)
+          <> T (TkMapLen 1 . TkWord 0)
+          <> T (TkListLen 1)
           <> S w1
 
           -- tx 2, two keys
-          <> T (TkListLen 2 . TkWord 1)
-          <> S ws
+          <> T (TkMapLen 1 . TkWord 0)
+          <> T (TkListLen 2)
+          <> S w2
+          <> S w1
 
           -- tx 3, one script
-          <> T (TkListLen 2 . TkWord 2)
+          <> T (TkMapLen 1 . TkWord 1)
+          <> T (TkListLen 1)
           <> S testScript
 
           -- tx 4, two scripts
-          <> T (TkListLen 2 . TkWord 3)
-          <> S (Map.elems ss)
+          <> T (TkMapLen 1 . TkWord 1)
+          <> T (TkListLen 2)
+          <> S testScript
+          <> S testScript2
 
           -- tx 5, two keys and two scripts
-          <> T (TkListLen 3 . TkWord 4)
-          <> S ws
-          <> S ss
+          <> T (TkMapLen 2)
+          <> T (TkWord 0)
+            <> T (TkListLen 2)
+            <> S w2
+            <> S w1
+          <> T (TkWord 1)
+            <> T (TkListLen 2)
+            <> S testScript
+            <> S testScript2
 
         -- metadata
         <> T (TkMapLen 1)

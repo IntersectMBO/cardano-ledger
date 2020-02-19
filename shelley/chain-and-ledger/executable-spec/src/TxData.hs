@@ -15,14 +15,14 @@
 module TxData
   where
 
-import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeBreakOr,
-                     decodeListLen, decodeListLenOf, decodeMapLenOrIndef, decodeWord,
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
                      encodeListLen, encodeMapLen, encodeWord, enforceSize, matchSize)
 import           Cardano.Ledger.Shelley.Crypto
-import           Cardano.Prelude (NoUnexpectedThunks (..), Word64)
-import           Control.Monad (replicateM, unless)
+import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, catMaybes)
+import           Control.Monad (unless)
 import           Lens.Micro.TH (makeLenses)
 
+import           Data.Foldable (fold)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
@@ -40,12 +40,12 @@ import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
 import           Ledger.Core (Relation (..))
-import           MetaData
+import           MetaData (MetaDataHash)
 import           Slot (EpochNo (..), SlotNo (..))
 import           Updates (Update, emptyUpdate, updateNull)
 
 import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
-                     ToCBORGroup (..))
+                     ToCBORGroup (..), mapHelper)
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -284,18 +284,6 @@ instance forall crypto
   => Ord (WitVKey crypto) where
     compare = comparing witKeyHash
 
--- |A fully formed transaction.
-data Tx crypto
-  = Tx
-      { _body           :: !(TxBody crypto)
-      , _witnessVKeySet :: !(Set (WitVKey crypto))
-      , _witnessMSigMap ::
-          Map (ScriptHash crypto) (MultiSig crypto)
-      , _metadata       :: Maybe MetaData
-      } deriving (Show, Eq, Generic)
-
-instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
-
 newtype StakeCreds crypto =
   StakeCreds (Map (Credential crypto) SlotNo)
   deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
@@ -470,57 +458,29 @@ instance
       pure $ WitGVKey a b
     k -> invalidKey k
 
-
-instance
-  (Crypto crypto)
-  => ToCBOR (Tx crypto)
- where
-  toCBOR tx =
-    encodeListLen 4
-      <> toCBOR (_body tx)
-      <> toCBOR (_witnessVKeySet tx)
-      <> toCBOR (_witnessMSigMap tx)
-      <> toCBOR (_metadata tx)
-
-instance Crypto crypto => FromCBOR (Tx crypto) where
-  fromCBOR = decodeListLenOf 4 >>
-    Tx <$> fromCBOR <*> fromCBOR <*> fromCBOR <*> fromCBOR
-
 instance
   (Crypto crypto)
   => ToCBOR (TxBody crypto)
  where
   toCBOR txbody =
-    let l = toList $
-              single (encodeWord 0 <> toCBOR (_inputs txbody))
-            . single (encodeWord 1 <> toCBOR (CborSeq $ _outputs txbody))
-            . single (encodeWord 2 <> toCBOR (_txfee txbody))
-            . single (encodeWord 3 <> toCBOR (_ttl txbody))
-            . (if null cs then none else single (encodeWord 4 <> toCBOR (CborSeq cs)))
-            . (if null (unWdrl ws) then none else single (encodeWord 5 <> toCBOR ws))
-            . (if updateNull us then none else single (encodeWord 6 <> toCBOR us))
-            . (encodeMDH $ _mdHash txbody)
-        toList xs = xs []
+    let l = catMaybes 
+          [ encodeMapElement 0 $ _inputs txbody
+          , encodeMapElement 1 $ CborSeq $ _outputs txbody
+          , encodeMapElement 2 $ _txfee txbody
+          , encodeMapElement 3 $ _ttl txbody
+          , encodeMapElementUnless null 4 $ CborSeq $ _certs txbody
+          , encodeMapElementUnless (null . unWdrl) 5 $ _wdrls txbody
+          , encodeMapElementUnless (updateNull) 6 $ _txUpdate txbody
+          , encodeMapElement 7 =<< _mdHash txbody
+          ]
         n = fromIntegral $ length l
-    in encodeMapLen n <> foldr (<>) mempty l
+    in encodeMapLen n <> fold l
     where
-      cs = _certs txbody
-      ws = _wdrls txbody
-      us = _txUpdate txbody
-      single x = (x:)
-      none = id
-      encodeMDH Nothing   = none
-      encodeMDH (Just md) = single $ encodeWord 7 <> toCBOR md
-
-mapHelper :: Decoder s b -> Decoder s [b]
-mapHelper decodePart = decodeMapLenOrIndef >>= \case
-  Just len -> replicateM len decodePart
-  Nothing  -> loop [] (not <$> decodeBreakOr) decodePart
-  where
-  loop acc condition action = condition >>= \case
-    False -> pure acc
-    True -> action >>= \v -> loop (v:acc) condition action
-
+      encodeMapElement ix x = Just (encodeWord ix <> toCBOR x)
+      encodeMapElementUnless condition ix x = 
+        if condition x 
+          then Nothing 
+          else encodeMapElement ix x
 
 instance
   (Crypto crypto)
@@ -771,8 +731,6 @@ instance Relation (StakeCreds crypto) where
 -- Lenses
 
 makeLenses ''TxBody
-
-makeLenses ''Tx
 
 makeLenses ''Delegation
 
