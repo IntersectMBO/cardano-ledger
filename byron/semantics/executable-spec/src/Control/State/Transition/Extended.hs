@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
@@ -18,6 +19,7 @@
 -- | Small step state transition systems.
 module Control.State.Transition.Extended where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.Monad (unless)
 import           Control.Monad.Identity (Identity(..))
 import           Control.Monad.Free.Church
@@ -218,4 +220,4 @@ applySTS ctx = applySTSIndifferently ctx <&> \case
 -- | This can be used to specify predicate failures in STS rules where a value
 -- is beyond a certain threshold.
 newtype Threshold a = Threshold a
-  deriving (Eq, Ord, Show, Data, Typeable)
+  deriving (Eq, Ord, Show, Data, Typeable, NoUnexpectedThunks)

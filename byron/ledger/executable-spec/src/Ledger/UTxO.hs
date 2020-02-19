@@ -18,6 +18,7 @@
 
 module Ledger.UTxO where
 
+import           Cardano.Prelude (NoUnexpectedThunks)
 import           Control.Monad (replicateM)
 import           Data.AbstractSize (HasTypeReps, abstractSize)
 import           Data.Data (Data, Typeable)
@@ -40,25 +41,28 @@ import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGobli
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId = TxId { getTxId :: Hash }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
   deriving anyclass (HasTypeReps)
 
 -- |The input of a UTxO.
 --
 --     * __TODO__ - is it okay to use list indices instead of implementing the Ix Type?
 data TxIn = TxIn TxId Natural
-  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
+  deriving (Show, Eq, Ord, Generic, Hashable
+            , HasTypeReps, Data, Typeable, NoUnexpectedThunks)
 
 -- |The output of a UTxO.
 data TxOut = TxOut { addr  :: Addr
                    , value :: Lovelace
-                   } deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
+                   }
+  deriving (Show, Eq, Ord, Generic, Hashable
+            , HasTypeReps, Data, Typeable, NoUnexpectedThunks)
 
 -- |The unspent transaction outputs.
 newtype UTxO = UTxO
   { unUTxO :: Map TxIn TxOut
   } deriving stock (Show, Data, Typeable)
-    deriving newtype (Eq, Relation, Semigroup, Monoid)
+    deriving newtype (Eq, Relation, Semigroup, Monoid, NoUnexpectedThunks)
 
 -- | Apply function uniformly across all outputs
 mapUTxOValues :: (Lovelace -> Lovelace) -> UTxO -> UTxO
@@ -79,7 +83,9 @@ fromTxOuts = UTxO . Map.fromList . fmap (\out -> (TxIn (mkId out) 0, out))
 data TxBody = TxBody
   { inputs  :: [TxIn]
   , outputs :: [TxOut]
-  } deriving (Eq, Show, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
+  }
+  deriving (Eq, Show, Ord, Generic, Hashable
+            , HasTypeReps, Data, Typeable, NoUnexpectedThunks)
 
 txid :: TxBody -> TxId
 txid = TxId . hash
@@ -128,13 +134,15 @@ txsize = abstractSize costs
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data Wit = Wit VKey (Sig TxBody)
-  deriving (Show, Eq, Ord, Generic, Hashable, HasTypeReps, Data, Typeable)
+  deriving (Show, Eq, Ord, Generic, Hashable
+            , HasTypeReps, Data, Typeable, NoUnexpectedThunks)
 
 -- |A fully formed transaction.
 data Tx = Tx
   { body      :: TxBody
   , witnesses :: [Wit]
-  } deriving (Show, Eq, Generic, Hashable, HasTypeReps, Data, Typeable)
+  } deriving (Show, Eq, Generic, Hashable, HasTypeReps
+              , Data, Typeable, NoUnexpectedThunks)
 
 instance HasHash [Tx] where
   hash = Hash . Just . H.hash

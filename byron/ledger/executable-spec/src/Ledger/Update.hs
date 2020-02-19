@@ -24,6 +24,7 @@ module Ledger.Update
   )
 where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.Arrow (second, (&&&))
 import           Control.Lens
 import           Control.Monad (mzero)
@@ -75,22 +76,22 @@ import           Prelude
 
 newtype FactorA = FactorA Int
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
   deriving anyclass (HasTypeReps)
 
 newtype FactorB = FactorB Int
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
   deriving anyclass (HasTypeReps)
 
 newtype UpAdptThd = UpAdptThd Double
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, Num, Real, Fractional, RealFrac)
+  deriving newtype (Eq, Ord, Hashable, Num, Real, Fractional, RealFrac, NoUnexpectedThunks)
   deriving anyclass (HasTypeReps)
 
 newtype BkSgnCntT = BkSgnCntT Double
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, Num, Fractional)
+  deriving newtype (Eq, Ord, Hashable, Num, Fractional, NoUnexpectedThunks)
   deriving anyclass (HasTypeReps)
 
 -- | Protocol parameters.
@@ -122,7 +123,7 @@ data PParams = PParams -- TODO: this should be a module of @cs-ledger@.
   -- ^ Minimum fees per transaction
   , _factorB :: !FactorB
   -- ^ Additional fees per transaction size
-  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable)
+  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
 
 makeLenses ''PParams
 
@@ -130,7 +131,7 @@ instance HasTypeReps PParams
 
 newtype UpId = UpId Int
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
   deriving anyclass (HasTypeReps)
 
 -- | Protocol version
@@ -138,7 +139,7 @@ data ProtVer = ProtVer
   { _pvMaj :: Natural
   , _pvMin :: Natural
   , _pvAlt :: Natural
-  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable)
+  } deriving (Eq, Generic, Ord, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
 
 makeLenses ''ProtVer
 
@@ -146,21 +147,21 @@ instance HasTypeReps ProtVer
 
 newtype ApName = ApName String
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable)
+  deriving newtype (Eq, Ord, Hashable, NoUnexpectedThunks)
 
 instance HasTypeReps ApName
 
 -- | Application version
 newtype ApVer = ApVer Natural
   deriving stock (Generic, Show, Data, Typeable)
-  deriving newtype (Eq, Ord, Num, Hashable)
+  deriving newtype (Eq, Ord, Num, Hashable, NoUnexpectedThunks)
 
 instance HasTypeReps ApVer
 
 data SwVer = SwVer
   { _svName :: ApName
   , _svVer :: ApVer
-  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
 
 makeLenses ''SwVer
 
@@ -182,7 +183,7 @@ type STag = String
 
 -- | For now we do not have any requirements on metadata.
 data Metadata = Metadata
-  deriving (Eq, Ord, Show, Generic, Hashable, Data, Typeable)
+  deriving (Eq, Ord, Show, Generic, Hashable, Data, Typeable, NoUnexpectedThunks)
 
 -- | Update proposal
 data UProp = UProp
@@ -196,7 +197,7 @@ data UProp = UProp
   -- ^ System tags involved in the update proposal.
   , _upMdt :: Metadata
   -- ^ Metadata required for performing software updates.
-  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
 
 
 -- We need the Hashable instance before making lenses.
@@ -342,7 +343,7 @@ data UpdateConstraintViolation
   | TransactionSizeTooLarge Natural (Threshold Natural)
   | ScriptVersionTooLarge Natural (Threshold Natural)
   | ScriptVersionTooSmall Natural (Threshold Natural)
-  deriving (Eq, Ord, Show, Data, Typeable)
+  deriving (Eq, Ord, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
 svCanFollow
   :: Map ApName (ApVer, Core.Slot, Metadata)
@@ -375,7 +376,7 @@ instance STS UPSVV where
     | CannotFollowSv
     | InvalidApplicationName
     | InvalidSystemTags
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -412,7 +413,7 @@ instance STS UPPVV where
     = CannotFollowPv
     | CannotUpdatePv [UpdateConstraintViolation]
     | AlreadyProposedPv
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -452,7 +453,7 @@ instance STS UPV where
     | AVChangedInPVUpdate ApName ApVer (Maybe (ApVer, Slot, Metadata))
     | ParamsChangedInSVUpdate
     | PVChangedInSVUpdate
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -512,7 +513,7 @@ instance STS UPREG where
     = UPVFailure (PredicateFailure UPV)
     | NotGenesisDelegate
     | DoesNotVerify
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -541,7 +542,7 @@ data Vote = Vote
   { _vCaster :: Core.VKey
   , _vPropId :: UpId
   , _vSig :: Core.Sig UpId
-  } deriving (Eq, Generic, Show, Hashable, Data, Typeable)
+  } deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoUnexpectedThunks)
 
 
 makeLenses ''Vote
@@ -577,7 +578,7 @@ instance STS ADDVOTE where
     = AVSigDoesNotVerify
     | NoUpdateProposal UpId
     | VoteByNonGenesisDelegate VKey
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -621,7 +622,7 @@ instance STS UPVOTE where
     | S_HigherThanThdAndNotAlreadyConfirmed
     | S_CfmThdNotReached
     | S_AlreadyConfirmed
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Generic, Typeable, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -665,7 +666,7 @@ instance STS FADS where
   type State FADS = [(Core.Slot, (ProtVer, PParams))]
   type Signal FADS = (Core.Slot, (ProtVer, PParams))
   data PredicateFailure FADS
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic)
 
   initialRules = []
   transitionRules =
@@ -719,7 +720,7 @@ instance STS UPEND where
     | CannotAdopt ProtVer
     | NotADelegate VKey
     | UnconfirmedProposal UpId
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -926,7 +927,7 @@ instance STS UPIREG where
   type Signal UPIREG = UProp
   data PredicateFailure UPIREG
     = UPREGFailure (PredicateFailure UPREG)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1300,7 +1301,7 @@ instance STS UPIVOTE where
   type Signal UPIVOTE = Vote
   data PredicateFailure UPIVOTE
     = UPVOTEFailure (PredicateFailure UPVOTE)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -1352,7 +1353,7 @@ instance STS APPLYVOTES where
 
   data PredicateFailure APPLYVOTES
     = UpivoteFailure (PredicateFailure UPIVOTE)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1379,7 +1380,7 @@ instance STS UPIVOTES where
 
   data PredicateFailure UPIVOTES
     = ApplyVotesFailure (PredicateFailure APPLYVOTES)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1523,7 +1524,7 @@ instance STS UPIEND where
   type Signal UPIEND = (ProtVer, Core.VKey)
   data PredicateFailure UPIEND
     = UPENDFailure (PredicateFailure UPEND)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1602,7 +1603,7 @@ instance STS PVBUMP where
 
   -- PVBUMP has no predicate failures
   data PredicateFailure PVBUMP = NoPVBUMPFailure
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
@@ -1629,7 +1630,7 @@ instance STS UPIEC where
   type Signal UPIEC = ()
   data PredicateFailure UPIEC
     = PVBUMPFailure (PredicateFailure PVBUMP)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
   transitionRules =
