@@ -839,10 +839,10 @@ ex2Cquater =
 txbodyEx2D :: TxBody
 txbodyEx2D = TxBody
       { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2B) 0]
-      , TxData._outputs  = [ TxOut aliceAddr    (Coin 717) ]
+      , TxData._outputs  = Seq.fromList [ TxOut aliceAddr    (Coin 717) ]
       , TxData._certs    =
-        fromList [ DCertDeleg (Delegate $ Delegation carlSHK (hk alicePool)) ]
-      , TxData._wdrls    = Map.empty
+        Seq.fromList [ DCertDeleg (Delegate $ Delegation carlSHK (hk alicePool)) ]
+      , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 5
       , TxData._ttl      = SlotNo 500
       , TxData._txUpdate = emptyUpdate
@@ -1390,9 +1390,8 @@ txbodyEx2K :: TxBody
 txbodyEx2K = TxBody
            (Set.fromList [TxIn (txid txbodyEx2D) 0])
            (Seq.singleton $ TxOut alicePtrAddr 715)
-           (fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
+           (Seq.fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
            (Wdrl Map.empty)
-           Map.empty
            (Coin 2)
            (SlotNo 500)
            emptyUpdate
