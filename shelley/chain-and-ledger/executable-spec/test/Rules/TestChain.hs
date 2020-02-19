@@ -37,7 +37,7 @@ numberOfTests :: Word64
 numberOfTests = 300
 
 traceLen :: Word64
-traceLen = 20 -- TODO @uroboros use short CHAIN traces until we have complete Epoch-boundary-proof Update generation
+traceLen = 100
 
 ----------------------------------------------------------------------
 -- Properties for PoolReap (using the CHAIN Trace) --
