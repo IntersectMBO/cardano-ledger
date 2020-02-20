@@ -24,9 +24,9 @@ import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), gen
 import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range)
-import           LedgerState (pattern EpochState, pattern NewEpochState, esAccountState, esLState,
-                     esPp, getGKeys, nesEL, nesEs, nesOsched, nesPd, overlaySchedule,
-                     _delegationState, _dstate, _genDelegs, _reserves)
+import           LedgerState (pattern EpochState, pattern NewEpochState, esLState, esPp, getGKeys,
+                     nesEL, nesEs, nesOsched, nesPd, overlaySchedule, _delegationState, _dstate,
+                     _genDelegs, _reserves)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
@@ -144,11 +144,11 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
       Left _ -> QC.discard
       Right _nes' -> do
         let NewEpochState _ _ _ es _ _ _ = _nes'
-            EpochState _ _ ls _          = es
+            EpochState acnt _ ls pp'     = es
         mkBlock
           <$> pure (chainHashHeader chainSt)
           <*> pure keys'
-          <*> toList <$> genTxs ls nextSlot
+          <*> toList <$> genTxs pp' (_reserves acnt) ls nextSlot
           <*> pure nextSlot
           <*> pure (chainBlockNo chainSt + 1)
           <*> pure (chainEpochNonce chainSt)
@@ -187,10 +187,8 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
 
     genBlockNonce = NatNonce <$> genNatural 1 100
 
-    genTxs ls s = do
-      let pParams = (esPp . nesEs . chainNes) chainSt
-          reserves = (_reserves . esAccountState . nesEs . chainNes) chainSt
-          ledgerEnv = LedgersEnv s pParams reserves
+    genTxs pp reserves ls s = do
+      let ledgerEnv = LedgersEnv s pp reserves
 
       n <- QC.choose (1, 10)
       sigGen @LEDGERS (n :: Word64) ledgerEnv ls

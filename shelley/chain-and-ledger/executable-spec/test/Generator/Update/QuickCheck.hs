@@ -200,12 +200,11 @@ genSetOfPpm pp = do
       , MaxBBSize             <$> genSize
       , MaxTxSize             <$> genSize
       , MaxBHSize             <$> genSize
-      -- TODO @uroboros - these params lead to ValueNotConserved predicate failures
-      -- , KeyDeposit            <$> genKeyDeposit
-      -- , KeyMinRefund          <$> genKeyMinRefund
-      -- , KeyDecayRate          <$> genKeyDecayRate
-      -- , PoolDeposit           <$> genPoolDeposit
-      -- , PoolMinRefund         <$> genPoolMinRefund
+      , KeyDeposit            <$> genKeyDeposit
+      , KeyMinRefund          <$> genKeyMinRefund
+      , KeyDecayRate          <$> genKeyDecayRate
+      , PoolDeposit           <$> genPoolDeposit
+      , PoolMinRefund         <$> genPoolMinRefund
       , PoolDecayRate         <$> genPoolDecayRate
       , EMax                  <$> genEMax
       , Nopt                  <$> genNOpt
