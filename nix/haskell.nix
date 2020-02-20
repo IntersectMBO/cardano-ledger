@@ -37,6 +37,7 @@ let
           packages.cs-blockchain.configureFlags = [ "--ghc-option=-Werror" ];
           packages.cs-ledger.configureFlags = [ "--ghc-option=-Werror" ];
           packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
+          packages.delegation.components.tests.delegation-test.build-tools = [buildPackages.cddl buildPackages.cbor-diag];
           packages.non-integer.configureFlags = [ "--ghc-option=-Werror" ];
           packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
           enableLibraryProfiling = profiling;

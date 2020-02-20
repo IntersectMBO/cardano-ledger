@@ -42,7 +42,7 @@ cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
-  base <- BSL.readFile "../cddl-spec/shelley.cddl"
+  base <- BSL.readFile "shelley.cddl"
   crypto <- BSL.readFile "../cddl-spec/mock/crypto.cddl"
   finset <- BSL.readFile "../cddl-spec/mock/finset.cddl"
   pure $ base <> crypto <> finset
