@@ -53,8 +53,6 @@ instance STS (AVUP crypto) where
     | AVConsensus
     | NonGenesisUpdateAVUP
     | CannotFollow
-    | InvalidName
-    | InvalidSystemTags
     deriving (Show, Eq, Generic)
 
   initialRules = []
@@ -74,8 +72,6 @@ instance
      AVConsensus          -> toCBOR (3 :: Word8)
      NonGenesisUpdateAVUP -> toCBOR (4 :: Word8)
      CannotFollow         -> toCBOR (5 :: Word8)
-     InvalidName          -> toCBOR (6 :: Word8)
-     InvalidSystemTags    -> toCBOR (7 :: Word8)
 
 instance
   (Crypto crypto)
@@ -89,8 +85,6 @@ instance
       3 -> pure AVConsensus
       4 -> pure NonGenesisUpdateAVUP
       5 -> pure CannotFollow
-      6 -> pure InvalidName
-      7 -> pure InvalidSystemTags
       k -> invalidKey k
 
 avUpCombined :: TransitionRule (AVUP crypto)
@@ -125,11 +119,7 @@ avUpdateNoConsensus = do
 
   dom _aup ⊆ dom _genDelegs ?! NonGenesisUpdateAVUP
 
-  all allApNamesValid (range _aup) ?! InvalidName
-
   all (allSvCanFollow avs favs) (range _aup) ?! CannotFollow
-
-  all allTagsValid (range _aup) ?! InvalidSystemTags
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
@@ -149,11 +139,7 @@ avUpdateConsensus = do
 
   dom _aup ⊆ dom _genDelegs ?! NonGenesisUpdateAVUP
 
-  all allApNamesValid (range _aup) ?! InvalidName
-
   all (allSvCanFollow avs favs) (range _aup) ?! CannotFollow
-
-  all allTagsValid (range _aup) ?! InvalidSystemTags
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
@@ -172,11 +158,5 @@ avUpdateConsensus = do
     (favs ⨃ [(s, fav')])
     avs
 
-allApNamesValid :: Applications crypto -> Bool
-allApNamesValid = all apNameValid . dom . apps
-
 allSvCanFollow :: Applications crypto -> Favs crypto -> Applications crypto -> Bool
 allSvCanFollow avs favs = all (svCanFollow avs favs) . Map.toList . apps
-
-allTagsValid :: Applications crypto -> Bool
-allTagsValid = all sTagsValid . range . range . apps

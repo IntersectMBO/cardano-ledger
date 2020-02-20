@@ -205,10 +205,6 @@ determines what is being voted on, e.g. the application version.
 Recall here that $\type{T}^?$ is the option type, see \ref{sec:notation-shelley},
 and a term of this type can have a value of type $\type{T}$ or no value.
 
-The function $\fun{validAV}$ uses three functions from \cite{byron_ledger_spec}, namely
-$\fun{apNameValid}$, $\fun{svCanFollow}$, and $\fun{sTagValid}$. It determines
-whether an application version is valid, given its name, version number,
-metadata, and a set of applications to compare against.
 The function $\fun{newAVs}$ adds the most recent valid application
 versions to a finite map of applications using right override.
 This helper function will be used in the ledger update.
@@ -317,19 +313,15 @@ this update will become the current AV.
 All other update proposals are scrapped.
 \end{itemize}
 
-The AVUP rule has three predicate failures:
+The AVUP rule has two predicate failures:
 \begin{itemize}
 \item In the case of \var{aup} being non-empty, if the check $\dom aup \subseteq
   \dom genDelegs$ fails, there is a \emph{NonGenesisUpdate} failure as only genesis keys
   can be used in the application version update.
-\item In the case of \var{aup} being non-empty, if any of the application names
-  in the proposal are invalid, there is a \emph{InvalidName} failure.
 \item In the case of \var{aup} being non-empty, if any of the application versions
   in the proposal are not exactly one more than the greatest version for the given
   application name in the current application versions or the future application
   versions, there is a \emph{CannotFollow} failure.
-\item In the case of \var{aup} being non-empty, if any of the metadata in
-  in the proposal contains an invalid system tag, there is a \emph{InvalidSystemTags} failure.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -406,14 +398,8 @@ The AVUP rule has three predicate failures:
       &
       \dom{\var{aup}}\subseteq\dom{\var{genDelegs}}
       \\
-      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
-        \fun{apNameValid}~\var{v}
-      \\
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
       \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
-      \\
-      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall \wcard\mapsto(\wcard,~m)\in\var{vote},~
-      \forall \var{st}\mapsto\wcard\in\var{m},~ \fun{sTagValid}~\var{st}
       \\
       \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
       \\
@@ -454,14 +440,8 @@ The AVUP rule has three predicate failures:
       &
       \dom{\var{aup}}\subseteq\dom{\var{genDelegs}}
       \\
-      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\in\dom{vote},~
-        \fun{apNameValid}~\var{v}
-      \\
       \forall \wcard\mapsto\var{vote}\in\var{aup},\forall n\mapsto(v,~\wcard)\in\var{vote},~
         \fun{svCanFollow}~\var{avs}~\var{favs}~\var{n}~\var{v}
-      \\
-      \forall \wcard\mapsto\var{vote}\in\var{aup},\forall \wcard\mapsto(\wcard,~m)\in\var{vote},~
-      \forall \var{st}\mapsto\wcard\in\var{m},~ \fun{sTagValid}~\var{st}
       \\
       \var{aup'}\leteq\var{aup_s}\unionoverrideRight\var{aup}
       \\

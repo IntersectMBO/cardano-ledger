@@ -1,7 +1,5 @@
 ; Shelley Types
 
-output = transaction_metadata
-
 block =
   [ header
   , transaction_bodies         : [* transaction_body]  ; 19
@@ -15,32 +13,32 @@ transaction_index = uint
 
 header =
   ( header_body
-  , body_signature : $kes_signature  ; 18
+  , body_signature : $kes_signature
   )
 
 header_body =
-  ( prev_hash        : $hash       ; 1
-  , issuer_vkey      : $vkey       ; 2
-  , vrf_vkey         : $vrf_vkey   ; 3
-  , slot             : uint        ; 4
-  , nonce_vrf        : $vrf_cert   ; 5
-  , leader_vrf       : $vrf_cert   ; 6
-  , size             : uint        ; 7
-  , block_number     : uint        ; 8
-  , block_body_hash  : $hash       ; 9    ; merkle triple root
+  ( prev_hash        : $hash
+  , issuer_vkey      : $vkey
+  , vrf_vkey         : $vrf_vkey
+  , slot             : uint
+  , nonce_vrf        : $vrf_cert
+  , leader_vrf       : $vrf_cert
+  , size             : uint
+  , block_number     : uint
+  , block_body_hash  : $hash ; merkle triple root
   , operational_cert
   , protocol_version
   )
 
 operational_cert =
-  ( hot_vkey        : $kes_vkey    ; 10
-  , cold_vkey       : $vkey        ; 11
-  , sequence_number : uint         ; 12
-  , kes_period      : uint         ; 13
-  , sigma           : $signature   ; 14
+  ( hot_vkey        : $kes_vkey
+  , cold_vkey       : $vkey
+  , sequence_number : uint
+  , kes_period      : uint
+  , sigma           : $signature
   )
 
-protocol_version = (uint, uint, uint)   ; 15 16 17
+protocol_version = (uint, uint)
 
 ; Do we want to use a Map here? Is it actually cheaper?
 ; Do we want to add extension points here?
@@ -148,8 +146,8 @@ application_version_update = { * application_name =>  [uint, application_metadat
 
 application_metadata = { * system_tag => installerhash }
 
-application_name = tstr .size 12
-system_tag = tstr .size 10
+application_name = tstr .size 64
+system_tag = tstr .size 64
 
 transaction_witness_set =
   { ?0 => [* pubkey_witness]
@@ -170,12 +168,13 @@ transaction_metadata = { * transaction_metadadum_label => transaction_metadatum 
 
 vkeywitness = [$vkey, $signature]
 
-unit_interval = rational    ; FIXME: replace with uint for fixed precision
+unit_interval = rational
 
-rational =                  ; FIXME: replace with uint for fixed precision
+; rational =  #6.30( TODO use the cbor tag
+rational =
    [ numerator   : uint
    , denominator : uint
-   ]
+   ] ;)
 
 coin = uint
 epoch = uint

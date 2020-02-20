@@ -19,7 +19,6 @@ import           Cardano.Ledger.Shelley.Crypto (Crypto)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
-import           Data.Ix (inRange)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
@@ -105,12 +104,9 @@ instance
       5 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
       k -> invalidKey k
 
-pvCanFollow :: (Natural, Natural, Natural) -> Ppm -> Bool
-pvCanFollow (mjp, mip, ap) (ProtocolVersion (mjn, mn, an))
-  = (mjp, mip, ap) < (mjn, mn, an)
-  && inRange (0,1) (mjn - mjp)
-  && ((mjp == mjn) ==> (mip + 1 == mn))
-  && ((mjp + 1 == mjn) ==> (mn == 0))
+pvCanFollow :: (Natural, Natural) -> Ppm -> Bool
+pvCanFollow (m, n) (ProtocolVersion (m', n'))
+  = (m+1, 0) == (m', n') || (m, n+1) == (m', n')
 pvCanFollow _ _ = True
 
 ppupTransitionEmpty :: TransitionRule (PPUP crypto)

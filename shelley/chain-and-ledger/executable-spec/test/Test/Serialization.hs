@@ -51,9 +51,9 @@ import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrP
                      pattern RewardAcnt, pattern ScriptHash, pattern TxBody, pattern TxIn,
                      pattern TxOut, Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMargin,
                      _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
-import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
-                     pattern InstallerHash, pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
-                     Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
+import           Updates (pattern AVUpdate, ApVer (..), pattern Applications, pattern InstallerHash,
+                     pattern Mdt, pattern PPUpdate, PParamsUpdate (..), Ppm (..), pattern Update,
+                     apName, emptyUpdate, systemTag)
 
 import           ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, HashHeader,
                      InstallerHash, KeyHash, KeyPair, MultiSig, PoolDistr, RewardUpdate, SKeyES,
@@ -498,7 +498,7 @@ serializationTests = testGroup "Serialization Tests"
         activeSlotCoefficient = UnsafeUnitInterval $ 1 % 8
         d                     = UnsafeUnitInterval $ 1 % 9
         extraEntropy          = NeutralNonce
-        protocolVersion       = (0,1,2)
+        protocolVersion       = (0,1)
     in
     checkEncodingCBOR "pparams_update_all"
     (PParamsUpdate $ Set.fromList
@@ -547,28 +547,28 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "avupdate"
   , let
-      appName   = ApName $ T.pack "Daedalus"
-      systemTag = SystemTag $ T.pack "DOS"
+      apname   = apName $ T.pack "Daedalus"
+      systemtag = systemTag $ T.pack "DOS"
       apVer    = ApVer 17
     in
     checkEncodingCBOR "avupdate"
     (AVUpdate (Map.singleton
                 testGKeyHash
                 (Applications (Map.singleton
-                       appName
+                       apname
                        (apVer
                        , Mdt $ Map.singleton
-                           systemTag
+                           systemtag
                            testInstallerHash
                        )))))
     ( (T $ TkMapLen 1 )
       <> S testGKeyHash
       <> (T $ TkMapLen 1 )
-        <> S appName
+        <> S apname
         <> (T $ TkListLen 2)
         <> S apVer
         <> (T $ TkMapLen 1 )
-        <> S systemTag
+        <> S systemtag
         <> S testInstallerHash
     )
 
@@ -580,10 +580,10 @@ serializationTests = testGroup "Serialization Tests"
       avup = AVUpdate (Map.singleton
                   testGKeyHash
                   (Applications (Map.singleton
-                         (ApName $ T.pack "Daedalus")
+                         (apName $ T.pack "Daedalus")
                          (ApVer 17
                          , Mdt $ Map.singleton
-                             (SystemTag $ T.pack "DOS")
+                             (systemTag $ T.pack "DOS")
                              testInstallerHash
                          ))))
       e = Just $ EpochNo 0
@@ -635,10 +635,10 @@ serializationTests = testGroup "Serialization Tests"
              (AVUpdate (Map.singleton
                          testGKeyHash
                          (Applications (Map.singleton
-                                (ApName $ T.pack "Daedalus")
+                                (apName $ T.pack "Daedalus")
                                 (ApVer 17
                                 , Mdt $ Map.singleton
-                                    (SystemTag $ T.pack "DOS")
+                                    (systemTag $ T.pack "DOS")
                                     testInstallerHash
                                 )))))
              (Just $ EpochNo 0)
@@ -683,10 +683,10 @@ serializationTests = testGroup "Serialization Tests"
              (AVUpdate (Map.singleton
                          testGKeyHash
                          (Applications (Map.singleton
-                                (ApName $ T.pack "Daedalus")
+                                (apName $ T.pack "Daedalus")
                                 (ApVer 17
                                 , Mdt $ Map.singleton
-                                    (SystemTag $ T.pack "DOS")
+                                    (systemTag $ T.pack "DOS")
                                     testInstallerHash
                                 )))))
              (Just $ EpochNo 0)

@@ -43,7 +43,7 @@ import           Shrinkers (shrinkBlock)
 import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           STS.Chain (initialShelleyState)
 import           Test.Utils (runShelleyBase)
-import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
+import           Updates (ApVer (..), pattern Applications, pattern Mdt, apName)
 import           UTxO (balance)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
@@ -74,11 +74,11 @@ lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
-                            [ (ApName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (ApName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
-                            , (ApName $ T.pack "Ahoy", (ApVer 7, Mdt Map.empty))
-                            , (ApName $ T.pack "Shebang", (ApVer 11, Mdt Map.empty))
-                            , (ApName $ T.pack "Icarus", (ApVer 13, Mdt Map.empty))
+                            [ (apName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
+                            , (apName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                            , (apName $ T.pack "Ahoy", (ApVer 7, Mdt Map.empty))
+                            , (apName $ T.pack "Shebang", (ApVer 11, Mdt Map.empty))
+                            , (apName $ T.pack "Icarus", (ApVer 13, Mdt Map.empty))
                             ]
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
