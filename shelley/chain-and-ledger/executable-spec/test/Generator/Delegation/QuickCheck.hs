@@ -45,9 +45,9 @@ import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDeleg
 import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, toCred,
                      tooLateInEpoch)
 import           Keys (GenDelegs (..), hashKey, vKey)
-import           Ledger.Core (dom, range, (</|), (∈), (∉))
+import           Ledger.Core (dom, range, (∈), (∉))
 import           LedgerState (dstate, keyRefund, pParams, pstate, retiring, stPools, stkCreds,
-                     _dstate, _genDelegs, _irwd, _pstate, _retiring, _rewards, _stPools, _stkCreds)
+                     _dstate, _genDelegs, _pstate, _rewards, _stPools, _stkCreds)
 import           PParams (PParams (..), d)
 import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
 import           Tx (getKeyCombination)
@@ -211,9 +211,6 @@ genDeRegKeyCert keys scripts dState =
                       ((&&) <$> registered <*> zeroRewards) cred) scripts
     zeroRewards k =
          (Coin 0) == (Map.findWithDefault (Coin 1) (mkRwdAcnt k) (_rewards dState))
-      && noIRWaiting  k
-
-    noIRWaiting k = not $ k ∈ dom (_irwd dState)
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's
@@ -259,8 +256,7 @@ genDelegation keys scripts dpState =
       filter (registeredDelegate . scriptToCred . snd) scripts
 
     (StakePools registeredPools) = _stPools (_pstate dpState)
-    availablePools =
-      Set.toList $ dom (dom ((_retiring . _pstate) dpState) </| registeredPools)
+    availablePools = Set.toList $ dom registeredPools
 
 genGenesisDelegation
   :: KeyPairs
