@@ -216,5 +216,5 @@ propAbstractSizeNotTooBig = property $ do
     all notTooBig txs
 
 onlyValidChainSignalsAreGenerated :: Property
-onlyValidChainSignalsAreGenerated = withMaxSuccess 100 $
+onlyValidChainSignalsAreGenerated = withMaxSuccess 200 $
   onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 200 (200::Word64) (Just mkGenesisChainState)
