@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -43,12 +44,14 @@ module Control.State.Transition.Trace
   )
 where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.Lens (makeLenses, to, (^.), (^..), _1, _2)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
 import           Data.Maybe (catMaybes)
+import           GHC.Generics (Generic)
 import           GHC.Stack (HasCallStack)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
 
@@ -66,7 +69,7 @@ data Trace s
       , _traceTrans :: ![(State s, Signal s)]
       -- ^ Signals and resulting states observed in the trace. New elements are
       -- put in front of the list.
-    }
+    } deriving Generic
 
 makeLenses ''Trace
 
@@ -75,6 +78,12 @@ deriving instance
 
 deriving instance
   (Show (State s), Show (Signal s), Show (Environment s)) => (Show (Trace s))
+
+instance
+  ( NoUnexpectedThunks (Environment s)
+  , NoUnexpectedThunks (State s)
+  , NoUnexpectedThunks (Signal s)
+  ) => (NoUnexpectedThunks (Trace s))
 
 -- | Make a trace given an environment and initial state.
 mkTrace :: Environment s -> State s -> [(State s, Signal s)] -> Trace s
