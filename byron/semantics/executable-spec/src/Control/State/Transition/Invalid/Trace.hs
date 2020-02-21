@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -10,8 +11,10 @@
 --
 module Control.State.Transition.Invalid.Trace where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.State.Transition (Environment, PredicateFailure, Signal, State)
 import qualified Control.State.Transition.Trace as Trace
+import           GHC.Generics (Generic)
 
 
 data Trace s
@@ -22,7 +25,7 @@ data Trace s
     -- isn't guaranteed to do so, since invalid trace generation is
     -- probabilistic.
     , errorOrLastState :: !(Either [[PredicateFailure s]] (State s))
-    }
+    } deriving Generic
 
 deriving instance
   ( Eq (Environment s)
@@ -37,3 +40,10 @@ deriving instance
   , Show (Signal s)
   , Show (PredicateFailure s)
   ) => (Show (Trace s))
+
+instance
+  ( NoUnexpectedThunks (Environment s)
+  , NoUnexpectedThunks (State s)
+  , NoUnexpectedThunks (Signal s)
+  , NoUnexpectedThunks (PredicateFailure s)
+  ) => (NoUnexpectedThunks (Trace s))

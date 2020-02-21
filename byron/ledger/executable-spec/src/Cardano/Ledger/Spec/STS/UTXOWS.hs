@@ -1,7 +1,10 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -10,7 +13,9 @@
 
 module Cardano.Ledger.Spec.STS.UTXOWS where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Data.Data (Data, Typeable)
+import           GHC.Generics (Generic)
 
 import           Cardano.Ledger.Spec.STS.UTXO (UTxOEnv, UTxOState)
 import           Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
@@ -29,7 +34,7 @@ instance STS UTXOWS where
   type Environment UTXOWS = UTxOEnv
   data PredicateFailure UTXOWS
     = UtxowFailure (PredicateFailure UTXOW)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules =
     [ do

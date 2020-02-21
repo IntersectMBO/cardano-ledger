@@ -6,6 +6,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -91,6 +92,7 @@ module Ledger.Delegation
   )
 where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..), allNoUnexpectedThunks, noUnexpectedThunksInKeysAndValues)
 import           Control.Arrow ((&&&))
 import           Control.Lens (Lens', lens, makeFields, to, (%~), (&), (.~), (<>~), (^.), _1)
 import           Data.AbstractSize
@@ -147,7 +149,7 @@ data DCert = DCert
   , depoch :: Epoch
     -- | Witness for the delegation certificate
   , signature :: Sig (VKey, Epoch)
-  } deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable)
+  } deriving (Show, Eq, Ord, Generic, Hashable, Data, Typeable, NoUnexpectedThunks)
 
 instance HasTypeReps DCert
 
@@ -190,7 +192,7 @@ data DSEnv = DSEnv
   -- ^ Current slot
   , _dSEnvK :: BlockCount
   -- ^ Chain stability parameter
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
 makeFields ''DSEnv
 
@@ -198,7 +200,7 @@ makeFields ''DSEnv
 data DSState = DSState
   { _dSStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))]
   , _dSStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
 makeFields ''DSState
 
@@ -207,7 +209,14 @@ data DState = DState
   { _dStateDelegationMap :: Bimap VKeyGenesis VKey
     -- | When was the last time each genesis key delegated.
   , _dStateLastDelegation :: Map VKeyGenesis Slot
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic)
+
+instance NoUnexpectedThunks DState where
+  whnfNoUnexpectedThunks ctxt (DState dmap lastDeleg)
+    = allNoUnexpectedThunks
+      [ noUnexpectedThunksInKeysAndValues ctxt $ Bimap.toList dmap
+      , noUnexpectedThunksInKeysAndValues ctxt $ Map.toList lastDeleg
+      ]
 
 makeFields ''DState
 
@@ -222,9 +231,18 @@ data DIState = DIState
   , _dIStateLastDelegation :: Map VKeyGenesis Slot
   , _dIStateScheduledDelegations :: [(Slot, (VKeyGenesis, VKey))]
   , _dIStateKeyEpochDelegations :: Set (Epoch, VKeyGenesis)
-  } deriving (Show, Eq)
+  } deriving (Show, Eq, Generic)
 
 makeFields ''DIState
+
+instance NoUnexpectedThunks DIState where
+  whnfNoUnexpectedThunks ctxt (DIState dmap lastDeleg sds sked)
+    = allNoUnexpectedThunks
+      [ noUnexpectedThunksInKeysAndValues ctxt $ Bimap.toList dmap
+      , noUnexpectedThunksInKeysAndValues ctxt $ Map.toList lastDeleg
+      , whnfNoUnexpectedThunks ctxt sds
+      , whnfNoUnexpectedThunks ctxt sked
+      ]
 
 dmsL :: HasDelegationMap a (Bimap VKeyGenesis VKey)
     => Lens' a (Bimap VKeyGenesis VKey)
@@ -264,7 +282,7 @@ dIStateDState = lens
 data SDELEG deriving (Data, Typeable)
 
 data EpochDiff = EpochDiff { currentEpoch :: Epoch, certEpoch :: Epoch }
-  deriving (Eq, Show, Data, Typeable)
+  deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
 instance STS SDELEG where
   type State SDELEG = DSState
@@ -281,7 +299,7 @@ instance STS SDELEG where
     | HasAlreadyDelegated
     | IsAlreadyScheduled
     | DoesNotVerify
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ return DSState
                    { _dSStateScheduledDelegations = []
@@ -353,7 +371,7 @@ instance STS ADELEG where
     | S_NoLastDelegation
     | S_AfterExistingDelegation
     | S_AlreadyADelegateOf VKey VKeyGenesis
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [
     do
@@ -410,7 +428,7 @@ instance STS SDELEGS where
 
   data PredicateFailure SDELEGS
     = SDelegFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -440,7 +458,7 @@ instance STS ADELEGS where
 
   data PredicateFailure ADELEGS
     = ADelegFailure (PredicateFailure ADELEG)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -471,7 +489,7 @@ instance STS DELEG where
   data PredicateFailure DELEG
     = SDelegSFailure (PredicateFailure SDELEGS)
     | ADelegSFailure (PredicateFailure ADELEGS)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = [ do
                      IRC env <- judgmentContext
@@ -581,7 +599,7 @@ instance STS MSDELEG where
   type Signal MSDELEG = Maybe DCert
 
   data PredicateFailure MSDELEG = SDELEGFailure (PredicateFailure SDELEG)
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
 

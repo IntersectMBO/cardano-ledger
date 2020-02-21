@@ -1,9 +1,12 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -12,8 +15,10 @@
 
 module Cardano.Ledger.Spec.STS.UTXOW where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Data.Data (Data, Typeable)
 import qualified Data.Map as Map
+import           GHC.Generics (Generic)
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (Gen, MonadTest)
 import qualified Hedgehog.Gen as Gen
@@ -51,7 +56,7 @@ instance STS UTXOW where
   data PredicateFailure UTXOW
     = UtxoFailure (PredicateFailure UTXO)
     | InsufficientWitnesses
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules =
     [ do
