@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -18,8 +20,10 @@ module Cardano.Ledger.Spec.STS.UTXO
   )
 where
 
+import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Data.Data (Data, Typeable)
 import qualified Data.Set as Set
+import           GHC.Generics (Generic)
 
 import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
                      State, TRC (TRC), initialRules, judgmentContext, transitionRules, (?!))
@@ -38,12 +42,12 @@ data UTXO deriving (Data, Typeable)
 data UTxOEnv = UTxOEnv
   { utxo0 :: UTxO
   , pps   :: PParams
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, NoUnexpectedThunks)
 
 data UTxOState = UTxOState
   { utxo     :: UTxO
   , reserves :: Lovelace
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic, NoUnexpectedThunks)
 
 instance STS UTXO where
 
@@ -61,7 +65,7 @@ instance STS UTXO where
     | IncreasedTotalBalance
     | InputsNotInUTxO
     | NonPositiveOutputs
-    deriving (Eq, Show, Data, Typeable)
+    deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules =
     [ do
