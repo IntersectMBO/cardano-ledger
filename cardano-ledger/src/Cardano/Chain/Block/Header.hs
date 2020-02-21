@@ -49,6 +49,7 @@ module Cardano.Chain.Block.Header
   , ABoundaryHeader(..)
   , mkABoundaryHeader
   , toCBORABoundaryHeader
+  , toCBORABoundaryHeaderSize
   , fromCBORABoundaryHeader
   , boundaryHeaderHashAnnotated
   , wrapBoundaryBytes
@@ -83,6 +84,7 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary
   ( Annotated(..)
   , ByteSpan
+  , Case(..)
   , Decoded(..)
   , Decoder
   , DecoderError(..)
@@ -98,6 +100,7 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   , serializeEncoding
+  , szCases
   , szGreedy
   )
 import Cardano.Chain.Block.Body (Body)
@@ -546,6 +549,39 @@ toCBORABoundaryHeader pm hdr =
     genesisTag = case (boundaryPrevHash hdr, boundaryEpoch hdr) of
       (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
       _ -> mempty :: Map Word8 LByteString
+
+toCBORABoundaryHeaderSize :: Proxy ProtocolMagicId -> Proxy (ABoundaryHeader a) -> Size
+toCBORABoundaryHeaderSize pm hdr =
+      1
+    + szGreedy pm
+    + szCases
+        [ Case "GenesisHash" $ szGreedy
+                             $ pFromLeft
+                             $ boundaryPrevHash <$> hdr
+        , Case "HeaderHash"  $ szGreedy
+                             $ pFromRight
+                             $ boundaryPrevHash <$> hdr
+        ]
+    -- Body proof
+    + szGreedy (Proxy :: Proxy (Hash LByteString))
+    -- Consensus data
+    + ( 1
+      + szGreedy (boundaryEpoch <$> hdr)
+      + szGreedy (boundaryDifficulty <$> hdr)
+      )
+    -- Extra data
+    + ( 1
+      + szCases
+        [ Case "Genesis" 11
+        , Case ""        1
+        ]
+      )
+  where
+    pFromLeft :: Proxy (Either a b) -> Proxy a
+    pFromLeft _ = Proxy
+
+    pFromRight :: Proxy (Either a b) -> Proxy b
+    pFromRight _ = Proxy
 
 fromCBORABoundaryHeader :: Decoder s (ABoundaryHeader ByteSpan)
 fromCBORABoundaryHeader = do
