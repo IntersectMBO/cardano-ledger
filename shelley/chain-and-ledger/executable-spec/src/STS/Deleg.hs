@@ -17,17 +17,14 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin (..))
-import           Control.Monad.Trans.Reader (asks, runReaderT)
+import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
-import           Control.State.Transition.Generator
-import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
-import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import           LedgerState (DState, emptyDState, _delegations, _fGenDelegs, _genDelegs, _irwd,
@@ -166,12 +163,3 @@ delegationTransition = do
     _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds
-
-
-instance Crypto crypto
-  => HasTrace (DELEG crypto) where
-  envGen _ = undefined :: Gen DelegEnv
-  sigGen _ _ = undefined :: Gen (DCert crypto)
-
-  type BaseEnv (DELEG crypto) = Globals
-  interpretSTS globals act = runIdentity $ runReaderT act globals

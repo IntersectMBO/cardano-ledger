@@ -11,17 +11,13 @@ where
 
 import           BaseTypes
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace (..), envGen, sigGen)
-import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Delegation.Certificates
 import           EpochBoundary (poolRefunds)
 import           GHC.Generics (Generic)
-import           Hedgehog (Gen)
 import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import           LedgerState
 import           Lens.Micro ((^.))
@@ -77,10 +73,3 @@ poolReapTransition = do
        , _pParams = retired ⋪ _pParams ps
        , _retiring = retired ⋪ _retiring ps
        }
-
-instance HasTrace (POOLREAP crypto) where
-  envGen _ = undefined :: Gen PParams
-  sigGen _ _ = undefined :: Gen EpochNo
-
-  type BaseEnv (POOLREAP crypto) = Globals
-  interpretSTS globals act = runIdentity $ runReaderT act globals
