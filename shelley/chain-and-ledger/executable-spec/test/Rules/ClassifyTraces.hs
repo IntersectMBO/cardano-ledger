@@ -18,9 +18,11 @@ import           Data.Sequence (Seq)
 import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
-import           BlockChain (pattern Block, pattern TxSeq)
+import           BaseTypes (Globals (epochInfo))
+import           BlockChain (pattern Block, pattern TxSeq, bhbody, bheaderSlotNo)
 import           Cardano.Binary (serialize')
-import           ConcreteCryptoTypes (Applications, CHAIN, DCert, LEDGER, Tx, TxOut)
+import           Cardano.Slotting.Slot (EpochSize (..))
+import           ConcreteCryptoTypes (Applications, Block, CHAIN, DCert, LEDGER, Tx, TxOut)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
 import           Control.State.Transition.Trace.Generator.QuickCheck (classifyTraceLength,
@@ -30,6 +32,7 @@ import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDel
 import           Generator.ChainTrace (mkGenesisChainState)
 import           Generator.LedgerTrace.QuickCheck (mkGenesisLedgerState)
 import           LedgerState (txsize)
+import           Slot (SlotNo (..), epochInfoSize)
 import           Test.Utils
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
                      pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
@@ -101,6 +104,13 @@ relevantCasesAreCovered = withMaxSuccess 200 . property $ do
               (0.99 >= noAVUpdateRatio (avUpdatesByTx txs))
               "at least 1% of transactions have non-trivial application updates"
 
+     , cover_ 60
+              (2 <= epochBoundariesInTrace bs)
+              "at least 2 epoch changes in trace"
+
+     , cover_ 10
+              (5 <= epochBoundariesInTrace bs)
+              "at least 5 epoch changes in trace"
      ]
     where
       cover_ pc b s = cover pc b s (property ())
@@ -218,3 +228,13 @@ propAbstractSizeNotTooBig = property $ do
 onlyValidChainSignalsAreGenerated :: Property
 onlyValidChainSignalsAreGenerated = withMaxSuccess 200 $
   onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 200 (200::Word64) (Just mkGenesisChainState)
+
+epochBoundariesInTrace :: [Block] -> Int
+epochBoundariesInTrace bs
+  = length $
+      filter atEpochBoundary (blockSlot <$> bs)
+  where
+    EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfo) testGlobals undefined
+
+    blockSlot (Block bh _) = (bheaderSlotNo . bhbody) bh
+    atEpochBoundary (SlotNo s) = s `rem` slotsPerEpoch == 0
