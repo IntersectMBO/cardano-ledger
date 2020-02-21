@@ -16,16 +16,12 @@ import           BaseTypes
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin
-import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
-import           Control.State.Transition.Generator
-import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import           Delegation.Certificates
 import           EpochBoundary
 import           GHC.Generics (Generic)
-import           Hedgehog (Gen)
 import           LedgerState
 import           Slot
 import           STS.Epoch
@@ -128,16 +124,3 @@ instance
   Embed (MIR crypto) (NEWEPOCH crypto)
   where
   wrapFailed = MirFailure
-
-instance
-  Crypto crypto =>
-  HasTrace (NEWEPOCH crypto)
-  where
-
-  envGen _ = undefined :: Gen (NewEpochEnv crypto)
-
-  sigGen _ _ = undefined :: Gen EpochNo
-
-  type BaseEnv (NEWEPOCH crypto) = Globals
-
-  interpretSTS globals act = runIdentity $ runReaderT act globals

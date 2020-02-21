@@ -21,17 +21,13 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, deco
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Coin (Coin)
-import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition
-import           Control.State.Transition.Generator
-import           Data.Functor.Identity (runIdentity)
 import           Data.Sequence (Seq (..))
 import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
-import           Hedgehog (Gen)
 import           Ledger.Core (dom, (∈), (⊆), (⨃))
 import           LedgerState (DPState (..), emptyDelegation, _dstate, _rewards, _stPools)
 import           PParams
@@ -137,12 +133,3 @@ instance
   => Embed (DELPL crypto) (DELEGS crypto)
  where
   wrapFailed = DelplFailure
-
-
-instance Crypto crypto
-  => HasTrace (DELEGS crypto) where
-  envGen _ = undefined :: Gen (DelegsEnv crypto)
-  sigGen _ _ = undefined :: Gen (Seq (DCert crypto))
-
-  type BaseEnv (DELEGS crypto) = Globals
-  interpretSTS globals act = runIdentity $ runReaderT act globals

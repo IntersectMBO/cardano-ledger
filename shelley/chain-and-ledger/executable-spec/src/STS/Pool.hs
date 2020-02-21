@@ -15,10 +15,8 @@ import           BaseTypes
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (asks, runReaderT)
+import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
-import           Control.State.Transition.Generator
-import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -26,7 +24,6 @@ import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           Delegation.Certificates
 import           GHC.Generics (Generic)
-import           Hedgehog (Gen)
 import           Keys
 import           Ledger.Core (dom, (∈), (∉), (⋪))
 import           LedgerState
@@ -133,16 +130,3 @@ m ⨃ (k, v) = Map.union (Map.singleton k v) m
   (KeyHash crypto, a) ->
   Map (KeyHash crypto) a
 m ∪ (k, v) = Map.union m (Map.singleton k v)
-
-instance
-  Crypto crypto =>
-  HasTrace (POOL crypto)
-  where
-
-  envGen _ = undefined :: Gen PoolEnv
-
-  sigGen _ _ = undefined :: Gen (DCert crypto)
-
-  type BaseEnv (POOL crypto) = Globals
-
-  interpretSTS globals act = runIdentity $ runReaderT act globals
