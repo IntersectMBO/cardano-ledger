@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -32,7 +33,7 @@ instance STS UTXOWS where
   type Signal UTXOWS = [Tx]
   type Environment UTXOWS = UTxOEnv
   data PredicateFailure UTXOWS
-    = UtxowFailure !(PredicateFailure UTXOW)
+    = UtxowFailure (PredicateFailure UTXOW)
     deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules =
