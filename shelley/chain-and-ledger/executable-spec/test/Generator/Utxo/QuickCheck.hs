@@ -176,8 +176,12 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
              update
              Nothing -- TODO generate metadata
 
--- | Calculate the fee and distribute the remainder of the balance
--- to the given addresses (as transaction outputs)
+-- | Distribute the sum of `balance_` and `fee` over the addresses, return the
+-- sum of `fee` and the remainder of the equal distribution and the list ouf
+-- transaction outputs that cover the balance and fees.
+--
+-- The idea is to have an specified spending balance and fees that must be paid
+-- by the selected addresses.
 calcFeeAndOutputs
   :: Coin
   -> [Addr]
@@ -187,12 +191,6 @@ calcFeeAndOutputs balance_ addrs fee =
   ( fee + splitCoinRem
   , (`TxOut` amountPerOutput) <$> Seq.fromList addrs)
   where
-    -- TODO @uroboros fee=0 works for now since PParams minFeeA/B == 0.
-    --      We need to instead add a "draft" TxBody as argument, which will
-    --      give a measure of the minimum fee for this transaction.
-    --      This estimated fee can then be used to create the actual TxBody,
-    --      with the new fee baked in.
-    -- fee = 0
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
     balanceAfterFee = balance_ - fee
