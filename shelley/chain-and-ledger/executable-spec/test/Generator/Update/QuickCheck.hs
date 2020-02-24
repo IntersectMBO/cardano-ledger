@@ -196,7 +196,7 @@ genSetOfPpm
 genSetOfPpm pp = do
   n <- QC.elements [1 .. 3] -- pick up to three param updates
   subsetOf n [
-        MinFeeB               <$> pure 0 -- TODO @uroboros disable until tx fees are dealt with (genNatural 0 10)
+        MinFeeB               <$> genNatural 0 3
       , MaxBBSize             <$> genSize
       , MaxTxSize             <$> genSize
       , MaxBHSize             <$> genSize
