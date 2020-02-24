@@ -111,15 +111,21 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 
 
     -- calc. fees and output amounts
-    let (remainder, outputs) = calcFeeAndOutputs balance_ recipientAddrs (Coin 0)
+    let (_, outputs) = calcFeeAndOutputs balance_ recipientAddrs (Coin 0)
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
       genUpdate slot coreKeys keysByStakeHash pparams (utxoSt, dpState)
 
-    -- witnessed transaction
     -- this is the "model" `TxBody` which is used to calculate the fees
-    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update remainder slotWithTTL
+    --
+    -- while it only contains a pseudo fee value of 0, the constructed
+    -- transcation will have the correct set of witnesses.
+    --
+    -- Once the transaction body and the witnesses are constructed, we can use
+    -- this model to calculate the real fee value and update the fees and
+    -- transaction outputs in the final, generated transaction.
+    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update (Coin 0) slotWithTTL
     let multiSig = Map.fromList $
           (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
           (map (\(_, sScript) -> (hashScript sScript, sScript)) (stakeScripts ++ wdrlScripts))
@@ -136,9 +142,10 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 
     let metadata = Nothing -- TODO generate metadata
 
-    -- recalculate fees
+    -- calculate real fees of witnesses transaction
     let minimalFees = minfee pparams (Tx txBody wits multiSig metadata)
 
+    -- discard generated transaction if the balance cannot cover the fees
     if minimalFees > balance_
       then D.trace (  "discarded bc. of real fees, minimal: "
                    ++ show minimalFees ++ " Output balance: "
@@ -146,6 +153,7 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
                    ) QC.discard
       else do
 
+      -- update model transaction with real fees and outputs
       let (fees', outputs') = calcFeeAndOutputs balance_ recipientAddrs minimalFees
           txBody' = txBody { _txfee = fees'
                            , _outputs = outputs' }
