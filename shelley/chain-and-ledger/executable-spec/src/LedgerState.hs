@@ -127,12 +127,11 @@ import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDec
                      keyMinRefund, minfeeA, minfeeB)
 import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch, epochInfoFirst,
                      epochInfoSize, (+*), (-*))
-import           Tx (extractGenKeyHash, extractKeyHash)
+import           Tx (Tx (..), body, certs, extractGenKeyHash, extractKeyHash)
 import           TxData (Addr (..), Credential (..), DelegCert (..), Ix, MIRCert (..),
-                     PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), Tx (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..), body, certs,
-                     countMSigNodes, getRwdCred, inputs, poolOwners, poolPledge, poolRAcnt, ttl,
-                     txfee, wdrls, witKeyHash)
+                     PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), TxBody (..),
+                     TxId (..), TxIn (..), TxOut (..), Wdrl (..), countMSigNodes, getRwdCred,
+                     inputs, poolOwners, poolPledge, poolRAcnt, ttl, txfee, wdrls, witKeyHash)
 import           Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..), UpdateState (..),
                      apps, emptyUpdate, emptyUpdateState)
 import           UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins, txouts, txup,

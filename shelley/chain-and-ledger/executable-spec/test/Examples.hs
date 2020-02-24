@@ -109,12 +109,13 @@ import           STS.Ledgers (pattern LedgerFailure)
 import           STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
                      pattern MIRInsufficientGenesisSigsUTXOW)
 import           Test.Utils
+import           Tx (pattern Tx)
 import           TxData (pattern AddrPtr, pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
                      pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
-                     pattern StakePools, pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                     Wdrl (..), addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge,
-                     _poolPubKey, _poolRAcnt, _poolVrf)
+                     pattern StakePools, pattern TxBody, pattern TxIn, pattern TxOut, Wdrl (..),
+                     addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
+                     _poolRAcnt, _poolVrf)
 import qualified TxData (TxBody (..))
 import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),

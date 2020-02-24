@@ -52,7 +52,8 @@ import qualified Rules.TestPool as TestPool
 import qualified Rules.TestUtxo as TestUtxo
 import qualified Rules.TestUtxow as TestUtxow
 import           STS.Ledger (LedgerEnv (ledgerPp))
-import           TxData (body, certs, wdrls)
+import           Tx (body)
+import           TxData (certs, wdrls)
 import           UTxO (balance)
 
 import           Test.Utils (testGlobals)

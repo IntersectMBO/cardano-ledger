@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -11,6 +12,7 @@ module Serialization
   , CBORMap (..)
   , decodeCollection
   , decodeCollectionWithLen
+  , mapHelper
   )
 where
 
@@ -63,6 +65,7 @@ instance (Ord a, FromCBOR a, FromCBOR b) => FromCBOR (CBORMap a b) where
     decodePair = (,) <$> fromCBOR <*> fromCBOR
 
 newtype CborSeq a = CborSeq { unwrapCborSeq :: Seq a }
+  deriving Foldable
 
 instance ToCBOR a => ToCBOR (CborSeq a) where
   toCBOR (CborSeq xs) =
@@ -92,3 +95,12 @@ decodeCollectionWithLen lenOrIndef el = do
   loop (n,acc) condition action = condition >>= \case
       False -> pure (n,acc)
       True -> action >>= \v -> loop (n+1, (v:acc)) condition action
+
+mapHelper :: Decoder s b -> Decoder s [b]
+mapHelper decodePart = decodeMapLenOrIndef >>= \case
+  Just len -> replicateM len decodePart
+  Nothing  -> loop [] (not <$> decodeBreakOr) decodePart
+  where
+  loop acc condition action = condition >>= \case
+    False -> pure acc
+    True -> action >>= \v -> loop (v:acc) condition action

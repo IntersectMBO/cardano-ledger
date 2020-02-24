@@ -31,11 +31,11 @@ import           PParams (PParams (..), emptyPParams)
 import           Slot (SlotNo (..))
 import           STS.Utxo (UtxoEnv (..))
 import           Test.Utils
-import           Tx (hashScript)
+import           Tx (pattern Tx, hashScript, _body)
 import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
                      pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
-                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools, pattern Tx,
-                     pattern TxBody, pattern TxIn, pattern TxOut, pattern Wdrl, unWdrl, _body)
+                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools, pattern TxBody,
+                     pattern TxIn, pattern TxOut, pattern Wdrl, unWdrl)
 import           Updates (emptyUpdate)
 import           UTxO (makeWitnessesVKey, txid)
 

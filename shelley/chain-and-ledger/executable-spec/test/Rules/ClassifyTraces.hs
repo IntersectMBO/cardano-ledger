@@ -34,9 +34,10 @@ import           Generator.LedgerTrace.QuickCheck (mkGenesisLedgerState)
 import           LedgerState (txsize)
 import           Slot (SlotNo (..), epochInfoSize)
 import           Test.Utils
+import           Tx (_body)
 import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
                      pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
-                     Wdrl (..), _body, _certs, _outputs, _txUpdate, _wdrls)
+                     Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
 import           Updates (pattern AVUpdate, pattern PPUpdate, PParamsUpdate, pattern Update)
 
 relevantCasesAreCovered :: Property

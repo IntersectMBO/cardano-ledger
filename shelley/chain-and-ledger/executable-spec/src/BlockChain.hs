@@ -49,16 +49,13 @@ import qualified Data.Map.Strict as Map
 import           Data.Ratio (denominator, numerator)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Data.Set (Set)
-import qualified Data.Set as Set
-import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           MetaData (MetaData)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, invalidKey, mkNonce)
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
-                     encodeListLen, matchSize)
+import           BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, mkNonce)
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, encodeListLen,
+                     matchSize)
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -70,8 +67,7 @@ import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
 import           OCert (OCert (..))
 import           Slot (BlockNo (..), SlotNo (..))
-import           Tx (Tx (..), TxBody (..), WitVKey (..), hashScript)
-import           TxData (MultiSig (..), ScriptHash (..))
+import           Tx (Tx (..), cborWitsToTx, txToCBORWits)
 
 import           NonIntegral ((***))
 import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
@@ -118,7 +114,7 @@ bbHash (TxSeq txns) = (HashBBody . coerce) $
     hashBytes :: forall a. ToCBOR a => a -> Hash.ByteString
     hashBytes = Hash.getHash . hash @(HASH crypto)
     bodies = hashBytes . CborSeq $ _body       <$> txns
-    wits =   hashBytes . CborSeq $ txToSegWit  <$> txns
+    wits =   hashBytes . CborSeq $ txToCBORWits  <$> txns
     md =     hashBytes           $ extractMetaData txns
 
 -- |HashHeader to Nonce
@@ -256,115 +252,6 @@ data Block crypto
     (TxSeq crypto)
   deriving (Show, Eq)
 
--- The SegWits data type is only used for serializing and deserializing
--- blocks using a "segregated witness" format:
---
---   block =
---     [ header
---     , transaction_bodies         : [* transaction_body]
---     , transaction_witness_sets   : [* transaction_witness_set]
---     , transaction_metadata_set   : { * uint => transaction_metadata }
---     ]
---
---     and transaction_witness_set is serialized depending on what
---     values are present:
---
---  transaction_witness_set =
---    (  0, vkeywitness
---    // 1, $script
---    // 2, [* vkeywitness]
---    // 3, [* $script]
---    // 4, [* vkeywitness],[* $script]
---    )
-data SegWits crypto
-  = SegWitsVKey (WitVKey crypto)
-  | SegWitsVKeys (Set (WitVKey crypto))
-  | SegWitsScript (ScriptHash crypto) (MultiSig crypto)
-  | SegWitsScripts (Map (ScriptHash crypto) (MultiSig crypto))
-  | SegWitsAll (Set (WitVKey crypto)) (Map (ScriptHash crypto) (MultiSig crypto))
-  deriving (Show, Eq)
-
-segWitToTx
-  :: (Crypto crypto)
-  => (TxBody crypto, SegWits crypto, Maybe MetaData)
-  -> Tx crypto
-segWitToTx (body, (SegWitsVKey w), md) = Tx body (Set.singleton w) mempty md
-segWitToTx (body, (SegWitsVKeys ws), md) = Tx body ws mempty md
-segWitToTx (body, (SegWitsScript s m), md) = Tx body mempty (Map.singleton s m) md
-segWitToTx (body, (SegWitsScripts ss), md) = Tx body mempty ss md
-segWitToTx (body, (SegWitsAll ws ss), md) = Tx body ws ss md
-
-txToSegWit
-  :: (Crypto crypto)
-  => Tx crypto
-  -> SegWits crypto
-txToSegWit (Tx _ ws ss _) =
-  case (Set.toList ws, Map.toList ss) of
-    ([x]      , [])        -> SegWitsVKey x
-    (zs@(_:_), [])        -> SegWitsVKeys $ Set.fromList zs
-    ([]       , [p])       -> uncurry SegWitsScript p
-    ([]       , qs@(_:_)) -> SegWitsScripts $ Map.fromList qs
-    (zs       , qs)        -> SegWitsAll (Set.fromList zs) (Map.fromList qs)
-
-instance Crypto crypto
-  => ToCBOR (SegWits crypto)
- where
-  toCBOR = \case
-    SegWitsVKey w ->
-      encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR w
-
-    SegWitsVKeys ws ->
-      encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR ws
-
-    SegWitsScript _ m ->
-      encodeListLen 2
-        <> toCBOR (2 :: Word8)
-        <> toCBOR m
-
-    SegWitsScripts ss ->
-      encodeListLen 2
-        <> toCBOR (3 :: Word8)
-        <> toCBOR (Map.elems ss)
-
-    SegWitsAll ws ss ->
-      encodeListLen 3
-        <> toCBOR (4 :: Word8)
-        <> toCBOR ws
-        <> toCBOR ss
-
-instance Crypto crypto
-  => FromCBOR (SegWits crypto)
- where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> do
-        matchSize "SegWitsVKey" 2 n
-        a <- fromCBOR
-        pure $ SegWitsVKey a
-      1 -> do
-        a <- fromCBOR
-        matchSize "SegWitsVKeys" 2 n
-        pure $ SegWitsVKeys a
-      2 -> do
-        matchSize "SegWitsScript" 2 n
-        a <- fromCBOR
-        pure $ SegWitsScript (hashScript a) a
-      3 -> do
-        a <- fromCBOR
-        matchSize "SegWitsScripts" 2 n
-        (pure . SegWitsScripts . Map.fromList) $ fmap (\x -> (hashScript x, x)) a
-      4 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        matchSize "SegWitsAll" 3 n
-        pure $ SegWitsAll a b
-      k -> invalidKey k
-
 -- |Given a sequence of transactions, return a mapping
 -- from indices in the original sequence to the non-Nothing metadata value
 extractMetaData :: Seq (Tx crypto) -> CBORMap Int MetaData
@@ -389,7 +276,7 @@ instance Crypto crypto
         <> toCBOR metadata
       where
         bodies = CborSeq $ fmap _body txns
-        wits = CborSeq $ fmap txToSegWit txns
+        wits = CborSeq $ fmap txToCBORWits txns
         metadata = extractMetaData txns
 
 instance Crypto crypto
@@ -417,9 +304,8 @@ instance Crypto crypto
         <> show b <> ") and metadata ("
         <> show w <> ")"
       )
-    let txns = fmap segWitToTx (Seq.zip3 bodies wits metadata)
+    let txns = Seq.zipWith3 cborWitsToTx bodies wits metadata
     pure $ Block header (TxSeq txns)
-
 
 bHeaderSize
   :: ( Crypto crypto)

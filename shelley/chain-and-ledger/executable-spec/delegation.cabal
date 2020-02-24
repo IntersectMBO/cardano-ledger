@@ -135,6 +135,7 @@ test-suite delegation-test
                          Rules.TestUtxo
                          Rules.TestUtxow
                          Test.Serialization
+                         Test.CDDL
                          Test.Utils
     hs-source-dirs:      test
     ghc-options:
@@ -156,25 +157,26 @@ test-suite delegation-test
       ghc-options:
         -Werror
     build-depends:
+      QuickCheck,
       base,
       bytestring,
-      cborg,
-      cryptonite,
-      tasty,
-      tasty-hunit,
-      tasty-hedgehog,
-      tasty-quickcheck,
-      transformers,
-      hedgehog,
-      QuickCheck,
-      delegation,
-      containers,
-      multiset,
-      text,
-      microlens,
-      cs-ledger,
       cardano-binary,
       cardano-crypto-class,
       cardano-prelude,
       cardano-slotting,
-      small-steps
+      cborg,
+      containers,
+      cryptonite,
+      cs-ledger,
+      delegation,
+      hedgehog,
+      microlens,
+      multiset,
+      process-extras,
+      small-steps,
+      tasty,
+      tasty-hedgehog,
+      tasty-hunit,
+      tasty-quickcheck,
+      text,
+      transformers

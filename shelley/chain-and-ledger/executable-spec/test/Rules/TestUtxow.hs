@@ -28,9 +28,8 @@ import           Keys (hashAnyKey)
 import           Ledger.Core (dom, (<|))
 import           LedgerState (pattern UTxOState, keyRefunds)
 import           PParams (PParams)
-import           Tx (getKeyCombinations)
-import           TxData (pattern TxIn, pattern WitGVKey, pattern WitVKey, _body, _certs, _inputs,
-                     _txfee, _witnessMSigMap, _witnessVKeySet)
+import           Tx (getKeyCombinations, _body, _witnessMSigMap, _witnessVKeySet)
+import           TxData (pattern TxIn, pattern WitGVKey, pattern WitVKey, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, totalDeposits, txins, txouts)
 
 --------------------------
