@@ -14,13 +14,14 @@ import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
+import           BaseTypes (intervalValue)
 import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, GenKeyHash, KeyHash, KeyPair,
                      LEDGERS, TICK)
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import           Delegation.Certificates (PoolDistr (..))
 import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural,
-                     getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash, zero)
+                     getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash)
 import           Generator.LedgerTrace.QuickCheck ()
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range)
@@ -28,13 +29,14 @@ import           LedgerState (pattern EpochState, pattern NewEpochState, esLStat
                      nesEL, nesEs, nesOsched, nesPd, overlaySchedule, _delegationState, _dstate,
                      _genDelegs, _reserves)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
+import           PParams (PParams (_activeSlotCoeff))
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
                      chainOCertIssue, chainSlotNo)
 import           STS.Ledgers (LedgersEnv (..))
 import           STS.Ocert (pattern OCertEnv)
 import           STS.Tick (TickEnv (..))
-import           Test.Utils (maxKESIterations, runShelleyBase)
+import           Test.Utils (maxKESIterations, runShelleyBase, unsafeMkUnitInterval)
 
 nextCoreNode
   :: Map SlotNo (Maybe GenKeyHash)
@@ -99,10 +101,10 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
   lookForPraosStart <- genSlotIncrease
   let poolParams = (Map.toList . Map.filter ((> 0) . fst) . unPoolDistr . nesPd . chainNes) chainSt
   poolParams' <- take 1 <$> QC.shuffle poolParams
-  let (nextSlot, keys) = case poolParams' of
-        []       -> (nextOSlot, gkeys gkey)
-        (pkh, (_, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
-                      Nothing -> (nextOSlot, gkeys gkey)
+  let (nextSlot, poolStake, keys) = case poolParams' of
+        []       -> (nextOSlot, 0, gkeys gkey)
+        (pkh, (stake, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
+                      Nothing -> (nextOSlot, 0, gkeys gkey)
                       Just ps -> let apks = AllPoolKeys
                                        { cold = (keysByStakeHash Map.! pkh)
                                        , vrf  = (traceVRFKeyPairsByHash Map.! vrfkey)
@@ -110,7 +112,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
                                                 -- ^^ TODO @jc - don't use the genesis hot key
                                        , hk   = pkh
                                        }
-                                 in (ps, apks)
+                                 in (ps, stake, apks)
 
   if nextSlot > sNow
     then QC.discard
@@ -153,7 +155,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
           <*> pure (chainBlockNo chainSt + 1)
           <*> pure (chainEpochNonce chainSt)
           <*> genBlockNonce
-          <*> genPraosLeader
+          <*> genPraosLeader poolStake pp'
           <*> pure kesPeriod_
           <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
           <*> pure oCert
@@ -178,8 +180,14 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
                 -- if we find the pre-hashed key in keysByStakeHash, we use it instead of the original cold key
                 (origIssuerKeys gkey) {cold = updatedCold, hk = (hashKey . vKey) updatedCold}
 
-    -- TODO @uroboros
-    genPraosLeader = pure zero
+    genPraosLeader stake pp =
+      if stake >= 0 && stake <= 1 then do
+        n <- genNatural 2 10
+        -- use the stake divided by 1 / n multiplied with f as leader election value
+        pure (unsafeMkUnitInterval ((stake / fromIntegral n)
+                                    * ((intervalValue . _activeSlotCoeff) pp)))
+      else
+        error "stake not in [0; 1]"
 
     -- we assume small gaps in slot numbers
     genSlotIncrease = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
