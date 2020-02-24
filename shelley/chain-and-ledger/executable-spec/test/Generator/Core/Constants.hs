@@ -96,11 +96,11 @@ maxNumKeyPairs = 150
 
 -- | minimal coin value for generated genesis outputs
 minGenesisOutputVal :: Integer
-minGenesisOutputVal = 1000
+minGenesisOutputVal = 1000000
 
 -- | maximal coin value for generated genesis outputs
 maxGenesisOutputVal :: Integer
-maxGenesisOutputVal = 10000
+maxGenesisOutputVal = 100000000
 
 -- | Number of base scripts from which multi sig scripts are built.
 numBaseScripts :: Int
