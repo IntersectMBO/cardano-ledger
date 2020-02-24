@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -36,12 +35,12 @@ import           Generator.Core.QuickCheck (AllPoolKeys, findPayKeyPairAddr, fin
                      findPayScriptFromAddr, findStakeScriptFromCred, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
 import           Generator.Update.QuickCheck (genUpdate)
-import           LedgerState (pattern UTxOState, _dstate, _ptrs, _rewards)
+import           LedgerState (pattern UTxOState, minfee, _dstate, _ptrs, _rewards)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
-                     pattern ScriptHashObj, Wdrl (..), getRwdCred)
+                     pattern ScriptHashObj, Wdrl (..), getRwdCred, _outputs, _txfee)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
@@ -112,14 +111,15 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 
 
     -- calc. fees and output amounts
-    let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
+    let (remainder, outputs) = calcFeeAndOutputs balance_ recipientAddrs (Coin 0)
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
       genUpdate slot coreKeys keysByStakeHash pparams (utxoSt, dpState)
 
     -- witnessed transaction
-    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update fee slotWithTTL
+    -- this is the "model" `TxBody` which is used to calculate the fees
+    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update remainder slotWithTTL
     let multiSig = Map.fromList $
           (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
           (map (\(_, sScript) -> (hashScript sScript, sScript)) (stakeScripts ++ wdrlScripts))
@@ -130,13 +130,30 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
     -- deterministically for each script. Varying the script is possible though.
     let keysLists = map getKeyCombination $ Map.elems multiSig
         msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
-        !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
-                `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
-                `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
+        wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+          `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
+          `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
 
     let metadata = Nothing -- TODO generate metadata
-    -- discard if balance is negative, i.e., deposits exceed spending balance
-    pure (Tx txBody wits multiSig metadata)
+
+    -- recalculate fees
+    let minimalFees = minfee pparams (Tx txBody wits multiSig metadata)
+
+    if minimalFees > balance_
+      then D.trace (  "discarded bc. of real fees, minimal: "
+                   ++ show minimalFees ++ " Output balance: "
+                   ++ show balance_
+                   ) QC.discard
+      else do
+
+      let (fees', outputs') = calcFeeAndOutputs balance_ recipientAddrs minimalFees
+          txBody' = txBody { _txfee = fees'
+                           , _outputs = outputs' }
+          wits' = makeWitnessesVKey txBody' (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+            `Set.union` makeGenWitnessesVKey txBody' genesisWitnesses
+            `Set.union` makeWitnessesFromScriptKeys txBody' keyHashMap msigSignatures
+
+      pure (Tx txBody' wits' multiSig metadata)
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
@@ -164,8 +181,9 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
 calcFeeAndOutputs
   :: Coin
   -> [Addr]
+  -> Coin
   -> (Coin, Seq TxOut)
-calcFeeAndOutputs balance_ addrs =
+calcFeeAndOutputs balance_ addrs fee =
   ( fee + splitCoinRem
   , (`TxOut` amountPerOutput) <$> Seq.fromList addrs)
   where
@@ -174,7 +192,7 @@ calcFeeAndOutputs balance_ addrs =
     --      give a measure of the minimum fee for this transaction.
     --      This estimated fee can then be used to create the actual TxBody,
     --      with the new fee baked in.
-    fee = 0
+    -- fee = 0
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
     balanceAfterFee = balance_ - fee

@@ -55,8 +55,8 @@ genIntervalInThousands lower upper =
 
 -- TODO @uroboros for now, keeping minA/B at zero until we generate fees in genTx
 genPParams :: Gen PParams
-genPParams = mkPParams <$> pure 0 -- _minfeeA
-                       <*> pure 0 -- _minfeeB
+genPParams = mkPParams <$> genInteger 0 1000 -- _minfeeA
+                       <*> genNatural 0 2    -- _minfeeB
                        <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
                        <*> genKeyDeposit
                        <*> genKeyMinRefund
