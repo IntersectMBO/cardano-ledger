@@ -3,6 +3,7 @@ module Generator.Core.Constants
 where
 
 import           Data.Word (Word64)
+import           Numeric.Natural (Natural)
 
 -- | minimal number of addresses for transaction outputs
 minNumGenAddr :: Int
@@ -135,3 +136,9 @@ maxSlotTrace = 5000
 -- | Lower bound of the MaxEpoch protocol parameter
 frequencyLowMaxEpoch :: Word64
 frequencyLowMaxEpoch = 6
+
+maxMinFeeA :: Integer
+maxMinFeeA = 1000
+
+maxMinFeeB :: Natural
+maxMinFeeB = 3
