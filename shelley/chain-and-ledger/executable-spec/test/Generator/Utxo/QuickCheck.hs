@@ -27,8 +27,7 @@ import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, Credential, DCert, DPState,
                      DState, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx,
                      TxBody, TxIn, TxOut, UTxO, UTxOState, Update, VrfKeyPairs, WitVKey)
-import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
-                     minNumGenInputs)
+import           Generator.Core.Constants (maxNumGenInputs, minNumGenInputs)
 import           Generator.Core.Constants (frequencyAFewWithdrawals, frequencyNoWithdrawals,
                      frequencyPotentiallyManyWithdrawals, maxAFewWithdrawals)
 import           Generator.Core.QuickCheck (AllPoolKeys, findPayKeyPairAddr, findPayKeyPairCred,
@@ -79,7 +78,7 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
       spendScripts   = Either.rights spendCredentials
 
   -- output addresses
-  recipientAddrs' <- genRecipients keys' scripts'
+  recipientAddrs' <- genRecipients (length witnessedInputs) keys' scripts'
 
   -- maybe convert some addresss to pointer addresses
   recipientAddrs  <- genPtrAddrs (_dstate dpState) recipientAddrs'
@@ -280,11 +279,17 @@ mkWdrlWits _ keyHashMap c@(KeyHashObj _)    = Left $ findPayKeyPairCred c keyHas
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients
-  :: KeyPairs
+  :: Int
+  -> KeyPairs
   -> MultiSigPairs
   -> Gen [Addr]
-genRecipients keys scripts = do
-  n' <- QC.choose (minNumGenAddr, maxNumGenAddr)
+genRecipients len keys scripts = do
+  n' <- QC.frequency (  (if len > 1 then [(1, pure (len - 1))] else [])
+                     -- ^ contract size of UTxO (only if at least 2 inputs are chosen)
+                     ++ [(2, pure len)]
+                     -- ^ keep size
+                     ++ [(1, pure $ len + 1)])
+                     -- ^ expand size of UTxO
 
   -- choose m scripts and n keys as recipients
   m  <- QC.choose (0, n' - 1)
