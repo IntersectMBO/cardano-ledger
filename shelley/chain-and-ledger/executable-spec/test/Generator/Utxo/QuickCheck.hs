@@ -26,7 +26,7 @@ import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, Credential, DCert, DPState,
                      DState, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx,
-                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, VrfKeyPairs)
+                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, VrfKeyPairs, WitVKey)
 import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
                      minNumGenInputs)
 import           Generator.Core.Constants (frequencyAFewWithdrawals, frequencyNoWithdrawals,
@@ -111,7 +111,7 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 
 
     -- calc. fees and output amounts
-    let (_, outputs) = calcFeeAndOutputs balance_ recipientAddrs (Coin 0)
+    let (_, outputs) = calcOutputsFromBalance balance_ recipientAddrs (Coin 0)
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
@@ -136,9 +136,12 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
     -- deterministically for each script. Varying the script is possible though.
     let keysLists = map getKeyCombination $ Map.elems multiSig
         msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
-        wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
-          `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
-          `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
+        wits = mkTxWits
+          txBody
+          (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+          genesisWitnesses
+          keyHashMap
+          msigSignatures
 
     let metadata = Nothing -- TODO generate metadata
 
@@ -154,14 +157,30 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
       else do
 
       -- update model transaction with real fees and outputs
-      let (fees', outputs') = calcFeeAndOutputs balance_ recipientAddrs minimalFees
+      let (fees', outputs') =
+            calcOutputsFromBalance balance_ recipientAddrs minimalFees
           txBody' = txBody { _txfee = fees'
                            , _outputs = outputs' }
-          wits' = makeWitnessesVKey txBody' (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
-            `Set.union` makeGenWitnessesVKey txBody' genesisWitnesses
-            `Set.union` makeWitnessesFromScriptKeys txBody' keyHashMap msigSignatures
+          wits' = mkTxWits
+            txBody'
+            (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+            genesisWitnesses
+            keyHashMap
+            msigSignatures
 
       pure (Tx txBody' wits' multiSig metadata)
+
+mkTxWits
+  :: TxBody
+  -> [KeyPair]
+  -> [CoreKeyPair]
+  -> Map AnyKeyHash KeyPair
+  -> Set AnyKeyHash
+  -> Set WitVKey
+mkTxWits txBody keyWits genesisWits keyHashMap msigs =
+  makeWitnessesVKey txBody keyWits
+  `Set.union` makeGenWitnessesVKey txBody genesisWits
+  `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigs
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
@@ -190,12 +209,12 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
 --
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
-calcFeeAndOutputs
+calcOutputsFromBalance
   :: Coin
   -> [Addr]
   -> Coin
   -> (Coin, Seq TxOut)
-calcFeeAndOutputs balance_ addrs fee =
+calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem
   , (`TxOut` amountPerOutput) <$> Seq.fromList addrs)
   where
