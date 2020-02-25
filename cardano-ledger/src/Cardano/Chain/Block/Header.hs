@@ -41,6 +41,8 @@ module Cardano.Chain.Block.Header
   , fromCBORHeader
   , fromCBORHeaderToHash
   , wrapHeaderBytes
+  , toCBORBlockVersions
+  , toCBORBlockVersionsSize
 
   -- * Header Formatting
   , renderHeader

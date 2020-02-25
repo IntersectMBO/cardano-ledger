@@ -11,6 +11,7 @@ import Test.Options (ShouldAssertNF(..), mainWithTestScenario, tsGroupToTree)
 
 import qualified Test.Cardano.Chain.Block.CBOR
 import qualified Test.Cardano.Chain.Block.Model
+import qualified Test.Cardano.Chain.Block.Size
 import qualified Test.Cardano.Chain.Block.Validation
 import qualified Test.Cardano.Chain.Block.ValidationMode
 import qualified Test.Cardano.Chain.Buildable
@@ -43,6 +44,7 @@ main =
     $   tsGroupToTree
     <$> [ Test.Cardano.Chain.Block.CBOR.tests
         , Test.Cardano.Chain.Block.Model.tests
+        , Test.Cardano.Chain.Block.Size.tests
         , Test.Cardano.Chain.Block.Validation.tests NoAssertNF
         , Test.Cardano.Chain.Block.ValidationMode.tests
         , Test.Cardano.Chain.Buildable.tests
