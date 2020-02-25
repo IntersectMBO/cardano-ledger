@@ -12,7 +12,7 @@
    \\[1em]
    Duncan Coutts  \quad \texttt{<duncan.coutts@iohk.io>}
 }
-\DueDate{1$^{\textrm{st}}$ November 2019}
+\DueDate{25$^{\textrm{st}}$ February 2020}
 \SubmissionDate{28$^{\textrm{th}}$ October 2019}{2019/10/28}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
@@ -1549,6 +1549,12 @@ excludes all addresses that hold no stake, and excludes addresses with
 stake rights but that have not correctly registered their staking key or
 delegation choice.
 
+We will call stake that is correctly delegated to an existing pool \emph{active
+  stake}, sometimes contrasted to the \emph{total stake}, which includes stake
+that is not delegated (or delegated to pools that are already retired). Unless
+specifically stated otherwise, when we talk about relative stake, we always
+normalise to the active stake, not the total stake.
+
 \subsubsection{Chain Delegation}
 \label{chain-delegation}
 
@@ -2799,9 +2805,10 @@ Every epoch, the total amount of ada in circulation \(T\) will be increased by
 adding ada to the rewards pot. To ensure the amount of ada never exceeds a
 finite, specified limit \(T_\infty\), the increase will reduce exponentially.
 Also, the increase will depend on the number of blocks that have been produced
-during the epoch. Specifically, each epoch, the contribution from monetary
-expansion to the rewards pot is given by
-\[\min(\eta, 1) \rho \left(T_\infty - T\right)\,,\]
+during the epoch, and on the amount of active stake in the system. Specifically,
+each epoch, the contribution from monetary expansion to the rewards pot is given
+by
+\[\min(\eta, 1) \,\bar{s}\, \rho \left(T_\infty - T\right)\,,\]
 where
 \begin{itemize}
 \item[\(\eta\)] is the ratio between the number of blocks that have been produced
@@ -2816,6 +2823,10 @@ where
   will be the number of slots in an epoch, while for Ouroboros Praos, we will
   use the number of slots per epoch times the active slots coefficient \(f\)
   (see Equation (1) in \citep{ouroboros_praos}).
+\item[\(\bar{s}\)] is the ratio of \emph{active} and \emph{total} stake. As
+  explained in \cref{overall-stake-distribution}, stake that is not delegated to
+  a stake pool is not considered to be active, and is disregarded for the
+  purpose of leader election.
 \item[\(\rho\)] is the monetary expansion parameter.
 \item[\(T_\infty\)] is the maximal amount of ada to ever be in circulation
   (i.e., \(45\cdot10^{9}\) ada).
@@ -2824,11 +2835,19 @@ where
 \end{itemize}
 
 The dependence on \(\eta\) incentivises cooperative behaviour, and in particular
-discourages the pools sabotaging each others blocks. Note that \(\eta\) can
-exceed \(1\) when there are more blocks produced in an epoch than would be
-expected on average. But the product \(\min(\eta, 1)\rho\) is always bounded by
-\(1\), which is necessary to ensure we never exceed \(T_\infty\) ada in
-circulation.
+discourages the pools sabotaging each others blocks. Similarly, the factor of
+\(\bar{s}\) is used to prevent an incentive to block delegation certificates.
+Since the relative stake of a stakeholder (the stake they themselves have
+delegated, divided by the overall active stake) is the deciding factor in
+determining their rewards, there would an incentive to keep the amount of active
+stake as small as possible, which could lead to a collective censorship of
+delegation certificates. Reducing the rewards from monetary expansion by
+\(\bar{s}\) counters this incentive.
+
+Note that \(\eta\) can exceed \(1\) when there are more blocks produced in an
+epoch than would be expected on average. But the product \(\min(\eta,
+1)\,\bar{s}\,\rho\) is always bounded by \(1\), which is necessary to ensure we
+never exceed \(T_\infty\) ada in circulation.
 
 Since \(T_\infty\) is finite, rewards from monetary expansion will
 decrease over time. This has to be compensated by
@@ -2975,6 +2994,9 @@ Here
   owner(s) (the amount of ada pledged during pool registration,
   see \cref{stake-pool-registration}).
 \end{itemize}
+
+As stated in \cref{overall-stake-distribution}, relative stake refers to stake
+divided by the amount of \emph{active} stake.
 
 As mentioned in \cref{stake-pool-registration}, the rewards for a pool
 where the owner(s) fail to honour their pledge of stake will receive
