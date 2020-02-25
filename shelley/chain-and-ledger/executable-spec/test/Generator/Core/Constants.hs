@@ -3,6 +3,7 @@ module Generator.Core.Constants
 where
 
 import           Data.Word (Word64)
+import           Numeric.Natural (Natural)
 
 -- | minimal number of addresses for transaction outputs
 minNumGenAddr :: Int
@@ -96,11 +97,11 @@ maxNumKeyPairs = 150
 
 -- | minimal coin value for generated genesis outputs
 minGenesisOutputVal :: Integer
-minGenesisOutputVal = 1000
+minGenesisOutputVal = 1000000
 
 -- | maximal coin value for generated genesis outputs
 maxGenesisOutputVal :: Integer
-maxGenesisOutputVal = 10000
+maxGenesisOutputVal = 100000000
 
 -- | Number of base scripts from which multi sig scripts are built.
 numBaseScripts :: Int
@@ -135,3 +136,9 @@ maxSlotTrace = 5000
 -- | Lower bound of the MaxEpoch protocol parameter
 frequencyLowMaxEpoch :: Word64
 frequencyLowMaxEpoch = 6
+
+maxMinFeeA :: Integer
+maxMinFeeA = 1000
+
+maxMinFeeB :: Natural
+maxMinFeeB = 3

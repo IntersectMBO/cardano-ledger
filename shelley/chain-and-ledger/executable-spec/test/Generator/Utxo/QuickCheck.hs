@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -27,7 +26,7 @@ import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, Credential, DCert, DPState,
                      DState, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx,
-                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, VrfKeyPairs)
+                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, VrfKeyPairs, WitVKey)
 import           Generator.Core.Constants (maxNumGenAddr, maxNumGenInputs, minNumGenAddr,
                      minNumGenInputs)
 import           Generator.Core.Constants (frequencyAFewWithdrawals, frequencyNoWithdrawals,
@@ -36,12 +35,12 @@ import           Generator.Core.QuickCheck (AllPoolKeys, findPayKeyPairAddr, fin
                      findPayScriptFromAddr, findStakeScriptFromCred, genNatural)
 import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
 import           Generator.Update.QuickCheck (genUpdate)
-import           LedgerState (pattern UTxOState, _dstate, _ptrs, _rewards)
+import           LedgerState (pattern UTxOState, minfee, _dstate, _ptrs, _rewards)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
-                     pattern ScriptHashObj, Wdrl (..), getRwdCred)
+                     pattern ScriptHashObj, Wdrl (..), getRwdCred, _outputs, _txfee)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
@@ -112,14 +111,21 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 
 
     -- calc. fees and output amounts
-    let (fee, outputs) = calcFeeAndOutputs balance_ recipientAddrs
+    let (_, outputs) = calcOutputsFromBalance balance_ recipientAddrs (Coin 0)
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
       genUpdate slot coreKeys keysByStakeHash pparams (utxoSt, dpState)
 
-    -- witnessed transaction
-    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update fee slotWithTTL
+    -- this is the "model" `TxBody` which is used to calculate the fees
+    --
+    -- while it only contains a pseudo fee value of 0, the constructed
+    -- transcation will have the correct set of witnesses.
+    --
+    -- Once the transaction body and the witnesses are constructed, we can use
+    -- this model to calculate the real fee value and update the fees and
+    -- transaction outputs in the final, generated transaction.
+    txBody <- genTxBody (Set.fromList inputs) outputs certs wdrls update (Coin 0) slotWithTTL
     let multiSig = Map.fromList $
           (map (\(payScript, _) -> (hashScript payScript, payScript)) spendScripts) ++
           (map (\(_, sScript) -> (hashScript sScript, sScript)) (stakeScripts ++ wdrlScripts))
@@ -130,13 +136,51 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
     -- deterministically for each script. Varying the script is possible though.
     let keysLists = map getKeyCombination $ Map.elems multiSig
         msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
-        !wits = makeWitnessesVKey txBody (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
-                `Set.union` makeGenWitnessesVKey txBody genesisWitnesses
-                `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigSignatures
+        wits = mkTxWits
+          txBody
+          (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+          genesisWitnesses
+          keyHashMap
+          msigSignatures
 
     let metadata = Nothing -- TODO generate metadata
-    -- discard if balance is negative, i.e., deposits exceed spending balance
-    pure (Tx txBody wits multiSig metadata)
+
+    -- calculate real fees of witnesses transaction
+    let minimalFees = minfee pparams (Tx txBody wits multiSig metadata)
+
+    -- discard generated transaction if the balance cannot cover the fees
+    if minimalFees > balance_
+      then D.trace (  "discarded bc. of real fees, minimal: "
+                   ++ show minimalFees ++ " Output balance: "
+                   ++ show balance_
+                   ) QC.discard
+      else do
+
+      -- update model transaction with real fees and outputs
+      let (fees', outputs') =
+            calcOutputsFromBalance balance_ recipientAddrs minimalFees
+          txBody' = txBody { _txfee = fees'
+                           , _outputs = outputs' }
+          wits' = mkTxWits
+            txBody'
+            (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+            genesisWitnesses
+            keyHashMap
+            msigSignatures
+
+      pure (Tx txBody' wits' multiSig metadata)
+
+mkTxWits
+  :: TxBody
+  -> [KeyPair]
+  -> [CoreKeyPair]
+  -> Map AnyKeyHash KeyPair
+  -> Set AnyKeyHash
+  -> Set WitVKey
+mkTxWits txBody keyWits genesisWits keyHashMap msigs =
+  makeWitnessesVKey txBody keyWits
+  `Set.union` makeGenWitnessesVKey txBody genesisWits
+  `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigs
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
@@ -159,22 +203,21 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
              update
              Nothing -- TODO generate metadata
 
--- | Calculate the fee and distribute the remainder of the balance
--- to the given addresses (as transaction outputs)
-calcFeeAndOutputs
+-- | Distribute the sum of `balance_` and `fee` over the addresses, return the
+-- sum of `fee` and the remainder of the equal distribution and the list ouf
+-- transaction outputs that cover the balance and fees.
+--
+-- The idea is to have an specified spending balance and fees that must be paid
+-- by the selected addresses.
+calcOutputsFromBalance
   :: Coin
   -> [Addr]
+  -> Coin
   -> (Coin, Seq TxOut)
-calcFeeAndOutputs balance_ addrs =
+calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem
   , (`TxOut` amountPerOutput) <$> Seq.fromList addrs)
   where
-    -- TODO @uroboros fee=0 works for now since PParams minFeeA/B == 0.
-    --      We need to instead add a "draft" TxBody as argument, which will
-    --      give a measure of the minimum fee for this transaction.
-    --      This estimated fee can then be used to create the actual TxBody,
-    --      with the new fee baked in.
-    fee = 0
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.
     balanceAfterFee = balance_ - fee

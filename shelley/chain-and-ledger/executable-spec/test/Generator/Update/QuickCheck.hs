@@ -30,7 +30,8 @@ import           Coin (Coin (..))
 import           ConcreteCryptoTypes (AVUpdate, Applications, CoreKeyPair, DPState, GenKeyHash,
                      KeyHash, KeyPair, Mdt, PPUpdate, UTxOState, Update)
 import           Examples (unsafeMkUnitInterval)
-import           Generator.Core.Constants (frequencyLowMaxEpoch, frequencyTxUpdates)
+import           Generator.Core.Constants (frequencyLowMaxEpoch, frequencyTxUpdates, maxMinFeeA,
+                     maxMinFeeB)
 import           Generator.Core.QuickCheck (AllPoolKeys (cold), genInteger, genNatural, genWord64,
                      increasingProbabilityAt, tooLateInEpoch)
 import           Keys (GenDelegs (..), hash, hashKey, vKey)
@@ -53,10 +54,9 @@ genIntervalInThousands :: Integer -> Integer -> Gen UnitInterval
 genIntervalInThousands lower upper =
   unsafeMkUnitInterval <$> genRationalInThousands lower upper
 
--- TODO @uroboros for now, keeping minA/B at zero until we generate fees in genTx
 genPParams :: Gen PParams
-genPParams = mkPParams <$> pure 0 -- _minfeeA
-                       <*> pure 0 -- _minfeeB
+genPParams = mkPParams <$> genInteger 0 maxMinFeeA -- _minfeeA
+                       <*> genNatural 0 maxMinFeeB -- _minfeeB
                        <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
                        <*> genKeyDeposit
                        <*> genKeyMinRefund
@@ -196,7 +196,7 @@ genSetOfPpm
 genSetOfPpm pp = do
   n <- QC.elements [1 .. 3] -- pick up to three param updates
   subsetOf n [
-        MinFeeB               <$> pure 0 -- TODO @uroboros disable until tx fees are dealt with (genNatural 0 10)
+        MinFeeB               <$> genNatural 0 maxMinFeeB
       , MaxBBSize             <$> genSize
       , MaxTxSize             <$> genSize
       , MaxBHSize             <$> genSize
