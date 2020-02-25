@@ -51,7 +51,7 @@ data PrtclState crypto
       Nonce -- ^ Evolving nonce
       Nonce -- ^ Candidate nonce
       Nonce -- ^ Prev epoch hash nonce
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
   toCBOR (PrtclState m hh sn bn n1 n2 n3 n4) = mconcat
