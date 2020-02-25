@@ -5,21 +5,13 @@ where
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
--- | minimal number of addresses for transaction outputs
-minNumGenAddr :: Int
-minNumGenAddr = 1
-
--- | minimal number of addresses for transaction outputs
-maxNumGenAddr :: Int
-maxNumGenAddr = 2
-
 -- | minimal number of transaction inputs to select
 minNumGenInputs :: Int
 minNumGenInputs = 1
 
 -- | maximal number of transaction inputs to select
 maxNumGenInputs :: Int
-maxNumGenInputs = 5
+maxNumGenInputs = 10
 
 -- | Relative frequency of generated credential registration certificates
 frequencyRegKeyCert :: Int
@@ -85,11 +77,11 @@ frequencyTxUpdates = 10
 
 -- | minimal number of genesis UTxO outputs
 minGenesisUTxOouts :: Int
-minGenesisUTxOouts = 1
+minGenesisUTxOouts = 10
 
 -- | maximal number of genesis UTxO outputs
 maxGenesisUTxOouts :: Int
-maxGenesisUTxOouts = 5
+maxGenesisUTxOouts = 100
 
 -- | maximal numbers of generated keypairs
 maxNumKeyPairs :: Word64
