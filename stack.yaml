@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/00487726c4bc21b4744e59d913334ebfeac7d68e/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0/snapshot.yaml
 
 packages:
   - cardano-ledger
@@ -7,7 +7,7 @@ packages:
   - crypto/test
 
 extra-deps:
-  - tasty-hedgehog-1.0.0.1
+  - tasty-hedgehog-1.0.0.2
 
   # To be able to use `stack hoogle`
   - haskell-src-exts-1.21.0
@@ -15,13 +15,13 @@ extra-deps:
   - generic-monoid-0.1.0.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 00487726c4bc21b4744e59d913334ebfeac7d68e
+    commit: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
     subdirs:
       - .
       - test
 
   - git: https://github.com/input-output-hk/cardano-base
-    commit: 4f24cf8d6686ac764c6ddbc188c88d9296497a50
+    commit: a7b403c1762a6a122a691df816c26563b7e547f8
     subdirs:
       - binary
       - binary/test
@@ -41,7 +41,7 @@ extra-deps:
   - gray-code-0.3.1
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: dd30455144e11efb435619383ba84ce02aee720d
+    commit: 479c1718ab85761ae72d13c559b12227c8837748
     subdirs:
       - contra-tracer
 
