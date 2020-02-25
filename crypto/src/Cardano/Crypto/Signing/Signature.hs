@@ -124,6 +124,7 @@ fromCBORXSignature = toCborError . CC.xsignature =<< fromCBOR
 
 instance Typeable a => ToCBOR (Signature a) where
   toCBOR (Signature a) = toCBORXSignature a
+  encodedSizeExpr _ _ = 66
 
 instance Typeable a => FromCBOR (Signature a) where
   fromCBOR = fmap Signature fromCBORXSignature

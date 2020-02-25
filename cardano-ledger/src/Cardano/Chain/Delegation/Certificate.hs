@@ -187,6 +187,13 @@ instance ToCBOR Certificate where
       <> toCBOR (delegateVK cert)
       <> toCBOR (signature cert)
 
+  encodedSizeExpr size cert =
+      1
+    + encodedSizeExpr size (epoch <$> cert)
+    + encodedSizeExpr size (issuerVK <$> cert)
+    + encodedSizeExpr size (delegateVK <$> cert)
+    + encodedSizeExpr size (signature <$> cert)
+
 instance FromCBOR Certificate where
   fromCBOR = void <$> fromCBOR @(ACertificate ByteSpan)
 

@@ -575,6 +575,11 @@ instance ToCBOR BlockSignature where
       <> toCBOR (2 :: Word8)
       <> (encodeListLen 2 <> toCBOR cert <> toCBOR sig)
 
+  encodedSizeExpr size sig =
+      3
+    + encodedSizeExpr size (delegationCertificate <$> sig)
+    + encodedSizeExpr size (signature             <$> sig)
+
 instance FromCBOR BlockSignature where
   fromCBOR = void <$> fromCBOR @(ABlockSignature ByteSpan)
 
@@ -630,6 +635,14 @@ instance ToCBOR ToSign where
       <> toCBOR (tsSlot ts)
       <> toCBOR (tsDifficulty ts)
       <> toCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
+
+  encodedSizeExpr size ts =
+      1
+    + encodedSizeExpr size (tsHeaderHash <$> ts)
+    + encodedSizeExpr size (tsBodyProof <$> ts)
+    + encodedSizeExpr size (tsSlot <$> ts)
+    + encodedSizeExpr size (tsDifficulty <$> ts)
+    + toCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
 
 instance FromCBOR ToSign where
   fromCBOR = do

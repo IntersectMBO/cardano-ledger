@@ -30,6 +30,8 @@ instance ToJSON ChainDifficulty where
 instance ToCBOR ChainDifficulty where
     toCBOR cd = encodeListLen 1 <> toCBOR (unChainDifficulty cd)
 
+    encodedSizeExpr f cd = 1 + encodedSizeExpr f (unChainDifficulty <$> cd)
+
 instance FromCBOR ChainDifficulty where
     fromCBOR = do
         enforceSize "ChainDifficulty" 1
