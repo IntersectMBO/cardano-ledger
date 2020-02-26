@@ -53,7 +53,17 @@ instance STS (PPUP crypto) where
 
   initialRules = []
 
-  transitionRules = [ppupTransitionEmpty, ppupTransitionNonEmpty]
+  transitionRules = [ ppupCombined ]
+
+ppupCombined :: TransitionRule (PPUP crypto)
+ppupCombined = do
+  TRC ( _
+      , _
+      , (PPUpdate pup, _)) <- judgmentContext
+
+  if Map.null pup
+    then ppupTransitionEmpty
+    else ppupTransitionNonEmpty
 
 instance NoUnexpectedThunks (PredicateFailure (PPUP crypto))
 
