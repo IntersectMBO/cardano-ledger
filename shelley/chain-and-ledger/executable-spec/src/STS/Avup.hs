@@ -96,14 +96,15 @@ instance
 avUpCombined :: TransitionRule (AVUP crypto)
 avUpCombined = do
   TRC ( _
-      , _
+      , AVUPState (AVUpdate aupS) _ _
       , AVUpdate _aup) <- judgmentContext
 
   if Map.null _aup
     then avUpdateEmpty
     else do
     coreNodeQuorum <- liftSTS $ asks quorum
-    let fav  = votedValue _aup (fromIntegral coreNodeQuorum)
+    let aup' = aupS ⨃ Map.toList _aup
+        fav  = votedValue aup' (fromIntegral coreNodeQuorum)
     case fav of
       Nothing -> avUpdateNoConsensus
       Just _  -> avUpdateConsensus
