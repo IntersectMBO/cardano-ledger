@@ -59,7 +59,7 @@ instance STS (AVUP crypto) where
 
   initialRules = []
 
-  transitionRules = [avUpdateEmpty, avUpdateNoConsensus, avUpdateConsensus]
+  transitionRules = [ avUpCombined ]
 
 instance NoUnexpectedThunks (PredicateFailure (AVUP crypto))
 
@@ -92,6 +92,21 @@ instance
       6 -> pure InvalidName
       7 -> pure InvalidSystemTags
       k -> invalidKey k
+
+avUpCombined :: TransitionRule (AVUP crypto)
+avUpCombined = do
+  TRC ( _
+      , _
+      , AVUpdate _aup) <- judgmentContext
+
+  if Map.null _aup
+    then avUpdateEmpty
+    else do
+    coreNodeQuorum <- liftSTS $ asks quorum
+    let fav  = votedValue _aup (fromIntegral coreNodeQuorum)
+    case fav of
+      Nothing -> avUpdateNoConsensus
+      Just _  -> avUpdateConsensus
 
 avUpdateEmpty :: TransitionRule (AVUP crypto)
 avUpdateEmpty = do
