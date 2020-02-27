@@ -26,13 +26,14 @@ import           Address (scriptToCred, toCred)
 import           Coin (Coin (..), splitCoin)
 import           ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair, Credential, DCert, DPState,
                      DState, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx,
-                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, VrfKeyPairs, WitVKey)
-import           Generator.Core.Constants (maxNumGenInputs, minNumGenInputs)
+                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, WitVKey)
 import           Generator.Core.Constants (frequencyAFewWithdrawals, frequencyNoWithdrawals,
-                     frequencyPotentiallyManyWithdrawals, maxAFewWithdrawals)
+                     frequencyPotentiallyManyWithdrawals, maxAFewWithdrawals, maxNumGenInputs,
+                     minNumGenInputs)
 import           Generator.Core.QuickCheck (AllPoolKeys, findPayKeyPairAddr, findPayKeyPairCred,
                      findPayScriptFromAddr, findStakeScriptFromCred, genNatural)
-import           Generator.Delegation.QuickCheck (CertCred (..), genDCerts)
+import           Generator.DCertTrace (genDCerts)
+import           Generator.Delegation.QuickCheck (CertCred (..))
 import           Generator.Update.QuickCheck (genUpdate)
 import           LedgerState (pattern UTxOState, minfee, _dstate, _ptrs, _rewards)
 import           Slot (SlotNo (..))
@@ -56,9 +57,8 @@ genTx :: LedgerEnv
       -> MultiSigPairs
       -> [(CoreKeyPair, AllPoolKeys)]
       -> Map KeyHash KeyPair -- indexed keys By StakeHash
-      -> VrfKeyPairs
       -> Gen Tx
-genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys keyHashMap scripts coreKeys keysByStakeHash vrfKeys = do
+genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpState) keys keyHashMap scripts coreKeys keysByStakeHash = do
   keys' <- QC.shuffle keys
   scripts' <- QC.shuffle scripts
 
@@ -88,7 +88,7 @@ genTx (LedgerEnv slot _ pparams _) (utxoSt@(UTxOState utxo _ _ _), dpState) keys
 
   -- certificates
   (certs, certCreds, deposits_, refunds_)
-    <- genDCerts keys' keyHashMap scripts' (fst <$> coreKeys) vrfKeys keysByStakeHash pparams dpState slot ttl
+    <- genDCerts keyHashMap pparams dpState slot ttl txIx reserves
 
   if spendingBalance < deposits_
     then D.trace ("discarded") QC.discard

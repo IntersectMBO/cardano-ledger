@@ -7,16 +7,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Generator.Delegation.QuickCheck
-  ( genDCerts
+  ( genDCert
   , CertCred (..))
   where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
-import           Data.Maybe (catMaybes, fromMaybe)
+import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
 import           Data.Set ((\\))
 import qualified Data.Set as Set
 import           Lens.Micro (to, (^.))
@@ -29,12 +27,12 @@ import           Test.Utils
 import           Address (mkRwdAcnt, scriptToCred)
 import           BaseTypes (interval0)
 import           Coin (Coin (..))
-import           ConcreteCryptoTypes (AnyKeyHash, CoreKeyPair, DCert, DPState, DState, KeyHash,
-                     KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
-                     VrfKeyPairs, hashKeyVRF)
+import           ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState, KeyHash, KeyPair,
+                     KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey, VrfKeyPairs,
+                     hashKeyVRF)
 import           Delegation.Certificates (pattern DCertMir, pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
-                     pattern RetirePool, pattern StakeCreds, decayKey, isDeRegKey)
+                     pattern RetirePool, pattern StakeCreds)
 import           Examples (unsafeMkUnitInterval)
 import           Generator.Core.Constants (frequencyDeRegKeyCert, frequencyDelegationCert,
                      frequencyGenesisDelegationCert, frequencyKeyCredDeReg,
@@ -46,76 +44,19 @@ import           Generator.Core.QuickCheck (genCoinList, genInteger, genWord64, 
                      tooLateInEpoch)
 import           Keys (GenDelegs (..), hashKey, vKey)
 import           Ledger.Core (dom, range, (∈), (∉))
-import           LedgerState (dstate, keyRefund, pParams, pstate, retiring, stPools, stkCreds,
-                     _dstate, _genDelegs, _pstate, _rewards, _stPools, _stkCreds)
+import           LedgerState (dstate, pParams, pstate, retiring, stPools, _dstate, _genDelegs,
+                     _pstate, _rewards, _stPools, _stkCreds)
 import           PParams (PParams (..), d)
-import           Slot (EpochNo (EpochNo), SlotNo (SlotNo))
-import           Tx (getKeyCombination)
+import           Slot (EpochNo (EpochNo), SlotNo)
 import           TxData (pattern DCertDeleg, pattern DCertGenesis, pattern DCertPool,
                      pattern Delegation, pattern KeyHashObj, pattern PoolParams, RewardAcnt (..),
                      pattern StakePools, _poolPubKey, _poolVrf)
-import           UTxO (totalDeposits)
 
 data CertCred = CoreKeyCred [CoreKeyPair]
               | KeyCred KeyPair
               | ScriptCred (MultiSig, MultiSig)
+              | NoCred
               deriving (Show)
-
--- | Generate certificates and also return the associated witnesses and
--- deposits and refunds required.
-genDCerts
-  :: KeyPairs
-  -> Map AnyKeyHash KeyPair
-  -> MultiSigPairs
-  -> [CoreKeyPair]
-  -> VrfKeyPairs
-  -> Map KeyHash KeyPair -- indexed keys By StakeHash
-  -> PParams
-  -> DPState
-  -> SlotNo
-  -> Natural
-  -> Gen (Seq DCert, [CertCred], Coin, Coin)
-genDCerts keys keyHashMap scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot ttl = do
-  -- TODO @uroboros Generate _multiple_ certs per Tx
-  -- TODO ensure that the `Seq` is constructed with the list reversed, or that
-  -- later traversals are done backwards, to be consistent with the executable
-  -- spec (see `delegsTransition` in `STS.Delegs`) which consumes the list
-  -- starting at the tail end.
-
-  cert <- genDCert keys scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot
-  case cert of
-    Nothing ->
-      return (Seq.empty, [], Coin 0, Coin 0)
-    Just (cert_, witnessOrCoreKeys) -> do
-      let certs = [cert_]
-          deposits_ = totalDeposits pparams (_stPools (_pstate dpState)) certs
-
-          deRegStakeCreds = filter isDeRegKey certs
-          slotWithTTL = slot + SlotNo (fromIntegral ttl)
-          rewardForCred crt =
-            let (dval, dmin, lambda) = decayKey pparams
-             in keyRefund dval
-                          dmin
-                          lambda
-                          (dpState ^. dstate . stkCreds)
-                          slotWithTTL
-                          crt
-          refunds_ = sum (rewardForCred <$> deRegStakeCreds)
-
-      case witnessOrCoreKeys of
-        ScriptCred (_, stakeScript) -> do
-          let witnessHashes = getKeyCombination stakeScript
-          let witnesses =
-                catMaybes (map (flip Map.lookup keyHashMap) witnessHashes)
-          pure ( Seq.fromList certs
-               , (map KeyCred witnesses) ++
-                 (case cert_ of
-                    DCertDeleg (RegKey _) -> []
-                    _        -> [witnessOrCoreKeys])
-               , deposits_
-               , refunds_)
-        _ -> return (Seq.fromList certs, [witnessOrCoreKeys], deposits_, refunds_)
-
 
 -- | Occasionally generate a valid certificate
 --
@@ -164,14 +105,15 @@ genRegKeyCert keys scripts delegSt =
           [] -> pure Nothing
           _  -> do
             (_payKey, stakeKey) <- QC.elements availableKeys
-            pure $ Just (DCertDeleg (RegKey (toCred stakeKey)), KeyCred stakeKey))
+            pure $ Just ( DCertDeleg (RegKey (toCred stakeKey))
+                        , NoCred))
     , ( frequencyScriptCredReg
       , case availableScripts of
           [] -> pure Nothing
           _  -> do
-            scriptPair@(_, stakeScript) <- QC.elements availableScripts
-            pure $ Just (DCertDeleg (RegKey (scriptToCred stakeScript))
-                        , ScriptCred scriptPair))
+            (_, stakeScript) <- QC.elements availableScripts
+            pure $ Just ( DCertDeleg (RegKey (scriptToCred stakeScript))
+                        , NoCred))
     ]
   where
     notRegistered k = k ∉ dom (_stkCreds delegSt)
