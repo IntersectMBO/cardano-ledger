@@ -31,8 +31,6 @@ module UTxO
   , totalDeposits
   , makeWitnessVKey
   , makeWitnessesVKey
-  , makeGenWitnessVKey
-  , makeGenWitnessesVKey
   , makeWitnessesFromScriptKeys
   , verifyWitVKey
   , scriptsNeeded
@@ -63,6 +61,7 @@ import           TxData (Addr (..), Credential (..), pattern DeRegKey, pattern D
                      poolPubKey, txUpdate)
 import           Updates (Update)
 
+import           Data.Coerce (coerce)
 import           Delegation.Certificates (DCert (..), StakePools (..), dvalue, requiresVKeyWitness)
 
 -- |The unspent transaction outputs.
@@ -139,7 +138,6 @@ verifyWitVKey
   -> WitVKey crypto
   -> Bool
 verifyWitVKey tx (WitVKey vkey sig) = verify vkey tx sig
-verifyWitVKey tx (WitGVKey vkey sig) = verify vkey tx sig
 
 -- |Create a witness for transaction
 makeWitnessVKey
@@ -147,9 +145,9 @@ makeWitnessVKey
      , Signable (DSIGN crypto) (TxBody crypto)
      )
   => TxBody crypto
-  -> KeyPair 'Regular crypto
+  -> KeyPair a crypto
   -> WitVKey crypto
-makeWitnessVKey tx keys = WitVKey (vKey keys) (sign (sKey keys) tx)
+makeWitnessVKey tx keys = WitVKey (coerce $ vKey keys) (sign (sKey keys) tx)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
@@ -157,29 +155,9 @@ makeWitnessesVKey
      , Signable (DSIGN crypto) (TxBody crypto)
      )
   => TxBody crypto
-  -> [KeyPair 'Regular crypto]
+  -> [KeyPair a crypto]
   -> Set (WitVKey crypto)
 makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
-
--- |Create a genesis witness for transaction
-makeGenWitnessVKey
-  :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
-     )
-  => TxBody crypto
-  -> KeyPair 'Genesis crypto
-  -> WitVKey crypto
-makeGenWitnessVKey tx keys = WitGVKey (vKey keys) (sign (sKey keys) tx)
-
--- |Create genesis witnesses for transaction
-makeGenWitnessesVKey
-  :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
-     )
-  => TxBody crypto
-  -> [KeyPair 'Genesis crypto]
-  -> Set (WitVKey crypto)
-makeGenWitnessesVKey tx = Set.fromList . fmap (makeGenWitnessVKey tx)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.

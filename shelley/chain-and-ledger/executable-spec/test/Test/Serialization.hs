@@ -62,7 +62,7 @@ import           ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, Has
                      VerKeyVRF, hashKeyVRF)
 import           OCert (KESPeriod (..), pattern OCert)
 import           Unsafe.Coerce (unsafeCoerce)
-import           UTxO (makeGenWitnessVKey, makeWitnessVKey)
+import           UTxO (makeWitnessVKey)
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -329,20 +329,10 @@ serializationTests = testGroup "Serialization Tests"
       <> S (Coin 2)
     )
   , case makeWitnessVKey testTxb testKey1 of
-    (WitGVKey _ _) -> error "unreachable"
     w@(WitVKey vk sig) ->
       checkEncodingCBOR "vkey_witnesses"
       w  -- Transaction _witnessVKeySet element
-      ( T (TkListLen 3 . TkWord 0)
-        <> S vk -- vkey
-        <> S sig -- signature
-      )
-  , case makeGenWitnessVKey testTxb testGKey of
-    (WitVKey _ _) -> error "unreachable"
-    w@(WitGVKey vk sig) ->
-      checkEncodingCBOR "genesis_vkey_witnesses"
-      w  -- Transaction _witnessVKeySet element
-      ( T (TkListLen 3 . TkWord 1)
+      ( T (TkListLen 2)
         <> S vk -- vkey
         <> S sig -- signature
       )

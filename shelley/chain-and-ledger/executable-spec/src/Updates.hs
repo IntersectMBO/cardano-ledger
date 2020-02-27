@@ -34,8 +34,8 @@ module Updates
   )
 where
 
-import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), decodeMapLenOrIndef,
-                     encodeListLen, encodeMapLen, enforceSize)
+import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), encodeListLen, encodeMapLen,
+                     enforceSize)
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -52,7 +52,7 @@ import           BaseTypes (Nonce, Text64, UnitInterval)
 import           Coin (Coin)
 import           Keys (GenDelegs, GenKeyHash)
 import           PParams (ActiveSlotCoeff, PParams (..))
-import           Serialization (CBORMap (..), decodeCollection)
+import           Serialization (CBORMap (..), decodeMapContents)
 import           Slot (EpochNo (..), SlotNo)
 
 import           Numeric.Natural (Natural)
@@ -195,7 +195,7 @@ instance ToCBOR PParamsUpdate where
 
 instance FromCBOR PParamsUpdate where
   fromCBOR = fmap (PParamsUpdate . Set.fromList)
-    $ decodeCollection decodeMapLenOrIndef
+    $ decodeMapContents
     $ fromCBOR @Word8 >>= \case
          0  -> MinFeeA <$> fromCBOR
          1  -> MinFeeB <$> fromCBOR

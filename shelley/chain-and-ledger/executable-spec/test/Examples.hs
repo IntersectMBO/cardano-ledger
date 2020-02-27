@@ -122,7 +122,7 @@ import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern App
                      InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
                      Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, emptyUpdate,
                      emptyUpdateState)
-import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
+import           UTxO (pattern UTxO, balance, makeWitnessesVKey, txid)
 
 data CHAINExample =
   CHAINExample { currentSlotNo    :: SlotNo       -- ^ Current slot
@@ -443,7 +443,7 @@ txEx2A = Tx
             -- since it is an owner of the stake pool being registered,
             -- and *not* because of the stake key registration.
                      `Set.union`
-           makeGenWitnessesVKey txbodyEx2A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
+           makeWitnessesVKey txbodyEx2A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
              , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
@@ -2148,7 +2148,7 @@ txbodyEx5A = TxBody
 txEx5A :: Tx
 txEx5A = Tx
            txbodyEx5A
-           (makeWitnessesVKey txbodyEx5A [ alicePay ] `Set.union` makeGenWitnessesVKey txbodyEx5A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
+           (makeWitnessesVKey txbodyEx5A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx5A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
            Map.empty
            Nothing
 
@@ -2297,7 +2297,7 @@ txbodyEx6A = TxBody
 txEx6A :: Tx
 txEx6A = Tx
            txbodyEx6A
-           (makeWitnessesVKey txbodyEx6A [ alicePay ] `Set.union` makeGenWitnessesVKey txbodyEx6A
+           (makeWitnessesVKey txbodyEx6A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx6A
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
@@ -2370,7 +2370,7 @@ ex6A = CHAINExample (SlotNo 10) initStEx2A blockEx6A (Right expectedStEx6A)
 txEx6B :: Tx
 txEx6B = Tx
            txbodyEx6A
-           (makeWitnessesVKey txbodyEx6A [ alicePay ] `Set.union` makeGenWitnessesVKey txbodyEx6A
+           (makeWitnessesVKey txbodyEx6A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx6A
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
@@ -2461,7 +2461,7 @@ txbodyEx6F = TxBody
 
 txEx6F :: Tx
 txEx6F = Tx txbodyEx6F
-            (makeWitnessesVKey txbodyEx6F [ alicePay, aliceStake ]  `Set.union` makeGenWitnessesVKey txbodyEx6F
+            (makeWitnessesVKey txbodyEx6F [ alicePay, aliceStake ]  `Set.union` makeWitnessesVKey txbodyEx6F
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)

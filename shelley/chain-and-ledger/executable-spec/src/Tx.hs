@@ -61,7 +61,7 @@ import           GHC.Generics (Generic)
 import           Lens.Micro.TH (makeLenses)
 import           MetaData (MetaData)
 
-import           Serialization (CborSeq (..), mapHelper)
+import           Serialization (CborSeq (..), decodeMapContents)
 import           TxData (Credential (..), MultiSig (..), Script (..), ScriptHash (..), TxBody (..),
                      TxId (..), TxIn (..), TxOut (..), WitVKey (..), certs, inputs,
                      nativeMultiSigTag, outputs, ttl, txUpdate, txfee, wdrls, witKeyHash)
@@ -126,7 +126,7 @@ instance (Crypto crypto) =>
 instance (Crypto crypto) =>
   FromCBOR (CBORWits crypto) where
   fromCBOR = do
-    mapParts <- mapHelper $
+    mapParts <- decodeMapContents $
       decodeWord >>= \case
         0 -> fromCBOR >>= \x -> pure (\w -> w { _cborWitsVKeys  = x })
         1 -> fromCBOR >>= \x -> pure (\w -> w { _cborWitsScripts  = x })
