@@ -187,6 +187,18 @@ ts_prop_sizeABoundaryHeader =
            <*> genBoundaryHeader)
 
 --
+-- ABlockOrBoundaryHdr
+--
+
+ts_prop_sizeABlockOrBoundaryHdr :: TSProperty
+ts_prop_sizeABlockOrBoundaryHdr =
+    encodedSizeTest
+      toCBORABlockOrBoundaryHdr
+      toCBORABlockOrBoundaryHdrSize
+      $ ((,) <$> Crypto.genProtocolMagicId <*> Slotting.genEpochSlots)
+        >>= uncurry genABlockOrBoundaryHdr
+
+--
 -- Utils
 --
 

@@ -11,6 +11,7 @@ module Test.Cardano.Chain.Block.Gen
   , genBlockWithEpochSlots
   , genBoundaryBlock
   , genBoundaryHeader
+  , genABlockOrBoundaryHdr
   )
 where
 
@@ -22,7 +23,9 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Chain.Block
-  ( ABlockSignature(..)
+  ( ABlockOrBoundaryHdr(..)
+  , ABlockSignature(..)
+  , AHeader
   , Block
   , BlockSignature
   , Body
@@ -35,10 +38,15 @@ import Cardano.Chain.Block
   , HeaderHash
   , Proof(..)
   , ToSign(..)
+  , fromCBORABoundaryHeader
+  , fromCBORAHeader
   , hashHeader
   , mkBlockExplicit
   , mkHeaderExplicit
+  , toCBORABoundaryHeader
+  , toCBORHeader
   )
+import Cardano.Chain.Byron.API (reAnnotateUsing)
 import Cardano.Chain.Delegation (signCertificate)
 import Cardano.Chain.Genesis (GenesisHash(..))
 import Cardano.Chain.Slotting
@@ -214,3 +222,21 @@ genBoundaryHeader = do
     <*> pure epoch
     <*> genChainDifficulty
     <*> pure ()
+
+genABlockOrBoundaryHdr
+  :: ProtocolMagicId
+  -> EpochSlots
+  -> Gen (ABlockOrBoundaryHdr ByteString)
+genABlockOrBoundaryHdr pm es =
+    Gen.choice
+      [ ABOBBlockHdr . reAnnotateHdr  <$> genHeader pm es
+      , ABOBBoundaryHdr . reAnnotateBoundaryHdr <$> genBoundaryHeader
+      ]
+  where
+    reAnnotateHdr :: AHeader () -> AHeader ByteString
+    reAnnotateHdr = reAnnotateUsing (toCBORHeader es)
+                                    (fromCBORAHeader es)
+
+    reAnnotateBoundaryHdr :: ABoundaryHeader () -> ABoundaryHeader ByteString
+    reAnnotateBoundaryHdr = reAnnotateUsing (toCBORABoundaryHeader pm)
+                                            fromCBORABoundaryHeader
