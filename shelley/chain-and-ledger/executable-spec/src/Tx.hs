@@ -36,16 +36,14 @@ module Tx
 --  , txwitsScript
   , extractKeyHash
   , extractScriptHash
+  , getrefs
+  , addrTxOut
   , extractGenKeyHash
   , getKeyCombinations
   , getKeyCombination
   , txToCBORWits
   , cborWitsToTx
   , getrefs
-  , addrTxOut
-  , extractGenKeyHash
-  , getKeyCombinations
-  , getKeyCombination
   , adaID
   , adaToken
   )
@@ -217,6 +215,33 @@ hashAnyScript
 hashAnyScript (MultiSigScript msig) =
   ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
                                           <> toCBOR x) (MultiSigScript msig)
+
+
+-- | Hashes plutus script, appending the 'plutusTag' in
+-- front and then calling the script CBOR function.
+hashPLCScript :: Crypto crypto
+  => ScriptPLC crypto
+  -> ScriptHash crypto
+hashPLCScript (ScriptPLC pv plc) =
+  ScriptHashPlutus (hashWithSerialiser (\x -> encodeWord8 plutusTag
+                                          <> toCBOR x) plc)
+
+
+-- | native currency (Ada) currencyID
+adaID :: (Crypto crypto) => ScriptHash crypto
+adaID = hashPLCScript (ScriptPLC 1)
+
+adaToken :: ByteString
+adaToken =  pack "Ada"
+
+-- | returns a Value representing the given amount of Ada
+toValue :: Crypto crypto => Coin -> Value crypto
+toValue (Coin c) = Value (singleton adaID (singleton adaToken (Quantity c)))
+
+
+-- | 0 Ada
+zeroValue :: Crypto crypto => Value crypto
+zeroValue = Value (singleton (hashPLCScript (ScriptPLC (0,0,0) 1)) (singleton adaToken (Quantity 0)))
 
 
 -- | Hashes plutus script, appending the 'plutusTag' in

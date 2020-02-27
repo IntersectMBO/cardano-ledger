@@ -37,11 +37,11 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           BaseTypes (CborSeq (..), UnitInterval, invalidKey)
-import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey, hash)
 import           Ledger.Core (Relation (..))
 
+import           Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
 import           Scripts
 import           CostModel
 import           PParams (PlutusPP)
@@ -535,10 +535,36 @@ instance
   (Typeable crypto, Crypto crypto)
   => ToCBOR (TxInTx crypto)
  where
-  toCBOR (TxOut addr coin) =
-    encodeListLen (listLen addr + 1)
-      <> toCBORGroup addr
-      <> toCBOR coin
+  toCBOR = \case
+    TxInVK txin isfee ->
+      encodeListLen 3
+       <> toCBOR (0 :: Word8)
+       <> toCBOR txin
+       <> toCBOR isfee
+
+    TxInScr txin dh ->
+      encodeListLen 3
+       <> toCBOR (1 :: Word8)
+       <> toCBOR txin
+       <> toCBOR dh
+
+instance (Crypto crypto) =>
+  FromCBOR (TxInTx crypto) where
+  fromCBOR = do
+    n <- decodeListLen
+    decodeWord >>= \case
+      0 -> do
+        matchSize "TxInVK" 2 n
+        a <- fromCBOR
+        b <- fromCBOR
+        pure $ TxInVK a b
+      1 -> do
+        matchSize "TxInScr" 2 n
+        a <- fromCBOR
+        (b ) <- fromCBOR
+        pure $ TxInScr a (DataHash b)
+      k -> invalidKey k
+
 
   toCBOR = \case
     TxInVK txin isfee ->

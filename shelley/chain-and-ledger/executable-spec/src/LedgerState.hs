@@ -352,10 +352,11 @@ emptyEpochState :: (Crypto crypto) => EpochState crypto
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
 
+
 getIR :: EpochState crypto -> Map (Credential crypto) Coin
 getIR = _irwd . _dstate . _delegationState . esLState
 
-emptyLedgerState :: LedgerState crypto
+emptyLedgerState :: LedgerState
 emptyLedgerState =
   LedgerState
   emptyUTxOState
