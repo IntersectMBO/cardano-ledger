@@ -55,7 +55,7 @@ import           Numeric.Natural (Natural)
 
 import           BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, mkNonce)
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, encodeListLen,
-                     matchSize)
+                     matchSize, serializeEncoding')
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -75,7 +75,7 @@ import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), From
 
 -- |The hash of a Block Header
 newtype HashHeader crypto =
-  HashHeader (Hash (HASH crypto) (BHeader crypto))
+  HashHeader { unHashHeader :: (Hash (HASH crypto) (BHeader crypto)) }
   deriving (Show, Eq, Generic, Ord)
 
 deriving instance Crypto crypto => ToCBOR (HashHeader crypto)
@@ -87,9 +87,22 @@ newtype TxSeq crypto
     = TxSeq (Seq (Tx crypto))
   deriving (Eq, Show)
 
+instance Crypto crypto
+  => ToCBORGroup (TxSeq crypto)
+ where
+  toCBORGroup (TxSeq txns) =
+       toCBOR bodies
+    <> toCBOR wits
+    <> toCBOR metadata
+      where
+        bodies = CborSeq $ fmap _body txns
+        wits = CborSeq $ fmap txToCBORWits txns
+        metadata = extractMetaData txns
+  listLen _ = 3
+
 -- | Hash of block body
 newtype HashBBody crypto =
-  HashBBody (Hash (HASH crypto) (TxSeq crypto))
+  HashBBody { unHashBody :: (Hash (HASH crypto) (TxSeq crypto)) }
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (HashBBody crypto)
@@ -100,7 +113,7 @@ bhHash
   :: Crypto crypto
   => BHeader crypto
   -> HashHeader crypto
-bhHash = HashHeader . hash
+bhHash = HashHeader . Hash.hashWithSerialiser toCBORGroup
 
 -- |Hash a given block body
 bbHash
@@ -268,16 +281,10 @@ constructMetaData n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n-1])
 instance Crypto crypto
   => ToCBOR (Block crypto)
  where
-  toCBOR (Block h (TxSeq txns)) =
-      encodeListLen (listLen h + 3)
+  toCBOR (Block h txns) =
+      encodeListLen (listLen h + listLen txns)
         <> toCBORGroup h
-        <> toCBOR bodies
-        <> toCBOR wits
-        <> toCBOR metadata
-      where
-        bodies = CborSeq $ fmap _body txns
-        wits = CborSeq $ fmap txToCBORWits txns
-        metadata = extractMetaData txns
+        <> toCBORGroup txns
 
 instance Crypto crypto
   => FromCBOR (Block crypto)
@@ -308,13 +315,16 @@ instance Crypto crypto
     pure $ Block header (TxSeq txns)
 
 bHeaderSize
-  :: ( Crypto crypto)
+  :: forall crypto. (Crypto crypto)
   => BHeader crypto
   -> Int
-bHeaderSize = BS.length . BS.pack . show
+bHeaderSize = BS.length . serializeEncoding' . toCBORGroup
 
-bBodySize :: Crypto crypto => TxSeq crypto-> Int
-bBodySize (TxSeq txs) = sum (map (BS.length . BS.pack . show) $ toList txs)
+bBodySize
+  :: forall crypto. (Crypto crypto)
+  => TxSeq crypto
+  -> Int
+bBodySize = BS.length . serializeEncoding' . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonce (fromIntegral s)
