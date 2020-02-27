@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE NumDecimals          #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
@@ -34,6 +35,7 @@ module Cardano.Chain.Block.Header
 
   -- * Header Binary Serialization
   , toCBORHeader
+  , toCBORHeaderSize
   , toCBORHeaderToHash
   , fromCBORAHeader
   , fromCBORHeader
@@ -86,6 +88,8 @@ import Cardano.Binary
   , DecoderError(..)
   , Encoding
   , FromCBOR(..)
+  , Raw
+  , Size
   , ToCBOR(..)
   , annotatedDecoder
   , fromCBORAnnotated
@@ -94,6 +98,7 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   , serializeEncoding
+  , szGreedy
   )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
@@ -294,6 +299,24 @@ toCBORHeader es h =
        )
     <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
 
+toCBORHeaderSize :: Proxy EpochSlots -> Proxy (AHeader a) -> Size
+toCBORHeaderSize es hdr =
+       1 -- encodeListLen 5
+     + szGreedy (headerProtocolMagicId <$> hdr)
+     + szGreedy (headerPrevHash <$> hdr)
+     + szGreedy (headerProof <$> hdr)
+     + ( 1
+       + szGreedy (fromSlotNumber <$> es <*> (headerSlot <$> hdr))
+       + szGreedy (headerGenesisKey <$> hdr)
+       + szGreedy (headerDifficulty <$> hdr)
+       -- there is only 'ToCBOR' @ASignature ()@ instance, we
+       -- must map 'a' to '()'
+       + szGreedy (headerSignature . fmap (const ()) <$> hdr)
+       )
+    + toCBORBlockVersionsSize
+        (headerProtocolVersion <$> hdr)
+        (headerSoftwareVersion <$> hdr)
+
 toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
 toCBORBlockVersions pv sv =
   encodeListLen 4
@@ -303,6 +326,15 @@ toCBORBlockVersions pv sv =
     <> toCBOR (mempty :: Map Word8 LByteString)
     -- Hash of the encoding of empty ExtraBodyData
     <> toCBOR (hashRaw "\129\160")
+
+toCBORBlockVersionsSize :: Proxy ProtocolVersion -> Proxy SoftwareVersion -> Size
+toCBORBlockVersionsSize pv sv =
+    1
+  + szGreedy pv
+  + szGreedy sv
+  -- empty attributes dictionary
+  + 1
+  + szGreedy (Proxy :: Proxy (Hash Raw))
 
 fromCBORHeader :: EpochSlots -> Decoder s Header
 fromCBORHeader epochSlots = void <$> fromCBORAHeader epochSlots
