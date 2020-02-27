@@ -39,10 +39,9 @@ import           LedgerState (_dstate, _genDelegs, _ups)
 import           Numeric.Natural (Natural)
 import           PParams (PParams (..))
 import           Slot (EpochNo (EpochNo), SlotNo)
-import           Updates (pattern AVUpdate, pattern ApName, pattern ApVer, pattern Applications,
-                     InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
-                     Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, apps,
-                     emptyUpdate, maxVer)
+import           Updates (pattern AVUpdate, pattern ApVer, pattern Applications, InstallerHash (..),
+                     pattern Mdt, pattern PPUpdate, PParamsUpdate (..), Ppm (..), pattern Update,
+                     pattern UpdateState, apName, apps, emptyUpdate, maxVer, systemTag)
 
 import           Test.Utils (epochFromSlotNo)
 
@@ -172,22 +171,20 @@ genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 -- ^^ TODO jc - generating d=0 takes some care, if there are no registered
 -- stake pools then d=0 deadlocks the system.
 
-genProtocolVersion :: Gen (Natural, Natural, Natural)
-genProtocolVersion  = ((,,) <$> genNatural 1 10 <*> genNatural 1 50 <*> genNatural 1 100)
+genProtocolVersion :: Gen (Natural, Natural)
+genProtocolVersion  = ((,) <$> genNatural 1 10 <*> genNatural 1 50)
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
 genNextProtocolVersion
   :: PParams
-  -> Gen (Natural, Natural, Natural)
+  -> Gen (Natural, Natural)
 genNextProtocolVersion pp = do
-  n <- genNatural 1 100
   QC.elements
-    [ (major + 1, 0        , 0)
-    , (major    , minor + 1, alt)
-    , (major    , minor + 1, alt + n)]
+    [ (m + 1, 0    )
+    , (m    , n + 1)]
   where
-    (major, minor, alt) = _protocolVersion pp
+    (m, n) = _protocolVersion pp
 
 -- | Given the current protocol params generates a subset of protocol parameter assignments.
 genSetOfPpm
@@ -275,7 +272,7 @@ genApplications utxoSt = do
     genInstallers i =
       Mdt <$> Map.fromList
           <$> QC.vectorOf i
-                          ((,) <$> (SystemTag . T.pack <$> genShortAscii)
+                          ((,) <$> (systemTag . T.pack <$> genShortAscii)
                                <*> (InstallerHash . hash . BS.pack <$> genShortAscii))
 
     genApplication i = QC.frequency [ (2, genNewApp i)
@@ -286,10 +283,10 @@ genApplications utxoSt = do
         avs' -> do
           (an, (_, _)) <- QC.elements avs'
           pure . incrVersion . (an,) $ maxVer an avs favs
-    incrVersion (apName, (ApVer apVer, mdt)) = (apName, (ApVer (apVer+1), mdt))
+    incrVersion (apname, (ApVer apVer, mdt)) = (apname, (ApVer (apVer+1), mdt))
 
     genNewApp i = (,) <$> genNewAppName <*> ((ApVer 1,) <$> (genInstallers i))
-    genNewAppName = ApName . T.pack <$> genShortAscii
+    genNewAppName = apName . T.pack <$> genShortAscii
 
     genShortAscii = QC.vectorOf 5 QC.arbitraryASCIIChar
 

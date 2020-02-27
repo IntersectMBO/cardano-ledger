@@ -81,7 +81,7 @@ data PParams = PParams
     -- | Extra entropy
   , _extraEntropy    :: Nonce
     -- | Protocol version
-  , _protocolVersion :: (Natural, Natural, Natural)
+  , _protocolVersion :: (Natural, Natural)
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks PParams
@@ -183,5 +183,5 @@ emptyPParams =
      , _activeSlotCoeff = interval0
      , _d = interval0
      , _extraEntropy = NeutralNonce
-     , _protocolVersion = (0, 0, 0)
+     , _protocolVersion = (0, 0)
      }

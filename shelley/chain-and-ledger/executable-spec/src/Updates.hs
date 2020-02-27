@@ -12,17 +12,18 @@ module Updates
   , PPUpdateEnv(..)
   , PPUpdate(..)
   , PParamsUpdate(..)
-  , ApName(..)
+  , ApName
+  , apName
   , ApVer(..)
   , Mdt(..)
-  , SystemTag(..)
+  , SystemTag
+  , systemTag
   , InstallerHash(..)
   , Applications(..)
   , AVUpdate(..)
   , Update(..)
   , UpdateState(..)
   , Favs
-  , apNameValid
   , allNames
   , maxVer
   , newAVs
@@ -32,23 +33,23 @@ module Updates
   , updateNull
   , updatePParams
   , svCanFollow
-  , sTagsValid
   )
 where
 
-import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), decodeMapLenOrIndef,
-                     encodeListLen, encodeMapLen, enforceSize)
+import           Cardano.Binary (DecoderError (..), Encoding, FromCBOR (..), ToCBOR (..),
+                     decodeMapLenOrIndef, encodeListLen, encodeMapLen, enforceSize)
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Ledger.Shelley.Crypto
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Data.ByteString (ByteString)
-import           Data.Char (isAscii)
+import qualified Data.ByteString as BS
 import qualified Data.List as List (group)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import           Data.Text.Encoding (encodeUtf8)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 
@@ -61,16 +62,51 @@ import           Slot (EpochNo (..), SlotNo)
 
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (dom, range, (◁))
+import           Ledger.Core (range, (◁))
 
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 newtype ApName = ApName T.Text
-  deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
+  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+
+textSize :: T.Text -> Int
+textSize = BS.length . encodeUtf8
+
+apName :: T.Text -> ApName
+apName t =
+  let numBytes = textSize t
+  in
+    if numBytes <= 64
+      then ApName t
+      else error $ "apName received too many bytes (expected 64): " <> show numBytes
+
+instance FromCBOR ApName
+ where
+  fromCBOR = do
+    t <- fromCBOR
+    if textSize t > 64
+      then cborError $ DecoderErrorCustom "ApName has too many bytes:" t
+      else pure $ ApName t
 
 newtype SystemTag = SystemTag T.Text
-  deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
+  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+
+systemTag :: T.Text -> SystemTag
+systemTag t =
+  let numBytes = (BS.length . encodeUtf8) t
+  in
+    if numBytes <= 64
+      then SystemTag t
+      else error $ "systemTag received too many bytes (expected 64): " <> show numBytes
+
+instance FromCBOR SystemTag
+ where
+  fromCBOR = do
+    t <- fromCBOR
+    if textSize t > 64
+      then cborError $ DecoderErrorCustom "SystemTag has too many bytes:" t
+      else pure $ SystemTag t
 
 newtype InstallerHash crypto = InstallerHash (Hash (HASH crypto) ByteString)
   deriving (Show, Ord, Eq, NoUnexpectedThunks)
@@ -159,7 +195,7 @@ data Ppm = MinFeeA Integer
   | ActiveSlotCoefficient UnitInterval
   | D UnitInterval
   | ExtraEntropy Nonce
-  | ProtocolVersion (Natural, Natural, Natural)
+  | ProtocolVersion (Natural, Natural)
   deriving (Show, Ord, Eq, Generic)
 
 instance NoUnexpectedThunks Ppm
@@ -233,19 +269,6 @@ instance Crypto crypto => ToCBOR (PPUpdate crypto) where
 
 instance Crypto crypto => FromCBOR (PPUpdate crypto) where
   fromCBOR = PPUpdate .  unwrapCBORMap <$> fromCBOR
-
--- | This is just an example and not neccessarily how we will actually validate names
-apNameValid :: ApName -> Bool
-apNameValid (ApName an) = all isAscii cs && length cs <= 12
-  where cs = T.unpack an
-
--- | This is just an example and not neccessarily how we will actually validate system tags
-sTagValid :: SystemTag -> Bool
-sTagValid (SystemTag st) = all isAscii cs && length cs <= 10
-  where cs = T.unpack st
-
-sTagsValid :: Mdt crypto -> Bool
-sTagsValid (Mdt md) = all sTagValid (dom md)
 
 type Favs crypto = Map SlotNo (Applications crypto)
 

@@ -117,10 +117,9 @@ import           TxData (pattern AddrPtr, pattern DCertDeleg, pattern DCertGenes
                      addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolVrf)
 import qualified TxData (TxBody (..))
-import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
-                     InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
-                     Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, emptyUpdate,
-                     emptyUpdateState)
+import           Updates (pattern AVUpdate, ApVer (..), pattern Applications, InstallerHash (..),
+                     pattern Mdt, pattern PPUpdate, PParamsUpdate (..), Ppm (..), pattern Update,
+                     pattern UpdateState, apName, emptyUpdate, emptyUpdateState, systemTag)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
 data CHAINExample =
@@ -169,8 +168,8 @@ genDelegs = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (
 -- | There are only two applications on test Byron blockchain:
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
-                            [ (ApName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (ApName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                            [ (apName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
+                            , (apName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
                             ]
 
 alicePay :: KeyPair
@@ -1817,12 +1816,12 @@ ex3C = CHAINExample (SlotNo 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
 
 daedalusMDEx4A :: Mdt
 daedalusMDEx4A = Mdt $ Map.singleton
-                              (SystemTag $ T.pack "DOS")
+                              (systemTag $ T.pack "DOS")
                               (InstallerHash $ hash $ BS.pack "ABC")
 
 appsEx4A :: Applications
 appsEx4A = Applications $ Map.singleton
-                            (ApName $ T.pack "Daedalus")
+                            (apName $ T.pack "Daedalus")
                             (ApVer 17, daedalusMDEx4A)
 
 avupEx4A :: AVUpdate
@@ -2035,8 +2034,8 @@ updateStEx4C = UpdateState
   (AVUpdate Map.empty)
   Map.empty
   (Applications $ Map.fromList
-                     [ (ApName $ T.pack "Daedalus", (ApVer 17, daedalusMDEx4A))
-                     , (ApName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                     [ (apName $ T.pack "Daedalus", (ApVer 17, daedalusMDEx4A))
+                     , (apName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
                      ])
 
 expectedLSEx4C :: LedgerState
