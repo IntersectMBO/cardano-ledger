@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -13,22 +14,22 @@
 
 module Generator.LedgerTrace.QuickCheck where
 
+import           Control.Monad (foldM)
+import           Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
+import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 
 import           BaseTypes (Globals)
-import           ConcreteCryptoTypes (DPState, LEDGER, LEDGERS, UTxOState)
+import           ConcreteCryptoTypes (DPState, LEDGER, LEDGERS, Tx, UTxOState)
 import           Control.Monad.Trans.Reader (runReaderT)
-import           Control.State.Transition (IRC)
-import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
+import           Control.State.Transition.Extended (IRC, TRC (..), applySTS)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
-import           Data.Functor.Identity (runIdentity)
-import           Data.Word (Word64)
 
 import           Generator.Core.Constants (maxGenesisUTxOouts, minGenesisUTxOouts, numBaseScripts)
 import           Generator.Core.QuickCheck (coreNodeKeys, genCoin, genUtxo0, genesisDelegs0,
                      traceKeyHashMap, traceKeyPairs, traceKeyPairsByStakeHash,
-                     traceMSigCombinations, traceMSigScripts, traceVRFKeyPairs)
+                     traceMSigCombinations, traceMSigScripts)
 import           Generator.Update.QuickCheck (genPParams)
 import           Generator.Utxo.QuickCheck (genTx)
 import           LedgerState (pattern LedgerState, genesisState)
@@ -36,7 +37,9 @@ import           Shrinkers (shrinkTx)
 import           Slot (SlotNo (..))
 import           STS.Ledger (LedgerEnv (..))
 import           STS.Ledgers (LedgersEnv (..))
-import           Test.Utils (testGlobals)
+import           TxData (Ix)
+
+import           Test.Utils (runShelleyBase)
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
@@ -47,16 +50,7 @@ instance TQC.HasTrace LEDGER Word64 where
               <*> genPParams
               <*> genCoin 1000000 10000000
 
-  sigGen _ ledgerEnv ledgerSt =
-    genTx
-     ledgerEnv
-     ledgerSt
-     traceKeyPairs
-     traceKeyHashMap
-     (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
-     coreNodeKeys
-     traceKeyPairsByStakeHash
-     traceVRFKeyPairs
+  sigGen _ = genTx_
 
   shrinkSignal = shrinkTx
 
@@ -70,17 +64,47 @@ instance TQC.HasTrace LEDGERS Word64 where
                <*> genCoin 1000000 10000000
 
   -- a LEDGERS signal is a sequence of LEDGER signals
-  sigGen maxTxs (LedgersEnv slotNo pParams reserves) (LedgerState utxoSt dpSt) =
-    Seq.fromList . traceSignals OldestFirst <$>
-      TQC.traceFrom @LEDGER testGlobals maxTxs maxTxs ledgerEnv (utxoSt, dpSt)
+  sigGen maxTxs (LedgersEnv slotNo pParams reserves) (LedgerState utxoSt dpSt) = do
+      (_, _, txs') <-
+        foldM genAndApplyTx
+              (utxoSt, dpSt, [])
+              [0 .. (fromIntegral maxTxs - 1)]
+
+      pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
     where
-      ix = 0 -- TODO @uroboros - zip [0 ..] $ toList txwits
-      ledgerEnv = LedgerEnv slotNo ix pParams reserves
+      genAndApplyTx
+        :: (UTxOState, DPState, [Tx])
+        -> TxData.Ix
+        -> Gen (UTxOState, DPState, [Tx])
+      genAndApplyTx (u, dp, txs) ix = do
+        let ledgerEnv = LedgerEnv slotNo ix pParams reserves
+        tx <- genTx_ ledgerEnv (u, dp)
+
+        let res = runShelleyBase $ applySTS @LEDGER (TRC (ledgerEnv, (u, dp), tx))
+        pure $ case res of
+          Left _ ->
+            (u, dp, txs)
+          Right (u',dp') ->
+            (u',dp', tx:txs)
 
   shrinkSignal = const []
 
   type BaseEnv LEDGERS = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
+
+genTx_
+  :: LedgerEnv
+  -> (UTxOState, DPState)
+  -> Gen Tx
+genTx_ env st =
+  genTx
+    env
+    st
+    traceKeyPairs
+    traceKeyHashMap
+    (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
+    coreNodeKeys
+    traceKeyPairsByStakeHash
 
 -- | Generate initial state for the LEDGER STS using the STS environment.
 --

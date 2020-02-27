@@ -83,6 +83,10 @@ minGenesisUTxOouts = 10
 maxGenesisUTxOouts :: Int
 maxGenesisUTxOouts = 100
 
+-- | maximal number of certificates per transaction
+maxCertsPerTx :: Word64
+maxCertsPerTx = 3
+
 -- | maximal numbers of generated keypairs
 maxNumKeyPairs :: Word64
 maxNumKeyPairs = 150
@@ -97,7 +101,7 @@ maxGenesisOutputVal = 100000000
 
 -- | Number of base scripts from which multi sig scripts are built.
 numBaseScripts :: Int
-numBaseScripts = 5
+numBaseScripts = 3
 
 -- | Relative frequency that a transaction does not include any reward withdrawals
 frequencyNoWithdrawals :: Int

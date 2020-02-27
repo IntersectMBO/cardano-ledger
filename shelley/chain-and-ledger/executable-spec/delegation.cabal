@@ -116,6 +116,7 @@ test-suite delegation-test
                          Generator.Core.QuickCheck
                          Generator.ChainTrace
                          Generator.LedgerTrace.QuickCheck
+                         Generator.DCertTrace
                          Generator.Delegation.QuickCheck
                          Generator.Update.QuickCheck
                          Generator.Utxo.QuickCheck

@@ -20,6 +20,7 @@ import qualified OCert
 import qualified STS.Chain
 import qualified STS.Deleg
 import qualified STS.Delegs
+import qualified STS.Delpl
 import qualified STS.Ledger
 import qualified STS.Ledgers
 import qualified STS.NewEpoch
@@ -153,6 +154,8 @@ type UTXO = STS.Utxo.UTXO ConcreteCrypto
 type UtxoEnv = STS.Utxo.UtxoEnv ConcreteCrypto
 
 type DELEG = STS.Deleg.DELEG ConcreteCrypto
+
+type DELPL = STS.Delpl.DELPL ConcreteCrypto
 
 type LEDGER = STS.Ledger.LEDGER ConcreteCrypto
 
