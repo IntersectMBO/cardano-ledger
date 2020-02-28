@@ -1,10 +1,5 @@
 # Delegation Design Document Changelog
 
-## 2020-02-25
-Include factor of relative stake over total stake in monetary expansion, to
-counter an incentive to censor delegation certificates that would increase the
-amount of active stake.
-
 ## 2019-06-07
 Update section on script addresses.
 
