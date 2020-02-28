@@ -27,6 +27,10 @@ module PParams
   , d
   , extraEntropy
   , protocolVersion
+  , ActiveSlotCoeff
+  , mkActiveSlotCoeff
+  , activeSlotVal
+  , activeSlotLog
   ) where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
@@ -34,9 +38,12 @@ import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Nonce (NeutralNonce), UnitInterval, interval0)
+import           BaseTypes (FixedPoint, Nonce (NeutralNonce), UnitInterval, interval0,
+                     intervalValue)
 import           Coin (Coin (..))
 import           Slot (EpochNo (..))
+
+import qualified NonIntegral (ln')
 
 import           Lens.Micro.TH (makeLenses)
 
@@ -83,6 +90,25 @@ data PParams = PParams
     -- | Protocol version
   , _protocolVersion :: (Natural, Natural)
   } deriving (Show, Eq, Generic)
+
+data ActiveSlotCoeff =
+  ActiveSlotCoeff
+  {
+    unActiveSlotVal :: UnitInterval
+  , unActiveSlotLog :: FixedPoint
+  } deriving (Eq, Show)
+
+mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
+mkActiveSlotCoeff v =
+  ActiveSlotCoeff
+  v
+  (NonIntegral.ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v))
+
+activeSlotVal :: ActiveSlotCoeff -> UnitInterval
+activeSlotVal = unActiveSlotVal
+
+activeSlotLog :: ActiveSlotCoeff -> FixedPoint
+activeSlotLog = unActiveSlotLog
 
 instance NoUnexpectedThunks PParams
 
