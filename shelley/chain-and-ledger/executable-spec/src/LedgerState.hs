@@ -967,10 +967,10 @@ poolRewards
   -> Natural
   -> Coin
   -> Coin
-poolRewards d_ sigma blocksN blocksTotal (Coin maxP) =
+poolRewards d_ sigma blocksN blocksTotal f@(Coin maxP) =
   if intervalValue d_ < 0.8
     then floor (p * fromIntegral maxP)
-    else 1
+    else f
   where
     p = beta / intervalValue sigma
     beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
@@ -1036,7 +1036,7 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
     tot = fromIntegral total
     mRewards = Map.fromList
      [(RewardAcnt hk,
-       memberRew poolR pool (StakeShare (fromIntegral c% tot)) (StakeShare sigma))
+       memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma))
      | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
     iReward  = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
