@@ -19,9 +19,10 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (Nonce (..), Seed (..), ShelleyBase)
+import           BaseTypes (Nonce (..), Seed (..), ShelleyBase, Globals (..))
 import           BlockChain (BHBody, Block (..), HashHeader, bHeaderSize, bhbody, bheaderSlotNo,
                      hBbsize, hashHeaderToNonce)
+import           Cardano.Prelude (asks)
 import           Coin (Coin (..))
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..), emptySnapShots)
@@ -30,7 +31,7 @@ import           LedgerState (AccountState (..), DPState (..), DState (..), Epoc
                      LedgerState (..), NewEpochState (..), PState (..), UTxOState (..),
                      emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
 import           OCert (KESPeriod)
-import           PParams (PParams, _maxBBSize, _maxBHSize)
+import           PParams (PParams, _maxBBSize, _maxBHSize, _protocolVersion)
 import           Slot (BlockNo, EpochNo, SlotNo)
 import           Tx (TxBody)
 import           Updates (AVUpdate (..), Applications, PPUpdate (..), UpdateState (..))
@@ -129,6 +130,7 @@ instance
   data PredicateFailure (CHAIN crypto)
     = HeaderSizeTooLargeCHAIN
     | BlockSizeTooLargeCHAIN
+    | ObsoleteNodeCHAIN Natural Natural
     | BbodyFailure (PredicateFailure (BBODY crypto))
     | TickFailure (PredicateFailure (TICK crypto))
     | PrtclFailure (PredicateFailure (PRTCL crypto))
@@ -149,7 +151,13 @@ chainTransition
 chainTransition = do
   TRC (sNow, ChainState nes cs eta0 etaV etaC etaH h sL bL, block@(Block bh _)) <- judgmentContext
 
+
   let NewEpochState _ _ _ (EpochState _ _ _ pp) _ _ _ = nes
+
+  maxpv <- liftSTS $ asks maxMajorPV
+  let (m, _) = _protocolVersion pp
+  m <= maxpv ?! ObsoleteNodeCHAIN m maxpv
+
   let bhb = bhbody bh
   let s = bheaderSlotNo bhb
   fromIntegral (bHeaderSize bh) < _maxBHSize pp ?! HeaderSizeTooLargeCHAIN

@@ -106,7 +106,7 @@ This rule has the following predicate failures:
 \end{enumerate}
 
 Note that $\fun{pvCanFollow}$
-was defined in \cite{byron_ledger_spec}. The constant $\SlotsPrior$
+is defined in Figure~\ref{fig:funcs:helper-updates}.
 is used in defining the blockchain layer functionality (specifically,
 properties of header validation),
 and is explained in detail in the paper \cite{byron_chain_spec}.
@@ -238,6 +238,12 @@ $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
         \bigcup_{\var{fav}\in\var{favs}}
         \range{favs}
         \Bigg)
+  \end{align*}
+
+  \begin{align*}
+      & \fun{pvCanFollow} \in \ProtVer \to  \ProtVer \to \Bool \\
+      & \fun{pvCanFollow}~\var{(m,~n)}~\var{(m', n')} = \\
+      & ~~~~ (m', n') = (m+1,~0) \lor (m', n') = (m,~n+1) \\
   \end{align*}
 
   \begin{align*}

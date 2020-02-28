@@ -1569,7 +1569,7 @@ part of the STS. It calls $\mathsf{BHEAD}$, $\mathsf{PRTCL}$, and $\mathsf{BBODY
 
 The environment for the chain rule is the current slot number \var{s_{now}}.
 
-The transition checks two properties of the block header \var{bh}:
+The transition checks three things:
 \begin{itemize}
 \item The size of \var{bh} is less than or equal to the maximal size that the
   protocol parameters allow for block headers.
@@ -1577,6 +1577,9 @@ The transition checks two properties of the block header \var{bh}:
   maximal size that the protocol parameters allow for block bodies.
   It will later be verified that the size of the block body matches the size claimed
   in the header (see Figure~\ref{fig:rules:bbody}).
+\item The node is not obsolete, meaning that the major component of the
+  protocol version in the protocol parameters
+  is not bigger than the constant $\MaxMajorPV$.
 \end{itemize}
 
 
@@ -1680,6 +1683,10 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       \var{s} \leteq \bslot{bhb}
       \\
       (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard,\wcard) \leteq \var{nes}
+      &
+      (m,~\wcard)\leteq\fun{pv}~\var{pp}
+      \\~\\
+      m \leq \MaxMajorPV
       \\
       \bHeaderSize{bh} \leq \fun{maxHeaderSize}~\var{pp}
       &
@@ -1785,12 +1792,14 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \label{fig:rules:chain}
 \end{figure}
 
-The CHAIN rule has two predicate failures:
+The CHAIN rule has three predicate failures:
 \begin{itemize}
 \item If the size of the block header is larger than the maximally allowed size,
   there is a \emph{HeaderSizeTooLarge} failure.
 \item If the size of the block body is larger than the maximally allowed size,
   there is a \emph{BlockSizeTooLarge} failure.
+\item If the major component of the protocol version is larger than $\MaxMajorPV$,
+  there is a \emph{ObsoleteNode} failure.
 \end{itemize}
 
 \clearpage
