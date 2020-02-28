@@ -56,7 +56,7 @@ import           GHC.Generics (Generic)
 import           BaseTypes (Nonce, UnitInterval)
 import           Coin (Coin)
 import           Keys (GenDelegs, GenKeyHash)
-import           PParams (PParams (..))
+import           PParams (ActiveSlotCoeff, PParams (..))
 import           Serialization (CBORMap (..), decodeCollection)
 import           Slot (EpochNo (..), SlotNo)
 
@@ -192,7 +192,7 @@ data Ppm = MinFeeA Integer
   | A0 Rational
   | Rho UnitInterval
   | Tau UnitInterval
-  | ActiveSlotCoefficient UnitInterval
+  | ActiveSlotCoefficient ActiveSlotCoeff
   | D UnitInterval
   | ExtraEntropy Nonce
   | ProtocolVersion (Natural, Natural)

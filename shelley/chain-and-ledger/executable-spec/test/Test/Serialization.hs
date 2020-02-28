@@ -40,7 +40,7 @@ import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
 import           LedgerState (AccountState (..), EpochState (..), NewEpochState (..),
                      pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs)
 import           Numeric.Natural (Natural)
-import           PParams (emptyPParams)
+import           PParams (emptyPParams, mkActiveSlotCoeff)
 import           Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Test.Utils
@@ -495,7 +495,7 @@ serializationTests = testGroup "Serialization Tests"
         a0                    = 1 % 6
         rho                   = UnsafeUnitInterval $ 1 % 6
         tau                   = UnsafeUnitInterval $ 1 % 7
-        activeSlotCoefficient = UnsafeUnitInterval $ 1 % 8
+        activeSlotCoefficient = mkActiveSlotCoeff $ UnsafeUnitInterval $ 1 % 8
         d                     = UnsafeUnitInterval $ 1 % 9
         extraEntropy          = NeutralNonce
         protocolVersion       = (0,1)

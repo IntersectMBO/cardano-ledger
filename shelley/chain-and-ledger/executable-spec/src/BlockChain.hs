@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -46,7 +47,6 @@ import           Data.Coerce (coerce)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Ratio (denominator, numerator)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           GHC.Generics (Generic)
@@ -65,13 +65,13 @@ import           Control.Monad (unless)
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
+import           NonIntegral (ln')
 import           OCert (OCert (..))
-import           Slot (BlockNo (..), SlotNo (..))
-import           Tx (Tx (..), cborWitsToTx, txToCBORWits)
-
-import           NonIntegral ((***))
+import           PParams (ActiveSlotCoeff, activeSlotLog)
 import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
                      ToCBORGroup (..))
+import           Slot (BlockNo (..), SlotNo (..))
+import           Tx (Tx (..), cborWitsToTx, txToCBORWits)
 
 -- |The hash of a Block Header
 newtype HashHeader crypto =
@@ -368,7 +368,7 @@ vrfChecks
     )
   => Nonce
   -> PoolDistr crypto
-  -> UnitInterval
+  -> ActiveSlotCoeff
   -> BHBody crypto
   -> Bool
 vrfChecks eta0 (PoolDistr pd) f bhb =
@@ -383,17 +383,15 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
             && VRF.verifyCertified () vrfK
                          (mkSeed seedL slot eta0 prevHash)
                          (coerce $ bheaderL bhb)
-            && intervalValue (fromNatural . VRF.certifiedNatural $ bheaderL bhb)
-            <  1
-            -  ((1 - activeSlotsCoeff) *** fromRational sigma)
+            && (ln' (fromRational
+                    $ 1 - intervalValue (fromNatural . VRF.certifiedNatural $ bheaderL bhb))
+                > fromRational sigma * c)
  where
   hk = hashKey $ bvkcold bhb
   vrfK = bheaderVrfVk bhb
   prevHash = bheaderPrev bhb
   slot = bheaderSlotNo bhb
-  f' = intervalValue f
-  activeSlotsCoeff =
-    fromIntegral (numerator f') / fromIntegral (denominator f')
+  c = activeSlotLog f
 
 seedEta :: Nonce
 seedEta = mkNonce 0

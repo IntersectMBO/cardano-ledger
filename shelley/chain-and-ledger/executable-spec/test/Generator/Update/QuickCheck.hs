@@ -37,7 +37,7 @@ import           Generator.Core.QuickCheck (AllPoolKeys (cold), genInteger, genN
 import           Keys (GenDelegs (..), hash, hashKey, vKey)
 import           LedgerState (_dstate, _genDelegs, _ups)
 import           Numeric.Natural (Natural)
-import           PParams (PParams (..))
+import           PParams (ActiveSlotCoeff, PParams (..), mkActiveSlotCoeff)
 import           Slot (EpochNo (EpochNo), SlotNo)
 import           Updates (pattern AVUpdate, pattern ApVer, pattern Applications, InstallerHash (..),
                      pattern Mdt, pattern PPUpdate, PParamsUpdate (..), Ppm (..), pattern Update,
@@ -159,8 +159,10 @@ genTau :: Gen UnitInterval
 genTau = genIntervalInThousands 100 300
 
 -- | activeSlotCoeff: 0.1-1
-genActiveSlotCoeff :: Gen UnitInterval
-genActiveSlotCoeff = unsafeMkUnitInterval <$> QC.elements [0.025, 0.05, 0.075, 0.1, 0.2, 0.5]
+genActiveSlotCoeff :: Gen ActiveSlotCoeff
+genActiveSlotCoeff =
+  (mkActiveSlotCoeff . unsafeMkUnitInterval)
+  <$> QC.elements [0.025, 0.05, 0.075, 0.1, 0.2, 0.5]
 -- ^^ This is a somewhat arbitrary group of values.
 -- In the real system, we will probably be using a value near 1/10,
 -- and we know that we would not ever choose values too small (say below 1/40)
