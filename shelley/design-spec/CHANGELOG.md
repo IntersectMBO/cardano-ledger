@@ -1,5 +1,8 @@
 # Delegation Design Document Changelog
 
+## 2020-02-28
+Clarify when we use active stake vs total stake.
+
 ## 2019-06-07
 Update section on script addresses.
 
@@ -48,16 +51,16 @@ into the document.
 - Elaborating further on why stake pool registrations will not be censored.
 - Capture choice of KES scheme in design doc.
 - Streamlining information on deposits
-    
+
     Replacing an explanation of the concept with a link to the section where it's
     already explained.
 - Elaborate on certificate replay protection
-    
+
     The paragraph was not entirely true, it said there was only one possible source
     of funds in addition to UTxO entries, but with rewards accounts, there is
     another one.
 - Fix that rewards go to treasury if reward key unregistered.
-    
+
     We can not move them to the rewards pool -- if we did, it would create an
     incentive for all other leaders to censor a certificate that caused the pool to
     use a valid certificate.
@@ -91,9 +94,9 @@ Changes after the first day of the Berlin workshop.
 - Add todo to clarify stakepool metadata
 - Add section on TTL for transactions
 - Elaboration and slight change to stake pool registration.
-    
+
   After the first day of discussions in Berlin, we came to the conclusions that
-    
+
   - we need a _registered_ staking key to collect rewards
   - this should _not_ be the same key that's used for participating in the
     protocol. For participation in the protocol, we want cold and operational
