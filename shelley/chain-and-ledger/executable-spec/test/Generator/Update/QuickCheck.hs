@@ -25,7 +25,7 @@ import qualified Data.Text as T (pack)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
-import           BaseTypes (Nonce (NeutralNonce), UnitInterval, mkNonce)
+import           BaseTypes (Nonce (NeutralNonce), UnitInterval, mkNonce, text64)
 import           Coin (Coin (..))
 import           ConcreteCryptoTypes (AVUpdate, Applications, CoreKeyPair, DPState, GenKeyHash,
                      KeyHash, KeyPair, Mdt, PPUpdate, UTxOState, Update)
@@ -39,9 +39,10 @@ import           LedgerState (_dstate, _genDelegs, _ups)
 import           Numeric.Natural (Natural)
 import           PParams (ActiveSlotCoeff, PParams (..), mkActiveSlotCoeff)
 import           Slot (EpochNo (EpochNo), SlotNo)
-import           Updates (pattern AVUpdate, pattern ApVer, pattern Applications, InstallerHash (..),
-                     pattern Mdt, pattern PPUpdate, PParamsUpdate (..), Ppm (..), pattern Update,
-                     pattern UpdateState, apName, apps, emptyUpdate, maxVer, systemTag)
+import           Updates (pattern AVUpdate, ApName (..), pattern ApVer, pattern Applications,
+                     InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
+                     Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, apps,
+                     emptyUpdate, maxVer)
 
 import           Test.Utils (epochFromSlotNo)
 
@@ -274,7 +275,7 @@ genApplications utxoSt = do
     genInstallers i =
       Mdt <$> Map.fromList
           <$> QC.vectorOf i
-                          ((,) <$> (systemTag . T.pack <$> genShortAscii)
+                          ((,) <$> (SystemTag . text64 . T.pack <$> genShortAscii)
                                <*> (InstallerHash . hash . BS.pack <$> genShortAscii))
 
     genApplication i = QC.frequency [ (2, genNewApp i)
@@ -288,7 +289,7 @@ genApplications utxoSt = do
     incrVersion (apname, (ApVer apVer, mdt)) = (apname, (ApVer (apVer+1), mdt))
 
     genNewApp i = (,) <$> genNewAppName <*> ((ApVer 1,) <$> (genInstallers i))
-    genNewAppName = apName . T.pack <$> genShortAscii
+    genNewAppName = ApName . text64 . T.pack <$> genShortAscii
 
     genShortAscii = QC.vectorOf 5 QC.arbitraryASCIIChar
 

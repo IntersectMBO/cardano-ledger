@@ -22,6 +22,8 @@ module BaseTypes
   , mkNonce
   , mkUnitInterval
   , truncateUnitInterval
+  , Text64
+  , text64
     -- * STS Base
   , Globals (..)
   , ShelleyBase
@@ -34,11 +36,14 @@ import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Cardano.Slotting.EpochInfo
 import           Control.Monad.Trans.Reader (ReaderT)
+import qualified Data.ByteString as BS
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Functor.Identity
 import           Data.Ratio (denominator, numerator, (%))
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Text.Encoding (encodeUtf8)
 import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
@@ -129,6 +134,25 @@ newtype Seed = Seed (Hash SHA256 Seed)
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
 infix 1 ==>
+
+newtype Text64 = Text64 Text
+  deriving (Eq, Ord, Generic, Show, ToCBOR, NoUnexpectedThunks)
+
+text64 :: Text -> Text64
+text64 t =
+  let numBytes = BS.length . encodeUtf8 $ t
+  in
+    if numBytes <= 64
+      then Text64 t
+      else error $ "text64 received too many bytes: " <> show numBytes
+
+instance FromCBOR Text64
+ where
+  fromCBOR = do
+    t <- fromCBOR
+    if (BS.length . encodeUtf8) t > 64
+      then cborError $ DecoderErrorCustom "Text64 has too many bytes:" t
+      else pure $ Text64 t
 
 --------------------------------------------------------------------------------
 -- Base monad for all STS systems

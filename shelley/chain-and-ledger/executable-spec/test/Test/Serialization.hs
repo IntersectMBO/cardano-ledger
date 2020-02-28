@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
 
@@ -16,13 +17,12 @@ import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (pack)
-import qualified Data.Text as T (pack)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
 
 
-import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce)
+import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce, text64)
 import           BlockChain (pattern BHBody, pattern BHeader, Block (..), pattern HashHeader,
                      ProtVer (..), TxSeq (..), bbHash, bhash, bheaderBlockNo, bheaderEta, bheaderL,
                      bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk, bprotvert,
@@ -47,13 +47,14 @@ import           Test.Utils
 import           Tx (Tx (..), hashScript)
 import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
                      pattern DCertDeleg, pattern DCertGenesis, pattern DCertMir, pattern DCertPool,
-                     pattern Delegation, pattern PoolParams, Ptr (..), pattern RequireSignature,
-                     pattern RewardAcnt, pattern ScriptHash, pattern TxBody, pattern TxIn,
-                     pattern TxOut, Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMargin,
-                     _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolVrf)
-import           Updates (pattern AVUpdate, ApVer (..), pattern Applications, pattern InstallerHash,
-                     pattern Mdt, pattern PPUpdate, PParamsUpdate (..), Ppm (..), pattern Update,
-                     apName, emptyUpdate, systemTag)
+                     pattern Delegation, PoolMetaData (..), pattern PoolParams, Ptr (..),
+                     pattern RequireSignature, pattern RewardAcnt, pattern ScriptHash,
+                     pattern TxBody, pattern TxIn, pattern TxOut, Url (..), Wdrl (..),
+                     WitVKey (..), _TxId, _poolCost, _poolMD, _poolMDHash, _poolMDUrl, _poolMargin,
+                     _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
+import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
+                     pattern InstallerHash, pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
+                     Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 
 import           ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, HashHeader,
                      InstallerHash, KeyHash, KeyPair, MultiSig, PoolDistr, RewardUpdate, SKeyES,
@@ -410,6 +411,8 @@ serializationTests = testGroup "Serialization Tests"
         poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
         poolPledge = Coin 11
         poolCost = Coin 55
+        poolUrl = "pool.io"
+        poolMDHash = BS.pack "{}"
     in
     checkEncodingCBOR "register_pool"
     (DCertPool (RegPool (PoolParams
@@ -420,8 +423,13 @@ serializationTests = testGroup "Serialization Tests"
                , _poolMargin = poolMargin
                , _poolRAcnt = poolRAcnt
                , _poolOwners = Set.singleton poolOwner
+               , _poolRelays = Seq.empty
+               , _poolMD = Just $ PoolMetaData
+                             { _poolMDUrl = Url $ text64 poolUrl
+                             , _poolMDHash = poolMDHash
+                             }
                })))
-    ( T (TkListLen 8)
+    ( T (TkListLen 10)
       <> T (TkWord 6) -- Reg Pool
       <> S testKeyHash1 -- operator
       <> S testVRFKH    -- vrf keyhash
@@ -430,6 +438,10 @@ serializationTests = testGroup "Serialization Tests"
       <> S poolMargin   -- margin
       <> S poolRAcnt    -- reward acct
       <> T (TkTag 258 . TkListLen 1) <> S poolOwner   -- owners
+      <> T (TkListLen 0) -- relays
+      <> T (TkListLen 1 . TkListLen 2) -- metadata present
+      <> S poolUrl       -- metadata url
+      <> S poolMDHash    -- metadata hash
     )
 
   , checkEncodingCBOR "retire_pool"
@@ -547,8 +559,8 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "avupdate"
   , let
-      apname   = apName $ T.pack "Daedalus"
-      systemtag = systemTag $ T.pack "DOS"
+      apname   = ApName $ text64 "Daedalus"
+      systemtag = SystemTag $ text64 "DOS"
       apVer    = ApVer 17
     in
     checkEncodingCBOR "avupdate"
@@ -580,10 +592,10 @@ serializationTests = testGroup "Serialization Tests"
       avup = AVUpdate (Map.singleton
                   testGKeyHash
                   (Applications (Map.singleton
-                         (apName $ T.pack "Daedalus")
+                         (ApName $ text64 "Daedalus")
                          (ApVer 17
                          , Mdt $ Map.singleton
-                             (systemTag $ T.pack "DOS")
+                             (SystemTag $ text64 "DOS")
                              testInstallerHash
                          ))))
       e = Just $ EpochNo 0
@@ -635,10 +647,10 @@ serializationTests = testGroup "Serialization Tests"
              (AVUpdate (Map.singleton
                          testGKeyHash
                          (Applications (Map.singleton
-                                (apName $ T.pack "Daedalus")
+                                (ApName $ text64 "Daedalus")
                                 (ApVer 17
                                 , Mdt $ Map.singleton
-                                    (systemTag $ T.pack "DOS")
+                                    (SystemTag $ text64 "DOS")
                                     testInstallerHash
                                 )))))
              (Just $ EpochNo 0)
@@ -683,10 +695,10 @@ serializationTests = testGroup "Serialization Tests"
              (AVUpdate (Map.singleton
                          testGKeyHash
                          (Applications (Map.singleton
-                                (apName $ T.pack "Daedalus")
+                                (ApName $ text64 "Daedalus")
                                 (ApVer 17
                                 , Mdt $ Map.singleton
-                                    (systemTag $ T.pack "DOS")
+                                    (SystemTag $ text64 "DOS")
                                     testInstallerHash
                                 )))))
              (Just $ EpochNo 0)
@@ -975,6 +987,11 @@ serializationTests = testGroup "Serialization Tests"
               , _poolMargin = unsafeMkUnitInterval 0.7
               , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
               , _poolOwners = Set.singleton testKeyHash2
+              , _poolRelays = Seq.empty
+              , _poolMD = Just $ PoolMetaData
+                            { _poolMDUrl  = Url $ text64 "web.site"
+                            , _poolMDHash = BS.pack "{}"
+                            }
               }
         ps = Map.singleton testKeyHash1 p
         fs = Coin 123
@@ -1004,6 +1021,11 @@ serializationTests = testGroup "Serialization Tests"
             , _poolMargin = unsafeMkUnitInterval 0.7
             , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
             , _poolOwners = Set.singleton testKeyHash2
+            , _poolRelays = Seq.empty
+            , _poolMD = Just $ PoolMetaData
+                          { _poolMDUrl  = Url $ text64 "web.site"
+                          , _poolMDHash = BS.pack "{}"
+                          }
             }
       ps = Map.singleton testKeyHash1 p
       fs = Coin 123

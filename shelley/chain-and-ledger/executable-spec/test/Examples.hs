@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -70,13 +71,12 @@ import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet
 import           Data.Maybe (isJust, maybe)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
-import qualified Data.Text as T (pack)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Address (mkRwdAcnt)
-import           BaseTypes (Nonce (..), mkNonce, startRewards, (⭒))
+import           BaseTypes (Nonce (..), mkNonce, startRewards, text64, (⭒))
 import           BlockChain (pattern HashHeader, bhHash, bheader, hashHeaderToNonce)
 import           Coin (Coin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
@@ -112,14 +112,16 @@ import           Test.Utils
 import           Tx (pattern Tx)
 import           TxData (pattern AddrPtr, pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
-                     pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern StakeCreds,
-                     pattern StakePools, pattern TxBody, pattern TxIn, pattern TxOut, Wdrl (..),
-                     addStakeCreds, _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
-                     _poolRAcnt, _poolVrf)
+                     PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
+                     pattern StakeCreds, pattern StakePools, pattern TxBody, pattern TxIn,
+                     pattern TxOut, Url (..), Wdrl (..), addStakeCreds, _poolCost, _poolMD,
+                     _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
+                     _poolRAcnt, _poolRelays, _poolVrf)
 import qualified TxData (TxBody (..))
-import           Updates (pattern AVUpdate, ApVer (..), pattern Applications, InstallerHash (..),
-                     pattern Mdt, pattern PPUpdate, PParamsUpdate (..), Ppm (..), pattern Update,
-                     pattern UpdateState, apName, emptyUpdate, emptyUpdateState, systemTag)
+import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
+                     InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
+                     Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, emptyUpdate,
+                     emptyUpdateState)
 import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesVKey, txid)
 
 data CHAINExample =
@@ -168,8 +170,8 @@ genDelegs = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (
 -- | There are only two applications on test Byron blockchain:
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
-                            [ (apName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (apName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                            [ (ApName $ text64 "Daedalus", (ApVer 16, Mdt Map.empty))
+                            , (ApName $ text64 "Yoroi", (ApVer 4, Mdt Map.empty))
                             ]
 
 alicePay :: KeyPair
@@ -219,6 +221,11 @@ alicePoolParams =
     , _poolMargin = unsafeMkUnitInterval 0.1
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
+    , _poolRelays = Seq.empty
+    , _poolMD = Just $ PoolMetaData
+                  { _poolMDUrl  = Url $ text64 "alice.pool"
+                  , _poolMDHash = BS.pack "{}"
+                  }
     }
 
 
@@ -1817,12 +1824,12 @@ ex3C = CHAINExample (SlotNo 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
 
 daedalusMDEx4A :: Mdt
 daedalusMDEx4A = Mdt $ Map.singleton
-                              (systemTag $ T.pack "DOS")
+                              (SystemTag $ text64 "DOS")
                               (InstallerHash $ hash $ BS.pack "ABC")
 
 appsEx4A :: Applications
 appsEx4A = Applications $ Map.singleton
-                            (apName $ T.pack "Daedalus")
+                            (ApName $ text64 "Daedalus")
                             (ApVer 17, daedalusMDEx4A)
 
 avupEx4A :: AVUpdate
@@ -2035,8 +2042,8 @@ updateStEx4C = UpdateState
   (AVUpdate Map.empty)
   Map.empty
   (Applications $ Map.fromList
-                     [ (apName $ T.pack "Daedalus", (ApVer 17, daedalusMDEx4A))
-                     , (apName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
+                     [ (ApName $ text64 "Daedalus", (ApVer 17, daedalusMDEx4A))
+                     , (ApName $ text64 "Yoroi", (ApVer 4, Mdt Map.empty))
                      ])
 
 expectedLSEx4C :: LedgerState

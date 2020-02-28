@@ -104,7 +104,12 @@ pool_params = ( keyhash             ; operator
               , unit_interval       ; margin
               , [credential]        ; reward account
               , finite_set<keyhash> ; pool owners
+              , [* url]             ; relays
+              , [?pool_metadata]    ; pool metadata
               )
+
+url = tstr .size 64
+pool_metadata = [url, metadata_hash]
 
 withdrawals = { * [credential] => coin }
 

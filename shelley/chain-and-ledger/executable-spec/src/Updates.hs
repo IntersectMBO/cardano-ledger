@@ -12,12 +12,10 @@ module Updates
   , PPUpdateEnv(..)
   , PPUpdate(..)
   , PParamsUpdate(..)
-  , ApName
-  , apName
+  , ApName (..)
   , ApVer(..)
   , Mdt(..)
-  , SystemTag
-  , systemTag
+  , SystemTag (..)
   , InstallerHash(..)
   , Applications(..)
   , AVUpdate(..)
@@ -36,24 +34,21 @@ module Updates
   )
 where
 
-import           Cardano.Binary (DecoderError (..), Encoding, FromCBOR (..), ToCBOR (..),
-                     decodeMapLenOrIndef, encodeListLen, encodeMapLen, enforceSize)
+import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), decodeMapLenOrIndef,
+                     encodeListLen, encodeMapLen, enforceSize)
 import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Ledger.Shelley.Crypto
-import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
+import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import qualified Data.List as List (group)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Text as T
-import           Data.Text.Encoding (encodeUtf8)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 
-import           BaseTypes (Nonce, UnitInterval)
+import           BaseTypes (Nonce, Text64, UnitInterval)
 import           Coin (Coin)
 import           Keys (GenDelegs, GenKeyHash)
 import           PParams (ActiveSlotCoeff, PParams (..))
@@ -67,46 +62,11 @@ import           Ledger.Core (range, (◁))
 newtype ApVer = ApVer Natural
   deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
-newtype ApName = ApName T.Text
-  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
+newtype ApName = ApName Text64
+  deriving (Show, Ord, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
-textSize :: T.Text -> Int
-textSize = BS.length . encodeUtf8
-
-apName :: T.Text -> ApName
-apName t =
-  let numBytes = textSize t
-  in
-    if numBytes <= 64
-      then ApName t
-      else error $ "apName received too many bytes (expected 64): " <> show numBytes
-
-instance FromCBOR ApName
- where
-  fromCBOR = do
-    t <- fromCBOR
-    if textSize t > 64
-      then cborError $ DecoderErrorCustom "ApName has too many bytes:" t
-      else pure $ ApName t
-
-newtype SystemTag = SystemTag T.Text
-  deriving (Show, Ord, Eq, ToCBOR, NoUnexpectedThunks)
-
-systemTag :: T.Text -> SystemTag
-systemTag t =
-  let numBytes = (BS.length . encodeUtf8) t
-  in
-    if numBytes <= 64
-      then SystemTag t
-      else error $ "systemTag received too many bytes (expected 64): " <> show numBytes
-
-instance FromCBOR SystemTag
- where
-  fromCBOR = do
-    t <- fromCBOR
-    if textSize t > 64
-      then cborError $ DecoderErrorCustom "SystemTag has too many bytes:" t
-      else pure $ SystemTag t
+newtype SystemTag = SystemTag Text64
+  deriving (Show, Ord, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 newtype InstallerHash crypto = InstallerHash (Hash (HASH crypto) ByteString)
   deriving (Show, Ord, Eq, NoUnexpectedThunks)

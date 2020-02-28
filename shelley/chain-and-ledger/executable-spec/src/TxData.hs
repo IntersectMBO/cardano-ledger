@@ -22,6 +22,7 @@ import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, catMaybes)
 import           Control.Monad (unless)
 import           Lens.Micro.TH (makeLenses)
 
+import           Data.ByteString (ByteString)
 import           Data.Foldable (fold)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -35,7 +36,7 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (UnitInterval, invalidKey)
+import           BaseTypes (Text64, UnitInterval, invalidKey)
 import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
@@ -55,6 +56,16 @@ data Delegation crypto = Delegation
 
 instance NoUnexpectedThunks (Delegation crypto)
 
+newtype Url = Url Text64
+  deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
+
+data PoolMetaData = PoolMetaData
+  { _poolMDUrl  :: Url
+  , _poolMDHash :: ByteString
+  } deriving (Eq, Generic, Show)
+
+instance NoUnexpectedThunks PoolMetaData
+
 -- |A stake pool.
 data PoolParams crypto =
   PoolParams
@@ -65,6 +76,8 @@ data PoolParams crypto =
     , _poolMargin  :: UnitInterval
     , _poolRAcnt   :: RewardAcnt crypto
     , _poolOwners  :: Set (KeyHash crypto)
+    , _poolRelays  :: Seq Url
+    , _poolMD      :: Maybe PoolMetaData
     } deriving (Show, Generic, Eq)
       deriving ToCBOR via CBORGroup (PoolParams crypto)
       deriving FromCBOR via CBORGroup (PoolParams crypto)
@@ -463,7 +476,7 @@ instance
   => ToCBOR (TxBody crypto)
  where
   toCBOR txbody =
-    let l = catMaybes 
+    let l = catMaybes
           [ encodeMapElement 0 $ _inputs txbody
           , encodeMapElement 1 $ CborSeq $ _outputs txbody
           , encodeMapElement 2 $ _txfee txbody
@@ -477,9 +490,9 @@ instance
     in encodeMapLen n <> fold l
     where
       encodeMapElement ix x = Just (encodeWord ix <> toCBOR x)
-      encodeMapElementUnless condition ix x = 
-        if condition x 
-          then Nothing 
+      encodeMapElementUnless condition ix x =
+        if condition x
+          then Nothing
           else encodeMapElement ix x
 
 instance
@@ -662,6 +675,21 @@ instance ToCBORGroup Ptr where
 instance FromCBORGroup Ptr where
   fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
+instance ToCBOR PoolMetaData
+ where
+  toCBOR (PoolMetaData u h) =
+    encodeListLen 2
+      <> toCBOR u
+      <> toCBOR h
+
+instance FromCBOR PoolMetaData
+  where
+  fromCBOR = do
+    enforceSize "PoolMetaData" 2
+    u <- fromCBOR
+    h <- fromCBOR
+    pure $ PoolMetaData u h
+
 instance
   (Crypto crypto)
   => ToCBORGroup (PoolParams crypto)
@@ -674,7 +702,9 @@ instance
       <> toCBOR (_poolMargin poolParams)
       <> toCBOR (_poolRAcnt poolParams)
       <> toCBOR (_poolOwners poolParams)
-  listLen _ = 7
+      <> toCBOR (CborSeq (_poolRelays poolParams))
+      <> toCBOR (_poolMD poolParams)
+  listLen _ = 9
 
 instance
   (Crypto crypto)
@@ -688,6 +718,8 @@ instance
     margin <- fromCBOR
     ra <- fromCBOR
     owners <- fromCBOR
+    relays <- fromCBOR
+    md <- fromCBOR
     pure $ PoolParams
             { _poolPubKey = vk
             , _poolVrf    = vrf
@@ -696,6 +728,8 @@ instance
             , _poolMargin = margin
             , _poolRAcnt  = ra
             , _poolOwners = owners
+            , _poolRelays = (unwrapCborSeq relays)
+            , _poolMD     = md
             }
 
 instance Relation (StakeCreds crypto) where

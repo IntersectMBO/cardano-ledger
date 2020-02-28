@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,6 +16,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
+import qualified Data.Sequence as Seq
 import           Data.Set ((\\))
 import qualified Data.Set as Set
 import           Lens.Micro (to, (^.))
@@ -269,6 +271,8 @@ genStakePool skeys vrfKeys =
                 interval
                 (RewardAcnt $ KeyHashObj $ hashKey acntKey)
                 Set.empty
+                Seq.empty
+                Nothing
      in (pps, snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.
