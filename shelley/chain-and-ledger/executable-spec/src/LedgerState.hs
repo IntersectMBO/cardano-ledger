@@ -123,8 +123,8 @@ import           Lens.Micro (to, (%~), (&), (.~), (^.))
 import           Lens.Micro.TH (makeLenses)
 import qualified MetaData as MD
 import           Numeric.Natural (Natural)
-import           PParams (PParams (..), activeSlotCoeff, d, emptyPParams, keyDecayRate, keyDeposit,
-                     keyMinRefund, minfeeA, minfeeB)
+import           PParams (PParams (..), activeSlotCoeff, activeSlotVal, d, emptyPParams,
+                     keyDecayRate, keyDeposit, keyMinRefund, minfeeA, minfeeB)
 import           Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch, epochInfoFirst,
                      epochInfoSize, (+*), (-*))
 import           Tx (Tx (..), body, certs, extractGenKeyHash, extractKeyHash)
@@ -1131,7 +1131,8 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
 
         -- reserves and rewards change
         deltaR_ = (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves)
-        expectedBlocks = intervalValue (_activeSlotCoeff pp) * fromIntegral slotsPerEpoch
+        expectedBlocks =
+          intervalValue ((activeSlotVal . _activeSlotCoeff) pp) * fromIntegral slotsPerEpoch
         eta = fromIntegral blocksMade / expectedBlocks
 
         Coin rewardPot = _feeSS ss + deltaR_
@@ -1163,7 +1164,7 @@ overlaySchedule e gkeys pp = do
       let
         numActive = dval * fromIntegral slotsPerEpoch
         dInv = 1 / dval
-        asc = intervalValue $ pp ^. activeSlotCoeff
+        asc = (intervalValue . activeSlotVal) $ pp ^. activeSlotCoeff
 
         toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
         toSlotNo x = firstSlotNo +* toRelativeSlotNo x

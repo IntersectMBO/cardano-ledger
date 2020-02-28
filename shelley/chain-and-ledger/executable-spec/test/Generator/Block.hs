@@ -29,7 +29,7 @@ import           LedgerState (pattern EpochState, pattern NewEpochState, esLStat
                      nesEL, nesEs, nesOsched, nesPd, overlaySchedule, _delegationState, _dstate,
                      _genDelegs, _reserves)
 import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import           PParams (PParams (_activeSlotCoeff))
+import           PParams (PParams (_activeSlotCoeff), activeSlotVal)
 import           Slot (EpochNo (..), SlotNo (..))
 import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
                      chainOCertIssue, chainSlotNo)
@@ -185,7 +185,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
         n <- genNatural 2 10
         -- use the stake divided by 1 / n multiplied with f as leader election value
         pure (unsafeMkUnitInterval ((stake / fromIntegral n)
-                                    * ((intervalValue . _activeSlotCoeff) pp)))
+                                    * ((intervalValue . activeSlotVal . _activeSlotCoeff) pp)))
       else
         error "stake not in [0; 1]"
 

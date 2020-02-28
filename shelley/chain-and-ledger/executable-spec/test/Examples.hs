@@ -96,7 +96,7 @@ import           LedgerState (AccountState (..), pattern DPState, pattern EpochS
                      _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools,
                      _stkCreds, _treasury)
 import           OCert (KESPeriod (..))
-import           PParams (PParams (..), emptyPParams)
+import           PParams (PParams (..), emptyPParams, mkActiveSlotCoeff)
 import           Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..), (+*))
 import           STS.Bbody (pattern LedgersFailure)
 import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, initialShelleyState,
@@ -294,7 +294,8 @@ ppsEx1 = emptyPParams { _maxBBSize       =       50000
                       , _keyDeposit      = Coin      7
                       , _poolDeposit     = Coin    250
                       , _d               = unsafeMkUnitInterval 0.5
-                      , _activeSlotCoeff = unsafeMkUnitInterval 0.9
+                      , _activeSlotCoeff =
+                        mkActiveSlotCoeff (unsafeMkUnitInterval 0.9)
                       , _tau             = unsafeMkUnitInterval 0.2
                       , _rho             = unsafeMkUnitInterval 0.0021
                       , _keyDecayRate    =                      0.002

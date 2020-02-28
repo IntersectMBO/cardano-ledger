@@ -94,7 +94,7 @@ overlayTransition = do
 
   case Map.lookup (bheaderSlotNo bhb) osched of
     Nothing ->
-      vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
+      vrfChecks eta0 pd ((activeSlotVal . _activeSlotCoeff) pp) bhb ?! NotPraosLeaderOVERLAY
     Just Nothing ->
       failBecause NotActiveSlotOVERLAY
     Just (Just gkey) ->

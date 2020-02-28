@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -38,7 +39,7 @@ import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           BaseTypes (FixedPoint, Nonce (NeutralNonce), UnitInterval, interval0,
+import           BaseTypes (FixedPoint, Nonce (NeutralNonce), UnitInterval, fpPrecision, interval0,
                      intervalValue)
 import           Coin (Coin (..))
 import           Slot (EpochNo (..))
@@ -82,7 +83,7 @@ data PParams = PParams
     -- | Monetary expansion
   , _tau             :: UnitInterval
     -- | Active slot coefficient
-  , _activeSlotCoeff :: UnitInterval
+  , _activeSlotCoeff :: ActiveSlotCoeff
     -- | Decentralization parameter
   , _d               :: UnitInterval
     -- | Extra entropy
@@ -93,22 +94,39 @@ data PParams = PParams
 
 data ActiveSlotCoeff =
   ActiveSlotCoeff
-  {
-    unActiveSlotVal :: UnitInterval
-  , unActiveSlotLog :: FixedPoint
-  } deriving (Eq, Show)
+  { unActiveSlotVal :: UnitInterval
+  , unActiveSlotLog :: Integer  -- TODO mgudemann make this FixedPoint,
+                                -- currently a problem because of
+                                -- NoUnexpectedThunks instance for FixedPoint
+  } deriving (Eq, Ord, Show, Generic)
+
+instance NoUnexpectedThunks ActiveSlotCoeff
+
+instance FromCBOR ActiveSlotCoeff
+ where
+   fromCBOR = do
+     enforceSize "ActiveSlotCoeff" 1
+     v <- fromCBOR
+     pure $ mkActiveSlotCoeff v
+
+instance ToCBOR ActiveSlotCoeff
+ where
+   toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal }) =
+     toCBOR slotVal
 
 mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
 mkActiveSlotCoeff v =
-  ActiveSlotCoeff
-  v
-  (NonIntegral.ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v))
+  ActiveSlotCoeff { unActiveSlotVal = v
+                  , unActiveSlotLog = floor
+                    (fpPrecision * (
+                        NonIntegral.ln' $
+                        (1 :: FixedPoint) - (fromRational $ intervalValue v))) }
 
 activeSlotVal :: ActiveSlotCoeff -> UnitInterval
 activeSlotVal = unActiveSlotVal
 
 activeSlotLog :: ActiveSlotCoeff -> FixedPoint
-activeSlotLog = unActiveSlotLog
+activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 
 instance NoUnexpectedThunks PParams
 
@@ -206,7 +224,7 @@ emptyPParams =
      , _a0 = 0
      , _rho = interval0
      , _tau = interval0
-     , _activeSlotCoeff = interval0
+     , _activeSlotCoeff = mkActiveSlotCoeff interval0
      , _d = interval0
      , _extraEntropy = NeutralNonce
      , _protocolVersion = (0, 0)
