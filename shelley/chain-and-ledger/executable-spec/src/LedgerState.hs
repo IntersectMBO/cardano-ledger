@@ -1040,7 +1040,7 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
      | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
     iReward  = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (pool ^. poolRAcnt) iReward mRewards
-    rewards' = addrsRew ◁ potentialRewards
+    rewards' = Map.filter (/= Coin 0) $ addrsRew ◁ potentialRewards
 
 reward
   :: PParams
