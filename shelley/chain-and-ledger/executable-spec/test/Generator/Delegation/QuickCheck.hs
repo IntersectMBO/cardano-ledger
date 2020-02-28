@@ -250,15 +250,16 @@ genStakePool skeys vrfKeys =
   mkPoolParams
     <$> (QC.elements skeys)
     <*> (snd <$> QC.elements vrfKeys)
-    <*> (Coin <$> genInteger 1 100)
-    <*> (Coin <$> genInteger 1 100)
+    <*> (Coin <$> QC.frequency [ (1, genInteger 1 100)
+                               , (5, pure 0)]) -- pledge
+    <*> (Coin <$> genInteger 1 100) -- cost
     <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> (getAnyStakeKey skeys)
  where
   getAnyStakeKey :: KeyPairs -> Gen VKey
   getAnyStakeKey keys = vKey . snd <$> QC.elements keys
 
-  mkPoolParams poolKeyPair vrfKey cost pledge marginPercent acntKey =
+  mkPoolParams poolKeyPair vrfKey pledge cost marginPercent acntKey =
     let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
         pps = PoolParams
                 (hashKey . vKey . snd $ poolKeyPair)
