@@ -561,203 +561,54 @@ pool operators.
 \subsection{Overview of Delegation}
 \label{overview-of-delegation}
 
-Delegation is a separation of the control over the movements of funds
-and the rights (and obligations) in the Proof of Stake protocol that are
-associated with those funds. We achieve this separation by introducing
-another type of address: while the right to move funds are tied to a
-\emph{value address}, the right (and obligation) to take part in the PoS
-is tied to a \emph{stake address}. The association between the two is
-that a value address can contain a reference to a stake address.
+Delegation is a separation of the control over the movements of funds and the
+rights (and obligations) in the PoS protocol that are associated with those
+funds. We achieve this separation by modelling it in the address structure. We
+will distinguish between \emph{value addresses} that determine how funds can be
+spent, and \emph{stake addresses} that define if and how those funds take part
+in the PoS protocol. Actual coins will belong to an (overall) \emph{address},
+consisting of both a value address and a stake address.
 
-Except for special classes of value addresses with no stake
-rights\footnote{Enterprise,
-  bootstrap era and AVVM addresses have no corresponding stake
-  rights. AVVM is an acronym for ``Ada Virtual Vending Machine'', and AVVM
-  addresses are special addresses used in the initial distribution of Ada.},
-all value addresses have stake rights corresponding to the funds
-at the address. To exercise these stake rights, and to receive staking
-rewards, each value address must be associated with a \emph{registered}
-stake address. This involves registering a stake address on the chain
-and using value addresses that refer to this stake address. Each
-registered stake address has a corresponding \emph{reward account} which
-is used to hold accumulated staking rewards. To exercise stake rights
-associated with a registered stake address, those rights must be
-\emph{delegated} to a registered stake pool.
-This involves posting a delegation certificate on the chain identifying
-the chosen stake pool. Registered stake pools participate in the Proof
-of Stake protocol using the key for their stake pool to sign blocks.
-Only registered stake pools participate in the PoS protocol, but anyone
-can register a private stake pool for ``self staking''. For each stake
-pool, the set of stake keys that delegate to it are known, and staking
-rewards can be paid into the reward accounts associated with each stake
-key. Rewards can accumulate in the reward account of the stake addresses
-over multiple epochs and can be reclaimed as part of a transaction using
-the stake address as an input.
+We support multi signature (multi-sig) schemes, for payments as well as for
+delegations. We do this by allowing value addresses and script addresses to use
+either keypairs, or scripts for authorisation, and implementing a simple
+scripting language to describe multi-sig schemes. Introducing multi-sig in this
+way has the benefit of naturally generalising when we will later introduce more
+powerful scripting languages, such as Plutus and Marlowe.
 
-Thus, the overall structure is that value addresses with stake rights
-are associated with a stake address, and the stake address delegates to
-a stake pool, and the stake pool takes part in the PoS protocol. Private
-staking works in exactly the same way, using a stake address, and
-delegating, but using a private stake pool.
+Participating in the PoS protocol requires two steps:
+\begin{description}
+\item[Using a registered stake address] Users can post certificates to the chain
+  to register a stake address. This will allow them to delegate funds associated
+  with that address, and also automatically set up a corresponding \emph{reward
+    account}, where the system will accumulate rewards for delegating funds from
+  that stake address.
+\item[Delegating from that stake address to a registered \emph{stake pool}] All
+  blocks in Cardano-Shelley will be produced by a set of stake pools that need
+  to be registered on the chain, by posting an appropriate certificate.
+  Individual stakeholders can \emph{delegate} funds from each of their
+  registered stake addresses to a pool of their choosing. Stake in an address
+  that delegates to a pool counts to the stake of that pool in the leader
+  election. The pool will be rewarded for block production, and those rewards
+  will automatically be distributed to the apropriate reward addresses.
 
-To control the conditions of use of an address, value addresses and
-stake addresses can be based on a cryptographic key pair. In this case
-the holder of the single private key controls the use of the address,
-as their signature is required to spend from the value address, or
-delegate or withdraw rewards from a stake address.
+  Note that this does not restrict an individual stakeholder wanting to use
+  their own stake to produce blocks (``self staking''). Such users should
+  register a \emph{private stake pool}, and delegate their own funds to that
+  pool. This uniform architecture, not distinguishing between those stakeholders
+  that are using their stake directly and those that are delegating, reduces the
+  overall complexity of the system significantly.
+\end{description}
 
-Value addresses and stake addresses can also be based on scripts, where
-the script provides the conditions in which the address can be used. In
-the Shelley release the only\footnote{The Goguen release will extend this
-with Plutus Core, allowing scripts written in Plutus, Marlowe, or other
-languages that compile to Plutus Core.} available script language is one
-that is specialised to express multi-signature conditions: such that N
-out of M cryptographic keys are required to sign to use the address.
-
-Figure~\ref{fig:overview-delegation} shows some of the concepts involved in
-delegation, and their relationships. The light-blue nodes represent concepts, which
-do not have a representation in the system, whereas light-brown nodes represent
-system entities.
-
-\begin{figure}[ht]
-  \centering
-  \begin{tikzpicture}[ align = center
-                     , node distance = 8em and 10em
-                     , text width = 5em
-                     , font = \footnotesize
-                     , >={Latex[width=0.5em, length=0.5em]}
-                     , every node/.style = { rectangle
-                                         , rounded corners
-                                         , draw = black
-                                         , align = center
-                                         , minimum height = 4em }
-                     ]
-
-
-    \tikzset{ concept/.style = {fill=blue!10}
-            , entity/.style = {fill=brown!10}}
-    %%
-    %% Nodes
-    %%
-    \node (owner)   [concept]                    {Owner};
-    \node (valaddr)    [entity, left = of owner]    {Value address};
-    \node (registeredStakeAddr)    [entity, below = of owner]   {Registered stake address};
-    \node (pkey)    [entity, left = of registeredStakeAddr]     {Payment key or script hash};
-    \node (racc)    [entity, right = of registeredStakeAddr]    {Reward account};
-    \node (rewards) [concept, below = of racc]   {Rewards};
-    \node (funds)   [concept, below = of pkey]   {Funds};
-    \node (srights) [concept, below = of registeredStakeAddr]   {Staking rights};
-    \node (spool)   [entity, below = of srights] {Stake pool};
-    \node (pos)     [concept, right = of spool]  {PoS};
-
-    \tikzset{every node/.style={align=center, text width=6em, text=brown}}
-    %%
-    %% Relationship between nodes (arrows)
-    %%
-    \draw[->] (owner) edge node[above] {owns} (valaddr);
-    \draw[->] (valaddr) edge node[left] {contains} (pkey);
-    \draw[->] (valaddr) edge node [above, rotate=-40]{refers to} (registeredStakeAddr);
-    \draw[->] (owner) edge node[left] {owns} (registeredStakeAddr);
-    \draw[->] (owner) edge node[left] {owns} (racc);
-
-    \draw[<->] (registeredStakeAddr) edge node[anchor=south] {is associated\\ with a} (racc);
-    \draw[->] (racc) edge node[above, rotate=90] {collects} (rewards);
-    \draw[->] (pkey) edge node[anchor=west] {has} (funds);
-    \draw[->] (registeredStakeAddr) edge node[anchor=west] {has} (srights);
-    \draw[->] (srights) edge node[anchor=north] {associated with} (funds);
-    \draw[->] (pos) edge[bend left] node[left] {pays to} (racc);
-    \draw[->] (srights) edge node[anchor=east] {delegated to} (spool);
-    \draw[->] (spool) edge node[anchor=south] {participates in} (pos);
-  \end{tikzpicture}
-  \caption{Overview of delegation}
-  \label{fig:overview-delegation}
-\end{figure}
-
-Figure~\ref{fig:er-relationship-delegation} shows the entity-relationship
-diagram of the system level entities involved in the implementation of
-delegation:
-\begin{itemize}
-\item Each normal pubkey address\footnote{As opposed to script
-  addresses}\todo{update to the new address nomenclature}
-  contains a single payment key. However, the same payment key
-  can be used by multiple addresses (where addresses differ among each other in
-  the delegation information).
-\item Many value addresses can refer to the same stake address. For instance,
-  different outputs of a transaction can specify the that the stake associated
-  with those output should be transferred to the same stake key.
-\item Each stake address has a unique reward account associated with it, and a
-  reward account is only associated with one stake key.
-\item There can be many UTxO entries (funds) for a single address. However, a
-  UTxO entry refers an available input address to use.
-\item A stake address is associated with exactly zero or one stake pools at any
-  point in time. A stake pool has exactly one staking key that controls the pool
-  (though it has to use further operational keys to mitigate key theft as described
-  in \cref{operational-key-certificates}, and there can
-  be multiple stake addresses delegating or pledging to the pool).
-\end{itemize}
-
-\begin{figure*}[ht]
-  \centering
-  \begin{tikzpicture}[ align = center
-                     , node distance = 8em and 10em
-                     , text width = 5em
-                     , font = \footnotesize
-                     , >={Latex[width=0.5em, length=0.5em]}
-                     , every node/.style = { rectangle
-                                           , rounded corners
-                                           , draw = black
-                                           , align = center
-                                           , minimum height = 4em }
-                     ]
-
-  %%
-  %% Nodes
-  %%
-  \node (valueAddr) [] {Value address};
-  \node (singleKeyAddr) [above = of valueAddr] {Single key address};
-  \node (scriptAddr) [right = of singleKeyAddr] {Script address};
-  \node (utxo) [left = of valueAddr] {UTxO};
-  \node (pkey) [above = of singleKeyAddr] {Payment key};
-  \node (registeredStakeAddr) [below = of valueAddr] {Registerd stake address};
-  \node (spool) [left = of registeredStakeAddr] {Stake pool};
-  \node (racc) [right = of registeredStakeAddr] {Reward account};
-  \node (script) [above = of scriptAddr] {Script};
-
-  \tikzset{every node/.style={align=center, text width=6em, above}}
-  %%
-  %% Relationship between nodes (arrows)
-  %%
-  % Horizontal lines. By grouping all the horizontal lines we do not need to set
-  % the node attributes (such as `align`) every time.
-  \draw[-] (utxo) edge node[pos=0.1]  {$n$}
-                       node[pos=0.85] {$1$}
-           (valueAddr);
-  \draw[{Triangle[open]}-] (valueAddr) edge
-                           (singleKeyAddr);
-  \draw[{Triangle[open]}-] (valueAddr) edge
-                           (scriptAddr);
-  \draw[-] (registeredStakeAddr) edge node[pos=0.1]  {$1$}
-                       node[pos=0.85] {$0 \ldots 1$}
-           (spool);
-  \draw[-] (registeredStakeAddr) edge node[pos=0.1] {$1$}
-                       node[pos=0.9] {$1$}
-           (racc);
-  % Horizontal lines.
-  \tikzset{every node/.style={align=left, right}}
-  \draw[-] (valueAddr) edge node[pos=0.1] {$n$}
-                            node[pos=0.9] {$0 \ldots 1$}
-           (registeredStakeAddr);
-  \draw[-] (singleKeyAddr) edge node[pos=0.1]  {$n$}
-                       node[pos=0.85] {$1$}
-           (pkey);
-  \draw[-] (scriptAddr) edge node[pos=0.1]  {$1$}
-                       node[pos=0.85] {$1$}
-           (script);
-  \end{tikzpicture}
-
-  \caption{Entity-relationship diagram for delegation}
-  \label{fig:er-relationship-delegation}
-\end{figure*}
+Rewards to pools and their members follow the scheme described
+in~\cref{design-of-incentives}. In designing the rewards system, we were careful
+to avoid incentivising selfish behaviour and encourage cooperative behaviour.
+The rewards that a pool will get for producing blocks depends on how much stake
+they control, and on how well they perform when producing blocks. Stake pool
+operators can influence how the rewards for the pool are split amongst its
+members, by setting parameters in the stake pool registration certificate.
+Wallets will assist users in making rational choices and delegating to pools
+that are expected to give the best rewards.
 
 \subsection{Address Structure}
 \label{address-structure}
@@ -770,7 +621,6 @@ two concerns, we distinguish between \emph{value addresses} and \emph{stake
 stake address.
 
 \todo[inline]{Suggest restructuring this subsection based on the following subsubsections. So instead of the description list for key addresses, and stake addresses, turn those into their own subsubsections.
-
 Also clearly document the structure of value and script addresses. Suggest that if we're uising $\beta$ for the staking reference we use $\alpha$ for the payment credential!}
 
 \subsubsection{Key addresses}
