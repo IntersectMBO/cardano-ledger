@@ -9,8 +9,8 @@ import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Internal.Property (CoverPercentage)
 
-import           Ledger.Delegation (PredicateFailure (DoesNotVerify, EpochInThePast, EpochPastNextEpoch, HasAlreadyDelegated, IsAlreadyScheduled, IsNotGenesisKey))
-
+import           Ledger.Delegation (EpochDiff(..)
+                                   , PredicateFailure (DoesNotVerify, EpochInThePast, EpochPastNextEpoch, HasAlreadyDelegated, IsAlreadyScheduled, IsNotGenesisKey))
 
 coverDelegFailures
   :: forall m a
@@ -24,8 +24,8 @@ coverDelegFailures
 coverDelegFailures coverPercentage =
   Generator.coverFailures
     coverPercentage
-    [ EpochInThePast undefined
-    , EpochPastNextEpoch undefined
+    [ EpochInThePast (EpochDiff 0 0) -- The value here is ignored, only the constructor is compared
+    , EpochPastNextEpoch (EpochDiff 0 0 ) -- The value here is ignored, only the constructor is compared
     , IsAlreadyScheduled
     , IsNotGenesisKey
     , HasAlreadyDelegated
