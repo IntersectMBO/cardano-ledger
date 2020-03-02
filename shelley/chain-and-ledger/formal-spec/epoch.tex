@@ -15,8 +15,8 @@
 \newcommand{\RewardUpdate}{\type{RewardUpdate}}
 
 \newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
-\newcommand{\reward}[7]{\fun{reward}
-  ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}}
+\newcommand{\reward}[8]{\fun{reward}
+  ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}~ \var{#8}}
 \newcommand{\rewardOnePool}[9]{\fun{rewardOnePool}
   ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}~\var{#9}}
 \newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
@@ -27,7 +27,7 @@
 \newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~{#2}~\var{#3}~\var{#4}~\var{#5}}
-\newcommand{\createRUpd}[2]{\fun{createRUpd}~\var{#1}~\var{#2}}
+\newcommand{\createRUpd}[3]{\fun{createRUpd}~\var{#1}~\var{#2}~\var{#3}}
 \newcommand{\getIR}[1]{\fun{getIR}~\var{#1}}
 
 This chapter introduces the epoch boundary transition system and the related reward calculation.
@@ -1152,8 +1152,8 @@ The calculation is done pool-by-pool.
       & \fun{reward} \in \PParams \to \BlocksMade \to \Coin\to \powerset{\AddrRWD}
       \to (\KeyHash \mapsto \PoolParam) \\
       & ~~~\to \Stake \to (\KeyHash_{stake} \mapsto \KeyHash_{pool}) \to
-      (\AddrRWD \mapsto \Coin)\\
-      & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{stake}{delegs}
+      \Coin \to (\AddrRWD \mapsto \Coin)\\
+      & \reward{pp}{blocks}{R}{addrs_{rew}}{poolParams}{stake}{delegs}{total}
           = \var{rewards}\\
       & ~~~\where \\
       & ~~~~~~~tot = \sum_{\_\mapsto c\in \var{stake}}c \\
@@ -1323,8 +1323,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \emph{Calculation to create a reward update}
   %
   \begin{align*}
-    & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
-    & \createRUpd{b}{es} = \left(
+    & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \Coin \to \RewardUpdate \\
+    & \createRUpd{b}{es}{total} = \left(
       \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
@@ -1346,7 +1346,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
     & ~~~~~~~\var{rs}
-      = \reward{pp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs} \\
+      = \reward{pp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs}{total} \\
     & ~~~~~~~\Delta t_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
     & ~~~~~~~blocksMade = \sum_{\wcard \mapsto m \in b}m
   \end{align*}

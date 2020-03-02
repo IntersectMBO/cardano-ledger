@@ -14,7 +14,7 @@ The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
 and $\Z$ is only chosen over $\N$ for its additive inverses.
 
-Seven global constants are defined.
+Eight global constants are defined.
 As global constants, these values can only be changed by updating the software.
 The constants $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$
 represent the number of slots in an epoch/KES period (for a brief explanation
@@ -28,10 +28,17 @@ must create a new operational certificate is given by $\MaxKESEvo$.
 The constant $\Quorum$ determines the quorum amount needed for votes on the
 protocol parameter updates and the application version updates.
 
-Finally, $\MaxMajorPV$ provides a mechanism for halting outdated nodes.
+The constant $\MaxMajorPV$ provides a mechanism for halting outdated nodes.
 Once the major component of the protocol version in the protocol parameters
 exceeds this value, every subsequent block is invalid.
 See Figure~\ref{fig:rules:chain}.
+
+Finally, $\MaxLovelaceSupply$ gives the total number of lovelace in the system,
+which is used in the reward calculation.
+It is always equal to the sum of the values in the UTxO, plus the sum of the
+values in the reward accounts, plus the deposit pot, plus the fee pot,
+plus the treasury and the reserves.
+
 
 Some helper functions are defined in Figure~\ref{fig:defs:protocol-parameters-helpers}.
 The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
@@ -148,6 +155,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
       \MaxKESEvo & \N & \text{maximum KES key evolutions}\\
       \Quorum & \N & \text{quorum for update system votes}\\
       \MaxMajorPV & \N & \text{all blocks are invalid after this value}\\
+      \MaxLovelaceSupply & \Coin & \text{total lovelace in the system}\\
     \end{array}
   \end{equation*}
   %

@@ -16,6 +16,7 @@ module Test.Utils
   , maxKESIterations
   , unsafeMkUnitInterval
   , slotsPerKESIteration
+  , maxLLSupply
   ) where
 
 import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, mkUnitInterval)
@@ -26,6 +27,7 @@ import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Cardano.Prelude (asks)
 import           Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
+import           Coin (Coin (..))
 import           ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair, SKey, SKeyES, SignKeyVRF, VKey,
                      VKeyES, VKeyGenesis, VerKeyVRF)
 import           Control.Monad.Trans.Reader (runReaderT)
@@ -100,6 +102,7 @@ testGlobals = Globals
   , maxKESEvo = 10
   , quorum = 5
   , maxMajorPV = 1000
+  , maxLovelaceSupply = 45*1000*1000*1000*1000*1000
   }
 
 runShelleyBase :: ShelleyBase a -> a
@@ -126,3 +129,6 @@ maxKESIterations = runShelleyBase (asks maxKESEvo)
 
 slotsPerKESIteration :: Word64
 slotsPerKESIteration = runShelleyBase (asks slotsPerKESPeriod)
+
+maxLLSupply :: Coin
+maxLLSupply = Coin $ fromIntegral $ runShelleyBase (asks maxLovelaceSupply)

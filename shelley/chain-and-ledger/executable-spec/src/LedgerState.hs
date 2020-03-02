@@ -1050,11 +1050,11 @@ reward
   -> Map (KeyHash crypto) (PoolParams crypto)
   -> Stake crypto
   -> Map (Credential crypto) (KeyHash crypto)
+  -> Coin
   -> Map (RewardAcnt crypto) Coin
-reward pp (BlocksMade b) r addrsRew poolParams stake@(Stake stake') delegs =
+reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
   rewards'
   where
-    total = Map.foldl (+) (Coin 0) stake'
     pdata =
       [ ( hk
         , ( poolParams Map.! hk
@@ -1120,8 +1120,9 @@ createRUpd
   :: EpochNo
   -> BlocksMade crypto
   -> EpochState crypto
+  -> Coin
   -> ShelleyBase (RewardUpdate crypto)
-createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
+createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) total = do
     ei <- asks epochInfo
     slotsPerEpoch <- epochInfoSize ei e
     let (stake', delegs') = _pstakeGo ss
@@ -1139,7 +1140,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) = do
         deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
         _R = Coin $ rewardPot - deltaT1
 
-        rs_ = reward pp b _R (Map.keysSet $ _rewards ds) poolsSS' stake' delegs'
+        rs_ = reward pp b _R (Map.keysSet $ _rewards ds) poolsSS' stake' delegs' total
         deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer

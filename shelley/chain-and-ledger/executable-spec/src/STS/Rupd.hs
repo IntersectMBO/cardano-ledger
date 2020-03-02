@@ -9,15 +9,17 @@ module STS.Rupd
   )
 where
 
-import           BaseTypes
+import           BaseTypes (ShelleyBase, epochInfo, maxLovelaceSupply, startRewards)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Coin (Coin (..))
 import           Control.Monad.Trans.Reader (asks)
-import           Control.State.Transition
+import           Control.State.Transition (STS (..), TRC (..), TransitionRule, judgmentContext,
+                     liftSTS)
 import           Data.Functor ((<&>))
-import           EpochBoundary
+import           EpochBoundary (BlocksMade)
 import           GHC.Generics (Generic)
-import           LedgerState
-import           Slot
+import           LedgerState (EpochState, RewardUpdate, createRUpd)
+import           Slot (Duration (..), SlotNo, epochInfoEpoch, epochInfoFirst, (+*))
 
 data RUPD crypto
 
@@ -41,14 +43,15 @@ instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
 rupdTransition :: TransitionRule (RUPD crypto)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
-  (epoch, slot) <- liftSTS $ do
+  (epoch, slot, maxLL) <- liftSTS $ do
     ei <- asks epochInfo
     sr <- asks startRewards
     e <- epochInfoEpoch ei s
     slot <- epochInfoFirst ei e <&> (+* (Duration sr))
-    return (e, slot)
+    maxLL <- asks maxLovelaceSupply
+    return (e, slot, maxLL)
   if s <= slot
     then pure ru
     else case ru of
-      Nothing -> Just <$> (liftSTS $ createRUpd epoch b es)
+      Nothing -> Just <$> (liftSTS $ createRUpd epoch b es (Coin $ fromIntegral maxLL))
       Just _  -> pure ru
