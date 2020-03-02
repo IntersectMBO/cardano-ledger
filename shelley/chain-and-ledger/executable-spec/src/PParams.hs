@@ -105,13 +105,14 @@ instance NoUnexpectedThunks ActiveSlotCoeff
 instance FromCBOR ActiveSlotCoeff
  where
    fromCBOR = do
-     enforceSize "ActiveSlotCoeff" 1
      v <- fromCBOR
+     -- l <_ fromCBOR TODO unActiveSlotLog is currently ignored
      pure $ mkActiveSlotCoeff v
 
 instance ToCBOR ActiveSlotCoeff
  where
-   toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal }) =
+   toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal
+                           , unActiveSlotLog = _logVal}) = -- TODO unActiveSlotLog is currently ignored
      toCBOR slotVal
 
 mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
