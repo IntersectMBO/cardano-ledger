@@ -395,7 +395,7 @@ checkVRFValue certNat σ f =
   case taylorExpCmp 3 (1 / q) x of
     ABOVE _ _ -> False
     BELOW _ _ -> True
-    UNKNOWN   -> error "could not compare VRF value"
+    MaxReached _ -> True
   where
     c = activeSlotLog f
     q = fromRational $ 1 - (intervalValue . fromNatural) certNat

@@ -2,11 +2,11 @@
 
 module Main where
 
-import           System.IO                (isEOF)
+import           System.IO (isEOF)
 
 import           NonIntegral
 
-import qualified Data.Fixed               as FP
+import qualified Data.Fixed as FP
 
 data E34
 
@@ -43,7 +43,7 @@ doTestsFromStdin = do
         (case res of
             BELOW acc n -> (show acc) ++ " LT " ++ show n
             ABOVE acc n -> (show acc) ++ " GT " ++ show n
-            UNKNOWN -> "error"
+            MaxReached _ -> "error"
         )
       doTestsFromStdin
 
