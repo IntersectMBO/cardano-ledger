@@ -65,7 +65,7 @@ import           Control.Monad (unless)
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
-import           NonIntegral (exp')
+import           NonIntegral (CompareResult (..), taylorExpCmp)
 import           OCert (OCert (..))
 import           PParams (ActiveSlotCoeff, activeSlotLog)
 import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
@@ -392,10 +392,14 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
 
 checkVRFValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
 checkVRFValue certNat σ f =
-  (1 / q) < exp' (- fromRational σ * c)
+  case taylorExpCmp 3 (1 / q) x of
+    ABOVE _ _ -> False
+    BELOW _ _ -> True
+    UNKNOWN   -> error "could not compare VRF value"
   where
     c = activeSlotLog f
     q = fromRational $ 1 - (intervalValue . fromNatural) certNat
+    x = (- fromRational σ * c)
 
 seedEta :: Nonce
 seedEta = mkNonce 0
