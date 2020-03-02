@@ -12,8 +12,8 @@
    \\[1em]
    Duncan Coutts  \quad \texttt{<duncan.coutts@iohk.io>}
 }
-\DueDate{1$^{\textrm{st}}$ November 2019}
-\SubmissionDate{28$^{\textrm{th}}$ October 2019}{2019/10/28}
+\DueDate{28$^{\textrm{st}}$ February 2020}
+\SubmissionDate{28$^{\textrm{th}}$ February 2020}{2020/02/28}
 \LeaderName{Philipp Kant, \IOHK}
 \InstitutionAddress{\IOHK}
 \Version{1.10}
@@ -167,8 +167,9 @@ obsolete things.
 First version officially published on the IOHK blog.}
 \change{2019-05-17}{PK, LB, DC}{FM (IOHK)}{Some clarifications in response to review by the auditors.}
 \change{2019-06-07}{PK, LB, DC}{FM (IOHK)}{Update section on script addresses.}
-     \change{2019/10/09}{Kevin Hammond}{FM (IOHK)}{Added standard cover page.}
-      \end{changelog}
+\change{2019/10/09}{Kevin Hammond}{FM (IOHK)}{Added standard cover page.}
+\change{2020-02-28}{PK}{FM (IOHK)}{Clarify when to use active/total stake.}
+  \end{changelog}
       \clearpage%
 \begin{landscape}
 \floatstyle{plain}
@@ -1549,6 +1550,10 @@ excludes all addresses that hold no stake, and excludes addresses with
 stake rights but that have not correctly registered their staking key or
 delegation choice.
 
+We will call stake that is correctly delegated to an existing pool \emph{active
+  stake}, sometimes contrasted to the \emph{total stake}, which includes stake
+that is not delegated (or delegated to pools that are already retired).
+
 \subsubsection{Chain Delegation}
 \label{chain-delegation}
 
@@ -2870,6 +2875,42 @@ These calculations proceed in two steps: First, rewards are split
 amongst \emph{pools}. Next, each pool splits its share of \(R\) amongst
 its operator and its members.
 
+\subsubsection{Relative Stake: Active vs Total}
+As explained in \cref{overall-stake-distribution}, we distinguish the amount of
+\emph{active stake} and the \emph{total stake}. Stake is only considered active
+when it is correctly delegated to a non-retired pool. Whenever we look at
+fractions of stake (in the leader election, or when distributing rewards
+according to stake), we need to specify whether we normalise to the active or to
+the total stake.
+
+\begin{description}
+\item[Leader Schedule] For the purpose of determining the leader schedule, we
+  use the construction in \cref{overall-stake-distribution}, which yields the
+  stake relative to the amount of \emph{active} stake.
+
+  The benefit of doing this is that the chain growth will be independent of how
+  many stakeholders do delegate their stake.
+\item[Rewards Distribution] When we distribute rewards depending on how much
+  stake any party provides, we will always use the stake relative to the
+  \emph{total} stake.
+
+  That way, we ensure that the share of the rewards that any one party gets does
+  not change when the amount of active stake changes. Not only is this more
+  predictable for individual players, it also prevents creating an incentive to
+  block new delegation certificates. If we were using the stake relative to the
+  active stake, then any player who already had active stake would lose rewards
+  when other players started delegating their stake, which could lead to a
+  collective censorship of transactions with delegation certificates.
+\item[Performance Estimations] The rewards of a pool will depend on how well
+  they perform, i.e., on how many blocks they produce, and on how many blocks we
+  would expect a pool with their stake to produce
+  (\cref{stake-performance-and-block-production}).
+
+  Since leader election depends on the fraction of \emph{active} stake that a
+  pool controls, we have to normalise to active stake when estimating
+  performance as well.
+\end{description}
+
 \subsubsection{Stake, Performance, and Block Production}
 \label{stake-performance-and-block-production}
 
@@ -2898,11 +2939,11 @@ performance of the other pools and the network. We can write\footnote{We assume
   Praos. However, the error when linearising the leader election function is
   small, particularly for the range of parameters we are considering for
   Cardano.}
-\[\beta = \sigma p r_e \,,\]
+\[\beta = \sigma_a p r_e \,,\]
 where
 \begin{enumerate}
-\item[\(\sigma\)] is the relative stake \(\sigma\) of the pool (the fraction of
-  the absolute stake that the pool controls),
+\item[\(\sigma_a\)] is the relative stake \(\sigma\) of the pool (the fraction of
+  the \emph{active} stake that the pool controls),
 \item[\(p\)] is the performance \(p\) of the pool, i.e. the fraction
   \[
   p = \frac{n}{\max(N,1)}
@@ -2910,10 +2951,10 @@ where
   of the number \(n\) of blocks it successfully added to the chain and the
   number \(N\) of slots it was elected as a leader, and
 \item[\(r_e\)] is a factor that captures the relation between the relative stake
-  \(\sigma\) of the pool, the number \(N\) of slots it is elected as a leader,
+  \(\sigma_a\) of the pool, the number \(N\) of slots it is elected as a leader,
   and the total number \(\Nbar\) of blocks that were added to the chain during
   the epoch. To be precise, we have
-  \[r_e = \frac{N}{\sigma \max(1, \Nbar)}\,.\]
+  \[r_e = \frac{N}{\sigma_a \max(1, \Nbar)}\,.\]
   The factor \(r_e\) captures random influences on \(\beta\): the
   randomness in the leader election that influences \(N\), and the randomness
   both from the leader election and the bunch of random influences on
@@ -2923,14 +2964,14 @@ where
 
 If we insert the definitions of \(p\) and \(r_e\) into \(\beta\), we find that
 \[
-\beta = \sigma \frac{n}{\max(N,1)} \frac{N}{\sigma \max(1, \Nbar)}
+\beta = \sigma_a \frac{n}{\max(N,1)} \frac{N}{\sigma_a \max(1, \Nbar)}
 = \frac{n}{\max(1, \Nbar)}\,,
 \]
 which is indeed the fraction of blocks produced by the pool\footnote{When
   cancelling \(N\) and \(\max(N,1)\), note that for \(N=0\), also \(n=0\), and
   the equation trivially holds.}.
 
-In Ouroboros Praos, we can observe \(\sigma\), \(n\), and \(\Nbar\), but
+In Ouroboros Praos, we can observe \(\sigma_a\), \(n\), and \(\Nbar\), but
 we do not have a direct handle on any of \(N\), \(r_e\), or \(p\). From the
 observables, we can extract
 \begin{equation}
@@ -2940,7 +2981,7 @@ observables, we can extract
 While the true performance \(p\) is not accessible, we can define and measure
 the \emph{apparent performance}
 \[
-\pbar := p r_e = \frac{\beta}{\sigma}\,.
+\pbar := p r_e = \frac{\beta}{\sigma_a}\,.
 \]
 We will use the apparent performance \(\pbar\) as a proxy for the performance
 when determining the rewards for pools.
@@ -2968,8 +3009,9 @@ Here
 \item
   \(z_0:=1/k\) is the size of a saturated pool.
 \item
-  \(\sigma':=\min(\sigma, z_0)\), where \(\sigma\) is the relative stake
-  of the pool.
+  \(\sigma':=\min(\sigma, z_0)\), where \(\sigma\) is the relative stake of the
+  pool (note that this is relative to the \emph{total stake}, not the active
+  stake).
 \item
   \(s':=\min(s, z_0)\), where \(s\) is the relative stake of the pool
   owner(s) (the amount of ada pledged during pool registration,
