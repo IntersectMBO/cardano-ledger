@@ -393,9 +393,9 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
 checkVRFValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
 checkVRFValue certNat σ f =
   case taylorExpCmp 3 (1 / q) x of
-    ABOVE _ _ -> False
-    BELOW _ _ -> True
-    MaxReached _ -> True
+    ABOVE _ _    -> False
+    BELOW _ _    -> True
+    MaxReached _ -> False
   where
     c = activeSlotLog f
     q = fromRational $ 1 - (intervalValue . fromNatural) certNat
