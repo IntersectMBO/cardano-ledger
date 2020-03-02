@@ -100,9 +100,9 @@ leader f sigma = 1 - ((1 - f) *** sigma)
 
 taylor :: (RealFrac a, Show a, Enum a) => a -> a -> a -> a -> Bool
 taylor f a p sigma = case taylorExpCmp 3 (1/q) (-sigma*c) of
-                        ABOVE _ _ -> p >= a
-                        BELOW _ _ -> p <  a
-                        UNKNOWN   -> False
+                        ABOVE _ _    -> p >= a
+                        BELOW _ _    -> p <  a
+                        MaxReached _ -> False
                         where c = ln' (1 - f)
                               q = 1 - p
 
