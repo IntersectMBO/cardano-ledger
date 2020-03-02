@@ -65,7 +65,7 @@ import           Control.Monad (unless)
 import           Delegation.Certificates (PoolDistr (..))
 import           EpochBoundary (BlocksMade (..))
 import           Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
-import           NonIntegral (ln')
+import           NonIntegral (CompareResult (..), taylorExpCmp)
 import           OCert (OCert (..))
 import           PParams (ActiveSlotCoeff, activeSlotLog)
 import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
@@ -383,15 +383,23 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
             && VRF.verifyCertified () vrfK
                          (mkSeed seedL slot eta0 prevHash)
                          (coerce $ bheaderL bhb)
-            && (ln' (fromRational
-                    $ 1 - intervalValue (fromNatural . VRF.certifiedNatural $ bheaderL bhb))
-                > fromRational sigma * c)
+            && checkVRFValue (VRF.certifiedNatural $ bheaderL bhb) sigma f
  where
   hk = hashKey $ bvkcold bhb
   vrfK = bheaderVrfVk bhb
   prevHash = bheaderPrev bhb
   slot = bheaderSlotNo bhb
-  c = activeSlotLog f
+
+checkVRFValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
+checkVRFValue certNat σ f =
+  case taylorExpCmp 3 (1 / q) x of
+    ABOVE _ _ -> False
+    BELOW _ _ -> True
+    MaxReached _ -> True
+  where
+    c = activeSlotLog f
+    q = fromRational $ 1 - (intervalValue . fromNatural) certNat
+    x = (- fromRational σ * c)
 
 seedEta :: Nonce
 seedEta = mkNonce 0

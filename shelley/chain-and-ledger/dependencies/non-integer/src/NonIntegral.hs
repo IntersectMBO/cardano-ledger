@@ -11,7 +11,7 @@ module NonIntegral
 
 data CompareResult a = BELOW a Int
                      | ABOVE a Int
-                     | UNKNOWN
+                     | MaxReached Int
   deriving (Show, Eq)
 
 scaleExp :: (RealFrac a) => a -> (Integer, a)
@@ -59,7 +59,7 @@ eps = 1 / 10^(24::Int)
 -- The 'maxN' parameter gives the maximum recursion depth, 'n' gives the current
 -- rursion depth, 'lastVal' is the optional last value ('Nothing' for the first
 -- iteration). 'aNm2' / 'bNm2' are A_{n-2} / B_{n-2}, 'aNm1' / 'bNm1' are
--- A_{n-1} / B_{n-1}, and 'aN' / 'bN' are A_n / B_n respectively, 'an' / 'bn' 
+-- A_{n-1} / B_{n-1}, and 'aN' / 'bN' are A_n / B_n respectively, 'an' / 'bn'
 -- are lists of succecsive a_n / b_n values for the recurrence relation:
 --
 -- A_{-1} = 1,    A_0 = b_0
@@ -181,14 +181,17 @@ taylorExp maxN n x lastX acc divisor
   | otherwise = taylorExp maxN (n + 1) x nextX (acc + nextX) (divisor + 1)
   where nextX = (lastX * x) / divisor
 
+-- | Efficient way to compare the result of the Taylor expansion of the
+-- exponential function to a threshold value. Using error estimation one can
+-- stop early, once it's known the result will certainly be above or below the
+-- target value.
 taylorExpCmp :: (RealFrac a) => a -> a -> a -> CompareResult a
 taylorExpCmp boundX cmp x = go 1000 0 x 1 1
   where
     go maxN n err acc divisor
-      | maxN == n       = UNKNOWN
-      | abs nextX < eps = UNKNOWN
-      | cmp > acc' + errorTerm = ABOVE acc' (n + 1)
-      | cmp < acc' - errorTerm = BELOW acc' (n + 1)
+      | maxN == n               = MaxReached n
+      | cmp >= acc' + errorTerm = ABOVE acc' (n + 1)
+      | cmp < acc' - errorTerm  = BELOW acc' (n + 1)
       | otherwise = go maxN (n + 1) err' acc' divisor'
       where errorTerm = err' * boundX
             divisor' = divisor + 1
