@@ -26,8 +26,8 @@ import           Delegation.Certificates (pattern Delegate, pattern RegKey, patt
 import           Generator (asStateTransition)
 import           TxData (pattern AddrBase, Credential (..), pattern DCertDeleg, pattern DCertPool,
                      Delegation (..), pattern PoolParams, pattern Ptr, pattern RewardAcnt,
-                     Wdrl (..), _poolCost, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
-                     _poolRAcnt, _poolVrf)
+                     Wdrl (..), _poolCost, _poolMD, _poolMargin, _poolOwners, _poolPledge,
+                     _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
 import           Validation (ValidationError (..))
 
 import           Keys (pattern KeyPair, hashKey, vKey)
@@ -346,13 +346,15 @@ stakeKeyRegistration1 = LedgerState.emptyDelegation
 stakePool :: PoolParams
 stakePool = PoolParams
             {
-              _poolPubKey = hashKey $ vKey stakePoolKey1
-            , _poolVrf = hashKeyVRF stakePoolVRFKey1
+              _poolPubKey  = hashKey $ vKey stakePoolKey1
+            , _poolVrf     = hashKeyVRF stakePoolVRFKey1
             , _poolPledge  = Coin 0
-            , _poolCost = Coin 0      -- TODO: what is a sensible value?
-            , _poolMargin = interval0     --          or here?
+            , _poolCost    = Coin 0      -- TODO: what is a sensible value?
+            , _poolMargin  = interval0     --          or here?
             , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
             , _poolOwners  = Set.empty
+            , _poolRelays  = Seq.empty
+            , _poolMD      = Nothing
             }
 
 halfInterval :: UnitInterval
@@ -362,13 +364,15 @@ halfInterval =
 stakePoolUpdate :: PoolParams
 stakePoolUpdate = PoolParams
                    {
-                     _poolPubKey = hashKey $ vKey stakePoolKey1
-                   , _poolVrf = hashKeyVRF stakePoolVRFKey1
+                     _poolPubKey  = hashKey $ vKey stakePoolKey1
+                   , _poolVrf     = hashKeyVRF stakePoolVRFKey1
                    , _poolPledge  = Coin 0
-                   , _poolCost = Coin 100      -- TODO: what is a sensible value?
-                   , _poolMargin = halfInterval     --          or here?
+                   , _poolCost    = Coin 100      -- TODO: what is a sensible value?
+                   , _poolMargin  = halfInterval     --          or here?
                    , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
                    , _poolOwners  = Set.empty
+                   , _poolRelays  = Seq.empty
+                   , _poolMD      = Nothing
                    }
 
 tx4Body :: TxBody

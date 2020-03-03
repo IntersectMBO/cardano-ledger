@@ -67,12 +67,16 @@ The following derived types are introduced:
     \item the pool pledge.
     \item the pool reward account.
     \item the hash of the VRF verification key.
+    \item the pool relays.
+    \item optional pool medata (a url and a hash).
   \end{itemize}
   The idea of pool owners is explained in Section 4.4.4 of \cite{delegation_design}.
   The pool cost and margin indicate how much more of the rewards pool leaders
   get than the members.
   The pool pledge is explained in Section 5.1 of \cite{delegation_design}.
   The pool reward account is where all pool rewards go.
+  The pool relays and metadata url are explained in Sections
+  3.4.4 and 4.2 of \cite{delegation_design}.
 \end{itemize}
 
 Accessor functions for certificates and pool parameters are also defined, but
@@ -103,6 +107,8 @@ It does the following:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
+      \var{url} & \URL & \text{a url}\\
+      \var{pmd} & \PoolMD & \text{pool metadata}\\
     \end{array}
   \end{equation*}
   %
@@ -131,11 +137,17 @@ It does the following:
       & \KeyHash \mapsto \Slot
       & \text{registered stake pools} \\
       %
+      \PoolMD
+      & ~=~
+      & \URL \times \type{PoolMDHash}
+      & \text{stake pool metadata} \\
+      %
       \PoolParam
       & ~=~
       & \powerset{\KeyHash} \times \Coin \times \unitInterval \times \Coin
       & \text{stake pool parameters} \\
-      & & \qquad \times \AddrRWD \times \KeyHash_{vrf}
+      & & \qquad \times \AddrRWD \times \KeyHash_{vrf} \\
+      & & \qquad \seqof{\URL} \times \PoolMD^?
     \end{array}
   \end{equation*}
   %

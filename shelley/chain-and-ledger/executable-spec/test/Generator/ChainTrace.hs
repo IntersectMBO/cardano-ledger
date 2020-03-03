@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -15,14 +16,13 @@ module Generator.ChainTrace where
 import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, keysSet)
-import qualified Data.Text as T (pack)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Unsafe.Coerce (unsafeCoerce)
 
-import           BaseTypes (Globals)
+import           BaseTypes (Globals, text64)
 import           BlockChain (pattern HashHeader)
 import           Cardano.Crypto.Hash (ShortHash)
 import           ConcreteCryptoTypes (Applications, CHAIN, ChainState, GenDelegs, HashHeader,
@@ -43,7 +43,7 @@ import           Shrinkers (shrinkBlock)
 import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           STS.Chain (initialShelleyState)
 import           Test.Utils (runShelleyBase)
-import           Updates (ApVer (..), pattern Applications, pattern Mdt, apName)
+import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
 import           UTxO (balance)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
@@ -74,11 +74,11 @@ lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
 byronApps :: Applications
 byronApps = Applications $ Map.fromList
-                            [ (apName $ T.pack "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (apName $ T.pack "Yoroi", (ApVer 4, Mdt Map.empty))
-                            , (apName $ T.pack "Ahoy", (ApVer 7, Mdt Map.empty))
-                            , (apName $ T.pack "Shebang", (ApVer 11, Mdt Map.empty))
-                            , (apName $ T.pack "Icarus", (ApVer 13, Mdt Map.empty))
+                            [ (ApName $ text64 "Daedalus", (ApVer 16, Mdt Map.empty))
+                            , (ApName $ text64 "Yoroi", (ApVer 4, Mdt Map.empty))
+                            , (ApName $ text64 "Ahoy", (ApVer 7, Mdt Map.empty))
+                            , (ApName $ text64 "Shebang", (ApVer 11, Mdt Map.empty))
+                            , (ApName $ text64 "Icarus", (ApVer 13, Mdt Map.empty))
                             ]
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
