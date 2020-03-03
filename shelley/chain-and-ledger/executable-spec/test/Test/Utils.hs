@@ -99,6 +99,7 @@ testGlobals = Globals
   , securityParameter = 10
   , maxKESEvo = 10
   , quorum = 5
+  , maxMajorPV = 1000
   }
 
 runShelleyBase :: ShelleyBase a -> a

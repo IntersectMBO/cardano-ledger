@@ -14,7 +14,7 @@ The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
 and $\Z$ is only chosen over $\N$ for its additive inverses.
 
-Six global constants are defined.
+Seven global constants are defined.
 As global constants, these values can only be changed by updating the software.
 The constants $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$
 represent the number of slots in an epoch/KES period (for a brief explanation
@@ -25,9 +25,13 @@ must create a new operational certificate is given by $\MaxKESEvo$.
 \textbf{Note that if } $\MaxKESEvo$
 \textbf{is changed, the KES signature format may have to change as well.}
 
-Finally, $\Quorum$ determines the quorum amount needed for votes on the
+The constant $\Quorum$ determines the quorum amount needed for votes on the
 protocol parameter updates and the application version updates.
 
+Finally, $\MaxMajorPV$ provides a mechanism for halting outdated nodes.
+Once the major component of the protocol version in the protocol parameters
+exceeds this value, every subsequent block is invalid.
+See Figure~\ref{fig:rules:chain}.
 
 Some helper functions are defined in Figure~\ref{fig:defs:protocol-parameters-helpers}.
 The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
@@ -67,7 +71,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
       \\
       \var{pv}
       & \ProtVer
-      & \N\times\N\times\N
+      & \N\times\N
       & \text{protocol version}
     \end{array}
   \end{equation*}
@@ -143,6 +147,7 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
       \StartRewards & \Duration & \text{duration to start reward calculations}\\
       \MaxKESEvo & \N & \text{maximum KES key evolutions}\\
       \Quorum & \N & \text{quorum for update system votes}\\
+      \MaxMajorPV & \N & \text{all blocks are invalid after this value}\\
     \end{array}
   \end{equation*}
   %

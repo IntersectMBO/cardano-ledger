@@ -177,6 +177,8 @@ data Globals = Globals
   , maxKESEvo :: Word64
     -- | Quorum for update system votes and MIR certificates
   , quorum :: Word64
+    -- | All blocks invalid after this protocol version
+  , maxMajorPV :: Natural
   }
 
 type ShelleyBase = ReaderT Globals Identity
