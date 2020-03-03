@@ -390,12 +390,29 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
   prevHash = bheaderPrev bhb
   slot = bheaderSlotNo bhb
 
+-- | Check that the certified input natural is valid for being slot leader. This
+-- means we check that
+--
+-- fromNat (certNat) < 1 - (1 - f)^σ
+--
+-- where fromNat creates an appropriate value in [0;1] from the certified
+-- natural. The calculation is done using the following optimization:
+--
+-- let p = fromNat (certNat) and c = ln(1 - f)
+--
+-- then           p < 1 - (1 - f)^σ
+-- <=>  1 / (1 - p) > exp(-σ * c)
+--
+-- this can be efficiently be computed by `taylorExpCmp` which returns `ABOVE`
+-- in case the reference value `1 / (1 - p)` is above the exponential function
+-- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
+-- conclusively compute this within the given iteration bounds.
 checkVRFValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
 checkVRFValue certNat σ f =
   case taylorExpCmp 3 (1 / q) x of
-    ABOVE _ _ -> False
-    BELOW _ _ -> True
-    MaxReached _ -> True
+    ABOVE _ _    -> False
+    BELOW _ _    -> True
+    MaxReached _ -> False
   where
     c = activeSlotLog f
     q = fromRational $ 1 - (intervalValue . fromNatural) certNat
