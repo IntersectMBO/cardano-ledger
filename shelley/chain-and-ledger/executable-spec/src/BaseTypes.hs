@@ -179,6 +179,8 @@ data Globals = Globals
   , quorum :: Word64
     -- | All blocks invalid after this protocol version
   , maxMajorPV :: Natural
+    -- | Maximum number of lovelace in the system
+  , maxLovelaceSupply :: Word64
   }
 
 type ShelleyBase = ReaderT Globals Identity

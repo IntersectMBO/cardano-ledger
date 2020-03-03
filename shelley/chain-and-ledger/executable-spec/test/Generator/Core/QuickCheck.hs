@@ -23,7 +23,6 @@ module Generator.Core.QuickCheck
   , genesisAccountState
   , genesisDelegs0
   , increasingProbabilityAt
-  , maxLovelaceSupply
   , numCoreNodes
   , coreKeyPairs
   , coreNodeKeys
@@ -89,7 +88,7 @@ import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
                      pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
                      pattern RequireSignature, pattern ScriptHashObj)
 
-import           Test.Utils (epochFromSlotNo, runShelleyBase)
+import           Test.Utils (epochFromSlotNo, maxLLSupply, runShelleyBase)
 
 genBool :: Gen Bool
 genBool = QC.arbitraryBoundedRandom
@@ -325,11 +324,8 @@ genesisAccountState :: AccountState
 genesisAccountState =
   AccountState
   { _treasury = Coin 0
-  , _reserves = maxLovelaceSupply
+  , _reserves = maxLLSupply
   }
-
-maxLovelaceSupply :: Coin
-maxLovelaceSupply = Coin 45*1000*1000*1000*1000*1000
 
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.

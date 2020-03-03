@@ -35,14 +35,14 @@ import           Generator.Block (genBlock)
 import           Generator.Core.Constants (maxGenesisUTxOouts, maxSlotTrace, minGenesisUTxOouts,
                      minSlotTrace)
 import           Generator.Core.QuickCheck (coreNodeKeys, genUtxo0, genesisDelegs0,
-                     maxLovelaceSupply, traceKeyPairsByStakeHash)
+                     traceKeyPairsByStakeHash)
 import           Generator.Update.QuickCheck (genPParams)
 import           Keys (pattern GenDelegs, Hash, hash)
 import           LedgerState (overlaySchedule)
 import           Shrinkers (shrinkBlock)
 import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           STS.Chain (initialShelleyState)
-import           Test.Utils (runShelleyBase)
+import           Test.Utils (maxLLSupply, runShelleyBase)
 import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
 import           UTxO (balance)
 
@@ -103,7 +103,7 @@ mkGenesisChainState (IRC _slotNo) = do
     epoch0
     lastByronHeaderHash
     utxo0
-    (maxLovelaceSupply - balance utxo0)
+    (maxLLSupply - balance utxo0)
     delegs0
     osched_
     byronApps
