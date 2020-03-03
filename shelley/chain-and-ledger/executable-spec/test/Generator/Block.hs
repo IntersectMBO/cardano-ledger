@@ -183,11 +183,15 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
 
     genPraosLeader stake pp =
       if stake >= 0 && stake <= 1 then do
+        -- we subtract one from the numerator for a non-zero stake e.g. for a
+        -- stake of 3/20, we would go with 2/20 and then divide by a random
+        -- integer in [1,10]. This value is guaranteed to be below the ϕ
+        -- function for the VRF value comparison and generates a valid leader
+        -- value for Praos.
         let stake' = if stake > 0
               then (numerator stake - 1) % denominator stake
               else stake
         n <- genNatural 1 10
-        -- use the stake divided by 1 / n multiplied with f as leader election value
         pure (unsafeMkUnitInterval ((stake' / fromIntegral n)
                                     * ((intervalValue . activeSlotVal . _activeSlotCoeff) pp)))
       else
