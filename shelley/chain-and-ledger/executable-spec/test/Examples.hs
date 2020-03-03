@@ -35,6 +35,7 @@ module Examples
   , ex6C
   , ex6D
   , ex6E
+  , ex6F'
   , test6F
   , maxLovelaceSupply
   -- key pairs and example addresses
