@@ -18,7 +18,6 @@ import Cardano.Prelude
 
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (os2ip)
-import Crypto.OpenSSL.Random (randBytes)
 import Crypto.Random
   ( ChaChaDRG
   , MonadPseudoRandom
@@ -33,7 +32,7 @@ import qualified Data.ByteArray as ByteArray (convert)
 
 -- | Generate a cryptographically random 'ByteString' of specific length
 secureRandomBS :: MonadIO m => Int -> m ByteString
-secureRandomBS = liftIO . randBytes
+secureRandomBS = liftIO . getRandomBytes
 
 -- | You can use 'runSecureRandom' on any 'MonadRandom' computation to make
 --   it use a Really Secure™ randomness source (that is, OpenSSL)

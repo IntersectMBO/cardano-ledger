@@ -59,7 +59,6 @@ library
                      , cardano-crypto
                      , cardano-prelude
                      , cryptonite
-                     , cryptonite-openssl
                      , data-default
                      , formatting
                      , memory
