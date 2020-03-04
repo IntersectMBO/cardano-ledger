@@ -39,14 +39,14 @@ import           Numeric.Natural (Natural)
 import           BaseTypes (Text64, UnitInterval, invalidKey)
 import           Coin (Coin (..))
 import           Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
-                     Sig, VKey, VKeyGenesis, VerKeyVRF, hashAnyKey)
+                     Sig, VKey, VerKeyVRF, hashAnyKey)
 import           Ledger.Core (Relation (..))
 import           MetaData (MetaDataHash)
 import           Slot (EpochNo (..), SlotNo (..))
 import           Updates (Update, emptyUpdate, updateNull)
 
 import           Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
-                     ToCBORGroup (..), mapHelper)
+                     ToCBORGroup (..), decodeList, decodeMapContents, encodeFoldable)
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -280,7 +280,6 @@ instance NoUnexpectedThunks (TxBody crypto)
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey crypto
   = WitVKey (VKey crypto) !(Sig crypto (TxBody crypto))
-  | WitGVKey (VKeyGenesis crypto) !(Sig crypto (TxBody crypto))
   deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (WitVKey crypto)
@@ -290,7 +289,6 @@ witKeyHash
   => WitVKey crypto
   -> AnyKeyHash crypto
 witKeyHash (WitVKey key _) = hashAnyKey key
-witKeyHash (WitGVKey key _) = hashAnyKey key
 
 instance forall crypto
   . ( Crypto crypto)
@@ -446,13 +444,7 @@ instance
   => ToCBOR (WitVKey crypto)
  where
   toCBOR (WitVKey vk sig) =
-    encodeListLen 3
-      <> toCBOR (0 :: Word8)
-      <> toCBOR vk
-      <> toCBOR sig
-  toCBOR (WitGVKey vk sig) =
-    encodeListLen 3
-      <> toCBOR (1 :: Word8)
+    encodeListLen 2
       <> toCBOR vk
       <> toCBOR sig
 
@@ -460,16 +452,11 @@ instance
   Crypto crypto
   => FromCBOR (WitVKey crypto)
  where
-  fromCBOR = enforceSize "WitVKey" 3  >> decodeWord >>= \case
-    0 -> do
-      a <- fromCBOR
-      b <- fromCBOR
-      pure $ WitVKey a b
-    1 -> do
-      a <- fromCBOR
-      b <- fromCBOR
-      pure $ WitGVKey a b
-    k -> invalidKey k
+  fromCBOR = do
+    enforceSize "WitVKey" 2
+    a <- fromCBOR
+    b <- fromCBOR
+    pure $ WitVKey a b
 
 instance
   (Crypto crypto)
@@ -500,7 +487,7 @@ instance
   => FromCBOR (TxBody crypto)
   where
    fromCBOR = do
-     mapParts <- mapHelper $
+     mapParts <- decodeMapContents $
        decodeWord >>= \case
          0 -> fromCBOR                     >>= \x -> pure (0, \t -> t { _inputs   = x })
          1 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs  = x })
@@ -540,11 +527,11 @@ instance (Crypto crypto) =>
   toCBOR (RequireSignature hk) =
     encodeListLen 2 <> encodeWord 0 <> toCBOR hk
   toCBOR (RequireAllOf msigs) =
-    encodeListLen 2 <> encodeWord 1 <> toCBOR msigs
+    encodeListLen 2 <> encodeWord 1 <> encodeFoldable msigs
   toCBOR (RequireAnyOf msigs) =
-    encodeListLen 2 <> encodeWord 2 <> toCBOR msigs
+    encodeListLen 2 <> encodeWord 2 <> encodeFoldable msigs
   toCBOR (RequireMOf m msigs) =
-    encodeListLen 3 <> encodeWord 3 <> toCBOR m <> toCBOR msigs
+    encodeListLen 3 <> encodeWord 3 <> toCBOR m <> encodeFoldable msigs
 
 instance (Crypto crypto) =>
   FromCBOR (MultiSig crypto) where
@@ -552,12 +539,12 @@ instance (Crypto crypto) =>
     n <- decodeListLen
     decodeWord >>= \case
       0 -> matchSize "RequireSignature" 2 n >> (RequireSignature . AnyKeyHash) <$> fromCBOR
-      1 -> matchSize "RequireAllOf" 2 n >> RequireAllOf <$> fromCBOR
-      2 -> matchSize "RequireAnyOf" 2 n >> RequireAnyOf <$> fromCBOR
+      1 -> matchSize "RequireAllOf" 2 n >> RequireAllOf <$> decodeList fromCBOR
+      2 -> matchSize "RequireAnyOf" 2 n >> RequireAnyOf <$> decodeList fromCBOR
       3 -> do
         matchSize "RequireMOf" 3 n
         m     <- fromCBOR
-        msigs <- fromCBOR
+        msigs <- decodeList fromCBOR
         pure $ RequireMOf m msigs
       k -> invalidKey k
 

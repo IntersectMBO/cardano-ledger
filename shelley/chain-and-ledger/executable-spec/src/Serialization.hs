@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -10,9 +11,9 @@ module Serialization
   , CBORGroup (..)
   , CborSeq (..)
   , CBORMap (..)
-  , decodeCollection
-  , decodeCollectionWithLen
-  , mapHelper
+  , decodeList
+  , decodeMapContents
+  , encodeFoldable
   )
 where
 
@@ -20,12 +21,12 @@ import           Cardano.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..), 
                      decodeListLen, decodeListLenOrIndef, decodeMapLenOrIndef, encodeBreak,
                      encodeListLen, encodeListLenIndef, encodeMapLen, encodeMapLenIndef, matchSize)
 import           Control.Monad (replicateM)
+import           Data.Foldable (foldl')
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Typeable
-
 
 class Typeable a => ToCBORGroup a where
   toCBORGroup :: a -> Encoding
@@ -60,7 +61,7 @@ instance (ToCBOR a, ToCBOR b) => ToCBOR (CBORMap a b) where
 
 instance (Ord a, FromCBOR a, FromCBOR b) => FromCBOR (CBORMap a b) where
   fromCBOR = CBORMap . Map.fromList
-    <$> decodeCollection decodeMapLenOrIndef decodePair
+    <$> decodeMapContents decodePair
     where
     decodePair = (,) <$> fromCBOR <*> fromCBOR
 
@@ -71,14 +72,29 @@ instance ToCBOR a => ToCBOR (CborSeq a) where
   toCBOR (CborSeq xs) =
     let l = fromIntegral $ Seq.length xs
         contents = foldMap toCBOR xs
-    in
-    if l <= 23
-    then encodeListLen l <> contents
-    else encodeListLenIndef <> contents <> encodeBreak
+    in wrapCBORArray l contents
 
 instance FromCBOR a => FromCBOR (CborSeq a) where
-  fromCBOR = CborSeq . Seq.fromList
-    <$> decodeCollection decodeListLenOrIndef fromCBOR
+  fromCBOR = CborSeq . Seq.fromList <$> decodeList fromCBOR
+
+encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
+encodeFoldable xs = wrapCBORArray len contents
+  where
+    (len, contents) = foldl' go (0, mempty) xs
+    go (!l, !enc) next = (l+1,enc <> toCBOR next)
+
+wrapCBORArray :: Word -> Encoding -> Encoding
+wrapCBORArray len contents =
+  if len <= 23
+    then encodeListLen len <> contents
+    else encodeListLenIndef <> contents <> encodeBreak
+
+
+decodeList :: Decoder s a -> Decoder s [a]
+decodeList = decodeCollection decodeListLenOrIndef
+
+decodeMapContents :: Decoder s a -> Decoder s [a]
+decodeMapContents = decodeCollection decodeMapLenOrIndef
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -95,12 +111,3 @@ decodeCollectionWithLen lenOrIndef el = do
   loop (n,acc) condition action = condition >>= \case
       False -> pure (n,acc)
       True -> action >>= \v -> loop (n+1, (v:acc)) condition action
-
-mapHelper :: Decoder s b -> Decoder s [b]
-mapHelper decodePart = decodeMapLenOrIndef >>= \case
-  Just len -> replicateM len decodePart
-  Nothing  -> loop [] (not <$> decodeBreakOr) decodePart
-  where
-  loop acc condition action = condition >>= \case
-    False -> pure acc
-    True -> action >>= \v -> loop (v:acc) condition action

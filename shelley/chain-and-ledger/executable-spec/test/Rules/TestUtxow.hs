@@ -24,12 +24,11 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      signal, source, target)
 
 import           ConcreteCryptoTypes (StakeCreds, StakePools, Tx, UTXO, UTXOW)
-import           Keys (hashAnyKey)
 import           Ledger.Core (dom, (<|))
 import           LedgerState (pattern UTxOState, keyRefunds)
 import           PParams (PParams)
 import           Tx (getKeyCombinations, _body, _witnessMSigMap, _witnessVKeySet)
-import           TxData (pattern TxIn, pattern WitGVKey, pattern WitVKey, _certs, _inputs, _txfee)
+import           TxData (pattern TxIn, witKeyHash, _certs, _inputs, _txfee)
 import           UTxO (pattern UTxO, balance, totalDeposits, txins, txouts)
 
 --------------------------
@@ -174,6 +173,4 @@ requiredMSigSignaturesSubset tr =
     existsReqKeyComb keyHashes msig  =
       any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (getKeyCombinations msig)
     keyHashSet sst =
-      Set.map (\case
-                  WitVKey vk _   -> hashAnyKey vk
-                  WitGVKey vkg _ -> hashAnyKey vkg) (_witnessVKeySet $ signal sst)
+      Set.map witKeyHash (_witnessVKeySet $ signal sst)

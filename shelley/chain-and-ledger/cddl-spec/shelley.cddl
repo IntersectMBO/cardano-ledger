@@ -89,20 +89,20 @@ delegation_certificate =
   // 9, move_instantaneous_reward     ; move instantaneous rewards
   ]
 
-move_instantaneous_reward = { * [credential] => coin }
+move_instantaneous_reward = { * credential => coin }
 pointer = (uint, uint, uint)
 
 credential =
-  (  0, keyhash
+  [  0, keyhash
   // 1, scripthash
-  )
+  ]
 
 pool_params = ( keyhash             ; operator
               , $vrf_keyhash        ; vrf keyhash
               , coin                ; pledge
               , coin                ; cost
               , unit_interval       ; margin
-              , [credential]        ; reward account
+              , credential        ; reward account
               , finite_set<keyhash> ; pool owners
               , [* url]             ; relays
               , [?pool_metadata]    ; pool metadata
@@ -111,7 +111,7 @@ pool_params = ( keyhash             ; operator
 url = tstr .size 64
 pool_metadata = [url, metadata_hash]
 
-withdrawals = { * [credential] => coin }
+withdrawals = { * credential => coin }
 
 full_update = [ protocol_param_update_votes
               , application_version_update_votes
@@ -155,8 +155,8 @@ application_name = tstr .size 64
 system_tag = tstr .size 64
 
 transaction_witness_set =
-  { ?0 => [* pubkey_witness]
-  , ?1 => [* script]
+  { ?0 => [* vkeywitness ]
+  , ?1 => [* script ]
   }
 
 transaction_metadatum =
@@ -171,7 +171,14 @@ transaction_metadadum_label = uint
 transaction_metadata = { * transaction_metadadum_label => transaction_metadatum }
 
 
-vkeywitness = [$vkey, $signature]
+vkeywitness = [ $vkey, $signature ]
+
+script =
+  [  0, keyhash
+  // 1, [ * script ]
+  // 2, [ * script ]
+  // 3, uint, [ * script ]
+  ]
 
 unit_interval = rational
 

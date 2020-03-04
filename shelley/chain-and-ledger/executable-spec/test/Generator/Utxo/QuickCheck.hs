@@ -41,8 +41,7 @@ import           STS.Ledger (LedgerEnv (..))
 import           Tx (pattern Tx, pattern TxBody, pattern TxOut, getKeyCombination, hashScript)
 import           TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
                      pattern ScriptHashObj, Wdrl (..), getRwdCred, _outputs, _txfee)
-import           UTxO (pattern UTxO, balance, makeGenWitnessesVKey, makeWitnessesFromScriptKeys,
-                     makeWitnessesVKey)
+import           UTxO (pattern UTxO, balance, makeWitnessesFromScriptKeys, makeWitnessesVKey)
 
 import           Debug.Trace as D
 
@@ -178,7 +177,7 @@ mkTxWits
   -> Set WitVKey
 mkTxWits txBody keyWits genesisWits keyHashMap msigs =
   makeWitnessesVKey txBody keyWits
-  `Set.union` makeGenWitnessesVKey txBody genesisWits
+  `Set.union` makeWitnessesVKey txBody genesisWits
   `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigs
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
