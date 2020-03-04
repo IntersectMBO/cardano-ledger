@@ -26,8 +26,7 @@ steps:
   - label: Stack build
     commands:
       - "nix-build .buildkite/default.nix -o sr"
-      # FIXME: stack fails due to doctests
-      - "./sr/bin/rebuild --build-dir=$BUILD_DIR --cache-dir=$CACHE_DIR || true"
+      - "./sr/bin/rebuild --build-dir=$BUILD_DIR --cache-dir=$CACHE_DIR"
     agents:
       system: x86_64-linux
     timeout_in_minutes: 120
