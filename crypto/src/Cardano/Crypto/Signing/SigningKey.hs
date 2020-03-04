@@ -23,9 +23,10 @@ import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..), shortVerific
 
 
 -- | Wrapper around 'CC.XPrv'.
-newtype SigningKey = SigningKey CC.XPrv
-    deriving (NFData)
-    deriving NoUnexpectedThunks via UseIsNormalForm SigningKey
+newtype SigningKey = SigningKey
+  { unSigningKey :: CC.XPrv
+  } deriving newtype (NFData)
+    deriving NoUnexpectedThunks via UseIsNormalForm CC.XPrv
 
 -- Note that there is deliberately no Eq instance. The cardano-crypto library
 -- does not define one for XPrv.
