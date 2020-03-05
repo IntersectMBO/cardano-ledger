@@ -26,7 +26,9 @@ module Test.Cardano.Chain.Block.Model
   )
 where
 
+import Prelude (String)
 import Cardano.Prelude hiding (trace, State, state)
+import Data.String (fromString)
 import Test.Cardano.Prelude
 
 import Control.Lens ((^.))
@@ -44,6 +46,7 @@ import Hedgehog
   , failure
   , footnote
   , forAll
+  , label
   , property
   , success
   )
@@ -93,6 +96,7 @@ import Cardano.Spec.Chain.STS.Rule.Chain
   , sigGenChain
   )
 import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
+import           Cardano.Spec.Chain.STS.Block (BlockStats(..))
 import qualified Cardano.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator
   ( SignalGenerator
@@ -163,6 +167,9 @@ ts_prop_generatedChainsAreValidated =
     let (traceLength, step) = (200 :: Word64, 10 :: Word64)
     tr <- forAll $ trace @CHAIN () traceLength
     classifyTraceLength tr traceLength step
+    classifyBlockStats $
+      Abstract.chainBlockStats $
+        map Abstract.blockStats (traceSignals OldestFirst tr)
     printAdditionalInfoOnFailure tr
     passConcreteValidation tr
   where
@@ -173,6 +180,31 @@ ts_prop_generatedChainsAreValidated =
         allowedDelegatorHashes = elaborateVKeyGenesisHash <$> Set.toList allowedDelegators
         (_, _, allowedDelegators, _, _) = _traceEnv tr
 
+classifyBlockStats :: Maybe (BlockStats, BlockStats, BlockStats)
+                   -> PropertyT IO ()
+classifyBlockStats Nothing = return ()
+classifyBlockStats (Just (sMin, sMax, sAvg)) = do
+    classify' "min # tx" sMin Abstract.blockStatsUtxo
+    classify' "max # tx" sMax Abstract.blockStatsUtxo
+    classify' "avg # tx" sAvg Abstract.blockStatsUtxo
+
+    classify' "min # dcert" sMin Abstract.blockStatsDCerts
+    classify' "max # dcert" sMax Abstract.blockStatsDCerts
+    classify' "avg # dcert" sAvg Abstract.blockStatsDCerts
+
+    classify' "min # votes" sMin Abstract.blockStatsUpdVotes
+    classify' "max # votes" sMax Abstract.blockStatsUpdVotes
+    classify' "avg # votes" sAvg Abstract.blockStatsUpdVotes
+
+    classify' "min # prop" sMin Abstract.blockStatsUpdProp
+    classify' "max # prop" sMax Abstract.blockStatsUpdProp
+    classify' "avg # prop" sAvg Abstract.blockStatsUpdProp
+  where
+    classify' :: String -> BlockStats -> (BlockStats -> Word) -> PropertyT IO ()
+    classify' l stats f
+      | f stats == 0 = label (fromString (l ++ " == 0"))
+      | f stats == 1 = label (fromString (l ++ " == 1"))
+      | otherwise    = label (fromString (l ++ " >  1"))
 
 passConcreteValidation :: MonadTest m => Trace CHAIN -> m ()
 passConcreteValidation tr = void $ evalEither result
