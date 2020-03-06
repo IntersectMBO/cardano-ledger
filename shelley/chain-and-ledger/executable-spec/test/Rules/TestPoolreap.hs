@@ -17,13 +17,14 @@ import           Test.QuickCheck (Property, conjoin)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
 
-import           Coin (pattern Coin)
 import           ConcreteCryptoTypes (POOLREAP)
-import           LedgerState (pattern AccountState, pattern DState, pattern UTxOState, _deposited,
-                     _fees, _reserves, _rewards, _treasury, _utxo)
-import           STS.PoolReap (pattern PoolreapState, prAcnt, prDState, prPState, prUTxOSt)
-import           TxData (pattern StakePools)
-import           UTxO (balance)
+import           Shelley.Spec.Ledger.Coin (pattern Coin)
+import           Shelley.Spec.Ledger.LedgerState (pattern AccountState, pattern DState,
+                     pattern UTxOState, _deposited, _fees, _reserves, _rewards, _treasury, _utxo)
+import           Shelley.Spec.Ledger.STS.PoolReap (pattern PoolreapState, prAcnt, prDState,
+                     prPState, prUTxOSt)
+import           Shelley.Spec.Ledger.TxData (pattern StakePools)
+import           Shelley.Spec.Ledger.UTxO (balance)
 
 import           Ledger.Core (dom, (▷))
 import           Rules.TestPool (getRetiring, getStPools)

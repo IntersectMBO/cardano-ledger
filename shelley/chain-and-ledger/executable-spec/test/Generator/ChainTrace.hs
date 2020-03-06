@@ -22,8 +22,6 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Unsafe.Coerce (unsafeCoerce)
 
-import           BaseTypes (Globals, text64)
-import           BlockChain (pattern HashHeader)
 import           Cardano.Crypto.Hash (ShortHash)
 import           ConcreteCryptoTypes (Applications, CHAIN, ChainState, GenDelegs, HashHeader,
                      KeyHash)
@@ -32,19 +30,21 @@ import           Control.State.Transition (IRC (..))
 import           Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace, envGen,
                      interpretSTS, shrinkSignal, sigGen)
 import           Generator.Block (genBlock)
-import           Generator.Core.Constants (maxGenesisUTxOouts, maxSlotTrace, minGenesisUTxOouts,
+import           Generator.Constants (maxGenesisUTxOouts, maxSlotTrace, minGenesisUTxOouts,
                      minSlotTrace)
-import           Generator.Core.QuickCheck (coreNodeKeys, genUtxo0, genesisDelegs0,
-                     traceKeyPairsByStakeHash)
-import           Generator.Update.QuickCheck (genPParams)
-import           Keys (pattern GenDelegs, Hash, hash)
-import           LedgerState (overlaySchedule)
+import           Generator.Core (coreNodeKeys, genUtxo0, genesisDelegs0, traceKeyPairsByStakeHash)
+import           Generator.Update (genPParams)
+import           Shelley.Spec.Ledger.BaseTypes (Globals, text64)
+import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader)
+import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, hash)
+import           Shelley.Spec.Ledger.LedgerState (overlaySchedule)
+import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import           Shelley.Spec.Ledger.STS.Chain (initialShelleyState)
+import           Shelley.Spec.Ledger.Updates (ApName (..), ApVer (..), pattern Applications,
+                     pattern Mdt)
+import           Shelley.Spec.Ledger.UTxO (balance)
 import           Shrinkers (shrinkBlock)
-import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
-import           STS.Chain (initialShelleyState)
 import           Test.Utils (maxLLSupply, runShelleyBase)
-import           Updates (ApName (..), ApVer (..), pattern Applications, pattern Mdt)
-import           UTxO (balance)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.

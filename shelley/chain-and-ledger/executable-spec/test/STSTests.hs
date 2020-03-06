@@ -3,7 +3,7 @@
 
 module STSTests (stsTests) where
 
-import           Data.Either (isRight, fromRight)
+import           Data.Either (fromRight, isRight)
 import qualified Data.Map.Strict as Map (empty, singleton)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
@@ -18,11 +18,11 @@ import           MultiSigExamples (aliceAndBob, aliceAndBobOrCarl, aliceAndBobOr
 
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
-import           STS.Chain (totalAda)
-import           STS.Utxow (PredicateFailure (..))
+import           Shelley.Spec.Ledger.STS.Chain (totalAda)
+import           Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
+import           Shelley.Spec.Ledger.Tx (hashScript)
+import           Shelley.Spec.Ledger.TxData (pattern RewardAcnt, pattern ScriptHashObj, Wdrl (..))
 import           Test.Utils (maxLLSupply, runShelleyBase)
-import           Tx (hashScript)
-import           TxData (pattern RewardAcnt, pattern ScriptHashObj, Wdrl (..))
 
 
 -- | Runs example, applies chain state transition system rule (STS),

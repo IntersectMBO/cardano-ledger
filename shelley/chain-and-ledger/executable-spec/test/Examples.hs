@@ -75,54 +75,58 @@ import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
-import           Address (mkRwdAcnt)
-import           BaseTypes (Nonce (..), mkNonce, startRewards, text64, (⭒))
-import           BlockChain (pattern HashHeader, bhHash, bheader, hashHeaderToNonce)
-import           Coin (Coin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
+import           Generator.Core (AllPoolKeys (..), NatNonce (..), genesisAccountState, mkBlock,
+                     mkOCert, zero)
+import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), mkNonce, startRewards, text64, (⭒))
+import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, bhHash, bheader,
+                     hashHeaderToNonce)
+import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
-import           EpochBoundary (BlocksMade (..), pattern SnapShots, pattern Stake, emptySnapShots,
-                     _feeSS, _poolsSS, _pstakeGo, _pstakeMark, _pstakeSet)
-import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genesisAccountState,
-                     mkBlock, mkOCert, zero)
-import           Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey, vKey)
-import           LedgerState (AccountState (..), pattern DPState, pattern EpochState,
-                     pattern LedgerState, pattern NewEpochState, pattern RewardUpdate,
-                     pattern UTxOState, deltaF, deltaR, deltaT, emptyDState, emptyPState,
-                     esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
+import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern SnapShots,
+                     pattern Stake, emptySnapShots, _feeSS, _poolsSS, _pstakeGo, _pstakeMark,
+                     _pstakeSet)
+import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey,
+                     vKey)
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern DPState,
+                     pattern EpochState, pattern LedgerState, pattern NewEpochState,
+                     pattern RewardUpdate, pattern UTxOState, deltaF, deltaR, deltaT, emptyDState,
+                     emptyPState, esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
                      overlaySchedule, rs, _delegationState, _delegations, _dstate, _fGenDelegs,
                      _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools,
                      _stkCreds, _treasury)
-import           OCert (KESPeriod (..))
-import           PParams (PParams (..), emptyPParams, mkActiveSlotCoeff)
-import           Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..), (+*))
-import           STS.Bbody (pattern LedgersFailure)
-import           STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes, initialShelleyState,
-                     totalAda)
-import           STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
-import           STS.Delegs (pattern DelplFailure)
-import           STS.Delpl (pattern DelegFailure)
-import           STS.Ledger (pattern DelegsFailure, pattern UtxowFailure)
-import           STS.Ledgers (pattern LedgerFailure)
-import           STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import           Shelley.Spec.Ledger.PParams (PParams (..), emptyPParams, mkActiveSlotCoeff)
+import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..),
+                     (+*))
+import           Shelley.Spec.Ledger.STS.Bbody (pattern LedgersFailure)
+import           Shelley.Spec.Ledger.STS.Chain (pattern BbodyFailure, pattern ChainState, chainNes,
+                     initialShelleyState, totalAda)
+import           Shelley.Spec.Ledger.STS.Deleg (pattern InsufficientForInstantaneousRewardsDELEG)
+import           Shelley.Spec.Ledger.STS.Delegs (pattern DelplFailure)
+import           Shelley.Spec.Ledger.STS.Delpl (pattern DelegFailure)
+import           Shelley.Spec.Ledger.STS.Ledger (pattern DelegsFailure, pattern UtxowFailure)
+import           Shelley.Spec.Ledger.STS.Ledgers (pattern LedgerFailure)
+import           Shelley.Spec.Ledger.STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
                      pattern MIRInsufficientGenesisSigsUTXOW)
+import           Shelley.Spec.Ledger.Tx (pattern Tx)
+import           Shelley.Spec.Ledger.TxData (pattern AddrPtr, pattern DCertDeleg,
+                     pattern DCertGenesis, pattern DCertMir, pattern DCertPool, pattern Delegation,
+                     pattern KeyHashObj, PoolMetaData (..), pattern PoolParams, Ptr (..),
+                     pattern RewardAcnt, pattern StakeCreds, pattern StakePools, pattern TxBody,
+                     pattern TxIn, pattern TxOut, Url (..), Wdrl (..), addStakeCreds, _poolCost,
+                     _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge,
+                     _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
+import qualified Shelley.Spec.Ledger.TxData as TxData (TxBody (..))
+import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, ApName (..), ApVer (..),
+                     pattern Applications, InstallerHash (..), pattern Mdt, pattern PPUpdate,
+                     PParamsUpdate (..), Ppm (..), SystemTag (..), pattern Update,
+                     pattern UpdateState, emptyUpdate, emptyUpdateState)
+import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesVKey, txid)
 import           Test.Utils
-import           Tx (pattern Tx)
-import           TxData (pattern AddrPtr, pattern DCertDeleg, pattern DCertGenesis,
-                     pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
-                     PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
-                     pattern StakeCreds, pattern StakePools, pattern TxBody, pattern TxIn,
-                     pattern TxOut, Url (..), Wdrl (..), addStakeCreds, _poolCost, _poolMD,
-                     _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
-                     _poolRAcnt, _poolRelays, _poolVrf)
-import qualified TxData (TxBody (..))
-import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
-                     InstallerHash (..), pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
-                     Ppm (..), SystemTag (..), pattern Update, pattern UpdateState, emptyUpdate,
-                     emptyUpdateState)
-import           UTxO (pattern UTxO, balance, makeWitnessesVKey, txid)
 
 data CHAINExample =
   CHAINExample { currentSlotNo    :: SlotNo       -- ^ Current slot

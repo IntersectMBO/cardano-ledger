@@ -19,15 +19,16 @@ import           Control.State.Transition (Environment, State)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
 
-import           BaseTypes ((==>))
 import           ConcreteCryptoTypes (KeyHash, LEDGER, POOL, PState, PoolParams, StakePools)
-import           Delegation.Certificates (poolCWitness)
-import           LedgerState (pattern PState, pParams, retiring, stPools, _retiring, _stPools)
-import           PParams (_eMax)
-import           Slot (EpochNo (..))
-import           STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
-import           TxData (pattern DCertPool, pattern KeyHashObj, pattern RegPool, pattern RetirePool,
-                     pattern StakePools, poolPubKey)
+import           Shelley.Spec.Ledger.BaseTypes ((==>))
+import           Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
+import           Shelley.Spec.Ledger.LedgerState (pattern PState, pParams, retiring, stPools,
+                     _retiring, _stPools)
+import           Shelley.Spec.Ledger.PParams (_eMax)
+import           Shelley.Spec.Ledger.Slot (EpochNo (..))
+import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
+import           Shelley.Spec.Ledger.TxData (pattern DCertPool, pattern KeyHashObj, pattern RegPool,
+                     pattern RetirePool, pattern StakePools, poolPubKey)
 
 import           Ledger.Core (dom, (∈), (∉))
 import           Test.Utils (epochFromSlotNo)

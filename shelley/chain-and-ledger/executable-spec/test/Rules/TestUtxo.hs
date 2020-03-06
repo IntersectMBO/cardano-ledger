@@ -12,13 +12,13 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      signal, source, target)
 import           Test.QuickCheck (Property, conjoin)
 
-import           Coin (pattern Coin)
-import           Tx (pattern Tx, _body)
-import           TxData (Wdrl (..), _wdrls)
-import           UTxO (balance)
+import           Shelley.Spec.Ledger.Coin (pattern Coin)
+import           Shelley.Spec.Ledger.Tx (pattern Tx, _body)
+import           Shelley.Spec.Ledger.TxData (Wdrl (..), _wdrls)
+import           Shelley.Spec.Ledger.UTxO (balance)
 
 import           ConcreteCryptoTypes (UTXO)
-import           LedgerState (pattern UTxOState, _deposited, _fees, _utxo)
+import           Shelley.Spec.Ledger.LedgerState (pattern UTxOState, _deposited, _fees, _utxo)
 
 --------------------------
 -- Properties for UTXOW --

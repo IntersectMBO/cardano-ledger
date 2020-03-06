@@ -27,28 +27,27 @@ import           Lens.Micro ((^.))
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 
-import           BaseTypes (ShelleyBase)
-import           BaseTypes (Globals)
-import           Coin (Coin)
 import           ConcreteCryptoTypes (AnyKeyHash, DCert, DELPL, DPState, KeyPair)
 import           Control.State.Transition (BaseM, Embed, Environment, PredicateFailure, STS, Signal,
                      State, TRC (..), TransitionRule, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
-import           Delegation.Certificates (decayKey, isDeRegKey)
-import           Generator.Core.Constants (maxCertsPerTx, numBaseScripts)
-import           Generator.Core.QuickCheck (coreNodeKeys, traceKeyPairs, traceKeyPairsByStakeHash,
+import           Generator.Constants (maxCertsPerTx, numBaseScripts)
+import           Generator.Core (coreNodeKeys, traceKeyPairs, traceKeyPairsByStakeHash,
                      traceMSigCombinations, traceMSigScripts, traceVRFKeyPairs)
-import           Generator.Delegation.QuickCheck (CertCred (..), genDCert)
+import           Generator.Delegation (CertCred (..), genDCert)
 import           GHC.Generics (Generic)
-import           LedgerState (dstate, keyRefund, stkCreds, _pstate, _stPools)
-import           PParams (PParams)
-import           Slot (SlotNo (..))
-import           STS.Delpl (DelplEnv (..))
-import           Tx (getKeyCombination)
-import           TxData (Ix, Ptr (..))
-import           UTxO (totalDeposits)
+import           Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
+import           Shelley.Spec.Ledger.Coin (Coin)
+import           Shelley.Spec.Ledger.Delegation.Certificates (decayKey, isDeRegKey)
+import           Shelley.Spec.Ledger.LedgerState (dstate, keyRefund, stkCreds, _pstate, _stPools)
+import           Shelley.Spec.Ledger.PParams (PParams)
+import           Shelley.Spec.Ledger.Slot (SlotNo (..))
+import           Shelley.Spec.Ledger.STS.Delpl (DelplEnv (..))
+import           Shelley.Spec.Ledger.Tx (getKeyCombination)
+import           Shelley.Spec.Ledger.TxData (Ix, Ptr (..))
+import           Shelley.Spec.Ledger.UTxO (totalDeposits)
 
 import           Test.Utils (testGlobals)
 

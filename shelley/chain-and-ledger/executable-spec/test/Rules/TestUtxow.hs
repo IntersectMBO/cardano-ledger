@@ -25,11 +25,12 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 
 import           ConcreteCryptoTypes (StakeCreds, StakePools, Tx, UTXO, UTXOW)
 import           Ledger.Core (dom, (<|))
-import           LedgerState (pattern UTxOState, keyRefunds)
-import           PParams (PParams)
-import           Tx (getKeyCombinations, _body, _witnessMSigMap, _witnessVKeySet)
-import           TxData (pattern TxIn, witKeyHash, _certs, _inputs, _txfee)
-import           UTxO (pattern UTxO, balance, totalDeposits, txins, txouts)
+import           Shelley.Spec.Ledger.LedgerState (pattern UTxOState, keyRefunds)
+import           Shelley.Spec.Ledger.PParams (PParams)
+import           Shelley.Spec.Ledger.Tx (getKeyCombinations, _body, _witnessMSigMap,
+                     _witnessVKeySet)
+import           Shelley.Spec.Ledger.TxData (pattern TxIn, witKeyHash, _certs, _inputs, _txfee)
+import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, totalDeposits, txins, txouts)
 
 --------------------------
 -- Properties for UTXOW --

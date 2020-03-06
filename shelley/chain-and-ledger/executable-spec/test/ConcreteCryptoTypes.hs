@@ -10,30 +10,30 @@ import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (MockKES)
 import           Cardano.Crypto.VRF.Fake (FakeVRF)
 
-import qualified BlockChain
 import           Cardano.Ledger.Shelley.Crypto
-import qualified Delegation.Certificates
-import qualified EpochBoundary
-import qualified Keys
-import qualified LedgerState
-import qualified OCert
-import qualified STS.Chain
-import qualified STS.Deleg
-import qualified STS.Delegs
-import qualified STS.Delpl
-import qualified STS.Ledger
-import qualified STS.Ledgers
-import qualified STS.NewEpoch
-import qualified STS.Ocert
-import qualified STS.Pool
-import qualified STS.PoolReap
-import qualified STS.Tick
-import qualified STS.Utxo
-import qualified STS.Utxow
-import qualified Tx
-import qualified TxData
-import qualified Updates
-import qualified UTxO
+import qualified Shelley.Spec.Ledger.BlockChain as BlockChain
+import qualified Shelley.Spec.Ledger.Delegation.Certificates as Delegation.Certificates
+import qualified Shelley.Spec.Ledger.EpochBoundary as EpochBoundary
+import qualified Shelley.Spec.Ledger.Keys as Keys
+import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
+import qualified Shelley.Spec.Ledger.OCert as OCert
+import qualified Shelley.Spec.Ledger.STS.Chain as STS.Chain
+import qualified Shelley.Spec.Ledger.STS.Deleg as STS.Deleg
+import qualified Shelley.Spec.Ledger.STS.Delegs as STS.Delegs
+import qualified Shelley.Spec.Ledger.STS.Delpl as STS.Delpl
+import qualified Shelley.Spec.Ledger.STS.Ledger as STS.Ledger
+import qualified Shelley.Spec.Ledger.STS.Ledgers as STS.Ledgers
+import qualified Shelley.Spec.Ledger.STS.NewEpoch as STS.NewEpoch
+import qualified Shelley.Spec.Ledger.STS.Ocert as STS.Ocert
+import qualified Shelley.Spec.Ledger.STS.Pool as STS.Pool
+import qualified Shelley.Spec.Ledger.STS.PoolReap as STS.PoolReap
+import qualified Shelley.Spec.Ledger.STS.Tick as STS.Tick
+import qualified Shelley.Spec.Ledger.STS.Utxo as STS.Utxo
+import qualified Shelley.Spec.Ledger.STS.Utxow as STS.Utxow
+import qualified Shelley.Spec.Ledger.Tx as Tx
+import qualified Shelley.Spec.Ledger.TxData as TxData
+import qualified Shelley.Spec.Ledger.Updates as Updates
+import qualified Shelley.Spec.Ledger.UTxO as UTxO
 
 data ConcreteCrypto
 

@@ -9,12 +9,12 @@ import           Data.Set (Set)
 import qualified Data.Set as S
 import           Test.QuickCheck (shrinkIntegral, shrinkList)
 
-import           Coin
 import           ConcreteCryptoTypes (Block)
-import           Slot
-import           Tx
-import           TxData
-import           Updates
+import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.Tx
+import           Shelley.Spec.Ledger.TxData
+import           Shelley.Spec.Ledger.Updates
 
 shrinkBlock
   :: Block

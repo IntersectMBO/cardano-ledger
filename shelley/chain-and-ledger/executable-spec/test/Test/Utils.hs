@@ -19,7 +19,6 @@ module Test.Utils
   , maxLLSupply
   ) where
 
-import           BaseTypes (Globals (..), ShelleyBase, UnitInterval, mkUnitInterval)
 import           Cardano.Binary (ToCBOR (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
@@ -27,7 +26,6 @@ import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
 import           Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Cardano.Prelude (asks)
 import           Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
-import           Coin (Coin (..))
 import           ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair, SKey, SKeyES, SignKeyVRF, VKey,
                      VKeyES, VKeyGenesis, VerKeyVRF)
 import           Control.Monad.Trans.Reader (runReaderT)
@@ -37,11 +35,15 @@ import           Data.Functor.Identity (runIdentity)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
 import           Hedgehog (MonadTest, (===))
-import           Keys (pattern SKey, pattern SKeyES, pattern VKey, pattern VKeyES,
-                     pattern VKeyGenesis, hashKey, iterationCountKESKey, updateKESKey, vKey)
-import           OCert (KESPeriod (..))
-import           Slot (EpochNo, EpochSize (..), SlotNo)
-import           TxData (pattern AddrBase, pattern KeyHashObj)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
+                     mkUnitInterval)
+import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Keys (pattern SKey, pattern SKeyES, pattern VKey,
+                     pattern VKeyES, pattern VKeyGenesis, hashKey, iterationCountKESKey,
+                     updateKESKey, vKey)
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import           Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern KeyHashObj)
 
 assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
 assertAll p xs = [] === filter (not . p) xs

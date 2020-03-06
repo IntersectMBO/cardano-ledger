@@ -16,7 +16,7 @@ module Cardano.Crypto.VRF.Fake
   , WithResult(..)
   ) where
 
-import BaseTypes (Seed)
+import Shelley.Spec.Ledger.BaseTypes (Seed)
 import Cardano.Binary (FromCBOR(..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (nonNegIntR)

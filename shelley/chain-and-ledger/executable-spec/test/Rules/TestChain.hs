@@ -13,18 +13,18 @@ where
 import           Data.Word (Word64)
 import           Test.QuickCheck (Property, Testable, property, withMaxSuccess)
 
-import           BlockChain (Block (..), bhbody, bheaderSlotNo)
 import           ConcreteCryptoTypes (CHAIN, NEWEPOCH, POOLREAP)
 import           Control.State.Transition.Trace (SourceSignalTarget (..), Trace,
                      sourceSignalTargets)
 import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import           Generator.ChainTrace (mkGenesisChainState)
-import           LedgerState (pattern DPState, esAccountState, esLState, nesEs, _delegationState,
-                     _utxoState)
 import qualified Rules.TestNewEpoch as TestNewEpoch
 import qualified Rules.TestPoolreap as TestPoolreap
-import           STS.Chain (ChainState (..))
-import           STS.PoolReap (PoolreapState (..))
+import           Shelley.Spec.Ledger.BlockChain (Block (..), bhbody, bheaderSlotNo)
+import           Shelley.Spec.Ledger.LedgerState (pattern DPState, esAccountState, esLState, nesEs,
+                     _delegationState, _utxoState)
+import           Shelley.Spec.Ledger.STS.Chain (ChainState (..))
+import           Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
 
 import           Test.Utils (epochFromSlotNo, testGlobals)
 

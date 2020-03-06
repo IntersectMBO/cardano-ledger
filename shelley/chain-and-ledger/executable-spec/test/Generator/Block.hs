@@ -15,28 +15,28 @@ import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
-import           BaseTypes (intervalValue)
 import           ConcreteCryptoTypes (Block, ChainState, CoreKeyPair, GenKeyHash, KeyHash, KeyPair,
                      LEDGERS, TICK)
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
-import           Delegation.Certificates (PoolDistr (..))
-import           Generator.Core.QuickCheck (AllPoolKeys (..), NatNonce (..), genNatural,
-                     getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash)
-import           Generator.LedgerTrace.QuickCheck ()
-import           Keys (GenDelegs (..), hashKey, vKey)
+import           Generator.Core (AllPoolKeys (..), NatNonce (..), genNatural, getKESPeriodRenewalNo,
+                     mkBlock, mkOCert, traceVRFKeyPairsByHash)
+import           Generator.LedgerTrace ()
 import           Ledger.Core (dom, range)
-import           LedgerState (pattern EpochState, pattern NewEpochState, esLState, esPp, getGKeys,
-                     nesEL, nesEs, nesOsched, nesPd, overlaySchedule, _delegationState, _dstate,
-                     _genDelegs, _reserves)
-import           OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import           PParams (PParams (_activeSlotCoeff), activeSlotVal)
-import           Slot (EpochNo (..), SlotNo (..))
-import           STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader, chainNes,
-                     chainOCertIssue, chainSlotNo)
-import           STS.Ledgers (LedgersEnv (..))
-import           STS.Ocert (pattern OCertEnv)
-import           STS.Tick (TickEnv (..))
+import           Shelley.Spec.Ledger.BaseTypes (intervalValue)
+import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
+import           Shelley.Spec.Ledger.LedgerState (pattern EpochState, pattern NewEpochState,
+                     esLState, esPp, getGKeys, nesEL, nesEs, nesOsched, nesPd, overlaySchedule,
+                     _delegationState, _dstate, _genDelegs, _reserves)
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
+import           Shelley.Spec.Ledger.PParams (PParams (_activeSlotCoeff), activeSlotVal)
+import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import           Shelley.Spec.Ledger.STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader,
+                     chainNes, chainOCertIssue, chainSlotNo)
+import           Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
+import           Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
+import           Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 import           Test.Utils (maxKESIterations, runShelleyBase, unsafeMkUnitInterval)
 
 nextCoreNode
