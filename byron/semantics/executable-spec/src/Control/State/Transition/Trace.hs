@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -45,18 +46,43 @@ module Control.State.Transition.Trace
 where
 
 import           Cardano.Prelude (NoUnexpectedThunks(..))
-import           Control.Lens (makeLenses, to, (^.), (^..), _1, _2)
+import           Control.Lens (Lens',lens, makeLenses, to, (^.), (^..))
 import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
 import           Data.Maybe (catMaybes)
+import           Data.Sequence.Strict (StrictSeq(Empty, (:<|)))
+import qualified Data.Sequence.Strict as Seq
 import           GHC.Generics (Generic)
 import           GHC.Stack (HasCallStack)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
 
 import           Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State,
                      TRC (TRC), applySTS)
+
+-- Signal and resulting state.
+--
+-- Strict in both arguments, unlike a tuple.
+data SigState s = SigState !(State s) !(Signal s)
+  deriving (Generic)
+
+transSt :: Lens' (SigState s) (State s)
+transSt = lens (\(SigState st _) -> st) (\(SigState _ x) st -> SigState st x)
+
+transSig :: Lens' (SigState s) (Signal s)
+transSig = lens (\(SigState _ sig) -> sig) (\(SigState x _) sig -> SigState x sig)
+
+deriving instance
+  (Eq (State s), Eq (Signal s)) => (Eq (SigState s))
+
+deriving instance
+  (Show (State s), Show (Signal s)) => (Show (SigState s))
+
+instance
+  ( NoUnexpectedThunks (State s)
+  , NoUnexpectedThunks (Signal s)
+  ) => (NoUnexpectedThunks (SigState s))
 
 -- | A successful trace of a transition system.
 --
@@ -66,7 +92,7 @@ data Trace s
       -- ^ Environment under which the trace was run.
       , _traceInitState :: !(State s)
       -- ^ Initial state in the trace
-      , _traceTrans :: ![(State s, Signal s)]
+      , _traceTrans :: !(Seq.StrictSeq (SigState s))
       -- ^ Signals and resulting states observed in the trace. New elements are
       -- put in front of the list.
     } deriving Generic
@@ -87,7 +113,9 @@ instance
 
 -- | Make a trace given an environment and initial state.
 mkTrace :: Environment s -> State s -> [(State s, Signal s)] -> Trace s
-mkTrace = Trace
+mkTrace env initState sigs = Trace env initState sigs'
+  where
+    sigs' = uncurry SigState <$> Seq.fromList sigs
 
 -- $setup
 -- |
@@ -124,7 +152,7 @@ mkTrace = Trace
 lastState :: Trace s -> State s
 lastState Trace { _traceInitState, _traceTrans } =
   case _traceTrans of
-    (st, _):_ -> st
+    SigState st _ :<| _ -> st
     _ -> _traceInitState
 
 
@@ -153,8 +181,8 @@ lastState Trace { _traceInitState, _traceTrans } =
 lastSignal :: HasCallStack => Trace s -> Signal s
 lastSignal Trace { _traceTrans } =
   case _traceTrans of
-    [] -> error "lastSignal was called with a trace without signals"
-    (_st, signal):_ -> signal
+    Empty -> error "lastSignal was called with a trace without signals"
+    SigState _st signal :<| _ -> signal
 
 
 -- | Return the first and last state of the trace.
@@ -205,7 +233,7 @@ fromNewestFirst OldestFirst = reverse
 -- ["one","two","three"]
 --
 traceSignals :: TraceOrder -> Trace s -> [Signal s]
-traceSignals order tr = fromNewestFirst order (tr ^.. traceTrans . traverse . _2)
+traceSignals order tr = fromNewestFirst order (tr ^.. traceTrans . traverse . transSig)
 
 -- | Retrieve all the states in the trace, in the order specified.
 --
@@ -229,7 +257,7 @@ traceStates :: TraceOrder -> Trace s -> [State s]
 traceStates order tr = fromNewestFirst order (xs ++ [x])
   where
     x = tr ^. traceInitState
-    xs = tr ^.. traceTrans . traverse . _1
+    xs = tr ^.. traceTrans . traverse . transSt
 
 -- | Compute the length of a trace, defined as the number of signals it
 -- contains.
@@ -262,17 +290,17 @@ traceLength tr = tr ^. traceTrans . to length
 --
 -- >>> tr01 = mkTrace True 0 [(1, "one")] :: Trace DUMMY
 -- >>> traceInit tr01
--- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = []}
+-- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = StrictSeq {getSeq = fromList []}}
 --
 -- >>> tr012 = mkTrace True 0 [(2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> traceInit tr012
--- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = [(1,"one")]}
+-- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = StrictSeq {getSeq = fromList [SigState 1 "one"]}}
 --
 traceInit :: HasCallStack => Trace s -> Trace s
 traceInit tr@Trace { _traceTrans } =
   case _traceTrans of
-    [] -> error "traceInit was called with a trace without signals"
-    _:trans -> tr { _traceTrans = trans }
+    Empty -> error "traceInit was called with a trace without signals"
+    _ :<| trans -> tr { _traceTrans = trans }
 
 -- | Retrieve all the signals in the trace paired with the state prior to the
 -- application of the signal.
@@ -329,10 +357,10 @@ preStatesAndSignals NewestFirst tr
 -- :}
 --
 -- >>> runIdentity $ closure @ADDER () 0 [3, 2, 1]
--- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = [(6,3),(3,2),(1,1)]}
+-- Trace {_traceEnv = (), _traceInitState = 0, _traceTrans = StrictSeq {getSeq = fromList [SigState 6 3,SigState 3 2,SigState 1 1]}}
 --
 -- >>> runIdentity $ closure @ADDER () 10 [-3, -2, -1]
--- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = [(4,-3),(7,-2),(9,-1)]}
+-- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = StrictSeq {getSeq = fromList [SigState 4 (-3),SigState 7 (-2),SigState 9 (-1)]}}
 --
 closure
   :: forall s m
