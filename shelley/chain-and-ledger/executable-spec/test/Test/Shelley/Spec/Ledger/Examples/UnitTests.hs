@@ -7,6 +7,7 @@ import           Control.Monad (foldM)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Ratio ((%))
 import           Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -18,6 +19,7 @@ import           Test.Tasty.HUnit
 
 import           Shelley.Spec.Ledger.Address
 import           Shelley.Spec.Ledger.BaseTypes
+import           Shelley.Spec.Ledger.BlockChain (checkVRFValue)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern Delegate, pattern RegKey,
                      pattern RegPool, pattern RetirePool, StakeCreds (..), StakePools (..))
@@ -41,6 +43,7 @@ import           Shelley.Spec.Ledger.UTxO (pattern UTxO, makeWitnessVKey, makeWi
 
 import qualified Test.Cardano.Crypto.VRF.Fake as FakeVRF
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import           Test.Shelley.Spec.Ledger.Generator.Core (unitIntervalToNatural)
 import           Test.Shelley.Spec.Ledger.PreSTSGenerator (asStateTransition)
 import           Test.Shelley.Spec.Ledger.Utils
 
@@ -447,8 +450,8 @@ testsValidLedger =
           ]
     ]
 
-testOverlayScheduleDZero :: Assertion
-testOverlayScheduleDZero =
+testOverlayScheduleZero :: Assertion
+testOverlayScheduleZero =
   let
     os = runShelleyBase
       $ overlaySchedule
@@ -457,12 +460,24 @@ testOverlayScheduleDZero =
         (emptyPParams {_d = unsafeMkUnitInterval 0})
   in os @?= Map.empty
 
+testVRFCheckWithActiveSlotCoeffOne :: Assertion
+testVRFCheckWithActiveSlotCoeffOne =
+  checkVRFValue 0 (1 % 2) (mkActiveSlotCoeff $ unsafeMkUnitInterval 1) @?= True
 
-testsDParam :: TestTree
-testsDParam =
-  testGroup "Test the d parameter."
+testVRFCheckWithLeaderValueOne :: Assertion
+testVRFCheckWithLeaderValueOne =
+  checkVRFValue vrfOne (1 % 2) (mkActiveSlotCoeff $ unsafeMkUnitInterval 0.5) @?= False
+  where vrfOne = unitIntervalToNatural (unsafeMkUnitInterval 1)
+
+testsPParams :: TestTree
+testsPParams =
+  testGroup "Test the protocol parameters."
     [ testCase "Overlay Schedule when d is zero" $
-        testOverlayScheduleDZero
+        testOverlayScheduleZero
+    , testCase "VRF checks when the activeSlotCoeff is one" $
+        testVRFCheckWithActiveSlotCoeffOne
+    , testCase "VRF checks when the VRF leader value is one" $
+        testVRFCheckWithLeaderValueOne
     ]
 
 testSpendNonexistentInput :: Assertion
@@ -596,4 +611,4 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
 
 unitTests :: TestTree
 unitTests = testGroup "Unit Tests"
-  [ testsValidLedger, testsInvalidLedger, testsDParam ]
+  [ testsValidLedger, testsInvalidLedger, testsPParams ]

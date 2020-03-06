@@ -106,20 +106,25 @@ instance FromCBOR ActiveSlotCoeff
  where
    fromCBOR = do
      v <- fromCBOR
-     -- l <_ fromCBOR TODO unActiveSlotLog is currently ignored
      pure $ mkActiveSlotCoeff v
 
 instance ToCBOR ActiveSlotCoeff
  where
    toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal
-                           , unActiveSlotLog = _logVal}) = -- TODO unActiveSlotLog is currently ignored
+                           , unActiveSlotLog = _logVal}) =
      toCBOR slotVal
 
 mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
 mkActiveSlotCoeff v =
   ActiveSlotCoeff { unActiveSlotVal = v
-                  , unActiveSlotLog = floor
-                    (fpPrecision * (
+                  , unActiveSlotLog =
+                    if (intervalValue v) == 1
+                      -- If the active slot coefficient is equal to one,
+                      -- then nearly every stake pool can produce a block every slot.
+                      -- In this degenerate case, where ln (1-f) is not defined,
+                      -- we set the unActiveSlotLog to zero.
+                      then 0
+                      else floor (fpPrecision * (
                         ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v))) }
 
 activeSlotVal :: ActiveSlotCoeff -> UnitInterval

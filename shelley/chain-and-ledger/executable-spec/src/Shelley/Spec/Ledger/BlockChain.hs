@@ -38,6 +38,7 @@ module Shelley.Spec.Ledger.BlockChain
   , vrfChecks
   , incrBlocks
   , mkSeed
+  , checkVRFValue
   )
 where
 
@@ -50,10 +51,9 @@ import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.MetaData (MetaData)
 import           Numeric.Natural (Natural)
+import           Shelley.Spec.Ledger.MetaData (MetaData)
 
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, mkNonce)
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, encodeListLen,
                      matchSize, serializeEncoding')
 import           Cardano.Crypto.Hash (SHA256)
@@ -62,16 +62,19 @@ import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (unless)
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey, hashKeyVRF)
-import           Shelley.Spec.Ledger.OCert (OCert (..))
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, activeSlotLog)
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
-                     ToCBORGroup (..))
-import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
+                     mkNonce)
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
+import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey,
+                     hashKeyVRF)
+import           Shelley.Spec.Ledger.OCert (OCert (..))
+import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, activeSlotLog, activeSlotVal)
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..),
+                     FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), cborWitsToTx, txToCBORWits)
+import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- |The hash of a Block Header
 newtype HashHeader crypto =
@@ -405,13 +408,27 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
 -- conclusively compute this within the given iteration bounds.
 checkVRFValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
 checkVRFValue certNat σ f =
-  case taylorExpCmp 3 (1 / q) x of
-    ABOVE _ _    -> False
-    BELOW _ _    -> True
-    MaxReached _ -> False
+  if (intervalValue $ activeSlotVal f) == 1
+    -- If the active slot coefficient is equal to one,
+    -- then nearly every stake pool can produce a block every slot.
+    -- In this degenerate case, where ln (1-f) is not defined,
+    -- we let the VRF leader check always succeed.
+    -- This is a testing convenience, the active slot coefficient should not
+    -- bet set above one half otherwise.
+  then True
+  else if leaderVal == 1
+    -- Having a VRF value of one is always a failure.
+    -- Moreover, it would cause division by zero.
+  then False
+  else
+    case taylorExpCmp 3 (1 / q) x of
+      ABOVE _ _    -> False
+      BELOW _ _    -> True
+      MaxReached _ -> False
   where
+    leaderVal = (intervalValue . fromNatural) certNat
     c = activeSlotLog f
-    q = fromRational $ 1 - (intervalValue . fromNatural) certNat
+    q = fromRational $ 1 - leaderVal
     x = (- fromRational σ * c)
 
 seedEta :: Nonce
