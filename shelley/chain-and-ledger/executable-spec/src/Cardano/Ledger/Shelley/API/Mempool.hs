@@ -17,7 +17,6 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
-import           BaseTypes (Globals)
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Ledger.Shelley.API.Validation
@@ -28,12 +27,13 @@ import           Control.Monad.Trans.Reader (runReader)
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Data.Sequence (Seq)
 import           Data.Typeable (Typeable)
-import qualified LedgerState
-import           Slot (SlotNo)
-import           STS.Ledgers (LEDGERS)
-import qualified STS.Ledgers as Ledgers
-import           Tx (Tx)
-import qualified Tx as Tx
+import           Shelley.Spec.Ledger.BaseTypes (Globals)
+import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
+import           Shelley.Spec.Ledger.Slot (SlotNo)
+import           Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
+import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
+import           Shelley.Spec.Ledger.Tx (Tx)
+import qualified Shelley.Spec.Ledger.Tx as Tx
 
 type MempoolEnv = Ledgers.LedgersEnv
 

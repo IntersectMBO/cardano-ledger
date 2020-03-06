@@ -15,23 +15,23 @@ module Cardano.Ledger.Shelley.API.Validation
   )
 where
 
-import BaseTypes (Globals)
-import BlockChain
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import Cardano.Ledger.Shelley.Crypto
-import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Arrow (left, right)
-import Control.Monad.Except
-import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (TRC (..), applySTS)
-import Data.Either (fromRight)
-import GHC.Generics (Generic)
-import Ledger.Core (Relation (..))
-import qualified LedgerState
-import qualified STS.Bbody as STS
-import qualified STS.Tick as STS
-import Slot (SlotNo)
-import qualified TxData as Tx
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.Arrow (left, right)
+import           Control.Monad.Except
+import           Control.Monad.Trans.Reader (runReader)
+import           Control.State.Transition.Extended (TRC (..), applySTS)
+import           Data.Either (fromRight)
+import           GHC.Generics (Generic)
+import           Ledger.Core (Relation (..))
+import           Shelley.Spec.Ledger.BaseTypes (Globals)
+import           Shelley.Spec.Ledger.BlockChain
+import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
+import           Shelley.Spec.Ledger.Slot (SlotNo)
+import qualified Shelley.Spec.Ledger.STS.Bbody as STS
+import qualified Shelley.Spec.Ledger.STS.Tick as STS
+import qualified Shelley.Spec.Ledger.TxData as Tx
 
 -- | Type alias for the state updated by TICK and BBODY rules
 type ShelleyState = LedgerState.NewEpochState

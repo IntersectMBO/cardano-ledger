@@ -20,24 +20,25 @@ import qualified Data.Sequence as Seq
 
 import qualified Data.Set as Set (fromList)
 
-import           Coin
 import           ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig, ScriptHash, Tx, TxBody,
                      TxId, TxIn, UTXOW, UTxOState, Wdrl)
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-import           Keys (pattern GenDelegs, undiscriminateKeyHash)
-import           LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
-import           MetaData (MetaData)
-import           PParams (PParams (..), emptyPParams)
-import           Slot (SlotNo (..))
-import           STS.Utxo (UtxoEnv (..))
+import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, undiscriminateKeyHash)
+import           Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
+import           Shelley.Spec.Ledger.MetaData (MetaData)
+import           Shelley.Spec.Ledger.PParams (PParams (..), emptyPParams)
+import           Shelley.Spec.Ledger.Slot (SlotNo (..))
+import           Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
+import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body)
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern KeyHashObj,
+                     pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
+                     pattern RequireSignature, pattern ScriptHashObj, pattern StakeCreds,
+                     pattern StakePools, pattern TxBody, pattern TxIn, pattern TxOut, pattern Wdrl,
+                     unWdrl)
+import           Shelley.Spec.Ledger.Updates (emptyUpdate)
+import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 import           Test.Utils
-import           Tx (pattern Tx, hashScript, _body)
-import           TxData (pattern AddrBase, pattern KeyHashObj, pattern RequireAllOf,
-                     pattern RequireAnyOf, pattern RequireMOf, pattern RequireSignature,
-                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools, pattern TxBody,
-                     pattern TxIn, pattern TxOut, pattern Wdrl, unWdrl)
-import           Updates (emptyUpdate)
-import           UTxO (makeWitnessesVKey, txid)
 
 import           Examples (aliceAddr, alicePay, bobAddr, bobPay, carlAddr, dariaAddr)
 
@@ -165,7 +166,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
                    Right utxoSt'' -> utxoSt''
                    _                      -> error ("must fail test before: "
                                                    ++ show initUtxo)
-        txbody = makeTxBody inputs 
+        txbody = makeTxBody inputs
           [(aliceAddr, aliceInitCoin + bobInitCoin + sum (unWdrl wdrl))] wdrl
         inputs = [TxIn txId (fromIntegral n) | n <-
                      [0..length lockScripts - (if aliceKeep > 0 then 0 else 1)]]

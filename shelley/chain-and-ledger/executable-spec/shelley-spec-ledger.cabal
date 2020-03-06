@@ -1,0 +1,183 @@
+name:                shelley-spec-ledger
+version:             0.1.0.0
+description:         Shelley Ledger Executable Model
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+build-type:          Simple
+cabal-version:       >=1.8
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+  subdir:   hs
+
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
+library
+  exposed-modules:   Shelley.Spec.Ledger.Address
+                     Shelley.Spec.Ledger.BaseTypes
+                     Shelley.Spec.Ledger.BlockChain
+                     Shelley.Spec.Ledger.Coin
+                     Shelley.Spec.Ledger.Keys
+                     Shelley.Spec.Ledger.UTxO
+                     Shelley.Spec.Ledger.Slot
+                     Shelley.Spec.Ledger.PParams
+                     Shelley.Spec.Ledger.EpochBoundary
+                     Shelley.Spec.Ledger.LedgerState
+                     Shelley.Spec.Ledger.MetaData
+                     Shelley.Spec.Ledger.Serialization
+                     Shelley.Spec.Ledger.Delegation.PoolParams
+                     Shelley.Spec.Ledger.Delegation.Certificates
+                     Shelley.Spec.Ledger.OCert
+                     Shelley.Spec.Ledger.Tx
+                     Shelley.Spec.Ledger.TxData
+                     Shelley.Spec.Ledger.Updates
+                     Shelley.Spec.Ledger.Validation
+                     Shelley.Spec.Ledger.STS.Avup
+                     Shelley.Spec.Ledger.STS.Bbody
+                     Shelley.Spec.Ledger.STS.Tick
+                     Shelley.Spec.Ledger.STS.Chain
+                     Shelley.Spec.Ledger.STS.Deleg
+                     Shelley.Spec.Ledger.STS.Delegs
+                     Shelley.Spec.Ledger.STS.Delpl
+                     Shelley.Spec.Ledger.STS.Epoch
+                     Shelley.Spec.Ledger.STS.Ledger
+                     Shelley.Spec.Ledger.STS.Ledgers
+                     Shelley.Spec.Ledger.STS.Mir
+                     Shelley.Spec.Ledger.STS.NewEpoch
+                     Shelley.Spec.Ledger.STS.Newpp
+                     Shelley.Spec.Ledger.STS.Ocert
+                     Shelley.Spec.Ledger.STS.Overlay
+                     Shelley.Spec.Ledger.STS.Pool
+                     Shelley.Spec.Ledger.STS.PoolReap
+                     Shelley.Spec.Ledger.STS.Ppup
+                     Shelley.Spec.Ledger.STS.Prtcl
+                     Shelley.Spec.Ledger.STS.Rupd
+                     Shelley.Spec.Ledger.STS.Snap
+                     Shelley.Spec.Ledger.STS.Up
+                     Shelley.Spec.Ledger.STS.Updn
+                     Shelley.Spec.Ledger.STS.Utxo
+                     Shelley.Spec.Ledger.STS.Utxow
+
+                     Cardano.Ledger.Shelley.Crypto
+
+                     Cardano.Ledger.Shelley.API
+  other-modules:     Cardano.Ledger.Shelley.API.Validation
+                     Cardano.Ledger.Shelley.API.Mempool
+                     Cardano.Ledger.Shelley.API.Protocol
+  hs-source-dirs: src
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:
+      -Werror
+  build-depends:
+    aeson,
+    base >= 4.7 && < 5,
+    bytestring,
+    cborg,
+    cborg-json,
+    containers,
+    cryptonite,
+    hedgehog,
+    QuickCheck,
+    small-steps,
+    microlens,
+    microlens-th,
+    mtl,
+    shelley-spec-non-integral,
+    stm,
+    text,
+    transformers,
+    cs-ledger,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-prelude,
+    cardano-slotting
+
+test-suite shelley-spec-ledger-test
+    type:                exitcode-stdio-1.0
+    main-is:             Tests.hs
+    other-modules:       UnitTests
+                         Test.Utils
+                         ConcreteCryptoTypes
+                         MultiSigExamples
+                         Mutator
+                         Generator
+                         Generator.Constants
+                         Generator.Block
+                         Generator.Core
+                         Generator.ChainTrace
+                         Generator.LedgerTrace
+                         Generator.DCertTrace
+                         Generator.Delegation
+                         Generator.Update
+                         Generator.Utxo
+                         PropertyTests
+                         Shrinkers
+                         STSTests
+                         Examples
+                         Rules.ClassifyTraces
+                         Cardano.Crypto.VRF.Fake
+                         Rules.TestChain
+                         Rules.TestDeleg
+                         Rules.TestLedger
+                         Rules.TestNewEpoch
+                         Rules.TestDelegs
+                         Rules.TestPool
+                         Rules.TestPoolreap
+                         Rules.TestUtxo
+                         Rules.TestUtxow
+                         Test.Serialization
+                         Test.CDDL
+                         Test.Utils
+    hs-source-dirs:      test
+    ghc-options:
+      -threaded
+      -rtsopts
+      -with-rtsopts=-N
+      -Wall
+      -Wcompat
+      -Wincomplete-record-updates
+      -Wincomplete-uni-patterns
+      -Wredundant-constraints
+      -- We set a bound here so that we're alerted of potential space
+      -- leaks in our generators (or test) code.
+      --
+      -- The 4 megabytes stack bound and 150 megabytes heap bound were
+      -- determined ad-hoc.
+      "-with-rtsopts=-K4m -M150m"
+    if (!flag(development))
+      ghc-options:
+        -Werror
+    build-depends:
+      QuickCheck,
+      base,
+      bytestring,
+      cardano-binary,
+      cardano-crypto-class,
+      cardano-prelude,
+      cardano-slotting,
+      cborg,
+      containers,
+      cryptonite,
+      cs-ledger,
+      shelley-spec-ledger,
+      hedgehog,
+      microlens,
+      multiset,
+      process-extras,
+      small-steps,
+      tasty,
+      tasty-hedgehog,
+      tasty-hunit,
+      tasty-quickcheck,
+      text,
+      transformers

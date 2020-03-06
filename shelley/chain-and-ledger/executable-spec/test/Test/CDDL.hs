@@ -1,11 +1,10 @@
-{-# Language Rank2Types #-}
-{-# Language TypeApplications #-}
-{-# Language BangPatterns #-}
-{-# Language NoImplicitPrelude #-}
-{-# Language LambdaCase #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language AllowAmbiguousTypes #-}
-{-# Language OverloadedStrings #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.CDDL
   ( cddlTests
@@ -21,15 +20,13 @@ import qualified Data.ByteString.Lazy as BSL
 import           Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
 import           System.Process.ByteString.Lazy
 
-
-
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           ConcreteCryptoTypes (AVUpdate, DCert, MultiSig, PPUpdate, Tx, TxBody, TxIn, TxOut,
                      Update)
-import           MetaData (MetaData)
-import           Updates (PParamsUpdate)
+import           Shelley.Spec.Ledger.MetaData (MetaData)
+import           Shelley.Spec.Ledger.Updates (PParamsUpdate)
 
 cddlTests :: TestTree
 cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->

@@ -22,18 +22,18 @@ import qualified Data.Set as Set (isSubsetOf, singleton, size)
 
 import           Test.QuickCheck (Property, conjoin, counterexample, property)
 
-import           Address (mkRwdAcnt)
-import           BaseTypes ((==>))
+import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
+import           Shelley.Spec.Ledger.BaseTypes ((==>))
 
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
 import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
-import           Coin (Coin, pattern Coin)
 import           ConcreteCryptoTypes (Credential, DELEG, DState, KeyHash, RewardAcnt)
-import           LedgerState (_delegations, _irwd, _rewards, _stkCreds)
-import           TxData (pattern DCertDeleg, pattern DCertMir, pattern DeRegKey, pattern Delegate,
-                     pattern Delegation, pattern MIRCert, pattern RegKey)
+import           Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
+import           Shelley.Spec.Ledger.LedgerState (_delegations, _irwd, _rewards, _stkCreds)
+import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertMir, pattern DeRegKey,
+                     pattern Delegate, pattern Delegation, pattern MIRCert, pattern RegKey)
 
 -------------------------------
 -- helper accessor functions --

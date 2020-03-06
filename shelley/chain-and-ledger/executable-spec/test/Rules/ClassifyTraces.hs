@@ -18,8 +18,6 @@ import           Data.Sequence (Seq)
 import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
-import           BaseTypes (Globals (epochInfo))
-import           BlockChain (pattern Block, pattern TxSeq, bhbody, bheaderSlotNo)
 import           Cardano.Binary (serialize')
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           ConcreteCryptoTypes (Applications, Block, CHAIN, DCert, LEDGER, Tx, TxOut)
@@ -27,19 +25,24 @@ import           Control.State.Transition.Trace (TraceOrder (OldestFirst), trace
                      traceSignals)
 import           Control.State.Transition.Trace.Generator.QuickCheck (classifyTraceLength,
                      forAllTraceFromInitState, onlyValidSignalsAreGeneratedFromInitState)
-import           Delegation.Certificates (isDeRegKey, isDelegation, isGenesisDelegation,
-                     isInstantaneousRewards, isRegKey, isRegPool, isRetirePool)
 import           Generator.ChainTrace (mkGenesisChainState)
-import           Generator.Core.Constants (maxCertsPerTx)
-import           Generator.LedgerTrace.QuickCheck (mkGenesisLedgerState)
-import           LedgerState (txsize)
-import           Slot (SlotNo (..), epochInfoSize)
+import           Generator.Constants (maxCertsPerTx)
+import           Generator.LedgerTrace (mkGenesisLedgerState)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo))
+import           Shelley.Spec.Ledger.BlockChain (pattern Block, pattern TxSeq, bhbody,
+                     bheaderSlotNo)
+import           Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey, isDelegation,
+                     isGenesisDelegation, isInstantaneousRewards, isRegKey, isRegPool,
+                     isRetirePool)
+import           Shelley.Spec.Ledger.LedgerState (txsize)
+import           Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
+import           Shelley.Spec.Ledger.Tx (_body)
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey,
+                     pattern Delegate, pattern Delegation, pattern RegKey, pattern ScriptHashObj,
+                     pattern TxOut, Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
+import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, pattern PPUpdate, PParamsUpdate,
+                     pattern Update)
 import           Test.Utils
-import           Tx (_body)
-import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey, pattern Delegate,
-                     pattern Delegation, pattern RegKey, pattern ScriptHashObj, pattern TxOut,
-                     Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
-import           Updates (pattern AVUpdate, pattern PPUpdate, PParamsUpdate, pattern Update)
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 200 . property $ do
@@ -237,7 +240,7 @@ propAbstractSizeNotTooBig = property $ do
     all notTooBig txs
 
 onlyValidChainSignalsAreGenerated :: Property
-onlyValidChainSignalsAreGenerated = withMaxSuccess 200 $
+onlyValidChainSignalsAreGenerated = withMaxSuccess 100 $
   onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 100 (100::Word64) (Just mkGenesisChainState)
 
 epochBoundariesInTrace :: [Block] -> Int

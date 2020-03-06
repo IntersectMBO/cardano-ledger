@@ -39,22 +39,23 @@ import           Test.QuickCheck (Property, Testable, conjoin, property, withMax
 import           Control.State.Transition.Trace (SourceSignalTarget (..), Trace, source,
                      sourceSignalTargets, target, traceEnv)
 import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
-import           Generator.LedgerTrace.QuickCheck (mkGenesisLedgerState)
+import           Generator.LedgerTrace (mkGenesisLedgerState)
 
-import           Coin (pattern Coin)
 import           ConcreteCryptoTypes (DELEG, DELEGS, LEDGER, POOL, StakeCreds, StakePools, UTXO,
                      UTXOW, Wdrl)
-import           LedgerState (pattern DPState, pattern DState, pattern UTxOState, dstate, pstate,
-                     stPools, stkCreds, _deposited, _dstate, _fees, _rewards, _utxo)
 import qualified Rules.TestDeleg as TestDeleg
 import qualified Rules.TestDelegs as TestDelegs
 import qualified Rules.TestPool as TestPool
 import qualified Rules.TestUtxo as TestUtxo
 import qualified Rules.TestUtxow as TestUtxow
-import           STS.Ledger (LedgerEnv (ledgerPp))
-import           Tx (body)
-import           TxData (certs, wdrls)
-import           UTxO (balance)
+import           Shelley.Spec.Ledger.Coin (pattern Coin)
+import           Shelley.Spec.Ledger.LedgerState (pattern DPState, pattern DState,
+                     pattern UTxOState, dstate, pstate, stPools, stkCreds, _deposited, _dstate,
+                     _fees, _rewards, _utxo)
+import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp))
+import           Shelley.Spec.Ledger.Tx (body)
+import           Shelley.Spec.Ledger.TxData (certs, wdrls)
+import           Shelley.Spec.Ledger.UTxO (balance)
 
 import           Test.Utils (testGlobals)
 

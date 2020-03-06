@@ -17,28 +17,30 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Utils
 
-import           Address
-import           BaseTypes
 import qualified Cardano.Crypto.VRF.Fake as FakeVRF
-import           Coin
-import           Delegation.Certificates (pattern Delegate, pattern RegKey, pattern RegPool,
-                     pattern RetirePool, StakeCreds (..), StakePools (..))
 import           Generator (asStateTransition)
-import           TxData (pattern AddrBase, Credential (..), pattern DCertDeleg, pattern DCertPool,
-                     Delegation (..), pattern PoolParams, pattern Ptr, pattern RewardAcnt,
-                     Wdrl (..), _poolCost, _poolMD, _poolMargin, _poolOwners, _poolPledge,
-                     _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
-import           Validation (ValidationError (..))
+import           Shelley.Spec.Ledger.Address
+import           Shelley.Spec.Ledger.BaseTypes
+import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.Delegation.Certificates (pattern Delegate, pattern RegKey,
+                     pattern RegPool, pattern RetirePool, StakeCreds (..), StakePools (..))
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, Credential (..), pattern DCertDeleg,
+                     pattern DCertPool, Delegation (..), pattern PoolParams, pattern Ptr,
+                     pattern RewardAcnt, Wdrl (..), _poolCost, _poolMD, _poolMargin, _poolOwners,
+                     _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
+import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
-import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (pattern LedgerState, pattern UTxOState, delegationState, delegations,
-                     dstate, emptyDelegation, genesisCoins, genesisId, genesisState, minfee,
-                     overlaySchedule, pParams, pstate, ptrs, retiring, rewards, stPools, stkCreds)
-import           PParams
-import           Slot
-import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, body, ttl)
-import           Updates
-import           UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
+import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
+import           Shelley.Spec.Ledger.LedgerState (pattern LedgerState, pattern UTxOState,
+                     delegationState, delegations, dstate, emptyDelegation, genesisCoins,
+                     genesisId, genesisState, minfee, overlaySchedule, pParams, pstate, ptrs,
+                     retiring, rewards, stPools, stkCreds)
+import           Shelley.Spec.Ledger.PParams
+import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
+                     body, ttl)
+import           Shelley.Spec.Ledger.Updates
+import           Shelley.Spec.Ledger.UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
 
 import           ConcreteCryptoTypes
 
@@ -103,7 +105,7 @@ testLedgerValidTransactions ::
 testLedgerValidTransactions ls utxoState' =
     ls @?= Right (LedgerState
                      utxoState'
-                     LedgerState.emptyDelegation
+                     emptyDelegation
                      )
 
 testValidStakeKeyRegistration ::
@@ -175,7 +177,7 @@ testValidWithdrawal =
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
     ls = asStateTransition
            (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty Nothing) (Coin 0)
-    expectedDS = LedgerState.emptyDelegation & dstate . rewards .~
+    expectedDS = emptyDelegation & dstate . rewards .~
                    Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)
   in ls @?= Right (LedgerState
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyUpdateState)
@@ -328,7 +330,7 @@ utxoSt3 = UTxOState
             emptyUpdateState
 
 stakeKeyRegistration1 :: DPState
-stakeKeyRegistration1 = LedgerState.emptyDelegation
+stakeKeyRegistration1 = emptyDelegation
   & dstate . rewards .~
       Map.fromList [ (mkVKeyRwdAcnt aliceStake, Coin 0)
                    , (mkVKeyRwdAcnt bobStake, Coin 0)

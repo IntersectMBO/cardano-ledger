@@ -20,34 +20,28 @@ module Cardano.Ledger.Shelley.API.Protocol
   )
 where
 
-import BaseTypes (Globals (epochInfo))
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
-import Cardano.Ledger.Shelley.API.Validation
-import Cardano.Ledger.Shelley.Crypto
-import Cardano.Prelude (NoUnexpectedThunks (..))
-import Cardano.Slotting.EpochInfo (epochInfoEpoch)
-import Control.Arrow (left, right)
-import Control.Monad.Except
-import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-import Data.Functor.Identity (runIdentity)
-import Data.Map.Strict (Map)
-import Delegation.Certificates (PoolDistr)
-import GHC.Generics (Generic)
-import Keys (GenDelegs, GenKeyHash)
-import LedgerState
-  ( EpochState (..),
-    NewEpochEnv (..),
-    NewEpochState (..),
-    _delegationState,
-    _dstate,
-    _genDelegs,
-    getGKeys,
-  )
-import PParams (PParams)
-import STS.NewEpoch (NEWEPOCH)
-import qualified STS.Prtcl
-import Slot (SlotNo)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
+import           Cardano.Ledger.Shelley.API.Validation
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Slotting.EpochInfo (epochInfoEpoch)
+import           Control.Arrow (left, right)
+import           Control.Monad.Except
+import           Control.Monad.Trans.Reader (runReader)
+import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import           Data.Functor.Identity (runIdentity)
+import           Data.Map.Strict (Map)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo))
+
+import           GHC.Generics (Generic)
+import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
+import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
+import           Shelley.Spec.Ledger.LedgerState (EpochState (..), NewEpochEnv (..),
+                     NewEpochState (..), getGKeys, _delegationState, _dstate, _genDelegs)
+import           Shelley.Spec.Ledger.PParams (PParams)
+import           Shelley.Spec.Ledger.Slot (SlotNo)
+import           Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
+import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto

@@ -43,29 +43,32 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 
-import           Coin
 import           Control.State.Transition.Extended (TRC (..), applySTS)
-import           Keys (pattern KeyPair, hashKey, vKey)
-import           LedgerState (pattern LedgerValidation, applyTxBody, dstate, genesisCoins,
-                     genesisState, stkCreds, utxo, utxoState, validTx, _delegationState, _dstate,
-                     _genDelegs, _utxoState)
-import           PParams (PParams (..), emptyPParams)
-import           Slot
-import           STS.Delegs (pattern DelegateeNotRegisteredDELEG, PredicateFailure (..),
-                     pattern WithdrawalsNotInRewardsDELEGS)
-import           STS.Ledger (LedgerEnv (..), PredicateFailure (..))
-import           STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO, pattern FeeTooSmallUTxO,
-                     pattern InputSetEmptyUTxO, pattern ValueNotConservedUTxO)
-import           STS.Utxow (pattern InvalidWitnessesUTXOW, pattern MissingScriptWitnessesUTXOW,
-                     pattern MissingVKeyWitnessesUTXOW, PredicateFailure (..))
+import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
+import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody, dstate,
+                     genesisCoins, genesisState, stkCreds, utxo, utxoState, validTx,
+                     _delegationState, _dstate, _genDelegs, _utxoState)
+import           Shelley.Spec.Ledger.PParams (PParams (..), emptyPParams)
+import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.STS.Delegs (pattern DelegateeNotRegisteredDELEG,
+                     PredicateFailure (..), pattern WithdrawalsNotInRewardsDELEGS)
+import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), PredicateFailure (..))
+import           Shelley.Spec.Ledger.STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO,
+                     pattern FeeTooSmallUTxO, pattern InputSetEmptyUTxO,
+                     pattern ValueNotConservedUTxO)
+import           Shelley.Spec.Ledger.STS.Utxow (pattern InvalidWitnessesUTXOW,
+                     pattern MissingScriptWitnessesUTXOW, pattern MissingVKeyWitnessesUTXOW,
+                     PredicateFailure (..))
+import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxOut, body)
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg,
+                     pattern DCertPool, pattern DeRegKey, pattern Delegate, pattern Delegation,
+                     pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..),
+                     Wdrl (..))
+import           Shelley.Spec.Ledger.Updates
+import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessVKey)
+import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
 import           Test.Utils
-import           Tx (pattern Tx, pattern TxBody, pattern TxOut, body)
-import           TxData (pattern AddrBase, pattern DCertDeleg, pattern DCertPool, pattern DeRegKey,
-                     pattern Delegate, pattern Delegation, pattern KeyHashObj, pattern RegKey,
-                     pattern RetirePool, StakeCreds (..), Wdrl (..))
-import           Updates
-import           UTxO (pattern UTxO, balance, makeWitnessVKey)
-import           Validation (ValidationError (..), Validity (..))
 
 import           ConcreteCryptoTypes
 import           Mutator

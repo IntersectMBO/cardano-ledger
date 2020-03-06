@@ -20,10 +20,7 @@ import qualified Test.Tasty.QuickCheck as TQC
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 
-import           Coin
 import           Ledger.Core ((<|))
-import           LedgerState hiding (genDelegs)
-import           PParams
 import           Rules.ClassifyTraces (onlyValidChainSignalsAreGenerated,
                      onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
 import           Rules.TestChain (constantSumPots, nonNegativeDeposits, preservationOfAda,
@@ -36,11 +33,15 @@ import           Rules.TestLedger (consumedEqualsProduced, credentialMappingAfte
                      prop_MIRValuesEndUpInMap, prop_MIRentriesEndUpInMap, registeredPoolIsAdded,
                      rewardZeroAfterRegKey, rewardZeroAfterRegPool, rewardsDecreasesByWithdrawals,
                      rewardsSumInvariant)
-import           Slot
-import           Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs, witnessVKeySet,
-                     _body, _witnessVKeySet)
-import           UTxO (balance, makeWitnessVKey, totalDeposits, txid, txins, txouts, verifyWitVKey)
-import           Validation (ValidationError (..))
+import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.LedgerState hiding (genDelegs)
+import           Shelley.Spec.Ledger.PParams
+import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs,
+                     witnessVKeySet, _body, _witnessVKeySet)
+import           Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey, totalDeposits, txid, txins,
+                     txouts, verifyWitVKey)
+import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
 import           ConcreteCryptoTypes
 import           Generator
@@ -166,9 +167,11 @@ classifyInvalidDoubleSpend = withTests 1000 $ property $ do
 minimalPropertyTests :: TestTree
 minimalPropertyTests =
   testGroup "Minimal Property Tests"
-    [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered
-    , TQC.testProperty "total amount of Ada is preserved" preservationOfAda
-    , TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated]
+    [ -- TODO @uroboros
+      -- TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered
+      --, TQC.testProperty "total amount of Ada is preserved" preservationOfAda
+      --,
+      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated]
 
 
 -- | 'TestTree' of property-based testing properties.

@@ -11,10 +11,10 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 
 import           Test.QuickCheck (Property, conjoin)
 
-import           Coin (pattern Coin)
 import           ConcreteCryptoTypes (DELEGS, Wdrl)
-import           LedgerState (_dstate, _rewards)
-import qualified TxData as T
+import           Shelley.Spec.Ledger.Coin (pattern Coin)
+import           Shelley.Spec.Ledger.LedgerState (_dstate, _rewards)
+import qualified Shelley.Spec.Ledger.TxData as T
 
 ---------------------------
 -- Properties for DELEGS --

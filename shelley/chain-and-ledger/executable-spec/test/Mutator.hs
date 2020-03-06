@@ -30,19 +30,21 @@ import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           BaseTypes
-import           Coin
-import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
+import           Shelley.Spec.Ledger.BaseTypes
+import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool)
-import           Keys (hashKey, vKey)
-import           Updates
+import           Shelley.Spec.Ledger.Keys (hashKey, vKey)
+import           Shelley.Spec.Ledger.Updates
 
-import           Slot
-import           Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut, _body, _certs,
-                     _inputs, _outputs, _ttl, _txfee, _wdrls, _witnessMSigMap, _witnessVKeySet)
-import           TxData (Credential (..), pattern DCertDeleg, pattern DCertGenesis,
-                     pattern DCertMir, pattern DCertPool, pattern Delegation, PoolParams (..))
+import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
+                     _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls, _witnessMSigMap,
+                     _witnessVKeySet)
+import           Shelley.Spec.Ledger.TxData (Credential (..), pattern DCertDeleg,
+                     pattern DCertGenesis, pattern DCertMir, pattern DCertPool, pattern Delegation,
+                     PoolParams (..))
 
 import           ConcreteCryptoTypes
 

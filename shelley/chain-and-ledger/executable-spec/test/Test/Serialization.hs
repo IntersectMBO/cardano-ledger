@@ -7,7 +7,7 @@ module Test.Serialization where
 
 import qualified Data.Maybe as Maybe (fromJust)
 import           Data.String (fromString)
-import qualified MetaData as MD
+import qualified Shelley.Spec.Ledger.MetaData as MD
 
 import           Cardano.Binary (Decoder, FromCBOR (..), ToCBOR (..), decodeFullDecoder,
                      serializeEncoding, toCBOR)
@@ -21,48 +21,49 @@ import qualified Data.ByteString.Char8 as BS (pack)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
 
-
-import           BaseTypes (Nonce (..), UnitInterval (..), mkNonce, text64)
-import           BlockChain (pattern BHBody, pattern BHeader, Block (..), pattern HashHeader,
-                     ProtVer (..), TxSeq (..), bbHash, bhash, bheaderBlockNo, bheaderEta, bheaderL,
-                     bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk, bprotvert,
-                     bsize, mkSeed, seedEta, seedL)
-import           Coin (Coin (..))
 import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
-import           Delegation.Certificates (pattern DeRegKey, pattern Delegate,
+import           Numeric.Natural (Natural)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..), mkNonce, text64)
+import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
+                     pattern HashHeader, ProtVer (..), TxSeq (..), bbHash, bhash, bheaderBlockNo,
+                     bheaderEta, bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk,
+                     bheaderVrfVk, bprotvert, bsize, mkSeed, seedEta, seedL)
+import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
-import           EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..))
-import           Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash, pattern KeyPair,
-                     pattern UnsafeSig, hash, hashKey, sKey, sign, signKES, undiscriminateKeyHash,
-                     vKey)
-import           LedgerState (AccountState (..), EpochState (..), NewEpochState (..),
-                     pattern RewardUpdate, deltaF, deltaR, deltaT, emptyLedgerState, genesisId, rs)
-import           Numeric.Natural (Natural)
-import           PParams (emptyPParams, mkActiveSlotCoeff)
-import           Serialization (FromCBORGroup (..), ToCBORGroup (..))
-import           Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..))
+import           Shelley.Spec.Ledger.Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
+                     pattern KeyPair, pattern UnsafeSig, hash, hashKey, sKey, sign, signKES,
+                     undiscriminateKeyHash, vKey)
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..), EpochState (..),
+                     NewEpochState (..), pattern RewardUpdate, deltaF, deltaR, deltaT,
+                     emptyLedgerState, genesisId, rs)
+import           Shelley.Spec.Ledger.PParams (emptyPParams, mkActiveSlotCoeff)
+import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
+import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrEnterprise,
+                     pattern AddrPtr, Credential (..), pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation, PoolMetaData (..),
+                     pattern PoolParams, Ptr (..), pattern RequireSignature, pattern RewardAcnt,
+                     pattern ScriptHash, pattern TxBody, pattern TxIn, pattern TxOut, Url (..),
+                     Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD, _poolMDHash, _poolMDUrl,
+                     _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays,
+                     _poolVrf)
+import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, ApName (..), ApVer (..),
+                     pattern Applications, pattern InstallerHash, pattern Mdt, pattern PPUpdate,
+                     PParamsUpdate (..), Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 import           Test.Utils
-import           Tx (Tx (..), hashScript)
-import           TxData (pattern AddrBase, pattern AddrEnterprise, pattern AddrPtr, Credential (..),
-                     pattern DCertDeleg, pattern DCertGenesis, pattern DCertMir, pattern DCertPool,
-                     pattern Delegation, PoolMetaData (..), pattern PoolParams, Ptr (..),
-                     pattern RequireSignature, pattern RewardAcnt, pattern ScriptHash,
-                     pattern TxBody, pattern TxIn, pattern TxOut, Url (..), Wdrl (..),
-                     WitVKey (..), _TxId, _poolCost, _poolMD, _poolMDHash, _poolMDUrl, _poolMargin,
-                     _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
-import           Updates (pattern AVUpdate, ApName (..), ApVer (..), pattern Applications,
-                     pattern InstallerHash, pattern Mdt, pattern PPUpdate, PParamsUpdate (..),
-                     Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 
 import           ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair, GenKeyHash, HashHeader,
                      InstallerHash, KeyHash, KeyPair, MultiSig, PoolDistr, RewardUpdate, SKeyES,
                      ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn, VKey, VKeyES, VRFKeyHash,
                      VerKeyVRF, hashKeyVRF)
-import           OCert (KESPeriod (..), pattern OCert)
+import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
+import           Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import           Unsafe.Coerce (unsafeCoerce)
-import           UTxO (makeWitnessVKey)
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -845,7 +846,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "block_header"
-  , let sig = Maybe.fromJust $ Keys.signKES (fst testKESKeys) testBHB 0
+  , let sig = Maybe.fromJust $ signKES (fst testKESKeys) testBHB 0
     in
     checkEncodingCBOR "block_header"
     (BHeader testBHB sig)
@@ -855,7 +856,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "empty_block"
-  , let sig = Maybe.fromJust $ Keys.signKES (fst testKESKeys) testBHB 0
+  , let sig = Maybe.fromJust $ signKES (fst testKESKeys) testBHB 0
         bh = BHeader testBHB sig
         txns = TxSeq mempty
     in
@@ -867,7 +868,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "rich_block"
-  , let sig = Maybe.fromJust $ Keys.signKES (fst testKESKeys) testBHB 0
+  , let sig = Maybe.fromJust $ signKES (fst testKESKeys) testBHB 0
         bh = BHeader testBHB sig
         tin = Set.fromList [TxIn genesisId 1]
         tout = Seq.singleton $ TxOut testAddrE (Coin 2)
