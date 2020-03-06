@@ -52,7 +52,7 @@ module Shelley.Spec.Ledger.Keys
   , signKES
   , verifyKES
   , updateKESKey
-  , iterationCountKESKey
+  , currentPeriodKESKey
 
   , VRFAlgorithm(SignKeyVRF, VerKeyVRF)
   , VRFValue(..)
@@ -76,7 +76,7 @@ import           Cardano.Crypto.DSIGN
                      SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
-import           Cardano.Crypto.KES (KESAlgorithm (SignKeyKES, VerKeyKES, encodeSigKES, encodeVerKeyKES, iterationCountKES, updateKES),
+import           Cardano.Crypto.KES (KESAlgorithm (SignKeyKES, VerKeyKES, currentPeriodKES, encodeSigKES, encodeVerKeyKES, updateKES),
                      SignedKES (SignedKES), decodeSignedKES, signedKES, verifySignedKES)
 import qualified Cardano.Crypto.KES as KES
 import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
@@ -205,21 +205,20 @@ signKES (SKeyES k) d n =
 updateKESKey
   :: Crypto crypto
   => SKeyES crypto
+  -> Natural  -- ^ Target period
   -> Maybe (SKeyES crypto)
-updateKESKey (SKeyES k) =
-  let newSeed = iterationCountKES () k
-      k' = (fst . withDRG (drgNewSeed (seedFromInteger $ fromIntegral newSeed))) $
-        updateKES () k
-  in
-    case k' of
-      Nothing  -> Nothing
-      Just k'' -> (Just . SKeyES) k''
+updateKESKey (SKeyES k) period =
+    fmap SKeyES $
+    (fst . withDRG (drgNewSeed newSeed)) $
+    updateKES () k period
+  where
+    newSeed = seedFromInteger $ fromIntegral $ currentPeriodKES () k
 
-iterationCountKESKey
+currentPeriodKESKey
   :: Crypto crypto
   => SKeyES crypto
   -> Natural
-iterationCountKESKey (SKeyES k) = iterationCountKES () k
+currentPeriodKESKey (SKeyES k) = currentPeriodKES () k
 
 -- |Verify a key evolving signature
 verifyKES

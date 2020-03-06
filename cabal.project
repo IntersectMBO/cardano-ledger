@@ -17,29 +17,29 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: a7b403c1762a6a122a691df816c26563b7e547f8
-  --sha256: 0j87xb20xkl2h5vbqhn9af7dqjwwcbp60nwsp1yablzv295gnxwi
+  tag: 9091c30f1a689acd0abc024ce4dc18bf0052701a
+  --sha256: 0p4n39rf27vc5kysivp55y1mfl6l5mxlj7nc06sqcgiq4ckwblh5
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: a7b403c1762a6a122a691df816c26563b7e547f8
-  --sha256: 0j87xb20xkl2h5vbqhn9af7dqjwwcbp60nwsp1yablzv295gnxwi
+  tag: 9091c30f1a689acd0abc024ce4dc18bf0052701a
+  --sha256: 0p4n39rf27vc5kysivp55y1mfl6l5mxlj7nc06sqcgiq4ckwblh5
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: a7b403c1762a6a122a691df816c26563b7e547f8
-  --sha256: 0j87xb20xkl2h5vbqhn9af7dqjwwcbp60nwsp1yablzv295gnxwi
+  tag: 9091c30f1a689acd0abc024ce4dc18bf0052701a
+  --sha256: 0p4n39rf27vc5kysivp55y1mfl6l5mxlj7nc06sqcgiq4ckwblh5
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: a7b403c1762a6a122a691df816c26563b7e547f8
-  --sha256: 0j87xb20xkl2h5vbqhn9af7dqjwwcbp60nwsp1yablzv295gnxwi
+  tag: 9091c30f1a689acd0abc024ce4dc18bf0052701a
+  --sha256: 0p4n39rf27vc5kysivp55y1mfl6l5mxlj7nc06sqcgiq4ckwblh5
   subdir: slotting
 
 source-repository-package
