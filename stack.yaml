@@ -20,7 +20,7 @@ extra-deps:
 - monad-stm-0.1.0.2
 
 - git: https://github.com/input-output-hk/cardano-prelude
-  commit: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
+  commit: fbc8a137ab819d766fca9d327ce12b006c8e8dd6
 
 - git: https://github.com/input-output-hk/cardano-base
   commit: a7b403c1762a6a122a691df816c26563b7e547f8
