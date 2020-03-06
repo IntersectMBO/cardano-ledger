@@ -22,14 +22,14 @@ allow-newer: katip:Win32
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
-  --sha256: 1q2pz7qx9l4frnifilv0jqz8i4y3q0jwlip4m22z0ldiz5iasmln
+  tag: 3893f21db1665e7bab9e8c6504c547fc7c28f98c
+  --sha256: 09qqcjzmjsa3r7f1yiwk4bn8bpv7nvqf7hfyg784shasspwfq8n4
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
-  --sha256: 1q2pz7qx9l4frnifilv0jqz8i4y3q0jwlip4m22z0ldiz5iasmln
+  tag: 3893f21db1665e7bab9e8c6504c547fc7c28f98c
+  --sha256: 09qqcjzmjsa3r7f1yiwk4bn8bpv7nvqf7hfyg784shasspwfq8n4
   subdir: test
 
 source-repository-package
@@ -62,22 +62,22 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 93ff3480b9585bf1b7a9bd4013d7baed48135521
-  --sha256: 133ycm546za0d7yma2q5dscwy3khhs1vaqpzx4585y6sd9igzzi9
+  tag: 47fd353ab0ea7ef008ab2f16d0a371ae79c8106d
+  --sha256: 0mbmsgi42wyv1a7zcrb13lpz8rklksxcdyf12s650fqqvim12yfm
   subdir: byron/semantics/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 93ff3480b9585bf1b7a9bd4013d7baed48135521
-  --sha256: 133ycm546za0d7yma2q5dscwy3khhs1vaqpzx4585y6sd9igzzi9
+  tag: 47fd353ab0ea7ef008ab2f16d0a371ae79c8106d
+  --sha256: 0mbmsgi42wyv1a7zcrb13lpz8rklksxcdyf12s650fqqvim12yfm
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 93ff3480b9585bf1b7a9bd4013d7baed48135521
-  --sha256: 133ycm546za0d7yma2q5dscwy3khhs1vaqpzx4585y6sd9igzzi9
+  tag: 47fd353ab0ea7ef008ab2f16d0a371ae79c8106d
+  --sha256: 0mbmsgi42wyv1a7zcrb13lpz8rklksxcdyf12s650fqqvim12yfm
   subdir: byron/chain/executable-spec
 
 source-repository-package

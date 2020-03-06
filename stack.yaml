@@ -15,7 +15,7 @@ extra-deps:
   - generic-monoid-0.1.0.0
 
   - git: https://github.com/input-output-hk/cardano-prelude
-    commit: 57fcc83702b91e0a7aecdb32c99ab1d8c1c444d0
+    commit: 3893f21db1665e7bab9e8c6504c547fc7c28f98c
     subdirs:
       - .
       - test
@@ -28,7 +28,7 @@ extra-deps:
       - cardano-crypto-class
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 93ff3480b9585bf1b7a9bd4013d7baed48135521
+    commit: 47fd353ab0ea7ef008ab2f16d0a371ae79c8106d
     subdirs:
       - byron/semantics/executable-spec
       - byron/ledger/executable-spec
