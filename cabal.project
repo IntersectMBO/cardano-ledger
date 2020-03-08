@@ -45,13 +45,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: fbc8a137ab819d766fca9d327ce12b006c8e8dd6
+  tag: 3893f21db1665e7bab9e8c6504c547fc7c28f98c
   --sha256: 09qqcjzmjsa3r7f1yiwk4bn8bpv7nvqf7hfyg784shasspwfq8n4
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: fbc8a137ab819d766fca9d327ce12b006c8e8dd6
+  tag: 3893f21db1665e7bab9e8c6504c547fc7c28f98c
   --sha256: 09qqcjzmjsa3r7f1yiwk4bn8bpv7nvqf7hfyg784shasspwfq8n4
   subdir: test
 
