@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Crypto.Signing.Redeem.SigningKey
@@ -23,6 +24,7 @@ import Cardano.Crypto.Signing.Redeem.VerificationKey
 newtype RedeemSigningKey =
   RedeemSigningKey Ed25519.SecretKey
   deriving (Eq, Show, Generic, NFData, FromCBOR, ToCBOR)
+  deriving NoUnexpectedThunks via UseIsNormalForm RedeemSigningKey
 
 -- Note that there is deliberately no Ord instance. The crypto libraries
 -- encourage using key /hashes/ not keys for things like sets, map etc.

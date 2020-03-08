@@ -154,7 +154,6 @@ exampleGenesisInitializer = GenesisInitializer
     }
   , giAvvmBalanceFactor = 0.366832547637728 :: Rational
   , giUseHeavyDlg = False
-  , giSeed        = 0
   }
 
 exampleGenesisNonAvvmBalances0 :: GenesisNonAvvmBalances
