@@ -1,8 +1,7 @@
 { pkgs ? import ../nix {}
-, commonLib ? pkgs.commonLib
 }:
 
-commonLib.haskellBuildUtils.stackRebuild {
+pkgs.haskellBuildUtils.stackRebuild {
   script = ./rebuild.hs;
   buildTools = [];
   libs = ps: [];

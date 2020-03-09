@@ -18,9 +18,9 @@ let
     packages = ps: with ps; [
       cs-blockchain
       cs-ledger
-      non-integer
+      shelley-spec-non-integral
       small-steps
-      delegation
+      shelley-spec-ledger
     ];
 
     # These programs will be available inside the nix-shell.

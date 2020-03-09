@@ -3,6 +3,7 @@
 ############################################################################
 { lib
 , stdenv
+, pkgs
 , haskell-nix
 , buildPackages
 , config ? {}
@@ -23,8 +24,9 @@ let
         packages.cs-blockchain.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cs-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
-        packages.non-integer.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.shelley-spec-non-integral.configureFlags = [ "--ghc-option=-Werror" ];
         packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.shelley-spec-ledger.components.tests.shelley-spec-ledger-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         enableLibraryProfiling = profiling;
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
         packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;

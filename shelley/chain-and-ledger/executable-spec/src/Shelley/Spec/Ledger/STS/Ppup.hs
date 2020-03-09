@@ -24,7 +24,6 @@ import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Ledger.Core (dom, (⊆), (⨃))
-import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.PParams
@@ -104,8 +103,8 @@ instance
       5 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
       k -> invalidKey k
 
-pvCanFollow :: (Natural, Natural) -> Ppm -> Bool
-pvCanFollow (m, n) (ProtocolVersion (m', n'))
+pvCanFollow :: ProtVer -> Ppm -> Bool
+pvCanFollow (ProtVer m n) (ProtocolVersion (ProtVer m' n'))
   = (m+1, 0) == (m', n') || (m, n+1) == (m', n')
 pvCanFollow _ _ = True
 

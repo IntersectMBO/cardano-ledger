@@ -32,7 +32,8 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..
                      EpochState (..), LedgerState (..), NewEpochState (..), PState (..),
                      UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams, _maxBBSize, _maxBHSize, _protocolVersion)
+import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..), _maxBBSize, _maxBHSize,
+                     _protocolVersion)
 import           Shelley.Spec.Ledger.Slot (BlockNo, EpochNo, SlotNo)
 import           Shelley.Spec.Ledger.Tx (TxBody)
 import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Applications, PPUpdate (..),
@@ -157,7 +158,7 @@ chainTransition = do
   let NewEpochState _ _ _ (EpochState _ _ _ pp) _ _ _ = nes
 
   maxpv <- liftSTS $ asks maxMajorPV
-  let (m, _) = _protocolVersion pp
+  let (ProtVer m _) = _protocolVersion pp
   m <= maxpv ?! ObsoleteNodeCHAIN m maxpv
 
   let bhb = bhbody bh

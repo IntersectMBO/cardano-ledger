@@ -68,12 +68,13 @@ import           Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochInfo, intervalValue,
                      slotsPrior)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, pattern Block,
-                     ProtVer (..), TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
+                     TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign,
                      signKES, undiscriminateKeyHash, vKey)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), genesisCoins)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
+import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), SlotNo (..), epochInfoFirst,
                      (*-))
 import           Shelley.Spec.Ledger.Tx (pattern TxOut, hashScript)
@@ -394,7 +395,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
             (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
             (bbHash $ TxSeq $ fromList txns)
             oCert
-            (ProtVer 0 0 0)
+            (ProtVer 0 0)
     kpDiff = kesPeriod - c0
     hotKey = case evolveKESUntil sHot (KESPeriod kpDiff) of
                Nothing ->

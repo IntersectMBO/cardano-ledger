@@ -25,9 +25,9 @@ import           Data.Ratio ((%))
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..), mkNonce, text64)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
-                     pattern HashHeader, ProtVer (..), TxSeq (..), bbHash, bhash, bheaderBlockNo,
-                     bheaderEta, bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk,
-                     bheaderVrfVk, bprotvert, bsize, mkSeed, seedEta, seedL)
+                     pattern HashHeader, TxSeq (..), bbHash, bhash, bheaderBlockNo, bheaderEta,
+                     bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk,
+                     bprotvert, bsize, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
@@ -39,7 +39,7 @@ import           Shelley.Spec.Ledger.Keys (DiscVKey (..), pattern GenKeyHash, Ha
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), EpochState (..),
                      NewEpochState (..), pattern RewardUpdate, deltaF, deltaR, deltaT,
                      emptyLedgerState, genesisId, rs)
-import           Shelley.Spec.Ledger.PParams (emptyPParams, mkActiveSlotCoeff)
+import           Shelley.Spec.Ledger.PParams (ProtVer (..), emptyPParams, mkActiveSlotCoeff)
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
@@ -223,7 +223,7 @@ testBHB = BHBody
           , bhash          = bbHash $ TxSeq Seq.empty
           , bheaderOCert   = OCert (snd testKESKeys) (vKey testKey1)
             0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
-          , bprotvert      = ProtVer 0 0 0
+          , bprotvert      = ProtVer 0 0
           }
 
 data ToTokens where
@@ -503,7 +503,7 @@ serializationTests = testGroup "Serialization Tests"
         activeSlotCoefficient = mkActiveSlotCoeff $ UnsafeUnitInterval $ 1 % 8
         d                     = UnsafeUnitInterval $ 1 % 9
         extraEntropy          = NeutralNonce
-        protocolVersion       = (0,1)
+        protocolVersion       = ProtVer 0 1
     in
     checkEncodingCBOR "pparams_update_all"
     (PParamsUpdate $ Set.fromList
@@ -800,7 +800,7 @@ serializationTests = testGroup "Serialization Tests"
                 0
                 (KESPeriod 0)
                 (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
-      protover = ProtVer 0 0 0
+      protover = ProtVer 0 0
     in
     checkEncodingCBOR "block_header_body"
     ( BHBody
@@ -817,7 +817,7 @@ serializationTests = testGroup "Serialization Tests"
       , bprotvert      = protover
       }
     )
-    ( T (TkListLen $ 9 + 5 + 3)
+    ( T (TkListLen $ 9 + 5 + 2)
       <> S prevhash
       <> S issuerVkey
       <> S vrfVkey
@@ -852,7 +852,7 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "block_header"
     (BHeader testBHB sig)
-    ( (T $ TkListLen 18)
+    ( (T $ TkListLen 17)
         <> G testBHB
         <> S sig
     )
@@ -864,7 +864,7 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "empty_block"
     (Block bh txns)
-    ( (T $ TkListLen 21)
+    ( (T $ TkListLen 20)
         <> G bh
         <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
     )
@@ -895,7 +895,7 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "rich_block"
     (Block bh txns)
-    ( (T $ TkListLen 21)
+    ( (T $ TkListLen 20)
         -- header
         <> G bh
 

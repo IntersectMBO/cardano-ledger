@@ -1,5 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -32,6 +34,7 @@ module Shelley.Spec.Ledger.PParams
   , mkActiveSlotCoeff
   , activeSlotVal
   , activeSlotLog
+  , ProtVer(..)
   ) where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
@@ -42,6 +45,8 @@ import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, Nonce (NeutralNonce), UnitInterval,
                      fpPrecision, interval0, intervalValue)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
+                     ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (EpochNo (..))
 
 import           Shelley.Spec.NonIntegral (ln')
@@ -89,7 +94,7 @@ data PParams = PParams
     -- | Extra entropy
   , _extraEntropy    :: Nonce
     -- | Protocol version
-  , _protocolVersion :: (Natural, Natural)
+  , _protocolVersion :: ProtVer
   } deriving (Show, Eq, Generic)
 
 data ActiveSlotCoeff =
@@ -132,6 +137,23 @@ activeSlotVal = unActiveSlotVal
 
 activeSlotLog :: ActiveSlotCoeff -> FixedPoint
 activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
+
+data ProtVer = ProtVer Natural Natural
+  deriving (Show, Eq, Generic, Ord)
+  deriving ToCBOR via (CBORGroup ProtVer)
+  deriving FromCBOR via (CBORGroup ProtVer)
+
+instance NoUnexpectedThunks ProtVer
+
+instance ToCBORGroup ProtVer where
+  toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
+  listLen _ = 2
+
+instance FromCBORGroup ProtVer where
+  fromCBORGroup = do
+    x <- fromCBOR
+    y <- fromCBOR
+    pure $ ProtVer x y
 
 instance NoUnexpectedThunks PParams
 
@@ -179,7 +201,7 @@ instance ToCBOR PParams
         <> toCBOR activeSlotCoeff'
         <> toCBOR d'
         <> toCBOR extraEntropy'
-        <> toCBOR protocolVersion'
+        <> toCBORGroup protocolVersion'
 
 instance FromCBOR PParams
  where
@@ -205,7 +227,7 @@ instance FromCBOR PParams
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
-      <*> fromCBOR
+      <*> fromCBORGroup
 
 makeLenses ''PParams
 
@@ -232,5 +254,5 @@ emptyPParams =
      , _activeSlotCoeff = mkActiveSlotCoeff interval0
      , _d = interval0
      , _extraEntropy = NeutralNonce
-     , _protocolVersion = (0, 0)
+     , _protocolVersion = ProtVer 0 0
      }

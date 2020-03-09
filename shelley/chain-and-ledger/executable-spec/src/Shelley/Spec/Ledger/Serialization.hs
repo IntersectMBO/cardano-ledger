@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types #-}
 
 module Shelley.Spec.Ledger.Serialization
   ( ToCBORGroup (..)
@@ -14,13 +15,14 @@ module Shelley.Spec.Ledger.Serialization
   , decodeList
   , decodeMapContents
   , encodeFoldable
+  , groupRecord
   )
 where
 
 import           Cardano.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..), decodeBreakOr,
-                     decodeListLen, decodeListLenOrIndef, decodeMapLenOrIndef, encodeBreak,
-                     encodeListLen, encodeListLenIndef, encodeMapLen, encodeMapLenIndef, matchSize)
-import           Control.Monad (replicateM)
+                     decodeListLenOrIndef, decodeMapLenOrIndef, encodeBreak, encodeListLen,
+                     encodeListLenIndef, encodeMapLen, encodeMapLenIndef, matchSize)
+import           Control.Monad (replicateM, void)
 import           Data.Foldable (foldl')
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -41,12 +43,19 @@ class Typeable a => FromCBORGroup a where
   fromCBORGroup :: Decoder s a
 
 instance (FromCBORGroup a, ToCBORGroup a) => FromCBOR (CBORGroup a) where
-  fromCBOR = do
-    n <- decodeListLen
-    x <- fromCBORGroup
-    matchSize "CBORGroup" ((fromIntegral . toInteger . listLen) x) n
-    pure $ CBORGroup x
+  fromCBOR = CBORGroup <$> groupRecord
 
+decodeRecord :: (a -> Int) -> Decoder s a -> Decoder s a
+decodeRecord getRecordSize decode = do
+  lenOrIndef <- decodeListLenOrIndef
+  x <- decode
+  case lenOrIndef of
+    Just n -> matchSize "CBORGroup" (getRecordSize x) n
+    Nothing -> void decodeBreakOr -- TODO: make this give better errors
+  pure x
+
+groupRecord :: forall a s. (ToCBORGroup a, FromCBORGroup a) => Decoder s a
+groupRecord = decodeRecord (fromIntegral . toInteger . listLen) fromCBORGroup
 
 newtype CBORMap a b = CBORMap { unwrapCBORMap :: Map a b }
 

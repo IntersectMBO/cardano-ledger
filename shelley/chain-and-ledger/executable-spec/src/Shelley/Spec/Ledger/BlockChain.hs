@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,7 +18,7 @@ module Shelley.Spec.Ledger.BlockChain
   , BHBody(..)
   , BHeader(..)
   , Block(..)
-  , ProtVer(..)
+  , LaxBlock(..)
   , TxSeq(..)
   , bhHash
   , bbHash
@@ -54,8 +55,8 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, encodeListLen,
-                     matchSize, serializeEncoding')
+import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen,
+                     encodeListLen, matchSize, serializeEncoding')
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -69,7 +70,8 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey,
                      hashKeyVRF)
 import           Shelley.Spec.Ledger.OCert (OCert (..))
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, activeSlotLog, activeSlotVal)
+import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, ProtVer (..), activeSlotLog,
+                     activeSlotVal)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..),
                      FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
@@ -161,26 +163,6 @@ instance Crypto crypto
      bhb <- fromCBORGroup
      sig <- fromCBOR
      pure $ BHeader bhb sig
-
-data ProtVer = ProtVer Natural Natural Natural
-  deriving (Show, Eq, Generic, Ord)
-  deriving ToCBOR via (CBORGroup ProtVer)
-
-instance NoUnexpectedThunks ProtVer
-
-instance ToCBORGroup ProtVer where
-  toCBORGroup (ProtVer x y z) =
-          toCBOR x
-       <> toCBOR y
-       <> toCBOR z
-  listLen _ = 3
-
-instance FromCBORGroup ProtVer where
-  fromCBORGroup = do
-    x <- fromCBOR
-    y <- fromCBOR
-    z <- fromCBOR
-    pure $ ProtVer x y z
 
 data BHBody crypto = BHBody
   { -- | Hash of the previous block header
@@ -285,33 +267,46 @@ instance Crypto crypto
         <> toCBORGroup h
         <> toCBORGroup txns
 
-instance Crypto crypto
-  => FromCBOR (Block crypto)
- where
-  fromCBOR = do
-    n <- decodeListLen
-    header <- fromCBORGroup
-    matchSize "Block" ((fromIntegral . toInteger . listLen) header + 3) n
-    bodies <- unwrapCborSeq <$> fromCBOR
-    wits <- unwrapCborSeq <$> fromCBOR
-    let b = length bodies
-        w = length wits
+blockDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Block crypto)
+blockDecoder lax = do
+  n <- decodeListLen
+  header <- fromCBORGroup
+  matchSize "Block" ((fromIntegral . toInteger . listLen) header + 3) n
+  bodies <- unwrapCborSeq <$> fromCBOR
+  wits <- unwrapCborSeq <$> fromCBOR
+  let b = length bodies
+      w = length wits
 
-    metadata <- constructMetaData b . unwrapCBORMap <$> fromCBOR
-    let m = length metadata
+  metadata <- constructMetaData b . unwrapCBORMap <$> fromCBOR
+  let m = length metadata
 
-    unless (b == w)
+  unless (lax || b == w)
       (fail $ "different number of transaction bodies ("
         <> show b <> ") and witness sets ("
         <> show w <> ")"
       )
-    unless (b == m)
+  unless (lax || b == m)
       (fail $ "mismatch between transaction bodies ("
         <> show b <> ") and metadata ("
         <> show w <> ")"
       )
-    let txns = Seq.zipWith3 cborWitsToTx bodies wits metadata
-    pure $ Block header (TxSeq txns)
+  let txns = Seq.zipWith3 cborWitsToTx bodies wits metadata
+  pure $ Block header (TxSeq txns)
+
+instance Crypto crypto
+  => FromCBOR (Block crypto)
+ where
+  fromCBOR = blockDecoder False
+
+newtype LaxBlock crypto
+  = LaxBlock (Block crypto)
+  deriving (Show, Eq)
+  deriving ToCBOR via (Block crypto)
+
+instance Crypto crypto
+  => FromCBOR (LaxBlock crypto)
+ where
+  fromCBOR = LaxBlock <$> blockDecoder True
 
 bHeaderSize
   :: forall crypto. (Crypto crypto)

@@ -51,7 +51,7 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce, Text64, UnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..))
+import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..), ProtVer)
 import           Shelley.Spec.Ledger.Serialization (CBORMap (..), decodeMapContents)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo)
 
@@ -155,7 +155,7 @@ data Ppm = MinFeeA Integer
   | ActiveSlotCoefficient ActiveSlotCoeff
   | D UnitInterval
   | ExtraEntropy Nonce
-  | ProtocolVersion (Natural, Natural)
+  | ProtocolVersion ProtVer
   deriving (Show, Ord, Eq, Generic)
 
 instance NoUnexpectedThunks Ppm
