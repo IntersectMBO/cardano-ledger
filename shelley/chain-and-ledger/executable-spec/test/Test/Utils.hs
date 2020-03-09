@@ -39,8 +39,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitI
                      mkUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (pattern SKey, pattern SKeyES, pattern VKey,
-                     pattern VKeyES, pattern VKeyGenesis, hashKey, iterationCountKESKey,
-                     updateKESKey, vKey)
+                     pattern VKeyES, pattern VKeyGenesis, hashKey, updateKESKey, vKey)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern KeyHashObj)
@@ -118,13 +117,7 @@ slotFromEpoch = runIdentity  . epochInfoFirst (epochInfo testGlobals)
 
 -- | Try to evolve KES key until specific KES period is reached.
 evolveKESUntil :: SKeyES -> KESPeriod -> Maybe SKeyES
-evolveKESUntil k p'@(KESPeriod p) =
-  if p == iterationCountKESKey k then Just k
-  else
-    let k' = updateKESKey k
-    in  case k' of
-          Nothing  -> Nothing
-          Just k'' -> evolveKESUntil k'' p'
+evolveKESUntil key (KESPeriod period) = updateKESKey key period
 
 maxKESIterations :: Word64
 maxKESIterations = runShelleyBase (asks maxKESEvo)
