@@ -316,7 +316,7 @@ instance VRFValue Nonce where
 
 instance VRFValue UnitInterval where
   -- TODO Consider whether this is a reasonable thing to do
-  fromNatural k = truncateUnitInterval $ toInteger (k `mod` 10000) % 10000
+  fromNatural k = truncateUnitInterval $ toInteger k % 10000
 
 hashKeyVRF
   :: Crypto crypto
