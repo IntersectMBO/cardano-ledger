@@ -52,7 +52,8 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce, Text64, UnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
 import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..), ProtVer)
-import           Shelley.Spec.Ledger.Serialization (CBORMap (..), decodeMapContents)
+import           Shelley.Spec.Ledger.Serialization (CBORMap (..), decodeMapContents,
+                     rationalFromCBOR, rationalToCBOR)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo)
 
 import           Numeric.Natural (Natural)
@@ -179,13 +180,13 @@ instance ToCBOR PParamsUpdate where
         MaxBHSize x             -> word  4 <> toCBOR x
         KeyDeposit x            -> word  5 <> toCBOR x
         KeyMinRefund x          -> word  6 <> toCBOR x
-        KeyDecayRate x          -> word  7 <> toCBOR x
+        KeyDecayRate x          -> word  7 <> rationalToCBOR x
         PoolDeposit x           -> word  8 <> toCBOR x
         PoolMinRefund x         -> word  9 <> toCBOR x
-        PoolDecayRate x         -> word 10 <> toCBOR x
+        PoolDecayRate x         -> word 10 <> rationalToCBOR x
         EMax x                  -> word 11 <> toCBOR x
         Nopt x                  -> word 12 <> toCBOR x
-        A0   x                  -> word 13 <> toCBOR x
+        A0   x                  -> word 13 <> rationalToCBOR x
         Rho  x                  -> word 14 <> toCBOR x
         Tau  x                  -> word 15 <> toCBOR x
         ActiveSlotCoefficient x -> word 16 <> toCBOR x
@@ -204,13 +205,13 @@ instance FromCBOR PParamsUpdate where
          4  -> MaxBHSize <$> fromCBOR
          5  -> KeyDeposit <$> fromCBOR
          6  -> KeyMinRefund <$> fromCBOR
-         7  -> KeyDecayRate <$> fromCBOR
+         7  -> KeyDecayRate <$> rationalFromCBOR
          8  -> PoolDeposit <$> fromCBOR
          9  -> PoolMinRefund <$> fromCBOR
-         10 -> PoolDecayRate <$> fromCBOR
+         10 -> PoolDecayRate <$> rationalFromCBOR
          11 -> (EMax . EpochNo) <$> fromCBOR
          12 -> Nopt <$> fromCBOR
-         13 -> A0   <$> fromCBOR
+         13 -> A0   <$> rationalFromCBOR
          14 -> Rho  <$> fromCBOR
          15 -> Tau  <$> fromCBOR
          16 -> ActiveSlotCoefficient <$> fromCBOR

@@ -16,16 +16,21 @@ module Shelley.Spec.Ledger.Serialization
   , decodeMapContents
   , encodeFoldable
   , groupRecord
+  , rationalToCBOR
+  , rationalFromCBOR
   )
 where
 
-import           Cardano.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..), decodeBreakOr,
-                     decodeListLenOrIndef, decodeMapLenOrIndef, encodeBreak, encodeListLen,
-                     encodeListLenIndef, encodeMapLen, encodeMapLenIndef, matchSize)
-import           Control.Monad (replicateM, void)
+import           Cardano.Binary (Decoder, DecoderError (..), Encoding, FromCBOR (..), ToCBOR (..),
+                     decodeBreakOr, decodeListLenOrIndef, decodeMapLenOrIndef, decodeTag,
+                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen,
+                     encodeMapLenIndef, encodeTag, matchSize)
+import           Cardano.Prelude (cborError)
+import           Control.Monad (replicateM, unless, void)
 import           Data.Foldable (foldl')
 import           Data.Map (Map)
 import qualified Data.Map as Map
+import           Data.Ratio (Rational, denominator, numerator, (%))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Typeable
@@ -120,3 +125,16 @@ decodeCollectionWithLen lenOrIndef el = do
   loop (n,acc) condition action = condition >>= \case
       False -> pure (n,acc)
       True -> action >>= \v -> loop (n+1, (v:acc)) condition action
+
+rationalToCBOR :: Rational -> Encoding
+rationalToCBOR r = encodeTag 30
+  <> encodeListLen 2 <> toCBOR (numerator r) <> toCBOR (denominator r)
+
+rationalFromCBOR :: Decoder s Rational
+rationalFromCBOR = do
+    t <- decodeTag
+    unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
+    (numInts, ints) <- decodeCollectionWithLen (decodeListLenOrIndef) fromCBOR
+    case ints of
+      n:d:[] -> pure $ n % d
+      _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numInts

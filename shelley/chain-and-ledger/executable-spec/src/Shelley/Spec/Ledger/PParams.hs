@@ -46,7 +46,7 @@ import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, Nonce (NeutralNonce)
                      fpPrecision, interval0, intervalValue)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
-                     ToCBORGroup (..))
+                     ToCBORGroup (..), rationalFromCBOR, rationalToCBOR)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..))
 
 import           Shelley.Spec.NonIntegral (ln')
@@ -189,13 +189,13 @@ instance ToCBOR PParams
         <> toCBOR maxBHSize'
         <> toCBOR keyDeposit'
         <> toCBOR keyMinRefund'
-        <> toCBOR keyDecayRate'
+        <> rationalToCBOR keyDecayRate'
         <> toCBOR poolDeposit'
         <> toCBOR poolMinRefund'
-        <> toCBOR poolDecayRate'
+        <> rationalToCBOR poolDecayRate'
         <> toCBOR eMax'
         <> toCBOR nOpt'
-        <> toCBOR a0'
+        <> rationalToCBOR a0'
         <> toCBOR rho'
         <> toCBOR tau'
         <> toCBOR activeSlotCoeff'
@@ -208,26 +208,26 @@ instance FromCBOR PParams
   fromCBOR = do
     enforceSize "PParams" 20
     PParams
-      <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBORGroup
+      <$> fromCBOR         -- _minfeeA         :: Integer
+      <*> fromCBOR         -- _minfeeB         :: Natural
+      <*> fromCBOR         -- _maxBBSize       :: Natural
+      <*> fromCBOR         -- _maxTxSize       :: Natural
+      <*> fromCBOR         -- _maxBHSize       :: Natural
+      <*> fromCBOR         -- _keyDeposit      :: Coin
+      <*> fromCBOR         -- _keyMinRefund    :: UnitInterval
+      <*> rationalFromCBOR -- _keyDecayRate    :: Rational
+      <*> fromCBOR         -- _poolDeposit     :: Coin
+      <*> fromCBOR         -- _poolMinRefund   :: UnitInterval
+      <*> rationalFromCBOR -- _poolDecayRate   :: Rational
+      <*> fromCBOR         -- _eMax            :: EpochNo
+      <*> fromCBOR         -- _nOpt            :: Natural
+      <*> rationalFromCBOR -- _a0              :: Rational
+      <*> fromCBOR         -- _rho             :: UnitInterval
+      <*> fromCBOR         -- _tau             :: UnitInterval
+      <*> fromCBOR         -- _activeSlotCoeff :: ActiveSlotCoeff
+      <*> fromCBOR         -- _d               :: UnitInterval
+      <*> fromCBOR         -- _extraEntropy    :: Nonce
+      <*> fromCBORGroup    -- _protocolVersion :: ProtVer
 
 makeLenses ''PParams
 

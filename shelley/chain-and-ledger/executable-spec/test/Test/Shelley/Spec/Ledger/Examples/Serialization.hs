@@ -255,7 +255,7 @@ serializationTests = testGroup "Serialization Tests"
     (T (TkWord64 30))
   , checkEncodingCBOR "rational"
     (UnsafeUnitInterval (1 % 2))
-    (T (TkListLen 2 . TkInteger 1 . TkInteger 2))
+    (T (TkTag 30 . TkListLen 2 . TkInteger 1 . TkInteger 2))
   , checkEncodingCBOR "slot"
     (SlotNo 7)
     (T (TkWord64 7))
@@ -536,13 +536,13 @@ serializationTests = testGroup "Serialization Tests"
       <> (T $ TkWord 4) <> S maxbhsize
       <> (T $ TkWord 5) <> S keydeposit
       <> (T $ TkWord 6) <> S keyminrefund
-      <> (T $ TkWord 7) <> S keydecayrate
+      <> (T $ TkWord 7 . TkTag 30) <> S keydecayrate
       <> (T $ TkWord 8) <> S pooldeposit
       <> (T $ TkWord 9) <> S poolminrefund
-      <> (T $ TkWord 10) <> S pooldecayrate
+      <> (T $ TkWord 10 . TkTag 30) <> S pooldecayrate
       <> (T $ TkWord 11) <> S emax
       <> (T $ TkWord 12) <> S nopt
-      <> (T $ TkWord 13) <> S a0
+      <> (T $ TkWord 13 . TkTag 30) <> S a0
       <> (T $ TkWord 14) <> S rho
       <> (T $ TkWord 15) <> S tau
       <> (T $ TkWord 16) <> S activeSlotCoefficient
