@@ -799,9 +799,9 @@ In Rule~\ref{eq:rule:voting}:
   casting the vote.
 \item The vote must refer to a registered update proposal.
 \item The proposal id must be signed by the key that is casting the vote.
-\item It is possible for the same genesis key to vote multiple times for
-  the same proposal, however this vote will be counted once (note that we're
-  taking the union of the key-proposal-id pairs).
+\item A given genesis key is only allowed to vote for a proposal once. This
+  provision guards against replay attacks, where a third party may replay the
+  vote in multiple blocks.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -813,6 +813,7 @@ In Rule~\ref{eq:rule:voting}:
       \var{vts}_{\var{pid}} \leteq
       \{ (\var{pid}, \var{vk_s}) \mid \var{vk_s} \mapsto \var{vk} \in \var{dms} \} &
       \var{vts}_{\var{pid}} \neq \emptyset &
+      \var{vts}_{\var{pid}} \nsubseteq \var{vts} \\
       \mathcal{V}_{\var{vk}}\serialised{\var{pid}}_{(\vSig{v})}\\
     }
     {
