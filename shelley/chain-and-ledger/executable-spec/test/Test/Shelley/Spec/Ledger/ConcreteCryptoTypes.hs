@@ -109,6 +109,8 @@ type UTxO = UTxO.UTxO ConcreteCrypto
 
 type Block = BlockChain.Block ConcreteCrypto
 
+type LaxBlock = BlockChain.LaxBlock ConcreteCrypto
+
 type BHBody = BlockChain.BHBody ConcreteCrypto
 
 type SKeyES = Keys.SKeyES ConcreteCrypto

@@ -2,10 +2,12 @@
 
 block =
   [ header
-  , transaction_bodies         : [* transaction_body]  ; 19
-  , transaction_witness_sets   : [* transaction_witness_set] ; 20
+  , transaction_bodies         : [* transaction_body]
+  , transaction_witness_sets   : [* transaction_witness_set]
   , transaction_metadata_set   : { * transaction_index => transaction_metadata }
-  ]
+  ]; Valid blocks must also satisfy the following two constraints:
+   ; 1) the length of transaction_bodies and transaction_witness_sets must be the same
+   ; 2) every transaction_index must be strictly smaller than the length of transaction_bodies
 
 transaction = [transaction_body, transaction_witness_set, [?transaction_metadata]]
 

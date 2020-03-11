@@ -30,7 +30,8 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), UnitInterv
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hash, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs, _ups)
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..), mkActiveSlotCoeff)
+import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..), ProtVer (..),
+                     mkActiveSlotCoeff)
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, ApName (..), pattern ApVer,
                      pattern Applications, InstallerHash (..), pattern Mdt, pattern PPUpdate,
@@ -174,20 +175,20 @@ genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 -- ^^ TODO jc - generating d=0 takes some care, if there are no registered
 -- stake pools then d=0 deadlocks the system.
 
-genProtocolVersion :: Gen (Natural, Natural)
-genProtocolVersion  = ((,) <$> genNatural 1 10 <*> genNatural 1 50)
+genProtocolVersion :: Gen ProtVer
+genProtocolVersion  = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
 genNextProtocolVersion
   :: PParams
-  -> Gen (Natural, Natural)
+  -> Gen ProtVer
 genNextProtocolVersion pp = do
   QC.elements
-    [ (m + 1, 0    )
-    , (m    , n + 1)]
+    [ ProtVer (m + 1) 0
+    , ProtVer m       (n + 1)]
   where
-    (m, n) = _protocolVersion pp
+    ProtVer m n = _protocolVersion pp
 
 -- | Given the current protocol params generates a subset of protocol parameter assignments.
 genSetOfPpm

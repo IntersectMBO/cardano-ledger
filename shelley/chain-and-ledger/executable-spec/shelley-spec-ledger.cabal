@@ -5,6 +5,10 @@ author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 build-type:          Simple
 cabal-version:       >=1.8
+extra-source-files:
+  cddl-files/shelley.cddl
+  cddl-files/mock/crypto.cddl
+  cddl-files/mock/finset.cddl
 
 source-repository head
   type: git
