@@ -578,6 +578,7 @@ instance STS ADDVOTE where
     = AVSigDoesNotVerify
     | NoUpdateProposal UpId
     | VoteByNonGenesisDelegate VKey
+    | RepeatVoteByGenesisDelegate VKey
     deriving (Eq, Show, Data, Typeable, Generic, NoUnexpectedThunks)
 
   initialRules = []
@@ -594,6 +595,7 @@ instance STS ADDVOTE where
                 Just vks -> Set.singleton (pid, vks)
                 Nothing  -> Set.empty
         vtsPid /= Set.empty ?! VoteByNonGenesisDelegate vk
+        not (vtsPid `Set.isSubsetOf` vts) ?! RepeatVoteByGenesisDelegate vk
         Set.member pid rups ?! NoUpdateProposal pid
         Core.verify vk pid (vote ^. vSig) ?! AVSigDoesNotVerify
         return $! vts <> vtsPid
