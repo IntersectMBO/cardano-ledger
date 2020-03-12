@@ -86,7 +86,7 @@ This function must produce a unique id for each unique transaction.
       \\
       \var{md}
       & \MetaData
-      & \N \mapsto \MetaDatum
+      & \seqof{\MetaDatum}
       & \text{metadata}
     \end{array}
   \end{equation*}
@@ -133,7 +133,7 @@ This function must produce a unique id for each unique transaction.
       \var{txbody}
       & \TxBody
       & \begin{array}{l}
-        \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
+        \powerset{\TxIn} \times \seqof{\TxOut} \times \seqof{\DCert}
         \times \Coin \times \Slot \times \Wdrl
         \\ ~~~~\times \Update \times \MetaDataHash^?
         \end{array}
