@@ -17,6 +17,7 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EpochBoundary
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.OCert as OCert
+import qualified Shelley.Spec.Ledger.Rewards as Rewards
 import qualified Shelley.Spec.Ledger.Scripts as Scripts
 import qualified Shelley.Spec.Ledger.STS.Chain as STS.Chain
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS.Deleg
@@ -139,6 +140,8 @@ type OCertEnv = STS.Ocert.OCertEnv ConcreteCrypto
 type HashHeader = BlockChain.HashHeader ConcreteCrypto
 
 type NewEpochState = LedgerState.NewEpochState ConcreteCrypto
+
+type NonMyopic = Rewards.NonMyopic ConcreteCrypto
 
 type RewardUpdate = LedgerState.RewardUpdate ConcreteCrypto
 

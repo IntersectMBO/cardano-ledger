@@ -29,6 +29,7 @@ library
                      Shelley.Spec.Ledger.UTxO
                      Shelley.Spec.Ledger.Slot
                      Shelley.Spec.Ledger.PParams
+                     Shelley.Spec.Ledger.Rewards
                      Shelley.Spec.Ledger.EpochBoundary
                      Shelley.Spec.Ledger.LedgerState
                      Shelley.Spec.Ledger.MetaData

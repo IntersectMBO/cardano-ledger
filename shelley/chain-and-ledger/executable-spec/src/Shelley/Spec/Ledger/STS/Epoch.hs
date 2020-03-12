@@ -19,9 +19,10 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState (pattern DPState, EpochState, pattern EpochState,
-                     emptyAccount, emptyLedgerState, esAccountState, esLState, esPp, esSnapshots,
-                     _delegationState, _ups, _utxoState)
+                     emptyAccount, emptyLedgerState, esAccountState, esLState, esNonMyopic, esPp,
+                     esSnapshots, _delegationState, _ups, _utxoState)
 import           Shelley.Spec.Ledger.PParams
+import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Updates
 
@@ -51,7 +52,12 @@ instance NoUnexpectedThunks (PredicateFailure (EPOCH crypto))
 
 initialEpoch :: InitialRule (EPOCH crypto)
 initialEpoch =
-  pure $ EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams
+  pure $ EpochState
+           emptyAccount
+           emptySnapShots
+           emptyLedgerState
+           emptyPParams
+           emptyNonMyopic
 
 votedValuePParams
   :: PPUpdate crypto
@@ -76,7 +82,8 @@ epochTransition = do
   TRC (_, EpochState { esAccountState = acnt
                      , esSnapshots = ss
                      , esLState = ls
-                     , esPp = pp}, e) <- judgmentContext
+                     , esPp = pp
+                     , esNonMyopic = nm}, e) <- judgmentContext
   let utxoSt = _utxoState ls
   let DPState dstate pstate = _delegationState ls
   SnapState ss' utxoSt' <-
@@ -96,6 +103,7 @@ epochTransition = do
     ss'
     (ls { _utxoState = utxoSt''', _delegationState = DPState dstate' pstate' })
     pp'
+    nm
 
 instance Embed (SNAP crypto) (EPOCH crypto) where
     wrapFailed = SnapFailure

@@ -21,9 +21,10 @@ import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import           Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
 import           Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import           Shelley.Spec.Ledger.LedgerState (EpochState, pattern EpochState, emptyAccount,
-                     emptyLedgerState, esAccountState, esLState, esPp, esSnapshots,
+                     emptyLedgerState, esAccountState, esLState, esNonMyopic, esPp, esSnapshots,
                      _delegationState, _dstate, _irwd, _reserves, _rewards, _stkCreds)
 import           Shelley.Spec.Ledger.PParams (emptyPParams)
+import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 
 import           Control.State.Transition
 
@@ -44,14 +45,20 @@ instance STS (MIR crypto) where
 instance NoUnexpectedThunks (PredicateFailure (MIR crypto))
 
 initialMir :: InitialRule (MIR crypto)
-initialMir = pure $ EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams
+initialMir = pure $ EpochState
+                      emptyAccount
+                      emptySnapShots
+                      emptyLedgerState
+                      emptyPParams
+                      emptyNonMyopic
 
 mirTransition :: forall crypto . TransitionRule (MIR crypto)
 mirTransition = do
   TRC (_, EpochState { esAccountState = acnt
                      , esSnapshots = ss
                      , esLState = ls
-                     , esPp = pp}, ()) <- judgmentContext
+                     , esPp = pp
+                     , esNonMyopic = nm}, ()) <- judgmentContext
   let dpState = _delegationState ls
       dState = _dstate dpState
       StakeCreds stkcreds = _stkCreds dState
@@ -68,6 +75,7 @@ mirTransition = do
                            dState  { _rewards = (_rewards dState) ∪+ update
                                    , _irwd = Map.empty } } }
                   pp
+                  nm
     else pure $ EpochState
                   acnt
                   ss
@@ -75,3 +83,4 @@ mirTransition = do
                          dpState {  _dstate =
                            dState  { _irwd = Map.empty } } }
                   pp
+                  nm

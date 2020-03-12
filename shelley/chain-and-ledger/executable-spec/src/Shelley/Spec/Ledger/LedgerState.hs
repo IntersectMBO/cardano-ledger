@@ -37,7 +37,6 @@ module Shelley.Spec.Ledger.LedgerState
   , PState(..)
   , KeyPairs
   , UTxOState(..)
-  , StakeShare(..)
   , emptyAccount
   , emptyPState
   , emptyDState
@@ -63,7 +62,6 @@ module Shelley.Spec.Ledger.LedgerState
   , keyRefund
   , decayedTx
   -- epoch boundary
-  , memberRew
   , stakeDistr
   , applyRUpd
   , createRUpd
@@ -84,18 +82,14 @@ import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
 import           Data.Proxy (Proxy (..))
-import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq (Seq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..), Stake (..),
-                     aggregateOuts, baseStake, emptySnapShots, maxPool, poolStake, ptrStake,
-                     rewardStake)
+import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
+                     Stake (..), aggregateOuts, baseStake, emptySnapShots, ptrStake, rewardStake)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHash,
                      KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
                      undiscriminateKeyHash)
@@ -117,12 +111,13 @@ import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity 
 import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), PoolDistr (..),
                      StakeCreds (..), StakePools (..), decayKey, delegCWitness, genesisCWitness,
                      poolCWitness, refund, requiresVKeyWitness)
-import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
+import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopic (..),
+                     emptyNonMyopic, reward)
 
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
-                     intervalValue, mkUnitInterval, text64Size)
-import           Shelley.Spec.Ledger.Scripts                     
+                     intervalValue, text64Size)
+import           Shelley.Spec.Ledger.Scripts (countMSigNodes)
 
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -138,11 +133,6 @@ instance NoUnexpectedThunks (LedgerValidation crypto)
 
 type RewardAccounts crypto
   = Map (RewardAcnt crypto) Coin
-
--- | StakeShare type
-newtype StakeShare =
-  StakeShare Rational
-  deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
@@ -237,31 +227,34 @@ data RewardUpdate crypto= RewardUpdate
   , deltaR        :: Coin
   , rs            :: Map (RewardAcnt crypto) Coin
   , deltaF        :: Coin
+  , nonMyopic     :: NonMyopic crypto
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate crypto)
 
 instance Crypto crypto => ToCBOR (RewardUpdate crypto)
  where
-  toCBOR (RewardUpdate dt dr rw df) =
-    encodeListLen 4
+  toCBOR (RewardUpdate dt dr rw df nm) =
+    encodeListLen 5
       <> toCBOR dt
       <> toCBOR (-dr) -- TODO change Coin serialization to use integers?
       <> toCBOR rw
       <> toCBOR (-df) -- TODO change Coin serialization to use integers?
+      <> toCBOR nm
 
 instance Crypto crypto => FromCBOR (RewardUpdate crypto)
  where
   fromCBOR = do
-    enforceSize "RewardUpdate" 4
+    enforceSize "RewardUpdate" 5
     dt <- fromCBOR
     dr <- fromCBOR -- TODO change Coin serialization to use integers?
     rw <- fromCBOR
     df <- fromCBOR -- TODO change Coin serialization to use integers?
-    pure $ RewardUpdate dt (-dr) rw (-df)
+    nm <- fromCBOR
+    pure $ RewardUpdate dt (-dr) rw (-df) nm
 
 emptyRewardUpdate :: RewardUpdate crypto
-emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0)
+emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
 
 data AccountState = AccountState
   { _treasury  :: Coin
@@ -289,6 +282,7 @@ data EpochState crypto
     , esSnapshots :: SnapShots crypto
     , esLState :: LedgerState crypto
     , esPp :: PParams
+    , esNonMyopic :: NonMyopic crypto
     }
   deriving (Show, Eq, Generic)
 
@@ -296,8 +290,8 @@ instance NoUnexpectedThunks (EpochState crypto)
 
 instance Crypto crypto => ToCBOR (EpochState crypto)
  where
-  toCBOR (EpochState a s l p) =
-    encodeListLen 4 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR p
+  toCBOR (EpochState a s l p n) =
+    encodeListLen 4 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR p <> toCBOR n
 
 instance Crypto crypto => FromCBOR (EpochState crypto)
  where
@@ -307,14 +301,15 @@ instance Crypto crypto => FromCBOR (EpochState crypto)
     s <- fromCBOR
     l <- fromCBOR
     p <- fromCBOR
-    pure $ EpochState a s l p
+    n <- fromCBOR
+    pure $ EpochState a s l p n
 
 emptyUTxOState :: UTxOState crypto
 emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
 
 emptyEpochState :: EpochState crypto
 emptyEpochState =
-  EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams
+  EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams emptyNonMyopic
 
 getIR :: EpochState crypto -> Map (Credential crypto) Coin
 getIR = _irwd . _dstate . _delegationState . esLState
@@ -413,7 +408,7 @@ getGKeys
   -> Set (GenKeyHash crypto)
 getGKeys nes = Map.keysSet genDelegs
   where NewEpochState _ _ _ es _ _ _ = nes
-        EpochState _ _ ls _ = es
+        EpochState _ _ ls _ _ = es
         LedgerState _ (DPState (DState _ _ _ _ _ (GenDelegs genDelegs) _) _) = ls
 
 data NewEpochEnv crypto=
@@ -941,118 +936,6 @@ reapRewards dStateRewards withdrawals =
 -- epoch boundary calculations --
 ---------------------------------
 
--- | Calculate pool reward
-poolRewards
-  :: UnitInterval
-  -> UnitInterval
-  -> Natural
-  -> Natural
-  -> Coin
-  -> Coin
-poolRewards d_ sigma blocksN blocksTotal f@(Coin maxP) =
-  if intervalValue d_ < 0.8
-    then floor (p * fromIntegral maxP)
-    else f
-  where
-    p = beta / intervalValue sigma
-    beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
-
--- | Calculate pool leader reward
-leaderRew
-  :: Coin
-  -> PoolParams crypto
-  -> StakeShare
-  -> StakeShare
-  -> Coin
-leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
-  | f' <= c = f
-  | otherwise =
-    Coin $ c + floor (fromIntegral (f' - c) * (m' + (1 - m') * s / sigma))
-  where
-    (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
-
--- | Calculate pool member reward
-memberRew
-  :: Coin
-  -> PoolParams crypto
-  -> StakeShare
-  -> StakeShare
-  -> Coin
-memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
-  | f' <= c = 0
-  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * t / sigma
-  where
-    (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
-
--- | Reward one pool
-rewardOnePool
-  :: PParams
-  -> Coin
-  -> Natural
-  -> Natural
-  -> Credential crypto
-  -> PoolParams crypto
-  -> Stake crypto
-  -> Coin
-  -> Set (RewardAcnt crypto)
-  -> Map (RewardAcnt crypto) Coin
-rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) addrsRew =
-  rewards'
-  where
-    Coin pstake = Map.foldl (+) (Coin 0) stake
-    Coin ostake = Set.foldl
-                    (\c o -> c + (stake Map.! KeyHashObj o))
-                    (Coin 0)
-                    (_poolOwners pool)
-    sigma = fromIntegral pstake % fromIntegral total
-    Coin pledge = _poolPledge pool
-    pr = fromIntegral pledge % fromIntegral total
-    maxP =
-      if pledge <= ostake
-        then maxPool pp r sigma pr
-        else 0
-    s' = fromMaybe (error "LedgerState.rewardOnePool: Unexpected Nothing") $ mkUnitInterval sigma
-    poolR = poolRewards (_d pp) s' blocksN blocksTotal maxP
-    tot = fromIntegral total
-    mRewards = Map.fromList
-     [(RewardAcnt hk,
-       memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma))
-     | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
-    iReward  = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
-    potentialRewards = Map.insert (_poolRAcnt pool) iReward mRewards
-    rewards' = Map.filter (/= Coin 0) $ addrsRew ◁ potentialRewards
-
-reward
-  :: PParams
-  -> BlocksMade crypto
-  -> Coin
-  -> Set (RewardAcnt crypto)
-  -> Map (KeyHash crypto) (PoolParams crypto)
-  -> Stake crypto
-  -> Map (Credential crypto) (KeyHash crypto)
-  -> Coin
-  -> Map (RewardAcnt crypto) Coin
-reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
-  rewards'
-  where
-    pdata =
-      [ ( hk
-        , ( poolParams Map.! hk
-          , b Map.! hk
-          , poolStake hk delegs stake))
-      | hk <-
-          Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet b
-      ]
-    results =
-      [ ( hk
-        , rewardOnePool pp r n totalBlocks (KeyHashObj hk) pool actgr total addrsRew)
-      | (hk, (pool, n, actgr)) <- pdata
-      ]
-    rewards' = foldl (\m (_, r') -> Map.union m r') Map.empty results
-    totalBlocks = Map.foldr (+) 0 b
-
 -- | Stake distribution
 stakeDistr
   :: forall crypto
@@ -1081,7 +964,7 @@ applyRUpd
   :: RewardUpdate crypto
   -> EpochState crypto
   -> EpochState crypto
-applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
+applyRUpd ru (EpochState as ss ls pp nm) = EpochState as' ss ls' pp nm
   where utxoState_ = _utxoState ls
         delegState = _delegationState ls
         dState = _dstate delegState
@@ -1097,6 +980,33 @@ applyRUpd ru (EpochState as ss ls pp) = EpochState as' ss ls' pp
                                 { _rewards = _rewards dState ∪+ rs ru
                                 }}}
 
+updateNonMypopic
+  :: NonMyopic crypto
+  -> Coin
+  -> Map (KeyHash crypto) Rational
+  -> SnapShot crypto
+  -> NonMyopic crypto
+updateNonMypopic nm rPot aps ss = nm
+  { apparentPerformances = aps'
+  , rewardPot = rPot
+  , snap = ss
+  }
+  where
+    SnapShot _ _ poolParams = ss
+    absentPools = Set.toList $
+      (Map.keysSet poolParams) `Set.difference` (Map.keysSet aps)
+    performanceZero = Map.fromList $ fmap (\p -> (p, 0)) absentPools
+    -- TODO how to handle pools with near zero stake?
+
+    expMovAvgWeight = 0.5 -- TODO move to globals or protocol parameters?
+    prev = apparentPerformances nm
+    performance kh ap = case Map.lookup kh prev of
+      Nothing -> ApparentPerformance $ fromRational ap -- TODO give new pools the average performance?
+      Just (ApparentPerformance p) -> ApparentPerformance $
+        expMovAvgWeight * p + (1 - expMovAvgWeight) * (fromRational ap)
+    aps' = Map.mapWithKey performance (aps `Map.union` performanceZero)
+
+
 -- | Create a reward update
 createRUpd
   :: EpochNo
@@ -1104,7 +1014,7 @@ createRUpd
   -> EpochState crypto
   -> Coin
   -> ShelleyBase (RewardUpdate crypto)
-createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) total = do
+createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp nm) total = do
     ei <- asks epochInfo
     slotsPerEpoch <- epochInfoSize ei e
     let SnapShot stake' delegs' poolParams = _pstakeGo ss
@@ -1117,15 +1027,20 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) total = do
           intervalValue ((activeSlotVal . _activeSlotCoeff) pp) * fromIntegral slotsPerEpoch
         eta = fromIntegral blocksMade / expectedBlocks
 
-        Coin rewardPot = _feeSS ss + deltaR_
-        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
-        _R = Coin $ rewardPot - deltaT1
+        Coin rPot = _feeSS ss + deltaR_
+        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rPot
+        _R = Coin $ rPot - deltaT1
 
-        rs_ = reward pp b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' total
+        (rs_, aps) = reward pp b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' total
         deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
-    pure $ RewardUpdate (Coin deltaT1 + deltaT2) (-deltaR_) rs_ (-(_feeSS ss))
+    pure $ RewardUpdate
+             (Coin deltaT1 + deltaT2)
+             (-deltaR_)
+             rs_
+             (-(_feeSS ss))
+             (updateNonMypopic nm _R aps (_pstakeGo ss))
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.
@@ -1174,5 +1089,5 @@ updateNES
   -> LedgerState crypto
   -> NewEpochState crypto
 updateNES (NewEpochState eL bprev _
-           (EpochState acnt ss _ pp) ru pd osched) bcur ls =
-  NewEpochState eL bprev bcur (EpochState acnt ss ls pp) ru pd osched
+           (EpochState acnt ss _ pp nm) ru pd osched) bcur ls =
+  NewEpochState eL bprev bcur (EpochState acnt ss ls pp nm) ru pd osched
