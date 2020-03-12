@@ -199,4 +199,11 @@ between epochs and slots and one function $\fun{kesPeriod}$ for getting the cycl
   \label{fig:defs:protocol-parameters-helpers}
 \end{figure*}
 
+(NSF: This figures' definitions tacitly assumes/implies that the abstract types
+Epoch and KESPeriod are equal to Slot, or that the multiplication and division
+tacitly convert them, etc. It also seems to assume that those otherwise
+abstract types are integral types. Should these definitions also use
+``Constructor functions'' such as $\fun{addr_{rwd}}$? Or maybe just add some
+text calling out the harmless punning that isolated here?)
+
 \clearpage
