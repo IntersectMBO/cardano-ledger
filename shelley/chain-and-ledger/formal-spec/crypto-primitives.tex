@@ -71,13 +71,16 @@ organization chosen for an implementation.
   \end{align*}
   \emph{Notation for serialized and verified data}
   \begin{align*}
-    & \serialised{x} & \text{serialised representation of } x\\
+    & \serialised{x} & \text{serialised representation of } x (NSF: restrict the type of x?)\\
     & \mathcal{V}_{\var{vk}}{\serialised{d}}_{\sigma} = \verify{vk}{d}{\sigma}
     & \text{shorthand notation for } \fun{verify}
   \end{align*}
   \caption{Cryptographic definitions}
   \label{fig:crypto-defs-shelley}
 \end{figure}
+
+(NSF: what is $\Data$? Does stand for something like $\exists x. Serialisable x
+\Rightarrow x$?)
 
 When we get to the blockchain layer validation, we will use
 key evolving signatures (KES) according to the MMM scheme \cite{cryptoeprint:2001:034}.
