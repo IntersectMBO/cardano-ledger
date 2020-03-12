@@ -78,6 +78,7 @@ data Error
   = VotingInvalidSignature
   | VotingProposalNotRegistered UpId
   | VotingVoterNotDelegate KeyHash
+  | VotingVoteAlreadyCast KeyHash
   deriving (Eq, Show)
 
 instance ToCBOR Error where
@@ -93,6 +94,10 @@ instance ToCBOR Error where
       encodeListLen 2
         <> toCBOR (2 :: Word8)
         <> toCBOR keyHash
+    VotingVoteAlreadyCast keyHash ->
+      encodeListLen 2
+        <> toCBOR (3 :: Word8)
+        <> toCBOR keyHash
 
 instance FromCBOR Error where
   fromCBOR = do
@@ -104,6 +109,7 @@ instance FromCBOR Error where
       0 -> checkSize 1 >> pure VotingInvalidSignature
       1 -> checkSize 2 >> VotingProposalNotRegistered <$> fromCBOR
       2 -> checkSize 2 >> VotingVoterNotDelegate <$> fromCBOR
+      3 -> checkSize 2 >> VotingVoteAlreadyCast <$> fromCBOR
       _ -> cborError   $  DecoderErrorUnknownTag "Voting.Error" tag
 
 
@@ -152,6 +158,7 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
 --   1) The vote is for a registered proposal
 --   2) There is at least one genesis key delegating to the voter
 --   3) The signature is valid
+--   4) The vote has not already been cast
 --
 --   This corresponds to the `ADDVOTE` rule in the spec.
 registerVote
@@ -170,6 +177,12 @@ registerVote pm vre votes vote = do
   delegator <- case Delegation.lookupR voter delegationMap of
     Nothing -> throwError (VotingVoterNotDelegate voter)
     Just d  -> pure d
+
+  -- Check that the vote has not already been cast
+  case M.lookup upId votes of
+    Just khs | delegator `Set.member` khs -> throwError (VotingVoteAlreadyCast delegator)
+    _ -> pure ()
+
 
   -- Check that the signature is valid
   verifySignatureDecoded pm SignUSVote voterVK signedBytes signature
