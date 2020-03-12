@@ -33,7 +33,7 @@ A transaction, $\Tx$, consists of:
   \item A triple of:
     \begin{itemize}
       \item A finite map from payment verification keys to signatures.
-      \item A finite map from script hashes to scripts.
+      \item A finite map from script hashes to scripts. (NSF: Presumably the key of each mapping must be the hash of the value. Seems worth being explicit here.)
       \item Optional metadata.
     \end{itemize}
 \end{itemize}
