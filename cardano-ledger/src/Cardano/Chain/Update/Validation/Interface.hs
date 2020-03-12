@@ -412,7 +412,7 @@ registerEndorsement env st endorsement = do
     vsKeep = S.fromList $ fst <$> M.elems registeredProtocolUpdateProposals'
 
   pure $!
-    st { candidateProtocolUpdates = candidateProtocolUpdates'
+    st { candidateProtocolUpdates = forceElemsToWHNF candidateProtocolUpdates'
        , registeredProtocolUpdateProposals = registeredProtocolUpdateProposals'
        , registeredSoftwareUpdateProposals =
            M.restrictKeys registeredSoftwareUpdateProposals pidsKeep
