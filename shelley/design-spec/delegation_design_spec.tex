@@ -4545,9 +4545,15 @@ later scripts.
 \subsection{Detail}
 
 The transaction can contain metadata. The metadata hash is part of the body of
-the transaction so is covered by all transaction signatures. The metadata value
-is kept with the transaction witnesses. This follows the `segmented witness'
-design idea.
+the transaction so is covered by all transaction signatures. This allows for
+integrity checking and authentication of the metadata.
+
+The metadata value is kept outside of the transaction body, much like the
+transaction witnesses. This follows the `segmented witness' design idea that
+allows witnesses to be discarded when the data is known to have been checked.
+We go one step further and keep the metadata outside the body separately from
+the witnesses too, in principle allowing an implementation to store or discard
+the metadata or the witnesses independently of each other.
 
 The structure of the metadata is a mapping from keys to values. The keys are
 unsigned integers limited in size up to 64 bits. The values are simple
