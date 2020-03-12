@@ -67,7 +67,7 @@ organization chosen for an implementation.
   \emph{Constraints}
   \begin{align*}
     & \forall (sk, vk) \in \KeyPair,~ d \in \Data,~ \sigma \in \Sig \cdot
-    \sign{sk}{d} = \sigma \implies \verify{vk}{d}{\sigma}
+    \sign{sk}{d} = \sigma \implies (vk, d, \sigma) \in \verify
   \end{align*}
   \emph{Notation for serialized and verified data}
   \begin{align*}
