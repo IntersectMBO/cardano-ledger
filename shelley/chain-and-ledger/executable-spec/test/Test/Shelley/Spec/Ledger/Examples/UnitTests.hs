@@ -44,6 +44,7 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import           Test.Shelley.Spec.Ledger.Generator.Core (unitIntervalToNatural)
 import           Test.Shelley.Spec.Ledger.PreSTSGenerator (asStateTransition)
 import           Test.Shelley.Spec.Ledger.Utils
+import           Test.Shelley.Spec.Ledger.Examples.Fees (feeTests)
 
 
 alicePay :: KeyPair
@@ -631,4 +632,4 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
 
 unitTests :: TestTree
 unitTests = testGroup "Unit Tests"
-  [ testsValidLedger, testsInvalidLedger, testsPParams ]
+  [ testsValidLedger, testsInvalidLedger, testsPParams, feeTests ]

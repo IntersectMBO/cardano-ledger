@@ -56,7 +56,7 @@ data Delegation crypto = Delegation
 
 instance NoUnexpectedThunks (Delegation crypto)
 
-newtype Url = Url Text64
+newtype Url = Url { unUrl :: Text64 }
   deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 data PoolMetaData = PoolMetaData
