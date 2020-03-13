@@ -23,7 +23,6 @@ import           Data.Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Word (Word64)
-import           Lens.Micro ((^.))
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 
@@ -36,7 +35,7 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Delegation.Certificates (decayKey, isDeRegKey)
-import           Shelley.Spec.Ledger.LedgerState (dstate, keyRefund, stkCreds, _pstate, _stPools)
+import           Shelley.Spec.Ledger.LedgerState (keyRefund, _dstate, _pstate, _stPools, _stkCreds)
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Delpl (DelplEnv (..))
@@ -140,7 +139,7 @@ genDCerts keyHashMap pparams dpState slot ttl txIx reserves = do
 
   where
     (dval, dmin, lambda) = decayKey pparams
-    stkCreds_ = dpState ^. dstate . stkCreds
+    stkCreds_ = (_stkCreds . _dstate) dpState
     certRefund = keyRefund dval dmin lambda stkCreds_
 
     extendWithScriptCred cred =

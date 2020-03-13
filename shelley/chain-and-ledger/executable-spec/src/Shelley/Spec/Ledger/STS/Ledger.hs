@@ -31,7 +31,7 @@ import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), Ix, PState (..),
                      UTxOState)
-import           Shelley.Spec.Ledger.PParams hiding (d)
+import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Delegs
 import           Shelley.Spec.Ledger.STS.Utxo (pattern BadInputsUTxO, pattern ExpiredUTxO,

@@ -20,7 +20,6 @@ import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeLis
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, catMaybes)
 import           Control.Monad (unless)
-import           Lens.Micro.TH (makeLenses)
 
 import           Data.ByteString (ByteString)
 import           Data.Foldable (fold)
@@ -36,17 +35,18 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
+import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (Text64, UnitInterval, invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
-                     Sig, VKey, VerKeyVRF, hashAnyKey)
-import           Ledger.Core (Relation (..))
+import           Shelley.Spec.Ledger.Keys (AnyKeyHash, pattern AnyKeyHash, GenKeyHash, Hash,
+                     KeyHash, pattern KeyHash, Sig, VKey, VerKeyVRF, hashAnyKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Updates (Update, emptyUpdate, updateNull)
 
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..), FromCBORGroup (..),
-                     ToCBORGroup (..), decodeList, decodeMapContents, encodeFoldable)
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..),
+                     FromCBORGroup (..), ToCBORGroup (..), decodeList, decodeMapContents,
+                     encodeFoldable)
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -303,7 +303,7 @@ addStakeCreds :: (Credential crypto) -> SlotNo -> (StakeCreds crypto) -> StakeCr
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
 newtype StakePools crypto =
-  StakePools (Map (KeyHash crypto) SlotNo)
+  StakePools { unStakePools :: (Map (KeyHash crypto) SlotNo) }
   deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 
@@ -748,11 +748,3 @@ instance Relation (StakeCreds crypto) where
   (StakeCreds stkCreds) ▷>= vmin = StakeCreds $ stkCreds ▷>= vmin
 
   size (StakeCreds stkCreds) = size stkCreds
-
--- Lenses
-
-makeLenses ''TxBody
-
-makeLenses ''Delegation
-
-makeLenses ''PoolParams

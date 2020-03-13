@@ -19,7 +19,6 @@ import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import           Data.Set ((\\))
 import qualified Data.Set as Set
-import           Lens.Micro (to, (^.))
 import           Numeric.Natural (Natural)
 
 import           Test.QuickCheck (Gen)
@@ -33,13 +32,13 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DCertMir, 
                      pattern Delegate, pattern GenesisDelegate, pattern MIRCert, pattern RegKey,
                      pattern RegPool, pattern RetirePool, pattern StakeCreds)
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
-import           Shelley.Spec.Ledger.LedgerState (dstate, pParams, pstate, retiring, stPools,
-                     _dstate, _genDelegs, _pstate, _rewards, _stPools, _stkCreds)
-import           Shelley.Spec.Ledger.PParams (PParams (..), d)
+import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs, _pParams, _pstate, _retiring,
+                     _rewards, _stPools, _stkCreds)
+import           Shelley.Spec.Ledger.PParams (PParams (..))
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertPool, pattern Delegation, pattern KeyHashObj, pattern PoolParams,
-                     RewardAcnt (..), pattern StakePools, _poolPubKey, _poolVrf)
+                     RewardAcnt (..), pattern StakePools, unStakePools, _poolPubKey, _poolVrf)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState,
                      KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
@@ -92,8 +91,8 @@ genDCert keys scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot =
                , (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
                ]
  where
-  dState = dpState ^. dstate
-  pState = dpState ^. pstate
+  dState = _dstate dpState
+  pState = _pstate dpState
 
 -- | Generate a RegKey certificate along and also returns the staking credential
 -- (needed to witness the certificate)
@@ -222,7 +221,7 @@ genGenesisDelegation keys coreKeys dpState =
       ( DCertGenesis (GenesisDelegate (hashVKey gkey, (hashVKey . snd) key))
       , CoreKeyCred [gkey])
 
-    (GenDelegs genDelegs_) = _genDelegs $ dpState ^. dstate
+    (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
 
     genesisDelegator k = k ∈ dom genDelegs_
     genesisDelegators = filter (genesisDelegator . hashVKey) coreKeys
@@ -242,10 +241,10 @@ genRegPool keys vrfKeys dpState =
      else
        Just <$> genDCertRegPool availableKeys availableVrfKeys
  where
-  notRegistered k = k `notElem` (dpState ^. pstate . pParams . to Map.elems . to (_poolPubKey <$>))
+  notRegistered k = k `notElem` ((_poolPubKey <$>) . Map.elems . _pParams . _pstate) dpState
   availableKeys = filter (notRegistered . hashKey . vKey . snd) keys
 
-  notRegisteredVrf k = k `notElem` (dpState ^. pstate . pParams . to Map.elems . to (_poolVrf <$>))
+  notRegisteredVrf k = k `notElem` ((_poolVrf <$>) . Map.elems . _pParams . _pstate) dpState
   availableVrfKeys = filter (notRegisteredVrf . hashKeyVRF . snd) vrfKeys
 
 -- | Generate PoolParams and the key witness.
@@ -304,10 +303,10 @@ genRetirePool keysByStakeHash pState slot =
                 <$> QC.elements retireable
                 <*> (EpochNo <$> genWord64 epochLow epochHigh)
  where
-  stakePools = pState ^. (stPools . to (\(StakePools x) -> x))
+  stakePools = (unStakePools . _stPools) pState
 
   registered_ = dom stakePools
-  retiring_ = dom (pState ^. retiring)
+  retiring_ = dom (_retiring pState)
   retireable = Set.toList (registered_ \\ retiring_)
 
   lookupHash hk = fromMaybe (error "genRetirePool: could not find keyHash")
@@ -341,7 +340,7 @@ genInstantaneousRewards s coreKeys pparams delegSt = do
 
   pure $ if (-- Discard this generator (by returning Nothing) if:
              -- we are in full decentralisation mode (d=0) when IR certs are not allowed
-             pparams ^. d == interval0
+             _d pparams == interval0
              -- or when we don't have keys available for generating an IR cert
              || null credCoinMap
              -- or it's too late in the epoch for IR certs

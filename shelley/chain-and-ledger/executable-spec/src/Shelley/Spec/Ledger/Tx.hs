@@ -13,17 +13,6 @@ module Shelley.Spec.Ledger.Tx
   , TxOut(..)
   , TxIn(..)
   , TxId(..)
-  , txUpdate
-  , inputs
-  , outputs
-  , certs
-  , wdrls
-  , txfee
-  , ttl
-  , body
-  , metadata
-  , witnessVKeySet
-  , witnessMSigMap
     -- witness data
   , WitVKey(..)
   , MultiSignatureScript
@@ -58,14 +47,12 @@ import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
-import           Lens.Micro.TH (makeLenses)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
 import           Shelley.Spec.Ledger.Serialization (CborSeq (..), decodeMapContents)
 import           Shelley.Spec.Ledger.TxData (Credential (..), MultiSig (..), Script (..),
                      ScriptHash (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..),
-                     certs, inputs, nativeMultiSigTag, outputs, ttl, txUpdate, txfee, wdrls,
-                     witKeyHash)
+                     nativeMultiSigTag, witKeyHash)
 
 
 -- |A fully formed transaction.
@@ -257,7 +244,3 @@ extractGenKeyHash
   :: [GenKeyHash crypto]
   -> [AnyKeyHash crypto]
 extractGenKeyHash = map undiscriminateKeyHash
-
--- Lenses
-
-makeLenses ''Tx

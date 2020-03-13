@@ -32,21 +32,20 @@ where
 
 import           Data.Foldable (toList)
 import           Data.Word (Word64)
-import           Lens.Micro ((^.))
 
 import           Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
 
-import           Control.State.Transition.Trace (SourceSignalTarget (..), Trace, source,
-                     sourceSignalTargets, target, traceEnv)
+import           Control.State.Transition.Trace (SourceSignalTarget (..), Trace (..), source,
+                     sourceSignalTargets, target)
 import           Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 
 import           Shelley.Spec.Ledger.Coin (pattern Coin)
 import           Shelley.Spec.Ledger.LedgerState (pattern DPState, pattern DState,
-                     pattern UTxOState, dstate, pstate, stPools, stkCreds, _deposited, _dstate,
-                     _fees, _rewards, _utxo)
+                     pattern UTxOState, _deposited, _dstate, _fees, _pstate, _rewards, _stPools,
+                     _stkCreds, _utxo)
 import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp))
-import           Shelley.Spec.Ledger.Tx (body)
-import           Shelley.Spec.Ledger.TxData (certs, wdrls)
+import           Shelley.Spec.Ledger.Tx (_body)
+import           Shelley.Spec.Ledger.TxData (_certs, _wdrls)
 import           Shelley.Spec.Ledger.UTxO (balance)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (DELEG, DELEGS, LEDGER, POOL,
@@ -153,7 +152,7 @@ preserveBalance :: Property
 preserveBalance =
   forAllLedgerTrace $ \tr ->
     let ssts = map ledgerToUtxowSsts (sourceSignalTargets tr)
-        pp = ledgerPp (tr ^. traceEnv)
+        pp = ledgerPp (_traceEnv tr)
 
     in TestUtxow.preserveBalance pp ssts
 
@@ -161,7 +160,7 @@ preserveBalanceRestricted :: Property
 preserveBalanceRestricted =
   forAllLedgerTrace $ \tr ->
     let ssts = map ledgerToUtxowSsts (sourceSignalTargets tr)
-        pp = ledgerPp (tr ^. traceEnv)
+        pp = ledgerPp (_traceEnv tr)
 
     in TestUtxow.preserveBalanceRestricted pp ssts
 
@@ -204,7 +203,7 @@ registeredPoolIsAdded :: Property
 registeredPoolIsAdded =
   forAllLedgerTrace $ \tr ->
     let sst = concatMap ledgerToPoolSsts (sourceSignalTargets tr)
-    in TestPool.registeredPoolIsAdded (tr ^. traceEnv) sst
+    in TestPool.registeredPoolIsAdded (_traceEnv tr) sst
 
 -- | Check that a newly registered pool has a reward of 0.
 rewardZeroAfterRegPool :: Property
@@ -217,7 +216,7 @@ poolRetireInEpoch :: Property
 poolRetireInEpoch =
   forAllLedgerTrace $ \tr ->
     let sst = concatMap ledgerToPoolSsts (sourceSignalTargets tr)
-    in TestPool.poolRetireInEpoch (tr ^. traceEnv) sst
+    in TestPool.poolRetireInEpoch (_traceEnv tr) sst
 
 -- | Check that a `RetirePool` certificate properly removes a stake pool.
 poolIsMarkedForRetirement :: Property
@@ -265,22 +264,22 @@ ledgerToDelegSsts
   :: SourceSignalTarget LEDGER
   -> [SourceSignalTarget DELEG]
 ledgerToDelegSsts (SourceSignalTarget (_, DPState d _) (_, DPState d' _) tx) =
-  [SourceSignalTarget d d' cert | cert <- toList (tx ^. body . certs)]
+  [SourceSignalTarget d d' cert | cert <- toList ((_certs . _body) tx)]
 
 -- | Transform LEDGER `sourceSignalTargets`s to DELEGS ones.
 ledgerToDelegsSsts
   :: SourceSignalTarget LEDGER
   -> (Wdrl, SourceSignalTarget DELEGS)
 ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
-  ( tx ^. body . wdrls
-  , SourceSignalTarget dpSt dpSt' (tx ^. body . certs))
+  ( (_wdrls . _body) tx
+  , SourceSignalTarget dpSt dpSt' ((_certs . _body) tx))
 
 -- | Transform LEDGER `SourceSignalTargets`s to POOL ones.
 ledgerToPoolSsts
   :: SourceSignalTarget LEDGER
   -> [SourceSignalTarget POOL]
 ledgerToPoolSsts (SourceSignalTarget (_, DPState _ p) (_, DPState _ p') tx) =
-  [SourceSignalTarget p p' cert | cert <- toList (tx ^. body . certs)]
+  [SourceSignalTarget p p' cert | cert <- toList ((_certs . _body) tx)]
 
 -- | Transform LEDGER to UTXO `SourceSignalTargets`s
 ledgerToUtxoSsts
@@ -294,6 +293,6 @@ ledgerToUtxowSsts
   :: SourceSignalTarget LEDGER
   -> (StakeCreds, StakePools, SourceSignalTarget UTXOW)
 ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
-  ( delegSt ^. dstate . stkCreds
-  , delegSt ^. pstate . stPools
+  ( (_stkCreds . _dstate) delegSt
+  , (_stPools . _pstate) delegSt
   , SourceSignalTarget utxoSt utxoSt' tx)

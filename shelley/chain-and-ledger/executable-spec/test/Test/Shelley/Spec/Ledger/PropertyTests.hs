@@ -10,8 +10,6 @@ import qualified Data.Map.Strict as Map
 import           Data.MultiSet (filter, fromSet, occur, size, unions)
 import qualified Data.Set as Set
 
-import           Lens.Micro ((%~), (&), (.~), (^.))
-
 import           Hedgehog.Internal.Property (LabelName (..))
 import           Test.Tasty
 import           Test.Tasty.Hedgehog
@@ -22,11 +20,11 @@ import qualified Hedgehog.Gen as Gen
 
 import           Ledger.Core ((<|))
 import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.LedgerState hiding (genDelegs)
+import           Shelley.Spec.Ledger.LedgerState
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Tx (pattern TxIn, pattern TxOut, body, certs, inputs, outputs,
-                     witnessVKeySet, _body, _witnessVKeySet)
+import           Shelley.Spec.Ledger.Tx (pattern TxIn, pattern TxOut, _body, _certs, _inputs,
+                     _outputs, _witnessVKeySet)
 import           Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey, totalDeposits, txid, txins,
                      txouts, verifyWitVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..))
@@ -69,8 +67,8 @@ propPositiveBalance:: Property
 propPositiveBalance =
     property $ do
       initialState <- forAll genNonemptyGenesisState
-      utxoSize (initialState ^. utxoState . utxo) /== 0
-      Coin 0 /== balance (initialState ^. utxoState . utxo)
+      utxoSize ((_utxo . _utxoState) initialState) /== 0
+      Coin 0 /== balance ((_utxo . _utxoState) initialState)
 
 -- | This property states that the balance of the initial genesis state equals
 -- the balance of the end ledger state plus the collected fees.
@@ -83,55 +81,55 @@ propPreserveBalanceInitTx =
         Left _    -> failure
         Right ls' -> do
               classify "non-trivial wealth dist"
-                (isNotDustDist (ls ^. utxoState . utxo) (ls' ^. utxoState . utxo))
-              balance (ls ^. utxoState . utxo) === balance (ls' ^. utxoState . utxo) + fee
+                (isNotDustDist ((_utxo . _utxoState) ls) ((_utxo . _utxoState) ls'))
+              balance ((_utxo . _utxoState) ls) === balance ((_utxo . _utxoState) ls') + fee
 
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Property
 propBalanceTxInTxOut = property $ do
   (l, steps, fee, txwits, l')  <- forAll genValidStateTx
-  let tx                       = txwits ^. body
+  let tx                       = _body txwits
   let inps                     = txins tx
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
-    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
-  (balance $ inps <| (l ^. utxoState . utxo)) === (balance (txouts tx) + fee)
+    (isNotDustDist ((_utxo . _utxoState) l) ((_utxo. _utxoState) l'))
+  (balance $ inps <| ((_utxo . _utxoState) l)) === (balance (txouts tx) + fee)
 
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
 propPreserveOutputs = property $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
-  let tx                    = txwits ^. body
+  let tx                    = _body txwits
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
-    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
-  True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ l' ^. utxoState . utxo)
+    (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l'))
+  True === Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ (_utxo . _utxoState) l')
 
 -- | Property (Eliminate Inputs of Transaction)
 propEliminateInputs :: Property
 propEliminateInputs = property $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
-  let tx                    = txwits ^. body
+  let tx                    = _body txwits
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
-    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
+    (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l'))
   -- no element of 'txins tx' is a key in the 'UTxO' of l'
-  Map.empty === Map.restrictKeys (utxoMap $ l' ^. utxoState . utxo) (txins tx)
+  Map.empty === Map.restrictKeys (utxoMap $ (_utxo . _utxoState) l') (txins tx)
 
 -- | Property (Completeness and Collision-Freeness of new TxIds)
 propUniqueTxIds :: Property
 propUniqueTxIds = property $ do
   (l, steps, _, txwits, l') <- forAll genValidStateTx
-  let tx                    = txwits ^. body
-  let origTxIds             = collectIds <$> Map.keys (utxoMap (l ^. utxoState . utxo))
+  let tx                    = _body txwits
+  let origTxIds             = collectIds <$> Map.keys (utxoMap ((_utxo . _utxoState) l))
   let newTxIds              = collectIds <$> Map.keys (utxoMap (txouts tx))
   let txId                  = txid tx
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
-    (isNotDustDist (l ^. utxoState . utxo) (l' ^. utxoState . utxo))
+    (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l'))
   True === (all (== txId) newTxIds &&
              notElem txId origTxIds &&
-            Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ l' ^. utxoState . utxo))
+            Map.isSubmapOf (utxoMap $ txouts tx) (utxoMap $ (_utxo . _utxoState) l'))
          where collectIds (TxIn txId _) = txId
 
 -- | Property checks no double spend occurs in the currently generated 'TxWits'
@@ -142,7 +140,7 @@ propNoDoubleSpend = withTests 1000 $ property $ do
       case next of
         Left _  -> failure
         Right _ -> do
-          let inputIndicesSet = unions $ map (\txwit -> fromSet $ txwit ^. body . inputs) txs
+          let inputIndicesSet = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
           0 === Data.MultiSet.size (Data.MultiSet.filter
                      (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
                      inputIndicesSet)
@@ -154,7 +152,7 @@ classifyInvalidDoubleSpend :: Property
 classifyInvalidDoubleSpend = withTests 1000 $ property $ do
       (_, _, _, _, txs, LedgerValidation validationErrors _)
           <- forAll genNonEmptyAndAdvanceTx'
-      let inputIndicesSet  = unions $ map (\txwit -> fromSet $ txwit ^. body . inputs) txs
+      let inputIndicesSet  = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
       let multiSpentInputs = Data.MultiSet.size $ Data.MultiSet.filter
                                    (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
                                    inputIndicesSet
@@ -291,7 +289,7 @@ propBalanceTxInTxOut' =
   let tx                       = _body txwits
   let inps                     = txins tx
   let getErrors (LedgerValidation valErrors _) = valErrors
-  let balanceSource            = balance $ inps <| (l ^. utxoState . utxo)
+  let balanceSource            = balance $ inps <| ((_utxo . _utxoState) l)
   let balanceTarget            = balance $ txouts tx
   let valErrors                = getErrors lv
   let nonTrivial               =  balanceSource /= Coin 0
@@ -299,8 +297,8 @@ propBalanceTxInTxOut' =
   classify "non-valid, OK" (valErrors /= [] && balanceOk && nonTrivial)
   if valErrors /= [] && balanceOk && nonTrivial
 
-  then label $ LabelName (   "inputs: "     ++ show (show $ Set.size $ tx ^. inputs)
-              ++ " outputs: "   ++ show (show $ length $ tx ^. outputs)
+  then label $ LabelName (   "inputs: "     ++ show (show $ Set.size $ _inputs tx)
+              ++ " outputs: "   ++ show (show $ length $ _outputs tx)
               ++ " balance l "  ++ show balanceSource
               ++ " balance l' " ++ show balanceTarget
               ++ " txfee " ++ show fee
@@ -322,12 +320,12 @@ propCheckRedundantWitnessSet :: Property
 propCheckRedundantWitnessSet = property $ do
   (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
   let keyPair                  = fst $ head keyPairs
-  let tx                       = txwits ^. body
+  let tx                       = _body txwits
   let witness                  = makeWitnessVKey tx keyPair
-  let txwits'                  = txwits & witnessVKeySet %~ Set.insert witness
+  let txwits'                  = txwits {_witnessVKeySet = (Set.insert witness (_witnessVKeySet txwits))}
   let l''                      = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l txwits' (Coin 0)
   classify "unneeded signature added"
-    (not $ witness `Set.member` (txwits ^. witnessVKeySet))
+    (not $ witness `Set.member` (_witnessVKeySet txwits))
   case l'' of
     Right _                    ->
         True === Set.null (
@@ -339,10 +337,15 @@ propCheckMissingWitness :: Property
 propCheckMissingWitness = property $ do
   (l, steps, _, txwits, _) <- forAll genValidStateTx
   witnessList              <- forAll (Gen.subsequence $
-                                        Set.toList (txwits ^. witnessVKeySet))
-  let witnessVKeySet''          = txwits ^. witnessVKeySet
+                                        Set.toList (_witnessVKeySet txwits))
+  let witnessVKeySet''          = _witnessVKeySet txwits
   let witnessVKeySet'           = Set.fromList witnessList
-  let l'                    = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l (txwits & witnessVKeySet .~ witnessVKeySet') (Coin 0)
+  let l'                    = asStateTransition
+                                (SlotNo $ fromIntegral steps)
+                                emptyPParams
+                                l
+                                (txwits {_witnessVKeySet = witnessVKeySet'})
+                                (Coin 0)
   let isRealSubset          = witnessVKeySet' `Set.isSubsetOf` witnessVKeySet'' &&
                               witnessVKeySet' /= witnessVKeySet''
   classify "real subset" isRealSubset
@@ -357,10 +360,10 @@ propPreserveBalance :: Property
 propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- forAll genValidStateTx
   let destroyed =
-           balance (l ^. utxoState . utxo)
-        + (keyRefunds emptyPParams (l ^. delegationState . dstate . stkCreds) $ tx ^. body)
+           balance ((_utxo . _utxoState) l)
+        + (keyRefunds emptyPParams ((_stkCreds . _dstate . _delegationState) l) $ _body tx)
   let created =
-           balance (l' ^. utxoState . utxo)
+           balance ((_utxo . _utxoState) l')
         + fee
-        + (totalDeposits emptyPParams (l' ^. delegationState . pstate . stPools) $ toList $ tx ^.body . certs)
+        + (totalDeposits emptyPParams ((_stPools . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx)
   destroyed === created

@@ -11,7 +11,6 @@ import qualified Data.Map as M
 import qualified Data.Maybe as Maybe (maybe)
 import qualified Data.Set as S
 import           Data.Word (Word64)
-import           Lens.Micro (to, (^.))
 
 import           Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 
@@ -23,13 +22,13 @@ import           Ledger.Core (dom, (∈), (∉))
 
 import           Shelley.Spec.Ledger.BaseTypes ((==>))
 import           Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
-import           Shelley.Spec.Ledger.LedgerState (pattern PState, pParams, retiring, stPools,
-                     _retiring, _stPools)
+import           Shelley.Spec.Ledger.LedgerState (pattern PState, _pParams, _retiring, _stPools,
+                     _stPools)
 import           Shelley.Spec.Ledger.PParams (_eMax)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..))
 import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
 import           Shelley.Spec.Ledger.TxData (pattern DCertPool, pattern KeyHashObj, pattern RegPool,
-                     pattern RetirePool, pattern StakePools, poolPubKey)
+                     pattern RetirePool, pattern StakePools, unStakePools, _poolPubKey)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (KeyHash, LEDGER, POOL, PState,
                      PoolParams, StakePools)
@@ -124,7 +123,7 @@ registeredPoolIsAdded env ssts =
    where
     check :: PoolParams -> Property
     check poolParams = do
-      let hk = poolParams ^. poolPubKey
+      let hk = _poolPubKey poolParams
           sSt = source sst
           tSt = target sst
 
@@ -132,21 +131,21 @@ registeredPoolIsAdded env ssts =
         [ -- Check for pool re-registration. If we register a pool which was already
           -- registered (indicated by presence in `stPools`), then we check that it
           -- is not in `retiring` after the signal has been processed.
-          if hk ∈ dom (sSt ^. stPools . to (\(StakePools x) -> x))
+          if hk ∈ dom ((unStakePools . _stPools) sSt)
             then
               conjoin
                 [ counterexample "Pool re-registration: pool should be in 'retiring' before signal"
-                    (hk ∈ dom (sSt ^. retiring))
+                    (hk ∈ dom (_retiring sSt))
                 , counterexample "Pool re-registration: pool should not be in 'retiring' after signal"
-                    (hk ∉ dom (tSt ^. retiring))
+                    (hk ∉ dom (_retiring tSt))
                 ]
             else property ()
 
         , counterexample "PoolParams are registered in pParams map"
-            (M.lookup hk (tSt ^. pParams) === Just poolParams)
+            (M.lookup hk (_pParams tSt) === Just poolParams)
 
         , counterexample "Hashkey is registered in stPools map"
-            (M.lookup hk (tSt ^. stPools . to (\(StakePools x) -> x))
+            (M.lookup hk ((unStakePools . _stPools) tSt)
                === Just (ledgerSlotNo env))
         ]
 
@@ -170,9 +169,9 @@ poolIsMarkedForRetirement ssts =
     wasRemoved :: KeyHash -> Property
     wasRemoved hk = conjoin
       [ counterexample "hk not in stPools"
-          (hk ∈ dom (source sst ^. (stPools . to (\(StakePools x) -> x))))
+          (hk ∈ dom ((unStakePools . _stPools) (source sst)))
       , counterexample "hk is not in target's retiring"
-          (hk ∈ dom (target sst ^. retiring))
+          (hk ∈ dom (_retiring $ target sst))
       ]
 
 -- | Assert that PState maps are in sync with each other after each `Signal

@@ -29,7 +29,6 @@ import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Ledger.Core (dom, range, (∪), (⊆), (⋪))
-import           Lens.Micro ((^.))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Delegation.Certificates
@@ -172,7 +171,7 @@ utxoInductive = do
 
   let refunded = keyRefunds pp stakeCreds txb
   decayed <- liftSTS $ decayedTx pp stakeCreds txb
-  let txCerts = toList $ txb ^. certs
+  let txCerts = toList $ _certs txb
   let depositChange = totalDeposits pp stakepools txCerts - (refunded + decayed)
 
   pure UTxOState

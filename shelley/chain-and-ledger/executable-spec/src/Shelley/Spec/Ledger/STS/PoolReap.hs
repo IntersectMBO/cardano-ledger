@@ -16,13 +16,13 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
-import           Lens.Micro ((^.))
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Delegation.Certificates
+import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import           Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import           Shelley.Spec.Ledger.EpochBoundary (poolRefunds)
-import           Shelley.Spec.Ledger.LedgerState
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DState (..), PState (..),
+                     UTxOState (..), emptyAccount, emptyDState, emptyPState, emptyUTxOState)
+import           Shelley.Spec.Ledger.PParams (PParams (..))
+import           Shelley.Spec.Ledger.Slot (EpochNo (..), epochInfoFirst)
 import           Shelley.Spec.Ledger.TxData (_poolRAcnt)
 
 data POOLREAP crypto
@@ -55,10 +55,10 @@ poolReapTransition = do
   firstSlot <- liftSTS $ do
     ei <- asks epochInfo
     epochInfoFirst ei e
-  let retired = dom $ (ps ^. retiring) ▷ Set.singleton e
+  let retired = dom $ (_retiring ps) ▷ Set.singleton e
       StakePools stpools = _stPools ps
       pr = poolRefunds pp (retired ◁ stpools) firstSlot
-      rewardAcnts = Map.map _poolRAcnt $ retired ◁ (ps ^. pParams)
+      rewardAcnts = Map.map _poolRAcnt $ retired ◁ (_pParams ps)
       rewardAcnts' = Map.fromList . Map.elems $ Map.intersectionWith (,) rewardAcnts pr
       (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈  dom (_rewards ds)) rewardAcnts'
       refunded = sum $ Map.elems refunds

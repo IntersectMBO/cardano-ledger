@@ -27,7 +27,7 @@ import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Delegation.Certificates
 import           Shelley.Spec.Ledger.LedgerState (DPState, emptyDelegation, _dstate, _pstate)
-import           Shelley.Spec.Ledger.PParams hiding (d)
+import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..))
 import           Shelley.Spec.Ledger.STS.Pool
