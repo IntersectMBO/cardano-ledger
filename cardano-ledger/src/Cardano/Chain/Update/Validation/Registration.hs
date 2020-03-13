@@ -376,7 +376,7 @@ canUpdate adoptedPP proposedPP proposal = do
                      (TooLarge adoptedMaxBlockSize newMaxBlockSize)
 
   -- Check that the new max transaction size is less than the new max block size
-  (newMaxTxSize <=  newMaxBlockSize)
+  (newMaxTxSize < newMaxBlockSize)
     `orThrowError` MaxTxSizeTooLarge
                      (TooLarge newMaxBlockSize newMaxTxSize)
 
