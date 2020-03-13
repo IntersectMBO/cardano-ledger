@@ -172,6 +172,7 @@ test-suite shelley-spec-ledger-test
       containers,
       cryptonite,
       cs-ledger,
+      directory,
       shelley-spec-ledger,
       hedgehog,
       multiset,
