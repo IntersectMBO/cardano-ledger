@@ -169,8 +169,10 @@ First version officially published on the IOHK blog.}
 \change{2019-06-07}{PK, LB, DC}{FM (IOHK)}{Update section on script addresses.}
 \change{2019/10/09}{Kevin Hammond}{FM (IOHK)}{Added standard cover page.}
 \change{2020-02-28}{PK}{FM (IOHK)}{Clarify when to use active/total stake.}
-  \end{changelog}
-      \clearpage%
+\change{2020/03/11}{DC}{FM (IOHK)}{Document the metadata feature.}
+\end{changelog}
+
+\clearpage%
 \begin{landscape}
 \floatstyle{plain}
 \restylefloat{figure}
@@ -4509,6 +4511,168 @@ certificate. But all pools are incentivised to include the certificate, via
 fees. So this censorship would only happen if a majority of pools decided to
 partake in malicious behaviour and attack the system, against their direct
 incentives.
+
+\section{Transaction Metadata}
+
+Adding metadata to transactions is a useful new feature in Cardano Shelley.
+It is not related to delegation or decentralisation.
+
+\subsection{Motivation and design goals}
+
+The purpose is to enable a range of new applications by allowing arbitrary
+structured data to be included onto the chain, and to make effective use of
+that data. The term `metadata' is perhaps a misnomer since it is simply about
+placing application specific data on the chain; it is only metadata from the
+point of view of a transaction since it is carried along with transactions and
+not involved in validation.
+
+A design goal is to add very little complexity to the on-chain part of the
+system but to get (or allow for) as much functionality as possible, in
+combination with other features or components. This helps keep implementation
+complexity lower. Importantly it keeps the size of the trusted base low, by
+having the complex functionality to use the metadata outside of the trusted
+base.
+
+A design principle that we preserve is that the historical data on the chain is
+not needed to validate the next block or transaction. All data needed for later
+validation must be explicitly tracked in the ledger state. This means the old
+part of the chain does not need to be preserved locally at all, or at least not
+in random access storage. This avoids a problem that Ethereum ran into with
+disk I/O becoming a performance bottleneck. This is why the design does not
+include metadata into the ledger state, and does not make it accessible to
+later scripts.
+
+\subsection{Detail}
+
+The transaction can contain metadata. The metadata hash is part of the body of
+the transaction so is covered by all transaction signatures. This allows for
+integrity checking and authentication of the metadata.
+
+The metadata value is kept outside of the transaction body, much like the
+transaction witnesses. This follows the `segmented witness' design idea that
+allows witnesses to be discarded when the data is known to have been checked.
+We go one step further and keep the metadata outside the body separately from
+the witnesses too, in principle allowing an implementation to store or discard
+the metadata or the witnesses independently of each other.
+
+The structure of the metadata is a mapping from keys to values. The keys are
+unsigned integers limited in size up to 64 bits. The values are simple
+structured terms, consisting of integers, text strings, byte strings, lists and
+maps.
+
+There is no limit on the number of key-value pairs, except that imposed by the
+overall transaction size limit. There is also no limit on individual structured
+values, but there is a limit on the size of text strings and byte strings
+within the structured values.
+
+A key aspect of the design is that metadata included in transactions is not
+available for later retrieval from within the ledger validation rules,
+including scripts. The metadata is not entered into the ledger state, and
+general historical chain data is not otherwise available to the ledger
+validation rules.
+
+The changes to the ledger validation rules are thus very limited: only the
+metadata syntax, metadata size limits and the effect of the metadata on the
+transaction size calculation and thus the transaction fees. No data is added
+to the ledger state. The metadata resides only on the chain.
+
+There are no special fees for metadata. The metadata simply contributes to the
+size of the transaction and fees are based on the transaction size. This choice
+is justified by the fact that the cost to operators is only the one-time
+processing cost and any long term storage of the blockchain. There is no long
+term random access state.
+
+The metadata within a transaction will be made available to validation scripts,
+including Plutus Core scripts. Note again that this is only the immediate
+transaction being validated. No metadata from predecessor transactions is
+available.
+
+\subsection{Explanation and use}
+
+The purpose of the metadata being a key value mapping is to make it
+straightforward to combine metadata for multiple purposes into the same
+transaction. Think of the metadata key as being a schema identifier, that
+says what the metadata value is. There is however no on-chain schema
+enforcement. The interpretation of the data is entirely up to the applications
+that consume it.
+
+It may make sense to establish a public registry of known metadata keys and
+corresponding schemas.
+
+The metadata value is required to be structured data rather than a single
+unstructured blob. The available structure is like a simplified version of JSON.
+This makes the data easier to inspect and manipulate, particularly by scripts,
+such as Plutus scripts, in future evolutions of the system. The metadata values
+do not include floating point numbers because on-chain script languages cannot
+support such types.
+
+The size of strings in the structured value is limited to mitigate the problem
+of unpleasant or illegal content being posted to the blockchain. It does not
+prevent this problem entirely, but it means that it is not as simple as posting
+large binary blobs.
+
+Of course posting data to the chain is only half the story. It must also be
+possible to use it effectively. Part of the design is that the data is not
+kept in random-access storage for use by on-chain scripts, so that validating
+the chain does not require random access to old parts of the chain or large
+databases. So the design calls for metadata use to be managed off-chain using
+an indexing service.
+
+An indexing service, much like an explorer, enables the collection,
+authentication and query of the metadata that is posted on the chain. It is
+clear that an agent can follow the chain and write all transaction metadata
+into a relational database for later query. This is the design that the
+backends for many blockchain explorers use. This solves the collection and
+query parts of the problem, but not the authentication part.
+
+Using HD wallet schemes however, the authenticity of the metadata can be
+ensured. Depending on the HD scheme -- using public or non-public key
+derivation -- the metadata can be publicly verifiable, or only privately
+verifiable.
+
+For example, a simple scheme to track the issuance of physical items could
+involve the original owner posting metadata within transactions that spend from
+a designated wallet. An indexing server that knows the HD wallet structure (and
+either public or private keys depending on the HD scheme) can track the wallet
+and index all the metadata in transactions from that wallet (or wallet
+sub-account).
+
+Such schemes have a great deal of flexibility since there is a lot of
+flexibility in HD wallet schemes. With public HD derivation, the indexing
+server does not need any signing keys, just an appropriate verification key of
+a sub-tree in the HD wallet space. If that verification key is revealed then
+anyone can reliably run the indexing service, and anyone can verify that the
+metadata is authentic. If the verification key is not revealed then only the
+owner can run the indexing service, and be used to implement some lookup or
+verification service, or it can reveal the authenticity of a particular address
+without revealing all addresses.
+
+It is even possible in principle to use multi-signature wallets, or wallets
+involving scripts. There just needs to be some wallet scheme that the indexing
+service can use to reliably track and authenticate the transactions using the
+wallet.
+
+Obviously, to take advantage of these possibilities requires suitable wallet
+and indexing components. These are however independent components and their
+complexity does not impact the complexity of the on-chain rules, so does not
+add to the size of the trusted base of the overall system.
+
+\subsection{Binary schema}
+
+The binary schema is very simple. The notation is CBOR CDDL (much like BNF).
+
+\begin{verbatim}
+metadata = { * metadata_key => metadata_value }
+
+metadata_key = uint
+
+metadata_value =
+    int
+  / bytes .size 64
+  / text  .size 64
+  / [ * metadata_value ]
+  / { * metadata_value => metadata_value }
+\end{verbatim}
 
 \addcontentsline{toc}{section}{References}
 %\bibliographystyle{plainnat}
