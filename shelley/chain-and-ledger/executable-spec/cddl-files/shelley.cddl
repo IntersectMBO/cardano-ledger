@@ -182,13 +182,10 @@ script =
   // 3, uint, [ * script ]
   ]
 
-unit_interval = rational
-
-; rational =  #6.30( TODO use the cbor tag
-rational =
+rational =  #6.30(
    [ numerator   : uint
    , denominator : uint
-   ] ;)
+   ])
 
 coin = uint
 epoch = uint

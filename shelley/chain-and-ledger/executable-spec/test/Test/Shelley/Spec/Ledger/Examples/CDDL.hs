@@ -50,7 +50,6 @@ cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @AVUpdate      30 "application_version_update_votes"
     , cddlTest @PPUpdate      30 "protocol_param_update_votes"
     , cddlTest @PParamsUpdate 30 "protocol_param_update"
-    , cddlTest @PParamsUpdate 30 "protocol_param_update"
     , cddlTest @Tx            30 "transaction"
     , cddlTest @LaxBlock      30 "block"
     ] <*> pure cddl
@@ -59,8 +58,8 @@ combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
   base <- BSL.readFile "cddl-files/shelley.cddl"
   crypto <- BSL.readFile "cddl-files/mock/crypto.cddl"
-  finset <- BSL.readFile "cddl-files/mock/finset.cddl"
-  pure $ base <> crypto <> finset
+  extras <- BSL.readFile "cddl-files/mock/extras.cddl"
+  pure $ base <> crypto <> extras
 
 cddlTest
   :: forall a. (ToCBOR a, FromCBOR a)

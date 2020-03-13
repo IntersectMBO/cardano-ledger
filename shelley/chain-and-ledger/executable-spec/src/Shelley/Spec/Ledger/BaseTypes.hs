@@ -48,6 +48,8 @@ import           Data.Word (Word64, Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
+import           Shelley.Spec.Ledger.Serialization (rationalFromCBOR, rationalToCBOR)
+
 data E34
 
 instance FP.HasResolution E34 where
@@ -65,7 +67,17 @@ fpEpsilon = (10::FixedPoint)^(17::Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnsafeUnitInterval Rational   -- TODO: Fixed precision
-    deriving (Show, Ord, Eq, NoUnexpectedThunks, ToCBOR, FromCBOR)
+    deriving (Show, Ord, Eq, NoUnexpectedThunks)
+
+instance ToCBOR UnitInterval where
+  toCBOR (UnsafeUnitInterval u) = rationalToCBOR u
+
+instance FromCBOR UnitInterval where
+  fromCBOR = do
+    r <- rationalFromCBOR
+    case mkUnitInterval r of
+      Nothing -> cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
+      Just u -> pure u
 
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
 mkUnitInterval :: Rational -> Maybe UnitInterval
