@@ -34,8 +34,6 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
-import           Lens.Micro ((^.))
-
 import           Numeric.Natural
 
 import           Hedgehog
@@ -46,9 +44,9 @@ import qualified Hedgehog.Range as Range
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
-import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody, dstate,
-                     genesisCoins, genesisState, stkCreds, utxo, utxoState, validTx,
-                     _delegationState, _dstate, _genDelegs, _utxoState)
+import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody,
+                     genesisCoins, genesisState, validTx, _delegationState, _dstate, _genDelegs,
+                     _stkCreds, _utxo, _utxoState)
 import           Shelley.Spec.Ledger.PParams (PParams (..), emptyPParams)
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Delegs (pattern DelegateeNotRegisteredDELEG,
@@ -60,7 +58,7 @@ import           Shelley.Spec.Ledger.STS.Utxo (pattern BadInputsUTxO, pattern Ex
 import           Shelley.Spec.Ledger.STS.Utxow (pattern InvalidWitnessesUTXOW,
                      pattern MissingScriptWitnessesUTXOW, pattern MissingVKeyWitnessesUTXOW,
                      PredicateFailure (..))
-import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxOut, body)
+import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxOut, _body)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg,
                      pattern DCertPool, pattern DeRegKey, pattern Delegate, pattern Delegation,
                      pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..),
@@ -195,7 +193,7 @@ genTx keyList (UTxO m) cslot = do
 genLedgerStateTx :: KeyPairs -> SlotNo -> LedgerState ->
                     Gen (Coin, Tx, Either [ValidationError] LedgerState)
 genLedgerStateTx keyList (SlotNo _slot) sourceState = do
-  let utxo' = sourceState ^. utxoState . utxo
+  let utxo' = (_utxo . _utxoState) sourceState
   slot' <- genWord64 _slot (_slot + 100)
   (txfee', tx) <- genTx keyList utxo' (SlotNo slot')
   pure (txfee', tx, asStateTransition (SlotNo slot') defPCs sourceState tx (Coin 0))
@@ -253,7 +251,7 @@ repeatCollectTx'
     -> [ValidationError]
     -> Gen (Coin, [Tx], LedgerValidation)
 repeatCollectTx' n keyPairs fees ls txs validationErrors
- | n == 0 || (utxoSize $ ls ^. utxoState . utxo) == 0 =
+ | n == 0 || (utxoSize $ (_utxo . _utxoState) ls) == 0 =
      pure (fees, reverse txs, LedgerValidation validationErrors ls)
  | otherwise = do
     (txfee', tx, LedgerValidation errors' ls') <- genLedgerStateTx' keyPairs ls
@@ -306,7 +304,7 @@ genStateTx = do
 genLedgerStateTx' :: KeyPairs -> LedgerState ->
                     Gen (Coin, Tx, LedgerValidation)
 genLedgerStateTx' keyList sourceState = do
-  let utxo' = sourceState ^. utxoState . utxo
+  let utxo' = (_utxo . _utxoState) sourceState
   _slot <- genWord64 0 1000
   (txfee', tx) <- genTx keyList utxo' (SlotNo _slot)
   tx'          <- mutateTx tx
@@ -340,7 +338,7 @@ genDelegation keys d = do
   poolKey      <- Gen.element $ Map.keys stkCreds'
   delegatorKey <- getAnyStakeKey keys
   pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
-       where (StakeCreds stkCreds') = d ^. dstate . stkCreds
+       where (StakeCreds stkCreds') = (_stkCreds . _dstate) d
 
 genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
 genDCertDelegate keys ds = (DCertDeleg . Delegate) <$> genDelegation keys ds
@@ -381,7 +379,7 @@ asStateTransition'
   -> Coin
   -> LedgerValidation
 asStateTransition' _slot pp (LedgerValidation valErrors ls) tx _ =
-    let ls' = applyTxBody ls pp (tx ^. body)
+    let ls' = applyTxBody ls pp (_body tx)
         d'  = (_genDelegs . _dstate . _delegationState) ls
     in
     case validTx tx d' _slot pp ls of

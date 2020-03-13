@@ -12,8 +12,6 @@ import           Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 
-import           Lens.Micro ((&), (.~), (^.))
-
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
@@ -31,13 +29,13 @@ import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
 import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern LedgerState, pattern UTxOState,
-                     delegationState, delegations, dstate, emptyDelegation, genesisCoins,
-                     genesisId, genesisState, minfee, overlaySchedule, pParams, pstate, ptrs,
-                     retiring, rewards, stPools, stkCreds)
+                     emptyDelegation, genesisCoins, genesisId, genesisState, minfee,
+                     overlaySchedule, _delegationState, _delegations, _dstate, _pParams, _pstate,
+                     _ptrs, _retiring, _rewards, _stPools, _stkCreds)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
-                     body, ttl)
+                     _body, _ttl)
 import           Shelley.Spec.Ledger.Updates
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
 
@@ -91,8 +89,11 @@ genesis = (genesisState Map.empty . genesisCoins)
             , TxOut bobAddr bobInitCoin ]
 
 changeReward :: LedgerState -> RewardAcnt -> Coin -> LedgerState
-changeReward ls acnt c = ls & delegationState . dstate . rewards .~ newAccounts
-  where newAccounts = Map.insert acnt c (ls ^. delegationState . dstate. rewards)
+changeReward ls acnt c = ls {_delegationState = delSt {_dstate = dstate' {_rewards = newAccounts}}}
+  where
+    delSt = _delegationState ls
+    dstate' = _dstate delSt
+    newAccounts = Map.insert acnt c ((_rewards . _dstate . _delegationState) ls)
 
 stakePoolKey1 :: KeyPair
 stakePoolKey1 = KeyPair 5 5
@@ -128,15 +129,21 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
   let
     ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
+    dstate' = _dstate stakeKeyRegistration
+    pstate' = _pstate stakeKeyRegistration
   in ls2 @?= Right
          (LedgerState
           utxoState'
           (stakeKeyRegistration
-           & dstate . delegations .~
-                Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
-           & pstate . stPools .~ (StakePools $ Map.fromList [(poolhk, SlotNo 0)])
-           & pstate . pParams .~ Map.fromList [(poolhk, pool)])
+            { _dstate = dstate'
+               { _delegations = Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)] }
+            , _pstate = pstate'
+               { _stPools = (StakePools $ Map.fromList [(poolhk, SlotNo 0)])
+               , _pParams = Map.fromList [(poolhk, pool)]
+               }
+            }
           )
+         )
 
 testValidRetirement ::
   [Tx] -> UTxOState -> DPState -> EpochNo -> PoolParams -> Assertion
@@ -144,16 +151,23 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
   let
     ls2 = ledgerState txs
     poolhk = hashKey $ vKey stakePoolKey1
+    dstate' = _dstate stakeKeyRegistration
+    pstate' = _pstate stakeKeyRegistration
   in ls2 @?= Right
          (LedgerState
           utxoState'
           (stakeKeyRegistration
-           & dstate . delegations .~
-                Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)]
-           & pstate . stPools .~  (StakePools $ Map.fromList [(poolhk, SlotNo 0)])
-           & pstate . pParams .~ Map.fromList [(poolhk, pool)]
-           & pstate . retiring .~ Map.fromList [(poolhk, e)])
+            {
+              _dstate = dstate'
+                { _delegations = Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)] }
+            , _pstate = pstate'
+                { _stPools  = StakePools $ Map.fromList [(poolhk, SlotNo 0)]
+                , _pParams  = Map.fromList [(poolhk, pool)]
+                , _retiring = Map.fromList [(poolhk, e)]
+                }
+            }
           )
+         )
 
 bobWithdrawal :: Map RewardAcnt Coin
 bobWithdrawal = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 10)
@@ -181,8 +195,10 @@ testValidWithdrawal =
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
     ls = asStateTransition
            (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty Nothing) (Coin 0)
-    expectedDS = emptyDelegation & dstate . rewards .~
-                   Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)
+    dstate' = _dstate emptyDelegation
+    expectedDS = emptyDelegation
+      { _dstate = dstate' {_rewards = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)}}
+
   in ls @?= Right (LedgerState
                      (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyUpdateState)
                      expectedDS
@@ -202,7 +218,7 @@ testInvalidWintess =
            (SlotNo 1)
            emptyUpdate
            Nothing
-    tx' = tx & ttl .~ SlotNo 2
+    tx' = tx { _ttl = SlotNo  2}
     wits = makeWitnessesVKey tx' [alicePay]
   in ledgerState [Tx tx wits Map.empty Nothing] @?= Left [InvalidWitness]
 
@@ -275,8 +291,8 @@ utxoSt1 :: UTxOState
 utxoSt1 = UTxOState
             (UTxO $ Map.fromList
                [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-               , (TxIn (txid $ tx1 ^. body) 0, TxOut aliceAddr (Coin 6400))
-               , (TxIn (txid $ tx1 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+               , (TxIn (txid $ _body tx1) 0, TxOut aliceAddr (Coin 6400))
+               , (TxIn (txid $ _body tx1) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 0)
             (Coin 600)
             emptyUpdateState
@@ -299,15 +315,15 @@ utxoSt2 :: UTxOState
 utxoSt2 = UTxOState
             (UTxO $ Map.fromList
               [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
-              , (TxIn (txid $ tx2 ^. body) 0, TxOut aliceAddr (Coin 5400))
-              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+              , (TxIn (txid $ _body tx2) 0, TxOut aliceAddr (Coin 5400))
+              , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 300)
             (Coin 1300)
             emptyUpdateState
 
 tx3Body :: TxBody
 tx3Body = TxBody
-          (Set.fromList [TxIn (txid $ tx2 ^. body) 0])
+          (Set.fromList [TxIn (txid $ _body tx2) 0])
           (Seq.singleton $ TxOut aliceAddr (Coin 3950))
           (Seq.fromList [ DCertPool (RegPool stakePool)
                         , DCertDeleg (Delegate (Delegation
@@ -328,26 +344,30 @@ utxoSt3 = UTxOState
             (UTxO $ Map.fromList
               [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
               , (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 3950))
-              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+              , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 2500)
             emptyUpdateState
 
 stakeKeyRegistration1 :: DPState
 stakeKeyRegistration1 = emptyDelegation
-  & dstate . rewards .~
-      Map.fromList [ (mkVKeyRwdAcnt aliceStake, Coin 0)
-                   , (mkVKeyRwdAcnt bobStake, Coin 0)
-                   , (mkVKeyRwdAcnt stakePoolKey1, Coin 0)]
-  & dstate . stkCreds .~ (StakeCreds $
-      Map.fromList [ (KeyHashObj $ hashKey $ vKey aliceStake, SlotNo 0)
-                   , (KeyHashObj $ hashKey $ vKey bobStake, SlotNo 0)
-                   , (KeyHashObj $ hashKey $ vKey stakePoolKey1, SlotNo 0)])
-  & dstate . ptrs .~
-      Map.fromList [ (Ptr (SlotNo 0) 0 0, KeyHashObj $ hashKey $ vKey aliceStake)
-                   , (Ptr (SlotNo 0) 0 1, KeyHashObj $ hashKey $ vKey bobStake)
-                   , (Ptr (SlotNo 0) 0 2, KeyHashObj $ hashKey $ vKey stakePoolKey1)
-                   ]
+  { _dstate = (_dstate emptyDelegation)
+      {
+        _rewards = Map.fromList
+          [ (mkVKeyRwdAcnt aliceStake, Coin 0)
+          , (mkVKeyRwdAcnt bobStake, Coin 0)
+          , (mkVKeyRwdAcnt stakePoolKey1, Coin 0)]
+      , _stkCreds = StakeCreds $ Map.fromList
+          [ (KeyHashObj $ hashKey $ vKey aliceStake, SlotNo 0)
+          , (KeyHashObj $ hashKey $ vKey bobStake, SlotNo 0)
+          , (KeyHashObj $ hashKey $ vKey stakePoolKey1, SlotNo 0)]
+      , _ptrs    = Map.fromList
+          [ (Ptr (SlotNo 0) 0 0, KeyHashObj $ hashKey $ vKey aliceStake)
+          , (Ptr (SlotNo 0) 0 1, KeyHashObj $ hashKey $ vKey bobStake)
+          , (Ptr (SlotNo 0) 0 2, KeyHashObj $ hashKey $ vKey stakePoolKey1)
+          ]
+      }
+  }
 
 stakePool :: PoolParams
 stakePool = PoolParams
@@ -383,7 +403,7 @@ stakePoolUpdate = PoolParams
 
 tx4Body :: TxBody
 tx4Body = TxBody
-          (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
+          (Set.fromList [TxIn (txid $ _body tx3) 0])
           (Seq.singleton $ TxOut aliceAddr (Coin 2950)) -- Note the deposit is not charged
           (Seq.fromList [ DCertPool (RegPool stakePoolUpdate) ])
           (Wdrl Map.empty)
@@ -400,7 +420,7 @@ utxoSt4 = UTxOState
             (UTxO $ Map.fromList
               [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
               , (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950))
-              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+              , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 3500)
             emptyUpdateState
@@ -410,14 +430,14 @@ utxo5 e = UTxOState
             (UTxO $ Map.fromList
               [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
               , (TxIn (txid $ tx5Body e) 0, TxOut aliceAddr (Coin 2950))
-              , (TxIn (txid $ tx2 ^. body) 1, TxOut bobAddr (Coin 3000)) ])
+              , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 3500)
             emptyUpdateState
 
 tx5Body :: EpochNo -> TxBody
 tx5Body e = TxBody
-          (Set.fromList [TxIn (txid $ tx3 ^. body) 0])
+          (Set.fromList [TxIn (txid $ _body tx3) 0])
           (Seq.singleton $ TxOut aliceAddr (Coin 2950))
           (Seq.fromList [ DCertPool (RetirePool (hashKey $ vKey stakePoolKey1) e) ])
           (Wdrl Map.empty)

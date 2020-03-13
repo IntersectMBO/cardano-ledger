@@ -25,7 +25,6 @@ module Shelley.Spec.Ledger.UTxO
   , txins
   , txinLookup
   , txouts
-  , txUpdate
   , txup
   , balance
   , totalDeposits
@@ -36,8 +35,6 @@ module Shelley.Spec.Ledger.UTxO
   , scriptsNeeded
   , txinsScript
   ) where
-
-import           Lens.Micro ((^.))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -56,9 +53,9 @@ import           Shelley.Spec.Ledger.Keys (AnyKeyHash, KeyDiscriminator (..), Ke
 import           Shelley.Spec.Ledger.PParams (PParams (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), pattern DeRegKey,
-                     pattern Delegate, pattern Delegation, PoolCert (..), ScriptHash, TxBody (..),
-                     TxId (..), TxIn (..), TxOut (..), Wdrl (..), WitVKey (..), getRwdCred, inputs,
-                     outputs, poolPubKey, txUpdate)
+                     pattern Delegate, pattern Delegation, PoolCert (..), PoolParams (..),
+                     ScriptHash, TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..),
+                     WitVKey (..), getRwdCred)
 import           Shelley.Spec.Ledger.Updates (Update)
 
 import           Data.Coerce (coerce)
@@ -111,7 +108,7 @@ txid = TxId . hash
 txins
   :: TxBody crypto
   -> Set (TxIn crypto)
-txins = flip (^.) inputs
+txins = _inputs
 
 -- |Compute the transaction outputs of a transaction.
 txouts
@@ -119,7 +116,7 @@ txouts
   => TxBody crypto
   -> UTxO crypto
 txouts tx = UTxO $
-  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (toList $ tx ^. outputs) [0..]]
+  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (toList $ _outputs tx) [0..]]
   where
     transId = txid tx
 
@@ -188,7 +185,7 @@ totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (DCertPool (RegPool pool)) =
-      Map.notMember (pool ^. poolPubKey) stpools
+      Map.notMember (_poolPubKey pool) stpools
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 

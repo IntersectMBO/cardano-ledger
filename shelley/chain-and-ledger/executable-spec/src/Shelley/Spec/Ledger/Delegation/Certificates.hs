@@ -36,28 +36,26 @@ import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenKeyHash, Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
-import           Shelley.Spec.Ledger.PParams (PParams (..), keyDecayRate, keyDeposit, keyMinRefund,
-                     poolDecayRate, poolDeposit, poolMinRefund)
+import           Shelley.Spec.Ledger.PParams (PParams (..))
 import           Shelley.Spec.Ledger.Slot (Duration (..))
 import           Shelley.Spec.Ledger.TxData (Credential (..), DCert (..), DelegCert (..),
-                     GenesisDelegate (..), MIRCert (..), PoolCert (..), StakeCreds (..),
-                     StakePools (..), delegator, poolPubKey)
+                     Delegation (..), GenesisDelegate (..), MIRCert (..), PoolCert (..),
+                     PoolParams (..), StakeCreds (..), StakePools (..))
 import           Shelley.Spec.NonIntegral (exp')
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
 import           Data.Ratio (approxRational)
 
-import           Lens.Micro ((^.))
 
 -- |Determine the certificate author
 delegCWitness :: DelegCert crypto-> Credential crypto
 delegCWitness (RegKey _)            = error "no witness in key registration certificate"
 delegCWitness (DeRegKey hk)         = hk
-delegCWitness (Delegate delegation) = delegation ^. delegator
+delegCWitness (Delegate delegation) = _delegator delegation
 
 poolCWitness :: PoolCert crypto -> Credential crypto
-poolCWitness (RegPool pool)            = KeyHashObj $ pool ^. poolPubKey
+poolCWitness (RegPool pool)            = KeyHashObj $ _poolPubKey pool
 poolCWitness (RetirePool k _)          = KeyHashObj k
 
 genesisCWitness :: GenesisDelegate crypto -> GenKeyHash crypto
@@ -65,8 +63,8 @@ genesisCWitness (GenesisDelegate (gk, _)) = gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert crypto-> PParams -> Coin
-dvalue (DCertDeleg (RegKey _))  = flip (^.) keyDeposit
-dvalue (DCertPool (RegPool _)) = flip (^.) poolDeposit
+dvalue (DCertDeleg (RegKey _))  = _keyDeposit
+dvalue (DCertPool (RegPool _)) = _poolDeposit
 dvalue _ = const $ Coin 0
 
 -- |Compute a refund on a deposit
@@ -110,15 +108,15 @@ isRetirePool _ = False
 
 decayKey :: PParams -> (Coin, UnitInterval, Rational)
 decayKey pc = (dval, dmin, lambdad)
-    where dval    = fromIntegral $ pc ^. keyDeposit
-          dmin    = pc ^. keyMinRefund
-          lambdad = pc ^. keyDecayRate
+    where dval    = fromIntegral $ _keyDeposit pc
+          dmin    = _keyMinRefund pc
+          lambdad = _keyDecayRate pc
 
 decayPool :: PParams -> (Coin, UnitInterval, Rational)
 decayPool pc = (pval, pmin, lambdap)
-    where pval    = fromIntegral $ pc ^. poolDeposit
-          pmin    = pc ^. poolMinRefund
-          lambdap = pc ^. poolDecayRate
+    where pval    = fromIntegral $ _poolDeposit pc
+          pmin    = _poolMinRefund pc
+          lambdap = _poolDecayRate pc
 
 newtype PoolDistr crypto = PoolDistr
   { unPoolDistr :: (Map (KeyHash crypto) (Rational, Hash (HASH crypto) (VerKeyVRF (VRF crypto))))

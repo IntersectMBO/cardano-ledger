@@ -20,7 +20,7 @@ import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState (DState (..), PState (..), UTxOState (..),
                      stakeDistr, _deposited, _fees)
-import           Shelley.Spec.Ledger.PParams hiding (d)
+import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Updates
 import           Shelley.Spec.Ledger.UTxO

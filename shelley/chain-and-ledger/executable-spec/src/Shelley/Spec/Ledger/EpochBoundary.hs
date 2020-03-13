@@ -15,11 +15,6 @@ module Shelley.Spec.Ledger.EpochBoundary
   ( Stake(..)
   , BlocksMade(..)
   , SnapShots(..)
-  , pstakeMark
-  , pstakeSet
-  , pstakeGo
-  , poolsSS
-  , feeSS
   , emptySnapShots
   , rewardStake
   , aggregateOuts
@@ -53,7 +48,6 @@ import           Data.Ratio ((%))
 import qualified Data.Set as Set
 
 import           GHC.Generics (Generic)
-import           Lens.Micro.TH (makeLenses)
 import           Numeric.Natural (Natural)
 
 import           Ledger.Core (dom, (▷), (◁))
@@ -239,8 +233,6 @@ instance
       ps <- fromCBOR
       f <- fromCBOR
       pure $ SnapShots mark set go ps f
-
-makeLenses ''SnapShots
 
 emptySnapShots :: SnapShots crypto
 emptySnapShots =

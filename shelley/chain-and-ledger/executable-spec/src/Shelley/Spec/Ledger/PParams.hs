@@ -9,27 +9,6 @@
 module Shelley.Spec.Ledger.PParams
   ( PParams(..)
   , emptyPParams
-  -- lenses
-  , minfeeA
-  , minfeeB
-  , maxBBSize
-  , maxTxSize
-  , maxBHSize
-  , keyDeposit
-  , keyMinRefund
-  , keyDecayRate
-  , poolDeposit
-  , poolMinRefund
-  , poolDecayRate
-  , eMax
-  , nOpt
-  , a0
-  , rho
-  , tau
-  , activeSlotCoeff
-  , d
-  , extraEntropy
-  , protocolVersion
   , ActiveSlotCoeff
   , mkActiveSlotCoeff
   , activeSlotVal
@@ -51,7 +30,6 @@ import           Shelley.Spec.Ledger.Slot (EpochNo (..))
 
 import           Shelley.Spec.NonIntegral (ln')
 
-import           Lens.Micro.TH (makeLenses)
 
 -- | Protocol parameters
 data PParams = PParams
@@ -228,8 +206,6 @@ instance FromCBOR PParams
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBORGroup
-
-makeLenses ''PParams
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
