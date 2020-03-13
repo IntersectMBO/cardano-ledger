@@ -62,8 +62,9 @@ ocertTransition
 ocertTransition = do
   TRC (env, cs, BHeader bhb sigma) <- judgmentContext
 
-  let OCert vk_hot vk_cold n c0@(KESPeriod c0_) tau = bheaderOCert bhb
-      hk = hashKey vk_cold
+  let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb
+      vkey = bheaderVk bhb
+      hk = hashKey vkey
       s = bheaderSlotNo bhb
   kp@(KESPeriod kp_) <- liftSTS $ kesPeriod s
 
@@ -79,7 +80,7 @@ ocertTransition = do
                                               -- predicate failure in the
                                               -- transition.
 
-  verify vk_cold (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
+  verify vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
   verifyKES vk_hot bhb sigma t ?! InvalidKesSignatureOCERT
 
   case currentIssueNo env cs hk of

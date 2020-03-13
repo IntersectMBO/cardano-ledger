@@ -35,7 +35,6 @@ module Shelley.Spec.Ledger.BlockChain
     --
   , seedEta
   , seedL
-  , bvkcold
   , vrfChecks
   , incrBlocks
   , mkSeed
@@ -379,7 +378,7 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
                          (coerce $ bheaderL bhb)
             && checkVRFValue (VRF.certifiedNatural $ bheaderL bhb) sigma f
  where
-  hk = hashKey $ bvkcold bhb
+  hk = hashKey $ bheaderVk bhb
   vrfK = bheaderVrfVk bhb
   prevHash = bheaderPrev bhb
   slot = bheaderSlotNo bhb
@@ -431,9 +430,6 @@ seedEta = mkNonce 0
 
 seedL :: Nonce
 seedL = mkNonce 1
-
-bvkcold :: BHBody crypto -> VKey crypto
-bvkcold bhb = ocertVkCold $ bheaderOCert bhb
 
 hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize

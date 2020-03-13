@@ -418,10 +418,9 @@ newtype NatNonce = NatNonce Natural
 mkOCert :: AllPoolKeys -> Natural -> KESPeriod -> OCert
 mkOCert pkeys n c0 =
   let (_, (_, vKeyHot)) = head $ hot pkeys
-      KeyPair vKeyCold sKeyCold = cold pkeys in
+      KeyPair _vKeyCold sKeyCold = cold pkeys in
   OCert
    vKeyHot
-   vKeyCold
    n
    c0
    (sign sKeyCold (vKeyHot, n, c0))

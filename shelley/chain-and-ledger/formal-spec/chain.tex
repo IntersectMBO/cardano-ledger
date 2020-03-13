@@ -139,7 +139,6 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{vk_{hot}} & \VKeyEv & \text{operational (hot) key}\\
-        \var{vk_{cold}} & \VKey & \text{cold key}\\
         \var{n} & \N & \text{certificate issue number}\\
         c_0 & \KESPeriod & \text{start KES period}\\
         \sigma & \Sig & \text{cold key signature}\\
@@ -964,10 +963,10 @@ The transition rule is shown in Figure~\ref{fig:rules:ocert}. From the block
 header body \var{bhb} we first extract the following:
 
 \begin{itemize}
-  \item The operational certificate, consisting of the hot key \var{vk_{hot}}, the cold key
-    \var{vk_{cold}}, the KES period number \var{n}, the KES period start \var{c_0} and the cold key
+  \item The operational certificate, consisting of the hot key \var{vk_{hot}},
+    the KES period number \var{n}, the KES period start \var{c_0} and the cold key
   signature.
-\item The hash \var{hk} of \var{vk_{cold}}.
+\item The cold key \var{vk_{cold}}.
 \item The slot \var{s} for the block.
 \item The number of KES periods that have elapsed since the start period on the certificate.
 \end{itemize}
@@ -998,7 +997,9 @@ of the key \var{hk} with the KES period \var{n}.
     {
       (\var{bhb},~\sigma)\leteq\var{bh}
       &
-      (\var{vk_{hot}},~\var{vk_{cold}},~n,~c_{0},~\tau) \leteq \bocert{bhb}
+      (\var{vk_{hot}},~n,~c_{0},~\tau) \leteq \bocert{bhb}
+      &
+      \var{vk_{cold}} \leteq \bvkcold{bhb}
       \\
       \var{hk} \leteq \hashKey{vk_{cold}}
       &
