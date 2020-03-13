@@ -24,6 +24,7 @@ module Shelley.Spec.Ledger.BaseTypes
   , truncateUnitInterval
   , Text64
   , text64
+  , text64Size
     -- * STS Base
   , Globals (..)
   , ShelleyBase
@@ -157,6 +158,9 @@ text64 t =
     if numBytes <= 64
       then Text64 t
       else error $ "text64 received too many bytes: " <> show numBytes
+
+text64Size :: Text64 -> Int
+text64Size (Text64 t) = BS.length . encodeUtf8 $ t
 
 instance FromCBOR Text64
  where

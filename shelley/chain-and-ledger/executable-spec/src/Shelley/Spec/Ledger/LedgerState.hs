@@ -105,9 +105,9 @@ import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (
                      epochInfoFirst, epochInfoSize, (+*), (-*))
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCert (..), Ix,
-                     MIRCert (..), PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..), countMSigNodes,
-                     getRwdCred, witKeyHash)
+                     MIRCert (..), PoolCert (..), PoolMetaData (..), PoolParams (..), Ptr (..),
+                     RewardAcnt (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), Url (..),
+                     Wdrl (..), countMSigNodes, getRwdCred, witKeyHash)
 import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..),
                      UpdateState (..), apps, emptyUpdate, emptyUpdateState)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins,
@@ -121,7 +121,7 @@ import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
-                     intervalValue, mkUnitInterval)
+                     intervalValue, mkUnitInterval, text64Size)
 
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -558,6 +558,11 @@ txsize (Tx
             + (toInteger $ length outs) * (smallArray + uint + address)
 
     numPoolOwners = toInteger . length . _poolOwners
+    relays pps = fmap (text64Size . unUrl) (_poolRelays pps)
+    poolMD pps = smallArray + (toInteger $
+      case (_poolMD pps) of
+        Nothing -> 0
+        Just (PoolMetaData u _) -> (text64Size . unUrl) u)
     pparams pps = cborTag + arrayPrefix + (numPoolOwners pps)*(hashObj) -- pool owners
                 + uint -- cost
                 + unitInterval -- margin
@@ -565,6 +570,8 @@ txsize (Tx
                 + hashObj -- operator
                 + hashObj -- vrf keyhash
                 + credential -- reward account
+                + toInteger (sum (relays pps)) -- relays
+                + toInteger (poolMD pps)  -- metadata
     certSize (DCertDeleg (RegKey _)) = smallArray + labelSize + hashObj
     certSize (DCertDeleg (DeRegKey _)) = smallArray + labelSize + hashObj
     certSize (DCertDeleg (Delegate _ )) = smallArray + labelSize + 2 * hashObj
