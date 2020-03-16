@@ -1,6 +1,5 @@
-{ pkgs ? (import ../../../default.nix {}).pkgs
+{ pkgs ? (import ../../../nix/default.nix {}).pkgs
 }:
-
 
 with pkgs;
 

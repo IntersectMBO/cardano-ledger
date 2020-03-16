@@ -206,6 +206,8 @@ In these rules we make use of the abstract constant $\var{ngk}$, defined in
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \var{ngk} & \mathbb{N} & \text{number of genesis keys}\\
+      \fun{firstSlot} & \in ~ \Epoch \to \Slot
+      & \text{first slot of an epoch}
     \end{array}
   \end{equation*}
 
@@ -259,7 +261,7 @@ In these rules we make use of the abstract constant $\var{ngk}$, defined in
       \powerset (\UPIEnv \times \UPIState
       \times (\ProtVer \times \VKey) \times \UPIState)\\
       \_ \vdash \_ \trans{upiec}{} \_ &
-      \powerset (\Slot \times \UPIState \times \UPIState)
+      \powerset (\Epoch \times \UPIState \times \UPIState)
     \end{array}
   \end{equation*}
   \caption{Update-proposals interface transition-system types}
@@ -874,7 +876,7 @@ expires.
     \inference
     {
       {\left(\begin{array}{l}
-         s_n\\
+         \fun{firstSlot}~e_n\\
          \var{fads}
        \end{array}\right)}
       \vdash
@@ -895,7 +897,7 @@ expires.
       } &\var{pv} = \var{pv'}
     }
     {
-      (s_n)
+      (e_n)
       \vdash
       {
         \left(
@@ -936,7 +938,7 @@ expires.
     \inference
     {
       {\left(\begin{array}{l}
-         s_n\\
+         \fun{firstSlot}~e_n\\
          \var{fads}
        \end{array}\right)}
       \vdash
@@ -958,7 +960,7 @@ expires.
       & \var{pv} \neq \var{pv'}
     }
     {
-      (s_n)
+      (e_n)
       \vdash
       {
         \left(
