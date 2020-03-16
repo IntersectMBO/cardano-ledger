@@ -42,6 +42,11 @@ instance ToCBOR ProtocolVersion where
     encodeListLen 3 <> toCBOR (pvMajor pv) <> toCBOR (pvMinor pv) <> toCBOR
       (pvAlt pv)
 
+  encodedSizeExpr f pv = 1
+                       + encodedSizeExpr f (pvMajor <$> pv)
+                       + encodedSizeExpr f (pvMinor <$> pv)
+                       + encodedSizeExpr f (pvAlt   <$> pv)
+
 instance FromCBOR ProtocolVersion where
   fromCBOR = do
     enforceSize "ProtocolVersion" 3

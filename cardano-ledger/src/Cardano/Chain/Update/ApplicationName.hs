@@ -25,7 +25,8 @@ import Formatting (bprint, int, stext)
 import qualified Formatting.Buildable as B
 
 import Cardano.Binary
-  ( Decoder
+  ( Case(..)
+  , Decoder
   , DecoderError(..)
   , FromCBOR(..)
   , ToCBOR(..)
@@ -33,6 +34,7 @@ import Cardano.Binary
   , decodeWord8
   , encodeListLen
   , matchSize
+  , szCases
   )
 
 
@@ -42,6 +44,10 @@ newtype ApplicationName = ApplicationName
 
 instance ToCBOR ApplicationName where
   toCBOR appName = toCBOR (unApplicationName appName)
+  encodedSizeExpr _ _ =
+    1 + szCases [ Case "minBound" 0
+                , Case "maxBound" (fromInteger applicationNameMaxLength)
+                ]
 
 instance FromCBOR ApplicationName where
   fromCBOR = ApplicationName <$> fromCBOR

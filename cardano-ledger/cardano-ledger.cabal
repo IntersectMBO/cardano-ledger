@@ -183,6 +183,7 @@ test-suite cardano-ledger-test
                        Test.Cardano.Chain.Block.Gen
                        Test.Cardano.Chain.Block.Model
                        Test.Cardano.Chain.Block.Model.Examples
+                       Test.Cardano.Chain.Block.Size
                        Test.Cardano.Chain.Block.Validation
                        Test.Cardano.Chain.Block.ValidationMode
                        Test.Cardano.Chain.Byron.API
@@ -255,6 +256,7 @@ test-suite cardano-ledger-test
                      , cardano-crypto-wrapper
                      , cardano-prelude
                      , cardano-prelude-test
+                     , cborg
                      , containers
                      , contra-tracer
                      , cryptonite

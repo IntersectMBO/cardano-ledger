@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE NumDecimals          #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
@@ -34,11 +35,14 @@ module Cardano.Chain.Block.Header
 
   -- * Header Binary Serialization
   , toCBORHeader
+  , toCBORHeaderSize
   , toCBORHeaderToHash
   , fromCBORAHeader
   , fromCBORHeader
   , fromCBORHeaderToHash
   , wrapHeaderBytes
+  , toCBORBlockVersions
+  , toCBORBlockVersionsSize
 
   -- * Header Formatting
   , renderHeader
@@ -47,6 +51,7 @@ module Cardano.Chain.Block.Header
   , ABoundaryHeader(..)
   , mkABoundaryHeader
   , toCBORABoundaryHeader
+  , toCBORABoundaryHeaderSize
   , fromCBORABoundaryHeader
   , boundaryHeaderHashAnnotated
   , wrapBoundaryBytes
@@ -81,11 +86,14 @@ import qualified Formatting.Buildable as B
 import Cardano.Binary
   ( Annotated(..)
   , ByteSpan
+  , Case(..)
   , Decoded(..)
   , Decoder
   , DecoderError(..)
   , Encoding
   , FromCBOR(..)
+  , Raw
+  , Size
   , ToCBOR(..)
   , annotatedDecoder
   , fromCBORAnnotated
@@ -94,6 +102,8 @@ import Cardano.Binary
   , encodeListLen
   , enforceSize
   , serializeEncoding
+  , szCases
+  , szGreedy
   )
 import Cardano.Chain.Block.Body (Body)
 import Cardano.Chain.Block.Boundary
@@ -294,6 +304,24 @@ toCBORHeader es h =
        )
     <> toCBORBlockVersions (headerProtocolVersion h) (headerSoftwareVersion h)
 
+toCBORHeaderSize :: Proxy EpochSlots -> Proxy (AHeader a) -> Size
+toCBORHeaderSize es hdr =
+       1 -- encodeListLen 5
+     + szGreedy (headerProtocolMagicId <$> hdr)
+     + szGreedy (headerPrevHash <$> hdr)
+     + szGreedy (headerProof <$> hdr)
+     + ( 1
+       + szGreedy (fromSlotNumber <$> es <*> (headerSlot <$> hdr))
+       + szGreedy (headerGenesisKey <$> hdr)
+       + szGreedy (headerDifficulty <$> hdr)
+       -- there is only 'ToCBOR' @ASignature ()@ instance, we
+       -- must map 'a' to '()'
+       + szGreedy (headerSignature . fmap (const ()) <$> hdr)
+       )
+    + toCBORBlockVersionsSize
+        (headerProtocolVersion <$> hdr)
+        (headerSoftwareVersion <$> hdr)
+
 toCBORBlockVersions :: ProtocolVersion -> SoftwareVersion -> Encoding
 toCBORBlockVersions pv sv =
   encodeListLen 4
@@ -303,6 +331,15 @@ toCBORBlockVersions pv sv =
     <> toCBOR (mempty :: Map Word8 LByteString)
     -- Hash of the encoding of empty ExtraBodyData
     <> toCBOR (hashRaw "\129\160")
+
+toCBORBlockVersionsSize :: Proxy ProtocolVersion -> Proxy SoftwareVersion -> Size
+toCBORBlockVersionsSize pv sv =
+    1
+  + szGreedy pv
+  + szGreedy sv
+  -- empty attributes dictionary
+  + 1
+  + szGreedy (Proxy :: Proxy (Hash Raw))
 
 fromCBORHeader :: EpochSlots -> Decoder s Header
 fromCBORHeader epochSlots = void <$> fromCBORAHeader epochSlots
@@ -515,6 +552,39 @@ toCBORABoundaryHeader pm hdr =
       (Left _, n) | n > 0 -> Map.singleton 255 "Genesis"
       _ -> mempty :: Map Word8 LByteString
 
+toCBORABoundaryHeaderSize :: Proxy ProtocolMagicId -> Proxy (ABoundaryHeader a) -> Size
+toCBORABoundaryHeaderSize pm hdr =
+      1
+    + szGreedy pm
+    + szCases
+        [ Case "GenesisHash" $ szGreedy
+                             $ pFromLeft
+                             $ boundaryPrevHash <$> hdr
+        , Case "HeaderHash"  $ szGreedy
+                             $ pFromRight
+                             $ boundaryPrevHash <$> hdr
+        ]
+    -- Body proof
+    + szGreedy (Proxy :: Proxy (Hash LByteString))
+    -- Consensus data
+    + ( 1
+      + szGreedy (boundaryEpoch <$> hdr)
+      + szGreedy (boundaryDifficulty <$> hdr)
+      )
+    -- Extra data
+    + ( 1
+      + szCases
+        [ Case "Genesis" 11
+        , Case ""        1
+        ]
+      )
+  where
+    pFromLeft :: Proxy (Either a b) -> Proxy a
+    pFromLeft _ = Proxy
+
+    pFromRight :: Proxy (Either a b) -> Proxy b
+    pFromRight _ = Proxy
+
 fromCBORABoundaryHeader :: Decoder s (ABoundaryHeader ByteSpan)
 fromCBORABoundaryHeader = do
   Annotated header bytespan <- annotatedDecoder $ do
@@ -575,6 +645,11 @@ instance ToCBOR BlockSignature where
       <> toCBOR (2 :: Word8)
       <> (encodeListLen 2 <> toCBOR cert <> toCBOR sig)
 
+  encodedSizeExpr size sig =
+      3
+    + encodedSizeExpr size (delegationCertificate <$> sig)
+    + encodedSizeExpr size (signature             <$> sig)
+
 instance FromCBOR BlockSignature where
   fromCBOR = void <$> fromCBOR @(ABlockSignature ByteSpan)
 
@@ -630,6 +705,14 @@ instance ToCBOR ToSign where
       <> toCBOR (tsSlot ts)
       <> toCBOR (tsDifficulty ts)
       <> toCBORBlockVersions (tsProtocolVersion ts) (tsSoftwareVersion ts)
+
+  encodedSizeExpr size ts =
+      1
+    + encodedSizeExpr size (tsHeaderHash <$> ts)
+    + encodedSizeExpr size (tsBodyProof <$> ts)
+    + encodedSizeExpr size (tsSlot <$> ts)
+    + encodedSizeExpr size (tsDifficulty <$> ts)
+    + toCBORBlockVersionsSize (tsProtocolVersion <$> ts) (tsSoftwareVersion <$> ts)
 
 instance FromCBOR ToSign where
   fromCBOR = do

@@ -55,6 +55,11 @@ instance ToCBOR TxProof where
       <> toCBOR (txpNumber proof)
       <> toCBOR (txpRoot proof)
       <> toCBOR (txpWitnessesHash proof)
+  encodedSizeExpr size proof =
+      1
+    + encodedSizeExpr size (txpNumber <$> proof)
+    + encodedSizeExpr size (txpRoot   <$> proof)
+    + encodedSizeExpr size (txpWitnessesHash <$> proof)
 
 instance FromCBOR TxProof where
   fromCBOR = do

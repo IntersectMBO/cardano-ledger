@@ -54,6 +54,13 @@ instance ToCBOR Proof where
       <> toCBOR (proofDelegation bc)
       <> toCBOR (proofUpdate bc)
 
+  encodedSizeExpr size bc =
+        1
+      + encodedSizeExpr size (proofUTxO <$> bc)
+      + encodedSizeExpr size (proofSsc  <$> bc)
+      + encodedSizeExpr size (proofDelegation  <$> bc)
+      + encodedSizeExpr size (proofUpdate  <$> bc)
+
 instance FromCBOR Proof where
   fromCBOR = do
     enforceSize "Proof" 4

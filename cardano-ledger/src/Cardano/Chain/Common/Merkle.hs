@@ -73,6 +73,7 @@ instance ToJSON a => ToJSON (MerkleRoot a) where
 
 instance ToCBOR a => ToCBOR (MerkleRoot a) where
   toCBOR = toCBOR . getMerkleRoot
+  encodedSizeExpr size = encodedSizeExpr size . fmap getMerkleRoot
 
 instance FromCBOR a => FromCBOR (MerkleRoot a) where
   fromCBOR = MerkleRoot <$> fromCBOR

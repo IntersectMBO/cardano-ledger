@@ -68,6 +68,8 @@ module Cardano.Chain.Block.Block
   , ABlockOrBoundaryHdr(..)
   , aBlockOrBoundaryHdr
   , fromCBORABlockOrBoundaryHdr
+  , toCBORABlockOrBoundaryHdr
+  , toCBORABlockOrBoundaryHdrSize
   , abobHdrFromBlock
   , abobHdrSlotNo
   , abobHdrChainDifficulty
@@ -77,6 +79,8 @@ module Cardano.Chain.Block.Block
 where
 
 import Cardano.Prelude
+-- TODO `contramap` should be in `Cardano.Prelude`
+import Control.Tracer (contramap)
 
 import Control.Monad.Fail (fail)
 import Data.Aeson (ToJSON)
@@ -85,20 +89,25 @@ import Data.Text.Lazy.Builder (Builder, fromText)
 import Formatting (bprint, build, int, later, shown)
 import qualified Formatting.Buildable as B
 
+import qualified Codec.CBOR.Encoding as CBOR
+
 import Cardano.Binary
   ( Annotated(..)
   , ByteSpan(..)
+  , Case(..)
   , Decoded(..)
   , Decoder
   , DecoderError(..)
   , Encoding
   , FromCBOR(..)
+  , Size
   , ToCBOR(..)
   , annotatedDecoder
   , encodeBreak
   , encodeListLen
   , encodeListLenIndef
   , enforceSize
+  , szCases
   )
 import Cardano.Chain.Block.Body
   ( ABody
@@ -137,7 +146,9 @@ import Cardano.Chain.Block.Header
   , headerToSign
   , mkHeaderExplicit
   , toCBORHeader
+  , toCBORHeaderSize
   , toCBORABoundaryHeader
+  , toCBORABoundaryHeaderSize
   )
 import Cardano.Chain.Block.Proof (Proof(..))
 import Cardano.Chain.Common (ChainDifficulty(..), dropEmptyAttributes)
@@ -527,6 +538,36 @@ fromCBORABlockOrBoundaryHdr epochSlots = do
       0 -> ABOBBoundaryHdr <$> fromCBORABoundaryHeader
       1 -> ABOBBlockHdr    <$> fromCBORAHeader epochSlots
       t -> fail $ "Unknown tag in encoded HeaderOrBoundary" <> show t
+
+-- | Encoder for 'ABlockOrBoundaryHdr' which is using the annotation.
+-- It is right inverse of 'fromCBORAblockOrBoundaryHdr'.
+--
+-- TODO: add a round trip test, e.g.
+--
+-- prop> fromCBORABlockOrBoundaryHdr . toCBORABlockOrBoundaryHdr = id
+--
+-- which does not type check, but convey the meaning.
+--
+toCBORABlockOrBoundaryHdr :: ABlockOrBoundaryHdr ByteString -> Encoding
+toCBORABlockOrBoundaryHdr hdr =
+       CBOR.encodeListLen 2
+    <> case hdr of
+        ABOBBoundaryHdr h ->
+             CBOR.encodeWord 0
+          <> CBOR.encodePreEncoded (boundaryHeaderAnnotation h)
+        ABOBBlockHdr h ->
+             CBOR.encodeWord 1
+          <> CBOR.encodePreEncoded (headerAnnotation h)
+
+-- | The size computation is compatible with 'toCBORABlockOrBoundaryHdr'
+--
+toCBORABlockOrBoundaryHdrSize :: Proxy (ABlockOrBoundaryHdr a) -> Size
+toCBORABlockOrBoundaryHdrSize hdr
+  = 2 -- @encodeListLen 2@ followed by @encodeWord 0@ or @encodeWord 1@.
+  + szCases [
+        Case "ABOBBoundaryHdr" $ toCBORABoundaryHeaderSize Proxy (ABOBBoundaryHdr `contramap` hdr)
+      , Case "ABOBBlockHdr"    $ toCBORHeaderSize Proxy (ABOBBlockHdr `contramap` hdr)
+      ]
 
 -- | The analogue of 'Data.Either.either'
 aBlockOrBoundaryHdr :: (AHeader         a -> b)

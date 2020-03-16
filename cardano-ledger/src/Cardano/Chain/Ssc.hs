@@ -112,6 +112,12 @@ instance ToCBOR SscProof where
       , 0x31, 0xe9, 0xf2, 0xba, 0x25, 0xc2, 0x16, 0x91
       , 0x77, 0xed, 0xc9, 0x41, 0xbd, 0x50, 0xad, 0x6c ]
 
+  encodedSizeExpr size _ =
+      1
+    + encodedSizeExpr size (Proxy :: Proxy Word8)
+    + 34
+
+
 instance FromCBOR SscProof where
   fromCBOR = do
     dropSscProof

@@ -53,6 +53,7 @@ instance Aeson.ToJSON EpochNumber where
 
 instance ToCBOR EpochNumber where
   toCBOR (EpochNumber epoch) = toCBOR epoch
+  encodedSizeExpr size = encodedSizeExpr size . fmap getEpochNumber
 
 instance FromCBOR EpochNumber where
   fromCBOR = EpochNumber <$> fromCBOR
