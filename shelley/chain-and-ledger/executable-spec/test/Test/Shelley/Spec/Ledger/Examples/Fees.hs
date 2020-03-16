@@ -27,13 +27,14 @@ import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body, _metadat
                      _witnessVKeySet)
 import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertPool,
                      pattern Delegation, pattern KeyHashObj, PoolMetaData (..), pattern PoolParams,
-                     pattern RequireMOf, pattern RequireSignature, pattern RewardAcnt,
+                     pattern RewardAcnt,
                      pattern TxBody, pattern TxIn, pattern TxOut, Url (..), Wdrl (..), _certs,
                      _inputs, _mdHash, _outputs, _poolCost, _poolMD, _poolMDHash, _poolMDUrl,
                      _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays,
                      _poolVrf, _ttl, _txUpdate, _txfee, _wdrls)
 import           Shelley.Spec.Ledger.Updates (emptyUpdate)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
+import           Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, ConcreteCrypto, Credential,
                      KeyHash, KeyPair, MultiSig, PoolParams, SignKeyVRF, Tx, TxBody, VerKeyVRF,
