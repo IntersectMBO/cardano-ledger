@@ -34,7 +34,6 @@ header_body =
 
 operational_cert =
   ( hot_vkey        : $kes_vkey
-  , cold_vkey       : $vkey
   , sequence_number : uint
   , kes_period      : uint
   , sigma           : $signature

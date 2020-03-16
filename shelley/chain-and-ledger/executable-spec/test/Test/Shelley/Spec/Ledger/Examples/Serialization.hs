@@ -221,7 +221,7 @@ testBHB = BHBody
           , bsize          = 0
           , bheaderBlockNo = BlockNo 44
           , bhash          = bbHash $ TxSeq Seq.empty
-          , bheaderOCert   = OCert (snd testKESKeys) (vKey testKey1)
+          , bheaderOCert   = OCert (snd testKESKeys)
             0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
           , bprotvert      = ProtVer 0 0
           }
@@ -796,7 +796,6 @@ serializationTests = testGroup "Serialization Tests"
       bbhash = bbHash $ TxSeq Seq.empty
       ocert = OCert
                 (snd testKESKeys)
-                (vKey testKey1)
                 0
                 (KESPeriod 0)
                 (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
@@ -817,7 +816,7 @@ serializationTests = testGroup "Serialization Tests"
       , bprotvert      = protover
       }
     )
-    ( T (TkListLen $ 9 + 5 + 2)
+    ( T (TkListLen $ 9 + 4 + 2)
       <> S prevhash
       <> S issuerVkey
       <> S vrfVkey
@@ -833,15 +832,13 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "operational_cert"
   , let vkHot     = snd testKESKeys
-        vkCol     = vKey testKey1
         counter   = 0
         kesperiod = KESPeriod 0
         signature = sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0)
     in
     checkEncodingCBORCBORGroup "operational_cert"
-    (OCert vkHot vkCol counter kesperiod signature)
+    (OCert vkHot counter kesperiod signature)
     (    S vkHot
-      <> S vkCol
       <> S counter
       <> S kesperiod
       <> S signature
@@ -852,7 +849,7 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "block_header"
     (BHeader testBHB sig)
-    ( (T $ TkListLen 17)
+    ( (T $ TkListLen 16)
         <> G testBHB
         <> S sig
     )
@@ -864,7 +861,7 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "empty_block"
     (Block bh txns)
-    ( (T $ TkListLen 20)
+    ( (T $ TkListLen 19)
         <> G bh
         <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
     )
@@ -895,7 +892,7 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "rich_block"
     (Block bh txns)
-    ( (T $ TkListLen 20)
+    ( (T $ TkListLen 19)
         -- header
         <> G bh
 

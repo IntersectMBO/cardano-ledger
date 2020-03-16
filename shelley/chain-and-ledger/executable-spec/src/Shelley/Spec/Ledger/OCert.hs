@@ -26,7 +26,7 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Keys (KeyHash, Sig, VKey, VKeyES)
+import           Shelley.Spec.Ledger.Keys (KeyHash, Sig, VKeyES)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 
@@ -52,8 +52,6 @@ newtype KESPeriod = KESPeriod Natural
 data OCert crypto = OCert
   { -- | The operational hot key
     ocertVkHot     :: VKeyES crypto
-    -- | The cold key
-  , ocertVkCold    :: VKey crypto
     -- | counter
   , ocertN         :: Natural
     -- | Start of key evolving signature period
@@ -71,11 +69,10 @@ instance
  where
   toCBORGroup ocert =
          toCBOR (ocertVkHot ocert)
-      <> toCBOR (ocertVkCold ocert)
       <> toCBOR (ocertN ocert)
       <> toCBOR (ocertKESPeriod ocert)
       <> toCBOR (ocertSigma ocert)
-  listLen _ = 5
+  listLen _ = 4
 
 instance
   (Crypto crypto)
@@ -84,7 +81,6 @@ instance
   fromCBORGroup =
     OCert
       <$> fromCBOR
-      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR

@@ -88,7 +88,7 @@ overlayTransition = do
   TRC ( OverlayEnv pp osched eta0 pd (GenDelegs genDelegs)
       , cs
       , bh@(BHeader bhb _)) <- judgmentContext
-  let vk = bvkcold bhb
+  let vk = bheaderVk bhb
       vkh = hashKey vk
 
   case Map.lookup (bheaderSlotNo bhb) osched of
