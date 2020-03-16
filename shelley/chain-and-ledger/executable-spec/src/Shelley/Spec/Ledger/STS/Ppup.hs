@@ -131,7 +131,7 @@ ppupTransitionNonEmpty = do
     ei <- asks epochInfo
     EpochNo e <- epochInfoEpoch ei slot
     epochInfoFirst ei (EpochNo $ e + 1)
-  slot < firstSlotNextEpoch *- (Duration sp) ?! PPUpdateTooLatePPUP
+  slot < firstSlotNextEpoch *- (Duration (2 * sp)) ?! PPUpdateTooLatePPUP
 
   currentEpoch <- liftSTS $ do
     ei <- asks epochInfo
