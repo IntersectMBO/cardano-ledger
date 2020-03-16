@@ -32,7 +32,8 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..))
+import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
+                     Stake (..))
 import           Shelley.Spec.Ledger.Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
                      pattern KeyPair, pattern UnsafeSig, hash, hashKey, sKey, sign, signKES,
                      undiscriminateKeyHash, vKey)
@@ -963,12 +964,18 @@ serializationTests = testGroup "Serialization Tests"
     ( T (TkMapLen 1)
       <> S (KeyHashObj testKeyHash1)
       <> S (Coin 13))
-  , let mark = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 11)
-               , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
-        set  = ( Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22)
-               , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
-        go   = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 33)
-               , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+  , let mark = SnapShot
+                 (Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 11))
+                 (Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+                 ps
+        set  = SnapShot
+                 (Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22))
+                 (Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+                 ps
+        go   = SnapShot
+                 (Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 33))
+                 (Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+                 ps
         p = PoolParams
               { _poolPubKey = testKeyHash1
               , _poolVrf = testVRFKH
@@ -987,22 +994,27 @@ serializationTests = testGroup "Serialization Tests"
         fs = Coin 123
     in
     checkEncodingCBOR "snapshots"
-    (SnapShots mark set go ps fs)
-    ( T (TkListLen 5)
+    (SnapShots mark set go fs)
+    ( T (TkListLen 4)
       <> S mark
       <> S set
       <> S go
-      <> S ps
       <> S fs )
   , let
       e  = EpochNo 0
       ac = AccountState (Coin 100) (Coin 100)
-      mark = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 11)
-             , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
-      set  = ( Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22)
-             , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
-      go   = ( Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 33)
-             , Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+      mark = SnapShot
+               (Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 11))
+               (Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+               ps
+      set  = SnapShot
+               (Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22))
+               (Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+               ps
+      go   = SnapShot
+               (Stake $ Map.singleton (KeyHashObj testKeyHash1) (Coin 33))
+               (Map.singleton (KeyHashObj testKeyHash1) testKeyHash3)
+               ps
       p = PoolParams
             { _poolPubKey = testKeyHash1
             , _poolVrf = testVRFKH
@@ -1019,7 +1031,7 @@ serializationTests = testGroup "Serialization Tests"
             }
       ps = Map.singleton testKeyHash1 p
       fs = Coin 123
-      ss = SnapShots mark set go ps fs
+      ss = SnapShots mark set go fs
       ls = emptyLedgerState
       pps = emptyPParams
       bs = Map.singleton testKeyHash1 1

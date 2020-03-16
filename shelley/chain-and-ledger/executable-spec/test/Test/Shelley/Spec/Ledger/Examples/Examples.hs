@@ -79,9 +79,9 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern SnapShots,
-                     pattern Stake, emptySnapShots, _feeSS, _poolsSS, _pstakeGo, _pstakeMark,
-                     _pstakeSet)
+import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern SnapShot,
+                     pattern SnapShots, pattern Stake, emptySnapShots, _feeSS, _pstakeGo,
+                     _pstakeMark, _pstakeSet)
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey,
                      vKey)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern DPState,
@@ -123,8 +123,8 @@ import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesV
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (AVUpdate, Addr, Applications, Block,
                      CHAIN, ChainState, Credential, DState, EpochState, GenKeyHash, HashHeader,
                      KeyHash, KeyPair, LedgerState, Mdt, NewEpochState, PPUpdate, PState,
-                     PoolDistr, PoolParams, RewardAcnt, SKey, SnapShots, Stake, Tx, TxBody, UTxO,
-                     UTxOState, Update, UpdateState, VKeyGenesis, hashKeyVRF)
+                     PoolDistr, PoolParams, RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody,
+                     UTxO, UTxOState, Update, UpdateState, VKeyGenesis, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), NatNonce (..),
                      genesisAccountState, mkBlock, mkOCert, zero)
 import           Test.Shelley.Spec.Ledger.Utils
@@ -750,16 +750,17 @@ epoch1OSchedEx2C = runShelleyBase $ overlaySchedule
                     ppsEx1
 
 -- | Snapshot of stakes for Alice and Bob
-snapEx2C :: (Stake, Map Credential KeyHash)
-snapEx2C = ( Stake ( Map.fromList [(aliceSHK, aliceCoinEx2BBase + aliceCoinEx2BPtr)
-                                  , (bobSHK, bobInitCoin)])
-          , delegsEx2B )
+snapEx2C :: SnapShot
+snapEx2C = SnapShot
+  (Stake ( Map.fromList [ (aliceSHK, aliceCoinEx2BBase + aliceCoinEx2BPtr)
+                        , (bobSHK, bobInitCoin)]))
+  delegsEx2B
+  (Map.singleton (hk alicePool) alicePoolParams)
 
 -- | Make a snapshot for a given fee.
 snapsEx2Cgeneric :: Coin -> SnapShots
 snapsEx2Cgeneric feeSnapShot = emptySnapShots {
     _pstakeMark = snapEx2C -- ^ snapshot of stake pools and parameters
-  , _poolsSS    = Map.singleton (hk alicePool) alicePoolParams -- ^ single pool of Alice
   , _feeSS      = feeSnapShot
   }
 
@@ -986,16 +987,17 @@ epoch1OSchedEx2E = runShelleyBase $ overlaySchedule
                     (Map.keysSet genDelegs)
                     ppsEx1
 
-snapEx2E :: (Stake, Map Credential KeyHash)
-snapEx2E = ( Stake ( Map.fromList [ (aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr)
-                                  , (carlSHK, carlMIR)
-                                  , (bobSHK, bobInitCoin)])
-          , delegsEx2D )
+snapEx2E :: SnapShot
+snapEx2E = SnapShot
+  (Stake ( Map.fromList [ (aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr)
+                        , (carlSHK, carlMIR)
+                        , (bobSHK, bobInitCoin)]))
+  delegsEx2D
+  (Map.singleton (hk alicePool) alicePoolParams)
 
 snapsEx2E :: SnapShots
 snapsEx2E = emptySnapShots { _pstakeMark = snapEx2E
                            , _pstakeSet = snapEx2C
-                           , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
                            , _feeSS = Coin 19
                            }
 
@@ -1284,12 +1286,13 @@ expectedLSEx2I = LedgerState
                (DPState dsEx2I psEx2A)
 
 snapsEx2I :: SnapShots
-snapsEx2I = snapsEx2G { _pstakeMark =
+snapsEx2I = snapsEx2G { _pstakeMark = SnapShot
                           (Stake ( Map.fromList
                             [ (bobSHK, bobInitCoin + bobRAcnt2H)
                             , (aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr + aliceRAcnt2H)
-                            , (carlSHK, carlMIR) ])
-                          , delegsEx2D )
+                            , (carlSHK, carlMIR) ]))
+                          delegsEx2D
+                          (Map.singleton (hk alicePool) alicePoolParams)
                         -- The stake snapshots have bigger values now, due to the new rewards
                       , _pstakeSet = snapEx2E
                       , _pstakeGo = snapEx2E
@@ -1529,14 +1532,14 @@ acntEx2L = acntEx2I { _treasury =  _treasury acntEx2I --previous amount
                                   + Coin 9 } -- from the reward update
 
 snapsEx2L :: SnapShots
-snapsEx2L = SnapShots { _pstakeMark =
+snapsEx2L = SnapShots { _pstakeMark = SnapShot
                           (Stake (
                             Map.fromList [ (aliceSHK, aliceRAcnt2H + aliceCoinEx2BPtr + aliceCoinEx2KPtr)
-                                         , (carlSHK, carlMIR)])
-                          , Map.fromList [ (aliceSHK, hk alicePool), (carlSHK, hk alicePool) ])
+                                         , (carlSHK, carlMIR)]))
+                          (Map.fromList [ (aliceSHK, hk alicePool), (carlSHK, hk alicePool) ])
+                          (Map.singleton (hk alicePool) alicePoolParams)
                       , _pstakeSet = _pstakeMark snapsEx2I
                       , _pstakeGo = _pstakeSet snapsEx2I
-                      , _poolsSS = Map.singleton (hk alicePool) alicePoolParams
                       , _feeSS = Coin 22
                       }
 dsEx2L :: DState

@@ -89,7 +89,7 @@ newEpochTransition = do
       es'' <- trans @(MIR crypto) $ TRC ((), es', ())
       es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
       let EpochState _acnt ss _ls pp = es'''
-          (Stake stake, delegs) = _pstakeSet ss
+          SnapShot (Stake stake) delegs poolParams = _pstakeSet ss
           Coin total = Map.foldl (+) (Coin 0) stake
           sd =
             aggregatePlus $
@@ -99,7 +99,7 @@ newEpochTransition = do
                                        -- particular when shrinking)
                   | (hk, Coin c) <- Map.toList stake
                 ]
-          pd' = Map.intersectionWith (,) sd (Map.map _poolVrf (_poolsSS ss))
+          pd' = Map.intersectionWith (,) sd (Map.map _poolVrf poolParams)
       osched' <- liftSTS $ overlaySchedule e gkeys pp
       pure $
         NewEpochState

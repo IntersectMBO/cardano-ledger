@@ -14,6 +14,7 @@ This modules implements the necessary functions for the changes that can happen 
 module Shelley.Spec.Ledger.EpochBoundary
   ( Stake(..)
   , BlocksMade(..)
+  , SnapShot(..)
   , SnapShots(..)
   , emptySnapShots
   , rewardStake
@@ -188,22 +189,46 @@ groupByPool active delegs =
     ]
 
 -- | Snapshot of the stake distribution.
+data SnapShot crypto
+  = SnapShot
+    { _stake :: Stake crypto
+    , _delegations :: Map (Credential crypto) (KeyHash crypto)
+    , _poolParams :: Map (KeyHash crypto) (PoolParams crypto)
+    } deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (SnapShot crypto)
+
+instance
+  Crypto crypto
+  => ToCBOR (SnapShot crypto)
+  where
+    toCBOR (SnapShot
+      { _stake = s
+      , _delegations = d
+      , _poolParams = p
+      }) =
+      encodeListLen 3
+        <> toCBOR s
+        <> toCBOR d
+        <> toCBOR p
+
+instance
+  Crypto crypto
+  => FromCBOR (SnapShot crypto)
+  where
+    fromCBOR = do
+      enforceSize "SnapShot" 3
+      s <- fromCBOR
+      d <- fromCBOR
+      p <- fromCBOR
+      pure $ SnapShot s d p
+
+-- | Snapshots of the stake distribution.
 data SnapShots crypto
   = SnapShots
-    { _pstakeMark
-      :: ( Stake crypto
-         , Map (Credential crypto) (KeyHash crypto)
-         )
-    , _pstakeSet
-      :: ( Stake crypto
-         , Map (Credential crypto) (KeyHash crypto)
-         )
-    , _pstakeGo
-      :: ( Stake crypto
-         , Map (Credential crypto) (KeyHash crypto)
-         )
-    , _poolsSS
-      :: Map (KeyHash crypto) (PoolParams crypto)
+    { _pstakeMark :: SnapShot crypto
+    , _pstakeSet  :: SnapShot crypto
+    , _pstakeGo   :: SnapShot crypto
     , _feeSS :: Coin
     } deriving (Show, Eq, Generic)
 
@@ -213,12 +238,11 @@ instance
   Crypto crypto
   => ToCBOR (SnapShots crypto)
   where
-    toCBOR (SnapShots mark set go ps fs) =
-      encodeListLen 5
+    toCBOR (SnapShots mark set go fs) =
+      encodeListLen 4
       <> toCBOR mark
       <> toCBOR set
       <> toCBOR go
-      <> toCBOR ps
       <> toCBOR fs
 
 instance
@@ -226,17 +250,14 @@ instance
   => FromCBOR (SnapShots crypto)
   where
     fromCBOR = do
-      enforceSize "SnapShots" 5
+      enforceSize "SnapShots" 4
       mark <- fromCBOR
       set <- fromCBOR
       go <- fromCBOR
-      ps <- fromCBOR
       f <- fromCBOR
-      pure $ SnapShots mark set go ps f
+      pure $ SnapShots mark set go f
 
 emptySnapShots :: SnapShots crypto
 emptySnapShots =
-    SnapShots snapEmpty snapEmpty snapEmpty Map.empty (Coin 0)
-    where pooledEmpty = Map.empty
-          stakeEmpty  = Stake Map.empty
-          snapEmpty   = (stakeEmpty, pooledEmpty)
+    SnapShots snapEmpty snapEmpty snapEmpty (Coin 0)
+    where snapEmpty   = SnapShot (Stake Map.empty) Map.empty Map.empty

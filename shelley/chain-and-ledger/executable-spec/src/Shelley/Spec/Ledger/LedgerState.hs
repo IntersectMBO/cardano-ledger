@@ -93,7 +93,7 @@ import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShots (..), Stake (..),
+import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..), Stake (..),
                      aggregateOuts, baseStake, emptySnapShots, maxPool, poolStake, ptrStake,
                      rewardStake)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHash,
@@ -1058,14 +1058,14 @@ stakeDistr
    . UTxO crypto
   -> DState crypto
   -> PState crypto
-  -> ( Stake crypto
-     , Map (Credential crypto) (KeyHash crypto)
-     )
-stakeDistr u ds ps = ( Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation
-                     , delegs)
+  -> SnapShot crypto
+stakeDistr u ds ps = SnapShot
+  (Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation)
+  delegs
+  poolParams
     where
       DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
-      PState (StakePools stpools) _ _                          = ps
+      PState (StakePools stpools) poolParams _                 = ps
       outs = aggregateOuts u
 
       stakeRelation :: [(Credential crypto, Coin)]
@@ -1106,8 +1106,7 @@ createRUpd
 createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) total = do
     ei <- asks epochInfo
     slotsPerEpoch <- epochInfoSize ei e
-    let (stake', delegs') = _pstakeGo ss
-        poolsSS' = _poolsSS ss
+    let SnapShot stake' delegs' poolParams = _pstakeGo ss
         Coin reserves = _reserves acnt
         ds = _dstate $ _delegationState ls
 
@@ -1121,7 +1120,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp) total = do
         deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rewardPot
         _R = Coin $ rewardPot - deltaT1
 
-        rs_ = reward pp b _R (Map.keysSet $ _rewards ds) poolsSS' stake' delegs' total
+        rs_ = reward pp b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' total
         deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
