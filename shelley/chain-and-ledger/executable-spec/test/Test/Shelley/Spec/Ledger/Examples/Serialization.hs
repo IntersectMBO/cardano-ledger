@@ -27,7 +27,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..), m
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
                      pattern HashHeader, TxSeq (..), bbHash, bhash, bheaderBlockNo, bheaderEta,
                      bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk,
-                     bprotvert, bsize, mkSeed, seedEta, seedL)
+                     bprotver, bsize, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
@@ -226,7 +226,7 @@ testBHB = BHBody
           , bhash          = bbHash $ TxSeq Seq.empty
           , bheaderOCert   = OCert (snd testKESKeys)
             0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
-          , bprotvert      = ProtVer 0 0
+          , bprotver       = ProtVer 0 0
           }
 
 data ToTokens where
@@ -816,7 +816,7 @@ serializationTests = testGroup "Serialization Tests"
       , bheaderBlockNo = blockNo
       , bhash          = bbhash
       , bheaderOCert   = ocert
-      , bprotvert      = protover
+      , bprotver       = protover
       }
     )
     ( T (TkListLen $ 9 + 4 + 2)

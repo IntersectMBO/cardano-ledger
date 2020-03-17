@@ -185,7 +185,7 @@ data BHBody crypto = BHBody
     -- | operational certificate
   , bheaderOCert          :: OCert crypto
     -- | protocol version
-  , bprotvert          :: ProtVer
+  , bprotver              :: ProtVer
   } deriving (Show, Eq, Generic)
     deriving ToCBOR via (CBORGroup (BHBody crypto))
     deriving FromCBOR via (CBORGroup (BHBody crypto))
@@ -196,7 +196,7 @@ instance Crypto crypto
 instance Crypto crypto
   => ToCBORGroup (BHBody crypto)
  where
-  listLen bhBody =  9 + listLen (bheaderOCert bhBody)  + listLen (bprotvert bhBody)
+  listLen bhBody =  9 + listLen (bheaderOCert bhBody)  + listLen (bprotver bhBody)
   toCBORGroup bhBody =
          toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
@@ -208,7 +208,7 @@ instance Crypto crypto
       <> toCBOR (bheaderBlockNo bhBody)
       <> toCBOR (bhash bhBody)
       <> toCBORGroup (bheaderOCert bhBody)
-      <> toCBORGroup (bprotvert bhBody)
+      <> toCBORGroup (bprotver bhBody)
 
 instance Crypto crypto
   => FromCBORGroup (BHBody crypto)
@@ -224,7 +224,7 @@ instance Crypto crypto
     bheaderBlockNo <- fromCBOR
     bhash <- fromCBOR
     bheaderOCert <- fromCBORGroup
-    bprotvert <- fromCBORGroup
+    bprotver <- fromCBORGroup
     pure $ BHBody
            { bheaderPrev
            , bheaderVk
@@ -236,7 +236,7 @@ instance Crypto crypto
            , bheaderBlockNo
            , bhash
            , bheaderOCert
-           , bprotvert
+           , bprotver
            }
 
 data Block crypto
