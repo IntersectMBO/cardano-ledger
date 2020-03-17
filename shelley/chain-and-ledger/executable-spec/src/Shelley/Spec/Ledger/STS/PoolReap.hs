@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -41,7 +42,6 @@ instance STS (POOLREAP crypto) where
   type Environment (POOLREAP crypto) = PParams
   type BaseM (POOLREAP crypto) = ShelleyBase
   data PredicateFailure (POOLREAP crypto)
-    = FailurePOOLREAP
     deriving (Show, Eq, Generic)
   initialRules = [pure $ PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState]
   transitionRules = [poolReapTransition]

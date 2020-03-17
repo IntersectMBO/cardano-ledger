@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -44,7 +45,6 @@ instance STS (SNAP crypto) where
   type Environment (SNAP crypto) = SnapEnv crypto
   type BaseM (SNAP crypto) = ShelleyBase
   data PredicateFailure (SNAP crypto)
-    = FailureSNAP
     deriving (Show, Generic, Eq)
 
   initialRules =

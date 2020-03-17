@@ -41,8 +41,7 @@ instance STS (NEWPP crypto) where
   type Environment (NEWPP crypto) = NewppEnv crypto
   type BaseM (NEWPP crypto) = ShelleyBase
   data PredicateFailure (NEWPP crypto)
-    = FailureNEWPP
-    | UnexpectedDepositPot
+    = UnexpectedDepositPot
     deriving (Show, Eq, Generic)
 
   initialRules = [initialNewPp]
