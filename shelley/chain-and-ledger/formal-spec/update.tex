@@ -81,6 +81,12 @@ proposed updates (indexed by genesis keys) and an optional epoch
 The purpose of the $\Seed$ type in the $\PPUpdate$ derived type is explained
 in the protocol parameter adoption rules.
 
+Protocol updates are only allowed up until ($2\cdot\SlotsPrior$)-many slots before the
+end of the epoch. The reason for this involves how we safely predict hard forks.
+Changing the protocol version can result in a hard fork, and we would like an
+entire stability period between when we know that a hard fork will necessarily happen
+and when the current epoch ends.
+
 \begin{itemize}
   \item PP-Update-Empty : no new updates were proposed, do nothing
   \item PP-Update-Nonempty : some new updates $\var{pup}$ were proposed
@@ -94,7 +100,7 @@ This rule has the following predicate failures:
 
 \begin{enumerate}
 \item In the case of \var{slot} being greater than or equal to
-  $\fun{firstSlot}~((\epoch{slot}) + 1) - \fun{SlotsPrior}$, there is
+  $\fun{firstSlot}~((\epoch{slot}) + 1) - 2\cdot\fun{SlotsPrior}$, there is
   a \emph{PPUpdateTooLate} failure.
 \item In the case that the epoch number in the signal is not the current epoch,
   there is a \emph{PPUpdateNoEpoch} failure.
@@ -169,7 +175,7 @@ and will be rejected otherwise.
       \forall\var{ps}\in\range{pup},~
         \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
       \\
-      \var{slot} < \fun{firstSlot}~((\epoch{slot}) + 1) - \SlotsPrior
+      \var{slot} < \fun{firstSlot}~((\epoch{slot}) + 1) - 2\cdot\SlotsPrior
       \\
       \epoch{slot} = e
     }
