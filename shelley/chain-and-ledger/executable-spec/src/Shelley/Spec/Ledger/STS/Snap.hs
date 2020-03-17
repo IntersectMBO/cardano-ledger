@@ -59,7 +59,7 @@ snapTransition = do
 
   let UTxOState utxo deposits' fees _ = u
   let DState stkCreds _ _ _ _ _ _ = dstate
-  let PState stpools poolParams _ = pstate
+  let PState stpools _ _          = pstate
   let stake = stakeDistr utxo dstate pstate
   _slot <- liftSTS $ do
     ei <- asks epochInfo
@@ -70,7 +70,6 @@ snapTransition = do
     s { _pstakeMark = stake
       , _pstakeSet = _pstakeMark s
       , _pstakeGo = _pstakeSet s
-      , _poolsSS = poolParams
       , _feeSS = fees + decayed}
     u { _deposited = oblg
       , _fees = fees + decayed}

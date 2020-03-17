@@ -5,6 +5,7 @@
 \newcommand{\Acnt}{\type{Acnt}}
 \newcommand{\PlReapState}{\type{PlReapState}}
 \newcommand{\NewPParamEnv}{\type{NewPParamEnv}}
+\newcommand{\Snapshot}{\type{Snapshot}}
 \newcommand{\Snapshots}{\type{Snapshots}}
 \newcommand{\SnapshotEnv}{\type{SnapshotEnv}}
 \newcommand{\SnapshotState}{\type{SnapshotState}}
@@ -236,7 +237,7 @@ Figure~\ref{fig:epoch-defs} introduces three new derived types:
       & \text{blocks made by stake pools} \\
       \var{stake}
       & \Stake
-      & \KeyHash_{stake} \mapsto \Coin
+      & \Credential \mapsto \Coin
       & \text{stake} \\
     \end{array}
   \end{equation*}
@@ -305,13 +306,20 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
 \label{sec:snapshots}
 
 The state transition types for stake distribution snapshots are given in
-Figure~\ref{fig:ts-types:snapshot}. The type $\type{\Snapshots}$ contains the
+Figure~\ref{fig:ts-types:snapshot}.
+Each snapshot consists of:
+\begin{itemize}
+  \item $\var{stake}$, a stake distribution, which is defined in
+    Figure~\ref{fig:epoch-defs} as a mapping of credentials to coin.
+  \item $\var{delegations}$, a delegation map, mapping credentials to stake pools.
+  \item $\var{poolParameters}$, storing the pool parameters of each stake pool.
+\end{itemize}
+
+The type $\type{\Snapshots}$ contains the
 information needing to be saved on the epoch boundary:
 \begin{itemize}
   \item $\var{pstake_{mark}}$, $\var{pstake_{set}}$ and $\var{pstake_{go}}$ are the three
-    stake distribution snapshots (paired with the corresponding delegation map),
-    as explained in Section~\ref{sec:reward-overview}.
-  \item $\var{poolsSS}$ stores the pool parameters from the epoch boundary.
+    snapshots as explained in Section~\ref{sec:reward-overview}.
   \item $\var{feeSS}$ stores the fees and decayed deposit amounts at the epoch boundary.
 \end{itemize}
 
@@ -333,16 +341,24 @@ information needing to be saved on the epoch boundary:
   %
   \emph{Snapshots}
   \begin{equation*}
+    \Snapshot =
+    \left(
+      \begin{array}{r@{~\in~}ll}
+        \var{stake} & \Stake & \text{stake distribution}\\
+        \var{delegations} & \Credential\mapsto\KeyHash_{pool}
+                          & \text{stake delegations}\\
+        \var{poolParameters} & \KeyHash_{pool} \mapsto \PoolParam & \text{pool parameters }\\
+      \end{array}
+    \right)
+  \end{equation*}
+
+  \begin{equation*}
     \Snapshots =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{pstake_{mark}} & \Stake\times(\KeyHash_{stake}\mapsto\KeyHash_{pool})
-                            & \text{newest stake}\\
-        \var{pstake_{set}} & \Stake\times(\KeyHash_{stake}\mapsto\KeyHash_{pool})
-                           & \text{middle stake}\\
-        \var{pstake_{go}} & \Stake\times(\KeyHash_{stake}\mapsto\KeyHash_{pool})
-                          & \text{oldest stake}\\
-        \var{poolsSS} & \KeyHash \mapsto \PoolParam & \text{pool parameters }\\
+        \var{pstake_{mark}} & \Snapshot & \text{newest stake}\\
+        \var{pstake_{set}}  & \Snapshot & \text{middle stake}\\
+        \var{pstake_{go}}   & \Snapshot & \text{oldest stake}\\
         \var{feeSS} & \Coin & \text{fee snapshot}\\
       \end{array}
     \right)
@@ -377,8 +393,6 @@ This transition has no preconditions and results in the following state change:
   \item The oldest snapshot is replaced with the penultimate one.
   \item The penultimate snapshot is replaced with the newest one.
   \item The newest snapshot is replaced with one just calculated.
-  \item The pool parameters are stored.
-  \item The pool performance is stored.
   \item The fees and decayed deposits are stored in $\var{feeSS}$. Note that this value will not
     change between epochs, unlike the $\var{fees}$ and $\var{deposits}$ values in the UTxO state.
   \item In the UTxO state, the decayed deposit amounts are moved from the deposit pot
@@ -417,7 +431,6 @@ This transition has no preconditions and results in the following state change:
           \var{pstake_{mark}}\\
           \var{pstake_{set}}\\
           \var{pstake_{go}}\\
-          \var{poolsSS}\\
           \var{feeSS} \\
           ~ \\
           \var{utxo} \\
@@ -429,10 +442,9 @@ This transition has no preconditions and results in the following state change:
       \trans{snap}{e}
       \left(
         \begin{array}{r}
-          \varUpdate{(\var{stake},~\var{delegations})} \\
+          \varUpdate{(\var{stake},~\var{delegations},~\var{poolParams})} \\
           \varUpdate{\var{pstake_{mark}}} \\
           \varUpdate{\var{pstake_{set}}} \\
-          \varUpdate{\var{poolParams}} \\
           \varUpdate{\var{fees} + \var{decayed}} \\
           ~ \\
           \var{utxo} \\

@@ -183,6 +183,8 @@ type WitVKey = TxData.WitVKey ConcreteCrypto
 
 type Wdrl = TxData.Wdrl ConcreteCrypto
 
+type SnapShot = EpochBoundary.SnapShot ConcreteCrypto
+
 type SnapShots = EpochBoundary.SnapShots ConcreteCrypto
 
 type Stake = EpochBoundary.Stake ConcreteCrypto

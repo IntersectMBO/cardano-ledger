@@ -482,8 +482,8 @@ In the first case, the new epoch state is updated as follows:
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
           (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es'''} \\
-         (\wcard,~\var{pstake_{set}},~\wcard,~\var{pools},~\wcard) & \var{ss} \\
-         (\var{stake}, \var{delegs}) & \var{pstake_{set}} \\
+         (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
+         (\var{stake},~\var{delegs},~\var{poolPrms}) & \var{pstake_{set}} \\
          total & \sum_{\_ \mapsto c\in\var{stake}} c \\
           \var{sd} & \fun{aggregate_{+}}~\left(\var{delegs}^{-1}\circ
                      \left\{
@@ -496,7 +496,7 @@ In the first case, the new epoch state is updated as follows:
             {
               \begin{array}{r@{~\in~}l}
                 \var{hk_p}\mapsto\sigma & \var{sd} \\
-                \var{hk_p}\mapsto\var{p} & \var{pools}
+                \var{hk_p}\mapsto\var{p} & \var{poolPrms}
               \end{array}
             }
             \right\}\\
