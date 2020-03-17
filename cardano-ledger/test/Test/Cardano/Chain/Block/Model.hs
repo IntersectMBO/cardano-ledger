@@ -23,6 +23,7 @@ module Test.Cardano.Chain.Block.Model
   ( tests
   , elaborateAndUpdate
   , passConcreteValidation
+  , elaborateBlock
   )
 where
 

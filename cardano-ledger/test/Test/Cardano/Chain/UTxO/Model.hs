@@ -11,6 +11,7 @@ module Test.Cardano.Chain.UTxO.Model
   , elaborateAndUpdate
   , elaborateInitialUTxO
   , elaborateTxWitnesses
+  , elaborateTxWitsBSWithMap
   )
 where
 
