@@ -11,6 +11,7 @@
 module Cardano.Chain.Genesis.Data
   ( GenesisData(..)
   , GenesisDataError(..)
+  , mainnetProtocolMagicId
   , readGenesisData
   )
 where
@@ -128,3 +129,6 @@ readGenesisData fp = do
   let genesisHash = GenesisHash $ hashRaw (renderCanonicalJSON genesisDataJSON)
 
   pure (genesisData, genesisHash)
+
+mainnetProtocolMagicId :: ProtocolMagicId
+mainnetProtocolMagicId = ProtocolMagicId 764824073
