@@ -434,7 +434,7 @@ getKESPeriodRenewalNo keys (KESPeriod kp) =
           then n
           else go rest (n + 1) k
 
--- | True if the given slot is within the last `slotsPrior`
+-- | True if the given slot is within the last `2 * slotsPrior`
 -- slots of the current epoch.
 tooLateInEpoch :: SlotNo -> Bool
 tooLateInEpoch s = runShelleyBase $ do
@@ -442,4 +442,4 @@ tooLateInEpoch s = runShelleyBase $ do
   firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
   slotsPrior_ <- asks slotsPrior
 
-  return (s >= firstSlotNo *- Duration slotsPrior_)
+  return (s >= firstSlotNo *- Duration (2 * slotsPrior_))
