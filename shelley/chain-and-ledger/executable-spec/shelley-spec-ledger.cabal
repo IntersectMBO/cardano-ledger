@@ -163,6 +163,7 @@ test-suite shelley-spec-ledger-test
     build-depends:
       QuickCheck,
       base,
+      base16-bytestring,
       bytestring,
       cardano-binary,
       cardano-crypto-class,

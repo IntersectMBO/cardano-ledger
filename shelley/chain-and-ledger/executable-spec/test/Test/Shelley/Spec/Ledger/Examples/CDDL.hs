@@ -17,12 +17,14 @@ import qualified Prelude
 import           Cardano.Binary
 import           Cardano.Prelude
 import           Control.Exception (bracket)
+import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import           Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
 import qualified System.Directory as Sys
 import qualified System.IO as Sys
 import qualified System.IO.Error as Sys
 import           System.Process.ByteString.Lazy
+
 
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -68,7 +70,7 @@ combinedCDDL = do
   pure $ base <> crypto <> extras
 
 cddlTest
-  :: forall a. (ToCBOR a, FromCBOR a)
+  :: forall a. (ToCBOR a, FromCBOR a, Show a)
   => Int
   -> BSL.ByteString
   -> IO BSL.ByteString
@@ -81,7 +83,7 @@ cddlTest n entryName cddlRes = testCase
   cddlTestCommon @a serialize fromCBOR n cddl
 
 cddlGroupTest
-  :: forall a. (ToCBORGroup a, FromCBORGroup a)
+  :: forall a. (ToCBORGroup a, FromCBORGroup a, Show a)
   => Int
   -> BSL.ByteString
   -> IO BSL.ByteString
@@ -96,7 +98,7 @@ cddlGroupTest n entryName cddlRes = testCase ("cddl roundtrip " <> show (typeRep
     cddl
 
 cddlTestCommon
-  :: (a -> BSL.ByteString)
+  :: Show a => (a -> BSL.ByteString)
   -> (forall s. Decoder s a)
   -> Int
   -> BSL.ByteString
@@ -112,11 +114,19 @@ cddlTestCommon serializer decoder n cddlData = do
           assertFailure $ Prelude.unlines
             [ "Failed to deserialize"
             , "Error: " <> show e
-            , "Data: " <> Char8.unpack exampleDiag
+            , "Generated diag: " <> Char8.unpack exampleDiag
             ]
       let reencoded = serializer decoded
-      verifyConforming reencoded cddl
-
+      verifyConforming reencoded cddl >>= \case
+        True -> pure ()
+        False ->
+          assertFailure $ Prelude.unlines
+            [ "Serialized data did not conform to the spec"
+            , "Generated diag: " <> Char8.unpack exampleDiag
+            , "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes)
+            , "Decoded value: " <> show decoded
+            , "Reencoded base16: " <> Char8.unpack (Base16.encode reencoded)
+            ]
 
 data StdErr = StdErr Prelude.String BSL.ByteString
 
@@ -166,8 +176,8 @@ usingFile bytes k = withTempFile "." "tmp" $ \fileName h -> do
   Sys.hClose h
   k fileName
 
-verifyConforming :: BSL.ByteString -> FilePath -> Assertion
+verifyConforming :: BSL.ByteString -> FilePath -> IO Bool
 verifyConforming value cddl = readProcessWithExitCode2 "cddl" [cddl, "validate", "-"] value >>=
     \case
-      Right _ -> pure ()
-      Left stdErr -> throwStdErr "Got failing exit code when validating against cddl" stdErr
+      Right _ -> pure True
+      Left _ -> pure False
