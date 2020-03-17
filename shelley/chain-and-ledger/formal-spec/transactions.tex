@@ -43,7 +43,7 @@ unspent transaction outputs. It is a finite map from transaction inputs
 to transaction outputs that are available to be spent.
 
 Finally, $\fun{txid}$ computes the transaction id of a given transaction.
-This function must produce a unique id for each unique transaction.
+This function must produce a unique id for each unique transaction body.
 
 \begin{figure*}[htb]
   \emph{Abstract types}
@@ -167,7 +167,7 @@ This function must produce a unique id for each unique transaction.
   \emph{Abstract Functions}
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \txid{} & \Tx \to \TxId & \text{compute transaction id}\\
+      \txid{} & \TxBody \to \TxId & \text{compute transaction id}\\
       \fun{validateScript} & \Script \to \Tx \to \Bool & \text{script interpreter}\\
       \fun{hashMD} & \MetaData \to \MetaDataHash & \text{hash the metadata}\\
     \end{array}

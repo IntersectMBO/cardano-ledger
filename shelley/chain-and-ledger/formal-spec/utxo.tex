@@ -233,9 +233,10 @@ If all the predicates are satisfied, the state is updated as follows:
   \item Update the UTxO:
     \begin{itemize}
       \item Remove from the UTxO all the $(\var{txin}, \var{txout})$ pairs
-        associated with the $\var{txins}$'s in the $\var{inputs}$ list of $\var{tx}$.
+        associated with the $\var{txins}$'s in the $\var{inputs}$ list of
+        the transaction body $\var{txb}$.
       \item Add all the $\var{outputs}$ of $\var{tx}$ to the
-        UTxO, associated with the $\fun{txid}~\var{tx}$
+        UTxO, associated with the $\fun{txid}$ of the transaction body $\var{txb}$
     \end{itemize}
   \item Add all new deposits to the deposit pot and subtract all refunds.
   \item Add the transaction fee to the fee pot. Additionally, for any refund
