@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -35,13 +36,14 @@ instance STS (MIR crypto) where
     type Environment (MIR crypto) = ()
     type BaseM (MIR crypto) = ShelleyBase
     data PredicateFailure (MIR crypto)
-      = MirFailure (PredicateFailure (MIR crypto))
       deriving (Show, Generic, Eq)
 
     initialRules = [ initialMir ]
     transitionRules = [ mirTransition ]
 
 instance NoUnexpectedThunks (PredicateFailure (MIR crypto))
+  showTypeOf _ = "Shelley.Spec.Ledger.STS.Mir.PredicateFailure"
+  whnfNoUnexpectedThunks _ _ = return NoUnexpectedThunks
 
 initialMir :: InitialRule (MIR crypto)
 initialMir = pure $ EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams
