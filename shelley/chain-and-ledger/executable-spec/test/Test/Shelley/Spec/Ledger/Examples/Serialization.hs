@@ -47,8 +47,8 @@ import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrEnterprise,
                      pattern AddrPtr, Credential (..), pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertMir, pattern DCertPool, pattern Delegation, PoolMetaData (..),
-                     pattern PoolParams, Ptr (..), pattern RequireSignature, pattern RewardAcnt,
-                     pattern ScriptHash, pattern TxBody, pattern TxIn, pattern TxOut, Url (..),
+                     pattern PoolParams, Ptr (..), pattern RewardAcnt,
+                     pattern TxBody, pattern TxIn, pattern TxOut, Url (..),
                      Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD, _poolMDHash, _poolMDUrl,
                      _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays,
                      _poolVrf)
@@ -58,6 +58,8 @@ import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, ApName (..), ApV
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
+import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature,
+                 pattern ScriptHash)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair,

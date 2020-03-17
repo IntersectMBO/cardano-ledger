@@ -107,7 +107,7 @@ import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyH
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCert (..), Ix,
                      MIRCert (..), PoolCert (..), PoolMetaData (..), PoolParams (..), Ptr (..),
                      RewardAcnt (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), Url (..),
-                     Wdrl (..), countMSigNodes, getRwdCred, witKeyHash)
+                     Wdrl (..), getRwdCred, witKeyHash)
 import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..),
                      UpdateState (..), apps, emptyUpdate, emptyUpdateState)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins,
@@ -122,6 +122,7 @@ import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
                      intervalValue, mkUnitInterval, text64Size)
+import           Shelley.Spec.Ledger.Scripts                     
 
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys

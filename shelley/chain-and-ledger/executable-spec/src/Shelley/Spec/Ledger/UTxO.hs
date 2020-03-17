@@ -54,13 +54,14 @@ import           Shelley.Spec.Ledger.PParams (PParams (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), pattern DeRegKey,
                      pattern Delegate, pattern Delegation, PoolCert (..), PoolParams (..),
-                     ScriptHash, TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..),
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..),
                      WitVKey (..), getRwdCred)
 import           Shelley.Spec.Ledger.Updates (Update)
 
 import           Data.Coerce (coerce)
 import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), StakePools (..), dvalue,
                      requiresVKeyWitness)
+import           Shelley.Spec.Ledger.Scripts
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto

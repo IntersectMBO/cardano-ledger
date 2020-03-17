@@ -78,9 +78,9 @@ import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), SlotNo (..), epochInfoFirst,
                      (*-))
 import           Shelley.Spec.Ledger.Tx (pattern TxOut, hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
-                     pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
-                     pattern RequireSignature, pattern ScriptHashObj)
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj, pattern ScriptHashObj)
+import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
+                 pattern RequireSignature)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair,
                      Credential, GenKeyHash, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig,

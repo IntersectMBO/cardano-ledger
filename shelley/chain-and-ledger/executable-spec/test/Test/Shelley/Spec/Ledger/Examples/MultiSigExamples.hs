@@ -30,12 +30,13 @@ import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern KeyHashObj,
-                     pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
-                     pattern RequireSignature, pattern ScriptHashObj, pattern StakeCreds,
+                     pattern ScriptHashObj, pattern StakeCreds,
                      pattern StakePools, pattern TxBody, pattern TxIn, pattern TxOut, pattern Wdrl,
                      unWdrl)
 import           Shelley.Spec.Ledger.Updates (emptyUpdate)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
+import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
+                 pattern RequireSignature)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig,
                      ScriptHash, Tx, TxBody, TxId, TxIn, UTXOW, UTxOState, Wdrl)

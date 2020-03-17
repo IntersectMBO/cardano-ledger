@@ -17,6 +17,7 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EpochBoundary
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.OCert as OCert
+import qualified Shelley.Spec.Ledger.Scripts as Scripts
 import qualified Shelley.Spec.Ledger.STS.Chain as STS.Chain
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS.Deleg
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS.Delegs
@@ -175,9 +176,9 @@ type Credential = TxData.Credential ConcreteCrypto
 
 type StakeCreds = TxData.StakeCreds ConcreteCrypto
 
-type MultiSig = TxData.MultiSig ConcreteCrypto
+type MultiSig = Scripts.MultiSig ConcreteCrypto
 
-type ScriptHash = TxData.ScriptHash ConcreteCrypto
+type ScriptHash = Scripts.ScriptHash ConcreteCrypto
 
 type WitVKey = TxData.WitVKey ConcreteCrypto
 
