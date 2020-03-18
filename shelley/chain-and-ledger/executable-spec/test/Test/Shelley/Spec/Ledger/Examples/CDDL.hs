@@ -16,10 +16,14 @@ import qualified Prelude
 
 import           Cardano.Binary
 import           Cardano.Prelude
+import           Control.Exception (bracket)
+import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import           Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
+import qualified System.Directory as Sys
+import qualified System.IO as Sys
+import qualified System.IO.Error as Sys
 import           System.Process.ByteString.Lazy
-
 
 
 import           Test.Tasty
@@ -30,29 +34,33 @@ import           Shelley.Spec.Ledger.Serialization
 import           Shelley.Spec.Ledger.Updates (PParamsUpdate)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (AVUpdate, Addr, BHBody, BHeader,
-                     DCert, LaxBlock, MultiSig, OCert, PPUpdate, Tx, TxBody, TxIn, TxOut, Update)
+                     Credential, DCert, LaxBlock, MultiSig, OCert, PPUpdate, Tx, TxBody, TxIn,
+                     TxOut, Update)
 
 cddlTests :: TestTree
 cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [
-      cddlGroupTest @BHeader  30 "header"
-    , cddlGroupTest @BHBody   30 "header_body"
-    , cddlGroupTest @OCert    30 "operational_cert"
-    , cddlGroupTest @Addr     20 "address"
-    , cddlTest @TxBody        30 "transaction_body"
-    , cddlTest @TxOut         30 "transaction_output"
-    , cddlTest @DCert         30 "delegation_certificate"
-    , cddlTest @TxIn          30 "transaction_input"
-    , cddlTest @MetaData      10 "transaction_metadata"
-    , cddlTest @MultiSig      30 "script"
-    , cddlTest @Update        30 "full_update"
-    , cddlTest @AVUpdate      30 "application_version_update_votes"
-    , cddlTest @PPUpdate      30 "protocol_param_update_votes"
-    , cddlTest @PParamsUpdate 30 "protocol_param_update"
-    , cddlTest @Tx            30 "transaction"
-    , cddlTest @LaxBlock      30 "block"
+      cddlGroupTest @BHeader  n "header"
+    , cddlGroupTest @BHBody   n "header_body"
+    , cddlGroupTest @OCert    n "operational_cert"
+    , cddlGroupTest @Addr     n "address"
+    , cddlTest @Credential    n "credential"
+    , cddlTest @TxBody        n "transaction_body"
+    , cddlTest @TxOut         n "transaction_output"
+    , cddlTest @DCert         n "delegation_certificate"
+    , cddlTest @TxIn          n "transaction_input"
+    , cddlTest @MetaData      n "transaction_metadata"
+    , cddlTest @MultiSig      n "script"
+    , cddlTest @Update        n "full_update"
+    , cddlTest @AVUpdate      n "application_version_update_votes"
+    , cddlTest @PPUpdate      n "protocol_param_update_votes"
+    , cddlTest @PParamsUpdate n "protocol_param_update"
+    , cddlTest @Tx            n "transaction"
+    , cddlTest @LaxBlock      n "block"
     ] <*> pure cddl
+  where
+    n = 1
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
@@ -62,7 +70,7 @@ combinedCDDL = do
   pure $ base <> crypto <> extras
 
 cddlTest
-  :: forall a. (ToCBOR a, FromCBOR a)
+  :: forall a. (ToCBOR a, FromCBOR a, Show a)
   => Int
   -> BSL.ByteString
   -> IO BSL.ByteString
@@ -72,46 +80,53 @@ cddlTest n entryName cddlRes = testCase
   $ do
   basecddl <- cddlRes
   let cddl = "output = " <> entryName <> "\n" <> basecddl
-  examples <- Char8.lines <$> generateCBORDiagStdIn n cddl :: IO [BSL.ByteString]
-  forM_ examples $ \exampleDiag -> do
-    exampleBytes <- diagToBytes exampleDiag
-    decoded <- case decodeFull @a exampleBytes of
-      Right x -> pure x
-      Left e  ->
-        assertFailure $ Prelude.unlines
-          [ "Failed to deserialize"
-          , "Error: " <> show e
-          , "Data: " <> Char8.unpack exampleDiag
-          ]
-    let reencoded = serialize decoded
-    verifyConforming reencoded cddl
+  cddlTestCommon @a serialize fromCBOR n cddl
 
 cddlGroupTest
-  :: forall a. (ToCBORGroup a, FromCBORGroup a)
+  :: forall a. (ToCBORGroup a, FromCBORGroup a, Show a)
   => Int
   -> BSL.ByteString
   -> IO BSL.ByteString
   -> TestTree
-cddlGroupTest n entryName cddlRes = testCase
-  ("cddl roundtrip " <> show (typeRep (Proxy @a)))
-  $ do
+cddlGroupTest n entryName cddlRes = testCase ("cddl roundtrip " <> show (typeRep (Proxy @a))) $ do
   basecddl <- cddlRes
   let cddl = "output = [" <> entryName <> "]\n" <> basecddl
-  examples <- Char8.lines <$> generateCBORDiagStdIn n cddl :: IO [BSL.ByteString]
-  let decoder = groupRecord :: forall s. Decoder s a
-  forM_ examples $ \exampleDiag -> do
-    exampleBytes <- diagToBytes exampleDiag
-    decoded <- case decodeFullDecoder "CBORGroup" decoder exampleBytes of
-      Right x -> pure x
-      Left e  ->
-        assertFailure $ Prelude.unlines
-          [ "Failed to deserialize"
-          , "Error: " <> show e
-          , "Data: " <> Char8.unpack exampleDiag
-          ]
-    let reencoded = serializeEncoding $ encodeListLen 1 <> toCBORGroup decoded
-    verifyConforming reencoded cddl
+  cddlTestCommon @a
+    (\x -> serializeEncoding $ encodeListLen (listLen x) <> toCBORGroup x)
+    groupRecord
+    n
+    cddl
 
+cddlTestCommon
+  :: Show a => (a -> BSL.ByteString)
+  -> (forall s. Decoder s a)
+  -> Int
+  -> BSL.ByteString
+  -> IO ()
+cddlTestCommon serializer decoder n cddlData = do
+  usingFile cddlData $ \cddl -> do
+    examples <- Char8.lines <$> generateCBORDiagStdIn n cddlData :: IO [BSL.ByteString]
+    forM_ examples $ \exampleDiag -> do
+      exampleBytes <- diagToBytes exampleDiag
+      decoded <- case decodeFullDecoder "cbor test" decoder exampleBytes of
+        Right x -> pure x
+        Left e  ->
+          assertFailure $ Prelude.unlines
+            [ "Failed to deserialize"
+            , "Error: " <> show e
+            , "Generated diag: " <> Char8.unpack exampleDiag
+            ]
+      let reencoded = serializer decoded
+      verifyConforming reencoded cddl >>= \case
+        True -> pure ()
+        False ->
+          assertFailure $ Prelude.unlines
+            [ "Serialized data did not conform to the spec"
+            , "Generated diag: " <> Char8.unpack exampleDiag
+            , "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes)
+            , "Decoded value: " <> show decoded
+            , "Reencoded base16: " <> Char8.unpack (Base16.encode reencoded)
+            ]
 
 data StdErr = StdErr Prelude.String BSL.ByteString
 
@@ -147,5 +162,22 @@ readProcessWithExitCode2 exec args stdIn = do
     ExitSuccess -> pure (Right stdOut)
     ExitFailure _i -> pure (Left stdErr)
 
-verifyConforming :: BSL.ByteString -> BSL.ByteString -> Assertion
-verifyConforming _value _cddl = pure () -- TODO
+withTempFile :: FilePath -> String -> (FilePath -> Handle -> IO a) -> IO a
+withTempFile dir nameTemplate k = bracket (Sys.openBinaryTempFile dir nameTemplate) cleanup (uncurry k)
+  where
+  cleanup (fileName, h) = do
+    Sys.hClose h
+    catch (Sys.removeFile fileName) $ \err ->
+      if Sys.isDoesNotExistError err then return () else throwIO err
+
+usingFile :: BSL.ByteString -> (FilePath -> IO a) -> IO a
+usingFile bytes k = withTempFile "." "tmp" $ \fileName h -> do
+  BSL.hPut h bytes
+  Sys.hClose h
+  k fileName
+
+verifyConforming :: BSL.ByteString -> FilePath -> IO Bool
+verifyConforming value cddl = readProcessWithExitCode2 "cddl" [cddl, "validate", "-"] value >>=
+    \case
+      Right _ -> pure True
+      Left _ -> pure False
