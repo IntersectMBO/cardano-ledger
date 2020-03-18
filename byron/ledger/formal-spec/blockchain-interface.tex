@@ -472,7 +472,7 @@ Figure~\ref{fig:st-diagram-pt-up}.
 
   \draw[->] (confirmed)
   edge node [right, text width=8em]
-  {Proposal was confirmed at least $2 \cdot k$ slots ago}
+  {Proposal was confirmed at least $4 \cdot k$ slots ago}
   (adopted);
 
 
@@ -772,9 +772,13 @@ Rule~\ref{eq:rule:upi-ec-pv-change} models how the protocol-version and its
 parameters are changed depending on an epoch change signal.
 %
 On an epoch change, this rule will pick a candidate that gathered enough
-endorsements at least $2 \cdot k$ slots ago. If a protocol-version candidate
-cannot gather enough endorsements $2 \cdot k$ slots before the end of an
-epoch, the proposal can only be adopted in the next epoch.
+endorsements at least $4 \cdot k$ slots ago. If a protocol-version candidate
+cannot gather enough endorsements $4 \cdot k$ slots before the end of an epoch,
+the proposal can only be adopted in the next epoch. The reason for the $4 \cdot
+k$ slot delay is to allow a period between knowing when a proposal will be
+adopted, and the event of its being adopted. Since update proposals can and will
+make large changes to the way the chain operates, it is useful to be able to
+guarantee a window in which it is known that no update will take place.
 %
 Figure~\ref{fig:up-confirmed-too-late} shows an example of a proposal being
 confirmed too late in an epoch, where it is not possible to get enough
@@ -811,7 +815,7 @@ expires.
     \label{eq:rule:pvbump-change-epoch-only}
     \inference
     {
-      [.., s_n - 2 \cdot k] \restrictdom \var{fads} = \epsilon
+      [.., s_n - 4 \cdot k] \restrictdom \var{fads} = \epsilon
     }
     {
       {\left(\begin{array}{l}
@@ -841,7 +845,7 @@ expires.
     \label{eq:rule:pvbump-change}
     \inference
     {
-      \wcard ; (\wcard , (\var{pv_c}, \var{pps_c})) \leteq [.., s_n - 2 \cdot k] \restrictdom \var{fads}
+      \wcard ; (\wcard , (\var{pv_c}, \var{pps_c})) \leteq [.., s_n - 4 \cdot k] \restrictdom \var{fads}
     }
     {
       {\left(\begin{array}{l}
@@ -1131,7 +1135,7 @@ proposal can be in, and what causes the transitions between them.
 
   \draw[->] (confirmed)
   edge node [right, text width=8em]
-  {Proposal gets enough endorsements $2 \cdot k$ slots before the end of an epoch}
+  {Proposal gets enough endorsements $4 \cdot k$ slots before the end of an epoch}
   (adopted);
 
   \end{tikzpicture}
