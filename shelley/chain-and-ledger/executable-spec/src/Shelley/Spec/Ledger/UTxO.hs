@@ -39,7 +39,7 @@ module Shelley.Spec.Ledger.UTxO
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Foldable (toList)
-import           Data.Map.Strict (Map)
+import           Data.Map.Strict (Map, keys)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
@@ -54,23 +54,24 @@ import           Shelley.Spec.Ledger.PParams (PParams (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), pattern DeRegKey,
                      pattern Delegate, pattern Delegation, PoolCert (..), PoolParams (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..),
-                     WitVKey (..), getRwdCred)
+                     TxBody (..), TxId (..), TxIn (..), Wdrl (..), UTxOOut(..),
+                     WitVKey (..), getRwdCred, getAddress, getValue, getAddressTx, getValueTx)
 import           Shelley.Spec.Ledger.Updates (Update)
 
 import           Data.Coerce (coerce)
 import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), StakePools (..), dvalue,
                      requiresVKeyWitness)
 import           Shelley.Spec.Ledger.Scripts
+import           Shelley.Spec.Ledger.Value
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto
-  = UTxO (Map (TxIn crypto) (TxOut crypto))
+  = UTxO (Map (TxIn crypto) (UTxOOut crypto))
   deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 instance Relation (UTxO crypto) where
   type Domain (UTxO crypto) = TxIn crypto
-  type Range (UTxO crypto)  = TxOut crypto
+  type Range (UTxO crypto)  = UTxOOut crypto
 
   singleton k v = UTxO $ Map.singleton k v
 
@@ -117,7 +118,8 @@ txouts
   => TxBody crypto
   -> UTxO crypto
 txouts tx = UTxO $
-  Map.fromList [(TxIn transId idx, out) | (out, idx) <- zip (toList $ _outputs tx) [0..]]
+  Map.fromList [(TxIn transId idx, UTxOOut (getAddressTx out) (valueToCompactValue $ getValueTx out)) |
+    (out, idx) <- zip (toList $ _outputs tx) [0..]]
   where
     transId = txid tx
 
@@ -125,7 +127,7 @@ txouts tx = UTxO $
 txinLookup
   :: TxIn crypto
   -> UTxO crypto
-  -> Maybe (TxOut crypto)
+  -> Maybe (UTxOOut crypto)
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- |Verify a transaction body witness
@@ -146,7 +148,7 @@ makeWitnessVKey
   => TxBody crypto
   -> KeyPair a crypto
   -> WitVKey crypto
-makeWitnessVKey tx keys = WitVKey (coerce $ vKey keys) (sign (sKey keys) tx)
+makeWitnessVKey tx vkeys = WitVKey (coerce $ vKey vkeys) (sign (sKey vkeys) tx)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
@@ -172,9 +174,8 @@ makeWitnessesFromScriptKeys txb hashKeyMap scriptHashes =
   in  makeWitnessesVKey txb (Map.elems witKeys)
 
 -- |Determine the total balance contained in the UTxO.
-balance :: UTxO crypto -> Coin
-balance (UTxO utxo) = foldr addCoins 0 utxo
-  where addCoins (TxOut _ a) b = a + b
+balance :: Crypto crypto => UTxO crypto -> Value crypto
+balance (UTxO utxo) = foldr (+) zeroV (Set.map getValue (range utxo))
 
 -- |Determine the total deposit amount needed
 totalDeposits
@@ -218,18 +219,20 @@ scriptCred (ScriptHashObj hs) = Just hs
 
 -- | Computes the set of script hashes required to unlock the transcation inputs
 -- and the withdrawals.
+-- now runs the forging scripts too
 scriptsNeeded
   :: UTxO crypto
   -> Tx crypto
   -> Set (ScriptHash crypto)
 scriptsNeeded u tx =
-  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
+  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . getAddress) u'')
   `Set.union`
   Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
   `Set.union`
   Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
-  where unTxOut (TxOut a _) = a
-        withdrawals = unWdrl $ _wdrls $ _body tx
+  `Set.union`
+  Set.fromList (keys $ val $ _forge $ _body tx)
+  where withdrawals = unWdrl $ _wdrls $ _body tx
         UTxO u'' = txinsScript (txins $ _body tx) u <| u
         certificates = (toList . _certs . _body) tx
 
@@ -241,7 +244,7 @@ txinsScript
   -> Set (TxIn crypto)
 txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
-  Map.keysSet (Map.filter (\(TxOut a _) ->
+  Map.keysSet (Map.filter (\(UTxOOut a _) ->
                                case a of
                                  AddrBase (ScriptHashObj _) _     -> True
                                  AddrEnterprise (ScriptHashObj _) -> True

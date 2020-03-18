@@ -41,6 +41,7 @@ import           Shelley.Spec.Ledger.Tx (TxBody)
 import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Applications, PPUpdate (..),
                      UpdateState (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
+import           Shelley.Spec.Ledger.Value
 
 import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Ledger.Shelley.Crypto
@@ -219,9 +220,9 @@ instance
   wrapFailed = PrtclFailure
 
 -- |Calculate the total ada in the chain state
-totalAda :: ChainState crypto -> Coin
+totalAda :: (Crypto crypto) => ChainState crypto -> Coin
 totalAda (ChainState nes _ _ _ _ _ _) =
-  treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
+  treasury_ + reserves_ + rewards_ + (getAdaAmount circulation) + deposits + fees_
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls

@@ -11,6 +11,7 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
+import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
@@ -39,7 +40,7 @@ data SnapEnv crypto
       (DState crypto)
       (PState crypto)
 
-instance STS (SNAP crypto) where
+instance (Crypto crypto) => STS (SNAP crypto) where
   type State (SNAP crypto) = SnapState crypto
   type Signal (SNAP crypto) = EpochNo
   type Environment (SNAP crypto) = SnapEnv crypto
@@ -53,7 +54,7 @@ instance STS (SNAP crypto) where
 
 instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
 
-snapTransition :: TransitionRule (SNAP crypto)
+snapTransition :: (Crypto crypto) => TransitionRule (SNAP crypto)
 snapTransition = do
   TRC (SnapEnv pp dstate pstate, SnapState s u, eNew) <- judgmentContext
 

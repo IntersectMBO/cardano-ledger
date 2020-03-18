@@ -42,6 +42,7 @@ library
                      Shelley.Spec.Ledger.Updates
                      Shelley.Spec.Ledger.Validation
                      Shelley.Spec.Ledger.Scripts
+                     Shelley.Spec.Ledger.Value
                      Shelley.Spec.Ledger.STS.Avup
                      Shelley.Spec.Ledger.STS.Bbody
                      Shelley.Spec.Ledger.STS.Tick

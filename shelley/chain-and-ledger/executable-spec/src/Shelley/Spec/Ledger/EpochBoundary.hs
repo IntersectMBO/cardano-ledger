@@ -37,7 +37,7 @@ import           Shelley.Spec.Ledger.Keys (KeyHash)
 import           Shelley.Spec.Ledger.PParams (PParams (..))
 import           Shelley.Spec.Ledger.Slot (SlotNo, (-*))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt,
-                     TxOut (..), getRwdCred)
+                     getRwdCred, getAddress, getCoin)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
@@ -76,9 +76,10 @@ getStakeHK :: Addr crypto -> Maybe (Credential crypto)
 getStakeHK (AddrBase _ hk) = Just hk
 getStakeHK _               = Nothing
 
-aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
+-- | Add up only the Ada with the getCoin function
+aggregateOuts :: Crypto crypto => UTxO crypto -> Map (Addr crypto) Coin
 aggregateOuts (UTxO u) =
-  Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
+  Map.fromListWith (+) (map (\(_, ot) -> (getAddress ot, getCoin ot)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
 baseStake

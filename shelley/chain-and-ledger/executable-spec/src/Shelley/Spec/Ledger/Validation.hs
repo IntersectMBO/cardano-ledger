@@ -7,10 +7,11 @@ import           GHC.Generics (Generic)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Slot (SlotNo)
+import           Shelley.Spec.Ledger.Value
 
 -- |Validation errors represent the failures of a transaction to be valid
 -- for a given ledger state.
-data ValidationError =
+data ValidationError crypto =
   -- | The transaction inputs are not valid.
     BadInputs
   -- | The transaction has expired
@@ -20,7 +21,7 @@ data ValidationError =
   -- | The transaction fee is too small
   | FeeTooSmall Coin Coin
   -- | Value is not conserved
-  | ValueNotConserved Coin Coin
+  | ValueNotConserved (Value crypto) (Value crypto)
   -- | Unknown reward account
   | IncorrectRewards
   -- | One of the transaction witnesses is invalid.
@@ -41,17 +42,17 @@ data ValidationError =
   | UnknownValidationError
     deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks ValidationError
+instance NoUnexpectedThunks (ValidationError crypto)
 
 -- |The validity of a transaction, where an invalid transaction
 -- is represented by list of errors.
-data Validity = Valid | Invalid [ValidationError] deriving (Show, Eq)
+data Validity crypto = Valid | Invalid [(ValidationError crypto)] deriving (Show, Eq)
 
-instance Semigroup Validity where
+instance Semigroup (Validity crypto) where
   Valid <> b                 = b
   a <> Valid                 = a
   (Invalid a) <> (Invalid b) = Invalid (a ++ b)
 
-instance Monoid Validity where
+instance Monoid (Validity crypto) where
   mempty = Valid
   mappend = (<>)
