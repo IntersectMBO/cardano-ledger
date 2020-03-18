@@ -1,0 +1,68 @@
+name:                shelley-spec-ledger-test
+version:             0.1.0.0
+description:         Test helpers from shelley-spec-ledger exposed to other packages
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+build-type:          Simple
+cabal-version:       >=1.8
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
+library
+  exposed-modules:   Test.Cardano.Crypto.VRF.Fake
+                     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+                     Test.Shelley.Spec.Ledger.Examples.Examples
+                     Test.Shelley.Spec.Ledger.Examples.MultiSigExamples
+                     Test.Shelley.Spec.Ledger.Examples.Serialization
+                     Test.Shelley.Spec.Ledger.Generator.Block
+                     Test.Shelley.Spec.Ledger.Generator.Constants
+                     Test.Shelley.Spec.Ledger.Generator.Core
+                     Test.Shelley.Spec.Ledger.Generator.Delegation
+                     Test.Shelley.Spec.Ledger.Generator.Trace.Chain
+                     Test.Shelley.Spec.Ledger.Generator.Trace.DCert
+                     Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
+                     Test.Shelley.Spec.Ledger.Generator.Update
+                     Test.Shelley.Spec.Ledger.Generator.Utxo
+                     Test.Shelley.Spec.Ledger.PreSTSGenerator
+                     Test.Shelley.Spec.Ledger.PreSTSMutator
+                     Test.Shelley.Spec.Ledger.Shrinkers
+                     Test.Shelley.Spec.Ledger.Utils
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:
+      -Werror
+  build-depends:
+    QuickCheck,
+    base,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-prelude,
+    cardano-slotting,
+    cborg,
+    containers,
+    cryptonite,
+    cs-ledger,
+    shelley-spec-ledger,
+    hedgehog,
+    multiset,
+    process-extras,
+    small-steps,
+    tasty,
+    tasty-hedgehog,
+    tasty-hunit,
+    tasty-quickcheck,
+    text,
+    transformers
