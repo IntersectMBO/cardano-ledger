@@ -888,8 +888,8 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "empty_block"
     (Block bh txns)
-    ( (T $ TkListLen 19)
-        <> G bh
+    ( (T $ TkListLen 4)
+        <> S bh
         <> T (TkListLen 0 . TkListLen 0 . TkMapLen 0)
     )
 
@@ -919,9 +919,9 @@ serializationTests = testGroup "Serialization Tests"
     in
     checkEncodingCBOR "rich_block"
     (Block bh txns)
-    ( (T $ TkListLen 19)
+    ( (T $ TkListLen 4)
         -- header
-        <> G bh
+        <> S bh
 
         -- bodies
         <> T (TkListLen 5)
