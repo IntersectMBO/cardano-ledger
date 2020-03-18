@@ -1611,7 +1611,7 @@ instance STS PVBUMP where
   transitionRules =
     [ do
         TRC ((s_n, fads, k), (pv, pps), ()) <- judgmentContext
-        case s_n  -. 2 *. k <=◁ fads of
+        case s_n  -. 4 *. k <=◁ fads of
           [] ->
             pure $! (pv, pps)
           (_s, (pv_c, pps_c)): _xs ->
@@ -1622,7 +1622,7 @@ data UPIEC deriving (Generic, Data, Typeable)
 
 instance STS UPIEC where
   type Environment UPIEC =
-    ( Core.Slot
+    ( Core.Epoch
     , BlockCount -- Chain stability parameter; this is a global
                  -- constant in the formal specification, which we put
                  -- in this environment so that we can test with
@@ -1637,11 +1637,12 @@ instance STS UPIEC where
   initialRules = []
   transitionRules =
     [ do
-        TRC ((s_n, k), us, ()) <- judgmentContext
+        TRC ((e_n, k), us, ()) <- judgmentContext
         let
           (pv, pps) = us ^. _1 :: (ProtVer, PParams)
           fads      = us ^. _2 :: [(Core.Slot, (ProtVer, PParams))]
-        (pv', pps') <- trans @PVBUMP $ TRC ((s_n, fads, k), (pv, pps), ())
+        (pv', pps') <- trans @PVBUMP
+          $ TRC ((GP.epochFirstSlot k e_n, fads, k), (pv, pps), ())
         return $! if pv == pv'
           then us
           else
