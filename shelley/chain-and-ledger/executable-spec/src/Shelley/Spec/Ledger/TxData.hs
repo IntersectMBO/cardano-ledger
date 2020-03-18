@@ -353,6 +353,29 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "relays"
         <*> obj .: "metadata"
 
+-- | get value from UTxO output
+getValue :: forall crypto. (Crypto crypto) => UTxOOut crypto -> Value crypto
+getValue (UTxOOut _ v) = compactValueToValue v
+
+-- | get address from UTxO output
+getAddress :: UTxOOut crypto -> Addr crypto
+getAddress (UTxOOut a _) = a
+
+-- | get value from Tx output
+getValueTx :: TxOut crypto -> Value crypto
+getValueTx (TxOut _ v) = v
+
+-- | get address from Tx output
+getAddressTx :: TxOut crypto -> Addr crypto
+getAddressTx (TxOut a _) = a
+
+-- | get coin amount from UTxO output
+getCoin :: Crypto crypto => UTxOOut crypto -> Coin
+getCoin (UTxOOut _ v) =
+  getAdaAmount $ Value $ filterWithKey (\k _ -> k==adaID) v'
+  where
+    Value v' = compactValueToValue v
+
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto = TxId {_TxId :: Hash crypto (TxBody crypto)}
   deriving (Show, Eq, Ord, Generic)
@@ -369,15 +392,23 @@ data TxIn crypto
 
 instance NoUnexpectedThunks (TxIn crypto)
 
--- | The output of a UTxO.
+-- |The output of a Tx.
 data TxOut crypto
-  = TxOut !(Addr crypto) !Coin
+  = TxOut !(Addr crypto) !(Value crypto)
   deriving (Show, Eq, Generic, Ord, NFData)
 
 instance NoUnexpectedThunks (TxOut crypto)
 
-data DelegCert crypto
-  = -- | A stake key registration certificate.
+
+-- |The output of a UTxO.
+data UTxOOut crypto
+  = UTxOOut !(Addr crypto) !(CompactValue crypto)
+  deriving (Show, Eq, Generic, Ord)
+
+instance NoUnexpectedThunks (UTxOOut crypto)
+
+data DelegCert crypto =
+    -- | A stake key registration certificate.
     RegKey !(StakeCredential crypto)
   | -- | A stake key deregistration certificate.
     DeRegKey !(StakeCredential crypto)
@@ -459,6 +490,7 @@ data TxBody crypto = TxBody'
     _outputs' :: !(StrictSeq (TxOut crypto)),
     _certs' :: !(StrictSeq (DCert crypto)),
     _wdrls' :: !(Wdrl crypto),
+    _forge'    :: !(Value crypto),
     _txfee' :: !Coin,
     _ttl' :: !SlotNo,
     _txUpdate' :: !(StrictMaybe (Update crypto)),
@@ -477,17 +509,19 @@ pattern TxBody ::
   StrictSeq (TxOut crypto) ->
   StrictSeq (DCert crypto) ->
   Wdrl crypto ->
+  Value crypto ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update crypto) ->
   StrictMaybe (MetaDataHash crypto) ->
   TxBody crypto
-pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
+pattern TxBody {_inputs, _outputs, _certs, _wdrls, _forge, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBody'
     { _inputs' = _inputs,
       _outputs' = _outputs,
       _certs' = _certs,
       _wdrls' = _wdrls,
+      _forge' = _forge,
       _txfee' = _txfee,
       _ttl' = _ttl,
       _txUpdate' = _txUpdate,
@@ -670,22 +704,36 @@ instance
     pure $ TxIn a (fromInteger $ toInteger b)
 
 instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (TxOut crypto)
-  where
-  toCBOR (TxOut addr coin) =
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (UTxOOut crypto)
+ where
+  toCBOR (UTxOOut addr value) =
     encodeListLen 2
       <> toCBOR addr
-      <> toCBOR coin
+      <> toCBOR value
+
+instance (Crypto crypto) =>
+  FromCBOR (UTxOOut crypto) where
+  fromCBOR = decodeRecordNamed "UTxOOut" (const 2) $ do
+    addr <- fromCBOR
+    b <- fromCBOR
+    pure $ UTxOOut addr b
 
 instance
-  (Crypto crypto) =>
-  FromCBOR (TxOut crypto)
-  where
+  (Typeable crypto, Crypto crypto)
+  => ToCBOR (TxOut crypto)
+ where
+  toCBOR (TxOut addr value) =
+    encodeListLen 2
+      <> toCBOR addr
+      <> toCBOR (valueToCompactValue value)
+
+instance (Crypto crypto) =>
+  FromCBOR (TxOut crypto) where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
-    addr <- fromCBOR
-    (b :: Word64) <- fromCBOR
-    pure $ TxOut addr (Coin $ toInteger b)
+    addr <- fromCBORGroup
+    b <- fromCBOR
+    pure $ TxOut addr (compactValueToValue b)
 
 instance
   (Typeable kr, Crypto crypto) =>
@@ -737,6 +785,7 @@ instance
           5 -> f 5 fromCBOR $ \_ x t -> t {_wdrls' = x}
           6 -> f 6 fromCBOR $ \_ x t -> t {_txUpdate' = SJust x}
           7 -> f 7 fromCBOR $ \_ x t -> t {_mdHash' = SJust x}
+          8 -> f 8 fromCBOR $ \_ x t -> t {_forge' = x}
           k -> invalidKey k
     let requiredFields :: Map Int String
         requiredFields =
@@ -772,6 +821,7 @@ instance
             _txfee' = Coin 0,
             _ttl' = SlotNo 0,
             _certs' = StrictSeq.empty,
+            _forge'   = Value Map.empty
             _wdrls' = Wdrl Map.empty,
             _txUpdate' = SNothing,
             _mdHash' = SNothing,

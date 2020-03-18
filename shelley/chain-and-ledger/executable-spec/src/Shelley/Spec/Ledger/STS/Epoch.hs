@@ -48,7 +48,7 @@ import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH crypto
 
-instance STS (EPOCH crypto) where
+instance (Crypto crypto) => STS (EPOCH crypto) where
   type State (EPOCH crypto) = EpochState crypto
   type Signal (EPOCH crypto) = EpochNo
   type Environment (EPOCH crypto) = ()
@@ -88,11 +88,11 @@ votedValuePParams (ProposedPPUpdates ppup) pps quorumN =
           (Map.empty :: Map PParamsUpdate Int)
           ppup
       consensus = Map.filter (>= quorumN) votes
-   in case length consensus of
+  in case length consensus of
         1 -> (Just . updatePParams pps . fst . head . Map.toList) consensus
         _ -> Nothing
 
-epochTransition :: forall crypto. TransitionRule (EPOCH crypto)
+epochTransition :: forall crypto. (Crypto crypto) => TransitionRule (EPOCH crypto)
 epochTransition = do
   TRC
     ( _,
@@ -138,11 +138,11 @@ epochTransition = do
       pp'
       nm
 
-instance Embed (SNAP crypto) (EPOCH crypto) where
-  wrapFailed = SnapFailure
+instance (Crypto crypto) => Embed (SNAP crypto) (EPOCH crypto) where
+    wrapFailed = SnapFailure
 
-instance Embed (POOLREAP crypto) (EPOCH crypto) where
-  wrapFailed = PoolReapFailure
+instance (Crypto crypto) => Embed (POOLREAP crypto) (EPOCH crypto) where
+    wrapFailed = PoolReapFailure
 
-instance Embed (NEWPP crypto) (EPOCH crypto) where
-  wrapFailed = NewPpFailure
+instance (Crypto crypto) => Embed (NEWPP crypto) (EPOCH crypto) where
+    wrapFailed = NewPpFailure

@@ -42,7 +42,7 @@ instance STS (SNAP crypto) where
 
 instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
 
-snapTransition :: TransitionRule (SNAP crypto)
+snapTransition :: (Crypto crypto) => TransitionRule (SNAP crypto)
 snapTransition = do
   TRC (lstate, s, ()) <- judgmentContext
 

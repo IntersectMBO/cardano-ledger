@@ -105,13 +105,13 @@ instance
         !Coin -- the minimum fee for this transaction
         !Coin -- the fee supplied in this transaction
     | ValueNotConservedUTxO
-        !Coin -- the Coin consumed by this transaction
-        !Coin -- the Coin produced by this transaction
+        !(Value crypto) -- the Coin consumed by this transaction
+        !(Value crypto) -- the Coin produced by this transaction
     | WrongNetwork
         !Network -- the expected network id
         !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
     | OutputTooSmallUTxO
-        ![TxOut crypto] -- list of supplied transaction outputs that are too small
+        ![UTxOOut crypto] -- list of supplied transaction outputs that are too small
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
@@ -241,11 +241,11 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
+  let outputCoins = [v | (UTxOOut _ v) <- Set.toList (range (txouts txb))]
   let minUTxOValue = fromIntegral $ _minUTxOValue pp
-  all (minUTxOValue <=) outputCoins
+  all (valueToCompactValue zeroV <=) outputValues
     ?! OutputTooSmallUTxO
-      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (range (txouts txb))))
+      (filter (\(UTxOOut _ v) -> v < (coinToValue minUTxOValue)) (Set.toList (range (txouts txb))))
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx

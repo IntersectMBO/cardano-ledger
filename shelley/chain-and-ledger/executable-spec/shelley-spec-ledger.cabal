@@ -45,6 +45,7 @@ library
                      Shelley.Spec.Ledger.Tx
                      Shelley.Spec.Ledger.TxData
                      Shelley.Spec.Ledger.Scripts
+                     Shelley.Spec.Ledger.Value
                      Shelley.Spec.Ledger.STS.Bbody
                      Shelley.Spec.Ledger.STS.Tick
                      Shelley.Spec.Ledger.STS.Chain

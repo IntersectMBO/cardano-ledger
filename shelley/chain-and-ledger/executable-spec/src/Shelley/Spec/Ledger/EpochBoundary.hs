@@ -74,9 +74,10 @@ getStakeHK :: Addr crypto -> Maybe (Credential 'Staking crypto)
 getStakeHK (Addr _ _ (StakeRefBase hk)) = Just hk
 getStakeHK _ = Nothing
 
-aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
+-- | Add up only the Ada with the getCoin function
+aggregateOuts :: Crypto crypto => UTxO crypto -> Map (Addr crypto) Coin
 aggregateOuts (UTxO u) =
-  Map.fromListWith (+) (map (\(_, TxOut a c) -> (a, c)) $ Map.toList u)
+  Map.fromListWith (+) (map (\(_, ot) -> (getAddress ot, getCoin ot)) $ Map.toList u)
 
 -- | Get Stake of base addresses in TxOut set.
 baseStake ::

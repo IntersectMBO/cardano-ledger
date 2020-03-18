@@ -220,8 +220,16 @@ import Shelley.Spec.Ledger.UTxO
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
 
-type RewardAccounts crypto =
-  Map (RewardAcnt crypto) Coin
+-- | A ledger validation state consists of a ledger state 't' and the list of
+-- validation errors that occurred from a valid 's' to reach 't'.
+data LedgerValidation crypto
+  = LedgerValidation [(ValidationError crypto)] (LedgerState crypto)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (LedgerValidation crypto)
+
+type RewardAccounts crypto
+  = Map (RewardAcnt crypto) Coin
 
 data FutureGenDeleg crypto = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo,
@@ -700,6 +708,7 @@ genesisId =
           Set.empty
           StrictSeq.Empty
           StrictSeq.Empty
+          (Value Map.empty)
           (Wdrl Map.empty)
           (Coin 0)
           (SlotNo 0)
@@ -712,9 +721,9 @@ genesisCoins ::
   (Crypto crypto) =>
   [TxOut crypto] ->
   UTxO crypto
-genesisCoins outs =
-  UTxO $
-    Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0 ..] outs]
+genesisCoins outs = UTxO $
+  Map.fromList [(TxIn genesisId idx, UTxOOut (getAddressTx out) (valueToCompactValue $ getValueTx out)) |
+    (idx, out) <- zip [0..] outs]
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
@@ -730,12 +739,61 @@ genesisState genDelegs0 utxo0 =
         (Coin 0)
         emptyPPUPState
     )
-    (DPState dState emptyPState)
+
+-- |Creates the UTxO for a new ledger with the specified transaction outputs.
+genesisCoins
+  :: (Crypto crypto)
+  => [TxOut crypto]
+  -> UTxO crypto
+genesisCoins outs = UTxO $
+  Map.fromList [(TxIn genesisId idx, UTxOOut (getAddressTx out) (valueToCompactValue $ getValueTx out)) |
+    (idx, out) <- zip [0..] outs]
+
+-- |Creates the ledger state for an empty ledger which
+-- contains the specified transaction outputs.
+genesisState
+  :: Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto)
+  -> UTxO crypto
+  -> LedgerState crypto
+genesisState genDelegs0 utxo0 = LedgerState
+  (UTxOState
+    utxo0
+    (Coin 0)
+    (Coin 0)
+    emptyPPPUpdates)
+  (DPState dState emptyPState)
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
--- | Implementation of abstract transaction size
-txsize :: forall crypto. (Crypto crypto) => Tx crypto -> Integer
+-- | Determine if the transaction has expired
+current :: Crypto crypto => TxBody crypto -> SlotNo -> Validity
+current tx slot =
+    if _ttl tx < slot
+    then Invalid [Expired (_ttl tx) slot]
+    else Valid
+
+-- | Determine if the input set of a transaction consumes at least one input,
+-- else it would be possible to do a replay attack using this transaction.
+validNoReplay :: Crypto crypto => TxBody crypto -> Validity
+validNoReplay tx =
+    if txins tx == Set.empty
+    then Invalid [InputSetEmpty]
+    else Valid
+
+-- |Determine if the inputs in a transaction are valid for a given ledger state.
+validInputs
+  :: Crypto crypto
+  => TxBody crypto
+  -> UTxOState crypto
+  -> (Validity crypto)
+validInputs tx u =
+  if txins tx `Set.isSubsetOf` dom (_utxo u)
+    then Valid
+    else Invalid [BadInputs]
+
+-- |Implementation of abstract transaction size
+-- TODO forge value and proper outputs size!
+txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
 txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
     uint = 5
@@ -756,15 +814,37 @@ txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
 minfee :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
 minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
--- | Compute the lovelace which are created by the transaction
-produced ::
-  (Crypto crypto) =>
-  PParams ->
-  StakePools crypto ->
-  TxBody crypto ->
-  Coin
+-- |Determine if the fee is large enough
+validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> (Validity crypto)
+validFee pc tx =
+  if needed <= given
+    then Valid
+    else Invalid [FeeTooSmall needed given]
+      where
+        needed = minfee pc tx
+        given  = (_txfee . _body) tx
+
+-- |Compute the lovelace which are created by the transaction
+produced
+  :: (Crypto crypto)
+  => PParams
+  -> StakePools crypto
+  -> TxBody crypto
+  -> Value crypto
 produced pp stakePools tx =
-  balance (txouts tx) + _txfee tx + totalDeposits pp stakePools (toList $ _certs tx)
+    balance (txouts tx) + coinToValue (_txfee tx + totalDeposits pp stakePools (toList $ _certs tx))
+
+-- |Compute the key deregistration refunds in a transaction
+keyRefunds
+  :: Crypto crypto
+  => PParams
+  -> StakeCreds crypto
+  -> TxBody crypto
+  -> Coin
+keyRefunds pp stk tx =
+  sum [keyRefund dval dmin lambda stk (_ttl tx) c | c@(DCertDeleg (DeRegKey _)) <- toList $ _certs tx]
+  where
+    (dval, dmin, lambda) = decayKey pp
 
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
@@ -776,18 +856,19 @@ keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
   where
     deregistrations = filter isDeRegKey (toList $ _certs tx)
 
--- | Compute the lovelace which are destroyed by the transaction
-consumed ::
-  Crypto crypto =>
-  PParams ->
-  UTxO crypto ->
-  TxBody crypto ->
-  Coin
+-- |Compute the lovelace which are destroyed by the transaction
+consumed
+  :: Crypto crypto
+  => PParams
+  -> UTxO crypto
+  -> StakeCreds crypto
+  -> TxBody crypto
+  -> Value crypto
 consumed pp (_u@(UTxO v)) tx =
   -- balance (txins tx ◁ _u) + refunds + withdrawals
   -- We do not call ◁, as this causes an identity call to toSet(txins tx)
   -- To be fixed in a following PR
-  balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
+    _forge tx <> balance (UTxO (Map.restrictKeys v (txins tx))) <> coinToValue (refunds + withdrawals)
   where
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
@@ -886,6 +967,54 @@ verifiedWits (Tx txbody wits _) =
         (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
         (Set.toList $ addrWits wits)
 
+-- |Given a ledger state, determine if the UTxO witnesses in a given
+-- transaction are sufficient.
+-- We check that there are not more witnesses than inputs, if several inputs
+-- from the same address are used, it is not strictly necessary to include more
+-- than one witness.
+enoughWits
+  :: Crypto crypto
+  => Tx crypto
+  -> GenDelegs crypto
+  -> UTxOState crypto
+  -> (Validity crypto)
+enoughWits tx@(Tx _ wits _ _) d' u =
+  if witsVKeyNeeded (_utxo u) tx d' `Set.isSubsetOf` signers
+    then Valid
+    else Invalid [MissingWitnesses]
+  where
+    signers = Set.map witKeyHash wits
+
+validRuleUTXO
+  :: (Crypto crypto)
+  => RewardAccounts crypto
+  -> StakePools crypto
+  -> StakeCreds crypto
+  -> PParams
+  -> SlotNo
+  -> Tx crypto
+  -> UTxOState crypto
+  -> (Validity crypto)
+validRuleUTXO accs stakePools stakeKeys pc slot tx u =
+                          validInputs txb u
+                       <> current txb slot
+                       <> validNoReplay txb
+                       <> validFee pc tx
+                       <> preserveBalance stakePools stakeKeys pc txb u
+                       <> correctWithdrawals accs (unWdrl $ _wdrls txb)
+  where txb = _body tx
+
+validRuleUTXOW
+  :: ( Crypto crypto
+     , DSignable crypto (Hash crypto (TxBody crypto))
+     )
+  => Tx crypto
+  -> GenDelegs crypto
+  -> LedgerState crypto
+  -> (Validity crypto)
+validRuleUTXOW tx d' l = verifiedWits tx
+                   <> enoughWits tx d' (_utxoState l)
+
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
@@ -962,25 +1091,26 @@ reapRewards dStateRewards withdrawals =
 ---------------------------------
 
 -- | Stake distribution
-stakeDistr ::
-  forall crypto.
-  UTxO crypto ->
-  DState crypto ->
-  PState crypto ->
-  SnapShot crypto
-stakeDistr u ds ps =
-  SnapShot
-    (Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation)
-    delegs
-    poolParams
-  where
-    DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
-    PState (StakePools stpools) poolParams _ _ = ps
-    outs = aggregateOuts u
-    stakeRelation :: [(Credential 'Staking crypto, Coin)]
-    stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
-    activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools
-    aggregatePlus = Map.fromListWith (+)
+stakeDistr
+  :: (Crypto crypto)
+  => UTxO crypto
+  -> DState crypto
+  -> PState crypto
+  -> SnapShot crypto
+stakeDistr u ds ps = SnapShot
+  (Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation)
+  delegs
+  poolParams
+    where
+      DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
+      PState (StakePools stpools) poolParams _                 = ps
+      outs = aggregateOuts u
+
+      stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
+
+      activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools
+
+      aggregatePlus = Map.fromListWith (+)
 
 -- | Apply a reward update
 applyRUpd ::

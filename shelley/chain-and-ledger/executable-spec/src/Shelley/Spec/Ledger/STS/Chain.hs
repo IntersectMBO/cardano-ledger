@@ -328,10 +328,10 @@ instance
   where
   wrapFailed = PrtclFailure
 
--- | Calculate the total ada in the chain state
-totalAda :: ChainState crypto -> Coin
+-- |Calculate the total ada in the chain state
+totalAda :: (Crypto crypto) => ChainState crypto -> Coin
 totalAda (ChainState nes _ _ _ _ _ _) =
-  treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
+  treasury_ + reserves_ + rewards_ + (getAdaAmount circulation) + deposits + fees_
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls
