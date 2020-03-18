@@ -169,11 +169,14 @@ utxoInductive = do
 
   let outputValues = [v | (UTxOOut _ v) <- Set.toList (range (txouts txb))]
   all (valueToCompactValue zeroV <=) outputValues ?! NegativeOutputsUTxO
+<<<<<<< HEAD
 
   let (Value vls) = _forge txb
   let cids = Map.keys vls
   all (adaID /=) cids  ?! ForgingAda
 
+=======
+>>>>>>> multicur no testing
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
