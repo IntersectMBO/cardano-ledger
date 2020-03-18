@@ -532,7 +532,8 @@ toCBORABoundaryHeader pm hdr =
              Right hh -> toCBOR hh
          )
       -- Body proof
-      <> toCBOR (hash (mempty :: LByteString))
+      -- The body is always an empty slot leader schedule, so we hash that.
+      <> toCBOR (hash ([] :: [()]))
       -- Consensus data
       <> ( encodeListLen 2
           -- Epoch
