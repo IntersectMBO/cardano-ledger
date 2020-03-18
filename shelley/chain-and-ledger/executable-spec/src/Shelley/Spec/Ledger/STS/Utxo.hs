@@ -260,6 +260,8 @@ utxoInductive = do
   let cids = Map.keys vls
   all (adaID /=) cids  ?! ForgingAda
 
+=======
+>>>>>>> multicur no testing
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx
