@@ -50,7 +50,7 @@ instance STS EPOCH where
           then
             pure $! us
           else do
-            us' <- trans @UPIEC $ TRC ((s, k), us, ())
+            us' <- trans @UPIEC $ TRC ((sEpoch s k, k), us, ())
             pure $! us'
     ]
 

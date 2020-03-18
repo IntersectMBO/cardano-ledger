@@ -1,7 +1,8 @@
 -- | Ledger global parameters.
 
 module Ledger.GlobalParams
-  ( lovelaceCap
+  ( epochFirstSlot
+  , lovelaceCap
   , slotsPerEpoch
   , slotsPerEpochToK
   , c
@@ -10,7 +11,7 @@ where
 
 import           Data.Word (Word64)
 
-import           Ledger.Core (BlockCount (BlockCount), lovelaceCap)
+import           Ledger.Core (BlockCount (BlockCount), Epoch(..), Slot(..), lovelaceCap)
 
 
 -- | Given the chain stability parameter, often referred to as @k@, which is
@@ -23,6 +24,11 @@ slotsPerEpoch (BlockCount bc) = fromIntegral $ bc * 10
 -- the chain stability parameter @k@.
 slotsPerEpochToK :: (Integral n) => n -> BlockCount
 slotsPerEpochToK n = BlockCount $ floor $ (fromIntegral n :: Double) / 10
+
+-- | Given the chain stability parameter, calculate the first slot in a given
+-- epoch.
+epochFirstSlot :: BlockCount -> Epoch -> Slot
+epochFirstSlot bc (Epoch epochs) = Slot $ epochs * slotsPerEpoch bc
 
 -- | Factor used to bound the concrete size by the abstract size.
 --
