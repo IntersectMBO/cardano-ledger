@@ -163,8 +163,8 @@ chainTransition = do
 
   let bhb = bhbody bh
   let s = bheaderSlotNo bhb
-  fromIntegral (bHeaderSize bh) < _maxBHSize pp ?! HeaderSizeTooLargeCHAIN
-  fromIntegral (hBbsize bhb) < _maxBBSize pp ?! BlockSizeTooLargeCHAIN
+  fromIntegral (bHeaderSize bh) <= _maxBHSize pp ?! HeaderSizeTooLargeCHAIN
+  fromIntegral (hBbsize bhb) <= _maxBBSize pp ?! BlockSizeTooLargeCHAIN
   let gkeys = getGKeys nes
 
   nes' <-
