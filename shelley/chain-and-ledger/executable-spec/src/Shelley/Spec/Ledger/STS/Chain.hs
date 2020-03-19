@@ -34,6 +34,7 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
 import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..), _maxBBSize, _maxBHSize,
                      _protocolVersion)
+import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot (BlockNo, EpochNo, SlotNo)
 import           Shelley.Spec.Ledger.Tx (TxBody)
 import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Applications, PPUpdate (..),
@@ -96,6 +97,7 @@ initialShelleyState s b e h utxo reserves genDelegs os apps pp =
            (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
          )
          pp
+         emptyNonMyopic
        )
        Nothing
        (PoolDistr Map.empty)
@@ -155,7 +157,7 @@ chainTransition = do
   TRC (sNow, ChainState nes cs eta0 etaV etaC etaH h sL bL, block@(Block bh _)) <- judgmentContext
 
 
-  let NewEpochState _ _ _ (EpochState _ _ _ pp) _ _ _ = nes
+  let NewEpochState _ _ _ (EpochState _ _ _ pp _) _ _ _ = nes
 
   maxpv <- liftSTS $ asks maxMajorPV
   let (ProtVer m _) = _protocolVersion pp
@@ -172,7 +174,7 @@ chainTransition = do
 
   let NewEpochState e1 _ _ _ _ _ _ = nes
       NewEpochState e2 _ bcur es _ _pd osched = nes'
-  let EpochState (AccountState _ _reserves) _ ls pp'                         = es
+  let EpochState (AccountState _ _reserves) _ ls pp' _                       = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
   PrtclState cs' h' sL' bL' eta0' etaV' etaC' etaH' <- trans @(PRTCL crypto)
@@ -225,7 +227,7 @@ totalAda :: ChainState crypto -> Coin
 totalAda (ChainState nes _ _ _ _ _ _ _ _) =
   treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
   where
-    (EpochState (AccountState treasury_ reserves_) _ ls _) = nesEs nes
+    (EpochState (AccountState treasury_ reserves_) _ ls _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls
     (DPState ds _) = _delegationState ls
     rewards_ = sum (Map.elems (_rewards ds))

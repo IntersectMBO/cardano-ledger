@@ -39,8 +39,9 @@ import           Shelley.Spec.Ledger.Keys (DiscVKey (..), pattern GenKeyHash, Ha
                      undiscriminateKeyHash, vKey)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), EpochState (..),
                      NewEpochState (..), pattern RewardUpdate, deltaF, deltaR, deltaT,
-                     emptyLedgerState, genesisId, rs)
+                     emptyLedgerState, genesisId, nonMyopic, rs)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..), emptyPParams, mkActiveSlotCoeff)
+import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
@@ -1037,12 +1038,14 @@ serializationTests = testGroup "Serialization Tests"
       ls = emptyLedgerState
       pps = emptyPParams
       bs = Map.singleton testKeyHash1 1
-      es = EpochState ac ss ls pps
+      nm = emptyNonMyopic
+      es = EpochState ac ss ls pps nm
       ru = (Just RewardUpdate
              { deltaT        = Coin 100
              , deltaR        = Coin (-200)
              , rs            = Map.empty
              , deltaF        = Coin (-10)
+             , nonMyopic     = nm
              }) :: Maybe RewardUpdate
       pd = (PoolDistr Map.empty) :: PoolDistr
       os = Map.singleton (SlotNo 1) (Just testGKeyHash)

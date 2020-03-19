@@ -82,13 +82,13 @@ newEpochTransition = do
       es' <- case ru of
                Nothing  -> pure es
                Just ru' -> do
-                 let RewardUpdate dt dr rs_ df = ru'
+                 let RewardUpdate dt dr rs_ df _ = ru'
                  dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
                  pure $ applyRUpd ru' es
 
       es'' <- trans @(MIR crypto) $ TRC ((), es', ())
       es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
-      let EpochState _acnt ss _ls pp = es'''
+      let EpochState _acnt ss _ls pp _ = es'''
           SnapShot (Stake stake) delegs poolParams = _pstakeSet ss
           Coin total = Map.foldl (+) (Coin 0) stake
           sd =

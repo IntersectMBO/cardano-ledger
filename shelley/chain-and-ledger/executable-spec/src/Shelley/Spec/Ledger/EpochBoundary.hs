@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.EpochBoundary
   , BlocksMade(..)
   , SnapShot(..)
   , SnapShots(..)
+  , emptySnapShot
   , emptySnapShots
   , rewardStake
   , aggregateOuts
@@ -60,7 +61,7 @@ newtype BlocksMade crypto
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto
-  = Stake (Map (Credential crypto) Coin)
+  = Stake { unStake :: (Map (Credential crypto) Coin) }
   deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 -- | Add two stake distributions
@@ -257,7 +258,8 @@ instance
       f <- fromCBOR
       pure $ SnapShots mark set go f
 
+emptySnapShot :: SnapShot crypto
+emptySnapShot = SnapShot (Stake Map.empty) Map.empty Map.empty
+
 emptySnapShots :: SnapShots crypto
-emptySnapShots =
-    SnapShots snapEmpty snapEmpty snapEmpty (Coin 0)
-    where snapEmpty   = SnapShot (Stake Map.empty) Map.empty Map.empty
+emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
