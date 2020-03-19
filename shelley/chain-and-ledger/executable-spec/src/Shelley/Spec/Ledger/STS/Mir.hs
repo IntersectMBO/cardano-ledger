@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -36,7 +37,6 @@ instance STS (MIR crypto) where
     type Environment (MIR crypto) = ()
     type BaseM (MIR crypto) = ShelleyBase
     data PredicateFailure (MIR crypto)
-      = MirFailure (PredicateFailure (MIR crypto))
       deriving (Show, Generic, Eq)
 
     initialRules = [ initialMir ]

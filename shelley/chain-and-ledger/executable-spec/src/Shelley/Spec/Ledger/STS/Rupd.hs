@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -34,7 +35,6 @@ instance STS (RUPD crypto) where
   type Environment (RUPD crypto) = RupdEnv crypto
   type BaseM (RUPD crypto) = ShelleyBase
   data PredicateFailure (RUPD crypto)
-    = FailureRUPD
     deriving (Show, Eq, Generic)
 
   initialRules = [pure Nothing]

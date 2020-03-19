@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -33,8 +34,8 @@ instance
   type Signal (UPDN crypto) = SlotNo
   type Environment (UPDN crypto) = UpdnEnv crypto
   type BaseM (UPDN crypto) = ShelleyBase
-  data PredicateFailure (UPDN crypto) = FailureUPDN
-                               deriving (Generic, Show, Eq)
+  data PredicateFailure (UPDN crypto)
+    deriving (Generic, Show, Eq)
   initialRules = [pure (UpdnState (mkNonce 0) (mkNonce 0) (mkNonce 0) (mkNonce 0))]
   transitionRules = [updTransition]
 
