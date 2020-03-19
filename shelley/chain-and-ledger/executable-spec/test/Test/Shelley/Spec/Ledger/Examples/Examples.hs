@@ -179,9 +179,8 @@ data CHAINExample =
   CHAINExample { currentSlotNo    :: SlotNo       -- ^ Current slot
                , startState     :: ChainState -- ^ State to start testing with
                , newBlock       :: Block      -- ^ Block to run chain state transition system on
-               , intendedResult :: (Either [[PredicateFailure CHAIN]] -- ^ type of fatal error, if failure expected
-                                           ChainState                 --   and final chain state if success expected
-                                   )
+               , intendedResult :: Either [[PredicateFailure CHAIN]] ChainState
+                  -- ^ type of fatal error, if failure expected and final chain state if success expected
                }
 
 data MIRExample =
