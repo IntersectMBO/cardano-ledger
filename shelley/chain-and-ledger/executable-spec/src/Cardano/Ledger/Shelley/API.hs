@@ -7,3 +7,4 @@ where
 import           Cardano.Ledger.Shelley.API.Mempool as X
 import           Cardano.Ledger.Shelley.API.Protocol as X
 import           Cardano.Ledger.Shelley.API.Validation as X
+import           Cardano.Ledger.Shelley.API.Wallet as X
