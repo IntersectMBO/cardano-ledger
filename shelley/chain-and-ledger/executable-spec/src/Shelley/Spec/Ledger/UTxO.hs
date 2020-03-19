@@ -244,8 +244,8 @@ txinsScript
   -> Set (TxIn crypto)
 txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
-  Map.keysSet (Map.filter (\(UTxOOut a _) ->
-                               case a of
+  Map.keysSet (Map.filter (\utxoout ->
+                               case getAddress utxoout of
                                  AddrBase (ScriptHashObj _) _     -> True
                                  AddrEnterprise (ScriptHashObj _) -> True
                                  AddrPtr (ScriptHashObj _) _      -> True
