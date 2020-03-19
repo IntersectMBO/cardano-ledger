@@ -15,6 +15,9 @@
 
 module Shelley.Spec.Ledger.BlockChain
   ( HashHeader(..)
+  , PrevHash(..)
+  , LastAppliedBlock(..)
+  , lastAppliedHash
   , BHBody(..)
   , BHeader(..)
   , Block(..)
@@ -54,13 +57,15 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
-import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen,
-                     encodeListLen, matchSize, serializeEncoding')
+import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR),
+                     TokenType (TypeNull), decodeListLen, decodeListLenOf, decodeNull,
+                     encodeListLen, encodeNull, matchSize, peekTokenType, serializeEncoding')
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
                      mkNonce)
@@ -163,9 +168,55 @@ instance Crypto crypto
      sig <- fromCBOR
      pure $ BHeader bhb sig
 
+-- |The previous hash of a block
+data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
+  deriving (Show, Eq, Generic, Ord)
+
+instance Crypto crypto => NoUnexpectedThunks (PrevHash crypto)
+
+instance Crypto crypto
+  => ToCBOR (PrevHash crypto)
+  where
+    toCBOR GenesisHash = encodeNull
+    toCBOR (BlockHash h) = toCBOR h
+
+instance Crypto crypto
+  => FromCBOR (PrevHash crypto)
+ where
+   fromCBOR = do
+     peekTokenType >>= \case
+       TypeNull -> do
+         decodeNull
+         pure GenesisHash
+       _ -> BlockHash <$> fromCBOR
+
+data LastAppliedBlock crypto = LastAppliedBlock {
+     labBlockNo :: !BlockNo
+   , labSlotNo  :: !SlotNo
+   , labHash    :: !(HashHeader crypto)
+   }
+  deriving (Show, Eq, Generic)
+
+instance Crypto crypto => NoUnexpectedThunks (LastAppliedBlock crypto)
+
+instance Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
+  toCBOR (LastAppliedBlock b s h) =
+      encodeListLen 3 <> toCBOR b <> toCBOR s <> toCBOR h
+
+instance Crypto crypto => FromCBOR (LastAppliedBlock crypto) where
+  fromCBOR = decodeListLenOf 3 >>
+    LastAppliedBlock
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+lastAppliedHash :: WithOrigin (LastAppliedBlock crypto) -> PrevHash crypto
+lastAppliedHash Origin   = GenesisHash
+lastAppliedHash (At lab) = BlockHash $ labHash lab
+
 data BHBody crypto = BHBody
   { -- | Hash of the previous block header
-    bheaderPrev           :: HashHeader crypto
+    bheaderPrev           :: PrevHash crypto
     -- | verification key of block issuer
   , bheaderVk             :: VKey crypto
     -- | VRF verification key for block issuer
@@ -366,9 +417,10 @@ vrfChecks
   -> Bool
 vrfChecks eta0 (PoolDistr pd) f bhb =
   let sigma' = Map.lookup hk pd
-  in  case sigma' of
-        Nothing -> False
-        Just (sigma, vrfHK) ->
+  in  case (sigma', bheaderPrev bhb) of
+        (_, GenesisHash) -> True
+        (Nothing, _) -> False
+        (Just (sigma, vrfHK), (BlockHash prevHash)) ->
           vrfHK == hashKeyVRF @crypto vrfK
             && VRF.verifyCertified () vrfK
                          (mkSeed seedEta slot eta0 prevHash)
@@ -380,7 +432,6 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
  where
   hk = hashKey $ bheaderVk bhb
   vrfK = bheaderVrfVk bhb
-  prevHash = bheaderPrev bhb
   slot = bheaderSlotNo bhb
 
 -- | Check that the certified input natural is valid for being slot leader. This

@@ -19,7 +19,7 @@ header =
   )
 
 header_body =
-  ( prev_hash        : $hash
+  ( prev_hash        : ($hash / null)
   , issuer_vkey      : $vkey
   , vrf_vkey         : $vrf_vkey
   , slot             : uint

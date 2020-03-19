@@ -139,6 +139,8 @@ type OCertEnv = STS.Ocert.OCertEnv ConcreteCrypto
 
 type HashHeader = BlockChain.HashHeader ConcreteCrypto
 
+type PrevHash = BlockChain.PrevHash ConcreteCrypto
+
 type NewEpochState = LedgerState.NewEpochState ConcreteCrypto
 
 type NonMyopic = Rewards.NonMyopic ConcreteCrypto

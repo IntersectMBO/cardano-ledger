@@ -68,19 +68,20 @@ import           Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochInfo, intervalValue,
                      slotsPrior)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, pattern Block,
-                     TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
+                     pattern BlockHash, TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign,
                      signKES, undiscriminateKeyHash, vKey)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), genesisCoins)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
+import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf,
+                     pattern RequireMOf, pattern RequireSignature)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), SlotNo (..), epochInfoFirst,
                      (*-))
 import           Shelley.Spec.Ledger.Tx (pattern TxOut, hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj, pattern ScriptHashObj)
-import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
-                 pattern RequireSignature)
+import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
+                     pattern ScriptHashObj)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair,
                      Credential, GenKeyHash, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig,
@@ -385,7 +386,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
     nonceNonce = mkSeed seedEta s enonce prev
     leaderNonce = mkSeed seedL s enonce prev
     bhb = BHBody
-            prev
+            (BlockHash prev)
             vKeyCold
             (snd $ vrf pkeys)
             s

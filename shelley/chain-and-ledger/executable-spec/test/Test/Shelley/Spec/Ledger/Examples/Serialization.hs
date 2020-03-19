@@ -25,9 +25,10 @@ import           Data.Ratio ((%))
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval (..), mkNonce, text64)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
-                     pattern HashHeader, TxSeq (..), bbHash, bhash, bheaderBlockNo, bheaderEta,
-                     bheaderL, bheaderOCert, bheaderPrev, bheaderSlotNo, bheaderVk, bheaderVrfVk,
-                     bprotver, bsize, mkSeed, seedEta, seedL)
+                     pattern BlockHash, pattern HashHeader, TxSeq (..), bbHash, bhash,
+                     bheaderBlockNo, bheaderEta, bheaderL, bheaderOCert, bheaderPrev,
+                     bheaderSlotNo, bheaderVk, bheaderVrfVk, bprotver, bsize, mkSeed, seedEta,
+                     seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
@@ -48,19 +49,17 @@ import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrEnterprise,
                      pattern AddrPtr, Credential (..), pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertMir, pattern DCertPool, pattern Delegation, PoolMetaData (..),
-                     pattern PoolParams, Ptr (..), pattern RewardAcnt,
-                     pattern TxBody, pattern TxIn, pattern TxOut, Url (..),
-                     Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD, _poolMDHash, _poolMDUrl,
-                     _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays,
-                     _poolVrf)
+                     pattern PoolParams, Ptr (..), pattern RewardAcnt, pattern TxBody,
+                     pattern TxIn, pattern TxOut, Url (..), Wdrl (..), WitVKey (..), _TxId,
+                     _poolCost, _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners,
+                     _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
 import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, ApName (..), ApVer (..),
                      pattern Applications, pattern InstallerHash, pattern Mdt, pattern PPUpdate,
                      PParamsUpdate (..), Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
+import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
-import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature,
-                 pattern ScriptHash)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair,
@@ -214,7 +213,7 @@ testHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
 testBHB :: BHBody
 testBHB = BHBody
-          { bheaderPrev    = testHeaderHash
+          { bheaderPrev    = BlockHash testHeaderHash
           , bheaderVk      = vKey testKey1
           , bheaderVrfVk   = snd testVRF
           , bheaderSlotNo  = SlotNo 33
@@ -787,7 +786,7 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "block_header_body"
   , let
-      prevhash = testHeaderHash
+      prevhash = BlockHash testHeaderHash
       issuerVkey = vKey testKey1
       vrfVkey = snd testVRF
       slot = SlotNo 33

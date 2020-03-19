@@ -37,6 +37,7 @@ import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeLis
 import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Slotting.Slot (WithOrigin (..), withOriginFromMaybe, withOriginToMaybe)
 import           Control.State.Transition
 
 data PRTCL crypto
@@ -44,9 +45,7 @@ data PRTCL crypto
 data PrtclState crypto
   = PrtclState
       (Map (KeyHash crypto) Natural)
-      (HashHeader crypto)
-      SlotNo
-      BlockNo
+      (WithOrigin (LastAppliedBlock crypto))
       Nonce -- ^ Current epoch nonce
       Nonce -- ^ Evolving nonce
       Nonce -- ^ Candidate nonce
@@ -54,12 +53,10 @@ data PrtclState crypto
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m hh sn bn n1 n2 n3 n4) = mconcat
-    [ encodeListLen 8
+  toCBOR (PrtclState m lab n1 n2 n3 n4) = mconcat
+    [ encodeListLen 6
     , toCBOR m
-    , toCBOR hh
-    , toCBOR sn
-    , toCBOR bn
+    , toCBOR $ withOriginToMaybe lab
     , toCBOR n1
     , toCBOR n2
     , toCBOR n3
@@ -67,18 +64,16 @@ instance Crypto crypto => ToCBOR (PrtclState crypto) where
     ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
-  fromCBOR = decodeListLenOf 8 >>
+  fromCBOR = decodeListLenOf 6 >>
     PrtclState
       <$> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
+      <*> (withOriginFromMaybe <$> fromCBOR)
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
 
-instance NoUnexpectedThunks (PrtclState crypto)
+instance Crypto crypto => NoUnexpectedThunks (PrtclState crypto)
 
 data PrtclEnv crypto
   = PrtclEnv
@@ -113,7 +108,7 @@ instance
 
   data PredicateFailure (PRTCL crypto)
     = WrongSlotIntervalPRTCL
-    | WrongBlockNoPRTCL BlockNo BlockNo
+    | WrongBlockNoPRTCL (WithOrigin (LastAppliedBlock crypto)) BlockNo
     | WrongBlockSequencePRTCL
     | OverlayFailure (PredicateFailure (OVERLAY crypto))
     | UpdnFailure (PredicateFailure (UPDN crypto))
@@ -133,25 +128,42 @@ prtclTransition
   => TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC ( PrtclEnv pp osched pd dms sNow ne
-      , PrtclState cs h sL bL eta0 etaV etaC etaH
+      , PrtclState cs lab eta0 etaV etaC etaH
       , bh) <- judgmentContext
   let bhb  = bhbody bh
       bn = bheaderBlockNo bhb
       slot = bheaderSlotNo bhb
       eta  = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
-  sL < slot && slot <= sNow ?! WrongSlotIntervalPRTCL
-  bL + 1 == bn ?! WrongBlockNoPRTCL bL bn
-  h == bheaderPrev bhb ?! WrongBlockSequencePRTCL
+      ph = lastAppliedHash lab
+
+  case lab of
+    Origin -> pure ()
+    At (LastAppliedBlock bL sL _) -> do
+      sL < slot && slot <= sNow ?! WrongSlotIntervalPRTCL
+      bL + 1 == bn ?! WrongBlockNoPRTCL lab bn
+  ph == bheaderPrev bhb ?! WrongBlockSequencePRTCL
 
   UpdnState eta0' etaV' etaC' etaH'
-    <- trans @(UPDN crypto) $ TRC (UpdnEnv eta pp h ne, UpdnState eta0 etaV etaC etaH, slot)
+    <- trans @(UPDN crypto) $ TRC ( UpdnEnv eta pp ph ne
+                                  , UpdnState eta0 etaV etaC etaH
+                                  , slot)
   cs'
     <- trans @(OVERLAY crypto)
         $ TRC (OverlayEnv pp osched eta0' pd dms, cs, bh)
 
-  pure $ PrtclState cs' (bhHash bh) slot bn eta0' etaV' etaC' etaH'
+  pure $ PrtclState
+           cs'
+           (At $ LastAppliedBlock
+                   bn
+                   slot
+                   (bhHash bh)
+           )
+           eta0'
+           etaV'
+           etaC'
+           etaH'
 
-instance NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
+instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
 
 instance
   ( Crypto crypto

@@ -114,11 +114,12 @@ import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Unsafe.Coerce (unsafeCoerce)
 
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), mkNonce, startRewards, text64, (⭒))
-import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, bhHash, bheader,
-                     hashHeaderToNonce)
+import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
+                     bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
@@ -389,16 +390,15 @@ esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1 emptyNonMyopic
 --   No blocks of Shelley have been processed yet.
 initStEx1 :: ChainState
 initStEx1 = initialShelleyState
-  (SlotNo 0)
-  (BlockNo 0)
+  (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
   (EpochNo 0)
-  lastByronHeaderHash
   (UTxO Map.empty)
   maxLLSupply
   genDelegs
   (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0))
   (Applications Map.empty)
   ppsEx1
+  (hashHeaderToNonce lastByronHeaderHash)
 
 -- | Null initial block. Just records the Byron hash, and contains no transactions.
 blockEx1 :: Block
@@ -432,9 +432,10 @@ expectedStEx1 = ChainState
   (nonce0 ⭒ mkNonce 1)
   (nonce0 ⭒ mkNonce 1)
   NeutralNonce
-  (bhHash (bheader blockEx1))
-  (SlotNo 1)
-  (BlockNo 1)
+  (At $ LastAppliedBlock
+    (BlockNo 1)
+    (SlotNo 1)
+    (bhHash . bheader $ blockEx1))
 
 -- | Wraps example all together.
 ex1 :: CHAINExample
@@ -544,16 +545,15 @@ initNesEx2A = NewEpochState
 
 initStEx2A :: ChainState
 initStEx2A = initialShelleyState
-  (SlotNo 0)
-  (BlockNo 0)
+  (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
   (EpochNo 0)
-  lastByronHeaderHash
   utxoEx2A
   (maxLLSupply - balance utxoEx2A)
   genDelegs
   overlayEx2A
   byronApps
   ppsEx1
+  (hashHeaderToNonce lastByronHeaderHash)
 
 blockEx2A :: Block
 blockEx2A = mkBlock
@@ -632,9 +632,10 @@ expectedStEx2A = ChainState
   (nonce0 ⭒ mkNonce 1)
   (nonce0 ⭒ mkNonce 1)
   NeutralNonce
-  blockEx2AHash
-  (SlotNo 10)
-  (BlockNo 1)
+  (At $ LastAppliedBlock
+    (BlockNo 1)
+    (SlotNo 10)
+    blockEx2AHash)
 
 ex2A :: CHAINExample
 ex2A = CHAINExample (SlotNo 10) initStEx2A blockEx2A (Right expectedStEx2A)
@@ -747,9 +748,10 @@ expectedStEx2Bgeneric pp = ChainState
   (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- ^ Evolving nonce
   (nonce0 ⭒ mkNonce 1)             -- ^ Candidate nonce
   NeutralNonce
-  blockEx2BHash                    -- ^ Hash header of the chain
-  (SlotNo 90)                      -- ^ Current slot
-  (BlockNo 2)                      -- ^ Current block no
+  (At $ LastAppliedBlock
+    (BlockNo 2)                    -- ^ Current block no
+    (SlotNo 90)                    -- ^ Current slot
+    blockEx2BHash)                 -- ^ Hash header of the chain
 
 -- | Expected state after transition
 expectedStEx2B :: ChainState
@@ -868,9 +870,10 @@ expectedStEx2Cgeneric ss ls pp = ChainState
   (mkSeqNonce 3)
   (mkSeqNonce 3)
   (hashHeaderToNonce blockEx2BHash)
-  blockEx2CHash
-  (SlotNo 110)
-  (BlockNo 3)
+  (At $ LastAppliedBlock
+    (BlockNo 3)
+    (SlotNo 110)
+    blockEx2CHash)
 
 -- ** Expected chain state after STS
 expectedStEx2C :: ChainState
@@ -1007,9 +1010,10 @@ expectedStEx2D = ChainState
   (mkSeqNonce 4)
   (mkSeqNonce 3)
   (hashHeaderToNonce blockEx2BHash)
-  blockEx2DHash
-  (SlotNo 190)
-  (BlockNo 4)
+  (At $ LastAppliedBlock
+    (BlockNo 4)
+    (SlotNo 190)
+    blockEx2DHash)
 
 ex2D :: CHAINExample
 ex2D = CHAINExample (SlotNo 190) expectedStEx2C blockEx2D (Right expectedStEx2D)
@@ -1098,9 +1102,10 @@ expectedStEx2E = ChainState
   (mkSeqNonce 5)
   (mkSeqNonce 5)
   (hashHeaderToNonce blockEx2DHash)
-  blockEx2EHash
-  (SlotNo 220)
-  (BlockNo 5)
+  (At $ LastAppliedBlock
+    (BlockNo 5)
+    (SlotNo 220)
+    blockEx2EHash)
 
 ex2E :: CHAINExample
 ex2E = CHAINExample (SlotNo 220) expectedStEx2D blockEx2E (Right expectedStEx2E)
@@ -1151,9 +1156,10 @@ expectedStEx2F = ChainState
   (mkSeqNonce 6)
   (mkSeqNonce 5)
   (hashHeaderToNonce blockEx2DHash)
-  blockEx2FHash
-  (SlotNo 295)
-  (BlockNo 6)
+  (At $ LastAppliedBlock
+    (BlockNo 6)
+    (SlotNo 295)
+    blockEx2FHash)
 
 ex2F :: CHAINExample
 ex2F = CHAINExample (SlotNo 295) expectedStEx2E blockEx2F (Right expectedStEx2F)
@@ -1225,9 +1231,10 @@ expectedStEx2G = ChainState
   (mkSeqNonce 7)
   (mkSeqNonce 7)
   (hashHeaderToNonce blockEx2FHash)
-  blockEx2GHash
-  (SlotNo 310)
-  (BlockNo 7)
+  (At $ LastAppliedBlock
+    (BlockNo 7)
+    (SlotNo 310)
+    blockEx2GHash)
 
 ex2G :: CHAINExample
 ex2G = CHAINExample (SlotNo 310) expectedStEx2F blockEx2G (Right expectedStEx2G)
@@ -1297,9 +1304,10 @@ expectedStEx2H = ChainState
   (mkSeqNonce 8)
   (mkSeqNonce 7)
   (hashHeaderToNonce blockEx2FHash)
-  blockEx2HHash
-  (SlotNo 390)
-  (BlockNo 8)
+  (At $ LastAppliedBlock
+    (BlockNo 8)
+    (SlotNo 390)
+    blockEx2HHash)
 
 ex2H :: CHAINExample
 ex2H = CHAINExample (SlotNo 390) expectedStEx2G blockEx2H (Right expectedStEx2H)
@@ -1382,9 +1390,10 @@ expectedStEx2I = ChainState
   (mkSeqNonce 9)
   (mkSeqNonce 9)
   (hashHeaderToNonce blockEx2HHash)
-  blockEx2IHash
-  (SlotNo 410)
-  (BlockNo 9)
+  (At $ LastAppliedBlock
+    (BlockNo 9)
+    (SlotNo 410)
+    blockEx2IHash)
 
 ex2I :: CHAINExample
 ex2I = CHAINExample (SlotNo 410) expectedStEx2H blockEx2I (Right expectedStEx2I)
@@ -1477,9 +1486,10 @@ expectedStEx2J = ChainState
   (mkSeqNonce 10)
   (mkSeqNonce 10)
   (hashHeaderToNonce blockEx2HHash)
-  blockEx2JHash
-  (SlotNo 420)
-  (BlockNo 10)
+  (At $ LastAppliedBlock
+    (BlockNo 10)
+    (SlotNo 420)
+    blockEx2JHash)
 
 ex2J :: CHAINExample
 ex2J = CHAINExample (SlotNo 420) expectedStEx2I blockEx2J (Right expectedStEx2J)
@@ -1567,9 +1577,10 @@ expectedStEx2K = ChainState
   (mkSeqNonce 11)
   (mkSeqNonce 10)
   (hashHeaderToNonce blockEx2HHash)
-  blockEx2KHash
-  (SlotNo 490)
-  (BlockNo 11)
+  (At $ LastAppliedBlock
+    (BlockNo 11)
+    (SlotNo 490)
+    blockEx2KHash)
 
 ex2K :: CHAINExample
 ex2K = CHAINExample (SlotNo 490) expectedStEx2J blockEx2K (Right expectedStEx2K)
@@ -1650,9 +1661,10 @@ expectedStEx2L = ChainState
   (mkSeqNonce 12)
   (mkSeqNonce 12)
   (hashHeaderToNonce blockEx2KHash)
-  blockEx2LHash
-  (SlotNo 510)
-  (BlockNo 12)
+  (At $ LastAppliedBlock
+    (BlockNo 12)
+    (SlotNo 510)
+    blockEx2LHash)
 
 ex2L :: CHAINExample
 ex2L = CHAINExample (SlotNo 510) expectedStEx2K blockEx2L (Right expectedStEx2L)
@@ -1752,9 +1764,10 @@ expectedStEx3A = ChainState
   (nonce0 ⭒ mkNonce 1)
   (nonce0 ⭒ mkNonce 1)
   NeutralNonce
-  blockEx3AHash
-  (SlotNo 10)
-  (BlockNo 1)
+  (At $ LastAppliedBlock
+    (BlockNo 1)
+    (SlotNo 10)
+    blockEx3AHash)
 
 ex3A :: CHAINExample
 ex3A = CHAINExample (SlotNo 10) initStEx2A blockEx3A (Right expectedStEx3A)
@@ -1852,9 +1865,10 @@ expectedStEx3B = ChainState
   (mkSeqNonce 2)
   (mkSeqNonce 2)
   NeutralNonce
-  blockEx3BHash
-  (SlotNo 20)
-  (BlockNo 2)
+  (At $ LastAppliedBlock
+    (BlockNo 2)
+    (SlotNo 20)
+    blockEx3BHash)
 
 ex3B :: CHAINExample
 ex3B = CHAINExample (SlotNo 20) expectedStEx3A blockEx3B (Right expectedStEx3B)
@@ -1916,9 +1930,10 @@ expectedStEx3C = ChainState
   (mkSeqNonce 3)
   (mkSeqNonce 3)
   (hashHeaderToNonce blockEx3BHash)
-  blockEx3CHash
-  (SlotNo 110)
-  (BlockNo 3)
+  (At $ LastAppliedBlock
+    (BlockNo 3)
+    (SlotNo 110)
+    blockEx3CHash)
 
 ex3C :: CHAINExample
 ex3C = CHAINExample (SlotNo 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
@@ -2025,9 +2040,10 @@ expectedStEx4A = ChainState
   (nonce0 ⭒ mkNonce 1)
   (nonce0 ⭒ mkNonce 1)
   NeutralNonce
-  blockEx4AHash
-  (SlotNo 10)
-  (BlockNo 1)
+  (At $ LastAppliedBlock
+    (BlockNo 1)
+    (SlotNo 10)
+    blockEx4AHash)
 
 ex4A :: CHAINExample
 ex4A = CHAINExample (SlotNo 10) initStEx2A blockEx4A (Right expectedStEx4A)
@@ -2123,9 +2139,10 @@ expectedStEx4B = ChainState
   (mkSeqNonce 2)
   (mkSeqNonce 2)
   NeutralNonce
-  blockEx4BHash
-  (SlotNo 20)
-  (BlockNo 2)
+  (At $ LastAppliedBlock
+    (BlockNo 2)
+    (SlotNo 20)
+    blockEx4BHash)
 
 ex4B :: CHAINExample
 ex4B = CHAINExample (SlotNo 20) expectedStEx4A blockEx4B (Right expectedStEx4B)
@@ -2190,9 +2207,10 @@ expectedStEx4C = ChainState
   (mkSeqNonce 3)
   (mkSeqNonce 3)
   NeutralNonce
-  blockEx4CHash
-  (SlotNo 60)
-  (BlockNo 3)
+  (At $ LastAppliedBlock
+    (BlockNo 3)
+    (SlotNo 60)
+    blockEx4CHash)
 
 
 ex4C :: CHAINExample
@@ -2281,9 +2299,10 @@ expectedStEx5A = ChainState
   (nonce0 ⭒ mkNonce 1)
   (nonce0 ⭒ mkNonce 1)
   NeutralNonce
-  blockEx5AHash
-  (SlotNo 10)
-  (BlockNo 1)
+  (At $ LastAppliedBlock
+    (BlockNo 1)
+    (SlotNo 10)
+    blockEx5AHash)
 
 ex5A :: CHAINExample
 ex5A = CHAINExample (SlotNo 10) initStEx2A blockEx5A (Right expectedStEx5A)
@@ -2344,9 +2363,10 @@ expectedStEx5B = ChainState
   (mkSeqNonce 2)
   (mkSeqNonce 2)
   NeutralNonce
-  blockEx5BHash
-  (SlotNo 50)
-  (BlockNo 2)
+  (At $ LastAppliedBlock
+    (BlockNo 2)
+    (SlotNo 50)
+    blockEx5BHash)
 
 ex5B :: CHAINExample
 ex5B = CHAINExample (SlotNo 50) expectedStEx5A blockEx5B (Right expectedStEx5B)
@@ -2435,9 +2455,10 @@ expectedStEx6A = ChainState
   (nonce0 ⭒ mkNonce 1)
   (nonce0 ⭒ mkNonce 1)
   NeutralNonce
-  blockEx6AHash
-  (SlotNo 10)
-  (BlockNo 1)
+  (At $ LastAppliedBlock
+    (BlockNo 1)
+    (SlotNo 10)
+    blockEx6AHash)
 
 ex6A :: CHAINExample
 ex6A = CHAINExample (SlotNo 10) initStEx2A blockEx6A (Right expectedStEx6A)
