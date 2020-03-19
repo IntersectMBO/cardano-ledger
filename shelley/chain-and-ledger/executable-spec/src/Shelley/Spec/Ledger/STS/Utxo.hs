@@ -250,7 +250,7 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputCoins = [v | (UTxOOut _ v) <- Set.toList (range (txouts txb))]
+  let outputValues = [v | (UTxOOut _ v) <- Set.toList (range (txouts txb))]
   let minUTxOValue = fromIntegral $ _minUTxOValue pp
   all (valueToCompactValue zeroV <=) outputValues
     ?! OutputTooSmallUTxO
@@ -258,10 +258,12 @@ utxoInductive = do
 
   let (Value vls) = _forge txb
   let cids = Map.keys vls
-  all (adaID /=) cids  ?! ForgingAda
+  all (adaID /=) cids  ?! (ForgingAda (Value vls))
 
 =======
->>>>>>> multicur no testing
+  let outputValues = [getValue utxoout | utxoout <- Set.toList (range (txouts txb))]
+  all (zeroV <=) outputValues ?! NegativeOutputsUTxO
+>>>>>>> fix rebase stuff
 
   let (Value vls) = _forge txb
   let cids = Map.keys vls
