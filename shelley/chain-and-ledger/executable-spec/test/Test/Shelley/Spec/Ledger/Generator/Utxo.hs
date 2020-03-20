@@ -192,7 +192,7 @@ genTxBody
   -> Seq TxOut
   -> Seq DCert
   -> Map RewardAcnt Coin
-  -> Update
+  -> Maybe Update
   -> Coin
   -> SlotNo
   -> Gen TxBody

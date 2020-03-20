@@ -11,36 +11,17 @@ module Shelley.Spec.Ledger.Updates
   ( Ppm(..)
   , PPUpdateEnv(..)
   , PPUpdate(..)
+  , emptyPPUpdate
   , PParamsUpdate(..)
-  , ApName (..)
-  , ApVer(..)
-  , Mdt(..)
-  , SystemTag (..)
-  , InstallerHash(..)
-  , Applications(..)
-  , AVUpdate(..)
   , Update(..)
-  , UpdateState(..)
-  , Favs
-  , allNames
-  , maxVer
-  , newAVs
-  , votedValue
-  , emptyUpdateState
-  , emptyUpdate
-  , updateNull
   , updatePParams
-  , svCanFollow
   )
 where
 
 import           Cardano.Binary (Encoding, FromCBOR (..), ToCBOR (..), encodeListLen, encodeMapLen,
                      enforceSize)
-import           Cardano.Crypto.Hash (Hash)
 import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Data.ByteString (ByteString)
-import qualified Data.List as List (group)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
@@ -48,7 +29,7 @@ import qualified Data.Set as Set
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 
-import           Shelley.Spec.Ledger.BaseTypes (Nonce, Text64, UnitInterval)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce, UnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
 import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..), ProtVer)
@@ -58,73 +39,21 @@ import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo)
 
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (range, (◁))
-
-newtype ApVer = ApVer Natural
-  deriving (Show, Ord, Eq, FromCBOR, ToCBOR, NoUnexpectedThunks)
-
-newtype ApName = ApName Text64
-  deriving (Show, Ord, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
-
-newtype SystemTag = SystemTag Text64
-  deriving (Show, Ord, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
-
-newtype InstallerHash crypto = InstallerHash (Hash (HASH crypto) ByteString)
-  deriving (Show, Ord, Eq, NoUnexpectedThunks)
-
-deriving instance Crypto crypto => ToCBOR (InstallerHash crypto)
-deriving instance Crypto crypto => FromCBOR (InstallerHash crypto)
-
-newtype Mdt crypto = Mdt (Map SystemTag (InstallerHash crypto))
-  deriving (Show, Ord, Eq, NoUnexpectedThunks)
-
-instance Crypto crypto => ToCBOR (Mdt crypto) where
-  toCBOR (Mdt m) = mapToCBOR m
-
-instance Crypto crypto => FromCBOR (Mdt crypto) where
-  fromCBOR = Mdt <$> mapFromCBOR
-
-
--- | List of applications on the blockchain and their versions.
-newtype Applications crypto = Applications {
-  apps :: Map ApName (ApVer, Mdt crypto)
-  } deriving (Show, Ord, Eq, NoUnexpectedThunks)
-
-instance Crypto crypto => ToCBOR (Applications crypto) where
-  toCBOR (Applications m) = mapToCBOR m
-
-instance Crypto crypto => FromCBOR (Applications crypto) where
-  fromCBOR = Applications <$> mapFromCBOR
-
--- | A single update of the @Applications list.
-newtype AVUpdate crypto = AVUpdate {
-  aup :: Map (GenKeyHash crypto) (Applications crypto)
-  } deriving (Show, Eq, NoUnexpectedThunks)
-
-instance Crypto crypto => ToCBOR (AVUpdate crypto) where
-  toCBOR (AVUpdate m) = mapToCBOR m
-
-instance Crypto crypto => FromCBOR (AVUpdate crypto) where
-  fromCBOR = AVUpdate <$> mapFromCBOR
 
 -- | Update Proposal
 data Update crypto
-  = Update (PPUpdate crypto) (AVUpdate crypto) (Maybe EpochNo)
+  = Update (PPUpdate crypto) EpochNo
   deriving (Show, Eq, Generic)
-
-updateNull :: Update crypto -> Bool
-updateNull (Update (PPUpdate ppup) (AVUpdate avup) _e) = null ppup && null avup
 
 instance NoUnexpectedThunks (Update crypto)
 
 instance Crypto crypto => ToCBOR (Update crypto) where
-  toCBOR (Update ppUpdate avUpdate e) =
-    encodeListLen 3 <> toCBOR ppUpdate <> toCBOR avUpdate <> toCBOR e
+  toCBOR (Update ppUpdate e) =
+    encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
 instance Crypto crypto => FromCBOR (Update crypto) where
   fromCBOR =
-    Update <$ enforceSize "Update" 3
-      <*> fromCBOR
+    Update <$ enforceSize "Update" 2
       <*> fromCBOR
       <*> fromCBOR
 
@@ -231,51 +160,8 @@ instance Crypto crypto => ToCBOR (PPUpdate crypto) where
 instance Crypto crypto => FromCBOR (PPUpdate crypto) where
   fromCBOR = PPUpdate <$> mapFromCBOR
 
-type Favs crypto = Map SlotNo (Applications crypto)
-
-maxVer :: ApName -> Applications crypto -> Favs crypto -> (ApVer, Mdt crypto)
-maxVer an avs favs =
-  maximum $ vs an avs : fmap (vs an) (Set.toList (range favs))
-    where
-      vs n (Applications as) =
-        Map.foldr max (ApVer 0, Mdt Map.empty) (Set.singleton n ◁ as)
-
-svCanFollow :: Applications crypto -> Favs crypto -> (ApName, (ApVer, Mdt crypto)) -> Bool
-svCanFollow avs favs (an, (ApVer v, _)) = v == 1 + m
-  where (ApVer m) = fst $ maxVer an avs favs
-
-allNames :: Applications crypto -> Favs crypto -> Set ApName
-allNames (Applications avs) favs =
-  Prelude.foldr
-    (\(Applications fav) acc -> acc `Set.union` Map.keysSet fav)
-    (Map.keysSet avs)
-    (Map.elems favs)
-
-newAVs :: Applications crypto -> Favs crypto -> Applications crypto
-newAVs avs favs = Applications $
-                    Map.fromList [(an, maxVer an avs favs) | an <- Set.toList $ allNames avs favs]
-
-votedValue
-  :: Eq a => Map (GenKeyHash crypto) a -> Int -> Maybe a
-votedValue vs quorum | null elemLists = Nothing
-                     | otherwise      = Just $ (head . head) elemLists  -- elemLists contains an element
-                                               -- and that list contains at
-                                               -- least 5 elements
-
-
- where
-  elemLists =
-    filter (\l -> length l >= quorum) $ List.group $ map snd $ Map.toList vs
-
-emptyUpdateState :: UpdateState crypto
-emptyUpdateState = UpdateState
-                     (PPUpdate Map.empty)
-                     (AVUpdate Map.empty)
-                     Map.empty
-                     (Applications Map.empty)
-
-emptyUpdate :: Update crypto
-emptyUpdate = Update (PPUpdate Map.empty) (AVUpdate Map.empty) Nothing
+emptyPPUpdate :: PPUpdate crypto
+emptyPPUpdate = PPUpdate Map.empty
 
 updatePParams :: PParams -> PParamsUpdate -> PParams
 updatePParams ppms (PParamsUpdate up) = Set.foldr updatePParams' ppms up
@@ -300,28 +186,3 @@ updatePParams ppms (PParamsUpdate up) = Set.foldr updatePParams' ppms up
   updatePParams' (D                     p) pps = pps { _d = p }
   updatePParams' (ExtraEntropy          p) pps = pps { _extraEntropy = p }
   updatePParams' (ProtocolVersion       p) pps = pps { _protocolVersion = p }
-
-data UpdateState crypto
-  = UpdateState
-      (PPUpdate crypto)
-      (AVUpdate crypto)
-      (Map SlotNo (Applications crypto))
-      (Applications crypto)
-  deriving (Show, Eq, Generic)
-
-instance NoUnexpectedThunks (UpdateState crypto)
-
-instance Crypto crypto => ToCBOR (UpdateState crypto)
- where
-  toCBOR (UpdateState a b c d) =
-    encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
-
-instance Crypto crypto => FromCBOR (UpdateState crypto)
- where
-  fromCBOR = do
-    enforceSize "UpdateState" 4
-    a <- fromCBOR
-    b <- fromCBOR
-    c <- fromCBOR
-    d <- fromCBOR
-    pure $ UpdateState a b c d

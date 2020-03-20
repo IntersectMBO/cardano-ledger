@@ -35,7 +35,6 @@ import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertPo
                      Wdrl (..), _certs, _inputs, _mdHash, _outputs, _poolCost, _poolMD,
                      _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolRelays, _poolVrf, _ttl, _txUpdate, _txfee, _wdrls)
-import           Shelley.Spec.Ledger.Updates (emptyUpdate)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, ConcreteCrypto, Credential,
@@ -123,7 +122,7 @@ txbSimpleUTxO = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -157,7 +156,7 @@ txbMutiUTxO = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 199
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -185,7 +184,7 @@ txbRegisterStake = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -210,7 +209,7 @@ txbDelegateStake = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -235,7 +234,7 @@ txbDeregisterStake = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -261,7 +260,7 @@ txbRegisterPool = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -286,7 +285,7 @@ txbRetirePool = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -315,7 +314,7 @@ txbWithMD = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Just $ MD.hashMetaData @ConcreteCrypto md
   }
 
@@ -347,7 +346,7 @@ txbWithMultiSig = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -372,7 +371,7 @@ txbWithWithdrawal = TxBody
   , _wdrls    = Wdrl $ Map.singleton (RewardAcnt aliceSHK) 100
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = emptyUpdate
+  , _txUpdate = Nothing
   , _mdHash   = Nothing
   }
 
@@ -395,14 +394,14 @@ txWithWithdrawalBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394
 
 sizeTests :: TestTree
 sizeTests = testGroup "Fee Tests"
-  [ testCase "simple utxo" $ sizeTest txSimpleUTxOBytes16 txSimpleUTxO 94
-  , testCase "multiple utxo" $ sizeTest txMutiUTxOBytes16 txMutiUTxO 199
-  , testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake 102
-  , testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake 129
-  , testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake 102
-  , testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 173
-  , testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool 107
-  , testCase "metadata" $ sizeTest txWithMDBytes16 txWithMD 237
-  , testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig 145
-  , testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal 127
+  [ testCase "simple utxo" $ sizeTest txSimpleUTxOBytes16 txSimpleUTxO 84
+  , testCase "multiple utxo" $ sizeTest txMutiUTxOBytes16 txMutiUTxO 189
+  , testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake 92
+  , testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake 119
+  , testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake 92
+  , testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 163
+  , testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool 97
+  , testCase "metadata" $ sizeTest txWithMDBytes16 txWithMD 227
+  , testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig 135
+  , testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal 117
   ]

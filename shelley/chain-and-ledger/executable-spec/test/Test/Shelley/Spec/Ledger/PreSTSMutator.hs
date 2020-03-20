@@ -36,7 +36,6 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, 
                      pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool)
 import           Shelley.Spec.Ledger.Keys (hashKey, vKey)
-import           Shelley.Spec.Ledger.Updates
 
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
@@ -104,7 +103,7 @@ mutateTxBody tx = do
     (_wdrls tx)
     (_txfee tx)
     (_ttl tx)
-    emptyUpdate
+    Nothing
     Nothing
 
 -- | Mutator for a list of 'TxIn'.

@@ -77,7 +77,7 @@ import           Shelley.Spec.Ledger.OCert (OCert (..))
 import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, ProtVer (..), activeSlotLog,
                      activeSlotVal)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
-                     FromCBORGroup (..), ToCBORGroup (..), mapFromCBOR, mapToCBOR)
+                     FromCBORGroup (..), ToCBORGroup (..), mapFromCBOR)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), cborWitsToTx, txToCBORWits)
 import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)

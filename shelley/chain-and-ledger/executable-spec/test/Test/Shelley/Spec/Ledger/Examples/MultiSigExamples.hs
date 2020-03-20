@@ -26,17 +26,15 @@ import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, undiscriminateKeyH
 import           Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 import           Shelley.Spec.Ledger.PParams (PParams (..), emptyPParams)
+import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf,
+                     pattern RequireMOf, pattern RequireSignature)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern KeyHashObj,
-                     pattern ScriptHashObj, pattern StakeCreds,
-                     pattern StakePools, pattern TxBody, pattern TxIn, pattern TxOut, pattern Wdrl,
-                     unWdrl)
-import           Shelley.Spec.Ledger.Updates (emptyUpdate)
+                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools, pattern TxBody,
+                     pattern TxIn, pattern TxOut, pattern Wdrl, unWdrl)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
-import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf, pattern RequireMOf,
-                 pattern RequireSignature)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig,
                      ScriptHash, Tx, TxBody, TxId, TxIn, UTXOW, UTxOState, Wdrl)
@@ -84,7 +82,7 @@ initTxBody addrs = TxBody
         (Wdrl Map.empty)
         (Coin 0)
         (SlotNo 0)
-        emptyUpdate
+        Nothing
         Nothing
 
 makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
@@ -96,7 +94,7 @@ makeTxBody inp addrCs wdrl =
     wdrl
     (Coin 0)
     (SlotNo 10)
-    emptyUpdate
+    Nothing
     Nothing
 
 makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx

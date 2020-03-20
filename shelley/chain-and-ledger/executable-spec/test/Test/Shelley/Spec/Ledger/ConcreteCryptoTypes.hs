@@ -195,19 +195,9 @@ type SnapShots = EpochBoundary.SnapShots ConcreteCrypto
 
 type Stake = EpochBoundary.Stake ConcreteCrypto
 
-type Mdt = Updates.Mdt ConcreteCrypto
-
-type Applications = Updates.Applications ConcreteCrypto
-
-type InstallerHash = Updates.InstallerHash ConcreteCrypto
-
 type Update = Updates.Update ConcreteCrypto
 
-type UpdateState = Updates.UpdateState ConcreteCrypto
-
 type PPUpdate = Updates.PPUpdate ConcreteCrypto
-
-type AVUpdate = Updates.AVUpdate ConcreteCrypto
 
 type VRFKeyHash = Keys.Hash ShortHash (Keys.VerKeyVRF FakeVRF)
 

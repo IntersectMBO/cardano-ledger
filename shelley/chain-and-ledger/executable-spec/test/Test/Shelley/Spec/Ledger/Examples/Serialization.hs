@@ -53,9 +53,8 @@ import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrEnter
                      pattern TxIn, pattern TxOut, Url (..), Wdrl (..), WitVKey (..), _TxId,
                      _poolCost, _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
-import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, ApName (..), ApVer (..),
-                     pattern Applications, pattern InstallerHash, pattern Mdt, pattern PPUpdate,
-                     PParamsUpdate (..), Ppm (..), SystemTag (..), pattern Update, emptyUpdate)
+import           Shelley.Spec.Ledger.Updates (pattern PPUpdate, PParamsUpdate (..), Ppm (..),
+                     pattern Update)
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash)
@@ -63,9 +62,9 @@ import           Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, CoreKeyPair,
-                     GenKeyHash, HashHeader, InstallerHash, KeyHash, KeyPair, MultiSig, PoolDistr,
-                     RewardUpdate, SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn, VKey,
-                     VKeyES, VRFKeyHash, VerKeyVRF, hashKeyVRF)
+                     GenKeyHash, HashHeader, KeyHash, KeyPair, MultiSig, PoolDistr, RewardUpdate,
+                     SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn, VKey, VKeyES,
+                     VRFKeyHash, VerKeyVRF, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Utils
 
 import           Unsafe.Coerce (unsafeCoerce)
@@ -149,7 +148,7 @@ testVRFKH :: VRFKeyHash
 testVRFKH = hashKeyVRF $ snd testVRF
 
 testTxb :: TxBody
-testTxb = TxBody Set.empty Seq.empty Seq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) emptyUpdate Nothing
+testTxb = TxBody Set.empty Seq.empty Seq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) Nothing Nothing
 
 testKey1 :: KeyPair
 testKey1 = KeyPair vk sk
@@ -189,12 +188,6 @@ testKESKeys = mkKESKeyPair (0, 0, 0, 0, 3)
 
 testAddrE :: Addr
 testAddrE = AddrEnterprise (KeyHashObj testKeyHash1)
-
-testInstallerHash :: InstallerHash
-testInstallerHash = (InstallerHash . hash . BS.pack) "ABC"
-
-getRawInstallerHash :: InstallerHash -> ByteString
-getRawInstallerHash (InstallerHash hsh) = getHash hsh
 
 testScript :: MultiSig
 testScript = RequireSignature $ undiscriminateKeyHash testKeyHash1
@@ -553,53 +546,16 @@ serializationTests = testGroup "Serialization Tests"
       <> (T $ TkWord 18) <> S extraEntropy
       <> (T $ TkWord 19) <> S protocolVersion)
 
-  -- checkEncodingCBOR "avupdate"
-  , let
-      apname   = ApName $ text64 "Daedalus"
-      systemtag = SystemTag $ text64 "DOS"
-      apVer    = ApVer 17
-    in
-    checkEncodingCBOR "avupdate"
-    (AVUpdate (Map.singleton
-                testGKeyHash
-                (Applications (Map.singleton
-                       apname
-                       (apVer
-                       , Mdt $ Map.singleton
-                           systemtag
-                           testInstallerHash
-                       )))))
-    ( (T $ TkMapLen 1 )
-      <> S testGKeyHash
-      <> (T $ TkMapLen 1 )
-        <> S apname
-        <> (T $ TkListLen 2)
-        <> S apVer
-        <> (T $ TkMapLen 1 )
-        <> S systemtag
-        <> S testInstallerHash
-    )
-
     -- checkEncodingCBOR "full_update"
   , let
       ppup = PPUpdate (Map.singleton
                   testGKeyHash
                   (PParamsUpdate $ Set.singleton (Nopt 100)))
-      avup = AVUpdate (Map.singleton
-                  testGKeyHash
-                  (Applications (Map.singleton
-                         (ApName $ text64 "Daedalus")
-                         (ApVer 17
-                         , Mdt $ Map.singleton
-                             (SystemTag $ text64 "DOS")
-                             testInstallerHash
-                         ))))
-      e = Just $ EpochNo 0
+      e = EpochNo 0
     in checkEncodingCBOR "full_update"
-    (Update ppup avup e)
-    ( (T $ TkListLen 3)
+    (Update ppup e)
+    ( (T $ TkListLen 2)
       <> S ppup
-      <> S avup
       <> S e
     )
 
@@ -615,7 +571,7 @@ serializationTests = testGroup "Serialization Tests"
       (Wdrl Map.empty)
       (Coin 9)
       (SlotNo 500)
-      emptyUpdate
+      Nothing
       Nothing
     )
     ( T (TkMapLen 4)
@@ -640,16 +596,7 @@ serializationTests = testGroup "Serialization Tests"
              (PPUpdate (Map.singleton
                          testGKeyHash
                          (PParamsUpdate $ Set.singleton (Nopt 100))))
-             (AVUpdate (Map.singleton
-                         testGKeyHash
-                         (Applications (Map.singleton
-                                (ApName $ text64 "Daedalus")
-                                (ApVer 17
-                                , Mdt $ Map.singleton
-                                    (SystemTag $ text64 "DOS")
-                                    testInstallerHash
-                                )))))
-             (Just $ EpochNo 0)
+             (EpochNo 0)
     in checkEncodingCBOR "txbody_partial"
     ( TxBody -- transaction body with some optional components
         tin
@@ -658,7 +605,7 @@ serializationTests = testGroup "Serialization Tests"
         (Wdrl ras)
         (Coin 9)
         (SlotNo 500)
-        up
+        (Just up)
         Nothing
      )
      ( T (TkMapLen 6)
@@ -688,16 +635,7 @@ serializationTests = testGroup "Serialization Tests"
              (PPUpdate (Map.singleton
                          testGKeyHash
                          (PParamsUpdate $ Set.singleton (Nopt 100))))
-             (AVUpdate (Map.singleton
-                         testGKeyHash
-                         (Applications (Map.singleton
-                                (ApName $ text64 "Daedalus")
-                                (ApVer 17
-                                , Mdt $ Map.singleton
-                                    (SystemTag $ text64 "DOS")
-                                    testInstallerHash
-                                )))))
-             (Just $ EpochNo 0)
+             (EpochNo 0)
       mdh = MD.hashMetaData $ MD.MetaData $ Map.singleton 13 (MD.I 17)
     in checkEncodingCBOR "txbody_full"
     ( TxBody -- transaction body with all components
@@ -707,7 +645,7 @@ serializationTests = testGroup "Serialization Tests"
         (Wdrl ras)
         (Coin 9)
         (SlotNo 500)
-        up
+        (Just up)
         (Just mdh)
      )
      ( T (TkMapLen 8)
@@ -739,7 +677,7 @@ serializationTests = testGroup "Serialization Tests"
                 (Wdrl Map.empty)
                 (Coin 9)
                 (SlotNo 500)
-                emptyUpdate
+                Nothing
                 Nothing
         w = makeWitnessVKey txb testKey1
         md = Nothing :: Maybe MD.MetaData
@@ -763,7 +701,7 @@ serializationTests = testGroup "Serialization Tests"
                 (Wdrl Map.empty)
                 (Coin 9)
                 (SlotNo 500)
-                emptyUpdate
+                Nothing
                 Nothing
         w = makeWitnessVKey txb testKey1
         s = Map.singleton (hashScript testScript) testScript
@@ -874,7 +812,7 @@ serializationTests = testGroup "Serialization Tests"
         bh = BHeader testBHB sig
         tin = Set.fromList [TxIn genesisId 1]
         tout = Seq.singleton $ TxOut testAddrE (Coin 2)
-        txb s = TxBody tin tout Seq.empty (Wdrl Map.empty) (Coin 9) (SlotNo s) emptyUpdate Nothing
+        txb s = TxBody tin tout Seq.empty (Wdrl Map.empty) (Coin 9) (SlotNo s) Nothing Nothing
         txb1 = txb 500
         txb2 = txb 501
         txb3 = txb 502

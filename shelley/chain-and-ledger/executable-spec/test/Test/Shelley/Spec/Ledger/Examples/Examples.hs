@@ -25,9 +25,6 @@ module Test.Shelley.Spec.Ledger.Examples.Examples
   , ex3A
   , ex3B
   , ex3C
-  , ex4A
-  , ex4B
-  , ex4C
   , ex5A
   , ex5B
   , ex6A
@@ -68,9 +65,6 @@ module Test.Shelley.Spec.Ledger.Examples.Examples
   , blockEx3A
   , blockEx3B
   , blockEx3C
-  , blockEx4A
-  , blockEx4B
-  , blockEx4C
   , blockEx5A
   , blockEx5B
   , blockEx6A
@@ -86,8 +80,6 @@ module Test.Shelley.Spec.Ledger.Examples.Examples
   , txEx2K
   , txEx3A
   , txEx3B
-  , txEx4A
-  , txEx4B
   , txEx5A
   , txEx6A
   , txEx6B
@@ -161,17 +153,15 @@ import           Shelley.Spec.Ledger.TxData (pattern AddrPtr, pattern DCertDeleg
                      _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge,
                      _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
 import qualified Shelley.Spec.Ledger.TxData as TxData (TxBody (..))
-import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, ApName (..), ApVer (..),
-                     pattern Applications, InstallerHash (..), pattern Mdt, pattern PPUpdate,
-                     PParamsUpdate (..), Ppm (..), SystemTag (..), pattern Update,
-                     pattern UpdateState, emptyUpdate, emptyUpdateState)
+import           Shelley.Spec.Ledger.Updates (pattern PPUpdate, PParamsUpdate (..), Ppm (..),
+                     pattern Update, emptyPPUpdate)
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesVKey, txid)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (AVUpdate, Addr, Applications, Block,
-                     CHAIN, ChainState, Credential, DState, EpochState, GenKeyHash, HashHeader,
-                     KeyHash, KeyPair, LedgerState, Mdt, NewEpochState, PPUpdate, PState,
-                     PoolDistr, PoolParams, RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody,
-                     UTxO, UTxOState, Update, UpdateState, VKeyGenesis, hashKeyVRF)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CHAIN, ChainState,
+                     Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
+                     LedgerState, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
+                     RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody, UTxO, UTxOState, Update,
+                     VKeyGenesis, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), NatNonce (..),
                      genesisAccountState, mkBlock, mkOCert, zero)
 import           Test.Shelley.Spec.Ledger.Utils
@@ -217,13 +207,6 @@ coreNodeKeys = snd . (coreNodes !!)
 
 genDelegs :: Map GenKeyHash KeyHash
 genDelegs = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
-
--- | There are only two applications on test Byron blockchain:
-byronApps :: Applications
-byronApps = Applications $ Map.fromList
-                            [ (ApName $ text64 "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (ApName $ text64 "Yoroi", (ApVer 4, Mdt Map.empty))
-                            ]
 
 alicePay :: KeyPair
 alicePay = KeyPair vk sk
@@ -328,7 +311,7 @@ dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
 
 -- | Empty set of UTxOs. No coins to be spent.
 utxostEx1 :: UTxOState
-utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
+utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUpdate
 
 dsEx1 :: DState
 dsEx1 = emptyDState { _genDelegs = GenDelegs genDelegs }
@@ -396,7 +379,6 @@ initStEx1 = initialShelleyState
   maxLLSupply
   genDelegs
   (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0))
-  (Applications Map.empty)
   ppsEx1
   (hashHeaderToNonce lastByronHeaderHash)
 
@@ -461,7 +443,7 @@ ppupEx2A = PPUpdate $ Map.singleton
 -- | Update proposal that just changes protocol parameters,
 --   and does not change applications.
 updateEx2A :: Update
-updateEx2A = Update ppupEx2A (AVUpdate Map.empty) (Just $ EpochNo 0)
+updateEx2A = Update ppupEx2A (EpochNo 0)
 
 
 aliceCoinEx2A :: Coin
@@ -481,7 +463,7 @@ txbodyEx2A = TxBody
            (Wdrl Map.empty)
            (Coin 3)
            (SlotNo 10)
-           updateEx2A
+           (Just updateEx2A)
            Nothing
 
 txEx2A :: Tx
@@ -507,11 +489,8 @@ txEx2A = Tx
 alicePtrAddr :: Addr
 alicePtrAddr = AddrPtr (KeyHashObj . hashKey $ vKey alicePay) (Ptr (SlotNo 10) 0 0)
 
-usEx2A :: UpdateState
-usEx2A = UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps
-
 utxostEx2A :: UTxOState
-utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) usEx2A
+utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyPPUpdate
 
 lsEx2A :: LedgerState
 lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1)
@@ -551,7 +530,6 @@ initStEx2A = initialShelleyState
   (maxLLSupply - balance utxoEx2A)
   genDelegs
   overlayEx2A
-  byronApps
   ppsEx1
   (hashHeaderToNonce lastByronHeaderHash)
 
@@ -590,13 +568,6 @@ psEx2A = psEx1
           , _pParams = Map.singleton (hk alicePool) alicePoolParams
           }
 
-updateStEx2A :: UpdateState
-updateStEx2A = UpdateState
-  ppupEx2A
-  (AVUpdate Map.empty)
-  Map.empty
-  byronApps
-
 expectedLSEx2A :: LedgerState
 expectedLSEx2A = LedgerState
                (UTxOState
@@ -606,7 +577,7 @@ expectedLSEx2A = LedgerState
                    ])
                  (Coin 271)
                  (Coin 3)
-                 updateStEx2A)
+                 ppupEx2A)
                (DPState dsEx2A psEx2A)
 
 blockEx2AHash :: HashHeader
@@ -663,7 +634,7 @@ txbodyEx2B = TxBody
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 4
       , TxData._ttl      = SlotNo 90
-      , TxData._txUpdate = emptyUpdate
+      , TxData._txUpdate = Nothing
       , TxData._mdHash   = Nothing
       }
 
@@ -723,7 +694,7 @@ expectedLSEx2B = LedgerState
                  utxoEx2B
                  (Coin 271)
                  (Coin 7)
-                 updateStEx2A)
+                 ppupEx2A)
                (DPState dsEx2B psEx2A)
 
 expectedStEx2Bgeneric :: PParams -> ChainState
@@ -832,7 +803,7 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
     utxoEx2B
     lsDeposits
     lsFees
-    usEx2A) -- Note that the ppup is gone now
+    emptyPPUpdate) -- Note that the ppup is gone now
   (DPState
     dsEx2B { _irwd     = Map.empty
            , _stkCreds = addStakeCreds carlSHK (SlotNo 10)   $ _stkCreds dsEx2B
@@ -929,7 +900,7 @@ txbodyEx2D = TxBody
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 5
       , TxData._ttl      = SlotNo 500
-      , TxData._txUpdate = emptyUpdate
+      , TxData._txUpdate = Nothing
       , TxData._mdHash   = Nothing
       }
 
@@ -982,7 +953,7 @@ expectedLSEx2D = LedgerState
                  utxoEx2D
                  (Coin 257)
                  (Coin 26)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState dsEx2D psEx2A)
 
 expectedStEx2D :: ChainState
@@ -1063,7 +1034,7 @@ expectedLSEx2E = LedgerState
                  utxoEx2D
                  (Coin 243)
                  (Coin 19)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState
                 dsEx2D { _irwd = Map.empty
                        , _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B
@@ -1204,7 +1175,7 @@ expectedLSEx2G = LedgerState
                  utxoEx2D
                  (Coin 233)
                  (Coin 10)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState
                  dsEx2D
                  psEx2A)
@@ -1354,7 +1325,7 @@ expectedLSEx2I = LedgerState
                  utxoEx2D
                  (Coin 224)
                  (Coin 9)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState dsEx2I psEx2A)
 
 snapsEx2I :: SnapShots
@@ -1415,7 +1386,7 @@ txbodyEx2J = TxBody
            (Wdrl $ Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
            (Coin 9)
            (SlotNo 500)
-           emptyUpdate
+           Nothing
            Nothing
 
 txEx2J :: Tx
@@ -1464,7 +1435,7 @@ expectedLSEx2J = LedgerState
                  utxoEx2J
                  (Coin (219 - 4) + 5)
                  (Coin 18)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState dsEx2J psEx2A)
 
 oCertIssueNosEx2J :: Map KeyHash Natural
@@ -1508,7 +1479,7 @@ txbodyEx2K = TxBody
            (Wdrl Map.empty)
            (Coin 2)
            (SlotNo 500)
-           emptyUpdate
+           Nothing
            Nothing
 
 txEx2K :: Tx
@@ -1551,7 +1522,7 @@ expectedLSEx2K = LedgerState
                  utxoEx2K
                  (Coin 220)
                  (Coin 20)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState dsEx2J psEx2K)
 
 expectedStEx2K :: ChainState
@@ -1638,7 +1609,7 @@ expectedLSEx2L = LedgerState
                  utxoEx2K
                  (Coin 4 + 4)
                  (Coin 22)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped
 
 
@@ -1684,7 +1655,7 @@ ppupEx3A = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, ppVote3A)
                                    ]
 
 updateEx3A :: Update
-updateEx3A = Update ppupEx3A (AVUpdate Map.empty) (Just $ EpochNo 0)
+updateEx3A = Update ppupEx3A (EpochNo 0)
 
 aliceCoinEx3A :: Coin
 aliceCoinEx3A = aliceInitCoin - 1
@@ -1697,7 +1668,7 @@ txbodyEx3A = TxBody
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 10)
-           updateEx3A
+           (Just updateEx3A)
            Nothing
 
 txEx3A :: Tx
@@ -1727,13 +1698,6 @@ blockEx3A = mkBlock
              0
              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
-updateStEx3A :: UpdateState
-updateStEx3A = UpdateState
-  ppupEx3A
-  (AVUpdate Map.empty)
-  Map.empty
-  byronApps
-
 expectedLSEx3A :: LedgerState
 expectedLSEx3A = LedgerState
                (UTxOState
@@ -1743,7 +1707,7 @@ expectedLSEx3A = LedgerState
                    ])
                  (Coin 0)
                  (Coin 1)
-                 updateStEx3A)
+                 ppupEx3A)
                (DPState dsEx1 psEx1)
 
 blockEx3AHash :: HashHeader
@@ -1782,7 +1746,7 @@ ppupEx3B = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, ppVote3A)
                                    ]
 
 updateEx3B :: Update
-updateEx3B = Update ppupEx3B (AVUpdate Map.empty) (Just $ EpochNo 0)
+updateEx3B = Update ppupEx3B (EpochNo 0)
 
 aliceCoinEx3B :: Coin
 aliceCoinEx3B = aliceCoinEx3A - 1
@@ -1795,7 +1759,7 @@ txbodyEx3B = TxBody
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 31)
-           updateEx3B
+           (Just updateEx3B)
            Nothing
 
 txEx3B :: Tx
@@ -1824,19 +1788,15 @@ blockEx3B = mkBlock
              0
              (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
 
-updateStEx3B :: UpdateState
-updateStEx3B = UpdateState
-  (PPUpdate $ Map.fromList $ fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A))
-    [0, 1, 3, 4, 5])
-  (AVUpdate Map.empty)
-  Map.empty
-  byronApps
-
 utxoEx3B :: UTxO
 utxoEx3B = UTxO . Map.fromList $
              [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
              , (TxIn (txid txbodyEx3B) 0, TxOut aliceAddr aliceCoinEx3B)
              ]
+
+ppupEx3B' :: PPUpdate
+ppupEx3B' = PPUpdate $ Map.fromList $
+  fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A)) [0, 1, 3, 4, 5]
 
 expectedLSEx3B :: LedgerState
 expectedLSEx3B = LedgerState
@@ -1844,7 +1804,7 @@ expectedLSEx3B = LedgerState
                  utxoEx3B
                  (Coin 0)
                  (Coin 2)
-                 updateStEx3B)
+                 ppupEx3B')
                (DPState dsEx1 psEx1)
 
 blockEx3BHash :: HashHeader
@@ -1909,7 +1869,7 @@ expectedLSEx3C = LedgerState
                  utxoEx3B
                  (Coin 0)
                  (Coin 2)
-                 usEx2A)
+                 emptyPPUpdate)
                (DPState dsEx1 psEx1)
 
 ppsEx3C :: PParams
@@ -1939,284 +1899,6 @@ ex3C :: CHAINExample
 ex3C = CHAINExample (SlotNo 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
 
 
--- | Example 4A - Setting up for a successful application version update,
--- have three genesis keys vote on the same new version
-
-
-daedalusMDEx4A :: Mdt
-daedalusMDEx4A = Mdt $ Map.singleton
-                              (SystemTag $ text64 "DOS")
-                              (InstallerHash $ hash $ BS.pack "ABC")
-
-appsEx4A :: Applications
-appsEx4A = Applications $ Map.singleton
-                            (ApName $ text64 "Daedalus")
-                            (ApVer 17, daedalusMDEx4A)
-
-avupEx4A :: AVUpdate
-avupEx4A = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, appsEx4A)
-                                   , (hashKey $ coreNodeVKG 3, appsEx4A)
-                                   , (hashKey $ coreNodeVKG 4, appsEx4A)
-                                   ]
-
-updateEx4A :: Update
-updateEx4A = Update (PPUpdate Map.empty) avupEx4A Nothing
-
-aliceCoinEx4A :: Coin
-aliceCoinEx4A = aliceInitCoin - 1
-
-txbodyEx4A :: TxBody
-txbodyEx4A = TxBody
-           (Set.fromList [TxIn genesisId 0])
-           (Seq.singleton $ TxOut aliceAddr aliceCoinEx4A)
-           Seq.empty
-           (Wdrl Map.empty)
-           (Coin 1)
-           (SlotNo 10)
-           updateEx4A
-           Nothing
-
-txEx4A :: Tx
-txEx4A = Tx
-          txbodyEx4A
-          (makeWitnessesVKey
-            txbodyEx4A
-            [ alicePay
-            , cold $ coreNodeKeys 0
-            , cold $ coreNodeKeys 3
-            , cold $ coreNodeKeys 4
-            ])
-          Map.empty
-          Nothing
-
-blockEx4A :: Block
-blockEx4A = mkBlock
-             lastByronHeaderHash
-             (coreNodeKeys 2)
-             [txEx4A]
-             (SlotNo 10)
-             (BlockNo 1)
-             (mkNonce 0)
-             (NatNonce 1)
-             zero
-             0
-             0
-             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
-
-updateStEx4A :: UpdateState
-updateStEx4A = UpdateState
-  (PPUpdate Map.empty)
-  avupEx4A
-  Map.empty
-  byronApps
-
-expectedLSEx4A :: LedgerState
-expectedLSEx4A = LedgerState
-               (UTxOState
-                 (UTxO . Map.fromList $
-                   [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-                   , (TxIn (txid txbodyEx4A) 0, TxOut aliceAddr aliceCoinEx4A)
-                   ])
-                 (Coin 0)
-                 (Coin 1)
-                 updateStEx4A)
-               (DPState dsEx1 psEx1)
-
-blockEx4AHash :: HashHeader
-blockEx4AHash = bhHash (bheader blockEx4A)
-
-expectedStEx4A :: ChainState
-expectedStEx4A = ChainState
-  (NewEpochState
-     (EpochNo 0)
-     (BlocksMade Map.empty)
-     (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1 emptyNonMyopic)
-     Nothing
-     (PoolDistr Map.empty)
-     overlayEx2A)
-  oCertIssueNosEx1
-  nonce0
-  (nonce0 ⭒ mkNonce 1)
-  (nonce0 ⭒ mkNonce 1)
-  NeutralNonce
-  (At $ LastAppliedBlock
-    (BlockNo 1)
-    (SlotNo 10)
-    blockEx4AHash)
-
-ex4A :: CHAINExample
-ex4A = CHAINExample (SlotNo 10) initStEx2A blockEx4A (Right expectedStEx4A)
-
-
--- | Example 4B - Finish getting enough votes for the application version update.
-
-avupEx4B :: AVUpdate
-avupEx4B = AVUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, appsEx4A)
-                                   , (hashKey $ coreNodeVKG 5, appsEx4A)
-                                   ]
-
-updateEx4B :: Update
-updateEx4B = Update (PPUpdate Map.empty) avupEx4B Nothing
-
-aliceCoinEx4B :: Coin
-aliceCoinEx4B = aliceCoinEx4A - 1
-
-txbodyEx4B :: TxBody
-txbodyEx4B = TxBody
-           (Set.fromList [TxIn (txid txbodyEx4A) 0])
-           (Seq.singleton $ TxOut aliceAddr aliceCoinEx4B)
-           Seq.empty
-           (Wdrl Map.empty)
-           (Coin 1)
-           (SlotNo 31)
-           updateEx4B
-           Nothing
-
-txEx4B :: Tx
-txEx4B = Tx
-          txbodyEx4B
-          (makeWitnessesVKey
-            txbodyEx4B
-            [ alicePay
-            , cold $ coreNodeKeys 1
-            , cold $ coreNodeKeys 5
-            ])
-          Map.empty
-          Nothing
-
-blockEx4B :: Block
-blockEx4B = mkBlock
-             blockEx4AHash
-             (coreNodeKeys 5)
-             [txEx4B]
-             (SlotNo 20)
-             (BlockNo 2)
-             (mkNonce 0)
-             (NatNonce 2)
-             zero
-             1
-             0
-             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
-
-updateStEx4B :: UpdateState
-updateStEx4B = UpdateState
-  (PPUpdate Map.empty)
-  (AVUpdate Map.empty)
-  (Map.singleton (SlotNo 53) appsEx4A)
-  byronApps
-
-utxoEx4B :: UTxO
-utxoEx4B = UTxO . Map.fromList $
-             [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin)
-             , (TxIn (txid txbodyEx4B) 0, TxOut aliceAddr aliceCoinEx4B)
-             ]
-
-expectedLSEx4B :: LedgerState
-expectedLSEx4B = LedgerState
-               (UTxOState
-                 utxoEx4B
-                 (Coin 0)
-                 (Coin 2)
-                 updateStEx4B)
-               (DPState dsEx1 psEx1)
-
-blockEx4BHash :: HashHeader
-blockEx4BHash = bhHash (bheader blockEx4B)
-
-expectedStEx4B :: ChainState
-expectedStEx4B = ChainState
-  (NewEpochState
-     (EpochNo 0)
-     (BlocksMade Map.empty)
-     (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1 emptyNonMyopic)
-     Nothing
-     (PoolDistr Map.empty)
-     overlayEx2A)
-  oCertIssueNosEx1
-  nonce0
-  (mkSeqNonce 2)
-  (mkSeqNonce 2)
-  NeutralNonce
-  (At $ LastAppliedBlock
-    (BlockNo 2)
-    (SlotNo 20)
-    blockEx4BHash)
-
-ex4B :: CHAINExample
-ex4B = CHAINExample (SlotNo 20) expectedStEx4A blockEx4B (Right expectedStEx4B)
-
-
--- | Example 4C - Adopt application version update
-
-
-blockEx4C :: Block
-blockEx4C = mkBlock
-             blockEx4BHash
-             (coreNodeKeys 3)
-             []
-             (SlotNo 60)
-             (BlockNo 3)
-             (mkNonce 0)
-             (NatNonce 3)
-             zero
-             3
-             0
-             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
-
-updateStEx4C :: UpdateState
-updateStEx4C = UpdateState
-  (PPUpdate Map.empty)
-  (AVUpdate Map.empty)
-  Map.empty
-  (Applications $ Map.fromList
-                     [ (ApName $ text64 "Daedalus", (ApVer 17, daedalusMDEx4A))
-                     , (ApName $ text64 "Yoroi", (ApVer 4, Mdt Map.empty))
-                     ])
-
-expectedLSEx4C :: LedgerState
-expectedLSEx4C = LedgerState
-               (UTxOState
-                 utxoEx4B
-                 (Coin 0)
-                 (Coin 2)
-                 updateStEx4C)
-               (DPState dsEx1 psEx1)
-
-blockEx4CHash :: HashHeader
-blockEx4CHash = bhHash (bheader blockEx4C)
-
-expectedStEx4C :: ChainState
-expectedStEx4C = ChainState
-  (NewEpochState
-     (EpochNo 0)
-     (BlocksMade Map.empty)
-     (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx4C ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 0
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin 0
-                        , nonMyopic     = emptyNonMyopic
-                        })
-      (PoolDistr Map.empty)
-      overlayEx2A)
-  oCertIssueNosEx1
-  nonce0
-  (mkSeqNonce 3)
-  (mkSeqNonce 3)
-  NeutralNonce
-  (At $ LastAppliedBlock
-    (BlockNo 3)
-    (SlotNo 60)
-    blockEx4CHash)
-
-
-ex4C :: CHAINExample
-ex4C = CHAINExample (SlotNo 60) expectedStEx4B blockEx4C (Right expectedStEx4C)
-
-
 -- | Example 5A - Genesis key delegation
 
 
@@ -2237,7 +1919,7 @@ txbodyEx5A = TxBody
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
-              emptyUpdate
+              Nothing
               Nothing
 
 txEx5A :: Tx
@@ -2281,7 +1963,7 @@ expectedLSEx5A = LedgerState
                  utxoEx5A
                  (Coin 0)
                  (Coin 1)
-                 (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
+                 emptyPPUpdate)
                (DPState dsEx5A psEx1)
 
 expectedStEx5A :: ChainState
@@ -2340,7 +2022,7 @@ expectedLSEx5B = LedgerState
                  utxoEx5A
                  (Coin 0)
                  (Coin 1)
-                 (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
+                 emptyPPUpdate)
                (DPState dsEx5B psEx1)
 
 expectedStEx5B :: ChainState
@@ -2389,7 +2071,7 @@ txbodyEx6A = TxBody
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
-              emptyUpdate
+              Nothing
               Nothing
 
 txEx6A :: Tx
@@ -2437,7 +2119,7 @@ expectedLSEx6A = LedgerState
                  utxoEx6A
                  (Coin 0)
                  (Coin 1)
-                 (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty byronApps))
+                 emptyPPUpdate)
                (DPState dsEx6A psEx1)
 
 expectedStEx6A :: ChainState
@@ -2555,7 +2237,7 @@ txbodyEx6F = TxBody
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 99)
-              emptyUpdate
+              Nothing
               Nothing
 
 txEx6F :: Tx
@@ -2600,7 +2282,7 @@ txbodyEx6F' = TxBody
                (Coin 1)
                ((slotFromEpoch $ EpochNo 1)
                 +* Duration (startRewards testGlobals) + SlotNo 7)
-               emptyUpdate
+               Nothing
                Nothing
 
 txEx6F' :: Tx
@@ -2636,7 +2318,7 @@ txbodyEx6F'' = TxBody
                 (Wdrl Map.empty)
                 (Coin 1)
                 ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
-                emptyUpdate
+                Nothing
                 Nothing
 
 txEx6F'' :: Tx

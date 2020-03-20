@@ -37,31 +37,19 @@ data PPUPEnv crypto
 
 instance STS (PPUP crypto) where
   type State (PPUP crypto) = PPUpdate crypto
-  type Signal (PPUP crypto) = (PPUpdate crypto, Maybe EpochNo)
+  type Signal (PPUP crypto) = Maybe (Update crypto)
   type Environment (PPUP crypto) = PPUPEnv crypto
   type BaseM (PPUP crypto) = ShelleyBase
   data PredicateFailure (PPUP crypto)
     = NonGenesisUpdatePPUP (Set (GenKeyHash crypto)) (Set (GenKeyHash crypto))
     | PPUpdateTooLatePPUP
-    | PPUpdateEmpty
-    | PPUpdateNonEmpty
-    | PPUpdateNoEpoch (Maybe EpochNo)
+    | PPUpdateWrongEpoch EpochNo
     | PVCannotFollowPPUP
     deriving (Show, Eq, Generic)
 
   initialRules = []
 
-  transitionRules = [ ppupCombined ]
-
-ppupCombined :: TransitionRule (PPUP crypto)
-ppupCombined = do
-  TRC ( _
-      , _
-      , (PPUpdate pup, _)) <- judgmentContext
-
-  if Map.null pup
-    then ppupTransitionEmpty
-    else ppupTransitionNonEmpty
+  transitionRules = [ ppupTransitionNonEmpty ]
 
 instance NoUnexpectedThunks (PredicateFailure (PPUP crypto))
 
@@ -75,11 +63,9 @@ instance
        <> toCBOR (0 :: Word8)
        <> toCBOR a
        <> toCBOR b
-     PPUpdateTooLatePPUP  -> encodeListLen 1 <> toCBOR (1 :: Word8)
-     PPUpdateEmpty        -> encodeListLen 1 <> toCBOR (2 :: Word8)
-     PPUpdateNonEmpty     -> encodeListLen 1 <> toCBOR (3 :: Word8)
-     (PPUpdateNoEpoch e)  -> encodeListLen 2 <> toCBOR (4 :: Word8) <> toCBOR e
-     PVCannotFollowPPUP   -> encodeListLen 1 <> toCBOR (5 :: Word8)
+     PPUpdateTooLatePPUP    -> encodeListLen 1 <> toCBOR (1 :: Word8)
+     (PPUpdateWrongEpoch e) -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR e
+     PVCannotFollowPPUP     -> encodeListLen 1 <> toCBOR (3 :: Word8)
 
 instance
   (Crypto crypto)
@@ -94,13 +80,11 @@ instance
         b <- fromCBOR
         pure $ NonGenesisUpdatePPUP a b
       1 -> matchSize "PPUpdateTooLatePPUP" 1 n >> pure PPUpdateTooLatePPUP
-      2 -> matchSize "PPUpdateEmpty" 1 n >> pure PPUpdateEmpty
-      3 -> matchSize "PPUpdateNonEmpty" 1 n >> pure PPUpdateNonEmpty
-      4 -> do
-        matchSize "PPUpdateNoEpoch" 2 n
+      2 -> do
+        matchSize "PPUpdateWrongEpoch" 2 n
         a <- fromCBOR
-        pure $ PPUpdateNoEpoch a
-      5 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
+        pure $ PPUpdateWrongEpoch a
+      3 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
       k -> invalidKey k
 
 pvCanFollow :: ProtVer -> Ppm -> Bool
@@ -108,34 +92,29 @@ pvCanFollow (ProtVer m n) (ProtocolVersion (ProtVer m' n'))
   = (m+1, 0) == (m', n') || (m, n+1) == (m', n')
 pvCanFollow _ _ = True
 
-ppupTransitionEmpty :: TransitionRule (PPUP crypto)
-ppupTransitionEmpty = do
-  TRC (_, pupS, (PPUpdate pup, _)) <- judgmentContext
-
-  Map.null pup ?! PPUpdateNonEmpty
-
-  pure pupS
-
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
-  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), PPUpdate pupS, (PPUpdate pup, te)) <- judgmentContext
+  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), PPUpdate pupS, up)
+    <- judgmentContext
 
-  not (Map.null pup) ?! PPUpdateEmpty
+  case up of
+    Nothing -> pure (PPUpdate pupS)
+    Just (Update (PPUpdate pup) te) -> do
 
-  (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
+      (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
 
-  all (all (pvCanFollow (_protocolVersion pp)) . ppmSet) pup ?! PVCannotFollowPPUP
+      all (all (pvCanFollow (_protocolVersion pp)) . ppmSet) pup ?! PVCannotFollowPPUP
 
-  sp <- liftSTS $ asks slotsPrior
-  firstSlotNextEpoch <- liftSTS $ do
-    ei <- asks epochInfo
-    EpochNo e <- epochInfoEpoch ei slot
-    epochInfoFirst ei (EpochNo $ e + 1)
-  slot < firstSlotNextEpoch *- (Duration (2 * sp)) ?! PPUpdateTooLatePPUP
+      sp <- liftSTS $ asks slotsPrior
+      firstSlotNextEpoch <- liftSTS $ do
+        ei <- asks epochInfo
+        EpochNo e <- epochInfoEpoch ei slot
+        epochInfoFirst ei (EpochNo $ e + 1)
+      slot < firstSlotNextEpoch *- (Duration (2 * sp)) ?! PPUpdateTooLatePPUP
 
-  currentEpoch <- liftSTS $ do
-    ei <- asks epochInfo
-    epochInfoEpoch ei slot
-  Just currentEpoch == te ?! PPUpdateNoEpoch te
+      currentEpoch <- liftSTS $ do
+        ei <- asks epochInfo
+        epochInfoEpoch ei slot
+      currentEpoch == te ?! PPUpdateWrongEpoch te
 
-  pure $ PPUpdate (pupS ⨃  Map.toList pup)
+      pure $ PPUpdate (pupS ⨃  Map.toList pup)
