@@ -1726,7 +1726,7 @@ protocolVersionEndorsementGen upienv upistate =
                                        & fmap fst
               where
                 stableAndConfirmedProposalIDs =
-                  dom (confirmedProposals upistate ▷<= sn  -. 2 *. k)
+                  dom (confirmedProposals upistate ▷<= sn  -. 4 *. k)
                   where
                     (sn, _, k, _) = upienv
 
