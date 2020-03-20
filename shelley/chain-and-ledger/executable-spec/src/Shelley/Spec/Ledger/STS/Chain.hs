@@ -20,9 +20,10 @@ import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
 
 import           Cardano.Prelude (asks)
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase)
-import           Shelley.Spec.Ledger.BlockChain (BHBody, Block (..), HashHeader, bHeaderSize,
-                     bhbody, bheaderSlotNo, hBbsize, hashHeaderToNonce)
+import           Shelley.Spec.Ledger.BlockChain (BHBody, Block (..), LastAppliedBlock (..),
+                     bHeaderSize, bhbody, bheaderSlotNo, hBbsize)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
@@ -35,7 +36,7 @@ import           Shelley.Spec.Ledger.OCert (KESPeriod)
 import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..), _maxBBSize, _maxBHSize,
                      _protocolVersion)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import           Shelley.Spec.Ledger.Slot (BlockNo, EpochNo, SlotNo)
+import           Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import           Shelley.Spec.Ledger.Tx (TxBody)
 import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Applications, PPUpdate (..),
                      UpdateState (..))
@@ -53,32 +54,29 @@ data CHAIN crypto
 
 data ChainState crypto
   = ChainState
-    { chainNes            :: NewEpochState crypto
-    , chainOCertIssue     :: Map.Map (KeyHash crypto) Natural
-    , chainEpochNonce     :: Nonce
-    , chainEvolvingNonce  :: Nonce
-    , chainCandidateNonce :: Nonce
-    , chainPrevEpochNonce :: Nonce
-    , chainHashHeader     :: HashHeader crypto
-    , chainSlotNo         :: SlotNo
-    , chainBlockNo        :: BlockNo
+    { chainNes              :: NewEpochState crypto
+    , chainOCertIssue       :: Map.Map (KeyHash crypto) Natural
+    , chainEpochNonce       :: Nonce
+    , chainEvolvingNonce    :: Nonce
+    , chainCandidateNonce   :: Nonce
+    , chainPrevEpochNonce   :: Nonce
+    , chainLastAppliedBlock :: WithOrigin (LastAppliedBlock crypto)
     }
   deriving (Show, Eq)
 
 -- |Creates a valid initial chain state
 initialShelleyState
-  :: SlotNo
-  -> BlockNo
+  :: WithOrigin (LastAppliedBlock crypto)
   -> EpochNo
-  -> HashHeader crypto
   -> UTxO crypto
   -> Coin
   -> Map (GenKeyHash crypto) (KeyHash crypto)
   -> Map SlotNo (Maybe (GenKeyHash crypto))
   -> Applications crypto
   -> PParams
+  -> Nonce
   -> ChainState crypto
-initialShelleyState s b e h utxo reserves genDelegs os apps pp =
+initialShelleyState lab e utxo reserves genDelegs os apps pp initNonce =
   ChainState
     (NewEpochState
        e
@@ -104,13 +102,11 @@ initialShelleyState s b e h utxo reserves genDelegs os apps pp =
        os
     )
     cs
-    (hashHeaderToNonce h)
-    (hashHeaderToNonce h)
-    (hashHeaderToNonce h)
+    initNonce
+    initNonce
+    initNonce
     NeutralNonce
-    h
-    s
-    b
+    lab
   where
     cs = Map.fromList (fmap (\hk -> (hk,0)) (Map.elems genDelegs))
 
@@ -154,7 +150,7 @@ chainTransition
      )
   => TransitionRule (CHAIN crypto)
 chainTransition = do
-  TRC (sNow, ChainState nes cs eta0 etaV etaC etaH h sL bL, block@(Block bh _)) <- judgmentContext
+  TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _)) <- judgmentContext
 
 
   let NewEpochState _ _ _ (EpochState _ _ _ pp _) _ _ _ = nes
@@ -177,9 +173,9 @@ chainTransition = do
   let EpochState (AccountState _ _reserves) _ ls pp' _                       = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
-  PrtclState cs' h' sL' bL' eta0' etaV' etaC' etaH' <- trans @(PRTCL crypto)
+  PrtclState cs' lab' eta0' etaV' etaC' etaH' <- trans @(PRTCL crypto)
     $ TRC ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2)
-          , PrtclState cs h sL bL eta0 etaV etaC etaH
+          , PrtclState cs lab eta0 etaV etaC etaH
           , bh)
 
   BbodyState ls' bcur' <- trans @(BBODY crypto)
@@ -187,7 +183,7 @@ chainTransition = do
 
   let nes'' = updateNES nes' bcur' ls'
 
-  pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' h' sL' bL'
+  pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
   ( Crypto crypto
@@ -224,7 +220,7 @@ instance
 
 -- |Calculate the total ada in the chain state
 totalAda :: ChainState crypto -> Coin
-totalAda (ChainState nes _ _ _ _ _ _ _ _) =
+totalAda (ChainState nes _ _ _ _ _ _) =
   treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _ _) = nesEs nes

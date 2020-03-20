@@ -23,12 +23,14 @@ import qualified Test.QuickCheck as QC
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Cardano.Crypto.Hash (ShortHash)
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition (IRC (..))
 import           Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace, envGen,
                      interpretSTS, shrinkSignal, sigGen)
 import           Shelley.Spec.Ledger.BaseTypes (Globals, text64)
-import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader)
+import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..),
+                     hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, hash)
 import           Shelley.Spec.Ledger.LedgerState (overlaySchedule)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -100,16 +102,15 @@ mkGenesisChainState (IRC _slotNo) = do
                 pParams
 
   pure . Right $ initialShelleyState
-    (SlotNo 0)
-    (BlockNo 0)
+    (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     epoch0
-    lastByronHeaderHash
     utxo0
     (maxLLSupply - balance utxo0)
     delegs0
     osched_
     byronApps
     pParams
+    (hashHeaderToNonce lastByronHeaderHash)
   where
     epoch0 = EpochNo 0
     delegs0 = genesisDelegs0

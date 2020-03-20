@@ -2,6 +2,8 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Updn
@@ -23,7 +25,7 @@ import           Shelley.Spec.Ledger.Slot
 
 data UPDN crypto
 
-data UpdnEnv crypto = UpdnEnv Nonce PParams (HashHeader crypto) Bool
+data UpdnEnv crypto = UpdnEnv Nonce PParams (PrevHash crypto) Bool
 data UpdnState = UpdnState Nonce Nonce Nonce Nonce
   deriving (Show, Eq)
 
@@ -41,9 +43,18 @@ instance
 
 instance NoUnexpectedThunks (PredicateFailure (UPDN crypto))
 
+prevHashToNonce
+  :: Nonce
+  -> PrevHash crypto
+  -> Nonce
+prevHashToNonce n = \case
+  GenesisHash -> n -- This case is impossible. The function is only called on a new epoch,
+                   -- but the GenesisHash can only occur as the first block.
+  BlockHash ph -> hashHeaderToNonce ph
+
 updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
 updTransition = do
-  TRC (UpdnEnv eta pp h ne, UpdnState eta_0 eta_v eta_c eta_h, s) <- judgmentContext
+  TRC (UpdnEnv eta pp ph ne, UpdnState eta_0 eta_v eta_c eta_h, s) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sp <- liftSTS $ asks slotsPrior
   EpochNo e <- liftSTS $ epochInfoEpoch ei s
@@ -55,4 +66,4 @@ updTransition = do
       then eta_v ⭒ eta
       else eta_c
     )
-    (if ne then (hashHeaderToNonce h) else eta_h)
+    (if ne then (prevHashToNonce eta_h ph) else eta_h)

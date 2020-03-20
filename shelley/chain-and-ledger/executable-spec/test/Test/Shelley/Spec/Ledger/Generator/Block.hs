@@ -15,10 +15,12 @@ import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
+import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import           Ledger.Core (dom, range)
 import           Shelley.Spec.Ledger.BaseTypes (intervalValue)
+import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern EpochState, pattern NewEpochState,
@@ -27,8 +29,8 @@ import           Shelley.Spec.Ledger.LedgerState (pattern EpochState, pattern Ne
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Shelley.Spec.Ledger.PParams (PParams (_activeSlotCoeff), activeSlotVal)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-import           Shelley.Spec.Ledger.STS.Chain (chainBlockNo, chainEpochNonce, chainHashHeader,
-                     chainNes, chainOCertIssue, chainSlotNo)
+import           Shelley.Spec.Ledger.STS.Chain (chainEpochNonce, chainLastAppliedBlock, chainNes,
+                     chainOCertIssue)
 import           Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import           Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import           Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
@@ -78,14 +80,13 @@ genBlock
   -> Gen Block
 genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
   let os = (nesOsched . chainNes) chainSt
-      s = chainSlotNo chainSt
       dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
       pp = (esPp . nesEs . chainNes) chainSt
       (EpochNo e) = (nesEL . chainNes) chainSt
       (GenDelegs cores) = (_genDelegs . _dstate) dpstate
       nextOs = runShelleyBase $ overlaySchedule
         (EpochNo $ e + 1) (Map.keysSet cores) pp
-      (nextOSlot, gkey) = nextCoreNode os nextOs s
+      (nextOSlot, gkey) = nextCoreNode os nextOs slot
 
   {- Our slot selection strategy uses the overlay schedule.
    - Above we calculated the next available core node slot
@@ -151,11 +152,11 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
         let NewEpochState _ _ _ es _ _ _ = _nes'
             EpochState acnt _ ls pp' _   = es
         mkBlock
-          <$> pure (chainHashHeader chainSt)
+          <$> pure hashheader
           <*> pure keys'
           <*> toList <$> genTxs pp' (_reserves acnt) ls nextSlot
           <*> pure nextSlot
-          <*> pure (chainBlockNo chainSt + 1)
+          <*> pure (block + 1)
           <*> pure (chainEpochNonce chainSt)
           <*> genBlockNonce
           <*> genPraosLeader poolStake pp'
@@ -163,6 +164,9 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
           <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
           <*> pure oCert
   where
+    (block, slot, hashheader) = case chainLastAppliedBlock chainSt of
+      Origin -> error "block generator does not support from Origin"
+      At (LastAppliedBlock b s hh) -> (b, s, hh)
     ledgerSt = (esLState . nesEs . chainNes) chainSt
     (GenDelegs genesisDelegs) = (_genDelegs . _dstate . _delegationState) ledgerSt
 
@@ -201,7 +205,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
 
     -- we assume small gaps in slot numbers
     genSlotIncrease = SlotNo . (lastSlotNo +) <$> QC.choose (1, 5)
-    lastSlotNo = unSlotNo (chainSlotNo chainSt)
+    lastSlotNo = unSlotNo slot
 
     genBlockNonce = NatNonce <$> genNatural 1 100
 
