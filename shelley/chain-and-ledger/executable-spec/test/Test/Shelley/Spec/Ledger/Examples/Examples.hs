@@ -51,6 +51,49 @@ module Test.Shelley.Spec.Ledger.Examples.Examples
   , dariaStake
   , dariaAddr
   , coreNodeSKG -- TODO remove
+  -- blocks
+  , blockEx1
+  , blockEx2A
+  , blockEx2B
+  , blockEx2C
+  , blockEx2D
+  , blockEx2E
+  , blockEx2F
+  , blockEx2G
+  , blockEx2H
+  , blockEx2I
+  , blockEx2J
+  , blockEx2K
+  , blockEx2L
+  , blockEx3A
+  , blockEx3B
+  , blockEx3C
+  , blockEx4A
+  , blockEx4B
+  , blockEx4C
+  , blockEx5A
+  , blockEx5B
+  , blockEx6A
+  , blockEx6B
+  , blockEx6F
+  , blockEx6F'
+  , blockEx6F''
+  -- transactions
+  , txEx2A
+  , txEx2B
+  , txEx2D
+  , txEx2J
+  , txEx2K
+  , txEx3A
+  , txEx3B
+  , txEx4A
+  , txEx4B
+  , txEx5A
+  , txEx6A
+  , txEx6B
+  , txEx6F
+  , txEx6F'
+  , txEx6F''
   -- helpers
   , unsafeMkUnitInterval
   )
@@ -136,9 +179,8 @@ data CHAINExample =
   CHAINExample { currentSlotNo    :: SlotNo       -- ^ Current slot
                , startState     :: ChainState -- ^ State to start testing with
                , newBlock       :: Block      -- ^ Block to run chain state transition system on
-               , intendedResult :: (Either [[PredicateFailure CHAIN]] -- ^ type of fatal error, if failure expected
-                                           ChainState                 --   and final chain state if success expected
-                                   )
+               , intendedResult :: Either [[PredicateFailure CHAIN]] ChainState
+                  -- ^ type of fatal error, if failure expected and final chain state if success expected
                }
 
 data MIRExample =
