@@ -11,13 +11,14 @@ module Shelley.Spec.Ledger.Serialization
   , FromCBORGroup (..)
   , CBORGroup (..)
   , CborSeq (..)
-  , CBORMap (..)
   , decodeList
   , decodeMapContents
   , encodeFoldable
   , groupRecord
   , rationalToCBOR
   , rationalFromCBOR
+  , mapToCBOR
+  , mapFromCBOR
   )
 where
 
@@ -62,10 +63,8 @@ decodeRecord getRecordSize decode = do
 groupRecord :: forall a s. (ToCBORGroup a, FromCBORGroup a) => Decoder s a
 groupRecord = decodeRecord (fromIntegral . toInteger . listLen) fromCBORGroup
 
-newtype CBORMap a b = CBORMap { unwrapCBORMap :: Map a b }
-
-instance (ToCBOR a, ToCBOR b) => ToCBOR (CBORMap a b) where
-  toCBOR (CBORMap m) =
+mapToCBOR :: (ToCBOR a, ToCBOR b) => Map a b -> Encoding
+mapToCBOR m =
     let l = fromIntegral $ Map.size m
         contents = Map.foldMapWithKey (\k v -> toCBOR k <> toCBOR v) m
     in
@@ -73,8 +72,8 @@ instance (ToCBOR a, ToCBOR b) => ToCBOR (CBORMap a b) where
     then encodeMapLen l <> contents
     else encodeMapLenIndef <> contents <> encodeBreak
 
-instance (Ord a, FromCBOR a, FromCBOR b) => FromCBOR (CBORMap a b) where
-  fromCBOR = CBORMap . Map.fromList
+mapFromCBOR :: (Ord a, FromCBOR a, FromCBOR b) => Decoder s (Map a b)
+mapFromCBOR = Map.fromList
     <$> decodeMapContents decodePair
     where
     decodePair = (,) <$> fromCBOR <*> fromCBOR

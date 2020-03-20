@@ -52,7 +52,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce, Text64, UnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
 import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..), ProtVer)
-import           Shelley.Spec.Ledger.Serialization (CBORMap (..), decodeMapContents,
+import           Shelley.Spec.Ledger.Serialization (decodeMapContents, mapFromCBOR, mapToCBOR,
                      rationalFromCBOR, rationalToCBOR)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo)
 
@@ -79,10 +79,10 @@ newtype Mdt crypto = Mdt (Map SystemTag (InstallerHash crypto))
   deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
 instance Crypto crypto => ToCBOR (Mdt crypto) where
-  toCBOR (Mdt m) = toCBOR (CBORMap m)
+  toCBOR (Mdt m) = mapToCBOR m
 
 instance Crypto crypto => FromCBOR (Mdt crypto) where
-  fromCBOR = Mdt .  unwrapCBORMap <$> fromCBOR
+  fromCBOR = Mdt <$> mapFromCBOR
 
 
 -- | List of applications on the blockchain and their versions.
@@ -91,10 +91,10 @@ newtype Applications crypto = Applications {
   } deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
 instance Crypto crypto => ToCBOR (Applications crypto) where
-  toCBOR (Applications m) = toCBOR (CBORMap m)
+  toCBOR (Applications m) = mapToCBOR m
 
 instance Crypto crypto => FromCBOR (Applications crypto) where
-  fromCBOR = Applications .  unwrapCBORMap <$> fromCBOR
+  fromCBOR = Applications <$> mapFromCBOR
 
 -- | A single update of the @Applications list.
 newtype AVUpdate crypto = AVUpdate {
@@ -102,10 +102,10 @@ newtype AVUpdate crypto = AVUpdate {
   } deriving (Show, Eq, NoUnexpectedThunks)
 
 instance Crypto crypto => ToCBOR (AVUpdate crypto) where
-  toCBOR (AVUpdate m) = toCBOR (CBORMap m)
+  toCBOR (AVUpdate m) = mapToCBOR m
 
 instance Crypto crypto => FromCBOR (AVUpdate crypto) where
-  fromCBOR = AVUpdate .  unwrapCBORMap <$> fromCBOR
+  fromCBOR = AVUpdate <$> mapFromCBOR
 
 -- | Update Proposal
 data Update crypto
@@ -226,10 +226,10 @@ newtype PPUpdate crypto
   deriving (Show, Eq, NoUnexpectedThunks)
 
 instance Crypto crypto => ToCBOR (PPUpdate crypto) where
-  toCBOR (PPUpdate m) = toCBOR (CBORMap m)
+  toCBOR (PPUpdate m) = mapToCBOR m
 
 instance Crypto crypto => FromCBOR (PPUpdate crypto) where
-  fromCBOR = PPUpdate .  unwrapCBORMap <$> fromCBOR
+  fromCBOR = PPUpdate <$> mapFromCBOR
 
 type Favs crypto = Map SlotNo (Applications crypto)
 

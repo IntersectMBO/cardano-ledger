@@ -38,14 +38,15 @@ import           Numeric.Natural (Natural)
 import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (Text64, UnitInterval, invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash,
-                     KeyHash, pattern KeyHash, Sig, VKey, VerKeyVRF, hashAnyKey)
+import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
+                     Sig, VKey, VerKeyVRF, hashAnyKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Updates (Update, emptyUpdate, updateNull)
 
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..),
-                     FromCBORGroup (..), ToCBORGroup (..), decodeMapContents)
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
+                     FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, mapFromCBOR,
+                     mapToCBOR)
 
 import           Shelley.Spec.Ledger.Scripts
 
@@ -134,10 +135,10 @@ newtype Wdrl crypto = Wdrl { unWdrl :: Map (RewardAcnt crypto) Coin }
   deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
 instance Crypto crypto => ToCBOR (Wdrl crypto) where
-  toCBOR = toCBOR . CBORMap . unWdrl
+  toCBOR = mapToCBOR . unWdrl
 
 instance Crypto crypto => FromCBOR (Wdrl crypto) where
-  fromCBOR = Wdrl . unwrapCBORMap <$> fromCBOR
+  fromCBOR = Wdrl <$> mapFromCBOR
 
 
 -- |A unique ID of a transaction, which is computable from the transaction.
@@ -187,10 +188,10 @@ newtype MIRCert crypto = MIRCert (Map (Credential crypto) Coin)
   deriving (Show, Generic, Eq)
 
 instance Crypto crypto => FromCBOR (MIRCert crypto) where
-  fromCBOR = MIRCert . unwrapCBORMap <$> fromCBOR
+  fromCBOR = MIRCert <$> mapFromCBOR
 
 instance Crypto crypto => ToCBOR (MIRCert crypto) where
-  toCBOR (MIRCert c) = toCBOR (CBORMap c)
+  toCBOR (MIRCert c) = mapToCBOR c
 
 -- | A heavyweight certificate.
 data DCert crypto =
