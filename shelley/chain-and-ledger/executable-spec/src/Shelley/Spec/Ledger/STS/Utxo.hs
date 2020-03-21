@@ -105,15 +105,15 @@ instance
         !Coin -- the minimum fee for this transaction
         !Coin -- the fee supplied in this transaction
     | ValueNotConservedUTxO
-        !(Value crypto) -- the Value consumed by this transaction
-        !(Value crypto) -- the Value produced by this transaction
+        !ValueBSType -- the Value consumed by this transaction
+        !ValueBSType -- the Value produced by this transaction
     | WrongNetwork
         !Network -- the expected network id
         !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
     | OutputTooSmallUTxO
         ![UTxOOut crypto] -- list of supplied transaction outputs that are too small
     | ForgingAda
-        !(Value crypto) -- the forge value containing Ada
+        !ValueBSType -- the forge value containing Ada
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
@@ -245,7 +245,7 @@ utxoInductive = do
 
   let consumed_ = consumed pp utxo txb
       produced_ = produced pp stakepools txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
+  consumed_ == produced_ ?! ValueNotConservedUTxO (toValBST consumed_) (toValBST produced_)
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
@@ -258,16 +258,7 @@ utxoInductive = do
 
   let (Value vls) = _forge txb
   let cids = Map.keys vls
-  all (adaID /=) cids  ?! (ForgingAda (Value vls))
-
-=======
-  let outputValues = [getValue utxoout | utxoout <- Set.toList (range (txouts txb))]
-  all (zeroV <=) outputValues ?! NegativeOutputsUTxO
->>>>>>> fix rebase stuff
-
-  let (Value vls) = _forge txb
-  let cids = Map.keys vls
-  all (adaID /=) cids  ?! ForgingAda
+  all (adaID /=) cids  ?! (ForgingAda (valueToCompactValue (Value vls)))
 
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)

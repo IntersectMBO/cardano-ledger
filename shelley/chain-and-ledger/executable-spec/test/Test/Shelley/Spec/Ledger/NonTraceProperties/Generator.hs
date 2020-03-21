@@ -128,7 +128,7 @@ utxoSize :: UTxO h -> Int
 utxoSize (UTxO m) = Map.size m
 
 -- | Extract the map in an 'UTxO'.
-utxoMap :: UTxO h -> Map (TxIn h) (TxOut h)
+utxoMap :: UTxO h -> Map (TxIn h) (UTxOOut h)
 utxoMap (UTxO m) = m
 
 -- | Generates a list of '(pay, stake)' key pairs.
@@ -171,11 +171,16 @@ genCoinList minCoin maxCoin lower upper = do
       Gen.integral (Range.exponential minCoin maxCoin)
   return (Coin <$> xs)
 
+--TODO make correct
+genValueList minCoin maxCoin lower upper = do
+  xs <- genCoinList minCoin maxCoin lower upper
+  return (fmap coinToValue xs)
+
 -- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Coin
 -- value is generated.
 genTxOut :: [Addr h] -> Gen [TxOut h]
 genTxOut addrs = do
-  ys <- genCoinList 100 10000 (length addrs) (length addrs)
+  ys <- genValueList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- TODO generate sensible protocol constants
@@ -199,12 +204,13 @@ genTx :: HashAlgorithm h => KeyPairs h -> UTxO h -> SlotNo -> Gen (Coin, Tx h)
 genTx keyList (UTxO m) cslot = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
-  let !selectedAddr = addr $ head selectedInputs
-  let !selectedUTxO = Map.filter (\(TxOut a _) -> a == selectedAddr) m
+  let !selectedAddr    = addr $ head selectedInputs
+  let !selectedUTxO    = Map.filter (\out -> getAddress out == selectedAddr) m
   let !selectedKeyPair = findPayKeyPair selectedAddr keyList
   let !selectedBalance = balance $ UTxO selectedUTxO
 
   -- select receipients, distribute balance of selected UTxO set
+  -- TODO whats up with coin vs value here
   n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
   receipients <- Seq.fromList . take (fromIntegral n) <$> Gen.shuffle keyList
   let realN = length receipients
@@ -224,6 +230,7 @@ genTx keyList (UTxO m) cslot = do
           (Map.keysSet selectedUTxO)
           (StrictSeq.toStrict ((`TxOut` perReceipient) <$> receipientAddrs))
           StrictSeq.Empty
+          zeroV -- TODO generate forges
           (Wdrl Map.empty) -- TODO generate witdrawals
           txfee'
           (cslot + SlotNo txttl)

@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.Value
 
 import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListLen,
                   decodeWord)
+import           Shelley.Spec.Ledger.Serialization (CBORMap (..))
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
@@ -17,7 +18,8 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           GHC.Generics (Generic)
 import           Data.Word (Word8)
 import           Cardano.Crypto.Hash (hash)
-import           Data.Map.Strict (Map, elems, empty, unionWith, toList, singleton, filterWithKey, keys, map)
+import           Data.Map.Strict (Map, elems, empty, unionWith, toList, singleton, filterWithKey, keys, map,
+                 toList, fromList)
 import           Cardano.Ledger.Shelley.Crypto
 import           Data.ByteString.Char8 (ByteString, pack)
 import           Shelley.Spec.Ledger.Scripts
@@ -33,7 +35,15 @@ data Value crypto = Value
   { val :: Map (ScriptHash crypto) (Map ByteString Quantity) }
   deriving (Show, Eq, Generic)
 
+data ValueBSType = ValueBSType (Map ByteString (Map ByteString Quantity))
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks ValueBSType
 instance NoUnexpectedThunks (Value crypto)
+
+-- | make a crypto-free Value type
+toValBST :: Value crypto -> ValueBSType
+toValBST (Value v) = ValueBSType $ fromList $ fmap (\(cid, tkns) -> (pack $ show cid, tkns)) (toList v)
 
 -- | compact representation of Value
 data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
@@ -154,3 +164,9 @@ instance
         v <- fromCBOR
         pure $ compactValueToValue $ MixValue $ Value v
       k -> invalidKey k
+
+instance ToCBOR ValueBSType where
+  toCBOR (ValueBSType v) = (toCBOR . CBORMap) v
+
+instance FromCBOR ValueBSType where
+  fromCBOR = ValueBSType . unwrapCBORMap <$> fromCBOR

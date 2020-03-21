@@ -13,6 +13,7 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
     mutateTx,
     mutateTxBody,
     mutateDCert,
+    mutateValue,
     getAnyStakeKey,
   )
 where
@@ -93,8 +94,14 @@ mutateNat lower upper n =
 
 -- | Mutator for 'Coin' values, based on mutation of the contained value field.
 mutateCoin :: Natural -> Natural -> Coin -> Gen Coin
-mutateCoin lower upper (Coin val) =
-  Coin . fromIntegral <$> mutateNat lower upper (fromIntegral val)
+mutateCoin lower upper (Coin c) =
+  Coin . fromIntegral <$> mutateNat lower upper (fromIntegral c)
+
+-- | Mutator for 'Value', based on mutation of the contained value field.
+-- TODO make this correct
+mutateValue :: (Crypto crypto) => Integer -> Integer -> Value crypto -> Gen (Value crypto)
+mutateValue lower upper v = (coinToValue . Coin) <$> mutateNat lower upper (fromIntegral c)
+  where (Coin c) = getAdaAmount v
 
 -- | Mutator of 'Tx' which mutates the contained transaction
 mutateTx :: HashAlgorithm h => Tx h -> Gen (Tx h)
@@ -113,6 +120,7 @@ mutateTxBody tx = do
       (Set.fromList inputs')
       outputs'
       (_certs tx)
+      (_forge tx)
       (_wdrls tx)
       (_txfee tx)
       (_ttl tx)
@@ -148,7 +156,7 @@ mutateOutputs (txout :<| txouts) = do
 -- the output.
 mutateOutput :: TxOut h -> Gen (TxOut h)
 mutateOutput (TxOut addr c) = do
-  c' <- mutateCoin 0 100 c
+  c' <- mutateValue 0 100 c
   pure $ TxOut addr c'
 
 -- Mutators for 'DelegationData'
@@ -162,9 +170,9 @@ getAnyStakeKey keys = vKey . snd <$> Gen.element keys
 
 -- | Mutate 'Epoch' analogously to 'Coin' data.
 mutateEpoch :: Natural -> Natural -> EpochNo -> Gen EpochNo
-mutateEpoch lower upper (EpochNo val) =
+mutateEpoch lower upper (EpochNo v) =
   EpochNo . fromIntegral
-    <$> mutateNat lower upper (fromIntegral val)
+    <$> mutateNat lower upper (fromIntegral v)
 
 -- | Mutator for delegation certificates.
 -- A 'RegKey' and 'DeRegKey' select randomly a key fomr the supplied list of
