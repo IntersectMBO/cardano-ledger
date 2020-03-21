@@ -8,13 +8,15 @@ import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Test.QuickCheck (shrinkIntegral, shrinkList)
+import           Cardano.Ledger.Shelley.Crypto
 
+import           Shelley.Spec.Ledger.Value
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx
 import           Shelley.Spec.Ledger.TxData
 import           Shelley.Spec.Ledger.Updates
-import           Shelley.Spec.Ledger.Scripts 
+import           Shelley.Spec.Ledger.Scripts
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block)
 
 shrinkBlock
@@ -23,7 +25,8 @@ shrinkBlock
 shrinkBlock _ = []
 
 shrinkTx
-  :: Tx crypto
+  :: (Crypto crypto)
+  => Tx crypto
   -> [Tx crypto]
 shrinkTx (Tx _b _ws _wm _md) =
   [ Tx b' _ws _wm _md | b' <- shrinkTxBody _b ]
@@ -32,32 +35,39 @@ shrinkTx (Tx _b _ws _wm _md) =
   [ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
   -}
 
-shrinkTxBody :: TxBody crypto -> [TxBody crypto]
-shrinkTxBody (TxBody is os cs ws tf tl tu md) =
+-- TODO proper forge shrink!
+shrinkTxBody :: (Crypto crypto) => TxBody crypto -> [TxBody crypto]
+shrinkTxBody (TxBody is os cs fg ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md |
+  [ TxBody is os' cs fg ws (tf + getAdaAmount (outBalance - outputBalance os')) tl tu md |
     os' <- toList $ shrinkSeq shrinkTxOut os ]
 
-  -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
-  -- [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
-  -- [ TxBody is os cs ws tf' tl tu | tf' <- shrinkCoin tf ] ++
-  -- [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
-  -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
+  -- [ TxBody is os cs' fg ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
+  -- [ TxBody is os cs fg ws' tf tl tu | ws' <- shrinkForge fg ] ++
+  -- [ TxBody is os cs fg ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
+  -- [ TxBody is os cs fg ws tf' tl tu | tf' <- shrinkCoin tf ] ++
+  -- [ TxBody is os cs fg ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
+  -- [ TxBody is os cs fg ws tf tl tu' | tu' <- shrinkUpdate tu ]
   where outBalance = outputBalance os
 
-outputBalance :: Seq (TxOut crypto) -> Coin
-outputBalance = foldl (\v (TxOut _ c) -> v + c) (Coin 0)
+outputBalance :: (Crypto crypto) => Seq (TxOut crypto) -> Value crypto
+outputBalance = foldl (\v (TxOut _ c) -> v + c) zeroV
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
 shrinkTxIn = const []
 
-shrinkTxOut :: TxOut crypto -> [TxOut crypto]
-shrinkTxOut (TxOut addr coin) =
-  TxOut addr <$> shrinkCoin coin
+shrinkTxOut :: (Crypto crypto) => TxOut crypto -> [TxOut crypto]
+shrinkTxOut (TxOut addr v) =
+  TxOut addr <$> shrinkValue v
+
+--TODO proper value shrink
+shrinkValue :: (Crypto crypto) => Value crypto -> [Value crypto]
+shrinkValue x = (coinToValue . Coin) <$> shrinkIntegral c
+  where (Coin c) = getAdaAmount x
 
 shrinkCoin :: Coin -> [Coin]
 shrinkCoin (Coin x) = Coin <$> shrinkIntegral x
