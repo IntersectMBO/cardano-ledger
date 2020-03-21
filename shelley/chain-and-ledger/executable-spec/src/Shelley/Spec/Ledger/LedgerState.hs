@@ -94,7 +94,9 @@ import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHas
                      KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
                      undiscriminateKeyHash)
 import qualified Shelley.Spec.Ledger.MetaData as MD
-import           Shelley.Spec.Ledger.PParams (PParams (..), activeSlotVal, emptyPParams)
+import           Shelley.Spec.Ledger.PParams (PPUpdate (..), PParams, Update (..), activeSlotVal,
+                     emptyPPUpdate, emptyPParams, _activeSlotCoeff, _d, _keyDecayRate, _keyDeposit,
+                     _keyMinRefund, _minfeeA, _minfeeB, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoFirst, epochInfoSize, (+*), (-*))
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
@@ -102,7 +104,6 @@ import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCe
                      MIRCert (..), PoolCert (..), PoolMetaData (..), PoolParams (..), Ptr (..),
                      RewardAcnt (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), Url (..),
                      Wdrl (..), getRwdCred, witKeyHash)
-import           Shelley.Spec.Ledger.Updates (PPUpdate (..), Update (..), emptyPPUpdate)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins,
                      txouts, txup, verifyWitVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
@@ -620,7 +621,7 @@ txsize (Tx
 
 -- |Minimum fee calculation
 minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
-minfee pp tx = Coin $ _minfeeA pp * txsize tx + fromIntegral (_minfeeB pp)
+minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
 -- |Determine if the fee is large enough
 validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Validity

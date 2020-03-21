@@ -23,7 +23,6 @@ import           Shelley.Spec.Ledger.LedgerState (DState (..), PState (..), UTxO
                      stakeDistr, _deposited, _fees)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Updates
 import           Shelley.Spec.Ledger.UTxO
 
 data SNAP crypto

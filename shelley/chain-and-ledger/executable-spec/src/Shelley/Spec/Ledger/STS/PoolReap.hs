@@ -22,7 +22,7 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import           Shelley.Spec.Ledger.EpochBoundary (poolRefunds)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DState (..), PState (..),
                      UTxOState (..), emptyAccount, emptyDState, emptyPState, emptyUTxOState)
-import           Shelley.Spec.Ledger.PParams (PParams (..))
+import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), epochInfoFirst)
 import           Shelley.Spec.Ledger.TxData (_poolRAcnt)
 

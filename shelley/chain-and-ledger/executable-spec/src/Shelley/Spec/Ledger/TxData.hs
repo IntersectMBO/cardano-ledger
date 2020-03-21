@@ -41,8 +41,8 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VerKeyVRF, hashAnyKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import           Shelley.Spec.Ledger.PParams (Update)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-import           Shelley.Spec.Ledger.Updates (Update)
 
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
                      FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, mapFromCBOR,

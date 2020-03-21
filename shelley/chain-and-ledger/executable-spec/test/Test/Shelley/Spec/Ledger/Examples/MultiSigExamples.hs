@@ -25,7 +25,7 @@ import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, undiscriminateKeyHash)
 import           Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
-import           Shelley.Spec.Ledger.PParams (PParams (..), emptyPParams)
+import           Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
 import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf,
                      pattern RequireMOf, pattern RequireSignature)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))

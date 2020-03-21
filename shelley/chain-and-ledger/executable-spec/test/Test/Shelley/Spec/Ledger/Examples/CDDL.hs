@@ -30,8 +30,8 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Shelley.Spec.Ledger.MetaData (MetaData)
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import           Shelley.Spec.Ledger.Serialization
-import           Shelley.Spec.Ledger.Updates (PParamsUpdate)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, BHeader, Credential,
                      DCert, LaxBlock, MultiSig, OCert, PPUpdate, Tx, TxBody, TxIn, TxOut, Update)

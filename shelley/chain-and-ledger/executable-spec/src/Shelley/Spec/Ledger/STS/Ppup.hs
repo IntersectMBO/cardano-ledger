@@ -28,7 +28,6 @@ import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Updates
 
 data PPUP crypto
 
@@ -87,10 +86,10 @@ instance
       3 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
       k -> invalidKey k
 
-pvCanFollow :: ProtVer -> Ppm -> Bool
-pvCanFollow (ProtVer m n) (ProtocolVersion (ProtVer m' n'))
+pvCanFollow :: ProtVer -> Maybe ProtVer -> Bool
+pvCanFollow _ Nothing = True
+pvCanFollow (ProtVer m n) (Just (ProtVer m' n'))
   = (m+1, 0) == (m', n') || (m, n+1) == (m', n')
-pvCanFollow _ _ = True
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
@@ -103,7 +102,7 @@ ppupTransitionNonEmpty = do
 
       (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
 
-      all (all (pvCanFollow (_protocolVersion pp)) . ppmSet) pup ?! PVCannotFollowPPUP
+      all ((pvCanFollow (_protocolVersion pp)) . _protocolVersion) pup ?! PVCannotFollowPPUP
 
       sp <- liftSTS $ asks slotsPrior
       firstSlotNextEpoch <- liftSTS $ do

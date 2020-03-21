@@ -24,7 +24,6 @@ import           Shelley.Spec.Ledger.LedgerState (pattern DPState, EpochState, p
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Updates
 
 import           Control.State.Transition
 

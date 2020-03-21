@@ -41,7 +41,11 @@ import           Shelley.Spec.Ledger.Keys (DiscVKey (..), pattern GenKeyHash, Ha
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), EpochState (..),
                      NewEpochState (..), pattern RewardUpdate, deltaF, deltaR, deltaT,
                      emptyLedgerState, genesisId, nonMyopic, rs)
-import           Shelley.Spec.Ledger.PParams (ProtVer (..), emptyPParams, mkActiveSlotCoeff)
+import           Shelley.Spec.Ledger.PParams (pattern PPUpdate, PParams' (PParams), PParamsUpdate,
+                     ProtVer (..), pattern Update, emptyPParams, mkActiveSlotCoeff, _a0,
+                     _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
+                     _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt,
+                     _poolDecayRate, _poolDeposit, _poolMinRefund, _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -53,8 +57,6 @@ import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrEnter
                      pattern TxIn, pattern TxOut, Url (..), Wdrl (..), WitVKey (..), _TxId,
                      _poolCost, _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners,
                      _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
-import           Shelley.Spec.Ledger.Updates (pattern PPUpdate, PParamsUpdate (..), Ppm (..),
-                     pattern Update)
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash)
@@ -476,7 +478,28 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncodingCBOR "pparams_update_key_deposit_only"
-    (PParamsUpdate $ Set.singleton (KeyDeposit (Coin 5)))
+    (PParams
+       { _minfeeA = Nothing
+       , _minfeeB = Nothing
+       , _maxBBSize = Nothing
+       , _maxTxSize = Nothing
+       , _maxBHSize = Nothing
+       , _keyDeposit = Just (Coin 5)
+       , _keyMinRefund = Nothing
+       , _keyDecayRate = Nothing
+       , _poolDeposit = Nothing
+       , _poolMinRefund = Nothing
+       , _poolDecayRate = Nothing
+       , _eMax = Nothing
+       , _nOpt = Nothing
+       , _a0 = Nothing
+       , _rho = Nothing
+       , _tau = Nothing
+       , _activeSlotCoeff = Nothing
+       , _d = Nothing
+       , _extraEntropy = Nothing
+       , _protocolVersion = Nothing
+       } :: PParamsUpdate)
     ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5))
 
   -- checkEncodingCBOR "pparams_update_all"
@@ -502,28 +525,28 @@ serializationTests = testGroup "Serialization Tests"
         protocolVersion       = ProtVer 0 1
     in
     checkEncodingCBOR "pparams_update_all"
-    (PParamsUpdate $ Set.fromList
-      [ MinFeeA               minfeea
-      , MinFeeB               minfeeb
-      , MaxBBSize             maxbbsize
-      , MaxTxSize             maxtxsize
-      , MaxBHSize             maxbhsize
-      , KeyDeposit            keydeposit
-      , KeyMinRefund          keyminrefund
-      , KeyDecayRate          keydecayrate
-      , PoolDeposit           pooldeposit
-      , PoolMinRefund         poolminrefund
-      , PoolDecayRate         pooldecayrate
-      , EMax                  emax
-      , Nopt                  nopt
-      , A0                    a0
-      , Rho                   rho
-      , Tau                   tau
-      , ActiveSlotCoefficient activeSlotCoefficient
-      , D                     d
-      , ExtraEntropy          extraEntropy
-      , ProtocolVersion       protocolVersion
-      ])
+    (PParams
+       { _minfeeA         = Just minfeea
+       , _minfeeB         = Just minfeeb
+       , _maxBBSize       = Just maxbbsize
+       , _maxTxSize       = Just maxtxsize
+       , _maxBHSize       = Just maxbhsize
+       , _keyDeposit      = Just keydeposit
+       , _keyMinRefund    = Just keyminrefund
+       , _keyDecayRate    = Just keydecayrate
+       , _poolDeposit     = Just pooldeposit
+       , _poolMinRefund   = Just poolminrefund
+       , _poolDecayRate   = Just pooldecayrate
+       , _eMax            = Just emax
+       , _nOpt            = Just nopt
+       , _a0              = Just a0
+       , _rho             = Just rho
+       , _tau             = Just tau
+       , _activeSlotCoeff = Just activeSlotCoefficient
+       , _d               = Just d
+       , _extraEntropy    = Just extraEntropy
+       , _protocolVersion = Just protocolVersion
+       } :: PParamsUpdate)
     ((T $ TkMapLen 20)
       <> (T $ TkWord 0) <> S minfeea
       <> (T $ TkWord 1) <> S minfeeb
@@ -550,7 +573,28 @@ serializationTests = testGroup "Serialization Tests"
   , let
       ppup = PPUpdate (Map.singleton
                   testGKeyHash
-                  (PParamsUpdate $ Set.singleton (Nopt 100)))
+                  (PParams
+                     { _minfeeA = Nothing
+                     , _minfeeB = Nothing
+                     , _maxBBSize = Nothing
+                     , _maxTxSize = Nothing
+                     , _maxBHSize = Nothing
+                     , _keyDeposit = Nothing
+                     , _keyMinRefund = Nothing
+                     , _keyDecayRate = Nothing
+                     , _poolDeposit = Nothing
+                     , _poolMinRefund = Nothing
+                     , _poolDecayRate = Nothing
+                     , _eMax = Nothing
+                     , _nOpt = Just 100
+                     , _a0 = Nothing
+                     , _rho = Nothing
+                     , _tau = Nothing
+                     , _activeSlotCoeff = Nothing
+                     , _d = Nothing
+                     , _extraEntropy = Nothing
+                     , _protocolVersion = Nothing
+                     }))
       e = EpochNo 0
     in checkEncodingCBOR "full_update"
     (Update ppup e)
@@ -592,10 +636,30 @@ serializationTests = testGroup "Serialization Tests"
       tout = TxOut testAddrE (Coin 2)
       ra = RewardAcnt (KeyHashObj testKeyHash2)
       ras = Map.singleton ra (Coin 123)
-      up = Update
-             (PPUpdate (Map.singleton
-                         testGKeyHash
-                         (PParamsUpdate $ Set.singleton (Nopt 100))))
+      up = Update (PPUpdate (Map.singleton
+             testGKeyHash
+             (PParams
+                { _minfeeA = Nothing
+                , _minfeeB = Nothing
+                , _maxBBSize = Nothing
+                , _maxTxSize = Nothing
+                , _maxBHSize = Nothing
+                , _keyDeposit = Nothing
+                , _keyMinRefund = Nothing
+                , _keyDecayRate = Nothing
+                , _poolDeposit = Nothing
+                , _poolMinRefund = Nothing
+                , _poolDecayRate = Nothing
+                , _eMax = Nothing
+                , _nOpt = Just 100
+                , _a0 = Nothing
+                , _rho = Nothing
+                , _tau = Nothing
+                , _activeSlotCoeff = Nothing
+                , _d = Nothing
+                , _extraEntropy = Nothing
+                , _protocolVersion = Nothing
+                })))
              (EpochNo 0)
     in checkEncodingCBOR "txbody_partial"
     ( TxBody -- transaction body with some optional components
@@ -634,7 +698,28 @@ serializationTests = testGroup "Serialization Tests"
       up = Update
              (PPUpdate (Map.singleton
                          testGKeyHash
-                         (PParamsUpdate $ Set.singleton (Nopt 100))))
+                         (PParams
+                            { _minfeeA = Nothing
+                            , _minfeeB = Nothing
+                            , _maxBBSize = Nothing
+                            , _maxTxSize = Nothing
+                            , _maxBHSize = Nothing
+                            , _keyDeposit = Nothing
+                            , _keyMinRefund = Nothing
+                            , _keyDecayRate = Nothing
+                            , _poolDeposit = Nothing
+                            , _poolMinRefund = Nothing
+                            , _poolDecayRate = Nothing
+                            , _eMax = Nothing
+                            , _nOpt = Just 100
+                            , _a0 = Nothing
+                            , _rho = Nothing
+                            , _tau = Nothing
+                            , _activeSlotCoeff = Nothing
+                            , _d = Nothing
+                            , _extraEntropy = Nothing
+                            , _protocolVersion = Nothing
+                            })))
              (EpochNo 0)
       mdh = MD.hashMetaData $ MD.MetaData $ Map.singleton 13 (MD.I 17)
     in checkEncodingCBOR "txbody_full"

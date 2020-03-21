@@ -47,7 +47,7 @@ import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody,
                      genesisCoins, genesisState, validTx, _delegationState, _dstate, _genDelegs,
                      _stkCreds, _utxo, _utxoState)
-import           Shelley.Spec.Ledger.PParams (PParams (..), emptyPParams)
+import           Shelley.Spec.Ledger.PParams (PParams, emptyPParams)
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Delegs (pattern DelegateeNotRegisteredDELEG,
                      PredicateFailure (..), pattern WithdrawalsNotInRewardsDELEGS)

@@ -33,12 +33,11 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..
                      EpochState (..), LedgerState (..), NewEpochState (..), PState (..),
                      UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..), _maxBBSize, _maxBHSize,
-                     _protocolVersion)
+import           Shelley.Spec.Ledger.PParams (PPUpdate (..), PParams, ProtVer (..), _maxBBSize,
+                     _maxBHSize, _protocolVersion)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import           Shelley.Spec.Ledger.Tx (TxBody)
-import           Shelley.Spec.Ledger.Updates (PPUpdate (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
 import qualified Cardano.Crypto.VRF as VRF

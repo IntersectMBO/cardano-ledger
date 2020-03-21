@@ -34,7 +34,7 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DCertMir, 
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs, _pParams, _pstate, _retiring,
                      _rewards, _stPools, _stkCreds)
-import           Shelley.Spec.Ledger.PParams (PParams (..))
+import           Shelley.Spec.Ledger.PParams (PParams, _d)
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGenesis,
                      pattern DCertPool, pattern Delegation, pattern KeyHashObj, pattern PoolParams,

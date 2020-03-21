@@ -12,13 +12,10 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
   where
 
-import           Control.Monad (join)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
-import           Data.Set (Set)
-import qualified Data.Set as Set (fromList)
 
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -28,11 +25,13 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), UnitInterv
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams (..), ProtVer (..),
-                     mkActiveSlotCoeff)
+import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, pattern PPUpdate, PParams,
+                     PParams' (PParams), ProtVer (..), pattern Update, mkActiveSlotCoeff, _a0,
+                     _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
+                     _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt,
+                     _poolDecayRate, _poolDeposit, _poolMinRefund, _protocolVersion,
+                     _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
-import           Shelley.Spec.Ledger.Updates (pattern PPUpdate, PParamsUpdate (..), Ppm (..),
-                     pattern Update)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DPState, GenKeyHash,
                      KeyHash, KeyPair, PPUpdate, UTxOState, Update)
@@ -52,7 +51,7 @@ genIntervalInThousands lower upper =
   unsafeMkUnitInterval <$> genRationalInThousands lower upper
 
 genPParams :: Gen PParams
-genPParams = mkPParams <$> genInteger 0 maxMinFeeA -- _minfeeA
+genPParams = mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
                        <*> genNatural 0 maxMinFeeB -- _minfeeB
                        <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
                        <*> genKeyDeposit
@@ -186,45 +185,6 @@ genNextProtocolVersion pp = do
   where
     ProtVer m n = _protocolVersion pp
 
--- | Given the current protocol params generates a subset of protocol parameter assignments.
-genSetOfPpm
-  :: PParams -- existing params
-  -> Gen (Set Ppm)
-genSetOfPpm pp = do
-  n <- QC.elements [1 .. 3] -- pick up to three param updates
-  subsetOf n [
-        MinFeeB               <$> genNatural 0 maxMinFeeB
-      , MaxBBSize             <$> genSize
-      , MaxTxSize             <$> genSize
-      , MaxBHSize             <$> genSize
-      , KeyDeposit            <$> genKeyDeposit
-      , KeyMinRefund          <$> genKeyMinRefund
-      , KeyDecayRate          <$> genKeyDecayRate
-      , PoolDeposit           <$> genPoolDeposit
-      , PoolMinRefund         <$> genPoolMinRefund
-      , PoolDecayRate         <$> genPoolDecayRate
-      , EMax                  <$> genEMax
-      , Nopt                  <$> genNOpt
-      , A0                    <$> genA0
-      , Rho                   <$> genRho
-      , Tau                   <$> genTau
-      , ActiveSlotCoefficient <$> genActiveSlotCoeff
-      , D                     <$> genDecentralisationParam
-      , ExtraEntropy          <$> genExtraEntropy
-      , ProtocolVersion       <$> genNextProtocolVersion pp
-      ]
-  where
-    genSize = genNatural low hi
-
--- | Pick a subset (size n) of the given generators and produce a set of generated values.
-subsetOf :: Ord a => Int -> [Gen a] -> Gen (Set a)
-subsetOf n =
-  fmap Set.fromList
-  . join
-  . fmap sequence
-  . (take n <$>)
-  . QC.shuffle
-
 -- | Generate a proposal for protocol parameter updates for all the given genesis keys.
 -- Return an empty update if it is too late in the epoch for updates.
 genPPUpdate
@@ -236,8 +196,48 @@ genPPUpdate s pp genesisKeys =
   if (tooLateInEpoch s)
     then
       pure (PPUpdate Map.empty)
-    else do
-      pps <- PParamsUpdate <$> genSetOfPpm pp
+    else do -- TODO generate Maybe tyes so not all updates are full
+      minFeeA               <- genNatural 0 maxMinFeeA
+      minFeeB               <- genNatural 0 maxMinFeeB
+      maxBBSize             <- genNatural low hi
+      maxTxSize             <- genNatural low hi
+      maxBHSize             <- genNatural low hi
+      keyDeposit            <- genKeyDeposit
+      keyMinRefund          <- genKeyMinRefund
+      keyDecayRate          <- genKeyDecayRate
+      poolDeposit           <- genPoolDeposit
+      poolMinRefund         <- genPoolMinRefund
+      poolDecayRate         <- genPoolDecayRate
+      eMax                  <- genEMax
+      nopt                  <- genNOpt
+      a0                    <- genA0
+      rho                   <- genRho
+      tau                   <- genTau
+      activeSlotCoefficient <- genActiveSlotCoeff
+      d                     <- genDecentralisationParam
+      extraEntropy          <- genExtraEntropy
+      protocolVersion       <- genNextProtocolVersion pp
+      let pps = PParams { _minfeeA               = Just minFeeA
+                        , _minfeeB               = Just minFeeB
+                        , _maxBBSize             = Just maxBBSize
+                        , _maxTxSize             = Just maxTxSize
+                        , _maxBHSize             = Just maxBHSize
+                        , _keyDeposit            = Just keyDeposit
+                        , _keyMinRefund          = Just keyMinRefund
+                        , _keyDecayRate          = Just keyDecayRate
+                        , _poolDeposit           = Just poolDeposit
+                        , _poolMinRefund         = Just poolMinRefund
+                        , _poolDecayRate         = Just poolDecayRate
+                        , _eMax                  = Just eMax
+                        , _nOpt                  = Just nopt
+                        , _a0                    = Just a0
+                        , _rho                   = Just rho
+                        , _tau                   = Just tau
+                        , _activeSlotCoeff       = Just activeSlotCoefficient
+                        , _d                     = Just d
+                        , _extraEntropy          = Just extraEntropy
+                        , _protocolVersion       = Just protocolVersion
+                        }
       let ppUpdate = zip genesisKeys (repeat pps)
       pure $
         (PPUpdate . Map.fromList) ppUpdate

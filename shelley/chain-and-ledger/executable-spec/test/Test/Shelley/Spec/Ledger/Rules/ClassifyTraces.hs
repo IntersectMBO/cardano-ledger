@@ -31,12 +31,12 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey, isDele
                      isGenesisDelegation, isInstantaneousRewards, isRegKey, isRegPool,
                      isRetirePool)
 import           Shelley.Spec.Ledger.LedgerState (txsize)
+import           Shelley.Spec.Ledger.PParams (pattern PPUpdate, PParamsUpdate, pattern Update)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import           Shelley.Spec.Ledger.Tx (_body)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey,
                      pattern Delegate, pattern Delegation, pattern RegKey, pattern ScriptHashObj,
                      pattern TxOut, Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
-import           Shelley.Spec.Ledger.Updates (pattern PPUpdate, PParamsUpdate, pattern Update)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, CHAIN, DCert, LEDGER, Tx,
                      TxOut)

@@ -39,7 +39,6 @@ import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Ppup
 import           Shelley.Spec.Ledger.Tx
-import           Shelley.Spec.Ledger.Updates (emptyPPUpdate)
 import           Shelley.Spec.Ledger.UTxO
 
 data UTXO crypto

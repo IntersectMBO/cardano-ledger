@@ -38,7 +38,7 @@ import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), Stake (..),
                      emptySnapShot, maxPool, poolStake)
 import           Shelley.Spec.Ledger.Keys (KeyHash)
-import           Shelley.Spec.Ledger.PParams (PParams (..))
+import           Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import           Shelley.Spec.Ledger.TxData (Credential (..), PoolParams (..), RewardAcnt (..))
 
 

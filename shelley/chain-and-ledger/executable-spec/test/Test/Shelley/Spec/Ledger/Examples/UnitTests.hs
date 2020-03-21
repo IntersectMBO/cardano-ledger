@@ -36,7 +36,6 @@ import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _body, _ttl)
-import           Shelley.Spec.Ledger.Updates
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
 
 import qualified Test.Cardano.Crypto.VRF.Fake as FakeVRF
