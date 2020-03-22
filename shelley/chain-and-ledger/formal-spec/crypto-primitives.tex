@@ -126,14 +126,14 @@ slots have passed, as determined by the global constant $\SlotsPerKESPeriod$.
       \fun{verify_{ev}} & \powerset{\left(\VKey \times \N \times \Data \times \Sig\right)}
                         & \text{verification relation}\\
                         %
-      \fun{sign_{ev}} & \SKey \to \N \to \Data \to \Sig
+      \fun{sign_{ev}} & (\N \to \SKeyEv) \to \N \to \Data \to \Sig
                       & \text{signing function}\\
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
     & \forall n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Data,~ \sigma \in \Sig \cdot \\
-    & ~~~~~~~~\signEv{sk}_{n}{d} = \sigma \implies \verifyEv{vk}{n}{d}{\sigma}
+    & ~~~~~~~~\fun{sign_{ev}}~{sk}~{n}~{d} = \sigma \implies \verifyEv{vk}{n}{d}{\sigma}
   \end{align*}
   \emph{Notation for verified KES data}
   \begin{align*}
