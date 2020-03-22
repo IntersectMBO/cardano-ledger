@@ -9,20 +9,20 @@ outline rules for genesis keys \textit{proposing} both protocol parameter
 and application version updates, as well as voting on whether a particular
 software update is an acceptable future option.
 For rules regarding the \textit{adoption} of protocol
-parameter updates, see \ref{sec:pparam-update}. For rules regarding
+parameter updates, see Section~\ref{sec:pparam-update}. For rules regarding
 adoption of new software versions see \ref{sec:software-updates}.
 
 This chapter does not discuss authentication of update proposals.
 The signature for the keys in the proposal will be checked in the
 $\mathsf{UTXOW}$ transition, which checks all the necessary witnesses
-for a transaction, see \ref{sec:witnesses-shelley}.
+for a transaction, see Section\ref{sec:witnesses-shelley}.
 
 \textbf{Genesis Key Delegations.} The environment for both protocol parameter
 and application version updates contains
 the value $\var{genDelegs}$, which is a finite map indexed by genesis key hashes.
 This is the genesis key delegations. During the Byron era, they are all
 already delegated to some $\KeyHash$, and these delegations are inherited
-through the Byron-Shelley transition (see \ref{sec:byron-to-shelley}).
+through the Byron-Shelley transition (see Section~\ref{sec:byron-to-shelley}).
 These delegations can be updated as described in \ref{sec:delegation-shelley},
 but there is no mechanism for them to un-delegate or for the keys to which they delegate
 to retire (unlike regular stake pools).
@@ -67,7 +67,7 @@ The process of decentralization will result in the core nodes gradually giving u
 some of their priviledges and responsibilities to the network,
 eventually give them \textit{all} up.
 The update proposal mechanism will not be decentralization in the Shelley era, however.
-For more on the decentralization process, see \ref{sec:new-epoch-trans}.
+For more on the decentralization process, see Section~\ref{sec:new-epoch-trans}.
 
 \subsection{Protocol Parameter Update Proposals}
 \label{sec:pp-proposals}
@@ -202,13 +202,13 @@ Figure~\ref{fig:funcs:helper-updates} gives some helper functions for the
 application version update transition.
 The function $\fun{votedValue_T}$ returns
 the consensus value of update proposals in the event that at least five
-genesis keys agree (see \cite{delegation_design}). Note that this is greater
+genesis keys agree (see the document~\cite{delegation_design}). Note that this is greater
 than majority (there are seven core nodes), so there can
 be \text{at most one value} with five or more votes.
 This function will also be used for the protocol parameters later in Section~\ref{sec:epoch}.
 Note that $\type{T}$ is an arbitrary type. The specific choice of this type
 determines what is being voted on, e.g. the application version.
-Recall here that $\type{T}^?$ is the option type, see \ref{sec:notation-shelley},
+Recall here that $\type{T}^?$ is the option type, see Section~\ref{sec:notation-shelley},
 and a term of this type can have a value of type $\type{T}$ or no value.
 
 The function $\fun{newAVs}$ adds the most recent valid application

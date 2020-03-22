@@ -8,7 +8,7 @@
 \EditorName{Jared Corduan, \IOHK}
 \Authors{Jared Corduan \quad \texttt{<jared.corduan@iohk.io>}
    \\[1em]
-   Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io}
+   Polina Vinogradova \quad \texttt{<polina.vinogradova@iohk.io>}
    \\[1em]
    Matthias G\"udemann \quad \texttt{<matthias.gudemann@iohk.io>}
 }
@@ -42,14 +42,15 @@
 \usepackage{tikz}
 \usepackage{booktabs}
 \usepackage{enumerate}
-
-
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
 \usepackage{semantic}
 %% Setup for the semantic package
 \setpremisesspace{20pt}
+
+\usepackage{tocloft}
+\addtolength{\cftsubsecnumwidth}{5pt}
 
 %%
 %% Types
@@ -288,6 +289,7 @@
 
 %% In-para enumeration -- KH
 \usepackage{paralist}
+
 
 \begin{document}
 

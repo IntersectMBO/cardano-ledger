@@ -33,7 +33,8 @@ A transaction, $\Tx$, consists of:
   \item A triple of:
     \begin{itemize}
       \item A finite map from payment verification keys to signatures.
-      \item A finite map from script hashes to scripts.
+      \item A finite map containing scripts as values, with their hashes as
+      their indexes.
       \item Optional metadata.
     \end{itemize}
 \end{itemize}
@@ -138,7 +139,7 @@ This function must produce a unique id for each unique transaction body.
         \\ ~~~~\times \Update \times \MetaDataHash^?
         \end{array}
       \\
-      \var{wit} & \TxWitness & (\VKey \mapsto \Sig, \HashScr \mapsto \Script)
+      \var{wit} & \TxWitness & (\VKey \mapsto \Sig) \times (\HashScr \mapsto \Script)
       \\
       \var{tx}
       & \Tx

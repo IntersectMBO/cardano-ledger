@@ -3,10 +3,18 @@
 
 Addresses are described in section 4.2 of the delegation design document \cite{delegation_design}.
 The types needed for the addresses are defined in Figure~\ref{fig:defs:addresses}.
+They all involve a credential, which is either a key or a multi-signature script.
 There are four types of UTxO addresses:
 \begin{itemize}
 \item Base addresses, $\AddrB$, containing the hash of a payment credential and
-  the hash of a staking credential,
+  the hash of a staking credential. Note that the payment credential hash is the
+  hash of the key (or script) which has contol of the funds at this address,
+  i.e. is able to witness spending
+  them. The staking credential is the credential which accumulates
+  the rewards associated with the funds at the payment part of the address.
+  The staking credential
+  must be a (registered) delegation credential (see Section~\ref{sec:delegation-shelley}
+  for a discussion of the delegation mechanism)
 \item Pointer addresses, $\AddrP$, containing the hash of a payment credential
   and a pointer to a stake credential registration certificate,
 \item Enterprise addresses, $\AddrE$,
@@ -20,19 +28,18 @@ There are four types of UTxO addresses:
 three address types make up the $\Addr$ type, which will be used in transaction
 outputs in Section~\ref{sec:utxo}.
 
+For an explanation of why enterprise addresses do not have staking rights,
+and how they could potentially circumvent this restriction and delegate to a
+stake pool, see \ref{sec:delegation-shelley}.
+The boostrap addresses are needed for the Byron-Shelley transition in order to
+accommodate having UTxO entries from the Byron era during the Shelley era.
+
 There are also subtypes of the address types which correspond to the credential
 being either a key hash (the $vkey$ subtype) or a script hash (the $script$
 subtype). So for example $\Addr_{base}^{script}$ is the type of base addresses
 which have a script hash as pay credential. This approach is used to facilitate
 expressing the restriction of the domain of certain functions to a specific
 credential type.
-
-For an explanation of why enterprise addresses do not have staking rights,
-and how they can delegate to a stake pool, see \ref{sec:delegation-shelley}.
-The boostrap addresses are needed for the Byron-Shelley transition in order to
-accommodate having UTxO entries from the Byron era during the Shelley era.
-Together, these address types make up the $\Addr$ type, which will be used
-in transaction outputs in Section~\ref{sec:utxo}.
 
 Note that for security, privacy and usability reasons, the staking (delegating)
 credential associated with an address should be different from its payment
@@ -46,7 +53,16 @@ a staking credential. These account addresses will only be used for receiving
 rewards from the proof of stake leader election. Appendix A
 of~\cite{delegation_design} explains this design choice.  The mechanism for
 transferring rewards from these accounts will be explained in
-Section~\ref{sec:utxo} and follows~\cite{chimeric}.
+Section~\ref{sec:utxo} and follows the approach outlined in the
+document~\cite{chimeric}.
+
+Note that, even though in the Cardano system, most of the
+accounting is UTxO-style, the reward addresses are a special case. They do not
+fall prey to many of the pitfalls of account-based accounting because of their restricted
+use, outlined in the rules in Sections~\ref{sec:utxo} and~{sec:epoch}.
+For each staking credential, we use the function $\fun{addr_{rwd}}$ to create
+the reward address corresponding to the credential, or to access an existing one
+if it already exists. 
 
 Base, pointer and enterprise addresses contain a payment credential which is
 either a key hash or a script hash. Base addresses contain a staking credential
@@ -131,15 +147,15 @@ which is also either a key hash or a script hash.
       \\
       \var{addr^{vkey}_{enterprise}}
                  & \Addr^{vkey}_{enterprise}
-                               & \KeyHash\cap\Addr_{enterprise}
+                               & \Addr_{enterprise}\cap\KeyHash
       \\
       \var{addr^{script}_{enterprise}}
                  & \Addr^{vkey}_{enterprise}
-                               & \HashScr\cap\Addr_{enterprise}
+                               & \Addr_{enterprise}\HashScr
       \\[0.5cm]
       \var{addr^{vkey}} &
              \Addr^{vkey} &
-                            \Addr^{vkey}_{base} \uniondistinct \Addr^{vkey}_{ptr} \uniondistinct \Addr^{vkey}_{enterprise} \uniondistinct \Addr^{vkey}_{bootstrap}\\[0.3cm]
+                            \Addr^{vkey}_{base} \uniondistinct \Addr^{vkey}_{ptr} \uniondistinct \Addr^{vkey}_{enterprise} \uniondistinct \Addr_{bootstrap}\\[0.3cm]
       \var{addr^{script}} &
                             \Addr^{script} &
                                              \Addr^{script}_{base}
