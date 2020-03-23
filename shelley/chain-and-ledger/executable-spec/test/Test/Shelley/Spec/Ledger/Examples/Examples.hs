@@ -617,8 +617,8 @@ expectedStEx2A :: ChainState
 expectedStEx2A = ChainState
   (NewEpochState
      (EpochNo   0)
-     (BlocksMade Map.empty) -- ^ Still no blocks
-     (BlocksMade Map.empty) -- ^ Still no blocks
+     (BlocksMade Map.empty) -- Still no blocks
+     (BlocksMade Map.empty) -- Still no blocks
      (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1 emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
@@ -656,7 +656,7 @@ txbodyEx2B = TxBody
       { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2A) 0]
       , TxData._outputs  = Seq.fromList [ TxOut aliceAddr    aliceCoinEx2BBase
                                         , TxOut alicePtrAddr aliceCoinEx2BPtr ]
-      -- | Delegation certificates
+      --  Delegation certificates
       , TxData._certs    =
         Seq.fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
                      , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
@@ -669,23 +669,23 @@ txbodyEx2B = TxBody
 
 txEx2B :: Tx
 txEx2B = Tx
-          txbodyEx2B -- ^ Body of the transaction
+          txbodyEx2B -- Body of the transaction
           (makeWitnessesVKey txbodyEx2B [alicePay, aliceStake, bobStake])
-                     -- ^ Witness verification key set
-          Map.empty  -- ^ Witness signature map
+                     -- Witness verification key set
+          Map.empty  -- Witness signature map
           Nothing
 
 blockEx2B :: Block
 blockEx2B = mkBlock
-             blockEx2AHash    -- ^ Hash of previous block
+             blockEx2AHash    -- Hash of previous block
              (coreNodeKeys 5)
-             [txEx2B]         -- ^ Single transaction to record
-             (SlotNo 90)        -- ^ Current slot
+             [txEx2B]         -- Single transaction to record
+             (SlotNo 90)      -- Current slot
              (BlockNo 2)
-             (mkNonce 0)      -- ^ Epoch nonce
-             (NatNonce 2)     -- ^ Block nonce
-             zero             -- ^ Praos leader value
-             4                -- ^ Period of KES (key evolving signature scheme)
+             (mkNonce 0)      -- Epoch nonce
+             (NatNonce 2)     -- Block nonce
+             zero             -- Praos leader value
+             4                -- Period of KES (key evolving signature scheme)
              0
              (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
 
@@ -728,30 +728,30 @@ expectedLSEx2B = LedgerState
 
 expectedStEx2Bgeneric :: PParams -> ChainState
 expectedStEx2Bgeneric pp = ChainState
-  -- | New state of the epoch
+  -- New state of the epoch
   (NewEpochState
-     (EpochNo   0)            -- ^ First epoch
-     (BlocksMade Map.empty) -- ^ Blocks made before current
-     (BlocksMade Map.empty) -- ^ Blocks made before current
+     (EpochNo 0)            -- First epoch
+     (BlocksMade Map.empty) -- Blocks made before current
+     (BlocksMade Map.empty) -- Blocks made before current
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp emptyNonMyopic)
-                            -- ^ Previous epoch state
+                            -- Previous epoch state
      (Just RewardUpdate { deltaT        = Coin 0
                         , deltaR        = Coin 0
                         , rs            = Map.empty
                         , deltaF        = Coin 0
                         , nonMyopic     = emptyNonMyopic
-                        })  -- ^ Update reward
+                        })  -- Update reward
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
   nonce0
-  (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- ^ Evolving nonce
-  (nonce0 ⭒ mkNonce 1)             -- ^ Candidate nonce
+  (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- Evolving nonce
+  (nonce0 ⭒ mkNonce 1)             -- Candidate nonce
   NeutralNonce
   (At $ LastAppliedBlock
-    (BlockNo 2)                    -- ^ Current block no
-    (SlotNo 90)                    -- ^ Current slot
-    blockEx2BHash)                 -- ^ Hash header of the chain
+    (BlockNo 2)                    -- Current block no
+    (SlotNo 90)                    -- Current slot
+    blockEx2BHash)                 -- Hash header of the chain
 
 -- | Expected state after transition
 expectedStEx2B :: ChainState
@@ -779,15 +779,15 @@ ex2B = CHAINExample (SlotNo 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
 
 blockEx2C :: Block
 blockEx2C = mkBlock
-             blockEx2BHash    -- ^ Hash of previous block
+             blockEx2BHash    -- Hash of previous block
              (coreNodeKeys 2)
-             []               -- ^ No transactions at all (empty block)
-             (SlotNo 110)       -- ^ Current slot
-             (BlockNo 3)      -- ^ Second block within the epoch
-             (mkNonce 0)      -- ^ Epoch nonce
-             (NatNonce 3)     -- ^ Block nonce
-             zero             -- ^ Praos leader value
-             5                -- ^ Period of KES (key evolving signature scheme)
+             []               -- No transactions at all (empty block)
+             (SlotNo 110)     -- Current slot
+             (BlockNo 3)      -- Second block within the epoch
+             (mkNonce 0)      -- Epoch nonce
+             (NatNonce 3)     -- Block nonce
+             zero             -- Praos leader value
+             5                -- Period of KES (key evolving signature scheme)
              0
              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
@@ -808,7 +808,7 @@ snapEx2C = SnapShot
 -- | Make a snapshot for a given fee.
 snapsEx2Cgeneric :: Coin -> SnapShots
 snapsEx2Cgeneric feeSnapShot = emptySnapShots {
-    _pstakeMark = snapEx2C -- ^ snapshot of stake pools and parameters
+    _pstakeMark = snapEx2C -- snapshot of stake pools and parameters
   , _feeSS      = feeSnapShot
   }
 
