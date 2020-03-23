@@ -113,7 +113,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
                                        { cold = (keysByStakeHash Map.! pkh)
                                        , vrf  = (traceVRFKeyPairsByHash Map.! vrfkey)
                                        , hot  = (hot $ gkeys gkey)
-                                                -- ^^ TODO @jc - don't use the genesis hot key
+                                                -- TODO @jc - don't use the genesis hot key
                                        , hk   = pkh
                                        }
                                  in (ps, stake, apks)

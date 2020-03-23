@@ -290,11 +290,11 @@ genRecipients
   -> Gen [Addr]
 genRecipients len keys scripts = do
   n' <- QC.frequency (  (if len > 1 then [(1, pure (len - 1))] else [])
-                     -- ^ contract size of UTxO (only if at least 2 inputs are chosen)
+                     -- contract size of UTxO (only if at least 2 inputs are chosen)
                      ++ [(2, pure len)]
-                     -- ^ keep size
+                     -- keep size
                      ++ [(1, pure $ len + 1)])
-                     -- ^ expand size of UTxO
+                     -- expand size of UTxO
 
   -- choose m scripts and n keys as recipients
   m  <- QC.choose (0, n' - 1)
