@@ -46,8 +46,6 @@ import qualified Control.State.Transition.Extended as STS
 import           Control.State.Transition.Trace (Trace)
 import qualified Control.State.Transition.Trace as Trace
 
-import qualified Debug.Trace as D
-
 -- | State transition systems for which traces can be generated, given a trace
 -- generation environment.
 --
@@ -102,7 +100,7 @@ traceFrom traceEnv maxTraceLength traceGenEnv env st0 = do
       sig <- sigGen @sts @traceGenEnv traceGenEnv env sti
       case interpretSTS @sts @traceGenEnv traceEnv (STS.applySTS @sts (TRC(env, sti, sig))) of
         Left _predicateFailures ->
-          loop (d - 1) sti (D.trace ("STS PredicateFailure - " <> show _predicateFailures) stSigs)
+          loop (d - 1) sti stSigs
         Right sti' ->
           loop (d - 1) sti' ((sti', sig): stSigs)
 
