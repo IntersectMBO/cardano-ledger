@@ -88,7 +88,7 @@ newEpochTransition = do
 
       es'' <- trans @(MIR crypto) $ TRC ((), es', ())
       es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
-      let EpochState _acnt ss _ls pp _ = es'''
+      let EpochState _acnt ss _ls _pr pp _ = es'''
           SnapShot (Stake stake) delegs poolParams = _pstakeSet ss
           Coin total = Map.foldl (+) (Coin 0) stake
           sd =

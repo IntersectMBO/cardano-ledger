@@ -370,7 +370,7 @@ acntEx1 = genesisAccountState
 
 -- | Epoch state with no snapshots.
 esEx1 :: EpochState
-esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1 emptyNonMyopic
+esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1 ppsEx1 emptyNonMyopic
 
 -- | Empty initial Shelley state with fake Byron hash and no blocks at all.
 --   No blocks of Shelley have been processed yet.
@@ -526,7 +526,7 @@ acntEx2A = AccountState
             }
 
 esEx2A :: EpochState
-esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1 emptyNonMyopic
+esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1 ppsEx1 emptyNonMyopic
 
 overlayEx2A :: Map SlotNo (Maybe GenKeyHash)
 overlayEx2A = runShelleyBase
@@ -614,7 +614,7 @@ expectedStEx2A = ChainState
      (EpochNo   0)
      (BlocksMade Map.empty) -- Still no blocks
      (BlocksMade Map.empty) -- Still no blocks
-     (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -728,7 +728,7 @@ expectedStEx2Bgeneric pp = ChainState
      (EpochNo 0)            -- First epoch
      (BlocksMade Map.empty) -- Blocks made before current
      (BlocksMade Map.empty) -- Blocks made before current
-     (EpochState acntEx2A emptySnapShots expectedLSEx2B pp emptyNonMyopic)
+     (EpochState acntEx2A emptySnapShots expectedLSEx2B pp pp emptyNonMyopic)
                             -- Previous epoch state
      (Just RewardUpdate { deltaT        = Coin 0
                         , deltaR        = Coin 0
@@ -856,7 +856,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
      (EpochNo 1)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2A { _reserves = _reserves acntEx2A - carlMIR } ss ls pp emptyNonMyopic)
+     (EpochState acntEx2A { _reserves = _reserves acntEx2A - carlMIR } ss ls pp pp emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
@@ -991,6 +991,7 @@ expectedStEx2D = ChainState
         snapsEx2C
         expectedLSEx2D
         ppsEx1
+        ppsEx1
         emptyNonMyopic)
      (Just RewardUpdate { deltaT        = Coin 21
                         , deltaR        = Coin 0
@@ -1085,7 +1086,7 @@ expectedStEx2E = ChainState
      (EpochNo 2)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      (PoolDistr
        (Map.singleton
@@ -1137,7 +1138,7 @@ expectedStEx2F = ChainState
      (EpochNo 2)
      (BlocksMade Map.empty)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
-     (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
      (Just RewardUpdate { deltaT        = Coin 19
                         , deltaR        = Coin 0
                         , rs            = Map.empty
@@ -1217,7 +1218,7 @@ expectedStEx2G = ChainState
      (EpochNo 3)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
-     (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      pdEx2F
      epoch1OSchedEx2G)
@@ -1282,7 +1283,7 @@ expectedStEx2H = ChainState
      (EpochNo 3)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
-     (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
      (Just RewardUpdate { deltaT        = Coin 767369696984
                         , deltaR        = Coin (-793333333333)
                         , rs            = rewardsEx2H
@@ -1376,7 +1377,7 @@ expectedStEx2I = ChainState
      (EpochNo 4)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2I snapsEx2I expectedLSEx2I ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2I snapsEx2I expectedLSEx2I ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      pdEx2F
      epoch1OSchedEx2I)
@@ -1472,7 +1473,7 @@ expectedStEx2J = ChainState
      (EpochNo 4)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2I snapsEx2I expectedLSEx2J ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2I snapsEx2I expectedLSEx2J ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      pdEx2F
      epoch1OSchedEx2I)
@@ -1555,7 +1556,7 @@ expectedStEx2K = ChainState
      (EpochNo 4)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1 ppsEx1 emptyNonMyopic)
      (Just RewardUpdate { deltaT        = Coin 9
                         , deltaR        = Coin 0
                         , rs            = Map.empty
@@ -1647,7 +1648,7 @@ expectedStEx2L = ChainState
      (EpochNo 5)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      pdEx2F
      (runShelleyBase $ overlaySchedule (EpochNo 5) (Map.keysSet genDelegs) ppsEx1))
@@ -1765,7 +1766,7 @@ expectedStEx3A = ChainState
      (EpochNo 0)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -1863,7 +1864,7 @@ expectedStEx3B = ChainState
      (EpochNo 0)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -1928,7 +1929,7 @@ expectedStEx3C = ChainState
      (EpochNo 1)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx3C emptyNonMyopic)
+     (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx1 ppsEx3C emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
      overlayEx3C)
@@ -2019,7 +2020,7 @@ expectedStEx4A = ChainState
      (EpochNo 0)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)
@@ -2078,7 +2079,7 @@ expectedStEx4B = ChainState
      (EpochNo 0)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1 ppsEx1 emptyNonMyopic)
      (Just RewardUpdate { deltaT        = Coin 0
                         , deltaR        = Coin 0
                         , rs            = Map.empty
@@ -2175,7 +2176,7 @@ expectedStEx5A = ChainState
      (EpochNo 0)
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
-     (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1 emptyNonMyopic)
+     (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1 ppsEx1 emptyNonMyopic)
      Nothing
      (PoolDistr Map.empty)
      overlayEx2A)

@@ -92,6 +92,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
            (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
          )
          pp
+         pp
          emptyNonMyopic
        )
        Nothing
@@ -150,7 +151,7 @@ chainTransition = do
   TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _)) <- judgmentContext
 
 
-  let NewEpochState _ _ _ (EpochState _ _ _ pp _) _ _ _ = nes
+  let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 
   maxpv <- liftSTS $ asks maxMajorPV
   let (ProtVer m _) = _protocolVersion pp
@@ -167,7 +168,7 @@ chainTransition = do
 
   let NewEpochState e1 _ _ _ _ _ _ = nes
       NewEpochState e2 _ bcur es _ _pd osched = nes'
-  let EpochState (AccountState _ _reserves) _ ls pp' _                       = es
+  let EpochState (AccountState _ _reserves) _ ls _ pp' _                     = es
   let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
   PrtclState cs' lab' eta0' etaV' etaC' etaH' <- trans @(PRTCL crypto)
@@ -220,7 +221,7 @@ totalAda :: ChainState crypto -> Coin
 totalAda (ChainState nes _ _ _ _ _ _) =
   treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
   where
-    (EpochState (AccountState treasury_ reserves_) _ ls _ _) = nesEs nes
+    (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls
     (DPState ds _) = _delegationState ls
     rewards_ = sum (Map.elems (_rewards ds))

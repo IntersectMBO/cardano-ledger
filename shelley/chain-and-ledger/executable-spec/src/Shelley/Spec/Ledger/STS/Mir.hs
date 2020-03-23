@@ -22,8 +22,8 @@ import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import           Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
 import           Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import           Shelley.Spec.Ledger.LedgerState (EpochState, pattern EpochState, emptyAccount,
-                     emptyLedgerState, esAccountState, esLState, esNonMyopic, esPp, esSnapshots,
-                     _delegationState, _dstate, _irwd, _reserves, _rewards, _stkCreds)
+                     emptyLedgerState, esAccountState, esLState, esNonMyopic, esPp, esPrevPp,
+                     esSnapshots, _delegationState, _dstate, _irwd, _reserves, _rewards, _stkCreds)
 import           Shelley.Spec.Ledger.PParams (emptyPParams)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 
@@ -50,6 +50,7 @@ initialMir = pure $ EpochState
                       emptySnapShots
                       emptyLedgerState
                       emptyPParams
+                      emptyPParams
                       emptyNonMyopic
 
 mirTransition :: forall crypto . TransitionRule (MIR crypto)
@@ -57,6 +58,7 @@ mirTransition = do
   TRC (_, EpochState { esAccountState = acnt
                      , esSnapshots = ss
                      , esLState = ls
+                     , esPrevPp = pr
                      , esPp = pp
                      , esNonMyopic = nm}, ()) <- judgmentContext
   let dpState = _delegationState ls
@@ -74,6 +76,7 @@ mirTransition = do
                          dpState {  _dstate =
                            dState  { _rewards = (_rewards dState) ∪+ update
                                    , _irwd = Map.empty } } }
+                  pr
                   pp
                   nm
     else pure $ EpochState
@@ -82,5 +85,6 @@ mirTransition = do
                   ls { _delegationState =
                          dpState {  _dstate =
                            dState  { _irwd = Map.empty } } }
+                  pr
                   pp
                   nm
