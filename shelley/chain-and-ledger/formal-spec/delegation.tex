@@ -249,7 +249,7 @@ The operational certificates counters $\var{cs}$ in the stake pool state are a
 tool to ensure that blocks containing outdated certificates are rejected.
 These certificates are part of the block header.
 For a discussion of why this additional mechanism is needed,
-see \cite{delegation_design}, and for
+see the document~\cite{delegation_design}, and for
 the relevant rules, see Section \ref{sec:oper-cert-trans}.
 
 The environment for the state transition for $\DState$ contains the current slot number
@@ -364,7 +364,7 @@ concerns are independent of the ledger rules.
         We could have used a normal union, since the system as a whole enjoys the property that
         $\var{hk}\in\dom{\var{stkCreds}}\iff \addrRw \var{hk}\in\dom{\var{rewards}}$.
         The union override left, however, gives us a \textit{local}
-        preservation of value property. See \cref{sec:preservation-of-value}.
+        preservation of value property, see Section~\cref{sec:preservation-of-value}.
       \item The certificate pointer is mapped to the new stake credential.
     \end{itemize}
 

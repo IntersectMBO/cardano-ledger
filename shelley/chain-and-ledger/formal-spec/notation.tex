@@ -5,7 +5,7 @@ The transition system is explained in \cite{small_step_semantics}.
 
 \begin{description}
   \item[Powerset] Given a set $\type{X}$, $\powerset{\type{X}}$ is the set of all
-    the subsets of $X$.
+    the subsets of $\type{X}$.
   \item[Sequences] Given a set $\type{X}$, $\seqof{\type{X}}$ is the set of
     sequences having elements taken from $\type{X}$. The empty sequence is
     denoted by $\epsilon$. Given a sequence $\Lambda$, $\Lambda; \type{x}$ is
@@ -20,9 +20,8 @@ The transition system is explained in \cite{small_step_semantics}.
   \item[Maps and partial functions] $A \mapsto B$ denotes a \textbf{partial
     function} from $A$ to $B$, which can be seen as a map (dictionary) with
     keys in $A$ and values in $B$. Given a map $m \in A \mapsto B$, notation
-    $a \mapsto b \in m$ is equivalent to both $m~ a = b$ and $\mathsf{a}~m = b$.
-    Given a set $A$, $A \mapsto A$ represents the identity map on $A$:
-    $\{a \mapsto a \mid a \in A\}$. The $\emptyset$ symbol is also used to
+    $a \mapsto b \in m$ is equivalent to $m~ a = b$. 
+    The $\emptyset$ symbol is also used to
     represent the empty map as well.
   \item[Map Operations] Figure~\ref{fig:notation:nonstandard}
     describes some non-standard map operations.
@@ -38,7 +37,7 @@ The transition system is explained in \cite{small_step_semantics}.
     we define the compostion $R\circ S$ to be all pairs $(a, c)$ such that
     $(a, b)\in R$ and $(b, c)\in S$ for some $b\in B$.
   \item[Option type] An option type in type $A$ is denoted as $A^? = A + \Nothing$. The
-    $A$ case corresponds to the case when there is a value of type $A$ and the $1$
+    $A$ case corresponds to the case when there is a value of type $A$ and the $\Nothing$
     case corresponds to the case when there is no value.
   \item[:=] We abuse the \textbf{:=} symbol here to mean propositional equality. In the
   style of semantics we use in this formal spec, definitional equality is not needed.

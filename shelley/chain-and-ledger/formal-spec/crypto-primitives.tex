@@ -28,6 +28,8 @@ Serialization is a physical manifestation of data on a given storage device.
 In this document, the properties and rules we state involving serialization are
 assumed to hold true independently of the storage medium and style of data
 organization chosen for an implementation.
+The type $\Ser$ denotes the serialized representation of a term of any serializable
+type.
 
 \begin{figure}[htb]
   \emph{Abstract types}
@@ -38,7 +40,7 @@ organization chosen for an implementation.
       \var{vk} & \VKey & \text{public verifying key}\\
       \var{hk} & \KeyHash & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
-      \var{d} & \Data  & \text{data}\\
+      \var{d} & \Ser  & \text{data}\\
       \var{script} & \Script & \text{multi-signature script} \\
       \var{hs} & \HashScr & \text{hash of a script}
     \end{array}
@@ -54,24 +56,24 @@ organization chosen for an implementation.
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \hashKey{} & \VKey \to \KeyHash
-                 & \text{hashKey function} \\
+                 & \text{hash a verification key} \\
                  %
-      \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}
+      \fun{verify} & \powerset{\left(\VKey \times \Ser \times \Sig\right)}
                    & \text{verification relation}\\
                    %
-      \fun{sign} & \SKey \to \Data \to \Sig
+      \fun{sign} & \SKey \to \Ser \to \Sig
                  & \text{signing function}\\
       \fun{hashScript} & \Script \to \HashScr & \text{hash a serialized script}
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall (sk, vk) \in \KeyPair,~ d \in \Data,~ \sigma \in \Sig \cdot
-    \sign{sk}{d} = \sigma \implies \verify{vk}{d}{\sigma}
+    & \forall (sk, vk) \in \KeyPair,~ d \in \Ser,~ \sigma \in \Sig \cdot
+    \sign{sk}{d} = \sigma \implies (vk, d, \sigma) \in \fun{verify}
   \end{align*}
   \emph{Notation for serialized and verified data}
   \begin{align*}
-    & \serialised{x} & \text{serialised representation of } x\\
+    & \serialised{x} ~\in \Ser & \text{serialised representation of } x\\
     & \mathcal{V}_{\var{vk}}{\serialised{d}}_{\sigma} = \verify{vk}{d}{\sigma}
     & \text{shorthand notation for } \fun{verify}
   \end{align*}
@@ -86,19 +88,19 @@ the use of public and private key pairs.
 These signature schemes provide forward cryptographic security, meaning that a
 compromised key does not make it easier for an adversary to forge a signature that
 allegedly had been signed in the past.
-Figure~\ref{fig:crypto-defs-shelley} introduces the additional cryptographic abstractions
+Figure~\ref{fig:kes-defs-shelley} introduces the additional cryptographic abstractions
 needed for KES.
 
 In KES, the public verification key stays constant, but the
 corresponding private key evolves incrementally. For this reason, KES
 verification keys are indexed by integers representing the step in the key's
 evolution. This evolution step parameter is also an additional parameter needed
-for the signing (denoted by $\fun{signEv}$) and verification
-(denoted by $\fun{verifyEv}$) functions.
+for the signing (denoted by $\fun{sign_{ev}}$) and verification
+(denoted by $\fun{verify_{ev}}$) functions.
 
 Since the private key evolves incrementally in a KES scheme, the ledger rules
-require the pool operators to evolve their keys once per KES period-slots.
-This is the constant $\KESPeriod$.
+require the pool operators to evolve their keys every time a certain number of
+slots have passed, as determined by the global constant $\SlotsPerKESPeriod$.
 
 \begin{figure}[htb]
   \emph{Abstract types}
@@ -123,17 +125,17 @@ This is the constant $\KESPeriod$.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{verify_{ev}} & \powerset{\left(\VKey \times \N \times \Data \times \Sig\right)}
+      \fun{verify_{ev}} & \powerset{\left(\VKey \times \N \times \Ser \times \Sig\right)}
                         & \text{verification relation}\\
                         %
-      \fun{sign_{ev}} & \SKey \to \N \to \Data \to \Sig
+      \fun{sign_{ev}} & (\N \to \SKeyEv) \to \N \to \Ser \to \Sig
                       & \text{signing function}\\
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Data,~ \sigma \in \Sig \cdot \\
-    & ~~~~~~~~\signEv{sk}{n}{d} = \sigma \implies \verifyEv{vk}{n}{d}{\sigma}
+    & \forall n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Ser,~ \sigma \in \Sig \cdot \\
+    & ~~~~~~~~\fun{sign_{ev}}~{sk}~{n}~{d} = \sigma \implies \verifyEv{vk}{n}{d}{\sigma}
   \end{align*}
   \emph{Notation for verified KES data}
   \begin{align*}
@@ -149,17 +151,26 @@ Figure~\ref{fig:types-msig} shows the types for multi-signature
 schemes. Multi-signatures effectively specify one or more combinations of
 cryptographic signatures which are considered valid. This is realized in a
 native way via a script-like DSL which allows for defining terms that can be
-evaluated. The terms form a tree like structure and are evaluated via the
+evaluated. Multi-signature scripts is the only type of script (for any
+purpose, including output-locking) that exist in Shelley.
+
+The terms form a tree like structure and are evaluated via the
 \fun{evalMultiSigScript} function. The parameters are a script and a set of key
 hashes. The function returns $\mathsf{True}$ when the supplied key hashes are
 a valid combination for the script, otherwise it returns $\mathsf{False}$.
+The following are the four constructors that make up the multisignature script
+scheme:
 
-An example of a use case of this is if we want to impose any of the following
-requirements on spending an output:
 \begin{itemize}
-\item two parties are required to sign;
-\item either one of two parties may sign;
-\item generally, $m$ out of $n$ ($m \leq n$) parties are required to sign.
+\item[$\type{RequireSig}$] ~:~ the signature of a key with a specific
+hash is required;
+\item[$\type{RequireAllOf}$] ~:~signatures of all of the keys that hash to the
+values specified in the given list are required;
+\item[$\type{RequireAnyOf}$] ~:~a single signature is required, by a key hashing
+to one of the given values in the list (this constructor is redundant and can
+be expressed using $\type{RequireMOf}$);
+\item[$\type{RequireMOf}$]~:~ $m$ of the keys with the hashes specified in the list
+are required to sign
 \end{itemize}
 
 \begin{figure*}[hbt]

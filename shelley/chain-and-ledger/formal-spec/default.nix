@@ -10,7 +10,7 @@ stdenv.mkDerivation {
                       scheme-small
 
                       # libraries
-                      stmaryrd lm-math amsmath extarrows cleveref semantic xcolor xstring paralist cm-super
+                      stmaryrd lm-math amsmath extarrows cleveref semantic xcolor xstring paralist cm-super tocloft
 
                       # bclogo and dependencies
                       bclogo mdframed xkeyval etoolbox needspace

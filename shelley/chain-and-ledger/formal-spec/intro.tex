@@ -39,7 +39,7 @@ While the blockchain protocol is a reactive system that is driven by the arrival
 of blocks causing updates to the ledger, the formal description is a collection
 of rules that compose a
 static description of what a \textit{valid ledger} is. A valid ledger state can only
-reached by applying a sequence of inference rules and any valid ledger state
+be reached by applying a sequence of inference rules and any valid ledger state
 is reachable by applying some sequence of these rules.
 The specifics of the semantics we use to define and apply
 the rules we present in this document are explained in detail in
@@ -50,7 +50,7 @@ The structure of the rules that we give here is such that their application is
 deterministic. That is, given a specific initial state and relevant environmental
 constants, there is no ambiguity
 about which rule should be applied at any given time (i.e.~which state
-transition is allowed to take place). This is an important property which reflects
-the reality of the implementation --- the blockchain evolves in a particular way
-given some user activity and the passage of time --- its behaviour is
-never unexpected.
+transition is allowed to take place). This property ensures that the specification
+is totally precise --- no
+choice is left to the implementor and any two implementations must
+behave the same when it comes to deciding whether a block is valid.
