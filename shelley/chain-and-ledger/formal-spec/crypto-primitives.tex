@@ -28,6 +28,8 @@ Serialization is a physical manifestation of data on a given storage device.
 In this document, the properties and rules we state involving serialization are
 assumed to hold true independently of the storage medium and style of data
 organization chosen for an implementation.
+The type $\Ser$ denotes the serialized representation of a term of any serializable
+type.
 
 \begin{figure}[htb]
   \emph{Abstract types}
@@ -38,7 +40,7 @@ organization chosen for an implementation.
       \var{vk} & \VKey & \text{public verifying key}\\
       \var{hk} & \KeyHash & \text{hash of a key}\\
       \sigma & \Sig  & \text{signature}\\
-      \var{d} & \Data  & \text{data}\\
+      \var{d} & \Ser  & \text{data}\\
       \var{script} & \Script & \text{multi-signature script} \\
       \var{hs} & \HashScr & \text{hash of a script}
     \end{array}
@@ -56,22 +58,22 @@ organization chosen for an implementation.
       \hashKey{} & \VKey \to \KeyHash
                  & \text{hash a verification key} \\
                  %
-      \fun{verify} & \powerset{\left(\VKey \times \Data \times \Sig\right)}
+      \fun{verify} & \powerset{\left(\VKey \times \Ser \times \Sig\right)}
                    & \text{verification relation}\\
                    %
-      \fun{sign} & \SKey \to \Data \to \Sig
+      \fun{sign} & \SKey \to \Ser \to \Sig
                  & \text{signing function}\\
       \fun{hashScript} & \Script \to \HashScr & \text{hash a serialized script}
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall (sk, vk) \in \KeyPair,~ d \in \Data,~ \sigma \in \Sig \cdot
+    & \forall (sk, vk) \in \KeyPair,~ d \in \Ser,~ \sigma \in \Sig \cdot
     \sign{sk}{d} = \sigma \implies (vk, d, \sigma) \in \fun{verify}
   \end{align*}
   \emph{Notation for serialized and verified data}
   \begin{align*}
-    & \serialised{x} & \text{serialised representation of } x\\
+    & \serialised{x} ~\in \Ser & \text{serialised representation of } x\\
     & \mathcal{V}_{\var{vk}}{\serialised{d}}_{\sigma} = \verify{vk}{d}{\sigma}
     & \text{shorthand notation for } \fun{verify}
   \end{align*}
@@ -123,16 +125,16 @@ slots have passed, as determined by the global constant $\SlotsPerKESPeriod$.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \fun{verify_{ev}} & \powerset{\left(\VKey \times \N \times \Data \times \Sig\right)}
+      \fun{verify_{ev}} & \powerset{\left(\VKey \times \N \times \Ser \times \Sig\right)}
                         & \text{verification relation}\\
                         %
-      \fun{sign_{ev}} & (\N \to \SKeyEv) \to \N \to \Data \to \Sig
+      \fun{sign_{ev}} & (\N \to \SKeyEv) \to \N \to \Ser \to \Sig
                       & \text{signing function}\\
     \end{array}
   \end{equation*}
   \emph{Constraints}
   \begin{align*}
-    & \forall n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Data,~ \sigma \in \Sig \cdot \\
+    & \forall n\in\N, (sk_n, vk) \in \KeyPairEv, ~ d \in \Ser,~ \sigma \in \Sig \cdot \\
     & ~~~~~~~~\fun{sign_{ev}}~{sk}~{n}~{d} = \sigma \implies \verifyEv{vk}{n}{d}{\sigma}
   \end{align*}
   \emph{Notation for verified KES data}
@@ -165,7 +167,8 @@ hash is required;
 \item[$\type{RequireAllOf}$] ~:~signatures of all of the keys that hash to the
 values specified in the given list are required;
 \item[$\type{RequireAnyOf}$] ~:~a single signature is required, by a key hashing
-to one of the given values in the list;
+to one of the given values in the list (this constructor is redundant and can
+be expressed using $\type{RequireMOf}$);
 \item[$\type{RequireMOf}$]~:~ $m$ of the keys with the hashes specified in the list
 are required to sign
 \end{itemize}

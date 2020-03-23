@@ -10,8 +10,9 @@ There are four types of UTxO addresses:
   the hash of a staking credential. Note that the payment credential hash is the
   hash of the key (or script) which has contol of the funds at this address,
   i.e. is able to witness spending
-  them. The staking credential is the credential which accumulates
-  the rewards associated with the funds at the payment part of the address.
+  them. The staking credential controls the delegation
+  decision for the Ada at this address (i.e. it is used for rewards, staking,
+  etc.).
   The staking credential
   must be a (registered) delegation credential (see Section~\ref{sec:delegation-shelley}
   for a discussion of the delegation mechanism)
@@ -26,7 +27,9 @@ There are four types of UTxO addresses:
 
 \noindent Where a credential is either key or a multi-signature script. Together, these
 three address types make up the $\Addr$ type, which will be used in transaction
-outputs in Section~\ref{sec:utxo}.
+outputs in Section~\ref{sec:utxo}. The notations
+$\Credential_{pay}$ and $\Credential_{stake}$ do not represent distinct types.
+The subscripts are annotations indicating how the credential is being used.
 
 For an explanation of why enterprise addresses do not have staking rights,
 and how they could potentially circumvent this restriction and delegate to a
@@ -57,12 +60,12 @@ Section~\ref{sec:utxo} and follows the approach outlined in the
 document~\cite{chimeric}.
 
 Note that, even though in the Cardano system, most of the
-accounting is UTxO-style, the reward addresses are a special case. They do not
-fall prey to many of the pitfalls of account-based accounting because of their restricted
-use, outlined in the rules in Sections~\ref{sec:utxo} and~{sec:epoch}.
+accounting is UTxO-style, the reward addresses are a special case. Their
+use restricted to only special cases (e.g. collecting rewards from them),
+outlined in the rules in Sections~\ref{sec:utxo} and Section~\ref{sec:epoch}.
 For each staking credential, we use the function $\fun{addr_{rwd}}$ to create
 the reward address corresponding to the credential, or to access an existing one
-if it already exists. 
+if it already exists.
 
 Base, pointer and enterprise addresses contain a payment credential which is
 either a key hash or a script hash. Base addresses contain a staking credential
