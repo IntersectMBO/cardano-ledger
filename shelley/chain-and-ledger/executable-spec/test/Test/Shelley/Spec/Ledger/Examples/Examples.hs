@@ -129,11 +129,12 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern DPS
                      _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring,
                      _rewards, _stPools, _stkCreds, _treasury)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import           Shelley.Spec.Ledger.PParams (pattern PPUpdate, PParams, PParams' (PParams),
-                     PParamsUpdate, pattern Update, emptyPPUpdate, emptyPParams, mkActiveSlotCoeff,
-                     _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
-                     _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt,
-                     _poolDecayRate, _poolDeposit, _poolMinRefund, _protocolVersion, _rho, _tau)
+import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams), PParamsUpdate,
+                     pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams,
+                     mkActiveSlotCoeff, _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
+                     _keyDecayRate, _keyDeposit, _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize,
+                     _minfeeA, _minfeeB, _nOpt, _poolDecayRate, _poolDeposit, _poolMinRefund,
+                     _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), pattern NonMyopic,
                      emptyNonMyopic, rewardPot)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..),
@@ -161,7 +162,7 @@ import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesV
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CHAIN, ChainState,
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
-                     LedgerState, NewEpochState, PPUpdate, PState, PoolDistr, PoolParams,
+                     LedgerState, NewEpochState, PState, PoolDistr, PoolParams, ProposedPPUpdates,
                      RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody, UTxO, UTxOState, Update,
                      VKeyGenesis, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), NatNonce (..),
@@ -313,7 +314,7 @@ dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
 
 -- | Empty set of UTxOs. No coins to be spent.
 utxostEx1 :: UTxOState
-utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUpdate
+utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 
 dsEx1 :: DState
 dsEx1 = emptyDState { _genDelegs = GenDelegs genDelegs }
@@ -437,31 +438,31 @@ utxoEx2A = genesisCoins
        ]
 
 -- | Register a single pool with 255 coins of deposit
-ppupEx2A :: PPUpdate
-ppupEx2A = PPUpdate $ Map.singleton
-                        (hashKey $ coreNodeVKG 0) -- stake key
-                        (PParams
-                           { _minfeeA = Nothing
-                           , _minfeeB = Nothing
-                           , _maxBBSize = Nothing
-                           , _maxTxSize = Nothing
-                           , _maxBHSize = Nothing
-                           , _keyDeposit = Just 255
-                           , _keyMinRefund = Nothing
-                           , _keyDecayRate = Nothing
-                           , _poolDeposit = Nothing
-                           , _poolMinRefund = Nothing
-                           , _poolDecayRate = Nothing
-                           , _eMax = Nothing
-                           , _nOpt = Nothing
-                           , _a0 = Nothing
-                           , _rho = Nothing
-                           , _tau = Nothing
-                           , _activeSlotCoeff = Nothing
-                           , _d = Nothing
-                           , _extraEntropy = Nothing
-                           , _protocolVersion = Nothing
-                           })
+ppupEx2A :: ProposedPPUpdates
+ppupEx2A = ProposedPPUpdates $ Map.singleton
+             (hashKey $ coreNodeVKG 0) -- stake key
+             (PParams
+                { _minfeeA = Nothing
+                , _minfeeB = Nothing
+                , _maxBBSize = Nothing
+                , _maxTxSize = Nothing
+                , _maxBHSize = Nothing
+                , _keyDeposit = Just 255
+                , _keyMinRefund = Nothing
+                , _keyDecayRate = Nothing
+                , _poolDeposit = Nothing
+                , _poolMinRefund = Nothing
+                , _poolDecayRate = Nothing
+                , _eMax = Nothing
+                , _nOpt = Nothing
+                , _a0 = Nothing
+                , _rho = Nothing
+                , _tau = Nothing
+                , _activeSlotCoeff = Nothing
+                , _d = Nothing
+                , _extraEntropy = Nothing
+                , _protocolVersion = Nothing
+                })
 
 -- | Update proposal that just changes protocol parameters,
 --   and does not change applications.
@@ -513,7 +514,7 @@ alicePtrAddr :: Addr
 alicePtrAddr = AddrPtr (KeyHashObj . hashKey $ vKey alicePay) (Ptr (SlotNo 10) 0 0)
 
 utxostEx2A :: UTxOState
-utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyPPUpdate
+utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyPPPUpdates
 
 lsEx2A :: LedgerState
 lsEx2A = LedgerState utxostEx2A (DPState dsEx1 psEx1)
@@ -826,7 +827,7 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
     utxoEx2B
     lsDeposits
     lsFees
-    emptyPPUpdate) -- Note that the ppup is gone now
+    emptyPPPUpdates) -- Note that the ppup is gone now
   (DPState
     dsEx2B { _irwd     = Map.empty
            , _stkCreds = addStakeCreds carlSHK (SlotNo 10)   $ _stkCreds dsEx2B
@@ -976,7 +977,7 @@ expectedLSEx2D = LedgerState
                  utxoEx2D
                  (Coin 257)
                  (Coin 26)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx2D psEx2A)
 
 expectedStEx2D :: ChainState
@@ -1057,7 +1058,7 @@ expectedLSEx2E = LedgerState
                  utxoEx2D
                  (Coin 243)
                  (Coin 19)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState
                 dsEx2D { _irwd = Map.empty
                        , _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B
@@ -1198,7 +1199,7 @@ expectedLSEx2G = LedgerState
                  utxoEx2D
                  (Coin 233)
                  (Coin 10)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState
                  dsEx2D
                  psEx2A)
@@ -1348,7 +1349,7 @@ expectedLSEx2I = LedgerState
                  utxoEx2D
                  (Coin 224)
                  (Coin 9)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx2I psEx2A)
 
 snapsEx2I :: SnapShots
@@ -1458,7 +1459,7 @@ expectedLSEx2J = LedgerState
                  utxoEx2J
                  (Coin (219 - 4) + 5)
                  (Coin 18)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx2J psEx2A)
 
 oCertIssueNosEx2J :: Map KeyHash Natural
@@ -1545,7 +1546,7 @@ expectedLSEx2K = LedgerState
                  utxoEx2K
                  (Coin 220)
                  (Coin 20)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx2J psEx2K)
 
 expectedStEx2K :: ChainState
@@ -1632,7 +1633,7 @@ expectedLSEx2L = LedgerState
                  utxoEx2K
                  (Coin 4 + 4)
                  (Coin 22)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped
 
 
@@ -1692,10 +1693,11 @@ ppVote3A = PParams
              , _protocolVersion = Nothing
              }
 
-ppupEx3A :: PPUpdate
-ppupEx3A = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 0, ppVote3A)
-                                   , (hashKey $ coreNodeVKG 3, ppVote3A)
-                                   , (hashKey $ coreNodeVKG 4, ppVote3A)
+ppupEx3A :: ProposedPPUpdates
+ppupEx3A = ProposedPPUpdates $ Map.fromList
+             [ (hashKey $ coreNodeVKG 0, ppVote3A)
+             , (hashKey $ coreNodeVKG 3, ppVote3A)
+             , (hashKey $ coreNodeVKG 4, ppVote3A)
                                    ]
 
 updateEx3A :: Update
@@ -1784,10 +1786,11 @@ ex3A = CHAINExample (SlotNo 10) initStEx2A blockEx3A (Right expectedStEx3A)
 -- | Example 3B - Finish getting enough votes for the protocol parameter update.
 
 
-ppupEx3B :: PPUpdate
-ppupEx3B = PPUpdate $ Map.fromList [ (hashKey $ coreNodeVKG 1, ppVote3A)
-                                   , (hashKey $ coreNodeVKG 5, ppVote3A)
-                                   ]
+ppupEx3B :: ProposedPPUpdates
+ppupEx3B = ProposedPPUpdates $ Map.fromList
+             [ (hashKey $ coreNodeVKG 1, ppVote3A)
+             , (hashKey $ coreNodeVKG 5, ppVote3A)
+             ]
 
 updateEx3B :: Update
 updateEx3B = Update ppupEx3B (EpochNo 0)
@@ -1838,8 +1841,8 @@ utxoEx3B = UTxO . Map.fromList $
              , (TxIn (txid txbodyEx3B) 0, TxOut aliceAddr aliceCoinEx3B)
              ]
 
-ppupEx3B' :: PPUpdate
-ppupEx3B' = PPUpdate $ Map.fromList $
+ppupEx3B' :: ProposedPPUpdates
+ppupEx3B' = ProposedPPUpdates $ Map.fromList $
   fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A)) [0, 1, 3, 4, 5]
 
 expectedLSEx3B :: LedgerState
@@ -1913,7 +1916,7 @@ expectedLSEx3C = LedgerState
                  utxoEx3B
                  (Coin 0)
                  (Coin 2)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx1 psEx1)
 
 ppsEx3C :: PParams
@@ -2007,7 +2010,7 @@ expectedLSEx4A = LedgerState
                  utxoEx4A
                  (Coin 0)
                  (Coin 1)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx4A psEx1)
 
 expectedStEx4A :: ChainState
@@ -2066,7 +2069,7 @@ expectedLSEx4B = LedgerState
                  utxoEx4A
                  (Coin 0)
                  (Coin 1)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx4B psEx1)
 
 expectedStEx4B :: ChainState
@@ -2163,7 +2166,7 @@ expectedLSEx5A = LedgerState
                  utxoEx5A
                  (Coin 0)
                  (Coin 1)
-                 emptyPPUpdate)
+                 emptyPPPUpdates)
                (DPState dsEx5A psEx1)
 
 expectedStEx5A :: ChainState

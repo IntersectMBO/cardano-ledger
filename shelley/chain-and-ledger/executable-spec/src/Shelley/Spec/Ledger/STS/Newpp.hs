@@ -50,7 +50,7 @@ instance NoUnexpectedThunks (PredicateFailure (NEWPP crypto))
 
 initialNewPp :: InitialRule (NEWPP crypto)
 initialNewPp = pure $ NewppState
-  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUpdate)
+  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)
   emptyAccount
   emptyPParams
 

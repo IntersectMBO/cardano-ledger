@@ -200,7 +200,7 @@ testValidWithdrawal =
       { _dstate = dstate' {_rewards = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)}}
 
   in ls @?= Right (LedgerState
-                     (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyPPUpdate)
+                     (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyPPPUpdates)
                      expectedDS
                      )
 
@@ -295,7 +295,7 @@ utxoSt1 = UTxOState
                , (TxIn (txid $ _body tx1) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 0)
             (Coin 600)
-            emptyPPUpdate
+            emptyPPPUpdates
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -319,7 +319,7 @@ utxoSt2 = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 300)
             (Coin 1300)
-            emptyPPUpdate
+            emptyPPPUpdates
 
 tx3Body :: TxBody
 tx3Body = TxBody
@@ -347,7 +347,7 @@ utxoSt3 = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 2500)
-            emptyPPUpdate
+            emptyPPPUpdates
 
 stakeKeyRegistration1 :: DPState
 stakeKeyRegistration1 = emptyDelegation
@@ -423,7 +423,7 @@ utxoSt4 = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 3500)
-            emptyPPUpdate
+            emptyPPPUpdates
 
 utxo5 :: EpochNo -> UTxOState
 utxo5 e = UTxOState
@@ -433,7 +433,7 @@ utxo5 e = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 3500)
-            emptyPPUpdate
+            emptyPPPUpdates
 
 tx5Body :: EpochNo -> TxBody
 tx5Body e = TxBody

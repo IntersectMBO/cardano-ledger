@@ -59,11 +59,11 @@ initialEpoch =
            emptyNonMyopic
 
 votedValuePParams
-  :: PPUpdate crypto
+  :: ProposedPPUpdates crypto
   -> PParams
   -> Int
   -> Maybe PParams
-votedValuePParams (PPUpdate ppup) pps quorumN =
+votedValuePParams (ProposedPPUpdates ppup) pps quorumN =
   let
     incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
     votes = Map.foldr

@@ -25,16 +25,16 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), UnitInterv
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, pattern PPUpdate, PParams,
-                     PParams' (PParams), ProtVer (..), pattern Update, mkActiveSlotCoeff, _a0,
-                     _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
+import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams, PParams' (PParams),
+                     pattern ProposedPPUpdates, ProtVer (..), pattern Update, mkActiveSlotCoeff,
+                     _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
                      _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt,
                      _poolDecayRate, _poolDeposit, _poolMinRefund, _protocolVersion,
                      _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DPState, GenKeyHash,
-                     KeyHash, KeyPair, PPUpdate, UTxOState, Update)
+                     KeyHash, KeyPair, ProposedPPUpdates, UTxOState, Update)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (frequencyLowMaxEpoch,
                      frequencyTxUpdates, maxMinFeeA, maxMinFeeB)
@@ -191,11 +191,11 @@ genPPUpdate
   :: SlotNo
   -> PParams
   -> [GenKeyHash]
-  -> Gen PPUpdate
+  -> Gen ProposedPPUpdates
 genPPUpdate s pp genesisKeys =
   if (tooLateInEpoch s)
     then
-      pure (PPUpdate Map.empty)
+      pure (ProposedPPUpdates Map.empty)
     else do -- TODO generate Maybe tyes so not all updates are full
       minFeeA               <- genNatural 0 maxMinFeeA
       minFeeB               <- genNatural 0 maxMinFeeB
@@ -240,7 +240,7 @@ genPPUpdate s pp genesisKeys =
                         }
       let ppUpdate = zip genesisKeys (repeat pps)
       pure $
-        (PPUpdate . Map.fromList) ppUpdate
+        (ProposedPPUpdates . Map.fromList) ppUpdate
 
 -- | Generate an @Update (where all the given nodes participate)
 -- with a 50% chance of having non-empty PPUpdates or AVUpdates

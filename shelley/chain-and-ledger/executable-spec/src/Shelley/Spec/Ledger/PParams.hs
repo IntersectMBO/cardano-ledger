@@ -21,8 +21,8 @@ module Shelley.Spec.Ledger.PParams
   , activeSlotLog
   , ProtVer(..)
   , PPUpdateEnv(..)
-  , PPUpdate(..)
-  , emptyPPUpdate
+  , ProposedPPUpdates(..)
+  , emptyPPPUpdates
   , PParamsUpdate
   , Update(..)
   , updatePParams
@@ -265,7 +265,7 @@ emptyPParams =
 
 -- | Update Proposal
 data Update crypto
-  = Update (PPUpdate crypto) EpochNo
+  = Update (ProposedPPUpdates crypto) EpochNo
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (Update crypto)
@@ -376,20 +376,20 @@ instance FromCBOR PParamsUpdate where
      pure $ foldr ($) emptyPParamsUpdate (snd <$> mapParts)
 
 -- | Update operation for protocol parameters structure @PParams
-newtype PPUpdate crypto
-  = PPUpdate (Map (GenKeyHash crypto) PParamsUpdate)
+newtype ProposedPPUpdates crypto
+  = ProposedPPUpdates (Map (GenKeyHash crypto) PParamsUpdate)
   deriving (Show, Eq, Generic)
 
-instance NoUnexpectedThunks (PPUpdate crypto)
+instance NoUnexpectedThunks (ProposedPPUpdates crypto)
 
-instance Crypto crypto => ToCBOR (PPUpdate crypto) where
-  toCBOR (PPUpdate m) = mapToCBOR m
+instance Crypto crypto => ToCBOR (ProposedPPUpdates crypto) where
+  toCBOR (ProposedPPUpdates m) = mapToCBOR m
 
-instance Crypto crypto => FromCBOR (PPUpdate crypto) where
-  fromCBOR = PPUpdate <$> mapFromCBOR
+instance Crypto crypto => FromCBOR (ProposedPPUpdates crypto) where
+  fromCBOR = ProposedPPUpdates <$> mapFromCBOR
 
-emptyPPUpdate :: PPUpdate crypto
-emptyPPUpdate = PPUpdate Map.empty
+emptyPPPUpdates :: ProposedPPUpdates crypto
+emptyPPPUpdates = ProposedPPUpdates Map.empty
 
 updatePParams :: PParams -> PParamsUpdate -> PParams
 updatePParams pp ppup = PParams

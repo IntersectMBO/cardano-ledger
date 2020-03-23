@@ -94,9 +94,9 @@ import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHas
                      KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
                      undiscriminateKeyHash)
 import qualified Shelley.Spec.Ledger.MetaData as MD
-import           Shelley.Spec.Ledger.PParams (PPUpdate (..), PParams, Update (..), activeSlotVal,
-                     emptyPPUpdate, emptyPParams, _activeSlotCoeff, _d, _keyDecayRate, _keyDeposit,
-                     _keyMinRefund, _minfeeA, _minfeeB, _rho, _tau)
+import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), Update (..),
+                     activeSlotVal, emptyPPPUpdates, emptyPParams, _activeSlotCoeff, _d,
+                     _keyDecayRate, _keyDeposit, _keyMinRefund, _minfeeA, _minfeeB, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoFirst, epochInfoSize, (+*), (-*))
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
@@ -305,7 +305,7 @@ instance Crypto crypto => FromCBOR (EpochState crypto)
     pure $ EpochState a s l p n
 
 emptyUTxOState :: UTxOState crypto
-emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUpdate
+emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 
 emptyEpochState :: EpochState crypto
 emptyEpochState =
@@ -339,14 +339,14 @@ emptyPState =
 clearPpup
   :: UTxOState crypto
   -> UTxOState crypto
-clearPpup utxoSt = utxoSt {_ppups = emptyPPUpdate}
+clearPpup utxoSt = utxoSt {_ppups = emptyPPPUpdates}
 
 data UTxOState crypto=
     UTxOState
     { _utxo      :: !(UTxO crypto)
     , _deposited :: Coin
     , _fees      :: Coin
-    , _ppups     :: PPUpdate crypto
+    , _ppups     :: ProposedPPUpdates crypto
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (UTxOState crypto)
@@ -476,7 +476,7 @@ genesisState genDelegs0 utxo0 = LedgerState
     utxo0
     (Coin 0)
     (Coin 0)
-    emptyPPUpdate)
+    emptyPPPUpdates)
   (DPState dState emptyPState)
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
@@ -601,7 +601,7 @@ txsize (Tx
                + labelSize + protoVersion -- protocol version
     uSize = case up of
       Nothing -> arrayPrefix
-      Just (Update (PPUpdate ppup) _) ->
+      Just (Update (ProposedPPUpdates ppup) _) ->
         arrayPrefix
         + mapPrefix + (toInteger $ length ppup) * (hashObj + params)  -- ppup
         + uint -- epoch
@@ -854,7 +854,7 @@ propWits
   -> GenDelegs crypto
   -> Set (KeyHash crypto)
 propWits Nothing _ = Set.empty
-propWits (Just (Update (PPUpdate pup) _)) (GenDelegs _genDelegs) =
+propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs _genDelegs) =
   Set.fromList $ Map.elems updateKeys
   where updateKeys = Map.keysSet pup ◁ _genDelegs
 

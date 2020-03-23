@@ -35,7 +35,7 @@ data PPUPEnv crypto
   = PPUPEnv SlotNo PParams (GenDelegs crypto)
 
 instance STS (PPUP crypto) where
-  type State (PPUP crypto) = PPUpdate crypto
+  type State (PPUP crypto) = ProposedPPUpdates crypto
   type Signal (PPUP crypto) = Maybe (Update crypto)
   type Environment (PPUP crypto) = PPUPEnv crypto
   type BaseM (PPUP crypto) = ShelleyBase
@@ -93,12 +93,12 @@ pvCanFollow (ProtVer m n) (Just (ProtVer m' n'))
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
-  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), PPUpdate pupS, up)
+  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), ProposedPPUpdates pupS, up)
     <- judgmentContext
 
   case up of
-    Nothing -> pure (PPUpdate pupS)
-    Just (Update (PPUpdate pup) te) -> do
+    Nothing -> pure (ProposedPPUpdates pupS)
+    Just (Update (ProposedPPUpdates pup) te) -> do
 
       (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
 
@@ -116,4 +116,4 @@ ppupTransitionNonEmpty = do
         epochInfoEpoch ei slot
       currentEpoch == te ?! PPUpdateWrongEpoch te
 
-      pure $ PPUpdate (pupS ⨃  Map.toList pup)
+      pure $ ProposedPPUpdates (pupS ⨃  Map.toList pup)

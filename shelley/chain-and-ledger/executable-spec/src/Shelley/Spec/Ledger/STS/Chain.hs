@@ -33,8 +33,8 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..
                      EpochState (..), LedgerState (..), NewEpochState (..), PState (..),
                      UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
-import           Shelley.Spec.Ledger.PParams (PPUpdate (..), PParams, ProtVer (..), _maxBBSize,
-                     _maxBHSize, _protocolVersion)
+import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), ProtVer (..),
+                     _maxBBSize, _maxBHSize, _protocolVersion)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import           Shelley.Spec.Ledger.Tx (TxBody)
@@ -87,7 +87,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
              utxo
              (Coin 0)
              (Coin 0)
-             (PPUpdate Map.empty)
+             (ProposedPPUpdates Map.empty)
            )
            (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
          )

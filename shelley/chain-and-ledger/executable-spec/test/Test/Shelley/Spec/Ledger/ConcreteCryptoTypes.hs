@@ -197,7 +197,7 @@ type Stake = EpochBoundary.Stake ConcreteCrypto
 
 type Update = PParams.Update ConcreteCrypto
 
-type PPUpdate = PParams.PPUpdate ConcreteCrypto
+type ProposedPPUpdates = PParams.ProposedPPUpdates ConcreteCrypto
 
 type VRFKeyHash = Keys.Hash ShortHash (Keys.VerKeyVRF FakeVRF)
 

@@ -133,7 +133,7 @@ instance
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do
   IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUpdate
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 
 utxoInductive
   :: forall crypto

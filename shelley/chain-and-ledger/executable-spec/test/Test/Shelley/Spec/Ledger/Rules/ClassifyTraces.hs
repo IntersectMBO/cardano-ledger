@@ -31,7 +31,8 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey, isDele
                      isGenesisDelegation, isInstantaneousRewards, isRegKey, isRegPool,
                      isRetirePool)
 import           Shelley.Spec.Ledger.LedgerState (txsize)
-import           Shelley.Spec.Ledger.PParams (pattern PPUpdate, PParamsUpdate, pattern Update)
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate, pattern ProposedPPUpdates,
+                     pattern Update)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import           Shelley.Spec.Ledger.Tx (_body)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey,
@@ -162,7 +163,7 @@ ppUpdatesByTx :: [Tx] -> [[PParamsUpdate]]
 ppUpdatesByTx txs = ppUpdates . _txUpdate . _body <$> txs
   where
     ppUpdates Nothing = mempty
-    ppUpdates (Just (Update (PPUpdate ppUpd) _)) = Map.elems ppUpd
+    ppUpdates (Just (Update (ProposedPPUpdates ppUpd) _)) = Map.elems ppUpd
 
 -- | Ratio of the number of empty PParamsUpdate to Updates
 noPPUpdateRatio :: [[PParamsUpdate]] -> Double

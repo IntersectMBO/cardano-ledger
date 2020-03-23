@@ -114,11 +114,11 @@ pool_metadata = [url, metadata_hash]
 
 withdrawals = { * credential => coin }
 
-update = [ protocol_param_update_votes
+update = [ proposed_protocol_parameter_updates
          , epoch
          ]
 
-protocol_param_update_votes =
+proposed_protocol_parameter_updates =
   { * genesishash => protocol_param_update }
 
 protocol_param_update =

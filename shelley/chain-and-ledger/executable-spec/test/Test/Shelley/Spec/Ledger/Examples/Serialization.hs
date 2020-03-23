@@ -41,11 +41,12 @@ import           Shelley.Spec.Ledger.Keys (DiscVKey (..), pattern GenKeyHash, Ha
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), EpochState (..),
                      NewEpochState (..), pattern RewardUpdate, deltaF, deltaR, deltaT,
                      emptyLedgerState, genesisId, nonMyopic, rs)
-import           Shelley.Spec.Ledger.PParams (pattern PPUpdate, PParams' (PParams), PParamsUpdate,
-                     ProtVer (..), pattern Update, emptyPParams, mkActiveSlotCoeff, _a0,
-                     _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
-                     _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt,
-                     _poolDecayRate, _poolDeposit, _poolMinRefund, _protocolVersion, _rho, _tau)
+import           Shelley.Spec.Ledger.PParams (PParams' (PParams), PParamsUpdate,
+                     pattern ProposedPPUpdates, ProtVer (..), pattern Update, emptyPParams,
+                     mkActiveSlotCoeff, _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
+                     _keyDecayRate, _keyDeposit, _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize,
+                     _minfeeA, _minfeeB, _nOpt, _poolDecayRate, _poolDeposit, _poolMinRefund,
+                     _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -571,30 +572,30 @@ serializationTests = testGroup "Serialization Tests"
 
     -- checkEncodingCBOR "full_update"
   , let
-      ppup = PPUpdate (Map.singleton
-                  testGKeyHash
-                  (PParams
-                     { _minfeeA = Nothing
-                     , _minfeeB = Nothing
-                     , _maxBBSize = Nothing
-                     , _maxTxSize = Nothing
-                     , _maxBHSize = Nothing
-                     , _keyDeposit = Nothing
-                     , _keyMinRefund = Nothing
-                     , _keyDecayRate = Nothing
-                     , _poolDeposit = Nothing
-                     , _poolMinRefund = Nothing
-                     , _poolDecayRate = Nothing
-                     , _eMax = Nothing
-                     , _nOpt = Just 100
-                     , _a0 = Nothing
-                     , _rho = Nothing
-                     , _tau = Nothing
-                     , _activeSlotCoeff = Nothing
-                     , _d = Nothing
-                     , _extraEntropy = Nothing
-                     , _protocolVersion = Nothing
-                     }))
+      ppup = ProposedPPUpdates (Map.singleton
+               testGKeyHash
+               (PParams
+                  { _minfeeA = Nothing
+                  , _minfeeB = Nothing
+                  , _maxBBSize = Nothing
+                  , _maxTxSize = Nothing
+                  , _maxBHSize = Nothing
+                  , _keyDeposit = Nothing
+                  , _keyMinRefund = Nothing
+                  , _keyDecayRate = Nothing
+                  , _poolDeposit = Nothing
+                  , _poolMinRefund = Nothing
+                  , _poolDecayRate = Nothing
+                  , _eMax = Nothing
+                  , _nOpt = Just 100
+                  , _a0 = Nothing
+                  , _rho = Nothing
+                  , _tau = Nothing
+                  , _activeSlotCoeff = Nothing
+                  , _d = Nothing
+                  , _extraEntropy = Nothing
+                  , _protocolVersion = Nothing
+                  }))
       e = EpochNo 0
     in checkEncodingCBOR "full_update"
     (Update ppup e)
@@ -636,7 +637,7 @@ serializationTests = testGroup "Serialization Tests"
       tout = TxOut testAddrE (Coin 2)
       ra = RewardAcnt (KeyHashObj testKeyHash2)
       ras = Map.singleton ra (Coin 123)
-      up = Update (PPUpdate (Map.singleton
+      up = Update (ProposedPPUpdates (Map.singleton
              testGKeyHash
              (PParams
                 { _minfeeA = Nothing
@@ -696,7 +697,7 @@ serializationTests = testGroup "Serialization Tests"
       ra = RewardAcnt (KeyHashObj testKeyHash2)
       ras = Map.singleton ra (Coin 123)
       up = Update
-             (PPUpdate (Map.singleton
+             (ProposedPPUpdates (Map.singleton
                          testGKeyHash
                          (PParams
                             { _minfeeA = Nothing

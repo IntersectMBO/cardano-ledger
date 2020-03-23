@@ -47,7 +47,7 @@ instance STS (SNAP crypto) where
     deriving (Show, Generic, Eq)
 
   initialRules =
-    [pure $ SnapState emptySnapShots (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUpdate)]
+    [pure $ SnapState emptySnapShots (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)]
   transitionRules = [snapTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))
