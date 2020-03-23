@@ -20,11 +20,10 @@ import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState (pattern DPState, EpochState, pattern EpochState,
                      emptyAccount, emptyLedgerState, esAccountState, esLState, esNonMyopic, esPp,
-                     esSnapshots, _delegationState, _ups, _utxoState)
+                     esSnapshots, _delegationState, _ppups, _utxoState)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Updates
 
 import           Control.State.Transition
 
@@ -60,11 +59,11 @@ initialEpoch =
            emptyNonMyopic
 
 votedValuePParams
-  :: PPUpdate crypto
+  :: ProposedPPUpdates crypto
   -> PParams
   -> Int
   -> Maybe PParams
-votedValuePParams (PPUpdate ppup) pps quorumN =
+votedValuePParams (ProposedPPUpdates ppup) pps quorumN =
   let
     incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
     votes = Map.foldr
@@ -93,7 +92,7 @@ epochTransition = do
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
-  let UpdateState ppup _ _ _ = _ups utxoSt
+  let ppup = _ppups utxoSt
   let ppNew = votedValuePParams ppup pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt''' acnt'' pp' <-
     trans @(NEWPP crypto)

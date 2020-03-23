@@ -17,6 +17,7 @@ import qualified Shelley.Spec.Ledger.EpochBoundary as EpochBoundary
 import qualified Shelley.Spec.Ledger.Keys as Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.OCert as OCert
+import qualified Shelley.Spec.Ledger.PParams as PParams
 import qualified Shelley.Spec.Ledger.Rewards as Rewards
 import qualified Shelley.Spec.Ledger.Scripts as Scripts
 import qualified Shelley.Spec.Ledger.STS.Chain as STS.Chain
@@ -34,7 +35,6 @@ import qualified Shelley.Spec.Ledger.STS.Utxo as STS.Utxo
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS.Utxow
 import qualified Shelley.Spec.Ledger.Tx as Tx
 import qualified Shelley.Spec.Ledger.TxData as TxData
-import qualified Shelley.Spec.Ledger.Updates as Updates
 import qualified Shelley.Spec.Ledger.UTxO as UTxO
 
 data ConcreteCrypto
@@ -195,19 +195,9 @@ type SnapShots = EpochBoundary.SnapShots ConcreteCrypto
 
 type Stake = EpochBoundary.Stake ConcreteCrypto
 
-type Mdt = Updates.Mdt ConcreteCrypto
+type Update = PParams.Update ConcreteCrypto
 
-type Applications = Updates.Applications ConcreteCrypto
-
-type InstallerHash = Updates.InstallerHash ConcreteCrypto
-
-type Update = Updates.Update ConcreteCrypto
-
-type UpdateState = Updates.UpdateState ConcreteCrypto
-
-type PPUpdate = Updates.PPUpdate ConcreteCrypto
-
-type AVUpdate = Updates.AVUpdate ConcreteCrypto
+type ProposedPPUpdates = PParams.ProposedPPUpdates ConcreteCrypto
 
 type VRFKeyHash = Keys.Hash ShortHash (Keys.VerKeyVRF FakeVRF)
 

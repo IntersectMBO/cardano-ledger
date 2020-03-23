@@ -1,5 +1,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Block
   ( genBlock
@@ -27,7 +28,7 @@ import           Shelley.Spec.Ledger.LedgerState (pattern EpochState, pattern Ne
                      esLState, esPp, getGKeys, nesEL, nesEs, nesOsched, nesPd, overlaySchedule,
                      _delegationState, _dstate, _genDelegs, _reserves)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams (_activeSlotCoeff), activeSlotVal)
+import           Shelley.Spec.Ledger.PParams (PParams' (_activeSlotCoeff), activeSlotVal)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Chain (chainEpochNonce, chainLastAppliedBlock, chainNes,
                      chainOCertIssue)

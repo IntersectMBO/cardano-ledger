@@ -50,13 +50,12 @@ import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable,
                      hash, sKey, sign, vKey, verify)
-import           Shelley.Spec.Ledger.PParams (PParams (..))
+import           Shelley.Spec.Ledger.PParams (PParams, Update)
 import           Shelley.Spec.Ledger.Tx (Tx (..))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), pattern DeRegKey,
                      pattern Delegate, pattern Delegation, PoolCert (..), PoolParams (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..),
-                     WitVKey (..), getRwdCred)
-import           Shelley.Spec.Ledger.Updates (Update)
+                     TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..), WitVKey (..),
+                     getRwdCred)
 
 import           Data.Coerce (coerce)
 import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), StakePools (..), dvalue,
@@ -190,7 +189,7 @@ totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
     notRegisteredPool _ = True
     cs' = filter notRegisteredPool cs
 
-txup :: Tx crypto -> Update crypto
+txup :: Tx crypto -> Maybe (Update crypto)
 txup (Tx txbody _ _ _) = _txUpdate txbody
 
 -- | Extract script hash from value address with script.

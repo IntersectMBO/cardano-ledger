@@ -23,7 +23,6 @@ import           Shelley.Spec.Ledger.LedgerState (DState (..), PState (..), UTxO
                      stakeDistr, _deposited, _fees)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Updates
 import           Shelley.Spec.Ledger.UTxO
 
 data SNAP crypto
@@ -48,7 +47,7 @@ instance STS (SNAP crypto) where
     deriving (Show, Generic, Eq)
 
   initialRules =
-    [pure $ SnapState emptySnapShots (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)]
+    [pure $ SnapState emptySnapShots (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)]
   transitionRules = [snapTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (SNAP crypto))

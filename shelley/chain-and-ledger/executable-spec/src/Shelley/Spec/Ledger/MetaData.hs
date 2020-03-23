@@ -28,7 +28,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Codec.CBOR.Term as CBOR
 
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.Serialization (CBORMap (..))
+import           Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
 data MetaDatum
@@ -45,10 +45,10 @@ newtype MetaData = MetaData (Map Word64 MetaDatum)
   deriving (Eq, Show, Generic, NoUnexpectedThunks)
 
 instance ToCBOR MetaData where
-  toCBOR (MetaData m) = toCBOR (CBORMap m)
+  toCBOR (MetaData m) = mapToCBOR m
 
 instance FromCBOR MetaData where
-  fromCBOR = MetaData . unwrapCBORMap <$> fromCBOR
+  fromCBOR = MetaData <$> mapFromCBOR
 
 type CBORToDataError = String
 

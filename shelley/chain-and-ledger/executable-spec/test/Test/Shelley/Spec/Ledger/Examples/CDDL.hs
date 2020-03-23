@@ -30,34 +30,33 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Shelley.Spec.Ledger.MetaData (MetaData)
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import           Shelley.Spec.Ledger.Serialization
-import           Shelley.Spec.Ledger.Updates (PParamsUpdate)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (AVUpdate, Addr, BHBody, BHeader,
-                     Credential, DCert, LaxBlock, MultiSig, OCert, PPUpdate, Tx, TxBody, TxIn,
-                     TxOut, Update)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, BHeader, Credential,
+                     DCert, LaxBlock, MultiSig, OCert, ProposedPPUpdates, Tx, TxBody, TxIn, TxOut,
+                     Update)
 
 cddlTests :: TestTree
 cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [
-      cddlGroupTest @BHeader  n "header"
-    , cddlGroupTest @BHBody   n "header_body"
-    , cddlGroupTest @OCert    n "operational_cert"
-    , cddlGroupTest @Addr     n "address"
-    , cddlTest @Credential    n "credential"
-    , cddlTest @TxBody        n "transaction_body"
-    , cddlTest @TxOut         n "transaction_output"
-    , cddlTest @DCert         n "delegation_certificate"
-    , cddlTest @TxIn          n "transaction_input"
-    , cddlTest @MetaData      n "transaction_metadata"
-    , cddlTest @MultiSig      n "script"
-    , cddlTest @Update        n "full_update"
-    , cddlTest @AVUpdate      n "application_version_update_votes"
-    , cddlTest @PPUpdate      n "protocol_param_update_votes"
-    , cddlTest @PParamsUpdate n "protocol_param_update"
-    , cddlTest @Tx            n "transaction"
-    , cddlTest @LaxBlock      n "block"
+      cddlGroupTest @BHeader      n "header"
+    , cddlGroupTest @BHBody       n "header_body"
+    , cddlGroupTest @OCert        n "operational_cert"
+    , cddlGroupTest @Addr         n "address"
+    , cddlTest @Credential        n "credential"
+    , cddlTest @TxBody            n "transaction_body"
+    , cddlTest @TxOut             n "transaction_output"
+    , cddlTest @DCert             n "delegation_certificate"
+    , cddlTest @TxIn              n "transaction_input"
+    , cddlTest @MetaData          n "transaction_metadata"
+    , cddlTest @MultiSig          n "script"
+    , cddlTest @Update            n "update"
+    , cddlTest @ProposedPPUpdates n "proposed_protocol_parameter_updates"
+    , cddlTest @PParamsUpdate     n "protocol_param_update"
+    , cddlTest @Tx                n "transaction"
+    , cddlTest @LaxBlock          n "block"
     ] <*> pure cddl
   where
     n = 1

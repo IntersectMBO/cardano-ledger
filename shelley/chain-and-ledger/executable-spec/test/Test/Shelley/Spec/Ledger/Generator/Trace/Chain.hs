@@ -15,7 +15,7 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
 import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, empty, fromList, keysSet)
+import qualified Data.Map.Strict as Map (elems, fromList, keysSet)
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
@@ -28,19 +28,17 @@ import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition (IRC (..))
 import           Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace, envGen,
                      interpretSTS, shrinkSignal, sigGen)
-import           Shelley.Spec.Ledger.BaseTypes (Globals, text64)
+import           Shelley.Spec.Ledger.BaseTypes (Globals)
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..),
                      hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, hash)
 import           Shelley.Spec.Ledger.LedgerState (overlaySchedule)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Chain (initialShelleyState)
-import           Shelley.Spec.Ledger.Updates (ApName (..), ApVer (..), pattern Applications,
-                     pattern Mdt)
 import           Shelley.Spec.Ledger.UTxO (balance)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Applications, CHAIN, ChainState,
-                     GenDelegs, HashHeader, KeyHash)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, ChainState, GenDelegs,
+                     HashHeader, KeyHash)
 import           Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (maxGenesisUTxOouts, maxSlotTrace,
                      minGenesisUTxOouts, minSlotTrace)
@@ -76,15 +74,6 @@ instance HasTrace CHAIN Word64 where
 lastByronHeaderHash :: HashHeader
 lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 
-byronApps :: Applications
-byronApps = Applications $ Map.fromList
-                            [ (ApName $ text64 "Daedalus", (ApVer 16, Mdt Map.empty))
-                            , (ApName $ text64 "Yoroi", (ApVer 4, Mdt Map.empty))
-                            , (ApName $ text64 "Ahoy", (ApVer 7, Mdt Map.empty))
-                            , (ApName $ text64 "Shebang", (ApVer 11, Mdt Map.empty))
-                            , (ApName $ text64 "Icarus", (ApVer 13, Mdt Map.empty))
-                            ]
-
 -- Note: this function must be usable in place of 'applySTS' and needs to align
 -- with the signature 'RuleContext sts -> Gen (Either [[PredicateFailure sts]] (State sts))'.
 -- To achieve this we (1) use 'IRC CHAIN' (the "initial rule context") instead of simply 'Chain Env'
@@ -108,7 +97,6 @@ mkGenesisChainState (IRC _slotNo) = do
     (maxLLSupply - balance utxo0)
     delegs0
     osched_
-    byronApps
     pParams
     (hashHeaderToNonce lastByronHeaderHash)
   where

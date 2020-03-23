@@ -2,78 +2,108 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | This module contains just the type of protocol parameters.
 module Shelley.Spec.Ledger.PParams
-  ( PParams(..)
+  ( PParams'(..)
+  , PParams
   , emptyPParams
   , ActiveSlotCoeff
   , mkActiveSlotCoeff
   , activeSlotVal
   , activeSlotLog
   , ProtVer(..)
+  , PPUpdateEnv(..)
+  , ProposedPPUpdates(..)
+  , emptyPPPUpdates
+  , PParamsUpdate
+  , Update(..)
+  , updatePParams
   ) where
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Control.Monad (unless)
+import           Data.Foldable (fold)
+import           Data.Functor.Identity (Identity)
+import           Data.List (nub)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen,
+                     encodeMapLen, encodeWord, enforceSize)
+import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Prelude (NoUnexpectedThunks (..), catMaybes)
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, Nonce (NeutralNonce), UnitInterval,
-                     fpPrecision, interval0, intervalValue)
+                     fpPrecision, interval0, intervalValue, invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
-                     ToCBORGroup (..), rationalFromCBOR, rationalToCBOR)
-import           Shelley.Spec.Ledger.Slot (EpochNo (..))
-
+                     ToCBORGroup (..), decodeMapContents, mapFromCBOR, mapToCBOR, rationalFromCBOR,
+                     rationalToCBOR)
+import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import           Shelley.Spec.NonIntegral (ln')
 
 
+type family HKD f a where
+  HKD Identity a = a
+  HKD f        a = f a
+
 -- | Protocol parameters
-data PParams = PParams
+data PParams' f = PParams
   { -- |The linear factor for the minimum fee calculation
-    _minfeeA         :: Integer
+    _minfeeA         :: HKD f Natural
     -- |The constant factor for the minimum fee calculation
-  , _minfeeB         :: Natural
+  , _minfeeB         :: HKD f Natural
     -- | Maximal block body size
-  , _maxBBSize       :: Natural
+  , _maxBBSize       :: HKD f Natural
     -- | Maximal transaction size
-  , _maxTxSize       :: Natural
+  , _maxTxSize       :: HKD f Natural
     -- | Maximal block header size
-  , _maxBHSize       :: Natural
+  , _maxBHSize       :: HKD f Natural
     -- |The amount of a key registration deposit
-  , _keyDeposit      :: Coin
+  , _keyDeposit      :: HKD f Coin
     -- |The minimum percent refund guarantee
-  , _keyMinRefund    :: UnitInterval
+  , _keyMinRefund    :: HKD f UnitInterval
     -- |The deposit decay rate
-  , _keyDecayRate    :: Rational
+  , _keyDecayRate    :: HKD f Rational
     -- |The amount of a pool registration deposit
-  , _poolDeposit     :: Coin
+  , _poolDeposit     :: HKD f Coin
     -- | The minimum percent pool refund
-  , _poolMinRefund   :: UnitInterval
+  , _poolMinRefund   :: HKD f UnitInterval
     -- | Decay rate for pool deposits
-  , _poolDecayRate   :: Rational
+  , _poolDecayRate   :: HKD f Rational
     -- | epoch bound on pool retirement
-  , _eMax            :: EpochNo
+  , _eMax            :: HKD f EpochNo
     -- | Desired number of pools
-  , _nOpt            :: Natural
+  , _nOpt            :: HKD f Natural
     -- | Pool influence
-  , _a0              :: Rational
+  , _a0              :: HKD f Rational
     -- | Treasury expansion
-  , _rho             :: UnitInterval
+  , _rho             :: HKD f UnitInterval
     -- | Monetary expansion
-  , _tau             :: UnitInterval
+  , _tau             :: HKD f UnitInterval
     -- | Active slot coefficient
-  , _activeSlotCoeff :: ActiveSlotCoeff
+  , _activeSlotCoeff :: HKD f ActiveSlotCoeff
     -- | Decentralization parameter
-  , _d               :: UnitInterval
+  , _d               :: HKD f UnitInterval
     -- | Extra entropy
-  , _extraEntropy    :: Nonce
+  , _extraEntropy    :: HKD f Nonce
     -- | Protocol version
-  , _protocolVersion :: ProtVer
-  } deriving (Show, Eq, Generic)
+  , _protocolVersion :: HKD f ProtVer
+  } deriving (Generic)
+
+type PParams = PParams' Identity
+deriving instance Eq (PParams' Identity)
+deriving instance Show (PParams' Identity)
 
 data ActiveSlotCoeff =
   ActiveSlotCoeff
@@ -232,3 +262,155 @@ emptyPParams =
      , _extraEntropy = NeutralNonce
      , _protocolVersion = ProtVer 0 0
      }
+
+-- | Update Proposal
+data Update crypto
+  = Update (ProposedPPUpdates crypto) EpochNo
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (Update crypto)
+
+instance Crypto crypto => ToCBOR (Update crypto) where
+  toCBOR (Update ppUpdate e) =
+    encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
+
+instance Crypto crypto => FromCBOR (Update crypto) where
+  fromCBOR =
+    Update <$ enforceSize "Update" 2
+      <*> fromCBOR
+      <*> fromCBOR
+
+data PPUpdateEnv crypto = PPUpdateEnv SlotNo (GenDelegs crypto)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (PPUpdateEnv crypto)
+
+type PParamsUpdate = PParams' Maybe
+deriving instance Eq (PParams' Maybe)
+deriving instance Show (PParams' Maybe)
+deriving instance Ord (PParams' Maybe)
+
+instance NoUnexpectedThunks PParamsUpdate where
+
+instance ToCBOR PParamsUpdate where
+  toCBOR ppup =
+    let l = catMaybes
+          [ encodeMapElement  0 toCBOR         =<< _minfeeA         ppup
+          , encodeMapElement  1 toCBOR         =<< _minfeeB         ppup
+          , encodeMapElement  2 toCBOR         =<< _maxBBSize       ppup
+          , encodeMapElement  3 toCBOR         =<< _maxTxSize       ppup
+          , encodeMapElement  4 toCBOR         =<< _maxBHSize       ppup
+          , encodeMapElement  5 toCBOR         =<< _keyDeposit      ppup
+          , encodeMapElement  6 toCBOR         =<< _keyMinRefund    ppup
+          , encodeMapElement  7 rationalToCBOR =<< _keyDecayRate    ppup
+          , encodeMapElement  8 toCBOR         =<< _poolDeposit     ppup
+          , encodeMapElement  9 toCBOR         =<< _poolMinRefund   ppup
+          , encodeMapElement 10 rationalToCBOR =<< _poolDecayRate   ppup
+          , encodeMapElement 11 toCBOR         =<< _eMax            ppup
+          , encodeMapElement 12 toCBOR         =<< _nOpt            ppup
+          , encodeMapElement 13 rationalToCBOR =<< _a0              ppup
+          , encodeMapElement 14 toCBOR         =<< _rho             ppup
+          , encodeMapElement 15 toCBOR         =<< _tau             ppup
+          , encodeMapElement 16 toCBOR         =<< _activeSlotCoeff ppup
+          , encodeMapElement 17 toCBOR         =<< _d               ppup
+          , encodeMapElement 18 toCBOR         =<< _extraEntropy    ppup
+          , encodeMapElement 19 toCBOR         =<< _protocolVersion ppup
+          ]
+        n = fromIntegral $ length l
+    in encodeMapLen n <> fold l
+    where
+      encodeMapElement ix encoder x = Just (encodeWord ix <> encoder x)
+
+emptyPParamsUpdate :: PParamsUpdate
+emptyPParamsUpdate   = PParams
+  { _minfeeA         = Nothing
+  , _minfeeB         = Nothing
+  , _maxBBSize       = Nothing
+  , _maxTxSize       = Nothing
+  , _maxBHSize       = Nothing
+  , _keyDeposit      = Nothing
+  , _keyMinRefund    = Nothing
+  , _keyDecayRate    = Nothing
+  , _poolDeposit     = Nothing
+  , _poolMinRefund   = Nothing
+  , _poolDecayRate   = Nothing
+  , _eMax            = Nothing
+  , _nOpt            = Nothing
+  , _a0              = Nothing
+  , _rho             = Nothing
+  , _tau             = Nothing
+  , _activeSlotCoeff = Nothing
+  , _d               = Nothing
+  , _extraEntropy    = Nothing
+  , _protocolVersion = Nothing
+  }
+
+instance FromCBOR PParamsUpdate where
+   fromCBOR = do
+     mapParts <- decodeMapContents $
+       decodeWord >>= \case
+         0  -> fromCBOR         >>= \x -> pure ( 0, \up -> up { _minfeeA         = Just x })
+         1  -> fromCBOR         >>= \x -> pure ( 1, \up -> up { _minfeeB         = Just x })
+         2  -> fromCBOR         >>= \x -> pure ( 2, \up -> up { _maxBBSize       = Just x })
+         3  -> fromCBOR         >>= \x -> pure ( 3, \up -> up { _maxTxSize       = Just x })
+         4  -> fromCBOR         >>= \x -> pure ( 4, \up -> up { _maxBHSize       = Just x })
+         5  -> fromCBOR         >>= \x -> pure ( 5, \up -> up { _keyDeposit      = Just x })
+         6  -> fromCBOR         >>= \x -> pure ( 6, \up -> up { _keyMinRefund    = Just x })
+         7  -> rationalFromCBOR >>= \x -> pure ( 7, \up -> up { _keyDecayRate    = Just x })
+         8  -> fromCBOR         >>= \x -> pure ( 8, \up -> up { _poolDeposit     = Just x })
+         9  -> fromCBOR         >>= \x -> pure ( 9, \up -> up { _poolMinRefund   = Just x })
+         10 -> rationalFromCBOR >>= \x -> pure (10, \up -> up { _poolDecayRate   = Just x })
+         11 -> fromCBOR         >>= \x -> pure (11, \up -> up { _eMax            = Just x })
+         12 -> fromCBOR         >>= \x -> pure (12, \up -> up { _nOpt            = Just x })
+         13 -> rationalFromCBOR >>= \x -> pure (13, \up -> up { _a0              = Just x })
+         14 -> fromCBOR         >>= \x -> pure (14, \up -> up { _rho             = Just x })
+         15 -> fromCBOR         >>= \x -> pure (15, \up -> up { _tau             = Just x })
+         16 -> fromCBOR         >>= \x -> pure (16, \up -> up { _activeSlotCoeff = Just x })
+         17 -> fromCBOR         >>= \x -> pure (17, \up -> up { _d               = Just x })
+         18 -> fromCBOR         >>= \x -> pure (18, \up -> up { _extraEntropy    = Just x })
+         19 -> fromCBOR         >>= \x -> pure (19, \up -> up { _protocolVersion = Just x })
+         k -> invalidKey k
+     let fields = fst <$> mapParts :: [Int]
+     unless (nub fields == fields)
+       (fail $ "duplicate keys: " <> show fields)
+     pure $ foldr ($) emptyPParamsUpdate (snd <$> mapParts)
+
+-- | Update operation for protocol parameters structure @PParams
+newtype ProposedPPUpdates crypto
+  = ProposedPPUpdates (Map (GenKeyHash crypto) PParamsUpdate)
+  deriving (Show, Eq, Generic)
+
+instance NoUnexpectedThunks (ProposedPPUpdates crypto)
+
+instance Crypto crypto => ToCBOR (ProposedPPUpdates crypto) where
+  toCBOR (ProposedPPUpdates m) = mapToCBOR m
+
+instance Crypto crypto => FromCBOR (ProposedPPUpdates crypto) where
+  fromCBOR = ProposedPPUpdates <$> mapFromCBOR
+
+emptyPPPUpdates :: ProposedPPUpdates crypto
+emptyPPPUpdates = ProposedPPUpdates Map.empty
+
+updatePParams :: PParams -> PParamsUpdate -> PParams
+updatePParams pp ppup = PParams
+  { _minfeeA = fromMaybe (_minfeeA pp) (_minfeeA ppup)
+  , _minfeeB = fromMaybe (_minfeeB pp) (_minfeeB ppup)
+  , _maxBBSize = fromMaybe (_maxBBSize pp) (_maxBBSize ppup)
+  , _maxTxSize = fromMaybe (_maxTxSize pp) (_maxTxSize ppup)
+  , _maxBHSize = fromMaybe (_maxBHSize pp) (_maxBHSize ppup)
+  , _keyDeposit = fromMaybe (_keyDeposit pp) (_keyDeposit ppup)
+  , _keyMinRefund = fromMaybe (_keyMinRefund pp) (_keyMinRefund ppup)
+  , _keyDecayRate = fromMaybe (_keyDecayRate pp) (_keyDecayRate ppup)
+  , _poolDeposit = fromMaybe (_poolDeposit pp) (_poolDeposit ppup)
+  , _poolMinRefund = fromMaybe (_poolMinRefund pp) (_poolMinRefund ppup)
+  , _poolDecayRate = fromMaybe (_poolDecayRate pp) (_poolDecayRate ppup)
+  , _eMax = fromMaybe (_eMax pp) (_eMax ppup)
+  , _nOpt = fromMaybe (_nOpt pp) (_nOpt ppup)
+  , _a0 = fromMaybe (_a0 pp) (_a0 ppup)
+  , _rho = fromMaybe (_rho pp) (_rho ppup)
+  , _tau = fromMaybe (_tau pp) (_tau ppup)
+  , _activeSlotCoeff = fromMaybe (_activeSlotCoeff pp) (_activeSlotCoeff ppup)
+  , _d = fromMaybe (_d pp) (_d ppup)
+  , _extraEntropy = fromMaybe (_extraEntropy pp) (_extraEntropy ppup)
+  , _protocolVersion = fromMaybe (_protocolVersion pp) (_protocolVersion ppup)
+  }

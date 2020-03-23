@@ -37,9 +37,8 @@ import           Shelley.Spec.Ledger.LedgerState (UTxOState (..), consumed, deca
                      minfee, produced, txsize)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.STS.Up
+import           Shelley.Spec.Ledger.STS.Ppup
 import           Shelley.Spec.Ledger.Tx
-import           Shelley.Spec.Ledger.Updates (emptyUpdateState)
 import           Shelley.Spec.Ledger.UTxO
 
 data UTXO crypto
@@ -69,7 +68,7 @@ instance
     | FeeTooSmallUTxO Coin Coin
     | ValueNotConservedUTxO Coin Coin
     | NegativeOutputsUTxO
-    | UpdateFailure (PredicateFailure (UP crypto))
+    | UpdateFailure (PredicateFailure (PPUP crypto))
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -134,7 +133,7 @@ instance
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do
   IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 
 utxoInductive
   :: forall crypto
@@ -142,7 +141,7 @@ utxoInductive
   => TransitionRule (UTXO crypto)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo deposits' fees ups = u
+  let UTxOState utxo deposits' fees ppup = u
   let txb = _body tx
 
   _ttl txb >= slot ?! ExpiredUTxO (_ttl txb) slot
@@ -159,8 +158,8 @@ utxoInductive = do
       produced_ = produced pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
-  -- process Update Proposals
-  ups' <- trans @(UP crypto) $ TRC (UpdateEnv slot pp genDelegs, ups, txup tx)
+  -- process Protocol Parameter Update Proposals
+  ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
   all (0 <=) outputCoins ?! NegativeOutputsUTxO
@@ -178,10 +177,10 @@ utxoInductive = do
         { _utxo      = (txins txb ⋪ utxo) ∪ txouts txb
         , _deposited = deposits' + depositChange
         , _fees      = fees + (_txfee txb) + decayed
-        , _ups       = ups'
+        , _ppups     = ppup'
         }
 
 instance Crypto crypto
-  => Embed (UP crypto) (UTXO crypto)
+  => Embed (PPUP crypto) (UTXO crypto)
  where
   wrapFailed = UpdateFailure

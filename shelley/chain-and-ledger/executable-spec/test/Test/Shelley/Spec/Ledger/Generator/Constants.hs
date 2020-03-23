@@ -133,7 +133,7 @@ maxSlotTrace = 5000
 frequencyLowMaxEpoch :: Word64
 frequencyLowMaxEpoch = 6
 
-maxMinFeeA :: Integer
+maxMinFeeA :: Natural
 maxMinFeeA = 1000
 
 maxMinFeeB :: Natural

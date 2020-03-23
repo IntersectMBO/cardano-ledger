@@ -24,7 +24,6 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState, DState (..), PSt
                      pattern UTxOState, clearPpup, emptyAccount, _deposited, _irwd, _reserves)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Updates
 import           Shelley.Spec.Ledger.UTxO
 
 data NEWPP crypto
@@ -51,7 +50,7 @@ instance NoUnexpectedThunks (PredicateFailure (NEWPP crypto))
 
 initialNewPp :: InitialRule (NEWPP crypto)
 initialNewPp = pure $ NewppState
-  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState)
+  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)
   emptyAccount
   emptyPParams
 

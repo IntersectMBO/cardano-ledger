@@ -33,13 +33,11 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..
                      EpochState (..), LedgerState (..), NewEpochState (..), PState (..),
                      UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams, ProtVer (..), _maxBBSize, _maxBHSize,
-                     _protocolVersion)
+import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), ProtVer (..),
+                     _maxBBSize, _maxBHSize, _protocolVersion)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import           Shelley.Spec.Ledger.Tx (TxBody)
-import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Applications, PPUpdate (..),
-                     UpdateState (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
 import qualified Cardano.Crypto.VRF as VRF
@@ -72,11 +70,10 @@ initialShelleyState
   -> Coin
   -> Map (GenKeyHash crypto) (KeyHash crypto)
   -> Map SlotNo (Maybe (GenKeyHash crypto))
-  -> Applications crypto
   -> PParams
   -> Nonce
   -> ChainState crypto
-initialShelleyState lab e utxo reserves genDelegs os apps pp initNonce =
+initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
   ChainState
     (NewEpochState
        e
@@ -90,7 +87,7 @@ initialShelleyState lab e utxo reserves genDelegs os apps pp initNonce =
              utxo
              (Coin 0)
              (Coin 0)
-             (UpdateState (PPUpdate Map.empty) (AVUpdate Map.empty) Map.empty apps)
+             (ProposedPPUpdates Map.empty)
            )
            (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
          )

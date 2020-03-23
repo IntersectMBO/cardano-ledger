@@ -19,7 +19,7 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (CHAINExample (..), alicePay, bobPay,
                      carlPay, dariaPay, ex1, ex2A, ex2B, ex2C, ex2Cbis, ex2Cquater, ex2Cter, ex2D,
                      ex2E, ex2F, ex2G, ex2H, ex2I, ex2J, ex2K, ex2L, ex3A, ex3B, ex3C, ex4A, ex4B,
-                     ex4C, ex5A, ex5B, ex6A, ex6B, ex6C, ex6D, ex6E, ex6F', test6F)
+                     ex5A, ex5B, ex5C, ex5D, ex5E, ex5F', test5F)
 import           Test.Shelley.Spec.Ledger.Examples.MultiSigExamples (aliceAndBob, aliceAndBobOrCarl,
                      aliceAndBobOrCarlAndDaria, aliceAndBobOrCarlOrDaria, aliceOnly, aliceOrBob,
                      applyTxWithScript, bobOnly)
@@ -63,17 +63,14 @@ stsTests = testGroup "STS Tests"
   , testCase "CHAIN example 3A - get 3/7 votes for a pparam update" $ testCHAINExample ex3A
   , testCase "CHAIN example 3B - get 5/7 votes for a pparam update" $ testCHAINExample ex3B
   , testCase "CHAIN example 3C - processes a pparam update" $ testCHAINExample ex3C
-  , testCase "CHAIN example 4A - get 3/7 votes for a version update" $ testCHAINExample ex4A
-  , testCase "CHAIN example 4B - create a future app version" $ testCHAINExample ex4B
-  , testCase "CHAIN example 4C - adopt a future app version" $ testCHAINExample ex4C
-  , testCase "CHAIN example 5A - stage genesis key delegation" $ testCHAINExample ex5A
-  , testCase "CHAIN example 5B - adopt genesis key delegation" $ testCHAINExample ex5B
-  , testCase "CHAIN example 6A - create MIR cert" $ testCHAINExample ex6A
-  , testCase "CHAIN example 6B - FAIL: insufficient core node signatures" $ testCHAINExample ex6B
-  , testCase "CHAIN example 6C - FAIL: MIR impossible in decentralized network" $ testCHAINExample ex6C
-  , testCase "CHAIN example 6D - FAIL: MIR impossible (decentralized and insufficient sigs)" $ testCHAINExample ex6D
-  , testCase "CHAIN example 6E - FAIL: MIR insufficient reserves" $ testCHAINExample ex6E
-  , testCase "CHAIN example 6F - apply MIR at epoch boundary" test6F
+  , testCase "CHAIN example 4A - stage genesis key delegation" $ testCHAINExample ex4A
+  , testCase "CHAIN example 4B - adopt genesis key delegation" $ testCHAINExample ex4B
+  , testCase "CHAIN example 5A - create MIR cert" $ testCHAINExample ex5A
+  , testCase "CHAIN example 5B - FAIL: insufficient core node signatures" $ testCHAINExample ex5B
+  , testCase "CHAIN example 5C - FAIL: MIR impossible in decentralized network" $ testCHAINExample ex5C
+  , testCase "CHAIN example 5D - FAIL: MIR impossible (decentralized and insufficient sigs)" $ testCHAINExample ex5D
+  , testCase "CHAIN example 5E - FAIL: MIR insufficient reserves" $ testCHAINExample ex5E
+  , testCase "CHAIN example 5F - apply MIR at epoch boundary" test5F
   , testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda ex1
   , testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda ex2A
   , testCase "CHAIN example 2B - Preservation of ADA" $ testPreservationOfAda ex2B
@@ -92,12 +89,9 @@ stsTests = testGroup "STS Tests"
   , testCase "CHAIN example 3C - Preservation of ADA" $ testPreservationOfAda ex3C
   , testCase "CHAIN example 4A - Preservation of ADA" $ testPreservationOfAda ex4A
   , testCase "CHAIN example 4B - Preservation of ADA" $ testPreservationOfAda ex4B
-  , testCase "CHAIN example 4C - Preservation of ADA" $ testPreservationOfAda ex4C
   , testCase "CHAIN example 5A - Preservation of ADA" $ testPreservationOfAda ex5A
-  , testCase "CHAIN example 5B - Preservation of ADA" $ testPreservationOfAda ex5B
-  , testCase "CHAIN example 6A - Preservation of ADA" $ testPreservationOfAda ex6A
-  , testCase "CHAIN example 6F - Preservation of ADA" $
-      (totalAda (fromRight (error "CHAIN example 6F" ) ex6F') @?= maxLLSupply)
+  , testCase "CHAIN example 5F - Preservation of ADA" $
+      (totalAda (fromRight (error "CHAIN example 5F" ) ex5F') @?= maxLLSupply)
   , testCase "Alice uses SingleSig script" testAliceSignsAlone
   , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
   , testCase "Everybody signs in multi-sig" testEverybodySigns

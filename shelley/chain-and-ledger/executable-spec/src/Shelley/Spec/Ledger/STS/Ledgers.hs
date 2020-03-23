@@ -37,7 +37,6 @@ import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import           Shelley.Spec.Ledger.Tx
-import           Shelley.Spec.Ledger.Updates (Applications (..), UpdateState (..), apps, newAVs)
 
 data LEDGERS crypto
 
@@ -97,13 +96,10 @@ ledgersTransition = do
         (u, dp)
       $ zip [0 ..] $ toList txwits
 
-  let UTxOState utxo deposits fee us = u''
-  let UpdateState ppup aup favs avs = us
+  let UTxOState utxo deposits fee ppup = u''
   let ds = _dstate dp''
   let DState _ _ _ _ fGenDelegs_ (GenDelegs genDelegs_) _ = ds
 
-  let (favs', ready) = Map.partitionWithKey (\s _ -> s > slot) favs
-  let avs' = Applications $ apps avs ⨃ (Map.toList . apps $ newAVs avs ready)
   let (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
   let maxSlotNo = maximum . Set.map fst . Map.keysSet
   let latestPerGKey gk =
@@ -114,7 +110,7 @@ ledgersTransition = do
                   (Set.map snd (Map.keysSet curr))
   let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr
 
-  let u''' = UTxOState utxo deposits fee (UpdateState ppup aup favs' avs')
+  let u''' = UTxOState utxo deposits fee ppup
   let dp''' = dp'' { _dstate = ds { _fGenDelegs = fGenDelegs'
                                   , _genDelegs = GenDelegs $ genDelegs_ ⨃ Map.toList genDelegs'
                                   }

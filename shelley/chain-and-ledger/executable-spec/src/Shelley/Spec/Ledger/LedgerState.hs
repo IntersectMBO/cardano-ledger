@@ -94,7 +94,9 @@ import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHas
                      KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
                      undiscriminateKeyHash)
 import qualified Shelley.Spec.Ledger.MetaData as MD
-import           Shelley.Spec.Ledger.PParams (PParams (..), activeSlotVal, emptyPParams)
+import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), Update (..),
+                     activeSlotVal, emptyPPPUpdates, emptyPParams, _activeSlotCoeff, _d,
+                     _keyDecayRate, _keyDeposit, _keyMinRefund, _minfeeA, _minfeeB, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoFirst, epochInfoSize, (+*), (-*))
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
@@ -102,8 +104,6 @@ import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCe
                      MIRCert (..), PoolCert (..), PoolMetaData (..), PoolParams (..), Ptr (..),
                      RewardAcnt (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), Url (..),
                      Wdrl (..), getRwdCred, witKeyHash)
-import           Shelley.Spec.Ledger.Updates (AVUpdate (..), Mdt (..), PPUpdate (..), Update (..),
-                     UpdateState (..), apps, emptyUpdate, emptyUpdateState)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins,
                      txouts, txup, verifyWitVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
@@ -305,7 +305,7 @@ instance Crypto crypto => FromCBOR (EpochState crypto)
     pure $ EpochState a s l p n
 
 emptyUTxOState :: UTxOState crypto
-emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyUpdateState
+emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 
 emptyEpochState :: EpochState crypto
 emptyEpochState =
@@ -339,16 +339,14 @@ emptyPState =
 clearPpup
   :: UTxOState crypto
   -> UTxOState crypto
-clearPpup utxoSt =
-  let UpdateState _ avup faps aps = _ups utxoSt
-  in utxoSt {_ups = UpdateState (PPUpdate Map.empty) avup faps aps}
+clearPpup utxoSt = utxoSt {_ppups = emptyPPPUpdates}
 
 data UTxOState crypto=
     UTxOState
     { _utxo      :: !(UTxO crypto)
     , _deposited :: Coin
     , _fees      :: Coin
-    , _ups       :: UpdateState crypto
+    , _ppups     :: ProposedPPUpdates crypto
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (UTxOState crypto)
@@ -456,7 +454,7 @@ genesisId =
    (Wdrl Map.empty)
    (Coin 0)
    (SlotNo 0)
-   emptyUpdate
+   Nothing
    Nothing)
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
@@ -478,7 +476,7 @@ genesisState genDelegs0 utxo0 = LedgerState
     utxo0
     (Coin 0)
     (Coin 0)
-    emptyUpdateState)
+    emptyPPPUpdates)
   (DPState dState emptyPState)
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
@@ -511,7 +509,7 @@ validInputs tx u =
 -- |Implementation of abstract transaction size
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
 txsize (Tx
-          (TxBody ins outs cs ws _ _ (Update (PPUpdate ppup) (AVUpdate avup) _) mdh)
+          (TxBody ins outs cs ws _ _ up mdh)
           vKeySigs
           msigScripts
           md) =
@@ -601,14 +599,12 @@ txsize (Tx
                + labelSize + unitInterval -- d. decentralization constant
                + labelSize + uint         -- extra entropy
                + labelSize + protoVersion -- protocol version
-    ppupSize = mapPrefix + (toInteger $ length ppup) * (hashObj + params)
-    avupSize = mapPrefix + (sum $ fmap appsSize avup)
-    appsSize as = hashObj + mapPrefix + (sum $ fmap appMDSize (apps as))
-    nameSize = 12
-    sysTagSize = 10
-    appMDSize (_av, (Mdt m)) = nameSize + arrayPrefix + uint + mapPrefix
-                             + (toInteger $ length m) * (sysTagSize + hashObj)
-    uSize = arrayPrefix + ppupSize + avupSize + smallArray + uint
+    uSize = case up of
+      Nothing -> arrayPrefix
+      Just (Update (ProposedPPUpdates ppup) _) ->
+        arrayPrefix
+        + mapPrefix + (toInteger $ length ppup) * (hashObj + params)  -- ppup
+        + uint -- epoch
 
     mdhSize = if mdh == Nothing then arrayPrefix else arrayPrefix + hashObj
 
@@ -625,7 +621,7 @@ txsize (Tx
 
 -- |Minimum fee calculation
 minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
-minfee pp tx = Coin $ _minfeeA pp * txsize tx + fromIntegral (_minfeeB pp)
+minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
 -- |Determine if the fee is large enough
 validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Validity
@@ -854,12 +850,13 @@ validRuleUTXOW tx d' l = verifiedWits tx
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits
-  :: Update crypto
+  :: Maybe (Update crypto)
   -> GenDelegs crypto
   -> Set (KeyHash crypto)
-propWits (Update (PPUpdate pup) (AVUpdate aup') _) (GenDelegs _genDelegs) =
+propWits Nothing _ = Set.empty
+propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs _genDelegs) =
   Set.fromList $ Map.elems updateKeys
-  where updateKeys = (Map.keysSet pup `Set.union` Map.keysSet aup') ◁ _genDelegs
+  where updateKeys = Map.keysSet pup ◁ _genDelegs
 
 validTx
   :: ( Crypto crypto

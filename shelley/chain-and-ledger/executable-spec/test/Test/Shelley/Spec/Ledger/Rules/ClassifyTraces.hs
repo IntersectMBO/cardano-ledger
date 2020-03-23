@@ -31,16 +31,16 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey, isDele
                      isGenesisDelegation, isInstantaneousRewards, isRegKey, isRegPool,
                      isRetirePool)
 import           Shelley.Spec.Ledger.LedgerState (txsize)
+import           Shelley.Spec.Ledger.PParams (PParamsUpdate, pattern ProposedPPUpdates,
+                     pattern Update)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import           Shelley.Spec.Ledger.Tx (_body)
 import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey,
                      pattern Delegate, pattern Delegation, pattern RegKey, pattern ScriptHashObj,
                      pattern TxOut, Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
-import           Shelley.Spec.Ledger.Updates (pattern AVUpdate, pattern PPUpdate, PParamsUpdate,
-                     pattern Update)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Applications, Block, CHAIN, DCert,
-                     LEDGER, Tx, TxOut)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, CHAIN, DCert, LEDGER, Tx,
+                     TxOut)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (maxCertsPerTx)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
@@ -113,10 +113,6 @@ relevantCasesAreCovered = withMaxSuccess 200 . property $ do
               "at least 2% of transactions have non-trivial protocol param updates"
 
      , cover_ 60
-              (0.98 >= noAVUpdateRatio (avUpdatesByTx txs))
-              "at least 2% of transactions have non-trivial application updates"
-
-     , cover_ 60
               (2 <= epochBoundariesInTrace bs)
               "at least 2 epoch changes in trace"
 
@@ -166,21 +162,12 @@ maxCertsRatio = lenRatio (filter ((== maxCertsPerTx) . fromIntegral . length))
 ppUpdatesByTx :: [Tx] -> [[PParamsUpdate]]
 ppUpdatesByTx txs = ppUpdates . _txUpdate . _body <$> txs
   where
-    ppUpdates (Update (PPUpdate ppUpd) _ _) = Map.elems ppUpd
+    ppUpdates Nothing = mempty
+    ppUpdates (Just (Update (ProposedPPUpdates ppUpd) _)) = Map.elems ppUpd
 
 -- | Ratio of the number of empty PParamsUpdate to Updates
 noPPUpdateRatio :: [[PParamsUpdate]] -> Double
 noPPUpdateRatio = lenRatio (filter null)
-
--- | Extract non-trivial application  updates from the given transactions
-avUpdatesByTx :: [Tx] -> [[Applications]]
-avUpdatesByTx txs = avUpdates . _txUpdate . _body <$> txs
-  where
-    avUpdates (Update _ (AVUpdate avUpd) _) = Map.elems avUpd
-
--- | Ratio of the number of empty Application updates to Updates
-noAVUpdateRatio :: [[Applications]] -> Double
-noAVUpdateRatio = lenRatio (filter null)
 
 ratioInt :: Int -> Int -> Double
 ratioInt x y

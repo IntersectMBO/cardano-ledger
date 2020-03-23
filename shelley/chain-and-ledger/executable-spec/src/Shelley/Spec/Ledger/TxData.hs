@@ -38,14 +38,15 @@ import           Numeric.Natural (Natural)
 import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (Text64, UnitInterval, invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash,
-                     KeyHash, pattern KeyHash, Sig, VKey, VerKeyVRF, hashAnyKey)
+import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
+                     Sig, VKey, VerKeyVRF, hashAnyKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import           Shelley.Spec.Ledger.PParams (Update)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-import           Shelley.Spec.Ledger.Updates (Update, emptyUpdate, updateNull)
 
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..),
-                     FromCBORGroup (..), ToCBORGroup (..), decodeMapContents)
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
+                     FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, mapFromCBOR,
+                     mapToCBOR)
 
 import           Shelley.Spec.Ledger.Scripts
 
@@ -134,10 +135,10 @@ newtype Wdrl crypto = Wdrl { unWdrl :: Map (RewardAcnt crypto) Coin }
   deriving (Show, Eq, Generic, NoUnexpectedThunks)
 
 instance Crypto crypto => ToCBOR (Wdrl crypto) where
-  toCBOR = toCBOR . CBORMap . unWdrl
+  toCBOR = mapToCBOR . unWdrl
 
 instance Crypto crypto => FromCBOR (Wdrl crypto) where
-  fromCBOR = Wdrl . unwrapCBORMap <$> fromCBOR
+  fromCBOR = Wdrl <$> mapFromCBOR
 
 
 -- |A unique ID of a transaction, which is computable from the transaction.
@@ -187,10 +188,10 @@ newtype MIRCert crypto = MIRCert (Map (Credential crypto) Coin)
   deriving (Show, Generic, Eq)
 
 instance Crypto crypto => FromCBOR (MIRCert crypto) where
-  fromCBOR = MIRCert . unwrapCBORMap <$> fromCBOR
+  fromCBOR = MIRCert <$> mapFromCBOR
 
 instance Crypto crypto => ToCBOR (MIRCert crypto) where
-  toCBOR (MIRCert c) = toCBOR (CBORMap c)
+  toCBOR (MIRCert c) = mapToCBOR c
 
 -- | A heavyweight certificate.
 data DCert crypto =
@@ -215,7 +216,7 @@ data TxBody crypto
       , _wdrls    :: Wdrl crypto
       , _txfee    :: Coin
       , _ttl      :: SlotNo
-      , _txUpdate :: Update crypto
+      , _txUpdate :: Maybe (Update crypto)
       , _mdHash   :: Maybe (MetaDataHash crypto)
       } deriving (Show, Eq, Generic)
 
@@ -414,7 +415,7 @@ instance
           , encodeMapElement 3 $ _ttl txbody
           , encodeMapElementUnless null 4 $ CborSeq $ _certs txbody
           , encodeMapElementUnless (null . unWdrl) 5 $ _wdrls txbody
-          , encodeMapElementUnless (updateNull) 6 $ _txUpdate txbody
+          , encodeMapElement 6 =<< _txUpdate txbody
           , encodeMapElement 7 =<< _mdHash txbody
           ]
         n = fromIntegral $ length l
@@ -439,7 +440,7 @@ instance
          3 -> fromCBOR                     >>= \x -> pure (3, \t -> t { _ttl      = x })
          4 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
          5 -> fromCBOR                     >>= \x -> pure (5, \t -> t { _wdrls    = x })
-         6 -> fromCBOR                     >>= \x -> pure (6, \t -> t { _txUpdate = x })
+         6 -> fromCBOR                     >>= \x -> pure (6, \t -> t { _txUpdate = Just x })
          7 -> fromCBOR                     >>= \x -> pure (7, \t -> t { _mdHash   = Just x })
          k -> invalidKey k
      let requiredFields :: Map Int String
@@ -462,7 +463,7 @@ instance
           , _ttl      = SlotNo 0
           , _certs    = Seq.empty
           , _wdrls    = Wdrl Map.empty
-          , _txUpdate = emptyUpdate
+          , _txUpdate = Nothing
           , _mdHash   = Nothing
           }
 

@@ -76,8 +76,8 @@ import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue 
 import           Shelley.Spec.Ledger.OCert (OCert (..))
 import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, ProtVer (..), activeSlotLog,
                      activeSlotVal)
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CBORMap (..), CborSeq (..),
-                     FromCBORGroup (..), ToCBORGroup (..))
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
+                     FromCBORGroup (..), ToCBORGroup (..), mapFromCBOR)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), cborWitsToTx, txToCBORWits)
 import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
@@ -298,10 +298,10 @@ data Block crypto
 
 -- |Given a sequence of transactions, return a mapping
 -- from indices in the original sequence to the non-Nothing metadata value
-extractMetaData :: Seq (Tx crypto) -> CBORMap Int MetaData
+extractMetaData :: Seq (Tx crypto) -> Map Int MetaData
 extractMetaData txns =
   let metadata = Seq.mapWithIndex (\i -> \t -> (i, _metadata t)) txns
-  in CBORMap $ ((Map.mapMaybe id) . Map.fromList . toList) metadata
+  in ((Map.mapMaybe id) . Map.fromList . toList) metadata
 
 -- |Given a size and a mapping from indices to maybe metadata,
 -- return a sequence whose size is the size paramater and
@@ -327,7 +327,7 @@ blockDecoder lax = do
   let b = length bodies
       w = length wits
 
-  metadata <- constructMetaData b . unwrapCBORMap <$> fromCBOR
+  metadata <- constructMetaData b <$> mapFromCBOR
   let m = length metadata
 
   unless (lax || b == w)

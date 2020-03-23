@@ -34,7 +34,7 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..), StakePools (..),
                      decayKey, decayPool, refund)
 import           Shelley.Spec.Ledger.Keys (KeyHash)
-import           Shelley.Spec.Ledger.PParams (PParams (..))
+import           Shelley.Spec.Ledger.PParams (PParams, _a0, _nOpt)
 import           Shelley.Spec.Ledger.Slot (SlotNo, (-*))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt,
                      TxOut (..), getRwdCred)

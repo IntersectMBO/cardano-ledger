@@ -36,15 +36,14 @@ import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _body, _ttl)
-import           Shelley.Spec.Ledger.Updates
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
 
 import qualified Test.Cardano.Crypto.VRF.Fake as FakeVRF
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import           Test.Shelley.Spec.Ledger.Examples.Fees (sizeTests)
 import           Test.Shelley.Spec.Ledger.Generator.Core (unitIntervalToNatural)
 import           Test.Shelley.Spec.Ledger.PreSTSGenerator (asStateTransition)
 import           Test.Shelley.Spec.Ledger.Utils
-import           Test.Shelley.Spec.Ledger.Examples.Fees (sizeTests)
 
 
 alicePay :: KeyPair
@@ -187,7 +186,7 @@ testValidWithdrawal =
            (Wdrl bobWithdrawal)
            (Coin 1000)
            (SlotNo 0)
-           emptyUpdate
+           Nothing
            Nothing
     wits = makeWitnessesVKey tx [alicePay, bobStake]
     utxo' = Map.fromList
@@ -201,7 +200,7 @@ testValidWithdrawal =
       { _dstate = dstate' {_rewards = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)}}
 
   in ls @?= Right (LedgerState
-                     (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyUpdateState)
+                     (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyPPPUpdates)
                      expectedDS
                      )
 
@@ -217,7 +216,7 @@ testInvalidWintess =
            (Wdrl Map.empty)
            (Coin 1000)
            (SlotNo 1)
-           emptyUpdate
+           Nothing
            Nothing
     tx' = tx { _ttl = SlotNo  2}
     wits = makeWitnessesVKey tx' [alicePay]
@@ -235,7 +234,7 @@ testWithdrawalNoWit =
            (Wdrl bobWithdrawal)
            (Coin 1000)
            (SlotNo 0)
-           emptyUpdate
+           Nothing
            Nothing
     wits = Set.singleton $ makeWitnessVKey tx alicePay
     ls = asStateTransition
@@ -254,7 +253,7 @@ testWithdrawalWrongAmt =
            (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
            (Coin 1000)
            (SlotNo 0)
-           emptyUpdate
+           Nothing
            Nothing
     wits = makeWitnessesVKey tx [alicePay, bobStake]
     ls =asStateTransition
@@ -275,7 +274,7 @@ aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits 
                (Wdrl Map.empty)
                fee
                s
-               emptyUpdate
+               Nothing
                Nothing
     wits = makeWitnessesVKey txbody signers
 
@@ -296,7 +295,7 @@ utxoSt1 = UTxOState
                , (TxIn (txid $ _body tx1) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 0)
             (Coin 600)
-            emptyUpdateState
+            emptyPPPUpdates
 
 ls1 :: Either [ValidationError] LedgerState
 ls1 = ledgerState [tx1]
@@ -320,7 +319,7 @@ utxoSt2 = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 300)
             (Coin 1300)
-            emptyUpdateState
+            emptyPPPUpdates
 
 tx3Body :: TxBody
 tx3Body = TxBody
@@ -333,7 +332,7 @@ tx3Body = TxBody
           (Wdrl Map.empty)
           (Coin 1200)
           (SlotNo 100)
-          emptyUpdate
+          Nothing
           Nothing
 
 tx3 :: Tx
@@ -348,7 +347,7 @@ utxoSt3 = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 2500)
-            emptyUpdateState
+            emptyPPPUpdates
 
 stakeKeyRegistration1 :: DPState
 stakeKeyRegistration1 = emptyDelegation
@@ -410,7 +409,7 @@ tx4Body = TxBody
           (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 100)
-          emptyUpdate
+          Nothing
           Nothing
 
 tx4 :: Tx
@@ -424,7 +423,7 @@ utxoSt4 = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 3500)
-            emptyUpdateState
+            emptyPPPUpdates
 
 utxo5 :: EpochNo -> UTxOState
 utxo5 e = UTxOState
@@ -434,7 +433,7 @@ utxo5 e = UTxOState
               , (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000)) ])
             (Coin 550)
             (Coin 3500)
-            emptyUpdateState
+            emptyPPPUpdates
 
 tx5Body :: EpochNo -> TxBody
 tx5Body e = TxBody
@@ -444,7 +443,7 @@ tx5Body e = TxBody
           (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 100)
-          emptyUpdate
+          Nothing
           Nothing
 
 tx5 :: EpochNo -> Tx
@@ -526,7 +525,7 @@ testWitnessNotIncluded =
               (Wdrl Map.empty)
               (Coin 596)
               (SlotNo 100)
-              emptyUpdate
+              Nothing
               Nothing
     tx = Tx txbody Set.empty Map.empty Nothing
   in ledgerState [tx] @?= Left [MissingWitnesses]
@@ -541,7 +540,7 @@ testSpendNotOwnedUTxO =
               (Wdrl Map.empty)
               (Coin 768)
               (SlotNo 100)
-              emptyUpdate
+              Nothing
               Nothing
     aliceWit = makeWitnessVKey txbody alicePay
     tx = Tx txbody (Set.fromList [aliceWit]) Map.empty Nothing
@@ -557,7 +556,7 @@ testWitnessWrongUTxO =
               (Wdrl Map.empty)
               (Coin 770)
               (SlotNo 100)
-              emptyUpdate
+              Nothing
               Nothing
     tx2body = TxBody
               (Set.fromList [TxIn genesisId 1])
@@ -566,7 +565,7 @@ testWitnessWrongUTxO =
               (Wdrl Map.empty)
               (Coin 770)
               (SlotNo 101)
-              emptyUpdate
+              Nothing
               Nothing
     aliceWit = makeWitnessVKey  tx2body alicePay
     tx = Tx txbody (Set.fromList [aliceWit]) Map.empty Nothing
@@ -584,7 +583,7 @@ testEmptyInputSet =
            (Wdrl aliceWithdrawal)
            (Coin 1000)
            (SlotNo 0)
-           emptyUpdate
+           Nothing
            Nothing
     wits = makeWitnessesVKey tx [aliceStake]
     genesisWithReward' = changeReward genesis (mkVKeyRwdAcnt aliceStake) (Coin 2000)
