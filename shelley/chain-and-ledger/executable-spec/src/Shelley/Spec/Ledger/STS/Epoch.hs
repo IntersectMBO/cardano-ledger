@@ -20,7 +20,7 @@ import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.LedgerState (pattern DPState, EpochState, pattern EpochState,
                      emptyAccount, emptyLedgerState, esAccountState, esLState, esNonMyopic, esPp,
-                     esSnapshots, _delegationState, _ppups, _utxoState)
+                     esPrevPp, esSnapshots, _delegationState, _ppups, _utxoState)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Slot
@@ -56,6 +56,7 @@ initialEpoch =
            emptySnapShots
            emptyLedgerState
            emptyPParams
+           emptyPParams
            emptyNonMyopic
 
 votedValuePParams
@@ -81,6 +82,7 @@ epochTransition = do
   TRC (_, EpochState { esAccountState = acnt
                      , esSnapshots = ss
                      , esLState = ls
+                     , esPrevPp = _pr
                      , esPp = pp
                      , esNonMyopic = nm}, e) <- judgmentContext
   let utxoSt = _utxoState ls
@@ -101,6 +103,7 @@ epochTransition = do
     acnt''
     ss'
     (ls { _utxoState = utxoSt''', _delegationState = DPState dstate' pstate' })
+    pp
     pp'
     nm
 

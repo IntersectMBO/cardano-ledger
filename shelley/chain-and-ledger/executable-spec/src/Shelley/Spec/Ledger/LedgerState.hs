@@ -281,6 +281,7 @@ data EpochState crypto
     { esAccountState :: AccountState
     , esSnapshots :: SnapShots crypto
     , esLState :: LedgerState crypto
+    , esPrevPp :: PParams
     , esPp :: PParams
     , esNonMyopic :: NonMyopic crypto
     }
@@ -290,26 +291,27 @@ instance NoUnexpectedThunks (EpochState crypto)
 
 instance Crypto crypto => ToCBOR (EpochState crypto)
  where
-  toCBOR (EpochState a s l p n) =
-    encodeListLen 4 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR p <> toCBOR n
+  toCBOR (EpochState a s l r p n) =
+    encodeListLen 6 <> toCBOR a <> toCBOR s <> toCBOR l <> toCBOR r <> toCBOR p <> toCBOR n
 
 instance Crypto crypto => FromCBOR (EpochState crypto)
  where
   fromCBOR = do
-    enforceSize "EpochState" 4
+    enforceSize "EpochState" 6
     a <- fromCBOR
     s <- fromCBOR
     l <- fromCBOR
+    r <- fromCBOR
     p <- fromCBOR
     n <- fromCBOR
-    pure $ EpochState a s l p n
+    pure $ EpochState a s l r p n
 
 emptyUTxOState :: UTxOState crypto
 emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 
 emptyEpochState :: EpochState crypto
 emptyEpochState =
-  EpochState emptyAccount emptySnapShots emptyLedgerState  emptyPParams emptyNonMyopic
+  EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
 
 getIR :: EpochState crypto -> Map (Credential crypto) Coin
 getIR = _irwd . _dstate . _delegationState . esLState
@@ -406,7 +408,7 @@ getGKeys
   -> Set (GenKeyHash crypto)
 getGKeys nes = Map.keysSet genDelegs
   where NewEpochState _ _ _ es _ _ _ = nes
-        EpochState _ _ ls _ _ = es
+        EpochState _ _ ls _ _ _ = es
         LedgerState _ (DPState (DState _ _ _ _ _ (GenDelegs genDelegs) _) _) = ls
 
 data NewEpochEnv crypto=
@@ -961,7 +963,7 @@ applyRUpd
   :: RewardUpdate crypto
   -> EpochState crypto
   -> EpochState crypto
-applyRUpd ru (EpochState as ss ls pp nm) = EpochState as' ss ls' pp nm
+applyRUpd ru (EpochState as ss ls pr pp nm) = EpochState as' ss ls' pr pp nm
   where utxoState_ = _utxoState ls
         delegState = _delegationState ls
         dState = _dstate delegState
@@ -1011,7 +1013,7 @@ createRUpd
   -> EpochState crypto
   -> Coin
   -> ShelleyBase (RewardUpdate crypto)
-createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp nm) total = do
+createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
     ei <- asks epochInfo
     slotsPerEpoch <- epochInfoSize ei e
     let SnapShot stake' delegs' poolParams = _pstakeGo ss
@@ -1019,16 +1021,16 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pp nm) total = do
         ds = _dstate $ _delegationState ls
 
         -- reserves and rewards change
-        deltaR_ = (floor $ min 1 eta * intervalValue (_rho pp) * fromIntegral reserves)
+        deltaR_ = (floor $ min 1 eta * intervalValue (_rho pr) * fromIntegral reserves)
         expectedBlocks =
-          intervalValue ((activeSlotVal . _activeSlotCoeff) pp) * fromIntegral slotsPerEpoch
+          intervalValue ((activeSlotVal . _activeSlotCoeff) pr) * fromIntegral slotsPerEpoch
         eta = fromIntegral blocksMade / expectedBlocks
 
         Coin rPot = _feeSS ss + deltaR_
-        deltaT1 = floor $ intervalValue (_tau pp) * fromIntegral rPot
+        deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
         _R = Coin $ rPot - deltaT1
 
-        (rs_, aps) = reward pp b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' total
+        (rs_, aps) = reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' total
         deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
@@ -1086,5 +1088,5 @@ updateNES
   -> LedgerState crypto
   -> NewEpochState crypto
 updateNES (NewEpochState eL bprev _
-           (EpochState acnt ss _ pp nm) ru pd osched) bcur ls =
-  NewEpochState eL bprev bcur (EpochState acnt ss ls pp nm) ru pd osched
+           (EpochState acnt ss _ pr pp nm) ru pd osched) bcur ls =
+  NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd osched

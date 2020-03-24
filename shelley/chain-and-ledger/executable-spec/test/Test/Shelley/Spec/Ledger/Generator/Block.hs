@@ -151,7 +151,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
       Left _ -> QC.discard
       Right _nes' -> do
         let NewEpochState _ _ _ es _ _ _ = _nes'
-            EpochState acnt _ ls pp' _   = es
+            EpochState acnt _ ls _ pp' _   = es
         mkBlock
           <$> pure hashheader
           <*> pure keys'
