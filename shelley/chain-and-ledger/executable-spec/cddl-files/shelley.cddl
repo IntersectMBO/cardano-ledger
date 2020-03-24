@@ -14,9 +14,9 @@ transaction = [transaction_body, transaction_witness_set, [?transaction_metadata
 transaction_index = uint
 
 header =
-  ( header_body
+  [ header_body
   , body_signature : $kes_signature
-  )
+  ]
 
 header_body =
   ( prev_hash        : ($hash / null)

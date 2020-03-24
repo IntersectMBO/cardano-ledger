@@ -59,7 +59,8 @@ import           Shelley.Spec.Ledger.MetaData (MetaData)
 
 import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR),
                      TokenType (TypeNull), decodeListLen, decodeListLenOf, decodeNull,
-                     encodeListLen, encodeNull, matchSize, peekTokenType, serializeEncoding')
+                     encodeListLen, encodeNull, matchSize, peekTokenType, serialize',
+                     serializeEncoding')
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -122,7 +123,7 @@ bhHash
   :: Crypto crypto
   => BHeader crypto
   -> HashHeader crypto
-bhHash = HashHeader . Hash.hashWithSerialiser toCBORGroup
+bhHash = HashHeader . Hash.hashWithSerialiser toCBOR
 
 -- |Hash a given block body
 bbHash
@@ -148,24 +149,24 @@ data BHeader crypto
       (BHBody crypto)
       (KESig crypto (BHBody crypto))
   deriving (Show, Generic, Eq)
-  deriving ToCBOR via (CBORGroup (BHeader crypto))
-  deriving FromCBOR via (CBORGroup (BHeader crypto))
 
 instance Crypto crypto
   => NoUnexpectedThunks (BHeader crypto)
 
 instance Crypto crypto
-  => ToCBORGroup (BHeader crypto)
+  => ToCBOR (BHeader crypto)
   where
-    listLen (BHeader bHBody _kESig) = listLen bHBody + 1
-    toCBORGroup (BHeader bHBody kESig) = toCBORGroup bHBody <> toCBOR kESig
+    toCBOR (BHeader bhBody kESig) =
+      encodeListLen (listLen bhBody + 1) <> toCBORGroup bhBody <> toCBOR kESig
 
 instance Crypto crypto
-  => FromCBORGroup (BHeader crypto)
+  => FromCBOR (BHeader crypto)
  where
-   fromCBORGroup = do
+   fromCBOR = do
+     n <- decodeListLen
      bhb <- fromCBORGroup
      sig <- fromCBOR
+     matchSize "Header" ((fromIntegral . toInteger . listLen) bhb + 1) n
      pure $ BHeader bhb sig
 
 -- |The previous hash of a block
@@ -313,15 +314,15 @@ instance Crypto crypto
   => ToCBOR (Block crypto)
  where
   toCBOR (Block h txns) =
-      encodeListLen (listLen h + listLen txns)
-        <> toCBORGroup h
+      encodeListLen (1 + listLen txns)
+        <> toCBOR h
         <> toCBORGroup txns
 
 blockDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Block crypto)
 blockDecoder lax = do
   n <- decodeListLen
-  header <- fromCBORGroup
-  matchSize "Block" ((fromIntegral . toInteger . listLen) header + 3) n
+  matchSize "Block" 4 n
+  header <- fromCBOR
   bodies <- unwrapCborSeq <$> fromCBOR
   wits <- unwrapCborSeq <$> fromCBOR
   let b = length bodies
@@ -362,7 +363,7 @@ bHeaderSize
   :: forall crypto. (Crypto crypto)
   => BHeader crypto
   -> Int
-bHeaderSize = BS.length . serializeEncoding' . toCBORGroup
+bHeaderSize = BS.length . serialize'
 
 bBodySize
   :: forall crypto. (Crypto crypto)
