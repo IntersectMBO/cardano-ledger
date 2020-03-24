@@ -12,6 +12,9 @@ The type $\PParams$ is a finite map containing all the Shelley parameters,
 indexed by their names.
 We will explain the significance of each parameter as it comes up in
 the calculations used in transition rules.
+The type $\PParamsUpdate$ is similar to $\PParams$, but is
+a partial mapping of the protocol parameters. It is used in the update
+system explained in Section~\ref{sec:update}.
 
 The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
@@ -76,8 +79,13 @@ without being explicit about the types and conversion.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{pp}
       & \PParams
+      & \Ppm \to \mathsf{T_{ppm}}
+      & \text{protocol parameters}
+      \\
+      \var{ppup}
+      & \PParamsUpdate
       & \Ppm \mapsto \mathsf{T_{ppm}}
-      & \text{protocol parameter map}
+      & \text{protocol parameter update}
       \\
       \var{coin}
       & \Coin
