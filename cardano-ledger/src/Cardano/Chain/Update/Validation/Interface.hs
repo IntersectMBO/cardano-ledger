@@ -54,7 +54,15 @@ import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.Common.KeyHash (KeyHash)
 import qualified Cardano.Chain.Delegation as Delegation
 import qualified Cardano.Chain.Genesis as Genesis
-import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotCount, SlotCount(SlotCount), unSlotNumber)
+import Cardano.Chain.ProtocolConstants (kEpochSlots)
+import Cardano.Chain.Slotting
+  ( EpochNumber
+  , SlotNumber
+  , subSlotCount
+  , SlotCount(SlotCount)
+  , epochFirstSlot
+  , unSlotNumber
+  )
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
 import Cardano.Chain.Update.ProtocolParameters
   ( ProtocolParameters
@@ -473,10 +481,9 @@ registerEpoch
   -> State
 registerEpoch env st lastSeenEpoch = do
   let PVBump.State
-        currentEpoch'
         adoptedProtocolVersion'
         nextProtocolParameters'
-        = tryBumpVersion subEnv subSt lastSeenEpoch
+        = tryBumpVersion subEnv subSt
   if adoptedProtocolVersion' == adoptedProtocolVersion
     then
       -- Nothing changes in the state, since we are not changing protocol
@@ -489,8 +496,7 @@ registerEpoch env st lastSeenEpoch = do
       -- We have a new protocol version, so we update the current protocol
       -- version and parameters, and we perform a cleanup of the state
       -- variables.
-      st { currentEpoch = currentEpoch'
-         , adoptedProtocolVersion = adoptedProtocolVersion'
+      st { adoptedProtocolVersion = adoptedProtocolVersion'
          , adoptedProtocolParameters = nextProtocolParameters'
          , candidateProtocolUpdates = []
          , registeredProtocolUpdateProposals = M.empty
@@ -501,23 +507,21 @@ registerEpoch env st lastSeenEpoch = do
          , proposalRegistrationSlot = M.empty
          }
   where
-    subEnv = PVBump.Environment k currentSlot candidateProtocolUpdates
+    subEnv = PVBump.Environment k firstSlotOfLastSeenEpoch candidateProtocolUpdates
 
     subSt =
       PVBump.State
-        currentEpoch
         adoptedProtocolVersion
         adoptedProtocolParameters
 
+    firstSlotOfLastSeenEpoch = epochFirstSlot (kEpochSlots k) lastSeenEpoch
 
     Environment
       { k
-      , currentSlot
       } = env
 
     State
-      { currentEpoch
-      , adoptedProtocolVersion
+      { adoptedProtocolVersion
       , adoptedProtocolParameters
       , candidateProtocolUpdates
       } = st

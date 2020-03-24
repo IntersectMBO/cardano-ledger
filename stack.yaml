@@ -31,7 +31,7 @@ extra-deps:
       - cardano-crypto-class
 
   - git: https://github.com/input-output-hk/cardano-ledger-specs
-    commit: 647cd71e3c4630488e71596f5e9c26fee598b541
+    commit: c006b101b699b7b54a96d077fdbad07005b8da77
     subdirs:
       - byron/semantics/executable-spec
       - byron/ledger/executable-spec
@@ -44,7 +44,7 @@ extra-deps:
   - gray-code-0.3.1
 
   - git: https://github.com/input-output-hk/iohk-monitoring-framework
-    commit: 3e45d5dd4942c295f0ea4bfed7c407b914b15447
+    commit: ef164a834ef2b2d9ceb2ec262109a726ee534d66
     subdirs:
       - contra-tracer
 

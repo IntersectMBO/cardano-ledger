@@ -9,9 +9,9 @@ where
 
 import Cardano.Prelude hiding (State)
 
-import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
+import Cardano.Chain.ProtocolConstants (kUpdateStabilityParam)
 import Cardano.Chain.Common.BlockCount (BlockCount)
-import Cardano.Chain.Slotting (EpochNumber, SlotNumber, subSlotCount)
+import Cardano.Chain.Slotting (SlotNumber, subSlotCount)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.Validation.Endorsement
@@ -23,44 +23,42 @@ import Cardano.Chain.Update.Validation.Endorsement
 
 data Environment = Environment
   { k                         :: !BlockCount
-  , currentSlot               :: !SlotNumber
+  , epochFirstSlot            :: !SlotNumber
   , candidateProtocolVersions :: ![CandidateProtocolUpdate]
   }
 
 data State = State
-  { currentEpoch              :: !EpochNumber
-  , nextProtocolVersion       :: !ProtocolVersion
+  { nextProtocolVersion       :: !ProtocolVersion
   , nextProtocolParameters    :: !ProtocolParameters
   }
 
 -- | Change the protocol version when an epoch change is detected, and there is
--- a candidate protocol update that was confirmed at least @2 * k@ slots ago,
--- where @k@ is the chain security parameter.
+-- a candidate protocol update that was confirmed at least @4 * k@ slots before
+-- the start of the new epoch, where @k@ is the chain security parameter.
+--
+-- For a full history of why this is required, see
+-- https://github.com/input-output-hk/cardano-ledger-specs/issues/1288
 --
 -- This corresponds to the @PVBUMP@ rules in the Byron ledger specification.
 tryBumpVersion
   :: Environment
   -> State
-  -> EpochNumber
   -> State
-tryBumpVersion env st lastSeenEpoch =
-  case (currentEpoch < lastSeenEpoch, stableCandidates) of
-    (True, newestStable:_) ->
+tryBumpVersion env st =
+  case stableCandidates of
+    (newestStable:_) ->
       let CandidateProtocolUpdate
             { cpuProtocolVersion
             , cpuProtocolParameters
             } = newestStable
       in
-        st { currentEpoch = lastSeenEpoch
-           , nextProtocolVersion = cpuProtocolVersion
+        st { nextProtocolVersion = cpuProtocolVersion
            , nextProtocolParameters = cpuProtocolParameters
            }
     _ -> st
 
   where
-    Environment { k, currentSlot, candidateProtocolVersions } = env
-
-    State { currentEpoch } = st
+    Environment { k, epochFirstSlot, candidateProtocolVersions } = env
 
     stableCandidates =
-      filter ((<= subSlotCount (kSlotSecurityParam k) currentSlot) . cpuSlot) candidateProtocolVersions
+      filter ((<= subSlotCount (kUpdateStabilityParam k) epochFirstSlot) . cpuSlot) candidateProtocolVersions
