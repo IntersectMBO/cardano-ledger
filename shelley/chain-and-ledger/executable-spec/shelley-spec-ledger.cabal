@@ -140,6 +140,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Examples.Serialization
                          Test.Shelley.Spec.Ledger.Examples.CDDL
                          Test.Shelley.Spec.Ledger.Examples.Fees
+                         Test.TestScenario
     hs-source-dirs:      test
     ghc-options:
       -threaded
