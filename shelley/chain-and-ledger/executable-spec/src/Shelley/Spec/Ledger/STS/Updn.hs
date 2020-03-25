@@ -44,12 +44,12 @@ instance
 instance NoUnexpectedThunks (PredicateFailure (UPDN crypto))
 
 prevHashToNonce
-  :: Nonce
-  -> PrevHash crypto
+  :: PrevHash crypto
   -> Nonce
-prevHashToNonce n = \case
-  GenesisHash -> n -- This case is impossible. The function is only called on a new epoch,
-                   -- but the GenesisHash can only occur as the first block.
+prevHashToNonce = \case
+  GenesisHash -> NeutralNonce -- This case is impossible.
+                              -- The function is only called on a new epoch,
+                              -- but the GenesisHash can only occur as the first block.
   BlockHash ph -> hashHeaderToNonce ph
 
 updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
@@ -66,4 +66,4 @@ updTransition = do
       then eta_v ⭒ eta
       else eta_c
     )
-    (if ne then (prevHashToNonce eta_h ph) else eta_h)
+    (if ne then (prevHashToNonce ph) else eta_h)
