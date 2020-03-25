@@ -6,7 +6,7 @@
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
 \newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
-\newcommand{\hashHeaderToNonce}[1]{\fun{hashHeaderToNonce}~ \var{#1}}
+\newcommand{\prevHashToNonce}[1]{\fun{prevHashToNonce}~ \var{#1}}
 
 \newcommand{\T}{\type{T}}
 \newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
@@ -54,6 +54,8 @@
 \newcommand{\ChainEnv}{\type{ChainEnv}}
 \newcommand{\ChainState}{\type{ChainState}}
 \newcommand{\ChainSig}{\type{ChainSig}}
+\newcommand{\LastAppliedBlock}{\type{LastAppliedBlock}}
+\newcommand{\lastAppliedHash}[1]{\fun{lastAppliedHash}~\var{#1}}
 
 
 This chapter introduces the view of the blockchain layer as required for the
@@ -152,7 +154,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
     \BHBody =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{prev} & \HashHeader & \text{hash of previous block body}\\
+        \var{prev} & \HashHeader^? & \text{hash of previous block body}\\
         \var{vk} & \VKey & \text{block issuer}\\
         \var{vrfVk} & \VKey & \text{VRF verification key}\\
         \var{slot} & \Slot & \text{block slot}\\
@@ -193,8 +195,8 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
                    & \text{size of a block body} \\
       \slotToSeed{} & \Slot \to \Seed
                     & \text{convert a slot to a seed} \\
-      \hashHeaderToNonce{} & \HashHeader \to \Seed
-                    & \text{convert a header hash to a seed} \\
+      \prevHashToNonce{} & \HashHeader^? \to \Seed
+                    & \text{convert an optional header hash to a seed} \\
       \fun{bbodyhash} & \seqof{\Tx} \to \HashBBody \\
     \end{array}
   \end{equation*}
@@ -208,7 +210,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{bbody} & \Block \to \seqof{\Tx} \\
       \fun{bvkcold} & \BHBody \to \VKey &
       \fun{bvkvrf} & \BHBody \to \VKey \\
-      \fun{bprev} & \BHBody \to \HashHeader &
+      \fun{bprev} & \BHBody \to \HashHeader^? &
       \fun{bslot} & \BHBody \to \Slot \\
       \fun{bblockno} & \BHBody \to \BlockNo &
       \fun{bnonce} & \BHBody \to \Seed \\
@@ -592,7 +594,7 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
       \begin{array}{r@{~\in~}lr}
         \eta & \Seed & \text{new nonce} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
-        h_c & \HashHeader & \text{current previous hash} \\
+        \var{ph} & \HashHeader^? & \text{current previous hash} \\
         b & \Bool & \text{is new epoch} \\
       \end{array}
     \right)
@@ -644,13 +646,13 @@ near the end of the epoch is not discarded).
     \inference[Update-All]
     { \eta_e \leteq \fun{extraEntropy}~\var{pp}
       &
-      \eta_p \leteq \hashHeaderToNonce h_c
+      \eta_p \leteq \prevHashToNonce \var{ph}
     }
     {
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
-         h_c \\
+         \var{ph} \\
          \mathsf{True}
        \end{array}}
       \vdash
@@ -681,7 +683,7 @@ near the end of the epoch is not discarded).
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
-         h_c \\
+         \var{ph} \\
          \mathsf{False}
        \end{array}}
       \vdash
@@ -1277,13 +1279,22 @@ followed by the transition to update the evolving and candidate nonces.
   %
   \emph{Protocol states}
   \begin{equation*}
+    \LastAppliedBlock =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{b_\ell} & \Slot & \text{last block number} \\
+        \var{s_\ell} & \Slot & \text{last slot} \\
+        \var{h} & \HashHeader & \text{latest header hash} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \begin{equation*}
     \PrtclState =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
-        \var{h} & \HashHeader & \text{latest header hash} \\
-        \var{s_\ell} & \Slot & \text{last slot} \\
-        \var{b_\ell} & \BlockNo & \text{last block number} \\
+        \var{lab} & \LastAppliedBlock^? & \text{last applied block} \\
         \eta_0 & \Seed & \text{current epoch nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
@@ -1299,6 +1310,30 @@ followed by the transition to update the evolving and candidate nonces.
   \end{equation*}
   \caption{Protocol transition-system types}
   \label{fig:ts-types:prtcl}
+  %
+  \emph{Helper Functions}
+  \begin{align*}
+      & \fun{lastAppliedHash} \in \LastAppliedBlock^? \to \HashHeader^? \\
+      & \fun{lastAppliedHash}~\var{lab} =
+        \begin{cases}
+          \Nothing & lab = \Nothing \\
+          h & lab = (\wcard,~\wcard,~h) \\
+        \end{cases}
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{checkPrtclSeq} \in \Slot \to \Slot \to \BlockNo \to \LastAppliedBlock^? \to \Bool \\
+      & \fun{checkPrtclSeq}~\var{slot}~\var{s_{now}}~\var{bn}~\var{lab} =
+        \begin{cases}
+          \mathsf{True}
+          &
+          lab = \Nothing
+          \\
+          \var{s_\ell} < \var{slot} \leq \var{s_{now}} \land \var{b_\ell} + 1 = \var{bn}
+          &
+          lab = (b_\ell,~s_\ell,~\wcard) \\
+        \end{cases}
+  \end{align*}
 \end{figure}
 
 The environments for this transition are:
@@ -1319,9 +1354,7 @@ The environments for this transition are:
 The states for this transition consists of:
 \begin{itemize}
   \item The operational certificate issue number mapping.
-  \item The slot of the last block header.
-  \item The last block number.
-  \item The hash of last block header.
+  \item The last applied block information.
   \item The current epoch nonce.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
@@ -1336,19 +1369,21 @@ The states for this transition consists of:
       &
       \var{slot} \leteq \bslot{bhb}
       &
-      \eta\leteq\fun{bnonce}~\var{bhb}
+      \var{bn}\leteq\fun{bblockno}~\var{bhb}
       \\
-      \var{s_\ell} < \var{slot} \leq \var{s_{now}}
+      \eta\leteq\fun{bnonce}~\var{bhb}
       &
-      \var{h} = \bprev{bhb}
+      \var{ph}\leteq\bprev{bhb}
+      \\
+      \fun{checkPrtclSeq}~\var{slot}~\var{s_{now}}~\var{bn}~\var{lab}
       &
-      \var{b_\ell} + 1 = \fun{bblockno}~\var{bhb}
+      \lastAppliedHash{lab} = ph
       \\~\\
       {
         {\left(\begin{array}{c}
         \eta \\
         \var{pp} \\
-        h \\
+        \var{ph} \\
         \var{ne} \\
         \end{array}\right)}
         \vdash
@@ -1378,6 +1413,8 @@ The states for this transition consists of:
         }
         \vdash \var{cs}\trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}} \var{cs}'
       }
+      \\~\\
+      \var{lab'}\leteq(b_\ell + 1,~\var{slot},~\bhHash{bh})
     }
     {
       {\begin{array}{c}
@@ -1391,9 +1428,7 @@ The states for this transition consists of:
       \vdash
       {\left(\begin{array}{c}
             \var{cs} \\
-            \var{h} \\
-            \var{s_\ell} \\
-            \var{b_\ell} \\
+            \var{lab} \\
             \eta_0 \\
             \eta_v \\
             \eta_c \\
@@ -1402,9 +1437,7 @@ The states for this transition consists of:
       \trans{prtcl}{\var{bh}}
       {\left(\begin{array}{c}
             \varUpdate{cs'} \\
-            \varUpdate{\bhHash{bh}} \\
-            \varUpdate{slot} \\
-            \varUpdate{b_\ell + 1} \\
+            \varUpdate{lab'} \\
             \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
@@ -1615,9 +1648,7 @@ following:
         ~\eta_v & \Seed & \text{evolving nonce} \\
         ~\eta_c & \Seed & \text{candidate nonce} \\
         ~\eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
-        \var{h} & \HashHeader & \text{latest header hash} \\
-        \var{s_\ell} & \Slot & \text{last slot} \\
-        \var{b_\ell} & \Slot & \text{last block number} \\
+        \var{lab} & \LastAppliedBlock^? & \text{latest applied block} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1726,9 +1757,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \vdash
         {\left(\begin{array}{c}
               \var{cs} \\
-              \var{h} \\
-              \var{s_\ell} \\
-              \var{b_\ell} \\
+              \var{lab} \\
               \eta_0 \\
               \eta_v \\
               \eta_c \\
@@ -1737,9 +1766,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \trans{\hyperref[fig:rules:prtcl]{prtcl}}{\var{bh}}
         {\left(\begin{array}{c}
               \var{cs'} \\
-              \var{h'} \\
-              \var{s_\ell'} \\
-              \var{b_\ell'} \\
+              \var{lab'} \\
               \eta_0' \\
               \eta_v' \\
               \eta_c' \\
@@ -1775,9 +1802,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
             \eta_v \\
             \eta_c \\
             \eta_h \\
-            \var{h} \\
-            \var{s_\ell} \\
-            \var{b_\ell} \\
+            \var{lab} \\
       \end{array}\right)}
       \trans{chain}{\var{block}}
       {\left(\begin{array}{c}
@@ -1787,9 +1812,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
             \varUpdate{\eta_h'} \\
-            \varUpdate{\var{h}'} \\
-            \varUpdate{\var{s_\ell}'} \\
-            \varUpdate{\var{b_\ell}'} \\
+            \varUpdate{\var{lab}'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1828,22 +1851,21 @@ candidate nonces for Shelley.
   \emph{Shelley Initial States}
   %
   \begin{align*}
-      & \fun{initialShelleyState} \in \Slot \to \BlockNo \to \Epoch \to\HashHeader \to \UTxO
-        \to \Coin \\
-      & ~~~ \to (\KeyHashGen \mapsto \KeyHash) \to (\Slot\mapsto\KeyHashGen^?)
-        \to \PParams \to \ChainState \\
+      & \fun{initialShelleyState} \in \LastAppliedBlock^? \to \Epoch \to \UTxO
+        \to \Coin \to (\KeyHashGen \mapsto \KeyHash) \\
+      & ~~~ \to (\Slot\mapsto\KeyHashGen^?)
+        \to \PParams \to \Seed \to \ChainState \\
       & \fun{initialShelleyState}~
       \left(
         \begin{array}{c}
-          \var{s} \\
-          \var{bn} \\
+          \var{lab} \\
           \var{e} \\
-          \var{h} \\
           \var{utxo} \\
           \var{reserves} \\
           \var{genDelegs} \\
           \var{os} \\
           \var{pp} \\
+          \var{initNonce} \\
         \end{array}
       \right)
       =
@@ -1916,13 +1938,11 @@ candidate nonces for Shelley.
             \end{array}
           \right) \\
           \var{cs} \\
-          \hashHeaderToNonce{h} \\
-          \hashHeaderToNonce{h} \\
-          \hashHeaderToNonce{h} \\
+          \var{initNonce} \\
+          \var{initNonce} \\
+          \var{initNonce} \\
           0_{seed} \\
-          \var{h} \\
-          \var{s} \\
-          \var{bn} \\
+          \var{lab} \\
         \end{array}
       \right) \\
       & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{genDelegs}\} \\
@@ -1955,8 +1975,7 @@ candidate nonces for Shelley.
       \fun{initialShelleyState}~
       \left(
         \begin{array}{c}
-          \var{s_{last}} \\
-          \var{bn} \\
+          (\var{s_{last}}~\var{bn},~\prevHashToNonce{h}) \\
           e \\
           \fun{hash}~{h} \\
           \var{utxo} \\
@@ -1964,6 +1983,7 @@ candidate nonces for Shelley.
           \var{gd} \\
           \overlaySchedule{e}{(\dom{gd})}{pp} \\
           \var{pp} \\
+          \prevHashToNonce{h} \\
         \end{array}
       \right) \\
       & ~~~~\where \\
