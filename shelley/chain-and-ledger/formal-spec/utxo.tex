@@ -145,7 +145,7 @@ The state needed for the UTxO transition $\UTxOState$, consists of:
   \item The current UTxO.
   \item The deposit pot.
   \item The fee pot.
-  \item The update state (see Figure~\ref{fig:ts-types:update}).
+  \item Proposed updates (see Section~\ref{sec:update}).
 \end{itemize}
 The signal for the UTxO transition is a transaction.
 
@@ -172,7 +172,7 @@ The signal for the UTxO transition is a transaction.
         \var{utxo} & \UTxO & \text{UTxO}\\
         \var{deposits} & \Coin & \text{deposits pot}\\
         \var{fees} & \Coin & \text{fee pot}\\
-        \var{ups} & \UpdateState & \text{update state}\\
+        \var{pup} & \ProposedPPUpdates & \text{proposed updates}\\
       \end{array}
     \right)
   \end{equation*}
@@ -216,7 +216,7 @@ The transition contains the following predicates:
     In other words, the amount of value produced by the transaction must be the same as
     the amount consumed.
   \item
-    The $\mathsf{UPDATE}$ transition is successful.
+    The $\mathsf{PPUP}$ transition is successful.
   \item
     The coin value of each new output must be non-negative.
   \item
@@ -308,7 +308,7 @@ requests).
           \var{genDelegs} \\
         \end{array}
       }
-      \vdash \var{ups} \trans{\hyperref[fig:rules:update]{up}}{\fun{txup}~\var{tx}} \var{ups'}
+      \vdash \var{pup} \trans{\hyperref[fig:rules:pp-update]{ppup}}{\fun{txup}~\var{tx}} \var{pup'}
       \\
       ~
       \\
@@ -339,7 +339,7 @@ requests).
         \var{utxo} \\
         \var{deposits} \\
         \var{fees} \\
-        \var{ups}\\
+        \var{pup}\\
       \end{array}
       \right)
       \trans{utxo}{tx}
@@ -348,7 +348,7 @@ requests).
         \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{txb} + \var{decayed}} \\
-        \varUpdate{ups'}\\
+        \varUpdate{pup'}\\
       \end{array}
       \right)
     }
@@ -573,12 +573,12 @@ This consists of:
   \begin{align*}
     & \fun{propWits} \in \Update \to (\KeyHashGen\mapsto\VKey) \to \powerset{\KeyHash}
     & \text{hashkeys for proposals} \\
-    & \fun{propWits}~(\var{pup},~\var{aup})~\var{genDelegs} = \\
+    & \fun{propWits}~(\var{pup},~\wcard)~\var{genDelegs} = \\
     & ~~\left\{
       \hashKey{vkey}
       \mid
       \var{gkey}\mapsto\var{vkey}\in
-      \left(\left(\dom{\var{pup}}\cup\dom{\var{aup}}\right)\restrictdom\var{genDelegs}\right)
+      \left(\dom{\var{pup}}\restrictdom\var{genDelegs}\right)
       \right\}
   \end{align*}
 

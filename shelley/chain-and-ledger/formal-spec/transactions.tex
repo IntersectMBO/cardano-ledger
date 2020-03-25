@@ -21,7 +21,7 @@ A transaction body, $\TxBody$, is made up of eight pieces:
     that error messages can be precise about why a transaction is invalid.
     For reward calculation rules, see Section \ref{sec:reward-overview},
     and for the rule for collecting rewards, see Section \ref{sec:utxo-trans}.
-  \item Update proposals for protocol parameters and software.
+  \item An optional update proposals for the protocol parameters.
     The update system will be explained in Section \ref{sec:update}.
   \item An optional metadata hash.
 \end{itemize}
@@ -54,9 +54,6 @@ This function must produce a unique id for each unique transaction body.
       \var{gkey} & \VKeyGen & \text{genesis public keys}\\
       \var{gkh} & \KeyHashGen & \text{genesis key hash}\\
       \var{txid} & \TxId & \text{transaction id}\\
-      \var{an} & \ApName & \text{application name}\\
-      \var{st} & \SystemTag & \text{system tag}\\
-      \var{ih} & \InstallerHash & \text{update data}\\
       \var{m} & \MetaDatum & \text{metadatum}\\
       \var{mdh} & \MetaDataHash & \text{hash of transaction metadata}\\
     \end{array}
@@ -96,33 +93,13 @@ This function must produce a unique id for each unique transaction body.
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{pup}
-      & \PPUpdate
-      & \KeyHashGen \mapsto \Ppm \mapsto \mathsf{T_{ppm}}
-      & \text{protocol parameter update}
-      \\
-      \var{av}
-      & \ApVer
-      & \N
-      & \text{application versions}
-      \\
-      \var{md}
-      & \Metadata
-      & \SystemTag\mapsto\InstallerHash
-      & \text{application metadata}
-      \\
-      \var{apps}
-      & \Applications
-      & \ApName \mapsto (\ApVer \times \Metadata)
-      & \text{application versions}
-      \\
-      \var{aup}
-      & \AVUpdate
-      & \KeyHashGen \mapsto \Applications
-      & \text{application update}
+      & \ProposedPPUpdates
+      & \KeyHashGen \mapsto \PPUpdate
+      & \text{proposed updates}
       \\
       \var{up}
       & \Update
-      & \PPUpdate \times \AVUpdate \times \Epoch^?
+      & \ProposedPPUpdates \times \Epoch
       & \text{update proposal}
     \end{array}
   \end{equation*}
@@ -136,7 +113,7 @@ This function must produce a unique id for each unique transaction body.
       & \begin{array}{l}
         \powerset{\TxIn} \times (\Ix \mapsto \TxOut) \times \seqof{\DCert}
         \times \Coin \times \Slot \times \Wdrl
-        \\ ~~~~\times \Update \times \MetaDataHash^?
+        \\ ~~~~\times \Update^? \times \MetaDataHash^?
         \end{array}
       \\
       \var{wit} & \TxWitness & (\VKey \mapsto \Sig) \times (\HashScr \mapsto \Script)
@@ -159,8 +136,8 @@ This function must produce a unique id for each unique transaction body.
       \fun{txbody} & \Tx \to \TxBody & \text{transaction body}\\
       \fun{txwitsVKey} & \Tx \to (\VKey \mapsto \Sig) & \text{VKey witnesses} \\
       \fun{txwitsScript} & \Tx \to (\HashScr \mapsto \Script) & \text{script witnesses}\\
-      \fun{txup} & \Tx \to \Update & \text{protocol parameter update}\\
-      \fun{txMD} & \Tx \to \MetaData & \text{metadata}\\
+      \fun{txup} & \Tx \to \Update^? & \text{protocol parameter update}\\
+      \fun{txMD} & \Tx \to \MetaData^? & \text{metadata}\\
       \fun{txMDhash} & \Tx \to \MetaDataHash & \text{metadata hash}\\
     \end{array}
   \end{equation*}

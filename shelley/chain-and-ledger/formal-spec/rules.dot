@@ -8,10 +8,7 @@ digraph STS {
 
         UTXOW -> UTXO
         UTXOW -> DELEGS [style=dotted]
-        UTXO  -> UP
-
-        UP -> PPUP
-        UP -> AVUP
+        UTXO  -> PPUP
 
         DELEGS -> DELPL
         DELEGS -> DELEGS

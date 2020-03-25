@@ -288,6 +288,7 @@ we reset the instantaneous rewards back to the empty mapping.
             \var{acnt} \\
             \var{ss} \\
             (\var{us},~(\var{ds},~\var{ps})) \\
+            \var{prevPP} \\
             \var{pp} \\
       \end{array}\right)}
       \trans{mir}{}
@@ -295,6 +296,7 @@ we reset the instantaneous rewards back to the empty mapping.
             \varUpdate{\var{acnt'}} \\
             \var{ss} \\
             (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
+            \var{prevPP} \\
             \var{pp} \\
       \end{array}\right)}
     }
@@ -326,6 +328,7 @@ we reset the instantaneous rewards back to the empty mapping.
             \var{acnt} \\
             \var{ss} \\
             (\var{us},~(\var{ds},~\var{ps})) \\
+            \var{prevPP} \\
             \var{pp} \\
       \end{array}\right)}
       \trans{mir}{}
@@ -333,6 +336,7 @@ we reset the instantaneous rewards back to the empty mapping.
             \var{acnt} \\
             \var{ss} \\
             (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
+            \var{prevPP} \\
             \var{pp} \\
       \end{array}\right)}
     }
@@ -481,7 +485,7 @@ In the first case, the new epoch state is updated as follows:
       }
       \\~\\
       {\begin{array}{r@{~\leteq~}l}
-          (\var{acnt},~\var{ss},~\var{ls}, \var{pp}) & \var{es'''} \\
+          (\var{acnt},~\var{ss},~\var{ls},~\wcard,~\var{pp}) & \var{es'''} \\
          (\wcard,~\var{pstake_{set}},~\wcard,~\wcard) & \var{ss} \\
          (\var{stake},~\var{delegs},~\var{poolPrms}) & \var{pstake_{set}} \\
          total & \sum_{\_ \mapsto c\in\var{stake}} c \\
@@ -1704,7 +1708,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \leteq\var{nes} \\
       (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd},\var{osched})
         \leteq\var{nes'} \\
-        (\var{acnt},~\wcard,\var{ls},~\var{pp'})\leteq\var{es}\\
+        (\var{acnt},~\wcard,\var{ls},~\wcard,~\var{pp'})\leteq\var{es}\\
         ( \wcard,
           ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
           (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
@@ -1826,7 +1830,8 @@ candidate nonces for Shelley.
   \begin{align*}
       & \fun{initialShelleyState} \in \Slot \to \BlockNo \to \Epoch \to\HashHeader \to \UTxO
         \to \Coin \\
-      & ~~~ \to (\KeyHashGen \mapsto \KeyHash) \to (\Slot\mapsto\KeyHashGen^?) \to \Applications \to  \PParams \to \ChainState \\
+      & ~~~ \to (\KeyHashGen \mapsto \KeyHash) \to (\Slot\mapsto\KeyHashGen^?)
+        \to \PParams \to \ChainState \\
       & \fun{initialShelleyState}~
       \left(
         \begin{array}{c}
@@ -1838,7 +1843,6 @@ candidate nonces for Shelley.
           \var{reserves} \\
           \var{genDelegs} \\
           \var{os} \\
-          \var{apps} \\
           \var{pp} \\
         \end{array}
       \right)
@@ -1875,14 +1879,7 @@ candidate nonces for Shelley.
                           \var{utxo} \\
                           0 \\
                           0 \\
-                          \left(
-                            \begin{array}{c}
-                              \emptyset \\
-                              \emptyset \\
-                              \emptyset \\
-                              \var{apps}\\
-                            \end{array}
-                          \right) \\
+                          \emptyset \\
                         \end{array}
                       \right) \\
                       \left(
@@ -1908,6 +1905,7 @@ candidate nonces for Shelley.
                       \right) \\
                     \end{array}
                   \right) \\
+                  \var{pp} \\
                   \var{pp} \\
                 \end{array}
               \right) \\
@@ -1941,7 +1939,7 @@ candidate nonces for Shelley.
   \emph{Byron to Shelley Transition}
   %
   \begin{align*}
-      & \fun{toShelley} \in \CEState \to \ChainState \\
+      & \fun{toShelley} \in \CEState \to \BlockNo \to \ChainState \\
       & \fun{toShelley}~
       \left(
         \begin{array}{c}
@@ -1952,7 +1950,7 @@ candidate nonces for Shelley.
           \var{ds} \\
           \var{us}
         \end{array}
-      \right)
+      \right)~\var{bn}
       =
       \fun{initialShelleyState}~
       \left(
@@ -1965,13 +1963,11 @@ candidate nonces for Shelley.
           \var{reserves} \\
           \var{gd} \\
           \overlaySchedule{e}{(\dom{gd})}{pp} \\
-          \fun{avs}~\var{us} \\
           \var{pp} \\
         \end{array}
       \right) \\
       & ~~~~\where \\
       & ~~~~~~~~~e = \epoch{s_{last}} \\
-      & ~~~~~~~~~bn = \mathsf{TODO} \\
       & ~~~~~~~~~gd = \fun{dms}~\var{ds} \\
       & ~~~~~~~~~pp = \pps{us} \\
   \end{align*}

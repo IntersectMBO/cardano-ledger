@@ -436,7 +436,7 @@ This transition has no preconditions and results in the following state change:
           \var{utxo} \\
           \var{deposits} \\
           \var{fees} \\
-          \var{up} \\
+          \var{pup} \\
         \end{array}
       \right)
       \trans{snap}{e}
@@ -450,7 +450,7 @@ This transition has no preconditions and results in the following state change:
           \var{utxo} \\
           \varUpdate{\var{oblg}} \\
           \varUpdate{\var{fees} + \var{decayed}} \\
-          \var{up} \\
+          \var{pup} \\
         \end{array}
       \right)
     }
@@ -804,6 +804,12 @@ which is defined in Figure~\ref{fig:ts-types:epoch}.
 The transition has no evironment.
 The state is made up of the the accounting state, the snapshots, the ledger state and the
 protocol parameters.
+The transition uses a helper function $\fun{votedValue}$ which returns
+the consensus value of update proposals in the event that consensus it met.
+\textbf{Note that} $\fun{votedValue}$
+\textbf{is only well-defined if } $\Quorum$
+\textbf{is greater than half the number of core nodes, i.e.}
+$\Quorum > |\var{genDelegs}|/2$ \textbf{.}
 
 %%
 %% Figure - Epoch Defs
@@ -817,6 +823,7 @@ protocol parameters.
         \var{acnt} & \Acnt & \text{accounting}\\
         \var{ss} & \Snapshots & \text{snapshots}\\
         \var{ls} & \LState & \text{ledger state}\\
+        \var{prevPp} & \PParams & \text{previous protocol parameters}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
       \end{array}
     \right)
@@ -837,13 +844,25 @@ protocol parameters.
     \end{array}
   \end{equation*}
   %
+  \emph{Helper Functions}
+  \begin{align*}
+      & \fun{votedValue} \in (\KeyHashGen\mapsto\PParamsUpdate) \to \PParamsUpdate^?\\
+      & \fun{votedValue}~\var{vs} =
+        \begin{cases}
+          p & \exists p\in\range{vs}~(|vs\restrictrange p|\geq \Quorum) \\
+          \Nothing & \text{otherwise} \\
+        \end{cases}
+  \end{align*}
+  %
   \caption{Epoch transition-system types}
   \label{fig:ts-types:epoch}
 \end{figure}
 
 
 The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$ and $\mathsf{NEWPP}$
-in sequence.
+in sequence. It also store the previous protocol parameters in $\var{prevPp}$.
+The previous protocol parameters will be used for the reward calculation in the upcoming epoch,
+note that they correspond to the epoch for which the reward are being calculated.
 The ordering of these rules is important.
 The stake pools which will be reaped during the $\mathsf{POOLREAP}$ transition must still be a
 part of the new snapshot, and so $\mathsf{SNAP}$ must occur before $\mathsf{POOLREAP}$.
@@ -913,9 +932,9 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       }
       \right)
       \\~\\~\\
-      \var{(\wcard,~\wcard,~\wcard,~(\var{ppup},~\wcard,~\wcard,~\wcard))}\leteq\var{utxoSt'}\\
+      \var{(\wcard,~\wcard,~\wcard,~\var{pup})}\leteq\var{utxoSt'}\\
       \var{pp_{new}}\leteq\var{pp}\unionoverrideRight
-      \fun{votedValue_{(\Ppm\to\mathsf{T_{ppm}})}}~\var{ppup}\\
+      \fun{votedValue}~\var{pup}\\
       {
         \begin{array}{r}
           \var{pp_{new}}\\
@@ -953,6 +972,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
         \var{acnt} \\
         \var{ss} \\
         \var{ls} \\
+        \var{prevPp} \\
         \var{pp} \\
       \end{array}
       \right)
@@ -962,6 +982,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
         \varUpdate{\var{acnt''}} \\
         \varUpdate{\var{ss'}} \\
         \varUpdate{\var{ls'}} \\
+        \varUpdate{\var{pp}} \\
         \varUpdate{\var{pp'}} \\
       \end{array}
       \right)
@@ -1290,6 +1311,9 @@ reward update to an instance of $\EpochState$.
 
 The $\fun{createRUpd}$ function does the following:
 \begin{itemize}
+  \item Note that for all the calculations below, we use the previous protocol parameters
+    $\var{prevPp}$, which correspondings the the parameters during the epoch for which we
+    are being created for.
   \item First we calculate the change to the reserves,
     as determined by the $\rho$ protocol parameter.
   \item Next we calculate $\var{rewardPot}$, the total amount of coin available for rewards this
@@ -1339,7 +1363,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & \createRUpd{b}{es}{total} = \left(
       \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS}\right) \\
     & ~~~\where \\
-    & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{pp}) = \var{es} \\
+    & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{prevPp},~\wcard) = \var{es} \\
     & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
     & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
     & ~~~~~~~(\wcard,~\var{reserves}) = \var{acnt} \\
@@ -1350,15 +1374,15 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \wcard
       \right)
       \right) = \var{ls} \\
-    & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~{pp}) \cdot
+    & ~~~~~~~\Delta r = \floor*{\min(1,\eta) \cdot (\fun{rho}~\var{prevPp}) \cdot
       \var{reserves}}
     \\
-    & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~{pp}} \\
+    & ~~~~~~~\eta = \frac{blocksMade}{\SlotsPerEpoch \cdot \fun{activeSlotCoeff}~\var{prevPp}} \\
     & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
-    & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~{pp}) \cdot \var{rewardPot}} \\
+    & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~\var{prevPp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
     & ~~~~~~~\var{rs}
-      = \reward{pp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs}{total} \\
+      = \reward{prevPp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs}{total} \\
     & ~~~~~~~\Delta t_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
     & ~~~~~~~blocksMade = \sum_{\wcard \mapsto m \in b}m
   \end{align*}
@@ -1402,6 +1426,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{fees} \\
           \var{up} \\
           ~ \\
+          \var{prevPp} \\
           \var{pp} \\
         \end{array}
       \right)
@@ -1427,6 +1452,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \varUpdate{\var{fees}+\Delta f} \\
           \var{up} \\
           ~ \\
+          \var{prevPp} \\
           \var{pp} \\
         \end{array}
     \right)
