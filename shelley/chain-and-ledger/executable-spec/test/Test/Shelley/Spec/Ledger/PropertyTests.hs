@@ -269,7 +269,10 @@ propertyTests = testGroup "Property-Based Testing"
                    propBalanceTxInTxOut'
                   , testProperty
                     "Classify double spend"
-                    classifyInvalidDoubleSpend
+                     classifyInvalidDoubleSpend
+                  , testProperty
+                    "NonNegative TxOuts"
+                    propNonNegativeTxOuts
                   ]
                 , testGroup "Properties of Trace generators"
                   [ TQC.testProperty
@@ -280,6 +283,12 @@ propertyTests = testGroup "Property-Based Testing"
                        onlyValidChainSignalsAreGenerated
                   ]
                 ]
+
+propNonNegativeTxOuts :: Property
+propNonNegativeTxOuts =
+  withTests 100000 $ property $ do
+  (_, _, _, tx, _)  <- forAll genStateTx
+  all (\(TxOut _ (Coin x)) -> x >= 0) (_outputs . _body $ tx) === True
 
 -- | Mutations for Property 7.2
 propBalanceTxInTxOut' :: Property
