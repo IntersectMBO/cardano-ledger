@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.Examples.Serialization where
 
@@ -237,6 +238,17 @@ instance Semigroup ToTokens where
 instance Monoid ToTokens where
   mempty = T id
 
+testNegativeCoin :: Assertion
+testNegativeCoin =
+  let enc@(Encoding tokens) = toCBOR (Coin (-1))
+  in
+    (tokens TkEnd @?= (TkInteger (-1)) TkEnd)
+    >>
+    (case (decodeFullDecoder "negative_coin" (fromCBOR @Coin) . serializeEncoding) enc of
+      Left _ -> pure ()
+      Right _ -> assertFailure "should not deserialize negative coins"
+    )
+
 serializationTests :: TestTree
 serializationTests = testGroup "Serialization Tests"
 
@@ -252,6 +264,7 @@ serializationTests = testGroup "Serialization Tests"
   , checkEncodingCBOR "coin"
     (Coin 30)
     (T (TkWord64 30))
+  , testCase "prop_serialize_negative-coin" testNegativeCoin
   , checkEncodingCBOR "rational"
     (UnsafeUnitInterval (1 % 2))
     (T (TkTag 30 . TkListLen 2 . TkInteger 1 . TkInteger 2))
