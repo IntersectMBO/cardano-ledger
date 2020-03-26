@@ -23,6 +23,7 @@ import           Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import           Control.State.Transition
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
@@ -154,7 +155,11 @@ utxoWitnessed = do
 
   -- check genesis keys signatures for instantaneous rewards certificates
   let genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
-      mirCerts = Seq.filter isInstantaneousRewards $ _certs txbody
+      mirCerts =
+          StrictSeq.toStrict
+        . Seq.filter isInstantaneousRewards
+        . StrictSeq.getSeq
+        $ _certs txbody
       GenDelegs genMapping = genDelegs
 
   coreNodeQuorum <- liftSTS $ asks quorum

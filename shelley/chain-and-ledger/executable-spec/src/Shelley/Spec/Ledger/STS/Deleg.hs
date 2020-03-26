@@ -134,7 +134,7 @@ delegationTransition = do
       pure $ ds
         { _delegations = _delegations ds ⨃ [(hk, dpool)] }
 
-    DCertGenesis (GenesisDelegate (gkh, vkh)) -> do
+    DCertGenesis (GenesisDelegate gkh vkh) -> do
       sp <- liftSTS $ asks slotsPrior
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp

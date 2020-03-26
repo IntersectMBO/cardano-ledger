@@ -52,8 +52,8 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
 import           Data.Maybe (catMaybes)
-import           Data.Sequence.Strict (StrictSeq(Empty, (:<|)))
-import qualified Data.Sequence.Strict as Seq
+import           Data.Sequence.Strict (StrictSeq ((:<|), Empty))
+import qualified Data.Sequence.Strict as StrictSeq
 import           GHC.Generics (Generic)
 import           GHC.Stack (HasCallStack)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
@@ -92,7 +92,7 @@ data Trace s
       -- ^ Environment under which the trace was run.
       , _traceInitState :: !(State s)
       -- ^ Initial state in the trace
-      , _traceTrans :: !(Seq.StrictSeq (SigState s))
+      , _traceTrans :: !(StrictSeq (SigState s))
       -- ^ Signals and resulting states observed in the trace. New elements are
       -- put in front of the list.
     } deriving Generic
@@ -115,7 +115,7 @@ instance
 mkTrace :: Environment s -> State s -> [(State s, Signal s)] -> Trace s
 mkTrace env initState sigs = Trace env initState sigs'
   where
-    sigs' = uncurry SigState <$> Seq.fromList sigs
+    sigs' = uncurry SigState <$> StrictSeq.fromList sigs
 
 -- $setup
 -- |

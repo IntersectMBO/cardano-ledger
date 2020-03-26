@@ -15,7 +15,7 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
 import qualified Data.ByteString as BS
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
-import           Data.Sequence (Seq)
+import           Data.Sequence.Strict (StrictSeq)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 import qualified Test.QuickCheck.Gen
 import           Cardano.Binary (serialize')
@@ -201,7 +201,7 @@ ratioInt x y
   = fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: [Seq TxOut] -> Double
+txScriptOutputsRatio :: [StrictSeq TxOut] -> Double
 txScriptOutputsRatio txoutsList =
   ratioInt
    (sum (map countScriptOuts txoutsList))

@@ -100,7 +100,7 @@ import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet
                      (!?))
 import           Data.Maybe (isJust, maybe)
 import           Data.Ratio ((%))
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
@@ -258,7 +258,7 @@ alicePoolParams =
     , _poolMargin = unsafeMkUnitInterval 0.1
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , _poolRelays = Seq.empty
+    , _poolRelays = StrictSeq.empty
     , _poolMD = Just $ PoolMetaData
                   { _poolMDUrl  = Url $ text64 "alice.pool"
                   , _poolMDHash = BS.pack "{}"
@@ -477,8 +477,8 @@ aliceCoinEx2A = aliceInitCoin - (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1)
 txbodyEx2A :: TxBody
 txbodyEx2A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.fromList [TxOut aliceAddr aliceCoinEx2A])
-           (Seq.fromList ([ DCertDeleg (RegKey aliceSHK)
+           (StrictSeq.fromList [TxOut aliceAddr aliceCoinEx2A])
+           (StrictSeq.fromList ([ DCertDeleg (RegKey aliceSHK)
            , DCertDeleg (RegKey bobSHK)
            , DCertDeleg (RegKey carlSHK)
            , DCertPool (RegPool alicePoolParams)
@@ -649,12 +649,12 @@ aliceCoinEx2BPtr = aliceCoinEx2A - (aliceCoinEx2BBase + 4)
 txbodyEx2B :: TxBody
 txbodyEx2B = TxBody
       { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2A) 0]
-      , TxData._outputs  = Seq.fromList [ TxOut aliceAddr    aliceCoinEx2BBase
-                                        , TxOut alicePtrAddr aliceCoinEx2BPtr ]
+      , TxData._outputs  = StrictSeq.fromList [ TxOut aliceAddr    aliceCoinEx2BBase
+                                              , TxOut alicePtrAddr aliceCoinEx2BPtr ]
       --  Delegation certificates
       , TxData._certs    =
-        Seq.fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
-                     , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
+        StrictSeq.fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
+                           , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 4
       , TxData._ttl      = SlotNo 90
@@ -918,9 +918,9 @@ aliceCoinEx2DBase = aliceCoinEx2BBase - 5
 txbodyEx2D :: TxBody
 txbodyEx2D = TxBody
       { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2B) 0]
-      , TxData._outputs  = Seq.fromList [ TxOut aliceAddr aliceCoinEx2DBase ]
+      , TxData._outputs  = StrictSeq.fromList [ TxOut aliceAddr aliceCoinEx2DBase ]
       , TxData._certs    =
-        Seq.fromList [ DCertDeleg (Delegate $ Delegation carlSHK (hk alicePool)) ]
+        StrictSeq.fromList [ DCertDeleg (Delegate $ Delegation carlSHK (hk alicePool)) ]
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 5
       , TxData._ttl      = SlotNo 500
@@ -1406,8 +1406,8 @@ bobAda2J = bobRAcnt2H -- reward account
 txbodyEx2J :: TxBody
 txbodyEx2J = TxBody
            (Set.fromList [TxIn genesisId 1])
-           (Seq.singleton $ TxOut bobAddr bobAda2J)
-           (Seq.fromList [DCertDeleg (DeRegKey bobSHK)])
+           (StrictSeq.singleton $ TxOut bobAddr bobAda2J)
+           (StrictSeq.fromList [DCertDeleg (DeRegKey bobSHK)])
            (Wdrl $ Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
            (Coin 9)
            (SlotNo 500)
@@ -1499,8 +1499,8 @@ aliceCoinEx2KPtr = aliceCoinEx2DBase - 2
 txbodyEx2K :: TxBody
 txbodyEx2K = TxBody
            (Set.fromList [TxIn (txid txbodyEx2D) 0])
-           (Seq.singleton $ TxOut alicePtrAddr aliceCoinEx2KPtr)
-           (Seq.fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
+           (StrictSeq.singleton $ TxOut alicePtrAddr aliceCoinEx2KPtr)
+           (StrictSeq.fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
            (Wdrl Map.empty)
            (Coin 2)
            (SlotNo 500)
@@ -1710,8 +1710,8 @@ aliceCoinEx3A = aliceInitCoin - 1
 txbodyEx3A :: TxBody
 txbodyEx3A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.singleton $ TxOut aliceAddr aliceCoinEx3A)
-           Seq.empty
+           (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3A)
+           StrictSeq.empty
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 10)
@@ -1802,8 +1802,8 @@ aliceCoinEx3B = aliceCoinEx3A - 1
 txbodyEx3B :: TxBody
 txbodyEx3B = TxBody
            (Set.fromList [TxIn (txid txbodyEx3A) 0])
-           (Seq.singleton $ TxOut aliceAddr aliceCoinEx3B)
-           Seq.empty
+           (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3B)
+           StrictSeq.empty
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 31)
@@ -1960,10 +1960,10 @@ aliceCoinEx4A = aliceInitCoin - 1
 txbodyEx4A :: TxBody
 txbodyEx4A = TxBody
               (Set.fromList [TxIn genesisId 0])
-              (Seq.singleton $ TxOut aliceAddr aliceCoinEx4A)
-              (Seq.fromList [DCertGenesis (GenesisDelegate
-                                       ( (hashKey . coreNodeVKG) 0
-                                       , (hashKey . vKey) newGenDelegate))])
+              (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx4A)
+              (StrictSeq.fromList [DCertGenesis (GenesisDelegate
+                                       (hashKey (coreNodeVKG 0))
+                                       (hashKey (vKey newGenDelegate)))])
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
@@ -2114,8 +2114,8 @@ aliceCoinEx5A = aliceInitCoin - 1
 txbodyEx5A :: TxBody
 txbodyEx5A = TxBody
               (Set.fromList [TxIn genesisId 0])
-              (Seq.singleton $ TxOut aliceAddr aliceCoinEx5A)
-              (Seq.fromList [DCertMir (MIRCert ir)])
+              (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5A)
+              (StrictSeq.fromList [DCertMir (MIRCert ir)])
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
@@ -2280,8 +2280,8 @@ aliceCoinEx5F = aliceInitCoin - (_keyDeposit ppsEx1) - 1
 txbodyEx5F :: TxBody
 txbodyEx5F = TxBody
               (Set.fromList [TxIn genesisId 0])
-              (Seq.singleton $ TxOut aliceAddr aliceCoinEx5F)
-              (Seq.fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert ir)])
+              (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5F)
+              (StrictSeq.fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert ir)])
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 99)
@@ -2324,8 +2324,8 @@ aliceCoinEx5F' = aliceCoinEx5F - 1
 txbodyEx5F' :: TxBody
 txbodyEx5F' = TxBody
                (Set.fromList [TxIn (txid txbodyEx5F) 0])
-               (Seq.singleton $ TxOut aliceAddr aliceCoinEx5F')
-               Seq.empty
+               (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5F')
+               StrictSeq.empty
                (Wdrl Map.empty)
                (Coin 1)
                ((slotFromEpoch $ EpochNo 1)
@@ -2361,8 +2361,8 @@ aliceCoinEx5F'' = aliceCoinEx5F' - 1
 txbodyEx5F'' :: TxBody
 txbodyEx5F'' = TxBody
                 (Set.fromList [TxIn (txid txbodyEx5F') 0])
-                (Seq.singleton $ TxOut aliceAddr aliceCoinEx5F'')
-                Seq.empty
+                (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5F'')
+                StrictSeq.empty
                 (Wdrl Map.empty)
                 (Coin 1)
                 ((slotFromEpoch $ EpochNo 2) + SlotNo 10)

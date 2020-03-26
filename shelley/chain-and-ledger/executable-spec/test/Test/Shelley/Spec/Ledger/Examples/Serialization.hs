@@ -77,7 +77,7 @@ import           Test.Shelley.Spec.Ledger.Utils
 import           Unsafe.Coerce (unsafeCoerce)
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 roundTrip :: (Show a, Eq a)
@@ -169,7 +169,7 @@ testVRFKH :: VRFKeyHash
 testVRFKH = hashKeyVRF $ snd testVRF
 
 testTxb :: TxBody
-testTxb = TxBody Set.empty Seq.empty Seq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) Nothing Nothing
+testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) Nothing Nothing
 
 testKey1 :: KeyPair
 testKey1 = KeyPair vk sk
@@ -237,7 +237,7 @@ testBHB = BHBody
             (mkSeed seedL (SlotNo 33) (mkNonce 0)) 1) (fst testVRF)
           , bsize          = 0
           , bheaderBlockNo = BlockNo 44
-          , bhash          = bbHash $ TxSeq Seq.empty
+          , bhash          = bbHash $ TxSeq StrictSeq.empty
           , bheaderOCert   = OCert (snd testKESKeys)
             0 (KESPeriod 0) (sign (sKey testKey1) (snd testKESKeys, 0, KESPeriod 0))
           , bprotver       = ProtVer 0 0
@@ -451,7 +451,7 @@ serializationTests = testGroup "Serialization Tests"
                , _poolMargin = poolMargin
                , _poolRAcnt = poolRAcnt
                , _poolOwners = Set.singleton poolOwner
-               , _poolRelays = Seq.empty
+               , _poolRelays = StrictSeq.empty
                , _poolMD = Just $ PoolMetaData
                              { _poolMDUrl = Url $ text64 poolUrl
                              , _poolMDHash = poolMDHash
@@ -497,7 +497,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
   , checkEncodingCBOR "genesis_delegation"
-    (DCertGenesis (GenesisDelegate (testGKeyHash, testKeyHash1)))
+    (DCertGenesis (GenesisDelegate testGKeyHash testKeyHash1))
     ( T (TkListLen 3
       . TkWord 8) -- genesis delegation cert
       <> S testGKeyHash -- delegator credential
@@ -647,8 +647,8 @@ serializationTests = testGroup "Serialization Tests"
     in checkEncodingCBOR "txbody"
     ( TxBody -- minimal transaction body
       tin
-      (Seq.singleton tout)
-      Seq.empty
+      (StrictSeq.singleton tout)
+      StrictSeq.empty
       (Wdrl Map.empty)
       (Coin 9)
       (SlotNo 500)
@@ -701,8 +701,8 @@ serializationTests = testGroup "Serialization Tests"
     in checkEncodingCBOR "txbody_partial"
     ( TxBody -- transaction body with some optional components
         tin
-        (Seq.singleton tout)
-        mempty
+        (StrictSeq.singleton tout)
+        StrictSeq.Empty
         (Wdrl ras)
         (Coin 9)
         (SlotNo 500)
@@ -762,8 +762,8 @@ serializationTests = testGroup "Serialization Tests"
     in checkEncodingCBOR "txbody_full"
     ( TxBody -- transaction body with all components
         tin
-        (Seq.singleton tout)
-        (Seq.fromList [ reg ])
+        (StrictSeq.singleton tout)
+        (StrictSeq.fromList [ reg ])
         (Wdrl ras)
         (Coin 9)
         (SlotNo 500)
@@ -794,8 +794,8 @@ serializationTests = testGroup "Serialization Tests"
   -- checkEncodingCBOR "minimal_txn"
   , let txb = TxBody
                 (Set.fromList [TxIn genesisId 1])
-                (Seq.singleton $ TxOut testAddrE (Coin 2))
-                Seq.empty
+                (StrictSeq.singleton $ TxOut testAddrE (Coin 2))
+                StrictSeq.empty
                 (Wdrl Map.empty)
                 (Coin 9)
                 (SlotNo 500)
@@ -818,8 +818,8 @@ serializationTests = testGroup "Serialization Tests"
   -- checkEncodingCBOR "full_txn"
   , let txb = TxBody
                 (Set.fromList [TxIn genesisId 1])
-                (Seq.singleton $ TxOut testAddrE (Coin 2))
-                Seq.empty
+                (StrictSeq.singleton $ TxOut testAddrE (Coin 2))
+                StrictSeq.empty
                 (Wdrl Map.empty)
                 (Coin 9)
                 (SlotNo 500)
@@ -856,7 +856,7 @@ serializationTests = testGroup "Serialization Tests"
       leaderProof = coerce $ mkCertifiedVRF (WithResult leaderValue 1) (fst testVRF)
       size = 0
       blockNo = BlockNo 44
-      bbhash = bbHash $ TxSeq Seq.empty
+      bbhash = bbHash $ TxSeq StrictSeq.empty
       ocert = OCert
                 (snd testKESKeys)
                 0
@@ -920,7 +920,7 @@ serializationTests = testGroup "Serialization Tests"
     -- checkEncodingCBOR "empty_block"
   , let sig = Maybe.fromJust $ signKES (fst testKESKeys) testBHB 0
         bh = BHeader testBHB sig
-        txns = TxSeq mempty
+        txns = TxSeq StrictSeq.Empty
     in
     checkEncodingCBORAnnotated "empty_block"
     (Block bh txns)
@@ -933,8 +933,8 @@ serializationTests = testGroup "Serialization Tests"
   , let sig = Maybe.fromJust $ signKES (fst testKESKeys) testBHB 0
         bh = BHeader testBHB sig
         tin = Set.fromList [TxIn genesisId 1]
-        tout = Seq.singleton $ TxOut testAddrE (Coin 2)
-        txb s = TxBody tin tout Seq.empty (Wdrl Map.empty) (Coin 9) (SlotNo s) Nothing Nothing
+        tout = StrictSeq.singleton $ TxOut testAddrE (Coin 2)
+        txb s = TxBody tin tout StrictSeq.empty (Wdrl Map.empty) (Coin 9) (SlotNo s) Nothing Nothing
         txb1 = txb 500
         txb2 = txb 501
         txb3 = txb 502
@@ -951,7 +951,7 @@ serializationTests = testGroup "Serialization Tests"
         tx4 = Tx txb4 mempty ss Nothing
         tx5MD = MD.MetaData $ Map.singleton 17 (MD.I 42)
         tx5 = Tx txb5 ws ss (Just tx5MD)
-        txns = TxSeq $ Seq.fromList [tx1, tx2, tx3, tx4, tx5]
+        txns = TxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
     in
     checkEncodingCBORAnnotated "rich_block"
     (Block bh txns)
@@ -1046,7 +1046,7 @@ serializationTests = testGroup "Serialization Tests"
               , _poolMargin = unsafeMkUnitInterval 0.7
               , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
               , _poolOwners = Set.singleton testKeyHash2
-              , _poolRelays = Seq.empty
+              , _poolRelays = StrictSeq.empty
               , _poolMD = Just $ PoolMetaData
                             { _poolMDUrl  = Url $ text64 "web.site"
                             , _poolMDHash = BS.pack "{}"
@@ -1085,7 +1085,7 @@ serializationTests = testGroup "Serialization Tests"
             , _poolMargin = unsafeMkUnitInterval 0.7
             , _poolRAcnt = RewardAcnt (KeyHashObj testKeyHash1)
             , _poolOwners = Set.singleton testKeyHash2
-            , _poolRelays = Seq.empty
+            , _poolRelays = StrictSeq.empty
             , _poolMD = Just $ PoolMetaData
                           { _poolMDUrl  = Url $ text64 "web.site"
                           , _poolMDHash = BS.pack "{}"

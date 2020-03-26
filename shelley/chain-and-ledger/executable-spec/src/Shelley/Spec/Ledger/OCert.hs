@@ -51,13 +51,13 @@ newtype KESPeriod = KESPeriod Natural
 
 data OCert crypto = OCert
   { -- | The operational hot key
-    ocertVkHot     :: VKeyES crypto
+    ocertVkHot     :: !(VKeyES crypto)
     -- | counter
-  , ocertN         :: Natural
+  , ocertN         :: !Natural
     -- | Start of key evolving signature period
-  , ocertKESPeriod :: KESPeriod
+  , ocertKESPeriod :: !KESPeriod
     -- | Signature of block operational certificate content
-  , ocertSigma     :: Sig crypto (VKeyES crypto, Natural, KESPeriod)
+  , ocertSigma     :: !(Sig crypto (VKeyES crypto, Natural, KESPeriod))
   } deriving (Show, Eq, Generic)
     deriving ToCBOR via (CBORGroup (OCert crypto))
 

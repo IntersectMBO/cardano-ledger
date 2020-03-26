@@ -19,7 +19,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set ((\\))
 import qualified Data.Set as Set
 import           GHC.Stack (HasCallStack)
@@ -238,7 +238,7 @@ genGenesisDelegation keys coreKeys dpState =
   where
     hashVKey = hashKey . vKey
     mkCert gkey key = Just
-      ( DCertGenesis (GenesisDelegate (hashVKey gkey, (hashVKey . snd) key))
+      ( DCertGenesis (GenesisDelegate (hashVKey gkey) (hashVKey (snd key)))
       , CoreKeyCred [gkey])
 
     (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
@@ -293,7 +293,7 @@ genStakePool skeys vrfKeys =
                 interval
                 (RewardAcnt $ KeyHashObj $ hashKey acntKey)
                 Set.empty
-                Seq.empty
+                StrictSeq.empty
                 Nothing
      in (pps, snd poolKeyPair)
 

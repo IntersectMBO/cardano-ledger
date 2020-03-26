@@ -57,9 +57,8 @@ data Tx crypto
   = Tx
       { _body           :: !(TxBody crypto)
       , _witnessVKeySet :: !(Set (WitVKey crypto))
-      , _witnessMSigMap ::
-          Map (ScriptHash crypto) (MultiSig crypto)
-      , _metadata       :: Maybe MetaData
+      , _witnessMSigMap :: !(Map (ScriptHash crypto) (MultiSig crypto))
+      , _metadata       :: !(Maybe MetaData)
       } deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (Tx crypto)

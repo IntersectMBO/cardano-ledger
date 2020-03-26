@@ -26,8 +26,8 @@ import           Data.Foldable (fold)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
@@ -46,14 +46,14 @@ import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
                      FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, mapFromCBOR,
-                     mapToCBOR)
+                     mapToCBOR, unwrapCborStrictSeq)
 
 import           Shelley.Spec.Ledger.Scripts
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
-  { _delegator :: Credential crypto
-  , _delegatee :: KeyHash crypto
+  { _delegator :: !(Credential crypto)
+  , _delegatee :: !(KeyHash crypto)
   } deriving (Eq, Generic, Show)
 
 instance NoUnexpectedThunks (Delegation crypto)
@@ -62,8 +62,8 @@ newtype Url = Url { unUrl :: Text64 }
   deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 data PoolMetaData = PoolMetaData
-  { _poolMDUrl  :: Url
-  , _poolMDHash :: ByteString
+  { _poolMDUrl  :: !Url
+  , _poolMDHash :: !ByteString
   } deriving (Eq, Generic, Show)
 
 instance NoUnexpectedThunks PoolMetaData
@@ -71,15 +71,15 @@ instance NoUnexpectedThunks PoolMetaData
 -- |A stake pool.
 data PoolParams crypto =
   PoolParams
-    { _poolPubKey  :: KeyHash crypto
-    , _poolVrf     :: Hash (HASH crypto) (VerKeyVRF (VRF crypto))
-    , _poolPledge  :: Coin
-    , _poolCost    :: Coin
-    , _poolMargin  :: UnitInterval
-    , _poolRAcnt   :: RewardAcnt crypto
-    , _poolOwners  :: Set (KeyHash crypto)
-    , _poolRelays  :: Seq Url
-    , _poolMD      :: Maybe PoolMetaData
+    { _poolPubKey  :: !(KeyHash crypto)
+    , _poolVrf     :: !(Hash (HASH crypto) (VerKeyVRF (VRF crypto)))
+    , _poolPledge  :: !Coin
+    , _poolCost    :: !Coin
+    , _poolMargin  :: !UnitInterval
+    , _poolRAcnt   :: !(RewardAcnt crypto)
+    , _poolOwners  :: !(Set (KeyHash crypto))
+    , _poolRelays  :: !(StrictSeq Url)
+    , _poolMD      :: !(Maybe PoolMetaData)
     } deriving (Show, Generic, Eq)
       deriving ToCBOR via CBORGroup (PoolParams crypto)
       deriving FromCBOR via CBORGroup (PoolParams crypto)
@@ -93,8 +93,8 @@ newtype RewardAcnt crypto = RewardAcnt
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential crypto =
-    ScriptHashObj (ScriptHash crypto)
-  | KeyHashObj    (KeyHash crypto)
+    ScriptHashObj !(ScriptHash crypto)
+  | KeyHashObj    !(KeyHash crypto)
     deriving (Show, Eq, Generic, Ord)
     deriving ToCBOR via (CBORGroup (Credential crypto))
 
@@ -112,10 +112,10 @@ instance NoUnexpectedThunks (Credential crypto)
 
 -- |An address for UTxO.
 data Addr crypto
-  = AddrBase (Credential crypto) (Credential crypto)
-  | AddrEnterprise (Credential crypto)
-  | AddrPtr (Credential crypto) Ptr
-  | AddrBootstrap (KeyHash crypto)
+  = AddrBase !(Credential crypto) !(Credential crypto)
+  | AddrEnterprise !(Credential crypto)
+  | AddrPtr !(Credential crypto) !Ptr
+  | AddrBootstrap !(KeyHash crypto)
   deriving (Show, Eq, Ord, Generic)
   deriving (ToCBOR, FromCBOR) via (CBORGroup (Addr crypto))
 
@@ -125,7 +125,7 @@ type Ix  = Natural
 
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr
-  = Ptr SlotNo Ix Ix
+  = Ptr !SlotNo !Ix !Ix
   deriving (Show, Eq, Ord, Generic)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
@@ -151,36 +151,37 @@ deriving instance Crypto crypto => FromCBOR (TxId crypto)
 
 -- |The input of a UTxO.
 data TxIn crypto
-  = TxIn (TxId crypto) Natural -- TODO use our own Natural type
+  = TxIn !(TxId crypto) !Natural -- TODO use our own Natural type
   deriving (Show, Eq, Generic, Ord)
 
 instance NoUnexpectedThunks (TxIn crypto)
 
 -- |The output of a UTxO.
 data TxOut crypto
-  = TxOut (Addr crypto) Coin
+  = TxOut !(Addr crypto) !Coin
   deriving (Show, Eq, Generic, Ord)
 
 instance NoUnexpectedThunks (TxOut crypto)
 
 data DelegCert crypto =
     -- | A stake key registration certificate.
-    RegKey (Credential crypto)
+    RegKey !(Credential crypto)
     -- | A stake key deregistration certificate.
-  | DeRegKey (Credential crypto)
+  | DeRegKey !(Credential crypto)
     -- | A stake delegation certificate.
-  | Delegate (Delegation crypto)
+  | Delegate !(Delegation crypto)
   deriving (Show, Generic, Eq)
 
 data PoolCert crypto =
     -- | A stake pool registration certificate.
-    RegPool (PoolParams crypto)
+    RegPool !(PoolParams crypto)
     -- | A stake pool retirement certificate.
-  | RetirePool (KeyHash crypto) EpochNo
+  | RetirePool !(KeyHash crypto) !EpochNo
   deriving (Show, Generic, Eq)
 
 -- | Genesis key delegation certificate
-newtype GenesisDelegate crypto = GenesisDelegate (GenKeyHash crypto, KeyHash crypto)
+data GenesisDelegate crypto =
+    GenesisDelegate !(GenKeyHash crypto) !(KeyHash crypto)
   deriving (Show, Generic, Eq)
 
 -- | Move instantaneous rewards certificate
@@ -195,10 +196,10 @@ instance Crypto crypto => ToCBOR (MIRCert crypto) where
 
 -- | A heavyweight certificate.
 data DCert crypto =
-    DCertDeleg (DelegCert crypto)
-  | DCertPool (PoolCert crypto)
-  | DCertGenesis (GenesisDelegate crypto)
-  | DCertMir (MIRCert crypto)
+    DCertDeleg !(DelegCert crypto)
+  | DCertPool !(PoolCert crypto)
+  | DCertGenesis !(GenesisDelegate crypto)
+  | DCertMir !(MIRCert crypto)
   deriving (Show, Generic, Eq)
 
 instance NoUnexpectedThunks (DelegCert crypto)
@@ -211,20 +212,20 @@ instance NoUnexpectedThunks (DCert crypto)
 data TxBody crypto
   = TxBody
       { _inputs   :: !(Set (TxIn crypto))
-      , _outputs  :: Seq (TxOut crypto)
-      , _certs    :: Seq (DCert crypto)
-      , _wdrls    :: Wdrl crypto
-      , _txfee    :: Coin
-      , _ttl      :: SlotNo
-      , _txUpdate :: Maybe (Update crypto)
-      , _mdHash   :: Maybe (MetaDataHash crypto)
+      , _outputs  :: !(StrictSeq (TxOut crypto))
+      , _certs    :: !(StrictSeq (DCert crypto))
+      , _wdrls    :: !(Wdrl crypto)
+      , _txfee    :: !Coin
+      , _ttl      :: !SlotNo
+      , _txUpdate :: !(Maybe (Update crypto))
+      , _mdHash   :: !(Maybe (MetaDataHash crypto))
       } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (TxBody crypto)
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey crypto
-  = WitVKey (VKey crypto) !(Sig crypto (TxBody crypto))
+  = WitVKey !(VKey crypto) !(Sig crypto (TxBody crypto))
   deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (WitVKey crypto)
@@ -299,7 +300,7 @@ instance
            <> toCBOR epoch
 
            -- DCertGenesis
-     DCertGenesis (GenesisDelegate (gk, kh)) ->
+     DCertGenesis (GenesisDelegate gk kh) ->
            encodeListLen 3
            <> toCBOR (8 :: Word8)
            <> toCBOR gk
@@ -345,7 +346,7 @@ instance
         matchSize "GenesisDelegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ DCertGenesis $ GenesisDelegate (a, b)
+        pure $ DCertGenesis $ GenesisDelegate a b
       9 -> matchSize "MIRCert" 2 n >> DCertMir <$> fromCBOR
       k -> invalidKey k
 
@@ -410,10 +411,10 @@ instance
   toCBOR txbody =
     let l = catMaybes
           [ encodeMapElement 0 $ _inputs txbody
-          , encodeMapElement 1 $ CborSeq $ _outputs txbody
+          , encodeMapElement 1 $ CborSeq $ StrictSeq.getSeq $ _outputs txbody
           , encodeMapElement 2 $ _txfee txbody
           , encodeMapElement 3 $ _ttl txbody
-          , encodeMapElementUnless null 4 $ CborSeq $ _certs txbody
+          , encodeMapElementUnless null 4 $ CborSeq $ StrictSeq.getSeq $ _certs txbody
           , encodeMapElementUnless (null . unWdrl) 5 $ _wdrls txbody
           , encodeMapElement 6 =<< _txUpdate txbody
           , encodeMapElement 7 =<< _mdHash txbody
@@ -434,14 +435,14 @@ instance
    fromCBOR = do
      mapParts <- decodeMapContents $
        decodeWord >>= \case
-         0 -> fromCBOR                     >>= \x -> pure (0, \t -> t { _inputs   = x })
-         1 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs  = x })
-         2 -> fromCBOR                     >>= \x -> pure (2, \t -> t { _txfee    = x })
-         3 -> fromCBOR                     >>= \x -> pure (3, \t -> t { _ttl      = x })
-         4 -> (unwrapCborSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
-         5 -> fromCBOR                     >>= \x -> pure (5, \t -> t { _wdrls    = x })
-         6 -> fromCBOR                     >>= \x -> pure (6, \t -> t { _txUpdate = Just x })
-         7 -> fromCBOR                     >>= \x -> pure (7, \t -> t { _mdHash   = Just x })
+         0 -> fromCBOR                           >>= \x -> pure (0, \t -> t { _inputs   = x })
+         1 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs  = x })
+         2 -> fromCBOR                           >>= \x -> pure (2, \t -> t { _txfee    = x })
+         3 -> fromCBOR                           >>= \x -> pure (3, \t -> t { _ttl      = x })
+         4 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
+         5 -> fromCBOR                           >>= \x -> pure (5, \t -> t { _wdrls    = x })
+         6 -> fromCBOR                           >>= \x -> pure (6, \t -> t { _txUpdate = Just x })
+         7 -> fromCBOR                           >>= \x -> pure (7, \t -> t { _mdHash   = Just x })
          k -> invalidKey k
      let requiredFields :: Map Int String
          requiredFields = Map.fromList $
@@ -458,10 +459,10 @@ instance
      where
        basebody = TxBody
           { _inputs   = Set.empty
-          , _outputs  = Seq.empty
+          , _outputs  = StrictSeq.empty
           , _txfee    = Coin 0
           , _ttl      = SlotNo 0
-          , _certs    = Seq.empty
+          , _certs    = StrictSeq.empty
           , _wdrls    = Wdrl Map.empty
           , _txUpdate = Nothing
           , _mdHash   = Nothing
@@ -597,7 +598,7 @@ instance
       <> toCBOR (_poolMargin poolParams)
       <> toCBOR (_poolRAcnt poolParams)
       <> toCBOR (_poolOwners poolParams)
-      <> toCBOR (CborSeq (_poolRelays poolParams))
+      <> toCBOR (CborSeq (StrictSeq.getSeq (_poolRelays poolParams)))
       <> toCBOR (_poolMD poolParams)
   listLen _ = 9
 
@@ -623,7 +624,7 @@ instance
             , _poolMargin = margin
             , _poolRAcnt  = ra
             , _poolOwners = owners
-            , _poolRelays = (unwrapCborSeq relays)
+            , _poolRelays = unwrapCborStrictSeq relays
             , _poolMD     = md
             }
 

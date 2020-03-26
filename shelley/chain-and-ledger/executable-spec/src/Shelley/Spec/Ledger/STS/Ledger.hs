@@ -22,6 +22,7 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, deco
                      encodeListLen, matchSize)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
@@ -109,7 +110,7 @@ ledgerTransition = do
 
   dpstate' <-
     trans @(DELEGS crypto)
-      $ TRC (DelegsEnv slot txIx pp tx reserves, dpstate, _certs $ _body tx)
+      $ TRC (DelegsEnv slot txIx pp tx reserves, dpstate, StrictSeq.getSeq $ _certs $ _body tx)
 
   let
     DPState dstate pstate = dpstate

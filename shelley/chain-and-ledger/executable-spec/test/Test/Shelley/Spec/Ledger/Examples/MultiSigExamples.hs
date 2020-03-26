@@ -15,8 +15,8 @@ module Test.Shelley.Spec.Ledger.Examples.MultiSigExamples
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
-import           Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as StrictSeq
 
 import qualified Data.Set as Set (fromList)
 
@@ -77,7 +77,7 @@ aliceAndBobOrCarlOrDaria =
 initTxBody :: [(Addr, Coin)] -> TxBody
 initTxBody addrs = TxBody
         (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
-        (Seq.fromList $ map (uncurry TxOut) addrs)
+        (StrictSeq.fromList $ map (uncurry TxOut) addrs)
         Empty
         (Wdrl Map.empty)
         (Coin 0)
@@ -89,7 +89,7 @@ makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
-    (Seq.fromList [uncurry TxOut addrC | addrC <- addrCs])
+    (StrictSeq.fromList [uncurry TxOut addrC | addrC <- addrCs])
     Empty
     wdrl
     (Coin 0)

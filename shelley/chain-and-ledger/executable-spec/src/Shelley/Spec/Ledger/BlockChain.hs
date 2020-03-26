@@ -56,15 +56,16 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR),
-                     TokenType (TypeNull), decodeListLen, decodeListLenOf, decodeNull,
-                     encodeListLen, encodeNull, matchSize, peekTokenType, serialize',
-                     serializeEncoding, serializeEncoding', encodePreEncoded, Decoder,
-                     Annotator(..), annotatorSlice)
+import           Cardano.Binary (Annotator (..), Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR),
+                     TokenType (TypeNull), annotatorSlice, decodeListLen, decodeListLenOf,
+                     decodeNull, encodeListLen, encodeNull, encodePreEncoded, matchSize,
+                     peekTokenType, serialize', serializeEncoding, serializeEncoding')
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -98,7 +99,7 @@ deriving instance Crypto crypto => FromCBOR (HashHeader crypto)
 instance NoUnexpectedThunks (HashHeader crypto)
 
 newtype TxSeq crypto
-    = TxSeq (Seq (Tx crypto))
+    = TxSeq (StrictSeq (Tx crypto))
   deriving (Eq, Show)
 
 instance Crypto crypto
@@ -109,8 +110,8 @@ instance Crypto crypto
     <> toCBOR wits
     <> toCBOR metadata
       where
-        bodies = CborSeq $ fmap _body txns
-        wits = CborSeq $ fmap txToCBORWits txns
+        bodies = CborSeq $ StrictSeq.getSeq $ fmap _body txns
+        wits = CborSeq $ StrictSeq.getSeq $ fmap txToCBORWits txns
         metadata = extractMetaData txns
   listLen _ = 3
 
@@ -140,8 +141,8 @@ bbHash (TxSeq txns) = (HashBBody . coerce) $
   where
     hashBytes :: forall a. ToCBOR a => a -> Hash.ByteString
     hashBytes = Hash.getHash . hash @(HASH crypto)
-    bodies = hashBytes . CborSeq $ _body       <$> txns
-    wits =   hashBytes . CborSeq $ txToCBORWits  <$> txns
+    bodies = hashBytes . CborSeq . StrictSeq.getSeq $ _body       <$> txns
+    wits =   hashBytes . CborSeq . StrictSeq.getSeq $ txToCBORWits  <$> txns
     md =     hashBytes           $ extractMetaData txns
 
 -- |HashHeader to Nonce
@@ -150,9 +151,9 @@ hashHeaderToNonce = Nonce . coerce
 
 data BHeader crypto
   = BHeader' {
-      bHeaderBody' :: (BHBody crypto)
-    , bHeaderSig' :: (KESig crypto (BHBody crypto))
-    , bHeaderBytes :: LByteString
+      bHeaderBody' :: !(BHBody crypto)
+    , bHeaderSig' :: !(KESig crypto (BHBody crypto))
+    , bHeaderBytes :: !LByteString
     }
   deriving (Generic)
   deriving NoUnexpectedThunks via
@@ -241,27 +242,27 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 
 data BHBody crypto = BHBody
   { -- | Hash of the previous block header
-    bheaderPrev           :: PrevHash crypto
+    bheaderPrev           :: !(PrevHash crypto)
     -- | verification key of block issuer
-  , bheaderVk             :: VKey crypto
+  , bheaderVk             :: !(VKey crypto)
     -- | VRF verification key for block issuer
-  , bheaderVrfVk          :: VRF.VerKeyVRF (VRF crypto)
+  , bheaderVrfVk          :: !(VRF.VerKeyVRF (VRF crypto))
     -- | block slot
-  , bheaderSlotNo           :: SlotNo
+  , bheaderSlotNo         :: !SlotNo
     -- | block number
-  , bheaderBlockNo        :: BlockNo
+  , bheaderBlockNo        :: !BlockNo
     -- | block nonce
-  , bheaderEta            :: VRF.CertifiedVRF (VRF crypto) Nonce
+  , bheaderEta            :: !(VRF.CertifiedVRF (VRF crypto) Nonce)
     -- | leader election value
-  , bheaderL              :: VRF.CertifiedVRF (VRF crypto) UnitInterval
+  , bheaderL              :: !(VRF.CertifiedVRF (VRF crypto) UnitInterval)
     -- | Size of the block body
-  , bsize                 :: Natural
+  , bsize                 :: !Natural
     -- | Hash of block body
-  , bhash                 :: HashBBody crypto
+  , bhash                 :: !(HashBBody crypto)
     -- | operational certificate
-  , bheaderOCert          :: OCert crypto
+  , bheaderOCert          :: !(OCert crypto)
     -- | protocol version
-  , bprotver              :: ProtVer
+  , bprotver              :: !ProtVer
   } deriving (Show, Eq, Generic)
     deriving ToCBOR via (CBORGroup (BHBody crypto))
     deriving FromCBOR via (CBORGroup (BHBody crypto))
@@ -316,7 +317,7 @@ instance Crypto crypto
            }
 
 data Block crypto
-  = Block' (BHeader crypto) (TxSeq crypto) LByteString
+  = Block' !(BHeader crypto) !(TxSeq crypto) !LByteString
 
 instance Crypto crypto => Show (Block crypto) where
   showsPrec n b@(Block h txns)
@@ -338,9 +339,13 @@ pattern Block h txns <- Block' h txns _
 
 -- |Given a sequence of transactions, return a mapping
 -- from indices in the original sequence to the non-Nothing metadata value
-extractMetaData :: Seq (Tx crypto) -> Map Int MetaData
+extractMetaData :: StrictSeq (Tx crypto) -> Map Int MetaData
 extractMetaData txns =
-  let metadata = Seq.mapWithIndex (\i -> \t -> (i, _metadata t)) txns
+  let metadata =
+          StrictSeq.toStrict
+        . Seq.mapWithIndex (\i -> \t -> (i, _metadata t))
+        . StrictSeq.getSeq
+        $ txns
   in ((Map.mapMaybe id) . Map.fromList . toList) metadata
 
 -- |Given a size and a mapping from indices to maybe metadata,
@@ -378,7 +383,7 @@ blockDecoder lax = annotatorSlice $ do
         <> show w <> ")"
       )
   let txns = Seq.zipWith3 cborWitsToTx bodies wits metadata
-  pure $ Block' <$> header <*> pure (TxSeq txns)
+  pure $ Block' <$> header <*> pure (TxSeq (StrictSeq.toStrict txns))
 
 instance Crypto crypto
   => FromCBOR (Annotator (Block crypto))

@@ -44,12 +44,12 @@ data PRTCL crypto
 
 data PrtclState crypto
   = PrtclState
-      (Map (KeyHash crypto) Natural)
-      (WithOrigin (LastAppliedBlock crypto))
-      Nonce -- ^ Current epoch nonce
-      Nonce -- ^ Evolving nonce
-      Nonce -- ^ Candidate nonce
-      Nonce -- ^ Prev epoch hash nonce
+      !(Map (KeyHash crypto) Natural)
+      !(WithOrigin (LastAppliedBlock crypto))
+      !Nonce -- ^ Current epoch nonce
+      !Nonce -- ^ Evolving nonce
+      !Nonce -- ^ Candidate nonce
+      !Nonce -- ^ Prev epoch hash nonce
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where

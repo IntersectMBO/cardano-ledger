@@ -20,6 +20,7 @@ where
 import           Byron.Spec.Ledger.Core ((∈))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes
@@ -92,7 +93,7 @@ bbodyTransition = judgmentContext >>=
   bbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
 
   ls' <- trans @(LEDGERS crypto)
-         $ TRC (LedgersEnv (bheaderSlotNo bhb) pp _reserves, ls, txs)
+         $ TRC (LedgersEnv (bheaderSlotNo bhb) pp _reserves, ls, StrictSeq.getSeq txs)
 
   pure $ BbodyState ls' (incrBlocks (bheaderSlotNo bhb ∈ oslots) hk b)
 

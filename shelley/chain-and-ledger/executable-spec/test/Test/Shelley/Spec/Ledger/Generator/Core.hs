@@ -51,7 +51,7 @@ import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList, insert, lookup)
 import           Data.Ratio ((%))
-import           Data.Sequence (fromList)
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
 import           GHC.Stack (HasCallStack)
@@ -361,8 +361,8 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
             blockNo
             (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
             (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
-            (fromIntegral $ bBodySize $ (TxSeq . fromList) txns)
-            (bbHash $ TxSeq $ fromList txns)
+            (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)
+            (bbHash $ TxSeq $ StrictSeq.fromList txns)
             oCert
             (ProtVer 0 0)
     kpDiff = kesPeriod - c0
@@ -375,7 +375,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
             Just sig' -> sig'
     bh = BHeader bhb sig
   in
-    Block bh (TxSeq $ fromList txns)
+    Block bh (TxSeq $ StrictSeq.fromList txns)
 
 -- | We provide our own nonces to 'mkBlock', which we then wish to recover as
 -- the output of the VRF functions. In general, however, we just derive them

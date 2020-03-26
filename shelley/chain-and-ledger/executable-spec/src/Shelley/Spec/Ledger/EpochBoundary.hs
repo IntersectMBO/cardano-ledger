@@ -192,9 +192,9 @@ groupByPool active delegs =
 -- | Snapshot of the stake distribution.
 data SnapShot crypto
   = SnapShot
-    { _stake :: Stake crypto
-    , _delegations :: Map (Credential crypto) (KeyHash crypto)
-    , _poolParams :: Map (KeyHash crypto) (PoolParams crypto)
+    { _stake       :: !(Stake crypto)
+    , _delegations :: !(Map (Credential crypto) (KeyHash crypto))
+    , _poolParams  :: !(Map (KeyHash crypto) (PoolParams crypto))
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShot crypto)
@@ -227,10 +227,10 @@ instance
 -- | Snapshots of the stake distribution.
 data SnapShots crypto
   = SnapShots
-    { _pstakeMark :: SnapShot crypto
-    , _pstakeSet  :: SnapShot crypto
-    , _pstakeGo   :: SnapShot crypto
-    , _feeSS :: Coin
+    { _pstakeMark :: !(SnapShot crypto)
+    , _pstakeSet  :: !(SnapShot crypto)
+    , _pstakeGo   :: !(SnapShot crypto)
+    , _feeSS      :: !Coin
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShots crypto)

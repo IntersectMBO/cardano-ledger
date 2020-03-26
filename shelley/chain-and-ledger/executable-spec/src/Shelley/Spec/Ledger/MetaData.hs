@@ -31,6 +31,8 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
+--
+-- TODO make strict
 data MetaDatum
     = Map [(MetaDatum, MetaDatum)]
     | List [MetaDatum]

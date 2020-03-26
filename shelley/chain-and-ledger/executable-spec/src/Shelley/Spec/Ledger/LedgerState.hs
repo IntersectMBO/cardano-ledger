@@ -82,7 +82,7 @@ import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
-import qualified Data.Sequence as Seq (Seq (..))
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
@@ -137,19 +137,19 @@ type RewardAccounts crypto
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
     {  -- |The active stake keys.
-      _stkCreds    :: StakeCreds           crypto
+      _stkCreds    :: !(StakeCreds           crypto)
       -- |The active reward accounts.
-    ,  _rewards    :: RewardAccounts       crypto
+    ,  _rewards    :: !(RewardAccounts       crypto)
       -- |The current delegations.
-    , _delegations :: Map (Credential crypto) (KeyHash crypto)
+    , _delegations :: !(Map (Credential crypto) (KeyHash crypto))
       -- |The pointed to hash keys.
-    , _ptrs        :: Map Ptr (Credential crypto)
+    , _ptrs        :: !(Map Ptr (Credential crypto))
       -- | future genesis key delegations
-    , _fGenDelegs  :: Map (SlotNo, GenKeyHash crypto) (KeyHash crypto)
+    , _fGenDelegs  :: !(Map (SlotNo, GenKeyHash crypto) (KeyHash crypto))
       -- |Genesis key delegations
-    , _genDelegs   :: GenDelegs crypto
+    , _genDelegs   :: !(GenDelegs crypto)
       -- | Instantaneous Rewards
-    , _irwd        :: Map (Credential crypto) Coin
+    , _irwd        :: !(Map (Credential crypto) Coin)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DState crypto)
@@ -176,11 +176,11 @@ instance Crypto crypto => FromCBOR (DState crypto)
 -- | Current state of staking pools and their certificate counters.
 data PState crypto = PState
     { -- |The active stake pools.
-      _stPools     :: StakePools crypto
+      _stPools     :: !(StakePools crypto)
       -- |The pool parameters.
-    , _pParams     :: Map (KeyHash crypto) (PoolParams crypto)
+    , _pParams     :: !(Map (KeyHash crypto) (PoolParams crypto))
       -- |A map of retiring stake pools to the epoch when they retire.
-    , _retiring    :: Map (KeyHash crypto) EpochNo
+    , _retiring    :: !(Map (KeyHash crypto) EpochNo)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (PState crypto)
@@ -203,8 +203,8 @@ instance Crypto crypto => FromCBOR (PState crypto)
 data DPState crypto =
     DPState
     {
-      _dstate :: DState crypto
-    , _pstate :: PState crypto
+      _dstate :: !(DState crypto)
+    , _pstate :: !(PState crypto)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DPState crypto)
@@ -223,11 +223,11 @@ instance Crypto crypto => FromCBOR (DPState crypto)
     pure $ DPState ds ps
 
 data RewardUpdate crypto= RewardUpdate
-  { deltaT        :: Coin
-  , deltaR        :: Coin
-  , rs            :: Map (RewardAcnt crypto) Coin
-  , deltaF        :: Coin
-  , nonMyopic     :: NonMyopic crypto
+  { deltaT        :: !Coin
+  , deltaR        :: !Coin
+  , rs            :: !(Map (RewardAcnt crypto) Coin)
+  , deltaF        :: !Coin
+  , nonMyopic     :: !(NonMyopic crypto)
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate crypto)
@@ -257,8 +257,8 @@ emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
 
 data AccountState = AccountState
-  { _treasury  :: Coin
-  , _reserves  :: Coin
+  { _treasury  :: !Coin
+  , _reserves  :: !Coin
   } deriving (Show, Eq, Generic)
 
 instance ToCBOR AccountState
@@ -278,12 +278,12 @@ instance NoUnexpectedThunks AccountState
 
 data EpochState crypto
   = EpochState
-    { esAccountState :: AccountState
-    , esSnapshots :: SnapShots crypto
-    , esLState :: LedgerState crypto
-    , esPrevPp :: PParams
-    , esPp :: PParams
-    , esNonMyopic :: NonMyopic crypto
+    { esAccountState :: !AccountState
+    , esSnapshots :: !(SnapShots crypto)
+    , esLState :: !(LedgerState crypto)
+    , esPrevPp :: !PParams
+    , esPp :: !PParams
+    , esNonMyopic :: !(NonMyopic crypto)
     }
   deriving (Show, Eq, Generic)
 
@@ -346,9 +346,9 @@ clearPpup utxoSt = utxoSt {_ppups = emptyPPPUpdates}
 data UTxOState crypto=
     UTxOState
     { _utxo      :: !(UTxO crypto)
-    , _deposited :: Coin
-    , _fees      :: Coin
-    , _ppups     :: ProposedPPUpdates crypto
+    , _deposited :: !Coin
+    , _fees      :: !Coin
+    , _ppups     :: !(ProposedPPUpdates crypto)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (UTxOState crypto)
@@ -371,15 +371,14 @@ instance Crypto crypto => FromCBOR (UTxOState crypto)
 -- | New Epoch state and environment
 data NewEpochState crypto=
   NewEpochState {
-    nesEL     :: EpochNo                       -- ^ Last epoch
-  , nesBprev  :: BlocksMade          crypto  -- ^ Blocks made before current epoch
-  , nesBcur   :: BlocksMade          crypto  -- ^ Blocks made in current epoch
-  , nesEs     :: EpochState          crypto  -- ^ Epoch state before current
-  , nesRu     :: Maybe (RewardUpdate crypto) -- ^ Possible reward update
-  , nesPd     :: PoolDistr           crypto  -- ^ Stake distribution within the stake pool
-  , nesOsched :: Map  SlotNo
-                     (Maybe
-                       (GenKeyHash   crypto))  -- ^ Overlay schedule for PBFT vs Praos
+    nesEL     :: !EpochNo                       -- ^ Last epoch
+  , nesBprev  :: !(BlocksMade          crypto)  -- ^ Blocks made before current epoch
+  , nesBcur   :: !(BlocksMade          crypto)  -- ^ Blocks made in current epoch
+  , nesEs     :: !(EpochState          crypto)  -- ^ Epoch state before current
+  , nesRu     :: !(Maybe (RewardUpdate crypto)) -- ^ Possible reward update
+  , nesPd     :: !(PoolDistr           crypto)  -- ^ Stake distribution within the stake pool
+  , nesOsched :: !(Map SlotNo
+                   (Maybe (GenKeyHash  crypto)))  -- ^ Overlay schedule for PBFT vs Praos
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochState crypto)
@@ -451,8 +450,8 @@ genesisId =
   TxId $ hash
   (TxBody
    Set.empty
-   Seq.Empty
-   Seq.Empty
+   StrictSeq.Empty
+   StrictSeq.Empty
    (Wdrl Map.empty)
    (Coin 0)
    (SlotNo 0)

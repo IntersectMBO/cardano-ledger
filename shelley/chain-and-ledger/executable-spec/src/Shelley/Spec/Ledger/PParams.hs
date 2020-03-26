@@ -60,45 +60,45 @@ type family HKD f a where
 -- | Protocol parameters
 data PParams' f = PParams
   { -- |The linear factor for the minimum fee calculation
-    _minfeeA         :: HKD f Natural
+    _minfeeA         :: !(HKD f Natural)
     -- |The constant factor for the minimum fee calculation
-  , _minfeeB         :: HKD f Natural
+  , _minfeeB         :: !(HKD f Natural)
     -- | Maximal block body size
-  , _maxBBSize       :: HKD f Natural
+  , _maxBBSize       :: !(HKD f Natural)
     -- | Maximal transaction size
-  , _maxTxSize       :: HKD f Natural
+  , _maxTxSize       :: !(HKD f Natural)
     -- | Maximal block header size
-  , _maxBHSize       :: HKD f Natural
+  , _maxBHSize       :: !(HKD f Natural)
     -- |The amount of a key registration deposit
-  , _keyDeposit      :: HKD f Coin
+  , _keyDeposit      :: !(HKD f Coin)
     -- |The minimum percent refund guarantee
-  , _keyMinRefund    :: HKD f UnitInterval
+  , _keyMinRefund    :: !(HKD f UnitInterval)
     -- |The deposit decay rate
-  , _keyDecayRate    :: HKD f Rational
+  , _keyDecayRate    :: !(HKD f Rational)
     -- |The amount of a pool registration deposit
-  , _poolDeposit     :: HKD f Coin
+  , _poolDeposit     :: !(HKD f Coin)
     -- | The minimum percent pool refund
-  , _poolMinRefund   :: HKD f UnitInterval
+  , _poolMinRefund   :: !(HKD f UnitInterval)
     -- | Decay rate for pool deposits
-  , _poolDecayRate   :: HKD f Rational
+  , _poolDecayRate   :: !(HKD f Rational)
     -- | epoch bound on pool retirement
-  , _eMax            :: HKD f EpochNo
+  , _eMax            :: !(HKD f EpochNo)
     -- | Desired number of pools
-  , _nOpt            :: HKD f Natural
+  , _nOpt            :: !(HKD f Natural)
     -- | Pool influence
-  , _a0              :: HKD f Rational
+  , _a0              :: !(HKD f Rational)
     -- | Treasury expansion
-  , _rho             :: HKD f UnitInterval
+  , _rho             :: !(HKD f UnitInterval)
     -- | Monetary expansion
-  , _tau             :: HKD f UnitInterval
+  , _tau             :: !(HKD f UnitInterval)
     -- | Active slot coefficient
-  , _activeSlotCoeff :: HKD f ActiveSlotCoeff
+  , _activeSlotCoeff :: !(HKD f ActiveSlotCoeff)
     -- | Decentralization parameter
-  , _d               :: HKD f UnitInterval
+  , _d               :: !(HKD f UnitInterval)
     -- | Extra entropy
-  , _extraEntropy    :: HKD f Nonce
+  , _extraEntropy    :: !(HKD f Nonce)
     -- | Protocol version
-  , _protocolVersion :: HKD f ProtVer
+  , _protocolVersion :: !(HKD f ProtVer)
   } deriving (Generic)
 
 type PParams = PParams' Identity
@@ -107,10 +107,10 @@ deriving instance Show (PParams' Identity)
 
 data ActiveSlotCoeff =
   ActiveSlotCoeff
-  { unActiveSlotVal :: UnitInterval
-  , unActiveSlotLog :: Integer  -- TODO mgudemann make this FixedPoint,
-                                -- currently a problem because of
-                                -- NoUnexpectedThunks instance for FixedPoint
+  { unActiveSlotVal :: !UnitInterval
+  , unActiveSlotLog :: !Integer  -- TODO mgudemann make this FixedPoint,
+                                 -- currently a problem because of
+                                 -- NoUnexpectedThunks instance for FixedPoint
   } deriving (Eq, Ord, Show, Generic)
 
 instance NoUnexpectedThunks ActiveSlotCoeff
@@ -146,7 +146,7 @@ activeSlotVal = unActiveSlotVal
 activeSlotLog :: ActiveSlotCoeff -> FixedPoint
 activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 
-data ProtVer = ProtVer Natural Natural
+data ProtVer = ProtVer !Natural !Natural
   deriving (Show, Eq, Generic, Ord)
   deriving ToCBOR via (CBORGroup ProtVer)
   deriving FromCBOR via (CBORGroup ProtVer)
@@ -265,7 +265,7 @@ emptyPParams =
 
 -- | Update Proposal
 data Update crypto
-  = Update (ProposedPPUpdates crypto) EpochNo
+  = Update !(ProposedPPUpdates crypto) !EpochNo
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (Update crypto)

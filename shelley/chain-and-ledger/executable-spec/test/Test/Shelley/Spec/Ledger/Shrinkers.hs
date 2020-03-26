@@ -5,6 +5,8 @@ import           Data.Map (Map)
 import qualified Data.Map as M
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Test.QuickCheck (shrinkIntegral, shrinkList)
@@ -40,7 +42,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
   [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md |
-    os' <- toList $ shrinkSeq shrinkTxOut os ]
+    os' <- toList $ shrinkStrictSeq shrinkTxOut os ]
 
   -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
   -- [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
@@ -49,7 +51,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
   where outBalance = outputBalance os
 
-outputBalance :: Seq (TxOut crypto) -> Coin
+outputBalance :: StrictSeq (TxOut crypto) -> Coin
 outputBalance = foldl (\v (TxOut _ c) -> v + c) (Coin 0)
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
@@ -92,6 +94,10 @@ shrinkSet f = (S.fromList <$>) . shrinkList f . toList
 -- TODO can this be made more efficient?
 shrinkSeq :: (a -> [a]) -> Seq a -> [Seq a]
 shrinkSeq f = (Seq.fromList <$>) . shrinkList f . toList
+
+-- TODO can this be made more efficient?
+shrinkStrictSeq :: (a -> [a]) -> StrictSeq a -> [StrictSeq a]
+shrinkStrictSeq f = (StrictSeq.fromList <$>) . shrinkList f . toList
 
 shrinkMap
   :: Ord k

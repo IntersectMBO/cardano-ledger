@@ -14,7 +14,7 @@ import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map (empty, singleton)
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 import           Cardano.Binary (decodeFullDecoder, fromCBOR)
@@ -82,7 +82,7 @@ alicePoolParams =
     , _poolMargin = unsafeMkUnitInterval 0.1
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , _poolRelays = (Seq.singleton . Url . text64) "relay.io"
+    , _poolRelays = (StrictSeq.singleton . Url . text64) "relay.io"
     , _poolMD = Just $ PoolMetaData
                   { _poolMDUrl  = Url $ text64 "alice.pool"
                   , _poolMDHash = BS.pack "{}"
@@ -117,8 +117,8 @@ carlPay = KeyPair vk sk
 txbSimpleUTxO :: TxBody
 txbSimpleUTxO = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -146,13 +146,14 @@ txbMutiUTxO = TxBody
   { _inputs   = Set.fromList [ TxIn genesisId 0
                              , TxIn genesisId 1
                              ]
-  , _outputs  = Seq.fromList [ TxOut aliceAddr (Coin 10)
-                             , TxOut aliceAddr (Coin 20)
-                             , TxOut aliceAddr (Coin 30)
-                             , TxOut bobAddr   (Coin 40)
-                             , TxOut bobAddr   (Coin 50)
-                             ]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList
+                [ TxOut aliceAddr (Coin 10)
+                , TxOut aliceAddr (Coin 20)
+                , TxOut aliceAddr (Coin 30)
+                , TxOut bobAddr   (Coin 40)
+                , TxOut bobAddr   (Coin 50)
+                ]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 199
   , _ttl      = SlotNo 10
@@ -179,8 +180,8 @@ txMutiUTxOBytes16 = "83a400d90102828244b45c4891008244b45c4891010185840044cfb2c41
 txbRegisterStake :: TxBody
 txbRegisterStake = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertDeleg (RegKey aliceSHK) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertDeleg (RegKey aliceSHK) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -204,8 +205,8 @@ txRegisterStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f
 txbDelegateStake :: TxBody
 txbDelegateStake = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertDeleg (Delegate $ Delegation bobSHK alicePoolKH) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertDeleg (Delegate $ Delegation bobSHK alicePoolKH) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -229,8 +230,8 @@ txDelegateStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f
 txbDeregisterStake :: TxBody
 txbDeregisterStake = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertDeleg (DeRegKey aliceSHK) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertDeleg (DeRegKey aliceSHK) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -255,8 +256,8 @@ txDeregisterStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c414447639
 txbRegisterPool :: TxBody
 txbRegisterPool = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertPool (RegPool alicePoolParams) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertPool (RegPool alicePoolParams) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -280,8 +281,8 @@ txRegisterPoolBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7
 txbRetirePool :: TxBody
 txbRetirePool = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertPool (RetirePool alicePoolKH (EpochNo 5)) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertPool (RetirePool alicePoolKH (EpochNo 5)) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -309,8 +310,8 @@ md = MD.MetaData $ Map.singleton 0 (MD.List [ MD.I 5, MD.S "hello"])
 txbWithMD :: TxBody
 txbWithMD = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -341,8 +342,8 @@ msig = RequireMOf 2
 txbWithMultiSig :: TxBody
 txbWithMultiSig = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0] -- acting as if this is multi-sig
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
@@ -366,8 +367,8 @@ txWithMultiSigBytes16 = "83a400d90102818244b45c4891000181840044cfb2c4144476394f7
 txbWithWithdrawal :: TxBody
 txbWithWithdrawal = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl $ Map.singleton (RewardAcnt aliceSHK) 100
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10

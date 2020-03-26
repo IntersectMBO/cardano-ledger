@@ -60,7 +60,7 @@ poolCWitness (RegPool pool)            = KeyHashObj $ _poolPubKey pool
 poolCWitness (RetirePool k _)          = KeyHashObj k
 
 genesisCWitness :: GenesisDelegate crypto -> GenKeyHash crypto
-genesisCWitness (GenesisDelegate (gk, _)) = gk
+genesisCWitness (GenesisDelegate gk _) = gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert crypto-> PParams -> Coin
@@ -94,7 +94,7 @@ isDelegation _ = False
 
 -- | Check for `GenesisDelegate` constructor
 isGenesisDelegation :: DCert crypto-> Bool
-isGenesisDelegation (DCertGenesis (GenesisDelegate _)) = True
+isGenesisDelegation (DCertGenesis (GenesisDelegate {})) = True
 isGenesisDelegation _ = False
 
 -- | Check for `RegPool` constructor

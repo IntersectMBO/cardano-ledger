@@ -102,7 +102,7 @@ interval1 = UnsafeUnitInterval 1
 
 -- | Evolving nonce type.
 data Nonce
-  = Nonce (Hash SHA256 Nonce)
+  = Nonce !(Hash SHA256 Nonce)
   | NeutralNonce -- ^ Identity element
   deriving (Eq, Generic, Ord, Show)
 

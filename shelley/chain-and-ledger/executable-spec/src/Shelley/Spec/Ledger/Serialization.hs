@@ -11,6 +11,7 @@ module Shelley.Spec.Ledger.Serialization
   , FromCBORGroup (..)
   , CBORGroup (..)
   , CborSeq (..)
+  , unwrapCborStrictSeq
   , decodeList
   , decodeMapContents
   , encodeFoldable
@@ -34,6 +35,8 @@ import qualified Data.Map as Map
 import           Data.Ratio (Rational, denominator, numerator, (%))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Typeable
 
 class Typeable a => ToCBORGroup a where
@@ -89,6 +92,9 @@ instance ToCBOR a => ToCBOR (CborSeq a) where
 
 instance FromCBOR a => FromCBOR (CborSeq a) where
   fromCBOR = CborSeq . Seq.fromList <$> decodeList fromCBOR
+
+unwrapCborStrictSeq :: CborSeq a -> StrictSeq a
+unwrapCborStrictSeq = StrictSeq.toStrict . unwrapCborSeq
 
 encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
 encodeFoldable xs = wrapCBORArray len contents

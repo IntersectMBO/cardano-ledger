@@ -29,8 +29,8 @@ module Test.Shelley.Spec.Ledger.PreSTSGenerator
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -173,8 +173,8 @@ genTx keyList (UTxO m) cslot = do
   txttl <- genWord64 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
-           ((`TxOut` perReceipient) <$> receipientAddrs)
-           Empty
+           (StrictSeq.toStrict ((`TxOut` perReceipient) <$> receipientAddrs))
+           StrictSeq.Empty
            (Wdrl Map.empty) -- TODO generate witdrawals
            txfee'
            (cslot + SlotNo txttl)
