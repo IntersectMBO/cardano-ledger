@@ -269,7 +269,7 @@ propertyTests = testGroup "Property-Based Testing"
                    propBalanceTxInTxOut'
                   , testProperty
                     "Classify double spend"
-                     classifyInvalidDoubleSpend
+                    classifyInvalidDoubleSpend
                   , testProperty
                     "NonNegative TxOuts"
                     propNonNegativeTxOuts
