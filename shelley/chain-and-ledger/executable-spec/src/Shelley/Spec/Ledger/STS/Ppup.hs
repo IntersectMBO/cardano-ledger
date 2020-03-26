@@ -86,9 +86,9 @@ instance
       3 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
       k -> invalidKey k
 
-pvCanFollow :: ProtVer -> Maybe ProtVer -> Bool
-pvCanFollow _ Nothing = True
-pvCanFollow (ProtVer m n) (Just (ProtVer m' n'))
+pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
+pvCanFollow _ SNothing = True
+pvCanFollow (ProtVer m n) (SJust (ProtVer m' n'))
   = (m+1, 0) == (m', n') || (m, n+1) == (m', n')
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)

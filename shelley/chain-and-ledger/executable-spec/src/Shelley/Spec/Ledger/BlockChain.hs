@@ -73,7 +73,7 @@ import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedT
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
-                     mkNonce)
+                     mkNonce, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
@@ -346,7 +346,7 @@ extractMetaData txns =
         . Seq.mapWithIndex (\i -> \t -> (i, _metadata t))
         . StrictSeq.getSeq
         $ txns
-  in ((Map.mapMaybe id) . Map.fromList . toList) metadata
+  in ((Map.mapMaybe strictMaybeToMaybe) . Map.fromList . toList) metadata
 
 -- |Given a size and a mapping from indices to maybe metadata,
 -- return a sequence whose size is the size paramater and

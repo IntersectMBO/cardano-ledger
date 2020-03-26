@@ -36,7 +36,8 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Byron.Spec.Ledger.Core (Relation (..))
-import           Shelley.Spec.Ledger.BaseTypes (Text64, UnitInterval, invalidKey)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), Text64, UnitInterval, invalidKey,
+                     strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VerKeyVRF, hashAnyKey)
@@ -79,7 +80,7 @@ data PoolParams crypto =
     , _poolRAcnt   :: !(RewardAcnt crypto)
     , _poolOwners  :: !(Set (KeyHash crypto))
     , _poolRelays  :: !(StrictSeq Url)
-    , _poolMD      :: !(Maybe PoolMetaData)
+    , _poolMD      :: !(StrictMaybe PoolMetaData)
     } deriving (Show, Generic, Eq)
       deriving ToCBOR via CBORGroup (PoolParams crypto)
       deriving FromCBOR via CBORGroup (PoolParams crypto)
@@ -217,8 +218,8 @@ data TxBody crypto
       , _wdrls    :: !(Wdrl crypto)
       , _txfee    :: !Coin
       , _ttl      :: !SlotNo
-      , _txUpdate :: !(Maybe (Update crypto))
-      , _mdHash   :: !(Maybe (MetaDataHash crypto))
+      , _txUpdate :: !(StrictMaybe (Update crypto))
+      , _mdHash   :: !(StrictMaybe (MetaDataHash crypto))
       } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (TxBody crypto)
@@ -416,8 +417,8 @@ instance
           , encodeMapElement 3 $ _ttl txbody
           , encodeMapElementUnless null 4 $ CborSeq $ StrictSeq.getSeq $ _certs txbody
           , encodeMapElementUnless (null . unWdrl) 5 $ _wdrls txbody
-          , encodeMapElement 6 =<< _txUpdate txbody
-          , encodeMapElement 7 =<< _mdHash txbody
+          , encodeMapElement 6 =<< strictMaybeToMaybe (_txUpdate txbody)
+          , encodeMapElement 7 =<< strictMaybeToMaybe (_mdHash txbody)
           ]
         n = fromIntegral $ length l
     in encodeMapLen n <> fold l
@@ -441,8 +442,8 @@ instance
          3 -> fromCBOR                           >>= \x -> pure (3, \t -> t { _ttl      = x })
          4 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
          5 -> fromCBOR                           >>= \x -> pure (5, \t -> t { _wdrls    = x })
-         6 -> fromCBOR                           >>= \x -> pure (6, \t -> t { _txUpdate = Just x })
-         7 -> fromCBOR                           >>= \x -> pure (7, \t -> t { _mdHash   = Just x })
+         6 -> fromCBOR                           >>= \x -> pure (6, \t -> t { _txUpdate = SJust x })
+         7 -> fromCBOR                           >>= \x -> pure (7, \t -> t { _mdHash   = SJust x })
          k -> invalidKey k
      let requiredFields :: Map Int String
          requiredFields = Map.fromList $
@@ -464,8 +465,8 @@ instance
           , _ttl      = SlotNo 0
           , _certs    = StrictSeq.empty
           , _wdrls    = Wdrl Map.empty
-          , _txUpdate = Nothing
-          , _mdHash   = Nothing
+          , _txUpdate = SNothing
+          , _mdHash   = SNothing
           }
 
 

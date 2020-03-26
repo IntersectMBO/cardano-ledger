@@ -18,7 +18,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 import           Cardano.Binary (decodeFullDecoder, fromCBOR)
-import           Shelley.Spec.Ledger.BaseTypes (text64)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), text64)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
@@ -83,7 +83,7 @@ alicePoolParams =
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , _poolRelays = (StrictSeq.singleton . Url . text64) "relay.io"
-    , _poolMD = Just $ PoolMetaData
+    , _poolMD = SJust $ PoolMetaData
                   { _poolMDUrl  = Url $ text64 "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
@@ -122,8 +122,8 @@ txbSimpleUTxO = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txSimpleUTxO :: Tx
@@ -131,7 +131,7 @@ txSimpleUTxO = Tx
   { _body           = txbSimpleUTxO
   , _witnessVKeySet = makeWitnessesVKey txbSimpleUTxO [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
@@ -157,8 +157,8 @@ txbMutiUTxO = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 199
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txMutiUTxO :: Tx
@@ -169,7 +169,7 @@ txMutiUTxO = Tx
                       , bobPay
                       ]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txMutiUTxOBytes16 :: BSL.ByteString
@@ -185,8 +185,8 @@ txbRegisterStake = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txRegisterStake :: Tx
@@ -194,7 +194,7 @@ txRegisterStake = Tx
   { _body           = txbRegisterStake
   , _witnessVKeySet = makeWitnessesVKey txbRegisterStake [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txRegisterStakeBytes16 :: BSL.ByteString
@@ -210,8 +210,8 @@ txbDelegateStake = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txDelegateStake :: Tx
@@ -219,7 +219,7 @@ txDelegateStake = Tx
   { _body           = txbDelegateStake
   , _witnessVKeySet = makeWitnessesVKey txbDelegateStake [alicePay, bobStake]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txDelegateStakeBytes16 :: BSL.ByteString
@@ -235,8 +235,8 @@ txbDeregisterStake = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txDeregisterStake :: Tx
@@ -244,7 +244,7 @@ txDeregisterStake = Tx
   { _body           = txbDeregisterStake
   , _witnessVKeySet = makeWitnessesVKey txbDeregisterStake [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 
@@ -261,8 +261,8 @@ txbRegisterPool = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txRegisterPool :: Tx
@@ -270,7 +270,7 @@ txRegisterPool = Tx
   { _body           = txbRegisterPool
   , _witnessVKeySet = makeWitnessesVKey txbRegisterPool [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txRegisterPoolBytes16 :: BSL.ByteString
@@ -286,8 +286,8 @@ txbRetirePool = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txRetirePool :: Tx
@@ -295,7 +295,7 @@ txRetirePool = Tx
   { _body           = txbRetirePool
   , _witnessVKeySet = makeWitnessesVKey txbRetirePool [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txRetirePoolBytes16 :: BSL.ByteString
@@ -315,8 +315,8 @@ txbWithMD = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Just $ MD.hashMetaData @ConcreteCrypto md
+  , _txUpdate = SNothing
+  , _mdHash   = SJust $ MD.hashMetaData @ConcreteCrypto md
   }
 
 txWithMD :: Tx
@@ -324,7 +324,7 @@ txWithMD = Tx
   { _body           = txbWithMD
   , _witnessVKeySet = makeWitnessesVKey txbWithMD [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Just md
+  , _metadata       = SJust md
   }
 
 txWithMDBytes16 :: BSL.ByteString
@@ -347,8 +347,8 @@ txbWithMultiSig = TxBody
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txWithMultiSig :: Tx
@@ -356,7 +356,7 @@ txWithMultiSig = Tx
   { _body           = txbWithMultiSig
   , _witnessVKeySet = makeWitnessesVKey txbWithMultiSig [alicePay, bobPay]
   , _witnessMSigMap = Map.singleton (hashScript msig) msig
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txWithMultiSigBytes16 :: BSL.ByteString
@@ -372,8 +372,8 @@ txbWithWithdrawal = TxBody
   , _wdrls    = Wdrl $ Map.singleton (RewardAcnt aliceSHK) 100
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txWithWithdrawal :: Tx
@@ -381,7 +381,7 @@ txWithWithdrawal = Tx
   { _body           = txbWithWithdrawal
   , _witnessVKeySet = makeWitnessesVKey txbWithWithdrawal [alicePay, aliceStake]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txWithWithdrawalBytes16 :: BSL.ByteString

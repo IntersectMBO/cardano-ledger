@@ -21,6 +21,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, undiscriminateKeyHash)
 import           Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
@@ -82,8 +83,8 @@ initTxBody addrs = TxBody
         (Wdrl Map.empty)
         (Coin 0)
         (SlotNo 0)
-        Nothing
-        Nothing
+        SNothing
+        SNothing
 
 makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
 makeTxBody inp addrCs wdrl =
@@ -94,12 +95,12 @@ makeTxBody inp addrCs wdrl =
     wdrl
     (Coin 0)
     (SlotNo 10)
-    Nothing
-    Nothing
+    SNothing
+    SNothing
 
 makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
-makeTx txBody keyPairs =
-  Tx txBody (makeWitnessesVKey txBody keyPairs)
+makeTx txBody keyPairs msigs =
+  Tx txBody (makeWitnessesVKey txBody keyPairs) msigs . maybeToStrictMaybe
 
 aliceInitCoin :: Coin
 aliceInitCoin = 10000

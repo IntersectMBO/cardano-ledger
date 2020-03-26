@@ -25,6 +25,9 @@ module Shelley.Spec.Ledger.BaseTypes
   , Text64
   , text64
   , text64Size
+  , StrictMaybe (..)
+  , strictMaybeToMaybe
+  , maybeToStrictMaybe
     -- * STS Base
   , Globals (..)
   , ShelleyBase
@@ -169,6 +172,58 @@ instance FromCBOR Text64
     if (BS.length . encodeUtf8) t > 64
       then cborError $ DecoderErrorCustom "Text64 has too many bytes:" t
       else pure $ Text64 t
+
+-- | Strict 'Maybe'.
+--
+-- TODO move to @cardano-prelude@
+data StrictMaybe a
+  = SNothing
+  | SJust !a
+  deriving (Eq, Ord, Show, Generic)
+
+instance NoUnexpectedThunks a => NoUnexpectedThunks (StrictMaybe a)
+
+instance Functor StrictMaybe where
+  fmap _ SNothing  = SNothing
+  fmap f (SJust a) = SJust (f a)
+
+instance Applicative StrictMaybe where
+  pure = SJust
+
+  SJust f  <*> m   = fmap f m
+  SNothing <*> _m  = SNothing
+
+  SJust _m1 *> m2  = m2
+  SNothing  *> _m2 = SNothing
+
+instance Monad StrictMaybe where
+    SJust x >>= k   = k x
+    SNothing  >>= _ = SNothing
+
+    (>>) = (*>)
+
+    return = SJust
+    fail _ = SNothing
+
+instance ToCBOR a => ToCBOR (StrictMaybe a) where
+  toCBOR SNothing  = encodeListLen 0
+  toCBOR (SJust x) = encodeListLen 1 <> toCBOR x
+
+instance FromCBOR a => FromCBOR (StrictMaybe a) where
+  fromCBOR = do
+    n <- decodeListLen
+    case n of
+      0 -> pure SNothing
+      1 -> SJust <$> fromCBOR
+      _ -> fail "unknown tag"
+
+strictMaybeToMaybe :: StrictMaybe a -> Maybe a
+strictMaybeToMaybe SNothing  = Nothing
+strictMaybeToMaybe (SJust x) = Just x
+
+maybeToStrictMaybe :: Maybe a -> StrictMaybe a
+maybeToStrictMaybe Nothing  = SNothing
+maybeToStrictMaybe (Just x) = SJust x
 
 --------------------------------------------------------------------------------
 -- Base monad for all STS systems

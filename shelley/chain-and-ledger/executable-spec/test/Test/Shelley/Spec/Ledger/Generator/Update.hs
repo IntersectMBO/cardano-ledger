@@ -25,7 +25,8 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Numeric.Natural (Natural)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), UnitInterval, mkNonce)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), StrictMaybe (..),
+                     UnitInterval, mkNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
@@ -228,26 +229,26 @@ genPPUpdate (c@Constants{maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
       d                     <- genDecentralisationParam
       extraEntropy          <- genExtraEntropy
       protocolVersion       <- genNextProtocolVersion pp
-      let pps = PParams { _minfeeA               = Just minFeeA
-                        , _minfeeB               = Just minFeeB
-                        , _maxBBSize             = Just maxBBSize
-                        , _maxTxSize             = Just maxTxSize
-                        , _maxBHSize             = Just maxBHSize
-                        , _keyDeposit            = Just keyDeposit
-                        , _keyMinRefund          = Just keyMinRefund
-                        , _keyDecayRate          = Just keyDecayRate
-                        , _poolDeposit           = Just poolDeposit
-                        , _poolMinRefund         = Just poolMinRefund
-                        , _poolDecayRate         = Just poolDecayRate
-                        , _eMax                  = Just eMax
-                        , _nOpt                  = Just nopt
-                        , _a0                    = Just a0
-                        , _rho                   = Just rho
-                        , _tau                   = Just tau
-                        , _activeSlotCoeff       = Just activeSlotCoefficient
-                        , _d                     = Just d
-                        , _extraEntropy          = Just extraEntropy
-                        , _protocolVersion       = Just protocolVersion
+      let pps = PParams { _minfeeA               = SJust minFeeA
+                        , _minfeeB               = SJust minFeeB
+                        , _maxBBSize             = SJust maxBBSize
+                        , _maxTxSize             = SJust maxTxSize
+                        , _maxBHSize             = SJust maxBHSize
+                        , _keyDeposit            = SJust keyDeposit
+                        , _keyMinRefund          = SJust keyMinRefund
+                        , _keyDecayRate          = SJust keyDecayRate
+                        , _poolDeposit           = SJust poolDeposit
+                        , _poolMinRefund         = SJust poolMinRefund
+                        , _poolDecayRate         = SJust poolDecayRate
+                        , _eMax                  = SJust eMax
+                        , _nOpt                  = SJust nopt
+                        , _a0                    = SJust a0
+                        , _rho                   = SJust rho
+                        , _tau                   = SJust tau
+                        , _activeSlotCoeff       = SJust activeSlotCoefficient
+                        , _d                     = SJust d
+                        , _extraEntropy          = SJust extraEntropy
+                        , _protocolVersion       = SJust protocolVersion
                         }
       let ppUpdate = zip genesisKeys (repeat pps)
       pure $

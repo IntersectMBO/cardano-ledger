@@ -118,8 +118,8 @@ import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopi
                      emptyNonMyopic, reward)
 
 import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
-import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
-                     intervalValue, text64Size)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe (..),
+                     UnitInterval, intervalValue, text64Size)
 import           Shelley.Spec.Ledger.Scripts (countMSigNodes)
 
 
@@ -397,13 +397,13 @@ instance NoUnexpectedThunks (OBftSlot crypto)
 -- | New Epoch state and environment
 data NewEpochState crypto=
   NewEpochState {
-    nesEL     :: !EpochNo                         -- ^ Last epoch
-  , nesBprev  :: !(BlocksMade          crypto)    -- ^ Blocks made before current epoch
-  , nesBcur   :: !(BlocksMade          crypto)    -- ^ Blocks made in current epoch
-  , nesEs     :: !(EpochState          crypto)    -- ^ Epoch state before current
-  , nesRu     :: !(Maybe (RewardUpdate crypto))   -- ^ Possible reward update
-  , nesPd     :: !(PoolDistr           crypto)    -- ^ Stake distribution within the stake pool
-  , nesOsched :: !(Map SlotNo (OBftSlot crypto))  -- ^ Overlay schedule for PBFT vs Praos
+    nesEL     :: !EpochNo                              -- ^ Last epoch
+  , nesBprev  :: !(BlocksMade                crypto)   -- ^ Blocks made before current epoch
+  , nesBcur   :: !(BlocksMade                crypto)   -- ^ Blocks made in current epoch
+  , nesEs     :: !(EpochState                crypto)   -- ^ Epoch state before current
+  , nesRu     :: !(StrictMaybe (RewardUpdate crypto))  -- ^ Possible reward update
+  , nesPd     :: !(PoolDistr                 crypto)   -- ^ Stake distribution within the stake pool
+  , nesOsched :: !(Map SlotNo (OBftSlot      crypto))  -- ^ Overlay schedule for PBFT vs Praos
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochState crypto)
@@ -480,8 +480,8 @@ genesisId =
    (Wdrl Map.empty)
    (Coin 0)
    (SlotNo 0)
-   Nothing
-   Nothing)
+   SNothing
+   SNothing)
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins
@@ -581,8 +581,8 @@ txsize (Tx
     relays pps = fmap (text64Size . unUrl) (_poolRelays pps)
     poolMD pps = smallArray + (toInteger $
       case (_poolMD pps) of
-        Nothing -> 0
-        Just (PoolMetaData u _) -> (text64Size . unUrl) u)
+        SNothing -> 0
+        SJust (PoolMetaData u _) -> (text64Size . unUrl) u)
     pparams pps = cborTag + arrayPrefix + (numPoolOwners pps)*(hashObj) -- pool owners
                 + uint -- cost
                 + unitInterval -- margin
@@ -626,13 +626,13 @@ txsize (Tx
                + labelSize + uint         -- extra entropy
                + labelSize + protoVersion -- protocol version
     uSize = case up of
-      Nothing -> arrayPrefix
-      Just (Update (ProposedPPUpdates ppup) _) ->
+      SNothing -> arrayPrefix
+      SJust (Update (ProposedPPUpdates ppup) _) ->
         arrayPrefix
         + mapPrefix + (toInteger $ length ppup) * (hashObj + params)  -- ppup
         + uint -- epoch
 
-    mdhSize = if mdh == Nothing then arrayPrefix else arrayPrefix + hashObj
+    mdhSize = if mdh == SNothing then arrayPrefix else arrayPrefix + hashObj
 
     datumSize (MD.Map m) = mapPrefix + sum (fmap (\(x, y) -> smallArray + datumSize x + datumSize y) m)
     datumSize (MD.List d_) = arrayPrefix + sum (fmap datumSize d_)
@@ -641,8 +641,8 @@ txsize (Tx
     datumSize (MD.S _) = 64
 
     mdSize = case md of
-      Nothing -> arrayPrefix
-      Just (MD.MetaData md') -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
+      SNothing -> arrayPrefix
+      SJust (MD.MetaData md') -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
                                   + uint * (toInteger $ length md')
 
 -- |Minimum fee calculation

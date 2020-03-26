@@ -78,7 +78,7 @@ mutateCoin lower upper (Coin val) =
 mutateTx :: Tx -> Gen Tx
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
-  pure $ Tx body' (_witnessVKeySet txwits) (_witnessMSigMap txwits) Nothing
+  pure $ Tx body' (_witnessVKeySet txwits) (_witnessMSigMap txwits) SNothing
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
@@ -92,8 +92,8 @@ mutateTxBody tx = do
     (_wdrls tx)
     (_txfee tx)
     (_ttl tx)
-    Nothing
-    Nothing
+    SNothing
+    SNothing
 
 -- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]

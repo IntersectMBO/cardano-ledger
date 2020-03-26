@@ -24,7 +24,7 @@ import           Control.State.Transition.Trace (TraceOrder (OldestFirst), trace
                      traceSignals)
 import           Control.State.Transition.Trace.Generator.QuickCheck (classifyTraceLength,
                      forAllTraceFromInitState, onlyValidSignalsAreGeneratedFromInitState)
-import           Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo))
+import           Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
 import           Shelley.Spec.Ledger.BlockChain (pattern Block, pattern TxSeq, bhbody,
                      bheaderSlotNo)
 import           Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey, isDelegation,
@@ -189,8 +189,8 @@ maxCertsRatio Constants{maxCertsPerTx} = lenRatio (filter ((== maxCertsPerTx) . 
 ppUpdatesByTx :: [Tx] -> [[PParamsUpdate]]
 ppUpdatesByTx txs = ppUpdates . _txUpdate . _body <$> txs
   where
-    ppUpdates Nothing = mempty
-    ppUpdates (Just (Update (ProposedPPUpdates ppUpd) _)) = Map.elems ppUpd
+    ppUpdates SNothing = mempty
+    ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.elems ppUpd
 
 -- | Ratio of the number of empty PParamsUpdate to Updates
 noPPUpdateRatio :: [[PParamsUpdate]] -> Double

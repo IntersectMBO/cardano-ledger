@@ -30,7 +30,7 @@ import qualified Test.QuickCheck as QC
 
 import           Byron.Spec.Ledger.Core (dom, range, (∈), (∉))
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
-import           Shelley.Spec.Ledger.BaseTypes (interval0)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), interval0)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DCertMir, pattern DeRegKey,
                      pattern Delegate, pattern GenesisDelegate, pattern MIRCert, pattern RegKey,
@@ -294,7 +294,7 @@ genStakePool skeys vrfKeys =
                 (RewardAcnt $ KeyHashObj $ hashKey acntKey)
                 Set.empty
                 StrictSeq.empty
-                Nothing
+                SNothing
      in (pps, snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.

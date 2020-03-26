@@ -109,7 +109,8 @@ import           Unsafe.Coerce (unsafeCoerce)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), mkNonce, startRewards, text64, (⭒))
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, startRewards,
+                     text64, (⭒))
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -260,7 +261,7 @@ alicePoolParams =
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , _poolRelays = StrictSeq.empty
-    , _poolMD = Just $ PoolMetaData
+    , _poolMD = SJust $ PoolMetaData
                   { _poolMDUrl  = Url $ text64 "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
@@ -410,7 +411,7 @@ expectedStEx1 = ChainState
      (BlocksMade Map.empty)
      -- Note that blocks in the overlay schedule do not add to this count.
      esEx1
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      (Map.singleton (SlotNo 1) (ActiveSlot . hashKey $ coreNodeVKG 0)))
   oCertIssueNosEx1
@@ -443,26 +444,26 @@ ppupEx2A :: ProposedPPUpdates
 ppupEx2A = ProposedPPUpdates $ Map.singleton
              (hashKey $ coreNodeVKG 0) -- stake key
              (PParams
-                { _minfeeA = Nothing
-                , _minfeeB = Nothing
-                , _maxBBSize = Nothing
-                , _maxTxSize = Nothing
-                , _maxBHSize = Nothing
-                , _keyDeposit = Just 255
-                , _keyMinRefund = Nothing
-                , _keyDecayRate = Nothing
-                , _poolDeposit = Nothing
-                , _poolMinRefund = Nothing
-                , _poolDecayRate = Nothing
-                , _eMax = Nothing
-                , _nOpt = Nothing
-                , _a0 = Nothing
-                , _rho = Nothing
-                , _tau = Nothing
-                , _activeSlotCoeff = Nothing
-                , _d = Nothing
-                , _extraEntropy = Nothing
-                , _protocolVersion = Nothing
+                { _minfeeA = SNothing
+                , _minfeeB = SNothing
+                , _maxBBSize = SNothing
+                , _maxTxSize = SNothing
+                , _maxBHSize = SNothing
+                , _keyDeposit = SJust 255
+                , _keyMinRefund = SNothing
+                , _keyDecayRate = SNothing
+                , _poolDeposit = SNothing
+                , _poolMinRefund = SNothing
+                , _poolDecayRate = SNothing
+                , _eMax = SNothing
+                , _nOpt = SNothing
+                , _a0 = SNothing
+                , _rho = SNothing
+                , _tau = SNothing
+                , _activeSlotCoeff = SNothing
+                , _d = SNothing
+                , _extraEntropy = SNothing
+                , _protocolVersion = SNothing
                 })
 
 -- | Update proposal that just changes protocol parameters,
@@ -488,8 +489,8 @@ txbodyEx2A = TxBody
            (Wdrl Map.empty)
            (Coin 3)
            (SlotNo 10)
-           (Just updateEx2A)
-           Nothing
+           (SJust updateEx2A)
+           SNothing
 
 txEx2A :: Tx
 txEx2A = Tx
@@ -508,7 +509,7 @@ txEx2A = Tx
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
              ])
           Map.empty
-          Nothing
+          SNothing
 
 -- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
@@ -542,7 +543,7 @@ initNesEx2A = NewEpochState
                (BlocksMade Map.empty)
                (BlocksMade Map.empty)
                esEx2A
-               Nothing
+               SNothing
                (PoolDistr Map.empty)
                overlayEx2A
 
@@ -616,7 +617,7 @@ expectedStEx2A = ChainState
      (BlocksMade Map.empty) -- Still no blocks
      (BlocksMade Map.empty) -- Still no blocks
      (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   -- Operational certificate issue numbers are now only updated during block
@@ -659,8 +660,8 @@ txbodyEx2B = TxBody
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 4
       , TxData._ttl      = SlotNo 90
-      , TxData._txUpdate = Nothing
-      , TxData._mdHash   = Nothing
+      , TxData._txUpdate = SNothing
+      , TxData._mdHash   = SNothing
       }
 
 txEx2B :: Tx
@@ -669,7 +670,7 @@ txEx2B = Tx
           (makeWitnessesVKey txbodyEx2B [alicePay, aliceStake, bobStake])
                      -- Witness verification key set
           Map.empty  -- Witness signature map
-          Nothing
+          SNothing
 
 blockEx2B :: Block
 blockEx2B = mkBlock
@@ -731,12 +732,12 @@ expectedStEx2Bgeneric pp = ChainState
      (BlocksMade Map.empty) -- Blocks made before current
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp pp emptyNonMyopic)
                             -- Previous epoch state
-     (Just RewardUpdate { deltaT        = Coin 0
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin 0
-                        , nonMyopic     = emptyNonMyopic
-                        })  -- Update reward
+     (SJust RewardUpdate { deltaT        = Coin 0
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin 0
+                         , nonMyopic     = emptyNonMyopic
+                         })  -- Update reward
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -858,7 +859,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A { _reserves = _reserves acntEx2A - carlMIR } ss ls pp pp emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
   oCertIssueNosEx1
@@ -925,8 +926,8 @@ txbodyEx2D = TxBody
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 5
       , TxData._ttl      = SlotNo 500
-      , TxData._txUpdate = Nothing
-      , TxData._mdHash   = Nothing
+      , TxData._txUpdate = SNothing
+      , TxData._mdHash   = SNothing
       }
 
 txEx2D :: Tx
@@ -934,7 +935,7 @@ txEx2D = Tx
           txbodyEx2D
           (makeWitnessesVKey txbodyEx2D [alicePay, carlStake])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx2D :: Block
 blockEx2D = mkBlock
@@ -994,12 +995,12 @@ expectedStEx2D = ChainState
         ppsEx1
         ppsEx1
         emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 21
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin (-21)
-                        , nonMyopic     = emptyNonMyopic { rewardPot = Coin 17 }
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 21
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin (-21)
+                         , nonMyopic     = emptyNonMyopic { rewardPot = Coin 17 }
+                         })
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
   oCertIssueNosEx1
@@ -1088,7 +1089,7 @@ expectedStEx2E = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr
        (Map.singleton
           (hk alicePool)
@@ -1140,12 +1141,12 @@ expectedStEx2F = ChainState
      (BlocksMade Map.empty)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 19
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin (-19)
-                        , nonMyopic     = emptyNonMyopic { rewardPot = Coin 16 }
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 19
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin (-19)
+                         , nonMyopic     = emptyNonMyopic { rewardPot = Coin 16 }
+                         })
      pdEx2F
      epoch1OSchedEx2E)
   oCertIssueNosEx2F
@@ -1220,7 +1221,7 @@ expectedStEx2G = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      epoch1OSchedEx2G)
   oCertIssueNosEx2G
@@ -1285,15 +1286,15 @@ expectedStEx2H = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 767369696984
-                        , deltaR        = Coin (-793333333333)
-                        , rs            = rewardsEx2H
-                        , deltaF        = Coin (-10)
-                        , nonMyopic     = NonMyopic
-                            (Map.singleton (hk alicePool) alicePerfEx2H)
-                            (Coin 634666666675)
-                            snapEx2C
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 767369696984
+                         , deltaR        = Coin (-793333333333)
+                         , rs            = rewardsEx2H
+                         , deltaF        = Coin (-10)
+                         , nonMyopic     = NonMyopic
+                             (Map.singleton (hk alicePool) alicePerfEx2H)
+                             (Coin 634666666675)
+                             snapEx2C
+                         })
      pdEx2F
      epoch1OSchedEx2G)
   oCertIssueNosEx2H
@@ -1379,7 +1380,7 @@ expectedStEx2I = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2I snapsEx2I expectedLSEx2I ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2I
@@ -1412,15 +1413,15 @@ txbodyEx2J = TxBody
            (Wdrl $ Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
            (Coin 9)
            (SlotNo 500)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
 
 txEx2J :: Tx
 txEx2J = Tx
           txbodyEx2J
           (makeWitnessesVKey txbodyEx2J [bobPay, bobStake])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx2J :: Block
 blockEx2J = mkBlock
@@ -1475,7 +1476,7 @@ expectedStEx2J = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2I snapsEx2I expectedLSEx2J ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2J
@@ -1505,15 +1506,15 @@ txbodyEx2K = TxBody
            (Wdrl Map.empty)
            (Coin 2)
            (SlotNo 500)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
 
 txEx2K :: Tx
 txEx2K = Tx
           txbodyEx2K
           (makeWitnessesVKey txbodyEx2K [cold alicePool, alicePay])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx2K :: Block
 blockEx2K = mkBlock
@@ -1558,15 +1559,15 @@ expectedStEx2K = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 9
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin (-9)
-                        , nonMyopic     = NonMyopic
-                            (Map.singleton (hk alicePool) (ApparentPerformance 0))
-                            (Coin 8)
-                            snapEx2E
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 9
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin (-9)
+                         , nonMyopic     = NonMyopic
+                             (Map.singleton (hk alicePool) (ApparentPerformance 0))
+                             (Coin 8)
+                             snapEx2E
+                         })
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2J
@@ -1650,7 +1651,7 @@ expectedStEx2L = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      (runShelleyBase $ overlaySchedule (EpochNo 5) (Map.keysSet genDelegs) ppsEx1))
   oCertIssueNosEx2L
@@ -1673,26 +1674,26 @@ ex2L = CHAINExample (SlotNo 510) expectedStEx2K blockEx2L (Right expectedStEx2L)
 
 ppVote3A :: PParamsUpdate
 ppVote3A = PParams
-             { _minfeeA = Nothing
-             , _minfeeB = Nothing
-             , _maxBBSize = Nothing
-             , _maxTxSize = Nothing
-             , _maxBHSize = Nothing
-             , _keyDeposit = Nothing
-             , _keyMinRefund = Nothing
-             , _keyDecayRate = Nothing
-             , _poolDeposit = Just 200
-             , _poolMinRefund = Nothing
-             , _poolDecayRate = Nothing
-             , _eMax = Nothing
-             , _nOpt = Nothing
-             , _a0 = Nothing
-             , _rho = Nothing
-             , _tau = Nothing
-             , _activeSlotCoeff = Nothing
-             , _d = Nothing
-             , _extraEntropy = Just (mkNonce 123)
-             , _protocolVersion = Nothing
+             { _minfeeA = SNothing
+             , _minfeeB = SNothing
+             , _maxBBSize = SNothing
+             , _maxTxSize = SNothing
+             , _maxBHSize = SNothing
+             , _keyDeposit = SNothing
+             , _keyMinRefund = SNothing
+             , _keyDecayRate = SNothing
+             , _poolDeposit = SJust 200
+             , _poolMinRefund = SNothing
+             , _poolDecayRate = SNothing
+             , _eMax = SNothing
+             , _nOpt = SNothing
+             , _a0 = SNothing
+             , _rho = SNothing
+             , _tau = SNothing
+             , _activeSlotCoeff = SNothing
+             , _d = SNothing
+             , _extraEntropy = SJust (mkNonce 123)
+             , _protocolVersion = SNothing
              }
 
 ppupEx3A :: ProposedPPUpdates
@@ -1716,8 +1717,8 @@ txbodyEx3A = TxBody
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 10)
-           (Just updateEx3A)
-           Nothing
+           (SJust updateEx3A)
+           SNothing
 
 txEx3A :: Tx
 txEx3A = Tx
@@ -1730,7 +1731,7 @@ txEx3A = Tx
             , cold $ coreNodeKeys 4
             ])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx3A :: Block
 blockEx3A = mkBlock
@@ -1768,7 +1769,7 @@ expectedStEx3A = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -1808,8 +1809,8 @@ txbodyEx3B = TxBody
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 31)
-           (Just updateEx3B)
-           Nothing
+           (SJust updateEx3B)
+           SNothing
 
 txEx3B :: Tx
 txEx3B = Tx
@@ -1821,7 +1822,7 @@ txEx3B = Tx
             , cold $ coreNodeKeys 5
             ])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx3B :: Block
 blockEx3B = mkBlock
@@ -1866,7 +1867,7 @@ expectedStEx3B = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -1931,7 +1932,7 @@ expectedStEx3C = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx1 ppsEx3C emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx3C)
   oCertIssueNosEx1
@@ -1968,15 +1969,15 @@ txbodyEx4A = TxBody
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
 
 txEx4A :: Tx
 txEx4A = Tx
            txbodyEx4A
            (makeWitnessesVKey txbodyEx4A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx4A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
            Map.empty
-           Nothing
+           SNothing
 
 blockEx4A :: Block
 blockEx4A = mkBlock
@@ -2022,7 +2023,7 @@ expectedStEx4A = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -2081,12 +2082,12 @@ expectedStEx4B = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 0
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin 0
-                        , nonMyopic     = emptyNonMyopic
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 0
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin 0
+                         , nonMyopic     = emptyNonMyopic
+                         })
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -2120,8 +2121,8 @@ txbodyEx5A = TxBody
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
 
 txEx5A :: Tx
 txEx5A = Tx
@@ -2134,7 +2135,7 @@ txEx5A = Tx
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
            ])
            Map.empty
-           Nothing
+           SNothing
 
 blockEx5A :: Block
 blockEx5A = mkBlock
@@ -2178,7 +2179,7 @@ expectedStEx5A = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -2207,7 +2208,7 @@ txEx5B = Tx
              , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
            ])
            Map.empty
-           Nothing
+           SNothing
 
 blockEx5B :: Block
 blockEx5B = mkBlock
@@ -2286,8 +2287,8 @@ txbodyEx5F = TxBody
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 99)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
 
 txEx5F :: Tx
 txEx5F = Tx txbodyEx5F
@@ -2299,7 +2300,7 @@ txEx5F = Tx txbodyEx5F
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
              ])
             Map.empty
-            Nothing
+            SNothing
 
 blockEx5F :: Block
 blockEx5F = mkBlock
@@ -2331,11 +2332,11 @@ txbodyEx5F' = TxBody
                (Coin 1)
                ((slotFromEpoch $ EpochNo 1)
                 +* Duration (startRewards testGlobals) + SlotNo 7)
-               Nothing
-               Nothing
+               SNothing
+               SNothing
 
 txEx5F' :: Tx
-txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey txbodyEx5F' [ alicePay ]) Map.empty Nothing
+txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey txbodyEx5F' [ alicePay ]) Map.empty SNothing
 
 blockEx5F' :: Block
 blockEx5F' = mkBlock
@@ -2367,11 +2368,11 @@ txbodyEx5F'' = TxBody
                 (Wdrl Map.empty)
                 (Coin 1)
                 ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
-                Nothing
-                Nothing
+                SNothing
+                SNothing
 
 txEx5F'' :: Tx
-txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey txbodyEx5F'' [ alicePay ]) Map.empty Nothing
+txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey txbodyEx5F'' [ alicePay ]) Map.empty SNothing
 
 blockEx5F'' :: Block
 blockEx5F'' = mkBlock

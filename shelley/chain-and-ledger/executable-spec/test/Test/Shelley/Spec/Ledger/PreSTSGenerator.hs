@@ -42,6 +42,7 @@ import qualified Hedgehog.Range as Range
 
 
 import           Control.State.Transition.Extended (TRC (..), applySTS)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody,
@@ -178,10 +179,10 @@ genTx keyList (UTxO m) cslot = do
            (Wdrl Map.empty) -- TODO generate witdrawals
            txfee'
            (cslot + SlotNo txttl)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
   let !txwit = makeWitnessVKey txbody selectedKeyPair
-  pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty Nothing)
+  pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty SNothing)
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
 

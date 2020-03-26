@@ -56,7 +56,7 @@ instance
           (BlocksMade Map.empty)
           (BlocksMade Map.empty)
           emptyEpochState
-          Nothing
+          SNothing
           (PoolDistr Map.empty)
           Map.empty
     ]
@@ -80,8 +80,8 @@ newEpochTransition = do
     then pure src
     else do
       es' <- case ru of
-               Nothing  -> pure es
-               Just ru' -> do
+               SNothing  -> pure es
+               SJust ru' -> do
                  let RewardUpdate dt dr rs_ df _ = ru'
                  dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
                  pure $ applyRUpd ru' es
@@ -107,7 +107,7 @@ newEpochTransition = do
           bcur
           (BlocksMade Map.empty)
           es'''
-          Nothing
+          SNothing
           (PoolDistr pd')
           osched'
   where

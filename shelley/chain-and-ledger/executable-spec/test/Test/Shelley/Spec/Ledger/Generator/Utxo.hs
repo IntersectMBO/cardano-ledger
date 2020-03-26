@@ -27,6 +27,7 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Shelley.Spec.Ledger.Address (scriptToCred, toCred)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
 import           Shelley.Spec.Ledger.LedgerState (pattern UTxOState, minfee, _dstate, _ptrs,
                      _rewards)
@@ -154,7 +155,7 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
           ksKeyPairsByHash
           msigSignatures
 
-    let metadata = Nothing -- TODO generate metadata
+    let metadata = SNothing -- TODO generate metadata
 
     -- calculate real fees of witnesses transaction
     let minimalFees = minfee pparams (Tx txBody wits multiSig metadata)
@@ -210,8 +211,8 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
              (Wdrl wdrls)
              fee
              slotWithTTL
-             update
-             Nothing -- TODO generate metadata
+             (maybeToStrictMaybe update)
+             SNothing -- TODO generate metadata
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the
 -- sum of `fee` and the remainder of the equal distribution and the list ouf

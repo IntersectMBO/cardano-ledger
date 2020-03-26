@@ -28,8 +28,8 @@ import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, intervalValue, invalidKey, quorum,
-                     (==>))
+import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), intervalValue,
+                     invalidKey, quorum, (==>))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import           Shelley.Spec.Ledger.Keys
@@ -148,10 +148,10 @@ utxoWitnessed = do
 
   -- check metadata hash
   case (_mdHash txbody) of
-    Nothing  -> md == Nothing ?! BadMetaDataHashUTXOW
-    Just mdh -> case md of
-                  Nothing  -> failBecause BadMetaDataHashUTXOW
-                  Just md' -> hashMetaData md' == mdh ?! BadMetaDataHashUTXOW
+    SNothing  -> md == SNothing ?! BadMetaDataHashUTXOW
+    SJust mdh -> case md of
+                  SNothing  -> failBecause BadMetaDataHashUTXOW
+                  SJust md' -> hashMetaData md' == mdh ?! BadMetaDataHashUTXOW
 
   -- check genesis keys signatures for instantaneous rewards certificates
   let genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits

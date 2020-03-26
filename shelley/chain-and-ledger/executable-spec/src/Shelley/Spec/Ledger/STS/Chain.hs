@@ -22,7 +22,8 @@ import           Numeric.Natural (Natural)
 
 import           Cardano.Prelude (MonadError (..), asks, unless)
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase,
+                     StrictMaybe (..))
 import           Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, Block (..), LastAppliedBlock (..),
                      bHeaderSize, bhbody, bheaderSlotNo, hBbsize)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -96,7 +97,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
          pp
          emptyNonMyopic
        )
-       Nothing
+       SNothing
        (PoolDistr Map.empty)
        os
     )
