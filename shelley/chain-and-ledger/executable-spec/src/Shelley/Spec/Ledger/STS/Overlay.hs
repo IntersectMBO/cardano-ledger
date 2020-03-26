@@ -24,6 +24,7 @@ import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.BlockChain
 import           Shelley.Spec.Ledger.Delegation.Certificates
 import           Shelley.Spec.Ledger.Keys
+import           Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
 import           Shelley.Spec.Ledger.OCert
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
@@ -39,7 +40,7 @@ data OVERLAY crypto
 data OverlayEnv crypto
   = OverlayEnv
       PParams
-      (Map SlotNo (Maybe (GenKeyHash crypto)))
+      (Map SlotNo (OBftSlot crypto))
       Nonce
       (PoolDistr crypto)
       (GenDelegs crypto)
@@ -95,9 +96,9 @@ overlayTransition = judgmentContext >>=
   case Map.lookup (bheaderSlotNo bhb) osched of
     Nothing ->
       vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
-    Just Nothing ->
+    Just NonActiveSlot ->
       failBecause NotActiveSlotOVERLAY
-    Just (Just gkey) ->
+    Just (ActiveSlot gkey) ->
       case Map.lookup gkey genDelegs of
         Nothing ->
           failBecause NoGenesisStakingOVERLAY

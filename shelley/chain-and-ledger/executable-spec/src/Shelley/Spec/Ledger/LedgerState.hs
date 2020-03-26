@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -37,6 +38,7 @@ module Shelley.Spec.Ledger.LedgerState
   , PState(..)
   , KeyPairs
   , UTxOState(..)
+  , OBftSlot(..)
   , emptyAccount
   , emptyPState
   , emptyDState
@@ -73,7 +75,8 @@ module Shelley.Spec.Ledger.LedgerState
   , updateNES
   ) where
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (TypeNull), decodeNull,
+                     encodeListLen, encodeNull, enforceSize, peekTokenType)
 import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -368,17 +371,39 @@ instance Crypto crypto => FromCBOR (UTxOState crypto)
     us <- fromCBOR
     pure $ UTxOState ut dp fs us
 
+data OBftSlot crypto =
+    NonActiveSlot
+  | ActiveSlot !(GenKeyHash crypto)
+  deriving (Show, Eq, Generic)
+
+instance Crypto crypto
+  => ToCBOR (OBftSlot crypto)
+  where
+    toCBOR NonActiveSlot  = encodeNull
+    toCBOR (ActiveSlot k) = toCBOR k
+
+instance Crypto crypto
+  => FromCBOR (OBftSlot crypto)
+ where
+   fromCBOR = do
+     peekTokenType >>= \case
+       TypeNull -> do
+         decodeNull
+         pure NonActiveSlot
+       _ -> ActiveSlot <$> fromCBOR
+
+instance NoUnexpectedThunks (OBftSlot crypto)
+
 -- | New Epoch state and environment
 data NewEpochState crypto=
   NewEpochState {
-    nesEL     :: !EpochNo                       -- ^ Last epoch
-  , nesBprev  :: !(BlocksMade          crypto)  -- ^ Blocks made before current epoch
-  , nesBcur   :: !(BlocksMade          crypto)  -- ^ Blocks made in current epoch
-  , nesEs     :: !(EpochState          crypto)  -- ^ Epoch state before current
-  , nesRu     :: !(Maybe (RewardUpdate crypto)) -- ^ Possible reward update
-  , nesPd     :: !(PoolDistr           crypto)  -- ^ Stake distribution within the stake pool
-  , nesOsched :: !(Map SlotNo
-                   (Maybe (GenKeyHash  crypto)))  -- ^ Overlay schedule for PBFT vs Praos
+    nesEL     :: !EpochNo                         -- ^ Last epoch
+  , nesBprev  :: !(BlocksMade          crypto)    -- ^ Blocks made before current epoch
+  , nesBcur   :: !(BlocksMade          crypto)    -- ^ Blocks made in current epoch
+  , nesEs     :: !(EpochState          crypto)    -- ^ Epoch state before current
+  , nesRu     :: !(Maybe (RewardUpdate crypto))   -- ^ Possible reward update
+  , nesPd     :: !(PoolDistr           crypto)    -- ^ Stake distribution within the stake pool
+  , nesOsched :: !(Map SlotNo (OBftSlot crypto))  -- ^ Overlay schedule for PBFT vs Praos
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochState crypto)
@@ -1046,7 +1071,7 @@ overlaySchedule
   :: EpochNo
   -> Set (GenKeyHash crypto)
   -> PParams
-  -> ShelleyBase (Map SlotNo (Maybe (GenKeyHash crypto)))
+  -> ShelleyBase (Map SlotNo (OBftSlot crypto))
 overlaySchedule e gkeys pp = do
   let dval = intervalValue $ _d pp
   if dval == 0
@@ -1072,11 +1097,11 @@ overlaySchedule e gkeys pp = do
 
         active =
           Map.fromList $ fmap
-            (\(gk,(_,s))->(s, Just gk))
+            (\(gk,(_,s))->(s, ActiveSlot gk))
             (zip (cycle (Set.toList gkeys)) (filter fst unassignedSched))
         inactive =
           Map.fromList $ fmap
-            (\x -> (snd x, Nothing))
+            (\x -> (snd x, NonActiveSlot))
             (filter (not . fst) unassignedSched)
       pure $ Map.union active inactive
 

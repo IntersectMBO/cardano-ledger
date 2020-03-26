@@ -25,6 +25,7 @@ import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.BlockChain
 import           Shelley.Spec.Ledger.Delegation.Certificates
 import           Shelley.Spec.Ledger.Keys
+import           Shelley.Spec.Ledger.LedgerState (OBftSlot)
 import           Shelley.Spec.Ledger.OCert
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
@@ -78,7 +79,7 @@ instance Crypto crypto => NoUnexpectedThunks (PrtclState crypto)
 data PrtclEnv crypto
   = PrtclEnv
       PParams
-      (Map SlotNo (Maybe (GenKeyHash crypto)))
+      (Map SlotNo (OBftSlot crypto))
       (PoolDistr crypto)
       (GenDelegs crypto)
       SlotNo

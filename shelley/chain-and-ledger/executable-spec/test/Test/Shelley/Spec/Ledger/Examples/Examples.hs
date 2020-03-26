@@ -121,13 +121,14 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern Sna
                      _pstakeMark, _pstakeSet)
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey,
                      vKey)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern DPState,
-                     pattern EpochState, pattern LedgerState, pattern NewEpochState,
-                     pattern RewardUpdate, pattern UTxOState, deltaF, deltaR, deltaT, emptyDState,
-                     emptyPState, esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
-                     nonMyopic, overlaySchedule, rs, _delegationState, _delegations, _dstate,
-                     _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring,
-                     _rewards, _stPools, _stkCreds, _treasury)
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern ActiveSlot,
+                     pattern DPState, pattern EpochState, pattern LedgerState,
+                     pattern NewEpochState, pattern RewardUpdate, pattern UTxOState, deltaF,
+                     deltaR, deltaT, emptyDState, emptyPState, esAccountState, esLState, esPp,
+                     genesisCoins, genesisId, nesEs, nonMyopic, overlaySchedule, rs,
+                     _delegationState, _delegations, _dstate, _fGenDelegs, _genDelegs, _irwd,
+                     _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools, _stkCreds,
+                     _treasury)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams), PParamsUpdate,
                      pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams,
@@ -162,9 +163,9 @@ import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesV
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CHAIN, ChainState,
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
-                     LedgerState, NewEpochState, PState, PoolDistr, PoolParams, ProposedPPUpdates,
-                     RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody, UTxO, UTxOState, Update,
-                     VKeyGenesis, hashKeyVRF)
+                     LedgerState, NewEpochState, OBftSlot, PState, PoolDistr, PoolParams,
+                     ProposedPPUpdates, RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody, UTxO,
+                     UTxOState, Update, VKeyGenesis, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), NatNonce (..),
                      genesisAccountState, mkBlock, mkOCert, zero)
 import           Test.Shelley.Spec.Ledger.Utils
@@ -381,7 +382,7 @@ initStEx1 = initialShelleyState
   (UTxO Map.empty)
   maxLLSupply
   genDelegs
-  (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0))
+  (Map.singleton (SlotNo 1) (ActiveSlot . hashKey $ coreNodeVKG 0))
   ppsEx1
   (hashHeaderToNonce lastByronHeaderHash)
 
@@ -411,7 +412,7 @@ expectedStEx1 = ChainState
      esEx1
      Nothing
      (PoolDistr Map.empty)
-     (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0)))
+     (Map.singleton (SlotNo 1) (ActiveSlot . hashKey $ coreNodeVKG 0)))
   oCertIssueNosEx1
   nonce0
   (nonce0 ⭒ mkNonce 1)
@@ -528,7 +529,7 @@ acntEx2A = AccountState
 esEx2A :: EpochState
 esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1 ppsEx1 emptyNonMyopic
 
-overlayEx2A :: Map SlotNo (Maybe GenKeyHash)
+overlayEx2A :: Map SlotNo OBftSlot
 overlayEx2A = runShelleyBase
   $ overlaySchedule
     (EpochNo 0)
@@ -786,7 +787,7 @@ blockEx2C = mkBlock
              0
              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
-epoch1OSchedEx2C :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2C :: Map SlotNo OBftSlot
 epoch1OSchedEx2C = runShelleyBase $ overlaySchedule
                     (EpochNo 1)
                     (Map.keysSet genDelegs)
@@ -1033,7 +1034,7 @@ blockEx2E = mkBlock
              10
              (mkOCert (coreNodeKeys 5) 1 (KESPeriod 10))
 
-epoch1OSchedEx2E :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2E :: Map SlotNo OBftSlot
 epoch1OSchedEx2E = runShelleyBase $ overlaySchedule
                     (EpochNo 2)
                     (Map.keysSet genDelegs)
@@ -1182,7 +1183,7 @@ blockEx2G = mkBlock
 blockEx2GHash :: HashHeader
 blockEx2GHash = bhHash (bheader blockEx2G)
 
-epoch1OSchedEx2G :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2G :: Map SlotNo OBftSlot
 epoch1OSchedEx2G = runShelleyBase $ overlaySchedule
                     (EpochNo 3)
                     (Map.keysSet genDelegs)
@@ -1329,7 +1330,7 @@ blockEx2I = mkBlock
 blockEx2IHash :: HashHeader
 blockEx2IHash = bhHash (bheader blockEx2I)
 
-epoch1OSchedEx2I :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2I :: Map SlotNo OBftSlot
 epoch1OSchedEx2I = runShelleyBase $ overlaySchedule
                      (EpochNo 4)
                      (Map.keysSet genDelegs)
@@ -1902,7 +1903,7 @@ blockEx3C = mkBlock
 blockEx3CHash :: HashHeader
 blockEx3CHash = bhHash (bheader blockEx3C)
 
-overlayEx3C :: Map SlotNo (Maybe GenKeyHash)
+overlayEx3C :: Map SlotNo OBftSlot
 overlayEx3C = runShelleyBase $ overlaySchedule
                     (EpochNo 1)
                     (Map.keysSet genDelegs)

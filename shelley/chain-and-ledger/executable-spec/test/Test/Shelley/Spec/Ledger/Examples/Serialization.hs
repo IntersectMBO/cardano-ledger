@@ -42,9 +42,9 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (.
 import           Shelley.Spec.Ledger.Keys (DiscVKey (..), pattern GenKeyHash, Hash, pattern KeyHash,
                      pattern KeyPair, pattern UnsafeSig, hash, hashKey, sKey, sign, signKES,
                      undiscriminateKeyHash, vKey)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), EpochState (..),
-                     NewEpochState (..), pattern RewardUpdate, deltaF, deltaR, deltaT,
-                     emptyLedgerState, genesisId, nonMyopic, rs)
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern ActiveSlot,
+                     EpochState (..), NewEpochState (..), pattern RewardUpdate, deltaF, deltaR,
+                     deltaT, emptyLedgerState, genesisId, nonMyopic, rs)
 import           Shelley.Spec.Ledger.PParams (PParams' (PParams), PParamsUpdate,
                      pattern ProposedPPUpdates, ProtVer (..), pattern Update, emptyPParams,
                      mkActiveSlotCoeff, _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
@@ -1107,7 +1107,7 @@ serializationTests = testGroup "Serialization Tests"
              , nonMyopic     = nm
              }) :: Maybe RewardUpdate
       pd = (PoolDistr Map.empty) :: PoolDistr
-      os = Map.singleton (SlotNo 1) (Just testGKeyHash)
+      os = Map.singleton (SlotNo 1) (ActiveSlot testGKeyHash)
       nes = NewEpochState
               e
               (BlocksMade bs)

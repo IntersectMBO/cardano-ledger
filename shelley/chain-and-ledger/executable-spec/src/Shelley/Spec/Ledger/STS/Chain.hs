@@ -31,7 +31,7 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapSh
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), GenKeyHash, KESignable, KeyHash,
                      Signable, VKeyES)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..), DState (..),
-                     EpochState (..), LedgerState (..), NewEpochState (..), PState (..),
+                     EpochState (..), LedgerState (..), NewEpochState (..), OBftSlot, PState (..),
                      UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
 import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), ProtVer (..),
@@ -70,7 +70,7 @@ initialShelleyState
   -> UTxO crypto
   -> Coin
   -> Map (GenKeyHash crypto) (KeyHash crypto)
-  -> Map SlotNo (Maybe (GenKeyHash crypto))
+  -> Map SlotNo (OBftSlot crypto)
   -> PParams
   -> Nonce
   -> ChainState crypto

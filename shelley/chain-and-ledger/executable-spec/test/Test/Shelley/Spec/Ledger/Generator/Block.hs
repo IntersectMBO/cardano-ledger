@@ -12,6 +12,7 @@ import           Data.Foldable (toList)
 import qualified Data.List as List (find)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (listToMaybe)
 import           Data.Ratio (denominator, numerator, (%))
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
@@ -24,9 +25,9 @@ import           Shelley.Spec.Ledger.BaseTypes (intervalValue)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
-import           Shelley.Spec.Ledger.LedgerState (pattern EpochState, pattern NewEpochState,
-                     esLState, esPp, getGKeys, nesEL, nesEs, nesOsched, nesPd, overlaySchedule,
-                     _delegationState, _dstate, _genDelegs, _reserves)
+import           Shelley.Spec.Ledger.LedgerState (pattern ActiveSlot, pattern EpochState,
+                     pattern NewEpochState, esLState, esPp, getGKeys, nesEL, nesEs, nesOsched,
+                     nesPd, overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
 import           Shelley.Spec.Ledger.PParams (PParams' (_activeSlotCoeff), activeSlotVal)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
@@ -37,7 +38,7 @@ import           Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import           Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState,
-                     GenKeyHash, LEDGERS, TICK)
+                     GenKeyHash, LEDGERS, OBftSlot, TICK)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), GenEnv(..), KeySpace(..), NatNonce (..),
                      genNatural, getKESPeriodRenewalNo, mkBlock, mkOCert)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
@@ -45,15 +46,14 @@ import           Test.Shelley.Spec.Ledger.Utils (maxKESIterations, runShelleyBas
                      unsafeMkUnitInterval)
 
 nextCoreNode
-  :: Map SlotNo (Maybe GenKeyHash)
-  -> Map SlotNo (Maybe GenKeyHash)
+  :: Map SlotNo OBftSlot
+  -> Map SlotNo OBftSlot
   -> SlotNo
   -> (SlotNo, GenKeyHash)
 nextCoreNode os nextOs s =
   let getNextOSlot os' =
-        let osGen = Map.toAscList $ Map.mapMaybe id os'
-            nextSlots = filter ((> s) . fst) osGen
-        in if null nextSlots then Nothing else Just $ head nextSlots
+        let (_, nextSlots) = Map.split s os'
+        in listToMaybe [(slot, k) | (slot, ActiveSlot k) <- Map.toAscList nextSlots]
   in
   case getNextOSlot os of
     Nothing -> -- there are no more active overlay slots this epoch
@@ -66,8 +66,8 @@ nextCoreNode os nextOs s =
 getPraosSlot
   :: SlotNo
   -> SlotNo
-  -> Map SlotNo (Maybe GenKeyHash)
-  -> Map SlotNo (Maybe GenKeyHash)
+  -> Map SlotNo OBftSlot
+  -> Map SlotNo OBftSlot
   -> Maybe SlotNo
 getPraosSlot start tooFar os nos =
   let schedules = os `Map.union` nos
