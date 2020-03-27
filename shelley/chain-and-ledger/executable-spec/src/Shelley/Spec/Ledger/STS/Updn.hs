@@ -44,12 +44,15 @@ instance
 instance NoUnexpectedThunks (PredicateFailure (UPDN crypto))
 
 prevHashToNonce
-  :: Nonce
-  -> PrevHash crypto
+  :: PrevHash crypto
   -> Nonce
-prevHashToNonce n = \case
-  GenesisHash -> n -- This case is impossible. The function is only called on a new epoch,
-                   -- but the GenesisHash can only occur as the first block.
+prevHashToNonce = \case
+  GenesisHash -> NeutralNonce -- This case can only happen when starting Shelley from genesis,
+                              -- setting the intial chain state to some epoch e,
+                              -- and having the first block be in epoch e+1.
+                              -- In this edge case there is no need to add any extra
+                              -- entropy via the previous header hash to the next epoch nonce,
+                              -- so using the neutral nonce is appropriate.
   BlockHash ph -> hashHeaderToNonce ph
 
 updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
@@ -66,4 +69,4 @@ updTransition = do
       then eta_v ⭒ eta
       else eta_c
     )
-    (if ne then (prevHashToNonce eta_h ph) else eta_h)
+    (if ne then (prevHashToNonce ph) else eta_h)

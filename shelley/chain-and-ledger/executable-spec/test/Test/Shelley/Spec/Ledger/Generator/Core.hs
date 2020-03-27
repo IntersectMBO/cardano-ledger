@@ -383,8 +383,8 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
   let
     (_, (sHot, _)) = head $ hot pkeys
     KeyPair vKeyCold _ = cold pkeys
-    nonceNonce = mkSeed seedEta s enonce prev
-    leaderNonce = mkSeed seedL s enonce prev
+    nonceNonce = mkSeed seedEta s enonce
+    leaderNonce = mkSeed seedL s enonce
     bhb = BHBody
             (BlockHash prev)
             vKeyCold

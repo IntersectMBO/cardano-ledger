@@ -215,9 +215,9 @@ testBHB = BHBody
           , bheaderVrfVk   = snd testVRF
           , bheaderSlotNo  = SlotNo 33
           , bheaderEta     = coerce $ mkCertifiedVRF (WithResult
-            (mkSeed seedEta (SlotNo 33) (mkNonce 0) testHeaderHash)1) (fst testVRF)
+            (mkSeed seedEta (SlotNo 33) (mkNonce 0)) 1) (fst testVRF)
           , bheaderL       = coerce $ mkCertifiedVRF (WithResult
-            (mkSeed seedL (SlotNo 33) (mkNonce 0) testHeaderHash) 1) (fst testVRF)
+            (mkSeed seedL (SlotNo 33) (mkNonce 0)) 1) (fst testVRF)
           , bsize          = 0
           , bheaderBlockNo = BlockNo 44
           , bhash          = bbHash $ TxSeq Seq.empty
@@ -827,9 +827,9 @@ serializationTests = testGroup "Serialization Tests"
       issuerVkey = vKey testKey1
       vrfVkey = snd testVRF
       slot = SlotNo 33
-      nonce = mkSeed seedEta (SlotNo 33) (mkNonce 0) testHeaderHash
+      nonce = mkSeed seedEta (SlotNo 33) (mkNonce 0)
       nonceProof = coerce $ mkCertifiedVRF (WithResult nonce 1) (fst testVRF)
-      leaderValue = mkSeed seedL (SlotNo 33) (mkNonce 0) testHeaderHash
+      leaderValue = mkSeed seedL (SlotNo 33) (mkNonce 0)
       leaderProof = coerce $ mkCertifiedVRF (WithResult leaderValue 1) (fst testVRF)
       size = 0
       blockNo = BlockNo 44

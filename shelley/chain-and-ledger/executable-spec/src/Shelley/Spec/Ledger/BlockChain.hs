@@ -394,16 +394,14 @@ hsig (BHeader _ s) = s
 
 -- | Construct a seed to use in the VRF computation.
 mkSeed
-  :: Crypto crypto
-  => Nonce -- ^ Universal constant
+  :: Nonce -- ^ Universal constant
   -> SlotNo
   -> Nonce -- ^ Epoch nonce
-  -> HashHeader crypto
   -> Seed
-mkSeed (Nonce uc) slot nonce lastHash =
-  Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce, lastHash))
-mkSeed NeutralNonce slot nonce lastHash =
-  Seed . coerce $ hash @SHA256 (slot, nonce, lastHash)
+mkSeed (Nonce uc) slot nonce =
+  Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce))
+mkSeed NeutralNonce slot nonce =
+  Seed . coerce $ hash @SHA256 (slot, nonce)
 
 vrfChecks
   ::  forall crypto
@@ -418,16 +416,15 @@ vrfChecks
   -> Bool
 vrfChecks eta0 (PoolDistr pd) f bhb =
   let sigma' = Map.lookup hk pd
-  in  case (sigma', bheaderPrev bhb) of
-        (_, GenesisHash) -> True
-        (Nothing, _) -> False
-        (Just (sigma, vrfHK), (BlockHash prevHash)) ->
+  in  case sigma' of
+        Nothing -> False
+        Just (sigma, vrfHK) ->
           vrfHK == hashKeyVRF @crypto vrfK
             && VRF.verifyCertified () vrfK
-                         (mkSeed seedEta slot eta0 prevHash)
+                         (mkSeed seedEta slot eta0)
                          (coerce $ bheaderEta bhb)
             && VRF.verifyCertified () vrfK
-                         (mkSeed seedL slot eta0 prevHash)
+                         (mkSeed seedL slot eta0)
                          (coerce $ bheaderL bhb)
             && checkVRFValue (VRF.certifiedNatural $ bheaderL bhb) sigma f
  where
