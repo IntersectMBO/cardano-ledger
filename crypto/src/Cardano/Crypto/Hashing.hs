@@ -86,7 +86,7 @@ import Cardano.Binary
 --   Made abstract in order to support different algorithms
 newtype AbstractHash algo a =
   AbstractHash (Digest algo)
-  deriving (Show, Eq, Ord, ByteArray.ByteArrayAccess, Generic, NFData)
+  deriving (Show, Eq, Ord, Generic, NFData)
   deriving NoUnexpectedThunks via UseIsNormalForm (Digest algo)
 
 instance HashAlgorithm algo => Read (AbstractHash algo a) where
