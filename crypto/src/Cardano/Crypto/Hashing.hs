@@ -95,9 +95,9 @@ newtype AbstractHash algo a =
 instance HashAlgorithm algo => Read (AbstractHash algo a) where
   readsPrec _ s = case parseBase16 $ toS s of
     Left  _  -> []
-    Right bs -> case Hash.digestFromByteString bs of
+    Right bs -> case abstractHashFromBytes bs of
       Nothing -> []
-      Just h  -> [(AbstractHash h, "")]
+      Just h  -> [(h, "")]
 
 instance B.Buildable (AbstractHash algo a) where
   build = bprint mediumHashF
@@ -134,8 +134,8 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo) => FromCBOR (AbstractHa
         "AbstractHash"
         "Cannot convert ByteString to digest"
       )
-      (pure . AbstractHash)
-      (Hash.digestFromByteString bs)
+      pure
+      (abstractHashFromBytes bs)
 
 instance HeapWords (AbstractHash algo a) where
   heapWords _
@@ -175,14 +175,14 @@ decodeAbstractHash
   :: HashAlgorithm algo => Text -> Either Text (AbstractHash algo a)
 decodeAbstractHash prettyHash = do
   bytes <- first (sformat build) $ parseBase16 prettyHash
-  case Hash.digestFromByteString bytes of
+  case abstractHashFromBytes bytes of
     Nothing -> Left
       (  "decodeAbstractHash: "
       <> "can't convert bytes to hash,"
       <> " the value was "
       <> toS prettyHash
       )
-    Just digest -> return (AbstractHash digest)
+    Just h -> return h
 
 -- | Hash the 'ToCBOR'-serialised version of a value
 abstractHash :: (HashAlgorithm algo, ToCBOR a) => a -> AbstractHash algo a
