@@ -16,7 +16,7 @@
 
 module Cardano.Crypto.Hashing
   ( -- * 'AbstractHash' type supporting different hash algorithms
-    AbstractHash(..)
+    AbstractHash
   , HashAlgorithm
     -- ** Hashing
   , abstractHash

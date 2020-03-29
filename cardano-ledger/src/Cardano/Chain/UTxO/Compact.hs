@@ -33,11 +33,9 @@ where
 
 import Cardano.Prelude
 
-import Crypto.Hash (digestFromByteString)
-import Cardano.Crypto.Hashing (AbstractHash(..))
+import Cardano.Crypto.Hashing (hashToBytes, unsafeHashFromBytes)
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
-import qualified Data.ByteArray as BA (convert)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 
 import Cardano.Binary (FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
@@ -170,16 +168,12 @@ putCompactTxId (CompactTxId a b c d) =
                 >> putWord64le d
 
 toCompactTxId :: TxId -> CompactTxId
-toCompactTxId txId =
-  let bs = BA.convert txId :: ByteString
-  in runGet getCompactTxId (BSL.fromStrict bs)
+toCompactTxId =
+  runGet getCompactTxId . BSL.fromStrict . hashToBytes
 
 fromCompactTxId :: CompactTxId -> TxId
-fromCompactTxId compactTxId =
-  let bs = BSL.toStrict $ runPut (putCompactTxId compactTxId)
-  in case digestFromByteString bs of
-    Just d  -> AbstractHash d
-    Nothing -> panic "fromCompactTxId: impossible: failed to reconstruct TxId from CompactTxId"
+fromCompactTxId =
+  unsafeHashFromBytes . BSL.toStrict . runPut . putCompactTxId
 
 --------------------------------------------------------------------------------
 -- Compact TxOut

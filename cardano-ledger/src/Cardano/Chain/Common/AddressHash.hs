@@ -11,13 +11,13 @@ import Crypto.Hash (Blake2b_224, Digest, SHA3_256)
 import qualified Crypto.Hash as CryptoHash
 
 import Cardano.Binary (ToCBOR, serialize)
-import Cardano.Crypto.Hashing (AbstractHash(..))
+import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromDigest)
 
 -- | Hash used to identify address.
 type AddressHash = AbstractHash Blake2b_224
 
 unsafeAddressHash :: ToCBOR a => a -> AddressHash b
-unsafeAddressHash = AbstractHash . secondHash . firstHash
+unsafeAddressHash = abstractHashFromDigest . secondHash . firstHash
  where
   firstHash :: ToCBOR a => a -> Digest SHA3_256
   firstHash = CryptoHash.hashlazy . serialize

@@ -40,7 +40,7 @@ import Cardano.Prelude
 
 import Data.Aeson (ToJSON)
 import Data.Bits (Bits(..))
-import Data.ByteArray (ByteArrayAccess, convert)
+import Data.ByteArray (ByteArrayAccess)
 import Data.ByteString.Builder (Builder, byteString, word8)
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
@@ -51,7 +51,7 @@ import qualified Prelude
 
 import Cardano.Binary
   (Annotated(..), FromCBOR(..), Raw, ToCBOR(..), serializeBuilder)
-import Cardano.Crypto (AbstractHash(..), Hash, hashDecoded, hashRaw)
+import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
 
 
 --------------------------------------------------------------------------------
@@ -79,7 +79,7 @@ instance FromCBOR a => FromCBOR (MerkleRoot a) where
   fromCBOR = MerkleRoot <$> fromCBOR
 
 merkleRootToBuilder :: MerkleRoot a -> Builder
-merkleRootToBuilder (MerkleRoot (AbstractHash d)) = byteString (convert d)
+merkleRootToBuilder (MerkleRoot h) = byteString (hashToBytes h)
 
 mkRoot :: MerkleRoot a -> MerkleRoot a -> MerkleRoot a
 mkRoot a b = MerkleRoot . hashRaw . toLazyByteString $ mconcat
