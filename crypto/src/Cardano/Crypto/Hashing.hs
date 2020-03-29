@@ -44,9 +44,6 @@ module Cardano.Crypto.Hashing
   , hashHexF
   , mediumHashF
   , shortHashF
-
-    -- * Utility
-  , hashDigestSize'
   )
 where
 
@@ -163,12 +160,6 @@ instance HeapWords (AbstractHash algo a) where
     --         +--------------+
     --
     = 8
-
-hashDigestSize' :: forall algo . HashAlgorithm algo => Int
-hashDigestSize' = hashDigestSize @algo
-  (panic
-    "Cardano.Crypto.Hashing.hashDigestSize': HashAlgorithm value is evaluated!"
-  )
 
 -- | Parses given hash in base16 form.
 decodeAbstractHash
