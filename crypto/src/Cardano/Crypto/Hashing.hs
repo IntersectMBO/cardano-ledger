@@ -21,6 +21,11 @@ module Cardano.Crypto.Hashing
     -- ** Hashing
   , abstractHash
   , unsafeAbstractHash
+    -- ** Conversion
+  , abstractHashFromDigest
+  , abstractHashFromBytes
+  , unsafeAbstractHashFromBytes
+  , abstractHashToBytes
     -- ** Parsing and printing
   , decodeAbstractHash
 
@@ -30,6 +35,10 @@ module Cardano.Crypto.Hashing
   , hash
   , hashDecoded
   , hashRaw
+    -- ** Conversion
+  , hashFromBytes
+  , unsafeHashFromBytes
+  , hashToBytes
     -- ** Parsing and printing
   , decodeHash
   , hashHexF
@@ -185,6 +194,32 @@ abstractHash = unsafeAbstractHash . serialize
 unsafeAbstractHash :: HashAlgorithm algo => LByteString -> AbstractHash algo a
 unsafeAbstractHash = AbstractHash . Hash.hashlazy
 
+-- | Make an 'AbstractHash' from a 'Digest' for the same 'HashAlgorithm'.
+--
+abstractHashFromDigest :: Digest algo -> AbstractHash algo a
+abstractHashFromDigest = AbstractHash
+
+-- | Make an 'AbstractHash' from the bytes representation of the hash. It will
+-- fail if given the wrong number of bytes for the choice of 'HashAlgorithm'.
+--
+abstractHashFromBytes :: HashAlgorithm algo => ByteString -> Maybe (AbstractHash algo a)
+abstractHashFromBytes =
+  fmap abstractHashFromDigest . Hash.digestFromByteString
+
+-- | Like 'abstractHashFromDigestBytes' but the number of bytes provided
+-- /must/ be correct for the choice of 'HashAlgorithm'.
+--
+unsafeAbstractHashFromBytes :: HashAlgorithm algo => ByteString -> AbstractHash algo a
+unsafeAbstractHashFromBytes bs =
+  case Hash.digestFromByteString bs of
+    Nothing -> panic "Cardano.Crypto.Hashing.unsafeAbstractHashFromBytes: wrong hash size"
+    Just d  -> AbstractHash d
+
+-- | The bytes representation of the hash value.
+--
+abstractHashToBytes :: AbstractHash algo a -> ByteString
+abstractHashToBytes (AbstractHash d) = ByteArray.convert d
+
 
 --------------------------------------------------------------------------------
 -- Hash
@@ -204,6 +239,20 @@ hashDecoded = unsafeAbstractHash . LBS.fromStrict . recoverBytes
 -- | Hash a bytestring
 hashRaw :: LBS.ByteString -> Hash Raw
 hashRaw = unsafeAbstractHash
+
+-- | Make a hash from it bytes representation. It must be a 32-byte bytestring.
+-- The size is checked.
+hashFromBytes :: ByteString -> Maybe (Hash a)
+hashFromBytes = abstractHashFromBytes
+
+-- | Make a hash from a 32-byte bytestring. It must be exactly 32 bytes.
+unsafeHashFromBytes :: ByteString -> Hash a
+unsafeHashFromBytes = unsafeAbstractHashFromBytes
+
+-- | The bytes representation of the hash value.
+--
+hashToBytes :: AbstractHash algo a -> ByteString
+hashToBytes = abstractHashToBytes
 
 -- | Parses given hash in base16 form.
 decodeHash :: Text -> Either Text (Hash a)
