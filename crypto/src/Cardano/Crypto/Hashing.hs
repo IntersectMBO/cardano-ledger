@@ -15,24 +15,28 @@
 -- | Hashing capabilities.
 
 module Cardano.Crypto.Hashing
-  ( -- * AbstractHash
+  ( -- * 'AbstractHash' type supporting different hash algorithms
     AbstractHash(..)
-  , decodeAbstractHash
-  , decodeHash
+  , HashAlgorithm
+    -- ** Hashing
   , abstractHash
   , unsafeAbstractHash
+    -- ** Parsing and printing
+  , decodeAbstractHash
 
-         -- * Common Hash
+   -- * Standard 'Hash' type using Blake2b 256
   , Hash
-  , hashHexF
-  , mediumHashF
-  , shortHashF
+    -- ** Hashing
   , hash
   , hashDecoded
   , hashRaw
+    -- ** Parsing and printing
+  , decodeHash
+  , hashHexF
+  , mediumHashF
+  , shortHashF
 
-         -- * Utility
-  , HashAlgorithm
+    -- * Utility
   , hashDigestSize'
   )
 where
@@ -171,19 +175,14 @@ decodeAbstractHash prettyHash = do
       )
     Just digest -> return (AbstractHash digest)
 
--- | Parses given hash in base16 form.
-decodeHash :: Text -> Either Text (Hash a)
-decodeHash = decodeAbstractHash @Blake2b_256
-
 -- | Hash the 'ToCBOR'-serialised version of a value
 abstractHash :: (HashAlgorithm algo, ToCBOR a) => a -> AbstractHash algo a
 abstractHash = unsafeAbstractHash . serialize
 
--- | Make an 'AbstractHash' from a lazy 'ByteString'
+-- | Hash a lazy 'LByteString'
 --
---   You can choose the phantom type, hence the "unsafe"
-unsafeAbstractHash
-  :: HashAlgorithm algo => LByteString -> AbstractHash algo anything
+-- You can choose the phantom type, hence the \"unsafe\".
+unsafeAbstractHash :: HashAlgorithm algo => LByteString -> AbstractHash algo a
 unsafeAbstractHash = AbstractHash . Hash.hashlazy
 
 
@@ -191,20 +190,24 @@ unsafeAbstractHash = AbstractHash . Hash.hashlazy
 -- Hash
 --------------------------------------------------------------------------------
 
--- | Type alias for commonly used hash
+-- | The type of our commonly used hash, Blake2b 256
 type Hash = AbstractHash Blake2b_256
 
--- | Short version of 'unsafeHash'.
+-- | The hash of a value, serialised via 'ToCBOR'.
 hash :: ToCBOR a => a -> Hash a
 hash = abstractHash
 
--- | Hashes the annotation
+-- | The hash of a value's annotation
 hashDecoded :: (Decoded t) => t -> Hash (BaseType t)
 hashDecoded = unsafeAbstractHash . LBS.fromStrict . recoverBytes
 
--- | Raw constructor application.
+-- | Hash a bytestring
 hashRaw :: LBS.ByteString -> Hash Raw
 hashRaw = unsafeAbstractHash
+
+-- | Parses given hash in base16 form.
+decodeHash :: Text -> Either Text (Hash a)
+decodeHash = decodeAbstractHash @Blake2b_256
 
 -- | Specialized formatter for 'Hash'.
 hashHexF :: Format r (AbstractHash algo a -> r)
