@@ -10,7 +10,7 @@ module Shelley.Spec.Ledger.Value
 
 import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListLen,
                   decodeWord)
-import           Shelley.Spec.Ledger.Serialization (CBORMap (..))
+import           Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
@@ -42,6 +42,7 @@ instance NoUnexpectedThunks ValueBSType
 instance NoUnexpectedThunks (Value crypto)
 
 -- | make a crypto-free Value type
+-- TODO this is a hack!
 toValBST :: Value crypto -> ValueBSType
 toValBST (Value v) = ValueBSType $ fromList $ fmap (\(cid, tkns) -> (pack $ show cid, tkns)) (toList v)
 
@@ -166,7 +167,7 @@ instance
       k -> invalidKey k
 
 instance ToCBOR ValueBSType where
-  toCBOR (ValueBSType v) = (toCBOR . CBORMap) v
+  toCBOR (ValueBSType v) = mapToCBOR v
 
 instance FromCBOR ValueBSType where
-  fromCBOR = ValueBSType . unwrapCBORMap <$> fromCBOR
+  fromCBOR = ValueBSType <$> mapFromCBOR

@@ -99,8 +99,8 @@ mutateCoin lower upper (Coin c) =
 
 -- | Mutator for 'Value', based on mutation of the contained value field.
 -- TODO make this correct
-mutateValue :: (Crypto crypto) => Integer -> Integer -> Value crypto -> Gen (Value crypto)
-mutateValue lower upper v = (coinToValue . Coin) <$> mutateNat lower upper (fromIntegral c)
+mutateValue :: (Crypto crypto) => Natural -> Natural -> Value crypto -> Gen (Value crypto)
+mutateValue lower upper v = (coinToValue . Coin . fromIntegral) <$> mutateNat lower upper (fromIntegral c)
   where (Coin c) = getAdaAmount v
 
 -- | Mutator of 'Tx' which mutates the contained transaction
