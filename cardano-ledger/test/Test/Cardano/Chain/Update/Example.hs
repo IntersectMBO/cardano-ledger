@@ -81,7 +81,7 @@ exampleProtocolParameters = ProtocolParameters
  where
   tslin  = TxSizeLinear c1' c2'
   c1'    = mkKnownLovelace @999
-  c2'    = mkKnownLovelace @77
+  c2'    = 77 :: Rational
   sfrule = SoftforkRule
     (rationalToLovelacePortion 99e-15)
     (rationalToLovelacePortion 99e-15)
@@ -106,7 +106,7 @@ exampleProtocolParametersUpdate = ProtocolParametersUpdate
  where
   tslin'  = TxSizeLinear co1 co2
   co1     = mkKnownLovelace @999
-  co2     = mkKnownLovelace @77
+  co2     = 77 :: Rational
   sfrule' = SoftforkRule
     (rationalToLovelacePortion 99e-15)
     (rationalToLovelacePortion 99e-15)

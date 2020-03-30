@@ -106,7 +106,7 @@ genCanonicalTxFeePolicy :: Gen TxFeePolicy
 genCanonicalTxFeePolicy = TxFeePolicyTxSizeLinear <$> genCanonicalTxSizeLinear
 
 genCanonicalTxSizeLinear :: Gen TxSizeLinear
-genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genLovelace'
+genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genMultiplier
  where
   genLovelace' :: Gen Lovelace
   genLovelace' =
@@ -195,4 +195,8 @@ genTxFeePolicy :: Gen TxFeePolicy
 genTxFeePolicy = TxFeePolicyTxSizeLinear <$> genTxSizeLinear
 
 genTxSizeLinear :: Gen TxSizeLinear
-genTxSizeLinear = TxSizeLinear <$> genLovelace <*> genLovelace
+genTxSizeLinear = TxSizeLinear <$> genLovelace <*> genMultiplier
+
+-- | Generate multipliers for the TxSizeLinear.
+genMultiplier :: Gen Rational
+genMultiplier = fromIntegral <$> Gen.word16 (Range.constant 0 1000)

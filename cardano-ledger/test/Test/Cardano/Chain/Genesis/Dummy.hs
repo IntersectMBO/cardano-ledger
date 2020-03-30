@@ -125,7 +125,7 @@ dummyProtocolParameters = ProtocolParameters
     , srThdDecrement = rationalToLovelacePortion 0.05
     }
   , ppTxFeePolicy       = TxFeePolicyTxSizeLinear
-    (TxSizeLinear (mkKnownLovelace @155381) (mkKnownLovelace @44))
+    (TxSizeLinear (mkKnownLovelace @155381) 43.946)
   , ppUnlockStakeEpoch  = EpochNumber maxBound
   }
 

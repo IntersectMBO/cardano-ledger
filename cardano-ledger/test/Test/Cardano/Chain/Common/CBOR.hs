@@ -243,7 +243,7 @@ golden_TxFeePolicy_Linear =
  where
   tfp = TxFeePolicyTxSizeLinear (TxSizeLinear c1 c2)
   c1 = mkKnownLovelace @99
-  c2 = mkKnownLovelace @777
+  c2 = 777 :: Rational
 
 ts_roundTripTxFeePolicyCBOR :: TSProperty
 ts_roundTripTxFeePolicyCBOR =
@@ -258,7 +258,7 @@ golden_TxSizeLinear =
  where
   tsl = TxSizeLinear c1 c2
   c1 = mkKnownLovelace @99
-  c2 = mkKnownLovelace @777
+  c2 = 777 :: Rational
 
 ts_roundTripTxSizeLinearCBOR :: TSProperty
 ts_roundTripTxSizeLinearCBOR =

@@ -83,9 +83,7 @@ ts_prop_updateUTxO_Valid =
       vMode <- forAll $ ValidationMode BlockValidation <$> genValidationMode
       updateRes <- (`runReaderT` vMode) . runExceptT $
         UTxO.updateUTxO env utxo [tx]
-      case updateRes of
-        Left _  -> failure
-        Right _ -> success
+      void $ evalEither updateRes
 
 -- | Property: When calling 'updateUTxO' given a valid transaction with an
 -- invalid witness, 'UTxO' validation should pass in both the
@@ -221,7 +219,8 @@ abstractTxFee txIdMap tfp aTx = do
                   (calculateTxSizeLinear
                     txSizeLinear
                     (fromIntegral $ BS.length txBytes))
-  Abstract.Lovelace (lovelaceToInteger cLovelace)
+  -- Add an extra lovelace to the fee to compensate for rounding errors
+  Abstract.Lovelace (1 + lovelaceToInteger cLovelace)
 
 elaborateTxId :: Map Abstract.TxId UTxO.TxId -> Abstract.TxId -> TxId
 elaborateTxId txIdMap abstractTxId =

@@ -74,9 +74,7 @@ elaborateFeePolicy (Abstract.FactorA a) (Abstract.FactorB b) =
   Concrete.TxFeePolicyTxSizeLinear $ Concrete.TxSizeLinear aC bC
   where
     aC = intToLovelace a
-    bC = intToLovelace
-       $ floor
-       $ fromIntegral b / (fromIntegral GP.c :: Double)
+    bC = fromIntegral b % fromIntegral GP.c :: Rational
 
     intToLovelace :: Int -> Concrete.Lovelace
     intToLovelace x =

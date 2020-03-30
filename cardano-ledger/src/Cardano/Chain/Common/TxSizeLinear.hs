@@ -31,17 +31,17 @@ import Cardano.Chain.Common.Lovelace
   ( Lovelace
   , LovelaceError
   , addLovelace
+  , integerToLovelace
   , mkLovelace
-  , scaleLovelace
+  , scaleLovelaceRationalUp
   , unsafeGetLovelace
   )
-
 
 -- | A linear equation on the transaction size. Represents the @\s -> a + b*s@
 -- function where @s@ is the transaction size in bytes, @a@ and @b@ are
 -- constant coefficients.
 data TxSizeLinear =
-  TxSizeLinear !Lovelace !Lovelace
+  TxSizeLinear !Lovelace !Rational
   deriving (Eq, Ord, Show, Generic)
   deriving anyclass (NFData, NoUnexpectedThunks)
 
@@ -56,13 +56,13 @@ instance ToCBOR TxSizeLinear where
   toCBOR (TxSizeLinear a b) =
     encodeListLen 2
       <> toCBOR (fromIntegral (unsafeGetLovelace a) :: Nano)
-      <> toCBOR (fromIntegral (unsafeGetLovelace b) :: Nano)
+      <> toCBOR (fromRational b :: Nano)
 
 instance FromCBOR TxSizeLinear where
   fromCBOR = do
     enforceSize "TxSizeLinear" 2
     !a <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
-    !b <- wrapLovelaceError . mkLovelace . round =<< fromCBOR @Nano
+    !b <- toRational <$> fromCBOR @Nano
     return $ TxSizeLinear a b
    where
     wrapLovelaceError :: Either LovelaceError Lovelace -> Decoder s Lovelace
@@ -71,7 +71,10 @@ instance FromCBOR TxSizeLinear where
 
 calculateTxSizeLinear
   :: TxSizeLinear -> Natural -> Either LovelaceError Lovelace
-calculateTxSizeLinear (TxSizeLinear a b) = addLovelace a <=< scaleLovelace b
+calculateTxSizeLinear (TxSizeLinear a b) sz
+  = addLovelace a
+      =<< flip scaleLovelaceRationalUp b
+      <$> integerToLovelace (fromIntegral sz)
 
 txSizeLinearMinValue :: TxSizeLinear -> Lovelace
 txSizeLinearMinValue (TxSizeLinear a _) = a

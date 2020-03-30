@@ -85,7 +85,7 @@ instance Monad m => ToJSON m TxFeePolicy where
   -- We multiply by 1e9 to keep compatibility with 'Nano' coefficients
   toJSON (TxFeePolicyTxSizeLinear (TxSizeLinear summand multiplier)) = mkObject
     [ ("summand"   , toJSON $ 1e9 * lovelaceToInteger summand)
-    , ("multiplier", toJSON $ 1e9 * lovelaceToInteger multiplier)
+    , ("multiplier", toJSON (floor $ 1e9 * multiplier :: Integer))
     ]
 
 instance MonadError SchemaError m => FromJSON m TxFeePolicy where
@@ -94,7 +94,7 @@ instance MonadError SchemaError m => FromJSON m TxFeePolicy where
     summand <- wrapLovelaceError . mkLovelace . (`div` 1e9) =<< fromJSField
       obj
       "summand"
-    multiplier <- wrapLovelaceError . mkLovelace . (`div` 1e9) =<< fromJSField
+    multiplier <- (% 1e9) <$> fromJSField
       obj
       "multiplier"
     return $ TxFeePolicyTxSizeLinear (TxSizeLinear summand multiplier)
