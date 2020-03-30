@@ -581,7 +581,7 @@ In the first case, the new epoch state is updated as follows:
 
 The Update Nonce Transition updates the nonces until the randomness gets fixed.
 The environment is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
-the block nonce $\eta$, the protocol parameters $\var{pp}$, the current previous hash $h_c$,
+the block nonce $\eta$, the protocol parameters $\var{pp}$, the current previous hash $\var{ph}$,
 and a marker $\var{ne}$ determining whether we are in a new epoch.
 The update nonce state is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
 the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
@@ -595,7 +595,7 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
         \eta & \Seed & \text{new nonce} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
         \var{ph} & \HashHeader^? & \text{current previous hash} \\
-        b & \Bool & \text{is new epoch} \\
+        \var{ne} & \Bool & \text{is new epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -714,7 +714,7 @@ near the end of the epoch is not discarded).
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
-         h_c \\
+         ph \\
          \mathsf{False}
        \end{array}}
       \vdash
