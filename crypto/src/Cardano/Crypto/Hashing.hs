@@ -62,6 +62,7 @@ import Data.Aeson
 import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteArray.Encoding as ByteArray
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
@@ -126,19 +127,18 @@ instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
     in fromInteger (toInteger (withWordSize realSz + realSz))
 
-instance (Typeable algo, Typeable a, HashAlgorithm algo) => FromCBOR (AbstractHash algo a) where
+instance (Typeable algo, Typeable a, HashAlgorithm algo)
+      => FromCBOR (AbstractHash algo a) where
+  fromCBOR = do
   -- FIXME bad decode: it reads an arbitrary-length byte string.
   -- Better instance: know the hash algorithm up front, read exactly that
   -- many bytes, fail otherwise. Then convert to a digest.
-  fromCBOR = do
-    bs <- fromCBOR @ByteString
-    maybe
-      (cborError $ DecoderErrorCustom
-        "AbstractHash"
-        "Cannot convert ByteString to digest"
-      )
-      pure
-      (abstractHashFromBytes bs)
+    bs <- fromCBOR @SBS.ShortByteString
+    when (SBS.length bs /= expectedSize) $
+      cborError $ DecoderErrorCustom "AbstractHash" "Bytes not expected length"
+    return (AbstractHash bs)
+    where
+      expectedSize = hashDigestSize (Prelude.undefined :: algo)
 
 instance HeapWords (AbstractHash algo a) where
   heapWords _
@@ -198,9 +198,13 @@ abstractHashFromDigest = AbstractHash . SBS.toShort . ByteArray.convert
 -- | Make an 'AbstractHash' from the bytes representation of the hash. It will
 -- fail if given the wrong number of bytes for the choice of 'HashAlgorithm'.
 --
-abstractHashFromBytes :: HashAlgorithm algo => ByteString -> Maybe (AbstractHash algo a)
-abstractHashFromBytes =
-  fmap abstractHashFromDigest . Hash.digestFromByteString
+abstractHashFromBytes :: forall algo a. HashAlgorithm algo
+                      => ByteString -> Maybe (AbstractHash algo a)
+abstractHashFromBytes bs
+  | BS.length bs == expectedSize = Just (unsafeAbstractHashFromBytes bs)
+  | otherwise                    = Nothing
+  where
+    expectedSize = hashDigestSize (Prelude.undefined :: algo)
 
 -- | Like 'abstractHashFromDigestBytes' but the number of bytes provided
 -- /must/ be correct for the choice of 'HashAlgorithm'.
