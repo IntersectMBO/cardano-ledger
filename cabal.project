@@ -35,22 +35,22 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: f869bee9b08ba1044b1476737c9d65083e1c6c7f
-  --sha256: 0df3bdf13cwx3hd8n4q53g9hybb0w8mh837y64ydd88xhdfaf6a3
+  tag: 68dcff6e832efa8711b9757d8ddaba61759da973
+  --sha256: 1mqyxi6h2bq4w81v3vn05s0y4i6zp42g6yagy8bzbihh97q2wc0g
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: f869bee9b08ba1044b1476737c9d65083e1c6c7f
-  --sha256: 0df3bdf13cwx3hd8n4q53g9hybb0w8mh837y64ydd88xhdfaf6a3
+  tag: 68dcff6e832efa8711b9757d8ddaba61759da973
+  --sha256: 1mqyxi6h2bq4w81v3vn05s0y4i6zp42g6yagy8bzbihh97q2wc0g
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: f869bee9b08ba1044b1476737c9d65083e1c6c7f
-  --sha256: 0df3bdf13cwx3hd8n4q53g9hybb0w8mh837y64ydd88xhdfaf6a3
+  tag: 68dcff6e832efa8711b9757d8ddaba61759da973
+  --sha256: 1mqyxi6h2bq4w81v3vn05s0y4i6zp42g6yagy8bzbihh97q2wc0g
   subdir: binary/test
 
 source-repository-package
