@@ -61,8 +61,10 @@ import Data.Aeson
   )
 import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.ByteArray as ByteArray
-import qualified Data.ByteString as BS
+import qualified Data.ByteArray.Encoding as ByteArray
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as SBS
 import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable(..))
 
@@ -84,10 +86,15 @@ import Cardano.Binary
 -- | Hash wrapper with phantom type for more type-safety
 --
 --   Made abstract in order to support different algorithms
-newtype AbstractHash algo a =
-  AbstractHash (Digest algo)
-  deriving (Show, Eq, Ord, Generic, NFData)
-  deriving NoUnexpectedThunks via UseIsNormalForm (Digest algo)
+newtype AbstractHash algo a = AbstractHash SBS.ShortByteString
+  deriving (Eq, Ord, Generic, NFData)
+  deriving NoUnexpectedThunks via UseIsNormalForm SBS.ShortByteString
+
+instance Show (AbstractHash algo a) where
+  show (AbstractHash h) = BSC.unpack
+                        . ByteArray.convertToBase ByteArray.Base16
+                        . SBS.fromShort
+                        $ h
 
 instance HashAlgorithm algo => Read (AbstractHash algo a) where
   readsPrec _ s = case parseBase16 $ toS s of
@@ -113,8 +120,7 @@ instance ToJSONKey (AbstractHash algo a) where
   toJSONKey = toJSONKeyText (sformat hashHexF)
 
 instance (Typeable algo, Typeable a, HashAlgorithm algo) => ToCBOR (AbstractHash algo a) where
-  toCBOR (AbstractHash digest) =
-    toCBOR (ByteArray.convert digest :: BS.ByteString)
+  toCBOR (AbstractHash h) = toCBOR h
 
   encodedSizeExpr _ _ =
     let realSz = hashDigestSize (panic "unused, I hope!" :: algo)
@@ -138,20 +144,19 @@ instance HeapWords (AbstractHash algo a) where
   heapWords _
     -- We have
     --
-    -- > newtype AbstractHash algo a = AbstractHash (Digest algo)
-    -- > newtype Digest a = Digest (Block Word8)
-    -- > data Block ty = Block ByteArray#
+    -- > newtype AbstractHash algo a = AbstractHash ShortByteString
+    -- > data ShortByteString = SBS ByteArray#
     --
     -- so @AbstractHash algo a@ requires:
     --
-    -- - 1 word for the 'Block' object header
+    -- - 1 word for the 'ShortByteString' object header
     -- - 1 word for the pointer to the byte array object
     -- - 1 word for the byte array object header
     -- - 1 word for the size of the byte array payload in bytes
     -- - 4 words (on a 64-bit arch) for the byte array payload containing the digest
     --
     -- +---------+
-    -- │Block│ * │
+    -- │ SBS │ * │
     -- +-------+-+
     --         |
     --         v
@@ -183,12 +188,12 @@ abstractHash = unsafeAbstractHash . serialize
 --
 -- You can choose the phantom type, hence the \"unsafe\".
 unsafeAbstractHash :: HashAlgorithm algo => LByteString -> AbstractHash algo a
-unsafeAbstractHash = AbstractHash . Hash.hashlazy
+unsafeAbstractHash = abstractHashFromDigest . Hash.hashlazy
 
 -- | Make an 'AbstractHash' from a 'Digest' for the same 'HashAlgorithm'.
 --
 abstractHashFromDigest :: Digest algo -> AbstractHash algo a
-abstractHashFromDigest = AbstractHash
+abstractHashFromDigest = AbstractHash . SBS.toShort . ByteArray.convert
 
 -- | Make an 'AbstractHash' from the bytes representation of the hash. It will
 -- fail if given the wrong number of bytes for the choice of 'HashAlgorithm'.
@@ -200,16 +205,13 @@ abstractHashFromBytes =
 -- | Like 'abstractHashFromDigestBytes' but the number of bytes provided
 -- /must/ be correct for the choice of 'HashAlgorithm'.
 --
-unsafeAbstractHashFromBytes :: HashAlgorithm algo => ByteString -> AbstractHash algo a
-unsafeAbstractHashFromBytes bs =
-  case Hash.digestFromByteString bs of
-    Nothing -> panic "Cardano.Crypto.Hashing.unsafeAbstractHashFromBytes: wrong hash size"
-    Just d  -> AbstractHash d
+unsafeAbstractHashFromBytes :: ByteString -> AbstractHash algo a
+unsafeAbstractHashFromBytes = AbstractHash . SBS.toShort
 
 -- | The bytes representation of the hash value.
 --
 abstractHashToBytes :: AbstractHash algo a -> ByteString
-abstractHashToBytes (AbstractHash d) = ByteArray.convert d
+abstractHashToBytes (AbstractHash h) = SBS.fromShort h
 
 
 --------------------------------------------------------------------------------
@@ -251,7 +253,7 @@ decodeHash = decodeAbstractHash @Blake2b_256
 
 -- | Specialized formatter for 'Hash'.
 hashHexF :: Format r (AbstractHash algo a -> r)
-hashHexF = later $ \(AbstractHash x) -> B.build (show x :: Text)
+hashHexF = later $ \h -> B.build (show h :: Text)
 
 -- | Smart formatter for 'Hash' to show only first @16@ characters of 'Hash'.
 mediumHashF :: Format r (AbstractHash algo a -> r)
