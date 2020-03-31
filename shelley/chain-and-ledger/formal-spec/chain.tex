@@ -636,7 +636,7 @@ This does assume that the first block in an epoch will occur before
 \SlotsPrior{} slots before the beginning of the next epoch.
 
 Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
-$\eta_v\star\eta$, not $\eta_c\star\eta$. The reason for this is that even
+$\eta_v\seedOp\eta$, not $\eta_c\seedOp\eta$. The reason for this is that even
 though the nonce candidate is frozen sometime during the epoch, we want the two
 nonces to again be equal at the start of a new epoch (so that the entropy added
 near the end of the epoch is not discarded).
