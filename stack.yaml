@@ -5,7 +5,7 @@ packages:
 - shelley/chain-and-ledger/executable-spec/test
 - byron/chain/executable-spec
 - byron/ledger/executable-spec
-- byron/semantics/executable-spec
+- semantics/executable-spec
 - shelley/chain-and-ledger/dependencies/non-integer
 
 ghc-options:

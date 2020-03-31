@@ -3,7 +3,7 @@ index-state: 2020-01-31T00:00:00Z
 packages:
   byron/chain/executable-spec
   byron/ledger/executable-spec
-  byron/semantics/executable-spec
+  semantics/executable-spec
   shelley/chain-and-ledger/dependencies/non-integer
   shelley/chain-and-ledger/executable-spec
   shelley/chain-and-ledger/executable-spec/test
