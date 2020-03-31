@@ -18,6 +18,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           GHC.Stack (HasCallStack)
 
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -55,7 +56,8 @@ import           Debug.Trace as D
 --
 -- Selects unspent outputs and spends the funds on a some valid addresses.
 -- Also generates valid certificates.
-genTx :: LedgerEnv
+genTx :: HasCallStack
+      => LedgerEnv
       -> (UTxOState, DPState)
       -> KeyPairs
       -> Map AnyKeyHash KeyPair
@@ -238,7 +240,8 @@ calcOutputsFromBalance balance_ addrs fee =
 -- spend these outputs). If this is not the case, `findPayKeyPairAddr` /
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 pickSpendingInputs
-  :: MultiSigPairs
+  :: HasCallStack
+  => MultiSigPairs
   -> Map AnyKeyHash KeyPair
   -> UTxO
   -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
@@ -275,7 +278,8 @@ pickWithdrawals wdrls = QC.frequency
 
 -- | Collect witnesses needed for reward withdrawals.
 mkWdrlWits
-  :: MultiSigPairs
+  :: HasCallStack
+  => MultiSigPairs
   -> Map AnyKeyHash KeyPair
   -> Credential
   -> Either KeyPair (MultiSig, MultiSig)
