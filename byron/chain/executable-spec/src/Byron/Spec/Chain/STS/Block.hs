@@ -8,7 +8,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 
-module Cardano.Spec.Chain.STS.Block where
+module Byron.Spec.Chain.STS.Block where
 
 import           Control.Lens (makeLenses, view, (^.))
 import           Data.AbstractSize

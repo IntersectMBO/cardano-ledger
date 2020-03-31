@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Properties where
+module Test.Byron.Spec.Chain.STS.Properties where
 
 import           Control.Arrow ((***))
 import           Control.Lens (view, (&), (^.), (^..), _1, _5)
@@ -23,9 +23,9 @@ import           Byron.Spec.Ledger.Core (BlockCount (BlockCount), Epoch, Slot (u
 import           Byron.Spec.Ledger.Delegation
 import           Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
 
-import           Cardano.Spec.Chain.STS.Block
-import           Cardano.Spec.Chain.STS.Rule.Chain
-import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
+import           Byron.Spec.Chain.STS.Block
+import           Byron.Spec.Chain.STS.Rule.Chain
+import           Byron.Spec.Chain.STS.Rule.Epoch (sEpoch)
 
 slotsIncrease :: Property
 slotsIncrease = property $ do

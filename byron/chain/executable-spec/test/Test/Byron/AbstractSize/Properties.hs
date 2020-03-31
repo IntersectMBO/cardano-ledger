@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.AbstractSize.Properties
+module Test.Byron.AbstractSize.Properties
     (testAbstractSize)
   where
 
@@ -27,8 +27,8 @@ import           Byron.Spec.Ledger.Delegation (DCert)
 import           Byron.Spec.Ledger.Update (ProtVer (..), UProp (..), Vote)
 import           Byron.Spec.Ledger.UTxO
 
-import           Cardano.Spec.Chain.STS.Block (Block (..), BlockBody (..), BlockHeader (..))
-import           Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
+import           Byron.Spec.Chain.STS.Block (Block (..), BlockBody (..), BlockHeader (..))
+import           Byron.Spec.Chain.STS.Rule.Chain (CHAIN)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, testCase, (@?=))

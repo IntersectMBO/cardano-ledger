@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Rule.Pbft where
+module Byron.Spec.Chain.STS.Rule.Pbft where
 
 import           Control.Lens ((^.))
 import           Data.Bimap (Bimap)
@@ -15,8 +15,8 @@ import           Control.State.Transition
 import           Byron.Spec.Ledger.Core
 import           Byron.Spec.Ledger.Update
 
-import           Cardano.Spec.Chain.STS.Block
-import           Cardano.Spec.Chain.STS.Rule.SigCnt
+import           Byron.Spec.Chain.STS.Block
+import           Byron.Spec.Chain.STS.Rule.SigCnt
 
 data PBFT deriving (Data, Typeable)
 

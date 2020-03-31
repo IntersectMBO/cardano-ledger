@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Rule.Bupi where
+module Byron.Spec.Chain.STS.Rule.Bupi where
 
 import           Data.Data (Data, Typeable)
 

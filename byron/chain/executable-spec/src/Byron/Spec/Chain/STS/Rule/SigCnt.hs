@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Rule.SigCnt where
+module Byron.Spec.Chain.STS.Rule.SigCnt where
 
 import           Control.Arrow ((|||))
 import           Control.Lens ((^.))

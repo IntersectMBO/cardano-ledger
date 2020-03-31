@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Rule.Epoch where
+module Byron.Spec.Chain.STS.Rule.Epoch where
 
 import           Control.State.Transition
 import           Data.Data (Data, Typeable)

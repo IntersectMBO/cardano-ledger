@@ -4,9 +4,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Rule.BBody where
+module Byron.Spec.Chain.STS.Rule.BBody where
 
-import           Cardano.Spec.Chain.STS.Rule.Bupi
+import           Byron.Spec.Chain.STS.Rule.Bupi
 import           Control.Lens ((^.))
 import           Data.Bimap (keys)
 import           Data.Data (Data, Typeable)
@@ -24,7 +24,7 @@ import           Control.State.Transition (Embed, Environment, PredicateFailure,
                      TRC (TRC), initialRules, judgmentContext, trans, transitionRules, wrapFailed,
                      (?!))
 
-import           Cardano.Spec.Chain.STS.Block
+import           Byron.Spec.Chain.STS.Block
 
 data BBODY deriving (Data, Typeable)
 

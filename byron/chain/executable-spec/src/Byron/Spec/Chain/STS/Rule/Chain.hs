@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Spec.Chain.STS.Rule.Chain where
+module Byron.Spec.Chain.STS.Rule.Chain where
 
 import           Control.Lens (Lens', (&), (.~), (^.), _1, _5)
 import           Data.Bimap (Bimap)
@@ -39,11 +39,11 @@ import           Byron.Spec.Ledger.UTxO (UTxO, mapUTxOValues)
 import           Control.State.Transition
 import           Control.State.Transition.Generator
 
-import           Cardano.Spec.Chain.STS.Block
-import           Cardano.Spec.Chain.STS.Rule.BBody
-import           Cardano.Spec.Chain.STS.Rule.Epoch (EPOCH, sEpoch)
-import           Cardano.Spec.Chain.STS.Rule.Pbft
-import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as SigCntGen
+import           Byron.Spec.Chain.STS.Block
+import           Byron.Spec.Chain.STS.Rule.BBody
+import           Byron.Spec.Chain.STS.Rule.Epoch (EPOCH, sEpoch)
+import           Byron.Spec.Chain.STS.Rule.Pbft
+import qualified Byron.Spec.Chain.STS.Rule.SigCnt as SigCntGen
 
 data CHAIN deriving (Data, Typeable)
 

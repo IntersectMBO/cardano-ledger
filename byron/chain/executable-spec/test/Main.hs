@@ -4,8 +4,8 @@ module Main (main) where
 import           Test.Tasty (TestTree, defaultMain, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
-import           Cardano.AbstractSize.Properties (testAbstractSize)
-import           Cardano.Spec.Chain.STS.Properties as CHAIN
+import           Test.Byron.AbstractSize.Properties (testAbstractSize)
+import           Test.Byron.Spec.Chain.STS.Properties as CHAIN
 
 main :: IO ()
 main = defaultMain tests
