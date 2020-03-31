@@ -58,6 +58,7 @@ import           Data.Ratio ((%))
 import           Data.Sequence (fromList)
 import           Data.Tuple (swap)
 import           Data.Word (Word64)
+import           GHC.Stack (HasCallStack)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.QuickCheck (Gen)
@@ -224,7 +225,11 @@ someScripts lower upper =
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPairCred :: Credential -> Map AnyKeyHash KeyPair -> KeyPair
+findPayKeyPairCred
+  :: HasCallStack
+  => Credential
+  -> Map AnyKeyHash KeyPair
+  -> KeyPair
 findPayKeyPairCred c keyHashMap =
   case c of
     KeyHashObj addr -> lookforKeyHash addr
@@ -238,7 +243,7 @@ findPayKeyPairCred c keyHashMap =
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPairAddr :: Addr -> Map AnyKeyHash KeyPair -> KeyPair
+findPayKeyPairAddr :: HasCallStack => Addr -> Map AnyKeyHash KeyPair -> KeyPair
 findPayKeyPairAddr a keyHashMap =
   case a of
     AddrBase addr _ -> findPayKeyPairCred addr keyHashMap
@@ -247,7 +252,7 @@ findPayKeyPairAddr a keyHashMap =
       error "findPayKeyPairAddr: expects only AddrBase or AddrPtr addresses"
 
 -- | Find first matching script for a credential.
-findPayScriptFromCred :: Credential -> MultiSigPairs -> (MultiSig, MultiSig)
+findPayScriptFromCred :: HasCallStack => Credential -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -260,7 +265,7 @@ findPayScriptFromCred c scripts =
         Just i  -> scripts !! i
 
 -- | Find first matching script for a credential.
-findStakeScriptFromCred :: Credential -> MultiSigPairs -> (MultiSig, MultiSig)
+findStakeScriptFromCred :: HasCallStack =>  Credential -> MultiSigPairs -> (MultiSig, MultiSig)
 findStakeScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -274,7 +279,7 @@ findStakeScriptFromCred c scripts =
 
 
 -- | Find first matching script for address.
-findPayScriptFromAddr :: Addr -> MultiSigPairs -> (MultiSig, MultiSig)
+findPayScriptFromAddr :: HasCallStack => Addr -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScriptFromAddr a scripts =
   case a of
     AddrBase scriptHash _ -> findPayScriptFromCred scriptHash scripts
