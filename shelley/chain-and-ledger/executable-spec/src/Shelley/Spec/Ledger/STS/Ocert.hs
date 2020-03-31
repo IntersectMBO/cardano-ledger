@@ -11,12 +11,12 @@ module Shelley.Spec.Ledger.STS.Ocert
   )
 where
 
+import           Byron.Spec.Ledger.Core ((⨃))
 import           Cardano.Prelude (NoUnexpectedThunks, asks)
 import           Control.State.Transition
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
-import           Ledger.Core ((⨃))
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.BlockChain

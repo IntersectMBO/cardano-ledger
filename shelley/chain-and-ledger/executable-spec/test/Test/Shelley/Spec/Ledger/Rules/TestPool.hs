@@ -18,7 +18,7 @@ import           Control.State.Transition (Environment, State)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
 
-import           Ledger.Core (dom, (∈), (∉))
+import           Byron.Spec.Ledger.Core (dom, (∈), (∉))
 
 import           Shelley.Spec.Ledger.BaseTypes ((==>))
 import           Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)

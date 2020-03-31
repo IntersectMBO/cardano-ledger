@@ -30,8 +30,8 @@ module Shelley.Spec.Ledger.Delegation.Certificates
   , requiresVKeyWitness
   ) where
 
+import           Byron.Spec.Ledger.Core (Relation (..))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto

@@ -22,10 +22,10 @@ import           Test.Tasty.Hedgehog
 
 import           Control.State.Transition.Generator (trace)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
-import           Ledger.Core hiding ((<|))
-import           Ledger.Delegation (DCert)
-import           Ledger.Update (ProtVer (..), UProp (..), Vote)
-import           Ledger.UTxO
+import           Byron.Spec.Ledger.Core hiding ((<|))
+import           Byron.Spec.Ledger.Delegation (DCert)
+import           Byron.Spec.Ledger.Update (ProtVer (..), UProp (..), Vote)
+import           Byron.Spec.Ledger.UTxO
 
 import           Cardano.Spec.Chain.STS.Block (Block (..), BlockBody (..), BlockHeader (..))
 import           Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)

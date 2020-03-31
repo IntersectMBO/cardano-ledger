@@ -10,13 +10,13 @@ module Shelley.Spec.Ledger.STS.PoolReap
   )
 where
 
+import           Byron.Spec.Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
-import           Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
 import           Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import           Shelley.Spec.Ledger.EpochBoundary (poolRefunds)

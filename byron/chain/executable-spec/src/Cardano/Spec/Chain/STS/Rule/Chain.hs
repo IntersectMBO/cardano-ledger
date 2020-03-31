@@ -27,17 +27,17 @@ import           Hedgehog.Internal.Property (CoverPercentage)
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
 
-import           Cardano.Ledger.Spec.STS.UTXO (UTxOEnv (UTxOEnv, pps, utxo0), UTxOState)
-import           Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
+import           Byron.Spec.Ledger.STS.UTXO (UTxOEnv (UTxOEnv, pps, utxo0), UTxOState)
+import           Byron.Spec.Ledger.STS.UTXOWS (UTXOWS)
+import           Byron.Spec.Ledger.Core
+import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
+import           Byron.Spec.Ledger.Delegation
+import qualified Byron.Spec.Ledger.GlobalParams as GP
+import           Byron.Spec.Ledger.Update hiding (delegationMap)
+import qualified Byron.Spec.Ledger.Update as Update
+import           Byron.Spec.Ledger.UTxO (UTxO, mapUTxOValues)
 import           Control.State.Transition
 import           Control.State.Transition.Generator
-import           Ledger.Core
-import qualified Ledger.Core.Generators as CoreGen
-import           Ledger.Delegation
-import qualified Ledger.GlobalParams as GP
-import           Ledger.Update hiding (delegationMap)
-import qualified Ledger.Update as Update
-import           Ledger.UTxO (UTxO, mapUTxOValues)
 
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.BBody

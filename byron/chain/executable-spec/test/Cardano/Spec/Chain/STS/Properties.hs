@@ -19,9 +19,9 @@ import           Control.State.Transition.Generator (TraceLength (Desired, Maxim
 import qualified Control.State.Transition.Generator as Transition.Generator
 import           Control.State.Transition.Trace
 
-import           Ledger.Core (BlockCount (BlockCount), Epoch, Slot (unSlot))
-import           Ledger.Delegation
-import           Ledger.GlobalParams (slotsPerEpoch)
+import           Byron.Spec.Ledger.Core (BlockCount (BlockCount), Epoch, Slot (unSlot))
+import           Byron.Spec.Ledger.Delegation
+import           Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
 
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.Chain

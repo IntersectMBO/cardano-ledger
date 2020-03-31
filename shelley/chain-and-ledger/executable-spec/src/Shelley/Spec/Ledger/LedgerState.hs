@@ -114,7 +114,7 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), PoolDi
 import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopic (..),
                      emptyNonMyopic, reward)
 
-import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
+import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
                      intervalValue, text64Size)
 import           Shelley.Spec.Ledger.Scripts (countMSigNodes)

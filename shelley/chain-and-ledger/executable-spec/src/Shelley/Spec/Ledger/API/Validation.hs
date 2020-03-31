@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
+import           Byron.Spec.Ledger.Core (Relation (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Shelley.Spec.Ledger.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -24,7 +25,6 @@ import           Control.Monad.Trans.Reader (runReader)
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Data.Either (fromRight)
 import           GHC.Generics (Generic)
-import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (Globals)
 import           Shelley.Spec.Ledger.BlockChain
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState

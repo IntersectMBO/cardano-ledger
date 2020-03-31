@@ -11,6 +11,7 @@ module Shelley.Spec.Ledger.STS.Pool
   )
 where
 
+import           Byron.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
@@ -21,7 +22,6 @@ import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
-import           Ledger.Core (dom, (∈), (∉), (⋪))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates

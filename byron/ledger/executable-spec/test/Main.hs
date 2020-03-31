@@ -9,22 +9,22 @@ import           Test.Tasty (TestTree, defaultMain, localOption, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.Ingredients.ConsoleReporter (UseColor (Auto))
 
-import           Ledger.AbstractSize.Properties (testTxHasTypeReps)
-import qualified Ledger.Core.Generators.Properties as CoreGen
-import           Ledger.Delegation.Examples (deleg)
-import qualified Ledger.Delegation.Properties as DELEG
-import           Ledger.Relation.Properties (testRelation)
-import           Ledger.Update.Examples (upiendExamples)
-import qualified Ledger.Update.Properties as UPDATE
-import           Ledger.UTxO.Properties (moneyIsConstant)
-import qualified Ledger.UTxO.Properties as UTxO
+import           Test.Byron.Spec.Ledger.AbstractSize.Properties (testTxHasTypeReps)
+import qualified Test.Byron.Spec.Ledger.Core.Generators.Properties as CoreGen
+import           Test.Byron.Spec.Ledger.Delegation.Examples (deleg)
+import qualified Test.Byron.Spec.Ledger.Delegation.Properties as DELEG
+import           Test.Byron.Spec.Ledger.Relation.Properties (testRelation)
+import           Test.Byron.Spec.Ledger.Update.Examples (upiendExamples)
+import qualified Test.Byron.Spec.Ledger.Update.Properties as UPDATE
+import           Test.Byron.Spec.Ledger.UTxO.Properties (moneyIsConstant)
+import qualified Test.Byron.Spec.Ledger.UTxO.Properties as UTxO
 
 main :: IO ()
 main = defaultMain tests
  where
   tests :: TestTree
   tests = localOption Auto $ testGroup
-    "Ledger"
+    "Test.Byron.Spec.Ledger"
     [ testGroup "Core generators properties"
       [ testProperty "Relevant k values are generated"  CoreGen.relevantKValuesAreGenerated ]
     , testGroup "Delegation Examples" deleg
@@ -61,6 +61,6 @@ main = defaultMain tests
       , testProperty "Invalid signals are generated when requested" UPDATE.invalidSignalsAreGenerated
       ]
     -- TODO move this out of here (these are not properties of the transition
-    -- systems) and also move the Relation class and instances out of Ledger.Core
+    -- systems) and also move the Relation class and instances out of Byron.Spec.Ledger.Core
     , testRelation
     ]

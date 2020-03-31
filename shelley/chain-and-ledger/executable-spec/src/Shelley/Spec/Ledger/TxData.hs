@@ -35,7 +35,7 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (Relation (..))
+import           Byron.Spec.Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (Text64, UnitInterval, invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,

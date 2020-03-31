@@ -24,7 +24,7 @@ import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
-import           Ledger.Core (dom, range, (∈), (∉))
+import           Byron.Spec.Ledger.Core (dom, range, (∈), (∉))
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
 import           Shelley.Spec.Ledger.BaseTypes (interval0)
 import           Shelley.Spec.Ledger.Coin (Coin (..))

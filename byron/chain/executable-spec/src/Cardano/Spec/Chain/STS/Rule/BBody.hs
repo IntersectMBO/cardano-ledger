@@ -13,16 +13,16 @@ import           Data.Data (Data, Typeable)
 import           Data.Set (fromList)
 import           Data.Word (Word8)
 
-import           Cardano.Ledger.Spec.STS.UTXO (UTxOEnv (UTxOEnv, pps, utxo0), UTxOState)
-import           Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
+import           Byron.Spec.Ledger.STS.UTXO (UTxOEnv (UTxOEnv, pps, utxo0), UTxOState)
+import           Byron.Spec.Ledger.STS.UTXOWS (UTXOWS)
+import           Byron.Spec.Ledger.Core (BlockCount, Epoch, hash)
+import           Byron.Spec.Ledger.Delegation (DELEG, DIState, DSEnv (DSEnv), _dIStateDelegationMap,
+                     _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK, _dSEnvSlot)
+import           Byron.Spec.Ledger.Update (PParams, UPIState, maxBkSz)
+import           Byron.Spec.Ledger.UTxO (UTxO)
 import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
                      TRC (TRC), initialRules, judgmentContext, trans, transitionRules, wrapFailed,
                      (?!))
-import           Ledger.Core (BlockCount, Epoch, hash)
-import           Ledger.Delegation (DELEG, DIState, DSEnv (DSEnv), _dIStateDelegationMap,
-                     _dSEnvAllowedDelegators, _dSEnvEpoch, _dSEnvK, _dSEnvSlot)
-import           Ledger.Update (PParams, UPIState, maxBkSz)
-import           Ledger.UTxO (UTxO)
 
 import           Cardano.Spec.Chain.STS.Block
 

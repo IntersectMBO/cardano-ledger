@@ -12,8 +12,8 @@ import           Data.Sequence (Seq)
 
 import           Control.State.Transition
 
-import           Ledger.Core
-import           Ledger.Update
+import           Byron.Spec.Ledger.Core
+import           Byron.Spec.Ledger.Update
 
 import           Cardano.Spec.Chain.STS.Block
 import           Cardano.Spec.Chain.STS.Rule.SigCnt

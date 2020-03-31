@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.STS.Ledgers
   )
 where
 
+import           Byron.Spec.Ledger.Core ((◁), (⨃))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (foldM)
@@ -25,7 +26,6 @@ import           Data.Sequence (Seq)
 import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
-import           Ledger.Core ((◁), (⨃))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Crypto

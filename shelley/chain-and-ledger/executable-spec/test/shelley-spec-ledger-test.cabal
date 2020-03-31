@@ -54,7 +54,7 @@ library
     cborg,
     containers,
     cryptonite,
-    cs-ledger,
+    byron-spec-ledger,
     shelley-spec-ledger,
     hedgehog,
     multiset,

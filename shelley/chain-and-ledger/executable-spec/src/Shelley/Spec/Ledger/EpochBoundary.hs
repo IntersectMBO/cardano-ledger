@@ -52,7 +52,7 @@ import           Shelley.Spec.Ledger.Crypto
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (dom, (▷), (◁))
+import           Byron.Spec.Ledger.Core (dom, (▷), (◁))
 
 -- | Blocks made
 newtype BlocksMade crypto

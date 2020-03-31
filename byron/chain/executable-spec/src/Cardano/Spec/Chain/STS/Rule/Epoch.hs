@@ -8,9 +8,9 @@ module Cardano.Spec.Chain.STS.Rule.Epoch where
 import           Control.State.Transition
 import           Data.Data (Data, Typeable)
 import           GHC.Stack (HasCallStack)
-import           Ledger.Core
-import           Ledger.GlobalParams (slotsPerEpoch)
-import           Ledger.Update
+import           Byron.Spec.Ledger.Core
+import           Byron.Spec.Ledger.GlobalParams (slotsPerEpoch)
+import           Byron.Spec.Ledger.Update
 
 
 -- | Compute the epoch for the given _absolute_ slot and chain stability parameter.

@@ -24,10 +24,10 @@ import           Numeric.Natural (Natural)
 
 import           Control.State.Transition.Generator
 
-import           Ledger.Core (Hash (Hash), Sig (Sig), Slot, VKey, hash, owner)
-import           Ledger.Delegation
-import           Ledger.Update (ProtVer, STag, UProp, Vote)
-import           Ledger.UTxO (TxIn, TxOut, Tx, Wit)
+import           Byron.Spec.Ledger.Core (Hash (Hash), Sig (Sig), Slot, VKey, hash, owner)
+import           Byron.Spec.Ledger.Delegation
+import           Byron.Spec.Ledger.Update (ProtVer, STag, UProp, Vote)
+import           Byron.Spec.Ledger.UTxO (TxIn, TxOut, Tx, Wit)
 
 import           Test.Goblin (AddShrinks (..), Goblin (..))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin)

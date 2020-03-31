@@ -37,7 +37,7 @@ library
                      , bimap >=0.4 && <0.5
                      , bytestring
                      , containers
-                     , cs-ledger
+                     , byron-spec-ledger
                      , goblins
                      , hashable
                      , hedgehog >= 1.0
@@ -68,14 +68,14 @@ test-suite chain-rules-test
                      , tasty-hunit
                      -- local deps
                      , cs-blockchain
-                     , cs-ledger
+                     , byron-spec-ledger
                      , small-steps
   ghc-options:         -Wall
                        -Wcompat
                        -Wincomplete-record-updates
                        -Wincomplete-uni-patterns
                        -Wredundant-constraints
-                       -- See `cs-ledger.cabal` for an explanation of the
+                       -- See `byron-spec-ledger.cabal` for an explanation of the
                        -- options below.
                        "-with-rtsopts=-K4m -M300m"
   if (!flag(development))

@@ -137,7 +137,7 @@ hierarchy. Passing `-l` to `tasty` will list the available test names.
 When testing using `stack`, pay special attention to escaping the right symbols, e.g.:
 
 ```sh
-stack test cs-ledger:test:ledger-rules-test --ta "-p \"\$1 ~ /Ledger/ \&\& \$2 ~ /Update/ \&\& \$3 ~ /classified/\""
+stack test byron-spec-ledger:test:byron-spec-ledger-test --ta "-p \"\$1 ~ /Ledger/ \&\& \$2 ~ /Update/ \&\& \$3 ~ /classified/\""
 ```
 
 Alternatively, it is also possible to use `ghcid` if it is installed in your system. In this case,

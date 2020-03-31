@@ -18,8 +18,8 @@ import qualified Hedgehog.Range as Range
 
 import           Control.State.Transition
 
-import           Ledger.Core hiding ((|>))
-import           Ledger.Update hiding (NotADelegate)
+import           Byron.Spec.Ledger.Core hiding ((|>))
+import           Byron.Spec.Ledger.Update hiding (NotADelegate)
 
 data SIGCNT deriving (Data, Typeable)
 

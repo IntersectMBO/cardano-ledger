@@ -11,8 +11,8 @@ import           Data.Data (Data, Typeable)
 import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
                      TRC (TRC), TransitionRule, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed)
-import           Ledger.Core (VKey)
-import           Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
+import           Byron.Spec.Ledger.Core (VKey)
+import           Byron.Spec.Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
 
 
 type UpdatePayload =

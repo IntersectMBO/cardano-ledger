@@ -45,7 +45,7 @@ import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
-import           Ledger.Core (Relation (..))
+import           Byron.Spec.Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable,

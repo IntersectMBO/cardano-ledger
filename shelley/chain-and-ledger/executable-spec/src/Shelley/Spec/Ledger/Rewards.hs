@@ -31,7 +31,7 @@ import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core ((◁))
+import           Byron.Spec.Ledger.Core ((◁))
 import           Shelley.Spec.Ledger.BaseTypes (UnitInterval (..), intervalValue, mkUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
