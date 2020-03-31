@@ -6,7 +6,7 @@
 
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
-module Cardano.Ledger.Shelley.API.Validation
+module Shelley.Spec.Ledger.API.Validation
   ( ShelleyState,
     TickTransitionError,
     BlockTransitionError,
@@ -16,7 +16,7 @@ module Cardano.Ledger.Shelley.API.Validation
 where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import           Cardano.Ledger.Shelley.Crypto
+import           Shelley.Spec.Ledger.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Arrow (left, right)
 import           Control.Monad.Except

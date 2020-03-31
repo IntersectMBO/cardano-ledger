@@ -10,16 +10,16 @@
 module Shelley.Spec.Ledger.Scripts
   where
 
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeWord,
-                     encodeListLen, encodeWord, encodeWord8, matchSize, decodeListLen)
-import           Shelley.Spec.Ledger.Serialization (decodeList, encodeFoldable)
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
+                     encodeListLen, encodeWord, encodeWord8, matchSize)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
+import           Cardano.Prelude (Generic, NoUnexpectedThunks (..))
 import qualified Data.List as List (concat, concatMap, permutations)
-import           Cardano.Prelude (Generic, NoUnexpectedThunks(..))
-import           Cardano.Ledger.Shelley.Crypto (Crypto(..), HASH)
 import           Data.Word (Word8)
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
+import           Shelley.Spec.Ledger.Crypto (Crypto (..), HASH)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, pattern AnyKeyHash, Hash)
+import           Shelley.Spec.Ledger.Serialization (decodeList, encodeFoldable)
 
 
 -- | Magic number representing the tag of the native multi-signature script

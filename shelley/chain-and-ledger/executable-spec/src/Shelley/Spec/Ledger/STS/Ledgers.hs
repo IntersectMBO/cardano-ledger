@@ -16,7 +16,6 @@ module Shelley.Spec.Ledger.STS.Ledgers
 where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (foldM)
 import           Control.State.Transition
@@ -29,6 +28,7 @@ import           GHC.Generics (Generic)
 import           Ledger.Core ((◁), (⨃))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin (Coin)
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.LedgerState (DState (..), LedgerState (..), UTxOState (..),
                      emptyLedgerState, _delegationState, _dstate, _fGenDelegs, _genDelegs,

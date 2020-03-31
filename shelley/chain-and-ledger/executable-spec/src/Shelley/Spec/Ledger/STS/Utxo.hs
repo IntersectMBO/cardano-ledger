@@ -19,7 +19,6 @@ where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
                      encodeListLen, matchSize)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
 import           Data.Foldable (toList)
@@ -31,6 +30,7 @@ import           GHC.Generics (Generic)
 import           Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.LedgerState (UTxOState (..), consumed, decayedTx, keyRefunds,

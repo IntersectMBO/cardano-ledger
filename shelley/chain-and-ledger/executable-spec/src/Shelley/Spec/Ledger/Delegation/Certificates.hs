@@ -31,10 +31,10 @@ module Shelley.Spec.Ledger.Delegation.Certificates
   ) where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import           Cardano.Ledger.Shelley.Crypto
 import           Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (GenKeyHash, Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
 import           Shelley.Spec.Ledger.PParams (PParams, _keyDecayRate, _keyDeposit, _keyMinRefund,
                      _poolDecayRate, _poolDeposit, _poolMinRefund)

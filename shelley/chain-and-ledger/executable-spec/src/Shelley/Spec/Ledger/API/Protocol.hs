@@ -10,7 +10,7 @@
 --
 -- In particular, this code supports extracting the components of the ledger
 -- state needed for protocol execution, both now and in a 2k-slot window.
-module Cardano.Ledger.Shelley.API.Protocol
+module Shelley.Spec.Ledger.API.Protocol
   ( STS.Prtcl.PrtclEnv,
     mkPrtclEnv,
     LedgerView (..),
@@ -21,8 +21,8 @@ module Cardano.Ledger.Shelley.API.Protocol
 where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
-import           Cardano.Ledger.Shelley.API.Validation
-import           Cardano.Ledger.Shelley.Crypto
+import           Shelley.Spec.Ledger.API.Validation
+import           Shelley.Spec.Ledger.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Cardano.Slotting.EpochInfo (epochInfoEpoch)
 import           Control.Arrow (left, right)

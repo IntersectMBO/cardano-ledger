@@ -6,7 +6,7 @@
 
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
-module Cardano.Ledger.Shelley.API.Mempool
+module Shelley.Spec.Ledger.API.Mempool
   ( MempoolEnv,
     MempoolState,
     mkMempoolEnv,
@@ -19,8 +19,8 @@ where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import           Cardano.Ledger.Shelley.API.Validation
-import           Cardano.Ledger.Shelley.Crypto
+import           Shelley.Spec.Ledger.API.Validation
+import           Shelley.Spec.Ledger.Crypto
 import           Control.Arrow (left)
 import           Control.Monad.Except
 import           Control.Monad.Trans.Reader (runReader)

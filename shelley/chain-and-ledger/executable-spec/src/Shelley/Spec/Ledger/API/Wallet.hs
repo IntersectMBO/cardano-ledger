@@ -1,4 +1,4 @@
-module Cardano.Ledger.Shelley.API.Wallet
+module Shelley.Spec.Ledger.API.Wallet
   ( getNonMyopicMemberRewards
   )
 where
@@ -9,7 +9,7 @@ import           Data.Ratio ((%))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
-import           Cardano.Ledger.Shelley.API.Validation (ShelleyState)
+import           Shelley.Spec.Ledger.API.Validation (ShelleyState)
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)

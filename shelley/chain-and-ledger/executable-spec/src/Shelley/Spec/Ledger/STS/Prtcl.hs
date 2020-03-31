@@ -35,10 +35,10 @@ import           Shelley.Spec.Ledger.STS.Updn
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLenOf,
                      encodeListLen)
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..), withOriginFromMaybe, withOriginToMaybe)
 import           Control.State.Transition
+import           Shelley.Spec.Ledger.Crypto
 
 data PRTCL crypto
 

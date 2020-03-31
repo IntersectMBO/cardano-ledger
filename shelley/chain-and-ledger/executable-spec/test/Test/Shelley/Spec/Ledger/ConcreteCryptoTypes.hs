@@ -10,7 +10,7 @@ import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (MockKES)
 import           Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
-import           Cardano.Ledger.Shelley.Crypto
+import           Shelley.Spec.Ledger.Crypto
 import qualified Shelley.Spec.Ledger.BlockChain as BlockChain
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Delegation.Certificates
 import qualified Shelley.Spec.Ledger.EpochBoundary as EpochBoundary

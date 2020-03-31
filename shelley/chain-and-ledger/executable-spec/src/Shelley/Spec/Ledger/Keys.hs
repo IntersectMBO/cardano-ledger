@@ -61,7 +61,6 @@ module Shelley.Spec.Ledger.Keys
   )
 where
 
-import           Cardano.Ledger.Shelley.Crypto
 import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
 import           Data.Map.Strict (Map)
 import           Data.Ratio ((%))
@@ -69,6 +68,7 @@ import           Data.Set (Set)
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
+import           Shelley.Spec.Ledger.Crypto
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (toCBOR))
 import           Cardano.Crypto.DSIGN

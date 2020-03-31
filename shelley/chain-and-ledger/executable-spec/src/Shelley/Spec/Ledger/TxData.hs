@@ -17,9 +17,9 @@ module Shelley.Spec.Ledger.TxData
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
                      encodeListLen, encodeMapLen, encodeWord, enforceSize, matchSize)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, catMaybes)
 import           Control.Monad (unless)
+import           Shelley.Spec.Ledger.Crypto
 
 import           Data.ByteString (ByteString)
 import           Data.Foldable (fold)

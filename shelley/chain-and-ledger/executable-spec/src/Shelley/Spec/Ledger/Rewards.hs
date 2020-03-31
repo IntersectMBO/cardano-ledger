@@ -17,8 +17,8 @@ module Shelley.Spec.Ledger.Rewards
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeDouble, encodeDouble,
                      encodeListLen, enforceSize)
-import           Cardano.Ledger.Shelley.Crypto (Crypto)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Shelley.Spec.Ledger.Crypto (Crypto)
 
 import           Data.Function (on)
 import           Data.List (sortBy)

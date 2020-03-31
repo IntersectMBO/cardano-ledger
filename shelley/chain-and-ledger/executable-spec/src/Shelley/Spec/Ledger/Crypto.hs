@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Package all the crypto constraints into one place.
-module Cardano.Ledger.Shelley.Crypto where
+module Shelley.Spec.Ledger.Crypto where
 
 import Cardano.Crypto.DSIGN
 import Cardano.Crypto.Hash

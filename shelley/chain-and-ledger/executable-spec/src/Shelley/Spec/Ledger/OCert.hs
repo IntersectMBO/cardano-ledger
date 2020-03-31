@@ -14,7 +14,6 @@ module Shelley.Spec.Ledger.OCert
 where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR, toCBOR)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Data.Functor ((<&>))
@@ -26,6 +25,7 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Shelley.Spec.Ledger.BaseTypes
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (KeyHash, Sig, VKeyES)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))

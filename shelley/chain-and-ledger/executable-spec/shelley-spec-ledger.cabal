@@ -65,13 +65,13 @@ library
                      Shelley.Spec.Ledger.STS.Utxo
                      Shelley.Spec.Ledger.STS.Utxow
 
-                     Cardano.Ledger.Shelley.Crypto
+                     Shelley.Spec.Ledger.Crypto
 
-                     Cardano.Ledger.Shelley.API
-  other-modules:     Cardano.Ledger.Shelley.API.Validation
-                     Cardano.Ledger.Shelley.API.Mempool
-                     Cardano.Ledger.Shelley.API.Protocol
-                     Cardano.Ledger.Shelley.API.Wallet
+                     Shelley.Spec.Ledger.API
+  other-modules:     Shelley.Spec.Ledger.API.Validation
+                     Shelley.Spec.Ledger.API.Mempool
+                     Shelley.Spec.Ledger.API.Protocol
+                     Shelley.Spec.Ledger.API.Wallet
   hs-source-dirs: src
   ghc-options:
     -Wall

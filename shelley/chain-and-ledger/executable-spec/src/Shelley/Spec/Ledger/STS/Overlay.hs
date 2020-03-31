@@ -30,9 +30,9 @@ import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Ocert
 
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
+import           Shelley.Spec.Ledger.Crypto
 
 data OVERLAY crypto
 

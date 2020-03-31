@@ -41,8 +41,8 @@ import           Shelley.Spec.Ledger.Tx (TxBody)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Ledger.Shelley.Crypto
 import           Control.State.Transition
+import           Shelley.Spec.Ledger.Crypto
 
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Prtcl
