@@ -88,7 +88,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \vrf{\T}{}{} & \SKey \to \Seed \to \T\times\Proof
                    & \text{verifiable random function} \\
                    %
-      \verifyVrf{\T}{}{}{} & \VKey \to \Seed \to \T\times\Proof \to \Bool
+      \verifyVrf{\T}{}{}{} & \VKey \to \Seed \to \Proof\times\T \to \Bool
                            & \text{verify vrf proof} \\
                            %
     \end{array}
