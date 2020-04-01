@@ -85,7 +85,7 @@ maxGenesisUTxOouts = 100
 
 -- | maximal number of certificates per transaction
 maxCertsPerTx :: Word64
-maxCertsPerTx = 3
+maxCertsPerTx = 1
 
 -- | maximal numbers of generated keypairs
 maxNumKeyPairs :: Word64

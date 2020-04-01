@@ -805,7 +805,7 @@ The transition has no evironment.
 The state is made up of the the accounting state, the snapshots, the ledger state and the
 protocol parameters.
 The transition uses a helper function $\fun{votedValue}$ which returns
-the consensus value of update proposals in the event that consensus it met.
+the consensus value of update proposals in the event that consensus is met.
 \textbf{Note that} $\fun{votedValue}$
 \textbf{is only well-defined if } $\Quorum$
 \textbf{is greater than half the number of core nodes, i.e.}
@@ -860,7 +860,7 @@ $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
 
 
 The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$ and $\mathsf{NEWPP}$
-in sequence. It also store the previous protocol parameters in $\var{prevPp}$.
+in sequence. It also stores the previous protocol parameters in $\var{prevPp}$.
 The previous protocol parameters will be used for the reward calculation in the upcoming epoch,
 note that they correspond to the epoch for which the reward are being calculated.
 The ordering of these rules is important.
@@ -1312,8 +1312,8 @@ reward update to an instance of $\EpochState$.
 The $\fun{createRUpd}$ function does the following:
 \begin{itemize}
   \item Note that for all the calculations below, we use the previous protocol parameters
-    $\var{prevPp}$, which correspondings the the parameters during the epoch for which we
-    are being created for.
+    $\var{prevPp}$, which corresponds to the parameters during the epoch for which we
+    are creating rewards.
   \item First we calculate the change to the reserves,
     as determined by the $\rho$ protocol parameter.
   \item Next we calculate $\var{rewardPot}$, the total amount of coin available for rewards this
