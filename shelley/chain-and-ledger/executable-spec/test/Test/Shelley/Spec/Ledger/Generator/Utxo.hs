@@ -50,8 +50,6 @@ import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
 import           Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import           Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 
-import           Debug.Trace as D
-
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
 -- Selects unspent outputs and spends the funds on a some valid addresses.
@@ -98,7 +96,7 @@ genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpS
     <- genDCerts keyHashMap pparams dpState slot ttl txIx reserves
 
   if spendingBalance < deposits_
-    then D.trace ("discarded") QC.discard
+    then QC.discard
     else do
 
     -- attempt to make provision for certificate deposits (otherwise discard this generator)
@@ -156,10 +154,7 @@ genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpS
 
     -- discard generated transaction if the balance cannot cover the fees
     if minimalFees > balance_
-      then D.trace (  "discarded bc. of real fees, minimal: "
-                   ++ show minimalFees ++ " Output balance: "
-                   ++ show balance_
-                   ) QC.discard
+      then QC.discard
       else do
 
       -- update model transaction with real fees and outputs

@@ -238,7 +238,7 @@ findPayKeyPairCred c keyHashMap =
   where
     lookforKeyHash addr' =
       case Map.lookup (undiscriminateKeyHash addr') keyHashMap of
-        Nothing -> error "findPayKeyPairCred: could not find a match for the given credential"
+        Nothing -> error $ "findPayKeyPairCred: could not find a match for the given credential: " <> show addr'
         Just kp -> kp
 
 -- | Find first matching key pair for address. Returns the matching key pair
