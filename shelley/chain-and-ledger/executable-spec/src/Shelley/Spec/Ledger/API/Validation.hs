@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.API.Validation
   ( ShelleyState,
     TickTransitionError,
     BlockTransitionError,
+    chainChecks,
     applyTickTransition,
     applyBlockTransition,
   )
@@ -17,7 +18,6 @@ where
 
 import           Byron.Spec.Ledger.Core (Relation (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import           Shelley.Spec.Ledger.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Arrow (left, right)
 import           Control.Monad.Except
@@ -25,16 +25,31 @@ import           Control.Monad.Trans.Reader (runReader)
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Data.Either (fromRight)
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes (Globals)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import           Shelley.Spec.Ledger.BlockChain
+import           Shelley.Spec.Ledger.Crypto
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
+import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Slot (SlotNo)
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
+import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
 import qualified Shelley.Spec.Ledger.TxData as Tx
 
 -- | Type alias for the state updated by TICK and BBODY rules
 type ShelleyState = LedgerState.NewEpochState
+
+{-------------------------------------------------------------------------------
+  CHAIN Transition checks
+-------------------------------------------------------------------------------}
+chainChecks ::
+  forall crypto m.
+  (Crypto crypto, MonadError (STS.PredicateFailure (STS.CHAIN crypto)) m) =>
+  Globals ->
+  PParams ->
+  BHeader crypto ->
+  m ()
+chainChecks globals pp bh = STS.chainChecks (maxMajorPV globals) pp bh
 
 {-------------------------------------------------------------------------------
   Applying blocks
