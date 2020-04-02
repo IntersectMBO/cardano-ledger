@@ -52,7 +52,7 @@ import qualified Hedgehog.Range as Range
 import Cardano.Binary (Annotated(..), Raw(..), ToCBOR)
 import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing
-  (AbstractHash(..), Hash, HashAlgorithm, abstractHash, hash)
+  (AbstractHash, Hash, HashAlgorithm, abstractHash, hash)
 import Cardano.Crypto.ProtocolMagic
   ( AProtocolMagic(..)
   , ProtocolMagic

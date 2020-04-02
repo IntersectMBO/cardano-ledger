@@ -55,8 +55,7 @@ import Cardano.Chain.UTxO
   , mkTxPayload
   )
 import Cardano.Crypto
-  ( AbstractHash(..)
-  , Hash
+  ( Hash
   , ProtocolMagicId(..)
   , VerificationKey(..)
   , RedeemSignature
