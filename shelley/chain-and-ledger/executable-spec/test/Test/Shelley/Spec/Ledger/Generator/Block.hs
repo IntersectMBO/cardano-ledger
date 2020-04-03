@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -12,7 +13,6 @@ import qualified Data.List as List (find)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ratio (denominator, numerator, (%))
-import           Data.Word (Word64)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 
@@ -36,10 +36,10 @@ import           Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import           Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import           Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState, CoreKeyPair,
-                     GenKeyHash, KeyHash, KeyPair, LEDGERS, TICK)
-import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), NatNonce (..),
-                     genNatural, getKESPeriodRenewalNo, mkBlock, mkOCert, traceVRFKeyPairsByHash)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState,
+                     GenKeyHash, LEDGERS, TICK)
+import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), KeySpace(..), NatNonce (..),
+                     genNatural, getKESPeriodRenewalNo, mkBlock, mkOCert)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import           Test.Shelley.Spec.Ledger.Utils (maxKESIterations, runShelleyBase,
                      unsafeMkUnitInterval)
@@ -74,12 +74,12 @@ getPraosSlot start tooFar os nos =
   in List.find (not . (`Map.member` schedules)) [start .. tooFar-1]
 
 genBlock
-  :: SlotNo
+  :: KeySpace
+  -> SlotNo
   -> ChainState
-  -> [(CoreKeyPair, AllPoolKeys)] -- core node keys
-  -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> Gen Block
-genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
+genBlock ks@(KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairsByHash })
+          sNow chainSt = do
   let os = (nesOsched . chainNes) chainSt
       dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
       pp = (esPp . nesEs . chainNes) chainSt
@@ -111,8 +111,8 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
         (pkh, (stake, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
                       Nothing -> (nextOSlot, 0, gkeys gkey)
                       Just ps -> let apks = AllPoolKeys
-                                       { cold = (keysByStakeHash Map.! pkh)
-                                       , vrf  = (traceVRFKeyPairsByHash Map.! vrfkey)
+                                       { cold = (ksKeyPairsByStakeHash Map.! pkh)
+                                       , vrf  = (ksVRFKeyPairsByHash Map.! vrfkey)
                                        , hot  = (hot $ gkeys gkey)
                                                 -- TODO @jc - don't use the genesis hot key
                                        , hk   = pkh
@@ -171,7 +171,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
     ledgerSt = (esLState . nesEs . chainNes) chainSt
     (GenDelegs genesisDelegs) = (_genDelegs . _dstate . _delegationState) ledgerSt
 
-    origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) coreNodeKeys of
+    origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) ksCoreNodes of
                          Nothing -> error "couldn't find corresponding core node key"
                          Just k  -> snd k
     gkeys gkey =
@@ -180,7 +180,7 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
             error "genBlock: NoGenesisStakingOVERLAY"
           Just gKeyHash ->
             -- if GenesisDelegate certs changed a delegation to a new key
-            case Map.lookup gKeyHash keysByStakeHash of
+            case Map.lookup gKeyHash ksKeyPairsByStakeHash of
               Nothing ->
                 -- then we use the original keys (which have not been changed by a genesis delegation)
                 origIssuerKeys gkey
@@ -213,5 +213,4 @@ genBlock sNow chainSt coreNodeKeys keysByStakeHash = do
     genTxs pp reserves ls s = do
       let ledgerEnv = LedgersEnv s pp reserves
 
-      n <- QC.choose (1, 10)
-      sigGen @LEDGERS (n :: Word64) ledgerEnv ls
+      sigGen @LEDGERS ks ledgerEnv ls

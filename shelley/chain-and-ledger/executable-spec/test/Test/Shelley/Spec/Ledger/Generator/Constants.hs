@@ -87,6 +87,10 @@ maxGenesisUTxOouts = 100
 maxCertsPerTx :: Word64
 maxCertsPerTx = 1
 
+-- | maximal number of Txs per block
+maxTxsPerBlock :: Word64
+maxTxsPerBlock = 10
+
 -- | maximal numbers of generated keypairs
 maxNumKeyPairs :: Word64
 maxNumKeyPairs = 150
@@ -138,3 +142,6 @@ maxMinFeeA = 1000
 
 maxMinFeeB :: Natural
 maxMinFeeB = 3
+
+numCoreNodes :: Word64
+numCoreNodes = 7

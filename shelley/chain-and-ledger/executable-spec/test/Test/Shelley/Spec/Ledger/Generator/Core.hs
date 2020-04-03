@@ -1,12 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllPoolKeys (..)
+  , KeySpace(..)
+  , pattern KeySpace
   , NatNonce (..)
-  , coreNodeVKG
   , findPayKeyPairAddr
   , findPayKeyPairCred
   , findPayScriptFromCred
@@ -19,22 +21,8 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   , genNatural
   , genWord64
   , genTxOut
-  , genUtxo0
-  , genesisAccountState
-  , genesisDelegs0
   , increasingProbabilityAt
-  , numCoreNodes
-  , coreKeyPairs
-  , coreNodeKeys
-  , traceKeyPairs
-  , traceKeyPairsByStakeHash
-  , traceKeyHashMap
-  , traceVRFKeyPairs
-  , traceVRFKeyPairsByHash
-  , traceMSigScripts
-  , traceMSigCombinations
-  , someKeyPairs
-  , someScripts
+  , mkScriptsFromKeyPair
   , pickStakeKey
   , toAddr
   , toCred
@@ -43,13 +31,18 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   , mkBlock
   , mkOCert
   , getKESPeriodRenewalNo
-  , tooLateInEpoch)
+  , tooLateInEpoch
+  , mkKeyPair
+  , mkKeyPairs
+  , mkGenKey
+  , mkMSigScripts
+  , mkMSigCombinations
+  , genesisAccountState
+  )
   where
 
-import           Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (asks)
-import           Crypto.Random (drgNewTest, withDRG)
 import           Data.Coerce (coerce)
 import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
@@ -65,15 +58,15 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Numeric.Natural (Natural)
-import           Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr, toCred)
+import           Shelley.Spec.Ledger.Address (toAddr, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochInfo, intervalValue,
                      slotsPrior)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, pattern Block,
                      pattern BlockHash, TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashAnyKey, hashKey, sKey, sign,
+import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashAnyKey, hashKey, sign,
                      signKES, undiscriminateKeyHash, vKey)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), genesisCoins)
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern RequireAnyOf,
@@ -85,14 +78,58 @@ import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrPtr, 
                      pattern ScriptHashObj)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair,
-                     Credential, GenKeyHash, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig,
-                     MultiSigPairs, OCert, SKeyES, SignKeyVRF, Tx, TxOut, UTxO, VKey, VKeyES,
-                     VKeyGenesis, VRFKeyHash, VerKeyVRF, hashKeyVRF)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (maxGenesisOutputVal, maxNumKeyPairs,
-                     maxSlotTrace, minGenesisOutputVal, numBaseScripts)
+                     Credential, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig,
+                     MultiSigPairs, OCert, SKeyES, SignKeyVRF, Tx, TxOut, VKey, VKeyES,
+                     VRFKeyHash, VerKeyVRF, hashKeyVRF)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (maxGenesisOutputVal, minGenesisOutputVal)
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, evolveKESUntil, maxKESIterations,
-                     maxLLSupply, mkCertifiedVRF, mkGenKey, mkKESKeyPair, mkKeyPair, mkVRFKeyPair,
-                     runShelleyBase, slotsPerKESIteration, unsafeMkUnitInterval)
+                     maxLLSupply, mkCertifiedVRF, mkGenKey, mkKeyPair,
+                     runShelleyBase, unsafeMkUnitInterval)
+
+data AllPoolKeys = AllPoolKeys
+  { cold :: KeyPair
+  , vrf :: (SignKeyVRF, VerKeyVRF)
+  , hot :: [(KESPeriod, (SKeyES, VKeyES))]
+  , hk  :: KeyHash
+  } deriving (Show)
+
+-- | Collection of all keys which are required to generate a trace.
+--
+--   These are the _only_ keys which should be involved in the trace.
+data KeySpace = KeySpace_
+  { ksCoreNodes :: [(CoreKeyPair, AllPoolKeys)]
+  , ksKeyPairs :: KeyPairs
+  , ksKeyPairsByHash :: Map AnyKeyHash KeyPair
+  , ksKeyPairsByStakeHash :: Map KeyHash KeyPair
+  , ksMSigScripts :: MultiSigPairs
+  , ksVRFKeyPairs :: [(SignKeyVRF, VerKeyVRF)]
+  , ksVRFKeyPairsByHash :: Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
+  } deriving (Show)
+
+pattern KeySpace
+  :: [(CoreKeyPair, AllPoolKeys)]
+  -> KeyPairs
+  -> MultiSigPairs
+  -> [(SignKeyVRF, VerKeyVRF)]
+  -> KeySpace
+pattern KeySpace ksCoreNodes ksKeyPairs ksMSigScripts ksVRFKeyPairs
+  <- KeySpace_
+      { ksCoreNodes
+      , ksKeyPairs
+      , ksMSigScripts
+      , ksVRFKeyPairs
+      }
+  where
+    KeySpace ksCoreNodes ksKeyPairs ksMSigScripts ksVRFKeyPairs
+      = KeySpace_
+        { ksCoreNodes
+        , ksKeyPairs
+        , ksKeyPairsByHash = mkKeyHashMap ksKeyPairs
+        , ksKeyPairsByStakeHash = mkStakeKeyHashMap ksKeyPairs
+        , ksMSigScripts
+        , ksVRFKeyPairs
+        , ksVRFKeyPairsByHash = mkVRFKeyPairsByHash ksVRFKeyPairs
+        }
 
 genBool :: Gen Bool
 genBool = QC.arbitraryBoundedRandom
@@ -118,37 +155,33 @@ mkKeyPairs n
   where
     mkKeyPair_ n_ = (uncurry KeyPair . swap) (mkKeyPair (n_,n_,n_,n_,n_))
 
--- | Constant list of KeyPairs intended to be used in the generators.
-traceKeyPairs :: KeyPairs
-traceKeyPairs = mkKeyPairs <$> [1 .. maxNumKeyPairs]
-
-traceKeyPairsByStakeHash
-  :: Map KeyHash KeyPair
-traceKeyPairsByStakeHash =
-  Map.fromList (f <$> traceKeyPairs)
+-- | Generate a mapping from stake key hash to stake key pair, from a list of
+-- (payment, staking) key pairs.
+mkStakeKeyHashMap
+  :: KeyPairs -> Map KeyHash KeyPair
+mkStakeKeyHashMap keyPairs =
+  Map.fromList (f <$> keyPairs)
   where
     f (_payK, stakeK) = ((hashKey . vKey) stakeK, stakeK)
 
--- | Mapping from key hash to key pair
-traceKeyHashMap :: Map AnyKeyHash KeyPair
-traceKeyHashMap =
+-- | Generate a mapping from key hash (both payment and stake keys) to keypair
+-- from a list of (payment, staking) key pairs.
+mkKeyHashMap :: KeyPairs -> Map AnyKeyHash KeyPair
+mkKeyHashMap =
   foldl (\m (payKey, stakeKey) ->
            let m' = Map.insert (hashAnyKey $ vKey payKey) payKey m
            in       Map.insert (hashAnyKey $ vKey stakeKey) stakeKey m')
-  Map.empty traceKeyPairs
+  Map.empty
 
-numCoreNodes :: Word64
-numCoreNodes = 7
-
--- | Multi-Sig Scripts based on the `traceKeyPairs` key pairs
-traceMSigScripts :: MultiSigPairs
-traceMSigScripts = map mkScriptsFromKeyPair traceKeyPairs
+-- | Multi-Sig Scripts based on the given key pairs
+mkMSigScripts :: KeyPairs -> MultiSigPairs
+mkMSigScripts = map mkScriptsFromKeyPair
 
 -- | Combine a list of multisig pairs into hierarchically structured multi-sig
 -- scripts, list must have at least length 3. Be careful not to call with too
 -- many pairs in order not to create too many of the possible combinations.
-traceMSigCombinations :: MultiSigPairs -> MultiSigPairs
-traceMSigCombinations msigs =
+mkMSigCombinations :: MultiSigPairs -> MultiSigPairs
+mkMSigCombinations msigs =
   if length msigs < 3 then error "length of input msigs must be at least 3"
   else foldl (++) [] $
        do
@@ -172,56 +205,6 @@ mkScriptsFromKeyPair (k0, k1) = (mkScriptFromKey k0, mkScriptFromKey k1)
 
 mkScriptFromKey :: KeyPair -> MultiSig
 mkScriptFromKey = (RequireSignature . hashAnyKey . vKey)
-
-data AllPoolKeys = AllPoolKeys
-  { cold :: KeyPair
-  , vrf :: (SignKeyVRF, VerKeyVRF)
-  , hot :: [(KESPeriod, (SKeyES, VKeyES))]
-  , hk  :: KeyHash
-  } deriving (Show)
-
--- Pairs of (genesis key, node keys)
---
--- NOTE: we use a seed range in the [1000...] range
--- to create keys that don't overlap with any of the other generated keys
-coreNodeKeys :: [(CoreKeyPair, AllPoolKeys)]
-coreNodeKeys =
-  [ ( (toKeyPair . mkGenKey)  (x, 0, 0, 0, 0)
-    , let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, 1) in
-        AllPoolKeys
-          (toKeyPair (skCold, vkCold))
-          (mkVRFKeyPair (x, 0, 0, 0, 2))
-          [( KESPeriod (fromIntegral (iter * fromIntegral maxKESIterations))
-           , mkKESKeyPair (x, 0, 0, fromIntegral iter, 3)
-           ) | iter <- [0 .. (1 + div maxSlotTrace (fromIntegral (maxKESIterations * slotsPerKESIteration)))]]
-          (hashKey vkCold)
-    )
-  | x <- [1001..1000+numCoreNodes]
-  ]
-  where
-    toKeyPair (sk,vk) = KeyPair {sKey = sk, vKey = vk}
-
--- Pairs of (genesis key, node cold key)
-coreNodeVKG :: Int -> VKeyGenesis
-coreNodeVKG = vKey . fst . (coreNodeKeys !!)
-
-coreKeyPairs :: [CoreKeyPair]
-coreKeyPairs = fst . unzip $ coreNodeKeys
-
--- | Select between _lower_ and _upper_ keys from 'traceKeyPairs'
-someKeyPairs :: Int -> Int -> Gen KeyPairs
-someKeyPairs lower upper =
-  take
-    <$> QC.choose (lower, upper)
-    <*> QC.shuffle traceKeyPairs
-
--- | Select between _lower_ and _upper_ scripts from the possible combinations
--- of the first `numBaseScripts` multi-sig scripts of `traceMSigScripts`.
-someScripts :: Int -> Int -> Gen MultiSigPairs
-someScripts lower upper =
-  take
-  <$> QC.choose (lower, upper)
-  <*> QC.shuffle (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
@@ -274,7 +257,7 @@ findStakeScriptFromCred c scripts =
   where
     lookForScriptHash scriptHash =
       case List.findIndex (\(_, scr) -> scriptHash == hashScript scr) scripts of
-        Nothing -> error "findStakeScriptFromCred: could not find matching script for given credential"
+        Nothing -> error $ "findStakeScriptFromCred: could not find matching script for given credential"
         Just i  -> scripts !! i
 
 
@@ -312,29 +295,6 @@ genCoinList minCoin maxCoin lower upper = do
 genCoin :: Integer -> Integer -> Gen Coin
 genCoin minCoin maxCoin = Coin <$> QC.choose (minCoin, maxCoin)
 
-genUtxo0 :: Int -> Int -> Gen UTxO
-genUtxo0 lower upper = do
-  genesisKeys <- someKeyPairs lower upper
-  genesisScripts <- someScripts lower upper
-  outs <- genTxOut (fmap toAddr genesisKeys ++ fmap scriptsToAddr genesisScripts)
-  return (genesisCoins outs)
-
-genesisDelegs0 :: Map GenKeyHash KeyHash
-genesisDelegs0
-  = Map.fromList
-      [ (hashVKey gkey, hashVKey (cold pkeys))
-      | (gkey, pkeys) <- coreNodeKeys]
-  where
-    hashVKey = hashKey . vKey
-
--- | Account with empty treasury
-genesisAccountState :: AccountState
-genesisAccountState =
-  AccountState
-  { _treasury = Coin 0
-  , _reserves = maxLLSupply
-  }
-
 -- | Generate values the given distribution in 90% of the cases, and values at
 -- the bounds of the range in 10% of the cases.
 --
@@ -351,16 +311,8 @@ increasingProbabilityAt gen (lower, upper)
                  , (5, pure upper)
                  ]
 
--- | A pre-populated space of VRF keys for use in the generators.
-traceVRFKeyPairs :: [(SignKeyVRF, VerKeyVRF)]
-traceVRFKeyPairs = [body (0,0,0,0,i) | i <- [1 .. 50]]
- where
-  body seed = fst . withDRG (drgNewTest seed) $ do
-    sk <- genKeyVRF
-    return (sk, deriveVerKeyVRF sk)
-
-traceVRFKeyPairsByHash :: Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
-traceVRFKeyPairsByHash = Map.fromList $ fmap (\p -> (hashKeyVRF (snd p), p)) traceVRFKeyPairs
+mkVRFKeyPairsByHash :: [(SignKeyVRF, VerKeyVRF)] -> Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
+mkVRFKeyPairsByHash = Map.fromList . fmap (\p -> (hashKeyVRF (snd p), p))
 
 zero :: UnitInterval
 zero = unsafeMkUnitInterval 0
@@ -449,3 +401,11 @@ tooLateInEpoch s = runShelleyBase $ do
   slotsPrior_ <- asks slotsPrior
 
   return (s >= firstSlotNo *- Duration (2 * slotsPrior_))
+
+-- | Account with empty treasury
+genesisAccountState :: AccountState
+genesisAccountState =
+  AccountState
+    { _treasury = Coin 0,
+      _reserves = maxLLSupply
+    }
