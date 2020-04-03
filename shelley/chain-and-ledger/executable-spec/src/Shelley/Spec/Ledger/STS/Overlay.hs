@@ -14,10 +14,10 @@ module Shelley.Spec.Ledger.STS.Overlay
   )
 where
 
+import           Byron.Spec.Ledger.Core (dom, range)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
-import           Ledger.Core (dom, range)
 import           Numeric.Natural (Natural)
 
 import           Shelley.Spec.Ledger.BaseTypes
@@ -30,9 +30,9 @@ import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Ocert
 
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
+import           Shelley.Spec.Ledger.Crypto
 
 data OVERLAY crypto
 

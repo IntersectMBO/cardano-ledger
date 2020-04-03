@@ -1,0 +1,79 @@
+name:                byron-spec-chain
+version:             0.1.0.0
+synopsis:            Executable specification of the Cardano blockchain
+-- description:
+homepage:            https://github.com/input-output-hk/cardano-legder-specs
+license:             MIT
+license-file:        LICENSE
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+-- copyright:
+category:            Testing
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
+library
+  exposed-modules:     Byron.Spec.Chain.STS.Block
+                     , Byron.Spec.Chain.STS.Rule.BBody
+                     , Byron.Spec.Chain.STS.Rule.Bupi
+                     , Byron.Spec.Chain.STS.Rule.Chain
+                     , Byron.Spec.Chain.STS.Rule.Epoch
+                     , Byron.Spec.Chain.STS.Rule.Pbft
+                     , Byron.Spec.Chain.STS.Rule.SigCnt
+  --other-modules:
+  -- other-extensions:
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  build-depends:       base >=4.11 && <5
+                     , bimap >=0.4 && <0.5
+                     , bytestring
+                     , containers
+                     , byron-spec-ledger
+                     , goblins
+                     , hashable
+                     , hedgehog >= 1.0
+                     , lens
+                     , small-steps
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:       -Werror
+
+test-suite chain-rules-test
+  hs-source-dirs:      test
+  main-is:             Main.hs
+  other-modules:       Test.Byron.Spec.Chain.STS.Properties
+                     , Test.Byron.AbstractSize.Properties
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
+                     , containers
+                     , data-ordlist
+                     , hedgehog >= 1.0
+                     , lens
+                     , tasty
+                     , tasty-hedgehog
+                     , tasty-hunit
+                     -- local deps
+                     , byron-spec-chain
+                     , byron-spec-ledger
+                     , small-steps
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wredundant-constraints
+                       -- See `byron-spec-ledger.cabal` for an explanation of the
+                       -- options below.
+                       "-with-rtsopts=-K4m -M300m"
+  if (!flag(development))
+    ghc-options:       -Werror

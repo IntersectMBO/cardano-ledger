@@ -17,8 +17,8 @@ module Shelley.Spec.Ledger.Rewards
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeDouble, encodeDouble,
                      encodeListLen, enforceSize)
-import           Cardano.Ledger.Shelley.Crypto (Crypto)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Shelley.Spec.Ledger.Crypto (Crypto)
 
 import           Data.Function (on)
 import           Data.List (sortBy)
@@ -31,7 +31,7 @@ import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core ((◁))
+import           Byron.Spec.Ledger.Core ((◁))
 import           Shelley.Spec.Ledger.BaseTypes (UnitInterval (..), intervalValue, mkUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)

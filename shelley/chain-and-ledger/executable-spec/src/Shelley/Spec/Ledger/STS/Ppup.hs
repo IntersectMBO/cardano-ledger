@@ -12,9 +12,9 @@ module Shelley.Spec.Ledger.STS.Ppup
   )
 where
 
+import           Byron.Spec.Ledger.Core (dom, (⊆), (⨃))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
                      encodeListLen, matchSize)
-import           Cardano.Ledger.Shelley.Crypto (Crypto)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
@@ -23,8 +23,8 @@ import           Data.Set (Set)
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
-import           Ledger.Core (dom, (⊆), (⨃))
 import           Shelley.Spec.Ledger.BaseTypes
+import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot

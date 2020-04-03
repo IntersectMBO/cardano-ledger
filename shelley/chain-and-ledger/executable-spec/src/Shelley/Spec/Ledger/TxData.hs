@@ -17,9 +17,9 @@ module Shelley.Spec.Ledger.TxData
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
                      encodeListLen, encodeMapLen, encodeWord, enforceSize, matchSize)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, catMaybes)
 import           Control.Monad (unless)
+import           Shelley.Spec.Ledger.Crypto
 
 import           Data.ByteString (ByteString)
 import           Data.Foldable (fold)
@@ -35,7 +35,7 @@ import           Data.Word (Word8)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (Relation (..))
+import           Byron.Spec.Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (Text64, UnitInterval, invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,

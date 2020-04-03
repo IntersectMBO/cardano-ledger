@@ -41,18 +41,18 @@ import           Shelley.Spec.Ledger.TxData (Addr (..), Credential, PoolParams, 
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Ratio ((%))
 import qualified Data.Set as Set
+import           Shelley.Spec.Ledger.Crypto
 
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Ledger.Core (dom, (▷), (◁))
+import           Byron.Spec.Ledger.Core (dom, (▷), (◁))
 
 -- | Blocks made
 newtype BlocksMade crypto

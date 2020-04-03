@@ -1,4 +1,4 @@
-# Revision history for cs-blockchain
+# Revision history for byron-spec-chain
 
 ## 0.1.0.0 -- 2018-11-06
 

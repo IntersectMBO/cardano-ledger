@@ -13,13 +13,13 @@ module Shelley.Spec.Ledger.STS.Updn
   )
 where
 
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks)
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.BlockChain
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 

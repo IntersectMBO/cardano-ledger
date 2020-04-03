@@ -14,13 +14,13 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
 import           Data.Set (Set)
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.LedgerState
 import           Shelley.Spec.Ledger.Slot

@@ -23,7 +23,7 @@ import           Test.QuickCheck (Property, conjoin, (===))
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
 
-import           Ledger.Core (dom, (<|))
+import           Byron.Spec.Ledger.Core (dom, (<|))
 import           Shelley.Spec.Ledger.LedgerState (pattern UTxOState, keyRefunds)
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Tx (getKeyCombinations, _body, _witnessMSigMap,

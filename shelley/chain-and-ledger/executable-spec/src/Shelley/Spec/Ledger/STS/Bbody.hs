@@ -17,15 +17,15 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
-import           Cardano.Ledger.Shelley.Crypto
+import           Byron.Spec.Ledger.Core ((∈))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.State.Transition
 import           Data.Set (Set)
 import           GHC.Generics (Generic)
-import           Ledger.Core ((∈))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.BlockChain
 import           Shelley.Spec.Ledger.Coin (Coin)
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.LedgerState

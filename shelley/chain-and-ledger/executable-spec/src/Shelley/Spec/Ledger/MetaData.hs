@@ -15,7 +15,6 @@ module Shelley.Spec.Ledger.MetaData
 
 import           Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR))
 import           Cardano.Crypto.Hash (Hash, hash)
-import           Cardano.Ledger.Shelley.Crypto (Crypto, HASH)
 import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, cborError)
 import           Data.Bifunctor (bimap)
 import           Data.Bitraversable (bitraverse)
@@ -24,6 +23,7 @@ import           Data.ByteString.Lazy as BL
 import           Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import           Shelley.Spec.Ledger.Crypto (Crypto, HASH)
 
 import qualified Codec.CBOR.Term as CBOR
 

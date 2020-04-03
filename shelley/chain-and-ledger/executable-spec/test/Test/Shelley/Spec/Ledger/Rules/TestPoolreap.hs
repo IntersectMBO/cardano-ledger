@@ -17,7 +17,7 @@ import           Test.QuickCheck (Property, conjoin)
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
 
-import           Ledger.Core (dom, (▷))
+import           Byron.Spec.Ledger.Core (dom, (▷))
 import           Shelley.Spec.Ledger.Coin (pattern Coin)
 import           Shelley.Spec.Ledger.LedgerState (pattern AccountState, pattern DState,
                      pattern UTxOState, _deposited, _fees, _reserves, _rewards, _treasury, _utxo)

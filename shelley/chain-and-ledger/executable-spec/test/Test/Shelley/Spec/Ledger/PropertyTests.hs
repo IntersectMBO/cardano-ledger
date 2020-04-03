@@ -18,7 +18,7 @@ import qualified Test.Tasty.QuickCheck as TQC
 import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 
-import           Ledger.Core ((<|))
+import           Byron.Spec.Ledger.Core ((<|))
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.LedgerState
 import           Shelley.Spec.Ledger.PParams

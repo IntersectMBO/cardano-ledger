@@ -22,7 +22,7 @@ let
     modules = [
       {
         packages.cs-blockchain.configureFlags = [ "--ghc-option=-Werror" ];
-        packages.cs-ledger.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.byron-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
         packages.shelley-spec-non-integral.configureFlags = [ "--ghc-option=-Werror" ];
         packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
@@ -30,7 +30,7 @@ let
         enableLibraryProfiling = profiling;
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
         packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;
-        packages.cs-ledger.components.tests.doctests.buildable = lib.mkForce false;
+        packages.byron-spec-ledger.components.tests.doctests.buildable = lib.mkForce false;
       }
     ];
   };

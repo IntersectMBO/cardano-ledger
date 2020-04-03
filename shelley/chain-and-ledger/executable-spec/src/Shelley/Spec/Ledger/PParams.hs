@@ -40,11 +40,11 @@ import           Numeric.Natural (Natural)
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen,
                      encodeMapLen, encodeWord, enforceSize)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), catMaybes)
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, Nonce (NeutralNonce), UnitInterval,
                      fpPrecision, interval0, intervalValue, invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
                      ToCBORGroup (..), decodeMapContents, mapFromCBOR, mapToCBOR, rationalFromCBOR,

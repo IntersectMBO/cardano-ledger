@@ -45,7 +45,7 @@ let
     # Attributes of PDF builds of LaTeX documentation.
     byronLedgerSpec = import ./byron/ledger/formal-spec { inherit pkgs; };
     byronChainSpec = import ./byron/chain/formal-spec { inherit pkgs; };
-    semanticsSpec = import ./byron/semantics/formal-spec { inherit pkgs; };
+    semanticsSpec = import ./semantics/formal-spec { inherit pkgs; };
     shelleyLedgerSpec = import ./shelley/chain-and-ledger/formal-spec { inherit pkgs; };
     delegationDesignSpec = import ./shelley/design-spec { inherit pkgs; };
     nonIntegerCalculations = import ./shelley/chain-and-ledger/dependencies/non-integer/doc {inherit pkgs; };

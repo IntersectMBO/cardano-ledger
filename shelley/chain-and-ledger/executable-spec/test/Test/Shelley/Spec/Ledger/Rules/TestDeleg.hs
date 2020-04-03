@@ -25,9 +25,9 @@ import           Test.QuickCheck (Property, conjoin, counterexample, property)
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import           Shelley.Spec.Ledger.BaseTypes ((==>))
 
+import           Byron.Spec.Ledger.Core (dom, range, (∈), (∉), (◁))
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
-import           Ledger.Core (dom, range, (∈), (∉), (◁))
 
 import           Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
 import           Shelley.Spec.Ledger.LedgerState (_delegations, _irwd, _rewards, _stkCreds)

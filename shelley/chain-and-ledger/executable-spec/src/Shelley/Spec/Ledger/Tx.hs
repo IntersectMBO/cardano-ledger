@@ -33,9 +33,8 @@ where
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
 
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeWord,
-                     encodeListLen, encodeWord, encodeMapLen, decodeListLenOf)
-import           Cardano.Ledger.Shelley.Crypto
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLenOf, decodeWord,
+                     encodeListLen, encodeMapLen, encodeWord)
 import           Cardano.Prelude (NoUnexpectedThunks (..), catMaybes)
 import           Data.Foldable (fold, toList)
 import           Data.Map.Strict (Map)
@@ -45,13 +44,13 @@ import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
-import           Shelley.Spec.Ledger.Serialization (CborSeq (..), decodeMapContents)
-import           Shelley.Spec.Ledger.TxData (Credential (..),
-                     TxBody (..), TxId (..), TxIn (..), TxOut (..), WitVKey (..),
-                     witKeyHash)
 import           Shelley.Spec.Ledger.Scripts
+import           Shelley.Spec.Ledger.Serialization (CborSeq (..), decodeMapContents)
+import           Shelley.Spec.Ledger.TxData (Credential (..), TxBody (..), TxId (..), TxIn (..),
+                     TxOut (..), WitVKey (..), witKeyHash)
 
 -- |A fully formed transaction.
 data Tx crypto

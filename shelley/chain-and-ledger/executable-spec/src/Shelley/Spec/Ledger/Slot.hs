@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.Slot
   )
 where
 
+import qualified Byron.Spec.Ledger.Core as Byron (Slot (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Slotting.EpochInfo (EpochInfo)
@@ -31,7 +32,6 @@ import           Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..
 import           Control.Monad.Trans (lift)
 import           Data.Functor.Identity (Identity)
 import           Data.Word (Word64)
-import qualified Ledger.Core as Byron (Slot (..))
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
 newtype Duration = Duration Word64

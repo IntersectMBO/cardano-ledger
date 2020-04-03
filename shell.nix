@@ -17,7 +17,7 @@ let
     # then list all local packages then include source-repository-package that cabal complains about:
     packages = ps: with ps; [
       cs-blockchain
-      cs-ledger
+      byron-spec-ledger
       shelley-spec-non-integral
       small-steps
       shelley-spec-ledger

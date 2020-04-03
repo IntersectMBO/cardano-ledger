@@ -12,8 +12,8 @@ module Shelley.Spec.Ledger.STS.Deleg
   )
 where
 
+import           Byron.Spec.Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
@@ -22,9 +22,9 @@ import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
-import           Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.LedgerState (DState, emptyDState, _delegations, _fGenDelegs,

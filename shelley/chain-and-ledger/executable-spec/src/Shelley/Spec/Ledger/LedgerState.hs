@@ -76,7 +76,6 @@ module Shelley.Spec.Ledger.LedgerState
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
-import           Cardano.Ledger.Shelley.Crypto (Crypto, DSIGN, HASH)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import           Data.Foldable (toList)
@@ -88,6 +87,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Crypto (Crypto, DSIGN, HASH)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
                      Stake (..), aggregateOuts, baseStake, emptySnapShots, ptrStake, rewardStake)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHash,
@@ -114,7 +114,7 @@ import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), PoolDi
 import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopic (..),
                      emptyNonMyopic, reward)
 
-import           Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
+import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
                      intervalValue, text64Size)
 import           Shelley.Spec.Ledger.Scripts (countMSigNodes)

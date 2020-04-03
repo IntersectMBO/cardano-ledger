@@ -16,9 +16,9 @@ module Shelley.Spec.Ledger.STS.Utxow
   )
 where
 
+import           Byron.Spec.Ledger.Core (dom, (∩))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
                      encodeListLen, matchSize)
-import           Cardano.Ledger.Shelley.Crypto
 import           Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import           Control.State.Transition
 import qualified Data.Map.Strict as Map
@@ -27,9 +27,9 @@ import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           Data.Word (Word8)
 import           GHC.Generics (Generic)
-import           Ledger.Core (dom, (∩))
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, intervalValue, invalidKey, quorum,
                      (==>))
+import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.LedgerState (UTxOState (..), verifiedWits, witsVKeyNeeded)
