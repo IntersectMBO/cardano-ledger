@@ -19,7 +19,7 @@ import           GHC.Generics (Generic)
 import           Data.Word (Word8)
 import           Cardano.Crypto.Hash (hash)
 import           Data.Map.Strict (Map, elems, empty, unionWith, toList, singleton, filterWithKey, keys, map,
-                 toList, fromList)
+                 toList, fromList, union, filter, singleton)
 import           Shelley.Spec.Ledger.Crypto
 import           Data.ByteString.Char8 (ByteString, pack)
 import           Shelley.Spec.Ledger.Scripts
@@ -99,9 +99,17 @@ adaToken :: ByteString
 adaToken = pack "Ada"
 
 valueToCompactValue :: Crypto crypto => Value crypto -> CompactValue crypto
-valueToCompactValue (Value v)
-  | keys v == [adaID] = AdaOnly $ getAdaAmount $ Value v
-  | otherwise                                 = MixValue $ Value v
+valueToCompactValue vl
+  | keys v == [adaID] = AdaOnly $ getAdaAmount vl
+  | otherwise         = MixValue $ uniqueAdaToken vl
+    where
+      (Value v) = vl
+
+-- | make a Value term where the only token name within the ada currency is adaToken
+uniqueAdaToken :: Crypto crypto => Value crypto -> Value crypto
+uniqueAdaToken (Value v) = Value $ union (singleton adaID $ singleton adaToken $ foldl (+) 0
+  (fmap snd $ concat $ fmap toList (elems (filterWithKey (\k _ -> k == adaID) v)))  )
+  (filterWithKey (\k _ -> k /= adaID) v)
 
 compactValueToValue :: Crypto crypto => CompactValue crypto -> Value crypto
 compactValueToValue (AdaOnly c)  = coinToValue c
