@@ -20,7 +20,7 @@ import           Data.Word (Word8)
 import           Cardano.Crypto.Hash (hash)
 import           Data.Map.Strict (Map, elems, empty, unionWith, toList, singleton, filterWithKey, keys, map,
                  toList, fromList)
-import           Cardano.Ledger.Shelley.Crypto
+import           Shelley.Spec.Ledger.Crypto
 import           Data.ByteString.Char8 (ByteString, pack)
 import           Shelley.Spec.Ledger.Scripts
 
