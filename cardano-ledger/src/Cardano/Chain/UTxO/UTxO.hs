@@ -56,7 +56,7 @@ import Cardano.Chain.UTxO.Compact
   , toCompactTxIn
   , toCompactTxOut
   )
-import Cardano.Crypto (hash)
+import Cardano.Crypto (serializeCborHash)
 
 
 newtype UTxO = UTxO
@@ -106,7 +106,7 @@ fromBalances =
 -- references an address constructed by hashing the TxOut address. This means
 -- it is not guaranteed (or likely) to be a real address.
 fromTxOut :: TxOut -> UTxO
-fromTxOut out = fromList [(TxInUtxo (coerce . hash $ txOutAddress out) 0, out)]
+fromTxOut out = fromList [(TxInUtxo (coerce . serializeCborHash $ txOutAddress out) 0, out)]
 
 toList :: UTxO -> [(TxIn, TxOut)]
 toList = fmap (bimap fromCompactTxIn fromCompactTxOut) . M.toList . unUTxO
@@ -160,7 +160,7 @@ txOutputUTxO tx = UTxO $ M.fromList
   indexedOutputs = zip [0 ..] (NE.toList $ txOutputs tx)
 
   txId :: Tx -> TxId
-  txId = hash
+  txId = serializeCborHash
 
 isRedeemUTxO :: UTxO -> Bool
 isRedeemUTxO =

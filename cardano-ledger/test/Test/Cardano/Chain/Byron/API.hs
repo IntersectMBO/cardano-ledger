@@ -186,7 +186,7 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
         Nothing -> []
         Just up ->
           let up' = elaborateUpdateProposal pm up
-              upIdMap' = Map.insert (Spec._upId up) (H.hash up') upIdMap
+              upIdMap' = Map.insert (Spec._upId up) (H.serializeCborHash up') upIdMap
               vote' = elaborateVote pm upIdMap' <$> vote
           in  addAnnotation <$>
                 [MempoolUpdateProposal up'] <>
@@ -213,7 +213,7 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
       apply1 :: ChainValidationState -> AMempoolPayload ByteString
              -> Either ApplyMempoolPayloadErr ChainValidationState
       apply1 c mp = applyMempoolPayload validationMode config (SlotNumber genSlot) mp c
-      headerHash = coerce (H.hash (0 :: Int)) :: HeaderHash
+      headerHash = coerce (H.serializeCborHash (0 :: Int)) :: HeaderHash
       applyMempoolPayloadResult = foldM apply1 cvs mempoolPayloads
       validateBlockResult =
         validateBlock config validationMode concreteBlock headerHash cvs

@@ -129,10 +129,10 @@ import Cardano.Crypto
   , SignTag(..)
   , SigningKey
   , VerificationKey
-  , hash
   , hashDecoded
   , hashHexF
   , hashRaw
+  , serializeCborHash
   , sign
   , unsafeAbstractHash
   )
@@ -533,7 +533,7 @@ toCBORABoundaryHeader pm hdr =
          )
       -- Body proof
       -- The body is always an empty slot leader schedule, so we hash that.
-      <> toCBOR (hash ([] :: [()]))
+      <> toCBOR (serializeCborHash ([] :: [()]))
       -- Consensus data
       <> ( encodeListLen 2
           -- Epoch

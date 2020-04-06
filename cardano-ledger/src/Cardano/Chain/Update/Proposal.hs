@@ -66,10 +66,10 @@ import Cardano.Crypto
   , SafeSigner
   , SignTag(SignUSProposal)
   , Signature
-  , hash
   , hashDecoded
   , safeSign
   , safeToVerification
+  , serializeCborHash
   )
 
 
@@ -196,7 +196,7 @@ instance B.Buildable (AProposal ()) where
     )
     (softwareVersion body')
     (protocolVersion body')
-    (hash proposal)
+    (serializeCborHash proposal)
     (protocolParametersUpdate body')
     (M.keys $ metadata body')
    where

@@ -108,7 +108,7 @@ elaborateWitness concreteTx (Abstract.Wit key _) = Concrete.VKWitness
  where
   (concreteVK, concreteSK) = elaborateKeyPair $ vKeyPair key
   signature = sign Dummy.protocolMagicId SignTx concreteSK sigData
-  sigData   = Concrete.TxSigData $ hash concreteTx
+  sigData   = Concrete.TxSigData $ serializeCborHash concreteTx
 
 elaborateTxIns
   :: (Abstract.TxId -> Concrete.TxId)

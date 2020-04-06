@@ -60,9 +60,9 @@ import Cardano.Crypto
   , VerificationKey(..)
   , RedeemSignature
   , SignTag(..)
-  , hash
   , redeemDeterministicKeyGen
   , redeemSign
+  , serializeCborHash
   , sign
   )
 import qualified Cardano.Crypto.Wallet as CC
@@ -120,7 +120,7 @@ exampleTxProof = TxProof 32 mroot hashWit
  where
   mroot = mtRoot $ mkMerkleTree
     [(UnsafeTx exampleTxInList exampleTxOutList (mkAttributes ()))]
-  hashWit = hash $ [(V.fromList [(VKWitness exampleVerificationKey exampleTxSig)])]
+  hashWit = serializeCborHash $ [(V.fromList [(VKWitness exampleVerificationKey exampleTxSig)])]
 
 exampleTxSig :: TxSig
 exampleTxSig =
@@ -141,4 +141,4 @@ exampleRedeemSignature = redeemSign
   where rsk = fromJust (snd <$> redeemDeterministicKeyGen (getBytes 0 32))
 
 exampleHashTx :: Hash Tx
-exampleHashTx = coerce (hash "golden" :: Hash Text)
+exampleHashTx = coerce (serializeCborHash "golden" :: Hash Text)

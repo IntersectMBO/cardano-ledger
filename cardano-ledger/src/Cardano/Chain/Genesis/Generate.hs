@@ -74,7 +74,6 @@ import Cardano.Crypto as Crypto
   , runSecureRandom
   , getProtocolMagicId
   , getRequiresNetworkMagic
-  , hash
   , keyGen
   , noPassSafeSigner
   , toVerification
@@ -82,6 +81,7 @@ import Cardano.Crypto as Crypto
   , redeemKeyGen
   , redeemToVerification
   , toCompactRedeemVerificationKey
+  , serializeCborHash
   )
 
 
@@ -389,7 +389,7 @@ generateGenesisConfigWithEntropy startTime genesisSpec = do
   where
     -- Anything will do for the genesis hash. A hash of "patak" was used before,
     -- and so it remains. Here lies the last of the Serokell code. RIP.
-    genesisHash = GenesisHash $ coerce $ hash ("patak" :: Text)
+    genesisHash = GenesisHash $ coerce $ serializeCborHash ("patak" :: Text)
 
 
 ----------------------------------------------------------------------------

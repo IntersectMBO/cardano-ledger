@@ -12,7 +12,7 @@ import qualified Crypto.PubKey.Ed25519 as Ed25519
 import           Cardano.Crypto
                    ( SigningKey(..)
                    )
-import           Cardano.Crypto.Hashing (hash)
+import           Cardano.Crypto.Hashing (serializeCborHash)
 
 
 -- Note that we /only/ provide these Eq and Ord instances for test suites.
@@ -21,7 +21,7 @@ import           Cardano.Crypto.Hashing (hash)
 
 
 instance Eq SigningKey where
-  a == b = hash a == hash b
+  a == b = serializeCborHash a == serializeCborHash b
 
 instance Ord Ed25519.PublicKey where
   compare x1 x2 = compare (toByteString x1) (toByteString x2)

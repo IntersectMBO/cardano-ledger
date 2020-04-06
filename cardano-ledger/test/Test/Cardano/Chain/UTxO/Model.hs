@@ -30,7 +30,7 @@ import Cardano.Chain.UTxO
 import qualified Cardano.Chain.UTxO as Concrete
 import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import Cardano.Chain.ValidationMode (ValidationMode (..))
-import Cardano.Crypto (hash, hashDecoded)
+import Cardano.Crypto (hashDecoded, serializeCborHash)
 
 import qualified Cardano.Ledger.Spec.STS.UTXO as Abstract
 import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
@@ -153,4 +153,4 @@ elaborateTxId :: Map Abstract.TxId Concrete.TxId
 elaborateTxId txIdMap txId =
   case M.lookup txId txIdMap of
     Just concreteTxId -> concreteTxId
-    Nothing -> coerce (hash (show txId :: Text))
+    Nothing -> coerce $ serializeCborHash (show txId :: Text)

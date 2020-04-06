@@ -50,7 +50,7 @@ import Cardano.Chain.Update
   , payload
   , signProposal
   )
-import Cardano.Crypto (ProtocolMagicId(..), hash)
+import Cardano.Crypto (ProtocolMagicId(..), serializeCborHash)
 
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Example (exampleSafeSigner)
@@ -129,10 +129,10 @@ exampleInstallerHashes offset count = map
   (toInstallerHash . (* offset))
   [0 .. count - 1]
  where
-  toInstallerHash start = InstallerHash . hash . Raw $ getBytes start 128
+  toInstallerHash start = InstallerHash . serializeCborHash . Raw $ getBytes start 128
 
 exampleUpId :: UpId
-exampleUpId = hash exampleProposal
+exampleUpId = serializeCborHash exampleProposal
 
 examplePayload :: Payload
 examplePayload = payload up uv

@@ -175,7 +175,7 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
       addUpdateProposalId (abstractProposal, concreteProposal) =
         Map.insert
           (Abstract.Update._upId abstractProposal)
-          (H.hash concreteProposal)
+          (H.serializeCborHash concreteProposal)
           proposalsIdMap
 
 
@@ -219,7 +219,7 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
             else coerce dummyHash
 
       dummyHash :: H.Hash Int
-      dummyHash = H.hash 0
+      dummyHash = H.serializeCborHash 0
 
 elaborateBS
   :: AbstractToConcreteIdMaps
@@ -313,7 +313,7 @@ abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stabl
   -- We shouldn't need to use 'coerce' after
   -- https://github.com/input-output-hk/cardano-ledger/issues/332 gets
   -- implemented.
-  genesisHash = Genesis.GenesisHash $ coerce $ H.hash ("" :: ByteString)
+  genesisHash = Genesis.GenesisHash $ coerce $ H.serializeCborHash ("" :: ByteString)
 
   gPps = elaboratePParams protocolParams
 
