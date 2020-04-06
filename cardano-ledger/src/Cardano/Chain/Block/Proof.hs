@@ -24,7 +24,7 @@ import qualified Cardano.Chain.Delegation.Payload as Delegation
 import Cardano.Chain.Ssc (SscProof(..))
 import Cardano.Chain.UTxO.TxProof (TxProof, mkTxProof, recoverTxProof)
 import qualified Cardano.Chain.Update.Proof as Update
-import Cardano.Crypto (Hash, hash, hashDecoded)
+import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
 
 
 -- | Proof of everything contained in the payload
@@ -70,7 +70,7 @@ mkProof :: Body -> Proof
 mkProof body = Proof
   { proofUTxO        = mkTxProof $ bodyTxPayload body
   , proofSsc        = SscProof
-  , proofDelegation = hash $ bodyDlgPayload body
+  , proofDelegation = serializeCborHash $ bodyDlgPayload body
   , proofUpdate     = Update.mkProof $ bodyUpdatePayload body
   }
 

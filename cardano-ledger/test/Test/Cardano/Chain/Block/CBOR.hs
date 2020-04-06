@@ -62,8 +62,8 @@ import Cardano.Crypto
   ( ProtocolMagicId(..)
   , SignTag(..)
   , abstractHash
-  , hash
   , noPassSafeSigner
+  , serializeCborHash
   , sign
   , toVerification
   )
@@ -310,7 +310,7 @@ exampleProof = Proof
   where dp = Delegation.unsafePayload (take 4 exampleCertificates)
 
 exampleHeaderHash :: HeaderHash
-exampleHeaderHash = coerce (hash ("HeaderHash" :: Text))
+exampleHeaderHash = coerce $ serializeCborHash ("HeaderHash" :: Text)
 
 exampleBody :: Body
 exampleBody = Body exampleTxPayload SscPayload dp Update.examplePayload

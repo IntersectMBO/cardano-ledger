@@ -26,7 +26,6 @@ module Cardano.Chain.Delegation.Certificate
 
   -- * Certificate Accessor
   , epoch
-  , certificateId
   , recoverCertificateId
 
   -- * Certificate Predicate
@@ -64,7 +63,6 @@ import Cardano.Crypto
   , SignTag(SignCertificate)
   , Signature
   , VerificationKey(unVerificationKey)
-  , hash
   , hashDecoded
   , safeSign
   , safeToVerification
@@ -147,12 +145,8 @@ unsafeCertificate e ivk dvk sig = UnsafeACertificate (Annotated e ()) ivk dvk si
 epoch :: ACertificate a -> EpochNumber
 epoch = unAnnotated . aEpoch
 
-certificateId :: ACertificate a -> CertificateId
-certificateId = hash . void
-
 recoverCertificateId :: ACertificate ByteString -> CertificateId
 recoverCertificateId = hashDecoded
-
 
 --------------------------------------------------------------------------------
 -- Certificate Predicate

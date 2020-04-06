@@ -34,9 +34,9 @@ import Cardano.Crypto
   , SigningKey(..)
   , SignTag(SignForTestingOnly)
   , Signature
-  , hash
   , redeemDeterministicKeyGen
   , redeemSign
+  , serializeCborHash
   , sign
   )
 
@@ -218,7 +218,7 @@ goldenDeprecatedSecretProof = deprecatedGoldenDecode
 --------------------------------------------------------------------------------
 
 goldenAbstractHash :: Property
-goldenAbstractHash = goldenTestCBOR (hash ()) "test/golden/AbstractHash"
+goldenAbstractHash = goldenTestCBOR (serializeCborHash ()) "test/golden/AbstractHash"
 
 genUnitAbstractHash :: Gen (AbstractHash Blake2b_256 ())
 genUnitAbstractHash = genAbstractHash $ pure ()

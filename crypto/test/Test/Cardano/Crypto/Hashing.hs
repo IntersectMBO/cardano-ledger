@@ -25,7 +25,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import Cardano.Binary (ToCBOR)
-import Cardano.Crypto (decodeAbstractHash, hash, hashHexF)
+import Cardano.Crypto (decodeAbstractHash, hashHexF, serializeCborHash)
 
 
 --------------------------------------------------------------------------------
@@ -58,14 +58,14 @@ prop_goldenHash :: Property
 prop_goldenHash =
   withTests 1
     .   property
-    $   sformat hashHexF (hash (1 :: Word64))
+    $   sformat hashHexF (serializeCborHash (1 :: Word64))
     === "ee155ace9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e25"
 
 
 -- | Check that 'decodeAbstractHash' correctly decodes hash values
 prop_decodeAbstractHash :: Property
 prop_decodeAbstractHash = property $ do
-  a <- hash <$> forAll (Gen.int Range.constantBounded)
+  a <- serializeCborHash <$> forAll (Gen.int Range.constantBounded)
   decodeAbstractHash (sformat hashHexF a) === Right a
 
 
@@ -78,4 +78,4 @@ hashInequality :: (Eq a, Show a, ToCBOR a) => Gen a -> Property
 hashInequality genA = property $ do
   a <- forAll genA
   b <- forAll $ Gen.filter (/= a) genA
-  hash a /== hash b
+  serializeCborHash a /== serializeCborHash b

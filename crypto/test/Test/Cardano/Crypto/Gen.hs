@@ -52,7 +52,7 @@ import qualified Hedgehog.Range as Range
 import Cardano.Binary (Annotated(..), Raw(..), ToCBOR)
 import Cardano.Crypto (PassPhrase)
 import Cardano.Crypto.Hashing
-  (AbstractHash, Hash, HashAlgorithm, abstractHash, hash)
+  (AbstractHash, Hash, HashAlgorithm, abstractHash, serializeCborHash)
 import Cardano.Crypto.ProtocolMagic
   ( AProtocolMagic(..)
   , ProtocolMagic
@@ -209,7 +209,7 @@ genHashRaw :: Gen (Hash Raw)
 genHashRaw = genAbstractHash $ Raw <$> gen32Bytes
 
 genTextHash :: Gen (Hash Text)
-genTextHash = hash <$> Gen.text (Range.linear 0 10) Gen.alphaNum
+genTextHash = serializeCborHash <$> Gen.text (Range.linear 0 10) Gen.alphaNum
 
 feedPM :: (ProtocolMagicId -> Gen a) -> Gen a
 feedPM genA = genA =<< genProtocolMagicId

@@ -29,7 +29,7 @@ import Cardano.Chain.UTxO.TxPayload
   , txpWitnesses
   )
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
-import Cardano.Crypto (Hash, hash, hashDecoded)
+import Cardano.Crypto (Hash, hashDecoded, serializeCborHash)
 
 
 data TxProof = TxProof
@@ -74,7 +74,7 @@ mkTxProof :: TxPayload -> TxProof
 mkTxProof payload = TxProof
   { txpNumber        = fromIntegral (length $ txpTxs payload)
   , txpRoot          = mtRoot (mkMerkleTree $ txpTxs payload)
-  , txpWitnessesHash = hash $ txpWitnesses payload
+  , txpWitnessesHash = serializeCborHash $ txpWitnesses payload
   }
 
 recoverTxProof :: ATxPayload ByteString -> TxProof

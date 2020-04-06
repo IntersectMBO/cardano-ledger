@@ -35,6 +35,7 @@ module Cardano.Crypto.Hashing
   , hash
   , hashDecoded
   , hashRaw
+  , serializeCborHash
     -- ** Conversion
   , hashFromBytes
   , unsafeHashFromBytes
@@ -181,6 +182,7 @@ decodeAbstractHash prettyHash = do
     Just h -> return h
 
 -- | Hash the 'ToCBOR'-serialised version of a value
+-- Once this is no longer used outside this module it should be made private.
 abstractHash :: (HashAlgorithm algo, ToCBOR a) => a -> AbstractHash algo a
 abstractHash = unsafeAbstractHash . serialize
 
@@ -225,9 +227,14 @@ abstractHashToBytes (AbstractHash h) = SBS.fromShort h
 -- | The type of our commonly used hash, Blake2b 256
 type Hash = AbstractHash Blake2b_256
 
+{-# DEPRECATED hash "Use serializeCborHash or hash the annotation instead." #-}
 -- | The hash of a value, serialised via 'ToCBOR'.
 hash :: ToCBOR a => a -> Hash a
 hash = abstractHash
+
+-- | The hash of a value, serialised via 'ToCBOR'.
+serializeCborHash :: ToCBOR a => a -> Hash a
+serializeCborHash = abstractHash
 
 -- | The hash of a value's annotation
 hashDecoded :: (Decoded t) => t -> Hash (BaseType t)

@@ -39,7 +39,7 @@ import Cardano.Chain.Common
   , lovelaceF
   )
 import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
-import Cardano.Crypto (Hash, hash, shortHashF)
+import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
 
 
 --------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ instance B.Buildable Tx where
     . listJson
     . builder
     )
-    (hash tx)
+    (serializeCborHash tx)
     (txInputs tx)
     (txOutputs tx)
     attrsBuilder

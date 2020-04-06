@@ -165,7 +165,7 @@ elaborateUpSD ( protocolVersion
     -- elaborators should be able to generate random data, or the abstract
     -- update payload should include (an abstract version of) these hashes.
     concreteSystemHashes =
-      repeat $ Concrete.InstallerHash $ coerce $ H.hash ("" :: ByteString)
+      repeat $ Concrete.InstallerHash $ coerce $ H.serializeCborHash ("" :: ByteString)
 
 
 -- | Convert a 'ProtocolParameters' value to a 'ProtocolParametersUpdate'
@@ -245,6 +245,6 @@ elaborateProposalId proposalsIdMap abstractProposalId  =
         -- NOTE: if the elaborators returned a `Gen a` value, then we could
         -- return random hashes here.
         abstractIdHash :: Concrete.UpId -- Keeps GHC happy ...
-        abstractIdHash = coerce $ H.hash id
+        abstractIdHash = coerce $ H.serializeCborHash id
           where
             Abstract.UpId id = abstractProposalId
