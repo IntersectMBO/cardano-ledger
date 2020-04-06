@@ -5,6 +5,7 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -17,12 +18,10 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.DCert
 
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Data.Functor.Identity (runIdentity)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (lookup)
 import           Data.Maybe (catMaybes)
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 
@@ -43,12 +42,9 @@ import           Shelley.Spec.Ledger.Tx (getKeyCombination)
 import           Shelley.Spec.Ledger.TxData (Ix, Ptr (..))
 import           Shelley.Spec.Ledger.UTxO (totalDeposits)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (AnyKeyHash, DCert, DELPL, DPState,
-                     KeyPair)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (maxCertsPerTx, numBaseScripts)
-import           Test.Shelley.Spec.Ledger.Generator.Core (coreNodeKeys, traceKeyPairs,
-                     traceKeyPairsByStakeHash, traceMSigCombinations, traceMSigScripts,
-                     traceVRFKeyPairs)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (DCert, DELPL, DPState)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (maxCertsPerTx)
+import           Test.Shelley.Spec.Ledger.Generator.Core (KeySpace(..))
 import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import           Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
@@ -88,16 +84,18 @@ certsTransition = do
 instance Embed DELPL CERTS where
   wrapFailed = CertsFailure
 
-instance QC.HasTrace CERTS Word64 where
+instance QC.HasTrace CERTS KeySpace where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
-  sigGen _ (slot, _txIx, pparams, _reserves) (dpState, _certIx) =
+  sigGen KeySpace_ { ksCoreNodes, ksKeyPairs, ksKeyPairsByStakeHash
+                   , ksMSigScripts, ksVRFKeyPairs }
+        (slot, _txIx, pparams, _reserves) (dpState, _certIx) =
     genDCert
-      traceKeyPairs
-      (traceMSigCombinations $ take numBaseScripts traceMSigScripts)
-      (fst <$> coreNodeKeys)
-      traceVRFKeyPairs
-      traceKeyPairsByStakeHash
+      ksKeyPairs
+      ksMSigScripts
+      (fst <$> ksCoreNodes)
+      ksVRFKeyPairs
+      ksKeyPairsByStakeHash
       pparams
       dpState
       slot
@@ -110,7 +108,7 @@ instance QC.HasTrace CERTS Word64 where
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts
-  :: Map AnyKeyHash KeyPair
+  :: KeySpace
   -> PParams
   -> DPState
   -> SlotNo
@@ -118,13 +116,13 @@ genDCerts
   -> Natural
   -> Coin
   -> Gen (Seq DCert, [CertCred], Coin, Coin)
-genDCerts keyHashMap pparams dpState slot ttl txIx reserves = do
+genDCerts ks@(KeySpace_ { ksKeyPairsByHash }) pparams dpState slot ttl txIx reserves = do
   let env = (slot, txIx, pparams, reserves)
       st0 = (dpState, 0)
 
   certsCreds <-
     catMaybes . traceSignals OldestFirst <$>
-      QC.traceFrom @CERTS testGlobals maxCertsPerTx maxCertsPerTx env st0
+      QC.traceFrom @CERTS testGlobals maxCertsPerTx ks env st0
 
   let (certs, creds) = unzip certsCreds
       deRegStakeCreds = filter isDeRegKey certs
@@ -151,4 +149,4 @@ genDCerts keyHashMap pparams dpState slot ttl txIx reserves = do
         _ ->
           return [cred]
 
-    lookupWit = flip Map.lookup keyHashMap
+    lookupWit = flip Map.lookup ksKeyPairsByHash

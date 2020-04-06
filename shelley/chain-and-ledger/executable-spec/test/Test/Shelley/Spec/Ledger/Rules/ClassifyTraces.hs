@@ -15,7 +15,6 @@ import qualified Data.ByteString as BS
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
-import           Data.Word (Word64)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
 
 import           Cardano.Binary (serialize')
@@ -42,6 +41,7 @@ import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDele
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, CHAIN, DCert, LEDGER, Tx,
                      TxOut)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (maxCertsPerTx)
+import           Test.Shelley.Spec.Ledger.Generator.Presets (keySpace)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import           Test.Shelley.Spec.Ledger.Utils
@@ -49,7 +49,7 @@ import           Test.Shelley.Spec.Ledger.Utils
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 200 . property $ do
   let tl = 100
-  forAllTraceFromInitState @CHAIN testGlobals tl tl (Just mkGenesisChainState) $ \tr -> do
+  forAllTraceFromInitState @CHAIN testGlobals tl keySpace (Just mkGenesisChainState) $ \tr -> do
     let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
         bs = traceSignals OldestFirst tr
         txs = concat (blockTxs <$> bs)
@@ -197,7 +197,7 @@ lenRatio f xs
 
 onlyValidLedgerSignalsAreGenerated :: Property
 onlyValidLedgerSignalsAreGenerated = withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState @LEDGER testGlobals 100 (100::Word64) (Just mkGenesisLedgerState)
+    onlyValidSignalsAreGeneratedFromInitState @LEDGER testGlobals 100 keySpace (Just mkGenesisLedgerState)
 
 -- | Check that the abstract transaction size function
 -- actually bounds the number of bytes in the serialized transaction.
@@ -205,7 +205,7 @@ propAbstractSizeBoundsBytes :: Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'
-  forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
+  forAllTraceFromInitState @LEDGER testGlobals tl keySpace (Just mkGenesisLedgerState) $ \tr -> do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
     all (\tx -> txsize tx >= numBytes tx) txs
@@ -223,14 +223,14 @@ propAbstractSizeNotTooBig = property $ do
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
       notTooBig txb = txsize txb <= acceptableMagnitude * numBytes txb
-  forAllTraceFromInitState @LEDGER testGlobals tl tl (Just mkGenesisLedgerState) $ \tr -> do
+  forAllTraceFromInitState @LEDGER testGlobals tl keySpace (Just mkGenesisLedgerState) $ \tr -> do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
     all notTooBig txs
 
 onlyValidChainSignalsAreGenerated :: Property
 onlyValidChainSignalsAreGenerated = withMaxSuccess 100 $
-  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 100 (100::Word64) (Just mkGenesisChainState)
+  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 100 keySpace (Just mkGenesisChainState)
 
 epochBoundariesInTrace :: [Block] -> Int
 epochBoundariesInTrace bs

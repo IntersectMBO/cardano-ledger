@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -37,44 +38,47 @@ import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesF
                      makeWitnessesVKey)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair,
-                     Credential, DCert, DPState, DState, KeyHash, KeyPair, KeyPairs, MultiSig,
+                     Credential, DCert, DPState, DState, KeyPair, KeyPairs, MultiSig,
                      MultiSigPairs, RewardAcnt, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState, Update,
                      WitVKey)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (frequencyAFewWithdrawals,
                      frequencyNoWithdrawals, frequencyPotentiallyManyWithdrawals,
                      maxAFewWithdrawals, maxNumGenInputs, minNumGenInputs)
-import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys, findPayKeyPairAddr,
+import           Test.Shelley.Spec.Ledger.Generator.Core (KeySpace(..), findPayKeyPairAddr,
                      findPayKeyPairCred, findPayScriptFromAddr, findStakeScriptFromCred,
                      genNatural)
 import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
 import           Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import           Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 
-import           Debug.Trace as D
-
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
 -- Selects unspent outputs and spends the funds on a some valid addresses.
 -- Also generates valid certificates.
 genTx :: HasCallStack
-      => LedgerEnv
+      => KeySpace
+      -> LedgerEnv
       -> (UTxOState, DPState)
-      -> KeyPairs
-      -> Map AnyKeyHash KeyPair
-      -> MultiSigPairs
-      -> [(CoreKeyPair, AllPoolKeys)]
-      -> Map KeyHash KeyPair -- indexed keys By StakeHash
       -> Gen Tx
-genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpState) keys keyHashMap scripts coreKeys keysByStakeHash = do
-  keys' <- QC.shuffle keys
-  scripts' <- QC.shuffle scripts
+genTx ks@(KeySpace_ { ksCoreNodes
+                    , ksKeyPairs
+                    , ksKeyPairsByHash
+                    , ksKeyPairsByStakeHash
+                    , ksMSigScripts })
+      (LedgerEnv slot txIx pparams reserves)
+      (utxoSt@(UTxOState utxo _ _ _), dpState)
+      = do
+
+  keys' <- QC.shuffle ksKeyPairs
+  scripts' <- QC.shuffle ksMSigScripts
 
   -- inputs
   (witnessedInputs, spendingBalanceUtxo) <-
-    pickSpendingInputs scripts' keyHashMap utxo
+    pickSpendingInputs scripts' ksKeyPairsByHash utxo
 
   wdrls <- pickWithdrawals ((_rewards . _dstate) dpState)
-  let wdrlCredentials = fmap (mkWdrlWits scripts' keyHashMap) (fmap getRwdCred (Map.keys wdrls))
+
+  let wdrlCredentials = fmap (mkWdrlWits scripts' ksKeyPairsByHash) (fmap getRwdCred (Map.keys wdrls))
       wdrlWitnesses = Either.lefts wdrlCredentials
       wdrlScripts   = Either.rights wdrlCredentials
 
@@ -95,10 +99,10 @@ genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpS
 
   -- certificates
   (certs, certCreds, deposits_, refunds_)
-    <- genDCerts keyHashMap pparams dpState slot ttl txIx reserves
+    <- genDCerts ks pparams dpState slot ttl txIx reserves
 
   if spendingBalance < deposits_
-    then D.trace ("discarded") QC.discard
+    then QC.discard
     else do
 
     -- attempt to make provision for certificate deposits (otherwise discard this generator)
@@ -121,7 +125,7 @@ genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpS
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
-      genUpdate slot coreKeys keysByStakeHash pparams (utxoSt, dpState)
+      genUpdate slot ksCoreNodes ksKeyPairsByStakeHash pparams (utxoSt, dpState)
 
     -- this is the "model" `TxBody` which is used to calculate the fees
     --
@@ -146,7 +150,7 @@ genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpS
           txBody
           (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
           genesisWitnesses
-          keyHashMap
+          ksKeyPairsByHash
           msigSignatures
 
     let metadata = Nothing -- TODO generate metadata
@@ -156,10 +160,7 @@ genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpS
 
     -- discard generated transaction if the balance cannot cover the fees
     if minimalFees > balance_
-      then D.trace (  "discarded bc. of real fees, minimal: "
-                   ++ show minimalFees ++ " Output balance: "
-                   ++ show balance_
-                   ) QC.discard
+      then QC.discard
       else do
 
       -- update model transaction with real fees and outputs
@@ -171,7 +172,7 @@ genTx (LedgerEnv slot txIx pparams reserves) (utxoSt@(UTxOState utxo _ _ _), dpS
             txBody'
             (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
             genesisWitnesses
-            keyHashMap
+            ksKeyPairsByHash
             msigSignatures
 
       pure (Tx txBody' wits' multiSig metadata)

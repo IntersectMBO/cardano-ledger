@@ -119,6 +119,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
                          Test.Shelley.Spec.Ledger.Generator.Trace.DCert
                          Test.Shelley.Spec.Ledger.Generator.Delegation
+                         Test.Shelley.Spec.Ledger.Generator.Presets
                          Test.Shelley.Spec.Ledger.Generator.Update
                          Test.Shelley.Spec.Ledger.Generator.Utxo
                          Test.Shelley.Spec.Ledger.PropertyTests

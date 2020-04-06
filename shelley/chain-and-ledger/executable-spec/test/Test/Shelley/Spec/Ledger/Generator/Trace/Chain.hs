@@ -16,7 +16,6 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, fromList, keysSet)
-import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -42,25 +41,24 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, ChainState
 import           Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (maxGenesisUTxOouts, maxSlotTrace,
                      minGenesisUTxOouts, minSlotTrace)
-import           Test.Shelley.Spec.Ledger.Generator.Core (coreNodeKeys, genUtxo0, genesisDelegs0,
-                     traceKeyPairsByStakeHash)
+import           Test.Shelley.Spec.Ledger.Generator.Core (KeySpace(..))
+import           Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import           Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import           Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
 import           Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
-instance HasTrace CHAIN Word64 where
+instance HasTrace CHAIN KeySpace where
   -- the current slot needs to be large enough to allow for many blocks
   -- to be processed (in large CHAIN traces)
   envGen _ = SlotNo <$> QC.choose (fromIntegral minSlotTrace, fromIntegral maxSlotTrace)
 
-  sigGen _ env st =
+  sigGen ks env st =
     genBlock
+      ks
       env
       st
-      coreNodeKeys
-      traceKeyPairsByStakeHash
 
   shrinkSignal = shrinkBlock
 
