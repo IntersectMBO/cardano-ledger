@@ -21,7 +21,7 @@ let
     ghc = buildPackages.haskell-nix.compiler.${compiler};
     modules = [
       {
-        packages.cs-blockchain.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.byron-spec-chain.configureFlags = [ "--ghc-option=-Werror" ];
         packages.byron-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
         packages.shelley-spec-non-integral.configureFlags = [ "--ghc-option=-Werror" ];
