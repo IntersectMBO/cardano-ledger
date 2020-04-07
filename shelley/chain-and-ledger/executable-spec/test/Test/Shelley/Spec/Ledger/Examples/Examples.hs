@@ -123,7 +123,7 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern Sna
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey,
                      vKey)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern ActiveSlot,
-                     pattern DPState, pattern EpochState, pattern LedgerState,
+                     pattern DPState, pattern EpochState, FutureGenDeleg (..), pattern LedgerState,
                      pattern NewEpochState, pattern RewardUpdate, pattern UTxOState, deltaF,
                      deltaR, deltaT, emptyDState, emptyPState, esAccountState, esLState, esPp,
                      genesisCoins, genesisId, nesEs, nonMyopic, overlaySchedule, rs,
@@ -1998,7 +1998,7 @@ blockEx4AHash = bhHash (bheader blockEx4A)
 
 dsEx4A :: DState
 dsEx4A = dsEx1 { _fGenDelegs = Map.singleton
-                          ( SlotNo 43, hashKey $ coreNodeVKG 0 )
+                          ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVKG 0) )
                           ( (hashKey . vKey) newGenDelegate ) }
 
 utxoEx4A :: UTxO

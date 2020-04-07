@@ -29,6 +29,7 @@ module Shelley.Spec.Ledger.LedgerState
   , RewardUpdate(..)
   , RewardAccounts
   , emptyRewardUpdate
+  , FutureGenDeleg(..)
   , EpochState(..)
   , emptyEpochState
   , getIR
@@ -137,6 +138,26 @@ instance NoUnexpectedThunks (LedgerValidation crypto)
 type RewardAccounts crypto
   = Map (RewardAcnt crypto) Coin
 
+data FutureGenDeleg crypto = FutureGenDeleg
+    { fGenDelegSlot       :: !SlotNo
+    , fGenDelegGenKeyHash :: !(GenKeyHash crypto)
+    } deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks (FutureGenDeleg crypto)
+
+instance Crypto crypto => ToCBOR (FutureGenDeleg crypto)
+ where
+  toCBOR (FutureGenDeleg a b) =
+    encodeListLen 2 <> toCBOR a <> toCBOR b
+
+instance Crypto crypto => FromCBOR (FutureGenDeleg crypto)
+ where
+  fromCBOR = do
+    enforceSize "FutureGenDeleg" 2
+    a <- fromCBOR
+    b <- fromCBOR
+    pure $ FutureGenDeleg a b
+
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
     {  -- |The active stake keys.
@@ -148,7 +169,7 @@ data DState crypto = DState
       -- |The pointed to hash keys.
     , _ptrs        :: !(Map Ptr (Credential crypto))
       -- | future genesis key delegations
-    , _fGenDelegs  :: !(Map (SlotNo, GenKeyHash crypto) (KeyHash crypto))
+    , _fGenDelegs  :: !(Map (FutureGenDeleg crypto) (KeyHash crypto))
       -- |Genesis key delegations
     , _genDelegs   :: !(GenDelegs crypto)
       -- | Instantaneous Rewards
