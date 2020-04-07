@@ -37,23 +37,23 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import qualified Cardano.Spec.Chain.STS.Rule.Chain as Abstract
-import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN)
-import Cardano.Ledger.Spec.STS.UTXOWS (UTXOWS)
-import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv (..), UTxOState (..))
+import qualified Byron.Spec.Chain.STS.Block as Abstract
+import qualified Byron.Spec.Chain.STS.Rule.Chain as Abstract
+import Byron.Spec.Chain.STS.Rule.Chain (CHAIN)
+import Byron.Spec.Ledger.STS.UTXOWS (UTXOWS)
+import Byron.Spec.Ledger.STS.UTXO (UTxOEnv (..), UTxOState (..))
 import Control.State.Transition
 import Control.State.Transition.Generator (trace)
 import qualified Control.State.Transition.Trace as Trace
-import qualified Ledger.Core as Abstract
-import Ledger.Delegation
+import qualified Byron.Spec.Ledger.Core as Abstract
+import Byron.Spec.Ledger.Delegation
   ( ADELEGS
   , DELEG
   , DIState (..)
   , DState (..)
   )
-import Ledger.GlobalParams (lovelaceCap)
-import qualified Ledger.UTxO as Abstract
+import Byron.Spec.Ledger.GlobalParams (lovelaceCap)
+import qualified Byron.Spec.Ledger.UTxO as Abstract
 
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import Test.Cardano.Chain.Elaboration.Block

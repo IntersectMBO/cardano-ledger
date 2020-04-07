@@ -35,22 +35,22 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 68dcff6e832efa8711b9757d8ddaba61759da973
-  --sha256: 1mqyxi6h2bq4w81v3vn05s0y4i6zp42g6yagy8bzbihh97q2wc0g
+  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
+  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 68dcff6e832efa8711b9757d8ddaba61759da973
-  --sha256: 1mqyxi6h2bq4w81v3vn05s0y4i6zp42g6yagy8bzbihh97q2wc0g
+  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
+  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 68dcff6e832efa8711b9757d8ddaba61759da973
-  --sha256: 1mqyxi6h2bq4w81v3vn05s0y4i6zp42g6yagy8bzbihh97q2wc0g
+  tag: 742a789a520387c6cd30a4ca28bc4fc8588a41c7
+  --sha256: 0zqar90z7hdklxcimfxb2dmk0cq43bywa7p255hynn7ss0nxszz6
   subdir: binary/test
 
 source-repository-package
@@ -62,29 +62,29 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: c006b101b699b7b54a96d077fdbad07005b8da77
-  --sha256: 1m2xs2z9bq83k65l2hx41zbj1akyl83cdlxhdxssd8nbmb723qar
-  subdir: byron/semantics/executable-spec
+  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
+  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
+  subdir: semantics/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: c006b101b699b7b54a96d077fdbad07005b8da77
-  --sha256: 1m2xs2z9bq83k65l2hx41zbj1akyl83cdlxhdxssd8nbmb723qar
+  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
+  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
   subdir: byron/ledger/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: c006b101b699b7b54a96d077fdbad07005b8da77
-  --sha256: 1m2xs2z9bq83k65l2hx41zbj1akyl83cdlxhdxssd8nbmb723qar
+  tag: f1d5ddb25531b2512796d34e9cfd803f7af76567
+  --sha256: 1nxqdi8vbx3mg1qdbvj7v6ngfjbgbf9i7yxc3ijac2mqb4fn5b4f
   subdir: byron/chain/executable-spec
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: ef164a834ef2b2d9ceb2ec262109a726ee534d66
-  --sha256: 0n6m65yfwsz37fpqv1f6sw5qrdh1hxiipss7yj1pvxdnya3ndnlc
+  tag: 10877fbae54aa7a4c04ae3b5d87c825a4019e9e9
+  --sha256: 17brigssa3yjys75izczpwh10m1ai4rja2wgkx95nvm6krizrkh7
   subdir:   contra-tracer
 
 source-repository-package

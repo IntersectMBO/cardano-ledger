@@ -50,14 +50,14 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Slotting as Slotting
 
 import qualified Control.State.Transition as Transition
-import qualified Cardano.Spec.Chain.STS.Block as Abstract
-import Cardano.Spec.Chain.STS.Rule.Chain (CHAIN, disL)
-import qualified Cardano.Spec.Chain.STS.Rule.Epoch as Abstract
-import qualified Ledger.Core as Abstract
-import Ledger.Delegation
+import qualified Byron.Spec.Chain.STS.Block as Abstract
+import Byron.Spec.Chain.STS.Rule.Chain (CHAIN, disL)
+import qualified Byron.Spec.Chain.STS.Rule.Epoch as Abstract
+import qualified Byron.Spec.Ledger.Core as Abstract
+import Byron.Spec.Ledger.Delegation
   (DCert, delegationMap, delegatorOf, mkDCert)
-import qualified Ledger.Update as Abstract.Update
-import qualified Ledger.UTxO as Abstract
+import qualified Byron.Spec.Ledger.Update as Abstract.Update
+import qualified Byron.Spec.Ledger.UTxO as Abstract
 import Cardano.Chain.Common
   ( BlockCount(BlockCount)
   , ChainDifficulty(ChainDifficulty)

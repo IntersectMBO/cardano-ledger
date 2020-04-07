@@ -80,13 +80,13 @@ import Cardano.Chain.Update
   )
 import Cardano.Chain.Update.Validation.Interface (adoptedProtocolParameters)
 
-import Cardano.Ledger.Spec.STS.UTXO (UTxOEnv(..))
-import Cardano.Ledger.Spec.STS.UTXOW (coverUtxoFailure, tamperedTxList)
-import Cardano.Spec.Chain.STS.Rule.BBody
+import Byron.Spec.Ledger.STS.UTXO (UTxOEnv(..))
+import Byron.Spec.Ledger.STS.UTXOW (coverUtxoFailure, tamperedTxList)
+import Byron.Spec.Chain.STS.Rule.BBody
   ( PredicateFailure(InvalidBlockSize, InvalidDelegationHash,
                  InvalidUpdateProposalHash, InvalidUtxoHash)
   )
-import Cardano.Spec.Chain.STS.Rule.Chain
+import Byron.Spec.Chain.STS.Rule.Chain
   ( CHAIN
   , ShouldGenDelegation(NoGenDelegation)
   , ShouldGenUTxO(NoGenUTxO)
@@ -96,9 +96,9 @@ import Cardano.Spec.Chain.STS.Rule.Chain
   , isHeaderSizeTooBigFailure
   , sigGenChain
   )
-import           Cardano.Spec.Chain.STS.Rule.Epoch (sEpoch)
-import           Cardano.Spec.Chain.STS.Block (BlockStats(..))
-import qualified Cardano.Spec.Chain.STS.Block as Abstract
+import           Byron.Spec.Chain.STS.Rule.Epoch (sEpoch)
+import           Byron.Spec.Chain.STS.Block (BlockStats(..))
+import qualified Byron.Spec.Chain.STS.Block as Abstract
 import Control.State.Transition.Generator
   ( SignalGenerator
   , classifyTraceLength
@@ -121,8 +121,8 @@ import Control.State.Transition.Trace
   , traceInit
   , traceSignals
   )
-import qualified Ledger.Core as AbstractCore
-import Ledger.Delegation
+import qualified Byron.Spec.Ledger.Core as AbstractCore
+import Byron.Spec.Ledger.Delegation
   ( DSEnv (DSEnv)
   , _dSEnvAllowedDelegators
   , _dIStateDelegationMap
@@ -131,8 +131,8 @@ import Ledger.Delegation
   , _dSEnvSlot
   , tamperedDcerts
   )
-import qualified Ledger.Delegation.Test as Delegation.Test
-import Ledger.Update
+import qualified Byron.Spec.Ledger.Delegation.Test as Delegation.Test
+import Byron.Spec.Ledger.Update
   ( PParams
   , UPIEnv
   , UPIREG
@@ -142,7 +142,7 @@ import Ledger.Update
   , tamperWithUpdateProposal
   , tamperWithVotes
   )
-import qualified Ledger.Update.Test as Update.Test
+import qualified Byron.Spec.Ledger.Update.Test as Update.Test
 
 import Test.Cardano.Chain.Elaboration.Block
   ( AbstractToConcreteIdMaps

@@ -18,7 +18,7 @@ import qualified Data.ByteString.Lazy as BSL
 
 import Cardano.Chain.Common (KeyHash, hashKey)
 import Cardano.Crypto.Signing (VerificationKey, SigningKey, deterministicKeyGen, noPassSafeSigner, SafeSigner)
-import Ledger.Core
+import Byron.Spec.Ledger.Core
   ( KeyPair
   , Owner(Owner)
   , VKey(VKey)

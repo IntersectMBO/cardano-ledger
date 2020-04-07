@@ -51,7 +51,7 @@ let
 
         # split data output for ekg to reduce closure size
         packages.ekg.components.library.enableSeparateDataOutput = true;
-        packages.cs-ledger.components.tests.doctests.build-tools = [ buildPackages.haskell-nix.haskellPackages.alex ];
+        packages.byron-spec-ledger.components.tests.doctests.build-tools = [ buildPackages.haskell-nix.haskellPackages.alex ];
         packages.cardano-ledger = {
           configureFlags = [ "--ghc-option=-Werror" ];
           components = {

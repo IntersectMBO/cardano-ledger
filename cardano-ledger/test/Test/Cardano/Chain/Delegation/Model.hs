@@ -26,8 +26,8 @@ import qualified Hedgehog.Range as Range
 import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import qualified Control.State.Transition as STS
 import qualified Control.State.Transition.Generator as STS
-import Ledger.Delegation (DELEG, SDELEG)
-import qualified Ledger.Delegation as Abstract
+import Byron.Spec.Ledger.Delegation (DELEG, SDELEG)
+import qualified Byron.Spec.Ledger.Delegation as Abstract
 
 import qualified Test.Cardano.Chain.Elaboration.Delegation as E
 import qualified Test.Cardano.Crypto.Dummy as Dummy

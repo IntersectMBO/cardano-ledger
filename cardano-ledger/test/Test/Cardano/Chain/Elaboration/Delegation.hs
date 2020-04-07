@@ -25,7 +25,7 @@ import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.Slotting as Concrete
 import Cardano.Crypto (ProtocolMagicId)
 import Cardano.Crypto.Signing (noPassSafeSigner)
-import Ledger.Core
+import Byron.Spec.Ledger.Core
   ( BlockCount(..)
   , Epoch(..)
   , Owner(..)
@@ -33,7 +33,7 @@ import Ledger.Core
   , VKey(..)
   , VKeyGenesis(..)
   )
-import Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
+import Byron.Spec.Ledger.Delegation (DCert(..), DSEnv(..), dcertGen, delegate, delegator)
 
 import Test.Cardano.Chain.Config (readMainetCfg)
 import Test.Cardano.Chain.Elaboration.Keys

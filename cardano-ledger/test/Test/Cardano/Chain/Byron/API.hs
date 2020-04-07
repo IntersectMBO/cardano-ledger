@@ -28,18 +28,18 @@ import           Cardano.Chain.Byron.API            (ApplyMempoolPayloadErr (..)
                                                      applyMempoolPayload)
 import           Cardano.Crypto                     (ProtocolMagicId)
 import qualified Cardano.Crypto.Hashing as H
-import qualified Cardano.Ledger.Spec.STS.UTXO       as STS
-import qualified Cardano.Ledger.Spec.STS.UTXOW      as STS
-import qualified Cardano.Spec.Chain.STS.Block       as STS
-import           Cardano.Spec.Chain.STS.Rule.Chain  (CHAIN)
-import qualified Cardano.Spec.Chain.STS.Rule.Epoch  as STS
-import qualified Cardano.Spec.Chain.STS.Rule.SigCnt as STS
+import qualified Byron.Spec.Ledger.STS.UTXO       as STS
+import qualified Byron.Spec.Ledger.STS.UTXOW      as STS
+import qualified Byron.Spec.Chain.STS.Block       as STS
+import           Byron.Spec.Chain.STS.Rule.Chain  (CHAIN)
+import qualified Byron.Spec.Chain.STS.Rule.Epoch  as STS
+import qualified Byron.Spec.Chain.STS.Rule.SigCnt as STS
 import qualified Control.State.Transition           as STS
 import qualified Control.State.Transition.Generator as STS
 import qualified Control.State.Transition.Trace     as STS
-import qualified Ledger.Core                        as Spec
-import qualified Ledger.Delegation                  as Spec
-import qualified Ledger.Update                      as Spec
+import qualified Byron.Spec.Ledger.Core                        as Spec
+import qualified Byron.Spec.Ledger.Delegation                  as Spec
+import qualified Byron.Spec.Ledger.Update                      as Spec
 
 import           Cardano.Binary (fromCBOR, toCBOR)
 import           Cardano.Chain.Block          (BlockValidationMode (..),
@@ -226,4 +226,3 @@ ts_mempoolValidation = withTestsTS 100 . property $ do
   where
   addAnnotation :: MempoolPayload -> AMempoolPayload ByteString
   addAnnotation = reAnnotateUsing toCBOR fromCBOR
-
