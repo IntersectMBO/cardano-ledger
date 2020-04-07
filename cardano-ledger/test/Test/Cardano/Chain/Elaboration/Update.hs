@@ -26,10 +26,10 @@ import qualified Cardano.Chain.Slotting as Concrete
 import qualified Cardano.Chain.Update as Concrete
 import qualified Cardano.Chain.Update.Proposal as Proposal
 
-import Ledger.Core (unSlotCount)
-import Ledger.Core.Omniscient (signatureVKey, signatureData)
-import qualified Ledger.Update as Abstract
-import qualified Ledger.GlobalParams as GP
+import Byron.Spec.Ledger.Core (unSlotCount)
+import Byron.Spec.Ledger.Core.Omniscient (signatureVKey, signatureData)
+import qualified Byron.Spec.Ledger.Update as Abstract
+import qualified Byron.Spec.Ledger.GlobalParams as GP
 
 
 import Test.Cardano.Chain.Elaboration.Keys (elaborateVKey, vKeyToSafeSigner)

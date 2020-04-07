@@ -38,12 +38,12 @@ import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import qualified Ledger.Core as Abstract
-import qualified Ledger.Core.Generators as Abstract
-import qualified Ledger.Update as Abstract
-import qualified Ledger.Update.Generators as Abstract
-import qualified Ledger.UTxO as Abstract
-import qualified Ledger.UTxO.Generators as Abstract
+import qualified Byron.Spec.Ledger.Core as Abstract
+import qualified Byron.Spec.Ledger.Core.Generators as Abstract
+import qualified Byron.Spec.Ledger.Update as Abstract
+import qualified Byron.Spec.Ledger.Update.Generators as Abstract
+import qualified Byron.Spec.Ledger.UTxO as Abstract
+import qualified Byron.Spec.Ledger.UTxO.Generators as Abstract
 
 import Test.Cardano.Chain.Elaboration.Update (elaboratePParams)
 import Test.Cardano.Chain.Elaboration.UTxO (elaborateTxBS)

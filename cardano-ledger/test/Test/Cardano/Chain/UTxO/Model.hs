@@ -32,12 +32,12 @@ import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import Cardano.Chain.ValidationMode (ValidationMode (..))
 import Cardano.Crypto (hashDecoded, serializeCborHash)
 
-import qualified Cardano.Ledger.Spec.STS.UTXO as Abstract
-import Cardano.Ledger.Spec.STS.UTXOW (UTXOW)
+import qualified Byron.Spec.Ledger.STS.UTXO as Abstract
+import Byron.Spec.Ledger.STS.UTXOW (UTXOW)
 import Control.State.Transition.Generator (classifyTraceLength, trace)
 import Control.State.Transition.Trace
   (Trace, TraceOrder(OldestFirst), traceEnv, traceSignals)
-import qualified Ledger.UTxO as Abstract
+import qualified Byron.Spec.Ledger.UTxO as Abstract
 
 import qualified Test.Cardano.Chain.Elaboration.UTxO as E
 import Test.Options (TSGroup, TSProperty, withTestsTS)

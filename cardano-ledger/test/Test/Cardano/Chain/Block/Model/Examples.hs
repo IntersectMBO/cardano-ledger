@@ -22,14 +22,14 @@ import Cardano.Prelude hiding (trace, State)
 import Control.State.Transition
 import Control.State.Transition.Trace
 
-import Ledger.Core
-import Ledger.Delegation
-import Ledger.Update
-import Ledger.UTxO
-import Cardano.Ledger.Spec.STS.UTXO
+import Byron.Spec.Ledger.Core
+import Byron.Spec.Ledger.Delegation
+import Byron.Spec.Ledger.Update
+import Byron.Spec.Ledger.UTxO
+import Byron.Spec.Ledger.STS.UTXO
 
-import Cardano.Spec.Chain.STS.Block
-import Cardano.Spec.Chain.STS.Rule.Chain
+import Byron.Spec.Chain.STS.Block
+import Byron.Spec.Chain.STS.Rule.Chain
 
 -- | A trace example. When debugging conformance tests you can add such a
 -- trace, and use it in the repl. __NOTE__: Do not commit such trace.

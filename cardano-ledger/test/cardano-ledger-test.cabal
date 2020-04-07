@@ -97,8 +97,8 @@ library
                      , cardano-prelude-test
                      , containers
                      , cryptonite
-                     , cs-blockchain
-                     , cs-ledger
+                     , byron-spec-chain
+                     , byron-spec-ledger
                      , directory
                      , filepath
                      , formatting

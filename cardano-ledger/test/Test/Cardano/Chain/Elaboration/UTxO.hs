@@ -29,9 +29,9 @@ import qualified Cardano.Chain.UTxO.Validation as Concrete.UTxO
 import qualified Cardano.Chain.Update as Concrete
 import Cardano.Crypto
 
-import qualified Cardano.Ledger.Spec.STS.UTXO as Abstract
-import qualified Ledger.Core as Abstract
-import qualified Ledger.UTxO as Abstract
+import qualified Byron.Spec.Ledger.STS.UTXO as Abstract
+import qualified Byron.Spec.Ledger.Core as Abstract
+import qualified Byron.Spec.Ledger.UTxO as Abstract
 
 import Test.Cardano.Chain.Elaboration.Keys
 import Test.Cardano.Chain.Genesis.Dummy
