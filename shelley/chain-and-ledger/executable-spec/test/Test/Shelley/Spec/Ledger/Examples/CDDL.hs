@@ -44,7 +44,7 @@ cddlTests :: TestTree
 cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [
-      cddlTest @BHeader           n "header"
+      cddlTest' @BHeader          n "header"
     , cddlGroupTest @BHBody       n "header_body"
     , cddlGroupTest @OCert        n "operational_cert"
     , cddlGroupTest @Addr         n "address"

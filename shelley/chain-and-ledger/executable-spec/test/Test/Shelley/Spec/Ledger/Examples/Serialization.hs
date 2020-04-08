@@ -910,7 +910,7 @@ serializationTests = testGroup "Serialization Tests"
     -- checkEncodingCBOR "block_header"
   , let sig = Maybe.fromJust $ signKES (fst testKESKeys) testBHB 0
     in
-    checkEncodingCBOR "block_header"
+    checkEncodingCBORAnnotated "block_header"
     (BHeader testBHB sig)
     ( (T $ TkListLen 16)
         <> G testBHB
