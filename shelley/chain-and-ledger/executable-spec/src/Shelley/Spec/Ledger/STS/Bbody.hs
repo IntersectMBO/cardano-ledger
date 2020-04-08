@@ -80,10 +80,11 @@ bbodyTransition
      , Signable (DSIGN crypto) (TxBody crypto)
      )
   => TransitionRule (BBODY crypto)
-bbodyTransition = do
-  TRC ( BbodyEnv oslots pp _reserves
-      , BbodyState ls b
-      , Block (BHeader bhb _) txsSeq@(TxSeq txs)) <- judgmentContext
+bbodyTransition = judgmentContext >>=
+  \(TRC ( BbodyEnv oslots pp _reserves
+          , BbodyState ls b
+          , Block (BHeader bhb _) txsSeq@(TxSeq txs))
+   ) -> do
   let hk = hashKey $ bheaderVk bhb
 
   bBodySize txsSeq == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY

@@ -147,9 +147,9 @@ chainTransition
      , VRF.Signable (VRF crypto) Seed
      )
   => TransitionRule (CHAIN crypto)
-chainTransition = do
-  TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _)) <- judgmentContext
-
+chainTransition = judgmentContext >>=
+  \( TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))
+  ) -> do
 
   let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 

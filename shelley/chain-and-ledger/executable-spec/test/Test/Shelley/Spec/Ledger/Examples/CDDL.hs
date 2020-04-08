@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,7 +15,9 @@ module Test.Shelley.Spec.Ledger.Examples.CDDL
 import           Prelude (String)
 import qualified Prelude
 
-import           Cardano.Binary
+import           Cardano.Binary (ToCBOR(..), FromCBOR(..), DecoderError, serialize,
+                                 decodeFullDecoder, serializeEncoding, encodeListLen,
+                                 Annotator, decodeAnnotator)
 import           Cardano.Prelude
 import           Control.Exception (bracket)
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -56,7 +59,7 @@ cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @ProposedPPUpdates n "proposed_protocol_parameter_updates"
     , cddlTest @PParamsUpdate     n "protocol_param_update"
     , cddlTest @Tx                n "transaction"
-    , cddlTest @LaxBlock          n "block"
+    , cddlTest' @LaxBlock         n "block"
     ] <*> pure cddl
   where
     n = 1
@@ -79,7 +82,20 @@ cddlTest n entryName cddlRes = testCase
   $ do
   basecddl <- cddlRes
   let cddl = "output = " <> entryName <> "\n" <> basecddl
-  cddlTestCommon @a serialize fromCBOR n cddl
+  cddlTestCommon @a serialize (decodeFullDecoder "cbor test" fromCBOR) n cddl
+
+cddlTest'
+  :: forall a. (ToCBOR a, FromCBOR (Annotator a), Show a)
+  => Int
+  -> BSL.ByteString
+  -> IO BSL.ByteString
+  -> TestTree
+cddlTest' n entryName cddlRes = testCase
+  ("cddl roundtrip " <> show (typeRep (Proxy @a)))
+  $ do
+  basecddl <- cddlRes
+  let cddl = "output = " <> entryName <> "\n" <> basecddl
+  cddlTestCommon @a serialize (decodeAnnotator "cbor test" fromCBOR) n cddl
 
 cddlGroupTest
   :: forall a. (ToCBORGroup a, FromCBORGroup a, Show a)
@@ -92,13 +108,13 @@ cddlGroupTest n entryName cddlRes = testCase ("cddl roundtrip " <> show (typeRep
   let cddl = "output = [" <> entryName <> "]\n" <> basecddl
   cddlTestCommon @a
     (\x -> serializeEncoding $ encodeListLen (listLen x) <> toCBORGroup x)
-    groupRecord
+    (decodeFullDecoder "cbor test" groupRecord)
     n
     cddl
 
 cddlTestCommon
   :: Show a => (a -> BSL.ByteString)
-  -> (forall s. Decoder s a)
+  -> (BSL.ByteString -> Either DecoderError a)
   -> Int
   -> BSL.ByteString
   -> IO ()
@@ -107,7 +123,7 @@ cddlTestCommon serializer decoder n cddlData = do
     examples <- Char8.lines <$> generateCBORDiagStdIn n cddlData :: IO [BSL.ByteString]
     forM_ examples $ \exampleDiag -> do
       exampleBytes <- diagToBytes exampleDiag
-      decoded <- case decodeFullDecoder "cbor test" decoder exampleBytes of
+      decoded <- case decoder exampleBytes of
         Right x -> pure x
         Left e  ->
           assertFailure $ Prelude.unlines
