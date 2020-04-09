@@ -12,6 +12,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 module Shelley.Spec.Ledger.BlockChain
   ( HashHeader(..)
@@ -20,7 +21,7 @@ module Shelley.Spec.Ledger.BlockChain
   , lastAppliedHash
   , BHBody(..)
   , BHeader(..)
-  , Block(..)
+  , Block(Block)
   , LaxBlock(..)
   , TxSeq(..)
   , bhHash
@@ -47,6 +48,7 @@ where
 
 
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Coerce (coerce)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
@@ -57,14 +59,15 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
-import           Cardano.Binary (Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR),
+import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR),
                      TokenType (TypeNull), decodeListLen, decodeListLenOf, decodeNull,
                      encodeListLen, encodeNull, matchSize, peekTokenType, serialize',
-                     serializeEncoding')
+                     serializeEncoding, serializeEncoding', encodePreEncoded, Decoder,
+                     Annotator(..), annotatorSlice)
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Prelude (LByteString, NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
@@ -292,10 +295,25 @@ instance Crypto crypto
            }
 
 data Block crypto
-  = Block
-    (BHeader crypto)
-    (TxSeq crypto)
-  deriving (Show, Eq)
+  = Block' (BHeader crypto) (TxSeq crypto) LByteString
+
+instance Crypto crypto => Show (Block crypto) where
+  showsPrec n b@(Block h txns)
+    | n >= 10 = ('(':) . showsPrec 0 b . (')':)
+    | otherwise = (<>) $ unwords [ "Block", showsPrec 10 h [], showsPrec 10 txns []]
+
+instance Crypto crypto => Eq (Block crypto) where
+  (Block h txns) == (Block h' txns') = (h == h') && (txns == txns')
+
+pattern Block :: Crypto crypto => BHeader crypto -> TxSeq crypto -> Block crypto
+pattern Block h txns <- Block' h txns _
+  where
+  Block h txns =
+    let bytes = serializeEncoding $
+          encodeListLen (1 + listLen txns) <> toCBOR h <> toCBORGroup txns
+    in Block' h txns bytes
+
+{-# COMPLETE Block #-}
 
 -- |Given a sequence of transactions, return a mapping
 -- from indices in the original sequence to the non-Nothing metadata value
@@ -313,13 +331,10 @@ constructMetaData n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n-1])
 instance Crypto crypto
   => ToCBOR (Block crypto)
  where
-  toCBOR (Block h txns) =
-      encodeListLen (1 + listLen txns)
-        <> toCBOR h
-        <> toCBORGroup txns
+  toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
-blockDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Block crypto)
-blockDecoder lax = do
+blockDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Annotator (Block crypto))
+blockDecoder lax = annotatorSlice $ do
   n <- decodeListLen
   matchSize "Block" 4 n
   header <- fromCBOR
@@ -342,10 +357,10 @@ blockDecoder lax = do
         <> show w <> ")"
       )
   let txns = Seq.zipWith3 cborWitsToTx bodies wits metadata
-  pure $ Block header (TxSeq txns)
+  pure $ Annotator (Block' <$> pure header <*> pure (TxSeq txns))
 
 instance Crypto crypto
-  => FromCBOR (Block crypto)
+  => FromCBOR (Annotator (Block crypto))
  where
   fromCBOR = blockDecoder False
 
@@ -355,9 +370,9 @@ newtype LaxBlock crypto
   deriving ToCBOR via (Block crypto)
 
 instance Crypto crypto
-  => FromCBOR (LaxBlock crypto)
+  => FromCBOR (Annotator (LaxBlock crypto))
  where
-  fromCBOR = LaxBlock <$> blockDecoder True
+  fromCBOR = fmap LaxBlock <$> blockDecoder True
 
 bHeaderSize
   :: forall crypto. (Crypto crypto)
@@ -375,11 +390,11 @@ slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonce (fromIntegral s)
 
 bheader
-  :: Block crypto
+  :: Crypto crypto => Block crypto
   -> BHeader crypto
 bheader (Block bh _) = bh
 
-bbody :: Block crypto -> TxSeq crypto
+bbody :: Crypto crypto => Block crypto -> TxSeq crypto
 bbody (Block _ txs) = txs
 
 bhbody
