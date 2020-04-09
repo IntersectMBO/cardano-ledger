@@ -116,6 +116,9 @@ data Error
   | ProposalTooLarge (TooLarge Natural)
   | SoftwareVersionError SoftwareVersionError
   | SystemTagError SystemTagError
+    -- | The update proposal proposes neither a bump in the protocol or
+    -- application versions.
+  | NullUpdateProposal
   deriving (Eq, Show)
 
 instance ToCBOR Error where
@@ -173,6 +176,9 @@ instance ToCBOR Error where
       encodeListLen 2
         <> toCBOR (12 :: Word8)
         <> toCBOR systemTagError
+    NullUpdateProposal ->
+      encodeListLen 1
+        <> toCBOR (13 :: Word8)
 
 instance FromCBOR Error where
   fromCBOR = do
@@ -194,6 +200,7 @@ instance FromCBOR Error where
       10 -> checkSize 2 >> ProposalTooLarge <$> fromCBOR
       11 -> checkSize 2 >> SoftwareVersionError <$> fromCBOR
       12 -> checkSize 2 >> SystemTagError <$> fromCBOR
+      13 -> checkSize 1 >> pure NullUpdateProposal
       _  -> cborError   $  DecoderErrorUnknownTag "Registration.Error" tag
 
 data TooLarge n = TooLarge
@@ -272,6 +279,9 @@ registerProposalComponents
   -> AProposal ByteString
   -> m State
 registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
+
+  (protocolVersionChanged || softwareVersionChanged)
+    `orThrowError` NullUpdateProposal
 
   -- Register protocol update if we have one
   registeredPUPs' <- if protocolVersionChanged
