@@ -7,6 +7,8 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 module Test.Shelley.Spec.Ledger.Generator.Delegation
   ( genDCert
   , CertCred (..))
@@ -19,6 +21,7 @@ import           Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import           Data.Set ((\\))
 import qualified Data.Set as Set
+import           GHC.Stack (HasCallStack)
 import           Numeric.Natural (Natural)
 
 import           Test.QuickCheck (Gen)
@@ -72,7 +75,8 @@ data CertCred = CoreKeyCred [CoreKeyPair]
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
 genDCert
-  :: KeyPairs
+  :: HasCallStack
+  => KeyPairs
   -> MultiSigPairs
   -> [CoreKeyPair]
   -> VrfKeyPairs
@@ -97,7 +101,8 @@ genDCert keys scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot =
 -- | Generate a RegKey certificate along and also returns the staking credential
 -- (needed to witness the certificate)
 genRegKeyCert
-  :: KeyPairs
+  :: HasCallStack
+  => KeyPairs
   -> MultiSigPairs
   -> DState
   -> Gen (Maybe (DCert, CertCred))
@@ -126,7 +131,8 @@ genRegKeyCert keys scripts delegSt =
 -- | Generate a DeRegKey certificate along with the staking credential, which is
 -- needed to witness the certificate.
 genDeRegKeyCert
-  :: KeyPairs
+  :: HasCallStack
+  => KeyPairs
   -> MultiSigPairs
   -> DState
   -> Gen (Maybe (DCert, CertCred))
@@ -164,7 +170,8 @@ genDeRegKeyCert keys scripts dState =
 -- Returns nothing if there are no registered staking credentials or no
 -- registered pools.
 genDelegation
-  :: KeyPairs
+  :: HasCallStack
+  => KeyPairs
   -> MultiSigPairs
   -> DPState
   -> Gen (Maybe (DCert, CertCred))
@@ -204,7 +211,8 @@ genDelegation keys scripts dpState =
     availablePools = Set.toList $ dom registeredPools
 
 genGenesisDelegation
-  :: KeyPairs
+  :: HasCallStack
+  => KeyPairs
   -> [CoreKeyPair]
   -> DPState
   -> Gen (Maybe (DCert, CertCred))
@@ -231,7 +239,8 @@ genGenesisDelegation keys coreKeys dpState =
 
 -- | Generate and return a RegPool certificate along with its witnessing key.
 genRegPool
-  :: KeyPairs
+  :: HasCallStack
+  => KeyPairs
   -> VrfKeyPairs
   -> DPState
   -> Gen (Maybe (DCert, CertCred))
@@ -248,7 +257,7 @@ genRegPool keys vrfKeys dpState =
   availableVrfKeys = filter (notRegisteredVrf . hashKeyVRF . snd) vrfKeys
 
 -- | Generate PoolParams and the key witness.
-genStakePool :: KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
+genStakePool :: HasCallStack => KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
 genStakePool skeys vrfKeys =
   mkPoolParams
     <$> (QC.elements skeys)
@@ -277,7 +286,7 @@ genStakePool skeys vrfKeys =
      in (pps, snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.
-genDCertRegPool :: KeyPairs -> VrfKeyPairs -> Gen (DCert, CertCred)
+genDCertRegPool :: HasCallStack => KeyPairs -> VrfKeyPairs -> Gen (DCert, CertCred)
 genDCertRegPool skeys vrfKeys = do
   (pps, poolKey) <- genStakePool skeys vrfKeys
   pure (DCertPool (RegPool pps), KeyCred poolKey)
@@ -290,7 +299,8 @@ genDCertRegPool skeys vrfKeys = do
 -- constructed value, return the keypair which corresponds to the selected
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool
-  :: Map KeyHash KeyPair -- indexed keys By StakeHash
+  :: HasCallStack
+  => Map KeyHash KeyPair -- indexed keys By StakeHash
   -> PState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
@@ -321,7 +331,8 @@ genRetirePool keysByStakeHash pState slot =
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards
-  :: SlotNo
+  :: HasCallStack
+  => SlotNo
   -> [CoreKeyPair]
   -> PParams
   -> DState
