@@ -6,6 +6,8 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 module Test.Shelley.Spec.Ledger.Generator.Utxo
   ( genTx
   )
@@ -178,7 +180,8 @@ genTx ks@(KeySpace_ { ksCoreNodes
       pure (Tx txBody' wits' multiSig metadata)
 
 mkTxWits
-  :: TxBody
+  :: HasCallStack
+  => TxBody
   -> [KeyPair]
   -> [CoreKeyPair]
   -> Map AnyKeyHash KeyPair
@@ -191,7 +194,8 @@ mkTxWits txBody keyWits genesisWits keyHashMap msigs =
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody
-  :: Set TxIn
+  :: HasCallStack
+  => Set TxIn
   -> Seq TxOut
   -> Seq DCert
   -> Map RewardAcnt Coin
@@ -217,7 +221,8 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
 calcOutputsFromBalance
-  :: Coin
+  :: HasCallStack
+  => Coin
   -> [Addr]
   -> Coin
   -> (Coin, Seq TxOut)
@@ -265,7 +270,8 @@ pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
 
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 pickWithdrawals
-  :: Map RewardAcnt Coin
+  :: HasCallStack
+  => Map RewardAcnt Coin
   -> Gen (Map RewardAcnt Coin)
 pickWithdrawals wdrls = QC.frequency
   [ (frequencyNoWithdrawals,
@@ -289,7 +295,8 @@ mkWdrlWits _ keyHashMap c@(KeyHashObj _)    = Left $ findPayKeyPairCred c keyHas
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients
-  :: Int
+  :: HasCallStack
+  => Int
   -> KeyPairs
   -> MultiSigPairs
   -> Gen [Addr]
@@ -319,7 +326,7 @@ genRecipients len keys scripts = do
 
   return (zipWith AddrBase payCreds stakeCreds)
 
-genPtrAddrs :: DState -> [Addr] -> Gen [Addr]
+genPtrAddrs :: HasCallStack => DState -> [Addr] -> Gen [Addr]
 genPtrAddrs ds addrs = do
   let pointers = _ptrs ds
 

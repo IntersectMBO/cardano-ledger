@@ -4,6 +4,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllPoolKeys (..)
   , KeySpace(..)
@@ -131,25 +133,25 @@ pattern KeySpace ksCoreNodes ksKeyPairs ksMSigScripts ksVRFKeyPairs
         , ksVRFKeyPairsByHash = mkVRFKeyPairsByHash ksVRFKeyPairs
         }
 
-genBool :: Gen Bool
+genBool :: HasCallStack => Gen Bool
 genBool = QC.arbitraryBoundedRandom
 
-genInteger :: Integer -> Integer -> Gen Integer
+genInteger :: HasCallStack => Integer -> Integer -> Gen Integer
 genInteger lower upper = QC.choose (lower, upper)
 
 -- | Generator for a natural number between 'lower' and 'upper'
-genNatural :: Natural -> Natural -> Gen Natural
+genNatural :: HasCallStack => Natural -> Natural -> Gen Natural
 genNatural lower upper = fromInteger <$> QC.choose (lower', upper')
  where
   lower' = fromIntegral lower
   upper' = fromIntegral upper
 
 -- | Generator for a Word64 between 'lower' and 'upper'
-genWord64 :: Word64 -> Word64 -> Gen Word64
+genWord64 :: HasCallStack => Word64 -> Word64 -> Gen Word64
 genWord64 lower upper = fromIntegral
   <$> genNatural (fromIntegral lower) (fromIntegral upper)
 
-mkKeyPairs :: Word64 -> (KeyPair, KeyPair)
+mkKeyPairs :: HasCallStack => Word64 -> (KeyPair, KeyPair)
 mkKeyPairs n
   = (mkKeyPair_ (2*n), mkKeyPair_ (2*n+1))
   where
@@ -158,7 +160,7 @@ mkKeyPairs n
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
 mkStakeKeyHashMap
-  :: KeyPairs -> Map KeyHash KeyPair
+  :: HasCallStack => KeyPairs -> Map KeyHash KeyPair
 mkStakeKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -166,7 +168,7 @@ mkStakeKeyHashMap keyPairs =
 
 -- | Generate a mapping from key hash (both payment and stake keys) to keypair
 -- from a list of (payment, staking) key pairs.
-mkKeyHashMap :: KeyPairs -> Map AnyKeyHash KeyPair
+mkKeyHashMap :: HasCallStack => KeyPairs -> Map AnyKeyHash KeyPair
 mkKeyHashMap =
   foldl (\m (payKey, stakeKey) ->
            let m' = Map.insert (hashAnyKey $ vKey payKey) payKey m
@@ -174,13 +176,13 @@ mkKeyHashMap =
   Map.empty
 
 -- | Multi-Sig Scripts based on the given key pairs
-mkMSigScripts :: KeyPairs -> MultiSigPairs
+mkMSigScripts :: HasCallStack => KeyPairs -> MultiSigPairs
 mkMSigScripts = map mkScriptsFromKeyPair
 
 -- | Combine a list of multisig pairs into hierarchically structured multi-sig
 -- scripts, list must have at least length 3. Be careful not to call with too
 -- many pairs in order not to create too many of the possible combinations.
-mkMSigCombinations :: MultiSigPairs -> MultiSigPairs
+mkMSigCombinations :: HasCallStack => MultiSigPairs -> MultiSigPairs
 mkMSigCombinations msigs =
   if length msigs < 3 then error "length of input msigs must be at least 3"
   else foldl (++) [] $
@@ -200,10 +202,10 @@ mkMSigCombinations msigs =
                                        , RequireMOf 2 [k2, k4, k6]
                                        , RequireMOf 3 [k2, k4, k6]]]
 
-mkScriptsFromKeyPair :: (KeyPair, KeyPair) -> (MultiSig, MultiSig)
+mkScriptsFromKeyPair :: HasCallStack => (KeyPair, KeyPair) -> (MultiSig, MultiSig)
 mkScriptsFromKeyPair (k0, k1) = (mkScriptFromKey k0, mkScriptFromKey k1)
 
-mkScriptFromKey :: KeyPair -> MultiSig
+mkScriptFromKey :: HasCallStack => KeyPair -> MultiSig
 mkScriptFromKey = (RequireSignature . hashAnyKey . vKey)
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
@@ -271,7 +273,7 @@ findPayScriptFromAddr a scripts =
       error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-pickStakeKey :: KeyPairs -> Gen VKey
+pickStakeKey :: HasCallStack => KeyPairs -> Gen VKey
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
@@ -279,20 +281,20 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
-genTxOut :: [Addr] -> Gen [TxOut]
+genTxOut :: HasCallStack => [Addr] -> Gen [TxOut]
 genTxOut addrs = do
   ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
 -- | Generates a list of 'Coin' values of length between 'lower' and 'upper'
 -- and with values between 'minCoin' and 'maxCoin'.
-genCoinList :: Integer -> Integer -> Int -> Int -> Gen [Coin]
+genCoinList :: HasCallStack => Integer -> Integer -> Int -> Int -> Gen [Coin]
 genCoinList minCoin maxCoin lower upper = do
   len <- QC.choose (lower, upper)
   replicateM len $ genCoin minCoin maxCoin
 
 -- TODO this should be an exponential distribution, not constant
-genCoin :: Integer -> Integer -> Gen Coin
+genCoin :: HasCallStack => Integer -> Integer -> Gen Coin
 genCoin minCoin maxCoin = Coin <$> QC.choose (minCoin, maxCoin)
 
 -- | Generate values the given distribution in 90% of the cases, and values at
@@ -302,7 +304,8 @@ genCoin minCoin maxCoin = Coin <$> QC.choose (minCoin, maxCoin)
 -- linear distributions provided by @hedgehog@ will generate a small percentage
 -- of these (0-1%).
 increasingProbabilityAt
-  :: Gen a
+  :: HasCallStack
+  => Gen a
   -> (a, a)
   -> Gen a
 increasingProbabilityAt gen (lower, upper)
@@ -311,20 +314,21 @@ increasingProbabilityAt gen (lower, upper)
                  , (5, pure upper)
                  ]
 
-mkVRFKeyPairsByHash :: [(SignKeyVRF, VerKeyVRF)] -> Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
+mkVRFKeyPairsByHash :: HasCallStack => [(SignKeyVRF, VerKeyVRF)] -> Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
 mkVRFKeyPairsByHash = Map.fromList . fmap (\p -> (hashKeyVRF (snd p), p))
 
-zero :: UnitInterval
+zero :: HasCallStack => UnitInterval
 zero = unsafeMkUnitInterval 0
 
 -- | Try to map the unit interval to a natural number. We don't care whether
 -- this is surjective. But it should be right inverse to `fromNatural` - that
 -- is, one should be able to recover the `UnitInterval` value used here.
-unitIntervalToNatural :: UnitInterval -> Natural
+unitIntervalToNatural :: HasCallStack => UnitInterval -> Natural
 unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
 
 mkBlock
-  :: HashHeader   -- ^ Hash of previous block
+  :: HasCallStack
+  => HashHeader   -- ^ Hash of previous block
   -> AllPoolKeys  -- ^ All keys in the stake pool
   -> [Tx]         -- ^ Transactions to record
   -> SlotNo       -- ^ Current slot
@@ -373,7 +377,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
 -- we then encode into the fake VRF implementation.
 newtype NatNonce = NatNonce Natural
 
-mkOCert :: AllPoolKeys -> Natural -> KESPeriod -> OCert
+mkOCert :: HasCallStack => AllPoolKeys -> Natural -> KESPeriod -> OCert
 mkOCert pkeys n c0 =
   let (_, (_, vKeyHot)) = head $ hot pkeys
       KeyPair _vKeyCold sKeyCold = cold pkeys in
@@ -383,7 +387,7 @@ mkOCert pkeys n c0 =
    c0
    (sign sKeyCold (vKeyHot, n, c0))
 
-getKESPeriodRenewalNo :: AllPoolKeys -> KESPeriod -> Integer
+getKESPeriodRenewalNo :: HasCallStack => AllPoolKeys -> KESPeriod -> Integer
 getKESPeriodRenewalNo keys (KESPeriod kp) =
   go (hot keys) 0 kp
   where go [] _ _ = error "did not find enough KES renewals"
@@ -394,7 +398,7 @@ getKESPeriodRenewalNo keys (KESPeriod kp) =
 
 -- | True if the given slot is within the last `2 * slotsPrior`
 -- slots of the current epoch.
-tooLateInEpoch :: SlotNo -> Bool
+tooLateInEpoch :: HasCallStack => SlotNo -> Bool
 tooLateInEpoch s = runShelleyBase $ do
   ei <- asks epochInfo
   firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
@@ -403,7 +407,7 @@ tooLateInEpoch s = runShelleyBase $ do
   return (s >= firstSlotNo *- Duration (2 * slotsPrior_))
 
 -- | Account with empty treasury
-genesisAccountState :: AccountState
+genesisAccountState :: HasCallStack => AccountState
 genesisAccountState =
   AccountState
     { _treasury = Coin 0,

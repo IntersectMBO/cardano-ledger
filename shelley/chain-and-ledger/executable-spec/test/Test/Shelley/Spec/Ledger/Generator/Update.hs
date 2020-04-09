@@ -6,6 +6,8 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 module Test.Shelley.Spec.Ledger.Generator.Update
   ( genPParams
   , genUpdate
@@ -16,6 +18,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
+import           GHC.Stack (HasCallStack)
 
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -42,15 +45,15 @@ import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (cold), ge
                      genNatural, genWord64, increasingProbabilityAt, tooLateInEpoch)
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 
-genRationalInThousands :: Integer -> Integer -> Gen Rational
+genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
   (% 1000) <$> genInteger lower upper
 
-genIntervalInThousands :: Integer -> Integer -> Gen UnitInterval
+genIntervalInThousands :: HasCallStack => Integer -> Integer -> Gen UnitInterval
 genIntervalInThousands lower upper =
   unsafeMkUnitInterval <$> genRationalInThousands lower upper
 
-genPParams :: Gen PParams
+genPParams :: HasCallStack => Gen PParams
 genPParams = mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
                        <*> genNatural 0 maxMinFeeB -- _minfeeB
                        <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
@@ -88,7 +91,7 @@ genPParams = mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
     rangeUpTo upper = genNatural low upper
 
 -- keyDecayRate: 0.001-0.1
-genKeyDecayRate :: Gen Rational
+genKeyDecayRate :: HasCallStack => Gen Rational
 genKeyDecayRate = genRationalInThousands 1 100
 
 
@@ -96,22 +99,22 @@ genKeyDecayRate = genRationalInThousands 1 100
 -- NOTE: we need to keep these deposits small, otherwise
 -- when we generate sequences of transactions we will bleed too
 -- much funds into the deposit pool (i.e. funds not available as utxo)
-genPoolDeposit :: Gen Coin
+genPoolDeposit :: HasCallStack => Gen Coin
 genPoolDeposit =
     increasingProbabilityAt
           (Coin <$> genInteger 0 100)
           (Coin 0, Coin 100)
 
 -- poolMinRefund: 0.1-0.7
-genPoolMinRefund :: Gen UnitInterval
+genPoolMinRefund :: HasCallStack => Gen UnitInterval
 genPoolMinRefund = genIntervalInThousands 100 700
 
 -- poolDecayRate: 0.001-0.1
-genPoolDecayRate :: Gen Rational
+genPoolDecayRate :: HasCallStack => Gen Rational
 genPoolDecayRate = genRationalInThousands 1 100
 
 -- Generates a Neutral or actual Nonces with equal frequency
-genExtraEntropy :: Gen Nonce
+genExtraEntropy :: HasCallStack => Gen Nonce
 genExtraEntropy  = QC.frequency [ (1, pure NeutralNonce)
                                 , (1, mkNonce <$> genNatural 1 123)]
 
@@ -123,40 +126,40 @@ low = 50000
 hi = 200000
 
 -- keyMinRefund: 0.1-0.5
-genKeyMinRefund :: Gen UnitInterval
+genKeyMinRefund :: HasCallStack => Gen UnitInterval
 genKeyMinRefund = genIntervalInThousands 100 500
 
 -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
-genEMax :: Gen EpochNo
+genEMax :: HasCallStack => Gen EpochNo
 genEMax = EpochNo <$> genWord64 frequencyLowMaxEpoch 500
 
 -- | nOpt
-genNOpt :: Gen Natural
+genNOpt :: HasCallStack => Gen Natural
 genNOpt  = genNatural 1 100
 
 -- | genKeyDeposit
 -- NOTE: we need to keep these deposits small, otherwise
 -- when we generate sequences of transactions we will bleed too
 -- much funds into the deposit pool (i.e. funds not available as utxo)
-genKeyDeposit :: Gen Coin
+genKeyDeposit :: HasCallStack => Gen Coin
 genKeyDeposit = increasingProbabilityAt
                   (Coin <$> genInteger 0 20)
                   (Coin 0, Coin 20)
 
 -- | a0: 0.01-1.0
-genA0 :: Gen Rational
+genA0 :: HasCallStack => Gen Rational
 genA0 = genRationalInThousands 10 1000
 
 -- | rho: 0.001-0.009
-genRho :: Gen UnitInterval
+genRho :: HasCallStack => Gen UnitInterval
 genRho = genIntervalInThousands 1 9
 
 -- | tau: 0.1-0.3
-genTau :: Gen UnitInterval
+genTau :: HasCallStack => Gen UnitInterval
 genTau = genIntervalInThousands 100 300
 
 -- | activeSlotCoeff: 0.1-1
-genActiveSlotCoeff :: Gen ActiveSlotCoeff
+genActiveSlotCoeff :: HasCallStack => Gen ActiveSlotCoeff
 genActiveSlotCoeff =
   (mkActiveSlotCoeff . unsafeMkUnitInterval)
   <$> QC.elements [0.025, 0.05, 0.075, 0.1, 0.2, 0.5]
@@ -165,18 +168,19 @@ genActiveSlotCoeff =
 -- and we know that we would not ever choose values too small (say below 1/40)
 -- or greater than a 1/2.
 
-genDecentralisationParam :: Gen UnitInterval
+genDecentralisationParam :: HasCallStack => Gen UnitInterval
 genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 -- ^^ TODO jc - generating d=0 takes some care, if there are no registered
 -- stake pools then d=0 deadlocks the system.
 
-genProtocolVersion :: Gen ProtVer
+genProtocolVersion :: HasCallStack => Gen ProtVer
 genProtocolVersion  = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
 genNextProtocolVersion
-  :: PParams
+  :: HasCallStack
+  => PParams
   -> Gen ProtVer
 genNextProtocolVersion pp = do
   QC.elements
@@ -188,7 +192,8 @@ genNextProtocolVersion pp = do
 -- | Generate a proposal for protocol parameter updates for all the given genesis keys.
 -- Return an empty update if it is too late in the epoch for updates.
 genPPUpdate
-  :: SlotNo
+  :: HasCallStack
+  => SlotNo
   -> PParams
   -> [GenKeyHash]
   -> Gen ProposedPPUpdates
@@ -246,7 +251,8 @@ genPPUpdate s pp genesisKeys =
 -- with a 50% chance of having non-empty PPUpdates or AVUpdates
 -- and a 25% chance of both being empty or non-empty
 genUpdateForNodes
-  :: SlotNo
+  :: HasCallStack
+  => SlotNo
   -> EpochNo -- current epoch
   -> [CoreKeyPair]
   -> PParams
@@ -259,7 +265,8 @@ genUpdateForNodes s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate
-  :: SlotNo
+  :: HasCallStack
+  => SlotNo
   -> [(CoreKeyPair, AllPoolKeys)]
   -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> PParams
