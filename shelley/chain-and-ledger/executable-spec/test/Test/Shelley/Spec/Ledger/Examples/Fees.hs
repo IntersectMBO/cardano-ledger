@@ -17,7 +17,7 @@ import qualified Data.Map.Strict as Map (empty, singleton)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
-import           Cardano.Binary (decodeFullDecoder, fromCBOR)
+import           Cardano.Binary (decodeAnnotator, fromCBOR)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), text64)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
@@ -46,7 +46,7 @@ import           Test.Shelley.Spec.Ledger.Utils
 sizeTest :: BSL.ByteString -> Tx -> Integer -> Assertion
 sizeTest b16 tx s = do
   let (b, _) = Base16.decode b16
-  decoded <- case decodeFullDecoder "cbor test" fromCBOR b of
+  decoded <- case decodeAnnotator "cbor test" fromCBOR b of
     Right t -> pure t
     Left e  -> assertFailure $ "sizeTest" <> show e
   (decoded @?= tx) >> (txsize tx @?= s)

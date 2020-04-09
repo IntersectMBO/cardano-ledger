@@ -24,7 +24,7 @@ module Shelley.Spec.Ledger.BlockChain
   , BHeader(BHeader)
   , Block(Block)
   , LaxBlock(..)
-  , TxSeq(..)
+  , TxSeq(TxSeq)
   , bhHash
   , bbHash
   , hashHeaderToNonce
@@ -51,7 +51,6 @@ where
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Coerce (coerce)
-import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
@@ -60,20 +59,20 @@ import           Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
-import           Shelley.Spec.Ledger.MetaData (MetaData)
 
 import           Cardano.Binary (Annotator (..), Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR),
                      TokenType (TypeNull), annotatorSlice, decodeListLen, decodeListLenOf,
                      decodeNull, encodeListLen, encodeNull, encodePreEncoded, matchSize,
-                     peekTokenType, serialize', serializeEncoding, serializeEncoding')
+                     peekTokenType, serialize', serializeEncoding, serializeEncoding', withSlice)
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
-import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..))
+import           Cardano.Prelude (AllowThunksIn (..), ByteString, LByteString,
+                     NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
-                     mkNonce, strictMaybeToMaybe)
+                     mkNonce)
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
@@ -82,10 +81,11 @@ import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue 
 import           Shelley.Spec.Ledger.OCert (OCert (..))
 import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, ProtVer (..), activeSlotLog,
                      activeSlotVal)
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
-                     FromCBORGroup (..), ToCBORGroup (..), mapFromCBOR)
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
+                     ToCBORGroup (..), decodeMap, decodeSeq, encodeFoldableEncoder,
+                     encodeFoldableMapEncoder)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import           Shelley.Spec.Ledger.Tx (Tx (..), cborWitsToTx, txToCBORWits)
+import           Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx)
 import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- |The hash of a Block Header
@@ -98,21 +98,47 @@ deriving instance Crypto crypto => FromCBOR (HashHeader crypto)
 
 instance NoUnexpectedThunks (HashHeader crypto)
 
-newtype TxSeq crypto
-    = TxSeq (StrictSeq (Tx crypto))
-  deriving (Eq, Show)
+data TxSeq crypto
+    = TxSeq'
+    { txSeqTxns' :: !(StrictSeq (Tx crypto))
+    , txSeqBodyBytes :: LByteString
+    , txSeqWitsBytes :: LByteString
+    , txSeqMetadataBytes :: LByteString
+    }
+  deriving (Eq, Show, Generic)
+  deriving NoUnexpectedThunks via
+    AllowThunksIn
+    '[ "txSeqBodyBytes"
+    , "txSeqWitsBytes"
+    , "txSeqMetadataBytes"
+    ] (TxSeq crypto)
+
+
+pattern TxSeq :: Crypto crypto => StrictSeq (Tx crypto) -> TxSeq crypto
+pattern TxSeq xs <- TxSeq' xs _ _ _
+  where
+  TxSeq txns =
+     let serializeFoldable x = serializeEncoding $
+           encodeFoldableEncoder (encodePreEncoded . BSL.toStrict) x
+         metaChunk index = fmap $ \bytes ->
+           toCBOR index <> (encodePreEncoded . BSL.toStrict) bytes
+     in  TxSeq'
+         { txSeqTxns' = txns
+         , txSeqBodyBytes     = serializeFoldable $ txBodyBytes <$> txns
+         , txSeqWitsBytes     = serializeFoldable $ txWitsBytes <$> txns
+         , txSeqMetadataBytes =
+            serializeEncoding . encodeFoldableMapEncoder metaChunk $
+            txMetadataBytes <$> txns
+         }
+
+{-# COMPLETE TxSeq #-}
 
 instance Crypto crypto
   => ToCBORGroup (TxSeq crypto)
  where
-  toCBORGroup (TxSeq txns) =
-       toCBOR bodies
-    <> toCBOR wits
-    <> toCBOR metadata
-      where
-        bodies = CborSeq $ StrictSeq.getSeq $ fmap _body txns
-        wits = CborSeq $ StrictSeq.getSeq $ fmap txToCBORWits txns
-        metadata = extractMetaData txns
+  toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
+     encodePreEncoded $ BSL.toStrict $
+     bodyBytes <> witsBytes <> metadataBytes
   listLen _ = 3
 
 -- | Hash of block body
@@ -136,14 +162,14 @@ bbHash
    . Crypto crypto
   => TxSeq crypto
   -> HashBBody crypto
-bbHash (TxSeq txns) = (HashBBody . coerce) $
-  hash @(HASH crypto) (bodies <> wits <> md)
+bbHash (TxSeq' _ bodies wits md) = (HashBBody . coerce) $
+  hashStrict (hashPart bodies <> hashPart wits <> hashPart md)
   where
-    hashBytes :: forall a. ToCBOR a => a -> Hash.ByteString
-    hashBytes = Hash.getHash . hash @(HASH crypto)
-    bodies = hashBytes . CborSeq . StrictSeq.getSeq $ _body       <$> txns
-    wits =   hashBytes . CborSeq . StrictSeq.getSeq $ txToCBORWits  <$> txns
-    md =     hashBytes           $ extractMetaData txns
+    -- FIXME: hash this with less indirection
+    -- This should be directly hashing the provided bytes with no funny business.
+    hashStrict :: ByteString -> Hash (HASH crypto) ByteString
+    hashStrict = Hash.hashWithSerialiser encodePreEncoded
+    hashPart = Hash.getHash . hashStrict . BSL.toStrict
 
 -- |HashHeader to Nonce
 hashHeaderToNonce :: HashHeader crypto -> Nonce
@@ -155,17 +181,9 @@ data BHeader crypto
     , bHeaderSig' :: !(KESig crypto (BHBody crypto))
     , bHeaderBytes :: !LByteString
     }
-  deriving (Generic)
+  deriving (Generic, Eq, Show)
   deriving NoUnexpectedThunks via
              AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
-
-instance Crypto crypto => Eq (BHeader crypto) where
-  (BHeader a b) == (BHeader a' b') = (a == a') && (b == b')
-
-instance Crypto crypto => Show (BHeader crypto) where
-  showsPrec n b@(BHeader body sig)
-    | n >= 10 = ('(':) .  showsPrec 0 b  . (')':)
-    | otherwise = (<>) $ unwords ["BHeader ", showsPrec 10 body [], showsPrec 10 sig []]
 
 pattern BHeader :: Crypto crypto => BHBody crypto -> KESig crypto (BHBody crypto) -> BHeader crypto
 pattern BHeader bHeaderBody' bHeaderSig' <- BHeader' { bHeaderBody', bHeaderSig' }
@@ -317,15 +335,8 @@ instance Crypto crypto
            }
 
 data Block crypto
-  = Block' !(BHeader crypto) !(TxSeq crypto) !LByteString
-
-instance Crypto crypto => Show (Block crypto) where
-  showsPrec n b@(Block h txns)
-    | n >= 10 = ('(':) . showsPrec 0 b . (')':)
-    | otherwise = (<>) $ unwords [ "Block", showsPrec 10 h [], showsPrec 10 txns []]
-
-instance Crypto crypto => Eq (Block crypto) where
-  (Block h txns) == (Block h' txns') = (h == h') && (txns == txns')
+  = Block' !(BHeader crypto) !(TxSeq crypto) LByteString
+    deriving (Eq, Show)
 
 pattern Block :: Crypto crypto => BHeader crypto -> TxSeq crypto -> Block crypto
 pattern Block h txns <- Block' h txns _
@@ -337,21 +348,10 @@ pattern Block h txns <- Block' h txns _
 
 {-# COMPLETE Block #-}
 
--- |Given a sequence of transactions, return a mapping
--- from indices in the original sequence to the non-Nothing metadata value
-extractMetaData :: StrictSeq (Tx crypto) -> Map Int MetaData
-extractMetaData txns =
-  let metadata =
-          StrictSeq.toStrict
-        . Seq.mapWithIndex (\i -> \t -> (i, _metadata t))
-        . StrictSeq.getSeq
-        $ txns
-  in ((Map.mapMaybe strictMaybeToMaybe) . Map.fromList . toList) metadata
-
 -- |Given a size and a mapping from indices to maybe metadata,
 -- return a sequence whose size is the size paramater and
 -- whose non-Nothing values correspond no the values in the mapping.
-constructMetaData :: Int -> Map Int MetaData -> Seq (Maybe MetaData)
+constructMetaData :: Int -> Map Int a -> Seq (Maybe a)
 constructMetaData n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n-1])
 
 instance Crypto crypto
@@ -364,12 +364,18 @@ blockDecoder lax = annotatorSlice $ do
   n <- decodeListLen
   matchSize "Block" 4 n
   header <- fromCBOR
-  bodies <- unwrapCborSeq <$> fromCBOR
-  wits <- unwrapCborSeq <$> fromCBOR
+  txns <- txSeqDecoder lax
+  pure $ Block' <$> header <*> txns
+
+txSeqDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Annotator (TxSeq crypto))
+txSeqDecoder lax = do
+  (bodies, bodiesAnn) <- withSlice $ decodeSeq (withSlice fromCBOR)
+  (wits, witsAnn) <- withSlice $ decodeSeq (withSlice decodeWits)
   let b = length bodies
       w = length wits
 
-  metadata <- constructMetaData b <$> mapFromCBOR
+  (metadata, metadataAnn) <- withSlice $ constructMetaData b <$>
+    decodeMap fromCBOR (withSlice fromCBOR)
   let m = length metadata
 
   unless (lax || b == w)
@@ -382,8 +388,8 @@ blockDecoder lax = annotatorSlice $ do
         <> show b <> ") and metadata ("
         <> show w <> ")"
       )
-  let txns = Seq.zipWith3 cborWitsToTx bodies wits metadata
-  pure $ Block' <$> header <*> pure (TxSeq (StrictSeq.toStrict txns))
+  let txns = sequenceA $ StrictSeq.toStrict $ Seq.zipWith3 segwitTx bodies wits metadata
+  pure $ TxSeq' <$> txns <*> bodiesAnn <*> witsAnn <*> metadataAnn
 
 instance Crypto crypto
   => FromCBOR (Annotator (Block crypto))

@@ -58,7 +58,7 @@ cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @Update            n "update"
     , cddlTest @ProposedPPUpdates n "proposed_protocol_parameter_updates"
     , cddlTest @PParamsUpdate     n "protocol_param_update"
-    , cddlTest @Tx                n "transaction"
+    , cddlTest' @Tx               n "transaction"
     , cddlTest' @LaxBlock         n "block"
     ] <*> pure cddl
   where
