@@ -59,9 +59,7 @@ ocertTransition
      , KESignable crypto (BHBody crypto)
      )
   => TransitionRule (OCERT crypto)
-ocertTransition = do
-  TRC (env, cs, BHeader bhb sigma) <- judgmentContext
-
+ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
   let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb
       vkey = bheaderVk bhb
       hk = hashKey vkey

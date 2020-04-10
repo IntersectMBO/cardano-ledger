@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -20,7 +21,7 @@ module Shelley.Spec.Ledger.BlockChain
   , LastAppliedBlock(..)
   , lastAppliedHash
   , BHBody(..)
-  , BHeader(..)
+  , BHeader(BHeader)
   , Block(Block)
   , LaxBlock(..)
   , TxSeq(..)
@@ -67,7 +68,7 @@ import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR),
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class as VRF
-import           Cardano.Prelude (LByteString, NoUnexpectedThunks (..))
+import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
@@ -148,29 +149,49 @@ hashHeaderToNonce :: HashHeader crypto -> Nonce
 hashHeaderToNonce = Nonce . coerce
 
 data BHeader crypto
-  = BHeader
-      (BHBody crypto)
-      (KESig crypto (BHBody crypto))
-  deriving (Show, Generic, Eq)
+  = BHeader' {
+      bHeaderBody' :: (BHBody crypto)
+    , bHeaderSig' :: (KESig crypto (BHBody crypto))
+    , bHeaderBytes :: LByteString
+    }
+  deriving (Generic)
+  deriving NoUnexpectedThunks via
+             AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
 
-instance Crypto crypto
-  => NoUnexpectedThunks (BHeader crypto)
+instance Crypto crypto => Eq (BHeader crypto) where
+  (BHeader a b) == (BHeader a' b') = (a == a') && (b == b')
+
+instance Crypto crypto => Show (BHeader crypto) where
+  showsPrec n b@(BHeader body sig)
+    | n >= 10 = ('(':) .  showsPrec 0 b  . (')':)
+    | otherwise = (<>) $ unwords ["BHeader ", showsPrec 10 body [], showsPrec 10 sig []]
+
+pattern BHeader :: Crypto crypto => BHBody crypto -> KESig crypto (BHBody crypto) -> BHeader crypto
+pattern BHeader bHeaderBody' bHeaderSig' <- BHeader' { bHeaderBody', bHeaderSig' }
+  where
+  BHeader body sig =
+    let mkBytes bhBody kESig = serializeEncoding $
+          encodeListLen (listLen bhBody + 1)
+          <> toCBORGroup bhBody
+          <> toCBOR kESig
+     in BHeader' body sig (mkBytes body sig)
+
+{-# COMPLETE BHeader #-}
 
 instance Crypto crypto
   => ToCBOR (BHeader crypto)
   where
-    toCBOR (BHeader bhBody kESig) =
-      encodeListLen (listLen bhBody + 1) <> toCBORGroup bhBody <> toCBOR kESig
+    toCBOR (BHeader' _ _ bytes) = encodePreEncoded (BSL.toStrict bytes)
 
 instance Crypto crypto
-  => FromCBOR (BHeader crypto)
+  => FromCBOR (Annotator (BHeader crypto))
  where
-   fromCBOR = do
+   fromCBOR = annotatorSlice $ do
      n <- decodeListLen
      bhb <- fromCBORGroup
      sig <- fromCBOR
      matchSize "Header" ((fromIntegral . toInteger . listLen) bhb + 1) n
-     pure $ BHeader bhb sig
+     pure $ BHeader' <$> pure bhb <*> pure sig
 
 -- |The previous hash of a block
 data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
@@ -357,7 +378,7 @@ blockDecoder lax = annotatorSlice $ do
         <> show w <> ")"
       )
   let txns = Seq.zipWith3 cborWitsToTx bodies wits metadata
-  pure $ Annotator (Block' <$> pure header <*> pure (TxSeq txns))
+  pure $ Block' <$> header <*> pure (TxSeq txns)
 
 instance Crypto crypto
   => FromCBOR (Annotator (Block crypto))
@@ -398,12 +419,12 @@ bbody :: Crypto crypto => Block crypto -> TxSeq crypto
 bbody (Block _ txs) = txs
 
 bhbody
-  :: BHeader crypto
+  :: Crypto crypto => BHeader crypto
   -> BHBody crypto
 bhbody (BHeader b _) = b
 
 hsig
-  :: BHeader crypto
+  :: Crypto crypto => BHeader crypto
   -> KESig crypto (BHBody crypto)
 hsig (BHeader _ s) = s
 

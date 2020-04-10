@@ -84,10 +84,11 @@ overlayTransition
      , VRF.Signable (VRF crypto) Seed
      )
   => TransitionRule (OVERLAY crypto)
-overlayTransition = do
-  TRC ( OverlayEnv pp osched eta0 pd (GenDelegs genDelegs)
+overlayTransition = judgmentContext >>=
+  \( TRC ( OverlayEnv pp osched eta0 pd (GenDelegs genDelegs)
       , cs
-      , bh@(BHeader bhb _)) <- judgmentContext
+      , bh@(BHeader bhb _))
+   ) -> do
   let vk = bheaderVk bhb
       vkh = hashKey vk
 
