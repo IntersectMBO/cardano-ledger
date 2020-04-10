@@ -283,6 +283,7 @@ registerProposal env st proposal = do
     subEnv =
       Registration.Environment
         protocolMagic
+        currentSlot
         adoptedProtocolVersion
         adoptedProtocolParameters
         appVersions
