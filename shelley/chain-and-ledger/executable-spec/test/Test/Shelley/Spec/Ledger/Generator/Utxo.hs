@@ -43,10 +43,8 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash,
                      Credential, DCert, DPState, DState, KeyPair, KeyPairs, MultiSig,
                      MultiSigPairs, RewardAcnt, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState, Update,
                      WitVKey)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (frequencyAFewWithdrawals,
-                     frequencyNoWithdrawals, frequencyPotentiallyManyWithdrawals,
-                     maxAFewWithdrawals, maxNumGenInputs, minNumGenInputs)
-import           Test.Shelley.Spec.Ledger.Generator.Core (KeySpace(..), findPayKeyPairAddr,
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..), KeySpace(..), findPayKeyPairAddr,
                      findPayKeyPairCred, findPayScriptFromAddr, findStakeScriptFromCred,
                      genNatural)
 import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
@@ -58,15 +56,16 @@ import           Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 -- Selects unspent outputs and spends the funds on a some valid addresses.
 -- Also generates valid certificates.
 genTx :: HasCallStack
-      => KeySpace
+      => GenEnv
       -> LedgerEnv
       -> (UTxOState, DPState)
       -> Gen Tx
-genTx ks@(KeySpace_ { ksCoreNodes
+genTx ge@(GenEnv KeySpace_ { ksCoreNodes
                     , ksKeyPairs
                     , ksKeyPairsByHash
                     , ksKeyPairsByStakeHash
-                    , ksMSigScripts })
+                    , ksMSigScripts }
+                  constants)
       (LedgerEnv slot txIx pparams reserves)
       (utxoSt@(UTxOState utxo _ _ _), dpState)
       = do
@@ -76,9 +75,9 @@ genTx ks@(KeySpace_ { ksCoreNodes
 
   -- inputs
   (witnessedInputs, spendingBalanceUtxo) <-
-    pickSpendingInputs scripts' ksKeyPairsByHash utxo
+    pickSpendingInputs constants scripts' ksKeyPairsByHash utxo
 
-  wdrls <- pickWithdrawals ((_rewards . _dstate) dpState)
+  wdrls <- pickWithdrawals constants ((_rewards . _dstate) dpState)
 
   let wdrlCredentials = fmap (mkWdrlWits scripts' ksKeyPairsByHash) (fmap getRwdCred (Map.keys wdrls))
       wdrlWitnesses = Either.lefts wdrlCredentials
@@ -101,7 +100,7 @@ genTx ks@(KeySpace_ { ksCoreNodes
 
   -- certificates
   (certs, certCreds, deposits_, refunds_)
-    <- genDCerts ks pparams dpState slot ttl txIx reserves
+    <- genDCerts ge pparams dpState slot ttl txIx reserves
 
   if spendingBalance < deposits_
     then QC.discard
@@ -127,7 +126,7 @@ genTx ks@(KeySpace_ { ksCoreNodes
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
-      genUpdate slot ksCoreNodes ksKeyPairsByStakeHash pparams (utxoSt, dpState)
+      genUpdate constants slot ksCoreNodes ksKeyPairsByStakeHash pparams (utxoSt, dpState)
 
     -- this is the "model" `TxBody` which is used to calculate the fees
     --
@@ -247,11 +246,12 @@ calcOutputsFromBalance balance_ addrs fee =
 -- `findPayScriptFromAddr` will fail by not finding the matching keys or scripts.
 pickSpendingInputs
   :: HasCallStack
-  => MultiSigPairs
+  => Constants
+  -> MultiSigPairs
   -> Map AnyKeyHash KeyPair
   -> UTxO
   -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
-pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
+pickSpendingInputs Constants { minNumGenInputs, maxNumGenInputs} scripts keyHashMap (UTxO utxo) = do
   selectedUtxo <- take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
                        <*> QC.shuffle (Map.toList utxo)
 
@@ -271,9 +271,17 @@ pickSpendingInputs scripts keyHashMap (UTxO utxo) = do
 -- | Select a subset of the reward accounts to use for reward withdrawals.
 pickWithdrawals
   :: HasCallStack
-  => Map RewardAcnt Coin
+  => Constants
+  -> Map RewardAcnt Coin
   -> Gen (Map RewardAcnt Coin)
-pickWithdrawals wdrls = QC.frequency
+pickWithdrawals
+  Constants
+    { frequencyNoWithdrawals,
+      frequencyAFewWithdrawals,
+      frequencyPotentiallyManyWithdrawals,
+      maxAFewWithdrawals
+    }
+  wdrls = QC.frequency
   [ (frequencyNoWithdrawals,
      pure Map.empty)
   , (frequencyAFewWithdrawals,

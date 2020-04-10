@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
@@ -16,7 +17,7 @@ import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
-
+import qualified Test.QuickCheck.Gen
 import           Cardano.Binary (serialize')
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
@@ -38,18 +39,44 @@ import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDele
                      pattern Delegate, pattern Delegation, pattern RegKey, pattern ScriptHashObj,
                      pattern TxOut, Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, CHAIN, DCert, LEDGER, Tx,
-                     TxOut)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (maxCertsPerTx)
-import           Test.Shelley.Spec.Ledger.Generator.Presets (keySpace)
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..))
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ChainState, Block, CHAIN, DCert, LEDGER, Tx,
+                     TxOut, DPState, UTxOState)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+import           Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import           Test.Shelley.Spec.Ledger.Utils
+import qualified Control.State.Transition.Extended
+
+
+
+genesisChainState ::
+  Maybe
+    ( Control.State.Transition.Extended.IRC CHAIN ->
+      Test.QuickCheck.Gen.Gen
+        ( Either
+            a
+            Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.ChainState
+        )
+    )
+genesisChainState = Just $ mkGenesisChainState (geConstants genEnv)
+
+genesisLedgerState
+  :: Maybe
+      (Control.State.Transition.Extended.IRC LEDGER
+        -> Test.QuickCheck.Gen.Gen
+            (Either
+                a
+                (Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.UTxOState,
+                Test.Shelley.Spec.Ledger.ConcreteCryptoTypes.DPState)))
+genesisLedgerState = Just $ mkGenesisLedgerState (geConstants genEnv)
 
 relevantCasesAreCovered :: Property
 relevantCasesAreCovered = withMaxSuccess 200 . property $ do
   let tl = 100
-  forAllTraceFromInitState @CHAIN testGlobals tl keySpace (Just mkGenesisChainState) $ \tr -> do
+      GenEnv _ c@(Constants{maxCertsPerTx}) = genEnv
+  forAllTraceFromInitState @CHAIN testGlobals tl genEnv genesisChainState $ \tr -> do
     let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
         bs = traceSignals OldestFirst tr
         txs = concat (blockTxs <$> bs)
@@ -95,7 +122,7 @@ relevantCasesAreCovered = withMaxSuccess 200 . property $ do
               "at most 60% of transactions have no certificates"
 
      , cover_ 60
-              (0.1 <= maxCertsRatio (certsByTx txs))
+              (0.1 <= maxCertsRatio c (certsByTx txs))
               ("at least 10% of transactions have " <> (show maxCertsPerTx) <> " certificates")
 
      , cover_ 20
@@ -155,8 +182,8 @@ noCertsRatio :: [[DCert]] -> Double
 noCertsRatio = lenRatio (filter null)
 
 -- | Ratio of the number of certificate groups of max size and the number of groups
-maxCertsRatio :: [[DCert]] -> Double
-maxCertsRatio = lenRatio (filter ((== maxCertsPerTx) . fromIntegral . length))
+maxCertsRatio :: Constants -> [[DCert]] -> Double
+maxCertsRatio Constants{maxCertsPerTx} = lenRatio (filter ((== maxCertsPerTx) . fromIntegral . length))
 
 -- | Extract non-trivial protocol param  updates from the given transactions
 ppUpdatesByTx :: [Tx] -> [[PParamsUpdate]]
@@ -197,7 +224,7 @@ lenRatio f xs
 
 onlyValidLedgerSignalsAreGenerated :: Property
 onlyValidLedgerSignalsAreGenerated = withMaxSuccess 200 $
-    onlyValidSignalsAreGeneratedFromInitState @LEDGER testGlobals 100 keySpace (Just mkGenesisLedgerState)
+    onlyValidSignalsAreGeneratedFromInitState @LEDGER testGlobals 100 genEnv genesisLedgerState
 
 -- | Check that the abstract transaction size function
 -- actually bounds the number of bytes in the serialized transaction.
@@ -205,7 +232,7 @@ propAbstractSizeBoundsBytes :: Property
 propAbstractSizeBoundsBytes = property $ do
   let tl = 100
       numBytes = toInteger . BS.length . serialize'
-  forAllTraceFromInitState @LEDGER testGlobals tl keySpace (Just mkGenesisLedgerState) $ \tr -> do
+  forAllTraceFromInitState @LEDGER testGlobals tl genEnv genesisLedgerState $ \tr -> do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
     all (\tx -> txsize tx >= numBytes tx) txs
@@ -223,14 +250,14 @@ propAbstractSizeNotTooBig = property $ do
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
       notTooBig txb = txsize txb <= acceptableMagnitude * numBytes txb
-  forAllTraceFromInitState @LEDGER testGlobals tl keySpace (Just mkGenesisLedgerState) $ \tr -> do
+  forAllTraceFromInitState @LEDGER testGlobals tl genEnv genesisLedgerState $ \tr -> do
     let txs :: [Tx]
         txs = traceSignals OldestFirst tr
     all notTooBig txs
 
 onlyValidChainSignalsAreGenerated :: Property
 onlyValidChainSignalsAreGenerated = withMaxSuccess 100 $
-  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 100 keySpace (Just mkGenesisChainState)
+  onlyValidSignalsAreGeneratedFromInitState @CHAIN testGlobals 100 genEnv genesisChainState
 
 epochBoundariesInTrace :: [Block] -> Int
 epochBoundariesInTrace bs

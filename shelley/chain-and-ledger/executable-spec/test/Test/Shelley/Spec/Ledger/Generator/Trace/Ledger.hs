@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -32,9 +33,8 @@ import           Shelley.Spec.Ledger.TxData (Ix)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (DPState, LEDGER, LEDGERS, Tx,
                      UTxOState)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (maxGenesisUTxOouts, maxTxsPerBlock,
-                     minGenesisUTxOouts)
-import           Test.Shelley.Spec.Ledger.Generator.Core (KeySpace(..), genCoin)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..), genCoin)
 import           Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import           Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import           Test.Shelley.Spec.Ledger.Shrinkers (shrinkTx)
@@ -43,11 +43,11 @@ import           Test.Shelley.Spec.Ledger.Utils (runShelleyBase)
 
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
-instance TQC.HasTrace LEDGER KeySpace where
-  envGen _ =
+instance TQC.HasTrace LEDGER GenEnv where
+  envGen GenEnv {geConstants} =
     LedgerEnv <$> pure (SlotNo 0)
               <*> pure 0
-              <*> genPParams
+              <*> genPParams geConstants
               <*> genCoin 1000000 10000000
 
   sigGen = genTx
@@ -57,14 +57,15 @@ instance TQC.HasTrace LEDGER KeySpace where
   type BaseEnv LEDGER = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals
 
-instance TQC.HasTrace LEDGERS KeySpace where
-  envGen _ =
+instance TQC.HasTrace LEDGERS GenEnv where
+  envGen GenEnv{geConstants} =
     LedgersEnv <$> pure (SlotNo 0)
-               <*> genPParams
+               <*> genPParams geConstants
                <*> genCoin 1000000 10000000
 
   -- a LEDGERS signal is a sequence of LEDGER signals
-  sigGen ks (LedgersEnv slotNo pParams reserves) (LedgerState utxoSt dpSt) = do
+  sigGen ge@(GenEnv _ Constants{maxTxsPerBlock})
+         (LedgersEnv slotNo pParams reserves) (LedgerState utxoSt dpSt) = do
       (_, _, txs') <-
         foldM genAndApplyTx
               (utxoSt, dpSt, [])
@@ -78,7 +79,7 @@ instance TQC.HasTrace LEDGERS KeySpace where
         -> Gen (UTxOState, DPState, [Tx])
       genAndApplyTx (u, dp, txs) ix = do
         let ledgerEnv = LedgerEnv slotNo ix pParams reserves
-        tx <- genTx ks ledgerEnv (u, dp)
+        tx <- genTx ge ledgerEnv (u, dp)
 
         let res = runShelleyBase $ applySTS @LEDGER (TRC (ledgerEnv, (u, dp), tx))
         pure $ case res of
@@ -99,9 +100,10 @@ instance TQC.HasTrace LEDGERS KeySpace where
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState
-  :: IRC LEDGER
+  :: Constants
+  -> IRC LEDGER
   -> Gen (Either a (UTxOState, DPState))
-mkGenesisLedgerState _ = do
-  utxo0 <- genUtxo0 minGenesisUTxOouts maxGenesisUTxOouts
-  let (LedgerState utxoSt dpSt) = genesisState genesisDelegs0 utxo0
+mkGenesisLedgerState c _ = do
+  utxo0 <- genUtxo0 c
+  let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0
   pure $ Right (utxoSt, dpSt)

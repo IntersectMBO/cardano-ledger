@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -39,9 +40,8 @@ import           Shelley.Spec.Ledger.UTxO (balance)
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, ChainState, GenDelegs,
                      HashHeader, KeyHash)
 import           Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (maxGenesisUTxOouts, maxSlotTrace,
-                     minGenesisUTxOouts, minSlotTrace)
-import           Test.Shelley.Spec.Ledger.Generator.Core (KeySpace(..))
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..))
 import           Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import           Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import           Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
@@ -49,14 +49,15 @@ import           Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
-instance HasTrace CHAIN KeySpace where
+instance HasTrace CHAIN GenEnv where
   -- the current slot needs to be large enough to allow for many blocks
   -- to be processed (in large CHAIN traces)
-  envGen _ = SlotNo <$> QC.choose (fromIntegral minSlotTrace, fromIntegral maxSlotTrace)
+  envGen (GenEnv _ Constants{minSlotTrace, maxSlotTrace})
+    = SlotNo <$> QC.choose (fromIntegral minSlotTrace, fromIntegral maxSlotTrace)
 
-  sigGen ks env st =
+  sigGen ge env st =
     genBlock
-      ks
+      ge
       env
       st
 
@@ -77,12 +78,13 @@ lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
 -- To achieve this we (1) use 'IRC CHAIN' (the "initial rule context") instead of simply 'Chain Env'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState
-  :: IRC CHAIN
+  :: Constants
+  -> IRC CHAIN
   -> Gen (Either a ChainState)
-mkGenesisChainState (IRC _slotNo) = do
-  utxo0 <- genUtxo0 minGenesisUTxOouts maxGenesisUTxOouts
+mkGenesisChainState constants (IRC _slotNo) = do
+  utxo0 <- genUtxo0 constants
 
-  pParams <- genPParams
+  pParams <- genPParams constants
   let osched_ = runShelleyBase $ overlaySchedule
                 epoch0
                 (Map.keysSet delegs0)
@@ -99,7 +101,7 @@ mkGenesisChainState (IRC _slotNo) = do
     (hashHeaderToNonce lastByronHeaderHash)
   where
     epoch0 = EpochNo 0
-    delegs0 = genesisDelegs0
+    delegs0 = genesisDelegs0 constants
 
 mkOCertIssueNos
   :: GenDelegs

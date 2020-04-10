@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -39,8 +40,7 @@ import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DPState, GenKeyHash,
                      KeyHash, KeyPair, ProposedPPUpdates, UTxOState, Update)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (frequencyLowMaxEpoch,
-                     frequencyTxUpdates, maxMinFeeA, maxMinFeeB)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (cold), genInteger,
                      genNatural, genWord64, increasingProbabilityAt, tooLateInEpoch)
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
@@ -53,25 +53,26 @@ genIntervalInThousands :: HasCallStack => Integer -> Integer -> Gen UnitInterval
 genIntervalInThousands lower upper =
   unsafeMkUnitInterval <$> genRationalInThousands lower upper
 
-genPParams :: HasCallStack => Gen PParams
-genPParams = mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
-                       <*> genNatural 0 maxMinFeeB -- _minfeeB
-                       <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
-                       <*> genKeyDeposit
-                       <*> genKeyMinRefund
-                       <*> genKeyDecayRate
-                       <*> genPoolDeposit
-                       <*> genPoolMinRefund
-                       <*> genPoolDecayRate
-                       <*> genEMax
-                       <*> genNOpt
-                       <*> genA0
-                       <*> genRho
-                       <*> genTau
-                       <*> genActiveSlotCoeff
-                       <*> genDecentralisationParam
-                       <*> genExtraEntropy
-                       <*> genProtocolVersion
+genPParams :: HasCallStack => Constants -> Gen PParams
+genPParams c@(Constants {maxMinFeeA, maxMinFeeB})
+  = mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
+              <*> genNatural 0 maxMinFeeB -- _minfeeB
+              <*> szGen  -- (maxBBSize, maxBHSize, maxTxSize)
+              <*> genKeyDeposit
+              <*> genKeyMinRefund
+              <*> genKeyDecayRate
+              <*> genPoolDeposit
+              <*> genPoolMinRefund
+              <*> genPoolDecayRate
+              <*> genEMax c
+              <*> genNOpt
+              <*> genA0
+              <*> genRho
+              <*> genTau
+              <*> genActiveSlotCoeff
+              <*> genDecentralisationParam
+              <*> genExtraEntropy
+              <*> genProtocolVersion
   where
 
     -- | Generates max block, header and transaction size. First generates the
@@ -130,8 +131,12 @@ genKeyMinRefund :: HasCallStack => Gen UnitInterval
 genKeyMinRefund = genIntervalInThousands 100 500
 
 -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
-genEMax :: HasCallStack => Gen EpochNo
-genEMax = EpochNo <$> genWord64 frequencyLowMaxEpoch 500
+genEMax
+  :: HasCallStack
+  => Constants
+  -> Gen EpochNo
+genEMax Constants{frequencyLowMaxEpoch}
+  = EpochNo <$> genWord64 frequencyLowMaxEpoch 500
 
 -- | nOpt
 genNOpt :: HasCallStack => Gen Natural
@@ -193,11 +198,12 @@ genNextProtocolVersion pp = do
 -- Return an empty update if it is too late in the epoch for updates.
 genPPUpdate
   :: HasCallStack
-  => SlotNo
+  => Constants
+  -> SlotNo
   -> PParams
   -> [GenKeyHash]
   -> Gen ProposedPPUpdates
-genPPUpdate s pp genesisKeys =
+genPPUpdate (c@Constants{maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
   if (tooLateInEpoch s)
     then
       pure (ProposedPPUpdates Map.empty)
@@ -213,7 +219,7 @@ genPPUpdate s pp genesisKeys =
       poolDeposit           <- genPoolDeposit
       poolMinRefund         <- genPoolMinRefund
       poolDecayRate         <- genPoolDecayRate
-      eMax                  <- genEMax
+      eMax                  <- genEMax c
       nopt                  <- genNOpt
       a0                    <- genA0
       rho                   <- genRho
@@ -252,38 +258,43 @@ genPPUpdate s pp genesisKeys =
 -- and a 25% chance of both being empty or non-empty
 genUpdateForNodes
   :: HasCallStack
-  => SlotNo
+  => Constants
+  -> SlotNo
   -> EpochNo -- current epoch
   -> [CoreKeyPair]
   -> PParams
   -> Gen (Maybe Update)
-genUpdateForNodes s e coreKeys pp =
+genUpdateForNodes c s e coreKeys pp =
   Just <$> (Update <$> genPPUpdate_ <*> pure e)
   where
     genesisKeys = hashKey . vKey <$> coreKeys
-    genPPUpdate_ = genPPUpdate s pp genesisKeys
+    genPPUpdate_ = genPPUpdate c s pp genesisKeys
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate
   :: HasCallStack
-  => SlotNo
+  => Constants
+  -> SlotNo
   -> [(CoreKeyPair, AllPoolKeys)]
   -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> PParams
   -> (UTxOState, DPState)
   -> Gen (Maybe Update, [KeyPair])
-genUpdate s coreKeyPairs keysByStakeHash pp (_utxoSt, delegPoolSt) = do
-  nodes <- take 5 <$> QC.shuffle coreKeyPairs
+genUpdate
+  c@(Constants{frequencyTxUpdates})
+  s coreKeyPairs keysByStakeHash pp (_utxoSt, delegPoolSt)
+  = do
+    nodes <- take 5 <$> QC.shuffle coreKeyPairs
 
-  let e = epochFromSlotNo s
-      (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
-      genesisKeys = (fst . unzip) nodes
-      updateWitnesses = latestPoolColdKey genDelegs <$> nodes
+    let e = epochFromSlotNo s
+        (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
+        genesisKeys = (fst . unzip) nodes
+        updateWitnesses = latestPoolColdKey genDelegs <$> nodes
 
-  QC.frequency [ ( frequencyTxUpdates
-                 , (,updateWitnesses) <$> genUpdateForNodes s e genesisKeys pp)
-               , ( 100 - frequencyTxUpdates
-                 , pure (Nothing, []))]
+    QC.frequency [ ( frequencyTxUpdates
+                  , (,updateWitnesses) <$> genUpdateForNodes c s e genesisKeys pp)
+                , ( 100 - frequencyTxUpdates
+                  , pure (Nothing, []))]
 
   where
     -- | Lookup the cold key for the given node in the genesis delegations map.

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
@@ -47,12 +48,7 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DCer
                      KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
                      VrfKeyPairs, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (frequencyDeRegKeyCert,
-                     frequencyDelegationCert, frequencyGenesisDelegationCert,
-                     frequencyKeyCredDeReg, frequencyKeyCredDelegation, frequencyKeyCredReg,
-                     frequencyLowMaxEpoch, frequencyMIRCert, frequencyRegKeyCert,
-                     frequencyRegPoolCert, frequencyRetirePoolCert, frequencyScriptCredDeReg,
-                     frequencyScriptCredDelegation, frequencyScriptCredReg)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
 import           Test.Shelley.Spec.Ledger.Generator.Core (genCoinList, genInteger, genWord64,
                      toCred, tooLateInEpoch)
 
@@ -76,7 +72,8 @@ data CertCred = CoreKeyCred [CoreKeyPair]
 -- and we generate more delegations than registrations of keys/pools.
 genDCert
   :: HasCallStack
-  => KeyPairs
+  => Constants
+  -> KeyPairs
   -> MultiSigPairs
   -> [CoreKeyPair]
   -> VrfKeyPairs
@@ -85,15 +82,24 @@ genDCert
   -> DPState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
-genDCert keys scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot =
-  QC.frequency [ (frequencyRegKeyCert, genRegKeyCert keys scripts dState)
-               , (frequencyRegPoolCert, genRegPool keys vrfKeys dpState)
-               , (frequencyDelegationCert, genDelegation keys scripts dpState)
-               , (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState)
-               , (frequencyDeRegKeyCert, genDeRegKeyCert keys scripts dState)
-               , (frequencyRetirePoolCert, genRetirePool keysByStakeHash pState slot)
-               , (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
-               ]
+genDCert
+  c@(Constants{frequencyRegKeyCert
+              , frequencyRegPoolCert
+              , frequencyDelegationCert
+              , frequencyGenesisDelegationCert
+              , frequencyDeRegKeyCert
+              , frequencyRetirePoolCert
+              , frequencyMIRCert
+              })
+  keys scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot =
+    QC.frequency [ (frequencyRegKeyCert, genRegKeyCert c keys scripts dState)
+                , (frequencyRegPoolCert, genRegPool keys vrfKeys dpState)
+                , (frequencyDelegationCert, genDelegation c keys scripts dpState)
+                , (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState)
+                , (frequencyDeRegKeyCert, genDeRegKeyCert c keys scripts dState)
+                , (frequencyRetirePoolCert, genRetirePool c keysByStakeHash pState slot)
+                , (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
+                ]
  where
   dState = _dstate dpState
   pState = _pstate dpState
@@ -102,27 +108,30 @@ genDCert keys scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot =
 -- (needed to witness the certificate)
 genRegKeyCert
   :: HasCallStack
-  => KeyPairs
+  => Constants
+  -> KeyPairs
   -> MultiSigPairs
   -> DState
   -> Gen (Maybe (DCert, CertCred))
-genRegKeyCert keys scripts delegSt =
-  QC.frequency
-    [ ( frequencyKeyCredReg
-      , case availableKeys of
-          [] -> pure Nothing
-          _  -> do
-            (_payKey, stakeKey) <- QC.elements availableKeys
-            pure $ Just ( DCertDeleg (RegKey (toCred stakeKey))
-                        , NoCred))
-    , ( frequencyScriptCredReg
-      , case availableScripts of
-          [] -> pure Nothing
-          _  -> do
-            (_, stakeScript) <- QC.elements availableScripts
-            pure $ Just ( DCertDeleg (RegKey (scriptToCred stakeScript))
-                        , NoCred))
-    ]
+genRegKeyCert
+  Constants{frequencyKeyCredReg, frequencyScriptCredReg}
+  keys scripts delegSt =
+    QC.frequency
+      [ ( frequencyKeyCredReg
+        , case availableKeys of
+            [] -> pure Nothing
+            _  -> do
+              (_payKey, stakeKey) <- QC.elements availableKeys
+              pure $ Just ( DCertDeleg (RegKey (toCred stakeKey))
+                          , NoCred))
+      , ( frequencyScriptCredReg
+        , case availableScripts of
+            [] -> pure Nothing
+            _  -> do
+              (_, stakeScript) <- QC.elements availableScripts
+              pure $ Just ( DCertDeleg (RegKey (scriptToCred stakeScript))
+                          , NoCred))
+      ]
   where
     notRegistered k = k ∉ dom (_stkCreds delegSt)
     availableKeys = filter (notRegistered . toCred . snd) keys
@@ -132,11 +141,12 @@ genRegKeyCert keys scripts delegSt =
 -- needed to witness the certificate.
 genDeRegKeyCert
   :: HasCallStack
-  => KeyPairs
+  => Constants
+  -> KeyPairs
   -> MultiSigPairs
   -> DState
   -> Gen (Maybe (DCert, CertCred))
-genDeRegKeyCert keys scripts dState =
+genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys scripts dState =
   QC.frequency
   [ ( frequencyKeyCredDeReg
     , case availableKeys of
@@ -171,11 +181,13 @@ genDeRegKeyCert keys scripts dState =
 -- registered pools.
 genDelegation
   :: HasCallStack
-  => KeyPairs
+  => Constants
+  -> KeyPairs
   -> MultiSigPairs
   -> DPState
   -> Gen (Maybe (DCert, CertCred))
-genDelegation keys scripts dpState =
+genDelegation Constants {frequencyKeyCredDelegation, frequencyScriptCredDelegation}
+              keys scripts dpState =
   if null availablePools
     then
       pure Nothing
@@ -300,11 +312,12 @@ genDCertRegPool skeys vrfKeys = do
 -- `KeyHash`, by doing a lookup in the set of `availableKeys`.
 genRetirePool
   :: HasCallStack
-  => Map KeyHash KeyPair -- indexed keys By StakeHash
+  => Constants
+  -> Map KeyHash KeyPair -- indexed keys By StakeHash
   -> PState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
-genRetirePool keysByStakeHash pState slot =
+genRetirePool Constants{frequencyLowMaxEpoch} keysByStakeHash pState slot =
   if (null retireable)
      then pure Nothing
      else (\keyHash epoch ->

@@ -51,7 +51,8 @@ import           Shelley.Spec.Ledger.UTxO (balance)
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (DELEG, DELEGS, LEDGER, POOL,
                      StakeCreds, StakePools, UTXO, UTXOW, Wdrl)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
-import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (keySpace)
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(geConstants))
+import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import qualified Test.Shelley.Spec.Ledger.Rules.TestDeleg as TestDeleg
 import qualified Test.Shelley.Spec.Ledger.Rules.TestDelegs as TestDelegs
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPool as TestPool
@@ -258,7 +259,7 @@ forAllLedgerTrace
   -> Property
 forAllLedgerTrace prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
-    forAllTraceFromInitState testGlobals traceLen Preset.keySpace (Just mkGenesisLedgerState) prop
+    forAllTraceFromInitState testGlobals traceLen Preset.genEnv (Just $ mkGenesisLedgerState (geConstants Preset.genEnv)) prop
 
 -- | Transform LEDGER `sourceSignalTargets`s to DELEG ones.
 ledgerToDelegSsts

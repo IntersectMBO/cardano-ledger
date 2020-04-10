@@ -43,8 +43,8 @@ import           Shelley.Spec.Ledger.TxData (Ix, Ptr (..))
 import           Shelley.Spec.Ledger.UTxO (totalDeposits)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (DCert, DELPL, DPState)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (maxCertsPerTx)
-import           Test.Shelley.Spec.Ledger.Generator.Core (KeySpace(..))
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..), KeySpace(..))
 import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import           Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
@@ -84,21 +84,33 @@ certsTransition = do
 instance Embed DELPL CERTS where
   wrapFailed = CertsFailure
 
-instance QC.HasTrace CERTS KeySpace where
+instance QC.HasTrace CERTS GenEnv where
   envGen _ = error "HasTrace CERTS - envGen not required"
 
-  sigGen KeySpace_ { ksCoreNodes, ksKeyPairs, ksKeyPairsByStakeHash
-                   , ksMSigScripts, ksVRFKeyPairs }
-        (slot, _txIx, pparams, _reserves) (dpState, _certIx) =
-    genDCert
-      ksKeyPairs
-      ksMSigScripts
-      (fst <$> ksCoreNodes)
-      ksVRFKeyPairs
-      ksKeyPairsByStakeHash
-      pparams
-      dpState
-      slot
+  sigGen
+    ( GenEnv
+        ( KeySpace_
+            { ksCoreNodes,
+              ksKeyPairs,
+              ksKeyPairsByStakeHash,
+              ksMSigScripts,
+              ksVRFKeyPairs
+            }
+          )
+        constants
+      )
+    (slot, _txIx, pparams, _reserves)
+    (dpState, _certIx) =
+      genDCert
+        constants
+        ksKeyPairs
+        ksMSigScripts
+        (fst <$> ksCoreNodes)
+        ksVRFKeyPairs
+        ksKeyPairsByStakeHash
+        pparams
+        dpState
+        slot
 
   shrinkSignal = const []
 
@@ -108,7 +120,7 @@ instance QC.HasTrace CERTS KeySpace where
 -- | Generate certificates and also return the associated witnesses and
 -- deposits and refunds required.
 genDCerts
-  :: KeySpace
+  :: GenEnv
   -> PParams
   -> DPState
   -> SlotNo
@@ -116,13 +128,23 @@ genDCerts
   -> Natural
   -> Coin
   -> Gen (Seq DCert, [CertCred], Coin, Coin)
-genDCerts ks@(KeySpace_ { ksKeyPairsByHash }) pparams dpState slot ttl txIx reserves = do
+genDCerts
+  ge@( GenEnv
+         KeySpace_ {ksKeyPairsByHash}
+         Constants {maxCertsPerTx}
+       )
+  pparams
+  dpState
+  slot
+  ttl
+  txIx
+  reserves = do
   let env = (slot, txIx, pparams, reserves)
       st0 = (dpState, 0)
 
   certsCreds <-
     catMaybes . traceSignals OldestFirst <$>
-      QC.traceFrom @CERTS testGlobals maxCertsPerTx ks env st0
+      QC.traceFrom @CERTS testGlobals maxCertsPerTx ge env st0
 
   let (certs, creds) = unzip certsCreds
       deRegStakeCreds = filter isDeRegKey certs
