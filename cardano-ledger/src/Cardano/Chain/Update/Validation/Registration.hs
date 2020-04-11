@@ -330,17 +330,19 @@ registerProposalComponents env rs proposal = do
   -- https://github.com/input-output-hk/cardano-ledger/issues/759
   -- https://github.com/input-output-hk/cardano-ledger/pull/766
   --
-  -- The existing staging network (protocol magic 633343913) does have a null
-  -- update proposal however, in epoch 44 (absolute slot number 969188). We
-  -- could delete the staging network blockchain and start from scratch,
-  -- however it is extremely useful for testing to have a realistic chain that
-  -- is as long as the mainnet chain, and indeed that has a large prefix that
-  -- was created by the legacy cardano-sl codebase. Therefore we allow for
-  -- this one specific excemption on this non-public testing network.
+  -- The existing staging network (protocol magic 633343913) does have existing
+  -- null update proposals however: one in epoch 44 (slot number 969188) and
+  -- one in epoch 88 (slot number 1915231). We could delete the staging network
+  -- blockchain and start from scratch, however it is extremely useful for
+  -- testing to have a realistic chain that is as long as the mainnet chain,
+  -- and indeed that has a large prefix that was created by the legacy
+  -- cardano-sl codebase. Therefore we allow for these specific excemptions on
+  -- this non-public testing network.
   --
   nullUpdateExemptions =
       unAnnotated protocolMagic == ProtocolMagicId 633343913 -- staging
-   && currentSlot               == SlotNumber      969188    -- where it occurs
+   &&              (currentSlot == SlotNumber  969188        -- in epoch 44
+                ||  currentSlot == SlotNumber 1915231)       -- in epoch 88
 
 
 -- | Validate a protocol update
