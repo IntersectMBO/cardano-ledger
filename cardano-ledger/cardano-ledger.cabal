@@ -152,6 +152,7 @@ library
                      , megaparsec
                      , memory
                      , mtl
+                     , quiet
                      , resourcet
                      , streaming
                      , streaming-binary

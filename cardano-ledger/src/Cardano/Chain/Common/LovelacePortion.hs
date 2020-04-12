@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
@@ -15,14 +17,20 @@ where
 
 import Cardano.Prelude
 
-import qualified Data.Aeson as Aeson
+import Cardano.Binary (FromCBOR(..), ToCBOR(..))
+
 import Control.Monad (fail)
 import Control.Monad.Except (MonadError(..))
+
+import qualified Data.Aeson as Aeson
+
 import Formatting (sformat, build, bprint, float, int)
 import qualified Formatting.Buildable as B
+
+import Quiet
+
 import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 
 
 -- | 'LovelacePortion' is a legacy Byron type that we keep only for
@@ -44,8 +52,9 @@ import Cardano.Binary (FromCBOR(..), ToCBOR(..))
 -- It is interpreted as a 'Rational' via the provided conversion functions.
 --
 newtype LovelacePortion = LovelacePortion
-  { getLovelacePortion :: Word64
-  } deriving (Show, Ord, Eq, Generic, HeapWords, NFData, NoUnexpectedThunks)
+  { unLovelacePortion :: Word64
+  } deriving (Ord, Eq, Generic, HeapWords, NFData, NoUnexpectedThunks)
+    deriving Show via (Quiet LovelacePortion)
 
 instance B.Buildable LovelacePortion where
   build cp@(LovelacePortion x) = bprint
@@ -58,7 +67,7 @@ instance B.Buildable LovelacePortion where
 instance Aeson.ToJSON LovelacePortion where
 
 instance ToCBOR LovelacePortion where
-  toCBOR = toCBOR . getLovelacePortion
+  toCBOR = toCBOR . unLovelacePortion
 
 instance FromCBOR LovelacePortion where
   fromCBOR = do
@@ -71,7 +80,7 @@ instance FromCBOR LovelacePortion where
 -- the external representation,  rather than a real in the range [0,1].
 -- This is because 'canonical-json' only supports numbers of type @Int54@.
 instance Monad m => ToJSON m LovelacePortion where
-  toJSON = toJSON . getLovelacePortion
+  toJSON = toJSON . unLovelacePortion
 
 instance MonadError SchemaError m => FromJSON m LovelacePortion where
   fromJSON val = do

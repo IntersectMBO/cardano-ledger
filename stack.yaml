@@ -50,8 +50,8 @@ extra-deps:
 
   # Not yet in Stack
   - bimap-0.4.0
-
   - Unique-0.4.7.6
+  - quiet-0.2
 
 nix:
   shell-file: nix/stack-shell.nix

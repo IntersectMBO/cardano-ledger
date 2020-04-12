@@ -2,6 +2,8 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingVia                #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -57,6 +59,7 @@ import Data.Data (Data)
 import Formatting (Format, bprint, build, int, sformat)
 import qualified Formatting.Buildable as B
 import GHC.TypeLits (type (<=))
+import Quiet
 import qualified Text.JSON.Canonical as Canonical
   (FromJSON(..), ReportSchemaErrors, ToJSON(..))
 
@@ -73,8 +76,9 @@ import Cardano.Binary
 
 -- | Lovelace is the least possible unit of currency
 newtype Lovelace = Lovelace
-  { getLovelace :: Word64
-  } deriving (Show, Ord, Eq, Generic, Data, NFData, NoUnexpectedThunks)
+  { unLovelace :: Word64
+  } deriving (Ord, Eq, Generic, Data, NFData, NoUnexpectedThunks)
+    deriving Show via (Quiet Lovelace)
 
 instance B.Buildable Lovelace where
   build (Lovelace n) = bprint (int . " lovelace") n
@@ -175,7 +179,7 @@ lovelaceF = build
 -- | Unwraps 'Lovelace'. It's called “unsafe” so that people wouldn't use it
 --   willy-nilly if they want to sum lovelace or something. It's actually safe.
 unsafeGetLovelace :: Lovelace -> Word64
-unsafeGetLovelace = getLovelace
+unsafeGetLovelace = unLovelace
 {-# INLINE unsafeGetLovelace #-}
 
 -- | Compute sum of all lovelace in container. Result is 'Integer' as a
