@@ -1,8 +1,8 @@
-
 \newcommand{\Val}{\fun{Val}}
 \newcommand{\POV}[1]{\ensuremath{\mathsf{PresOfVal}(\mathsf{#1})}}
 \newcommand{\DBE}[2]{\ensuremath{\mathsf{DBE}({#1},~{#2})}}
 \newcommand{\DGO}[2]{\ensuremath{\mathsf{DGO}({#1},~{#2})}}
+\newcommand{\transtar}[2]{\xlongrightarrow[\textsc{#1}]{#2}\negthickspace^{*}}
 
 \section{Properties}
 \label{sec:properties}
@@ -659,6 +659,202 @@ may either be from the current epoch or an earlier one, so we split them using $
   consequently so also does \DBE{c'}{s_i}.
 
 \end{proof}
+
+\subsection{Header-Only Validation}
+\label{sec:header-only-validation}
+The header-only validation properties of the Shelley Ledger are the analogs
+of those from Section 8.1 of \cite{byron_chain_spec}.
+
+In any given chain state, the consensus layer needs to be able to validate the
+block headers without having to download the block bodies.
+Property~\ref{prop:header-only-validation} states that if an extension of a
+chain that spans less than $\SlotsPrior$ slots is valid, then validating the
+headers of that extension is also valid. This property is useful for its
+converse: if the header validation check for a sequence of headers does not
+pass, then we know that the block validation that corresponds to those headers
+will not pass either.
+
+First we define the header-only version of the $\mathsf{CHAIN}$ transition,
+which we call $\mathsf{CHAINHEAD}$.
+It is very similiar to $\mathsf{CHAIN}$, the only difference being that
+it does not call $\mathsf{BBODY}$.
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:chain-head}
+    \inference[ChainHead]
+    {
+      \var{bh} \leteq \bheader{block}
+      &
+      \var{gkeys} \leteq \fun{getGKeys}~\var{nes}
+      &
+      \var{s} \leteq \bslot{(\bhbody{bh})}
+      \\
+      (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard,\wcard) \leteq \var{nes}
+      \\~\\
+      \fun{chainChecks}~\var{pp}~\var{bh}
+      \\~\\
+      {
+        {\begin{array}{c}
+           \var{gkeys} \\
+         \end{array}}
+        \vdash\var{nes}\trans{\hyperref[fig:rules:tick]{tick}}{\var{s}}\var{nes'}
+      } \\~\\
+      (\var{e_1},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,\wcard)
+        \leteq\var{nes} \\
+      (\var{e_2},~\wcard,~\wcard,~\var{es},~\wcard,~\var{pd},\var{osched})
+        \leteq\var{nes'} \\
+        (\wcard,~\wcard,\var{ls},~\wcard,~\var{pp'})\leteq\var{es}\\
+        ( \wcard,
+          ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
+          (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
+          \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
+      {
+        {\begin{array}{c}
+            \var{pp'} \\
+            \var{osched} \\
+            \var{pd} \\
+            \var{genDelegs} \\
+            \var{s_{now}} \\
+            \var{ne}
+         \end{array}}
+        \vdash
+        {\left(\begin{array}{c}
+              \var{cs} \\
+              \var{lab} \\
+              \eta_0 \\
+              \eta_v \\
+              \eta_c \\
+              \eta_h \\
+        \end{array}\right)}
+        \trans{\hyperref[fig:rules:prtcl]{prtcl}}{\var{bh}}
+        {\left(\begin{array}{c}
+              \var{cs'} \\
+              \var{lab'} \\
+              \eta_0' \\
+              \eta_v' \\
+              \eta_c' \\
+              \eta_h' \\
+        \end{array}\right)}
+      } \\~\\~\\
+    }
+    {
+      \var{s_{now}}
+      \vdash
+      {\left(\begin{array}{c}
+            \var{nes} \\
+            \var{cs} \\
+            \eta_0 \\
+            \eta_v \\
+            \eta_c \\
+            \eta_h \\
+            \var{lab} \\
+      \end{array}\right)}
+      \trans{chainhead}{\var{bh}}
+      {\left(\begin{array}{c}
+            \varUpdate{\var{nes}'} \\
+            \varUpdate{\var{cs}'} \\
+            \varUpdate{\eta_0'} \\
+            \varUpdate{\eta_v'} \\
+            \varUpdate{\eta_c'} \\
+            \varUpdate{\eta_h'} \\
+            \varUpdate{\var{lab}'} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{Chain-Head rules}
+  \label{fig:rules:chainhead}
+\end{figure}
+
+\begin{property}[Header only validation]\label{prop:header-only-validation}
+  For all environments $e$, states $s$ with slot number $t$\footnote{i.e. the
+    component $\var{s_\ell}$ of the last applied block of $s$ equals $t$},
+    and chain extensions $E$ with corresponding headers $H$ such that:
+  %
+  $$
+  0 \leq t_E - t  \leq \SlotsPrior
+  $$
+  %
+  we have:
+  %
+  $$
+  e \vdash s \transtar{\hyperref[fig:rules:chain]{chain}}{E} s'
+  \implies
+  e \vdash s \transtar{\hyperref[fig:rules:chainhead]{chainhead}}{H} s''
+  $$
+  where $t_E$ is the maximum slot number appearing in the blocks contained in
+  $E$, and $H$ is obtained from $E$ by applying $\fun{bheader}$ to each block in $E$.
+\end{property}
+
+\begin{property}[Body only validation]\label{prop:body-only-validation}
+  For all environments $e$, states $s$ with slot number $t$, and chain
+  extensions $E = [b_0, \ldots, b_n]$ with corresponding headers $H$ such that:
+  $$
+  0 \leq t_E - t  \leq \SlotsPrior
+  $$
+  we have that for all $i \in [1, n]$:
+  $$
+  e \vdash s \transtar{\hyperref[fig:rules:chainhead]{chainhead}}{H} s_{h}
+  \wedge
+  e \vdash s \transtar{\hyperref[fig:rules:chain]{chain}}{[b_0 \ldots b_{i-1}]} s_{i-1}
+  \implies
+  e_{i-1} \vdash s_{i-1}\trans{\hyperref[fig:rules:chainhead]{chainhead}}{h_i} s'_{h}
+  $$
+  where $t_E$ is the maximum slot number appearing in the blocks contained in $E$.
+\end{property}
+
+Property~\ref{prop:body-only-validation} states that if we validate a sequence
+of headers, we can validate their bodies independently and be sure that the
+blocks will pass the chain validation rule. To see this, given an environment
+$e$ and initial state $s$, assume that a sequence of headers
+$H = [h_0, \ldots, h_n]$ corresponding to blocks in $E = [b_0, \ldots, b_n]$ is
+valid according to the $\mathsf{chainhead}$ transition system:
+%
+$$
+e \vdash s \transtar{\hyperref[fig:rules:chainhead]{chainhead}}{H} s'
+$$
+%
+Assume the bodies of $E$ are valid
+according to the $\mathsf{bbody}$ rules, but $E$ is not valid according to
+the $\mathsf{chain}$ rule. Assume that there is a $b_j \in E$ such that it is
+\textbf{the first block} such that does not pass the $\mathsf{chain}$
+validation. Then:
+%
+$$
+e \vdash s \transtar{\hyperref[fig:rules:chain]{chain}}{[b_0, \ldots b_{j-1}]} s_j
+$$
+But by Property~\ref{prop:body-only-validation} we know that
+%
+$$
+e_j \vdash s_j \trans{\hyperref[fig:rules:chainhead]{chainhead}}{h_j} s_{j+1}
+$$
+which means that block $b_j$ has valid headers, and this in turn means that the
+validation of $b_j$ according to the chain rules must have failed because it
+contained an invalid block body. But this contradicts our assumption that the
+block bodies were valid.
+
+\begin{property}[Existence of roll back function]\label{prop:roll-back-funk}
+  There exists a function $\fun{f}$ such that for all chains
+  $$C = C_0 ; b; C_1$$
+  we have that if for all alternative chains $C'_1$, $\size{C'_1} \leq \frac{\SlotsPrior}{2}$, with
+  corresponding headers $H'_1$
+  $$
+  e \vdash s_0 \transtar{\hyperref[fig:rules:chain]{chain}}{C_0;b} s_1 \transtar{\hyperref[fig:rules:chain]{chain}}{C_1} s_2
+  \wedge
+  e \vdash s_1 \transtar{\hyperref[fig:rules:chain]{chain}}{C_1'} s'_1
+  \implies
+  (\fun{f}~(\bheader{b})~s_2) \transtar{\hyperref[fig:rules:chainhead]{chainhead}}{H'_1} s_h
+  $$
+\end{property}
+
+Property~\ref{prop:roll-back-funk} expresses the fact the there is a function
+that allow us to recover the header-only state by rolling back at most $k$
+blocks, and use this state to validate the headers of an alternate chain. Note
+that this property is not inherent to the $\mathsf{chain}$ rules and can be
+trivially satisfied by any function that keeps track of the history of the
+intermediate chain states up to $k$ blocks back. This property is stated here
+so that it can be used as a reference for the tests in the consensus layer,
+which uses the rules presented in this document.
+
 
 \subsection{Validity of a Ledger State}
 \label{sec:valid-ledg-state}

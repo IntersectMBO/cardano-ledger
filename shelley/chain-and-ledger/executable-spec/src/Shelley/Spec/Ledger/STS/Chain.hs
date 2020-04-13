@@ -12,6 +12,7 @@ module Shelley.Spec.Ledger.STS.Chain
   , PredicateFailure(..)
   , initialShelleyState
   , totalAda
+  , chainChecks
   )
 where
 
@@ -19,10 +20,10 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Numeric.Natural (Natural)
 
-import           Cardano.Prelude (asks)
+import           Cardano.Prelude (MonadError (..), asks, unless)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase)
-import           Shelley.Spec.Ledger.BlockChain (BHBody, Block (..), LastAppliedBlock (..),
+import           Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, Block (..), LastAppliedBlock (..),
                      bHeaderSize, bhbody, bheaderSlotNo, hBbsize)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
@@ -138,6 +139,20 @@ instance
   initialRules = []
   transitionRules = [chainTransition]
 
+chainChecks
+  :: (Crypto crypto, MonadError (PredicateFailure (CHAIN crypto)) m)
+  => Natural
+  -> PParams
+  -> BHeader crypto
+  -> m ()
+chainChecks maxpv pp bh = do
+  unless (m <= maxpv)                                     $ throwError (ObsoleteNodeCHAIN m maxpv)
+  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp) $ throwError HeaderSizeTooLargeCHAIN
+  unless (hBbsize (bhbody bh) <= _maxBBSize pp)           $ throwError BlockSizeTooLargeCHAIN
+  where
+    (ProtVer m _) = _protocolVersion pp
+
+
 chainTransition
   :: forall crypto
    . ( Crypto crypto
@@ -154,13 +169,11 @@ chainTransition = judgmentContext >>=
   let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 
   maxpv <- liftSTS $ asks maxMajorPV
-  let (ProtVer m _) = _protocolVersion pp
-  m <= maxpv ?! ObsoleteNodeCHAIN m maxpv
+  case chainChecks maxpv pp bh of
+    Right () -> pure ()
+    Left e -> failBecause e
 
-  let bhb = bhbody bh
-  let s = bheaderSlotNo bhb
-  fromIntegral (bHeaderSize bh) <= _maxBHSize pp ?! HeaderSizeTooLargeCHAIN
-  fromIntegral (hBbsize bhb) <= _maxBBSize pp ?! BlockSizeTooLargeCHAIN
+  let s = bheaderSlotNo $ bhbody bh
   let gkeys = getGKeys nes
 
   nes' <-
