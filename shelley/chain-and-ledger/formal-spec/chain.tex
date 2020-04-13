@@ -542,6 +542,8 @@ In the first case, the new epoch state is updated as follows:
   \begin{equation}\label{eq:not-new-epoch}
     \inference[Not-New-Epoch]
     {
+      (e_\ell,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard)\leteq\var{nes}
+      &
       e \neq e_\ell + 1
     }
     {
@@ -558,6 +560,8 @@ In the first case, the new epoch state is updated as follows:
   \begin{equation}\label{eq:no-reward-update}
     \inference[No-Reward-Update]
     {
+      (e_\ell,~\wcard,~\wcard,~\wcard,~\var{ru},~\wcard,~\wcard)\leteq\var{nes}
+      &
       e = e_\ell + 1
       &
       \var{ru} = \Nothing
