@@ -28,7 +28,7 @@ import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as M
 
 import Cardano.Binary
-  ( Annotated
+  ( Annotated(unAnnotated)
   , Decoder
   , DecoderError(..)
   , FromCBOR(..)
@@ -41,7 +41,7 @@ import Cardano.Binary
   )
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
-import Cardano.Chain.Slotting (SlotNumber)
+import Cardano.Chain.Slotting (SlotNumber(SlotNumber))
 import Cardano.Chain.Update.ApplicationName (ApplicationName)
 import Cardano.Chain.Update.InstallerHash (InstallerHash)
 import qualified Cardano.Chain.Update.Proposal as Proposal
@@ -73,7 +73,7 @@ import Cardano.Chain.Update.SoftwareVersion
   )
 import Cardano.Chain.Update.SystemTag (SystemTagError, checkSystemTag, SystemTag)
 import Cardano.Crypto
-  ( ProtocolMagicId
+  ( ProtocolMagicId(..)
   , SignTag(SignUSProposal)
   , verifySignatureDecoded
   )
@@ -81,6 +81,7 @@ import Cardano.Crypto
 
 data Environment = Environment
   { protocolMagic             :: !(Annotated ProtocolMagicId ByteString)
+  , currentSlot               :: !SlotNumber
   , adoptedProtocolVersion    :: !ProtocolVersion
   , adoptedProtocolParameters :: !ProtocolParameters
   , appVersions               :: !ApplicationVersions
@@ -247,9 +248,7 @@ registerProposal env rs proposal = do
 
   -- Check that the proposal is valid
   registerProposalComponents
-    adoptedProtocolVersion
-    adoptedProtocolParameters
-    appVersions
+    env
     rs
     proposal
  where
@@ -259,9 +258,6 @@ registerProposal env rs proposal = do
 
   Environment
     { protocolMagic
-    , adoptedProtocolVersion
-    , adoptedProtocolParameters
-    , appVersions
     , delegationMap
     } = env
 
@@ -272,15 +268,13 @@ registerProposal env rs proposal = do
 --   This corresponds to the `UPV` rules in the spec.
 registerProposalComponents
   :: MonadError Error m
-  => ProtocolVersion
-  -> ProtocolParameters
-  -> ApplicationVersions
+  => Environment
   -> State
   -> AProposal ByteString
   -> m State
-registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
+registerProposalComponents env rs proposal = do
 
-  (protocolVersionChanged || softwareVersionChanged)
+  (protocolVersionChanged || softwareVersionChanged || nullUpdateExemptions)
     `orThrowError` NullUpdateProposal
 
   -- Register protocol update if we have one
@@ -312,7 +306,43 @@ registerProposalComponents adoptedPV adoptedPP appVersions rs proposal = do
   protocolVersionChanged =
     not $ protocolVersion == adoptedPV && PPU.apply ppu adoptedPP == adoptedPP
 
+  Environment
+    { protocolMagic
+    , currentSlot
+    , adoptedProtocolVersion    = adoptedPV
+    , adoptedProtocolParameters = adoptedPP
+    , appVersions
+    } = env
+
   State registeredPUPs registeredSUPs = rs
+
+  -- A "null" update proposal is one that neither increase the protocol
+  -- version nor the software version. Such update proposals are invalid
+  -- according to the Byron specification. However in the cardano-sl code
+  -- they are accepted onto the chain but without any state change.
+  --
+  -- We cannot follow the legacy cardano-sl interpretation of accepting null
+  -- update onto the chain with no effect because it opens the door to DoS
+  -- attacks by replaying null update proposals.
+  --
+  -- For further details see:
+  --
+  -- https://github.com/input-output-hk/cardano-ledger/issues/759
+  -- https://github.com/input-output-hk/cardano-ledger/pull/766
+  --
+  -- The existing staging network (protocol magic 633343913) does have existing
+  -- null update proposals however: one in epoch 44 (slot number 969188) and
+  -- one in epoch 88 (slot number 1915231). We could delete the staging network
+  -- blockchain and start from scratch, however it is extremely useful for
+  -- testing to have a realistic chain that is as long as the mainnet chain,
+  -- and indeed that has a large prefix that was created by the legacy
+  -- cardano-sl codebase. Therefore we allow for these specific excemptions on
+  -- this non-public testing network.
+  --
+  nullUpdateExemptions =
+      unAnnotated protocolMagic == ProtocolMagicId 633343913 -- staging
+   &&              (currentSlot == SlotNumber  969188        -- in epoch 44
+                ||  currentSlot == SlotNumber 1915231)       -- in epoch 88
 
 
 -- | Validate a protocol update
