@@ -38,7 +38,7 @@ import           Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState,
                      GenKeyHash, LEDGERS, TICK)
-import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), KeySpace(..), NatNonce (..),
+import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), GenEnv(..), KeySpace(..), NatNonce (..),
                      genNatural, getKESPeriodRenewalNo, mkBlock, mkOCert)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import           Test.Shelley.Spec.Ledger.Utils (maxKESIterations, runShelleyBase,
@@ -74,11 +74,11 @@ getPraosSlot start tooFar os nos =
   in List.find (not . (`Map.member` schedules)) [start .. tooFar-1]
 
 genBlock
-  :: KeySpace
+  :: GenEnv
   -> SlotNo
   -> ChainState
   -> Gen Block
-genBlock ks@(KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairsByHash })
+genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairsByHash } _)
           sNow chainSt = do
   let os = (nesOsched . chainNes) chainSt
       dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
@@ -213,4 +213,4 @@ genBlock ks@(KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairsByHash 
     genTxs pp reserves ls s = do
       let ledgerEnv = LedgersEnv s pp reserves
 
-      sigGen @LEDGERS ks ledgerEnv ls
+      sigGen @LEDGERS ge ledgerEnv ls

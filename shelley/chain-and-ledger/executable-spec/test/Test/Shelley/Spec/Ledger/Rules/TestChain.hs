@@ -22,9 +22,10 @@ import           Shelley.Spec.Ledger.LedgerState (pattern DPState, esAccountStat
 import           Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import           Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
 
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(geConstants))
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, NEWEPOCH, POOLREAP)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
-import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (keySpace)
+import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import qualified Test.Shelley.Spec.Ledger.Rules.TestNewEpoch as TestNewEpoch
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, testGlobals)
@@ -88,7 +89,7 @@ forAllChainTrace
   -> Property
 forAllChainTrace prop =
   withMaxSuccess (fromIntegral numberOfTests) . property $
-    forAllTraceFromInitState testGlobals traceLen Preset.keySpace (Just mkGenesisChainState) prop
+    forAllTraceFromInitState testGlobals traceLen Preset.genEnv (Just $ mkGenesisChainState (geConstants Preset.genEnv)) prop
 
 -- | Transform CHAIN `sourceSignalTargets`s to POOLREAP ones.
 chainToPoolreapSst

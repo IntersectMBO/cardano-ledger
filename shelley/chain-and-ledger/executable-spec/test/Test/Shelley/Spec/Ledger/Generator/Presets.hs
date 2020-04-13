@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 -- | Pre-generated items to use in traces.
@@ -6,6 +7,7 @@
 --   involved, and thus cannot be used as generic generators.
 module Test.Shelley.Spec.Ledger.Generator.Presets
   ( keySpace,
+    genEnv,
     genUtxo0,
     genesisDelegs0,
   )
@@ -37,10 +39,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     VerKeyVRF,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants
-  ( maxNumKeyPairs,
-    maxSlotTrace,
-    numBaseScripts,
-    numCoreNodes,
+  ( Constants (..),
+    defaultConstants
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
@@ -52,17 +52,25 @@ import Test.Shelley.Spec.Ledger.Utils
     slotsPerKESIteration,
   )
 
+-- | Example generator environment, consisting of default constants and an
+-- corresponding keyspace.
+genEnv :: GenEnv
+genEnv = GenEnv
+  (keySpace defaultConstants)
+  defaultConstants
+
 -- | Example keyspace for use in generators
-keySpace :: KeySpace
-keySpace = KeySpace
-  coreNodeKeys
-  keyPairs
-  mSigCombinedScripts
-  vrfKeyPairs
+keySpace :: Constants -> KeySpace
+keySpace c =
+  KeySpace
+    (coreNodeKeys c)
+    (keyPairs c)
+    (mSigCombinedScripts c)
+    vrfKeyPairs
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: KeyPairs
-keyPairs = mkKeyPairs <$> [1 .. maxNumKeyPairs]
+keyPairs :: Constants -> KeyPairs
+keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 -- | A pre-populated space of VRF keys for use in the generators.
 vrfKeyPairs :: [(SignKeyVRF, VerKeyVRF)]
@@ -73,32 +81,33 @@ vrfKeyPairs = [body (0, 0, 0, 0, i) | i <- [1 .. 50]]
       return (sk, deriveVerKeyVRF sk)
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: Int -> Int -> Gen KeyPairs
-someKeyPairs lower upper =
+someKeyPairs :: Constants -> Int -> Int -> Gen KeyPairs
+someKeyPairs c lower upper =
   take
     <$> QC.choose (lower, upper)
-    <*> QC.shuffle keyPairs
+    <*> QC.shuffle (keyPairs c)
 
-mSigBaseScripts :: MultiSigPairs
-mSigBaseScripts = mkMSigScripts keyPairs
+mSigBaseScripts :: Constants -> MultiSigPairs
+mSigBaseScripts c = mkMSigScripts (keyPairs c)
 
-mSigCombinedScripts :: MultiSigPairs
-mSigCombinedScripts = mkMSigCombinations $ take numBaseScripts mSigBaseScripts
+mSigCombinedScripts :: Constants -> MultiSigPairs
+mSigCombinedScripts c@(Constants {numBaseScripts}) =
+  mkMSigCombinations . take numBaseScripts $ mSigBaseScripts c
 
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts :: Int -> Int -> Gen MultiSigPairs
-someScripts lower upper =
+someScripts :: Constants -> Int -> Int -> Gen MultiSigPairs
+someScripts c lower upper =
   take
     <$> QC.choose (lower, upper)
-    <*> QC.shuffle mSigCombinedScripts
+    <*> QC.shuffle (mSigCombinedScripts c)
 
 -- Pairs of (genesis key, node keys)
 --
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
-coreNodeKeys :: [(CoreKeyPair, AllPoolKeys)]
-coreNodeKeys =
+coreNodeKeys :: Constants -> [(CoreKeyPair, AllPoolKeys)]
+coreNodeKeys Constants {maxSlotTrace, numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
       let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, 1)
        in AllPoolKeys
@@ -125,18 +134,18 @@ coreNodeKeys =
   where
     toKeyPair (sk, vk) = KeyPair {sKey = sk, vKey = vk}
 
-genUtxo0 :: Int -> Int -> Gen UTxO
-genUtxo0 lower upper = do
-  genesisKeys <- someKeyPairs lower upper
-  genesisScripts <- someScripts lower upper
-  outs <- genTxOut (fmap toAddr genesisKeys ++ fmap scriptsToAddr genesisScripts)
+genUtxo0 :: Constants -> Gen UTxO
+genUtxo0 c@Constants{minGenesisUTxOouts, maxGenesisUTxOouts} = do
+  genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
+  genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
+  outs <- genTxOut c (fmap toAddr genesisKeys ++ fmap scriptsToAddr genesisScripts)
   return (genesisCoins outs)
 
-genesisDelegs0 :: Map GenKeyHash KeyHash
-genesisDelegs0 =
+genesisDelegs0 :: Constants -> Map GenKeyHash KeyHash
+genesisDelegs0 c =
   Map.fromList
     [ (hashVKey gkey, hashVKey (cold pkeys))
-      | (gkey, pkeys) <- coreNodeKeys
+      | (gkey, pkeys) <- coreNodeKeys c
     ]
   where
     hashVKey = hashKey . vKey

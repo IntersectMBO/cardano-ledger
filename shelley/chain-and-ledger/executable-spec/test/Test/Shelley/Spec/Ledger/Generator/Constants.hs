@@ -1,147 +1,156 @@
 module Test.Shelley.Spec.Ledger.Generator.Constants
-
+  ( Constants (..)
+  , defaultConstants
+  )
 where
 
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
 
--- | minimal number of transaction inputs to select
-minNumGenInputs :: Int
-minNumGenInputs = 1
+data Constants = Constants
+  {
+    -- | minimal number of transaction inputs to select
+    minNumGenInputs :: Int
 
--- | maximal number of transaction inputs to select
-maxNumGenInputs :: Int
-maxNumGenInputs = 10
+    -- | maximal number of transaction inputs to select
+  , maxNumGenInputs :: Int
 
--- | Relative frequency of generated credential registration certificates
-frequencyRegKeyCert :: Int
-frequencyRegKeyCert = 2
+    -- | Relative frequency of generated credential registration certificates
+  , frequencyRegKeyCert :: Int
 
--- | Relative frequency of generated pool registration certificates
-frequencyRegPoolCert :: Int
-frequencyRegPoolCert = 2
+    -- | Relative frequency of generated pool registration certificates
+  , frequencyRegPoolCert :: Int
 
--- | Relative frequency of generated delegation certificates
-frequencyDelegationCert :: Int
-frequencyDelegationCert = 3
+    -- | Relative frequency of generated delegation certificates
+  , frequencyDelegationCert :: Int
 
--- | Relative frequency of generated genesis delegation certificates
-frequencyGenesisDelegationCert :: Int
-frequencyGenesisDelegationCert = 1
+    -- | Relative frequency of generated genesis delegation certificates
+  , frequencyGenesisDelegationCert :: Int
 
--- | Relative frequency of generated credential de-registration certificates
-frequencyDeRegKeyCert :: Int
-frequencyDeRegKeyCert = 1
+    -- | Relative frequency of generated credential de-registration certificates
+  , frequencyDeRegKeyCert :: Int
 
--- | Relative frequency of generated pool retirement certificates
-frequencyRetirePoolCert :: Int
-frequencyRetirePoolCert = 1
+    -- | Relative frequency of generated pool retirement certificates
+  , frequencyRetirePoolCert :: Int
 
--- | Relative frequency of generated MIR certificates
-frequencyMIRCert :: Int
-frequencyMIRCert = 1
+    -- | Relative frequency of generated MIR certificates
+  , frequencyMIRCert :: Int
 
--- | Relative frequency of script credentials in credential registration
--- certificates
-frequencyScriptCredReg :: Int
-frequencyScriptCredReg = 1
+    -- | Relative frequency of script credentials in credential registration
+    -- certificates
+  , frequencyScriptCredReg :: Int
 
--- | Relative frequency of key credentials in credential registration
--- certificates
-frequencyKeyCredReg :: Int
-frequencyKeyCredReg = 2
+    -- | Relative frequency of key credentials in credential registration
+    -- certificates
+  , frequencyKeyCredReg :: Int
 
--- | Relative frequency of script credentials in credential de-registration
--- certificates
-frequencyScriptCredDeReg :: Int
-frequencyScriptCredDeReg = 1
+    -- | Relative frequency of script credentials in credential de-registration
+    -- certificates
+  , frequencyScriptCredDeReg :: Int
 
--- | Relative frequency of key credentials in credential de-registration
--- certificates
-frequencyKeyCredDeReg :: Int
-frequencyKeyCredDeReg = 2
+    -- | Relative frequency of key credentials in credential de-registration
+    -- certificates
+  , frequencyKeyCredDeReg :: Int
 
--- | Relative frequency of script credentials in credential delegation
--- certificates
-frequencyScriptCredDelegation :: Int
-frequencyScriptCredDelegation = 1
+    -- | Relative frequency of script credentials in credential delegation
+    -- certificates
+  , frequencyScriptCredDelegation :: Int
 
--- | Relative frequency of key credentials in credential delegation
--- certificates
-frequencyKeyCredDelegation :: Int
-frequencyKeyCredDelegation = 2
+    -- | Relative frequency of key credentials in credential delegation
+    -- certificates
+  , frequencyKeyCredDelegation :: Int
 
--- | Relative frequency of Prototol/Application Updates in a transaction
-frequencyTxUpdates :: Int
-frequencyTxUpdates = 10
+    -- | Relative frequency of Prototol/Application Updates in a transaction
+  , frequencyTxUpdates :: Int
 
--- | minimal number of genesis UTxO outputs
-minGenesisUTxOouts :: Int
-minGenesisUTxOouts = 10
+    -- | minimal number of genesis UTxO outputs
+  , minGenesisUTxOouts :: Int
 
--- | maximal number of genesis UTxO outputs
-maxGenesisUTxOouts :: Int
-maxGenesisUTxOouts = 100
+    -- | maximal number of genesis UTxO outputs
+  , maxGenesisUTxOouts :: Int
 
--- | maximal number of certificates per transaction
-maxCertsPerTx :: Word64
-maxCertsPerTx = 1
+    -- | maximal number of certificates per transaction
+  , maxCertsPerTx :: Word64
 
--- | maximal number of Txs per block
-maxTxsPerBlock :: Word64
-maxTxsPerBlock = 10
+    -- | maximal number of Txs per block
+  , maxTxsPerBlock :: Word64
 
--- | maximal numbers of generated keypairs
-maxNumKeyPairs :: Word64
-maxNumKeyPairs = 150
+    -- | maximal numbers of generated keypairs
+  , maxNumKeyPairs :: Word64
 
--- | minimal coin value for generated genesis outputs
-minGenesisOutputVal :: Integer
-minGenesisOutputVal = 1000000
+    -- | minimal coin value for generated genesis outputs
+  , minGenesisOutputVal :: Integer
 
--- | maximal coin value for generated genesis outputs
-maxGenesisOutputVal :: Integer
-maxGenesisOutputVal = 100000000
+    -- | maximal coin value for generated genesis outputs
+  , maxGenesisOutputVal :: Integer
 
--- | Number of base scripts from which multi sig scripts are built.
-numBaseScripts :: Int
-numBaseScripts = 3
+    -- | Number of base scripts from which multi sig scripts are built.
+  , numBaseScripts :: Int
 
--- | Relative frequency that a transaction does not include any reward withdrawals
-frequencyNoWithdrawals :: Int
-frequencyNoWithdrawals = 75
+    -- | Relative frequency that a transaction does not include any reward withdrawals
+  , frequencyNoWithdrawals :: Int
 
--- | Relative frequency that a transaction includes a small number of
--- reward withdrawals, bounded by 'maxAFewWithdrawals'.
-frequencyAFewWithdrawals :: Int
-frequencyAFewWithdrawals = 20
+    -- | Relative frequency that a transaction includes a small number of
+    -- reward withdrawals, bounded by 'maxAFewWithdrawals'.
+  , frequencyAFewWithdrawals :: Int
 
--- | Maximum number of reward withdrawals that counts as a small number.
-maxAFewWithdrawals :: Int
-maxAFewWithdrawals = 10
+    -- | Maximum number of reward withdrawals that counts as a small number.
+  , maxAFewWithdrawals :: Int
 
--- | Relative frequency that a transaction includes any positive number of
--- reward withdrawals
-frequencyPotentiallyManyWithdrawals :: Int
-frequencyPotentiallyManyWithdrawals = 5
+    -- | Relative frequency that a transaction includes any positive number of
+    -- reward withdrawals
+  , frequencyPotentiallyManyWithdrawals :: Int
 
--- | Minimal slot for CHAIN trace generation.
-minSlotTrace :: Int
-minSlotTrace = 1000
+    -- | Minimal slot for CHAIN trace generation.
+  , minSlotTrace :: Int
 
--- | Maximal slot for CHAIN trace generation.
-maxSlotTrace :: Int
-maxSlotTrace = 5000
+    -- | Maximal slot for CHAIN trace generation.
+  , maxSlotTrace :: Int
 
--- | Lower bound of the MaxEpoch protocol parameter
-frequencyLowMaxEpoch :: Word64
-frequencyLowMaxEpoch = 6
+    -- | Lower bound of the MaxEpoch protocol parameter
+  , frequencyLowMaxEpoch :: Word64
 
-maxMinFeeA :: Natural
-maxMinFeeA = 1000
+  , maxMinFeeA :: Natural
 
-maxMinFeeB :: Natural
-maxMinFeeB = 3
+  , maxMinFeeB :: Natural
 
-numCoreNodes :: Word64
-numCoreNodes = 7
+  , numCoreNodes :: Word64
+  } deriving Show
+
+defaultConstants :: Constants
+defaultConstants = Constants
+  { minNumGenInputs = 1
+  , maxNumGenInputs = 10
+  , frequencyRegKeyCert = 2
+  , frequencyRegPoolCert = 2
+  , frequencyDelegationCert = 3
+  , frequencyGenesisDelegationCert = 1
+  , frequencyDeRegKeyCert = 1
+  , frequencyRetirePoolCert = 1
+  , frequencyMIRCert = 1
+  , frequencyScriptCredReg = 1
+  , frequencyKeyCredReg = 2
+  , frequencyScriptCredDeReg = 1
+  , frequencyKeyCredDeReg = 2
+  , frequencyScriptCredDelegation = 1
+  , frequencyKeyCredDelegation = 2
+  , frequencyTxUpdates = 10
+  , minGenesisUTxOouts = 10
+  , maxGenesisUTxOouts = 100
+  , maxCertsPerTx = 1
+  , maxTxsPerBlock = 10
+  , maxNumKeyPairs = 150
+  , minGenesisOutputVal = 1000000
+  , maxGenesisOutputVal = 100000000
+  , numBaseScripts = 3
+  , frequencyNoWithdrawals = 75
+  , frequencyAFewWithdrawals = 20
+  , maxAFewWithdrawals = 10
+  , frequencyPotentiallyManyWithdrawals = 5
+  , minSlotTrace = 1000
+  , maxSlotTrace = 5000
+  , frequencyLowMaxEpoch = 6
+  , maxMinFeeA = 1000
+  , maxMinFeeB = 3
+  , numCoreNodes = 7
+  }

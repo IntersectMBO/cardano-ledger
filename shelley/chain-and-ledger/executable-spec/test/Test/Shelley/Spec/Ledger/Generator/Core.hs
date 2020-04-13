@@ -8,6 +8,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllPoolKeys (..)
+  , GenEnv(..)
   , KeySpace(..)
   , pattern KeySpace
   , NatNonce (..)
@@ -83,7 +84,7 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash,
                      Credential, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig,
                      MultiSigPairs, OCert, SKeyES, SignKeyVRF, Tx, TxOut, VKey, VKeyES,
                      VRFKeyHash, VerKeyVRF, hashKeyVRF)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (maxGenesisOutputVal, minGenesisOutputVal)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, evolveKESUntil, maxKESIterations,
                      maxLLSupply, mkCertifiedVRF, mkGenKey, mkKeyPair,
                      runShelleyBase, unsafeMkUnitInterval)
@@ -94,6 +95,12 @@ data AllPoolKeys = AllPoolKeys
   , hot :: [(KESPeriod, (SKeyES, VKeyES))]
   , hk  :: KeyHash
   } deriving (Show)
+
+-- | Generator environment.
+data GenEnv = GenEnv
+  { geKeySpace :: KeySpace
+  , geConstants :: Constants
+  }
 
 -- | Collection of all keys which are required to generate a trace.
 --
@@ -281,8 +288,8 @@ pickStakeKey keys = vKey . snd <$> QC.elements keys
 -- Note: we need to keep the initial utxo coin sizes large enough so that
 -- when we simulate sequences of transactions, we have enough funds available
 -- to include certificates that require deposits.
-genTxOut :: HasCallStack => [Addr] -> Gen [TxOut]
-genTxOut addrs = do
+genTxOut :: HasCallStack => Constants -> [Addr] -> Gen [TxOut]
+genTxOut Constants {maxGenesisOutputVal, minGenesisOutputVal} addrs = do
   ys <- genCoinList minGenesisOutputVal maxGenesisOutputVal (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
 
