@@ -22,7 +22,8 @@ import           Numeric.Natural (Natural)
 
 import           Cardano.Prelude (MonadError (..), asks, unless)
 import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase,
+                     StrictMaybe (..))
 import           Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, Block (..), LastAppliedBlock (..),
                      bHeaderSize, bhbody, bheaderSlotNo, hBbsize)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -31,7 +32,7 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapSh
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), GenKeyHash, KESignable, KeyHash,
                      Signable, VKeyES)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..), DState (..),
-                     EpochState (..), LedgerState (..), NewEpochState (..), PState (..),
+                     EpochState (..), LedgerState (..), NewEpochState (..), OBftSlot, PState (..),
                      UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
 import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), ProtVer (..),
@@ -70,7 +71,7 @@ initialShelleyState
   -> UTxO crypto
   -> Coin
   -> Map (GenKeyHash crypto) (KeyHash crypto)
-  -> Map SlotNo (Maybe (GenKeyHash crypto))
+  -> Map SlotNo (OBftSlot crypto)
   -> PParams
   -> Nonce
   -> ChainState crypto
@@ -96,7 +97,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
          pp
          emptyNonMyopic
        )
-       Nothing
+       SNothing
        (PoolDistr Map.empty)
        os
     )

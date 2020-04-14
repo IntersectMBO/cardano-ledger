@@ -35,9 +35,9 @@ import           Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo))
 
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
+import           Shelley.Spec.Ledger.Keys (GenDelegs)
 import           Shelley.Spec.Ledger.LedgerState (EpochState (..), NewEpochEnv (..),
-                     NewEpochState (..), getGKeys, _delegationState, _dstate, _genDelegs)
+                     NewEpochState (..), OBftSlot, getGKeys, _delegationState, _dstate, _genDelegs)
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Slot (SlotNo)
 import           Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
@@ -47,7 +47,7 @@ import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 data LedgerView crypto
   = LedgerView
       { lvProtParams :: PParams,
-        lvOverlaySched :: Map SlotNo (Maybe (GenKeyHash crypto)),
+        lvOverlaySched :: Map SlotNo (OBftSlot crypto),
         lvPoolDistr :: PoolDistr crypto,
         lvGenDelegs :: GenDelegs crypto
       }

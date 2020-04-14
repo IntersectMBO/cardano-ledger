@@ -147,6 +147,8 @@ type NonMyopic = Rewards.NonMyopic ConcreteCrypto
 
 type RewardUpdate = LedgerState.RewardUpdate ConcreteCrypto
 
+type OBftSlot = LedgerState.OBftSlot ConcreteCrypto
+
 type ChainState = STS.Chain.ChainState ConcreteCrypto
 
 type CHAIN = STS.Chain.CHAIN ConcreteCrypto

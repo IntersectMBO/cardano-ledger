@@ -19,7 +19,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set ((\\))
 import qualified Data.Set as Set
 import           GHC.Stack (HasCallStack)
@@ -30,7 +30,7 @@ import qualified Test.QuickCheck as QC
 
 import           Byron.Spec.Ledger.Core (dom, range, (∈), (∉))
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
-import           Shelley.Spec.Ledger.BaseTypes (interval0)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), interval0)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DCertMir, pattern DeRegKey,
                      pattern Delegate, pattern GenesisDelegate, pattern MIRCert, pattern RegKey,
@@ -238,7 +238,7 @@ genGenesisDelegation keys coreKeys dpState =
   where
     hashVKey = hashKey . vKey
     mkCert gkey key = Just
-      ( DCertGenesis (GenesisDelegate (hashVKey gkey, (hashVKey . snd) key))
+      ( DCertGenesis (GenesisDelegate (hashVKey gkey) (hashVKey (snd key)))
       , CoreKeyCred [gkey])
 
     (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
@@ -293,8 +293,8 @@ genStakePool skeys vrfKeys =
                 interval
                 (RewardAcnt $ KeyHashObj $ hashKey acntKey)
                 Set.empty
-                Seq.empty
-                Nothing
+                StrictSeq.empty
+                SNothing
      in (pps, snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.

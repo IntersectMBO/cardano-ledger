@@ -46,6 +46,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Byron.Spec.Ledger.Core (Relation (..))
+import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable,
@@ -190,7 +191,7 @@ totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
     cs' = filter notRegisteredPool cs
 
 txup :: Tx crypto -> Maybe (Update crypto)
-txup (Tx txbody _ _ _) = _txUpdate txbody
+txup (Tx txbody _ _ _) = strictMaybeToMaybe (_txUpdate txbody)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)

@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -28,6 +29,7 @@ module Shelley.Spec.Ledger.LedgerState
   , RewardUpdate(..)
   , RewardAccounts
   , emptyRewardUpdate
+  , FutureGenDeleg(..)
   , EpochState(..)
   , emptyEpochState
   , getIR
@@ -37,6 +39,7 @@ module Shelley.Spec.Ledger.LedgerState
   , PState(..)
   , KeyPairs
   , UTxOState(..)
+  , OBftSlot(..)
   , emptyAccount
   , emptyPState
   , emptyDState
@@ -73,7 +76,8 @@ module Shelley.Spec.Ledger.LedgerState
   , updateNES
   ) where
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (TypeNull), decodeNull,
+                     encodeListLen, encodeNull, enforceSize, peekTokenType)
 import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -82,7 +86,7 @@ import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
-import qualified Data.Sequence as Seq (Seq (..))
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
@@ -115,8 +119,8 @@ import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopi
                      emptyNonMyopic, reward)
 
 import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
-import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
-                     intervalValue, text64Size)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe (..),
+                     UnitInterval, intervalValue, text64Size)
 import           Shelley.Spec.Ledger.Scripts (countMSigNodes)
 
 
@@ -134,22 +138,42 @@ instance NoUnexpectedThunks (LedgerValidation crypto)
 type RewardAccounts crypto
   = Map (RewardAcnt crypto) Coin
 
+data FutureGenDeleg crypto = FutureGenDeleg
+    { fGenDelegSlot       :: !SlotNo
+    , fGenDelegGenKeyHash :: !(GenKeyHash crypto)
+    } deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks (FutureGenDeleg crypto)
+
+instance Crypto crypto => ToCBOR (FutureGenDeleg crypto)
+ where
+  toCBOR (FutureGenDeleg a b) =
+    encodeListLen 2 <> toCBOR a <> toCBOR b
+
+instance Crypto crypto => FromCBOR (FutureGenDeleg crypto)
+ where
+  fromCBOR = do
+    enforceSize "FutureGenDeleg" 2
+    a <- fromCBOR
+    b <- fromCBOR
+    pure $ FutureGenDeleg a b
+
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
     {  -- |The active stake keys.
-      _stkCreds    :: StakeCreds           crypto
+      _stkCreds    :: !(StakeCreds           crypto)
       -- |The active reward accounts.
-    ,  _rewards    :: RewardAccounts       crypto
+    ,  _rewards    :: !(RewardAccounts       crypto)
       -- |The current delegations.
-    , _delegations :: Map (Credential crypto) (KeyHash crypto)
+    , _delegations :: !(Map (Credential crypto) (KeyHash crypto))
       -- |The pointed to hash keys.
-    , _ptrs        :: Map Ptr (Credential crypto)
+    , _ptrs        :: !(Map Ptr (Credential crypto))
       -- | future genesis key delegations
-    , _fGenDelegs  :: Map (SlotNo, GenKeyHash crypto) (KeyHash crypto)
+    , _fGenDelegs  :: !(Map (FutureGenDeleg crypto) (KeyHash crypto))
       -- |Genesis key delegations
-    , _genDelegs   :: GenDelegs crypto
+    , _genDelegs   :: !(GenDelegs crypto)
       -- | Instantaneous Rewards
-    , _irwd        :: Map (Credential crypto) Coin
+    , _irwd        :: !(Map (Credential crypto) Coin)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DState crypto)
@@ -176,11 +200,11 @@ instance Crypto crypto => FromCBOR (DState crypto)
 -- | Current state of staking pools and their certificate counters.
 data PState crypto = PState
     { -- |The active stake pools.
-      _stPools     :: StakePools crypto
+      _stPools     :: !(StakePools crypto)
       -- |The pool parameters.
-    , _pParams     :: Map (KeyHash crypto) (PoolParams crypto)
+    , _pParams     :: !(Map (KeyHash crypto) (PoolParams crypto))
       -- |A map of retiring stake pools to the epoch when they retire.
-    , _retiring    :: Map (KeyHash crypto) EpochNo
+    , _retiring    :: !(Map (KeyHash crypto) EpochNo)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (PState crypto)
@@ -203,8 +227,8 @@ instance Crypto crypto => FromCBOR (PState crypto)
 data DPState crypto =
     DPState
     {
-      _dstate :: DState crypto
-    , _pstate :: PState crypto
+      _dstate :: !(DState crypto)
+    , _pstate :: !(PState crypto)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DPState crypto)
@@ -223,11 +247,11 @@ instance Crypto crypto => FromCBOR (DPState crypto)
     pure $ DPState ds ps
 
 data RewardUpdate crypto= RewardUpdate
-  { deltaT        :: Coin
-  , deltaR        :: Coin
-  , rs            :: Map (RewardAcnt crypto) Coin
-  , deltaF        :: Coin
-  , nonMyopic     :: NonMyopic crypto
+  { deltaT        :: !Coin
+  , deltaR        :: !Coin
+  , rs            :: !(Map (RewardAcnt crypto) Coin)
+  , deltaF        :: !Coin
+  , nonMyopic     :: !(NonMyopic crypto)
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate crypto)
@@ -257,8 +281,8 @@ emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate = RewardUpdate (Coin 0) (Coin 0) Map.empty (Coin 0) emptyNonMyopic
 
 data AccountState = AccountState
-  { _treasury  :: Coin
-  , _reserves  :: Coin
+  { _treasury  :: !Coin
+  , _reserves  :: !Coin
   } deriving (Show, Eq, Generic)
 
 instance ToCBOR AccountState
@@ -278,12 +302,12 @@ instance NoUnexpectedThunks AccountState
 
 data EpochState crypto
   = EpochState
-    { esAccountState :: AccountState
-    , esSnapshots :: SnapShots crypto
-    , esLState :: LedgerState crypto
-    , esPrevPp :: PParams
-    , esPp :: PParams
-    , esNonMyopic :: NonMyopic crypto
+    { esAccountState :: !AccountState
+    , esSnapshots :: !(SnapShots crypto)
+    , esLState :: !(LedgerState crypto)
+    , esPrevPp :: !PParams
+    , esPp :: !PParams
+    , esNonMyopic :: !(NonMyopic crypto)
     }
   deriving (Show, Eq, Generic)
 
@@ -346,9 +370,9 @@ clearPpup utxoSt = utxoSt {_ppups = emptyPPPUpdates}
 data UTxOState crypto=
     UTxOState
     { _utxo      :: !(UTxO crypto)
-    , _deposited :: Coin
-    , _fees      :: Coin
-    , _ppups     :: ProposedPPUpdates crypto
+    , _deposited :: !Coin
+    , _fees      :: !Coin
+    , _ppups     :: !(ProposedPPUpdates crypto)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (UTxOState crypto)
@@ -368,18 +392,39 @@ instance Crypto crypto => FromCBOR (UTxOState crypto)
     us <- fromCBOR
     pure $ UTxOState ut dp fs us
 
+data OBftSlot crypto =
+    NonActiveSlot
+  | ActiveSlot !(GenKeyHash crypto)
+  deriving (Show, Eq, Generic)
+
+instance Crypto crypto
+  => ToCBOR (OBftSlot crypto)
+  where
+    toCBOR NonActiveSlot  = encodeNull
+    toCBOR (ActiveSlot k) = toCBOR k
+
+instance Crypto crypto
+  => FromCBOR (OBftSlot crypto)
+ where
+   fromCBOR = do
+     peekTokenType >>= \case
+       TypeNull -> do
+         decodeNull
+         pure NonActiveSlot
+       _ -> ActiveSlot <$> fromCBOR
+
+instance NoUnexpectedThunks (OBftSlot crypto)
+
 -- | New Epoch state and environment
 data NewEpochState crypto=
   NewEpochState {
-    nesEL     :: EpochNo                       -- ^ Last epoch
-  , nesBprev  :: BlocksMade          crypto  -- ^ Blocks made before current epoch
-  , nesBcur   :: BlocksMade          crypto  -- ^ Blocks made in current epoch
-  , nesEs     :: EpochState          crypto  -- ^ Epoch state before current
-  , nesRu     :: Maybe (RewardUpdate crypto) -- ^ Possible reward update
-  , nesPd     :: PoolDistr           crypto  -- ^ Stake distribution within the stake pool
-  , nesOsched :: Map  SlotNo
-                     (Maybe
-                       (GenKeyHash   crypto))  -- ^ Overlay schedule for PBFT vs Praos
+    nesEL     :: !EpochNo                              -- ^ Last epoch
+  , nesBprev  :: !(BlocksMade                crypto)   -- ^ Blocks made before current epoch
+  , nesBcur   :: !(BlocksMade                crypto)   -- ^ Blocks made in current epoch
+  , nesEs     :: !(EpochState                crypto)   -- ^ Epoch state before current
+  , nesRu     :: !(StrictMaybe (RewardUpdate crypto))  -- ^ Possible reward update
+  , nesPd     :: !(PoolDistr                 crypto)   -- ^ Stake distribution within the stake pool
+  , nesOsched :: !(Map SlotNo (OBftSlot      crypto))  -- ^ Overlay schedule for PBFT vs Praos
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochState crypto)
@@ -451,13 +496,13 @@ genesisId =
   TxId $ hash
   (TxBody
    Set.empty
-   Seq.Empty
-   Seq.Empty
+   StrictSeq.Empty
+   StrictSeq.Empty
    (Wdrl Map.empty)
    (Coin 0)
    (SlotNo 0)
-   Nothing
-   Nothing)
+   SNothing
+   SNothing)
 
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins
@@ -557,8 +602,8 @@ txsize (Tx
     relays pps = fmap (text64Size . unUrl) (_poolRelays pps)
     poolMD pps = smallArray + (toInteger $
       case (_poolMD pps) of
-        Nothing -> 0
-        Just (PoolMetaData u _) -> (text64Size . unUrl) u)
+        SNothing -> 0
+        SJust (PoolMetaData u _) -> (text64Size . unUrl) u)
     pparams pps = cborTag + arrayPrefix + (numPoolOwners pps)*(hashObj) -- pool owners
                 + uint -- cost
                 + unitInterval -- margin
@@ -602,13 +647,13 @@ txsize (Tx
                + labelSize + uint         -- extra entropy
                + labelSize + protoVersion -- protocol version
     uSize = case up of
-      Nothing -> arrayPrefix
-      Just (Update (ProposedPPUpdates ppup) _) ->
+      SNothing -> arrayPrefix
+      SJust (Update (ProposedPPUpdates ppup) _) ->
         arrayPrefix
         + mapPrefix + (toInteger $ length ppup) * (hashObj + params)  -- ppup
         + uint -- epoch
 
-    mdhSize = if mdh == Nothing then arrayPrefix else arrayPrefix + hashObj
+    mdhSize = if mdh == SNothing then arrayPrefix else arrayPrefix + hashObj
 
     datumSize (MD.Map m) = mapPrefix + sum (fmap (\(x, y) -> smallArray + datumSize x + datumSize y) m)
     datumSize (MD.List d_) = arrayPrefix + sum (fmap datumSize d_)
@@ -617,8 +662,8 @@ txsize (Tx
     datumSize (MD.S _) = 64
 
     mdSize = case md of
-      Nothing -> arrayPrefix
-      Just (MD.MetaData md') -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
+      SNothing -> arrayPrefix
+      SJust (MD.MetaData md') -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
                                   + uint * (toInteger $ length md')
 
 -- |Minimum fee calculation
@@ -1047,7 +1092,7 @@ overlaySchedule
   :: EpochNo
   -> Set (GenKeyHash crypto)
   -> PParams
-  -> ShelleyBase (Map SlotNo (Maybe (GenKeyHash crypto)))
+  -> ShelleyBase (Map SlotNo (OBftSlot crypto))
 overlaySchedule e gkeys pp = do
   let dval = intervalValue $ _d pp
   if dval == 0
@@ -1073,11 +1118,11 @@ overlaySchedule e gkeys pp = do
 
         active =
           Map.fromList $ fmap
-            (\(gk,(_,s))->(s, Just gk))
+            (\(gk,(_,s))->(s, ActiveSlot gk))
             (zip (cycle (Set.toList gkeys)) (filter fst unassignedSched))
         inactive =
           Map.fromList $ fmap
-            (\x -> (snd x, Nothing))
+            (\x -> (snd x, NonActiveSlot))
             (filter (not . fst) unassignedSched)
       pure $ Map.union active inactive
 

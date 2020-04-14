@@ -31,6 +31,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestLedger
 where
 
 import           Data.Foldable (toList)
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Word (Word64)
 
 import           Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
@@ -274,7 +275,7 @@ ledgerToDelegsSsts
   -> (Wdrl, SourceSignalTarget DELEGS)
 ledgerToDelegsSsts (SourceSignalTarget (_, dpSt) (_, dpSt') tx) =
   ( (_wdrls . _body) tx
-  , SourceSignalTarget dpSt dpSt' ((_certs . _body) tx))
+  , SourceSignalTarget dpSt dpSt' ((StrictSeq.getSeq . _certs . _body) tx))
 
 -- | Transform LEDGER `SourceSignalTargets`s to POOL ones.
 ledgerToPoolSsts

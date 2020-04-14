@@ -29,8 +29,8 @@ module Test.Shelley.Spec.Ledger.PreSTSGenerator
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Sequence (Seq (..))
 import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 
@@ -42,6 +42,7 @@ import qualified Hedgehog.Range as Range
 
 
 import           Control.State.Transition.Extended (TRC (..), applySTS)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody,
@@ -173,15 +174,15 @@ genTx keyList (UTxO m) cslot = do
   txttl <- genWord64 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)
-           ((`TxOut` perReceipient) <$> receipientAddrs)
-           Empty
+           (StrictSeq.toStrict ((`TxOut` perReceipient) <$> receipientAddrs))
+           StrictSeq.Empty
            (Wdrl Map.empty) -- TODO generate witdrawals
            txfee'
            (cslot + SlotNo txttl)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
   let !txwit = makeWitnessVKey txbody selectedKeyPair
-  pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty Nothing)
+  pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty SNothing)
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
 

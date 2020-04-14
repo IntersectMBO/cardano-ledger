@@ -27,8 +27,8 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates
 import           Shelley.Spec.Ledger.Keys
-import           Shelley.Spec.Ledger.LedgerState (DState, emptyDState, _delegations, _fGenDelegs,
-                     _genDelegs, _irwd, _ptrs, _rewards, _stkCreds)
+import           Shelley.Spec.Ledger.LedgerState (DState, FutureGenDeleg (..), emptyDState,
+                     _delegations, _fGenDelegs, _genDelegs, _irwd, _ptrs, _rewards, _stkCreds)
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.TxData
 
@@ -134,7 +134,7 @@ delegationTransition = do
       pure $ ds
         { _delegations = _delegations ds ⨃ [(hk, dpool)] }
 
-    DCertGenesis (GenesisDelegate (gkh, vkh)) -> do
+    DCertGenesis (GenesisDelegate gkh vkh) -> do
       sp <- liftSTS $ asks slotsPrior
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp
@@ -143,7 +143,7 @@ delegationTransition = do
       gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG
       vkh ∉ range genDelegs ?! DuplicateGenesisDelegateDELEG
       pure $ ds
-        { _fGenDelegs = _fGenDelegs ds ⨃ [((s', gkh), vkh)]}
+        { _fGenDelegs = _fGenDelegs ds ⨃ [(FutureGenDeleg s' gkh, vkh)]}
 
     DCertMir (MIRCert credCoinMap) -> do
       sp <- liftSTS $ asks slotsPrior

@@ -8,8 +8,8 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio ((%))
-import           Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 import           Test.Tasty
@@ -180,21 +180,21 @@ testValidWithdrawal =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.fromList [ TxOut aliceAddr (Coin 6000)
-                         , TxOut bobAddr (Coin 3010) ])
+           (StrictSeq.fromList [ TxOut aliceAddr (Coin 6000)
+                               , TxOut bobAddr (Coin 3010) ])
            Empty
            (Wdrl bobWithdrawal)
            (Coin 1000)
            (SlotNo 0)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
     wits = makeWitnessesVKey tx [alicePay, bobStake]
     utxo' = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
        , (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010)) ]
     ls = asStateTransition
-           (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty Nothing) (Coin 0)
+           (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty SNothing) (Coin 0)
     dstate' = _dstate emptyDelegation
     expectedDS = emptyDelegation
       { _dstate = dstate' {_rewards = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)}}
@@ -209,36 +209,36 @@ testInvalidWintess =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.fromList
+           (StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6000)
               , TxOut bobAddr (Coin 3000) ])
            Empty
            (Wdrl Map.empty)
            (Coin 1000)
            (SlotNo 1)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
     tx' = tx { _ttl = SlotNo  2}
     wits = makeWitnessesVKey tx' [alicePay]
-  in ledgerState [Tx tx wits Map.empty Nothing] @?= Left [InvalidWitness]
+  in ledgerState [Tx tx wits Map.empty SNothing] @?= Left [InvalidWitness]
 
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.fromList
+           (StrictSeq.fromList
              [ TxOut aliceAddr (Coin 6000)
              , TxOut bobAddr (Coin 3010) ])
            Empty
            (Wdrl bobWithdrawal)
            (Coin 1000)
            (SlotNo 0)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
     wits = Set.singleton $ makeWitnessVKey tx alicePay
     ls = asStateTransition
-      (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty Nothing) (Coin 0)
+      (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty SNothing) (Coin 0)
   in ls @?= Left [MissingWitnesses]
 
 testWithdrawalWrongAmt :: Assertion
@@ -246,36 +246,36 @@ testWithdrawalWrongAmt =
   let
     tx = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.fromList
+           (StrictSeq.fromList
              [ TxOut aliceAddr (Coin 6000)
              , TxOut bobAddr (Coin 3011) ])
            Empty
            (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
            (Coin 1000)
            (SlotNo 0)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
     wits = makeWitnessesVKey tx [alicePay, bobStake]
     ls =asStateTransition
-          (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty Nothing) (Coin 0)
+          (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty SNothing) (Coin 0)
   in ls @?= Left [IncorrectRewards]
 
 aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
   [DCert] -> SlotNo -> [KeyPair] -> Tx
-aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits Map.empty Nothing
+aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits Map.empty SNothing
   where
     aliceCoin = aliceInitCoin + txrefs - (coin + fee + txdeps)
     txbody = TxBody
                (Set.fromList [txin])
-               (Seq.fromList
+               (StrictSeq.fromList
                  [ TxOut aliceAddr aliceCoin
                  , TxOut bobAddr coin ])
-               (Seq.fromList cs)
+               (StrictSeq.fromList cs)
                (Wdrl Map.empty)
                fee
                s
-               Nothing
-               Nothing
+               SNothing
+               SNothing
     wits = makeWitnessesVKey txbody signers
 
 tx1 :: Tx
@@ -324,19 +324,19 @@ utxoSt2 = UTxOState
 tx3Body :: TxBody
 tx3Body = TxBody
           (Set.fromList [TxIn (txid $ _body tx2) 0])
-          (Seq.singleton $ TxOut aliceAddr (Coin 3950))
-          (Seq.fromList [ DCertPool (RegPool stakePool)
-                        , DCertDeleg (Delegate (Delegation
-                                            (KeyHashObj $ hashKey $ vKey aliceStake)
-                                            (hashKey $ vKey stakePoolKey1)))])
+          (StrictSeq.singleton $ TxOut aliceAddr (Coin 3950))
+          (StrictSeq.fromList [ DCertPool (RegPool stakePool)
+                              , DCertDeleg (Delegate (Delegation
+                                                  (KeyHashObj $ hashKey $ vKey aliceStake)
+                                                  (hashKey $ vKey stakePoolKey1)))])
           (Wdrl Map.empty)
           (Coin 1200)
           (SlotNo 100)
-          Nothing
-          Nothing
+          SNothing
+          SNothing
 
 tx3 :: Tx
-tx3 = Tx tx3Body (makeWitnessesVKey tx3Body keys) Map.empty Nothing
+tx3 = Tx tx3Body (makeWitnessesVKey tx3Body keys) Map.empty SNothing
       where keys = [alicePay, aliceStake, stakePoolKey1]
 
 utxoSt3 :: UTxOState
@@ -379,8 +379,8 @@ stakePool = PoolParams
             , _poolMargin  = interval0     --          or here?
             , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
             , _poolOwners  = Set.empty
-            , _poolRelays  = Seq.empty
-            , _poolMD      = Nothing
+            , _poolRelays  = StrictSeq.empty
+            , _poolMD      = SNothing
             }
 
 halfInterval :: UnitInterval
@@ -397,23 +397,23 @@ stakePoolUpdate = PoolParams
                    , _poolMargin  = halfInterval     --          or here?
                    , _poolRAcnt   = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1)
                    , _poolOwners  = Set.empty
-                   , _poolRelays  = Seq.empty
-                   , _poolMD      = Nothing
+                   , _poolRelays  = StrictSeq.empty
+                   , _poolMD      = SNothing
                    }
 
 tx4Body :: TxBody
 tx4Body = TxBody
           (Set.fromList [TxIn (txid $ _body tx3) 0])
-          (Seq.singleton $ TxOut aliceAddr (Coin 2950)) -- Note the deposit is not charged
-          (Seq.fromList [ DCertPool (RegPool stakePoolUpdate) ])
+          (StrictSeq.singleton $ TxOut aliceAddr (Coin 2950)) -- Note the deposit is not charged
+          (StrictSeq.fromList [ DCertPool (RegPool stakePoolUpdate) ])
           (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 100)
-          Nothing
-          Nothing
+          SNothing
+          SNothing
 
 tx4 :: Tx
-tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [alicePay, stakePoolKey1]) Map.empty Nothing
+tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [alicePay, stakePoolKey1]) Map.empty SNothing
 
 utxoSt4 :: UTxOState
 utxoSt4 = UTxOState
@@ -438,16 +438,16 @@ utxo5 e = UTxOState
 tx5Body :: EpochNo -> TxBody
 tx5Body e = TxBody
           (Set.fromList [TxIn (txid $ _body tx3) 0])
-          (Seq.singleton $ TxOut aliceAddr (Coin 2950))
-          (Seq.fromList [ DCertPool (RetirePool (hashKey $ vKey stakePoolKey1) e) ])
+          (StrictSeq.singleton $ TxOut aliceAddr (Coin 2950))
+          (StrictSeq.fromList [ DCertPool (RetirePool (hashKey $ vKey stakePoolKey1) e) ])
           (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 100)
-          Nothing
-          Nothing
+          SNothing
+          SNothing
 
 tx5 :: EpochNo -> Tx
-tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [alicePay, stakePoolKey1]) Map.empty Nothing
+tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [alicePay, stakePoolKey1]) Map.empty SNothing
 
 
 testsValidLedger :: TestTree
@@ -518,16 +518,16 @@ testWitnessNotIncluded =
   let
     txbody = TxBody
               (Set.fromList [TxIn genesisId 0])
-              (Seq.fromList
+              (StrictSeq.fromList
                 [ TxOut aliceAddr (Coin 6404)
                 , TxOut bobAddr (Coin 3000) ])
               Empty
               (Wdrl Map.empty)
               (Coin 596)
               (SlotNo 100)
-              Nothing
-              Nothing
-    tx = Tx txbody Set.empty Map.empty Nothing
+              SNothing
+              SNothing
+    tx = Tx txbody Set.empty Map.empty SNothing
   in ledgerState [tx] @?= Left [MissingWitnesses]
 
 testSpendNotOwnedUTxO :: Assertion
@@ -535,15 +535,15 @@ testSpendNotOwnedUTxO =
   let
     txbody = TxBody
               (Set.fromList [TxIn genesisId 1])
-              (Seq.singleton $ TxOut aliceAddr (Coin 232))
+              (StrictSeq.singleton $ TxOut aliceAddr (Coin 232))
               Empty
               (Wdrl Map.empty)
               (Coin 768)
               (SlotNo 100)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
     aliceWit = makeWitnessVKey txbody alicePay
-    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty Nothing
+    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty SNothing
   in ledgerState [tx] @?= Left [MissingWitnesses]
 
 testWitnessWrongUTxO :: Assertion
@@ -551,24 +551,24 @@ testWitnessWrongUTxO =
   let
     txbody = TxBody
               (Set.fromList [TxIn genesisId 1])
-              (Seq.singleton $ TxOut aliceAddr (Coin 230))
+              (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
               Empty
               (Wdrl Map.empty)
               (Coin 770)
               (SlotNo 100)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
     tx2body = TxBody
               (Set.fromList [TxIn genesisId 1])
-              (Seq.singleton $ TxOut aliceAddr (Coin 230))
+              (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
               Empty
               (Wdrl Map.empty)
               (Coin 770)
               (SlotNo 101)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
     aliceWit = makeWitnessVKey  tx2body alicePay
-    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty Nothing
+    tx = Tx txbody (Set.fromList [aliceWit]) Map.empty SNothing
   in ledgerState [tx] @?= Left [ InvalidWitness
                                , MissingWitnesses]
 
@@ -578,17 +578,17 @@ testEmptyInputSet =
     aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt aliceStake) (Coin 2000)
     tx = TxBody
            Set.empty
-           (Seq.singleton $ TxOut aliceAddr (Coin 1000))
+           (StrictSeq.singleton $ TxOut aliceAddr (Coin 1000))
            Empty
            (Wdrl aliceWithdrawal)
            (Coin 1000)
            (SlotNo 0)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
     wits = makeWitnessesVKey tx [aliceStake]
     genesisWithReward' = changeReward genesis (mkVKeyRwdAcnt aliceStake) (Coin 2000)
     ls = asStateTransition
-           (SlotNo 0) testPCs genesisWithReward' (Tx tx wits Map.empty Nothing) (Coin 0)
+           (SlotNo 0) testPCs genesisWithReward' (Tx tx wits Map.empty SNothing) (Coin 0)
   in ls @?= Left [ InputSetEmpty ]
 
 testFeeTooSmall :: Assertion

@@ -30,9 +30,9 @@ import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys
-import           Shelley.Spec.Ledger.LedgerState (DState (..), LedgerState (..), UTxOState (..),
-                     emptyLedgerState, _delegationState, _dstate, _fGenDelegs, _genDelegs,
-                     _utxoState)
+import           Shelley.Spec.Ledger.LedgerState (DState (..), FutureGenDeleg (..),
+                     LedgerState (..), UTxOState (..), emptyLedgerState, _delegationState, _dstate,
+                     _fGenDelegs, _genDelegs, _utxoState)
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
@@ -100,15 +100,16 @@ ledgersTransition = do
   let ds = _dstate dp''
   let DState _ _ _ _ fGenDelegs_ (GenDelegs genDelegs_) _ = ds
 
-  let (curr, fGenDelegs') = Map.partitionWithKey (\(s, _) _ -> s <= slot) fGenDelegs_
-  let maxSlotNo = maximum . Set.map fst . Map.keysSet
+  let (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs_
+  let curr' = Map.mapKeys (\(FutureGenDeleg s g) -> (s, g)) curr
+  let maxSlotNo = maximum . Set.map fGenDelegSlot . Map.keysSet
   let latestPerGKey gk =
-        ( (maxSlotNo . Map.filterWithKey (\(_, c) _ -> c == gk)) curr
+        ( (maxSlotNo . Map.filterWithKey (\(FutureGenDeleg _ c) _ -> c == gk)) curr
         , gk)
   let genDelegsKeys = Set.map
                   latestPerGKey
-                  (Set.map snd (Map.keysSet curr))
-  let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr
+                  (Set.map fGenDelegGenKeyHash (Map.keysSet curr))
+  let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr'
 
   let u''' = UTxOState utxo deposits fee ppup
   let dp''' = dp'' { _dstate = ds { _fGenDelegs = fGenDelegs'

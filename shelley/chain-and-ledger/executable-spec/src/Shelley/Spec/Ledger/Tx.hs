@@ -30,7 +30,7 @@ module Shelley.Spec.Ledger.Tx
 where
 
 
-import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe, invalidKey, maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLenOf, decodeWord,
@@ -57,9 +57,8 @@ data Tx crypto
   = Tx
       { _body           :: !(TxBody crypto)
       , _witnessVKeySet :: !(Set (WitVKey crypto))
-      , _witnessMSigMap ::
-          Map (ScriptHash crypto) (MultiSig crypto)
-      , _metadata       :: Maybe MetaData
+      , _witnessMSigMap :: !(Map (ScriptHash crypto) (MultiSig crypto))
+      , _metadata       :: !(StrictMaybe MetaData)
       } deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (Tx crypto)
@@ -87,7 +86,7 @@ cborWitsToTx b ws md = Tx
         fmap
           (\x -> (hashScript x, x))
           ((toList . unwrapCborSeq . _cborWitsScripts) ws)
-  , _metadata = md
+  , _metadata = maybeToStrictMaybe md
   }
 
 data CBORWits crypto

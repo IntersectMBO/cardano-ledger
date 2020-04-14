@@ -16,8 +16,8 @@ import           Control.State.Transition (STS (..), TRC (..), TransitionRule, j
                      liftSTS)
 import           Data.Functor ((<&>))
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo, maxLovelaceSupply,
-                     startRewards)
+import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo,
+                     maxLovelaceSupply, startRewards)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import           Shelley.Spec.Ledger.LedgerState (EpochState, RewardUpdate, createRUpd)
@@ -30,14 +30,14 @@ data RupdEnv crypto
   = RupdEnv (BlocksMade crypto) (EpochState crypto)
 
 instance STS (RUPD crypto) where
-  type State (RUPD crypto) = Maybe (RewardUpdate crypto)
+  type State (RUPD crypto) = StrictMaybe (RewardUpdate crypto)
   type Signal (RUPD crypto) = SlotNo
   type Environment (RUPD crypto) = RupdEnv crypto
   type BaseM (RUPD crypto) = ShelleyBase
   data PredicateFailure (RUPD crypto)
     deriving (Show, Eq, Generic)
 
-  initialRules = [pure Nothing]
+  initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
@@ -55,5 +55,5 @@ rupdTransition = do
   if s <= slot
     then pure ru
     else case ru of
-      Nothing -> Just <$> (liftSTS $ createRUpd epoch b es (Coin $ fromIntegral maxLL))
-      Just _  -> pure ru
+      SNothing -> SJust <$> (liftSTS $ createRUpd epoch b es (Coin $ fromIntegral maxLL))
+      SJust _  -> pure ru

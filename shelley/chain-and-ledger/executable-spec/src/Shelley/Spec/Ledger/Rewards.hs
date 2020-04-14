@@ -52,9 +52,9 @@ instance FromCBOR ApparentPerformance
  where fromCBOR = ApparentPerformance <$> decodeDouble
 
 data NonMyopic crypto= NonMyopic
-  { apparentPerformances :: Map (KeyHash crypto) ApparentPerformance
-  , rewardPot :: Coin
-  , snap :: SnapShot crypto
+  { apparentPerformances :: !(Map (KeyHash crypto) ApparentPerformance)
+  , rewardPot :: !Coin
+  , snap :: !(SnapShot crypto)
   } deriving (Show, Eq, Generic)
 
 emptyNonMyopic :: NonMyopic crypto

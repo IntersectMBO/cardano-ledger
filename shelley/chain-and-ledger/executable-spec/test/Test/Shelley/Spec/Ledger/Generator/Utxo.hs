@@ -17,8 +17,8 @@ import qualified Data.Either as Either (lefts, rights)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (catMaybes)
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Stack (HasCallStack)
@@ -27,6 +27,7 @@ import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 import           Shelley.Spec.Ledger.Address (scriptToCred, toCred)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
 import           Shelley.Spec.Ledger.LedgerState (pattern UTxOState, minfee, _dstate, _ptrs,
                      _rewards)
@@ -154,7 +155,7 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
           ksKeyPairsByHash
           msigSignatures
 
-    let metadata = Nothing -- TODO generate metadata
+    let metadata = SNothing -- TODO generate metadata
 
     -- calculate real fees of witnesses transaction
     let minimalFees = minfee pparams (Tx txBody wits multiSig metadata)
@@ -195,8 +196,8 @@ mkTxWits txBody keyWits genesisWits keyHashMap msigs =
 genTxBody
   :: HasCallStack
   => Set TxIn
-  -> Seq TxOut
-  -> Seq DCert
+  -> StrictSeq TxOut
+  -> StrictSeq DCert
   -> Map RewardAcnt Coin
   -> Maybe Update
   -> Coin
@@ -210,8 +211,8 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
              (Wdrl wdrls)
              fee
              slotWithTTL
-             update
-             Nothing -- TODO generate metadata
+             (maybeToStrictMaybe update)
+             SNothing -- TODO generate metadata
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the
 -- sum of `fee` and the remainder of the equal distribution and the list ouf
@@ -224,10 +225,10 @@ calcOutputsFromBalance
   => Coin
   -> [Addr]
   -> Coin
-  -> (Coin, Seq TxOut)
+  -> (Coin, StrictSeq TxOut)
 calcOutputsFromBalance balance_ addrs fee =
   ( fee + splitCoinRem
-  , (`TxOut` amountPerOutput) <$> Seq.fromList addrs)
+  , (`TxOut` amountPerOutput) <$> StrictSeq.fromList addrs)
   where
     -- split the available balance into equal portions (one for each address),
     -- if there is a remainder, then add it to the fee.

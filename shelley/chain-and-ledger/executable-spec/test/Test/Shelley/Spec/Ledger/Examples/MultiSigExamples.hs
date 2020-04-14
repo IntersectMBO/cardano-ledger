@@ -15,12 +15,13 @@ module Test.Shelley.Spec.Ledger.Examples.MultiSigExamples
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
-import           Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as StrictSeq
 
 import qualified Data.Set as Set (fromList)
 
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, undiscriminateKeyHash)
 import           Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
@@ -77,29 +78,29 @@ aliceAndBobOrCarlOrDaria =
 initTxBody :: [(Addr, Coin)] -> TxBody
 initTxBody addrs = TxBody
         (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
-        (Seq.fromList $ map (uncurry TxOut) addrs)
+        (StrictSeq.fromList $ map (uncurry TxOut) addrs)
         Empty
         (Wdrl Map.empty)
         (Coin 0)
         (SlotNo 0)
-        Nothing
-        Nothing
+        SNothing
+        SNothing
 
 makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
-    (Seq.fromList [uncurry TxOut addrC | addrC <- addrCs])
+    (StrictSeq.fromList [uncurry TxOut addrC | addrC <- addrCs])
     Empty
     wdrl
     (Coin 0)
     (SlotNo 10)
-    Nothing
-    Nothing
+    SNothing
+    SNothing
 
 makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
-makeTx txBody keyPairs =
-  Tx txBody (makeWitnessesVKey txBody keyPairs)
+makeTx txBody keyPairs msigs =
+  Tx txBody (makeWitnessesVKey txBody keyPairs) msigs . maybeToStrictMaybe
 
 aliceInitCoin :: Coin
 aliceInitCoin = 10000

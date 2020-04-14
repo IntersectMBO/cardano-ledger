@@ -5,8 +5,8 @@
 
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -20,8 +20,8 @@ import           Control.Monad.Trans.Reader (runReaderT)
 import           Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map (lookup)
 import           Data.Maybe (catMaybes)
-import           Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 
@@ -43,8 +43,8 @@ import           Shelley.Spec.Ledger.TxData (Ix, Ptr (..))
 import           Shelley.Spec.Ledger.UTxO (totalDeposits)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (DCert, DELPL, DPState)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
-import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..), KeySpace(..))
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..))
 import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import           Test.Shelley.Spec.Ledger.Utils (testGlobals)
 
@@ -127,7 +127,7 @@ genDCerts
   -> Natural
   -> Natural
   -> Coin
-  -> Gen (Seq DCert, [CertCred], Coin, Coin)
+  -> Gen (StrictSeq DCert, [CertCred], Coin, Coin)
 genDCerts
   ge@( GenEnv
          KeySpace_ {ksKeyPairsByHash}
@@ -152,7 +152,7 @@ genDCerts
 
   withScriptCreds <- concat <$> mapM extendWithScriptCred creds
 
-  pure ( Seq.fromList certs
+  pure ( StrictSeq.fromList certs
        , withScriptCreds
        , totalDeposits pparams (_stPools (_pstate dpState)) certs
        , sum (certRefund slotWithTTL <$> deRegStakeCreds) )

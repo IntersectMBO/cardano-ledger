@@ -100,7 +100,7 @@ import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet
                      (!?))
 import           Data.Maybe (isJust, maybe)
 import           Data.Ratio ((%))
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
@@ -109,7 +109,8 @@ import           Unsafe.Coerce (unsafeCoerce)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), mkNonce, startRewards, text64, (⭒))
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, startRewards,
+                     text64, (⭒))
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -121,13 +122,14 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern Sna
                      _pstakeMark, _pstakeSet)
 import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey,
                      vKey)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern DPState,
-                     pattern EpochState, pattern LedgerState, pattern NewEpochState,
-                     pattern RewardUpdate, pattern UTxOState, deltaF, deltaR, deltaT, emptyDState,
-                     emptyPState, esAccountState, esLState, esPp, genesisCoins, genesisId, nesEs,
-                     nonMyopic, overlaySchedule, rs, _delegationState, _delegations, _dstate,
-                     _fGenDelegs, _genDelegs, _irwd, _pParams, _ptrs, _reserves, _retiring,
-                     _rewards, _stPools, _stkCreds, _treasury)
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern ActiveSlot,
+                     pattern DPState, pattern EpochState, FutureGenDeleg (..), pattern LedgerState,
+                     pattern NewEpochState, pattern RewardUpdate, pattern UTxOState, deltaF,
+                     deltaR, deltaT, emptyDState, emptyPState, esAccountState, esLState, esPp,
+                     genesisCoins, genesisId, nesEs, nonMyopic, overlaySchedule, rs,
+                     _delegationState, _delegations, _dstate, _fGenDelegs, _genDelegs, _irwd,
+                     _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools, _stkCreds,
+                     _treasury)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams), PParamsUpdate,
                      pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams,
@@ -162,9 +164,9 @@ import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesV
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CHAIN, ChainState,
                      Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
-                     LedgerState, NewEpochState, PState, PoolDistr, PoolParams, ProposedPPUpdates,
-                     RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody, UTxO, UTxOState, Update,
-                     VKeyGenesis, hashKeyVRF)
+                     LedgerState, NewEpochState, OBftSlot, PState, PoolDistr, PoolParams,
+                     ProposedPPUpdates, RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody, UTxO,
+                     UTxOState, Update, VKeyGenesis, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), NatNonce (..),
                      genesisAccountState, mkBlock, mkOCert, zero)
 import           Test.Shelley.Spec.Ledger.Utils
@@ -258,8 +260,8 @@ alicePoolParams =
     , _poolMargin = unsafeMkUnitInterval 0.1
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , _poolRelays = Seq.empty
-    , _poolMD = Just $ PoolMetaData
+    , _poolRelays = StrictSeq.empty
+    , _poolMD = SJust $ PoolMetaData
                   { _poolMDUrl  = Url $ text64 "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
@@ -381,7 +383,7 @@ initStEx1 = initialShelleyState
   (UTxO Map.empty)
   maxLLSupply
   genDelegs
-  (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0))
+  (Map.singleton (SlotNo 1) (ActiveSlot . hashKey $ coreNodeVKG 0))
   ppsEx1
   (hashHeaderToNonce lastByronHeaderHash)
 
@@ -409,9 +411,9 @@ expectedStEx1 = ChainState
      (BlocksMade Map.empty)
      -- Note that blocks in the overlay schedule do not add to this count.
      esEx1
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
-     (Map.singleton (SlotNo 1) (Just . hashKey $ coreNodeVKG 0)))
+     (Map.singleton (SlotNo 1) (ActiveSlot . hashKey $ coreNodeVKG 0)))
   oCertIssueNosEx1
   nonce0
   (nonce0 ⭒ mkNonce 1)
@@ -442,26 +444,26 @@ ppupEx2A :: ProposedPPUpdates
 ppupEx2A = ProposedPPUpdates $ Map.singleton
              (hashKey $ coreNodeVKG 0) -- stake key
              (PParams
-                { _minfeeA = Nothing
-                , _minfeeB = Nothing
-                , _maxBBSize = Nothing
-                , _maxTxSize = Nothing
-                , _maxBHSize = Nothing
-                , _keyDeposit = Just 255
-                , _keyMinRefund = Nothing
-                , _keyDecayRate = Nothing
-                , _poolDeposit = Nothing
-                , _poolMinRefund = Nothing
-                , _poolDecayRate = Nothing
-                , _eMax = Nothing
-                , _nOpt = Nothing
-                , _a0 = Nothing
-                , _rho = Nothing
-                , _tau = Nothing
-                , _activeSlotCoeff = Nothing
-                , _d = Nothing
-                , _extraEntropy = Nothing
-                , _protocolVersion = Nothing
+                { _minfeeA = SNothing
+                , _minfeeB = SNothing
+                , _maxBBSize = SNothing
+                , _maxTxSize = SNothing
+                , _maxBHSize = SNothing
+                , _keyDeposit = SJust 255
+                , _keyMinRefund = SNothing
+                , _keyDecayRate = SNothing
+                , _poolDeposit = SNothing
+                , _poolMinRefund = SNothing
+                , _poolDecayRate = SNothing
+                , _eMax = SNothing
+                , _nOpt = SNothing
+                , _a0 = SNothing
+                , _rho = SNothing
+                , _tau = SNothing
+                , _activeSlotCoeff = SNothing
+                , _d = SNothing
+                , _extraEntropy = SNothing
+                , _protocolVersion = SNothing
                 })
 
 -- | Update proposal that just changes protocol parameters,
@@ -477,8 +479,8 @@ aliceCoinEx2A = aliceInitCoin - (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1)
 txbodyEx2A :: TxBody
 txbodyEx2A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.fromList [TxOut aliceAddr aliceCoinEx2A])
-           (Seq.fromList ([ DCertDeleg (RegKey aliceSHK)
+           (StrictSeq.fromList [TxOut aliceAddr aliceCoinEx2A])
+           (StrictSeq.fromList ([ DCertDeleg (RegKey aliceSHK)
            , DCertDeleg (RegKey bobSHK)
            , DCertDeleg (RegKey carlSHK)
            , DCertPool (RegPool alicePoolParams)
@@ -487,8 +489,8 @@ txbodyEx2A = TxBody
            (Wdrl Map.empty)
            (Coin 3)
            (SlotNo 10)
-           (Just updateEx2A)
-           Nothing
+           (SJust updateEx2A)
+           SNothing
 
 txEx2A :: Tx
 txEx2A = Tx
@@ -507,7 +509,7 @@ txEx2A = Tx
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
              ])
           Map.empty
-          Nothing
+          SNothing
 
 -- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
@@ -528,7 +530,7 @@ acntEx2A = AccountState
 esEx2A :: EpochState
 esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1 ppsEx1 emptyNonMyopic
 
-overlayEx2A :: Map SlotNo (Maybe GenKeyHash)
+overlayEx2A :: Map SlotNo OBftSlot
 overlayEx2A = runShelleyBase
   $ overlaySchedule
     (EpochNo 0)
@@ -541,7 +543,7 @@ initNesEx2A = NewEpochState
                (BlocksMade Map.empty)
                (BlocksMade Map.empty)
                esEx2A
-               Nothing
+               SNothing
                (PoolDistr Map.empty)
                overlayEx2A
 
@@ -615,7 +617,7 @@ expectedStEx2A = ChainState
      (BlocksMade Map.empty) -- Still no blocks
      (BlocksMade Map.empty) -- Still no blocks
      (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   -- Operational certificate issue numbers are now only updated during block
@@ -649,17 +651,17 @@ aliceCoinEx2BPtr = aliceCoinEx2A - (aliceCoinEx2BBase + 4)
 txbodyEx2B :: TxBody
 txbodyEx2B = TxBody
       { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2A) 0]
-      , TxData._outputs  = Seq.fromList [ TxOut aliceAddr    aliceCoinEx2BBase
-                                        , TxOut alicePtrAddr aliceCoinEx2BPtr ]
+      , TxData._outputs  = StrictSeq.fromList [ TxOut aliceAddr    aliceCoinEx2BBase
+                                              , TxOut alicePtrAddr aliceCoinEx2BPtr ]
       --  Delegation certificates
       , TxData._certs    =
-        Seq.fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
-                     , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
+        StrictSeq.fromList [ DCertDeleg (Delegate $ Delegation aliceSHK (hk alicePool))
+                           , DCertDeleg (Delegate $ Delegation bobSHK   (hk alicePool))]
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 4
       , TxData._ttl      = SlotNo 90
-      , TxData._txUpdate = Nothing
-      , TxData._mdHash   = Nothing
+      , TxData._txUpdate = SNothing
+      , TxData._mdHash   = SNothing
       }
 
 txEx2B :: Tx
@@ -668,7 +670,7 @@ txEx2B = Tx
           (makeWitnessesVKey txbodyEx2B [alicePay, aliceStake, bobStake])
                      -- Witness verification key set
           Map.empty  -- Witness signature map
-          Nothing
+          SNothing
 
 blockEx2B :: Block
 blockEx2B = mkBlock
@@ -730,12 +732,12 @@ expectedStEx2Bgeneric pp = ChainState
      (BlocksMade Map.empty) -- Blocks made before current
      (EpochState acntEx2A emptySnapShots expectedLSEx2B pp pp emptyNonMyopic)
                             -- Previous epoch state
-     (Just RewardUpdate { deltaT        = Coin 0
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin 0
-                        , nonMyopic     = emptyNonMyopic
-                        })  -- Update reward
+     (SJust RewardUpdate { deltaT        = Coin 0
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin 0
+                         , nonMyopic     = emptyNonMyopic
+                         })  -- Update reward
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -786,7 +788,7 @@ blockEx2C = mkBlock
              0
              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
 
-epoch1OSchedEx2C :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2C :: Map SlotNo OBftSlot
 epoch1OSchedEx2C = runShelleyBase $ overlaySchedule
                     (EpochNo 1)
                     (Map.keysSet genDelegs)
@@ -857,7 +859,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A { _reserves = _reserves acntEx2A - carlMIR } ss ls pp pp emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
   oCertIssueNosEx1
@@ -918,14 +920,14 @@ aliceCoinEx2DBase = aliceCoinEx2BBase - 5
 txbodyEx2D :: TxBody
 txbodyEx2D = TxBody
       { TxData._inputs   = Set.fromList [TxIn (txid txbodyEx2B) 0]
-      , TxData._outputs  = Seq.fromList [ TxOut aliceAddr aliceCoinEx2DBase ]
+      , TxData._outputs  = StrictSeq.fromList [ TxOut aliceAddr aliceCoinEx2DBase ]
       , TxData._certs    =
-        Seq.fromList [ DCertDeleg (Delegate $ Delegation carlSHK (hk alicePool)) ]
+        StrictSeq.fromList [ DCertDeleg (Delegate $ Delegation carlSHK (hk alicePool)) ]
       , TxData._wdrls    = Wdrl Map.empty
       , TxData._txfee    = Coin 5
       , TxData._ttl      = SlotNo 500
-      , TxData._txUpdate = Nothing
-      , TxData._mdHash   = Nothing
+      , TxData._txUpdate = SNothing
+      , TxData._mdHash   = SNothing
       }
 
 txEx2D :: Tx
@@ -933,7 +935,7 @@ txEx2D = Tx
           txbodyEx2D
           (makeWitnessesVKey txbodyEx2D [alicePay, carlStake])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx2D :: Block
 blockEx2D = mkBlock
@@ -993,12 +995,12 @@ expectedStEx2D = ChainState
         ppsEx1
         ppsEx1
         emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 21
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin (-21)
-                        , nonMyopic     = emptyNonMyopic { rewardPot = Coin 17 }
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 21
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin (-21)
+                         , nonMyopic     = emptyNonMyopic { rewardPot = Coin 17 }
+                         })
      (PoolDistr Map.empty)
      epoch1OSchedEx2C)
   oCertIssueNosEx1
@@ -1033,7 +1035,7 @@ blockEx2E = mkBlock
              10
              (mkOCert (coreNodeKeys 5) 1 (KESPeriod 10))
 
-epoch1OSchedEx2E :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2E :: Map SlotNo OBftSlot
 epoch1OSchedEx2E = runShelleyBase $ overlaySchedule
                     (EpochNo 2)
                     (Map.keysSet genDelegs)
@@ -1087,7 +1089,7 @@ expectedStEx2E = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr
        (Map.singleton
           (hk alicePool)
@@ -1139,12 +1141,12 @@ expectedStEx2F = ChainState
      (BlocksMade Map.empty)
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 19
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin (-19)
-                        , nonMyopic     = emptyNonMyopic { rewardPot = Coin 16 }
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 19
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin (-19)
+                         , nonMyopic     = emptyNonMyopic { rewardPot = Coin 16 }
+                         })
      pdEx2F
      epoch1OSchedEx2E)
   oCertIssueNosEx2F
@@ -1182,7 +1184,7 @@ blockEx2G = mkBlock
 blockEx2GHash :: HashHeader
 blockEx2GHash = bhHash (bheader blockEx2G)
 
-epoch1OSchedEx2G :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2G :: Map SlotNo OBftSlot
 epoch1OSchedEx2G = runShelleyBase $ overlaySchedule
                     (EpochNo 3)
                     (Map.keysSet genDelegs)
@@ -1219,7 +1221,7 @@ expectedStEx2G = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      epoch1OSchedEx2G)
   oCertIssueNosEx2G
@@ -1284,15 +1286,15 @@ expectedStEx2H = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 767369696984
-                        , deltaR        = Coin (-793333333333)
-                        , rs            = rewardsEx2H
-                        , deltaF        = Coin (-10)
-                        , nonMyopic     = NonMyopic
-                            (Map.singleton (hk alicePool) alicePerfEx2H)
-                            (Coin 634666666675)
-                            snapEx2C
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 767369696984
+                         , deltaR        = Coin (-793333333333)
+                         , rs            = rewardsEx2H
+                         , deltaF        = Coin (-10)
+                         , nonMyopic     = NonMyopic
+                             (Map.singleton (hk alicePool) alicePerfEx2H)
+                             (Coin 634666666675)
+                             snapEx2C
+                         })
      pdEx2F
      epoch1OSchedEx2G)
   oCertIssueNosEx2H
@@ -1329,7 +1331,7 @@ blockEx2I = mkBlock
 blockEx2IHash :: HashHeader
 blockEx2IHash = bhHash (bheader blockEx2I)
 
-epoch1OSchedEx2I :: Map SlotNo (Maybe GenKeyHash)
+epoch1OSchedEx2I :: Map SlotNo OBftSlot
 epoch1OSchedEx2I = runShelleyBase $ overlaySchedule
                      (EpochNo 4)
                      (Map.keysSet genDelegs)
@@ -1378,7 +1380,7 @@ expectedStEx2I = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2I snapsEx2I expectedLSEx2I ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2I
@@ -1406,20 +1408,20 @@ bobAda2J = bobRAcnt2H -- reward account
 txbodyEx2J :: TxBody
 txbodyEx2J = TxBody
            (Set.fromList [TxIn genesisId 1])
-           (Seq.singleton $ TxOut bobAddr bobAda2J)
-           (Seq.fromList [DCertDeleg (DeRegKey bobSHK)])
+           (StrictSeq.singleton $ TxOut bobAddr bobAda2J)
+           (StrictSeq.fromList [DCertDeleg (DeRegKey bobSHK)])
            (Wdrl $ Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
            (Coin 9)
            (SlotNo 500)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
 
 txEx2J :: Tx
 txEx2J = Tx
           txbodyEx2J
           (makeWitnessesVKey txbodyEx2J [bobPay, bobStake])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx2J :: Block
 blockEx2J = mkBlock
@@ -1474,7 +1476,7 @@ expectedStEx2J = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2I snapsEx2I expectedLSEx2J ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2J
@@ -1499,20 +1501,20 @@ aliceCoinEx2KPtr = aliceCoinEx2DBase - 2
 txbodyEx2K :: TxBody
 txbodyEx2K = TxBody
            (Set.fromList [TxIn (txid txbodyEx2D) 0])
-           (Seq.singleton $ TxOut alicePtrAddr aliceCoinEx2KPtr)
-           (Seq.fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
+           (StrictSeq.singleton $ TxOut alicePtrAddr aliceCoinEx2KPtr)
+           (StrictSeq.fromList [DCertPool (RetirePool (hk alicePool) (EpochNo 5))])
            (Wdrl Map.empty)
            (Coin 2)
            (SlotNo 500)
-           Nothing
-           Nothing
+           SNothing
+           SNothing
 
 txEx2K :: Tx
 txEx2K = Tx
           txbodyEx2K
           (makeWitnessesVKey txbodyEx2K [cold alicePool, alicePay])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx2K :: Block
 blockEx2K = mkBlock
@@ -1557,15 +1559,15 @@ expectedStEx2K = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 9
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin (-9)
-                        , nonMyopic     = NonMyopic
-                            (Map.singleton (hk alicePool) (ApparentPerformance 0))
-                            (Coin 8)
-                            snapEx2E
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 9
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin (-9)
+                         , nonMyopic     = NonMyopic
+                             (Map.singleton (hk alicePool) (ApparentPerformance 0))
+                             (Coin 8)
+                             snapEx2E
+                         })
      pdEx2F
      epoch1OSchedEx2I)
   oCertIssueNosEx2J
@@ -1649,7 +1651,7 @@ expectedStEx2L = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      pdEx2F
      (runShelleyBase $ overlaySchedule (EpochNo 5) (Map.keysSet genDelegs) ppsEx1))
   oCertIssueNosEx2L
@@ -1672,26 +1674,26 @@ ex2L = CHAINExample (SlotNo 510) expectedStEx2K blockEx2L (Right expectedStEx2L)
 
 ppVote3A :: PParamsUpdate
 ppVote3A = PParams
-             { _minfeeA = Nothing
-             , _minfeeB = Nothing
-             , _maxBBSize = Nothing
-             , _maxTxSize = Nothing
-             , _maxBHSize = Nothing
-             , _keyDeposit = Nothing
-             , _keyMinRefund = Nothing
-             , _keyDecayRate = Nothing
-             , _poolDeposit = Just 200
-             , _poolMinRefund = Nothing
-             , _poolDecayRate = Nothing
-             , _eMax = Nothing
-             , _nOpt = Nothing
-             , _a0 = Nothing
-             , _rho = Nothing
-             , _tau = Nothing
-             , _activeSlotCoeff = Nothing
-             , _d = Nothing
-             , _extraEntropy = Just (mkNonce 123)
-             , _protocolVersion = Nothing
+             { _minfeeA = SNothing
+             , _minfeeB = SNothing
+             , _maxBBSize = SNothing
+             , _maxTxSize = SNothing
+             , _maxBHSize = SNothing
+             , _keyDeposit = SNothing
+             , _keyMinRefund = SNothing
+             , _keyDecayRate = SNothing
+             , _poolDeposit = SJust 200
+             , _poolMinRefund = SNothing
+             , _poolDecayRate = SNothing
+             , _eMax = SNothing
+             , _nOpt = SNothing
+             , _a0 = SNothing
+             , _rho = SNothing
+             , _tau = SNothing
+             , _activeSlotCoeff = SNothing
+             , _d = SNothing
+             , _extraEntropy = SJust (mkNonce 123)
+             , _protocolVersion = SNothing
              }
 
 ppupEx3A :: ProposedPPUpdates
@@ -1710,13 +1712,13 @@ aliceCoinEx3A = aliceInitCoin - 1
 txbodyEx3A :: TxBody
 txbodyEx3A = TxBody
            (Set.fromList [TxIn genesisId 0])
-           (Seq.singleton $ TxOut aliceAddr aliceCoinEx3A)
-           Seq.empty
+           (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3A)
+           StrictSeq.empty
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 10)
-           (Just updateEx3A)
-           Nothing
+           (SJust updateEx3A)
+           SNothing
 
 txEx3A :: Tx
 txEx3A = Tx
@@ -1729,7 +1731,7 @@ txEx3A = Tx
             , cold $ coreNodeKeys 4
             ])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx3A :: Block
 blockEx3A = mkBlock
@@ -1767,7 +1769,7 @@ expectedStEx3A = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -1802,13 +1804,13 @@ aliceCoinEx3B = aliceCoinEx3A - 1
 txbodyEx3B :: TxBody
 txbodyEx3B = TxBody
            (Set.fromList [TxIn (txid txbodyEx3A) 0])
-           (Seq.singleton $ TxOut aliceAddr aliceCoinEx3B)
-           Seq.empty
+           (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3B)
+           StrictSeq.empty
            (Wdrl Map.empty)
            (Coin 1)
            (SlotNo 31)
-           (Just updateEx3B)
-           Nothing
+           (SJust updateEx3B)
+           SNothing
 
 txEx3B :: Tx
 txEx3B = Tx
@@ -1820,7 +1822,7 @@ txEx3B = Tx
             , cold $ coreNodeKeys 5
             ])
           Map.empty
-          Nothing
+          SNothing
 
 blockEx3B :: Block
 blockEx3B = mkBlock
@@ -1865,7 +1867,7 @@ expectedStEx3B = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -1902,7 +1904,7 @@ blockEx3C = mkBlock
 blockEx3CHash :: HashHeader
 blockEx3CHash = bhHash (bheader blockEx3C)
 
-overlayEx3C :: Map SlotNo (Maybe GenKeyHash)
+overlayEx3C :: Map SlotNo OBftSlot
 overlayEx3C = runShelleyBase $ overlaySchedule
                     (EpochNo 1)
                     (Map.keysSet genDelegs)
@@ -1930,7 +1932,7 @@ expectedStEx3C = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx1 ppsEx3C emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx3C)
   oCertIssueNosEx1
@@ -1960,22 +1962,22 @@ aliceCoinEx4A = aliceInitCoin - 1
 txbodyEx4A :: TxBody
 txbodyEx4A = TxBody
               (Set.fromList [TxIn genesisId 0])
-              (Seq.singleton $ TxOut aliceAddr aliceCoinEx4A)
-              (Seq.fromList [DCertGenesis (GenesisDelegate
-                                       ( (hashKey . coreNodeVKG) 0
-                                       , (hashKey . vKey) newGenDelegate))])
+              (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx4A)
+              (StrictSeq.fromList [DCertGenesis (GenesisDelegate
+                                       (hashKey (coreNodeVKG 0))
+                                       (hashKey (vKey newGenDelegate)))])
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
 
 txEx4A :: Tx
 txEx4A = Tx
            txbodyEx4A
            (makeWitnessesVKey txbodyEx4A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx4A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
            Map.empty
-           Nothing
+           SNothing
 
 blockEx4A :: Block
 blockEx4A = mkBlock
@@ -1996,7 +1998,7 @@ blockEx4AHash = bhHash (bheader blockEx4A)
 
 dsEx4A :: DState
 dsEx4A = dsEx1 { _fGenDelegs = Map.singleton
-                          ( SlotNo 43, hashKey $ coreNodeVKG 0 )
+                          ( FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVKG 0) )
                           ( (hashKey . vKey) newGenDelegate ) }
 
 utxoEx4A :: UTxO
@@ -2021,7 +2023,7 @@ expectedStEx4A = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -2080,12 +2082,12 @@ expectedStEx4B = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1 ppsEx1 emptyNonMyopic)
-     (Just RewardUpdate { deltaT        = Coin 0
-                        , deltaR        = Coin 0
-                        , rs            = Map.empty
-                        , deltaF        = Coin 0
-                        , nonMyopic     = emptyNonMyopic
-                        })
+     (SJust RewardUpdate { deltaT        = Coin 0
+                         , deltaR        = Coin 0
+                         , rs            = Map.empty
+                         , deltaF        = Coin 0
+                         , nonMyopic     = emptyNonMyopic
+                         })
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -2114,13 +2116,13 @@ aliceCoinEx5A = aliceInitCoin - 1
 txbodyEx5A :: TxBody
 txbodyEx5A = TxBody
               (Set.fromList [TxIn genesisId 0])
-              (Seq.singleton $ TxOut aliceAddr aliceCoinEx5A)
-              (Seq.fromList [DCertMir (MIRCert ir)])
+              (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5A)
+              (StrictSeq.fromList [DCertMir (MIRCert ir)])
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 10)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
 
 txEx5A :: Tx
 txEx5A = Tx
@@ -2133,7 +2135,7 @@ txEx5A = Tx
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
            ])
            Map.empty
-           Nothing
+           SNothing
 
 blockEx5A :: Block
 blockEx5A = mkBlock
@@ -2177,7 +2179,7 @@ expectedStEx5A = ChainState
      (BlocksMade Map.empty)
      (BlocksMade Map.empty)
      (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1 ppsEx1 emptyNonMyopic)
-     Nothing
+     SNothing
      (PoolDistr Map.empty)
      overlayEx2A)
   oCertIssueNosEx1
@@ -2206,7 +2208,7 @@ txEx5B = Tx
              , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
            ])
            Map.empty
-           Nothing
+           SNothing
 
 blockEx5B :: Block
 blockEx5B = mkBlock
@@ -2280,13 +2282,13 @@ aliceCoinEx5F = aliceInitCoin - (_keyDeposit ppsEx1) - 1
 txbodyEx5F :: TxBody
 txbodyEx5F = TxBody
               (Set.fromList [TxIn genesisId 0])
-              (Seq.singleton $ TxOut aliceAddr aliceCoinEx5F)
-              (Seq.fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert ir)])
+              (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5F)
+              (StrictSeq.fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert ir)])
               (Wdrl Map.empty)
               (Coin 1)
               (SlotNo 99)
-              Nothing
-              Nothing
+              SNothing
+              SNothing
 
 txEx5F :: Tx
 txEx5F = Tx txbodyEx5F
@@ -2298,7 +2300,7 @@ txEx5F = Tx txbodyEx5F
              , KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
              ])
             Map.empty
-            Nothing
+            SNothing
 
 blockEx5F :: Block
 blockEx5F = mkBlock
@@ -2324,17 +2326,17 @@ aliceCoinEx5F' = aliceCoinEx5F - 1
 txbodyEx5F' :: TxBody
 txbodyEx5F' = TxBody
                (Set.fromList [TxIn (txid txbodyEx5F) 0])
-               (Seq.singleton $ TxOut aliceAddr aliceCoinEx5F')
-               Seq.empty
+               (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5F')
+               StrictSeq.empty
                (Wdrl Map.empty)
                (Coin 1)
                ((slotFromEpoch $ EpochNo 1)
                 +* Duration (startRewards testGlobals) + SlotNo 7)
-               Nothing
-               Nothing
+               SNothing
+               SNothing
 
 txEx5F' :: Tx
-txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey txbodyEx5F' [ alicePay ]) Map.empty Nothing
+txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey txbodyEx5F' [ alicePay ]) Map.empty SNothing
 
 blockEx5F' :: Block
 blockEx5F' = mkBlock
@@ -2361,16 +2363,16 @@ aliceCoinEx5F'' = aliceCoinEx5F' - 1
 txbodyEx5F'' :: TxBody
 txbodyEx5F'' = TxBody
                 (Set.fromList [TxIn (txid txbodyEx5F') 0])
-                (Seq.singleton $ TxOut aliceAddr aliceCoinEx5F'')
-                Seq.empty
+                (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5F'')
+                StrictSeq.empty
                 (Wdrl Map.empty)
                 (Coin 1)
                 ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
-                Nothing
-                Nothing
+                SNothing
+                SNothing
 
 txEx5F'' :: Tx
-txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey txbodyEx5F'' [ alicePay ]) Map.empty Nothing
+txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey txbodyEx5F'' [ alicePay ]) Map.empty SNothing
 
 blockEx5F'' :: Block
 blockEx5F'' = mkBlock

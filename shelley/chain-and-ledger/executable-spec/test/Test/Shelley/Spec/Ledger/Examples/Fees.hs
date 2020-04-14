@@ -14,11 +14,11 @@ import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map (empty, singleton)
-import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 import           Cardano.Binary (decodeFullDecoder, fromCBOR)
-import           Shelley.Spec.Ledger.BaseTypes (text64)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), text64)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
@@ -82,8 +82,8 @@ alicePoolParams =
     , _poolMargin = unsafeMkUnitInterval 0.1
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , _poolRelays = (Seq.singleton . Url . text64) "relay.io"
-    , _poolMD = Just $ PoolMetaData
+    , _poolRelays = (StrictSeq.singleton . Url . text64) "relay.io"
+    , _poolMD = SJust $ PoolMetaData
                   { _poolMDUrl  = Url $ text64 "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
@@ -117,13 +117,13 @@ carlPay = KeyPair vk sk
 txbSimpleUTxO :: TxBody
 txbSimpleUTxO = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txSimpleUTxO :: Tx
@@ -131,7 +131,7 @@ txSimpleUTxO = Tx
   { _body           = txbSimpleUTxO
   , _witnessVKeySet = makeWitnessesVKey txbSimpleUTxO [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
@@ -146,18 +146,19 @@ txbMutiUTxO = TxBody
   { _inputs   = Set.fromList [ TxIn genesisId 0
                              , TxIn genesisId 1
                              ]
-  , _outputs  = Seq.fromList [ TxOut aliceAddr (Coin 10)
-                             , TxOut aliceAddr (Coin 20)
-                             , TxOut aliceAddr (Coin 30)
-                             , TxOut bobAddr   (Coin 40)
-                             , TxOut bobAddr   (Coin 50)
-                             ]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList
+                [ TxOut aliceAddr (Coin 10)
+                , TxOut aliceAddr (Coin 20)
+                , TxOut aliceAddr (Coin 30)
+                , TxOut bobAddr   (Coin 40)
+                , TxOut bobAddr   (Coin 50)
+                ]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 199
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txMutiUTxO :: Tx
@@ -168,7 +169,7 @@ txMutiUTxO = Tx
                       , bobPay
                       ]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txMutiUTxOBytes16 :: BSL.ByteString
@@ -179,13 +180,13 @@ txMutiUTxOBytes16 = "83a400d90102828244b45c4891008244b45c4891010185840044cfb2c41
 txbRegisterStake :: TxBody
 txbRegisterStake = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertDeleg (RegKey aliceSHK) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertDeleg (RegKey aliceSHK) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txRegisterStake :: Tx
@@ -193,7 +194,7 @@ txRegisterStake = Tx
   { _body           = txbRegisterStake
   , _witnessVKeySet = makeWitnessesVKey txbRegisterStake [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txRegisterStakeBytes16 :: BSL.ByteString
@@ -204,13 +205,13 @@ txRegisterStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f
 txbDelegateStake :: TxBody
 txbDelegateStake = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertDeleg (Delegate $ Delegation bobSHK alicePoolKH) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertDeleg (Delegate $ Delegation bobSHK alicePoolKH) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txDelegateStake :: Tx
@@ -218,7 +219,7 @@ txDelegateStake = Tx
   { _body           = txbDelegateStake
   , _witnessVKeySet = makeWitnessesVKey txbDelegateStake [alicePay, bobStake]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txDelegateStakeBytes16 :: BSL.ByteString
@@ -229,13 +230,13 @@ txDelegateStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f
 txbDeregisterStake :: TxBody
 txbDeregisterStake = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertDeleg (DeRegKey aliceSHK) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertDeleg (DeRegKey aliceSHK) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txDeregisterStake :: Tx
@@ -243,7 +244,7 @@ txDeregisterStake = Tx
   { _body           = txbDeregisterStake
   , _witnessVKeySet = makeWitnessesVKey txbDeregisterStake [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 
@@ -255,13 +256,13 @@ txDeregisterStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c414447639
 txbRegisterPool :: TxBody
 txbRegisterPool = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertPool (RegPool alicePoolParams) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertPool (RegPool alicePoolParams) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txRegisterPool :: Tx
@@ -269,7 +270,7 @@ txRegisterPool = Tx
   { _body           = txbRegisterPool
   , _witnessVKeySet = makeWitnessesVKey txbRegisterPool [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txRegisterPoolBytes16 :: BSL.ByteString
@@ -280,13 +281,13 @@ txRegisterPoolBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7
 txbRetirePool :: TxBody
 txbRetirePool = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.fromList [ DCertPool (RetirePool alicePoolKH (EpochNo 5)) ]
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.fromList [ DCertPool (RetirePool alicePoolKH (EpochNo 5)) ]
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txRetirePool :: Tx
@@ -294,7 +295,7 @@ txRetirePool = Tx
   { _body           = txbRetirePool
   , _witnessVKeySet = makeWitnessesVKey txbRetirePool [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txRetirePoolBytes16 :: BSL.ByteString
@@ -309,13 +310,13 @@ md = MD.MetaData $ Map.singleton 0 (MD.List [ MD.I 5, MD.S "hello"])
 txbWithMD :: TxBody
 txbWithMD = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Just $ MD.hashMetaData @ConcreteCrypto md
+  , _txUpdate = SNothing
+  , _mdHash   = SJust $ MD.hashMetaData @ConcreteCrypto md
   }
 
 txWithMD :: Tx
@@ -323,7 +324,7 @@ txWithMD = Tx
   { _body           = txbWithMD
   , _witnessVKeySet = makeWitnessesVKey txbWithMD [alicePay]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Just md
+  , _metadata       = SJust md
   }
 
 txWithMDBytes16 :: BSL.ByteString
@@ -341,13 +342,13 @@ msig = RequireMOf 2
 txbWithMultiSig :: TxBody
 txbWithMultiSig = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0] -- acting as if this is multi-sig
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl Map.empty
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txWithMultiSig :: Tx
@@ -355,7 +356,7 @@ txWithMultiSig = Tx
   { _body           = txbWithMultiSig
   , _witnessVKeySet = makeWitnessesVKey txbWithMultiSig [alicePay, bobPay]
   , _witnessMSigMap = Map.singleton (hashScript msig) msig
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txWithMultiSigBytes16 :: BSL.ByteString
@@ -366,13 +367,13 @@ txWithMultiSigBytes16 = "83a400d90102818244b45c4891000181840044cfb2c4144476394f7
 txbWithWithdrawal :: TxBody
 txbWithWithdrawal = TxBody
   { _inputs   = Set.fromList [TxIn genesisId 0]
-  , _outputs  = Seq.fromList [TxOut aliceAddr (Coin 10)]
-  , _certs    = Seq.empty
+  , _outputs  = StrictSeq.fromList [TxOut aliceAddr (Coin 10)]
+  , _certs    = StrictSeq.empty
   , _wdrls    = Wdrl $ Map.singleton (RewardAcnt aliceSHK) 100
   , _txfee    = Coin 94
   , _ttl      = SlotNo 10
-  , _txUpdate = Nothing
-  , _mdHash   = Nothing
+  , _txUpdate = SNothing
+  , _mdHash   = SNothing
   }
 
 txWithWithdrawal :: Tx
@@ -380,7 +381,7 @@ txWithWithdrawal = Tx
   { _body           = txbWithWithdrawal
   , _witnessVKeySet = makeWitnessesVKey txbWithWithdrawal [alicePay, aliceStake]
   , _witnessMSigMap = Map.empty
-  , _metadata       = Nothing
+  , _metadata       = SNothing
   }
 
 txWithWithdrawalBytes16 :: BSL.ByteString

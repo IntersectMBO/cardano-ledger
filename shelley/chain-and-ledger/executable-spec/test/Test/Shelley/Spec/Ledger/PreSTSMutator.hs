@@ -21,8 +21,8 @@ import qualified Data.List as List (map)
 import qualified Data.Map.Strict as Map (fromList, toList)
 import           Data.Maybe (fromMaybe)
 import           Data.Ratio
-import           Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq
+import           Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set as Set
 import           Numeric.Natural
 
@@ -78,7 +78,7 @@ mutateCoin lower upper (Coin val) =
 mutateTx :: Tx -> Gen Tx
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
-  pure $ Tx body' (_witnessVKeySet txwits) (_witnessMSigMap txwits) Nothing
+  pure $ Tx body' (_witnessVKeySet txwits) (_witnessMSigMap txwits) SNothing
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
@@ -92,8 +92,8 @@ mutateTxBody tx = do
     (_wdrls tx)
     (_txfee tx)
     (_ttl tx)
-    Nothing
-    Nothing
+    SNothing
+    SNothing
 
 -- | Mutator for a list of 'TxIn'.
 mutateInputs :: [TxIn] -> Gen [TxIn]
@@ -112,8 +112,8 @@ mutateInput (TxIn idx index) = do
   pure $ TxIn idx index'
 
 -- | Mutator for a list of 'TxOut'.
-mutateOutputs :: Seq TxOut -> Gen (Seq TxOut)
-mutateOutputs Seq.Empty = pure Seq.Empty
+mutateOutputs :: StrictSeq TxOut -> Gen (StrictSeq TxOut)
+mutateOutputs StrictSeq.Empty = pure StrictSeq.Empty
 mutateOutputs (txout :<| txouts) = do
   mtxout    <- mutateOutput txout
   mtxouts   <- mutateOutputs txouts
@@ -175,9 +175,9 @@ mutateDCert keys _ (DCertDeleg (Delegate (Delegation _ _))) = do
   delegatee' <- getAnyStakeKey keys
   pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (hashKey delegatee')
 
-mutateDCert keys _ (DCertGenesis (GenesisDelegate (gk, _))) = do
+mutateDCert keys _ (DCertGenesis (GenesisDelegate gk _)) = do
   _delegatee <- getAnyStakeKey keys
-  pure $ DCertGenesis $ GenesisDelegate (gk, hashKey _delegatee)
+  pure $ DCertGenesis $ GenesisDelegate gk (hashKey _delegatee)
 
 mutateDCert _ _ (DCertMir (MIRCert credCoinMap)) = do
   let credCoinList = Map.toList credCoinMap

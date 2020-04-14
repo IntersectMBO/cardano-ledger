@@ -47,16 +47,16 @@ nativeMultiSigTag = 0
 data MultiSig crypto =
        -- | Require the redeeming transaction be witnessed by the spending key
        --   corresponding to the given verification key hash.
-       RequireSignature   (AnyKeyHash crypto)
+       RequireSignature  !(AnyKeyHash crypto)
 
        -- | Require all the sub-terms to be satisfied.
-     | RequireAllOf      [MultiSig crypto]
+     | RequireAllOf      ![MultiSig crypto]
 
        -- | Require any one of the sub-terms to be satisfied.
-     | RequireAnyOf      [MultiSig crypto]
+     | RequireAnyOf      ![MultiSig crypto]
 
        -- | Require M of the given sub-terms to be satisfied.
-     | RequireMOf    Int [MultiSig crypto]
+     | RequireMOf   !Int ![MultiSig crypto]
   deriving (Show, Eq, Ord, Generic)
 
 instance NoUnexpectedThunks (MultiSig crypto)
