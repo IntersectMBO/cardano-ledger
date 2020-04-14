@@ -8,12 +8,12 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module Shelley.Spec.Ledger.BlockChain
   ( HashHeader(..)
@@ -81,9 +81,8 @@ import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue 
 import           Shelley.Spec.Ledger.OCert (OCert (..))
 import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, ProtVer (..), activeSlotLog,
                      activeSlotVal)
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
-                     ToCBORGroup (..), decodeMap, decodeSeq, encodeFoldableEncoder,
-                     encodeFoldableMapEncoder)
+import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..), decodeMap,
+                     decodeSeq, encodeFoldableEncoder, encodeFoldableMapEncoder)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx)
 import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
@@ -190,8 +189,8 @@ pattern BHeader bHeaderBody' bHeaderSig' <- BHeader' { bHeaderBody', bHeaderSig'
   where
   BHeader body sig =
     let mkBytes bhBody kESig = serializeEncoding $
-          encodeListLen (listLen bhBody + 1)
-          <> toCBORGroup bhBody
+          encodeListLen 2
+          <> toCBOR bhBody
           <> toCBOR kESig
      in BHeader' body sig (mkBytes body sig)
 
@@ -207,9 +206,9 @@ instance Crypto crypto
  where
    fromCBOR = annotatorSlice $ do
      n <- decodeListLen
-     bhb <- fromCBORGroup
+     bhb <- fromCBOR
      sig <- fromCBOR
-     matchSize "Header" ((fromIntegral . toInteger . listLen) bhb + 1) n
+     matchSize "Header" 2 n
      pure $ BHeader' <$> pure bhb <*> pure sig
 
 -- |The previous hash of a block
@@ -259,16 +258,16 @@ lastAppliedHash Origin   = GenesisHash
 lastAppliedHash (At lab) = BlockHash $ labHash lab
 
 data BHBody crypto = BHBody
-  { -- | Hash of the previous block header
+  { -- | block number
+    bheaderBlockNo        :: !BlockNo
+    -- | block slot
+  , bheaderSlotNo         :: !SlotNo
+  , -- | Hash of the previous block header
     bheaderPrev           :: !(PrevHash crypto)
     -- | verification key of block issuer
   , bheaderVk             :: !(VKey crypto)
     -- | VRF verification key for block issuer
   , bheaderVrfVk          :: !(VRF.VerKeyVRF (VRF crypto))
-    -- | block slot
-  , bheaderSlotNo         :: !SlotNo
-    -- | block number
-  , bheaderBlockNo        :: !BlockNo
     -- | block nonce
   , bheaderEta            :: !(VRF.CertifiedVRF (VRF crypto) Nonce)
     -- | leader election value
@@ -282,53 +281,57 @@ data BHBody crypto = BHBody
     -- | protocol version
   , bprotver              :: !ProtVer
   } deriving (Show, Eq, Generic)
-    deriving ToCBOR via (CBORGroup (BHBody crypto))
-    deriving FromCBOR via (CBORGroup (BHBody crypto))
 
 instance Crypto crypto
   => NoUnexpectedThunks (BHBody crypto)
 
 instance Crypto crypto
-  => ToCBORGroup (BHBody crypto)
+  => ToCBOR (BHBody crypto)
  where
-  listLen bhBody =  9 + listLen (bheaderOCert bhBody)  + listLen (bprotver bhBody)
-  toCBORGroup bhBody =
-         toCBOR (bheaderPrev bhBody)
+  toCBOR bhBody =
+         encodeListLen (9 + listLen oc + listLen pv)
+      <> toCBOR (bheaderBlockNo bhBody)
+      <> toCBOR (bheaderSlotNo bhBody)
+      <> toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
       <> VRF.encodeVerKeyVRF (bheaderVrfVk bhBody)
-      <> toCBOR (bheaderSlotNo bhBody)
       <> toCBOR (bheaderEta bhBody)
       <> toCBOR (bheaderL bhBody)
       <> toCBOR (bsize bhBody)
-      <> toCBOR (bheaderBlockNo bhBody)
       <> toCBOR (bhash bhBody)
-      <> toCBORGroup (bheaderOCert bhBody)
-      <> toCBORGroup (bprotver bhBody)
+      <> toCBORGroup oc
+      <> toCBORGroup pv
+    where
+      oc = bheaderOCert bhBody
+      pv = bprotver bhBody
+
 
 instance Crypto crypto
-  => FromCBORGroup (BHBody crypto)
+  => FromCBOR (BHBody crypto)
  where
-  fromCBORGroup = do
+  fromCBOR = do
+    n <- decodeListLen
+    bheaderBlockNo <- fromCBOR
+    bheaderSlotNo <- fromCBOR
     bheaderPrev <- fromCBOR
     bheaderVk <- fromCBOR
     bheaderVrfVk <- VRF.decodeVerKeyVRF
-    bheaderSlotNo <- fromCBOR
     bheaderEta <- fromCBOR
     bheaderL  <- fromCBOR
     bsize <- fromCBOR
-    bheaderBlockNo <- fromCBOR
     bhash <- fromCBOR
     bheaderOCert <- fromCBORGroup
     bprotver <- fromCBORGroup
+    matchSize "BHBody" (fromIntegral $ 9 + listLen bheaderOCert + listLen bprotver) n
     pure $ BHBody
-           { bheaderPrev
+           { bheaderBlockNo
+           , bheaderSlotNo
+           , bheaderPrev
            , bheaderVk
            , bheaderVrfVk
-           , bheaderSlotNo
            , bheaderEta
            , bheaderL
            , bsize
-           , bheaderBlockNo
            , bhash
            , bheaderOCert
            , bprotver

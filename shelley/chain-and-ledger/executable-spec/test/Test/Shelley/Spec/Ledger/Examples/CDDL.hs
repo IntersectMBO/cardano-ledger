@@ -15,9 +15,9 @@ module Test.Shelley.Spec.Ledger.Examples.CDDL
 import           Prelude (String)
 import qualified Prelude
 
-import           Cardano.Binary (ToCBOR(..), FromCBOR(..), DecoderError, serialize,
-                                 decodeFullDecoder, serializeEncoding, encodeListLen,
-                                 Annotator, decodeAnnotator)
+import           Cardano.Binary (Annotator, DecoderError, FromCBOR (..), ToCBOR (..),
+                     decodeAnnotator, decodeFullDecoder, encodeListLen, serialize,
+                     serializeEncoding)
 import           Cardano.Prelude
 import           Control.Exception (bracket)
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -45,16 +45,16 @@ cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [
       cddlTest' @BHeader          n "header"
-    , cddlGroupTest @BHBody       n "header_body"
+    , cddlTest @BHBody            n "header_body"
     , cddlGroupTest @OCert        n "operational_cert"
     , cddlGroupTest @Addr         n "address"
-    , cddlTest @Credential        n "credential"
+    , cddlTest @Credential        n "stake_credential"
     , cddlTest @TxBody            n "transaction_body"
     , cddlTest @TxOut             n "transaction_output"
-    , cddlTest @DCert             n "delegation_certificate"
+    , cddlTest @DCert             n "certificate"
     , cddlTest @TxIn              n "transaction_input"
     , cddlTest @MetaData          n "transaction_metadata"
-    , cddlTest @MultiSig          n "script"
+    , cddlTest @MultiSig          n "multisig_script"
     , cddlTest @Update            n "update"
     , cddlTest @ProposedPPUpdates n "proposed_protocol_parameter_updates"
     , cddlTest @PParamsUpdate     n "protocol_param_update"

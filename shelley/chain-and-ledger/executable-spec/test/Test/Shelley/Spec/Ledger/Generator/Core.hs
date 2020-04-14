@@ -354,11 +354,11 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
     nonceNonce = mkSeed seedEta s enonce
     leaderNonce = mkSeed seedL s enonce
     bhb = BHBody
+            blockNo
+            s
             (BlockHash prev)
             vKeyCold
             (snd $ vrf pkeys)
-            s
-            blockNo
             (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
             (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
             (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)

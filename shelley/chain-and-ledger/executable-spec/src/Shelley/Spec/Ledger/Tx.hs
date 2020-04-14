@@ -44,12 +44,13 @@ module Shelley.Spec.Ledger.Tx
 where
 
 
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe, invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe, invalidKey, maybeToStrictMaybe,
+                     strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
 
 import           Cardano.Binary (Annotator (..), Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR),
-                     annotatorSlice, decodeWord, encodeListLen, encodeMapLen, encodePreEncoded,
-                     encodeWord, serialize, serializeEncoding, withSlice)
+                     annotatorSlice, decodeWord, encodeListLen, encodeMapLen, encodeNull,
+                     encodePreEncoded, encodeWord, serialize, serializeEncoding, withSlice)
 import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..),
                      catMaybes)
 import qualified Data.ByteString.Lazy as BSL
@@ -64,8 +65,8 @@ import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
 import           Shelley.Spec.Ledger.Scripts
-import           Shelley.Spec.Ledger.Serialization (decodeList, decodeMapContents, decodeMaybe,
-                     decodeRecordNamed, encodeFoldable)
+import           Shelley.Spec.Ledger.Serialization (decodeList, decodeMapContents, decodeNullMaybe,
+                     decodeRecordNamed, encodeFoldable, encodeNullMaybe)
 import           Shelley.Spec.Ledger.TxData (Credential (..), TxBody (..), TxId (..), TxIn (..),
                      TxOut (..), WitVKey (..), witKeyHash)
 
@@ -109,7 +110,8 @@ pattern Tx { _body, _witnessVKeySet, _witnessMSigMap, _metadata } <-
         bodyBytes = serialize body
         witsBytes = serializeEncoding $ encodeMapLen n <> fold l
         metadataBytes = serialize <$> (strictMaybeToMaybe metadata)
-        wrappedMetadataBytes = serialize metadata
+        wrappedMetadataBytes = serializeEncoding $
+          encodeNullMaybe toCBOR (strictMaybeToMaybe metadata)
         fullBytes = (serializeEncoding $ encodeListLen 3)
           <> bodyBytes <> witsBytes <> wrappedMetadataBytes
      in Tx'
@@ -141,8 +143,8 @@ segwitTx
             Nothing -> (Nothing, Nothing)
             Just (m, mb) -> (Just m, Just $ runAnnotator mb bytes)
           wrappedMetadataBytes = case metadataBytes of
-            Nothing -> serializeEncoding $ encodeListLen 0
-            Just b -> (serializeEncoding $ encodeListLen 1) <> b
+            Nothing -> serializeEncoding encodeNull
+            Just b -> b
           fullBytes = (serializeEncoding $ encodeListLen 3)
             <> bodyBytes <> witsBytes <> wrappedMetadataBytes
        in Tx'
@@ -184,7 +186,7 @@ instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
     (body, bodyAnn) <- withSlice fromCBOR
     (Wits witsVKeys witsScripts, witsAnn) <- withSlice decodeWits
     (meta, metaAnn) <- do
-      result <- decodeMaybe (withSlice fromCBOR)
+      result <- decodeNullMaybe (withSlice fromCBOR)
       pure $ case result of
         Nothing -> (Nothing, pure Nothing)
         Just (a,b) -> (Just a, Just <$> b)

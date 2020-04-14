@@ -4,12 +4,19 @@ block =
   [ header
   , transaction_bodies         : [* transaction_body]
   , transaction_witness_sets   : [* transaction_witness_set]
-  , transaction_metadata_set   : { * transaction_index => transaction_metadata }
+  , transaction_metadata_set   :
+      { * transaction_index => transaction_metadata }
   ]; Valid blocks must also satisfy the following two constraints:
-   ; 1) the length of transaction_bodies and transaction_witness_sets must be the same
-   ; 2) every transaction_index must be strictly smaller than the length of transaction_bodies
+   ; 1) the length of transaction_bodies and transaction_witness_sets
+   ;    must be the same
+   ; 2) every transaction_index must be strictly smaller than the
+   ;    length of transaction_bodies
 
-transaction = [transaction_body, transaction_witness_set, [?transaction_metadata]]
+transaction =
+  [ transaction_body
+  , transaction_witness_set
+  , transaction_metadata / null
+  ]
 
 transaction_index = uint
 
@@ -19,18 +26,18 @@ header =
   ]
 
 header_body =
-  ( prev_hash        : ($hash / null)
+  [ block_number     : uint
+  , slot             : uint
+  , prev_hash        : $hash32 / null
   , issuer_vkey      : $vkey
   , vrf_vkey         : $vrf_vkey
-  , slot             : uint
   , nonce_vrf        : $vrf_cert
   , leader_vrf       : $vrf_cert
-  , size             : uint
-  , block_number     : uint
-  , block_body_hash  : $hash ; merkle triple root
+  , block_body_size  : uint
+  , block_body_hash  : $hash32 ; merkle triple root
   , operational_cert
   , protocol_version
-  )
+  ]
 
 operational_cert =
   ( hot_vkey        : $kes_vkey
@@ -41,78 +48,68 @@ operational_cert =
 
 protocol_version = (uint, uint)
 
-; Do we want to use a Map here? Is it actually cheaper?
-; Do we want to add extension points here?
 transaction_body =
-  { 0 : finite_set<transaction_input>
+  { 0 : set<transaction_input>
   , 1 : [* transaction_output]
   , 2 : coin ; fee
   , 3 : uint ; ttl
-  , ? 4 : [* delegation_certificate]
+  , ? 4 : [* certificate]
   , ? 5 : withdrawals
   , ? 6 : update
   , ? 7 : metadata_hash
   }
 
-; Is it okay to have this as a group? Is it valid CBOR?! Does it need to be?
-transaction_input = [transaction_id : $hash, index : uint]
+transaction_input = [ transaction_id : $hash32
+                    , index : uint
+                    ]
 
 transaction_output = [address, amount : uint]
 
 address =
- (  0, keyhash, keyhash       ; base address
- // 1, keyhash, scripthash    ; base address
- // 2, scripthash, keyhash    ; base address
- // 3, scripthash, scripthash ; base address
- // 4, keyhash, pointer       ; pointer address
- // 5, scripthash, pointer    ; pointer address
- // 6, keyhash                ; enterprise address (null staking reference)
- // 7, scripthash             ; enterprise address (null staking reference)
- // 8, keyhash                ; bootstrap address
+ (  0, addr_keyhash, addr_keyhash ; base address
+ // 1, addr_keyhash, scripthash   ; base address
+ // 2, scripthash, addr_keyhash   ; base address
+ // 3, scripthash, scripthash     ; base address
+ // 4, addr_keyhash, pointer      ; pointer address
+ // 5, scripthash, pointer        ; pointer address
+ // 6, addr_keyhash               ; enterprise address
+ // 7, scripthash                 ; enterprise address
+ // 8, addr_keyhash               ; bootstrap address
  )
-
-delegation_certificate =
-  [  0, keyhash                       ; stake key registration
-  // 1, scripthash                    ; stake script registration
-  // 2, keyhash                       ; stake key de-registration
-  // 3, scripthash                    ; stake script de-registration
-  // 4                                ; stake key delegation
-      , keyhash                       ; delegating key
-      , keyhash                       ; key delegated to
-  // 5                                ; stake script delegation
-      , scripthash                    ; delegating script
-      , keyhash                       ; key delegated to
-  // 6, pool_params                   ; stake pool registration
-  // 7, keyhash, epoch                ; stake pool retirement
-  // 8                                ; genesis key delegation
-      , genesishash                   ; delegating key
-      , keyhash                       ; key delegated to
-  // 9, move_instantaneous_reward     ; move instantaneous rewards
-  ]
-
-move_instantaneous_reward = { * credential => coin }
 pointer = (uint, uint, uint)
 
-credential =
-  [  0, keyhash
+certificate =
+  [  0, stake_credential                   ; stake registration
+  // 1, stake_credential                   ; stake deregistration
+  // 2, stake_credential, pool_keyhash     ; stake delegation
+  // 3, pool_params                        ; pool registration
+  // 4, pool_keyhash, epoch                ; pool retirement
+  // 5, genesishash, genesis_delegate_hash ; genesis key delegation
+  // 6, move_instantaneous_reward          ; move inst. rewards
+  ]
+
+move_instantaneous_reward = { * stake_credential => coin }
+
+stake_credential =
+  [  0, addr_keyhash
   // 1, scripthash
   ]
 
-pool_params = ( keyhash             ; operator
-              , $vrf_keyhash        ; vrf keyhash
-              , coin                ; pledge
-              , coin                ; cost
-              , unit_interval       ; margin
-              , credential        ; reward account
-              , finite_set<keyhash> ; pool owners
-              , [* url]             ; relays
-              , [?pool_metadata]    ; pool metadata
+pool_params = ( pool_keyhash           ; operator
+              , vrf_keyhash            ; vrf keyhash
+              , coin                   ; pledge
+              , coin                   ; cost
+              , unit_interval          ; margin
+              , stake_credential       ; reward account
+              , set<addr_keyhash>      ; pool owners
+              , [* url]                ; relays
+              , pool_metadata / null   ; pool metadata
               )
 
-url = tstr .size 64
 pool_metadata = [url, metadata_hash]
+url = tstr .size (0..64)
 
-withdrawals = { * credential => coin }
+withdrawals = { * stake_credential => coin }
 
 update = [ proposed_protocol_parameter_updates
          , epoch
@@ -134,7 +131,7 @@ protocol_param_update =
   , ? 9:  unit_interval      ; pool deposit min refund
   , ? 10: rational           ; pool deposit decay rate
   , ? 11: epoch              ; maximum epoch
-  , ? 12: uint               ; n_optimal. desired number of stake pools
+  , ? 12: uint               ; n_opt: desired number of stake pools
   , ? 13: rational           ; pool pledge influence
   , ? 14: unit_interval      ; expansion rate
   , ? 15: unit_interval      ; treasury growth rate
@@ -144,19 +141,12 @@ protocol_param_update =
   , ? 19: [protocol_version] ; protocol version
   }
 
-
-application_version_update_votes = { * genesishash => application_version_update }
-
-application_version_update = { * application_name =>  [uint, application_metadata] }
-
-application_metadata = { * system_tag => installerhash }
-
-application_name = tstr .size 64
-system_tag = tstr .size 64
-
 transaction_witness_set =
   { ?0 => [* vkeywitness ]
-  , ?1 => [* script ]
+  , ?1 => [* multisig_script ]
+  ; In the future, new kinds of witnesses can be added like this:
+  ; , ?2 => [* monetary_policy_script ]
+  ; , ?3 => [* plutus_script ]
   }
 
 transaction_metadatum =
@@ -168,32 +158,27 @@ transaction_metadatum =
 
 transaction_metadadum_label = uint
 
-transaction_metadata = { * transaction_metadadum_label => transaction_metadatum }
+transaction_metadata =
+  { * transaction_metadadum_label => transaction_metadatum }
 
 
 vkeywitness = [ $vkey, $signature ]
 
-script =
-  [  0, keyhash
-  // 1, [ * script ]
-  // 2, [ * script ]
-  // 3, uint, [ * script ]
+multisig_script =
+  [  0, addr_keyhash                 ; public key
+  // 1, [ * multisig_script ]        ; all of
+  // 2, [ * multisig_script ]        ; any of
+  // 3, uint, [ * multisig_script ]  ; n of k
   ]
-
-rational =  #6.30(
-   [ numerator   : uint
-   , denominator : uint
-   ])
 
 coin = uint
 epoch = uint
 
-keyhash = $hash
+addr_keyhash = $hash28
+scripthash   = $hash28
 
-scripthash = $hash
-
-genesishash = $hash
-
-installerhash = $hash
-
-metadata_hash = $hash
+genesis_delegate_hash = $hash32
+pool_keyhash          = $hash32
+genesishash           = $hash32
+metadata_hash         = $hash32
+vrf_keyhash           = $hash32

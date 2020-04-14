@@ -1,12 +1,12 @@
 {-# Language LambdaCase #-}
 import           Test.Tasty
 
+import           Test.Shelley.Spec.Ledger.Examples.CDDL (cddlTests)
 import           Test.Shelley.Spec.Ledger.Examples.Serialization (serializationTests)
 import           Test.Shelley.Spec.Ledger.Examples.STSTests (stsTests)
 import           Test.Shelley.Spec.Ledger.Examples.UnitTests (unitTests)
-import           Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests)
-import           Test.Shelley.Spec.Ledger.Examples.CDDL (cddlTests)
-import           Test.TestScenario (mainWithTestScenario, TestScenario (..))
+import           Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
+import           Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
 tests :: TestTree
 tests = askOption $ \case
