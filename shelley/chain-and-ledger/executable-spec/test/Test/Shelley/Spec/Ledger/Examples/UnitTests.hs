@@ -21,10 +21,11 @@ import           Shelley.Spec.Ledger.BlockChain (checkVRFValue)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern Delegate, pattern RegKey,
                      pattern RegPool, pattern RetirePool, StakeCreds (..), StakePools (..))
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, Credential (..), pattern DCertDeleg,
+import           Shelley.Spec.Ledger.TxData (pattern Addr, Credential (..), pattern DCertDeleg,
                      pattern DCertPool, Delegation (..), pattern PoolParams, pattern Ptr,
-                     pattern RewardAcnt, Wdrl (..), _poolCost, _poolMD, _poolMargin, _poolOwners,
-                     _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
+                     pattern RewardAcnt, pattern StakeRefBase, Wdrl (..), _poolCost, _poolMD,
+                     _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays,
+                     _poolVrf)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
 import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
@@ -53,9 +54,9 @@ aliceStake :: KeyPair
 aliceStake = KeyPair 2 2
 
 aliceAddr :: Addr
-aliceAddr = AddrBase
+aliceAddr = Addr
              (KeyHashObj . hashKey $ vKey alicePay)
-             (KeyHashObj . hashKey $ vKey aliceStake)
+             (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
 bobPay :: KeyPair
 bobPay = KeyPair 3 3
@@ -64,9 +65,9 @@ bobStake :: KeyPair
 bobStake = KeyPair 4 4
 
 bobAddr :: Addr
-bobAddr = AddrBase
+bobAddr = Addr
            (KeyHashObj . hashKey $ vKey bobPay)
-           (KeyHashObj . hashKey $ vKey bobStake)
+           (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
 testPCs :: PParams
 testPCs = emptyPParams {

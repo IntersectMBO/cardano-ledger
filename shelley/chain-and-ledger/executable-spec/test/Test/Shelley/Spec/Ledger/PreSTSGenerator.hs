@@ -60,9 +60,9 @@ import           Shelley.Spec.Ledger.STS.Utxow (pattern InvalidWitnessesUTXOW,
                      pattern MissingScriptWitnessesUTXOW, pattern MissingVKeyWitnessesUTXOW,
                      PredicateFailure (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxOut, _body)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg,
-                     pattern DCertPool, pattern DeRegKey, pattern Delegate, pattern Delegation,
-                     pattern KeyHashObj, pattern RegKey, pattern RetirePool, StakeCreds (..),
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertPool,
+                     pattern DeRegKey, pattern Delegate, pattern Delegation, pattern KeyHashObj,
+                     pattern RegKey, pattern RetirePool, StakeCreds (..), pattern StakeRefBase,
                      Wdrl (..))
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
@@ -74,13 +74,13 @@ import           Test.Shelley.Spec.Ledger.Utils
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair
-findPayKeyPair (AddrBase (KeyHashObj addr) _) keyList =
+findPayKeyPair (Addr (KeyHashObj addr) _) keyList =
     case matches of
       []    -> error "findPayKeyPair: could not find a match for the given address"
       (x:_) -> fst x
     where
       matches = filter (\(pay, _) -> addr == hashKey (vKey pay)) keyList
-findPayKeyPair _ _ = error "findPayKeyPair: expects only AddrBase addresses"
+findPayKeyPair _ _ = error "findPayKeyPair: expects only KeyHash addresses"
 
 -- | Generator for a natural number between 'lower' and 'upper'
 genNatural :: Natural -> Natural -> Gen Natural
@@ -114,14 +114,17 @@ genKeyPairs lower upper = do
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: KeyPairs -> [(Credential, Credential)]
+hashKeyPairs :: KeyPairs -> [(Credential, StakeReference)]
 hashKeyPairs keyPairs =
-    (\(a, b) -> (KeyHashObj . hashKey $ vKey a, KeyHashObj . hashKey $ vKey b)) <$> keyPairs
+    (\(a, b) ->
+      (KeyHashObj . hashKey $ vKey a
+      , StakeRefBase . KeyHashObj . hashKey $ vKey b))
+      <$> keyPairs
 
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
-addrTxins keyPairs = uncurry AddrBase <$> hashKeyPairs keyPairs
+addrTxins keyPairs = uncurry Addr <$> hashKeyPairs keyPairs
 
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
 -- coins, with values between 'minCoin' and 'maxCoin'.
@@ -169,8 +172,11 @@ genTx keyList (UTxO m) cslot = do
   receipients <- Seq.fromList . take (fromIntegral n) <$> Gen.shuffle keyList
   let realN                = length receipients
   let (perReceipient, txfee') = splitCoin selectedBalance (fromIntegral realN)
-  let !receipientAddrs      = fmap
-          (\(p, d) -> AddrBase (KeyHashObj . hashKey $ vKey p) (KeyHashObj . hashKey $ vKey d)) receipients
+  let !receipientAddrs = fmap (\(p, d) ->
+                           Addr
+                             (KeyHashObj . hashKey $ vKey p)
+                             (StakeRefBase . KeyHashObj . hashKey $ vKey d))
+                           receipients
   txttl <- genWord64 1 100
   let !txbody = TxBody
            (Map.keysSet selectedUTxO)

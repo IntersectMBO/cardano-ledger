@@ -39,7 +39,7 @@ import           Shelley.Spec.Ledger.Keys (pattern SKey, pattern SKeyES, pattern
                      pattern VKeyES, pattern VKeyGenesis, hashKey, updateKESKey, vKey)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern KeyHashObj)
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj, pattern StakeRefBase)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair, SKey,
@@ -86,8 +86,8 @@ mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
 
 mkAddr :: (KeyPair, KeyPair) -> Addr
 mkAddr (payKey, stakeKey) =
-  AddrBase (KeyHashObj . hashKey $ vKey payKey)
-           (KeyHashObj . hashKey $ vKey stakeKey)
+  Addr (KeyHashObj . hashKey $ vKey payKey)
+       (StakeRefBase . KeyHashObj . hashKey $ vKey stakeKey)
 
 -- | You vouch that argument is in [0; 1].
 unsafeMkUnitInterval :: Rational -> UnitInterval

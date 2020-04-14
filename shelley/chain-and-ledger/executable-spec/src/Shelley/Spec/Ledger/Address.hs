@@ -19,7 +19,8 @@ import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (KeyDiscriminator (..), KeyPair, hashKey, vKey)
 import           Shelley.Spec.Ledger.Scripts
 import           Shelley.Spec.Ledger.Tx (hashScript)
-import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), RewardAcnt (..))
+import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), RewardAcnt (..),
+                     StakeReference (..))
 
 mkVKeyRwdAcnt
   :: Crypto crypto
@@ -37,7 +38,7 @@ toAddr
   :: Crypto crypto
   => (KeyPair 'Regular crypto, KeyPair 'Regular crypto)
   -> Addr crypto
-toAddr (payKey, stakeKey) = AddrBase (toCred payKey) (toCred stakeKey)
+toAddr (payKey, stakeKey) = Addr (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred
   :: Crypto crypto
@@ -53,7 +54,7 @@ scriptToCred = ScriptHashObj . hashScript
 -- | Create a base address from a pair of multi-sig scripts (pay and stake)
 scriptsToAddr :: Crypto crypto => (MultiSig crypto, MultiSig crypto) -> Addr crypto
 scriptsToAddr (payScript, stakeScript) =
-  AddrBase (scriptToCred payScript) (scriptToCred stakeScript)
+  Addr (scriptToCred payScript) (StakeRefBase $ scriptToCred stakeScript)
 
 -- | Serialise an address to the external format.
 --
@@ -75,4 +76,3 @@ serialiseAddr = serialize'
 --
 deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
 deserialiseAddr = either (const Nothing) id . decodeFull'
-

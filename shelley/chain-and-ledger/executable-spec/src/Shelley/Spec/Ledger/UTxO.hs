@@ -195,10 +195,8 @@ txup (Tx txbody _ _ _) = strictMaybeToMaybe (_txUpdate txbody)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
-getScriptHash (AddrBase (ScriptHashObj hs) _)     = Just hs
-getScriptHash (AddrPtr (ScriptHashObj hs) _)      = Just hs
-getScriptHash (AddrEnterprise (ScriptHashObj hs)) = Just hs
-getScriptHash _                                   = Nothing
+getScriptHash (Addr (ScriptHashObj hs) _) = Just hs
+getScriptHash _                           = Nothing
 
 scriptStakeCred
   :: DCert crypto
@@ -243,7 +241,5 @@ txinsScript txInps (UTxO u) =
   txInps `Set.intersection`
   Map.keysSet (Map.filter (\(TxOut a _) ->
                                case a of
-                                 AddrBase (ScriptHashObj _) _     -> True
-                                 AddrEnterprise (ScriptHashObj _) -> True
-                                 AddrPtr (ScriptHashObj _) _      -> True
+                                 Addr (ScriptHashObj _) _     -> True
                                  _                                -> False) u)

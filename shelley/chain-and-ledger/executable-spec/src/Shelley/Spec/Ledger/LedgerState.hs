@@ -813,8 +813,8 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     inputAuthors = undiscriminateKeyHash `Set.map` Set.foldr insertHK Set.empty (_inputs txbody)
     insertHK txin hkeys =
       case txinLookup txin utxo' of
-        Just (TxOut (AddrBase (KeyHashObj pay) _) _) -> Set.insert pay hkeys
-        _                               -> hkeys
+        Just (TxOut (Addr (KeyHashObj pay) _) _) -> Set.insert pay hkeys
+        _                                        -> hkeys
 
     wdrlAuthors =
       Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (unWdrl $ _wdrls txbody))

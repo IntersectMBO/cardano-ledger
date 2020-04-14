@@ -10,8 +10,8 @@ import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (MockKES)
 import           Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
-import           Shelley.Spec.Ledger.Crypto
 import qualified Shelley.Spec.Ledger.BlockChain as BlockChain
+import           Shelley.Spec.Ledger.Crypto
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Delegation.Certificates
 import qualified Shelley.Spec.Ledger.EpochBoundary as EpochBoundary
 import qualified Shelley.Spec.Ledger.Keys as Keys
@@ -94,6 +94,8 @@ type DState = LedgerState.DState ConcreteCrypto
 type PState = LedgerState.PState ConcreteCrypto
 
 type DPState = LedgerState.DPState ConcreteCrypto
+
+type StakeReference = TxData.StakeReference ConcreteCrypto
 
 type Addr = TxData.Addr ConcreteCrypto
 
