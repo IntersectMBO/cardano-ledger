@@ -7,8 +7,13 @@ module Shelley.Spec.Ledger.Address
   , scriptToCred
   , toAddr
   , toCred
+  , serialiseAddr
+  , deserialiseAddr
   )
 where
+
+import           Data.ByteString (ByteString)
+import           Cardano.Binary (serialize', decodeFull')
 
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (KeyDiscriminator (..), KeyPair, hashKey, vKey)
@@ -49,3 +54,25 @@ scriptToCred = ScriptHashObj . hashScript
 scriptsToAddr :: Crypto crypto => (MultiSig crypto, MultiSig crypto) -> Addr crypto
 scriptsToAddr (payScript, stakeScript) =
   AddrBase (scriptToCred payScript) (scriptToCred stakeScript)
+
+-- | Serialise an address to the external format.
+--
+-- Note: this is not the final format, this function will be updated later to
+-- use the final format.
+--
+-- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
+--
+serialiseAddr :: Crypto crypto => Addr crypto -> ByteString
+serialiseAddr = serialize'
+
+-- | Deserialise an address from the external format. This will fail if the
+-- input data is not in the right format (or if there is trailing data).
+--
+-- Note: this is not the final format, this function will be updated later to
+-- use the final format.
+--
+-- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
+--
+deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
+deserialiseAddr = either (const Nothing) id . decodeFull'
+
