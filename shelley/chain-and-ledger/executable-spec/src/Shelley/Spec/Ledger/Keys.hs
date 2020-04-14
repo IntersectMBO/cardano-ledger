@@ -81,7 +81,7 @@ import           Cardano.Crypto.KES (KESAlgorithm (SignKeyKES, VerKeyKES, curren
 import qualified Cardano.Crypto.KES as KES
 import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
 import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Prelude (NoUnexpectedThunks (..))
+import           Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import           Shelley.Spec.Ledger.BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
 
 -- | Discriminate between keys based on their usage in the system.
@@ -92,6 +92,7 @@ data KeyDiscriminator
 
 newtype SKey crypto = SKey (SignKeyDSIGN (DSIGN crypto))
 
+deriving instance (Crypto crypto, NFData (SignKeyDSIGN (DSIGN crypto))) => NFData (SKey crypto)
 deriving instance Crypto crypto => NoUnexpectedThunks (SKey crypto)
 
 deriving instance Crypto crypto => Show (SKey crypto)
@@ -103,6 +104,7 @@ newtype DiscVKey (kd :: KeyDiscriminator) crypto = DiscVKey (VerKeyDSIGN (DSIGN 
 deriving instance Crypto crypto => Show (DiscVKey kd crypto)
 deriving instance Crypto crypto => Eq   (DiscVKey kd crypto)
 deriving instance Num (VerKeyDSIGN (DSIGN crypto)) => Num (DiscVKey kd crypto)
+deriving instance (Crypto crypto, NFData (VerKeyDSIGN (DSIGN crypto))) => NFData (DiscVKey kd crypto)
 deriving instance Crypto crypto => NoUnexpectedThunks (DiscVKey kd crypto)
 
 instance (Crypto crypto, Typeable kd) => FromCBOR (DiscVKey kd crypto) where
