@@ -121,10 +121,14 @@ pattern VKeyGenesis a = DiscVKey a
 
 data KeyPair (kd :: KeyDiscriminator) crypto
   = KeyPair
-      { vKey :: DiscVKey kd crypto
-      , sKey :: SKey crypto
+      { vKey :: !(DiscVKey kd crypto)
+      , sKey :: !(SKey crypto)
       } deriving (Generic, Show)
 
+instance ( Crypto crypto
+         , NFData (VerKeyDSIGN (DSIGN crypto))
+         , NFData (SignKeyDSIGN (DSIGN crypto))
+         ) => NFData (KeyPair kd crypto)
 instance Crypto crypto => NoUnexpectedThunks (KeyPair kd crypto)
 
 newtype Sig crypto a = UnsafeSig (SignedDSIGN (DSIGN crypto) a)
