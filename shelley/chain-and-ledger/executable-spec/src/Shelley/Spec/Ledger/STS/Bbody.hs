@@ -84,10 +84,9 @@ bbodyTransition
 bbodyTransition = judgmentContext >>=
   \(TRC ( BbodyEnv oslots pp _reserves
           , BbodyState ls b
-          , Block (BHeader bhb _) txsSeq)
+          , Block (BHeader bhb _) txsSeq@(TxSeq txs))
    ) -> do
   let hk = hashKey $ bheaderVk bhb
-      TxSeq txs = txsSeq
 
   bBodySize txsSeq == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
 

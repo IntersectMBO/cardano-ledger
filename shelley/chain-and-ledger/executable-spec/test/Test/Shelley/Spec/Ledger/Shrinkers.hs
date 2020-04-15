@@ -12,7 +12,6 @@ import qualified Data.Set as S
 import           Test.QuickCheck (shrinkIntegral, shrinkList)
 
 import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Scripts
 import           Shelley.Spec.Ledger.Slot
@@ -26,8 +25,7 @@ shrinkBlock
 shrinkBlock _ = []
 
 shrinkTx
-  :: Crypto crypto
-  => Tx crypto
+  :: Tx crypto
   -> [Tx crypto]
 shrinkTx (Tx _b _ws _wm _md) =
   [ Tx b' _ws _wm _md | b' <- shrinkTxBody _b ]

@@ -556,13 +556,12 @@ validInputs tx u =
 -- |Implementation of abstract transaction size
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
 txsize (Tx
-          txbody
+          (TxBody ins outs cs ws _ _ up mdh)
           vKeySigs
           msigScripts
           md) =
   iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize + mdhSize + witnessSize + mdSize
   where
-    TxBody ins outs cs ws _ _ up mdh = txbody
     -- vkey signatures
     signatures = Set.size vKeySigs
 
@@ -800,8 +799,7 @@ correctWithdrawals accs withdrawals =
 -- given transaction. This set consists of the txin owners,
 -- certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded
-  :: Crypto crypto
-  => UTxO crypto
+  :: UTxO crypto
   -> Tx crypto
   -> GenDelegs crypto
   -> Set (AnyKeyHash crypto)

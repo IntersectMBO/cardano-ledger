@@ -125,9 +125,10 @@ utxoWitnessed
      , Signable (DSIGN crypto) (TxBody crypto)
      )
    => TransitionRule (UTXOW crypto)
-utxoWitnessed = judgmentContext >>=
-  \( TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx@(Tx txbody wits _ md))
-   ) -> do
+utxoWitnessed = do
+  TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx@(Tx txbody wits _ md))
+    <- judgmentContext
+
   let utxo = _utxo u
   let witsKeyHashes = Set.map witKeyHash wits
 
