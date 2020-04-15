@@ -19,11 +19,9 @@ module Shelley.Spec.Ledger.Keys
   , DSIGNAlgorithm
   , Signable
   , SKey(..)
-  , DiscVKey(..)
+  , DiscVKey(VKey, VKeyGenesis, ..)
   , VKey
-  , pattern VKey
   , VKeyGenesis
-  , pattern VKeyGenesis
   , DiscKeyHash(..)
   , KeyHash
   , pattern KeyHash
@@ -118,6 +116,8 @@ pattern VKey a = DiscVKey a
 type VKeyGenesis = DiscVKey 'Genesis
 pattern VKeyGenesis :: VerKeyDSIGN (DSIGN crypto) -> DiscVKey 'Genesis crypto
 pattern VKeyGenesis a = DiscVKey a
+
+{-# COMPLETE VKey, VKeyGenesis #-}
 
 data KeyPair (kd :: KeyDiscriminator) crypto
   = KeyPair
