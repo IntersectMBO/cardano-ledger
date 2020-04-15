@@ -37,7 +37,7 @@ import           Shelley.Spec.Ledger.Keys (KeyHash)
 import           Shelley.Spec.Ledger.PParams (PParams, _a0, _nOpt)
 import           Shelley.Spec.Ledger.Slot (SlotNo, (-*))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt,
-                     TxOut (..), getRwdCred)
+                     StakeReference (..), TxOut (..), getRwdCred)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
@@ -73,8 +73,8 @@ newtype Stake crypto
 
 -- | Extract hash of staking key from base address.
 getStakeHK :: Addr crypto -> Maybe (Credential crypto)
-getStakeHK (AddrBase _ hk) = Just hk
-getStakeHK _               = Nothing
+getStakeHK (Addr _ (StakeRefBase hk)) = Just hk
+getStakeHK _                          = Nothing
 
 aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
 aggregateOuts (UTxO u) =
@@ -95,7 +95,7 @@ baseStake vals =
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr crypto -> Maybe Ptr
-getStakePtr (AddrPtr _ ptr) = Just ptr
+getStakePtr (Addr _ (StakeRefPtr ptr)) = Just ptr
 getStakePtr _               = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.

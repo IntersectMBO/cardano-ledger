@@ -152,10 +152,10 @@ import           Shelley.Spec.Ledger.STS.Ledgers (pattern LedgerFailure)
 import           Shelley.Spec.Ledger.STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
                      pattern MIRInsufficientGenesisSigsUTXOW)
 import           Shelley.Spec.Ledger.Tx (pattern Tx)
-import           Shelley.Spec.Ledger.TxData (pattern AddrPtr, pattern DCertDeleg,
-                     pattern DCertGenesis, pattern DCertMir, pattern DCertPool, pattern Delegation,
-                     pattern KeyHashObj, PoolMetaData (..), pattern PoolParams, Ptr (..),
-                     pattern RewardAcnt, pattern StakeCreds, pattern StakePools, pattern TxBody,
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
+                     PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
+                     pattern StakeCreds, pattern StakePools, pattern StakeRefPtr, pattern TxBody,
                      pattern TxIn, pattern TxOut, Url (..), Wdrl (..), addStakeCreds, _poolCost,
                      _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge,
                      _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
@@ -513,7 +513,7 @@ txEx2A = Tx
 
 -- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
-alicePtrAddr = AddrPtr (KeyHashObj . hashKey $ vKey alicePay) (Ptr (SlotNo 10) 0 0)
+alicePtrAddr = Addr (KeyHashObj . hashKey $ vKey alicePay) (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
 utxostEx2A :: UTxOState
 utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyPPPUpdates

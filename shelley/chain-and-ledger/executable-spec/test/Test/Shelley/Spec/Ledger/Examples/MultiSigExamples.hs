@@ -32,9 +32,10 @@ import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern Requ
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern KeyHashObj,
-                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools, pattern TxBody,
-                     pattern TxIn, pattern TxOut, pattern Wdrl, unWdrl)
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
+                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools,
+                     pattern StakeRefBase, pattern TxBody, pattern TxIn, pattern TxOut,
+                     pattern Wdrl, unWdrl)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig,
@@ -47,7 +48,7 @@ import           Test.Shelley.Spec.Ledger.Utils
 
 -- Multi-signature scripts
 singleKeyOnly :: Addr -> MultiSig
-singleKeyOnly (AddrBase (KeyHashObj pk) _ ) = RequireSignature $ undiscriminateKeyHash pk
+singleKeyOnly (Addr (KeyHashObj pk) _ ) = RequireSignature $ undiscriminateKeyHash pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: MultiSig
@@ -131,9 +132,9 @@ initialUTxOState aliceKeep msigs =
   let addresses =
         [(aliceAddr, aliceKeep) | aliceKeep > 0] ++
         map (\(msig, c) ->
-               (AddrBase
+               (Addr
                 (ScriptHashObj $ hashScript msig)
-                (ScriptHashObj $ hashScript msig), c)) msigs
+                (StakeRefBase $ ScriptHashObj $ hashScript msig), c)) msigs
   in
   let tx = makeTx (initTxBody addresses)
                   [alicePay, bobPay]

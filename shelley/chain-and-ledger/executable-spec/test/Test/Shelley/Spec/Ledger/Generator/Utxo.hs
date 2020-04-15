@@ -35,8 +35,9 @@ import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxOut,
                      getKeyCombination, hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
-                     pattern ScriptHashObj, Wdrl (..), getRwdCred, _outputs, _txfee)
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
+                     pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr, Wdrl (..),
+                     getRwdCred, _outputs, _txfee)
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
@@ -44,10 +45,10 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash,
                      Credential, DCert, DPState, DState, KeyPair, KeyPairs, MultiSig,
                      MultiSigPairs, RewardAcnt, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState, Update,
                      WitVKey)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
-import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..), KeySpace(..), findPayKeyPairAddr,
-                     findPayKeyPairCred, findPayScriptFromAddr, findStakeScriptFromCred,
-                     genNatural)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..),
+                     findPayKeyPairAddr, findPayKeyPairCred, findPayScriptFromAddr,
+                     findStakeScriptFromCred, genNatural)
 import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
 import           Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 import           Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
@@ -259,13 +260,9 @@ pickSpendingInputs Constants { minNumGenInputs, maxNumGenInputs} scripts keyHash
   return ( witnessedInput <$> selectedUtxo
          , balance (UTxO (Map.fromList selectedUtxo)))
   where
-    witnessedInput (input, TxOut addr@(AddrBase (KeyHashObj _) _) _) =
+    witnessedInput (input, TxOut addr@(Addr (KeyHashObj _) _) _) =
       (input, Left $ findPayKeyPairAddr addr keyHashMap)
-    witnessedInput (input, TxOut addr@(AddrBase (ScriptHashObj _) _) _) =
-      (input, Right $ findPayScriptFromAddr addr scripts)
-    witnessedInput (input, TxOut addr@(AddrPtr (KeyHashObj _) _) _) =
-      (input, Left $ findPayKeyPairAddr addr keyHashMap)
-    witnessedInput (input, TxOut addr@(AddrPtr (ScriptHashObj _) _) _) =
+    witnessedInput (input, TxOut addr@(Addr (ScriptHashObj _) _) _) =
       (input, Right $ findPayScriptFromAddr addr scripts)
     witnessedInput _ = error "unsupported address"
 
@@ -332,8 +329,9 @@ genRecipients len keys scripts = do
   -- shuffle and zip keys and scripts together as base addresses
   payCreds   <- QC.shuffle (payKeys ++ payScripts)
   stakeCreds <- QC.shuffle (stakeKeys ++ stakeScripts)
+  let stakeCreds' = fmap StakeRefBase stakeCreds
 
-  return (zipWith AddrBase payCreds stakeCreds)
+  return (zipWith Addr payCreds stakeCreds')
 
 genPtrAddrs :: HasCallStack => DState -> [Addr] -> Gen [Addr]
 genPtrAddrs ds addrs = do
@@ -347,5 +345,5 @@ genPtrAddrs ds addrs = do
   pure (addrs' ++ (drop n addrs))
     where
       baseAddrToPtrAddr a p = case a of
-        AddrBase pay _ -> AddrPtr pay p
-        _              -> a
+        Addr pay _ -> Addr pay (StakeRefPtr p)
+        _          -> a

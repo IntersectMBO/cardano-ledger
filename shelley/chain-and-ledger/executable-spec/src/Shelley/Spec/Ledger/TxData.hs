@@ -110,12 +110,20 @@ instance Eq (GenesisCredential crypto)
 
 instance NoUnexpectedThunks (Credential crypto)
 
+type PaymentCredential crypto = Credential crypto
+type StakeCredential crypto = Credential crypto
+
+data StakeReference crypto
+  = StakeRefBase !(StakeCredential crypto)
+  | StakeRefPtr !Ptr
+  | StakeRefNull
+  deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks (StakeReference crypto)
 
 -- |An address for UTxO.
 data Addr crypto
-  = AddrBase !(Credential crypto) !(Credential crypto)
-  | AddrEnterprise !(Credential crypto)
-  | AddrPtr !(Credential crypto) !Ptr
+  = Addr !(PaymentCredential crypto) !(StakeReference crypto)
   | AddrBootstrap !(KeyHash crypto)
   deriving (Show, Eq, Ord, Generic)
   deriving (ToCBOR, FromCBOR) via (CBORGroup (Addr crypto))
@@ -495,26 +503,26 @@ instance
   (Typeable crypto, Crypto crypto)
   => ToCBORGroup (Addr crypto)
  where
-  listLen (AddrBase _ _) = 3
-  listLen (AddrPtr _ pointer) = 2 + listLen pointer
-  listLen (AddrEnterprise _) = 2
+  listLen (Addr _ (StakeRefBase _)) = 3
+  listLen (Addr _ (StakeRefPtr p)) = 2 + listLen p
+  listLen (Addr _ (StakeRefNull)) = 2
   listLen (AddrBootstrap  _) = 2
 
-  toCBORGroup (AddrBase (KeyHashObj a) (KeyHashObj b)) =
+  toCBORGroup (Addr (KeyHashObj a) (StakeRefBase (KeyHashObj b))) =
     toCBOR (0 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (AddrBase (KeyHashObj a) (ScriptHashObj b)) =
+  toCBORGroup (Addr (KeyHashObj a) (StakeRefBase (ScriptHashObj b))) =
     toCBOR (1 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (AddrBase (ScriptHashObj a) (KeyHashObj b)) =
+  toCBORGroup (Addr (ScriptHashObj a) (StakeRefBase (KeyHashObj b))) =
     toCBOR (2 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (AddrBase (ScriptHashObj a) (ScriptHashObj b)) =
+  toCBORGroup (Addr (ScriptHashObj a) (StakeRefBase (ScriptHashObj b))) =
     toCBOR (3 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (AddrPtr (KeyHashObj a) pointer) =
+  toCBORGroup (Addr (KeyHashObj a) (StakeRefPtr pointer)) =
     toCBOR (4 :: Word8) <> toCBOR a <> toCBORGroup pointer
-  toCBORGroup (AddrPtr (ScriptHashObj a) pointer) =
+  toCBORGroup (Addr (ScriptHashObj a) (StakeRefPtr pointer)) =
     toCBOR (5 :: Word8) <> toCBOR a <> toCBORGroup pointer
-  toCBORGroup (AddrEnterprise (KeyHashObj a)) =
+  toCBORGroup (Addr (KeyHashObj a) StakeRefNull) =
     toCBOR (6 :: Word8) <> toCBOR a
-  toCBORGroup (AddrEnterprise (ScriptHashObj a)) =
+  toCBORGroup (Addr (ScriptHashObj a) StakeRefNull) =
     toCBOR (7 :: Word8) <> toCBOR a
   toCBORGroup (AddrBootstrap a) =
     toCBOR (8 :: Word8) <> toCBOR a
@@ -526,37 +534,37 @@ instance (Crypto crypto) =>
       0 -> do
         a <- fromCBOR
         b <- fromCBOR
-        pure $ AddrBase (KeyHashObj a) (KeyHashObj b)
+        pure $ Addr (KeyHashObj a) (StakeRefBase (KeyHashObj b))
       1 -> do
         a <- fromCBOR
         b <- fromCBOR
-        pure $ AddrBase (KeyHashObj a) (ScriptHashObj b)
+        pure $ Addr (KeyHashObj a) (StakeRefBase (ScriptHashObj b))
       2 -> do
         a <- fromCBOR
         b <- fromCBOR
-        pure $ AddrBase (ScriptHashObj a) (KeyHashObj b)
+        pure $ Addr (ScriptHashObj a) (StakeRefBase (KeyHashObj b))
       3 -> do
         a <- fromCBOR
         b <- fromCBOR
-        pure $ AddrBase (ScriptHashObj a) (ScriptHashObj b)
+        pure $ Addr (ScriptHashObj a) (StakeRefBase (ScriptHashObj b))
       4 -> do
         a <- fromCBOR
         x <- fromCBOR
         y <- fromCBOR
         z <- fromCBOR
-        pure $ AddrPtr (KeyHashObj a) (Ptr x y z)
+        pure $ Addr (KeyHashObj a) (StakeRefPtr (Ptr x y z))
       5 -> do
         a <- fromCBOR
         x <- fromCBOR
         y <- fromCBOR
         z <- fromCBOR
-        pure $ AddrPtr (ScriptHashObj a) (Ptr x y z)
+        pure $ Addr (ScriptHashObj a) (StakeRefPtr (Ptr x y z))
       6 -> do
         a <- fromCBOR
-        pure $ AddrEnterprise (KeyHashObj a)
+        pure $ Addr (KeyHashObj a) StakeRefNull
       7 -> do
         a <- fromCBOR
-        pure $ AddrEnterprise (ScriptHashObj a)
+        pure $ Addr (ScriptHashObj a) StakeRefNull
       8 -> do
         a <- fromCBOR
         pure $ AddrBootstrap (KeyHash a)

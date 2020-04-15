@@ -67,8 +67,8 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochI
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, pattern Block,
                      pattern BlockHash, TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashAnyKey, hashKey, sign,
-                     signKES, undiscriminateKeyHash, vKey)
+import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashAnyKey, hashKey, sign, signKES,
+                     undiscriminateKeyHash, vKey)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -77,17 +77,17 @@ import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern Requ
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), SlotNo (..), epochInfoFirst,
                      (*-))
 import           Shelley.Spec.Ledger.Tx (pattern TxOut, hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern AddrPtr, pattern KeyHashObj,
-                     pattern ScriptHashObj)
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
+                     pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair,
-                     Credential, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig,
-                     MultiSigPairs, OCert, SKeyES, SignKeyVRF, Tx, TxOut, VKey, VKeyES,
-                     VRFKeyHash, VerKeyVRF, hashKeyVRF)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+                     Credential, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs,
+                     OCert, SKeyES, SignKeyVRF, Tx, TxOut, VKey, VKeyES, VRFKeyHash, VerKeyVRF,
+                     hashKeyVRF)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, evolveKESUntil, maxKESIterations,
-                     maxLLSupply, mkCertifiedVRF, mkGenKey, mkKeyPair,
-                     runShelleyBase, unsafeMkUnitInterval)
+                     maxLLSupply, mkCertifiedVRF, mkGenKey, mkKeyPair, runShelleyBase,
+                     unsafeMkUnitInterval)
 
 data AllPoolKeys = AllPoolKeys
   { cold :: KeyPair
@@ -238,10 +238,10 @@ findPayKeyPairCred c keyHashMap =
 findPayKeyPairAddr :: HasCallStack => Addr -> Map AnyKeyHash KeyPair -> KeyPair
 findPayKeyPairAddr a keyHashMap =
   case a of
-    AddrBase addr _ -> findPayKeyPairCred addr keyHashMap
-    AddrPtr addr _  -> findPayKeyPairCred addr keyHashMap
+    Addr addr (StakeRefBase _) -> findPayKeyPairCred addr keyHashMap
+    Addr addr (StakeRefPtr _)  -> findPayKeyPairCred addr keyHashMap
     _                            ->
-      error "findPayKeyPairAddr: expects only AddrBase or AddrPtr addresses"
+      error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
 -- | Find first matching script for a credential.
 findPayScriptFromCred :: HasCallStack => Credential -> MultiSigPairs -> (MultiSig, MultiSig)
@@ -274,8 +274,8 @@ findStakeScriptFromCred c scripts =
 findPayScriptFromAddr :: HasCallStack => Addr -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScriptFromAddr a scripts =
   case a of
-    AddrBase scriptHash _ -> findPayScriptFromCred scriptHash scripts
-    AddrPtr scriptHash _  -> findPayScriptFromCred scriptHash scripts
+    Addr scriptHash (StakeRefBase _) -> findPayScriptFromCred scriptHash scripts
+    Addr scriptHash (StakeRefPtr _)  -> findPayScriptFromCred scriptHash scripts
     _                     ->
       error "findPayScriptFromAddr: expects only base and pointer script addresses"
 

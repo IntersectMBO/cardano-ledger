@@ -12,18 +12,16 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   , propAbstractSizeNotTooBig)
   where
 
-import qualified Data.ByteString as BS
-import           Data.Foldable (toList)
-import qualified Data.Map.Strict as Map
-import           Data.Sequence.Strict (StrictSeq)
-import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
-import qualified Test.QuickCheck.Gen
 import           Cardano.Binary (serialize')
 import           Cardano.Slotting.Slot (EpochSize (..))
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceLength,
                      traceSignals)
 import           Control.State.Transition.Trace.Generator.QuickCheck (classifyTraceLength,
                      forAllTraceFromInitState, onlyValidSignalsAreGeneratedFromInitState)
+import qualified Data.ByteString as BS
+import           Data.Foldable (toList)
+import qualified Data.Map.Strict as Map
+import           Data.Sequence.Strict (StrictSeq)
 import           Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
 import           Shelley.Spec.Ledger.BlockChain (pattern Block, pattern TxSeq, bhbody,
                      bheaderSlotNo)
@@ -35,19 +33,21 @@ import           Shelley.Spec.Ledger.PParams (PParamsUpdate, pattern ProposedPPU
                      pattern Update)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import           Shelley.Spec.Ledger.Tx (_body)
-import           Shelley.Spec.Ledger.TxData (pattern AddrBase, pattern DCertDeleg, pattern DeRegKey,
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DeRegKey,
                      pattern Delegate, pattern Delegation, pattern RegKey, pattern ScriptHashObj,
                      pattern TxOut, Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
+import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, property, withMaxSuccess)
+import qualified Test.QuickCheck.Gen
 
-import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..))
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ChainState, Block, CHAIN, DCert, LEDGER, Tx,
-                     TxOut, DPState, UTxOState)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+import qualified Control.State.Transition.Extended
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, CHAIN, ChainState, DCert,
+                     DPState, LEDGER, Tx, TxOut, UTxOState)
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import           Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import           Test.Shelley.Spec.Ledger.Utils
-import qualified Control.State.Transition.Extended
 
 
 
@@ -208,7 +208,7 @@ txScriptOutputsRatio txoutsList =
    (sum (map length txoutsList))
   where countScriptOuts txouts =
           sum $ fmap (\case
-                        TxOut (AddrBase (ScriptHashObj _) _) _ -> 1
+                        TxOut (Addr (ScriptHashObj _) _) _ -> 1
                         _ -> 0) txouts
 
 -- | Transaction has a reward withdrawal
