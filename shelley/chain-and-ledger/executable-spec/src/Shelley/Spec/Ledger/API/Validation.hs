@@ -8,8 +8,8 @@
 -- API.
 module Shelley.Spec.Ledger.API.Validation
   ( ShelleyState,
-    TickTransitionError,
-    BlockTransitionError,
+    TickTransitionError(..),
+    BlockTransitionError(..),
     chainChecks,
     applyTickTransition,
     applyBlockTransition,

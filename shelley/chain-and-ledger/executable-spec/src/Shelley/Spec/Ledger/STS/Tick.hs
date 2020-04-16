@@ -9,8 +9,8 @@
 module Shelley.Spec.Ledger.STS.Tick
   ( TICK
   , TickEnv (..)
-  , PredicateFailure (..)
   , State
+  , PredicateFailure (..)
   )
 where
 

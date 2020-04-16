@@ -10,10 +10,10 @@
 
 module Shelley.Spec.Ledger.STS.Prtcl
   ( PRTCL
-  , PredicateFailure(..)
   , State
   , PrtclEnv(..)
   , PrtclState(..)
+  , PredicateFailure(..)
   )
 where
 

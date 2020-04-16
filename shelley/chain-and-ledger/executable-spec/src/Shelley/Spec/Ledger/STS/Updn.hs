@@ -10,6 +10,7 @@ module Shelley.Spec.Ledger.STS.Updn
   ( UPDN
   , UpdnEnv(..)
   , UpdnState(..)
+  , PredicateFailure
   )
 where
 

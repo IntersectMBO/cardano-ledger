@@ -7,6 +7,7 @@
 module Shelley.Spec.Ledger.STS.Rupd
   ( RUPD
   , RupdEnv(..)
+  , PredicateFailure
   )
 where
 

@@ -9,6 +9,7 @@
 
 module Shelley.Spec.Ledger.STS.Epoch
   ( EPOCH
+  , PredicateFailure(..)
   )
 where
 
