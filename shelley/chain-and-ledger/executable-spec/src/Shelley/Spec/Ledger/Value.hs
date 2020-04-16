@@ -12,12 +12,13 @@ import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListL
                   decodeWord)
 import           Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Data.Coerce (coerce)
 
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           GHC.Generics (Generic)
 import           Data.Word (Word8)
-import           Cardano.Crypto.Hash (hash)
+import           Cardano.Crypto.Hash (hash, Hash, ShortHash(..))
 import           Data.Map.Strict (Map, elems, empty, unionWith, toList, singleton, filterWithKey, keys, map,
                  toList, fromList, union, filter, singleton)
 import           Shelley.Spec.Ledger.Crypto
@@ -92,7 +93,7 @@ getAdaAmount (Value v) = Coin $ c
 -- | currency ID of Ada
 -- TODO use the right script here
 adaID :: Crypto crypto => ScriptHash crypto
-adaID = ScriptHash $ hash $ MultiSigScript (RequireAllOf [])
+adaID = ScriptHash $ coerce ("" :: Hash ShortHash (Script crypto))
 
 -- | token of Ada
 adaToken :: ByteString
