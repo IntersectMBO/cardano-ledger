@@ -814,6 +814,13 @@ txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
 minfee :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
 minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
 
+-- |Determine if Ada is being forged
+validForge :: forall crypto . (Crypto crypto) => Tx crypto-> Validity
+validForge tx =
+  if elem adaID (Map.keys $ val $ _forge $ _body tx)
+    then Valid
+    else Invalid [ForgingAda]
+
 -- |Determine if the fee is large enough
 validFee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Validity
 validFee pc tx =
@@ -1000,6 +1007,7 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
                        <> current txb slot
                        <> validNoReplay txb
                        <> validFee pc tx
+                       <> validForge tx
                        <> preserveBalance stakePools stakeKeys pc txb u
                        <> correctWithdrawals accs (unWdrl $ _wdrls txb)
   where txb = _body tx
