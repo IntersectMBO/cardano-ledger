@@ -82,6 +82,7 @@ import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
 import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
+import qualified Data.ByteString as BS (ByteString, length)
 import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -106,8 +107,8 @@ import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCert (..), Ix,
                      MIRCert (..), PoolCert (..), PoolMetaData (..), PoolParams (..), Ptr (..),
-                     RewardAcnt (..), TxBody (..), TxId (..), TxIn (..), TxOut (..), Url (..),
-                     Wdrl (..), getRwdCred, witKeyHash)
+                     RewardAcnt (..), StakePoolRelay (..), TxBody (..), TxId (..), TxIn (..),
+                     TxOut (..), Wdrl (..), getRwdCred, witKeyHash)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins,
                      txouts, txup, verifyWitVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
@@ -120,7 +121,7 @@ import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopi
 
 import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe (..),
-                     UnitInterval, intervalValue, text64Size)
+                     UnitInterval, dnsSize, intervalValue, text64Size, unIPv4, unIPv6, unUrl)
 import           Shelley.Spec.Ledger.Scripts (countMSigNodes)
 
 
@@ -589,6 +590,7 @@ txsize (Tx
     mapPrefix = 2
     labelSize = 1
     cborTag = 2
+    cborNull = 1
     address = 2 * hashObj
     credential = labelSize + hashObj
     unitInterval = cborTag + smallArray + uint + uint
@@ -600,7 +602,12 @@ txsize (Tx
             + (toInteger $ length outs) * (smallArray + uint + address)
 
     numPoolOwners = toInteger . length . _poolOwners
-    relays pps = fmap (text64Size . unUrl) (_poolRelays pps)
+    ipSize :: (a -> BS.ByteString) -> StrictMaybe a -> Integer
+    ipSize _ SNothing = cborNull
+    ipSize un (SJust ip) = (toInteger . BS.length . un) ip
+    relays (SingleHostAddr _ ipv4 ipv6) = uint + (ipSize unIPv4 ipv4) + (ipSize unIPv6 ipv6)
+    relays (SingleHostName _ n) = uint + dnsSize n
+    relays (MultiHostName _ n) = uint + dnsSize n
     poolMD pps = smallArray + (toInteger $
       case (_poolMD pps) of
         SNothing -> 0
@@ -612,7 +619,7 @@ txsize (Tx
                 + hashObj -- operator
                 + hashObj -- vrf keyhash
                 + credential -- reward account
-                + toInteger (sum (relays pps)) -- relays
+                + sum (fmap relays (_poolRelays pps)) -- relays
                 + toInteger (poolMD pps)  -- metadata
     certSize (DCertDeleg (RegKey _)) = smallArray + labelSize + hashObj
     certSize (DCertDeleg (DeRegKey _)) = smallArray + labelSize + hashObj

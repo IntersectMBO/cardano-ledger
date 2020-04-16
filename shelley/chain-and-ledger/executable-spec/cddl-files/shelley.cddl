@@ -95,16 +95,40 @@ stake_credential =
   // 1, scripthash
   ]
 
-pool_params = ( pool_keyhash           ; operator
-              , vrf_keyhash            ; vrf keyhash
-              , coin                   ; pledge
-              , coin                   ; cost
-              , unit_interval          ; margin
-              , stake_credential       ; reward account
-              , set<addr_keyhash>      ; pool owners
-              , [* url]                ; relays
-              , pool_metadata / null   ; pool metadata
+pool_params = ( operator:       pool_keyhash
+              , vrf_keyhash:    vrf_keyhash
+              , pledge:         coin
+              , cost:           coin
+              , margin:         unit_interval
+              , reward_account: stake_credential
+              , pool_owners:    set<addr_keyhash>
+              , relays:         [* relay]
+              , pool_metadata:  pool_metadata / null
               )
+
+port = uint .le 65535
+ipv4 = bytes .size 4
+ipv6 = bytes .size 16
+dns_name = tstr .size (0..64)
+
+single_host_addr = ( 0
+                   , port / null
+                   , ipv4 / null
+                   , ipv6 / null
+                   )
+single_host_name = ( 1
+                   , port / null
+                   , dns_name ; An A or AAAA DNS record
+                   )
+multi_host_name = ( 2
+                   , port / null
+                   , dns_name ; A SRV DNS record
+                   )
+relay =
+  [  single_host_addr
+  // single_host_name
+  // multi_host_name
+  ]
 
 pool_metadata = [url, metadata_hash]
 url = tstr .size (0..64)

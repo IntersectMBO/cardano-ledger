@@ -1,4 +1,4 @@
-{-# Language LambdaCase #-}
+{-# LANGUAGE LambdaCase #-}
 import           Test.Tasty
 
 import           Test.Shelley.Spec.Ledger.Examples.CDDL (cddlTests)
@@ -15,7 +15,7 @@ tests = askOption $ \case
 
 mainTests :: TestTree
 mainTests = testGroup "Ledger with Delegation"
-  [ cddlTests
+  [ cddlTests 1
   , minimalPropertyTests
   , serializationTests
   , stsTests
@@ -25,6 +25,7 @@ mainTests = testGroup "Ledger with Delegation"
 nightlyTests :: TestTree
 nightlyTests = testGroup "Ledger with Delegation nightly"
   [ propertyTests
+  , cddlTests 50
   ]
 
 -- main entry point

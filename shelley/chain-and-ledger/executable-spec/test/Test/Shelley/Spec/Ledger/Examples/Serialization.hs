@@ -27,7 +27,7 @@ import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval (..),
-                     mkNonce, text64)
+                     mkDnsName, mkIPv4, mkNonce, mkUrl, unIPv4)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
                      pattern BlockHash, pattern HashHeader, TxSeq (..), bbHash, bhash,
                      bheaderBlockNo, bheaderEta, bheaderL, bheaderOCert, bheaderPrev,
@@ -55,14 +55,14 @@ import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg,
-                     pattern DCertGenesis, pattern DCertMir, pattern DCertPool, pattern Delegation,
+import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
                      PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
-                     pattern StakeRefBase, pattern StakeRefNull, pattern StakeRefNull,
-                     pattern StakeRefPtr, pattern TxBody, pattern TxIn, pattern TxOut, Url (..),
-                     Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD, _poolMDHash, _poolMDUrl,
-                     _poolMargin, _poolOwners, _poolPledge, _poolPubKey, _poolRAcnt, _poolRelays,
-                     _poolVrf, pattern KeyHashObj, pattern ScriptHashObj)
+                     pattern ScriptHashObj, StakePoolRelay (..), pattern StakeRefBase,
+                     pattern StakeRefNull, pattern StakeRefPtr, pattern TxBody, pattern TxIn,
+                     pattern TxOut, Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD,
+                     _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
+                     _poolRAcnt, _poolRelays, _poolVrf)
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash)
@@ -74,8 +74,6 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, Cor
                      RewardUpdate, SKeyES, ScriptHash, Sig, SignKeyVRF, TxBody, TxId, TxIn, VKey,
                      VKeyES, VRFKeyHash, VerKeyVRF, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Utils
-
-import           Unsafe.Coerce (unsafeCoerce)
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
@@ -227,7 +225,7 @@ testScriptHash2 :: ScriptHash
 testScriptHash2 = hashScript testScript2
 
 testHeaderHash :: HashHeader
-testHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
+testHeaderHash = HashHeader $ coerce (hash 0 :: Hash ShortHash Int)
 
 testBHB :: BHBody
 testBHB = BHBody
@@ -433,6 +431,11 @@ serializationTests = testGroup "Serialization Tests"
         poolCost = Coin 55
         poolUrl = "pool.io"
         poolMDHash = BS.pack "{}"
+        poolRelays = StrictSeq.fromList
+          [ SingleHostAddr SNothing (SJust $ mkIPv4 0) SNothing
+          , SingleHostName SNothing $ mkDnsName "singlehost.relay.com"
+          , MultiHostName (SJust 42) $ mkDnsName "multihost.relay.com"
+          ]
     in
     checkEncodingCBOR "register_pool"
     (DCertPool (RegPool (PoolParams
@@ -443,9 +446,9 @@ serializationTests = testGroup "Serialization Tests"
                , _poolMargin = poolMargin
                , _poolRAcnt = poolRAcnt
                , _poolOwners = Set.singleton poolOwner
-               , _poolRelays = StrictSeq.empty
+               , _poolRelays = poolRelays
                , _poolMD = SJust $ PoolMetaData
-                             { _poolMDUrl = Url $ text64 poolUrl
+                             { _poolMDUrl = mkUrl poolUrl
                              , _poolMDHash = poolMDHash
                              }
                })))
@@ -458,7 +461,10 @@ serializationTests = testGroup "Serialization Tests"
       <> S poolMargin   -- margin
       <> S poolRAcnt    -- reward acct
       <> T (TkListLen 1) <> S poolOwner   -- owners
-      <> T (TkListLen 0) -- relays
+      <> T (TkListLen 3) -- relays
+        <> T (TkListLen 4 . TkWord 0 . TkNull . TkBytes (unIPv4 $ mkIPv4 0) . TkNull)
+        <> T (TkListLen 3 . TkWord 1 . TkNull . TkString ("singlehost.relay.com"))
+        <> T (TkListLen 3 . TkWord 2 . (TkWord 42) . TkString ("multihost.relay.com"))
       <> T (TkListLen 2) -- metadata present
       <> S poolUrl       -- metadata url
       <> S poolMDHash    -- metadata hash
@@ -1023,7 +1029,7 @@ serializationTests = testGroup "Serialization Tests"
               , _poolOwners = Set.singleton testKeyHash2
               , _poolRelays = StrictSeq.empty
               , _poolMD = SJust $ PoolMetaData
-                            { _poolMDUrl  = Url $ text64 "web.site"
+                            { _poolMDUrl  = mkUrl "web.site"
                             , _poolMDHash = BS.pack "{}"
                             }
               }
@@ -1062,7 +1068,7 @@ serializationTests = testGroup "Serialization Tests"
             , _poolOwners = Set.singleton testKeyHash2
             , _poolRelays = StrictSeq.empty
             , _poolMD = SJust $ PoolMetaData
-                          { _poolMDUrl  = Url $ text64 "web.site"
+                          { _poolMDUrl  = mkUrl "web.site"
                           , _poolMDHash = BS.pack "{}"
                           }
             }

@@ -28,6 +28,22 @@ module Shelley.Spec.Ledger.BaseTypes
   , StrictMaybe (..)
   , strictMaybeToMaybe
   , maybeToStrictMaybe
+  , fromSMaybe
+  , Url
+  , unUrl
+  , mkUrl
+  , DnsName
+  , unDnsName
+  , mkDnsName
+  , dnsSize
+  , IPv4
+  , unIPv4
+  , mkIPv4
+  , IPv6
+  , unIPv6
+  , mkIPv6
+  , Port
+  , unPort
     -- * STS Base
   , Globals (..)
   , ShelleyBase
@@ -39,8 +55,10 @@ import           Cardano.Binary (Decoder, DecoderError (..), FromCBOR (fromCBOR)
 import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Cardano.Slotting.EpochInfo
+import           Control.Monad (unless)
 import           Control.Monad.Trans.Reader (ReaderT)
 import qualified Data.ByteString as BS
+import           Data.ByteString.Conversion (toByteString')
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Functor.Identity
@@ -48,8 +66,9 @@ import           Data.Ratio (denominator, numerator, (%))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
-import           Data.Word (Word64, Word8)
+import           Data.Word (Word16, Word64, Word8)
 import           GHC.Generics (Generic)
+import           Network.Socket (HostAddress, HostAddress6, hostAddress6ToTuple)
 import           Numeric.Natural (Natural)
 
 import           Shelley.Spec.Ledger.Serialization (rationalFromCBOR, rationalToCBOR)
@@ -224,6 +243,54 @@ strictMaybeToMaybe (SJust x) = Just x
 maybeToStrictMaybe :: Maybe a -> StrictMaybe a
 maybeToStrictMaybe Nothing  = SNothing
 maybeToStrictMaybe (Just x) = SJust x
+
+fromSMaybe :: a -> StrictMaybe a -> a
+fromSMaybe d SNothing = d
+fromSMaybe _ (SJust x) = x
+
+newtype Url = Url { unUrl :: Text64 }
+  deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
+
+mkUrl :: Text -> Url
+mkUrl = Url . text64
+
+newtype DnsName = DnsName { unDnsName :: Text64 }
+  deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
+
+mkDnsName :: Text -> DnsName
+mkDnsName = DnsName . text64
+
+dnsSize :: DnsName -> Integer
+dnsSize = toInteger . text64Size . unDnsName
+
+newtype IPv4 = IPv4 { unIPv4 :: ByteString }
+  deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
+
+mkIPv4 :: HostAddress -> IPv4
+mkIPv4 hostAddr = IPv4 $ toByteString' hostAddr
+
+decodeMaxBytes :: String -> Int -> Decoder s BS.ByteString
+decodeMaxBytes name m = do
+  b <- fromCBOR
+  unless (BS.length b <= m)
+     (fail $ name <> " is too big: " <> show b)
+  pure b
+
+instance FromCBOR IPv4 where
+  fromCBOR = IPv4 <$> decodeMaxBytes "IPv4" 4
+
+newtype IPv6 = IPv6 { unIPv6 :: ByteString }
+  deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
+
+mkIPv6 :: HostAddress6 -> IPv6
+mkIPv6 hostAddr = IPv6 . mconcat . fmap toByteString' $ [w1, w2, w3, w4, w5, w6, w7, w8]
+  where (w1, w2, w3, w4, w5, w6, w7, w8) = hostAddress6ToTuple hostAddr
+
+instance FromCBOR IPv6 where
+  fromCBOR = IPv6 <$> decodeMaxBytes "IPv6" 16
+
+newtype Port = Port { unPort :: Word16 }
+  deriving (Eq, Ord, Num, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------
 -- Base monad for all STS systems

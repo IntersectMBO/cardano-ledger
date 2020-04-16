@@ -95,6 +95,7 @@ import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 
 import           Cardano.Crypto.Hash (ShortHash)
 import qualified Data.ByteString.Char8 as BS (pack)
+import           Data.Coerce (coerce)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
                      (!?))
@@ -104,13 +105,12 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
-import           Unsafe.Coerce (unsafeCoerce)
 
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, startRewards,
-                     text64, (⭒))
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, mkUrl,
+                     startRewards, (⭒))
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -156,9 +156,9 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, p
                      pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
                      PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
                      pattern StakeCreds, pattern StakePools, pattern StakeRefPtr, pattern TxBody,
-                     pattern TxIn, pattern TxOut, Url (..), Wdrl (..), addStakeCreds, _poolCost,
-                     _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge,
-                     _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf)
+                     pattern TxIn, pattern TxOut, Wdrl (..), addStakeCreds, _poolCost, _poolMD,
+                     _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
+                     _poolRAcnt, _poolRelays, _poolVrf)
 import qualified Shelley.Spec.Ledger.TxData as TxData (TxBody (..))
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesVKey, txid)
 
@@ -262,7 +262,7 @@ alicePoolParams =
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , _poolRelays = StrictSeq.empty
     , _poolMD = SJust $ PoolMetaData
-                  { _poolMDUrl  = Url $ text64 "alice.pool"
+                  { _poolMDUrl  = mkUrl "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
     }
@@ -275,7 +275,7 @@ alicePoolParams =
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
 lastByronHeaderHash :: HashHeader
-lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
+lastByronHeaderHash = HashHeader $ coerce (hash 0 :: Hash ShortHash Int)
 
 nonce0 :: Nonce
 nonce0 = hashHeaderToNonce lastByronHeaderHash
