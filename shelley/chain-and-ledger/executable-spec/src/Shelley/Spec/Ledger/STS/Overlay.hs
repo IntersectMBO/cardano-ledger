@@ -10,6 +10,7 @@
 
 module Shelley.Spec.Ledger.STS.Overlay
   ( OVERLAY
+  , PredicateFailure(..)
   , OverlayEnv(..)
   )
 where

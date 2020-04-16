@@ -6,8 +6,9 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Pool
-  ( POOL,
-    PoolEnv (..),
+  ( POOL
+  , PoolEnv(..)
+  , PredicateFailure(..)
   )
 where
 

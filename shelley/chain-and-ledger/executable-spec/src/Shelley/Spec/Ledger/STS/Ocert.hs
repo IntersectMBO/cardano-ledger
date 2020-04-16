@@ -7,6 +7,7 @@
 
 module Shelley.Spec.Ledger.STS.Ocert
   ( OCERT
+  , PredicateFailure(..)
   , OCertEnv(..)
   )
 where

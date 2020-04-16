@@ -9,6 +9,7 @@ module Shelley.Spec.Ledger.STS.Newpp
   ( NEWPP
   , NewppState (..)
   , NewppEnv (..)
+  , PredicateFailure(..)
   )
 where
 

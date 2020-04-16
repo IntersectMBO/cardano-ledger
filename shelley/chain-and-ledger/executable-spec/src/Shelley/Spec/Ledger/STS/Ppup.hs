@@ -9,6 +9,7 @@
 module Shelley.Spec.Ledger.STS.Ppup
   ( PPUP
   , PPUPEnv(..)
+  , PredicateFailure(..)
   )
 where
 

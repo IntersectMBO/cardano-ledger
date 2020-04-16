@@ -7,6 +7,7 @@
 module Shelley.Spec.Ledger.STS.PoolReap
   ( POOLREAP
   , PoolreapState(..)
+  , PredicateFailure
   )
 where
 
