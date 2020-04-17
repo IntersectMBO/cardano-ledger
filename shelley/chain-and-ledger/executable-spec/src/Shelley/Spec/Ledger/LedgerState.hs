@@ -83,6 +83,8 @@ import           Cardano.Crypto.Hash (byteCount)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import           Data.Foldable (toList)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy (..))
@@ -395,7 +397,7 @@ instance Crypto crypto => FromCBOR (UTxOState crypto)
 data OBftSlot crypto =
     NonActiveSlot
   | ActiveSlot !(GenKeyHash crypto)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Ord, Generic)
 
 instance Crypto crypto
   => ToCBOR (OBftSlot crypto)
@@ -433,7 +435,7 @@ instance Crypto crypto => ToCBOR (NewEpochState crypto)
  where
   toCBOR (NewEpochState e bp bc es ru pd os) =
     encodeListLen 7 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
-      <> toCBOR ru <> toCBOR pd <> toCBOR os
+      <> toCBOR ru <> toCBOR pd <> toCBOR (compactOverlaySchedule os)
 
 instance Crypto crypto => FromCBOR (NewEpochState crypto)
  where
@@ -445,8 +447,32 @@ instance Crypto crypto => FromCBOR (NewEpochState crypto)
     es <- fromCBOR
     ru <- fromCBOR
     pd <- fromCBOR
-    os <- fromCBOR
+    os <- decompactOverlaySchedule <$> fromCBOR
     pure $ NewEpochState e bp bc es ru pd os
+
+-- | Convert the overlay schedule to a representation that is more compact
+-- when serialised to a bytestring, but less efficient for lookups.
+--
+-- Each genesis key hash will only be stored once, instead of each time it is
+-- assigned to a slot.
+compactOverlaySchedule
+  :: Map SlotNo (OBftSlot crypto)
+  -> Map (OBftSlot crypto) (NonEmpty SlotNo)
+compactOverlaySchedule =
+    Map.foldrWithKey'
+      (\slot obftSlot ->
+        Map.insertWith (<>) obftSlot (pure slot))
+      Map.empty
+
+-- | Inverse of 'compactOverlaySchedule'
+decompactOverlaySchedule
+  :: Map (OBftSlot crypto) (NonEmpty SlotNo)
+  -> Map SlotNo (OBftSlot crypto)
+decompactOverlaySchedule compact = Map.fromList
+    [ (slot, obftSlot)
+    | (obftSlot, slots) <- Map.toList compact
+    , slot <- NonEmpty.toList slots
+    ]
 
 getGKeys
   :: NewEpochState crypto

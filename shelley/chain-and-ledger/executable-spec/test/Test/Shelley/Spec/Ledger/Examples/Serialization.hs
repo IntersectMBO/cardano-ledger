@@ -7,6 +7,7 @@
 
 module Test.Shelley.Spec.Ledger.Examples.Serialization where
 
+import           Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Maybe as Maybe (fromJust)
 import           Data.String (fromString)
 import qualified Shelley.Spec.Ledger.MetaData as MD
@@ -1083,6 +1084,7 @@ serializationTests = testGroup "Serialization Tests"
              }) :: StrictMaybe RewardUpdate
       pd = (PoolDistr Map.empty) :: PoolDistr
       os = Map.singleton (SlotNo 1) (ActiveSlot testGKeyHash)
+      compactOs = Map.singleton (ActiveSlot testGKeyHash) (SlotNo 1 :| [])
       nes = NewEpochState
               e
               (BlocksMade bs)
@@ -1101,6 +1103,6 @@ serializationTests = testGroup "Serialization Tests"
       <> S es
       <> S ru
       <> S pd
-      <> S os
+      <> S compactOs
     )
  ]
