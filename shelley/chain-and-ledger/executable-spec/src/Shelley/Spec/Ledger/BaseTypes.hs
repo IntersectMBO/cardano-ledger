@@ -230,28 +230,30 @@ maybeToStrictMaybe (Just x) = SJust x
 --------------------------------------------------------------------------------
 
 data Globals = Globals
-  { epochInfo :: EpochInfo Identity
-  , slotsPerKESPeriod :: Word64
+  { epochInfo :: !(EpochInfo Identity)
+  , slotsPerKESPeriod :: !Word64
     -- | Number of slots before the end of the epoch at which we stop updating
     --   the candidate nonce for the next epoch.
     --
     --   This value is also used in a number of other places; for example,
     --   protocol updates must be submitted at least this many slots before an
     --   epoch boundary.
-  , slotsPrior :: Word64
+  , slotsPrior :: !Word64
     -- | Number of slots after the beginning of an epoch when we may begin to
     --   distribute rewards.
-  , startRewards :: Word64
+  , startRewards :: !Word64
     -- | Maximum number of blocks we are allowed to roll back
-  , securityParameter :: Word64
+  , securityParameter :: !Word64
     -- | Maximum number of KES iterations
-  , maxKESEvo :: Word64
+  , maxKESEvo :: !Word64
     -- | Quorum for update system votes and MIR certificates
-  , quorum :: Word64
+  , quorum :: !Word64
     -- | All blocks invalid after this protocol version
-  , maxMajorPV :: Natural
+  , maxMajorPV :: !Natural
     -- | Maximum number of lovelace in the system
-  , maxLovelaceSupply :: Word64
-  }
+  , maxLovelaceSupply :: !Word64
+  } deriving (Generic)
+
+instance NoUnexpectedThunks Globals
 
 type ShelleyBase = ReaderT Globals Identity
