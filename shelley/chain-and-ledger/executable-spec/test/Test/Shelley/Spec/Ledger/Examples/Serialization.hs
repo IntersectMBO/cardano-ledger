@@ -627,7 +627,7 @@ serializationTests = testGroup "Serialization Tests"
   , let
       tin = [TxIn genesisId 1]
       tout = TxOut testAddrE (Coin 2)
-    in checkEncodingCBOR "txbody"
+    in checkEncodingCBORAnnotated "txbody"
     ( TxBody -- minimal transaction body
       (Set.fromList tin)
       (StrictSeq.singleton tout)
@@ -681,7 +681,7 @@ serializationTests = testGroup "Serialization Tests"
                 , _protocolVersion = SNothing
                 })))
              (EpochNo 0)
-    in checkEncodingCBOR "txbody_partial"
+    in checkEncodingCBORAnnotated "txbody_partial"
     ( TxBody -- transaction body with some optional components
         (Set.fromList tin)
         (StrictSeq.singleton tout)
@@ -742,7 +742,7 @@ serializationTests = testGroup "Serialization Tests"
                             })))
              (EpochNo 0)
       mdh = MD.hashMetaData $ MD.MetaData $ Map.singleton 13 (MD.I 17)
-    in checkEncodingCBOR "txbody_full"
+    in checkEncodingCBORAnnotated "txbody_full"
     ( TxBody -- transaction body with all components
         (Set.fromList tin)
         (StrictSeq.singleton tout)

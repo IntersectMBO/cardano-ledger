@@ -18,7 +18,6 @@ module Shelley.Spec.Ledger.Tx
       , _witnessVKeySet
       , _witnessMSigMap
       , _metadata
-      , txBodyBytes
       , txWitsBytes
       , txMetadataBytes
       )
@@ -77,15 +76,13 @@ data Tx crypto
       , _witnessVKeySet' :: !(Set (WitVKey crypto))
       , _witnessMSigMap' :: !(Map (ScriptHash crypto) (MultiSig crypto))
       , _metadata'       :: !(StrictMaybe MetaData)
-      , txBodyBytes      :: LByteString
       , txWitsBytes      :: LByteString
       , txMetadataBytes  :: !(Maybe LByteString)
       , txFullBytes      :: LByteString
       } deriving (Show, Eq, Generic)
         deriving NoUnexpectedThunks via
           AllowThunksIn
-            '["txBodyBytes"
-            , "txWitsBytes"
+            '[ "txWitsBytes"
             , "txMetadataBytes"
             , "txFullBytes"
             ] (Tx crypto)
@@ -97,7 +94,7 @@ pattern Tx :: Crypto crypto
   -> StrictMaybe MetaData
   -> Tx crypto
 pattern Tx { _body, _witnessVKeySet, _witnessMSigMap, _metadata } <-
-  Tx' _body _witnessVKeySet _witnessMSigMap _metadata _ _ _ _
+  Tx' _body _witnessVKeySet _witnessMSigMap _metadata _ _ _
   where
   Tx body witnessVKeySet witnessMSigMap metadata =
     let encodeMapElement ix enc x =
@@ -119,7 +116,6 @@ pattern Tx { _body, _witnessVKeySet, _witnessMSigMap, _metadata } <-
         , _witnessVKeySet' = witnessVKeySet
         , _witnessMSigMap' = witnessMSigMap
         , _metadata'       = metadata
-        , txBodyBytes      = bodyBytes
         , txWitsBytes      = witsBytes
         , txMetadataBytes  = metadataBytes
         , txFullBytes      = fullBytes
@@ -128,16 +124,17 @@ pattern Tx { _body, _witnessVKeySet, _witnessMSigMap, _metadata } <-
 {-# COMPLETE Tx #-}
 
 segwitTx
-  :: (TxBody crypto, Annotator LByteString)
+  :: Crypto crypto
+  => Annotator (TxBody crypto)
   -> (Wits crypto, Annotator LByteString)
   -> Maybe (MetaData, Annotator LByteString)
   -> Annotator (Tx crypto)
 segwitTx
-  (body, bodyAnn)
+  bodyAnn
   (Wits witnessVKeySet witnessMSigMap, witsAnn)
   metadataPair
   = Annotator $ \bytes ->
-      let bodyBytes = runAnnotator bodyAnn bytes
+      let body = runAnnotator bodyAnn bytes
           witsBytes = runAnnotator witsAnn bytes
           (metadata, metadataBytes) = case metadataPair of
             Nothing -> (Nothing, Nothing)
@@ -146,13 +143,12 @@ segwitTx
             Nothing -> serializeEncoding encodeNull
             Just b -> b
           fullBytes = (serializeEncoding $ encodeListLen 3)
-            <> bodyBytes <> witsBytes <> wrappedMetadataBytes
+            <> serialize body <> witsBytes <> wrappedMetadataBytes
        in Tx'
           { _body'           = body
           , _witnessVKeySet' = witnessVKeySet
           , _witnessMSigMap' = witnessMSigMap
           , _metadata'       = maybeToStrictMaybe metadata
-          , txBodyBytes      = bodyBytes
           , txWitsBytes      = witsBytes
           , txMetadataBytes  = metadataBytes
           , txFullBytes      = fullBytes
@@ -183,7 +179,7 @@ instance
 
 instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
   fromCBOR = annotatorSlice $ decodeRecordNamed "Tx" (const 3) $ do
-    (body, bodyAnn) <- withSlice fromCBOR
+    body <- fromCBOR
     (Wits witsVKeys witsScripts, witsAnn) <- withSlice decodeWits
     (meta, metaAnn) <- do
       result <- decodeNullMaybe (withSlice fromCBOR)
@@ -191,11 +187,10 @@ instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
         Nothing -> (Nothing, pure Nothing)
         Just (a,b) -> (Just a, Just <$> b)
     pure $
-      Tx' <$> pure body
+      Tx' <$> body
           <*> pure witsVKeys
           <*> pure witsScripts
           <*> pure (maybeToStrictMaybe meta)
-          <*> bodyAnn
           <*> witsAnn
           <*> metaAnn
 

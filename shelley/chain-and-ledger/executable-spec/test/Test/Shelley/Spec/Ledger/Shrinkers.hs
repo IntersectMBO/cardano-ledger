@@ -38,7 +38,7 @@ shrinkTx (Tx _b _ws _wm _md) =
   [ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
   -}
 
-shrinkTxBody :: TxBody crypto -> [TxBody crypto]
+shrinkTxBody :: Crypto crypto => TxBody crypto -> [TxBody crypto]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++

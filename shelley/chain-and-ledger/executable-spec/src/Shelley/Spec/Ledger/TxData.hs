@@ -1,8 +1,11 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -13,15 +16,56 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.TxData
+  ( Addr (..)
+  , Credential (..)
+  , DCert (..)
+  , DelegCert (..)
+  , Delegation (..)
+  , GenesisDelegate (..)
+  , Ix
+  , MIRCert (..)
+  , PoolCert (..)
+  , PoolMetaData (..)
+  , PoolParams (..)
+  , Ptr (..)
+  , RewardAcnt (..)
+  , StakeCreds (..)
+  , StakePools (..)
+  , StakePoolRelay (..)
+  , StakeReference (..)
+  , TxBody
+    ( TxBody
+    , _inputs
+    , _outputs
+    , _certs
+    , _wdrls
+    , _txfee
+    , _ttl
+    , _txUpdate
+    , _mdHash
+    )
+  , TxId (..)
+  , TxIn (..)
+  , TxOut (..)
+  , Url
+  , Wdrl (..)
+  , WitVKey (..)
+  --
+  , witKeyHash
+  , addStakeCreds
+)
   where
 
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
-                     encodeListLen, encodeMapLen, encodeWord, enforceSize, matchSize)
-import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, catMaybes)
+import           Cardano.Binary (Annotator (..), FromCBOR (fromCBOR), ToCBOR (toCBOR),
+                     annotatorSlice, decodeListLen, decodeWord, encodeListLen, encodeMapLen,
+                     encodePreEncoded, encodeWord, enforceSize, matchSize, serializeEncoding)
+import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..), Word64,
+                     catMaybes)
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.Crypto
 
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (fold)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -260,18 +304,64 @@ instance NoUnexpectedThunks (DCert crypto)
 
 -- |A raw transaction
 data TxBody crypto
-  = TxBody
-      { _inputs   :: !(Set (TxIn crypto))
-      , _outputs  :: !(StrictSeq (TxOut crypto))
-      , _certs    :: !(StrictSeq (DCert crypto))
-      , _wdrls    :: !(Wdrl crypto)
-      , _txfee    :: !Coin
-      , _ttl      :: !SlotNo
-      , _txUpdate :: !(StrictMaybe (Update crypto))
-      , _mdHash   :: !(StrictMaybe (MetaDataHash crypto))
+  = TxBody'
+      { _inputs'   :: !(Set (TxIn crypto))
+      , _outputs'  :: !(StrictSeq (TxOut crypto))
+      , _certs'    :: !(StrictSeq (DCert crypto))
+      , _wdrls'    :: !(Wdrl crypto)
+      , _txfee'    :: !Coin
+      , _ttl'      :: !SlotNo
+      , _txUpdate' :: !(StrictMaybe (Update crypto))
+      , _mdHash'   :: !(StrictMaybe (MetaDataHash crypto))
+      , bodyBytes  :: LByteString
       } deriving (Show, Eq, Generic)
+        deriving NoUnexpectedThunks via
+          AllowThunksIn '["bodyBytes"] (TxBody crypto)
 
-instance NoUnexpectedThunks (TxBody crypto)
+pattern TxBody
+  :: Crypto crypto
+  => Set (TxIn crypto)
+  -> StrictSeq (TxOut crypto)
+  -> StrictSeq (DCert crypto)
+  -> Wdrl crypto
+  -> Coin
+  -> SlotNo
+  -> StrictMaybe (Update crypto)
+  -> StrictMaybe (MetaDataHash crypto)
+  -> TxBody crypto
+pattern TxBody
+ { _inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash } <-
+ TxBody'
+   { _inputs'   = _inputs
+   , _outputs'  = _outputs
+   , _certs'    =  _certs
+   , _wdrls'    = _wdrls
+   , _txfee'    = _txfee
+   , _ttl'      = _ttl
+   , _txUpdate' = _txUpdate
+   , _mdHash'   = _mdHash
+   }
+  where
+  TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
+    let encodeMapElement ix x = Just (encodeWord ix <> toCBOR x)
+        encodeMapElementUnless condition ix x = if condition x
+          then Nothing
+          else encodeMapElement ix x
+        l = catMaybes
+          [ encodeMapElement 0 $ Set.toList _inputs
+          , encodeMapElement 1 $ CborSeq $ StrictSeq.getSeq _outputs
+          , encodeMapElement 2 _txfee
+          , encodeMapElement 3 _ttl
+          , encodeMapElementUnless null 4 $ CborSeq $ StrictSeq.getSeq _certs
+          , encodeMapElementUnless (null . unWdrl) 5 _wdrls
+          , encodeMapElement 6 =<< strictMaybeToMaybe _txUpdate
+          , encodeMapElement 7 =<< strictMaybeToMaybe _mdHash
+          ]
+        n = fromIntegral $ length l
+        bytes = serializeEncoding $ encodeMapLen n <> fold l
+     in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes
+
+{-# COMPLETE TxBody #-}
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey crypto
@@ -438,41 +528,23 @@ instance
   (Crypto crypto)
   => ToCBOR (TxBody crypto)
  where
-  toCBOR txbody =
-    let l = catMaybes
-          [ encodeMapElement 0 $ Set.toList $ _inputs txbody
-          , encodeMapElement 1 $ CborSeq $ StrictSeq.getSeq $ _outputs txbody
-          , encodeMapElement 2 $ _txfee txbody
-          , encodeMapElement 3 $ _ttl txbody
-          , encodeMapElementUnless null 4 $ CborSeq $ StrictSeq.getSeq $ _certs txbody
-          , encodeMapElementUnless (null . unWdrl) 5 $ _wdrls txbody
-          , encodeMapElement 6 =<< strictMaybeToMaybe (_txUpdate txbody)
-          , encodeMapElement 7 =<< strictMaybeToMaybe (_mdHash txbody)
-          ]
-        n = fromIntegral $ length l
-    in encodeMapLen n <> fold l
-    where
-      encodeMapElement ix x = Just (encodeWord ix <> toCBOR x)
-      encodeMapElementUnless condition ix x =
-        if condition x
-          then Nothing
-          else encodeMapElement ix x
+  toCBOR = encodePreEncoded . BSL.toStrict . bodyBytes
 
 instance
   (Crypto crypto)
-  => FromCBOR (TxBody crypto)
+  => FromCBOR (Annotator (TxBody crypto))
   where
-   fromCBOR = do
+   fromCBOR = annotatorSlice $ do
      mapParts <- decodeMapContents $
        decodeWord >>= \case
          0 -> decodeSet fromCBOR                 >>= \x -> pure (0, \t -> t { _inputs   = x })
-         1 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs  = x })
-         2 -> fromCBOR                           >>= \x -> pure (2, \t -> t { _txfee    = x })
-         3 -> fromCBOR                           >>= \x -> pure (3, \t -> t { _ttl      = x })
-         4 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs    = x })
-         5 -> fromCBOR                           >>= \x -> pure (5, \t -> t { _wdrls    = x })
-         6 -> fromCBOR                           >>= \x -> pure (6, \t -> t { _txUpdate = SJust x })
-         7 -> fromCBOR                           >>= \x -> pure (7, \t -> t { _mdHash   = SJust x })
+         1 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs'  = x })
+         2 -> fromCBOR                           >>= \x -> pure (2, \t -> t { _txfee'    = x })
+         3 -> fromCBOR                           >>= \x -> pure (3, \t -> t { _ttl'      = x })
+         4 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs'    = x })
+         5 -> fromCBOR                           >>= \x -> pure (5, \t -> t { _wdrls'    = x })
+         6 -> fromCBOR                           >>= \x -> pure (6, \t -> t { _txUpdate' = SJust x })
+         7 -> fromCBOR                           >>= \x -> pure (7, \t -> t { _mdHash'   = SJust x })
          k -> invalidKey k
      let requiredFields :: Map Int String
          requiredFields = Map.fromList $
@@ -485,17 +557,19 @@ instance
          missingFields = Map.filterWithKey (\k _ -> notElem k fields) requiredFields
      unless (null missingFields)
        (fail $ "missing required transaction component(s): " <> show missingFields)
-     pure $ foldr ($) basebody (snd <$> mapParts)
+     pure $ Annotator $ \_fullbytes bytes ->
+       (foldr ($) basebody (snd <$> mapParts)) { bodyBytes = bytes }
      where
-       basebody = TxBody
-          { _inputs   = Set.empty
-          , _outputs  = StrictSeq.empty
-          , _txfee    = Coin 0
-          , _ttl      = SlotNo 0
-          , _certs    = StrictSeq.empty
-          , _wdrls    = Wdrl Map.empty
-          , _txUpdate = SNothing
-          , _mdHash   = SNothing
+       basebody = TxBody'
+          { _inputs'  = Set.empty
+          , _outputs' = StrictSeq.empty
+          , _txfee'   = Coin 0
+          , _ttl'     = SlotNo 0
+          , _certs'   = StrictSeq.empty
+          , _wdrls'   = Wdrl Map.empty
+          , _txUpdate'= SNothing
+          , _mdHash'  = SNothing
+          , bodyBytes = mempty
           }
 
 
