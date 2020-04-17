@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -18,9 +20,10 @@ where
 
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Cardano.Prelude (MonadError (..), asks, unless)
+import           Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase,
                      StrictMaybe (..))
@@ -131,14 +134,16 @@ instance
   data PredicateFailure (CHAIN crypto)
     = HeaderSizeTooLargeCHAIN
     | BlockSizeTooLargeCHAIN
-    | ObsoleteNodeCHAIN Natural Natural
-    | BbodyFailure (PredicateFailure (BBODY crypto))
+    | ObsoleteNodeCHAIN !Natural !Natural
+    | BbodyFailure !(PredicateFailure (BBODY crypto))
     | TickFailure (PredicateFailure (TICK crypto))
-    | PrtclFailure (PredicateFailure (PRTCL crypto))
-    deriving (Show, Eq)
+    | PrtclFailure !(PredicateFailure (PRTCL crypto))
+    deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [chainTransition]
+
+instance Crypto crypto => NoUnexpectedThunks (PredicateFailure (CHAIN crypto))
 
 chainChecks
   :: (Crypto crypto, MonadError (PredicateFailure (CHAIN crypto)) m)
