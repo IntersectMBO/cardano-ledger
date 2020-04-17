@@ -8,7 +8,7 @@ module Test.Shelley.Spec.Ledger.Examples.Fees
 where
 
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
+import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -17,7 +17,7 @@ import qualified Data.Map.Strict as Map (empty, singleton)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
-import           Cardano.Binary (decodeAnnotator, fromCBOR)
+import           Cardano.Binary (serialize)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), text64)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
@@ -45,11 +45,7 @@ import           Test.Shelley.Spec.Ledger.Utils
 
 sizeTest :: BSL.ByteString -> Tx -> Integer -> Assertion
 sizeTest b16 tx s = do
-  let (b, _) = Base16.decode b16
-  decoded <- case decodeAnnotator "cbor test" fromCBOR b of
-    Right t -> pure t
-    Left e  -> assertFailure $ "sizeTest" <> show e
-  (decoded @?= tx) >> (txsize tx @?= s)
+  (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 
 alicePay :: KeyPair
 alicePay = KeyPair vk sk
@@ -135,8 +131,7 @@ txSimpleUTxO = Tx
   }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
-txSimpleUTxOBytes16 = "83a400d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030aa10081821a6753449f824489ec679d1a6753449f80"
-
+txSimpleUTxOBytes16 = "83a4009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030aa10081821a6753449f8244843dbcfc1a6753449ff6"
 
 -- | Transaction which consumes two UTxO and creates five UTxO
 -- | and has two witness
@@ -173,7 +168,7 @@ txMutiUTxO = Tx
   }
 
 txMutiUTxOBytes16 :: BSL.ByteString
-txMutiUTxOBytes16 = "83a400d90102828244b45c4891008244b45c4891010185840044cfb2c4144476394f7a0a840044cfb2c4144476394f7a14840044cfb2c4144476394f7a181e840044f079394944bcbe39001828840044f079394944bcbe390018320218c7030aa10082821a6753449f8244219dc2b31a6753449f821a3344eb568244219dc2b31a3344eb5680"
+txMutiUTxOBytes16 = "83a4009f8244605007430082446050074301ff0185840044cfb2c4144476394f7a0a840044cfb2c4144476394f7a14840044cfb2c4144476394f7a181e840044f079394944bcbe39001828840044f079394944bcbe390018320218c7030aa10082821a6753449f824441a0c70f1a6753449f821a3344eb56824441a0c70f1a3344eb56f6"
 
 -- | Transaction which registers a stake key
 
@@ -198,7 +193,7 @@ txRegisterStake = Tx
   }
 
 txRegisterStakeBytes16 :: BSL.ByteString
-txRegisterStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030a048182004476394f7aa10081821a6753449f8244ddb63dc11a6753449f80"
+txRegisterStakeBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a0481820082004476394f7aa10081821a6753449f8244f70aa3b61a6753449ff6"
 
 -- | Transaction which delegates a stake key
 
@@ -223,7 +218,7 @@ txDelegateStake = Tx
   }
 
 txDelegateStakeBytes16 :: BSL.ByteString
-txDelegateStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030a0481830444bcbe3900442b7dd894a10082821a687c686f8244a61602491a687c686f821a6753449f8244a61602491a6753449f80"
+txDelegateStakeBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a04818302820044bcbe3900442b7dd894a10082821a687c686f8244eab20f0c1a687c686f821a6753449f8244eab20f0c1a6753449ff6"
 
 -- | Transaction which de-registers a stake key
 
@@ -249,7 +244,7 @@ txDeregisterStake = Tx
 
 
 txDeregisterStakeBytes16 :: BSL.ByteString
-txDeregisterStakeBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030a048182024476394f7aa10081821a6753449f8244518af51d1a6753449f80"
+txDeregisterStakeBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a0481820182004476394f7aa10081821a6753449f8244e55d50821a6753449ff6"
 
 -- | Transaction which registers a stake pool
 
@@ -274,7 +269,7 @@ txRegisterPool = Tx
   }
 
 txRegisterPoolBytes16 :: BSL.ByteString
-txRegisterPoolBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030a04818a06442b7dd89444bf6afc170105d81e82010a82004476394f7ad90102814476394f7a816872656c61792e696f81826a616c6963652e706f6f6c427b7da10081821a6753449f8244530b23471a6753449f80"
+txRegisterPoolBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a04818a03442b7dd89444bf6afc170105d81e82010a82004476394f7a814476394f7a816872656c61792e696f826a616c6963652e706f6f6c427b7da10081821a6753449f824460b575ea1a6753449ff6"
 
 -- | Transaction which retires a stake pool
 
@@ -299,7 +294,7 @@ txRetirePool = Tx
   }
 
 txRetirePoolBytes16 :: BSL.ByteString
-txRetirePoolBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030a04818307442b7dd89405a10081821a6753449f824404d81fe41a6753449f80"
+txRetirePoolBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a04818304442b7dd89405a10081821a6753449f824468032e891a6753449ff6"
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
@@ -328,7 +323,7 @@ txWithMD = Tx
   }
 
 txWithMDBytes16 :: BSL.ByteString
-txWithMDBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030a07444eece652a10081821a6753449f8244b0436c041a6753449f81a10082056568656c6c6f"
+txWithMDBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a07444eece652a10081821a6753449f8244287d60081a6753449fa10082056568656c6c6f"
 
 -- | Spending from a multi-sig address
 
@@ -360,7 +355,7 @@ txWithMultiSig = Tx
   }
 
 txWithMultiSigBytes16 :: BSL.ByteString
-txWithMultiSigBytes16 = "83a400d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030aa20082821a6753449f824489ec679d1a6753449f821a3344eb56824489ec679d1a3344eb56018183030283820044cfb2c414820044f0793949820044cfff284080"
+txWithMultiSigBytes16 = "83a4009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030aa20082821a6753449f8244843dbcfc1a6753449f821a3344eb568244843dbcfc1a3344eb56018183030283820044cfb2c414820044f0793949820044cfff2840f6"
 
 -- | Transaction with a Reward Withdrawal
 
@@ -385,7 +380,7 @@ txWithWithdrawal = Tx
   }
 
 txWithWithdrawalBytes16 :: BSL.ByteString
-txWithWithdrawalBytes16 = "83a500d90102818244b45c4891000181840044cfb2c4144476394f7a0a02185e030a05a182004476394f7a1864a10082821afdd63a158244bebb7df71afdd63a15821a6753449f8244bebb7df71a6753449f80"
+txWithWithdrawalBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a05a182004476394f7a1864a10082821afdd63a1582447310d7861afdd63a15821a6753449f82447310d7861a6753449ff6"
 
 -- NOTE the txsize function takes into account which actual crypto parameter is use.
 -- These tests are using ShortHash and MockDSIGN so that:

@@ -14,12 +14,15 @@ module Shelley.Spec.Ledger.Serialization
   , unwrapCborStrictSeq
   , decodeList
   , decodeSeq
+  , decodeSet
   , decodeMapContents
   , decodeMaybe
   , decodeRecordNamed
+  , decodeNullMaybe
   , encodeFoldable
   , encodeFoldableEncoder
   , encodeFoldableMapEncoder
+  , encodeNullMaybe
   , groupRecord
   , rationalToCBOR
   , rationalFromCBOR
@@ -30,10 +33,11 @@ module Shelley.Spec.Ledger.Serialization
 where
 
 import           Cardano.Binary (Decoder, DecoderError (..), Encoding, FromCBOR (..), ToCBOR (..),
-                     decodeBreakOr, decodeListLenOrIndef, decodeMapLenOrIndef, decodeTag,
-                     encodeBreak, encodeListLen, encodeListLenIndef, encodeMapLen,
-                     encodeMapLenIndef, encodeTag, matchSize)
-import           Cardano.Prelude (cborError, Text)
+                     TokenType (TypeNull), decodeBreakOr, decodeListLenOrIndef,
+                     decodeMapLenOrIndef, decodeNull, decodeTag, encodeBreak, encodeListLen,
+                     encodeListLenIndef, encodeMapLen, encodeMapLenIndef, encodeNull, encodeTag,
+                     matchSize, peekTokenType)
+import           Cardano.Prelude (Text, cborError)
 import           Control.Monad (replicateM, unless)
 import           Data.Foldable (foldl')
 import           Data.Map (Map)
@@ -43,6 +47,8 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import           Data.Set (Set)
+import qualified Data.Set as Set
 import           Data.Typeable
 
 class Typeable a => ToCBORGroup a where
@@ -106,6 +112,9 @@ decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
 unwrapCborStrictSeq :: CborSeq a -> StrictSeq a
 unwrapCborStrictSeq = StrictSeq.toStrict . unwrapCborSeq
+
+decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
+decodeSet decoder = Set.fromList <$> decodeList decoder
 
 encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
 encodeFoldable = encodeFoldableEncoder toCBOR
@@ -181,3 +190,15 @@ rationalFromCBOR = do
     case ints of
       n:d:[] -> pure $ n % d
       _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numInts
+
+encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
+encodeNullMaybe _ Nothing = encodeNull
+encodeNullMaybe encoder (Just x) = encoder x
+
+decodeNullMaybe :: Decoder s a -> Decoder s (Maybe a)
+decodeNullMaybe decoder = do
+  peekTokenType >>= \case
+    TypeNull -> do
+      decodeNull
+      pure Nothing
+    _ -> Just <$> decoder

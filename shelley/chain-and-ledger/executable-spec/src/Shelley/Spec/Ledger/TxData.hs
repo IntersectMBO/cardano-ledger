@@ -37,7 +37,7 @@ import           Numeric.Natural (Natural)
 
 import           Byron.Spec.Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), Text64, UnitInterval, invalidKey,
-                     strictMaybeToMaybe)
+                     maybeToStrictMaybe, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VerKeyVRF, hashAnyKey)
@@ -46,8 +46,9 @@ import           Shelley.Spec.Ledger.PParams (Update)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
-                     FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, mapFromCBOR,
-                     mapToCBOR, unwrapCborStrictSeq)
+                     FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, decodeNullMaybe,
+                     decodeSet, encodeFoldable, encodeNullMaybe, mapFromCBOR, mapToCBOR,
+                     unwrapCborStrictSeq)
 
 import           Shelley.Spec.Ledger.Scripts
 
@@ -270,55 +271,42 @@ instance
  where
    toCBOR = \case
            -- DCertDeleg
-     DCertDeleg (RegKey (KeyHashObj h)) ->
+     DCertDeleg (RegKey cred) ->
            encodeListLen 2
            <> toCBOR (0 :: Word8)
-           <> toCBOR h
-     DCertDeleg (RegKey (ScriptHashObj h)) ->
+           <> toCBOR cred
+     DCertDeleg (DeRegKey cred) ->
            encodeListLen 2
            <> toCBOR (1 :: Word8)
-           <> toCBOR h
-     DCertDeleg (DeRegKey (KeyHashObj h)) ->
-           encodeListLen 2
+           <> toCBOR cred
+     DCertDeleg (Delegate (Delegation cred poolkh)) ->
+           encodeListLen 3
            <> toCBOR (2 :: Word8)
-           <> toCBOR h
-     DCertDeleg (DeRegKey (ScriptHashObj h)) ->
-           encodeListLen 2
-           <> toCBOR (3 :: Word8)
-           <> toCBOR h
-     DCertDeleg (Delegate (Delegation (KeyHashObj h) poolkh)) ->
-           encodeListLen 3
-           <> toCBOR (4 :: Word8)
-           <> toCBOR h
-           <> toCBOR poolkh
-     DCertDeleg (Delegate (Delegation (ScriptHashObj h) poolkh)) ->
-           encodeListLen 3
-           <> toCBOR (5 :: Word8)
-           <> toCBOR h
+           <> toCBOR cred
            <> toCBOR poolkh
 
            -- DCertPool
      DCertPool (RegPool poolParams) ->
            encodeListLen (1 + listLen poolParams)
-           <> toCBOR (6 :: Word8)
+           <> toCBOR (3 :: Word8)
            <> toCBORGroup poolParams
      DCertPool (RetirePool vk epoch) ->
            encodeListLen 3
-           <> toCBOR (7 :: Word8)
+           <> toCBOR (4 :: Word8)
            <> toCBOR vk
            <> toCBOR epoch
 
            -- DCertGenesis
      DCertGenesis (GenesisDelegate gk kh) ->
            encodeListLen 3
-           <> toCBOR (8 :: Word8)
+           <> toCBOR (5 :: Word8)
            <> toCBOR gk
            <> toCBOR kh
 
            -- DCertMIR
      DCertMir mir ->
            encodeListLen 2
-           <> toCBOR (9 :: Word8)
+           <> toCBOR (6 :: Word8)
            <> toCBOR mir
 
 instance
@@ -328,35 +316,28 @@ instance
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
-      0 -> matchSize "RegKey" 2 n >> (DCertDeleg . RegKey . KeyHashObj) <$> fromCBOR
-      1 -> matchSize "RegKey" 2 n >> (DCertDeleg . RegKey . ScriptHashObj) <$> fromCBOR
-      2 -> matchSize "DeRegKey" 2 n >> (DCertDeleg . DeRegKey . KeyHashObj) <$> fromCBOR
-      3 -> matchSize "DeRegKey" 2 n >> (DCertDeleg . DeRegKey . ScriptHashObj) <$> fromCBOR
-      4 -> do
+      0 -> matchSize "RegKey" 2 n >> (DCertDeleg . RegKey) <$> fromCBOR
+      1 -> matchSize "DeRegKey" 2 n >> (DCertDeleg . DeRegKey) <$> fromCBOR
+      2 -> do
         matchSize "Delegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ DCertDeleg $ Delegate (Delegation (KeyHashObj a) b)
-      5 -> do
-        matchSize "Delegate" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ DCertDeleg $ Delegate (Delegation (ScriptHashObj a) b)
-      6 -> do
+        pure $ DCertDeleg $ Delegate (Delegation a b)
+      3 -> do
         group <- fromCBORGroup
         matchSize "RegPool" (fromIntegral $ 1 + listLen group) n
         pure $ DCertPool $ RegPool group
-      7 -> do
+      4 -> do
         matchSize "RetirePool" 3 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ DCertPool $ RetirePool a (EpochNo b)
-      8 -> do
+      5 -> do
         matchSize "GenesisDelegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
         pure $ DCertGenesis $ GenesisDelegate a b
-      9 -> matchSize "MIRCert" 2 n >> DCertMir <$> fromCBOR
+      6 -> matchSize "MIRCert" 2 n >> DCertMir <$> fromCBOR
       k -> invalidKey k
 
 instance
@@ -419,7 +400,7 @@ instance
  where
   toCBOR txbody =
     let l = catMaybes
-          [ encodeMapElement 0 $ _inputs txbody
+          [ encodeMapElement 0 $ Set.toList $ _inputs txbody
           , encodeMapElement 1 $ CborSeq $ StrictSeq.getSeq $ _outputs txbody
           , encodeMapElement 2 $ _txfee txbody
           , encodeMapElement 3 $ _ttl txbody
@@ -444,7 +425,7 @@ instance
    fromCBOR = do
      mapParts <- decodeMapContents $
        decodeWord >>= \case
-         0 -> fromCBOR                           >>= \x -> pure (0, \t -> t { _inputs   = x })
+         0 -> decodeSet fromCBOR                 >>= \x -> pure (0, \t -> t { _inputs   = x })
          1 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs  = x })
          2 -> fromCBOR                           >>= \x -> pure (2, \t -> t { _txfee    = x })
          3 -> fromCBOR                           >>= \x -> pure (3, \t -> t { _ttl      = x })
@@ -606,9 +587,9 @@ instance
       <> toCBOR (_poolCost poolParams)
       <> toCBOR (_poolMargin poolParams)
       <> toCBOR (_poolRAcnt poolParams)
-      <> toCBOR (_poolOwners poolParams)
+      <> encodeFoldable (_poolOwners poolParams)
       <> toCBOR (CborSeq (StrictSeq.getSeq (_poolRelays poolParams)))
-      <> toCBOR (_poolMD poolParams)
+      <> encodeNullMaybe toCBOR (strictMaybeToMaybe (_poolMD poolParams))
   listLen _ = 9
 
 instance
@@ -622,9 +603,9 @@ instance
     cost <- fromCBOR
     margin <- fromCBOR
     ra <- fromCBOR
-    owners <- fromCBOR
+    owners <- decodeSet fromCBOR
     relays <- fromCBOR
-    md <- fromCBOR
+    md <- decodeNullMaybe fromCBOR
     pure $ PoolParams
             { _poolPubKey = vk
             , _poolVrf    = vrf
@@ -634,7 +615,7 @@ instance
             , _poolRAcnt  = ra
             , _poolOwners = owners
             , _poolRelays = unwrapCborStrictSeq relays
-            , _poolMD     = md
+            , _poolMD     = maybeToStrictMaybe md
             }
 
 instance Relation (StakeCreds crypto) where

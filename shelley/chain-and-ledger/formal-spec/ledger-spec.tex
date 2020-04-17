@@ -42,6 +42,7 @@
 \usepackage{tikz}
 \usepackage{booktabs}
 \usepackage{enumerate}
+\usepackage{listings}
 %%
 %% Package `semantic` can be used for writing inference rules.
 %%
@@ -312,7 +313,9 @@
 
 \clearpage
 \begin{appendix}
-  \input{appendix}
+  % \input{cddl}
+  % ^^ TODO figure out how to get relative imports (../executable-spec/cddl-files/shelley.cddl) to work in nix
+  \input{proofs}
 \end{appendix}
 
 
