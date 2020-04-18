@@ -11,14 +11,18 @@ import           Data.MultiSet (filter, fromSet, occur, size, unions)
 import qualified Data.Set as Set
 
 import           Hedgehog.Internal.Property (LabelName (..))
-import           Test.Tasty
-import           Test.Tasty.Hedgehog
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
 import qualified Test.Tasty.QuickCheck as TQC
 
-import           Hedgehog
+import           Hedgehog (Gen, Property, (/==), (===), classify, failure, label, property,
+                     success, withTests)
+import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           Byron.Spec.Ledger.Core ((<|))
+import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.LedgerState
 import           Shelley.Spec.Ledger.PParams
@@ -30,6 +34,7 @@ import           Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey, totalDeposi
 import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import           Test.Shelley.Spec.Ledger.Generator.Core (mkKeyPairs, toAddr)
 import           Test.Shelley.Spec.Ledger.PreSTSGenerator
 import           Test.Shelley.Spec.Ledger.Rules.ClassifyTraces (onlyValidChainSignalsAreGenerated,
                      onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
@@ -66,7 +71,7 @@ isNotDustDist initUtxo utxo' =
 propPositiveBalance:: Property
 propPositiveBalance =
     property $ do
-      initialState <- forAll genNonemptyGenesisState
+      initialState <- Hedgehog.forAll genNonemptyGenesisState
       utxoSize ((_utxo . _utxoState) initialState) /== 0
       Coin 0 /== balance ((_utxo . _utxoState) initialState)
 
@@ -75,7 +80,7 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
     property $ do
-      (_, steps, fee, ls, _, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, steps, fee, ls, _, next)  <- Hedgehog.forAll genNonEmptyAndAdvanceTx
       classify "non-trivial number of steps" (steps > 1)
       case next of
         Left _    -> failure
@@ -87,7 +92,7 @@ propPreserveBalanceInitTx =
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Property
 propBalanceTxInTxOut = property $ do
-  (l, steps, fee, txwits, l')  <- forAll genValidStateTx
+  (l, steps, fee, txwits, l')  <- Hedgehog.forAll genValidStateTx
   let tx                       = _body txwits
   let inps                     = txins tx
   classify "non-trivial valid ledger state" (steps > 1)
@@ -98,7 +103,7 @@ propBalanceTxInTxOut = property $ do
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
 propPreserveOutputs = property $ do
-  (l, steps, _, txwits, l') <- forAll genValidStateTx
+  (l, steps, _, txwits, l') <- Hedgehog.forAll genValidStateTx
   let tx                    = _body txwits
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
@@ -108,7 +113,7 @@ propPreserveOutputs = property $ do
 -- | Property (Eliminate Inputs of Transaction)
 propEliminateInputs :: Property
 propEliminateInputs = property $ do
-  (l, steps, _, txwits, l') <- forAll genValidStateTx
+  (l, steps, _, txwits, l') <- Hedgehog.forAll genValidStateTx
   let tx                    = _body txwits
   classify "non-trivial valid ledger state" (steps > 1)
   classify "non-trivial wealth dist"
@@ -119,7 +124,7 @@ propEliminateInputs = property $ do
 -- | Property (Completeness and Collision-Freeness of new TxIds)
 propUniqueTxIds :: Property
 propUniqueTxIds = property $ do
-  (l, steps, _, txwits, l') <- forAll genValidStateTx
+  (l, steps, _, txwits, l') <- Hedgehog.forAll genValidStateTx
   let tx                    = _body txwits
   let origTxIds             = collectIds <$> Map.keys (utxoMap ((_utxo . _utxoState) l))
   let newTxIds              = collectIds <$> Map.keys (utxoMap (txouts tx))
@@ -136,7 +141,7 @@ propUniqueTxIds = property $ do
 -- transactions. Note: this is more a property of the current generator.
 propNoDoubleSpend :: Property
 propNoDoubleSpend = withTests 1000 $ property $ do
-      (_, _, _, _, txs, next)  <- forAll genNonEmptyAndAdvanceTx
+      (_, _, _, _, txs, next)  <- Hedgehog.forAll genNonEmptyAndAdvanceTx
       case next of
         Left _  -> failure
         Right _ -> do
@@ -151,7 +156,7 @@ propNoDoubleSpend = withTests 1000 $ property $ do
 classifyInvalidDoubleSpend :: Property
 classifyInvalidDoubleSpend = withTests 1000 $ property $ do
       (_, _, _, _, txs, LedgerValidation validationErrors _)
-          <- forAll genNonEmptyAndAdvanceTx'
+          <- Hedgehog.forAll genNonEmptyAndAdvanceTx'
       let inputIndicesSet  = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
       let multiSpentInputs = Data.MultiSet.size $ Data.MultiSet.filter
                                    (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
@@ -162,6 +167,20 @@ classifyInvalidDoubleSpend = withTests 1000 $ property $ do
       classify "multi-spend" isMultiSpend
       True === (not isMultiSpend || validationErrors /= [])
 
+roundTripAddr :: Property
+roundTripAddr =
+  -- We are using a QC generator which means we need QC test
+    Hedgehog.property $ do
+      addr <- Hedgehog.forAll genAddressH
+      Hedgehog.tripping addr serialiseAddr deserialiseAddr
+  where
+    genAddressH :: Gen Addr -- actually TxData.Addr ConcreteCrypto
+    genAddressH = do
+      keyPair1 <- snd . mkKeyPairs <$> Gen.word64 Range.constantBounded
+      keyPair2 <- snd . mkKeyPairs <$> Gen.word64 Range.constantBounded
+      pure $ toAddr (keyPair1, keyPair2)
+
+
 minimalPropertyTests :: TestTree
 minimalPropertyTests =
   testGroup "Minimal Property Tests"
@@ -169,7 +188,9 @@ minimalPropertyTests =
       -- TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered
       --, TQC.testProperty "total amount of Ada is preserved" preservationOfAda
       --,
-      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated]
+      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated
+    , testProperty "Roundtrip Addr serialisation Hedghog" roundTripAddr
+    ]
 
 
 -- | 'TestTree' of property-based testing properties.
@@ -288,15 +309,15 @@ propertyTests = testGroup "Property-Based Testing"
 
 propNonNegativeTxOuts :: Property
 propNonNegativeTxOuts =
-  withTests 100000 $ property $ do
-  (_, _, _, tx, _)  <- forAll genStateTx
+  withTests 100000 . property $ do
+  (_, _, _, tx, _)  <- Hedgehog.forAll genStateTx
   all (\(TxOut _ (Coin x)) -> x >= 0) (_outputs . _body $ tx) === True
 
 -- | Mutations for Property 7.2
 propBalanceTxInTxOut' :: Property
 propBalanceTxInTxOut' =
   withTests 1000 $ property $ do
-  (l, _, fee, txwits, lv)  <- forAll genStateTx
+  (l, _, fee, txwits, lv)  <- Hedgehog.forAll genStateTx
   let tx                       = _body txwits
   let inps                     = txins tx
   let getErrors (LedgerValidation valErrors _) = valErrors
@@ -329,7 +350,7 @@ propBalanceTxInTxOut' =
 -- validate.
 propCheckRedundantWitnessSet :: Property
 propCheckRedundantWitnessSet = property $ do
-  (l, steps, _, txwits, _, keyPairs)  <- forAll genValidStateTxKeys
+  (l, steps, _, txwits, _, keyPairs)  <- Hedgehog.forAll genValidStateTxKeys
   let keyPair                  = fst $ head keyPairs
   let tx                       = _body txwits
   let witness                  = makeWitnessVKey tx keyPair
@@ -346,8 +367,8 @@ propCheckRedundantWitnessSet = property $ do
 -- | Check that we correctly report missing witnesses.
 propCheckMissingWitness :: Property
 propCheckMissingWitness = property $ do
-  (l, steps, _, txwits, _) <- forAll genValidStateTx
-  witnessList              <- forAll (Gen.subsequence $
+  (l, steps, _, txwits, _) <- Hedgehog.forAll genValidStateTx
+  witnessList              <- Hedgehog.forAll (Gen.subsequence $
                                         Set.toList (_witnessVKeySet txwits))
   let witnessVKeySet''          = _witnessVKeySet txwits
   let witnessVKeySet'           = Set.fromList witnessList
@@ -369,7 +390,7 @@ propCheckMissingWitness = property $ do
 -- | Property (Preserve Balance)
 propPreserveBalance :: Property
 propPreserveBalance = property $ do
-  (l, _, fee, tx, l') <- forAll genValidStateTx
+  (l, _, fee, tx, l') <- Hedgehog.forAll genValidStateTx
   let destroyed =
            balance ((_utxo . _utxoState) l)
         + (keyRefunds emptyPParams ((_stkCreds . _dstate . _delegationState) l) $ _body tx)
