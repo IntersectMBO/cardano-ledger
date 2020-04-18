@@ -4,7 +4,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Shelley.Spec.Ledger.MetaData
   ( MetaDatum (..)
@@ -62,40 +61,20 @@ https://github.com/well-typed/cborg/issues/222). So we need to be permissive
 when we decode.
 -}
 
-viewList :: CBOR.Term -> Maybe [CBOR.Term]
-viewList (CBOR.TList l)  = Just l
-viewList (CBOR.TListI l) = Just l
-viewList _               = Nothing
-
-viewMap :: CBOR.Term -> Maybe [(CBOR.Term, CBOR.Term)]
-viewMap (CBOR.TMap m)  = Just m
-viewMap (CBOR.TMapI m) = Just m
-viewMap _              = Nothing
-
-viewBytes :: CBOR.Term -> Maybe B.ByteString
-viewBytes (CBOR.TBytes b)  = Just b
-viewBytes (CBOR.TBytesI b) = Just (BL.toStrict b)
-viewBytes _                = Nothing
-
-viewInteger :: CBOR.Term -> Maybe Integer
-viewInteger (CBOR.TInt i)     = Just (fromIntegral i)
-viewInteger (CBOR.TInteger i) = Just i
-viewInteger _                 = Nothing
-
-viewString :: CBOR.Term -> Maybe T.Text
-viewString (CBOR.TString  s)  = Just s
-viewString (CBOR.TStringI s)  = Just (TL.toStrict s)
-viewString _                  = Nothing
-
 fromTerm :: CBOR.Term -> Either CBORToDataError MetaDatum
-fromTerm = \case
-    -- See Note [Permissive decoding]
-    (viewInteger -> Just i) -> pure $ I i
-    (viewBytes -> Just b) -> pure $ B b
-    (viewString -> Just s) -> pure $ S s
-    (viewMap -> Just entries) -> Map <$> traverse (bitraverse fromTerm fromTerm) entries
-    (viewList -> Just ts) -> List <$> traverse fromTerm ts
-    t -> Left $ "Unsupported CBOR term: " ++ show t
+fromTerm t =
+  case t of
+    CBOR.TInt i -> Right $ I (fromIntegral i)
+    CBOR.TInteger i -> Right $ I i
+    CBOR.TBytes b -> Right $ B b
+    CBOR.TBytesI b -> Right $ B (BL.toStrict b)
+    CBOR.TString  s -> Right $ S s
+    CBOR.TStringI s -> Right $ S (TL.toStrict s)
+    CBOR.TMap m -> Map <$> traverse (bitraverse fromTerm fromTerm) m
+    CBOR.TMapI m -> Map <$> traverse (bitraverse fromTerm fromTerm) m
+    CBOR.TList l -> List <$> traverse fromTerm l
+    CBOR.TListI l -> List <$> traverse fromTerm l
+    _ -> Left $ "Unsupported CBOR term: " ++ show t
 
 toTerm :: MetaDatum -> CBOR.Term
 toTerm = \case
