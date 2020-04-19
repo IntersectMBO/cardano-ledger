@@ -75,4 +75,4 @@ serialiseAddr = serialize'
 -- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
 --
 deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
-deserialiseAddr = either (const Nothing) id . decodeFull'
+deserialiseAddr = either (const Nothing) Just . decodeFull'
