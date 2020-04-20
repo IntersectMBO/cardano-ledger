@@ -10,6 +10,7 @@
 module Shelley.Spec.Ledger.STS.NewEpoch
   ( NEWEPOCH
   , PredicateFailure(..)
+  , calculatePoolDistr
   )
 where
 
@@ -90,17 +91,7 @@ newEpochTransition = do
       es'' <- trans @(MIR crypto) $ TRC ((), es', ())
       es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
       let EpochState _acnt ss _ls _pr pp _ = es'''
-          SnapShot (Stake stake) delegs poolParams = _pstakeSet ss
-          Coin total = Map.foldl (+) (Coin 0) stake
-          sd =
-            aggregatePlus $
-              catMaybes
-                [ (,fromIntegral c / fromIntegral (if total == 0 then 1 else total)) <$>
-                  Map.lookup hk delegs -- TODO mgudemann total could be zero (in
-                                       -- particular when shrinking)
-                  | (hk, Coin c) <- Map.toList stake
-                ]
-          pd' = Map.intersectionWith (,) sd (Map.map _poolVrf poolParams)
+          pd' = calculatePoolDistr (_pstakeSet ss)
       osched' <- liftSTS $ overlaySchedule e gkeys pp
       pure $
         NewEpochState
@@ -109,10 +100,22 @@ newEpochTransition = do
           (BlocksMade Map.empty)
           es'''
           SNothing
-          (PoolDistr pd')
+          pd'
           osched'
-  where
-    aggregatePlus = Map.fromListWith (+)
+
+calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
+calculatePoolDistr (SnapShot (Stake stake) delegs poolParams)
+  = let
+      Coin total = Map.foldl (+) (Coin 0) stake
+      sd =
+            Map.fromListWith (+) $
+              catMaybes
+                [ (,fromIntegral c / fromIntegral (if total == 0 then 1 else total)) <$>
+                  Map.lookup hk delegs -- TODO mgudemann total could be zero (in
+                                       -- particular when shrinking)
+                  | (hk, Coin c) <- Map.toList stake
+                ]
+    in PoolDistr $ Map.intersectionWith (,) sd (Map.map _poolVrf poolParams)
 
 instance
   Crypto crypto =>
