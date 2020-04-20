@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
 import           Data.Foldable (toList)
@@ -26,7 +28,7 @@ shrinkBlock
 shrinkBlock _ = []
 
 shrinkTx
-  :: Crypto crypto
+  :: forall crypto. Crypto crypto
   => Tx crypto
   -> [Tx crypto]
 shrinkTx (Tx _b _ws _wm _md) =
