@@ -1,8 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -14,13 +14,13 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
+import           Data.Coerce (coerce)
 import           Data.Functor.Identity (runIdentity)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, fromList, keysSet)
 import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import           Unsafe.Coerce (unsafeCoerce)
 
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Slotting.Slot (WithOrigin (..))
@@ -40,8 +40,8 @@ import           Shelley.Spec.Ledger.UTxO (balance)
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, ChainState, GenDelegs,
                      HashHeader, KeyHash)
 import           Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
-import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv(..))
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import           Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import           Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import           Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
@@ -71,7 +71,7 @@ instance HasTrace CHAIN GenEnv where
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
 lastByronHeaderHash :: HashHeader
-lastByronHeaderHash = HashHeader $ unsafeCoerce (hash 0 :: Hash ShortHash Int)
+lastByronHeaderHash = HashHeader $ coerce (hash 0 :: Hash ShortHash Int)
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
 -- with the signature 'RuleContext sts -> Gen (Either [[PredicateFailure sts]] (State sts))'.

@@ -36,8 +36,8 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Byron.Spec.Ledger.Core (Relation (..))
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), Text64, UnitInterval, invalidKey,
-                     maybeToStrictMaybe, strictMaybeToMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (DnsName, IPv4, IPv6, Port, StrictMaybe (..),
+                     UnitInterval, Url, invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VerKeyVRF, hashAnyKey)
@@ -60,15 +60,55 @@ data Delegation crypto = Delegation
 
 instance NoUnexpectedThunks (Delegation crypto)
 
-newtype Url = Url { unUrl :: Text64 }
-  deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
-
 data PoolMetaData = PoolMetaData
   { _poolMDUrl  :: !Url
   , _poolMDHash :: !ByteString
   } deriving (Eq, Generic, Show)
 
 instance NoUnexpectedThunks PoolMetaData
+
+data StakePoolRelay =
+     SingleHostAddr !(StrictMaybe Port) !(StrictMaybe IPv4) !(StrictMaybe IPv6)
+     -- ^ One or both of IPv4 & IPv6
+   | SingleHostName !(StrictMaybe Port) !DnsName
+     -- ^ An @A@ or @AAAA@ DNS record
+   | MultiHostName  !(StrictMaybe Port) !DnsName
+     -- ^ A @SRV@ DNS record
+  deriving (Eq, Generic, Show)
+
+instance NoUnexpectedThunks StakePoolRelay
+
+instance ToCBOR StakePoolRelay where
+  toCBOR (SingleHostAddr p ipv4 ipv6)
+    = encodeListLen 4
+        <> toCBOR (0 :: Word8)
+        <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
+        <> encodeNullMaybe toCBOR (strictMaybeToMaybe ipv4)
+        <> encodeNullMaybe toCBOR (strictMaybeToMaybe ipv6)
+  toCBOR (SingleHostName p n)
+    = encodeListLen 3
+        <> toCBOR (1 :: Word8)
+        <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
+        <> toCBOR n
+  toCBOR (MultiHostName p n)
+    = encodeListLen 3
+        <> toCBOR (2 :: Word8)
+        <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
+        <> toCBOR n
+
+instance FromCBOR StakePoolRelay where
+  fromCBOR = do
+    n <- decodeListLen
+    w <- decodeWord
+    p <- maybeToStrictMaybe <$> decodeNullMaybe fromCBOR
+    case w of
+      0 -> matchSize "SingleHostAddr" 4 n >>
+             SingleHostAddr p
+               <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+               <*> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+      1 -> matchSize "SingleHostName" 3 n >> SingleHostName p <$> fromCBOR
+      2 -> matchSize "MultiHostName"  3 n >> MultiHostName p <$> fromCBOR
+      k -> invalidKey k
 
 -- |A stake pool.
 data PoolParams crypto =
@@ -80,7 +120,7 @@ data PoolParams crypto =
     , _poolMargin  :: !UnitInterval
     , _poolRAcnt   :: !(RewardAcnt crypto)
     , _poolOwners  :: !(Set (KeyHash crypto))
-    , _poolRelays  :: !(StrictSeq Url)
+    , _poolRelays  :: !(StrictSeq StakePoolRelay)
     , _poolMD      :: !(StrictMaybe PoolMetaData)
     } deriving (Show, Generic, Eq)
       deriving ToCBOR via CBORGroup (PoolParams crypto)

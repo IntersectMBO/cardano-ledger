@@ -35,13 +35,14 @@ import           Test.Tasty.HUnit
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import           Shelley.Spec.Ledger.Serialization
+import           Shelley.Spec.Ledger.TxData (StakePoolRelay)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, BHeader, Credential,
                      DCert, LaxBlock, MultiSig, OCert, ProposedPPUpdates, Tx, TxBody, TxIn, TxOut,
                      Update)
 
-cddlTests :: TestTree
-cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
+cddlTests :: Int -> TestTree
+cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [
       cddlTest' @BHeader          n "header"
@@ -51,6 +52,7 @@ cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @Credential        n "stake_credential"
     , cddlTest @TxBody            n "transaction_body"
     , cddlTest @TxOut             n "transaction_output"
+    , cddlTest @StakePoolRelay    n "relay"
     , cddlTest @DCert             n "certificate"
     , cddlTest @TxIn              n "transaction_input"
     , cddlTest @MetaData          n "transaction_metadata"
@@ -61,8 +63,6 @@ cddlTests = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest' @Tx               n "transaction"
     , cddlTest' @LaxBlock         n "block"
     ] <*> pure cddl
-  where
-    n = 1
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do

@@ -18,7 +18,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 import           Cardano.Binary (serialize)
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), text64)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), mkDnsName, mkUrl)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
@@ -31,10 +31,11 @@ import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body, _metadat
                      _witnessVKeySet)
 import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertPool,
                      pattern Delegation, pattern KeyHashObj, PoolMetaData (..), pattern PoolParams,
-                     pattern RewardAcnt, pattern TxBody, pattern TxIn, pattern TxOut, Url (..),
-                     Wdrl (..), _certs, _inputs, _mdHash, _outputs, _poolCost, _poolMD,
-                     _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
-                     _poolRAcnt, _poolRelays, _poolVrf, _ttl, _txUpdate, _txfee, _wdrls)
+                     pattern RewardAcnt, StakePoolRelay (..), pattern TxBody, pattern TxIn,
+                     pattern TxOut, Wdrl (..), _certs, _inputs, _mdHash, _outputs, _poolCost,
+                     _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge,
+                     _poolPubKey, _poolRAcnt, _poolRelays, _poolVrf, _ttl, _txUpdate, _txfee,
+                     _wdrls)
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, ConcreteCrypto, Credential,
@@ -78,9 +79,9 @@ alicePoolParams =
     , _poolMargin = unsafeMkUnitInterval 0.1
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , _poolRelays = (StrictSeq.singleton . Url . text64) "relay.io"
+    , _poolRelays = StrictSeq.singleton $ SingleHostName SNothing $ mkDnsName "relay.io"
     , _poolMD = SJust $ PoolMetaData
-                  { _poolMDUrl  = Url $ text64 "alice.pool"
+                  { _poolMDUrl  = mkUrl "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
     }
@@ -269,7 +270,7 @@ txRegisterPool = Tx
   }
 
 txRegisterPoolBytes16 :: BSL.ByteString
-txRegisterPoolBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a04818a03442b7dd89444bf6afc170105d81e82010a82004476394f7a814476394f7a816872656c61792e696f826a616c6963652e706f6f6c427b7da10081821a6753449f824460b575ea1a6753449ff6"
+txRegisterPoolBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e030a04818a03442b7dd89444bf6afc170105d81e82010a82004476394f7a814476394f7a818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da10081821a6753449f8244b7006ffc1a6753449ff6"
 
 -- | Transaction which retires a stake pool
 
@@ -395,7 +396,7 @@ sizeTests = testGroup "Fee Tests"
   , testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake 92
   , testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake 119
   , testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake 92
-  , testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 163
+  , testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 168
   , testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool 97
   , testCase "metadata" $ sizeTest txWithMDBytes16 txWithMD 227
   , testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig 135
