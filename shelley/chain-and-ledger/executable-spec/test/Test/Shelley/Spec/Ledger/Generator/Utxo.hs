@@ -27,19 +27,19 @@ import           GHC.Stack (HasCallStack)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
-import           Shelley.Spec.Ledger.Address (scriptToCred, toCred)
+import           Shelley.Spec.Ledger.Address (pattern Addr, scriptToCred, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
 import           Shelley.Spec.Ledger.Keys (KeyRole (..), HasKeyRole(..))
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj,
+                     pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr)
 import           Shelley.Spec.Ledger.LedgerState (pattern UTxOState, minfee, _dstate, _ptrs,
                      _rewards)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxOut,
                      getKeyCombination, hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
-                     pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr, Wdrl (..),
-                     getRwdCred, _outputs, _txfee)
+import           Shelley.Spec.Ledger.TxData (Wdrl (..), getRwdCred, _outputs, _txfee)
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, hashTxBody, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 

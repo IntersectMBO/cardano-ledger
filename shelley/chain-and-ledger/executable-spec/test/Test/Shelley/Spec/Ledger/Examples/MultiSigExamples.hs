@@ -22,9 +22,12 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import           Shelley.Spec.Ledger.Address (pattern Addr)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Keys (KeyRole(..), asWitness)
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern ScriptHashObj,
+                    pattern StakeRefBase)
 import           Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 import           Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
@@ -33,9 +36,8 @@ import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern Requ
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
-                     pattern ScriptHashObj, pattern StakeCreds, pattern StakePools,
-                     pattern StakeRefBase, pattern TxBody, pattern TxIn, pattern TxOut,
+import           Shelley.Spec.Ledger.TxData (pattern StakeCreds, pattern StakePools,
+                     pattern TxBody, pattern TxIn, pattern TxOut,
                      pattern Wdrl, unWdrl)
 import           Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey, txid)
 

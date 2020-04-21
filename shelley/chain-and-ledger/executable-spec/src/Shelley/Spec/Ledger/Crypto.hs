@@ -10,6 +10,7 @@ import Cardano.Crypto.KES
 import Cardano.Crypto.VRF
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
+import Data.Word (Word8)
 
 class
   ( HashAlgorithm (HASH c),
@@ -22,11 +23,15 @@ class
     Typeable c
   ) =>
   Crypto c where
-
   type HASH c :: Type
-
   type DSIGN c :: Type
-
   type KES c :: Type
-
   type VRF c :: Type
+  networkMagicId :: proxy c -> Network
+
+data Network =
+  Mainnet | Testnet | Offline
+  deriving (Eq, Ord, Enum)
+
+networkToWord8 :: Network -> Word8
+networkToWord8 = toEnum . fromEnum

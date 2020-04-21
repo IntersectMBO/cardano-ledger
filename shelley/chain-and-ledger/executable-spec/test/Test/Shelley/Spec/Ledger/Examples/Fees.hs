@@ -22,6 +22,7 @@ import qualified Data.Set as Set
 import           Cardano.Binary (serialize)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), textToDns, textToUrl)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
 import           Shelley.Spec.Ledger.Keys (KeyRole(..), asWitness, hashKey, vKey)
@@ -32,7 +33,7 @@ import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, hashScript, _body, _metadata, _witnessMSigMap,
                      _witnessVKeySet)
 import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertPool,
-                     pattern Delegation, pattern KeyHashObj, PoolMetaData (..), pattern PoolParams,
+                     pattern Delegation, PoolMetaData (..), pattern PoolParams,
                      pattern RewardAcnt, StakePoolRelay (..), pattern TxBody, pattern TxIn,
                      pattern TxOut, Wdrl (..), _certs, _inputs, _mdHash, _outputs, _poolCost,
                      _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge,

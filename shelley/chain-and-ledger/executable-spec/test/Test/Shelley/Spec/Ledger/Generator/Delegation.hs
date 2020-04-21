@@ -32,6 +32,7 @@ import           Byron.Spec.Ledger.Core (dom, range, (∈), (∉))
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), interval0)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DCertMir, pattern DeRegKey,
                      pattern Delegate, pattern GenesisDelegCert, pattern MIRCert, pattern RegKey,
                      pattern RegPool, pattern RetirePool, pattern StakeCreds)
@@ -41,7 +42,7 @@ import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs, _pParams,
 import           Shelley.Spec.Ledger.PParams (PParams, _d)
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGenesis,
-                     pattern DCertPool, pattern Delegation, pattern KeyHashObj, pattern PoolParams,
+                     pattern DCertPool, pattern Delegation, pattern PoolParams,
                      RewardAcnt (..), pattern StakePools, unStakePools, _poolPubKey, _poolVrf)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState,

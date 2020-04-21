@@ -22,6 +22,7 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
 import           Byron.Spec.Ledger.Core (dom, (∈), (∉))
 
 import           Shelley.Spec.Ledger.BaseTypes ((==>))
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
 import           Shelley.Spec.Ledger.LedgerState (pattern PState, _pParams, _retiring, _stPools,
                      _stPools)
@@ -29,7 +30,7 @@ import           Shelley.Spec.Ledger.Keys (KeyRole(..))
 import           Shelley.Spec.Ledger.PParams (_eMax)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..))
 import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
-import           Shelley.Spec.Ledger.TxData (pattern DCertPool, pattern KeyHashObj, pattern RegPool,
+import           Shelley.Spec.Ledger.TxData (pattern DCertPool, pattern RegPool,
                      pattern RetirePool, pattern StakePools, unStakePools, _poolPubKey)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (KeyHash, LEDGER, POOL, PState,

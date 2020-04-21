@@ -36,6 +36,8 @@ import qualified Shelley.Spec.Ledger.STS.Tick as STS.Tick
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS.Utxo
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS.Utxow
 import qualified Shelley.Spec.Ledger.Tx as Tx
+import qualified Shelley.Spec.Ledger.Address as TxData
+import qualified Shelley.Spec.Ledger.Credential as TxData
 import qualified Shelley.Spec.Ledger.TxData as TxData
 import qualified Shelley.Spec.Ledger.UTxO as UTxO
 
@@ -46,6 +48,7 @@ instance Crypto ConcreteCrypto where
   type DSIGN ConcreteCrypto = MockDSIGN
   type KES ConcreteCrypto = MockKES 10
   type VRF ConcreteCrypto = FakeVRF
+  networkMagicId _ = Offline
 
 type DCert = Delegation.Certificates.DCert ConcreteCrypto
 

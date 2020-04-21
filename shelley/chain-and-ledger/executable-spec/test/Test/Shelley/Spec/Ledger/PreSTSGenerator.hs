@@ -43,8 +43,10 @@ import qualified Hedgehog.Range as Range
 
 
 import           Control.State.Transition.Extended (TRC (..), applySTS)
+import           Shelley.Spec.Ledger.Address (pattern Addr)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import           Shelley.Spec.Ledger.Coin
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
 import           Shelley.Spec.Ledger.Keys (KeyRole(..), coerceKeyRole, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody,
                      genesisCoins, genesisState, validTx, _delegationState, _dstate, _genDelegs,
@@ -61,9 +63,9 @@ import           Shelley.Spec.Ledger.STS.Utxow (pattern InvalidWitnessesUTXOW,
                      pattern MissingScriptWitnessesUTXOW, pattern MissingVKeyWitnessesUTXOW,
                      PredicateFailure (..))
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxOut, _body)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertPool,
-                     pattern DeRegKey, pattern Delegate, pattern Delegation, pattern KeyHashObj,
-                     pattern RegKey, pattern RetirePool, StakeCreds (..), pattern StakeRefBase,
+import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertPool,
+                     pattern DeRegKey, pattern Delegate, pattern Delegation,
+                     pattern RegKey, pattern RetirePool, StakeCreds (..),
                      Wdrl (..))
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, hashTxBody, makeWitnessVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))

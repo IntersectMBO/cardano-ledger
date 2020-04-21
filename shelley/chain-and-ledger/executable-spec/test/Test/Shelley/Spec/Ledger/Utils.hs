@@ -37,13 +37,14 @@ import           Data.Functor.Identity (runIdentity)
 import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
 import           Hedgehog (MonadTest, (===))
+import           Shelley.Spec.Ledger.Address (pattern Addr)
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
                      mkActiveSlotCoeff, mkUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import           Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, updateKES, vKey)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj, pattern StakeRefBase)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair,

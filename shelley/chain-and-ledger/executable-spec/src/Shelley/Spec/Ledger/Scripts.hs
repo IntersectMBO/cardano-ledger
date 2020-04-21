@@ -155,13 +155,18 @@ countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
 
 -- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
 -- front and then calling the script CBOR function.
+hashMultiSigScript
+  :: Crypto crypto
+  => MultiSig crypto
+  -> ScriptHash crypto
+hashMultiSigScript msig =
+  ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
+                                          <> toCBOR x) (MultiSigScript msig)
 hashAnyScript
   :: Crypto crypto
   => Script crypto
   -> ScriptHash crypto
-hashAnyScript (MultiSigScript msig) =
-  ScriptHash $ hashWithSerialiser (\x -> encodeWord8 nativeMultiSigTag
-                                          <> toCBOR x) (MultiSigScript msig)
+hashAnyScript (MultiSigScript msig) = hashMultiSigScript msig
 
 -- | Get one possible combination of keys for multi signature script
 getKeyCombination :: Crypto crypto => MultiSig crypto -> [KeyHash 'Witness crypto]
@@ -242,3 +247,5 @@ instance (Crypto crypto) =>
     decodeWord >>= \case
       0 -> MultiSigScript <$> fromCBOR
       k -> invalidKey k
+
+

@@ -31,6 +31,7 @@ import           Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
@@ -42,7 +43,7 @@ import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _body, _certs, _inputs, _outputs, _ttl, _txfee, _wdrls, _witnessMSigMap,
                      _witnessVKeySet)
-import           Shelley.Spec.Ledger.TxData (Credential (..), pattern DCertDeleg,
+import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg,
                      pattern DCertGenesis, pattern DCertMir, pattern DCertPool, pattern Delegation,
                      PoolParams (..))
 

@@ -13,8 +13,10 @@ import           Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import           Shelley.Spec.Ledger.Keys (asWitness)
 import           Shelley.Spec.Ledger.STS.Chain (totalAda)
 import           Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
+
+import           Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import           Shelley.Spec.Ledger.Tx (hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern RewardAcnt, pattern ScriptHashObj, Wdrl (..))
+import           Shelley.Spec.Ledger.TxData (pattern RewardAcnt, Wdrl (..))
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (CHAINExample (..), alicePay, bobPay,

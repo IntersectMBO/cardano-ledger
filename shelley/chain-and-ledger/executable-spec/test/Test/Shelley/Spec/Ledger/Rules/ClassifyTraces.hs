@@ -22,9 +22,11 @@ import qualified Data.ByteString as BS
 import           Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Sequence.Strict (StrictSeq)
+import           Shelley.Spec.Ledger.Address (pattern Addr)
 import           Shelley.Spec.Ledger.BaseTypes (Globals (epochInfo), StrictMaybe (..))
 import           Shelley.Spec.Ledger.BlockChain (pattern Block, pattern TxSeq, bhbody,
                      bheaderSlotNo)
+import           Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import           Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey, isDelegation,
                      isGenesisDelegation, isInstantaneousRewards, isRegKey, isRegPool,
                      isRetirePool)
@@ -33,8 +35,8 @@ import           Shelley.Spec.Ledger.PParams (PParamsUpdate, pattern ProposedPPU
                      pattern Update)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
 import           Shelley.Spec.Ledger.Tx (_body)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DeRegKey,
-                     pattern Delegate, pattern Delegation, pattern RegKey, pattern ScriptHashObj,
+import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DeRegKey,
+                     pattern Delegate, pattern Delegation, pattern RegKey,
                      pattern TxOut, Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
 import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, forAllBlind, property,
                      withMaxSuccess)

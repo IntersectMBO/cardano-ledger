@@ -35,12 +35,13 @@ import           Numeric.Natural (Natural)
 import           Byron.Spec.Ledger.Core ((◁))
 import           Shelley.Spec.Ledger.BaseTypes (UnitInterval (..), intervalValue, mkUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), Stake (..),
                      emptySnapShot, maxPool, poolStake)
 import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole(..))
 import           Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
-import           Shelley.Spec.Ledger.TxData (Credential (..), PoolParams (..), RewardAcnt (..))
+import           Shelley.Spec.Ledger.TxData (PoolParams (..), RewardAcnt (..))
 
 
 newtype ApparentPerformance = ApparentPerformance { unApparentPerformance :: Double }

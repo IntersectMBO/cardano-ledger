@@ -13,3 +13,13 @@ rational =  #6.30(
   ; real rational is: #6.30([uint, uint])
   ; but this produces numbers outside the unit interval
   ; and can also produce a zero in the denominator
+
+
+address = h'020102030401020304' /
+  h'120506070801020304' /
+  h'220102030405060708' /
+  h'320506070805060708' /
+  h'420102030487680203' /
+  h'520506070887680203' /
+  h'6201020304' /
+  h'7205060708'

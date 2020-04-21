@@ -29,6 +29,7 @@ import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCa
 import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
 import           Numeric.Natural (Natural)
+import           Shelley.Spec.Ledger.Address (pattern Addr)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval (..),
                      mkNonce, textToDns, textToUrl)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
@@ -37,6 +38,7 @@ import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader
                      bheaderSlotNo, bheaderVk, bheaderVrfVk, bprotver, bsize, mkSeed, seedEta,
                      seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefNull, pattern StakeRefPtr)
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegCert, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
@@ -58,11 +60,10 @@ import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern 
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..), ipv4ToBytes)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertGenesis,
-                     pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
+import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation,
                      PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
-                     pattern ScriptHashObj, StakePoolRelay (..), pattern StakeRefBase,
-                     pattern StakeRefNull, pattern StakeRefPtr, pattern TxBody, pattern TxIn,
+                     StakePoolRelay (..), pattern TxBody, pattern TxIn,
                      pattern TxOut, Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD,
                      _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolRelays, _poolVrf)
@@ -394,7 +395,7 @@ serializationTests = testGroup "Serialization Tests"
     checkEncodingCBOR "txout"
     (TxOut a (Coin 2))
     (T (TkListLen 3)
-      <> G a
+      <> S a
       <> S (Coin 2)
     )
   , case makeWitnessVKey testTxbHash testKey1 of

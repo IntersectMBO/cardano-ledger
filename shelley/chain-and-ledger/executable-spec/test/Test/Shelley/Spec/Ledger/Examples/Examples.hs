@@ -109,12 +109,13 @@ import           Numeric.Natural (Natural)
 
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
+import           Shelley.Spec.Ledger.Address (pattern Addr, mkRwdAcnt)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, startRewards,
                      textToUrl, (⭒))
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj, Ptr (..), pattern StakeRefPtr)
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegCert, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
@@ -152,10 +153,10 @@ import           Shelley.Spec.Ledger.STS.Ledgers (pattern LedgerFailure)
 import           Shelley.Spec.Ledger.STS.Utxow (pattern MIRImpossibleInDecentralizedNetUTXOW,
                      pattern MIRInsufficientGenesisSigsUTXOW)
 import           Shelley.Spec.Ledger.Tx (pattern Tx)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertGenesis,
-                     pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
-                     PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
-                     pattern StakeCreds, pattern StakePools, pattern StakeRefPtr, pattern TxBody,
+import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation,
+                     PoolMetaData (..), pattern PoolParams, pattern RewardAcnt,
+                     pattern StakeCreds, pattern StakePools, pattern TxBody,
                      pattern TxIn, pattern TxOut, Wdrl (..), addStakeCreds, _poolCost, _poolMD,
                      _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolRelays, _poolVrf)

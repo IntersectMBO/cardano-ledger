@@ -18,9 +18,7 @@
 
 
 module Shelley.Spec.Ledger.TxData
-  ( Addr (..)
-  , Credential (..)
-  , DCert (..)
+  ( DCert (..)
   , DelegCert (..)
   , Delegation (..)
   , GenesisDelegCert (..)
@@ -34,7 +32,6 @@ module Shelley.Spec.Ledger.TxData
   , StakeCreds (..)
   , StakePools (..)
   , StakePoolRelay (..)
-  , StakeReference (..)
   , TxBody
     ( TxBody
     , _inputs
@@ -83,11 +80,13 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Byron.Spec.Ledger.Core (Relation (..))
+import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe (..), UnitInterval, Url,
                      invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (HasKeyRole (..), Hash, KeyHash (..), KeyRole (..),
                      SignedDSIGN, VKey, VerKeyVRF, decodeSignedDSIGN, encodeSignedDSIGN, hashKey)
+                     VerKeyVRF, hashAnyKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import           Shelley.Spec.Ledger.Orphans ()
 import           Shelley.Spec.Ledger.PParams (Update)
@@ -99,7 +98,6 @@ import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..)
                      ipv4ToCBOR, ipv6FromCBOR, ipv6ToCBOR, mapFromCBOR, mapToCBOR,
                      unwrapCborStrictSeq)
 
-import           Shelley.Spec.Ledger.Scripts
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -177,67 +175,12 @@ data PoolParams crypto =
 
 instance NoUnexpectedThunks (PoolParams crypto)
 
--- |An account based address for rewards
 --
 -- A reward account uses the staking credential
-newtype RewardAcnt crypto = RewardAcnt
-  { getRwdCred :: Credential 'Staking crypto
-  } deriving (Show, Eq, Generic, Ord)
-    deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
-
--- | Script hash or key hash for a payment or a staking object.
-data Credential (kr :: KeyRole) crypto =
-    ScriptHashObj !(ScriptHash crypto)
-  | KeyHashObj    !(KeyHash kr crypto)
-    deriving (Show, Eq, Generic, NFData, Ord)
-    deriving ToCBOR via (CBORGroup (Credential kr crypto))
-
-instance HasKeyRole Credential where
   coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
   coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
 newtype GenesisCredential crypto = GenesisCredential (KeyHash 'Genesis crypto)
-  deriving (Show, Generic)
-
-instance Ord (GenesisCredential crypto)
-  where compare (GenesisCredential gh) (GenesisCredential gh')  = compare gh gh'
-
-instance Eq (GenesisCredential crypto)
-  where (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
-
-instance NoUnexpectedThunks (Credential kr crypto)
-
-type PaymentCredential crypto = Credential 'Payment crypto
-type StakeCredential crypto = Credential 'Staking crypto
-
-data StakeReference crypto
-  = StakeRefBase !(StakeCredential crypto)
-  | StakeRefPtr !Ptr
-  | StakeRefNull
-  deriving (Show, Eq, Generic, NFData, Ord)
-
-instance NoUnexpectedThunks (StakeReference crypto)
-
--- |An address for UTxO.
-data Addr crypto
-  = Addr !(PaymentCredential crypto) !(StakeReference crypto)
-  | AddrBootstrap !(KeyHash 'Payment crypto)
-  deriving (Show, Eq, Ord, Generic, NFData)
-  deriving (ToCBOR, FromCBOR) via (CBORGroup (Addr crypto))
-
-instance NoUnexpectedThunks (Addr crypto)
-
-type Ix  = Natural
-
--- | Pointer to a slot, transaction index and index in certificate list.
-data Ptr
-  = Ptr !SlotNo !Ix !Ix
-  deriving (Show, Eq, Generic, Ord)
-  deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
-
-instance NFData Ptr
-instance NoUnexpectedThunks Ptr
-
 newtype Wdrl crypto = Wdrl { unWdrl :: Map (RewardAcnt crypto) Coin }
   deriving (Show, Eq, Generic)
   deriving newtype NoUnexpectedThunks
@@ -247,7 +190,6 @@ instance Crypto crypto => ToCBOR (Wdrl crypto) where
 
 instance Crypto crypto => FromCBOR (Wdrl crypto) where
   fromCBOR = Wdrl <$> mapFromCBOR
-
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto
@@ -528,17 +470,15 @@ instance
   => ToCBOR (TxOut crypto)
  where
   toCBOR (TxOut addr coin) =
-    encodeListLen (listLen addr + 1)
-      <> toCBORGroup addr
+    encodeListLen 2
+      <> toCBOR addr
       <> toCBOR coin
 
 instance (Crypto crypto) =>
   FromCBOR (TxOut crypto) where
-  fromCBOR = do
-    n <- decodeListLen
-    addr <- fromCBORGroup
+  fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
+    addr <- fromCBOR
     (b :: Word64) <- fromCBOR
-    matchSize "TxOut" ((fromIntegral . toInteger . listLen) addr + 1) n
     pure $ TxOut addr (Coin $ toInteger b)
 
 instance
@@ -603,107 +543,6 @@ instance
           }
 
 
-instance (Typeable kr, Typeable crypto, Crypto crypto)
-  => ToCBORGroup (Credential kr crypto) where
-  listLen _ = 2
-  toCBORGroup = \case
-    KeyHashObj     kh -> toCBOR (0 :: Word8) <> toCBOR kh
-    ScriptHashObj  hs -> toCBOR (1 :: Word8) <> toCBOR hs
-
-instance (Typeable crypto, Crypto crypto)
-  => ToCBOR (GenesisCredential crypto)
-  where toCBOR (GenesisCredential kh) =
-          toCBOR kh
-
-instance (Crypto crypto, Typeable kr) =>
-  FromCBOR (Credential kr crypto) where
-  fromCBOR = do
-    enforceSize "Credential" 2
-    decodeWord >>= \case
-      0 -> KeyHashObj <$> fromCBOR
-      1 -> ScriptHashObj <$> fromCBOR
-      k -> invalidKey k
-
-instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBORGroup (Addr crypto)
- where
-  listLen (Addr _ (StakeRefBase _)) = 3
-  listLen (Addr _ (StakeRefPtr p)) = 2 + listLen p
-  listLen (Addr _ (StakeRefNull)) = 2
-  listLen (AddrBootstrap  _) = 2
-
-  toCBORGroup (Addr (KeyHashObj a) (StakeRefBase (KeyHashObj b))) =
-    toCBOR (0 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (Addr (KeyHashObj a) (StakeRefBase (ScriptHashObj b))) =
-    toCBOR (1 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (Addr (ScriptHashObj a) (StakeRefBase (KeyHashObj b))) =
-    toCBOR (2 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (Addr (ScriptHashObj a) (StakeRefBase (ScriptHashObj b))) =
-    toCBOR (3 :: Word8) <> toCBOR a <> toCBOR b
-  toCBORGroup (Addr (KeyHashObj a) (StakeRefPtr pointer)) =
-    toCBOR (4 :: Word8) <> toCBOR a <> toCBORGroup pointer
-  toCBORGroup (Addr (ScriptHashObj a) (StakeRefPtr pointer)) =
-    toCBOR (5 :: Word8) <> toCBOR a <> toCBORGroup pointer
-  toCBORGroup (Addr (KeyHashObj a) StakeRefNull) =
-    toCBOR (6 :: Word8) <> toCBOR a
-  toCBORGroup (Addr (ScriptHashObj a) StakeRefNull) =
-    toCBOR (7 :: Word8) <> toCBOR a
-  toCBORGroup (AddrBootstrap a) =
-    toCBOR (8 :: Word8) <> toCBOR a
-
-instance (Crypto crypto) =>
-  FromCBORGroup (Addr crypto) where
-  fromCBORGroup = do
-    decodeWord >>= \case
-      0 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ Addr (KeyHashObj a) (StakeRefBase (KeyHashObj b))
-      1 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ Addr (KeyHashObj a) (StakeRefBase (ScriptHashObj b))
-      2 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ Addr (ScriptHashObj a) (StakeRefBase (KeyHashObj b))
-      3 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ Addr (ScriptHashObj a) (StakeRefBase (ScriptHashObj b))
-      4 -> do
-        a <- fromCBOR
-        x <- fromCBOR
-        y <- fromCBOR
-        z <- fromCBOR
-        pure $ Addr (KeyHashObj a) (StakeRefPtr (Ptr x y z))
-      5 -> do
-        a <- fromCBOR
-        x <- fromCBOR
-        y <- fromCBOR
-        z <- fromCBOR
-        pure $ Addr (ScriptHashObj a) (StakeRefPtr (Ptr x y z))
-      6 -> do
-        a <- fromCBOR
-        pure $ Addr (KeyHashObj a) StakeRefNull
-      7 -> do
-        a <- fromCBOR
-        pure $ Addr (ScriptHashObj a) StakeRefNull
-      8 -> do
-        a <- fromCBOR
-        pure $ AddrBootstrap a
-      k -> invalidKey k
-
-instance ToCBORGroup Ptr where
-  toCBORGroup (Ptr sl txIx certIx) =
-         toCBOR sl
-      <> toCBOR (fromInteger (toInteger txIx) :: Word)
-      <> toCBOR (fromInteger (toInteger certIx) :: Word)
-  listLen _ = 3
-
-instance FromCBORGroup Ptr where
-  fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 instance ToCBOR PoolMetaData
  where

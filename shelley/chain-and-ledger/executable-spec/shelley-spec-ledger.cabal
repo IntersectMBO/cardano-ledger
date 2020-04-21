@@ -25,6 +25,7 @@ library
                      Shelley.Spec.Ledger.BaseTypes
                      Shelley.Spec.Ledger.BlockChain
                      Shelley.Spec.Ledger.Coin
+                     Shelley.Spec.Ledger.Credential
                      Shelley.Spec.Ledger.Keys
                      Shelley.Spec.Ledger.UTxO
                      Shelley.Spec.Ledger.Slot
@@ -86,6 +87,7 @@ library
   build-depends:
     aeson,
     base >= 4.7 && < 5,
+    binary,
     bytestring,
     cborg,
     cborg-json,
@@ -114,6 +116,7 @@ test-suite shelley-spec-ledger-test
     other-modules:       Test.Shelley.Spec.Ledger.Utils
                          Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
                          Test.Cardano.Crypto.VRF.Fake
+                         Test.Shelley.Spec.Ledger.Address
                          Test.Shelley.Spec.Ledger.PreSTSMutator
                          Test.Shelley.Spec.Ledger.PreSTSGenerator
                          Test.Shelley.Spec.Ledger.Generator.Constants
@@ -169,6 +172,7 @@ test-suite shelley-spec-ledger-test
       QuickCheck,
       base,
       base16-bytestring,
+      binary,
       bytestring,
       bytestring-conversion,
       cardano-binary,
