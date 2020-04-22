@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Shelley.Spec.Ledger.BaseTypes
   ( FixedPoint
@@ -108,8 +109,8 @@ mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Not
 
 -- | Convert a rational to a `UnitInterval` by ignoring its integer part.
 truncateUnitInterval :: Rational -> UnitInterval
-truncateUnitInterval r = case (numerator r, denominator r) of
-  (n, d) | n > d -> UnsafeUnitInterval $ (n - d) % d
+truncateUnitInterval (abs -> r) = case (numerator r, denominator r) of
+  (n, d) | n > d -> UnsafeUnitInterval $ (n `mod` d) % d
   _ -> UnsafeUnitInterval r
 
 -- | Get rational value of `UnitInterval` type
