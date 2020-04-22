@@ -123,8 +123,9 @@ pattern TxSeq xs <- TxSeq' xs _ _ _
            toCBOR index <> (encodePreEncoded . BSL.toStrict) bytes
      in  TxSeq'
          { txSeqTxns' = txns
-         , txSeqBodyBytes     = serializeFoldable $ txBodyBytes <$> txns
-         , txSeqWitsBytes     = serializeFoldable $ txWitsBytes <$> txns
+         , txSeqBodyBytes =
+             serializeEncoding . encodeFoldableEncoder (toCBOR . _body) $ txns
+         , txSeqWitsBytes = serializeFoldable $ txWitsBytes <$> txns
          , txSeqMetadataBytes =
             serializeEncoding . encodeFoldableMapEncoder metaChunk $
             txMetadataBytes <$> txns
@@ -372,7 +373,7 @@ blockDecoder lax = annotatorSlice $ do
 
 txSeqDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Annotator (TxSeq crypto))
 txSeqDecoder lax = do
-  (bodies, bodiesAnn) <- withSlice $ decodeSeq (withSlice fromCBOR)
+  (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
   (wits, witsAnn) <- withSlice $ decodeSeq (withSlice decodeWits)
   let b = length bodies
       w = length wits

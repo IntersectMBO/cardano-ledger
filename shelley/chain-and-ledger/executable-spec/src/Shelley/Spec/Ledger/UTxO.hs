@@ -108,7 +108,8 @@ txid = TxId . hashWithSerialiser toCBOR
 
 -- |Compute the UTxO inputs of a transaction.
 txins
-  :: TxBody crypto
+  :: Crypto crypto
+  => TxBody crypto
   -> Set (TxIn crypto)
 txins = _inputs
 

@@ -50,7 +50,7 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlGroupTest @OCert        n "operational_cert"
     , cddlGroupTest @Addr         n "address"
     , cddlTest @Credential        n "stake_credential"
-    , cddlTest @TxBody            n "transaction_body"
+    , cddlTest' @TxBody           n "transaction_body"
     , cddlTest @TxOut             n "transaction_output"
     , cddlTest @StakePoolRelay    n "relay"
     , cddlTest @DCert             n "certificate"

@@ -556,7 +556,7 @@ genesisState genDelegs0 utxo0 = LedgerState
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
 -- | Determine if the transaction has expired
-current :: TxBody crypto-> SlotNo -> Validity
+current :: Crypto crypto => TxBody crypto -> SlotNo -> Validity
 current tx slot =
     if _ttl tx < slot
     then Invalid [Expired (_ttl tx) slot]
@@ -564,7 +564,7 @@ current tx slot =
 
 -- | Determine if the input set of a transaction consumes at least one input,
 -- else it would be possible to do a replay attack using this transaction.
-validNoReplay :: TxBody crypto-> Validity
+validNoReplay :: Crypto crypto => TxBody crypto -> Validity
 validNoReplay tx =
     if txins tx == Set.empty
     then Invalid [InputSetEmpty]
@@ -572,7 +572,8 @@ validNoReplay tx =
 
 -- |Determine if the inputs in a transaction are valid for a given ledger state.
 validInputs
-  :: TxBody crypto
+  :: Crypto crypto
+  => TxBody crypto
   -> UTxOState crypto
   -> Validity
 validInputs tx u =
@@ -726,7 +727,8 @@ produced pp stakePools tx =
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
-  :: PParams
+  :: Crypto crypto
+  => PParams
   -> StakeCreds crypto
   -> TxBody crypto
   -> Coin
@@ -778,7 +780,8 @@ decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
 
 -- | Decayed deposit portions
 decayedTx
-  :: PParams
+  :: Crypto crypto
+  => PParams
   -> StakeCreds crypto
   -> TxBody crypto
   -> ShelleyBase Coin
@@ -789,7 +792,8 @@ decayedTx pp stk tx =
 
 -- |Compute the lovelace which are destroyed by the transaction
 consumed
-  :: PParams
+  :: Crypto crypto
+  => PParams
   -> UTxO crypto
   -> StakeCreds crypto
   -> TxBody crypto
@@ -964,7 +968,8 @@ validTx tx d' slot pp l =
 
 -- |Calculate the change to the deposit pool for a given transaction.
 depositPoolChange
-  :: LedgerState crypto
+  :: Crypto crypto
+  => LedgerState crypto
   -> PParams
   -> TxBody crypto
   -> Coin
