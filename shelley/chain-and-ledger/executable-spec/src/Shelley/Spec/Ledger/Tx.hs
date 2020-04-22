@@ -126,15 +126,16 @@ pattern Tx { _body, _witnessVKeySet, _witnessMSigMap, _metadata } <-
 segwitTx
   :: Crypto crypto
   => Annotator (TxBody crypto)
-  -> (Wits crypto, Annotator LByteString)
+  -> (Annotator (Wits crypto), Annotator LByteString)
   -> Maybe (MetaData, Annotator LByteString)
   -> Annotator (Tx crypto)
 segwitTx
   bodyAnn
-  (Wits witnessVKeySet witnessMSigMap, witsAnn)
+  (wits, witsAnn)
   metadataPair
   = Annotator $ \bytes ->
       let body = runAnnotator bodyAnn bytes
+          Wits witnessVKeySet witnessMSigMap = runAnnotator wits bytes
           witsBytes = runAnnotator witsAnn bytes
           (metadata, metadataBytes) = case metadataPair of
             Nothing -> (Nothing, Nothing)
@@ -154,11 +155,12 @@ segwitTx
           , txFullBytes      = fullBytes
           }
 
+type MultiSigMap crypto = Map (ScriptHash crypto) (MultiSig crypto)
 data Wits crypto = Wits
   (Set (WitVKey crypto))
-  (Map (ScriptHash crypto) (MultiSig crypto))
+  (MultiSigMap crypto)
 
-decodeWits :: Crypto crypto => Decoder s (Wits crypto)
+decodeWits :: Crypto crypto => Decoder s (Annotator (Wits crypto))
 decodeWits = do
   mapParts <- decodeMapContents $
     decodeWord >>= \case
@@ -166,7 +168,9 @@ decodeWits = do
       1 -> decodeList fromCBOR >>= \x -> pure (\(a,_) -> (a,x))
       k -> invalidKey k
   let (witsVKeys, witsScripts) = foldr ($) ([], []) mapParts
-  pure $ Wits (Set.fromList witsVKeys) (keyBy hashScript witsScripts)
+      keysSet = Set.fromList witsVKeys
+      multiSigMap = keyBy hashScript <$> sequence witsScripts
+  pure $ Wits <$> pure keysSet <*> multiSigMap
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
@@ -180,19 +184,21 @@ instance
 instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
   fromCBOR = annotatorSlice $ decodeRecordNamed "Tx" (const 3) $ do
     body <- fromCBOR
-    (Wits witsVKeys witsScripts, witsAnn) <- withSlice decodeWits
+    (wits, witsAnn) <- withSlice decodeWits
     (meta, metaAnn) <- do
       result <- decodeNullMaybe (withSlice fromCBOR)
       pure $ case result of
         Nothing -> (Nothing, pure Nothing)
         Just (a,b) -> (Just a, Just <$> b)
-    pure $
-      Tx' <$> body
-          <*> pure witsVKeys
-          <*> pure witsScripts
-          <*> pure (maybeToStrictMaybe meta)
-          <*> witsAnn
-          <*> metaAnn
+    pure $ Annotator $ \fullbytes bytes ->
+      let (Wits witsVKeys witsScripts) = runAnnotator wits fullbytes
+       in Tx' (runAnnotator body fullbytes)
+              witsVKeys
+              witsScripts
+              (maybeToStrictMaybe meta)
+              (runAnnotator witsAnn fullbytes)
+              (runAnnotator metaAnn fullbytes)
+              bytes
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -210,7 +216,8 @@ instance Crypto crypto =>
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.
 evalNativeMultiSigScript
-  :: MultiSig crypto
+  :: Crypto crypto
+  => MultiSig crypto
   -> Set (AnyKeyHash crypto)
   -> Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
