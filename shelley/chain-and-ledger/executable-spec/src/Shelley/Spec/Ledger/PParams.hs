@@ -15,10 +15,6 @@ module Shelley.Spec.Ledger.PParams
   ( PParams'(..)
   , PParams
   , emptyPParams
-  , ActiveSlotCoeff
-  , mkActiveSlotCoeff
-  , activeSlotVal
-  , activeSlotLog
   , ProtVer(..)
   , PPUpdateEnv(..)
   , ProposedPPUpdates(..)
@@ -43,7 +39,7 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeL
 import           Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, Nonce (NeutralNonce), StrictMaybe (..),
                      UnitInterval, fpPrecision, interval0, intervalValue, invalidKey,
-                     strictMaybeToMaybe)
+                     strictMaybeToMaybe, ActiveSlotCoeff, mkActiveSlotCoeff)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
@@ -51,7 +47,6 @@ import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGrou
                      ToCBORGroup (..), decodeMapContents, mapFromCBOR, mapToCBOR, rationalFromCBOR,
                      rationalToCBOR)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-import           Shelley.Spec.NonIntegral (ln')
 
 
 type family HKD f a where
@@ -105,47 +100,6 @@ data PParams' f = PParams
 type PParams = PParams' Identity
 deriving instance Eq (PParams' Identity)
 deriving instance Show (PParams' Identity)
-
-data ActiveSlotCoeff =
-  ActiveSlotCoeff
-  { unActiveSlotVal :: !UnitInterval
-  , unActiveSlotLog :: !Integer  -- TODO mgudemann make this FixedPoint,
-                                 -- currently a problem because of
-                                 -- NoUnexpectedThunks instance for FixedPoint
-  } deriving (Eq, Ord, Show, Generic)
-
-instance NoUnexpectedThunks ActiveSlotCoeff
-
-instance FromCBOR ActiveSlotCoeff
- where
-   fromCBOR = do
-     v <- fromCBOR
-     pure $ mkActiveSlotCoeff v
-
-instance ToCBOR ActiveSlotCoeff
- where
-   toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal
-                           , unActiveSlotLog = _logVal}) =
-     toCBOR slotVal
-
-mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
-mkActiveSlotCoeff v =
-  ActiveSlotCoeff { unActiveSlotVal = v
-                  , unActiveSlotLog =
-                    if (intervalValue v) == 1
-                      -- If the active slot coefficient is equal to one,
-                      -- then nearly every stake pool can produce a block every slot.
-                      -- In this degenerate case, where ln (1-f) is not defined,
-                      -- we set the unActiveSlotLog to zero.
-                      then 0
-                      else floor (fpPrecision * (
-                        ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v))) }
-
-activeSlotVal :: ActiveSlotCoeff -> UnitInterval
-activeSlotVal = unActiveSlotVal
-
-activeSlotLog :: ActiveSlotCoeff -> FixedPoint
-activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 
 data ProtVer = ProtVer !Natural !Natural
   deriving (Show, Eq, Generic, Ord)

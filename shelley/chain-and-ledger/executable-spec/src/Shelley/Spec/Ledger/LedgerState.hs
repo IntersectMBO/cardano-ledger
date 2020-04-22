@@ -102,7 +102,7 @@ import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHas
                      undiscriminateKeyHash)
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), Update (..),
-                     activeSlotVal, emptyPPPUpdates, emptyPParams, _activeSlotCoeff, _d,
+                     emptyPPPUpdates, emptyPParams, _activeSlotCoeff, _d,
                      _keyDecayRate, _keyDeposit, _keyMinRefund, _minfeeA, _minfeeB, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoFirst, epochInfoSize, (+*), (-*))
@@ -123,7 +123,8 @@ import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopi
 
 import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe (..),
-                     UnitInterval, dnsSize, intervalValue, text64Size, unIPv4, unIPv6, unUrl)
+                     UnitInterval, dnsSize, intervalValue, text64Size, unIPv4, unIPv6,
+                     unUrl, activeSlotVal)
 import           Shelley.Spec.Ledger.Scripts (countMSigNodes)
 
 

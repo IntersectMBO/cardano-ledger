@@ -28,7 +28,7 @@ import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval (..),
-                     mkDnsName, mkIPv4, mkNonce, mkUrl, unIPv4)
+                     mkDnsName, mkIPv4, mkNonce, mkUrl, unIPv4, mkActiveSlotCoeff)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
                      pattern BlockHash, pattern HashHeader, TxSeq (..), bbHash, bhash,
                      bheaderBlockNo, bheaderEta, bheaderL, bheaderOCert, bheaderPrev,
@@ -48,7 +48,7 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern Act
                      deltaT, emptyLedgerState, genesisId, nonMyopic, rs)
 import           Shelley.Spec.Ledger.PParams (PParams' (PParams), PParamsUpdate,
                      pattern ProposedPPUpdates, ProtVer (..), pattern Update, emptyPParams,
-                     mkActiveSlotCoeff, _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
+                     _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
                      _keyDecayRate, _keyDeposit, _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize,
                      _minfeeA, _minfeeB, _nOpt, _poolDecayRate, _poolDeposit, _poolMinRefund,
                      _protocolVersion, _rho, _tau)

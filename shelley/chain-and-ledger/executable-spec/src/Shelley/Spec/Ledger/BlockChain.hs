@@ -72,15 +72,14 @@ import           Cardano.Prelude (AllowThunksIn (..), ByteString, LByteString,
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
-                     mkNonce)
+                     mkNonce, ActiveSlotCoeff, activeSlotLog, activeSlotVal)
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey,
                      hashKeyVRF)
 import           Shelley.Spec.Ledger.OCert (OCert (..))
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, ProtVer (..), activeSlotLog,
-                     activeSlotVal)
+import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..), decodeMap,
                      decodeSeq, encodeFoldableEncoder, encodeFoldableMapEncoder)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))

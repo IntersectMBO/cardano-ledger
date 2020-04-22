@@ -26,12 +26,12 @@ import qualified Test.QuickCheck as QC
 
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), StrictMaybe (..),
-                     UnitInterval, mkNonce)
+                     UnitInterval, mkNonce, ActiveSlotCoeff, mkActiveSlotCoeff)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams, PParams' (PParams),
-                     pattern ProposedPPUpdates, ProtVer (..), pattern Update, mkActiveSlotCoeff,
+import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams),
+                     pattern ProposedPPUpdates, ProtVer (..), pattern Update,
                      _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
                      _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt,
                      _poolDecayRate, _poolDeposit, _poolMinRefund, _protocolVersion,

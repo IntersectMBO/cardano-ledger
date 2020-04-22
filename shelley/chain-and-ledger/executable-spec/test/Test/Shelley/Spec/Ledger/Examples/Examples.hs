@@ -110,7 +110,7 @@ import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, mkUrl,
-                     startRewards, (⭒))
+                     startRewards, (⭒), mkActiveSlotCoeff)
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -133,7 +133,7 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern Act
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams), PParamsUpdate,
                      pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams,
-                     mkActiveSlotCoeff, _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
+                     _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
                      _keyDecayRate, _keyDeposit, _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize,
                      _minfeeA, _minfeeB, _nOpt, _poolDecayRate, _poolDeposit, _poolMinRefund,
                      _protocolVersion, _rho, _tau)

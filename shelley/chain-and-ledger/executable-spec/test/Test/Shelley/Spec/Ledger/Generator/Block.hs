@@ -21,7 +21,7 @@ import           Byron.Spec.Ledger.Core (dom, range)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
-import           Shelley.Spec.Ledger.BaseTypes (intervalValue)
+import           Shelley.Spec.Ledger.BaseTypes (intervalValue, activeSlotVal)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
@@ -29,7 +29,7 @@ import           Shelley.Spec.Ledger.LedgerState (pattern ActiveSlot, pattern Ep
                      pattern NewEpochState, esLState, esPp, getGKeys, nesEL, nesEs, nesOsched,
                      nesPd, overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams' (_activeSlotCoeff), activeSlotVal)
+import           Shelley.Spec.Ledger.PParams (PParams' (_activeSlotCoeff))
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Chain (chainEpochNonce, chainLastAppliedBlock, chainNes,
                      chainOCertIssue)
