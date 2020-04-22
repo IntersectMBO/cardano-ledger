@@ -4,7 +4,6 @@
 \newcommand{\Proof}{\type{Proof}}
 \newcommand{\Seedl}{\mathsf{Seed}_\ell}
 \newcommand{\Seede}{\mathsf{Seed}_\eta}
-\newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
 \newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
 \newcommand{\prevHashToNonce}[1]{\fun{prevHashToNonce}~ \var{#1}}
 
@@ -418,7 +417,7 @@ of which are active.
     \range{osched}\subseteq\var{gkeys} \\
     |\var{osched}| = \floor{(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
     |\{s\mapsto k\in\var{osched}~\mid~k\neq\Nothing\}| =
-    \floor{(\activeSlotCoeff{pp})\cdot(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
+    \floor{\ActiveSlotCoeff(\fun{d}~\var{pp})\cdot\SlotsPerEpoch} \\
     \forall s\in\dom{osched},~\epoch{s}=e\\
   \end{align*}
   %
@@ -1111,7 +1110,6 @@ and the Praos blocks, depending on the overlay schedule.
 
 The environments for this transition are:
 \begin{itemize}
-  \item The protocol parameters $\var{pp}$.
   \item A mapping $\var{osched}$ of slots to an optional genesis key.
     In the terminology of \cite{delegation_design},
     the slots in $\var{osched}$ are the ``OBFT slots''.
@@ -1151,7 +1149,6 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
     \OverlayEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pp} & \PParams & \text{protocol parameters} \\
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
@@ -1195,7 +1192,6 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
     }
     {
       {\begin{array}{c}
-         \var{pp} \\
          \var{osched} \\
          \eta_0 \\
          \var{pd} \\
@@ -1221,11 +1217,10 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
       }
       \\~\\
-      \fun{vrfChecks}~\eta_0~\var{pd}~(\activeSlotCoeff{pp})~\var{bhb}
+      \fun{vrfChecks}~\eta_0~\var{pd}~\ActiveSlotCoeff~\var{bhb}
     }
     {
       {\begin{array}{c}
-         \var{pp} \\
          \var{osched} \\
          \eta_0 \\
          \var{pd} \\
@@ -1407,7 +1402,6 @@ The states for this transition consists of:
       }\\~\\
       {
         {\begin{array}{c}
-          \var{pp} \\
           \var{osched} \\
           \eta_0' \\
           \var{pd} \\

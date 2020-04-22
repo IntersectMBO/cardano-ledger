@@ -102,8 +102,8 @@ import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHas
                      undiscriminateKeyHash)
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), Update (..),
-                     emptyPPPUpdates, emptyPParams, _activeSlotCoeff, _d,
-                     _keyDecayRate, _keyDeposit, _keyMinRefund, _minfeeA, _minfeeB, _rho, _tau)
+                     emptyPPPUpdates, emptyPParams, _d, _keyDecayRate, _keyDeposit, _keyMinRefund,
+                     _minfeeA, _minfeeB, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoFirst, epochInfoSize, (+*), (-*))
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
@@ -123,8 +123,8 @@ import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopi
 
 import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe (..),
-                     UnitInterval, dnsSize, intervalValue, text64Size, unIPv4, unIPv6,
-                     unUrl, activeSlotVal)
+                     UnitInterval, activeSlotVal, dnsSize, intervalValue, text64Size, unIPv4,
+                     unIPv6, unUrl)
 import           Shelley.Spec.Ledger.Scripts (countMSigNodes)
 
 
@@ -1097,6 +1097,7 @@ createRUpd
 createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
     ei <- asks epochInfo
     slotsPerEpoch <- epochInfoSize ei e
+    asc <- asks activeSlotCoeff
     let SnapShot stake' delegs' poolParams = _pstakeGo ss
         Coin reserves = _reserves acnt
         ds = _dstate $ _delegationState ls
@@ -1104,7 +1105,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
         -- reserves and rewards change
         deltaR_ = (floor $ min 1 eta * intervalValue (_rho pr) * fromIntegral reserves)
         expectedBlocks =
-          intervalValue ((activeSlotVal . _activeSlotCoeff) pr) * fromIntegral slotsPerEpoch
+          intervalValue (activeSlotVal asc) * fromIntegral slotsPerEpoch
         eta = fromIntegral blocksMade / expectedBlocks
 
         Coin rPot = _feeSS ss + deltaR_
@@ -1138,17 +1139,18 @@ overlaySchedule e gkeys pp = do
       ei <- asks epochInfo
       slotsPerEpoch <- epochInfoSize ei e
       firstSlotNo <- epochInfoFirst ei e
+      asc <- asks activeSlotCoeff
       let
         numActive = dval * fromIntegral slotsPerEpoch
         dInv = 1 / dval
-        asc = (intervalValue . activeSlotVal) $ _activeSlotCoeff pp
+        ascValue = (intervalValue . activeSlotVal) asc
 
         toRelativeSlotNo x = (Duration . floor) (dInv * fromInteger x)
         toSlotNo x = firstSlotNo +* toRelativeSlotNo x
 
         genesisSlots = [ toSlotNo x | x <-[0..(floor numActive - 1)] ]
 
-        numInactivePerActive = floor (1 / asc) - 1
+        numInactivePerActive = floor (1 / ascValue) - 1
         activitySchedule = cycle (True:replicate numInactivePerActive False)
         unassignedSched = zip activitySchedule genesisSlots
 

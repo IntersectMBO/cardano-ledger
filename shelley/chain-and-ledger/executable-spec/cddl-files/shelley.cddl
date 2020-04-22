@@ -159,10 +159,9 @@ protocol_param_update =
   , ? 13: rational           ; pool pledge influence
   , ? 14: unit_interval      ; expansion rate
   , ? 15: unit_interval      ; treasury growth rate
-  , ? 16: unit_interval      ; active slot coefficient
-  , ? 17: unit_interval      ; d. decentralization constant
-  , ? 18: $nonce             ; extra entropy
-  , ? 19: [protocol_version] ; protocol version
+  , ? 16: unit_interval      ; d. decentralization constant
+  , ? 17: $nonce             ; extra entropy
+  , ? 18: [protocol_version] ; protocol version
   }
 
 transaction_witness_set =

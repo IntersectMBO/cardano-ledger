@@ -21,7 +21,7 @@ import           Byron.Spec.Ledger.Core (dom, range)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
-import           Shelley.Spec.Ledger.BaseTypes (intervalValue, activeSlotVal)
+import           Shelley.Spec.Ledger.BaseTypes (activeSlotCoeff, activeSlotVal, intervalValue)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
@@ -29,7 +29,6 @@ import           Shelley.Spec.Ledger.LedgerState (pattern ActiveSlot, pattern Ep
                      pattern NewEpochState, esLState, esPp, getGKeys, nesEL, nesEs, nesOsched,
                      nesPd, overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams' (_activeSlotCoeff))
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Chain (chainEpochNonce, chainLastAppliedBlock, chainNes,
                      chainOCertIssue)
@@ -37,12 +36,13 @@ import           Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import           Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import           Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState,
-                     GenKeyHash, LEDGERS, OBftSlot, TICK)
-import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), GenEnv(..), KeySpace(..), NatNonce (..),
-                     genNatural, getKESPeriodRenewalNo, mkBlock, mkOCert)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState, GenKeyHash,
+                     LEDGERS, OBftSlot, TICK)
+import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), GenEnv (..),
+                     KeySpace (..), NatNonce (..), genNatural, getKESPeriodRenewalNo, mkBlock,
+                     mkOCert)
 import           Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
-import           Test.Shelley.Spec.Ledger.Utils (maxKESIterations, runShelleyBase,
+import           Test.Shelley.Spec.Ledger.Utils (maxKESIterations, runShelleyBase, testGlobals,
                      unsafeMkUnitInterval)
 
 nextCoreNode
@@ -160,7 +160,7 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
           <*> pure (block + 1)
           <*> pure (chainEpochNonce chainSt)
           <*> genBlockNonce
-          <*> genPraosLeader poolStake pp'
+          <*> genPraosLeader poolStake
           <*> pure kesPeriod_
           <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
           <*> pure oCert
@@ -188,7 +188,7 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
                 -- if we find the pre-hashed key in keysByStakeHash, we use it instead of the original cold key
                 (origIssuerKeys gkey) {cold = updatedCold, hk = (hashKey . vKey) updatedCold}
 
-    genPraosLeader stake pp =
+    genPraosLeader stake =
       if stake >= 0 && stake <= 1 then do
         -- we subtract one from the numerator for a non-zero stake e.g. for a
         -- stake of 3/20, we would go with 2/20 and then divide by a random
@@ -198,9 +198,10 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
         let stake' = if stake > 0
               then (numerator stake - 1) % denominator stake
               else stake
+            asc = activeSlotCoeff testGlobals
         n <- genNatural 1 10
         pure (unsafeMkUnitInterval ((stake' / fromIntegral n)
-                                    * ((intervalValue . activeSlotVal . _activeSlotCoeff) pp)))
+                                    * ((intervalValue . activeSlotVal) asc)))
       else
         error "stake not in [0; 1]"
 

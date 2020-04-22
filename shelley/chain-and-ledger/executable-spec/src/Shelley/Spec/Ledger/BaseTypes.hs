@@ -371,6 +371,9 @@ data Globals = Globals
   , maxMajorPV :: !Natural
     -- | Maximum number of lovelace in the system
   , maxLovelaceSupply :: !Word64
+    -- | Active Slot Coefficient, named f in
+    -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
+  , activeSlotCoeff :: !ActiveSlotCoeff
   } deriving (Generic)
 
 instance NoUnexpectedThunks Globals

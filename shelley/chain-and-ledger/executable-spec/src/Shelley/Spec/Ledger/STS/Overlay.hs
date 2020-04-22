@@ -21,15 +21,16 @@ import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.BlockChain
-import           Shelley.Spec.Ledger.Delegation.Certificates
-import           Shelley.Spec.Ledger.Keys
+import           Cardano.Prelude (asks)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase, activeSlotCoeff)
+import           Shelley.Spec.Ledger.BlockChain (BHBody (..), BHeader (..), vrfChecks)
+import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
+import           Shelley.Spec.Ledger.Keys (GenDelegs (..), KESignable, KeyHash, Signable, VKeyES,
+                     hashKey)
 import           Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
-import           Shelley.Spec.Ledger.OCert
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.STS.Ocert
+import           Shelley.Spec.Ledger.OCert (KESPeriod)
+import           Shelley.Spec.Ledger.Slot (SlotNo)
+import           Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
 
 import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -40,7 +41,6 @@ data OVERLAY crypto
 
 data OverlayEnv crypto
   = OverlayEnv
-      PParams
       (Map SlotNo (OBftSlot crypto))
       Nonce
       (PoolDistr crypto)
@@ -87,16 +87,18 @@ overlayTransition
      )
   => TransitionRule (OVERLAY crypto)
 overlayTransition = judgmentContext >>=
-  \( TRC ( OverlayEnv pp osched eta0 pd (GenDelegs genDelegs)
+  \( TRC ( OverlayEnv osched eta0 pd (GenDelegs genDelegs)
       , cs
       , bh@(BHeader bhb _))
    ) -> do
   let vk = bheaderVk bhb
       vkh = hashKey vk
 
+  asc <- liftSTS $ asks activeSlotCoeff
+
   case Map.lookup (bheaderSlotNo bhb) osched of
     Nothing ->
-      vrfChecks eta0 pd (_activeSlotCoeff pp) bhb ?! NotPraosLeaderOVERLAY
+      vrfChecks eta0 pd asc bhb ?! NotPraosLeaderOVERLAY
     Just NonActiveSlot ->
       failBecause NotActiveSlotOVERLAY
     Just (ActiveSlot gkey) ->
