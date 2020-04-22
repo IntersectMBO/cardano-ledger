@@ -14,6 +14,7 @@ import qualified Data.Set as Set
 
 import           Test.Tasty
 import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck
 
 import           Shelley.Spec.Ledger.Address
 import           Shelley.Spec.Ledger.BaseTypes
@@ -616,6 +617,12 @@ testExpiredTx =
   in asStateTransition (SlotNo 1) testPCs genesis tx (Coin 0) @?=
        Left [ Expired (SlotNo 0) (SlotNo 1) ]
 
+testTruncateUnitInterval :: TestTree
+testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
+  \n -> let x = intervalValue $ truncateUnitInterval n
+        in (x <= 1) && (x >= 0)
+
+
 testsInvalidLedger :: TestTree
 testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
   [ testCase "Invalid Ledger - Alice tries to spend a nonexistent input" testSpendNonexistentInput
@@ -632,4 +639,9 @@ testsInvalidLedger = testGroup "Tests with invalid transactions in ledger"
 
 unitTests :: TestTree
 unitTests = testGroup "Unit Tests"
-  [ testsValidLedger, testsInvalidLedger, testsPParams, sizeTests ]
+  [ testsValidLedger
+  , testsInvalidLedger
+  , testsPParams
+  , sizeTests
+  , testTruncateUnitInterval
+  ]
