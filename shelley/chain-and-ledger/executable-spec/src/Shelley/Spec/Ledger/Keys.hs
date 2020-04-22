@@ -113,11 +113,11 @@ instance (Crypto crypto, Typeable kd) => ToCBOR (DiscVKey kd crypto) where
 type VKey = DiscVKey 'Regular
 pattern VKey :: VerKeyDSIGN (DSIGN crypto) -> DiscVKey 'Regular crypto
 pattern VKey a = DiscVKey a
+{-# COMPLETE VKey #-}
 type VKeyGenesis = DiscVKey 'Genesis
 pattern VKeyGenesis :: VerKeyDSIGN (DSIGN crypto) -> DiscVKey 'Genesis crypto
 pattern VKeyGenesis a = DiscVKey a
-
-{-# COMPLETE VKey, VKeyGenesis #-}
+{-# COMPLETE VKeyGenesis #-}
 
 data KeyPair (kd :: KeyDiscriminator) crypto
   = KeyPair
