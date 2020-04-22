@@ -16,6 +16,7 @@ data TestScenario
   = ContinuousIntegration
   | Development
   | Nightly
+  | Fast
   deriving (Read, Show)
 
 instance IsOption TestScenario where
@@ -39,5 +40,5 @@ mainWithTestScenario = defaultMainWithIngredients
 
 helpText :: [Char]
 helpText =
-  "Run under one of Development (default), ContinuousIntegration, or "
-    <> "Nightly, to affect how tests are run"
+  "Run under one of Development (default), ContinuousIntegration, "
+    <> "Nightly, or Fast, to affect how tests are run"

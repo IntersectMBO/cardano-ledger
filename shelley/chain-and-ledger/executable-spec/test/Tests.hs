@@ -11,11 +11,12 @@ import           Test.TestScenario (TestScenario (..), mainWithTestScenario)
 tests :: TestTree
 tests = askOption $ \case
   Nightly -> nightlyTests
+  Fast -> fastTests
   _ -> mainTests
 
 mainTests :: TestTree
 mainTests = testGroup "Ledger with Delegation"
-  [ cddlTests 1
+  [ cddlTests 5
   , minimalPropertyTests
   , serializationTests
   , stsTests
@@ -26,6 +27,14 @@ nightlyTests :: TestTree
 nightlyTests = testGroup "Ledger with Delegation nightly"
   [ propertyTests
   , cddlTests 50
+  ]
+
+fastTests :: TestTree
+fastTests = testGroup "Ledger with Delegation fast"
+  [ cddlTests 1
+  , serializationTests
+  , stsTests
+  , unitTests
   ]
 
 -- main entry point
