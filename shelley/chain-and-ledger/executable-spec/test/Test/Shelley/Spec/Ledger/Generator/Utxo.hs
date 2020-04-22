@@ -101,16 +101,16 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
   let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
   -- certificates
-  (certs, certCreds, deposits_, refunds_)
+  (certs, certCreds, deposits_, refunds_, dpState')
     <- genDCerts ge pparams dpState slot ttl txIx reserves
 
-  if spendingBalance < deposits_
+  let balance_ = spendingBalance - deposits_ + refunds_
+  if balance_ <= 0
     then QC.discard
     else do
 
     -- attempt to make provision for certificate deposits (otherwise discard this generator)
-    let balance_ = spendingBalance - deposits_ + refunds_
-        stakeScripts = Maybe.catMaybes $ map (\case
+    let stakeScripts = Maybe.catMaybes $ map (\case
                                                  ScriptCred c -> Just c
                                                  _            -> Nothing) certCreds
         genesisWitnesses = foldl (++) [] $
@@ -128,7 +128,7 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
 
     --- PParam + AV Updates
     (update, updateWitnesses) <-
-      genUpdate constants slot ksCoreNodes ksKeyPairsByStakeHash pparams (utxoSt, dpState)
+      genUpdate constants slot ksCoreNodes ksKeyPairsByStakeHash pparams (utxoSt, dpState')
 
     -- this is the "model" `TxBody` which is used to calculate the fees
     --

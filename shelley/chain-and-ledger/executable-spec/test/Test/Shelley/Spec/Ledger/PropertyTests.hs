@@ -180,18 +180,14 @@ roundTripAddr =
       keyPair2 <- snd . mkKeyPairs <$> Gen.word64 Range.constantBounded
       pure $ toAddr (keyPair1, keyPair2)
 
-
 minimalPropertyTests :: TestTree
 minimalPropertyTests =
   testGroup "Minimal Property Tests"
-    [ -- TODO @uroboros
-      -- TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered
-      --, TQC.testProperty "total amount of Ada is preserved" preservationOfAda
-      --,
-      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated
+    [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered
+    , TQC.testProperty "total amount of Ada is preserved" preservationOfAda
+    , TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated
     , testProperty "Roundtrip Addr serialisation Hedghog" roundTripAddr
     ]
-
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests :: TestTree

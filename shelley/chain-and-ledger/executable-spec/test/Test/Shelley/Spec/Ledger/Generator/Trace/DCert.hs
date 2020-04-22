@@ -28,7 +28,7 @@ import           Test.QuickCheck (Gen)
 import           Control.State.Transition (BaseM, Embed, Environment, PredicateFailure, STS, Signal,
                      State, TRC (..), TransitionRule, initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed)
-import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
+import           Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
@@ -127,7 +127,7 @@ genDCerts
   -> Natural
   -> Natural
   -> Coin
-  -> Gen (StrictSeq DCert, [CertCred], Coin, Coin)
+  -> Gen (StrictSeq DCert, [CertCred], Coin, Coin, DPState)
 genDCerts
   ge@( GenEnv
          KeySpace_ {ksKeyPairsByHash}
@@ -142,11 +142,12 @@ genDCerts
   let env = (slot, txIx, pparams, reserves)
       st0 = (dpState, 0)
 
-  certsCreds <-
-    catMaybes . traceSignals OldestFirst <$>
+  certsTrace <-
       QC.traceFrom @CERTS testGlobals maxCertsPerTx ge env st0
 
-  let (certs, creds) = unzip certsCreds
+  let certsCreds = catMaybes . traceSignals OldestFirst $ certsTrace
+      (lastState_, _) = lastState certsTrace
+      (certs, creds) = unzip certsCreds
       deRegStakeCreds = filter isDeRegKey certs
       slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
@@ -155,7 +156,8 @@ genDCerts
   pure ( StrictSeq.fromList certs
        , withScriptCreds
        , totalDeposits pparams (_stPools (_pstate dpState)) certs
-       , sum (certRefund slotWithTTL <$> deRegStakeCreds) )
+       , sum (certRefund slotWithTTL <$> deRegStakeCreds)
+       , lastState_)
 
   where
     (dval, dmin, lambda) = decayKey pparams
