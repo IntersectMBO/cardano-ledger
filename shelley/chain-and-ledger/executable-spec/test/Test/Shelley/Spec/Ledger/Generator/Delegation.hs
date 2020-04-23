@@ -35,7 +35,7 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DCertMir, pattern DeRegKey,
                      pattern Delegate, pattern GenesisDelegate, pattern MIRCert, pattern RegKey,
                      pattern RegPool, pattern RetirePool, pattern StakeCreds)
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
+import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey, undiscriminateKeyHash)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs, _pParams, _pstate, _retiring,
                      _rewards, _stPools, _stkCreds)
 import           Shelley.Spec.Ledger.PParams (PParams, _d)
@@ -45,7 +45,7 @@ import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGe
                      RewardAcnt (..), pattern StakePools, unStakePools, _poolPubKey, _poolVrf)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState,
-                     KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
+                     AnyKeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
                      VrfKeyPairs, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
@@ -77,7 +77,7 @@ genDCert
   -> MultiSigPairs
   -> [CoreKeyPair]
   -> VrfKeyPairs
-  -> Map KeyHash KeyPair -- indexed keys By StakeHash
+  -> Map AnyKeyHash KeyPair -- indexed keys By hash
   -> PParams
   -> DPState
   -> SlotNo
@@ -91,13 +91,13 @@ genDCert
               , frequencyRetirePoolCert
               , frequencyMIRCert
               })
-  keys scripts coreKeys vrfKeys keysByStakeHash pparams dpState slot =
+  keys scripts coreKeys vrfKeys keysByHash pparams dpState slot =
     QC.frequency [ (frequencyRegKeyCert, genRegKeyCert c keys scripts dState)
                 , (frequencyRegPoolCert, genRegPool keys vrfKeys dpState)
                 , (frequencyDelegationCert, genDelegation c keys scripts dpState)
                 , (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState)
                 , (frequencyDeRegKeyCert, genDeRegKeyCert c keys scripts dState)
-                , (frequencyRetirePoolCert, genRetirePool c keysByStakeHash pState slot)
+                , (frequencyRetirePoolCert, genRetirePool c keysByHash pState slot)
                 , (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
                 ]
  where
@@ -313,11 +313,11 @@ genDCertRegPool skeys vrfKeys = do
 genRetirePool
   :: HasCallStack
   => Constants
-  -> Map KeyHash KeyPair -- indexed keys By StakeHash
+  -> Map AnyKeyHash KeyPair -- indexed keys By Hash
   -> PState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
-genRetirePool Constants{frequencyLowMaxEpoch} keysByStakeHash pState slot =
+genRetirePool Constants{frequencyLowMaxEpoch} keysByHash pState slot =
   if (null retireable)
      then pure Nothing
      else (\keyHash epoch ->
@@ -333,7 +333,7 @@ genRetirePool Constants{frequencyLowMaxEpoch} keysByStakeHash pState slot =
   retireable = Set.toList (registered_ \\ retiring_)
 
   lookupHash hk = fromMaybe (error "genRetirePool: could not find keyHash")
-                            (Map.lookup hk keysByStakeHash)
+                            (Map.lookup (undiscriminateKeyHash hk) keysByHash)
   EpochNo cepoch = epochFromSlotNo slot
   epochLow = cepoch + 1
   -- we use the lower bound of MaxEpoch as the high mark so that all possible

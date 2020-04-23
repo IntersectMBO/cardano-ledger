@@ -92,7 +92,7 @@ instance QC.HasTrace CERTS GenEnv where
         ( KeySpace_
             { ksCoreNodes,
               ksKeyPairs,
-              ksKeyPairsByStakeHash,
+              ksKeyPairsByHash,
               ksMSigScripts,
               ksVRFKeyPairs
             }
@@ -107,7 +107,7 @@ instance QC.HasTrace CERTS GenEnv where
         ksMSigScripts
         (fst <$> ksCoreNodes)
         ksVRFKeyPairs
-        ksKeyPairsByStakeHash
+        ksKeyPairsByHash
         pparams
         dpState
         slot
