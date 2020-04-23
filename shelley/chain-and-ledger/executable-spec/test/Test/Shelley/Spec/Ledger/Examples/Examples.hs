@@ -132,11 +132,10 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern Act
                      _treasury)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams), PParamsUpdate,
-                     pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams,
-                     mkActiveSlotCoeff, _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
-                     _keyDecayRate, _keyDeposit, _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize,
-                     _minfeeA, _minfeeB, _nOpt, _poolDecayRate, _poolDeposit, _poolMinRefund,
-                     _protocolVersion, _rho, _tau)
+                     pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams, _a0,
+                     _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit, _keyMinRefund,
+                     _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt, _poolDecayRate,
+                     _poolDeposit, _poolMinRefund, _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), pattern NonMyopic,
                      emptyNonMyopic, rewardPot)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), EpochNo (..), SlotNo (..),
@@ -340,8 +339,6 @@ ppsEx1 = emptyPParams { _maxBBSize       =       50000
                       , _keyDeposit      = Coin      7
                       , _poolDeposit     = Coin    250
                       , _d               = unsafeMkUnitInterval 0.5
-                      , _activeSlotCoeff =
-                        mkActiveSlotCoeff (unsafeMkUnitInterval 0.9)
                       , _tau             = unsafeMkUnitInterval 0.2
                       , _rho             = unsafeMkUnitInterval 0.0021
                       , _keyDecayRate    =                      0.002
@@ -460,7 +457,6 @@ ppupEx2A = ProposedPPUpdates $ Map.singleton
                 , _a0 = SNothing
                 , _rho = SNothing
                 , _tau = SNothing
-                , _activeSlotCoeff = SNothing
                 , _d = SNothing
                 , _extraEntropy = SNothing
                 , _protocolVersion = SNothing
@@ -1690,7 +1686,6 @@ ppVote3A = PParams
              , _a0 = SNothing
              , _rho = SNothing
              , _tau = SNothing
-             , _activeSlotCoeff = SNothing
              , _d = SNothing
              , _extraEntropy = SJust (mkNonce 123)
              , _protocolVersion = SNothing

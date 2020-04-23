@@ -20,7 +20,7 @@ The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
 and $\Z$ is only chosen over $\N$ for its additive inverses.
 
-Eight global constants are defined.
+Nine global constants are defined.
 As global constants, these values can only be changed by updating the software,
 i.e. a soft or a hard fork.
 For the software update mechanism, see Section~\ref{sec:software-updates}.
@@ -32,6 +32,8 @@ The maximum number of time a KES key can be evolved before a pool operator
 must create a new operational certificate is given by $\MaxKESEvo$.
 \textbf{Note that if } $\MaxKESEvo$
 \textbf{is changed, the KES signature format may have to change as well.}
+The constant $\ActiveSlotCoeff$ is the value $f$ from the
+Praos paper \cite{ouroboros_praos}.
 
 The constant $\Quorum$ determines the quorum amount needed for votes on the
 protocol parameter updates and the application version updates.
@@ -119,7 +121,6 @@ without being explicit about the types and conversion.
         \var{a_0} \mapsto \posReals & \PParams & \text{pool influence}\\
         \tau \mapsto \unitInterval & \PParams & \text{treasury expansion}\\
         \rho \mapsto \unitInterval & \PParams & \text{monetary expansion}\\
-        \var{activeSlotCoeff} \mapsto (0, 1] & \PParams & f\text{ in \cite{ouroboros_praos}}\\
         \var{d} \mapsto \{0,~0.1,~0.2,~\ldots,~1\} & \PParams & \text{decentralization parameter}\\
         \var{extraEntropy} \mapsto \Seed & \PParams & \text{extra entropy}\\
         \var{pv} \mapsto \ProtVer & \PParams & \text{protocol version}\\
@@ -145,7 +146,6 @@ without being explicit about the types and conversion.
     \fun{influence},
     \fun{tau},
     \fun{rho},
-    \fun{activeSlotCoeff},
     \fun{d},
     \fun{extraEntropy},
     \fun{pv}
@@ -172,6 +172,7 @@ without being explicit about the types and conversion.
       \Quorum & \N & \text{quorum for update system votes}\\
       \MaxMajorPV & \N & \text{all blocks are invalid after this value}\\
       \MaxLovelaceSupply & \Coin & \text{total lovelace in the system}\\
+      \ActiveSlotCoeff & (0, 1] & f\text{ in \cite{ouroboros_praos}}\\
     \end{array}
   \end{equation*}
   %

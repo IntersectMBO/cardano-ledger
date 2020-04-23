@@ -15,10 +15,6 @@ module Shelley.Spec.Ledger.PParams
   ( PParams'(..)
   , PParams
   , emptyPParams
-  , ActiveSlotCoeff
-  , mkActiveSlotCoeff
-  , activeSlotVal
-  , activeSlotLog
   , ProtVer(..)
   , PPUpdateEnv(..)
   , ProposedPPUpdates(..)
@@ -41,9 +37,8 @@ import           Numeric.Natural (Natural)
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen,
                      encodeMapLen, encodeWord, enforceSize)
 import           Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
-import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, Nonce (NeutralNonce), StrictMaybe (..),
-                     UnitInterval, fpPrecision, interval0, intervalValue, invalidKey,
-                     strictMaybeToMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), StrictMaybe (..),
+                     UnitInterval, interval0, invalidKey, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
@@ -51,7 +46,6 @@ import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGrou
                      ToCBORGroup (..), decodeMapContents, mapFromCBOR, mapToCBOR, rationalFromCBOR,
                      rationalToCBOR)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-import           Shelley.Spec.NonIntegral (ln')
 
 
 type family HKD f a where
@@ -92,8 +86,6 @@ data PParams' f = PParams
   , _rho             :: !(HKD f UnitInterval)
     -- | Monetary expansion
   , _tau             :: !(HKD f UnitInterval)
-    -- | Active slot coefficient
-  , _activeSlotCoeff :: !(HKD f ActiveSlotCoeff)
     -- | Decentralization parameter
   , _d               :: !(HKD f UnitInterval)
     -- | Extra entropy
@@ -105,47 +97,6 @@ data PParams' f = PParams
 type PParams = PParams' Identity
 deriving instance Eq (PParams' Identity)
 deriving instance Show (PParams' Identity)
-
-data ActiveSlotCoeff =
-  ActiveSlotCoeff
-  { unActiveSlotVal :: !UnitInterval
-  , unActiveSlotLog :: !Integer  -- TODO mgudemann make this FixedPoint,
-                                 -- currently a problem because of
-                                 -- NoUnexpectedThunks instance for FixedPoint
-  } deriving (Eq, Ord, Show, Generic)
-
-instance NoUnexpectedThunks ActiveSlotCoeff
-
-instance FromCBOR ActiveSlotCoeff
- where
-   fromCBOR = do
-     v <- fromCBOR
-     pure $ mkActiveSlotCoeff v
-
-instance ToCBOR ActiveSlotCoeff
- where
-   toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal
-                           , unActiveSlotLog = _logVal}) =
-     toCBOR slotVal
-
-mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
-mkActiveSlotCoeff v =
-  ActiveSlotCoeff { unActiveSlotVal = v
-                  , unActiveSlotLog =
-                    if (intervalValue v) == 1
-                      -- If the active slot coefficient is equal to one,
-                      -- then nearly every stake pool can produce a block every slot.
-                      -- In this degenerate case, where ln (1-f) is not defined,
-                      -- we set the unActiveSlotLog to zero.
-                      then 0
-                      else floor (fpPrecision * (
-                        ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v))) }
-
-activeSlotVal :: ActiveSlotCoeff -> UnitInterval
-activeSlotVal = unActiveSlotVal
-
-activeSlotLog :: ActiveSlotCoeff -> FixedPoint
-activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 
 data ProtVer = ProtVer !Natural !Natural
   deriving (Show, Eq, Generic, Ord)
@@ -185,7 +136,6 @@ instance ToCBOR PParams
     , _a0              = a0'
     , _rho             = rho'
     , _tau             = tau'
-    , _activeSlotCoeff = activeSlotCoeff'
     , _d               = d'
     , _extraEntropy    = extraEntropy'
     , _protocolVersion = protocolVersion'
@@ -207,7 +157,6 @@ instance ToCBOR PParams
         <> rationalToCBOR a0'
         <> toCBOR rho'
         <> toCBOR tau'
-        <> toCBOR activeSlotCoeff'
         <> toCBOR d'
         <> toCBOR extraEntropy'
         <> toCBORGroup protocolVersion'
@@ -233,7 +182,6 @@ instance FromCBOR PParams
       <*> rationalFromCBOR -- _a0              :: Rational
       <*> fromCBOR         -- _rho             :: UnitInterval
       <*> fromCBOR         -- _tau             :: UnitInterval
-      <*> fromCBOR         -- _activeSlotCoeff :: ActiveSlotCoeff
       <*> fromCBOR         -- _d               :: UnitInterval
       <*> fromCBOR         -- _extraEntropy    :: Nonce
       <*> fromCBORGroup    -- _protocolVersion :: ProtVer
@@ -258,7 +206,6 @@ emptyPParams =
      , _a0 = 0
      , _rho = interval0
      , _tau = interval0
-     , _activeSlotCoeff = mkActiveSlotCoeff interval0
      , _d = interval0
      , _extraEntropy = NeutralNonce
      , _protocolVersion = ProtVer 0 0
@@ -312,10 +259,9 @@ instance ToCBOR PParamsUpdate where
           , encodeMapElement 13 rationalToCBOR =<< _a0              ppup
           , encodeMapElement 14 toCBOR         =<< _rho             ppup
           , encodeMapElement 15 toCBOR         =<< _tau             ppup
-          , encodeMapElement 16 toCBOR         =<< _activeSlotCoeff ppup
-          , encodeMapElement 17 toCBOR         =<< _d               ppup
-          , encodeMapElement 18 toCBOR         =<< _extraEntropy    ppup
-          , encodeMapElement 19 toCBOR         =<< _protocolVersion ppup
+          , encodeMapElement 16 toCBOR         =<< _d               ppup
+          , encodeMapElement 17 toCBOR         =<< _extraEntropy    ppup
+          , encodeMapElement 18 toCBOR         =<< _protocolVersion ppup
           ]
         n = fromIntegral $ length l
     in encodeMapLen n <> fold l
@@ -340,7 +286,6 @@ emptyPParamsUpdate   = PParams
   , _a0              = SNothing
   , _rho             = SNothing
   , _tau             = SNothing
-  , _activeSlotCoeff = SNothing
   , _d               = SNothing
   , _extraEntropy    = SNothing
   , _protocolVersion = SNothing
@@ -366,10 +311,9 @@ instance FromCBOR PParamsUpdate where
          13 -> rationalFromCBOR >>= \x -> pure (13, \up -> up { _a0              = SJust x })
          14 -> fromCBOR         >>= \x -> pure (14, \up -> up { _rho             = SJust x })
          15 -> fromCBOR         >>= \x -> pure (15, \up -> up { _tau             = SJust x })
-         16 -> fromCBOR         >>= \x -> pure (16, \up -> up { _activeSlotCoeff = SJust x })
-         17 -> fromCBOR         >>= \x -> pure (17, \up -> up { _d               = SJust x })
-         18 -> fromCBOR         >>= \x -> pure (18, \up -> up { _extraEntropy    = SJust x })
-         19 -> fromCBOR         >>= \x -> pure (19, \up -> up { _protocolVersion = SJust x })
+         16 -> fromCBOR         >>= \x -> pure (17, \up -> up { _d               = SJust x })
+         17 -> fromCBOR         >>= \x -> pure (18, \up -> up { _extraEntropy    = SJust x })
+         18 -> fromCBOR         >>= \x -> pure (19, \up -> up { _protocolVersion = SJust x })
          k -> invalidKey k
      let fields = fst <$> mapParts :: [Int]
      unless (nub fields == fields)
@@ -410,7 +354,6 @@ updatePParams pp ppup = PParams
   , _a0 = fromMaybe' (_a0 pp) (_a0 ppup)
   , _rho = fromMaybe' (_rho pp) (_rho ppup)
   , _tau = fromMaybe' (_tau pp) (_tau ppup)
-  , _activeSlotCoeff = fromMaybe' (_activeSlotCoeff pp) (_activeSlotCoeff ppup)
   , _d = fromMaybe' (_d pp) (_d ppup)
   , _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup)
   , _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup)

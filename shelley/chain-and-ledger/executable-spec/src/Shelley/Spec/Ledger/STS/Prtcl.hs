@@ -21,17 +21,19 @@ import           Data.Map.Strict (Map)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.BlockChain
-import           Shelley.Spec.Ledger.Delegation.Certificates
-import           Shelley.Spec.Ledger.Keys
+import           Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase)
+import           Shelley.Spec.Ledger.BlockChain (BHBody (..), BHeader (..), LastAppliedBlock (..),
+                     bhHash, bhbody, lastAppliedHash)
+import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
+import           Shelley.Spec.Ledger.Keys (GenDelegs (..), KESignable, KeyHash, Signable, VKeyES,
+                     fromNatural)
 import           Shelley.Spec.Ledger.LedgerState (OBftSlot)
-import           Shelley.Spec.Ledger.OCert
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.OCert (KESPeriod)
+import           Shelley.Spec.Ledger.PParams (PParams)
+import           Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
 
-import           Shelley.Spec.Ledger.STS.Overlay
-import           Shelley.Spec.Ledger.STS.Updn
+import           Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
+import           Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 
 import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLenOf,
                      encodeListLen)
@@ -39,7 +41,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..), withOriginFromMaybe, withOriginToMaybe)
 import           Control.State.Transition
-import           Shelley.Spec.Ledger.Crypto
+import           Shelley.Spec.Ledger.Crypto (Crypto, DSIGN, VRF)
 
 data PRTCL crypto
 
@@ -150,7 +152,7 @@ prtclTransition = do
                                   , slot)
   cs'
     <- trans @(OVERLAY crypto)
-        $ TRC (OverlayEnv pp osched eta0' pd dms, cs, bh)
+        $ TRC (OverlayEnv osched eta0' pd dms, cs, bh)
 
   pure $ PrtclState
            cs'

@@ -45,6 +45,10 @@ module Shelley.Spec.Ledger.BaseTypes
   , mkIPv6
   , Port
   , unPort
+  , ActiveSlotCoeff
+  , mkActiveSlotCoeff
+  , activeSlotVal
+  , activeSlotLog
     -- * STS Base
   , Globals (..)
   , ShelleyBase
@@ -73,6 +77,7 @@ import           Network.Socket (HostAddress, HostAddress6, hostAddress6ToTuple)
 import           Numeric.Natural (Natural)
 
 import           Shelley.Spec.Ledger.Serialization (rationalFromCBOR, rationalToCBOR)
+import           Shelley.Spec.NonIntegral (ln')
 
 data E34
 
@@ -294,6 +299,52 @@ newtype Port = Port { unPort :: Word16 }
   deriving (Eq, Ord, Num, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------
+-- Active Slot Coefficent, named f in
+-- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
+--------------------------------------------------------------------------------
+
+data ActiveSlotCoeff =
+  ActiveSlotCoeff
+  { unActiveSlotVal :: !UnitInterval
+  , unActiveSlotLog :: !Integer  -- TODO mgudemann make this FixedPoint,
+                                 -- currently a problem because of
+                                 -- NoUnexpectedThunks instance for FixedPoint
+  } deriving (Eq, Ord, Show, Generic)
+
+instance NoUnexpectedThunks ActiveSlotCoeff
+
+instance FromCBOR ActiveSlotCoeff
+ where
+   fromCBOR = do
+     v <- fromCBOR
+     pure $ mkActiveSlotCoeff v
+
+instance ToCBOR ActiveSlotCoeff
+ where
+   toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal
+                           , unActiveSlotLog = _logVal}) =
+     toCBOR slotVal
+
+mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
+mkActiveSlotCoeff v =
+  ActiveSlotCoeff { unActiveSlotVal = v
+                  , unActiveSlotLog =
+                    if (intervalValue v) == 1
+                      -- If the active slot coefficient is equal to one,
+                      -- then nearly every stake pool can produce a block every slot.
+                      -- In this degenerate case, where ln (1-f) is not defined,
+                      -- we set the unActiveSlotLog to zero.
+                      then 0
+                      else floor (fpPrecision * (
+                        ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v))) }
+
+activeSlotVal :: ActiveSlotCoeff -> UnitInterval
+activeSlotVal = unActiveSlotVal
+
+activeSlotLog :: ActiveSlotCoeff -> FixedPoint
+activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
+
+--------------------------------------------------------------------------------
 -- Base monad for all STS systems
 --------------------------------------------------------------------------------
 
@@ -320,6 +371,9 @@ data Globals = Globals
   , maxMajorPV :: !Natural
     -- | Maximum number of lovelace in the system
   , maxLovelaceSupply :: !Word64
+    -- | Active Slot Coefficient, named f in
+    -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
+  , activeSlotCoeff :: !ActiveSlotCoeff
   } deriving (Generic)
 
 instance NoUnexpectedThunks Globals

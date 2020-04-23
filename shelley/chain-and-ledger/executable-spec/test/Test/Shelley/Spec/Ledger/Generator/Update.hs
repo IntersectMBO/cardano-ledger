@@ -30,18 +30,17 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), StrictMayb
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
-import           Shelley.Spec.Ledger.PParams (ActiveSlotCoeff, PParams, PParams' (PParams),
-                     pattern ProposedPPUpdates, ProtVer (..), pattern Update, mkActiveSlotCoeff,
-                     _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit,
-                     _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt,
-                     _poolDecayRate, _poolDeposit, _poolMinRefund, _protocolVersion,
-                     _protocolVersion, _rho, _tau)
+import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams),
+                     pattern ProposedPPUpdates, ProtVer (..), pattern Update, _a0, _d, _eMax,
+                     _extraEntropy, _keyDecayRate, _keyDeposit, _keyMinRefund, _maxBBSize,
+                     _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt, _poolDecayRate,
+                     _poolDeposit, _poolMinRefund, _protocolVersion, _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DPState, GenKeyHash,
                      KeyHash, KeyPair, ProposedPPUpdates, UTxOState, Update)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
-import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
+import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (cold), genInteger,
                      genNatural, genWord64, increasingProbabilityAt, tooLateInEpoch)
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
@@ -70,7 +69,6 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB})
               <*> genA0
               <*> genRho
               <*> genTau
-              <*> genActiveSlotCoeff
               <*> genDecentralisationParam
               <*> genExtraEntropy
               <*> genProtocolVersion
@@ -164,16 +162,6 @@ genRho = genIntervalInThousands 1 9
 genTau :: HasCallStack => Gen UnitInterval
 genTau = genIntervalInThousands 100 300
 
--- | activeSlotCoeff: 0.1-1
-genActiveSlotCoeff :: HasCallStack => Gen ActiveSlotCoeff
-genActiveSlotCoeff =
-  (mkActiveSlotCoeff . unsafeMkUnitInterval)
-  <$> QC.elements [0.025, 0.05, 0.075, 0.1, 0.2, 0.5]
--- ^^ This is a somewhat arbitrary group of values.
--- In the real system, we will probably be using a value near 1/10,
--- and we know that we would not ever choose values too small (say below 1/40)
--- or greater than a 1/2.
-
 genDecentralisationParam :: HasCallStack => Gen UnitInterval
 genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 -- ^^ TODO jc - generating d=0 takes some care, if there are no registered
@@ -225,7 +213,6 @@ genPPUpdate (c@Constants{maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
       a0                    <- genA0
       rho                   <- genRho
       tau                   <- genTau
-      activeSlotCoefficient <- genActiveSlotCoeff
       d                     <- genDecentralisationParam
       extraEntropy          <- genExtraEntropy
       protocolVersion       <- genNextProtocolVersion pp
@@ -245,7 +232,6 @@ genPPUpdate (c@Constants{maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
                         , _a0                    = SJust a0
                         , _rho                   = SJust rho
                         , _tau                   = SJust tau
-                        , _activeSlotCoeff       = SJust activeSlotCoefficient
                         , _d                     = SJust d
                         , _extraEntropy          = SJust extraEntropy
                         , _protocolVersion       = SJust protocolVersion

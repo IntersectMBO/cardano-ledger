@@ -33,7 +33,7 @@ import           Data.Maybe (fromMaybe)
 import           Data.Word (Word64)
 import           Hedgehog (MonadTest, (===))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
-                     mkUnitInterval)
+                     mkActiveSlotCoeff, mkUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (pattern SKey, pattern SKeyES, pattern VKey,
                      pattern VKeyES, pattern VKeyGenesis, hashKey, updateKESKey, vKey)
@@ -105,6 +105,7 @@ testGlobals = Globals
   , quorum = 5
   , maxMajorPV = 1000
   , maxLovelaceSupply = 45*1000*1000*1000*1000*1000
+  , activeSlotCoeff = mkActiveSlotCoeff . unsafeMkUnitInterval $ 0.9
   }
 
 runShelleyBase :: ShelleyBase a -> a

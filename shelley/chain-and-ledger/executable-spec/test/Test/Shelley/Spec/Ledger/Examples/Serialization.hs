@@ -47,11 +47,10 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern Act
                      EpochState (..), NewEpochState (..), pattern RewardUpdate, deltaF, deltaR,
                      deltaT, emptyLedgerState, genesisId, nonMyopic, rs)
 import           Shelley.Spec.Ledger.PParams (PParams' (PParams), PParamsUpdate,
-                     pattern ProposedPPUpdates, ProtVer (..), pattern Update, emptyPParams,
-                     mkActiveSlotCoeff, _a0, _activeSlotCoeff, _d, _eMax, _extraEntropy,
-                     _keyDecayRate, _keyDeposit, _keyMinRefund, _maxBBSize, _maxBHSize, _maxTxSize,
-                     _minfeeA, _minfeeB, _nOpt, _poolDecayRate, _poolDeposit, _poolMinRefund,
-                     _protocolVersion, _rho, _tau)
+                     pattern ProposedPPUpdates, ProtVer (..), pattern Update, emptyPParams, _a0,
+                     _d, _eMax, _extraEntropy, _keyDecayRate, _keyDeposit, _keyMinRefund,
+                     _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt, _poolDecayRate,
+                     _poolDeposit, _poolMinRefund, _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
@@ -515,7 +514,6 @@ serializationTests = testGroup "Serialization Tests"
        , _a0 = SNothing
        , _rho = SNothing
        , _tau = SNothing
-       , _activeSlotCoeff = SNothing
        , _d = SNothing
        , _extraEntropy = SNothing
        , _protocolVersion = SNothing
@@ -539,7 +537,6 @@ serializationTests = testGroup "Serialization Tests"
         a0                    = 1 % 6
         rho                   = UnsafeUnitInterval $ 1 % 6
         tau                   = UnsafeUnitInterval $ 1 % 7
-        activeSlotCoefficient = mkActiveSlotCoeff $ UnsafeUnitInterval $ 1 % 8
         d                     = UnsafeUnitInterval $ 1 % 9
         extraEntropy          = NeutralNonce
         protocolVersion       = ProtVer 0 1
@@ -562,12 +559,11 @@ serializationTests = testGroup "Serialization Tests"
        , _a0              = SJust a0
        , _rho             = SJust rho
        , _tau             = SJust tau
-       , _activeSlotCoeff = SJust activeSlotCoefficient
        , _d               = SJust d
        , _extraEntropy    = SJust extraEntropy
        , _protocolVersion = SJust protocolVersion
        } :: PParamsUpdate)
-    ((T $ TkMapLen 20)
+    ((T $ TkMapLen 19)
       <> (T $ TkWord 0) <> S minfeea
       <> (T $ TkWord 1) <> S minfeeb
       <> (T $ TkWord 2) <> S maxbbsize
@@ -584,10 +580,9 @@ serializationTests = testGroup "Serialization Tests"
       <> (T $ TkWord 13 . TkTag 30) <> S a0
       <> (T $ TkWord 14) <> S rho
       <> (T $ TkWord 15) <> S tau
-      <> (T $ TkWord 16) <> S activeSlotCoefficient
-      <> (T $ TkWord 17) <> S d
-      <> (T $ TkWord 18) <> S extraEntropy
-      <> (T $ TkWord 19) <> S protocolVersion)
+      <> (T $ TkWord 16) <> S d
+      <> (T $ TkWord 17) <> S extraEntropy
+      <> (T $ TkWord 18) <> S protocolVersion)
 
     -- checkEncodingCBOR "full_update"
   , let
@@ -610,7 +605,6 @@ serializationTests = testGroup "Serialization Tests"
                   , _a0 = SNothing
                   , _rho = SNothing
                   , _tau = SNothing
-                  , _activeSlotCoeff = SNothing
                   , _d = SNothing
                   , _extraEntropy = SNothing
                   , _protocolVersion = SNothing
@@ -675,7 +669,6 @@ serializationTests = testGroup "Serialization Tests"
                 , _a0 = SNothing
                 , _rho = SNothing
                 , _tau = SNothing
-                , _activeSlotCoeff = SNothing
                 , _d = SNothing
                 , _extraEntropy = SNothing
                 , _protocolVersion = SNothing
@@ -735,7 +728,6 @@ serializationTests = testGroup "Serialization Tests"
                             , _a0 = SNothing
                             , _rho = SNothing
                             , _tau = SNothing
-                            , _activeSlotCoeff = SNothing
                             , _d = SNothing
                             , _extraEntropy = SNothing
                             , _protocolVersion = SNothing
