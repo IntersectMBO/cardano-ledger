@@ -6,7 +6,8 @@
 --   Functions in this module make specific assumptions about the sets of keys
 --   involved, and thus cannot be used as generic generators.
 module Test.Shelley.Spec.Ledger.Generator.Presets
-  ( keySpace,
+  ( coreNodeKeys,
+    keySpace,
     genEnv,
     genUtxo0,
     genesisDelegs0,
