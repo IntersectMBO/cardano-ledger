@@ -60,8 +60,9 @@ import           Cardano.Binary (Decoder, DecoderError (..), FromCBOR (fromCBOR)
 import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Cardano.Slotting.EpochInfo
-import           Control.Monad (unless)
+import           Control.Monad (join, unless)
 import           Control.Monad.Trans.Reader (ReaderT)
+import           Data.Bits (shiftR, (.&.))
 import qualified Data.ByteString as BS
 import           Data.ByteString.Conversion (toByteString')
 import           Data.Coerce (coerce)
@@ -289,8 +290,12 @@ newtype IPv6 = IPv6 { unIPv6 :: ByteString }
   deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
 mkIPv6 :: HostAddress6 -> IPv6
-mkIPv6 hostAddr = IPv6 . mconcat . fmap toByteString' $ [w1, w2, w3, w4, w5, w6, w7, w8]
-  where (w1, w2, w3, w4, w5, w6, w7, w8) = hostAddress6ToTuple hostAddr
+mkIPv6 hostAddr = IPv6 . BS.pack . join . fmap encodeWord16
+    $ [w1, w2, w3, w4, w5, w6, w7, w8]
+  where
+    (w1, w2, w3, w4, w5, w6, w7, w8) = hostAddress6ToTuple hostAddr
+    encodeWord16 :: Word16 -> [Word8]
+    encodeWord16 x = map fromIntegral [ x .&. 0xFF, (x .&. 0xFF00) `shiftR` 8 ]
 
 instance FromCBOR IPv6 where
   fromCBOR = IPv6 <$> decodeMaxBytes "IPv6" 16
