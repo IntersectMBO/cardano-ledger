@@ -64,7 +64,6 @@ import           Control.Monad (join, unless)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Data.Bits (shiftR, (.&.))
 import qualified Data.ByteString as BS
-import           Data.ByteString.Conversion (toByteString')
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import           Data.Functor.Identity
@@ -274,7 +273,14 @@ newtype IPv4 = IPv4 { unIPv4 :: ByteString }
   deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
 mkIPv4 :: HostAddress -> IPv4
-mkIPv4 hostAddr = IPv4 $ toByteString' hostAddr
+mkIPv4 hostAddr = IPv4 haBS
+  where
+    haBS = BS.pack . map fromIntegral $
+      [ hostAddr .&. 0xFF
+      , (hostAddr .&. 0xFF00) `shiftR` 8
+      , (hostAddr .&. 0xFF0000) `shiftR` 16
+      , (hostAddr .&. 0xFF000000) `shiftR` 24
+      ]
 
 decodeMaxBytes :: String -> Int -> Decoder s BS.ByteString
 decodeMaxBytes name m = do
