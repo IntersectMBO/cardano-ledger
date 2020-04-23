@@ -1,0 +1,27 @@
+\section{Cryptographic Details}
+\label{sec:crypto-details}
+
+\subsection{Hashing}
+The hashing algorithm for payment and stake credentials (Figure~\ref{fig:defs:addresses}),
+is BLAKE2b-224.
+Everywhere else we use BLAKE2b-256.
+In the CDDL specification in Appendix~\ref{sec:cddl},
+$\mathsf{hash28}$ refers to BLAKE2b-224 and
+and $\mathsf{hash32}$ refers to BLAKE2b-256.
+BLAKE2 is specified in RFC 7693 \cite{rfcBLAKE2}.
+
+\subsection{Addresses}
+The \fun{sign} and \fun{verify} functions from Figure~\ref{fig:crypto-defs-shelley}
+use Ed25519. See \cite{rfcEdDSA}.
+
+\subsection{KES}
+The \fun{sign_{ev}} and \fun{verify_{ev}} functions from Figure~\ref{fig:kes-defs-shelley}
+use the iterated sum construction from Section 3.1 of \cite{cryptoeprint:2001:034}.
+We allow up to $2^7$ key evolutions, which is larger than the maximum number
+of evolutions allow by the spec, \MaxKESEvo, which will be set to $90$.
+See Figure~\ref{fig:rules:ocert}.
+
+\subsection{VRF}
+The \fun{verifyVrf} function from Figure~\ref{fig:defs-vrf}
+uses ECVRF-ED25519-SHA512-Elligator2 as described in the draft IETF specification
+\cite{rfcVRFDraft}.
