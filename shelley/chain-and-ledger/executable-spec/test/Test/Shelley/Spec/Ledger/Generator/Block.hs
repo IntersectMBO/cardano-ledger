@@ -87,7 +87,7 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
       (GenDelegs cores) = (_genDelegs . _dstate) dpstate
       nextOs = runShelleyBase $ overlaySchedule
         (EpochNo $ e + 1) (Map.keysSet cores) pp
-      (nextOSlot, gkey) = nextCoreNode os nextOs slot
+      (nextOSlot, gkh) = nextCoreNode os nextOs slot
 
   {- Our slot selection strategy uses the overlay schedule.
    - Above we calculated the next available core node slot
@@ -106,52 +106,73 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
   lookForPraosStart <- genSlotIncrease
   let poolParams = (Map.toList . Map.filter ((> 0) . fst) . unPoolDistr . nesPd . chainNes) chainSt
   poolParams' <- take 1 <$> QC.shuffle poolParams
-  let (nextSlot, poolStake, keys) = case poolParams' of
-        []       -> (nextOSlot, 0, gkeys gkey)
+
+  -- Look for a good future slot to make a block for.
+  -- We will find a slot number, a stake value, and an Either type.
+  --
+  -- If we choose an overlay slot, we return this slot number,
+  -- a stake value of 0 (the value here does not matter since
+  -- the overlay slots are not subject to the VRF checks), and Left ghk,
+  -- where gkh is the hash of the genesis key in this overlay position.
+  -- We cannot lookup these genesis keys until we run TICK to see if
+  -- the genesis key delegation has changed.
+  --
+  -- Otherwise, if we choose a Praos solt, we return the chosen slot number,
+  -- and the corresponding stake pool's stake and Right AllPoolKeys for
+  -- some chose stake pool that has non-zero stake.
+  let (nextSlot, poolStake, ks) = case poolParams' of
+        []       -> (nextOSlot, 0, Left gkh)
         (pkh, (stake, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
-                      Nothing -> (nextOSlot, 0, gkeys gkey)
+                      Nothing -> (nextOSlot, 0, Left gkh)
                       Just ps -> let apks = AllPoolKeys
-                                       { cold = (ksKeyPairsByStakeHash Map.! pkh)
-                                       , vrf  = (ksVRFKeyPairsByHash Map.! vrfkey)
-                                       , hot  = (hot $ gkeys gkey)
+                                       { cold = ksKeyPairsByStakeHash Map.! pkh
+                                       , vrf  = ksVRFKeyPairsByHash Map.! vrfkey
+                                       , hot  = hot $ snd (head ksCoreNodes)
                                                 -- TODO @jc - don't use the genesis hot key
                                        , hk   = pkh
                                        }
-                                 in (ps, stake, apks)
+                                 in (ps, stake, Right apks)
 
   if nextSlot > sNow
     then QC.discard
     else do
 
-    let kp@(KESPeriod kesPeriod_) = runShelleyBase (kesPeriod $ nextSlot)
+    let kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
         cs = chainOCertIssue chainSt
 
         -- ran genDelegs
-        genDelegationKeys = range cores
-
-        n' = currentIssueNo
-             (OCertEnv (dom poolParams) genDelegationKeys)
-             cs
-             ((hashKey . vKey . cold) keys)
-
-        m = getKESPeriodRenewalNo keys kp
-
-        hotKeys = drop (fromIntegral m) (hot keys)
-        keys' = keys { hot = hotKeys }
-        oCert =
-          case n' of
-            Nothing -> error "no issue number available"
-            Just _ ->
-              mkOCert keys' (fromIntegral m) ((fst . head) hotKeys)
-
     let nes  = chainNes chainSt
-        nes' = runShelleyBase $ (applySTS @TICK $ TRC (TickEnv (getGKeys nes), nes, nextSlot))
+        nes' = runShelleyBase $ applySTS @TICK $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
 
     case nes' of
       Left _ -> QC.discard
       Right _nes' -> do
         let NewEpochState _ _ _ es _ _ _ = _nes'
             EpochState acnt _ ls _ pp' _   = es
+            GenDelegs gds = _genDelegs . _dstate . _delegationState . esLState . nesEs $ _nes'
+
+            keys = case ks of
+              -- We chose an overlay slot, and need to lookup the given
+              -- keys from the genesis key hash.
+              Left ghk -> gkeys ghk gds
+
+              -- We chose a Praos slot, and have everything we need.
+              Right ks' -> ks'
+
+            n' = currentIssueNo
+                 (OCertEnv (dom poolParams) (range gds))
+                 cs
+                 ((hashKey . vKey . cold) keys)
+
+            m = getKESPeriodRenewalNo keys kp
+
+            hotKeys = drop (fromIntegral m) (hot keys)
+            keys' = keys { hot = hotKeys }
+            issueNumber = if n' == Nothing
+                            then error "no issue number available"
+                            else fromIntegral m
+            oCert = mkOCert keys' issueNumber ((fst . head) hotKeys)
+
         mkBlock
           <$> pure hashheader
           <*> pure keys'
@@ -168,19 +189,17 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
     (block, slot, hashheader) = case chainLastAppliedBlock chainSt of
       Origin -> error "block generator does not support from Origin"
       At (LastAppliedBlock b s hh) -> (b, s, hh)
-    ledgerSt = (esLState . nesEs . chainNes) chainSt
-    (GenDelegs genesisDelegs) = (_genDelegs . _dstate . _delegationState) ledgerSt
 
     origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) ksCoreNodes of
                          Nothing -> error "couldn't find corresponding core node key"
                          Just k  -> snd k
-    gkeys gkey =
-        case Map.lookup gkey genesisDelegs of
+    gkeys gkey gds =
+        case Map.lookup gkey gds of
           Nothing ->
-            error "genBlock: NoGenesisStakingOVERLAY"
-          Just gKeyHash ->
+            error "genBlock: CorruptGenenisDelegation"
+          Just ckh ->
             -- if GenesisDelegate certs changed a delegation to a new key
-            case Map.lookup gKeyHash ksKeyPairsByStakeHash of
+            case Map.lookup ckh ksKeyPairsByStakeHash of
               Nothing ->
                 -- then we use the original keys (which have not been changed by a genesis delegation)
                 origIssuerKeys gkey
