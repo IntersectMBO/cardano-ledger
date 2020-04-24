@@ -370,7 +370,7 @@ serializationTests = testGroup "Serialization Tests"
     )
   , case makeWitnessVKey testTxb testKey1 of
     w@(WitVKey vk sig) ->
-      checkEncodingCBOR "vkey_witnesses"
+      checkEncodingCBORAnnotated "vkey_witnesses"
       w  -- Transaction _witnessVKeySet element
       ( T (TkListLen 2)
         <> S vk -- vkey
