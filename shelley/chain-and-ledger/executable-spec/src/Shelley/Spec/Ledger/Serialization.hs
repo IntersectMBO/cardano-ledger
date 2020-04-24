@@ -175,7 +175,7 @@ decodeCollectionWithLen lenOrIndef el = do
     Nothing -> loop (0,[]) (not <$> decodeBreakOr) el
   where
   loop (n,acc) condition action = condition >>= \case
-      False -> pure (n,acc)
+      False -> pure (n,reverse acc)
       True -> action >>= \v -> loop (n+1, (v:acc)) condition action
 
 rationalToCBOR :: Rational -> Encoding
