@@ -1158,11 +1158,12 @@ overlaySchedule e gkeys pp = do
         numInactivePerActive = floor (1 / ascValue) - 1
         activitySchedule = cycle (True:replicate numInactivePerActive False)
         unassignedSched = zip activitySchedule genesisSlots
+        genesisCycle = if Set.null gkeys then [] else cycle (Set.toList gkeys)
 
         active =
           Map.fromList $ fmap
             (\(gk,(_,s))->(s, ActiveSlot gk))
-            (zip (cycle (Set.toList gkeys)) (filter fst unassignedSched))
+            (zip genesisCycle (filter fst unassignedSched))
         inactive =
           Map.fromList $ fmap
             (\x -> (snd x, NonActiveSlot))

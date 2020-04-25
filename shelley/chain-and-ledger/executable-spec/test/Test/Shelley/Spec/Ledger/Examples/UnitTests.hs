@@ -482,6 +482,16 @@ testOverlayScheduleZero =
         (emptyPParams {_d = unsafeMkUnitInterval 0})
   in os @?= Map.empty
 
+testNoGenesisOverlay :: Assertion
+testNoGenesisOverlay =
+  let
+    os = runShelleyBase
+      $ overlaySchedule
+        (EpochNo 0)
+        mempty
+        (emptyPParams {_d = unsafeMkUnitInterval 0.5})
+  in os @?= Map.empty
+
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
   checkVRFValue 0 (1 % 2) (mkActiveSlotCoeff $ unsafeMkUnitInterval 1) @?= True
@@ -496,6 +506,8 @@ testsPParams =
   testGroup "Test the protocol parameters."
     [ testCase "Overlay Schedule when d is zero" $
         testOverlayScheduleZero
+    , testCase "generate overlay schedule without genesis nodes" $
+        testNoGenesisOverlay
     , testCase "VRF checks when the activeSlotCoeff is one" $
         testVRFCheckWithActiveSlotCoeffOne
     , testCase "VRF checks when the VRF leader value is one" $
