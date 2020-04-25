@@ -15,28 +15,24 @@ module Shelley.Spec.Ledger.STS.Ledgers
   )
 where
 
-import           Byron.Spec.Ledger.Core ((◁), (⨃))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad (foldM)
 import           Control.State.Transition
 import           Data.Foldable (toList)
-import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq)
-import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes
+import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import           Shelley.Spec.Ledger.Coin (Coin)
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys
-import           Shelley.Spec.Ledger.LedgerState (DState (..), FutureGenDeleg (..),
-                     LedgerState (..), UTxOState (..), emptyLedgerState, _delegationState, _dstate,
-                     _fGenDelegs, _genDelegs, _utxoState)
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
+import           Shelley.Spec.Ledger.Crypto (Crypto, DSIGN)
+import           Shelley.Spec.Ledger.Keys (Signable)
+import           Shelley.Spec.Ledger.LedgerState (LedgerState (..), emptyLedgerState,
+                     _delegationState, _utxoState)
+import           Shelley.Spec.Ledger.PParams (PParams)
+import           Shelley.Spec.Ledger.Slot (SlotNo)
 import           Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
-import           Shelley.Spec.Ledger.Tx
+import           Shelley.Spec.Ledger.Tx (Tx, TxBody)
 
 data LEDGERS crypto
 
@@ -96,28 +92,7 @@ ledgersTransition = do
         (u, dp)
       $ zip [0 ..] $ toList txwits
 
-  let UTxOState utxo deposits fee ppup = u''
-  let ds = _dstate dp''
-  let DState _ _ _ _ fGenDelegs_ (GenDelegs genDelegs_) _ = ds
-
-  let (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs_
-  let curr' = Map.mapKeys (\(FutureGenDeleg s g) -> (s, g)) curr
-  let maxSlotNo = maximum . Set.map fGenDelegSlot . Map.keysSet
-  let latestPerGKey gk =
-        ( (maxSlotNo . Map.filterWithKey (\(FutureGenDeleg _ c) _ -> c == gk)) curr
-        , gk)
-  let genDelegsKeys = Set.map
-                  latestPerGKey
-                  (Set.map fGenDelegGenKeyHash (Map.keysSet curr))
-  let genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr'
-
-  let u''' = UTxOState utxo deposits fee ppup
-  let dp''' = dp'' { _dstate = ds { _fGenDelegs = fGenDelegs'
-                                  , _genDelegs = GenDelegs $ genDelegs_ ⨃ Map.toList genDelegs'
-                                  }
-                   }
-
-  pure $ LedgerState u''' dp'''
+  pure $ LedgerState u'' dp''
 
 instance
   ( Crypto crypto

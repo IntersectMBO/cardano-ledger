@@ -856,6 +856,12 @@ The Chain Tick Transition performs some chain level
 upkeep. The environment consists of a set of genesis keys, and the state is the
 epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
 
+Part of the upkeep is updating the genesis key delegation mapping
+according to the future delegation mapping.
+For each genesis key, we adopt the most recent delegation in $\var{fGenDelegs}$
+that is past the current slot, and any future genesis key delegations past the current
+slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the update.
+
 \begin{figure}
   \emph{Chain Tick Transitions}
   \begin{equation*}
@@ -864,6 +870,52 @@ epoch specific state necessary for the $\mathsf{NEWEPOCH}$ transition.
   \end{equation*}
   \caption{Tick transition-system types}
   \label{fig:ts-types:tick}
+  %
+  \emph{helper function}
+  \begin{align*}
+      & \fun{adoptGenesisDelegs} \in \EpochState \to \Slot \to EpochState
+      \\
+      & \fun{adoptGenesisDelegs}~\var{es}~\var{slot} = \var{es'}
+      \\
+      & ~~~~\where
+      \\
+      & ~~~~~~~~~~
+      (\var{acnt},~\var{ss},(\var{us},(\var{ds},\var{ps})),~\var{prevPp},~\var{pp})
+      \leteq\var{es}
+      \\
+      & ~~~~~~~~~~
+      (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
+      ~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})\leteq\var{ds}
+      \\
+      & ~~~~~~~~~~\var{curr}\leteq
+        \{
+          (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fGenDelegs}
+          ~\mid~
+          \var{s}\leq\var{slot}
+        \}
+      \\
+      & ~~~~~~~~~~\var{fGenDelegs'}\leteq
+          \var{fGenDelegs}\setminus\var{curr}
+      \\
+      & ~~~~~~~~~~\var{genDelegs'}\leteq
+          \left\{
+            \var{gkh}\mapsto\var{vkh}
+            ~\mathrel{\Bigg|}~
+            {
+              \begin{array}{l}
+                (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{curr}\\
+                \var{s}=\max\{s'~\mid~(s',~\var{gkh})\in\dom{\var{curr}}\}
+              \end{array}
+            }
+          \right\}
+      \\
+      & ~~~~~~~~~~\var{ds'}\leteq
+          (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
+          ~\var{fGenDelegs'},~\var{genDelegs}\unionoverrideRight\var{genDelegs'},~\var{i_{rwd}})
+      \\
+      & ~~~~~~~~~~\var{es'}\leteq
+      (\var{acnt},~\var{ss},(\var{us},(\var{ds'},\var{ps})),~\var{prevPp},~\var{pp})
+  \end{align*}
 \end{figure}
 
 The $\mathsf{TICK}$ transition rule is shown in Figure~\ref{fig:rules:tick}.
@@ -896,9 +948,6 @@ Three transitions are done:
       }
       \\~\\
       (\wcard,~\var{b_{prev}},~\wcard,~\var{es},~\wcard,~\wcard,~\wcard)\leteq\var{nes} \\
-      \\
-      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru'},~\var{pd'},\var{osched'})
-      \leteq\var{nes'}
       \\~\\
       {
         {\begin{array}{c}
@@ -908,8 +957,13 @@ Three transitions are done:
         \vdash \var{ru'}\trans{\hyperref[fig:rules:reward-update]{rupd}}{\var{s}} \var{ru''}
       }
       \\~\\
+      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru'},~\var{pd'},\var{osched'})
+      \leteq\var{nes'}
+      \\
+      \var{es''}\leteq\fun{adoptGenesisDelegs}~\var{es'}~\var{s}
+      \\
       \var{nes''}\leteq
-      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es'},~\var{ru''},~\var{pd'},\var{osched'})
+      (\var{e_\ell'},~\var{b_{prev}'},~\var{b_{cur}'},~\var{es''},~\var{ru''},~\var{pd'},\var{osched'})
       \\~\\
     }
     {

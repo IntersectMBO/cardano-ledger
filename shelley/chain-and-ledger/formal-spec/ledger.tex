@@ -121,14 +121,6 @@ then calls the $\mathsf{DELEGS}$ transition.
 
 The transition system $\mathsf{LEDGER}$ in Figure~\ref{fig:rules:ledger} is iterated
 in $\mathsf{LEDGERS}$ in order to process a list of transactions.
-The base case also adopts new application versions at the appropriate times
-and cleans up the future application versions mapping.
-Note that it is better to handle this logic here than in the $\mathsf{AVUP}$ transiton,
-because here it will happen even if the block contains no transactions.
-Similarly, the genesis key delegation mapping is updated according to the future delegation
-mapping. For each genesis key, we adopt the most recent delegation in $\var{fGenDelegs}$
-that is past the current slot, and any future genesis key delegations past the current
-slot is removed.
 
 \begin{figure}[htb]
   \emph{Ledger Sequence transitions}
@@ -145,56 +137,7 @@ slot is removed.
   \begin{equation}
     \label{eq:ledgers-base}
     \inference[Seq-ledger-base]
-    {
-      ((\var{utxo},~\var{deposits},~\var{fees},~\var{us})
-      ,~(\var{ds}, \var{ps}))
-      \leteq\var{ls}
-      \\
-      (\var{pup},~\var{aup},~\var{favs},~\var{avs}) \leteq\var{us}
-      \\
-      (\var{stkeys},~\var{rewards},~\var{delegations}, ~\var{ptrs},
-      ~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
-      \leteq\var{ds}
-      \\~\\
-      {\begin{array}{r@{~\leteq~}l}
-        \var{favs'} & \{\var{s}\mapsto\var{v}\in\var{favs} ~\mid~ s>\var{slot}\}
-        \\
-        \var{avs'}
-        & \var{avs}\unionoverrideRight\fun{newAVs}~\var{avs}~(\var{favs}\setminus\var{favs'})
-      \end{array}}
-      \\~\\
-      {\begin{array}{r@{~\leteq~}l}
-          \var{curr}
-          &
-          \{
-            (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fGenDelegs}
-            ~\mid~
-            \var{s}\leq\var{slot}
-          \}\\
-          \var{fGenDelegs'}
-          &
-          \var{fGenDelegs}\setminus\var{curr}\\
-      \end{array}}\\
-      \var{genDelegs'}\leteq
-      \left\{
-        \var{gkh}\mapsto\var{vkh}
-        ~\mathrel{\Bigg|}~
-        {
-          \begin{array}{l}
-            (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{curr}\\
-            \var{s}=\max\{s'~\mid~(s',~\var{gkh})\in\dom{\var{curr}}\}
-          \end{array}
-        }
-      \right\}
-      \\~\\
-      \var{us'}\leteq(\var{pup},~\var{aup},~\var{favs'},~\var{avs'})
-      \\
-      \var{ds'}\leteq
-      (\var{stkeys},~\var{rewards},~\var{delegations},~\var{ptrs},
-      ~\var{fGenDelegs'},~\var{genDelegs}\unionoverrideRight\var{genDelegs'},~\var{i_{rwd}})
-      \\
-      \var{ls'}\leteq((\var{utxo},~\var{deposits},~\var{fees},~\var{us'}),~(\var{ds'}, \var{ps}))
-    }
+    { }
     {
       \begin{array}{r}
         \var{slot}\\
