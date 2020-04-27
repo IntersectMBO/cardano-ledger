@@ -1,5 +1,6 @@
 module Shelley.Spec.Ledger.API.Wallet
   ( getNonMyopicMemberRewards
+  , getFilteredUTxO
   )
 where
 
@@ -14,10 +15,13 @@ import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)
 import           Shelley.Spec.Ledger.Keys (KeyHash)
-import           Shelley.Spec.Ledger.LedgerState (esNonMyopic, esPp, nesEs)
+import           Shelley.Spec.Ledger.LedgerState (esLState, esNonMyopic, esPp, nesEs, _utxo,
+                     _utxoState)
 import           Shelley.Spec.Ledger.Rewards (NonMyopic (..), StakeShare (..), getTopRankedPools,
                      nonMyopicMemberRew, nonMyopicStake)
-import           Shelley.Spec.Ledger.TxData (Credential (..), PoolParams (..))
+import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), PoolParams (..),
+                     TxOut (..))
+import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 
 -- | Calculate the Non-Myopic Pool Member Rewards for a set of credentials.
@@ -56,3 +60,13 @@ getNonMyopicMemberRewards globals ss creds = Map.fromList $
       where
         s = (toShare . _poolPledge) poolp
         nmps = nonMyopicStake k sigma s pp topPools
+
+-- | Get the UTxO filtered by address.
+getFilteredUTxO
+  :: ShelleyState crypto
+  -> Set (Addr crypto)
+  -> UTxO crypto
+getFilteredUTxO ss addrs =
+    UTxO $ Map.filter (\(TxOut addr _) -> addr `Set.member` addrs) fullUTxO
+  where
+    UTxO fullUTxO = _utxo . _utxoState . esLState . nesEs $ ss
