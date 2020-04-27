@@ -77,31 +77,27 @@ module Shelley.Spec.Ledger.LedgerState
   ) where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (TypeNull), decodeNull,
-                     encodeListLen, encodeNull, enforceSize, peekTokenType)
-import           Cardano.Crypto.DSIGN (abstractSizeSig, abstractSizeVKey)
-import           Cardano.Crypto.Hash (byteCount)
+                     encodeListLen, encodeNull, enforceSize, peekTokenType, serialize)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
-import qualified Data.ByteString as BS (ByteString, length)
+import qualified Data.ByteString.Lazy as BSL (length)
 import           Data.Foldable (toList)
 import           Data.List (foldl')
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Crypto (Crypto, DSIGN, HASH)
+import           Shelley.Spec.Ledger.Crypto (Crypto, DSIGN)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
                      Stake (..), aggregateOuts, baseStake, emptySnapShots, ptrStake, rewardStake)
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHash,
                      KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
                      undiscriminateKeyHash)
-import qualified Shelley.Spec.Ledger.MetaData as MD
 import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), Update (..),
                      emptyPPPUpdates, emptyPParams, _d, _keyDecayRate, _keyDeposit, _keyMinRefund,
                      _minfeeA, _minfeeB, _rho, _tau)
@@ -109,9 +105,8 @@ import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (
                      epochInfoFirst, epochInfoSize, (+*), (-*))
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCert (..), Ix,
-                     MIRCert (..), PoolCert (..), PoolMetaData (..), PoolParams (..), Ptr (..),
-                     RewardAcnt (..), StakePoolRelay (..), TxBody (..), TxId (..), TxIn (..),
-                     TxOut (..), Wdrl (..), getRwdCred, witKeyHash)
+                     PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), TxBody (..),
+                     TxId (..), TxIn (..), TxOut (..), Wdrl (..), getRwdCred, witKeyHash)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins,
                      txouts, txup, verifyWitVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
@@ -124,9 +119,7 @@ import           Shelley.Spec.Ledger.Rewards (ApparentPerformance (..), NonMyopi
 
 import           Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe (..),
-                     UnitInterval, activeSlotVal, dnsSize, intervalValue, text64Size, unIPv4,
-                     unIPv6, unUrl)
-import           Shelley.Spec.Ledger.Scripts (countMSigNodes)
+                     UnitInterval, activeSlotVal, intervalValue)
 
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -585,123 +578,31 @@ validInputs tx u =
 
 -- |Implementation of abstract transaction size
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
-txsize (Tx
-          txbody
-          vKeySigs
-          msigScripts
-          md) =
-  iSize + oSize + cSize + wSize + feeSize + ttlSize + uSize + mdhSize + witnessSize + mdSize
+txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
-    TxBody ins outs cs ws _ _ up mdh = txbody
-    -- vkey signatures
-    signatures = Set.size vKeySigs
-
-    -- multi-signature scripts
-    scriptNodes = Map.foldl' (+) 0 (Map.map countMSigNodes msigScripts)
-
-    -- The abstract size of the witnesses is caclucated as the sum of the sizes
-    -- of the vkey witnesses (vkey + signature size) and the size of the
-    -- scripts. For each script, the abstract size is calculated as the number
-    -- of nodes and leaves in the multi-signature script times the size of a
-    -- `hashObj`.
-    witnessSize =
-      (fromIntegral signatures) * ((toInteger . abstractSizeVKey) (Proxy :: Proxy (DSIGN crypto)) +
-                                    (toInteger . abstractSizeSig) (Proxy :: Proxy (DSIGN crypto))) +
-      hashObj * (fromIntegral scriptNodes) +
-      smallArray + labelSize + mapPrefix + (hashObj * fromIntegral (Map.size msigScripts))
-
-    -- hash
-    hl = toInteger $ byteCount (Proxy :: Proxy (HASH crypto))
-    hashObj = 2 + hl
     uint = 5
-    arrayPrefix = 2
     smallArray = 1
-    mapPrefix = 2
-    labelSize = 1
-    cborTag = 2
-    cborNull = 1
-    address = 2 * hashObj
-    credential = labelSize + hashObj
-    unitInterval = cborTag + smallArray + uint + uint
-    feeSize = labelSize + uint
-    ttlSize = labelSize + uint
-    iSize = labelSize + cborTag + arrayPrefix
-            + (toInteger $ length ins) * (smallArray + uint + hashObj)
-    oSize = labelSize + arrayPrefix
-            + (toInteger $ length outs) * (smallArray + uint + address)
+    hashLen = 32
+    hashObj = 2 + hashLen
+    addrHashLen = 28
+    addrHeader = 1
+    address = 2 + addrHeader + 2 * addrHashLen
 
-    numPoolOwners = toInteger . length . _poolOwners
-    ipSize :: (a -> BS.ByteString) -> StrictMaybe a -> Integer
-    ipSize _ SNothing = cborNull
-    ipSize un (SJust ip) = (toInteger . BS.length . un) ip
-    relays (SingleHostAddr _ ipv4 ipv6) = uint + (ipSize unIPv4 ipv4) + (ipSize unIPv6 ipv6)
-    relays (SingleHostName _ n) = uint + dnsSize n
-    relays (MultiHostName _ n) = uint + dnsSize n
-    poolMD pps = smallArray + (toInteger $
-      case (_poolMD pps) of
-        SNothing -> 0
-        SJust (PoolMetaData u _) -> (text64Size . unUrl) u)
-    pparams pps = cborTag + arrayPrefix + (numPoolOwners pps)*(hashObj) -- pool owners
-                + uint -- cost
-                + unitInterval -- margin
-                + uint -- pledge
-                + hashObj -- operator
-                + hashObj -- vrf keyhash
-                + credential -- reward account
-                + sum (fmap relays (_poolRelays pps)) -- relays
-                + toInteger (poolMD pps)  -- metadata
-    certSize (DCertDeleg (RegKey _)) = smallArray + labelSize + hashObj
-    certSize (DCertDeleg (DeRegKey _)) = smallArray + labelSize + hashObj
-    certSize (DCertDeleg (Delegate _ )) = smallArray + labelSize + 2 * hashObj
-    certSize (DCertPool (RegPool pps)) = smallArray + labelSize + hashObj + pparams pps
-    certSize (DCertPool (RetirePool _ _)) = smallArray + labelSize + uint + hashObj
-    certSize (DCertGenesis _) = smallArray + labelSize + 2 * hashObj
-    certSize (DCertMir (MIRCert m)) = smallArray + labelSize + mapPrefix
-                                    + (toInteger $ length m)*(uint + hashObj)
-    cSize = sum $ fmap certSize cs
-    wSize = labelSize + mapPrefix + (toInteger . length . unWdrl $ ws) * (uint + credential)
+    txbody = _body tx
 
-    protoVersion = (smallArray + uint + uint + uint)
-    params = mapPrefix
-               + labelSize + uint         -- minfee A
-               + labelSize + uint         -- minfee B
-               + labelSize + uint         -- max block body size
-               + labelSize + uint         -- max transaction size
-               + labelSize + uint         -- max block header size
-               + labelSize + uint         -- key deposit
-               + labelSize + unitInterval -- key deposit min refund
-               + labelSize + unitInterval -- key deposit decay rate
-               + labelSize + uint         -- pool deposit
-               + labelSize + unitInterval -- pool deposit min refund
-               + labelSize + unitInterval -- pool deposit decay rate
-               + labelSize + uint         -- maximum epoch
-               + labelSize + uint         -- n_optimal. desired number of stake pools
-               + labelSize + unitInterval -- pool pledge influence
-               + labelSize + unitInterval -- expansion rate
-               + labelSize + unitInterval -- treasury growth rate
-               + labelSize + unitInterval -- active slot coefficient
-               + labelSize + unitInterval -- d. decentralization constant
-               + labelSize + uint         -- extra entropy
-               + labelSize + protoVersion -- protocol version
-    uSize = case up of
-      SNothing -> arrayPrefix
-      SJust (Update (ProposedPPUpdates ppup) _) ->
-        arrayPrefix
-        + mapPrefix + (toInteger $ length ppup) * (hashObj + params)  -- ppup
-        + uint -- epoch
+    numInputs  = toInteger . length .  _inputs $ txbody
+    inputSize  = smallArray + uint + hashObj
 
-    mdhSize = if mdh == SNothing then arrayPrefix else arrayPrefix + hashObj
+    numOutputs = toInteger . length . _outputs $ txbody
+    outputSize = smallArray + uint + address
 
-    datumSize (MD.Map m) = mapPrefix + sum (fmap (\(x, y) -> smallArray + datumSize x + datumSize y) m)
-    datumSize (MD.List d_) = arrayPrefix + sum (fmap datumSize d_)
-    datumSize (MD.I _) = 64
-    datumSize (MD.B _) = 64
-    datumSize (MD.S _) = 64
+    rest  = toInteger . BSL.length . serialize $
+              tx { _body = txbody { _outputs = StrictSeq.empty
+                                  , _inputs  = Set.empty
+                                  , _txfee   = 0
+                                  }
+                 }
 
-    mdSize = case md of
-      SNothing -> arrayPrefix
-      SJust (MD.MetaData md') -> arrayPrefix + mapPrefix + sum (fmap datumSize md')
-                                  + uint * (toInteger $ length md')
 
 -- |Minimum fee calculation
 minfee :: forall crypto . (Crypto crypto) => PParams -> Tx crypto-> Coin
