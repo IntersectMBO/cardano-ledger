@@ -1,0 +1,1250 @@
+\section{UTxO}
+\label{sec:utxo}
+
+
+\subsection{UTxO Transitions}
+\label{sec:utxo-trans}
+
+We have added several functions having to to with transaction and UTxO inputs and
+outputs, which are used in defining the UTxO transition system. These are
+given in Figure \ref{fig:functions:insouts}. These include
+
+\begin{itemize}
+  \item the function $\fun{txinputs_{vf}}$ returns only those transaction inputs
+  that were selected to pay transaction fees (we call these "fee-marked" inputs)
+  \item the predicate function $\fun{feesOK}$ checks whether the transaction is
+  paying the necessary fees, and correctly. That is, it checks that
+  \begin{itemize}
+    \item[(i)] the fee-marked inputs are strictly of the type that are key or
+    multisignature script locked, not Plutus script
+    \item [(ii)] all the fee-marked inputs contain strictly Ada and no other tokens
+    \item [(iii)] the fee-marked inputs are enough to cover the fee amount stated
+    in the transaction
+    \item [(iv)] minimum fee the transaction is obligated to pay (this includes
+    the script-running fee) is less than the fee amount the transaction states
+    it is paying
+  \end{itemize}
+  \item the function $\fun{getOut}$ selects from a transaction output the data that
+  will be stored in the UTxO, i.e. $\UTxOOut$ without the slot number
+  \item the function $\fun{outs}$ now adds the slot number of the block in which transaction is
+  included to the outputs
+  \item the function $\fun{txins}$ that returns UTxO output reference part of both script
+  and non-script transaction inputs.
+\end{itemize}
+
+Note that when submitting a transaction, the wallet is responsible for
+determining the total price of the
+validation of all the Plutus scripts in a transaction
+by running the script itself to see how much resources it takes and doing the
+fee calculation using the cost model in protocol parameters. It is then
+also responsible for adding enough inputs to the transaction to cover the
+fees required.
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{txinputs_{vf}} \in \TxBody \to \powerset{\TxId \times \Ix} \\
+    & \text{tx VK inputs used for fees} \\
+    & \fun{txinputs_{vf}} ~txb~= \\
+    &~~\{ (txid,ix)~\vert~((txid,ix),\var{isfee}) \in
+    \fun{txinputs} ~txb,~
+     \var{isfee}\in\Yes\}
+    \nextdef
+    & \fun{feesOK} \in \N \to \PParams \to \GoguenTx \to \UTxO \to \Bool  \\
+    & \text{check if fee-marked inputs are Ada-only and enough to cover fees} \\
+    & \fun{feesOK} ~n~\var{pp}~tx~utxo~= \\
+    &~~\fun{range}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \subseteq \TxOutND ~ \\
+    &~~\wedge~ \fun{ubalance}~(\fun{txinputs_{vf}}~{txb}) \in \Coin \\
+    &~~      \wedge~ \fun{ubalance}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \geq \txfee{txb} ~ \\
+    &~~      \wedge~ \minfee~n~{pp}~{tx} \leq \txfee{txb} \\
+    &~~      \where \\
+    & ~~~~~~~ \var{txb}~=~\txbody{tx}
+    \nextdef
+    & \fun{getOut} \in \TxOut \to (\Addr \times \Value) \uniondistinct (\Addr \times \Value \times \DataHash)  \\
+    & \text{tx outputs transformed to UTxO outputs} \\
+    & \fun{getOut} ~{txout}~= \begin{cases}
+         \var{txout}  & \text{if~} \var{txout} \in \TxOutND \\
+              (\fun{getAddr}~\var{txout}, \fun{getValue}~\var{txout},
+              \fun{getDataHash}~\var{txout}) & \text{otherwise}
+            \end{cases}
+    \nextdef
+    & \fun{outs} \in \Slot \to \TxBody \to \UTxO \\
+    & \text{tx outputs as UTxO} \\
+    & \fun{outs} ~ \var{slot}~\var{txb} =
+        \left\{
+          (\fun{txid} ~ \var{txb}, \var{ix}) \mapsto (\fun{getOut}~\var{txout},\var{slot}) ~
+          \middle|~
+          \var{ix} \mapsto \var{txout} \in \txouts{txb}
+        \right\} \\
+    \nextdef
+    & \fun{txins} \in \TxBody \to \powerset{\TxId \times \Ix} \\
+    & \text{transaction inputs} \\
+    & \fun{txins} ~\var{txb} = \{(txid,ix) \mid ((txid,ix),\wcard)\in\fun{txinputs} ~txb\} \\
+  \end{align*}
+  \caption{Functions on Tx Inputs and Outputs}
+  \label{fig:functions:insouts}
+\end{figure}
+
+
+Figure~\ref{fig:functions:utxo} defines functions needed for the UTxO transition system.
+The changes due to Plutus integration are as follows:
+
+\begin{itemize}
+
+  \item $\fun{getCoin}$ adds up all the Ada in a given output and returns it as a
+  $\Coin$ value
+
+  \item $\fun{utxoAda}$ returns the set of all the outputs in a UTxO with only Ada
+  tokens (the other tokens are discarded). This is used in the stake distribution
+  calculation at the epoch boundary
+
+  \item $\fun{txscrfee}$ calculates the fee a transaction must pay for script
+  execution based on current resource use pricing. Note that this value,
+  like the non-script portion of the transaction fee, is calculated in $\Coin$,
+  as fees can only be paid in Ada.
+
+  \item For Goguen transactions, we have also changed the minimim fee calculation, $\fun{minfee}$,
+  to include the script fees the transaction is obligated to pay to run its
+  scripts.
+
+  \item
+    The $\fun{ubalance}$ function calculates the (aggregated by currency ID and
+    Token) sum total of all the value in a given UTxO.
+
+  \item The $\fun{consumed}$ calculation for the preservation of value remains the
+  same. It is still the sum of the reward address value consumed, the value
+   UTxO entries consumed, the value forged by a transaction,
+   and the value consumed from the deposit pot due
+   to the transaction collecting deposit refunds.
+
+  \item The $\fun{produced}$ calculation contains the fee a transaction pays
+  to the fee pot (this consists of the sum of two values, a transaction fee and a
+  fee for processing all the scripts inside it), the outputs it adds to the UTxO,
+  and the deposits it makes
+  to the deposit pot (these are the same values as the ledger spec).
+  The script execution costs are included in the transaction fee.
+  This calculation now takes the current slot number as an argument.
+\end{itemize}
+
+\textbf{Value Operations and Partial Order.}
+Note that
+the $\fun{consumed}$ and $\fun{produced}$ values are compared as $\Value$.
+The type $\Value$ has a partial order defined on it in (see~\cite{plutus_eutxo}).
+The idea of this partial order, as well as operations like addition and subtraction
+of terms of the $\Value$ type, is that a term $v \in \Value$ can be treated
+as a total map that maps to the trivial element $\epsilon \in \Token \to \Quantity$
+almost everywhere except for a several currency IDs that appear in $\dom~v$.
+
+This way, when adding two terms of type value, $\{ cid1 \mapsto tkns1\}$ and
+$\{ cid2 \mapsto tkns2\}$, the result is
+\[ \{ cid1 \mapsto (tkns1 + \epsilon), cid2 \mapsto (\epsilon + tkns2)\} \]
+
+which simplifies to
+
+\[ \{ cid1 \mapsto tkns1, cid2 \mapsto tkns2\} \]
+
+This definition of addition is also defined in Section~\ref{sec:notation-shelley}.
+Similarly, if we compare these two tokens, we compare them as follows
+(element-wise, with $\epsilon$ as the value associated to any currency ID
+not present in on of the values),
+
+\[ (\{ cid1 \mapsto tkns1\}~\leq~\{ cid2 \mapsto tkns2\}) \Leftrightarrow \\
+   (tkns1 \leq \epsilon~\wedge~ \epsilon \leq tkns2) \]
+
+\begin{figure}[htb]
+  \emph{Helper Functions}
+  \begin{align*}
+    & \fun{getCoin} \in \UTxOOut \to \Coin \\
+    & \fun{getCoin}~{\var{out}} ~=~\sum_{\mathsf{adaID} \mapsto tkns \in \fun{getValue}~out}
+       (\sum_{q \in \range~{tkns}} \fun{co}~q) \\
+    & \text{sum total of amount of Ada in an output}
+    \nextdef
+    & \fun{utxoAda} \in \UTxO \to \powerset{(\Addr \times \Coin)} \\
+    & \fun{utxoAda}~{\var{utxo}} ~=~\{~(\fun{getAddr}~\var{out},~\fun{getCoin}~{out})
+    ~\vert~ \var{out} \in \range~\var{utxo} ~\} \\
+    & \text{returns the outputs in the UTxO with only the Ada coins} \\
+  \end{align*}
+  %
+  \emph{Main Calculations}
+  \begin{align*}
+    & \fun{txscrfee} \in \N \to \Prices \to \ExUnits \to \Coin \\
+    & \fun{txscrfee}~n~ (\var{pr_{init}, pr_{mem}, pr_{steps}})~ (\var{mem, steps})
+    = \var{pr_{init}}*n + \var{pr_{mem}}*\var{mem} + \var{pr_{steps}}*\var{steps} \\
+    & \text{calculates the script fee a transaction must pay} \\
+    \nextdef
+    &\fun{minfee} \in \N \to \PParams \to \GoguenTx \to \Coin \\
+    & \text{minimum fee}\\
+    &\fun{minfee}  ~n~\var{pp}~\var{tx} = \\
+    &~~(\fun{a}~\var{pp}) \cdot \fun{txSize}~\var{tx} + (\fun{b}~\var{pp}) +
+    \fun{txscrfee}~n~(\fun{prices}~{pp})~(\fun{txexunits}~(\fun{txbody}~{tx}))
+    \nextdef
+    & \fun{ubalance} \in \UTxO \to \Value \\
+    & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{(q,s)}\in~\var{utxo}}
+    \fun{getValue}~\var{q} \\
+    & \text{UTxO balance} \\
+    \nextdef
+    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \TxBody \to \Value \\
+    & \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \\
+    & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} + \\
+    &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~\\
+        &~~+~ \keyRefunds{pp}{stkCreds}{txb}) +
+        ~\fun{forge}~\var{txb} \\
+    & \text{value consumed} \\
+    \nextdef
+    & \fun{produced} \in \Slot \to \PParams \to \StakePools \to \TxBody \to \Value \\
+    & \fun{produced}~\var{slot}~\var{pp}~\var{stpools}~\var{txb} = \\
+    &~~\ubalance{(\outs{slot}~{txb})}  + \fun{coinToValue}(\txfee{txb} \\
+    &~~+ \deposits{pp}{stpools}~{(\txcerts{txb})})\\
+    & \text{value produced} \\
+  \end{align*}
+  \caption{Functions used in UTxO rules}
+  \label{fig:functions:utxo}
+\end{figure}
+
+\clearpage
+
+\textbf{Putting Together Plutus Scripts and Their Inputs.}
+In Figure \ref{fig:functions:script1} we give the helper functions needed to
+retrieve all the data relevant to validation of Plutus scripts.
+This includes,
+
+\begin{itemize}
+  \item $\fun{indexof}$ finds the index of a given certificate, value, input, or
+  withdrawal in the list, finite map, or set of things of the corresponding type.
+  This function assumes there is some ordering on each of these structures.
+  This function is abstract because it assumes there is some ordering rather
+  than giving it explicitly. The specific ordering of a set or a finite map
+  could be implementation-dependent. A list ordering should be unambiguous.
+  \item $\fun{indexedScripts}$ creates a finite map wherein all the scripts
+  of a transaction (that it carries as a set) are indexed by their hashes,
+  calculated by this function
+  \item $\fun{indexedDats}$ is a similar function that indexes all the datum objects
+  carried by the transaction with their hashes
+  \item $\fun{getmdl}$ selects, given a script and protocol parameters,
+  the cost model that is associated with the language of that
+  script in the protocol parameters
+  \item $\fun{findRdmr}$ gets the redeemer carried by a Goguen transaction
+   which corresponds to the given current item. Recall that items that may require
+   Plutus scripts to be run include certificates, withdrawals, forges,
+   and outputs. To find the redeemer corresponding to that item, we search
+   the indexed redeemer structure for the redeemer with the right key.
+   The key we look for is the
+   pair of the type of item it is for (indicated by the tag), and the index of
+   said item in the list/set/map of these kinds of items in the transaction.
+\end{itemize}
+
+
+\begin{figure}[htb]
+  %
+  \emph{Abstract functions}
+  \begin{align*}
+    &\fun{indexof} \in \DCert \to \seqof{\DCert} \to  \to \Ix\\
+    &\fun{indexof} \in \Wdrl \to \Wdrl \to \Ix\\
+    &\fun{indexof} \in \TxIn \to \powerset{\TxIn} \to \Ix\\
+    &\fun{indexof} \in \Value \to \Value \to \Ix\\
+    & \text{get the index of an item in the an ordered representation} \\
+    \nextdef
+  \end{align*}
+  %
+  \emph{Helper functions}
+  \begin{align*}
+    &\fun{indexedScripts} \in \GoguenTx \to (\ScriptHash \mapsto \Script) \\
+    & \text{make a finite map of hash-indexed scripts} \\
+    &\fun{indexedScripts}~{tx} ~=~ \{ h \mapsto s ~\vert~ \fun{hashScript}~{s}~=~h,
+     s\in~\fun{txscripts}~(\fun{txwits}~{tx})\}
+    \nextdef
+    &\fun{indexedDats} \in \GoguenTx \to (\DataHash \mapsto \Data)\\
+    & \text{make a finite map of hash-indexed datum objects} \\
+    &\fun{indexedDats}~{tx} ~=~ \{ h \mapsto d ~\vert~ \fun{hashData}~{d}~=~h,
+     d\in~\fun{txdats}~(\fun{txwits}~{tx})\}
+    \nextdef
+    &\fun{getmdl} \in \Script \to \PParams \to \CostMod \\
+    & \text{make a finite map of hash-indexed scripts} \\
+    &\fun{getmdl}~{s}~{pp} = \fun{head}~ (\fun{toList}~ (\range ((\fun{language}~{s})\restrictdom(\fun{costmdls}~{pp}))))
+    &\nextdef
+    &\fun{findRdmr} \in \GoguenTx \to \CurItem \to \powerset{\Data}\\
+    & \text{get empty set or redeemer corresponding to index} \\
+    & \fun{findRdmr}~{tx}~\var{it} ~=~ \{~ r ~\vert~ \\
+    &~~(\mathsf{certTag}, \fun{indexof}~\var{it}~(\fun{txcerts}~{txb})) \mapsto ~r \in \fun{txrdmrs}~{txw} \\
+    &~~\vee~ (\mathsf{wdrlTag}, \fun{indexof}~\var{it}~(\fun{txwdrls}~{txb}))
+      \mapsto ~r \in \fun{txrdmrs}~{txw} \\
+    &~~\vee~(\mathsf{forgeTag}, \fun{indexof}~\var{it}~(\fun{forge}~{txb}))  \mapsto ~r
+      \in \fun{txrdmrs}~{txw} \\
+    &~~\vee~(\mathsf{inputTag}, \fun{indexof}~\var{it}~(\fun{txinputs}~{txb})) \mapsto ~r
+      \in \fun{txrdmrs}~{txw} \} \\
+      & ~~\where \\
+      & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
+      & ~~~~~~~ \var{txw}~=~\fun{txwits}~{tx}
+  \end{align*}
+  \caption{Combining Script Validators and their Inputs}
+  \label{fig:functions:script1}
+\end{figure}
+
+\textbf{Matching Scripts and Inputs.}
+In Figures \ref{fig:functions:script2} and \ref{fig:functions:script3},
+we give the four functions that gather all data inside a transaction
+and in the UTxO that is needed for script validation.
+
+\begin{itemize}
+\item $\fun{allCertScrts}$ returns the set of all the validators for the
+key deregistration certificates, together
+with the data needed for validation
+\item $\fun{allWDRLSScrts}$ returns the set of all the validators locking
+the script-address reward addresses together
+with the data needed for validation
+\item $\fun{forgedScrts}$ returns the set of all the validators for
+forging new tokens together
+with the data needed for validation
+\item $\fun{allInsScrts}$ returns the set of all the validators locking
+the script-address UTxO's together
+with the data needed for validation
+\end{itemize}
+
+
+\begin{note}
+\textbf{What scripts get redeemers?}
+Here we assume it is ok for every kind of Plutus script to
+have a redeemer. In fact, the transaction is obligated to provide a redeemer for
+every Plutus script. There is the possibility, in the future, to optimize supplying redeemers
+by allowing transactions to omit unit-value redeemers, filling the $\Data$-type
+unit in by default. Whether this will be done is contingent on real-world
+observations of the use of redeemers.
+\end{note}
+
+Note that there are no "checks" done inside these functions. If there are
+missing validators or inputs, or incorrect hashes, wrong type of script,
+this is caught during the application of the UTXOW
+rule (before these functions are ever applied).
+There are several pieces of data from different sources involved in building these
+sets:
+
+\begin{itemize}
+\item the hash of the validator script, which is either the address (withdrawal
+address or an output address in the UTxO),
+the certificate credential, or the currency ID of forged tokens
+
+\item the corresponding
+full validator, which is looked up (by hash value) in the finite map
+constructed by $\fun{indexedScripts}$
+
+\item the datum objects, which are also looked up by hash in the map
+constructed by $\fun{indexedDats}$.
+The hashes used to look up the datum objects are found in the outputs of the UTxO,
+indexed by the $(txid,ix)$ in the transaction output spending the UTxO entry
+
+\item the redeemers, which are in the indexed redeemer structure carried by the transaction.
+These are looked up by current item using the $\fun{findRdmr}$ function.
+
+\item the validation data, built using the UTxO, the transaction itself,
+and the current item being validated
+\end{itemize}
+
+Recall that $\fun{valContext}$ constructs the validation context (kept abstract
+in this spec).
+
+The function $\fun{mkPLCLst}$ returns a list made of the union of the sets of
+pairs (of a script and the input list) which were constructed by the
+functions specific to the script uses ($\fun{allCertScrts}$, $\fun{allWDRLSScrts}$,
+$\fun{forgedScrts}$, $\fun{allInsScrts}$). Note that like the functions building
+the script-inputs sets, $\fun{mkPLCLst}$ does not include the execution units or cost model
+ parameters in its return type. This data is supplied to the Plutus interpreter
+ directly during the application of the validation rule SVAL.
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{allCertScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus \times \seqof{\Data})} \\
+    & \text{check that all certificate witnessing scripts in a tx validate} \\
+    & \fun{allCertScrts}~{utxo}~{tx}~=~ \\
+    & ~~\{ (\var{script_v}, r;
+    \fun{valContext}~\var{utxo}~\var{tx}~\var{cert}; \epsilon) ~\vert \\
+    & ~~r \in \fun{findRdmr}~{tx}~\var{cert}, \\
+    & ~~\var{cert} \in (\DCertDeRegKey\cap\fun{txcerts}~\txbody{tx}), \\
+    &~~\fun{regCred}~\var{cert}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
+    & ~~\var{script_v} \in \ScriptPlutus
+     \}
+    %
+    \nextdef
+    & \fun{allWDRLSScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data})} \\
+    & \text{check that all reward withdrawal locking scripts in a tx validate} \\
+    & \fun{allWDRLSScrts}~{utxo}~{tx}~=~ \\
+    & ~~\{ (\var{script_v}, r; \fun{valContext}~\var{utxo}~\var{tx}~
+      (a\mapsto c); \epsilon) ~\vert \\
+    &~~ r\in \fun{findRdmr}~{tx}~\var{(a\mapsto c)}, \\
+    & ~~a \mapsto c \in\fun{txwdrls}~(\txbody{tx}), \\
+    & ~~\fun{validatorHash}~\var{a}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
+    & ~~ \var{script_v} \in \ScriptPlutus \}
+    \nextdef
+    %
+    & \fun{forgedScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data})} \\
+    & \text{check that all forging scripts in a tx validate} \\
+    & \fun{forgedScrts}~{utxo}~{tx}~=~\\
+    & ~~\{ (\var{script_v}, r;
+    \fun{valContext}~\var{utxo}~\var{tx}~\var{cid}; \epsilon) ~\vert \\
+    & ~~r \in \fun{findRdmr}~{tx}~(\var{cid}\mapsto ~ \var{tkns}), \\
+    & ~~\var{cid}\mapsto ~ \var{tkns} \in \fun{forge}~(\txbody{tx}), \\
+    &~~\var{cid}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}
+     \}
+    %
+  \end{align*}
+  \caption{Scripts and their Arguments}
+  \label{fig:functions:script2}
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{allInsScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data})} \\
+    & \text{check that all UTxO entry locking scripts in a tx validate} \\
+    & \fun{allInsScrts}~{utxo}~{tx}~=~ \{ (\var{script_v}; (\var{d};\var{r}; \\
+    & ~~ \fun{valContext}~\var{utxo}~\var{tx}~
+      (txid,ix,\var{hash_r}))) ~\vert \\
+    & ~~(txid,ix) \in \fun{txinputs}~(\txbody{tx}), \\
+    & ~~\var{r} \in \fun{findRdmr}~{tx}~\var{(txid,ix)}, \\
+    & ~~\var{(txid,ix)} \mapsto ((a,v),h_d) \in \var{utxo}, \\
+    & ~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx}, \\
+    & ~~(\fun{validatorHash}~{a})\mapsto \var{script_v}\in \fun{indexedScripts}~{tx} \}
+    \nextdef
+    & \fun{mkPLCLst} \in \GoguenTx \to \UTxO \to \seqof{(\ScriptPlutus \times \seqof{\Data})} \\
+    & \text{a list of all Plutus validators and corresponding input data} \\
+    & \fun{mkPLCLst} ~\var{tx}~ \var{utxo} ~=~
+    \fun{toList}~(\fun{allCertScrts}~{utxo}~{tx} \cup \fun{allWDRLSScrts}~{utxo}~{tx} \\
+    & ~~ \cup \fun{allInsScrts}~{utxo}~{tx} ~~ \cup \fun{forgedScrts}~{utxo}~{tx}) \\
+  \end{align*}
+  \caption{Scripts and their Arguments}
+  \label{fig:functions:script3}
+\end{figure}
+
+\textbf{Two Phase Script Validation.}
+Two phase Plutus script validation is necessary to ensure users pay for the
+computational resources script validation uses.
+Native script execution costs are expected to be much smaller than Plutus
+scripts, and can be assesed and limited by the ledger rules directly.
+Hence these scripts do not require two-phase validation. They are already
+in use in the Shelley spec with a signle validation phase.
+
+The first phase two-phase validation approach
+performs every aspect of transaction validation except running the scripts.
+The second phase is running the scripts. We use four transition systems
+for this validation approach, each with different responsibilities. We
+give the details of each below, but to summarize, when a transction is processed,
+it is done by rules in the transition systems in the following order
+(each transition calls on the one below it in its rules):
+
+\begin{itemize}
+  \item[(UTXOW)] : Verifies all the necessary witnessing info is present, including
+  VK witnesses, scripts, and all the script input data. It also performs
+  key witness checks and runs multisig scripts. It then applies state changes
+  computed by the UTXO transition
+  \item[(UTXO)] : Verifies a transaction satisfies all the accounting requirements
+  (including the general accounting property, correct fee payment, etc.),
+  applies state changes computed by the UTXOS transition
+  \item[(UTXOS)] : Performs the appropriate UTxO state changes, deciding based on the
+  value of the $\IsValidating$ tag, which it checks using the SVAL transition
+  \item[(SVAL)] : Runs the scripts, verifying that the $\IsValidating$ tag
+  is applied correctly
+\end{itemize}
+
+
+Recall that, unlike native
+multisignature scripts, Plutus scripts are opaque to the ledger. Recall also
+that a transaction states a $\ExUnits$ "budget" to cover running all Plutus
+scripts it is carrying. There is no way to check that this budget is enough,
+except running the scripts. To avoid over-spending, we run them sequentially,
+stopping whenever one does not validate, and charging the transaction the
+fees. From the point of view of the ledger, there is no difference
+between a script runnig out of $\ExUnits$ during validation, or not validating.
+If a transaction contains an invalid script, the only change to the ledger
+as a result of applying this transaction is the fees. Other parts of
+the transaction cannot be processed correctly in this case.
+
+Two phase validation requires a new transition system
+(see Figure \ref{fig:ts-types:utxos}) to sequentially run
+scripts and keep track of the execution units being spent as part of its state
+($\var{remExU}$). The signal here is a sequence of pairs of a validator
+script and the corresponding input data.
+
+Note that there is one state variable in the SVAL transition system. The reason
+for this is that in the second, script-running validation phase, we separate
+the UTxO state update from sequentially running scripts. This transition
+system is strictly for running the scripts, and a transition of this type
+will be used by another rule to perform the correct UTxO update.
+
+Running scripts sequentially
+to verify that they all validate in the alloted $\ExUnits$ budget only requires
+the amount of remaining $\ExUnits$ to be included in the state, and nothing else.
+In the environment, we need the protocol parameters and the
+transaction being validated. All other data needed
+to run the scripts comes from the signal.
+
+\begin{figure}[htb]
+  \emph{Validation environment}
+  \begin{equation*}
+    \ValEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pp} & \PParams & \text{protocol parameters}\\
+        \var{tx} & \GoguenTx & \text{transaction being processed} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Validation state}
+  \begin{equation*}
+    \ValState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{remExU} & \ExUnits & \text{exunits remaining to spend on validation} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Script transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{sval}{\_} \var{\_}
+    \subseteq \powerset (\ValEnv \times \ValState \times \seqof{(\ScriptPlutus\times\seqof{\Data})} \times \ValState)
+  \end{equation*}
+  %
+  \caption{UTxO script validation types}
+  \label{fig:ts-types:utxos}
+\end{figure}
+
+The rules for the second-phase script validation SVAL are given in
+Figure~\ref{fig:rules:utxo-scrval}. Again, there is no UTxO state update
+done in this rule. Its function is essentially verifying that the
+validation tag ($\fun{txvaltag}$) is applied correctly by the creater of
+the block by running all the scripts.
+
+Note that following the Shelley ledger spec approach, every function
+we define and use in the preconditions or calculations in the rules is
+necessarily total.
+This way, all errors (validation failures) we encounter always come from
+rule applications, i.e. a precondition of a rule is not met.
+We mention this here because the SVAL rule looks as if it could be
+simply a function. However, we want the incorrect application of the
+validation tag to be an error, so it must be an error that comes form
+an unmet precondition of a rule.
+
+There are three transition rules.
+The first rule, $\mathsf{Scripts\mbox{-}Val}$, applies when
+
+\begin{itemize}
+\item there
+are no scripts left to validate in the signal list (i.e. this is the base case of
+induction when all the scripts have validated)
+\item the validation tag is applied correctly (it is $\Yes$)
+\end{itemize}
+
+The $\mathsf{Scripts\mbox{-}Stop}$ rule applies when
+
+\begin{itemize}
+  \item The currenct script-input pair being validated does not validate
+  (because there are not enough $\ExUnits$ left or any other reasons)
+  \item The validation tag is correct ($\Nope$ in this case)
+\end{itemize}
+
+These first two rules require no state change.
+The $\mathsf{Scripts\mbox{-}Ind}$ rule applies when
+
+\begin{itemize}
+  \item the current script being validated has validated
+  \item there is a non-negative fee which remains to pay for validating
+  the rest of the scripts in the list
+  \item transition rules apply for rest of the list (without the currenct script)
+\end{itemize}
+
+The only state change in this rule is of the variable $\var{remExU}$.
+It is decreased by subtracting the cost of the execution of the
+current script from its current value.
+This is the variable we use to keep track of the remaining funds for
+script execution. If the transaction is overpaying ($\fun{txscrfee}~{tx}$
+is too big), the whole fee is still taken.
+
+It is always in the interest of the slot leader to have the new block validate,
+containing only valid transactions. This motivates the
+slot leader to:
+
+\begin{itemize}
+  \item correctly apply of the $\IsValidating$ tag,
+  \item include transactions that validate in every way
+  \textit{except possibly 2nd step script validation failure}
+  \item exclude any transactions that are invalid
+in some way \textit{other than 2nd step script validation failure}
+\end{itemize}
+
+We want to
+throw away all the blocks which have transactions with these tags
+applied incorrectly.
+One of the reasons for having the correct validation tag added by the slot leader
+to a transaction is that re-applying blocks would not require repeat
+execution of scripts in the transactions inside a block. In fact, when replaying
+blocks, all the witnessing info can be thrown away.
+We also rely on correct use of tags in other rules (at this time, only in
+the rules in Figure \ref{fig:rules:ledger}).
+
+\begin{note}
+\textbf{Non-integral calculations inside the Plutus interpreter:} if there
+will be some in the future (from the Actus contracts implemented using
+the Marlowe interpreter, for e.g.) they should
+be done the same way they are done in the Shelley ledger. This is a matter of
+deterministic script validation outcomes. Inconsistent rounding could
+result in different validation outcomes running the same script on the same
+arguments. For how this is done in the ledger calculations, see
+~\cite{non_int}.
+\end{note}
+
+
+\begin{figure}[htb]
+  \begin{equation}
+    \inference[Scripts-Val]
+    {
+    \fun{txvaltag}~\var{tx} \in \Yes  &
+    \var{remExU}~\geq~0
+    }
+    {
+    \begin{array}{l}
+      \var{pp}\\
+      \var{tx}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{remExU}\\
+      \end{array}
+      \right)
+      \trans{sval}{\epsilon}
+      \left(
+      \begin{array}{r}
+        \var{remExU}\\
+      \end{array}
+      \right) \\
+    }
+  \end{equation}
+  \begin{equation}
+    \inference[Scripts-Stop]
+    { \\~\\
+    (\var{isVal},\var{remExU'})~:=~ \llbracket \fun{fst}~{s} \rrbracket_
+    {\fun{getmdl}~(\fun{fst}~{s})~\var{pp},\var{remExU}} (\fun{snd}~{s})
+    \\
+    ~
+    \\
+    \fun{txvaltag}~\var{tx} \in \Nope &
+    (\var{remExU'}~<~0 ~ \lor ~ \var{isVal}\in \Nope)
+    }
+    {
+    \begin{array}{l}
+      \var{pp}\\
+      \var{tx}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{remExU}\\
+      \end{array}
+      \right)
+      \trans{sval}{\Gamma;s}
+      \left(
+      \begin{array}{r}
+        \var{remExU}\\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \begin{equation}
+    \inference[Scripts-Ind]
+    { \\~\\
+    (\var{isVal},\var{remExU''})~:=~ \llbracket \fun{fst}~{s} \rrbracket
+    _{\fun{getmdl}~(\fun{fst}~{s})~\var{pp},\var{remExU'}} (\fun{snd}~{s})
+    \\
+    ~
+    \\
+    \var{remExU''}~\geq~0
+    \\
+    ~
+    \\
+    {
+    \begin{array}{l}
+      \var{pp}\\
+      \var{tx}\\
+    \end{array}
+    }
+      \vdash
+      \left(
+      {
+      \begin{array}{r}
+        \var{remExU}\\
+      \end{array}
+      }
+      \right)
+      \trans{sval}{\Gamma}
+      \left(
+      {
+      \begin{array}{r}
+        \var{remExU'}\\
+      \end{array}
+      }
+      \right)
+    }
+    {
+    \begin{array}{l}
+      \var{pp}\\
+      \var{tx}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{remExU}\\
+      \end{array}
+      \right)
+      \trans{sval}{\Gamma;s}
+      \left(
+      \begin{array}{r}
+        \varUpdate{remExU''}\\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{Script validation rules}
+  \label{fig:rules:utxo-scrval}
+\end{figure}
+
+
+\textbf{Updating the UTxO State.}
+
+We have defined a separate transition system, UTXOS, to represent the two distinct
+UTxO state changes, one resulting from all scripts in a transaction validating,
+the other - from at least one failing to validate. Its transition types
+are all the same as for the for the UTXO transition, see Figure
+\ref{fig:ts-types:utxo-scripts}.
+
+\begin{figure}[htb]
+  \emph{State transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{utxos}{\_} \var{\_}
+    \subseteq \powerset (\UTxOEnv \times \UTxOState \times \GoguenTx \times \UTxOState)
+  \end{equation*}
+  %
+  \caption{UTxO state update types}
+  \label{fig:ts-types:utxo-scripts}
+\end{figure}
+
+There are two rules corresponding to the two possible state changes of the
+UTxO state in the UTXOS transition system, see Figure~\ref{fig:rules:utxo-state-upd}.
+
+In both cases, the SVAL transition is called upon to verify that the $\IsValidating$
+tag has been applied correctly. The function $\fun{mkPLCLst}$ is used to build
+the signal list $\var{sLst}$ for the SVAL transition.
+
+The first rule
+applies when the validation tag is $\Yes$.
+In this case, the states of the UTxO, fee
+  and deposit pots, and updates are updated exactly as in the current Shelley
+  ledger spec.
+
+  The second rule
+  applies when the validation tag is $\Nope$.
+  In this case, the UTxO state changes as follows:
+
+  \begin{itemize}
+    \item All the
+    UTxO entries corresponding to the transaction inputs selected for covering
+    script fees are removed
+
+    \item The sum total of the value of the marked UTxO entries
+    is added to the fee pot
+  \end{itemize}
+
+
+\begin{figure}[htb]
+  \begin{equation}
+    \inference[Scripts-Yes]
+    {
+    \var{txb}\leteq\txbody{tx} &
+    \fun{txvaltag}~\var{tx} \in \Yes
+    \\
+    ~
+    \\
+    \var{sLst} := \fun{mkPLCLst}~\var{tx}~\var{utxo}
+    \\~\\
+    {
+      \left(
+        \begin{array}{r}
+          \var{pp} \\
+          \var{tx} \\
+        \end{array}
+      \right)
+    }
+      \vdash
+        \var{\fun{txexunits}~{tx}}
+      \trans{sval}{sLst}\var{remExU}
+      \\~\\
+    {
+      \left(
+        \begin{array}{r}
+          \var{slot} \\
+          \var{pp} \\
+          \var{genDelegs} \\
+        \end{array}
+      \right)
+    }
+    \vdash \var{ups} \trans{\hyperref[fig:rules:update]{up}}{\fun{txup}~\var{tx}} \var{ups'}
+    \\~\\
+    \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
+    \\
+    \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{txb}
+    \\
+    \var{depositChange} \leteq
+      (\deposits{pp}~{stpools}~{\txcerts{txb}}) - (\var{refunded} + \var{decayed})
+    }
+    {
+    \begin{array}{l}
+      \var{slot}\\
+      \var{pp}\\
+      \var{stkCreds}\\
+      \var{stpools}\\
+      \var{genDelegs}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{ups} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{slot}~{txb}}}  \\
+        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{fees} + \txfee{txb} + \var{decayed}} \\
+        \varUpdate{\var{ups'}} \\
+      \end{array}
+      \right) \\
+    }
+  \end{equation}
+  \begin{equation}
+    \inference[Scripts-No]
+    {
+    \var{txb}\leteq\txbody{tx} &
+    \fun{txvaltag}~\var{tx} \in \Nope
+    \\
+    ~
+    \\
+    \var{sLst} := \fun{mkPLCLst}~\var{tx}~\var{utxo}
+    \\~\\
+    {
+      \left(
+        \begin{array}{r}
+          \var{pp} \\
+          \var{tx} \\
+        \end{array}
+      \right)
+    }
+      \vdash
+        \var{\fun{txexunits}~{tx}}
+      \trans{sval}{sLst}\var{remExU}
+    }
+    {
+    \begin{array}{l}
+      \var{slot}\\
+      \var{pp}\\
+      \var{stkCreds}\\
+      \var{stpools}\\
+      \var{genDelegs}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{ups} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{\fun{txinputs_{vf}}~{txb} \subtractdom \var{utxo}}}  \\
+        \var{deposits} \\
+        \varUpdate{\var{fees} + \fun{ubalance}~(\fun{txinputs_{vf}}~{txb}\restrictdom \var{utxo})} \\
+        \var{ups} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{State update rules}
+  \label{fig:rules:utxo-state-upd}
+\end{figure}
+
+In Figure \ref{fig:rules:utxo-shelley}, we present the $\type{UTxO-inductive}$
+transition rule for the UTXO transition type. Note that the
+signal for this transition is now specifically of type $\GoguenTx$, it does not
+work with Shelley transactions (see explanation about transforming one type into
+the other below). This rule
+It has the following preconditions (the relevant ones remain
+from the original Shelley spec):
+
+\begin{itemize}
+  \item The transaction is being processed within its validity interval
+
+  \item The transaction has at least one input
+
+  \item All inputs in a transaction correspond to UTxO entries
+
+  \item The general accounting property holds
+
+  \item The transaction is paying fees correctly
+
+  \item The transaction is not forging any Ada
+
+  \item All outputs of the transaction contain only non-negative quantities
+
+  \item The transaction size does not exceed maximum
+
+  \item The execution units budget a transaction gives does not exceed the max
+  allowed units
+
+  \item The UTXOS state transition is valid
+\end{itemize}
+
+The resulting state transition is defined entirely by the application of the
+UTXOS rule.
+
+\begin{figure}[htb]
+  \begin{equation}\label{eq:utxo-inductive-shelley}
+    \inference[UTxO-inductive]
+    {
+      \var{txb}\leteq\txbody{tx} &
+      \var{txw}\leteq\fun{txwits}~{tx} \\
+      \fun{txfst}~txb \leq \var{slot}
+      & \fun{txttl}~txb \geq \var{slot}
+      \\
+      \txins{txb} \neq \emptyset
+      & \txins{txb} \subseteq \dom \var{utxo}
+      \\
+      \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \produced{slot}~{pp}~{stpools}~{txb}
+      \\~\\
+      \fun{feesOK}~(\vert~ \fun{txscripts}~{tx} \cap \ScriptPlutus ~\vert) ~pp~tx~utxo \\
+      \\
+      ~
+      \\
+      \mathsf{adaID}~\notin \dom~{\fun{forge}~tx} \\
+      \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout\}  ~\geq ~ \epsilon \\~
+      \\
+      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
+      \fun{txexunits}~{txb} \leq \fun{maxTxExUnits}~{pp}
+      \\
+      ~
+      \\
+      {
+        \begin{array}{c}
+          \var{slot}\\
+          \var{pp}\\
+          \var{stkCreds}\\
+          \var{stpools}\\
+          \var{genDelegs}\\
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{r}
+            \var{utxo} \\
+            \var{deposits} \\
+            \var{fees} \\
+            \var{ups}\\
+          \end{array}
+        \right)
+      }
+      \trans{utxos}{\var{tx}}
+      {
+        \left(
+          \begin{array}{r}
+            \var{utxo'} \\
+            \var{deposits'} \\
+            \var{fees'} \\
+            \var{ups'}\\
+          \end{array}
+        \right)
+      }
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pp}\\
+        \var{stkCreds}\\
+        \var{stpools}\\
+        \var{genDelegs}\\
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{ups}\\
+      \end{array}
+      \right)
+      \trans{utxo}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{utxo'}}  \\
+        \varUpdate{\var{deposits'}} \\
+        \varUpdate{\var{fees'}} \\
+        \varUpdate{\var{ups'}}\\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:rules:utxo-shelley}
+\end{figure}
+
+\clearpage
+
+\textbf{Witnessing.}
+
+Plutus script validation is not part of witnessing because of the introduction
+of two-phase validation, as this type of validation may result in two
+different ways of updating the UTxO (fee payment only, or a full update).
+Native script validation
+still is, and we need to pick only the native scripts to validate as
+part of witnessing. We have changed the definition of the function
+$\fun{scriptsNeeded}$, see Figure~\ref{fig:functions-witnesses}.
+
+The result type of this function is now a finite map that associates items
+that require script validation with the hash of the script that must be run.
+This includes both MSig and Plutus scripts, and scripts used for every
+validation purpose (forging, outputs, certificates, withdrawals), see Figure
+\ref{fig:functions-witnesses}.
+
+
+\begin{figure}[htb]
+  \begin{align*}
+      & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to
+        (\CurItem \mapsto \ScriptHash)\\
+      & \hspace{-1cm}\text{items that need script validation and corresponding script hashes} \\
+      &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
+      & ~~\{ i \mapsto \fun{validatorHash}~(\fun{getAddr}~{txout}) \mid i \mapsto \var{txout} \in \var{utxo},\\
+      & ~~~~~i\in\fun{txinsScript}~{(\fun{txinputs}~\var{txb})}~{utxo}\} \\
+      \cup & ~~\{ (a\mapsto c) \mapsto \fun{stakeCred_{r}}~\var{a} \mid a \mapsto c \in \fun{txwdrls}~\var{txb}),
+         a\in \AddrRWDScr \} \\
+        \cup & ~~\{ cert \mapsto a \mid a \in\ScriptHash \cap \fun{certWitsNeeded}~{txb}\} \\
+        \cup & ~~\{ (cid \mapsto \var{tkns}) \mapsto \var{cid} \mid cid \mapsto \var{tkns}~\in~\fun{forge}~{txb} \} \\
+      & \where \\
+      & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
+      & ~~~~~~~ \var{txw}~=~\fun{txwits}~{tx}
+  \end{align*}
+  \caption{Functions used in witness rule}
+  \label{fig:functions-witnesses}
+\end{figure}
+
+Recall here that in the Goguen era, we must be able to validate both Shelley type
+and Goguen type transactions. To do this, we have two separate rules in for the
+UTXOW transition type. The first rule applies when we have $tx \in \GoguenTx$, see
+Figure~\ref{fig:rules:utxow-goguen}. In addition to the Shelley UTXOW preconditions
+that still apply, we have made the following changes and additions to the
+preconditions:
+
+\begin{itemize}
+
+    \item All the multisig scripts the transaction is carrying validate
+
+    \item The transaction has exactly the scripts required for witnessing and no
+    additional ones (this includes all languages of scripts, for all purposes)
+
+    \item The transaction is carrying a redeemer for every item that needs
+    validation by a Plutus script
+
+    \item The only certificates that are allowed to have scripts as witnesses
+    are delegation deregistration certificates
+
+    \item The transaction has a datum for every Plutus script output it is spending
+
+    \item The transaction has a datum for every Plutus script output that is
+    marked with the $\Yes$ tag for $\HasDV$
+
+    \item
+    The hash of the subset of protocol parameters in the transaction body is equal to
+    the hash of the same subset of protocol parameters currently on the ledger
+
+    \item The hash of the indexed redeemer structure attached to the transaction is
+    the same as the $\fun{rdmrsHash}~{tx}$ (the hash value contained in the signed body of
+    the transaction)
+
+\end{itemize}
+
+If these conditions are all satisfied, the resulting UTxO state change is fully determined
+by the UTXO transition (the application of which is also part of the conditions).
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive-goguen}
+    \inference[UTxO-witG]
+    {
+      \var{txb}\leteq\txbody{tx} &
+      \var{txw}\leteq\fun{txwits}~{tx} &
+      \var{tx}~\in~\GoguenTx \\
+      (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
+      \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
+      \dom (\txwitsVKey{txw}) \}\\~\\
+      \forall \var{validator} \in \fun{txscripts}~{txw} \cap \ScriptMSig,\\
+      \fun{runMSigScript}~\var{validator}~\var{tx}\\~\\
+      \range~(\fun{scriptsNeeded}~\var{utxo}~\var{tx}) ~=~ \dom (\fun{indexedScripts}~{tx}) \\
+      \forall c\mapsto h \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, ~h\mapsto s~\in~\fun{indexedScripts}~{tx},\\
+       s \in \ScriptPlutus~\Leftrightarrow ~\fun{findRdmr}~{tx}~{c}\neq \emptyset
+      \\~\\
+      \forall \var{cert}~\in~\fun{txcerts}~{txb}, \fun{regCred}~{cert}\in \ScriptHash \Leftrightarrow
+      \var{cert} \in~ \DCertDeRegKey \\~\\
+      \forall~\var{txin}\in\fun{txinputs}~{txb},
+      \var{txin} \mapsto \var{(\wcard,\wcard,h_d)} \in \var{utxo},
+      \var{h_d} ~\in \fun{dom}(\fun{indexedDats}~{txw})
+      \\
+      ~
+      \\
+      \forall~ix \mapsto (a,v,d_h,\Yes) ~\in~\fun{txouts}~{txb}, \\
+       \var{d_h}\in \fun{dom}~ (\fun{indexedDats}~{txw})
+      \\
+      ~
+      \\
+      \fun{ppHash}~{txb}~=~\fun{hashLanguagePP}~\var{pp}~(\fun{cmlangs}~(\fun{txscripts}~\var{txw})) \\~\\
+      \fun{txrdmrs}~\var{txw} ~=~ \emptyset \Leftrightarrow \fun{rdmrsHash}~{txb}~=~\Nothing \\
+      \fun{txrdmrs}~\var{txw} ~\neq~ \emptyset \Leftrightarrow
+      \fun{hash}~(\fun{txrdmrs}~\var{txw})~ =~  \fun{rdmrsHash}~{txb} \\
+      \\~\\
+      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
+      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}
+      \\~\\
+      genSig \leteq
+      \left\{
+        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
+      \right\}
+      \cap
+      \var{witsKeyHashes}
+      \\
+      \left\{
+        c\in\txcerts{txb}~\cap\DCertMir
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
+      \fun{d}~\var{pp} > 0
+      \\~\\
+      \var{mdh}\leteq\fun{txMDhash}~\var{txb}
+      &
+      \var{md}\leteq\fun{txMD}~\var{tx}
+      \\
+      (\var{mdh}=\Nothing \land \var{md}=\Nothing)
+      \lor
+      (\var{mdh}=\fun{hashMD}~\var{md})
+      \\~\\
+      {
+        \begin{array}{r}
+          \var{slot}\\
+          \var{pp}\\
+          \var{stkCreds}\\
+          \var{stpools}\\
+          \var{genDelegs}\\
+        \end{array}
+      }
+      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{tx}
+      \var{utxoSt'}\\
+    }
+    {
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+        \var{stkCreds}\\
+        \var{stpools}\\
+        \var{genDelegs}\\
+      \end{array}
+      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
+    }
+  \end{equation}
+  \caption{UTxO with witnesses inference rules for GoguenTx}
+  \label{fig:rules:utxow-goguen}
+\end{figure}
+
+The second rule applies when we have $tx \in \ShelleyTx$, see
+Figure~\ref{fig:rules:utxow-goguen}. In this case, we explicitly use the Shelley
+era functions and types, exactly as defined in the Shelley spec, to perform all the
+witnessing checks in the Shelley UTXOW rule. We must adhere to the Shelley
+witnessing rules on the transaction as is because the VK or multisig
+script signatures will not validate if we transform the transaction in any way.
+
+Having performed the witnessing checks on the original transaction, we use
+the $\fun{toGoguenTx}$ function (defined in Figure
+~\ref{fig:functions:to-shelley}) to strip all of the witnessing data off the
+transaction, and convert it to a Goguen type transaction. We keep the metadata and
+put default trivial values in any fields that are added to the transaction type
+of the Goguen era. We use this transformed version as the signal for the
+UTXO transition (which again determines the state change of this UTXOW rule).
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive-shelley}
+    \inference[UTxO-witS]
+    {
+      \var{txb}\leteq\txbody{tx} &
+      \var{txw}\leteq\fun{txwits}~{tx} &
+       \var{tx}~\in~\ShelleyTx \\~\\
+      (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
+      \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
+      \dom (\txwitsVKey{txw}) \}\\~\\
+      \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{txw},\\
+      \fun{hashScript}~\var{validator} = \var{hs} \wedge
+      \fun{validateScript}~\var{validator}~\var{tx}\\~\\
+      \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{txw})
+      \\~\\
+      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
+      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq witsKeyHashes
+      \\~\\
+      genSig \leteq
+      \left\{
+        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
+      \right\}
+      \cap
+      \var{witsKeyHashes}
+      \\
+      \left\{
+        c\in\txcerts{txb}~\cap\DCertMir
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
+      \fun{d}~\var{pp} > 0
+      \\~\\
+      \var{mdh}\leteq\fun{txMDhash}~\var{txb}
+      &
+      \var{md}\leteq\fun{txMD}~\var{tx}
+      \\
+      (\var{mdh}=\Nothing \land \var{md}=\Nothing)
+      \lor
+      (\var{mdh}=\fun{hashMD}~\var{md})
+      \\~\\
+      \var{txg}~\leteq~\fun{toGoguenTx}~{tx} \\~\\
+      {
+        \begin{array}{r}
+          \var{slot}\\
+          \var{pp}\\
+          \var{stkCreds}\\
+          \var{stpools}\\
+          \var{genDelegs}\\
+        \end{array}
+      }
+      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{txg}
+      \var{utxoSt'}\\
+    }
+    {
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+        \var{stkCreds}\\
+        \var{stpools}\\
+        \var{genDelegs}\\
+      \end{array}
+      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
+    }
+  \end{equation}
+  \caption{UTxO with witnesses inference rules for ShelleyTx}
+  \label{fig:rules:utxow-shelley}
+\end{figure}
+
+\clearpage

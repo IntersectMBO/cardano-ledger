@@ -1,0 +1,39 @@
+\section{Notation}
+\label{sec:notation-shelley}
+
+
+\begin{description}
+  \item[$\mathbb{N}$] The (canonical) symbol for the natural numbers
+  \item[$\mathbb{H}$] The type of byte strings
+  \item[Aggregated Addition] Given a type
+  $\type{FM}~\in~ \powerset(\type{X} \times \type{Y})$,
+    where addition is defined on terms of type $\type{Y}$, and a term $\var{fm} \in \type{FM}$,
+    we overload the $\sum$ notation as follows:
+    \[\sum_{(x, y)\in\var{fm}} (x,y) :=
+    \{ x\mapsto \sum_{(x,y)\in\var{fm}} y \} \]
+
+    In the case $\type{Y}~=~\type{A}\mapsto\type{B}$ is itself a finite map,
+    and addition is defined on terms of type $\type{B}$,
+    we interpret
+    \[\sum_{(x, (a\mapsto b))\in\var{fm}} (x,a\mapsto b) :=
+    \{ x \mapsto (a\mapsto \sum_{(x,a\mapsto b)\in\var{fm}} b) \} \]
+
+    We define $\sum$ on a set of the form
+    \[\type{FM} \subseteq \{ x \mapsto y \vert x \in \mathsf{X}, y \in \mathsf{Y} \} \]
+
+    in a similar way,
+    \[\sum_{(x\mapsto y)\in\var{fm}} x \mapsto y :=
+    \{ x\mapsto \sum_{x\mapsto y\in\var{fm}} y \} \]
+
+    We use the $+$ to denote this overloaded addition operation also.
+
+  \item[Other Operations] Similar to the definition of aggregated addition,
+  other scalar operations are defined on finite maps. This includes multiplication,
+  floor, etc.
+
+  \item[$\leq$] This symbol is overloaded to represent the conjunction of the
+  pairwise $\leq$ comparison of entries with at same index in a list or a vector.
+  Every other comparison symbol is overloaded in a similar way.
+
+\end{description}
+\clearpage

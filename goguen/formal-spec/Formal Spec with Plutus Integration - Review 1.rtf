@@ -1,0 +1,88 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf500
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red251\green2\blue7;\red251\green2\blue7;}
+{\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;\cssrgb\c100000\c14913\c0;}
+\margl1440\margr1440\vieww10800\viewh18480\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs24 \cf0 A Formal Specification of the Cardano Ledger with Plutus Integration\
+Review 1\
+\
+\
+- Perhaps it is better to have page numbers as Arabic numerals rather than Roman numerals?\
+\cf2 Yes!\cf0 \
+\
+- p4 The type \'93resource primitives\'94 is not defined?\
+\cf2 \'93Resource primitives\'94 will be specified when there is a final decision of the exact type of CostMod - \
+The Plutus team is working on it!\cf0 \
+\
+- p4 \'93set of arguments passed to the interpreter for for script\'85\'94 - extra \'93for\'94\
+\cf2 Yup!\cf0 \
+\
+- p7 \'93Yes for when it is for when all scripts will validate\'94 -> \'93Yes for when all scripts will validate\'94\
+\cf2 Yup\cf0 \
+\
+- p8 I\'92m not sure how marking all inputs as for-fees helps with privacy?\
+\cf2 Does this help?:\
+  An example of \
+  how marking only certain inputs as for-fees may be more telling than \
+  a user intended is as follows. Suppose there is a single Plutus script carried by a \
+  transaction. The inputs marked as for-fees, as well as the data in the UTxO outputs they are \
+  spending, can then be associated with the script.\
+\
+Should I add this into the spec?\cf0 \
+\
+- p8 \'93processed full\'94 -> \'93processed in full\'94\
+\cf2 Yup\cf0 \
+\
+- p8 I am not clear about what the description of HasDV means. The best I can paraphrase is \'93HasDV: This is a tag attached to a transaction\'92s output, used to indicate whether the transaction output contains the full datum object corresponding to the data hash.\'94 Is this correct?\
+\cf2 Does this make more sense?:\
+This is a tag attached to a transaction output if it is locked by a Plutus \
+  script. That is, the output contains an address, a value, and necessarily a \
+  hash of a datum. \
+  This tag indicates whether the transaction carrying the output\
+  contains, in its set of datum objects, the full datum corresponding \
+  to the hash of the datum in the output. \
+\
+  Note that it is up to the user \
+  to decide whether the transaction should have the full datum. The purpose of \
+  including it is strictly to communicate it to the user who will be spending \
+  the output in the future, and will require the full datum to validate \
+  the Plutus script locking the output. However, this tag must be applied \
+  correctly, otherwise the transaction will not validate. \cf0 \
+\
+- p8 \'93destinction\'94 -> \'93distinction\'94\
+\pard\pardeftab720\partightenfactor0
+\cf3 Yup\cf0 \
+\
+- According to p14 \'93the fee-marked inputs are strictly of the type that are key or multisignature script locked\'94. Does this contradict on p8 \'93Only VK-spending inputs can be used to pay fees\'94? Or does \'93VK-spending inputs\'94 also contain multisignature scripts?\
+\pard\pardeftab720\partightenfactor0
+\cf2 MSig script inputs can pay fees as they are not involved in 2-phase script validation. This was \
+A mistake, thank you!\
+\cf0 \
+- What is the reason that only key/multisig script locked inputs can be marked for fees? Is this to prevent complications with using outputs from scripts?\
+\cf2 Key and MSig input spending is validated in phase 1, so by the time phase 2 must be performed, we already know that spending these is OK (valid). So, these inputs can then be used to pay for validating the Plutus scripts. The intuition is that Plutus scripts will cost more that MSig or VK validation, so we want to charge people for running them even if they don\'92t validate. This is one way to do it. Does this make sense? Should I elaborate on this, and at what point in the document do you think is best to discuss it?\cf0 \
+\
+- p8 \'93and for all purposes - forgin, \'85\'94 -> \'93and for all purposes - forgining tokens, \'85\'94\
+\pard\pardeftab720\partightenfactor0
+\cf3 Yup\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+(Fig 2)\
+- p9 The UTxOOut type is different from TxOut in the ledger spec (SL-D5, v.0.2, Oct 08, 2019) which is defined as Addr x Coin. Are these two compatible or does this spec\'92s UTxOOut replace the TxOut type in the v.0.2 ledger spec? Also, are the Coin type and the Value type (used in this spec) compatible, or is the Coin type replaced by Value?\
+\pard\pardeftab720\partightenfactor0
+\cf3 The Coin type is still used everywhere that is Ada-only - like reward accounts, treasury, etc.\
+Coin type can be converted into a Value type. In the UTxO and transaction outputs, everything \
+Is strictly Value (even Ada is expressed as Value). And yes, the UTxOOut replaces the TxOut \
+that used to be in the UTxO, because transaction outputs and UTxO outputs don\'92t have exactly \
+the same information any more (e.g. no HasDV tag in the UTxO). \cf0 \
+\
+- p9 Why does UTxOOut include the slot number of when the output is created, but TxOut does not?\
+\cf3 TxOut does not need a slot number because the slot number is known from the block the transaction \
+Is in. Adding that slot number in the UTxO allows us to keep that information.\cf0 \
+\
+- p9 According to its description, CurItem is a hash of a forging script, transaction input, etc. However in Fig 2, its type is ScriptHash U TxIn U Wdrl U DCert. The ScriptHash type includes hash of any script, right? If so, how does one know/check that it is specifically a hash of a forging script?\
+\cf3 We don\'92t know what script it is a hash of. The way CurItem is used (to look up redeemers) \
+Is limited to only ever it being a hash of a forging script (see Figure 10). \
+}

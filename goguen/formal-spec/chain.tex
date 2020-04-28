@@ -1,0 +1,199 @@
+\section{Blockchain layer}
+\label{sec:chain}
+
+\newcommand{\Proof}{\type{Proof}}
+\newcommand{\Seedl}{\mathsf{Seed}_\ell}
+\newcommand{\Seede}{\mathsf{Seed}_\eta}
+\newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
+\newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
+
+\newcommand{\T}{\type{T}}
+\newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
+\newcommand{\verifyVrf}[4]{\fun{verifyVrf}_{#1} ~ #2 ~ #3 ~#4}
+
+\newcommand{\HashHeader}{\type{HashHeader}}
+\newcommand{\HashBBody}{\type{HashBBody}}
+\newcommand{\bhHash}[1]{\fun{bhHash}~ \var{#1}}
+\newcommand{\bHeaderSize}[1]{\fun{bHeaderSize}~ \var{#1}}
+\newcommand{\bSize}[1]{\fun{bSize}~ \var{#1}}
+\newcommand{\bBodySize}[1]{\fun{bBodySize}~ \var{#1}}
+\newcommand{\OCert}{\type{OCert}}
+\newcommand{\BHeader}{\type{BHeader}}
+\newcommand{\BHBody}{\type{BHBody}}
+
+\newcommand{\bheader}[1]{\fun{bheader}~\var{#1}}
+\newcommand{\hsig}[1]{\fun{hsig}~\var{#1}}
+\newcommand{\bprev}[1]{\fun{bprev}~\var{#1}}
+\newcommand{\bhash}[1]{\fun{bhash}~\var{#1}}
+\newcommand{\bvkcold}[1]{\fun{bvkcold}~\var{#1}}
+\newcommand{\bseedl}[1]{\fun{bseed}_{\ell}~\var{#1}}
+\newcommand{\bprfn}[1]{\fun{bprf}_{n}~\var{#1}}
+\newcommand{\bseedn}[1]{\fun{bseed}_{n}~\var{#1}}
+\newcommand{\bprfl}[1]{\fun{bprf}_{\ell}~\var{#1}}
+\newcommand{\bocert}[1]{\fun{bocert}~\var{#1}}
+\newcommand{\bnonce}[1]{\fun{bnonce}~\var{#1}}
+\newcommand{\bleader}[1]{\fun{bleader}~\var{#1}}
+\newcommand{\hBbsize}[1]{\fun{hBbsize}~\var{#1}}
+\newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
+\newcommand{\overlaySchedule}[4]{\fun{overlaySchedule}~\var{#1}~\var{#2}~{#3}~\var{#4}}
+
+\newcommand{\PrtclState}{\type{PrtclState}}
+\newcommand{\PrtclEnv}{\type{PrtclEnv}}
+\newcommand{\OverlayEnv}{\type{OverlayEnv}}
+\newcommand{\VRFState}{\type{VRFState}}
+\newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
+\newcommand{\NewEpochState}{\type{NewEpochState}}
+\newcommand{\PoolDistr}{\type{PoolDistr}}
+\newcommand{\BBodyEnv}{\type{BBodyEnv}}
+\newcommand{\BBodyState}{\type{BBodyState}}
+\newcommand{\RUpdEnv}{\type{RUpdEnv}}
+\newcommand{\ChainEnv}{\type{ChainEnv}}
+\newcommand{\ChainState}{\type{ChainState}}
+\newcommand{\ChainSig}{\type{ChainSig}}
+
+
+
+\subsection{Block Body Transition}
+\label{sec:block-body-trans}
+
+
+In Figure~\ref{fig:rules:bbody}, we have added the check that the sum total of
+script fees all transactions in a block pay do not exceed the maximum total fees per
+block (stored as a protocol parameter).
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:bbody}
+    \inference[Block-Body]
+    {
+      \var{txs} \leteq \bbody{block}
+      &
+      \var{bhb} \leteq \bhbody\bheader{block}
+      &
+      \var{hk} \leteq \hashKey\bvkcold{bhb}
+      \\~\\
+      \bBodySize{txs} = \hBbsize{bhb}
+      &
+      \fun{hash}~{txs} = \bbodyhash{bhb}
+      \\~\\
+      \sum_{tx\in txs} \fun{txexunits}~(\txbody~{tx}) \leq \fun{maxBlockExUnits}~\var{pp}
+      \\~\\
+      {
+        {\begin{array}{c}
+                 \bslot{bhb} \\
+                 \var{pp} \\
+                 \var{reserves}
+        \end{array}}
+        \vdash
+             \var{ls} \\
+        \trans{\hyperref[fig:rules:ledger-sequence]{ledgers}}{\var{txs}}
+             \var{ls}' \\
+      }
+    }
+    {
+      {\begin{array}{c}
+               \var{oslots} \\
+               \var{pp} \\
+               \var{reserves}
+      \end{array}}
+      \vdash
+      {\left(\begin{array}{c}
+            \var{ls} \\
+            \var{b} \\
+      \end{array}\right)}
+      \trans{bbody}{\var{block}}
+      {\left(\begin{array}{c}
+            \varUpdate{\var{ls}'} \\
+            \varUpdate{\fun{incrBlocks}~{(\bslot{bhb}\in\var{oslots})}~{hk}~{b}} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{BBody rules}
+  \label{fig:rules:bbody}
+\end{figure}
+
+We have also defined a function that transforms the Shelley ledger state into
+the Goguen one, see Figure~\ref{fig:functions:to-shelley}. Note that here we
+refer to Shelley-era protocol parameter type as $\ShelleyPParams$, and the Goguen
+type as $\PParams$.
+
+\begin{note}
+  \textbf{What creation slots should Shelley era UTxOs have?}
+  It is not yet clear whether we will follow the approach of making the creation
+  slot of every Shelley-era UTxO entry the first slot of Goguen. It is possible
+  to look through all the blocks and add the correct one, but not clear if
+  necessary. The other option is to allow both types out outputs, some without
+  the creation slot.
+\end{note}
+
+
+\begin{note}
+  \textbf{How to make this function readable?}
+  What's better notation to use to make the $\fun{toGoguen}$ function readable?
+\end{note}
+%%
+%% Figure - Shelley to Goguen Transition
+%%
+\begin{figure}[htb]
+  \emph{Types and Constants}
+  %
+  \begin{align*}
+      & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \\
+      & \text{the type of new parameters to add for Goguen}
+      \nextdef
+      & \mathsf{ivPP} ~\in~ \NewParams \\
+      & \text{the initial values for new Goguen parameters}
+  \end{align*}
+  \emph{Shelley to Goguen Transition Functions}
+  %
+  \begin{align*}
+      & \fun{mkUTxO} ~\in~ \Slot \to \ShelleyUTxO  \to \UTxO  \\
+      & \fun{mkUTxO}~s~\var{utxo} ~=~ \{~ \var{txin} \mapsto ((a,c),s) ~\vert~
+      \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\} \\
+      & \text{make UTxO Goguen}
+      \nextdef
+      & \fun{toGoguen} \in ~ \ShelleyChainState \to \ChainState \\
+      & \fun{toGoguen}~((v_1, v_2, v_3, (v_4, v_5, (\var{utxo}, v_6), \var{pp}),
+      v_7, v_8, v_8, v_{10}), v_{11}, v_{12}, v_{13}, v_{14}, v_{15}, v_{16}, s_{last}) \\
+      & ~~ = ((v_1, v_2, v_3, (v_4, v_5, (\fun{mkUTxO}~s_{last}~\var{utxo}, v_6),
+       \var{pp}\cup \mathsf{ivPP}),
+      v_7, v_8, v_8, v_{10}), \\
+      & v_{11}, v_{12}, v_{13}, v_{14}, v_{15}, v_{16}, s_{last}) \\
+      & \text{transform Shelley chain state to Goguen state}
+  \end{align*}
+  \caption{Shelley to Goguen State Transtition}
+  \label{fig:functions:to-shelley}
+\end{figure}
+
+Block creaters should be able to apply the transformation in Figure
+\ref{fig:functions:to-shelley} to make any Shelley-era transactions
+processable in the Goguen era. Here we give the type of the
+transaction transformation function, but use accessor functions to
+represent the changes that must be made to the original $tx \in \ShelleyTx$
+to transform it into the corresponding Goguen transaction $tx' \in \GoguenTx$.
+
+\begin{figure}[htb]
+  \emph{Functions}
+  \begin{align*}
+      & \fun{mkIns} ~\in~ \powerset{\ShelleyTxIn} \to \powerset{\TxIn}  \\
+      & \fun{mkIns}~\var{ins} ~=~ \{~ (\var{txin}, \Yes) ~\vert~
+      \var{txin} \in \var{ins}~\} \\
+      & \text{transform Shelley inputs into Goguen inputs}
+      \nextdef
+      & \fun{toGoguenTx} ~\in~  \ShelleyTx \to \GoguenTx \\
+      & \text{transform a Shelley transaction into a Goguen transaction as follows:}
+      \nextdef
+      & ~~\fun{txinputs}~{txb'} ~=~ \fun{mkIns}~(\fun{txins}~{txb}) \\
+      & ~~\fun{forge}~{txb'} ~= ~\epsilon \\
+      & ~~\fun{txexunits}~{txb'} ~= ~(0,0) \\
+      & ~~\fun{txfst}~{txb'} ~= ~0 \\
+      & ~~\fun{ppHash}~{txb'} ~= ~\Nothing \\
+      & ~~\fun{ppHash}~{txb'} ~= ~\Nothing \\~\\
+      & ~~\fun{txwits}~{tx'} ~= ~(\epsilon,\emptyset,\emptyset,\epsilon) \\
+      & ~~\fun{txvaltag}~{tx'} ~= ~\Yes \\
+      &~~      \where \\
+      & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
+      & ~~~~~~~ \var{txb'}~=~\txbody{tx'}
+  \end{align*}
+  \caption{Shelley to Goguen Transaction Interpretation}
+  \label{fig:functions:to-shelley}
+\end{figure}
