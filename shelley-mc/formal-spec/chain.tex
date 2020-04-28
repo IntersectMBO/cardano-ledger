@@ -1,0 +1,78 @@
+\section{Blockchain layer}
+\label{sec:chain}
+
+\newcommand{\Proof}{\type{Proof}}
+\newcommand{\Seedl}{\mathsf{Seed}_\ell}
+\newcommand{\Seede}{\mathsf{Seed}_\eta}
+\newcommand{\activeSlotCoeff}[1]{\fun{activeSlotCoeff}~ \var{#1}}
+\newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
+
+\newcommand{\T}{\type{T}}
+\newcommand{\vrf}[3]{\fun{vrf}_{#1} ~ #2 ~ #3}
+\newcommand{\verifyVrf}[4]{\fun{verifyVrf}_{#1} ~ #2 ~ #3 ~#4}
+
+\newcommand{\HashHeader}{\type{HashHeader}}
+\newcommand{\HashBBody}{\type{HashBBody}}
+\newcommand{\bhHash}[1]{\fun{bhHash}~ \var{#1}}
+\newcommand{\bHeaderSize}[1]{\fun{bHeaderSize}~ \var{#1}}
+\newcommand{\bSize}[1]{\fun{bSize}~ \var{#1}}
+\newcommand{\bBodySize}[1]{\fun{bBodySize}~ \var{#1}}
+\newcommand{\OCert}{\type{OCert}}
+\newcommand{\BHeader}{\type{BHeader}}
+\newcommand{\BHBody}{\type{BHBody}}
+
+\newcommand{\bheader}[1]{\fun{bheader}~\var{#1}}
+\newcommand{\hsig}[1]{\fun{hsig}~\var{#1}}
+\newcommand{\bprev}[1]{\fun{bprev}~\var{#1}}
+\newcommand{\bhash}[1]{\fun{bhash}~\var{#1}}
+\newcommand{\bvkcold}[1]{\fun{bvkcold}~\var{#1}}
+\newcommand{\bseedl}[1]{\fun{bseed}_{\ell}~\var{#1}}
+\newcommand{\bprfn}[1]{\fun{bprf}_{n}~\var{#1}}
+\newcommand{\bseedn}[1]{\fun{bseed}_{n}~\var{#1}}
+\newcommand{\bprfl}[1]{\fun{bprf}_{\ell}~\var{#1}}
+\newcommand{\bocert}[1]{\fun{bocert}~\var{#1}}
+\newcommand{\bnonce}[1]{\fun{bnonce}~\var{#1}}
+\newcommand{\bleader}[1]{\fun{bleader}~\var{#1}}
+\newcommand{\hBbsize}[1]{\fun{hBbsize}~\var{#1}}
+\newcommand{\bbodyhash}[1]{\fun{bbodyhash}~\var{#1}}
+\newcommand{\overlaySchedule}[4]{\fun{overlaySchedule}~\var{#1}~\var{#2}~{#3}~\var{#4}}
+
+\newcommand{\PrtclState}{\type{PrtclState}}
+\newcommand{\PrtclEnv}{\type{PrtclEnv}}
+\newcommand{\OverlayEnv}{\type{OverlayEnv}}
+\newcommand{\VRFState}{\type{VRFState}}
+\newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
+\newcommand{\NewEpochState}{\type{NewEpochState}}
+\newcommand{\PoolDistr}{\type{PoolDistr}}
+\newcommand{\BBodyEnv}{\type{BBodyEnv}}
+\newcommand{\BBodyState}{\type{BBodyState}}
+\newcommand{\RUpdEnv}{\type{RUpdEnv}}
+\newcommand{\ChainEnv}{\type{ChainEnv}}
+\newcommand{\ChainState}{\type{ChainState}}
+\newcommand{\ChainSig}{\type{ChainSig}}
+
+In Figure~\ref{fig:functions:to-mc}, we give the functions that will be used
+to transition from a Shelley chain state into a chain state that supports MC.
+The only part of the state affected by the transition is the UTxO. For ease of
+reading, we use different notation here to define the UTxO update, and specify
+explicitly only the change to the UTxO, implying that every other part of the
+state is unaffected.
+
+%%
+%% Figure - Shelley to MC Transition
+%%
+\begin{figure}[htb]
+  \begin{align*}
+      & \fun{mkUTxO} ~\in~ \Slot \to \ShelleyUTxO  \to \UTxO  \\
+      & \fun{mkUTxO}~s~\var{utxo} ~=~ \{~ \var{txin} \mapsto (a,\fun{coinToValue}~c) ~\vert~
+      \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\} \\
+      & \text{make UTxO with MC}
+      \nextdef
+      & \fun{toMC} \in ~ \ShelleyChainState \to \ChainState \\
+      & \fun{toMC}~cs : \\
+      & ~~~~ cs_{utxo} = \fun{mkUTxO}~\var{utxo} \\
+      & \text{transform Shelley chain state to a MC-supporting state}
+  \end{align*}
+  \caption{Shelley to MC Chain State Transtition}
+  \label{fig:functions:to-shelley}
+\end{figure}

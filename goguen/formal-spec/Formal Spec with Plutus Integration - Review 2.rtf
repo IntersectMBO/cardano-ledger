@@ -1,0 +1,39 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf500
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red251\green2\blue7;}
+{\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;}
+\margl1440\margr1440\vieww10800\viewh15040\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs24 \cf0 A Formal Specification of the Cardano Ledger with Plutus Integration\
+Review 2\
+\
+- p9 - \'93refecences\'94 -> \'93references\'94\
+\cf2 Yes\
+\cf0 \
+- p9 - \'93\'85we can to look\'85\'94 -> \'93\'85we can look\'85\'94\
+\cf2 Yes\cf0 \
+\
+- p9 - \'93\'85locked UTxO entry it contains\'85\'94 -> \'93\'85locked UTxO entry contains\'85\'94\
+\cf2 Yes\cf0 \
+\
+- p10 - The sentence \'93We do so by indexing\'85 the specific item (for the validation of which the witnessing term is needed).\'94 is a bit confusing. Can it be paraphrased to \'93We do so by indexing the witnessing terms by keys that uniquely identifies the item for which the witnessing term helps validate.\'94?\
+\cf2 Yes, that sounds better. \
+\cf0 \
+- p10 - The bullet points for \'93Body of the Transaction\'94 is missing MetaDataHash. If I understand correctly this is the thing which protects the integrity of the transaction metadata?\
+\cf2 That is why it is there - but I did not add an explanation because that\'92s a Shelley feature (since fairly recently)\
+\cf0 \
+- p11 - Is EUTxO short for extended UTxO?\
+\cf2 Yes, I will point that out the first time I use it.\
+\cf0 \
+- p11 - \'93additionaly\'94 -> \'93additionally\'94\
+\cf2 Yes\cf0 \
+\
+- p11 - \'93The second is cmlangs, which, given a set of scripts, returns the set of language tags of scripts whose languages have a corresponding cost model.\'94 - Does this mean it is possible to have a script which uses a language with no cost model? How does one compute execution costs in this case?\
+\cf2 Yes - the native MSig scripts don\'92t have a cost model in the Cost Models map. Their execution cost is not discussed in the Shelley formal spec, but in the executable spec it is analyzed and included in the transaction fee calculation. Note that it is not included *directly* in the fee - these scripts are analyzed as part of the tx size calculation, based on which the fee is calculated (this size -> fee calculation is in the Shelley spec). \cf0 \
+\
+- p13 - Could you explain the description of adaID, which says \'93guessing a script that hashes to this value and validates will allow a user to forge unlimited amounts of Ada\'94? How is this attack performed, and this obvious point of attack seems rather dangerous?\
+\cf2 We use a specific value for adaID like the bystestring \'93\'94 , but later on, as you will see in the rules, we actually check that nothing with ID \'93\'94 is forged. If someone accidentally happens to make a script that hashes to \'93\'94 (I don\'92t think this is even possible?), it will be easy to correct this with a small change to the script. I will explain this in that section.\cf0 \
+\
+}
