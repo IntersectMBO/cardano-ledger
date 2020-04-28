@@ -125,9 +125,12 @@ currentLedgerView = view
 --
 --  Time Travel (or the anachronistic ledger view)
 --
---  The ledger needs to expose access to the 'LedgerView' for a window of
---  2k-slots around the current tip of the chain. This functionality allows the
---  protocol layer to validate headers without downloading corresponding blocks.
+--  The ledger needs to expose access to the 'LedgerView' for a window of slots
+--  around the current tip of the chain. We call this period the stability
+--  window, and it corresponds to the number of slots needed to "guarantee" the
+--  presence of k blocks (where k is the security parameter). This functionality
+--  allows the protocol layer to validate headers without downloading
+--  corresponding blocks.
 --
 --  The ability to travel backwards in time is obviously always possible by
 --  keeping a record of past ledger states (or, more conservatively, ledger
@@ -136,15 +139,15 @@ currentLedgerView = view
 --
 --  In order to achieve forward time travel, we need a few things:
 --  - Transition rules which process the body of a block should not have any
---    effect on the @LedgerView@ for at least 2k slots after they are received.
---    This property should be guaranteed by the design of the ledger.
+--    effect on the @LedgerView@ during the stability window after they are
+--    received. This property should be guaranteed by the design of the ledger.
 --  - The effect of transition rules which process the header of a block should
---    be predictable for up to 2k slots.
+--    be predictable for the stability window.
 --
 --  We make the following claim:
 --
---  A future ledger view (within the 2k-slot bound) is equal to the application
---  of the TICK rule at the target slot to the curernt ledger state.
+--  A future ledger view (within the stability window) is equal to the
+--  application of the TICK rule at the target slot to the curernt ledger state.
 
 newtype FutureLedgerViewError crypto
   = FutureLedgerViewError [PredicateFailure (TICK crypto)]
@@ -152,8 +155,8 @@ newtype FutureLedgerViewError crypto
 
 -- | Anachronistic ledger view
 --
---   Given a slot within a 2k-slot future window of our current slot (the slot
---   corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
+--   Given a slot within the future stability window from our current slot (the
+--   slot corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
 --   appropriate to that slot.
 --
 futureLedgerView ::
