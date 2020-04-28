@@ -3,6 +3,7 @@
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
 import           Data.Foldable (toList)
+import           Data.List (foldl')
 import           Data.Map (Map)
 import qualified Data.Map as M
 import           Data.Sequence (Seq)
@@ -56,7 +57,7 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
   where outBalance = outputBalance os
 
 outputBalance :: StrictSeq (TxOut crypto) -> Coin
-outputBalance = foldl (\v (TxOut _ c) -> v + c) (Coin 0)
+outputBalance = foldl' (\v (TxOut _ c) -> v + c) (Coin 0)
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
 shrinkTxIn = const []

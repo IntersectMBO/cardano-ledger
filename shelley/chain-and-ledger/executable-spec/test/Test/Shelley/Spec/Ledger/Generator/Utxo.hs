@@ -14,6 +14,7 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   where
 
 import qualified Data.Either as Either (lefts, rights)
+import           Data.List (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (catMaybes)
@@ -113,7 +114,7 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
     let stakeScripts = Maybe.catMaybes $ map (\case
                                                  ScriptCred c -> Just c
                                                  _            -> Nothing) certCreds
-        genesisWitnesses = foldl (++) [] $
+        genesisWitnesses = foldl' (++) [] $
           Maybe.catMaybes $
           map (\case
                   CoreKeyCred c -> Just c
@@ -148,7 +149,7 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
     -- TODO mgudemann due to problems with time-outs, we select one combination
     -- deterministically for each script. Varying the script is possible though.
     let keysLists = map getKeyCombination $ Map.elems multiSig
-        msigSignatures = foldl Set.union Set.empty $ map Set.fromList keysLists
+        msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
         wits = mkTxWits
           txBody
           (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)

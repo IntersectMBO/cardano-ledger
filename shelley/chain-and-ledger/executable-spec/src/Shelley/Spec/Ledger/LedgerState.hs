@@ -84,6 +84,7 @@ import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import qualified Data.ByteString as BS (ByteString, length)
 import           Data.Foldable (toList)
+import           Data.List (foldl')
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
@@ -596,7 +597,7 @@ txsize (Tx
     signatures = Set.size vKeySigs
 
     -- multi-signature scripts
-    scriptNodes = Map.foldl (+) 0 (Map.map countMSigNodes msigScripts)
+    scriptNodes = Map.foldl' (+) 0 (Map.map countMSigNodes msigScripts)
 
     -- The abstract size of the witnesses is caclucated as the sum of the sizes
     -- of the vkey witnesses (vkey + signature size) and the size of the
@@ -858,9 +859,9 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
 
     wdrlAuthors =
       Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (unWdrl $ _wdrls txbody))
-    owners = foldl Set.union Set.empty
+    owners = foldl' Set.union Set.empty
                [((Set.map undiscriminateKeyHash) . _poolOwners) pool| DCertPool (RegPool pool) <- toList $ _certs txbody]
-    certAuthors = Set.fromList $ foldl (++) [] $ fmap getCertHK certificates
+    certAuthors = Set.fromList $ foldl' (++) [] $ fmap getCertHK certificates
     getCertHK = cwitness
 
     -- key reg requires no witness but this is already filtered out before the

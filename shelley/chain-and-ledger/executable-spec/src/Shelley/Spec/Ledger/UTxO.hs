@@ -43,6 +43,7 @@ import           Data.Foldable (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
+import           Data.List (foldl')
 import           Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -184,7 +185,7 @@ totalDeposits
   -> StakePools crypto
   -> [DCert crypto]
   -> Coin
-totalDeposits pc (StakePools stpools) cs = foldl f (Coin 0) cs'
+totalDeposits pc (StakePools stpools) cs = foldl' f (Coin 0) cs'
   where
     f coin cert = coin + dvalue cert pc
     notRegisteredPool (DCertPool (RegPool pool)) =

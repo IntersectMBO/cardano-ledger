@@ -10,6 +10,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   , removedAfterPoolreap)
 where
 
+import           Data.List (foldl')
 import qualified Data.Set as Set (intersection, isSubsetOf, null, singleton)
 
 import           Test.QuickCheck (Property, conjoin)
@@ -95,5 +96,5 @@ constantSumPots tr =
                                  , prAcnt = AccountState { _treasury = treasury'
                                                          , _reserves = reserves' }
                                  , prDState = DState { _rewards = rewards'}}}) =
-          (balance u + d + fees + treasury + reserves + foldl (+) (Coin 0) rewards) ==
-          (balance u' + d' + fees' + treasury' + reserves' + foldl (+) (Coin 0) rewards')
+          (balance u + d + fees + treasury + reserves + foldl' (+) (Coin 0) rewards) ==
+          (balance u' + d' + fees' + treasury' + reserves' + foldl' (+) (Coin 0) rewards')

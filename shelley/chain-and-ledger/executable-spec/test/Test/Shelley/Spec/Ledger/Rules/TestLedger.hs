@@ -33,6 +33,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestLedger
 where
 
 import           Data.Foldable (toList)
+import           Data.List (foldl')
 import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Word (Word64)
 
@@ -143,8 +144,8 @@ consumedEqualsProduced =
                                          , DPState
                                            { _dstate = DState { _rewards = rewards' }})} =
 
-          (balance u  + d  + fees  + foldl (+) (Coin 0) rewards ) ===
-          (balance u' + d' + fees' + foldl (+) (Coin 0) rewards')
+          (balance u  + d  + fees  + foldl' (+) (Coin 0) rewards ) ===
+          (balance u' + d' + fees' + foldl' (+) (Coin 0) rewards')
 
 feesNonDecreasing :: Property
 feesNonDecreasing =

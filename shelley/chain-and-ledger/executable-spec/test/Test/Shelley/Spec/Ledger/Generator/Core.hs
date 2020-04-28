@@ -47,6 +47,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
 import           Control.Monad (replicateM)
 import           Control.Monad.Trans.Reader (asks)
 import           Data.Coerce (coerce)
+import           Data.List (foldl')
 import qualified Data.List as List (findIndex, (\\))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList, insert, lookup)
@@ -177,9 +178,9 @@ mkStakeKeyHashMap keyPairs =
 -- from a list of (payment, staking) key pairs.
 mkKeyHashMap :: HasCallStack => KeyPairs -> Map AnyKeyHash KeyPair
 mkKeyHashMap =
-  foldl (\m (payKey, stakeKey) ->
-           let m' = Map.insert (hashAnyKey $ vKey payKey) payKey m
-           in       Map.insert (hashAnyKey $ vKey stakeKey) stakeKey m')
+  foldl' (\m (payKey, stakeKey) ->
+            let m' = Map.insert (hashAnyKey $ vKey payKey) payKey m
+            in       Map.insert (hashAnyKey $ vKey stakeKey) stakeKey m')
   Map.empty
 
 -- | Multi-Sig Scripts based on the given key pairs
@@ -192,7 +193,7 @@ mkMSigScripts = map mkScriptsFromKeyPair
 mkMSigCombinations :: HasCallStack => MultiSigPairs -> MultiSigPairs
 mkMSigCombinations msigs =
   if length msigs < 3 then error "length of input msigs must be at least 3"
-  else foldl (++) [] $
+  else foldl' (++) [] $
        do
          (k1, k2) <- msigs
          (k3, k4) <- msigs List.\\ [(k1, k2)]

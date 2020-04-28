@@ -96,6 +96,7 @@ import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 import           Cardano.Crypto.Hash (ShortHash)
 import qualified Data.ByteString.Char8 as BS (pack)
 import           Data.Coerce (coerce)
+import           Data.List (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
                      (!?))
@@ -280,7 +281,7 @@ nonce0 :: Nonce
 nonce0 = hashHeaderToNonce lastByronHeaderHash
 
 mkSeqNonce :: Natural -> Nonce
-mkSeqNonce m = foldl (\c x -> c ⭒ mkNonce x) nonce0 [1.. m]
+mkSeqNonce m = foldl' (\c x -> c ⭒ mkNonce x) nonce0 [1.. m]
 
 carlPay :: KeyPair
 carlPay = KeyPair vk sk
