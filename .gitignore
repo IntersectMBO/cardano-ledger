@@ -49,3 +49,6 @@ specs/**/.ghc.environment.x86_64-linux-*
 
 ## Ignore PDFs
 *.pdf
+
+## GHCID control files
+**/.ghcid
