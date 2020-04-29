@@ -3,7 +3,8 @@
 
 In this chapter, we outline the changes necessary to transaction and
 UTxO structure to make it possible to use Plutus scripts to validate
-certain actions.
+certain actions. Note that we use EUTxO and UTxO interchangably here,
+implicitly referring to the extended version.
 
 In Figure \ref{fig:defs:utxo-shelley-1}, we give the transaction types modified
 to support Plutus.
@@ -74,19 +75,42 @@ except for the following changes and additions:
   Note that in the extended UTxO model, it is possible for a transaction
   to either be processed in full, or do nothing but pay fees for script
   validation (in the case of script validation failure, see Section
-  \ref{sec:utxo} for details). All inputs can be marked as for-fees in
-  the name of privacy concerns (if a user so chooses).
+  \ref{sec:utxo} for details).
+  In designing a way to prevent all Ada in the transaction outputs from going into
+  the fee pot (in case of script validation failure), we have considered two
+  possibilities:
+
+  \begin{itemize}
+    \item[(-)] programmatically select the inputs which will be used to pay fees
+    \item[(-)] allow the user to decide which inputs will be used to pay fees
+  \end{itemize}
+
+  We have decided to give control over input selection for this purpose to the user,
+  as users may have different considerations when making their selection. This
+  option will additionally allow users to write their own programmatic solutions
+  to choosing for-fees inputs.
 
   \item $\UTxOIn$ is the type of the keys in the UTxO finite map. In Goguen, it is
-  the same as the type as the UTxO keys in Shelley, but we have changed the name
+  the same as the type as the basic UTxO keys in Shelley, but we have changed the name
   to make the distinction between a transaction input type and UTxO keys.
   These two types are the same in Shelley, but distinct in Goguen.
 
   \item $\TxIn$ is a transaction input. It includes the reference to the UTxO entry it is spending
   (the UTxO output reference part) and the $\IsFee$ tag, which indicates if this input should
-  be used to pay script execution fees. Only VK-spending inputs and native-script (MSig)
+  be used to pay script execution fees.
+
+  Only VK-spending inputs and native-script (MSig)
   spending inputs can be used to
-  pay fees.
+  pay fees. In Shelley, spending VK or MSig outputs is validated in a single witnessing
+    rule application, so either all required signatures are valid, or a transaction
+    is completely invalid. We kept this model, but chose a different approach to charging
+    users for running Plutus scripts, see Section~\ref{sec:two-phase}.
+
+    It is expected that Plutus scripts will be more
+    expensive to run, on average, than only checking signatures. We want to
+    charge users for running Plutus scripts, even if they do not validate. The
+    outputs spent to pay for running them (the ones marked as for-fees) must
+    be validated fully before validating Plutus scripts.
 
   \item $\TxOutND$: A transaction output with no datum hash
   (this type is for VK and multisig scripts outputs).
@@ -110,11 +134,12 @@ except for the following changes and additions:
   correctly, otherwise the transaction will not validate.
 
   \item $\UTxOOut$ is the type of UTxO entry that gets created when a transaction
-  output is processed. Note that like in the case of the type of transaction inputs,
+  output is processed. Note that, like in the case of the type of transaction inputs,
   the type of a transaction output is distinct from the type of the
   UTxO entry that gets created with the transaction output data.
-  The UTxO entries in the Goguen era include the slot numbers associated with each output
-  (to indicate when the output was created).
+
+  The (extended) UTxO entries in the Goguen era include the slot numbers associated with each output
+  to indicate when the output was created.
   This feature will be used for functionality that will be added in the future.
 
   \item $\TxOut$ : The type of outputs carried by a transaction,
@@ -278,27 +303,25 @@ the pieces of witnessing info to the thing it is required for witnessing. There
 are two possibilities here:
 
 \begin{itemize}
-  \item[(1)] The item being validated (output, forge, etc.) explicitly refecences
+  \item[(1)] The item being validated (output, forge, etc.) explicitly references
   the piece needed for witnessing, usually by containing its hash.
   In particular, this is the case for all scripts.
   Script addresses, currency IDs, and certificate credentials must contain
   the hash of the validator script that will be run.
 
-  To find the script, we can to look through
+  To find the script, we can look through
   the set of scripts for the one with the matching hash value.
   This is also the case with hashes of datum objects. A Plutus-script locked
-  UTxO entry it contains the hash of the datum, and we can look for
+  UTxO entry contains the hash of the datum, and we can look for
   the datum with this hash in the set.
 
   \item[(2)] The item being validated has no explicit link to, hash of, or
-  reference to the piece needed for witnessing. In this case, we must create
-  this link. We do so by indexing the witnessing terms by keys that uniquely
-  identifies the specific item (for the validation of which the witnessing term
-  is needed).
+  reference to, the piece of data needed for validation. In this case, we must create
+  the link.
 
   For redeemers, we use a reverse pointer approach. Instead of pairing
   a pointer (to the correct redeemer) with the item that redeemer is needed for,
-  we index the redeemer by the pointer to the item for
+  we make the index of the redeemer the pointer to the item for
   which it will be used. This pointer is the key in the indexed redeemer structure.
   This pointer is a pair of a tag indicating the type of
   thing being validated, and an index of it in the structure (list, set, or map)
@@ -347,7 +370,7 @@ because a hash of every validator script that will be run during the validation
 of the transaction is always part of the body, and the hash of every datum
 is recorded in the UTxO.
 
-In the EUTxO case, this means additionaly including everything in the body that can change
+In the EUTxO case, this means additionally including everything in the body that can change
 the validation outcome of a transaction between "fully validated", and "only
 paying fees" (two distinct cases of value transfer, which
 we will explain in Section~\ref{sec:utxo}).
@@ -450,7 +473,7 @@ the rest of a Shelley transction in the Goguen format when we discuss witnessing
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{tx} & \Tx & \ShelleyTx \uniondistinct \GoguenTx
-      \text{a Shelley or Goguen transaction}\\
+      \text{~~a Shelley or Goguen transaction}\\
     \end{array}
   \end{equation*}
   %
@@ -479,8 +502,9 @@ To select the relevant protocol parameters to hash, we have defined two helper
 functions (see Figure \ref{fig:defs:functions-chain-helper}). The first
 is an accessor function that returns the language tag of a given script, $\fun{language}$.
 The second is $\fun{cmlangs}$, which, given a set of scripts, returns the set
-of language tags of scripts whose languages have a corresponding cost model.
-We will use these in the rules we present later to make the hashes comparison.
+of language tags of scripts whose languages have a corresponding cost model,
+e.g. MSig (recall the discussion in \ref{sec:plutus-native}).
+We will use these in the rules we present later to compare the hashes.
 
 Note that at this time, only data from the protocol parameters must be hashed
 for the comparison we defined. For future Plutus versions, parts of the ledger
@@ -531,15 +555,23 @@ any types of tokens besides Ada. These fiels will continue to have the type $\Co
 The exact representation of tokens in the UTxO and inside transactions
 is an implementation detail, which we omit here.
 Note that it necessarily is equivalent to $\Value$, optimized
-for Ada-only cases, has a unique representation for Ada token,
-and does not allow Ada to have tokens denoted by anything other than $\mathsf{adaToken}$.
+for Ada-only cases, has a unique representation for the Ada token class,
+and does not allow tokens of the Ada currency to have a $\Token$ value
+of anything other than $\mathsf{adaToken}$.
 In Figure \ref{fig:defs:functions-helper} are the following helper functions,
 
 \begin{itemize}
-  \item $\mathsf{adaID}$ is a random script hash value with no known associated
-  script. It is the currency ID of Ada. While extremely unlikely, guessing a
-  script that hashes to this value
-  and validates will allow a user to forge unlimited amounts of Ada
+  \item $\mathsf{adaID}$ is a fixed bytestring value with no known associated
+  script (i.e. no known script hashes to this bytestring). It is the currency ID of Ada.
+  Note that as part of transaction validation, we explicitly check that there is no
+  value with currency ID $\mathsf{adaID}$ in its forge field.
+
+  It is very unlikely
+  that a script with the hash $\mathsf{adaID}$ will be found, and even less likely
+  that it is a meaningful forging script that can ever validate. If this does
+  happen, however, making a small change to the script, leaving its semantic meaning
+  intact, will change its hash and likely allow the forge to take place.
+
   \item $\mathsf{adaToken}$ is a byte string representation of the word "Ada".
   The ledger should never allow the use of any other token name associated
   with Ada's currency ID
@@ -559,7 +591,9 @@ An amount of Ada can also be represented as a multicurrency value
 using the notation in Figure \ref{fig:defs:functions-helper}, as
 $\fun{coinToValue}~c$ where $c \in \Coin$. We must use this representation
 when adding or subtracting Ada and other tokens as $\Value$, e.g. in the
-preservation of value calculations.
+preservation of value calculations. However, we will abuse notation and
+write shorthand that $v ~\in~ \Coin$ is $\type{True}$ when
+$v~ =~ \fun{coinToValue}~ c$ for some $c~\in~\Coin$.
 
 \begin{figure*}[htb]
   \emph{Abstract Functions and Values}
