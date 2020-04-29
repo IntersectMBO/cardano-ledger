@@ -9,7 +9,7 @@ natural = #6.2(bytes)
 
 $kes_vkey /= int
 $kes_signature /= [natural,signkeyKES]
-signkeyKES = [int, natural, natural] ; publishing the private key because this is fake
+signkeyKES = [int, natural] ; publishing the private key because this is fake
 
 $signature /= [bytes, int]
 
