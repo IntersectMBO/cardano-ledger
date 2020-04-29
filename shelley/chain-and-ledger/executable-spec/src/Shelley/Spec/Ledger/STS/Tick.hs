@@ -14,13 +14,12 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
-import           Byron.Spec.Ledger.Core ((◁), (⨃))
+import           Byron.Spec.Ledger.Core ((⨃))
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
-import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
 import           Shelley.Spec.Ledger.Crypto (Crypto)
@@ -68,15 +67,14 @@ adoptGenesisDelegs es slot = es'
     fGenDelegs = _fGenDelegs ds
     GenDelegs genDelegs = _genDelegs ds
     (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs
-    curr' = Map.mapKeys (\(FutureGenDeleg s g) -> (s, g)) curr
-    maxSlotNo = maximum . Set.map fGenDelegSlot . Map.keysSet
-    latestPerGKey gk =
-      ( (maxSlotNo . Map.filterWithKey (\(FutureGenDeleg _ c) _ -> c == gk)) curr
-      , gk)
-    genDelegsKeys = Set.map
-                latestPerGKey
-                (Set.map fGenDelegGenKeyHash (Map.keysSet curr))
-    genDelegs' = Map.mapKeys snd $ genDelegsKeys ◁ curr'
+
+    latestPerGKey (FutureGenDeleg s genKeyHash) delegate latest =
+      case Map.lookup genKeyHash latest of
+        Nothing -> Map.insert genKeyHash (s, delegate) latest
+        Just (t, _) -> if s > t
+                         then Map.insert genKeyHash (s, delegate) latest
+                         else latest
+    genDelegs' = Map.map snd $ Map.foldrWithKey latestPerGKey Map.empty curr
 
     ds' = ds { _fGenDelegs = fGenDelegs'
              , _genDelegs = GenDelegs $ genDelegs ⨃ Map.toList genDelegs'

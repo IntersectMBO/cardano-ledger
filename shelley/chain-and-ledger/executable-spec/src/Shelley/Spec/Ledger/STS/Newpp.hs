@@ -16,6 +16,7 @@ where
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
+import           Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes
@@ -68,7 +69,7 @@ newPpTransition = do
           Coin oblgNew = obligation ppNew' (_stkCreds dstate) (_stPools pstate) slot
           diff = oblgCurr - oblgNew
           Coin reserves = _reserves acnt
-          Coin requiredInstantaneousRewards = foldl (+) (Coin 0) $ _irwd dstate
+          Coin requiredInstantaneousRewards = foldl' (+) (Coin 0) $ _irwd dstate
 
       (Coin oblgCurr) == (_deposited utxoSt) ?! UnexpectedDepositPot
 

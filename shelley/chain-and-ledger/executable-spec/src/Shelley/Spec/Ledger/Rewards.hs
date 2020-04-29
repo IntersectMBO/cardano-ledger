@@ -21,7 +21,7 @@ import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 
 import           Data.Function (on)
-import           Data.List (sortBy)
+import           Data.List (foldl', sortBy)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
@@ -206,7 +206,7 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
   (rewards', appPerf)
   where
     Coin pstake = sum stake
-    Coin ostake = Set.foldl
+    Coin ostake = Set.foldl'
                     (\c o -> c + (stake Map.! KeyHashObj o))
                     (Coin 0)
                     (_poolOwners pool)
@@ -255,7 +255,7 @@ reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
         , rewardOnePool pp r n totalBlocks (KeyHashObj hk) pool actgr total addrsRew)
       | (hk, (pool, n, actgr)) <- pdata
       ]
-    rewards' = foldl (\m (_, r') -> Map.union m (fst r')) Map.empty results
+    rewards' = foldl' (\m (_, r') -> Map.union m (fst r')) Map.empty results
     appPerformances = Map.fromList $ fmap (\(hk, r') -> (hk, snd r')) results
     totalBlocks = sum b
 

@@ -106,7 +106,7 @@ newEpochTransition = do
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams)
   = let
-      Coin total = Map.foldl (+) (Coin 0) stake
+      Coin total = Map.foldl' (+) (Coin 0) stake
       sd =
             Map.fromListWith (+) $
               catMaybes

@@ -17,6 +17,7 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (asks)
 import           Control.State.Transition
+import           Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.Typeable (Typeable)
@@ -155,7 +156,7 @@ delegationTransition = do
         ?! MIRCertificateTooLateinEpochDELEG
 
       let combinedMap = Map.union credCoinMap (_irwd ds)
-          requiredForRewards = foldl (+) (Coin 0) (range combinedMap)
+          requiredForRewards = foldl' (+) (Coin 0) (range combinedMap)
       requiredForRewards <= reserves ?! InsufficientForInstantaneousRewardsDELEG
 
       pure $ ds { _irwd = combinedMap }

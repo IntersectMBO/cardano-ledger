@@ -10,6 +10,7 @@ where
 
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      signal, source, target)
+import           Data.List (foldl')
 import           Test.QuickCheck (Property, conjoin)
 
 import           Shelley.Spec.Ledger.Coin (pattern Coin)
@@ -58,7 +59,7 @@ potsSumIncreaseWdrls ssts =
                                , signal = Tx { _body = txbody }} =
       let circulation  = balance u
           circulation' = balance u'
-          withdrawals  = foldl (+) (Coin 0) $ unWdrl $ _wdrls txbody
+          withdrawals  = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txbody
       in
          withdrawals >= Coin 0
       && circulation' + d' + fees' == circulation + d + fees + withdrawals

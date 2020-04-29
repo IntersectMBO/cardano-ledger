@@ -12,6 +12,7 @@ import           Test.QuickCheck (Property, conjoin)
 
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      source, target)
+import           Data.List (foldl')
 
 import           Shelley.Spec.Ledger.Coin (pattern Coin)
 import           Shelley.Spec.Ledger.LedgerState (pattern AccountState, pattern DPState,
@@ -36,7 +37,7 @@ preservationOfAda tr =
   conjoin $
     map rewardsDecreaseBalanced tr
 
-  where sum_ = foldl (+) (Coin 0)
+  where sum_ = foldl' (+) (Coin 0)
 
         rewardsDecreaseBalanced
           (SourceSignalTarget

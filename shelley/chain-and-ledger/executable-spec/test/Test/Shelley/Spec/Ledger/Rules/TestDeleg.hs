@@ -14,8 +14,9 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
+import           Data.List (foldl')
 import           Data.Map (Map)
-import qualified Data.Map.Strict as Map (difference, filter, foldl, keysSet, lookup, (\\))
+import qualified Data.Map.Strict as Map (difference, filter, foldl', keysSet, lookup, (\\))
 import qualified Data.Maybe as Maybe (maybe)
 import           Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
@@ -124,7 +125,7 @@ rewardsSumInvariant tr =
                          , target = d'} =
       let rew  = _rewards d
           rew' = _rewards d'
-          sumRew = foldl (+) (Coin 0)
+          sumRew = foldl' (+) (Coin 0)
       in
          -- sum of rewards is not changed
          sumRew rew == sumRew rew'
@@ -160,7 +161,7 @@ instantaneousRewardsValue ssts =
       case sig of
         DCertMir (MIRCert irwd) ->
           property $
-          ((Map.foldl (+) (Coin 0) $ _irwd s Map.\\ irwd) +
-           (Map.foldl (+) (Coin 0) $ irwd) ==
-           (Map.foldl (+) (Coin 0) $ _irwd t))
+          ((Map.foldl' (+) (Coin 0) $ _irwd s Map.\\ irwd) +
+           (Map.foldl' (+) (Coin 0) $ irwd) ==
+           (Map.foldl' (+) (Coin 0) $ _irwd t))
         _                         -> property ()

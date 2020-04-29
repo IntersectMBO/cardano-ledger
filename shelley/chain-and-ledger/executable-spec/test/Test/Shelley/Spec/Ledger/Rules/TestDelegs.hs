@@ -8,6 +8,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestDelegs where
 
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      source, target)
+import           Data.List (foldl')
 
 import           Test.QuickCheck (Property, conjoin)
 
@@ -35,9 +36,9 @@ rewardsDecreasesByWithdrawals tr =
                                 , target = d'} =
       let rewards  = (_rewards . _dstate) d
           rewards' = (_rewards . _dstate) d'
-          rewardsSum = foldl (+) (Coin 0) rewards
-          rewardsSum' = foldl (+) (Coin 0) rewards'
-          wdrlSum = foldl (+) (Coin 0) wdrls
+          rewardsSum = foldl' (+) (Coin 0) rewards
+          rewardsSum' = foldl' (+) (Coin 0) rewards'
+          wdrlSum = foldl' (+) (Coin 0) wdrls
       in
          rewardsSum >= rewardsSum'
       && wdrlSum >= Coin 0
