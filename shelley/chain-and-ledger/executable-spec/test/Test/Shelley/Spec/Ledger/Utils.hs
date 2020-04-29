@@ -1,7 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 module Test.Shelley.Spec.Ledger.Utils
   ( assertAll
+  , mkSeedFromWords
   , mkCertifiedVRF
   , epochFromSlotNo
   , evolveKESUntil
@@ -23,10 +25,13 @@ import           Cardano.Binary (ToCBOR (..))
 import           Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
 import           Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import           Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
+import           Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import           Cardano.Prelude (asks)
 import           Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
 import           Control.Monad.Trans.Reader (runReaderT)
-import           Crypto.Random (drgNewTest, withDRG)
+import           Crypto.Random (withDRG, drgNewTest)
+import qualified Data.ByteString.Lazy as BSL
+import           Data.ByteString.Conversion (toByteString)
 import           Data.Coerce (coerce)
 import           Data.Functor.Identity (runIdentity)
 import           Data.Maybe (fromMaybe)
@@ -35,37 +40,52 @@ import           Hedgehog (MonadTest, (===))
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, UnitInterval,
                      mkActiveSlotCoeff, mkUnitInterval)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (pattern SKey, pattern SKeyES, pattern VKey,
-                     pattern VKeyES, pattern VKeyGenesis, hashKey, updateKESKey, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, updateKES, vKey)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj, pattern StakeRefBase)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair, SKey,
-                     SKeyES, SignKeyVRF, VKey, VKeyES, VKeyGenesis, VerKeyVRF)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, CertifiedVRF, KeyPair,
+                     SignKeyDSIGN, SignKeyKES, SignKeyVRF, VKeyGenesis, VerKeyKES,
+                     VerKeyVRF, VKey, pattern VKey)
 
 assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
 assertAll p xs = [] === filter (not . p) xs
 
+-- | Construct a seed from a bunch of Word64s
+--
+--   We multiply these words by some extra stuff to make sure they contain
+--   enough bits for our seed.
+mkSeedFromWords
+  :: (Word64, Word64, Word64, Word64, Word64)
+  -> Seed
+mkSeedFromWords (w1, w2, w3, w4, w5) = mkSeedFromBytes . BSL.toStrict $
+  toByteString (w1 * 15485867) <>
+  toByteString (w2 * 32452867) <>
+  toByteString (w3 * 49979693) <>
+  toByteString (w4 * 67867979) <>
+  toByteString (w5 * 86028157) <>
+  toByteString (2147483647 :: Word64)
+
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
-mkGenKey :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKeyGenesis)
-mkGenKey seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyDSIGN
-  return (SKey sk, VKeyGenesis $ deriveVerKeyDSIGN sk)
+mkGenKey :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN, VKeyGenesis)
+mkGenKey seed =
+  let sk = genKeyDSIGN $ mkSeedFromWords seed
+  in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
-mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKey, VKey)
-mkKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyDSIGN
-  return (SKey sk, VKey $ deriveVerKeyDSIGN sk)
+mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN, VKey kr)
+mkKeyPair seed =
+  let sk = genKeyDSIGN $ mkSeedFromWords seed
+  in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
 mkVRFKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF, VerKeyVRF)
-mkVRFKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyVRF
-  return (sk, deriveVerKeyVRF sk)
+mkVRFKeyPair seed =
+  let sk = genKeyVRF $ mkSeedFromWords seed
+  in (sk, deriveVerKeyVRF sk)
 
 -- | For testing purposes, create a VRF value
 mkCertifiedVRF
@@ -79,12 +99,12 @@ mkCertifiedVRF a sk = fst . withDRG (drgNewTest seed) $
     seed = (4,0,0,0,1)
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SKeyES, VKeyES)
-mkKESKeyPair seed = fst . withDRG (drgNewTest seed) $ do
-  sk <- genKeyKES $ fromIntegral (runShelleyBase (asks maxKESEvo))
-  return (SKeyES sk, VKeyES $ deriveVerKeyKES sk)
+mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyKES, VerKeyKES)
+mkKESKeyPair seed =
+  let sk = genKeyKES $ mkSeedFromWords seed
+  in (sk, deriveVerKeyKES sk)
 
-mkAddr :: (KeyPair, KeyPair) -> Addr
+mkAddr :: (KeyPair 'Payment, KeyPair 'Staking) -> Addr
 mkAddr (payKey, stakeKey) =
   Addr (KeyHashObj . hashKey $ vKey payKey)
        (StakeRefBase . KeyHashObj . hashKey $ vKey stakeKey)
@@ -118,8 +138,8 @@ slotFromEpoch :: EpochNo -> SlotNo
 slotFromEpoch = runIdentity  . epochInfoFirst (epochInfo testGlobals)
 
 -- | Try to evolve KES key until specific KES period is reached.
-evolveKESUntil :: SKeyES -> KESPeriod -> Maybe SKeyES
-evolveKESUntil key (KESPeriod period) = updateKESKey key period
+evolveKESUntil :: SignKeyKES -> KESPeriod -> Maybe SignKeyKES
+evolveKESUntil key (KESPeriod period) = updateKES () key period
 
 maxKESIterations :: Word64
 maxKESIterations = runShelleyBase (asks maxKESEvo)

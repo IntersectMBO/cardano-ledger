@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 {-|
@@ -33,9 +34,9 @@ import qualified Hedgehog.Range as Range
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern MIRCert, pattern RegKey, pattern RegPool,
+                     pattern GenesisDelegCert, pattern MIRCert, pattern RegKey, pattern RegPool,
                      pattern RetirePool)
-import           Shelley.Spec.Ledger.Keys (hashKey, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), coerceKeyRole, hashKey, vKey)
 
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
@@ -134,7 +135,7 @@ mutateOutput (TxOut addr c) = do
 -- 'Generator.hs' in order to prevent cyclic imports.
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-getAnyStakeKey :: KeyPairs -> Gen VKey
+getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
 getAnyStakeKey keys = vKey . snd <$> Gen.element keys
 
 -- | Mutate 'Epoch' analogously to 'Coin' data.
@@ -159,7 +160,7 @@ mutateDCert keys _ (DCertDeleg (DeRegKey _)) =
 mutateDCert keys _ (DCertPool (RetirePool _ epoch@(EpochNo e))) = do
     epoch' <- mutateEpoch 0 (fromIntegral e) epoch
     key'   <- getAnyStakeKey keys
-    pure $ DCertPool (RetirePool (hashKey key') epoch')
+    pure $ DCertPool (RetirePool (coerceKeyRole $ hashKey key') epoch')
 
 mutateDCert keys _ (DCertPool (RegPool
   (PoolParams _ vrfHk pledge cost margin rwdacnt owners relays poolMD))) = do
@@ -168,16 +169,16 @@ mutateDCert keys _ (DCertPool (RegPool
   p'      <- mutateNat 0 100 (fromIntegral $ numerator $ intervalValue margin)
   let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
   pure $ (DCertPool . RegPool)
-    (PoolParams (hashKey key') vrfHk pledge cost' interval rwdacnt owners relays poolMD)
+    (PoolParams (coerceKeyRole $ hashKey key') vrfHk pledge cost' interval rwdacnt owners relays poolMD)
 
 mutateDCert keys _ (DCertDeleg (Delegate (Delegation _ _))) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
-  pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (hashKey delegatee')
+  pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (coerceKeyRole $ hashKey delegatee')
 
-mutateDCert keys _ (DCertGenesis (GenesisDelegate gk _)) = do
+mutateDCert keys _ (DCertGenesis (GenesisDelegCert gk _)) = do
   _delegatee <- getAnyStakeKey keys
-  pure $ DCertGenesis $ GenesisDelegate gk (hashKey _delegatee)
+  pure $ DCertGenesis $ GenesisDelegCert gk (coerceKeyRole $ hashKey _delegatee)
 
 mutateDCert _ _ (DCertMir (MIRCert credCoinMap)) = do
   let credCoinList = Map.toList credCoinMap

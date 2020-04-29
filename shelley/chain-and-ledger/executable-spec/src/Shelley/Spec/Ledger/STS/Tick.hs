@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -23,7 +24,7 @@ import           Data.Set (Set)
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
 import           Shelley.Spec.Ledger.Crypto (Crypto)
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), GenKeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole(..), GenDelegs (..))
 import           Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), EpochState (..),
                      FutureGenDeleg (..), LedgerState (..), NewEpochEnv (..), NewEpochState (..))
 import           Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch)
@@ -33,7 +34,7 @@ import           Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..))
 data TICK crypto
 
 data TickEnv crypto
-  = TickEnv (Set (GenKeyHash crypto))
+  = TickEnv (Set (KeyHash 'Genesis crypto))
 
 instance Crypto crypto
   => STS (TICK crypto)

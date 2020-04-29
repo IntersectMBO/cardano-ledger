@@ -22,7 +22,6 @@ import           Numeric.Natural (Natural)
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
-import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad.Trans.Reader (runReaderT)
 import           Control.State.Transition (IRC (..))
@@ -31,14 +30,14 @@ import           Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, H
 import           Shelley.Spec.Ledger.BaseTypes (Globals)
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..),
                      hashHeaderToNonce)
-import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, hash)
+import           Shelley.Spec.Ledger.Keys (Hash, KeyRole (BlockIssuer), coerceKeyRole, hash)
 import           Shelley.Spec.Ledger.LedgerState (overlaySchedule)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.STS.Chain (initialShelleyState)
 import           Shelley.Spec.Ledger.UTxO (balance)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, ChainState, GenDelegs,
-                     HashHeader, KeyHash)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, ChainState, ConcreteCrypto,
+                     GenDelegs, pattern GenDelegs, HashHeader, KeyHash)
 import           Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
@@ -71,7 +70,7 @@ instance HasTrace CHAIN GenEnv where
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
 lastByronHeaderHash :: HashHeader
-lastByronHeaderHash = HashHeader $ coerce (hash 0 :: Hash ShortHash Int)
+lastByronHeaderHash = HashHeader $ coerce (hash 0 :: Hash ConcreteCrypto Int)
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
 -- with the signature 'RuleContext sts -> Gen (Either [[PredicateFailure sts]] (State sts))'.
@@ -105,8 +104,8 @@ mkGenesisChainState constants (IRC _slotNo) = do
 
 mkOCertIssueNos
   :: GenDelegs
-  -> Map KeyHash Natural
+  -> Map (KeyHash 'BlockIssuer) Natural
 mkOCertIssueNos (GenDelegs delegs0) =
   Map.fromList (fmap f (Map.elems delegs0))
   where
-    f vk = (vk, 0)
+    f vk = (coerceKeyRole vk, 0)

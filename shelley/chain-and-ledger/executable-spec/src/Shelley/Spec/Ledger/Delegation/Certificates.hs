@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -8,7 +9,7 @@ module Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert(..)
   , DelegCert(..)
   , PoolCert(..)
-  , GenesisDelegate(..)
+  , GenesisDelegCert(..)
   , MIRCert(..)
   , StakeCreds(..)
   , StakePools(..)
@@ -34,13 +35,12 @@ import           Byron.Spec.Ledger.Core (Relation (..))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (GenKeyHash, Hash, KeyHash, VRFAlgorithm (VerKeyVRF))
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), Hash, KeyHash, VerKeyVRF)
 import           Shelley.Spec.Ledger.PParams (PParams, _keyDecayRate, _keyDeposit, _keyMinRefund,
                      _poolDecayRate, _poolDeposit, _poolMinRefund)
 import           Shelley.Spec.Ledger.Slot (Duration (..))
 import           Shelley.Spec.Ledger.TxData (Credential (..), DCert (..), DelegCert (..),
-                     Delegation (..), GenesisDelegate (..), MIRCert (..), PoolCert (..),
+                     Delegation (..), GenesisDelegCert (..), MIRCert (..), PoolCert (..),
                      PoolParams (..), StakeCreds (..), StakePools (..))
 import           Shelley.Spec.NonIntegral (exp')
 
@@ -50,17 +50,17 @@ import           Data.Ratio (approxRational)
 
 
 -- |Determine the certificate author
-delegCWitness :: DelegCert crypto-> Credential crypto
+delegCWitness :: DelegCert crypto-> Credential 'Staking crypto
 delegCWitness (RegKey _)            = error "no witness in key registration certificate"
 delegCWitness (DeRegKey hk)         = hk
 delegCWitness (Delegate delegation) = _delegator delegation
 
-poolCWitness :: PoolCert crypto -> Credential crypto
+poolCWitness :: PoolCert crypto -> Credential 'StakePool crypto
 poolCWitness (RegPool pool)            = KeyHashObj $ _poolPubKey pool
 poolCWitness (RetirePool k _)          = KeyHashObj k
 
-genesisCWitness :: GenesisDelegate crypto -> GenKeyHash crypto
-genesisCWitness (GenesisDelegate gk _) = gk
+genesisCWitness :: GenesisDelegCert crypto -> KeyHash 'Genesis crypto
+genesisCWitness (GenesisDelegCert gk _) = gk
 
 -- |Retrieve the deposit amount for a certificate
 dvalue :: DCert crypto-> PParams -> Coin
@@ -94,7 +94,7 @@ isDelegation _ = False
 
 -- | Check for `GenesisDelegate` constructor
 isGenesisDelegation :: DCert crypto-> Bool
-isGenesisDelegation (DCertGenesis (GenesisDelegate {})) = True
+isGenesisDelegation (DCertGenesis (GenesisDelegCert {})) = True
 isGenesisDelegation _ = False
 
 -- | Check for `RegPool` constructor
@@ -120,7 +120,8 @@ decayPool pc = (pval, pmin, lambdap)
           lambdap = _poolDecayRate pc
 
 newtype PoolDistr crypto = PoolDistr
-  { unPoolDistr :: (Map (KeyHash crypto) (Rational, Hash (HASH crypto) (VerKeyVRF (VRF crypto))))
+  { unPoolDistr :: (Map (KeyHash 'StakePool crypto)
+                        (Rational, Hash crypto (VerKeyVRF crypto)))
   } deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Relation)
 
 isInstantaneousRewards :: DCert crypto-> Bool

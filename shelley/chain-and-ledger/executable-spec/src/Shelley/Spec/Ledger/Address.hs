@@ -16,7 +16,7 @@ import           Data.ByteString (ByteString)
 import           Cardano.Binary (serialize', decodeFull')
 
 import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (KeyDiscriminator (..), KeyPair, hashKey, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole (..), KeyPair(..), hashKey)
 import           Shelley.Spec.Ledger.Scripts
 import           Shelley.Spec.Ledger.Tx (hashScript)
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), RewardAcnt (..),
@@ -24,31 +24,33 @@ import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), RewardA
 
 mkVKeyRwdAcnt
   :: Crypto crypto
-  => KeyPair 'Regular crypto
+  => KeyPair 'Staking crypto
   -> RewardAcnt crypto
 mkVKeyRwdAcnt keys = RewardAcnt $ KeyHashObj (hashKey $ vKey keys)
 
 mkRwdAcnt
-  :: Credential crypto
+  :: Credential 'Staking crypto
   -> RewardAcnt crypto
 mkRwdAcnt script@(ScriptHashObj _) = RewardAcnt script
 mkRwdAcnt key@(KeyHashObj _) = RewardAcnt key
 
 toAddr
   :: Crypto crypto
-  => (KeyPair 'Regular crypto, KeyPair 'Regular crypto)
+  => (KeyPair 'Payment crypto, KeyPair 'Staking crypto)
   -> Addr crypto
 toAddr (payKey, stakeKey) = Addr (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred
   :: Crypto crypto
-  => KeyPair 'Regular crypto
-  -> Credential crypto
+  => KeyPair kr crypto
+  -> Credential kr crypto
 toCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Convert a given multi-sig script to a credential by hashing it and wrapping
 -- into the `Credential` data type.
-scriptToCred :: Crypto crypto => MultiSig crypto -> Credential crypto
+--
+-- TODO nc what is the role of this credential?
+scriptToCred :: Crypto crypto => MultiSig crypto -> Credential kr crypto
 scriptToCred = ScriptHashObj . hashScript
 
 -- | Create a base address from a pair of multi-sig scripts (pay and stake)

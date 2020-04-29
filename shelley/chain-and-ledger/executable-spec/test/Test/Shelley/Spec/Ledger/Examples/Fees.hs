@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
@@ -23,7 +24,7 @@ import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), textToDns, tex
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
-import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, undiscriminateKeyHash, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), asWitness, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (genesisId, txsize)
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import           Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
@@ -40,8 +41,8 @@ import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertPo
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, ConcreteCrypto, Credential,
-                     KeyHash, KeyPair, MultiSig, PoolParams, SignKeyVRF, Tx, TxBody, VerKeyVRF,
-                     hashKeyVRF)
+                     KeyHash, MultiSig, PoolParams, SignKeyVRF, Tx, TxBody, VerKeyVRF,
+                     hashKeyVRF, KeyPair, pattern KeyPair)
 import           Test.Shelley.Spec.Ledger.Utils
 
 
@@ -49,26 +50,26 @@ sizeTest :: BSL.ByteString -> Tx -> Integer -> Assertion
 sizeTest b16 tx s = do
   (Base16.encode (serialize tx) @?= b16) >> (txsize tx @?= s)
 
-alicePay :: KeyPair
+alicePay :: KeyPair 'Payment
 alicePay = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
+  where (sk, vk) = mkKeyPair (0,0,0,0,0)
 
-aliceStake :: KeyPair
+aliceStake :: KeyPair 'Staking
 aliceStake = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
+  where (sk, vk) = mkKeyPair (0,0,0,0,1)
 
-aliceSHK :: Credential
+aliceSHK :: Credential 'Staking
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-alicePool :: KeyPair
+alicePool :: KeyPair 'StakePool
 alicePool = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (0, 0, 0, 0, 2)
+  where (sk, vk) = mkKeyPair (0,0,0,0,2)
 
-alicePoolKH :: KeyHash
+alicePoolKH :: KeyHash 'StakePool
 alicePoolKH = (hashKey . vKey) alicePool
 
 aliceVRF :: (SignKeyVRF, VerKeyVRF)
-aliceVRF = mkVRFKeyPair (0, 0, 0, 0, 3)
+aliceVRF = mkVRFKeyPair (0,0,0,0,3)
 
 alicePoolParams :: PoolParams
 alicePoolParams =
@@ -90,23 +91,23 @@ alicePoolParams =
 aliceAddr :: Addr
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-bobPay :: KeyPair
+bobPay :: KeyPair 'Payment
 bobPay = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1, 0, 0, 0, 0)
+  where (sk, vk) = mkKeyPair (1,0,0,0,0)
 
-bobStake :: KeyPair
+bobStake :: KeyPair 'Staking
 bobStake = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (1, 0, 0, 0, 1)
+  where (sk, vk) = mkKeyPair (1,0,0,0,1)
 
-bobSHK :: Credential
+bobSHK :: Credential 'Staking
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 bobAddr :: Addr
 bobAddr = mkAddr (bobPay, bobStake)
 
-carlPay :: KeyPair
+carlPay :: KeyPair 'Payment
 carlPay = KeyPair vk sk
-  where (sk, vk) = mkKeyPair (2, 0, 0, 0, 0)
+  where (sk, vk) = mkKeyPair (2,0,0,0,0)
 
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
@@ -214,7 +215,7 @@ txbDelegateStake = TxBody
 txDelegateStake :: Tx
 txDelegateStake = Tx
   { _body           = txbDelegateStake
-  , _witnessVKeySet = makeWitnessesVKey txbDelegateStake [alicePay, bobStake]
+  , _witnessVKeySet = makeWitnessesVKey txbDelegateStake [asWitness alicePay, asWitness bobStake]
   , _witnessMSigMap = Map.empty
   , _metadata       = SNothing
   }
@@ -331,9 +332,9 @@ txWithMDBytes16 = "83a5009f82446050074300ff0181840044cfb2c4144476394f7a0a02185e0
 
 msig :: MultiSig
 msig = RequireMOf 2
-  [ (RequireSignature . undiscriminateKeyHash . hashKey . vKey) alicePay
-  , (RequireSignature . undiscriminateKeyHash . hashKey . vKey) bobPay
-  , (RequireSignature . undiscriminateKeyHash . hashKey . vKey) carlPay
+  [ (RequireSignature . asWitness . hashKey . vKey) alicePay
+  , (RequireSignature . asWitness . hashKey . vKey) bobPay
+  , (RequireSignature . asWitness . hashKey . vKey) carlPay
   ]
 
 txbWithMultiSig :: TxBody
@@ -376,7 +377,7 @@ txbWithWithdrawal = TxBody
 txWithWithdrawal :: Tx
 txWithWithdrawal = Tx
   { _body           = txbWithWithdrawal
-  , _witnessVKeySet = makeWitnessesVKey txbWithWithdrawal [alicePay, aliceStake]
+  , _witnessVKeySet = makeWitnessesVKey txbWithWithdrawal [asWitness alicePay, asWitness aliceStake]
   , _witnessMSigMap = Map.empty
   , _metadata       = SNothing
   }

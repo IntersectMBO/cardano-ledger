@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,7 +25,7 @@ import           Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import           Shelley.Spec.Ledger.BaseTypes (activeSlotCoeff, activeSlotVal, intervalValue)
 import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), GenDelegs (..), hashKey, vKey, coerceKeyRole)
 import           Shelley.Spec.Ledger.LedgerState (pattern ActiveSlot, pattern EpochState,
                      pattern NewEpochState, esLState, esPp, getGKeys, nesEL, nesEs, nesOsched,
                      nesPd, overlaySchedule, _delegationState, _dstate, _genDelegs, _reserves)
@@ -36,7 +37,7 @@ import           Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import           Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
 import           Shelley.Spec.Ledger.STS.Tick (TickEnv (..))
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState, GenKeyHash,
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block, ChainState, KeyHash,
                      LEDGERS, OBftSlot, TICK)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), GenEnv (..),
                      KeySpace (..), NatNonce (..), genNatural, getKESPeriodRenewalNo, mkBlock,
@@ -49,7 +50,7 @@ nextCoreNode
   :: Map SlotNo OBftSlot
   -> Map SlotNo OBftSlot
   -> SlotNo
-  -> (SlotNo, GenKeyHash)
+  -> (SlotNo, KeyHash 'Genesis)
 nextCoreNode os nextOs s =
   let getNextOSlot os' =
         let (_, nextSlots) = Map.split s os'
@@ -125,11 +126,11 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
         (pkh, (stake, vrfkey)):_ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
                       Nothing -> (nextOSlot, 0, Left gkh)
                       Just ps -> let apks = AllPoolKeys
-                                       { cold = ksKeyPairsByStakeHash Map.! pkh
+                                       { cold = coerceKeyRole $ ksKeyPairsByStakeHash Map.! coerceKeyRole pkh
                                        , vrf  = ksVRFKeyPairsByHash Map.! vrfkey
                                        , hot  = hot $ snd (head ksCoreNodes)
                                                 -- TODO @jc - don't use the genesis hot key
-                                       , hk   = pkh
+                                       , hk   = coerceKeyRole pkh
                                        }
                                  in (ps, stake, Right apks)
 
@@ -162,7 +163,7 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
             n' = currentIssueNo
                  (OCertEnv (dom poolParams) (range gds))
                  cs
-                 ((hashKey . vKey . cold) keys)
+                 ((coerceKeyRole . hashKey . vKey . cold) keys)
 
             m = getKESPeriodRenewalNo keys kp
 
@@ -193,19 +194,27 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
     origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) ksCoreNodes of
                          Nothing -> error "couldn't find corresponding core node key"
                          Just k  -> snd k
+
+    gkeys
+      :: KeyHash 'Genesis
+      -> Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)
+      -> AllPoolKeys
     gkeys gkey gds =
         case Map.lookup gkey gds of
           Nothing ->
             error "genBlock: CorruptGenenisDelegation"
           Just ckh ->
             -- if GenesisDelegate certs changed a delegation to a new key
-            case Map.lookup ckh ksKeyPairsByStakeHash of
+            case Map.lookup (coerceKeyRole ckh) ksKeyPairsByStakeHash of
               Nothing ->
                 -- then we use the original keys (which have not been changed by a genesis delegation)
                 origIssuerKeys gkey
               Just updatedCold ->
                 -- if we find the pre-hashed key in keysByStakeHash, we use it instead of the original cold key
-                (origIssuerKeys gkey) {cold = updatedCold, hk = (hashKey . vKey) updatedCold}
+                (origIssuerKeys gkey)
+                  {cold = coerceKeyRole updatedCold
+                  , hk = (hashKey . vKey) $ coerceKeyRole updatedCold
+                  }
 
     genPraosLeader stake =
       if stake >= 0 && stake <= 1 then do

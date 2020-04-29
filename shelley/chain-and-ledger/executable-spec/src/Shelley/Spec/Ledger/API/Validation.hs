@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.API.Validation
 where
 
 import           Byron.Spec.Ledger.Core (Relation (..))
-import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Arrow (left, right)
 import           Control.Monad.Except
@@ -28,6 +27,7 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import           Shelley.Spec.Ledger.BlockChain
 import           Shelley.Spec.Ledger.Crypto
+import           Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Slot (SlotNo)
@@ -111,7 +111,7 @@ applyBlockTransition ::
   forall crypto m.
   ( Crypto crypto,
     MonadError (BlockTransitionError crypto) m,
-    DSIGN.Signable (DSIGN crypto) (Tx.TxBody crypto)
+    DSignable crypto (Tx.TxBody crypto)
   ) =>
   Globals ->
   ShelleyState crypto ->

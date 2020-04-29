@@ -30,6 +30,7 @@ import qualified Test.QuickCheck as QC
 import           Shelley.Spec.Ledger.Address (scriptToCred, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
+import           Shelley.Spec.Ledger.Keys (KeyRole (..), HasKeyRole(..))
 import           Shelley.Spec.Ledger.LedgerState (pattern UTxOState, minfee, _dstate, _ptrs,
                      _rewards)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -42,12 +43,11 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash, CoreKeyPair,
-                     Credential, DCert, DPState, DState, KeyPair, KeyPairs, MultiSig,
-                     MultiSigPairs, RewardAcnt, Tx, TxBody, TxIn, TxOut, UTxO, UTxOState, Update,
-                     WitVKey)
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, CoreKeyPair, Credential, DCert,
+                     DPState, DState, KeyPair, KeyPairs, MultiSig, MultiSigPairs, RewardAcnt, Tx,
+                     TxBody, TxIn, TxOut, UTxO, UTxOState, Update, WitVKey, KeyHash)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..),
+import           Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..), Testing,
                      findPayKeyPairAddr, findPayKeyPairCred, findPayScriptFromAddr,
                      findStakeScriptFromCred, genNatural)
 import           Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
@@ -77,12 +77,17 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
   scripts' <- QC.shuffle ksMSigScripts
 
   -- inputs
+  let ksKeyPairsByHash' =
+       Map.fromList $ fmap (\(k, v) -> (coerceKeyRole k, coerceKeyRole v)) $
+         Map.toList ksKeyPairsByHash
   (witnessedInputs, spendingBalanceUtxo) <-
-    pickSpendingInputs constants scripts' ksKeyPairsByHash utxo
+    pickSpendingInputs constants scripts' ksKeyPairsByHash' utxo
 
   wdrls <- pickWithdrawals constants ((_rewards . _dstate) dpState)
 
-  let wdrlCredentials = fmap (mkWdrlWits scripts' ksKeyPairsByHash) (fmap getRwdCred (Map.keys wdrls))
+  let rwdCreds = fmap getRwdCred (Map.keys wdrls)
+      rwdCreds' = fmap coerceKeyRole rwdCreds
+      wdrlCredentials = fmap (mkWdrlWits scripts' ksKeyPairsByHash') rwdCreds'
       wdrlWitnesses = Either.lefts wdrlCredentials
       wdrlScripts   = Either.rights wdrlCredentials
 
@@ -148,13 +153,19 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
     --
     -- TODO mgudemann due to problems with time-outs, we select one combination
     -- deterministically for each script. Varying the script is possible though.
+
+    let spendWitnesses' = fmap coerceKeyRole spendWitnesses
+        certWitnesses' = fmap coerceKeyRole certWitnesses
+        wdrlWitnesses' = fmap coerceKeyRole wdrlWitnesses
+        updateWitnesses' = fmap coerceKeyRole updateWitnesses
+
     let keysLists = map getKeyCombination $ Map.elems multiSig
         msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
         wits = mkTxWits
           txBody
-          (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+          (spendWitnesses' ++ certWitnesses' ++ wdrlWitnesses' ++ updateWitnesses')
           genesisWitnesses
-          ksKeyPairsByHash
+          ksKeyPairsByHash'
           msigSignatures
 
     let metadata = SNothing -- TODO generate metadata
@@ -174,9 +185,9 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
                            , _outputs = outputs' }
           wits' = mkTxWits
             txBody'
-            (spendWitnesses ++ certWitnesses ++ wdrlWitnesses ++ updateWitnesses)
+            (spendWitnesses' ++ certWitnesses' ++ wdrlWitnesses' ++ updateWitnesses')
             genesisWitnesses
-            ksKeyPairsByHash
+            ksKeyPairsByHash'
             msigSignatures
 
       pure (Tx txBody' wits' multiSig metadata)
@@ -184,10 +195,10 @@ genTx ge@(GenEnv KeySpace_ { ksCoreNodes
 mkTxWits
   :: HasCallStack
   => TxBody
-  -> [KeyPair]
+  -> [KeyPair 'Witness]
   -> [CoreKeyPair]
-  -> Map AnyKeyHash KeyPair
-  -> Set AnyKeyHash
+  -> Map (KeyHash 'Witness) (KeyPair 'Witness)
+  -> Set (KeyHash 'Witness)
   -> Set WitVKey
 mkTxWits txBody keyWits genesisWits keyHashMap msigs =
   makeWitnessesVKey txBody keyWits
@@ -251,9 +262,9 @@ pickSpendingInputs
   :: HasCallStack
   => Constants
   -> MultiSigPairs
-  -> Map AnyKeyHash KeyPair
+  -> Map (KeyHash Testing) (KeyPair Testing)
   -> UTxO
-  -> Gen ([(TxIn, Either KeyPair (MultiSig, MultiSig))], Coin)
+  -> Gen ([(TxIn, Either (KeyPair 'Witness) (MultiSig, MultiSig))], Coin)
 pickSpendingInputs Constants { minNumGenInputs, maxNumGenInputs} scripts keyHashMap (UTxO utxo) = do
   selectedUtxo <- take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
                        <*> QC.shuffle (Map.toList utxo)
@@ -262,7 +273,7 @@ pickSpendingInputs Constants { minNumGenInputs, maxNumGenInputs} scripts keyHash
          , balance (UTxO (Map.fromList selectedUtxo)))
   where
     witnessedInput (input, TxOut addr@(Addr (KeyHashObj _) _) _) =
-      (input, Left $ findPayKeyPairAddr addr keyHashMap)
+      (input, Left . asWitness $ findPayKeyPairAddr addr keyHashMap)
     witnessedInput (input, TxOut addr@(Addr (ScriptHashObj _) _) _) =
       (input, Right $ findPayScriptFromAddr addr scripts)
     witnessedInput _ = error "unsupported address"
@@ -294,9 +305,9 @@ pickWithdrawals
 mkWdrlWits
   :: HasCallStack
   => MultiSigPairs
-  -> Map AnyKeyHash KeyPair
-  -> Credential
-  -> Either KeyPair (MultiSig, MultiSig)
+  -> Map (KeyHash 'Witness) (KeyPair 'Witness)
+  -> Credential 'Witness
+  -> Either (KeyPair 'Witness) (MultiSig, MultiSig)
 mkWdrlWits scripts _ c@(ScriptHashObj _) = Right $ findStakeScriptFromCred c scripts
 mkWdrlWits _ keyHashMap c@(KeyHashObj _)    = Left $ findPayKeyPairCred c keyHashMap
 

@@ -47,8 +47,8 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
 import           Data.Word (Word8)
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
-import           Shelley.Spec.Ledger.Crypto (Crypto (..), HASH)
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash(AnyKeyHash), Hash)
+import           Shelley.Spec.Ledger.Crypto (Crypto (..))
+import           Shelley.Spec.Ledger.Keys (KeyHash(..), KeyRole(Witness), Hash)
 import           Shelley.Spec.Ledger.Serialization (decodeList, encodeFoldable, decodeRecordNamed)
 
 
@@ -77,7 +77,7 @@ nativeMultiSigTag = 0
 data MultiSig' crypto =
        -- | Require the redeeming transaction be witnessed by the spending key
        --   corresponding to the given verification key hash.
-       RequireSignature'  !(AnyKeyHash crypto)
+       RequireSignature'  !(KeyHash 'Witness crypto)
 
        -- | Require all the sub-terms to be satisfied.
      | RequireAllOf'      ![MultiSig crypto]
@@ -97,7 +97,7 @@ data MultiSig crypto = MultiSig'
   deriving (Show, Eq, Ord, Generic)
   deriving NoUnexpectedThunks via AllowThunksIn '["multiSigBytes"] (MultiSig crypto)
 
-pattern RequireSignature :: Crypto crypto => AnyKeyHash crypto -> MultiSig crypto
+pattern RequireSignature :: Crypto crypto => KeyHash 'Witness crypto -> MultiSig crypto
 pattern RequireSignature akh <- MultiSig' (RequireSignature' akh) _
   where
     RequireSignature akh =
@@ -129,8 +129,8 @@ pattern RequireMOf n ms <- MultiSig' (RequireMOf' n ms) _
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 newtype ScriptHash crypto =
-  ScriptHash (Hash (HASH crypto) (Script crypto))
-  deriving (Show, Eq, Generic, Ord)
+  ScriptHash (Hash crypto (Script crypto))
+  deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoUnexpectedThunks)
 
 deriving newtype instance Crypto crypto => ToCBOR (ScriptHash crypto)
@@ -164,7 +164,7 @@ hashAnyScript (MultiSigScript msig) =
                                           <> toCBOR x) (MultiSigScript msig)
 
 -- | Get one possible combination of keys for multi signature script
-getKeyCombination :: Crypto crypto => MultiSig crypto -> [AnyKeyHash crypto]
+getKeyCombination :: Crypto crypto => MultiSig crypto -> [KeyHash 'Witness crypto]
 getKeyCombination (RequireSignature hk) = [hk]
 getKeyCombination (RequireAllOf msigs) =
   List.concatMap getKeyCombination msigs
@@ -178,7 +178,7 @@ getKeyCombination (RequireMOf m msigs) =
 
 -- | Get all valid combinations of keys for given multi signature. This is
 -- mainly useful for testing.
-getKeyCombinations :: Crypto crypto => MultiSig crypto -> [[AnyKeyHash crypto]]
+getKeyCombinations :: Crypto crypto => MultiSig crypto -> [[KeyHash 'Witness crypto]]
 getKeyCombinations (RequireSignature hk) = [[hk]]
 getKeyCombinations (RequireAllOf msigs) = [List.concat $
   List.concatMap getKeyCombinations msigs]
@@ -200,7 +200,7 @@ instance (Crypto crypto) =>
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
-      0 -> matchSize "RequireSignature" 2 n >> (RequireSignature . AnyKeyHash) <$> fromCBOR
+      0 -> matchSize "RequireSignature" 2 n >> (RequireSignature . KeyHash) <$> fromCBOR
       1 -> matchSize "RequireAllOf" 2 n >> RequireAllOf <$> decodeList fromCBOR
       2 -> matchSize "RequireAnyOf" 2 n >> RequireAnyOf <$> decodeList fromCBOR
       3 -> do
@@ -217,7 +217,7 @@ instance Crypto crypto =>
 instance Crypto crypto =>
   FromCBOR (Annotator (MultiSig' crypto)) where
   fromCBOR = fmap snd $ decodeRecordNamed "MultiSig" fst $ decodeWord >>= \case
-    0 -> (,) 2 . pure . RequireSignature' . AnyKeyHash <$> fromCBOR
+    0 -> (,) 2 . pure . RequireSignature' . KeyHash <$> fromCBOR
     1 -> do
       multiSigs <- sequence <$> decodeList fromCBOR
       pure (2, RequireAllOf' <$> multiSigs)

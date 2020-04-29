@@ -116,7 +116,7 @@ delplTransition = do
       ps <-
         trans @(POOL crypto) $ TRC (PoolEnv slot pp, _pstate d, c)
       pure $ d { _pstate = ps }
-    DCertGenesis (GenesisDelegate {}) -> do
+    DCertGenesis (GenesisDelegCert {}) -> do
       ds <-
         trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
       pure $ d { _dstate = ds }

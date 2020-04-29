@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 module Shelley.Spec.Ledger.API.Wallet
   ( getNonMyopicMemberRewards
   , getFilteredUTxO
@@ -14,7 +15,7 @@ import           Shelley.Spec.Ledger.API.Validation (ShelleyState)
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)
-import           Shelley.Spec.Ledger.Keys (KeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole(..))
 import           Shelley.Spec.Ledger.LedgerState (esLState, esNonMyopic, esPp, nesEs, _utxo,
                      _utxoState)
 import           Shelley.Spec.Ledger.Rewards (NonMyopic (..), StakeShare (..), getTopRankedPools,
@@ -31,8 +32,8 @@ import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 getNonMyopicMemberRewards
   :: Globals
   -> ShelleyState crypto
-  -> Set (Credential crypto)
-  -> Map (Credential crypto) (Map (KeyHash crypto) Coin)
+  -> Set (Credential 'Staking crypto)
+  -> Map (Credential 'Staking crypto) (Map (KeyHash 'StakePool crypto) Coin)
 getNonMyopicMemberRewards globals ss creds = Map.fromList $
   fmap
     (\cred -> (cred, Map.mapWithKey (mkNMMRewards $ memShare cred) poolData))

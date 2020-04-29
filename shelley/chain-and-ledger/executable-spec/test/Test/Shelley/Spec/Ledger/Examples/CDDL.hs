@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoImplicitPrelude #-}
@@ -32,6 +33,7 @@ import           System.Process.ByteString.Lazy
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
+import           Shelley.Spec.Ledger.Keys (KeyRole(Staking))
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import           Shelley.Spec.Ledger.Serialization
@@ -49,7 +51,7 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     , cddlTest @BHBody            n "header_body"
     , cddlGroupTest @OCert        n "operational_cert"
     , cddlGroupTest @Addr         n "address"
-    , cddlTest @Credential        n "stake_credential"
+    , cddlTest @(Credential 'Staking)   n "stake_credential"
     , cddlTest' @TxBody           n "transaction_body"
     , cddlTest @TxOut             n "transaction_output"
     , cddlTest @StakePoolRelay    n "relay"

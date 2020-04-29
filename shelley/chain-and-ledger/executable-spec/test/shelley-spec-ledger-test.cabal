@@ -48,6 +48,7 @@ library
     QuickCheck,
     base,
     bytestring,
+    bytestring-conversion,
     cardano-binary,
     cardano-crypto-class,
     cardano-prelude,

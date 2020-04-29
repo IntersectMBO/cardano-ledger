@@ -66,18 +66,21 @@ import           Cardano.Binary (Annotator (..), Decoder, FromCBOR (fromCBOR), T
                      peekTokenType, serialize', serializeEncoding, serializeEncoding', withSlice)
 import           Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
-import qualified Cardano.Crypto.VRF.Class as VRF
+import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Prelude (AllowThunksIn (..), ByteString, LByteString,
                      NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, strictMaybeToMaybe,
-                     mkNonce, ActiveSlotCoeff, activeSlotLog, activeSlotVal)
+import           Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, Nonce (..), Seed (..),
+                     UnitInterval, activeSlotLog, activeSlotVal, intervalValue, mkNonce,
+                     strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import           Shelley.Spec.Ledger.Keys (Hash, KESig, KeyHash, VKey, VRFValue (..), hash, hashKey,
-                     hashKeyVRF)
+import           Shelley.Spec.Ledger.Keys (CertifiedVRF, Hash, KeyHash, KeyRole (..), SignedKES,
+                     VKey, VRFValue (..), VerKeyVRF, coerceKeyRole, decodeSignedKES,
+                     decodeVerKeyVRF, encodeSignedKES, encodeVerKeyVRF, hash, hashKey,
+                     hashVerKeyVRF)
 import           Shelley.Spec.Ledger.OCert (OCert (..))
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..), decodeMap,
@@ -86,10 +89,9 @@ import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx)
 import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
-
--- |The hash of a Block Header
+-- | The hash of a Block Header
 newtype HashHeader crypto =
-  HashHeader { unHashHeader :: (Hash (HASH crypto) (BHeader crypto)) }
+  HashHeader { unHashHeader :: (Hash crypto (BHeader crypto)) }
   deriving (Show, Eq, Generic, Ord)
 
 deriving instance Crypto crypto => ToCBOR (HashHeader crypto)
@@ -143,7 +145,7 @@ instance Crypto crypto
 
 -- | Hash of block body
 newtype HashBBody crypto =
-  HashBBody { unHashBody :: (Hash (HASH crypto) (TxSeq crypto)) }
+  HashBBody { unHashBody :: (Hash crypto (TxSeq crypto)) }
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (HashBBody crypto)
@@ -167,7 +169,7 @@ bbHash (TxSeq' _ bodies wits md) = (HashBBody . coerce) $
   where
     -- FIXME: hash this with less indirection
     -- This should be directly hashing the provided bytes with no funny business.
-    hashStrict :: ByteString -> Hash (HASH crypto) ByteString
+    hashStrict :: ByteString -> Hash crypto ByteString
     hashStrict = Hash.hashWithSerialiser encodePreEncoded
     hashPart = Hash.getHash . hashStrict . BSL.toStrict
 
@@ -178,21 +180,24 @@ hashHeaderToNonce = Nonce . coerce
 data BHeader crypto
   = BHeader' {
       bHeaderBody' :: !(BHBody crypto)
-    , bHeaderSig' :: !(KESig crypto (BHBody crypto))
+    , bHeaderSig' :: !(SignedKES crypto (BHBody crypto))
     , bHeaderBytes :: !LByteString
     }
-  deriving (Generic, Eq, Show)
+  deriving (Generic)
   deriving NoUnexpectedThunks via
              AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
 
-pattern BHeader :: Crypto crypto => BHBody crypto -> KESig crypto (BHBody crypto) -> BHeader crypto
+deriving instance Crypto crypto => Eq (BHeader crypto)
+deriving instance Crypto crypto => Show (BHeader crypto)
+
+pattern BHeader :: Crypto crypto => BHBody crypto -> SignedKES crypto (BHBody crypto) -> BHeader crypto
 pattern BHeader bHeaderBody' bHeaderSig' <- BHeader' { bHeaderBody', bHeaderSig' }
   where
   BHeader body sig =
     let mkBytes bhBody kESig = serializeEncoding $
           encodeListLen 2
           <> toCBOR bhBody
-          <> toCBOR kESig
+          <> encodeSignedKES kESig
      in BHeader' body sig (mkBytes body sig)
 
 {-# COMPLETE BHeader #-}
@@ -208,7 +213,7 @@ instance Crypto crypto
    fromCBOR = annotatorSlice $ do
      n <- decodeListLen
      bhb <- fromCBOR
-     sig <- fromCBOR
+     sig <- decodeSignedKES
      matchSize "Header" 2 n
      pure $ BHeader' <$> pure bhb <*> pure sig
 
@@ -266,13 +271,13 @@ data BHBody crypto = BHBody
   , -- | Hash of the previous block header
     bheaderPrev           :: !(PrevHash crypto)
     -- | verification key of block issuer
-  , bheaderVk             :: !(VKey crypto)
+  , bheaderVk             :: !(VKey 'BlockIssuer crypto)
     -- | VRF verification key for block issuer
-  , bheaderVrfVk          :: !(VRF.VerKeyVRF (VRF crypto))
+  , bheaderVrfVk          :: !(VerKeyVRF crypto)
     -- | block nonce
-  , bheaderEta            :: !(VRF.CertifiedVRF (VRF crypto) Nonce)
+  , bheaderEta            :: !(CertifiedVRF crypto Nonce)
     -- | leader election value
-  , bheaderL              :: !(VRF.CertifiedVRF (VRF crypto) UnitInterval)
+  , bheaderL              :: !(CertifiedVRF crypto UnitInterval)
     -- | Size of the block body
   , bsize                 :: !Natural
     -- | Hash of block body
@@ -295,7 +300,7 @@ instance Crypto crypto
       <> toCBOR (bheaderSlotNo bhBody)
       <> toCBOR (bheaderPrev bhBody)
       <> toCBOR (bheaderVk bhBody)
-      <> VRF.encodeVerKeyVRF (bheaderVrfVk bhBody)
+      <> encodeVerKeyVRF (bheaderVrfVk bhBody)
       <> toCBOR (bheaderEta bhBody)
       <> toCBOR (bheaderL bhBody)
       <> toCBOR (bsize bhBody)
@@ -316,7 +321,7 @@ instance Crypto crypto
     bheaderSlotNo <- fromCBOR
     bheaderPrev <- fromCBOR
     bheaderVk <- fromCBOR
-    bheaderVrfVk <- VRF.decodeVerKeyVRF
+    bheaderVrfVk <- decodeVerKeyVRF
     bheaderEta <- fromCBOR
     bheaderL  <- fromCBOR
     bsize <- fromCBOR
@@ -440,7 +445,7 @@ bhbody (BHeader b _) = b
 
 hsig
   :: Crypto crypto => BHeader crypto
-  -> KESig crypto (BHBody crypto)
+  -> SignedKES crypto (BHBody crypto)
 hsig (BHeader _ s) = s
 
 -- | Construct a seed to use in the VRF computation.
@@ -470,7 +475,7 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
   in  case sigma' of
         Nothing -> False
         Just (sigma, vrfHK) ->
-          vrfHK == hashKeyVRF @crypto vrfK
+          vrfHK == hashVerKeyVRF vrfK
             && VRF.verifyCertified () vrfK
                          (mkSeed seedEta slot eta0)
                          (coerce $ bheaderEta bhb)
@@ -479,7 +484,7 @@ vrfChecks eta0 (PoolDistr pd) f bhb =
                          (coerce $ bheaderL bhb)
             && checkVRFValue (VRF.certifiedNatural $ bheaderL bhb) sigma f
  where
-  hk = hashKey $ bheaderVk bhb
+  hk = coerceKeyRole . hashKey $ bheaderVk bhb
   vrfK = bheaderVrfVk bhb
   slot = bheaderSlotNo bhb
 
@@ -536,7 +541,7 @@ hBbsize = bsize
 
 incrBlocks
   :: Bool
-  -> KeyHash crypto
+  -> KeyHash 'StakePool crypto
   -> BlocksMade crypto
   -> BlocksMade crypto
 incrBlocks isOverlay hk b'@(BlocksMade b)

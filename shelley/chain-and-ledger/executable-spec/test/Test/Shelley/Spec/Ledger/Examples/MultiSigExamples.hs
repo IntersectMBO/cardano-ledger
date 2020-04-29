@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -23,7 +24,7 @@ import qualified Data.Set as Set (fromList)
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, undiscriminateKeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), asWitness)
 import           Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 import           Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
@@ -39,7 +40,7 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
 import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig,
-                     ScriptHash, Tx, TxBody, TxId, TxIn, UTXOW, UTxOState, Wdrl)
+                     ScriptHash, Tx, TxBody, TxId, TxIn, UTXOW, UTxOState, Wdrl, pattern GenDelegs)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (aliceAddr, alicePay, bobAddr, bobPay,
                      carlAddr, dariaAddr)
 import           Test.Shelley.Spec.Ledger.Utils
@@ -48,7 +49,7 @@ import           Test.Shelley.Spec.Ledger.Utils
 
 -- Multi-signature scripts
 singleKeyOnly :: Addr -> MultiSig
-singleKeyOnly (Addr (KeyHashObj pk) _ ) = RequireSignature $ undiscriminateKeyHash pk
+singleKeyOnly (Addr (KeyHashObj pk) _ ) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: MultiSig
@@ -99,7 +100,7 @@ makeTxBody inp addrCs wdrl =
     SNothing
     SNothing
 
-makeTx :: TxBody -> [KeyPair] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
+makeTx :: TxBody -> [KeyPair 'Witness] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
 makeTx txBody keyPairs msigs =
   Tx txBody (makeWitnessesVKey txBody keyPairs) msigs . maybeToStrictMaybe
 
@@ -137,7 +138,7 @@ initialUTxOState aliceKeep msigs =
                 (StakeRefBase $ ScriptHashObj $ hashScript msig), c)) msigs
   in
   let tx = makeTx (initTxBody addresses)
-                  [alicePay, bobPay]
+                  (asWitness <$> [alicePay, bobPay])
                   Map.empty Nothing in
   (txid $ _body tx, runShelleyBase $ applySTS @UTXOW (TRC( UtxoEnv
                                            (SlotNo 0)
@@ -160,7 +161,7 @@ applyTxWithScript
   -> [MultiSig]
   -> Wdrl
   -> Coin
-  -> [KeyPair]
+  -> [KeyPair 'Witness]
   -> Either [[PredicateFailure UTXOW]] UTxOState
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where (txId, initUtxo) = initialUTxOState aliceKeep lockScripts

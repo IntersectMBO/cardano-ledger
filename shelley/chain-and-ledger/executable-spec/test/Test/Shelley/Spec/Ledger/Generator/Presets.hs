@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -15,15 +16,14 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
 where
 
 import Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
-import Crypto.Random (drgNewTest, withDRG)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr)
 import Shelley.Spec.Ledger.Keys
-  ( hashKey,
-    sKey,
-    vKey,
-    pattern KeyPair,
+  ( KeyRole (..),
+    coerceKeyRole,
+    hashKey,
+    vKey
   )
 import Shelley.Spec.Ledger.LedgerState (genesisCoins)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
@@ -31,17 +31,17 @@ import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( CoreKeyPair,
-    GenKeyHash,
     KeyHash,
     KeyPairs,
     MultiSigPairs,
     SignKeyVRF,
     UTxO,
     VerKeyVRF,
+    pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
-    defaultConstants
+    defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
@@ -49,6 +49,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkGenKey,
     mkKESKeyPair,
     mkKeyPair,
+    mkSeedFromWords,
     mkVRFKeyPair,
     slotsPerKESIteration,
   )
@@ -56,9 +57,10 @@ import Test.Shelley.Spec.Ledger.Utils
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
 genEnv :: GenEnv
-genEnv = GenEnv
-  (keySpace defaultConstants)
-  defaultConstants
+genEnv =
+  GenEnv
+    (keySpace defaultConstants)
+    defaultConstants
 
 -- | Example keyspace for use in generators
 keySpace :: Constants -> KeySpace
@@ -77,9 +79,9 @@ keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 vrfKeyPairs :: [(SignKeyVRF, VerKeyVRF)]
 vrfKeyPairs = [body (0, 0, 0, 0, i) | i <- [1 .. 50]]
   where
-    body seed = fst . withDRG (drgNewTest seed) $ do
-      sk <- genKeyVRF
-      return (sk, deriveVerKeyVRF sk)
+    body seed =
+      let sk = genKeyVRF $ mkSeedFromWords seed
+       in (sk, deriveVerKeyVRF sk)
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
 someKeyPairs :: Constants -> Int -> Int -> Gen KeyPairs
@@ -133,19 +135,19 @@ coreNodeKeys Constants {maxSlotTrace, numCoreNodes} =
     | x <- [1001 .. 1000 + numCoreNodes]
   ]
   where
-    toKeyPair (sk, vk) = KeyPair {sKey = sk, vKey = vk}
+    toKeyPair (sk, vk) = KeyPair vk sk
 
 genUtxo0 :: Constants -> Gen UTxO
-genUtxo0 c@Constants{minGenesisUTxOouts, maxGenesisUTxOouts} = do
+genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
   outs <- genTxOut c (fmap toAddr genesisKeys ++ fmap scriptsToAddr genesisScripts)
   return (genesisCoins outs)
 
-genesisDelegs0 :: Constants -> Map GenKeyHash KeyHash
+genesisDelegs0 :: Constants -> Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)
 genesisDelegs0 c =
   Map.fromList
-    [ (hashVKey gkey, hashVKey (cold pkeys))
+    [ (hashVKey gkey, coerceKeyRole $ hashVKey (cold pkeys))
       | (gkey, pkeys) <- coreNodeKeys c
     ]
   where

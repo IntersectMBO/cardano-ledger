@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -41,7 +42,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), StrictMayb
                      UnitInterval, interval0, invalidKey, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (GenDelegs, GenKeyHash)
+import           Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole(..))
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
                      ToCBORGroup (..), decodeMapContents, mapFromCBOR, mapToCBOR, rationalFromCBOR,
                      rationalToCBOR)
@@ -322,7 +323,7 @@ instance FromCBOR PParamsUpdate where
 
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates crypto
-  = ProposedPPUpdates (Map (GenKeyHash crypto) PParamsUpdate)
+  = ProposedPPUpdates (Map (KeyHash 'Genesis crypto) PParamsUpdate)
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (ProposedPPUpdates crypto)

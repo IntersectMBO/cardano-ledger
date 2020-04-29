@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -33,7 +34,7 @@ module Shelley.Spec.Ledger.EpochBoundary
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..), StakePools (..),
                      decayKey, decayPool, refund)
-import           Shelley.Spec.Ledger.Keys (KeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), KeyHash)
 import           Shelley.Spec.Ledger.PParams (PParams, _a0, _nOpt)
 import           Shelley.Spec.Ledger.Slot (SlotNo, (-*))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt,
@@ -56,12 +57,12 @@ import           Byron.Spec.Ledger.Core (dom, (▷), (◁))
 
 -- | Blocks made
 newtype BlocksMade crypto
-  = BlocksMade (Map (KeyHash crypto) Natural)
+  = BlocksMade (Map (KeyHash 'StakePool crypto) Natural)
   deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto
-  = Stake { unStake :: (Map (Credential crypto) Coin) }
+  = Stake { unStake :: (Map (Credential 'Staking crypto) Coin) }
   deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 -- | Add two stake distributions
@@ -72,7 +73,7 @@ newtype Stake crypto
 (Stake lhs) ⊎ (Stake rhs) = Stake $ Map.unionWith (+) lhs rhs
 
 -- | Extract hash of staking key from base address.
-getStakeHK :: Addr crypto -> Maybe (Credential crypto)
+getStakeHK :: Addr crypto -> Maybe (Credential 'Staking crypto)
 getStakeHK (Addr _ (StakeRefBase hk)) = Just hk
 getStakeHK _                          = Nothing
 
@@ -83,13 +84,13 @@ aggregateOuts (UTxO u) =
 -- | Get Stake of base addresses in TxOut set.
 baseStake
   :: Map (Addr crypto) Coin
-  -> [(Credential crypto, Coin)]
+  -> [(Credential 'Staking crypto, Coin)]
 baseStake vals =
   mapMaybe convert $ Map.toList vals
   where
    convert
      :: (Addr crypto, Coin)
-     -> Maybe (Credential crypto, Coin)
+     -> Maybe (Credential 'Staking crypto, Coin)
    convert (a, c) =
      (,c) <$> getStakeHK a
 
@@ -102,14 +103,14 @@ getStakePtr _               = Nothing
 ptrStake
   :: forall crypto
    . Map (Addr crypto) Coin
-  -> Map Ptr (Credential crypto)
-  -> [(Credential crypto, Coin)]
+  -> Map Ptr (Credential 'Staking crypto)
+  -> [(Credential 'Staking crypto, Coin)]
 ptrStake vals pointers =
   mapMaybe convert $ Map.toList vals
   where
     convert
       :: (Addr crypto, Coin)
-      -> Maybe (Credential crypto, Coin)
+      -> Maybe (Credential 'Staking crypto, Coin)
     convert (a, c) =
       case getStakePtr a of
         Nothing -> Nothing
@@ -118,7 +119,7 @@ ptrStake vals pointers =
 rewardStake
   :: forall crypto
    . Map (RewardAcnt crypto) Coin
-  -> [(Credential crypto, Coin)]
+  -> [(Credential 'Staking crypto, Coin)]
 rewardStake rewards =
   map convert $ Map.toList rewards
   where
@@ -126,8 +127,8 @@ rewardStake rewards =
 
 -- | Get stake of one pool
 poolStake
-  :: KeyHash crypto
-  -> Map (Credential crypto) (KeyHash crypto)
+  :: KeyHash 'StakePool crypto
+  -> Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
   -> Stake crypto
   -> Stake crypto
 poolStake hk delegs (Stake stake) =
@@ -136,9 +137,9 @@ poolStake hk delegs (Stake stake) =
 -- | Calculate pool refunds
 poolRefunds
   :: PParams
-  -> Map (KeyHash crypto) SlotNo
+  -> Map (KeyHash 'StakePool crypto) SlotNo
   -> SlotNo
-  -> Map (KeyHash crypto) Coin
+  -> Map (KeyHash 'StakePool crypto) Coin
 poolRefunds pp retirees cslot =
   Map.map
     (\s ->
@@ -177,11 +178,11 @@ maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
 
 -- | Pool individual reward
 groupByPool
-  :: Map (KeyHash crypto) Coin
-  -> Map (KeyHash crypto) (KeyHash crypto)
+  :: Map (KeyHash 'Staking crypto) Coin
+  -> Map (KeyHash 'Staking crypto) (KeyHash 'StakePool crypto)
   -> Map
-       (KeyHash crypto)
-       (Map (KeyHash crypto) Coin)
+       (KeyHash 'StakePool crypto)
+       (Map (KeyHash 'Staking crypto) Coin)
 groupByPool active delegs =
   Map.fromListWith
     Map.union
@@ -193,8 +194,8 @@ groupByPool active delegs =
 data SnapShot crypto
   = SnapShot
     { _stake       :: !(Stake crypto)
-    , _delegations :: !(Map (Credential crypto) (KeyHash crypto))
-    , _poolParams  :: !(Map (KeyHash crypto) (PoolParams crypto))
+    , _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto))
+    , _poolParams  :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto))
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShot crypto)

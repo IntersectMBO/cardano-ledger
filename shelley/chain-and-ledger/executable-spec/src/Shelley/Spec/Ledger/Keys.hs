@@ -1,317 +1,225 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
 module Shelley.Spec.Ledger.Keys
-  ( KeyDiscriminator(..)
-  , HashAlgorithm
-  , Hash
-  , hash
+  ( KeyRole(..)
+  , HasKeyRole(..)
 
-  , DSIGNAlgorithm
-  , Signable
-  , SKey(..)
-  , DiscVKey(VKey, VKeyGenesis, ..)
-  , VKey
-  , VKeyGenesis
-  , DiscKeyHash(..)
-  , KeyHash
-  , pattern KeyHash
-  , GenKeyHash
-  , pattern GenKeyHash
-  , AnyKeyHash
-  , pattern AnyKeyHash
-  , undiscriminateKeyHash
+  -- * DSIGN
+  , DSignable
+  , VKey(..)
   , KeyPair(..)
-  , Sig(..)
+  , signedDSIGN
+  , verifySignedDSIGN
+
+  -- * Key hashes
+  , KeyHash(..)
   , hashKey
-  , hashAnyKey
-  , sign
-  , verify
 
-  , GKeys(..)
+  -- * Genesis delegations
   , GenDelegs(..)
+  , GKeys(..)
 
-  , KESAlgorithm
+  -- * KES
   , KESignable
-  , SKeyES(..)
-  , VKeyES(..)
-  , KeyHashES(..)
-  , KESig(..)
-  , hashKeyES
-  , signKES
-  , verifyKES
-  , updateKESKey
-  , currentPeriodKESKey
 
-  , VRFAlgorithm(SignKeyVRF, VerKeyVRF)
+  -- * VRF
+  , VRFSignable
   , VRFValue(..)
-  , VRF.CertifiedVRF(..)
-  , hashKeyVRF
+
+  -- * Re-exports from cardano-crypto-class
+  , DSIGN.decodeSignedDSIGN
+  , DSIGN.encodeSignedDSIGN
+
+  , Hash.hash
+  , KES.decodeSignedKES
+  , KES.decodeVerKeyKES
+  , KES.encodeSignedKES
+  , KES.encodeVerKeyKES
+  , KES.signedKES
+  , KES.updateKES
+  , KES.verifyKES
+  , KES.verifySignedKES
+  , VRF.decodeVerKeyVRF
+  , VRF.encodeVerKeyVRF
+  , VRF.hashVerKeyVRF
+  , VRF.verifyVRF
+
+  -- * Re-parametrised types over `crypto`
+  , CertifiedVRF
+  , Hash
+  , SignedDSIGN
+  , SignKeyDSIGN
+  , SignedKES
+  , SignKeyKES
+  , SignKeyVRF
+  , VerKeyKES
+  , VerKeyVRF
   )
 where
 
-import           Crypto.Random (drgNewSeed, seedFromInteger, withDRG)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (toCBOR))
+import qualified Cardano.Crypto.DSIGN as DSIGN
+import qualified Cardano.Crypto.Hash as Hash
+import qualified Cardano.Crypto.KES as KES
+import qualified Cardano.Crypto.VRF as VRF
+import           Cardano.Prelude (NFData, NoUnexpectedThunks (..))
+import           Data.Coerce (Coercible, coerce)
 import           Data.Map.Strict (Map)
 import           Data.Ratio ((%))
 import           Data.Set (Set)
 import           Data.Typeable (Typeable)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
+import           Shelley.Spec.Ledger.BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
 import           Shelley.Spec.Ledger.Crypto
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (toCBOR))
-import           Cardano.Crypto.DSIGN
-                     (DSIGNAlgorithm (SignKeyDSIGN, Signable, VerKeyDSIGN, encodeVerKeyDSIGN),
-                     SignedDSIGN (SignedDSIGN), signedDSIGN, verifySignedDSIGN)
-import qualified Cardano.Crypto.DSIGN as DSIGN
-import           Cardano.Crypto.Hash (Hash, HashAlgorithm, hash, hashWithSerialiser)
-import           Cardano.Crypto.KES (KESAlgorithm (SignKeyKES, VerKeyKES, currentPeriodKES, encodeSigKES, encodeVerKeyKES, updateKES),
-                     SignedKES (SignedKES), decodeSignedKES, signedKES, verifySignedKES)
-import qualified Cardano.Crypto.KES as KES
-import           Cardano.Crypto.VRF (VRFAlgorithm (VerKeyVRF))
-import qualified Cardano.Crypto.VRF as VRF
-import           Cardano.Prelude (NFData, NoUnexpectedThunks (..))
-import           Shelley.Spec.Ledger.BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
-
--- | Discriminate between keys based on their usage in the system.
-data KeyDiscriminator
+-- | The role of a key.
+--
+--   Note that a role is not _fixed_, nor is it unique. In particular, keys may
+--   variously be used as witnesses, and so in many case we will change the role
+--   of a key to the 'Witness' role.
+--
+--   It is also perfectly allowable for a key to be used in many roles; there is
+--   nothing prohibiting somebody using the same underlying key as their payment
+--   and staking key, as well as the key for their stake pool. So these roles
+--   are more intended for two purposes:
+--
+--   - To make explicit how we are using a key in the specifications
+--   - To provide a guide to downstream implementors, for whom the profusion of
+--     keys may be confusing.
+data KeyRole
   = Genesis
-  | Regular
+  | GenesisDelegate
+  | Payment
+  | Staking
+  | StakePool
+  | BlockIssuer -- ^ A block issuer might be either a genesis delegate or a stake pool
+  | Witness
   deriving (Show)
 
-newtype SKey crypto
-  = SKey { unSKey :: SignKeyDSIGN (DSIGN crypto) }
+class HasKeyRole a where
 
-deriving instance (Crypto crypto, NFData (SignKeyDSIGN (DSIGN crypto))) => NFData (SKey crypto)
-deriving instance Crypto crypto => NoUnexpectedThunks (SKey crypto)
+  -- | General coercion of key roles.
+  --
+  --   The presence of this function is mostly to help the user realise where they
+  --   are converting key roles.
+  coerceKeyRole :: a r crypto -> a r' crypto
+  default coerceKeyRole
+    :: Coercible (a r crypto) (a r' crypto)
+    => a r crypto -> a r' crypto
+  coerceKeyRole = coerce
 
-deriving instance Crypto crypto => Show (SKey crypto)
-deriving instance Num (SignKeyDSIGN (DSIGN crypto)) => Num (SKey crypto)
+  -- | Use a key as a witness.
+  --
+  --   This is the most common coercion between key roles, because most keys can
+  --   be used as witnesses to some types of transaction. As such, we provide an
+  --   explicit coercion for it.
+  asWitness :: a r crypto -> a 'Witness crypto
+  asWitness = coerceKeyRole
+
+--------------------------------------------------------------------------------
+-- Verification keys
+--------------------------------------------------------------------------------
+
+type DSignable c = DSIGN.Signable (DSIGN c)
 
 -- | Discriminated verification key
-newtype DiscVKey (kd :: KeyDiscriminator) crypto
-  = DiscVKey { unDiscVKey :: VerKeyDSIGN (DSIGN crypto) }
+--
+--   We wrap the basic `VerKeyDSIGN` in order to add the key role.
+newtype VKey (kd :: KeyRole) crypto = VKey (DSIGN.VerKeyDSIGN (DSIGN crypto))
 
-deriving instance Crypto crypto => Show (DiscVKey kd crypto)
-deriving instance Crypto crypto => Eq   (DiscVKey kd crypto)
-deriving instance Num (VerKeyDSIGN (DSIGN crypto)) => Num (DiscVKey kd crypto)
-deriving instance (Crypto crypto, NFData (VerKeyDSIGN (DSIGN crypto))) => NFData (DiscVKey kd crypto)
-deriving instance Crypto crypto => NoUnexpectedThunks (DiscVKey kd crypto)
+deriving instance Crypto crypto => Show (VKey kd crypto)
+deriving instance Crypto crypto => Eq   (VKey kd crypto)
+deriving instance Num (DSIGN.VerKeyDSIGN (DSIGN crypto)) => Num (VKey kd crypto)
+deriving instance (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) => NFData (VKey kd crypto)
+deriving instance Crypto crypto => NoUnexpectedThunks (VKey kd crypto)
 
-instance (Crypto crypto, Typeable kd) => FromCBOR (DiscVKey kd crypto) where
-  fromCBOR = DiscVKey <$> DSIGN.decodeVerKeyDSIGN
-instance (Crypto crypto, Typeable kd) => ToCBOR (DiscVKey kd crypto) where
-  toCBOR (DiscVKey vk) = encodeVerKeyDSIGN vk
+instance HasKeyRole VKey
 
-type VKey = DiscVKey 'Regular
-pattern VKey :: VerKeyDSIGN (DSIGN crypto) -> DiscVKey 'Regular crypto
-pattern VKey a = DiscVKey a
-type VKeyGenesis = DiscVKey 'Genesis
-pattern VKeyGenesis :: VerKeyDSIGN (DSIGN crypto) -> DiscVKey 'Genesis crypto
-pattern VKeyGenesis a = DiscVKey a
+instance (Crypto crypto, Typeable kd) => FromCBOR (VKey kd crypto) where
+  fromCBOR = VKey <$> DSIGN.decodeVerKeyDSIGN
+instance (Crypto crypto, Typeable kd) => ToCBOR (VKey kd crypto) where
+  toCBOR (VKey vk) = DSIGN.encodeVerKeyDSIGN vk
 
-{-# COMPLETE VKey, VKeyGenesis #-}
-
-data KeyPair (kd :: KeyDiscriminator) crypto
+-- | Pair of signing key and verification key, with a usage role.
+data KeyPair (kd :: KeyRole) crypto
   = KeyPair
-      { vKey :: !(DiscVKey kd crypto)
-      , sKey :: !(SKey crypto)
+      { vKey :: !(VKey kd crypto)
+      , sKey :: !(DSIGN.SignKeyDSIGN (DSIGN crypto))
       } deriving (Generic, Show)
 
 instance ( Crypto crypto
-         , NFData (VerKeyDSIGN (DSIGN crypto))
-         , NFData (SignKeyDSIGN (DSIGN crypto))
+         , NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))
+         , NFData (DSIGN.SignKeyDSIGN (DSIGN crypto))
          ) => NFData (KeyPair kd crypto)
 instance Crypto crypto => NoUnexpectedThunks (KeyPair kd crypto)
 
-newtype Sig crypto a = UnsafeSig (SignedDSIGN (DSIGN crypto) a)
+instance HasKeyRole KeyPair
 
-deriving instance (Crypto crypto) => Show (Sig crypto a)
-deriving instance (Crypto crypto) => Eq   (Sig crypto a)
-deriving instance Crypto crypto => NoUnexpectedThunks (Sig crypto a)
-
-instance (Crypto crypto, Typeable a) => FromCBOR (Sig crypto a) where
-  fromCBOR = UnsafeSig <$> DSIGN.decodeSignedDSIGN
-instance (Crypto crypto, Typeable a) => ToCBOR (Sig crypto a) where
-  toCBOR (UnsafeSig s) = DSIGN.encodeSignedDSIGN s
-
--- |Produce a digital signature
-sign
-  :: (Crypto crypto, Signable (DSIGN crypto) a)
-  => SKey crypto
+-- | Produce a digital signature
+signedDSIGN
+  :: (Crypto crypto, DSIGN.Signable (DSIGN crypto) a)
+  => DSIGN.SignKeyDSIGN (DSIGN crypto)
   -> a
-  -> Sig crypto a
-sign (SKey k) d =
-  UnsafeSig
-    . fst
-    . withDRG (drgNewSeed (seedFromInteger 0))
-    $ signedDSIGN () d k
+  -> SignedDSIGN crypto a
+signedDSIGN key a = DSIGN.signedDSIGN () a key
 
--- |Verify a digital signature
-verify
-  :: (Crypto crypto, Signable (DSIGN crypto) a)
-  => DiscVKey kd crypto
+-- | Verify a digital signature
+verifySignedDSIGN
+  :: (Crypto crypto, DSIGN.Signable (DSIGN crypto) a)
+  => VKey kd crypto
   -> a
-  -> Sig crypto a
+  -> SignedDSIGN crypto a
   -> Bool
-verify (DiscVKey vk) vd (UnsafeSig sigDSIGN) =
-  either (const False) (const True) $ verifySignedDSIGN () vk vd sigDSIGN
-
-newtype SKeyES crypto = SKeyES (SignKeyKES (KES crypto))
-
-deriving instance (KESAlgorithm (KES crypto)) => Show (SKeyES crypto)
-
-newtype VKeyES crypto = VKeyES (VerKeyKES (KES crypto))
-
-deriving instance (KESAlgorithm (KES crypto)) => Show (VKeyES crypto)
-deriving instance (KESAlgorithm (KES crypto)) => Eq   (VKeyES crypto)
-deriving instance (KESAlgorithm (KES crypto)) => NoUnexpectedThunks (VKeyES crypto)
-
-instance Crypto crypto => ToCBOR (VKeyES crypto) where
-  toCBOR (VKeyES vKeyES) = encodeVerKeyKES vKeyES
-instance Crypto crypto => FromCBOR (VKeyES crypto) where
-  fromCBOR = VKeyES <$> KES.decodeVerKeyKES
-
-type KESignable crypto a = KES.Signable (KES crypto) a
-
-newtype KESig crypto a = KESig (SignedKES (KES crypto) a)
-
-deriving instance (Crypto crypto) => Show (KESig crypto a)
-deriving instance (Crypto crypto) => Eq   (KESig crypto a)
-deriving instance (Crypto crypto) => NoUnexpectedThunks (KESig crypto a)
-
-instance (Crypto crypto, Typeable a) => ToCBOR (KESig crypto a) where
-  toCBOR (KESig (SignedKES sigKES)) = encodeSigKES sigKES
-instance (Crypto crypto, Typeable a) => FromCBOR (KESig crypto a) where
-  fromCBOR = KESig <$> decodeSignedKES
-
-
--- |Produce a key evolving signature
-signKES
-  :: (Crypto crypto, KES.Signable (KES crypto) a)
-  => SKeyES crypto
-  -> a
-  -> Natural
-  -> Maybe (KESig crypto a)
-signKES (SKeyES k) d n =
-  let retval = signedKES () n d k
-      sig    = (fst . withDRG (drgNewSeed (seedFromInteger 0))) retval
-  in
-    case sig of
-      Nothing -> Nothing
-      Just sig' -> (Just . KESig) sig'
-
-updateKESKey
-  :: Crypto crypto
-  => SKeyES crypto
-  -> Natural  -- ^ Target period
-  -> Maybe (SKeyES crypto)
-updateKESKey (SKeyES k) period =
-    fmap SKeyES $
-    (fst . withDRG (drgNewSeed newSeed)) $
-    updateKES () k period
-  where
-    newSeed = seedFromInteger $ fromIntegral $ currentPeriodKES () k
-
-currentPeriodKESKey
-  :: Crypto crypto
-  => SKeyES crypto
-  -> Natural
-currentPeriodKESKey (SKeyES k) = currentPeriodKES () k
-
--- |Verify a key evolving signature
-verifyKES
-  :: (Crypto crypto, KES.Signable (KES crypto) a)
-  => VKeyES crypto
-  -> a
-  -> KESig crypto a
-  -> Natural
-  -> Bool
-verifyKES (VKeyES vKeyES) vd (KESig sigKES) n =
-  either (const False) (const True)
-    $ verifySignedKES () vKeyES n vd sigKES
-
-newtype GenDelegs crypto =
-  GenDelegs (Map (GenKeyHash crypto) (KeyHash crypto))
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
-
-newtype GKeys crypto = GKeys (Set (VKeyGenesis crypto))
-  deriving (Show, Eq, NoUnexpectedThunks)
+verifySignedDSIGN (VKey vk) vd sigDSIGN =
+  either (const False) (const True) $ DSIGN.verifySignedDSIGN () vk vd sigDSIGN
 
 --------------------------------------------------------------------------------
 -- Key Hashes
 --------------------------------------------------------------------------------
 
 -- | Discriminated hash of public Key
-newtype DiscKeyHash (discriminator :: KeyDiscriminator) crypto =
-  DiscKeyHash (Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto)))
-  deriving (Show, Eq, Generic, NFData, Ord, NoUnexpectedThunks)
+newtype KeyHash (discriminator :: KeyRole) crypto =
+  KeyHash (Hash crypto (DSIGN.VerKeyDSIGN (DSIGN crypto)))
+  deriving (Show, Eq, Ord)
+  deriving newtype (NFData, NoUnexpectedThunks)
 
-deriving instance (Crypto crypto, Typeable disc) => ToCBOR (DiscKeyHash disc crypto)
-deriving instance (Crypto crypto, Typeable disc) => FromCBOR (DiscKeyHash disc crypto)
+deriving instance (Crypto crypto, Typeable disc) => ToCBOR (KeyHash disc crypto)
+deriving instance (Crypto crypto, Typeable disc) => FromCBOR (KeyHash disc crypto)
 
-type KeyHash crypto = DiscKeyHash 'Regular crypto
-{-# COMPLETE KeyHash #-}
-pattern KeyHash
-  :: Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto))
-  -> DiscKeyHash 'Regular crypto
-pattern KeyHash a = DiscKeyHash a
-type GenKeyHash crypto = DiscKeyHash 'Genesis crypto
-{-# COMPLETE GenKeyHash #-}
-pattern GenKeyHash
-  :: Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto))
-  -> DiscKeyHash 'Genesis crypto
-pattern GenKeyHash a = DiscKeyHash a
-
--- | Discriminated hash of public Key
-newtype AnyKeyHash crypto =
-  AnyKeyHash (Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto)))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
-
-deriving instance Crypto crypto => ToCBOR (AnyKeyHash crypto)
-
-undiscriminateKeyHash
-  :: DiscKeyHash kd crypto
-  -> AnyKeyHash crypto
-undiscriminateKeyHash (DiscKeyHash x) = AnyKeyHash x
+instance HasKeyRole KeyHash
 
 -- |Hash a given public key
 hashKey
   :: Crypto crypto
-  => DiscVKey kd crypto
-  -> DiscKeyHash kd crypto
-hashKey (DiscVKey vk) = DiscKeyHash $ hashWithSerialiser encodeVerKeyDSIGN vk
+  => VKey kd crypto
+  -> KeyHash kd crypto
+hashKey (VKey vk) = KeyHash $ DSIGN.hashVerKeyDSIGN vk
 
--- | Hash a given public key and forget about what it's a hash of
-hashAnyKey
-  :: Crypto crypto
-  => DiscVKey kd crypto
-  -> AnyKeyHash crypto
-hashAnyKey = undiscriminateKeyHash . hashKey
+--------------------------------------------------------------------------------
+-- KES
+--------------------------------------------------------------------------------
 
--- |The hash of KES verification Key
-newtype KeyHashES crypto =
-  KeyHashES (Hash (HASH crypto) (VerKeyKES (KES crypto)))
-  deriving (Show, Eq, Ord)
+type KESignable c = KES.Signable (KES c)
 
-deriving instance Crypto crypto => ToCBOR (KeyHashES crypto)
+--------------------------------------------------------------------------------
+-- VRF
+--------------------------------------------------------------------------------
 
--- |Hash a given public key
-hashKeyES
-  :: Crypto crypto
-  => VKeyES crypto
-  -> KeyHashES crypto
-hashKeyES (VKeyES vKeyES) =
-  KeyHashES $ hashWithSerialiser encodeVerKeyKES vKeyES
+type VRFSignable c = VRF.Signable (VRF c)
 
 -- | Our VRFAlgorithm provides a 'Natural', so we must exhibit an extractor to
 --   use the bits as some other type
@@ -326,8 +234,37 @@ instance VRFValue UnitInterval where
   -- TODO Consider whether this is a reasonable thing to do
   fromNatural k = truncateUnitInterval $ toInteger k % 10000
 
-hashKeyVRF
-  :: Crypto crypto
-  => VRF.VerKeyVRF (VRF crypto)
-  -> Hash (HASH crypto) (VerKeyVRF (VRF crypto))
-hashKeyVRF = hashWithSerialiser VRF.encodeVerKeyVRF
+--------------------------------------------------------------------------------
+-- Genesis delegation
+--
+-- TODO should this really live in here?
+--------------------------------------------------------------------------------
+
+newtype GenDelegs crypto =
+  GenDelegs (Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto))
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
+
+newtype GKeys crypto = GKeys (Set (VKey 'Genesis crypto))
+  deriving (Show, Eq, NoUnexpectedThunks)
+
+
+--------------------------------------------------------------------------------
+-- crypto-parametrised types
+--
+-- Within `cardano-ledger-specs`, we parametrise everything on our `crypto` type
+-- "package". However, in `cardano-crypto-class`, things are parametrised on the
+-- original algorithm. In order to make using types from that module easier, we
+-- provide some type aliases which unwrap the crypto parameters.
+--------------------------------------------------------------------------------
+
+type Hash c = Hash.Hash (HASH c)
+type SignedDSIGN c = DSIGN.SignedDSIGN (DSIGN c)
+type SignKeyDSIGN c = DSIGN.SignKeyDSIGN (DSIGN c)
+
+type SignedKES c = KES.SignedKES (KES c)
+type SignKeyKES c = KES.SignKeyKES (KES c)
+type VerKeyKES c = KES.VerKeyKES (KES c)
+
+type CertifiedVRF c = VRF.CertifiedVRF (VRF c)
+type SignKeyVRF c = VRF.SignKeyVRF (VRF c)
+type VerKeyVRF c = VRF.VerKeyVRF (VRF c)
