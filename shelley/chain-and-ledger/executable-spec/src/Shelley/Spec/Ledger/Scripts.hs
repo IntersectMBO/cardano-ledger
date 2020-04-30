@@ -1,6 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -8,18 +12,45 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Shelley.Spec.Ledger.Scripts
-  where
+  ( MultiSig
+    ( RequireAllOf
+    , RequireAnyOf
+    , RequireSignature
+    , RequireMOf
+    , multiSigBytes
+    )
+  , Script (..)
+  , ScriptHash (..)
+  , countMSigNodes
+  , getKeyCombination
+  , getKeyCombinations
+  , hashAnyScript
+  ) where
 
-import           Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (toCBOR), decodeListLen, decodeWord,
-                     encodeListLen, encodeWord, encodeWord8, matchSize)
+import           Cardano.Binary
+  ( Annotator (..)
+  , annotatorSlice
+  , FromCBOR (fromCBOR)
+  , ToCBOR (toCBOR)
+  , decodeListLen
+  , decodeWord
+  , encodeListLen
+  , encodePreEncoded
+  , encodeWord
+  , encodeWord8
+  , matchSize
+  , serializeEncoding
+  )
+import           Cardano.Prelude (AllowThunksIn (..), LByteString)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Prelude (Generic, NoUnexpectedThunks (..))
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
 import           Data.Word (Word8)
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import           Shelley.Spec.Ledger.Crypto (Crypto (..), HASH)
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, pattern AnyKeyHash, Hash)
-import           Shelley.Spec.Ledger.Serialization (decodeList, encodeFoldable)
+import           Shelley.Spec.Ledger.Keys (AnyKeyHash(AnyKeyHash), Hash)
+import           Shelley.Spec.Ledger.Serialization (decodeList, encodeFoldable, decodeRecordNamed)
 
 
 -- | Magic number representing the tag of the native multi-signature script
@@ -44,39 +75,78 @@ nativeMultiSigTag = 0
 -- extension point to express other validity conditions, e.g., as needed for
 -- locking funds used with lightning.
 --
-data MultiSig crypto =
+data MultiSig' crypto =
        -- | Require the redeeming transaction be witnessed by the spending key
        --   corresponding to the given verification key hash.
-       RequireSignature  !(AnyKeyHash crypto)
+       RequireSignature'  !(AnyKeyHash crypto)
 
        -- | Require all the sub-terms to be satisfied.
-     | RequireAllOf      ![MultiSig crypto]
+     | RequireAllOf'      ![MultiSig crypto]
 
        -- | Require any one of the sub-terms to be satisfied.
-     | RequireAnyOf      ![MultiSig crypto]
+     | RequireAnyOf'      ![MultiSig crypto]
 
        -- | Require M of the given sub-terms to be satisfied.
-     | RequireMOf   !Int ![MultiSig crypto]
+     | RequireMOf'   !Int ![MultiSig crypto]
   deriving (Show, Eq, Ord, Generic)
+  deriving anyclass NoUnexpectedThunks
 
-instance NoUnexpectedThunks (MultiSig crypto)
+data MultiSig crypto = MultiSig'
+  { multiSig :: !(MultiSig' crypto)
+  , multiSigBytes :: LByteString
+  }
+  deriving (Show, Eq, Ord, Generic)
+  deriving NoUnexpectedThunks via AllowThunksIn '["multiSigBytes"] (MultiSig crypto)
+
+pattern RequireSignature :: Crypto crypto => AnyKeyHash crypto -> MultiSig crypto
+pattern RequireSignature akh <- MultiSig' (RequireSignature' akh) _
+  where
+    RequireSignature akh =
+      let bytes = serializeEncoding $ encodeListLen 2 <> encodeWord 0 <> toCBOR akh
+       in MultiSig' (RequireSignature' akh) bytes
+
+pattern RequireAllOf :: Crypto crypto => [MultiSig crypto] -> MultiSig crypto
+pattern RequireAllOf ms <- MultiSig' (RequireAllOf' ms) _
+  where
+    RequireAllOf ms =
+      let bytes = serializeEncoding $ encodeListLen 2 <> encodeWord 1 <> encodeFoldable ms
+       in MultiSig' (RequireAllOf' ms) bytes
+
+pattern RequireAnyOf :: Crypto crypto => [MultiSig crypto] -> MultiSig crypto
+pattern RequireAnyOf ms <- MultiSig' (RequireAnyOf' ms) _
+  where
+    RequireAnyOf ms =
+      let bytes = serializeEncoding $ encodeListLen 2 <> encodeWord 2 <> encodeFoldable ms
+       in MultiSig' (RequireAnyOf' ms) bytes
+
+pattern RequireMOf :: Crypto crypto => Int -> [MultiSig crypto] -> MultiSig crypto
+pattern RequireMOf n ms <- MultiSig' (RequireMOf' n ms) _
+  where
+    RequireMOf n ms =
+      let bytes = serializeEncoding $
+             encodeListLen 3 <> encodeWord 3 <> toCBOR n <> encodeFoldable ms
+       in MultiSig' (RequireMOf' n ms) bytes
+
+{-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 newtype ScriptHash crypto =
   ScriptHash (Hash (HASH crypto) (Script crypto))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, Generic)
+  deriving newtype NoUnexpectedThunks
+
+deriving newtype instance Crypto crypto => ToCBOR (ScriptHash crypto)
+deriving newtype instance Crypto crypto => FromCBOR (ScriptHash crypto)
 
 data Script crypto = MultiSigScript (MultiSig crypto)
                      -- new languages go here
   deriving (Show, Eq, Ord, Generic)
 
-instance NoUnexpectedThunks (Script crypto)
+instance Crypto crypto => NoUnexpectedThunks (Script crypto)
 
-deriving instance Crypto crypto => ToCBOR (ScriptHash crypto)
-deriving instance Crypto crypto => FromCBOR (ScriptHash crypto)
 
 
 -- | Count nodes and leaves of multi signature script
-countMSigNodes :: MultiSig crypto -> Int
+countMSigNodes :: Crypto crypto => MultiSig crypto -> Int
 countMSigNodes (RequireSignature _) = 1
 countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
@@ -95,8 +165,7 @@ hashAnyScript (MultiSigScript msig) =
                                           <> toCBOR x) (MultiSigScript msig)
 
 -- | Get one possible combination of keys for multi signature script
-getKeyCombination :: MultiSig crypto -> [AnyKeyHash crypto]
-
+getKeyCombination :: Crypto crypto => MultiSig crypto -> [AnyKeyHash crypto]
 getKeyCombination (RequireSignature hk) = [hk]
 getKeyCombination (RequireAllOf msigs) =
   List.concatMap getKeyCombination msigs
@@ -110,15 +179,11 @@ getKeyCombination (RequireMOf m msigs) =
 
 -- | Get all valid combinations of keys for given multi signature. This is
 -- mainly useful for testing.
-getKeyCombinations :: MultiSig crypto -> [[AnyKeyHash crypto]]
-
+getKeyCombinations :: Crypto crypto => MultiSig crypto -> [[AnyKeyHash crypto]]
 getKeyCombinations (RequireSignature hk) = [[hk]]
-
 getKeyCombinations (RequireAllOf msigs) = [List.concat $
   List.concatMap getKeyCombinations msigs]
-
 getKeyCombinations (RequireAnyOf msigs) = List.concatMap getKeyCombinations msigs
-
 getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs in
     map (concat . List.concatMap getKeyCombinations) perms
@@ -129,14 +194,7 @@ getKeyCombinations (RequireMOf m msigs) =
 
 instance (Crypto crypto) =>
   ToCBOR (MultiSig crypto) where
-  toCBOR (RequireSignature hk) =
-    encodeListLen 2 <> encodeWord 0 <> toCBOR hk
-  toCBOR (RequireAllOf msigs) =
-    encodeListLen 2 <> encodeWord 1 <> encodeFoldable msigs
-  toCBOR (RequireAnyOf msigs) =
-    encodeListLen 2 <> encodeWord 2 <> encodeFoldable msigs
-  toCBOR (RequireMOf m msigs) =
-    encodeListLen 3 <> encodeWord 3 <> toCBOR m <> encodeFoldable msigs
+  toCBOR (MultiSig' _ bytes) = encodePreEncoded $ BSL.toStrict bytes
 
 instance (Crypto crypto) =>
   FromCBOR (MultiSig crypto) where
@@ -153,9 +211,30 @@ instance (Crypto crypto) =>
         pure $ RequireMOf m msigs
       k -> invalidKey k
 
+instance Crypto crypto =>
+  FromCBOR (Annotator (MultiSig crypto)) where
+  fromCBOR = annotatorSlice $ fmap MultiSig' <$> fromCBOR
+
+instance Crypto crypto =>
+  FromCBOR (Annotator (MultiSig' crypto)) where
+  fromCBOR = fmap snd $ decodeRecordNamed "MultiSig" fst $ decodeWord >>= \case
+    0 -> (,) 2 . pure . RequireSignature' . AnyKeyHash <$> fromCBOR
+    1 -> do
+      multiSigs <- sequence <$> decodeList fromCBOR
+      pure (2, RequireAllOf' <$> multiSigs)
+    2 -> do
+      multiSigs <- sequence <$> decodeList fromCBOR
+      pure (2, RequireAnyOf' <$> multiSigs)
+    3 -> do
+      m <- fromCBOR
+      multiSigs <- sequence <$> decodeList fromCBOR
+      pure $ (3, RequireMOf' m <$> multiSigs)
+    k -> invalidKey k
+
 instance (Crypto crypto) =>
   ToCBOR (Script crypto) where
   toCBOR (MultiSigScript msig) =
+    --TODO make valid encoding or use CBORGroup
     toCBOR nativeMultiSigTag <> toCBOR msig
 
 instance (Crypto crypto) =>

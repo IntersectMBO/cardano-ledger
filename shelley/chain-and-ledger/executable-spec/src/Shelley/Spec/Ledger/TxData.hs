@@ -49,7 +49,7 @@ module Shelley.Spec.Ledger.TxData
   , TxOut (..)
   , Url
   , Wdrl (..)
-  , WitVKey (..)
+  , WitVKey (WitVKey, wvkBytes)
   --
   , witKeyHash
   , addStakeCreds
@@ -91,8 +91,8 @@ import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
                      FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, decodeNullMaybe,
-                     decodeSet, encodeFoldable, encodeNullMaybe, mapFromCBOR, mapToCBOR,
-                     unwrapCborStrictSeq)
+                     decodeRecordNamed, decodeSet, encodeFoldable, encodeNullMaybe, mapFromCBOR,
+                     mapToCBOR, unwrapCborStrictSeq)
 
 import           Shelley.Spec.Ledger.Scripts
 
@@ -365,10 +365,26 @@ pattern TxBody
 
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey crypto
-  = WitVKey !(VKey crypto) !(Sig crypto (TxBody crypto))
+  = WitVKey'
+    { wvkKey' :: !(VKey crypto)
+    , wvkSig' :: !(Sig crypto (TxBody crypto))
+    , wvkBytes :: LByteString
+    }
   deriving (Show, Eq, Generic)
+  deriving NoUnexpectedThunks via AllowThunksIn '["wvkBytes"] (WitVKey crypto)
 
-instance Crypto crypto => NoUnexpectedThunks (WitVKey crypto)
+pattern WitVKey
+   :: Crypto crypto
+   => VKey crypto
+   -> Sig crypto (TxBody crypto)
+   -> WitVKey crypto
+pattern WitVKey k s <- WitVKey' k s _
+  where
+  WitVKey k s =
+    let bytes = serializeEncoding $ encodeListLen 2 <> toCBOR k <> toCBOR s
+     in WitVKey' k s bytes
+
+{-# COMPLETE WitVKey #-}
 
 witKeyHash
   :: forall crypto. ( Crypto crypto)
@@ -509,20 +525,14 @@ instance
   Crypto crypto
   => ToCBOR (WitVKey crypto)
  where
-  toCBOR (WitVKey vk sig) =
-    encodeListLen 2
-      <> toCBOR vk
-      <> toCBOR sig
+  toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance
   Crypto crypto
-  => FromCBOR (WitVKey crypto)
+  => FromCBOR (Annotator (WitVKey crypto))
  where
-  fromCBOR = do
-    enforceSize "WitVKey" 2
-    a <- fromCBOR
-    b <- fromCBOR
-    pure $ WitVKey a b
+  fromCBOR = annotatorSlice $ decodeRecordNamed "WitVKey" (const 2) $
+    fmap pure $ WitVKey' <$> fromCBOR <*> fromCBOR
 
 instance
   (Crypto crypto)

@@ -1,20 +1,26 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Shelley.Spec.Ledger.MetaData
   ( MetaDatum (..)
-  , MetaData (..)
+  , MetaData (MetaData)
   , MetaDataHash (..)
   , hashMetaData
 ) where
 
-import           Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import           Cardano.Binary (Annotator (..), DecoderError (..), FromCBOR (fromCBOR),
+                     ToCBOR (toCBOR), encodePreEncoded, serializeEncoding, withSlice)
 import           Cardano.Crypto.Hash (Hash, hash)
-import           Cardano.Prelude (NoUnexpectedThunks (..), Word64, cborError)
+import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..), Word64,
+                     cborError)
 import           Data.Bifunctor (bimap)
 import           Data.Bitraversable (bitraverse)
 import           Data.ByteString as B
@@ -27,7 +33,7 @@ import           Shelley.Spec.Ledger.Crypto (Crypto, HASH)
 import qualified Codec.CBOR.Term as CBOR
 
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
+import           Shelley.Spec.Ledger.Serialization (mapToCBOR, mapFromCBOR)
 
 -- | A generic metadatum type.
 --
@@ -42,14 +48,28 @@ data MetaDatum
 
 instance NoUnexpectedThunks MetaDatum
 
-newtype MetaData = MetaData (Map Word64 MetaDatum)
-  deriving (Eq, Show, Generic, NoUnexpectedThunks)
+data MetaData =
+  MetaData'
+  { mdMap :: Map Word64 MetaDatum
+  , mdBytes :: LByteString
+  } deriving (Eq, Show, Generic)
+    deriving NoUnexpectedThunks via AllowThunksIn '["mdBytes"] MetaData
+
+pattern MetaData :: Map Word64 MetaDatum -> MetaData
+pattern MetaData m <- MetaData' m _
+  where
+  MetaData m = let bytes = serializeEncoding $ mapToCBOR m
+                in MetaData' m bytes
+
+{-# COMPLETE MetaData #-}
 
 instance ToCBOR MetaData where
-  toCBOR (MetaData m) = mapToCBOR m
+  toCBOR = encodePreEncoded . BL.toStrict . mdBytes
 
-instance FromCBOR MetaData where
-  fromCBOR = MetaData <$> mapFromCBOR
+instance FromCBOR (Annotator MetaData) where
+  fromCBOR = do
+    (m, bytesAnn) <- withSlice mapFromCBOR
+    pure $ MetaData' m <$> bytesAnn
 
 type CBORToDataError = String
 

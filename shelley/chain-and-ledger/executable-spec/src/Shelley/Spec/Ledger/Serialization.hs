@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Shelley.Spec.Ledger.Serialization
   ( ToCBORGroup (..)
@@ -15,7 +16,9 @@ module Shelley.Spec.Ledger.Serialization
   , decodeList
   , decodeSeq
   , decodeSet
+  , decodeMap
   , decodeMapContents
+  , decodeMapTraverse
   , decodeMaybe
   , decodeRecordNamed
   , decodeNullMaybe
@@ -28,7 +31,6 @@ module Shelley.Spec.Ledger.Serialization
   , rationalFromCBOR
   , mapToCBOR
   , mapFromCBOR
-  , decodeMap
   )
 where
 
@@ -40,6 +42,7 @@ import           Cardano.Binary (Decoder, DecoderError (..), Encoding, FromCBOR 
 import           Cardano.Prelude (Text, cborError)
 import           Control.Monad (replicateM, unless)
 import           Data.Foldable (foldl')
+import           Data.Functor.Compose (Compose (..))
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Ratio (Rational, denominator, numerator, (%))
@@ -94,6 +97,16 @@ decodeMap decodeKey decodeValue = Map.fromList
     <$> decodeMapContents decodePair
     where
     decodePair = (,) <$> decodeKey <*> decodeValue
+
+decodeMapTraverse
+   :: (Ord a, Applicative t)
+   => Decoder s (t a)
+   -> Decoder s (t b)
+   -> Decoder s (t (Map a b))
+decodeMapTraverse decodeKey decodeValue = fmap Map.fromList . sequenceA
+    <$> decodeMapContents decodePair
+    where
+    decodePair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
 
 newtype CborSeq a = CborSeq { unwrapCborSeq :: Seq a }
   deriving Foldable

@@ -71,7 +71,7 @@ import           Cardano.Prelude (AllowThunksIn (..), ByteString, LByteString,
                      NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.Monad (unless)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue,
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), Seed (..), UnitInterval, intervalValue, strictMaybeToMaybe,
                      mkNonce, ActiveSlotCoeff, activeSlotLog, activeSlotVal)
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
@@ -85,6 +85,7 @@ import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGr
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx)
 import           Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
+
 
 -- |The hash of a Block Header
 newtype HashHeader crypto =
@@ -118,8 +119,8 @@ pattern TxSeq xs <- TxSeq' xs _ _ _
   TxSeq txns =
      let serializeFoldable x = serializeEncoding $
            encodeFoldableEncoder (encodePreEncoded . BSL.toStrict) x
-         metaChunk index = fmap $ \bytes ->
-           toCBOR index <> (encodePreEncoded . BSL.toStrict) bytes
+         metaChunk index m = (\metadata ->
+           toCBOR index <> toCBOR metadata) <$> strictMaybeToMaybe m
      in  TxSeq'
          { txSeqTxns' = txns
          , txSeqBodyBytes =
@@ -127,7 +128,7 @@ pattern TxSeq xs <- TxSeq' xs _ _ _
          , txSeqWitsBytes = serializeFoldable $ txWitsBytes <$> txns
          , txSeqMetadataBytes =
             serializeEncoding . encodeFoldableMapEncoder metaChunk $
-            txMetadataBytes <$> txns
+             _metadata <$> txns
          }
 
 {-# COMPLETE TxSeq #-}
@@ -378,7 +379,7 @@ txSeqDecoder lax = do
       w = length wits
 
   (metadata, metadataAnn) <- withSlice $ constructMetaData b <$>
-    decodeMap fromCBOR (withSlice fromCBOR)
+    decodeMap fromCBOR fromCBOR
   let m = length metadata
 
   unless (lax || b == w)
