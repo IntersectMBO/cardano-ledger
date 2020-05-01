@@ -159,7 +159,7 @@ test-suite shelley-spec-ledger-test
       --
       -- The 4 megabytes stack bound and 200 megabytes heap bound were
       -- determined ad-hoc.
-      "-with-rtsopts=-K4m -M200m"
+      "-with-rtsopts=-K4m -M250m"
     if (!flag(development))
       ghc-options:
         -Werror
