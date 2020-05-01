@@ -88,7 +88,8 @@ data KeyDiscriminator
   | Regular
   deriving (Show)
 
-newtype SKey crypto = SKey (SignKeyDSIGN (DSIGN crypto))
+newtype SKey crypto
+  = SKey { unSKey :: SignKeyDSIGN (DSIGN crypto) }
 
 deriving instance (Crypto crypto, NFData (SignKeyDSIGN (DSIGN crypto))) => NFData (SKey crypto)
 deriving instance Crypto crypto => NoUnexpectedThunks (SKey crypto)
@@ -97,7 +98,8 @@ deriving instance Crypto crypto => Show (SKey crypto)
 deriving instance Num (SignKeyDSIGN (DSIGN crypto)) => Num (SKey crypto)
 
 -- | Discriminated verification key
-newtype DiscVKey (kd :: KeyDiscriminator) crypto = DiscVKey (VerKeyDSIGN (DSIGN crypto))
+newtype DiscVKey (kd :: KeyDiscriminator) crypto
+  = DiscVKey { unDiscVKey :: VerKeyDSIGN (DSIGN crypto) }
 
 deriving instance Crypto crypto => Show (DiscVKey kd crypto)
 deriving instance Crypto crypto => Eq   (DiscVKey kd crypto)
