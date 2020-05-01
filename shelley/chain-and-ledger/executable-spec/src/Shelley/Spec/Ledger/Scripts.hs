@@ -24,6 +24,7 @@ module Shelley.Spec.Ledger.Scripts
   , getKeyCombination
   , getKeyCombinations
   , hashAnyScript
+  , hashMultiSigScript
   ) where
 
 import           Cardano.Binary

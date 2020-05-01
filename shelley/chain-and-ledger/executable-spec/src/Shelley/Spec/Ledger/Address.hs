@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -32,7 +33,7 @@ module Shelley.Spec.Ledger.Address
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks, cborError)
+import           Cardano.Prelude (NoUnexpectedThunks, NFData, cborError)
 
 import           Cardano.Binary (ToCBOR(..), FromCBOR(..), DecoderError (..))
 import qualified Cardano.Crypto.Hash.Class as Hash
@@ -122,7 +123,7 @@ deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
 data Addr crypto
   = Addr !(PaymentCredential crypto) !(StakeReference crypto)
   | AddrBootstrap !(KeyHash crypto) -- TODO: replace with bigger byron address
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Generic, NFData, Ord)
 
 instance NoUnexpectedThunks (Addr crypto)
 

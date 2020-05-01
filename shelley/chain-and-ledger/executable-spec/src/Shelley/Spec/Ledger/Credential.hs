@@ -1,10 +1,13 @@
-{-# Language DerivingStrategies #-}
+{-# Language DeriveAnyClass #-}
 {-# Language DeriveGeneric #-}
+{-# Language DerivingStrategies #-}
+{-# Language DerivingVia #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language PatternSynonyms #-}
 {-# Language LambdaCase #-}
 {-# Language OverloadedStrings #-}
-{-# Language DerivingVia #-}
+{-# Language PatternSynonyms #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-} -- for deriving NFData SlotNo
 
 module Shelley.Spec.Ledger.Credential
   ( Credential (..)
@@ -18,7 +21,7 @@ module Shelley.Spec.Ledger.Credential
   ) where
 
 
-import Cardano.Prelude (NoUnexpectedThunks, Natural, Typeable, Word8)
+import           Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8)
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
 import           GHC.Generics (Generic)
@@ -29,6 +32,7 @@ import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGrou
                      ToCBORGroup (..))
 
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
+import           Shelley.Spec.Ledger.Orphans ()
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash)
 
@@ -36,7 +40,7 @@ import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash)
 data Credential crypto =
     ScriptHashObj !(ScriptHash crypto)
   | KeyHashObj    !(KeyHash crypto)
-    deriving (Show, Eq, Generic, Ord)
+    deriving (Show, Eq, Generic, NFData, Ord)
     deriving ToCBOR via (CBORGroup (Credential crypto))
 
 instance NoUnexpectedThunks (Credential crypto)
@@ -48,7 +52,7 @@ data StakeReference crypto
   = StakeRefBase !(StakeCredential crypto)
   | StakeRefPtr !Ptr
   | StakeRefNull
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Generic, NFData, Ord)
 
 instance NoUnexpectedThunks (StakeReference crypto)
 
@@ -58,10 +62,8 @@ type Ix  = Natural
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr
   = Ptr !SlotNo !Ix !Ix
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Ord, Generic, NFData, NoUnexpectedThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
-
-instance NoUnexpectedThunks Ptr
 
 instance (Typeable crypto, Crypto crypto)
   => ToCBORGroup (Credential crypto) where
@@ -92,7 +94,8 @@ instance FromCBORGroup Ptr where
 -- |An account based address for rewards
 newtype RewardAcnt crypto = RewardAcnt
   { getRwdCred :: Credential crypto
-  } deriving (Show, Eq, NoUnexpectedThunks, Ord, FromCBOR, ToCBOR)
+  } deriving (Show, Eq, Generic, Ord)
+    deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 newtype GenesisCredential crypto = GenesisCredential (GenKeyHash crypto)
   deriving (Show, Generic)

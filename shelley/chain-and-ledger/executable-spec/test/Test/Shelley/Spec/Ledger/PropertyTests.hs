@@ -20,6 +20,7 @@ import           Hedgehog (Gen, Property, classify, failure, label, property, su
                      (/==), (===))
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
 
 import           Byron.Spec.Ledger.Core ((<|))
 import           Shelley.Spec.Ledger.Coin
@@ -174,7 +175,7 @@ roundTripIpv4 =
       ha <- Hedgehog.forAll genIPv4
       Hedgehog.tripping ha ipv4ToBytes ipv4FromBytes
   where
-    genIPv4 :: Gen IPv4
+    genIPv4 :: Hedgehog.Gen IPv4
     genIPv4 = fromHostAddress <$> (Gen.word32 Range.constantBounded)
 
 roundTripIpv6 :: Property
@@ -184,7 +185,7 @@ roundTripIpv6 =
       ha <- Hedgehog.forAll genIPv6
       Hedgehog.tripping ha ipv6ToBytes ipv6FromBytes
   where
-    genIPv6 :: Gen IPv6
+    genIPv6 :: Hedgehog.Gen IPv6
     genIPv6 = do
       w1 <- Gen.word32 Range.constantBounded
       w2 <- Gen.word32 Range.constantBounded
