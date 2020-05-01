@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
@@ -41,7 +40,7 @@ import           Cardano.Binary
   , matchSize
   , serializeEncoding
   )
-import           Cardano.Prelude (AllowThunksIn (..), LByteString)
+import           Cardano.Prelude (AllowThunksIn (..), LByteString, NFData)
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Prelude (Generic, NoUnexpectedThunks (..))
 import qualified Data.ByteString.Lazy as BSL
@@ -131,8 +130,8 @@ pattern RequireMOf n ms <- MultiSig' (RequireMOf' n ms) _
 
 newtype ScriptHash crypto =
   ScriptHash (Hash (HASH crypto) (Script crypto))
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype NoUnexpectedThunks
+  deriving (Show, Eq, Generic, Ord)
+  deriving newtype (NFData, NoUnexpectedThunks)
 
 deriving newtype instance Crypto crypto => ToCBOR (ScriptHash crypto)
 deriving newtype instance Crypto crypto => FromCBOR (ScriptHash crypto)
