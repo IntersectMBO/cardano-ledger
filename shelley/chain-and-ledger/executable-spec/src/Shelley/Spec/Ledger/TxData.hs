@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
@@ -14,6 +15,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
+{-# OPTIONS_GHC -Wno-orphans #-} -- for deriving NFData SlotNo
 
 module Shelley.Spec.Ledger.TxData
   ( Addr (..)
@@ -59,8 +62,8 @@ module Shelley.Spec.Ledger.TxData
 import           Cardano.Binary (Annotator (..), FromCBOR (fromCBOR), ToCBOR (toCBOR),
                      annotatorSlice, decodeListLen, decodeWord, encodeListLen, encodeMapLen,
                      encodePreEncoded, encodeWord, enforceSize, matchSize, serializeEncoding)
-import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..), Word64,
-                     catMaybes)
+import           Cardano.Prelude (AllowThunksIn (..), LByteString, NFData, NoUnexpectedThunks (..),
+                     Word64, catMaybes)
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.Crypto
 
@@ -175,13 +178,14 @@ instance NoUnexpectedThunks (PoolParams crypto)
 -- |An account based address for rewards
 newtype RewardAcnt crypto = RewardAcnt
   { getRwdCred :: Credential crypto
-  } deriving (Show, Eq, NoUnexpectedThunks, Ord, FromCBOR, ToCBOR)
+  } deriving (Show, Eq, Generic, Ord)
+    deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 -- | Script hash or key hash for a payment or a staking object.
 data Credential crypto =
     ScriptHashObj !(ScriptHash crypto)
   | KeyHashObj    !(KeyHash crypto)
-    deriving (Show, Eq, Generic, Ord)
+    deriving (Show, Eq, Generic, NFData, Ord)
     deriving ToCBOR via (CBORGroup (Credential crypto))
 
 newtype GenesisCredential crypto = GenesisCredential (GenKeyHash crypto)
@@ -202,7 +206,7 @@ data StakeReference crypto
   = StakeRefBase !(StakeCredential crypto)
   | StakeRefPtr !Ptr
   | StakeRefNull
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Generic, NFData, Ord)
 
 instance NoUnexpectedThunks (StakeReference crypto)
 
@@ -210,7 +214,7 @@ instance NoUnexpectedThunks (StakeReference crypto)
 data Addr crypto
   = Addr !(PaymentCredential crypto) !(StakeReference crypto)
   | AddrBootstrap !(KeyHash crypto)
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Generic, NFData, Ord)
   deriving (ToCBOR, FromCBOR) via (CBORGroup (Addr crypto))
 
 instance NoUnexpectedThunks (Addr crypto)
@@ -220,13 +224,16 @@ type Ix  = Natural
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr
   = Ptr !SlotNo !Ix !Ix
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Generic, Ord)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
+instance NFData SlotNo
+instance NFData Ptr
 instance NoUnexpectedThunks Ptr
 
 newtype Wdrl crypto = Wdrl { unWdrl :: Map (RewardAcnt crypto) Coin }
-  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic)
+  deriving newtype NoUnexpectedThunks
 
 instance Crypto crypto => ToCBOR (Wdrl crypto) where
   toCBOR = mapToCBOR . unWdrl
@@ -238,10 +245,11 @@ instance Crypto crypto => FromCBOR (Wdrl crypto) where
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto
   = TxId { _TxId :: Hash (HASH crypto) (TxBody crypto) }
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, Ord)
+  deriving newtype NoUnexpectedThunks
 
-deriving instance Crypto crypto => ToCBOR (TxId crypto)
-deriving instance Crypto crypto => FromCBOR (TxId crypto)
+deriving newtype instance Crypto crypto => ToCBOR (TxId crypto)
+deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
 
 -- |The input of a UTxO.
 data TxIn crypto
@@ -399,14 +407,16 @@ instance forall crypto
 
 newtype StakeCreds crypto =
   StakeCreds (Map (Credential crypto) SlotNo)
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic)
+  deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 addStakeCreds :: (Credential crypto) -> SlotNo -> (StakeCreds crypto) -> StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
 newtype StakePools crypto =
   StakePools { unStakePools :: (Map (KeyHash crypto) SlotNo) }
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic)
+  deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 
 -- CBOR

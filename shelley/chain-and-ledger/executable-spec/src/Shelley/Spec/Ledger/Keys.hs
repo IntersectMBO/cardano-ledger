@@ -252,7 +252,7 @@ newtype GKeys crypto = GKeys (Set (VKeyGenesis crypto))
 -- | Discriminated hash of public Key
 newtype DiscKeyHash (discriminator :: KeyDiscriminator) crypto =
   DiscKeyHash (Hash (HASH crypto) (VerKeyDSIGN (DSIGN crypto)))
-  deriving (Show, Eq, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NFData, Ord, NoUnexpectedThunks)
 
 deriving instance (Crypto crypto, Typeable disc) => ToCBOR (DiscKeyHash disc crypto)
 deriving instance (Crypto crypto, Typeable disc) => FromCBOR (DiscKeyHash disc crypto)
