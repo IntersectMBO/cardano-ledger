@@ -23,28 +23,18 @@ module Shelley.Spec.Ledger.BaseTypes
   , mkNonce
   , mkUnitInterval
   , truncateUnitInterval
-  , Text64
-  , text64
-  , text64Size
   , StrictMaybe (..)
   , strictMaybeToMaybe
   , maybeToStrictMaybe
   , fromSMaybe
   , Url
-  , unUrl
-  , mkUrl
+  , urlToText
+  , textToUrl
   , DnsName
-  , unDnsName
-  , mkDnsName
-  , dnsSize
-  , IPv4
-  , unIPv4
-  , mkIPv4
-  , IPv6
-  , unIPv6
-  , mkIPv6
+  , dnsToText
+  , textToDns
   , Port
-  , unPort
+  , portToWord16
   , ActiveSlotCoeff
   , mkActiveSlotCoeff
   , activeSlotVal
@@ -60,9 +50,7 @@ import           Cardano.Binary (Decoder, DecoderError (..), FromCBOR (fromCBOR)
 import           Cardano.Crypto.Hash
 import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import           Cardano.Slotting.EpochInfo
-import           Control.Monad (join, unless)
 import           Control.Monad.Trans.Reader (ReaderT)
-import           Data.Bits (shiftR, (.&.))
 import qualified Data.ByteString as BS
 import           Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
@@ -73,7 +61,6 @@ import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Word (Word16, Word64, Word8)
 import           GHC.Generics (Generic)
-import           Network.Socket (HostAddress, HostAddress6, hostAddress6ToTuple)
 import           Numeric.Natural (Natural)
 
 import           Shelley.Spec.Ledger.Serialization (rationalFromCBOR, rationalToCBOR)
@@ -176,28 +163,6 @@ newtype Seed = Seed (Hash SHA256 Seed)
 a ==> b = not a || b
 infix 1 ==>
 
-newtype Text64 = Text64 Text
-  deriving (Eq, Ord, Generic, Show, ToCBOR, NoUnexpectedThunks)
-
-text64 :: Text -> Text64
-text64 t =
-  let numBytes = BS.length . encodeUtf8 $ t
-  in
-    if numBytes <= 64
-      then Text64 t
-      else error $ "text64 received too many bytes: " <> show numBytes
-
-text64Size :: Text64 -> Int
-text64Size (Text64 t) = BS.length . encodeUtf8 $ t
-
-instance FromCBOR Text64
- where
-  fromCBOR = do
-    t <- fromCBOR
-    if (BS.length . encodeUtf8) t > 64
-      then cborError $ DecoderErrorCustom "Text64 has too many bytes:" t
-      else pure $ Text64 t
-
 -- | Strict 'Maybe'.
 --
 -- TODO move to @cardano-prelude@
@@ -254,59 +219,48 @@ fromSMaybe :: a -> StrictMaybe a -> a
 fromSMaybe d SNothing = d
 fromSMaybe _ (SJust x) = x
 
-newtype Url = Url { unUrl :: Text64 }
-  deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
+--
+-- Helper functions for text with a 64 byte bound
+--
 
-mkUrl :: Text -> Url
-mkUrl = Url . text64
+text64 :: Text -> Maybe Text
+text64 t =
+  if (BS.length . encodeUtf8) t <= 64
+    then Just t
+    else Nothing
 
-newtype DnsName = DnsName { unDnsName :: Text64 }
-  deriving (Eq, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
+text64FromCBOR :: Decoder s Text
+text64FromCBOR = do
+  t <- fromCBOR
+  if (BS.length . encodeUtf8) t > 64
+    then cborError $ DecoderErrorCustom "text exceeds 64 bytes:" t
+    else pure t
 
-mkDnsName :: Text -> DnsName
-mkDnsName = DnsName . text64
+--
+-- Types used in the Stake Pool Relays
+--
 
-dnsSize :: DnsName -> Integer
-dnsSize = toInteger . text64Size . unDnsName
-
-newtype IPv4 = IPv4 { unIPv4 :: ByteString }
+newtype Url = Url { urlToText :: Text }
   deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
-mkIPv4 :: HostAddress -> IPv4
-mkIPv4 hostAddr = IPv4 haBS
-  where
-    haBS = BS.pack . map fromIntegral $
-      [ hostAddr .&. 0xFF
-      , (hostAddr .&. 0xFF00) `shiftR` 8
-      , (hostAddr .&. 0xFF0000) `shiftR` 16
-      , (hostAddr .&. 0xFF000000) `shiftR` 24
-      ]
+textToUrl :: Text -> Maybe Url
+textToUrl t = Url <$> text64 t
 
-decodeMaxBytes :: String -> Int -> Decoder s BS.ByteString
-decodeMaxBytes name m = do
-  b <- fromCBOR
-  unless (BS.length b <= m)
-     (fail $ name <> " is too big: " <> show b)
-  pure b
+instance FromCBOR Url
+ where
+  fromCBOR = Url <$> text64FromCBOR
 
-instance FromCBOR IPv4 where
-  fromCBOR = IPv4 <$> decodeMaxBytes "IPv4" 4
-
-newtype IPv6 = IPv6 { unIPv6 :: ByteString }
+newtype DnsName = DnsName { dnsToText :: Text }
   deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
-mkIPv6 :: HostAddress6 -> IPv6
-mkIPv6 hostAddr = IPv6 . BS.pack . join . fmap encodeWord16
-    $ [w1, w2, w3, w4, w5, w6, w7, w8]
-  where
-    (w1, w2, w3, w4, w5, w6, w7, w8) = hostAddress6ToTuple hostAddr
-    encodeWord16 :: Word16 -> [Word8]
-    encodeWord16 x = map fromIntegral [ x .&. 0xFF, (x .&. 0xFF00) `shiftR` 8 ]
+textToDns :: Text -> Maybe DnsName
+textToDns t = DnsName <$> text64 t
 
-instance FromCBOR IPv6 where
-  fromCBOR = IPv6 <$> decodeMaxBytes "IPv6" 16
+instance FromCBOR DnsName
+ where
+  fromCBOR = DnsName <$> text64FromCBOR
 
-newtype Port = Port { unPort :: Word16 }
+newtype Port = Port { portToWord16 :: Word16 }
   deriving (Eq, Ord, Num, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------

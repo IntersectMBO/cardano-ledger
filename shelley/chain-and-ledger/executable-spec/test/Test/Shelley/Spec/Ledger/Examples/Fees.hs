@@ -14,11 +14,12 @@ import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map (empty, singleton)
+import           Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 
 import           Cardano.Binary (serialize)
-import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), mkDnsName, mkUrl)
+import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), textToDns, textToUrl)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern RegKey, pattern RegPool, pattern RetirePool)
@@ -79,9 +80,9 @@ alicePoolParams =
     , _poolMargin = unsafeMkUnitInterval 0.1
     , _poolRAcnt = RewardAcnt aliceSHK
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
-    , _poolRelays = StrictSeq.singleton $ SingleHostName SNothing $ mkDnsName "relay.io"
+    , _poolRelays = StrictSeq.singleton $ SingleHostName SNothing $ fromJust $ textToDns "relay.io"
     , _poolMD = SJust $ PoolMetaData
-                  { _poolMDUrl  = mkUrl "alice.pool"
+                  { _poolMDUrl  = fromJust $ textToUrl "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
     }

@@ -8,6 +8,7 @@
 module Test.Shelley.Spec.Ledger.Examples.Serialization where
 
 import           Data.List.NonEmpty (NonEmpty ((:|)))
+import           Data.IP (toIPv4)
 import qualified Data.Maybe as Maybe (fromJust)
 import           Data.String (fromString)
 import qualified Shelley.Spec.Ledger.MetaData as MD
@@ -28,7 +29,7 @@ import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval (..),
-                     mkDnsName, mkIPv4, mkNonce, mkUrl, unIPv4)
+                     mkNonce, textToDns, textToUrl)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
                      pattern BlockHash, pattern HashHeader, TxSeq (..), bbHash, bhash,
                      bheaderBlockNo, bheaderEta, bheaderL, bheaderOCert, bheaderPrev,
@@ -52,7 +53,7 @@ import           Shelley.Spec.Ledger.PParams (PParams' (PParams), PParamsUpdate,
                      _maxBBSize, _maxBHSize, _maxTxSize, _minfeeA, _minfeeB, _nOpt, _poolDecayRate,
                      _poolDeposit, _poolMinRefund, _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
+import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..), ipv4ToBytes)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
 import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertGenesis,
@@ -431,10 +432,12 @@ serializationTests = testGroup "Serialization Tests"
         poolCost = Coin 55
         poolUrl = "pool.io"
         poolMDHash = BS.pack "{}"
+        ipv4 = toIPv4 [127,0,0,1]
+        ipv4Bytes = ipv4ToBytes . toIPv4 $ [127,0,0,1]
         poolRelays = StrictSeq.fromList
-          [ SingleHostAddr SNothing (SJust $ mkIPv4 0) SNothing
-          , SingleHostName SNothing $ mkDnsName "singlehost.relay.com"
-          , MultiHostName (SJust 42) $ mkDnsName "multihost.relay.com"
+          [ SingleHostAddr SNothing (SJust ipv4) SNothing
+          , SingleHostName SNothing $ Maybe.fromJust $ textToDns "singlehost.relay.com"
+          , MultiHostName (SJust 42) $ Maybe.fromJust $ textToDns "multihost.relay.com"
           ]
     in
     checkEncodingCBOR "register_pool"
@@ -448,7 +451,7 @@ serializationTests = testGroup "Serialization Tests"
                , _poolOwners = Set.singleton poolOwner
                , _poolRelays = poolRelays
                , _poolMD = SJust $ PoolMetaData
-                             { _poolMDUrl = mkUrl poolUrl
+                             { _poolMDUrl = Maybe.fromJust $ textToUrl poolUrl
                              , _poolMDHash = poolMDHash
                              }
                })))
@@ -462,7 +465,7 @@ serializationTests = testGroup "Serialization Tests"
       <> S poolRAcnt    -- reward acct
       <> T (TkListLen 1) <> S poolOwner   -- owners
       <> T (TkListLen 3) -- relays
-        <> T (TkListLen 4 . TkWord 0 . TkNull . TkBytes (unIPv4 $ mkIPv4 0) . TkNull)
+        <> T (TkListLen 4 . TkWord 0 . TkNull . TkBytes ipv4Bytes . TkNull)
         <> T (TkListLen 3 . TkWord 1 . TkNull . TkString ("singlehost.relay.com"))
         <> T (TkListLen 3 . TkWord 2 . (TkWord 42) . TkString ("multihost.relay.com"))
       <> T (TkListLen 2) -- metadata present
@@ -1022,7 +1025,7 @@ serializationTests = testGroup "Serialization Tests"
               , _poolOwners = Set.singleton testKeyHash2
               , _poolRelays = StrictSeq.empty
               , _poolMD = SJust $ PoolMetaData
-                            { _poolMDUrl  = mkUrl "web.site"
+                            { _poolMDUrl  = Maybe.fromJust $ textToUrl "web.site"
                             , _poolMDHash = BS.pack "{}"
                             }
               }
@@ -1061,7 +1064,7 @@ serializationTests = testGroup "Serialization Tests"
             , _poolOwners = Set.singleton testKeyHash2
             , _poolRelays = StrictSeq.empty
             , _poolMD = SJust $ PoolMetaData
-                          { _poolMDUrl  = mkUrl "web.site"
+                          { _poolMDUrl  = Maybe.fromJust $ textToUrl "web.site"
                           , _poolMDHash = BS.pack "{}"
                           }
             }

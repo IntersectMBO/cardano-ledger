@@ -5,6 +5,7 @@
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
 import           Data.Foldable (toList)
+import           Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.MultiSet (filter, fromSet, occur, size, unions)
@@ -26,6 +27,8 @@ import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.LedgerState
 import           Shelley.Spec.Ledger.PParams
+import           Shelley.Spec.Ledger.Serialization (ipv4FromBytes, ipv4ToBytes, ipv6FromBytes,
+                     ipv6ToBytes)
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern TxIn, pattern TxOut, _body, _certs, _inputs,
                      _outputs, _witnessVKeySet)
@@ -180,6 +183,31 @@ roundTripAddr =
       keyPair2 <- snd . mkKeyPairs <$> Gen.word64 Range.constantBounded
       pure $ toAddr (keyPair1, keyPair2)
 
+roundTripIpv4 :: Property
+roundTripIpv4 =
+  -- We are using a QC generator which means we need QC test
+    Hedgehog.property $ do
+      ha <- Hedgehog.forAll genIPv4
+      Hedgehog.tripping ha ipv4ToBytes ipv4FromBytes
+  where
+    genIPv4 :: Gen IPv4
+    genIPv4 = fromHostAddress <$> (Gen.word32 Range.constantBounded)
+
+roundTripIpv6 :: Property
+roundTripIpv6 =
+  -- We are using a QC generator which means we need QC test
+    Hedgehog.property $ do
+      ha <- Hedgehog.forAll genIPv6
+      Hedgehog.tripping ha ipv6ToBytes ipv6FromBytes
+  where
+    genIPv6 :: Gen IPv6
+    genIPv6 = do
+      w1 <- Gen.word32 Range.constantBounded
+      w2 <- Gen.word32 Range.constantBounded
+      w3 <- Gen.word32 Range.constantBounded
+      w4 <- Gen.word32 Range.constantBounded
+      pure $ fromHostAddress6 (w1,w2,w3,w4)
+
 minimalPropertyTests :: TestTree
 minimalPropertyTests =
   testGroup "Minimal Property Tests"
@@ -187,6 +215,8 @@ minimalPropertyTests =
     , TQC.testProperty "total amount of Ada is preserved" preservationOfAda
     , TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated
     , testProperty "Roundtrip Addr serialisation Hedghog" roundTripAddr
+    , testProperty "Roundtrip IPv4 serialisation Hedghog" roundTripIpv4
+    , testProperty "Roundtrip IPv6 serialisation Hedghog" roundTripIpv6
     ]
 
 -- | 'TestTree' of property-based testing properties.
