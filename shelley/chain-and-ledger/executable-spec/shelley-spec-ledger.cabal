@@ -37,6 +37,7 @@ library
                      Shelley.Spec.Ledger.Delegation.PoolParams
                      Shelley.Spec.Ledger.Delegation.Certificates
                      Shelley.Spec.Ledger.OCert
+                     Shelley.Spec.Ledger.Orphans
                      Shelley.Spec.Ledger.Tx
                      Shelley.Spec.Ledger.TxData
                      Shelley.Spec.Ledger.Validation

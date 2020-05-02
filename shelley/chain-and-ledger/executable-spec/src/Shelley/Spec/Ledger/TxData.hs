@@ -16,7 +16,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-} -- for deriving NFData SlotNo
 
 module Shelley.Spec.Ledger.TxData
   ( Addr (..)
@@ -63,7 +62,7 @@ import           Cardano.Binary (Annotator (..), FromCBOR (fromCBOR), ToCBOR (to
                      annotatorSlice, decodeListLen, decodeWord, encodeListLen, encodeMapLen,
                      encodePreEncoded, encodeWord, enforceSize, matchSize, serializeEncoding)
 import           Cardano.Prelude (AllowThunksIn (..), LByteString, NFData, NoUnexpectedThunks (..),
-                     Word64, allNoUnexpectedThunks, catMaybes)
+                     Word64, catMaybes)
 import           Control.Monad (unless)
 import           Shelley.Spec.Ledger.Crypto
 
@@ -90,6 +89,7 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VerKeyVRF, hashAnyKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import           Shelley.Spec.Ledger.Orphans ()
 import           Shelley.Spec.Ledger.PParams (Update)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
@@ -125,22 +125,7 @@ data StakePoolRelay =
      -- ^ A @SRV@ DNS record
   deriving (Eq, Generic, Show)
 
-instance NoUnexpectedThunks StakePoolRelay where
-  whnfNoUnexpectedThunks ctxt (SingleHostAddr p _ipv4 _ipv6)
-    = allNoUnexpectedThunks
-      [ noUnexpectedThunks ctxt p
-      -- TODO how show we handle the IPv4 and IpV6 types from Data.IP ?
-      ]
-  whnfNoUnexpectedThunks ctxt (SingleHostName p dns)
-    = allNoUnexpectedThunks
-      [ noUnexpectedThunks ctxt p
-      , noUnexpectedThunks ctxt dns
-      ]
-  whnfNoUnexpectedThunks ctxt (MultiHostName p dns)
-    = allNoUnexpectedThunks
-      [ noUnexpectedThunks  ctxt p
-      , noUnexpectedThunks  ctxt dns
-      ]
+instance NoUnexpectedThunks StakePoolRelay
 
 instance ToCBOR StakePoolRelay where
   toCBOR (SingleHostAddr p ipv4 ipv6)
@@ -244,7 +229,6 @@ data Ptr
   deriving (Show, Eq, Generic, Ord)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
-instance NFData SlotNo
 instance NFData Ptr
 instance NoUnexpectedThunks Ptr
 
