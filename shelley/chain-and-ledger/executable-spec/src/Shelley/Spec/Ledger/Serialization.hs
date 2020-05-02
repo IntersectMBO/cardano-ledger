@@ -31,6 +31,16 @@ module Shelley.Spec.Ledger.Serialization
   , rationalFromCBOR
   , mapToCBOR
   , mapFromCBOR
+  -- IPv4
+  , ipv4ToBytes
+  , ipv4FromBytes
+  , ipv4ToCBOR
+  , ipv4FromCBOR
+  -- IPv6
+  , ipv6ToBytes
+  , ipv6FromBytes
+  , ipv6ToCBOR
+  , ipv6FromCBOR
   )
 where
 
@@ -39,10 +49,16 @@ import           Cardano.Binary (Decoder, DecoderError (..), Encoding, FromCBOR 
                      decodeMapLenOrIndef, decodeNull, decodeTag, encodeBreak, encodeListLen,
                      encodeListLenIndef, encodeMapLen, encodeMapLenIndef, encodeNull, encodeTag,
                      matchSize, peekTokenType)
-import           Cardano.Prelude (Text, cborError)
+import           Cardano.Prelude (cborError)
 import           Control.Monad (replicateM, unless)
+import           Data.Binary.Get (Get, getWord32le, runGetOrFail)
+import           Data.Binary.Put (putWord32le, runPut)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (foldl')
 import           Data.Functor.Compose (Compose (..))
+import           Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6, toHostAddress,
+                     toHostAddress6)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Ratio (Rational, denominator, numerator, (%))
@@ -52,7 +68,10 @@ import           Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Typeable
+import           Network.Socket (HostAddress6)
 
 class Typeable a => ToCBORGroup a where
   toCBORGroup :: a -> Encoding
@@ -215,3 +234,53 @@ decodeNullMaybe decoder = do
       decodeNull
       pure Nothing
     _ -> Just <$> decoder
+
+ipv4ToBytes :: IPv4 -> BS.ByteString
+ipv4ToBytes = BSL.toStrict . runPut . putWord32le . toHostAddress
+
+ipv4FromBytes :: BS.ByteString -> Either String IPv4
+ipv4FromBytes b =
+  case runGetOrFail getWord32le (BSL.fromStrict b) of
+    Left (_, _, err) -> Left $ err
+    Right (_, _, ha) -> Right $ fromHostAddress ha
+
+ipv4ToCBOR :: IPv4 -> Encoding
+ipv4ToCBOR = toCBOR . ipv4ToBytes
+
+byteDecoderToDecoder :: Text -> (BS.ByteString -> Either String a) -> Decoder s a
+byteDecoderToDecoder name fromBytes = do
+  b <- fromCBOR
+  case fromBytes b of
+    Left err -> cborError $ DecoderErrorCustom name (Text.pack err)
+    Right ip -> pure ip
+
+ipv4FromCBOR :: Decoder s IPv4
+ipv4FromCBOR = byteDecoderToDecoder "IPv4" ipv4FromBytes
+
+ipv6ToBytes :: IPv6 -> BS.ByteString
+ipv6ToBytes ipv6 = BSL.toStrict . runPut $ do
+  let (w1, w2, w3, w4) = toHostAddress6 ipv6
+  putWord32le w1
+  putWord32le w2
+  putWord32le w3
+  putWord32le w4
+
+getHostAddress6 :: Get HostAddress6
+getHostAddress6 = do
+  w1 <- getWord32le
+  w2 <- getWord32le
+  w3 <- getWord32le
+  w4 <- getWord32le
+  return $ (w1,w2,w3,w4)
+
+ipv6FromBytes :: BS.ByteString -> Either String IPv6
+ipv6FromBytes b =
+  case runGetOrFail getHostAddress6 (BSL.fromStrict b) of
+    Left (_, _, err) -> Left $ err
+    Right (_, _, ha) -> Right $ fromHostAddress6 ha
+
+ipv6ToCBOR :: IPv6 -> Encoding
+ipv6ToCBOR = toCBOR . ipv6ToBytes
+
+ipv6FromCBOR :: Decoder s IPv6
+ipv6FromCBOR = byteDecoderToDecoder "IPv6" ipv6FromBytes

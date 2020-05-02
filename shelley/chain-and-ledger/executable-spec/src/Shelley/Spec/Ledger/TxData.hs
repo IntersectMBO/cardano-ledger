@@ -16,7 +16,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-} -- for deriving NFData SlotNo
 
 module Shelley.Spec.Ledger.TxData
   ( Addr (..)
@@ -70,6 +69,7 @@ import           Shelley.Spec.Ledger.Crypto
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (fold)
+import           Data.IP (IPv4, IPv6)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Ord (comparing)
@@ -83,19 +83,21 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Byron.Spec.Ledger.Core (Relation (..))
-import           Shelley.Spec.Ledger.BaseTypes (DnsName, IPv4, IPv6, Port, StrictMaybe (..),
+import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe (..),
                      UnitInterval, Url, invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
                      Sig, VKey, VerKeyVRF, hashAnyKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import           Shelley.Spec.Ledger.Orphans ()
 import           Shelley.Spec.Ledger.PParams (Update)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
                      FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, decodeNullMaybe,
-                     decodeRecordNamed, decodeSet, encodeFoldable, encodeNullMaybe, mapFromCBOR,
-                     mapToCBOR, unwrapCborStrictSeq)
+                     decodeRecordNamed, decodeSet, encodeFoldable, encodeNullMaybe, ipv4FromCBOR,
+                     ipv4ToCBOR, ipv6FromCBOR, ipv6ToCBOR, mapFromCBOR, mapToCBOR,
+                     unwrapCborStrictSeq)
 
 import           Shelley.Spec.Ledger.Scripts
 
@@ -130,8 +132,8 @@ instance ToCBOR StakePoolRelay where
     = encodeListLen 4
         <> toCBOR (0 :: Word8)
         <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
-        <> encodeNullMaybe toCBOR (strictMaybeToMaybe ipv4)
-        <> encodeNullMaybe toCBOR (strictMaybeToMaybe ipv6)
+        <> encodeNullMaybe ipv4ToCBOR (strictMaybeToMaybe ipv4)
+        <> encodeNullMaybe ipv6ToCBOR (strictMaybeToMaybe ipv6)
   toCBOR (SingleHostName p n)
     = encodeListLen 3
         <> toCBOR (1 :: Word8)
@@ -151,8 +153,8 @@ instance FromCBOR StakePoolRelay where
     case w of
       0 -> matchSize "SingleHostAddr" 4 n >>
              SingleHostAddr p
-               <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
-               <*> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+               <$> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
+               <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv6FromCBOR)
       1 -> matchSize "SingleHostName" 3 n >> SingleHostName p <$> fromCBOR
       2 -> matchSize "MultiHostName"  3 n >> MultiHostName p <$> fromCBOR
       k -> invalidKey k
@@ -227,7 +229,6 @@ data Ptr
   deriving (Show, Eq, Generic, Ord)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
-instance NFData SlotNo
 instance NFData Ptr
 instance NoUnexpectedThunks Ptr
 

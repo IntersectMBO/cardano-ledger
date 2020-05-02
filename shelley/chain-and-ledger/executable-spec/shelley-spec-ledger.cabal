@@ -37,6 +37,7 @@ library
                      Shelley.Spec.Ledger.Delegation.PoolParams
                      Shelley.Spec.Ledger.Delegation.Certificates
                      Shelley.Spec.Ledger.OCert
+                     Shelley.Spec.Ledger.Orphans
                      Shelley.Spec.Ledger.Tx
                      Shelley.Spec.Ledger.TxData
                      Shelley.Spec.Ledger.Validation
@@ -86,11 +87,11 @@ library
     aeson,
     base >= 4.7 && < 5,
     bytestring,
-    bytestring-conversion,
     cborg,
     cborg-json,
     containers,
     cryptonite,
+    binary,
     hedgehog,
     QuickCheck,
     small-steps,
@@ -100,6 +101,7 @@ library
     text,
     transformers,
     network,
+    iproute,
     byron-spec-ledger,
     cardano-binary,
     cardano-crypto-class,
@@ -179,6 +181,7 @@ test-suite shelley-spec-ledger-test
       directory,
       shelley-spec-ledger,
       hedgehog,
+      iproute,
       multiset,
       process-extras,
       small-steps,

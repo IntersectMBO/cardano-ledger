@@ -100,7 +100,7 @@ import           Data.List (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
                      (!?))
-import           Data.Maybe (isJust, maybe)
+import           Data.Maybe (fromJust, isJust, maybe)
 import           Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -110,8 +110,8 @@ import           Numeric.Natural (Natural)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, mkUrl,
-                     startRewards, (⭒))
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, startRewards,
+                     textToUrl, (⭒))
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -262,7 +262,7 @@ alicePoolParams =
     , _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , _poolRelays = StrictSeq.empty
     , _poolMD = SJust $ PoolMetaData
-                  { _poolMDUrl  = mkUrl "alice.pool"
+                  { _poolMDUrl  = fromJust $ textToUrl "alice.pool"
                   , _poolMDHash = BS.pack "{}"
                   }
     }
