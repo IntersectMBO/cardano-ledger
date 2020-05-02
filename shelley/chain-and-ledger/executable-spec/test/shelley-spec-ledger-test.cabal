@@ -58,6 +58,7 @@ library
     byron-spec-ledger,
     shelley-spec-ledger,
     hedgehog,
+    iproute,
     multiset,
     process-extras,
     small-steps,
