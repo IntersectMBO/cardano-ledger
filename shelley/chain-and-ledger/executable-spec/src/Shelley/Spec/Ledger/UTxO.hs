@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.UTxO
   -- * Primitives
     UTxO(..)
   -- * Functions
+  , hashTxBody
   , txid
   , txins
   , txinLookup
@@ -43,10 +44,10 @@ import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Data.Foldable (toList)
+import           Data.List (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
-import           Data.List (foldl')
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
@@ -54,8 +55,8 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), StakePools (..), dvalue,
                      requiresVKeyWitness)
-import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyPair (..), DSignable,
-                     asWitness, signedDSIGN, verifySignedDSIGN)
+import           Shelley.Spec.Ledger.Keys (DSignable, Hash, KeyHash (..), KeyPair (..), asWitness,
+                     signedDSIGN, verifySignedDSIGN)
 import           Shelley.Spec.Ledger.PParams (PParams, Update)
 import           Shelley.Spec.Ledger.Scripts
 import           Shelley.Spec.Ledger.Tx (Tx (..))
@@ -99,12 +100,19 @@ instance Relation (UTxO crypto) where
 
   size (UTxO utxo) = size utxo
 
+-- |Compute the hash of a transaction body.
+hashTxBody
+  :: Crypto crypto
+  => TxBody crypto
+  -> Hash crypto (TxBody crypto)
+hashTxBody = hashWithSerialiser toCBOR
+
 -- |Compute the id of a transaction.
 txid
   :: Crypto crypto
   => TxBody crypto
   -> TxId crypto
-txid = TxId . hashWithSerialiser toCBOR
+txid = TxId . hashTxBody
 
 -- |Compute the UTxO inputs of a transaction.
 txins
@@ -133,47 +141,47 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 -- |Verify a transaction body witness
 verifyWitVKey
   :: ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
-  => TxBody crypto
+  => Hash crypto (TxBody crypto)
   -> WitVKey crypto
   -> Bool
-verifyWitVKey tx (WitVKey vkey sig) = verifySignedDSIGN vkey tx sig
+verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash sig
 
 -- | Create a witness for transaction
 makeWitnessVKey
   :: forall crypto kr.
     ( Crypto crypto
-    , DSignable crypto (TxBody crypto)
+    , DSignable crypto (Hash crypto (TxBody crypto))
     )
-  => TxBody crypto
+  => Hash crypto (TxBody crypto)
   -> KeyPair kr crypto
   -> WitVKey crypto
-makeWitnessVKey tx keys
-  = WitVKey (asWitness $ vKey keys) (signedDSIGN @crypto (sKey keys) tx)
+makeWitnessVKey txbodyHash keys
+  = WitVKey (asWitness $ vKey keys) (signedDSIGN @crypto (sKey keys) txbodyHash)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
   :: ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
-  => TxBody crypto
+  => Hash crypto (TxBody crypto)
   -> [KeyPair a crypto]
   -> Set (WitVKey crypto)
-makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
+makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys
   :: (Crypto crypto
-     , DSignable crypto (TxBody crypto))
-  => TxBody crypto
+     , DSignable crypto (Hash crypto (TxBody crypto)))
+  => Hash crypto (TxBody crypto)
   -> Map (KeyHash kr crypto) (KeyPair kr crypto)
   -> Set (KeyHash kr crypto)
   -> Set (WitVKey crypto)
-makeWitnessesFromScriptKeys txb hashKeyMap scriptHashes =
+makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys    = Map.restrictKeys hashKeyMap scriptHashes
-  in  makeWitnessesVKey txb (Map.elems witKeys)
+  in  makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- |Determine the total balance contained in the UTxO.
 balance :: UTxO crypto -> Coin

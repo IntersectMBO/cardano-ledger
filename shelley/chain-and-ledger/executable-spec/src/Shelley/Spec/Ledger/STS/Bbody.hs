@@ -50,7 +50,7 @@ data BbodyEnv
 
 instance
   ( Crypto crypto
-  , DSignable crypto (TxBody crypto)
+  , DSignable crypto (Hash crypto (TxBody crypto))
   )
   => STS (BBODY crypto)
  where
@@ -78,7 +78,7 @@ instance NoUnexpectedThunks (PredicateFailure (BBODY crypto))
 bbodyTransition
   :: forall crypto
    . ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
   => TransitionRule (BBODY crypto)
 bbodyTransition = judgmentContext >>=
@@ -104,7 +104,7 @@ bbodyTransition = judgmentContext >>=
 
 instance
   ( Crypto crypto
-  , DSignable crypto (TxBody crypto)
+  , DSignable crypto (Hash crypto (TxBody crypto))
   )
   => Embed (LEDGERS crypto) (BBODY crypto)
  where

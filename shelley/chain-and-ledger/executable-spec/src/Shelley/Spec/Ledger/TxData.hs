@@ -83,8 +83,8 @@ import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
 import           Byron.Spec.Ledger.Core (Relation (..))
-import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe (..),
-                     UnitInterval, Url, invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
+import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe (..), UnitInterval, Url,
+                     invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (HasKeyRole (..), Hash, KeyHash (..), KeyRole (..),
                      SignedDSIGN, VKey, VerKeyVRF, decodeSignedDSIGN, encodeSignedDSIGN, hashKey)
@@ -382,7 +382,7 @@ pattern TxBody
 data WitVKey crypto
   = WitVKey'
     { wvkKey' :: !(VKey 'Witness crypto)
-    , wvkSig' :: !(SignedDSIGN crypto (TxBody crypto))
+    , wvkSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto)))
     , wvkBytes :: LByteString
     }
   deriving (Show, Eq, Generic)
@@ -391,7 +391,7 @@ data WitVKey crypto
 pattern WitVKey
    :: Crypto crypto
    => VKey 'Witness crypto
-   -> SignedDSIGN crypto (TxBody crypto)
+   -> SignedDSIGN crypto (Hash crypto (TxBody crypto))
    -> WitVKey crypto
 pattern WitVKey k s <- WitVKey' k s _
   where

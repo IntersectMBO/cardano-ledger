@@ -40,7 +40,7 @@ import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxO
 import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
                      pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr, Wdrl (..),
                      getRwdCred, _outputs, _txfee)
-import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesFromScriptKeys,
+import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, hashTxBody, makeWitnessesFromScriptKeys,
                      makeWitnessesVKey)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, CoreKeyPair, Credential, DCert,
@@ -201,9 +201,9 @@ mkTxWits
   -> Set (KeyHash 'Witness)
   -> Set WitVKey
 mkTxWits txBody keyWits genesisWits keyHashMap msigs =
-  makeWitnessesVKey txBody keyWits
-  `Set.union` makeWitnessesVKey txBody genesisWits
-  `Set.union` makeWitnessesFromScriptKeys txBody keyHashMap msigs
+  makeWitnessesVKey (hashTxBody txBody) keyWits
+  `Set.union` makeWitnessesVKey (hashTxBody txBody) genesisWits
+  `Set.union` makeWitnessesFromScriptKeys (hashTxBody txBody) keyHashMap msigs
 
 -- | Generate a transaction body with the given inputs/outputs and certificates
 genTxBody

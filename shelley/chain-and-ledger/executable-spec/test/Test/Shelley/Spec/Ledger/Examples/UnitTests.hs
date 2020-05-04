@@ -39,7 +39,7 @@ import           Shelley.Spec.Ledger.PParams
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern Tx, pattern TxBody, pattern TxIn, pattern TxOut,
                      _body, _ttl)
-import           Shelley.Spec.Ledger.UTxO (pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
+import           Shelley.Spec.Ledger.UTxO (hashTxBody, pattern UTxO, makeWitnessVKey, makeWitnessesVKey, txid)
 
 import qualified Test.Cardano.Crypto.VRF.Fake as FakeVRF
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -195,7 +195,7 @@ testValidWithdrawal =
            (SlotNo 0)
            SNothing
            SNothing
-    wits = makeWitnessesVKey tx [asWitness alicePay, asWitness bobStake]
+    wits = makeWitnessesVKey (hashTxBody tx) [asWitness alicePay, asWitness bobStake]
     utxo' = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
@@ -226,7 +226,7 @@ testInvalidWintess =
            SNothing
            SNothing
     tx' = tx { _ttl = SlotNo  2}
-    wits = makeWitnessesVKey tx' [alicePay]
+    wits = makeWitnessesVKey (hashTxBody tx') [alicePay]
   in ledgerState [Tx tx wits Map.empty SNothing] @?= Left [InvalidWitness]
 
 testWithdrawalNoWit :: Assertion
@@ -243,7 +243,7 @@ testWithdrawalNoWit =
            (SlotNo 0)
            SNothing
            SNothing
-    wits = Set.singleton $ makeWitnessVKey tx alicePay
+    wits = Set.singleton $ makeWitnessVKey (hashTxBody tx) alicePay
     ls = asStateTransition
       (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty SNothing) (Coin 0)
   in ls @?= Left [MissingWitnesses]
@@ -262,7 +262,7 @@ testWithdrawalWrongAmt =
            (SlotNo 0)
            SNothing
            SNothing
-    wits = makeWitnessesVKey tx [asWitness alicePay, asWitness bobStake]
+    wits = makeWitnessesVKey (hashTxBody tx) [asWitness alicePay, asWitness bobStake]
     ls =asStateTransition
           (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty SNothing) (Coin 0)
   in ls @?= Left [IncorrectRewards]
@@ -283,7 +283,7 @@ aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits 
                s
                SNothing
                SNothing
-    wits = makeWitnessesVKey txbody signers
+    wits = makeWitnessesVKey (hashTxBody txbody) signers
 
 tx1 :: Tx
 tx1 = aliceGivesBobLovelace
@@ -344,7 +344,7 @@ tx3Body = TxBody
           SNothing
 
 tx3 :: Tx
-tx3 = Tx tx3Body (makeWitnessesVKey tx3Body keys) Map.empty SNothing
+tx3 = Tx tx3Body (makeWitnessesVKey (hashTxBody tx3Body) keys) Map.empty SNothing
       where keys = [asWitness alicePay, asWitness aliceStake, asWitness stakePoolKey1]
 
 utxoSt3 :: UTxOState
@@ -421,7 +421,13 @@ tx4Body = TxBody
           SNothing
 
 tx4 :: Tx
-tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [asWitness alicePay, asWitness stakePoolKey1]) Map.empty SNothing
+tx4 = Tx
+        tx4Body
+        (makeWitnessesVKey
+          (hashTxBody tx4Body)
+          [asWitness alicePay, asWitness stakePoolKey1])
+        Map.empty
+        SNothing
 
 utxoSt4 :: UTxOState
 utxoSt4 = UTxOState
@@ -455,7 +461,13 @@ tx5Body e = TxBody
           SNothing
 
 tx5 :: EpochNo -> Tx
-tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [asWitness alicePay,asWitness stakePoolKey1]) Map.empty SNothing
+tx5 e = Tx
+          (tx5Body e)
+          (makeWitnessesVKey
+            (hashTxBody $ tx5Body e)
+            [asWitness alicePay,asWitness stakePoolKey1])
+          Map.empty
+          SNothing
 
 
 testsValidLedger :: TestTree
@@ -562,7 +574,7 @@ testSpendNotOwnedUTxO =
               (SlotNo 100)
               SNothing
               SNothing
-    aliceWit = makeWitnessVKey txbody alicePay
+    aliceWit = makeWitnessVKey (hashTxBody txbody) alicePay
     tx = Tx txbody (Set.fromList [aliceWit]) Map.empty SNothing
   in ledgerState [tx] @?= Left [MissingWitnesses]
 
@@ -587,7 +599,7 @@ testWitnessWrongUTxO =
               (SlotNo 101)
               SNothing
               SNothing
-    aliceWit = makeWitnessVKey  tx2body alicePay
+    aliceWit = makeWitnessVKey  (hashTxBody tx2body) alicePay
     tx = Tx txbody (Set.fromList [aliceWit]) Map.empty SNothing
   in ledgerState [tx] @?= Left [ InvalidWitness
                                , MissingWitnesses]
@@ -605,7 +617,7 @@ testEmptyInputSet =
            (SlotNo 0)
            SNothing
            SNothing
-    wits = makeWitnessesVKey tx [aliceStake]
+    wits = makeWitnessesVKey (hashTxBody tx) [aliceStake]
     genesisWithReward' = changeReward genesis (mkVKeyRwdAcnt aliceStake) (Coin 2000)
     ls = asStateTransition
            (SlotNo 0) testPCs genesisWithReward' (Tx tx wits Map.empty SNothing) (Coin 0)

@@ -37,7 +37,7 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
                      pattern ScriptHashObj, pattern StakeCreds, pattern StakePools,
                      pattern StakeRefBase, pattern TxBody, pattern TxIn, pattern TxOut,
                      pattern Wdrl, unWdrl)
-import           Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
+import           Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey, txid)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, KeyPair, LedgerState, MultiSig,
                      ScriptHash, Tx, TxBody, TxId, TxIn, UTXOW, UTxOState, Wdrl, pattern GenDelegs)
@@ -102,7 +102,7 @@ makeTxBody inp addrCs wdrl =
 
 makeTx :: TxBody -> [KeyPair 'Witness] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
 makeTx txBody keyPairs msigs =
-  Tx txBody (makeWitnessesVKey txBody keyPairs) msigs . maybeToStrictMaybe
+  Tx txBody (makeWitnessesVKey (hashTxBody txBody) keyPairs) msigs . maybeToStrictMaybe
 
 aliceInitCoin :: Coin
 aliceInitCoin = 10000

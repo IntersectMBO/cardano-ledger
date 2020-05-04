@@ -111,7 +111,7 @@ applyBlockTransition ::
   forall crypto m.
   ( Crypto crypto,
     MonadError (BlockTransitionError crypto) m,
-    DSignable crypto (Tx.TxBody crypto)
+    DSignable crypto (Hash crypto (Tx.TxBody crypto))
   ) =>
   Globals ->
   ShelleyState crypto ->

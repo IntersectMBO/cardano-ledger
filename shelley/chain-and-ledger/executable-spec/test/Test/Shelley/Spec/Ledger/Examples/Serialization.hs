@@ -66,7 +66,7 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, p
                      pattern TxOut, Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD,
                      _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolRelays, _poolVrf)
-import           Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
+import           Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey)
 
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, ConcreteCrypto,
@@ -171,6 +171,9 @@ testVRFKH = hashKeyVRF $ snd testVRF
 testTxb :: TxBody
 testTxb = TxBody Set.empty StrictSeq.empty StrictSeq.empty (Wdrl Map.empty) (Coin 0) (SlotNo 0) SNothing SNothing
 
+testTxbHash :: Hash ConcreteCrypto TxBody
+testTxbHash = hashTxBody testTxb
+
 testKey1 :: KeyPair 'Payment
 testKey1 = KeyPair vk sk
   where (sk, vk) = mkKeyPair (0,0,0,0,1)
@@ -202,7 +205,8 @@ testBlockIssuerKeyTokens = e
 testKey1SigToken :: Tokens -> Tokens
 testKey1SigToken = e
   where
-    s = signedDSIGN @ConcreteCrypto (sKey testKey1) testTxb :: SignedDSIGN TxBody
+    s = signedDSIGN @ConcreteCrypto (sKey testKey1) testTxbHash
+          :: SignedDSIGN (Hash ConcreteCrypto TxBody)
     Encoding e = encodeSignedDSIGN s
 
 testOpCertSigTokens :: Tokens -> Tokens
@@ -393,7 +397,7 @@ serializationTests = testGroup "Serialization Tests"
       <> G a
       <> S (Coin 2)
     )
-  , case makeWitnessVKey testTxb testKey1 of
+  , case makeWitnessVKey testTxbHash testKey1 of
     w@(WitVKey vk _sig) ->
       checkEncodingCBORAnnotated "vkey_witnesses"
       w  -- Transaction _witnessVKeySet element
@@ -803,7 +807,8 @@ serializationTests = testGroup "Serialization Tests"
                 (SlotNo 500)
                 SNothing
                 SNothing
-        w = makeWitnessVKey txb testKey1
+        txbh = hashTxBody txb
+        w = makeWitnessVKey txbh testKey1
     in
     checkEncodingCBORAnnotated "tx_min"
     ( Tx txb (Set.singleton w) Map.empty SNothing )
@@ -826,7 +831,8 @@ serializationTests = testGroup "Serialization Tests"
                 (SlotNo 500)
                 SNothing
                 SNothing
-        w = makeWitnessVKey txb testKey1
+        txbh = hashTxBody txb
+        w = makeWitnessVKey txbh testKey1
         s = Map.singleton (hashScript testScript) testScript
         md = MD.MetaData $ Map.singleton 17 (MD.I 42)
     in
@@ -940,8 +946,8 @@ serializationTests = testGroup "Serialization Tests"
         txb3 = txb 502
         txb4 = txb 503
         txb5 = txb 504
-        w1 = makeWitnessVKey txb1 testKey1
-        w2 = makeWitnessVKey txb1 testKey2
+        w1 = makeWitnessVKey (hashTxBody txb1) testKey1
+        w2 = makeWitnessVKey (hashTxBody txb1) testKey2
         ws = Set.fromList [w1, w2]
         tx1 = Tx txb1 (Set.singleton w1) mempty SNothing
         tx2 = Tx txb2 ws mempty SNothing

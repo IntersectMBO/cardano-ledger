@@ -65,7 +65,7 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, p
                      pattern DeRegKey, pattern Delegate, pattern Delegation, pattern KeyHashObj,
                      pattern RegKey, pattern RetirePool, StakeCreds (..), pattern StakeRefBase,
                      Wdrl (..))
-import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessVKey)
+import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, hashTxBody, makeWitnessVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -188,7 +188,8 @@ genTx keyList (UTxO m) cslot = do
            (cslot + SlotNo txttl)
            SNothing
            SNothing
-  let !txwit = makeWitnessVKey txbody selectedKeyPair
+  let !txbHash = hashTxBody txbody
+  let !txwit = makeWitnessVKey txbHash selectedKeyPair
   pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty SNothing)
             where utxoInputs = Map.keys m
                   addr inp   = getTxOutAddr $ m Map.! inp
