@@ -151,8 +151,6 @@ forAllTraceFromInitState
    . ( HasTrace sts traceGenEnv
      , QuickCheck.Testable prop
      , Show (Environment sts)
-     , Show (State sts)
-     , Show (Signal sts)
      )
   => BaseEnv sts
   -> Word64
@@ -163,7 +161,7 @@ forAllTraceFromInitState
   -> (Trace sts -> prop)
   -> QuickCheck.Property
 forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 prop =
-  QuickCheck.forAllShrink
+  QuickCheck.forAllShrinkBlind
     (traceFromInitState @sts @traceGenEnv baseEnv maxTraceLength traceGenEnv genSt0)
     (shrinkTrace @sts @traceGenEnv baseEnv)
     prop
@@ -174,8 +172,6 @@ forAllTrace
    . ( HasTrace sts traceGenEnv
      , QuickCheck.Testable prop
      , Show (Environment sts)
-     , Show (State sts)
-     , Show (Signal sts)
      )
   => BaseEnv sts
   -> Word64
@@ -230,7 +226,6 @@ onlyValidSignalsAreGenerated
   :: forall sts traceGenEnv
    . ( HasTrace sts traceGenEnv
      , Show (Environment sts)
-     , Show (State sts)
      , Show (Signal sts)
      )
   => BaseEnv sts
@@ -248,7 +243,6 @@ onlyValidSignalsAreGeneratedFromInitState
   :: forall sts traceGenEnv
    . ( HasTrace sts traceGenEnv
      , Show (Environment sts)
-     , Show (State sts)
      , Show (Signal sts)
      )
   => BaseEnv sts
@@ -286,8 +280,6 @@ traceLengthsAreClassified
   :: forall sts traceGenEnv
    . ( HasTrace sts traceGenEnv
      , Show (Environment sts)
-     , Show (State sts)
-     , Show (Signal sts)
      )
   => BaseEnv sts
   -> Word64
