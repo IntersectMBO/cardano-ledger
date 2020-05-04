@@ -233,13 +233,13 @@ possible constructors of the MPS language.
     %
     & \fun{evalMPSScript}
      ~\type{SignedByCIDToken}~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ \exists~t\mapsto ~\_~\in~ \fun{range}~(\var{cid}~ \restrictdom~(\fun{balance}~\var{spentouts})) ~:~ t~\in~\var{vhks} \\
+    &~~~~ =~ \exists~t\mapsto ~\_~\in~ \fun{range}~(\var{cid}~ \restrictdom~(\fun{ubalance}~\var{spentouts})) ~:~ t~\in~\var{vhks} \\
     & \text{checks that tx is signed by a key whose hash is the name of a token in this currency}
     \\~\\
     & \fun{evalMPSScript}
      ~(\type{SpendsCur}~\var{cid'})~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ (\var{cid'}~\neq~\Nothing ~\wedge ~\var{cid'}~\in~ \dom~(\fun{balance}~\var{spentouts}))\\
-    &~~~~~~ \vee (\var{cid'}~=~\Nothing ~\wedge ~\var{cid}~\in~ \dom~(\fun{balance}~\var{spentouts})) \\
+    &~~~~ =~ (\var{cid'}~\neq~\Nothing ~\wedge ~\var{cid'}~\in~ \dom~(\fun{ubalance}~\var{spentouts}))\\
+    &~~~~~~ \vee (\var{cid'}~=~\Nothing ~\wedge ~\var{cid}~\in~ \dom~(\fun{ubalance}~\var{spentouts})) \\
     & \text{checks that this transaction spends currency cid' OR itself if}~\var{cid'}~=~\Nothing
     \\~\\
     &\fun{evalMPSScript}~(\type{Not}~s)~\var{cid}~\var{slot}~\var{vhks}
@@ -272,7 +272,7 @@ possible constructors of the MPS language.
      ~(\type{CurrencyToAddress}~\var{cid'}~\var{addr})~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
     &~~~~ =~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
     &~~~~~~ \var{c}~\in~\dom~v~\Rightarrow~(a~=~ \var{a'} ~\wedge~
-                       v~=~\var{c}~ \restrictdom~(\fun{balance}~(\fun{outs}~txb)) \\
+                       v~=~\var{c}~ \restrictdom~(\fun{ubalance}~(\fun{outs}~txb)) \\
     & \where \\
     & ~~~~~~~ \var{a'}~=~\fun{if}~ \var{addr}~\neq~\Nothing~\fun{then}~\var{addr}~\fun{else}~\var{(cid',cid')} \\
     & ~~~~~~~ \var{c}~=~\fun{if}~ \var{cid'}~\neq~\Nothing~\fun{then}~\var{cid'}~\fun{else}~\var{cid} \\
