@@ -16,8 +16,8 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import qualified Test.Tasty.QuickCheck as TQC
 
-import           Hedgehog (Gen, Property, (/==), (===), classify, failure, label, property,
-                     success, withTests)
+import           Hedgehog (Gen, Property, classify, failure, label, property, success, withTests,
+                     (/==), (===))
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
@@ -42,7 +42,7 @@ import           Test.Shelley.Spec.Ledger.PreSTSGenerator
 import           Test.Shelley.Spec.Ledger.Rules.ClassifyTraces (onlyValidChainSignalsAreGenerated,
                      onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
 import           Test.Shelley.Spec.Ledger.Rules.TestChain (constantSumPots, nonNegativeDeposits,
-                     preservationOfAda)
+                     preservationOfAda, removedAfterPoolreap)
 import           Test.Shelley.Spec.Ledger.Rules.TestLedger (consumedEqualsProduced,
                      credentialMappingAfterDelegation, credentialRemovedAfterDereg,
                      eliminateTxInputs, feesNonDecreasing, newEntriesAndUniqueTxIns, noDoubleSpend,
@@ -262,10 +262,8 @@ propertyTests = testGroup "Property-Based Testing"
                                      constantSumPots
                   , TQC.testProperty "deposits are always non-negative"
                                      nonNegativeDeposits
-                  {- TODO @uroboros failing property - fix and include
                   , TQC.testProperty "pool is removed from stake pool and retiring maps"
                                      removedAfterPoolreap
-                  -}
                   ]
                 , testGroup "STS Rules - NewEpoch Properties"
                   [ TQC.testProperty "total amount of Ada is preserved"

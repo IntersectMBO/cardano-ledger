@@ -8,7 +8,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestNewEpoch
   , circulationDepositsInvariant)
 where
 
-import           Test.QuickCheck (Property, conjoin)
+import           Test.QuickCheck (Property, conjoin, counterexample, (===))
 
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      source, target)
@@ -109,4 +109,8 @@ circulationDepositsInvariant tr =
                     , _deposited = d'
                     }}}}}
             ) =
-          d == d' && (balance u) == (balance u')
+          counterexample ("circulationDepositsInvariant: balance delta= "
+                          <> show (balance u - balance u')
+                          <> " && deposit delta= " <> show (d - d'))
+            $ conjoin
+              [d === d', (balance u) === (balance u')]

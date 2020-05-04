@@ -36,7 +36,7 @@ import           Shelley.Spec.Ledger.Tx (_body)
 import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DeRegKey,
                      pattern Delegate, pattern Delegation, pattern RegKey, pattern ScriptHashObj,
                      pattern TxOut, Wdrl (..), _certs, _outputs, _txUpdate, _wdrls)
-import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, forAll, property,
+import           Test.QuickCheck (Property, checkCoverage, conjoin, cover, forAllBlind, property,
                      withMaxSuccess)
 import qualified Test.QuickCheck.Gen
 
@@ -78,7 +78,7 @@ relevantCasesAreCovered = do
   let tl = 100
       GenEnv _ c@(Constants{maxCertsPerTx}) = genEnv
 
-  forAll (traceFromInitState @CHAIN testGlobals tl genEnv genesisChainState) $ \tr -> do
+  forAllBlind (traceFromInitState @CHAIN testGlobals tl genEnv genesisChainState) $ \tr -> do
     let blockTxs (Block _ (TxSeq txSeq)) = toList txSeq
         bs = traceSignals OldestFirst tr
         txs = concat (blockTxs <$> bs)
