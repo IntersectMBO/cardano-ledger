@@ -42,25 +42,26 @@ include, most notably, addition and $\leq$ comparison.
 
 The type $\Value$ has a partial order defined on it in (see~\cite{plutus_eutxo}).
 The idea of this partial order, as well as operations like addition and subtraction
-of terms of the $\Value$ type, is that a term $v \in \Value$ can be treated
-as a total map that maps to the trivial element $\epsilon \in \Token \to \Quantity$
-almost everywhere except for a several currency IDs that appear in $\dom~v$.
+of terms of the $\Value$ type, is that partial maps can be treated as total maps
+that map to a trivial element $\epsilon$ in case the corresponding key does not map to a
+value.
 
-This way, when adding two terms of type value, $\{ cid1 \mapsto tkns1\}$ and
-$\{ cid2 \mapsto tkns2\}$, the result is
-\[ \{ cid1 \mapsto (tkns1 + \epsilon), cid2 \mapsto (\epsilon + tkns2)\} \]
+This way, when adding two partial maps, $m_1$ and $m_2$, $m_1 + m_2$ is defined
+by $(m_1 + m_2)(x) := m_1(x) + m_2(x)$, where the addition treats $\epsilon$ as
+$0$, and $\epsilon + \epsilon = \epsilon$.
 
-which simplifies to
+Note that this construction has to be iterated twice for the type $\Value$, as
+addition on the type $\Token \mapsto \Quantity$ needs to be defined this way first.
+This definition of addition is also defined in
+Section~\ref{sec:notation-shelley}.
 
-\[ \{ cid1 \mapsto tkns1, cid2 \mapsto tkns2\} \]
+Similarly, if we compare two maps, we compare them as follows (element-wise,
+with $\epsilon$ as the value associated to any currency ID not present in on of
+the values),
 
-This definition of addition is also defined in Section~\ref{sec:notation-shelley}.
-Similarly, if we compare these two tokens, we compare them as follows
-(element-wise, with $\epsilon$ as the value associated to any currency ID
-not present in on of the values),
+\[ m_1 \leq m_2 \Leftrightarrow \forall x, m_1(x) \leq m_2(x) \]
 
-\[ (\{ cid1 \mapsto tkns1\}~\leq~\{ cid2 \mapsto tkns2\}) \Leftrightarrow \\
-   (tkns1 \leq \epsilon~\wedge~ \epsilon \leq tkns2) \]
+where $\epsilon$ is again treated as $0$.
 
 \textbf{UTxO Helper Functions.}
 

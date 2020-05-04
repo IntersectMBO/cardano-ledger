@@ -270,25 +270,12 @@ possible constructors of the MPS language.
   \begin{align*}
     & \fun{evalMPSScript}
      ~(\type{CurrencyToAddress}~\var{cid'}~\var{addr})~\var{cid}~ \var{slot}~\var{vhks} ~\var{txb}~\var{spentouts} \\
-    &~~~~ =~ (\var{cid'}~\neq~\Nothing ~\wedge ~\var{addr}~\neq~\Nothing ~\wedge \\
-    &~~~~~~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
-    &~~~~~~ \var{cid'}~\in~\dom~v~\Rightarrow~(a~=~\var{addr} ~\wedge~ \\
-    &~~~~~~ v~=~\var{cid'}~ \restrictdom~(\fun{balance}~(\fun{outs}~txb))) \\
-    &~~~~~~ \vee \\
-    &~~~~~~ (\var{cid'}~=~\Nothing ~\wedge~ \var{addr}~\neq~\Nothing ~\wedge \\
-    &~~~~~~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
-    &~~~~~~ \var{cid}~\in~\dom~v~\Rightarrow~(a~=~\var{addr} ~\wedge~\\
-    &~~~~~~ v~=~\var{cid}~ \restrictdom~(\fun{balance}~(\fun{outs}~txb))) \\
-    &~~~~~~ \vee \\
-    &~~~~~~ (\var{cid'}~\neq~\Nothing ~\wedge~ \var{addr}~=~\Nothing ~\wedge \\
-    &~~~~~~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
-    &~~~~~~ \var{cid'}~\in~\dom~v~\Rightarrow~(a~=~\var{(cid',cid')} ~\wedge~\\
-    &~~~~~~ v~=~\var{cid'}~ \restrictdom~(\fun{balance}~(\fun{outs}~txb))) \\
-    &~~~~~~ \vee \\
-    &~~~~~~ (\var{cid'}~=~\Nothing ~\wedge~ \var{addr}~=~\Nothing ~\wedge \\
-    &~~~~~~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
-    &~~~~~~ \var{cid}~\in~\dom~v~\Rightarrow~(a~=~\var{(cid,cid)} ~\wedge~\\
-    &~~~~~~ v~=~\var{cid}~ \restrictdom~(\fun{balance}~(\fun{outs}~txb))) \\
+    &~~~~ =~ \forall~(a, v)~\in~\fun{range}~(\fun{outs}~txb),~\\
+    &~~~~~~ \var{c}~\in~\dom~v~\Rightarrow~(a~=~ \var{a'} ~\wedge~
+                       v~=~\var{c}~ \restrictdom~(\fun{balance}~(\fun{outs}~txb)) \\
+    & \where \\
+    & ~~~~~~~ \var{a'}~=~\fun{if}~ \var{addr}~\neq~\Nothing~\fun{then}~\var{addr}~\fun{else}~\var{(cid',cid')} \\
+    & ~~~~~~~ \var{c}~=~\fun{if}~ \var{cid'}~\neq~\Nothing~\fun{then}~\var{cid'}~\fun{else}~\var{cid} \\
     & \text{checks that tx outputs any cid tokens by themselves to the specified address} \\
     & \text {the script address of the given currency when addr unspecified}
     \end{align*}
@@ -457,9 +444,9 @@ and constants, needed for using Ada in a multicurrency setting.
 
 \begin{itemize}
   \item $\mathsf{adaID}$ is a random script hash value with no known associated
-  script. It is the currency ID of Ada. While extremely unlikely, guessing a
+  script. It is the currency ID of Ada. Even if a
   script that hashes to this value
-  and validates will allow a user to forge unlimited amounts of Ada
+  and validates is found, the UTXO rule forbids forging Ada
   \item $\mathsf{adaToken}$ is a byte string representation of the word "Ada".
   The ledger should never allow the use of any other token name associated
   with Ada's currency ID
