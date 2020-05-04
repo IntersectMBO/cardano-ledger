@@ -413,7 +413,7 @@ serializationTests = testGroup "Serialization Tests"
     (Map.singleton (RewardAcnt testStakeCred) (Coin 123))
     ( (T $ TkMapLen 1 . TkListLen 2)
         <> (T $ TkWord 0)
-        <> S testKeyHash1
+        <> S testKeyHash2
         <> S (Coin 123)
     )
 
@@ -973,8 +973,8 @@ serializationTests = testGroup "Serialization Tests"
           -- tx 2, two keys
           <> T (TkMapLen 1 . TkWord 0)
           <> T (TkListLen 2)
-          <> S w2
           <> S w1
+          <> S w2
 
           -- tx 3, one script
           <> T (TkMapLen 1 . TkWord 1)
@@ -991,8 +991,8 @@ serializationTests = testGroup "Serialization Tests"
           <> T (TkMapLen 2)
           <> T (TkWord 0)
             <> T (TkListLen 2)
-            <> S w2
             <> S w1
+            <> S w2
           <> T (TkWord 1)
             <> T (TkListLen 2)
             <> S testScript
