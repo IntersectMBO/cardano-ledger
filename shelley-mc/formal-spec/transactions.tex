@@ -7,7 +7,7 @@ into the Cardano
 system.
 
 \textbf{Representing Multicurrency.}
-Some new types (and changes to existing types) are are required for
+Some new types (and changes to existing types) are required for
 an MC-supporting ledger, see Figure~\ref{fig:defs:utxo-shelley-1}.
 The types not appearing in the Figure below are consistent with the
 current Shelley ledger design.
@@ -127,12 +127,12 @@ current Shelley ledger design.
   \label{fig:defs:utxo-shelley-1}
 \end{figure*}
 
-\textbf{The Multicurrency Scripting Language.}
+\textbf{The Monetary Policy Scripting Language.}
 Recall that the ID of a currency is the hash of its MPS.
-In Figure~\ref{fig:defs:tx-mc-script}, we give the types related to multicurrency
-scripts. The $\Script$ type
-is made up of multisig scripts and multicurrency scripts.
-The multicurrency script type, $\ScriptMPS$, has several constructurs, each of which
+In Figure~\ref{fig:defs:tx-mc-script}, we give the types related to monetary
+policy scripts. The $\Script$ type
+is made up of multisig scripts and monetary policy scripts.
+The monetary policy script type, $\ScriptMPS$, has several constructors, each of which
 is used in a different way during script evaluation (see MPS script evaluation
 discussion below).
 
