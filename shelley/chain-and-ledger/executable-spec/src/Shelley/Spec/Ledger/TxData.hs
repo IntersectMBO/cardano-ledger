@@ -83,10 +83,11 @@ import           Byron.Spec.Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.Address (Addr (..))
 import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe (..), UnitInterval, Url,
                      invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
+import           Shelley.Spec.Ledger.Credential (Credential (..), Ix, Ptr (..), RewardAcnt (..),
+                     StakeCredential)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (HasKeyRole (..), Hash, KeyHash (..), KeyRole (..),
-                     SignedDSIGN, VKey, VerKeyVRF, decodeSignedDSIGN, encodeSignedDSIGN, hashKey)
-                     VerKeyVRF, hashAnyKey)
+import           Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), SignedDSIGN, VKey,
+                     VerKeyVRF, decodeSignedDSIGN, encodeSignedDSIGN, hashKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import           Shelley.Spec.Ledger.Orphans ()
 import           Shelley.Spec.Ledger.PParams (Update)
@@ -175,12 +176,6 @@ data PoolParams crypto =
 
 instance NoUnexpectedThunks (PoolParams crypto)
 
---
--- A reward account uses the staking credential
-  coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
-  coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
-
-newtype GenesisCredential crypto = GenesisCredential (KeyHash 'Genesis crypto)
 newtype Wdrl crypto = Wdrl { unWdrl :: Map (RewardAcnt crypto) Coin }
   deriving (Show, Eq, Generic)
   deriving newtype NoUnexpectedThunks

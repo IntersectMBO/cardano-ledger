@@ -1,13 +1,13 @@
+{-# Language DataKinds #-}
 {-# Language DeriveAnyClass #-}
 {-# Language DeriveGeneric #-}
 {-# Language DerivingStrategies #-}
 {-# Language DerivingVia #-}
 {-# Language GeneralizedNewtypeDeriving #-}
+{-# Language KindSignatures #-}
 {-# Language LambdaCase #-}
 {-# Language OverloadedStrings #-}
 {-# Language PatternSynonyms #-}
-
-{-# OPTIONS_GHC -Wno-orphans #-} -- for deriving NFData SlotNo
 
 module Shelley.Spec.Ledger.Credential
   ( Credential (..)
@@ -23,7 +23,7 @@ module Shelley.Spec.Ledger.Credential
 
 import           Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8)
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
+import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen)
 import           GHC.Generics (Generic)
 
 import           Shelley.Spec.Ledger.Crypto (Crypto)
@@ -34,19 +34,22 @@ import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGrou
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import           Shelley.Spec.Ledger.Orphans ()
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
-import           Shelley.Spec.Ledger.Keys (GenKeyHash, KeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyHash, HasKeyRole (..), KeyRole (..))
 
 -- | Script hash or key hash for a payment or a staking object.
-data Credential crypto =
+data Credential (kr :: KeyRole) crypto =
     ScriptHashObj !(ScriptHash crypto)
-  | KeyHashObj    !(KeyHash crypto)
+  | KeyHashObj    !(KeyHash kr crypto)
     deriving (Show, Eq, Generic, NFData, Ord)
-    deriving ToCBOR via (CBORGroup (Credential crypto))
 
-instance NoUnexpectedThunks (Credential crypto)
+instance HasKeyRole Credential where
+  coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
+  coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
-type PaymentCredential crypto = Credential crypto
-type StakeCredential crypto = Credential crypto
+instance NoUnexpectedThunks (Credential kr crypto)
+
+type PaymentCredential crypto = Credential 'Payment crypto
+type StakeCredential crypto = Credential 'Staking crypto
 
 data StakeReference crypto
   = StakeRefBase !(StakeCredential crypto)
@@ -65,15 +68,14 @@ data Ptr
   deriving (Show, Eq, Ord, Generic, NFData, NoUnexpectedThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
-instance (Typeable crypto, Crypto crypto)
-  => ToCBORGroup (Credential crypto) where
-  listLen _ = 2
-  toCBORGroup = \case
-    KeyHashObj     kh -> toCBOR (0 :: Word8) <> toCBOR kh
-    ScriptHashObj  hs -> toCBOR (1 :: Word8) <> toCBOR hs
+instance (Typeable kr, Typeable crypto, Crypto crypto)
+  => ToCBOR (Credential kr crypto) where
+  toCBOR = \case
+    KeyHashObj     kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
+    ScriptHashObj  hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
-instance (Crypto crypto) =>
-  FromCBOR (Credential crypto) where
+instance (Typeable kr, Crypto crypto) =>
+  FromCBOR (Credential kr crypto) where
   fromCBOR = decodeRecordNamed "Credential" (const 2) $
     decodeWord >>= \case
       0 -> KeyHashObj <$> fromCBOR
@@ -93,11 +95,11 @@ instance FromCBORGroup Ptr where
 
 -- |An account based address for rewards
 newtype RewardAcnt crypto = RewardAcnt
-  { getRwdCred :: Credential crypto
+  { getRwdCred :: Credential 'Staking crypto
   } deriving (Show, Eq, Generic, Ord)
     deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
-newtype GenesisCredential crypto = GenesisCredential (GenKeyHash crypto)
+newtype GenesisCredential crypto = GenesisCredential (KeyHash 'Genesis crypto)
   deriving (Show, Generic)
 
 instance Ord (GenesisCredential crypto)

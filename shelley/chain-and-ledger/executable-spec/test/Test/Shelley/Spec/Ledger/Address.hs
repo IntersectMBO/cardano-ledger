@@ -64,11 +64,11 @@ golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
 golden name put value expected = T.testCase name $
   T.assertEqual name expected (LB16.encode . B.runPut . put $ value)
 
-keyHash :: C.Credential
+keyHash :: C.Credential kh
 keyHash = KeyHashObj . KeyHash . UnsafeHash . fst
    $ B16.decode "01020304"
 
-scriptHash :: C.Credential
+scriptHash :: C.Credential kh
 scriptHash = ScriptHashObj . ScriptHash . UnsafeHash . fst
    $ B16.decode "05060708"
 
@@ -110,10 +110,10 @@ genAddr = Addr <$> genCredential <*> genStakeReference
      , pure StakeRefNull
      ]
 
-genKeyHash :: Gen C.Credential
+genKeyHash :: Gen (C.Credential kr)
 genKeyHash = KeyHashObj . KeyHash <$> genHash
 
-genScriptHash :: Gen C.Credential
+genScriptHash :: Gen (C.Credential kr)
 genScriptHash = ScriptHashObj . ScriptHash <$> genHash
 
 genHash :: forall h a. HashAlgorithm h => Gen (Hash h a)

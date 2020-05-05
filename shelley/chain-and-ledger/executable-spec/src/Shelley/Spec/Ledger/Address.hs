@@ -55,7 +55,7 @@ import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.Credential (Credential (..), PaymentCredential, Ptr (..),
                      RewardAcnt (..), StakeReference (..))
 import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (KeyRole (..), KeyPair(..), hashKey)
+import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..), KeyPair(..), hashKey)
 
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 import           Shelley.Spec.Ledger.Scripts
@@ -122,7 +122,7 @@ deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
 -- |An address for UTxO.
 data Addr crypto
   = Addr !(PaymentCredential crypto) !(StakeReference crypto)
-  | AddrBootstrap !(KeyHash crypto) -- TODO: replace with bigger byron address
+  | AddrBootstrap !(KeyHash 'Payment crypto) -- TODO: replace with bigger byron address
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance NoUnexpectedThunks (Addr crypto)
@@ -180,10 +180,10 @@ getAddr = do
         ]
       Addr <$> getPayCred header <*> getStakeReference header
 
-getHash :: forall h a. HashAlgorithm h => Get (Hash h a)
+getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.byteCount ([] @h))
 
-putHash :: Hash h a -> Put
+putHash :: Hash.Hash h a -> Put
 putHash (Hash.UnsafeHash b) = B.putByteString b
 
 getPayCred :: Crypto crypto => Word8 -> Get (PaymentCredential crypto)
@@ -191,10 +191,10 @@ getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
 
-getScriptHash :: Crypto crypto => Get (Credential crypto)
+getScriptHash :: Crypto crypto => Get (Credential kr crypto)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getKeyHash :: Crypto crypto => Get (Credential crypto)
+getKeyHash :: Crypto crypto => Get (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
 getStakeReference :: Crypto crypto => Word8 -> Get (StakeReference crypto)
@@ -206,7 +206,7 @@ getStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getScriptHash
     False -> StakeRefBase <$> getKeyHash
 
-putCredential :: Credential crypto -> Put
+putCredential :: Credential kr crypto -> Put
 putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 

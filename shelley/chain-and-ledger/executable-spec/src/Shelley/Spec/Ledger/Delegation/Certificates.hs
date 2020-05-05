@@ -41,7 +41,7 @@ import           Shelley.Spec.Ledger.PParams (PParams, _keyDecayRate, _keyDeposi
                      _poolDecayRate, _poolDeposit, _poolMinRefund)
 import           Shelley.Spec.Ledger.Slot (Duration (..))
 import           Shelley.Spec.Ledger.TxData (DCert (..), DelegCert (..), Delegation (..),
-                     GenesisDelegate (..), MIRCert (..), PoolCert (..), PoolParams (..),
+                     GenesisDelegCert (..), MIRCert (..), PoolCert (..), PoolParams (..),
                      StakeCreds (..), StakePools (..))
 import           Shelley.Spec.NonIntegral (exp')
 
