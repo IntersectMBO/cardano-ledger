@@ -1,14 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestNewEpoch
-  ( preservationOfAda
-  , circulationDepositsInvariant)
+  ( preservationOfAda )
 where
 
-import           Test.QuickCheck (Property, conjoin, counterexample, (===))
+import           Test.QuickCheck (Property, conjoin)
 
 import           Control.State.Transition.Trace (SourceSignalTarget, pattern SourceSignalTarget,
                      source, target)
@@ -82,35 +80,3 @@ preservationOfAda tr =
           ) =
           reserves + treasury + sum_ rewards + balance utxo + fees + deposits_
           == reserves' + treasury' + sum_ rewards' + balance utxo' + fees' + deposits'
-
--- | Check that the circulation and deposits do not change in a NEWEPOCH
--- transition.
-circulationDepositsInvariant
-  :: [SourceSignalTarget NEWEPOCH]
-  -> Property
-circulationDepositsInvariant tr =
-  conjoin $
-    map circulationDepositsNoChange tr
-
-  where circulationDepositsNoChange
-          (SourceSignalTarget
-            { source = NewEpochState
-              { nesEs = EpochState
-                { esLState = LedgerState
-                  { _utxoState = UTxOState
-                    { _utxo = u
-                    , _deposited = d
-                    }}}}
-            , target = NewEpochState
-              { nesEs = EpochState
-                { esLState = LedgerState
-                  { _utxoState = UTxOState
-                    { _utxo = u'
-                    , _deposited = d'
-                    }}}}}
-            ) =
-          counterexample ("circulationDepositsInvariant: balance delta= "
-                          <> show (balance u - balance u')
-                          <> " && deposit delta= " <> show (d - d'))
-            $ conjoin
-              [d === d', (balance u) === (balance u')]
