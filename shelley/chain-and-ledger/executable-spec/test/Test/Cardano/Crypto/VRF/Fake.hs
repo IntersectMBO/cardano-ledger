@@ -20,7 +20,8 @@ module Test.Cardano.Crypto.VRF.Fake
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 import Cardano.Binary (FromCBOR(..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Crypto.Hash
-import Cardano.Crypto.Util (nonNegIntR)
+import Cardano.Crypto.Seed (runMonadRandomWithSeed)
+import Cardano.Crypto.Util (mockNonNegIntR)
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm(..))
 import Data.Proxy (Proxy (..))
@@ -53,6 +54,9 @@ instance SneakilyContainResult Seed where
 
 instance VRFAlgorithm FakeVRF where
 
+  algorithmNameVRF _ = "fakeVRF"
+  seedSizeVRF _ = 8
+
   type Signable FakeVRF = SneakilyContainResult
 
   newtype VerKeyVRF FakeVRF = VerKeyFakeVRF Int
@@ -64,7 +68,7 @@ instance VRFAlgorithm FakeVRF where
     deriving NoUnexpectedThunks via UseIsNormalForm (CertVRF FakeVRF)
 
   maxVRF _ = 2 ^ (8 * byteCount (Proxy :: Proxy MD5)) - 1
-  genKeyVRF = SignKeyFakeVRF <$> nonNegIntR
+  genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed mockNonNegIntR
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
   evalVRF () a sk = return $ evalVRF' a sk
   -- This implementation of `verifyVRF` checks the real result, which is hidden
@@ -73,6 +77,10 @@ instance VRFAlgorithm FakeVRF where
   verifyVRF () (VerKeyFakeVRF n) a c = snd (evalVRF' a (SignKeyFakeVRF n)) == snd c
   encodeVerKeyVRF = toCBOR
   decodeVerKeyVRF = fromCBOR
+  encodeSignKeyVRF = toCBOR
+  decodeSignKeyVRF = fromCBOR
+  encodeCertVRF = toCBOR
+  decodeCertVRF = fromCBOR
 
 evalVRF' :: SneakilyContainResult a => a -> SignKeyVRF FakeVRF -> (Natural, CertVRF FakeVRF)
 evalVRF' a (SignKeyFakeVRF n) =

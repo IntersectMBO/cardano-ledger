@@ -20,7 +20,7 @@
 module Control.State.Transition.Extended where
 
 import           Cardano.Prelude (NoUnexpectedThunks(..))
-import           Control.Monad (unless)
+import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.Identity (Identity(..))
 import           Control.Monad.Free.Church
 import           Control.Monad.Trans.Class (lift)
@@ -125,9 +125,9 @@ data Clause sts (rtype :: RuleType) a where
               -- Subsequent computation with state introduced
            -> (State sub -> a)
            -> Clause sts rtype a
-  Predicate :: Bool
+  Predicate :: Either e a
                -- Type of failure to return if the predicate fails
-            -> PredicateFailure sts
+            -> (e -> PredicateFailure sts)
             -> a
             -> Clause sts rtype a
 
@@ -140,12 +140,18 @@ type Rule sts rtype = F (Clause sts rtype)
 --   This takes a condition (a boolean expression) and a failure and results in
 --   a clause which will throw that failure if the condition fails.
 (?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
-cond ?! orElse = wrap $ Predicate cond orElse (pure ())
+cond ?! orElse = liftF $ Predicate (if cond then Right () else Left ()) (const orElse) ()
 
 infix 1 ?!
 
 failBecause :: PredicateFailure sts -> Rule sts ctx ()
 failBecause = (False ?!)
+
+-- | Oh noes with an explanation
+--
+--   We interpret this as "What?" "No!" "Because:"
+(?!:) :: Either e () -> (e -> PredicateFailure sts) -> Rule sts ctx ()
+cond ?!: orElse = liftF $ Predicate cond orElse ()
 
 trans
   :: Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
@@ -177,8 +183,9 @@ applyRuleIndifferently jc r = flip runStateT [] $ foldF runClause r
   runClause (Lift f next) = next <$> lift f
   runClause (GetCtx next              ) = next <$> pure jc
   runClause (Predicate cond orElse val) = do
-    unless cond $ modify (orElse :)
-    pure val
+    case catchError cond throwError of
+      Left err -> modify (orElse err :) >> pure val
+      Right x -> pure x
   runClause (SubTrans subCtx next) = do
     (ss, sfails) <- lift $ applySTSIndifferently subCtx
     traverse_ (\a -> modify (a :)) $ wrapFailed <$> concat sfails

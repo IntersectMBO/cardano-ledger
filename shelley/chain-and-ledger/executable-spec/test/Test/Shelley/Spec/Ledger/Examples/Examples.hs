@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -93,7 +94,6 @@ where
 
 import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 
-import           Cardano.Crypto.Hash (ShortHash)
 import qualified Data.ByteString.Char8 as BS (pack)
 import           Data.Coerce (coerce)
 import           Data.List (foldl')
@@ -116,13 +116,13 @@ import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastApplied
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
-                     pattern GenesisDelegate, pattern MIRCert, pattern PoolDistr, pattern RegKey,
+                     pattern GenesisDelegCert, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern SnapShot,
                      pattern SnapShots, pattern Stake, emptySnapShots, _feeSS, _pstakeGo,
                      _pstakeMark, _pstakeSet)
-import           Shelley.Spec.Ledger.Keys (pattern GenDelegs, Hash, pattern KeyPair, hash, hashKey,
-                     vKey)
+import           Shelley.Spec.Ledger.Keys (Hash, KeyRole (..), asWitness, coerceKeyRole, hash,
+                     hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern ActiveSlot,
                      pattern DPState, pattern EpochState, FutureGenDeleg (..), pattern LedgerState,
                      pattern NewEpochState, pattern RewardUpdate, pattern UTxOState, deltaF,
@@ -163,10 +163,11 @@ import qualified Shelley.Spec.Ledger.TxData as TxData (TxBody (..))
 import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesVKey, txid)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CHAIN, ChainState,
-                     Credential, DState, EpochState, GenKeyHash, HashHeader, KeyHash, KeyPair,
-                     LedgerState, NewEpochState, OBftSlot, PState, PoolDistr, PoolParams,
-                     ProposedPPUpdates, RewardAcnt, SKey, SnapShot, SnapShots, Tx, TxBody, UTxO,
-                     UTxOState, Update, VKeyGenesis, hashKeyVRF)
+                     ConcreteCrypto, Credential, DState, EpochState, pattern GenDelegs, HashHeader,
+                     KeyHash, KeyPair, pattern KeyPair, LedgerState, NewEpochState, OBftSlot,
+                     PState, PoolDistr, PoolParams, ProposedPPUpdates, RewardAcnt, SignKeyDSIGN,
+                     SnapShot, SnapShots, Tx, TxBody, UTxO, UTxOState, Update, VKeyGenesis,
+                     hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Generator.Core (AllPoolKeys (..), NatNonce (..),
                      genesisAccountState, mkBlock, mkOCert, zero)
 import           Test.Shelley.Spec.Ledger.Utils
@@ -181,7 +182,7 @@ data CHAINExample =
 
 data MIRExample =
   MIRExample
-  { mirStkCred :: Credential
+  { mirStkCred :: Credential 'Staking
   , mirRewards :: Coin
   , target     :: Either [[PredicateFailure CHAIN]] ChainState
   } deriving (Show, Eq)
@@ -198,10 +199,10 @@ mkAllPoolKeys w = AllPoolKeys (KeyPair vkCold skCold)
 numCoreNodes :: Word64
 numCoreNodes = 7
 
-coreNodes :: [((SKey, VKeyGenesis), AllPoolKeys)]
+coreNodes :: [((SignKeyDSIGN, VKeyGenesis), AllPoolKeys)]
 coreNodes = [(mkGenKey (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <-[101..100+numCoreNodes]]
 
-coreNodeSKG :: Int -> SKey
+coreNodeSKG :: Int -> SignKeyDSIGN
 coreNodeSKG = fst . fst . (coreNodes !!)
 
 coreNodeVKG :: Int -> VKeyGenesis
@@ -210,14 +211,17 @@ coreNodeVKG = snd . fst . (coreNodes !!)
 coreNodeKeys :: Int -> AllPoolKeys
 coreNodeKeys = snd . (coreNodes !!)
 
-genDelegs :: Map GenKeyHash KeyHash
-genDelegs = Map.fromList [ (hashKey $ snd gkey, hashKey . vKey $ cold pkeys) | (gkey, pkeys) <- coreNodes]
+genDelegs :: Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)
+genDelegs = Map.fromList
+  [ ( hashKey $ snd gkey
+    , coerceKeyRole . hashKey . vKey $ cold pkeys)
+  | (gkey, pkeys) <- coreNodes]
 
-alicePay :: KeyPair
+alicePay :: KeyPair 'Payment
 alicePay = KeyPair vk sk
   where (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
 
-aliceStake :: KeyPair
+aliceStake :: KeyPair 'Staking
 aliceStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
@@ -227,21 +231,21 @@ alicePool = mkAllPoolKeys 1
 aliceAddr :: Addr
 aliceAddr = mkAddr (alicePay, aliceStake)
 
-aliceSHK :: Credential
+aliceSHK :: Credential 'Staking
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
-bobPay :: KeyPair
+bobPay :: KeyPair 'Payment
 bobPay = KeyPair vk sk
   where (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
 
-bobStake :: KeyPair
+bobStake :: KeyPair 'Staking
 bobStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
 
 bobAddr :: Addr
 bobAddr = mkAddr (bobPay, bobStake)
 
-bobSHK :: Credential
+bobSHK :: Credential 'Staking
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 aliceInitCoin :: Coin
@@ -275,7 +279,7 @@ alicePoolParams =
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
 lastByronHeaderHash :: HashHeader
-lastByronHeaderHash = HashHeader $ coerce (hash 0 :: Hash ShortHash Int)
+lastByronHeaderHash = HashHeader $ coerce (hash 0 :: Hash ConcreteCrypto Int)
 
 nonce0 :: Nonce
 nonce0 = hashHeaderToNonce lastByronHeaderHash
@@ -283,33 +287,33 @@ nonce0 = hashHeaderToNonce lastByronHeaderHash
 mkSeqNonce :: Natural -> Nonce
 mkSeqNonce m = foldl' (\c x -> c ⭒ mkNonce x) nonce0 [1.. m]
 
-carlPay :: KeyPair
+carlPay :: KeyPair 'Payment
 carlPay = KeyPair vk sk
   where (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
 
-carlStake :: KeyPair
+carlStake :: KeyPair 'Staking
 carlStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
 
 carlAddr :: Addr
 carlAddr = mkAddr (carlPay, carlStake)
 
-carlSHK :: Credential
+carlSHK :: Credential 'Staking
 carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 
 
-dariaPay :: KeyPair
+dariaPay :: KeyPair 'Payment
 dariaPay = KeyPair vk sk
   where (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
 
-dariaStake :: KeyPair
+dariaStake :: KeyPair 'Staking
 dariaStake = KeyPair vk sk
   where (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
 
 dariaAddr :: Addr
 dariaAddr = mkAddr (dariaPay, dariaStake)
 
-dariaSHK :: Credential
+dariaSHK :: Credential 'Staking
 dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
 
 -- * Example 1 - apply CHAIN transition to an empty block
@@ -321,9 +325,9 @@ utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 dsEx1 :: DState
 dsEx1 = emptyDState { _genDelegs = GenDelegs genDelegs }
 
-oCertIssueNosEx1 :: Map KeyHash Natural
+oCertIssueNosEx1 :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx1 = Map.fromList (fmap f (Map.elems genDelegs))
-  where f vk = (vk, 0)
+  where f vk = (coerceKeyRole vk, 0)
 
 psEx1 :: PState
 psEx1 = emptyPState
@@ -494,7 +498,10 @@ txEx2A = Tx
           txbodyEx2A
           (makeWitnessesVKey
             txbodyEx2A
-            [alicePay, carlPay, aliceStake, cold alicePool, cold $ coreNodeKeys 0]
+            ( (asWitness <$> [alicePay, carlPay])
+            <> (asWitness <$> [aliceStake])
+            <> (asWitness <$> [cold alicePool, cold $ coreNodeKeys 0])
+            )
             -- Note that Alice's stake key needs to sign this transaction
             -- since it is an owner of the stake pool being registered,
             -- and *not* because of the stake key registration.
@@ -559,7 +566,7 @@ initStEx2A = initialShelleyState
 blockEx2A :: Block
 blockEx2A = mkBlock
              lastByronHeaderHash
-             (coreNodeKeys 2)
+             (coreNodeKeys 0)
              [txEx2A]
              (SlotNo 10)
              (BlockNo 1)
@@ -568,7 +575,7 @@ blockEx2A = mkBlock
              zero
              0
              0
-             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 dsEx2A :: DState
 dsEx2A = dsEx1
@@ -664,7 +671,8 @@ txbodyEx2B = TxBody
 txEx2B :: Tx
 txEx2B = Tx
           txbodyEx2B -- Body of the transaction
-          (makeWitnessesVKey txbodyEx2B [alicePay, aliceStake, bobStake])
+          (makeWitnessesVKey txbodyEx2B
+            [asWitness alicePay, asWitness aliceStake, asWitness bobStake])
                      -- Witness verification key set
           Map.empty  -- Witness signature map
           SNothing
@@ -672,7 +680,7 @@ txEx2B = Tx
 blockEx2B :: Block
 blockEx2B = mkBlock
              blockEx2AHash    -- Hash of previous block
-             (coreNodeKeys 5)
+             (coreNodeKeys 3)
              [txEx2B]         -- Single transaction to record
              (SlotNo 90)      -- Current slot
              (BlockNo 2)
@@ -681,7 +689,7 @@ blockEx2B = mkBlock
              zero             -- Praos leader value
              4                -- Period of KES (key evolving signature scheme)
              0
-             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
 
 blockEx2BHash :: HashHeader
 blockEx2BHash = bhHash (bheader blockEx2B)
@@ -694,7 +702,7 @@ utxoEx2B = UTxO . Map.fromList $
                    ]
 
 -- | Both Alice and Bob delegate to the Alice pool
-delegsEx2B :: Map Credential KeyHash
+delegsEx2B :: Map (Credential 'Staking) (KeyHash 'StakePool)
 delegsEx2B = Map.fromList
               [ (aliceSHK, hk alicePool)
               , (bobSHK,   hk alicePool)
@@ -774,7 +782,7 @@ ex2B = CHAINExample (SlotNo 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
 blockEx2C :: Block
 blockEx2C = mkBlock
              blockEx2BHash    -- Hash of previous block
-             (coreNodeKeys 2)
+             (coreNodeKeys 0)
              []               -- No transactions at all (empty block)
              (SlotNo 110)     -- Current slot
              (BlockNo 3)      -- Second block within the epoch
@@ -783,7 +791,7 @@ blockEx2C = mkBlock
              zero             -- Praos leader value
              5                -- Period of KES (key evolving signature scheme)
              0
-             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 epoch1OSchedEx2C :: Map SlotNo OBftSlot
 epoch1OSchedEx2C = runShelleyBase $ overlaySchedule
@@ -930,14 +938,14 @@ txbodyEx2D = TxBody
 txEx2D :: Tx
 txEx2D = Tx
           txbodyEx2D
-          (makeWitnessesVKey txbodyEx2D [alicePay, carlStake])
+          (makeWitnessesVKey txbodyEx2D [asWitness alicePay, asWitness carlStake])
           Map.empty
           SNothing
 
 blockEx2D :: Block
 blockEx2D = mkBlock
              blockEx2CHash
-             (coreNodeKeys 5)
+             (coreNodeKeys 3)
              [txEx2D]
              (SlotNo 190)
              (BlockNo 4)
@@ -946,7 +954,7 @@ blockEx2D = mkBlock
              zero
              9
              0
-             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
 
 blockEx2DHash :: HashHeader
 blockEx2DHash = bhHash (bheader blockEx2D)
@@ -958,7 +966,7 @@ utxoEx2D = UTxO . Map.fromList $
                    , (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
                    ]
 
-delegsEx2D :: Map Credential KeyHash
+delegsEx2D :: Map (Credential 'Staking) (KeyHash 'StakePool)
 delegsEx2D = Map.fromList
               [ (aliceSHK, hk alicePool)
               , (bobSHK,   hk alicePool)
@@ -1021,7 +1029,7 @@ ex2D = CHAINExample (SlotNo 190) expectedStEx2C blockEx2D (Right expectedStEx2D)
 blockEx2E :: Block
 blockEx2E = mkBlock
              blockEx2DHash
-             (coreNodeKeys 5)
+             (coreNodeKeys 3)
              []
              (SlotNo 220)
              (BlockNo 5)
@@ -1030,7 +1038,7 @@ blockEx2E = mkBlock
              zero
              11
              10
-             (mkOCert (coreNodeKeys 5) 1 (KESPeriod 10))
+             (mkOCert (coreNodeKeys 3) 1 (KESPeriod 10))
 
 epoch1OSchedEx2E :: Map SlotNo OBftSlot
 epoch1OSchedEx2E = runShelleyBase $ overlaySchedule
@@ -1075,9 +1083,12 @@ acntEx2E = AccountState
             , _reserves = maxLLSupply - balance utxoEx2A - carlMIR
             }
 
-oCertIssueNosEx2 :: Map KeyHash Natural
+oCertIssueNosEx2 :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2 =
-  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 5) 1 oCertIssueNosEx1
+  Map.insert
+    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 3)
+    1
+    oCertIssueNosEx1
 
 expectedStEx2E :: ChainState
 expectedStEx2E = ChainState
@@ -1108,8 +1119,8 @@ ex2E = CHAINExample (SlotNo 220) expectedStEx2D blockEx2E (Right expectedStEx2E)
 
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
 
-oCertIssueNosEx2F :: Map KeyHash Natural
-oCertIssueNosEx2F = Map.insert (hk alicePool) 0 oCertIssueNosEx2
+oCertIssueNosEx2F :: Map (KeyHash 'BlockIssuer) Natural
+oCertIssueNosEx2F = Map.insert (coerceKeyRole $ hk alicePool) 0 oCertIssueNosEx2
 
 blockEx2F :: Block
 blockEx2F = mkBlock
@@ -1167,7 +1178,7 @@ ex2F = CHAINExample (SlotNo 295) expectedStEx2E blockEx2F (Right expectedStEx2F)
 blockEx2G :: Block
 blockEx2G = mkBlock
              blockEx2FHash
-             (coreNodeKeys 2)
+             (coreNodeKeys 0)
              []
              (SlotNo 310)
              (BlockNo 7)
@@ -1176,7 +1187,7 @@ blockEx2G = mkBlock
              zero
              15
              15
-             (mkOCert (coreNodeKeys 2) 1 (KESPeriod 15))
+             (mkOCert (coreNodeKeys 0) 1 (KESPeriod 15))
 
 blockEx2GHash :: HashHeader
 blockEx2GHash = bhHash (bheader blockEx2G)
@@ -1204,9 +1215,12 @@ expectedLSEx2G = LedgerState
                  dsEx2D
                  psEx2A)
 
-oCertIssueNosEx2G :: Map KeyHash Natural
+oCertIssueNosEx2G :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2G =
-  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 1 oCertIssueNosEx2F
+  Map.insert
+    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0)
+    1
+    oCertIssueNosEx2F
 
 acntEx2G :: AccountState
 acntEx2G = acntEx2E { _treasury = Coin 40 }
@@ -1241,7 +1255,7 @@ ex2G = CHAINExample (SlotNo 310) expectedStEx2F blockEx2G (Right expectedStEx2G)
 blockEx2H :: Block
 blockEx2H = mkBlock
              blockEx2GHash
-             (coreNodeKeys 5)
+             (coreNodeKeys 3)
              []
              (SlotNo 390)
              (BlockNo 8)
@@ -1250,7 +1264,7 @@ blockEx2H = mkBlock
              zero
              19
              19
-             (mkOCert (coreNodeKeys 5) 2 (KESPeriod 19))
+             (mkOCert (coreNodeKeys 3) 2 (KESPeriod 19))
 
 blockEx2HHash :: HashHeader
 blockEx2HHash = bhHash (bheader blockEx2H)
@@ -1265,9 +1279,12 @@ rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
                           , (RewardAcnt bobSHK, bobRAcnt2H) ]
 
-oCertIssueNosEx2H :: Map KeyHash Natural
+oCertIssueNosEx2H :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2H =
-  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 5) 2 oCertIssueNosEx2G
+  Map.insert
+    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 3)
+    2
+    oCertIssueNosEx2G
 
 alicePerfEx2H :: ApparentPerformance
 alicePerfEx2H = ApparentPerformance (beta / sigma)
@@ -1314,7 +1331,7 @@ ex2H = CHAINExample (SlotNo 390) expectedStEx2G blockEx2H (Right expectedStEx2H)
 blockEx2I :: Block
 blockEx2I = mkBlock
               blockEx2HHash
-              (coreNodeKeys 2)
+              (coreNodeKeys 0)
               []
               (SlotNo 410)
               (BlockNo 9)
@@ -1323,7 +1340,7 @@ blockEx2I = mkBlock
               zero
               20
               20
-              (mkOCert (coreNodeKeys 2) 2 (KESPeriod 20))
+              (mkOCert (coreNodeKeys 0) 2 (KESPeriod 20))
 
 blockEx2IHash :: HashHeader
 blockEx2IHash = bhHash (bheader blockEx2I)
@@ -1366,9 +1383,12 @@ snapsEx2I = snapsEx2G { _pstakeMark = SnapShot
                       , _feeSS = Coin 9
                       }
 
-oCertIssueNosEx2I :: Map KeyHash Natural
+oCertIssueNosEx2I :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2I =
-  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 2 oCertIssueNosEx2H
+  Map.insert
+    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0)
+    2
+    oCertIssueNosEx2H
 
 expectedStEx2I :: ChainState
 expectedStEx2I = ChainState
@@ -1416,14 +1436,14 @@ txbodyEx2J = TxBody
 txEx2J :: Tx
 txEx2J = Tx
           txbodyEx2J
-          (makeWitnessesVKey txbodyEx2J [bobPay, bobStake])
+          (makeWitnessesVKey txbodyEx2J [asWitness bobPay, asWitness bobStake])
           Map.empty
           SNothing
 
 blockEx2J :: Block
 blockEx2J = mkBlock
               blockEx2IHash
-              (coreNodeKeys 5)
+              (coreNodeKeys 3)
               [txEx2J]
               (SlotNo 420)
               (BlockNo 10)
@@ -1432,7 +1452,7 @@ blockEx2J = mkBlock
               zero
               21
               19
-              (mkOCert (coreNodeKeys 5) 2 (KESPeriod 19))
+              (mkOCert (coreNodeKeys 3) 2 (KESPeriod 19))
 
 blockEx2JHash :: HashHeader
 blockEx2JHash = bhHash (bheader blockEx2J)
@@ -1462,9 +1482,12 @@ expectedLSEx2J = LedgerState
                  emptyPPPUpdates)
                (DPState dsEx2J psEx2A)
 
-oCertIssueNosEx2J :: Map KeyHash Natural
+oCertIssueNosEx2J :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2J =
-  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 2 oCertIssueNosEx2H
+  Map.insert
+    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0)
+    2
+    oCertIssueNosEx2H
 
 expectedStEx2J :: ChainState
 expectedStEx2J = ChainState
@@ -1509,14 +1532,14 @@ txbodyEx2K = TxBody
 txEx2K :: Tx
 txEx2K = Tx
           txbodyEx2K
-          (makeWitnessesVKey txbodyEx2K [cold alicePool, alicePay])
+          (makeWitnessesVKey txbodyEx2K [asWitness $ cold alicePool, asWitness alicePay])
           Map.empty
           SNothing
 
 blockEx2K :: Block
 blockEx2K = mkBlock
               blockEx2JHash
-              (coreNodeKeys 5)
+              (coreNodeKeys 3)
               [txEx2K]
               (SlotNo 490)
               (BlockNo 11)
@@ -1525,7 +1548,7 @@ blockEx2K = mkBlock
               zero
               24
               19
-              (mkOCert (coreNodeKeys 5) 2 (KESPeriod 19))
+              (mkOCert (coreNodeKeys 3) 2 (KESPeriod 19))
 
 blockEx2KHash :: HashHeader
 blockEx2KHash = bhHash (bheader blockEx2K)
@@ -1587,7 +1610,7 @@ ex2K = CHAINExample (SlotNo 490) expectedStEx2J blockEx2K (Right expectedStEx2K)
 blockEx2L :: Block
 blockEx2L = mkBlock
               blockEx2KHash
-              (coreNodeKeys 2)
+              (coreNodeKeys 0)
               []
               (SlotNo 510)
               (BlockNo 12)
@@ -1596,7 +1619,7 @@ blockEx2L = mkBlock
               zero
               25
               25
-              (mkOCert (coreNodeKeys 2) 3 (KESPeriod 25))
+              (mkOCert (coreNodeKeys 0) 3 (KESPeriod 25))
 
 blockEx2LHash :: HashHeader
 blockEx2LHash = bhHash (bheader blockEx2L)
@@ -1637,9 +1660,9 @@ expectedLSEx2L = LedgerState
                (DPState dsEx2L psEx1) -- Note the stake pool is reaped
 
 
-oCertIssueNosEx2L :: Map KeyHash Natural
+oCertIssueNosEx2L :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2L =
-  Map.insert (hashKey $ vKey $ cold $ coreNodeKeys 2) 3 oCertIssueNosEx2J
+  Map.insert (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0) 3 oCertIssueNosEx2J
 
 expectedStEx2L :: ChainState
 expectedStEx2L = ChainState
@@ -1721,10 +1744,10 @@ txEx3A = Tx
           txbodyEx3A
           (makeWitnessesVKey
             txbodyEx3A
-            [ alicePay
-            , cold $ coreNodeKeys 0
-            , cold $ coreNodeKeys 3
-            , cold $ coreNodeKeys 4
+            [ asWitness alicePay
+            , asWitness . cold $ coreNodeKeys 0
+            , asWitness . cold $ coreNodeKeys 3
+            , asWitness . cold $ coreNodeKeys 4
             ])
           Map.empty
           SNothing
@@ -1732,7 +1755,7 @@ txEx3A = Tx
 blockEx3A :: Block
 blockEx3A = mkBlock
              lastByronHeaderHash
-             (coreNodeKeys 2)
+             (coreNodeKeys 0)
              [txEx3A]
              (SlotNo 10)
              (BlockNo 1)
@@ -1741,7 +1764,7 @@ blockEx3A = mkBlock
              zero
              0
              0
-             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 expectedLSEx3A :: LedgerState
 expectedLSEx3A = LedgerState
@@ -1813,9 +1836,9 @@ txEx3B = Tx
           txbodyEx3B
           (makeWitnessesVKey
             txbodyEx3B
-            [ alicePay
-            , cold $ coreNodeKeys 1
-            , cold $ coreNodeKeys 5
+            [ asWitness alicePay
+            , asWitness . cold $ coreNodeKeys 1
+            , asWitness . cold $ coreNodeKeys 5
             ])
           Map.empty
           SNothing
@@ -1823,7 +1846,7 @@ txEx3B = Tx
 blockEx3B :: Block
 blockEx3B = mkBlock
              blockEx3AHash
-             (coreNodeKeys 5)
+             (coreNodeKeys 3)
              [txEx3B]
              (SlotNo 20)
              (BlockNo 2)
@@ -1832,7 +1855,7 @@ blockEx3B = mkBlock
              zero
              1
              0
-             (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
 
 utxoEx3B :: UTxO
 utxoEx3B = UTxO . Map.fromList $
@@ -1886,7 +1909,7 @@ ex3B = CHAINExample (SlotNo 20) expectedStEx3A blockEx3B (Right expectedStEx3B)
 blockEx3C :: Block
 blockEx3C = mkBlock
              blockEx3BHash
-             (coreNodeKeys 2)
+             (coreNodeKeys 0)
              []
              (SlotNo 110)
              (BlockNo 3)
@@ -1895,7 +1918,7 @@ blockEx3C = mkBlock
              zero
              5
              0
-             (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 blockEx3CHash :: HashHeader
 blockEx3CHash = bhHash (bheader blockEx3C)
@@ -1948,7 +1971,7 @@ ex3C = CHAINExample (SlotNo 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
 -- | Example 4A - Genesis key delegation
 
 
-newGenDelegate :: KeyPair
+newGenDelegate :: KeyPair 'GenesisDelegate
 newGenDelegate  = KeyPair vkCold skCold
   where (skCold, vkCold) = mkKeyPair (108, 0, 0, 0, 1)
 
@@ -1959,7 +1982,7 @@ txbodyEx4A :: TxBody
 txbodyEx4A = TxBody
               (Set.fromList [TxIn genesisId 0])
               (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx4A)
-              (StrictSeq.fromList [DCertGenesis (GenesisDelegate
+              (StrictSeq.fromList [DCertGenesis (GenesisDelegCert
                                        (hashKey (coreNodeVKG 0))
                                        (hashKey (vKey newGenDelegate)))])
               (Wdrl Map.empty)
@@ -1978,7 +2001,7 @@ txEx4A = Tx
 blockEx4A :: Block
 blockEx4A = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 2)
+              (coreNodeKeys 0)
               [txEx4A]
               (SlotNo 10)
               (BlockNo 1)
@@ -1987,7 +2010,7 @@ blockEx4A = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 blockEx4AHash :: HashHeader
 blockEx4AHash = bhHash (bheader blockEx4A)
@@ -2041,7 +2064,7 @@ ex4A = CHAINExample (SlotNo 10) initStEx2A blockEx4A (Right expectedStEx4A)
 blockEx4B :: Block
 blockEx4B = mkBlock
              blockEx4AHash
-             (coreNodeKeys 1)
+             (coreNodeKeys 6)
              []
              (SlotNo 50)
              (BlockNo 2)
@@ -2050,7 +2073,7 @@ blockEx4B = mkBlock
              zero
              2
              0
-             (mkOCert (coreNodeKeys 1) 0 (KESPeriod 0))
+             (mkOCert (coreNodeKeys 6) 0 (KESPeriod 0))
 
 blockEx4BHash :: HashHeader
 blockEx4BHash = bhHash (bheader blockEx4B)
@@ -2103,7 +2126,7 @@ ex4B = CHAINExample (SlotNo 50) expectedStEx4A blockEx4B (Right expectedStEx4B)
 -- | Example 5A - Genesis key delegation
 
 
-ir :: Map Credential Coin
+ir :: Map (Credential 'Staking) Coin
 ir = Map.fromList [(aliceSHK, Coin 100)]
 
 aliceCoinEx5A :: Coin
@@ -2136,7 +2159,7 @@ txEx5A = Tx
 blockEx5A :: Block
 blockEx5A = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 2)
+              (coreNodeKeys 0)
               [txEx5A]
               (SlotNo 10)
               (BlockNo 1)
@@ -2145,7 +2168,7 @@ blockEx5A = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 blockEx5AHash :: HashHeader
 blockEx5AHash = bhHash (bheader blockEx5A)
@@ -2209,7 +2232,7 @@ txEx5B = Tx
 blockEx5B :: Block
 blockEx5B = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 2)
+              (coreNodeKeys 0)
               [txEx5B]
               (SlotNo 10)
               (BlockNo 1)
@@ -2218,7 +2241,7 @@ blockEx5B = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 expectedStEx5B :: PredicateFailure CHAIN
 expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRInsufficientGenesisSigsUTXOW)))
@@ -2288,7 +2311,8 @@ txbodyEx5F = TxBody
 
 txEx5F :: Tx
 txEx5F = Tx txbodyEx5F
-            (makeWitnessesVKey txbodyEx5F [ alicePay, aliceStake ]  `Set.union` makeWitnessesVKey txbodyEx5F
+            (makeWitnessesVKey txbodyEx5F [ asWitness alicePay, asWitness aliceStake ]
+            `Set.union` makeWitnessesVKey txbodyEx5F
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
@@ -2301,7 +2325,7 @@ txEx5F = Tx txbodyEx5F
 blockEx5F :: Block
 blockEx5F = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 2)
+              (coreNodeKeys 0)
               [txEx5F]
               (SlotNo 10)
               (BlockNo 1)
@@ -2310,7 +2334,7 @@ blockEx5F = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 2) 0 (KESPeriod 0))
+              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
 -- | The second transaction in the next epoch and at least `startRewards` slots
 -- after the transaction carrying the MIR certificate, then creates the rewards
@@ -2337,7 +2361,7 @@ txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey txbodyEx5F' [ alicePay ]) Map.empty 
 blockEx5F' :: Block
 blockEx5F' = mkBlock
               (bhHash (bheader blockEx5F))
-              (coreNodeKeys 0)
+              (coreNodeKeys 5)
               [txEx5F']
               ((slotFromEpoch $ EpochNo 1)
                 +* Duration (startRewards testGlobals) + SlotNo 7)
@@ -2347,7 +2371,7 @@ blockEx5F' = mkBlock
               zero
               7
               0
-              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+              (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
 
 -- | The third transaction in the next epoch applies the reward update to 1)
 -- register a staking credential for Alice, 2) deducing the key deposit from the
@@ -2373,7 +2397,7 @@ txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey txbodyEx5F'' [ alicePay ]) Map.emp
 blockEx5F'' :: Block
 blockEx5F'' = mkBlock
                (bhHash (bheader blockEx5F'))
-               (coreNodeKeys 2)
+               (coreNodeKeys 0)
                [txEx5F'']
                ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
                (BlockNo 3)
@@ -2382,7 +2406,7 @@ blockEx5F'' = mkBlock
                zero
                10
                10
-               (mkOCert (coreNodeKeys 2) 0 (KESPeriod 10))
+               (mkOCert (coreNodeKeys 0) 0 (KESPeriod 10))
 
 ex5F' :: Either [[PredicateFailure CHAIN]] ChainState
 ex5F' = do

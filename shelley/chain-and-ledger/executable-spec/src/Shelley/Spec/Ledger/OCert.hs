@@ -1,8 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Shelley.Spec.Ledger.OCert
   ( OCert(..)
@@ -26,24 +28,27 @@ import           Numeric.Natural (Natural)
 
 import           Shelley.Spec.Ledger.BaseTypes
 import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (KeyHash, Sig, VKeyES)
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..), ToCBORGroup (..))
+import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignedDSIGN, VerKeyKES,
+                     coerceKeyRole, decodeSignedDSIGN, decodeVerKeyKES, encodeSignedDSIGN,
+                     encodeVerKeyKES)
+import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
+                     ToCBORGroup (..))
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 data OCertEnv crypto = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash crypto)
-  , ocertEnvGenDelegs :: Set (KeyHash crypto)
+  { ocertEnvStPools :: Set (KeyHash 'StakePool crypto)
+  , ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate crypto)
   } deriving (Show, Eq)
 
 currentIssueNo
   :: OCertEnv crypto
-  -> (Map (KeyHash crypto) Natural)
-  -> KeyHash crypto -- ^ Pool hash
+  -> (Map (KeyHash 'BlockIssuer crypto) Natural)
+  -> KeyHash 'BlockIssuer crypto -- ^ Pool hash
   -> Maybe Natural
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs
-  | Set.member hk stPools = Just 0
-  | Set.member hk genDelegs = Just 0
+  | Set.member (coerceKeyRole hk) stPools = Just 0
+  | Set.member (coerceKeyRole hk) genDelegs = Just 0
   | otherwise = Nothing
 
 newtype KESPeriod = KESPeriod Natural
@@ -51,16 +56,18 @@ newtype KESPeriod = KESPeriod Natural
 
 data OCert crypto = OCert
   { -- | The operational hot key
-    ocertVkHot     :: !(VKeyES crypto)
+    ocertVkHot     :: !(VerKeyKES crypto)
     -- | counter
   , ocertN         :: !Natural
     -- | Start of key evolving signature period
   , ocertKESPeriod :: !KESPeriod
     -- | Signature of block operational certificate content
-  , ocertSigma     :: !(Sig crypto (VKeyES crypto, Natural, KESPeriod))
-  } deriving (Show, Eq, Generic)
+  , ocertSigma     :: !(SignedDSIGN crypto (VerKeyKES crypto, Natural, KESPeriod))
+  } deriving (Generic)
     deriving ToCBOR via (CBORGroup (OCert crypto))
 
+deriving instance Crypto crypto => Eq (OCert crypto)
+deriving instance Crypto crypto => Show (OCert crypto)
 instance Crypto crypto => NoUnexpectedThunks (OCert crypto)
 
 instance
@@ -68,10 +75,10 @@ instance
   => ToCBORGroup (OCert crypto)
  where
   toCBORGroup ocert =
-         toCBOR (ocertVkHot ocert)
+         encodeVerKeyKES (ocertVkHot ocert)
       <> toCBOR (ocertN ocert)
       <> toCBOR (ocertKESPeriod ocert)
-      <> toCBOR (ocertSigma ocert)
+      <> encodeSignedDSIGN (ocertSigma ocert)
   listLen _ = 4
 
 instance
@@ -80,10 +87,10 @@ instance
  where
   fromCBORGroup =
     OCert
-      <$> fromCBOR
+      <$> decodeVerKeyKES
       <*> fromCBOR
       <*> fromCBOR
-      <*> fromCBOR
+      <*> decodeSignedDSIGN
 
 kesPeriod :: SlotNo -> ShelleyBase KESPeriod
 kesPeriod (SlotNo s) = asks slotsPerKESPeriod <&> \spkp ->

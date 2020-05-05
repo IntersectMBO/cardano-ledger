@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -25,8 +26,8 @@ import           Cardano.Prelude (asks)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase, activeSlotCoeff)
 import           Shelley.Spec.Ledger.BlockChain (BHBody (..), BHeader (..), vrfChecks)
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), KESignable, KeyHash, Signable, VKeyES,
-                     hashKey)
+import           Shelley.Spec.Ledger.Keys (DSignable, GenDelegs (..), KESignable, KeyHash,
+                     KeyRole (..), VerKeyKES, coerceKeyRole, hashKey)
 import           Shelley.Spec.Ledger.LedgerState (OBftSlot (..))
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
 import           Shelley.Spec.Ledger.Slot (SlotNo)
@@ -51,14 +52,14 @@ instance NoUnexpectedThunks (OverlayEnv crypto)
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )
   => STS (OVERLAY crypto)
  where
   type State (OVERLAY crypto)
-    = Map (KeyHash crypto) Natural
+    = Map (KeyHash 'BlockIssuer crypto) Natural
 
   type Signal (OVERLAY crypto)
     = BHeader crypto
@@ -69,7 +70,7 @@ instance
   data PredicateFailure (OVERLAY crypto)
     = NotPraosLeaderOVERLAY
     | NotActiveSlotOVERLAY
-    | WrongGenesisColdKeyOVERLAY (KeyHash crypto) (KeyHash crypto)
+    | WrongGenesisColdKeyOVERLAY (KeyHash 'BlockIssuer crypto) (KeyHash 'GenesisDelegate crypto)
     | NoGenesisStakingOVERLAY
     | OcertFailure (PredicateFailure (OCERT crypto))
     deriving (Show, Eq, Generic)
@@ -81,7 +82,7 @@ instance
 overlayTransition
   :: forall crypto
    . ( Crypto crypto
-     , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+     , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
      , KESignable crypto (BHBody crypto)
      , VRF.Signable (VRF crypto) Seed
      )
@@ -106,7 +107,7 @@ overlayTransition = judgmentContext >>=
         Nothing ->
           failBecause NoGenesisStakingOVERLAY
         Just genDelegsKey ->
-          vkh == genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
+          vkh == coerceKeyRole genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
 
   let
     oce = OCertEnv
@@ -118,7 +119,7 @@ instance NoUnexpectedThunks (PredicateFailure (OVERLAY crypto))
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )

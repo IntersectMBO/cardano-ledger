@@ -18,9 +18,7 @@ module Shelley.Spec.Ledger.MetaData
 
 import           Cardano.Binary (Annotator (..), DecoderError (..), FromCBOR (fromCBOR),
                      ToCBOR (toCBOR), encodePreEncoded, serializeEncoding, withSlice)
-import           Cardano.Crypto.Hash (Hash, hash)
-import           Cardano.Prelude (AllowThunksIn (..), LByteString, NoUnexpectedThunks (..), Word64,
-                     cborError)
+import           Cardano.Prelude (AllowThunksIn(..), LByteString, NoUnexpectedThunks (..), Word64, cborError)
 import           Data.Bifunctor (bimap)
 import           Data.Bitraversable (bitraverse)
 import           Data.ByteString as B
@@ -28,12 +26,13 @@ import           Data.ByteString.Lazy as BL
 import           Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import           Shelley.Spec.Ledger.Crypto (Crypto, HASH)
+import           Shelley.Spec.Ledger.Crypto (Crypto)
+import           Shelley.Spec.Ledger.Keys (Hash, hash)
 
 import qualified Codec.CBOR.Term as CBOR
 
 import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.Serialization (mapToCBOR, mapFromCBOR)
+import           Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
 --
@@ -117,7 +116,7 @@ instance FromCBOR MetaDatum
        Left e   -> (cborError . DecoderErrorCustom "metadata" . T.pack) e
 
 newtype MetaDataHash crypto
-  = MetaDataHash { unsafeMetaDataHash :: Hash (HASH crypto) MetaData }
+  = MetaDataHash { unsafeMetaDataHash :: Hash crypto MetaData }
   deriving (Show, Eq, Ord, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (MetaDataHash crypto)

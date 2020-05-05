@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -37,7 +38,7 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), Stake (..),
                      emptySnapShot, maxPool, poolStake)
-import           Shelley.Spec.Ledger.Keys (KeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole(..))
 import           Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import           Shelley.Spec.Ledger.TxData (Credential (..), PoolParams (..), RewardAcnt (..))
 
@@ -52,7 +53,7 @@ instance FromCBOR ApparentPerformance
  where fromCBOR = ApparentPerformance <$> decodeDouble
 
 data NonMyopic crypto= NonMyopic
-  { apparentPerformances :: !(Map (KeyHash crypto) ApparentPerformance)
+  { apparentPerformances :: !(Map (KeyHash 'StakePool crypto) ApparentPerformance)
   , rewardPot :: !Coin
   , snap :: !(SnapShot crypto)
   } deriving (Show, Eq, Generic)
@@ -121,9 +122,9 @@ getTopRankedPools
   :: Coin
   -> Coin
   -> PParams
-  -> Map (KeyHash crypto) (PoolParams crypto)
-  -> Map (KeyHash crypto) ApparentPerformance
-  -> Set (KeyHash crypto)
+  -> Map (KeyHash 'StakePool crypto) (PoolParams crypto)
+  -> Map (KeyHash 'StakePool crypto) ApparentPerformance
+  -> Set (KeyHash 'StakePool crypto)
 getTopRankedPools rPot total pp poolParams aps =
   Set.fromList $ fmap fst $
     take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
@@ -196,13 +197,12 @@ rewardOnePool
   -> Coin
   -> Natural
   -> Natural
-  -> Credential crypto
   -> PoolParams crypto
   -> Stake crypto
   -> Coin
   -> Set (RewardAcnt crypto)
   -> (Map (RewardAcnt crypto) Coin, Rational)
-rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) addrsRew =
+rewardOnePool pp r blocksN blocksTotal pool (Stake stake) (Coin total) addrsRew =
   (rewards', appPerf)
   where
     Coin pstake = sum stake
@@ -224,7 +224,7 @@ rewardOnePool pp r blocksN blocksTotal poolHK pool (Stake stake) (Coin total) ad
     mRewards = Map.fromList
      [(RewardAcnt hk,
        memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma))
-     | (hk, Coin c) <- Map.toList stake, hk /= poolHK]
+     | (hk, Coin c) <- Map.toList stake, hk `Set.notMember` (KeyHashObj `Set.map` _poolOwners pool)]
     iReward  = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (_poolRAcnt pool) iReward mRewards
     rewards' = Map.filter (/= Coin 0) $ addrsRew ◁ potentialRewards
@@ -234,11 +234,11 @@ reward
   -> BlocksMade crypto
   -> Coin
   -> Set (RewardAcnt crypto)
-  -> Map (KeyHash crypto) (PoolParams crypto)
+  -> Map (KeyHash 'StakePool crypto) (PoolParams crypto)
   -> Stake crypto
-  -> Map (Credential crypto) (KeyHash crypto)
+  -> Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
   -> Coin
-  -> (Map (RewardAcnt crypto) Coin, Map (KeyHash crypto) Rational)
+  -> (Map (RewardAcnt crypto) Coin, Map (KeyHash 'StakePool crypto) Rational)
 reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
   (rewards', appPerformances)
   where
@@ -252,7 +252,7 @@ reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
       ]
     results =
       [ ( hk
-        , rewardOnePool pp r n totalBlocks (KeyHashObj hk) pool actgr total addrsRew)
+        , rewardOnePool pp r n totalBlocks pool actgr total addrsRew)
       | (hk, (pool, n, actgr)) <- pdata
       ]
     rewards' = foldl' (\m (_, r') -> Map.union m (fst r')) Map.empty results
@@ -260,11 +260,11 @@ reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
     totalBlocks = sum b
 
 nonMyopicStake
-  :: KeyHash crypto
+  :: KeyHash 'StakePool crypto
   -> StakeShare
   -> StakeShare
   -> PParams
-  -> Set (KeyHash crypto)
+  -> Set (KeyHash 'StakePool crypto)
   -> StakeShare
 nonMyopicStake kh (StakeShare sigma) (StakeShare s) pp topPools =
   let

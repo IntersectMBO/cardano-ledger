@@ -18,7 +18,6 @@ module Shelley.Spec.Ledger.API.Mempool
 where
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import qualified Cardano.Crypto.DSIGN as DSIGN
 import           Shelley.Spec.Ledger.API.Validation
 import           Shelley.Spec.Ledger.Crypto
 import           Control.Arrow (left)
@@ -29,6 +28,7 @@ import           Data.Sequence (Seq)
 import           Data.Typeable (Typeable)
 import           Shelley.Spec.Ledger.BaseTypes (Globals)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
+import           Shelley.Spec.Ledger.Keys
 import           Shelley.Spec.Ledger.Slot (SlotNo)
 import           Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
@@ -98,7 +98,7 @@ applyTxs ::
   forall crypto m.
   ( Crypto crypto,
     MonadError (ApplyTxError crypto) m,
-    DSIGN.Signable (DSIGN crypto) (Tx.TxBody crypto)
+    DSignable crypto (Tx.TxBody crypto)
   ) =>
   Globals ->
   MempoolEnv ->

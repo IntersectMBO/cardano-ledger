@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 
@@ -29,7 +30,7 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, Credential (..), patt
                      _poolVrf)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
-import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), asWitness, coerceKeyRole, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern LedgerState, pattern UTxOState,
                      emptyDelegation, genesisCoins, genesisId, genesisState, minfee,
                      overlaySchedule, _delegationState, _delegations, _dstate, _pParams, _pstate,
@@ -48,10 +49,10 @@ import           Test.Shelley.Spec.Ledger.PreSTSGenerator (asStateTransition)
 import           Test.Shelley.Spec.Ledger.Utils
 
 
-alicePay :: KeyPair
+alicePay :: KeyPair 'Payment
 alicePay = KeyPair 1 1
 
-aliceStake :: KeyPair
+aliceStake :: KeyPair 'Staking
 aliceStake = KeyPair 2 2
 
 aliceAddr :: Addr
@@ -59,10 +60,10 @@ aliceAddr = Addr
              (KeyHashObj . hashKey $ vKey alicePay)
              (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: KeyPair
+bobPay :: KeyPair 'Payment
 bobPay = KeyPair 3 3
 
-bobStake :: KeyPair
+bobStake :: KeyPair 'Staking
 bobStake = KeyPair 4 4
 
 bobAddr :: Addr
@@ -97,7 +98,7 @@ changeReward ls acnt c = ls {_delegationState = delSt {_dstate = dstate' {_rewar
     dstate' = _dstate delSt
     newAccounts = Map.insert acnt c ((_rewards . _dstate . _delegationState) ls)
 
-stakePoolKey1 :: KeyPair
+stakePoolKey1 :: KeyPair 'Staking
 stakePoolKey1 = KeyPair 5 5
 
 stakePoolVRFKey1 :: VerKeyVRF
@@ -138,10 +139,14 @@ testValidDelegation txs utxoState' stakeKeyRegistration pool =
           utxoState'
           (stakeKeyRegistration
             { _dstate = dstate'
-               { _delegations = Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)] }
+              { _delegations = Map.fromList
+                [ ( KeyHashObj $ coerceKeyRole . hashKey $ vKey aliceStake
+                  , coerceKeyRole poolhk)
+                ]
+              }
             , _pstate = pstate'
-               { _stPools = (StakePools $ Map.fromList [(poolhk, SlotNo 0)])
-               , _pParams = Map.fromList [(poolhk, pool)]
+               { _stPools = (StakePools $ Map.fromList [(coerceKeyRole poolhk, SlotNo 0)])
+               , _pParams = Map.fromList [(coerceKeyRole poolhk, pool)]
                }
             }
           )
@@ -161,11 +166,11 @@ testValidRetirement txs utxoState' stakeKeyRegistration e pool =
           (stakeKeyRegistration
             {
               _dstate = dstate'
-                { _delegations = Map.fromList [(KeyHashObj $ hashKey $ vKey aliceStake, poolhk)] }
+                { _delegations = Map.fromList [(KeyHashObj $ coerceKeyRole . hashKey $ vKey aliceStake, coerceKeyRole poolhk)] }
             , _pstate = pstate'
-                { _stPools  = StakePools $ Map.fromList [(poolhk, SlotNo 0)]
-                , _pParams  = Map.fromList [(poolhk, pool)]
-                , _retiring = Map.fromList [(poolhk, e)]
+                { _stPools  = StakePools $ Map.fromList [(coerceKeyRole poolhk, SlotNo 0)]
+                , _pParams  = Map.fromList [(coerceKeyRole poolhk, pool)]
+                , _retiring = Map.fromList [(coerceKeyRole poolhk, e)]
                 }
             }
           )
@@ -190,7 +195,7 @@ testValidWithdrawal =
            (SlotNo 0)
            SNothing
            SNothing
-    wits = makeWitnessesVKey tx [alicePay, bobStake]
+    wits = makeWitnessesVKey tx [asWitness alicePay, asWitness bobStake]
     utxo' = Map.fromList
        [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000))
        , (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000))
@@ -257,13 +262,13 @@ testWithdrawalWrongAmt =
            (SlotNo 0)
            SNothing
            SNothing
-    wits = makeWitnessesVKey tx [alicePay, bobStake]
+    wits = makeWitnessesVKey tx [asWitness alicePay, asWitness bobStake]
     ls =asStateTransition
           (SlotNo 0) testPCs genesisWithReward (Tx tx wits Map.empty SNothing) (Coin 0)
   in ls @?= Left [IncorrectRewards]
 
 aliceGivesBobLovelace :: TxIn -> Coin -> Coin -> Coin -> Coin ->
-  [DCert] -> SlotNo -> [KeyPair] -> Tx
+  [DCert] -> SlotNo -> [KeyPair 'Witness] -> Tx
 aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits Map.empty SNothing
   where
     aliceCoin = aliceInitCoin + txrefs - (coin + fee + txdeps)
@@ -286,7 +291,7 @@ tx1 = aliceGivesBobLovelace
         (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
         []
         (SlotNo 0)
-        [alicePay]
+        [asWitness alicePay]
 
 
 utxoSt1 :: UTxOState
@@ -310,7 +315,8 @@ tx2 = aliceGivesBobLovelace
         , DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey bobStake)
         , DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey stakePoolKey1)]
         (SlotNo 100)
-        [alicePay, aliceStake, bobStake, stakePoolKey1]
+        [ asWitness alicePay, asWitness aliceStake
+        , asWitness bobStake, asWitness stakePoolKey1]
 
 
 utxoSt2 :: UTxOState
@@ -330,7 +336,7 @@ tx3Body = TxBody
           (StrictSeq.fromList [ DCertPool (RegPool stakePool)
                               , DCertDeleg (Delegate (Delegation
                                                   (KeyHashObj $ hashKey $ vKey aliceStake)
-                                                  (hashKey $ vKey stakePoolKey1)))])
+                                                  (coerceKeyRole . hashKey $ vKey stakePoolKey1)))])
           (Wdrl Map.empty)
           (Coin 1200)
           (SlotNo 100)
@@ -339,7 +345,7 @@ tx3Body = TxBody
 
 tx3 :: Tx
 tx3 = Tx tx3Body (makeWitnessesVKey tx3Body keys) Map.empty SNothing
-      where keys = [alicePay, aliceStake, stakePoolKey1]
+      where keys = [asWitness alicePay, asWitness aliceStake, asWitness stakePoolKey1]
 
 utxoSt3 :: UTxOState
 utxoSt3 = UTxOState
@@ -374,7 +380,7 @@ stakeKeyRegistration1 = emptyDelegation
 stakePool :: PoolParams
 stakePool = PoolParams
             {
-              _poolPubKey  = hashKey $ vKey stakePoolKey1
+              _poolPubKey  = coerceKeyRole . hashKey $ vKey stakePoolKey1
             , _poolVrf     = hashKeyVRF stakePoolVRFKey1
             , _poolPledge  = Coin 0
             , _poolCost    = Coin 0      -- TODO: what is a sensible value?
@@ -392,7 +398,7 @@ halfInterval =
 stakePoolUpdate :: PoolParams
 stakePoolUpdate = PoolParams
                    {
-                     _poolPubKey  = hashKey $ vKey stakePoolKey1
+                     _poolPubKey  = coerceKeyRole . hashKey $ vKey stakePoolKey1
                    , _poolVrf     = hashKeyVRF stakePoolVRFKey1
                    , _poolPledge  = Coin 0
                    , _poolCost    = Coin 100      -- TODO: what is a sensible value?
@@ -415,7 +421,7 @@ tx4Body = TxBody
           SNothing
 
 tx4 :: Tx
-tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [alicePay, stakePoolKey1]) Map.empty SNothing
+tx4 = Tx tx4Body (makeWitnessesVKey tx4Body [asWitness alicePay, asWitness stakePoolKey1]) Map.empty SNothing
 
 utxoSt4 :: UTxOState
 utxoSt4 = UTxOState
@@ -441,7 +447,7 @@ tx5Body :: EpochNo -> TxBody
 tx5Body e = TxBody
           (Set.fromList [TxIn (txid $ _body tx3) 0])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 2950))
-          (StrictSeq.fromList [ DCertPool (RetirePool (hashKey $ vKey stakePoolKey1) e) ])
+          (StrictSeq.fromList [ DCertPool (RetirePool (coerceKeyRole . hashKey $ vKey stakePoolKey1) e) ])
           (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 100)
@@ -449,7 +455,7 @@ tx5Body e = TxBody
           SNothing
 
 tx5 :: EpochNo -> Tx
-tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [alicePay, stakePoolKey1]) Map.empty SNothing
+tx5 e = Tx (tx5Body e) (makeWitnessesVKey (tx5Body e) [asWitness alicePay,asWitness stakePoolKey1]) Map.empty SNothing
 
 
 testsValidLedger :: TestTree
@@ -522,7 +528,7 @@ testSpendNonexistentInput =
            (Coin 3000) (Coin 1500) (Coin 0) (Coin 0)
            []
            (SlotNo 100)
-           [alicePay]
+           [asWitness alicePay]
   in ledgerState [tx] @?=
        Left [ ValueNotConserved (Coin 0) (Coin 10000)
             , BadInputs]
@@ -613,7 +619,7 @@ testFeeTooSmall =
            (Coin 3000) (Coin 1) (Coin 0) (Coin 0)
            []
            (SlotNo 100)
-           [alicePay]
+           [asWitness alicePay]
   in ledgerState [tx] @?=
        Left [ FeeTooSmall (minfee testPCs tx) (Coin 1) ]
 
@@ -625,7 +631,7 @@ testExpiredTx =
            (Coin 3000) (Coin 600) (Coin 0) (Coin 0)
            []
            (SlotNo 0)
-           [alicePay]
+           [asWitness alicePay]
   in asStateTransition (SlotNo 1) testPCs genesis tx (Coin 0) @?=
        Left [ Expired (SlotNo 0) (SlotNo 1) ]
 

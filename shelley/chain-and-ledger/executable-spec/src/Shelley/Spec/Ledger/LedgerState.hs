@@ -92,18 +92,17 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Crypto (Crypto, DSIGN)
+import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
                      Stake (..), aggregateOuts, baseStake, emptySnapShots, ptrStake, rewardStake)
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenDelegs (..), GenKeyHash,
-                     KeyDiscriminator (..), KeyHash, KeyPair, Signable, hash,
-                     undiscriminateKeyHash)
+import           Shelley.Spec.Ledger.Keys (DSignable, GenDelegs (..), KeyHash, KeyPair,
+                     KeyRole (..), asWitness, hash)
 import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), Update (..),
                      emptyPPPUpdates, emptyPParams, _d, _keyDecayRate, _keyDeposit, _keyMinRefund,
                      _minfeeA, _minfeeB, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoFirst, epochInfoSize, (+*), (-*))
-import           Shelley.Spec.Ledger.Tx (Tx (..), extractGenKeyHash, extractKeyHash)
+import           Shelley.Spec.Ledger.Tx (Tx (..), extractKeyHash)
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCert (..), Ix,
                      PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), TxBody (..),
                      TxId (..), TxIn (..), TxOut (..), Wdrl (..), getRwdCred, witKeyHash)
@@ -123,7 +122,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, Stric
 
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
-type KeyPairs crypto = [(KeyPair 'Regular crypto, KeyPair 'Regular crypto)]
+type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
 
 -- | A ledger validation state consists of a ledger state 't' and the list of
 -- validation errors that occurred from a valid 's' to reach 't'.
@@ -138,7 +137,7 @@ type RewardAccounts crypto
 
 data FutureGenDeleg crypto = FutureGenDeleg
     { fGenDelegSlot       :: !SlotNo
-    , fGenDelegGenKeyHash :: !(GenKeyHash crypto)
+    , fGenDelegGenKeyHash :: !(KeyHash 'Genesis crypto)
     } deriving (Show, Eq, Ord, Generic)
 
 instance NoUnexpectedThunks (FutureGenDeleg crypto)
@@ -163,15 +162,15 @@ data DState crypto = DState
       -- |The active reward accounts.
     ,  _rewards    :: !(RewardAccounts       crypto)
       -- |The current delegations.
-    , _delegations :: !(Map (Credential crypto) (KeyHash crypto))
+    , _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto))
       -- |The pointed to hash keys.
-    , _ptrs        :: !(Map Ptr (Credential crypto))
+    , _ptrs        :: !(Map Ptr (Credential 'Staking crypto))
       -- | future genesis key delegations
-    , _fGenDelegs  :: !(Map (FutureGenDeleg crypto) (KeyHash crypto))
+    , _fGenDelegs  :: !(Map (FutureGenDeleg crypto) (KeyHash 'GenesisDelegate crypto))
       -- |Genesis key delegations
     , _genDelegs   :: !(GenDelegs crypto)
       -- | Instantaneous Rewards
-    , _irwd        :: !(Map (Credential crypto) Coin)
+    , _irwd        :: !(Map (Credential 'Staking crypto) Coin)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DState crypto)
@@ -200,9 +199,9 @@ data PState crypto = PState
     { -- |The active stake pools.
       _stPools     :: !(StakePools crypto)
       -- |The pool parameters.
-    , _pParams     :: !(Map (KeyHash crypto) (PoolParams crypto))
+    , _pParams     :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto))
       -- |A map of retiring stake pools to the epoch when they retire.
-    , _retiring    :: !(Map (KeyHash crypto) EpochNo)
+    , _retiring    :: !(Map (KeyHash 'StakePool crypto) EpochNo)
     } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (PState crypto)
@@ -335,7 +334,7 @@ emptyEpochState :: EpochState crypto
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
 
-getIR :: EpochState crypto -> Map (Credential crypto) Coin
+getIR :: EpochState crypto -> Map (Credential 'Staking crypto) Coin
 getIR = _irwd . _dstate . _delegationState . esLState
 
 emptyLedgerState :: LedgerState crypto
@@ -392,7 +391,7 @@ instance Crypto crypto => FromCBOR (UTxOState crypto)
 
 data OBftSlot crypto =
     NonActiveSlot
-  | ActiveSlot !(GenKeyHash crypto)
+  | ActiveSlot !(KeyHash 'Genesis crypto)
   deriving (Show, Eq, Ord, Generic)
 
 instance Crypto crypto
@@ -472,7 +471,7 @@ decompactOverlaySchedule compact = Map.fromList
 
 getGKeys
   :: NewEpochState crypto
-  -> Set (GenKeyHash crypto)
+  -> Set (KeyHash 'Genesis crypto)
 getGKeys nes = Map.keysSet genDelegs
   where NewEpochState _ _ _ es _ _ _ = nes
         EpochState _ _ ls _ _ _ = es
@@ -481,7 +480,7 @@ getGKeys nes = Map.keysSet genDelegs
 data NewEpochEnv crypto=
   NewEpochEnv {
     neeS     :: SlotNo
-  , neeGkeys :: Set (GenKeyHash crypto)
+  , neeGkeys :: Set (KeyHash 'Genesis crypto)
   } deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (NewEpochEnv crypto)
@@ -537,7 +536,7 @@ genesisCoins outs = UTxO $
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
 genesisState
-  :: Map (GenKeyHash crypto) (KeyHash crypto)
+  :: Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto)
   -> UTxO crypto
   -> LedgerState crypto
 genesisState genDelegs0 utxo0 = LedgerState
@@ -744,7 +743,7 @@ witsVKeyNeeded
   => UTxO crypto
   -> Tx crypto
   -> GenDelegs crypto
-  -> Set (AnyKeyHash crypto)
+  -> Set (KeyHash 'Witness crypto)
 witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     inputAuthors `Set.union`
     wdrlAuthors  `Set.union`
@@ -752,34 +751,39 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     updateKeys   `Set.union`
     owners
   where
-    inputAuthors = undiscriminateKeyHash `Set.map` Set.foldr insertHK Set.empty (_inputs txbody)
+    inputAuthors = asWitness `Set.map` Set.foldr insertHK Set.empty (_inputs txbody)
     insertHK txin hkeys =
       case txinLookup txin utxo' of
         Just (TxOut (Addr (KeyHashObj pay) _) _) -> Set.insert pay hkeys
         _                                        -> hkeys
 
-    wdrlAuthors =
-      Set.fromList $ extractKeyHash $ map getRwdCred (Map.keys (unWdrl $ _wdrls txbody))
+    wdrlAuthors
+      = Set.map asWitness
+      . Set.fromList
+      . extractKeyHash
+      $ map getRwdCred (Map.keys (unWdrl $ _wdrls txbody))
     owners = foldl' Set.union Set.empty
-               [((Set.map undiscriminateKeyHash) . _poolOwners) pool| DCertPool (RegPool pool) <- toList $ _certs txbody]
-    certAuthors = Set.fromList $ foldl' (++) [] $ fmap getCertHK certificates
+               [ ((Set.map asWitness) . _poolOwners) pool
+               | DCertPool (RegPool pool) <- toList $ _certs txbody
+               ]
+    certAuthors = Set.map asWitness . Set.fromList $ foldl (++) [] $ fmap getCertHK certificates
     getCertHK = cwitness
 
     -- key reg requires no witness but this is already filtered out before the
     -- call to `cwitness`
-    cwitness (DCertDeleg dc) = extractKeyHash $ [delegCWitness dc]
-    cwitness (DCertPool pc) = extractKeyHash $ [poolCWitness pc]
-    cwitness (DCertGenesis gc) = extractGenKeyHash $ [genesisCWitness gc]
+    cwitness (DCertDeleg dc) = asWitness <$> extractKeyHash [delegCWitness dc]
+    cwitness (DCertPool pc) = asWitness <$> extractKeyHash [poolCWitness pc]
+    cwitness (DCertGenesis gc) = [asWitness $ genesisCWitness gc]
     cwitness c = error $ show c ++ " does not have a witness"
 
     certificates = filter requiresVKeyWitness (toList $ _certs txbody)
-    updateKeys = undiscriminateKeyHash `Set.map` propWits (txup tx) _genDelegs
+    updateKeys = asWitness `Set.map` propWits (txup tx) _genDelegs
 
 -- |Given a ledger state, determine if the UTxO witnesses in a given
 -- transaction are correct.
 verifiedWits
   :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
   => Tx crypto
   -> Validity
@@ -827,7 +831,7 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
 
 validRuleUTXOW
   :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
   => Tx crypto
   -> GenDelegs crypto
@@ -841,15 +845,15 @@ validRuleUTXOW tx d' l = verifiedWits tx
 propWits
   :: Maybe (Update crypto)
   -> GenDelegs crypto
-  -> Set (KeyHash crypto)
+  -> Set (KeyHash 'Witness crypto)
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs _genDelegs) =
-  Set.fromList $ Map.elems updateKeys
+  Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where updateKeys = Map.keysSet pup ◁ _genDelegs
 
 validTx
   :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
   => Tx crypto
   -> GenDelegs crypto
@@ -939,7 +943,7 @@ stakeDistr u ds ps = SnapShot
       PState (StakePools stpools) poolParams _                 = ps
       outs = aggregateOuts u
 
-      stakeRelation :: [(Credential crypto, Coin)]
+      stakeRelation :: [(Credential 'Staking crypto, Coin)]
       stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
 
       activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools
@@ -970,7 +974,7 @@ applyRUpd ru (EpochState as ss ls pr pp nm) = EpochState as' ss ls' pr pp nm
 updateNonMypopic
   :: NonMyopic crypto
   -> Coin
-  -> Map (KeyHash crypto) Rational
+  -> Map (KeyHash 'StakePool crypto) Rational
   -> SnapShot crypto
   -> NonMyopic crypto
 updateNonMypopic nm rPot aps ss = nm
@@ -1034,7 +1038,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
 -- This is just a very simple round-robin, evenly spaced schedule.
 overlaySchedule
   :: EpochNo
-  -> Set (GenKeyHash crypto)
+  -> Set (KeyHash 'Genesis crypto)
   -> PParams
   -> ShelleyBase (Map SlotNo (OBftSlot crypto))
 overlaySchedule e gkeys pp = do

@@ -1,13 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes where
 
-import           Cardano.Crypto.DSIGN (MockDSIGN)
+import           Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
 import           Cardano.Crypto.Hash (ShortHash)
 import           Cardano.Crypto.KES (MockKES)
+import           Data.Map (Map)
 import           Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
 import qualified Shelley.Spec.Ledger.BlockChain as BlockChain
@@ -42,7 +44,7 @@ data ConcreteCrypto
 instance Crypto ConcreteCrypto where
   type HASH ConcreteCrypto = ShortHash
   type DSIGN ConcreteCrypto = MockDSIGN
-  type KES ConcreteCrypto = MockKES
+  type KES ConcreteCrypto = MockKES 10
   type VRF ConcreteCrypto = FakeVRF
 
 type DCert = Delegation.Certificates.DCert ConcreteCrypto
@@ -57,27 +59,41 @@ type RewardAcnt = TxData.RewardAcnt ConcreteCrypto
 
 type StakePools = TxData.StakePools ConcreteCrypto
 
-type AnyKeyHash = Keys.AnyKeyHash ConcreteCrypto
-
-type KeyHash = Keys.KeyHash ConcreteCrypto
-
-type GenKeyHash = Keys.GenKeyHash ConcreteCrypto
+type KeyHash kr = Keys.KeyHash kr ConcreteCrypto
+pattern KeyHash
+  :: Keys.Hash ConcreteCrypto (VerKeyDSIGN (DSIGN ConcreteCrypto))
+  -> KeyHash kr
+pattern KeyHash h = Keys.KeyHash h
+{-# COMPLETE KeyHash #-}
 
 type GenDelegs = Keys.GenDelegs ConcreteCrypto
+pattern GenDelegs
+  :: (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate))
+  -> GenDelegs
+pattern GenDelegs m = Keys.GenDelegs m
+{-# COMPLETE GenDelegs #-}
 
-type KeyPair = Keys.KeyPair 'Keys.Regular ConcreteCrypto
+type KeyPair kr = Keys.KeyPair kr ConcreteCrypto
+pattern KeyPair :: VKey kr -> SignKeyDSIGN -> KeyPair kr
+pattern KeyPair vk sk = Keys.KeyPair vk sk
+{-# COMPLETE KeyPair #-}
 
 type CoreKeyPair = Keys.KeyPair 'Keys.Genesis ConcreteCrypto
 
-type VKey = Keys.VKey ConcreteCrypto
+type SignedDSIGN = Keys.SignedDSIGN ConcreteCrypto
 
-type SKey = Keys.SKey ConcreteCrypto
+type SignKeyDSIGN = Keys.SignKeyDSIGN ConcreteCrypto
+
+type VKey kr = Keys.VKey kr ConcreteCrypto
+pattern VKey :: VerKeyDSIGN (DSIGN ConcreteCrypto) -> VKey kr
+pattern VKey x = Keys.VKey x
+{-# COMPLETE VKey #-}
 
 type KeyPairs = LedgerState.KeyPairs ConcreteCrypto
 
 type MultiSigPairs = [(MultiSig, MultiSig)]
 
-type VKeyGenesis = Keys.VKeyGenesis ConcreteCrypto
+type VKeyGenesis = Keys.VKey 'Keys.Genesis ConcreteCrypto
 
 type EpochState = LedgerState.EpochState ConcreteCrypto
 
@@ -117,21 +133,17 @@ type LaxBlock = BlockChain.LaxBlock ConcreteCrypto
 
 type BHBody = BlockChain.BHBody ConcreteCrypto
 
-type SKeyES = Keys.SKeyES ConcreteCrypto
+type SignKeyKES = Keys.SignKeyKES ConcreteCrypto
 
-type VKeyES = Keys.VKeyES ConcreteCrypto
+type VerKeyKES = Keys.VerKeyKES ConcreteCrypto
 
-type SignKeyVRF = Keys.SignKeyVRF (VRF ConcreteCrypto)
+type SignKeyVRF = Keys.SignKeyVRF ConcreteCrypto
 
-type VerKeyVRF = Keys.VerKeyVRF (VRF ConcreteCrypto)
+type VerKeyVRF = Keys.VerKeyVRF ConcreteCrypto
 
 type VrfKeyPairs = [(SignKeyVRF, VerKeyVRF)]
 
-type CertifiedVRF = Keys.CertifiedVRF (VRF ConcreteCrypto)
-
-type KESig = Keys.KESig ConcreteCrypto BHBody
-
-type Sig a = Keys.Sig ConcreteCrypto a
+type CertifiedVRF = Keys.CertifiedVRF ConcreteCrypto
 
 type BHeader = BlockChain.BHeader ConcreteCrypto
 
@@ -181,7 +193,7 @@ type POOL = STS.Pool.POOL ConcreteCrypto
 
 type POOLREAP = STS.PoolReap.POOLREAP ConcreteCrypto
 
-type Credential = TxData.Credential ConcreteCrypto
+type Credential kr = TxData.Credential kr ConcreteCrypto
 
 type StakeCreds = TxData.StakeCreds ConcreteCrypto
 
@@ -203,9 +215,9 @@ type Update = PParams.Update ConcreteCrypto
 
 type ProposedPPUpdates = PParams.ProposedPPUpdates ConcreteCrypto
 
-type VRFKeyHash = Keys.Hash ShortHash (Keys.VerKeyVRF FakeVRF)
+type VRFKeyHash = Keys.Hash ConcreteCrypto (Keys.VerKeyVRF ConcreteCrypto)
 
 hashKeyVRF
-  :: Keys.VerKeyVRF FakeVRF
+  :: Keys.VerKeyVRF ConcreteCrypto
   -> VRFKeyHash
-hashKeyVRF = Keys.hashKeyVRF @ConcreteCrypto
+hashKeyVRF = Keys.hashVerKeyVRF

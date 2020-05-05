@@ -28,7 +28,7 @@ import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (NeutralNonce), StrictMaybe (..),
                      UnitInterval, mkNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey)
+import           Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole(..), coerceKeyRole, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams),
                      pattern ProposedPPUpdates, ProtVer (..), pattern Update, _a0, _d, _eMax,
@@ -37,7 +37,7 @@ import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams),
                      _poolDeposit, _poolMinRefund, _protocolVersion, _protocolVersion, _rho, _tau)
 import           Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DPState, GenKeyHash,
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DPState, KeyHash,
                      KeyHash, KeyPair, ProposedPPUpdates, UTxOState, Update)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -190,7 +190,7 @@ genPPUpdate
   => Constants
   -> SlotNo
   -> PParams
-  -> [GenKeyHash]
+  -> [KeyHash 'Genesis]
   -> Gen ProposedPPUpdates
 genPPUpdate (c@Constants{maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
   if (tooLateInEpoch s)
@@ -263,10 +263,10 @@ genUpdate
   => Constants
   -> SlotNo
   -> [(CoreKeyPair, AllPoolKeys)]
-  -> Map KeyHash KeyPair -- indexed keys By StakeHash
+  -> Map (KeyHash 'Staking) (KeyPair 'Staking) -- indexed keys By StakeHash
   -> PParams
   -> (UTxOState, DPState)
-  -> Gen (Maybe Update, [KeyPair])
+  -> Gen (Maybe Update, [KeyPair 'Witness])
 genUpdate
   c@(Constants{frequencyTxUpdates})
   s coreKeyPairs keysByStakeHash pp (_utxoSt, delegPoolSt)
@@ -289,10 +289,10 @@ genUpdate
     -- If we find the key there, we can assume that a GenesisDeleg certificate
     -- has changed the cold key, in which case we use the new key (otherwise we
     -- can use the original cold key)
-    latestPoolColdKey genDelegs_ (gkey, pkeys) =
+    latestPoolColdKey genDelegs_ (gkey, pkeys) = coerceKeyRole $
       case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
           Nothing ->
             error "genUpdate: NoGenesisStaking"
           Just gkeyHash ->
             fromMaybe (cold pkeys)
-                      (Map.lookup gkeyHash keysByStakeHash)
+                      (coerceKeyRole <$> Map.lookup (coerceKeyRole gkeyHash) keysByStakeHash)

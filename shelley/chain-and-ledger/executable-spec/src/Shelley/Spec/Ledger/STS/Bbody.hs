@@ -50,7 +50,7 @@ data BbodyEnv
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (TxBody crypto)
   )
   => STS (BBODY crypto)
  where
@@ -78,7 +78,7 @@ instance NoUnexpectedThunks (PredicateFailure (BBODY crypto))
 bbodyTransition
   :: forall crypto
    . ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
   => TransitionRule (BBODY crypto)
 bbodyTransition = judgmentContext >>=
@@ -96,11 +96,15 @@ bbodyTransition = judgmentContext >>=
   ls' <- trans @(LEDGERS crypto)
          $ TRC (LedgersEnv (bheaderSlotNo bhb) pp _reserves, ls, StrictSeq.getSeq txs)
 
-  pure $ BbodyState ls' (incrBlocks (bheaderSlotNo bhb ∈ oslots) hk b)
+  -- Note that this may not actually be a stake pool - it could be a genesis key
+  -- delegate. However, this would only entail an overhead of 7 counts, and it's
+  -- easier than differentiating here.
+  let hkAsStakePool = coerceKeyRole hk
+  pure $ BbodyState ls' (incrBlocks (bheaderSlotNo bhb ∈ oslots) hkAsStakePool b)
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (TxBody crypto)
   )
   => Embed (LEDGERS crypto) (BBODY crypto)
  where

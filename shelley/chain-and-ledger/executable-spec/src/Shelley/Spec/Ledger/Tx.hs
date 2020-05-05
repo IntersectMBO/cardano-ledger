@@ -35,7 +35,6 @@ module Shelley.Spec.Ledger.Tx
   , txwitsScript
   , extractKeyHash
   , extractScriptHash
-  , extractGenKeyHash
   , getKeyCombinations
   , getKeyCombination
   )
@@ -44,7 +43,7 @@ where
 
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe, invalidKey, maybeToStrictMaybe,
                      strictMaybeToMaybe)
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, undiscriminateKeyHash)
+import           Shelley.Spec.Ledger.Keys
 
 import           Cardano.Binary (Annotator (..), Decoder, FromCBOR (fromCBOR), ToCBOR (toCBOR),
                      annotatorSlice, decodeWord, encodeListLen, encodeMapLen, encodeNull,
@@ -205,7 +204,7 @@ instance Crypto crypto =>
 evalNativeMultiSigScript
   :: Crypto crypto
   => MultiSig crypto
-  -> Set (AnyKeyHash crypto)
+  -> Set (KeyHash 'Witness crypto)
   -> Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -222,7 +221,7 @@ validateNativeMultiSigScript
   -> Tx crypto
   -> Bool
 validateNativeMultiSigScript msig tx =
-  evalNativeMultiSigScript msig vhks
+  evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where witsSet = _witnessVKeySet tx
         vhks    = Set.map witKeyHash witsSet
 
@@ -234,22 +233,17 @@ txwitsScript
 txwitsScript = _witnessMSigMap
 
 extractKeyHash
-  :: [Credential crypto]
-  -> [AnyKeyHash crypto]
+  :: [Credential kr crypto]
+  -> [KeyHash kr crypto]
 extractKeyHash =
   mapMaybe (\case
-                KeyHashObj hk -> Just $ undiscriminateKeyHash hk
+                KeyHashObj hk -> Just hk
                 _ -> Nothing)
 
 extractScriptHash
-  :: [Credential crypto]
+  :: [Credential 'Payment crypto]
   -> [ScriptHash crypto]
 extractScriptHash =
   mapMaybe (\case
                 ScriptHashObj hk -> Just hk
                 _ -> Nothing)
-
-extractGenKeyHash
-  :: [GenKeyHash crypto]
-  -> [AnyKeyHash crypto]
-extractGenKeyHash = map undiscriminateKeyHash

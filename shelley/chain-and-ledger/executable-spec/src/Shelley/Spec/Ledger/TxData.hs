@@ -23,7 +23,7 @@ module Shelley.Spec.Ledger.TxData
   , DCert (..)
   , DelegCert (..)
   , Delegation (..)
-  , GenesisDelegate (..)
+  , GenesisDelegCert (..)
   , Ix
   , MIRCert (..)
   , PoolCert (..)
@@ -86,8 +86,8 @@ import           Byron.Spec.Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe (..),
                      UnitInterval, Url, invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, GenKeyHash, Hash, KeyHash, pattern KeyHash,
-                     Sig, VKey, VerKeyVRF, hashAnyKey)
+import           Shelley.Spec.Ledger.Keys (HasKeyRole (..), Hash, KeyHash (..), KeyRole (..),
+                     SignedDSIGN, VKey, VerKeyVRF, decodeSignedDSIGN, encodeSignedDSIGN, hashKey)
 import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
 import           Shelley.Spec.Ledger.Orphans ()
 import           Shelley.Spec.Ledger.PParams (Update)
@@ -103,8 +103,8 @@ import           Shelley.Spec.Ledger.Scripts
 
 -- |The delegation of one stake key to another.
 data Delegation crypto = Delegation
-  { _delegator :: !(Credential crypto)
-  , _delegatee :: !(KeyHash crypto)
+  { _delegator :: !(StakeCredential crypto)
+  , _delegatee :: !(KeyHash 'StakePool crypto)
   } deriving (Eq, Generic, Show)
 
 instance NoUnexpectedThunks (Delegation crypto)
@@ -162,13 +162,13 @@ instance FromCBOR StakePoolRelay where
 -- |A stake pool.
 data PoolParams crypto =
   PoolParams
-    { _poolPubKey  :: !(KeyHash crypto)
-    , _poolVrf     :: !(Hash (HASH crypto) (VerKeyVRF (VRF crypto)))
+    { _poolPubKey  :: !(KeyHash 'StakePool crypto)
+    , _poolVrf     :: !(Hash crypto (VerKeyVRF crypto))
     , _poolPledge  :: !Coin
     , _poolCost    :: !Coin
     , _poolMargin  :: !UnitInterval
     , _poolRAcnt   :: !(RewardAcnt crypto)
-    , _poolOwners  :: !(Set (KeyHash crypto))
+    , _poolOwners  :: !(Set (KeyHash 'Staking crypto))
     , _poolRelays  :: !(StrictSeq StakePoolRelay)
     , _poolMD      :: !(StrictMaybe PoolMetaData)
     } deriving (Show, Generic, Eq)
@@ -178,19 +178,25 @@ data PoolParams crypto =
 instance NoUnexpectedThunks (PoolParams crypto)
 
 -- |An account based address for rewards
+--
+-- A reward account uses the staking credential
 newtype RewardAcnt crypto = RewardAcnt
-  { getRwdCred :: Credential crypto
+  { getRwdCred :: Credential 'Staking crypto
   } deriving (Show, Eq, Generic, Ord)
     deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 -- | Script hash or key hash for a payment or a staking object.
-data Credential crypto =
+data Credential (kr :: KeyRole) crypto =
     ScriptHashObj !(ScriptHash crypto)
-  | KeyHashObj    !(KeyHash crypto)
+  | KeyHashObj    !(KeyHash kr crypto)
     deriving (Show, Eq, Generic, NFData, Ord)
-    deriving ToCBOR via (CBORGroup (Credential crypto))
+    deriving ToCBOR via (CBORGroup (Credential kr crypto))
 
-newtype GenesisCredential crypto = GenesisCredential (GenKeyHash crypto)
+instance HasKeyRole Credential where
+  coerceKeyRole (ScriptHashObj x) = ScriptHashObj x
+  coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
+
+newtype GenesisCredential crypto = GenesisCredential (KeyHash 'Genesis crypto)
   deriving (Show, Generic)
 
 instance Ord (GenesisCredential crypto)
@@ -199,10 +205,10 @@ instance Ord (GenesisCredential crypto)
 instance Eq (GenesisCredential crypto)
   where (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
 
-instance NoUnexpectedThunks (Credential crypto)
+instance NoUnexpectedThunks (Credential kr crypto)
 
-type PaymentCredential crypto = Credential crypto
-type StakeCredential crypto = Credential crypto
+type PaymentCredential crypto = Credential 'Payment crypto
+type StakeCredential crypto = Credential 'Staking crypto
 
 data StakeReference crypto
   = StakeRefBase !(StakeCredential crypto)
@@ -215,8 +221,8 @@ instance NoUnexpectedThunks (StakeReference crypto)
 -- |An address for UTxO.
 data Addr crypto
   = Addr !(PaymentCredential crypto) !(StakeReference crypto)
-  | AddrBootstrap !(KeyHash crypto)
-  deriving (Show, Eq, Generic, NFData, Ord)
+  | AddrBootstrap !(KeyHash 'Payment crypto)
+  deriving (Show, Eq, Ord, Generic, NFData)
   deriving (ToCBOR, FromCBOR) via (CBORGroup (Addr crypto))
 
 instance NoUnexpectedThunks (Addr crypto)
@@ -245,9 +251,9 @@ instance Crypto crypto => FromCBOR (Wdrl crypto) where
 
 -- |A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto
-  = TxId { _TxId :: Hash (HASH crypto) (TxBody crypto) }
-  deriving (Show, Eq, Generic, Ord)
-  deriving newtype NoUnexpectedThunks
+  = TxId { _TxId :: Hash crypto (TxBody crypto) }
+  deriving (Show, Eq, Ord, Generic)
+  deriving newtype (NFData, NoUnexpectedThunks)
 
 deriving newtype instance Crypto crypto => ToCBOR (TxId crypto)
 deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
@@ -268,9 +274,9 @@ instance NoUnexpectedThunks (TxOut crypto)
 
 data DelegCert crypto =
     -- | A stake key registration certificate.
-    RegKey !(Credential crypto)
+    RegKey !(StakeCredential crypto)
     -- | A stake key deregistration certificate.
-  | DeRegKey !(Credential crypto)
+  | DeRegKey !(StakeCredential crypto)
     -- | A stake delegation certificate.
   | Delegate !(Delegation crypto)
   deriving (Show, Generic, Eq)
@@ -279,16 +285,16 @@ data PoolCert crypto =
     -- | A stake pool registration certificate.
     RegPool !(PoolParams crypto)
     -- | A stake pool retirement certificate.
-  | RetirePool !(KeyHash crypto) !EpochNo
+  | RetirePool !(KeyHash 'StakePool crypto) !EpochNo
   deriving (Show, Generic, Eq)
 
 -- | Genesis key delegation certificate
-data GenesisDelegate crypto =
-    GenesisDelegate !(GenKeyHash crypto) !(KeyHash crypto)
+data GenesisDelegCert crypto =
+    GenesisDelegCert !(KeyHash 'Genesis crypto) !(KeyHash 'GenesisDelegate crypto)
   deriving (Show, Generic, Eq)
 
 -- | Move instantaneous rewards certificate
-newtype MIRCert crypto = MIRCert (Map (Credential crypto) Coin)
+newtype MIRCert crypto = MIRCert (Map (Credential 'Staking crypto) Coin)
   deriving (Show, Generic, Eq)
 
 instance Crypto crypto => FromCBOR (MIRCert crypto) where
@@ -301,13 +307,13 @@ instance Crypto crypto => ToCBOR (MIRCert crypto) where
 data DCert crypto =
     DCertDeleg !(DelegCert crypto)
   | DCertPool !(PoolCert crypto)
-  | DCertGenesis !(GenesisDelegate crypto)
+  | DCertGenesis !(GenesisDelegCert crypto)
   | DCertMir !(MIRCert crypto)
   deriving (Show, Generic, Eq)
 
 instance NoUnexpectedThunks (DelegCert crypto)
 instance NoUnexpectedThunks (PoolCert crypto)
-instance NoUnexpectedThunks (GenesisDelegate crypto)
+instance NoUnexpectedThunks (GenesisDelegCert crypto)
 instance NoUnexpectedThunks (MIRCert crypto)
 instance NoUnexpectedThunks (DCert crypto)
 
@@ -375,8 +381,8 @@ pattern TxBody
 -- |Proof/Witness that a transaction is authorized by the given key holder.
 data WitVKey crypto
   = WitVKey'
-    { wvkKey' :: !(VKey crypto)
-    , wvkSig' :: !(Sig crypto (TxBody crypto))
+    { wvkKey' :: !(VKey 'Witness crypto)
+    , wvkSig' :: !(SignedDSIGN crypto (TxBody crypto))
     , wvkBytes :: LByteString
     }
   deriving (Show, Eq, Generic)
@@ -384,13 +390,13 @@ data WitVKey crypto
 
 pattern WitVKey
    :: Crypto crypto
-   => VKey crypto
-   -> Sig crypto (TxBody crypto)
+   => VKey 'Witness crypto
+   -> SignedDSIGN crypto (TxBody crypto)
    -> WitVKey crypto
 pattern WitVKey k s <- WitVKey' k s _
   where
   WitVKey k s =
-    let bytes = serializeEncoding $ encodeListLen 2 <> toCBOR k <> toCBOR s
+    let bytes = serializeEncoding $ encodeListLen 2 <> toCBOR k <> encodeSignedDSIGN s
      in WitVKey' k s bytes
 
 {-# COMPLETE WitVKey #-}
@@ -398,8 +404,8 @@ pattern WitVKey k s <- WitVKey' k s _
 witKeyHash
   :: forall crypto. ( Crypto crypto)
   => WitVKey crypto
-  -> AnyKeyHash crypto
-witKeyHash (WitVKey key _) = hashAnyKey key
+  -> KeyHash 'Witness crypto
+witKeyHash (WitVKey key _) = hashKey key
 
 instance forall crypto
   . ( Crypto crypto)
@@ -407,18 +413,21 @@ instance forall crypto
     compare = comparing witKeyHash
 
 newtype StakeCreds crypto =
-  StakeCreds (Map (Credential crypto) SlotNo)
+  StakeCreds (Map (Credential 'Staking crypto) SlotNo)
   deriving (Show, Eq, Generic)
   deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
-addStakeCreds :: (Credential crypto) -> SlotNo -> (StakeCreds crypto) -> StakeCreds crypto
+addStakeCreds
+  :: (Credential 'Staking crypto)
+  -> SlotNo
+  -> (StakeCreds crypto)
+  -> StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
 newtype StakePools crypto =
-  StakePools { unStakePools :: (Map (KeyHash crypto) SlotNo) }
+  StakePools { unStakePools :: (Map (KeyHash 'StakePool crypto) SlotNo) }
   deriving (Show, Eq, Generic)
   deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
-
 
 -- CBOR
 
@@ -454,7 +463,7 @@ instance
            <> toCBOR epoch
 
            -- DCertGenesis
-     DCertGenesis (GenesisDelegate gk kh) ->
+     DCertGenesis (GenesisDelegCert gk kh) ->
            encodeListLen 3
            <> toCBOR (5 :: Word8)
            <> toCBOR gk
@@ -493,7 +502,7 @@ instance
         matchSize "GenesisDelegate" 3 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ DCertGenesis $ GenesisDelegate a b
+        pure $ DCertGenesis $ GenesisDelegCert a b
       6 -> matchSize "MIRCert" 2 n >> DCertMir <$> fromCBOR
       k -> invalidKey k
 
@@ -543,7 +552,7 @@ instance
   => FromCBOR (Annotator (WitVKey crypto))
  where
   fromCBOR = annotatorSlice $ decodeRecordNamed "WitVKey" (const 2) $
-    fmap pure $ WitVKey' <$> fromCBOR <*> fromCBOR
+    fmap pure $ WitVKey' <$> fromCBOR <*> decodeSignedDSIGN
 
 instance
   (Crypto crypto)
@@ -594,8 +603,8 @@ instance
           }
 
 
-instance (Typeable crypto, Crypto crypto)
-  => ToCBORGroup (Credential crypto) where
+instance (Typeable kr, Typeable crypto, Crypto crypto)
+  => ToCBORGroup (Credential kr crypto) where
   listLen _ = 2
   toCBORGroup = \case
     KeyHashObj     kh -> toCBOR (0 :: Word8) <> toCBOR kh
@@ -606,8 +615,8 @@ instance (Typeable crypto, Crypto crypto)
   where toCBOR (GenesisCredential kh) =
           toCBOR kh
 
-instance (Crypto crypto) =>
-  FromCBOR (Credential crypto) where
+instance (Crypto crypto, Typeable kr) =>
+  FromCBOR (Credential kr crypto) where
   fromCBOR = do
     enforceSize "Credential" 2
     decodeWord >>= \case
@@ -683,7 +692,7 @@ instance (Crypto crypto) =>
         pure $ Addr (ScriptHashObj a) StakeRefNull
       8 -> do
         a <- fromCBOR
-        pure $ AddrBootstrap (KeyHash a)
+        pure $ AddrBootstrap a
       k -> invalidKey k
 
 instance ToCBORGroup Ptr where
@@ -754,7 +763,7 @@ instance
             }
 
 instance Relation (StakeCreds crypto) where
-  type Domain (StakeCreds crypto) = Credential crypto
+  type Domain (StakeCreds crypto) = Credential 'Staking crypto
   type Range (StakeCreds crypto)  = SlotNo
 
   singleton k v = StakeCreds $ Map.singleton k v

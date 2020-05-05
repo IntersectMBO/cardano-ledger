@@ -34,6 +34,7 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Delegation.Certificates (decayKey, isDeRegKey)
+import           Shelley.Spec.Ledger.Keys (HasKeyRole(coerceKeyRole))
 import           Shelley.Spec.Ledger.LedgerState (keyRefund, _dstate, _pstate, _stPools, _stkCreds)
 import           Shelley.Spec.Ledger.PParams (PParams)
 import           Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -89,10 +90,9 @@ instance QC.HasTrace CERTS GenEnv where
 
   sigGen
     ( GenEnv
-        ( KeySpace_
+        ( ks@KeySpace_
             { ksCoreNodes,
               ksKeyPairs,
-              ksKeyPairsByHash,
               ksMSigScripts,
               ksVRFKeyPairs
             }
@@ -107,7 +107,7 @@ instance QC.HasTrace CERTS GenEnv where
         ksMSigScripts
         (fst <$> ksCoreNodes)
         ksVRFKeyPairs
-        ksKeyPairsByHash
+        (ksKeyPairsByStakeHash ks)
         pparams
         dpState
         slot
@@ -168,7 +168,10 @@ genDCerts
       case cred of
         ScriptCred (_, stakeScript) -> do
           let witnessHashes = getKeyCombination stakeScript
-              witnesses = KeyCred <$> catMaybes (map lookupWit witnessHashes)
+              witnessHashes' = fmap coerceKeyRole witnessHashes
+              foo = catMaybes (map lookupWit witnessHashes')
+              witnessHashes'' = fmap coerceKeyRole foo
+              witnesses = KeyCred <$> witnessHashes''
           pure (witnesses ++ [cred])
         _ ->
           return [cred]

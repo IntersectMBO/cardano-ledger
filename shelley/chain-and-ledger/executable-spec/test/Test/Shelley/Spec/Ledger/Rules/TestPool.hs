@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,6 +25,7 @@ import           Shelley.Spec.Ledger.BaseTypes ((==>))
 import           Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
 import           Shelley.Spec.Ledger.LedgerState (pattern PState, _pParams, _retiring, _stPools,
                      _stPools)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..))
 import           Shelley.Spec.Ledger.PParams (_eMax)
 import           Shelley.Spec.Ledger.Slot (EpochNo (..))
 import           Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
@@ -38,7 +40,7 @@ import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 -- helper accessor functions --
 -------------------------------
 
-getRetiring :: PState -> Map KeyHash EpochNo
+getRetiring :: PState -> Map (KeyHash 'StakePool) EpochNo
 getRetiring = _retiring
 
 getStPools :: PState -> StakePools
@@ -166,7 +168,7 @@ poolIsMarkedForRetirement ssts =
       DCertPool (RetirePool hk _epoch) -> wasRemoved hk
       _ -> property ()
    where
-    wasRemoved :: KeyHash -> Property
+    wasRemoved :: KeyHash 'StakePool -> Property
     wasRemoved hk = conjoin
       [ counterexample "hk not in stPools"
           (hk ∈ dom ((unStakePools . _stPools) (source sst)))

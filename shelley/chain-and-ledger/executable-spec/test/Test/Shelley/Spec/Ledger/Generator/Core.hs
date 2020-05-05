@@ -1,8 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
@@ -12,6 +16,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   , KeySpace(..)
   , pattern KeySpace
   , NatNonce (..)
+  , Testing
   , findPayKeyPairAddr
   , findPayKeyPairCred
   , findPayScriptFromCred
@@ -60,7 +65,6 @@ import           GHC.Stack (HasCallStack)
 import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.Address (toAddr, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochInfo, intervalValue,
@@ -68,8 +72,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochI
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, pattern Block,
                      pattern BlockHash, TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashAnyKey, hashKey, sign, signKES,
-                     undiscriminateKeyHash, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), HasKeyRole(coerceKeyRole), asWitness, hashKey, vKey, signedKES, signedDSIGN)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -81,20 +84,32 @@ import           Shelley.Spec.Ledger.Tx (pattern TxOut, hashScript)
 import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
                      pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr)
 
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, AnyKeyHash, Block, CoreKeyPair,
+import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CoreKeyPair,
                      Credential, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs,
-                     OCert, SKeyES, SignKeyVRF, Tx, TxOut, VKey, VKeyES, VRFKeyHash, VerKeyVRF,
-                     hashKeyVRF)
+                     OCert, SignKeyVRF, Tx, TxOut, VKey, VerKeyKES, VRFKeyHash, VerKeyVRF,
+                     hashKeyVRF, SignKeyKES, pattern KeyPair, ConcreteCrypto)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import           Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, evolveKESUntil, maxKESIterations,
                      maxLLSupply, mkCertifiedVRF, mkGenKey, mkKeyPair, runShelleyBase,
                      unsafeMkUnitInterval)
 
+-- | I'm in two minds about this. It basically takes advantage of a GHC bug to allow
+--   the inhabiting of a closed kind. On the other hand, the alternatives would be to
+--   have `Testing` as a real key role (test code infiltrating the library, yuck) or
+--   use a different role everywhere (confusing).
+data family Testing :: k
+
+toTesting :: HasKeyRole a => a r crypto -> a Testing crypto
+toTesting = coerceKeyRole
+
+fromTesting :: HasKeyRole a => a Testing crypto -> a r crypto
+fromTesting = coerceKeyRole
+
 data AllPoolKeys = AllPoolKeys
-  { cold :: KeyPair
+  { cold :: KeyPair 'StakePool
   , vrf :: (SignKeyVRF, VerKeyVRF)
-  , hot :: [(KESPeriod, (SKeyES, VKeyES))]
-  , hk  :: KeyHash
+  , hot :: [(KESPeriod, (SignKeyKES, VerKeyKES))]
+  , hk  :: KeyHash 'StakePool
   } deriving (Show)
 
 -- | Generator environment.
@@ -109,8 +124,8 @@ data GenEnv = GenEnv
 data KeySpace = KeySpace_
   { ksCoreNodes :: [(CoreKeyPair, AllPoolKeys)]
   , ksKeyPairs :: KeyPairs
-  , ksKeyPairsByHash :: Map AnyKeyHash KeyPair
-  , ksKeyPairsByStakeHash :: Map KeyHash KeyPair
+  , ksKeyPairsByHash :: Map (KeyHash Testing) (KeyPair Testing)
+  , ksKeyPairsByStakeHash :: Map (KeyHash 'Staking) (KeyPair 'Staking)
   , ksMSigScripts :: MultiSigPairs
   , ksVRFKeyPairs :: [(SignKeyVRF, VerKeyVRF)]
   , ksVRFKeyPairsByHash :: Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
@@ -159,16 +174,17 @@ genWord64 :: HasCallStack => Word64 -> Word64 -> Gen Word64
 genWord64 lower upper = fromIntegral
   <$> genNatural (fromIntegral lower) (fromIntegral upper)
 
-mkKeyPairs :: HasCallStack => Word64 -> (KeyPair, KeyPair)
+mkKeyPairs :: HasCallStack => Word64 -> (KeyPair kr, KeyPair kr')
 mkKeyPairs n
   = (mkKeyPair_ (2*n), mkKeyPair_ (2*n+1))
   where
-    mkKeyPair_ n_ = (uncurry KeyPair . swap) (mkKeyPair (n_,n_,n_,n_,n_))
+    mkKeyPair_ n_ = (uncurry KeyPair . swap)
+                    (mkKeyPair (n_,n_,n_,n_,n_))
 
 -- | Generate a mapping from stake key hash to stake key pair, from a list of
 -- (payment, staking) key pairs.
 mkStakeKeyHashMap
-  :: HasCallStack => KeyPairs -> Map KeyHash KeyPair
+  :: HasCallStack => KeyPairs -> Map (KeyHash 'Staking) (KeyPair 'Staking)
 mkStakeKeyHashMap keyPairs =
   Map.fromList (f <$> keyPairs)
   where
@@ -176,11 +192,11 @@ mkStakeKeyHashMap keyPairs =
 
 -- | Generate a mapping from key hash (both payment and stake keys) to keypair
 -- from a list of (payment, staking) key pairs.
-mkKeyHashMap :: HasCallStack => KeyPairs -> Map AnyKeyHash KeyPair
+mkKeyHashMap :: HasCallStack => KeyPairs -> Map (KeyHash Testing) (KeyPair Testing)
 mkKeyHashMap =
   foldl' (\m (payKey, stakeKey) ->
-            let m' = Map.insert (hashAnyKey $ vKey payKey) payKey m
-            in       Map.insert (hashAnyKey $ vKey stakeKey) stakeKey m')
+           let m' = Map.insert (toTesting . hashKey $ vKey payKey) (toTesting payKey) m
+           in       Map.insert (toTesting . hashKey $ vKey stakeKey) (toTesting stakeKey) m')
   Map.empty
 
 -- | Multi-Sig Scripts based on the given key pairs
@@ -210,19 +226,23 @@ mkMSigCombinations msigs =
                                        , RequireMOf 2 [k2, k4, k6]
                                        , RequireMOf 3 [k2, k4, k6]]]
 
-mkScriptsFromKeyPair :: HasCallStack => (KeyPair, KeyPair) -> (MultiSig, MultiSig)
-mkScriptsFromKeyPair (k0, k1) = (mkScriptFromKey k0, mkScriptFromKey k1)
+mkScriptsFromKeyPair
+  :: HasCallStack
+  => (KeyPair 'Payment, KeyPair 'Staking)
+  -> (MultiSig, MultiSig)
+mkScriptsFromKeyPair (k0, k1) =
+  (mkScriptFromKey $ asWitness k0, mkScriptFromKey $ asWitness k1)
 
-mkScriptFromKey :: HasCallStack => KeyPair -> MultiSig
-mkScriptFromKey = (RequireSignature . hashAnyKey . vKey)
+mkScriptFromKey :: HasCallStack => KeyPair 'Witness -> MultiSig
+mkScriptFromKey = (RequireSignature . hashKey . vKey)
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPairCred
   :: HasCallStack
-  => Credential
-  -> Map AnyKeyHash KeyPair
-  -> KeyPair
+  => Credential kr
+  -> Map (KeyHash kr) (KeyPair kr)
+  -> KeyPair kr
 findPayKeyPairCred c keyHashMap =
   case c of
     KeyHashObj addr -> lookforKeyHash addr
@@ -230,22 +250,22 @@ findPayKeyPairCred c keyHashMap =
       error "findPayKeyPairCred: expects only KeyHashObj"
   where
     lookforKeyHash addr' =
-      case Map.lookup (undiscriminateKeyHash addr') keyHashMap of
+      case Map.lookup addr' keyHashMap of
         Nothing -> error $ "findPayKeyPairCred: could not find a match for the given credential: " <> show addr'
         Just kp -> kp
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPairAddr :: HasCallStack => Addr -> Map AnyKeyHash KeyPair -> KeyPair
-findPayKeyPairAddr a keyHashMap =
+findPayKeyPairAddr :: HasCallStack => Addr -> Map (KeyHash Testing) (KeyPair Testing) -> KeyPair 'Payment
+findPayKeyPairAddr a keyHashMap = fromTesting $
   case a of
-    Addr addr (StakeRefBase _) -> findPayKeyPairCred addr keyHashMap
-    Addr addr (StakeRefPtr _)  -> findPayKeyPairCred addr keyHashMap
+    Addr addr (StakeRefBase _) -> findPayKeyPairCred (toTesting addr) keyHashMap
+    Addr addr (StakeRefPtr _)  -> findPayKeyPairCred (toTesting addr) keyHashMap
     _                            ->
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
 -- | Find first matching script for a credential.
-findPayScriptFromCred :: HasCallStack => Credential -> MultiSigPairs -> (MultiSig, MultiSig)
+findPayScriptFromCred :: HasCallStack => Credential 'Witness -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -258,7 +278,7 @@ findPayScriptFromCred c scripts =
         Just i  -> scripts !! i
 
 -- | Find first matching script for a credential.
-findStakeScriptFromCred :: HasCallStack =>  Credential -> MultiSigPairs -> (MultiSig, MultiSig)
+findStakeScriptFromCred :: HasCallStack =>  Credential 'Witness -> MultiSigPairs -> (MultiSig, MultiSig)
 findStakeScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -275,13 +295,15 @@ findStakeScriptFromCred c scripts =
 findPayScriptFromAddr :: HasCallStack => Addr -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScriptFromAddr a scripts =
   case a of
-    Addr scriptHash (StakeRefBase _) -> findPayScriptFromCred scriptHash scripts
-    Addr scriptHash (StakeRefPtr _)  -> findPayScriptFromCred scriptHash scripts
+    Addr scriptHash (StakeRefBase _) ->
+        findPayScriptFromCred (asWitness scriptHash) scripts
+    Addr scriptHash (StakeRefPtr _)  ->
+        findPayScriptFromCred (asWitness scriptHash) scripts
     _                     ->
       error "findPayScriptFromAddr: expects only base and pointer script addresses"
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-pickStakeKey :: HasCallStack => KeyPairs -> Gen VKey
+pickStakeKey :: HasCallStack => KeyPairs -> Gen (VKey 'Staking)
 pickStakeKey keys = vKey . snd <$> QC.elements keys
 
 -- | Generates a list of coins for the given 'Addr' and produced a 'TxOut' for each 'Addr'
@@ -358,7 +380,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
             blockNo
             s
             (BlockHash prev)
-            vKeyCold
+            (coerceKeyRole vKeyCold)
             (snd $ vrf pkeys)
             (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
             (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
@@ -371,7 +393,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
                Nothing ->
                  error ("could not evolve key to iteration " ++ show kesPeriod)
                Just hkey -> hkey
-    sig = case signKES hotKey bhb kpDiff of
+    sig = case signedKES () kpDiff bhb hotKey of
             Nothing -> error ("could not sign with KES key " ++ show hotKey)
             Just sig' -> sig'
     bh = BHeader bhb sig
@@ -393,7 +415,7 @@ mkOCert pkeys n c0 =
    vKeyHot
    n
    c0
-   (sign sKeyCold (vKeyHot, n, c0))
+   (signedDSIGN @ConcreteCrypto sKeyCold (vKeyHot, n, c0))
 
 getKESPeriodRenewalNo :: HasCallStack => AllPoolKeys -> KESPeriod -> Integer
 getKESPeriodRenewalNo keys (KESPeriod kp) =

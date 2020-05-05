@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -25,7 +26,7 @@ import           Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase)
 import           Shelley.Spec.Ledger.BlockChain (BHBody (..), BHeader (..), LastAppliedBlock (..),
                      bhHash, bhbody, lastAppliedHash)
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), KESignable, KeyHash, Signable, VKeyES,
+import           Shelley.Spec.Ledger.Keys (VRFSignable, KeyRole(..), GenDelegs (..), KESignable, KeyHash, DSignable, VerKeyKES,
                      fromNatural)
 import           Shelley.Spec.Ledger.LedgerState (OBftSlot)
 import           Shelley.Spec.Ledger.OCert (KESPeriod)
@@ -41,13 +42,13 @@ import qualified Cardano.Crypto.VRF as VRF
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Cardano.Slotting.Slot (WithOrigin (..), withOriginFromMaybe, withOriginToMaybe)
 import           Control.State.Transition
-import           Shelley.Spec.Ledger.Crypto (Crypto, DSIGN, VRF)
+import           Shelley.Spec.Ledger.Crypto (Crypto)
 
 data PRTCL crypto
 
 data PrtclState crypto
   = PrtclState
-      !(Map (KeyHash crypto) Natural)
+      !(Map (KeyHash 'BlockIssuer crypto) Natural)
       !(WithOrigin (LastAppliedBlock crypto))
       !Nonce -- ^ Current epoch nonce
       !Nonce -- ^ Evolving nonce
@@ -92,9 +93,9 @@ instance NoUnexpectedThunks (PrtclEnv crypto)
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
   , KESignable crypto (BHBody crypto)
-  , VRF.Signable (VRF crypto) Seed
+  , VRFSignable crypto Seed
   )
   => STS (PRTCL crypto)
  where
@@ -124,9 +125,9 @@ instance
 prtclTransition
   :: forall crypto
    . ( Crypto crypto
-     , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+     , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
      , KESignable crypto (BHBody crypto)
-     , VRF.Signable (VRF crypto) Seed
+     , VRFSignable crypto Seed
      )
   => TransitionRule (PRTCL crypto)
 prtclTransition = do
@@ -170,9 +171,9 @@ instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
   , KESignable crypto (BHBody crypto)
-  , VRF.Signable (VRF crypto) Seed
+  , VRFSignable crypto Seed
   )
   => Embed (OVERLAY crypto) (PRTCL crypto)
  where
@@ -180,9 +181,9 @@ instance
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
   , KESignable crypto (BHBody crypto)
-  , VRF.Signable (VRF crypto) Seed
+  , VRFSignable crypto Seed
   )
   => Embed (UPDN crypto) (PRTCL crypto)
  where

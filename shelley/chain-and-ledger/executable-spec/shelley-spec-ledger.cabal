@@ -170,6 +170,7 @@ test-suite shelley-spec-ledger-test
       base,
       base16-bytestring,
       bytestring,
+      bytestring-conversion,
       cardano-binary,
       cardano-crypto-class,
       cardano-prelude,

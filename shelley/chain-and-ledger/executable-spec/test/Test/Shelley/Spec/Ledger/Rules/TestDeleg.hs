@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
@@ -31,6 +32,7 @@ import           Control.State.Transition.Trace (SourceSignalTarget, pattern Sou
                      signal, source, target)
 
 import           Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..))
 import           Shelley.Spec.Ledger.LedgerState (_delegations, _irwd, _rewards, _stkCreds)
 import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertMir, pattern DeRegKey,
                      pattern Delegate, pattern Delegation, pattern MIRCert, pattern RegKey)
@@ -42,13 +44,13 @@ import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Credential, DELEG
 -- helper accessor functions --
 -------------------------------
 
-getStDelegs :: DState -> Set Credential
+getStDelegs :: DState -> Set (Credential 'Staking)
 getStDelegs = dom . _stkCreds
 
 getRewards :: DState -> Map RewardAcnt Coin
 getRewards = _rewards
 
-getDelegations :: DState -> Map Credential KeyHash
+getDelegations :: DState -> Map (Credential 'Staking) (KeyHash 'StakePool)
 getDelegations = _delegations
 
 --------------------------

@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -44,7 +45,7 @@ import qualified Hedgehog.Range as Range
 import           Control.State.Transition.Extended (TRC (..), applySTS)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Keys (pattern KeyPair, hashKey, vKey)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), coerceKeyRole, hashKey, vKey)
 import           Shelley.Spec.Ledger.LedgerState (pattern LedgerValidation, applyTxBody,
                      genesisCoins, genesisState, validTx, _delegationState, _dstate, _genDelegs,
                      _stkCreds, _utxo, _utxoState)
@@ -73,7 +74,7 @@ import           Test.Shelley.Spec.Ledger.Utils
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPair :: Addr -> KeyPairs -> KeyPair
+findPayKeyPair :: Addr -> KeyPairs -> KeyPair 'Payment
 findPayKeyPair (Addr (KeyHashObj addr) _) keyList =
     case matches of
       []    -> error "findPayKeyPair: could not find a match for the given address"
@@ -114,7 +115,7 @@ genKeyPairs lower upper = do
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: KeyPairs -> [(Credential, StakeReference)]
+hashKeyPairs :: KeyPairs -> [(Credential 'Payment, StakeReference)]
 hashKeyPairs keyPairs =
     (\(a, b) ->
       (KeyHashObj . hashKey $ vKey a
@@ -264,7 +265,7 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
     repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx:txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: Credential -> KeyPairs -> KeyPair
+findStakeKeyPair :: Credential 'Staking -> KeyPairs -> KeyPair 'Staking
 findStakeKeyPair (KeyHashObj hk) keyList =
     snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
@@ -337,13 +338,13 @@ genDCertDeRegKey keys =
 genDCertRetirePool :: KeyPairs -> EpochNo -> Gen DCert
 genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
-  pure $ DCertPool $ RetirePool (hashKey key) epoch
+  pure $ DCertPool $ RetirePool (coerceKeyRole $ hashKey key) epoch
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
   poolKey      <- Gen.element $ Map.keys stkCreds'
   delegatorKey <- getAnyStakeKey keys
-  pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (hashKey $ vKey $ findStakeKeyPair poolKey keys)
+  pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (coerceKeyRole . hashKey $ vKey $ findStakeKeyPair poolKey keys)
        where (StakeCreds stkCreds') = (_stkCreds . _dstate) d
 
 genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
@@ -375,7 +376,7 @@ asStateTransition _slot pp ls tx res =
 -- way.
 asStateTransition'
   -- :: ( Crypto crypto
-  --    , Signable (DSIGN crypto) (TxBody crypto)
+  --    , DSignable crypto (TxBody crypto)
   --    )
   -- =>
   :: SlotNo

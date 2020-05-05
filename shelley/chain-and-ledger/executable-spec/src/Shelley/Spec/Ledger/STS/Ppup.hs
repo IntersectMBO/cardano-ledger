@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -41,7 +42,7 @@ instance STS (PPUP crypto) where
   type Environment (PPUP crypto) = PPUPEnv crypto
   type BaseM (PPUP crypto) = ShelleyBase
   data PredicateFailure (PPUP crypto)
-    = NonGenesisUpdatePPUP (Set (GenKeyHash crypto)) (Set (GenKeyHash crypto))
+    = NonGenesisUpdatePPUP (Set (KeyHash 'Genesis crypto)) (Set (KeyHash 'Genesis crypto))
     | PPUpdateTooLatePPUP
     | PPUpdateWrongEpoch EpochNo
     | PVCannotFollowPPUP

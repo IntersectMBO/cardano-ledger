@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -29,13 +30,13 @@ data OCERT crypto
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
   , KESignable crypto (BHBody crypto)
   )
   => STS (OCERT crypto)
  where
   type State (OCERT crypto)
-    = Map (KeyHash crypto) Natural
+    = Map (KeyHash 'BlockIssuer crypto) Natural
   type Signal (OCERT crypto)
     = BHeader crypto
   type Environment (OCERT crypto) = OCertEnv crypto
@@ -45,7 +46,7 @@ instance
     | KESAfterEndOCERT
     | KESPeriodWrongOCERT
     | InvalidSignatureOCERT
-    | InvalidKesSignatureOCERT
+    | InvalidKesSignatureOCERT String
     | NoCounterForKeyHashOCERT
     deriving (Show, Eq, Generic)
 
@@ -56,7 +57,7 @@ instance NoUnexpectedThunks (PredicateFailure (OCERT crypto))
 
 ocertTransition
   :: ( Crypto crypto
-     , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
+     , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
      , KESignable crypto (BHBody crypto)
      )
   => TransitionRule (OCERT crypto)
@@ -79,8 +80,8 @@ ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
                                               -- predicate failure in the
                                               -- transition.
 
-  verify vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
-  verifyKES vk_hot bhb sigma t ?! InvalidKesSignatureOCERT
+  verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
+  verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT
 
   case currentIssueNo env cs hk of
     Nothing -> do

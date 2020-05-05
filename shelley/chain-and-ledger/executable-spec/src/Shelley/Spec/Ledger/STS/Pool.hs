@@ -121,13 +121,13 @@ poolDelegationTransition = do
 -- Instead, we just define these operators here.
 
 (⨃) ::
-  Map (KeyHash crypto) a ->
-  (KeyHash crypto, a) ->
-  Map (KeyHash crypto) a
+  Map (KeyHash kr crypto) a ->
+  (KeyHash kr crypto, a) ->
+  Map (KeyHash kr crypto) a
 m ⨃ (k, v) = Map.union (Map.singleton k v) m
 
 (∪) ::
-  Map (KeyHash crypto) a ->
-  (KeyHash crypto, a) ->
-  Map (KeyHash crypto) a
+  Map (KeyHash kr crypto) a ->
+  (KeyHash kr crypto, a) ->
+  Map (KeyHash kr crypto) a
 m ∪ (k, v) = Map.union m (Map.singleton k v)

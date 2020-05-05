@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -32,8 +33,8 @@ import           Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, Block (..), La
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), GenKeyHash, KESignable, KeyHash,
-                     Signable, VKeyES)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), GenDelegs (..), KESignable, KeyHash,
+                     DSignable, VerKeyKES, coerceKeyRole)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..), DState (..),
                      EpochState (..), LedgerState (..), NewEpochState (..), OBftSlot, PState (..),
                      UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
@@ -58,7 +59,7 @@ data CHAIN crypto
 data ChainState crypto
   = ChainState
     { chainNes              :: NewEpochState crypto
-    , chainOCertIssue       :: Map.Map (KeyHash crypto) Natural
+    , chainOCertIssue       :: Map.Map (KeyHash 'BlockIssuer crypto) Natural
     , chainEpochNonce       :: Nonce
     , chainEvolvingNonce    :: Nonce
     , chainCandidateNonce   :: Nonce
@@ -73,7 +74,7 @@ initialShelleyState
   -> EpochNo
   -> UTxO crypto
   -> Coin
-  -> Map (GenKeyHash crypto) (KeyHash crypto)
+  -> Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto)
   -> Map SlotNo (OBftSlot crypto)
   -> PParams
   -> Nonce
@@ -111,12 +112,12 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
     NeutralNonce
     lab
   where
-    cs = Map.fromList (fmap (\hk -> (hk,0)) (Map.elems genDelegs))
+    cs = Map.fromList (fmap (\hk -> (coerceKeyRole hk,0)) (Map.elems genDelegs))
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
+  , DSignable crypto (TxBody crypto)
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )
@@ -162,8 +163,8 @@ chainChecks maxpv pp bh = do
 chainTransition
   :: forall crypto
    . ( Crypto crypto
-     , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
+     , DSignable crypto (TxBody crypto)
      , KESignable crypto (BHBody crypto)
      , VRF.Signable (VRF crypto) Seed
      )
@@ -204,8 +205,8 @@ chainTransition = judgmentContext >>=
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
+  , DSignable crypto (TxBody crypto)
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )
@@ -215,8 +216,8 @@ instance
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
+  , DSignable crypto (TxBody crypto)
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )
@@ -226,8 +227,8 @@ instance
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (VKeyES crypto, Natural, KESPeriod)
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
+  , DSignable crypto (TxBody crypto)
   , KESignable crypto (BHBody crypto)
   , VRF.Signable (VRF crypto) Seed
   )

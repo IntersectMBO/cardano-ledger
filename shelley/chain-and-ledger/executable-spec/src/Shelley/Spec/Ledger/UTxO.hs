@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- for the Relation instance
@@ -36,6 +38,7 @@ module Shelley.Spec.Ledger.UTxO
   , txinsScript
   ) where
 
+import           Byron.Spec.Ledger.Core (Relation (..))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
@@ -46,24 +49,20 @@ import qualified Data.Maybe as Maybe
 import           Data.List (foldl')
 import           Data.Set (Set)
 import qualified Data.Set as Set
-
-import           Byron.Spec.Ledger.Core (Relation (..))
 import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (AnyKeyHash, KeyDiscriminator (..), KeyPair, Signable,
-                     sKey, sign, vKey, verify)
+import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), StakePools (..), dvalue,
+                     requiresVKeyWitness)
+import           Shelley.Spec.Ledger.Keys (KeyHash (..), KeyPair (..), DSignable,
+                     asWitness, signedDSIGN, verifySignedDSIGN)
 import           Shelley.Spec.Ledger.PParams (PParams, Update)
+import           Shelley.Spec.Ledger.Scripts
 import           Shelley.Spec.Ledger.Tx (Tx (..))
 import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), pattern DeRegKey,
                      pattern Delegate, pattern Delegation, PoolCert (..), PoolParams (..),
                      TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..), WitVKey (..),
                      getRwdCred)
-
-import           Data.Coerce (coerce)
-import           Shelley.Spec.Ledger.Delegation.Certificates (DCert (..), StakePools (..), dvalue,
-                     requiresVKeyWitness)
-import           Shelley.Spec.Ledger.Scripts
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto
@@ -134,27 +133,29 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 -- |Verify a transaction body witness
 verifyWitVKey
   :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
   => TxBody crypto
   -> WitVKey crypto
   -> Bool
-verifyWitVKey tx (WitVKey vkey sig) = verify vkey tx sig
+verifyWitVKey tx (WitVKey vkey sig) = verifySignedDSIGN vkey tx sig
 
--- |Create a witness for transaction
+-- | Create a witness for transaction
 makeWitnessVKey
-  :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
-     )
+  :: forall crypto kr.
+    ( Crypto crypto
+    , DSignable crypto (TxBody crypto)
+    )
   => TxBody crypto
-  -> KeyPair a crypto
+  -> KeyPair kr crypto
   -> WitVKey crypto
-makeWitnessVKey tx keys = WitVKey (coerce $ vKey keys) (sign (sKey keys) tx)
+makeWitnessVKey tx keys
+  = WitVKey (asWitness $ vKey keys) (signedDSIGN @crypto (sKey keys) tx)
 
 -- |Create witnesses for transaction
 makeWitnessesVKey
   :: ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
   => TxBody crypto
   -> [KeyPair a crypto]
@@ -165,10 +166,10 @@ makeWitnessesVKey tx = Set.fromList . fmap (makeWitnessVKey tx)
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys
   :: (Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto))
+     , DSignable crypto (TxBody crypto))
   => TxBody crypto
-  -> Map (AnyKeyHash crypto) (KeyPair 'Regular crypto)
-  -> Set (AnyKeyHash crypto)
+  -> Map (KeyHash kr crypto) (KeyPair kr crypto)
+  -> Set (KeyHash kr crypto)
   -> Set (WitVKey crypto)
 makeWitnessesFromScriptKeys txb hashKeyMap scriptHashes =
   let witKeys    = Map.restrictKeys hashKeyMap scriptHashes
@@ -211,7 +212,7 @@ scriptStakeCred (DCertDeleg (Delegate (Delegation (ScriptHashObj hs) _))) = Just
 scriptStakeCred _ = Nothing
 
 scriptCred
-  :: Credential crypto
+  :: Credential kr crypto
   -> Maybe (ScriptHash crypto)
 scriptCred (KeyHashObj _)  = Nothing
 scriptCred (ScriptHashObj hs) = Just hs

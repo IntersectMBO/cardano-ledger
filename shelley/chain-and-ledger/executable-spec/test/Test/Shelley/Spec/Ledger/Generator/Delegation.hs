@@ -33,9 +33,9 @@ import           Shelley.Spec.Ledger.Address (mkRwdAcnt, scriptToCred)
 import           Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), interval0)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DCertMir, pattern DeRegKey,
-                     pattern Delegate, pattern GenesisDelegate, pattern MIRCert, pattern RegKey,
+                     pattern Delegate, pattern GenesisDelegCert, pattern MIRCert, pattern RegKey,
                      pattern RegPool, pattern RetirePool, pattern StakeCreds)
-import           Shelley.Spec.Ledger.Keys (GenDelegs (..), hashKey, vKey, undiscriminateKeyHash)
+import           Shelley.Spec.Ledger.Keys (KeyRole(..), GenDelegs (..), hashKey, vKey, coerceKeyRole)
 import           Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs, _pParams, _pstate, _retiring,
                      _rewards, _stPools, _stkCreds)
 import           Shelley.Spec.Ledger.PParams (PParams, _d)
@@ -45,7 +45,7 @@ import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGe
                      RewardAcnt (..), pattern StakePools, unStakePools, _poolPubKey, _poolVrf)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CoreKeyPair, DCert, DPState, DState,
-                     AnyKeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
+                     KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs, PState, PoolParams, VKey,
                      VrfKeyPairs, hashKeyVRF)
 import           Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
 import           Test.Shelley.Spec.Ledger.Generator.Constants (Constants(..))
@@ -55,7 +55,7 @@ import           Test.Shelley.Spec.Ledger.Generator.Core (genCoinList, genIntege
 import           Test.Shelley.Spec.Ledger.Utils
 
 data CertCred = CoreKeyCred [CoreKeyPair]
-              | KeyCred KeyPair
+              | KeyCred (KeyPair 'Staking)
               | ScriptCred (MultiSig, MultiSig)
               | NoCred
               deriving (Show)
@@ -77,7 +77,7 @@ genDCert
   -> MultiSigPairs
   -> [CoreKeyPair]
   -> VrfKeyPairs
-  -> Map AnyKeyHash KeyPair -- indexed keys By hash
+  -> Map (KeyHash 'Staking) (KeyPair 'Staking) -- indexed keys By hash
   -> PParams
   -> DPState
   -> SlotNo
@@ -238,7 +238,7 @@ genGenesisDelegation keys coreKeys dpState =
   where
     hashVKey = hashKey . vKey
     mkCert gkey key = Just
-      ( DCertGenesis (GenesisDelegate (hashVKey gkey) (hashVKey (snd key)))
+      ( DCertGenesis (GenesisDelegCert (hashVKey gkey) (hashVKey (coerceKeyRole $ snd key)))
       , CoreKeyCred [gkey])
 
     (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
@@ -246,7 +246,7 @@ genGenesisDelegation keys coreKeys dpState =
     genesisDelegator k = k ∈ dom genDelegs_
     genesisDelegators = filter (genesisDelegator . hashVKey) coreKeys
 
-    notDelegatee k = k ∉ range genDelegs_
+    notDelegatee k = (coerceKeyRole k) ∉ range genDelegs_
     availableDelegatees = filter (notDelegatee . hashVKey . snd) keys
 
 -- | Generate and return a RegPool certificate along with its witnessing key.
@@ -260,19 +260,21 @@ genRegPool keys vrfKeys dpState =
   if null availableKeys || null availableVrfKeys
      then pure Nothing
      else
-       Just <$> genDCertRegPool availableKeys availableVrfKeys
+       Just <$> genDCertRegPool availableKeys' availableVrfKeys
  where
   notRegistered k = k `notElem` ((_poolPubKey <$>) . Map.elems . _pParams . _pstate) dpState
-  availableKeys = filter (notRegistered . hashKey . vKey . snd) keys
+  keys' = fmap (\(p, s) -> (p, coerceKeyRole s)) keys
+  availableKeys = filter (notRegistered . hashKey . vKey . snd) keys'
+  availableKeys' = fmap (\(p, s) -> (p, coerceKeyRole s)) availableKeys
 
   notRegisteredVrf k = k `notElem` ((_poolVrf <$>) . Map.elems . _pParams . _pstate) dpState
   availableVrfKeys = filter (notRegisteredVrf . hashKeyVRF . snd) vrfKeys
 
 -- | Generate PoolParams and the key witness.
-genStakePool :: HasCallStack => KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair)
+genStakePool :: HasCallStack => KeyPairs -> VrfKeyPairs -> Gen (PoolParams, KeyPair 'Witness)
 genStakePool skeys vrfKeys =
   mkPoolParams
-    <$> (QC.elements skeys)
+    <$> (QC.elements skeys')
     <*> (snd <$> QC.elements vrfKeys)
     <*> (Coin <$> QC.frequency [ (1, genInteger 1 100)
                                , (5, pure 0)]) -- pledge
@@ -280,7 +282,8 @@ genStakePool skeys vrfKeys =
     <*> (fromInteger <$> QC.choose (0, 100) :: Gen Natural)
     <*> (getAnyStakeKey skeys)
  where
-  getAnyStakeKey :: KeyPairs -> Gen VKey
+  skeys' = fmap (\(p, s) -> (p, coerceKeyRole s)) skeys
+  getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
   getAnyStakeKey keys = vKey . snd <$> QC.elements keys
 
   mkPoolParams poolKeyPair vrfKey pledge cost marginPercent acntKey =
@@ -295,13 +298,13 @@ genStakePool skeys vrfKeys =
                 Set.empty
                 StrictSeq.empty
                 SNothing
-     in (pps, snd poolKeyPair)
+     in (pps, coerceKeyRole $ snd poolKeyPair)
 
 -- | Generate `RegPool` and the key witness.
 genDCertRegPool :: HasCallStack => KeyPairs -> VrfKeyPairs -> Gen (DCert, CertCred)
 genDCertRegPool skeys vrfKeys = do
   (pps, poolKey) <- genStakePool skeys vrfKeys
-  pure (DCertPool (RegPool pps), KeyCred poolKey)
+  pure (DCertPool (RegPool pps), KeyCred . coerceKeyRole $ poolKey)
 
 -- | Generate a RetirePool along with the keypair which registered it.
 --
@@ -313,7 +316,7 @@ genDCertRegPool skeys vrfKeys = do
 genRetirePool
   :: HasCallStack
   => Constants
-  -> Map AnyKeyHash KeyPair -- indexed keys By Hash
+  -> Map (KeyHash 'Staking) (KeyPair 'Staking) -- indexed keys By Hash
   -> PState
   -> SlotNo
   -> Gen (Maybe (DCert, CertCred))
@@ -333,7 +336,7 @@ genRetirePool Constants{frequencyLowMaxEpoch} keysByHash pState slot =
   retireable = Set.toList (registered_ \\ retiring_)
 
   lookupHash hk = fromMaybe (error "genRetirePool: could not find keyHash")
-                            (Map.lookup (undiscriminateKeyHash hk) keysByHash)
+                            (Map.lookup (coerceKeyRole hk) keysByHash)
   EpochNo cepoch = epochFromSlotNo slot
   epochLow = cepoch + 1
   -- we use the lower bound of MaxEpoch as the high mark so that all possible

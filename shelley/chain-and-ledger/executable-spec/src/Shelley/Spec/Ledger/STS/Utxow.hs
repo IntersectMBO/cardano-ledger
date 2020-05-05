@@ -46,7 +46,7 @@ data UTXOW crypto
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (TxBody crypto)
   )
   => STS (UTXOW crypto)
  where
@@ -112,7 +112,7 @@ instance
 initialLedgerStateUTXOW
   :: forall crypto
    . ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
    => InitialRule (UTXOW crypto)
 initialLedgerStateUTXOW = do
@@ -122,7 +122,7 @@ initialLedgerStateUTXOW = do
 utxoWitnessed
   :: forall crypto
    . ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
    => TransitionRule (UTXOW crypto)
 utxoWitnessed = judgmentContext >>=
@@ -153,7 +153,7 @@ utxoWitnessed = judgmentContext >>=
                   SJust md' -> hashMetaData md' == mdh ?! BadMetaDataHashUTXOW
 
   -- check genesis keys signatures for instantaneous rewards certificates
-  let genSig = (Set.map undiscriminateKeyHash $ dom genMapping) ∩ Set.map witKeyHash wits
+  let genSig = (Set.map asWitness $ dom genMapping) ∩ Set.map witKeyHash wits
       mirCerts =
           StrictSeq.toStrict
         . Seq.filter isInstantaneousRewards
@@ -174,7 +174,7 @@ utxoWitnessed = judgmentContext >>=
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (TxBody crypto)
   )
   => Embed (UTXO crypto) (UTXOW crypto)
  where

@@ -55,7 +55,7 @@ data LedgerEnv
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (TxBody crypto)
   )
   => STS (LEDGER crypto)
  where
@@ -102,7 +102,7 @@ instance
 ledgerTransition
   :: forall crypto
    . ( Crypto crypto
-     , Signable (DSIGN crypto) (TxBody crypto)
+     , DSignable crypto (TxBody crypto)
      )
   => TransitionRule (LEDGER crypto)
 ledgerTransition = do
@@ -126,7 +126,7 @@ ledgerTransition = do
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (TxBody crypto)
   )
   => Embed (DELEGS crypto) (LEDGER crypto)
  where
@@ -134,7 +134,7 @@ instance
 
 instance
   ( Crypto crypto
-  , Signable (DSIGN crypto) (TxBody crypto)
+  , DSignable crypto (TxBody crypto)
   )
   => Embed (UTXOW crypto) (LEDGER crypto)
  where
