@@ -19,32 +19,103 @@ module Shelley.Spec.Ledger.STS.Chain
   )
 where
 
-import           Data.Map.Strict (Map)
+import           Data.Map.Strict
+  ( Map
+  )
 import qualified Data.Map.Strict as Map
-import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
+import           GHC.Generics
+  ( Generic
+  )
+import           Numeric.Natural
+  ( Natural
+  )
 
-import           Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
-import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase,
-                     StrictMaybe (..))
-import           Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, Block (..), LastAppliedBlock (..),
-                     bHeaderSize, bhbody, bheaderSlotNo, hBbsize)
-import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
-import           Shelley.Spec.Ledger.Keys (KeyRole(..), GenDelegs (..), KESignable, KeyHash,
-                     DSignable, VerKeyKES, coerceKeyRole)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..), DState (..),
-                     EpochState (..), LedgerState (..), NewEpochState (..), OBftSlot, PState (..),
-                     UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
-import           Shelley.Spec.Ledger.OCert (KESPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), ProtVer (..),
-                     _maxBBSize, _maxBHSize, _protocolVersion)
-import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import           Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
-import           Shelley.Spec.Ledger.Tx (TxBody)
-import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
+import           Cardano.Prelude
+  ( MonadError (..)
+  , NoUnexpectedThunks
+  , asks
+  , unless
+  )
+import           Cardano.Slotting.Slot
+  ( WithOrigin (..)
+  )
+import           Shelley.Spec.Ledger.BaseTypes
+  ( Globals (..)
+  , Nonce (..)
+  , Seed (..)
+  , ShelleyBase
+  , StrictMaybe (..)
+  )
+import           Shelley.Spec.Ledger.BlockChain
+  ( BHBody
+  , BHeader
+  , Block (..)
+  , LastAppliedBlock (..)
+  , bHeaderSize
+  , bhbody
+  , bheaderSlotNo
+  , hBbsize
+  )
+import           Shelley.Spec.Ledger.Coin
+  ( Coin (..)
+  )
+import           Shelley.Spec.Ledger.Delegation.Certificates
+  ( PoolDistr (..)
+  )
+import           Shelley.Spec.Ledger.EpochBoundary
+  ( BlocksMade (..)
+  , emptySnapShots
+  )
+import           Shelley.Spec.Ledger.Keys
+  ( DSignable
+  , GenDelegs (..)
+  , KESignable
+  , KeyHash
+  , KeyRole (..)
+  , VerKeyKES
+  , coerceKeyRole
+  )
+import           Shelley.Spec.Ledger.LedgerState
+  ( AccountState (..)
+  , DPState (..)
+  , DState (..)
+  , EpochState (..)
+  , LedgerState (..)
+  , NewEpochState (..)
+  , OBftSlot
+  , PState (..)
+  , UTxOState (..)
+  , emptyDState
+  , emptyPState
+  , getGKeys
+  , updateNES
+  , _genDelegs
+  )
+import           Shelley.Spec.Ledger.OCert
+  ( KESPeriod
+  )
+import           Shelley.Spec.Ledger.PParams
+  ( PParams
+  , ProposedPPUpdates (..)
+  , ProtVer (..)
+  , _maxBBSize
+  , _maxBHSize
+  , _protocolVersion
+  )
+import           Shelley.Spec.Ledger.Rewards
+  ( emptyNonMyopic
+  )
+import           Shelley.Spec.Ledger.Slot
+  ( EpochNo
+  , SlotNo
+  )
+import           Shelley.Spec.Ledger.Tx
+  ( TxBody
+  )
+import           Shelley.Spec.Ledger.UTxO
+  ( UTxO (..)
+  , balance
+  )
 
 import qualified Cardano.Crypto.VRF as VRF
 import           Control.State.Transition
