@@ -8,7 +8,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
   , nonNegativeDeposits
   , removedAfterPoolreap
     -- TestNewEpoch
-  , circulationDepositsInvariant
   , preservationOfAda)
 where
 
@@ -75,12 +74,6 @@ preservationOfAda =
     let sst = map chainToNewEpochSst (sourceSignalTargets tr)
     in TestNewEpoch.preservationOfAda sst
 
-circulationDepositsInvariant :: Property
-circulationDepositsInvariant =
-  forAllChainTrace $ \tr ->
-    let sst = map chainToNewEpochSst (sourceSignalTargets tr)
-    in TestNewEpoch.circulationDepositsInvariant sst
-
 ---------------------------
 -- Utils --
 ---------------------------
@@ -131,7 +124,7 @@ chainToNewEpochSst (SourceSignalTarget ChainState {chainNes = nes}
 
 -- | Transform the [(source, signal, target)] of a CHAIN Trace
 -- by manually applying the Chain TICK Rule to each source and producing
--- [(source, signal, target)].
+-- [(source, signal, target')].
 --
 -- This allows for testing properties on traces that exclude effects of the
 -- "UTXO branches" of the STS Rule tree.
