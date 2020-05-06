@@ -27,7 +27,7 @@ For the software update mechanism, see Section~\ref{sec:software-updates}.
 The constants $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$
 represent the number of slots in an epoch/KES period (for a brief explanation
 of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
-The constants $\SlotsPrior$ and $\StartRewards$ concern the chain stability.
+The constants $\StabilityWindow$ and $\RandomnessStabilisationWindow$ concern the chain stability.
 The maximum number of time a KES key can be evolved before a pool operator
 must create a new operational certificate is given by $\MaxKESEvo$.
 \textbf{Note that if } $\MaxKESEvo$
@@ -164,15 +164,23 @@ without being explicit about the types and conversion.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      \SlotsPerEpoch & \N & \text{slots per epoch} \\
-      \SlotsPerKESPeriod & \N & \text{slots per KES period} \\
-      \SlotsPrior & \Duration & \text{nonce leakage parameter }\tau\text{ in \cite{ouroboros_praos}}\\
-      \StartRewards & \Duration & \text{duration to start reward calculations}\\
-      \MaxKESEvo & \N & \text{maximum KES key evolutions}\\
-      \Quorum & \N & \text{quorum for update system votes}\\
-      \MaxMajorPV & \N & \text{all blocks are invalid after this value}\\
-      \MaxLovelaceSupply & \Coin & \text{total lovelace in the system}\\
-      \ActiveSlotCoeff & (0, 1] & f\text{ in \cite{ouroboros_praos}}\\
+      \SlotsPerEpoch & \N & \text{- slots per epoch} \\
+      \SlotsPerKESPeriod & \N & \text{- slots per KES period} \\
+      \StabilityWindow & \Duration &
+      \begin{array}{r}
+        \text{- window size for chain growth} \\
+        \text{guarantees, see}\text{ in \cite{ouroboros_praos}}
+      \end{array} \\
+      \RandomnessStabilisationWindow & \Duration &
+      \begin{array}{r}
+        \text{- duration needed for epoch}\\
+        \text{nonce stabilization}\\
+      \end{array} \\
+      \MaxKESEvo & \N & \text{- maximum KES key evolutions}\\
+      \Quorum & \N & \text{- quorum for update system votes}\\
+      \MaxMajorPV & \N & \text{- all blocks are invalid after this value}\\
+      \MaxLovelaceSupply & \Coin & \text{- total lovelace in the system}\\
+      \ActiveSlotCoeff & (0, 1] & -~f\text{ in \cite{ouroboros_praos}}\\
     \end{array}
   \end{equation*}
   %

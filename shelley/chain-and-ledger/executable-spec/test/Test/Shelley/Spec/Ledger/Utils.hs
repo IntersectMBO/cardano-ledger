@@ -119,8 +119,8 @@ testGlobals :: Globals
 testGlobals = Globals
   { epochInfo = fixedSizeEpochInfo $ EpochSize 100
   , slotsPerKESPeriod = 20
-  , startRewards = 33
-  , slotsPrior = 33
+  , stabilityWindow = 33
+  , randomnessStabilisationWindow = 33
   , securityParameter = 10
   , maxKESEvo = 10
   , quorum = 5

@@ -269,7 +269,7 @@ mapping inherited from Byron.
 **Consistency Property**
 In the absence of the extra entropy parameter,
 the epoch nonce is what you get from combining the blocks leading up to it
-(and stopping `SlotsPrior`-many slots in the previous epoch).
+(and stopping `StabilityWindow`-many slots in the previous epoch).
 
 # Decentralization Properties
 

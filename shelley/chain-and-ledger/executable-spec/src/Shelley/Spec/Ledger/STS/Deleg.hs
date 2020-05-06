@@ -136,7 +136,7 @@ delegationTransition = do
         { _delegations = _delegations ds ⨃ [(hk, dpool)] }
 
     DCertGenesis (GenesisDelegCert gkh vkh) -> do
-      sp <- liftSTS $ asks slotsPrior
+      sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp
           (GenDelegs genDelegs) = _genDelegs ds
@@ -147,7 +147,7 @@ delegationTransition = do
         { _fGenDelegs = _fGenDelegs ds ⨃ [(FutureGenDeleg s' gkh, vkh)]}
 
     DCertMir (MIRCert credCoinMap) -> do
-      sp <- liftSTS $ asks slotsPrior
+      sp <- liftSTS $ asks stabilityWindow
       firstSlot <- liftSTS $ do
         ei <- asks epochInfo
         EpochNo currEpoch <- epochInfoEpoch ei slot

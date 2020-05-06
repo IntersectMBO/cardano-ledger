@@ -631,12 +631,12 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
 
 The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal. There are
 three different cases for $\mathsf{UPDN}$: one where we are in a new epoch, one
-where \var{s} is not yet \SlotsPrior{} slots from the beginning of the next
-epoch and one where \var{s} is less than \SlotsPrior{} slots until the start of
+where \var{s} is not yet \StabilityWindow{} slots from the beginning of the next
+epoch and one where \var{s} is less than \StabilityWindow{} slots until the start of
 the next epoch.
 
 This does assume that the first block in an epoch will occur before
-\SlotsPrior{} slots before the beginning of the next epoch.
+\StabilityWindow{} slots before the beginning of the next epoch.
 
 Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
 $\eta_v\seedOp\eta$, not $\eta_c\seedOp\eta$. The reason for this is that even
@@ -680,7 +680,7 @@ near the end of the epoch is not discarded).
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
     {
-      s < \fun{firstSlot}~((\epoch{s}) + 1) - \SlotsPrior
+      s < \fun{firstSlot}~((\epoch{s}) + 1) - \RandomnessStabilisationWindow
     }
     {
       {\begin{array}{c}
@@ -711,7 +711,7 @@ near the end of the epoch is not discarded).
   \begin{equation}\label{eq:only-evolve}
     \inference[Only-Evolve]
     {
-      s \geq \fun{firstSlot}~((\epoch{s}) + 1) - \SlotsPrior
+      s \geq \fun{firstSlot}~((\epoch{s}) + 1) - \RandomnessStabilisationWindow
     }
     {
       {\begin{array}{c}
@@ -780,12 +780,12 @@ execution of the transition role is as follows:
 
 \begin{itemize}
 \item If the current reward update \var{ru} is empty and \var{s} is greater than
-  the sum of the first slot of its epoch and the duration \StartRewards, then a
+  the sum of the first slot of its epoch and the duration \StabilityWindow, then a
   new rewards update is calculated and the state is updated.
 \item If the current reward update \var{ru} is not \Nothing, i.e., a reward
   update has already been calculated but not yet applied, then the state is not updated.
 \item If the current reward update \var{ru} is empty and \var{s} is less than or equal to the sum
-  of the first slot of its epoch and the duration to start rewards \StartRewards,
+  of the first slot of its epoch and the duration to start rewards \StabilityWindow,
   then the state is not updated.
 \end{itemize}
 
@@ -793,7 +793,7 @@ execution of the transition role is as follows:
   \begin{equation}\label{eq:reward-update}
     \inference[Create-Reward-Update]
     {
-      s > \fun{firstSlot}~(\epoch{s}) + \StartRewards
+      s > \fun{firstSlot}~(\epoch{s}) + \StabilityWindow
       &
       ru = \Nothing
       \\~\\
@@ -833,7 +833,7 @@ execution of the transition role is as follows:
     {
       ru = \Nothing
       \\
-      s \leq \fun{firstSlot}~(\epoch{s}) + \StartRewards
+      s \leq \fun{firstSlot}~(\epoch{s}) + \StabilityWindow
     }
     {
       {\begin{array}{c}

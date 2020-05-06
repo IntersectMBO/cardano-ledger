@@ -110,8 +110,8 @@ import           Numeric.Natural (Natural)
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import           Shelley.Spec.Ledger.Address (pattern Addr, mkRwdAcnt)
-import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce, startRewards,
-                     textToUrl, (⭒))
+import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), mkNonce,
+                     randomnessStabilisationWindow, textToUrl, (⭒))
 import           Shelley.Spec.Ledger.BlockChain (pattern HashHeader, LastAppliedBlock (..), bhHash,
                      bheader, hashHeaderToNonce)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -2343,7 +2343,7 @@ blockEx5F = mkBlock
               0
               (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
 
--- | The second transaction in the next epoch and at least `startRewards` slots
+-- | The second transaction in the next epoch and at least `randomnessStabilisationWindow` slots
 -- after the transaction carrying the MIR certificate, then creates the rewards
 -- update that contains the transfer of `100` to Alice.
 
@@ -2358,7 +2358,7 @@ txbodyEx5F' = TxBody
                (Wdrl Map.empty)
                (Coin 1)
                ((slotFromEpoch $ EpochNo 1)
-                +* Duration (startRewards testGlobals) + SlotNo 7)
+                +* Duration (randomnessStabilisationWindow testGlobals) + SlotNo 7)
                SNothing
                SNothing
 
@@ -2371,7 +2371,7 @@ blockEx5F' = mkBlock
               (coreNodeKeys 5)
               [txEx5F']
               ((slotFromEpoch $ EpochNo 1)
-                +* Duration (startRewards testGlobals) + SlotNo 7)
+                +* Duration (randomnessStabilisationWindow testGlobals) + SlotNo 7)
               (BlockNo 2)
               (mkNonce 0)
               (NatNonce 1)
@@ -2420,7 +2420,7 @@ ex5F' = do
   nextState <- runShelleyBase $ applySTS @CHAIN (TRC (SlotNo 90, initStEx2A, blockEx5F))
   midState <-
     runShelleyBase $ applySTS @CHAIN
-      (TRC (((slotFromEpoch $ EpochNo 1) + SlotNo 7) +* Duration (startRewards testGlobals)
+      (TRC (((slotFromEpoch $ EpochNo 1) + SlotNo 7) +* Duration (randomnessStabilisationWindow testGlobals)
            , nextState
            , blockEx5F')
       )

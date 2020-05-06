@@ -106,7 +106,7 @@ ppupTransitionNonEmpty = do
 
       all ((pvCanFollow (_protocolVersion pp)) . _protocolVersion) pup ?! PVCannotFollowPPUP
 
-      sp <- liftSTS $ asks slotsPrior
+      sp <- liftSTS $ asks stabilityWindow
       firstSlotNextEpoch <- liftSTS $ do
         ei <- asks epochInfo
         EpochNo e <- epochInfoEpoch ei slot

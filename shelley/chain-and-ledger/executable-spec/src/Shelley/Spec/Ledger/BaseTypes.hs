@@ -316,16 +316,15 @@ activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 data Globals = Globals
   { epochInfo :: !(EpochInfo Identity)
   , slotsPerKESPeriod :: !Word64
+    -- | The window size in which our chosen chain growth property
+    --   guarantees at least k blocks. From the paper
+    --   "Ouroboros praos: An adaptively-secure, semi-synchronous proof-of-stake protocol".
+    --   The 'stabilityWindow' constant is used in a number of places; for example,
+    --   protocol updates must be submitted at least twice this many slots before an epoch boundary.
+  , stabilityWindow :: !Word64
     -- | Number of slots before the end of the epoch at which we stop updating
     --   the candidate nonce for the next epoch.
-    --
-    --   This value is also used in a number of other places; for example,
-    --   protocol updates must be submitted at least this many slots before an
-    --   epoch boundary.
-  , slotsPrior :: !Word64
-    -- | Number of slots after the beginning of an epoch when we may begin to
-    --   distribute rewards.
-  , startRewards :: !Word64
+  , randomnessStabilisationWindow :: !Word64
     -- | Maximum number of blocks we are allowed to roll back
   , securityParameter :: !Word64
     -- | Maximum number of KES iterations

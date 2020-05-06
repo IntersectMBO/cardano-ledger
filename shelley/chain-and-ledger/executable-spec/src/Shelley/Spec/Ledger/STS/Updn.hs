@@ -60,7 +60,7 @@ updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
 updTransition = do
   TRC (UpdnEnv eta pp ph ne, UpdnState eta_0 eta_v eta_c eta_h, s) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
-  sp <- liftSTS $ asks slotsPrior
+  sp <- liftSTS $ asks stabilityWindow
   EpochNo e <- liftSTS $ epochInfoEpoch ei s
   firstSlotNextEpoch <- liftSTS $ epochInfoFirst ei (EpochNo (e + 1))
   pure $ UpdnState

@@ -227,7 +227,7 @@ state transition types. We define two separate parts of the ledger state.
       stake hashkey of a pointer address.
       \item $\var{fGenDelegs}$ are the future genesis keys delegations. This variable
       is needed because genesis keys can only update their delegation with a
-      delay of $\SlotsPrior$ slots after submitting the certificate (this is
+      delay of $\StabilityWindow$ slots after submitting the certificate (this is
       necessary for header validation, see Section \ref{sec:chain})
       \item $\var{genDelegs}$ maps genesis key hashes to hashes of the cold key
         delegates.
@@ -394,7 +394,7 @@ concerns are independent of the ledger rules.
     Genesis delegation causes the following state transformation:
     \begin{itemize}
       \item The future genesis delegation relation is updated with the new delegate
-        to be adopted in $\SlotsPrior$-many slots.
+        to be adopted in $\StabilityWindow$-many slots.
       \end{itemize}
 
     \item  Moving instantaneous rewards is handled by \cref{eq:deleg-mir}. There
@@ -532,7 +532,7 @@ concerns are independent of the ledger rules.
       \var{c}\in \DCertGen
       & (\var{gkh},~\var{vkh})\leteq\fun{genesisDeleg}~{c}
       \\
-      s'\leteq\var{slot}+\SlotsPrior
+      s'\leteq\var{slot}+\StabilityWindow
       & \var{gkh}\in\dom{genDelegs}
       & \var{vkh}\notin\range{genDelegs}
     }
@@ -580,7 +580,7 @@ concerns are independent of the ledger rules.
     \inference[Deleg-Mir]
     {
       \var{c}\in \DCertMir\\
-      slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{SlotsPrior}\\
+      slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{StabilityWindow}\\
       \left(
         \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i_{rwd}})} val      \right)\leq\var{reserves}
     }
