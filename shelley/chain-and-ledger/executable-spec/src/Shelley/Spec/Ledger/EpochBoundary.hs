@@ -31,14 +31,15 @@ module Shelley.Spec.Ledger.EpochBoundary
   , (⊎)
   ) where
 
+import           Shelley.Spec.Ledger.Address (Addr (..))
+import           Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..), StakePools (..),
                      decayKey, decayPool, refund)
 import           Shelley.Spec.Ledger.Keys (KeyRole(..), KeyHash)
 import           Shelley.Spec.Ledger.PParams (PParams, _a0, _nOpt)
 import           Shelley.Spec.Ledger.Slot (SlotNo, (-*))
-import           Shelley.Spec.Ledger.TxData (Addr (..), Credential, PoolParams, Ptr, RewardAcnt,
-                     StakeReference (..), TxOut (..), getRwdCred)
+import           Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCred)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)

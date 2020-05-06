@@ -23,7 +23,6 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           Byron.Spec.Ledger.Core ((<|))
-import           Shelley.Spec.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Shelley.Spec.Ledger.Coin
 import           Shelley.Spec.Ledger.LedgerState
 import           Shelley.Spec.Ledger.PParams
@@ -37,7 +36,6 @@ import           Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessVKey,
 import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-import           Test.Shelley.Spec.Ledger.Generator.Core (mkKeyPairs, toAddr)
 import           Test.Shelley.Spec.Ledger.PreSTSGenerator
 import           Test.Shelley.Spec.Ledger.Rules.ClassifyTraces (onlyValidChainSignalsAreGenerated,
                      onlyValidLedgerSignalsAreGenerated, relevantCasesAreCovered)
@@ -170,19 +168,6 @@ classifyInvalidDoubleSpend = withTests 1000 $ property $ do
       classify "multi-spend" isMultiSpend
       True === (not isMultiSpend || validationErrors /= [])
 
-roundTripAddr :: Property
-roundTripAddr =
-  -- We are using a QC generator which means we need QC test
-    Hedgehog.property $ do
-      addr <- Hedgehog.forAll genAddressH
-      Hedgehog.tripping addr serialiseAddr deserialiseAddr
-  where
-    genAddressH :: Gen Addr -- actually TxData.Addr ConcreteCrypto
-    genAddressH = do
-      keyPair1 <- snd . mkKeyPairs <$> Gen.word64 Range.constantBounded
-      keyPair2 <- snd . mkKeyPairs <$> Gen.word64 Range.constantBounded
-      pure $ toAddr (keyPair1, keyPair2)
-
 roundTripIpv4 :: Property
 roundTripIpv4 =
   -- We are using a QC generator which means we need QC test
@@ -190,7 +175,7 @@ roundTripIpv4 =
       ha <- Hedgehog.forAll genIPv4
       Hedgehog.tripping ha ipv4ToBytes ipv4FromBytes
   where
-    genIPv4 :: Gen IPv4
+    genIPv4 :: Hedgehog.Gen IPv4
     genIPv4 = fromHostAddress <$> (Gen.word32 Range.constantBounded)
 
 roundTripIpv6 :: Property
@@ -200,7 +185,7 @@ roundTripIpv6 =
       ha <- Hedgehog.forAll genIPv6
       Hedgehog.tripping ha ipv6ToBytes ipv6FromBytes
   where
-    genIPv6 :: Gen IPv6
+    genIPv6 :: Hedgehog.Gen IPv6
     genIPv6 = do
       w1 <- Gen.word32 Range.constantBounded
       w2 <- Gen.word32 Range.constantBounded
@@ -214,7 +199,6 @@ minimalPropertyTests =
     [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered
     , TQC.testProperty "total amount of Ada is preserved" preservationOfAda
     , TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated
-    , testProperty "Roundtrip Addr serialisation Hedghog" roundTripAddr
     , testProperty "Roundtrip IPv4 serialisation Hedghog" roundTripIpv4
     , testProperty "Roundtrip IPv6 serialisation Hedghog" roundTripIpv6
     ]

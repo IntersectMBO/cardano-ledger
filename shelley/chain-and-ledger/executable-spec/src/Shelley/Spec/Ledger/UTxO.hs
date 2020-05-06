@@ -50,6 +50,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Shelley.Spec.Ledger.Address (Addr (..))
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto
@@ -60,7 +62,7 @@ import           Shelley.Spec.Ledger.Keys (DSignable, Hash, KeyHash (..), KeyPai
 import           Shelley.Spec.Ledger.PParams (PParams, Update)
 import           Shelley.Spec.Ledger.Scripts
 import           Shelley.Spec.Ledger.Tx (Tx (..))
-import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), pattern DeRegKey,
+import           Shelley.Spec.Ledger.TxData (pattern DeRegKey,
                      pattern Delegate, pattern Delegation, PoolCert (..), PoolParams (..),
                      TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..), WitVKey (..),
                      getRwdCred)

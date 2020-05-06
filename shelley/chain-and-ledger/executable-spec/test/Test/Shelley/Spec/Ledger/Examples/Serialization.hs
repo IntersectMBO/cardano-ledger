@@ -29,6 +29,7 @@ import           Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCa
 import           Data.Coerce (coerce)
 import           Data.Ratio ((%))
 import           Numeric.Natural (Natural)
+import           Shelley.Spec.Ledger.Address (pattern Addr)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval (..),
                      mkNonce, textToDns, textToUrl)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, Block (..),
@@ -37,6 +38,7 @@ import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader
                      bheaderSlotNo, bheaderVk, bheaderVrfVk, bprotver, bsize, mkSeed, seedEta,
                      seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern ScriptHashObj, pattern StakeRefNull)
 import           Shelley.Spec.Ledger.Delegation.Certificates (pattern DeRegKey, pattern Delegate,
                      pattern GenesisDelegCert, pattern MIRCert, pattern PoolDistr, pattern RegKey,
                      pattern RegPool, pattern RetirePool)
@@ -58,11 +60,10 @@ import           Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern 
 import           Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..), ipv4ToBytes)
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import           Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, pattern DCertGenesis,
-                     pattern DCertMir, pattern DCertPool, pattern Delegation, pattern KeyHashObj,
-                     PoolMetaData (..), pattern PoolParams, Ptr (..), pattern RewardAcnt,
-                     pattern ScriptHashObj, StakePoolRelay (..), pattern StakeRefBase,
-                     pattern StakeRefNull, pattern StakeRefPtr, pattern TxBody, pattern TxIn,
+import           Shelley.Spec.Ledger.TxData (pattern DCertDeleg, pattern DCertGenesis,
+                     pattern DCertMir, pattern DCertPool, pattern Delegation,
+                     PoolMetaData (..), pattern PoolParams, pattern RewardAcnt,
+                     StakePoolRelay (..), pattern TxBody, pattern TxIn,
                      pattern TxOut, Wdrl (..), WitVKey (..), _TxId, _poolCost, _poolMD,
                      _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolRelays, _poolVrf)
@@ -337,64 +338,14 @@ serializationTests = testGroup "Serialization Tests"
   , checkEncodingCBOR "credential_key_hash"
     testPayCred
     (T (TkListLen 2 . TkWord 0) <> S testKeyHash1)
-  , checkEncodingCBOR "base_address_key_key"
-    (Addr testPayCred (StakeRefBase $ KeyHashObj testKeyHash2))
-    ( (T $ TkListLen 3)
-        <> (T $ TkWord 0)
-        <> S testKeyHash1
-        <> S testKeyHash2
-    )
-  , checkEncodingCBOR "base_address_key_script"
-    (Addr testPayCred (StakeRefBase $ ScriptHashObj testScriptHash))
-    ( (T $ TkListLen 3)
-        <> (T $ TkWord 1)
-        <> S testKeyHash1
-        <> S testScriptHash
-    )
-  , checkEncodingCBOR "base_address_script_key"
-    (Addr (ScriptHashObj testScriptHash) (StakeRefBase $ KeyHashObj testKeyHash2))
-    ( (T $ TkListLen 3)
-        <> (T $ TkWord 2)
-        <> S testScriptHash
-        <> S testKeyHash2
-    )
-  , checkEncodingCBOR "base_address_script_script"
-    (Addr (ScriptHashObj testScriptHash) (StakeRefBase $ ScriptHashObj testScriptHash2))
-    ( (T $ TkListLen 3)
-        <> (T $ TkWord 3)
-        <> S testScriptHash
-        <> S testScriptHash2
-    )
-  , let ptr = Ptr (SlotNo 12) 0 3 in
-    checkEncodingCBOR "pointer_address_key"
-    (Addr testPayCred (StakeRefPtr ptr))
-    ( (T $ TkListLen (2 + fromIntegral (listLen ptr)))
-       <> T (TkWord 4)
-       <> S testKeyHash1
-       <> G ptr
-    )
-  , let ptr = Ptr (SlotNo 12) 0 3 in
-    checkEncodingCBOR "pointer_address_script"
-    (Addr (ScriptHashObj testScriptHash) (StakeRefPtr ptr))
-    ( (T $ TkListLen (2 + fromIntegral (listLen ptr)))
-       <> T (TkWord 5)
-       <> S testScriptHash
-       <> G ptr
-    )
-  , checkEncodingCBOR "enterprise_address_key"
-    (Addr testPayCred StakeRefNull)
-    (T (TkListLen 2) <> T (TkWord 6) <> S testKeyHash1)
-  , checkEncodingCBOR "enterprise_address_script"
-    (Addr (ScriptHashObj testScriptHash) StakeRefNull)
-    (T (TkListLen 2) <> T (TkWord 7) <> S testScriptHash)
   , checkEncodingCBOR "txin"
     (TxIn genesisId 0 :: TxIn)
     (T (TkListLen 2) <> S (genesisId :: TxId) <> T (TkWord64 0))
   , let a = Addr testPayCred StakeRefNull in
     checkEncodingCBOR "txout"
     (TxOut a (Coin 2))
-    (T (TkListLen 3)
-      <> G a
+    (T (TkListLen 2)
+      <> S a
       <> S (Coin 2)
     )
   , case makeWitnessVKey testTxbHash testKey1 of

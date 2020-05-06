@@ -35,13 +35,14 @@ import           Byron.Spec.Ledger.Core (Relation (..))
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import           Shelley.Spec.Ledger.BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.Keys (KeyRole(..), Hash, KeyHash, VerKeyVRF)
 import           Shelley.Spec.Ledger.PParams (PParams, _keyDecayRate, _keyDeposit, _keyMinRefund,
                      _poolDecayRate, _poolDeposit, _poolMinRefund)
 import           Shelley.Spec.Ledger.Slot (Duration (..))
-import           Shelley.Spec.Ledger.TxData (Credential (..), DCert (..), DelegCert (..),
-                     Delegation (..), GenesisDelegCert (..), MIRCert (..), PoolCert (..),
-                     PoolParams (..), StakeCreds (..), StakePools (..))
+import           Shelley.Spec.Ledger.TxData (DCert (..), DelegCert (..), Delegation (..),
+                     GenesisDelegCert (..), MIRCert (..), PoolCert (..), PoolParams (..),
+                     StakeCreds (..), StakePools (..))
 import           Shelley.Spec.NonIntegral (exp')
 
 import           Cardano.Prelude (NoUnexpectedThunks (..))

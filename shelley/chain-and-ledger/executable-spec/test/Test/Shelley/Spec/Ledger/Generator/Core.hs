@@ -66,13 +66,15 @@ import           Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import           Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import           Numeric.Natural (Natural)
-import           Shelley.Spec.Ledger.Address (toAddr, toCred)
+import           Shelley.Spec.Ledger.Address (pattern Addr, toAddr, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochInfo, intervalValue,
                      slotsPrior)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, pattern Block,
                      pattern BlockHash, TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Keys (KeyRole(..), HasKeyRole(coerceKeyRole), asWitness, hashKey, vKey, signedKES, signedDSIGN)
+import           Shelley.Spec.Ledger.Credential (pattern KeyHashObj,
+                     pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr)
 import           Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import           Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -81,8 +83,6 @@ import           Shelley.Spec.Ledger.Scripts (pattern RequireAllOf, pattern Requ
 import           Shelley.Spec.Ledger.Slot (BlockNo (..), Duration (..), SlotNo (..), epochInfoFirst,
                      (*-))
 import           Shelley.Spec.Ledger.Tx (pattern TxOut, hashScript)
-import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern KeyHashObj,
-                     pattern ScriptHashObj, pattern StakeRefBase, pattern StakeRefPtr)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CoreKeyPair,
                      Credential, HashHeader, KeyHash, KeyPair, KeyPairs, MultiSig, MultiSigPairs,

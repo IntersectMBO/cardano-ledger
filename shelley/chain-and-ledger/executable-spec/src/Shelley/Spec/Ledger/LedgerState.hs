@@ -92,6 +92,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
+import           Shelley.Spec.Ledger.Address (Addr (..))
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
@@ -104,7 +106,7 @@ import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), U
 import           Shelley.Spec.Ledger.Slot (Duration (..), EpochNo (..), SlotNo (..), epochInfoEpoch,
                      epochInfoFirst, epochInfoSize, (+*), (-*))
 import           Shelley.Spec.Ledger.Tx (Tx (..), extractKeyHash)
-import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), DelegCert (..), Ix,
+import           Shelley.Spec.Ledger.TxData (DelegCert (..), Ix,
                      PoolCert (..), PoolParams (..), Ptr (..), RewardAcnt (..), TxBody (..),
                      TxId (..), TxIn (..), TxOut (..), Wdrl (..), getRwdCred, witKeyHash)
 import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txinLookup, txins,

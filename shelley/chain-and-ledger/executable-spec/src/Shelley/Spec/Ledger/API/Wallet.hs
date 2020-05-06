@@ -11,7 +11,8 @@ import qualified Data.Map as Map
 import           Data.Ratio ((%))
 import           Data.Set (Set)
 import qualified Data.Set as Set
-
+import           Shelley.Spec.Ledger.Address (Addr (..))
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.API.Validation (ShelleyState)
 import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -21,8 +22,7 @@ import           Shelley.Spec.Ledger.LedgerState (esLState, esNonMyopic, esPp, n
                      _utxoState)
 import           Shelley.Spec.Ledger.Rewards (NonMyopic (..), StakeShare (..), getTopRankedPools,
                      nonMyopicMemberRew, nonMyopicStake)
-import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), PoolParams (..),
-                     TxOut (..))
+import           Shelley.Spec.Ledger.TxData (PoolParams (..), TxOut (..))
 import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 

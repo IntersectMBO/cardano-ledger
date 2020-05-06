@@ -61,11 +61,12 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.Crypto
 import           Shelley.Spec.Ledger.MetaData (MetaData)
 
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.Scripts
 import           Shelley.Spec.Ledger.Serialization (decodeList, decodeMapContents, decodeNullMaybe,
                      decodeRecordNamed, encodeFoldable, encodeNullMaybe)
-import           Shelley.Spec.Ledger.TxData (Credential (..), TxBody (..), TxId (..), TxIn (..),
-                     TxOut (..), WitVKey (..), witKeyHash)
+import           Shelley.Spec.Ledger.TxData (TxBody (..), TxId (..), TxIn (..), TxOut (..),
+                     WitVKey (..), witKeyHash)
 
 -- |A fully formed transaction.
 data Tx crypto

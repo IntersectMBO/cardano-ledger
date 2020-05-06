@@ -65,18 +65,27 @@ transaction_input = [ transaction_id : $hash32
 
 transaction_output = [address, amount : uint]
 
-address =
- (  0, addr_keyhash, addr_keyhash ; base address
- // 1, addr_keyhash, scripthash   ; base address
- // 2, scripthash, addr_keyhash   ; base address
- // 3, scripthash, scripthash     ; base address
- // 4, addr_keyhash, pointer      ; pointer address
- // 5, scripthash, pointer        ; pointer address
- // 6, addr_keyhash               ; enterprise address
- // 7, scripthash                 ; enterprise address
- // 8, addr_keyhash               ; bootstrap address
- )
-pointer = (uint, uint, uint)
+; address = bytes
+
+; address format:
+; [ 8 bit header | payload ]
+; header:
+; bit 7: byron/shelley
+; bit 6: base/other
+; bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+; bit 4: payment cred is keyhash/scripthash
+; bits 3-0 (for shelley addr): network id
+
+; 0000: base address: keyhash28,keyhash28
+; 0001: base address: scripthash28,keyhash28
+; 0010: base address: keyhash28,scripthash28
+; 0011: base address: scripthash28,scripthash28
+; 0100: pointer address: keyhash28, 3 variable length uint
+; 0101: pointer address: scripthash28, 3 variable length uint
+; 0110: enterprise address: keyhash28
+; 0111: enterprise address: scripthash28
+; 1000: byron address
+; 1001 - 1111: future formats
 
 certificate =
   [  0, stake_credential                   ; stake registration
