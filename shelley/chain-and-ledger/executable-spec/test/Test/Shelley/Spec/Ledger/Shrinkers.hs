@@ -2,42 +2,43 @@
 
 module Test.Shelley.Spec.Ledger.Shrinkers where
 
-import           Data.Foldable (toList)
-import           Data.List (foldl')
-import           Data.Map (Map)
+import Data.Foldable (toList)
+import Data.List (foldl')
+import Data.Map (Map)
 import qualified Data.Map as M
-import           Data.Sequence (Seq)
+import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import           Data.Set (Set)
+import Data.Set (Set)
 import qualified Data.Set as S
-import           Test.QuickCheck (shrinkIntegral, shrinkList)
+import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Scripts
+import Shelley.Spec.Ledger.Slot
+import Shelley.Spec.Ledger.Tx
+import Shelley.Spec.Ledger.TxData
+import Test.QuickCheck (shrinkIntegral, shrinkList)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block)
 
-import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Scripts
-import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.Tx
-import           Shelley.Spec.Ledger.TxData
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block)
-
-shrinkBlock
-  :: Block
-  -> [Block]
+shrinkBlock ::
+  Block ->
+  [Block]
 shrinkBlock _ = []
 
-shrinkTx
-  :: forall crypto. Crypto crypto
-  => Tx crypto
-  -> [Tx crypto]
+shrinkTx ::
+  forall crypto.
+  Crypto crypto =>
+  Tx crypto ->
+  [Tx crypto]
 shrinkTx (Tx _b _ws _wm _md) =
-  [ Tx b' _ws _wm _md | b' <- shrinkTxBody _b ]
-  {- TODO @uroboros write shrinker that shrinks to valid transactions
-  [ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++
-  [ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
-  -}
+  [Tx b' _ws _wm _md | b' <- shrinkTxBody _b]
+
+{- TODO @uroboros write shrinker that shrinks to valid transactions
+[ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++
+[ Tx b ws wm' | wm' <- shrinkMap shrinkScriptHash shrinkMultiSig wm ]
+-}
 
 shrinkTxBody :: Crypto crypto => TxBody crypto -> [TxBody crypto]
 shrinkTxBody (TxBody is os cs ws tf tl tu md) =
@@ -46,15 +47,16 @@ shrinkTxBody (TxBody is os cs ws tf tl tu md) =
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md |
-    os' <- toList $ shrinkStrictSeq shrinkTxOut os ]
-
-  -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
-  -- [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
-  -- [ TxBody is os cs ws tf' tl tu | tf' <- shrinkCoin tf ] ++
-  -- [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
-  -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
-  where outBalance = outputBalance os
+  [ TxBody is os' cs ws (tf + (outBalance - outputBalance os')) tl tu md
+    | os' <- toList $ shrinkStrictSeq shrinkTxOut os
+  ]
+  where
+    -- [ TxBody is os cs' ws tf tl tu | cs' <- shrinkSeq shrinkDCert cs ] ++
+    -- [ TxBody is os cs ws' tf tl tu | ws' <- shrinkWdrl ws ] ++
+    -- [ TxBody is os cs ws tf' tl tu | tf' <- shrinkCoin tf ] ++
+    -- [ TxBody is os cs ws tf tl' tu | tl' <- shrinkSlotNo tl ] ++
+    -- [ TxBody is os cs ws tf tl tu' | tu' <- shrinkUpdate tu ]
+    outBalance = outputBalance os
 
 outputBalance :: StrictSeq (TxOut crypto) -> Coin
 outputBalance = foldl' (\v (TxOut _ c) -> v + c) (Coin 0)
@@ -104,15 +106,15 @@ shrinkSeq f = (Seq.fromList <$>) . shrinkList f . toList
 shrinkStrictSeq :: (a -> [a]) -> StrictSeq a -> [StrictSeq a]
 shrinkStrictSeq f = (StrictSeq.fromList <$>) . shrinkList f . toList
 
-shrinkMap
-  :: Ord k
-  => (k -> [k])
-  -> (v -> [v])
-  -> Map k v
-  -> [Map k v]
-shrinkMap shrinkK shrinkV
-  = (M.fromList <$>) . shrinkList shrinkPair . M.toList
- where
-  shrinkPair (x, y) =
-    [ (x', y) | x' <- shrinkK x ] ++
-    [ (x, y') | y' <- shrinkV y ]
+shrinkMap ::
+  Ord k =>
+  (k -> [k]) ->
+  (v -> [v]) ->
+  Map k v ->
+  [Map k v]
+shrinkMap shrinkK shrinkV =
+  (M.fromList <$>) . shrinkList shrinkPair . M.toList
+  where
+    shrinkPair (x, y) =
+      [(x', y) | x' <- shrinkK x]
+        ++ [(x, y') | y' <- shrinkV y]

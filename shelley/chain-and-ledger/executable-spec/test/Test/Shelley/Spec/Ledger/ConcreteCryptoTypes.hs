@@ -6,14 +6,12 @@
 
 module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes where
 
-import           Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
-import           Cardano.Crypto.Hash (ShortHash)
-import           Cardano.Crypto.KES (MockKES)
-import           Data.Map (Map)
-import           Test.Cardano.Crypto.VRF.Fake (FakeVRF)
-
+import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.Hash (ShortHash)
+import Cardano.Crypto.KES (MockKES)
+import Data.Map (Map)
 import qualified Shelley.Spec.Ledger.BlockChain as BlockChain
-import           Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Crypto
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Delegation.Certificates
 import qualified Shelley.Spec.Ledger.EpochBoundary as EpochBoundary
 import qualified Shelley.Spec.Ledger.Keys as Keys
@@ -21,7 +19,6 @@ import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import qualified Shelley.Spec.Ledger.OCert as OCert
 import qualified Shelley.Spec.Ledger.PParams as PParams
 import qualified Shelley.Spec.Ledger.Rewards as Rewards
-import qualified Shelley.Spec.Ledger.Scripts as Scripts
 import qualified Shelley.Spec.Ledger.STS.Chain as STS.Chain
 import qualified Shelley.Spec.Ledger.STS.Deleg as STS.Deleg
 import qualified Shelley.Spec.Ledger.STS.Delegs as STS.Delegs
@@ -35,9 +32,11 @@ import qualified Shelley.Spec.Ledger.STS.PoolReap as STS.PoolReap
 import qualified Shelley.Spec.Ledger.STS.Tick as STS.Tick
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS.Utxo
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS.Utxow
+import qualified Shelley.Spec.Ledger.Scripts as Scripts
 import qualified Shelley.Spec.Ledger.Tx as Tx
 import qualified Shelley.Spec.Ledger.TxData as TxData
 import qualified Shelley.Spec.Ledger.UTxO as UTxO
+import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
 data ConcreteCrypto
 
@@ -60,22 +59,28 @@ type RewardAcnt = TxData.RewardAcnt ConcreteCrypto
 type StakePools = TxData.StakePools ConcreteCrypto
 
 type KeyHash kr = Keys.KeyHash kr ConcreteCrypto
-pattern KeyHash
-  :: Keys.Hash ConcreteCrypto (VerKeyDSIGN (DSIGN ConcreteCrypto))
-  -> KeyHash kr
+
+pattern KeyHash ::
+  Keys.Hash ConcreteCrypto (VerKeyDSIGN (DSIGN ConcreteCrypto)) ->
+  KeyHash kr
 pattern KeyHash h = Keys.KeyHash h
+
 {-# COMPLETE KeyHash #-}
 
 type GenDelegs = Keys.GenDelegs ConcreteCrypto
-pattern GenDelegs
-  :: (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate))
-  -> GenDelegs
+
+pattern GenDelegs ::
+  (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate)) ->
+  GenDelegs
 pattern GenDelegs m = Keys.GenDelegs m
+
 {-# COMPLETE GenDelegs #-}
 
 type KeyPair kr = Keys.KeyPair kr ConcreteCrypto
+
 pattern KeyPair :: VKey kr -> SignKeyDSIGN -> KeyPair kr
 pattern KeyPair vk sk = Keys.KeyPair vk sk
+
 {-# COMPLETE KeyPair #-}
 
 type CoreKeyPair = Keys.KeyPair 'Keys.Genesis ConcreteCrypto
@@ -85,8 +90,10 @@ type SignedDSIGN = Keys.SignedDSIGN ConcreteCrypto
 type SignKeyDSIGN = Keys.SignKeyDSIGN ConcreteCrypto
 
 type VKey kr = Keys.VKey kr ConcreteCrypto
+
 pattern VKey :: VerKeyDSIGN (DSIGN ConcreteCrypto) -> VKey kr
 pattern VKey x = Keys.VKey x
+
 {-# COMPLETE VKey #-}
 
 type KeyPairs = LedgerState.KeyPairs ConcreteCrypto
@@ -217,7 +224,7 @@ type ProposedPPUpdates = PParams.ProposedPPUpdates ConcreteCrypto
 
 type VRFKeyHash = Keys.Hash ConcreteCrypto (Keys.VerKeyVRF ConcreteCrypto)
 
-hashKeyVRF
-  :: Keys.VerKeyVRF ConcreteCrypto
-  -> VRFKeyHash
+hashKeyVRF ::
+  Keys.VerKeyVRF ConcreteCrypto ->
+  VRFKeyHash
 hashKeyVRF = Keys.hashVerKeyVRF

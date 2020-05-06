@@ -6,31 +6,31 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Pool
-  ( POOL
-  , PoolEnv(..)
-  , PredicateFailure(..)
+  ( POOL,
+    PoolEnv (..),
+    PredicateFailure (..),
   )
 where
 
-import           Byron.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (asks)
-import           Control.State.Transition
-import           Data.Map.Strict (Map)
+import Byron.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad.Trans.Reader (asks)
+import Control.State.Transition
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.Typeable (Typeable)
-import           Data.Word (Word8)
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Delegation.Certificates
-import           Shelley.Spec.Ledger.Keys
-import           Shelley.Spec.Ledger.LedgerState
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.TxData
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Delegation.Certificates
+import Shelley.Spec.Ledger.Keys
+import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Slot
+import Shelley.Spec.Ledger.TxData
 
 data POOL crypto
 
@@ -39,7 +39,6 @@ data PoolEnv
   deriving (Show, Eq)
 
 instance STS (POOL crypto) where
-
   type State (POOL crypto) = PState crypto
 
   type Signal (POOL crypto) = DCert crypto
@@ -61,18 +60,18 @@ instance STS (POOL crypto) where
 instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
 
 instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBOR (PredicateFailure (POOL crypto))
- where
-   toCBOR = \case
-      StakePoolNotRegisteredOnKeyPOOL   -> toCBOR (0 :: Word8)
-      StakePoolRetirementWrongEpochPOOL -> toCBOR (1 :: Word8)
-      WrongCertificateTypePOOL          -> toCBOR (2 :: Word8)
+  (Typeable crypto, Crypto crypto) =>
+  ToCBOR (PredicateFailure (POOL crypto))
+  where
+  toCBOR = \case
+    StakePoolNotRegisteredOnKeyPOOL -> toCBOR (0 :: Word8)
+    StakePoolRetirementWrongEpochPOOL -> toCBOR (1 :: Word8)
+    WrongCertificateTypePOOL -> toCBOR (2 :: Word8)
 
 instance
-  (Crypto crypto)
-  => FromCBOR (PredicateFailure (POOL crypto))
- where
+  (Crypto crypto) =>
+  FromCBOR (PredicateFailure (POOL crypto))
+  where
   fromCBOR = do
     decodeWord >>= \case
       0 -> pure StakePoolNotRegisteredOnKeyPOOL

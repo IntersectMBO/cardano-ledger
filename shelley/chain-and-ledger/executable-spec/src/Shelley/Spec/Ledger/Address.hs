@@ -1,49 +1,52 @@
 {-# LANGUAGE DataKinds #-}
 
 module Shelley.Spec.Ledger.Address
-  ( mkVKeyRwdAcnt
-  , mkRwdAcnt
-  , scriptsToAddr
-  , scriptToCred
-  , toAddr
-  , toCred
-  , serialiseAddr
-  , deserialiseAddr
+  ( mkVKeyRwdAcnt,
+    mkRwdAcnt,
+    scriptsToAddr,
+    scriptToCred,
+    toAddr,
+    toCred,
+    serialiseAddr,
+    deserialiseAddr,
   )
 where
 
-import           Data.ByteString (ByteString)
-import           Cardano.Binary (serialize', decodeFull')
+import Cardano.Binary (decodeFull', serialize')
+import Data.ByteString (ByteString)
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Keys (KeyPair (..), KeyRole (..), hashKey)
+import Shelley.Spec.Ledger.Scripts
+import Shelley.Spec.Ledger.Tx (hashScript)
+import Shelley.Spec.Ledger.TxData
+  ( Addr (..),
+    Credential (..),
+    RewardAcnt (..),
+    StakeReference (..),
+  )
 
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (KeyRole (..), KeyPair(..), hashKey)
-import           Shelley.Spec.Ledger.Scripts
-import           Shelley.Spec.Ledger.Tx (hashScript)
-import           Shelley.Spec.Ledger.TxData (Addr (..), Credential (..), RewardAcnt (..),
-                     StakeReference (..))
-
-mkVKeyRwdAcnt
-  :: Crypto crypto
-  => KeyPair 'Staking crypto
-  -> RewardAcnt crypto
+mkVKeyRwdAcnt ::
+  Crypto crypto =>
+  KeyPair 'Staking crypto ->
+  RewardAcnt crypto
 mkVKeyRwdAcnt keys = RewardAcnt $ KeyHashObj (hashKey $ vKey keys)
 
-mkRwdAcnt
-  :: Credential 'Staking crypto
-  -> RewardAcnt crypto
+mkRwdAcnt ::
+  Credential 'Staking crypto ->
+  RewardAcnt crypto
 mkRwdAcnt script@(ScriptHashObj _) = RewardAcnt script
 mkRwdAcnt key@(KeyHashObj _) = RewardAcnt key
 
-toAddr
-  :: Crypto crypto
-  => (KeyPair 'Payment crypto, KeyPair 'Staking crypto)
-  -> Addr crypto
+toAddr ::
+  Crypto crypto =>
+  (KeyPair 'Payment crypto, KeyPair 'Staking crypto) ->
+  Addr crypto
 toAddr (payKey, stakeKey) = Addr (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
-toCred
-  :: Crypto crypto
-  => KeyPair kr crypto
-  -> Credential kr crypto
+toCred ::
+  Crypto crypto =>
+  KeyPair kr crypto ->
+  Credential kr crypto
 toCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Convert a given multi-sig script to a credential by hashing it and wrapping
@@ -64,7 +67,6 @@ scriptsToAddr (payScript, stakeScript) =
 -- use the final format.
 --
 -- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
---
 serialiseAddr :: Crypto crypto => Addr crypto -> ByteString
 serialiseAddr = serialize'
 
@@ -75,6 +77,5 @@ serialiseAddr = serialize'
 -- use the final format.
 --
 -- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
---
 deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
 deserialiseAddr = either (const Nothing) Just . decodeFull'

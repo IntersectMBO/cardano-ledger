@@ -8,28 +8,34 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Ppup
-  ( PPUP
-  , PPUPEnv(..)
-  , PredicateFailure(..)
+  ( PPUP,
+    PPUPEnv (..),
+    PredicateFailure (..),
   )
 where
 
-import           Byron.Spec.Ledger.Core (dom, (⊆), (⨃))
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
-                     encodeListLen, matchSize)
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (asks)
-import           Control.State.Transition
+import Byron.Spec.Ledger.Core (dom, (⊆), (⨃))
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad.Trans.Reader (asks)
+import Control.State.Transition
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
-import           Data.Typeable (Typeable)
-import           Data.Word (Word8)
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Crypto (Crypto)
-import           Shelley.Spec.Ledger.Keys
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
+import Data.Set (Set)
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys
+import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Slot
 
 data PPUP crypto
 
@@ -50,28 +56,28 @@ instance STS (PPUP crypto) where
 
   initialRules = []
 
-  transitionRules = [ ppupTransitionNonEmpty ]
+  transitionRules = [ppupTransitionNonEmpty]
 
 instance NoUnexpectedThunks (PredicateFailure (PPUP crypto))
 
 instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBOR (PredicateFailure (PPUP crypto))
- where
-   toCBOR = \case
-     (NonGenesisUpdatePPUP a b) ->
-       encodeListLen 3
-       <> toCBOR (0 :: Word8)
-       <> toCBOR a
-       <> toCBOR b
-     PPUpdateTooLatePPUP    -> encodeListLen 1 <> toCBOR (1 :: Word8)
-     (PPUpdateWrongEpoch e) -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR e
-     PVCannotFollowPPUP     -> encodeListLen 1 <> toCBOR (3 :: Word8)
+  (Typeable crypto, Crypto crypto) =>
+  ToCBOR (PredicateFailure (PPUP crypto))
+  where
+  toCBOR = \case
+    (NonGenesisUpdatePPUP a b) ->
+      encodeListLen 3
+        <> toCBOR (0 :: Word8)
+        <> toCBOR a
+        <> toCBOR b
+    PPUpdateTooLatePPUP -> encodeListLen 1 <> toCBOR (1 :: Word8)
+    (PPUpdateWrongEpoch e) -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR e
+    PVCannotFollowPPUP -> encodeListLen 1 <> toCBOR (3 :: Word8)
 
 instance
-  (Crypto crypto)
-  => FromCBOR (PredicateFailure (PPUP crypto))
- where
+  (Crypto crypto) =>
+  FromCBOR (PredicateFailure (PPUP crypto))
+  where
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
@@ -90,18 +96,17 @@ instance
 
 pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
 pvCanFollow _ SNothing = True
-pvCanFollow (ProtVer m n) (SJust (ProtVer m' n'))
-  = (m+1, 0) == (m', n') || (m, n+1) == (m', n')
+pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
+  (m + 1, 0) == (m', n') || (m, n + 1) == (m', n')
 
 ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
-  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), ProposedPPUpdates pupS, up)
-    <- judgmentContext
+  TRC (PPUPEnv slot pp (GenDelegs _genDelegs), ProposedPPUpdates pupS, up) <-
+    judgmentContext
 
   case up of
     Nothing -> pure (ProposedPPUpdates pupS)
     Just (Update (ProposedPPUpdates pup) te) -> do
-
       (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
 
       all ((pvCanFollow (_protocolVersion pp)) . _protocolVersion) pup ?! PVCannotFollowPPUP
@@ -118,4 +123,4 @@ ppupTransitionNonEmpty = do
         epochInfoEpoch ei slot
       currentEpoch == te ?! PPUpdateWrongEpoch te
 
-      pure $ ProposedPPUpdates (pupS ⨃  Map.toList pup)
+      pure $ ProposedPPUpdates (pupS ⨃ Map.toList pup)

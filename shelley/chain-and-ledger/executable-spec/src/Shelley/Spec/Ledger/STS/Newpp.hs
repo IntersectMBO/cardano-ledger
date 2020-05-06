@@ -6,27 +6,37 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Newpp
-  ( NEWPP
-  , NewppState (..)
-  , NewppEnv (..)
-  , PredicateFailure(..)
+  ( NEWPP,
+    NewppState (..),
+    NewppEnv (..),
+    PredicateFailure (..),
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (asks)
-import           Control.State.Transition
-import           Data.List (foldl')
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad.Trans.Reader (asks)
+import Control.State.Transition
+import Data.List (foldl')
 import qualified Data.Map.Strict as Map
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.EpochBoundary
-import           Shelley.Spec.Ledger.LedgerState (AccountState, DState (..), PState (..), UTxOState,
-                     pattern UTxOState, clearPpup, emptyAccount, _deposited, _irwd, _reserves)
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.UTxO
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.EpochBoundary
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState,
+    DState (..),
+    PState (..),
+    UTxOState,
+    _deposited,
+    _irwd,
+    _reserves,
+    clearPpup,
+    emptyAccount,
+    pattern UTxOState,
+  )
+import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Slot
+import Shelley.Spec.Ledger.UTxO
 
 data NEWPP crypto
 
@@ -51,10 +61,12 @@ instance STS (NEWPP crypto) where
 instance NoUnexpectedThunks (PredicateFailure (NEWPP crypto))
 
 initialNewPp :: InitialRule (NEWPP crypto)
-initialNewPp = pure $ NewppState
-  (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)
-  emptyAccount
-  emptyPParams
+initialNewPp =
+  pure $
+    NewppState
+      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)
+      emptyAccount
+      emptyPParams
 
 newPpTransition :: TransitionRule (NEWPP crypto)
 newPpTransition = do
@@ -74,12 +86,10 @@ newPpTransition = do
       (Coin oblgCurr) == (_deposited utxoSt) ?! UnexpectedDepositPot
 
       if reserves + diff >= requiredInstantaneousRewards
-         && (_maxTxSize ppNew' + _maxBHSize ppNew') <  _maxBBSize ppNew'
+        && (_maxTxSize ppNew' + _maxBHSize ppNew') < _maxBBSize ppNew'
         then
-          let utxoSt' = utxoSt { _deposited = Coin oblgNew }
-          in
-            let acnt' = acnt { _reserves = Coin $ reserves + diff }
-            in pure $ NewppState (clearPpup utxoSt') acnt' ppNew'
-        else
-          pure $ NewppState (clearPpup utxoSt) acnt pp
+          let utxoSt' = utxoSt {_deposited = Coin oblgNew}
+           in let acnt' = acnt {_reserves = Coin $ reserves + diff}
+               in pure $ NewppState (clearPpup utxoSt') acnt' ppNew'
+        else pure $ NewppState (clearPpup utxoSt) acnt pp
     Nothing -> pure $ NewppState (clearPpup utxoSt) acnt pp

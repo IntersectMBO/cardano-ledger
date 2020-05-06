@@ -11,22 +11,23 @@
 -- | Fake implementation of VRF, where the random value isn't random but given
 -- by the creator.
 module Test.Cardano.Crypto.VRF.Fake
-  ( FakeVRF
-  , VerKeyVRF (..)
-  , SignKeyVRF (..)
-  , WithResult(..)
-  ) where
+  ( FakeVRF,
+    VerKeyVRF (..),
+    SignKeyVRF (..),
+    WithResult (..),
+  )
+where
 
-import Shelley.Spec.Ledger.BaseTypes (Seed)
-import Cardano.Binary (FromCBOR(..), ToCBOR (..), encodeListLen, enforceSize)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util (mockNonNegIntR)
 import Cardano.Crypto.VRF.Class
-import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm(..))
+import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm (..))
 import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.BaseTypes (Seed)
 
 data FakeVRF
 
@@ -53,7 +54,6 @@ instance SneakilyContainResult Seed where
   unsneakilyExtractPayload = id
 
 instance VRFAlgorithm FakeVRF where
-
   algorithmNameVRF _ = "fakeVRF"
   seedSizeVRF _ = 8
 
@@ -65,12 +65,13 @@ instance VRFAlgorithm FakeVRF where
     deriving (Show, Eq, Ord, Generic, ToCBOR, FromCBOR, NoUnexpectedThunks)
   data CertVRF FakeVRF = CertFakeVRF Int Natural
     deriving (Show, Eq, Ord, Generic)
-    deriving NoUnexpectedThunks via UseIsNormalForm (CertVRF FakeVRF)
+    deriving (NoUnexpectedThunks) via UseIsNormalForm (CertVRF FakeVRF)
 
   maxVRF _ = 2 ^ (8 * byteCount (Proxy :: Proxy MD5)) - 1
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed mockNonNegIntR
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
   evalVRF () a sk = return $ evalVRF' a sk
+
   -- This implementation of `verifyVRF` checks the real result, which is hidden
   -- in the certificate, but ignores the produced value, which is set to be the
   -- result of the sneaking.
@@ -87,7 +88,7 @@ evalVRF' a (SignKeyFakeVRF n) =
   let y = sneakilyExtractResult a
       p = unsneakilyExtractPayload a
       realValue = fromHash . hashWithSerialiser @MD5 id $ toCBOR p
-  in (y, CertFakeVRF n realValue)
+   in (y, CertFakeVRF n realValue)
 
 instance FromCBOR (CertVRF FakeVRF) where
   fromCBOR = do

@@ -7,44 +7,57 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Shelley.Spec.Ledger.OCert
-  ( OCert(..)
-  , OCertEnv(..)
-  , currentIssueNo
-  , KESPeriod(..)
-  , slotsPerKESPeriod
-  , kesPeriod)
+  ( OCert (..),
+    OCertEnv (..),
+    currentIssueNo,
+    KESPeriod (..),
+    slotsPerKESPeriod,
+    kesPeriod,
+  )
 where
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR, toCBOR)
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (asks)
-import           Data.Functor ((<&>))
-import           Data.Map.Strict (Map)
+import Cardano.Binary (FromCBOR (..), ToCBOR, toCBOR)
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad.Trans.Reader (asks)
+import Data.Functor ((<&>))
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
+import Data.Set (Set)
 import qualified Data.Set as Set
-import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
-
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignedDSIGN, VerKeyKES,
-                     coerceKeyRole, decodeSignedDSIGN, decodeVerKeyKES, encodeSignedDSIGN,
-                     encodeVerKeyKES)
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), FromCBORGroup (..),
-                     ToCBORGroup (..))
-import           Shelley.Spec.Ledger.Slot (SlotNo (..))
+import GHC.Generics (Generic)
+import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Keys
+  ( KeyHash,
+    KeyRole (..),
+    SignedDSIGN,
+    VerKeyKES,
+    coerceKeyRole,
+    decodeSignedDSIGN,
+    decodeVerKeyKES,
+    encodeSignedDSIGN,
+    encodeVerKeyKES,
+  )
+import Shelley.Spec.Ledger.Serialization
+  ( CBORGroup (..),
+    FromCBORGroup (..),
+    ToCBORGroup (..),
+  )
+import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 data OCertEnv crypto = OCertEnv
-  { ocertEnvStPools :: Set (KeyHash 'StakePool crypto)
-  , ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate crypto)
-  } deriving (Show, Eq)
+  { ocertEnvStPools :: Set (KeyHash 'StakePool crypto),
+    ocertEnvGenDelegs :: Set (KeyHash 'GenesisDelegate crypto)
+  }
+  deriving (Show, Eq)
 
-currentIssueNo
-  :: OCertEnv crypto
-  -> (Map (KeyHash 'BlockIssuer crypto) Natural)
-  -> KeyHash 'BlockIssuer crypto -- ^ Pool hash
-  -> Maybe Natural
+currentIssueNo ::
+  OCertEnv crypto ->
+  (Map (KeyHash 'BlockIssuer crypto) Natural) ->
+  -- | Pool hash
+  KeyHash 'BlockIssuer crypto ->
+  Maybe Natural
 currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Map.member hk cs = Map.lookup hk cs
   | Set.member (coerceKeyRole hk) stPools = Just 0
@@ -56,35 +69,38 @@ newtype KESPeriod = KESPeriod Natural
 
 data OCert crypto = OCert
   { -- | The operational hot key
-    ocertVkHot     :: !(VerKeyKES crypto)
+    ocertVkHot :: !(VerKeyKES crypto),
     -- | counter
-  , ocertN         :: !Natural
+    ocertN :: !Natural,
     -- | Start of key evolving signature period
-  , ocertKESPeriod :: !KESPeriod
+    ocertKESPeriod :: !KESPeriod,
     -- | Signature of block operational certificate content
-  , ocertSigma     :: !(SignedDSIGN crypto (VerKeyKES crypto, Natural, KESPeriod))
-  } deriving (Generic)
-    deriving ToCBOR via (CBORGroup (OCert crypto))
+    ocertSigma :: !(SignedDSIGN crypto (VerKeyKES crypto, Natural, KESPeriod))
+  }
+  deriving (Generic)
+  deriving (ToCBOR) via (CBORGroup (OCert crypto))
 
 deriving instance Crypto crypto => Eq (OCert crypto)
+
 deriving instance Crypto crypto => Show (OCert crypto)
+
 instance Crypto crypto => NoUnexpectedThunks (OCert crypto)
 
 instance
-  (Crypto crypto)
-  => ToCBORGroup (OCert crypto)
- where
+  (Crypto crypto) =>
+  ToCBORGroup (OCert crypto)
+  where
   toCBORGroup ocert =
-         encodeVerKeyKES (ocertVkHot ocert)
+    encodeVerKeyKES (ocertVkHot ocert)
       <> toCBOR (ocertN ocert)
       <> toCBOR (ocertKESPeriod ocert)
       <> encodeSignedDSIGN (ocertSigma ocert)
   listLen _ = 4
 
 instance
-  (Crypto crypto)
-  => FromCBORGroup (OCert crypto)
- where
+  (Crypto crypto) =>
+  FromCBORGroup (OCert crypto)
+  where
   fromCBORGroup =
     OCert
       <$> decodeVerKeyKES

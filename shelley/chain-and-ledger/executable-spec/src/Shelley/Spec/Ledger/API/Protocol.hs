@@ -20,25 +20,32 @@ module Shelley.Spec.Ledger.API.Protocol
   )
 where
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Arrow (left, right)
-import           Control.Monad.Except
-import           Control.Monad.Trans.Reader (runReader)
-import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-import           Data.Map.Strict (Map)
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.API.Validation
-import           Shelley.Spec.Ledger.BaseTypes (Globals)
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import           Shelley.Spec.Ledger.Keys (GenDelegs)
-import           Shelley.Spec.Ledger.LedgerState (EpochState (..), NewEpochState (..), OBftSlot,
-                     getGKeys, _delegationState, _dstate, _genDelegs)
-import           Shelley.Spec.Ledger.PParams (PParams)
-import           Shelley.Spec.Ledger.Slot (SlotNo)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Arrow (left, right)
+import Control.Monad.Except
+import Control.Monad.Trans.Reader (runReader)
+import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Data.Map.Strict (Map)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.API.Validation
+import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
+import Shelley.Spec.Ledger.Keys (GenDelegs)
+import Shelley.Spec.Ledger.LedgerState
+  ( EpochState (..),
+    NewEpochState (..),
+    OBftSlot,
+    _delegationState,
+    _dstate,
+    _genDelegs,
+    getGKeys,
+  )
+import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
-import           Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
+import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
+import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
@@ -158,7 +165,6 @@ newtype FutureLedgerViewError crypto
 --   Given a slot within the future stability window from our current slot (the
 --   slot corresponding to the passed-in 'ShelleyState'), return a 'LedgerView'
 --   appropriate to that slot.
---
 futureLedgerView ::
   forall crypto m.
   ( Crypto crypto,

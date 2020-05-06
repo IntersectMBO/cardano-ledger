@@ -5,35 +5,43 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.PoolReap
-  ( POOLREAP
-  , PoolreapState(..)
-  , PredicateFailure
+  ( POOLREAP,
+    PoolreapState (..),
+    PredicateFailure,
   )
 where
 
-import           Byron.Spec.Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (asks)
-import           Control.State.Transition
+import Byron.Spec.Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad.Trans.Reader (asks)
+import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
-import           Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
-import           Shelley.Spec.Ledger.EpochBoundary (poolRefunds)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DState (..), PState (..),
-                     UTxOState (..), emptyAccount, emptyDState, emptyPState, emptyUTxOState)
-import           Shelley.Spec.Ledger.PParams (PParams)
-import           Shelley.Spec.Ledger.Slot (EpochNo (..), epochInfoFirst)
-import           Shelley.Spec.Ledger.TxData (_poolRAcnt)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
+import Shelley.Spec.Ledger.EpochBoundary (poolRefunds)
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState (..),
+    DState (..),
+    PState (..),
+    UTxOState (..),
+    emptyAccount,
+    emptyDState,
+    emptyPState,
+    emptyUTxOState,
+  )
+import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.Slot (EpochNo (..), epochInfoFirst)
+import Shelley.Spec.Ledger.TxData (_poolRAcnt)
 
 data POOLREAP crypto
 
 data PoolreapState crypto = PoolreapState
-  { prUTxOSt :: UTxOState crypto
-  , prAcnt   :: AccountState
-  , prDState :: DState crypto
-  , prPState :: PState crypto
+  { prUTxOSt :: UTxOState crypto,
+    prAcnt :: AccountState,
+    prDState :: DState crypto,
+    prPState :: PState crypto
   }
   deriving (Show, Eq)
 
@@ -61,16 +69,20 @@ poolReapTransition = do
       pr = poolRefunds pp (retired ◁ stpools) firstSlot
       rewardAcnts = Map.map _poolRAcnt $ retired ◁ (_pParams ps)
       rewardAcnts' = Map.fromList . Map.elems $ Map.intersectionWith (,) rewardAcnts pr
-      (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈  dom (_rewards ds)) rewardAcnts'
+      (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈ dom (_rewards ds)) rewardAcnts'
       refunded = sum $ Map.elems refunds
       unclaimed = sum $ Map.elems mRefunds
 
-  pure $ PoolreapState
-    us { _deposited = _deposited us - (unclaimed + refunded)}
-    a { _treasury = _treasury a + unclaimed }
-    ds { _rewards = _rewards ds ∪+ refunds
-       , _delegations = _delegations ds ⋫ retired }
-    ps { _stPools = StakePools $ retired ⋪ stpools
-       , _pParams = retired ⋪ _pParams ps
-       , _retiring = retired ⋪ _retiring ps
-       }
+  pure $
+    PoolreapState
+      us {_deposited = _deposited us - (unclaimed + refunded)}
+      a {_treasury = _treasury a + unclaimed}
+      ds
+        { _rewards = _rewards ds ∪+ refunds,
+          _delegations = _delegations ds ⋫ retired
+        }
+      ps
+        { _stPools = StakePools $ retired ⋪ stpools,
+          _pParams = retired ⋪ _pParams ps,
+          _retiring = retired ⋪ _retiring ps
+        }

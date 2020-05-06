@@ -17,22 +17,22 @@ module Shelley.Spec.Ledger.API.Mempool
   )
 where
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import           Shelley.Spec.Ledger.API.Validation
-import           Shelley.Spec.Ledger.Crypto
-import           Control.Arrow (left)
-import           Control.Monad.Except
-import           Control.Monad.Trans.Reader (runReader)
-import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
-import           Data.Sequence (Seq)
-import           Data.Typeable (Typeable)
-import           Shelley.Spec.Ledger.BaseTypes (Globals)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Control.Arrow (left)
+import Control.Monad.Except
+import Control.Monad.Trans.Reader (runReader)
+import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Data.Sequence (Seq)
+import Data.Typeable (Typeable)
+import Shelley.Spec.Ledger.API.Validation
+import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
-import           Shelley.Spec.Ledger.Keys
-import           Shelley.Spec.Ledger.Slot (SlotNo)
-import           Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Ledgers
-import           Shelley.Spec.Ledger.Tx (Tx)
+import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Tx (Tx)
 import qualified Shelley.Spec.Ledger.Tx as Tx
 
 type MempoolEnv = Ledgers.LedgersEnv
@@ -82,17 +82,16 @@ data ApplyTxError crypto = ApplyTxError [PredicateFailure (LEDGERS crypto)]
   deriving (Eq, Show)
 
 instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBOR (ApplyTxError crypto)
- where
-   toCBOR (ApplyTxError es) = toCBOR es
+  (Typeable crypto, Crypto crypto) =>
+  ToCBOR (ApplyTxError crypto)
+  where
+  toCBOR (ApplyTxError es) = toCBOR es
 
 instance
-  (Crypto crypto)
-  => FromCBOR (ApplyTxError crypto)
- where
+  (Crypto crypto) =>
+  FromCBOR (ApplyTxError crypto)
+  where
   fromCBOR = ApplyTxError <$> fromCBOR
-
 
 applyTxs ::
   forall crypto m.

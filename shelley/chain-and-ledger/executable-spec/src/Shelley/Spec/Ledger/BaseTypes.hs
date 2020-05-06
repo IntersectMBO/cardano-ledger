@@ -8,82 +8,90 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Shelley.Spec.Ledger.BaseTypes
-  ( FixedPoint
-  , (==>)
-  , (⭒)
-  , Nonce(..)
-  , Seed(..)
-  , UnitInterval(..)
-  , fpEpsilon
-  , fpPrecision
-  , interval0
-  , interval1
-  , intervalValue
-  , invalidKey
-  , mkNonce
-  , mkUnitInterval
-  , truncateUnitInterval
-  , StrictMaybe (..)
-  , strictMaybeToMaybe
-  , maybeToStrictMaybe
-  , fromSMaybe
-  , Url
-  , urlToText
-  , textToUrl
-  , DnsName
-  , dnsToText
-  , textToDns
-  , Port
-  , portToWord16
-  , ActiveSlotCoeff
-  , mkActiveSlotCoeff
-  , activeSlotVal
-  , activeSlotLog
+  ( FixedPoint,
+    (==>),
+    (⭒),
+    Nonce (..),
+    Seed (..),
+    UnitInterval (..),
+    fpEpsilon,
+    fpPrecision,
+    interval0,
+    interval1,
+    intervalValue,
+    invalidKey,
+    mkNonce,
+    mkUnitInterval,
+    truncateUnitInterval,
+    StrictMaybe (..),
+    strictMaybeToMaybe,
+    maybeToStrictMaybe,
+    fromSMaybe,
+    Url,
+    urlToText,
+    textToUrl,
+    DnsName,
+    dnsToText,
+    textToDns,
+    Port,
+    portToWord16,
+    ActiveSlotCoeff,
+    mkActiveSlotCoeff,
+    activeSlotVal,
+    activeSlotLog,
+
     -- * STS Base
-  , Globals (..)
-  , ShelleyBase
-  ) where
+    Globals (..),
+    ShelleyBase,
+  )
+where
 
-
-import           Cardano.Binary (Decoder, DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR),
-                     decodeListLen, decodeWord, encodeListLen, matchSize)
-import           Cardano.Crypto.Hash
-import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
-import           Cardano.Slotting.EpochInfo
-import           Control.Monad.Trans.Reader (ReaderT)
+import Cardano.Binary
+  ( Decoder,
+    DecoderError (..),
+    FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+    decodeListLen,
+    decodeWord,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Crypto.Hash
+import Cardano.Prelude (NoUnexpectedThunks (..), cborError)
+import Cardano.Slotting.EpochInfo
+import Control.Monad.Trans.Reader (ReaderT)
 import qualified Data.ByteString as BS
-import           Data.Coerce (coerce)
+import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
-import           Data.Functor.Identity
-import           Data.Ratio (denominator, numerator, (%))
-import           Data.Text (Text)
+import Data.Functor.Identity
+import Data.Ratio ((%), denominator, numerator)
+import Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8)
-import           Data.Word (Word16, Word64, Word8)
-import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
-
-import           Shelley.Spec.Ledger.Serialization (rationalFromCBOR, rationalToCBOR)
-import           Shelley.Spec.NonIntegral (ln')
+import Data.Text.Encoding (encodeUtf8)
+import Data.Word (Word16, Word64, Word8)
+import GHC.Generics (Generic)
+import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.Serialization (rationalFromCBOR, rationalToCBOR)
+import Shelley.Spec.NonIntegral (ln')
 
 data E34
 
 instance FP.HasResolution E34 where
-  resolution _ = (10::Integer)^(34::Integer)
+  resolution _ = (10 :: Integer) ^ (34 :: Integer)
 
 type Digits34 = FP.Fixed E34
 
 type FixedPoint = Digits34
 
 fpPrecision :: FixedPoint
-fpPrecision = (10::FixedPoint)^(34::Integer)
+fpPrecision = (10 :: FixedPoint) ^ (34 :: Integer)
 
 fpEpsilon :: FixedPoint
-fpEpsilon = (10::FixedPoint)^(17::Integer) / fpPrecision
+fpEpsilon = (10 :: FixedPoint) ^ (17 :: Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
-newtype UnitInterval = UnsafeUnitInterval Rational   -- TODO: Fixed precision
-    deriving (Show, Ord, Eq, NoUnexpectedThunks)
+newtype UnitInterval = UnsafeUnitInterval Rational -- TODO: Fixed precision
+  deriving (Show, Ord, Eq, NoUnexpectedThunks)
 
 instance ToCBOR UnitInterval where
   toCBOR (UnsafeUnitInterval u) = rationalToCBOR u
@@ -118,7 +126,8 @@ interval1 = UnsafeUnitInterval 1
 -- | Evolving nonce type.
 data Nonce
   = Nonce !(Hash SHA256 Nonce)
-  | NeutralNonce -- ^ Identity element
+  | -- | Identity element
+    NeutralNonce
   deriving (Eq, Generic, Ord, Show)
 
 instance NoUnexpectedThunks Nonce
@@ -161,6 +170,7 @@ newtype Seed = Seed (Hash SHA256 Seed)
 
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
+
 infix 1 ==>
 
 -- | Strict 'Maybe'.
@@ -174,29 +184,29 @@ data StrictMaybe a
 instance NoUnexpectedThunks a => NoUnexpectedThunks (StrictMaybe a)
 
 instance Functor StrictMaybe where
-  fmap _ SNothing  = SNothing
+  fmap _ SNothing = SNothing
   fmap f (SJust a) = SJust (f a)
 
 instance Applicative StrictMaybe where
   pure = SJust
 
-  SJust f  <*> m   = fmap f m
-  SNothing <*> _m  = SNothing
+  SJust f <*> m = fmap f m
+  SNothing <*> _m = SNothing
 
-  SJust _m1 *> m2  = m2
-  SNothing  *> _m2 = SNothing
+  SJust _m1 *> m2 = m2
+  SNothing *> _m2 = SNothing
 
 instance Monad StrictMaybe where
-    SJust x >>= k   = k x
-    SNothing  >>= _ = SNothing
+  SJust x >>= k = k x
+  SNothing >>= _ = SNothing
 
-    (>>) = (*>)
+  (>>) = (*>)
 
-    return = SJust
-    fail _ = SNothing
+  return = SJust
+  fail _ = SNothing
 
 instance ToCBOR a => ToCBOR (StrictMaybe a) where
-  toCBOR SNothing  = encodeListLen 0
+  toCBOR SNothing = encodeListLen 0
   toCBOR (SJust x) = encodeListLen 1 <> toCBOR x
 
 instance FromCBOR a => FromCBOR (StrictMaybe a) where
@@ -208,11 +218,11 @@ instance FromCBOR a => FromCBOR (StrictMaybe a) where
       _ -> fail "unknown tag"
 
 strictMaybeToMaybe :: StrictMaybe a -> Maybe a
-strictMaybeToMaybe SNothing  = Nothing
+strictMaybeToMaybe SNothing = Nothing
 strictMaybeToMaybe (SJust x) = Just x
 
 maybeToStrictMaybe :: Maybe a -> StrictMaybe a
-maybeToStrictMaybe Nothing  = SNothing
+maybeToStrictMaybe Nothing = SNothing
 maybeToStrictMaybe (Just x) = SJust x
 
 fromSMaybe :: a -> StrictMaybe a -> a
@@ -240,27 +250,25 @@ text64FromCBOR = do
 -- Types used in the Stake Pool Relays
 --
 
-newtype Url = Url { urlToText :: Text }
+newtype Url = Url {urlToText :: Text}
   deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
 
-instance FromCBOR Url
- where
+instance FromCBOR Url where
   fromCBOR = Url <$> text64FromCBOR
 
-newtype DnsName = DnsName { dnsToText :: Text }
+newtype DnsName = DnsName {dnsToText :: Text}
   deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t
 
-instance FromCBOR DnsName
- where
+instance FromCBOR DnsName where
   fromCBOR = DnsName <$> text64FromCBOR
 
-newtype Port = Port { portToWord16 :: Word16 }
+newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Num, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------
@@ -268,40 +276,48 @@ newtype Port = Port { portToWord16 :: Word16 }
 -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
 --------------------------------------------------------------------------------
 
-data ActiveSlotCoeff =
-  ActiveSlotCoeff
-  { unActiveSlotVal :: !UnitInterval
-  , unActiveSlotLog :: !Integer  -- TODO mgudemann make this FixedPoint,
-                                 -- currently a problem because of
-                                 -- NoUnexpectedThunks instance for FixedPoint
-  } deriving (Eq, Ord, Show, Generic)
+data ActiveSlotCoeff = ActiveSlotCoeff
+  { unActiveSlotVal :: !UnitInterval,
+    unActiveSlotLog :: !Integer -- TODO mgudemann make this FixedPoint,
+      -- currently a problem because of
+      -- NoUnexpectedThunks instance for FixedPoint
+  }
+  deriving (Eq, Ord, Show, Generic)
 
 instance NoUnexpectedThunks ActiveSlotCoeff
 
-instance FromCBOR ActiveSlotCoeff
- where
-   fromCBOR = do
-     v <- fromCBOR
-     pure $ mkActiveSlotCoeff v
+instance FromCBOR ActiveSlotCoeff where
+  fromCBOR = do
+    v <- fromCBOR
+    pure $ mkActiveSlotCoeff v
 
-instance ToCBOR ActiveSlotCoeff
- where
-   toCBOR (ActiveSlotCoeff { unActiveSlotVal = slotVal
-                           , unActiveSlotLog = _logVal}) =
-     toCBOR slotVal
+instance ToCBOR ActiveSlotCoeff where
+  toCBOR
+    ( ActiveSlotCoeff
+        { unActiveSlotVal = slotVal,
+          unActiveSlotLog = _logVal
+        }
+      ) =
+      toCBOR slotVal
 
 mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
 mkActiveSlotCoeff v =
-  ActiveSlotCoeff { unActiveSlotVal = v
-                  , unActiveSlotLog =
-                    if (intervalValue v) == 1
-                      -- If the active slot coefficient is equal to one,
-                      -- then nearly every stake pool can produce a block every slot.
-                      -- In this degenerate case, where ln (1-f) is not defined,
-                      -- we set the unActiveSlotLog to zero.
-                      then 0
-                      else floor (fpPrecision * (
-                        ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v))) }
+  ActiveSlotCoeff
+    { unActiveSlotVal = v,
+      unActiveSlotLog =
+        if (intervalValue v) == 1
+          then-- If the active slot coefficient is equal to one,
+          -- then nearly every stake pool can produce a block every slot.
+          -- In this degenerate case, where ln (1-f) is not defined,
+          -- we set the unActiveSlotLog to zero.
+            0
+          else
+            floor
+              ( fpPrecision
+                  * ( ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v)
+                    )
+              )
+    }
 
 activeSlotVal :: ActiveSlotCoeff -> UnitInterval
 activeSlotVal = unActiveSlotVal
@@ -314,32 +330,33 @@ activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 --------------------------------------------------------------------------------
 
 data Globals = Globals
-  { epochInfo :: !(EpochInfo Identity)
-  , slotsPerKESPeriod :: !Word64
+  { epochInfo :: !(EpochInfo Identity),
+    slotsPerKESPeriod :: !Word64,
     -- | Number of slots before the end of the epoch at which we stop updating
     --   the candidate nonce for the next epoch.
     --
     --   This value is also used in a number of other places; for example,
     --   protocol updates must be submitted at least this many slots before an
     --   epoch boundary.
-  , slotsPrior :: !Word64
+    slotsPrior :: !Word64,
     -- | Number of slots after the beginning of an epoch when we may begin to
     --   distribute rewards.
-  , startRewards :: !Word64
+    startRewards :: !Word64,
     -- | Maximum number of blocks we are allowed to roll back
-  , securityParameter :: !Word64
+    securityParameter :: !Word64,
     -- | Maximum number of KES iterations
-  , maxKESEvo :: !Word64
+    maxKESEvo :: !Word64,
     -- | Quorum for update system votes and MIR certificates
-  , quorum :: !Word64
+    quorum :: !Word64,
     -- | All blocks invalid after this protocol version
-  , maxMajorPV :: !Natural
+    maxMajorPV :: !Natural,
     -- | Maximum number of lovelace in the system
-  , maxLovelaceSupply :: !Word64
+    maxLovelaceSupply :: !Word64,
     -- | Active Slot Coefficient, named f in
     -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
-  , activeSlotCoeff :: !ActiveSlotCoeff
-  } deriving (Generic)
+    activeSlotCoeff :: !ActiveSlotCoeff
+  }
+  deriving (Generic)
 
 instance NoUnexpectedThunks Globals
 

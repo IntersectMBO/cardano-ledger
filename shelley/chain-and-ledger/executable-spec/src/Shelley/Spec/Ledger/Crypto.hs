@@ -21,8 +21,8 @@ class
     ContextVRF (VRF c) ~ (),
     Typeable c
   ) =>
-  Crypto c where
-
+  Crypto c
+  where
   type HASH c :: Type
 
   type DSIGN c :: Type
