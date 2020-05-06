@@ -26,7 +26,7 @@ import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import           Shelley.Spec.Ledger.Coin (Coin)
 import           Shelley.Spec.Ledger.Crypto (Crypto)
-import           Shelley.Spec.Ledger.Keys (DSignable)
+import           Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import           Shelley.Spec.Ledger.LedgerState (LedgerState (..), emptyLedgerState,
                      _delegationState, _utxoState)
 import           Shelley.Spec.Ledger.PParams (PParams)
@@ -45,7 +45,7 @@ data LedgersEnv
 
 instance
   ( Crypto crypto
-  , DSignable crypto (TxBody crypto)
+  , DSignable crypto (Hash crypto (TxBody crypto))
   )
   => STS (LEDGERS crypto)
  where
@@ -77,7 +77,7 @@ instance
 ledgersTransition
   :: forall crypto
    . ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
   => TransitionRule (LEDGERS crypto)
 ledgersTransition = do
@@ -96,7 +96,7 @@ ledgersTransition = do
 
 instance
   ( Crypto crypto
-  , DSignable crypto (TxBody crypto)
+  , DSignable crypto (Hash crypto (TxBody crypto))
   )
   => Embed (LEDGER crypto) (LEDGERS crypto)
  where

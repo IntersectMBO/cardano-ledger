@@ -660,8 +660,9 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \fun{validateScript}~\var{validator}~\var{tx}\\~\\
       \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{tx})
       \\~\\
+      \var{txbodyHash}\leteq\fun{hash}~(\txbody{tx}) \\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
-      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
+      \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
       \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq witsKeyHashes
       \\~\\
       genSig \leteq

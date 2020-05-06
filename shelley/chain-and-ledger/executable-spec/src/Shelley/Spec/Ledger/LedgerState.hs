@@ -78,6 +78,7 @@ module Shelley.Spec.Ledger.LedgerState
 
 import           Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (TypeNull), decodeNull,
                      encodeListLen, encodeNull, enforceSize, peekTokenType, serialize)
+import           Cardano.Crypto.Hash (hashWithSerialiser)
 import           Cardano.Prelude (NoUnexpectedThunks (..))
 import           Control.Monad.Trans.Reader (ReaderT (..), asks)
 import qualified Data.ByteString.Lazy as BSL (length)
@@ -95,7 +96,7 @@ import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
                      Stake (..), aggregateOuts, baseStake, emptySnapShots, ptrStake, rewardStake)
-import           Shelley.Spec.Ledger.Keys (DSignable, GenDelegs (..), KeyHash, KeyPair,
+import           Shelley.Spec.Ledger.Keys (DSignable, GenDelegs (..), Hash, KeyHash, KeyPair,
                      KeyRole (..), asWitness, hash)
 import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), Update (..),
                      emptyPPPUpdates, emptyPParams, _d, _keyDecayRate, _keyDeposit, _keyMinRefund,
@@ -783,12 +784,12 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
 -- transaction are correct.
 verifiedWits
   :: ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
   => Tx crypto
   -> Validity
-verifiedWits (Tx tx wits _ _) =
-  if all (verifyWitVKey tx) wits
+verifiedWits (Tx txbody wits _ _) =
+  if all (verifyWitVKey $ hashWithSerialiser toCBOR txbody) wits
     then Valid
     else Invalid [InvalidWitness]
 
@@ -831,7 +832,7 @@ validRuleUTXO accs stakePools stakeKeys pc slot tx u =
 
 validRuleUTXOW
   :: ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
   => Tx crypto
   -> GenDelegs crypto
@@ -853,7 +854,7 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs _genDelegs) =
 
 validTx
   :: ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
   => Tx crypto
   -> GenDelegs crypto

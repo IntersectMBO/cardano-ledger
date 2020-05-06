@@ -32,8 +32,8 @@ import           Shelley.Spec.Ledger.Serialization (ipv4FromBytes, ipv4ToBytes, 
 import           Shelley.Spec.Ledger.Slot
 import           Shelley.Spec.Ledger.Tx (pattern TxIn, pattern TxOut, _body, _certs, _inputs,
                      _outputs, _witnessVKeySet)
-import           Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey, totalDeposits, txid, txins,
-                     txouts, verifyWitVKey)
+import           Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessVKey, totalDeposits,
+                     txid, txins, txouts, verifyWitVKey)
 import           Shelley.Spec.Ledger.Validation (ValidationError (..))
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -377,7 +377,7 @@ propCheckRedundantWitnessSet = property $ do
   (l, steps, _, txwits, _, keyPairs)  <- Hedgehog.forAll genValidStateTxKeys
   let keyPair                  = fst $ head keyPairs
   let tx                       = _body txwits
-  let witness                  = makeWitnessVKey tx keyPair
+  let witness                  = makeWitnessVKey (hashTxBody tx) keyPair
   let txwits'                  = txwits {_witnessVKeySet = (Set.insert witness (_witnessVKeySet txwits))}
   let l''                      = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l txwits' (Coin 0)
   classify "unneeded signature added"
@@ -385,7 +385,7 @@ propCheckRedundantWitnessSet = property $ do
   case l'' of
     Right _                    ->
         True === Set.null (
-         Set.filter (not . verifyWitVKey tx) (_witnessVKeySet txwits'))
+         Set.filter (not . verifyWitVKey (hashTxBody tx)) (_witnessVKeySet txwits'))
     _                          -> failure
 
 -- | Check that we correctly report missing witnesses.

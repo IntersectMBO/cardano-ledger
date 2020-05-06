@@ -160,7 +160,7 @@ import           Shelley.Spec.Ledger.TxData (pattern Addr, pattern DCertDeleg, p
                      _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolPubKey,
                      _poolRAcnt, _poolRelays, _poolVrf)
 import qualified Shelley.Spec.Ledger.TxData as TxData (TxBody (..))
-import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, makeWitnessesVKey, txid)
+import           Shelley.Spec.Ledger.UTxO (pattern UTxO, balance, hashTxBody, makeWitnessesVKey, txid)
 
 import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, Block, CHAIN, ChainState,
                      ConcreteCrypto, Credential, DState, EpochState, pattern GenDelegs, HashHeader,
@@ -497,7 +497,7 @@ txEx2A :: Tx
 txEx2A = Tx
           txbodyEx2A
           (makeWitnessesVKey
-            txbodyEx2A
+            (hashTxBody txbodyEx2A)
             ( (asWitness <$> [alicePay, carlPay])
             <> (asWitness <$> [aliceStake])
             <> (asWitness <$> [cold alicePool, cold $ coreNodeKeys 0])
@@ -506,7 +506,7 @@ txEx2A = Tx
             -- since it is an owner of the stake pool being registered,
             -- and *not* because of the stake key registration.
                      `Set.union`
-           makeWitnessesVKey txbodyEx2A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
+           makeWitnessesVKey (hashTxBody txbodyEx2A) [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
              , KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
@@ -671,7 +671,7 @@ txbodyEx2B = TxBody
 txEx2B :: Tx
 txEx2B = Tx
           txbodyEx2B -- Body of the transaction
-          (makeWitnessesVKey txbodyEx2B
+          (makeWitnessesVKey (hashTxBody txbodyEx2B)
             [asWitness alicePay, asWitness aliceStake, asWitness bobStake])
                      -- Witness verification key set
           Map.empty  -- Witness signature map
@@ -938,7 +938,7 @@ txbodyEx2D = TxBody
 txEx2D :: Tx
 txEx2D = Tx
           txbodyEx2D
-          (makeWitnessesVKey txbodyEx2D [asWitness alicePay, asWitness carlStake])
+          (makeWitnessesVKey (hashTxBody txbodyEx2D) [asWitness alicePay, asWitness carlStake])
           Map.empty
           SNothing
 
@@ -1436,7 +1436,7 @@ txbodyEx2J = TxBody
 txEx2J :: Tx
 txEx2J = Tx
           txbodyEx2J
-          (makeWitnessesVKey txbodyEx2J [asWitness bobPay, asWitness bobStake])
+          (makeWitnessesVKey (hashTxBody txbodyEx2J) [asWitness bobPay, asWitness bobStake])
           Map.empty
           SNothing
 
@@ -1532,7 +1532,7 @@ txbodyEx2K = TxBody
 txEx2K :: Tx
 txEx2K = Tx
           txbodyEx2K
-          (makeWitnessesVKey txbodyEx2K [asWitness $ cold alicePool, asWitness alicePay])
+          (makeWitnessesVKey (hashTxBody txbodyEx2K) [asWitness $ cold alicePool, asWitness alicePay])
           Map.empty
           SNothing
 
@@ -1743,7 +1743,7 @@ txEx3A :: Tx
 txEx3A = Tx
           txbodyEx3A
           (makeWitnessesVKey
-            txbodyEx3A
+            (hashTxBody txbodyEx3A)
             [ asWitness alicePay
             , asWitness . cold $ coreNodeKeys 0
             , asWitness . cold $ coreNodeKeys 3
@@ -1835,7 +1835,7 @@ txEx3B :: Tx
 txEx3B = Tx
           txbodyEx3B
           (makeWitnessesVKey
-            txbodyEx3B
+            (hashTxBody txbodyEx3B)
             [ asWitness alicePay
             , asWitness . cold $ coreNodeKeys 1
             , asWitness . cold $ coreNodeKeys 5
@@ -1994,7 +1994,10 @@ txbodyEx4A = TxBody
 txEx4A :: Tx
 txEx4A = Tx
            txbodyEx4A
-           (makeWitnessesVKey txbodyEx4A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx4A [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
+           (makeWitnessesVKey (hashTxBody txbodyEx4A) [ alicePay ]
+             `Set.union`
+              makeWitnessesVKey (hashTxBody txbodyEx4A)
+                [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0) ])
            Map.empty
            SNothing
 
@@ -2146,7 +2149,8 @@ txbodyEx5A = TxBody
 txEx5A :: Tx
 txEx5A = Tx
            txbodyEx5A
-           (makeWitnessesVKey txbodyEx5A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx5A
+           (makeWitnessesVKey (hashTxBody txbodyEx5A) [ alicePay ]
+             `Set.union` makeWitnessesVKey (hashTxBody txbodyEx5A)
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
@@ -2220,7 +2224,9 @@ ex5A = CHAINExample (SlotNo 10) initStEx2A blockEx5A (Right expectedStEx5A)
 txEx5B :: Tx
 txEx5B = Tx
            txbodyEx5A
-           (makeWitnessesVKey txbodyEx5A [ alicePay ] `Set.union` makeWitnessesVKey txbodyEx5A
+           (makeWitnessesVKey (hashTxBody txbodyEx5A) [ alicePay ]
+             `Set.union`
+             makeWitnessesVKey (hashTxBody txbodyEx5A)
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
@@ -2311,8 +2317,8 @@ txbodyEx5F = TxBody
 
 txEx5F :: Tx
 txEx5F = Tx txbodyEx5F
-            (makeWitnessesVKey txbodyEx5F [ asWitness alicePay, asWitness aliceStake ]
-            `Set.union` makeWitnessesVKey txbodyEx5F
+            (makeWitnessesVKey (hashTxBody txbodyEx5F) [ asWitness alicePay, asWitness aliceStake ]
+            `Set.union` makeWitnessesVKey (hashTxBody txbodyEx5F)
              [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0)
              , KeyPair (coreNodeVKG 1) (coreNodeSKG 1)
              , KeyPair (coreNodeVKG 2) (coreNodeSKG 2)
@@ -2356,7 +2362,7 @@ txbodyEx5F' = TxBody
                SNothing
 
 txEx5F' :: Tx
-txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey txbodyEx5F' [ alicePay ]) Map.empty SNothing
+txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey (hashTxBody txbodyEx5F') [ alicePay ]) Map.empty SNothing
 
 blockEx5F' :: Block
 blockEx5F' = mkBlock
@@ -2392,7 +2398,7 @@ txbodyEx5F'' = TxBody
                 SNothing
 
 txEx5F'' :: Tx
-txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey txbodyEx5F'' [ alicePay ]) Map.empty SNothing
+txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey (hashTxBody txbodyEx5F'') [ alicePay ]) Map.empty SNothing
 
 blockEx5F'' :: Block
 blockEx5F'' = mkBlock

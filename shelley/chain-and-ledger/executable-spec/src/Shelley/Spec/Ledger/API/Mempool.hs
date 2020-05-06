@@ -98,7 +98,7 @@ applyTxs ::
   forall crypto m.
   ( Crypto crypto,
     MonadError (ApplyTxError crypto) m,
-    DSignable crypto (Tx.TxBody crypto)
+    DSignable crypto (Hash crypto (Tx.TxBody crypto))
   ) =>
   Globals ->
   MempoolEnv ->

@@ -46,7 +46,7 @@ data UTXOW crypto
 
 instance
   ( Crypto crypto
-  , DSignable crypto (TxBody crypto)
+  , DSignable crypto (Hash crypto (TxBody crypto))
   )
   => STS (UTXOW crypto)
  where
@@ -112,7 +112,7 @@ instance
 initialLedgerStateUTXOW
   :: forall crypto
    . ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
    => InitialRule (UTXOW crypto)
 initialLedgerStateUTXOW = do
@@ -122,7 +122,7 @@ initialLedgerStateUTXOW = do
 utxoWitnessed
   :: forall crypto
    . ( Crypto crypto
-     , DSignable crypto (TxBody crypto)
+     , DSignable crypto (Hash crypto (TxBody crypto))
      )
    => TransitionRule (UTXOW crypto)
 utxoWitnessed = judgmentContext >>=
@@ -174,7 +174,7 @@ utxoWitnessed = judgmentContext >>=
 
 instance
   ( Crypto crypto
-  , DSignable crypto (TxBody crypto)
+  , DSignable crypto (Hash crypto (TxBody crypto))
   )
   => Embed (UTXO crypto) (UTXOW crypto)
  where
