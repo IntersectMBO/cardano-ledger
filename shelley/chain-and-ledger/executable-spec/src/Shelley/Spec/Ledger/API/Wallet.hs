@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 module Shelley.Spec.Ledger.API.Wallet
   ( getNonMyopicMemberRewards
+  , getUTxO
   , getFilteredUTxO
   )
 where
@@ -62,6 +63,12 @@ getNonMyopicMemberRewards globals ss creds = Map.fromList $
         s = (toShare . _poolPledge) poolp
         nmps = nonMyopicStake k sigma s pp topPools
 
+-- | Get the full UTxO.
+getUTxO
+  :: ShelleyState crypto
+  -> UTxO crypto
+getUTxO = _utxo . _utxoState . esLState . nesEs
+
 -- | Get the UTxO filtered by address.
 getFilteredUTxO
   :: ShelleyState crypto
@@ -70,4 +77,4 @@ getFilteredUTxO
 getFilteredUTxO ss addrs =
     UTxO $ Map.filter (\(TxOut addr _) -> addr `Set.member` addrs) fullUTxO
   where
-    UTxO fullUTxO = _utxo . _utxoState . esLState . nesEs $ ss
+    UTxO fullUTxO = getUTxO ss
