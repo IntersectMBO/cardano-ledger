@@ -68,7 +68,7 @@ import qualified Test.QuickCheck as QC
 import           Numeric.Natural (Natural)
 import           Shelley.Spec.Ledger.Address (pattern Addr, toAddr, toCred)
 import           Shelley.Spec.Ledger.BaseTypes (Nonce (..), UnitInterval, epochInfo, intervalValue,
-                     slotsPrior)
+                     stabilityWindow)
 import           Shelley.Spec.Ledger.BlockChain (pattern BHBody, pattern BHeader, pattern Block,
                      pattern BlockHash, TxSeq (..), bBodySize, bbHash, mkSeed, seedEta, seedL)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
@@ -426,15 +426,15 @@ getKESPeriodRenewalNo keys (KESPeriod kp) =
           then n
           else go rest (n + 1) k
 
--- | True if the given slot is within the last `2 * slotsPrior`
+-- | True if the given slot is within the last `2 * stabilityWindow`
 -- slots of the current epoch.
 tooLateInEpoch :: HasCallStack => SlotNo -> Bool
 tooLateInEpoch s = runShelleyBase $ do
   ei <- asks epochInfo
   firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
-  slotsPrior_ <- asks slotsPrior
+  stabilityWindow <- asks stabilityWindow
 
-  return (s >= firstSlotNo *- Duration (2 * slotsPrior_))
+  return (s >= firstSlotNo *- Duration (2 * stabilityWindow))
 
 -- | Account with empty treasury
 genesisAccountState :: HasCallStack => AccountState

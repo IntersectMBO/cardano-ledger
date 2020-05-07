@@ -18,7 +18,7 @@ import           Control.State.Transition (STS (..), TRC (..), TransitionRule, j
 import           Data.Functor ((<&>))
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo,
-                     maxLovelaceSupply, startRewards)
+                     maxLovelaceSupply, randomnessStabilisationWindow)
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import           Shelley.Spec.Ledger.LedgerState (EpochState, RewardUpdate, createRUpd)
@@ -48,7 +48,7 @@ rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (epoch, slot, maxLL) <- liftSTS $ do
     ei <- asks epochInfo
-    sr <- asks startRewards
+    sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
     slot <- epochInfoFirst ei e <&> (+* (Duration sr))
     maxLL <- asks maxLovelaceSupply
