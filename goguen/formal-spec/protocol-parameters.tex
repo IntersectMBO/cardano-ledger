@@ -1,31 +1,40 @@
 \section{Protocol Parameters}
 \label{sec:protocol-parameters}
 
-For Plutus integration, we have added the following types
+The transition from a Shelley ledger to a Goguen ledger model includes, most
+notably, a change from a basic UTxO model to an extended UTxO model, which
+we denote EUTxO in this document.
+For Plutus integration, the EUTxO model, and other Goguen features, we
+require following types
+in addition to those already defined in the Shelley specification
 (see Figure~\ref{fig:defs:protocol-parameters}):
 
 \begin{itemize}
-\item $\Language$: This represents the language name/tag (including the Plutus
-version number)
-\item $\ExUnits$: A term of this type has two integer values, $(mem, steps)$. The first
-represents some notion of the amount of memory needed for script validation.
-The second, the number of reduction steps (for some definition of a step, specific
-to the script interpreter)
-\item $\CostMod$: A term of this type represents the vector of coefficients used to convert \\
-\texttt{resource primitives}~$\to \ExUnits$. This type is abstract and the
-conversion is done by a script interpreter (thus, is opaque to the ledger rules)
-\item $\Prices$: A term of type is made up of three integer values,
-$\var{(pr_{init}, pr_{mem}, pr_{steps})}$. The first ($pr_{init}$) represents the initial
-cost of running a script. The $pr_{mem}$ is a price for a unit of memory
-used by script execution, and $pr_{steps}$ is the price per
-reduction step. It is used to calculate the cost of using an amount of execution
-units.
+  \item $\Language$: This represents the language name/tag (including the Plutus
+  version number)
+  \item $\ExUnits$: A term of this type has two integer values, $(mem, steps)$. The first
+  represents some notion of the amount of memory needed for script validation.
+  The second, the number of reduction steps (for some definition of a step, specific
+  to the script interpreter)
+  \item $\CostMod$: A term of this type represents the vector of coefficients used to generate
+  a term of type $\ExUnits$ given a vector of some resource primitives. This type is
+  abstract in our specification, and will come from the Plutus interpreter
+  implementation. The
+  conversion to $\ExUnits$ is also done by the interpreter (thus, is opaque to the ledger rules).
+  \item $\Prices$: A term of type is made up of three integer values,
+  $\var{(pr_{init}, pr_{mem}, pr_{steps})}$. The first ($pr_{init}$) represents the initial
+  cost of running a script. The $pr_{mem}$ is a price for a unit of memory
+  used by script execution, and $pr_{steps}$ is the price per
+  reduction step. It is used to calculate the cost of using an amount of execution
+  units.
 \end{itemize}
 
 We also added several protocol parameters and accessor functions necessary for
 Plutus integration.
 
-\textbf{Plutus vs. Native Script Languages.}
+\subsection{Plutus vs. Native Script Languages}
+\label{sec:plutus-native}
+
 All the newly added protocol parameter values have to do with limiting and calculating
 the script execution cost.
 These are only relevant for processing scripts that are opaque
@@ -36,15 +45,31 @@ nothing about their execution, it relies on the interpreter to compute resource
 used during the validation process. Hence the need for these parameters,
 the use of which is discussed below.
 
-Native scripts (currently this includes only the multisignature scripts), on the
+Native scripts (currently, this includes only the multisignature scripts), on the
 other hand, are processed entirely by the ledger rules.
 Because of this, their execution cost can easily be assessed before processing them.
-As a result, their running cost can be accounted for in calculating the minimum transaction
-fee, and its payment verified by comparing the minimum fee to the fee the transaction
-is actually paying. The $\Prices, \ExUnits$ or $\CostMod$ types are not used
-in processing native scripts.
+In the current version of the Shelley ledger, there is no assessment of cost
+of checking multisignatures (abbreviated MSig's). Instead, any additional fees 
+incurred as a result of
+spending MSig-locked outputs are proportional to the change in transaction
+size due to including all the necessary signatures (rather than the
+cost of verifying them). Therefore, the transaction size is the only
+value needed to calculate the fees of all Shelley transactions, and MSig
+scripts do not require any cost model.
 
-\textbf{Plutus Versions.} Each
+Scripts in any future native scripting languages will also
+have their cost analyzed by the ledger rules ahead of running them.
+The $\Prices, \ExUnits$ or $\CostMod$ types will not be used
+in processing native scripts. There will be language-specific
+costing strategies added as needed to asses the running cost.
+The running cost will be used in calculating the minimum transaction
+fee, and its payment verified by comparing the minimum fee to the fee the transaction
+is actually paying.
+
+\subsection{Plutus Versions}
+\label{sec:versions}
+
+Each
 version of Plutus (identified by a $\Language$ value) is considered a different
 language. That is, the interpreter
 specific to that version is invoked when a script is run. Each language
@@ -59,7 +84,9 @@ data nedeed by any version. Introducing a new version of Plutus
 into the set of supported versions is a hard fork, as the actual ledger rules
 and code must be updated manually to use the new interpreter.
 
-\textbf{Plutus Script Evaluation Determinism.}
+\subsection{Plutus Script Evaluation Determinism}
+\label{sec:determinism}
+
 A change in data passed to the interpreter for
 validating a given script can cause a change in the validation result. Such
 a change may occur between the time a transaction is submitted by the wallet
@@ -93,7 +120,9 @@ corresponding to that version, so it is also the only parameter included
 in the hash needed for this determinism-preserving comparison. For the rule
 where this comparison is performed, see Section~\ref{sec:block-body-trans}.
 
-\textbf{Plutus Script Evaluation Cost Model and Prices.}
+\subsection{Plutus Script Evaluation Cost Model and Prices}
+\label{sec:cost-mod}
+
 As one of the script validation parameters, each language also has a
 cost model. A cost model is a set of the values used to convert resource
 primitives used during script validation into the
@@ -116,7 +145,7 @@ scripts and cannot be toggled for individual versions. This parameter is
 convenient to change when real-world prices of things like electicity or hardware
 fluctuate.
 
-\textbf{Limiting Script Execution Costs}
+\textbf{Limiting Script Execution Costs.}
 The protocol parameters $\var{maxTxExUnits}$ and $\var{maxBlockExUnits}$ are
 used to limit the total per-transaction and per-script resource use of all
 types of scripts. Recall here that these only have non-trivial values for

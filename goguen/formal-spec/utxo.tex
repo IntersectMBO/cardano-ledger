@@ -26,8 +26,11 @@ given in Figure \ref{fig:functions:insouts}. These include
   \end{itemize}
   \item the function $\fun{getOut}$ selects from a transaction output the data that
   will be stored in the UTxO, i.e. $\UTxOOut$ without the slot number
-  \item the function $\fun{outs}$ now adds the slot number of the block in which transaction is
-  included to the outputs
+  \item the function $\fun{outs}$ throws away the $\HasDV$ tag from a
+  transaction output. It also now adds the slot number of the block in which transaction is
+  included to the outputs. This slot number is available in the
+  environment of the rule that calls the $\fun{outs}$ function, and gets
+  passed to it.
   \item the function $\fun{txins}$ that returns UTxO output reference part of both script
   and non-script transaction inputs.
 \end{itemize}
@@ -43,9 +46,9 @@ fees required.
 \begin{figure}[htb]
   \begin{align*}
     & \fun{txinputs_{vf}} \in \TxBody \to \powerset{\TxId \times \Ix} \\
-    & \text{tx VK inputs used for fees} \\
+    & \text{tx VK and MSig inputs used for fees} \\
     & \fun{txinputs_{vf}} ~txb~= \\
-    &~~\{ (txid,ix)~\vert~((txid,ix),\var{isfee}) \in
+    &~~\{ (txid,ix)~\vert~(txid,ix,\var{isfee}) \in
     \fun{txinputs} ~txb,~
      \var{isfee}\in\Yes\}
     \nextdef
@@ -53,7 +56,7 @@ fees required.
     & \text{check if fee-marked inputs are Ada-only and enough to cover fees} \\
     & \fun{feesOK} ~n~\var{pp}~tx~utxo~= \\
     &~~\fun{range}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \subseteq \TxOutND ~ \\
-    &~~\wedge~ \fun{ubalance}~(\fun{txinputs_{vf}}~{txb}) \in \Coin \\
+    &~~\wedge~ \fun{ubalance}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \in \Coin \\
     &~~      \wedge~ \fun{ubalance}~(\fun{txinputs_{vf}}~{txb} \restrictdom \var{utxo}) \geq \txfee{txb} ~ \\
     &~~      \wedge~ \minfee~n~{pp}~{tx} \leq \txfee{txb} \\
     &~~      \where \\
@@ -98,7 +101,12 @@ The changes due to Plutus integration are as follows:
   calculation at the epoch boundary
 
   \item $\fun{txscrfee}$ calculates the fee a transaction must pay for script
-  execution based on current resource use pricing. Note that this value,
+  execution based on the amount of $\ExUnits$ it has budgeted for running the
+  scripts it carries, and the prices (as indicated in the current protocol parameters)
+  for each of the components of $\ExUnits$. Recall that a transaction pays a flat
+  fee for running a Plutus script, plus some amount per unit of memory
+  and per reduction step.
+  Note that this value,
   like the non-script portion of the transaction fee, is calculated in $\Coin$,
   as fees can only be paid in Ada.
 
@@ -111,21 +119,31 @@ The changes due to Plutus integration are as follows:
     Token) sum total of all the value in a given UTxO.
 
   \item The $\fun{consumed}$ calculation for the preservation of value remains the
-  same. It is still the sum of the reward address value consumed, the value
-   UTxO entries consumed, the value forged by a transaction,
-   and the value consumed from the deposit pot due
-   to the transaction collecting deposit refunds.
+  same. It is still the sum of the value in the UTxO entries consumed, the
+   reward address value consumed, the
+   value consumed from the deposit pot (due
+   to the transaction collecting deposit refunds),
+   and the value forged by a transaction.
 
-  \item The $\fun{produced}$ calculation contains the fee a transaction pays
-  to the fee pot (this consists of the sum of two values, a transaction fee and a
-  fee for processing all the scripts inside it), the outputs it adds to the UTxO,
+   Note that forged value is part of the \textit{consumed} calculation because
+   it is value that will appear in the outputs "out of thin air". All outputs
+   in a transaction are put in the UTxO once it is processed, and therefore
+   are part of the \textit{produced} calculation. That same forged amount must be
+   added to the \textit{consumed} calculation in order to balance the preservation
+   of value equation.
+
+  \item The $\fun{produced}$ calculation sums the value in the outputs the
+  transaction adds to the UTxO, the fee a transaction pays
+  to the fee pot (this consists of both the standard size-based transaction fee
+  and the fee for processing all the scripts inside it),
   and the deposits it makes
-  to the deposit pot (these are the same values as the ledger spec).
-  The script execution costs are included in the transaction fee.
-  This calculation now takes the current slot number as an argument.
+  to the deposit pot.
+  This calculation now also takes the current slot number as an argument, which is
+  needed to construct the correct UTxO outputs.
 \end{itemize}
 
-\textbf{Value Operations and Partial Order.}
+\subsection{Value Operations and Partial Order.}
+\label{sec:value-ops}
 Note that
 the $\fun{consumed}$ and $\fun{produced}$ values are compared as $\Value$.
 The type $\Value$ has a partial order defined on it in (see~\cite{plutus_eutxo}).
@@ -161,7 +179,7 @@ not present in on of the values),
     & \fun{utxoAda} \in \UTxO \to \powerset{(\Addr \times \Coin)} \\
     & \fun{utxoAda}~{\var{utxo}} ~=~\{~(\fun{getAddr}~\var{out},~\fun{getCoin}~{out})
     ~\vert~ \var{out} \in \range~\var{utxo} ~\} \\
-    & \text{returns the outputs in the UTxO with only the Ada coins} \\
+    & \text{returns the addresses in the UTxO paired with the amount of Ada in them} \\
   \end{align*}
   %
   \emph{Main Calculations}
@@ -178,12 +196,12 @@ not present in on of the values),
     \fun{txscrfee}~n~(\fun{prices}~{pp})~(\fun{txexunits}~(\fun{txbody}~{tx}))
     \nextdef
     & \fun{ubalance} \in \UTxO \to \Value \\
-    & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{(q,s)}\in~\var{utxo}}
-    \fun{getValue}~\var{q} \\
+    & \fun{ubalance} ~ utxo = \sum_{\wcard\mapsto\var{out}\in~\var{utxo}}
+    \fun{getValue}~\var{out} \\
     & \text{UTxO balance} \\
     \nextdef
     & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \Wdrl \to \TxBody \to \Value \\
-    & \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \\
+    & \consumed~{pp}~{utxo}~{stkCreds}~{txb} = \\
     & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} + \\
     &~~  \fun{coinToValue}(\fun{wbalance}~(\fun{txwdrls}~{txb})~\\
         &~~+~ \keyRefunds{pp}{stkCreds}{txb}) +
@@ -202,7 +220,9 @@ not present in on of the values),
 
 \clearpage
 
-\textbf{Putting Together Plutus Scripts and Their Inputs.}
+\subsection{Putting Together Plutus Scripts and Their Inputs}
+\label{sec:scripts-inputs}
+
 In Figure \ref{fig:functions:script1} we give the helper functions needed to
 retrieve all the data relevant to validation of Plutus scripts.
 This includes,
@@ -214,6 +234,12 @@ This includes,
   This function is abstract because it assumes there is some ordering rather
   than giving it explicitly. The specific ordering of a set or a finite map
   could be implementation-dependent. A list ordering should be unambiguous.
+  \begin{note}
+    $\fun{indexof}$ should only be called on arguments of the correct type? or
+    it cannot be applied at all to a predicate of the wrong type, so
+    there is no way the predicate in the subset definition should not be satisfied
+    in case of wrong type. Does this work?
+  \end{note}
   \item $\fun{indexedScripts}$ creates a finite map wherein all the scripts
   of a transaction (that it carries as a set) are indexed by their hashes,
   calculated by this function
@@ -221,7 +247,11 @@ This includes,
   carried by the transaction with their hashes
   \item $\fun{getmdl}$ selects, given a script and protocol parameters,
   the cost model that is associated with the language of that
-  script in the protocol parameters
+  script in the protocol parameters.
+  \begin{note}
+    $\fun{getmdl}$ is only called on Plutus scripts, so it should always
+    be defined. need a better way to do this
+  \end{note}
   \item $\fun{findRdmr}$ gets the redeemer carried by a Goguen transaction
    which corresponds to the given current item. Recall that items that may require
    Plutus scripts to be run include certificates, withdrawals, forges,
@@ -237,7 +267,7 @@ This includes,
   %
   \emph{Abstract functions}
   \begin{align*}
-    &\fun{indexof} \in \DCert \to \seqof{\DCert} \to  \to \Ix\\
+    &\fun{indexof} \in \DCert \to \seqof{\DCert} \to \Ix\\
     &\fun{indexof} \in \Wdrl \to \Wdrl \to \Ix\\
     &\fun{indexof} \in \TxIn \to \powerset{\TxIn} \to \Ix\\
     &\fun{indexof} \in \Value \to \Value \to \Ix\\
@@ -300,7 +330,6 @@ with the data needed for validation
 \end{itemize}
 
 
-\begin{note}
 \textbf{What scripts get redeemers?}
 Here we assume it is ok for every kind of Plutus script to
 have a redeemer. In fact, the transaction is obligated to provide a redeemer for
@@ -308,9 +337,9 @@ every Plutus script. There is the possibility, in the future, to optimize supply
 by allowing transactions to omit unit-value redeemers, filling the $\Data$-type
 unit in by default. Whether this will be done is contingent on real-world
 observations of the use of redeemers.
-\end{note}
 
-Note that there are no "checks" done inside these functions. If there are
+Note that there are no "checks" done inside the functions matching
+scripts with their inputs. If there are
 missing validators or inputs, or incorrect hashes, wrong type of script,
 this is caught during the application of the UTXOW
 rule (before these functions are ever applied).
@@ -332,7 +361,10 @@ The hashes used to look up the datum objects are found in the outputs of the UTx
 indexed by the $(txid,ix)$ in the transaction output spending the UTxO entry
 
 \item the redeemers, which are in the indexed redeemer structure carried by the transaction.
-These are looked up by current item using the $\fun{findRdmr}$ function.
+These are looked up by current item using the $\fun{findRdmr}$ function. Note that
+the redeemer lookup function returns a set of redeemers, but this set should
+contain exactly one redeemer. There is exactly one redeemer associated with each
+$\CurItem$ in the indexed redeemer structure.
 
 \item the validation data, built using the UTxO, the transaction itself,
 and the current item being validated
@@ -370,7 +402,7 @@ the script-inputs sets, $\fun{mkPLCLst}$ does not include the execution units or
       (a\mapsto c); \epsilon) ~\vert \\
     &~~ r\in \fun{findRdmr}~{tx}~\var{(a\mapsto c)}, \\
     & ~~a \mapsto c \in\fun{txwdrls}~(\txbody{tx}), \\
-    & ~~\fun{validatorHash}~\var{a}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
+    & ~~\var{a}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
     & ~~ \var{script_v} \in \ScriptPlutus \}
     \nextdef
     %
@@ -396,9 +428,9 @@ the script-inputs sets, $\fun{mkPLCLst}$ does not include the execution units or
     & \fun{allInsScrts}~{utxo}~{tx}~=~ \{ (\var{script_v}; (\var{d};\var{r}; \\
     & ~~ \fun{valContext}~\var{utxo}~\var{tx}~
       (txid,ix,\var{hash_r}))) ~\vert \\
-    & ~~(txid,ix) \in \fun{txinputs}~(\txbody{tx}), \\
+    & ~~(txid,ix, \_) \in \fun{txinputs}~(\txbody{tx}), \\
     & ~~\var{r} \in \fun{findRdmr}~{tx}~\var{(txid,ix)}, \\
-    & ~~\var{(txid,ix)} \mapsto ((a,v),h_d) \in \var{utxo}, \\
+    & ~~\var{(txid,ix)} \mapsto ((a,v),h_d, \_) \in \var{utxo}, \\
     & ~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx}, \\
     & ~~(\fun{validatorHash}~{a})\mapsto \var{script_v}\in \fun{indexedScripts}~{tx} \}
     \nextdef
@@ -412,13 +444,15 @@ the script-inputs sets, $\fun{mkPLCLst}$ does not include the execution units or
   \label{fig:functions:script3}
 \end{figure}
 
-\textbf{Two Phase Script Validation.}
+\subsection{Two Phase Script Validation}
+\label{sec:two-phase}
+
 Two phase Plutus script validation is necessary to ensure users pay for the
 computational resources script validation uses.
 Native script execution costs are expected to be much smaller than Plutus
 scripts, and can be assesed and limited by the ledger rules directly.
 Hence these scripts do not require two-phase validation. They are already
-in use in the Shelley spec with a signle validation phase.
+in use in the Shelley spec with a single validation phase.
 
 The first phase two-phase validation approach
 performs every aspect of transaction validation except running the scripts.
@@ -468,7 +502,7 @@ system is strictly for running the scripts, and a transition of this type
 will be used by another rule to perform the correct UTxO update.
 
 Running scripts sequentially
-to verify that they all validate in the alloted $\ExUnits$ budget only requires
+to verify that they all validate in the allotted $\ExUnits$ budget only requires
 the amount of remaining $\ExUnits$ to be included in the state, and nothing else.
 In the environment, we need the protocol parameters and the
 transaction being validated. All other data needed
@@ -580,16 +614,15 @@ blocks, all the witnessing info can be thrown away.
 We also rely on correct use of tags in other rules (at this time, only in
 the rules in Figure \ref{fig:rules:ledger}).
 
-\begin{note}
-\textbf{Non-integral calculations inside the Plutus interpreter:} if there
+
+\textbf{Non-integral calculations inside the Plutus interpreter.} If there
 will be some in the future (from the Actus contracts implemented using
-the Marlowe interpreter, for e.g.) they should
+the Marlowe interpreter, for e.g.), they should
 be done the same way they are done in the Shelley ledger. This is a matter of
 deterministic script validation outcomes. Inconsistent rounding could
 result in different validation outcomes running the same script on the same
 arguments. For how this is done in the ledger calculations, see
 ~\cite{non_int}.
-\end{note}
 
 
 \begin{figure}[htb]
@@ -707,7 +740,8 @@ arguments. For how this is done in the ledger calculations, see
 \end{figure}
 
 
-\textbf{Updating the UTxO State.}
+\subsection{Updating the UTxO State}
+\label{sec:utxo-state-trans}
 
 We have defined a separate transition system, UTXOS, to represent the two distinct
 UTxO state changes, one resulting from all scripts in a transaction validating,
@@ -1003,7 +1037,8 @@ UTXOS rule.
 
 \clearpage
 
-\textbf{Witnessing.}
+\subsection{Witnessing}
+\label{sec:wits}
 
 Plutus script validation is not part of witnessing because of the introduction
 of two-phase validation, as this type of validation may result in two
