@@ -29,7 +29,7 @@ import           GHC.Natural (Natural)
 
 import           Cardano.Crypto.DSIGN.Class (SignedDSIGN (SignedDSIGN), VerKeyDSIGN)
 import           Cardano.Crypto.DSIGN.Mock (MockDSIGN, SigDSIGN (SigMockDSIGN))
-import           Cardano.Crypto.Hash (Hash)
+import           Cardano.Crypto.Hash (Hash(..))
 import           Cardano.Crypto.Hash.Short (ShortHash)
 
 -- | @abstractSize m a@ computes the abstract size of @a@, using the accounting
@@ -205,9 +205,9 @@ instance Typeable a => HasTypeReps (Hash ShortHash a) where
 
 instance HasTypeReps (SignedDSIGN MockDSIGN a) where
   -- A mock signature consists of a 'ByteString' (which is in turn a short hash)
-  -- and an 'Int'. For the 'ByteString' representation we return one character
+  -- and a 'Word64'. For the 'ByteString' representation we return one character
   -- per byte.
-  typeReps (SignedDSIGN (SigMockDSIGN bs i)) =
+  typeReps (SignedDSIGN (SigMockDSIGN (UnsafeHash bs) i)) =
     typeOf i <| Seq.replicate (BS.length bs) (typeOf (undefined :: Char))
 
 instance HasTypeReps (VerKeyDSIGN MockDSIGN) where

@@ -119,7 +119,7 @@ genScriptHash = ScriptHashObj . ScriptHash <$> genHash
 genHash :: forall h a. HashAlgorithm h => Gen (Hash h a)
 genHash = UnsafeHash . BS.pack <$> genWords numBytes
   where
-  numBytes = byteCount ([] @h)
+  numBytes = fromIntegral $ sizeHash ([] @h)
 
 genWords :: Natural -> Gen [B.Word8]
 genWords n | n > 0 = (:) <$> H.word8 H.constantBounded <*> genWords (n-1)

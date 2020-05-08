@@ -366,8 +366,8 @@ mkBlock
   -> Nonce        -- ^ EpochNo nonce
   -> NatNonce     -- ^ Block nonce
   -> UnitInterval -- ^ Praos leader value
-  -> Natural      -- ^ Period of KES (key evolving signature scheme)
-  -> Natural      -- ^ KES period of key registration
+  -> Word         -- ^ Period of KES (key evolving signature scheme)
+  -> Word      -- ^ KES period of key registration
   -> OCert        -- ^ Operational certificate
   -> Block
 mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
@@ -382,8 +382,11 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
             (BlockHash prev)
             (coerceKeyRole vKeyCold)
             (snd $ vrf pkeys)
-            (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
-            (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
+            (coerce $ mkCertifiedVRF
+              (WithResult nonceNonce (fromIntegral bnonce)) (fst $ vrf pkeys))
+            (coerce $ mkCertifiedVRF
+              (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
+              (fst $ vrf pkeys))
             (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)
             (bbHash $ TxSeq $ StrictSeq.fromList txns)
             oCert
@@ -393,9 +396,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
                Nothing ->
                  error ("could not evolve key to iteration " ++ show kesPeriod)
                Just hkey -> hkey
-    sig = case signedKES () kpDiff bhb hotKey of
-            Nothing -> error ("could not sign with KES key " ++ show hotKey)
-            Just sig' -> sig'
+    sig = signedKES () kpDiff bhb hotKey
     bh = BHeader bhb sig
   in
     Block bh (TxSeq $ StrictSeq.fromList txns)

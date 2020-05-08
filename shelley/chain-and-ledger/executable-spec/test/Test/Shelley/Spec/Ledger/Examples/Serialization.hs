@@ -16,7 +16,7 @@ import qualified Shelley.Spec.Ledger.MetaData as MD
 
 import           Cardano.Binary (Annotator, DecoderError, FromCBOR (..), ToCBOR (..),
                      decodeAnnotator, decodeFullDecoder, serialize', serializeEncoding, toCBOR)
-import           Cardano.Crypto.DSIGN (DSIGNAlgorithm (encodeVerKeyDSIGN), encodeSignedDSIGN)
+import           Cardano.Crypto.DSIGN (encodeVerKeyDSIGN, encodeSignedDSIGN)
 import           Cardano.Crypto.Hash (getHash)
 import           Cardano.Prelude (LByteString)
 import           Codec.CBOR.Encoding (Encoding (..), Tokens (..))
@@ -272,7 +272,7 @@ testBHB = BHBody
 testBHBSigTokens :: Tokens -> Tokens
 testBHBSigTokens = e
   where
-    s = Maybe.fromJust $ signedKES () 0 testBHB (fst testKESKeys)
+    s = signedKES () 0 testBHB (fst testKESKeys)
     Encoding e = encodeSignedKES s
 
 data ToTokens where
@@ -868,7 +868,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "block_header"
-  , let sig = Maybe.fromJust $ signedKES () 0 testBHB (fst testKESKeys)
+  , let sig = signedKES () 0 testBHB (fst testKESKeys)
     in
     checkEncodingCBORAnnotated "block_header"
     (BHeader testBHB sig)
@@ -878,7 +878,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "empty_block"
-  , let sig = Maybe.fromJust $ signedKES () 0 testBHB (fst testKESKeys)
+  , let sig = signedKES () 0 testBHB (fst testKESKeys)
         bh = BHeader testBHB sig
         txns = TxSeq StrictSeq.Empty
     in
@@ -890,7 +890,7 @@ serializationTests = testGroup "Serialization Tests"
     )
 
     -- checkEncodingCBOR "rich_block"
-  , let sig = Maybe.fromJust $ signedKES () 0 testBHB (fst testKESKeys)
+  , let sig = signedKES () 0 testBHB (fst testKESKeys)
         bh = BHeader testBHB sig
         tin = Set.fromList [TxIn genesisId 1]
         tout = StrictSeq.singleton $ TxOut testAddrE (Coin 2)
