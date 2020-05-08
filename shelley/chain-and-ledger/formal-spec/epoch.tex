@@ -28,7 +28,7 @@
 \newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\poolReward}[5]{\fun{poolReward}~\var{#1}~{#2}~\var{#3}~\var{#4}~\var{#5}}
-\newcommand{\createRUpd}[3]{\fun{createRUpd}~\var{#1}~\var{#2}~\var{#3}}
+\newcommand{\createRUpd}[2]{\fun{createRUpd}~\var{#1}~\var{#2}}
 \newcommand{\getIR}[1]{\fun{getIR}~\var{#1}}
 
 This chapter introduces the epoch boundary transition system and the related reward calculation.
@@ -1314,7 +1314,8 @@ The $\fun{createRUpd}$ function does the following:
   \item Note that for all the calculations below, we use the previous protocol parameters
     $\var{prevPp}$, which corresponds to the parameters during the epoch for which we
     are creating rewards.
-  \item First we calculate the change to the reserves,
+  \item First we calculate the total stake.
+  \item Then we calculate the change to the reserves,
     as determined by the $\rho$ protocol parameter.
   \item Next we calculate $\var{rewardPot}$, the total amount of coin available for rewards this
     epoch, as described in section 6.4 of \cite{delegation_design}. It consists of four pots:
@@ -1359,11 +1360,25 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
   \emph{Calculation to create a reward update}
   %
   \begin{align*}
-    & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \Coin \to \RewardUpdate \\
-    & \createRUpd{b}{es}{total} = \left(
+    & \fun{totalStake} \in \LState \to \Coin \\
+    & \fun{totalStake}~\var{ls} = \var{totalUtxoStake} + \var{totalRewardStake} \\
+    & ~~~\where \\
+    & ~~~~~~~((\var{utxo},\wcard,\wcard,\wcard),
+    ~((\wcard,~\var{rewards},\wcard,\wcard,\wcard,\wcard,\wcard),~\wcard))
+    = \var{ls} \\
+    & ~~~~~~~totalUtxoStake =
+    \sum \{c~\mid~\wcard\mapsto(a,~c)\in\var{utxo},~a\in\AddrB\uniondistinct\AddrP\} \\
+    & ~~~~~~~totalRewardStake =
+    \sum \{c~\mid~\wcard\mapsto c\in\var{rewards}\}
+  \end{align*}
+  %
+  \begin{align*}
+    & \fun{createRUpd} \in \BlocksMade \to \EpochState \to \RewardUpdate \\
+    & \createRUpd{b}{es} = \left(
       \Delta t_1+\Delta t_2,-~\Delta r,~\var{rs},~-\var{feeSS}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{prevPp},~\wcard) = \var{es} \\
+    & ~~~~~~~\var{total} = \fun{totalStake}~\var{ls} \\
     & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
     & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
     & ~~~~~~~(\wcard,~\var{reserves}) = \var{acnt} \\

@@ -18,8 +18,7 @@ import           Control.State.Transition (STS (..), TRC (..), TransitionRule, j
 import           Data.Functor ((<&>))
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo,
-                     maxLovelaceSupply, randomnessStabilisationWindow)
-import           Shelley.Spec.Ledger.Coin (Coin (..))
+                     randomnessStabilisationWindow)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import           Shelley.Spec.Ledger.LedgerState (EpochState, RewardUpdate, createRUpd)
 import           Shelley.Spec.Ledger.Slot (Duration (..), SlotNo, epochInfoEpoch, epochInfoFirst,
@@ -46,15 +45,14 @@ instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
 rupdTransition :: TransitionRule (RUPD crypto)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
-  (epoch, slot, maxLL) <- liftSTS $ do
+  (epoch, slot) <- liftSTS $ do
     ei <- asks epochInfo
     sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
     slot <- epochInfoFirst ei e <&> (+* (Duration sr))
-    maxLL <- asks maxLovelaceSupply
-    return (e, slot, maxLL)
+    return (e, slot)
   if s <= slot
     then pure ru
     else case ru of
-      SNothing -> SJust <$> (liftSTS $ createRUpd epoch b es (Coin $ fromIntegral maxLL))
+      SNothing -> SJust <$> (liftSTS $ createRUpd epoch b es)
       SJust _  -> pure ru
