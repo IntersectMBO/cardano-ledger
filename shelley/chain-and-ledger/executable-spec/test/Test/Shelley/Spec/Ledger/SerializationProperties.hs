@@ -95,7 +95,11 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams, ProtVer)
-import Shelley.Spec.Ledger.Rewards (ApparentPerformance (..))
+import Shelley.Spec.Ledger.Rewards
+  ( Likelihood (..),
+    LogWeight (..),
+    PerformanceEstimate (..),
+  )
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (ScriptHash))
@@ -446,6 +450,12 @@ instance Arbitrary PParams where
       p :: Proxy Monomorphic.ShortHash
       p = Proxy
 
+instance Arbitrary Likelihood where
+  arbitrary = Likelihood <$> arbitrary
+
+instance Arbitrary LogWeight where
+  arbitrary = LogWeight <$> arbitrary
+
 instance HashAlgorithm h => Arbitrary (Mock.NonMyopic h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
@@ -458,8 +468,8 @@ instance HashAlgorithm h => Arbitrary (Mock.SnapShots h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary ApparentPerformance where
-  arbitrary = ApparentPerformance <$> arbitrary
+instance Arbitrary PerformanceEstimate where
+  arbitrary = PerformanceEstimate <$> arbitrary
 
 instance HashAlgorithm h => Arbitrary (Mock.Stake h) where
   arbitrary = Stake <$> arbitrary
