@@ -10,8 +10,10 @@ maintainer:          formal.methods@iohk.io
 -- copyright:
 category:            Testing
 build-type:          Simple
-extra-source-files:  CHANGELOG.md
 cabal-version:       >= 2.0
+
+extra-source-files:  CHANGELOG.md
+                     src/goblin_genomes/*.genome
 
 flag development
     description: Disable '-Werror'
