@@ -601,11 +601,11 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "minimal_txn_body"
   , let
-      tin = [TxIn genesisId 1]
+      tin = TxIn genesisId 1
       tout = TxOut testAddrE (Coin 2)
     in checkEncodingCBORAnnotated "txbody"
     ( TxBody -- minimal transaction body
-      (Set.fromList tin)
+      (Set.fromList [tin])
       (StrictSeq.singleton tout)
       StrictSeq.empty
       (Wdrl Map.empty)
@@ -616,6 +616,7 @@ serializationTests = testGroup "Serialization Tests"
     )
     ( T (TkMapLen 4)
       <> T (TkWord 0) -- Tx Ins
+      <> T (TkListLen 1)
       <> S tin
       <> T (TkWord 1) -- Tx Outs
       <> T (TkListLen 1)
@@ -628,7 +629,7 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "transaction_mixed"
   , let
-      tin = [TxIn genesisId 1]
+      tin = TxIn genesisId 1
       tout = TxOut testAddrE (Coin 2)
       ra = RewardAcnt (KeyHashObj testKeyHash2)
       ras = Map.singleton ra (Coin 123)
@@ -658,7 +659,7 @@ serializationTests = testGroup "Serialization Tests"
              (EpochNo 0)
     in checkEncodingCBORAnnotated "txbody_partial"
     ( TxBody -- transaction body with some optional components
-        (Set.fromList tin)
+        (Set.fromList [tin])
         (StrictSeq.singleton tout)
         StrictSeq.Empty
         (Wdrl ras)
@@ -669,6 +670,7 @@ serializationTests = testGroup "Serialization Tests"
      )
      ( T (TkMapLen 6)
        <> T (TkWord 0) -- Tx Ins
+       <> T (TkListLen 1)
        <> S tin
        <> T (TkWord 1) -- Tx Outs
        <> T (TkListLen 1)
@@ -685,7 +687,7 @@ serializationTests = testGroup "Serialization Tests"
 
   -- checkEncodingCBOR "full_txn_body"
   , let
-      tin = [TxIn genesisId 1]
+      tin = TxIn genesisId 1
       tout = TxOut testAddrE (Coin 2)
       reg = DCertDeleg (RegKey testStakeCred)
       ra = RewardAcnt (KeyHashObj testKeyHash2)
@@ -718,7 +720,7 @@ serializationTests = testGroup "Serialization Tests"
       mdh = MD.hashMetaData $ MD.MetaData $ Map.singleton 13 (MD.I 17)
     in checkEncodingCBORAnnotated "txbody_full"
     ( TxBody -- transaction body with all components
-        (Set.fromList tin)
+        (Set.fromList [tin])
         (StrictSeq.singleton tout)
         (StrictSeq.fromList [ reg ])
         (Wdrl ras)
@@ -729,6 +731,7 @@ serializationTests = testGroup "Serialization Tests"
      )
      ( T (TkMapLen 8)
        <> T (TkWord 0) -- Tx Ins
+       <> T (TkListLen 1)
        <> S tin
        <> T (TkWord 1) -- Tx Outs
        <> T (TkListLen 1)
