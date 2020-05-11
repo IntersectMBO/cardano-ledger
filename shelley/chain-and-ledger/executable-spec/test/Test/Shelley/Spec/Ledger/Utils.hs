@@ -1,5 +1,7 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Utils
   ( assertAll
@@ -138,9 +140,20 @@ epochFromSlotNo = runIdentity . epochInfoEpoch (epochInfo testGlobals)
 slotFromEpoch :: EpochNo -> SlotNo
 slotFromEpoch = runIdentity  . epochInfoFirst (epochInfo testGlobals)
 
--- | Try to evolve KES key until specific KES period is reached.
-evolveKESUntil :: SignKeyKES -> KESPeriod -> Maybe SignKeyKES
-evolveKESUntil key (KESPeriod period) = updateKES () key period
+-- | Try to evolve KES key until specific KES period is reached, given the
+-- current KES period.
+evolveKESUntil
+  :: SignKeyKES
+  -> KESPeriod -- ^ Current KES period
+  -> KESPeriod -- ^ Target KES period
+  -> Maybe SignKeyKES
+evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current target
+  where
+    go !_ c t | t < c = Nothing
+    go !sk c t | c == t = Just sk
+    go !sk c t = case updateKES () sk c of
+      Nothing -> Nothing
+      Just sk' -> go sk' (c + 1) t
 
 maxKESIterations :: Word64
 maxKESIterations = runShelleyBase (asks maxKESEvo)

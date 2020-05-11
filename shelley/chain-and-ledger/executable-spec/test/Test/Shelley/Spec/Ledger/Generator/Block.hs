@@ -184,6 +184,7 @@ genBlock ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairs
           <*> genBlockNonce
           <*> genPraosLeader poolStake
           <*> pure kesPeriod_
+        -- This seems to be trying to work out the start of the KES "era", e.g. the KES period in which this key starts to be valid.
           <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
           <*> pure oCert
   where
