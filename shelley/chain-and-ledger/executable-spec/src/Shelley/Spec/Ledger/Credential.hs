@@ -92,7 +92,20 @@ instance ToCBORGroup Ptr where
     toCBOR sl
       <> toCBOR (fromInteger (toInteger txIx) :: Word)
       <> toCBOR (fromInteger (toInteger certIx) :: Word)
+  encodedGroupSizeExpr size_ proxy =
+        encodedSizeExpr size_ (getSlotNo <$> proxy)
+      + encodedSizeExpr size_ (getIx1    <$> proxy)
+      + encodedSizeExpr size_ (getIx2    <$> proxy)
+    where
+      getSlotNo :: Ptr -> SlotNo
+      getSlotNo (Ptr a _ _) = a
+
+      getIx1, getIx2 :: Ptr -> Ix
+      getIx1 (Ptr _ x _) = x
+      getIx2 (Ptr _ _ x) = x
+
   listLen _ = 3
+  listLenBound _ = 3
 
 instance FromCBORGroup Ptr where
   fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
