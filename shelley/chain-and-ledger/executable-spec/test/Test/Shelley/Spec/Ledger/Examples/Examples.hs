@@ -97,15 +97,16 @@ import           Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 import qualified Data.ByteString.Char8 as BS (pack)
 import           Data.Coerce (coerce)
 import           Data.List (foldl')
+import qualified Data.List
 import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, empty, fromList, insert, keysSet, member, singleton,
-                     (!?))
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromJust, isJust, maybe)
 import           Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import           Data.Word (Word64)
 import           Numeric.Natural (Natural)
+import           GHC.Stack (HasCallStack)
 
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
@@ -124,7 +125,7 @@ import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), pattern Sna
                      _pstakeMark, _pstakeSet)
 import           Shelley.Spec.Ledger.Keys (Hash, KeyRole (..), asWitness, coerceKeyRole, hash,
                      hashKey, vKey)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern ActiveSlot,
+import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern NonActiveSlot, pattern ActiveSlot,
                      pattern DPState, pattern EpochState, FutureGenDeleg (..), pattern LedgerState,
                      pattern NewEpochState, pattern RewardUpdate, pattern UTxOState, deltaF,
                      deltaR, deltaT, emptyDState, emptyPState, esAccountState, esLState, esPp,
@@ -211,6 +212,35 @@ coreNodeVKG = snd . fst . (coreNodes !!)
 
 coreNodeKeys :: Int -> AllPoolKeys
 coreNodeKeys = snd . (coreNodes !!)
+
+-- | Given the slot and an overlay schedule appropriate for this epoch, find the
+-- correct core keys for the node with rights to issue a block in this slot.
+coreNodeKeysForSlot
+  :: HasCallStack
+  => Map SlotNo OBftSlot
+  -> Word64
+  -> AllPoolKeys
+coreNodeKeysForSlot overlay slot = case Map.lookup (SlotNo slot) overlay of
+  Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
+  Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
+  Just (ActiveSlot gkh) ->
+    case Data.List.find (\((_, gk), _) -> hashKey gk == gkh) coreNodes of
+      Nothing -> error $ "coreNodesForSlot: Cannot find key hash in coreNodes: " <> show gkh
+      Just ((_,_),ak) -> ak
+
+-- | Calculate the overlay schedule for a given epoch
+overlayScheduleFor :: EpochNo -> Map SlotNo OBftSlot
+overlayScheduleFor e = runShelleyBase $
+  overlaySchedule
+    e
+    (Map.keysSet genDelegs)
+    ppsEx1
+
+-- | Look up the correct core node to issue a block in the given slot, over any epoch
+slotKeys :: HasCallStack => Word64 -> AllPoolKeys
+slotKeys = coreNodeKeysForSlot fullOSched
+  where
+    fullOSched = Map.unions $ [overlayScheduleFor e | e <- [0..10]]
 
 genDelegs :: Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)
 genDelegs = Map.fromList
@@ -377,8 +407,6 @@ acntEx1 = genesisAccountState
 esEx1 :: EpochState
 esEx1 = EpochState acntEx1 emptySnapShots lsEx1 ppsEx1 ppsEx1 emptyNonMyopic
 
--- | Empty initial Shelley state with fake Byron hash and no blocks at all.
---   No blocks of Shelley have been processed yet.
 initStEx1 :: ChainState
 initStEx1 = initialShelleyState
   (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
@@ -535,13 +563,6 @@ acntEx2A = AccountState
 esEx2A :: EpochState
 esEx2A = EpochState acntEx2A emptySnapShots lsEx2A ppsEx1 ppsEx1 emptyNonMyopic
 
-overlayEx2A :: Map SlotNo OBftSlot
-overlayEx2A = runShelleyBase
-  $ overlaySchedule
-    (EpochNo 0)
-    (Map.keysSet genDelegs)
-    ppsEx1
-
 initNesEx2A :: NewEpochState
 initNesEx2A = NewEpochState
                (EpochNo 0)
@@ -550,7 +571,7 @@ initNesEx2A = NewEpochState
                esEx2A
                SNothing
                (PoolDistr Map.empty)
-               overlayEx2A
+               (overlayScheduleFor (EpochNo 0))
 
 
 initStEx2A :: ChainState
@@ -560,14 +581,14 @@ initStEx2A = initialShelleyState
   utxoEx2A
   (maxLLSupply - balance utxoEx2A)
   genDelegs
-  overlayEx2A
+  (overlayScheduleFor (EpochNo 0))
   ppsEx1
   (hashHeaderToNonce lastByronHeaderHash)
 
 blockEx2A :: Block
 blockEx2A = mkBlock
              lastByronHeaderHash
-             (coreNodeKeys 0)
+             (slotKeys 10)
              [txEx2A]
              (SlotNo 10)
              (BlockNo 1)
@@ -576,7 +597,7 @@ blockEx2A = mkBlock
              zero
              0
              0
-             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+             (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
 dsEx2A :: DState
 dsEx2A = dsEx1
@@ -624,7 +645,7 @@ expectedStEx2A = ChainState
      (EpochState acntEx2A emptySnapShots expectedLSEx2A ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      (PoolDistr Map.empty)
-     overlayEx2A)
+     (overlayScheduleFor (EpochNo 0)))
   -- Operational certificate issue numbers are now only updated during block
   -- header processing (in the OCERT rule). As such, we will not see the
   -- operational certificate issue number appear until the first time a block is
@@ -681,7 +702,7 @@ txEx2B = Tx
 blockEx2B :: Block
 blockEx2B = mkBlock
              blockEx2AHash    -- Hash of previous block
-             (coreNodeKeys 3)
+             (slotKeys 90)
              [txEx2B]         -- Single transaction to record
              (SlotNo 90)      -- Current slot
              (BlockNo 2)
@@ -690,7 +711,7 @@ blockEx2B = mkBlock
              zero             -- Praos leader value
              4                -- Period of KES (key evolving signature scheme)
              0
-             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
+             (mkOCert (slotKeys 90) 0 (KESPeriod 0))
 
 blockEx2BHash :: HashHeader
 blockEx2BHash = bhHash (bheader blockEx2B)
@@ -745,7 +766,7 @@ expectedStEx2Bgeneric pp = ChainState
                          , nonMyopic     = emptyNonMyopic
                          })  -- Update reward
      (PoolDistr Map.empty)
-     overlayEx2A)
+     (overlayScheduleFor (EpochNo 0)))
   oCertIssueNosEx1
   nonce0
   (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2) -- Evolving nonce
@@ -783,7 +804,7 @@ ex2B = CHAINExample (SlotNo 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
 blockEx2C :: Block
 blockEx2C = mkBlock
              blockEx2BHash    -- Hash of previous block
-             (coreNodeKeys 0)
+             (slotKeys 110)
              []               -- No transactions at all (empty block)
              (SlotNo 110)     -- Current slot
              (BlockNo 3)      -- Second block within the epoch
@@ -792,13 +813,7 @@ blockEx2C = mkBlock
              zero             -- Praos leader value
              5                -- Period of KES (key evolving signature scheme)
              0
-             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
-
-epoch1OSchedEx2C :: Map SlotNo OBftSlot
-epoch1OSchedEx2C = runShelleyBase $ overlaySchedule
-                    (EpochNo 1)
-                    (Map.keysSet genDelegs)
-                    ppsEx1
+             (mkOCert (slotKeys 110) 0 (KESPeriod 0))
 
 -- | Snapshot of stakes for Alice and Bob
 snapEx2C :: SnapShot
@@ -867,7 +882,7 @@ expectedStEx2Cgeneric ss ls pp = ChainState
      (EpochState acntEx2A { _reserves = _reserves acntEx2A - carlMIR } ss ls pp pp emptyNonMyopic)
      SNothing
      (PoolDistr Map.empty)
-     epoch1OSchedEx2C)
+     (overlayScheduleFor (EpochNo 1)))
   oCertIssueNosEx1
   (nonce0 ⭒ mkNonce 1)
   (mkSeqNonce 3)
@@ -946,7 +961,7 @@ txEx2D = Tx
 blockEx2D :: Block
 blockEx2D = mkBlock
              blockEx2CHash
-             (coreNodeKeys 3)
+             (slotKeys 190)
              [txEx2D]
              (SlotNo 190)
              (BlockNo 4)
@@ -955,7 +970,7 @@ blockEx2D = mkBlock
              zero
              9
              0
-             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
+             (mkOCert (slotKeys 190) 0 (KESPeriod 0))
 
 blockEx2DHash :: HashHeader
 blockEx2DHash = bhHash (bheader blockEx2D)
@@ -1008,7 +1023,7 @@ expectedStEx2D = ChainState
                          , nonMyopic     = emptyNonMyopic { rewardPot = Coin 17 }
                          })
      (PoolDistr Map.empty)
-     epoch1OSchedEx2C)
+     (overlayScheduleFor (EpochNo 1)))
   oCertIssueNosEx1
   (nonce0 ⭒ mkNonce 1)
   (mkSeqNonce 4)
@@ -1030,7 +1045,7 @@ ex2D = CHAINExample (SlotNo 190) expectedStEx2C blockEx2D (Right expectedStEx2D)
 blockEx2E :: Block
 blockEx2E = mkBlock
              blockEx2DHash
-             (coreNodeKeys 3)
+             (slotKeys 220)
              []
              (SlotNo 220)
              (BlockNo 5)
@@ -1039,13 +1054,7 @@ blockEx2E = mkBlock
              zero
              11
              10
-             (mkOCert (coreNodeKeys 3) 1 (KESPeriod 10))
-
-epoch1OSchedEx2E :: Map SlotNo OBftSlot
-epoch1OSchedEx2E = runShelleyBase $ overlaySchedule
-                    (EpochNo 2)
-                    (Map.keysSet genDelegs)
-                    ppsEx1
+             (mkOCert (slotKeys 220) 1 (KESPeriod 10))
 
 snapEx2E :: SnapShot
 snapEx2E = SnapShot
@@ -1087,7 +1096,7 @@ acntEx2E = AccountState
 oCertIssueNosEx2 :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2 =
   Map.insert
-    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 3)
+    (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 220)
     1
     oCertIssueNosEx1
 
@@ -1103,7 +1112,7 @@ expectedStEx2E = ChainState
        (Map.singleton
           (hk alicePool)
           (1, hashKeyVRF (snd $ vrf alicePool))))
-     epoch1OSchedEx2E)
+     (overlayScheduleFor (EpochNo 2)))
   oCertIssueNosEx2
   ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
   (mkSeqNonce 5)
@@ -1157,7 +1166,8 @@ expectedStEx2F = ChainState
                          , nonMyopic     = emptyNonMyopic { rewardPot = Coin 16 }
                          })
      pdEx2F
-     epoch1OSchedEx2E)
+     (overlayScheduleFor (EpochNo 2))
+  )
   oCertIssueNosEx2F
   ((mkSeqNonce 3) ⭒ (hashHeaderToNonce blockEx2BHash))
   (mkSeqNonce 6)
@@ -1179,7 +1189,7 @@ ex2F = CHAINExample (SlotNo 295) expectedStEx2E blockEx2F (Right expectedStEx2F)
 blockEx2G :: Block
 blockEx2G = mkBlock
              blockEx2FHash
-             (coreNodeKeys 0)
+             (slotKeys 310)
              []
              (SlotNo 310)
              (BlockNo 7)
@@ -1188,16 +1198,10 @@ blockEx2G = mkBlock
              zero
              15
              15
-             (mkOCert (coreNodeKeys 0) 1 (KESPeriod 15))
+             (mkOCert (slotKeys 310) 1 (KESPeriod 15))
 
 blockEx2GHash :: HashHeader
 blockEx2GHash = bhHash (bheader blockEx2G)
-
-epoch1OSchedEx2G :: Map SlotNo OBftSlot
-epoch1OSchedEx2G = runShelleyBase $ overlaySchedule
-                    (EpochNo 3)
-                    (Map.keysSet genDelegs)
-                    ppsEx1
 
 snapsEx2G :: SnapShots
 snapsEx2G = snapsEx2E { _pstakeMark = snapEx2E
@@ -1219,7 +1223,7 @@ expectedLSEx2G = LedgerState
 oCertIssueNosEx2G :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2G =
   Map.insert
-    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0)
+    (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 310)
     1
     oCertIssueNosEx2F
 
@@ -1235,7 +1239,7 @@ expectedStEx2G = ChainState
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      pdEx2F
-     epoch1OSchedEx2G)
+     (overlayScheduleFor (EpochNo 3)))
   oCertIssueNosEx2G
   ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
   (mkSeqNonce 7)
@@ -1256,7 +1260,7 @@ ex2G = CHAINExample (SlotNo 310) expectedStEx2F blockEx2G (Right expectedStEx2G)
 blockEx2H :: Block
 blockEx2H = mkBlock
              blockEx2GHash
-             (coreNodeKeys 3)
+             (slotKeys 390)
              []
              (SlotNo 390)
              (BlockNo 8)
@@ -1265,7 +1269,7 @@ blockEx2H = mkBlock
              zero
              19
              19
-             (mkOCert (coreNodeKeys 3) 2 (KESPeriod 19))
+             (mkOCert (slotKeys 390) 2 (KESPeriod 19))
 
 blockEx2HHash :: HashHeader
 blockEx2HHash = bhHash (bheader blockEx2H)
@@ -1283,7 +1287,7 @@ rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
 oCertIssueNosEx2H :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2H =
   Map.insert
-    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 3)
+    (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 390)
     2
     oCertIssueNosEx2G
 
@@ -1318,7 +1322,7 @@ expectedStEx2H = ChainState
                              snapEx2C
                          })
      pdEx2F
-     epoch1OSchedEx2G)
+     (overlayScheduleFor (EpochNo 3)))
   oCertIssueNosEx2H
   ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
   (mkSeqNonce 8)
@@ -1339,7 +1343,7 @@ ex2H = CHAINExample (SlotNo 390) expectedStEx2G blockEx2H (Right expectedStEx2H)
 blockEx2I :: Block
 blockEx2I = mkBlock
               blockEx2HHash
-              (coreNodeKeys 0)
+              (slotKeys 410)
               []
               (SlotNo 410)
               (BlockNo 9)
@@ -1348,16 +1352,10 @@ blockEx2I = mkBlock
               zero
               20
               20
-              (mkOCert (coreNodeKeys 0) 2 (KESPeriod 20))
+              (mkOCert (slotKeys 410) 2 (KESPeriod 20))
 
 blockEx2IHash :: HashHeader
 blockEx2IHash = bhHash (bheader blockEx2I)
-
-epoch1OSchedEx2I :: Map SlotNo OBftSlot
-epoch1OSchedEx2I = runShelleyBase $ overlaySchedule
-                     (EpochNo 4)
-                     (Map.keysSet genDelegs)
-                     ppsEx1
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
@@ -1394,7 +1392,7 @@ snapsEx2I = snapsEx2G { _pstakeMark = SnapShot
 oCertIssueNosEx2I :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2I =
   Map.insert
-    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0)
+    (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 410)
     2
     oCertIssueNosEx2H
 
@@ -1407,7 +1405,7 @@ expectedStEx2I = ChainState
      (EpochState acntEx2I snapsEx2I expectedLSEx2I ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      pdEx2F
-     epoch1OSchedEx2I)
+     (overlayScheduleFor (EpochNo 4)))
   oCertIssueNosEx2I
   ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 9)
@@ -1451,7 +1449,7 @@ txEx2J = Tx
 blockEx2J :: Block
 blockEx2J = mkBlock
               blockEx2IHash
-              (coreNodeKeys 3)
+              (slotKeys 420)
               [txEx2J]
               (SlotNo 420)
               (BlockNo 10)
@@ -1460,7 +1458,7 @@ blockEx2J = mkBlock
               zero
               21
               19
-              (mkOCert (coreNodeKeys 3) 2 (KESPeriod 19))
+              (mkOCert (slotKeys 420) 2 (KESPeriod 19))
 
 blockEx2JHash :: HashHeader
 blockEx2JHash = bhHash (bheader blockEx2J)
@@ -1493,9 +1491,9 @@ expectedLSEx2J = LedgerState
 oCertIssueNosEx2J :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2J =
   Map.insert
-    (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0)
+    (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 420)
     2
-    oCertIssueNosEx2H
+    oCertIssueNosEx2I
 
 expectedStEx2J :: ChainState
 expectedStEx2J = ChainState
@@ -1506,7 +1504,7 @@ expectedStEx2J = ChainState
      (EpochState acntEx2I snapsEx2I expectedLSEx2J ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      pdEx2F
-     epoch1OSchedEx2I)
+     (overlayScheduleFor (EpochNo 4)))
   oCertIssueNosEx2J
   ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 10)
@@ -1547,7 +1545,7 @@ txEx2K = Tx
 blockEx2K :: Block
 blockEx2K = mkBlock
               blockEx2JHash
-              (coreNodeKeys 3)
+              (slotKeys 490)
               [txEx2K]
               (SlotNo 490)
               (BlockNo 11)
@@ -1556,7 +1554,7 @@ blockEx2K = mkBlock
               zero
               24
               19
-              (mkOCert (coreNodeKeys 3) 2 (KESPeriod 19))
+              (mkOCert (slotKeys 490) 2 (KESPeriod 19))
 
 blockEx2KHash :: HashHeader
 blockEx2KHash = bhHash (bheader blockEx2K)
@@ -1597,7 +1595,7 @@ expectedStEx2K = ChainState
                              snapEx2E
                          })
      pdEx2F
-     epoch1OSchedEx2I)
+     (overlayScheduleFor (EpochNo 4)))
   oCertIssueNosEx2J
   ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
   (mkSeqNonce 11)
@@ -1618,7 +1616,7 @@ ex2K = CHAINExample (SlotNo 490) expectedStEx2J blockEx2K (Right expectedStEx2K)
 blockEx2L :: Block
 blockEx2L = mkBlock
               blockEx2KHash
-              (coreNodeKeys 0)
+              (slotKeys 510)
               []
               (SlotNo 510)
               (BlockNo 12)
@@ -1627,7 +1625,7 @@ blockEx2L = mkBlock
               zero
               25
               25
-              (mkOCert (coreNodeKeys 0) 3 (KESPeriod 25))
+              (mkOCert (slotKeys 510) 3 (KESPeriod 25))
 
 blockEx2LHash :: HashHeader
 blockEx2LHash = bhHash (bheader blockEx2L)
@@ -1670,7 +1668,7 @@ expectedLSEx2L = LedgerState
 
 oCertIssueNosEx2L :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx2L =
-  Map.insert (coerceKeyRole . hashKey $ vKey $ cold $ coreNodeKeys 0) 3 oCertIssueNosEx2J
+  Map.insert (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 510) 3 oCertIssueNosEx2J
 
 expectedStEx2L :: ChainState
 expectedStEx2L = ChainState
@@ -1681,7 +1679,7 @@ expectedStEx2L = ChainState
      (EpochState acntEx2L snapsEx2L expectedLSEx2L ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      pdEx2F
-     (runShelleyBase $ overlaySchedule (EpochNo 5) (Map.keysSet genDelegs) ppsEx1))
+     (overlayScheduleFor (EpochNo 5)))
   oCertIssueNosEx2L
   ((mkSeqNonce 10) ⭒ (hashHeaderToNonce blockEx2HHash))
   (mkSeqNonce 12)
@@ -1763,7 +1761,7 @@ txEx3A = Tx
 blockEx3A :: Block
 blockEx3A = mkBlock
              lastByronHeaderHash
-             (coreNodeKeys 0)
+             (slotKeys 10)
              [txEx3A]
              (SlotNo 10)
              (BlockNo 1)
@@ -1772,7 +1770,7 @@ blockEx3A = mkBlock
              zero
              0
              0
-             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+             (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
 expectedLSEx3A :: LedgerState
 expectedLSEx3A = LedgerState
@@ -1798,7 +1796,7 @@ expectedStEx3A = ChainState
      (EpochState acntEx2A emptySnapShots expectedLSEx3A ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      (PoolDistr Map.empty)
-     overlayEx2A)
+     (overlayScheduleFor (EpochNo 0)))
   oCertIssueNosEx1
   nonce0
   (nonce0 ⭒ mkNonce 1)
@@ -1854,7 +1852,7 @@ txEx3B = Tx
 blockEx3B :: Block
 blockEx3B = mkBlock
              blockEx3AHash
-             (coreNodeKeys 3)
+             (slotKeys 20)
              [txEx3B]
              (SlotNo 20)
              (BlockNo 2)
@@ -1863,7 +1861,7 @@ blockEx3B = mkBlock
              zero
              1
              0
-             (mkOCert (coreNodeKeys 3) 0 (KESPeriod 0))
+             (mkOCert (slotKeys 20) 0 (KESPeriod 0))
 
 utxoEx3B :: UTxO
 utxoEx3B = UTxO . Map.fromList $
@@ -1896,7 +1894,7 @@ expectedStEx3B = ChainState
      (EpochState acntEx2A emptySnapShots expectedLSEx3B ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      (PoolDistr Map.empty)
-     overlayEx2A)
+     (overlayScheduleFor (EpochNo 0)))
   oCertIssueNosEx1
   nonce0
   (mkSeqNonce 2)
@@ -1917,7 +1915,7 @@ ex3B = CHAINExample (SlotNo 20) expectedStEx3A blockEx3B (Right expectedStEx3B)
 blockEx3C :: Block
 blockEx3C = mkBlock
              blockEx3BHash
-             (coreNodeKeys 0)
+             (slotKeys 110)
              []
              (SlotNo 110)
              (BlockNo 3)
@@ -1926,16 +1924,10 @@ blockEx3C = mkBlock
              zero
              5
              0
-             (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+             (mkOCert (slotKeys 110) 0 (KESPeriod 0))
 
 blockEx3CHash :: HashHeader
 blockEx3CHash = bhHash (bheader blockEx3C)
-
-overlayEx3C :: Map SlotNo OBftSlot
-overlayEx3C = runShelleyBase $ overlaySchedule
-                    (EpochNo 1)
-                    (Map.keysSet genDelegs)
-                    ppsEx1
 
 snapsEx3C :: SnapShots
 snapsEx3C = emptySnapShots { _feeSS = Coin 2 }
@@ -1961,7 +1953,7 @@ expectedStEx3C = ChainState
      (EpochState acntEx2A snapsEx3C expectedLSEx3C ppsEx1 ppsEx3C emptyNonMyopic)
      SNothing
      (PoolDistr Map.empty)
-     overlayEx3C)
+     (overlayScheduleFor (EpochNo 1)))
   oCertIssueNosEx1
   (mkSeqNonce 2 ⭒ mkNonce 123)
   (mkSeqNonce 3)
@@ -2012,7 +2004,7 @@ txEx4A = Tx
 blockEx4A :: Block
 blockEx4A = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 0)
+              (slotKeys 10)
               [txEx4A]
               (SlotNo 10)
               (BlockNo 1)
@@ -2021,7 +2013,7 @@ blockEx4A = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+              (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
 blockEx4AHash :: HashHeader
 blockEx4AHash = bhHash (bheader blockEx4A)
@@ -2055,7 +2047,7 @@ expectedStEx4A = ChainState
      (EpochState acntEx2A emptySnapShots expectedLSEx4A ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      (PoolDistr Map.empty)
-     overlayEx2A)
+     (overlayScheduleFor (EpochNo 0)))
   oCertIssueNosEx1
   nonce0
   (nonce0 ⭒ mkNonce 1)
@@ -2075,7 +2067,7 @@ ex4A = CHAINExample (SlotNo 10) initStEx2A blockEx4A (Right expectedStEx4A)
 blockEx4B :: Block
 blockEx4B = mkBlock
              blockEx4AHash
-             (coreNodeKeys 6)
+             (slotKeys 50)
              []
              (SlotNo 50)
              (BlockNo 2)
@@ -2084,7 +2076,7 @@ blockEx4B = mkBlock
              zero
              2
              0
-             (mkOCert (coreNodeKeys 6) 0 (KESPeriod 0))
+             (mkOCert (slotKeys 50) 0 (KESPeriod 0))
 
 blockEx4BHash :: HashHeader
 blockEx4BHash = bhHash (bheader blockEx4B)
@@ -2119,7 +2111,7 @@ expectedStEx4B = ChainState
                          , nonMyopic     = emptyNonMyopic
                          })
      (PoolDistr Map.empty)
-     overlayEx2A)
+     (overlayScheduleFor (EpochNo 0)))
   oCertIssueNosEx1
   nonce0
   (mkSeqNonce 2)
@@ -2171,7 +2163,7 @@ txEx5A = Tx
 blockEx5A :: Block
 blockEx5A = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 0)
+              (slotKeys 10)
               [txEx5A]
               (SlotNo 10)
               (BlockNo 1)
@@ -2180,7 +2172,7 @@ blockEx5A = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+              (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
 blockEx5AHash :: HashHeader
 blockEx5AHash = bhHash (bheader blockEx5A)
@@ -2212,7 +2204,7 @@ expectedStEx5A = ChainState
      (EpochState acntEx2A emptySnapShots expectedLSEx5A ppsEx1 ppsEx1 emptyNonMyopic)
      SNothing
      (PoolDistr Map.empty)
-     overlayEx2A)
+     (overlayScheduleFor (EpochNo 0)))
   oCertIssueNosEx1
   nonce0
   (nonce0 ⭒ mkNonce 1)
@@ -2246,7 +2238,7 @@ txEx5B = Tx
 blockEx5B :: Block
 blockEx5B = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 0)
+              (slotKeys 10)
               [txEx5B]
               (SlotNo 10)
               (BlockNo 1)
@@ -2255,7 +2247,7 @@ blockEx5B = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+              (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
 expectedStEx5B :: PredicateFailure CHAIN
 expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRInsufficientGenesisSigsUTXOW)))
@@ -2339,7 +2331,7 @@ txEx5F = Tx txbodyEx5F
 blockEx5F :: Block
 blockEx5F = mkBlock
               lastByronHeaderHash
-              (coreNodeKeys 0)
+              (slotKeys 10)
               [txEx5F]
               (SlotNo 10)
               (BlockNo 1)
@@ -2348,7 +2340,7 @@ blockEx5F = mkBlock
               zero
               0
               0
-              (mkOCert (coreNodeKeys 0) 0 (KESPeriod 0))
+              (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
 -- | The second transaction in the next epoch and at least `randomnessStabilisationWindow` slots
 -- after the transaction carrying the MIR certificate, then creates the rewards
@@ -2375,17 +2367,19 @@ txEx5F' = Tx txbodyEx5F' (makeWitnessesVKey (hashTxBody txbodyEx5F') [ alicePay 
 blockEx5F' :: Block
 blockEx5F' = mkBlock
               (bhHash (bheader blockEx5F))
-              (coreNodeKeys 5)
+              (slotKeys s)
               [txEx5F']
-              ((slotFromEpoch $ EpochNo 1)
-                +* Duration (randomnessStabilisationWindow testGlobals) + SlotNo 7)
+              (slot)
               (BlockNo 2)
               (mkNonce 0)
               (NatNonce 1)
               zero
               7
               0
-              (mkOCert (coreNodeKeys 5) 0 (KESPeriod 0))
+              (mkOCert (slotKeys s) 0 (KESPeriod 0))
+  where
+    slot@(SlotNo s) = (slotFromEpoch $ EpochNo 1)
+                +* Duration (randomnessStabilisationWindow testGlobals) + SlotNo 7
 
 -- | The third transaction in the next epoch applies the reward update to 1)
 -- register a staking credential for Alice, 2) deducing the key deposit from the
@@ -2411,16 +2405,18 @@ txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey (hashTxBody txbodyEx5F'') [ aliceP
 blockEx5F'' :: Block
 blockEx5F'' = mkBlock
                (bhHash (bheader blockEx5F'))
-               (coreNodeKeys 0)
+               (slotKeys s)
                [txEx5F'']
-               ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
+               (slot)
                (BlockNo 3)
                (mkNonce 0)
                (NatNonce 1)
                zero
                10
                10
-               (mkOCert (coreNodeKeys 0) 0 (KESPeriod 10))
+               (mkOCert (slotKeys s) 0 (KESPeriod 10))
+  where
+    slot@(SlotNo s) = (slotFromEpoch $ EpochNo 2) + SlotNo 10
 
 ex5F' :: Either [[PredicateFailure CHAIN]] ChainState
 ex5F' = do
