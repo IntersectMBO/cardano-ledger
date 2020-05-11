@@ -36,6 +36,15 @@ import Cardano.Binary
     enforceSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeWord,
+    encodeListLen,
+    encodeMapLen,
+    encodeWord,
+    enforceSize
+  )
 import Control.Monad (unless)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -156,7 +165,15 @@ instance NoUnexpectedThunks ProtVer
 
 instance ToCBORGroup ProtVer where
   toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
+  encodedGroupSizeExpr size proxy =
+        encodedSizeExpr size ((\(ProtVer x _) -> toWord x) <$> proxy)
+      + encodedSizeExpr size ((\(ProtVer _ y) -> toWord y) <$> proxy)
+    where
+      toWord :: Natural -> Word
+      toWord = fromIntegral
+
   listLen _ = 2
+  listLenBound _ = 2
 
 instance FromCBORGroup ProtVer where
   fromCBORGroup = do

@@ -68,7 +68,7 @@ module Shelley.Spec.Ledger.Keys
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (toCBOR))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
@@ -157,6 +157,7 @@ instance (Crypto crypto, Typeable kd) => FromCBOR (VKey kd crypto) where
 
 instance (Crypto crypto, Typeable kd) => ToCBOR (VKey kd crypto) where
   toCBOR (VKey vk) = DSIGN.encodeVerKeyDSIGN vk
+  encodedSizeExpr _size proxy = DSIGN.encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
 
 -- | Pair of signing key and verification key, with a usage role.
 data KeyPair (kd :: KeyRole) crypto = KeyPair
