@@ -36,15 +36,6 @@ import Cardano.Binary
     enforceSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
-import Cardano.Binary
-  ( FromCBOR (..),
-    ToCBOR (..),
-    decodeWord,
-    encodeListLen,
-    encodeMapLen,
-    encodeWord,
-    enforceSize
-  )
 import Control.Monad (unless)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
