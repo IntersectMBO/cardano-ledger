@@ -295,19 +295,19 @@ pattern TxBody
    }
   where
   TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
-    let encodeMapElement ix x = Just (encodeWord ix <> toCBOR x)
-        encodeMapElementUnless condition ix x = if condition x
+    let encodeMapElement ix enc x = Just (encodeWord ix <> enc x)
+        encodeMapElementUnless condition ix enc x = if condition x
           then Nothing
-          else encodeMapElement ix x
+          else encodeMapElement ix enc x
         l = catMaybes
-          [ encodeMapElement 0 $ Set.toList _inputs
-          , encodeMapElement 1 $ CborSeq $ StrictSeq.getSeq _outputs
-          , encodeMapElement 2 _txfee
-          , encodeMapElement 3 _ttl
-          , encodeMapElementUnless null 4 $ CborSeq $ StrictSeq.getSeq _certs
-          , encodeMapElementUnless (null . unWdrl) 5 _wdrls
-          , encodeMapElement 6 =<< strictMaybeToMaybe _txUpdate
-          , encodeMapElement 7 =<< strictMaybeToMaybe _mdHash
+          [ encodeMapElement 0 encodeFoldable _inputs
+          , encodeMapElement 1 encodeFoldable _outputs
+          , encodeMapElement 2 toCBOR _txfee
+          , encodeMapElement 3 toCBOR _ttl
+          , encodeMapElementUnless null 4 encodeFoldable _certs
+          , encodeMapElementUnless (null . unWdrl) 5 toCBOR _wdrls
+          , encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate
+          , encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash
           ]
         n = fromIntegral $ length l
         bytes = serializeEncoding $ encodeMapLen n <> fold l
