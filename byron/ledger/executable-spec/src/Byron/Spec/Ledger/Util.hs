@@ -5,17 +5,18 @@ module Byron.Spec.Ledger.Util
   ( mkGoblinGens
   ) where
 
-import           Data.FileEmbed (makeRelativeToProject)
 import           Language.Haskell.TH
-import           System.FilePath ((</>))
+import           System.FilePath ((</>), (<.>))
 
 import           Test.Goblin (loadGoblinDataFromFilePath)
 
 
 loadGD :: String -> Q Exp
-loadGD pfName = do
-  absPath <- makeRelativeToProject ("src" </> "goblin_genomes" </> pfName)
-  loadGoblinDataFromFilePath absPath
+loadGD pfName =
+  loadGoblinDataFromFilePath relPath
+ where
+  -- data files we get at compile time are always relative to the project
+  relPath = "src" </> "goblin_genomes" </> pfName <.> "genome"
 
 -- | Take a name (e.g. "DELEG") and a list of `PredicateFailure`s in `renderPF`
 -- form (see repo goblins-sts-breeder; STSExtra typeclass) (e.g.
