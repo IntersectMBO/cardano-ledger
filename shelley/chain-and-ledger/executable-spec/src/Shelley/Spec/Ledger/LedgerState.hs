@@ -67,7 +67,6 @@ module Shelley.Spec.Ledger.LedgerState
   -- epoch boundary
   , stakeDistr
   , applyRUpd
-  , totalStake
   , createRUpd
   --
   , NewEpochState(..)
@@ -94,7 +93,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 import           Shelley.Spec.Ledger.Address (Addr (..))
-import           Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
+import           Shelley.Spec.Ledger.Credential (Credential (..))
 import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Crypto (Crypto)
 import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot (..), SnapShots (..),
@@ -1002,35 +1001,20 @@ updateNonMypopic nm rPot aps ss = nm
     aps' = Map.mapWithKey performance (aps `Map.union` performanceZero)
 
 
--- | Compute the total stake
-totalStake
-  :: LedgerState crypto
-  -> Coin
-totalStake ls = totalUtxoStake + totalRewardStake
-  where
-    outputStake (TxOut (Addr _ (StakeRefBase _)) c) = c
-    outputStake (TxOut (Addr _ (StakeRefPtr _ )) c) = c
-    outputStake (TxOut (Addr _ (StakeRefNull  )) _) = 0
-    outputStake (TxOut (AddrBootstrap _)         _) = 0
-    (UTxO utxo) = _utxo . _utxoState $ ls
-    totalUtxoStake = Map.foldl' (\acc out -> outputStake out + acc) 0 utxo
-    totalRewardStake = sum $ _rewards . _dstate . _delegationState $ ls
-
 -- | Create a reward update
 createRUpd
   :: EpochNo
   -> BlocksMade crypto
   -> EpochState crypto
+  -> Coin
   -> ShelleyBase (RewardUpdate crypto)
-createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) = do
+createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
     ei <- asks epochInfo
     slotsPerEpoch <- epochInfoSize ei e
     asc <- asks activeSlotCoeff
     let SnapShot stake' delegs' poolParams = _pstakeGo ss
         Coin reserves = _reserves acnt
         ds = _dstate $ _delegationState ls
-
-        total = totalStake ls
 
         -- reserves and rewards change
         deltaR_ = (floor $ min 1 eta * intervalValue (_rho pr) * fromIntegral reserves)
@@ -1042,7 +1026,9 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) = do
         deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
         _R = Coin $ rPot - deltaT1
 
-        (rs_, aps) = reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' total
+        circulation = total - (_reserves acnt)
+        (rs_, aps) =
+          reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation
         deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer

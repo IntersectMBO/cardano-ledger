@@ -131,7 +131,7 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern Act
                      genesisCoins, genesisId, nesEs, nonMyopic, overlaySchedule, rs,
                      _delegationState, _delegations, _dstate, _fGenDelegs, _genDelegs, _irwd,
                      _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools, _stkCreds,
-                     _treasury, totalStake)
+                     _treasury)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams), PParamsUpdate,
                      pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams, _a0,
@@ -1287,15 +1287,19 @@ oCertIssueNosEx2H =
     2
     oCertIssueNosEx2G
 
-totalStakeEx2H :: Coin
-totalStakeEx2H = totalStake expectedLSEx2G
-
 alicePerfEx2H :: ApparentPerformance
 alicePerfEx2H = ApparentPerformance (beta / sigma)
   where
     beta = 1 -- Alice produced the only decentralized block this epoch
-    sigma = fromRational (fromIntegral stake % fromIntegral totalStakeEx2H)
+    reserves = _reserves acntEx2G
+    sigma = fromRational (fromIntegral stake % (fromIntegral $ maxLLSupply - reserves))
     stake = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
+
+deltaT2H :: Coin
+deltaT2H = Coin 786986666678
+
+deltaR2H :: Coin
+deltaR2H = Coin (-793333333333)
 
 expectedStEx2H :: ChainState
 expectedStEx2H = ChainState
@@ -1304,8 +1308,8 @@ expectedStEx2H = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
-     (SJust RewardUpdate { deltaT        = Coin 786986666678
-                         , deltaR        = Coin (-793333333333)
+     (SJust RewardUpdate { deltaT        = deltaT2H
+                         , deltaR        = deltaR2H
                          , rs            = rewardsEx2H
                          , deltaF        = Coin (-10)
                          , nonMyopic     = NonMyopic
@@ -1357,8 +1361,8 @@ epoch1OSchedEx2I = runShelleyBase $ overlaySchedule
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
-            { _treasury = Coin 786986666718
-            , _reserves = Coin 33999206666666557
+            { _treasury = (_treasury acntEx2G) + deltaT2H
+            , _reserves = (_reserves acntEx2G) + deltaR2H
             }
 
 dsEx2I :: DState
