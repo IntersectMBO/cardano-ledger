@@ -933,8 +933,10 @@ serializationTests = testGroup "Serialization Tests"
           -- tx 2, two keys
           <> T (TkMapLen 1 . TkWord 0)
           <> T (TkListLen 2)
-          <> S w1
+          -- The test is unfortunately sensitive to this ordering. TODO make it
+          -- better
           <> S w2
+          <> S w1
 
           -- tx 3, one script
           <> T (TkMapLen 1 . TkWord 1)
@@ -951,8 +953,8 @@ serializationTests = testGroup "Serialization Tests"
           <> T (TkMapLen 2)
           <> T (TkWord 0)
             <> T (TkListLen 2)
-            <> S w1
             <> S w2
+            <> S w1
           <> T (TkWord 1)
             <> T (TkListLen 2)
             <> S testScript
