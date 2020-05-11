@@ -12,13 +12,14 @@ import           Data.Ratio ((%))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Shelley.Spec.Ledger.Address (Addr (..))
-import           Shelley.Spec.Ledger.API.Validation (ShelleyState)
-import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.Credential (Credential (..))
+import           Shelley.Spec.Ledger.API.Validation (ShelleyState)
+import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import           Shelley.Spec.Ledger.Coin (Coin (..))
 import           Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)
-import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
-import           Shelley.Spec.Ledger.LedgerState (esLState, esNonMyopic, esPp, nesEs, totalStake,
-                     _utxo, _utxoState)
+import           Shelley.Spec.Ledger.Keys (KeyHash, KeyRole(..))
+import           Shelley.Spec.Ledger.LedgerState (esLState, esNonMyopic, esPp, nesEs, _utxo,
+                     _utxoState)
 import           Shelley.Spec.Ledger.Rewards (NonMyopic (..), StakeShare (..), getTopRankedPools,
                      nonMyopicMemberRew, nonMyopicStake)
 import           Shelley.Spec.Ledger.TxData (PoolParams (..), TxOut (..))
@@ -30,19 +31,20 @@ import           Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- pool (identified by the key hash of the pool operator) to the
 -- non-myopic pool member reward for that stake pool.
 getNonMyopicMemberRewards
-  :: ShelleyState crypto
+  :: Globals
+  -> ShelleyState crypto
   -> Set (Credential 'Staking crypto)
   -> Map (Credential 'Staking crypto) (Map (KeyHash 'StakePool crypto) Coin)
-getNonMyopicMemberRewards ss creds = Map.fromList $
+getNonMyopicMemberRewards globals ss creds = Map.fromList $
   fmap
     (\cred -> (cred, Map.mapWithKey (mkNMMRewards $ memShare cred) poolData))
     (Set.toList creds)
   where
-    es = nesEs ss
-    Coin total = totalStake $ esLState es
+    total = fromIntegral $ maxLovelaceSupply globals
     toShare (Coin x) = StakeShare (x % total)
     memShare cred = toShare $ Map.findWithDefault (Coin 0) cred (unStake stake)
 
+    es = nesEs ss
     pp = esPp es
     NonMyopic
       { apparentPerformances = aps

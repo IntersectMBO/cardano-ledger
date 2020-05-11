@@ -131,7 +131,7 @@ import           Shelley.Spec.Ledger.LedgerState (AccountState (..), pattern Act
                      genesisCoins, genesisId, nesEs, nonMyopic, overlaySchedule, rs,
                      _delegationState, _delegations, _dstate, _fGenDelegs, _genDelegs, _irwd,
                      _pParams, _ptrs, _reserves, _retiring, _rewards, _stPools, _stkCreds,
-                     _treasury, totalStake)
+                     _treasury)
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import           Shelley.Spec.Ledger.PParams (PParams, PParams' (PParams), PParamsUpdate,
                      pattern ProposedPPUpdates, pattern Update, emptyPPPUpdates, emptyPParams, _a0,
@@ -1271,10 +1271,10 @@ blockEx2HHash :: HashHeader
 blockEx2HHash = bhHash (bheader blockEx2H)
 
 aliceRAcnt2H :: Coin
-aliceRAcnt2H = Coin 5827393939
+aliceRAcnt2H = Coin 23839338840
 
 bobRAcnt2H :: Coin
-bobRAcnt2H = Coin 519272726
+bobRAcnt2H = Coin 2124297519
 
 rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
@@ -1287,14 +1287,11 @@ oCertIssueNosEx2H =
     2
     oCertIssueNosEx2G
 
-totalStakeEx2H :: Coin
-totalStakeEx2H = totalStake expectedLSEx2G
-
 alicePerfEx2H :: ApparentPerformance
 alicePerfEx2H = ApparentPerformance (beta / sigma)
   where
     beta = 1 -- Alice produced the only decentralized block this epoch
-    sigma = fromRational (fromIntegral stake % fromIntegral totalStakeEx2H)
+    sigma = fromRational (fromIntegral stake % fromIntegral maxLLSupply)
     stake = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
 
 expectedStEx2H :: ChainState
@@ -1304,7 +1301,7 @@ expectedStEx2H = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
-     (SJust RewardUpdate { deltaT        = Coin 786986666678
+     (SJust RewardUpdate { deltaT        = Coin 767369696984
                          , deltaR        = Coin (-793333333333)
                          , rs            = rewardsEx2H
                          , deltaF        = Coin (-10)
@@ -1357,7 +1354,7 @@ epoch1OSchedEx2I = runShelleyBase $ overlaySchedule
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
-            { _treasury = Coin 786986666718
+            { _treasury = Coin 767369697024
             , _reserves = Coin 33999206666666557
             }
 
