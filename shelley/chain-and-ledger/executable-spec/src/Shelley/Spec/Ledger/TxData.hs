@@ -37,6 +37,7 @@ module Shelley.Spec.Ledger.TxData
         _inputs,
         _outputs,
         _certs,
+        _forge,
         _wdrls,
         _txfee,
         _ttl,
@@ -489,8 +490,8 @@ data TxBody crypto = TxBody'
   { _inputs' :: !(Set (TxIn crypto)),
     _outputs' :: !(StrictSeq (TxOut crypto)),
     _certs' :: !(StrictSeq (DCert crypto)),
-    _wdrls' :: !(Wdrl crypto),
     _forge'    :: !(Value crypto),
+    _wdrls' :: !(Wdrl crypto),
     _txfee' :: !Coin,
     _ttl' :: !SlotNo,
     _txUpdate' :: !(StrictMaybe (Update crypto)),
@@ -508,20 +509,20 @@ pattern TxBody ::
   Set (TxIn crypto) ->
   StrictSeq (TxOut crypto) ->
   StrictSeq (DCert crypto) ->
-  Wdrl crypto ->
   Value crypto ->
+  Wdrl crypto ->
   Coin ->
   SlotNo ->
   StrictMaybe (Update crypto) ->
   StrictMaybe (MetaDataHash crypto) ->
   TxBody crypto
-pattern TxBody {_inputs, _outputs, _certs, _wdrls, _forge, _txfee, _ttl, _txUpdate, _mdHash} <-
+pattern TxBody {_inputs, _outputs, _certs, _forge, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBody'
     { _inputs' = _inputs,
       _outputs' = _outputs,
       _certs' = _certs,
-      _wdrls' = _wdrls,
       _forge' = _forge,
+      _wdrls' = _wdrls,
       _txfee' = _txfee,
       _ttl' = _ttl,
       _txUpdate' = _txUpdate,
@@ -541,9 +542,10 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _forge, _txfee, _ttl, _txUpda
                 encodeMapElement 2 encodePreEncoded feeBytes,
                 encodeMapElement 3 toCBOR _ttl,
                 encodeMapElementUnless null 4 encodeFoldable _certs,
-                encodeMapElementUnless (null . unWdrl) 5 toCBOR _wdrls,
-                encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate,
-                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash
+                encodeMapElementUnless (null . val) 5 toCBOR _forge,
+                encodeMapElementUnless (null . unWdrl) 6 toCBOR _wdrls,
+                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _txUpdate,
+                encodeMapElement 8 toCBOR =<< strictMaybeToMaybe _mdHash
               ]
           inputBytes = serializeEncoding' $ encodeFoldable _inputs
           outputBytes = serializeEncoding' $ encodeFoldable _outputs
@@ -551,7 +553,7 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _forge, _txfee, _ttl, _txUpda
           es = fromIntegral $ BS.length inputBytes + BS.length outputBytes + BS.length feeBytes
           n = fromIntegral $ length l
           bytes = serializeEncoding $ encodeMapLen n <> fold l
-       in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes es
+       in TxBody' _inputs _outputs _certs _forge _wdrls _txfee _ttl _txUpdate _mdHash bytes es
 
 {-# COMPLETE TxBody #-}
 
@@ -703,6 +705,7 @@ instance
     (b :: Word64) <- fromCBOR
     pure $ TxIn a (fromInteger $ toInteger b)
 
+
 instance
   (Typeable crypto, Crypto crypto)
   => ToCBOR (UTxOOut crypto)
@@ -731,7 +734,7 @@ instance
 instance (Crypto crypto) =>
   FromCBOR (TxOut crypto) where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
-    addr <- fromCBORGroup
+    addr <- fromCBOR
     b <- fromCBOR
     pure $ TxOut addr (compactValueToValue b)
 
