@@ -23,6 +23,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Word (Word)
 import           GHC.Generics (Generic)
 import           Numeric.Natural (Natural)
 
@@ -51,7 +52,7 @@ currentIssueNo (OCertEnv stPools genDelegs) cs hk
   | Set.member (coerceKeyRole hk) genDelegs = Just 0
   | otherwise = Nothing
 
-newtype KESPeriod = KESPeriod Natural
+newtype KESPeriod = KESPeriod Word
   deriving (Show, Eq, Ord, NoUnexpectedThunks, FromCBOR, ToCBOR)
 
 data OCert crypto = OCert

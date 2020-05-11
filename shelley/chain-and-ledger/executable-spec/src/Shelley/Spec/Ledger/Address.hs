@@ -181,7 +181,7 @@ getAddr = do
       Addr <$> getPayCred header <*> getStakeReference header
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
-getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.byteCount ([] @h))
+getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.sizeHash ([] @h))
 
 putHash :: Hash.Hash h a -> Put
 putHash (Hash.UnsafeHash b) = B.putByteString b

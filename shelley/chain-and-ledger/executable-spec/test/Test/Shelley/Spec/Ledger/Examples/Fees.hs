@@ -135,7 +135,7 @@ txSimpleUTxO = Tx
   }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
-txSimpleUTxOBytes16 = "83a4008182449db8a417000181824902aee84c700acd1b520a02185e030aa10081821b3030303030323134824439340e5c1b3030303030323134f6"
+txSimpleUTxOBytes16 = "83a4008182449db8a417000181824902048cc424f45049940a02185e030aa10081824830303030303231344c84aa81ee3030303030323134f6"
 
 -- | Transaction which consumes two UTxO and creates five UTxO
 -- | and has two witness
@@ -172,7 +172,7 @@ txMutiUTxO = Tx
   }
 
 txMutiUTxOBytes16 :: BSL.ByteString
-txMutiUTxOBytes16 = "83a4008282449db8a4170082449db8a417010185824902aee84c700acd1b520a824902aee84c700acd1b5214824902aee84c700acd1b52181e824902d42eadb1d42eadb11828824902d42eadb1d42eadb118320218c7030aa10082821b3030303030323134824471397a3b1b3030303030323134821b3135343835383637824471397a3b1b3135343835383637f6"
+txMutiUTxOBytes16 = "83a4008282449db8a4170082449db8a417010185824902048cc424f45049940a824902048cc424f450499414824902048cc424f4504994181e8249023050f79e3050f79e18288249023050f79e3050f79e18320218c7030aa10082824830303030303231344c80d2e3193030303030323134824831353438353836374c80d2e3193135343835383637f6"
 
 -- | Transaction which registers a stake key
 
@@ -197,7 +197,7 @@ txRegisterStake = Tx
   }
 
 txRegisterStakeBytes16 :: BSL.ByteString
-txRegisterStakeBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a02185e030a048182008200440acd1b52a10081821b30303030303231348244b901d3131b3030303030323134f6"
+txRegisterStakeBytes16 = "83a5008182449db8a417000181824902048cc424f45049940a02185e030a04818200820044f4504994a10081824830303030303231344cff6233043030303030323134f6"
 
 -- | Transaction which delegates a stake key
 
@@ -224,7 +224,7 @@ txDelegateStake = Tx
   }
 
 txDelegateStakeBytes16 :: BSL.ByteString
-txDelegateStakeBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a02185e030a04818302820044d42eadb14450d474d0a10082821b30303030303231348244ae17377c1b3030303030323134821b31353438353836378244ae17377c1b3135343835383637f6"
+txDelegateStakeBytes16 = "83a5008182449db8a417000181824902048cc424f45049940a02185e030a048183028200443050f79e4445c847eda10082824830303030303231344ca9f2fb0c3030303030323134824831353438353836374ca9f2fb0c3135343835383637f6"
 
 -- | Transaction which de-registers a stake key
 
@@ -250,7 +250,7 @@ txDeregisterStake = Tx
 
 
 txDeregisterStakeBytes16 :: BSL.ByteString
-txDeregisterStakeBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a02185e030a048182018200440acd1b52a10081821b30303030303231348244d0e5f47a1b3030303030323134f6"
+txDeregisterStakeBytes16 = "83a5008182449db8a417000181824902048cc424f45049940a02185e030a04818201820044f4504994a10081824830303030303231344c76f769253030303030323134f6"
 
 -- | Transaction which registers a stake pool
 
@@ -275,7 +275,7 @@ txRegisterPool = Tx
   }
 
 txRegisterPoolBytes16 :: BSL.ByteString
-txRegisterPoolBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a02185e030a04818a034450d474d04495286b7b0105d81e82010a8200440acd1b5281440acd1b52818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da10081821b3030303030323134824444968b971b3030303030323134f6"
+txRegisterPoolBytes16 = "83a5008182449db8a417000181824902048cc424f45049940a02185e030a04818a034445c847ed44bd9644df0105d81e82010a820044f45049948144f4504994818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da10081824830303030303231344c94a0cb1a3030303030323134f6"
 
 -- | Transaction which retires a stake pool
 
@@ -300,7 +300,7 @@ txRetirePool = Tx
   }
 
 txRetirePoolBytes16 :: BSL.ByteString
-txRetirePoolBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a02185e030a048183044450d474d005a10081821b303030303032313482449b81b2a61b3030303030323134f6"
+txRetirePoolBytes16 = "83a5008182449db8a417000181824902048cc424f45049940a02185e030a048183044445c847ed05a10081824830303030303231344c639dfad63030303030323134f6"
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
@@ -329,7 +329,7 @@ txWithMD = Tx
   }
 
 txWithMDBytes16 :: BSL.ByteString
-txWithMDBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a02185e030a07444eece652a10081821b3030303030323134824487e0ca181b3030303030323134a10082056568656c6c6f"
+txWithMDBytes16 = "83a5008182449db8a417000181824902048cc424f45049940a02185e030a07444eece652a10081824830303030303231344c4ed6e3733030303030323134a10082056568656c6c6f"
 
 -- | Spending from a multi-sig address
 
@@ -361,7 +361,7 @@ txWithMultiSig = Tx
   }
 
 txWithMultiSigBytes16 :: BSL.ByteString
-txWithMultiSigBytes16 = "83a4008182449db8a417000181824902aee84c700acd1b520a02185e030aa20082821b3030303030323134824439340e5c1b3030303030323134821b3135343835383637824439340e5c1b3135343835383637018183030283820044aee84c70820044d42eadb1820044ae010e05f6"
+txWithMultiSigBytes16 = "83a4008182449db8a417000181824902048cc424f45049940a02185e030aa20082824830303030303231344c84aa81ee3030303030323134824831353438353836374c84aa81ee3135343835383637018183030283820044048cc4248200443050f79e820044833f1591f6"
 
 -- | Transaction with a Reward Withdrawal
 
@@ -388,7 +388,7 @@ txWithWithdrawal = Tx
   }
 
 txWithWithdrawalBytes16 :: BSL.ByteString
-txWithWithdrawalBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a02185e030a05a18200440acd1b521864a10082821b3030303038363032824430e2ea611b3030303038363032821b3030303030323134824430e2ea611b3030303030323134f6"
+txWithWithdrawalBytes16 = "83a5008182449db8a417000181824902048cc424f45049940a02185e030a05a1820044f45049941864a10082824830303030303231344c52c2ffa03030303030323134824830303030383630324c52c2ffa03030303038363032f6"
 
 -- NOTE the txsize function takes into account which actual crypto parameter is use.
 -- These tests are using ShortHash and MockDSIGN so that:
@@ -398,14 +398,14 @@ txWithWithdrawalBytes16 = "83a5008182449db8a417000181824902aee84c700acd1b520a021
 
 sizeTests :: TestTree
 sizeTests = testGroup "Fee Tests"
-  [ testCase "simple utxo" $ sizeTest txSimpleUTxOBytes16 txSimpleUTxO 144
-  , testCase "multiple utxo" $ sizeTest txMutiUTxOBytes16 txMutiUTxO 469
-  , testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake 155
-  , testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake 185
-  , testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake 155
-  , testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 206
-  , testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool 154
-  , testCase "metadata" $ sizeTest txWithMDBytes16 txWithMD 159
-  , testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig 196
-  , testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal 180
+  [ testCase "simple utxo" $ sizeTest txSimpleUTxOBytes16 txSimpleUTxO 142
+  , testCase "multiple utxo" $ sizeTest txMutiUTxOBytes16 txMutiUTxO 465
+  , testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake 153
+  , testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake 181
+  , testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake 153
+  , testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 204
+  , testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool 152
+  , testCase "metadata" $ sizeTest txWithMDBytes16 txWithMD 157
+  , testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig 192
+  , testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal 176
   ]

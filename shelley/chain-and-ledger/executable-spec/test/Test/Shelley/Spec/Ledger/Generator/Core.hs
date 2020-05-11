@@ -366,8 +366,8 @@ mkBlock
   -> Nonce        -- ^ EpochNo nonce
   -> NatNonce     -- ^ Block nonce
   -> UnitInterval -- ^ Praos leader value
-  -> Natural      -- ^ Period of KES (key evolving signature scheme)
-  -> Natural      -- ^ KES period of key registration
+  -> Word         -- ^ Period of KES (key evolving signature scheme)
+  -> Word         -- ^ KES period of key registration
   -> OCert        -- ^ Operational certificate
   -> Block
 mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
@@ -382,20 +382,21 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
             (BlockHash prev)
             (coerceKeyRole vKeyCold)
             (snd $ vrf pkeys)
-            (coerce $ mkCertifiedVRF (WithResult nonceNonce bnonce) (fst $ vrf pkeys))
-            (coerce $ mkCertifiedVRF (WithResult leaderNonce $ unitIntervalToNatural l) (fst $ vrf pkeys))
+            (coerce $ mkCertifiedVRF
+              (WithResult nonceNonce (fromIntegral bnonce)) (fst $ vrf pkeys))
+            (coerce $ mkCertifiedVRF
+              (WithResult leaderNonce (fromIntegral $ unitIntervalToNatural l))
+              (fst $ vrf pkeys))
             (fromIntegral $ bBodySize $ (TxSeq . StrictSeq.fromList) txns)
             (bbHash $ TxSeq $ StrictSeq.fromList txns)
             oCert
             (ProtVer 0 0)
     kpDiff = kesPeriod - c0
-    hotKey = case evolveKESUntil sHot (KESPeriod kpDiff) of
+    hotKey = case evolveKESUntil sHot (KESPeriod 0) (KESPeriod kpDiff) of
                Nothing ->
-                 error ("could not evolve key to iteration " ++ show kesPeriod)
+                 error ("could not evolve key to iteration " ++ show (c0, kesPeriod, kpDiff))
                Just hkey -> hkey
-    sig = case signedKES () kpDiff bhb hotKey of
-            Nothing -> error ("could not sign with KES key " ++ show hotKey)
-            Just sig' -> sig'
+    sig = signedKES () kpDiff bhb hotKey
     bh = BHeader bhb sig
   in
     Block bh (TxSeq $ StrictSeq.fromList txns)
@@ -417,6 +418,9 @@ mkOCert pkeys n c0 =
    c0
    (signedDSIGN @ConcreteCrypto sKeyCold (vKeyHot, n, c0))
 
+-- | Takes a set of KES hot keys and checks to see whether there is one whose
+-- range contains the current KES period. If so, return its index in the list of
+-- hot keys.
 getKESPeriodRenewalNo :: HasCallStack => AllPoolKeys -> KESPeriod -> Integer
 getKESPeriodRenewalNo keys (KESPeriod kp) =
   go (hot keys) 0 kp
