@@ -1271,10 +1271,10 @@ blockEx2HHash :: HashHeader
 blockEx2HHash = bhHash (bheader blockEx2H)
 
 aliceRAcnt2H :: Coin
-aliceRAcnt2H = Coin 23839338840
+aliceRAcnt2H = Coin 5827393939
 
 bobRAcnt2H :: Coin
-bobRAcnt2H = Coin 2124297519
+bobRAcnt2H = Coin 519272726
 
 rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H = Map.fromList [ (RewardAcnt aliceSHK, aliceRAcnt2H)
@@ -1291,8 +1291,15 @@ alicePerfEx2H :: ApparentPerformance
 alicePerfEx2H = ApparentPerformance (beta / sigma)
   where
     beta = 1 -- Alice produced the only decentralized block this epoch
-    sigma = fromRational (fromIntegral stake % fromIntegral maxLLSupply)
+    reserves = _reserves acntEx2G
+    sigma = fromRational (fromIntegral stake % (fromIntegral $ maxLLSupply - reserves))
     stake = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
+
+deltaT2H :: Coin
+deltaT2H = Coin 786986666678
+
+deltaR2H :: Coin
+deltaR2H = Coin (-793333333333)
 
 expectedStEx2H :: ChainState
 expectedStEx2H = ChainState
@@ -1301,8 +1308,8 @@ expectedStEx2H = ChainState
      (BlocksMade $ Map.singleton (hk alicePool) 1)
      (BlocksMade Map.empty)
      (EpochState acntEx2G snapsEx2G expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
-     (SJust RewardUpdate { deltaT        = Coin 767369696984
-                         , deltaR        = Coin (-793333333333)
+     (SJust RewardUpdate { deltaT        = deltaT2H
+                         , deltaR        = deltaR2H
                          , rs            = rewardsEx2H
                          , deltaF        = Coin (-10)
                          , nonMyopic     = NonMyopic
@@ -1354,8 +1361,8 @@ epoch1OSchedEx2I = runShelleyBase $ overlaySchedule
 
 acntEx2I :: AccountState
 acntEx2I = AccountState
-            { _treasury = Coin 767369697024
-            , _reserves = Coin 33999206666666557
+            { _treasury = (_treasury acntEx2G) + deltaT2H
+            , _reserves = (_reserves acntEx2G) + deltaR2H
             }
 
 dsEx2I :: DState

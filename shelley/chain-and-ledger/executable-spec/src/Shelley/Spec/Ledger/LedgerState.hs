@@ -1026,7 +1026,9 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
         deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
         _R = Coin $ rPot - deltaT1
 
-        (rs_, aps) = reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' total
+        circulation = total - (_reserves acnt)
+        (rs_, aps) =
+          reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation
         deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
 
         blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer

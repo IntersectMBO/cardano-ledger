@@ -1381,8 +1381,9 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r \\
     & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~\var{prevPp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
+    & ~~~~~~~\var{circulation} = \var{total} - \var{reserves} \\
     & ~~~~~~~\var{rs}
-      = \reward{prevPp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs}{total} \\
+      = \reward{prevPp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs}{circulation} \\
     & ~~~~~~~\Delta t_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
     & ~~~~~~~blocksMade = \sum_{\wcard \mapsto m \in b}m
   \end{align*}
