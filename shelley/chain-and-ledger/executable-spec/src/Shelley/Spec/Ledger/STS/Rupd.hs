@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Shelley.Spec.Ledger.STS.Rupd
   ( RUPD,
@@ -45,7 +46,7 @@ data RUPD crypto
 data RupdEnv crypto
   = RupdEnv (BlocksMade crypto) (EpochState crypto)
 
-instance STS (RUPD crypto) where
+instance Crypto crypto => STS (RUPD crypto) where
   type State (RUPD crypto) = StrictMaybe (RewardUpdate crypto)
   type Signal (RUPD crypto) = SlotNo
   type Environment (RUPD crypto) = RupdEnv crypto
@@ -58,7 +59,7 @@ instance STS (RUPD crypto) where
 
 instance NoUnexpectedThunks (PredicateFailure (RUPD crypto))
 
-rupdTransition :: TransitionRule (RUPD crypto)
+rupdTransition :: forall crypto . (Crypto crypto) => TransitionRule (RUPD crypto)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (epoch, slot, maxLL) <- liftSTS $ do
