@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.Address
-  ( addressTests,
+  ( addressTests
   )
 where
 
@@ -33,7 +33,7 @@ import qualified Test.Tasty.HUnit as T
 import qualified Test.Tasty.Hedgehog as T
 
 addressTests :: TestTree
-addressTests = T.testGroup "binary tests" [goldenTests, roundTripTests]
+addressTests = T.testGroup "Address binary and golden tests" [goldenTests, roundTripTests]
 
 goldenTests :: TestTree
 goldenTests =

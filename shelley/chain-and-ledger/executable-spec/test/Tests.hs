@@ -24,6 +24,7 @@ mainTests =
       cddlTests 5,
       minimalPropertyTests,
       serializationTests,
+      addressTests,
       stsTests,
       unitTests
     ]
