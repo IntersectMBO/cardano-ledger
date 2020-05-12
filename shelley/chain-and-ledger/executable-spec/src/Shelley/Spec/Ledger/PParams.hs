@@ -68,11 +68,35 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
+-- | Higher Kinded Data
 type family HKD f a where
   HKD Identity a = a
   HKD f a = f a
 
--- | Protocol parameters
+-- | Protocol parameters.
+--
+-- We use the HKD type family so that the protocol parameters type and
+-- the type for the updates to the protocol parameters can share records fields.
+-- The protocol parameters will have type 'PParams'' 'Identity', and the updates
+-- will have type 'PParams'' 'StrictMaybe', though 'Identity' will be hidden from use.
+--
+-- For example:
+--
+-- @
+--   myParameters =
+--     PParams
+--       { _minfeeA = 0,
+--         _minfeeB = 0,
+--         ...
+--       }
+--
+--   myUpdate =
+--     PParamsUpdate
+--       { _minfeeA = SNothing,
+--         _minfeeB = SJust 42,
+--         ...
+--       }
+-- @
 data PParams' f = PParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
