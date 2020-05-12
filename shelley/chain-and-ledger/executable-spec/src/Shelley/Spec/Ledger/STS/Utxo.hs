@@ -11,35 +11,48 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Utxo
-  ( UTXO
-  , UtxoEnv (..)
-  , PredicateFailure(..)
+  ( UTXO,
+    UtxoEnv (..),
+    PredicateFailure (..),
   )
 where
 
-import           Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord,
-                     encodeListLen, matchSize)
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.State.Transition
-import           Data.Foldable (toList)
+import Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.State.Transition
+import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.Typeable (Typeable)
-import           Data.Word (Word8)
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Delegation.Certificates
-import           Shelley.Spec.Ledger.Keys
-import           Shelley.Spec.Ledger.LedgerState (UTxOState (..), consumed, decayedTx, keyRefunds,
-                     minfee, produced, txsize)
-import           Shelley.Spec.Ledger.PParams
-import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.STS.Ppup
-import           Shelley.Spec.Ledger.Tx
-import           Shelley.Spec.Ledger.UTxO
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Delegation.Certificates
+import Shelley.Spec.Ledger.Keys
+import Shelley.Spec.Ledger.LedgerState
+  ( UTxOState (..),
+    consumed,
+    decayedTx,
+    keyRefunds,
+    minfee,
+    produced,
+    txsize,
+  )
+import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.STS.Ppup
+import Shelley.Spec.Ledger.Slot
+import Shelley.Spec.Ledger.Tx
+import Shelley.Spec.Ledger.UTxO
 
 data UTXO crypto
 
@@ -50,12 +63,12 @@ data UtxoEnv crypto
       (StakeCreds crypto)
       (StakePools crypto)
       (GenDelegs crypto)
-      deriving(Show)
+  deriving (Show)
 
 instance
-  Crypto crypto
-  => STS (UTXO crypto)
- where
+  Crypto crypto =>
+  STS (UTXO crypto)
+  where
   type State (UTXO crypto) = UTxOState crypto
   type Signal (UTXO crypto) = Tx crypto
   type Environment (UTXO crypto) = UtxoEnv crypto
@@ -76,28 +89,37 @@ instance
 instance NoUnexpectedThunks (PredicateFailure (UTXO crypto))
 
 instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBOR (PredicateFailure (UTXO crypto))
- where
-   toCBOR = \case
-     BadInputsUTxO               -> encodeListLen 1 <> toCBOR (0 :: Word8)
-     (ExpiredUTxO a b)           -> encodeListLen 3 <> toCBOR (1 :: Word8)
-                                      <> toCBOR a <> toCBOR b
-     (MaxTxSizeUTxO a b)         -> encodeListLen 3 <> toCBOR (2 :: Word8)
-                                      <> toCBOR a <> toCBOR b
-     InputSetEmptyUTxO           -> encodeListLen 1 <> toCBOR (3 :: Word8)
-     (FeeTooSmallUTxO a b)       -> encodeListLen 3 <> toCBOR (4 :: Word8)
-                                      <> toCBOR a <> toCBOR b
-     (ValueNotConservedUTxO a b) -> encodeListLen 3 <> toCBOR (5 :: Word8)
-                                      <> toCBOR a <> toCBOR b
-     NegativeOutputsUTxO         -> encodeListLen 1 <> toCBOR (6 :: Word8)
-     (UpdateFailure a)           -> encodeListLen 2 <> toCBOR (7 :: Word8)
-                                      <> toCBOR a
+  (Typeable crypto, Crypto crypto) =>
+  ToCBOR (PredicateFailure (UTXO crypto))
+  where
+  toCBOR = \case
+    BadInputsUTxO -> encodeListLen 1 <> toCBOR (0 :: Word8)
+    (ExpiredUTxO a b) ->
+      encodeListLen 3 <> toCBOR (1 :: Word8)
+        <> toCBOR a
+        <> toCBOR b
+    (MaxTxSizeUTxO a b) ->
+      encodeListLen 3 <> toCBOR (2 :: Word8)
+        <> toCBOR a
+        <> toCBOR b
+    InputSetEmptyUTxO -> encodeListLen 1 <> toCBOR (3 :: Word8)
+    (FeeTooSmallUTxO a b) ->
+      encodeListLen 3 <> toCBOR (4 :: Word8)
+        <> toCBOR a
+        <> toCBOR b
+    (ValueNotConservedUTxO a b) ->
+      encodeListLen 3 <> toCBOR (5 :: Word8)
+        <> toCBOR a
+        <> toCBOR b
+    NegativeOutputsUTxO -> encodeListLen 1 <> toCBOR (6 :: Word8)
+    (UpdateFailure a) ->
+      encodeListLen 2 <> toCBOR (7 :: Word8)
+        <> toCBOR a
 
 instance
-  (Crypto crypto)
-  => FromCBOR (PredicateFailure (UTXO crypto))
- where
+  (Crypto crypto) =>
+  FromCBOR (PredicateFailure (UTXO crypto))
+  where
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
@@ -135,10 +157,10 @@ initialLedgerState = do
   IRC _ <- judgmentContext
   pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
 
-utxoInductive
-  :: forall crypto
-   . Crypto crypto
-  => TransitionRule (UTXO crypto)
+utxoInductive ::
+  forall crypto.
+  Crypto crypto =>
+  TransitionRule (UTXO crypto)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
@@ -149,7 +171,7 @@ utxoInductive = do
   txins txb /= Set.empty ?! InputSetEmptyUTxO
 
   let minFee = minfee pp tx
-      txFee  = _txfee txb
+      txFee = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   txins txb ⊆ dom utxo ?! BadInputsUTxO
@@ -173,14 +195,16 @@ utxoInductive = do
   let txCerts = toList $ _certs txb
   let depositChange = totalDeposits pp stakepools txCerts - (refunded + decayed)
 
-  pure UTxOState
-        { _utxo      = (txins txb ⋪ utxo) ∪ txouts txb
-        , _deposited = deposits' + depositChange
-        , _fees      = fees + (_txfee txb) + decayed
-        , _ppups     = ppup'
-        }
+  pure
+    UTxOState
+      { _utxo = (txins txb ⋪ utxo) ∪ txouts txb,
+        _deposited = deposits' + depositChange,
+        _fees = fees + (_txfee txb) + decayed,
+        _ppups = ppup'
+      }
 
-instance Crypto crypto
-  => Embed (PPUP crypto) (UTXO crypto)
- where
+instance
+  Crypto crypto =>
+  Embed (PPUP crypto) (UTXO crypto)
+  where
   wrapFailed = UpdateFailure

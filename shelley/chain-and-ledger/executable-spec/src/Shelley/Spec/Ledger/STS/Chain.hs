@@ -10,100 +10,136 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Chain
-  ( CHAIN
-  , ChainState (..)
-  , PredicateFailure(..)
-  , initialShelleyState
-  , totalAda
-  , chainChecks
+  ( CHAIN,
+    ChainState (..),
+    PredicateFailure (..),
+    initialShelleyState,
+    totalAda,
+    chainChecks,
   )
 where
 
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
-
-import           Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
-import           Cardano.Slotting.Slot (WithOrigin (..))
-import           Shelley.Spec.Ledger.BaseTypes (Globals (..), Nonce (..), Seed (..), ShelleyBase,
-                     StrictMaybe (..))
-import           Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, Block (..), LastAppliedBlock (..),
-                     bHeaderSize, bhbody, bheaderSlotNo, hBbsize)
-import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
-import           Shelley.Spec.Ledger.Keys (DSignable, GenDelegs (..), Hash, KESignable, KeyHash,
-                     KeyRole (..), VerKeyKES, coerceKeyRole)
-import           Shelley.Spec.Ledger.LedgerState (AccountState (..), DPState (..), DState (..),
-                     EpochState (..), LedgerState (..), NewEpochState (..), OBftSlot, PState (..),
-                     UTxOState (..), emptyDState, emptyPState, getGKeys, updateNES, _genDelegs)
-import           Shelley.Spec.Ledger.OCert (KESPeriod)
-import           Shelley.Spec.Ledger.PParams (PParams, ProposedPPUpdates (..), ProtVer (..),
-                     _maxBBSize, _maxBHSize, _protocolVersion)
-import           Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import           Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
-import           Shelley.Spec.Ledger.Tx (TxBody)
-import           Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
-
 import qualified Cardano.Crypto.VRF as VRF
-import           Control.State.Transition
-import           Shelley.Spec.Ledger.Crypto
-
-import           Shelley.Spec.Ledger.STS.Bbody
-import           Shelley.Spec.Ledger.STS.Prtcl
-import           Shelley.Spec.Ledger.STS.Tick
+import Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
+import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.State.Transition
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import GHC.Generics (Generic)
+import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Globals (..),
+    Nonce (..),
+    Seed (..),
+    ShelleyBase,
+    StrictMaybe (..),
+  )
+import Shelley.Spec.Ledger.BlockChain
+  ( BHBody,
+    BHeader,
+    Block (..),
+    LastAppliedBlock (..),
+    bHeaderSize,
+    bhbody,
+    bheaderSlotNo,
+    hBbsize,
+  )
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Shelley.Spec.Ledger.Keys
+  ( DSignable,
+    GenDelegs (..),
+    Hash,
+    KESignable,
+    KeyHash,
+    KeyRole (..),
+    VerKeyKES,
+    coerceKeyRole,
+  )
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState (..),
+    DPState (..),
+    DState (..),
+    EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    OBftSlot,
+    PState (..),
+    UTxOState (..),
+    _genDelegs,
+    emptyDState,
+    emptyPState,
+    getGKeys,
+    updateNES,
+  )
+import Shelley.Spec.Ledger.OCert (KESPeriod)
+import Shelley.Spec.Ledger.PParams
+  ( PParams,
+    ProposedPPUpdates (..),
+    ProtVer (..),
+    _maxBBSize,
+    _maxBHSize,
+    _protocolVersion,
+  )
+import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
+import Shelley.Spec.Ledger.STS.Bbody
+import Shelley.Spec.Ledger.STS.Prtcl
+import Shelley.Spec.Ledger.STS.Tick
+import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
+import Shelley.Spec.Ledger.Tx (TxBody)
+import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
 data CHAIN crypto
 
-data ChainState crypto
-  = ChainState
-    { chainNes              :: NewEpochState crypto
-    , chainOCertIssue       :: Map.Map (KeyHash 'BlockIssuer crypto) Natural
-    , chainEpochNonce       :: Nonce
-    , chainEvolvingNonce    :: Nonce
-    , chainCandidateNonce   :: Nonce
-    , chainPrevEpochNonce   :: Nonce
-    , chainLastAppliedBlock :: WithOrigin (LastAppliedBlock crypto)
-    }
+data ChainState crypto = ChainState
+  { chainNes :: NewEpochState crypto,
+    chainOCertIssue :: Map.Map (KeyHash 'BlockIssuer crypto) Natural,
+    chainEpochNonce :: Nonce,
+    chainEvolvingNonce :: Nonce,
+    chainCandidateNonce :: Nonce,
+    chainPrevEpochNonce :: Nonce,
+    chainLastAppliedBlock :: WithOrigin (LastAppliedBlock crypto)
+  }
   deriving (Show, Eq)
 
--- |Creates a valid initial chain state
-initialShelleyState
-  :: WithOrigin (LastAppliedBlock crypto)
-  -> EpochNo
-  -> UTxO crypto
-  -> Coin
-  -> Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto)
-  -> Map SlotNo (OBftSlot crypto)
-  -> PParams
-  -> Nonce
-  -> ChainState crypto
+-- | Creates a valid initial chain state
+initialShelleyState ::
+  WithOrigin (LastAppliedBlock crypto) ->
+  EpochNo ->
+  UTxO crypto ->
+  Coin ->
+  Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto) ->
+  Map SlotNo (OBftSlot crypto) ->
+  PParams ->
+  Nonce ->
+  ChainState crypto
 initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
   ChainState
-    (NewEpochState
-       e
-       (BlocksMade Map.empty)
-       (BlocksMade Map.empty)
-       (EpochState
-         (AccountState (Coin 0) reserves)
-         emptySnapShots
-         (LedgerState
-           (UTxOState
-             utxo
-             (Coin 0)
-             (Coin 0)
-             (ProposedPPUpdates Map.empty)
-           )
-           (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
-         )
-         pp
-         pp
-         emptyNonMyopic
-       )
-       SNothing
-       (PoolDistr Map.empty)
-       os
+    ( NewEpochState
+        e
+        (BlocksMade Map.empty)
+        (BlocksMade Map.empty)
+        ( EpochState
+            (AccountState (Coin 0) reserves)
+            emptySnapShots
+            ( LedgerState
+                ( UTxOState
+                    utxo
+                    (Coin 0)
+                    (Coin 0)
+                    (ProposedPPUpdates Map.empty)
+                )
+                (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
+            )
+            pp
+            pp
+            emptyNonMyopic
+        )
+        SNothing
+        (PoolDistr Map.empty)
+        os
     )
     cs
     initNonce
@@ -112,22 +148,24 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
     NeutralNonce
     lab
   where
-    cs = Map.fromList (fmap (\hk -> (coerceKeyRole hk,0)) (Map.elems genDelegs))
+    cs = Map.fromList (fmap (\hk -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
-  ( Crypto crypto
-  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
-  , DSignable crypto (Hash crypto (TxBody crypto))
-  , KESignable crypto (BHBody crypto)
-  , VRF.Signable (VRF crypto) Seed
-  )
-  => STS (CHAIN crypto)
- where
-  type State (CHAIN crypto)
-    = ChainState crypto
+  ( Crypto crypto,
+    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (Hash crypto (TxBody crypto)),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
+  ) =>
+  STS (CHAIN crypto)
+  where
+  type
+    State (CHAIN crypto) =
+      ChainState crypto
 
-  type Signal (CHAIN crypto)
-    = Block crypto
+  type
+    Signal (CHAIN crypto) =
+      Block crypto
 
   type Environment (CHAIN crypto) = SlotNo
   type BaseM (CHAIN crypto) = ShelleyBase
@@ -146,97 +184,99 @@ instance
 
 instance Crypto crypto => NoUnexpectedThunks (PredicateFailure (CHAIN crypto))
 
-chainChecks
-  :: (Crypto crypto, MonadError (PredicateFailure (CHAIN crypto)) m)
-  => Natural
-  -> PParams
-  -> BHeader crypto
-  -> m ()
+chainChecks ::
+  (Crypto crypto, MonadError (PredicateFailure (CHAIN crypto)) m) =>
+  Natural ->
+  PParams ->
+  BHeader crypto ->
+  m ()
 chainChecks maxpv pp bh = do
-  unless (m <= maxpv)                                     $ throwError (ObsoleteNodeCHAIN m maxpv)
+  unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
   unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp) $ throwError HeaderSizeTooLargeCHAIN
-  unless (hBbsize (bhbody bh) <= _maxBBSize pp)           $ throwError BlockSizeTooLargeCHAIN
+  unless (hBbsize (bhbody bh) <= _maxBBSize pp) $ throwError BlockSizeTooLargeCHAIN
   where
     (ProtVer m _) = _protocolVersion pp
 
+chainTransition ::
+  forall crypto.
+  ( Crypto crypto,
+    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (Hash crypto (TxBody crypto)),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
+  ) =>
+  TransitionRule (CHAIN crypto)
+chainTransition =
+  judgmentContext
+    >>= \(TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))) -> do
+        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 
-chainTransition
-  :: forall crypto
-   . ( Crypto crypto
-     , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
-     , DSignable crypto (Hash crypto (TxBody crypto))
-     , KESignable crypto (BHBody crypto)
-     , VRF.Signable (VRF crypto) Seed
-     )
-  => TransitionRule (CHAIN crypto)
-chainTransition = judgmentContext >>=
-  \( TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))
-  ) -> do
+        maxpv <- liftSTS $ asks maxMajorPV
+        case chainChecks maxpv pp bh of
+          Right () -> pure ()
+          Left e -> failBecause e
 
-  let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
+        let s = bheaderSlotNo $ bhbody bh
+        let gkeys = getGKeys nes
 
-  maxpv <- liftSTS $ asks maxMajorPV
-  case chainChecks maxpv pp bh of
-    Right () -> pure ()
-    Left e -> failBecause e
+        nes' <-
+          trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
 
-  let s = bheaderSlotNo $ bhbody bh
-  let gkeys = getGKeys nes
+        let NewEpochState e1 _ _ _ _ _ _ = nes
+            NewEpochState e2 _ bcur es _ _pd osched = nes'
+        let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
+        let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
-  nes' <-
-    trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
+        PrtclState cs' lab' eta0' etaV' etaC' etaH' <-
+          trans @(PRTCL crypto) $
+            TRC
+              ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2),
+                PrtclState cs lab eta0 etaV etaC etaH,
+                bh
+              )
 
-  let NewEpochState e1 _ _ _ _ _ _ = nes
-      NewEpochState e2 _ bcur es _ _pd osched = nes'
-  let EpochState (AccountState _ _reserves) _ ls _ pp' _                     = es
-  let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
+        BbodyState ls' bcur' <-
+          trans @(BBODY crypto) $
+            TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
 
-  PrtclState cs' lab' eta0' etaV' etaC' etaH' <- trans @(PRTCL crypto)
-    $ TRC ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2)
-          , PrtclState cs lab eta0 etaV etaC etaH
-          , bh)
+        let nes'' = updateNES nes' bcur' ls'
 
-  BbodyState ls' bcur' <- trans @(BBODY crypto)
-    $ TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
-
-  let nes'' = updateNES nes' bcur' ls'
-
-  pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
+        pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
-  ( Crypto crypto
-  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
-  , DSignable crypto (Hash crypto (TxBody crypto))
-  , KESignable crypto (BHBody crypto)
-  , VRF.Signable (VRF crypto) Seed
-  )
-  => Embed (BBODY crypto) (CHAIN crypto)
- where
+  ( Crypto crypto,
+    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (Hash crypto (TxBody crypto)),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
+  ) =>
+  Embed (BBODY crypto) (CHAIN crypto)
+  where
   wrapFailed = BbodyFailure
 
 instance
-  ( Crypto crypto
-  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
-  , DSignable crypto (Hash crypto (TxBody crypto))
-  , KESignable crypto (BHBody crypto)
-  , VRF.Signable (VRF crypto) Seed
-  )
-  => Embed (TICK crypto) (CHAIN crypto)
- where
+  ( Crypto crypto,
+    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (Hash crypto (TxBody crypto)),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
+  ) =>
+  Embed (TICK crypto) (CHAIN crypto)
+  where
   wrapFailed = TickFailure
 
 instance
-  ( Crypto crypto
-  , DSignable crypto (VerKeyKES crypto, Natural, KESPeriod)
-  , DSignable crypto (Hash crypto (TxBody crypto))
-  , KESignable crypto (BHBody crypto)
-  , VRF.Signable (VRF crypto) Seed
-  )
-  => Embed (PRTCL crypto) (CHAIN crypto)
- where
+  ( Crypto crypto,
+    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (Hash crypto (TxBody crypto)),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
+  ) =>
+  Embed (PRTCL crypto) (CHAIN crypto)
+  where
   wrapFailed = PrtclFailure
 
--- |Calculate the total ada in the chain state
+-- | Calculate the total ada in the chain state
 totalAda :: ChainState crypto -> Coin
 totalAda (ChainState nes _ _ _ _ _ _) =
   treasury_ + reserves_ + rewards_ + circulation + deposits + fees_

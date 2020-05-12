@@ -3,17 +3,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Shelley.Spec.Ledger.Coin
-    (
-     Coin(..)
-    , splitCoin
-    ) where
+  ( Coin (..),
+    splitCoin,
+  )
+where
 
-import           Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
-import           Cardano.Prelude (NoUnexpectedThunks (..), cborError)
-import           Data.Text (pack)
-import           Data.Word (Word64)
+import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
+import Cardano.Prelude (NoUnexpectedThunks (..), cborError)
+import Data.Text (pack)
+import Data.Word (Word64)
 
--- |The amount of value held by a transaction output.
+-- | The amount of value held by a transaction output.
 newtype Coin = Coin Integer
   deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks)
 
@@ -33,5 +33,5 @@ instance FromCBOR Coin where
 splitCoin :: Coin -> Integer -> (Coin, Coin)
 splitCoin (Coin n) 0 = (Coin 0, Coin n)
 splitCoin (Coin n) m
- | m <= 0     = error "must split coins into positive parts"
- | otherwise = (Coin $ n `div` m, Coin $ n `rem` m)
+  | m <= 0 = error "must split coins into positive parts"
+  | otherwise = (Coin $ n `div` m, Coin $ n `rem` m)

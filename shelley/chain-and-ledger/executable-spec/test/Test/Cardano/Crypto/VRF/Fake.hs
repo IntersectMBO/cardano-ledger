@@ -12,23 +12,24 @@
 -- | Fake implementation of VRF, where the random value isn't random but given
 -- by the creator.
 module Test.Cardano.Crypto.VRF.Fake
-  ( FakeVRF
-  , VerKeyVRF (..)
-  , SignKeyVRF (..)
-  , WithResult(..)
-  ) where
+  ( FakeVRF,
+    VerKeyVRF (..),
+    SignKeyVRF (..),
+    WithResult (..),
+  )
+where
 
-import Shelley.Spec.Ledger.BaseTypes (Seed)
-import Cardano.Binary (FromCBOR(..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
-import Cardano.Crypto.VRF.Class
 import Cardano.Crypto.Util
-import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm(..))
+import Cardano.Crypto.VRF.Class
+import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm (..))
 import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.BaseTypes (Seed)
 
 data FakeVRF
 
@@ -55,7 +56,6 @@ instance SneakilyContainResult Seed where
   unsneakilyExtractPayload = id
 
 instance VRFAlgorithm FakeVRF where
-
   algorithmNameVRF _ = "fakeVRF"
   seedSizeVRF _ = 8
 
@@ -66,63 +66,61 @@ instance VRFAlgorithm FakeVRF where
   newtype SignKeyVRF FakeVRF = SignKeyFakeVRF Word64
     deriving (Show, Eq, Ord, Generic, NoUnexpectedThunks)
 
-  -- | CertVRF contains two words, the signing key and the real value
   data CertVRF FakeVRF = CertFakeVRF Word64 Word16
     deriving (Show, Eq, Ord, Generic)
-    deriving NoUnexpectedThunks via UseIsNormalForm (CertVRF FakeVRF)
+    deriving (NoUnexpectedThunks) via UseIsNormalForm (CertVRF FakeVRF)
 
   maxVRF _ = 2 ^ (8 * sizeHash (Proxy :: Proxy MD5)) - 1
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
   evalVRF () a sk = return $ evalVRF' a sk
+
   -- This implementation of `verifyVRF` checks the real result, which is hidden
   -- in the certificate, but ignores the produced value, which is set to be the
   -- result of the sneaking.
   verifyVRF () (VerKeyFakeVRF n) a c = snd (evalVRF' a (SignKeyFakeVRF n)) == snd c
 
-  sizeVerKeyVRF  _ = 8
+  sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
-  sizeCertVRF    _ = 16
+  sizeCertVRF _ = 16
 
-  rawSerialiseVerKeyVRF  (VerKeyFakeVRF  k) = writeBinaryWord64 k
+  rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
-  rawSerialiseCertVRF    (CertFakeVRF  k s)
-    = writeBinaryWord64 k <> writeBinaryWord64 (fromIntegral s)
+  rawSerialiseCertVRF (CertFakeVRF k s) =
+    writeBinaryWord64 k <> writeBinaryWord64 (fromIntegral s)
 
   rawDeserialiseVerKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb
-    = Just $! VerKeyFakeVRF k
-
-    | otherwise
-    = Nothing
+    | [kb] <- splitsAt [8] bs,
+      let k = readBinaryWord64 kb =
+      Just $! VerKeyFakeVRF k
+    | otherwise =
+      Nothing
 
   rawDeserialiseSignKeyVRF bs
-    | [kb] <- splitsAt [8] bs
-    , let k = readBinaryWord64 kb
-    = Just $! SignKeyFakeVRF k
-
-    | otherwise
-    = Nothing
+    | [kb] <- splitsAt [8] bs,
+      let k = readBinaryWord64 kb =
+      Just $! SignKeyFakeVRF k
+    | otherwise =
+      Nothing
 
   rawDeserialiseCertVRF bs
-    | [kb, smb] <- splitsAt [8,8] bs
-    , let k = readBinaryWord64 kb
-    , let s = fromIntegral $ readBinaryWord64 smb
-    = Just $! CertFakeVRF k s
+    | [kb, smb] <- splitsAt [8, 8] bs,
+      let k = readBinaryWord64 kb,
+      let s = fromIntegral $ readBinaryWord64 smb =
+      Just $! CertFakeVRF k s
+    | otherwise =
+      Nothing
 
-    | otherwise
-    = Nothing
-
-evalVRF' :: SneakilyContainResult a
-  => a
-  -> SignKeyVRF FakeVRF
-  -> (Natural, CertVRF FakeVRF)
+evalVRF' ::
+  SneakilyContainResult a =>
+  a ->
+  SignKeyVRF FakeVRF ->
+  (Natural, CertVRF FakeVRF)
 evalVRF' a (SignKeyFakeVRF n) =
   let y = sneakilyExtractResult a
       p = unsneakilyExtractPayload a
       realValue = fromIntegral . fromHash . hashWithSerialiser @MD5 id $ toCBOR p
-  in (y, CertFakeVRF n realValue)
+   in (y, CertFakeVRF n realValue)
 
 instance FromCBOR (VerKeyVRF FakeVRF) where
   fromCBOR = decodeVerKeyVRF

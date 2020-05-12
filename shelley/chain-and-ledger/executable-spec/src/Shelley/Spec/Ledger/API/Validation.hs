@@ -8,32 +8,32 @@
 -- API.
 module Shelley.Spec.Ledger.API.Validation
   ( ShelleyState,
-    TickTransitionError(..),
-    BlockTransitionError(..),
+    TickTransitionError (..),
+    BlockTransitionError (..),
     chainChecks,
     applyTickTransition,
     applyBlockTransition,
   )
 where
 
-import           Byron.Spec.Ledger.Core (Relation (..))
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Arrow (left, right)
-import           Control.Monad.Except
-import           Control.Monad.Trans.Reader (runReader)
-import           Control.State.Transition.Extended (TRC (..), applySTS)
-import           Data.Either (fromRight)
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes (Globals (..))
-import           Shelley.Spec.Ledger.BlockChain
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Keys
+import Byron.Spec.Ledger.Core (Relation (..))
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Arrow (left, right)
+import Control.Monad.Except
+import Control.Monad.Trans.Reader (runReader)
+import Control.State.Transition.Extended (TRC (..), applySTS)
+import Data.Either (fromRight)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import Shelley.Spec.Ledger.BlockChain
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
-import           Shelley.Spec.Ledger.PParams (PParams)
-import           Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Bbody as STS
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Tick as STS
+import Shelley.Spec.Ledger.Slot (SlotNo)
 import qualified Shelley.Spec.Ledger.TxData as Tx
 
 -- | Type alias for the state updated by TICK and BBODY rules
@@ -67,14 +67,15 @@ mkBbodyEnv
   LedgerState.NewEpochState
     { LedgerState.nesOsched,
       LedgerState.nesEs
-    } = STS.BbodyEnv
-    { STS.bbodySlots = dom nesOsched,
-      STS.bbodyPp = LedgerState.esPp nesEs,
-      STS.bbodyReserves =
-        LedgerState._reserves
-          . LedgerState.esAccountState
-          $ nesEs
-    }
+    } =
+    STS.BbodyEnv
+      { STS.bbodySlots = dom nesOsched,
+        STS.bbodyPp = LedgerState.esPp nesEs,
+        STS.bbodyReserves =
+          LedgerState._reserves
+            . LedgerState.esAccountState
+            $ nesEs
+      }
 
 newtype TickTransitionError crypto
   = TickTransitionError [STS.PredicateFailure (STS.TICK crypto)]

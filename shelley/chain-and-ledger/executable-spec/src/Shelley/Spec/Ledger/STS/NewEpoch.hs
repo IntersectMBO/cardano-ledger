@@ -8,27 +8,27 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.NewEpoch
-  ( NEWEPOCH
-  , PredicateFailure(..)
-  , calculatePoolDistr
+  ( NEWEPOCH,
+    PredicateFailure (..),
+    calculatePoolDistr,
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.State.Transition
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.State.Transition
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes)
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes
-import           Shelley.Spec.Ledger.Coin
-import           Shelley.Spec.Ledger.Crypto
-import           Shelley.Spec.Ledger.Delegation.Certificates
-import           Shelley.Spec.Ledger.EpochBoundary
-import           Shelley.Spec.Ledger.LedgerState
-import           Shelley.Spec.Ledger.Slot
-import           Shelley.Spec.Ledger.STS.Epoch
-import           Shelley.Spec.Ledger.STS.Mir
-import           Shelley.Spec.Ledger.TxData
+import Data.Maybe (catMaybes)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Delegation.Certificates
+import Shelley.Spec.Ledger.EpochBoundary
+import Shelley.Spec.Ledger.LedgerState
+import Shelley.Spec.Ledger.STS.Epoch
+import Shelley.Spec.Ledger.STS.Mir
+import Shelley.Spec.Ledger.Slot
+import Shelley.Spec.Ledger.TxData
 
 data NEWEPOCH crypto
 
@@ -36,7 +36,6 @@ instance
   Crypto crypto =>
   STS (NEWEPOCH crypto)
   where
-
   type State (NEWEPOCH crypto) = NewEpochState crypto
 
   type Signal (NEWEPOCH crypto) = EpochNo
@@ -82,11 +81,11 @@ newEpochTransition = do
     then pure src
     else do
       es' <- case ru of
-               SNothing  -> pure es
-               SJust ru' -> do
-                 let RewardUpdate dt dr rs_ df _ = ru'
-                 dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
-                 pure $ applyRUpd ru' es
+        SNothing -> pure es
+        SJust ru' -> do
+          let RewardUpdate dt dr rs_ df _ = ru'
+          dt + dr + (sum rs_) + df == 0 ?! CorruptRewardUpdate ru'
+          pure $ applyRUpd ru' es
 
       es'' <- trans @(MIR crypto) $ TRC ((), es', ())
       es''' <- trans @(EPOCH crypto) $ TRC ((), es'', e)
@@ -104,18 +103,17 @@ newEpochTransition = do
           osched'
 
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
-calculatePoolDistr (SnapShot (Stake stake) delegs poolParams)
-  = let
-      Coin total = Map.foldl' (+) (Coin 0) stake
+calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
+  let Coin total = Map.foldl' (+) (Coin 0) stake
       sd =
-            Map.fromListWith (+) $
-              catMaybes
-                [ (,fromIntegral c / fromIntegral (if total == 0 then 1 else total)) <$>
-                  Map.lookup hk delegs -- TODO mgudemann total could be zero (in
-                                       -- particular when shrinking)
-                  | (hk, Coin c) <- Map.toList stake
-                ]
-    in PoolDistr $ Map.intersectionWith (,) sd (Map.map _poolVrf poolParams)
+        Map.fromListWith (+) $
+          catMaybes
+            [ (,fromIntegral c / fromIntegral (if total == 0 then 1 else total))
+                <$> Map.lookup hk delegs -- TODO mgudemann total could be zero (in
+                -- particular when shrinking)
+              | (hk, Coin c) <- Map.toList stake
+            ]
+   in PoolDistr $ Map.intersectionWith (,) sd (Map.map _poolVrf poolParams)
 
 instance
   Crypto crypto =>
