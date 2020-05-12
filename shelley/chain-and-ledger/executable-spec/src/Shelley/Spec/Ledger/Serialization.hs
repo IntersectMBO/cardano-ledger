@@ -8,74 +8,97 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Shelley.Spec.Ledger.Serialization
-  ( ToCBORGroup (..)
-  , FromCBORGroup (..)
-  , CBORGroup (..)
-  , CborSeq (..)
-  , unwrapCborStrictSeq
-  , decodeList
-  , decodeSeq
-  , decodeSet
-  , decodeMap
-  , decodeMapContents
-  , decodeMapTraverse
-  , decodeMaybe
-  , decodeRecordNamed
-  , decodeNullMaybe
-  , encodeFoldable
-  , encodeFoldableEncoder
-  , encodeFoldableMapEncoder
-  , encodeNullMaybe
-  , groupRecord
-  , rationalToCBOR
-  , rationalFromCBOR
-  , mapToCBOR
-  , mapFromCBOR
-  -- IPv4
-  , ipv4ToBytes
-  , ipv4FromBytes
-  , ipv4ToCBOR
-  , ipv4FromCBOR
-  -- IPv6
-  , ipv6ToBytes
-  , ipv6FromBytes
-  , ipv6ToCBOR
-  , ipv6FromCBOR
+  ( ToCBORGroup (..),
+    FromCBORGroup (..),
+    CBORGroup (..),
+    CborSeq (..),
+    unwrapCborStrictSeq,
+    decodeList,
+    decodeSeq,
+    decodeSet,
+    decodeMap,
+    decodeMapContents,
+    decodeMapTraverse,
+    decodeMaybe,
+    decodeRecordNamed,
+    decodeNullMaybe,
+    encodeFoldable,
+    encodeFoldableEncoder,
+    encodeFoldableMapEncoder,
+    encodeNullMaybe,
+    groupRecord,
+    rationalToCBOR,
+    rationalFromCBOR,
+    mapToCBOR,
+    mapFromCBOR,
+    -- IPv4
+    ipv4ToBytes,
+    ipv4FromBytes,
+    ipv4ToCBOR,
+    ipv4FromCBOR,
+    -- IPv6
+    ipv6ToBytes,
+    ipv6FromBytes,
+    ipv6ToCBOR,
+    ipv6FromCBOR,
   )
 where
 
-import           Cardano.Binary (Decoder, DecoderError (..), Encoding, FromCBOR (..), ToCBOR (..),
-                     TokenType (TypeNull), decodeBreakOr, decodeListLenOrIndef,
-                     decodeMapLenOrIndef, decodeNull, decodeTag, encodeBreak, encodeListLen,
-                     encodeListLenIndef, encodeMapLen, encodeMapLenIndef, encodeNull, encodeTag,
-                     matchSize, peekTokenType)
-import           Cardano.Prelude (cborError)
-import           Control.Monad (replicateM, unless)
-import           Data.Binary.Get (Get, getWord32le, runGetOrFail)
-import           Data.Binary.Put (putWord32le, runPut)
+import Cardano.Binary
+  ( Decoder,
+    DecoderError (..),
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    TokenType (TypeNull),
+    decodeBreakOr,
+    decodeListLenOrIndef,
+    decodeMapLenOrIndef,
+    decodeNull,
+    decodeTag,
+    encodeBreak,
+    encodeListLen,
+    encodeListLenIndef,
+    encodeMapLen,
+    encodeMapLenIndef,
+    encodeNull,
+    encodeTag,
+    matchSize,
+    peekTokenType,
+  )
+import Cardano.Prelude (cborError)
+import Control.Monad (replicateM, unless)
+import Data.Binary.Get (Get, getWord32le, runGetOrFail)
+import Data.Binary.Put (putWord32le, runPut)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Foldable (foldl')
-import           Data.Functor.Compose (Compose (..))
-import           Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6, toHostAddress,
-                     toHostAddress6)
-import           Data.Map (Map)
+import Data.Foldable (foldl')
+import Data.Functor.Compose (Compose (..))
+import Data.IP
+  ( IPv4,
+    IPv6,
+    fromHostAddress,
+    fromHostAddress6,
+    toHostAddress,
+    toHostAddress6,
+  )
+import Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Ratio (Rational, denominator, numerator, (%))
-import           Data.Sequence (Seq)
+import Data.Ratio ((%), Rational, denominator, numerator)
+import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import           Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import           Data.Set (Set)
+import Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Text (Text)
+import Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Typeable
-import           Network.Socket (HostAddress6)
+import Data.Typeable
+import Network.Socket (HostAddress6)
 
 class Typeable a => ToCBORGroup a where
   toCBORGroup :: a -> Encoding
-  listLen     :: a -> Word
+  listLen :: a -> Word
 
 newtype CBORGroup a = CBORGroup a
 
@@ -104,37 +127,39 @@ groupRecord = decodeRecordNamed "CBORGroup" (fromIntegral . toInteger . listLen)
 
 mapToCBOR :: (ToCBOR a, ToCBOR b) => Map a b -> Encoding
 mapToCBOR m =
-    let l = fromIntegral $ Map.size m
-        contents = Map.foldMapWithKey (\k v -> toCBOR k <> toCBOR v) m
-    in wrapCBORMap l contents
+  let l = fromIntegral $ Map.size m
+      contents = Map.foldMapWithKey (\k v -> toCBOR k <> toCBOR v) m
+   in wrapCBORMap l contents
 
 mapFromCBOR :: (Ord a, FromCBOR a, FromCBOR b) => Decoder s (Map a b)
 mapFromCBOR = decodeMap fromCBOR fromCBOR
 
 decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map a b)
-decodeMap decodeKey decodeValue = Map.fromList
+decodeMap decodeKey decodeValue =
+  Map.fromList
     <$> decodeMapContents decodePair
-    where
+  where
     decodePair = (,) <$> decodeKey <*> decodeValue
 
-decodeMapTraverse
-   :: (Ord a, Applicative t)
-   => Decoder s (t a)
-   -> Decoder s (t b)
-   -> Decoder s (t (Map a b))
-decodeMapTraverse decodeKey decodeValue = fmap Map.fromList . sequenceA
+decodeMapTraverse ::
+  (Ord a, Applicative t) =>
+  Decoder s (t a) ->
+  Decoder s (t b) ->
+  Decoder s (t (Map a b))
+decodeMapTraverse decodeKey decodeValue =
+  fmap Map.fromList . sequenceA
     <$> decodeMapContents decodePair
-    where
+  where
     decodePair = getCompose $ (,) <$> Compose decodeKey <*> Compose decodeValue
 
-newtype CborSeq a = CborSeq { unwrapCborSeq :: Seq a }
-  deriving Foldable
+newtype CborSeq a = CborSeq {unwrapCborSeq :: Seq a}
+  deriving (Foldable)
 
 instance ToCBOR a => ToCBOR (CborSeq a) where
   toCBOR (CborSeq xs) =
     let l = fromIntegral $ Seq.length xs
         contents = foldMap toCBOR xs
-    in wrapCBORArray l contents
+     in wrapCBORArray l contents
 
 instance FromCBOR a => FromCBOR (CborSeq a) where
   fromCBOR = CborSeq <$> decodeSeq fromCBOR
@@ -155,19 +180,19 @@ encodeFoldableEncoder :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
 encodeFoldableEncoder encode xs = wrapCBORArray len contents
   where
     (len, contents) = foldl' go (0, mempty) xs
-    go (!l, !enc) next = (l+1, enc <> encode next)
+    go (!l, !enc) next = (l + 1, enc <> encode next)
 
-encodeFoldableMapEncoder
-  :: Foldable f
-  => (Word -> a -> Maybe Encoding)
-  -> f a
-  -> Encoding
+encodeFoldableMapEncoder ::
+  Foldable f =>
+  (Word -> a -> Maybe Encoding) ->
+  f a ->
+  Encoding
 encodeFoldableMapEncoder encode xs = wrapCBORMap len contents
   where
     (len, _, contents) = foldl' go (0, 0, mempty) xs
     go (!l, !i, !enc) next = case encode i next of
-      Nothing -> (l, i+1, enc)
-      Just e -> (l+1, i+1, enc <> e)
+      Nothing -> (l, i + 1, enc)
+      Just e -> (l + 1, i + 1, enc <> e)
 
 wrapCBORArray :: Word -> Encoding -> Encoding
 wrapCBORArray len contents =
@@ -188,8 +213,11 @@ decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
 decodeMaybe d = decodeList d >>= \case
   [] -> pure Nothing
   [x] -> pure $ Just x
-  _ -> cborError $ DecoderErrorCustom "Maybe"
-         "Expected an array of length 0 or 1"
+  _ ->
+    cborError $
+      DecoderErrorCustom
+        "Maybe"
+        "Expected an array of length 0 or 1"
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
@@ -197,31 +225,34 @@ decodeMapContents = decodeCollection decodeMapLenOrIndef
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
 
-decodeCollectionWithLen
-  :: Decoder s (Maybe Int)
-  -> Decoder s a
-  -> Decoder s (Int,[a])
+decodeCollectionWithLen ::
+  Decoder s (Maybe Int) ->
+  Decoder s a ->
+  Decoder s (Int, [a])
 decodeCollectionWithLen lenOrIndef el = do
   lenOrIndef >>= \case
     Just len -> (,) len <$> replicateM len el
-    Nothing -> loop (0,[]) (not <$> decodeBreakOr) el
+    Nothing -> loop (0, []) (not <$> decodeBreakOr) el
   where
-  loop (n,acc) condition action = condition >>= \case
-      False -> pure (n,reverse acc)
-      True -> action >>= \v -> loop (n+1, (v:acc)) condition action
+    loop (n, acc) condition action = condition >>= \case
+      False -> pure (n, reverse acc)
+      True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
 
 rationalToCBOR :: Rational -> Encoding
-rationalToCBOR r = encodeTag 30
-  <> encodeListLen 2 <> toCBOR (numerator r) <> toCBOR (denominator r)
+rationalToCBOR r =
+  encodeTag 30
+    <> encodeListLen 2
+    <> toCBOR (numerator r)
+    <> toCBOR (denominator r)
 
 rationalFromCBOR :: Decoder s Rational
 rationalFromCBOR = do
-    t <- decodeTag
-    unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
-    (numInts, ints) <- decodeCollectionWithLen (decodeListLenOrIndef) fromCBOR
-    case ints of
-      n:d:[] -> pure $ n % d
-      _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numInts
+  t <- decodeTag
+  unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
+  (numInts, ints) <- decodeCollectionWithLen (decodeListLenOrIndef) fromCBOR
+  case ints of
+    n : d : [] -> pure $ n % d
+    _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numInts
 
 encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
 encodeNullMaybe _ Nothing = encodeNull
@@ -271,7 +302,7 @@ getHostAddress6 = do
   w2 <- getWord32le
   w3 <- getWord32le
   w4 <- getWord32le
-  return $ (w1,w2,w3,w4)
+  return $ (w1, w2, w3, w4)
 
 ipv6FromBytes :: BS.ByteString -> Either String IPv6
 ipv6FromBytes b =

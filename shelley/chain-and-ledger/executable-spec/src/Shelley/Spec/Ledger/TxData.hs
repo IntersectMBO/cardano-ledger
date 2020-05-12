@@ -16,133 +16,184 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-
 module Shelley.Spec.Ledger.TxData
-  ( DCert (..)
-  , DelegCert (..)
-  , Delegation (..)
-  , GenesisDelegCert (..)
-  , Ix
-  , MIRCert (..)
-  , PoolCert (..)
-  , PoolMetaData (..)
-  , PoolParams (..)
-  , Ptr (..)
-  , RewardAcnt (..)
-  , StakeCreds (..)
-  , StakePools (..)
-  , StakePoolRelay (..)
-  , TxBody
-    ( TxBody
-    , _inputs
-    , _outputs
-    , _certs
-    , _wdrls
-    , _txfee
-    , _ttl
-    , _txUpdate
-    , _mdHash
-    )
-  , TxId (..)
-  , TxIn (..)
-  , TxOut (..)
-  , Url
-  , Wdrl (..)
-  , WitVKey (WitVKey, wvkBytes)
-  --
-  , witKeyHash
-  , addStakeCreds
-)
-  where
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    GenesisDelegCert (..),
+    Ix,
+    MIRCert (..),
+    PoolCert (..),
+    PoolMetaData (..),
+    PoolParams (..),
+    Ptr (..),
+    RewardAcnt (..),
+    StakeCreds (..),
+    StakePools (..),
+    StakePoolRelay (..),
+    TxBody
+      ( TxBody,
+        _inputs,
+        _outputs,
+        _certs,
+        _wdrls,
+        _txfee,
+        _ttl,
+        _txUpdate,
+        _mdHash
+      ),
+    TxId (..),
+    TxIn (..),
+    TxOut (..),
+    Url,
+    Wdrl (..),
+    WitVKey (WitVKey, wvkBytes),
+    --
+    witKeyHash,
+    addStakeCreds,
+  )
+where
 
-import           Cardano.Binary (Annotator (..), FromCBOR (fromCBOR), ToCBOR (toCBOR),
-                     annotatorSlice, decodeListLen, decodeWord, encodeListLen, encodeMapLen,
-                     encodePreEncoded, encodeWord, enforceSize, matchSize, serializeEncoding)
-import           Cardano.Prelude (AllowThunksIn (..), LByteString, NFData, NoUnexpectedThunks (..),
-                     Word64, catMaybes)
-import           Control.Monad (unless)
-import           Shelley.Spec.Ledger.Crypto
-
-import           Data.ByteString (ByteString)
+import Byron.Spec.Ledger.Core (Relation (..))
+import Cardano.Binary
+  ( Annotator (..),
+    FromCBOR (fromCBOR),
+    ToCBOR (toCBOR),
+    annotatorSlice,
+    decodeListLen,
+    decodeWord,
+    encodeListLen,
+    encodeMapLen,
+    encodePreEncoded,
+    encodeWord,
+    enforceSize,
+    matchSize,
+    serializeEncoding,
+  )
+import Cardano.Prelude
+  ( AllowThunksIn (..),
+    LByteString,
+    NFData,
+    NoUnexpectedThunks (..),
+    Word64,
+    catMaybes,
+  )
+import Control.Monad (unless)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Foldable (fold)
-import           Data.IP (IPv4, IPv6)
-import           Data.Map.Strict (Map)
+import Data.Foldable (fold)
+import Data.IP (IPv4, IPv6)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Ord (comparing)
-import           Data.Sequence.Strict (StrictSeq)
+import Data.Ord (comparing)
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import           Data.Set (Set)
+import Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.Typeable (Typeable)
-import           Data.Word (Word8)
-import           GHC.Generics (Generic)
-import           Numeric.Natural (Natural)
+import Data.Typeable (Typeable)
+import Data.Word (Word8)
+import GHC.Generics (Generic)
+import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.Address (Addr (..))
+import Shelley.Spec.Ledger.BaseTypes
+  ( DnsName,
+    Port,
+    StrictMaybe (..),
+    UnitInterval,
+    Url,
+    invalidKey,
+    maybeToStrictMaybe,
+    strictMaybeToMaybe,
+  )
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Credential
+  ( Credential (..),
+    Ix,
+    Ptr (..),
+    RewardAcnt (..),
+    StakeCredential,
+  )
+import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Keys
+  ( Hash,
+    KeyHash (..),
+    KeyRole (..),
+    SignedDSIGN,
+    VKey,
+    VerKeyVRF,
+    decodeSignedDSIGN,
+    encodeSignedDSIGN,
+    hashKey,
+  )
+import Shelley.Spec.Ledger.MetaData (MetaDataHash)
+import Shelley.Spec.Ledger.Orphans ()
+import Shelley.Spec.Ledger.PParams (Update)
+import Shelley.Spec.Ledger.Serialization
+  ( CBORGroup (..),
+    CborSeq (..),
+    FromCBORGroup (..),
+    ToCBORGroup (..),
+    decodeMapContents,
+    decodeNullMaybe,
+    decodeRecordNamed,
+    decodeSet,
+    encodeFoldable,
+    encodeNullMaybe,
+    ipv4FromCBOR,
+    ipv4ToCBOR,
+    ipv6FromCBOR,
+    ipv6ToCBOR,
+    mapFromCBOR,
+    mapToCBOR,
+    unwrapCborStrictSeq,
+  )
+import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
-import           Byron.Spec.Ledger.Core (Relation (..))
-import           Shelley.Spec.Ledger.Address (Addr (..))
-import           Shelley.Spec.Ledger.BaseTypes (DnsName, Port, StrictMaybe (..), UnitInterval, Url,
-                     invalidKey, maybeToStrictMaybe, strictMaybeToMaybe)
-import           Shelley.Spec.Ledger.Credential (Credential (..), Ix, Ptr (..), RewardAcnt (..),
-                     StakeCredential)
-import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (..), SignedDSIGN, VKey,
-                     VerKeyVRF, decodeSignedDSIGN, encodeSignedDSIGN, hashKey)
-import           Shelley.Spec.Ledger.MetaData (MetaDataHash)
-import           Shelley.Spec.Ledger.Orphans ()
-import           Shelley.Spec.Ledger.PParams (Update)
-import           Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
-
-import           Shelley.Spec.Ledger.Serialization (CBORGroup (..), CborSeq (..),
-                     FromCBORGroup (..), ToCBORGroup (..), decodeMapContents, decodeNullMaybe,
-                     decodeRecordNamed, decodeSet, encodeFoldable, encodeNullMaybe, ipv4FromCBOR,
-                     ipv4ToCBOR, ipv6FromCBOR, ipv6ToCBOR, mapFromCBOR, mapToCBOR,
-                     unwrapCborStrictSeq)
-
-
--- |The delegation of one stake key to another.
+-- | The delegation of one stake key to another.
 data Delegation crypto = Delegation
-  { _delegator :: !(StakeCredential crypto)
-  , _delegatee :: !(KeyHash 'StakePool crypto)
-  } deriving (Eq, Generic, Show)
+  { _delegator :: !(StakeCredential crypto),
+    _delegatee :: !(KeyHash 'StakePool crypto)
+  }
+  deriving (Eq, Generic, Show)
 
 instance NoUnexpectedThunks (Delegation crypto)
 
 data PoolMetaData = PoolMetaData
-  { _poolMDUrl  :: !Url
-  , _poolMDHash :: !ByteString
-  } deriving (Eq, Generic, Show)
+  { _poolMDUrl :: !Url,
+    _poolMDHash :: !ByteString
+  }
+  deriving (Eq, Generic, Show)
 
 instance NoUnexpectedThunks PoolMetaData
 
-data StakePoolRelay =
-     SingleHostAddr !(StrictMaybe Port) !(StrictMaybe IPv4) !(StrictMaybe IPv6)
-     -- ^ One or both of IPv4 & IPv6
-   | SingleHostName !(StrictMaybe Port) !DnsName
-     -- ^ An @A@ or @AAAA@ DNS record
-   | MultiHostName  !(StrictMaybe Port) !DnsName
-     -- ^ A @SRV@ DNS record
+data StakePoolRelay
+  = -- | One or both of IPv4 & IPv6
+    SingleHostAddr !(StrictMaybe Port) !(StrictMaybe IPv4) !(StrictMaybe IPv6)
+  | -- | An @A@ or @AAAA@ DNS record
+    SingleHostName !(StrictMaybe Port) !DnsName
+  | -- | A @SRV@ DNS record
+    MultiHostName !(StrictMaybe Port) !DnsName
   deriving (Eq, Generic, Show)
 
 instance NoUnexpectedThunks StakePoolRelay
 
 instance ToCBOR StakePoolRelay where
-  toCBOR (SingleHostAddr p ipv4 ipv6)
-    = encodeListLen 4
-        <> toCBOR (0 :: Word8)
-        <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
-        <> encodeNullMaybe ipv4ToCBOR (strictMaybeToMaybe ipv4)
-        <> encodeNullMaybe ipv6ToCBOR (strictMaybeToMaybe ipv6)
-  toCBOR (SingleHostName p n)
-    = encodeListLen 3
-        <> toCBOR (1 :: Word8)
-        <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
-        <> toCBOR n
-  toCBOR (MultiHostName p n)
-    = encodeListLen 3
-        <> toCBOR (2 :: Word8)
-        <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
-        <> toCBOR n
+  toCBOR (SingleHostAddr p ipv4 ipv6) =
+    encodeListLen 4
+      <> toCBOR (0 :: Word8)
+      <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
+      <> encodeNullMaybe ipv4ToCBOR (strictMaybeToMaybe ipv4)
+      <> encodeNullMaybe ipv6ToCBOR (strictMaybeToMaybe ipv6)
+  toCBOR (SingleHostName p n) =
+    encodeListLen 3
+      <> toCBOR (1 :: Word8)
+      <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
+      <> toCBOR n
+  toCBOR (MultiHostName p n) =
+    encodeListLen 3
+      <> toCBOR (2 :: Word8)
+      <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
+      <> toCBOR n
 
 instance FromCBOR StakePoolRelay where
   fromCBOR = do
@@ -150,35 +201,36 @@ instance FromCBOR StakePoolRelay where
     w <- decodeWord
     p <- maybeToStrictMaybe <$> decodeNullMaybe fromCBOR
     case w of
-      0 -> matchSize "SingleHostAddr" 4 n >>
-             SingleHostAddr p
-               <$> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
-               <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv6FromCBOR)
+      0 ->
+        matchSize "SingleHostAddr" 4 n
+          >> SingleHostAddr p
+          <$> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
+          <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv6FromCBOR)
       1 -> matchSize "SingleHostName" 3 n >> SingleHostName p <$> fromCBOR
-      2 -> matchSize "MultiHostName"  3 n >> MultiHostName p <$> fromCBOR
+      2 -> matchSize "MultiHostName" 3 n >> MultiHostName p <$> fromCBOR
       k -> invalidKey k
 
--- |A stake pool.
-data PoolParams crypto =
-  PoolParams
-    { _poolPubKey  :: !(KeyHash 'StakePool crypto)
-    , _poolVrf     :: !(Hash crypto (VerKeyVRF crypto))
-    , _poolPledge  :: !Coin
-    , _poolCost    :: !Coin
-    , _poolMargin  :: !UnitInterval
-    , _poolRAcnt   :: !(RewardAcnt crypto)
-    , _poolOwners  :: !(Set (KeyHash 'Staking crypto))
-    , _poolRelays  :: !(StrictSeq StakePoolRelay)
-    , _poolMD      :: !(StrictMaybe PoolMetaData)
-    } deriving (Show, Generic, Eq)
-      deriving ToCBOR via CBORGroup (PoolParams crypto)
-      deriving FromCBOR via CBORGroup (PoolParams crypto)
+-- | A stake pool.
+data PoolParams crypto = PoolParams
+  { _poolPubKey :: !(KeyHash 'StakePool crypto),
+    _poolVrf :: !(Hash crypto (VerKeyVRF crypto)),
+    _poolPledge :: !Coin,
+    _poolCost :: !Coin,
+    _poolMargin :: !UnitInterval,
+    _poolRAcnt :: !(RewardAcnt crypto),
+    _poolOwners :: !(Set (KeyHash 'Staking crypto)),
+    _poolRelays :: !(StrictSeq StakePoolRelay),
+    _poolMD :: !(StrictMaybe PoolMetaData)
+  }
+  deriving (Show, Generic, Eq)
+  deriving (ToCBOR) via CBORGroup (PoolParams crypto)
+  deriving (FromCBOR) via CBORGroup (PoolParams crypto)
 
 instance NoUnexpectedThunks (PoolParams crypto)
 
-newtype Wdrl crypto = Wdrl { unWdrl :: Map (RewardAcnt crypto) Coin }
+newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
-  deriving newtype NoUnexpectedThunks
+  deriving newtype (NoUnexpectedThunks)
 
 instance Crypto crypto => ToCBOR (Wdrl crypto) where
   toCBOR = mapToCBOR . unWdrl
@@ -186,48 +238,48 @@ instance Crypto crypto => ToCBOR (Wdrl crypto) where
 instance Crypto crypto => FromCBOR (Wdrl crypto) where
   fromCBOR = Wdrl <$> mapFromCBOR
 
--- |A unique ID of a transaction, which is computable from the transaction.
-newtype TxId crypto
-  = TxId { _TxId :: Hash crypto (TxBody crypto) }
+-- | A unique ID of a transaction, which is computable from the transaction.
+newtype TxId crypto = TxId {_TxId :: Hash crypto (TxBody crypto)}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoUnexpectedThunks)
 
 deriving newtype instance Crypto crypto => ToCBOR (TxId crypto)
+
 deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
 
--- |The input of a UTxO.
+-- | The input of a UTxO.
 data TxIn crypto
   = TxIn !(TxId crypto) !Natural -- TODO use our own Natural type
   deriving (Show, Eq, Generic, Ord)
 
 instance NoUnexpectedThunks (TxIn crypto)
 
--- |The output of a UTxO.
+-- | The output of a UTxO.
 data TxOut crypto
   = TxOut !(Addr crypto) !Coin
   deriving (Show, Eq, Generic, Ord)
 
 instance NoUnexpectedThunks (TxOut crypto)
 
-data DelegCert crypto =
-    -- | A stake key registration certificate.
+data DelegCert crypto
+  = -- | A stake key registration certificate.
     RegKey !(StakeCredential crypto)
-    -- | A stake key deregistration certificate.
-  | DeRegKey !(StakeCredential crypto)
-    -- | A stake delegation certificate.
-  | Delegate !(Delegation crypto)
+  | -- | A stake key deregistration certificate.
+    DeRegKey !(StakeCredential crypto)
+  | -- | A stake delegation certificate.
+    Delegate !(Delegation crypto)
   deriving (Show, Generic, Eq)
 
-data PoolCert crypto =
-    -- | A stake pool registration certificate.
+data PoolCert crypto
+  = -- | A stake pool registration certificate.
     RegPool !(PoolParams crypto)
-    -- | A stake pool retirement certificate.
-  | RetirePool !(KeyHash 'StakePool crypto) !EpochNo
+  | -- | A stake pool retirement certificate.
+    RetirePool !(KeyHash 'StakePool crypto) !EpochNo
   deriving (Show, Generic, Eq)
 
 -- | Genesis key delegation certificate
-data GenesisDelegCert crypto =
-    GenesisDelegCert !(KeyHash 'Genesis crypto) !(KeyHash 'GenesisDelegate crypto)
+data GenesisDelegCert crypto
+  = GenesisDelegCert !(KeyHash 'Genesis crypto) !(KeyHash 'GenesisDelegate crypto)
   deriving (Show, Generic, Eq)
 
 -- | Move instantaneous rewards certificate
@@ -241,181 +293,186 @@ instance Crypto crypto => ToCBOR (MIRCert crypto) where
   toCBOR (MIRCert c) = mapToCBOR c
 
 -- | A heavyweight certificate.
-data DCert crypto =
-    DCertDeleg !(DelegCert crypto)
+data DCert crypto
+  = DCertDeleg !(DelegCert crypto)
   | DCertPool !(PoolCert crypto)
   | DCertGenesis !(GenesisDelegCert crypto)
   | DCertMir !(MIRCert crypto)
   deriving (Show, Generic, Eq)
 
 instance NoUnexpectedThunks (DelegCert crypto)
+
 instance NoUnexpectedThunks (PoolCert crypto)
+
 instance NoUnexpectedThunks (GenesisDelegCert crypto)
+
 instance NoUnexpectedThunks (MIRCert crypto)
+
 instance NoUnexpectedThunks (DCert crypto)
 
--- |A raw transaction
-data TxBody crypto
-  = TxBody'
-      { _inputs'   :: !(Set (TxIn crypto))
-      , _outputs'  :: !(StrictSeq (TxOut crypto))
-      , _certs'    :: !(StrictSeq (DCert crypto))
-      , _wdrls'    :: !(Wdrl crypto)
-      , _txfee'    :: !Coin
-      , _ttl'      :: !SlotNo
-      , _txUpdate' :: !(StrictMaybe (Update crypto))
-      , _mdHash'   :: !(StrictMaybe (MetaDataHash crypto))
-      , bodyBytes  :: LByteString
-      } deriving (Show, Eq, Generic)
-        deriving NoUnexpectedThunks via
-          AllowThunksIn '["bodyBytes"] (TxBody crypto)
+-- | A raw transaction
+data TxBody crypto = TxBody'
+  { _inputs' :: !(Set (TxIn crypto)),
+    _outputs' :: !(StrictSeq (TxOut crypto)),
+    _certs' :: !(StrictSeq (DCert crypto)),
+    _wdrls' :: !(Wdrl crypto),
+    _txfee' :: !Coin,
+    _ttl' :: !SlotNo,
+    _txUpdate' :: !(StrictMaybe (Update crypto)),
+    _mdHash' :: !(StrictMaybe (MetaDataHash crypto)),
+    bodyBytes :: LByteString
+  }
+  deriving (Show, Eq, Generic)
+  deriving
+    (NoUnexpectedThunks)
+    via AllowThunksIn '["bodyBytes"] (TxBody crypto)
 
-pattern TxBody
-  :: Crypto crypto
-  => Set (TxIn crypto)
-  -> StrictSeq (TxOut crypto)
-  -> StrictSeq (DCert crypto)
-  -> Wdrl crypto
-  -> Coin
-  -> SlotNo
-  -> StrictMaybe (Update crypto)
-  -> StrictMaybe (MetaDataHash crypto)
-  -> TxBody crypto
-pattern TxBody
- { _inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash } <-
- TxBody'
-   { _inputs'   = _inputs
-   , _outputs'  = _outputs
-   , _certs'    =  _certs
-   , _wdrls'    = _wdrls
-   , _txfee'    = _txfee
-   , _ttl'      = _ttl
-   , _txUpdate' = _txUpdate
-   , _mdHash'   = _mdHash
-   }
+pattern TxBody ::
+  Crypto crypto =>
+  Set (TxIn crypto) ->
+  StrictSeq (TxOut crypto) ->
+  StrictSeq (DCert crypto) ->
+  Wdrl crypto ->
+  Coin ->
+  SlotNo ->
+  StrictMaybe (Update crypto) ->
+  StrictMaybe (MetaDataHash crypto) ->
+  TxBody crypto
+pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
+  TxBody'
+    { _inputs' = _inputs,
+      _outputs' = _outputs,
+      _certs' = _certs,
+      _wdrls' = _wdrls,
+      _txfee' = _txfee,
+      _ttl' = _ttl,
+      _txUpdate' = _txUpdate,
+      _mdHash' = _mdHash
+    }
   where
-  TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
-    let encodeMapElement ix enc x = Just (encodeWord ix <> enc x)
-        encodeMapElementUnless condition ix enc x = if condition x
-          then Nothing
-          else encodeMapElement ix enc x
-        l = catMaybes
-          [ encodeMapElement 0 encodeFoldable _inputs
-          , encodeMapElement 1 encodeFoldable _outputs
-          , encodeMapElement 2 toCBOR _txfee
-          , encodeMapElement 3 toCBOR _ttl
-          , encodeMapElementUnless null 4 encodeFoldable _certs
-          , encodeMapElementUnless (null . unWdrl) 5 toCBOR _wdrls
-          , encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate
-          , encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash
-          ]
-        n = fromIntegral $ length l
-        bytes = serializeEncoding $ encodeMapLen n <> fold l
-     in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes
+    TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
+      let encodeMapElement ix enc x = Just (encodeWord ix <> enc x)
+          encodeMapElementUnless condition ix enc x =
+            if condition x
+              then Nothing
+              else encodeMapElement ix enc x
+          l =
+            catMaybes
+              [ encodeMapElement 0 encodeFoldable _inputs,
+                encodeMapElement 1 encodeFoldable _outputs,
+                encodeMapElement 2 toCBOR _txfee,
+                encodeMapElement 3 toCBOR _ttl,
+                encodeMapElementUnless null 4 encodeFoldable _certs,
+                encodeMapElementUnless (null . unWdrl) 5 toCBOR _wdrls,
+                encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate,
+                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash
+              ]
+          n = fromIntegral $ length l
+          bytes = serializeEncoding $ encodeMapLen n <> fold l
+       in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes
 
 {-# COMPLETE TxBody #-}
 
--- |Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey crypto
-  = WitVKey'
-    { wvkKey' :: !(VKey 'Witness crypto)
-    , wvkSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto)))
-    , wvkBytes :: LByteString
-    }
+-- | Proof/Witness that a transaction is authorized by the given key holder.
+data WitVKey crypto = WitVKey'
+  { wvkKey' :: !(VKey 'Witness crypto),
+    wvkSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto))),
+    wvkBytes :: LByteString
+  }
   deriving (Show, Eq, Generic)
-  deriving NoUnexpectedThunks via AllowThunksIn '["wvkBytes"] (WitVKey crypto)
+  deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey crypto)
 
-pattern WitVKey
-   :: Crypto crypto
-   => VKey 'Witness crypto
-   -> SignedDSIGN crypto (Hash crypto (TxBody crypto))
-   -> WitVKey crypto
-pattern WitVKey k s <- WitVKey' k s _
+pattern WitVKey ::
+  Crypto crypto =>
+  VKey 'Witness crypto ->
+  SignedDSIGN crypto (Hash crypto (TxBody crypto)) ->
+  WitVKey crypto
+pattern WitVKey k s <-
+  WitVKey' k s _
   where
-  WitVKey k s =
-    let bytes = serializeEncoding $ encodeListLen 2 <> toCBOR k <> encodeSignedDSIGN s
-     in WitVKey' k s bytes
+    WitVKey k s =
+      let bytes = serializeEncoding $ encodeListLen 2 <> toCBOR k <> encodeSignedDSIGN s
+       in WitVKey' k s bytes
 
 {-# COMPLETE WitVKey #-}
 
-witKeyHash
-  :: forall crypto. ( Crypto crypto)
-  => WitVKey crypto
-  -> KeyHash 'Witness crypto
+witKeyHash ::
+  forall crypto.
+  (Crypto crypto) =>
+  WitVKey crypto ->
+  KeyHash 'Witness crypto
 witKeyHash (WitVKey key _) = hashKey key
 
-instance forall crypto
-  . ( Crypto crypto)
-  => Ord (WitVKey crypto) where
-    compare = comparing witKeyHash
+instance
+  forall crypto.
+  (Crypto crypto) =>
+  Ord (WitVKey crypto)
+  where
+  compare = comparing witKeyHash
 
-newtype StakeCreds crypto =
-  StakeCreds (Map (Credential 'Staking crypto) SlotNo)
+newtype StakeCreds crypto
+  = StakeCreds (Map (Credential 'Staking crypto) SlotNo)
   deriving (Show, Eq, Generic)
   deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
-addStakeCreds
-  :: (Credential 'Staking crypto)
-  -> SlotNo
-  -> (StakeCreds crypto)
-  -> StakeCreds crypto
+addStakeCreds ::
+  (Credential 'Staking crypto) ->
+  SlotNo ->
+  (StakeCreds crypto) ->
+  StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
-newtype StakePools crypto =
-  StakePools { unStakePools :: (Map (KeyHash 'StakePool crypto) SlotNo) }
+newtype StakePools crypto = StakePools {unStakePools :: (Map (KeyHash 'StakePool crypto) SlotNo)}
   deriving (Show, Eq, Generic)
   deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 -- CBOR
 
 instance
-  (Crypto crypto)
-  => ToCBOR (DCert crypto)
- where
-   toCBOR = \case
-           -- DCertDeleg
-     DCertDeleg (RegKey cred) ->
-           encodeListLen 2
-           <> toCBOR (0 :: Word8)
-           <> toCBOR cred
-     DCertDeleg (DeRegKey cred) ->
-           encodeListLen 2
-           <> toCBOR (1 :: Word8)
-           <> toCBOR cred
-     DCertDeleg (Delegate (Delegation cred poolkh)) ->
-           encodeListLen 3
-           <> toCBOR (2 :: Word8)
-           <> toCBOR cred
-           <> toCBOR poolkh
-
-           -- DCertPool
-     DCertPool (RegPool poolParams) ->
-           encodeListLen (1 + listLen poolParams)
-           <> toCBOR (3 :: Word8)
-           <> toCBORGroup poolParams
-     DCertPool (RetirePool vk epoch) ->
-           encodeListLen 3
-           <> toCBOR (4 :: Word8)
-           <> toCBOR vk
-           <> toCBOR epoch
-
-           -- DCertGenesis
-     DCertGenesis (GenesisDelegCert gk kh) ->
-           encodeListLen 3
-           <> toCBOR (5 :: Word8)
-           <> toCBOR gk
-           <> toCBOR kh
-
-           -- DCertMIR
-     DCertMir mir ->
-           encodeListLen 2
-           <> toCBOR (6 :: Word8)
-           <> toCBOR mir
+  (Crypto crypto) =>
+  ToCBOR (DCert crypto)
+  where
+  toCBOR = \case
+    -- DCertDeleg
+    DCertDeleg (RegKey cred) ->
+      encodeListLen 2
+        <> toCBOR (0 :: Word8)
+        <> toCBOR cred
+    DCertDeleg (DeRegKey cred) ->
+      encodeListLen 2
+        <> toCBOR (1 :: Word8)
+        <> toCBOR cred
+    DCertDeleg (Delegate (Delegation cred poolkh)) ->
+      encodeListLen 3
+        <> toCBOR (2 :: Word8)
+        <> toCBOR cred
+        <> toCBOR poolkh
+    -- DCertPool
+    DCertPool (RegPool poolParams) ->
+      encodeListLen (1 + listLen poolParams)
+        <> toCBOR (3 :: Word8)
+        <> toCBORGroup poolParams
+    DCertPool (RetirePool vk epoch) ->
+      encodeListLen 3
+        <> toCBOR (4 :: Word8)
+        <> toCBOR vk
+        <> toCBOR epoch
+    -- DCertGenesis
+    DCertGenesis (GenesisDelegCert gk kh) ->
+      encodeListLen 3
+        <> toCBOR (5 :: Word8)
+        <> toCBOR gk
+        <> toCBOR kh
+    -- DCertMIR
+    DCertMir mir ->
+      encodeListLen 2
+        <> toCBOR (6 :: Word8)
+        <> toCBOR mir
 
 instance
-  (Crypto crypto)
-  => FromCBOR (DCert crypto)
- where
+  (Crypto crypto) =>
+  FromCBOR (DCert crypto)
+  where
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
@@ -444,16 +501,18 @@ instance
       k -> invalidKey k
 
 instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBOR (TxIn crypto)
- where
+  (Typeable crypto, Crypto crypto) =>
+  ToCBOR (TxIn crypto)
+  where
   toCBOR (TxIn txId index) =
     encodeListLen 2
       <> toCBOR txId
       <> toCBOR (fromIntegral index :: Word64)
 
-instance (Crypto crypto) =>
-  FromCBOR (TxIn crypto) where
+instance
+  (Crypto crypto) =>
+  FromCBOR (TxIn crypto)
+  where
   fromCBOR = do
     enforceSize "TxIn" 2
     a <- fromCBOR
@@ -461,93 +520,96 @@ instance (Crypto crypto) =>
     pure $ TxIn a (fromInteger $ toInteger b)
 
 instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBOR (TxOut crypto)
- where
+  (Typeable crypto, Crypto crypto) =>
+  ToCBOR (TxOut crypto)
+  where
   toCBOR (TxOut addr coin) =
     encodeListLen 2
       <> toCBOR addr
       <> toCBOR coin
 
-instance (Crypto crypto) =>
-  FromCBOR (TxOut crypto) where
+instance
+  (Crypto crypto) =>
+  FromCBOR (TxOut crypto)
+  where
   fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
     addr <- fromCBOR
     (b :: Word64) <- fromCBOR
     pure $ TxOut addr (Coin $ toInteger b)
 
 instance
-  Crypto crypto
-  => ToCBOR (WitVKey crypto)
- where
+  Crypto crypto =>
+  ToCBOR (WitVKey crypto)
+  where
   toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance
-  Crypto crypto
-  => FromCBOR (Annotator (WitVKey crypto))
- where
-  fromCBOR = annotatorSlice $ decodeRecordNamed "WitVKey" (const 2) $
-    fmap pure $ WitVKey' <$> fromCBOR <*> decodeSignedDSIGN
+  Crypto crypto =>
+  FromCBOR (Annotator (WitVKey crypto))
+  where
+  fromCBOR =
+    annotatorSlice $ decodeRecordNamed "WitVKey" (const 2)
+      $ fmap pure
+      $ WitVKey' <$> fromCBOR <*> decodeSignedDSIGN
 
 instance
-  (Crypto crypto)
-  => ToCBOR (TxBody crypto)
- where
+  (Crypto crypto) =>
+  ToCBOR (TxBody crypto)
+  where
   toCBOR = encodePreEncoded . BSL.toStrict . bodyBytes
 
 instance
-  (Crypto crypto)
-  => FromCBOR (Annotator (TxBody crypto))
+  (Crypto crypto) =>
+  FromCBOR (Annotator (TxBody crypto))
   where
-   fromCBOR = annotatorSlice $ do
-     mapParts <- decodeMapContents $
-       decodeWord >>= \case
-         0 -> decodeSet fromCBOR                 >>= \x -> pure (0, \t -> t { _inputs   = x })
-         1 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t { _outputs'  = x })
-         2 -> fromCBOR                           >>= \x -> pure (2, \t -> t { _txfee'    = x })
-         3 -> fromCBOR                           >>= \x -> pure (3, \t -> t { _ttl'      = x })
-         4 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t { _certs'    = x })
-         5 -> fromCBOR                           >>= \x -> pure (5, \t -> t { _wdrls'    = x })
-         6 -> fromCBOR                           >>= \x -> pure (6, \t -> t { _txUpdate' = SJust x })
-         7 -> fromCBOR                           >>= \x -> pure (7, \t -> t { _mdHash'   = SJust x })
-         k -> invalidKey k
-     let requiredFields :: Map Int String
-         requiredFields = Map.fromList $
-           [ (0, "inputs")
-           , (1, "outputs")
-           , (2, "fee")
-           , (3, "ttl")
-           ]
-         fields = fst <$> mapParts
-         missingFields = Map.filterWithKey (\k _ -> notElem k fields) requiredFields
-     unless (null missingFields)
-       (fail $ "missing required transaction component(s): " <> show missingFields)
-     pure $ Annotator $ \_fullbytes bytes ->
-       (foldr ($) basebody (snd <$> mapParts)) { bodyBytes = bytes }
-     where
-       basebody = TxBody'
-          { _inputs'  = Set.empty
-          , _outputs' = StrictSeq.empty
-          , _txfee'   = Coin 0
-          , _ttl'     = SlotNo 0
-          , _certs'   = StrictSeq.empty
-          , _wdrls'   = Wdrl Map.empty
-          , _txUpdate'= SNothing
-          , _mdHash'  = SNothing
-          , bodyBytes = mempty
+  fromCBOR = annotatorSlice $ do
+    mapParts <- decodeMapContents $
+      decodeWord >>= \case
+        0 -> decodeSet fromCBOR >>= \x -> pure (0, \t -> t {_inputs = x})
+        1 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t {_outputs' = x})
+        2 -> fromCBOR >>= \x -> pure (2, \t -> t {_txfee' = x})
+        3 -> fromCBOR >>= \x -> pure (3, \t -> t {_ttl' = x})
+        4 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t {_certs' = x})
+        5 -> fromCBOR >>= \x -> pure (5, \t -> t {_wdrls' = x})
+        6 -> fromCBOR >>= \x -> pure (6, \t -> t {_txUpdate' = SJust x})
+        7 -> fromCBOR >>= \x -> pure (7, \t -> t {_mdHash' = SJust x})
+        k -> invalidKey k
+    let requiredFields :: Map Int String
+        requiredFields =
+          Map.fromList $
+            [ (0, "inputs"),
+              (1, "outputs"),
+              (2, "fee"),
+              (3, "ttl")
+            ]
+        fields = fst <$> mapParts
+        missingFields = Map.filterWithKey (\k _ -> notElem k fields) requiredFields
+    unless
+      (null missingFields)
+      (fail $ "missing required transaction component(s): " <> show missingFields)
+    pure $ Annotator $ \_fullbytes bytes ->
+      (foldr ($) basebody (snd <$> mapParts)) {bodyBytes = bytes}
+    where
+      basebody =
+        TxBody'
+          { _inputs' = Set.empty,
+            _outputs' = StrictSeq.empty,
+            _txfee' = Coin 0,
+            _ttl' = SlotNo 0,
+            _certs' = StrictSeq.empty,
+            _wdrls' = Wdrl Map.empty,
+            _txUpdate' = SNothing,
+            _mdHash' = SNothing,
+            bodyBytes = mempty
           }
 
-
-
-instance ToCBOR PoolMetaData
- where
+instance ToCBOR PoolMetaData where
   toCBOR (PoolMetaData u h) =
     encodeListLen 2
       <> toCBOR u
       <> toCBOR h
 
-instance FromCBOR PoolMetaData
-  where
+instance FromCBOR PoolMetaData where
   fromCBOR = do
     enforceSize "PoolMetaData" 2
     u <- fromCBOR
@@ -555,11 +617,11 @@ instance FromCBOR PoolMetaData
     pure $ PoolMetaData u h
 
 instance
-  (Crypto crypto)
-  => ToCBORGroup (PoolParams crypto)
- where
+  (Crypto crypto) =>
+  ToCBORGroup (PoolParams crypto)
+  where
   toCBORGroup poolParams =
-         toCBOR (_poolPubKey poolParams)
+    toCBOR (_poolPubKey poolParams)
       <> toCBOR (_poolVrf poolParams)
       <> toCBOR (_poolPledge poolParams)
       <> toCBOR (_poolCost poolParams)
@@ -571,9 +633,9 @@ instance
   listLen _ = 9
 
 instance
-  (Crypto crypto)
-  => FromCBORGroup (PoolParams crypto)
- where
+  (Crypto crypto) =>
+  FromCBORGroup (PoolParams crypto)
+  where
   fromCBORGroup = do
     vk <- fromCBOR
     vrf <- fromCBOR
@@ -584,21 +646,22 @@ instance
     owners <- decodeSet fromCBOR
     relays <- fromCBOR
     md <- decodeNullMaybe fromCBOR
-    pure $ PoolParams
-            { _poolPubKey = vk
-            , _poolVrf    = vrf
-            , _poolPledge = pledge
-            , _poolCost   = cost
-            , _poolMargin = margin
-            , _poolRAcnt  = ra
-            , _poolOwners = owners
-            , _poolRelays = unwrapCborStrictSeq relays
-            , _poolMD     = maybeToStrictMaybe md
-            }
+    pure $
+      PoolParams
+        { _poolPubKey = vk,
+          _poolVrf = vrf,
+          _poolPledge = pledge,
+          _poolCost = cost,
+          _poolMargin = margin,
+          _poolRAcnt = ra,
+          _poolOwners = owners,
+          _poolRelays = unwrapCborStrictSeq relays,
+          _poolMD = maybeToStrictMaybe md
+        }
 
 instance Relation (StakeCreds crypto) where
   type Domain (StakeCreds crypto) = Credential 'Staking crypto
-  type Range (StakeCreds crypto)  = SlotNo
+  type Range (StakeCreds crypto) = SlotNo
 
   singleton k v = StakeCreds $ Map.singleton k v
 

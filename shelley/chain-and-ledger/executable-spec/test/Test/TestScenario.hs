@@ -1,16 +1,19 @@
-{-# Language TypeApplications #-}
-{-# Language OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.TestScenario where
 
-import Prelude hiding (show)
 import Cardano.Prelude hiding (Option)
-
 import Test.Tasty (TestTree, defaultMainWithIngredients, includingOptions)
-import Test.Tasty.Ingredients (Ingredient(..), composeReporters)
+import Test.Tasty.Ingredients (Ingredient (..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
 import Test.Tasty.Options
-  (IsOption(..), OptionDescription(..), lookupOption, safeRead)
+  ( IsOption (..),
+    OptionDescription (..),
+    lookupOption,
+    safeRead,
+  )
+import Prelude hiding (show)
 
 data TestScenario
   = ContinuousIntegration
@@ -32,11 +35,12 @@ logScenario = TestReporter [] $ \options _ -> Just $ \_ -> do
   pure (const (pure True))
 
 mainWithTestScenario :: TestTree -> IO ()
-mainWithTestScenario = defaultMainWithIngredients
-  [ includingOptions [Option (Proxy @TestScenario)]
-  , listingTests
-  , composeReporters logScenario consoleTestReporter
-  ]
+mainWithTestScenario =
+  defaultMainWithIngredients
+    [ includingOptions [Option (Proxy @TestScenario)],
+      listingTests,
+      composeReporters logScenario consoleTestReporter
+    ]
 
 helpText :: [Char]
 helpText =

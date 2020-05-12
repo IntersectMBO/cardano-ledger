@@ -9,46 +9,49 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.STS.Ledgers
-  ( LEDGERS
-  , LedgersEnv (..)
-  , PredicateFailure(..)
+  ( LEDGERS,
+    LedgersEnv (..),
+    PredicateFailure (..),
   )
 where
 
-import           Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad (foldM)
-import           Control.State.Transition
-import           Data.Foldable (toList)
-import           Data.Sequence (Seq)
-import           Data.Typeable (Typeable)
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import           Shelley.Spec.Ledger.Coin (Coin)
-import           Shelley.Spec.Ledger.Crypto (Crypto)
-import           Shelley.Spec.Ledger.Keys (DSignable, Hash)
-import           Shelley.Spec.Ledger.LedgerState (LedgerState (..), emptyLedgerState,
-                     _delegationState, _utxoState)
-import           Shelley.Spec.Ledger.PParams (PParams)
-import           Shelley.Spec.Ledger.Slot (SlotNo)
-import           Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
-import           Shelley.Spec.Ledger.Tx (Tx, TxBody)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad (foldM)
+import Control.State.Transition
+import Data.Foldable (toList)
+import Data.Sequence (Seq)
+import Data.Typeable (Typeable)
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys (DSignable, Hash)
+import Shelley.Spec.Ledger.LedgerState
+  ( LedgerState (..),
+    _delegationState,
+    _utxoState,
+    emptyLedgerState,
+  )
+import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
+import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Tx (Tx, TxBody)
 
 data LEDGERS crypto
 
-data LedgersEnv
-  = LedgersEnv
-    { ledgersSlotNo   :: SlotNo
-    , ledgersPp       :: PParams
-    , ledgersReserves :: Coin
-    }
+data LedgersEnv = LedgersEnv
+  { ledgersSlotNo :: SlotNo,
+    ledgersPp :: PParams,
+    ledgersReserves :: Coin
+  }
 
 instance
-  ( Crypto crypto
-  , DSignable crypto (Hash crypto (TxBody crypto))
-  )
-  => STS (LEDGERS crypto)
- where
+  ( Crypto crypto,
+    DSignable crypto (Hash crypto (TxBody crypto))
+  ) =>
+  STS (LEDGERS crypto)
+  where
   type State (LEDGERS crypto) = LedgerState crypto
   type Signal (LEDGERS crypto) = Seq (Tx crypto)
   type Environment (LEDGERS crypto) = LedgersEnv
@@ -63,41 +66,42 @@ instance
 instance NoUnexpectedThunks (PredicateFailure (LEDGERS crypto))
 
 instance
-  (Typeable crypto, Crypto crypto)
-  => ToCBOR (PredicateFailure (LEDGERS crypto))
- where
-   toCBOR (LedgerFailure e) = toCBOR e
+  (Typeable crypto, Crypto crypto) =>
+  ToCBOR (PredicateFailure (LEDGERS crypto))
+  where
+  toCBOR (LedgerFailure e) = toCBOR e
 
 instance
-  (Crypto crypto)
-  => FromCBOR (PredicateFailure (LEDGERS crypto))
- where
+  (Crypto crypto) =>
+  FromCBOR (PredicateFailure (LEDGERS crypto))
+  where
   fromCBOR = LedgerFailure <$> fromCBOR
 
-ledgersTransition
-  :: forall crypto
-   . ( Crypto crypto
-     , DSignable crypto (Hash crypto (TxBody crypto))
-     )
-  => TransitionRule (LEDGERS crypto)
+ledgersTransition ::
+  forall crypto.
+  ( Crypto crypto,
+    DSignable crypto (Hash crypto (TxBody crypto))
+  ) =>
+  TransitionRule (LEDGERS crypto)
 ledgersTransition = do
   TRC (LedgersEnv slot pp reserves, ls, txwits) <- judgmentContext
   let (u, dp) = (_utxoState ls, _delegationState ls)
   (u'', dp'') <-
     foldM
-        (\(u', dp') (ix, tx) ->
-          trans @(LEDGER crypto)
-            $ TRC (LedgerEnv slot ix pp reserves, (u', dp'), tx)
-        )
-        (u, dp)
-      $ zip [0 ..] $ toList txwits
+      ( \(u', dp') (ix, tx) ->
+          trans @(LEDGER crypto) $
+            TRC (LedgerEnv slot ix pp reserves, (u', dp'), tx)
+      )
+      (u, dp)
+      $ zip [0 ..]
+      $ toList txwits
 
   pure $ LedgerState u'' dp''
 
 instance
-  ( Crypto crypto
-  , DSignable crypto (Hash crypto (TxBody crypto))
-  )
-  => Embed (LEDGER crypto) (LEDGERS crypto)
- where
+  ( Crypto crypto,
+    DSignable crypto (Hash crypto (TxBody crypto))
+  ) =>
+  Embed (LEDGER crypto) (LEDGERS crypto)
+  where
   wrapFailed = LedgerFailure

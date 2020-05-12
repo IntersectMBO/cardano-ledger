@@ -22,15 +22,18 @@ class
     ContextVRF (VRF c) ~ (),
     Typeable c
   ) =>
-  Crypto c where
+  Crypto c
+  where
   type HASH c :: Type
   type DSIGN c :: Type
   type KES c :: Type
   type VRF c :: Type
   networkMagicId :: proxy c -> Network
 
-data Network =
-  Mainnet | Testnet | Offline
+data Network
+  = Mainnet
+  | Testnet
+  | Offline
   deriving (Eq, Ord, Enum)
 
 networkToWord8 :: Network -> Word8

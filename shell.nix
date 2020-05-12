@@ -8,6 +8,7 @@
 }:
 with pkgs;
 let
+  ormolu = import pkgs.commonLib.sources.ormolu {};
   # This provides a development environment that can be used with nix-shell or
   # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   shell = cardanoLedgerSpecsHaskellPackages.shellFor {
@@ -30,6 +31,7 @@ let
       hlint
       stylish-haskell
       weeder
+      ormolu.ormolu
     ];
 
     # Prevents cabal from choosing alternate plans, so that

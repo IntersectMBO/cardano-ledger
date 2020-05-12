@@ -23,7 +23,7 @@ import Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     coerceKeyRole,
     hashKey,
-    vKey
+    vKey,
   )
 import Shelley.Spec.Ledger.LedgerState (genesisCoins)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))

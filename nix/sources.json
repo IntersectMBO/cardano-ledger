@@ -22,5 +22,18 @@
         "type": "tarball",
         "url": "https://github.com/input-output-hk/iohk-nix/archive/50eb9c4ececf383309ada328545b788c3493cd42.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "ormolu": {
+        "branch": "master",
+        "description": "A formatter for Haskell source code",
+        "homepage": null,
+        "owner": "tweag",
+        "repo": "ormolu",
+        "rev": "a5c4d6c439b01648cc44e307e0fe10e1a55c9bd5",
+        "sha256": "0pddsffh9n48kbsgcvr99yqn2di0q5ndj62gh8bh2hd6qm6b5rgz",
+        "type": "tarball",
+        "url": "https://github.com/tweag/ormolu/archive/a5c4d6c439b01648cc44e307e0fe10e1a55c9bd5.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
+        "builtin": false
     }
 }

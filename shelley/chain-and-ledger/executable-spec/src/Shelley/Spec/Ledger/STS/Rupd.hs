@@ -5,25 +5,40 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Rupd
-  ( RUPD
-  , RupdEnv(..)
-  , PredicateFailure
+  ( RUPD,
+    RupdEnv (..),
+    PredicateFailure,
   )
 where
 
-import           Cardano.Prelude (NoUnexpectedThunks (..))
-import           Control.Monad.Trans.Reader (asks)
-import           Control.State.Transition (STS (..), TRC (..), TransitionRule, judgmentContext,
-                     liftSTS)
-import           Data.Functor ((<&>))
-import           GHC.Generics (Generic)
-import           Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo,
-                     maxLovelaceSupply, randomnessStabilisationWindow)
-import           Shelley.Spec.Ledger.Coin (Coin (..))
-import           Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
-import           Shelley.Spec.Ledger.LedgerState (EpochState, RewardUpdate, createRUpd)
-import           Shelley.Spec.Ledger.Slot (Duration (..), SlotNo, epochInfoEpoch, epochInfoFirst,
-                     (+*))
+import Cardano.Prelude (NoUnexpectedThunks (..))
+import Control.Monad.Trans.Reader (asks)
+import Control.State.Transition
+  ( STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    liftSTS,
+  )
+import Data.Functor ((<&>))
+import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.BaseTypes
+  ( ShelleyBase,
+    StrictMaybe (..),
+    epochInfo,
+    maxLovelaceSupply,
+    randomnessStabilisationWindow,
+  )
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
+import Shelley.Spec.Ledger.LedgerState (EpochState, RewardUpdate, createRUpd)
+import Shelley.Spec.Ledger.Slot
+  ( (+*),
+    Duration (..),
+    SlotNo,
+    epochInfoEpoch,
+    epochInfoFirst,
+  )
 
 data RUPD crypto
 
@@ -57,4 +72,4 @@ rupdTransition = do
     then pure ru
     else case ru of
       SNothing -> SJust <$> (liftSTS $ createRUpd epoch b es (Coin $ fromIntegral maxLL))
-      SJust _  -> pure ru
+      SJust _ -> pure ru

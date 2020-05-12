@@ -2,69 +2,85 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Test.Shelley.Spec.Ledger.Examples.CDDL
-  ( cddlTests
+  ( cddlTests,
   )
- where
+where
 
-import           Prelude (String)
-import qualified Prelude
-
-import           Cardano.Binary (Annotator, DecoderError, FromCBOR (..), ToCBOR (..),
-                     decodeAnnotator, decodeFullDecoder, encodeListLen, serialize,
-                     serializeEncoding)
-import           Cardano.Prelude
-import           Control.Exception (bracket)
+import Cardano.Binary
+  ( Annotator,
+    DecoderError,
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeAnnotator,
+    decodeFullDecoder,
+    encodeListLen,
+    serialize,
+    serializeEncoding,
+  )
+import Cardano.Prelude
+import Control.Exception (bracket)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
-import           Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
+import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
+import Shelley.Spec.Ledger.Keys (KeyRole (Staking))
+import Shelley.Spec.Ledger.MetaData (MetaData)
+import Shelley.Spec.Ledger.PParams (PParamsUpdate)
+import Shelley.Spec.Ledger.Serialization
+import Shelley.Spec.Ledger.TxData (StakePoolRelay)
 import qualified System.Directory as Sys
 import qualified System.IO as Sys
 import qualified System.IO.Error as Sys
-import           System.Process.ByteString.Lazy
-
-
-import           Test.Tasty
-import           Test.Tasty.HUnit
-
-import           Shelley.Spec.Ledger.Keys (KeyRole(Staking))
-import           Shelley.Spec.Ledger.MetaData (MetaData)
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import           Shelley.Spec.Ledger.Serialization
-import           Shelley.Spec.Ledger.TxData (StakePoolRelay)
-
-import           Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Addr, BHBody, BHeader, Credential,
-                     DCert, LaxBlock, MultiSig, OCert, ProposedPPUpdates, Tx, TxBody, TxIn, TxOut,
-                     Update)
+import System.Process.ByteString.Lazy
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+  ( Addr,
+    BHBody,
+    BHeader,
+    Credential,
+    DCert,
+    LaxBlock,
+    MultiSig,
+    OCert,
+    ProposedPPUpdates,
+    Tx,
+    TxBody,
+    TxIn,
+    TxOut,
+    Update,
+  )
+import Test.Tasty
+import Test.Tasty.HUnit
+import qualified Prelude
+import Prelude (String)
 
 cddlTests :: Int -> TestTree
 cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [
-      cddlTest' @BHeader          n "header"
-    , cddlTest @BHBody            n "header_body"
-    , cddlGroupTest @OCert        n "operational_cert"
-    , cddlTest @Addr              n "address"
-    , cddlTest @(Credential 'Staking)   n "stake_credential"
-    , cddlTest' @TxBody           n "transaction_body"
-    , cddlTest @TxOut             n "transaction_output"
-    , cddlTest @StakePoolRelay    n "relay"
-    , cddlTest @DCert             n "certificate"
-    , cddlTest @TxIn              n "transaction_input"
-    , cddlTest' @MetaData         n "transaction_metadata"
-    , cddlTest @MultiSig          n "multisig_script"
-    , cddlTest @Update            n "update"
-    , cddlTest @ProposedPPUpdates n "proposed_protocol_parameter_updates"
-    , cddlTest @PParamsUpdate     n "protocol_param_update"
-    , cddlTest' @Tx               n "transaction"
-    , cddlTest' @LaxBlock         n "block"
-    ] <*> pure cddl
+    [ cddlTest' @BHeader n "header",
+      cddlTest @BHBody n "header_body",
+      cddlGroupTest @OCert n "operational_cert",
+      cddlTest @Addr n "address",
+      cddlTest @(Credential 'Staking) n "stake_credential",
+      cddlTest' @TxBody n "transaction_body",
+      cddlTest @TxOut n "transaction_output",
+      cddlTest @StakePoolRelay n "relay",
+      cddlTest @DCert n "certificate",
+      cddlTest @TxIn n "transaction_input",
+      cddlTest' @MetaData n "transaction_metadata",
+      cddlTest @MultiSig n "multisig_script",
+      cddlTest @Update n "update",
+      cddlTest @ProposedPPUpdates n "proposed_protocol_parameter_updates",
+      cddlTest @PParamsUpdate n "protocol_param_update",
+      cddlTest' @Tx n "transaction",
+      cddlTest' @LaxBlock n "block"
+    ]
+      <*> pure cddl
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
@@ -73,38 +89,41 @@ combinedCDDL = do
   extras <- BSL.readFile "cddl-files/mock/extras.cddl"
   pure $ base <> crypto <> extras
 
-cddlTest
-  :: forall a. (ToCBOR a, FromCBOR a, Show a)
-  => Int
-  -> BSL.ByteString
-  -> IO BSL.ByteString
-  -> TestTree
+cddlTest ::
+  forall a.
+  (ToCBOR a, FromCBOR a, Show a) =>
+  Int ->
+  BSL.ByteString ->
+  IO BSL.ByteString ->
+  TestTree
 cddlTest n entryName cddlRes = testCase
   ("cddl roundtrip " <> show (typeRep (Proxy @a)))
   $ do
-  basecddl <- cddlRes
-  let cddl = "output = " <> entryName <> "\n" <> basecddl
-  cddlTestCommon @a serialize (decodeFullDecoder "cbor test" fromCBOR) n cddl
+    basecddl <- cddlRes
+    let cddl = "output = " <> entryName <> "\n" <> basecddl
+    cddlTestCommon @a serialize (decodeFullDecoder "cbor test" fromCBOR) n cddl
 
-cddlTest'
-  :: forall a. (ToCBOR a, FromCBOR (Annotator a), Show a)
-  => Int
-  -> BSL.ByteString
-  -> IO BSL.ByteString
-  -> TestTree
+cddlTest' ::
+  forall a.
+  (ToCBOR a, FromCBOR (Annotator a), Show a) =>
+  Int ->
+  BSL.ByteString ->
+  IO BSL.ByteString ->
+  TestTree
 cddlTest' n entryName cddlRes = testCase
   ("cddl roundtrip " <> show (typeRep (Proxy @a)))
   $ do
-  basecddl <- cddlRes
-  let cddl = "output = " <> entryName <> "\n" <> basecddl
-  cddlTestCommon @a serialize (decodeAnnotator "cbor test" fromCBOR) n cddl
+    basecddl <- cddlRes
+    let cddl = "output = " <> entryName <> "\n" <> basecddl
+    cddlTestCommon @a serialize (decodeAnnotator "cbor test" fromCBOR) n cddl
 
-cddlGroupTest
-  :: forall a. (ToCBORGroup a, FromCBORGroup a, Show a)
-  => Int
-  -> BSL.ByteString
-  -> IO BSL.ByteString
-  -> TestTree
+cddlGroupTest ::
+  forall a.
+  (ToCBORGroup a, FromCBORGroup a, Show a) =>
+  Int ->
+  BSL.ByteString ->
+  IO BSL.ByteString ->
+  TestTree
 cddlGroupTest n entryName cddlRes = testCase ("cddl roundtrip " <> show (typeRep (Proxy @a))) $ do
   basecddl <- cddlRes
   let cddl = "output = [" <> entryName <> "]\n" <> basecddl
@@ -114,12 +133,13 @@ cddlGroupTest n entryName cddlRes = testCase ("cddl roundtrip " <> show (typeRep
     n
     cddl
 
-cddlTestCommon
-  :: Show a => (a -> BSL.ByteString)
-  -> (BSL.ByteString -> Either DecoderError a)
-  -> Int
-  -> BSL.ByteString
-  -> IO ()
+cddlTestCommon ::
+  Show a =>
+  (a -> BSL.ByteString) ->
+  (BSL.ByteString -> Either DecoderError a) ->
+  Int ->
+  BSL.ByteString ->
+  IO ()
 cddlTestCommon serializer decoder n cddlData = do
   usingFile cddlData $ \cddl -> do
     examples <- Char8.lines <$> generateCBORDiagStdIn n cddlData :: IO [BSL.ByteString]
@@ -127,50 +147,52 @@ cddlTestCommon serializer decoder n cddlData = do
       exampleBytes <- diagToBytes exampleDiag
       decoded <- case decoder exampleBytes of
         Right x -> pure x
-        Left e  ->
-          assertFailure $ Prelude.unlines
-            [ "Failed to deserialize"
-            , "Error: " <> show e
-            , "Generated diag: " <> Char8.unpack exampleDiag
-            ]
+        Left e ->
+          assertFailure $
+            Prelude.unlines
+              [ "Failed to deserialize",
+                "Error: " <> show e,
+                "Generated diag: " <> Char8.unpack exampleDiag
+              ]
       let reencoded = serializer decoded
       verifyConforming reencoded cddl >>= \case
         True -> pure ()
         False ->
-          assertFailure $ Prelude.unlines
-            [ "Serialized data did not conform to the spec"
-            , "Generated diag: " <> Char8.unpack exampleDiag
-            , "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes)
-            , "Decoded value: " <> show decoded
-            , "Reencoded base16: " <> Char8.unpack (Base16.encode reencoded)
-            ]
+          assertFailure $
+            Prelude.unlines
+              [ "Serialized data did not conform to the spec",
+                "Generated diag: " <> Char8.unpack exampleDiag,
+                "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes),
+                "Decoded value: " <> show decoded,
+                "Reencoded base16: " <> Char8.unpack (Base16.encode reencoded)
+              ]
 
 data StdErr = StdErr Prelude.String BSL.ByteString
 
 instance Show StdErr where
-  show (StdErr message stdErr) = Prelude.unlines
-    [ message
-    , Char8.unpack stdErr
-    ]
+  show (StdErr message stdErr) =
+    Prelude.unlines
+      [ message,
+        Char8.unpack stdErr
+      ]
 
 instance Exception StdErr
 
 throwStdErr :: forall a. Prelude.String -> BSL.ByteString -> IO a
 throwStdErr message stdErr = throwIO $ StdErr message stdErr
 
-
 generateCBORDiagStdIn :: Int -> BSL.ByteString -> IO BSL.ByteString
 generateCBORDiagStdIn rounds cddl =
-  readProcessWithExitCode2 "cddl" ["-", "generate", Prelude.show rounds] cddl >>=
-    \case
+  readProcessWithExitCode2 "cddl" ["-", "generate", Prelude.show rounds] cddl
+    >>= \case
       Right result -> pure result
       Left stdErr -> throwStdErr "Got failing exit code when generating examples" stdErr
 
 diagToBytes :: BSL.ByteString -> IO BSL.ByteString
-diagToBytes diag = readProcessWithExitCode2 "diag2cbor.rb" ["-"] diag >>=
-    \case
-      Right result -> pure result
-      Left stdErr -> throwStdErr "Got failing exit code when converting cbor diagnostic notation to bytes" stdErr
+diagToBytes diag = readProcessWithExitCode2 "diag2cbor.rb" ["-"] diag
+  >>= \case
+    Right result -> pure result
+    Left stdErr -> throwStdErr "Got failing exit code when converting cbor diagnostic notation to bytes" stdErr
 
 readProcessWithExitCode2 :: FilePath -> [String] -> BSL.ByteString -> IO (Either BSL.ByteString BSL.ByteString)
 readProcessWithExitCode2 exec args stdIn = do
@@ -182,10 +204,10 @@ readProcessWithExitCode2 exec args stdIn = do
 withTempFile :: FilePath -> String -> (FilePath -> Handle -> IO a) -> IO a
 withTempFile dir nameTemplate k = bracket (Sys.openBinaryTempFile dir nameTemplate) cleanup (uncurry k)
   where
-  cleanup (fileName, h) = do
-    Sys.hClose h
-    catch (Sys.removeFile fileName) $ \err ->
-      if Sys.isDoesNotExistError err then return () else throwIO err
+    cleanup (fileName, h) = do
+      Sys.hClose h
+      catch (Sys.removeFile fileName) $ \err ->
+        if Sys.isDoesNotExistError err then return () else throwIO err
 
 usingFile :: BSL.ByteString -> (FilePath -> IO a) -> IO a
 usingFile bytes k = withTempFile "." "tmp" $ \fileName h -> do
@@ -194,7 +216,7 @@ usingFile bytes k = withTempFile "." "tmp" $ \fileName h -> do
   k fileName
 
 verifyConforming :: BSL.ByteString -> FilePath -> IO Bool
-verifyConforming value cddl = readProcessWithExitCode2 "cddl" [cddl, "validate", "-"] value >>=
-    \case
-      Right _ -> pure True
-      Left _ -> pure False
+verifyConforming value cddl = readProcessWithExitCode2 "cddl" [cddl, "validate", "-"] value
+  >>= \case
+    Right _ -> pure True
+    Left _ -> pure False
