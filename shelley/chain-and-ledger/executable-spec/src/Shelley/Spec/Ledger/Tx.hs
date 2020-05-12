@@ -18,7 +18,8 @@ module Shelley.Spec.Ledger.Tx
         _witnessVKeySet,
         _witnessMSigMap,
         _metadata,
-        txWitsBytes
+        txWitsBytes,
+        txFullBytes
       ),
     TxBody (..),
     TxOut (..),
