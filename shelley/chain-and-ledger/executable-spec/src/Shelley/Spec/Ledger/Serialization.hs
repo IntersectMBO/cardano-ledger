@@ -12,9 +12,9 @@ module Shelley.Spec.Ledger.Serialization
     FromCBORGroup (..),
     CBORGroup (..),
     CborSeq (..),
-    unwrapCborStrictSeq,
     decodeList,
     decodeSeq,
+    decodeStrictSeq,
     decodeSet,
     decodeMap,
     decodeMapContents,
@@ -182,8 +182,8 @@ instance FromCBOR a => FromCBOR (CborSeq a) where
 decodeSeq :: Decoder s a -> Decoder s (Seq a)
 decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
-unwrapCborStrictSeq :: CborSeq a -> StrictSeq a
-unwrapCborStrictSeq = StrictSeq.toStrict . unwrapCborSeq
+decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq a)
+decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
 
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
 decodeSet decoder = Set.fromList <$> decodeList decoder
