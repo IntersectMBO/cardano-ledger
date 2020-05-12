@@ -344,7 +344,7 @@ serializationTests = testGroup "Serialization Tests"
     (T (TkListLen 2) <> S (genesisId :: TxId) <> T (TkWord64 0))
   , let a = Addr testPayCred StakeRefNull in
     checkEncodingCBOR "txout"
-    (TxOut a (Coin 2))
+    (TxOut a zeroV) -- TODO make Value here
     (T (TkListLen 2)
       <> S a
       <> S (Coin 2)

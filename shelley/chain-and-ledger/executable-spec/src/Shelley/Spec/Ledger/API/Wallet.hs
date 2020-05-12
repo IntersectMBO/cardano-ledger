@@ -87,6 +87,6 @@ getFilteredUTxO ::
   Set (Addr crypto) ->
   UTxO crypto
 getFilteredUTxO ss addrs =
-  UTxO $ Map.filter (\(TxOut addr _) -> addr `Set.member` addrs) fullUTxO
+  UTxO $ Map.filter (\utxoout -> (getAddress utxoout) `Set.member` addrs) fullUTxO
   where
     UTxO fullUTxO = getUTxO ss

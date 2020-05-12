@@ -22,7 +22,7 @@ import           Cardano.Crypto.Hash (hash, Hash, ShortHash(..))
 import           Data.Map.Strict (Map, elems, empty, unionWith, toList, singleton, filterWithKey, keys, map,
                  toList, fromList, union, filter, singleton)
 import           Shelley.Spec.Ledger.Crypto
-import           Data.ByteString.Char8 (ByteString, pack)
+import           Data.ByteString.Char8 (ByteString, pack) -- TODO needs to be 32 bytestring, 28 for pack
 import           Shelley.Spec.Ledger.Scripts
 
 

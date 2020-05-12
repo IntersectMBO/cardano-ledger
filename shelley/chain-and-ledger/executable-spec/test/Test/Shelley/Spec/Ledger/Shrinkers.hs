@@ -60,7 +60,7 @@ shrinkTxBody (TxBody is os cs fg ws tf tl tu md) =
     -- [ TxBody is os cs fg ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
 
-outputBalance :: StrictSeq (TxOut crypto) -> Value crypto
+outputBalance :: Crypto crypto => StrictSeq (TxOut crypto) -> Value crypto
 outputBalance = foldl' (\v (TxOut _ c) -> v + c) zeroV
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
