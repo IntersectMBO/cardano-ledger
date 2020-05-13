@@ -135,7 +135,9 @@ data PParams' f = PParams
     -- | Extra entropy
     _extraEntropy :: !(HKD f Nonce),
     -- | Protocol version
-    _protocolVersion :: !(HKD f ProtVer)
+    _protocolVersion :: !(HKD f ProtVer),
+    -- | Minimum UTxO value
+    _minUTxOValue :: !(HKD f Natural)
   }
   deriving (Generic)
 
@@ -185,10 +187,11 @@ instance ToCBOR PParams where
           _tau = tau',
           _d = d',
           _extraEntropy = extraEntropy',
-          _protocolVersion = protocolVersion'
+          _protocolVersion = protocolVersion',
+          _minUTxOValue = minUTxOValue'
         }
       ) =
-      encodeListLen 20
+      encodeListLen 21
         <> toCBOR minfeeA'
         <> toCBOR minfeeB'
         <> toCBOR maxBBSize'
@@ -208,10 +211,11 @@ instance ToCBOR PParams where
         <> toCBOR d'
         <> toCBOR extraEntropy'
         <> toCBORGroup protocolVersion'
+        <> toCBOR minUTxOValue'
 
 instance FromCBOR PParams where
   fromCBOR = do
-    enforceSize "PParams" 20
+    enforceSize "PParams" 21
     PParams
       <$> fromCBOR -- _minfeeA         :: Integer
       <*> fromCBOR -- _minfeeB         :: Natural
@@ -232,6 +236,7 @@ instance FromCBOR PParams where
       <*> fromCBOR -- _d               :: UnitInterval
       <*> fromCBOR -- _extraEntropy    :: Nonce
       <*> fromCBORGroup -- _protocolVersion :: ProtVer
+      <*> fromCBOR -- _minUTxOValue    :: Natural
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
@@ -255,7 +260,8 @@ emptyPParams =
       _tau = interval0,
       _d = interval0,
       _extraEntropy = NeutralNonce,
-      _protocolVersion = ProtVer 0 0
+      _protocolVersion = ProtVer 0 0,
+      _minUTxOValue = 0
     }
 
 -- | Update Proposal
@@ -313,7 +319,8 @@ instance ToCBOR PParamsUpdate where
               encodeMapElement 15 toCBOR =<< _tau ppup,
               encodeMapElement 16 toCBOR =<< _d ppup,
               encodeMapElement 17 toCBOR =<< _extraEntropy ppup,
-              encodeMapElement 18 toCBOR =<< _protocolVersion ppup
+              encodeMapElement 18 toCBOR =<< _protocolVersion ppup,
+              encodeMapElement 19 toCBOR =<< _minUTxOValue ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
@@ -341,7 +348,8 @@ emptyPParamsUpdate =
       _tau = SNothing,
       _d = SNothing,
       _extraEntropy = SNothing,
-      _protocolVersion = SNothing
+      _protocolVersion = SNothing,
+      _minUTxOValue = SNothing
     }
 
 instance FromCBOR PParamsUpdate where
@@ -364,9 +372,10 @@ instance FromCBOR PParamsUpdate where
         13 -> rationalFromCBOR >>= \x -> pure (13, \up -> up {_a0 = SJust x})
         14 -> fromCBOR >>= \x -> pure (14, \up -> up {_rho = SJust x})
         15 -> fromCBOR >>= \x -> pure (15, \up -> up {_tau = SJust x})
-        16 -> fromCBOR >>= \x -> pure (17, \up -> up {_d = SJust x})
-        17 -> fromCBOR >>= \x -> pure (18, \up -> up {_extraEntropy = SJust x})
-        18 -> fromCBOR >>= \x -> pure (19, \up -> up {_protocolVersion = SJust x})
+        16 -> fromCBOR >>= \x -> pure (16, \up -> up {_d = SJust x})
+        17 -> fromCBOR >>= \x -> pure (17, \up -> up {_extraEntropy = SJust x})
+        18 -> fromCBOR >>= \x -> pure (18, \up -> up {_protocolVersion = SJust x})
+        19 -> fromCBOR >>= \x -> pure (19, \up -> up {_minUTxOValue = SJust x})
         k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
@@ -411,7 +420,8 @@ updatePParams pp ppup =
       _tau = fromMaybe' (_tau pp) (_tau ppup),
       _d = fromMaybe' (_d pp) (_d ppup),
       _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup)
+      _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
+      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup)
     }
   where
     fromMaybe' :: a -> StrictMaybe a -> a
