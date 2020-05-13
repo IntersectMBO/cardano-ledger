@@ -97,21 +97,11 @@ scriptsToAddr (payScript, stakeScript) =
   Addr (scriptToCred payScript) (StakeRefBase $ scriptToCred stakeScript)
 
 -- | Serialise an address to the external format.
---
--- Note: this is not the final format, this function will be updated later to
--- use the final format.
---
--- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
 serialiseAddr :: Crypto crypto => Addr crypto -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 
 -- | Deserialise an address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
---
--- Note: this is not the final format, this function will be updated later to
--- use the final format.
---
--- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
 deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
 deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
