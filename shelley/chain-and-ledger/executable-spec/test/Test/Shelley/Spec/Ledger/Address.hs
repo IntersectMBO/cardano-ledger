@@ -1,15 +1,21 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Address
   ( addressTests
   )
 where
 
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..) )
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
+import Cardano.Crypto.KES.Simple
+import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
@@ -17,6 +23,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as LB16
 import qualified Data.ByteString.Lazy as LBS
+import Data.Proxy (Proxy (..))
+import GHC.Stack ( HasCallStack )
 import Hedgehog (Gen)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as H
@@ -24,6 +32,7 @@ import qualified Hedgehog.Range as H
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
+import Shelley.Spec.Ledger.Crypto (Crypto (..), Network (..))
 import Shelley.Spec.Ledger.Keys (pattern KeyHash)
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -32,8 +41,6 @@ import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
 import qualified Test.Tasty.Hedgehog as T
-import GHC.Stack ( HasCallStack )
-import Data.Proxy (Proxy (..))
 
 addressTests :: TestTree
 addressTests = T.testGroup "Address binary and golden tests" [goldenTests, roundTripTests]
@@ -89,16 +96,16 @@ goldenTests =
       -- serialisation golden tests
       goldenSerialisation
         "addrEnterpriseK for network id = 0"
-        (Addr (keyBlake2b224 paymentKey) StakeRefNull)
-        "62",
+        (Addr @RealisticCrypto (keyBlake2b224 paymentKey) StakeRefNull)
+        "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
       goldenSerialisation
         "addrBaseKK for network id = 0"
-        (Addr (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
-        "02",
+        (Addr @RealisticCrypto (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
       goldenSerialisation
         "addrPtrK for network id = 0"
-        (Addr (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
-        "4281000203"
+        (Addr @RealisticCrypto (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
 
        -- the same as above for other network ids is also needed, for example, for 3, 6
     ]
@@ -108,7 +115,19 @@ golden name put value expected =
   T.testCase name $
     T.assertEqual name expected (LB16.encode . B.runPut . put $ value)
 
-goldenSerialisation :: String -> C.Addr -> BS.ByteString -> TestTree
+-- helper data to mimick realistic crypto
+data RealisticCrypto
+
+instance Crypto RealisticCrypto where
+  type DSIGN RealisticCrypto = Ed25519DSIGN
+  type KES   RealisticCrypto = SimpleKES Ed25519DSIGN 14
+  type VRF   RealisticCrypto = SimpleVRF
+  type HASH  RealisticCrypto = Blake2b_256
+  networkMagicId _ = Mainnet
+
+type RealisticCredential kr = Credential kr RealisticCrypto
+
+goldenSerialisation :: String -> Addr RealisticCrypto -> BS.ByteString -> TestTree
 goldenSerialisation name value expected =
   T.testCase name $
     T.assertEqual name expected (B16.encode . serialiseAddr $ value)
@@ -127,10 +146,9 @@ stakeKey = B16.encode "1c2c3c4c5c6c7c8c"
 -- 32-byte verification key is expected, vk, ie., public key without chain code.
 -- The verification key undergoes Blake2b_224 hashing
 -- and should be 28-byte in the aftermath
-keyBlake2b224 :: BS.ByteString ->  C.Credential kh
+keyBlake2b224 :: BS.ByteString ->  RealisticCredential kh
 keyBlake2b224 vk =
-  KeyHashObj . KeyHash . UnsafeHash . fst $
-    B16.decode hk
+  KeyHashObj . KeyHash . UnsafeHash $ hk
   where
     hash = digest (Proxy :: Proxy Blake2b_224)
     vk' = invariantSize 32 vk
