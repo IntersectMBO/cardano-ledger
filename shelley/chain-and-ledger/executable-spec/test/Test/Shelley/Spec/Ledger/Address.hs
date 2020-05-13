@@ -8,7 +8,8 @@ module Test.Shelley.Spec.Ledger.Address
   )
 where
 
-import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..))
+import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..) )
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
@@ -31,6 +32,8 @@ import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
 import qualified Test.Tasty.Hedgehog as T
+import GHC.Stack ( HasCallStack )
+import Data.Proxy (Proxy (..))
 
 addressTests :: TestTree
 addressTests = T.testGroup "Address binary and golden tests" [goldenTests, roundTripTests]
@@ -81,7 +84,23 @@ goldenTests =
         "addrEnterpriseS"
         putAddr
         (Addr scriptHash StakeRefNull)
-        "7205060708"
+        "7205060708",
+
+      -- serialisation golden tests
+      goldenSerialisation
+        "addrEnterpriseK for network id = 0"
+        (Addr (keyBlake2b224 paymentKey) StakeRefNull)
+        "62",
+      goldenSerialisation
+        "addrBaseKK for network id = 0"
+        (Addr (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        "02",
+      goldenSerialisation
+        "addrPtrK for network id = 0"
+        (Addr (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        "4281000203"
+
+       -- the same as above for other network ids is also needed, for example, for 3, 6
     ]
 
 golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
@@ -89,10 +108,44 @@ golden name put value expected =
   T.testCase name $
     T.assertEqual name expected (LB16.encode . B.runPut . put $ value)
 
+goldenSerialisation :: String -> C.Addr -> BS.ByteString -> TestTree
+goldenSerialisation name value expected =
+  T.testCase name $
+    T.assertEqual name expected (B16.encode . serialiseAddr $ value)
+
 keyHash :: C.Credential kh
 keyHash =
   KeyHashObj . KeyHash . UnsafeHash . fst $
     B16.decode "01020304"
+
+paymentKey :: BS.ByteString
+paymentKey = B16.encode "1a2a3a4a5a6a7a8a"
+
+stakeKey :: BS.ByteString
+stakeKey = B16.encode "1c2c3c4c5c6c7c8c"
+
+-- 32-byte verification key is expected, vk, ie., public key without chain code.
+-- The verification key undergoes Blake2b_224 hashing
+-- and should be 28-byte in the aftermath
+keyBlake2b224 :: BS.ByteString ->  C.Credential kh
+keyBlake2b224 vk =
+  KeyHashObj . KeyHash . UnsafeHash . fst $
+    B16.decode hk
+  where
+    hash = digest (Proxy :: Proxy Blake2b_224)
+    vk' = invariantSize 32 vk
+    hk = invariantSize
+        (fromIntegral $ sizeHash (Proxy :: Proxy Blake2b_224))
+        (hash vk')
+
+invariantSize :: HasCallStack => Int -> BS.ByteString -> BS.ByteString
+invariantSize expectedLength bytes
+    | BS.length bytes == expectedLength = bytes
+    | otherwise = error
+      $ "length was "
+      ++ show (BS.length bytes)
+      ++ ", but expected to be "
+      ++ show expectedLength
 
 scriptHash :: C.Credential kh
 scriptHash =
