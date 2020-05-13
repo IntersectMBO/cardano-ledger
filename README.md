@@ -125,6 +125,10 @@ corresponding to the Byron release). Then the tests can be run by executing:
 stack test
 ```
 
+**Note** that the tests in `shelley-spec-ledger` require two Ruby gems,
+[cbor-diag](https://rubygems.org/gems/cbor-diag) and
+[cddl](https://rubygems.org/gems/cddl).
+
 For the executable models test suites that use `tasty` (e.g. Byron), it is possible to select which
 tests to run by passing the `-p` flag to the test program, followed by an `awk` pattern. For
 instance for running only the `UTxO` tests, we can pass the `-p UTxO` option. `tasty` allows for
