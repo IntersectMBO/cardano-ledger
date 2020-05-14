@@ -130,6 +130,7 @@ import Shelley.Spec.Ledger.PParams
     _maxTxSize,
     _minfeeA,
     _minfeeB,
+    _minUTxOValue,
     _nOpt,
     _poolDecayRate,
     _poolDeposit,
@@ -679,7 +680,8 @@ serializationTests =
               _tau = SNothing,
               _d = SNothing,
               _extraEntropy = SNothing,
-              _protocolVersion = SNothing
+              _protocolVersion = SNothing,
+              _minUTxOValue = SNothing
             } ::
             PParamsUpdate
         )
@@ -704,6 +706,7 @@ serializationTests =
           d = UnsafeUnitInterval $ 1 % 9
           extraEntropy = NeutralNonce
           protocolVersion = ProtVer 0 1
+          minUTxOValue = 121
        in checkEncodingCBOR
             "pparams_update_all"
             ( PParams
@@ -725,11 +728,12 @@ serializationTests =
                   _tau = SJust tau,
                   _d = SJust d,
                   _extraEntropy = SJust extraEntropy,
-                  _protocolVersion = SJust protocolVersion
+                  _protocolVersion = SJust protocolVersion,
+                  _minUTxOValue = SJust minUTxOValue
                 } ::
                 PParamsUpdate
             )
-            ( (T $ TkMapLen 19)
+            ( (T $ TkMapLen 20)
                 <> (T $ TkWord 0)
                 <> S minfeea
                 <> (T $ TkWord 1)
@@ -768,6 +772,8 @@ serializationTests =
                 <> S extraEntropy
                 <> (T $ TkWord 18)
                 <> S protocolVersion
+                <> (T $ TkWord 19)
+                <> S minUTxOValue
             ),
       -- checkEncodingCBOR "full_update"
       let ppup =
@@ -793,7 +799,8 @@ serializationTests =
                         _tau = SNothing,
                         _d = SNothing,
                         _extraEntropy = SNothing,
-                        _protocolVersion = SNothing
+                        _protocolVersion = SNothing,
+                        _minUTxOValue = SNothing
                       }
                   )
               )
@@ -861,7 +868,8 @@ serializationTests =
                             _tau = SNothing,
                             _d = SNothing,
                             _extraEntropy = SNothing,
-                            _protocolVersion = SNothing
+                            _protocolVersion = SNothing,
+                            _minUTxOValue = SNothing
                           }
                       )
                   )
@@ -925,7 +933,8 @@ serializationTests =
                             _tau = SNothing,
                             _d = SNothing,
                             _extraEntropy = SNothing,
-                            _protocolVersion = SNothing
+                            _protocolVersion = SNothing,
+                            _minUTxOValue = SNothing
                           }
                       )
                   )

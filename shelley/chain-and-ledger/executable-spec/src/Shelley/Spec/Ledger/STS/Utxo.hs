@@ -80,7 +80,7 @@ instance
     | InputSetEmptyUTxO
     | FeeTooSmallUTxO Coin Coin
     | ValueNotConservedUTxO Coin Coin
-    | NegativeOutputsUTxO
+    | OutputTooSmallUTxO
     | UpdateFailure (PredicateFailure (PPUP crypto))
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
@@ -111,7 +111,7 @@ instance
       encodeListLen 3 <> toCBOR (5 :: Word8)
         <> toCBOR a
         <> toCBOR b
-    NegativeOutputsUTxO -> encodeListLen 1 <> toCBOR (6 :: Word8)
+    OutputTooSmallUTxO -> encodeListLen 1 <> toCBOR (6 :: Word8)
     (UpdateFailure a) ->
       encodeListLen 2 <> toCBOR (7 :: Word8)
         <> toCBOR a
@@ -145,7 +145,7 @@ instance
         a <- fromCBOR
         b <- fromCBOR
         pure $ ValueNotConservedUTxO a b
-      6 -> matchSize "NegativeOutputsUTxO" 1 n >> pure NegativeOutputsUTxO
+      6 -> matchSize "OutputTooSmallUTxO" 1 n >> pure OutputTooSmallUTxO
       7 -> do
         matchSize "UpdateFailure" 2 n
         a <- fromCBOR
@@ -184,7 +184,8 @@ utxoInductive = do
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
-  all (0 <=) outputCoins ?! NegativeOutputsUTxO
+  let minUTxOValue = fromIntegral $ _minUTxOValue pp
+  all (minUTxOValue <=) outputCoins ?! OutputTooSmallUTxO
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx

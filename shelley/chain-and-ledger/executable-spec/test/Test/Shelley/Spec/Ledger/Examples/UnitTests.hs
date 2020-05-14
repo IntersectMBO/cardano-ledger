@@ -1,13 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.Examples.UnitTests (unitTests) where
 
-import Control.Monad (foldM)
-import Data.Map.Strict (Map)
+import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -17,70 +18,36 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (checkVRFValue)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( StakeCreds (..),
-    StakePools (..),
-    pattern Delegate,
-    pattern RegKey,
-    pattern RegPool,
-    pattern RetirePool,
-  )
-import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
-  ( _delegationState,
-    _delegations,
+  ( pattern DPState,
+    pattern UTxOState,
     _dstate,
-    _pParams,
-    _pstate,
-    _ptrs,
-    _retiring,
     _rewards,
-    _stPools,
-    _stkCreds,
-    emptyDelegation,
+    emptyDState,
+    emptyPState,
+    overlaySchedule,
     genesisCoins,
     genesisId,
-    genesisState,
-    minfee,
-    overlaySchedule,
-    pattern LedgerState,
-    pattern UTxOState,
   )
 import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.STS.Ledger (pattern LedgerEnv, pattern UtxowFailure, pattern UtxoFailure, pattern DelegsFailure)
+import Shelley.Spec.Ledger.STS.Utxo (PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
-  ( _body,
-    _ttl,
+  ( _ttl,
     pattern Tx,
     pattern TxBody,
     pattern TxIn,
     pattern TxOut,
   )
-import Shelley.Spec.Ledger.TxData
-  ( Delegation (..),
-    Wdrl (..),
-    _poolCost,
-    _poolMD,
-    _poolMargin,
-    _poolOwners,
-    _poolPledge,
-    _poolPubKey,
-    _poolRAcnt,
-    _poolRelays,
-    _poolVrf,
-    pattern DCertDeleg,
-    pattern DCertPool,
-    pattern PoolParams,
-    pattern Ptr,
-    pattern RewardAcnt,
-  )
-import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey, txid, pattern UTxO)
-import Shelley.Spec.Ledger.Validation (ValidationError (..))
-import qualified Test.Cardano.Crypto.VRF.Fake as FakeVRF
+import Shelley.Spec.Ledger.TxData ( Wdrl (..),)
+import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Examples.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core (unitIntervalToNatural)
-import Test.Shelley.Spec.Ledger.PreSTSGenerator (asStateTransition)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -110,530 +77,17 @@ bobAddr =
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 
-testPCs :: PParams
-testPCs =
+pp :: PParams
+pp =
   emptyPParams
     { _minfeeA = 1,
       _minfeeB = 1,
       _keyDeposit = 100,
       _poolDeposit = 250,
       _maxTxSize = 1024,
-      _eMax = EpochNo 10
+      _eMax = EpochNo 10,
+      _minUTxOValue = 100
     }
-
-aliceInitCoin :: Coin
-aliceInitCoin = Coin 10000
-
-bobInitCoin :: Coin
-bobInitCoin = Coin 1000
-
-genesis :: LedgerState
-genesis =
-  (genesisState Map.empty . genesisCoins)
-    [ TxOut aliceAddr aliceInitCoin,
-      TxOut bobAddr bobInitCoin
-    ]
-
-changeReward :: LedgerState -> RewardAcnt -> Coin -> LedgerState
-changeReward ls acnt c = ls {_delegationState = delSt {_dstate = dstate' {_rewards = newAccounts}}}
-  where
-    delSt = _delegationState ls
-    dstate' = _dstate delSt
-    newAccounts = Map.insert acnt c ((_rewards . _dstate . _delegationState) ls)
-
-stakePoolKey1 :: KeyPair 'Staking
-stakePoolKey1 = KeyPair 5 5
-
-stakePoolVRFKey1 :: VerKeyVRF
-stakePoolVRFKey1 = FakeVRF.VerKeyFakeVRF 15
-
-ledgerState :: [Tx] -> Either [ValidationError] LedgerState
-ledgerState = foldM (\l t -> asStateTransition (SlotNo 0) testPCs l t (Coin 0)) genesis
-
-testLedgerValidTransactions ::
-  Either [ValidationError] LedgerState -> UTxOState -> Assertion
-testLedgerValidTransactions ls utxoState' =
-  ls
-    @?= Right
-      ( LedgerState
-          utxoState'
-          emptyDelegation
-      )
-
-testValidStakeKeyRegistration ::
-  Tx -> UTxOState -> DPState -> Assertion
-testValidStakeKeyRegistration tx utxoState' stakeKeyRegistration =
-  let ls2 = ledgerState [tx]
-   in ls2
-        @?= Right
-          ( LedgerState
-              utxoState'
-              stakeKeyRegistration
-          )
-
-testValidDelegation ::
-  [Tx] -> UTxOState -> DPState -> PoolParams -> Assertion
-testValidDelegation txs utxoState' stakeKeyRegistration pool =
-  let ls2 = ledgerState txs
-      poolhk = hashKey $ vKey stakePoolKey1
-      dstate' = _dstate stakeKeyRegistration
-      pstate' = _pstate stakeKeyRegistration
-   in ls2
-        @?= Right
-          ( LedgerState
-              utxoState'
-              ( stakeKeyRegistration
-                  { _dstate =
-                      dstate'
-                        { _delegations =
-                            Map.fromList
-                              [ ( KeyHashObj $ coerceKeyRole . hashKey $ vKey aliceStake,
-                                  coerceKeyRole poolhk
-                                )
-                              ]
-                        },
-                    _pstate =
-                      pstate'
-                        { _stPools = (StakePools $ Map.fromList [(coerceKeyRole poolhk, SlotNo 0)]),
-                          _pParams = Map.fromList [(coerceKeyRole poolhk, pool)]
-                        }
-                  }
-              )
-          )
-
-testValidRetirement ::
-  [Tx] -> UTxOState -> DPState -> EpochNo -> PoolParams -> Assertion
-testValidRetirement txs utxoState' stakeKeyRegistration e pool =
-  let ls2 = ledgerState txs
-      poolhk = hashKey $ vKey stakePoolKey1
-      dstate' = _dstate stakeKeyRegistration
-      pstate' = _pstate stakeKeyRegistration
-   in ls2
-        @?= Right
-          ( LedgerState
-              utxoState'
-              ( stakeKeyRegistration
-                  { _dstate =
-                      dstate'
-                        { _delegations = Map.fromList [(KeyHashObj $ coerceKeyRole . hashKey $ vKey aliceStake, coerceKeyRole poolhk)]
-                        },
-                    _pstate =
-                      pstate'
-                        { _stPools = StakePools $ Map.fromList [(coerceKeyRole poolhk, SlotNo 0)],
-                          _pParams = Map.fromList [(coerceKeyRole poolhk, pool)],
-                          _retiring = Map.fromList [(coerceKeyRole poolhk, e)]
-                        }
-                  }
-              )
-          )
-
-bobWithdrawal :: Map RewardAcnt Coin
-bobWithdrawal = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 10)
-
-genesisWithReward :: LedgerState
-genesisWithReward = changeReward genesis (mkVKeyRwdAcnt bobStake) (Coin 10)
-
-testValidWithdrawal :: Assertion
-testValidWithdrawal =
-  let tx =
-        TxBody
-          (Set.fromList [TxIn genesisId 0])
-          ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3010)
-              ]
-          )
-          Empty
-          (Wdrl bobWithdrawal)
-          (Coin 1000)
-          (SlotNo 0)
-          SNothing
-          SNothing
-      wits = makeWitnessesVKey (hashTxBody tx) [asWitness alicePay, asWitness bobStake]
-      utxo' =
-        Map.fromList
-          [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000)),
-            (TxIn (txid tx) 0, TxOut aliceAddr (Coin 6000)),
-            (TxIn (txid tx) 1, TxOut bobAddr (Coin 3010))
-          ]
-      ls =
-        asStateTransition
-          (SlotNo 0)
-          testPCs
-          genesisWithReward
-          (Tx tx wits Map.empty SNothing)
-          (Coin 0)
-      dstate' = _dstate emptyDelegation
-      expectedDS =
-        emptyDelegation
-          { _dstate = dstate' {_rewards = Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 0)}
-          }
-   in ls
-        @?= Right
-          ( LedgerState
-              (UTxOState (UTxO utxo') (Coin 0) (Coin 1000) emptyPPPUpdates)
-              expectedDS
-          )
-
-testInvalidWintess :: Assertion
-testInvalidWintess =
-  let tx =
-        TxBody
-          (Set.fromList [TxIn genesisId 0])
-          ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3000)
-              ]
-          )
-          Empty
-          (Wdrl Map.empty)
-          (Coin 1000)
-          (SlotNo 1)
-          SNothing
-          SNothing
-      tx' = tx {_ttl = SlotNo 2}
-      wits = makeWitnessesVKey (hashTxBody tx') [alicePay]
-   in ledgerState [Tx tx wits Map.empty SNothing] @?= Left [InvalidWitness]
-
-testWithdrawalNoWit :: Assertion
-testWithdrawalNoWit =
-  let tx =
-        TxBody
-          (Set.fromList [TxIn genesisId 0])
-          ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3010)
-              ]
-          )
-          Empty
-          (Wdrl bobWithdrawal)
-          (Coin 1000)
-          (SlotNo 0)
-          SNothing
-          SNothing
-      wits = Set.singleton $ makeWitnessVKey (hashTxBody tx) alicePay
-      ls =
-        asStateTransition
-          (SlotNo 0)
-          testPCs
-          genesisWithReward
-          (Tx tx wits Map.empty SNothing)
-          (Coin 0)
-   in ls @?= Left [MissingWitnesses]
-
-testWithdrawalWrongAmt :: Assertion
-testWithdrawalWrongAmt =
-  let tx =
-        TxBody
-          (Set.fromList [TxIn genesisId 0])
-          ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3011)
-              ]
-          )
-          Empty
-          (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
-          (Coin 1000)
-          (SlotNo 0)
-          SNothing
-          SNothing
-      wits = makeWitnessesVKey (hashTxBody tx) [asWitness alicePay, asWitness bobStake]
-      ls =
-        asStateTransition
-          (SlotNo 0)
-          testPCs
-          genesisWithReward
-          (Tx tx wits Map.empty SNothing)
-          (Coin 0)
-   in ls @?= Left [IncorrectRewards]
-
-aliceGivesBobLovelace ::
-  TxIn ->
-  Coin ->
-  Coin ->
-  Coin ->
-  Coin ->
-  [DCert] ->
-  SlotNo ->
-  [KeyPair 'Witness] ->
-  Tx
-aliceGivesBobLovelace txin coin fee txdeps txrefs cs s signers = Tx txbody wits Map.empty SNothing
-  where
-    aliceCoin = aliceInitCoin + txrefs - (coin + fee + txdeps)
-    txbody =
-      TxBody
-        (Set.fromList [txin])
-        ( StrictSeq.fromList
-            [ TxOut aliceAddr aliceCoin,
-              TxOut bobAddr coin
-            ]
-        )
-        (StrictSeq.fromList cs)
-        (Wdrl Map.empty)
-        fee
-        s
-        SNothing
-        SNothing
-    wits = makeWitnessesVKey (hashTxBody txbody) signers
-
-tx1 :: Tx
-tx1 =
-  aliceGivesBobLovelace
-    (TxIn genesisId 0)
-    (Coin 3000)
-    (Coin 600)
-    (Coin 0)
-    (Coin 0)
-    []
-    (SlotNo 0)
-    [asWitness alicePay]
-
-utxoSt1 :: UTxOState
-utxoSt1 =
-  UTxOState
-    ( UTxO $
-        Map.fromList
-          [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000)),
-            (TxIn (txid $ _body tx1) 0, TxOut aliceAddr (Coin 6400)),
-            (TxIn (txid $ _body tx1) 1, TxOut bobAddr (Coin 3000))
-          ]
-    )
-    (Coin 0)
-    (Coin 600)
-    emptyPPPUpdates
-
-ls1 :: Either [ValidationError] LedgerState
-ls1 = ledgerState [tx1]
-
-tx2 :: Tx
-tx2 =
-  aliceGivesBobLovelace
-    (TxIn genesisId 0)
-    (Coin 3000)
-    (Coin 1300)
-    (Coin 3 * 100)
-    (Coin 0)
-    [ DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey aliceStake),
-      DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey bobStake),
-      DCertDeleg (RegKey $ (KeyHashObj . hashKey) $ vKey stakePoolKey1)
-    ]
-    (SlotNo 100)
-    [ asWitness alicePay,
-      asWitness aliceStake,
-      asWitness bobStake,
-      asWitness stakePoolKey1
-    ]
-
-utxoSt2 :: UTxOState
-utxoSt2 =
-  UTxOState
-    ( UTxO $
-        Map.fromList
-          [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000)),
-            (TxIn (txid $ _body tx2) 0, TxOut aliceAddr (Coin 5400)),
-            (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000))
-          ]
-    )
-    (Coin 300)
-    (Coin 1300)
-    emptyPPPUpdates
-
-tx3Body :: TxBody
-tx3Body =
-  TxBody
-    (Set.fromList [TxIn (txid $ _body tx2) 0])
-    (StrictSeq.singleton $ TxOut aliceAddr (Coin 3950))
-    ( StrictSeq.fromList
-        [ DCertPool (RegPool stakePool),
-          DCertDeleg
-            ( Delegate
-                ( Delegation
-                    (KeyHashObj $ hashKey $ vKey aliceStake)
-                    (coerceKeyRole . hashKey $ vKey stakePoolKey1)
-                )
-            )
-        ]
-    )
-    (Wdrl Map.empty)
-    (Coin 1200)
-    (SlotNo 100)
-    SNothing
-    SNothing
-
-tx3 :: Tx
-tx3 = Tx tx3Body (makeWitnessesVKey (hashTxBody tx3Body) keys) Map.empty SNothing
-  where
-    keys = [asWitness alicePay, asWitness aliceStake, asWitness stakePoolKey1]
-
-utxoSt3 :: UTxOState
-utxoSt3 =
-  UTxOState
-    ( UTxO $
-        Map.fromList
-          [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000)),
-            (TxIn (txid tx3Body) 0, TxOut aliceAddr (Coin 3950)),
-            (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000))
-          ]
-    )
-    (Coin 550)
-    (Coin 2500)
-    emptyPPPUpdates
-
-stakeKeyRegistration1 :: DPState
-stakeKeyRegistration1 =
-  emptyDelegation
-    { _dstate =
-        (_dstate emptyDelegation)
-          { _rewards =
-              Map.fromList
-                [ (mkVKeyRwdAcnt aliceStake, Coin 0),
-                  (mkVKeyRwdAcnt bobStake, Coin 0),
-                  (mkVKeyRwdAcnt stakePoolKey1, Coin 0)
-                ],
-            _stkCreds =
-              StakeCreds $
-                Map.fromList
-                  [ (KeyHashObj $ hashKey $ vKey aliceStake, SlotNo 0),
-                    (KeyHashObj $ hashKey $ vKey bobStake, SlotNo 0),
-                    (KeyHashObj $ hashKey $ vKey stakePoolKey1, SlotNo 0)
-                  ],
-            _ptrs =
-              Map.fromList
-                [ (Ptr (SlotNo 0) 0 0, KeyHashObj $ hashKey $ vKey aliceStake),
-                  (Ptr (SlotNo 0) 0 1, KeyHashObj $ hashKey $ vKey bobStake),
-                  (Ptr (SlotNo 0) 0 2, KeyHashObj $ hashKey $ vKey stakePoolKey1)
-                ]
-          }
-    }
-
-stakePool :: PoolParams
-stakePool =
-  PoolParams
-    { _poolPubKey = coerceKeyRole . hashKey $ vKey stakePoolKey1,
-      _poolVrf = hashKeyVRF stakePoolVRFKey1,
-      _poolPledge = Coin 0,
-      _poolCost = Coin 0, -- TODO: what is a sensible value?
-      _poolMargin = interval0, --          or here?
-      _poolRAcnt = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1),
-      _poolOwners = Set.empty,
-      _poolRelays = StrictSeq.empty,
-      _poolMD = SNothing
-    }
-
-halfInterval :: UnitInterval
-halfInterval =
-  fromMaybe (error "could not construct unit interval") $ mkUnitInterval 0.5
-
-stakePoolUpdate :: PoolParams
-stakePoolUpdate =
-  PoolParams
-    { _poolPubKey = coerceKeyRole . hashKey $ vKey stakePoolKey1,
-      _poolVrf = hashKeyVRF stakePoolVRFKey1,
-      _poolPledge = Coin 0,
-      _poolCost = Coin 100, -- TODO: what is a sensible value?
-      _poolMargin = halfInterval, --          or here?
-      _poolRAcnt = RewardAcnt (KeyHashObj . hashKey . vKey $ stakePoolKey1),
-      _poolOwners = Set.empty,
-      _poolRelays = StrictSeq.empty,
-      _poolMD = SNothing
-    }
-
-tx4Body :: TxBody
-tx4Body =
-  TxBody
-    (Set.fromList [TxIn (txid $ _body tx3) 0])
-    (StrictSeq.singleton $ TxOut aliceAddr (Coin 2950)) -- Note the deposit is not charged
-    (StrictSeq.fromList [DCertPool (RegPool stakePoolUpdate)])
-    (Wdrl Map.empty)
-    (Coin 1000)
-    (SlotNo 100)
-    SNothing
-    SNothing
-
-tx4 :: Tx
-tx4 =
-  Tx
-    tx4Body
-    ( makeWitnessesVKey
-        (hashTxBody tx4Body)
-        [asWitness alicePay, asWitness stakePoolKey1]
-    )
-    Map.empty
-    SNothing
-
-utxoSt4 :: UTxOState
-utxoSt4 =
-  UTxOState
-    ( UTxO $
-        Map.fromList
-          [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000)),
-            (TxIn (txid tx4Body) 0, TxOut aliceAddr (Coin 2950)),
-            (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000))
-          ]
-    )
-    (Coin 550)
-    (Coin 3500)
-    emptyPPPUpdates
-
-utxo5 :: EpochNo -> UTxOState
-utxo5 e =
-  UTxOState
-    ( UTxO $
-        Map.fromList
-          [ (TxIn genesisId 1, TxOut bobAddr (Coin 1000)),
-            (TxIn (txid $ tx5Body e) 0, TxOut aliceAddr (Coin 2950)),
-            (TxIn (txid $ _body tx2) 1, TxOut bobAddr (Coin 3000))
-          ]
-    )
-    (Coin 550)
-    (Coin 3500)
-    emptyPPPUpdates
-
-tx5Body :: EpochNo -> TxBody
-tx5Body e =
-  TxBody
-    (Set.fromList [TxIn (txid $ _body tx3) 0])
-    (StrictSeq.singleton $ TxOut aliceAddr (Coin 2950))
-    (StrictSeq.fromList [DCertPool (RetirePool (coerceKeyRole . hashKey $ vKey stakePoolKey1) e)])
-    (Wdrl Map.empty)
-    (Coin 1000)
-    (SlotNo 100)
-    SNothing
-    SNothing
-
-tx5 :: EpochNo -> Tx
-tx5 e =
-  Tx
-    (tx5Body e)
-    ( makeWitnessesVKey
-        (hashTxBody $ tx5Body e)
-        [asWitness alicePay, asWitness stakePoolKey1]
-    )
-    Map.empty
-    SNothing
-
-testsValidLedger :: TestTree
-testsValidLedger =
-  testGroup
-    "Tests with valid transactions in ledger."
-    [ testCase "Valid Ledger - Alice gives Bob 3000 of her 10000 lovelace" $
-        testLedgerValidTransactions ls1 utxoSt1,
-      testGroup
-        "Tests for stake delegation."
-        [ testCase "Valid stake key registration." $
-            testValidStakeKeyRegistration tx2 utxoSt2 stakeKeyRegistration1,
-          testCase "Valid stake delegation from Alice to stake pool." $
-            testValidDelegation [tx2, tx3] utxoSt3 stakeKeyRegistration1 stakePool,
-          testCase "Update stake pool parameters" $
-            testValidDelegation [tx2, tx3, tx4] utxoSt4 stakeKeyRegistration1 stakePoolUpdate,
-          testCase "Retire Pool" $
-            testValidRetirement [tx2, tx3, tx5 (EpochNo 1)] (utxo5 (EpochNo 1)) stakeKeyRegistration1 (EpochNo 1) stakePool
-        ],
-      testGroup
-        "Tests for withdrawals"
-        [ testCase "Valid withdrawal." testValidWithdrawal
-        ]
-    ]
 
 testOverlayScheduleZero :: Assertion
 testOverlayScheduleZero =
@@ -679,23 +133,103 @@ testsPParams =
         testVRFCheckWithLeaderValueOne
     ]
 
+testTruncateUnitInterval :: TestTree
+testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
+  \n ->
+    let x = intervalValue $ truncateUnitInterval n
+     in (x <= 1) && (x >= 0)
+
+testLEDGER
+  :: (UTxOState, DPState)
+  -> Tx
+  -> LedgerEnv
+  -> Either [[PredicateFailure LEDGER]] (UTxOState, DPState)
+  -> Assertion
+testLEDGER initSt tx env (Right expectedSt) = do
+  checkTrace @LEDGER runShelleyBase env $ pure initSt .- tx .-> expectedSt
+testLEDGER initSt tx env predicateFailure@(Left _) = do
+  let st = runShelleyBase $ applySTS @LEDGER (TRC (env, initSt, tx))
+  st @?= predicateFailure
+
+aliceInitCoin :: Coin
+aliceInitCoin = Coin 10000
+
+data AliceToBob = AliceToBob
+  { input    :: TxIn
+  , toBob    :: Coin
+  , fee      :: Coin
+  , deposits :: Coin
+  , refunds  :: Coin
+  , certs    :: [DCert]
+  , ttl      :: SlotNo
+  , signers  :: [KeyPair 'Witness]
+  }
+
+aliceGivesBobLovelace :: AliceToBob -> Tx
+aliceGivesBobLovelace
+  AliceToBob
+    { input, toBob, fee, deposits, refunds, certs, ttl, signers } = Tx txbody wits Map.empty SNothing
+  where
+    aliceCoin = aliceInitCoin + refunds - (toBob + fee + deposits)
+    txbody =
+      TxBody
+        (Set.singleton input)
+        ( StrictSeq.fromList
+            [ TxOut aliceAddr aliceCoin,
+              TxOut bobAddr toBob
+            ]
+        )
+        (StrictSeq.fromList certs)
+        (Wdrl Map.empty)
+        fee
+        ttl
+        SNothing
+        SNothing
+    wits = makeWitnessesVKey (hashTxBody txbody) signers
+
+utxoState :: UTxOState
+utxoState = UTxOState
+  (genesisCoins [ TxOut aliceAddr aliceInitCoin
+                , TxOut bobAddr (Coin 1000)])
+  (Coin 0)
+  (Coin 0)
+  emptyPPPUpdates
+
+dpState :: DPState
+dpState = DPState emptyDState emptyPState
+
+addReward :: DPState -> RewardAcnt -> Coin -> DPState
+addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
+  where
+    ds = _dstate dp
+    rewards = Map.insert ra c $ _rewards ds
+
+ledgerEnv :: LedgerEnv
+ledgerEnv = LedgerEnv (SlotNo 0) 0 pp 0
+
+testInvalidTx
+  :: [PredicateFailure LEDGER]
+  -> Tx
+  -> Assertion
+testInvalidTx errs tx =
+  testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
+
 testSpendNonexistentInput :: Assertion
-testSpendNonexistentInput =
-  let tx =
-        aliceGivesBobLovelace
-          (TxIn genesisId 42)
-          (Coin 3000)
-          (Coin 1500)
-          (Coin 0)
-          (Coin 0)
-          []
-          (SlotNo 100)
-          [asWitness alicePay]
-   in ledgerState [tx]
-        @?= Left
-          [ ValueNotConserved (Coin 0) (Coin 10000),
-            BadInputs
-          ]
+testSpendNonexistentInput = testInvalidTx
+  [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000)))
+  , UtxowFailure (UtxoFailure BadInputsUTxO)
+  ] $
+  aliceGivesBobLovelace $
+    AliceToBob
+      { input    = (TxIn genesisId 42) -- Non Existent
+      , toBob    = (Coin 3000)
+      , fee      = (Coin 1500)
+      , deposits = (Coin 0)
+      , refunds  = (Coin 0)
+      , certs    = []
+      , ttl      = (SlotNo 100)
+      , signers  = [asWitness alicePay]
+      }
 
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
@@ -714,7 +248,7 @@ testWitnessNotIncluded =
           SNothing
           SNothing
       tx = Tx txbody Set.empty Map.empty SNothing
-   in ledgerState [tx] @?= Left [MissingWitnesses]
+   in testInvalidTx [UtxowFailure MissingVKeyWitnessesUTXOW] tx
 
 testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
@@ -730,7 +264,7 @@ testSpendNotOwnedUTxO =
           SNothing
       aliceWit = makeWitnessVKey (hashTxBody txbody) alicePay
       tx = Tx txbody (Set.fromList [aliceWit]) Map.empty SNothing
-   in ledgerState [tx] @?= Left [MissingWitnesses]
+   in testInvalidTx [UtxowFailure MissingVKeyWitnessesUTXOW] tx
 
 testWitnessWrongUTxO :: Assertion
 testWitnessWrongUTxO =
@@ -756,16 +290,13 @@ testWitnessWrongUTxO =
           SNothing
       aliceWit = makeWitnessVKey (hashTxBody tx2body) alicePay
       tx = Tx txbody (Set.fromList [aliceWit]) Map.empty SNothing
-   in ledgerState [tx]
-        @?= Left
-          [ InvalidWitness,
-            MissingWitnesses
-          ]
+   in testInvalidTx [ UtxowFailure InvalidWitnessesUTXOW
+                    , UtxowFailure MissingVKeyWitnessesUTXOW] tx
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
   let aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt aliceStake) (Coin 2000)
-      tx =
+      txb =
         TxBody
           Set.empty
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 1000))
@@ -775,52 +306,128 @@ testEmptyInputSet =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = makeWitnessesVKey (hashTxBody tx) [aliceStake]
-      genesisWithReward' = changeReward genesis (mkVKeyRwdAcnt aliceStake) (Coin 2000)
-      ls =
-        asStateTransition
-          (SlotNo 0)
-          testPCs
-          genesisWithReward'
-          (Tx tx wits Map.empty SNothing)
-          (Coin 0)
-   in ls @?= Left [InputSetEmpty]
+      wits = makeWitnessesVKey (hashTxBody txb) [aliceStake]
+      tx = Tx txb wits Map.empty SNothing
+      dpState' = addReward dpState (mkVKeyRwdAcnt aliceStake) (Coin 2000)
+  in testLEDGER
+       (utxoState, dpState')
+       tx
+       ledgerEnv
+       (Left [[UtxowFailure (UtxoFailure InputSetEmptyUTxO)]])
 
 testFeeTooSmall :: Assertion
-testFeeTooSmall =
-  let tx =
-        aliceGivesBobLovelace
-          (TxIn genesisId 0)
-          (Coin 3000)
-          (Coin 1)
-          (Coin 0)
-          (Coin 0)
-          []
-          (SlotNo 100)
-          [asWitness alicePay]
-   in ledgerState [tx]
-        @?= Left [FeeTooSmall (minfee testPCs tx) (Coin 1)]
+testFeeTooSmall = testInvalidTx
+  [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 209) (Coin 1)))] $
+  aliceGivesBobLovelace
+    AliceToBob
+      { input    = (TxIn genesisId 0)
+      , toBob    = (Coin 3000)
+      , fee      = (Coin 1)
+      , deposits = (Coin 0)
+      , refunds  = (Coin 0)
+      , certs    = []
+      , ttl      = (SlotNo 100)
+      , signers  = [asWitness alicePay]
+      }
 
 testExpiredTx :: Assertion
 testExpiredTx =
-  let tx =
-        aliceGivesBobLovelace
-          (TxIn genesisId 0)
-          (Coin 3000)
-          (Coin 600)
-          (Coin 0)
-          (Coin 0)
-          []
-          (SlotNo 0)
-          [asWitness alicePay]
-   in asStateTransition (SlotNo 1) testPCs genesis tx (Coin 0)
-        @?= Left [Expired (SlotNo 0) (SlotNo 1)]
+  let
+    errs = [UtxowFailure (UtxoFailure (ExpiredUTxO (SlotNo {unSlotNo = 0}) (SlotNo {unSlotNo = 1})))]
+    tx = aliceGivesBobLovelace $
+           AliceToBob
+             { input    = (TxIn genesisId 0)
+             , toBob    = (Coin 3000)
+             , fee      = (Coin 600)
+             , deposits = (Coin 0)
+             , refunds  = (Coin 0)
+             , certs    = []
+             , ttl      = (SlotNo 0)
+             , signers  = [asWitness alicePay]
+             }
+    ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp 0
+  in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
 
-testTruncateUnitInterval :: TestTree
-testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
-  \n ->
-    let x = intervalValue $ truncateUnitInterval n
-     in (x <= 1) && (x >= 0)
+testInvalidWintess :: Assertion
+testInvalidWintess =
+  let txb =
+        TxBody
+          (Set.fromList [TxIn genesisId 0])
+          ( StrictSeq.fromList
+              [ TxOut aliceAddr (Coin 6000),
+                TxOut bobAddr (Coin 3000)
+              ]
+          )
+          Empty
+          (Wdrl Map.empty)
+          (Coin 1000)
+          (SlotNo 1)
+          SNothing
+          SNothing
+      txb' = txb {_ttl = SlotNo 2}
+      wits = makeWitnessesVKey (hashTxBody txb') [alicePay]
+      tx = Tx txb wits Map.empty SNothing
+      errs = [UtxowFailure InvalidWitnessesUTXOW]
+  in testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
+
+testWithdrawalNoWit :: Assertion
+testWithdrawalNoWit =
+  let txb =
+        TxBody
+          (Set.fromList [TxIn genesisId 0])
+          ( StrictSeq.fromList
+              [ TxOut aliceAddr (Coin 6000),
+                TxOut bobAddr (Coin 3010)
+              ]
+          )
+          Empty
+          (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 10))
+          (Coin 1000)
+          (SlotNo 0)
+          SNothing
+          SNothing
+      wits = Set.singleton $ makeWitnessVKey (hashTxBody txb) alicePay
+      tx = Tx txb wits Map.empty SNothing
+      errs = [UtxowFailure MissingVKeyWitnessesUTXOW]
+      dpState' = addReward dpState (mkVKeyRwdAcnt bobStake) (Coin 10)
+  in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
+
+testWithdrawalWrongAmt :: Assertion
+testWithdrawalWrongAmt =
+  let txb =
+        TxBody
+          (Set.fromList [TxIn genesisId 0])
+          ( StrictSeq.fromList
+              [ TxOut aliceAddr (Coin 6000),
+                TxOut bobAddr (Coin 3011)
+              ]
+          )
+          Empty
+          (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
+          (Coin 1000)
+          (SlotNo 0)
+          SNothing
+          SNothing
+      wits = makeWitnessesVKey (hashTxBody txb) [asWitness alicePay, asWitness bobStake]
+      dpState' = addReward dpState (mkVKeyRwdAcnt bobStake) (Coin 10)
+      tx = Tx txb wits Map.empty SNothing
+      errs = [DelegsFailure WithdrawalsNotInRewardsDELEGS]
+  in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
+
+testOutputTooSmall :: Assertion
+testOutputTooSmall = testInvalidTx
+  [UtxowFailure (UtxoFailure OutputTooSmallUTxO)] $
+  aliceGivesBobLovelace $
+    AliceToBob
+      { input    = (TxIn genesisId 0)
+      , toBob    = (Coin 1) -- Too Small
+      , fee      = (Coin 997)
+      , deposits = (Coin 0)
+      , refunds  = (Coin 0)
+      , certs    = []
+      , ttl      = (SlotNo 0)
+      , signers  = [asWitness alicePay]
+      }
 
 testsInvalidLedger :: TestTree
 testsInvalidLedger =
@@ -835,15 +442,15 @@ testsInvalidLedger =
       testCase "Invalid Ledger - Alice's transaction has expired" testExpiredTx,
       testCase "Invalid Ledger - Invalid witnesses" testInvalidWintess,
       testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit,
-      testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt
+      testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt,
+      testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall
     ]
 
 unitTests :: TestTree
 unitTests =
   testGroup
     "Unit Tests"
-    [ testsValidLedger,
-      testsInvalidLedger,
+    [ testsInvalidLedger,
       testsPParams,
       sizeTests,
       testTruncateUnitInterval

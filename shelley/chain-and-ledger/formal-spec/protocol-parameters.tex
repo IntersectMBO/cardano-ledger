@@ -124,6 +124,7 @@ without being explicit about the types and conversion.
         \var{d} \mapsto \{0,~0.1,~0.2,~\ldots,~1\} & \PParams & \text{decentralization parameter}\\
         \var{extraEntropy} \mapsto \Seed & \PParams & \text{extra entropy}\\
         \var{pv} \mapsto \ProtVer & \PParams & \text{protocol version}\\
+        \var{minUTxOValue} \mapsto \ProtVer & \PParams & \text{minimum allowed value of a new \TxOut}\\
       \end{array}
   \end{equation*}
   %
@@ -148,7 +149,8 @@ without being explicit about the types and conversion.
     \fun{rho},
     \fun{d},
     \fun{extraEntropy},
-    \fun{pv}
+    \fun{pv},
+    \fun{minUTxOValue},
   \end{center}
   %
   \emph{Abstract Functions}

@@ -212,6 +212,7 @@ import Shelley.Spec.Ledger.PParams
     _maxTxSize,
     _minfeeA,
     _minfeeB,
+    _minUTxOValue,
     _nOpt,
     _poolDecayRate,
     _poolDeposit,
@@ -555,7 +556,8 @@ ppsEx1 =
       _keyDecayRate = 0.002,
       _keyMinRefund = unsafeMkUnitInterval 0.5,
       _poolDecayRate = 0.001,
-      _poolMinRefund = unsafeMkUnitInterval 0.5
+      _poolMinRefund = unsafeMkUnitInterval 0.5,
+      _minUTxOValue = 100
     }
 
 -- | Never decay.
@@ -684,7 +686,8 @@ ppupEx2A =
             _tau = SNothing,
             _d = SNothing,
             _extraEntropy = SNothing,
-            _protocolVersion = SNothing
+            _protocolVersion = SNothing,
+            _minUTxOValue = SNothing
           }
       )
 
@@ -2096,7 +2099,8 @@ ppVote3A =
       _tau = SNothing,
       _d = SNothing,
       _extraEntropy = SJust (mkNonce 123),
-      _protocolVersion = SNothing
+      _protocolVersion = SNothing,
+      _minUTxOValue = SNothing
     }
 
 ppupEx3A :: ProposedPPUpdates

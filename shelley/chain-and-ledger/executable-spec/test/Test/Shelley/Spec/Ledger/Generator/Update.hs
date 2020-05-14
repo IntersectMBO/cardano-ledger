@@ -45,11 +45,11 @@ import Shelley.Spec.Ledger.PParams
     _maxTxSize,
     _minfeeA,
     _minfeeB,
+    _minUTxOValue,
     _nOpt,
     _poolDecayRate,
     _poolDeposit,
     _poolMinRefund,
-    _protocolVersion,
     _protocolVersion,
     _rho,
     _tau,
@@ -108,6 +108,7 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
     <*> genDecentralisationParam
     <*> genExtraEntropy
     <*> genProtocolVersion
+    <*> genMinUTxOValue
   where
     szGen :: Gen (Natural, Natural, Natural)
     szGen = do
@@ -204,6 +205,9 @@ genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 genProtocolVersion :: HasCallStack => Gen ProtVer
 genProtocolVersion = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 
+genMinUTxOValue :: HasCallStack => Gen Natural
+genMinUTxOValue = pure 0 -- TODO generate nonzero minimum UTxO values
+
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
 genNextProtocolVersion ::
@@ -251,6 +255,7 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
       d <- genDecentralisationParam
       extraEntropy <- genExtraEntropy
       protocolVersion <- genNextProtocolVersion pp
+      minUTxOValue <- genMinUTxOValue
       let pps =
             PParams
               { _minfeeA = SJust minFeeA,
@@ -271,7 +276,8 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
                 _tau = SJust tau,
                 _d = SJust d,
                 _extraEntropy = SJust extraEntropy,
-                _protocolVersion = SJust protocolVersion
+                _protocolVersion = SJust protocolVersion,
+                _minUTxOValue = SJust minUTxOValue
               }
       let ppUpdate = zip genesisKeys (repeat pps)
       pure $

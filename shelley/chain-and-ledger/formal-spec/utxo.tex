@@ -218,7 +218,8 @@ The transition contains the following predicates:
   \item
     The $\mathsf{PPUP}$ transition is successful.
   \item
-    The coin value of each new output must be non-negative.
+    The coin value of each new output must be at least as large as the
+    minimum value specified by the protocol parameter $\var{minUTxOValue}$.
   \item
     The transaction size must be below the allowed maximum.
     Note that there is an implicit max transaction size given by the max block size,
@@ -312,7 +313,7 @@ requests).
       \\
       ~
       \\
-      \forall (\_\mapsto (\_, c)) \in \txouts{txb}, c \geq 0
+      \forall (\_\mapsto (\_, c)) \in \txouts{txb}, c \geq (\fun{minUTxOValue}~\var{pp})
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
       \\
@@ -357,18 +358,22 @@ requests).
   \label{fig:rules:utxo-shelley}
 \end{figure}
 
-The UTXO rule has five predicate failures:
+The UTXO rule has seven predicate failures:
 \begin{itemize}
 \item In the case of any input not being valid, there is a \emph{BadInput}
   failure.
 \item In the case of the current slot being greater than the time-to-live of the
   current transaction, there is an \emph{Expired} failure.
+\item In the case that the transaction is too large,
+  there is a \emph{MaxTxSize} failure.
 \item In the case of an empty input set, there is a \emph{InputSetEmpty} failure,
   in order to prevent replay attacks.
 \item If the fees are smaller than the minimal transaction fees, there is a
   \emph{FeeTooSmall} failure.
 \item If the transaction does not correctly conserve the balance, there is a
   \emph{ValueNotConserved} failure.
+\item If the transaction creates an output below the allowed minimum value,
+  there is a \emph{OutputTooSmall} failure.
 \end{itemize}
 
 \clearpage
