@@ -209,39 +209,39 @@ chainTransition ::
 chainTransition =
   judgmentContext
     >>= \(TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))) -> do
-        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
+      let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 
-        maxpv <- liftSTS $ asks maxMajorPV
-        case chainChecks maxpv pp bh of
-          Right () -> pure ()
-          Left e -> failBecause e
+      maxpv <- liftSTS $ asks maxMajorPV
+      case chainChecks maxpv pp bh of
+        Right () -> pure ()
+        Left e -> failBecause e
 
-        let s = bheaderSlotNo $ bhbody bh
-        let gkeys = getGKeys nes
+      let s = bheaderSlotNo $ bhbody bh
+      let gkeys = getGKeys nes
 
-        nes' <-
-          trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
+      nes' <-
+        trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
 
-        let NewEpochState e1 _ _ _ _ _ _ = nes
-            NewEpochState e2 _ bcur es _ _pd osched = nes'
-        let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
-        let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
+      let NewEpochState e1 _ _ _ _ _ _ = nes
+          NewEpochState e2 _ bcur es _ _pd osched = nes'
+      let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
+      let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
-        PrtclState cs' lab' eta0' etaV' etaC' etaH' <-
-          trans @(PRTCL crypto) $
-            TRC
-              ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2),
-                PrtclState cs lab eta0 etaV etaC etaH,
-                bh
-              )
+      PrtclState cs' lab' eta0' etaV' etaC' etaH' <-
+        trans @(PRTCL crypto) $
+          TRC
+            ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2),
+              PrtclState cs lab eta0 etaV etaC etaH,
+              bh
+            )
 
-        BbodyState ls' bcur' <-
-          trans @(BBODY crypto) $
-            TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
+      BbodyState ls' bcur' <-
+        trans @(BBODY crypto) $
+          TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
 
-        let nes'' = updateNES nes' bcur' ls'
+      let nes'' = updateNES nes' bcur' ls'
 
-        pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
+      pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
   ( Crypto crypto,

@@ -26,7 +26,6 @@ import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm (..))
 import Data.Bits
-
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import Data.Proxy (Proxy (..))
