@@ -34,7 +34,7 @@ where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError)
+import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError, panic)
 import Control.Monad (unless)
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
@@ -131,7 +131,7 @@ payCredIsScript :: Int
 payCredIsScript = 4
 
 putAddr :: forall crypto. Crypto crypto => Addr crypto -> Put
-putAddr (AddrBootstrap _kh) = undefined -- TODO: defer to byron
+putAddr (AddrBootstrap _kh) = panic "Shelley.Spec.Ledger.Address.putAddr: TODO: defer to byron"
 putAddr (Addr pc sr) =
   let setPayCredBit = case pc of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -207,7 +207,7 @@ putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 
 getByron :: Get (Addr crypto)
-getByron = undefined
+getByron = panic "Shelley.Spec.Ledger.Address.getByron: undefined"
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
