@@ -4,7 +4,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.UnitTests (unitTests) where
+module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
@@ -46,7 +46,7 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData ( Wdrl (..),)
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-import Test.Shelley.Spec.Ledger.Examples.Fees (sizeTests)
+import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core (unitIntervalToNatural)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty

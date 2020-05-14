@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.STSTests (stsTests) where
+module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
@@ -14,7 +14,7 @@ import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN)
-import Test.Shelley.Spec.Ledger.Examples.Examples
+import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
     alicePay,
     bobPay,
@@ -49,7 +49,7 @@ import Test.Shelley.Spec.Ledger.Examples.Examples
     ex5F',
     test5F,
   )
-import Test.Shelley.Spec.Ledger.Examples.MultiSigExamples
+import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
     aliceAndBobOrCarl,
     aliceAndBobOrCarlAndDaria,

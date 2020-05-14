@@ -5,7 +5,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.Examples
+module Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
     ex1,
     ex2A,

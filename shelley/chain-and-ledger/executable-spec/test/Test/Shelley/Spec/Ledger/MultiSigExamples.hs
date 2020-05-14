@@ -2,7 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.MultiSigExamples
+module Test.Shelley.Spec.Ledger.MultiSigExamples
   ( applyTxWithScript,
     aliceOnly,
     bobOnly,
@@ -66,7 +66,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Wdrl,
     pattern GenDelegs,
   )
-import Test.Shelley.Spec.Ledger.Examples.Examples
+import Test.Shelley.Spec.Ledger.Examples
   ( aliceAddr,
     alicePay,
     bobAddr,

@@ -83,7 +83,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     VrfKeyPairs,
     hashKeyVRF,
   )
-import Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
+import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genCoinList,

@@ -6,7 +6,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.Serialization where
+module Test.Shelley.Spec.Ledger.Serialization where
 
 import Cardano.Binary
   ( Annotator,

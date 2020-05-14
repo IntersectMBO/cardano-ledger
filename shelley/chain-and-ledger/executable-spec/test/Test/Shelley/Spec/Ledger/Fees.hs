@@ -3,7 +3,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.Fees
+module Test.Shelley.Spec.Ledger.Fees
   ( sizeTests,
   )
 where

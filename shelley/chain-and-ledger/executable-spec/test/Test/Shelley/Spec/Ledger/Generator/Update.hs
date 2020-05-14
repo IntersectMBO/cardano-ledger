@@ -69,7 +69,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     UTxOState,
     Update,
   )
-import Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
+import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllPoolKeys (cold),
