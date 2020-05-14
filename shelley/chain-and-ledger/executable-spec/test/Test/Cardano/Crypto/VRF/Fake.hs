@@ -25,6 +25,10 @@ import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm (..))
+import Data.Bits
+
+import qualified Data.ByteString as BS
+import Data.ByteString (ByteString)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
@@ -82,12 +86,12 @@ instance VRFAlgorithm FakeVRF where
 
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
-  sizeCertVRF _ = 16
+  sizeCertVRF _ = 10
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseCertVRF (CertFakeVRF k s) =
-    writeBinaryWord64 k <> writeBinaryWord64 (fromIntegral s)
+    writeBinaryWord64 k <> writeBinaryWord16 s
 
   rawDeserialiseVerKeyVRF bs
     | [kb] <- splitsAt [8] bs,
@@ -104,9 +108,9 @@ instance VRFAlgorithm FakeVRF where
       Nothing
 
   rawDeserialiseCertVRF bs
-    | [kb, smb] <- splitsAt [8, 8] bs,
+    | [kb, smb] <- splitsAt [8, 2] bs,
       let k = readBinaryWord64 kb,
-      let s = fromIntegral $ readBinaryWord64 smb =
+      let s = readBinaryWord16 smb =
       Just $! CertFakeVRF k s
     | otherwise =
       Nothing
@@ -139,3 +143,12 @@ instance FromCBOR (CertVRF FakeVRF) where
 
 instance ToCBOR (CertVRF FakeVRF) where
   toCBOR = encodeCertVRF
+
+readBinaryWord16 :: ByteString -> Word16
+readBinaryWord16 =
+  BS.foldl' (\acc w8 -> unsafeShiftL acc 8 + fromIntegral w8) 0
+
+writeBinaryWord16 :: Word16 -> ByteString
+writeBinaryWord16 =
+  BS.reverse . fst
+    . BS.unfoldrN 2 (\w -> Just (fromIntegral w, unsafeShiftR w 8))
