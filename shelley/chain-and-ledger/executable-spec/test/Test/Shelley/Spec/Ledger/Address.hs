@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -8,7 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Address
-  ( addressTests
+  ( addressTests,
   )
 where
 
@@ -100,50 +101,45 @@ realGoldenTests =
   T.testGroup
     "RealisticCrypto golden tests"
     [
-      goldenSerialisationMainnet
+      goldenSerialisation
         "addrEnterpriseK for network id = 0"
         (Addr @(RealisticCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
         "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      goldenSerialisationMainnet
+      goldenSerialisation
         "addrBaseKK for network id = 0"
         (Addr @(RealisticCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      goldenSerialisationMainnet
+      goldenSerialisation
         "addrPtrK for network id = 0"
         (Addr @(RealisticCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
 
-      goldenSerialisationTestnet
+      goldenSerialisation
         "addrEnterpriseK for network id = 1"
         (Addr @(RealisticCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
         "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      goldenSerialisationTestnet
+      goldenSerialisation
         "addrBaseKK for network id = 1"
         (Addr @(RealisticCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      goldenSerialisationTestnet
+      goldenSerialisation
         "addrPtrK for network id = 1"
         (Addr @(RealisticCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
 
-      goldenSerialisationOffline
+      goldenSerialisation
         "addrEnterpriseK for network id = 2"
         (Addr @(RealisticCrypto 'Offline) (keyBlake2b224 paymentKey) StakeRefNull)
         "628a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      goldenSerialisationOffline
+      goldenSerialisation
         "addrBaseKK for network id = 2"
         (Addr @(RealisticCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "028a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      goldenSerialisationOffline
+      goldenSerialisation
         "addrPtrK for network id = 2"
         (Addr @(RealisticCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "428a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
     ]
-
-golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
-golden name put value expected =
-  T.testCase name $
-    T.assertEqual name expected (LB16.encode . B.runPut . put $ value)
 
 -- helper data to mimick realistic crypto
 -- influenced by https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
@@ -172,25 +168,12 @@ instance Crypto (RealisticCrypto 'Offline) where
 
 type RealisticCredential kr (net :: Network) = Credential kr (RealisticCrypto net)
 
-goldenSerialisationMainnet :: String -> Addr (RealisticCrypto 'Mainnet) -> BS.ByteString -> TestTree
-goldenSerialisationMainnet name value expected =
+goldenSerialisation
+    :: Crypto (RealisticCrypto network)
+    => String -> Addr (RealisticCrypto network) -> BS.ByteString -> TestTree
+goldenSerialisation name value expected =
   T.testCase name $
     T.assertEqual name expected (B16.encode . serialiseAddr $ value)
-
-goldenSerialisationTestnet :: String -> Addr (RealisticCrypto 'Testnet) -> BS.ByteString -> TestTree
-goldenSerialisationTestnet name value expected =
-  T.testCase name $
-    T.assertEqual name expected (B16.encode . serialiseAddr $ value)
-
-goldenSerialisationOffline :: String -> Addr (RealisticCrypto 'Offline) -> BS.ByteString -> TestTree
-goldenSerialisationOffline name value expected =
-  T.testCase name $
-    T.assertEqual name expected (B16.encode . serialiseAddr $ value)
-
-keyHash :: C.Credential kh
-keyHash =
-  KeyHashObj . KeyHash . UnsafeHash . fst $
-    B16.decode "01020304"
 
 paymentKey :: BS.ByteString
 paymentKey = B16.encode "1a2a3a4a5a6a7a8a"
@@ -219,6 +202,16 @@ invariantSize expectedLength bytes
       ++ show (BS.length bytes)
       ++ ", but expected to be "
       ++ show expectedLength
+
+golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
+golden name put value expected =
+  T.testCase name $
+    T.assertEqual name expected (LB16.encode . B.runPut . put $ value)
+
+keyHash :: C.Credential kh
+keyHash =
+  KeyHashObj . KeyHash . UnsafeHash . fst $
+    B16.decode "01020304"
 
 scriptHash :: C.Credential kh
 scriptHash =
