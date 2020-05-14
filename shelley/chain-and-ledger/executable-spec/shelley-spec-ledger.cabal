@@ -117,8 +117,6 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
                          Test.Cardano.Crypto.VRF.Fake
                          Test.Shelley.Spec.Ledger.Address
-                         Test.Shelley.Spec.Ledger.PreSTSMutator
-                         Test.Shelley.Spec.Ledger.PreSTSGenerator
                          Test.Shelley.Spec.Ledger.Generator.Constants
                          Test.Shelley.Spec.Ledger.Generator.Block
                          Test.Shelley.Spec.Ledger.Generator.Core
@@ -129,6 +127,9 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Generator.Presets
                          Test.Shelley.Spec.Ledger.Generator.Update
                          Test.Shelley.Spec.Ledger.Generator.Utxo
+                         Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
+                         Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
+                         Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests
                          Test.Shelley.Spec.Ledger.PropertyTests
                          Test.Shelley.Spec.Ledger.Shrinkers
                          Test.Shelley.Spec.Ledger.Examples.STSTests

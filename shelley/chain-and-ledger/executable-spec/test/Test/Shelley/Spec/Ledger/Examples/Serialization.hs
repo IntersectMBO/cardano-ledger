@@ -26,7 +26,7 @@ import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
-import Data.IP (toIPv4)
+import Data.IP (toIPv4, IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
@@ -144,7 +144,8 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash)
-import Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..), ipv4ToBytes)
+import Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..)
+  , ipv4ToBytes, ipv4FromBytes, ipv6ToBytes, ipv6FromBytes)
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
 import Shelley.Spec.Ledger.TxData
@@ -209,6 +210,16 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), Assertion, assertEqual, assertFailure, testCase)
+import Test.Tasty.Hedgehog (testProperty)
+import Hedgehog
+  ( Gen,
+    Property,
+    property,
+    forAll,
+    tripping
+  )
+import qualified Hedgehog.Gen as Gen
+import Hedgehog.Range (constantBounded)
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -456,10 +467,35 @@ testNegativeCoin =
                Right _ -> assertFailure "should not deserialize negative coins"
            )
 
+roundTripIpv4 :: Property
+roundTripIpv4 =
+  -- We are using a QC generator which means we need QC test
+  Hedgehog.property $ do
+    ha <- forAll genIPv4
+    Hedgehog.tripping ha ipv4ToBytes ipv4FromBytes
+  where
+    genIPv4 :: Gen IPv4
+    genIPv4 = fromHostAddress <$> (Gen.word32 constantBounded)
+
+roundTripIpv6 :: Property
+roundTripIpv6 =
+  -- We are using a QC generator which means we need QC test
+  Hedgehog.property $ do
+    ha <- forAll genIPv6
+    Hedgehog.tripping ha ipv6ToBytes ipv6FromBytes
+  where
+    genIPv6 :: Hedgehog.Gen IPv6
+    genIPv6 = do
+      w1 <- Gen.word32 constantBounded
+      w2 <- Gen.word32 constantBounded
+      w3 <- Gen.word32 constantBounded
+      w4 <- Gen.word32 constantBounded
+      pure $ fromHostAddress6 (w1, w2, w3, w4)
+
 serializationTests :: TestTree
 serializationTests =
   testGroup
-    "Serialization Tests"
+    "CBOR Serialization Tests"
     [ checkEncodingCBOR
         "list"
         [1 :: Integer]
@@ -1330,5 +1366,7 @@ serializationTests =
                 <> S ru
                 <> S pd
                 <> S compactOs
-            )
+            ),
+    testProperty "Roundtrip IPv4 serialisation Hedghog" roundTripIpv4,
+    testProperty "Roundtrip IPv6 serialisation Hedghog" roundTripIpv6
     ]

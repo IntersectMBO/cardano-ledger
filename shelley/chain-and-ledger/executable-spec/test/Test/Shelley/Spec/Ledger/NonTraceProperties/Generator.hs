@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Shelley.Spec.Ledger.PreSTSGenerator
+module Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
   ( utxoSize,
     utxoMap,
     genNonEmptyAndAdvanceTx,
@@ -93,7 +93,7 @@ import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessVKey, pattern UTxO)
 import Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-import Test.Shelley.Spec.Ledger.PreSTSMutator
+import Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
 import Test.Shelley.Spec.Ledger.Utils
 
 -- | Find first matching key pair for address. Returns the matching key pair
