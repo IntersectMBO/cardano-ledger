@@ -26,7 +26,7 @@ import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
-import Data.IP (toIPv4, IPv4, IPv6, fromHostAddress, fromHostAddress6)
+import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6, toIPv4)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe (fromJust)
@@ -34,6 +34,15 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.String (fromString)
+import Hedgehog
+  ( Gen,
+    Property,
+    forAll,
+    property,
+    tripping,
+  )
+import qualified Hedgehog.Gen as Gen
+import Hedgehog.Range (constantBounded)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
@@ -128,9 +137,9 @@ import Shelley.Spec.Ledger.PParams
     _maxBBSize,
     _maxBHSize,
     _maxTxSize,
+    _minUTxOValue,
     _minfeeA,
     _minfeeB,
-    _minUTxOValue,
     _nOpt,
     _poolDecayRate,
     _poolDeposit,
@@ -144,8 +153,14 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature, pattern ScriptHash)
-import Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..)
-  , ipv4ToBytes, ipv4FromBytes, ipv6ToBytes, ipv6FromBytes)
+import Shelley.Spec.Ledger.Serialization
+  ( FromCBORGroup (..),
+    ToCBORGroup (..),
+    ipv4FromBytes,
+    ipv4ToBytes,
+    ipv6FromBytes,
+    ipv6ToBytes,
+  )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
 import Shelley.Spec.Ledger.TxData
@@ -211,15 +226,6 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), Assertion, assertEqual, assertFailure, testCase)
 import Test.Tasty.Hedgehog (testProperty)
-import Hedgehog
-  ( Gen,
-    Property,
-    property,
-    forAll,
-    tripping
-  )
-import qualified Hedgehog.Gen as Gen
-import Hedgehog.Range (constantBounded)
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -1367,6 +1373,6 @@ serializationTests =
                 <> S pd
                 <> S compactOs
             ),
-    testProperty "Roundtrip IPv4 serialisation Hedghog" roundTripIpv4,
-    testProperty "Roundtrip IPv6 serialisation Hedghog" roundTripIpv6
+      testProperty "Roundtrip IPv4 serialisation Hedghog" roundTripIpv4,
+      testProperty "Roundtrip IPv6 serialisation Hedghog" roundTripIpv6
     ]

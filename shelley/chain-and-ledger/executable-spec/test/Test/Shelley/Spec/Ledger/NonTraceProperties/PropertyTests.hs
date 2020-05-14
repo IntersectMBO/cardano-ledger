@@ -300,7 +300,6 @@ propPreserveBalance = property $ do
           + (totalDeposits emptyPParams ((_stPools . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx)
   destroyed === created
 
-
 -- | 'TestTree' of property-based testing properties.
 nonTracePropertyTests :: TestTree
 nonTracePropertyTests =

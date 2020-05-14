@@ -1,12 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 
-import Test.Shelley.Spec.Ledger.Address(addressTests)
+import Test.Shelley.Spec.Ledger.Address (addressTests)
 import Test.Shelley.Spec.Ledger.CDDL (cddlTests)
+import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
+import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.STSTests (stsTests)
 import Test.Shelley.Spec.Ledger.Serialization (serializationTests)
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
-import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
-import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
