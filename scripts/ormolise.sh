@@ -3,4 +3,4 @@
 
 set -euo pipefail
 
-ormolu -m inplace $(git ls-files -- 'shelley/chain-and-ledger/executable-spec/*.hs' | grep -v Setup.hs)
+ormolu -c -m inplace $(git ls-files -- 'shelley/chain-and-ledger/executable-spec/*.hs' | grep -v Setup.hs)
