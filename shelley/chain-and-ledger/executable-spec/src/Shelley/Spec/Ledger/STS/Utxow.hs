@@ -52,7 +52,6 @@ import Shelley.Spec.Ledger.STS.Utxo
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
-import Shelley.Spec.Ledger.Validation (Validity (..))
 
 data UTXOW crypto
 
@@ -161,7 +160,7 @@ utxoWitnessed =
         ?! MissingScriptWitnessesUTXOW
 
       -- check VKey witnesses
-      verifiedWits tx == Valid ?! InvalidWitnessesUTXOW
+      verifiedWits tx ?! InvalidWitnessesUTXOW
 
       let needed = witsVKeyNeeded utxo tx genDelegs
       needed `Set.isSubsetOf` witsKeyHashes ?! MissingVKeyWitnessesUTXOW

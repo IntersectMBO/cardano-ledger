@@ -47,9 +47,9 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     verifyWitVKey,
   )
-import Shelley.Spec.Ledger.Validation (ValidationError (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
+import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 

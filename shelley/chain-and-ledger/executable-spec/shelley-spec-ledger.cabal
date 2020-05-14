@@ -41,7 +41,6 @@ library
                      Shelley.Spec.Ledger.Orphans
                      Shelley.Spec.Ledger.Tx
                      Shelley.Spec.Ledger.TxData
-                     Shelley.Spec.Ledger.Validation
                      Shelley.Spec.Ledger.Scripts
                      Shelley.Spec.Ledger.STS.Bbody
                      Shelley.Spec.Ledger.STS.Tick
@@ -134,6 +133,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
                          Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
                          Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests
+                         Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
                          Test.Shelley.Spec.Ledger.PropertyTests
                          Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
                          Test.Shelley.Spec.Ledger.Rules.TestChain
