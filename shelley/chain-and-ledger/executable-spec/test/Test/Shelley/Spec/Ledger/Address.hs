@@ -16,7 +16,7 @@ where
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..) )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.KES.Simple
+import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
@@ -45,7 +45,7 @@ import qualified Test.Tasty.HUnit as T
 import qualified Test.Tasty.Hedgehog as T
 
 addressTests :: TestTree
-addressTests = T.testGroup "Address golden tests" [goldenTests, realGoldenTests, roundTripTests]
+addressTests = T.testGroup "Address golden tests" [goldenTests, testsWithOtherCrypto, roundTripTests]
 
 goldenTests :: TestTree
 goldenTests =
@@ -96,82 +96,82 @@ goldenTests =
         "7205060708"
     ]
 
-realGoldenTests :: TestTree
-realGoldenTests =
+testsWithOtherCrypto :: TestTree
+testsWithOtherCrypto =
   T.testGroup
-    "RealisticCrypto golden tests"
+    "serialiseAddr tests with OtherCrypto"
     [
-      goldenSerialisation
+      checkSerialiseAddr
         "addrEnterpriseK for network id = 0"
-        (Addr @(RealisticCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
         "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      goldenSerialisation
+      checkSerialiseAddr
         "addrBaseKK for network id = 0"
-        (Addr @(RealisticCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      goldenSerialisation
+      checkSerialiseAddr
         "addrPtrK for network id = 0"
-        (Addr @(RealisticCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
 
-      goldenSerialisation
+      checkSerialiseAddr
         "addrEnterpriseK for network id = 1"
-        (Addr @(RealisticCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
         "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      goldenSerialisation
+      checkSerialiseAddr
         "addrBaseKK for network id = 1"
-        (Addr @(RealisticCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      goldenSerialisation
+      checkSerialiseAddr
         "addrPtrK for network id = 1"
-        (Addr @(RealisticCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
 
-      goldenSerialisation
+      checkSerialiseAddr
         "addrEnterpriseK for network id = 2"
-        (Addr @(RealisticCrypto 'Offline) (keyBlake2b224 paymentKey) StakeRefNull)
+        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) StakeRefNull)
         "628a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      goldenSerialisation
+      checkSerialiseAddr
         "addrBaseKK for network id = 2"
-        (Addr @(RealisticCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "028a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      goldenSerialisation
+      checkSerialiseAddr
         "addrPtrK for network id = 2"
-        (Addr @(RealisticCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "428a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
     ]
 
--- helper data to mimick realistic crypto
+-- helper data to mimick crypto impl used in cardano-node
 -- influenced by https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
-data RealisticCrypto (network :: Network)
+data OtherCrypto (network :: Network)
 
-instance Crypto (RealisticCrypto 'Mainnet) where
-  type DSIGN (RealisticCrypto 'Mainnet) = Ed25519DSIGN
-  type KES   (RealisticCrypto 'Mainnet) = SimpleKES Ed25519DSIGN 14
-  type VRF   (RealisticCrypto 'Mainnet) = SimpleVRF
-  type HASH  (RealisticCrypto 'Mainnet) = Blake2b_256
+instance Crypto (OtherCrypto 'Mainnet) where
+  type DSIGN (OtherCrypto 'Mainnet) = Ed25519DSIGN
+  type KES   (OtherCrypto 'Mainnet) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF   (OtherCrypto 'Mainnet) = SimpleVRF
+  type HASH  (OtherCrypto 'Mainnet) = Blake2b_256
   networkMagicId _ = Mainnet
 
-instance Crypto (RealisticCrypto 'Testnet) where
-  type DSIGN (RealisticCrypto 'Testnet) = Ed25519DSIGN
-  type KES   (RealisticCrypto 'Testnet) = SimpleKES Ed25519DSIGN 14
-  type VRF   (RealisticCrypto 'Testnet) = SimpleVRF
-  type HASH  (RealisticCrypto 'Testnet) = Blake2b_256
+instance Crypto (OtherCrypto 'Testnet) where
+  type DSIGN (OtherCrypto 'Testnet) = Ed25519DSIGN
+  type KES   (OtherCrypto 'Testnet) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF   (OtherCrypto 'Testnet) = SimpleVRF
+  type HASH  (OtherCrypto 'Testnet) = Blake2b_256
   networkMagicId _ = Testnet
 
-instance Crypto (RealisticCrypto 'Offline) where
-  type DSIGN (RealisticCrypto 'Offline) = Ed25519DSIGN
-  type KES   (RealisticCrypto 'Offline) = SimpleKES Ed25519DSIGN 14
-  type VRF   (RealisticCrypto 'Offline) = SimpleVRF
-  type HASH  (RealisticCrypto 'Offline) = Blake2b_256
+instance Crypto (OtherCrypto 'Offline) where
+  type DSIGN (OtherCrypto 'Offline) = Ed25519DSIGN
+  type KES   (OtherCrypto 'Offline) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF   (OtherCrypto 'Offline) = SimpleVRF
+  type HASH  (OtherCrypto 'Offline) = Blake2b_256
   networkMagicId _ = Offline
 
-type RealisticCredential kr (net :: Network) = Credential kr (RealisticCrypto net)
+type OtherCredential kr (net :: Network) = Credential kr (OtherCrypto net)
 
-goldenSerialisation
-    :: Crypto (RealisticCrypto network)
-    => String -> Addr (RealisticCrypto network) -> BS.ByteString -> TestTree
-goldenSerialisation name value expected =
+checkSerialiseAddr
+    :: Crypto (OtherCrypto network)
+    => String -> Addr (OtherCrypto network) -> BS.ByteString -> TestTree
+checkSerialiseAddr name value expected =
   T.testCase name $
     T.assertEqual name expected (B16.encode . serialiseAddr $ value)
 
@@ -184,7 +184,7 @@ stakeKey = B16.encode "1c2c3c4c5c6c7c8c"
 -- 32-byte verification key is expected, vk, ie., public key without chain code.
 -- The verification key undergoes Blake2b_224 hashing
 -- and should be 28-byte in the aftermath
-keyBlake2b224 :: BS.ByteString ->  RealisticCredential kh net
+keyBlake2b224 :: BS.ByteString -> OtherCredential kh net
 keyBlake2b224 vk =
   KeyHashObj . KeyHash . UnsafeHash $ hk
   where
