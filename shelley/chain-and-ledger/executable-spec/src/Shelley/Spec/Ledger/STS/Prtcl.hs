@@ -26,7 +26,6 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Cardano.Slotting.Slot (WithOrigin (..), withOriginFromMaybe, withOriginToMaybe)
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
@@ -35,10 +34,9 @@ import Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
-    LastAppliedBlock (..),
     bhHash,
     bhbody,
-    lastAppliedHash,
+    hashHeaderToNonce,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
@@ -57,14 +55,15 @@ import Shelley.Spec.Ledger.OCert (KESPeriod)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
-import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
+import Shelley.Spec.Ledger.Slot (SlotNo)
 
 data PRTCL crypto
 
 data PrtclState crypto
   = PrtclState
       !(Map (KeyHash 'BlockIssuer crypto) Natural)
-      !(WithOrigin (LastAppliedBlock crypto))
+      !Nonce
+      -- ^ Current previous hash nonce
       !Nonce
       -- ^ Current epoch nonce
       !Nonce
@@ -76,15 +75,15 @@ data PrtclState crypto
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m lab n1 n2 n3 n4) =
+  toCBOR (PrtclState m n1 n2 n3 n4 n5) =
     mconcat
       [ encodeListLen 6,
         toCBOR m,
-        toCBOR $ withOriginToMaybe lab,
         toCBOR n1,
         toCBOR n2,
         toCBOR n3,
-        toCBOR n4
+        toCBOR n4,
+        toCBOR n5
       ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
@@ -92,7 +91,7 @@ instance Crypto crypto => FromCBOR (PrtclState crypto) where
     decodeListLenOf 6
       >> PrtclState
       <$> fromCBOR
-      <*> (withOriginFromMaybe <$> fromCBOR)
+      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
@@ -107,7 +106,6 @@ data PrtclEnv crypto
       (Map SlotNo (OBftSlot crypto))
       (PoolDistr crypto)
       (GenDelegs crypto)
-      SlotNo
       Bool
   deriving (Generic)
 
@@ -136,10 +134,7 @@ instance
   type BaseM (PRTCL crypto) = ShelleyBase
 
   data PredicateFailure (PRTCL crypto)
-    = WrongSlotIntervalPRTCL
-    | WrongBlockNoPRTCL (WithOrigin (LastAppliedBlock crypto)) BlockNo
-    | WrongBlockSequencePRTCL
-    | OverlayFailure (PredicateFailure (OVERLAY crypto))
+    = OverlayFailure (PredicateFailure (OVERLAY crypto))
     | UpdnFailure (PredicateFailure (UPDN crypto))
     deriving (Show, Eq, Generic)
 
@@ -157,28 +152,19 @@ prtclTransition ::
   TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC
-    ( PrtclEnv pp osched pd dms sNow ne,
-      PrtclState cs lab eta0 etaV etaC etaH,
+    ( PrtclEnv pp osched pd dms ne,
+      PrtclState cs etaPH eta0 etaV etaC etaH,
       bh
       ) <-
     judgmentContext
   let bhb = bhbody bh
-      bn = bheaderBlockNo bhb
       slot = bheaderSlotNo bhb
       eta = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
-      ph = lastAppliedHash lab
-
-  case lab of
-    Origin -> pure ()
-    At (LastAppliedBlock bL sL _) -> do
-      sL < slot && slot <= sNow ?! WrongSlotIntervalPRTCL
-      bL + 1 == bn ?! WrongBlockNoPRTCL lab bn
-  ph == bheaderPrev bhb ?! WrongBlockSequencePRTCL
 
   UpdnState eta0' etaV' etaC' etaH' <-
     trans @(UPDN crypto) $
       TRC
-        ( UpdnEnv eta pp ph ne,
+        ( UpdnEnv eta pp etaPH ne,
           UpdnState eta0 etaV etaC etaH,
           slot
         )
@@ -189,12 +175,7 @@ prtclTransition = do
   pure $
     PrtclState
       cs'
-      ( At $
-          LastAppliedBlock
-            bn
-            slot
-            (bhHash bh)
-      )
+      (hashHeaderToNonce (bhHash bh))
       eta0'
       etaV'
       etaC'

@@ -28,6 +28,7 @@ module Shelley.Spec.Ledger.BlockChain
     bhHash,
     bbHash,
     hashHeaderToNonce,
+    prevHashToNonce,
     bHeaderSize,
     bBodySize,
     slotToNonce,
@@ -298,6 +299,18 @@ instance
         decodeNull
         pure GenesisHash
       _ -> BlockHash <$> fromCBOR
+
+prevHashToNonce ::
+  PrevHash crypto ->
+  Nonce
+prevHashToNonce = \case
+  GenesisHash -> NeutralNonce -- This case can only happen when starting Shelley from genesis,
+  -- setting the intial chain state to some epoch e,
+  -- and having the first block be in epoch e+1.
+  -- In this edge case there is no need to add any extra
+  -- entropy via the previous header hash to the next epoch nonce,
+  -- so using the neutral nonce is appropriate.
+  BlockHash ph -> hashHeaderToNonce ph
 
 data LastAppliedBlock crypto = LastAppliedBlock
   { labBlockNo :: !BlockNo,
