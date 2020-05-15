@@ -10,7 +10,8 @@
 {-# LANGUAGE OverloadedStrings          #-}
 
 module Cardano.Chain.Block.Validation
-  ( updateBody
+  ( UPI.adoptedProtocolParameters
+  , updateBody
   , updateChainBlockOrBoundary
   , updateChainBoundary
   , epochTransition
