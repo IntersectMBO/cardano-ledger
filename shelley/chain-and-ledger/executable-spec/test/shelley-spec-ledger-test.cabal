@@ -32,6 +32,7 @@ library
                      Test.Shelley.Spec.Ledger.MultiSigExamples
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
+                     Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
                      Test.Shelley.Spec.Ledger.Serialization
                      Test.Shelley.Spec.Ledger.Shrinkers
                      Test.Shelley.Spec.Ledger.Utils

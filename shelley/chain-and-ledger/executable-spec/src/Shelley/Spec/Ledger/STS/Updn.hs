@@ -19,14 +19,21 @@ import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
 
 data UPDN crypto
 
-data UpdnEnv crypto = UpdnEnv Nonce PParams (PrevHash crypto) Bool
+data UpdnEnv
+  = UpdnEnv
+      Nonce
+      -- ^ New nonce
+      PParams
+      Nonce
+      -- ^ Current previous hash nonce
+      Bool
+      -- ^ Is new epoch
 
 data UpdnState = UpdnState Nonce Nonce Nonce Nonce
   deriving (Show, Eq)
@@ -37,7 +44,7 @@ instance
   where
   type State (UPDN crypto) = UpdnState
   type Signal (UPDN crypto) = SlotNo
-  type Environment (UPDN crypto) = UpdnEnv crypto
+  type Environment (UPDN crypto) = UpdnEnv
   type BaseM (UPDN crypto) = ShelleyBase
   data PredicateFailure (UPDN crypto)
     deriving (Generic, Show, Eq)
@@ -46,21 +53,9 @@ instance
 
 instance NoUnexpectedThunks (PredicateFailure (UPDN crypto))
 
-prevHashToNonce ::
-  PrevHash crypto ->
-  Nonce
-prevHashToNonce = \case
-  GenesisHash -> NeutralNonce -- This case can only happen when starting Shelley from genesis,
-  -- setting the intial chain state to some epoch e,
-  -- and having the first block be in epoch e+1.
-  -- In this edge case there is no need to add any extra
-  -- entropy via the previous header hash to the next epoch nonce,
-  -- so using the neutral nonce is appropriate.
-  BlockHash ph -> hashHeaderToNonce ph
-
 updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
 updTransition = do
-  TRC (UpdnEnv eta pp ph ne, UpdnState eta_0 eta_v eta_c eta_h, s) <- judgmentContext
+  TRC (UpdnEnv eta pp eta_ph ne, UpdnState eta_0 eta_v eta_c eta_h, s) <- judgmentContext
   ei <- liftSTS $ asks epochInfo
   sp <- liftSTS $ asks stabilityWindow
   EpochNo e <- liftSTS $ epochInfoEpoch ei s
@@ -73,4 +68,4 @@ updTransition = do
           then eta_v ⭒ eta
           else eta_c
       )
-      (if ne then (prevHashToNonce ph) else eta_h)
+      (if ne then eta_ph else eta_h)

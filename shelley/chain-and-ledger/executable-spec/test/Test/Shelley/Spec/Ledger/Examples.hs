@@ -331,9 +331,7 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
 
 data CHAINExample = CHAINExample
-  { -- | Current slot
-    currentSlotNo :: SlotNo,
-    -- | State to start testing with
+  { -- | State to start testing with
     startState :: ChainState,
     -- | Block to run chain state transition system on
     newBlock :: Block,
@@ -648,7 +646,7 @@ expectedStEx1 =
 
 -- | Wraps example all together.
 ex1 :: CHAINExample
-ex1 = CHAINExample (SlotNo 1) initStEx1 blockEx1 (Right expectedStEx1)
+ex1 = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)
 
 -- * Example 2A - apply CHAIN transition to register stake keys and a pool
 
@@ -895,7 +893,7 @@ expectedStEx2A =
     )
 
 ex2A :: CHAINExample
-ex2A = CHAINExample (SlotNo 10) initStEx2A blockEx2A (Right expectedStEx2A)
+ex2A = CHAINExample initStEx2A blockEx2A (Right expectedStEx2A)
 
 -- * Example 2B - process a block late enough in the epoch in order to create a reward update.
 
@@ -1055,7 +1053,7 @@ expectedStEx2Bquater = expectedStEx2Bgeneric ppsExInstantDecay
 
 -- | Wrap plain example
 ex2B :: CHAINExample
-ex2B = CHAINExample (SlotNo 90) expectedStEx2A blockEx2B (Right expectedStEx2B)
+ex2B = CHAINExample expectedStEx2A blockEx2B (Right expectedStEx2B)
 
 -- | Example 2C - process an empty block in the next epoch
 -- so that the (empty) reward update is applied and a stake snapshot is made.
@@ -1184,20 +1182,20 @@ expectedStEx2Cquater =
 
 -- | Example 2C with standard decay.
 ex2C :: CHAINExample
-ex2C = CHAINExample (SlotNo 110) expectedStEx2B blockEx2C (Right expectedStEx2C)
+ex2C = CHAINExample expectedStEx2B blockEx2C (Right expectedStEx2C)
 
 -- | Example 2C with no decay.
 ex2Cbis :: CHAINExample
-ex2Cbis = CHAINExample (SlotNo 110) expectedStEx2Bbis blockEx2C (Right expectedStEx2Cbis)
+ex2Cbis = CHAINExample expectedStEx2Bbis blockEx2C (Right expectedStEx2Cbis)
 
 -- | Example 2C with full refund.
 ex2Cter :: CHAINExample
-ex2Cter = CHAINExample (SlotNo 110) expectedStEx2Bter blockEx2C (Right expectedStEx2Cter)
+ex2Cter = CHAINExample expectedStEx2Bter blockEx2C (Right expectedStEx2Cter)
 
 -- | Example 2C with instant decay.
 ex2Cquater :: CHAINExample
 ex2Cquater =
-  CHAINExample (SlotNo 110) expectedStEx2Bquater blockEx2C (Right expectedStEx2Cquater)
+  CHAINExample expectedStEx2Bquater blockEx2C (Right expectedStEx2Cquater)
 
 -- | Example 2D - process a block late enough
 -- in the epoch in order to create a second reward update, preparing the way for
@@ -1321,7 +1319,7 @@ expectedStEx2D =
     )
 
 ex2D :: CHAINExample
-ex2D = CHAINExample (SlotNo 190) expectedStEx2C blockEx2D (Right expectedStEx2D)
+ex2D = CHAINExample expectedStEx2C blockEx2D (Right expectedStEx2D)
 
 -- | Example 2E - create the first non-empty pool distribution
 -- by creating a block in the third epoch of this running example.
@@ -1427,7 +1425,7 @@ expectedStEx2E =
     )
 
 ex2E :: CHAINExample
-ex2E = CHAINExample (SlotNo 220) expectedStEx2D blockEx2E (Right expectedStEx2E)
+ex2E = CHAINExample expectedStEx2D blockEx2E (Right expectedStEx2E)
 
 -- | Example 2F - create a decentralized Praos block (ie one not in the overlay schedule)
 oCertIssueNosEx2F :: Map (KeyHash 'BlockIssuer) Natural
@@ -1487,7 +1485,7 @@ expectedStEx2F =
     )
 
 ex2F :: CHAINExample
-ex2F = CHAINExample (SlotNo 295) expectedStEx2E blockEx2F (Right expectedStEx2F)
+ex2F = CHAINExample expectedStEx2E blockEx2F (Right expectedStEx2F)
 
 -- | Example 2G - create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
@@ -1567,7 +1565,7 @@ expectedStEx2G =
     )
 
 ex2G :: CHAINExample
-ex2G = CHAINExample (SlotNo 310) expectedStEx2F blockEx2G (Right expectedStEx2G)
+ex2G = CHAINExample expectedStEx2F blockEx2G (Right expectedStEx2G)
 
 -- | Example 2H - create the first non-trivial reward update
 blockEx2H :: Block
@@ -1659,7 +1657,7 @@ expectedStEx2H =
     )
 
 ex2H :: CHAINExample
-ex2H = CHAINExample (SlotNo 390) expectedStEx2G blockEx2H (Right expectedStEx2H)
+ex2H = CHAINExample expectedStEx2G blockEx2H (Right expectedStEx2H)
 
 -- | Example 2I - apply the first non-trivial reward update
 blockEx2I :: Block
@@ -1754,7 +1752,7 @@ expectedStEx2I =
     )
 
 ex2I :: CHAINExample
-ex2I = CHAINExample (SlotNo 410) expectedStEx2H blockEx2I (Right expectedStEx2I)
+ex2I = CHAINExample expectedStEx2H blockEx2I (Right expectedStEx2I)
 
 -- | Example 2J - drain reward account and de-register stake key
 bobAda2J :: Coin
@@ -1866,7 +1864,7 @@ expectedStEx2J =
     )
 
 ex2J :: CHAINExample
-ex2J = CHAINExample (SlotNo 420) expectedStEx2I blockEx2J (Right expectedStEx2J)
+ex2J = CHAINExample expectedStEx2I blockEx2J (Right expectedStEx2J)
 
 -- | Example 2K - start stake pool retirement
 aliceCoinEx2KPtr :: Coin
@@ -1969,7 +1967,7 @@ expectedStEx2K =
     )
 
 ex2K :: CHAINExample
-ex2K = CHAINExample (SlotNo 490) expectedStEx2J blockEx2K (Right expectedStEx2K)
+ex2K = CHAINExample expectedStEx2J blockEx2K (Right expectedStEx2K)
 
 -- | Example 2L - reap a stake pool
 blockEx2L :: Block
@@ -2074,7 +2072,7 @@ expectedStEx2L =
     )
 
 ex2L :: CHAINExample
-ex2L = CHAINExample (SlotNo 510) expectedStEx2K blockEx2L (Right expectedStEx2L)
+ex2L = CHAINExample expectedStEx2K blockEx2L (Right expectedStEx2L)
 
 -- | Example 3A - Setting up for a successful protocol parameter update,
 -- have three genesis keys vote on the same new parameters
@@ -2203,7 +2201,7 @@ expectedStEx3A =
     )
 
 ex3A :: CHAINExample
-ex3A = CHAINExample (SlotNo 10) initStEx2A blockEx3A (Right expectedStEx3A)
+ex3A = CHAINExample initStEx2A blockEx3A (Right expectedStEx3A)
 
 -- | Example 3B - Finish getting enough votes for the protocol parameter update.
 ppupEx3B :: ProposedPPUpdates
@@ -2312,7 +2310,7 @@ expectedStEx3B =
     )
 
 ex3B :: CHAINExample
-ex3B = CHAINExample (SlotNo 20) expectedStEx3A blockEx3B (Right expectedStEx3B)
+ex3B = CHAINExample expectedStEx3A blockEx3B (Right expectedStEx3B)
 
 -- | Example 3C - Adopt protocol parameter update
 blockEx3C :: Block
@@ -2375,7 +2373,7 @@ expectedStEx3C =
     )
 
 ex3C :: CHAINExample
-ex3C = CHAINExample (SlotNo 110) expectedStEx3B blockEx3C (Right expectedStEx3C)
+ex3C = CHAINExample expectedStEx3B blockEx3C (Right expectedStEx3C)
 
 -- | Example 4A - Genesis key delegation
 newGenDelegate :: KeyPair 'GenesisDelegate
@@ -2487,7 +2485,7 @@ expectedStEx4A =
     )
 
 ex4A :: CHAINExample
-ex4A = CHAINExample (SlotNo 10) initStEx2A blockEx4A (Right expectedStEx4A)
+ex4A = CHAINExample initStEx2A blockEx4A (Right expectedStEx4A)
 
 -- | Example 4B - New genesis key delegation updated from future delegations
 blockEx4B :: Block
@@ -2564,7 +2562,7 @@ expectedStEx4B =
     )
 
 ex4B :: CHAINExample
-ex4B = CHAINExample (SlotNo 50) expectedStEx4A blockEx4B (Right expectedStEx4B)
+ex4B = CHAINExample expectedStEx4A blockEx4B (Right expectedStEx4B)
 
 -- | Example 5A - Genesis key delegation
 ir :: Map (Credential 'Staking) Coin
@@ -2666,7 +2664,7 @@ expectedStEx5A =
     )
 
 ex5A :: CHAINExample
-ex5A = CHAINExample (SlotNo 10) initStEx2A blockEx5A (Right expectedStEx5A)
+ex5A = CHAINExample initStEx2A blockEx5A (Right expectedStEx5A)
 
 -- | Example 5B - Instantaneous rewards with insufficient core node signatures
 txEx5B :: Tx
@@ -2704,7 +2702,7 @@ expectedStEx5B :: PredicateFailure CHAIN
 expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRInsufficientGenesisSigsUTXOW)))
 
 ex5B :: CHAINExample
-ex5B = CHAINExample (SlotNo 10) initStEx2A blockEx5B (Left [[expectedStEx5B]])
+ex5B = CHAINExample initStEx2A blockEx5B (Left [[expectedStEx5B]])
 
 -- | Example 5C - Instantaneous rewards in decentralized era
 expectedStEx5C :: PredicateFailure CHAIN
@@ -2713,7 +2711,6 @@ expectedStEx5C = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRIm
 ex5C :: CHAINExample
 ex5C =
   CHAINExample
-    (SlotNo 10)
     (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esPp = ppsEx1 {_d = unsafeMkUnitInterval 0}}}})
     blockEx5A
     (Left [[expectedStEx5C]])
@@ -2723,7 +2720,6 @@ ex5C =
 ex5D :: CHAINExample
 ex5D =
   CHAINExample
-    (SlotNo 10)
     (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esPp = ppsEx1 {_d = unsafeMkUnitInterval 0}}}})
     blockEx5B
     (Left [[expectedStEx5C, expectedStEx5B]])
@@ -2732,7 +2728,6 @@ ex5D =
 ex5E :: CHAINExample
 ex5E =
   CHAINExample
-    (SlotNo 10)
     (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esAccountState = acntEx2A {_reserves = 99}}}})
     blockEx5A
     ( Left
@@ -2883,18 +2878,12 @@ blockEx5F'' =
 
 ex5F' :: Either [[PredicateFailure CHAIN]] ChainState
 ex5F' = do
-  nextState <- runShelleyBase $ applySTS @CHAIN (TRC (SlotNo 90, initStEx2A, blockEx5F))
+  nextState <- runShelleyBase $ applySTS @CHAIN (TRC ((), initStEx2A, blockEx5F))
   midState <-
     runShelleyBase $
-      applySTS @CHAIN
-        ( TRC
-            ( ((slotFromEpoch $ EpochNo 1) + SlotNo 7) +* Duration (randomnessStabilisationWindow testGlobals),
-              nextState,
-              blockEx5F'
-            )
-        )
+      applySTS @CHAIN (TRC ((), nextState, blockEx5F'))
   finalState <-
-    runShelleyBase $ applySTS @CHAIN (TRC (((slotFromEpoch $ EpochNo 2) + SlotNo 10), midState, blockEx5F''))
+    runShelleyBase $ applySTS @CHAIN (TRC ((), midState, blockEx5F''))
 
   pure finalState
 

@@ -109,12 +109,10 @@ getPraosSlot start tooFar os nos =
 
 genBlock ::
   GenEnv ->
-  SlotNo ->
   ChainState ->
   Gen Block
 genBlock
   ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairsByHash} _)
-  sNow
   chainSt = do
     let os = (nesOsched . chainNes) chainSt
         dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
@@ -175,56 +173,53 @@ genBlock
                       }
                in (ps, stake, Right apks)
 
-    if nextSlot > sNow
-      then QC.discard
-      else do
-        let kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
-            cs = chainOCertIssue chainSt
+    let kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
+        cs = chainOCertIssue chainSt
 
-        -- ran genDelegs
-        let nes = chainNes chainSt
-            nes' = runShelleyBase $ applySTS @TICK $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
+    -- ran genDelegs
+    let nes = chainNes chainSt
+        nes' = runShelleyBase $ applySTS @TICK $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
 
-        case nes' of
-          Left _ -> QC.discard
-          Right _nes' -> do
-            let NewEpochState _ _ _ es _ _ _ = _nes'
-                EpochState acnt _ ls _ pp' _ = es
-                GenDelegs gds = _genDelegs . _dstate . _delegationState . esLState . nesEs $ _nes'
-                keys = case ks of
-                  -- We chose an overlay slot, and need to lookup the given
-                  -- keys from the genesis key hash.
-                  Left ghk -> gkeys ghk gds
-                  -- We chose a Praos slot, and have everything we need.
-                  Right ks' -> ks'
-                n' =
-                  currentIssueNo
-                    (OCertEnv (dom poolParams) (range gds))
-                    cs
-                    ((coerceKeyRole . hashKey . vKey . cold) keys)
-                m = getKESPeriodRenewalNo keys kp
-                hotKeys = drop (fromIntegral m) (hot keys)
-                keys' = keys {hot = hotKeys}
-                issueNumber =
-                  if n' == Nothing
-                    then error "no issue number available"
-                    else fromIntegral m
-                oCert = mkOCert keys' issueNumber ((fst . head) hotKeys)
+    case nes' of
+      Left _ -> QC.discard
+      Right _nes' -> do
+        let NewEpochState _ _ _ es _ _ _ = _nes'
+            EpochState acnt _ ls _ pp' _ = es
+            GenDelegs gds = _genDelegs . _dstate . _delegationState . esLState . nesEs $ _nes'
+            keys = case ks of
+              -- We chose an overlay slot, and need to lookup the given
+              -- keys from the genesis key hash.
+              Left ghk -> gkeys ghk gds
+              -- We chose a Praos slot, and have everything we need.
+              Right ks' -> ks'
+            n' =
+              currentIssueNo
+                (OCertEnv (dom poolParams) (range gds))
+                cs
+                ((coerceKeyRole . hashKey . vKey . cold) keys)
+            m = getKESPeriodRenewalNo keys kp
+            hotKeys = drop (fromIntegral m) (hot keys)
+            keys' = keys {hot = hotKeys}
+            issueNumber =
+              if n' == Nothing
+                then error "no issue number available"
+                else fromIntegral m
+            oCert = mkOCert keys' issueNumber ((fst . head) hotKeys)
 
-            mkBlock
-              <$> pure hashheader
-              <*> pure keys'
-              <*> toList
-              <$> genTxs pp' (_reserves acnt) ls nextSlot
-              <*> pure nextSlot
-              <*> pure (block + 1)
-              <*> pure (chainEpochNonce chainSt)
-              <*> genBlockNonce
-              <*> genPraosLeader poolStake
-              <*> pure kesPeriod_
-              -- This seems to be trying to work out the start of the KES "era", e.g. the KES period in which this key starts to be valid.
-              <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
-              <*> pure oCert
+        mkBlock
+          <$> pure hashheader
+          <*> pure keys'
+          <*> toList
+          <$> genTxs pp' (_reserves acnt) ls nextSlot
+          <*> pure nextSlot
+          <*> pure (block + 1)
+          <*> pure (chainEpochNonce chainSt)
+          <*> genBlockNonce
+          <*> genPraosLeader poolStake
+          <*> pure kesPeriod_
+          -- This seems to be trying to work out the start of the KES "era", e.g. the KES period in which this key starts to be valid.
+          <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
+          <*> pure oCert
     where
       (block, slot, hashheader) = case chainLastAppliedBlock chainSt of
         Origin -> error "block generator does not support from Origin"
