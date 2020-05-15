@@ -10,6 +10,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE CPP #-}
 
 module Byron.Spec.Ledger.Delegation
   ( -- * Delegation scheduling
@@ -119,7 +120,7 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, genTrace,
-                     sigGen, tinkerWithSigGen)
+                     sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import           Byron.Spec.Ledger.Core (BlockCount, Epoch (Epoch), HasHash, Hash (Hash), Owner (Owner), Sig,
                      Slot (Slot), SlotCount (SlotCount), VKey (VKey), VKeyGenesis (VKeyGenesis),
@@ -130,10 +131,13 @@ import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import           Byron.Spec.Ledger.Core.Omniscient (signWithGenesisKey)
 
 import           Byron.Spec.Ledger.Util (mkGoblinGens)
-import           Test.Goblin (AddShrinks (..), Goblin (..), GoblinData, SeedGoblin (..),
-                     mkEmptyGoblin)
+import           Test.Goblin (AddShrinks (..), Goblin (..), SeedGoblin (..))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
+#if defined(GOBLINS)
+import           Control.State.Transition.Generator (tinkerWithSigGen)
+import           Test.Goblin (GoblinData, mkEmptyGoblin)
+#endif
 
 --------------------------------------------------------------------------------
 -- Abstract types
@@ -809,10 +813,13 @@ deriveSeedGoblin ''DIState
 
 mkGoblinGens
   "DELEG"
-  [ "SDelegSFailure_SDelegFailure_EpochInThePast"
+  [
+#if defined(GOBLINS)
+    "SDelegSFailure_SDelegFailure_EpochInThePast"
   , "SDelegSFailure_SDelegFailure_EpochPastNextEpoch"
   , "SDelegSFailure_SDelegFailure_IsAlreadyScheduled"
   , "SDelegSFailure_SDelegFailure_IsNotGenesisKey"
+#endif
   ]
 
 tamperedDcerts :: DIEnv -> DIState -> Gen [DCert]

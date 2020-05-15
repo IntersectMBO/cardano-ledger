@@ -14,6 +14,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE CPP #-}
 
 -- This is for the Hashable Set instance
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -27,11 +28,9 @@ where
 import           Cardano.Prelude (NoUnexpectedThunks(..))
 import           Control.Arrow (second, (&&&))
 import           Control.Lens
-import           Control.Monad (mzero)
 import           Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import           Data.Char (isAscii)
-import           Data.Coerce (coerce)
 import           Data.Data (Data, Typeable)
 import           Data.Foldable (foldl', toList)
 import           Data.Hashable (Hashable)
@@ -53,8 +52,15 @@ import qualified Hedgehog.Range as Range
 import           Numeric.Natural
 
 import           Control.State.Transition
-import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen, sigGen,
-                     tinkerWithSigGen)
+import           Control.State.Transition.Generator (HasTrace, envGen, sigGen)
+#if defined(GOBLINS)
+import           Control.Monad (mzero)
+import           Data.Coerce (coerce)
+import           Control.State.Transition.Generator (SignalGenerator, tinkerWithSigGen)
+import           Byron.Spec.Ledger.Util (mkGoblinGens)
+import           Test.Goblin (GoblinData, mkEmptyGoblin, saveInBagOfTricks,
+                     tinkerRummagedOrConjureOrSave, transcribeGenesAsInt, (<$$>))
+#endif
 import           Data.AbstractSize (HasTypeReps)
 
 import           Byron.Spec.Ledger.Core (BlockCount (..), HasHash, Owner (Owner), Relation (..), Slot,
@@ -64,10 +70,9 @@ import qualified Byron.Spec.Ledger.Core as Core
 import qualified Byron.Spec.Ledger.Core.Generators as CoreGen
 import           Byron.Spec.Ledger.Core.Omniscient (skey)
 import qualified Byron.Spec.Ledger.GlobalParams as GP
-import           Byron.Spec.Ledger.Util (mkGoblinGens)
 
-import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), GoblinData, SeedGoblin (..),
-                     mkEmptyGoblin, saveInBagOfTricks, tinkerRummagedOrConjureOrSave,
+import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), SeedGoblin (..),
+                     saveInBagOfTricks, tinkerRummagedOrConjureOrSave,
                      transcribeGenesAsInt, (<$$>))
 import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
@@ -1821,7 +1826,7 @@ deriveSeedGoblin ''UpId
 --------------------------------------------------------------------------------
 -- GoblinData & goblin-tinkered SignalGenerators
 --------------------------------------------------------------------------------
-
+#if defined(GOBLINS)
 mkGoblinGens
   "UPIREG"
   [ "UPREGFailure_DoesNotVerify"
@@ -1997,3 +2002,4 @@ tamperWithVote vote =
         pure $! vote & vSig .~ Core.sign (skey vk) (vote ^. vPropId)
     , pure $! vote
     ]
+#endif

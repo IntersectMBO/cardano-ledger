@@ -10,6 +10,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE CPP #-}
 
 -- | UTXO transition system with witnessing
 
@@ -29,7 +30,7 @@ import           Control.State.Transition (Embed, Environment, IRC (IRC), Predic
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, SignalGenerator, coverFailures,
-                     envGen, sigGen, tinkerWithSigGen)
+                     envGen, sigGen)
 
 import           Byron.Spec.Ledger.Core (Addr (Addr),VKey, mkAddr, verify)
 import qualified Byron.Spec.Ledger.Update.Generators as UpdateGen
@@ -40,8 +41,10 @@ import qualified Byron.Spec.Ledger.UTxO.Generators as UTxOGen
 
 import           Byron.Spec.Ledger.STS.UTXO
 
+#if defined(GOBLINS)
+import           Control.State.Transition.Generator (tinkerWithSigGen)
 import           Test.Goblin (GoblinData, mkEmptyGoblin)
-
+#endif
 
 data UTXOW deriving (Data, Typeable)
 
@@ -118,12 +121,15 @@ instance HasTrace UTXOW where
 
 mkGoblinGens
   "UTXOW"
-  [ "InsufficientWitnesses"
+  [
+#if defined(GOBLINS)
+    "InsufficientWitnesses"
   , "UtxoFailure_EmptyTxInputs"
   , "UtxoFailure_EmptyTxOutputs"
   , "UtxoFailure_FeeTooLow"
   , "UtxoFailure_InputsNotInUTxO"
   , "UtxoFailure_NonPositiveOutputs"
+#endif
   ]
 
 tamperedTxList :: UTxOEnv -> UTxOState -> Gen [Tx]

@@ -20,6 +20,11 @@ flag development
     default: False
     manual: True
 
+flag goblins
+    description: Enable globlins
+    default: True
+    manual: True
+
 library
   hs-source-dirs:      src
   exposed-modules:     Hedgehog.Gen.Double
@@ -63,6 +68,9 @@ library
                -Wredundant-constraints
   if (!flag(development))
     ghc-options: -Werror
+
+  if (flag(goblins))
+    ghc-options: -DGOBLINS
 
 test-suite doctests
   hs-source-dirs:      test
