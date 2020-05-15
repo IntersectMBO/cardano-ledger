@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.UnitTests (unitTests) where
+module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
@@ -20,21 +20,21 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
-  ( pattern DPState,
-    pattern UTxOState,
-    _dstate,
+  ( _dstate,
     _rewards,
     emptyDState,
     emptyPState,
-    overlaySchedule,
     genesisCoins,
     genesisId,
+    overlaySchedule,
+    pattern DPState,
+    pattern UTxOState,
   )
 import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.STS.Ledger (pattern LedgerEnv, pattern UtxowFailure, pattern UtxoFailure, pattern DelegsFailure)
+import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Ledger (pattern DelegsFailure, pattern LedgerEnv, pattern UtxoFailure, pattern UtxowFailure)
 import Shelley.Spec.Ledger.STS.Utxo (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( _ttl,
@@ -43,10 +43,10 @@ import Shelley.Spec.Ledger.Tx
     pattern TxIn,
     pattern TxOut,
   )
-import Shelley.Spec.Ledger.TxData ( Wdrl (..),)
+import Shelley.Spec.Ledger.TxData (Wdrl (..))
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-import Test.Shelley.Spec.Ledger.Examples.Fees (sizeTests)
+import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core (unitIntervalToNatural)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty
@@ -139,12 +139,12 @@ testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
     let x = intervalValue $ truncateUnitInterval n
      in (x <= 1) && (x >= 0)
 
-testLEDGER
-  :: (UTxOState, DPState)
-  -> Tx
-  -> LedgerEnv
-  -> Either [[PredicateFailure LEDGER]] (UTxOState, DPState)
-  -> Assertion
+testLEDGER ::
+  (UTxOState, DPState) ->
+  Tx ->
+  LedgerEnv ->
+  Either [[PredicateFailure LEDGER]] (UTxOState, DPState) ->
+  Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
   checkTrace @LEDGER runShelleyBase env $ pure initSt .- tx .-> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
@@ -155,45 +155,57 @@ aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
 
 data AliceToBob = AliceToBob
-  { input    :: TxIn
-  , toBob    :: Coin
-  , fee      :: Coin
-  , deposits :: Coin
-  , refunds  :: Coin
-  , certs    :: [DCert]
-  , ttl      :: SlotNo
-  , signers  :: [KeyPair 'Witness]
+  { input :: TxIn,
+    toBob :: Coin,
+    fee :: Coin,
+    deposits :: Coin,
+    refunds :: Coin,
+    certs :: [DCert],
+    ttl :: SlotNo,
+    signers :: [KeyPair 'Witness]
   }
 
 aliceGivesBobLovelace :: AliceToBob -> Tx
 aliceGivesBobLovelace
   AliceToBob
-    { input, toBob, fee, deposits, refunds, certs, ttl, signers } = Tx txbody wits Map.empty SNothing
-  where
-    aliceCoin = aliceInitCoin + refunds - (toBob + fee + deposits)
-    txbody =
-      TxBody
-        (Set.singleton input)
-        ( StrictSeq.fromList
-            [ TxOut aliceAddr aliceCoin,
-              TxOut bobAddr toBob
-            ]
-        )
-        (StrictSeq.fromList certs)
-        (Wdrl Map.empty)
-        fee
-        ttl
-        SNothing
-        SNothing
-    wits = makeWitnessesVKey (hashTxBody txbody) signers
+    { input,
+      toBob,
+      fee,
+      deposits,
+      refunds,
+      certs,
+      ttl,
+      signers
+    } = Tx txbody wits Map.empty SNothing
+    where
+      aliceCoin = aliceInitCoin + refunds - (toBob + fee + deposits)
+      txbody =
+        TxBody
+          (Set.singleton input)
+          ( StrictSeq.fromList
+              [ TxOut aliceAddr aliceCoin,
+                TxOut bobAddr toBob
+              ]
+          )
+          (StrictSeq.fromList certs)
+          (Wdrl Map.empty)
+          fee
+          ttl
+          SNothing
+          SNothing
+      wits = makeWitnessesVKey (hashTxBody txbody) signers
 
 utxoState :: UTxOState
-utxoState = UTxOState
-  (genesisCoins [ TxOut aliceAddr aliceInitCoin
-                , TxOut bobAddr (Coin 1000)])
-  (Coin 0)
-  (Coin 0)
-  emptyPPPUpdates
+utxoState =
+  UTxOState
+    ( genesisCoins
+        [ TxOut aliceAddr aliceInitCoin,
+          TxOut bobAddr (Coin 1000)
+        ]
+    )
+    (Coin 0)
+    (Coin 0)
+    emptyPPPUpdates
 
 dpState :: DPState
 dpState = DPState emptyDState emptyPState
@@ -207,28 +219,29 @@ addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
 ledgerEnv :: LedgerEnv
 ledgerEnv = LedgerEnv (SlotNo 0) 0 pp 0
 
-testInvalidTx
-  :: [PredicateFailure LEDGER]
-  -> Tx
-  -> Assertion
+testInvalidTx ::
+  [PredicateFailure LEDGER] ->
+  Tx ->
+  Assertion
 testInvalidTx errs tx =
   testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
 
 testSpendNonexistentInput :: Assertion
-testSpendNonexistentInput = testInvalidTx
-  [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000)))
-  , UtxowFailure (UtxoFailure BadInputsUTxO)
-  ] $
-  aliceGivesBobLovelace $
-    AliceToBob
-      { input    = (TxIn genesisId 42) -- Non Existent
-      , toBob    = (Coin 3000)
-      , fee      = (Coin 1500)
-      , deposits = (Coin 0)
-      , refunds  = (Coin 0)
-      , certs    = []
-      , ttl      = (SlotNo 100)
-      , signers  = [asWitness alicePay]
+testSpendNonexistentInput =
+  testInvalidTx
+    [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
+      UtxowFailure (UtxoFailure BadInputsUTxO)
+    ]
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = (TxIn genesisId 42), -- Non Existent
+        toBob = (Coin 3000),
+        fee = (Coin 1500),
+        deposits = (Coin 0),
+        refunds = (Coin 0),
+        certs = [],
+        ttl = (SlotNo 100),
+        signers = [asWitness alicePay]
       }
 
 testWitnessNotIncluded :: Assertion
@@ -290,8 +303,11 @@ testWitnessWrongUTxO =
           SNothing
       aliceWit = makeWitnessVKey (hashTxBody tx2body) alicePay
       tx = Tx txbody (Set.fromList [aliceWit]) Map.empty SNothing
-   in testInvalidTx [ UtxowFailure InvalidWitnessesUTXOW
-                    , UtxowFailure MissingVKeyWitnessesUTXOW] tx
+   in testInvalidTx
+        [ UtxowFailure InvalidWitnessesUTXOW,
+          UtxowFailure MissingVKeyWitnessesUTXOW
+        ]
+        tx
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
@@ -309,44 +325,45 @@ testEmptyInputSet =
       wits = makeWitnessesVKey (hashTxBody txb) [aliceStake]
       tx = Tx txb wits Map.empty SNothing
       dpState' = addReward dpState (mkVKeyRwdAcnt aliceStake) (Coin 2000)
-  in testLEDGER
-       (utxoState, dpState')
-       tx
-       ledgerEnv
-       (Left [[UtxowFailure (UtxoFailure InputSetEmptyUTxO)]])
+   in testLEDGER
+        (utxoState, dpState')
+        tx
+        ledgerEnv
+        (Left [[UtxowFailure (UtxoFailure InputSetEmptyUTxO)]])
 
 testFeeTooSmall :: Assertion
-testFeeTooSmall = testInvalidTx
-  [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 209) (Coin 1)))] $
-  aliceGivesBobLovelace
-    AliceToBob
-      { input    = (TxIn genesisId 0)
-      , toBob    = (Coin 3000)
-      , fee      = (Coin 1)
-      , deposits = (Coin 0)
-      , refunds  = (Coin 0)
-      , certs    = []
-      , ttl      = (SlotNo 100)
-      , signers  = [asWitness alicePay]
-      }
+testFeeTooSmall =
+  testInvalidTx
+    [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 209) (Coin 1)))]
+    $ aliceGivesBobLovelace
+      AliceToBob
+        { input = (TxIn genesisId 0),
+          toBob = (Coin 3000),
+          fee = (Coin 1),
+          deposits = (Coin 0),
+          refunds = (Coin 0),
+          certs = [],
+          ttl = (SlotNo 100),
+          signers = [asWitness alicePay]
+        }
 
 testExpiredTx :: Assertion
 testExpiredTx =
-  let
-    errs = [UtxowFailure (UtxoFailure (ExpiredUTxO (SlotNo {unSlotNo = 0}) (SlotNo {unSlotNo = 1})))]
-    tx = aliceGivesBobLovelace $
-           AliceToBob
-             { input    = (TxIn genesisId 0)
-             , toBob    = (Coin 3000)
-             , fee      = (Coin 600)
-             , deposits = (Coin 0)
-             , refunds  = (Coin 0)
-             , certs    = []
-             , ttl      = (SlotNo 0)
-             , signers  = [asWitness alicePay]
-             }
-    ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp 0
-  in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
+  let errs = [UtxowFailure (UtxoFailure (ExpiredUTxO (SlotNo {unSlotNo = 0}) (SlotNo {unSlotNo = 1})))]
+      tx =
+        aliceGivesBobLovelace $
+          AliceToBob
+            { input = (TxIn genesisId 0),
+              toBob = (Coin 3000),
+              fee = (Coin 600),
+              deposits = (Coin 0),
+              refunds = (Coin 0),
+              certs = [],
+              ttl = (SlotNo 0),
+              signers = [asWitness alicePay]
+            }
+      ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp 0
+   in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
 
 testInvalidWintess :: Assertion
 testInvalidWintess =
@@ -368,7 +385,7 @@ testInvalidWintess =
       wits = makeWitnessesVKey (hashTxBody txb') [alicePay]
       tx = Tx txb wits Map.empty SNothing
       errs = [UtxowFailure InvalidWitnessesUTXOW]
-  in testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
+   in testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
 
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
@@ -390,7 +407,7 @@ testWithdrawalNoWit =
       tx = Tx txb wits Map.empty SNothing
       errs = [UtxowFailure MissingVKeyWitnessesUTXOW]
       dpState' = addReward dpState (mkVKeyRwdAcnt bobStake) (Coin 10)
-  in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
+   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
@@ -412,21 +429,22 @@ testWithdrawalWrongAmt =
       dpState' = addReward dpState (mkVKeyRwdAcnt bobStake) (Coin 10)
       tx = Tx txb wits Map.empty SNothing
       errs = [DelegsFailure WithdrawalsNotInRewardsDELEGS]
-  in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
+   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
 testOutputTooSmall :: Assertion
-testOutputTooSmall = testInvalidTx
-  [UtxowFailure (UtxoFailure OutputTooSmallUTxO)] $
-  aliceGivesBobLovelace $
-    AliceToBob
-      { input    = (TxIn genesisId 0)
-      , toBob    = (Coin 1) -- Too Small
-      , fee      = (Coin 997)
-      , deposits = (Coin 0)
-      , refunds  = (Coin 0)
-      , certs    = []
-      , ttl      = (SlotNo 0)
-      , signers  = [asWitness alicePay]
+testOutputTooSmall =
+  testInvalidTx
+    [UtxowFailure (UtxoFailure OutputTooSmallUTxO)]
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = (TxIn genesisId 0),
+        toBob = (Coin 1), -- Too Small
+        fee = (Coin 997),
+        deposits = (Coin 0),
+        refunds = (Coin 0),
+        certs = [],
+        ttl = (SlotNo 0),
+        signers = [asWitness alicePay]
       }
 
 testsInvalidLedger :: TestTree

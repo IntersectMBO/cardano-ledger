@@ -143,6 +143,14 @@ When testing using `stack`, pay special attention to escaping the right symbols,
 stack test byron-spec-ledger:test:byron-spec-ledger-test --ta "-p \"\$1 ~ /Ledger/ \&\& \$2 ~ /Update/ \&\& \$3 ~ /classified/\""
 ```
 
+Additionally, the Shelley tests are grouped into test scenarios,
+`ContinuousIntegration`, `Development`, `Nightly`, and `Fast`,
+which can be run with the `--scenario` flag. For example:
+
+```sh
+stack test shelley-spec-ledger --ta --scenario=Nightly
+```
+
 Alternatively, it is also possible to use `ghcid` if it is installed in your system. In this case,
 it can be helpful to run ghcid in a separate shell:
 

@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Shelley.Spec.Ledger.PreSTSGenerator
+module Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
   ( utxoSize,
     utxoMap,
     genNonEmptyAndAdvanceTx,
@@ -54,8 +54,6 @@ import Shelley.Spec.Ledger.LedgerState
     applyTxBody,
     genesisCoins,
     genesisState,
-    validTx,
-    pattern LedgerValidation,
   )
 import Shelley.Spec.Ledger.PParams (PParams, emptyPParams)
 import Shelley.Spec.Ledger.STS.Delegs
@@ -91,9 +89,9 @@ import Shelley.Spec.Ledger.TxData
     pattern RetirePool,
   )
 import Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessVKey, pattern UTxO)
-import Shelley.Spec.Ledger.Validation (ValidationError (..), Validity (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-import Test.Shelley.Spec.Ledger.PreSTSMutator
+import Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
+import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
 import Test.Shelley.Spec.Ledger.Utils
 
 -- | Find first matching key pair for address. Returns the matching key pair

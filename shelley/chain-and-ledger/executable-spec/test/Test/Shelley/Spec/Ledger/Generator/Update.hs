@@ -43,9 +43,9 @@ import Shelley.Spec.Ledger.PParams
     _maxBBSize,
     _maxBHSize,
     _maxTxSize,
+    _minUTxOValue,
     _minfeeA,
     _minfeeB,
-    _minUTxOValue,
     _nOpt,
     _poolDecayRate,
     _poolDeposit,
@@ -69,7 +69,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     UTxOState,
     Update,
   )
-import Test.Shelley.Spec.Ledger.Examples.Examples (unsafeMkUnitInterval)
+import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllPoolKeys (cold),

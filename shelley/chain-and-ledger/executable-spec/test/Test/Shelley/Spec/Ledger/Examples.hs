@@ -5,7 +5,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.Examples
+module Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
     ex1,
     ex2A,
@@ -210,9 +210,9 @@ import Shelley.Spec.Ledger.PParams
     _maxBBSize,
     _maxBHSize,
     _maxTxSize,
+    _minUTxOValue,
     _minfeeA,
     _minfeeB,
-    _minUTxOValue,
     _nOpt,
     _poolDecayRate,
     _poolDeposit,
