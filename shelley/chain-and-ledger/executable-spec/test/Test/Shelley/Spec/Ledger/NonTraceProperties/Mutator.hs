@@ -7,7 +7,7 @@
 --
 -- This module implements a mutation based approach for generating invalid
 -- data. Input values are mutated depending on their value.
-module Test.Shelley.Spec.Ledger.PreSTSMutator
+module Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
   ( mutateNat,
     mutateCoin,
     mutateTx,

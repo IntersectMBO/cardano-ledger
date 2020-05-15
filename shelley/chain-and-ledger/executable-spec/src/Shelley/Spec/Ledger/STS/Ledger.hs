@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.STS.Utxo
     pattern FeeTooSmallUTxO,
     pattern InputSetEmptyUTxO,
     pattern MaxTxSizeUTxO,
-    pattern NegativeOutputsUTxO,
+    pattern OutputTooSmallUTxO,
     pattern UpdateFailure,
     pattern ValueNotConservedUTxO,
   )

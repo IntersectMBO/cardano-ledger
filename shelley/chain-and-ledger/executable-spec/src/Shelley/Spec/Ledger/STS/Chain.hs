@@ -40,9 +40,13 @@ import Shelley.Spec.Ledger.BlockChain
     Block (..),
     LastAppliedBlock (..),
     bHeaderSize,
+    bhHash,
     bhbody,
+    bheaderBlockNo,
     bheaderSlotNo,
     hBbsize,
+    lastAppliedHash,
+    prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto
@@ -167,7 +171,7 @@ instance
     Signal (CHAIN crypto) =
       Block crypto
 
-  type Environment (CHAIN crypto) = SlotNo
+  type Environment (CHAIN crypto) = ()
   type BaseM (CHAIN crypto) = ShelleyBase
 
   data PredicateFailure (CHAIN crypto)
@@ -177,6 +181,7 @@ instance
     | BbodyFailure !(PredicateFailure (BBODY crypto))
     | TickFailure (PredicateFailure (TICK crypto))
     | PrtclFailure !(PredicateFailure (PRTCL crypto))
+    | PrtclSeqFailure !(PrtlSeqFailure crypto)
     deriving (Show, Eq, Generic)
 
   initialRules = []
@@ -208,40 +213,53 @@ chainTransition ::
   TransitionRule (CHAIN crypto)
 chainTransition =
   judgmentContext
-    >>= \(TRC (sNow, ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))) -> do
-        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
+    >>= \(TRC ((), ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))) -> do
+      case prtlSeqChecks lab bh of
+        Right () -> pure ()
+        Left e -> failBecause $ PrtclSeqFailure e
 
-        maxpv <- liftSTS $ asks maxMajorPV
-        case chainChecks maxpv pp bh of
-          Right () -> pure ()
-          Left e -> failBecause e
+      let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 
-        let s = bheaderSlotNo $ bhbody bh
-        let gkeys = getGKeys nes
+      maxpv <- liftSTS $ asks maxMajorPV
+      case chainChecks maxpv pp bh of
+        Right () -> pure ()
+        Left e -> failBecause e
 
-        nes' <-
-          trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
+      let s = bheaderSlotNo $ bhbody bh
+      let gkeys = getGKeys nes
 
-        let NewEpochState e1 _ _ _ _ _ _ = nes
-            NewEpochState e2 _ bcur es _ _pd osched = nes'
-        let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
-        let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
+      nes' <-
+        trans @(TICK crypto) $ TRC (TickEnv gkeys, nes, s)
 
-        PrtclState cs' lab' eta0' etaV' etaC' etaH' <-
-          trans @(PRTCL crypto) $
-            TRC
-              ( PrtclEnv pp' osched _pd _genDelegs sNow (e1 /= e2),
-                PrtclState cs lab eta0 etaV etaC etaH,
-                bh
-              )
+      let NewEpochState e1 _ _ _ _ _ _ = nes
+          NewEpochState e2 _ bcur es _ _pd osched = nes'
+      let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
+      let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
 
-        BbodyState ls' bcur' <-
-          trans @(BBODY crypto) $
-            TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
+      let ph = lastAppliedHash lab
+          etaPH = prevHashToNonce ph
+      PrtclState cs' _etaPH' eta0' etaV' etaC' etaH' <-
+        trans @(PRTCL crypto) $
+          TRC
+            ( PrtclEnv pp' osched _pd _genDelegs (e1 /= e2),
+              PrtclState cs etaPH eta0 etaV etaC etaH,
+              bh
+            )
 
-        let nes'' = updateNES nes' bcur' ls'
+      BbodyState ls' bcur' <-
+        trans @(BBODY crypto) $
+          TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
 
-        pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
+      let nes'' = updateNES nes' bcur' ls'
+          bhb = bhbody bh
+          lab' =
+            At $
+              LastAppliedBlock
+                (bheaderBlockNo bhb)
+                (bheaderSlotNo bhb)
+                (bhHash bh)
+
+      pure $ ChainState nes'' cs' eta0' etaV' etaC' etaH' lab'
 
 instance
   ( Crypto crypto,

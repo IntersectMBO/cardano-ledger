@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Shelley.Spec.Ledger.Examples.STSTests (stsTests) where
+module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
@@ -14,7 +14,7 @@ import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN)
-import Test.Shelley.Spec.Ledger.Examples.Examples
+import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
     alicePay,
     bobPay,
@@ -49,7 +49,7 @@ import Test.Shelley.Spec.Ledger.Examples.Examples
     ex5F',
     test5F,
   )
-import Test.Shelley.Spec.Ledger.Examples.MultiSigExamples
+import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
     aliceAndBobOrCarl,
     aliceAndBobOrCarlAndDaria,
@@ -66,16 +66,16 @@ import Test.Tasty.HUnit ((@?=), Assertion, assertBool, assertFailure, testCase)
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
 testCHAINExample :: CHAINExample -> Assertion
-testCHAINExample (CHAINExample slotNow initSt block (Right expectedSt)) = do
-  checkTrace @CHAIN runShelleyBase slotNow $ pure initSt .- block .-> expectedSt
-testCHAINExample (CHAINExample slotNow initSt block predicateFailure@(Left _)) = do
-  let st = runShelleyBase $ applySTS @CHAIN (TRC (slotNow, initSt, block))
+testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
+  checkTrace @CHAIN runShelleyBase () $ pure initSt .- block .-> expectedSt
+testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
+  let st = runShelleyBase $ applySTS @CHAIN (TRC ((), initSt, block))
   st @?= predicateFailure
 
 testPreservationOfAda :: CHAINExample -> Assertion
-testPreservationOfAda (CHAINExample _ _ _ (Right expectedSt)) =
+testPreservationOfAda (CHAINExample _ _ (Right expectedSt)) =
   totalAda expectedSt @?= maxLLSupply
-testPreservationOfAda (CHAINExample _ _ _ (Left predicateFailure)) =
+testPreservationOfAda (CHAINExample _ _ (Left predicateFailure)) =
   assertFailure $ "Ada not preserved " ++ show predicateFailure
 
 stsTests :: TestTree

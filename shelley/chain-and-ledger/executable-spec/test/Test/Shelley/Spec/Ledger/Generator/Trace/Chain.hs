@@ -41,7 +41,6 @@ import Shelley.Spec.Ledger.STS.Chain (initialShelleyState)
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Gen)
-import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( CHAIN,
     ChainState,
@@ -62,16 +61,9 @@ import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase)
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance HasTrace CHAIN GenEnv where
-  -- the current slot needs to be large enough to allow for many blocks
-  -- to be processed (in large CHAIN traces)
-  envGen (GenEnv _ Constants {minSlotTrace, maxSlotTrace}) =
-    SlotNo <$> QC.choose (fromIntegral minSlotTrace, fromIntegral maxSlotTrace)
+  envGen _ = pure ()
 
-  sigGen ge env st =
-    genBlock
-      ge
-      env
-      st
+  sigGen ge _env st = genBlock ge st
 
   shrinkSignal = shrinkBlock
 

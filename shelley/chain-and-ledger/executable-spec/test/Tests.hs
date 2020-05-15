@@ -1,10 +1,12 @@
 {-# LANGUAGE LambdaCase #-}
 
-import Test.Shelley.Spec.Ledger.Examples.CDDL (cddlTests)
-import Test.Shelley.Spec.Ledger.Examples.STSTests (stsTests)
-import Test.Shelley.Spec.Ledger.Examples.Serialization (serializationTests)
-import Test.Shelley.Spec.Ledger.Examples.UnitTests (unitTests)
+import Test.Shelley.Spec.Ledger.Address (addressTests)
+import Test.Shelley.Spec.Ledger.CDDL (cddlTests)
+import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
+import Test.Shelley.Spec.Ledger.STSTests (stsTests)
+import Test.Shelley.Spec.Ledger.Serialization (serializationTests)
+import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -18,7 +20,8 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Ledger with Delegation"
-    [ cddlTests 5,
+    [ addressTests,
+      cddlTests 5,
       minimalPropertyTests,
       serializationTests,
       stsTests,
@@ -30,6 +33,7 @@ nightlyTests =
   testGroup
     "Ledger with Delegation nightly"
     [ propertyTests,
+      nonTracePropertyTests,
       cddlTests 50
     ]
 
@@ -37,7 +41,8 @@ fastTests :: TestTree
 fastTests =
   testGroup
     "Ledger with Delegation fast"
-    [ cddlTests 1,
+    [ addressTests,
+      cddlTests 1,
       serializationTests,
       stsTests,
       unitTests

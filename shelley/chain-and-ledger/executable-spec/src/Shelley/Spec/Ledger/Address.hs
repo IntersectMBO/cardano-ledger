@@ -34,7 +34,7 @@ where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError)
+import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError, panic)
 import Control.Monad (unless)
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
@@ -97,21 +97,11 @@ scriptsToAddr (payScript, stakeScript) =
   Addr (scriptToCred payScript) (StakeRefBase $ scriptToCred stakeScript)
 
 -- | Serialise an address to the external format.
---
--- Note: this is not the final format, this function will be updated later to
--- use the final format.
---
--- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
 serialiseAddr :: Crypto crypto => Addr crypto -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 
 -- | Deserialise an address from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
---
--- Note: this is not the final format, this function will be updated later to
--- use the final format.
---
--- See <https://github.com/input-output-hk/cardano-ledger-specs/issues/1367>
 deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
 deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
@@ -141,7 +131,7 @@ payCredIsScript :: Int
 payCredIsScript = 4
 
 putAddr :: forall crypto. Crypto crypto => Addr crypto -> Put
-putAddr (AddrBootstrap _kh) = undefined -- TODO: defer to byron
+putAddr (AddrBootstrap _kh) = panic "Shelley.Spec.Ledger.Address.putAddr: TODO: defer to byron"
 putAddr (Addr pc sr) =
   let setPayCredBit = case pc of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -217,7 +207,7 @@ putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 
 getByron :: Get (Addr crypto)
-getByron = undefined
+getByron = panic "Shelley.Spec.Ledger.Address.getByron: undefined"
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do

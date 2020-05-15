@@ -88,7 +88,6 @@ instance Crypto crypto => ToCBOR (LedgerView crypto) where
 -- epoch.
 mkPrtclEnv ::
   LedgerView crypto ->
-  SlotNo ->
   -- | New epoch marker. This should be true iff this execution of the PRTCL
   -- rule is being run on the first block in a new epoch.
   Bool ->

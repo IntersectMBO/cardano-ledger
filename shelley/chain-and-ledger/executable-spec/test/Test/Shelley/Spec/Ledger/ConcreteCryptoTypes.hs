@@ -111,8 +111,6 @@ type NEWEPOCH = STS.NewEpoch.NEWEPOCH ConcreteCrypto
 
 type LedgerState = LedgerState.LedgerState ConcreteCrypto
 
-type LedgerValidation = LedgerState.LedgerValidation ConcreteCrypto
-
 type UTxOState = LedgerState.UTxOState ConcreteCrypto
 
 type DState = LedgerState.DState ConcreteCrypto

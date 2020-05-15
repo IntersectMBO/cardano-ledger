@@ -48,7 +48,7 @@ instance
     | KESAfterEndOCERT
     | KESPeriodWrongOCERT
     | InvalidSignatureOCERT
-    | InvalidKesSignatureOCERT String
+    | InvalidKesSignatureOCERT Word Word Word String
     | NoCounterForKeyHashOCERT
     deriving (Show, Eq, Generic)
 
@@ -82,7 +82,7 @@ ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
   -- predicate failure in the
   -- transition.
   verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
-  verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT
+  verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
 
   case currentIssueNo env cs hk of
     Nothing -> do

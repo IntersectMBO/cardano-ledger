@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Test.Shelley.Spec.Ledger.Examples.CDDL
+module Test.Shelley.Spec.Ledger.CDDL
   ( cddlTests,
   )
 where

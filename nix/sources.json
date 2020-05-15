@@ -25,15 +25,15 @@
     },
     "ormolu": {
         "branch": "master",
+        "builtin": false,
         "description": "A formatter for Haskell source code",
         "homepage": null,
         "owner": "tweag",
         "repo": "ormolu",
-        "rev": "a5c4d6c439b01648cc44e307e0fe10e1a55c9bd5",
-        "sha256": "0pddsffh9n48kbsgcvr99yqn2di0q5ndj62gh8bh2hd6qm6b5rgz",
+        "rev": "b0092e11a182dc25a14c1f349cf994ea446022a7",
+        "sha256": "01zkdp43aw3l89gbz58c1jwk46y1an5z3l3z5snpyqxmshvkgnz0",
         "type": "tarball",
-        "url": "https://github.com/tweag/ormolu/archive/a5c4d6c439b01648cc44e307e0fe10e1a55c9bd5.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-        "builtin": false
+        "url": "https://github.com/tweag/ormolu/archive/b0092e11a182dc25a14c1f349cf994ea446022a7.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
