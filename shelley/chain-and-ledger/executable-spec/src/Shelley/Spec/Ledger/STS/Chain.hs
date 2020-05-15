@@ -181,6 +181,7 @@ instance
     | BbodyFailure !(PredicateFailure (BBODY crypto))
     | TickFailure (PredicateFailure (TICK crypto))
     | PrtclFailure !(PredicateFailure (PRTCL crypto))
+    | PrtclSeqFailure !(PrtlSeqFailure crypto)
     deriving (Show, Eq, Generic)
 
   initialRules = []
@@ -213,6 +214,10 @@ chainTransition ::
 chainTransition =
   judgmentContext
     >>= \(TRC ((), ChainState nes cs eta0 etaV etaC etaH lab, block@(Block bh _))) -> do
+      case prtlSeqChecks lab bh of
+        Right () -> pure ()
+        Left e -> failBecause $ PrtclSeqFailure e
+
       let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
 
       maxpv <- liftSTS $ asks maxMajorPV

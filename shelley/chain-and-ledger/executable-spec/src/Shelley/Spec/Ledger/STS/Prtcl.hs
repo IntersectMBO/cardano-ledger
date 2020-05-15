@@ -15,6 +15,8 @@ module Shelley.Spec.Ledger.STS.Prtcl
     PrtclEnv (..),
     PrtclState (..),
     PredicateFailure (..),
+    PrtlSeqFailure,
+    prtlSeqChecks,
   )
 where
 
@@ -25,7 +27,8 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (MonadError (..), NoUnexpectedThunks (..), unless)
+import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
@@ -34,9 +37,11 @@ import Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
+    LastAppliedBlock (..),
     bhHash,
     bhbody,
     hashHeaderToNonce,
+    lastAppliedHash,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
@@ -55,7 +60,7 @@ import Shelley.Spec.Ledger.OCert (KESPeriod)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
-import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
 
 data PRTCL crypto
 
@@ -202,3 +207,29 @@ instance
   Embed (UPDN crypto) (PRTCL crypto)
   where
   wrapFailed = UpdnFailure
+
+data PrtlSeqFailure crypto
+  = WrongSlotIntervalPrtclSeq
+  | WrongBlockNoPrtclSeq (WithOrigin (LastAppliedBlock crypto)) BlockNo
+  | WrongBlockSequencePrtclSeq
+  deriving (Show, Eq, Generic)
+
+instance Crypto crypto => NoUnexpectedThunks (PrtlSeqFailure crypto)
+
+prtlSeqChecks ::
+  (MonadError (PrtlSeqFailure crypto) m, Crypto crypto) =>
+  WithOrigin (LastAppliedBlock crypto) ->
+  BHeader crypto ->
+  m ()
+prtlSeqChecks lab bh =
+  case lab of
+    Origin -> pure ()
+    At (LastAppliedBlock bL sL _) -> do
+      unless (sL < slot) $ throwError WrongSlotIntervalPrtclSeq
+      unless (bL + 1 == bn) $ throwError $ WrongBlockNoPrtclSeq lab bn
+      unless (ph == bheaderPrev bhb) $ throwError WrongBlockSequencePrtclSeq
+  where
+    bhb = bhbody bh
+    bn = bheaderBlockNo bhb
+    slot = bheaderSlotNo bhb
+    ph = lastAppliedHash lab
