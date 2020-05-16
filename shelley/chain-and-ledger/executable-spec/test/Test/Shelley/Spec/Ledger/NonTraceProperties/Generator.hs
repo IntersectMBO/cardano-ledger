@@ -449,11 +449,11 @@ convertPredicateFailuresToValidationErrors pfs =
   map predicateFailureToValidationError $ foldr (++) [] pfs
 
 predicateFailureToValidationError :: PredicateFailure LEDGER -> ValidationError
-predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW)) =
+predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW _)) =
   MissingWitnesses
 predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW)) =
   MissingWitnesses
-predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW)) =
+predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW [])) =
   InvalidWitness
 predicateFailureToValidationError (UtxowFailure (UtxoFailure InputSetEmptyUTxO)) =
   InputSetEmpty

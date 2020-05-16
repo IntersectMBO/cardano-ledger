@@ -7,8 +7,9 @@ import Control.State.Transition.Extended (TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import Data.Either (fromRight, isRight)
 import qualified Data.Map.Strict as Map (empty, singleton)
+import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
-import Shelley.Spec.Ledger.Keys (asWitness)
+import Shelley.Spec.Ledger.Keys (asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.STS.Chain (totalAda)
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
@@ -334,7 +335,7 @@ testScriptAndSKey =
 
 testScriptAndSKey' :: Assertion
 testScriptAndSKey' =
-  utxoSt' @?= Left [[MissingVKeyWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingVKeyWitnessesUTXOW wits]]
   where
     utxoSt' =
       applyTxWithScript
@@ -343,6 +344,7 @@ testScriptAndSKey' =
         (Wdrl Map.empty)
         1000
         [asWitness bobPay]
+    wits = Set.singleton $ asWitness $ hashKey $ vKey alicePay
 
 testScriptAndSKey'' :: Assertion
 testScriptAndSKey'' =

@@ -190,7 +190,7 @@ verifiedWits' ::
   Tx crypto ->
   Validity
 verifiedWits' tx =
-  if verifiedWits tx
+  if verifiedWits tx == []
     then Valid
     else Invalid [InvalidWitness]
 

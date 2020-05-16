@@ -144,6 +144,7 @@ import Shelley.Spec.Ledger.Keys
     KeyHash,
     KeyPair,
     KeyRole (..),
+    VKey,
     asWitness,
     hash,
   )
@@ -191,6 +192,7 @@ import Shelley.Spec.Ledger.TxData
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    WitVKey (..),
     getRwdCred,
   )
 import Shelley.Spec.Ledger.UTxO
@@ -800,9 +802,10 @@ verifiedWits ::
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Tx crypto ->
-  Bool
-verifiedWits (Tx txbody wits _ _) =
-  all (verifyWitVKey $ hashWithSerialiser toCBOR txbody) wits
+  [VKey 'Witness crypto]
+verifiedWits (Tx txbody wits _ _) = fmap (\(WitVKey vk _) -> vk) failed
+  where
+    failed = filter (not . verifyWitVKey (hashWithSerialiser toCBOR txbody)) (Set.toList wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
