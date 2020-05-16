@@ -238,11 +238,11 @@ chainTransition =
 
       let ph = lastAppliedHash lab
           etaPH = prevHashToNonce ph
-      PrtclState cs' _etaPH' eta0' etaV' etaC' etaH' <-
+      PrtclState cs' eta0' etaV' etaC' etaH' <-
         trans @(PRTCL crypto) $
           TRC
-            ( PrtclEnv pp' osched _pd _genDelegs (e1 /= e2),
-              PrtclState cs etaPH eta0 etaV etaC etaH,
+            ( PrtclEnv pp' osched _pd _genDelegs (e1 /= e2) etaPH,
+              PrtclState cs eta0 etaV etaC etaH,
               bh
             )
 

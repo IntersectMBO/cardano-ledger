@@ -38,9 +38,7 @@ import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
     LastAppliedBlock (..),
-    bhHash,
     bhbody,
-    hashHeaderToNonce,
     lastAppliedHash,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -67,8 +65,7 @@ data PRTCL crypto
 data PrtclState crypto
   = PrtclState
       !(Map (KeyHash 'BlockIssuer crypto) Natural)
-      !Nonce
-      -- ^ Current previous hash nonce
+      -- ^ Operation Certificate counters
       !Nonce
       -- ^ Current epoch nonce
       !Nonce
@@ -80,23 +77,21 @@ data PrtclState crypto
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m n1 n2 n3 n4 n5) =
+  toCBOR (PrtclState m n1 n2 n3 n4) =
     mconcat
-      [ encodeListLen 6,
+      [ encodeListLen 5,
         toCBOR m,
         toCBOR n1,
         toCBOR n2,
         toCBOR n3,
-        toCBOR n4,
-        toCBOR n5
+        toCBOR n4
       ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
   fromCBOR =
-    decodeListLenOf 6
+    decodeListLenOf 5
       >> PrtclState
       <$> fromCBOR
-      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
@@ -112,6 +107,7 @@ data PrtclEnv crypto
       (PoolDistr crypto)
       (GenDelegs crypto)
       Bool
+      Nonce
   deriving (Generic)
 
 instance NoUnexpectedThunks (PrtclEnv crypto)
@@ -157,8 +153,8 @@ prtclTransition ::
   TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC
-    ( PrtclEnv pp osched pd dms ne,
-      PrtclState cs etaPH eta0 etaV etaC etaH,
+    ( PrtclEnv pp osched pd dms ne etaPH,
+      PrtclState cs eta0 etaV etaC etaH,
       bh
       ) <-
     judgmentContext
@@ -180,7 +176,6 @@ prtclTransition = do
   pure $
     PrtclState
       cs'
-      (hashHeaderToNonce (bhHash bh))
       eta0'
       etaV'
       etaC'
