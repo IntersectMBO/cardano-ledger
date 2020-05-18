@@ -114,7 +114,7 @@ instance
         wits <- decodeList fromCBOR
         pure $ InvalidWitnessesUTXOW wits
       1 -> do
-        matchSize "MissingVKeyWitnessesUTXOW" 1 n
+        matchSize "MissingVKeyWitnessesUTXOW" 2 n
         missing <- decodeSet fromCBOR
         pure $ MissingVKeyWitnessesUTXOW missing
       2 -> matchSize "MissingScriptWitnessesUTXOW" 1 n >> pure MissingScriptWitnessesUTXOW
