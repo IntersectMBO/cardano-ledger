@@ -1,14 +1,23 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Address
   ( addressTests,
   )
 where
 
-import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..))
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
+import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..) )
+import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
+import Cardano.Crypto.KES.Sum
+import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
@@ -16,6 +25,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as LB16
 import qualified Data.ByteString.Lazy as LBS
+import Data.Proxy (Proxy (..))
+import GHC.Stack ( HasCallStack )
 import Hedgehog (Gen)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as H
@@ -23,6 +34,7 @@ import qualified Hedgehog.Range as H
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
+import Shelley.Spec.Ledger.Crypto (Crypto (..), Network (..))
 import Shelley.Spec.Ledger.Keys (pattern KeyHash)
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -33,12 +45,12 @@ import qualified Test.Tasty.HUnit as T
 import qualified Test.Tasty.Hedgehog as T
 
 addressTests :: TestTree
-addressTests = T.testGroup "binary tests" [goldenTests, roundTripTests]
+addressTests = T.testGroup "Address golden tests" [goldenTests, testsWithOtherCrypto, roundTripTests]
 
 goldenTests :: TestTree
 goldenTests =
   T.testGroup
-    "golden tests"
+    "ConcreteCrypto golden tests"
     [ golden "keyHash" putCredential keyHash "01020304",
       golden "scriptHash" putCredential scriptHash "05060708",
       golden "ptr" putPtr ptr "81000203",
@@ -83,6 +95,113 @@ goldenTests =
         (Addr scriptHash StakeRefNull)
         "7205060708"
     ]
+
+testsWithOtherCrypto :: TestTree
+testsWithOtherCrypto =
+  T.testGroup
+    "serialiseAddr tests with OtherCrypto"
+    [
+      checkSerialiseAddr
+        "addrEnterpriseK for network id = 0"
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
+      checkSerialiseAddr
+        "addrBaseKK for network id = 0"
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
+      checkSerialiseAddr
+        "addrPtrK for network id = 0"
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
+
+      checkSerialiseAddr
+        "addrEnterpriseK for network id = 1"
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
+      checkSerialiseAddr
+        "addrBaseKK for network id = 1"
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
+      checkSerialiseAddr
+        "addrPtrK for network id = 1"
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
+
+      checkSerialiseAddr
+        "addrEnterpriseK for network id = 2"
+        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) StakeRefNull)
+        "628a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
+      checkSerialiseAddr
+        "addrBaseKK for network id = 2"
+        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        "028a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
+      checkSerialiseAddr
+        "addrPtrK for network id = 2"
+        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        "428a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
+    ]
+
+-- helper data to mimick crypto impl used in cardano-node
+-- influenced by https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
+data OtherCrypto (network :: Network)
+
+instance Crypto (OtherCrypto 'Mainnet) where
+  type DSIGN (OtherCrypto 'Mainnet) = Ed25519DSIGN
+  type KES   (OtherCrypto 'Mainnet) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF   (OtherCrypto 'Mainnet) = SimpleVRF
+  type HASH  (OtherCrypto 'Mainnet) = Blake2b_256
+  networkMagicId _ = Mainnet
+
+instance Crypto (OtherCrypto 'Testnet) where
+  type DSIGN (OtherCrypto 'Testnet) = Ed25519DSIGN
+  type KES   (OtherCrypto 'Testnet) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF   (OtherCrypto 'Testnet) = SimpleVRF
+  type HASH  (OtherCrypto 'Testnet) = Blake2b_256
+  networkMagicId _ = Testnet
+
+instance Crypto (OtherCrypto 'Offline) where
+  type DSIGN (OtherCrypto 'Offline) = Ed25519DSIGN
+  type KES   (OtherCrypto 'Offline) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF   (OtherCrypto 'Offline) = SimpleVRF
+  type HASH  (OtherCrypto 'Offline) = Blake2b_256
+  networkMagicId _ = Offline
+
+type OtherCredential kr (net :: Network) = Credential kr (OtherCrypto net)
+
+checkSerialiseAddr
+    :: Crypto (OtherCrypto network)
+    => String -> Addr (OtherCrypto network) -> BS.ByteString -> TestTree
+checkSerialiseAddr name value expected =
+  T.testCase name $
+    T.assertEqual name expected (B16.encode . serialiseAddr $ value)
+
+paymentKey :: BS.ByteString
+paymentKey = B16.encode "1a2a3a4a5a6a7a8a"
+
+stakeKey :: BS.ByteString
+stakeKey = B16.encode "1c2c3c4c5c6c7c8c"
+
+-- 32-byte verification key is expected, vk, ie., public key without chain code.
+-- The verification key undergoes Blake2b_224 hashing
+-- and should be 28-byte in the aftermath
+keyBlake2b224 :: BS.ByteString -> OtherCredential kh net
+keyBlake2b224 vk =
+  KeyHashObj . KeyHash . UnsafeHash $ hk
+  where
+    hash = digest (Proxy :: Proxy Blake2b_224)
+    vk' = invariantSize 32 vk
+    hk = invariantSize
+        (fromIntegral $ sizeHash (Proxy :: Proxy Blake2b_224))
+        (hash vk')
+
+invariantSize :: HasCallStack => Int -> BS.ByteString -> BS.ByteString
+invariantSize expectedLength bytes
+    | BS.length bytes == expectedLength = bytes
+    | otherwise = error
+      $ "length was "
+      ++ show (BS.length bytes)
+      ++ ", but expected to be "
+      ++ show expectedLength
 
 golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
 golden name put value expected =
