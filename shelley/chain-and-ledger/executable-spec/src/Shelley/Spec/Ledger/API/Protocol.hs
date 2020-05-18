@@ -29,7 +29,7 @@ import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.API.Validation
-import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.Keys (GenDelegs)
@@ -91,6 +91,7 @@ mkPrtclEnv ::
   -- | New epoch marker. This should be true iff this execution of the PRTCL
   -- rule is being run on the first block in a new epoch.
   Bool ->
+  Nonce ->
   STS.Prtcl.PrtclEnv crypto
 mkPrtclEnv
   LedgerView
