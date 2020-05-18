@@ -51,6 +51,7 @@ import Cardano.Binary
     FromCBOR (..),
     ToCBOR (..),
     TokenType (TypeNull),
+    Size,
     decodeBreakOr,
     decodeListLenOrIndef,
     decodeMapLenOrIndef,
@@ -65,6 +66,7 @@ import Cardano.Binary
     encodeTag,
     matchSize,
     peekTokenType,
+    withWordSize,
   )
 import Cardano.Prelude (cborError)
 import Control.Monad (replicateM, unless)
@@ -98,12 +100,22 @@ import Network.Socket (HostAddress6)
 
 class Typeable a => ToCBORGroup a where
   toCBORGroup :: a -> Encoding
-  listLen :: a -> Word
+  encodedGroupSizeExpr :: (forall x. ToCBOR x => Proxy x -> Size)
+                       -> Proxy a -> Size
 
-newtype CBORGroup a = CBORGroup a
+  listLen     :: a -> Word
+  -- | an upper bound for 'listLen', used in 'Size' expressions.
+  listLenBound :: Proxy a -> Word
+
+newtype CBORGroup a = CBORGroup { unCBORGroup :: a }
 
 instance ToCBORGroup a => ToCBOR (CBORGroup a) where
   toCBOR (CBORGroup x) = encodeListLen (listLen x) <> toCBORGroup x
+  encodedSizeExpr size proxy =
+        fromInteger (withWordSize (listLenBound proxy'))
+      + encodedGroupSizeExpr size proxy'
+    where
+      proxy' = unCBORGroup <$> proxy
 
 class Typeable a => FromCBORGroup a where
   fromCBORGroup :: Decoder s a

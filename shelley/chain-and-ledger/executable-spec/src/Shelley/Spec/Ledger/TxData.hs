@@ -51,14 +51,19 @@ module Shelley.Spec.Ledger.TxData
     --
     witKeyHash,
     addStakeCreds,
+    --
+    SizeOfPoolOwners (..),
+    SizeOfPoolRelays (..),
   )
 where
 
 import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary
   ( Annotator (..),
+    Case (..),
     FromCBOR (fromCBOR),
-    ToCBOR (toCBOR),
+    ToCBOR (..),
+    Size,
     annotatorSlice,
     decodeListLen,
     decodeWord,
@@ -69,6 +74,7 @@ import Cardano.Binary
     enforceSize,
     matchSize,
     serializeEncoding,
+    szCases,
   )
 import Cardano.Prelude
   ( AllowThunksIn (..),
@@ -77,6 +83,7 @@ import Cardano.Prelude
     NoUnexpectedThunks (..),
     Word64,
     catMaybes,
+    panic,
   )
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -86,6 +93,7 @@ import Data.IP (IPv4, IPv6)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -616,6 +624,22 @@ instance FromCBOR PoolMetaData where
     h <- fromCBOR
     pure $ PoolMetaData u h
 
+-- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
+-- 'PoolParams'.
+--
+data SizeOfPoolOwners = SizeOfPoolOwners
+
+instance ToCBOR SizeOfPoolOwners where
+  toCBOR = panic "The `SizeOfPoolOwners` type cannot be encoded!"
+
+-- | The size of the '_poolRelays' 'Set'.  Only used to compute size of encoded
+-- 'PoolParams'.
+--
+data SizeOfPoolRelays = SizeOfPoolRelays
+
+instance ToCBOR SizeOfPoolRelays where
+  toCBOR = panic "The `SizeOfPoolRelays` type cannot be encoded!"
+
 instance
   (Crypto crypto) =>
   ToCBORGroup (PoolParams crypto)
@@ -630,7 +654,30 @@ instance
       <> encodeFoldable (_poolOwners poolParams)
       <> toCBOR (CborSeq (StrictSeq.getSeq (_poolRelays poolParams)))
       <> encodeNullMaybe toCBOR (strictMaybeToMaybe (_poolMD poolParams))
+
+  encodedGroupSizeExpr size' proxy =
+        encodedSizeExpr size' (_poolPubKey <$> proxy)
+      + encodedSizeExpr size' (_poolVrf    <$> proxy)
+      + encodedSizeExpr size' (_poolPledge <$> proxy)
+      + encodedSizeExpr size' (_poolCost   <$> proxy)
+      + encodedSizeExpr size' (_poolMargin <$> proxy)
+      + encodedSizeExpr size' (_poolRAcnt  <$> proxy)
+      + 2 + poolSize  * encodedSizeExpr size' (elementProxy (_poolOwners <$> proxy))
+      + 2 + relaySize * encodedSizeExpr size' (elementProxy (_poolRelays <$> proxy))
+      + szCases
+          [ Case "Nothing" 1
+          , Case "Just" $ encodedSizeExpr size' (elementProxy (_poolMD <$> proxy))
+          ]
+    where
+      poolSize, relaySize :: Size
+      poolSize  = size' (Proxy @SizeOfPoolOwners)
+      relaySize = size' (Proxy @SizeOfPoolRelays)
+
+      elementProxy :: Proxy (f a) -> Proxy a
+      elementProxy _ = Proxy
+
   listLen _ = 9
+  listLenBound _ = 9
 
 instance
   (Crypto crypto) =>
