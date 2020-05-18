@@ -190,9 +190,9 @@ verifiedWits' ::
   Tx crypto ->
   Validity
 verifiedWits' tx =
-  if verifiedWits tx == []
-    then Valid
-    else Invalid [InvalidWitness]
+  case verifiedWits tx of
+    (Right ()) -> Valid
+    (Left _failures) -> Invalid [InvalidWitness]
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are sufficient.

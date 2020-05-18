@@ -802,8 +802,11 @@ verifiedWits ::
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Tx crypto ->
-  [VKey 'Witness crypto]
-verifiedWits (Tx txbody wits _ _) = fmap (\(WitVKey vk _) -> vk) failed
+  Either [VKey 'Witness crypto] ()
+verifiedWits (Tx txbody wits _ _) =
+  case failed == mempty of
+    True -> Right ()
+    False -> Left $ fmap (\(WitVKey vk _) -> vk) failed
   where
     failed = filter (not . verifyWitVKey (hashWithSerialiser toCBOR txbody)) (Set.toList wits)
 

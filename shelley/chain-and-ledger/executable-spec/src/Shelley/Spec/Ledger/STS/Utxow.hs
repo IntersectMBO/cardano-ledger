@@ -171,11 +171,14 @@ utxoWitnessed =
         ?! MissingScriptWitnessesUTXOW
 
       -- check VKey witnesses
-      let failedWits = verifiedWits tx
-      failedWits == mempty ?! InvalidWitnessesUTXOW failedWits
+      verifiedWits tx ?!: InvalidWitnessesUTXOW
 
       let needed = witsVKeyNeeded utxo tx genDelegs
-      needed `Set.isSubsetOf` witsKeyHashes ?! MissingVKeyWitnessesUTXOW (needed `Set.difference` witsKeyHashes)
+          missingWitnesses = needed `Set.difference` witsKeyHashes
+          haveNeededWitnesses = case missingWitnesses == Set.empty of
+            True -> Right ()
+            False -> Left missingWitnesses
+      haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
 
       -- check metadata hash
       case (_mdHash txbody) of
