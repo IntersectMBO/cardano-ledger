@@ -277,6 +277,8 @@ data PState crypto = PState
     _stPools :: !(StakePools crypto),
     -- | The pool parameters.
     _pParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
+    -- | The future pool parameters.
+    _fPParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
     -- | A map of retiring stake pools to the epoch when they retire.
     _retiring :: !(Map (KeyHash 'StakePool crypto) EpochNo)
   }
@@ -285,16 +287,17 @@ data PState crypto = PState
 instance NoUnexpectedThunks (PState crypto)
 
 instance Crypto crypto => ToCBOR (PState crypto) where
-  toCBOR (PState a b c) =
-    encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
+  toCBOR (PState a b c d) =
+    encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
 
 instance Crypto crypto => FromCBOR (PState crypto) where
   fromCBOR = do
-    enforceSize "PState" 3
+    enforceSize "PState" 4
     a <- fromCBOR
     b <- fromCBOR
     c <- fromCBOR
-    pure $ PState a b c
+    d <- fromCBOR
+    pure $ PState a b c d
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
@@ -424,7 +427,7 @@ emptyDState =
 
 emptyPState :: PState crypto
 emptyPState =
-  PState (StakePools Map.empty) Map.empty Map.empty
+  PState (StakePools Map.empty) Map.empty Map.empty Map.empty
 
 -- | Clear the protocol parameter updates
 clearPpup ::
@@ -898,7 +901,7 @@ stakeDistr u ds ps =
     poolParams
   where
     DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
-    PState (StakePools stpools) poolParams _ = ps
+    PState (StakePools stpools) poolParams _ _ = ps
     outs = aggregateOuts u
     stakeRelation :: [(Credential 'Staking crypto, Coin)]
     stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'

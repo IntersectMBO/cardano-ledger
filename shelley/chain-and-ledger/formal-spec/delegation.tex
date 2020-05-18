@@ -240,6 +240,10 @@ state transition types. We define two separate parts of the ledger state.
         mapping from hashkeys to the slot of the registration.
       \item $\var{poolParams}$ tracks the parameters associated with each stake pool, such as
         their costs and margin.
+      \item When changes are made to the pool parameters late in an epoch, they are staged
+        in $\var{fPoolParams}$.
+        These parameters will be updated by another transaction (namely $\mathsf{EPOCH}$)
+        when the next epoch starts.
       \item $\var{retiring}$ tracks stake pool retirements, using a map from hashkeys to
         the epoch in which it will retire.
     \end{itemize}
@@ -662,17 +666,26 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \item The key is added to the set of registered stake pools.
       \item The pool's parameters are stored.
     \end{itemize}
-  \item Stake pool parameter updates are handled by \cref{eq:pool-rereg}.
-    This rule, which also matches on the certificate type $\type{DCertRegPool}$,
-    is distinguished from \cref{eq:pool-reg} by the requirement that
-    the pool be registered. This rule also ends stake pool retirements.
-    Reregistration causes the following state transformation:
-    \begin{itemize}
-      \item The pool's parameters are updated.
-      \item The pool is removed from the collection of retiring pools.
-      \item Note that $\var{stpools}$ is \textbf{not} updated.
-        The registration creation slot does does not change.
-    \end{itemize}
+  \item Stake pool parameter updates are handled by \cref{eq:pool-rereg} and \cref{eq:pool-rereg-late}.
+    These rules, which also matches on the certificate type $\type{DCertRegPool}$,
+    are distinguished from \cref{eq:pool-reg} by the requirement that the pool be registered.
+
+    The reason for the two update cases is to provide delegators some time to react when
+    stake pools change their parameters. The stake distribution snapshots are taken
+    at the end of the epoch, so if stake pool wishes to change parameters near
+    the end of an epoch, we apply the update just after the next snapshot is taken.
+
+    In particular, \cref{eq:pool-rereg} handles the case that the certificate is received
+    before the last $\StabilityWindow$-many slots of the epoch.
+    In this case, the update immediately included in $\var{poolParam}$.
+    Otherwise, in \cref{eq:pool-rereg-late}, the update is added to
+    the future pool parameters $\var{fPoolParam}$,
+    which will override $\var{poolParam}$ with the new values in the $\mathsf{EPOCH}$ transition
+    (see Figure~\cref{fig:rules:epoch}).
+
+    This rule also ends stake pool retirements.
+    Note that $\var{stpools}$ is \textbf{not} updated.
+    The registration creation slot does does not change.
   \item Stake pool retirements are handled by \cref{eq:pool-ret}.
     Given a slot number $\var{slot}$, the application of this rule requires that the
     planned retirement epoch $\var{e}$ stated in the certificate is in the future,
@@ -717,6 +730,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \begin{array}{r}
         \var{stpools} \\
         \var{poolParams} \\
+        \var{fPoolParams} \\
         \var{retiring} \\
       \end{array}
       \right)
@@ -727,6 +741,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
                                   & \varUpdate{\{\var{hk} \mapsto \var{slot}\}} \\
         \varUpdate{\var{poolParams}} & \varUpdate{\union}
                                     & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}} \\
+       \var{fPoolParams} \\
        \var{retiring} \\
       \end{array}
       \right)
@@ -739,6 +754,10 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \var{c}\in\DCertRegPool
       & \var{hk} \leteq \cwitness{c}
       & hk \in \dom \var{stpools}
+      \\
+      \var{fslot} \leteq \fun{firstSlot}~((\epoch{slot}) + 1)
+      &
+      slot < \var{fslot} - \fun{StabilityWindow}\\
     }
     {
       \begin{array}{r}
@@ -750,6 +769,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \begin{array}{r}
         \var{stpools} \\
         \var{poolParams} \\
+        \var{fPoolParams} \\
         \var{retiring} \\
       \end{array}
       \right)
@@ -759,8 +779,47 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \var{stpools} \\
         \varUpdate{\var{poolParams}} & \varUpdate{\unionoverrideRight}
                                   & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}}\\
+                                  \var{fPoolParams} \\
         \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
       \end{array}
+      \right)
+    }
+  \end{equation}
+
+  \begin{equation}\label{eq:pool-rereg-late}
+    \inference[Pool-reReg-late]
+    {
+      \var{c}\in\DCertRegPool
+      & \var{hk} \leteq \cwitness{c}
+      & hk \in \dom \var{stpools}
+      \\
+      \var{fslot} \leteq \fun{firstSlot}~((\epoch{slot}) + 1)
+      &
+      slot \geq \var{fslot} - \fun{StabilityWindow}\\
+    }
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+      \end{array}
+      \vdash
+      \left(
+        \begin{array}{r}
+          \var{stpools} \\
+          \var{poolParams} \\
+          \var{fPoolParams} \\
+          \var{retiring} \\
+        \end{array}
+      \right)
+      \trans{pool}{c}
+      \left(
+        \begin{array}{rcl}
+          \var{stpools} \\
+          \var{poolParams} \\
+          \varUpdate{\var{fPoolParams}} & \varUpdate{\unionoverrideRight}
+                                        & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}}\\
+          \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
+        \end{array}
       \right)
     }
   \end{equation}
@@ -785,6 +844,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \begin{array}{r}
         \var{stpools} \\
         \var{poolParams} \\
+        \var{fPoolParams} \\
         \var{retiring} \\
       \end{array}
     \right)
@@ -793,6 +853,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \begin{array}{rcl}
         \var{stpools} \\
         \var{poolParams} \\
+        \var{fPoolParams} \\
         \varUpdate{\var{retiring}} & \varUpdate{\unionoverrideRight}
                                    & \varUpdate{\{\var{hk} \mapsto \var{e}\}} \\
       \end{array}

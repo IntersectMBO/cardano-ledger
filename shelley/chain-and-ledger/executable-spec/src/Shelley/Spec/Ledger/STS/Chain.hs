@@ -23,6 +23,15 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
+  ( Embed (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    failBecause,
+    judgmentContext,
+    liftSTS,
+    trans,
+  )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -49,7 +58,7 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys
@@ -88,9 +97,15 @@ import Shelley.Spec.Ledger.PParams
     _protocolVersion,
   )
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import Shelley.Spec.Ledger.STS.Bbody
+import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyState (..))
 import Shelley.Spec.Ledger.STS.Prtcl
-import Shelley.Spec.Ledger.STS.Tick
+  ( PRTCL,
+    PrtclEnv (..),
+    PrtclState (..),
+    PrtlSeqFailure,
+    prtlSeqChecks,
+  )
+import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
@@ -238,7 +253,7 @@ chainTransition =
       let NewEpochState e1 _ _ _ _ _ _ = nes
           NewEpochState e2 _ bcur es _ _pd osched = nes'
       let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
-      let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
+      let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _ _)) = ls
 
       let ph = lastAppliedHash lab
           etaPH = prevHashToNonce ph
