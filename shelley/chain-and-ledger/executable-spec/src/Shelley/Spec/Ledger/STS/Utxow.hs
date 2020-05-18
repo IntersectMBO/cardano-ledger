@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -30,6 +31,7 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -49,6 +51,7 @@ import Shelley.Spec.Ledger.LedgerState (UTxOState (..), verifiedWits, witsVKeyNe
 import Shelley.Spec.Ledger.MetaData (hashMetaData)
 import Shelley.Spec.Ledger.PParams (_d)
 import Shelley.Spec.Ledger.STS.Utxo
+import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
@@ -66,8 +69,8 @@ instance
   type Environment (UTXOW crypto) = UtxoEnv crypto
   type BaseM (UTXOW crypto) = ShelleyBase
   data PredicateFailure (UTXOW crypto)
-    = InvalidWitnessesUTXOW
-    | MissingVKeyWitnessesUTXOW
+    = InvalidWitnessesUTXOW [VKey 'Witness crypto]
+    | MissingVKeyWitnessesUTXOW (Set (KeyHash 'Witness crypto))
     | MissingScriptWitnessesUTXOW
     | ScriptWitnessNotValidatingUTXOW
     | UtxoFailure (PredicateFailure (UTXO crypto))
@@ -79,15 +82,17 @@ instance
   transitionRules = [utxoWitnessed]
   initialRules = [initialLedgerStateUTXOW]
 
-instance NoUnexpectedThunks (PredicateFailure (UTXOW crypto))
+instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (UTXOW crypto))
 
 instance
   (Typeable crypto, Crypto crypto) =>
   ToCBOR (PredicateFailure (UTXOW crypto))
   where
   toCBOR = \case
-    InvalidWitnessesUTXOW -> encodeListLen 1 <> toCBOR (0 :: Word8)
-    MissingVKeyWitnessesUTXOW -> encodeListLen 1 <> toCBOR (1 :: Word8)
+    InvalidWitnessesUTXOW wits ->
+      encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
+    MissingVKeyWitnessesUTXOW missing ->
+      encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
     MissingScriptWitnessesUTXOW -> encodeListLen 1 <> toCBOR (2 :: Word8)
     ScriptWitnessNotValidatingUTXOW -> encodeListLen 1 <> toCBOR (3 :: Word8)
     (UtxoFailure a) ->
@@ -104,8 +109,14 @@ instance
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
-      0 -> matchSize "InvalidWitnessesUTXOW" 1 n >> pure InvalidWitnessesUTXOW
-      1 -> matchSize "MissingVKeyWitnessesUTXOW" 1 n >> pure MissingVKeyWitnessesUTXOW
+      0 -> do
+        matchSize "InvalidWitnessesUTXOW" 2 n
+        wits <- decodeList fromCBOR
+        pure $ InvalidWitnessesUTXOW wits
+      1 -> do
+        matchSize "MissingVKeyWitnessesUTXOW" 1 n
+        missing <- decodeSet fromCBOR
+        pure $ MissingVKeyWitnessesUTXOW missing
       2 -> matchSize "MissingScriptWitnessesUTXOW" 1 n >> pure MissingScriptWitnessesUTXOW
       3 ->
         matchSize "ScriptWitnessNotValidatingUTXOW" 1 n
@@ -160,10 +171,14 @@ utxoWitnessed =
         ?! MissingScriptWitnessesUTXOW
 
       -- check VKey witnesses
-      verifiedWits tx ?! InvalidWitnessesUTXOW
+      verifiedWits tx ?!: InvalidWitnessesUTXOW
 
       let needed = witsVKeyNeeded utxo tx genDelegs
-      needed `Set.isSubsetOf` witsKeyHashes ?! MissingVKeyWitnessesUTXOW
+          missingWitnesses = needed `Set.difference` witsKeyHashes
+          haveNeededWitnesses = case missingWitnesses == Set.empty of
+            True -> Right ()
+            False -> Left missingWitnesses
+      haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
 
       -- check metadata hash
       case (_mdHash txbody) of
