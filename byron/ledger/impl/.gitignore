@@ -1,0 +1,44 @@
+# Cabal & Stack
+.stack-work*/
+**/dist
+cabal.project.local
+dist-newstyle
+.ghc.environment.*
+stack.yaml.lock
+stack-local.yaml.lock
+
+# Editors
+TAGS
+*~
+\#*
+\.#*
+
+# Vim swap files
+*.sw[a-p]
+
+# Emacs auto-generated Emacs-lisp code
+auto/
+
+# Nix artifacts
+specs/**/result
+result
+.stack-to-nix.cache
+
+# Profiler, profiteur, and profiterole artifacts
+*.aux
+*.folded
+*.prof
+*.hp
+*.ps
+*.html
+!iohk-monitoring/static/*.html
+*.profiterole.*
+
+# gitinfo2 auxiliary file
+gitHeadLocal.gin
+
+# Local development
+stack-local.yaml
+
+# Mac
+.DS_Store
