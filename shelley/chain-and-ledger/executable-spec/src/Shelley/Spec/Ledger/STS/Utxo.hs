@@ -30,6 +30,7 @@ import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -50,6 +51,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Ppup
+import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.UTxO
@@ -74,13 +76,13 @@ instance
   type Environment (UTXO crypto) = UtxoEnv crypto
   type BaseM (UTXO crypto) = ShelleyBase
   data PredicateFailure (UTXO crypto)
-    = BadInputsUTxO
+    = BadInputsUTxO (Set (TxIn crypto))
     | ExpiredUTxO SlotNo SlotNo
     | MaxTxSizeUTxO Integer Integer
     | InputSetEmptyUTxO
     | FeeTooSmallUTxO Coin Coin
     | ValueNotConservedUTxO Coin Coin
-    | OutputTooSmallUTxO
+    | OutputTooSmallUTxO [TxOut crypto]
     | UpdateFailure (PredicateFailure (PPUP crypto))
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
@@ -93,7 +95,8 @@ instance
   ToCBOR (PredicateFailure (UTXO crypto))
   where
   toCBOR = \case
-    BadInputsUTxO -> encodeListLen 1 <> toCBOR (0 :: Word8)
+    BadInputsUTxO ins ->
+      encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable ins
     (ExpiredUTxO a b) ->
       encodeListLen 3 <> toCBOR (1 :: Word8)
         <> toCBOR a
@@ -111,7 +114,9 @@ instance
       encodeListLen 3 <> toCBOR (5 :: Word8)
         <> toCBOR a
         <> toCBOR b
-    OutputTooSmallUTxO -> encodeListLen 1 <> toCBOR (6 :: Word8)
+    OutputTooSmallUTxO outs ->
+      encodeListLen 2 <> toCBOR (6 :: Word8)
+        <> encodeFoldable outs
     (UpdateFailure a) ->
       encodeListLen 2 <> toCBOR (7 :: Word8)
         <> toCBOR a
@@ -123,7 +128,10 @@ instance
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
-      0 -> matchSize "BadInputsUTxO" 1 n >> pure BadInputsUTxO
+      0 -> do
+        ins <- decodeSet fromCBOR
+        matchSize "BadInputsUTxO" 2 n
+        pure $ BadInputsUTxO ins
       1 -> do
         matchSize "ExpiredUTxO" 3 n
         a <- fromCBOR
@@ -145,7 +153,10 @@ instance
         a <- fromCBOR
         b <- fromCBOR
         pure $ ValueNotConservedUTxO a b
-      6 -> matchSize "OutputTooSmallUTxO" 1 n >> pure OutputTooSmallUTxO
+      6 -> do
+        matchSize "OutputTooSmallUTxO" 2 n
+        outs <- decodeList fromCBOR
+        pure $ OutputTooSmallUTxO outs
       7 -> do
         matchSize "UpdateFailure" 2 n
         a <- fromCBOR
@@ -174,7 +185,7 @@ utxoInductive = do
       txFee = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  txins txb ⊆ dom utxo ?! BadInputsUTxO
+  txins txb ⊆ dom utxo ?! BadInputsUTxO (txins txb)
 
   let consumed_ = consumed pp utxo stakeCreds txb
       produced_ = produced pp stakepools txb
@@ -185,7 +196,9 @@ utxoInductive = do
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
   let minUTxOValue = fromIntegral $ _minUTxOValue pp
-  all (minUTxOValue <=) outputCoins ?! OutputTooSmallUTxO
+  all (minUTxOValue <=) outputCoins
+    ?! OutputTooSmallUTxO
+      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (range (txouts txb))))
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx

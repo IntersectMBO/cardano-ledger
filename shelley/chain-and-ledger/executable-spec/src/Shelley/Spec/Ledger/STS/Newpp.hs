@@ -52,7 +52,7 @@ instance STS (NEWPP crypto) where
   type Environment (NEWPP crypto) = NewppEnv crypto
   type BaseM (NEWPP crypto) = ShelleyBase
   data PredicateFailure (NEWPP crypto)
-    = UnexpectedDepositPot
+    = UnexpectedDepositPot Coin Coin
     deriving (Show, Eq, Generic)
 
   initialRules = [initialNewPp]
@@ -83,7 +83,7 @@ newPpTransition = do
           Coin reserves = _reserves acnt
           Coin requiredInstantaneousRewards = foldl' (+) (Coin 0) $ _irwd dstate
 
-      (Coin oblgCurr) == (_deposited utxoSt) ?! UnexpectedDepositPot
+      (Coin oblgCurr) == (_deposited utxoSt) ?! UnexpectedDepositPot (Coin oblgCurr) (_deposited utxoSt)
 
       if reserves + diff >= requiredInstantaneousRewards
         && (_maxTxSize ppNew' + _maxBHSize ppNew') < _maxBBSize ppNew'

@@ -103,6 +103,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust, maybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
@@ -2698,8 +2699,11 @@ blockEx5B =
     0
     (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
+mirWitsEx5B :: Set (KeyHash 'Witness)
+mirWitsEx5B = Set.fromList [asWitness . hk . coreNodeKeys $ i | i <- [0 .. 3]]
+
 expectedStEx5B :: PredicateFailure CHAIN
-expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRInsufficientGenesisSigsUTXOW)))
+expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure $ MIRInsufficientGenesisSigsUTXOW mirWitsEx5B)))
 
 ex5B :: CHAINExample
 ex5B = CHAINExample initStEx2A blockEx5B (Left [[expectedStEx5B]])

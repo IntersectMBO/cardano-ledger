@@ -49,7 +49,7 @@ instance STS (PPUP crypto) where
   type BaseM (PPUP crypto) = ShelleyBase
   data PredicateFailure (PPUP crypto)
     = NonGenesisUpdatePPUP (Set (KeyHash 'Genesis crypto)) (Set (KeyHash 'Genesis crypto))
-    | PPUpdateTooLatePPUP
+    | PPUpdateTooLatePPUP SlotNo SlotNo
     | PPUpdateWrongEpoch EpochNo
     | PVCannotFollowPPUP
     deriving (Show, Eq, Generic)
@@ -70,7 +70,7 @@ instance
         <> toCBOR (0 :: Word8)
         <> toCBOR a
         <> toCBOR b
-    PPUpdateTooLatePPUP -> encodeListLen 1 <> toCBOR (1 :: Word8)
+    PPUpdateTooLatePPUP s t -> encodeListLen 3 <> toCBOR (1 :: Word8) <> toCBOR s <> toCBOR t
     (PPUpdateWrongEpoch e) -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR e
     PVCannotFollowPPUP -> encodeListLen 1 <> toCBOR (3 :: Word8)
 
@@ -86,7 +86,11 @@ instance
         a <- fromCBOR
         b <- fromCBOR
         pure $ NonGenesisUpdatePPUP a b
-      1 -> matchSize "PPUpdateTooLatePPUP" 1 n >> pure PPUpdateTooLatePPUP
+      1 -> do
+        matchSize "PPUpdateTooLatePPUP" 3 n
+        s <- fromCBOR
+        t <- fromCBOR
+        pure $ PPUpdateTooLatePPUP s t
       2 -> do
         matchSize "PPUpdateWrongEpoch" 2 n
         a <- fromCBOR
@@ -116,7 +120,8 @@ ppupTransitionNonEmpty = do
         ei <- asks epochInfo
         EpochNo e <- epochInfoEpoch ei slot
         epochInfoFirst ei (EpochNo $ e + 1)
-      slot < firstSlotNextEpoch *- (Duration (2 * sp)) ?! PPUpdateTooLatePPUP
+      let tooLate = firstSlotNextEpoch *- (Duration (2 * sp))
+      slot < tooLate ?! PPUpdateTooLatePPUP slot tooLate
 
       currentEpoch <- liftSTS $ do
         ei <- asks epochInfo

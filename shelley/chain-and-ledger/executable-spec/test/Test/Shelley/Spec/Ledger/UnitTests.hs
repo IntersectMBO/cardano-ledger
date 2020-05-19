@@ -230,7 +230,7 @@ testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
     [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
-      UtxowFailure (UtxoFailure BadInputsUTxO)
+      UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ TxIn genesisId 42))
     ]
     $ aliceGivesBobLovelace
     $ AliceToBob
@@ -438,7 +438,7 @@ testWithdrawalWrongAmt =
 testOutputTooSmall :: Assertion
 testOutputTooSmall =
   testInvalidTx
-    [UtxowFailure (UtxoFailure OutputTooSmallUTxO)]
+    [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [TxOut bobAddr (Coin 1)])]
     $ aliceGivesBobLovelace
     $ AliceToBob
       { input = (TxIn genesisId 0),
