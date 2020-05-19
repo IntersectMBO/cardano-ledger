@@ -157,7 +157,7 @@ instance NoUnexpectedThunks ProtVer
 instance ToCBORGroup ProtVer where
   toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
   encodedGroupSizeExpr size proxy =
-        encodedSizeExpr size ((\(ProtVer x _) -> toWord x) <$> proxy)
+    encodedSizeExpr size ((\(ProtVer x _) -> toWord x) <$> proxy)
       + encodedSizeExpr size ((\(ProtVer _ y) -> toWord y) <$> proxy)
     where
       toWord :: Natural -> Word

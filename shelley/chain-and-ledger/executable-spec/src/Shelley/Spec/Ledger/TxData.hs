@@ -62,8 +62,8 @@ import Cardano.Binary
   ( Annotator (..),
     Case (..),
     FromCBOR (fromCBOR),
-    ToCBOR (..),
     Size,
+    ToCBOR (..),
     annotatorSlice,
     decodeListLen,
     decodeWord,
@@ -626,7 +626,6 @@ instance FromCBOR PoolMetaData where
 
 -- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
---
 data SizeOfPoolOwners = SizeOfPoolOwners
 
 instance ToCBOR SizeOfPoolOwners where
@@ -634,7 +633,6 @@ instance ToCBOR SizeOfPoolOwners where
 
 -- | The size of the '_poolRelays' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
---
 data SizeOfPoolRelays = SizeOfPoolRelays
 
 instance ToCBOR SizeOfPoolRelays where
@@ -656,23 +654,24 @@ instance
       <> encodeNullMaybe toCBOR (strictMaybeToMaybe (_poolMD poolParams))
 
   encodedGroupSizeExpr size' proxy =
-        encodedSizeExpr size' (_poolPubKey <$> proxy)
-      + encodedSizeExpr size' (_poolVrf    <$> proxy)
+    encodedSizeExpr size' (_poolPubKey <$> proxy)
+      + encodedSizeExpr size' (_poolVrf <$> proxy)
       + encodedSizeExpr size' (_poolPledge <$> proxy)
-      + encodedSizeExpr size' (_poolCost   <$> proxy)
+      + encodedSizeExpr size' (_poolCost <$> proxy)
       + encodedSizeExpr size' (_poolMargin <$> proxy)
-      + encodedSizeExpr size' (_poolRAcnt  <$> proxy)
-      + 2 + poolSize  * encodedSizeExpr size' (elementProxy (_poolOwners <$> proxy))
-      + 2 + relaySize * encodedSizeExpr size' (elementProxy (_poolRelays <$> proxy))
+      + encodedSizeExpr size' (_poolRAcnt <$> proxy)
+      + 2
+      + poolSize * encodedSizeExpr size' (elementProxy (_poolOwners <$> proxy))
+      + 2
+      + relaySize * encodedSizeExpr size' (elementProxy (_poolRelays <$> proxy))
       + szCases
-          [ Case "Nothing" 1
-          , Case "Just" $ encodedSizeExpr size' (elementProxy (_poolMD <$> proxy))
-          ]
+        [ Case "Nothing" 1,
+          Case "Just" $ encodedSizeExpr size' (elementProxy (_poolMD <$> proxy))
+        ]
     where
       poolSize, relaySize :: Size
-      poolSize  = size' (Proxy @SizeOfPoolOwners)
+      poolSize = size' (Proxy @SizeOfPoolOwners)
       relaySize = size' (Proxy @SizeOfPoolRelays)
-
       elementProxy :: Proxy (f a) -> Proxy a
       elementProxy _ = Proxy
 
