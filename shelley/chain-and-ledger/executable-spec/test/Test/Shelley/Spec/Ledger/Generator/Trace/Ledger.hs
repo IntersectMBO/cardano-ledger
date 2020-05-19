@@ -20,8 +20,9 @@ import Control.State.Transition.Extended (IRC, TRC (..), applySTS)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
+import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (Globals)
-import Shelley.Spec.Ledger.LedgerState (genesisState, pattern LedgerState)
+import Shelley.Spec.Ledger.LedgerState (AccountState (..), genesisState, pattern LedgerState)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -42,6 +43,12 @@ import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkTx)
 import Test.Shelley.Spec.Ledger.Utils (runShelleyBase)
 
+genAccountState :: HasCallStack => Constants -> Gen AccountState
+genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
+  AccountState
+    <$> genCoin minTreasury maxTreasury
+    <*> genCoin minReserves maxReserves
+
 -- The LEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.
 instance TQC.HasTrace LEDGER GenEnv where
@@ -49,7 +56,7 @@ instance TQC.HasTrace LEDGER GenEnv where
     LedgerEnv <$> pure (SlotNo 0)
       <*> pure 0
       <*> genPParams geConstants
-      <*> genCoin 1000000 10000000
+      <*> genAccountState geConstants
 
   sigGen = genTx
 
@@ -62,7 +69,7 @@ instance TQC.HasTrace LEDGERS GenEnv where
   envGen GenEnv {geConstants} =
     LedgersEnv <$> pure (SlotNo 0)
       <*> genPParams geConstants
-      <*> genCoin 1000000 10000000
+      <*> genAccountState geConstants
 
   -- a LEDGERS signal is a sequence of LEDGER signals
   sigGen

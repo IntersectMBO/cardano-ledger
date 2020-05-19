@@ -111,7 +111,7 @@ certificate =
   // 6, move_instantaneous_reward      ; move inst. rewards
   ]
 
-move_instantaneous_reward = { * stake_credential => coin }
+move_instantaneous_reward = [ 0 / 1, { * stake_credential => coin } ]
 
 stake_credential =
   [  0, addr_keyhash

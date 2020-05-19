@@ -16,12 +16,19 @@ where
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
-import Data.List (foldl')
+  ( (?!),
+    InitialRule,
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    liftSTS,
+  )
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.EpochBoundary
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DState (..),
@@ -32,11 +39,12 @@ import Shelley.Spec.Ledger.LedgerState
     _reserves,
     clearPpup,
     emptyAccount,
+    totalInstantaneousReservesRewards,
     pattern UTxOState,
   )
-import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.UTxO
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates, emptyPParams)
+import Shelley.Spec.Ledger.Slot (EpochNo, epochInfoFirst)
+import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 data NEWPP crypto
 
@@ -83,11 +91,13 @@ newPpTransition = do
           Coin oblgNew = obligation ppNew' (_stkCreds dstate) (_stPools pstate) slot
           diff = oblgCurr - oblgNew
           Coin reserves = _reserves acnt
-          Coin requiredInstantaneousRewards = foldl' (+) (Coin 0) $ _irwd dstate
+          Coin requiredInstantaneousRewards = totalInstantaneousReservesRewards (_irwd dstate)
 
       (Coin oblgCurr) == (_deposited utxoSt) ?! UnexpectedDepositPot (Coin oblgCurr) (_deposited utxoSt)
 
       if reserves + diff >= requiredInstantaneousRewards
+        -- Note that instantaneous rewards from the treasury are irrelevant here,
+        -- since changes in the protocol parameters do not change how much is needed from the treasury
         && (_maxTxSize ppNew' + _maxBHSize ppNew') < _maxBBSize ppNew'
         then
           let utxoSt' = utxoSt {_deposited = Coin oblgNew}

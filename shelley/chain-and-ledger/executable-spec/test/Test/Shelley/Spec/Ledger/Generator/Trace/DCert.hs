@@ -42,7 +42,14 @@ import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Delegation.Certificates (decayKey, isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole))
-import Shelley.Spec.Ledger.LedgerState (_dstate, _pstate, _stPools, _stkCreds, keyRefund)
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState,
+    _dstate,
+    _pstate,
+    _stPools,
+    _stkCreds,
+    keyRefund,
+  )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DelplEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -61,7 +68,7 @@ import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 data CERTS
 
 instance STS CERTS where
-  type Environment CERTS = (SlotNo, Ix, PParams, Coin)
+  type Environment CERTS = (SlotNo, Ix, PParams, AccountState)
   type State CERTS = (DPState, Ix)
   type Signal CERTS = Maybe (DCert, CertCred)
 
@@ -77,7 +84,7 @@ instance STS CERTS where
 certsTransition :: TransitionRule CERTS
 certsTransition = do
   TRC
-    ( (slot, txIx, pp, reserves),
+    ( (slot, txIx, pp, acnt),
       (dpState, nextCertIx),
       c
       ) <-
@@ -86,7 +93,7 @@ certsTransition = do
   case c of
     Just (cert, _wits) -> do
       let ptr = Ptr slot txIx nextCertIx
-      dpState' <- trans @DELPL $ TRC (DelplEnv slot ptr pp reserves, dpState, cert)
+      dpState' <- trans @DELPL $ TRC (DelplEnv slot ptr pp acnt, dpState, cert)
 
       pure (dpState', nextCertIx + 1)
     Nothing ->
@@ -136,7 +143,7 @@ genDCerts ::
   SlotNo ->
   Natural ->
   Natural ->
-  Coin ->
+  AccountState ->
   Gen (StrictSeq DCert, [CertCred], Coin, Coin, DPState)
 genDCerts
   ge@( GenEnv
@@ -148,8 +155,8 @@ genDCerts
   slot
   ttl
   txIx
-  reserves = do
-    let env = (slot, txIx, pparams, reserves)
+  acnt = do
+    let env = (slot, txIx, pparams, acnt)
         st0 = (dpState, 0)
 
     certsTrace <-

@@ -152,6 +152,6 @@ isInstantaneousRewards _ = False
 -- one witness, and False otherwise. It is mainly used to ensure
 -- that calling a variant of `cwitness` is safe.
 requiresVKeyWitness :: DCert crypto -> Bool
-requiresVKeyWitness (DCertMir (MIRCert _)) = False
+requiresVKeyWitness (DCertMir (MIRCert _ _)) = False
 requiresVKeyWitness (DCertDeleg (RegKey _)) = False
 requiresVKeyWitness _ = True

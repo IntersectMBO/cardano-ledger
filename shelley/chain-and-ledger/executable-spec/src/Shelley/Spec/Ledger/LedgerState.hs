@@ -26,11 +26,14 @@ module Shelley.Spec.Ledger.LedgerState
     AccountState (..),
     RewardUpdate (..),
     RewardAccounts,
+    InstantaneousRewards (..),
+    emptyInstantaneousRewards,
+    totalInstantaneousReservesRewards,
+    totalInstantaneousTreasuryRewards,
     emptyRewardUpdate,
     FutureGenDeleg (..),
     EpochState (..),
     emptyEpochState,
-    getIR,
     emptyLedgerState,
     emptyUTxOState,
     clearPpup,
@@ -171,6 +174,7 @@ import Shelley.Spec.Ledger.Rewards
     emptyNonMyopic,
     reward,
   )
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
   ( (+*),
     (-*),
@@ -233,6 +237,31 @@ instance Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
     b <- fromCBOR
     pure $ FutureGenDeleg a b
 
+data InstantaneousRewards crypto = InstantaneousRewards
+  { iRReserves :: !(Map (Credential 'Staking crypto) Coin),
+    iRTreasury :: !(Map (Credential 'Staking crypto) Coin)
+  }
+  deriving (Show, Eq, Generic)
+
+totalInstantaneousReservesRewards :: InstantaneousRewards crypto -> Coin
+totalInstantaneousReservesRewards (InstantaneousRewards irR _) = sum irR
+
+totalInstantaneousTreasuryRewards :: InstantaneousRewards crypto -> Coin
+totalInstantaneousTreasuryRewards (InstantaneousRewards _ irT) = sum irT
+
+instance NoUnexpectedThunks (InstantaneousRewards crypto)
+
+instance Crypto crypto => ToCBOR (InstantaneousRewards crypto) where
+  toCBOR (InstantaneousRewards irR irT) =
+    encodeListLen 2 <> mapToCBOR irR <> mapToCBOR irT
+
+instance Crypto crypto => FromCBOR (InstantaneousRewards crypto) where
+  fromCBOR = do
+    enforceSize "InstantaneousRewards" 2
+    irR <- mapFromCBOR
+    irT <- mapFromCBOR
+    pure $ InstantaneousRewards irR irT
+
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
   { -- | The active stake keys.
@@ -252,7 +281,7 @@ data DState crypto = DState
     -- | Genesis key delegations
     _genDelegs :: !(GenDelegs crypto),
     -- | Instantaneous Rewards
-    _irwd :: !(Map (Credential 'Staking crypto) Coin)
+    _irwd :: !(InstantaneousRewards crypto)
   }
   deriving (Show, Eq, Generic)
 
@@ -411,9 +440,6 @@ emptyEpochState :: EpochState crypto
 emptyEpochState =
   EpochState emptyAccount emptySnapShots emptyLedgerState emptyPParams emptyPParams emptyNonMyopic
 
-getIR :: EpochState crypto -> Map (Credential 'Staking crypto) Coin
-getIR = _irwd . _dstate . _delegationState . esLState
-
 emptyLedgerState :: LedgerState crypto
 emptyLedgerState =
   LedgerState
@@ -427,9 +453,19 @@ emptyDelegation :: DPState crypto
 emptyDelegation =
   DPState emptyDState emptyPState
 
+emptyInstantaneousRewards :: InstantaneousRewards crypto
+emptyInstantaneousRewards = InstantaneousRewards Map.empty Map.empty
+
 emptyDState :: DState crypto
 emptyDState =
-  DState (StakeCreds Map.empty) Map.empty Map.empty Map.empty Map.empty (GenDelegs Map.empty) Map.empty
+  DState
+    (StakeCreds Map.empty)
+    Map.empty
+    Map.empty
+    Map.empty
+    Map.empty
+    (GenDelegs Map.empty)
+    emptyInstantaneousRewards
 
 emptyPState :: PState crypto
 emptyPState =

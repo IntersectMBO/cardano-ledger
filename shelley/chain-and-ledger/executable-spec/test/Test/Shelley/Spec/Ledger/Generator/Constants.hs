@@ -80,7 +80,11 @@ data Constants = Constants
     frequencyLowMaxEpoch :: Word64,
     maxMinFeeA :: Natural,
     maxMinFeeB :: Natural,
-    numCoreNodes :: Word64
+    numCoreNodes :: Word64,
+    minTreasury :: Integer,
+    maxTreasury :: Integer,
+    minReserves :: Integer,
+    maxReserves :: Integer
   }
   deriving (Show)
 
@@ -120,5 +124,9 @@ defaultConstants =
       frequencyLowMaxEpoch = 6,
       maxMinFeeA = 1000,
       maxMinFeeB = 3,
-      numCoreNodes = 7
+      numCoreNodes = 7,
+      minTreasury = 1000000,
+      maxTreasury = 10000000,
+      minReserves = 1000000,
+      maxReserves = 10000000
     }

@@ -28,16 +28,26 @@ import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates
-import Shelley.Spec.Ledger.LedgerState (DPState, _dstate, _pstate, emptyDelegation)
-import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState,
+    DPState,
+    _dstate,
+    _pstate,
+    emptyDelegation,
+  )
+import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..))
-import Shelley.Spec.Ledger.STS.Pool
-import Shelley.Spec.Ledger.Slot
+import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..))
+import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.TxData
+  ( DCert (..),
+    DelegCert (..),
+    GenesisDelegCert (..),
+    PoolCert (..),
+    Ptr,
+  )
 
 data DELPL crypto
 
@@ -45,7 +55,7 @@ data DelplEnv = DelplEnv
   { delplSlotNo :: SlotNo,
     delPlPtr :: Ptr,
     delPlPp :: PParams,
-    delPlReserves :: Coin
+    delPlAcnt :: AccountState
   }
 
 instance
@@ -100,7 +110,7 @@ delplTransition ::
   Crypto crypto =>
   TransitionRule (DELPL crypto)
 delplTransition = do
-  TRC (DelplEnv slot ptr pp reserves, d, c) <- judgmentContext
+  TRC (DelplEnv slot ptr pp acnt, d, c) <- judgmentContext
   case c of
     DCertPool (RegPool _) -> do
       ps <-
@@ -112,22 +122,22 @@ delplTransition = do
       pure $ d {_pstate = ps}
     DCertGenesis (GenesisDelegCert {}) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (RegKey _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (DeRegKey _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertDeleg (Delegate _) -> do
       ds <-
-        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
+        trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
     DCertMir _ -> do
-      ds <- trans @(DELEG crypto) $ TRC (DelegEnv slot ptr reserves, _dstate d, c)
+      ds <- trans @(DELEG crypto) $ TRC (DelegEnv slot ptr acnt, _dstate d, c)
       pure $ d {_dstate = ds}
 
 instance

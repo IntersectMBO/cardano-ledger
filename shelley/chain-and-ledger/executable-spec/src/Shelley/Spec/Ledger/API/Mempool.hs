@@ -64,9 +64,7 @@ mkMempoolEnv
     Ledgers.LedgersEnv
       { Ledgers.ledgersSlotNo = slot,
         Ledgers.ledgersPp = LedgerState.esPp nesEs,
-        Ledgers.ledgersReserves =
-          LedgerState._reserves $
-            LedgerState.esAccountState nesEs
+        Ledgers.ledgersAccount = LedgerState.esAccountState nesEs
       }
 
 -- | Construct a mempool state from the wider ledger state.

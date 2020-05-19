@@ -45,7 +45,8 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), coerceKeyRole, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
-  ( _delegationState,
+  ( AccountState (..),
+    _delegationState,
     _dstate,
     _genDelegs,
     _stkCreds,
@@ -240,7 +241,7 @@ genLedgerStateTx keyList (SlotNo _slot) sourceState = do
   let utxo' = (_utxo . _utxoState) sourceState
   slot' <- genWord64 _slot (_slot + 100)
   (txfee', tx) <- genTx keyList utxo' (SlotNo slot')
-  pure (txfee', tx, asStateTransition (SlotNo slot') defPCs sourceState tx (Coin 0))
+  pure (txfee', tx, asStateTransition (SlotNo slot') defPCs sourceState tx (AccountState 0 0))
 
 -- | Generator of a non-emtpy ledger genesis state and a random number of
 -- transactions applied to it. Returns the amount of accumulated fees, the
@@ -360,7 +361,7 @@ genLedgerStateTx' keyList sourceState = do
   pure
     ( txfee',
       tx',
-      asStateTransition' (SlotNo _slot) defPCs (LedgerValidation [] sourceState) tx' (Coin 0)
+      asStateTransition' (SlotNo _slot) defPCs (LedgerValidation [] sourceState) tx' (AccountState 0 0)
     )
 
 -- Generators for 'DelegationData'
@@ -405,14 +406,14 @@ asStateTransition ::
   PParams ->
   LedgerState ->
   Tx ->
-  Coin ->
+  AccountState ->
   Either [ValidationError] LedgerState
-asStateTransition _slot pp ls tx res =
+asStateTransition _slot pp ls tx acnt =
   let next =
         runShelleyBase $
           applySTS @LEDGER
             ( TRC
-                ( (LedgerEnv _slot 0 pp res),
+                ( (LedgerEnv _slot 0 pp acnt),
                   (_utxoState ls, _delegationState ls),
                   tx
                 )
@@ -437,7 +438,7 @@ asStateTransition' ::
   PParams ->
   LedgerValidation ->
   Tx ->
-  Coin ->
+  AccountState ->
   LedgerValidation
 asStateTransition' _slot pp (LedgerValidation valErrors ls) tx _ =
   let ls' = applyTxBody ls pp (_body tx)

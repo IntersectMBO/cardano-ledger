@@ -165,7 +165,8 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
 import Shelley.Spec.Ledger.TxData
-  ( PoolMetaData (..),
+  ( MIRPot (..),
+    PoolMetaData (..),
     StakePoolRelay (..),
     Wdrl (..),
     WitVKey (..),
@@ -732,10 +733,12 @@ serializationUnitTests =
       let rws = Map.singleton testStakeCred 77
        in checkEncodingCBOR
             "mir"
-            (DCertMir (MIRCert rws))
+            (DCertMir (MIRCert ReservesMIR rws))
             ( T
                 ( TkListLen 2
                     . TkWord 6 -- make instantaneous rewards cert
+                    . TkListLen 2
+                    . TkWord 0 -- take from the reserves
                 )
                 <> S rws
             ),
