@@ -15,7 +15,7 @@ module Shelley.Spec.Ledger.STS.Prtcl
     PrtclEnv (..),
     PrtclState (..),
     PredicateFailure (..),
-    PrtlSeqFailure,
+    PrtlSeqFailure(..),
     prtlSeqChecks,
   )
 where
@@ -38,6 +38,7 @@ import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
     LastAppliedBlock (..),
+    PrevHash,
     bhbody,
     lastAppliedHash,
   )
@@ -205,8 +206,20 @@ instance
 
 data PrtlSeqFailure crypto
   = WrongSlotIntervalPrtclSeq
-  | WrongBlockNoPrtclSeq (WithOrigin (LastAppliedBlock crypto)) BlockNo
+      SlotNo
+      -- ^ Last slot number.
+      SlotNo
+      -- ^ Current slot number.
+  | WrongBlockNoPrtclSeq
+      (WithOrigin (LastAppliedBlock crypto))
+      -- ^ Last applied block.
+      BlockNo
+      -- ^ Current block number.
   | WrongBlockSequencePrtclSeq
+      (PrevHash crypto)
+      -- ^ Last applied hash
+      (PrevHash crypto)
+      -- ^ Current block's previous hash
   deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (PrtlSeqFailure crypto)
@@ -220,9 +233,9 @@ prtlSeqChecks lab bh =
   case lab of
     Origin -> pure ()
     At (LastAppliedBlock bL sL _) -> do
-      unless (sL < slot) $ throwError WrongSlotIntervalPrtclSeq
-      unless (bL + 1 == bn) $ throwError $ WrongBlockNoPrtclSeq lab bn
-      unless (ph == bheaderPrev bhb) $ throwError WrongBlockSequencePrtclSeq
+      unless (sL < slot) . throwError $ WrongSlotIntervalPrtclSeq sL slot
+      unless (bL + 1 == bn) . throwError $ WrongBlockNoPrtclSeq lab bn
+      unless (ph == bheaderPrev bhb) . throwError $ WrongBlockSequencePrtclSeq ph (bheaderPrev bhb)
   where
     bhb = bhbody bh
     bn = bheaderBlockNo bhb
