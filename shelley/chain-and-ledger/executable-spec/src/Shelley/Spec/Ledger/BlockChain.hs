@@ -41,7 +41,6 @@ module Shelley.Spec.Ledger.BlockChain
     --
     seedEta,
     seedL,
-    vrfChecks,
     incrBlocks,
     mkSeed,
     checkVRFValue,
@@ -108,7 +107,6 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.Keys
   ( CertifiedVRF,
@@ -119,14 +117,11 @@ import Shelley.Spec.Ledger.Keys
     VKey,
     VRFValue (..),
     VerKeyVRF,
-    coerceKeyRole,
     decodeSignedKES,
     decodeVerKeyVRF,
     encodeSignedKES,
     encodeVerKeyVRF,
     hash,
-    hashKey,
-    hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -609,39 +604,6 @@ mkSeed (Nonce uc) slot nonce =
   Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce))
 mkSeed NeutralNonce slot nonce =
   Seed . coerce $ hash @SHA256 (slot, nonce)
-
-vrfChecks ::
-  forall crypto.
-  ( Crypto crypto,
-    VRF.Signable (VRF crypto) Seed,
-    VRF.ContextVRF (VRF crypto) ~ ()
-  ) =>
-  Nonce ->
-  PoolDistr crypto ->
-  ActiveSlotCoeff ->
-  BHBody crypto ->
-  Bool
-vrfChecks eta0 (PoolDistr pd) f bhb =
-  let sigma' = Map.lookup hk pd
-   in case sigma' of
-        Nothing -> False
-        Just (sigma, vrfHK) ->
-          vrfHK == hashVerKeyVRF vrfK
-            && VRF.verifyCertified
-              ()
-              vrfK
-              (mkSeed seedEta slot eta0)
-              (coerce $ bheaderEta bhb)
-            && VRF.verifyCertified
-              ()
-              vrfK
-              (mkSeed seedL slot eta0)
-              (coerce $ bheaderL bhb)
-            && checkVRFValue (VRF.certifiedNatural $ bheaderL bhb) sigma f
-  where
-    hk = coerceKeyRole . hashKey $ bheaderVk bhb
-    vrfK = bheaderVrfVk bhb
-    slot = bheaderSlotNo bhb
 
 -- | Check that the certified input natural is valid for being slot leader. This
 -- means we check that
