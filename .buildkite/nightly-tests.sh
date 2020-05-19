@@ -6,7 +6,7 @@ pushd shelley/chain-and-ledger/executable-spec/ \
 
 popd
 nix build -f `dirname $0`/.. haskellPackages.cardano-ledger.components.tests.cardano-ledger-test -o cardano-ledger-test
-pushd cardano-ledger \
-  && ../cardano-ledger-test/bin/cardano-ledger-test --scenario=QualityAssurance
+pushd byron/ledger/impl \
+  && ../../../cardano-ledger-test/bin/cardano-ledger-test --scenario=QualityAssurance
 
 popd
