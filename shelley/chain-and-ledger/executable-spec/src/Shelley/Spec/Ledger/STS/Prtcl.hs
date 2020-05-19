@@ -15,7 +15,7 @@ module Shelley.Spec.Ledger.STS.Prtcl
     PrtclEnv (..),
     PrtclState (..),
     PredicateFailure (..),
-    PrtlSeqFailure(..),
+    PrtlSeqFailure (..),
     prtlSeqChecks,
   )
 where
