@@ -47,7 +47,7 @@ instance Crypto ConcreteCrypto where
   type DSIGN ConcreteCrypto = MockDSIGN
   type KES ConcreteCrypto = MockKES 10
   type VRF ConcreteCrypto = FakeVRF
-  networkMagicId _ = Offline
+  networkMagicId _ = Testnet
 
 type DCert = Delegation.Certificates.DCert ConcreteCrypto
 

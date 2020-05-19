@@ -31,9 +31,8 @@ class
   networkMagicId :: proxy c -> Network
 
 data Network
-  = Mainnet
-  | Testnet
-  | Offline
+  = Testnet
+  | Mainnet
   deriving (Eq, Ord, Enum)
 
 networkToWord8 :: Network -> Word8

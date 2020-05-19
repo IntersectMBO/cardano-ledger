@@ -58,42 +58,42 @@ goldenTests =
         "addrBaseKK"
         putAddr
         (Addr keyHash (StakeRefBase keyHash))
-        "020102030401020304",
+        "000102030401020304",
       golden
         "addrBaseSK"
         putAddr
         (Addr scriptHash (StakeRefBase keyHash))
-        "120506070801020304",
+        "100506070801020304",
       golden
         "addrBaseKS"
         putAddr
         (Addr keyHash (StakeRefBase scriptHash))
-        "220102030405060708",
+        "200102030405060708",
       golden
         "addrBaseSS"
         putAddr
         (Addr scriptHash (StakeRefBase scriptHash))
-        "320506070805060708",
+        "300506070805060708",
       golden
         "addrPtrK"
         putAddr
         (Addr keyHash (StakeRefPtr ptr))
-        "420102030481000203",
+        "400102030481000203",
       golden
         "addrPtrS"
         putAddr
         (Addr scriptHash (StakeRefPtr ptr))
-        "520506070881000203",
+        "500506070881000203",
       golden
         "addrEnterpriseK"
         putAddr
         (Addr keyHash StakeRefNull)
-        "6201020304",
+        "6001020304",
       golden
         "addrEnterpriseS"
         putAddr
         (Addr scriptHash StakeRefNull)
-        "7205060708"
+        "7005060708"
     ]
 
 testsWithOtherCrypto :: TestTree
@@ -103,54 +103,34 @@ testsWithOtherCrypto =
     [
       checkSerialiseAddr
         "addrEnterpriseK for network id = 0"
-        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
         "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
       checkSerialiseAddr
         "addrBaseKK for network id = 0"
-        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
       checkSerialiseAddr
         "addrPtrK for network id = 0"
-        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
 
       checkSerialiseAddr
         "addrEnterpriseK for network id = 1"
-        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
         "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
       checkSerialiseAddr
         "addrBaseKK for network id = 1"
-        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
       checkSerialiseAddr
         "addrPtrK for network id = 1"
-        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
-        "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
-
-      checkSerialiseAddr
-        "addrEnterpriseK for network id = 2"
-        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) StakeRefNull)
-        "628a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
-      checkSerialiseAddr
-        "addrBaseKK for network id = 2"
-        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
-        "028a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
-      checkSerialiseAddr
-        "addrPtrK for network id = 2"
-        (Addr @(OtherCrypto 'Offline) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
-        "428a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
+        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
     ]
 
 -- helper data to mimick crypto impl used in cardano-node
 -- influenced by https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
 data OtherCrypto (network :: Network)
-
-instance Crypto (OtherCrypto 'Mainnet) where
-  type DSIGN (OtherCrypto 'Mainnet) = Ed25519DSIGN
-  type KES   (OtherCrypto 'Mainnet) = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF   (OtherCrypto 'Mainnet) = SimpleVRF
-  type HASH  (OtherCrypto 'Mainnet) = Blake2b_256
-  networkMagicId _ = Mainnet
 
 instance Crypto (OtherCrypto 'Testnet) where
   type DSIGN (OtherCrypto 'Testnet) = Ed25519DSIGN
@@ -159,12 +139,12 @@ instance Crypto (OtherCrypto 'Testnet) where
   type HASH  (OtherCrypto 'Testnet) = Blake2b_256
   networkMagicId _ = Testnet
 
-instance Crypto (OtherCrypto 'Offline) where
-  type DSIGN (OtherCrypto 'Offline) = Ed25519DSIGN
-  type KES   (OtherCrypto 'Offline) = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF   (OtherCrypto 'Offline) = SimpleVRF
-  type HASH  (OtherCrypto 'Offline) = Blake2b_256
-  networkMagicId _ = Offline
+instance Crypto (OtherCrypto 'Mainnet) where
+  type DSIGN (OtherCrypto 'Mainnet) = Ed25519DSIGN
+  type KES   (OtherCrypto 'Mainnet) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF   (OtherCrypto 'Mainnet) = SimpleVRF
+  type HASH  (OtherCrypto 'Mainnet) = Blake2b_256
+  networkMagicId _ = Mainnet
 
 type OtherCredential kr (net :: Network) = Credential kr (OtherCrypto net)
 
