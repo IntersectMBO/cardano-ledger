@@ -67,9 +67,9 @@ import Cardano.Binary
     serialize',
     serializeEncoding,
     serializeEncoding',
+    szCases,
     withSlice,
     withWordSize,
-    szCases,
   )
 import Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
@@ -90,10 +90,10 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Sequence (Seq)
-import Data.Word (Word64)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -201,9 +201,9 @@ instance
     encodePreEncoded $ BSL.toStrict $
       bodyBytes <> witsBytes <> metadataBytes
   encodedGroupSizeExpr size _proxy =
-      encodedSizeExpr size (Proxy :: Proxy ByteString)
-    + encodedSizeExpr size (Proxy :: Proxy ByteString)
-    + encodedSizeExpr size (Proxy :: Proxy ByteString)
+    encodedSizeExpr size (Proxy :: Proxy ByteString)
+      + encodedSizeExpr size (Proxy :: Proxy ByteString)
+      + encodedSizeExpr size (Proxy :: Proxy ByteString)
   listLen _ = 3
   listLenBound _ = 3
 
@@ -276,9 +276,9 @@ instance
   where
   toCBOR (BHeader' _ _ bytes) = encodePreEncoded (BSL.toStrict bytes)
   encodedSizeExpr size proxy =
-      1
-    + encodedSizeExpr size (bHeaderBody' <$> proxy)
-    + KES.encodedSigKESSizeExpr ((KES.getSig . bHeaderSig') <$> proxy)
+    1
+      + encodedSizeExpr size (bHeaderBody' <$> proxy)
+      + KES.encodedSigKESSizeExpr ((KES.getSig . bHeaderSig') <$> proxy)
 
 instance
   Crypto crypto =>
@@ -303,16 +303,22 @@ instance
   where
   toCBOR GenesisHash = encodeNull
   toCBOR (BlockHash h) = toCBOR h
-  encodedSizeExpr size proxy = 
+  encodedSizeExpr size proxy =
     szCases
-      [ Case "GenesisHash" 1
-      , Case "BlockHash"   (encodedSizeExpr size
-                             ((\case
-                                  -- we are mapping a 'Proxy', so nothing can
-                                  -- go wrong here
-                                  GenesisHash -> error "impossible happend"
-                                  BlockHash h -> h)
-                              <$> proxy))
+      [ Case "GenesisHash" 1,
+        Case
+          "BlockHash"
+          ( encodedSizeExpr
+              size
+              ( ( \case
+                    -- we are mapping a 'Proxy', so nothing can
+                    -- go wrong here
+                    GenesisHash -> error "impossible happend"
+                    BlockHash h -> h
+                )
+                  <$> proxy
+              )
+          )
       ]
 
 instance
@@ -415,29 +421,28 @@ instance
       pv = bprotver bhBody
 
   encodedSizeExpr size proxy =
-        fromInteger (withWordSize $ 9 + listLenBound oc + listLenBound pv)
-      + encodedSizeExpr              size (bheaderBlockNo     <$> proxy)
-      + encodedSizeExpr              size (bheaderSlotNo      <$> proxy)
-      + encodedSizeExpr              size (bheaderPrev        <$> proxy)
-      + encodedSizeExpr              size (bheaderVk          <$> proxy)
-      + VRF.encodedVerKeyVRFSizeExpr      (bheaderVrfVk       <$> proxy)
-      + encodedSizeExpr              size (bheaderEta         <$> proxy)
-      + encodedSizeExpr              size (bheaderL           <$> proxy)
-      + encodedSizeExpr              size ((toWord64 . bsize) <$> proxy)
-      + encodedSizeExpr              size (bhash              <$> proxy)
-      + encodedSizeExpr              size (bheaderOCert       <$> proxy)
-      + encodedSizeExpr              size (bprotver           <$> proxy)
+    fromInteger (withWordSize $ 9 + listLenBound oc + listLenBound pv)
+      + encodedSizeExpr size (bheaderBlockNo <$> proxy)
+      + encodedSizeExpr size (bheaderSlotNo <$> proxy)
+      + encodedSizeExpr size (bheaderPrev <$> proxy)
+      + encodedSizeExpr size (bheaderVk <$> proxy)
+      + VRF.encodedVerKeyVRFSizeExpr (bheaderVrfVk <$> proxy)
+      + encodedSizeExpr size (bheaderEta <$> proxy)
+      + encodedSizeExpr size (bheaderL <$> proxy)
+      + encodedSizeExpr size ((toWord64 . bsize) <$> proxy)
+      + encodedSizeExpr size (bhash <$> proxy)
+      + encodedSizeExpr size (bheaderOCert <$> proxy)
+      + encodedSizeExpr size (bprotver <$> proxy)
     where
       oc = bheaderOCert <$> proxy
-      pv = bprotver     <$> proxy
-
+      pv = bprotver <$> proxy
       toWord64 :: Natural -> Word64
       toWord64 = fromIntegral
 
-
-instance Crypto crypto
-  => FromCBOR (BHBody crypto)
- where
+instance
+  Crypto crypto =>
+  FromCBOR (BHBody crypto)
+  where
   fromCBOR = do
     n <- decodeListLen
     bheaderBlockNo <- fromCBOR

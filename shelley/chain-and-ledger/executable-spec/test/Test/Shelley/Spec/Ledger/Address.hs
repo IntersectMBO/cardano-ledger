@@ -13,9 +13,9 @@ module Test.Shelley.Spec.Ledger.Address
   )
 where
 
-import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
-import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..) )
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
+import Cardano.Crypto.Hash.Class (Hash (..), HashAlgorithm (..))
 import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
 import qualified Data.Binary as B
@@ -26,7 +26,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as LB16
 import qualified Data.ByteString.Lazy as LBS
 import Data.Proxy (Proxy (..))
-import GHC.Stack ( HasCallStack )
+import GHC.Stack (HasCallStack)
 import Hedgehog (Gen)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as H
@@ -100,8 +100,7 @@ testsWithOtherCrypto :: TestTree
 testsWithOtherCrypto =
   T.testGroup
     "serialiseAddr tests with OtherCrypto"
-    [
-      checkSerialiseAddr
+    [ checkSerialiseAddr
         "addrEnterpriseK for network id = 0"
         (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
         "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
@@ -113,7 +112,6 @@ testsWithOtherCrypto =
         "addrPtrK for network id = 0"
         (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
-
       checkSerialiseAddr
         "addrEnterpriseK for network id = 1"
         (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
@@ -134,23 +132,26 @@ data OtherCrypto (network :: Network)
 
 instance Crypto (OtherCrypto 'Testnet) where
   type DSIGN (OtherCrypto 'Testnet) = Ed25519DSIGN
-  type KES   (OtherCrypto 'Testnet) = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF   (OtherCrypto 'Testnet) = SimpleVRF
-  type HASH  (OtherCrypto 'Testnet) = Blake2b_256
+  type KES (OtherCrypto 'Testnet) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF (OtherCrypto 'Testnet) = SimpleVRF
+  type HASH (OtherCrypto 'Testnet) = Blake2b_256
   networkMagicId _ = Testnet
 
 instance Crypto (OtherCrypto 'Mainnet) where
   type DSIGN (OtherCrypto 'Mainnet) = Ed25519DSIGN
-  type KES   (OtherCrypto 'Mainnet) = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF   (OtherCrypto 'Mainnet) = SimpleVRF
-  type HASH  (OtherCrypto 'Mainnet) = Blake2b_256
+  type KES (OtherCrypto 'Mainnet) = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF (OtherCrypto 'Mainnet) = SimpleVRF
+  type HASH (OtherCrypto 'Mainnet) = Blake2b_256
   networkMagicId _ = Mainnet
 
 type OtherCredential kr (net :: Network) = Credential kr (OtherCrypto net)
 
-checkSerialiseAddr
-    :: Crypto (OtherCrypto network)
-    => String -> Addr (OtherCrypto network) -> BS.ByteString -> TestTree
+checkSerialiseAddr ::
+  Crypto (OtherCrypto network) =>
+  String ->
+  Addr (OtherCrypto network) ->
+  BS.ByteString ->
+  TestTree
 checkSerialiseAddr name value expected =
   T.testCase name $
     T.assertEqual name expected (B16.encode . serialiseAddr $ value)
@@ -170,18 +171,20 @@ keyBlake2b224 vk =
   where
     hash = digest (Proxy :: Proxy Blake2b_224)
     vk' = invariantSize 32 vk
-    hk = invariantSize
+    hk =
+      invariantSize
         (fromIntegral $ sizeHash (Proxy :: Proxy Blake2b_224))
         (hash vk')
 
 invariantSize :: HasCallStack => Int -> BS.ByteString -> BS.ByteString
 invariantSize expectedLength bytes
-    | BS.length bytes == expectedLength = bytes
-    | otherwise = error
-      $ "length was "
-      ++ show (BS.length bytes)
-      ++ ", but expected to be "
-      ++ show expectedLength
+  | BS.length bytes == expectedLength = bytes
+  | otherwise =
+    error $
+      "length was "
+        ++ show (BS.length bytes)
+        ++ ", but expected to be "
+        ++ show expectedLength
 
 golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
 golden name put value expected =
