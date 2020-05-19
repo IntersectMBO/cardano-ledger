@@ -1,6 +1,0 @@
-steps:
-  - label: 'nightly tests'
-    command:
-      - ".buildkite/nightly-tests.sh"
-    agents:
-      system: x86_64-linux
