@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,7 +16,7 @@ module Shelley.Spec.Ledger.STS.Prtcl
     PrtclEnv (..),
     PrtclState (..),
     PredicateFailure (..),
-    PrtlSeqFailure(..),
+    PrtlSeqFailure (..),
     prtlSeqChecks,
   )
 where
@@ -42,7 +43,7 @@ import Shelley.Spec.Ledger.BlockChain
     bhbody,
     lastAppliedHash,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
@@ -138,11 +139,15 @@ instance
   data PredicateFailure (PRTCL crypto)
     = OverlayFailure (PredicateFailure (OVERLAY crypto))
     | UpdnFailure (PredicateFailure (UPDN crypto))
-    deriving (Show, Eq, Generic)
+    deriving (Generic)
 
   initialRules = []
 
   transitionRules = [prtclTransition]
+
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Show (PredicateFailure (PRTCL crypto))
+
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (PRTCL crypto))
 
 prtclTransition ::
   forall crypto.
