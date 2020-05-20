@@ -86,7 +86,6 @@ import Cardano.Binary
     encodeNull,
     enforceSize,
     peekTokenType,
-    serialize,
   )
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NoUnexpectedThunks (..))
@@ -646,16 +645,7 @@ txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
     inputSize = smallArray + uint + hashObj
     numOutputs = toInteger . length . _outputs $ txbody
     outputSize = smallArray + uint + address
-    rest =
-      toInteger . BSL.length . serialize $
-        tx
-          { _body =
-              txbody
-                { _outputs = StrictSeq.empty,
-                  _inputs = Set.empty,
-                  _txfee = 0
-                }
-          }
+    rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 
 -- | Minimum fee calculation
 minfee :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin

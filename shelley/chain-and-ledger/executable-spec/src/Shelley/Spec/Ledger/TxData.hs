@@ -40,7 +40,8 @@ module Shelley.Spec.Ledger.TxData
         _txfee,
         _ttl,
         _txUpdate,
-        _mdHash
+        _mdHash,
+        extraSize
       ),
     TxId (..),
     TxIn (..),
@@ -61,6 +62,7 @@ import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary
   ( Annotator (..),
     Case (..),
+    Decoder,
     FromCBOR (fromCBOR),
     Size,
     ToCBOR (..),
@@ -74,7 +76,9 @@ import Cardano.Binary
     enforceSize,
     matchSize,
     serializeEncoding,
+    serializeEncoding',
     szCases,
+    withSlice,
   )
 import Cardano.Prelude
   ( AllowThunksIn (..),
@@ -87,9 +91,11 @@ import Cardano.Prelude
   )
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
 import Data.IP (IPv4, IPv6)
+import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
@@ -145,6 +151,7 @@ import Shelley.Spec.Ledger.Serialization
     decodeNullMaybe,
     decodeRecordNamed,
     decodeSet,
+    decodeStrictSeq,
     encodeFoldable,
     encodeNullMaybe,
     ipv4FromCBOR,
@@ -153,7 +160,6 @@ import Shelley.Spec.Ledger.Serialization
     ipv6ToCBOR,
     mapFromCBOR,
     mapToCBOR,
-    unwrapCborStrictSeq,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
@@ -328,7 +334,8 @@ data TxBody crypto = TxBody'
     _ttl' :: !SlotNo,
     _txUpdate' :: !(StrictMaybe (Update crypto)),
     _mdHash' :: !(StrictMaybe (MetaDataHash crypto)),
-    bodyBytes :: LByteString
+    bodyBytes :: LByteString,
+    extraSize :: Int64 -- This is the contribution of inputs, outputs, and fees to the size of the transaction
   }
   deriving (Show, Eq, Generic)
   deriving
@@ -366,18 +373,22 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
               else encodeMapElement ix enc x
           l =
             catMaybes
-              [ encodeMapElement 0 encodeFoldable _inputs,
-                encodeMapElement 1 encodeFoldable _outputs,
-                encodeMapElement 2 toCBOR _txfee,
+              [ encodeMapElement 0 encodePreEncoded inputBytes,
+                encodeMapElement 1 encodePreEncoded outputBytes,
+                encodeMapElement 2 encodePreEncoded feeBytes,
                 encodeMapElement 3 toCBOR _ttl,
                 encodeMapElementUnless null 4 encodeFoldable _certs,
                 encodeMapElementUnless (null . unWdrl) 5 toCBOR _wdrls,
                 encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate,
                 encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash
               ]
+          inputBytes = serializeEncoding' $ encodeFoldable _inputs
+          outputBytes = serializeEncoding' $ encodeFoldable _outputs
+          feeBytes = serializeEncoding' $ toCBOR _txfee
+          es = fromIntegral $ BS.length inputBytes + BS.length outputBytes + BS.length feeBytes
           n = fromIntegral $ length l
           bytes = serializeEncoding $ encodeMapLen n <> fold l
-       in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes
+       in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes es
 
 {-# COMPLETE TxBody #-}
 
@@ -573,14 +584,26 @@ instance
   fromCBOR = annotatorSlice $ do
     mapParts <- decodeMapContents $
       decodeWord >>= \case
-        0 -> decodeSet fromCBOR >>= \x -> pure (0, \t -> t {_inputs = x})
-        1 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (1, \t -> t {_outputs' = x})
-        2 -> fromCBOR >>= \x -> pure (2, \t -> t {_txfee' = x})
-        3 -> fromCBOR >>= \x -> pure (3, \t -> t {_ttl' = x})
-        4 -> (unwrapCborStrictSeq <$> fromCBOR) >>= \x -> pure (4, \t -> t {_certs' = x})
-        5 -> fromCBOR >>= \x -> pure (5, \t -> t {_wdrls' = x})
-        6 -> fromCBOR >>= \x -> pure (6, \t -> t {_txUpdate' = SJust x})
-        7 -> fromCBOR >>= \x -> pure (7, \t -> t {_mdHash' = SJust x})
+        0 -> f 0 (decodeSet fromCBOR) $ \bytes x t ->
+          t
+            { _inputs' = x,
+              extraSize = extraSize t + BSL.length bytes
+            }
+        1 -> f 1 (decodeStrictSeq fromCBOR) $ \bytes x t ->
+          t
+            { _outputs' = x,
+              extraSize = extraSize t + BSL.length bytes
+            }
+        2 -> f 2 fromCBOR $ \bytes x t ->
+          t
+            { _txfee' = x,
+              extraSize = extraSize t + BSL.length bytes
+            }
+        3 -> f 3 fromCBOR $ \_ x t -> t {_ttl' = x}
+        4 -> f 4 (decodeStrictSeq fromCBOR) $ \_ x t -> t {_certs' = x}
+        5 -> f 5 fromCBOR $ \_ x t -> t {_wdrls' = x}
+        6 -> f 6 fromCBOR $ \_ x t -> t {_txUpdate' = SJust x}
+        7 -> f 7 fromCBOR $ \_ x t -> t {_mdHash' = SJust x}
         k -> invalidKey k
     let requiredFields :: Map Int String
         requiredFields =
@@ -595,9 +618,19 @@ instance
     unless
       (null missingFields)
       (fail $ "missing required transaction component(s): " <> show missingFields)
-    pure $ Annotator $ \_fullbytes bytes ->
-      (foldr ($) basebody (snd <$> mapParts)) {bodyBytes = bytes}
+    pure $ Annotator $ \fullbytes bytes ->
+      (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
     where
+      f ::
+        Int ->
+        Decoder s a ->
+        (LByteString -> a -> TxBody crypto -> TxBody crypto) ->
+        Decoder s (Int, Annotator (TxBody crypto -> TxBody crypto))
+      f key decoder updater = do
+        (x, annBytes) <- withSlice decoder
+        let result = Annotator $ \fullbytes txbody ->
+              updater (runAnnotator annBytes fullbytes) x txbody
+        pure (key, result)
       basebody =
         TxBody'
           { _inputs' = Set.empty,
@@ -608,7 +641,8 @@ instance
             _wdrls' = Wdrl Map.empty,
             _txUpdate' = SNothing,
             _mdHash' = SNothing,
-            bodyBytes = mempty
+            bodyBytes = mempty,
+            extraSize = 0
           }
 
 instance ToCBOR PoolMetaData where
@@ -690,7 +724,7 @@ instance
     margin <- fromCBOR
     ra <- fromCBOR
     owners <- decodeSet fromCBOR
-    relays <- fromCBOR
+    relays <- decodeStrictSeq fromCBOR
     md <- decodeNullMaybe fromCBOR
     pure $
       PoolParams
@@ -701,7 +735,7 @@ instance
           _poolMargin = margin,
           _poolRAcnt = ra,
           _poolOwners = owners,
-          _poolRelays = unwrapCborStrictSeq relays,
+          _poolRelays = relays,
           _poolMD = maybeToStrictMaybe md
         }
 
