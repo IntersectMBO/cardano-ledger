@@ -22,29 +22,29 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 033a66c705a24d2d29732f7fb2fceaa9674b7ba5
-  --sha256: 0qw2sv4h0zhnrh79nip4k183f2nvj3sf8bnkq0bpywr65y7q0qyv
+  tag: 9b82346b78e212fcd3e795faf9dd7f3266ab7297
+  --sha256: 04iv32x233bck4xd34x2g0yaxj438f57d3z6m0pvvzj2yca1slxm
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 033a66c705a24d2d29732f7fb2fceaa9674b7ba5
-  --sha256: 0qw2sv4h0zhnrh79nip4k183f2nvj3sf8bnkq0bpywr65y7q0qyv
+  tag: 9b82346b78e212fcd3e795faf9dd7f3266ab7297
+  --sha256: 04iv32x233bck4xd34x2g0yaxj438f57d3z6m0pvvzj2yca1slxm
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 033a66c705a24d2d29732f7fb2fceaa9674b7ba5
-  --sha256: 0qw2sv4h0zhnrh79nip4k183f2nvj3sf8bnkq0bpywr65y7q0qyv
+  tag: 9b82346b78e212fcd3e795faf9dd7f3266ab7297
+  --sha256: 04iv32x233bck4xd34x2g0yaxj438f57d3z6m0pvvzj2yca1slxm
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 033a66c705a24d2d29732f7fb2fceaa9674b7ba5
-  --sha256: 0qw2sv4h0zhnrh79nip4k183f2nvj3sf8bnkq0bpywr65y7q0qyv
+  tag: 9b82346b78e212fcd3e795faf9dd7f3266ab7297
+  --sha256: 04iv32x233bck4xd34x2g0yaxj438f57d3z6m0pvvzj2yca1slxm
   subdir: slotting
 
 source-repository-package
@@ -56,21 +56,21 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: bd7eb69d27bfaee46d435bc1d2720520b1446426
-  --sha256: 1cmxh1gk7lvgs6bfr8v6k2lpjxmk0qam58clvdvxkybrlbh186ps
+  tag: 594f587bfab626a405ac532112cc0b942ad3efdb
+  --sha256: 09h9kd6drhw53i1k8ahwk95kb0c1nbbxr8f3p9rx63yq3hdga2cw
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: bd7eb69d27bfaee46d435bc1d2720520b1446426
-  --sha256: 1cmxh1gk7lvgs6bfr8v6k2lpjxmk0qam58clvdvxkybrlbh186ps
+  tag: 594f587bfab626a405ac532112cc0b942ad3efdb
+  --sha256: 09h9kd6drhw53i1k8ahwk95kb0c1nbbxr8f3p9rx63yq3hdga2cw
   subdir: test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: d998ff661aebae783a68725f3834af472bfa6468
-  --sha256: 1bycl2iaribc242xk6l0li0qi86b2sz061mgc99q9p2qgb21p8af
+  tag: 20309d5aa56b0ae5fd982465297a1d87aa5658a1
+  --sha256: 0j4k6faiy2isqfm12lmwz7szpdrkzxhfz6ljjkv5r2v41v0hnx6f
   subdir:   contra-tracer
 
 source-repository-package
