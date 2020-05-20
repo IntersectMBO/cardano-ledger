@@ -25,6 +25,7 @@ module Shelley.Spec.Ledger.BlockChain
     Block (Block),
     LaxBlock (..),
     TxSeq (TxSeq),
+    HashBBody,
     bhHash,
     bbHash,
     hashHeaderToNonce,

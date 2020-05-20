@@ -459,7 +459,7 @@ predicateFailureToValidationError (UtxowFailure (UtxoFailure InputSetEmptyUTxO))
   InputSetEmpty
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (ExpiredUTxO a b))) =
   Expired a b
-predicateFailureToValidationError (UtxowFailure (UtxoFailure BadInputsUTxO)) =
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (BadInputsUTxO _))) =
   BadInputs
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (FeeTooSmallUTxO a b))) =
   FeeTooSmall a b

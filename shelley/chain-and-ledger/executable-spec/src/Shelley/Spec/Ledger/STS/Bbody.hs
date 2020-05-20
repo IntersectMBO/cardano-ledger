@@ -66,8 +66,8 @@ instance
   type BaseM (BBODY crypto) = ShelleyBase
 
   data PredicateFailure (BBODY crypto)
-    = WrongBlockBodySizeBBODY
-    | InvalidBodyHashBBODY
+    = WrongBlockBodySizeBBODY Int Int
+    | InvalidBodyHashBBODY (HashBBody crypto) (HashBBody crypto)
     | LedgersFailure (PredicateFailure (LEDGERS crypto))
     deriving (Show, Eq, Generic)
 
@@ -92,10 +92,13 @@ bbodyTransition =
            ) -> do
         let hk = hashKey $ bheaderVk bhb
             TxSeq txs = txsSeq
+            actualBodySize = bBodySize txsSeq
+            actualBodyHash = bbHash txsSeq
 
-        bBodySize txsSeq == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
+        actualBodySize == fromIntegral (hBbsize bhb)
+          ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ hBbsize bhb)
 
-        bbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
+        actualBodyHash == bhash bhb ?! InvalidBodyHashBBODY actualBodyHash (bhash bhb)
 
         ls' <-
           trans @(LEDGERS crypto) $

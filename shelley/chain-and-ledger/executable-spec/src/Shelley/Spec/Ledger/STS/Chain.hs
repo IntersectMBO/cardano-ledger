@@ -175,8 +175,8 @@ instance
   type BaseM (CHAIN crypto) = ShelleyBase
 
   data PredicateFailure (CHAIN crypto)
-    = HeaderSizeTooLargeCHAIN
-    | BlockSizeTooLargeCHAIN
+    = HeaderSizeTooLargeCHAIN Int Natural
+    | BlockSizeTooLargeCHAIN Natural Natural
     | ObsoleteNodeCHAIN !Natural !Natural
     | BbodyFailure !(PredicateFailure (BBODY crypto))
     | TickFailure (PredicateFailure (TICK crypto))
@@ -197,8 +197,12 @@ chainChecks ::
   m ()
 chainChecks maxpv pp bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp) $ throwError HeaderSizeTooLargeCHAIN
-  unless (hBbsize (bhbody bh) <= _maxBBSize pp) $ throwError BlockSizeTooLargeCHAIN
+  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp)
+    $ throwError
+    $ HeaderSizeTooLargeCHAIN (bHeaderSize bh) (_maxBHSize pp)
+  unless (hBbsize (bhbody bh) <= _maxBBSize pp)
+    $ throwError
+    $ BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)
   where
     (ProtVer m _) = _protocolVersion pp
 

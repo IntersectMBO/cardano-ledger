@@ -18,6 +18,7 @@ import Cardano.Prelude (NoUnexpectedThunks, asks)
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -44,12 +45,12 @@ instance
   type Environment (OCERT crypto) = OCertEnv crypto
   type BaseM (OCERT crypto) = ShelleyBase
   data PredicateFailure (OCERT crypto)
-    = KESBeforeStartOCERT
-    | KESAfterEndOCERT
-    | KESPeriodWrongOCERT
-    | InvalidSignatureOCERT
+    = KESBeforeStartOCERT KESPeriod KESPeriod
+    | KESAfterEndOCERT KESPeriod KESPeriod Word64
+    | KESPeriodWrongOCERT Natural Natural
+    | InvalidSignatureOCERT Natural KESPeriod -- TODO use whole OCert
     | InvalidKesSignatureOCERT Word Word Word String
-    | NoCounterForKeyHashOCERT
+    | NoCounterForKeyHashOCERT (KeyHash 'BlockIssuer crypto)
     deriving (Show, Eq, Generic)
 
   initialRules = [pure Map.empty]
@@ -72,8 +73,9 @@ ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
 
   maxKESiterations <- liftSTS $ asks maxKESEvo
 
-  c0 <= kp ?! KESBeforeStartOCERT
-  kp_ < c0_ + (fromIntegral maxKESiterations) ?! KESAfterEndOCERT
+  c0 <= kp ?! KESBeforeStartOCERT c0 kp
+  kp_ < c0_ + (fromIntegral maxKESiterations)
+    ?! KESAfterEndOCERT kp c0 maxKESiterations
 
   let t = if kp_ >= c0_ then kp_ - c0_ else 0 -- this is required to prevent an
   -- arithmetic underflow, in the
@@ -81,13 +83,13 @@ ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
   -- above `KESBeforeStartOCERT`
   -- predicate failure in the
   -- transition.
-  verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
+  verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT n c0
   verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
 
   case currentIssueNo env cs hk of
     Nothing -> do
-      failBecause NoCounterForKeyHashOCERT
+      failBecause $ NoCounterForKeyHashOCERT hk
       pure cs
     Just m -> do
-      m <= n ?! KESPeriodWrongOCERT
+      m <= n ?! KESPeriodWrongOCERT m n
       pure $ cs ⨃ [(hk, n)]

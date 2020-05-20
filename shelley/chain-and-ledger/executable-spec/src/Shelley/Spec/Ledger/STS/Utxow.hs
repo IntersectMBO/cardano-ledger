@@ -74,7 +74,7 @@ instance
     | MissingScriptWitnessesUTXOW
     | ScriptWitnessNotValidatingUTXOW
     | UtxoFailure (PredicateFailure (UTXO crypto))
-    | MIRInsufficientGenesisSigsUTXOW
+    | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness crypto))
     | MIRImpossibleInDecentralizedNetUTXOW
     | BadMetaDataHashUTXOW
     deriving (Eq, Generic, Show)
@@ -98,7 +98,7 @@ instance
     (UtxoFailure a) ->
       encodeListLen 2 <> toCBOR (4 :: Word8)
         <> toCBOR a
-    MIRInsufficientGenesisSigsUTXOW -> encodeListLen 1 <> toCBOR (5 :: Word8)
+    MIRInsufficientGenesisSigsUTXOW sigs -> encodeListLen 2 <> toCBOR (5 :: Word8) <> encodeFoldable sigs
     MIRImpossibleInDecentralizedNetUTXOW -> encodeListLen 1 <> toCBOR (6 :: Word8)
     BadMetaDataHashUTXOW -> encodeListLen 1 <> toCBOR (7 :: Word8)
 
@@ -125,9 +125,10 @@ instance
         matchSize "UtxoFailure" 2 n
         a <- fromCBOR
         pure $ UtxoFailure a
-      5 ->
-        matchSize "MIRInsufficientGenesisSigsUTXOW" 1 n
-          >> pure MIRInsufficientGenesisSigsUTXOW
+      5 -> do
+        matchSize "MIRInsufficientGenesisSigsUTXOW" 2 n
+        s <- fromCBOR
+        pure $ MIRInsufficientGenesisSigsUTXOW s
       6 ->
         matchSize "MIRImpossibleInDecentralizedNetUTXOW" 1 n
           >> pure MIRImpossibleInDecentralizedNetUTXOW
@@ -200,7 +201,7 @@ utxoWitnessed =
       ( (not $ null mirCerts)
           ==> Set.size genSig >= fromIntegral coreNodeQuorum
         )
-        ?! MIRInsufficientGenesisSigsUTXOW
+        ?! MIRInsufficientGenesisSigsUTXOW genSig
       ( (not $ null mirCerts)
           ==> (0 < intervalValue (_d pp))
         )
