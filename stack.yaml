@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/bd7eb69d27bfaee46d435bc1d2720520b1446426/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/594f587bfab626a405ac532112cc0b942ad3efdb/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
@@ -23,22 +23,27 @@ extra-deps:
 - Unique-0.4.7.6
 - bimap-0.4.0
 - monad-stm-0.1.0.2
+- generic-monoid-0.1.0.0
 
 - git: https://github.com/input-output-hk/cardano-crypto
   commit: 2547ad1e80aeabca2899951601079408becbc92c
 
 - git: https://github.com/input-output-hk/cardano-prelude
-  commit: bd7eb69d27bfaee46d435bc1d2720520b1446426
+  commit: 594f587bfab626a405ac532112cc0b942ad3efdb
+  subdirs:
+    - .
+    - test
 
 - git: https://github.com/input-output-hk/cardano-base
-  commit: 033a66c705a24d2d29732f7fb2fceaa9674b7ba5
+  commit: 9b82346b78e212fcd3e795faf9dd7f3266ab7297
   subdirs:
     - binary
+    - binary/test
     - cardano-crypto-class
     - slotting
 
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
-  commit: d998ff661aebae783a68725f3834af472bfa6468
+  commit: 20309d5aa56b0ae5fd982465297a1d87aa5658a1
   subdirs:
     - contra-tracer
 
