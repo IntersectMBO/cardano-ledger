@@ -766,7 +766,7 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     unspendableKeyHash = KeyHash (coerce (hash 0 :: Hash crypto Int))
     insertHK txin hkeys =
       case txinLookup txin utxo' of
-        Just (TxOut (Addr (KeyHashObj pay) _) _) -> Set.insert pay hkeys
+        Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert pay hkeys
         Just (TxOut (AddrBootstrap _) _) -> Set.insert unspendableKeyHash hkeys
         -- NOTE: Until Byron addresses are supported, we insert an unspendible keyhash
         _ -> hkeys

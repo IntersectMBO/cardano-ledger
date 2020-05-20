@@ -326,8 +326,8 @@ findPayKeyPairCred c keyHashMap =
 findPayKeyPairAddr :: HasCallStack => Addr -> Map (KeyHash Testing) (KeyPair Testing) -> KeyPair 'Payment
 findPayKeyPairAddr a keyHashMap = fromTesting $
   case a of
-    Addr addr (StakeRefBase _) -> findPayKeyPairCred (toTesting addr) keyHashMap
-    Addr addr (StakeRefPtr _) -> findPayKeyPairCred (toTesting addr) keyHashMap
+    Addr _ addr (StakeRefBase _) -> findPayKeyPairCred (toTesting addr) keyHashMap
+    Addr _ addr (StakeRefPtr _) -> findPayKeyPairCred (toTesting addr) keyHashMap
     _ ->
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
@@ -361,9 +361,9 @@ findStakeScriptFromCred c scripts =
 findPayScriptFromAddr :: HasCallStack => Addr -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScriptFromAddr a scripts =
   case a of
-    Addr scriptHash (StakeRefBase _) ->
+    Addr _ scriptHash (StakeRefBase _) ->
       findPayScriptFromCred (asWitness scriptHash) scripts
-    Addr scriptHash (StakeRefPtr _) ->
+    Addr _ scriptHash (StakeRefPtr _) ->
       findPayScriptFromCred (asWitness scriptHash) scripts
     _ ->
       error "findPayScriptFromAddr: expects only base and pointer script addresses"

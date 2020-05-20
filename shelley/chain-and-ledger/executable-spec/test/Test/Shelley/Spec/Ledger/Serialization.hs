@@ -46,7 +46,8 @@ import Hedgehog.Range (constantBounded)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (..),
+  ( Network (..),
+    Nonce (..),
     StrictMaybe (..),
     UnitInterval (..),
     mkNonce,
@@ -382,7 +383,7 @@ testKESKeys :: (SignKeyKES, VerKeyKES)
 testKESKeys = mkKESKeyPair (0, 0, 0, 0, 3)
 
 testAddrE :: Addr
-testAddrE = Addr (KeyHashObj testKeyHash1) StakeRefNull
+testAddrE = Addr Testnet (KeyHashObj testKeyHash1) StakeRefNull
 
 testPayCred :: Credential 'Payment
 testPayCred = KeyHashObj testKeyHash1
@@ -547,7 +548,7 @@ serializationTests =
         "txin"
         (TxIn genesisId 0 :: TxIn)
         (T (TkListLen 2) <> S (genesisId :: TxId) <> T (TkWord64 0)),
-      let a = Addr testPayCred StakeRefNull
+      let a = Addr Testnet testPayCred StakeRefNull
        in checkEncodingCBOR
             "txout"
             (TxOut a (Coin 2))

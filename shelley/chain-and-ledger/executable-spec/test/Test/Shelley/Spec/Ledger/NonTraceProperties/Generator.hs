@@ -40,7 +40,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Numeric.Natural
 import Shelley.Spec.Ledger.Address (pattern Addr)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), coerceKeyRole, hashKey, vKey)
@@ -98,7 +98,7 @@ import Test.Shelley.Spec.Ledger.Utils
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
 findPayKeyPair :: Addr -> KeyPairs -> KeyPair 'Payment
-findPayKeyPair (Addr (KeyHashObj addr) _) keyList =
+findPayKeyPair (Addr _ (KeyHashObj addr) _) keyList =
   case matches of
     [] -> error "findPayKeyPair: could not find a match for the given address"
     (x : _) -> fst x
@@ -151,7 +151,7 @@ hashKeyPairs keyPairs =
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
 addrTxins :: KeyPairs -> [Addr]
-addrTxins keyPairs = uncurry Addr <$> hashKeyPairs keyPairs
+addrTxins keyPairs = uncurry (Addr Testnet) <$> hashKeyPairs keyPairs
 
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
 -- coins, with values between 'minCoin' and 'maxCoin'.
@@ -204,6 +204,7 @@ genTx keyList (UTxO m) cslot = do
         fmap
           ( \(p, d) ->
               Addr
+                Testnet
                 (KeyHashObj . hashKey $ vKey p)
                 (StakeRefBase . KeyHashObj . hashKey $ vKey d)
           )

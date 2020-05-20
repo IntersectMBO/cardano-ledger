@@ -43,6 +43,7 @@ import Hedgehog ((===), MonadTest)
 import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
+    Network (..),
     ShelleyBase,
     UnitInterval,
     mkActiveSlotCoeff,
@@ -126,6 +127,7 @@ mkKESKeyPair seed =
 mkAddr :: (KeyPair 'Payment, KeyPair 'Staking) -> Addr
 mkAddr (payKey, stakeKey) =
   Addr
+    Testnet
     (KeyHashObj . hashKey $ vKey payKey)
     (StakeRefBase . KeyHashObj . hashKey $ vKey stakeKey)
 
@@ -146,7 +148,8 @@ testGlobals =
       quorum = 5,
       maxMajorPV = 1000,
       maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000,
-      activeSlotCoeff = mkActiveSlotCoeff . unsafeMkUnitInterval $ 0.9
+      activeSlotCoeff = mkActiveSlotCoeff . unsafeMkUnitInterval $ 0.9,
+      networkId = Testnet
     }
 
 runShelleyBase :: ShelleyBase a -> a

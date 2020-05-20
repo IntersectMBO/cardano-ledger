@@ -63,6 +63,7 @@ aliceStake = KeyPair 2 2
 aliceAddr :: Addr
 aliceAddr =
   Addr
+    Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
@@ -75,6 +76,7 @@ bobStake = KeyPair 4 4
 bobAddr :: Addr
 bobAddr =
   Addr
+    Testnet
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
 

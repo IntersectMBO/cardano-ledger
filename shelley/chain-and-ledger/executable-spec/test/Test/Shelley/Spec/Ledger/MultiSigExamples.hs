@@ -21,7 +21,11 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
 import Shelley.Spec.Ledger.Address (pattern Addr)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Network (..),
+    StrictMaybe (..),
+    maybeToStrictMaybe,
+  )
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential
   ( pattern KeyHashObj,
@@ -80,7 +84,7 @@ import Test.Shelley.Spec.Ledger.Utils
 
 -- Multi-signature scripts
 singleKeyOnly :: Addr -> MultiSig
-singleKeyOnly (Addr (KeyHashObj pk) _) = RequireSignature $ asWitness pk
+singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
 aliceOnly :: MultiSig
@@ -174,6 +178,7 @@ initialUTxOState aliceKeep msigs =
           ++ map
             ( \(msig, c) ->
                 ( Addr
+                    Testnet
                     (ScriptHashObj $ hashScript msig)
                     (StakeRefBase $ ScriptHashObj $ hashScript msig),
                   c

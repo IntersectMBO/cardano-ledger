@@ -21,12 +21,10 @@ import Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
     decodeWord,
     encodeListLen,
-    matchSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -35,6 +33,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.Address (Addr, getNetwork)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto
@@ -51,9 +50,15 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Ppup
-import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization
+  ( decodeList,
+    decodeRecordNamed,
+    decodeSet,
+    encodeFoldable,
+  )
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
+import Shelley.Spec.Ledger.TxData (TxBody (..))
 import Shelley.Spec.Ledger.UTxO
 
 data UTXO crypto
@@ -91,6 +96,9 @@ instance
     | ValueNotConservedUTxO
         !Coin -- the Coin consumed by this transaction
         !Coin -- the Coin produced by this transaction
+    | WrongNetwork
+        !Network -- the expected network id
+        !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
     | OutputTooSmallUTxO
         ![TxOut crypto] -- list of supplied transaction outputs that are too small
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
@@ -130,48 +138,49 @@ instance
     (UpdateFailure a) ->
       encodeListLen 2 <> toCBOR (7 :: Word8)
         <> toCBOR a
+    (WrongNetwork right wrongs) ->
+      encodeListLen 3 <> toCBOR (8 :: Word8)
+        <> toCBOR right
+        <> encodeFoldable wrongs
 
 instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (UTXO crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> do
-        ins <- decodeSet fromCBOR
-        matchSize "BadInputsUTxO" 2 n
-        pure $ BadInputsUTxO ins
-      1 -> do
-        matchSize "ExpiredUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ ExpiredUTxO a b
-      2 -> do
-        matchSize "MaxTxSizeUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ MaxTxSizeUTxO a b
-      3 -> matchSize "InputSetEmptyUTxO" 1 n >> pure InputSetEmptyUTxO
-      4 -> do
-        matchSize "FeeTooSmallUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ FeeTooSmallUTxO a b
-      5 -> do
-        matchSize "ValueNotConservedUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ ValueNotConservedUTxO a b
-      6 -> do
-        matchSize "OutputTooSmallUTxO" 2 n
-        outs <- decodeList fromCBOR
-        pure $ OutputTooSmallUTxO outs
-      7 -> do
-        matchSize "UpdateFailure" 2 n
-        a <- fromCBOR
-        pure $ UpdateFailure a
-      k -> invalidKey k
+  fromCBOR =
+    fmap snd $ decodeRecordNamed "PredicateFailureUTXO" fst $
+      decodeWord >>= \case
+        0 -> (,) 0 <$> do
+          ins <- decodeSet fromCBOR
+          pure $ BadInputsUTxO ins
+        1 -> (,) 1 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ ExpiredUTxO a b
+        2 -> (,) 2 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ MaxTxSizeUTxO a b
+        3 -> (,) 3 <$> pure InputSetEmptyUTxO
+        4 -> (,) 4 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ FeeTooSmallUTxO a b
+        5 -> (,) 5 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ ValueNotConservedUTxO a b
+        6 -> (,) 6 <$> do
+          outs <- decodeList fromCBOR
+          pure $ OutputTooSmallUTxO outs
+        7 -> (,) 7 <$> do
+          a <- fromCBOR
+          pure $ UpdateFailure a
+        8 -> (,) 8 <$> do
+          right <- fromCBOR
+          wrongs <- fromCBOR
+          pure $ WrongNetwork right wrongs
+        k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do
@@ -197,6 +206,13 @@ utxoInductive = do
 
   let validInputs = dom utxo
   txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+
+  ni <- liftSTS $ asks networkId
+  let addrsWrongNetwork =
+        filter
+          (\a -> getNetwork a /= ni)
+          (fmap (\(TxOut a _) -> a) $ toList $ _outputs txb)
+  null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
 
   let consumed_ = consumed pp utxo stakeCreds txb
       produced_ = produced pp stakepools txb
