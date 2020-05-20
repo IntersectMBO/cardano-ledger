@@ -126,9 +126,9 @@ data PParams' f = PParams
     _nOpt :: !(HKD f Natural),
     -- | Pool influence
     _a0 :: !(HKD f Rational),
-    -- | Treasury expansion
-    _rho :: !(HKD f UnitInterval),
     -- | Monetary expansion
+    _rho :: !(HKD f UnitInterval),
+    -- | Treasury expansion
     _tau :: !(HKD f UnitInterval),
     -- | Decentralization parameter
     _d :: !(HKD f UnitInterval),
