@@ -81,10 +81,36 @@ instance
 
   data PredicateFailure (OVERLAY crypto)
     = VRFKeyUnknown (KeyHash 'StakePool crypto)
-    | VRFKeyWrongVRFKey (Hash crypto (VerKeyVRF crypto)) (Hash crypto (VerKeyVRF crypto))
-    | VRFKeyBadNonce Nonce SlotNo Nonce (VRF.CertifiedVRF (VRF crypto) Nonce)
-    | VRFKeyBadLeaderValue Nonce SlotNo Nonce (VRF.CertifiedVRF (VRF crypto) UnitInterval)
-    | VRFLeaderValueTooBig Natural Rational ActiveSlotCoeff
+    | VRFKeyWrongVRFKey
+        (Hash crypto (VerKeyVRF crypto))
+        -- ^ Registered/correct VRF key hash (exists in stake pool distribution).
+        (Hash crypto (VerKeyVRF crypto))
+        -- ^ Unregistered/incorrect VRF key hash (does not exist in
+        -- stake pool distribution).
+    | VRFKeyBadNonce
+        Nonce
+        -- ^ Seed nonce.
+        SlotNo
+        -- ^ Current slot number.
+        Nonce
+        -- ^ Previous header hash as nonce.
+        (VRF.CertifiedVRF (VRF crypto) Nonce)
+        -- ^ Block nonce.
+    | VRFKeyBadLeaderValue
+        Nonce
+        -- ^ Seed nonce.
+        SlotNo
+        -- ^ Current slot number.
+        Nonce
+        -- ^ Previous header hash as nonce.
+        (VRF.CertifiedVRF (VRF crypto) UnitInterval)
+        -- ^ Leader election value.
+    | VRFLeaderValueTooBig
+        Natural
+        -- ^ Leader Election value
+        Rational
+        -- ^ "Weight"/sigma of delegation pool
+        ActiveSlotCoeff
     | NotActiveSlotOVERLAY SlotNo
     | WrongGenesisColdKeyOVERLAY (KeyHash 'BlockIssuer crypto) (KeyHash 'GenesisDelegate crypto)
     | UnknownGenesisKeyOVERLAY (KeyHash 'Genesis crypto)
