@@ -34,6 +34,9 @@ module Test.Shelley.Spec.Ledger.Examples
     ex5D,
     ex5E,
     ex5F',
+    ex6A,
+    ex6BExpectedNES,
+    ex6BPoolParams,
     test5F,
     -- key pairs and example addresses
     alicePay,
@@ -163,6 +166,7 @@ import Shelley.Spec.Ledger.LedgerState
     _delegations,
     _dstate,
     _fGenDelegs,
+    _fPParams,
     _genDelegs,
     _irwd,
     _pParams,
@@ -178,6 +182,7 @@ import Shelley.Spec.Ledger.LedgerState
     deltaT,
     emptyDState,
     emptyPState,
+    emptyRewardUpdate,
     esAccountState,
     esLState,
     esPp,
@@ -1012,15 +1017,7 @@ expectedStEx2Bgeneric pp =
         (BlocksMade Map.empty) -- Blocks made before current
         (EpochState acntEx2A emptySnapShots expectedLSEx2B pp pp emptyNonMyopic)
         -- Previous epoch state
-        ( SJust
-            RewardUpdate
-              { deltaT = Coin 0,
-                deltaR = Coin 0,
-                rs = Map.empty,
-                deltaF = Coin 0,
-                nonMyopic = emptyNonMyopic
-              } -- Update reward
-        )
+        (SJust emptyRewardUpdate)
         (PoolDistr Map.empty)
         (overlayScheduleFor (EpochNo 0))
     )
@@ -2538,15 +2535,7 @@ expectedStEx4B =
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
         (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1 ppsEx1 emptyNonMyopic)
-        ( SJust
-            RewardUpdate
-              { deltaT = Coin 0,
-                deltaR = Coin 0,
-                rs = Map.empty,
-                deltaF = Coin 0,
-                nonMyopic = emptyNonMyopic
-              }
-        )
+        (SJust emptyRewardUpdate)
         (PoolDistr Map.empty)
         (overlayScheduleFor (EpochNo 0))
     )
@@ -2908,3 +2897,116 @@ test5F = do
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
       assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5FState
+
+-- * Example 6A - apply CHAIN transition to re-register a stake pool late in the epoch
+-- This example continues on from example 2A.
+
+feeEx6A :: Coin
+feeEx6A = Coin 3
+
+aliceCoinEx6A :: Coin
+aliceCoinEx6A = aliceCoinEx2A - feeEx6A
+
+alicePoolParams6A :: PoolParams
+alicePoolParams6A = alicePoolParams {_poolCost = Coin 500}
+
+txbodyEx6A :: TxBody
+txbodyEx6A =
+  TxBody
+    (Set.fromList [TxIn (txid txbodyEx2A) 0])
+    (StrictSeq.fromList [TxOut aliceAddr aliceCoinEx6A])
+    ( StrictSeq.fromList
+        ( [ DCertPool (RegPool alicePoolParams6A)
+          ]
+        )
+    )
+    (Wdrl Map.empty)
+    feeEx6A
+    (SlotNo 100)
+    SNothing
+    SNothing
+
+txEx6A :: Tx
+txEx6A =
+  Tx
+    txbodyEx6A
+    ( makeWitnessesVKey
+        (hashTxBody txbodyEx6A)
+        ( (asWitness <$> [alicePay])
+            <> (asWitness <$> [cold alicePool])
+        )
+    )
+    Map.empty
+    SNothing
+
+blockEx6A :: Block
+blockEx6A =
+  mkBlock
+    blockEx2AHash
+    (slotKeys 90)
+    [txEx6A]
+    (SlotNo 90) -- This is late in the epoch
+    (BlockNo 2)
+    (mkNonce 0)
+    (NatNonce 2)
+    zero
+    4
+    0
+    (mkOCert (slotKeys 90) 0 (KESPeriod 0))
+
+blockEx6AHash :: HashHeader
+blockEx6AHash = bhHash (bheader blockEx6A)
+
+psEx6A :: PState
+psEx6A = psEx2A {_fPParams = Map.singleton (hk alicePool) alicePoolParams6A}
+
+expectedLSEx6A :: LedgerState
+expectedLSEx6A =
+  LedgerState
+    ( UTxOState
+        ( UTxO . Map.fromList $
+            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
+              (TxIn (txid txbodyEx6A) 0, TxOut aliceAddr aliceCoinEx6A)
+            ]
+        )
+        (Coin 271)
+        (Coin 3 + feeEx6A)
+        ppupEx2A
+    )
+    (DPState dsEx2A psEx6A)
+
+expectedStEx6A :: ChainState
+expectedStEx6A =
+  ChainState
+    ( NewEpochState
+        (EpochNo 0)
+        (BlocksMade Map.empty)
+        (BlocksMade Map.empty)
+        (EpochState acntEx2A emptySnapShots expectedLSEx6A ppsEx1 ppsEx1 emptyNonMyopic)
+        (SJust emptyRewardUpdate)
+        (PoolDistr Map.empty)
+        (overlayScheduleFor (EpochNo 0))
+    )
+    oCertIssueNosEx1
+    nonce0
+    (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2)
+    (nonce0 ⭒ mkNonce 1)
+    NeutralNonce
+    ( At $
+        LastAppliedBlock
+          (BlockNo 2)
+          (SlotNo 90)
+          blockEx6AHash
+    )
+
+ex6A :: CHAINExample
+ex6A = CHAINExample expectedStEx2A blockEx6A (Right expectedStEx6A)
+
+-- * Example 6B - If The TICK rule is applied to the NewEpochState
+-- in expectedStEx6A, then the future pool parameters should be adopted
+
+ex6BExpectedNES :: NewEpochState
+ex6BExpectedNES = chainNes expectedStEx6A
+
+ex6BPoolParams :: Map (KeyHash 'StakePool) PoolParams
+ex6BPoolParams = Map.singleton (hk alicePool) alicePoolParams6A

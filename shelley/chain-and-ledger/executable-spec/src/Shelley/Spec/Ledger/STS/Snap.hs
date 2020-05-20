@@ -65,7 +65,7 @@ snapTransition = do
 
   let UTxOState utxo deposits' fees _ = u
   let DState stkCreds _ _ _ _ _ _ = dstate
-  let PState stpools _ _ = pstate
+  let PState stpools _ _ _ = pstate
   let stake = stakeDistr utxo dstate pstate
   _slot <- liftSTS $ do
     ei <- asks epochInfo

@@ -132,7 +132,7 @@ ledgerTransition = do
 
   let DPState dstate pstate = dpstate
       DState stkCreds _ _ _ _ genDelegs _ = dstate
-      PState stpools _ _ = pstate
+      PState stpools _ _ _ = pstate
 
   utxoSt' <-
     trans @(UTXOW crypto) $

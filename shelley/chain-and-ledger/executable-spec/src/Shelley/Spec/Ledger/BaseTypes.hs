@@ -251,7 +251,7 @@ text64FromCBOR = do
 --
 
 newtype Url = Url {urlToText :: Text}
-  deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
+  deriving (Eq, Ord, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
@@ -260,7 +260,7 @@ instance FromCBOR Url where
   fromCBOR = Url <$> text64FromCBOR
 
 newtype DnsName = DnsName {dnsToText :: Text}
-  deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
+  deriving (Eq, Ord, Generic, Show, ToCBOR, NoUnexpectedThunks)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t

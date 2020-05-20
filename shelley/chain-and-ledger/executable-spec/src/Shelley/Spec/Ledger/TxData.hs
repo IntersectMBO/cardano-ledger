@@ -176,7 +176,7 @@ data PoolMetaData = PoolMetaData
   { _poolMDUrl :: !Url,
     _poolMDHash :: !ByteString
   }
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Ord, Generic, Show)
 
 instance NoUnexpectedThunks PoolMetaData
 
@@ -187,7 +187,7 @@ data StakePoolRelay
     SingleHostName !(StrictMaybe Port) !DnsName
   | -- | A @SRV@ DNS record
     MultiHostName !(StrictMaybe Port) !DnsName
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Ord, Generic, Show)
 
 instance NoUnexpectedThunks StakePoolRelay
 
@@ -236,7 +236,7 @@ data PoolParams crypto = PoolParams
     _poolRelays :: !(StrictSeq StakePoolRelay),
     _poolMD :: !(StrictMaybe PoolMetaData)
   }
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
   deriving (ToCBOR) via CBORGroup (PoolParams crypto)
   deriving (FromCBOR) via CBORGroup (PoolParams crypto)
 

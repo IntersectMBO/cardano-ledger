@@ -17,7 +17,7 @@ import Byron.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord, encodeListLen, matchSize)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
+import Control.State.Transition ((?!), STS (..), TRC (..), TransitionRule, failBecause, judgmentContext, liftSTS)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -25,14 +25,13 @@ import Data.Typeable (Typeable)
 import Data.Word as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates
-import Shelley.Spec.Ledger.Keys
-import Shelley.Spec.Ledger.LedgerState
-import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.Slot ((*-), Duration (..), EpochNo (..), SlotNo, epochInfoEpoch, epochInfoFirst)
+import Shelley.Spec.Ledger.TxData (DCert (..), PoolCert (..), PoolParams (..), StakePools (..))
 
 data POOL crypto
 
@@ -102,6 +101,7 @@ poolDelegationTransition = do
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
+
       let hk = _poolPubKey poolParam
       if hk ∉ dom stpools
         then -- register new, Pool-Reg
@@ -111,13 +111,27 @@ poolDelegationTransition = do
               { _stPools = StakePools $ stpools ∪ (hk, slot),
                 _pParams = _pParams ps ∪ (hk, poolParam)
               }
-        else -- re-register, Pool-reReg
+        else do
+          -- re-register, Pool-reReg
+          sp <- liftSTS $ asks stabilityWindow
+          firstSlot <- liftSTS $ do
+            ei <- asks epochInfo
+            EpochNo currEpoch <- epochInfoEpoch ei slot
+            epochInfoFirst ei $ EpochNo (currEpoch + 1)
 
-          pure $
-            ps
-              { _pParams = _pParams ps ⨃ (hk, poolParam),
-                _retiring = Set.singleton hk ⋪ _retiring ps
-              }
+          case slot < firstSlot *- Duration sp of
+            True ->
+              pure $ -- non-late re-registration
+                ps
+                  { _pParams = _pParams ps ⨃ (hk, poolParam),
+                    _retiring = Set.singleton hk ⋪ _retiring ps
+                  }
+            False ->
+              pure $ -- late re-registration
+                ps
+                  { _fPParams = _fPParams ps ⨃ (hk, poolParam),
+                    _retiring = Set.singleton hk ⋪ _retiring ps
+                  }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       hk ∈ dom stpools ?! StakePoolNotRegisteredOnKeyPOOL hk

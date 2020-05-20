@@ -13,15 +13,17 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
+import Byron.Spec.Ledger.Core ((⨃))
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
-import Control.State.Transition
+import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.EpochBoundary
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
+    PState (..),
     _delegationState,
     _ppups,
     _utxoState,
@@ -36,12 +38,12 @@ import Shelley.Spec.Ledger.LedgerState
     pattern DPState,
     pattern EpochState,
   )
-import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (..), emptyPParams, updatePParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import Shelley.Spec.Ledger.STS.Newpp
-import Shelley.Spec.Ledger.STS.PoolReap
-import Shelley.Spec.Ledger.STS.Snap
-import Shelley.Spec.Ledger.Slot
+import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
+import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
+import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapEnv (..), SnapState (..))
+import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH crypto
 
@@ -108,8 +110,16 @@ epochTransition = do
   let DPState dstate pstate = _delegationState ls
   SnapState ss' utxoSt' <-
     trans @(SNAP crypto) $ TRC (SnapEnv pp dstate pstate, SnapState ss utxoSt, e)
-  PoolreapState utxoSt'' acnt' dstate' pstate' <-
-    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt' acnt dstate pstate, e)
+
+  let PState _ pParams fPParams _ = pstate
+      ppp = pParams ⨃ (Map.toList fPParams)
+      pstate' =
+        pstate
+          { _pParams = ppp,
+            _fPParams = Map.empty
+          }
+  PoolreapState utxoSt'' acnt' dstate' pstate'' <-
+    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt' acnt dstate pstate', e)
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
@@ -122,7 +132,7 @@ epochTransition = do
     EpochState
       acnt''
       ss'
-      (ls {_utxoState = utxoSt''', _delegationState = DPState dstate' pstate'})
+      (ls {_utxoState = utxoSt''', _delegationState = DPState dstate' pstate''})
       pp
       pp'
       nm

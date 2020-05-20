@@ -223,7 +223,7 @@ pStateIsInternallyConsistent ssts =
     map isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
   where
     isConsistent :: State POOL -> Property
-    isConsistent (PState stPools_ pParams_ retiring_) = do
+    isConsistent (PState stPools_ pParams_ _ retiring_) = do
       let StakePools stPoolsMap = stPools_
           poolKeys = M.keysSet stPoolsMap
           pParamKeys = M.keysSet pParams_

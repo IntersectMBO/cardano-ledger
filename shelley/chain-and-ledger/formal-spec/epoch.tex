@@ -862,10 +862,13 @@ $\Quorum > |\var{genDelegs}|/2$ \textbf{.}
 The epoch transition rule calls $\mathsf{SNAP}$, $\mathsf{POOLREAP}$ and $\mathsf{NEWPP}$
 in sequence. It also stores the previous protocol parameters in $\var{prevPp}$.
 The previous protocol parameters will be used for the reward calculation in the upcoming epoch,
-note that they correspond to the epoch for which the reward are being calculated.
+note that they correspond to the epoch for which the rewards are being calculated.
+Additionally, this transition also adopts the pool parameters $\var{fPoolParams}$
+corresponding to the pool re-registration certificates which we submitted late in the ending epoch.
 The ordering of these rules is important.
-The stake pools which will be reaped during the $\mathsf{POOLREAP}$ transition must still be a
-part of the new snapshot, and so $\mathsf{SNAP}$ must occur before $\mathsf{POOLREAP}$.
+The stake pools which will be updated by $\var{fPoolParams}$ or
+reaped during the $\mathsf{POOLREAP}$ transition must still be a
+part of the new snapshot, and so $\mathsf{SNAP}$ must occur before these two actions.
 Moreover, $\mathsf{SNAP}$ sets the deposit pot equal to current obligation,
 which is a property that is preserved by $\mathsf{POOLREAP}$ and which
 is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ transition.
@@ -908,6 +911,11 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
         \right)
       }
       \\~\\~\\
+      (\var{stpools},~\var{poolParams},~\var{fPoolParams},~\var{retiring})\leteq\var{pstate}
+      \\
+      \var{pstate'}\leteq(\var{stpools},~\var{poolParams}\unionoverrideRight\var{fPoolParams},
+      ~\emptyset,~\var{retiring})
+      \\~\\~\\
       \var{pp}
       \vdash
       \left(
@@ -916,7 +924,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
             \var{utxoSt'} \\
             \var{acnt} \\
             \var{dstate} \\
-            \var{pstate} \\
+            \var{pstate'} \\
           \end{array}
         }
       \right)
@@ -927,7 +935,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
             \var{utxoSt''} \\
             \var{acnt'} \\
             \var{dstate'} \\
-            \var{pstate'} \\
+            \var{pstate''} \\
         \end{array}
       }
       \right)
@@ -939,7 +947,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
         \begin{array}{r}
           \var{pp_{new}}\\
           \var{dstate'}\\
-          \var{pstate'}\\
+          \var{pstate''}\\
         \end{array}
       }
       \vdash
@@ -963,7 +971,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       }
       \right)
       \\~\\~\\
-      \var{ls}' \leteq (\var{utxoSt}''',~(\var{dstate}',~\var{pstate}'))
+      \var{ls}' \leteq (\var{utxoSt}''',~(\var{dstate}',~\var{pstate}''))
     }
     {
       \vdash

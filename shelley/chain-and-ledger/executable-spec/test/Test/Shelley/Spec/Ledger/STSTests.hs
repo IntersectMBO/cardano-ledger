@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -6,15 +7,27 @@ module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import Data.Either (fromRight, isRight)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, singleton)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
-import Shelley.Spec.Ledger.Keys (asWitness, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
+import Shelley.Spec.Ledger.LedgerState
+  ( _delegationState,
+    _fPParams,
+    _pParams,
+    _pstate,
+    esLState,
+    getGKeys,
+    nesEs,
+  )
 import Shelley.Spec.Ledger.STS.Chain (totalAda)
+import Shelley.Spec.Ledger.STS.Tick (pattern TickEnv)
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
+import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, KeyHash, NewEpochState, PoolParams, TICK, TickEnv)
 import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
     alicePay,
@@ -48,6 +61,9 @@ import Test.Shelley.Spec.Ledger.Examples
     ex5D,
     ex5E,
     ex5F',
+    ex6A,
+    ex6BExpectedNES,
+    ex6BPoolParams,
     test5F,
   )
 import Test.Shelley.Spec.Ledger.MultiSigExamples
@@ -73,11 +89,46 @@ testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
   let st = runShelleyBase $ applySTS @CHAIN (TRC ((), initSt, block))
   st @?= predicateFailure
 
+-- | Applies the TICK transition to a given chain state,
+-- and check that some component of the result is as expected.
+testTICKChainState ::
+  (Show a, Eq a) =>
+  NewEpochState ->
+  TickEnv ->
+  SlotNo ->
+  (NewEpochState -> a) ->
+  a ->
+  Assertion
+testTICKChainState initSt env slot focus expectedSt = do
+  let result = runShelleyBase $ applySTS @TICK (TRC (env, initSt, slot))
+  case result of
+    Right res -> focus res @?= expectedSt
+    Left err -> assertFailure $ show err
+
 testPreservationOfAda :: CHAINExample -> Assertion
 testPreservationOfAda (CHAINExample _ _ (Right expectedSt)) =
   totalAda expectedSt @?= maxLLSupply
 testPreservationOfAda (CHAINExample _ _ (Left predicateFailure)) =
   assertFailure $ "Ada not preserved " ++ show predicateFailure
+
+newEpochToPoolParams ::
+  NewEpochState ->
+  (Map (KeyHash 'StakePool) PoolParams)
+newEpochToPoolParams = _pParams . _pstate . _delegationState . esLState . nesEs
+
+newEpochToFuturePoolParams ::
+  NewEpochState ->
+  (Map (KeyHash 'StakePool) PoolParams)
+newEpochToFuturePoolParams = _fPParams . _pstate . _delegationState . esLState . nesEs
+
+testAdoptLatePoolRegistration :: Assertion
+testAdoptLatePoolRegistration =
+  testTICKChainState
+    ex6BExpectedNES
+    (TickEnv $ getGKeys ex6BExpectedNES)
+    (SlotNo 110)
+    (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
+    (ex6BPoolParams, Map.empty)
 
 stsTests :: TestTree
 stsTests =
@@ -110,6 +161,8 @@ stsTests =
       testCase "CHAIN example 5D - FAIL: MIR impossible (decentralized and insufficient sigs)" $ testCHAINExample ex5D,
       testCase "CHAIN example 5E - FAIL: MIR insufficient reserves" $ testCHAINExample ex5E,
       testCase "CHAIN example 5F - apply MIR at epoch boundary" test5F,
+      testCase "CHAIN example 6A - Late Pool Re-registration" $ testCHAINExample ex6A,
+      testCase "CHAIN example 6B - Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration,
       testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda ex1,
       testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda ex2A,
       testCase "CHAIN example 2B - Preservation of ADA" $ testPreservationOfAda ex2B,
@@ -131,6 +184,7 @@ stsTests =
       testCase "CHAIN example 5A - Preservation of ADA" $ testPreservationOfAda ex5A,
       testCase "CHAIN example 5F - Preservation of ADA" $
         (totalAda (fromRight (error "CHAIN example 5F") ex5F') @?= maxLLSupply),
+      testCase "CHAIN example 6A - Preservation of ADA" $ testPreservationOfAda ex6A,
       testCase "Alice uses SingleSig script" testAliceSignsAlone,
       testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign,
       testCase "Everybody signs in multi-sig" testEverybodySigns,
