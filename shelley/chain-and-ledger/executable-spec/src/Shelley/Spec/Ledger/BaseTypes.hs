@@ -91,7 +91,7 @@ fpEpsilon = (10 :: FixedPoint) ^ (17 :: Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnsafeUnitInterval Rational -- TODO: Fixed precision
-  deriving (Show, Ord, Eq, NoUnexpectedThunks)
+  deriving (Show, Ord, Eq, NoUnexpectedThunks, Generic)
 
 instance ToCBOR UnitInterval where
   toCBOR (UnsafeUnitInterval u) = rationalToCBOR u
