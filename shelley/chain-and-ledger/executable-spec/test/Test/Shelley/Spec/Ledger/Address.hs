@@ -38,6 +38,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto (..), Network (..))
 import Shelley.Spec.Ledger.Keys (pattern KeyHash)
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as C
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
@@ -232,7 +233,11 @@ putGet name gen put get = T.testProperty (name <> "_bytes") $ H.property $ do
       Right (_, _, result) -> Just result
 
 genAddr :: Gen C.Addr
-genAddr = Addr <$> genCredential <*> genStakeReference
+genAddr =
+  H.frequency
+    [ (5, Addr <$> genCredential <*> genStakeReference),
+      (1, AddrBootstrap <$> Byron.genAddress)
+    ]
   where
     genCredential = H.choice [genKeyHash, genScriptHash]
     genStakeReference =

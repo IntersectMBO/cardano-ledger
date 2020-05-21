@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -32,9 +33,10 @@ module Shelley.Spec.Ledger.Address
   )
 where
 
-import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..), decodeFull, serialize)
+import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError, panic)
+import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError)
 import Control.Monad (unless)
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
@@ -110,7 +112,7 @@ deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
 -- | An address for UTxO.
 data Addr crypto
   = Addr !(PaymentCredential crypto) !(StakeReference crypto)
-  | AddrBootstrap !(KeyHash 'Payment crypto) -- TODO: replace with bigger byron address
+  | AddrBootstrap !(Byron.Address)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance NoUnexpectedThunks (Addr crypto)
@@ -131,7 +133,7 @@ payCredIsScript :: Int
 payCredIsScript = 4
 
 putAddr :: forall crypto. Crypto crypto => Addr crypto -> Put
-putAddr (AddrBootstrap _kh) = panic "Shelley.Spec.Ledger.Address.putAddr: TODO: defer to byron"
+putAddr (AddrBootstrap byronAddr) = B.putLazyByteString (serialize byronAddr)
 putAddr (Addr pc sr) =
   let setPayCredBit = case pc of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -207,7 +209,9 @@ putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 
 getByron :: Get (Addr crypto)
-getByron = panic "Shelley.Spec.Ledger.Address.getByron: undefined"
+getByron = decodeFull <$> B.getRemainingLazyByteString >>= \case
+  Left e -> fail (show e)
+  Right r -> pure $ AddrBootstrap r
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
