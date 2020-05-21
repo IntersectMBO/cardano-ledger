@@ -48,10 +48,21 @@ instance STS (PPUP crypto) where
   type Environment (PPUP crypto) = PPUPEnv crypto
   type BaseM (PPUP crypto) = ShelleyBase
   data PredicateFailure (PPUP crypto)
-    = NonGenesisUpdatePPUP (Set (KeyHash 'Genesis crypto)) (Set (KeyHash 'Genesis crypto))
-    | PPUpdateTooLatePPUP SlotNo SlotNo
-    | PPUpdateWrongEpoch EpochNo
+    = NonGenesisUpdatePPUP
+        { pfPPUPvoters :: Set (KeyHash 'Genesis crypto), -- KeyHashes which are voting
+          pfPPUPgenesisKeyhashes :: Set (KeyHash 'Genesis crypto) -- KeyHashes which should be voting
+        }
+    | PPUpdateTooLatePPUP
+        { pfPPUPslot :: SlotNo, -- current slot
+          pfPPUPtooLate :: SlotNo -- bound on when votes are allowed this epoch
+        }
+    | PPUpdateWrongEpoch
+        { pfPPUPepoch :: EpochNo, -- current epoch
+          pfPPUPintendedEpoch :: EpochNo -- intended epoch of update
+        }
     | PVCannotFollowPPUP
+        { pfPPUPbadPV :: ProtVer -- the first bad protocol version
+        }
     deriving (Show, Eq, Generic)
 
   initialRules = []
@@ -71,8 +82,8 @@ instance
         <> toCBOR a
         <> toCBOR b
     PPUpdateTooLatePPUP s t -> encodeListLen 3 <> toCBOR (1 :: Word8) <> toCBOR s <> toCBOR t
-    (PPUpdateWrongEpoch e) -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR e
-    PVCannotFollowPPUP -> encodeListLen 1 <> toCBOR (3 :: Word8)
+    PPUpdateWrongEpoch ce e -> encodeListLen 3 <> toCBOR (2 :: Word8) <> toCBOR ce <> toCBOR e
+    PVCannotFollowPPUP p -> encodeListLen 2 <> toCBOR (3 :: Word8) <> toCBOR p
 
 instance
   (Crypto crypto) =>
@@ -92,10 +103,14 @@ instance
         t <- fromCBOR
         pure $ PPUpdateTooLatePPUP s t
       2 -> do
-        matchSize "PPUpdateWrongEpoch" 2 n
+        matchSize "PPUpdateWrongEpoch" 3 n
         a <- fromCBOR
-        pure $ PPUpdateWrongEpoch a
-      3 -> matchSize "PVCannotFollowPPUP" 1 n >> pure PVCannotFollowPPUP
+        b <- fromCBOR
+        pure $ PPUpdateWrongEpoch a b
+      3 -> do
+        matchSize "PVCannotFollowPPUP" 2 n
+        p <- fromCBOR
+        pure $ PVCannotFollowPPUP p
       k -> invalidKey k
 
 pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
@@ -113,7 +128,11 @@ ppupTransitionNonEmpty = do
     Just (Update (ProposedPPUpdates pup) te) -> do
       (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (dom pup) (dom _genDelegs)
 
-      all ((pvCanFollow (_protocolVersion pp)) . _protocolVersion) pup ?! PVCannotFollowPPUP
+      let goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
+      let badPVs = Map.filter (not . goodPV) pup
+      case Map.toList (Map.map _protocolVersion badPVs) of
+        ((_, SJust pv) : _) -> failBecause $ PVCannotFollowPPUP pv
+        _ -> pure ()
 
       sp <- liftSTS $ asks stabilityWindow
       firstSlotNextEpoch <- liftSTS $ do
@@ -126,6 +145,6 @@ ppupTransitionNonEmpty = do
       currentEpoch <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoEpoch ei slot
-      currentEpoch == te ?! PPUpdateWrongEpoch te
+      currentEpoch == te ?! PPUpdateWrongEpoch currentEpoch te
 
       pure $ ProposedPPUpdates (pupS ⨃ Map.toList pup)

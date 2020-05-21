@@ -50,7 +50,7 @@ instance STS (SNAP crypto) where
   type Signal (SNAP crypto) = EpochNo
   type Environment (SNAP crypto) = SnapEnv crypto
   type BaseM (SNAP crypto) = ShelleyBase
-  data PredicateFailure (SNAP crypto)
+  data PredicateFailure (SNAP crypto) -- No predicate failures
     deriving (Show, Generic, Eq)
 
   initialRules =

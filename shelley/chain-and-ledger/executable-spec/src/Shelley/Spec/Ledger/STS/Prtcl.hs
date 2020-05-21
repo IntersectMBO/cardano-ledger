@@ -137,8 +137,8 @@ instance
   type BaseM (PRTCL crypto) = ShelleyBase
 
   data PredicateFailure (PRTCL crypto)
-    = OverlayFailure (PredicateFailure (OVERLAY crypto))
-    | UpdnFailure (PredicateFailure (UPDN crypto))
+    = OverlayFailure (PredicateFailure (OVERLAY crypto)) -- Subtransition Failures
+    | UpdnFailure (PredicateFailure (UPDN crypto)) -- Subtransition Failures
     deriving (Generic)
 
   initialRules = []

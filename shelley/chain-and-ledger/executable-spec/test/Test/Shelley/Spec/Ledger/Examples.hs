@@ -31,13 +31,11 @@ module Test.Shelley.Spec.Ledger.Examples
     ex5A,
     ex5B,
     ex5C,
-    ex5D,
-    ex5E,
-    ex5F',
+    ex5D',
     ex6A,
     ex6BExpectedNES,
     ex6BPoolParams,
-    test5F,
+    test5D,
     -- key pairs and example addresses
     alicePay,
     aliceStake,
@@ -185,7 +183,6 @@ import Shelley.Spec.Ledger.LedgerState
     emptyRewardUpdate,
     esAccountState,
     esLState,
-    esPp,
     genesisCoins,
     genesisId,
     nesEs,
@@ -251,8 +248,7 @@ import Shelley.Spec.Ledger.STS.Delpl (pattern DelegFailure)
 import Shelley.Spec.Ledger.STS.Ledger (pattern DelegsFailure, pattern UtxowFailure)
 import Shelley.Spec.Ledger.STS.Ledgers (pattern LedgerFailure)
 import Shelley.Spec.Ledger.STS.Utxow
-  ( pattern MIRImpossibleInDecentralizedNetUTXOW,
-    pattern MIRInsufficientGenesisSigsUTXOW,
+  ( pattern MIRInsufficientGenesisSigsUTXOW,
   )
 import Shelley.Spec.Ledger.Slot
   ( (+*),
@@ -2697,29 +2693,9 @@ expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure $ MIR
 ex5B :: CHAINExample
 ex5B = CHAINExample initStEx2A blockEx5B (Left [[expectedStEx5B]])
 
--- | Example 5C - Instantaneous rewards in decentralized era
-expectedStEx5C :: PredicateFailure CHAIN
-expectedStEx5C = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRImpossibleInDecentralizedNetUTXOW)))
-
+-- | Example 5C - Instantaneous rewards that overrun the available reserves
 ex5C :: CHAINExample
 ex5C =
-  CHAINExample
-    (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esPp = ppsEx1 {_d = unsafeMkUnitInterval 0}}}})
-    blockEx5A
-    (Left [[expectedStEx5C]])
-
--- | Example 5D - Instantaneous rewards in decentralized era and not enough core
--- signatures
-ex5D :: CHAINExample
-ex5D =
-  CHAINExample
-    (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esPp = ppsEx1 {_d = unsafeMkUnitInterval 0}}}})
-    blockEx5B
-    (Left [[expectedStEx5C, expectedStEx5B]])
-
--- | Example 5E - Instantaneous rewards that overrun the available reserves
-ex5E :: CHAINExample
-ex5E =
   CHAINExample
     (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esAccountState = acntEx2A {_reserves = 99}}}})
     blockEx5A
@@ -2729,7 +2705,7 @@ ex5E =
                   ( LedgerFailure
                       ( DelegsFailure
                           ( DelplFailure
-                              (DelegFailure InsufficientForInstantaneousRewardsDELEG)
+                              (DelegFailure $ InsufficientForInstantaneousRewardsDELEG (Coin 100) (Coin 99))
                           )
                       )
                   )
@@ -2869,8 +2845,8 @@ blockEx5F'' =
   where
     slot@(SlotNo s) = (slotFromEpoch $ EpochNo 2) + SlotNo 10
 
-ex5F' :: Either [[PredicateFailure CHAIN]] ChainState
-ex5F' = do
+ex5D' :: Either [[PredicateFailure CHAIN]] ChainState
+ex5D' = do
   nextState <- runShelleyBase $ applySTS @CHAIN (TRC ((), initStEx2A, blockEx5F))
   midState <-
     runShelleyBase $
@@ -2883,20 +2859,20 @@ ex5F' = do
 -- | Tests that after getting instantaneous rewards, creating the update and
 -- then applying the update, Alice's key is actually registered, the key deposit
 -- value deducted and the remaining value credited as reward.
-test5F :: Assertion
-test5F = do
-  case ex5F' of
+test5D :: Assertion
+test5D = do
+  case ex5D' of
     Left e -> assertFailure (show e)
-    Right ex5FState -> do
+    Right ex5DState -> do
       let getDState = _dstate . _delegationState . esLState . nesEs . chainNes
-          ds = getDState ex5FState
+          ds = getDState ex5DState
           StakeCreds stkCreds = _stkCreds ds
           rews = _rewards ds
           rewEntry = rews Map.!? (mkRwdAcnt aliceSHK)
       assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
-      assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5FState
+      assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5DState
 
 -- * Example 6A - apply CHAIN transition to re-register a stake pool late in the epoch
 -- This example continues on from example 2A.

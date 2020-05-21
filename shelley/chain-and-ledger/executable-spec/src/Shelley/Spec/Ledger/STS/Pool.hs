@@ -22,8 +22,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word as Set
-import Data.Word (Word64)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -49,9 +48,17 @@ instance STS (POOL crypto) where
   type BaseM (POOL crypto) = ShelleyBase
 
   data PredicateFailure (POOL crypto)
-    = StakePoolNotRegisteredOnKeyPOOL (KeyHash 'StakePool crypto)
-    | StakePoolRetirementWrongEpochPOOL Word64 Word64 Word64
+    = StakePoolNotRegisteredOnKeyPOOL
+        { pfPOOLunknowCannotRegister :: KeyHash 'StakePool crypto -- KeyHash which cannot be retired since it is not registered
+        }
+    | StakePoolRetirementWrongEpochPOOL
+        { pfPOOLcurrentEpoch :: Word64, -- Current Epoch
+          pfPOOLintendedEpoch :: Word64, -- The epoch listed in the Pool Retirement Certificate
+          pfPOOLepochMax :: Word64 -- The first epoch that is too far out for retirement
+        }
     | WrongCertificateTypePOOL
+        { pfPOOLwhichCertType :: Word8 -- The disallowed certificate (this case should never happen)
+        }
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyPState]
@@ -69,8 +76,8 @@ instance
       encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
     StakePoolRetirementWrongEpochPOOL ce e em ->
       encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR em
-    WrongCertificateTypePOOL ->
-      encodeListLen 1 <> toCBOR (2 :: Word8)
+    WrongCertificateTypePOOL ct ->
+      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR ct
 
 instance
   (Crypto crypto) =>
@@ -90,8 +97,9 @@ instance
         matchSize "StakePoolRetirementWrongEpochPOOL" 4 n
         pure $ StakePoolRetirementWrongEpochPOOL ce e em
       2 -> do
-        matchSize "WrongCertificateTypePOOL" 1 n
-        pure WrongCertificateTypePOOL
+        matchSize "WrongCertificateTypePOOL" 2 n
+        ct <- fromCBOR
+        pure $ WrongCertificateTypePOOL ct
       k -> invalidKey k
 
 poolDelegationTransition :: TransitionRule (POOL crypto)
@@ -142,8 +150,14 @@ poolDelegationTransition = do
       cepoch < e && e < cepoch + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       pure $ ps {_retiring = _retiring ps ⨃ (hk, EpochNo e)}
-    _ -> do
-      failBecause WrongCertificateTypePOOL
+    DCertDeleg _ -> do
+      failBecause $ WrongCertificateTypePOOL 0
+      pure ps
+    DCertMir _ -> do
+      failBecause $ WrongCertificateTypePOOL 1
+      pure ps
+    DCertGenesis _ -> do
+      failBecause $ WrongCertificateTypePOOL 2
       pure ps
 
 -- Note: we avoid using the Relation operators (⨃) and (∪) here because that

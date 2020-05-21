@@ -76,14 +76,30 @@ instance
   type Environment (UTXO crypto) = UtxoEnv crypto
   type BaseM (UTXO crypto) = ShelleyBase
   data PredicateFailure (UTXO crypto)
-    = BadInputsUTxO (Set (TxIn crypto))
-    | ExpiredUTxO SlotNo SlotNo
-    | MaxTxSizeUTxO Integer Integer
+    = BadInputsUTxO
+        { pfUTXOtxins :: Set (TxIn crypto) -- The bad transaction inputs
+        }
+    | ExpiredUTxO
+        { pfUTXOttl :: SlotNo, -- transaction's time to live
+          pfUTXOcurrentSlot :: SlotNo -- current slot
+        }
+    | MaxTxSizeUTxO
+        { pfUTXOtransactionSize :: Integer, -- the actual transaction size
+          pfUTXOmaxTxSize :: Integer -- the max transaction size
+        }
     | InputSetEmptyUTxO
-    | FeeTooSmallUTxO Coin Coin
-    | ValueNotConservedUTxO Coin Coin
-    | OutputTooSmallUTxO [TxOut crypto]
-    | UpdateFailure (PredicateFailure (PPUP crypto))
+    | FeeTooSmallUTxO
+        { pfUTXOminFee :: Coin, -- the minimum fee for this transaction
+          pfUTXOgivenFee :: Coin -- the fee supplied in this transaction
+        }
+    | ValueNotConservedUTxO
+        { pfUTXOconsumed :: Coin, -- the Coin consumed by this transaction
+          pfUTXOproduced :: Coin -- the Coin produced by this transaction
+        }
+    | OutputTooSmallUTxO
+        { pfUTXOtooSmallOuts :: [TxOut crypto] -- list of supplied transaction outputs that are too small
+        }
+    | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -185,7 +201,8 @@ utxoInductive = do
       txFee = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  txins txb ⊆ dom utxo ?! BadInputsUTxO (txins txb)
+  let validInputs = dom utxo
+  txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
 
   let consumed_ = consumed pp utxo stakeCreds txb
       produced_ = produced pp stakepools txb

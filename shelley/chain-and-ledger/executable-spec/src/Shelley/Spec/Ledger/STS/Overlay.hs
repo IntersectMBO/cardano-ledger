@@ -26,7 +26,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, Nonce, Seed, ShelleyBase, UnitInterval, activeSlotCoeff)
+import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, Nonce, Seed, ShelleyBase, activeSlotCoeff)
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), BHeader (..), checkVRFValue, mkSeed, seedEta, seedL)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
@@ -80,15 +80,41 @@ instance
   type BaseM (OVERLAY crypto) = ShelleyBase
 
   data PredicateFailure (OVERLAY crypto)
-    = VRFKeyUnknown (KeyHash 'StakePool crypto)
-    | VRFKeyWrongVRFKey (Hash crypto (VerKeyVRF crypto)) (Hash crypto (VerKeyVRF crypto))
-    | VRFKeyBadNonce Nonce SlotNo Nonce (VRF.CertifiedVRF (VRF crypto) Nonce)
-    | VRFKeyBadLeaderValue Nonce SlotNo Nonce (VRF.CertifiedVRF (VRF crypto) UnitInterval)
-    | VRFLeaderValueTooBig Natural Rational ActiveSlotCoeff
-    | NotActiveSlotOVERLAY SlotNo
-    | WrongGenesisColdKeyOVERLAY (KeyHash 'BlockIssuer crypto) (KeyHash 'GenesisDelegate crypto)
-    | UnknownGenesisKeyOVERLAY (KeyHash 'Genesis crypto)
-    | OcertFailure (PredicateFailure (OCERT crypto))
+    = VRFKeyUnknown
+        { pfOVERLAYunknownVRF :: KeyHash 'StakePool crypto -- unknown VRF keyhash
+        }
+    | VRFKeyWrongVRFKey
+        { pfOVERLAYvrfRegistered :: Hash crypto (VerKeyVRF crypto), --VRF KeyHash registered with stake pool
+          pfOVERLAYvrfHeader :: Hash crypto (VerKeyVRF crypto) --VRF KeyHash from Header
+        }
+    | VRFKeyBadNonce
+        { pfOVERLAYnonceConstant :: Nonce, -- Nonce constant to distinguish VRF nonce values
+          pfOVERLAYnonceSlot :: SlotNo, -- Slot used for VRF calculation
+          pfOVERLAYnonceEpochNonce :: Nonce, -- Epoch nonce used for VRF calculation
+          pfOVERLAYnonceVRFValue :: (VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated nonce value
+        }
+    | VRFKeyBadLeaderValue
+        { pfOVERLAYleaderConstant :: Nonce, -- Leader constant to distinguish VRF leader values
+          pfOVERLAYleaderSlot :: SlotNo, -- Slot used for VRF calculation
+          pfOVERLAYleaderEpochNonce :: Nonce, -- Epoch nonce used for VRF calculation
+          pfOVERLAYleaderVRFValue :: (VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated leader value
+        }
+    | VRFLeaderValueTooBig
+        { pfOVERLAYleaderValue :: Natural, -- VRF Leader value
+          pfOVERLAYrelativeStake :: Rational, -- stake pool's relative stake
+          pfOVERLAYactiveSlotCoeffient :: ActiveSlotCoeff -- Praos active slot coefficient value
+        }
+    | NotActiveSlotOVERLAY
+        { pfOVERLAYsilentSlot :: SlotNo -- Slot which is supposed to be silent
+        }
+    | WrongGenesisColdKeyOVERLAY
+        { pfOVERLAYcurrentGenesisKH :: KeyHash 'BlockIssuer crypto, -- KeyHash of block issuer
+          pfOVERLAYassignedGenesisKH :: KeyHash 'GenesisDelegate crypto -- KeyHash genesis delegate keyhash assigned to this slot
+        }
+    | UnknownGenesisKeyOVERLAY
+        { pfOVERLAYbadGenesisKH :: KeyHash 'Genesis crypto -- KeyHash which does not correspond to o genesis node
+        }
+    | OcertFailure (PredicateFailure (OCERT crypto)) -- Subtransition Failures
     deriving (Generic)
 
   initialRules = []

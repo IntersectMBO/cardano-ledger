@@ -431,9 +431,10 @@ testWithdrawalWrongAmt =
           SNothing
           SNothing
       wits = makeWitnessesVKey (hashTxBody txb) [asWitness alicePay, asWitness bobStake]
-      dpState' = addReward dpState (mkVKeyRwdAcnt bobStake) (Coin 10)
+      rAcnt = mkVKeyRwdAcnt bobStake
+      dpState' = addReward dpState rAcnt (Coin 10)
       tx = Tx txb wits Map.empty SNothing
-      errs = [DelegsFailure WithdrawalsNotInRewardsDELEGS]
+      errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
 testOutputTooSmall :: Assertion

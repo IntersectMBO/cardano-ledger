@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -25,16 +26,17 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.State.Transition
+import Control.State.Transition ((?!), (?!:), Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans)
+import Data.Map as Map
 import Data.Sequence (Seq (..))
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
     _dstate,
@@ -42,11 +44,12 @@ import Shelley.Spec.Ledger.LedgerState
     _stPools,
     emptyDelegation,
   )
-import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.STS.Delpl
-import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.Tx
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
+import Shelley.Spec.Ledger.Serialization (encodeFoldable)
+import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Tx (Tx (..))
+import Shelley.Spec.Ledger.TxData (DCert (..), DelegCert (..), Delegation (..), Ix, Ptr (..), RewardAcnt, StakePools (..), TxBody (..), Wdrl (..))
 
 data DELEGS crypto
 
@@ -69,8 +72,12 @@ instance
   type BaseM (DELEGS crypto) = ShelleyBase
   data PredicateFailure (DELEGS crypto)
     = DelegateeNotRegisteredDELEG
+        { pfDELEGSpoolNotRegistered :: (KeyHash 'StakePool crypto) -- target pool which is not registered
+        }
     | WithdrawalsNotInRewardsDELEGS
-    | DelplFailure (PredicateFailure (DELPL crypto))
+        { pfDELEGSincorrectWithdrawals :: Map (RewardAcnt crypto) Coin -- withdrawals that are missing or are not withdrawing the entire amount
+        }
+    | DelplFailure (PredicateFailure (DELPL crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDelegation]
@@ -83,8 +90,8 @@ instance
   ToCBOR (PredicateFailure (DELEGS crypto))
   where
   toCBOR = \case
-    DelegateeNotRegisteredDELEG -> encodeListLen 1 <> toCBOR (0 :: Word8)
-    WithdrawalsNotInRewardsDELEGS -> encodeListLen 1 <> toCBOR (1 :: Word8)
+    DelegateeNotRegisteredDELEG kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
+    WithdrawalsNotInRewardsDELEGS ws -> encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable ws
     (DelplFailure a) ->
       encodeListLen 2 <> toCBOR (2 :: Word8)
         <> toCBOR a
@@ -96,12 +103,14 @@ instance
   fromCBOR = do
     n <- decodeListLen
     decodeWord >>= \case
-      0 ->
-        matchSize "DelegateeNotRegisteredDELEG" 1 n
-          >> pure DelegateeNotRegisteredDELEG
-      1 ->
-        matchSize "WithdrawalsNotInRewardsDELEGS" 1 n
-          >> pure WithdrawalsNotInRewardsDELEGS
+      0 -> do
+        matchSize "DelegateeNotRegisteredDELEG" 2 n
+        kh <- fromCBOR
+        pure $ DelegateeNotRegisteredDELEG kh
+      1 -> do
+        matchSize "WithdrawalsNotInRewardsDELEGS" 2 n
+        ws <- fromCBOR
+        pure $ WithdrawalsNotInRewardsDELEGS ws
       2 -> do
         matchSize "DelplFailure" 2 n
         a <- fromCBOR
@@ -121,7 +130,9 @@ delegsTransition = do
           wdrls_ = unWdrl $ _wdrls (_body tx)
           rewards = _rewards ds
 
-      wdrls_ ⊆ rewards ?! WithdrawalsNotInRewardsDELEGS
+      wdrls_ ⊆ rewards
+        ?! WithdrawalsNotInRewardsDELEGS
+          (Map.differenceWith (\x y -> if x /= y then Just x else Nothing) wdrls_ rewards)
 
       let rewards' = rewards ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
 
@@ -133,9 +144,12 @@ delegsTransition = do
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
               let StakePools stPools_ = _stPools $ _pstate dpstate'
-               in _delegatee deleg ∈ dom stPools_
-            _ -> True
-      isDelegationRegistered ?! DelegateeNotRegisteredDELEG
+                  targetPool = _delegatee deleg
+               in case targetPool ∈ dom stPools_ of
+                    True -> Right ()
+                    False -> Left $ DelegateeNotRegisteredDELEG targetPool
+            _ -> Right ()
+      isDelegationRegistered ?!: id
 
       let ptr = Ptr slot txIx (fromIntegral $ length gamma)
       trans @(DELPL crypto) $

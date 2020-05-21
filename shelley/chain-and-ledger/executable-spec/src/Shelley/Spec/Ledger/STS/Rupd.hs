@@ -50,7 +50,7 @@ instance STS (RUPD crypto) where
   type Signal (RUPD crypto) = SlotNo
   type Environment (RUPD crypto) = RupdEnv crypto
   type BaseM (RUPD crypto) = ShelleyBase
-  data PredicateFailure (RUPD crypto)
+  data PredicateFailure (RUPD crypto) -- No predicate failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure SNothing]

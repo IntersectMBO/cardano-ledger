@@ -58,13 +58,11 @@ import Test.Shelley.Spec.Ledger.Examples
     ex5A,
     ex5B,
     ex5C,
-    ex5D,
-    ex5E,
-    ex5F',
+    ex5D',
     ex6A,
     ex6BExpectedNES,
     ex6BPoolParams,
-    test5F,
+    test5D,
   )
 import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
@@ -157,10 +155,8 @@ stsTests =
       testCase "CHAIN example 4B - adopt genesis key delegation" $ testCHAINExample ex4B,
       testCase "CHAIN example 5A - create MIR cert" $ testCHAINExample ex5A,
       testCase "CHAIN example 5B - FAIL: insufficient core node signatures" $ testCHAINExample ex5B,
-      testCase "CHAIN example 5C - FAIL: MIR impossible in decentralized network" $ testCHAINExample ex5C,
-      testCase "CHAIN example 5D - FAIL: MIR impossible (decentralized and insufficient sigs)" $ testCHAINExample ex5D,
-      testCase "CHAIN example 5E - FAIL: MIR insufficient reserves" $ testCHAINExample ex5E,
-      testCase "CHAIN example 5F - apply MIR at epoch boundary" test5F,
+      testCase "CHAIN example 5C - FAIL: MIR insufficient reserves" $ testCHAINExample ex5C,
+      testCase "CHAIN example 5D - apply MIR at epoch boundary" test5D,
       testCase "CHAIN example 6A - Late Pool Re-registration" $ testCHAINExample ex6A,
       testCase "CHAIN example 6B - Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration,
       testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda ex1,
@@ -182,8 +178,8 @@ stsTests =
       testCase "CHAIN example 4A - Preservation of ADA" $ testPreservationOfAda ex4A,
       testCase "CHAIN example 4B - Preservation of ADA" $ testPreservationOfAda ex4B,
       testCase "CHAIN example 5A - Preservation of ADA" $ testPreservationOfAda ex5A,
-      testCase "CHAIN example 5F - Preservation of ADA" $
-        (totalAda (fromRight (error "CHAIN example 5F") ex5F') @?= maxLLSupply),
+      testCase "CHAIN example 5D - Preservation of ADA" $
+        (totalAda (fromRight (error "CHAIN example 5D") ex5D') @?= maxLLSupply),
       testCase "CHAIN example 6A - Preservation of ADA" $ testPreservationOfAda ex6A,
       testCase "Alice uses SingleSig script" testAliceSignsAlone,
       testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign,
@@ -223,7 +219,7 @@ testAliceSignsAlone =
 
 testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl Map.empty) 0 [asWitness bobPay, asWitness carlPay, asWitness dariaPay]
@@ -238,7 +234,7 @@ testEverybodySigns =
 
 testWrongScript :: Assertion
 testWrongScript =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript aliceOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOrBob] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -269,14 +265,14 @@ testAliceAndBob =
 
 testAliceAndBob' :: Assertion
 testAliceAndBob' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [asWitness alicePay]
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [asWitness bobPay]
@@ -358,7 +354,7 @@ testTwoScripts =
 
 testTwoScripts' :: Assertion
 testTwoScripts' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript
@@ -438,7 +434,7 @@ testRwdAliceSignsAlone =
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay]
@@ -453,7 +449,7 @@ testRwdAliceSignsAlone'' =
 
 testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]

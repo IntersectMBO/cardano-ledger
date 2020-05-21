@@ -645,8 +645,6 @@ It has six predicates:
   \item Every multisignature script is valid.
   \item The set of scripts given by the transaction is equal to the set of required scripts.
   \item Any instantaneous reward certificates have quorum agreement from the genesis nodes.
-  \item No instantaneous reward certificates are allowed when
-    the decentralization parameter is equal to zero.
   \item Either the transaction metadata hash and the transaction metadata are both absent,
     or the hash present in the body is actually equal to the hash of the metadata.
 \end{itemize}
@@ -679,8 +677,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \\
       \left\{
         c\in\txcerts{tx}~\cap\DCertMir
-      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
-      \fun{d}~\var{pp} > 0
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum
       \\~\\
       \var{mdh}\leteq\fun{txMDhash}~\var{tx}
       &
@@ -731,8 +728,6 @@ The UTXOW rule has eight predicate failures:
   there is a \emph{UtxoFailure} failure.
 \item In the case of a lack of quorum on an instantaneous reward certificate,
   there is a \emph{MIRInsufficientGenesisSigs} failure.
-\item In the case of an instantaneous reward certificate after decentralization,
-  there is a \emph{MIRImpossibleInDecentralizedNet} failure.
 \item In the case of inconsist metadata hashes,
   there is a \emph{BadMetaDataHash} failure.
 \end{itemize}
