@@ -189,8 +189,8 @@ groupByPool ::
 groupByPool active delegs =
   Map.fromListWith
     Map.union
-    [ (delegs Map.! hk, Set.singleton hk ◁ active)
-      | hk <- Map.keys delegs
+    [ (pool, Set.singleton hk ◁ active)
+      | (hk, pool) <- Map.toList delegs
     ]
 
 -- | Snapshot of the stake distribution.
