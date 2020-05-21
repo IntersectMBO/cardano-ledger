@@ -46,7 +46,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))
-import Shelley.Spec.Ledger.Serialization (decodeMap, encodeFoldable)
+import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData (DCert (..), DelegCert (..), Delegation (..), Ix, Ptr (..), RewardAcnt, StakePools (..), TxBody (..), Wdrl (..))
@@ -91,7 +91,7 @@ instance
   where
   toCBOR = \case
     DelegateeNotRegisteredDELEG kh -> encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
-    WithdrawalsNotInRewardsDELEGS ws -> encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable ws
+    WithdrawalsNotInRewardsDELEGS ws -> encodeListLen 2 <> toCBOR (1 :: Word8) <> mapToCBOR ws
     (DelplFailure a) ->
       encodeListLen 2 <> toCBOR (2 :: Word8)
         <> toCBOR a
@@ -109,7 +109,7 @@ instance
         pure $ DelegateeNotRegisteredDELEG kh
       1 -> do
         matchSize "WithdrawalsNotInRewardsDELEGS" 2 n
-        ws <- decodeMap fromCBOR fromCBOR
+        ws <- mapFromCBOR
         pure $ WithdrawalsNotInRewardsDELEGS ws
       2 -> do
         matchSize "DelplFailure" 2 n
