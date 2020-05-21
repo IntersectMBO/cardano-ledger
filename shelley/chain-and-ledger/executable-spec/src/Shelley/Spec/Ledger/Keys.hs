@@ -201,7 +201,7 @@ verifySignedDSIGN (VKey vk) vd sigDSIGN =
 newtype KeyHash (discriminator :: KeyRole) crypto
   = KeyHash (Hash crypto (DSIGN.VerKeyDSIGN (DSIGN crypto)))
   deriving (Show, Eq, Ord)
-  deriving newtype (NFData, NoUnexpectedThunks)
+  deriving newtype (NFData, NoUnexpectedThunks, Generic)
 
 deriving instance (Crypto crypto, Typeable disc) => ToCBOR (KeyHash disc crypto)
 
@@ -249,10 +249,10 @@ instance VRFValue UnitInterval where
 
 newtype GenDelegs crypto
   = GenDelegs (Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto))
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic)
 
 newtype GKeys crypto = GKeys (Set (VKey 'Genesis crypto))
-  deriving (Show, Eq, NoUnexpectedThunks)
+  deriving (Show, Eq, NoUnexpectedThunks, Generic)
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types

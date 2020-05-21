@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -12,10 +13,11 @@ import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NoUnexpectedThunks (..), cborError)
 import Data.Text (pack)
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 
 -- | The amount of value held by a transaction output.
 newtype Coin = Coin Integer
-  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks, Generic)
 
 instance ToCBOR Coin where
   toCBOR (Coin c) =
