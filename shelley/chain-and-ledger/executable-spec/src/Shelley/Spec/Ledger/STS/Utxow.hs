@@ -150,7 +150,7 @@ instance
         pure $ UtxoFailure a
       5 -> do
         matchSize "MIRInsufficientGenesisSigsUTXOW" 2 n
-        s <- fromCBOR
+        s <- decodeSet fromCBOR
         pure $ MIRInsufficientGenesisSigsUTXOW s
       6 -> do
         matchSize "MissingTxBodyMetaDataHash" 2 n
