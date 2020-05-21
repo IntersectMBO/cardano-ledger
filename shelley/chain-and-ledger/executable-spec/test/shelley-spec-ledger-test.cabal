@@ -35,6 +35,7 @@ library
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
                      Test.Shelley.Spec.Ledger.Serialization
                      Test.Shelley.Spec.Ledger.Shrinkers
+                     Test.Shelley.Spec.Ledger.Orphans
                      Test.Shelley.Spec.Ledger.Utils
   ghc-options:
     -Wall

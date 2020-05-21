@@ -112,7 +112,8 @@ library
 test-suite shelley-spec-ledger-test
     type:                exitcode-stdio-1.0
     main-is:             Tests.hs
-    other-modules:       Test.Shelley.Spec.Ledger.Utils
+    other-modules:       Test.Shelley.Spec.Ledger.Orphans
+                         Test.Shelley.Spec.Ledger.Utils
                          Test.Cardano.Crypto.VRF.Fake
                          Test.Shelley.Spec.Ledger.Address
                          Test.Shelley.Spec.Ledger.CDDL

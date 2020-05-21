@@ -144,8 +144,6 @@ deriving instance Crypto crypto => Show (VKey kd crypto)
 
 deriving instance Crypto crypto => Eq (VKey kd crypto)
 
-deriving instance Num (DSIGN.VerKeyDSIGN (DSIGN crypto)) => Num (VKey kd crypto)
-
 deriving instance (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) => NFData (VKey kd crypto)
 
 deriving instance Crypto crypto => NoUnexpectedThunks (VKey kd crypto)
