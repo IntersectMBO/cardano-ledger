@@ -202,10 +202,6 @@ utxoWitnessed =
           ==> Set.size genSig >= fromIntegral coreNodeQuorum
         )
         ?! MIRInsufficientGenesisSigsUTXOW genSig
-      ( (not $ null mirCerts)
-          ==> (0 < intervalValue (_d pp))
-        )
-        ?! MIRImpossibleInDecentralizedNetUTXOW
 
       trans @(UTXO crypto) $
         TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx)
