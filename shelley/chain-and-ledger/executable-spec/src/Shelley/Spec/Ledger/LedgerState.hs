@@ -91,6 +91,7 @@ import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (ReaderT (..), asks)
 import qualified Data.ByteString.Lazy as BSL (length)
+import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty)
@@ -141,6 +142,7 @@ import Shelley.Spec.Ledger.Keys
     GenDelegs (..),
     Hash,
     KeyHash,
+    KeyHash (..),
     KeyPair,
     KeyRole (..),
     VKey,
@@ -748,6 +750,7 @@ consumed pp u stakeKeys tx =
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
+  forall crypto.
   Crypto crypto =>
   UTxO crypto ->
   Tx crypto ->
@@ -761,9 +764,12 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     `Set.union` owners
   where
     inputAuthors = asWitness `Set.map` Set.foldr insertHK Set.empty (_inputs txbody)
+    unspendableKeyHash = KeyHash (coerce (hash 0 :: Hash crypto Int))
     insertHK txin hkeys =
       case txinLookup txin utxo' of
         Just (TxOut (Addr (KeyHashObj pay) _) _) -> Set.insert pay hkeys
+        Just (TxOut (AddrBootstrap _) _) -> Set.insert unspendableKeyHash hkeys
+        -- NOTE: Until Byron addresses are supported, we insert an unspendible keyhash
         _ -> hkeys
     wdrlAuthors =
       Set.map asWitness
