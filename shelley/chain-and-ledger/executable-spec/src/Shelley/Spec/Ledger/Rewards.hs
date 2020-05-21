@@ -140,15 +140,7 @@ getTopRankedPools rPot total pp poolParams aps =
   Set.fromList $ fmap fst $
     take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
   where
-    pdata =
-      [ ( hk,
-          ( poolParams Map.! hk,
-            aps Map.! hk
-          )
-        )
-        | hk <-
-            Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet aps
-      ]
+    pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =
       [ ( hk,
           desirability pp rPot pool ap total
@@ -222,7 +214,7 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) (Coin total) addrsRew 
     Coin pstake = sum stake
     Coin ostake =
       Set.foldl'
-        (\c o -> c + (stake Map.! KeyHashObj o))
+        (\c o -> c + (fromMaybe (Coin 0) $ Map.lookup (KeyHashObj o) stake))
         (Coin 0)
         (_poolOwners pool)
     sigma = fromIntegral pstake % fromIntegral total
@@ -261,16 +253,7 @@ reward ::
 reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
   (rewards', appPerformances)
   where
-    pdata =
-      [ ( hk,
-          ( poolParams Map.! hk,
-            b Map.! hk,
-            poolStake hk delegs stake
-          )
-        )
-        | hk <-
-            Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet b
-      ]
+    pdata = Map.toList $ Map.intersectionWithKey (\hk params blocks -> (params, blocks, poolStake hk delegs stake)) poolParams b
     results =
       [ ( hk,
           rewardOnePool pp r n totalBlocks pool actgr total addrsRew

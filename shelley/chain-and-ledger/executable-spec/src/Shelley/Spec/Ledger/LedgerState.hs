@@ -702,10 +702,9 @@ decayedKey ::
 decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
   case cert of
     DCertDeleg (DeRegKey key) ->
-      if Map.notMember key stkcreds
-        then pure 0
-        else do
-          let created' = stkcreds Map.! key
+      case Map.lookup key stkcreds of
+        Nothing -> pure 0
+        Just created' -> do
           start <- do
             ei <- asks epochInfo
             fs <- epochInfoFirst ei =<< epochInfoEpoch ei cslot
