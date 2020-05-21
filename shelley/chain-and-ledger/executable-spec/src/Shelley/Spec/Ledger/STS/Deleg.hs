@@ -133,11 +133,11 @@ instance
         kh <- fromCBOR
         pure $ StakeKeyNotRegisteredDELEG kh
       2 -> do
-        matchSize "" 1 n
+        matchSize "" 2 n
         b <- fromCBOR
         pure $ StakeKeyNonZeroAccountBalanceDELEG b
       3 -> do
-        matchSize "" 1 n
+        matchSize "" 2 n
         kh <- fromCBOR
         pure $ StakeDelegationImpossibleDELEG kh
       4 -> do
@@ -157,7 +157,7 @@ instance
         reserves <- fromCBOR
         pure $ InsufficientForInstantaneousRewardsDELEG needed reserves
       8 -> do
-        matchSize "" 1 n
+        matchSize "" 3 n
         sNow <- fromCBOR
         sTooLate <- fromCBOR
         pure $ MIRCertificateTooLateinEpochDELEG sNow sTooLate
