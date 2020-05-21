@@ -203,7 +203,7 @@ instance
           pfCHAINmaxProtoVersion :: !Natural -- max protocol version
         }
     | BbodyFailure !(PredicateFailure (BBODY crypto)) -- Subtransition Failures
-    | TickFailure (PredicateFailure (TICK crypto)) -- Subtransition Failures
+    | TickFailure !(PredicateFailure (TICK crypto)) -- Subtransition Failures
     | PrtclFailure !(PredicateFailure (PRTCL crypto)) -- Subtransition Failures
     | PrtclSeqFailure !(PrtlSeqFailure crypto) -- Subtransition Failures
     deriving (Show, Eq, Generic)
