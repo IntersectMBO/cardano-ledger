@@ -125,39 +125,39 @@ instance
     n <- decodeListLen
     decodeWord >>= \case
       0 -> do
-        matchSize "" 2 n
+        matchSize "StakeKeyAlreadyRegisteredDELEG" 2 n
         kh <- fromCBOR
         pure $ StakeKeyAlreadyRegisteredDELEG kh
       1 -> do
-        matchSize "" 2 n
+        matchSize "StakeKeyNotRegisteredDELEG" 2 n
         kh <- fromCBOR
         pure $ StakeKeyNotRegisteredDELEG kh
       2 -> do
-        matchSize "" 2 n
+        matchSize "StakeKeyNonZeroAccountBalanceDELEG" 2 n
         b <- fromCBOR
         pure $ StakeKeyNonZeroAccountBalanceDELEG b
       3 -> do
-        matchSize "" 2 n
+        matchSize "StakeDelegationImpossibleDELEG" 2 n
         kh <- fromCBOR
         pure $ StakeDelegationImpossibleDELEG kh
       4 -> do
-        matchSize "" 1 n
+        matchSize "WrongCertificateTypeDELEG" 1 n
         pure WrongCertificateTypeDELEG
       5 -> do
-        matchSize "" 2 n
+        matchSize "GenesisKeyNotInpMappingDELEG" 2 n
         gkh <- fromCBOR
         pure $ GenesisKeyNotInpMappingDELEG gkh
       6 -> do
-        matchSize "" 2 n
+        matchSize "DuplicateGenesisDelegateDELEG" 2 n
         kh <- fromCBOR
         pure $ DuplicateGenesisDelegateDELEG kh
       7 -> do
-        matchSize "" 3 n
+        matchSize "InsufficientForInstantaneousRewardsDELEG" 3 n
         needed <- fromCBOR
         reserves <- fromCBOR
         pure $ InsufficientForInstantaneousRewardsDELEG needed reserves
       8 -> do
-        matchSize "" 3 n
+        matchSize "MIRCertificateTooLateinEpochDELEG" 3 n
         sNow <- fromCBOR
         sTooLate <- fromCBOR
         pure $ MIRCertificateTooLateinEpochDELEG sNow sTooLate
