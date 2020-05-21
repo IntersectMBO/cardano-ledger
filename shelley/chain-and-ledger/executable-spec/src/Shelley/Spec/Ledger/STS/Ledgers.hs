@@ -57,7 +57,7 @@ instance
   type Environment (LEDGERS crypto) = LedgersEnv
   type BaseM (LEDGERS crypto) = ShelleyBase
   data PredicateFailure (LEDGERS crypto)
-    = LedgerFailure (PredicateFailure (LEDGER crypto))
+    = LedgerFailure (PredicateFailure (LEDGER crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyLedgerState]

@@ -83,8 +83,8 @@ instance
   type Environment (LEDGER crypto) = LedgerEnv
   type BaseM (LEDGER crypto) = ShelleyBase
   data PredicateFailure (LEDGER crypto)
-    = UtxowFailure (PredicateFailure (UTXOW crypto))
-    | DelegsFailure (PredicateFailure (DELEGS crypto))
+    = UtxowFailure (PredicateFailure (UTXOW crypto)) -- Subtransition Failures
+    | DelegsFailure (PredicateFailure (DELEGS crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []

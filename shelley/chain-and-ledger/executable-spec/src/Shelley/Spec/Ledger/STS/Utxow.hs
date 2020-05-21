@@ -40,7 +40,6 @@ import Shelley.Spec.Ledger.BaseTypes
   ( (==>),
     ShelleyBase,
     StrictMaybe (..),
-    intervalValue,
     invalidKey,
     quorum,
   )
@@ -48,9 +47,9 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), verifiedWits, witsVKeyNeeded)
-import Shelley.Spec.Ledger.MetaData (hashMetaData)
-import Shelley.Spec.Ledger.PParams (_d)
+import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
 import Shelley.Spec.Ledger.STS.Utxo
+import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
@@ -69,14 +68,30 @@ instance
   type Environment (UTXOW crypto) = UtxoEnv crypto
   type BaseM (UTXOW crypto) = ShelleyBase
   data PredicateFailure (UTXOW crypto)
-    = InvalidWitnessesUTXOW [VKey 'Witness crypto]
-    | MissingVKeyWitnessesUTXOW (Set (KeyHash 'Witness crypto))
+    = InvalidWitnessesUTXOW
+        { pfUTXObadWitnesses :: [VKey 'Witness crypto] -- witnesses which failed in verifiedWits function
+        }
+    | MissingVKeyWitnessesUTXOW
+        { pfUTXOmissingWitnesses :: Set (KeyHash 'Witness crypto) -- witnesses which were needed and not supplied
+        }
     | MissingScriptWitnessesUTXOW
+        { pfUTXOmissingScripts :: Set (ScriptHash crypto) -- missing scripts
+        }
     | ScriptWitnessNotValidatingUTXOW
+        { pfUTXOfailedScripts :: Set (ScriptHash crypto) -- failed scripts
+        }
     | UtxoFailure (PredicateFailure (UTXO crypto))
     | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness crypto))
-    | MIRImpossibleInDecentralizedNetUTXOW
-    | BadMetaDataHashUTXOW
+    | MissingTxBodyMetaDataHash
+        { pfUTXOhashOfMetadata :: MetaDataHash crypto -- hash of the full metadata
+        }
+    | MissingTxMetaData
+        { pfUTXOtxbodyMetaDataHash :: MetaDataHash crypto -- hash of the metadata included in the transaction body
+        }
+    | ConflictingMetaDataHash
+        { pfUTXOMetaDataHashConflictBodyInside :: MetaDataHash crypto, -- hash of the metadata included in the transaction body
+          pfUTXOMetaDataHashConflictBodyOutside :: MetaDataHash crypto -- hash of the full metadata
+        }
     deriving (Eq, Generic, Show)
 
   transitionRules = [utxoWitnessed]
@@ -93,14 +108,18 @@ instance
       encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
     MissingVKeyWitnessesUTXOW missing ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
-    MissingScriptWitnessesUTXOW -> encodeListLen 1 <> toCBOR (2 :: Word8)
-    ScriptWitnessNotValidatingUTXOW -> encodeListLen 1 <> toCBOR (3 :: Word8)
+    MissingScriptWitnessesUTXOW ss -> encodeListLen 2 <> toCBOR (2 :: Word8) <> encodeFoldable ss
+    ScriptWitnessNotValidatingUTXOW ss -> encodeListLen 2 <> toCBOR (3 :: Word8) <> encodeFoldable ss
     (UtxoFailure a) ->
       encodeListLen 2 <> toCBOR (4 :: Word8)
         <> toCBOR a
     MIRInsufficientGenesisSigsUTXOW sigs -> encodeListLen 2 <> toCBOR (5 :: Word8) <> encodeFoldable sigs
-    MIRImpossibleInDecentralizedNetUTXOW -> encodeListLen 1 <> toCBOR (6 :: Word8)
-    BadMetaDataHashUTXOW -> encodeListLen 1 <> toCBOR (7 :: Word8)
+    MissingTxBodyMetaDataHash h ->
+      encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR h
+    MissingTxMetaData h ->
+      encodeListLen 2 <> toCBOR (7 :: Word8) <> toCBOR h
+    ConflictingMetaDataHash bodyHash fullMDHash ->
+      encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
 
 instance
   (Crypto crypto) =>
@@ -117,10 +136,14 @@ instance
         matchSize "MissingVKeyWitnessesUTXOW" 2 n
         missing <- decodeSet fromCBOR
         pure $ MissingVKeyWitnessesUTXOW missing
-      2 -> matchSize "MissingScriptWitnessesUTXOW" 1 n >> pure MissingScriptWitnessesUTXOW
-      3 ->
-        matchSize "ScriptWitnessNotValidatingUTXOW" 1 n
-          >> pure ScriptWitnessNotValidatingUTXOW
+      2 -> do
+        matchSize "MissingScriptWitnessesUTXOW" 2 n
+        ss <- decodeSet fromCBOR
+        pure $ MissingScriptWitnessesUTXOW ss
+      3 -> do
+        matchSize "ScriptWitnessNotValidatingUTXOW" 2 n
+        ss <- decodeSet fromCBOR
+        pure $ ScriptWitnessNotValidatingUTXOW ss
       4 -> do
         matchSize "UtxoFailure" 2 n
         a <- fromCBOR
@@ -129,12 +152,19 @@ instance
         matchSize "MIRInsufficientGenesisSigsUTXOW" 2 n
         s <- fromCBOR
         pure $ MIRInsufficientGenesisSigsUTXOW s
-      6 ->
-        matchSize "MIRImpossibleInDecentralizedNetUTXOW" 1 n
-          >> pure MIRImpossibleInDecentralizedNetUTXOW
-      7 ->
-        matchSize "BadMetaDataHashUTXOW" 1 n
-          >> pure BadMetaDataHashUTXOW
+      6 -> do
+        matchSize "MissingTxBodyMetaDataHash" 2 n
+        h <- fromCBOR
+        pure $ MissingTxBodyMetaDataHash h
+      7 -> do
+        matchSize "MissingTxMetaData" 2 n
+        h <- fromCBOR
+        pure $ MissingTxMetaData h
+      8 -> do
+        matchSize "ConflictingMetaDataHash" 3 n
+        bodyHash <- fromCBOR
+        fullMDHash <- fromCBOR
+        pure $ ConflictingMetaDataHash bodyHash fullMDHash
       k -> invalidKey k
 
 initialLedgerStateUTXOW ::
@@ -160,16 +190,17 @@ utxoWitnessed =
       let witsKeyHashes = Set.map witKeyHash wits
 
       -- check multi-signature scripts
-      all
-        ( \(hs, validator) ->
-            hashScript validator == hs
-              && validateScript validator tx
-        )
-        (Map.toList $ txwitsScript tx)
-        ?! ScriptWitnessNotValidatingUTXOW
+      let failedScripts =
+            filter
+              (\(hs, validator) -> hashScript validator /= hs || not (validateScript validator tx))
+              (Map.toList $ txwitsScript tx)
+      case failedScripts of
+        [] -> pure ()
+        fs -> failBecause $ ScriptWitnessNotValidatingUTXOW $ Set.fromList $ fmap fst fs
 
-      scriptsNeeded utxo tx == Map.keysSet (txwitsScript tx)
-        ?! MissingScriptWitnessesUTXOW
+      let sNeeded = scriptsNeeded utxo tx
+          sReceived = Map.keysSet (txwitsScript tx)
+      sNeeded == sReceived ?! MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
 
       -- check VKey witnesses
       verifiedWits tx ?!: InvalidWitnessesUTXOW
@@ -182,11 +213,12 @@ utxoWitnessed =
       haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
 
       -- check metadata hash
-      case (_mdHash txbody) of
-        SNothing -> md == SNothing ?! BadMetaDataHashUTXOW
-        SJust mdh -> case md of
-          SNothing -> failBecause BadMetaDataHashUTXOW
-          SJust md' -> hashMetaData md' == mdh ?! BadMetaDataHashUTXOW
+      case (_mdHash txbody, md) of
+        (SNothing, SNothing) -> pure ()
+        (SJust mdh, SNothing) -> failBecause $ MissingTxMetaData mdh
+        (SNothing, SJust md') -> failBecause $ MissingTxBodyMetaDataHash (hashMetaData md')
+        (SJust mdh, SJust md') ->
+          hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genSig = (Set.map asWitness $ dom genMapping) ∩ Set.map witKeyHash wits

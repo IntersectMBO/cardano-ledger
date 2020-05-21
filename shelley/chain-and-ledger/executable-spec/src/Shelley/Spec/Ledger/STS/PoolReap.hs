@@ -50,7 +50,7 @@ instance STS (POOLREAP crypto) where
   type Signal (POOLREAP crypto) = EpochNo
   type Environment (POOLREAP crypto) = PParams
   type BaseM (POOLREAP crypto) = ShelleyBase
-  data PredicateFailure (POOLREAP crypto)
+  data PredicateFailure (POOLREAP crypto) -- No predicate Falures
     deriving (Show, Eq, Generic)
   initialRules = [pure $ PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState]
   transitionRules = [poolReapTransition]

@@ -45,12 +45,32 @@ instance
   type Environment (OCERT crypto) = OCertEnv crypto
   type BaseM (OCERT crypto) = ShelleyBase
   data PredicateFailure (OCERT crypto)
-    = KESBeforeStartOCERT KESPeriod KESPeriod
-    | KESAfterEndOCERT KESPeriod KESPeriod Word64
-    | KESPeriodWrongOCERT Natural Natural
-    | InvalidSignatureOCERT Natural KESPeriod -- TODO use whole OCert
-    | InvalidKesSignatureOCERT Word Word Word String
-    | NoCounterForKeyHashOCERT (KeyHash 'BlockIssuer crypto)
+    = KESBeforeStartOCERT
+        { pfOCERTbeforeKESPeriodStart :: KESPeriod, -- OCert Start KES Period
+          pfOCERTbeforeKESPeriodNow :: KESPeriod -- Current KES Period
+        }
+    | KESAfterEndOCERT
+        { pfOCERTafterKESPeriodNow :: KESPeriod, -- Current KES Period
+          pfOCERTafterKESPeriodEnd :: KESPeriod, -- OCert Start KES Period
+          pfOCERTafterKESPeriodMaxEv :: Word64 -- Max KES Key Evolutions
+        }
+    | KESPeriodWrongOCERT
+        { pfOCERTlastCounter :: Natural, -- last KES counter used
+          pfOCERTcurrentCounter :: Natural -- current KES counter
+        }
+    | InvalidSignatureOCERT -- TODO use whole OCert
+        { pfOCERTcounter :: Natural, -- OCert counter
+          pfOCERTkesPeriod :: KESPeriod -- OCert KES period
+        }
+    | InvalidKesSignatureOCERT
+        { pfOCERTkesSigKESperiod :: Word, -- current KES Period
+          pfOCERTkesSigKESstart :: Word, -- KES start period
+          pfOCERTkesSigKESEvolutions :: Word, -- expected KES evolutions
+          pfOCERTkesSigKESError :: String -- error message given by Consensus Layer
+        }
+    | NoCounterForKeyHashOCERT
+        { pfOCERTcannotFindCounter :: KeyHash 'BlockIssuer crypto -- stake pool key hash
+        }
     deriving (Show, Eq, Generic)
 
   initialRules = [pure Map.empty]

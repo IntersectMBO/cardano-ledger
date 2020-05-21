@@ -190,13 +190,22 @@ instance
   type BaseM (CHAIN crypto) = ShelleyBase
 
   data PredicateFailure (CHAIN crypto)
-    = HeaderSizeTooLargeCHAIN Int Natural
-    | BlockSizeTooLargeCHAIN Natural Natural
-    | ObsoleteNodeCHAIN !Natural !Natural
-    | BbodyFailure !(PredicateFailure (BBODY crypto))
-    | TickFailure (PredicateFailure (TICK crypto))
-    | PrtclFailure !(PredicateFailure (PRTCL crypto))
-    | PrtclSeqFailure !(PrtlSeqFailure crypto)
+    = HeaderSizeTooLargeCHAIN
+        { pfCHAINheaderSize :: !Natural, -- Header Size
+          pfCHAINheaderMax :: !Natural -- Max Header Size
+        }
+    | BlockSizeTooLargeCHAIN
+        { pfCHAINblockSize :: !Natural, -- Block Size
+          pfCHAINblockMax :: !Natural -- Max Block Size
+        }
+    | ObsoleteNodeCHAIN
+        { pfCHAINprotoVersion :: !Natural, -- used protocol version
+          pfCHAINmaxProtoVersion :: !Natural -- max protocol version
+        }
+    | BbodyFailure !(PredicateFailure (BBODY crypto)) -- Subtransition Failures
+    | TickFailure (PredicateFailure (TICK crypto)) -- Subtransition Failures
+    | PrtclFailure !(PredicateFailure (PRTCL crypto)) -- Subtransition Failures
+    | PrtclSeqFailure !(PrtlSeqFailure crypto) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
@@ -214,7 +223,7 @@ chainChecks maxpv pp bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
   unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp)
     $ throwError
-    $ HeaderSizeTooLargeCHAIN (bHeaderSize bh) (_maxBHSize pp)
+    $ HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (_maxBHSize pp)
   unless (hBbsize (bhbody bh) <= _maxBBSize pp)
     $ throwError
     $ BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)

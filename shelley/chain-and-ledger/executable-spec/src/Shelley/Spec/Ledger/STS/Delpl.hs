@@ -57,8 +57,8 @@ instance
   type Environment (DELPL crypto) = DelplEnv
   type BaseM (DELPL crypto) = ShelleyBase
   data PredicateFailure (DELPL crypto)
-    = PoolFailure (PredicateFailure (POOL crypto))
-    | DelegFailure (PredicateFailure (DELEG crypto))
+    = PoolFailure (PredicateFailure (POOL crypto)) -- Subtransition Failures
+    | DelegFailure (PredicateFailure (DELEG crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDelegation]

@@ -56,8 +56,8 @@ instance
   type Environment (TICK crypto) = TickEnv crypto
   type BaseM (TICK crypto) = ShelleyBase
   data PredicateFailure (TICK crypto)
-    = NewEpochFailure (PredicateFailure (NEWEPOCH crypto))
-    | RupdFailure (PredicateFailure (RUPD crypto))
+    = NewEpochFailure (PredicateFailure (NEWEPOCH crypto)) -- Subtransition Failures
+    | RupdFailure (PredicateFailure (RUPD crypto)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules = []

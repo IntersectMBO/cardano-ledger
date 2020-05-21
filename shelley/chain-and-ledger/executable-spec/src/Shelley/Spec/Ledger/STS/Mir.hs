@@ -51,7 +51,7 @@ instance STS (MIR crypto) where
   type Signal (MIR crypto) = ()
   type Environment (MIR crypto) = ()
   type BaseM (MIR crypto) = ShelleyBase
-  data PredicateFailure (MIR crypto)
+  data PredicateFailure (MIR crypto) -- No Failures
     deriving (Show, Generic, Eq)
 
   initialRules = [initialMir]

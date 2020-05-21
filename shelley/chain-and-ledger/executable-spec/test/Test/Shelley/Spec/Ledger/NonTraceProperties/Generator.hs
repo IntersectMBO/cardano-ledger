@@ -451,7 +451,7 @@ convertPredicateFailuresToValidationErrors pfs =
 predicateFailureToValidationError :: PredicateFailure LEDGER -> ValidationError
 predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW _)) =
   MissingWitnesses
-predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW)) =
+predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW _)) =
   MissingWitnesses
 predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW [])) =
   InvalidWitness
@@ -465,8 +465,8 @@ predicateFailureToValidationError (UtxowFailure (UtxoFailure (FeeTooSmallUTxO a 
   FeeTooSmall a b
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO a b))) =
   ValueNotConserved a b
-predicateFailureToValidationError (DelegsFailure DelegateeNotRegisteredDELEG) =
+predicateFailureToValidationError (DelegsFailure (DelegateeNotRegisteredDELEG _)) =
   StakeDelegationImpossible
-predicateFailureToValidationError (DelegsFailure WithdrawalsNotInRewardsDELEGS) =
+predicateFailureToValidationError (DelegsFailure (WithdrawalsNotInRewardsDELEGS _)) =
   IncorrectRewards
 predicateFailureToValidationError _ = UnknownValidationError

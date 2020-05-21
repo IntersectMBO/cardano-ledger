@@ -219,7 +219,7 @@ testAliceSignsAlone =
 
 testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl Map.empty) 0 [asWitness bobPay, asWitness carlPay, asWitness dariaPay]
@@ -234,7 +234,7 @@ testEverybodySigns =
 
 testWrongScript :: Assertion
 testWrongScript =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript aliceOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOrBob] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -265,14 +265,14 @@ testAliceAndBob =
 
 testAliceAndBob' :: Assertion
 testAliceAndBob' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [asWitness alicePay]
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [asWitness bobPay]
@@ -354,7 +354,7 @@ testTwoScripts =
 
 testTwoScripts' :: Assertion
 testTwoScripts' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript
@@ -434,7 +434,7 @@ testRwdAliceSignsAlone =
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay]
@@ -449,7 +449,7 @@ testRwdAliceSignsAlone'' =
 
 testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]

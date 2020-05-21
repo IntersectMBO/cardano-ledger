@@ -53,9 +53,9 @@ instance STS (EPOCH crypto) where
   type Environment (EPOCH crypto) = ()
   type BaseM (EPOCH crypto) = ShelleyBase
   data PredicateFailure (EPOCH crypto)
-    = PoolReapFailure (PredicateFailure (POOLREAP crypto))
-    | SnapFailure (PredicateFailure (SNAP crypto))
-    | NewPpFailure (PredicateFailure (NEWPP crypto))
+    = PoolReapFailure (PredicateFailure (POOLREAP crypto)) -- Subtransition Failures
+    | SnapFailure (PredicateFailure (SNAP crypto)) -- Subtransition Failures
+    | NewPpFailure (PredicateFailure (NEWPP crypto)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 
   initialRules = [initialEpoch]

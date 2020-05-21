@@ -51,8 +51,10 @@ instance STS (NEWPP crypto) where
   type Signal (NEWPP crypto) = EpochNo
   type Environment (NEWPP crypto) = NewppEnv crypto
   type BaseM (NEWPP crypto) = ShelleyBase
-  data PredicateFailure (NEWPP crypto)
-    = UnexpectedDepositPot Coin Coin
+  data PredicateFailure (NEWPP crypto) = UnexpectedDepositPot
+    { pfNEWPPcurrentObligation :: Coin, -- The total outstanding deposits
+      pfNEWPPdepositPot :: Coin -- The deposit pot
+    }
     deriving (Show, Eq, Generic)
 
   initialRules = [initialNewPp]

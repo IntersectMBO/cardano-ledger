@@ -183,7 +183,6 @@ import Shelley.Spec.Ledger.LedgerState
     emptyRewardUpdate,
     esAccountState,
     esLState,
-    esPp,
     genesisCoins,
     genesisId,
     nesEs,
@@ -2706,7 +2705,7 @@ ex5C =
                   ( LedgerFailure
                       ( DelegsFailure
                           ( DelplFailure
-                              (DelegFailure InsufficientForInstantaneousRewardsDELEG)
+                              (DelegFailure $ InsufficientForInstantaneousRewardsDELEG (Coin 100) (Coin 99))
                           )
                       )
                   )
