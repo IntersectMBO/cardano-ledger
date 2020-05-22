@@ -111,7 +111,8 @@ import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
-  ( Network (..),
+  ( Globals (..),
+    Network (..),
     Nonce (..),
     StrictMaybe (..),
     mkNonce,
@@ -463,7 +464,7 @@ alicePoolParams =
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
-      _poolRAcnt = RewardAcnt aliceSHK,
+      _poolRAcnt = RewardAcnt Testnet aliceSHK,
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays = StrictSeq.empty,
       _poolMD =
@@ -834,9 +835,9 @@ dsEx2A =
             ],
       _rewards =
         Map.fromList
-          [ (RewardAcnt aliceSHK, Coin 0),
-            (RewardAcnt bobSHK, Coin 0),
-            (RewardAcnt carlSHK, Coin 0)
+          [ (RewardAcnt Testnet aliceSHK, Coin 0),
+            (RewardAcnt Testnet bobSHK, Coin 0),
+            (RewardAcnt Testnet carlSHK, Coin 0)
           ],
       _irwd =
         Map.fromList
@@ -1119,7 +1120,7 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
         dsEx2B
           { _irwd = Map.empty,
             _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
-            _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
+            _rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1372,7 +1373,7 @@ expectedLSEx2E =
         dsEx2D
           { _irwd = Map.empty,
             _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
-            _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
+            _rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1594,8 +1595,8 @@ bobRAcnt2H = Coin 519272726
 rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H =
   Map.fromList
-    [ (RewardAcnt aliceSHK, aliceRAcnt2H),
-      (RewardAcnt bobSHK, bobRAcnt2H)
+    [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H),
+      (RewardAcnt Testnet bobSHK, bobRAcnt2H)
     ]
 
 oCertIssueNosEx2H :: Map (KeyHash 'BlockIssuer) Natural
@@ -1685,7 +1686,7 @@ acntEx2I =
     }
 
 dsEx2I :: DState
-dsEx2I = dsEx2D {_rewards = Map.insert (mkRwdAcnt carlSHK) 110 rewardsEx2H}
+dsEx2I = dsEx2D {_rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 rewardsEx2H}
 
 expectedLSEx2I :: LedgerState
 expectedLSEx2I =
@@ -1767,7 +1768,7 @@ txbodyEx2J =
     (Set.fromList [TxIn genesisId 1])
     (StrictSeq.singleton $ TxOut bobAddr bobAda2J)
     (StrictSeq.fromList [DCertDeleg (DeRegKey bobSHK)])
-    (Wdrl $ Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
+    (Wdrl $ Map.singleton (RewardAcnt Testnet bobSHK) bobRAcnt2H)
     (Coin 9)
     (SlotNo 500)
     SNothing
@@ -1817,7 +1818,7 @@ dsEx2J =
           ],
       _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _delegations = Map.fromList [(aliceSHK, hk alicePool), (carlSHK, hk alicePool)],
-      _rewards = Map.fromList [(RewardAcnt aliceSHK, aliceRAcnt2H), (RewardAcnt carlSHK, carlMIR)]
+      _rewards = Map.fromList [(RewardAcnt Testnet aliceSHK, aliceRAcnt2H), (RewardAcnt Testnet carlSHK, carlMIR)]
     }
 
 expectedLSEx2J :: LedgerState
@@ -2025,8 +2026,8 @@ dsEx2L =
       _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _rewards =
         Map.fromList
-          [ (RewardAcnt aliceSHK, aliceRAcnt2H + Coin 201),
-            (RewardAcnt carlSHK, carlMIR)
+          [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H + Coin 201),
+            (RewardAcnt Testnet carlSHK, carlMIR)
           ]
           -- Note the pool cert refund of 201
     }
@@ -2873,7 +2874,7 @@ test5D = do
           ds = getDState ex5DState
           StakeCreds stkCreds = _stkCreds ds
           rews = _rewards ds
-          rewEntry = rews Map.!? (mkRwdAcnt aliceSHK)
+          rewEntry = rews Map.!? (mkRwdAcnt Testnet aliceSHK)
       assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry

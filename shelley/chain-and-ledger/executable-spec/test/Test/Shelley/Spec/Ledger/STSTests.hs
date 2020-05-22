@@ -10,6 +10,7 @@ import Data.Either (fromRight, isRight)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, singleton)
 import qualified Data.Set as Set
+import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
@@ -429,7 +430,7 @@ testRwdAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript aliceOnly)) 1000) 0 [asWitness alicePay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript aliceOnly)) 1000) 0 [asWitness alicePay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone' :: Assertion
@@ -437,14 +438,14 @@ testRwdAliceSignsAlone' =
   utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay]
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
   assertBool s (isRight utxoSt')
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone''' :: Assertion
@@ -452,4 +453,4 @@ testRwdAliceSignsAlone''' =
   utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]

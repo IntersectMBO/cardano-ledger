@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.Address
     deserialiseAddr,
     Addr (..),
     getNetwork,
+    RewardAcnt (..),
     -- internals exported for testing
     getAddr,
     getKeyHash,
@@ -34,10 +35,17 @@ module Shelley.Spec.Ledger.Address
   )
 where
 
-import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..), decodeFull, serialize)
+import Cardano.Binary
+  ( Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeFull,
+    serialize,
+  )
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError)
+import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError)
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
@@ -47,7 +55,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
 import Data.String (fromString)
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
@@ -55,7 +62,6 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     PaymentCredential,
     Ptr (..),
-    RewardAcnt (..),
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Crypto
@@ -65,15 +71,17 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 mkVKeyRwdAcnt ::
   Crypto crypto =>
+  Network ->
   KeyPair 'Staking crypto ->
   RewardAcnt crypto
-mkVKeyRwdAcnt keys = RewardAcnt $ KeyHashObj (hashKey $ vKey keys)
+mkVKeyRwdAcnt network keys = RewardAcnt network $ KeyHashObj (hashKey $ vKey keys)
 
 mkRwdAcnt ::
+  Network ->
   Credential 'Staking crypto ->
   RewardAcnt crypto
-mkRwdAcnt script@(ScriptHashObj _) = RewardAcnt script
-mkRwdAcnt key@(KeyHashObj _) = RewardAcnt key
+mkRwdAcnt network script@(ScriptHashObj _) = RewardAcnt network script
+mkRwdAcnt network key@(KeyHashObj _) = RewardAcnt network key
 
 toAddr ::
   Crypto crypto =>
@@ -126,6 +134,15 @@ getNetwork (AddrBootstrap byronAddr) =
 
 instance NoUnexpectedThunks (Addr crypto)
 
+-- | An account based address for rewards
+data RewardAcnt crypto = RewardAcnt
+  { getRwdNetwork :: Network,
+    getRwdCred :: Credential 'Staking crypto
+  }
+  deriving (Show, Eq, Generic, Ord, NFData)
+
+instance NoUnexpectedThunks (RewardAcnt crypto)
+
 byron :: Int
 byron = 7
 
@@ -140,6 +157,9 @@ stakeCredIsScript = 5
 
 payCredIsScript :: Int
 payCredIsScript = 4
+
+rewardCredIsScript :: Int
+rewardCredIsScript = 4
 
 putAddr :: Addr crypto -> Put
 putAddr (AddrBootstrap byronAddr) = B.putLazyByteString (serialize byronAddr)
@@ -181,6 +201,34 @@ getAddr = do
           fail $
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
+
+putRewardAcnt :: RewardAcnt crypto -> Put
+putRewardAcnt (RewardAcnt network cred) = do
+  let setPayCredBit = case cred of
+        ScriptHashObj _ -> flip setBit payCredIsScript
+        KeyHashObj _ -> id
+      netId = networkToWord8 network
+      rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
+      header = setPayCredBit (netId .|. rewardAcntPrefix)
+  B.putWord8 header
+  putCredential cred
+
+getRewardAcnt :: forall crypto. Crypto crypto => Get (RewardAcnt crypto)
+getRewardAcnt = do
+  header <- B.getWord8
+  let rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
+      isRewardAcnt = (header .&. rewardAcntPrefix) == rewardAcntPrefix
+      netId = header .&. 0x0F -- 0b00001111 is the mask for the network id
+  case (word8ToNetwork netId, isRewardAcnt) of
+    (Nothing, _) ->
+      fail $ concat ["Reward account with unknown network Id. (", show netId, ")"]
+    (_, False) ->
+      fail $ concat ["Expected reward account. Got account with header: ", show header]
+    (Just network, True) -> do
+      cred <- case testBit header rewardCredIsScript of
+        True -> getScriptHash
+        False -> getKeyHash
+      pure $ RewardAcnt network cred
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.sizeHash ([] @h))
@@ -267,16 +315,22 @@ word7sToNat = foldl' f 0
 getVariableLengthNat :: Get Natural
 getVariableLengthNat = word7sToNat <$> getWord7s
 
-instance
-  (Typeable crypto, Crypto crypto) =>
-  ToCBOR (Addr crypto)
-  where
+decoderFromGet :: Text -> Get a -> Decoder s a
+decoderFromGet name get = do
+  bytes <- fromCBOR
+  case B.runGetOrFail get bytes of
+    Right (_remaining, _offset, value) -> pure value
+    Left (_remaining, _offset, message) ->
+      cborError (DecoderErrorCustom name $ fromString message)
+
+instance Crypto crypto => ToCBOR (Addr crypto) where
   toCBOR = toCBOR . B.runPut . putAddr
 
 instance Crypto crypto => FromCBOR (Addr crypto) where
-  fromCBOR = do
-    bytes <- fromCBOR
-    case B.runGetOrFail getAddr bytes of
-      Right (_remaining, _offset, value) -> pure value
-      Left (_remaining, _offset, message) ->
-        cborError (DecoderErrorCustom "Addr" $ fromString message)
+  fromCBOR = decoderFromGet "Addr" getAddr
+
+instance Crypto crypto => ToCBOR (RewardAcnt crypto) where
+  toCBOR = toCBOR . B.runPut . putRewardAcnt
+
+instance Crypto crypto => FromCBOR (RewardAcnt crypto) where
+  fromCBOR = decoderFromGet "RewardAcnt" getRewardAcnt

@@ -317,7 +317,7 @@ testWitnessWrongUTxO =
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
-  let aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt aliceStake) (Coin 2000)
+  let aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
       txb =
         TxBody
           Set.empty
@@ -330,7 +330,7 @@ testEmptyInputSet =
           SNothing
       wits = makeWitnessesVKey (hashTxBody txb) [aliceStake]
       tx = Tx txb wits Map.empty SNothing
-      dpState' = addReward dpState (mkVKeyRwdAcnt aliceStake) (Coin 2000)
+      dpState' = addReward dpState (mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (utxoState, dpState')
         tx
@@ -404,7 +404,7 @@ testWithdrawalNoWit =
               ]
           )
           Empty
-          (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 10))
+          (Wdrl $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 10))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -413,7 +413,7 @@ testWithdrawalNoWit =
       tx = Tx txb wits Map.empty SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs = [UtxowFailure $ MissingVKeyWitnessesUTXOW missing]
-      dpState' = addReward dpState (mkVKeyRwdAcnt bobStake) (Coin 10)
+      dpState' = addReward dpState (mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
 testWithdrawalWrongAmt :: Assertion
@@ -427,13 +427,13 @@ testWithdrawalWrongAmt =
               ]
           )
           Empty
-          (Wdrl $ Map.singleton (mkVKeyRwdAcnt bobStake) (Coin 11))
+          (Wdrl $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 11))
           (Coin 1000)
           (SlotNo 0)
           SNothing
           SNothing
       wits = makeWitnessesVKey (hashTxBody txb) [asWitness alicePay, asWitness bobStake]
-      rAcnt = mkVKeyRwdAcnt bobStake
+      rAcnt = mkVKeyRwdAcnt Testnet bobStake
       dpState' = addReward dpState rAcnt (Coin 10)
       tx = Tx txb wits Map.empty SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]

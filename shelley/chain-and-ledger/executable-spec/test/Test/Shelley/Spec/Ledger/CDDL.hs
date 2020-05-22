@@ -48,6 +48,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     MultiSig,
     OCert,
     ProposedPPUpdates,
+    RewardAcnt,
     Tx,
     TxBody,
     TxIn,
@@ -66,6 +67,7 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @BHBody n "header_body",
       cddlGroupTest @OCert n "operational_cert",
       cddlTest @Addr n "address",
+      cddlTest @RewardAcnt n "reward_account",
       cddlTest @(Credential 'Staking) n "stake_credential",
       cddlTest' @TxBody n "transaction_body",
       cddlTest @TxOut n "transaction_output",
@@ -152,7 +154,8 @@ cddlTestCommon serializer decoder n cddlData = do
             Prelude.unlines
               [ "Failed to deserialize",
                 "Error: " <> show e,
-                "Generated diag: " <> Char8.unpack exampleDiag
+                "Generated diag: " <> Char8.unpack exampleDiag,
+                "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes)
               ]
       let reencoded = serializer decoded
       verifyConforming reencoded cddl >>= \case

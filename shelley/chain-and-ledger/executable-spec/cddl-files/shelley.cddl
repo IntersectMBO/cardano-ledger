@@ -66,15 +66,25 @@ transaction_input = [ transaction_id : $hash32
 transaction_output = [address, amount : uint]
 
 ; address = bytes
+; reward_account = bytes
 
 ; address format:
-; [ 8 bit header | payload ]
-; header:
-; bit 7: byron/shelley
+; [ 8 bit header | payload ];
+;
+; shelley payment addresses:
+; bit 7: 0
 ; bit 6: base/other
 ; bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
 ; bit 4: payment cred is keyhash/scripthash
-; bits 3-0 (for shelley addr): network id
+; bits 3-0: network id
+;
+; reward addresses:
+; bits 7-5: 111
+; bit 4: credential is keyhash/scripthash
+; bits 3-0: network id
+;
+; byron addresses:
+; bits 7-4: 1000
 
 ; 0000: base address: keyhash28,keyhash28
 ; 0001: base address: scripthash28,keyhash28
@@ -85,7 +95,9 @@ transaction_output = [address, amount : uint]
 ; 0110: enterprise address: keyhash28
 ; 0111: enterprise address: scripthash28
 ; 1000: byron address
-; 1001 - 1111: future formats
+; 1110: reward account: keyhash28
+; 1111: reward account: scripthash28
+; 1001 - 1101: future formats
 
 certificate =
   [  0, stake_credential                   ; stake registration
@@ -109,7 +121,7 @@ pool_params = ( operator:       pool_keyhash
               , pledge:         coin
               , cost:           coin
               , margin:         unit_interval
-              , reward_account: stake_credential
+              , reward_account: reward_account
               , pool_owners:    set<addr_keyhash>
               , relays:         [* relay]
               , pool_metadata:  pool_metadata / null
@@ -142,7 +154,7 @@ relay =
 pool_metadata = [url, metadata_hash]
 url = tstr .size (0..64)
 
-withdrawals = { * stake_credential => coin }
+withdrawals = { * reward_account => coin }
 
 update = [ proposed_protocol_parameter_updates
          , epoch
