@@ -30,7 +30,7 @@ import qualified Data.Maybe as Maybe (maybe)
 import Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes ((==>))
+import Shelley.Spec.Ledger.BaseTypes ((==>), Network (..))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (_delegations, _irwd, _rewards, _stkCreds)
@@ -82,7 +82,7 @@ rewardZeroAfterReg tr =
         "a newly registered key should have a reward of 0"
         ( (hk ∉ getStDelegs d)
             ==> ( hk ∈ getStDelegs d'
-                    && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt hk) (getRewards d'))
+                    && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt Testnet hk) (getRewards d'))
                 )
         )
     credNewlyRegisteredAndRewardZero _ = property ()
@@ -104,7 +104,7 @@ credentialRemovedAfterDereg tr =
         counterexample
           "a deregistered stake key should not be in the reward and delegation mappings"
           ( cred ∉ getStDelegs d'
-              && mkRwdAcnt cred ∉ dom (getRewards d')
+              && mkRwdAcnt Testnet cred ∉ dom (getRewards d')
               && cred ∉ dom (getDelegations d')
           )
     removedDeregCredential _ = property ()

@@ -108,7 +108,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( DnsName,
     Port,
@@ -124,7 +124,6 @@ import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ix,
     Ptr (..),
-    RewardAcnt (..),
     StakeCredential,
   )
 import Shelley.Spec.Ledger.Crypto

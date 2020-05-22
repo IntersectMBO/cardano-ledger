@@ -16,7 +16,12 @@ import qualified Data.Map.Strict as Map (empty, singleton)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), textToDns, textToUrl)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Network (..),
+    StrictMaybe (..),
+    textToDns,
+    textToUrl,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -127,7 +132,7 @@ alicePoolParams =
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
-      _poolRAcnt = RewardAcnt aliceSHK,
+      _poolRAcnt = RewardAcnt Testnet aliceSHK,
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays = StrictSeq.singleton $ SingleHostName SNothing $ fromJust $ textToDns "relay.io",
       _poolMD =
@@ -337,7 +342,7 @@ txRegisterPool =
     }
 
 txRegisterPoolBytes16 :: BSL.ByteString
-txRegisterPoolBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a04818a034445c847ed44bd9644df0105d81e82010a820044f45049948144f4504994818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da10081824830303030303231344cedabddbc3030303030323134f6"
+txRegisterPoolBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a04818a034445c847ed44bd9644df0105d81e82010a45e0f45049948144f4504994818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da10081824830303030303231344c7cfb7d383030303030323134f6"
 
 -- | Transaction which retires a stake pool
 txbRetirePool :: TxBody
@@ -437,7 +442,7 @@ txbWithWithdrawal =
     { _inputs = Set.fromList [TxIn genesisId 0],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Coin 10)],
       _certs = StrictSeq.empty,
-      _wdrls = Wdrl $ Map.singleton (RewardAcnt aliceSHK) 100,
+      _wdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) 100,
       _txfee = Coin 94,
       _ttl = SlotNo 10,
       _txUpdate = SNothing,
@@ -457,7 +462,7 @@ txWithWithdrawal =
     }
 
 txWithWithdrawalBytes16 :: BSL.ByteString
-txWithWithdrawalBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a05a1820044f45049941864a10082824830303030303231344c5dde32ca3030303030323134824830303030383630324c5dde32ca3030303038363032f6"
+txWithWithdrawalBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a05a145e0f45049941864a10082824830303030303231344c7c5c72bb3030303030323134824830303030383630324c7c5c72bb3030303038363032f6"
 
 -- NOTE the txsize function takes into account which actual crypto parameter is use.
 -- These tests are using ShortHash and MockDSIGN so that:
@@ -474,9 +479,9 @@ sizeTests =
       testCase "register stake key" $ sizeTest txRegisterStakeBytes16 txRegisterStake 150,
       testCase "delegate stake key" $ sizeTest txDelegateStakeBytes16 txDelegateStake 178,
       testCase "deregister stake key" $ sizeTest txDeregisterStakeBytes16 txDeregisterStake 150,
-      testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 201,
+      testCase "register stake pool" $ sizeTest txRegisterPoolBytes16 txRegisterPool 200,
       testCase "retire stake pool" $ sizeTest txRetirePoolBytes16 txRetirePool 149,
       testCase "metadata" $ sizeTest txWithMDBytes16 txWithMD 154,
       testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig 189,
-      testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal 173
+      testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal 172
     ]

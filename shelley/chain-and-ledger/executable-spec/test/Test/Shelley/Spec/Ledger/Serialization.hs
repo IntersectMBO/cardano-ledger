@@ -573,23 +573,24 @@ serializationTests =
             <> S testScript
         ),
       -- checkEncodingCBOR "withdrawal_key"
-      checkEncodingCBOR
-        "withdrawal"
-        (Map.singleton (RewardAcnt testStakeCred) (Coin 123))
-        ( (T $ TkMapLen 1 . TkListLen 2)
-            <> (T $ TkWord 0)
-            <> S testKeyHash2
-            <> S (Coin 123)
-        ),
+      let r = (RewardAcnt Testnet testStakeCred)
+       in checkEncodingCBOR
+            "withdrawal"
+            (Map.singleton r (Coin 123))
+            ( (T $ TkMapLen 1)
+                <> S r
+                <> S (Coin 123)
+            ),
       -- checkEncodingCBOR "withdrawal_script"
-      checkEncodingCBOR
-        "withdrawal"
-        (Map.singleton (RewardAcnt (ScriptHashObj testScriptHash)) (Coin 123))
-        ( (T $ TkMapLen 1 . TkListLen 2)
-            <> (T $ TkWord 1)
-            <> S testScriptHash
-            <> S (Coin 123)
-        ),
+      --
+      let r = RewardAcnt Testnet (ScriptHashObj testScriptHash)
+       in checkEncodingCBOR
+            "withdrawal"
+            (Map.singleton r (Coin 123))
+            ( (T $ TkMapLen 1)
+                <> S r
+                <> S (Coin 123)
+            ),
       checkEncodingCBOR
         "register_stake_reference"
         (DCertDeleg (RegKey testStakeCred))
@@ -617,7 +618,7 @@ serializationTests =
       -- checkEncodingCBOR "register-pool"
       let poolOwner = testKeyHash2
           poolMargin = unsafeMkUnitInterval 0.7
-          poolRAcnt = RewardAcnt testStakeCred
+          poolRAcnt = RewardAcnt Testnet testStakeCred
           poolPledge = Coin 11
           poolCost = Coin 55
           poolUrl = "pool.io"
@@ -885,7 +886,7 @@ serializationTests =
       -- checkEncodingCBOR "transaction_mixed"
       let tin = TxIn genesisId 1
           tout = TxOut testAddrE (Coin 2)
-          ra = RewardAcnt (KeyHashObj testKeyHash2)
+          ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
             Update
@@ -950,7 +951,7 @@ serializationTests =
       let tin = TxIn genesisId 1
           tout = TxOut testAddrE (Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
-          ra = RewardAcnt (KeyHashObj testKeyHash2)
+          ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
             Update
@@ -1276,7 +1277,7 @@ serializationTests =
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
                 _poolMargin = unsafeMkUnitInterval 0.7,
-                _poolRAcnt = RewardAcnt testStakeCred,
+                _poolRAcnt = RewardAcnt Testnet testStakeCred,
                 _poolOwners = Set.singleton testKeyHash2,
                 _poolRelays = StrictSeq.empty,
                 _poolMD =
@@ -1321,7 +1322,7 @@ serializationTests =
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
                 _poolMargin = unsafeMkUnitInterval 0.7,
-                _poolRAcnt = RewardAcnt testStakeCred,
+                _poolRAcnt = RewardAcnt Testnet testStakeCred,
                 _poolOwners = Set.singleton testKeyHash2,
                 _poolRelays = StrictSeq.empty,
                 _poolMD =

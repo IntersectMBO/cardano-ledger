@@ -14,17 +14,36 @@ module Shelley.Spec.Ledger.STS.Deleg
 where
 
 import Byron.Spec.Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord, encodeListLen, matchSize)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord,
+    encodeListLen,
+    matchSize,
+  )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition ((?!), STS (..), TRC (..), TransitionRule, failBecause, judgmentContext, liftSTS)
+import Control.State.Transition
+  ( (?!),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    failBecause,
+    judgmentContext,
+    liftSTS,
+  )
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Globals (..),
+    ShelleyBase,
+    invalidKey,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -159,7 +178,7 @@ delegationTransition ::
   TransitionRule (DELEG crypto)
 delegationTransition = do
   TRC (DelegEnv slot ptr reserves, ds, c) <- judgmentContext
-
+  network <- liftSTS $ asks networkId
   case c of
     DCertDeleg (RegKey hk) -> do
       -- note that pattern match is used instead of regCred, as in the spec
@@ -168,20 +187,20 @@ delegationTransition = do
       pure $
         ds
           { _stkCreds = _stkCreds ds ∪ singleton hk slot,
-            _rewards = _rewards ds ∪ Map.singleton (RewardAcnt hk) (Coin 0), -- ∪ is override left
+            _rewards = _rewards ds ∪ Map.singleton (RewardAcnt network hk) (Coin 0), -- ∪ is override left
             _ptrs = _ptrs ds ∪ Map.singleton ptr hk
           }
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       hk ∈ dom (_stkCreds ds) ?! StakeKeyNotRegisteredDELEG hk
 
-      let rewardCoin = Map.lookup (RewardAcnt hk) (_rewards ds)
+      let rewardCoin = Map.lookup (RewardAcnt network hk) (_rewards ds)
       rewardCoin == Just 0 ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
       pure $
         ds
           { _stkCreds = Set.singleton hk ⋪ _stkCreds ds,
-            _rewards = Set.singleton (RewardAcnt hk) ⋪ _rewards ds,
+            _rewards = Set.singleton (RewardAcnt network hk) ⋪ _rewards ds,
             _delegations = Set.singleton hk ⋪ _delegations ds,
             _ptrs = _ptrs ds ⋫ Set.singleton hk
           }

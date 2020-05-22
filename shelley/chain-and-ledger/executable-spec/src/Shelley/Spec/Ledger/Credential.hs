@@ -15,7 +15,6 @@ module Shelley.Spec.Ledger.Credential
     Ix,
     PaymentCredential,
     Ptr (..),
-    RewardAcnt (..),
     StakeCredential,
     StakeReference (..),
   )
@@ -108,13 +107,6 @@ instance ToCBORGroup Ptr where
 
 instance FromCBORGroup Ptr where
   fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
-
--- | An account based address for rewards
-newtype RewardAcnt crypto = RewardAcnt
-  { getRwdCred :: Credential 'Staking crypto
-  }
-  deriving (Show, Eq, Generic, Ord)
-  deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 newtype GenesisCredential crypto = GenesisCredential (KeyHash 'Genesis crypto)
   deriving (Show, Generic)

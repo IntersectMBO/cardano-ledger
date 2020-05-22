@@ -15,12 +15,12 @@ module Shelley.Spec.Ledger.STS.Mir
 where
 
 import Byron.Spec.Ledger.Core (dom, (∪+), (◁))
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
@@ -85,13 +85,14 @@ mirTransition = do
       ()
       ) <-
     judgmentContext
+  network <- liftSTS $ asks networkId
   let dpState = _delegationState ls
       dState = _dstate dpState
       StakeCreds stkcreds = _stkCreds dState
       irwd' = (dom stkcreds) ◁ (_irwd dState)
       tot = sum irwd'
       reserves = _reserves acnt
-      update = Map.mapKeys mkRwdAcnt irwd'
+      update = Map.mapKeys (mkRwdAcnt network) irwd'
   if tot <= reserves
     then
       pure $
