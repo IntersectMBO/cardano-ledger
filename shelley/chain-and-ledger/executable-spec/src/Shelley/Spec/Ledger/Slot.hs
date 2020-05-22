@@ -32,6 +32,7 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.Monad.Trans (lift)
 import Data.Functor.Identity (Identity)
 import Data.Word (Word64)
+import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
 newtype Duration = Duration Word64
@@ -61,11 +62,23 @@ slotByronToShelley (Byron.Slot s) = SlotNo s
 slotShelleyToByron :: SlotNo -> Byron.Slot
 slotShelleyToByron (SlotNo s) = Byron.Slot s
 
-epochInfoEpoch :: EpochInfo Identity -> SlotNo -> ShelleyBase EpochNo
+epochInfoEpoch ::
+  HasCallStack =>
+  EpochInfo Identity ->
+  SlotNo ->
+  ShelleyBase EpochNo
 epochInfoEpoch ei = lift . EI.epochInfoEpoch ei
 
-epochInfoFirst :: EpochInfo Identity -> EpochNo -> ShelleyBase SlotNo
+epochInfoFirst ::
+  HasCallStack =>
+  EpochInfo Identity ->
+  EpochNo ->
+  ShelleyBase SlotNo
 epochInfoFirst ei = lift . EI.epochInfoFirst ei
 
-epochInfoSize :: EpochInfo Identity -> EpochNo -> ShelleyBase EpochSize
+epochInfoSize ::
+  HasCallStack =>
+  EpochInfo Identity ->
+  EpochNo ->
+  ShelleyBase EpochSize
 epochInfoSize ei = lift . EI.epochInfoSize ei
