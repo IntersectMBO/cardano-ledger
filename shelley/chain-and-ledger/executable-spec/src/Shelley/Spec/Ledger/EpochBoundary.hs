@@ -76,7 +76,7 @@ newtype Stake crypto = Stake {unStake :: (Map (Credential 'Staking crypto) Coin)
 
 -- | Extract hash of staking key from base address.
 getStakeHK :: Addr crypto -> Maybe (Credential 'Staking crypto)
-getStakeHK (Addr _ (StakeRefBase hk)) = Just hk
+getStakeHK (Addr _ _ (StakeRefBase hk)) = Just hk
 getStakeHK _ = Nothing
 
 aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
@@ -98,7 +98,7 @@ baseStake vals =
 
 -- | Extract pointer from pointer address.
 getStakePtr :: Addr crypto -> Maybe Ptr
-getStakePtr (Addr _ (StakeRefPtr ptr)) = Just ptr
+getStakePtr (Addr _ _ (StakeRefPtr ptr)) = Just ptr
 getStakePtr _ = Nothing
 
 -- | Calculate stake of pointer addresses in TxOut set.

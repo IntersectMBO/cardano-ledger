@@ -19,6 +19,7 @@ import Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr)
+import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     coerceKeyRole,
@@ -141,7 +142,10 @@ genUtxo0 :: Constants -> Gen UTxO
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
-  outs <- genTxOut c (fmap toAddr genesisKeys ++ fmap scriptsToAddr genesisScripts)
+  outs <-
+    genTxOut
+      c
+      (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr Testnet) genesisScripts)
   return (genesisCoins outs)
 
 genesisDelegs0 :: Constants -> Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)

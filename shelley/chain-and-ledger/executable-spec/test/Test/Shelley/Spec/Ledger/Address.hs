@@ -33,8 +33,9 @@ import qualified Hedgehog.Gen as H
 import qualified Hedgehog.Range as H
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
+import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
-import Shelley.Spec.Ledger.Crypto (Crypto (..), Network (..))
+import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (pattern KeyHash)
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
@@ -58,42 +59,42 @@ goldenTests =
       golden
         "addrBaseKK"
         putAddr
-        (Addr keyHash (StakeRefBase keyHash))
+        (Addr Testnet keyHash (StakeRefBase keyHash))
         "000102030401020304",
       golden
         "addrBaseSK"
         putAddr
-        (Addr scriptHash (StakeRefBase keyHash))
+        (Addr Testnet scriptHash (StakeRefBase keyHash))
         "100506070801020304",
       golden
         "addrBaseKS"
         putAddr
-        (Addr keyHash (StakeRefBase scriptHash))
+        (Addr Testnet keyHash (StakeRefBase scriptHash))
         "200102030405060708",
       golden
         "addrBaseSS"
         putAddr
-        (Addr scriptHash (StakeRefBase scriptHash))
+        (Addr Testnet scriptHash (StakeRefBase scriptHash))
         "300506070805060708",
       golden
         "addrPtrK"
         putAddr
-        (Addr keyHash (StakeRefPtr ptr))
+        (Addr Testnet keyHash (StakeRefPtr ptr))
         "400102030481000203",
       golden
         "addrPtrS"
         putAddr
-        (Addr scriptHash (StakeRefPtr ptr))
+        (Addr Testnet scriptHash (StakeRefPtr ptr))
         "500506070881000203",
       golden
         "addrEnterpriseK"
         putAddr
-        (Addr keyHash StakeRefNull)
+        (Addr Testnet keyHash StakeRefNull)
         "6001020304",
       golden
         "addrEnterpriseS"
         putAddr
-        (Addr scriptHash StakeRefNull)
+        (Addr Testnet scriptHash StakeRefNull)
         "7005060708"
     ]
 
@@ -103,54 +104,46 @@ testsWithOtherCrypto =
     "serialiseAddr tests with OtherCrypto"
     [ checkSerialiseAddr
         "addrEnterpriseK for network id = 0"
-        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        (Addr Testnet (keyBlake2b224 paymentKey) StakeRefNull)
         "608a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
       checkSerialiseAddr
         "addrBaseKK for network id = 0"
-        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        (Addr Testnet (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "008a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
       checkSerialiseAddr
         "addrPtrK for network id = 0"
-        (Addr @(OtherCrypto 'Testnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        (Addr Testnet (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "408a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203",
       checkSerialiseAddr
         "addrEnterpriseK for network id = 1"
-        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) StakeRefNull)
+        (Addr Mainnet (keyBlake2b224 paymentKey) StakeRefNull)
         "618a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d4",
       checkSerialiseAddr
         "addrBaseKK for network id = 1"
-        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
+        (Addr Mainnet (keyBlake2b224 paymentKey) (StakeRefBase (keyBlake2b224 stakeKey)))
         "018a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d408b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4",
       checkSerialiseAddr
         "addrPtrK for network id = 1"
-        (Addr @(OtherCrypto 'Mainnet) (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
+        (Addr Mainnet (keyBlake2b224 paymentKey) (StakeRefPtr ptr))
         "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
     ]
 
 -- helper data to mimick crypto impl used in cardano-node
 -- influenced by https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
-data OtherCrypto (network :: Network)
+--
+data OtherCrypto
 
-instance Crypto (OtherCrypto 'Testnet) where
-  type DSIGN (OtherCrypto 'Testnet) = Ed25519DSIGN
-  type KES (OtherCrypto 'Testnet) = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF (OtherCrypto 'Testnet) = SimpleVRF
-  type HASH (OtherCrypto 'Testnet) = Blake2b_256
-  networkMagicId _ = Testnet
+instance Crypto OtherCrypto where
+  type DSIGN OtherCrypto = Ed25519DSIGN
+  type KES OtherCrypto = Sum7KES Ed25519DSIGN Blake2b_256
+  type VRF OtherCrypto = SimpleVRF
+  type HASH OtherCrypto = Blake2b_256
 
-instance Crypto (OtherCrypto 'Mainnet) where
-  type DSIGN (OtherCrypto 'Mainnet) = Ed25519DSIGN
-  type KES (OtherCrypto 'Mainnet) = Sum7KES Ed25519DSIGN Blake2b_256
-  type VRF (OtherCrypto 'Mainnet) = SimpleVRF
-  type HASH (OtherCrypto 'Mainnet) = Blake2b_256
-  networkMagicId _ = Mainnet
-
-type OtherCredential kr (net :: Network) = Credential kr (OtherCrypto net)
+type OtherCredential kr = Credential kr OtherCrypto
 
 checkSerialiseAddr ::
-  Crypto (OtherCrypto network) =>
   String ->
-  Addr (OtherCrypto network) ->
+  Addr OtherCrypto ->
   BS.ByteString ->
   TestTree
 checkSerialiseAddr name value expected =
@@ -166,7 +159,7 @@ stakeKey = B16.encode "1c2c3c4c5c6c7c8c"
 -- 32-byte verification key is expected, vk, ie., public key without chain code.
 -- The verification key undergoes Blake2b_224 hashing
 -- and should be 28-byte in the aftermath
-keyBlake2b224 :: BS.ByteString -> OtherCredential kh net
+keyBlake2b224 :: BS.ByteString -> OtherCredential kh
 keyBlake2b224 vk =
   KeyHashObj . KeyHash . UnsafeHash $ hk
   where
@@ -235,7 +228,7 @@ putGet name gen put get = T.testProperty (name <> "_bytes") $ H.property $ do
 genAddr :: Gen C.Addr
 genAddr =
   H.frequency
-    [ (5, Addr <$> genCredential <*> genStakeReference),
+    [ (5, Addr Testnet <$> genCredential <*> genStakeReference),
       (1, AddrBootstrap <$> Byron.genAddress)
     ]
   where

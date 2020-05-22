@@ -23,7 +23,11 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.Address (scriptToCred, toCred, pattern Addr)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Network (..),
+    StrictMaybe (..),
+    maybeToStrictMaybe,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..), splitCoin)
 import Shelley.Spec.Ledger.Credential
   ( pattern KeyHashObj,
@@ -340,9 +344,9 @@ pickSpendingInputs Constants {minNumGenInputs, maxNumGenInputs} scripts keyHashM
       balance (UTxO (Map.fromList selectedUtxo))
     )
   where
-    witnessedInput (input, TxOut addr@(Addr (KeyHashObj _) _) _) =
+    witnessedInput (input, TxOut addr@(Addr _ (KeyHashObj _) _) _) =
       (input, Left . asWitness $ findPayKeyPairAddr addr keyHashMap)
-    witnessedInput (input, TxOut addr@(Addr (ScriptHashObj _) _) _) =
+    witnessedInput (input, TxOut addr@(Addr _ (ScriptHashObj _) _) _) =
       (input, Right $ findPayScriptFromAddr addr scripts)
     witnessedInput _ = error "unsupported address"
 
@@ -417,7 +421,7 @@ genRecipients len keys scripts = do
   stakeCreds <- QC.shuffle (stakeKeys ++ stakeScripts)
   let stakeCreds' = fmap StakeRefBase stakeCreds
 
-  return (zipWith Addr payCreds stakeCreds')
+  return (zipWith (Addr Testnet) payCreds stakeCreds')
 
 genPtrAddrs :: HasCallStack => DState -> [Addr] -> Gen [Addr]
 genPtrAddrs ds addrs = do
@@ -431,5 +435,5 @@ genPtrAddrs ds addrs = do
   pure (addrs' ++ (drop n addrs))
   where
     baseAddrToPtrAddr a p = case a of
-      Addr pay _ -> Addr pay (StakeRefPtr p)
+      Addr n pay _ -> Addr n pay (StakeRefPtr p)
       _ -> a

@@ -17,6 +17,7 @@ module Shelley.Spec.Ledger.Address
     serialiseAddr,
     deserialiseAddr,
     Addr (..),
+    getNetwork,
     -- internals exported for testing
     getAddr,
     getKeyHash,
@@ -37,7 +38,6 @@ import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..), decodeFull
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Prelude (NFData, NoUnexpectedThunks, cborError)
-import Control.Monad (unless)
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
@@ -50,6 +50,7 @@ import Data.String (fromString)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     PaymentCredential,
@@ -76,9 +77,10 @@ mkRwdAcnt key@(KeyHashObj _) = RewardAcnt key
 
 toAddr ::
   Crypto crypto =>
+  Network ->
   (KeyPair 'Payment crypto, KeyPair 'Staking crypto) ->
   Addr crypto
-toAddr (payKey, stakeKey) = Addr (toCred payKey) (StakeRefBase $ toCred stakeKey)
+toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred ::
   Crypto crypto =>
@@ -94,12 +96,12 @@ scriptToCred :: Crypto crypto => MultiSig crypto -> Credential kr crypto
 scriptToCred = ScriptHashObj . hashMultiSigScript
 
 -- | Create a base address from a pair of multi-sig scripts (pay and stake)
-scriptsToAddr :: Crypto crypto => (MultiSig crypto, MultiSig crypto) -> Addr crypto
-scriptsToAddr (payScript, stakeScript) =
-  Addr (scriptToCred payScript) (StakeRefBase $ scriptToCred stakeScript)
+scriptsToAddr :: Crypto crypto => Network -> (MultiSig crypto, MultiSig crypto) -> Addr crypto
+scriptsToAddr n (payScript, stakeScript) =
+  Addr n (scriptToCred payScript) (StakeRefBase $ scriptToCred stakeScript)
 
 -- | Serialise an address to the external format.
-serialiseAddr :: Crypto crypto => Addr crypto -> ByteString
+serialiseAddr :: Addr crypto -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 
 -- | Deserialise an address from the external format. This will fail if the
@@ -111,9 +113,16 @@ deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
 
 -- | An address for UTxO.
 data Addr crypto
-  = Addr !(PaymentCredential crypto) !(StakeReference crypto)
+  = Addr !Network !(PaymentCredential crypto) !(StakeReference crypto)
   | AddrBootstrap !(Byron.Address)
   deriving (Show, Eq, Generic, NFData, Ord)
+
+getNetwork :: Addr crypto -> Network
+getNetwork (Addr n _ _) = n
+getNetwork (AddrBootstrap byronAddr) =
+  case Byron.aaNetworkMagic . Byron.attrData . Byron.addrAttributes $ byronAddr of
+    Byron.NetworkMainOrStage -> Mainnet
+    Byron.NetworkTestnet _ -> Testnet
 
 instance NoUnexpectedThunks (Addr crypto)
 
@@ -132,13 +141,13 @@ stakeCredIsScript = 5
 payCredIsScript :: Int
 payCredIsScript = 4
 
-putAddr :: forall crypto. Crypto crypto => Addr crypto -> Put
+putAddr :: Addr crypto -> Put
 putAddr (AddrBootstrap byronAddr) = B.putLazyByteString (serialize byronAddr)
-putAddr (Addr pc sr) =
+putAddr (Addr network pc sr) =
   let setPayCredBit = case pc of
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
-      netId = networkToWord8 $ networkMagicId ([] @crypto)
+      netId = networkToWord8 network
    in case sr of
         StakeRefBase sc -> do
           let setStakeCredBit = case sc of
@@ -166,17 +175,12 @@ getAddr = do
     else do
       _ <- B.getWord8 -- read past the header byte
       let addrNetId = header .&. 0x0F -- 0b00001111 is the mask for the network id
-          netId = networkToWord8 $ networkMagicId ([] @crypto)
-      unless (addrNetId == netId) $ fail $
-        concat
-          [ "Got address with incorrect network Id. \n",
-            "Expected: ",
-            show netId,
-            "\n",
-            "Got: ",
-            show addrNetId
-          ]
-      Addr <$> getPayCred header <*> getStakeReference header
+      case word8ToNetwork addrNetId of
+        Just n -> Addr n <$> getPayCred header <*> getStakeReference header
+        Nothing ->
+          fail $
+            concat
+              ["Address with unknown network Id. (", show addrNetId, ")"]
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.sizeHash ([] @h))

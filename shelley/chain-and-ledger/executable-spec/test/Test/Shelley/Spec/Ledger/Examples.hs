@@ -111,7 +111,8 @@ import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (..),
+  ( Network (..),
+    Nonce (..),
     StrictMaybe (..),
     mkNonce,
     randomnessStabilisationWindow,
@@ -755,7 +756,11 @@ txEx2A =
 
 -- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
-alicePtrAddr = Addr (KeyHashObj . hashKey $ vKey alicePay) (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
+alicePtrAddr =
+  Addr
+    Testnet
+    (KeyHashObj . hashKey $ vKey alicePay)
+    (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
 utxostEx2A :: UTxOState
 utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyPPPUpdates
