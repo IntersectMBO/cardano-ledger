@@ -187,9 +187,10 @@ protocol_param_update =
 transaction_witness_set =
   { ?0 => [* vkeywitness ]
   , ?1 => [* multisig_script ]
+  , ?2 => [* bootstrap_witness ]
   ; In the future, new kinds of witnesses can be added like this:
-  ; , ?2 => [* monetary_policy_script ]
-  ; , ?3 => [* plutus_script ]
+  ; , ?3 => [* monetary_policy_script ]
+  ; , ?4 => [* plutus_script ]
   }
 
 transaction_metadatum =
@@ -204,8 +205,9 @@ transaction_metadadum_label = uint
 transaction_metadata =
   { * transaction_metadadum_label => transaction_metadatum }
 
-
 vkeywitness = [ $vkey, $signature ]
+
+bootstrap_witness = [ $vkey, $signature, bytes, bytes, bytes ]
 
 multisig_script =
   [  0, addr_keyhash                 ; public key

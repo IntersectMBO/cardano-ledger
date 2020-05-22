@@ -46,7 +46,8 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
-  ( getKeyCombination,
+  ( WitnessSetHKD (..),
+    getKeyCombination,
     hashScript,
     pattern Tx,
     pattern TxBody,
@@ -235,7 +236,8 @@ genTx
           let metadata = SNothing -- TODO generate metadata
 
           -- calculate real fees of witnesses transaction
-          let minimalFees = minfee pparams (Tx txBody wits multiSig metadata)
+          let witSet = mempty {addrWits = wits, msigWits = multiSig}
+          let minimalFees = minfee pparams (Tx txBody witSet metadata)
 
           -- discard generated transaction if the balance cannot cover the fees
           if minimalFees > balance_
@@ -256,8 +258,8 @@ genTx
                       genesisWitnesses
                       ksKeyPairsByHash'
                       msigSignatures
-
-              pure (Tx txBody' wits' multiSig metadata)
+                  witSet' = mempty {addrWits = wits', msigWits = multiSig}
+              pure (Tx txBody' witSet' metadata)
 
 mkTxWits ::
   HasCallStack =>

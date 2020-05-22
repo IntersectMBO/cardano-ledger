@@ -261,7 +261,7 @@ import Shelley.Spec.Ledger.Slot
     EpochNo (..),
     SlotNo (..),
   )
-import Shelley.Spec.Ledger.Tx (pattern Tx)
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), pattern Tx)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
     PoolMetaData (..),
@@ -710,25 +710,26 @@ txEx2A :: Tx
 txEx2A =
   Tx
     txbodyEx2A
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx2A)
-        ( (asWitness <$> [alicePay, carlPay])
-            <> (asWitness <$> [aliceStake])
-            <> ( asWitness
-                   <$> [ cold alicePool,
-                         cold (coreNodeKeys 0),
-                         cold (coreNodeKeys 1),
-                         cold (coreNodeKeys 2),
-                         cold (coreNodeKeys 3),
-                         cold (coreNodeKeys 4)
-                       ]
-               )
-        )
-        -- Note that Alice's stake key needs to sign this transaction
-        -- since it is an owner of the stake pool being registered,
-        -- and *not* because of the stake key registration.
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2A)
+            ( (asWitness <$> [alicePay, carlPay])
+                <> (asWitness <$> [aliceStake])
+                <> ( asWitness
+                       <$> [ cold alicePool,
+                             cold (coreNodeKeys 0),
+                             cold (coreNodeKeys 1),
+                             cold (coreNodeKeys 2),
+                             cold (coreNodeKeys 3),
+                             cold (coreNodeKeys 4)
+                           ]
+                   )
+            )
+            -- Note that Alice's stake key needs to sign this transaction
+            -- since it is an owner of the stake pool being registered,
+            -- and *not* because of the stake key registration.
+      }
     SNothing
 
 -- | Pointer address to address of Alice address.
@@ -899,12 +900,12 @@ txEx2B :: Tx
 txEx2B =
   Tx
     txbodyEx2B -- Body of the transaction
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx2B)
-        [asWitness alicePay, asWitness aliceStake, asWitness bobStake]
-    )
-    -- Witness verification key set
-    Map.empty -- Witness signature map
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2B)
+            [asWitness alicePay, asWitness aliceStake, asWitness bobStake]
+      }
     SNothing
 
 blockEx2B :: Block
@@ -1122,8 +1123,10 @@ txEx2D :: Tx
 txEx2D =
   Tx
     txbodyEx2D
-    (makeWitnessesVKey (hashTxBody txbodyEx2D) [asWitness alicePay, asWitness carlStake])
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody txbodyEx2D) [asWitness alicePay, asWitness carlStake]
+      }
     SNothing
 
 blockEx2D :: Block
@@ -1675,8 +1678,10 @@ txEx2J :: Tx
 txEx2J =
   Tx
     txbodyEx2J
-    (makeWitnessesVKey (hashTxBody txbodyEx2J) [asWitness bobPay, asWitness bobStake])
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody txbodyEx2J) [asWitness bobPay, asWitness bobStake]
+      }
     SNothing
 
 blockEx2J :: Block
@@ -1783,8 +1788,12 @@ txEx2K :: Tx
 txEx2K =
   Tx
     txbodyEx2K
-    (makeWitnessesVKey (hashTxBody txbodyEx2K) [asWitness $ cold alicePool, asWitness alicePay])
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2K)
+            [asWitness $ cold alicePool, asWitness alicePay]
+      }
     SNothing
 
 blockEx2K :: Block
@@ -2024,15 +2033,16 @@ txEx3A :: Tx
 txEx3A =
   Tx
     txbodyEx3A
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx3A)
-        [ asWitness alicePay,
-          asWitness . cold $ coreNodeKeys 0,
-          asWitness . cold $ coreNodeKeys 3,
-          asWitness . cold $ coreNodeKeys 4
-        ]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx3A)
+            [ asWitness alicePay,
+              asWitness . cold $ coreNodeKeys 0,
+              asWitness . cold $ coreNodeKeys 3,
+              asWitness . cold $ coreNodeKeys 4
+            ]
+      }
     SNothing
 
 blockEx3A :: Block
@@ -2126,14 +2136,15 @@ txEx3B :: Tx
 txEx3B =
   Tx
     txbodyEx3B
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx3B)
-        [ asWitness alicePay,
-          asWitness . cold $ coreNodeKeys 1,
-          asWitness . cold $ coreNodeKeys 5
-        ]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx3B)
+            [ asWitness alicePay,
+              asWitness . cold $ coreNodeKeys 1,
+              asWitness . cold $ coreNodeKeys 5
+            ]
+      }
     SNothing
 
 blockEx3B :: Block
@@ -2303,12 +2314,13 @@ txEx4A :: Tx
 txEx4A =
   Tx
     txbodyEx4A
-    ( makeWitnessesVKey (hashTxBody txbodyEx4A) [alicePay]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody txbodyEx4A)
-          [KeyPair (coreNodeVKG 0) (coreNodeSKG 0)]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody txbodyEx4A) [alicePay]
+            `Set.union` makeWitnessesVKey
+              (hashTxBody txbodyEx4A)
+              [KeyPair (coreNodeVKG 0) (coreNodeSKG 0)]
+      }
     SNothing
 
 blockEx4A :: Block
@@ -2475,19 +2487,20 @@ txEx5A :: MIRPot -> Tx
 txEx5A pot =
   Tx
     (txbodyEx5A pot)
-    ( makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody $ txbodyEx5A pot)
-          ( asWitness
-              <$> [ cold (coreNodeKeys 0),
-                    cold (coreNodeKeys 1),
-                    cold (coreNodeKeys 2),
-                    cold (coreNodeKeys 3),
-                    cold (coreNodeKeys 4)
-                  ]
-          )
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
+            `Set.union` makeWitnessesVKey
+              (hashTxBody $ txbodyEx5A pot)
+              ( asWitness
+                  <$> [ cold (coreNodeKeys 0),
+                        cold (coreNodeKeys 1),
+                        cold (coreNodeKeys 2),
+                        cold (coreNodeKeys 3),
+                        cold (coreNodeKeys 4)
+                      ]
+              )
+      }
     SNothing
 
 blockEx5A :: MIRPot -> Block
@@ -2596,18 +2609,20 @@ txEx5B :: MIRPot -> Tx
 txEx5B pot =
   Tx
     (txbodyEx5A pot)
-    ( makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody $ txbodyEx5A pot)
-          ( asWitness
-              <$> [ cold (coreNodeKeys 0),
-                    cold (coreNodeKeys 1),
-                    cold (coreNodeKeys 2),
-                    cold (coreNodeKeys 3)
-                  ]
-          )
+    ( mempty
+        { addrWits =
+            makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
+              `Set.union` makeWitnessesVKey
+                (hashTxBody $ txbodyEx5A pot)
+                ( asWitness
+                    <$> [ cold (coreNodeKeys 0),
+                          cold (coreNodeKeys 1),
+                          cold (coreNodeKeys 2),
+                          cold (coreNodeKeys 3)
+                        ]
+                )
+        }
     )
-    Map.empty
     SNothing
 
 blockEx5B :: MIRPot -> Block
@@ -2696,19 +2711,20 @@ txEx5D :: MIRPot -> Tx
 txEx5D pot =
   Tx
     (txbodyEx5D pot)
-    ( makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody $ txbodyEx5D pot)
-          ( asWitness
-              <$> [ cold (coreNodeKeys 0),
-                    cold (coreNodeKeys 1),
-                    cold (coreNodeKeys 2),
-                    cold (coreNodeKeys 3),
-                    cold (coreNodeKeys 4)
-                  ]
-          )
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake]
+            `Set.union` makeWitnessesVKey
+              (hashTxBody $ txbodyEx5D pot)
+              ( asWitness
+                  <$> [ cold (coreNodeKeys 0),
+                        cold (coreNodeKeys 1),
+                        cold (coreNodeKeys 2),
+                        cold (coreNodeKeys 3),
+                        cold (coreNodeKeys 4)
+                      ]
+              )
+      }
     SNothing
 
 blockEx5D :: MIRPot -> Block
@@ -2747,7 +2763,13 @@ txbodyEx5D' pot =
     SNothing
 
 txEx5D' :: MIRPot -> Tx
-txEx5D' pot = Tx (txbodyEx5D' pot) (makeWitnessesVKey (hashTxBody $ txbodyEx5D' pot) [alicePay]) Map.empty SNothing
+txEx5D' pot =
+  Tx
+    (txbodyEx5D' pot)
+    mempty
+      { addrWits = makeWitnessesVKey (hashTxBody $ txbodyEx5D' pot) [alicePay]
+      }
+    SNothing
 
 blockEx5D' :: MIRPot -> Block
 blockEx5D' pot =
@@ -2787,7 +2809,11 @@ txbodyEx5D'' pot =
     SNothing
 
 txEx5D'' :: MIRPot -> Tx
-txEx5D'' pot = Tx (txbodyEx5D'' pot) (makeWitnessesVKey (hashTxBody $ txbodyEx5D'' pot) [alicePay]) Map.empty SNothing
+txEx5D'' pot =
+  Tx
+    (txbodyEx5D'' pot)
+    mempty {addrWits = makeWitnessesVKey (hashTxBody $ txbodyEx5D'' pot) [alicePay]}
+    SNothing
 
 blockEx5D'' :: MIRPot -> Nonce -> Block
 blockEx5D'' pot epochNonce =
@@ -2880,14 +2906,15 @@ txEx6A :: Tx
 txEx6A =
   Tx
     txbodyEx6A
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx6A)
-        ( (asWitness <$> [alicePay])
-            <> (asWitness <$> [aliceStake])
-            <> (asWitness <$> [cold alicePool])
-        )
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx6A)
+            ( (asWitness <$> [alicePay])
+                <> (asWitness <$> [aliceStake])
+                <> (asWitness <$> [cold alicePool])
+            )
+      }
     SNothing
 
 earlySlotEx6 :: Word64

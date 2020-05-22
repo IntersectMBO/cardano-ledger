@@ -30,9 +30,10 @@ import Shelley.Spec.Ledger.LedgerState (keyRefunds, pattern UTxOState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Tx
   ( _body,
-    _witnessMSigMap,
-    _witnessVKeySet,
+    _witnessSet,
+    addrWits,
     getKeyCombinations,
+    msigWits,
   )
 import Shelley.Spec.Ledger.TxData (_certs, _inputs, _txfee, witKeyHash, pattern TxIn)
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
@@ -193,8 +194,8 @@ requiredMSigSignaturesSubset tr =
   where
     signaturesSubset sst =
       let khs = keyHashSet sst
-       in all (existsReqKeyComb khs) (_witnessMSigMap $ signal sst)
+       in all (existsReqKeyComb khs) (msigWits . _witnessSet $ signal sst)
     existsReqKeyComb keyHashes msig =
       any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (getKeyCombinations msig)
     keyHashSet sst =
-      Set.map witKeyHash (_witnessVKeySet $ signal sst)
+      Set.map witKeyHash (addrWits . _witnessSet $ signal sst)

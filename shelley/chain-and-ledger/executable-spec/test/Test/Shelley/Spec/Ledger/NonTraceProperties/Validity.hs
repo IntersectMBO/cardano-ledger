@@ -32,7 +32,7 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
   ( SlotNo (..),
   )
-import Shelley.Spec.Ledger.Tx (Tx (..))
+import Shelley.Spec.Ledger.Tx (Tx (..), addrWits)
 import Shelley.Spec.Ledger.TxData
   ( TxBody (..),
     Wdrl (..),
@@ -200,12 +200,12 @@ enoughWits ::
   GenDelegs crypto ->
   UTxOState crypto ->
   Validity
-enoughWits tx@(Tx _ wits _ _) d' u =
+enoughWits tx@(Tx _ wits _) d' u =
   if witsVKeyNeeded (_utxo u) tx d' `Set.isSubsetOf` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
-    signers = Set.map witKeyHash wits
+    signers = Set.map witKeyHash (addrWits wits)
 
 validRuleUTXOW ::
   ( Crypto crypto,

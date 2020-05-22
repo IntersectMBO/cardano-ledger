@@ -159,7 +159,7 @@ import Shelley.Spec.Ledger.Serialization
     ipv6ToBytes,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), hashScript)
+import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
     PoolMetaData (..),
@@ -1036,7 +1036,7 @@ serializationUnitTests =
           w = makeWitnessVKey txbh testKey1
        in checkEncodingCBORAnnotated
             "tx_min"
-            (Tx txb (Set.singleton w) Map.empty SNothing)
+            (Tx txb mempty {addrWits = Set.singleton w} SNothing)
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 1)
@@ -1059,10 +1059,11 @@ serializationUnitTests =
           txbh = hashTxBody txb
           w = makeWitnessVKey txbh testKey1
           s = Map.singleton (hashScript testScript) testScript
+          wits = mempty {addrWits = Set.singleton w, msigWits = s}
           md = MD.MetaData $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
             "tx_full"
-            (Tx txb (Set.singleton w) s (SJust md))
+            (Tx txb wits (SJust md))
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 2)
@@ -1168,17 +1169,21 @@ serializationUnitTests =
           w1 = makeWitnessVKey (hashTxBody txb1) testKey1
           w2 = makeWitnessVKey (hashTxBody txb1) testKey2
           ws = Set.fromList [w1, w2]
-          tx1 = Tx txb1 (Set.singleton w1) mempty SNothing
-          tx2 = Tx txb2 ws mempty SNothing
-          tx3 = Tx txb3 mempty (Map.singleton (hashScript testScript) testScript) SNothing
+          tx1 = Tx txb1 mempty {addrWits = Set.singleton w1} SNothing
+          tx2 = Tx txb2 mempty {addrWits = ws} SNothing
+          tx3 =
+            Tx
+              txb3
+              mempty {msigWits = Map.singleton (hashScript testScript) testScript}
+              SNothing
           ss =
             Map.fromList
               [ (hashScript testScript, testScript),
                 (hashScript testScript2, testScript2)
               ]
-          tx4 = Tx txb4 mempty ss SNothing
+          tx4 = Tx txb4 mempty {msigWits = ss} SNothing
           tx5MD = MD.MetaData $ Map.singleton 17 (MD.I 42)
-          tx5 = Tx txb5 ws ss (SJust tx5MD)
+          tx5 = Tx txb5 mempty {addrWits = ws, msigWits = ss} (SJust tx5MD)
           txns = TxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             "rich_block"

@@ -92,7 +92,6 @@ import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
-import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty)
@@ -103,7 +102,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
@@ -172,7 +171,7 @@ import Shelley.Spec.Ledger.Slot
     epochInfoFirst,
     epochInfoSize,
   )
-import Shelley.Spec.Ledger.Tx (Tx (..), extractKeyHash)
+import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), extractKeyHash)
 import Shelley.Spec.Ledger.TxData
   ( Ix,
     PoolCert (..),
@@ -728,7 +727,7 @@ witsVKeyNeeded ::
   Tx crypto ->
   GenDelegs crypto ->
   Set (KeyHash 'Witness crypto)
-witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
+witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
   inputAuthors
     `Set.union` wdrlAuthors
     `Set.union` certAuthors
@@ -736,12 +735,10 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     `Set.union` owners
   where
     inputAuthors = asWitness `Set.map` Set.foldr insertHK Set.empty (_inputs txbody)
-    unspendableKeyHash = KeyHash (coerce (hash 0 :: Hash crypto Int))
     insertHK txin hkeys =
       case txinLookup txin utxo' of
         Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert pay hkeys
-        Just (TxOut (AddrBootstrap _) _) -> Set.insert unspendableKeyHash hkeys
-        -- NOTE: Until Byron addresses are supported, we insert an unspendible keyhash
+        Just (TxOut (AddrBootstrap bootAddr) _) -> Set.insert (bootstrapKeyHash bootAddr) hkeys
         _ -> hkeys
     wdrlAuthors =
       Set.map asWitness
@@ -774,12 +771,15 @@ verifiedWits ::
   ) =>
   Tx crypto ->
   Either [VKey 'Witness crypto] ()
-verifiedWits (Tx txbody wits _ _) =
+verifiedWits (Tx txbody wits _) =
   case failed == mempty of
     True -> Right ()
     False -> Left $ fmap (\(WitVKey vk _) -> vk) failed
   where
-    failed = filter (not . verifyWitVKey (hashWithSerialiser toCBOR txbody)) (Set.toList wits)
+    failed =
+      filter
+        (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
+        (Set.toList $ addrWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
