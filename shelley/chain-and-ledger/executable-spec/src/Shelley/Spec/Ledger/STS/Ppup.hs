@@ -49,20 +49,16 @@ instance STS (PPUP crypto) where
   type BaseM (PPUP crypto) = ShelleyBase
   data PredicateFailure (PPUP crypto)
     = NonGenesisUpdatePPUP
-        { pfPPUPvoters :: Set (KeyHash 'Genesis crypto), -- KeyHashes which are voting
-          pfPPUPgenesisKeyhashes :: Set (KeyHash 'Genesis crypto) -- KeyHashes which should be voting
-        }
+        !(Set (KeyHash 'Genesis crypto)) -- KeyHashes which are voting
+        !(Set (KeyHash 'Genesis crypto)) -- KeyHashes which should be voting
     | PPUpdateTooLatePPUP
-        { pfPPUPslot :: SlotNo, -- current slot
-          pfPPUPtooLate :: SlotNo -- bound on when votes are allowed this epoch
-        }
+        !SlotNo -- current slot
+        !SlotNo -- bound on when votes are allowed this epoch
     | PPUpdateWrongEpoch
-        { pfPPUPepoch :: EpochNo, -- current epoch
-          pfPPUPintendedEpoch :: EpochNo -- intended epoch of update
-        }
+        !EpochNo -- current epoch
+        !EpochNo -- intended epoch of update
     | PVCannotFollowPPUP
-        { pfPPUPbadPV :: ProtVer -- the first bad protocol version
-        }
+        !ProtVer -- the first bad protocol version
     deriving (Show, Eq, Generic)
 
   initialRules = []

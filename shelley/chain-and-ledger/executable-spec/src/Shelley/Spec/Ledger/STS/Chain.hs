@@ -191,17 +191,14 @@ instance
 
   data PredicateFailure (CHAIN crypto)
     = HeaderSizeTooLargeCHAIN
-        { pfCHAINheaderSize :: !Natural, -- Header Size
-          pfCHAINheaderMax :: !Natural -- Max Header Size
-        }
+        !Natural -- Header Size
+        !Natural -- Max Header Size
     | BlockSizeTooLargeCHAIN
-        { pfCHAINblockSize :: !Natural, -- Block Size
-          pfCHAINblockMax :: !Natural -- Max Block Size
-        }
+        !Natural -- Block Size
+        !Natural -- Max Block Size
     | ObsoleteNodeCHAIN
-        { pfCHAINprotoVersion :: !Natural, -- used protocol version
-          pfCHAINmaxProtoVersion :: !Natural -- max protocol version
-        }
+        !Natural -- protocol version used
+        !Natural -- max protocol version
     | BbodyFailure !(PredicateFailure (BBODY crypto)) -- Subtransition Failures
     | TickFailure !(PredicateFailure (TICK crypto)) -- Subtransition Failures
     | PrtclFailure !(PredicateFailure (PRTCL crypto)) -- Subtransition Failures

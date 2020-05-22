@@ -47,8 +47,7 @@ instance
   data PredicateFailure (NEWEPOCH crypto)
     = EpochFailure (PredicateFailure (EPOCH crypto)) -- Subtransition Failures
     | CorruptRewardUpdate
-        { pfNEWEPOCHcorruptRewardUpdate :: (RewardUpdate crypto) -- The reward update violates an invariant
-        }
+        !(RewardUpdate crypto) -- The reward update which violates an invariant
     | MirFailure (PredicateFailure (MIR crypto)) -- Subtransition Failures
     deriving (Show, Generic, Eq)
 

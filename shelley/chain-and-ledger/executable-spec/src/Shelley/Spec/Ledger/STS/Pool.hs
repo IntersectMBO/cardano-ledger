@@ -49,16 +49,13 @@ instance STS (POOL crypto) where
 
   data PredicateFailure (POOL crypto)
     = StakePoolNotRegisteredOnKeyPOOL
-        { pfPOOLunknowCannotRegister :: KeyHash 'StakePool crypto -- KeyHash which cannot be retired since it is not registered
-        }
+        !(KeyHash 'StakePool crypto) -- KeyHash which cannot be retired since it is not registered
     | StakePoolRetirementWrongEpochPOOL
-        { pfPOOLcurrentEpoch :: Word64, -- Current Epoch
-          pfPOOLintendedEpoch :: Word64, -- The epoch listed in the Pool Retirement Certificate
-          pfPOOLepochMax :: Word64 -- The first epoch that is too far out for retirement
-        }
+        !Word64 -- Current Epoch
+        !Word64 -- The epoch listed in the Pool Retirement Certificate
+        !Word64 -- The first epoch that is too far out for retirement
     | WrongCertificateTypePOOL
-        { pfPOOLwhichCertType :: Word8 -- The disallowed certificate (this case should never happen)
-        }
+        !Word8 -- The disallowed certificate (this case should never happen)
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyPState]

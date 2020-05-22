@@ -69,29 +69,22 @@ instance
   type BaseM (UTXOW crypto) = ShelleyBase
   data PredicateFailure (UTXOW crypto)
     = InvalidWitnessesUTXOW
-        { pfUTXObadWitnesses :: [VKey 'Witness crypto] -- witnesses which failed in verifiedWits function
-        }
+        ![VKey 'Witness crypto] -- witnesses which failed in verifiedWits function
     | MissingVKeyWitnessesUTXOW
-        { pfUTXOmissingWitnesses :: Set (KeyHash 'Witness crypto) -- witnesses which were needed and not supplied
-        }
+        !(Set (KeyHash 'Witness crypto)) -- witnesses which were needed and not supplied
     | MissingScriptWitnessesUTXOW
-        { pfUTXOmissingScripts :: Set (ScriptHash crypto) -- missing scripts
-        }
+        !(Set (ScriptHash crypto)) -- missing scripts
     | ScriptWitnessNotValidatingUTXOW
-        { pfUTXOfailedScripts :: Set (ScriptHash crypto) -- failed scripts
-        }
+        !(Set (ScriptHash crypto)) -- failed scripts
     | UtxoFailure (PredicateFailure (UTXO crypto))
     | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness crypto))
     | MissingTxBodyMetaDataHash
-        { pfUTXOhashOfMetadata :: MetaDataHash crypto -- hash of the full metadata
-        }
+        !(MetaDataHash crypto) -- hash of the full metadata
     | MissingTxMetaData
-        { pfUTXOtxbodyMetaDataHash :: MetaDataHash crypto -- hash of the metadata included in the transaction body
-        }
+        !(MetaDataHash crypto) -- hash of the metadata included in the transaction body
     | ConflictingMetaDataHash
-        { pfUTXOMetaDataHashConflictBodyInside :: MetaDataHash crypto, -- hash of the metadata included in the transaction body
-          pfUTXOMetaDataHashConflictBodyOutside :: MetaDataHash crypto -- hash of the full metadata
-        }
+        !(MetaDataHash crypto) -- hash of the metadata included in the transaction body
+        !(MetaDataHash crypto) -- hash of the full metadata
     deriving (Eq, Generic, Show)
 
   transitionRules = [utxoWitnessed]

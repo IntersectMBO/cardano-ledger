@@ -72,11 +72,9 @@ instance
   type BaseM (DELEGS crypto) = ShelleyBase
   data PredicateFailure (DELEGS crypto)
     = DelegateeNotRegisteredDELEG
-        { pfDELEGSpoolNotRegistered :: (KeyHash 'StakePool crypto) -- target pool which is not registered
-        }
+        !(KeyHash 'StakePool crypto) -- target pool which is not registered
     | WithdrawalsNotInRewardsDELEGS
-        { pfDELEGSincorrectWithdrawals :: Map (RewardAcnt crypto) Coin -- withdrawals that are missing or are not withdrawing the entire amount
-        }
+        !(Map (RewardAcnt crypto) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
     | DelplFailure (PredicateFailure (DELPL crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
