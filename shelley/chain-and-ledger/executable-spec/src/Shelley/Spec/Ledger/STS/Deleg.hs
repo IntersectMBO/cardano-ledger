@@ -60,32 +60,24 @@ instance STS (DELEG crypto) where
   type BaseM (DELEG crypto) = ShelleyBase
   data PredicateFailure (DELEG crypto)
     = StakeKeyAlreadyRegisteredDELEG
-        { pfDELEGcredIsRegistered :: Credential 'Staking crypto -- Credential which is already registered
-        }
+        !(Credential 'Staking crypto) -- Credential which is already registered
     | StakeKeyNotRegisteredDELEG
-        { pfDELEGcredIsNotRegistered :: Credential 'Staking crypto -- Credential which is not registered
-        }
+        !(Credential 'Staking crypto) -- Credential which is not registered
     | StakeKeyNonZeroAccountBalanceDELEG
-        { pfDELEGNonZeroBalance :: Maybe Coin -- The remaining reward account balance, if it exists
-        }
+        !(Maybe Coin) -- The remaining reward account balance, if it exists
     | StakeDelegationImpossibleDELEG
-        { pfDELEGcannotDelegCredential :: Credential 'Staking crypto -- Credential that is not registered
-        }
+        !(Credential 'Staking crypto) -- Credential that is not registered
     | WrongCertificateTypeDELEG -- The DCertPool constructor should not be used by this transition
     | GenesisKeyNotInpMappingDELEG
-        { pfDELEGunknownGenesisKH :: KeyHash 'Genesis crypto -- Unknown Genesis KeyHash
-        }
+        !(KeyHash 'Genesis crypto) -- Unknown Genesis KeyHash
     | DuplicateGenesisDelegateDELEG
-        { pfDELEGduplicateDelegation :: KeyHash 'GenesisDelegate crypto -- Keyhash which is already delegated to
-        }
+        !(KeyHash 'GenesisDelegate crypto) -- Keyhash which is already delegated to
     | InsufficientForInstantaneousRewardsDELEG
-        { pfDELEGneededMIRamount :: Coin, -- amount of rewards to be given out
-          pfDELEGreserves :: Coin -- size of the reserves
-        }
+        !Coin -- amount of rewards to be given out
+        !Coin -- size of the reserves
     | MIRCertificateTooLateinEpochDELEG
-        { pfDELEGmirNow :: SlotNo, -- current slot
-          pfDELEGmirTooLate :: SlotNo -- MIR must be submitted before this slot
-        }
+        !SlotNo -- current slot
+        !SlotNo -- MIR must be submitted before this slot
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDState]

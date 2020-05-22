@@ -46,31 +46,25 @@ instance
   type BaseM (OCERT crypto) = ShelleyBase
   data PredicateFailure (OCERT crypto)
     = KESBeforeStartOCERT
-        { pfOCERTbeforeKESPeriodStart :: KESPeriod, -- OCert Start KES Period
-          pfOCERTbeforeKESPeriodNow :: KESPeriod -- Current KES Period
-        }
+        !KESPeriod -- OCert Start KES Period
+        !KESPeriod -- Current KES Period
     | KESAfterEndOCERT
-        { pfOCERTafterKESPeriodNow :: KESPeriod, -- Current KES Period
-          pfOCERTafterKESPeriodEnd :: KESPeriod, -- OCert Start KES Period
-          pfOCERTafterKESPeriodMaxEv :: Word64 -- Max KES Key Evolutions
-        }
+        !KESPeriod -- Current KES Period
+        !KESPeriod -- OCert Start KES Period
+        !Word64 -- Max KES Key Evolutions
     | KESPeriodWrongOCERT
-        { pfOCERTlastCounter :: Natural, -- last KES counter used
-          pfOCERTcurrentCounter :: Natural -- current KES counter
-        }
+        !Natural -- last KES counter used
+        !Natural -- current KES counter
     | InvalidSignatureOCERT -- TODO use whole OCert
-        { pfOCERTcounter :: Natural, -- OCert counter
-          pfOCERTkesPeriod :: KESPeriod -- OCert KES period
-        }
+        !Natural -- OCert counter
+        !KESPeriod -- OCert KES period
     | InvalidKesSignatureOCERT
-        { pfOCERTkesSigKESperiod :: Word, -- current KES Period
-          pfOCERTkesSigKESstart :: Word, -- KES start period
-          pfOCERTkesSigKESEvolutions :: Word, -- expected KES evolutions
-          pfOCERTkesSigKESError :: String -- error message given by Consensus Layer
-        }
+        !Word -- current KES Period
+        !Word -- KES start period
+        !Word -- expected KES evolutions
+        !String -- error message given by Consensus Layer
     | NoCounterForKeyHashOCERT
-        { pfOCERTcannotFindCounter :: KeyHash 'BlockIssuer crypto -- stake pool key hash
-        }
+        !(KeyHash 'BlockIssuer crypto) -- stake pool key hash
     deriving (Show, Eq, Generic)
 
   initialRules = [pure Map.empty]

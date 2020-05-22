@@ -77,28 +77,22 @@ instance
   type BaseM (UTXO crypto) = ShelleyBase
   data PredicateFailure (UTXO crypto)
     = BadInputsUTxO
-        { pfUTXOtxins :: Set (TxIn crypto) -- The bad transaction inputs
-        }
+        !(Set (TxIn crypto)) -- The bad transaction inputs
     | ExpiredUTxO
-        { pfUTXOttl :: SlotNo, -- transaction's time to live
-          pfUTXOcurrentSlot :: SlotNo -- current slot
-        }
+        !SlotNo -- transaction's time to live
+        !SlotNo -- current slot
     | MaxTxSizeUTxO
-        { pfUTXOtransactionSize :: Integer, -- the actual transaction size
-          pfUTXOmaxTxSize :: Integer -- the max transaction size
-        }
+        !Integer -- the actual transaction size
+        !Integer -- the max transaction size
     | InputSetEmptyUTxO
     | FeeTooSmallUTxO
-        { pfUTXOminFee :: Coin, -- the minimum fee for this transaction
-          pfUTXOgivenFee :: Coin -- the fee supplied in this transaction
-        }
+        !Coin -- the minimum fee for this transaction
+        !Coin -- the fee supplied in this transaction
     | ValueNotConservedUTxO
-        { pfUTXOconsumed :: Coin, -- the Coin consumed by this transaction
-          pfUTXOproduced :: Coin -- the Coin produced by this transaction
-        }
+        !Coin -- the Coin consumed by this transaction
+        !Coin -- the Coin produced by this transaction
     | OutputTooSmallUTxO
-        { pfUTXOtooSmallOuts :: [TxOut crypto] -- list of supplied transaction outputs that are too small
-        }
+        ![TxOut crypto] -- list of supplied transaction outputs that are too small
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]

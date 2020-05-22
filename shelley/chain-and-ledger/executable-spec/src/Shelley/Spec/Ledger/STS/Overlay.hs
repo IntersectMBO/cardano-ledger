@@ -81,39 +81,31 @@ instance
 
   data PredicateFailure (OVERLAY crypto)
     = VRFKeyUnknown
-        { pfOVERLAYunknownVRF :: KeyHash 'StakePool crypto -- unknown VRF keyhash
-        }
+        !(KeyHash 'StakePool crypto) -- unknown VRF keyhash (not registered)
     | VRFKeyWrongVRFKey
-        { pfOVERLAYvrfRegistered :: Hash crypto (VerKeyVRF crypto), --VRF KeyHash registered with stake pool
-          pfOVERLAYvrfHeader :: Hash crypto (VerKeyVRF crypto) --VRF KeyHash from Header
-        }
+        !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash registered with stake pool
+        !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash from Header
     | VRFKeyBadNonce
-        { pfOVERLAYnonceConstant :: Nonce, -- Nonce constant to distinguish VRF nonce values
-          pfOVERLAYnonceSlot :: SlotNo, -- Slot used for VRF calculation
-          pfOVERLAYnonceEpochNonce :: Nonce, -- Epoch nonce used for VRF calculation
-          pfOVERLAYnonceVRFValue :: (VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated nonce value
-        }
+        !Nonce -- Nonce constant to distinguish VRF nonce values
+        !SlotNo -- Slot used for VRF calculation
+        !Nonce -- Epoch nonce used for VRF calculation
+        !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated nonce value
     | VRFKeyBadLeaderValue
-        { pfOVERLAYleaderConstant :: Nonce, -- Leader constant to distinguish VRF leader values
-          pfOVERLAYleaderSlot :: SlotNo, -- Slot used for VRF calculation
-          pfOVERLAYleaderEpochNonce :: Nonce, -- Epoch nonce used for VRF calculation
-          pfOVERLAYleaderVRFValue :: (VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated leader value
-        }
+        !Nonce -- Leader constant to distinguish VRF leader values
+        !SlotNo -- Slot used for VRF calculation
+        !Nonce -- Epoch nonce used for VRF calculation
+        !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated leader value
     | VRFLeaderValueTooBig
-        { pfOVERLAYleaderValue :: Natural, -- VRF Leader value
-          pfOVERLAYrelativeStake :: Rational, -- stake pool's relative stake
-          pfOVERLAYactiveSlotCoeffient :: ActiveSlotCoeff -- Praos active slot coefficient value
-        }
+        !Natural -- VRF Leader value
+        !Rational -- stake pool's relative stake
+        !ActiveSlotCoeff -- Praos active slot coefficient value
     | NotActiveSlotOVERLAY
-        { pfOVERLAYsilentSlot :: SlotNo -- Slot which is supposed to be silent
-        }
+        !SlotNo -- Slot which is supposed to be silent
     | WrongGenesisColdKeyOVERLAY
-        { pfOVERLAYcurrentGenesisKH :: KeyHash 'BlockIssuer crypto, -- KeyHash of block issuer
-          pfOVERLAYassignedGenesisKH :: KeyHash 'GenesisDelegate crypto -- KeyHash genesis delegate keyhash assigned to this slot
-        }
+        !(KeyHash 'BlockIssuer crypto) -- KeyHash of block issuer
+        !(KeyHash 'GenesisDelegate crypto) -- KeyHash genesis delegate keyhash assigned to this slot
     | UnknownGenesisKeyOVERLAY
-        { pfOVERLAYbadGenesisKH :: KeyHash 'Genesis crypto -- KeyHash which does not correspond to o genesis node
-        }
+        !(KeyHash 'Genesis crypto) -- KeyHash which does not correspond to o genesis node
     | OcertFailure (PredicateFailure (OCERT crypto)) -- Subtransition Failures
     deriving (Generic)
 

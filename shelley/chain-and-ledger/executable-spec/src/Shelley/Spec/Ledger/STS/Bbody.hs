@@ -67,13 +67,11 @@ instance
 
   data PredicateFailure (BBODY crypto)
     = WrongBlockBodySizeBBODY
-        { pfBBODYactualBodySize :: Int, -- Actual Body Size
-          pfBBODYclaimedBodySize :: Int -- Claimed Body Size
-        }
+        !Int -- Actual Body Size
+        !Int -- Claimed Body Size in Header
     | InvalidBodyHashBBODY
-        { pfBBODYactualHash :: HashBBody crypto, -- Actual Hash
-          pfBBODYclaimedHash :: HashBBody crypto -- Claimed Hash
-        }
+        !(HashBBody crypto) -- Actual Hash
+        !(HashBBody crypto) -- Claimed Hash
     | LedgersFailure (PredicateFailure (LEDGERS crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
