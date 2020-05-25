@@ -150,35 +150,35 @@ instance
   fromCBOR =
     fmap snd $ decodeRecordNamed "PredicateFailureUTXO" fst $
       decodeWord >>= \case
-        0 -> (,) 0 <$> do
+        0 -> (,) 2 <$> do
           ins <- decodeSet fromCBOR
           pure $ BadInputsUTxO ins
-        1 -> (,) 1 <$> do
+        1 -> (,) 3 <$> do
           a <- fromCBOR
           b <- fromCBOR
           pure $ ExpiredUTxO a b
-        2 -> (,) 2 <$> do
+        2 -> (,) 3 <$> do
           a <- fromCBOR
           b <- fromCBOR
           pure $ MaxTxSizeUTxO a b
-        3 -> (,) 3 <$> pure InputSetEmptyUTxO
-        4 -> (,) 4 <$> do
+        3 -> (,) 1 <$> pure InputSetEmptyUTxO
+        4 -> (,) 3 <$> do
           a <- fromCBOR
           b <- fromCBOR
           pure $ FeeTooSmallUTxO a b
-        5 -> (,) 5 <$> do
+        5 -> (,) 3 <$> do
           a <- fromCBOR
           b <- fromCBOR
           pure $ ValueNotConservedUTxO a b
-        6 -> (,) 6 <$> do
+        6 -> (,) 2 <$> do
           outs <- decodeList fromCBOR
           pure $ OutputTooSmallUTxO outs
-        7 -> (,) 7 <$> do
+        7 -> (,) 2 <$> do
           a <- fromCBOR
           pure $ UpdateFailure a
-        8 -> (,) 8 <$> do
+        8 -> (,) 3 <$> do
           right <- fromCBOR
-          wrongs <- fromCBOR
+          wrongs <- decodeSet fromCBOR
           pure $ WrongNetwork right wrongs
         k -> invalidKey k
 
