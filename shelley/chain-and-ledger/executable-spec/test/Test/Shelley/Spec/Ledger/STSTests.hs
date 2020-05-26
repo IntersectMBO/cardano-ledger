@@ -61,7 +61,9 @@ import Test.Shelley.Spec.Ledger.Examples
     ex5C,
     ex5D',
     ex6A,
+    ex6A',
     ex6BExpectedNES,
+    ex6BExpectedNES',
     ex6BPoolParams,
     test5D,
   )
@@ -120,6 +122,15 @@ newEpochToFuturePoolParams ::
   (Map (KeyHash 'StakePool) PoolParams)
 newEpochToFuturePoolParams = _fPParams . _pstate . _delegationState . esLState . nesEs
 
+testAdoptEarlyPoolRegistration :: Assertion
+testAdoptEarlyPoolRegistration =
+  testTICKChainState
+    ex6BExpectedNES'
+    (TickEnv $ getGKeys ex6BExpectedNES')
+    (SlotNo 110)
+    (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
+    (ex6BPoolParams, Map.empty)
+
 testAdoptLatePoolRegistration :: Assertion
 testAdoptLatePoolRegistration =
   testTICKChainState
@@ -158,8 +169,10 @@ stsTests =
       testCase "CHAIN example 5B - FAIL: insufficient core node signatures" $ testCHAINExample ex5B,
       testCase "CHAIN example 5C - FAIL: MIR insufficient reserves" $ testCHAINExample ex5C,
       testCase "CHAIN example 5D - apply MIR at epoch boundary" test5D,
-      testCase "CHAIN example 6A - Late Pool Re-registration" $ testCHAINExample ex6A,
-      testCase "CHAIN example 6B - Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration,
+      testCase "CHAIN example 6A - Early Pool Re-registration" $ testCHAINExample ex6A,
+      testCase "CHAIN example 6A' - Late Pool Re-registration" $ testCHAINExample ex6A',
+      testCase "CHAIN example 6B - Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
+      testCase "CHAIN example 6B' - Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration,
       testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda ex1,
       testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda ex2A,
       testCase "CHAIN example 2B - Preservation of ADA" $ testPreservationOfAda ex2B,
