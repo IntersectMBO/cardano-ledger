@@ -100,13 +100,15 @@ transaction_output = [address, amount : uint]
 ; 1001 - 1101: future formats
 
 certificate =
-  [  0, stake_credential                   ; stake registration
-  // 1, stake_credential                   ; stake deregistration
-  // 2, stake_credential, pool_keyhash     ; stake delegation
-  // 3, pool_params                        ; pool registration
-  // 4, pool_keyhash, epoch                ; pool retirement
-  // 5, genesishash, genesis_delegate_hash ; genesis key delegation
-  // 6, move_instantaneous_reward          ; move inst. rewards
+  [  0, stake_credential               ; stake registration
+  // 1, stake_credential               ; stake deregistration
+  // 2, stake_credential, pool_keyhash ; stake delegation
+  // 3, pool_params                    ; pool registration
+  // 4, pool_keyhash, epoch            ; pool retirement
+  // 5, genesishash,                   ; genesis key delegation
+        genesis_delegate_hash,
+        vrf_keyhash,
+  // 6, move_instantaneous_reward      ; move inst. rewards
   ]
 
 move_instantaneous_reward = { * stake_credential => coin }

@@ -74,7 +74,7 @@ poolCWitness (RegPool pool) = KeyHashObj $ _poolPubKey pool
 poolCWitness (RetirePool k _) = KeyHashObj k
 
 genesisCWitness :: GenesisDelegCert crypto -> KeyHash 'Genesis crypto
-genesisCWitness (GenesisDelegCert gk _) = gk
+genesisCWitness (GenesisDelegCert gk _ _) = gk
 
 -- | Retrieve the deposit amount for a certificate
 dvalue :: DCert crypto -> PParams -> Coin

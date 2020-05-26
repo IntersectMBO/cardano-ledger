@@ -69,6 +69,7 @@ import Shelley.Spec.Ledger.Keys
     KeyHash,
     KeyRole (..),
     VerKeyKES,
+    VerKeyVRF,
     coerceKeyRole,
   )
 import Shelley.Spec.Ledger.LedgerState
@@ -129,7 +130,9 @@ initialShelleyState ::
   EpochNo ->
   UTxO crypto ->
   Coin ->
-  Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto) ->
+  Map
+    (KeyHash 'Genesis crypto)
+    (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto)) ->
   Map SlotNo (OBftSlot crypto) ->
   PParams ->
   Nonce ->
@@ -167,7 +170,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
     NeutralNonce
     lab
   where
-    cs = Map.fromList (fmap (\hk -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
+    cs = Map.fromList (fmap (\(hk, _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
   ( Crypto crypto,

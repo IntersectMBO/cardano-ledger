@@ -74,8 +74,6 @@ module Test.Shelley.Spec.Ledger.Examples
     blockEx5A,
     blockEx5B,
     blockEx5F,
-    blockEx5F',
-    blockEx5F'',
     -- transactions
     txEx2A,
     txEx2B,
@@ -240,7 +238,9 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.STS.Bbody (pattern LedgersFailure)
 import Shelley.Spec.Ledger.STS.Chain
-  ( chainNes,
+  ( chainCandidateNonce,
+    chainNes,
+    chainPrevEpochNonce,
     initialShelleyState,
     totalAda,
     pattern BbodyFailure,
@@ -322,6 +322,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     UTxOState,
     Update,
     VKeyGenesis,
+    VRFKeyHash,
     hashKeyVRF,
     pattern GenDelegs,
     pattern KeyPair,
@@ -409,11 +410,13 @@ slotKeys = coreNodeKeysForSlot fullOSched
   where
     fullOSched = Map.unions $ [overlayScheduleFor e | e <- [0 .. 10]]
 
-genDelegs :: Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)
+genDelegs :: Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash)
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey,
-        coerceKeyRole . hashKey . vKey $ cold pkeys
+        ( coerceKeyRole . hashKey . vKey $ cold pkeys,
+          hashKeyVRF . snd . vrf $ pkeys
+        )
       )
       | (gkey, pkeys) <- coreNodes
     ]
@@ -537,7 +540,7 @@ dsEx1 = emptyDState {_genDelegs = GenDelegs genDelegs}
 oCertIssueNosEx1 :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx1 = Map.fromList (fmap f (Map.elems genDelegs))
   where
-    f vk = (coerceKeyRole vk, 0)
+    f (vk, _) = (coerceKeyRole vk, 0)
 
 psEx1 :: PState
 psEx1 = emptyPState
@@ -618,7 +621,7 @@ blockEx1 =
     []
     (SlotNo 1)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -813,7 +816,7 @@ blockEx2A =
     [txEx2A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -958,7 +961,7 @@ blockEx2B =
     [txEx2B] -- Single transaction to record
     (SlotNo 90) -- Current slot
     (BlockNo 2)
-    (mkNonce 0) -- Epoch nonce
+    nonce0 -- Epoch nonce
     (NatNonce 2) -- Block nonce
     zero -- Praos leader value
     4 -- Period of KES (key evolving signature scheme)
@@ -1068,7 +1071,7 @@ blockEx2C =
     [] -- No transactions at all (empty block)
     (SlotNo 110) -- Current slot
     (BlockNo 3) -- Second block within the epoch
-    (mkNonce 0) -- Epoch nonce
+    (nonce0 ⭒ mkNonce 1) -- Epoch nonce
     (NatNonce 3) -- Block nonce
     zero -- Praos leader value
     5 -- Period of KES (key evolving signature scheme)
@@ -1240,7 +1243,7 @@ blockEx2D =
     [txEx2D]
     (SlotNo 190)
     (BlockNo 4)
-    (mkNonce 0 ⭒ mkNonce 1)
+    (nonce0 ⭒ mkNonce 1)
     (NatNonce 4)
     zero
     9
@@ -1500,7 +1503,7 @@ blockEx2G =
     []
     (SlotNo 310)
     (BlockNo 7)
-    (mkSeqNonce 5)
+    ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
     (NatNonce 7)
     zero
     15
@@ -1579,7 +1582,7 @@ blockEx2H =
     []
     (SlotNo 390)
     (BlockNo 8)
-    (mkSeqNonce 5)
+    ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
     (NatNonce 8)
     zero
     19
@@ -1671,7 +1674,7 @@ blockEx2I =
     []
     (SlotNo 410)
     (BlockNo 9)
-    (mkSeqNonce 7)
+    ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
     (NatNonce 9)
     zero
     20
@@ -1793,7 +1796,7 @@ blockEx2J =
     [txEx2J]
     (SlotNo 420)
     (BlockNo 10)
-    (mkSeqNonce 7)
+    ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
     (NatNonce 10)
     zero
     21
@@ -1901,7 +1904,7 @@ blockEx2K =
     [txEx2K]
     (SlotNo 490)
     (BlockNo 11)
-    (mkSeqNonce 7)
+    ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
     (NatNonce 11)
     zero
     24
@@ -1981,7 +1984,7 @@ blockEx2L =
     []
     (SlotNo 510)
     (BlockNo 12)
-    (mkSeqNonce 10)
+    ((mkSeqNonce 10) ⭒ (hashHeaderToNonce blockEx2HHash))
     (NatNonce 12)
     zero
     25
@@ -2154,7 +2157,7 @@ blockEx3A =
     [txEx3A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2255,7 +2258,7 @@ blockEx3B =
     [txEx3B]
     (SlotNo 20)
     (BlockNo 2)
-    (mkNonce 0)
+    nonce0
     (NatNonce 2)
     zero
     1
@@ -2324,7 +2327,7 @@ blockEx3C =
     []
     (SlotNo 110)
     (BlockNo 3)
-    (mkSeqNonce 2)
+    (mkSeqNonce 2 ⭒ mkNonce 123)
     (NatNonce 3)
     zero
     5
@@ -2384,6 +2387,9 @@ newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (108, 0, 0, 0, 1)
 
+newGenesisVrfKH :: VRFKeyHash
+newGenesisVrfKH = hashKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
+
 aliceCoinEx4A :: Coin
 aliceCoinEx4A = aliceInitCoin - 1
 
@@ -2397,6 +2403,7 @@ txbodyEx4A =
             ( GenesisDelegCert
                 (hashKey (coreNodeVKG 0))
                 (hashKey (vKey newGenDelegate))
+                newGenesisVrfKH
             )
         ]
     )
@@ -2426,7 +2433,7 @@ blockEx4A =
     [txEx4A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2442,7 +2449,7 @@ dsEx4A =
     { _fGenDelegs =
         Map.singleton
           (FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVKG 0))
-          ((hashKey . vKey) newGenDelegate)
+          ((hashKey . vKey) newGenDelegate, newGenesisVrfKH)
     }
 
 utxoEx4A :: UTxO
@@ -2499,7 +2506,7 @@ blockEx4B =
     []
     (SlotNo 50)
     (BlockNo 2)
-    (mkNonce 0)
+    nonce0
     (NatNonce 2)
     zero
     2
@@ -2517,7 +2524,7 @@ dsEx4B =
         GenDelegs $
           Map.insert
             ((hashKey . coreNodeVKG) 0)
-            ((hashKey . vKey) newGenDelegate)
+            ((hashKey . vKey) newGenDelegate, newGenesisVrfKH)
             genDelegs
     }
 
@@ -2603,7 +2610,7 @@ blockEx5A =
     [txEx5A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2686,7 +2693,7 @@ blockEx5B =
     [txEx5B]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2767,7 +2774,7 @@ blockEx5F =
     [txEx5F]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2805,8 +2812,8 @@ blockEx5F' =
     [txEx5F']
     (slot)
     (BlockNo 2)
-    (mkNonce 0)
-    (NatNonce 1)
+    (mkSeqNonce 1)
+    (NatNonce 2)
     zero
     7
     0
@@ -2837,15 +2844,15 @@ txbodyEx5F'' =
 txEx5F'' :: Tx
 txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey (hashTxBody txbodyEx5F'') [alicePay]) Map.empty SNothing
 
-blockEx5F'' :: Block
-blockEx5F'' =
+blockEx5F'' :: Nonce -> Block
+blockEx5F'' epochNonce =
   mkBlock
     (bhHash (bheader blockEx5F'))
     (slotKeys s)
     [txEx5F'']
     (slot)
     (BlockNo 3)
-    (mkNonce 0)
+    epochNonce
     (NatNonce 1)
     zero
     10
@@ -2860,8 +2867,9 @@ ex5D' = do
   midState <-
     runShelleyBase $
       applySTS @CHAIN (TRC ((), nextState, blockEx5F'))
+  let finalEpochNonce = (chainCandidateNonce midState) ⭒ (chainPrevEpochNonce midState)
   finalState <-
-    runShelleyBase $ applySTS @CHAIN (TRC ((), midState, blockEx5F''))
+    runShelleyBase $ applySTS @CHAIN (TRC ((), midState, blockEx5F'' finalEpochNonce))
 
   pure finalState
 
@@ -2942,7 +2950,7 @@ blockEx6A slot =
     [txEx6A]
     (SlotNo slot)
     (BlockNo 2)
-    (mkNonce 0)
+    nonce0
     (NatNonce 2)
     zero
     (word64SlotToKesPeriodWord slot)

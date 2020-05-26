@@ -72,7 +72,7 @@ pattern KeyHash h = Keys.KeyHash h
 type GenDelegs = Keys.GenDelegs ConcreteCrypto
 
 pattern GenDelegs ::
-  (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate)) ->
+  (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate, VRFKeyHash)) ->
   GenDelegs
 pattern GenDelegs m = Keys.GenDelegs m
 
