@@ -29,7 +29,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Shelley.Spec.Ledger.Slot ((*-), Duration (..), EpochNo (..), SlotNo, epochInfoEpoch, epochInfoFirst)
+import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Shelley.Spec.Ledger.TxData (DCert (..), PoolCert (..), PoolParams (..), StakePools (..))
 
 data POOL crypto
@@ -117,26 +117,11 @@ poolDelegationTransition = do
                 _pParams = _pParams ps ∪ (hk, poolParam)
               }
         else do
-          -- re-register, Pool-reReg
-          sp <- liftSTS $ asks stabilityWindow
-          firstSlot <- liftSTS $ do
-            ei <- asks epochInfo
-            EpochNo currEpoch <- epochInfoEpoch ei slot
-            epochInfoFirst ei $ EpochNo (currEpoch + 1)
-
-          case slot < firstSlot *- Duration sp of
-            True ->
-              pure $ -- non-late re-registration
-                ps
-                  { _pParams = _pParams ps ⨃ (hk, poolParam),
-                    _retiring = Set.singleton hk ⋪ _retiring ps
-                  }
-            False ->
-              pure $ -- late re-registration
-                ps
-                  { _fPParams = _fPParams ps ⨃ (hk, poolParam),
-                    _retiring = Set.singleton hk ⋪ _retiring ps
-                  }
+          pure $
+            ps
+              { _fPParams = _fPParams ps ⨃ (hk, poolParam),
+                _retiring = Set.singleton hk ⋪ _retiring ps
+              }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       hk ∈ dom stpools ?! StakePoolNotRegisteredOnKeyPOOL hk

@@ -33,7 +33,9 @@ module Test.Shelley.Spec.Ledger.Examples
     ex5C,
     ex5D',
     ex6A,
+    ex6A',
     ex6BExpectedNES,
+    ex6BExpectedNES',
     ex6BPoolParams,
     test5D,
     -- key pairs and example addresses
@@ -310,6 +312,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     PoolParams,
     ProposedPPUpdates,
     RewardAcnt,
+    RewardUpdate,
     SignKeyDSIGN,
     SnapShot,
     SnapShots,
@@ -2921,23 +2924,33 @@ txEx6A =
     Map.empty
     SNothing
 
-blockEx6A :: Block
-blockEx6A =
+earlySlotEx6 :: Word64
+earlySlotEx6 = 20
+
+lateSlotEx6 :: Word64
+lateSlotEx6 = 90
+
+word64SlotToKesPeriodWord :: Word64 -> Word
+word64SlotToKesPeriodWord slot =
+  (fromIntegral $ toInteger slot) `div` (fromIntegral $ toInteger $ slotsPerKESPeriod testGlobals)
+
+blockEx6A :: Word64 -> Block
+blockEx6A slot =
   mkBlock
     blockEx2AHash
-    (slotKeys 90)
+    (slotKeys slot)
     [txEx6A]
-    (SlotNo 90) -- This is late in the epoch
+    (SlotNo slot)
     (BlockNo 2)
     (mkNonce 0)
     (NatNonce 2)
     zero
-    4
+    (word64SlotToKesPeriodWord slot)
     0
-    (mkOCert (slotKeys 90) 0 (KESPeriod 0))
+    (mkOCert (slotKeys slot) 0 (KESPeriod 0))
 
-blockEx6AHash :: HashHeader
-blockEx6AHash = bhHash (bheader blockEx6A)
+blockEx6AHash :: Word64 -> HashHeader
+blockEx6AHash slot = bhHash (bheader $ blockEx6A slot)
 
 psEx6A :: PState
 psEx6A = psEx2A {_fPParams = Map.singleton (hk alicePool) alicePoolParams6A}
@@ -2957,38 +2970,64 @@ expectedLSEx6A =
     )
     (DPState dsEx2A psEx6A)
 
-expectedStEx6A :: ChainState
-expectedStEx6A =
+rewardUpdateEx6A :: StrictMaybe RewardUpdate
+rewardUpdateEx6A = SNothing
+
+rewardUpdateEx6A' :: StrictMaybe RewardUpdate
+rewardUpdateEx6A' = SJust emptyRewardUpdate
+
+candidateNonceEx6A :: Nonce
+candidateNonceEx6A = nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2
+
+candidateNonceEx6A' :: Nonce
+candidateNonceEx6A' = nonce0 ⭒ mkNonce 1
+
+expectedStEx6A :: Word64 -> StrictMaybe RewardUpdate -> Nonce -> ChainState
+expectedStEx6A slot ru cn =
   ChainState
     ( NewEpochState
         (EpochNo 0)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
         (EpochState acntEx2A emptySnapShots expectedLSEx6A ppsEx1 ppsEx1 emptyNonMyopic)
-        (SJust emptyRewardUpdate)
+        ru
         (PoolDistr Map.empty)
         (overlayScheduleFor (EpochNo 0))
     )
     oCertIssueNosEx1
     nonce0
     (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2)
-    (nonce0 ⭒ mkNonce 1)
+    cn
     NeutralNonce
     ( At $
         LastAppliedBlock
           (BlockNo 2)
-          (SlotNo 90)
-          blockEx6AHash
+          (SlotNo slot)
+          (blockEx6AHash slot)
     )
 
 ex6A :: CHAINExample
-ex6A = CHAINExample expectedStEx2A blockEx6A (Right expectedStEx6A)
+ex6A =
+  CHAINExample
+    expectedStEx2A
+    (blockEx6A earlySlotEx6)
+    (Right $ expectedStEx6A earlySlotEx6 rewardUpdateEx6A candidateNonceEx6A)
+
+ex6A' :: CHAINExample
+ex6A' =
+  CHAINExample
+    expectedStEx2A
+    (blockEx6A lateSlotEx6)
+    (Right $ expectedStEx6A lateSlotEx6 rewardUpdateEx6A' candidateNonceEx6A')
 
 -- * Example 6B - If The TICK rule is applied to the NewEpochState
 -- in expectedStEx6A, then the future pool parameters should be adopted
 
 ex6BExpectedNES :: NewEpochState
-ex6BExpectedNES = chainNes expectedStEx6A
+ex6BExpectedNES = chainNes (expectedStEx6A earlySlotEx6 rewardUpdateEx6A candidateNonceEx6A)
+
+ex6BExpectedNES' :: NewEpochState
+ex6BExpectedNES' = chainNes (expectedStEx6A lateSlotEx6 rewardUpdateEx6A' candidateNonceEx6A')
 
 ex6BPoolParams :: Map (KeyHash 'StakePool) PoolParams
 ex6BPoolParams = Map.singleton (hk alicePool) alicePoolParams6A
