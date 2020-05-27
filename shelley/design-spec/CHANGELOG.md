@@ -1,9 +1,7 @@
 # Delegation Design Document Changelog
 
-## CURRENT
-Add multi-sig delegation. This contains a change in terminology. We now have
-stake addresses (instead of staking keys), which can either be public key hash,
-or a multi-sig script hash.
+## 2020-06-12
+Rewrote the chapter on addresses. Now includes multi-sig, and is clearly separating addresses (payment and stake) and credentials.
 
 ## 2020-02-28
 Clarify when we use active stake vs total stake.

@@ -33,6 +33,7 @@
 \usepackage{todonotes}
 \usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
 \usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage{titlesec}
 \hypersetup{
   pdftitle={Design Specification for Delegation and Incentives in Cardano},
   pdfauthor={Philipp Kant, Lars Brünjes, Duncan Coutts},
@@ -54,6 +55,12 @@
 \usetikzlibrary{positioning}
 \usetikzlibrary{arrows.meta}
 \usetikzlibrary{calc}
+
+\setcounter{secnumdepth}{4}
+\titleformat{\paragraph}
+            {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+            \titlespacing*{\paragraph}
+                          {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 
 \DeclareMathOperator{\dom}{dom}
 \DeclareMathOperator{\range}{range}
@@ -169,6 +176,9 @@ First version officially published on the IOHK blog.}
 \change{2019/10/09}{Kevin Hammond}{FM (IOHK)}{Added standard cover page.}
 \change{2020-02-28}{PK}{FM (IOHK)}{Clarify when to use active/total stake.}
 \change{2020/03/11}{DC}{FM (IOHK)}{Document the metadata feature.}
+\change{2020-06-12}{PK}{FM (IOHK)}{Rewrite chapter on addresses. Now includes
+  multi-sig, and is clearer about the distinction of payment addresses, stake
+  addresses, credentials.}
 \end{changelog}
 
 \clearpage%
@@ -604,180 +614,156 @@ Participating in the PoS protocol requires two steps:
 
 Rewards to pools and their members follow the scheme described
 in~\cref{design-of-incentives}. In designing the rewards system, we were careful
-to avoid incentivising selfish behaviour and encourage cooperative behaviour.
-The rewards that a pool will get for producing blocks depends on how much stake
-they control, and on how well they perform when producing blocks. Stake pool
-operators can influence how the rewards for the pool are split amongst its
-members, by setting parameters in the stake pool registration certificate.
-Wallets will assist users in making rational choices and delegating to pools
-that are expected to give the best rewards.
+to avoid incentivising selfish behaviour, and to encourage cooperative behaviour
+instead. The rewards that a pool will get for producing blocks depend on how
+much stake they control, and on how well they perform when producing blocks.
+Stake pool operators can influence how the rewards for the pool are split
+amongst its members, by setting parameters in the stake pool registration
+certificate. Wallets will assist users in making rational choices and delegating
+to pools that are expected to give the best rewards.
 
-\subsection{Address Structure}
+\subsection{Addresses and Credentials}
 \label{address-structure}
-In Shelley, an address has to provide information on two things: who has the
-right to spend funds in that address, and who has the right to delegate the
-stake associated with funds in that address to a stake pool. To separate those
-two concerns, we distinguish between \emph{value addresses} and \emph{stake
-  addresses}. Value addresses and stake addresses are building blocks for
-(overall) addresses: an address contains a value address, and may also contain a
-stake address.
 
-\todo[inline]{Suggest restructuring this subsection based on the following subsubsections. So instead of the description list for key addresses, and stake addresses, turn those into their own subsubsections.
-Also clearly document the structure of value and script addresses. Suggest that if we're uising $\beta$ for the staking reference we use $\alpha$ for the payment credential!}
+In Shelley, an address has to provide information on two things: how tokens can
+be spent, and how the associated stake is controlled. To separate those two
+concerns, we distinguish between \emph{value addresses} and \emph{stake
+  addresses}.
 
-\subsubsection{Key addresses}
-
-\subsubsection{Script addresses}
-
-\subsubsection{Value addresses}
-
-\subsubsection{Stake addresses}
-
-\subsubsection{Terminology of addresses}
+Addresses are objects that have a user-facing binary representation (they appear
+in the UTxO, and users can inspect them using a wallet or explorer). They
+contain \emph{credentials} that govern access rights; using an address (such as
+spending from a payment address, or delegating funds associated with a stake
+address) requires a witness for the credential (which is specific to the
+particular transaction). There are two different kinds of credentials:
 
 \begin{description}
-\item[value address] is either a bootstrap address or a new Shelley address which consists of a payment credential and a staking reference.
-\item[stake address] consists of a staking credential
-\item[payment credential] is either the hash of a verification key or the hash of a validation script
-\item[staking credential] is either the hash of a verification key or the hash of a validation script
-\item[staking reference] is a reference to a stake address is either a base form, a pointer form or a null form
-\item[key address] is a value or stake address where the contained credential uses a single key pair
-\item[script address] is a value or stake address where the contained credential uses a validation script
-\item[base address] is a value address where the staking reference use the base form
-\item[pointer address] is a value address where the staking reference use the pointer form
-\item[enterprise address] is a value address where the staking reference use the null form
-\item[bootstrap address] is a value address as introduced in Byron.
-\item[AVVM address] are special addresses used in the initial distribution of Ada.
+\item[Key Credential] A credential can be constructed from a pair \((sk,
+  vk)\) of a \emph{signing key} \(sk\) and corresponding \emph{verification key}
+  \(vk\). The credential is a cryptographic hash \(\hash{vk}\) of the
+  verification key.
+
+  A witness for a key credential consists of the verification key \(vk\), and a
+  signature of the transaction from the signing key \(sk\).
+\item[Script Credential] Tokens and stake can also be controlled by a
+  \emph{validator script}, which can either succeed or fail to validate on a
+  given input. In this case, the credential is the hash of the script.
+
+  A witness for a script credential is the script itself, as well as input to
+  the script that makes it validate.
 \end{description}
 
-Both value and stake addresses can take one of two forms:
-\begin{description}
-\item[Single Key Addresses], or simply \emph{key addresses}, are associated with
-  a single key pair \((sk, vk)\). The address consists of a cryptographic hash
-  \(\hash{vk}\) of the verification key \(vk\). A witness for the address
-  contains the verification key \(vk\) itself, as well as a signature of the
-  signign key \(sk\). We call this a \emph{single key witness}, or simply a
-  \emph{key witness}.
+In future releases, we will add multiple languages to Cardano, with Plutus being
+the most prominent example. In Shelley, script credentials will only be used for
+the purpose of requiring signatures from multiple parties, a process known as
+multi signature, or \emph{multi-sig}. For this, Cardano-Shelley will feature a
+minimalistic scripting language capable of expressing the requirement of having
+a specified subset of a given set of keys provide a signature. Examples include
+\emph{M of N} schemes, where a transaction can be authorised if at least \(N\)
+distinct keys, from a set of \(M\) keys, sign the transaction.
 
-\item[Script Addresses] defer authorisation to a \emph{validator script}. The
-  address contains a cryptographic hash of this script. In the future, Cardano
-  will support multiple languages, with Plutus being the most prominent example,
-  and the type of witness provided for a script address will depend on the
-  language of the script.
+By introducing multi-sig script credentials, in Shelley, it will be possible to
+require single or multiple signatures both for the spending of funds and for the
+delegation of stake, independently.
 
-  In Shelley, we will only support script addresses for a narrower purpose,
-  namely for providing a mechanism for requiring multiple signatures to
-  authorise a transaction, known as multi signature or multi-sig.
+\todo{ Remove ``multi-sig address'', ``key witness'', ``multi-sig witness'',
+  ``script witness'' from the rest of the document}
 
-  Cardano-Shelley will feature a minimalistic scripting language capable of
-  expressing the requirement of having a specified subset of a given set of keys
-  provide a signature. Examples include \emph{M of N} schemes, where a
-  transaction can be authorised if at least \(N\) distinct keys, from a set of
-  \(M\) keys, sign the transaction. We will also call this special instance of
-  script addresses \emph{multi-sig addresses}.
+For the case of multi-sig scripts, a witness contains the validator script
+matching the hash in the script credential, and a set of witnesses for
+individual key credentials. The validator script will determine whether those
+witnesses are sufficient for the funds to be spent. For details, and an example
+of a multi signature scripting language, see~\citep{multi-sig-scripts}.
 
-  A witness for a multi-sig address (called \emph{multi-sig witness}) contains
-  the validator script matching the hash in the address, and a set of single key
-  witnesses. The validator script will determine whether those signatures are
-  sufficient for the funds to be spent. For details, and an example of a multi
-  signature scripting language, see~\citep{multi-sig-scripts}.
+\begin{figure}[ht]
+  \includegraphics[width=\linewidth]{addresses.pdf}
+  \caption{Addresses and Credentials}
+  \label{fig:addresses}
+\end{figure}
 
-  In Goguen, the next major release of Cardano after Shelley, we will expand
-  script addresses to also contain addresses for Plutus scripts.
-\end{description}
-Thus, in Shelley, it will be possible to require single or multiple signatures
-both for the spending of funds and for the delegation of stake, independently.
+\cref{fig:addresses} shows the anatomy of both payment and stake addresses. Let
+us first consider a \emph{Stake Address}: it contains a stake credential (which
+can be a key credential or script credential). A stake address is used for two
+purposes: delegating stake (see \cref{delegation-certificates}), and spending
+rewards accumulated in a \emph{reward account} (see \cref{reward-accounts}).
 
-Shelley will introduce four different types of addresses: \emph{base
-addresses}, \emph{pointer addresses}, \emph{enterprise addresses}, and
-\emph{reward account addresses}. Each address has the form
-\begin{equation}
-\mathcal{A} = \mathcal{A}_v \mathbin{||} \beta
-\label{eq:address-general}
-\end{equation}
-where \(\mathcal{A}_v\) is a value address, and \(||\) denotes string
-concatenation. The types of addresses differ in the \emph{staking object}
-\(\beta\), which carries the information of which stake address (if any) belongs
-to this address.
+\emph{Payment Addresses} have more structure: first of all, we have the two
+cases of Byron and Shelley addresses. The purpose of Byron addresses is
+backwards compatibility. Byron addresses have no notion of stake, so it is not
+possible to delegate from a Byron address; users will have to transfer funds to
+a Shelley address first.
 
-In addition to those new addresses, the system will continue to support
-\emph{bootstrap addresses} as introduced in Byron. Only the new base
-and pointer addresses carry stake rights however.
+A Shelley address contains a payment credential (again, either a key or script
+credential). A transaction that consumes a UTxO entry with a Shelley address
+will need a witness for this payment credential in order to be validated. In
+addition, a Shelley address also contains a stake credential. When calculating
+the stake distribution (see \cref{delegation-relations} for details), the system
+uses this stake credential to decide where to count the stake corresponding to
+the tokens in this address.
 
-\subsubsection{Base Address}
-\label{base-address}
+There are three options for the stake credential in a Shelley address: it can be
+provided \emph{by value}, i.e., just be the hash of a verification key or
+validator script. Shelley addresses that provide their stake credential by value
+are sometimes also called \emph{base addresses}.
 
-A base address directly specifies the stake address that should
-control the stake for the address,
-\[
-\beta = \mathcal{A}_s\,,
-\]
-where \(\mathcal{A}_s\) is a stake address.
+There is also a more compact way of representing a stake credential: since stake
+addresses need to be registered on the chain in order to be considered for the
+stake distribution (see \cref{stake-address-registration-certificates}), we can
+also include them \emph{by reference}, pointing to the certificate that
+registered the stake address containing a given stake credential. Since the
+blockchain orders transactions, this pointer is quite small, containing only
+three numbers (slot index, transaction index within the block, and certificate
+index within the transaction). Shelley addresses that contain their stake
+credential by reference are also called \emph{pointer addresses}.
 
-Base addresses can be used in transactions without registering the
-stake address in advance. The stake rights can only be exercised by
-registering the stake address and delegating to a stake pool. Once the
-stake address is registered, the stake rights can be exercised for base
-addresses used in transactions before or after the key registration.
+The third possibility is to not have a stake credential at all. In this case,
+the stake corresponding to the tokens in the address is not considered by the
+system at all (just as for a Byron address). In particular, it will not be
+counted towards the active stake (\cref{overall-stake-distribution}), and so
+will not slow down chain growth. Users who do not wish to contribute to the PoS
+protocol should use this option. Such addresses are also called \emph{enterprise
+  addresses}.
 
-\subsubsection{Pointer Address}
+\subsubsection{On Pointer Addresses}
 \label{pointer-address}
 
-A pointer address indirectly specifies the stake address that should
-control the stake for the address. It references a stake address by a
-\emph{stake address pointer} which is a location on the blockchain of the
-stake address registration certificate for that address. See
-\cref{certificates-on-the-blockchain} for details on certificates on the
-blockchain.
+Allowing the stake credential to be included in a payment address via reference
+allows for shorter addresses, which is a requirement (\cref{short-addresses}).
+However, there are also some subtleties to consider.
 
-Concretely, pointer addresses have as their staking object
-\[
-\beta = (N_\text{block}, N_\text{tx}, N_\text{reg})\,,
-\]
-where \(N_\text{block}\) is the index of a block in the chain,
-\(N_\text{tx}\) is the index of a transaction within that block and
-\(N_\text{reg}\) is the index of the registration certificate within
-the list of certificates in the transaction. This identified
-transaction should have a stake address registration certificate at
-index \(N_\text{reg}\) in its list of certificates. The certificate
-specifies a stake address \(\mathcal{A}_s\). The staking rights associated
-with funds held in this address may be exercised by providing witnesses for
-\(\mathcal{A}_s\).
+\paragraph{Invalid Refereces}
+First, we need to consider the case that the reference does not point to an
+\emph{active} stake address registration. This covers the case that the key was
+unregistered after (or indeed before) the transaction, and also covers pointers
+to targets that are plainly invalid. The system will allow transactions to and
+from such addresses, but their stake will not be considered for leader eleaction
+and rewards.
 
-Pointer addresses can be used in transactions even if their target is
-not an \emph{active} stake address registration. This covers the case that
-the key was unregistered after (or indeed before) the transaction, and
-also covers pointers to targets that are plainly invalid. The reason for
-allowing such invalid targets is so that nodes need only track the
-currently active stake addresses.
+Note that in particular, when a pointer address becomes invalid because the
+stake address it points to is deregistered, registering the same stake address
+again does not ``restore'' the stake in the pointer address; the tokens have to
+be moved to another address in order to use the stake. This minor limitation
+allows the system to not remember unregistered stake addresses.
 
-In such cases however the stake rights cannot be exercised. To exercise
-the stake rights the stake address must be registered in advance of using
-the pointer address in the output of a transaction, and the stake address
-must remain registered while the pointer address holds funds. This is a
-difference compared to base addresses where the stake address can be
-registered after the base address is used in a transaction.
 
-The primary advantage of pointer addresses is that they can be
-comparatively short, which is one of our requirements (recall
-\cref{short-addresses}). The pointer can be considerably shorter than
-the hash used in base addresses.
+So, to exercise the stake rights of a pointer address, the stake address must be
+registered in advance of using the pointer address in the output of a
+transaction, and the stake address must remain registered while the pointer
+address holds funds. This is a difference compared to addresses that contain
+their stake credential bby value, where the stake address can be registered
+after the value address is used in a transaction.
 
 \paragraph{Pointer Addresses and Rollback}
-There is a subtlety with pointer addresses: it might happen that a
-stake address registration certificate that is referenced by a pointer
-address might be lost due to a rollback. This should not lead to
-a loss of funds. To prevent that, the system should
-consider pointer addresses with an invalid pointer to be valid for the
-purpose of using funds stored therein as inputs for transactions (but
-ignore them for the purpose of PoS participation).
+A special case of an invalid pointer is a rollback: when the block containing a
+stake address registration certificate gets rolled back, addresses containing
+the stake address by reference to that certificate will lose their stake rights.
+Since the addresses will remain valid for payments, though, the stake rights can
+be restored by moving the funds to another address. Still, it is prudent to
+avoid this, by either allowing a number of blocks between transactions \(t_1\)
+registering a stake address and \(t_2\) moving funds to a pointer address for
+this stake address, or by using an output of \(t_1\) as an input to \(t_2\).
 
-Optionally, a wallet might refuse to create transactions to pointer
-addresses before the referenced certificate has become immutable, in
-order to prevent funds from being excluded from the PoS in case of
-rollbacks.
-
-\subsubsection{Enterprise Address}
+\subsubsection{On Enterprise Address}
 \label{enterprise-address}
 
 Enterprise addresses carry no stake rights whatsoever and thus using
@@ -786,11 +772,6 @@ protocol. Exchanges or other organisations that control large amounts of
 ada -- but hold it on behalf of other users -- may wish to follow a
 policy of not exercising stake rights. By using enterprise addresses,
 exchanges can demonstrate that they follow this policy.
-
-The staking object for enterprise addresses is a fixed nullary constant
-\[
-\beta = \epsilon\,.
-\]
 Since enterprise addresses are not associated with any stake address, they
 are automatically excluded from the mechanisms that influence the slot
 leadership schedule.
@@ -803,10 +784,10 @@ to. Also note that it is generally considered bad practice to leave funds on
 exchanges, and in Cardano-Shelley, there will also be a monetary incentive to
 withdraw funds from exchanges in order to earn rewards.
 
-\subsubsection{Reward Account Address}
+\subsubsection{Reward Accounts}
 \label{reward-address}
 
-Reward account addresses are used to distribute rewards for participating in
+Reward accounts are used to distribute rewards for participating in
 the PoS protocol (either directly or via delegation), as described in
 \ref{distributing-rewards}. They have a number of interesting
 properties:
@@ -815,67 +796,52 @@ properties:
 \item They use account-style accounting, not UTxO-style.
 \item They can not receive funds via transactions. Instead, their
   balance is only increased when rewards are distributed.
-\item They do not contain a value address. Instead, there is a
-  one-to-one correspondence between registered stake addresses and reward
-  account addresses (see \cref{fig:er-relationship-delegation}). Whenever funds
-  are withdrawn from a reward account address, a witness for its stake address
-  has to be provided.
+\item A reward account is not related to a value address, but to a stake
+  address. Thus, spending from a reward account requires a witness for a stake
+  credential, rather than a payment credential.
 \end{itemize}
 
-A reward account address has the form
-\[
-\mathcal{A}_s \mathbin{||} \beta
-\]
-where \(\mathcal{A}_s\) is a stake address\footnote{Strictly speaking, this is a
-deviation from the general form of an address in \cref{eq:address-general},
-where the first part of an address is always a value address, not a stake
-address. For reward account addresses, \(\mathcal{A}_s\) takes the part of both
-the value address and the stake address.}. Withdrawing funds from the reward
-account address requires a witness for this stake address. Furthermore, stake
-associated with funds in the address contribute to the stake of this stake
-address.
-
-Just as in the case of enterprise addresses, the staking object for a reward
-address does not need to carry any information, so it is set to a
-nullary constant (though of course a different one):
-\[
-\beta = \rho, \quad \rho \neq \epsilon
-\]
+Rewards can be ``withdrawn'' from a reward account, by using the reward account
+as an input to a transaction. Note that we will still require at least one UTxO
+style input in this transactions for replay protection, as explained in
+\cref{certificate-replay-prevention}. Stake associated with funds in a reward
+account will contribute to the stake of the stake address, so there is no
+incentive to frequently withdraw rewards.
 
 The terms \emph{reward address}, \emph{reward account}, and \emph{reward account
-  address} will be used interchangeably throughout this document.
-% And so from here on we don't need to keep saying "reward account address"!
+  address} will be used interchangeably throughout this document. \todo{Use
+  reward account everywhere instead.}
 
-\subsubsection{Bootstrap Address}
+\subsubsection{Byron Address}
 \label{bootstrap-address}
 
-Bootstrap addresses were introduced in Byron. In Byron they were interpreted as
-having stake rights but those stake rights were always delegated to a fixed set
-of single key stake addresses specified in the genesis block, controlled by the
+In Byron, all addresses were interpreted as
+having stake rights, but those stake rights were always delegated to a fixed set
+of keys specified in the genesis block, controlled by the
 Cardano Foundation, Emurgo, and IOHK.
 
-Bootstrap addresses continue to exist in Shelley, but their
+Byron addresses continue to exist in Shelley, but their
 interpretation is changed subtly and their use is disincentivised.
-Their interpretation is changed from having stake rights but with
+Their interpretation is changed from having stake rights with
 forced delegation, to having no stake rights whatsoever. Their use is
-disincentivised since owners have the option to move their funds into
-the new base or pointer addresses that have stake rights which can be
-exercised to receive staking rewards.
+disincentivised, since owners have the option to move their funds into
+the new base or pointer addresses that have stake rights, which can be
+exercised to receive rewards.
 
-It is worth noting that initially bootstrap addresses and enterprise addresses
+It is worth noting that initially, Byron addresses and enterprise addresses
 have essentially identical behaviour. This might change in the future, if new
 features are added to enterprise addresses.
 
 \subsubsection{HD Wallet Structure in Shelley}
 \label{hd-wallet-structure-in-shelley}
 
-The Shelley addresses where the value address is a single public key hash
+Shelley addresses with a verification key hash as payment credential
 support hierarchical deterministic wallets, as per BIP-32~\citep{bip32}.
 
 For multi-sig value addresses, we can use a slight generalisation of
 BIP-45~\citep{bip45}\todo{Lay out the necessary generalisation of BIP-45}.
 
-In particular this kind of wallet scheme allows implementations that can
+In particular, this kind of wallet scheme allows implementations that can
 do wallet restoration from seed in time that is better than linear in
 the total number of addresses in the blockchain. For details, see
 \cref{wallet-recovery-process}.
@@ -885,28 +851,28 @@ the total number of addresses in the blockchain. For details, see
 
 Wallets will recognise addresses (other than reward addresses) that belong to
 them just as they would without delegation, by looking only at the
-value part of the address (see \cref{wallet-recovery-process} for how to find
+payment credential (see \cref{wallet-recovery-process} for how to find
 addresses efficiently).
 
-Finding the stake addresses of a wallet (and in particular the corresponding
-reward addresses) can be done either by just reading off all the stake addresses
-of addresses found via their value address, or by performing a second search,
+Finding the stake credentials of a wallet (and in particular the corresponding
+reward accounts) can be done either by just reading off all the stake credentials
+of addresses found via their payment credentials, or by performing a second search,
 this time over all the registered stake addresses\footnote{As explained in
   \cref{stake-address-registration-certificates}, stake addresses need to be
   registered on-chain.}. The former option is quicker and easier to implement.
-However, it is conceivable to construct addresses where the value address
-belongs to one wallet, but the stake address belongs to another. The stake
-address of such addresses would only be found by the wallet that controls it via
+However, it is conceivable to construct addresses where the payment credential
+belongs to one wallet, but the stake credential belongs to another. The stake
+credential of such addresses would only be found by the wallet that controls it via
 a dedicated search on the registered stake addresses.
 
-Once a wallet recognises an address via its payment address, it will read its
-staking object \(\beta\), and check whether it is set according
+Once a wallet recognises an address via its payment credential, it will read its
+stake credential, and check whether it is set according
 to the current delegation preference of the wallet. If there is a
 discrepancy, it will alert the user, and ask them whether they want to
 re-delegate according to their current delegation preferences.
 
 This check protects against the malleability attack in
-\cref{address-nonmalleability}. It does so not by making it impossible but
+\cref{address-nonmalleability}. It does so not by making it impossible, but
 by ensuring that the users are aware of it. This design also covers the case
 of users simply changing their delegation choice but subsequently receiving
 payments to addresses they handed out previously that use the previous
