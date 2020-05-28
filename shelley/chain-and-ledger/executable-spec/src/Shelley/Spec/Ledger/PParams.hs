@@ -21,6 +21,7 @@ module Shelley.Spec.Ledger.PParams
     ProposedPPUpdates (..),
     emptyPPPUpdates,
     PParamsUpdate,
+    emptyPParamsUpdate,
     Update (..),
     updatePParams,
   )
