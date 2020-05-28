@@ -149,6 +149,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Rules.TestUtxo
                          Test.Shelley.Spec.Ledger.Rules.TestUtxow
                          Test.Shelley.Spec.Ledger.Serialization
+                         Test.Shelley.Spec.Ledger.SerializationProperties
                          Test.Shelley.Spec.Ledger.Shrinkers
                          Test.Shelley.Spec.Ledger.STSTests
                          Test.Shelley.Spec.Ledger.UnitTests
@@ -190,7 +191,9 @@ test-suite shelley-spec-ledger-test
       byron-spec-ledger,
       directory,
       shelley-spec-ledger,
+      generic-random,
       hedgehog,
+      hedgehog-quickcheck,
       iproute,
       multiset,
       process-extras,
