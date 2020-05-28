@@ -20,6 +20,7 @@ allow-newer: true
 extra-deps:
 - sequence-0.9.8
 - tasty-hedgehog-1.0.0.2 # Needed due to https://github.com/qfpl/tasty-hedgehog/issues/30
+- hedgehog-quickcheck-0.1.1
 - Unique-0.4.7.6
 - bimap-0.4.0
 - monad-stm-0.1.0.2

@@ -31,6 +31,7 @@ import qualified Shelley.Spec.Ledger.STS.NewEpoch as STS.NewEpoch
 import qualified Shelley.Spec.Ledger.STS.Ocert as STS.Ocert
 import qualified Shelley.Spec.Ledger.STS.Pool as STS.Pool
 import qualified Shelley.Spec.Ledger.STS.PoolReap as STS.PoolReap
+import qualified Shelley.Spec.Ledger.STS.Ppup as STS.Ppup
 import qualified Shelley.Spec.Ledger.STS.Tick as STS.Tick
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS.Utxo
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS.Utxow
@@ -199,6 +200,8 @@ type DELEGS = STS.Delegs.DELEGS ConcreteCrypto
 type POOL = STS.Pool.POOL ConcreteCrypto
 
 type POOLREAP = STS.PoolReap.POOLREAP ConcreteCrypto
+
+type PPUP = STS.Ppup.PPUP ConcreteCrypto
 
 type Credential kr = TxData.Credential kr ConcreteCrypto
 

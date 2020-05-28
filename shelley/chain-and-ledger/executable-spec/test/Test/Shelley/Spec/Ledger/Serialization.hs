@@ -223,10 +223,19 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern KeyPair,
     pattern VKey,
   )
+import Test.Shelley.Spec.Ledger.SerializationProperties
+  ( prop_roundtrip_Block,
+    prop_roundtrip_BlockHeaderHash,
+    prop_roundtrip_Header,
+    prop_roundtrip_LEDGER_PredicateFails,
+    prop_roundtrip_Tx,
+    prop_roundtrip_TxId,
+  )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), Assertion, assertEqual, assertFailure, testCase)
 import Test.Tasty.Hedgehog (testProperty)
+import qualified Test.Tasty.QuickCheck as QC (testProperty)
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -501,6 +510,26 @@ roundTripIpv6 =
 
 serializationTests :: TestTree
 serializationTests =
+  testGroup
+    "Shelley Serialization Tests"
+    [ serializationUnitTests,
+      serializationPropertyTests
+    ]
+
+serializationPropertyTests :: TestTree
+serializationPropertyTests =
+  testGroup
+    "Serialisation roundtrip Property Tests"
+    [ QC.testProperty "roundtrip Block" prop_roundtrip_Block,
+      QC.testProperty "roundtrip Header" prop_roundtrip_Header,
+      QC.testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
+      QC.testProperty "roundtrip Tx" prop_roundtrip_Tx,
+      QC.testProperty "roundtrip TxId" prop_roundtrip_TxId,
+      QC.testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails
+    ]
+
+serializationUnitTests :: TestTree
+serializationUnitTests =
   testGroup
     "CBOR Serialization Tests"
     [ checkEncodingCBOR
