@@ -199,9 +199,9 @@ mutateDCert keys _ (DCertDeleg (Delegate (Delegation _ _))) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
   pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (coerceKeyRole $ hashKey delegatee')
-mutateDCert keys _ (DCertGenesis (GenesisDelegCert gk _)) = do
+mutateDCert keys _ (DCertGenesis (GenesisDelegCert gk _ vrfKH)) = do
   _delegatee <- getAnyStakeKey keys
-  pure $ DCertGenesis $ GenesisDelegCert gk (coerceKeyRole $ hashKey _delegatee)
+  pure $ DCertGenesis $ GenesisDelegCert gk (coerceKeyRole $ hashKey _delegatee) vrfKH
 mutateDCert _ _ (DCertMir (MIRCert credCoinMap)) = do
   let credCoinList = Map.toList credCoinMap
       coins = List.map snd credCoinList

@@ -15,7 +15,7 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∈), (∉))
+import Byron.Spec.Ledger.Core (dom, (∈), (∉))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import Data.Maybe (fromMaybe)
@@ -313,20 +313,30 @@ genGenesisDelegation ::
 genGenesisDelegation keys coreKeys dpState =
   if null genesisDelegators || null availableDelegatees
     then pure Nothing
-    else
-      mkCert <$> QC.elements genesisDelegators
-        <*> QC.elements availableDelegatees
+    else do
+      gk <- QC.elements genesisDelegators
+      d <- QC.elements availableDelegatees
+      case Map.lookup (hashVKey gk) genDelegs_ of
+        -- TODO instead of always using the existing VRF key hash,
+        -- sometimes generate new VRF keys
+        Nothing -> pure Nothing
+        Just (_, vrf) -> return $ mkCert gk d vrf
   where
     hashVKey = hashKey . vKey
-    mkCert gkey key =
+    mkCert gkey key vrf =
       Just
-        ( DCertGenesis (GenesisDelegCert (hashVKey gkey) (hashVKey (coerceKeyRole $ snd key))),
+        ( DCertGenesis
+            ( GenesisDelegCert
+                (hashVKey gkey)
+                (hashVKey (coerceKeyRole $ snd key))
+                vrf
+            ),
           CoreKeyCred [gkey]
         )
     (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
     genesisDelegator k = k ∈ dom genDelegs_
     genesisDelegators = filter (genesisDelegator . hashVKey) coreKeys
-    notDelegatee k = (coerceKeyRole k) ∉ range genDelegs_
+    notDelegatee k = (coerceKeyRole k) ∉ (fmap fst (Map.elems genDelegs_))
     availableDelegatees = filter (notDelegatee . hashVKey . snd) keys
 
 -- | Generate and return a RegPool certificate along with its witnessing key.

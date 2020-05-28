@@ -338,7 +338,7 @@ genUpdate
         case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
           Nothing ->
             error "genUpdate: NoGenesisStaking"
-          Just gkeyHash ->
+          Just (gkeyHash, _) ->
             fromMaybe
               (cold pkeys)
               (coerceKeyRole <$> Map.lookup (coerceKeyRole gkeyHash) keysByStakeHash)

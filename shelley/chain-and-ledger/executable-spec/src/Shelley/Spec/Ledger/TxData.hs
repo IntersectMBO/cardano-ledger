@@ -292,7 +292,10 @@ data PoolCert crypto
 
 -- | Genesis key delegation certificate
 data GenesisDelegCert crypto
-  = GenesisDelegCert !(KeyHash 'Genesis crypto) !(KeyHash 'GenesisDelegate crypto)
+  = GenesisDelegCert
+      !(KeyHash 'Genesis crypto)
+      !(KeyHash 'GenesisDelegate crypto)
+      !(Hash crypto (VerKeyVRF crypto))
   deriving (Show, Generic, Eq)
 
 -- | Move instantaneous rewards certificate
@@ -476,11 +479,12 @@ instance
         <> toCBOR vk
         <> toCBOR epoch
     -- DCertGenesis
-    DCertGenesis (GenesisDelegCert gk kh) ->
-      encodeListLen 3
+    DCertGenesis (GenesisDelegCert gk kh vrf) ->
+      encodeListLen 4
         <> toCBOR (5 :: Word8)
         <> toCBOR gk
         <> toCBOR kh
+        <> toCBOR vrf
     -- DCertMIR
     DCertMir mir ->
       encodeListLen 2
@@ -511,10 +515,11 @@ instance
         b <- fromCBOR
         pure $ DCertPool $ RetirePool a (EpochNo b)
       5 -> do
-        matchSize "GenesisDelegate" 3 n
+        matchSize "GenesisDelegate" 4 n
         a <- fromCBOR
         b <- fromCBOR
-        pure $ DCertGenesis $ GenesisDelegCert a b
+        c <- fromCBOR
+        pure $ DCertGenesis $ GenesisDelegCert a b c
       6 -> matchSize "MIRCert" 2 n >> DCertMir <$> fromCBOR
       k -> invalidKey k
 

@@ -47,7 +47,13 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegs (..),
+    Hash,
+    KeyHash,
+    KeyRole (..),
+    VerKeyVRF,
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( DState,
     FutureGenDeleg (..),
@@ -60,8 +66,24 @@ import Shelley.Spec.Ledger.LedgerState
     _stkCreds,
     emptyDState,
   )
-import Shelley.Spec.Ledger.Slot ((*-), (+*), Duration (..), EpochNo (..), SlotNo, epochInfoEpoch, epochInfoFirst)
-import Shelley.Spec.Ledger.TxData (DCert (..), DelegCert (..), Delegation (..), GenesisDelegCert (..), MIRCert (..), Ptr, RewardAcnt (..))
+import Shelley.Spec.Ledger.Slot
+  ( (*-),
+    (+*),
+    Duration (..),
+    EpochNo (..),
+    SlotNo,
+    epochInfoEpoch,
+    epochInfoFirst,
+  )
+import Shelley.Spec.Ledger.TxData
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    GenesisDelegCert (..),
+    MIRCert (..),
+    Ptr,
+    RewardAcnt (..),
+  )
 
 data DELEG crypto
 
@@ -97,6 +119,8 @@ instance STS (DELEG crypto) where
     | MIRCertificateTooLateinEpochDELEG
         !SlotNo -- current slot
         !SlotNo -- MIR must be submitted before this slot
+    | DuplicateGenesisVRFDELEG
+        !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash which is already delegated to
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDState]
@@ -127,6 +151,8 @@ instance
       encodeListLen 3 <> toCBOR (7 :: Word8) <> toCBOR needed <> toCBOR reserves
     MIRCertificateTooLateinEpochDELEG sNow sTooLate ->
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR sNow <> toCBOR sTooLate
+    DuplicateGenesisVRFDELEG vrf ->
+      encodeListLen 2 <> toCBOR (9 :: Word8) <> toCBOR vrf
 
 instance
   (Crypto crypto) =>
@@ -172,6 +198,10 @@ instance
         sNow <- fromCBOR
         sTooLate <- fromCBOR
         pure $ MIRCertificateTooLateinEpochDELEG sNow sTooLate
+      9 -> do
+        matchSize "DuplicateGenesisVRFDELEG" 2 n
+        vrf <- fromCBOR
+        pure $ DuplicateGenesisVRFDELEG vrf
       k -> invalidKey k
 
 delegationTransition ::
@@ -212,17 +242,33 @@ delegationTransition = do
         ds
           { _delegations = _delegations ds ⨃ [(hk, dpool)]
           }
-    DCertGenesis (GenesisDelegCert gkh vkh) -> do
+    DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp
           (GenDelegs genDelegs) = _genDelegs ds
 
       gkh ∈ dom genDelegs ?! GenesisKeyNotInpMappingDELEG gkh
-      vkh ∉ range genDelegs ?! DuplicateGenesisDelegateDELEG vkh
+
+      let currentOtherDelegations =
+            range $
+              Map.filterWithKey (\k _ -> k /= gkh) genDelegs
+          futureOtherDelegations =
+            range $
+              Map.filterWithKey (\(FutureGenDeleg _ k) _ -> k /= gkh) (_fGenDelegs ds)
+          currentOtherColdKeyHashes = Set.map fst currentOtherDelegations
+          futureOtherColdKeyHashes = Set.map fst futureOtherDelegations
+          currentOtherVrfKeyHashes = Set.map snd currentOtherDelegations
+          futureOtherVrfKeyHashes = Set.map snd futureOtherDelegations
+
+      vkh ∉ (currentOtherColdKeyHashes `Set.union` futureOtherColdKeyHashes)
+        ?! DuplicateGenesisDelegateDELEG vkh
+      vrf ∉ (currentOtherVrfKeyHashes `Set.union` futureOtherVrfKeyHashes)
+        ?! DuplicateGenesisVRFDELEG vrf
+
       pure $
         ds
-          { _fGenDelegs = _fGenDelegs ds ⨃ [(FutureGenDeleg s' gkh, vkh)]
+          { _fGenDelegs = _fGenDelegs ds ⨃ [(FutureGenDeleg s' gkh, (vkh, vrf))]
           }
     DCertMir (MIRCert credCoinMap) -> do
       sp <- liftSTS $ asks stabilityWindow

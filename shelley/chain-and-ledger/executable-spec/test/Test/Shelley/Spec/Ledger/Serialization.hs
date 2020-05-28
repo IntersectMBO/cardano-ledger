@@ -684,13 +684,14 @@ serializationTests =
         ),
       checkEncodingCBOR
         "genesis_delegation"
-        (DCertGenesis (GenesisDelegCert testGKeyHash (coerceKeyRole testKeyHash1)))
+        (DCertGenesis (GenesisDelegCert testGKeyHash (coerceKeyRole testKeyHash1) testVRFKH))
         ( T
-            ( TkListLen 3
+            ( TkListLen 4
                 . TkWord 5 -- genesis delegation cert
             )
             <> S testGKeyHash -- delegator credential
             <> S testKeyHash1 -- delegatee key hash
+            <> S testVRFKH -- delegatee vrf key hash
         ),
       -- checkEncodingCBOR "mir"
       let rws = Map.singleton testStakeCred 77

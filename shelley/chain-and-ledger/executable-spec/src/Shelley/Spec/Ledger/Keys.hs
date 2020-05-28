@@ -248,7 +248,11 @@ instance VRFValue UnitInterval where
 --------------------------------------------------------------------------------
 
 newtype GenDelegs crypto
-  = GenDelegs (Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto))
+  = GenDelegs
+      ( Map
+          (KeyHash 'Genesis crypto)
+          (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto))
+      )
   deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic)
 
 newtype GKeys crypto = GKeys (Set (VKey 'Genesis crypto))
