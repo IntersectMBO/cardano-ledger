@@ -66,6 +66,8 @@ outlined in the rules in Sections~\ref{sec:utxo} and Section~\ref{sec:epoch}.
 For each staking credential, we use the function $\fun{addr_{rwd}}$ to create
 the reward address corresponding to the credential, or to access an existing one
 if it already exists.
+Note that $\fun{addr_{rwd}}$ uses the global constant $\NetworkId$ to
+attach a network ID to the given stake credential.
 
 Base, pointer and enterprise addresses contain a payment credential which is
 either a key hash or a script hash. Base addresses contain a staking credential
@@ -76,15 +78,16 @@ which is also either a key hash or a script hash.
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
-      slot & \Slot & \text{absolute slot}\\
-      ix & \Ix & \text{index}\\
+      \var{slot} & \Slot & \text{absolute slot}\\
+      \var{ix} & \Ix & \text{index}\\
+      \var{net} & \Network & \text{either $\mathsf{Testnet}$ or $\mathsf{Mainnet}$}\\
     \end{array}
   \end{equation*}
   %
   \emph{Derived types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+    \begin{array}{r@{\in}l@{\qquad=\qquad}lr}
       \var{cred} & \Credential & \KeyHash\uniondistinct\HashScr \\
       \var{(s,t,c)}
       & \Ptr
@@ -93,22 +96,22 @@ which is also either a key hash or a script hash.
       \\
       \var{addr}
       & \AddrB
-      & \Credential_{pay}\times\Credential_{stake}
+      & \NetworkId\times\Credential_{pay}\times\Credential_{stake}
       & \text{base address}
       \\
       \var{addr}
       & \AddrP
-      & \Credential_{pay}\times\Ptr
+      & \NetworkId\times\Credential_{pay}\times\Ptr
       & \text{pointer address}
       \\
       \var{addr}
       & \AddrE
-      & \Credential_{pay}
+      & \NetworkId\times\Credential_{pay}
       & \text{enterprise address}
       \\
       \var{addr}
       & \AddrBS
-      & \KeyHash_{pay}
+      & \NetworkId\times\KeyHash_{pay}
       & \text{bootstrap address}
       \\
       \var{addr}
@@ -122,7 +125,7 @@ which is also either a key hash or a script hash.
       \\
       \var{acct}
       & \AddrRWD
-      & \Credential_{stake}
+      & \NetworkId\times\Credential_{stake}
       & \text{reward account}
       \\
     \end{array}
@@ -186,6 +189,8 @@ which is also either a key hash or a script hash.
                                                    from reward addr}\\
       \fun{addrPtr} & \AddrP \to \Ptr
                     & \text{pointer from pointer addr}\\
+      \fun{netId} & \Addr \to \NetworkId
+                    & \text{network Id from addr}\\
     \end{array}
   \end{equation*}
   %
@@ -195,7 +200,10 @@ which is also either a key hash or a script hash.
     \begin{array}{r@{~\in~}lr}
       \fun{addr_{rwd}}
         & \Credential_{stake} \to \AddrRWD
-        & \text{construct a reward account}
+        & \begin{array}{l}
+            \text{construct a reward account,} \\
+            \text{implicitly using $\NetworkId$}
+          \end{array}
     \end{array}
   \end{equation*}
   %

@@ -313,7 +313,9 @@ requests).
       \\
       ~
       \\
-      \forall (\_\mapsto (\_, c)) \in \txouts{txb}, c \geq (\fun{minUTxOValue}~\var{pp})
+      \forall (\wcard\mapsto (\wcard,~c)) \in \txouts{txb}, c \geq (\fun{minUTxOValue}~\var{pp})
+      \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a =\NetworkId
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
       \\

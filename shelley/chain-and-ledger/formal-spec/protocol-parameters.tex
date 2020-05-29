@@ -1,6 +1,9 @@
 \section{Protocol Parameters}
 \label{sec:protocol-parameters}
 
+\subsection{Updatble Protocol Parameters}
+\label{sec:updatable-protocol-parameters}
+
 The Shelley protocol parameters are listed in Figure~\ref{fig:defs:protocol-parameters}.
 Some of the Shelley protocol parameters are common to the Byron era,
 specifically, the common ones are $\var{a}$, $\var{b}$, $\var{maxTxSize}$, and
@@ -19,36 +22,6 @@ system explained in Section~\ref{sec:update}.
 The type $\Coin$ is defined as an alias for the integers.
 Negative values will not be allowed in UTxO outputs or reward accounts,
 and $\Z$ is only chosen over $\N$ for its additive inverses.
-
-Nine global constants are defined.
-As global constants, these values can only be changed by updating the software,
-i.e. a soft or a hard fork.
-For the software update mechanism, see Section~\ref{sec:software-updates}.
-The constants $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$
-represent the number of slots in an epoch/KES period (for a brief explanation
-of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
-The constants $\StabilityWindow$ and $\RandomnessStabilisationWindow$ concern the chain stability.
-The maximum number of time a KES key can be evolved before a pool operator
-must create a new operational certificate is given by $\MaxKESEvo$.
-\textbf{Note that if } $\MaxKESEvo$
-\textbf{is changed, the KES signature format may have to change as well.}
-The constant $\ActiveSlotCoeff$ is the value $f$ from the
-Praos paper \cite{ouroboros_praos}.
-
-The constant $\Quorum$ determines the quorum amount needed for votes on the
-protocol parameter updates and the application version updates.
-
-The constant $\MaxMajorPV$ provides a mechanism for halting outdated nodes.
-Once the major component of the protocol version in the protocol parameters
-exceeds this value, every subsequent block is invalid.
-See Figure~\ref{fig:rules:chain}.
-
-Finally, $\MaxLovelaceSupply$ gives the total number of lovelace in the system,
-which is used in the reward calculation.
-It is always equal to the sum of the values in the UTxO, plus the sum of the
-values in the reward accounts, plus the deposit pot, plus the fee pot,
-plus the treasury and the reserves.
-
 
 Some helper functions are defined in Figure~\ref{fig:defs:protocol-parameters-helpers}.
 The $\fun{minfee}$ function calculates the minimum fee that must be paid by a transaction.
@@ -150,7 +123,7 @@ without being explicit about the types and conversion.
     \fun{d},
     \fun{extraEntropy},
     \fun{pv},
-    \fun{minUTxOValue},
+    \fun{minUTxOValue}
   \end{center}
   %
   \emph{Abstract Functions}
@@ -162,6 +135,52 @@ without being explicit about the types and conversion.
     \end{array}
   \end{equation*}
   %
+  \caption{Definitions Used in Protocol Parameters}
+  \label{fig:defs:protocol-parameters}
+\end{figure*}
+
+\subsection{Global Constants}
+\label{sec:global-constants}
+
+In additon to the updatable protocol parameters defined in
+Section~\ref{sec:updatable-protocol-parameters},
+there are ten parameters which cannot be changed by the update
+system in Section~\ref{sec:update}.
+We call these the global constants, as changing these values can only
+be done by updating the software, i.e. a soft or a hard fork.
+For the software update mechanism, see Section~\ref{sec:software-updates}.
+
+The constants $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$
+represent the number of slots in an epoch/KES period (for a brief explanation
+of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
+The constants $\StabilityWindow$ and $\RandomnessStabilisationWindow$ concern the chain stability.
+The maximum number of time a KES key can be evolved before a pool operator
+must create a new operational certificate is given by $\MaxKESEvo$.
+\textbf{Note that if } $\MaxKESEvo$
+\textbf{is changed, the KES signature format may have to change as well.}
+
+The constant $\Quorum$ determines the quorum amount needed for votes on the
+protocol parameter updates and the application version updates.
+
+The constant $\MaxMajorPV$ provides a mechanism for halting outdated nodes.
+Once the major component of the protocol version in the protocol parameters
+exceeds this value, every subsequent block is invalid.
+See Figure~\ref{fig:rules:chain}.
+
+The constant $\MaxLovelaceSupply$ gives the total number of lovelace in the system,
+which is used in the reward calculation.
+It is always equal to the sum of the values in the UTxO, plus the sum of the
+values in the reward accounts, plus the deposit pot, plus the fee pot,
+plus the treasury and the reserves.
+
+The constant $\ActiveSlotCoeff$ is the value $f$ from the
+Praos paper \cite{ouroboros_praos}.
+
+Lastly, $\NetworkId$ determines what network, either mainnet or testnet, is expected.
+This value will also appear inside every address, and transactions
+containing addresses with an unexpected network ID are rejected.
+
+\begin{figure*}[htb]
   \emph{Global Constants}
   %
   \begin{equation*}
@@ -182,12 +201,13 @@ without being explicit about the types and conversion.
       \Quorum & \N & \text{- quorum for update system votes}\\
       \MaxMajorPV & \N & \text{- all blocks are invalid after this value}\\
       \MaxLovelaceSupply & \Coin & \text{- total lovelace in the system}\\
-      \ActiveSlotCoeff & (0, 1] & -~f\text{ in \cite{ouroboros_praos}}\\
+      \ActiveSlotCoeff & (0, 1] & \text{ - }f\text{ in \cite{ouroboros_praos}}\\
+      \NetworkId & \Network & \text{- the network, mainnet or testnet}\\
     \end{array}
   \end{equation*}
   %
-  \caption{Definitions Used in Protocol Parameters}
-  \label{fig:defs:protocol-parameters}
+  \caption{Global Constants}
+  \label{fig:defs:global-constants}
 \end{figure*}
 
 \begin{figure*}[htb]
