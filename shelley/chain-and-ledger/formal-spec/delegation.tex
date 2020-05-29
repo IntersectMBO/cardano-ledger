@@ -166,7 +166,7 @@ It does the following:
       \fun{retire} & \DCertRetirePool \to \Epoch
                                             & \text{epoch of pool retirement}
       \\
-      \fun{genesisDeleg} & \DCertGen \to (\KeyHashGen,~\KeyHash)
+      \fun{genesisDeleg} & \DCertGen \to (\KeyHashGen,~\KeyHash,~\KeyHash_{vrf})
                                             & \text{genesis delegation}
       \\
       \fun{moveRewards} & \DCertMir \to (\StakeCredential \mapsto \Coin)
@@ -270,6 +270,8 @@ and the protocol parameters.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{stakeCred} & \StakeCredential & (\KeyHash_{stake} \uniondistinct
                                        \HashScr) \\
+      \var{fGenDelegs} & \FutGenesisDelegation
+                       & (\Slot\times\KeyHashGen)\mapsto(\KeyHash\times\KeyHash_{vrf}) \\
     \end{array}
   \end{equation*}
   %
@@ -283,8 +285,8 @@ and the protocol parameters.
             \var{rewards} & \AddrRWD \mapsto \Coin & \text{rewards}\\
             \var{delegations} & \StakeCredential \mapsto \KeyHash_{pool} & \text{delegations}\\
             \var{ptrs} & \Ptr \mapsto \StakeCredential & \text{pointer to stake credential}\\
-            \var{fGenDelegs} & (\Slot\times\KeyHashGen) \mapsto \KeyHash & \text{future genesis key delegations}\\
-            \var{genDelegs} & \KeyHashGen \mapsto \KeyHash & \text{genesis key delegations}\\
+            \var{fGenDelegs} & \FutGenesisDelegation & \text{future genesis key delegations}\\
+            \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations}\\
             \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}\\
           \end{array}
       \right)
@@ -534,11 +536,23 @@ concerns are independent of the ledger rules.
     \inference[Deleg-Gen]
     {
       \var{c}\in \DCertGen
-      & (\var{gkh},~\var{vkh})\leteq\fun{genesisDeleg}~{c}
+      & (\var{gkh},~\var{vkh},~\var{vrf})\leteq\fun{genesisDeleg}~{c}
       \\
       s'\leteq\var{slot}+\StabilityWindow
       & \var{gkh}\in\dom{genDelegs}
-      & \var{vkh}\notin\range{genDelegs}
+      \\~\\
+      {
+        \begin{array}{ l @{~\leteq~\{} c @{~\mid~} r @{\mapsto} l @{,~\var{g}\neq\var{gkh}\}} }
+          \var{currentOtherColdKeyHashes} & \var{k}  & \var{g} & (\var{k},~\wcard) \\
+          \var{currentOtherVrfKeyHashes}  & \var{v} & \var{g} & (\wcard,~\var{v}) \\
+          \var{futureOtherColdKeyHashes}  & \var{k}  & (\var{g},~\wcard) & (\var{k},~\wcard) \\
+          \var{futureOtherVrfKeyHashe}    & \var{v} & (\var{g},~\wcard) & (\wcard,~\var{v}) \\
+      \end{array}
+      }
+      \\
+      \var{vkh}\notin\var{currentOtherColdKeyHashes}\union\var{futureOtherColdKeyHashes} \\
+      \var{vrf}\notin\var{currentOtherVrfKeyHashes}\union\var{futureOtherVrfKeyHashe} \\
+      \var{fdeleg}\leteq\{(\var{s'},~\var{gkh}) \mapsto (\var{vkh},~\var{vrf})\}
     }
     {
       \begin{array}{r}
@@ -565,8 +579,9 @@ concerns are independent of the ledger rules.
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
-        \varUpdate{\var{fGenDelegs}} & \varUpdate{\unionoverrideRight}
-                               & \varUpdate{\{(\var{s'},~\var{gkh}) \mapsto \var{vkh}\}} \\
+        \varUpdate{\var{fGenDelegs}}
+        & \varUpdate{\unionoverrideRight}
+        & \varUpdate{fdeleg} \\
         \var{genDelegs} \\
         \var{i_{rwd}}
       \end{array}
@@ -667,7 +682,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
       \item The pool's parameters are stored.
     \end{itemize}
   \item Stake pool parameter updates are handled by \cref{eq:pool-rereg}.
-    This rules, which also matches on the certificate type $\type{DCertRegPool}$,
+    This rule, which also matches on the certificate type $\type{DCertRegPool}$,
     is distinguished from \cref{eq:pool-reg} by the requirement that the pool be registered.
 
     Unlike the initial stake pool registrations, the pool parameters will not change
@@ -742,7 +757,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     }
   \end{equation}
 
-  \begin{equation}\label{eq:pool-rereg-late}
+  \begin{equation}\label{eq:pool-rereg}
     \inference[Pool-reReg]
     {
       \var{c}\in\DCertRegPool

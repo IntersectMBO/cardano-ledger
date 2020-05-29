@@ -159,7 +159,7 @@ The signal for the UTxO transition is a transaction.
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{stkCreds} & \StakeCreds & \text{stake credential}\\
         \var{stpools} & \StakePools & \text{stake pool}\\
-        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -576,13 +576,13 @@ This consists of:
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{propWits} \in \Update \to (\KeyHashGen\mapsto\VKey) \to \powerset{\KeyHash}
+    & \fun{propWits} \in \Update \to \GenesisDelegation \to \powerset{\KeyHash}
     & \text{hashkeys for proposals} \\
     & \fun{propWits}~(\var{pup},~\wcard)~\var{genDelegs} = \\
     & ~~\left\{
-      \hashKey{vkey}
+      \var{kh}
       \mid
-      \var{gkey}\mapsto\var{vkey}\in
+      \var{gkh}\mapsto(\var{kh},~\wcard)\in
       \left(\dom{\var{pup}}\restrictdom\var{genDelegs}\right)
       \right\}
   \end{align*}

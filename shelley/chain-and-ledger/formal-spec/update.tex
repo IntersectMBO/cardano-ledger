@@ -16,11 +16,18 @@ for a transaction, see Section\ref{sec:witnesses-shelley}.
 
 \textbf{Genesis Key Delegations.} The environment for the protocol parameter
 update transition contains the value $\var{genDelegs}$,
-which is a finite map indexed by genesis key hashes.
-This is the genesis key delegations. During the Byron era, they are all
+which is a finite map indexed by genesis key hashes,
+and which maps to a pair consisting of a delegate key hash
+(corresponding to the cold key used for producing blocks) and
+a VRF key hash.
+
+During the Byron era, the genesis nodes are all
 already delegated to some $\KeyHash$, and these delegations are inherited
 through the Byron-Shelley transition (see Section~\ref{sec:byron-to-shelley}).
-These delegations can be updated as described in \ref{sec:delegation-shelley},
+The VRF key hashes in this mapping will be new to the Shelley era.
+
+The delegations mapping can be updated as described in
+Section~\ref{sec:delegation-shelley},
 but there is no mechanism for them to un-delegate or for the keys to which they delegate
 to retire (unlike regular stake pools).
 
@@ -81,18 +88,30 @@ This rule has the following predicate failures:
   can be used in the protocol parameter update.
 \item If a protocol parameter update in \var{pup} cannot follow the current
   protocol parameter, there is a \emph{PVCannotFollow} failure.
-  Note that $\fun{pvCanFollow}$ is defined in Figure~\ref{fig:funcs:helper-updates}.
+  Note that $\fun{pvCanFollow}$ is defined in Figure~\ref{fig:ts-types:pp-update}.
 \end{enumerate}
 
 \begin{figure}[htb]
+  \emph{Derived types}
+  \begin{equation*}
+    \begin{array}{lclr}
+      \GenesisDelegation
+      & ~=~
+      & \KeyHashGen\mapsto(\KeyHash\times\KeyHash_{vrf})
+      & \text{genesis delegations} \\
+    \end{array}
+  \end{equation*}
+  %
   \emph{Protocol Parameter Update environment}
+  %
   \begin{equation*}
     \PPUpdateEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \GenesisDelegation
+                        & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -104,6 +123,13 @@ This rule has the following predicate failures:
     \subseteq \powerset (
     \PPUpdateEnv \times \ProposedPPUpdates \times \Update^? \times \ProposedPPUpdates)
   \end{equation*}
+  %
+  \emph{Helper Functions}
+  \begin{align*}
+      & \fun{pvCanFollow} \in \ProtVer \to \ProtVer \to \Bool\\
+      & \fun{pvCanFollow}~(m,~n)~(m',~n') = \\
+      & ~~~~(m + 1, 0) = (m', n') \lor (m, n + 1) = (m', n')
+  \end{align*}
   %
   \caption{Protocol Parameter Update Transition System Types}
   \label{fig:ts-types:pp-update}
