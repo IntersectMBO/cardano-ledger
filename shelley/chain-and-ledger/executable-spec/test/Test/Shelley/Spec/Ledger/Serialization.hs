@@ -228,6 +228,9 @@ import Test.Shelley.Spec.Ledger.SerializationProperties
     prop_roundtrip_BlockHeaderHash,
     prop_roundtrip_Header,
     prop_roundtrip_LEDGER_PredicateFails,
+    prop_roundtrip_LedgerState,
+    prop_roundtrip_NewEpochState,
+    prop_roundtrip_PrtclState,
     prop_roundtrip_Tx,
     prop_roundtrip_TxId,
   )
@@ -525,7 +528,10 @@ serializationPropertyTests =
       QC.testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
       QC.testProperty "roundtrip Tx" prop_roundtrip_Tx,
       QC.testProperty "roundtrip TxId" prop_roundtrip_TxId,
-      QC.testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails
+      QC.testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails,
+      QC.testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
+      QC.testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
+      QC.testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState
     ]
 
 serializationUnitTests :: TestTree
