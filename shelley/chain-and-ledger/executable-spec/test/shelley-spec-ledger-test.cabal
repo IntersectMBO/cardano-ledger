@@ -34,6 +34,7 @@ library
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
                      Test.Shelley.Spec.Ledger.Serialization
+                     Test.Shelley.Spec.Ledger.SerializationProperties
                      Test.Shelley.Spec.Ledger.Shrinkers
                      Test.Shelley.Spec.Ledger.Orphans
                      Test.Shelley.Spec.Ledger.Utils
@@ -47,8 +48,8 @@ library
     ghc-options:
       -Werror
   build-depends:
-    QuickCheck,
     base,
+    byron-spec-ledger,
     bytestring,
     bytestring-conversion,
     cardano-binary,
@@ -58,12 +59,14 @@ library
     cborg,
     containers,
     cryptonite,
-    byron-spec-ledger,
-    shelley-spec-ledger,
+    generic-random,
     hedgehog,
+    hedgehog-quickcheck,
     iproute,
     multiset,
     process-extras,
+    QuickCheck,
+    shelley-spec-ledger,
     small-steps,
     tasty,
     tasty-hedgehog,
