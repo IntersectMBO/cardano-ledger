@@ -26,6 +26,7 @@ library
                      Shelley.Spec.Ledger.BlockChain
                      Shelley.Spec.Ledger.Coin
                      Shelley.Spec.Ledger.Credential
+                     Shelley.Spec.Ledger.Genesis
                      Shelley.Spec.Ledger.Keys
                      Shelley.Spec.Ledger.UTxO
                      Shelley.Spec.Ledger.Slot
@@ -102,12 +103,14 @@ library
     shelley-spec-non-integral,
     stm,
     text,
+    time,
     transformers,
     network,
     iproute,
     byron-spec-ledger,
     cardano-binary,
     cardano-crypto-class,
+    cardano-crypto-wrapper,
     cardano-prelude,
     cardano-slotting
 
