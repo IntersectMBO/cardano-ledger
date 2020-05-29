@@ -1,4 +1,4 @@
-finite_set<a> = #6.258([* a ])
+finite_set<a> = [* a ]
 
 unit_interval = #6.30([uint, uint])
 
