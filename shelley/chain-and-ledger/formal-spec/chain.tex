@@ -888,7 +888,7 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
       \\
       & ~~~~~~~~~~\var{curr}\leteq
         \{
-          (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fGenDelegs}
+          (\var{s},~\var{gkh})\mapsto(\var{vkh},~\var{vrf})\in\var{fGenDelegs}
           ~\mid~
           \var{s}\leq\var{slot}
         \}
@@ -898,11 +898,11 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
       \\
       & ~~~~~~~~~~\var{genDelegs'}\leteq
           \left\{
-            \var{gkh}\mapsto\var{vkh}
+            \var{gkh}\mapsto(\var{vkh},~\var{vrf})
             ~\mathrel{\Bigg|}~
             {
               \begin{array}{l}
-                (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{curr}\\
+                (\var{s},~\var{gkh})\mapsto(\var{vkh},~\var{vrf})\in\var{curr}\\
                 \var{s}=\max\{s'~\mid~(s',~\var{gkh})\in\dom{\var{curr}}\}
               \end{array}
             }
@@ -1125,24 +1125,41 @@ parameters. The function checks:
 \begin{figure}
   \emph{VRF helper function}
   \begin{align*}
-      & \fun{vrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
-      & \fun{vrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
+      & \fun{vrfChecks} \in \Seed \to \BHBody \to \Bool \\
+      & \fun{vrfChecks}~\eta_0~\var{bhb} = \\
       & \begin{array}{cl}
-        ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
-        ~~~~ \land &
+        ~~~~ &
              \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}
                {(\bprfn{bhb},~\bnonce{bhb}}) \\
         ~~~~ \land &
              \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}
                {(\bprfl{bhb},~\bleader{bhb}}) \\
-        ~~~~ \land &
-             \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
+      \end{array} \\
+      & ~~~~\where \\
+      & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
+      & ~~~~~~~~~~\var{vrfVk} \leteq \fun{bvkvrf}~\var{bhb} \\
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{praosVrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
+      & \fun{praosVrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
+      & \begin{array}{cl}
+        ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
+        ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
+        ~~~~ \land & \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
       \end{array} \\
       & ~~~~\where \\
       & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
-      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{vrfVk} \\
-      & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
-      & ~~~~~~~~~~\var{vrfVk} \leteq \fun{bvkvrf}~\var{bhb} \\
+      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{pbftVrfChecks} \in \KeyHash_{vrf} \to \Seed \to \BHBody \to \Bool \\
+      & \fun{pbftVrfChecks}~\var{vrfh}~\eta_0~~\var{bhb} = \\
+      & \begin{array}{cl}
+        ~~~~ & \var{vrfh} = \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
+        ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
+      \end{array} \\
   \end{align*}
   \label{fig:vrf-checks}
 \end{figure}
@@ -1171,14 +1188,16 @@ The environments for this transition are:
     responsible for producing the block.
   \item The epoch nonce $\eta_0$.
   \item The stake pool stake distribution $\var{pd}$.
-  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys.
+  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys and vrf keys.
 \end{itemize}
 
 The states for this transition consist only of the mapping of certificate issue numbers.
 
 This transition establishes that a block producer is in fact authorized.
 Since there are three key pairs involved (cold keys, VRF keys, and hot KES keys)
-it is worth examining the interaction in Equation~\ref{eq:decentralized} closely.
+it is worth examining the interaction closely.
+First we look at the regular Praos/decentralized setting,
+which is given by Equation~\ref{eq:decentralized}.
 
 \begin{itemize}
   \item First we check the operational certificate with $\mathsf{OCERT}$.
@@ -1189,12 +1208,16 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
 \item  Next, in the $\fun{vrfChecks}$ predicate, we check that the hash of this cold key is in the
   mapping $\var{pd}$, and that it maps to $(\sigma,~\var{hk_{vrf}})$, where
   $(\sigma,~\var{hk_{vrf}})$ is the hash of the VRF key in the header.
-  If $\fun{vrfChecks}$ returns true, then we know that the cold key in the block header was a
+  If $\fun{praosVrfChecks}$ returns true, then we know that the cold key in the block header was a
   registered stake pool at the beginning of the previous epoch, and that it is indeed registered
   with the VRF key listed in the header.
 \item Finally, we use the VRF verification key in the header, along with the VRF proofs in the
   header, to check that the operator is allowed to produce the block.
 \end{itemize}
+The situation for the overlay schedule, given by Equation~\ref{eq:active-pbft}, is similar.
+The difference is that we check the overlay schedule to see what core node is
+supposed to make a block, and then use the genesis delegation mapping to
+check the correct cold key hash and vrf key hash.
 
 \begin{figure}
   \emph{Overlay environments}
@@ -1205,7 +1228,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1232,7 +1255,9 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \\
       \bslot bhb \mapsto \var{gkh}\in\var{osched}
       &
-      \var{gkh}\mapsto\var{vkh}\in\var{genDelegs}
+      \var{gkh}\mapsto(\var{vkh},~\var{vrfh})\in\var{genDelegs}
+      \\~\\
+      \fun{pbftVrfChecks}~\var{vrfh}~\eta_0~\var{bhb}
       \\~\\
       {
         {\begin{array}{c}
@@ -1270,7 +1295,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
       }
       \\~\\
-      \fun{vrfChecks}~\eta_0~\var{pd}~\ActiveSlotCoeff~\var{bhb}
+      \fun{praosVrfChecks}~\eta_0~\var{pd}~\ActiveSlotCoeff~\var{bhb}
     }
     {
       {\begin{array}{c}
@@ -1290,18 +1315,31 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
   \label{fig:rules:overlay}
 \end{figure}
 
-The OVERLAY rule has four predicate failures:
+The OVERLAY rule has nine predicate failures:
 \begin{itemize}
-\item In the case of the slot not being part of a OBFT schedule, if the VRF
-  leader check does not verify, there is a \emph{NotPraosLeader} failure.
+\item If in the decentralized case the VRF key is not in the pool distribution,
+  there is a \emph{VRFKeyUnknown} failure.
+\item If in the decentralized case the VRF key hash does not match the one
+  listed in the block header, there is a \emph{VRFKeyWrongVRFKey} failure.
+\item If the VRF generated nonce in the block header does not validate
+  against the VRF certificate, there is a \emph{VRFKeyBadNonce} failure.
+\item If the VRF generated leader value in the block header does not validate
+  against the VRF certificate, there is a \emph{VRFKeyBadLeaderValue} failure.
+\item If the VRF generated leader value in the block header is too large
+  compared to the relative stake of the pool, there is a \emph{VRFLeaderValueTooBig} failure.
 \item In the case of the slot being in the OBFT schedule, but without genesis
   key (i.e., $Nothing$), there is a \emph{NotActiveSlot} failure.
 \item In the case of the slot being in the OBFT schedule, if there is a
-  specified key, but this key is not in the genesis delegation map, there is a
-  \emph{NoGenesisStaking} failure.
-\item In the case of the slot being in the OBFT schedule, if there is a
   specified genesis key which is not the same key as in the bock header body,
-  there is a \emph{NoGenesisColdKey} failure.
+  there is a \emph{WrongGenesisColdKey} failure.
+\item In the case of the slot being in the OBFT schedule, if the hash of the
+  VRF key in block header does not match the hash in the genesis delegation mapping,
+  there is a \emph{WrongGenesisVRFKey} failure.
+\item In the case of the slot being in the OBFT schedule, if the genesis delegate
+  keyhash is not in the genesis delegation mapping,
+  there is a \emph{UnknownGenesisKey} failure.
+  This case should never happen, and represents a logic error.
+
 \end{itemize}
 
 \clearpage
@@ -1892,7 +1930,7 @@ candidate nonces for Shelley.
   %
   \begin{align*}
       & \fun{initialShelleyState} \in \LastAppliedBlock^? \to \Epoch \to \UTxO
-        \to \Coin \to (\KeyHashGen \mapsto \KeyHash) \\
+        \to \Coin \to \GenesisDelegation \\
       & ~~~ \to (\Slot\mapsto\KeyHashGen^?)
         \to \PParams \to \Seed \to \ChainState \\
       & \fun{initialShelleyState}~
@@ -1985,7 +2023,7 @@ candidate nonces for Shelley.
           \var{lab} \\
         \end{array}
       \right) \\
-      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{genDelegs}\} \\
+      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~(\var{hk},~\wcard)\in\range{genDelegs}\} \\
   \end{align*}
 
   \caption{Initial Shelley States}
@@ -1999,7 +2037,7 @@ candidate nonces for Shelley.
   \emph{Byron to Shelley Transition}
   %
   \begin{align*}
-      & \fun{toShelley} \in \CEState \to \BlockNo \to \ChainState \\
+      & \fun{toShelley} \in \CEState \to \GenesisDelegation \to \BlockNo \to \ChainState \\
       & \fun{toShelley}~
       \left(
         \begin{array}{c}
@@ -2007,10 +2045,10 @@ candidate nonces for Shelley.
           \wcard \\
           \var{h} \\
           (\var{utxo},~\var{reserves}) \\
-          \var{ds} \\
+          \wcard \\
           \var{us}
         \end{array}
-      \right)~\var{bn}
+      \right)~\var{bn}~\var{gd}
       =
       \fun{initialShelleyState}~
       \left(
@@ -2028,7 +2066,6 @@ candidate nonces for Shelley.
       \right) \\
       & ~~~~\where \\
       & ~~~~~~~~~e = \epoch{s_{last}} \\
-      & ~~~~~~~~~gd = \fun{dms}~\var{ds} \\
       & ~~~~~~~~~pp = \pps{us} \\
   \end{align*}
 
