@@ -27,6 +27,7 @@ library
                      Shelley.Spec.Ledger.BlockChain
                      Shelley.Spec.Ledger.Coin
                      Shelley.Spec.Ledger.Credential
+                     Shelley.Spec.Ledger.Genesis
                      Shelley.Spec.Ledger.Keys
                      Shelley.Spec.Ledger.UTxO
                      Shelley.Spec.Ledger.Slot
@@ -111,6 +112,7 @@ library
     small-steps,
     stm,
     text,
+    time,
     transformers
 
 test-suite shelley-spec-ledger-test

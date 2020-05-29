@@ -114,6 +114,9 @@ unitIntervalToRational :: UnitInterval -> Rational
 unitIntervalToRational (UnsafeUnitInterval x) =
   (fromIntegral $ numerator x) % (fromIntegral $ denominator x)
 
+unitIntervalFromRational :: Rational -> UnitInterval
+unitIntervalFromRational = truncateUnitInterval . fromRational
+
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
 mkUnitInterval :: Ratio Word64 -> Maybe UnitInterval
 mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Nothing
