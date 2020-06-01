@@ -55,16 +55,22 @@ import Cardano.Binary
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
-import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError)
+import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, parseBase16)
+import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.Aeson.Types as Aeson
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
 import Data.Bits ((.&.), (.|.), setBit, shiftL, shiftR, testBit)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
 import Data.String (fromString)
+import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
@@ -163,6 +169,30 @@ data RewardAcnt crypto = RewardAcnt
   deriving (Show, Eq, Generic, Ord, NFData)
 
 instance NoUnexpectedThunks (RewardAcnt crypto)
+
+instance Crypto crypto => ToJSONKey (Addr crypto) where
+  toJSONKey = Aeson.ToJSONKeyText addrToText (Aeson.text . addrToText)
+
+instance Crypto crypto => FromJSONKey (Addr crypto) where
+  fromJSONKey = Aeson.FromJSONKeyTextParser parseAddr
+
+instance Crypto crypto => ToJSON (Addr crypto) where
+  toJSON = toJSON . addrToText
+
+instance Crypto crypto => FromJSON (Addr crypto) where
+  parseJSON = Aeson.withText "address" parseAddr
+
+addrToText :: Addr crypto -> Text
+addrToText =
+    Text.decodeLatin1 . Base16.encode . serialiseAddr
+
+parseAddr :: Crypto crypto => Text -> Aeson.Parser (Addr crypto)
+parseAddr t = do
+    bytes <- either badHex return (parseBase16 t)
+    maybe badFormat return (deserialiseAddr bytes)
+  where
+    badHex h = fail $ "Addresses are expected in hex encoding for now: " ++ show h
+    badFormat = fail "Address is not in the right format"
 
 byron :: Int
 byron = 7

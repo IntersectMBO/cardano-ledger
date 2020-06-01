@@ -74,6 +74,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Coerce (Coercible, coerce)
 import Data.Map.Strict (Map)
 import Data.Ratio ((%))
@@ -206,6 +207,14 @@ newtype KeyHash (discriminator :: KeyRole) crypto
 deriving instance (Crypto crypto, Typeable disc) => ToCBOR (KeyHash disc crypto)
 
 deriving instance (Crypto crypto, Typeable disc) => FromCBOR (KeyHash disc crypto)
+
+deriving newtype instance ToJSONKey (KeyHash disc crypto)
+deriving newtype instance Crypto crypto =>
+                          FromJSONKey (KeyHash disc crypto)
+
+deriving newtype instance ToJSON (KeyHash disc crypto)
+deriving newtype instance Crypto crypto =>
+                          FromJSON (KeyHash disc crypto)
 
 instance HasKeyRole KeyHash
 

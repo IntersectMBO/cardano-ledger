@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -25,6 +26,7 @@ module Shelley.Spec.Ledger.BaseTypes
     interval1,
     intervalValue,
     unitIntervalToRational,
+    unitIntervalFromRational,
     invalidKey,
     mkNonce,
     mkUnitInterval,
@@ -66,6 +68,8 @@ import Cardano.Crypto.Hash
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (ReaderT)
+import Data.Aeson (FromJSON (..), ToJSON (..))
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
@@ -109,6 +113,14 @@ instance FromCBOR UnitInterval where
     case mkUnitInterval r of
       Nothing -> cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
       Just u -> pure u
+
+instance ToJSON UnitInterval where
+  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Double)
+
+instance FromJSON UnitInterval where
+  parseJSON v =
+    truncateUnitInterval . realToFrac
+      <$> (parseJSON v :: Aeson.Parser Double)
 
 unitIntervalToRational :: UnitInterval -> Rational
 unitIntervalToRational (UnsafeUnitInterval x) =
@@ -164,6 +176,9 @@ instance FromCBOR Nonce where
         matchSize "Nonce" 2 n
         Nonce <$> fromCBOR
       k -> invalidKey k
+
+deriving anyclass instance ToJSON Nonce
+deriving anyclass instance FromJSON Nonce
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce
@@ -384,7 +399,7 @@ type ShelleyBase = ReaderT Globals Identity
 data Network
   = Testnet
   | Mainnet
-  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, NoUnexpectedThunks)
+  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoUnexpectedThunks)
 
 networkToWord8 :: Network -> Word8
 networkToWord8 = toEnum . fromEnum
