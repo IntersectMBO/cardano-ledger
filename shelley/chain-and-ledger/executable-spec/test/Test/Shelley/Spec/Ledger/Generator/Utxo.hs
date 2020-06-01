@@ -158,7 +158,7 @@ genTx
 
       -- certificates
       (certs, certCreds, deposits_, refunds_, dpState') <-
-        genDCerts ge pparams dpState slot ttl txIx reserves
+        genDCerts ge pparams dpState slot txIx reserves
 
       let balance_ = spendingBalance - deposits_ + refunds_
       if balance_ <= 0

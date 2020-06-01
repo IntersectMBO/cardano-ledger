@@ -26,6 +26,18 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
+  ( (?!),
+    Embed,
+    IRC (..),
+    InitialRule,
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    liftSTS,
+    trans,
+    wrapFailed,
+  )
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -34,32 +46,31 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (Addr, getNetwork)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates
-import Shelley.Spec.Ledger.Keys
+import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
+import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Delegation.Certificates (StakePools)
+import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     consumed,
-    decayedTx,
     keyRefunds,
     minfee,
     produced,
     txsize,
   )
-import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.STS.Ppup
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates)
+import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
     decodeRecordNamed,
     decodeSet,
     encodeFoldable,
   )
-import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.Tx
+import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
 import Shelley.Spec.Ledger.TxData (TxBody (..))
-import Shelley.Spec.Ledger.UTxO
+import Shelley.Spec.Ledger.UTxO (UTxO (..), totalDeposits, txins, txouts, txup)
 
 data UTXO crypto
 
@@ -67,7 +78,6 @@ data UtxoEnv crypto
   = UtxoEnv
       SlotNo
       PParams
-      (StakeCreds crypto)
       (StakePools crypto)
       (GenDelegs crypto)
   deriving (Show)
@@ -192,7 +202,7 @@ utxoInductive ::
   Crypto crypto =>
   TransitionRule (UTXO crypto)
 utxoInductive = do
-  TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo deposits' fees ppup = u
   let txb = _body tx
 
@@ -214,7 +224,7 @@ utxoInductive = do
           (fmap (\(TxOut a _) -> a) $ toList $ _outputs txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
 
-  let consumed_ = consumed pp utxo stakeCreds txb
+  let consumed_ = consumed pp utxo txb
       produced_ = produced pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
@@ -231,16 +241,15 @@ utxoInductive = do
       txSize_ = txsize tx
   txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
 
-  let refunded = keyRefunds pp stakeCreds txb
-  decayed <- liftSTS $ decayedTx pp stakeCreds txb
+  let refunded = keyRefunds pp txb
   let txCerts = toList $ _certs txb
-  let depositChange = totalDeposits pp stakepools txCerts - (refunded + decayed)
+  let depositChange = totalDeposits pp stakepools txCerts - refunded
 
   pure
     UTxOState
       { _utxo = (txins txb ⋪ utxo) ∪ txouts txb,
         _deposited = deposits' + depositChange,
-        _fees = fees + (_txfee txb) + decayed,
+        _fees = fees + (_txfee txb),
         _ppups = ppup'
       }
 

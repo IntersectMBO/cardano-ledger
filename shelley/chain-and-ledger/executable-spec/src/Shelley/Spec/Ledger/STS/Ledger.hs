@@ -138,13 +138,13 @@ ledgerTransition = do
       TRC (DelegsEnv slot txIx pp tx account, dpstate, StrictSeq.getSeq $ _certs $ _body tx)
 
   let DPState dstate pstate = dpstate
-      DState stkCreds _ _ _ _ genDelegs _ = dstate
-      PState stpools _ _ _ = pstate
+      genDelegs = _genDelegs dstate
+      stpools = _stPools pstate
 
   utxoSt' <-
     trans @(UTXOW crypto) $
       TRC
-        ( UtxoEnv slot pp stkCreds stpools genDelegs,
+        ( UtxoEnv slot pp stpools genDelegs,
           utxoSt,
           tx
         )

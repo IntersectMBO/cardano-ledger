@@ -15,14 +15,14 @@
 \newcommand{\Stake}{\type{Stake}}
 \newcommand{\RewardUpdate}{\type{RewardUpdate}}
 
-\newcommand{\obligation}[4]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\obligation}[3]{\fun{obligation}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\reward}[8]{\fun{reward}
   ~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}~ \var{#6}~ \var{#7}~ \var{#8}}
 \newcommand{\rewardOnePool}[9]{\fun{rewardOnePool}
   ~\var{#1}~\var{#2}~\var{#3}~\var{#4}~\var{#5}~\var{#6}~\var{#7}~\var{#8}~\var{#9}}
 \newcommand{\isActive}[4]{\fun{isActive}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
 \newcommand{\activeStake}[5]{\fun{activeStake}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}~ \var{#5}}
-\newcommand{\poolRefunds}[3]{\fun{poolRefunds}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\poolRefunds}[2]{\fun{poolRefunds}~ \var{#1}~ \var{#2}}
 \newcommand{\poolStake}[3]{\fun{poolStake}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\stakeDistr}[3]{\fun{stakeDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
@@ -122,12 +122,7 @@ throughout the rest of the section.
 
 \begin{itemize}
   \item The function $\fun{obligation}$ calculates the the minimal amount of coin needed to
-    pay out all deposit refunds, as of the current slot.
-  \item The function $\fun{poolRefunds}$ is used to calculate the total refunds
-    that must be distributed for stake pools scheduled to retire.
-    Note that this calculation takes a slot number corresponding to the epoch boundary slot
-    when the calculation is performed.  The returned map maps pool operator hashkeys to the
-    refunds, which will ultimately be returned to the registered reward account.
+    pay out all deposit refunds.
   \item The function $\fun{poolStake}$ filters the stake distribution to one stake pool.
 \end{itemize}
 
@@ -138,36 +133,12 @@ throughout the rest of the section.
 \begin{figure}[htb]
   \emph{Total possible refunds}
   \begin{align*}
-    & \fun{obligation} \in \PParams \to \StakeCreds \to \StakePools \to \Slot \to \Coin \\
-    & \obligation{pp}{stkCreds}{stpools}{cslot} =\\
-    & \sum\limits_{(\_ \mapsto s) \in \var{stkCreds}}
-      \refund{d_{\mathsf{val}}}{d_{\min}}{\lambda_d}{(\slotminus{cslot}{s})}
-      + \sum\limits_{(\_ \mapsto s) \in \var{stpools}}
-      \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{s})} \\
-    &
-      \begin{array}{lr@{~=~}l}
-        \where
-          & \dval,~d_{\min},~\lambda_d
-          & \fun{keyDeposit}~\var{pp},~\fun{keyMinRefund}~\var{pp},~\fun{keyDecayRate}~\var{pp}
-          \\
-          & p_{\mathsf{val}},~p_{\min},~\lambda_p
-          & \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp}
-      \end{array}\\
+    & \fun{obligation} \in \PParams \to \StakeCreds \to \StakePools \to \Coin \\
+    & \obligation{pp}{stkCreds}{stpools}{cslot} =
+      (\fun{keyDeposit}~\var{pp}) \cdot|\var{stkCreds}| +
+      (\fun{poolDecayRate}~\var{pp}) \cdot|\var{stpools}| \\
   \end{align*}
-  \emph{Pool refunds}
-  \begin{align*}
-      & \fun{poolRefunds} \in \PParams \to (\KeyHash_{pool} \mapsto \Epoch) \to \Slot \to
-      (\KeyHash_{pool} \mapsto \Coin) \\
-      & \poolRefunds{pp}{retiring}{cslot} = \left\{
-        \var{hk}\mapsto
-          \refund{p_{\mathsf{val}}}{p_{\min}}{\lambda_p}{(\slotminus{cslot}{(\fun{slot}~e)})}
-          \mid
-          \var{hk}\mapsto e\in\var{retiring}
-        \right\}\\
-      & \where p_{\mathsf{val}},~p_{\min},~\lambda_p =
-          \fun{poolDeposit}~\var{pp},~\fun{poolMinRefund}~\var{pp},~\fun{poolDecayRate}~\var{pp} \\
-  \end{align*}
-
+  %
   \emph{Filter Stake to one Pool}
   \begin{align*}
       & \fun{poolStake} \in \KeyHash_{pool} \to (\KeyHash_{stake} \mapsto \KeyHash_{pool})
@@ -280,13 +251,15 @@ The stake distribution calculation is given in Figure~\ref{fig:functions:stake-d
   \emph{Stake Distribution (using functions and maps as relations)}
   %
   \begin{align*}
-      & \fun{stakeDistr} \in \UTxO \to \DState \to \PState \to \Stake \\
-      & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} =
-      (\dom{\var{activeDelegs}})\restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right)\\
+      & \fun{stakeDistr} \in \UTxO \to \DState \to \PState \to \Snapshot \\
+      & \fun{stakeDistr}~{utxo}~{dstate}~{pstate} = \\
+      & ~~~~ \big((\dom{\var{activeDelegs}})
+      \restrictdom\left(\fun{aggregate_{+}}~\var{stakeRelation}\right),
+    ~\var{delegations},~\var{poolParams}\big)\\
       & \where \\
       & ~~~~ (\var{stkCreds},~\var{rewards},~\var{delegations},~\var{ptrs},~\wcard,~\wcard)
         = \var{dstate} \\
-      & ~~~~ (\var{stpools},~\wcard,~\wcard) = \var{pstate} \\
+      & ~~~~ (\var{stpools},~\var{poolParams}~\wcard,~\wcard) = \var{pstate} \\
       & ~~~~ \var{stakeRelation} = \left(
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\range{\var{utxo}}\right)
@@ -320,25 +293,15 @@ information needing to be saved on the epoch boundary:
 \begin{itemize}
   \item $\var{pstake_{mark}}$, $\var{pstake_{set}}$ and $\var{pstake_{go}}$ are the three
     snapshots as explained in Section~\ref{sec:reward-overview}.
-  \item $\var{feeSS}$ stores the fees and decayed deposit amounts at the epoch boundary.
+  \item $\var{feeSS}$ stores the fees which are added to the reward pot during
+    the next reward update calculation, which is then subtracted from the fee pot
+    on the epoch boundary.
 \end{itemize}
 
 %%
 %% Figure - Snapshots Defs
 %%
 \begin{figure}[htb]
-  \emph{Snapshot environment}
-  \begin{equation*}
-    \SnapshotEnv =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{dstate} & \DState & \text{delegation state}\\
-        \var{pstate} & \PState & \text{pool state}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{Snapshots}
   \begin{equation*}
     \Snapshot =
@@ -364,22 +327,11 @@ information needing to be saved on the epoch boundary:
     \right)
   \end{equation*}
   %
-  \emph{Snapshot States}
-  \begin{equation*}
-    \SnapshotState =
-    \left(
-      \begin{array}{r@{~\in~}ll}
-        \var{ss} & \Snapshots & \text{snapshots}\\
-        \var{utxoSt} & \UTxOState & \text{utxo state}\\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
   \emph{Snapshot transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{snap}{\_} \var{\_}
-    \subseteq \powerset (\SnapshotEnv \times \SnapshotState \times \Epoch \times \SnapshotState)
+    \var{\_} \trans{snap}{} \var{\_}
+    \subseteq \powerset (\LState \times \Snapshots \times \Snapshots)
   \end{equation*}
   %
   \caption{Snapshot transition-system types}
@@ -393,12 +345,8 @@ This transition has no preconditions and results in the following state change:
   \item The oldest snapshot is replaced with the penultimate one.
   \item The penultimate snapshot is replaced with the newest one.
   \item The newest snapshot is replaced with one just calculated.
-  \item The fees and decayed deposits are stored in $\var{feeSS}$. Note that this value will not
-    change between epochs, unlike the $\var{fees}$ and $\var{deposits}$ values in the UTxO state.
-  \item In the UTxO state, the decayed deposit amounts are moved from the deposit pot
-    to the fee pool. Note that in the reward transition (Section~\ref{sec:reward-calc}),
-    the value $\var{feeSS}$ will be removed from the fee pot in the UTxO state.
-    The decay is calculated based on \textit{the first slot in the upcoming epoch}.
+  \item The current fees pot is stored in $\var{feeSS}$. Note that this value will not
+    change during the epoch, unlike the $\var{fees}$ value in the UTxO state.
 \end{itemize}
 
 %%
@@ -410,20 +358,14 @@ This transition has no preconditions and results in the following state change:
     {
       {
       \begin{array}{r@{~\leteq~}l}
-        (\var{stkCreds},~\wcard,~\var{delegations},~\wcard,~\wcard,~\wcard) & \var{dstate}\\
-        (\var{stpools},~\var{poolParams},~\wcard) & \var{pstate}\\
+        ((\var{utxo},~\wcard,\var{fees},~\wcard),~(\var{dstate},~\var{pstate})) & \var{lstate} \\
         \var{stake} & \stakeDistr{utxo}{dstate}{pstate} \\
-        \var{slot} & \firstSlot{e} \\
-        \var{oblg} & \obligation{pp}{stkCreds}{stpools}{slot} \\
-        \var{decayed} & \var{deposits} - \var{oblg} \\
       \end{array}
       }
     }
     {
       \begin{array}{r}
-        \var{pp} \\
-        \var{dstate} \\
-        \var{pstate} \\
+        \var{lstate} \\
       \end{array}
       \vdash
       \left(
@@ -432,25 +374,15 @@ This transition has no preconditions and results in the following state change:
           \var{pstake_{set}}\\
           \var{pstake_{go}}\\
           \var{feeSS} \\
-          ~ \\
-          \var{utxo} \\
-          \var{deposits} \\
-          \var{fees} \\
-          \var{pup} \\
         \end{array}
       \right)
-      \trans{snap}{e}
+      \trans{snap}{}
       \left(
         \begin{array}{r}
-          \varUpdate{(\var{stake},~\var{delegations},~\var{poolParams})} \\
+          \varUpdate{\var{stake}} \\
           \varUpdate{\var{pstake_{mark}}} \\
           \varUpdate{\var{pstake_{set}}} \\
-          \varUpdate{\var{fees} + \var{decayed}} \\
-          ~ \\
-          \var{utxo} \\
-          \varUpdate{\var{oblg}} \\
-          \varUpdate{\var{fees} + \var{decayed}} \\
-          \var{pup} \\
+          \varUpdate{\var{fees}} \\
         \end{array}
       \right)
     }
@@ -518,7 +450,11 @@ This transition has no preconditions and results in the following state change:
       {
       \begin{array}{r@{~\leteq~}l}
         \var{retired} & \dom{(\var{retiring}^{-1}~\var{e})} \\
-        \var{pr} & \poolRefunds{pp}{(\var{retired}\restrictdom\var{stpools})}{(\firstSlot{e})} \\
+        \var{pr} & \left\{
+                   \var{kh}\mapsto(\fun{poolDeposit}~\var{pp})
+                     \mid
+                     \var{kh}\in\var{retired}
+                   \right\}\\
         \var{rewardAcnts}
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
                    \var{hk}\mapsto\var{pool} \in \var{retired}\restrictdom\var{poolParams} \} \\
@@ -600,9 +536,9 @@ This transition has no preconditions and results in the following state change:
 \subsection{Protocol Parameters Update Transition}
 \label{sec:pparam-update}
 
-Finally, reaching the epoch boundary may trigger a change in the protocol
-parameters. The protocol parameters environment consists of the new
-protocol parameters and the delegation and pool states.
+Finally, reaching the epoch boundary may trigger a change in the protocol parameters.
+The protocol parameters environment consists of the delegation and pool states,
+and the signal is an optional new collection of protocol parameters
 The state change is a change of the $\UTxOState$, the $\Acnt$ states and the current $\PParams$.
 The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto-param}.
 
@@ -615,7 +551,6 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
     \NewPParamEnv =
     \left(
       \begin{array}{r@{~\in~}ll}
-        \var{pp_{new}} & \PParams^? & \text{new protocol parameters}\\
         \var{dstate} & \DState & \text{delegation state}\\
         \var{pstate} & \PState & \text{pool state}\\
       \end{array}
@@ -638,7 +573,7 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{newpp}{\_} \var{\_}
-    \subseteq \powerset (\NewPParamEnv \times \NewPParamState \times \Epoch \times \NewPParamState)
+    \subseteq \powerset (\NewPParamEnv \times \NewPParamState \times \PParams^? \times \NewPParamState)
   \end{equation*}
   %
   \caption{New Proto Param transition-system types}
@@ -689,15 +624,13 @@ for ease of reading.
     {
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
-         \var{slot} & \leteq & \firstSlot{e} \\
-         \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools}{slot} \\
-         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools}{slot} \\
+         \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools} \\
+         \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools} \\
+         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}\\
          \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
                                                                                       \leteq
                               & \var{dstate}\\
-         \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}\\
-         (\var{utxo},~\var{deposits},~\var{fees},~\var{ups}) & \leteq & \var{utxoSt} \\
-         (\var{pup},~\var{aup},~\var{favs},~\var{avs}) & \leteq & \var{ups} \\
+         (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \leteq & \var{utxoSt} \\
       \end{array}}
       \\~\\~\\
       \var{oblg_{cur}} = \var{deposits} \\
@@ -706,15 +639,13 @@ for ease of reading.
         \fun{maxBlockSize}~\var{pp_{new}}
       \\~\\
         \var{utxoSt'} \leteq
-        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees}
-        \left(\varUpdate{\emptyset},~\var{aup},~\var{favs},~\var{avs}\right)\right)
+        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees},~\varUpdate{\emptyset}\right)
       \\~\\
       (\var{treasury},~\var{reserves})\leteq \var{acnt} \\
       \var{acnt'} \leteq (\var{treasury},~\varUpdate{reserves + diff}) \\
     }
     {
       \begin{array}{l}
-        \var{pp_{new}}\\
         \var{dstate}\\
         \var{pstate}\\
       \end{array}
@@ -726,7 +657,7 @@ for ease of reading.
           \var{pp}
         \end{array}
       \right)
-      \trans{newpp}{e}
+      \trans{newpp}{\var{pp_{new}}}
       \left(
         \begin{array}{rcl}
           \varUpdate{utxoSt'}\\
@@ -752,25 +683,21 @@ for ease of reading.
       \end{array}}\right)
       \\~\\~\\
       {\begin{array}{rcl}
-          \var{slot} & \leteq & \firstSlot{e} \\
-          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools}{slot} \\
-          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools}{slot} \\
+          \var{oblg_{cur}} & \leteq & \obligation{pp}{stkCreds}{stpools} \\
+          \var{oblg_{new}} & \leteq & \obligation{pp_{new}}{stkCreds}{stpools} \\
          \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
                                                                                  \leteq
                               & \var{dstate}\\
          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
       \end{array}}
       \\~\\~\\
-      \left(\var{utxo},~\var{oblg},~\var{fees}
-        \left(\var{pup},~\var{aup},~\var{favs},~\var{avs}\right)\right)
+      \left(\var{utxo},~\var{oblg},~\var{fees},~\wcard\right)
         \leteq \var{utxoSt} \\
         \var{utxoSt'} \leteq
-        \left(\var{utxo},~\var{oblg},~\var{fees}
-        \left(\varUpdate{\emptyset},~\var{aup},~\var{favs},~\var{avs}\right)\right)
+        \left(\var{utxo},~\var{oblg},~\var{fees},~\varUpdate{\emptyset}\right)
     }
     {
       \begin{array}{l}
-        \var{pp_{new}}\\
         \var{dstate}\\
         \var{pstate}\\
       \end{array}
@@ -782,7 +709,7 @@ for ease of reading.
           \var{pp}
         \end{array}
       \right)
-      \trans{newpp}{e}
+      \trans{newpp}{\var{pp_{new}}}
       \left(
         \begin{array}{rcl}
           \varUpdate{utxoSt'}\\
@@ -882,37 +809,17 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
   \begin{equation}\label{eq:epoch}
     \inference[Epoch]
     {
-      (\var{utxoSt},~(\var{dstate},~\var{pstate}))\leteq\var{ls} \\
       {
         \begin{array}{r}
-          \var{pp}\\
-          \var{dstate} \\
-          \var{pstate} \\
+          \var{lstate} \\
         \end{array}
       }
       \vdash
-      {
-        \left(
-          {
-            \begin{array}{r}
-              \var{ss} \\
-              \var{utxoSt} \\
-            \end{array}
-          }
-        \right)
-      }
-      \trans{\hyperref[fig:rules:snapshot]{snap}}{e}
-      {
-        \left(
-          {
-            \begin{array}{r}
-              \var{ss'} \\
-              \var{utxoSt'} \\
-            \end{array}
-          }
-        \right)
-      }
-      \\~\\~\\
+      { \var{ss} }
+      \trans{\hyperref[fig:rules:snapshot]{snap}}{}
+      { \var{ss'} }
+      \\~\\
+      (\var{utxoSt},~(\var{dstate},~\var{pstate}))\leteq\var{ls} \\
       (\var{stpools},~\var{poolParams},~\var{fPoolParams},~\var{retiring})\leteq\var{pstate}
       \\
       \var{pstate'}\leteq(\var{stpools},~\var{poolParams}\unionoverrideRight\var{fPoolParams},
@@ -923,7 +830,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       \left(
         {
           \begin{array}{r}
-            \var{utxoSt'} \\
+            \var{utxoSt} \\
             \var{acnt} \\
             \var{dstate} \\
             \var{pstate'} \\
@@ -934,7 +841,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       \left(
       {
         \begin{array}{rcl}
-            \var{utxoSt''} \\
+            \var{utxoSt'} \\
             \var{acnt'} \\
             \var{dstate'} \\
             \var{pstate''} \\
@@ -947,7 +854,6 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       \fun{votedValue}~\var{pup}\\
       {
         \begin{array}{r}
-          \var{pp_{new}}\\
           \var{dstate'}\\
           \var{pstate''}\\
         \end{array}
@@ -956,24 +862,24 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       \left(
         {
           \begin{array}{r}
-            \var{utxoSt''} \\
+            \var{utxoSt'} \\
             \var{acnt'} \\
             \var{pp}\\
           \end{array}
         }
       \right)
-      \trans{\hyperref[fig:rules:new-proto-param]{newpp}}{e}
+      \trans{\hyperref[fig:rules:new-proto-param]{newpp}}{\var{pp_{new}}}
       \left(
       {
         \begin{array}{rcl}
-            \var{utxoSt'''} \\
+            \var{utxoSt''} \\
             \var{acnt''} \\
             \var{pp'}\\
         \end{array}
       }
       \right)
       \\~\\~\\
-      \var{ls}' \leteq (\var{utxoSt}''',~(\var{dstate}',~\var{pstate}''))
+      \var{ls}' \leteq (\var{utxoSt}'',~(\var{dstate}',~\var{pstate}''))
     }
     {
       \vdash
@@ -1257,7 +1163,6 @@ The blue arrows represent the movement of funds that pass through the ``reward p
     (C) edge (FR)
 
     (D) edge (C)
-    (D) edge (FR)
 
     (RA) edge (C);
 

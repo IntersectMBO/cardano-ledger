@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, ProposedPPUpdates (.
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapState (..))
-import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapEnv (..), SnapState (..))
+import Shelley.Spec.Ledger.STS.Snap (SNAP)
 import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH crypto
@@ -108,8 +108,8 @@ epochTransition = do
     judgmentContext
   let utxoSt = _utxoState ls
   let DPState dstate pstate = _delegationState ls
-  SnapState ss' utxoSt' <-
-    trans @(SNAP crypto) $ TRC (SnapEnv pp dstate pstate, SnapState ss utxoSt, e)
+  ss' <-
+    trans @(SNAP crypto) $ TRC (ls, ss, ())
 
   let PState _ pParams fPParams _ = pstate
       ppp = pParams ⨃ (Map.toList fPParams)
@@ -118,21 +118,21 @@ epochTransition = do
           { _pParams = ppp,
             _fPParams = Map.empty
           }
-  PoolreapState utxoSt'' acnt' dstate' pstate'' <-
-    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt' acnt dstate pstate', e)
+  PoolreapState utxoSt' acnt' dstate' pstate'' <-
+    trans @(POOLREAP crypto) $ TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
   let ppup = _ppups utxoSt
   let ppNew = votedValuePParams ppup pp (fromIntegral coreNodeQuorum)
-  NewppState utxoSt''' acnt'' pp' <-
+  NewppState utxoSt'' acnt'' pp' <-
     trans @(NEWPP crypto) $
-      TRC (NewppEnv ppNew dstate' pstate', NewppState utxoSt'' acnt' pp, e)
+      TRC (NewppEnv dstate' pstate', NewppState utxoSt' acnt' pp, ppNew)
   pure $
     EpochState
       acnt''
       ss'
-      (ls {_utxoState = utxoSt''', _delegationState = DPState dstate' pstate''})
+      (ls {_utxoState = utxoSt'', _delegationState = DPState dstate' pstate''})
       pp
       pp'
       nm

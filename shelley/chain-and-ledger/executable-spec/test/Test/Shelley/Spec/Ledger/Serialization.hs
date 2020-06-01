@@ -132,9 +132,7 @@ import Shelley.Spec.Ledger.PParams
     _d,
     _eMax,
     _extraEntropy,
-    _keyDecayRate,
     _keyDeposit,
-    _keyMinRefund,
     _maxBBSize,
     _maxBHSize,
     _maxTxSize,
@@ -142,9 +140,7 @@ import Shelley.Spec.Ledger.PParams
     _minfeeA,
     _minfeeB,
     _nOpt,
-    _poolDecayRate,
     _poolDeposit,
-    _poolMinRefund,
     _protocolVersion,
     _rho,
     _tau,
@@ -751,11 +747,7 @@ serializationUnitTests =
               _maxTxSize = SNothing,
               _maxBHSize = SNothing,
               _keyDeposit = SJust (Coin 5),
-              _keyMinRefund = SNothing,
-              _keyDecayRate = SNothing,
               _poolDeposit = SNothing,
-              _poolMinRefund = SNothing,
-              _poolDecayRate = SNothing,
               _eMax = SNothing,
               _nOpt = SNothing,
               _a0 = SNothing,
@@ -776,11 +768,7 @@ serializationUnitTests =
           maxtxsize = 3
           maxbhsize = 4
           keydeposit = Coin 5
-          keyminrefund = UnsafeUnitInterval $ 1 % 2
-          keydecayrate = 1 % 3
           pooldeposit = Coin 6
-          poolminrefund = UnsafeUnitInterval $ 1 % 4
-          pooldecayrate = 1 % 5
           emax = EpochNo 7
           nopt = 8
           a0 = 1 % 6
@@ -799,11 +787,7 @@ serializationUnitTests =
                   _maxTxSize = SJust maxtxsize,
                   _maxBHSize = SJust maxbhsize,
                   _keyDeposit = SJust keydeposit,
-                  _keyMinRefund = SJust keyminrefund,
-                  _keyDecayRate = SJust keydecayrate,
                   _poolDeposit = SJust pooldeposit,
-                  _poolMinRefund = SJust poolminrefund,
-                  _poolDecayRate = SJust pooldecayrate,
                   _eMax = SJust emax,
                   _nOpt = SJust nopt,
                   _a0 = SJust a0,
@@ -816,7 +800,7 @@ serializationUnitTests =
                 } ::
                 PParamsUpdate
             )
-            ( (T $ TkMapLen 20)
+            ( (T $ TkMapLen 16)
                 <> (T $ TkWord 0)
                 <> S minfeea
                 <> (T $ TkWord 1)
@@ -830,32 +814,24 @@ serializationUnitTests =
                 <> (T $ TkWord 5)
                 <> S keydeposit
                 <> (T $ TkWord 6)
-                <> S keyminrefund
-                <> (T $ TkWord 7 . TkTag 30)
-                <> S keydecayrate
-                <> (T $ TkWord 8)
                 <> S pooldeposit
-                <> (T $ TkWord 9)
-                <> S poolminrefund
-                <> (T $ TkWord 10 . TkTag 30)
-                <> S pooldecayrate
-                <> (T $ TkWord 11)
+                <> (T $ TkWord 7)
                 <> S emax
-                <> (T $ TkWord 12)
+                <> (T $ TkWord 8)
                 <> S nopt
-                <> (T $ TkWord 13 . TkTag 30)
+                <> (T $ TkWord 9 . TkTag 30)
                 <> S a0
-                <> (T $ TkWord 14)
+                <> (T $ TkWord 10)
                 <> S rho
-                <> (T $ TkWord 15)
+                <> (T $ TkWord 11)
                 <> S tau
-                <> (T $ TkWord 16)
+                <> (T $ TkWord 12)
                 <> S d
-                <> (T $ TkWord 17)
+                <> (T $ TkWord 13)
                 <> S extraEntropy
-                <> (T $ TkWord 18)
+                <> (T $ TkWord 14)
                 <> S protocolVersion
-                <> (T $ TkWord 19)
+                <> (T $ TkWord 15)
                 <> S minUTxOValue
             ),
       -- checkEncodingCBOR "full_update"
@@ -870,11 +846,7 @@ serializationUnitTests =
                         _maxTxSize = SNothing,
                         _maxBHSize = SNothing,
                         _keyDeposit = SNothing,
-                        _keyMinRefund = SNothing,
-                        _keyDecayRate = SNothing,
                         _poolDeposit = SNothing,
-                        _poolMinRefund = SNothing,
-                        _poolDecayRate = SNothing,
                         _eMax = SNothing,
                         _nOpt = SJust 100,
                         _a0 = SNothing,
@@ -939,11 +911,7 @@ serializationUnitTests =
                             _maxTxSize = SNothing,
                             _maxBHSize = SNothing,
                             _keyDeposit = SNothing,
-                            _keyMinRefund = SNothing,
-                            _keyDecayRate = SNothing,
                             _poolDeposit = SNothing,
-                            _poolMinRefund = SNothing,
-                            _poolDecayRate = SNothing,
                             _eMax = SNothing,
                             _nOpt = SJust 100,
                             _a0 = SNothing,
@@ -1004,11 +972,7 @@ serializationUnitTests =
                             _maxTxSize = SNothing,
                             _maxBHSize = SNothing,
                             _keyDeposit = SNothing,
-                            _keyMinRefund = SNothing,
-                            _keyDecayRate = SNothing,
                             _poolDeposit = SNothing,
-                            _poolMinRefund = SNothing,
-                            _poolDecayRate = SNothing,
                             _eMax = SNothing,
                             _nOpt = SJust 100,
                             _a0 = SNothing,

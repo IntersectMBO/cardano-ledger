@@ -131,7 +131,7 @@ We will prove the soundness of Theorem~\ref{thm:chain-pres-of-value} via a few l
   The proof is essentially unfolding the definition of the predicate
   \begin{equation}
     \label{cons-is-prod}
-    \consumed{pp}{utxo}{stkCreds}{rewards}~{t} = \produced{pp}{stpools}~{t}
+    \consumed{pp}{utxo}{t} = \produced{pp}{stpools}{t}
   \end{equation}
   and applying a little algebra.
 %
@@ -141,7 +141,6 @@ If we let:
       k & \keyRefunds{pp}{stkCreds}{t} \\
       f & \txfee{t} \\
       d & \totalDeposits{pp}{stpools}{(\txcerts{t})} \\
-      c & \decayedTx{pp}{stkCreds}~{t} \\
     \end{array}
   \end{equation*}
   then equation~\ref{cons-is-prod} can be rewritten as:
@@ -155,7 +154,7 @@ If we let:
     = \Val(\outs{t}) + f + d - k + \Val(\txins{t} \subtractdom{\var{utxo}})
   \end{equation*}
   (Though not needed for the proof at hand,
-  note that $d-k-c$ is non-negative since the deposits will always be large enough to cover
+  note that $d-k$ is non-negative since the deposits will always be large enough to cover
   the current obligation. See Theorem~\ref{thm:non-neg-deposits}.)
 %
   It then follows that:
@@ -165,11 +164,8 @@ If we let:
     & \Val(\outs{t}) + f + d - k + \Val(\txins{t} \subtractdom{\var{utxo}})
     & \text{(by Lemma~\ref{lemma:value-sum-pres-1})}
     \\
-    & \Val((\txins{t} \subtractdom{\var{utxo}})\cup\outs{t}) + f + d - k
+    & \Val((\txins{t} \subtractdom{\var{utxo}})\cup\outs{t}) + (d - k) + f 
     & \text{(by Lemma~\ref{lemma:value-sum-pres-2})}
-    \\
-    & \Val((\txins{t} \subtractdom{\var{utxo}})\cup\outs{t}) + (d-k-c) + (f+c)
-    & \text{(by adding $c-c$)}
     \end{array}
   \end{equation*}
   Note that in order to apply Lemma~\ref{lemma:value-sum-pres-2} above,
@@ -336,8 +332,7 @@ We are now ready to prove Theorem~\ref{thm:chain-pres-of-value}.
   the base case is trivial;
   and the inductive case follows directly from \POV{LEDGER}.
 %
-  \POV{SNAP} holds since $\var{decayed}$ is added to $\var{fees}$
-  and subtracted from $\var{deposits}$.
+  \POV{SNAP} holds trivially, since it contains no value.
   Similarly, \POV{NEWPP} holds since $\var{diff}$ is added to $\var{reserves}$
   and subtracted from $\var{deposits}$.
   Therefore \POV{EPOCH} holds by Lemma~\ref{lemma:poolreap-pres-of-value}.
@@ -348,7 +343,7 @@ We are now ready to prove Theorem~\ref{thm:chain-pres-of-value}.
   \POV{CHAIN} easily follows from this.
 \end{proof}
 
-\subsection{Non-negative Deposit Pot}
+\subsection{Non-negative Deposit Pot}  % TODO - this section is out of date due to no decaying deposits
 \label{sec:non-negative-deposit-pot}
 
 The \emph{deposit pot} (the variable $\var{deposits}$ in the UTxO State)

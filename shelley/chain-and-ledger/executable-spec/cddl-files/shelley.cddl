@@ -172,19 +172,16 @@ protocol_param_update =
   , ? 3:  uint               ; max transaction size
   , ? 4:  uint               ; max block header size
   , ? 5:  coin               ; key deposit
-  , ? 6:  unit_interval      ; key deposit min refund
-  , ? 7:  rational           ; key deposit decay rate
-  , ? 8:  coin               ; pool deposit
-  , ? 9:  unit_interval      ; pool deposit min refund
-  , ? 10: rational           ; pool deposit decay rate
-  , ? 11: epoch              ; maximum epoch
-  , ? 12: uint               ; n_opt: desired number of stake pools
-  , ? 13: rational           ; pool pledge influence
-  , ? 14: unit_interval      ; expansion rate
-  , ? 15: unit_interval      ; treasury growth rate
-  , ? 16: unit_interval      ; d. decentralization constant
-  , ? 17: $nonce             ; extra entropy
-  , ? 18: [protocol_version] ; protocol version
+  , ? 6:  coin               ; pool deposit
+  , ? 7: epoch               ; maximum epoch
+  , ? 8: uint                ; n_opt: desired number of stake pools
+  , ? 9: rational            ; pool pledge influence
+  , ? 10: unit_interval      ; expansion rate
+  , ? 11: unit_interval      ; treasury growth rate
+  , ? 12: unit_interval      ; d. decentralization constant
+  , ? 13: $nonce             ; extra entropy
+  , ? 14: [protocol_version] ; protocol version
+  , ? 15: coin               ; min utxo value
   }
 
 transaction_witness_set =

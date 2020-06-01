@@ -13,14 +13,17 @@ where
 
 import Byron.Spec.Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
+  ( STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+  )
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
-import Shelley.Spec.Ledger.EpochBoundary (poolRefunds)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DState (..),
@@ -31,8 +34,8 @@ import Shelley.Spec.Ledger.LedgerState
     emptyPState,
     emptyUTxOState,
   )
-import Shelley.Spec.Ledger.PParams (PParams)
-import Shelley.Spec.Ledger.Slot (EpochNo (..), epochInfoFirst)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxData (_poolRAcnt)
 
 data POOLREAP crypto
@@ -61,12 +64,9 @@ poolReapTransition :: TransitionRule (POOLREAP crypto)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
-  firstSlot <- liftSTS $ do
-    ei <- asks epochInfo
-    epochInfoFirst ei e
   let retired = dom $ (_retiring ps) ▷ Set.singleton e
       StakePools stpools = _stPools ps
-      pr = poolRefunds pp (retired ◁ stpools) firstSlot
+      pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ retired ◁ (_pParams ps)
       rewardAcnts' = Map.fromList . Map.elems $ Map.intersectionWith (,) rewardAcnts pr
       (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈ dom (_rewards ds)) rewardAcnts'

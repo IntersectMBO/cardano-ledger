@@ -83,12 +83,8 @@ without being explicit about the types and conversion.
         \var{maxBlockSize} \mapsto \N & \PParams & \text{max block body size}\\
         \var{maxTxSize} \mapsto \N & \PParams & \text{max transaction size}\\
         \var{maxHeaderSize} \mapsto \N & \PParams & \text{max block header size}\\
-        \var{keyDeposit} \mapsto \Coin & \PParams & \text{stake credential deposit}\\
-        \var{keyMinRefund} \mapsto \unitInterval & \PParams & \text{stake credential min refund}\\
         \var{keyDecayRate} \mapsto \nonnegReals & \PParams & \text{stake credential decay rate}\\
         \var{poolDeposit} \mapsto \Coin & \PParams & \text{stake pool deposit}\\
-        \var{poolMinRefund} \mapsto \unitInterval & \PParams & \text{stake pool min refund}\\
-        \var{poolDecayRate} \mapsto \nonnegReals & \PParams & \text{stake pool decay rate}\\
         \var{E_{max}} \mapsto \Epoch & \PParams & \text{epoch bound on pool retirement}\\
         \var{n_{opt}} \mapsto \Npos & \PParams & \text{desired number of pools}\\
         \var{a_0} \mapsto \posReals & \PParams & \text{pool influence}\\
@@ -110,11 +106,7 @@ without being explicit about the types and conversion.
     \fun{maxTxSize},
     \fun{maxHeaderSize},
     \fun{keyDeposit},
-    \fun{keyMinRefund},
-    \fun{keyDecayRate},
     \fun{poolDeposit},
-    \fun{poolMinRefund},
-    \fun{poolDecayRate},
     \fun{emax},
     \fun{nopt},
     \fun{influence},
