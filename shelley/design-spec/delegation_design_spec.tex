@@ -2403,11 +2403,13 @@ content:
 \item[A Name]
   of up to 50 characters.
 \item[A Short Textual Description]
+  of up to 255 characters.
 \item[A URL]
   to a homepage with additional information about the pool.
 \end{description}
-All characters in the metadata will be UTF8 encoded. The metadata is restricted
-to have a size of no more than 512 bytes.
+All characters in the metadata will be UTF8 encoded, as per the JSON
+specification. The metadata is restricted to have a total size of no more than
+512 bytes, including all JSON encoding overheads.
 
 The stake pool operators are responsible for serving this data at the URL
 provided in the stake pool registration certificate. However, wallets should not
