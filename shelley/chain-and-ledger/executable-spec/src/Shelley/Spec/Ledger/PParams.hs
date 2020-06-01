@@ -38,7 +38,10 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
+import Data.Aeson (FromJSON (..), ToJSON (..), (.=) , (.:), (.:?), (.!=))
+import qualified Data.Aeson as Aeson
 import Data.Foldable (fold)
+import qualified Data.Aeson.Types as Aeson
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
@@ -147,6 +150,20 @@ data ProtVer = ProtVer !Natural !Natural
 
 instance NoUnexpectedThunks ProtVer
 
+instance ToJSON ProtVer where
+  toJSON (ProtVer major minor) =
+    Aeson.object
+      [ "major" .= major
+      , "minor" .= minor
+      ]
+
+instance FromJSON ProtVer where
+  parseJSON =
+    Aeson.withObject "ProtVer" $ \ obj ->
+      ProtVer
+        <$> obj .: "major"
+        <*> obj .: "minor"
+
 instance ToCBORGroup ProtVer where
   toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
   encodedGroupSizeExpr size proxy =
@@ -226,6 +243,52 @@ instance FromCBOR PParams where
       <*> fromCBOR -- _extraEntropy    :: Nonce
       <*> fromCBORGroup -- _protocolVersion :: ProtVer
       <*> fromCBOR -- _minUTxOValue    :: Natural
+
+
+instance ToJSON PParams where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= _minfeeA pp
+      , "minFeeB" .= _minfeeB pp
+      , "maxBlockBodySize" .= _maxBBSize pp
+      , "maxTxSize" .= _maxTxSize pp
+      , "maxBlockHeaderSize" .= _maxBHSize pp
+      , "keyDeposit" .= _keyDeposit pp
+      , "poolDeposit" .= _poolDeposit pp
+      , "eMax" .= _eMax pp
+      , "nOpt" .= _nOpt pp
+      , "a0" .= (fromRational $ _a0 pp :: Double)
+      , "rho" .= _rho pp
+      , "tau" .= _tau pp
+      , "decentralisationParam" .= _d pp
+      , "extraEntropy" .= _extraEntropy pp
+      , "protocolVersion" .= _protocolVersion pp
+      , "minUTxOValue" .= _minUTxOValue pp
+      ]
+
+instance FromJSON PParams where
+  parseJSON =
+      Aeson.withObject "PParams" $ \ obj ->
+        PParams
+          <$> obj .: "minFeeA"
+          <*> obj .: "minFeeB"
+          <*> obj .: "maxBlockBodySize"
+          <*> obj .: "maxTxSize"
+          <*> obj .: "maxBlockHeaderSize"
+          <*> obj .: "keyDeposit"
+          <*> obj .: "poolDeposit"
+          <*> obj .: "eMax"
+          <*> obj .: "nOpt"
+          <*> parseRationalFromDouble (obj .: "a0")
+          <*> obj .: "rho"
+          <*> obj .: "tau"
+          <*> obj .: "decentralisationParam"
+          <*> obj .: "extraEntropy"
+          <*> obj .: "protocolVersion"
+          <*> obj .:? "minUTxOValue" .!= 0
+      where
+        parseRationalFromDouble :: Aeson.Parser Double -> Aeson.Parser Rational
+        parseRationalFromDouble p = realToFrac <$> p
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams

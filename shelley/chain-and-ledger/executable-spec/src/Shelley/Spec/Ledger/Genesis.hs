@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module Shelley.Spec.Ledger.Genesis
   ( ShelleyGenesisStaking(..)
@@ -10,6 +12,8 @@ module Shelley.Spec.Ledger.Genesis
   , sgActiveSlotCoeff
   ) where
 
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), (.=), (.:))
+import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Time (NominalDiffTime, UTCTime)
@@ -24,6 +28,7 @@ import qualified Shelley.Spec.Ledger.Address as SL
 import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff)
 import qualified Shelley.Spec.Ledger.BaseTypes as SL
 import qualified Shelley.Spec.Ledger.Coin as SL
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import qualified Shelley.Spec.Ledger.Keys as SL
 import qualified Shelley.Spec.Ledger.PParams as SL
 import qualified Shelley.Spec.Ledger.TxData as SL
@@ -99,3 +104,73 @@ sgActiveSlotCoeff =
     . SL.truncateUnitInterval
     . toRational
     . sgActiveSlotsCoeff
+
+instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
+  toJSON sg =
+    Aeson.object
+      [ "systemStart"           .= sgSystemStart sg
+        --TODO: this should not have both network magic and protocol magic
+        -- they are different names for the same thing used in two ways.
+      , "networkMagic"          .= sgNetworkMagic sg
+      , "networkId"             .= sgNetworkId sg
+      , "protocolMagicId"       .= sgProtocolMagicId sg
+      , "activeSlotsCoeff"      .= sgActiveSlotsCoeff sg
+      , "securityParam"         .= sgSecurityParam sg
+      , "epochLength"           .= sgEpochLength sg
+      , "slotsPerKESPeriod"     .= sgSlotsPerKESPeriod sg
+      , "maxKESEvolutions"      .= sgMaxKESEvolutions sg
+      , "slotLength"            .= sgSlotLength sg
+      , "updateQuorum"          .= sgUpdateQuorum sg
+      , "maxMajorPV"            .= sgMaxMajorPV sg
+      , "maxLovelaceSupply"     .= sgMaxLovelaceSupply sg
+      , "protocolParams"        .= sgProtocolParams sg
+      , "genDelegs"             .= Map.map toGenDelegPair (sgGenDelegs sg)
+      , "initialFunds"          .= sgInitialFunds sg
+      , "staking"               .= Null
+      ]
+    where
+      toGenDelegPair (d,v) = GenDelegPair d v
+
+instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
+  parseJSON =
+    Aeson.withObject "ShelleyGenesis" $ \ obj ->
+      ShelleyGenesis
+        <$> obj .: "systemStart"
+        <*> obj .: "networkMagic"
+        <*> obj .: "networkId"
+        <*> obj .: "protocolMagicId"
+        <*> obj .: "activeSlotsCoeff"
+        <*> obj .: "securityParam"
+        <*> obj .: "epochLength"
+        <*> obj .: "slotsPerKESPeriod"
+        <*> obj .: "maxKESEvolutions"
+        <*> obj .: "slotLength"
+        <*> obj .: "updateQuorum"
+        <*> obj .: "maxMajorPV"
+        <*> obj .: "maxLovelaceSupply"
+        <*> obj .: "protocolParams"
+        <*> (Map.map fromGenDelegPair <$>
+            obj .: "genDelegs")
+        <*> obj .: "initialFunds"
+        <*> pure emptyGenesisStaking  --TODO
+    where
+      fromGenDelegPair (GenDelegPair d v) = (d,v)
+
+-- | Type to adjust the JSON presentation of the genesis delegate mapping.
+data GenDelegPair crypto =
+       GenDelegPair (SL.KeyHash 'SL.GenesisDelegate crypto)
+                    (SL.Hash crypto (SL.VerKeyVRF crypto))
+
+instance Crypto crypto => ToJSON (GenDelegPair crypto) where
+  toJSON (GenDelegPair d v) =
+    Aeson.object
+      [ "delegate" .= d
+      , "vrf" .= v
+      ]
+
+instance Crypto crypto => FromJSON (GenDelegPair crypto) where
+  parseJSON =
+      Aeson.withObject "GenDelegPair" $ \ obj ->
+        GenDelegPair
+          <$> obj .: "delegate"
+          <*> obj .: "vrf"
