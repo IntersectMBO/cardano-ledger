@@ -1214,6 +1214,10 @@ The certificate contains the following:
   owner(s), see \cref{stake-pool-registration,reminder-stake-pool-registration}.
 
 \item
+  A list of IP addresses and/or DNS Names of public relay nodes that the stake
+  pool operator provides to support the Cardano network.
+
+\item
   Optionally, a URL and content hash for additional metadata about the pool, for
   display in the wallet. The URL is restricted to a length of 64 bytes. It is
   the obligation of the stake pool operator that this URL points to a JSON
@@ -2387,45 +2391,35 @@ complicate engineering.
 \subsection{Stake Pool Metadata}
 \label{stake-pool-metadata}
 
-The stake pool registration certificate can contain a URL (up to 64 bytes),
-pointing to a JSON object with the following content:
+The stake pool registration certificate
+(see \cref{stake-pool-registration-certificates}) optionally contains a content
+hash and a URL (up to 64 bytes), pointing to a JSON object with the following
+content:
 
 \begin{description}
 \item[A Ticker]
   of 3-5 characters, for a compact display of stake pools in a
   wallet.
-\item[A Title/Name]
+\item[A Name]
   of up to 50 characters.
 \item[A Short Textual Description]
 \item[A URL]
   to a homepage with additional information about the pool.
-\item[A list of IP addresses and/or Domain Names]
-  of public relay nodes that the stake pool operator provides to contribute to
-  the Cardano network.
-\item[A set of tags,]
-  keywords that can be used to filter stake pools in the wallet UI. For example,
-  a stake pool that gives their rewards to a charity might indicate this by
-  using a ``charity'' tag. Other tags could specify the geographic location, or
-  whether a pool is running on cloud infrastructure or a physical server owned
-  by the pool operator.
 \end{description}
 All characters in the metadata will be UTF8 encoded. The metadata is restricted
 to have a size of no more than 512 bytes.
 
 The stake pool operators are responsible for serving this data at the URL
-provided in the stake pool registration certificate. However, wallets will not
+provided in the stake pool registration certificate. However, wallets should not
 retrieve the data for each stake pool at those individual URLs. Not only would
 that be inefficient, it would also allow malicious actors to intentionally slow
 down all wallets by intentionally delaying the response of their server.
 Instead, metadata will be cached on \emph{metadata proxy servers}.
 
 Those proxy servers will query the metadata URLs in the stake pool registration
-certificates, and cache the metadata, with the pool's \(sks\) as key.
-Invalidating the cache will be triggered when the content hash listed in the
-certificate does not match the content hash of the cached metadata. The wallet
-will then retrieve the metadata for pools it needs to display from one of the
-proxy servers, instead of having to send a request to each of the pool's
-metadata URLs.
+certificates, and cache the metadata. The wallet will then retrieve the
+metadata for pools it needs to display from one of the proxy servers, instead
+of having to send a request to each of the pool's metadata URLs.
 
 Those servers are simple, and in particular, they require relatively little
 trust: because of the content hash, someone running a proxy server can not
@@ -2433,9 +2427,9 @@ display forged metadata. The worst thing they can do is filter the list of stake
 pools.
 
 In order to avoid those proxy servers to become a point of centralisation of the
-system, we will encourage third parties (stake pools, people in the community)
-to run metadata proxy servers, and provide code and binaries for the proxies.
-Wallets should be configurable to query a number of those proxy servers.
+system, it is encouraged that third parties (stake pools and other members of
+the community) should also run metadata proxy servers. Wallets should be
+configurable to query a number of those proxy servers.
 
 Another function that the metadata proxy servers provide is filtering malicious
 entries: it is possible to embed a variety of malicious content in the metadata,
