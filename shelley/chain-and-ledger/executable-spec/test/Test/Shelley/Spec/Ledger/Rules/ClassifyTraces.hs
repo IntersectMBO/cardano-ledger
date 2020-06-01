@@ -294,7 +294,7 @@ txScriptOutputsRatio txoutsList =
       sum $
         fmap
           ( \case
-              TxOut (Addr (ScriptHashObj _) _) _ -> 1
+              TxOut (Addr _ (ScriptHashObj _) _) _ -> 1
               _ -> 0
           )
           txouts

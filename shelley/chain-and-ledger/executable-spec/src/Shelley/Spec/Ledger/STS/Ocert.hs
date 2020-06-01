@@ -18,6 +18,7 @@ import Cardano.Prelude (NoUnexpectedThunks, asks)
 import Control.State.Transition
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -45,11 +46,25 @@ instance
   type BaseM (OCERT crypto) = ShelleyBase
   data PredicateFailure (OCERT crypto)
     = KESBeforeStartOCERT
+        !KESPeriod -- OCert Start KES Period
+        !KESPeriod -- Current KES Period
     | KESAfterEndOCERT
+        !KESPeriod -- Current KES Period
+        !KESPeriod -- OCert Start KES Period
+        !Word64 -- Max KES Key Evolutions
     | KESPeriodWrongOCERT
-    | InvalidSignatureOCERT
-    | InvalidKesSignatureOCERT Word Word Word String
+        !Natural -- last KES counter used
+        !Natural -- current KES counter
+    | InvalidSignatureOCERT -- TODO use whole OCert
+        !Natural -- OCert counter
+        !KESPeriod -- OCert KES period
+    | InvalidKesSignatureOCERT
+        !Word -- current KES Period
+        !Word -- KES start period
+        !Word -- expected KES evolutions
+        !String -- error message given by Consensus Layer
     | NoCounterForKeyHashOCERT
+        !(KeyHash 'BlockIssuer crypto) -- stake pool key hash
     deriving (Show, Eq, Generic)
 
   initialRules = [pure Map.empty]
@@ -72,8 +87,9 @@ ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
 
   maxKESiterations <- liftSTS $ asks maxKESEvo
 
-  c0 <= kp ?! KESBeforeStartOCERT
-  kp_ < c0_ + (fromIntegral maxKESiterations) ?! KESAfterEndOCERT
+  c0 <= kp ?! KESBeforeStartOCERT c0 kp
+  kp_ < c0_ + (fromIntegral maxKESiterations)
+    ?! KESAfterEndOCERT kp c0 maxKESiterations
 
   let t = if kp_ >= c0_ then kp_ - c0_ else 0 -- this is required to prevent an
   -- arithmetic underflow, in the
@@ -81,13 +97,13 @@ ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
   -- above `KESBeforeStartOCERT`
   -- predicate failure in the
   -- transition.
-  verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT
+  verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT n c0
   verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
 
   case currentIssueNo env cs hk of
     Nothing -> do
-      failBecause NoCounterForKeyHashOCERT
+      failBecause $ NoCounterForKeyHashOCERT hk
       pure cs
     Just m -> do
-      m <= n ?! KESPeriodWrongOCERT
+      m <= n ?! KESPeriodWrongOCERT m n
       pure $ cs ⨃ [(hk, n)]

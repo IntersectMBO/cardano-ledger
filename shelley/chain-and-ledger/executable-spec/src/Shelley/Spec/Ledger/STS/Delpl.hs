@@ -57,11 +57,8 @@ instance
   type Environment (DELPL crypto) = DelplEnv
   type BaseM (DELPL crypto) = ShelleyBase
   data PredicateFailure (DELPL crypto)
-    = PoolFailure (PredicateFailure (POOL crypto))
-    | DelegFailure (PredicateFailure (DELEG crypto))
-    | ScriptNotInWitnessDELPL
-    | ScriptHashNotMatchDELPL
-    | ScriptDoesNotValidateDELPL
+    = PoolFailure (PredicateFailure (POOL crypto)) -- Subtransition Failures
+    | DelegFailure (PredicateFailure (DELEG crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyDelegation]
@@ -80,9 +77,6 @@ instance
     (DelegFailure a) ->
       encodeListLen 2 <> toCBOR (1 :: Word8)
         <> toCBOR a
-    ScriptNotInWitnessDELPL -> encodeListLen 1 <> toCBOR (2 :: Word8)
-    ScriptHashNotMatchDELPL -> encodeListLen 1 <> toCBOR (3 :: Word8)
-    ScriptDoesNotValidateDELPL -> encodeListLen 1 <> toCBOR (4 :: Word8)
 
 instance
   (Crypto crypto) =>
@@ -99,15 +93,6 @@ instance
         matchSize "DelegFailure" 2 n
         a <- fromCBOR
         pure $ DelegFailure a
-      2 ->
-        matchSize "ScriptNotInWitnessDELPL" 1 n
-          >> pure ScriptNotInWitnessDELPL
-      3 ->
-        matchSize "ScriptHashNotMatchDELPL" 1 n
-          >> pure ScriptHashNotMatchDELPL
-      4 ->
-        matchSize "ScriptDoesNotValidateDELPL" 1 n
-          >> pure ScriptDoesNotValidateDELPL
       k -> invalidKey k
 
 delplTransition ::

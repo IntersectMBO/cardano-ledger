@@ -21,6 +21,7 @@ module Shelley.Spec.Ledger.PParams
     ProposedPPUpdates (..),
     emptyPPPUpdates,
     PParamsUpdate,
+    emptyPParamsUpdate,
     Update (..),
     updatePParams,
   )
@@ -126,9 +127,9 @@ data PParams' f = PParams
     _nOpt :: !(HKD f Natural),
     -- | Pool influence
     _a0 :: !(HKD f Rational),
-    -- | Treasury expansion
-    _rho :: !(HKD f UnitInterval),
     -- | Monetary expansion
+    _rho :: !(HKD f UnitInterval),
+    -- | Treasury expansion
     _tau :: !(HKD f UnitInterval),
     -- | Decentralization parameter
     _d :: !(HKD f UnitInterval),
@@ -156,7 +157,15 @@ instance NoUnexpectedThunks ProtVer
 
 instance ToCBORGroup ProtVer where
   toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
+  encodedGroupSizeExpr size proxy =
+    encodedSizeExpr size ((\(ProtVer x _) -> toWord x) <$> proxy)
+      + encodedSizeExpr size ((\(ProtVer _ y) -> toWord y) <$> proxy)
+    where
+      toWord :: Natural -> Word
+      toWord = fromIntegral
+
   listLen _ = 2
+  listLenBound _ = 2
 
 instance FromCBORGroup ProtVer where
   fromCBORGroup = do

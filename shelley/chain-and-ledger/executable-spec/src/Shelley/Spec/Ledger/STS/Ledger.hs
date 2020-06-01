@@ -83,14 +83,14 @@ instance
   type Environment (LEDGER crypto) = LedgerEnv
   type BaseM (LEDGER crypto) = ShelleyBase
   data PredicateFailure (LEDGER crypto)
-    = UtxowFailure (PredicateFailure (UTXOW crypto))
-    | DelegsFailure (PredicateFailure (DELEGS crypto))
+    = UtxowFailure (PredicateFailure (UTXOW crypto)) -- Subtransition Failures
+    | DelegsFailure (PredicateFailure (DELEGS crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [ledgerTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
+instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (LEDGER crypto))
 
 instance
   (Typeable crypto, Crypto crypto) =>
@@ -132,7 +132,7 @@ ledgerTransition = do
 
   let DPState dstate pstate = dpstate
       DState stkCreds _ _ _ _ genDelegs _ = dstate
-      PState stpools _ _ = pstate
+      PState stpools _ _ _ = pstate
 
   utxoSt' <-
     trans @(UTXOW crypto) $

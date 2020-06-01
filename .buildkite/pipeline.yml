@@ -1,17 +1,7 @@
 # The Buildkite pipeline definition.
 # See https://buildkite.com/docs/pipelines for documentation.
 
-env:
-  BUILD_DIR: "/build/cardano-ledger-specs"
-  STACK_ROOT: "/build/cardano-ledger-specs.stack"
-  CACHE_DIR: "/cache/cardano-ledger-specs"
-
 steps:
-  - label: 'hydra-eval-errors'
-    command: 'nix-build ./nix -A iohkNix.hydraEvalErrors && ./result/bin/hydra-eval-errors.py'
-    agents:
-      system: x86_64-linux
-
   - label: 'check-cabal-project'
     command: "nix-build ./nix -A iohkNix.checkCabalProject -o check-cabal-project.sh && ./check-cabal-project.sh"
     agents:
@@ -22,12 +12,7 @@ steps:
     agents:
       system: x86_64-linux
 
-  # Imperative build steps
-  - label: Stack build
-    commands:
-      - "nix-build .buildkite/default.nix -o sr"
-      # FIXME: stack fails due to doctests
-      - "./sr/bin/rebuild --build-dir=$BUILD_DIR --cache-dir=$CACHE_DIR || true"
+  - label: 'ormolisation'
+    command: 'scripts/ormolise.sh'
     agents:
       system: x86_64-linux
-    timeout_in_minutes: 120

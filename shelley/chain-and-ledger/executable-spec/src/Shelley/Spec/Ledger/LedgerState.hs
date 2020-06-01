@@ -86,12 +86,12 @@ import Cardano.Binary
     encodeNull,
     enforceSize,
     peekTokenType,
-    serialize,
   )
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (ReaderT (..), asks)
 import qualified Data.ByteString.Lazy as BSL (length)
+import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty)
@@ -142,8 +142,11 @@ import Shelley.Spec.Ledger.Keys
     GenDelegs (..),
     Hash,
     KeyHash,
+    KeyHash (..),
     KeyPair,
     KeyRole (..),
+    VKey,
+    VerKeyVRF,
     asWitness,
     hash,
   )
@@ -191,6 +194,7 @@ import Shelley.Spec.Ledger.TxData
     TxIn (..),
     TxOut (..),
     Wdrl (..),
+    WitVKey (..),
     getRwdCred,
   )
 import Shelley.Spec.Ledger.UTxO
@@ -240,7 +244,11 @@ data DState crypto = DState
     -- | The pointed to hash keys.
     _ptrs :: !(Map Ptr (Credential 'Staking crypto)),
     -- | future genesis key delegations
-    _fGenDelegs :: !(Map (FutureGenDeleg crypto) (KeyHash 'GenesisDelegate crypto)),
+    _fGenDelegs ::
+      !( Map
+           (FutureGenDeleg crypto)
+           (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto))
+       ),
     -- | Genesis key delegations
     _genDelegs :: !(GenDelegs crypto),
     -- | Instantaneous Rewards
@@ -275,6 +283,8 @@ data PState crypto = PState
     _stPools :: !(StakePools crypto),
     -- | The pool parameters.
     _pParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
+    -- | The future pool parameters.
+    _fPParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
     -- | A map of retiring stake pools to the epoch when they retire.
     _retiring :: !(Map (KeyHash 'StakePool crypto) EpochNo)
   }
@@ -283,16 +293,17 @@ data PState crypto = PState
 instance NoUnexpectedThunks (PState crypto)
 
 instance Crypto crypto => ToCBOR (PState crypto) where
-  toCBOR (PState a b c) =
-    encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
+  toCBOR (PState a b c d) =
+    encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
 
 instance Crypto crypto => FromCBOR (PState crypto) where
   fromCBOR = do
-    enforceSize "PState" 3
+    enforceSize "PState" 4
     a <- fromCBOR
     b <- fromCBOR
     c <- fromCBOR
-    pure $ PState a b c
+    d <- fromCBOR
+    pure $ PState a b c d
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
@@ -422,7 +433,7 @@ emptyDState =
 
 emptyPState :: PState crypto
 emptyPState =
-  PState (StakePools Map.empty) Map.empty Map.empty
+  PState (StakePools Map.empty) Map.empty Map.empty Map.empty
 
 -- | Clear the protocol parameter updates
 clearPpup ::
@@ -613,7 +624,9 @@ genesisCoins outs =
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
-  Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto) ->
+  Map
+    (KeyHash 'Genesis crypto)
+    (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto)) ->
   UTxO crypto ->
   LedgerState crypto
 genesisState genDelegs0 utxo0 =
@@ -644,16 +657,7 @@ txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
     inputSize = smallArray + uint + hashObj
     numOutputs = toInteger . length . _outputs $ txbody
     outputSize = smallArray + uint + address
-    rest =
-      toInteger . BSL.length . serialize $
-        tx
-          { _body =
-              txbody
-                { _outputs = StrictSeq.empty,
-                  _inputs = Set.empty,
-                  _txfee = 0
-                }
-          }
+    rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 
 -- | Minimum fee calculation
 minfee :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
@@ -707,10 +711,9 @@ decayedKey ::
 decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
   case cert of
     DCertDeleg (DeRegKey key) ->
-      if Map.notMember key stkcreds
-        then pure 0
-        else do
-          let created' = stkcreds Map.! key
+      case Map.lookup key stkcreds of
+        Nothing -> pure 0
+        Just created' -> do
           start <- do
             ei <- asks epochInfo
             fs <- epochInfoFirst ei =<< epochInfoEpoch ei cslot
@@ -753,6 +756,7 @@ consumed pp u stakeKeys tx =
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeeded ::
+  forall crypto.
   Crypto crypto =>
   UTxO crypto ->
   Tx crypto ->
@@ -766,9 +770,12 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _ _) _genDelegs =
     `Set.union` owners
   where
     inputAuthors = asWitness `Set.map` Set.foldr insertHK Set.empty (_inputs txbody)
+    unspendableKeyHash = KeyHash (coerce (hash 0 :: Hash crypto Int))
     insertHK txin hkeys =
       case txinLookup txin utxo' of
-        Just (TxOut (Addr (KeyHashObj pay) _) _) -> Set.insert pay hkeys
+        Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert pay hkeys
+        Just (TxOut (AddrBootstrap _) _) -> Set.insert unspendableKeyHash hkeys
+        -- NOTE: Until Byron addresses are supported, we insert an unspendible keyhash
         _ -> hkeys
     wdrlAuthors =
       Set.map asWitness
@@ -800,9 +807,13 @@ verifiedWits ::
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Tx crypto ->
-  Bool
+  Either [VKey 'Witness crypto] ()
 verifiedWits (Tx txbody wits _ _) =
-  all (verifyWitVKey $ hashWithSerialiser toCBOR txbody) wits
+  case failed == mempty of
+    True -> Right ()
+    False -> Left $ fmap (\(WitVKey vk _) -> vk) failed
+  where
+    failed = filter (not . verifyWitVKey (hashWithSerialiser toCBOR txbody)) (Set.toList wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
@@ -811,10 +822,11 @@ propWits ::
   GenDelegs crypto ->
   Set (KeyHash 'Witness crypto)
 propWits Nothing _ = Set.empty
-propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs _genDelegs) =
+propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where
-    updateKeys = Map.keysSet pup ◁ _genDelegs
+    updateKeys' = Map.keysSet pup ◁ genDelegs
+    updateKeys = Map.map fst updateKeys'
 
 -- Functions for stake delegation model
 
@@ -892,7 +904,7 @@ stakeDistr u ds ps =
     poolParams
   where
     DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
-    PState (StakePools stpools) poolParams _ = ps
+    PState (StakePools stpools) poolParams _ _ = ps
     outs = aggregateOuts u
     stakeRelation :: [(Credential 'Staking crypto, Coin)]
     stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
@@ -967,6 +979,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
   ei <- asks epochInfo
   slotsPerEpoch <- epochInfoSize ei e
   asc <- asks activeSlotCoeff
+  network <- asks networkId
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
@@ -980,7 +993,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       _R = Coin $ rPot - deltaT1
       circulation = total - (_reserves acnt)
       (rs_, aps) =
-        reward pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation
+        reward network pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation
       deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $

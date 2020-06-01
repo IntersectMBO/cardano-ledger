@@ -21,19 +21,19 @@ import Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
-    decodeListLen,
     decodeWord,
     encodeListLen,
-    matchSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.Address (Addr, getNetwork)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto
@@ -50,8 +50,15 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Ppup
+import Shelley.Spec.Ledger.Serialization
+  ( decodeList,
+    decodeRecordNamed,
+    decodeSet,
+    encodeFoldable,
+  )
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
+import Shelley.Spec.Ledger.TxData (TxBody (..))
 import Shelley.Spec.Ledger.UTxO
 
 data UTXO crypto
@@ -75,13 +82,26 @@ instance
   type BaseM (UTXO crypto) = ShelleyBase
   data PredicateFailure (UTXO crypto)
     = BadInputsUTxO
-    | ExpiredUTxO SlotNo SlotNo
-    | MaxTxSizeUTxO Integer Integer
+        !(Set (TxIn crypto)) -- The bad transaction inputs
+    | ExpiredUTxO
+        !SlotNo -- transaction's time to live
+        !SlotNo -- current slot
+    | MaxTxSizeUTxO
+        !Integer -- the actual transaction size
+        !Integer -- the max transaction size
     | InputSetEmptyUTxO
-    | FeeTooSmallUTxO Coin Coin
-    | ValueNotConservedUTxO Coin Coin
+    | FeeTooSmallUTxO
+        !Coin -- the minimum fee for this transaction
+        !Coin -- the fee supplied in this transaction
+    | ValueNotConservedUTxO
+        !Coin -- the Coin consumed by this transaction
+        !Coin -- the Coin produced by this transaction
+    | WrongNetwork
+        !Network -- the expected network id
+        !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
     | OutputTooSmallUTxO
-    | UpdateFailure (PredicateFailure (PPUP crypto))
+        ![TxOut crypto] -- list of supplied transaction outputs that are too small
+    | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
@@ -93,7 +113,8 @@ instance
   ToCBOR (PredicateFailure (UTXO crypto))
   where
   toCBOR = \case
-    BadInputsUTxO -> encodeListLen 1 <> toCBOR (0 :: Word8)
+    BadInputsUTxO ins ->
+      encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable ins
     (ExpiredUTxO a b) ->
       encodeListLen 3 <> toCBOR (1 :: Word8)
         <> toCBOR a
@@ -111,46 +132,55 @@ instance
       encodeListLen 3 <> toCBOR (5 :: Word8)
         <> toCBOR a
         <> toCBOR b
-    OutputTooSmallUTxO -> encodeListLen 1 <> toCBOR (6 :: Word8)
+    OutputTooSmallUTxO outs ->
+      encodeListLen 2 <> toCBOR (6 :: Word8)
+        <> encodeFoldable outs
     (UpdateFailure a) ->
       encodeListLen 2 <> toCBOR (7 :: Word8)
         <> toCBOR a
+    (WrongNetwork right wrongs) ->
+      encodeListLen 3 <> toCBOR (8 :: Word8)
+        <> toCBOR right
+        <> encodeFoldable wrongs
 
 instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (UTXO crypto))
   where
-  fromCBOR = do
-    n <- decodeListLen
-    decodeWord >>= \case
-      0 -> matchSize "BadInputsUTxO" 1 n >> pure BadInputsUTxO
-      1 -> do
-        matchSize "ExpiredUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ ExpiredUTxO a b
-      2 -> do
-        matchSize "MaxTxSizeUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ MaxTxSizeUTxO a b
-      3 -> matchSize "InputSetEmptyUTxO" 1 n >> pure InputSetEmptyUTxO
-      4 -> do
-        matchSize "FeeTooSmallUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ FeeTooSmallUTxO a b
-      5 -> do
-        matchSize "ValueNotConservedUTxO" 3 n
-        a <- fromCBOR
-        b <- fromCBOR
-        pure $ ValueNotConservedUTxO a b
-      6 -> matchSize "OutputTooSmallUTxO" 1 n >> pure OutputTooSmallUTxO
-      7 -> do
-        matchSize "UpdateFailure" 2 n
-        a <- fromCBOR
-        pure $ UpdateFailure a
-      k -> invalidKey k
+  fromCBOR =
+    fmap snd $ decodeRecordNamed "PredicateFailureUTXO" fst $
+      decodeWord >>= \case
+        0 -> (,) 2 <$> do
+          ins <- decodeSet fromCBOR
+          pure $ BadInputsUTxO ins
+        1 -> (,) 3 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ ExpiredUTxO a b
+        2 -> (,) 3 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ MaxTxSizeUTxO a b
+        3 -> (,) 1 <$> pure InputSetEmptyUTxO
+        4 -> (,) 3 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ FeeTooSmallUTxO a b
+        5 -> (,) 3 <$> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure $ ValueNotConservedUTxO a b
+        6 -> (,) 2 <$> do
+          outs <- decodeList fromCBOR
+          pure $ OutputTooSmallUTxO outs
+        7 -> (,) 2 <$> do
+          a <- fromCBOR
+          pure $ UpdateFailure a
+        8 -> (,) 3 <$> do
+          right <- fromCBOR
+          wrongs <- decodeSet fromCBOR
+          pure $ WrongNetwork right wrongs
+        k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do
@@ -174,7 +204,15 @@ utxoInductive = do
       txFee = _txfee txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  txins txb ⊆ dom utxo ?! BadInputsUTxO
+  let validInputs = dom utxo
+  txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+
+  ni <- liftSTS $ asks networkId
+  let addrsWrongNetwork =
+        filter
+          (\a -> getNetwork a /= ni)
+          (fmap (\(TxOut a _) -> a) $ toList $ _outputs txb)
+  null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
 
   let consumed_ = consumed pp utxo stakeCreds txb
       produced_ = produced pp stakepools txb
@@ -185,7 +223,9 @@ utxoInductive = do
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
   let minUTxOValue = fromIntegral $ _minUTxOValue pp
-  all (minUTxOValue <=) outputCoins ?! OutputTooSmallUTxO
+  all (minUTxOValue <=) outputCoins
+    ?! OutputTooSmallUTxO
+      (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (range (txouts txb))))
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)
       txSize_ = txsize tx

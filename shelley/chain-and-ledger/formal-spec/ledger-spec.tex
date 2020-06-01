@@ -82,6 +82,8 @@
 \newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
 \newcommand{\MaxMajorPV}{\mathsf{MaxMajorPV}}
 \newcommand{\ActiveSlotCoeff}{\mathsf{ActiveSlotCoeff}}
+\newcommand{\Network}{\mathsf{Network}}
+\newcommand{\NetworkId}{\mathsf{NetworkId}}
 \newcommand{\BlockNo}{\type{BlockNo}}
 \newcommand{\MaxKESEvo}{\ensuremath{\mathsf{MaxKESEvo}}}
 \newcommand{\Quorum}{\ensuremath{\mathsf{Quorum}}}
@@ -98,6 +100,8 @@
 \newcommand{\MetaDataHash}{\ensuremath{\type{MetaDataHash}}}
 \newcommand{\PPUpdate}{\type{PPUpdate}}
 \newcommand{\Update}{\type{Update}}
+\newcommand{\GenesisDelegation}{\type{GenesisDelegation}}
+\newcommand{\FutGenesisDelegation}{\type{FutGenesisDelegation}}
 
 \newcommand{\DCert}{\type{DCert}}
 \newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
@@ -253,6 +257,7 @@
 %% Blockchain
 \newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
 \newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
+\newcommand{\bblockno}[1]{\fun{bblockno}~\var{#1}}
 \newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
 \newcommand{\bhbody}[1]{\fun{bhbody}~\var{#1}}
 \newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
@@ -315,6 +320,7 @@
 \clearpage
 \begin{appendix}
   \input{crypto-details}
+  \input{address-binary}
   \input{cddl}
   \input{txsize}
   \input{proofs}

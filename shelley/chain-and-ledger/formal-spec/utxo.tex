@@ -159,7 +159,7 @@ The signal for the UTxO transition is a transaction.
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{stkCreds} & \StakeCreds & \text{stake credential}\\
         \var{stpools} & \StakePools & \text{stake pool}\\
-        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -313,7 +313,9 @@ requests).
       \\
       ~
       \\
-      \forall (\_\mapsto (\_, c)) \in \txouts{txb}, c \geq (\fun{minUTxOValue}~\var{pp})
+      \forall (\wcard\mapsto (\wcard,~c)) \in \txouts{txb}, c \geq (\fun{minUTxOValue}~\var{pp})
+      \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a =\NetworkId
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
       \\
@@ -576,13 +578,13 @@ This consists of:
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{propWits} \in \Update \to (\KeyHashGen\mapsto\VKey) \to \powerset{\KeyHash}
+    & \fun{propWits} \in \Update \to \GenesisDelegation \to \powerset{\KeyHash}
     & \text{hashkeys for proposals} \\
     & \fun{propWits}~(\var{pup},~\wcard)~\var{genDelegs} = \\
     & ~~\left\{
-      \hashKey{vkey}
+      \var{kh}
       \mid
-      \var{gkey}\mapsto\var{vkey}\in
+      \var{gkh}\mapsto(\var{kh},~\wcard)\in
       \left(\dom{\var{pup}}\restrictdom\var{genDelegs}\right)
       \right\}
   \end{align*}
@@ -645,8 +647,6 @@ It has six predicates:
   \item Every multisignature script is valid.
   \item The set of scripts given by the transaction is equal to the set of required scripts.
   \item Any instantaneous reward certificates have quorum agreement from the genesis nodes.
-  \item No instantaneous reward certificates are allowed when
-    the decentralization parameter is equal to zero.
   \item Either the transaction metadata hash and the transaction metadata are both absent,
     or the hash present in the body is actually equal to the hash of the metadata.
 \end{itemize}
@@ -679,8 +679,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \\
       \left\{
         c\in\txcerts{tx}~\cap\DCertMir
-      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
-      \fun{d}~\var{pp} > 0
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum
       \\~\\
       \var{mdh}\leteq\fun{txMDhash}~\var{tx}
       &
@@ -731,8 +730,6 @@ The UTXOW rule has eight predicate failures:
   there is a \emph{UtxoFailure} failure.
 \item In the case of a lack of quorum on an instantaneous reward certificate,
   there is a \emph{MIRInsufficientGenesisSigs} failure.
-\item In the case of an instantaneous reward certificate after decentralization,
-  there is a \emph{MIRImpossibleInDecentralizedNet} failure.
 \item In the case of inconsist metadata hashes,
   there is a \emph{BadMetaDataHash} failure.
 \end{itemize}

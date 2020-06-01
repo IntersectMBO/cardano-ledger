@@ -19,7 +19,13 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import Data.Ratio ((%), denominator, numerator)
-import Shelley.Spec.Ledger.BaseTypes (activeSlotCoeff, activeSlotVal, intervalValue)
+import qualified Data.Set as Set
+import Shelley.Spec.Ledger.BaseTypes
+  ( activeSlotCoeff,
+    activeSlotVal,
+    intervalValue,
+    (⭒),
+  )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, hashKey, vKey)
@@ -41,11 +47,14 @@ import Shelley.Spec.Ledger.LedgerState
     pattern NewEpochState,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), currentIssueNo, kesPeriod)
+import Shelley.Spec.Ledger.PParams (_extraEntropy)
 import Shelley.Spec.Ledger.STS.Chain
-  ( chainEpochNonce,
+  ( chainCandidateNonce,
+    chainEpochNonce,
     chainLastAppliedBlock,
     chainNes,
     chainOCertIssue,
+    chainPrevEpochNonce,
   )
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.STS.Ocert (pattern OCertEnv)
@@ -60,6 +69,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     LEDGERS,
     OBftSlot,
     TICK,
+    VRFKeyHash,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllPoolKeys (..),
@@ -192,9 +202,10 @@ genBlock
               Left ghk -> gkeys ghk gds
               -- We chose a Praos slot, and have everything we need.
               Right ks' -> ks'
+            genesisVKHs = Set.map fst $ range gds
             n' =
               currentIssueNo
-                (OCertEnv (dom poolParams) (range gds))
+                (OCertEnv (dom poolParams) genesisVKHs)
                 cs
                 ((coerceKeyRole . hashKey . vKey . cold) keys)
             m = getKESPeriodRenewalNo keys kp
@@ -205,6 +216,10 @@ genBlock
                 then error "no issue number available"
                 else fromIntegral m
             oCert = mkOCert keys' issueNumber ((fst . head) hotKeys)
+            epochNonce =
+              if (nesEL nes) < (nesEL _nes') -- if it is a new epoch
+                then (chainCandidateNonce chainSt) ⭒ (chainPrevEpochNonce chainSt) ⭒ (_extraEntropy pp')
+                else chainEpochNonce chainSt
 
         mkBlock
           <$> pure hashheader
@@ -213,7 +228,7 @@ genBlock
           <$> genTxs pp' (_reserves acnt) ls nextSlot
           <*> pure nextSlot
           <*> pure (block + 1)
-          <*> pure (chainEpochNonce chainSt)
+          <*> pure epochNonce
           <*> genBlockNonce
           <*> genPraosLeader poolStake
           <*> pure kesPeriod_
@@ -229,13 +244,13 @@ genBlock
         Just k -> snd k
       gkeys ::
         KeyHash 'Genesis ->
-        Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate) ->
+        Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash) ->
         AllPoolKeys
       gkeys gkey gds =
         case Map.lookup gkey gds of
           Nothing ->
             error "genBlock: CorruptGenenisDelegation"
-          Just ckh ->
+          Just (ckh, _) ->
             -- if GenesisDelegate certs changed a delegation to a new key
             case Map.lookup (coerceKeyRole ckh) ksKeyPairsByStakeHash of
               Nothing ->

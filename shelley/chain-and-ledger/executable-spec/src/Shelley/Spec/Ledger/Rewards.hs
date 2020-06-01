@@ -37,7 +37,12 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (UnitInterval (..), intervalValue, mkUnitInterval)
+import Shelley.Spec.Ledger.BaseTypes
+  ( Network,
+    UnitInterval (..),
+    intervalValue,
+    mkUnitInterval,
+  )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -140,15 +145,7 @@ getTopRankedPools rPot total pp poolParams aps =
   Set.fromList $ fmap fst $
     take (fromIntegral $ _nOpt pp) (sortBy (flip compare `on` snd) rankings)
   where
-    pdata =
-      [ ( hk,
-          ( poolParams Map.! hk,
-            aps Map.! hk
-          )
-        )
-        | hk <-
-            Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet aps
-      ]
+    pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =
       [ ( hk,
           desirability pp rPot pool ap total
@@ -207,6 +204,7 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
 
 -- | Reward one pool
 rewardOnePool ::
+  Network ->
   PParams ->
   Coin ->
   Natural ->
@@ -216,13 +214,13 @@ rewardOnePool ::
   Coin ->
   Set (RewardAcnt crypto) ->
   (Map (RewardAcnt crypto) Coin, Rational)
-rewardOnePool pp r blocksN blocksTotal pool (Stake stake) (Coin total) addrsRew =
+rewardOnePool network pp r blocksN blocksTotal pool (Stake stake) (Coin total) addrsRew =
   (rewards', appPerf)
   where
     Coin pstake = sum stake
     Coin ostake =
       Set.foldl'
-        (\c o -> c + (stake Map.! KeyHashObj o))
+        (\c o -> c + (fromMaybe (Coin 0) $ Map.lookup (KeyHashObj o) stake))
         (Coin 0)
         (_poolOwners pool)
     sigma = fromIntegral pstake % fromIntegral total
@@ -238,7 +236,7 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) (Coin total) addrsRew 
     tot = fromIntegral total
     mRewards =
       Map.fromList
-        [ ( RewardAcnt hk,
+        [ ( RewardAcnt network hk,
             memberRew poolR pool (StakeShare (fromIntegral c % tot)) (StakeShare sigma)
           )
           | (hk, Coin c) <- Map.toList stake,
@@ -249,6 +247,7 @@ rewardOnePool pp r blocksN blocksTotal pool (Stake stake) (Coin total) addrsRew 
     rewards' = Map.filter (/= Coin 0) $ addrsRew ◁ potentialRewards
 
 reward ::
+  Network ->
   PParams ->
   BlocksMade crypto ->
   Coin ->
@@ -258,22 +257,13 @@ reward ::
   Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
   Coin ->
   (Map (RewardAcnt crypto) Coin, Map (KeyHash 'StakePool crypto) Rational)
-reward pp (BlocksMade b) r addrsRew poolParams stake delegs total =
+reward network pp (BlocksMade b) r addrsRew poolParams stake delegs total =
   (rewards', appPerformances)
   where
-    pdata =
-      [ ( hk,
-          ( poolParams Map.! hk,
-            b Map.! hk,
-            poolStake hk delegs stake
-          )
-        )
-        | hk <-
-            Set.toList $ Map.keysSet poolParams `Set.intersection` Map.keysSet b
-      ]
+    pdata = Map.toList $ Map.intersectionWithKey (\hk params blocks -> (params, blocks, poolStake hk delegs stake)) poolParams b
     results =
       [ ( hk,
-          rewardOnePool pp r n totalBlocks pool actgr total addrsRew
+          rewardOnePool network pp r n totalBlocks pool actgr total addrsRew
         )
         | (hk, (pool, n, actgr)) <- pdata
       ]

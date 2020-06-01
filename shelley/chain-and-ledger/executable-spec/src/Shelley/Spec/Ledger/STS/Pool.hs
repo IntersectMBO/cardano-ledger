@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,24 +14,23 @@ module Shelley.Spec.Ledger.STS.Pool
 where
 
 import Byron.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord, encodeListLen, matchSize)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition
+import Control.State.Transition ((?!), STS (..), TRC (..), TransitionRule, failBecause, judgmentContext, liftSTS)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Delegation.Certificates
-import Shelley.Spec.Ledger.Keys
-import Shelley.Spec.Ledger.LedgerState
-import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
+import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
+import Shelley.Spec.Ledger.TxData (DCert (..), PoolCert (..), PoolParams (..), StakePools (..))
 
 data POOL crypto
 
@@ -49,8 +49,13 @@ instance STS (POOL crypto) where
 
   data PredicateFailure (POOL crypto)
     = StakePoolNotRegisteredOnKeyPOOL
+        !(KeyHash 'StakePool crypto) -- KeyHash which cannot be retired since it is not registered
     | StakePoolRetirementWrongEpochPOOL
+        !Word64 -- Current Epoch
+        !Word64 -- The epoch listed in the Pool Retirement Certificate
+        !Word64 -- The first epoch that is too far out for retirement
     | WrongCertificateTypePOOL
+        !Word8 -- The disallowed certificate (this case should never happen)
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyPState]
@@ -64,19 +69,34 @@ instance
   ToCBOR (PredicateFailure (POOL crypto))
   where
   toCBOR = \case
-    StakePoolNotRegisteredOnKeyPOOL -> toCBOR (0 :: Word8)
-    StakePoolRetirementWrongEpochPOOL -> toCBOR (1 :: Word8)
-    WrongCertificateTypePOOL -> toCBOR (2 :: Word8)
+    StakePoolNotRegisteredOnKeyPOOL kh ->
+      encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR kh
+    StakePoolRetirementWrongEpochPOOL ce e em ->
+      encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR em
+    WrongCertificateTypePOOL ct ->
+      encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR ct
 
 instance
   (Crypto crypto) =>
   FromCBOR (PredicateFailure (POOL crypto))
   where
   fromCBOR = do
+    n <- decodeListLen
     decodeWord >>= \case
-      0 -> pure StakePoolNotRegisteredOnKeyPOOL
-      1 -> pure StakePoolRetirementWrongEpochPOOL
-      2 -> pure WrongCertificateTypePOOL
+      0 -> do
+        matchSize "StakePoolNotRegisteredOnKeyPOOL" 2 n
+        kh <- fromCBOR
+        pure $ StakePoolNotRegisteredOnKeyPOOL kh
+      1 -> do
+        ce <- fromCBOR
+        e <- fromCBOR
+        em <- fromCBOR
+        matchSize "StakePoolRetirementWrongEpochPOOL" 4 n
+        pure $ StakePoolRetirementWrongEpochPOOL ce e em
+      2 -> do
+        matchSize "WrongCertificateTypePOOL" 2 n
+        ct <- fromCBOR
+        pure $ WrongCertificateTypePOOL ct
       k -> invalidKey k
 
 poolDelegationTransition :: TransitionRule (POOL crypto)
@@ -86,6 +106,7 @@ poolDelegationTransition = do
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
+
       let hk = _poolPubKey poolParam
       if hk ∉ dom stpools
         then -- register new, Pool-Reg
@@ -95,24 +116,30 @@ poolDelegationTransition = do
               { _stPools = StakePools $ stpools ∪ (hk, slot),
                 _pParams = _pParams ps ∪ (hk, poolParam)
               }
-        else -- re-register, Pool-reReg
-
+        else do
           pure $
             ps
-              { _pParams = _pParams ps ⨃ (hk, poolParam),
+              { _fPParams = _fPParams ps ⨃ (hk, poolParam),
                 _retiring = Set.singleton hk ⋪ _retiring ps
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      hk ∈ dom stpools ?! StakePoolNotRegisteredOnKeyPOOL
+      hk ∈ dom stpools ?! StakePoolNotRegisteredOnKeyPOOL hk
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfo
         epochInfoEpoch ei slot
       let EpochNo maxEpoch = _eMax pp
-      cepoch < e && e < cepoch + maxEpoch ?! StakePoolRetirementWrongEpochPOOL
+      cepoch < e && e < cepoch + maxEpoch
+        ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       pure $ ps {_retiring = _retiring ps ⨃ (hk, EpochNo e)}
-    _ -> do
-      failBecause WrongCertificateTypePOOL
+    DCertDeleg _ -> do
+      failBecause $ WrongCertificateTypePOOL 0
+      pure ps
+    DCertMir _ -> do
+      failBecause $ WrongCertificateTypePOOL 1
+      pure ps
+    DCertGenesis _ -> do
+      failBecause $ WrongCertificateTypePOOL 2
       pure ps
 
 -- Note: we avoid using the Relation operators (⨃) and (∪) here because that

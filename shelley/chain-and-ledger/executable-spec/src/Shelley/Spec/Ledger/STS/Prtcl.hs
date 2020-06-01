@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,7 +16,7 @@ module Shelley.Spec.Ledger.STS.Prtcl
     PrtclEnv (..),
     PrtclState (..),
     PredicateFailure (..),
-    PrtlSeqFailure,
+    PrtlSeqFailure (..),
     prtlSeqChecks,
   )
 where
@@ -38,12 +39,11 @@ import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
     LastAppliedBlock (..),
-    bhHash,
+    PrevHash,
     bhbody,
-    hashHeaderToNonce,
     lastAppliedHash,
   )
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
@@ -67,8 +67,7 @@ data PRTCL crypto
 data PrtclState crypto
   = PrtclState
       !(Map (KeyHash 'BlockIssuer crypto) Natural)
-      !Nonce
-      -- ^ Current previous hash nonce
+      -- ^ Operation Certificate counters
       !Nonce
       -- ^ Current epoch nonce
       !Nonce
@@ -80,23 +79,21 @@ data PrtclState crypto
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m n1 n2 n3 n4 n5) =
+  toCBOR (PrtclState m n1 n2 n3 n4) =
     mconcat
-      [ encodeListLen 6,
+      [ encodeListLen 5,
         toCBOR m,
         toCBOR n1,
         toCBOR n2,
         toCBOR n3,
-        toCBOR n4,
-        toCBOR n5
+        toCBOR n4
       ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
   fromCBOR =
-    decodeListLenOf 6
+    decodeListLenOf 5
       >> PrtclState
       <$> fromCBOR
-      <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
@@ -112,6 +109,7 @@ data PrtclEnv crypto
       (PoolDistr crypto)
       (GenDelegs crypto)
       Bool
+      Nonce
   deriving (Generic)
 
 instance NoUnexpectedThunks (PrtclEnv crypto)
@@ -139,13 +137,17 @@ instance
   type BaseM (PRTCL crypto) = ShelleyBase
 
   data PredicateFailure (PRTCL crypto)
-    = OverlayFailure (PredicateFailure (OVERLAY crypto))
-    | UpdnFailure (PredicateFailure (UPDN crypto))
-    deriving (Show, Eq, Generic)
+    = OverlayFailure (PredicateFailure (OVERLAY crypto)) -- Subtransition Failures
+    | UpdnFailure (PredicateFailure (UPDN crypto)) -- Subtransition Failures
+    deriving (Generic)
 
   initialRules = []
 
   transitionRules = [prtclTransition]
+
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Show (PredicateFailure (PRTCL crypto))
+
+deriving instance (VRF.VRFAlgorithm (VRF crypto)) => Eq (PredicateFailure (PRTCL crypto))
 
 prtclTransition ::
   forall crypto.
@@ -157,8 +159,8 @@ prtclTransition ::
   TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC
-    ( PrtclEnv pp osched pd dms ne,
-      PrtclState cs etaPH eta0 etaV etaC etaH,
+    ( PrtclEnv pp osched pd dms ne etaPH,
+      PrtclState cs eta0 etaV etaC etaH,
       bh
       ) <-
     judgmentContext
@@ -180,7 +182,6 @@ prtclTransition = do
   pure $
     PrtclState
       cs'
-      (hashHeaderToNonce (bhHash bh))
       eta0'
       etaV'
       etaC'
@@ -210,8 +211,20 @@ instance
 
 data PrtlSeqFailure crypto
   = WrongSlotIntervalPrtclSeq
-  | WrongBlockNoPrtclSeq (WithOrigin (LastAppliedBlock crypto)) BlockNo
+      SlotNo
+      -- ^ Last slot number.
+      SlotNo
+      -- ^ Current slot number.
+  | WrongBlockNoPrtclSeq
+      (WithOrigin (LastAppliedBlock crypto))
+      -- ^ Last applied block.
+      BlockNo
+      -- ^ Current block number.
   | WrongBlockSequencePrtclSeq
+      (PrevHash crypto)
+      -- ^ Last applied hash
+      (PrevHash crypto)
+      -- ^ Current block's previous hash
   deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (PrtlSeqFailure crypto)
@@ -225,9 +238,9 @@ prtlSeqChecks lab bh =
   case lab of
     Origin -> pure ()
     At (LastAppliedBlock bL sL _) -> do
-      unless (sL < slot) $ throwError WrongSlotIntervalPrtclSeq
-      unless (bL + 1 == bn) $ throwError $ WrongBlockNoPrtclSeq lab bn
-      unless (ph == bheaderPrev bhb) $ throwError WrongBlockSequencePrtclSeq
+      unless (sL < slot) . throwError $ WrongSlotIntervalPrtclSeq sL slot
+      unless (bL + 1 == bn) . throwError $ WrongBlockNoPrtclSeq lab bn
+      unless (ph == bheaderPrev bhb) . throwError $ WrongBlockSequencePrtclSeq ph (bheaderPrev bhb)
   where
     bhb = bhbody bh
     bn = bheaderBlockNo bhb

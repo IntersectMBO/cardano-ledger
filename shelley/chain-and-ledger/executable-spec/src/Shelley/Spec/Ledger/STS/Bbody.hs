@@ -19,21 +19,21 @@ where
 
 import Byron.Spec.Ledger.Core ((∈))
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.State.Transition
+import Control.State.Transition ((?!), Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.BlockChain
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
+import Shelley.Spec.Ledger.BlockChain (BHBody (..), BHeader (..), Block (..), HashBBody, TxSeq (..), bBodySize, bbHash, hBbsize, incrBlocks)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.EpochBoundary
-import Shelley.Spec.Ledger.Keys
-import Shelley.Spec.Ledger.LedgerState
-import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.STS.Ledgers
-import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.Tx
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
+import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole, hashKey)
+import Shelley.Spec.Ledger.LedgerState (LedgerState)
+import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
+import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Tx (TxBody)
 
 data BBODY crypto
 
@@ -67,14 +67,18 @@ instance
 
   data PredicateFailure (BBODY crypto)
     = WrongBlockBodySizeBBODY
+        !Int -- Actual Body Size
+        !Int -- Claimed Body Size in Header
     | InvalidBodyHashBBODY
-    | LedgersFailure (PredicateFailure (LEDGERS crypto))
+        !(HashBBody crypto) -- Actual Hash
+        !(HashBBody crypto) -- Claimed Hash
+    | LedgersFailure (PredicateFailure (LEDGERS crypto)) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
   transitionRules = [bbodyTransition]
 
-instance NoUnexpectedThunks (PredicateFailure (BBODY crypto))
+instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (BBODY crypto))
 
 bbodyTransition ::
   forall crypto.
@@ -92,10 +96,13 @@ bbodyTransition =
            ) -> do
         let hk = hashKey $ bheaderVk bhb
             TxSeq txs = txsSeq
+            actualBodySize = bBodySize txsSeq
+            actualBodyHash = bbHash txsSeq
 
-        bBodySize txsSeq == fromIntegral (hBbsize bhb) ?! WrongBlockBodySizeBBODY
+        actualBodySize == fromIntegral (hBbsize bhb)
+          ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ hBbsize bhb)
 
-        bbHash txsSeq == bhash bhb ?! InvalidBodyHashBBODY
+        actualBodyHash == bhash bhb ?! InvalidBodyHashBBODY actualBodyHash (bhash bhb)
 
         ls' <-
           trans @(LEDGERS crypto) $

@@ -16,7 +16,9 @@ module Shelley.Spec.Ledger.OCert
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR, toCBOR)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), toCBOR)
+import qualified Cardano.Crypto.DSIGN as DSIGN
+import qualified Cardano.Crypto.KES as KES
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Data.Functor ((<&>))
@@ -96,7 +98,17 @@ instance
       <> toCBOR (ocertN ocert)
       <> toCBOR (ocertKESPeriod ocert)
       <> encodeSignedDSIGN (ocertSigma ocert)
+  encodedGroupSizeExpr size proxy =
+    KES.encodedVerKeyKESSizeExpr (ocertVkHot <$> proxy)
+      + encodedSizeExpr size ((toWord . ocertN) <$> proxy)
+      + encodedSizeExpr size ((\(KESPeriod p) -> p) . ocertKESPeriod <$> proxy)
+      + DSIGN.encodedSigDSIGNSizeExpr (((\(DSIGN.SignedDSIGN sig) -> sig) . ocertSigma) <$> proxy)
+    where
+      toWord :: Natural -> Word
+      toWord = fromIntegral
+
   listLen _ = 4
+  listLenBound _ = 4
 
 instance
   (Crypto crypto) =>

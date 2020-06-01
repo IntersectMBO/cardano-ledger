@@ -68,7 +68,7 @@ module Shelley.Spec.Ledger.Keys
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (toCBOR))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
@@ -144,8 +144,6 @@ deriving instance Crypto crypto => Show (VKey kd crypto)
 
 deriving instance Crypto crypto => Eq (VKey kd crypto)
 
-deriving instance Num (DSIGN.VerKeyDSIGN (DSIGN crypto)) => Num (VKey kd crypto)
-
 deriving instance (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) => NFData (VKey kd crypto)
 
 deriving instance Crypto crypto => NoUnexpectedThunks (VKey kd crypto)
@@ -157,6 +155,7 @@ instance (Crypto crypto, Typeable kd) => FromCBOR (VKey kd crypto) where
 
 instance (Crypto crypto, Typeable kd) => ToCBOR (VKey kd crypto) where
   toCBOR (VKey vk) = DSIGN.encodeVerKeyDSIGN vk
+  encodedSizeExpr _size proxy = DSIGN.encodedVerKeyDSIGNSizeExpr ((\(VKey k) -> k) <$> proxy)
 
 -- | Pair of signing key and verification key, with a usage role.
 data KeyPair (kd :: KeyRole) crypto = KeyPair
@@ -202,7 +201,7 @@ verifySignedDSIGN (VKey vk) vd sigDSIGN =
 newtype KeyHash (discriminator :: KeyRole) crypto
   = KeyHash (Hash crypto (DSIGN.VerKeyDSIGN (DSIGN crypto)))
   deriving (Show, Eq, Ord)
-  deriving newtype (NFData, NoUnexpectedThunks)
+  deriving newtype (NFData, NoUnexpectedThunks, Generic)
 
 deriving instance (Crypto crypto, Typeable disc) => ToCBOR (KeyHash disc crypto)
 
@@ -249,11 +248,15 @@ instance VRFValue UnitInterval where
 --------------------------------------------------------------------------------
 
 newtype GenDelegs crypto
-  = GenDelegs (Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto))
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  = GenDelegs
+      ( Map
+          (KeyHash 'Genesis crypto)
+          (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto))
+      )
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic)
 
 newtype GKeys crypto = GKeys (Set (VKey 'Genesis crypto))
-  deriving (Show, Eq, NoUnexpectedThunks)
+  deriving (Show, Eq, NoUnexpectedThunks, Generic)
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types

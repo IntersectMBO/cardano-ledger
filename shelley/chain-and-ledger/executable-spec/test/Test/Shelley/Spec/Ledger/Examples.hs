@@ -31,10 +31,13 @@ module Test.Shelley.Spec.Ledger.Examples
     ex5A,
     ex5B,
     ex5C,
-    ex5D,
-    ex5E,
-    ex5F',
-    test5F,
+    ex5D',
+    ex6A,
+    ex6A',
+    ex6BExpectedNES,
+    ex6BExpectedNES',
+    ex6BPoolParams,
+    test5D,
     -- key pairs and example addresses
     alicePay,
     aliceStake,
@@ -71,8 +74,6 @@ module Test.Shelley.Spec.Ledger.Examples
     blockEx5A,
     blockEx5B,
     blockEx5F,
-    blockEx5F',
-    blockEx5F'',
     -- transactions
     txEx2A,
     txEx2B,
@@ -103,13 +104,16 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust, maybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (..),
+  ( Globals (..),
+    Network (..),
+    Nonce (..),
     StrictMaybe (..),
     mkNonce,
     randomnessStabilisationWindow,
@@ -162,6 +166,7 @@ import Shelley.Spec.Ledger.LedgerState
     _delegations,
     _dstate,
     _fGenDelegs,
+    _fPParams,
     _genDelegs,
     _irwd,
     _pParams,
@@ -177,9 +182,9 @@ import Shelley.Spec.Ledger.LedgerState
     deltaT,
     emptyDState,
     emptyPState,
+    emptyRewardUpdate,
     esAccountState,
     esLState,
-    esPp,
     genesisCoins,
     genesisId,
     nesEs,
@@ -233,7 +238,9 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.STS.Bbody (pattern LedgersFailure)
 import Shelley.Spec.Ledger.STS.Chain
-  ( chainNes,
+  ( chainCandidateNonce,
+    chainNes,
+    chainPrevEpochNonce,
     initialShelleyState,
     totalAda,
     pattern BbodyFailure,
@@ -245,8 +252,7 @@ import Shelley.Spec.Ledger.STS.Delpl (pattern DelegFailure)
 import Shelley.Spec.Ledger.STS.Ledger (pattern DelegsFailure, pattern UtxowFailure)
 import Shelley.Spec.Ledger.STS.Ledgers (pattern LedgerFailure)
 import Shelley.Spec.Ledger.STS.Utxow
-  ( pattern MIRImpossibleInDecentralizedNetUTXOW,
-    pattern MIRInsufficientGenesisSigsUTXOW,
+  ( pattern MIRInsufficientGenesisSigsUTXOW,
   )
 import Shelley.Spec.Ledger.Slot
   ( (+*),
@@ -306,6 +312,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     PoolParams,
     ProposedPPUpdates,
     RewardAcnt,
+    RewardUpdate,
     SignKeyDSIGN,
     SnapShot,
     SnapShots,
@@ -315,6 +322,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     UTxOState,
     Update,
     VKeyGenesis,
+    VRFKeyHash,
     hashKeyVRF,
     pattern GenDelegs,
     pattern KeyPair,
@@ -402,11 +410,13 @@ slotKeys = coreNodeKeysForSlot fullOSched
   where
     fullOSched = Map.unions $ [overlayScheduleFor e | e <- [0 .. 10]]
 
-genDelegs :: Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)
+genDelegs :: Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash)
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey,
-        coerceKeyRole . hashKey . vKey $ cold pkeys
+        ( coerceKeyRole . hashKey . vKey $ cold pkeys,
+          hashKeyVRF . snd . vrf $ pkeys
+        )
       )
       | (gkey, pkeys) <- coreNodes
     ]
@@ -460,7 +470,7 @@ alicePoolParams =
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
       _poolMargin = unsafeMkUnitInterval 0.1,
-      _poolRAcnt = RewardAcnt aliceSHK,
+      _poolRAcnt = RewardAcnt Testnet aliceSHK,
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays = StrictSeq.empty,
       _poolMD =
@@ -530,7 +540,7 @@ dsEx1 = emptyDState {_genDelegs = GenDelegs genDelegs}
 oCertIssueNosEx1 :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx1 = Map.fromList (fmap f (Map.elems genDelegs))
   where
-    f vk = (coerceKeyRole vk, 0)
+    f (vk, _) = (coerceKeyRole vk, 0)
 
 psEx1 :: PState
 psEx1 = emptyPState
@@ -611,7 +621,7 @@ blockEx1 =
     []
     (SlotNo 1)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -753,7 +763,11 @@ txEx2A =
 
 -- | Pointer address to address of Alice address.
 alicePtrAddr :: Addr
-alicePtrAddr = Addr (KeyHashObj . hashKey $ vKey alicePay) (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
+alicePtrAddr =
+  Addr
+    Testnet
+    (KeyHashObj . hashKey $ vKey alicePay)
+    (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
 
 utxostEx2A :: UTxOState
 utxostEx2A = UTxOState utxoEx2A (Coin 0) (Coin 0) emptyPPPUpdates
@@ -802,7 +816,7 @@ blockEx2A =
     [txEx2A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -827,9 +841,9 @@ dsEx2A =
             ],
       _rewards =
         Map.fromList
-          [ (RewardAcnt aliceSHK, Coin 0),
-            (RewardAcnt bobSHK, Coin 0),
-            (RewardAcnt carlSHK, Coin 0)
+          [ (RewardAcnt Testnet aliceSHK, Coin 0),
+            (RewardAcnt Testnet bobSHK, Coin 0),
+            (RewardAcnt Testnet carlSHK, Coin 0)
           ],
       _irwd =
         Map.fromList
@@ -947,7 +961,7 @@ blockEx2B =
     [txEx2B] -- Single transaction to record
     (SlotNo 90) -- Current slot
     (BlockNo 2)
-    (mkNonce 0) -- Epoch nonce
+    nonce0 -- Epoch nonce
     (NatNonce 2) -- Block nonce
     zero -- Praos leader value
     4 -- Period of KES (key evolving signature scheme)
@@ -1011,15 +1025,7 @@ expectedStEx2Bgeneric pp =
         (BlocksMade Map.empty) -- Blocks made before current
         (EpochState acntEx2A emptySnapShots expectedLSEx2B pp pp emptyNonMyopic)
         -- Previous epoch state
-        ( SJust
-            RewardUpdate
-              { deltaT = Coin 0,
-                deltaR = Coin 0,
-                rs = Map.empty,
-                deltaF = Coin 0,
-                nonMyopic = emptyNonMyopic
-              } -- Update reward
-        )
+        (SJust emptyRewardUpdate)
         (PoolDistr Map.empty)
         (overlayScheduleFor (EpochNo 0))
     )
@@ -1065,7 +1071,7 @@ blockEx2C =
     [] -- No transactions at all (empty block)
     (SlotNo 110) -- Current slot
     (BlockNo 3) -- Second block within the epoch
-    (mkNonce 0) -- Epoch nonce
+    (nonce0 ⭒ mkNonce 1) -- Epoch nonce
     (NatNonce 3) -- Block nonce
     zero -- Praos leader value
     5 -- Period of KES (key evolving signature scheme)
@@ -1120,7 +1126,7 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
         dsEx2B
           { _irwd = Map.empty,
             _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
-            _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
+            _rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1237,7 +1243,7 @@ blockEx2D =
     [txEx2D]
     (SlotNo 190)
     (BlockNo 4)
-    (mkNonce 0 ⭒ mkNonce 1)
+    (nonce0 ⭒ mkNonce 1)
     (NatNonce 4)
     zero
     9
@@ -1373,7 +1379,7 @@ expectedLSEx2E =
         dsEx2D
           { _irwd = Map.empty,
             _stkCreds = addStakeCreds carlSHK (SlotNo 10) $ _stkCreds dsEx2B,
-            _rewards = Map.insert (mkRwdAcnt carlSHK) 110 $ _rewards dsEx2B
+            _rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 $ _rewards dsEx2B
           }
         psEx2A
     )
@@ -1497,7 +1503,7 @@ blockEx2G =
     []
     (SlotNo 310)
     (BlockNo 7)
-    (mkSeqNonce 5)
+    ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
     (NatNonce 7)
     zero
     15
@@ -1576,7 +1582,7 @@ blockEx2H =
     []
     (SlotNo 390)
     (BlockNo 8)
-    (mkSeqNonce 5)
+    ((mkSeqNonce 5) ⭒ (hashHeaderToNonce blockEx2DHash))
     (NatNonce 8)
     zero
     19
@@ -1595,8 +1601,8 @@ bobRAcnt2H = Coin 519272726
 rewardsEx2H :: Map RewardAcnt Coin
 rewardsEx2H =
   Map.fromList
-    [ (RewardAcnt aliceSHK, aliceRAcnt2H),
-      (RewardAcnt bobSHK, bobRAcnt2H)
+    [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H),
+      (RewardAcnt Testnet bobSHK, bobRAcnt2H)
     ]
 
 oCertIssueNosEx2H :: Map (KeyHash 'BlockIssuer) Natural
@@ -1668,7 +1674,7 @@ blockEx2I =
     []
     (SlotNo 410)
     (BlockNo 9)
-    (mkSeqNonce 7)
+    ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
     (NatNonce 9)
     zero
     20
@@ -1686,7 +1692,7 @@ acntEx2I =
     }
 
 dsEx2I :: DState
-dsEx2I = dsEx2D {_rewards = Map.insert (mkRwdAcnt carlSHK) 110 rewardsEx2H}
+dsEx2I = dsEx2D {_rewards = Map.insert (mkRwdAcnt Testnet carlSHK) 110 rewardsEx2H}
 
 expectedLSEx2I :: LedgerState
 expectedLSEx2I =
@@ -1768,7 +1774,7 @@ txbodyEx2J =
     (Set.fromList [TxIn genesisId 1])
     (StrictSeq.singleton $ TxOut bobAddr bobAda2J)
     (StrictSeq.fromList [DCertDeleg (DeRegKey bobSHK)])
-    (Wdrl $ Map.singleton (RewardAcnt bobSHK) bobRAcnt2H)
+    (Wdrl $ Map.singleton (RewardAcnt Testnet bobSHK) bobRAcnt2H)
     (Coin 9)
     (SlotNo 500)
     SNothing
@@ -1790,7 +1796,7 @@ blockEx2J =
     [txEx2J]
     (SlotNo 420)
     (BlockNo 10)
-    (mkSeqNonce 7)
+    ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
     (NatNonce 10)
     zero
     21
@@ -1818,7 +1824,7 @@ dsEx2J =
           ],
       _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _delegations = Map.fromList [(aliceSHK, hk alicePool), (carlSHK, hk alicePool)],
-      _rewards = Map.fromList [(RewardAcnt aliceSHK, aliceRAcnt2H), (RewardAcnt carlSHK, carlMIR)]
+      _rewards = Map.fromList [(RewardAcnt Testnet aliceSHK, aliceRAcnt2H), (RewardAcnt Testnet carlSHK, carlMIR)]
     }
 
 expectedLSEx2J :: LedgerState
@@ -1898,7 +1904,7 @@ blockEx2K =
     [txEx2K]
     (SlotNo 490)
     (BlockNo 11)
-    (mkSeqNonce 7)
+    ((mkSeqNonce 7) ⭒ (hashHeaderToNonce blockEx2FHash))
     (NatNonce 11)
     zero
     24
@@ -1978,7 +1984,7 @@ blockEx2L =
     []
     (SlotNo 510)
     (BlockNo 12)
-    (mkSeqNonce 10)
+    ((mkSeqNonce 10) ⭒ (hashHeaderToNonce blockEx2HHash))
     (NatNonce 12)
     zero
     25
@@ -2026,8 +2032,8 @@ dsEx2L =
       _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _rewards =
         Map.fromList
-          [ (RewardAcnt aliceSHK, aliceRAcnt2H + Coin 201),
-            (RewardAcnt carlSHK, carlMIR)
+          [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H + Coin 201),
+            (RewardAcnt Testnet carlSHK, carlMIR)
           ]
           -- Note the pool cert refund of 201
     }
@@ -2151,7 +2157,7 @@ blockEx3A =
     [txEx3A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2252,7 +2258,7 @@ blockEx3B =
     [txEx3B]
     (SlotNo 20)
     (BlockNo 2)
-    (mkNonce 0)
+    nonce0
     (NatNonce 2)
     zero
     1
@@ -2321,7 +2327,7 @@ blockEx3C =
     []
     (SlotNo 110)
     (BlockNo 3)
-    (mkSeqNonce 2)
+    (mkSeqNonce 2 ⭒ mkNonce 123)
     (NatNonce 3)
     zero
     5
@@ -2381,6 +2387,9 @@ newGenDelegate = KeyPair vkCold skCold
   where
     (skCold, vkCold) = mkKeyPair (108, 0, 0, 0, 1)
 
+newGenesisVrfKH :: VRFKeyHash
+newGenesisVrfKH = hashKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
+
 aliceCoinEx4A :: Coin
 aliceCoinEx4A = aliceInitCoin - 1
 
@@ -2394,6 +2403,7 @@ txbodyEx4A =
             ( GenesisDelegCert
                 (hashKey (coreNodeVKG 0))
                 (hashKey (vKey newGenDelegate))
+                newGenesisVrfKH
             )
         ]
     )
@@ -2423,7 +2433,7 @@ blockEx4A =
     [txEx4A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2439,7 +2449,7 @@ dsEx4A =
     { _fGenDelegs =
         Map.singleton
           (FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVKG 0))
-          ((hashKey . vKey) newGenDelegate)
+          ((hashKey . vKey) newGenDelegate, newGenesisVrfKH)
     }
 
 utxoEx4A :: UTxO
@@ -2496,7 +2506,7 @@ blockEx4B =
     []
     (SlotNo 50)
     (BlockNo 2)
-    (mkNonce 0)
+    nonce0
     (NatNonce 2)
     zero
     2
@@ -2514,7 +2524,7 @@ dsEx4B =
         GenDelegs $
           Map.insert
             ((hashKey . coreNodeVKG) 0)
-            ((hashKey . vKey) newGenDelegate)
+            ((hashKey . vKey) newGenDelegate, newGenesisVrfKH)
             genDelegs
     }
 
@@ -2537,15 +2547,7 @@ expectedStEx4B =
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
         (EpochState acntEx2A emptySnapShots expectedLSEx4B ppsEx1 ppsEx1 emptyNonMyopic)
-        ( SJust
-            RewardUpdate
-              { deltaT = Coin 0,
-                deltaR = Coin 0,
-                rs = Map.empty,
-                deltaF = Coin 0,
-                nonMyopic = emptyNonMyopic
-              }
-        )
+        (SJust emptyRewardUpdate)
         (PoolDistr Map.empty)
         (overlayScheduleFor (EpochNo 0))
     )
@@ -2608,7 +2610,7 @@ blockEx5A =
     [txEx5A]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2691,42 +2693,25 @@ blockEx5B =
     [txEx5B]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
     0
     (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
+mirWitsEx5B :: Set (KeyHash 'Witness)
+mirWitsEx5B = Set.fromList [asWitness . hk . coreNodeKeys $ i | i <- [0 .. 3]]
+
 expectedStEx5B :: PredicateFailure CHAIN
-expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRInsufficientGenesisSigsUTXOW)))
+expectedStEx5B = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure $ MIRInsufficientGenesisSigsUTXOW mirWitsEx5B)))
 
 ex5B :: CHAINExample
 ex5B = CHAINExample initStEx2A blockEx5B (Left [[expectedStEx5B]])
 
--- | Example 5C - Instantaneous rewards in decentralized era
-expectedStEx5C :: PredicateFailure CHAIN
-expectedStEx5C = BbodyFailure (LedgersFailure (LedgerFailure (UtxowFailure MIRImpossibleInDecentralizedNetUTXOW)))
-
+-- | Example 5C - Instantaneous rewards that overrun the available reserves
 ex5C :: CHAINExample
 ex5C =
-  CHAINExample
-    (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esPp = ppsEx1 {_d = unsafeMkUnitInterval 0}}}})
-    blockEx5A
-    (Left [[expectedStEx5C]])
-
--- | Example 5D - Instantaneous rewards in decentralized era and not enough core
--- signatures
-ex5D :: CHAINExample
-ex5D =
-  CHAINExample
-    (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esPp = ppsEx1 {_d = unsafeMkUnitInterval 0}}}})
-    blockEx5B
-    (Left [[expectedStEx5C, expectedStEx5B]])
-
--- | Example 5E - Instantaneous rewards that overrun the available reserves
-ex5E :: CHAINExample
-ex5E =
   CHAINExample
     (initStEx2A {chainNes = initNesEx2A {nesEs = esEx2A {esAccountState = acntEx2A {_reserves = 99}}}})
     blockEx5A
@@ -2736,7 +2721,7 @@ ex5E =
                   ( LedgerFailure
                       ( DelegsFailure
                           ( DelplFailure
-                              (DelegFailure InsufficientForInstantaneousRewardsDELEG)
+                              (DelegFailure $ InsufficientForInstantaneousRewardsDELEG (Coin 100) (Coin 99))
                           )
                       )
                   )
@@ -2789,7 +2774,7 @@ blockEx5F =
     [txEx5F]
     (SlotNo 10)
     (BlockNo 1)
-    (mkNonce 0)
+    nonce0
     (NatNonce 1)
     zero
     0
@@ -2827,8 +2812,8 @@ blockEx5F' =
     [txEx5F']
     (slot)
     (BlockNo 2)
-    (mkNonce 0)
-    (NatNonce 1)
+    (mkSeqNonce 1)
+    (NatNonce 2)
     zero
     7
     0
@@ -2859,15 +2844,15 @@ txbodyEx5F'' =
 txEx5F'' :: Tx
 txEx5F'' = Tx txbodyEx5F'' (makeWitnessesVKey (hashTxBody txbodyEx5F'') [alicePay]) Map.empty SNothing
 
-blockEx5F'' :: Block
-blockEx5F'' =
+blockEx5F'' :: Nonce -> Block
+blockEx5F'' epochNonce =
   mkBlock
     (bhHash (bheader blockEx5F'))
     (slotKeys s)
     [txEx5F'']
     (slot)
     (BlockNo 3)
-    (mkNonce 0)
+    epochNonce
     (NatNonce 1)
     zero
     10
@@ -2876,31 +2861,181 @@ blockEx5F'' =
   where
     slot@(SlotNo s) = (slotFromEpoch $ EpochNo 2) + SlotNo 10
 
-ex5F' :: Either [[PredicateFailure CHAIN]] ChainState
-ex5F' = do
+ex5D' :: Either [[PredicateFailure CHAIN]] ChainState
+ex5D' = do
   nextState <- runShelleyBase $ applySTS @CHAIN (TRC ((), initStEx2A, blockEx5F))
   midState <-
     runShelleyBase $
       applySTS @CHAIN (TRC ((), nextState, blockEx5F'))
+  let finalEpochNonce = (chainCandidateNonce midState) ⭒ (chainPrevEpochNonce midState)
   finalState <-
-    runShelleyBase $ applySTS @CHAIN (TRC ((), midState, blockEx5F''))
+    runShelleyBase $ applySTS @CHAIN (TRC ((), midState, blockEx5F'' finalEpochNonce))
 
   pure finalState
 
 -- | Tests that after getting instantaneous rewards, creating the update and
 -- then applying the update, Alice's key is actually registered, the key deposit
 -- value deducted and the remaining value credited as reward.
-test5F :: Assertion
-test5F = do
-  case ex5F' of
+test5D :: Assertion
+test5D = do
+  case ex5D' of
     Left e -> assertFailure (show e)
-    Right ex5FState -> do
+    Right ex5DState -> do
       let getDState = _dstate . _delegationState . esLState . nesEs . chainNes
-          ds = getDState ex5FState
+          ds = getDState ex5DState
           StakeCreds stkCreds = _stkCreds ds
           rews = _rewards ds
-          rewEntry = rews Map.!? (mkRwdAcnt aliceSHK)
+          rewEntry = rews Map.!? (mkRwdAcnt Testnet aliceSHK)
       assertBool "Alice's credential not in stkCreds" (aliceSHK `Map.member` stkCreds)
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
-      assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5FState
+      assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5DState
+
+-- * Example 6A - apply CHAIN transition to re-register a stake pool late in the epoch
+-- This example continues on from example 2A.
+
+feeEx6A :: Coin
+feeEx6A = Coin 3
+
+aliceCoinEx6A :: Coin
+aliceCoinEx6A = aliceCoinEx2A - feeEx6A
+
+alicePoolParams6A :: PoolParams
+alicePoolParams6A = alicePoolParams {_poolCost = Coin 500}
+
+txbodyEx6A :: TxBody
+txbodyEx6A =
+  TxBody
+    (Set.fromList [TxIn (txid txbodyEx2A) 0])
+    (StrictSeq.fromList [TxOut aliceAddr aliceCoinEx6A])
+    ( StrictSeq.fromList
+        ( [ DCertPool (RegPool alicePoolParams6A)
+          ]
+        )
+    )
+    (Wdrl Map.empty)
+    feeEx6A
+    (SlotNo 100)
+    SNothing
+    SNothing
+
+txEx6A :: Tx
+txEx6A =
+  Tx
+    txbodyEx6A
+    ( makeWitnessesVKey
+        (hashTxBody txbodyEx6A)
+        ( (asWitness <$> [alicePay])
+            <> (asWitness <$> [cold alicePool])
+        )
+    )
+    Map.empty
+    SNothing
+
+earlySlotEx6 :: Word64
+earlySlotEx6 = 20
+
+lateSlotEx6 :: Word64
+lateSlotEx6 = 90
+
+word64SlotToKesPeriodWord :: Word64 -> Word
+word64SlotToKesPeriodWord slot =
+  (fromIntegral $ toInteger slot) `div` (fromIntegral $ toInteger $ slotsPerKESPeriod testGlobals)
+
+blockEx6A :: Word64 -> Block
+blockEx6A slot =
+  mkBlock
+    blockEx2AHash
+    (slotKeys slot)
+    [txEx6A]
+    (SlotNo slot)
+    (BlockNo 2)
+    nonce0
+    (NatNonce 2)
+    zero
+    (word64SlotToKesPeriodWord slot)
+    0
+    (mkOCert (slotKeys slot) 0 (KESPeriod 0))
+
+blockEx6AHash :: Word64 -> HashHeader
+blockEx6AHash slot = bhHash (bheader $ blockEx6A slot)
+
+psEx6A :: PState
+psEx6A = psEx2A {_fPParams = Map.singleton (hk alicePool) alicePoolParams6A}
+
+expectedLSEx6A :: LedgerState
+expectedLSEx6A =
+  LedgerState
+    ( UTxOState
+        ( UTxO . Map.fromList $
+            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
+              (TxIn (txid txbodyEx6A) 0, TxOut aliceAddr aliceCoinEx6A)
+            ]
+        )
+        (Coin 271)
+        (Coin 3 + feeEx6A)
+        ppupEx2A
+    )
+    (DPState dsEx2A psEx6A)
+
+rewardUpdateEx6A :: StrictMaybe RewardUpdate
+rewardUpdateEx6A = SNothing
+
+rewardUpdateEx6A' :: StrictMaybe RewardUpdate
+rewardUpdateEx6A' = SJust emptyRewardUpdate
+
+candidateNonceEx6A :: Nonce
+candidateNonceEx6A = nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2
+
+candidateNonceEx6A' :: Nonce
+candidateNonceEx6A' = nonce0 ⭒ mkNonce 1
+
+expectedStEx6A :: Word64 -> StrictMaybe RewardUpdate -> Nonce -> ChainState
+expectedStEx6A slot ru cn =
+  ChainState
+    ( NewEpochState
+        (EpochNo 0)
+        (BlocksMade Map.empty)
+        (BlocksMade Map.empty)
+        (EpochState acntEx2A emptySnapShots expectedLSEx6A ppsEx1 ppsEx1 emptyNonMyopic)
+        ru
+        (PoolDistr Map.empty)
+        (overlayScheduleFor (EpochNo 0))
+    )
+    oCertIssueNosEx1
+    nonce0
+    (nonce0 ⭒ mkNonce 1 ⭒ mkNonce 2)
+    cn
+    NeutralNonce
+    ( At $
+        LastAppliedBlock
+          (BlockNo 2)
+          (SlotNo slot)
+          (blockEx6AHash slot)
+    )
+
+ex6A :: CHAINExample
+ex6A =
+  CHAINExample
+    expectedStEx2A
+    (blockEx6A earlySlotEx6)
+    (Right $ expectedStEx6A earlySlotEx6 rewardUpdateEx6A candidateNonceEx6A)
+
+ex6A' :: CHAINExample
+ex6A' =
+  CHAINExample
+    expectedStEx2A
+    (blockEx6A lateSlotEx6)
+    (Right $ expectedStEx6A lateSlotEx6 rewardUpdateEx6A' candidateNonceEx6A')
+
+-- * Example 6B - If The TICK rule is applied to the NewEpochState
+-- in expectedStEx6A, then the future pool parameters should be adopted
+
+ex6BExpectedNES :: NewEpochState
+ex6BExpectedNES = chainNes (expectedStEx6A earlySlotEx6 rewardUpdateEx6A candidateNonceEx6A)
+
+ex6BExpectedNES' :: NewEpochState
+ex6BExpectedNES' = chainNes (expectedStEx6A lateSlotEx6 rewardUpdateEx6A' candidateNonceEx6A')
+
+ex6BPoolParams :: Map (KeyHash 'StakePool) PoolParams
+ex6BPoolParams = Map.singleton (hk alicePool) alicePoolParams6A

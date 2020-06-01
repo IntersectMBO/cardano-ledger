@@ -80,6 +80,7 @@ library
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
     -Wredundant-constraints
+    -Wpartial-fields
   if (!flag(development))
     ghc-options:
       -Werror
@@ -88,6 +89,7 @@ library
     base >= 4.7 && < 5,
     binary,
     bytestring,
+    cardano-ledger,
     cborg,
     cborg-json,
     containers,
@@ -112,7 +114,8 @@ library
 test-suite shelley-spec-ledger-test
     type:                exitcode-stdio-1.0
     main-is:             Tests.hs
-    other-modules:       Test.Shelley.Spec.Ledger.Utils
+    other-modules:       Test.Shelley.Spec.Ledger.Orphans
+                         Test.Shelley.Spec.Ledger.Utils
                          Test.Cardano.Crypto.VRF.Fake
                          Test.Shelley.Spec.Ledger.Address
                          Test.Shelley.Spec.Ledger.CDDL
@@ -146,6 +149,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Rules.TestUtxo
                          Test.Shelley.Spec.Ledger.Rules.TestUtxow
                          Test.Shelley.Spec.Ledger.Serialization
+                         Test.Shelley.Spec.Ledger.SerializationProperties
                          Test.Shelley.Spec.Ledger.Shrinkers
                          Test.Shelley.Spec.Ledger.STSTests
                          Test.Shelley.Spec.Ledger.UnitTests
@@ -178,6 +182,7 @@ test-suite shelley-spec-ledger-test
       bytestring-conversion,
       cardano-binary,
       cardano-crypto-class,
+      cardano-ledger-test,
       cardano-prelude,
       cardano-slotting,
       cborg,
@@ -186,7 +191,9 @@ test-suite shelley-spec-ledger-test
       byron-spec-ledger,
       directory,
       shelley-spec-ledger,
+      generic-random,
       hedgehog,
+      hedgehog-quickcheck,
       iproute,
       multiset,
       process-extras,

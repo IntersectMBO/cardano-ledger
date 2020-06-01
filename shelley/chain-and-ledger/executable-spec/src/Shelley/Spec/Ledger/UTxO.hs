@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -40,7 +41,7 @@ where
 import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (hashWithSerialiser)
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (Generic, NoUnexpectedThunks (..))
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.Map.Strict (Map)
@@ -89,7 +90,7 @@ import Shelley.Spec.Ledger.TxData
 -- | The unspent transaction outputs.
 newtype UTxO crypto
   = UTxO (Map (TxIn crypto) (TxOut crypto))
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic)
 
 instance Relation (UTxO crypto) where
   type Domain (UTxO crypto) = TxIn crypto
@@ -231,7 +232,7 @@ txup (Tx txbody _ _ _) = strictMaybeToMaybe (_txUpdate txbody)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
-getScriptHash (Addr (ScriptHashObj hs) _) = Just hs
+getScriptHash (Addr _ (ScriptHashObj hs) _) = Just hs
 getScriptHash _ = Nothing
 
 scriptStakeCred ::
@@ -278,7 +279,7 @@ txinsScript txInps (UTxO u) =
       ( Map.filter
           ( \(TxOut a _) ->
               case a of
-                Addr (ScriptHashObj _) _ -> True
+                Addr _ (ScriptHashObj _) _ -> True
                 _ -> False
           )
           u

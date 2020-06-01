@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -11,6 +13,9 @@ module Shelley.Spec.Ledger.BaseTypes
   ( FixedPoint,
     (==>),
     (⭒),
+    Network (..),
+    networkToWord8,
+    word8ToNetwork,
     Nonce (..),
     Seed (..),
     UnitInterval (..),
@@ -57,7 +62,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Crypto.Hash
-import Cardano.Prelude (NoUnexpectedThunks (..), cborError)
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (ReaderT)
 import qualified Data.ByteString as BS
@@ -91,7 +96,8 @@ fpEpsilon = (10 :: FixedPoint) ^ (17 :: Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnsafeUnitInterval Rational -- TODO: Fixed precision
-  deriving (Show, Ord, Eq, NoUnexpectedThunks)
+  deriving (Show, Ord, Eq, Generic)
+  deriving newtype (NoUnexpectedThunks)
 
 instance ToCBOR UnitInterval where
   toCBOR (UnsafeUnitInterval u) = rationalToCBOR u
@@ -166,7 +172,8 @@ mkNonce = Nonce . coerce . hash @SHA256
 --   We do not expose the constructor to `Seed`. Instead, a `Seed` should be
 --   created using `mkSeed` for a VRF calculation.
 newtype Seed = Seed (Hash SHA256 Seed)
-  deriving (Eq, Ord, Show, Generic, NoUnexpectedThunks, ToCBOR)
+  deriving (Eq, Ord, Show, Generic)
+  deriving newtype (NoUnexpectedThunks, ToCBOR)
 
 (==>) :: Bool -> Bool -> Bool
 a ==> b = not a || b
@@ -251,7 +258,8 @@ text64FromCBOR = do
 --
 
 newtype Url = Url {urlToText :: Text}
-  deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
+  deriving (Eq, Ord, Generic, Show)
+  deriving newtype (ToCBOR, NoUnexpectedThunks)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
@@ -260,7 +268,8 @@ instance FromCBOR Url where
   fromCBOR = Url <$> text64FromCBOR
 
 newtype DnsName = DnsName {dnsToText :: Text}
-  deriving (Eq, Generic, Show, ToCBOR, NoUnexpectedThunks)
+  deriving (Eq, Ord, Generic, Show)
+  deriving newtype (ToCBOR, NoUnexpectedThunks)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t
@@ -269,7 +278,8 @@ instance FromCBOR DnsName where
   fromCBOR = DnsName <$> text64FromCBOR
 
 newtype Port = Port {portToWord16 :: Word16}
-  deriving (Eq, Ord, Num, Generic, Show, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  deriving (Eq, Ord, Generic, Show)
+  deriving newtype (Num, FromCBOR, ToCBOR, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------
 -- Active Slot Coefficent, named f in
@@ -353,10 +363,34 @@ data Globals = Globals
     maxLovelaceSupply :: !Word64,
     -- | Active Slot Coefficient, named f in
     -- "Ouroboros Praos: An adaptively-secure, semi-synchronous proof-of-stake protocol"
-    activeSlotCoeff :: !ActiveSlotCoeff
+    activeSlotCoeff :: !ActiveSlotCoeff,
+    -- | The network ID
+    networkId :: !Network
   }
   deriving (Generic)
 
 instance NoUnexpectedThunks Globals
 
 type ShelleyBase = ReaderT Globals Identity
+
+data Network
+  = Testnet
+  | Mainnet
+  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, NoUnexpectedThunks)
+
+networkToWord8 :: Network -> Word8
+networkToWord8 = toEnum . fromEnum
+
+word8ToNetwork :: Word8 -> Maybe Network
+word8ToNetwork e
+  | fromEnum e > fromEnum (maxBound :: Network) = Nothing
+  | fromEnum e < fromEnum (minBound :: Network) = Nothing
+  | otherwise = Just $ toEnum (fromEnum e)
+
+instance ToCBOR Network where
+  toCBOR = toCBOR . networkToWord8
+
+instance FromCBOR Network where
+  fromCBOR = word8ToNetwork <$> fromCBOR >>= \case
+    Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
+    Just n -> pure n

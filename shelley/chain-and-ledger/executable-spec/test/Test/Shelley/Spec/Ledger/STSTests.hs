@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -6,14 +7,28 @@ module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import Data.Either (fromRight, isRight)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, singleton)
+import qualified Data.Set as Set
+import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
-import Shelley.Spec.Ledger.Keys (asWitness)
+import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
+import Shelley.Spec.Ledger.LedgerState
+  ( _delegationState,
+    _fPParams,
+    _pParams,
+    _pstate,
+    esLState,
+    getGKeys,
+    nesEs,
+  )
 import Shelley.Spec.Ledger.STS.Chain (totalAda)
+import Shelley.Spec.Ledger.STS.Tick (pattern TickEnv)
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
+import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, KeyHash, NewEpochState, PoolParams, TICK, TickEnv)
 import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
     alicePay,
@@ -44,10 +59,13 @@ import Test.Shelley.Spec.Ledger.Examples
     ex5A,
     ex5B,
     ex5C,
-    ex5D,
-    ex5E,
-    ex5F',
-    test5F,
+    ex5D',
+    ex6A,
+    ex6A',
+    ex6BExpectedNES,
+    ex6BExpectedNES',
+    ex6BPoolParams,
+    test5D,
   )
 import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
@@ -72,11 +90,55 @@ testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
   let st = runShelleyBase $ applySTS @CHAIN (TRC ((), initSt, block))
   st @?= predicateFailure
 
+-- | Applies the TICK transition to a given chain state,
+-- and check that some component of the result is as expected.
+testTICKChainState ::
+  (Show a, Eq a) =>
+  NewEpochState ->
+  TickEnv ->
+  SlotNo ->
+  (NewEpochState -> a) ->
+  a ->
+  Assertion
+testTICKChainState initSt env slot focus expectedSt = do
+  let result = runShelleyBase $ applySTS @TICK (TRC (env, initSt, slot))
+  case result of
+    Right res -> focus res @?= expectedSt
+    Left err -> assertFailure $ show err
+
 testPreservationOfAda :: CHAINExample -> Assertion
 testPreservationOfAda (CHAINExample _ _ (Right expectedSt)) =
   totalAda expectedSt @?= maxLLSupply
 testPreservationOfAda (CHAINExample _ _ (Left predicateFailure)) =
   assertFailure $ "Ada not preserved " ++ show predicateFailure
+
+newEpochToPoolParams ::
+  NewEpochState ->
+  (Map (KeyHash 'StakePool) PoolParams)
+newEpochToPoolParams = _pParams . _pstate . _delegationState . esLState . nesEs
+
+newEpochToFuturePoolParams ::
+  NewEpochState ->
+  (Map (KeyHash 'StakePool) PoolParams)
+newEpochToFuturePoolParams = _fPParams . _pstate . _delegationState . esLState . nesEs
+
+testAdoptEarlyPoolRegistration :: Assertion
+testAdoptEarlyPoolRegistration =
+  testTICKChainState
+    ex6BExpectedNES'
+    (TickEnv $ getGKeys ex6BExpectedNES')
+    (SlotNo 110)
+    (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
+    (ex6BPoolParams, Map.empty)
+
+testAdoptLatePoolRegistration :: Assertion
+testAdoptLatePoolRegistration =
+  testTICKChainState
+    ex6BExpectedNES
+    (TickEnv $ getGKeys ex6BExpectedNES)
+    (SlotNo 110)
+    (\n -> (newEpochToPoolParams n, newEpochToFuturePoolParams n))
+    (ex6BPoolParams, Map.empty)
 
 stsTests :: TestTree
 stsTests =
@@ -105,10 +167,12 @@ stsTests =
       testCase "CHAIN example 4B - adopt genesis key delegation" $ testCHAINExample ex4B,
       testCase "CHAIN example 5A - create MIR cert" $ testCHAINExample ex5A,
       testCase "CHAIN example 5B - FAIL: insufficient core node signatures" $ testCHAINExample ex5B,
-      testCase "CHAIN example 5C - FAIL: MIR impossible in decentralized network" $ testCHAINExample ex5C,
-      testCase "CHAIN example 5D - FAIL: MIR impossible (decentralized and insufficient sigs)" $ testCHAINExample ex5D,
-      testCase "CHAIN example 5E - FAIL: MIR insufficient reserves" $ testCHAINExample ex5E,
-      testCase "CHAIN example 5F - apply MIR at epoch boundary" test5F,
+      testCase "CHAIN example 5C - FAIL: MIR insufficient reserves" $ testCHAINExample ex5C,
+      testCase "CHAIN example 5D - apply MIR at epoch boundary" test5D,
+      testCase "CHAIN example 6A - Early Pool Re-registration" $ testCHAINExample ex6A,
+      testCase "CHAIN example 6A' - Late Pool Re-registration" $ testCHAINExample ex6A',
+      testCase "CHAIN example 6B - Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
+      testCase "CHAIN example 6B' - Adopt Late Pool Re-registration" $ testAdoptLatePoolRegistration,
       testCase "CHAIN example 1 - Preservation of ADA" $ testPreservationOfAda ex1,
       testCase "CHAIN example 2A - Preservation of ADA" $ testPreservationOfAda ex2A,
       testCase "CHAIN example 2B - Preservation of ADA" $ testPreservationOfAda ex2B,
@@ -128,8 +192,9 @@ stsTests =
       testCase "CHAIN example 4A - Preservation of ADA" $ testPreservationOfAda ex4A,
       testCase "CHAIN example 4B - Preservation of ADA" $ testPreservationOfAda ex4B,
       testCase "CHAIN example 5A - Preservation of ADA" $ testPreservationOfAda ex5A,
-      testCase "CHAIN example 5F - Preservation of ADA" $
-        (totalAda (fromRight (error "CHAIN example 5F") ex5F') @?= maxLLSupply),
+      testCase "CHAIN example 5D - Preservation of ADA" $
+        (totalAda (fromRight (error "CHAIN example 5D") ex5D') @?= maxLLSupply),
+      testCase "CHAIN example 6A - Preservation of ADA" $ testPreservationOfAda ex6A,
       testCase "Alice uses SingleSig script" testAliceSignsAlone,
       testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign,
       testCase "Everybody signs in multi-sig" testEverybodySigns,
@@ -168,7 +233,7 @@ testAliceSignsAlone =
 
 testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl Map.empty) 0 [asWitness bobPay, asWitness carlPay, asWitness dariaPay]
@@ -183,7 +248,7 @@ testEverybodySigns =
 
 testWrongScript :: Assertion
 testWrongScript =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript aliceOnly)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceOnly, 11000)] [aliceOrBob] (Wdrl Map.empty) 0 [asWitness alicePay, asWitness bobPay]
@@ -214,14 +279,14 @@ testAliceAndBob =
 
 testAliceAndBob' :: Assertion
 testAliceAndBob' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [asWitness alicePay]
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript [(aliceAndBob, 11000)] [aliceAndBob] (Wdrl Map.empty) 0 [asWitness bobPay]
@@ -303,7 +368,7 @@ testTwoScripts =
 
 testTwoScripts' :: Assertion
 testTwoScripts' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript aliceAndBob)]]
   where
     utxoSt' =
       applyTxWithScript
@@ -334,7 +399,7 @@ testScriptAndSKey =
 
 testScriptAndSKey' :: Assertion
 testScriptAndSKey' =
-  utxoSt' @?= Left [[MissingVKeyWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingVKeyWitnessesUTXOW wits]]
   where
     utxoSt' =
       applyTxWithScript
@@ -343,6 +408,7 @@ testScriptAndSKey' =
         (Wdrl Map.empty)
         1000
         [asWitness bobPay]
+    wits = Set.singleton $ asWitness $ hashKey $ vKey alicePay
 
 testScriptAndSKey'' :: Assertion
 testScriptAndSKey'' =
@@ -377,27 +443,27 @@ testRwdAliceSignsAlone =
   assertBool s (isRight utxoSt')
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript aliceOnly)) 1000) 0 [asWitness alicePay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript aliceOnly)) 1000) 0 [asWitness alicePay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW]]
+  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay]
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
   assertBool s (isRight utxoSt')
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly, bobOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]
     s = "problem: " ++ show utxoSt'
 
 testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW]]
+  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript bobOnly)]]
   where
     utxoSt' =
-      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript [(aliceOnly, 11000)] [aliceOnly] (Wdrl $ Map.singleton (RewardAcnt Testnet (ScriptHashObj $ hashScript bobOnly)) 1000) 0 [asWitness alicePay, asWitness bobPay]

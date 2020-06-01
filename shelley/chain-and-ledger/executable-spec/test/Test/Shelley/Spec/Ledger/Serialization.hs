@@ -46,7 +46,8 @@ import Hedgehog.Range (constantBounded)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (..),
+  ( Network (..),
+    Nonce (..),
     StrictMaybe (..),
     UnitInterval (..),
     mkNonce,
@@ -222,10 +223,22 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern KeyPair,
     pattern VKey,
   )
+import Test.Shelley.Spec.Ledger.SerializationProperties
+  ( prop_roundtrip_Block,
+    prop_roundtrip_BlockHeaderHash,
+    prop_roundtrip_Header,
+    prop_roundtrip_LEDGER_PredicateFails,
+    prop_roundtrip_LedgerState,
+    prop_roundtrip_NewEpochState,
+    prop_roundtrip_PrtclState,
+    prop_roundtrip_Tx,
+    prop_roundtrip_TxId,
+  )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit ((@?=), Assertion, assertEqual, assertFailure, testCase)
 import Test.Tasty.Hedgehog (testProperty)
+import qualified Test.Tasty.QuickCheck as QC (testProperty)
 
 roundTrip ::
   (Show a, Eq a) =>
@@ -382,7 +395,7 @@ testKESKeys :: (SignKeyKES, VerKeyKES)
 testKESKeys = mkKESKeyPair (0, 0, 0, 0, 3)
 
 testAddrE :: Addr
-testAddrE = Addr (KeyHashObj testKeyHash1) StakeRefNull
+testAddrE = Addr Testnet (KeyHashObj testKeyHash1) StakeRefNull
 
 testPayCred :: Credential 'Payment
 testPayCred = KeyHashObj testKeyHash1
@@ -501,6 +514,29 @@ roundTripIpv6 =
 serializationTests :: TestTree
 serializationTests =
   testGroup
+    "Shelley Serialization Tests"
+    [ serializationUnitTests,
+      serializationPropertyTests
+    ]
+
+serializationPropertyTests :: TestTree
+serializationPropertyTests =
+  testGroup
+    "Serialisation roundtrip Property Tests"
+    [ QC.testProperty "roundtrip Block" prop_roundtrip_Block,
+      QC.testProperty "roundtrip Header" prop_roundtrip_Header,
+      QC.testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
+      QC.testProperty "roundtrip Tx" prop_roundtrip_Tx,
+      QC.testProperty "roundtrip TxId" prop_roundtrip_TxId,
+      QC.testProperty "roundtrip LEDGER Predicate Failures" prop_roundtrip_LEDGER_PredicateFails,
+      QC.testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
+      QC.testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
+      QC.testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState
+    ]
+
+serializationUnitTests :: TestTree
+serializationUnitTests =
+  testGroup
     "CBOR Serialization Tests"
     [ checkEncodingCBOR
         "list"
@@ -547,7 +583,7 @@ serializationTests =
         "txin"
         (TxIn genesisId 0 :: TxIn)
         (T (TkListLen 2) <> S (genesisId :: TxId) <> T (TkWord64 0)),
-      let a = Addr testPayCred StakeRefNull
+      let a = Addr Testnet testPayCred StakeRefNull
        in checkEncodingCBOR
             "txout"
             (TxOut a (Coin 2))
@@ -572,23 +608,24 @@ serializationTests =
             <> S testScript
         ),
       -- checkEncodingCBOR "withdrawal_key"
-      checkEncodingCBOR
-        "withdrawal"
-        (Map.singleton (RewardAcnt testStakeCred) (Coin 123))
-        ( (T $ TkMapLen 1 . TkListLen 2)
-            <> (T $ TkWord 0)
-            <> S testKeyHash2
-            <> S (Coin 123)
-        ),
+      let r = (RewardAcnt Testnet testStakeCred)
+       in checkEncodingCBOR
+            "withdrawal"
+            (Map.singleton r (Coin 123))
+            ( (T $ TkMapLen 1)
+                <> S r
+                <> S (Coin 123)
+            ),
       -- checkEncodingCBOR "withdrawal_script"
-      checkEncodingCBOR
-        "withdrawal"
-        (Map.singleton (RewardAcnt (ScriptHashObj testScriptHash)) (Coin 123))
-        ( (T $ TkMapLen 1 . TkListLen 2)
-            <> (T $ TkWord 1)
-            <> S testScriptHash
-            <> S (Coin 123)
-        ),
+      --
+      let r = RewardAcnt Testnet (ScriptHashObj testScriptHash)
+       in checkEncodingCBOR
+            "withdrawal"
+            (Map.singleton r (Coin 123))
+            ( (T $ TkMapLen 1)
+                <> S r
+                <> S (Coin 123)
+            ),
       checkEncodingCBOR
         "register_stake_reference"
         (DCertDeleg (RegKey testStakeCred))
@@ -616,7 +653,7 @@ serializationTests =
       -- checkEncodingCBOR "register-pool"
       let poolOwner = testKeyHash2
           poolMargin = unsafeMkUnitInterval 0.7
-          poolRAcnt = RewardAcnt testStakeCred
+          poolRAcnt = RewardAcnt Testnet testStakeCred
           poolPledge = Coin 11
           poolCost = Coin 55
           poolUrl = "pool.io"
@@ -682,13 +719,14 @@ serializationTests =
         ),
       checkEncodingCBOR
         "genesis_delegation"
-        (DCertGenesis (GenesisDelegCert testGKeyHash (coerceKeyRole testKeyHash1)))
+        (DCertGenesis (GenesisDelegCert testGKeyHash (coerceKeyRole testKeyHash1) testVRFKH))
         ( T
-            ( TkListLen 3
+            ( TkListLen 4
                 . TkWord 5 -- genesis delegation cert
             )
             <> S testGKeyHash -- delegator credential
             <> S testKeyHash1 -- delegatee key hash
+            <> S testVRFKH -- delegatee vrf key hash
         ),
       -- checkEncodingCBOR "mir"
       let rws = Map.singleton testStakeCred 77
@@ -884,7 +922,7 @@ serializationTests =
       -- checkEncodingCBOR "transaction_mixed"
       let tin = TxIn genesisId 1
           tout = TxOut testAddrE (Coin 2)
-          ra = RewardAcnt (KeyHashObj testKeyHash2)
+          ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
             Update
@@ -949,7 +987,7 @@ serializationTests =
       let tin = TxIn genesisId 1
           tout = TxOut testAddrE (Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
-          ra = RewardAcnt (KeyHashObj testKeyHash2)
+          ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
             Update
@@ -1275,7 +1313,7 @@ serializationTests =
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
                 _poolMargin = unsafeMkUnitInterval 0.7,
-                _poolRAcnt = RewardAcnt testStakeCred,
+                _poolRAcnt = RewardAcnt Testnet testStakeCred,
                 _poolOwners = Set.singleton testKeyHash2,
                 _poolRelays = StrictSeq.empty,
                 _poolMD =
@@ -1320,7 +1358,7 @@ serializationTests =
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
                 _poolMargin = unsafeMkUnitInterval 0.7,
-                _poolRAcnt = RewardAcnt testStakeCred,
+                _poolRAcnt = RewardAcnt Testnet testStakeCred,
                 _poolOwners = Set.singleton testKeyHash2,
                 _poolRelays = StrictSeq.empty,
                 _poolMD =

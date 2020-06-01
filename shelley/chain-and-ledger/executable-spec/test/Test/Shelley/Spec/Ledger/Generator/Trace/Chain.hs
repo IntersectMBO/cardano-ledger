@@ -116,4 +116,4 @@ mkOCertIssueNos ::
 mkOCertIssueNos (GenDelegs delegs0) =
   Map.fromList (fmap f (Map.elems delegs0))
   where
-    f vk = (coerceKeyRole vk, 0)
+    f (vk, _) = (coerceKeyRole vk, 0)

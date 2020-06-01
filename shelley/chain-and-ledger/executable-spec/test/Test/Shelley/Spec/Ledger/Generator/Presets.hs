@@ -19,6 +19,7 @@ import Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr)
+import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Keys
   ( KeyRole (..),
     coerceKeyRole,
@@ -36,7 +37,9 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     MultiSigPairs,
     SignKeyVRF,
     UTxO,
+    VRFKeyHash,
     VerKeyVRF,
+    hashKeyVRF,
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants
@@ -141,13 +144,20 @@ genUtxo0 :: Constants -> Gen UTxO
 genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts c minGenesisUTxOouts maxGenesisUTxOouts
-  outs <- genTxOut c (fmap toAddr genesisKeys ++ fmap scriptsToAddr genesisScripts)
+  outs <-
+    genTxOut
+      c
+      (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr Testnet) genesisScripts)
   return (genesisCoins outs)
 
-genesisDelegs0 :: Constants -> Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate)
+genesisDelegs0 :: Constants -> Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash)
 genesisDelegs0 c =
   Map.fromList
-    [ (hashVKey gkey, coerceKeyRole $ hashVKey (cold pkeys))
+    [ ( hashVKey gkey,
+        ( coerceKeyRole $ hashVKey (cold pkeys),
+          hashKeyVRF . snd . vrf $ pkeys
+        )
+      )
       | (gkey, pkeys) <- coreNodeKeys c
     ]
   where

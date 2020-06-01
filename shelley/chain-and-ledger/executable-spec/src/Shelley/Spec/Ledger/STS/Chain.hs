@@ -23,6 +23,15 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
+  ( Embed (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    failBecause,
+    judgmentContext,
+    liftSTS,
+    trans,
+  )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -49,7 +58,7 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Crypto (Crypto, VRF)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys
@@ -60,6 +69,7 @@ import Shelley.Spec.Ledger.Keys
     KeyHash,
     KeyRole (..),
     VerKeyKES,
+    VerKeyVRF,
     coerceKeyRole,
   )
 import Shelley.Spec.Ledger.LedgerState
@@ -88,9 +98,15 @@ import Shelley.Spec.Ledger.PParams
     _protocolVersion,
   )
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
-import Shelley.Spec.Ledger.STS.Bbody
+import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyState (..))
 import Shelley.Spec.Ledger.STS.Prtcl
-import Shelley.Spec.Ledger.STS.Tick
+  ( PRTCL,
+    PrtclEnv (..),
+    PrtclState (..),
+    PrtlSeqFailure,
+    prtlSeqChecks,
+  )
+import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
@@ -114,7 +130,9 @@ initialShelleyState ::
   EpochNo ->
   UTxO crypto ->
   Coin ->
-  Map (KeyHash 'Genesis crypto) (KeyHash 'GenesisDelegate crypto) ->
+  Map
+    (KeyHash 'Genesis crypto)
+    (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto)) ->
   Map SlotNo (OBftSlot crypto) ->
   PParams ->
   Nonce ->
@@ -152,7 +170,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
     NeutralNonce
     lab
   where
-    cs = Map.fromList (fmap (\hk -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
+    cs = Map.fromList (fmap (\(hk, _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
   ( Crypto crypto,
@@ -176,12 +194,18 @@ instance
 
   data PredicateFailure (CHAIN crypto)
     = HeaderSizeTooLargeCHAIN
+        !Natural -- Header Size
+        !Natural -- Max Header Size
     | BlockSizeTooLargeCHAIN
-    | ObsoleteNodeCHAIN !Natural !Natural
-    | BbodyFailure !(PredicateFailure (BBODY crypto))
-    | TickFailure (PredicateFailure (TICK crypto))
-    | PrtclFailure !(PredicateFailure (PRTCL crypto))
-    | PrtclSeqFailure !(PrtlSeqFailure crypto)
+        !Natural -- Block Size
+        !Natural -- Max Block Size
+    | ObsoleteNodeCHAIN
+        !Natural -- protocol version used
+        !Natural -- max protocol version
+    | BbodyFailure !(PredicateFailure (BBODY crypto)) -- Subtransition Failures
+    | TickFailure !(PredicateFailure (TICK crypto)) -- Subtransition Failures
+    | PrtclFailure !(PredicateFailure (PRTCL crypto)) -- Subtransition Failures
+    | PrtclSeqFailure !(PrtlSeqFailure crypto) -- Subtransition Failures
     deriving (Show, Eq, Generic)
 
   initialRules = []
@@ -197,8 +221,12 @@ chainChecks ::
   m ()
 chainChecks maxpv pp bh = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp) $ throwError HeaderSizeTooLargeCHAIN
-  unless (hBbsize (bhbody bh) <= _maxBBSize pp) $ throwError BlockSizeTooLargeCHAIN
+  unless (fromIntegral (bHeaderSize bh) <= _maxBHSize pp)
+    $ throwError
+    $ HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (_maxBHSize pp)
+  unless (hBbsize (bhbody bh) <= _maxBBSize pp)
+    $ throwError
+    $ BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (_maxBBSize pp)
   where
     (ProtVer m _) = _protocolVersion pp
 
@@ -234,15 +262,15 @@ chainTransition =
       let NewEpochState e1 _ _ _ _ _ _ = nes
           NewEpochState e2 _ bcur es _ _pd osched = nes'
       let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
-      let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
+      let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _ _)) = ls
 
       let ph = lastAppliedHash lab
           etaPH = prevHashToNonce ph
-      PrtclState cs' _etaPH' eta0' etaV' etaC' etaH' <-
+      PrtclState cs' eta0' etaV' etaC' etaH' <-
         trans @(PRTCL crypto) $
           TRC
-            ( PrtclEnv pp' osched _pd _genDelegs (e1 /= e2),
-              PrtclState cs etaPH eta0 etaV etaC etaH,
+            ( PrtclEnv pp' osched _pd _genDelegs (e1 /= e2) etaPH,
+              PrtclState cs eta0 etaV etaC etaH,
               bh
             )
 

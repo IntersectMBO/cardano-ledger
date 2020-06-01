@@ -584,7 +584,8 @@ In the first case, the new epoch state is updated as follows:
 
 The Update Nonce Transition updates the nonces until the randomness gets fixed.
 The environment is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
-the block nonce $\eta$, the protocol parameters $\var{pp}$, the current previous hash $\var{ph}$,
+the block nonce $\eta$, the protocol parameters $\var{pp}$, the current previous hash
+nonce $\eta_\var{ph}$,
 and a marker $\var{ne}$ determining whether we are in a new epoch.
 The update nonce state is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
 the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
@@ -597,7 +598,7 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
       \begin{array}{r@{~\in~}lr}
         \eta & \Seed & \text{new nonce} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
-        \var{ph} & \HashHeader^? & \text{current previous hash} \\
+        \eta_\var{ph} & \Seed & \text{previous header hash as nonce} \\
         \var{ne} & \Bool & \text{is new epoch} \\
       \end{array}
     \right)
@@ -648,14 +649,12 @@ near the end of the epoch is not discarded).
    \begin{equation}\label{eq:update-all}
     \inference[Update-All]
     { \eta_e \leteq \fun{extraEntropy}~\var{pp}
-      &
-      \eta_p \leteq \prevHashToNonce \var{ph}
     }
     {
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
-         \var{ph} \\
+         \eta_\var{ph} \\
          \mathsf{True}
        \end{array}}
       \vdash
@@ -670,7 +669,7 @@ near the end of the epoch is not discarded).
             \varUpdate{\eta_c \seedOp \eta_h \seedOp \eta_e} \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \varUpdate{\eta_v\seedOp\eta} \\
-            \varUpdate{\eta_p} \\
+            \varUpdate{\eta_\var{ph}} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -686,7 +685,7 @@ near the end of the epoch is not discarded).
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
-         \var{ph} \\
+         \eta_\var{ph} \\
          \mathsf{False}
        \end{array}}
       \vdash
@@ -717,7 +716,7 @@ near the end of the epoch is not discarded).
       {\begin{array}{c}
          \eta \\
          \var{pp} \\
-         ph \\
+         \eta_\var{ph} \\
          \mathsf{False}
        \end{array}}
       \vdash
@@ -889,7 +888,7 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
       \\
       & ~~~~~~~~~~\var{curr}\leteq
         \{
-          (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{fGenDelegs}
+          (\var{s},~\var{gkh})\mapsto(\var{vkh},~\var{vrf})\in\var{fGenDelegs}
           ~\mid~
           \var{s}\leq\var{slot}
         \}
@@ -899,11 +898,11 @@ slot is removed. The helper function $\fun{adoptGenesisDelegs}$ accomplishes the
       \\
       & ~~~~~~~~~~\var{genDelegs'}\leteq
           \left\{
-            \var{gkh}\mapsto\var{vkh}
+            \var{gkh}\mapsto(\var{vkh},~\var{vrf})
             ~\mathrel{\Bigg|}~
             {
               \begin{array}{l}
-                (\var{s},~\var{gkh})\mapsto\var{vkh}\in\var{curr}\\
+                (\var{s},~\var{gkh})\mapsto(\var{vkh},~\var{vrf})\in\var{curr}\\
                 \var{s}=\max\{s'~\mid~(s',~\var{gkh})\in\dom{\var{curr}}\}
               \end{array}
             }
@@ -1027,7 +1026,7 @@ header body \var{bhb} we first extract the following:
 
 \begin{itemize}
   \item The operational certificate, consisting of the hot key \var{vk_{hot}},
-    the KES period number \var{n}, the KES period start \var{c_0} and the cold key
+    the certificate issue number \var{n}, the KES period start \var{c_0} and the cold key
   signature.
 \item The cold key \var{vk_{cold}}.
 \item The slot \var{s} for the block.
@@ -1126,24 +1125,41 @@ parameters. The function checks:
 \begin{figure}
   \emph{VRF helper function}
   \begin{align*}
-      & \fun{vrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
-      & \fun{vrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
+      & \fun{vrfChecks} \in \Seed \to \BHBody \to \Bool \\
+      & \fun{vrfChecks}~\eta_0~\var{bhb} = \\
       & \begin{array}{cl}
-        ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
-        ~~~~ \land &
+        ~~~~ &
              \verifyVrf{\Seed}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seede)}
                {(\bprfn{bhb},~\bnonce{bhb}}) \\
         ~~~~ \land &
              \verifyVrf{\unitInterval}{\var{vrfVk}}{((\eta_0\seedOp ss)\seedOp\Seedl)}
                {(\bprfl{bhb},~\bleader{bhb}}) \\
-        ~~~~ \land &
-             \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
+      \end{array} \\
+      & ~~~~\where \\
+      & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
+      & ~~~~~~~~~~\var{vrfVk} \leteq \fun{bvkvrf}~\var{bhb} \\
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{praosVrfChecks} \in \Seed \to \PoolDistr \to \unitInterval \to \BHBody \to \Bool \\
+      & \fun{praosVrfChecks}~\eta_0~\var{pd}~\var{f}~\var{bhb} = \\
+      & \begin{array}{cl}
+        ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
+        ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
+        ~~~~ \land & \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
       \end{array} \\
       & ~~~~\where \\
       & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
-      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{vrfVk} \\
-      & ~~~~~~~~~~\var{ss} \leteq \slotToSeed{(\bslot{bhb})} \\
-      & ~~~~~~~~~~\var{vrfVk} \leteq \fun{bvkvrf}~\var{bhb} \\
+      & ~~~~~~~~~~\var{hk_{vrf}} \leteq \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{pbftVrfChecks} \in \KeyHash_{vrf} \to \Seed \to \BHBody \to \Bool \\
+      & \fun{pbftVrfChecks}~\var{vrfh}~\eta_0~~\var{bhb} = \\
+      & \begin{array}{cl}
+        ~~~~ & \var{vrfh} = \hashKey{(\fun{bvkvrf}~\var{bhb})} \\
+        ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
+      \end{array} \\
   \end{align*}
   \label{fig:vrf-checks}
 \end{figure}
@@ -1172,14 +1188,16 @@ The environments for this transition are:
     responsible for producing the block.
   \item The epoch nonce $\eta_0$.
   \item The stake pool stake distribution $\var{pd}$.
-  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys.
+  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys and vrf keys.
 \end{itemize}
 
 The states for this transition consist only of the mapping of certificate issue numbers.
 
 This transition establishes that a block producer is in fact authorized.
 Since there are three key pairs involved (cold keys, VRF keys, and hot KES keys)
-it is worth examining the interaction in Equation~\ref{eq:decentralized} closely.
+it is worth examining the interaction closely.
+First we look at the regular Praos/decentralized setting,
+which is given by Equation~\ref{eq:decentralized}.
 
 \begin{itemize}
   \item First we check the operational certificate with $\mathsf{OCERT}$.
@@ -1190,12 +1208,16 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
 \item  Next, in the $\fun{vrfChecks}$ predicate, we check that the hash of this cold key is in the
   mapping $\var{pd}$, and that it maps to $(\sigma,~\var{hk_{vrf}})$, where
   $(\sigma,~\var{hk_{vrf}})$ is the hash of the VRF key in the header.
-  If $\fun{vrfChecks}$ returns true, then we know that the cold key in the block header was a
+  If $\fun{praosVrfChecks}$ returns true, then we know that the cold key in the block header was a
   registered stake pool at the beginning of the previous epoch, and that it is indeed registered
   with the VRF key listed in the header.
 \item Finally, we use the VRF verification key in the header, along with the VRF proofs in the
   header, to check that the operator is allowed to produce the block.
 \end{itemize}
+The situation for the overlay schedule, given by Equation~\ref{eq:active-pbft}, is similar.
+The difference is that we check the overlay schedule to see what core node is
+supposed to make a block, and then use the genesis delegation mapping to
+check the correct cold key hash and vrf key hash.
 
 \begin{figure}
   \emph{Overlay environments}
@@ -1206,7 +1228,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \eta_0 & \Seed & \text{epoch nonce} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
-        \var{genDelegs} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
+        \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1233,7 +1255,9 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
       \\
       \bslot bhb \mapsto \var{gkh}\in\var{osched}
       &
-      \var{gkh}\mapsto\var{vkh}\in\var{genDelegs}
+      \var{gkh}\mapsto(\var{vkh},~\var{vrfh})\in\var{genDelegs}
+      \\~\\
+      \fun{pbftVrfChecks}~\var{vrfh}~\eta_0~\var{bhb}
       \\~\\
       {
         {\begin{array}{c}
@@ -1271,7 +1295,7 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
         \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
       }
       \\~\\
-      \fun{vrfChecks}~\eta_0~\var{pd}~\ActiveSlotCoeff~\var{bhb}
+      \fun{praosVrfChecks}~\eta_0~\var{pd}~\ActiveSlotCoeff~\var{bhb}
     }
     {
       {\begin{array}{c}
@@ -1291,18 +1315,31 @@ it is worth examining the interaction in Equation~\ref{eq:decentralized} closely
   \label{fig:rules:overlay}
 \end{figure}
 
-The OVERLAY rule has four predicate failures:
+The OVERLAY rule has nine predicate failures:
 \begin{itemize}
-\item In the case of the slot not being part of a OBFT schedule, if the VRF
-  leader check does not verify, there is a \emph{NotPraosLeader} failure.
+\item If in the decentralized case the VRF key is not in the pool distribution,
+  there is a \emph{VRFKeyUnknown} failure.
+\item If in the decentralized case the VRF key hash does not match the one
+  listed in the block header, there is a \emph{VRFKeyWrongVRFKey} failure.
+\item If the VRF generated nonce in the block header does not validate
+  against the VRF certificate, there is a \emph{VRFKeyBadNonce} failure.
+\item If the VRF generated leader value in the block header does not validate
+  against the VRF certificate, there is a \emph{VRFKeyBadLeaderValue} failure.
+\item If the VRF generated leader value in the block header is too large
+  compared to the relative stake of the pool, there is a \emph{VRFLeaderValueTooBig} failure.
 \item In the case of the slot being in the OBFT schedule, but without genesis
   key (i.e., $Nothing$), there is a \emph{NotActiveSlot} failure.
 \item In the case of the slot being in the OBFT schedule, if there is a
-  specified key, but this key is not in the genesis delegation map, there is a
-  \emph{NoGenesisStaking} failure.
-\item In the case of the slot being in the OBFT schedule, if there is a
   specified genesis key which is not the same key as in the bock header body,
-  there is a \emph{NoGenesisColdKey} failure.
+  there is a \emph{WrongGenesisColdKey} failure.
+\item In the case of the slot being in the OBFT schedule, if the hash of the
+  VRF key in block header does not match the hash in the genesis delegation mapping,
+  there is a \emph{WrongGenesisVRFKey} failure.
+\item In the case of the slot being in the OBFT schedule, if the genesis delegate
+  keyhash is not in the genesis delegation mapping,
+  there is a \emph{UnknownGenesisKey} failure.
+  This case should never happen, and represents a logic error.
+
 \end{itemize}
 
 \clearpage
@@ -1324,30 +1361,18 @@ followed by the transition to update the evolving and candidate nonces.
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
-        \var{s_{now}} & \Slot & \text{current slot} \\
         \var{ne} & \Bool & \text{new epoch marker} \\
+        \eta_\var{ph} & \Seed & \text{nonce from previous header hash} \\
       \end{array}
     \right)
   \end{equation*}
   %
   \emph{Protocol states}
   \begin{equation*}
-    \LastAppliedBlock =
-    \left(
-      \begin{array}{r@{~\in~}lr}
-        \var{b_\ell} & \Slot & \text{last block number} \\
-        \var{s_\ell} & \Slot & \text{last slot} \\
-        \var{h} & \HashHeader & \text{latest header hash} \\
-      \end{array}
-    \right)
-  \end{equation*}
-  %
-  \begin{equation*}
     \PrtclState =
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
-        \var{lab} & \LastAppliedBlock^? & \text{last applied block} \\
         \eta_0 & \Seed & \text{current epoch nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
@@ -1363,30 +1388,6 @@ followed by the transition to update the evolving and candidate nonces.
   \end{equation*}
   \caption{Protocol transition-system types}
   \label{fig:ts-types:prtcl}
-  %
-  \emph{Helper Functions}
-  \begin{align*}
-      & \fun{lastAppliedHash} \in \LastAppliedBlock^? \to \HashHeader^? \\
-      & \fun{lastAppliedHash}~\var{lab} =
-        \begin{cases}
-          \Nothing & lab = \Nothing \\
-          h & lab = (\wcard,~\wcard,~h) \\
-        \end{cases}
-  \end{align*}
-  %
-  \begin{align*}
-      & \fun{checkPrtclSeq} \in \Slot \to \Slot \to \BlockNo \to \LastAppliedBlock^? \to \Bool \\
-      & \fun{checkPrtclSeq}~\var{slot}~\var{s_{now}}~\var{bn}~\var{lab} =
-        \begin{cases}
-          \mathsf{True}
-          &
-          lab = \Nothing
-          \\
-          \var{s_\ell} < \var{slot} \leq \var{s_{now}} \land \var{b_\ell} + 1 = \var{bn}
-          &
-          lab = (b_\ell,~s_\ell,~\wcard) \\
-        \end{cases}
-  \end{align*}
 \end{figure}
 
 The environments for this transition are:
@@ -1399,9 +1400,9 @@ The environments for this transition are:
     otherwise it is an active slot and its value designates the genesis key
     responsible for producing the block.
   \item The stake pool stake distribution $\var{pd}$.
-  \item The mapping $\var{genDelegs}$ of genesis keys to their cold keys.
-  \item The current slot (as determined by wall-clock).
+  \item The mapping $\var{dms}$ of genesis keys to their cold keys.
   \item A marker indicating whether we are in a new epoch $\var{ne}$.
+  \item The current previous header hash as a nonce, $\eta_\var{ph}$.
 \end{itemize}
 
 The states for this transition consists of:
@@ -1411,32 +1412,20 @@ The states for this transition consists of:
   \item The current epoch nonce.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
-  \item The nonce for hash of the last epoch.
+  \item The stored nonce for hash of the last epoch.
 \end{itemize}
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:prtcl}
     \inference[PRTCL]
     {
-      \var{bhb}\leteq\bhbody{bh}
-      &
-      \var{slot} \leteq \bslot{bhb}
-      &
-      \var{bn}\leteq\fun{bblockno}~\var{bhb}
-      \\
-      \eta\leteq\fun{bnonce}~\var{bhb}
-      &
-      \var{ph}\leteq\bprev{bhb}
-      \\
-      \fun{checkPrtclSeq}~\var{slot}~\var{s_{now}}~\var{bn}~\var{lab}
-      &
-      \lastAppliedHash{lab} = ph
+      \eta\leteq\fun{bnonce}~(\bhbody{bhb})
       \\~\\
       {
         {\left(\begin{array}{c}
         \eta \\
         \var{pp} \\
-        \var{ph} \\
+        \eta_\var{ph} \\
         \var{ne} \\
         \end{array}\right)}
         \vdash
@@ -1460,13 +1449,10 @@ The states for this transition consists of:
           \eta_0' \\
           \var{pd} \\
           \var{dms} \\
-          \var{s_{now}} \\
         \end{array}
         }
         \vdash \var{cs}\trans{\hyperref[fig:rules:overlay]{overlay}}{\var{bh}} \var{cs}'
       }
-      \\~\\
-      \var{lab'}\leteq(b_\ell + 1,~\var{slot},~\bhHash{bh})
     }
     {
       {\begin{array}{c}
@@ -1474,13 +1460,12 @@ The states for this transition consists of:
          \var{osched} \\
          \var{pd} \\
          \var{dms} \\
-         \var{s_{now}} \\
-         \var{ne}
+         \var{ne} \\
+         \eta_\var{ph}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{cs} \\
-            \var{lab} \\
             \eta_0 \\
             \eta_v \\
             \eta_c \\
@@ -1489,7 +1474,6 @@ The states for this transition consists of:
       \trans{prtcl}{\var{bh}}
       {\left(\begin{array}{c}
             \varUpdate{cs'} \\
-            \varUpdate{lab'} \\
             \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
@@ -1501,16 +1485,7 @@ The states for this transition consists of:
   \label{fig:rules:prtcl}
 \end{figure}
 
-The PRTCL rule has three predicate failures:
-\begin{itemize}
-\item If the slot of the block header body is not larger than the last slot or
-  greater than the current slot, there is a \emph{WrongSlotInterval} failure.
-\item If the hash of the previous header of the block header body is not equal
-  to the hash given in the environment, there is a \emph{WrongBlockSequence}
-  failure.
-\item If the block number does not increase by exactly one,
-  there is a \emph{WrongBlockNo} failure.
-\end{itemize}
+The PRTCL rule has no predicate failures.
 
 \clearpage
 
@@ -1657,11 +1632,15 @@ The BBODY rule has two predicate failures:
 The $\mathsf{CHAIN}$ transition rule is the main rule of the blockchain layer
 part of the STS. It calls $\mathsf{BHEAD}$, $\mathsf{PRTCL}$, and $\mathsf{BBODY}$ as sub-rules.
 
-The environment for the chain rule is the current slot number \var{s_{now}}.
+The chain rule has no environment.
 
-The transition checks three things (via $\fun{chainChecks}$
-from Figure~\ref{fig:funcs:chain-helper}):
+The transition checks six things
+(via $\fun{chainChecks}$ and $\fun{prtlSeqChecks}$ from Figure~\ref{fig:funcs:chain-helper}):
 \begin{itemize}
+\item The slot in the block header body is larger than the last slot recorded.
+\item The block number increases by exactly one.
+\item The previous hash listed in the block header matches the previous
+  block header hash which was recorded.
 \item The size of \var{bh} is less than or equal to the maximal size that the
   protocol parameters allow for block headers.
 \item The size of the block body, as claimed by the block header, is less than or equal to the
@@ -1692,6 +1671,17 @@ following:
 \begin{figure}
   \emph{Chain states}
   \begin{equation*}
+    \LastAppliedBlock =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{b_\ell} & \Slot & \text{last block number} \\
+        \var{s_\ell} & \Slot & \text{last slot} \\
+        \var{h} & \HashHeader & \text{latest header hash} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \begin{equation*}
     \ChainState =
     \left(
       \begin{array}{r@{~\in~}lr}
@@ -1708,17 +1698,14 @@ following:
   %
   \emph{Chain Transitions}
   \begin{equation*}
-    \_ \vdash \var{\_} \trans{chain}{\_} \var{\_} \subseteq
-    \powerset (\Slot \times \ChainState \times \Block \times \ChainState)
+    \vdash \var{\_} \trans{chain}{\_} \var{\_} \subseteq
+    \powerset (\ChainState \times \Block \times \ChainState)
   \end{equation*}
   \caption{Chain transition-system types}
   \label{fig:ts-types:chain}
 \end{figure}
 
-The $\mathsf{CHAIN}$ transition rule is shown in
-Figure~\ref{fig:rules:chain}. Its signal is a \var{block}, from which
-we extract the block header \var{bh}.
-The transition rule itself has no preconditions, instead it calls all its subrules.
+The $\mathsf{CHAIN}$ transition rule is shown in Figure~\ref{fig:rules:chain}. Its signal is a \var{block}.
 The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chain-helper}.
 
 %%
@@ -1763,6 +1750,35 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       & ~~~~ \where (m,~\wcard)\leteq\fun{pv}~\var{pp}
   \end{align*}
   %
+  \begin{align*}
+      & \fun{lastAppliedHash} \in \LastAppliedBlock^? \to \HashHeader^? \\
+      & \fun{lastAppliedHash}~\var{lab} =
+        \begin{cases}
+          \Nothing & lab = \Nothing \\
+          h & lab = (\wcard,~\wcard,~h) \\
+        \end{cases}
+  \end{align*}
+  %
+  \begin{align*}
+      & \fun{prtlSeqChecks} \to \LastAppliedBlock^? \to \BHeader \to \Bool \\
+      & \fun{prtlSeqChecks}~\var{lab}~\var{bh} =
+        \begin{cases}
+          \mathsf{True}
+          &
+          lab = \Nothing
+          \\
+          \var{s_\ell} < \var{slot}
+          \land \var{b_\ell} + 1 = \var{bn}
+          \land \var{ph} = \bprev{bhb}
+          &
+          lab = (b_\ell,~s_\ell,~\wcard) \\
+        \end{cases} \\
+      & ~~~~\where \\
+      & ~~~~~~~~~~\var{bhb} \leteq \bhbody{bh} \\
+      & ~~~~~~~~~~\var{bn} \leteq \bblockno{bhb} \\
+      & ~~~~~~~~~~\var{slot} \leteq \bslot{bhb} \\
+      & ~~~~~~~~~~\var{ph} \leteq \lastAppliedHash{lab} \\
+  \end{align*}
 
   \caption{Helper Functions used in the CHAIN transition}
   \label{fig:funcs:chain-helper}
@@ -1774,12 +1790,15 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
     {
       \var{bh} \leteq \bheader{block}
       &
+      \var{bhb} \leteq \bhbody{bh}
+      \\
       \var{gkeys} \leteq \fun{getGKeys}~\var{nes}
       &
-      \var{s} \leteq \bslot{(\bhbody{bh})}
+      \var{s} \leteq \bslot{bhb}
       \\
       (\wcard,~\wcard,~\wcard,~(\wcard,~\wcard,~\wcard,~\var{pp}),~\wcard,~\wcard,\wcard) \leteq \var{nes}
       \\~\\
+      \fun{prtlSeqChecks}~\var{lab}~\var{bh}\\
       \fun{chainChecks}~\var{pp}~\var{bh}
       \\~\\
       {
@@ -1798,19 +1817,19 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
           (\wcard, reserves) \leteq \var{acnt}\\
           \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
+          \eta_{ph} \leteq \prevHashToNonce{(\lastAppliedHash{lab})} \\
       {
         {\begin{array}{c}
             \var{pp'} \\
             \var{osched} \\
             \var{pd} \\
             \var{genDelegs} \\
-            \var{s_{now}} \\
-            \var{ne}
+            \var{ne} \\
+            \eta_{ph} \\
          \end{array}}
         \vdash
         {\left(\begin{array}{c}
               \var{cs} \\
-              \var{lab} \\
               \eta_0 \\
               \eta_v \\
               \eta_c \\
@@ -1819,7 +1838,6 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \trans{\hyperref[fig:rules:prtcl]{prtcl}}{\var{bh}}
         {\left(\begin{array}{c}
               \var{cs'} \\
-              \var{lab'} \\
               \eta_0' \\
               \eta_v' \\
               \eta_c' \\
@@ -1844,9 +1862,9 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \end{array}\right)}
       }\\~\\
       \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls'} \\
+      \var{lab'}\leteq (\bblockno{bhb},~\var{s},~\bhash{bh} ) \\
     }
     {
-      \var{s_{now}}
       \vdash
       {\left(\begin{array}{c}
             \var{nes} \\
@@ -1873,8 +1891,15 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
   \label{fig:rules:chain}
 \end{figure}
 
-The CHAIN rule has three predicate failures:
+The CHAIN rule has six predicate failures:
 \begin{itemize}
+\item If the slot of the block header body is not larger than the last slot or
+  greater than the current slot, there is a \emph{WrongSlotInterval} failure.
+\item If the block number does not increase by exactly one,
+  there is a \emph{WrongBlockNo} failure.
+\item If the hash of the previous header of the block header body is not equal
+  to the hash given in the environment, there is a \emph{WrongBlockSequence}
+  failure.
 \item If the size of the block header is larger than the maximally allowed size,
   there is a \emph{HeaderSizeTooLarge} failure.
 \item If the size of the block body is larger than the maximally allowed size,
@@ -1905,7 +1930,7 @@ candidate nonces for Shelley.
   %
   \begin{align*}
       & \fun{initialShelleyState} \in \LastAppliedBlock^? \to \Epoch \to \UTxO
-        \to \Coin \to (\KeyHashGen \mapsto \KeyHash) \\
+        \to \Coin \to \GenesisDelegation \\
       & ~~~ \to (\Slot\mapsto\KeyHashGen^?)
         \to \PParams \to \Seed \to \ChainState \\
       & \fun{initialShelleyState}~
@@ -1998,7 +2023,7 @@ candidate nonces for Shelley.
           \var{lab} \\
         \end{array}
       \right) \\
-      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~\var{hk}\in\range{genDelegs}\} \\
+      & ~~~~\where cs = \{\var{hk}\mapsto 0~\mid~(\var{hk},~\wcard)\in\range{genDelegs}\} \\
   \end{align*}
 
   \caption{Initial Shelley States}
@@ -2012,7 +2037,7 @@ candidate nonces for Shelley.
   \emph{Byron to Shelley Transition}
   %
   \begin{align*}
-      & \fun{toShelley} \in \CEState \to \BlockNo \to \ChainState \\
+      & \fun{toShelley} \in \CEState \to \GenesisDelegation \to \BlockNo \to \ChainState \\
       & \fun{toShelley}~
       \left(
         \begin{array}{c}
@@ -2020,10 +2045,10 @@ candidate nonces for Shelley.
           \wcard \\
           \var{h} \\
           (\var{utxo},~\var{reserves}) \\
-          \var{ds} \\
+          \wcard \\
           \var{us}
         \end{array}
-      \right)~\var{bn}
+      \right)~\var{bn}~\var{gd}
       =
       \fun{initialShelleyState}~
       \left(
@@ -2041,7 +2066,6 @@ candidate nonces for Shelley.
       \right) \\
       & ~~~~\where \\
       & ~~~~~~~~~e = \epoch{s_{last}} \\
-      & ~~~~~~~~~gd = \fun{dms}~\var{ds} \\
       & ~~~~~~~~~pp = \pps{us} \\
   \end{align*}
 

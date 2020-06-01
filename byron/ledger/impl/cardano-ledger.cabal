@@ -1,0 +1,342 @@
+name:                cardano-ledger
+version:             0.1.0.0
+synopsis:            The blockchain layer of Cardano
+description:         The blockchain layer of Cardano
+license:             Apache-2.0
+license-file:        LICENSE
+author:              IOHK
+maintainer:          operations@iohk.io
+copyright:           2018 IOHK
+category:            Currency
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+flag development
+    description: Disable `-Werror`
+    default: False
+    manual: True
+
+flag test-normal-form
+    description: Test ledger state normal form during epoch validation
+    default: False
+    manual: True
+
+library
+  hs-source-dirs:      src
+  exposed-modules:
+                       Cardano.Chain.Block
+                       Cardano.Chain.Byron.API
+                       Cardano.Chain.Common
+                       Cardano.Chain.Constants
+                       Cardano.Chain.Delegation
+                       Cardano.Chain.Delegation.Validation.Activation
+                       Cardano.Chain.Delegation.Validation.Interface
+                       Cardano.Chain.Delegation.Validation.Scheduling
+                       Cardano.Chain.Epoch.File
+                       Cardano.Chain.Epoch.Validation
+                       Cardano.Chain.Genesis
+                       Cardano.Chain.MempoolPayload
+                       Cardano.Chain.ProtocolConstants
+                       Cardano.Chain.Slotting
+                       Cardano.Chain.Ssc
+                       Cardano.Chain.UTxO
+                       Cardano.Chain.UTxO.UTxO
+                       Cardano.Chain.UTxO.Validation
+                       Cardano.Chain.Update
+                       Cardano.Chain.Update.Proposal
+                       Cardano.Chain.Update.Validation.Endorsement
+                       Cardano.Chain.Update.Validation.Interface
+                       Cardano.Chain.Update.Validation.Registration
+                       Cardano.Chain.Update.Validation.Voting
+                       Cardano.Chain.Update.Vote
+                       Cardano.Chain.ValidationMode
+
+  other-modules:
+                       Cardano.Chain.Block.Block
+                       Cardano.Chain.Block.Body
+                       Cardano.Chain.Block.Boundary
+                       Cardano.Chain.Block.Header
+                       Cardano.Chain.Block.Proof
+                       Cardano.Chain.Block.Validation
+                       Cardano.Chain.Block.ValidationMode
+
+                       Cardano.Chain.Byron.API.Common
+                       Cardano.Chain.Byron.API.Mempool
+                       Cardano.Chain.Byron.API.Protocol
+                       Cardano.Chain.Byron.API.Validation
+
+                       Cardano.Chain.Common.AddrAttributes
+                       Cardano.Chain.Common.AddrSpendingData
+                       Cardano.Chain.Common.Address
+                       Cardano.Chain.Common.AddressHash
+                       Cardano.Chain.Common.Attributes
+                       Cardano.Chain.Common.BlockCount
+                       Cardano.Chain.Common.CBOR
+                       Cardano.Chain.Common.ChainDifficulty
+                       Cardano.Chain.Common.Compact
+                       Cardano.Chain.Common.KeyHash
+                       Cardano.Chain.Common.Lovelace
+                       Cardano.Chain.Common.LovelacePortion
+                       Cardano.Chain.Common.Merkle
+                       Cardano.Chain.Common.NetworkMagic
+                       Cardano.Chain.Common.TxFeePolicy
+                       Cardano.Chain.Common.TxSizeLinear
+
+                       Cardano.Chain.Delegation.Certificate
+                       Cardano.Chain.Delegation.Map
+                       Cardano.Chain.Delegation.Payload
+
+                       Cardano.Chain.Genesis.AvvmBalances
+                       Cardano.Chain.Genesis.Config
+                       Cardano.Chain.Genesis.Data
+                       Cardano.Chain.Genesis.Delegation
+                       Cardano.Chain.Genesis.Generate
+                       Cardano.Chain.Genesis.Hash
+                       Cardano.Chain.Genesis.Initializer
+                       Cardano.Chain.Genesis.KeyHashes
+                       Cardano.Chain.Genesis.NonAvvmBalances
+                       Cardano.Chain.Genesis.Spec
+
+                       Cardano.Chain.Slotting.EpochAndSlotCount
+                       Cardano.Chain.Slotting.EpochNumber
+                       Cardano.Chain.Slotting.EpochSlots
+                       Cardano.Chain.Slotting.SlotCount
+                       Cardano.Chain.Slotting.SlotNumber
+
+                       Cardano.Chain.UTxO.Compact
+                       Cardano.Chain.UTxO.GenesisUTxO
+                       Cardano.Chain.UTxO.Tx
+                       Cardano.Chain.UTxO.TxAux
+                       Cardano.Chain.UTxO.TxPayload
+                       Cardano.Chain.UTxO.UTxOConfiguration
+                       Cardano.Chain.UTxO.TxProof
+                       Cardano.Chain.UTxO.TxWitness
+                       Cardano.Chain.UTxO.ValidationMode
+
+                       Cardano.Chain.Update.ApplicationName
+                       Cardano.Chain.Update.InstallerHash
+                       Cardano.Chain.Update.Payload
+                       Cardano.Chain.Update.Proof
+                       Cardano.Chain.Update.ProtocolParameters
+                       Cardano.Chain.Update.ProtocolParametersUpdate
+                       Cardano.Chain.Update.ProtocolVersion
+                       Cardano.Chain.Update.SoftforkRule
+                       Cardano.Chain.Update.SoftwareVersion
+                       Cardano.Chain.Update.SystemTag
+                       Cardano.Chain.Update.Validation.Interface.ProtocolVersionBump
+
+  build-depends:       base >=4.11 && <5
+                     , aeson
+                     , base58-bytestring
+                     , base64-bytestring-type
+                     , bimap >=0.4 && <0.5
+                     , binary
+                     , bytestring
+                     , canonical-json
+                     , cardano-binary
+                     , cardano-crypto
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cborg
+                     , containers
+                     , contra-tracer
+                     , concurrency
+                     , cryptonite
+                     , Cabal
+                     , deepseq
+                     , digest
+                     , directory
+                     , filepath
+                     , formatting
+                     , megaparsec
+                     , memory
+                     , mtl
+                     , quiet
+                     , resourcet
+                     , streaming
+                     , streaming-binary
+                     , streaming-bytestring
+                     , text
+                     , time
+                     , vector
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+
+  if (!flag(development))
+    ghc-options:         -Werror
+
+test-suite cardano-ledger-test
+  hs-source-dirs:      test
+  main-is:             test.hs
+  type:                exitcode-stdio-1.0
+
+  other-modules:
+
+                       Test.Cardano.Chain.Block.CBOR
+                       Test.Cardano.Chain.Block.Gen
+                       Test.Cardano.Chain.Block.Model
+                       Test.Cardano.Chain.Block.Model.Examples
+                       Test.Cardano.Chain.Block.Size
+                       Test.Cardano.Chain.Block.Validation
+                       Test.Cardano.Chain.Block.ValidationMode
+                       Test.Cardano.Chain.Byron.API
+
+                       Test.Cardano.Chain.Buildable
+
+                       Test.Cardano.Chain.Common.Address
+                       Test.Cardano.Chain.Common.CBOR
+                       Test.Cardano.Chain.Common.Compact
+                       Test.Cardano.Chain.Common.Example
+                       Test.Cardano.Chain.Common.Gen
+                       Test.Cardano.Chain.Common.Lovelace
+                       Test.Cardano.Chain.Config
+
+                       Test.Cardano.Chain.Delegation.CBOR
+                       Test.Cardano.Chain.Delegation.Certificate
+                       Test.Cardano.Chain.Delegation.Example
+                       Test.Cardano.Chain.Delegation.Gen
+                       Test.Cardano.Chain.Delegation.Model
+
+                       Test.Cardano.Chain.Elaboration.Block
+                       Test.Cardano.Chain.Elaboration.Delegation
+                       Test.Cardano.Chain.Elaboration.Keys
+                       Test.Cardano.Chain.Elaboration.Update
+                       Test.Cardano.Chain.Elaboration.UTxO
+
+                       Test.Cardano.Chain.Epoch.File
+
+                       Test.Cardano.Chain.Genesis.Dummy
+                       Test.Cardano.Chain.Genesis.Example
+                       Test.Cardano.Chain.Genesis.Gen
+                       Test.Cardano.Chain.Genesis.Json
+
+                       Test.Cardano.Chain.MempoolPayload.CBOR
+                       Test.Cardano.Chain.MempoolPayload.Example
+                       Test.Cardano.Chain.MempoolPayload.Gen
+
+                       Test.Cardano.Chain.Ssc.CBOR
+
+                       Test.Cardano.Chain.Slotting.CBOR
+                       Test.Cardano.Chain.Slotting.Example
+                       Test.Cardano.Chain.Slotting.Gen
+                       Test.Cardano.Chain.Slotting.Properties
+
+                       Test.Cardano.Chain.UTxO.CBOR
+                       Test.Cardano.Chain.UTxO.Compact
+                       Test.Cardano.Chain.UTxO.Example
+                       Test.Cardano.Chain.UTxO.Gen
+                       Test.Cardano.Chain.UTxO.Model
+                       Test.Cardano.Chain.UTxO.ValidationMode
+
+                       Test.Cardano.Chain.Update.CBOR
+                       Test.Cardano.Chain.Update.Example
+                       Test.Cardano.Chain.Update.Gen
+                       Test.Cardano.Chain.Update.Properties
+
+                       Test.Cardano.Mirror
+
+                       Test.Options
+
+  build-depends:       base
+                     , base16-bytestring
+                     , bimap >=0.4 && <0.5
+                     , bytestring
+                     , cardano-binary
+                     , cardano-binary-test
+                     , cardano-ledger
+                     , cardano-crypto
+                     , cardano-crypto-test
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , cborg
+                     , containers
+                     , contra-tracer
+                     , cryptonite
+                     , byron-spec-chain
+                     , byron-spec-ledger
+                     , directory
+                     , filepath
+                     , formatting
+                     , generic-monoid
+                     , hedgehog
+                     , lens
+                     , mtl
+                     , optparse-applicative
+                     , resourcet
+                     , small-steps
+                     , streaming
+                     , tasty
+                     , tasty-hedgehog
+                     , text
+                     , time
+                     , vector
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+                       "-with-rtsopts=-K5M -M500M"
+
+  if (!flag(development))
+    ghc-options:         -Werror
+
+test-suite epoch-validation-normal-form-test
+  if (!flag(test-normal-form))
+   buildable: False
+
+  hs-source-dirs:      test
+  main-is:             NormalFormTest.hs
+  type:                exitcode-stdio-1.0
+
+  other-modules:
+                       Test.Cardano.Chain.Block.Validation
+                       Test.Cardano.Chain.Config
+                       Test.Cardano.Mirror
+                       Test.Options
+
+  build-depends:       base
+                     , bytestring
+                     , cardano-binary
+                     , cardano-ledger
+                     , cardano-crypto-test
+                     , cardano-crypto-wrapper
+                     , cardano-prelude
+                     , cardano-prelude-test
+                     , containers
+                     , contra-tracer
+                     , directory
+                     , filepath
+                     , formatting
+                     , hedgehog
+                     , optparse-applicative
+                     , resourcet
+                     , silently
+                     , streaming
+                     , tasty
+                     , tasty-hedgehog
+
+  default-language:    Haskell2010
+  default-extensions:  NoImplicitPrelude
+
+  ghc-options:         -Weverything
+                       -fno-warn-all-missed-specialisations
+                       -fno-warn-missing-import-lists
+                       -fno-warn-safe
+                       -fno-warn-unsafe
+                       "-with-rtsopts=-K450K -M500M"
+
+  if (!flag(development))
+    ghc-options:         -Werror

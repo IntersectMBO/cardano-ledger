@@ -31,6 +31,7 @@ import qualified Shelley.Spec.Ledger.STS.NewEpoch as STS.NewEpoch
 import qualified Shelley.Spec.Ledger.STS.Ocert as STS.Ocert
 import qualified Shelley.Spec.Ledger.STS.Pool as STS.Pool
 import qualified Shelley.Spec.Ledger.STS.PoolReap as STS.PoolReap
+import qualified Shelley.Spec.Ledger.STS.Ppup as STS.Ppup
 import qualified Shelley.Spec.Ledger.STS.Tick as STS.Tick
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS.Utxo
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS.Utxow
@@ -47,7 +48,6 @@ instance Crypto ConcreteCrypto where
   type DSIGN ConcreteCrypto = MockDSIGN
   type KES ConcreteCrypto = MockKES 10
   type VRF ConcreteCrypto = FakeVRF
-  networkMagicId _ = Offline
 
 type DCert = Delegation.Certificates.DCert ConcreteCrypto
 
@@ -73,7 +73,7 @@ pattern KeyHash h = Keys.KeyHash h
 type GenDelegs = Keys.GenDelegs ConcreteCrypto
 
 pattern GenDelegs ::
-  (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate)) ->
+  (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate, VRFKeyHash)) ->
   GenDelegs
 pattern GenDelegs m = Keys.GenDelegs m
 
@@ -200,6 +200,8 @@ type DELEGS = STS.Delegs.DELEGS ConcreteCrypto
 type POOL = STS.Pool.POOL ConcreteCrypto
 
 type POOLREAP = STS.PoolReap.POOLREAP ConcreteCrypto
+
+type PPUP = STS.Ppup.PPUP ConcreteCrypto
 
 type Credential kr = TxData.Credential kr ConcreteCrypto
 

@@ -13,6 +13,8 @@
 , profiling ? config.haskellNix.profiling or false
 }:
 let
+  # The cardano-mainnet-mirror used during testing
+  cardano-mainnet-mirror = import ./cardano-mainnet-mirror.nix {inherit pkgs;};
 
   # This creates the Haskell package set.
   # https://input-output-hk.github.io/haskell.nix/user-guide/projects/
@@ -34,6 +36,22 @@ let
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
         packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;
         packages.byron-spec-ledger.components.tests.doctests.buildable = lib.mkForce false;
+
+        packages.cardano-ledger = {
+          configureFlags = [ "--ghc-option=-Werror" ];
+          components = {
+            all.postInstall = pkgs.lib.mkForce "";
+            tests.cardano-ledger-test = {
+              preCheck = ''
+                export CARDANO_MAINNET_MIRROR="${cardano-mainnet-mirror}/epochs"
+                cp ${../byron/ledger/impl/mainnet-genesis.json} ./mainnet-genesis.json
+              '';
+              build-tools = [ pkgs.makeWrapper ];
+              testFlags = [ "--scenario=ContinuousIntegration" ];
+            };
+          };
+        };
+
       }
     ];
   };
