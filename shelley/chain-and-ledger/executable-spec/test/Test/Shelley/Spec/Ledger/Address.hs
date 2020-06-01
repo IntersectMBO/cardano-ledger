@@ -34,7 +34,11 @@ import qualified Hedgehog.Range as H
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
-import Shelley.Spec.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
+import Shelley.Spec.Ledger.Credential
+  ( Credential (..),
+    Ptr (..),
+    StakeReference (..),
+  )
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (pattern KeyHash)
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
@@ -95,7 +99,17 @@ goldenTests =
         "addrEnterpriseS"
         putAddr
         (Addr Testnet scriptHash StakeRefNull)
-        "7005060708"
+        "7005060708",
+      golden
+        "rewardAcntK"
+        putRewardAcnt
+        (RewardAcnt Testnet keyHash)
+        "e001020304",
+      golden
+        "rewardAcntS"
+        putRewardAcnt
+        (RewardAcnt Testnet scriptHash)
+        "f005060708"
     ]
 
 testsWithOtherCrypto :: TestTree
@@ -203,6 +217,7 @@ roundTripTests =
   T.testGroup
     "round trip tests"
     [ roundTripAddress,
+      roundTripRewardAcnt,
       putGet "keyhash" genKeyHash putCredential getKeyHash,
       putGet "scripthash" genScriptHash putCredential getScriptHash,
       putGet "ptr" genPtr putPtr getPtr,
@@ -214,6 +229,11 @@ roundTripAddress :: TestTree
 roundTripAddress = T.testProperty "address_bytes" $ H.property $ do
   addr <- H.forAll genAddr
   H.tripping addr serialiseAddr deserialiseAddr
+
+roundTripRewardAcnt :: TestTree
+roundTripRewardAcnt = T.testProperty "reward_account_bytes" $ H.property $ do
+  ra <- H.forAll genRewardAcnt
+  H.tripping ra serialiseRewardAcnt deserialiseRewardAcnt
 
 putGet :: (Show a, Eq a) => String -> Gen a -> (a -> B.Put) -> B.Get a -> TestTree
 putGet name gen put get = T.testProperty (name <> "_bytes") $ H.property $ do
@@ -232,13 +252,18 @@ genAddr =
       (1, AddrBootstrap <$> Byron.genAddress)
     ]
   where
-    genCredential = H.choice [genKeyHash, genScriptHash]
     genStakeReference =
       H.choice
         [ StakeRefBase <$> genCredential,
           StakeRefPtr <$> genPtr,
           pure StakeRefNull
         ]
+
+genRewardAcnt :: Gen C.RewardAcnt
+genRewardAcnt = RewardAcnt Testnet <$> genCredential
+
+genCredential :: Gen (C.Credential kr)
+genCredential = H.choice [genKeyHash, genScriptHash]
 
 genKeyHash :: Gen (C.Credential kr)
 genKeyHash = KeyHashObj . KeyHash <$> genHash
