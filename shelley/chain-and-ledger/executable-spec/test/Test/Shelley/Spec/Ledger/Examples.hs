@@ -40,6 +40,7 @@ module Test.Shelley.Spec.Ledger.Examples
     ex6BPoolParams,
     test5DReserves,
     test5DTreasury,
+    ppsEx1,
     -- key pairs and example addresses
     alicePay,
     aliceStake,
