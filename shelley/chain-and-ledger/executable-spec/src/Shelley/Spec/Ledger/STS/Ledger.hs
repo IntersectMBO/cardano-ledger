@@ -28,23 +28,30 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
+  ( Embed (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    trans,
+  )
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Keys
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
+  ( AccountState,
+    DPState (..),
     DState (..),
     Ix,
     PState (..),
     UTxOState,
   )
-import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.STS.Delegs
+import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..))
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
     pattern BadInputsUTxO,
@@ -56,9 +63,9 @@ import Shelley.Spec.Ledger.STS.Utxo
     pattern UpdateFailure,
     pattern ValueNotConservedUTxO,
   )
-import Shelley.Spec.Ledger.STS.Utxow
-import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.Tx
+import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..), UTXOW)
+import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Tx (Tx (..), TxBody (..))
 
 data LEDGER crypto
 
@@ -66,7 +73,7 @@ data LedgerEnv = LedgerEnv
   { ledgerSlotNo :: SlotNo,
     ledgerIx :: Ix,
     ledgerPp :: PParams,
-    ledgerReserves :: Coin
+    ledgerAccount :: AccountState
   }
   deriving (Show)
 
@@ -124,11 +131,11 @@ ledgerTransition ::
   ) =>
   TransitionRule (LEDGER crypto)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp reserves, (utxoSt, dpstate), tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, (utxoSt, dpstate), tx) <- judgmentContext
 
   dpstate' <-
     trans @(DELEGS crypto) $
-      TRC (DelegsEnv slot txIx pp tx reserves, dpstate, StrictSeq.getSeq $ _certs $ _body tx)
+      TRC (DelegsEnv slot txIx pp tx account, dpstate, StrictSeq.getSeq $ _certs $ _body tx)
 
   let DPState dstate pstate = dpstate
       DState stkCreds _ _ _ _ genDelegs _ = dstate

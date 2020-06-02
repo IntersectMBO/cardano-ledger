@@ -202,8 +202,8 @@ mutateDCert keys _ (DCertDeleg (Delegate (Delegation _ _))) = do
 mutateDCert keys _ (DCertGenesis (GenesisDelegCert gk _ vrfKH)) = do
   _delegatee <- getAnyStakeKey keys
   pure $ DCertGenesis $ GenesisDelegCert gk (coerceKeyRole $ hashKey _delegatee) vrfKH
-mutateDCert _ _ (DCertMir (MIRCert credCoinMap)) = do
+mutateDCert _ _ (DCertMir (MIRCert pot credCoinMap)) = do
   let credCoinList = Map.toList credCoinMap
       coins = List.map snd credCoinList
   coins' <- mapM (mutateCoin 1 100) coins
-  pure $ DCertMir $ MIRCert $ Map.fromList $ zip (List.map fst credCoinList) coins'
+  pure $ DCertMir $ MIRCert pot $ Map.fromList $ zip (List.map fst credCoinList) coins'

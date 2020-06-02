@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.TxData
     GenesisDelegCert (..),
     Ix,
     MIRCert (..),
+    MIRPot (..),
     PoolCert (..),
     PoolMetaData (..),
     PoolParams (..),
@@ -298,15 +299,39 @@ data GenesisDelegCert crypto
       !(Hash crypto (VerKeyVRF crypto))
   deriving (Show, Generic, Eq)
 
+data MIRPot = ReservesMIR | TreasuryMIR
+  deriving (Show, Generic, Eq, NoUnexpectedThunks)
+
+instance ToCBOR MIRPot where
+  toCBOR ReservesMIR = toCBOR (0 :: Word8)
+  toCBOR TreasuryMIR = toCBOR (1 :: Word8)
+
+instance FromCBOR MIRPot where
+  fromCBOR = decodeWord >>= \case
+    0 -> pure ReservesMIR
+    1 -> pure TreasuryMIR
+    k -> invalidKey k
+
 -- | Move instantaneous rewards certificate
-newtype MIRCert crypto = MIRCert (Map (Credential 'Staking crypto) Coin)
+data MIRCert crypto = MIRCert
+  { mirPot :: MIRPot,
+    mirRewards :: (Map (Credential 'Staking crypto) Coin)
+  }
   deriving (Show, Generic, Eq)
 
 instance Crypto crypto => FromCBOR (MIRCert crypto) where
-  fromCBOR = MIRCert <$> mapFromCBOR
+  fromCBOR = do
+    n <- decodeListLen
+    matchSize "SingleHostAddr" 2 n
+    pot <- fromCBOR
+    values <- mapFromCBOR
+    pure $ MIRCert pot values
 
 instance Crypto crypto => ToCBOR (MIRCert crypto) where
-  toCBOR (MIRCert c) = mapToCBOR c
+  toCBOR (MIRCert pot values) =
+    encodeListLen 2
+      <> toCBOR pot
+      <> mapToCBOR values
 
 -- | A heavyweight certificate.
 data DCert crypto

@@ -261,7 +261,7 @@ chainTransition =
 
       let NewEpochState e1 _ _ _ _ _ _ = nes
           NewEpochState e2 _ bcur es _ _pd osched = nes'
-      let EpochState (AccountState _ _reserves) _ ls _ pp' _ = es
+      let EpochState account _ ls _ pp' _ = es
       let LedgerState _ (DPState (DState _ _ _ _ _ _genDelegs _) (PState _ _ _ _)) = ls
 
       let ph = lastAppliedHash lab
@@ -276,7 +276,7 @@ chainTransition =
 
       BbodyState ls' bcur' <-
         trans @(BBODY crypto) $
-          TRC (BbodyEnv (Map.keysSet osched) pp' _reserves, BbodyState ls bcur, block)
+          TRC (BbodyEnv (Map.keysSet osched) pp' account, BbodyState ls bcur, block)
 
       let nes'' = updateNES nes' bcur' ls'
           bhb = bhbody bh

@@ -33,7 +33,6 @@ import Control.State.Transition
     judgmentContext,
     liftSTS,
   )
-import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -55,8 +54,10 @@ import Shelley.Spec.Ledger.Keys
     VerKeyVRF,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( DState,
+  ( AccountState (..),
+    DState,
     FutureGenDeleg (..),
+    InstantaneousRewards (..),
     _delegations,
     _fGenDelegs,
     _genDelegs,
@@ -81,6 +82,7 @@ import Shelley.Spec.Ledger.TxData
     Delegation (..),
     GenesisDelegCert (..),
     MIRCert (..),
+    MIRPot (..),
     Ptr,
     RewardAcnt (..),
   )
@@ -90,7 +92,7 @@ data DELEG crypto
 data DelegEnv = DelegEnv
   { slotNo :: SlotNo,
     ptr_ :: Ptr,
-    reserves_ :: Coin
+    acnt_ :: AccountState
   }
   deriving (Show, Eq)
 
@@ -114,8 +116,9 @@ instance STS (DELEG crypto) where
     | DuplicateGenesisDelegateDELEG
         !(KeyHash 'GenesisDelegate crypto) -- Keyhash which is already delegated to
     | InsufficientForInstantaneousRewardsDELEG
+        !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
         !Coin -- amount of rewards to be given out
-        !Coin -- size of the reserves
+        !Coin -- size of the pot from which the lovelace is drawn
     | MIRCertificateTooLateinEpochDELEG
         !SlotNo -- current slot
         !SlotNo -- MIR must be submitted before this slot
@@ -147,8 +150,11 @@ instance
       encodeListLen 2 <> toCBOR (5 :: Word8) <> toCBOR gkh
     DuplicateGenesisDelegateDELEG kh ->
       encodeListLen 2 <> toCBOR (6 :: Word8) <> toCBOR kh
-    InsufficientForInstantaneousRewardsDELEG needed reserves ->
-      encodeListLen 3 <> toCBOR (7 :: Word8) <> toCBOR needed <> toCBOR reserves
+    InsufficientForInstantaneousRewardsDELEG pot needed potAmount ->
+      encodeListLen 4 <> toCBOR (7 :: Word8)
+        <> toCBOR pot
+        <> toCBOR needed
+        <> toCBOR potAmount
     MIRCertificateTooLateinEpochDELEG sNow sTooLate ->
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR sNow <> toCBOR sTooLate
     DuplicateGenesisVRFDELEG vrf ->
@@ -189,10 +195,11 @@ instance
         kh <- fromCBOR
         pure $ DuplicateGenesisDelegateDELEG kh
       7 -> do
-        matchSize "InsufficientForInstantaneousRewardsDELEG" 3 n
+        matchSize "InsufficientForInstantaneousRewardsDELEG" 4 n
+        pot <- fromCBOR
         needed <- fromCBOR
-        reserves <- fromCBOR
-        pure $ InsufficientForInstantaneousRewardsDELEG needed reserves
+        potAmount <- fromCBOR
+        pure $ InsufficientForInstantaneousRewardsDELEG pot needed potAmount
       8 -> do
         matchSize "MIRCertificateTooLateinEpochDELEG" 3 n
         sNow <- fromCBOR
@@ -207,7 +214,7 @@ instance
 delegationTransition ::
   TransitionRule (DELEG crypto)
 delegationTransition = do
-  TRC (DelegEnv slot ptr reserves, ds, c) <- judgmentContext
+  TRC (DelegEnv slot ptr acnt, ds, c) <- judgmentContext
   network <- liftSTS $ asks networkId
   case c of
     DCertDeleg (RegKey hk) -> do
@@ -270,7 +277,7 @@ delegationTransition = do
         ds
           { _fGenDelegs = _fGenDelegs ds ⨃ [(FutureGenDeleg s' gkh, (vkh, vrf))]
           }
-    DCertMir (MIRCert credCoinMap) -> do
+    DCertMir (MIRCert targetPot credCoinMap) -> do
       sp <- liftSTS $ asks stabilityWindow
       firstSlot <- liftSTS $ do
         ei <- asks epochInfo
@@ -280,12 +287,18 @@ delegationTransition = do
       slot < tooLate
         ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
-      let combinedMap = Map.union credCoinMap (_irwd ds)
-          requiredForRewards = foldl' (+) (Coin 0) (range combinedMap)
-      requiredForRewards <= reserves
-        ?! InsufficientForInstantaneousRewardsDELEG requiredForRewards reserves
+      let (potAmount, instantaneousRewards) =
+            case targetPot of
+              ReservesMIR -> (_reserves acnt, iRReserves $ _irwd ds)
+              TreasuryMIR -> (_treasury acnt, iRTreasury $ _irwd ds)
+      let combinedMap = Map.union credCoinMap instantaneousRewards
+          requiredForRewards = sum combinedMap
+      requiredForRewards <= potAmount
+        ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards potAmount
 
-      pure $ ds {_irwd = combinedMap}
+      case targetPot of
+        ReservesMIR -> pure $ ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
+        TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
     DCertPool _ -> do
       failBecause WrongCertificateTypeDELEG -- this always fails
       pure ds

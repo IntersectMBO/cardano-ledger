@@ -19,17 +19,34 @@ where
 
 import Byron.Spec.Ledger.Core ((∈))
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.State.Transition ((?!), Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans)
+import Control.State.Transition
+  ( (?!),
+    Embed (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    trans,
+  )
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.BlockChain (BHBody (..), BHeader (..), Block (..), HashBBody, TxSeq (..), bBodySize, bbHash, hBbsize, incrBlocks)
-import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.BlockChain
+  ( BHBody (..),
+    BHeader (..),
+    Block (..),
+    HashBBody,
+    TxSeq (..),
+    bBodySize,
+    bbHash,
+    hBbsize,
+    incrBlocks,
+  )
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole, hashKey)
-import Shelley.Spec.Ledger.LedgerState (LedgerState)
+import Shelley.Spec.Ledger.LedgerState (AccountState, LedgerState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo)
@@ -44,7 +61,7 @@ data BbodyState crypto
 data BbodyEnv = BbodyEnv
   { bbodySlots :: (Set SlotNo),
     bbodyPp :: PParams,
-    bbodyReserves :: Coin
+    bbodyAccount :: AccountState
   }
 
 instance
@@ -89,7 +106,7 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-             ( BbodyEnv oslots pp _reserves,
+             ( BbodyEnv oslots pp account,
                BbodyState ls b,
                Block (BHeader bhb _) txsSeq
                )
@@ -106,7 +123,7 @@ bbodyTransition =
 
         ls' <-
           trans @(LEDGERS crypto) $
-            TRC (LedgersEnv (bheaderSlotNo bhb) pp _reserves, ls, StrictSeq.getSeq txs)
+            TRC (LedgersEnv (bheaderSlotNo bhb) pp account, ls, StrictSeq.getSeq txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's

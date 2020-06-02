@@ -25,7 +25,7 @@ import Control.State.Transition.Trace
   )
 import Data.List (foldl')
 import Data.Map (Map)
-import qualified Data.Map.Strict as Map ((\\), difference, filter, foldl', keysSet, lookup)
+import qualified Data.Map.Strict as Map ((\\), difference, filter, keysSet, lookup)
 import qualified Data.Maybe as Maybe (maybe)
 import Data.Set (Set)
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
@@ -33,9 +33,16 @@ import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes ((==>), Network (..))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
-import Shelley.Spec.Ledger.LedgerState (_delegations, _irwd, _rewards, _stkCreds)
+import Shelley.Spec.Ledger.LedgerState
+  ( InstantaneousRewards (..),
+    _delegations,
+    _irwd,
+    _rewards,
+    _stkCreds,
+  )
 import Shelley.Spec.Ledger.TxData
-  ( pattern DCertDeleg,
+  ( MIRPot (..),
+    pattern DCertDeleg,
     pattern DCertMir,
     pattern DeRegKey,
     pattern Delegate,
@@ -161,7 +168,10 @@ instantaneousRewardsAdded ssts =
     checkMIR :: SourceSignalTarget DELEG -> Property
     checkMIR (SourceSignalTarget _ t sig) =
       case sig of
-        DCertMir (MIRCert irwd) -> property $ Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (_irwd t)
+        DCertMir (MIRCert ReservesMIR irwd) ->
+          property $ Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRReserves $ _irwd t)
+        DCertMir (MIRCert TreasuryMIR irwd) ->
+          property $ Map.keysSet irwd `Set.isSubsetOf` Map.keysSet (iRTreasury $ _irwd t)
         _ -> property ()
 
 -- | Check that an accepted MIR certificate adds the overall value in the
@@ -176,10 +186,16 @@ instantaneousRewardsValue ssts =
     checkMIR :: SourceSignalTarget DELEG -> Property
     checkMIR (SourceSignalTarget s t sig) =
       case sig of
-        DCertMir (MIRCert irwd) ->
+        DCertMir (MIRCert ReservesMIR irwd) ->
           property $
-            ( (Map.foldl' (+) (Coin 0) $ _irwd s Map.\\ irwd)
-                + (Map.foldl' (+) (Coin 0) $ irwd)
-                == (Map.foldl' (+) (Coin 0) $ _irwd t)
+            ( (sum $ (iRReserves $ _irwd s) Map.\\ irwd)
+                + (sum $ irwd)
+                == (sum $ (iRReserves $ _irwd t))
+            )
+        DCertMir (MIRCert TreasuryMIR irwd) ->
+          property $
+            ( (sum $ (iRTreasury $ _irwd s) Map.\\ irwd)
+                + (sum $ irwd)
+                == (sum $ (iRTreasury $ _irwd t))
             )
         _ -> property ()

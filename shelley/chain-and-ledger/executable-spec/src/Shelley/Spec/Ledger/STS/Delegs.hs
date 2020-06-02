@@ -38,7 +38,8 @@ import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
+  ( AccountState,
+    DPState (..),
     _dstate,
     _rewards,
     _stPools,
@@ -58,7 +59,7 @@ data DelegsEnv crypto = DelegsEnv
     delegsIx :: Ix,
     delegspp :: PParams,
     delegsTx :: (Tx crypto),
-    delegsReserves :: Coin
+    delegsAccount :: AccountState
   }
   deriving (Show)
 

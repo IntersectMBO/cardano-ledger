@@ -33,7 +33,6 @@ import Shelley.Spec.Ledger.LedgerState
   ( _delegationState,
     _dstate,
     _genDelegs,
-    _reserves,
     esLState,
     esPp,
     getGKeys,
@@ -225,7 +224,7 @@ genBlock
           <$> pure hashheader
           <*> pure keys'
           <*> toList
-          <$> genTxs pp' (_reserves acnt) ls nextSlot
+          <$> genTxs pp' acnt ls nextSlot
           <*> pure nextSlot
           <*> pure (block + 1)
           <*> pure epochNonce

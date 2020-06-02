@@ -247,7 +247,7 @@ propCheckRedundantWitnessSet = property $ do
   let tx = _body txwits
   let witness = makeWitnessVKey (hashTxBody tx) keyPair
   let txwits' = txwits {_witnessVKeySet = (Set.insert witness (_witnessVKeySet txwits))}
-  let l'' = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l txwits' (Coin 0)
+  let l'' = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l txwits' (AccountState 0 0)
   classify
     "unneeded signature added"
     (not $ witness `Set.member` (_witnessVKeySet txwits))
@@ -276,7 +276,7 @@ propCheckMissingWitness = property $ do
           emptyPParams
           l
           (txwits {_witnessVKeySet = witnessVKeySet'})
-          (Coin 0)
+          (AccountState 0 0)
   let isRealSubset =
         witnessVKeySet' `Set.isSubsetOf` witnessVKeySet''
           && witnessVKeySet' /= witnessVKeySet''

@@ -92,7 +92,8 @@ import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (ScriptHash))
 import Shelley.Spec.Ledger.TxData
-  ( PoolMetaData (PoolMetaData),
+  ( MIRPot,
+    PoolMetaData (PoolMetaData),
     PoolParams (PoolParams),
     RewardAcnt (RewardAcnt),
     StakePoolRelay,
@@ -268,6 +269,9 @@ instance Arbitrary UnitInterval where
 
 instance Crypto c => Arbitrary (KeyHash a c) where
   arbitrary = KeyHash <$> genHash (Proxy @c)
+
+instance Arbitrary MIRPot where
+  arbitrary = genericArbitraryU
 
 instance Arbitrary Natural where
   arbitrary = fromInteger <$> choose (0, 1000)
