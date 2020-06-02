@@ -57,13 +57,21 @@ transaction_body =
   , ? 5 : withdrawals
   , ? 6 : update
   , ? 7 : metadata_hash
+  , ? 8 : forge
   }
 
 transaction_input = [ transaction_id : $hash32
                     , index : uint
                     ]
 
-transaction_output = [address, amount : uint]
+transaction_output = [address, amount : value ]
+
+value = coin / mixvalue
+
+mixvalue = { * scripthash => { * token_name => uint } }
+
+; token_name = bytes
+; forge = mixvalue
 
 ; address = bytes
 ; reward_account = bytes

@@ -62,6 +62,7 @@ import Shelley.Spec.Ledger.STS.Utxo
     pattern OutputTooSmallUTxO,
     pattern UpdateFailure,
     pattern ValueNotConservedUTxO,
+    pattern ForgingAda,
   )
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..), UTXOW)
 import Shelley.Spec.Ledger.Slot (SlotNo)

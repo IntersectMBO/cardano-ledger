@@ -55,7 +55,9 @@ data ValidationError
   | -- | The transaction fee is too small
     FeeTooSmall Coin Coin
   | -- | Value is not conserved
-    ValueNotConserved Coin Coin
+    ValueNotConserved
+  | -- | ada being forged
+    UserForgingAda
   | -- | Unknown reward account
     IncorrectRewards
   | -- | One of the transaction witnesses is invalid.
@@ -143,7 +145,7 @@ preserveBalance ::
 preserveBalance stakePools pp tx u =
   if destroyed' == created'
     then Valid
-    else Invalid [ValueNotConserved destroyed' created']
+    else Invalid [ValueNotConserved]
   where
     destroyed' = consumed pp (_utxo u) tx
     created' = produced pp stakePools tx

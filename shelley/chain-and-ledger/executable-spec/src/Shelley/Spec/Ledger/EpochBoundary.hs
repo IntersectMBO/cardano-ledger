@@ -50,7 +50,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
-import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCred)
+import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCred, getAddress, getCoin)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
@@ -75,7 +75,7 @@ getStakeHK (Addr _ _ (StakeRefBase hk)) = Just hk
 getStakeHK _ = Nothing
 
 -- | Add up only the Ada with the getCoin function
-aggregateOuts :: Crypto crypto => UTxO crypto -> Map (Addr crypto) Coin
+aggregateOuts :: UTxO crypto -> Map (Addr crypto) Coin
 aggregateOuts (UTxO u) =
   Map.fromListWith (+) (map (\(_, ot) -> (getAddress ot, getCoin ot)) $ Map.toList u)
 

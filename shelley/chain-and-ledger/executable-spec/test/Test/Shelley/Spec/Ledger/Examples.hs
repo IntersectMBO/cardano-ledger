@@ -303,6 +303,7 @@ import Shelley.Spec.Ledger.TxData
     pattern TxBody,
     pattern TxIn,
     pattern TxOut,
+    pattern UTxOOut,
   )
 import qualified Shelley.Spec.Ledger.TxData as TxData (TxBody (..))
 import Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessesVKey, txid, pattern UTxO)
@@ -339,7 +340,11 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Update,
     VKeyGenesis,
     VRFKeyHash,
+<<<<<<< HEAD
     VerKeyVRF,
+=======
+    Value,
+>>>>>>> compiles up to test serialization, Value needs work
     hashKeyVRF,
     pattern GenDelegPair,
     pattern GenDelegs,
@@ -356,6 +361,15 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure)
+
+import Shelley.Spec.Ledger.Value
+  ( coinToValue,
+    zeroV,
+    valueToCompactValue,
+    getAdaAmount,
+  )
+
+-- TODO zeroV and all coin examples
 
 data CHAINExample h = CHAINExample
   { -- | State to start testing with
@@ -489,11 +503,11 @@ bobAddr = mkAddr (bobPay, bobStake)
 bobSHK :: HashAlgorithm h => Credential h 'Staking
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
-aliceInitCoin :: Coin
-aliceInitCoin = 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin :: Value
+aliceInitCoin = coinToValue (10 * 1000 * 1000 * 1000 * 1000 * 1000)
 
-bobInitCoin :: Coin
-bobInitCoin = 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin :: Value
+bobInitCoin = coinToValue (1 * 1000 * 1000 * 1000 * 1000 * 1000)
 
 alicePoolParams :: forall h. HashAlgorithm h => PoolParams h
 alicePoolParams =
@@ -729,8 +743,8 @@ ppupEx2A =
 updateEx2A :: HashAlgorithm h => Update h
 updateEx2A = Update ppupEx2A (EpochNo 0)
 
-aliceCoinEx2A :: Coin
-aliceCoinEx2A = aliceInitCoin - (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1) - 3
+aliceCoinEx2A :: Value
+aliceCoinEx2A = aliceInitCoin - coinToValue ( (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1) - 3)
 
 -- | Transaction body to be processed.
 txbodyEx2A :: HashAlgorithm h => TxBody h
@@ -756,6 +770,7 @@ txbodyEx2A =
                ]
         )
     )
+    zeroV
     (Wdrl Map.empty)
     (Coin 3)
     (SlotNo 10)
@@ -800,7 +815,7 @@ acntEx2A :: HashAlgorithm h => Proxy h -> AccountState
 acntEx2A p =
   AccountState
     { _treasury = Coin 0,
-      _reserves = maxLLSupply - balance (utxoEx2A p)
+      _reserves = maxLLSupply - getAdaAmount (balance (utxoEx2A p))
     }
 
 initStEx2A :: forall h. HashAlgorithm h => ChainState h
@@ -809,7 +824,7 @@ initStEx2A =
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
     (EpochNo 0)
     (utxoEx2A p)
-    (maxLLSupply - balance (utxoEx2A p))
+    (maxLLSupply - getAdaAmount (balance (utxoEx2A p)))
     genDelegs
     (overlayScheduleFor (EpochNo 0))
     ppsEx1
@@ -884,8 +899,8 @@ expectedLSEx2A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx2A) 0, TxOut aliceAddr aliceCoinEx2A)
+            [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+              (TxIn (txid txbodyEx2A) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx2A))
             ]
         )
         (Coin 271)
@@ -934,11 +949,11 @@ ex2A _ = CHAINExample initStEx2A blockEx2A (Right expectedStEx2A)
 
 -- * Example 2B - process a block late enough in the epoch in order to create a reward update.
 
-aliceCoinEx2BBase :: Coin
-aliceCoinEx2BBase = 5 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceCoinEx2BBase :: Value
+aliceCoinEx2BBase = coinToValue (5 * 1000 * 1000 * 1000 * 1000 * 1000)
 
-aliceCoinEx2BPtr :: Coin
-aliceCoinEx2BPtr = aliceCoinEx2A - (aliceCoinEx2BBase + 4)
+aliceCoinEx2BPtr :: Value
+aliceCoinEx2BPtr = aliceCoinEx2A - (aliceCoinEx2BBase + coinToValue (Coin 4))
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
@@ -957,6 +972,7 @@ txbodyEx2B =
           [ DCertDeleg (Delegate $ Delegation aliceSHK (hk (alicePool p))),
             DCertDeleg (Delegate $ Delegation bobSHK (hk (alicePool p)))
           ],
+      TxData._forge = zeroV,
       TxData._wdrls = Wdrl Map.empty,
       TxData._txfee = Coin 4,
       TxData._ttl = SlotNo 90,
@@ -1003,9 +1019,9 @@ blockEx2BHash _ = bhHash (bheader blockEx2B)
 utxoEx2B :: HashAlgorithm h => UTxO h
 utxoEx2B =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx2B) 0, TxOut aliceAddr aliceCoinEx2BBase),
-      (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
+    [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+      (TxIn (txid txbodyEx2B) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx2BBase)),
+      (TxIn (txid txbodyEx2B) 1, UTxOOut alicePtrAddr (valueToCompactValue aliceCoinEx2BPtr))
     ]
 
 -- | Both Alice and Bob delegate to the Alice pool
@@ -1109,8 +1125,8 @@ snapEx2C =
   SnapShot
     ( Stake
         ( Map.fromList
-            [ (aliceSHK, aliceCoinEx2BBase + aliceCoinEx2BPtr),
-              (bobSHK, bobInitCoin)
+            [ (aliceSHK, getAdaAmount (aliceCoinEx2BBase + aliceCoinEx2BPtr)),
+              (bobSHK, getAdaAmount bobInitCoin)
             ]
         )
     )
@@ -1191,8 +1207,8 @@ ex2C _ = CHAINExample expectedStEx2B blockEx2C (Right expectedStEx2C)
 -- Carl delegates his stake.
 
 -- | The transaction delegates Carl's stake to Alice's pool.
-aliceCoinEx2DBase :: Coin
-aliceCoinEx2DBase = aliceCoinEx2BBase - 5
+aliceCoinEx2DBase :: Value
+aliceCoinEx2DBase = aliceCoinEx2BBase - coinToValue (Coin 5)
 
 txbodyEx2D :: forall h. HashAlgorithm h => TxBody h
 txbodyEx2D =
@@ -1201,6 +1217,7 @@ txbodyEx2D =
       TxData._outputs = StrictSeq.fromList [TxOut aliceAddr aliceCoinEx2DBase],
       TxData._certs =
         StrictSeq.fromList [DCertDeleg (Delegate $ Delegation carlSHK (hk (alicePool p)))],
+      TxData._forge = zeroV,
       TxData._wdrls = Wdrl Map.empty,
       TxData._txfee = Coin 5,
       TxData._ttl = SlotNo 500,
@@ -1245,9 +1262,9 @@ blockEx2DHash _ = bhHash (bheader blockEx2D)
 utxoEx2D :: HashAlgorithm h => UTxO h
 utxoEx2D =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx2D) 0, TxOut aliceAddr aliceCoinEx2DBase),
-      (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
+    [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+      (TxIn (txid txbodyEx2D) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx2DBase)),
+      (TxIn (txid txbodyEx2B) 1, UTxOOut alicePtrAddr (valueToCompactValue aliceCoinEx2BPtr))
     ]
 
 delegsEx2D :: forall h. HashAlgorithm h => Map (Credential h 'Staking) (KeyHash h 'StakePool)
@@ -1347,9 +1364,9 @@ snapEx2E =
   SnapShot
     ( Stake
         ( Map.fromList
-            [ (aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr),
+            [ (aliceSHK, getAdaAmount (aliceCoinEx2DBase + aliceCoinEx2BPtr)),
               (carlSHK, carlMIR),
-              (bobSHK, bobInitCoin)
+              (bobSHK, getAdaAmount bobInitCoin)
             ]
         )
     )
@@ -1391,8 +1408,8 @@ blockEx2EHash = bhHash (bheader blockEx2E)
 acntEx2E :: HashAlgorithm h => proxy h -> AccountState
 acntEx2E p =
   AccountState
-    { _treasury = Coin 7,
-      _reserves = maxLLSupply - balance (utxoEx2A p) - carlMIR
+    { _treasury = Coin 21,
+      _reserves = maxLLSupply - (getAdaAmount (balance (utxoEx2A p))) - carlMIR
     }
 
 oCertIssueNosEx2 :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
@@ -1666,7 +1683,7 @@ alicePerfEx2H p = likelihood blocks t slotsPerEpoch
       epochInfoSize ei 0
     blocks = 1
     t = leaderProbability f relativeStake (_d ppsEx1)
-    stake = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
+    stake = getAdaAmount (aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin)
     reserves = _reserves (acntEx2G p)
     relativeStake =
       fromRational (fromIntegral stake % (fromIntegral $ maxLLSupply - reserves))
@@ -1794,8 +1811,8 @@ snapsEx2I p =
         SnapShot
           ( Stake
               ( Map.fromList
-                  [ (bobSHK, bobInitCoin + bobRAcnt2H),
-                    (aliceSHK, aliceCoinEx2DBase + aliceCoinEx2BPtr + aliceRAcnt2H),
+                  [ (bobSHK, getAdaAmount bobInitCoin + bobRAcnt2H),
+                    (aliceSHK, getAdaAmount (aliceCoinEx2DBase + aliceCoinEx2BPtr) + aliceRAcnt2H),
                     (carlSHK, carlMIR)
                   ]
               )
@@ -1846,12 +1863,12 @@ ex2I :: HashAlgorithm h => proxy h -> CHAINExample h
 ex2I _ = CHAINExample expectedStEx2H blockEx2I (Right expectedStEx2I)
 
 -- | Example 2J - drain reward account and de-register stake key
-bobAda2J :: Coin
+bobAda2J :: Value
 bobAda2J =
   bobRAcnt2H -- reward account
-    + bobInitCoin -- txin we will consume (must spend at least one)
+  <> coinToValue (bobInitCoin -- txin we will consume (must spend at least one)
     + Coin 7 -- stake registration refund
-    - Coin 9 -- tx fee
+    - Coin 9) -- tx fee
 
 txbodyEx2J :: HashAlgorithm h => TxBody h
 txbodyEx2J =
@@ -1859,6 +1876,7 @@ txbodyEx2J =
     (Set.fromList [TxIn genesisId 1])
     (StrictSeq.singleton $ TxOut bobAddr bobAda2J)
     (StrictSeq.fromList [DCertDeleg (DeRegKey bobSHK)])
+    zeroV
     (Wdrl $ Map.singleton (RewardAcnt Testnet bobSHK) bobRAcnt2H)
     (Coin 9)
     (SlotNo 500)
@@ -1899,9 +1917,9 @@ blockEx2JHash = bhHash (bheader blockEx2J)
 utxoEx2J :: HashAlgorithm h => UTxO h
 utxoEx2J =
   UTxO . Map.fromList $
-    [ (TxIn (txid txbodyEx2J) 0, TxOut bobAddr bobAda2J),
-      (TxIn (txid txbodyEx2D) 0, TxOut aliceAddr aliceCoinEx2DBase),
-      (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
+    [ (TxIn (txid txbodyEx2J) 0, UTxOOut bobAddr (valueToCompactValue bobAda2J)),
+      (TxIn (txid txbodyEx2D) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx2DBase)),
+      (TxIn (txid txbodyEx2B) 1, UTxOOut alicePtrAddr (valueToCompactValue aliceCoinEx2BPtr))
     ]
 
 dsEx2J :: HashAlgorithm h => DState h
@@ -1972,8 +1990,8 @@ ex2J :: HashAlgorithm h => proxy h -> CHAINExample h
 ex2J _ = CHAINExample expectedStEx2I blockEx2J (Right expectedStEx2J)
 
 -- | Example 2K - start stake pool retirement
-aliceCoinEx2KPtr :: Coin
-aliceCoinEx2KPtr = aliceCoinEx2DBase - 2
+aliceCoinEx2KPtr :: Value
+aliceCoinEx2KPtr = aliceCoinEx2DBase - coinToValue (Coin 2)
 
 txbodyEx2K :: HashAlgorithm h => TxBody h
 txbodyEx2K =
@@ -1981,6 +1999,7 @@ txbodyEx2K =
     (Set.fromList [TxIn (txid txbodyEx2D) 0])
     (StrictSeq.singleton $ TxOut alicePtrAddr aliceCoinEx2KPtr)
     (StrictSeq.fromList [DCertPool (RetirePool (hk (alicePool p)) (EpochNo 5))])
+    zeroV
     (Wdrl Map.empty)
     (Coin 2)
     (SlotNo 500)
@@ -2031,9 +2050,9 @@ blockEx2KHash _ = bhHash (bheader blockEx2K)
 utxoEx2K :: HashAlgorithm h => UTxO h
 utxoEx2K =
   UTxO . Map.fromList $
-    [ (TxIn (txid txbodyEx2J) 0, TxOut bobAddr bobAda2J),
-      (TxIn (txid txbodyEx2K) 0, TxOut alicePtrAddr aliceCoinEx2KPtr),
-      (TxIn (txid txbodyEx2B) 1, TxOut alicePtrAddr aliceCoinEx2BPtr)
+    [ (TxIn (txid txbodyEx2J) 0, UTxOOut bobAddr (valueToCompactValue bobAda2J)),
+      (TxIn (txid txbodyEx2K) 0, UTxOOut alicePtrAddr (valueToCompactValue aliceCoinEx2KPtr)),
+      (TxIn (txid txbodyEx2B) 1, UTxOOut alicePtrAddr (valueToCompactValue aliceCoinEx2BPtr))
     ]
 
 psEx2K :: HashAlgorithm h => PState h
@@ -2157,7 +2176,7 @@ snapsEx2L =
         SnapShot
           ( Stake
               ( Map.fromList
-                  [ (aliceSHK, aliceRAcnt2H + aliceCoinEx2BPtr + aliceCoinEx2KPtr),
+                  [ (aliceSHK, aliceRAcnt2H + getAdaAmount (aliceCoinEx2BPtr + aliceCoinEx2KPtr)),
                     (carlSHK, carlMIR)
                   ]
               )
@@ -2273,8 +2292,8 @@ ppupEx3A =
 updateEx3A :: HashAlgorithm h => Update h
 updateEx3A = Update ppupEx3A (EpochNo 0)
 
-aliceCoinEx3A :: Coin
-aliceCoinEx3A = aliceInitCoin - 1
+aliceCoinEx3A :: Value
+aliceCoinEx3A =aliceInitCoin - coinToValue (Coin 1)
 
 txbodyEx3A :: HashAlgorithm h => TxBody h
 txbodyEx3A =
@@ -2282,6 +2301,7 @@ txbodyEx3A =
     (Set.fromList [TxIn genesisId 0])
     (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3A)
     StrictSeq.empty
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     (SlotNo 10)
@@ -2331,8 +2351,8 @@ expectedLSEx3A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx3A) 0, TxOut aliceAddr aliceCoinEx3A)
+            [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+              (TxIn (txid txbodyEx3A) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx3A))
             ]
         )
         (Coin 0)
@@ -2386,8 +2406,8 @@ ppupEx3B =
 updateEx3B :: HashAlgorithm h => Update h
 updateEx3B = Update ppupEx3B (EpochNo 0)
 
-aliceCoinEx3B :: Coin
-aliceCoinEx3B = aliceCoinEx3A - 1
+aliceCoinEx3B :: Value
+aliceCoinEx3B = aliceCoinEx3A - (coinToValue (Coin 1))
 
 txbodyEx3B :: HashAlgorithm h => TxBody h
 txbodyEx3B =
@@ -2395,6 +2415,7 @@ txbodyEx3B =
     (Set.fromList [TxIn (txid txbodyEx3A) 0])
     (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3B)
     StrictSeq.empty
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     (SlotNo 31)
@@ -2441,8 +2462,8 @@ blockEx3B =
 utxoEx3B :: HashAlgorithm h => UTxO h
 utxoEx3B =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx3B) 0, TxOut aliceAddr aliceCoinEx3B)
+    [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+      (TxIn (txid txbodyEx3B) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx3B))
     ]
 
 ppupEx3B' :: HashAlgorithm h => ProposedPPUpdates h
@@ -2706,8 +2727,8 @@ newGenDelegate = KeyPair vkCold skCold
 newGenesisVrfKH :: HashAlgorithm h => VRFKeyHash h
 newGenesisVrfKH = hashKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
 
-aliceCoinEx4A :: Coin
-aliceCoinEx4A = aliceInitCoin - 1
+aliceCoinEx4A :: Value
+aliceCoinEx4A = aliceInitCoin - (coinToValue (Coin 1))
 
 txbodyEx4A :: HashAlgorithm h => TxBody h
 txbodyEx4A =
@@ -2723,6 +2744,7 @@ txbodyEx4A =
             )
         ]
     )
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     (SlotNo 10)
@@ -2779,8 +2801,8 @@ dsEx4A =
 utxoEx4A :: HashAlgorithm h => UTxO h
 utxoEx4A =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx4A) 0, TxOut aliceAddr aliceCoinEx4A)
+    [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+      (TxIn (txid txbodyEx4A) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx4A))
     ]
 
 expectedLSEx4A :: HashAlgorithm h => LedgerState h
@@ -2903,8 +2925,8 @@ ex4B _ = CHAINExample expectedStEx4A blockEx4B (Right expectedStEx4B)
 ir :: HashAlgorithm h => Map (Credential h 'Staking) Coin
 ir = Map.fromList [(aliceSHK, Coin 100)]
 
-aliceCoinEx5A :: Coin
-aliceCoinEx5A = aliceInitCoin - 1
+aliceCoinEx5A :: Value
+aliceCoinEx5A = aliceInitCoin - (coinToValue (Coin 1))
 
 txbodyEx5A :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5A pot =
@@ -2912,6 +2934,7 @@ txbodyEx5A pot =
     (Set.fromList [TxIn genesisId 0])
     (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5A)
     (StrictSeq.fromList [DCertMir (MIRCert pot ir)])
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     (SlotNo 10)
@@ -2966,8 +2989,8 @@ blockEx5AHash pot = bhHash (bheader $ blockEx5A pot)
 utxoEx5A :: HashAlgorithm h => MIRPot -> UTxO h
 utxoEx5A pot =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid $ txbodyEx5A pot) 0, TxOut aliceAddr aliceCoinEx5A)
+    [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+      (TxIn (txid $ txbodyEx5A pot) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx5A))
     ]
 
 dsEx5A :: HashAlgorithm h => MIRPot -> DState h
@@ -3150,8 +3173,8 @@ ex5CTreasury p = ex5C p TreasuryMIR
 
 -- | The first transaction adds the MIR certificate that transfers a value of
 -- 100 to Alice.
-aliceCoinEx5D :: Coin
-aliceCoinEx5D = aliceInitCoin - (_keyDeposit ppsEx1) - 1
+aliceCoinEx5D :: Value
+aliceCoinEx5D = aliceInitCoin - (coinToValue $ _keyDeposit ppsEx1) - (coinToValue (Coin 1))
 
 txbodyEx5D :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5D pot =
@@ -3159,6 +3182,7 @@ txbodyEx5D pot =
     (Set.fromList [TxIn genesisId 0])
     (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5D)
     (StrictSeq.fromList [DCertDeleg (RegKey aliceSHK), DCertMir (MIRCert pot ir)])
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     (SlotNo 99)
@@ -3210,8 +3234,8 @@ blockEx5D pot =
 -- | The second transaction in the next epoch and at least `randomnessStabilisationWindow` slots
 -- after the transaction carrying the MIR certificate, then creates the rewards
 -- update that contains the transfer of `100` to Alice.
-aliceCoinEx5D' :: Coin
-aliceCoinEx5D' = aliceCoinEx5D - 1
+aliceCoinEx5D' :: Value
+aliceCoinEx5D' = aliceCoinEx5D - (coinToValue (Coin 1))
 
 txbodyEx5D' :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5D' pot =
@@ -3219,6 +3243,7 @@ txbodyEx5D' pot =
     (Set.fromList [TxIn (txid $ txbodyEx5D pot) 0])
     (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5D')
     StrictSeq.empty
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     ( (slotFromEpoch $ EpochNo 1)
@@ -3260,8 +3285,8 @@ blockEx5D' pot =
 -- | The third transaction in the next epoch applies the reward update to 1)
 -- register a staking credential for Alice, 2) deducing the key deposit from the
 -- 100 and to 3) create the reward account with an initial amount of 93.
-aliceCoinEx5D'' :: Coin
-aliceCoinEx5D'' = aliceCoinEx5D' - 1
+aliceCoinEx5D'' :: Value
+aliceCoinEx5D'' = aliceCoinEx5F' - (coinToValue (Coin 1))
 
 txbodyEx5D'' :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5D'' pot =
@@ -3269,6 +3294,7 @@ txbodyEx5D'' pot =
     (Set.fromList [TxIn (txid $ txbodyEx5D' pot) 0])
     (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx5D'')
     StrictSeq.empty
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     ((slotFromEpoch $ EpochNo 2) + SlotNo 10)
@@ -3347,8 +3373,8 @@ test5DTreasury p = test5D p TreasuryMIR
 feeEx6A :: Coin
 feeEx6A = Coin 3
 
-aliceCoinEx6A :: Coin
-aliceCoinEx6A = aliceCoinEx2A - feeEx6A
+aliceCoinEx6A :: Value
+aliceCoinEx6A = aliceCoinEx2A - (coinToValue feeEx6A)
 
 alicePoolParams6A :: HashAlgorithm h => PoolParams h
 alicePoolParams6A = alicePoolParams {_poolCost = Coin 500}
@@ -3363,6 +3389,7 @@ txbodyEx6A =
           ]
         )
     )
+    zeroV
     (Wdrl Map.empty)
     feeEx6A
     (SlotNo 100)
@@ -3429,8 +3456,8 @@ expectedLSEx6A =
   LedgerState
     ( UTxOState
         ( UTxO . Map.fromList $
-            [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-              (TxIn (txid txbodyEx6A) 0, TxOut aliceAddr aliceCoinEx6A)
+            [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+              (TxIn (txid txbodyEx6A) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx6A))
             ]
         )
         (Coin 271)

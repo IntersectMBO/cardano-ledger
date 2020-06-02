@@ -48,12 +48,18 @@ module Shelley.Spec.Ledger.TxData
     TxId (..),
     TxIn (..),
     TxOut (..),
+    UTxOOut (..),
     Url,
     Wdrl (..),
     WitVKey (WitVKey, wvkBytes),
     --
     witKeyHash,
     addStakeCreds,
+    getValue,
+    getAddress,
+    getValueTx,
+    getAddressTx,
+    getCoin,
     --
     SizeOfPoolOwners (..),
     SizeOfPoolRelays (..),
@@ -102,7 +108,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int64)
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, filterWithKey)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
@@ -169,6 +175,7 @@ import Shelley.Spec.Ledger.Serialization
     mapToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.Value
 
 -- | The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -355,7 +362,7 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "metadata"
 
 -- | get value from UTxO output
-getValue :: forall crypto. (Crypto crypto) => UTxOOut crypto -> Value crypto
+getValue :: UTxOOut crypto -> Value crypto
 getValue (UTxOOut _ v) = compactValueToValue v
 
 -- | get address from UTxO output
@@ -371,7 +378,7 @@ getAddressTx :: TxOut crypto -> Addr crypto
 getAddressTx (TxOut a _) = a
 
 -- | get coin amount from UTxO output
-getCoin :: Crypto crypto => UTxOOut crypto -> Coin
+getCoin :: UTxOOut crypto -> Coin
 getCoin (UTxOOut _ v) =
   getAdaAmount $ Value $ filterWithKey (\k _ -> k==adaID) v'
   where
@@ -529,7 +536,7 @@ pattern TxBody {_inputs, _outputs, _certs, _forge, _wdrls, _txfee, _ttl, _txUpda
       _mdHash' = _mdHash
     }
   where
-    TxBody _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash =
+    TxBody _inputs _outputs _certs _forge _wdrls _txfee _ttl _txUpdate _mdHash =
       let encodeMapElement ix enc x = Just (encodeWord ix <> enc x)
           encodeMapElementUnless condition ix enc x =
             if condition x
@@ -540,12 +547,12 @@ pattern TxBody {_inputs, _outputs, _certs, _forge, _wdrls, _txfee, _ttl, _txUpda
               [ encodeMapElement 0 encodePreEncoded inputBytes,
                 encodeMapElement 1 encodePreEncoded outputBytes,
                 encodeMapElement 2 encodePreEncoded feeBytes,
-                encodeMapElement 3 toCBOR _ttl,
-                encodeMapElementUnless null 4 encodeFoldable _certs,
-                encodeMapElementUnless (null . val) 5 toCBOR _forge,
-                encodeMapElementUnless (null . unWdrl) 6 toCBOR _wdrls,
-                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _txUpdate,
-                encodeMapElement 8 toCBOR =<< strictMaybeToMaybe _mdHash
+                encodeMapElementUnless null 3 encodeFoldable _certs,
+                encodeMapElementUnless (null . unWdrl) 4 toCBOR _wdrls,
+                encodeMapElement 5 toCBOR _ttl,
+                encodeMapElement 6 toCBOR =<< strictMaybeToMaybe _txUpdate,
+                encodeMapElement 7 toCBOR =<< strictMaybeToMaybe _mdHash,
+                encodeMapElementUnless (null . val) 8 toCBOR _forge
               ]
           inputBytes = serializeEncoding' $ encodeFoldable _inputs
           outputBytes = serializeEncoding' $ encodeFoldable _outputs
@@ -824,7 +831,7 @@ instance
             _txfee' = Coin 0,
             _ttl' = SlotNo 0,
             _certs' = StrictSeq.empty,
-            _forge'   = Value Map.empty
+            _forge'   = Value Map.empty,
             _wdrls' = Wdrl Map.empty,
             _txUpdate' = SNothing,
             _mdHash' = SNothing,

@@ -50,6 +50,7 @@ import Shelley.Spec.Ledger.Tx
     _inputs,
     _outputs,
     _ttl,
+    _forge,
     _txfee,
     _wdrls,
     _witnessSet,
@@ -69,6 +70,10 @@ import Shelley.Spec.Ledger.TxData
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -- Used grudgingly for keys.
 import Unsafe.Coerce (unsafeCoerce)
+import Shelley.Spec.Ledger.Value
+  ( coinToValue,
+    getAdaAmount,
+  )
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
@@ -99,7 +104,7 @@ mutateCoin lower upper (Coin c) =
 
 -- | Mutator for 'Value', based on mutation of the contained value field.
 -- TODO make this correct
-mutateValue :: (Crypto crypto) => Natural -> Natural -> Value crypto -> Gen (Value crypto)
+mutateValue :: Natural -> Natural -> Value -> Gen Value
 mutateValue lower upper v = (coinToValue . Coin . fromIntegral) <$> mutateNat lower upper (fromIntegral c)
   where (Coin c) = getAdaAmount v
 

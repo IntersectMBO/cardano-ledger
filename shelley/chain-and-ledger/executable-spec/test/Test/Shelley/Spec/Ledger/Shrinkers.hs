@@ -21,6 +21,7 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
 import Test.QuickCheck (shrinkIntegral, shrinkList)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block)
+import Shelley.Spec.Ledger.Value
 
 shrinkBlock ::
   Block h ->
@@ -48,7 +49,7 @@ shrinkTxBody (TxBody is os cs fg ws tf tl tu md) =
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs fg ws (tf + (outBalance - outputBalance os')) tl tu md
+  [ TxBody is os' cs fg ws (tf + getAdaAmount (outBalance - outputBalance os')) tl tu md
     | os' <- toList $ shrinkStrictSeq shrinkTxOut os
   ]
   where
@@ -66,12 +67,12 @@ outputBalance = foldl' (\v (TxOut _ c) -> v + c) zeroV
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
 shrinkTxIn = const []
 
-shrinkTxOut :: (Crypto crypto) => TxOut crypto -> [TxOut crypto]
+shrinkTxOut :: TxOut crypto -> [TxOut crypto]
 shrinkTxOut (TxOut addr v) =
   TxOut addr <$> shrinkValue v
 
 --TODO proper value shrink
-shrinkValue :: (Crypto crypto) => Value crypto -> [Value crypto]
+shrinkValue :: Value crypto -> [Value crypto]
 shrinkValue x = (coinToValue . Coin) <$> shrinkIntegral c
   where (Coin c) = getAdaAmount x
 

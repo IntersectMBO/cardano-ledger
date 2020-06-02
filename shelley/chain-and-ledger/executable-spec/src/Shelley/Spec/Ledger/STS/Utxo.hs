@@ -69,8 +69,9 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
-import Shelley.Spec.Ledger.TxData (TxBody (..))
+import Shelley.Spec.Ledger.TxData (TxBody (..), UTxOOut(..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..), totalDeposits, txins, txouts, txup)
 
 data UTXO crypto
@@ -105,15 +106,15 @@ instance
         !Coin -- the minimum fee for this transaction
         !Coin -- the fee supplied in this transaction
     | ValueNotConservedUTxO
-        !ValueBSType -- the Value consumed by this transaction
-        !ValueBSType -- the Value produced by this transaction
+        !(Value crypto) -- the Value consumed by this transaction
+        !(Value crypto) -- the Value produced by this transaction
     | WrongNetwork
         !Network -- the expected network id
         !(Set (Addr crypto)) -- the set of addresses with incorrect network IDs
     | OutputTooSmallUTxO
         ![UTxOOut crypto] -- list of supplied transaction outputs that are too small
     | ForgingAda
-        !ValueBSType -- the forge value containing Ada
+        !(Value crypto) -- the forge value containing Ada
     | UpdateFailure (PredicateFailure (PPUP crypto)) -- Subtransition Failures
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
@@ -245,7 +246,7 @@ utxoInductive = do
 
   let consumed_ = consumed pp utxo txb
       produced_ = produced pp stakepools txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO (toValBST consumed_) (toValBST produced_)
+  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
@@ -254,11 +255,11 @@ utxoInductive = do
   let minUTxOValue = fromIntegral $ _minUTxOValue pp
   all (valueToCompactValue zeroV <=) outputValues
     ?! OutputTooSmallUTxO
-      (filter (\(UTxOOut _ v) -> v < (coinToValue minUTxOValue)) (Set.toList (range (txouts txb))))
+      (filter (\(UTxOOut _ v) -> v < (valueToCompactValue $ coinToValue minUTxOValue)) (Set.toList (range (txouts txb))))
 
   let (Value vls) = _forge txb
   let cids = Map.keys vls
-  all (adaID /=) cids  ?! (ForgingAda (valueToCompactValue (Value vls)))
+  all (adaID /=) cids  ?! (ForgingAda (Value vls))
 
 
   let maxTxSize_ = fromIntegral (_maxTxSize pp)

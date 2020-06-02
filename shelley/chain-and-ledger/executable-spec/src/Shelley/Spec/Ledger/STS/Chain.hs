@@ -114,6 +114,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
   )
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
 import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Tx (TxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 

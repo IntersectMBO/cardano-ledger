@@ -153,6 +153,9 @@ import Test.Shelley.Spec.Ledger.Utils
     runShelleyBase,
     unsafeMkUnitInterval,
   )
+import Shelley.Spec.Ledger.Value
+  ( coinToValue,
+  )
 
 data AllIssuerKeys h r = AllIssuerKeys
   { cold :: KeyPair h r,

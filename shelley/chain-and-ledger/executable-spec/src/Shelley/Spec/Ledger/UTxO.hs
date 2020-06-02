@@ -43,7 +43,7 @@ import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Data.Foldable (toList)
 import Data.List (foldl')
-import Data.Map.Strict (Map)
+import Data.Map.Strict (Map, keys)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Set (Set)
@@ -73,6 +73,7 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams (PParams, Update)
 import Shelley.Spec.Ledger.Scripts
+import Shelley.Spec.Ledger.Value
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
   ( PoolCert (..),
@@ -80,10 +81,14 @@ import Shelley.Spec.Ledger.TxData
     TxBody (..),
     TxId (..),
     TxIn (..),
-    TxOut (..),
+    UTxOOut (..),
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
+    getAddress,
+    getAddressTx,
+    getValue,
+    getValueTx,
     pattern DeRegKey,
     pattern Delegate,
     pattern Delegation,

@@ -60,10 +60,12 @@ import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
     _ttl,
+    _forge,
     pattern Tx,
     pattern TxBody,
     pattern TxIn,
     pattern TxOut,
+    pattern UTxOOut,
   )
 import Shelley.Spec.Ledger.TxData
   ( PoolMetaData (..),
@@ -92,6 +94,8 @@ import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+
+-- TODO change forge values!
 
 alicePay :: KeyPair ShortHash 'Payment
 alicePay = KeyPair 1 1
@@ -320,6 +324,7 @@ data AliceToBob = AliceToBob
   { input :: TxIn ShortHash,
     toBob :: Coin,
     fee :: Coin,
+    forge :: Value,
     deposits :: Coin,
     refunds :: Coin,
     certs :: [DCert ShortHash],
@@ -333,6 +338,7 @@ aliceGivesBobLovelace
     { input,
       toBob,
       fee,
+      forge,
       deposits,
       refunds,
       certs,
@@ -350,6 +356,7 @@ aliceGivesBobLovelace
               ]
           )
           (StrictSeq.fromList certs)
+          (Value Map.empty)
           (Wdrl Map.empty)
           fee
           ttl
@@ -399,6 +406,7 @@ testSpendNonexistentInput =
         { input = (TxIn genesisId 42), -- Non Existent
           toBob = (Coin 3000),
           fee = (Coin 1500),
+          forge = zeroV,
           deposits = (Coin 0),
           refunds = (Coin 0),
           certs = [],
@@ -417,6 +425,7 @@ testWitnessNotIncluded =
               ]
           )
           Empty
+          (Value Map.empty)
           (Wdrl Map.empty)
           (Coin 596)
           (SlotNo 100)
@@ -438,6 +447,7 @@ testSpendNotOwnedUTxO =
           (Set.fromList [TxIn genesisId 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 232))
           Empty
+          (Value Map.empty)
           (Wdrl Map.empty)
           (Coin 768)
           (SlotNo 100)
@@ -460,6 +470,7 @@ testWitnessWrongUTxO =
           (Set.fromList [TxIn genesisId 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
           Empty
+          (Value Map.empty)
           (Wdrl Map.empty)
           (Coin 770)
           (SlotNo 100)
@@ -470,6 +481,7 @@ testWitnessWrongUTxO =
           (Set.fromList [TxIn genesisId 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
           Empty
+          (Value Map.empty)
           (Wdrl Map.empty)
           (Coin 770)
           (SlotNo 101)
@@ -496,6 +508,7 @@ testEmptyInputSet =
           Set.empty
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 1000))
           Empty
+          (Value Map.empty)
           (Wdrl aliceWithdrawal)
           (Coin 1000)
           (SlotNo 0)
@@ -519,6 +532,7 @@ testFeeTooSmall =
         { input = (TxIn genesisId 0),
           toBob = (Coin 3000),
           fee = (Coin 1),
+          forge = zeroV,
           deposits = (Coin 0),
           refunds = (Coin 0),
           certs = [],
@@ -535,6 +549,7 @@ testExpiredTx =
             { input = (TxIn genesisId 0),
               toBob = (Coin 3000),
               fee = (Coin 600),
+              forge = zeroV,
               deposits = (Coin 0),
               refunds = (Coin 0),
               certs = [],
@@ -555,6 +570,7 @@ testInvalidWintess =
               ]
           )
           Empty
+          (Value Map.empty)
           (Wdrl Map.empty)
           (Coin 1000)
           (SlotNo 1)
@@ -581,6 +597,7 @@ testWithdrawalNoWit =
               ]
           )
           Empty
+          (Value Map.empty)
           (Wdrl $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 10))
           (Coin 1000)
           (SlotNo 0)
@@ -606,6 +623,7 @@ testWithdrawalWrongAmt =
               ]
           )
           Empty
+          (Value Map.empty)
           (Wdrl $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 11))
           (Coin 1000)
           (SlotNo 0)
@@ -633,6 +651,7 @@ testOutputTooSmall =
         { input = (TxIn genesisId 0),
           toBob = (Coin 1), -- Too Small
           fee = (Coin 997),
+          forge = zeroV,
           deposits = (Coin 0),
           refunds = (Coin 0),
           certs = [],
@@ -682,6 +701,7 @@ testPoolCostTooSmall =
         { input = (TxIn genesisId 0),
           toBob = (Coin 100),
           fee = (Coin 997),
+          forge = zeroV,
           deposits = (Coin 250),
           refunds = (Coin 0),
           certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
@@ -705,6 +725,7 @@ testsInvalidLedger =
       testCase "Invalid Ledger - Alice's transaction does not consume input" testEmptyInputSet,
       testCase "Invalid Ledger - Alice's fee is too small" testFeeTooSmall,
       testCase "Invalid Ledger - Alice's transaction has expired" testExpiredTx,
+      testCase "Invalid Ledger - Alice is trying to forge Ada" testForgingAda,
       testCase "Invalid Ledger - Invalid witnesses" testInvalidWintess,
       testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit,
       testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt,

@@ -70,6 +70,7 @@ import Shelley.Spec.Ledger.STS.Utxo
     pattern FeeTooSmallUTxO,
     pattern InputSetEmptyUTxO,
     pattern ValueNotConservedUTxO,
+    pattern ForgingAda,
   )
 import Shelley.Spec.Ledger.STS.Utxow
   ( PredicateFailure (..),
@@ -88,6 +89,7 @@ import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxData
   ( StakeCreds (..),
     Wdrl (..),
+    getAddress,
     pattern DCertDeleg,
     pattern DCertPool,
     pattern DeRegKey,
@@ -97,6 +99,11 @@ import Shelley.Spec.Ledger.TxData
     pattern RetirePool,
   )
 import Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessVKey, pattern UTxO)
+import Shelley.Spec.Ledger.Value
+  ( coinToValue,
+    splitValueFee,
+    zeroV,
+  )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
@@ -172,6 +179,7 @@ genCoinList minCoin maxCoin lower upper = do
   return (Coin <$> xs)
 
 --TODO make correct
+genValueList :: Integer -> Integer -> Int -> Int -> Gen [Value]
 genValueList minCoin maxCoin lower upper = do
   xs <- genCoinList minCoin maxCoin lower upper
   return (fmap coinToValue xs)
@@ -214,7 +222,7 @@ genTx keyList (UTxO m) cslot = do
   n <- genNatural 1 10 -- (fromIntegral $ length keyList) -- TODO make this variable, but uses too much RAM atm
   receipients <- Seq.fromList . take (fromIntegral n) <$> Gen.shuffle keyList
   let realN = length receipients
-  let (perReceipient, txfee') = splitCoin selectedBalance (fromIntegral realN)
+  let (perReceipient, txfee') = splitValueFee selectedBalance (fromIntegral realN)
   let !receipientAddrs =
         fmap
           ( \(p, d) ->
@@ -241,7 +249,7 @@ genTx keyList (UTxO m) cslot = do
   pure (txfee', Tx txbody mempty {addrWits = Set.fromList [txwit]} SNothing)
   where
     utxoInputs = Map.keys m
-    addr inp = getTxOutAddr $ m Map.! inp
+    addr inp = getAddress $ m Map.! inp
 
 -- | Generator for new transaction state transition, starting from a
 -- 'LedgerState' and using a list of pairs of 'KeyPair'. Returns either the
@@ -489,8 +497,10 @@ predicateFailureToValidationError (UtxowFailure (UtxoFailure (BadInputsUTxO _)))
   BadInputs
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (FeeTooSmallUTxO a b))) =
   FeeTooSmall a b
-predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO a b))) =
-  ValueNotConserved a b
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO _ _))) =
+  ValueNotConserved
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ForgingAda _))) =
+  UserForgingAda
 predicateFailureToValidationError (DelegsFailure (DelegateeNotRegisteredDELEG _)) =
   StakeDelegationImpossible
 predicateFailureToValidationError (DelegsFailure (WithdrawalsNotInRewardsDELEGS _)) =
