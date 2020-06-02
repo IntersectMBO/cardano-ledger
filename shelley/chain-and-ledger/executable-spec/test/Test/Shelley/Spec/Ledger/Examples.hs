@@ -340,11 +340,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Update,
     VKeyGenesis,
     VRFKeyHash,
-<<<<<<< HEAD
     VerKeyVRF,
-=======
     Value,
->>>>>>> compiles up to test serialization, Value needs work
     hashKeyVRF,
     pattern GenDelegPair,
     pattern GenDelegs,
@@ -3024,7 +3021,7 @@ initStEx5A =
   setChainStateAccountState
     ( AccountState
         { _treasury = 1000,
-          _reserves = maxLLSupply - (1000 + balance (utxoEx2A p))
+          _reserves = maxLLSupply - (1000 + getAdaAmount (balance (utxoEx2A p)))
         }
     )
     initStEx2A
@@ -3036,7 +3033,7 @@ acntEx5A :: HashAlgorithm h => Proxy h -> AccountState
 acntEx5A p =
   AccountState
     { _treasury = treasuryEx5A,
-      _reserves = maxLLSupply - (balance (utxoEx2A p) + treasuryEx5A)
+      _reserves = maxLLSupply - (getAdaAmount (balance (utxoEx2A p)) + treasuryEx5A)
     }
 
 expectedStEx5A :: forall h. HashAlgorithm h => MIRPot -> ChainState h
@@ -3286,7 +3283,7 @@ blockEx5D' pot =
 -- register a staking credential for Alice, 2) deducing the key deposit from the
 -- 100 and to 3) create the reward account with an initial amount of 93.
 aliceCoinEx5D'' :: Value
-aliceCoinEx5D'' = aliceCoinEx5F' - (coinToValue (Coin 1))
+aliceCoinEx5D'' = aliceCoinEx5D' - (coinToValue (Coin 1))
 
 txbodyEx5D'' :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5D'' pot =
