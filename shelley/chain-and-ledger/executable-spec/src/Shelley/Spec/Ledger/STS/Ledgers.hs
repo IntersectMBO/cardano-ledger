@@ -19,16 +19,23 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad (foldM)
 import Control.State.Transition
+  ( Embed (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    trans,
+  )
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
-import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
-  ( LedgerState (..),
+  ( AccountState,
+    LedgerState (..),
     _delegationState,
     _utxoState,
     emptyLedgerState,
@@ -43,7 +50,7 @@ data LEDGERS crypto
 data LedgersEnv = LedgersEnv
   { ledgersSlotNo :: SlotNo,
     ledgersPp :: PParams,
-    ledgersReserves :: Coin
+    ledgersAccount :: AccountState
   }
 
 instance
@@ -84,13 +91,13 @@ ledgersTransition ::
   ) =>
   TransitionRule (LEDGERS crypto)
 ledgersTransition = do
-  TRC (LedgersEnv slot pp reserves, ls, txwits) <- judgmentContext
+  TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
   let (u, dp) = (_utxoState ls, _delegationState ls)
   (u'', dp'') <-
     foldM
       ( \(u', dp') (ix, tx) ->
           trans @(LEDGER crypto) $
-            TRC (LedgerEnv slot ix pp reserves, (u', dp'), tx)
+            TRC (LedgerEnv slot ix pp account, (u', dp'), tx)
       )
       (u, dp)
       $ zip [0 ..]

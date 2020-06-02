@@ -19,15 +19,19 @@ module Shelley.Spec.Ledger.Address
     Addr (..),
     getNetwork,
     RewardAcnt (..),
+    serialiseRewardAcnt,
+    deserialiseRewardAcnt,
     -- internals exported for testing
     getAddr,
     getKeyHash,
     getPtr,
+    getRewardAcnt,
     getScriptHash,
     getVariableLengthNat,
     putAddr,
     putCredential,
     putPtr,
+    putRewardAcnt,
     putVariableLengthNat,
     natToWord7s,
     word7sToNat,
@@ -116,6 +120,17 @@ serialiseAddr = BSL.toStrict . B.runPut . putAddr
 -- input data is not in the right format (or if there is trailing data).
 deserialiseAddr :: Crypto crypto => ByteString -> Maybe (Addr crypto)
 deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
+  Left (_remaining, _offset, _message) -> Nothing
+  Right (_remaining, _offset, result) -> Just result
+
+-- | Serialise a reward account to the external format.
+serialiseRewardAcnt :: RewardAcnt crypto -> ByteString
+serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
+
+-- | Deserialise an reward account from the external format. This will fail if the
+-- input data is not in the right format (or if there is trailing data).
+deserialiseRewardAcnt :: Crypto crypto => ByteString -> Maybe (RewardAcnt crypto)
+deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (_remaining, _offset, result) -> Just result
 

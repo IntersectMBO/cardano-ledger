@@ -17,6 +17,13 @@ where
 import Byron.Spec.Ledger.Core (dom, (∪+), (◁))
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
+  ( InitialRule,
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    judgmentContext,
+    liftSTS,
+  )
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
@@ -24,14 +31,16 @@ import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
-  ( EpochState,
+  ( AccountState (..),
+    EpochState,
+    InstantaneousRewards (..),
     _delegationState,
     _dstate,
     _irwd,
-    _reserves,
     _rewards,
     _stkCreds,
     emptyAccount,
+    emptyInstantaneousRewards,
     emptyLedgerState,
     esAccountState,
     esLState,
@@ -89,15 +98,24 @@ mirTransition = do
   let dpState = _delegationState ls
       dState = _dstate dpState
       StakeCreds stkcreds = _stkCreds dState
-      irwd' = (dom stkcreds) ◁ (_irwd dState)
-      tot = sum irwd'
+      irwdR = (dom stkcreds) ◁ (iRReserves $ _irwd dState)
+      totFromReserves = sum irwdR
       reserves = _reserves acnt
-      update = Map.mapKeys (mkRwdAcnt network) irwd'
-  if tot <= reserves
+      updateFromReserves = Map.mapKeys (mkRwdAcnt network) irwdR
+      irwdT = (dom stkcreds) ◁ (iRTreasury $ _irwd dState)
+      totFromTreasury = sum irwdT
+      treasury = _treasury acnt
+      updateFromTreasury = Map.mapKeys (mkRwdAcnt network) irwdT
+      update = Map.unionWith (+) updateFromReserves updateFromTreasury
+
+  if totFromReserves <= reserves && totFromTreasury <= treasury
     then
       pure $
         EpochState
-          acnt {_reserves = reserves - tot}
+          acnt
+            { _reserves = reserves - totFromReserves,
+              _treasury = treasury - totFromTreasury
+            }
           ss
           ls
             { _delegationState =
@@ -105,7 +123,7 @@ mirTransition = do
                   { _dstate =
                       dState
                         { _rewards = (_rewards dState) ∪+ update,
-                          _irwd = Map.empty
+                          _irwd = emptyInstantaneousRewards
                         }
                   }
             }
@@ -121,7 +139,7 @@ mirTransition = do
             { _delegationState =
                 dpState
                   { _dstate =
-                      dState {_irwd = Map.empty}
+                      dState {_irwd = emptyInstantaneousRewards}
                   }
             }
           pr

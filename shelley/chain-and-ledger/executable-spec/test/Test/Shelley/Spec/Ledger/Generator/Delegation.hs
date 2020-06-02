@@ -58,7 +58,8 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams, _d)
 import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Shelley.Spec.Ledger.TxData
-  ( RewardAcnt (..),
+  ( MIRPot (..),
+    RewardAcnt (..),
     _poolPubKey,
     _poolVrf,
     unStakePools,
@@ -439,7 +440,7 @@ genRetirePool Constants {frequencyLowMaxEpoch} keysByHash pState slot =
     -- future updates of the protocol parameter, MaxEpoch, will not decrease
     -- the cut-off for pool-retirement and render this RetirePool
     -- "too late in the epoch" when it is retired
-    epochHigh = cepoch + frequencyLowMaxEpoch - 1
+    epochHigh = cepoch + frequencyLowMaxEpoch
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards ::
@@ -456,6 +457,7 @@ genInstantaneousRewards s coreKeys pparams delegSt = do
     take <$> QC.elements [0 .. (max 0 $ (Map.size credentials) - 1)]
       <*> QC.shuffle (Map.keys credentials)
   coins <- genCoinList 1 1000 (length winnerCreds) (length winnerCreds)
+  pot <- QC.elements [ReservesMIR, TreasuryMIR]
 
   coreSigners <-
     take <$> QC.elements [5 .. (max 0 $ (length coreKeys) - 1)]
@@ -475,6 +477,6 @@ genInstantaneousRewards s coreKeys pparams delegSt = do
       then Nothing
       else
         Just
-          ( DCertMir (MIRCert credCoinMap),
+          ( DCertMir (MIRCert pot credCoinMap),
             CoreKeyCred coreSigners
           )

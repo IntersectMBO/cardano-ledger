@@ -20,7 +20,8 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
-  ( _dstate,
+  ( AccountState (..),
+    _dstate,
     _rewards,
     emptyDState,
     emptyPState,
@@ -220,7 +221,7 @@ addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
     rewards = Map.insert ra c $ _rewards ds
 
 ledgerEnv :: LedgerEnv
-ledgerEnv = LedgerEnv (SlotNo 0) 0 pp 0
+ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState 0 0)
 
 testInvalidTx ::
   [PredicateFailure LEDGER] ->
@@ -368,7 +369,7 @@ testExpiredTx =
               ttl = (SlotNo 0),
               signers = [asWitness alicePay]
             }
-      ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp 0
+      ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState 0 0)
    in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
 
 testInvalidWintess :: Assertion

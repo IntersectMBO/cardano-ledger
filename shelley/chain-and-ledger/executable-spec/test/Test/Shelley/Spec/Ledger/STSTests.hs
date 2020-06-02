@@ -56,16 +56,21 @@ import Test.Shelley.Spec.Ledger.Examples
     ex3C,
     ex4A,
     ex4B,
-    ex5A,
-    ex5B,
-    ex5C,
-    ex5D',
+    ex5AReserves,
+    ex5ATreasury,
+    ex5BReserves,
+    ex5BTreasury,
+    ex5CReserves,
+    ex5CTreasury,
+    ex5DReserves',
+    ex5DTreasury',
     ex6A,
     ex6A',
     ex6BExpectedNES,
     ex6BExpectedNES',
     ex6BPoolParams,
-    test5D,
+    test5DReserves,
+    test5DTreasury,
   )
 import Test.Shelley.Spec.Ledger.MultiSigExamples
   ( aliceAndBob,
@@ -165,10 +170,18 @@ stsTests =
       testCase "CHAIN example 3C - processes a pparam update" $ testCHAINExample ex3C,
       testCase "CHAIN example 4A - stage genesis key delegation" $ testCHAINExample ex4A,
       testCase "CHAIN example 4B - adopt genesis key delegation" $ testCHAINExample ex4B,
-      testCase "CHAIN example 5A - create MIR cert" $ testCHAINExample ex5A,
-      testCase "CHAIN example 5B - FAIL: insufficient core node signatures" $ testCHAINExample ex5B,
-      testCase "CHAIN example 5C - FAIL: MIR insufficient reserves" $ testCHAINExample ex5C,
-      testCase "CHAIN example 5D - apply MIR at epoch boundary" test5D,
+      testCase "CHAIN example 5A - create MIR cert - reserves" $ testCHAINExample ex5AReserves,
+      testCase "CHAIN example 5A - create MIR cert - treasury" $ testCHAINExample ex5ATreasury,
+      testCase "CHAIN example 5B - FAIL: insufficient core node signatures MIR reserves" $
+        testCHAINExample ex5BReserves,
+      testCase "CHAIN example 5B - FAIL: insufficient core node signatures MIR treasury" $
+        testCHAINExample ex5BTreasury,
+      testCase "CHAIN example 5C - FAIL: MIR insufficient reserves" $
+        testCHAINExample ex5CReserves,
+      testCase "CHAIN example 5C - FAIL: MIR insufficient treasury" $
+        testCHAINExample ex5CTreasury,
+      testCase "CHAIN example 5D - apply reserves MIR at epoch boundary" test5DReserves,
+      testCase "CHAIN example 5D - apply treasury MIR at epoch boundary" test5DTreasury,
       testCase "CHAIN example 6A - Early Pool Re-registration" $ testCHAINExample ex6A,
       testCase "CHAIN example 6A' - Late Pool Re-registration" $ testCHAINExample ex6A',
       testCase "CHAIN example 6B - Adopt Early Pool Re-registration" $ testAdoptEarlyPoolRegistration,
@@ -191,9 +204,14 @@ stsTests =
       testCase "CHAIN example 3C - Preservation of ADA" $ testPreservationOfAda ex3C,
       testCase "CHAIN example 4A - Preservation of ADA" $ testPreservationOfAda ex4A,
       testCase "CHAIN example 4B - Preservation of ADA" $ testPreservationOfAda ex4B,
-      testCase "CHAIN example 5A - Preservation of ADA" $ testPreservationOfAda ex5A,
-      testCase "CHAIN example 5D - Preservation of ADA" $
-        (totalAda (fromRight (error "CHAIN example 5D") ex5D') @?= maxLLSupply),
+      testCase "CHAIN example 5A Reserves - Preservation of ADA" $
+        testPreservationOfAda ex5AReserves,
+      testCase "CHAIN example 5A Treasury - Preservation of ADA" $
+        testPreservationOfAda ex5ATreasury,
+      testCase "CHAIN example 5D Reserves - Preservation of ADA" $
+        (totalAda (fromRight (error "CHAIN example 5D") ex5DReserves') @?= maxLLSupply),
+      testCase "CHAIN example 5D Treasury - Preservation of ADA" $
+        (totalAda (fromRight (error "CHAIN example 5D") ex5DTreasury') @?= maxLLSupply),
       testCase "CHAIN example 6A - Preservation of ADA" $ testPreservationOfAda ex6A,
       testCase "Alice uses SingleSig script" testAliceSignsAlone,
       testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign,

@@ -71,10 +71,7 @@ mkBbodyEnv
     STS.BbodyEnv
       { STS.bbodySlots = dom nesOsched,
         STS.bbodyPp = LedgerState.esPp nesEs,
-        STS.bbodyReserves =
-          LedgerState._reserves
-            . LedgerState.esAccountState
-            $ nesEs
+        STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
 
 newtype TickTransitionError crypto
