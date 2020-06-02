@@ -701,7 +701,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     Given a slot number $\var{slot}$, the application of this rule requires that the
     planned retirement epoch $\var{e}$ stated in the certificate is in the future,
     i.e.~after $\var{cepoch}$ (the epoch of the current slot number in this context) and
-    that it is less than $\emax$ epochs after the current one.
+    that it is no more than than $\emax$ epochs after the current one.
     It is also required that the pool be registered.
     Note that imposing the $\emax$ constraint on the system is not strictly necessary.
     However, forcing stake pools to announce their retirement a shorter time in
@@ -801,7 +801,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     & \var{hk} \in \dom \var{stpools} \\
     \var{e} \leteq \retire{c}
     & \var{cepoch} \leteq \epoch{slot}
-    & \var{cepoch} < \var{e} < \var{cepoch} + (\fun{emax}~{pp})
+    & \var{cepoch} < \var{e} \leq \var{cepoch} + (\fun{emax}~{pp})
   }
   {
     \begin{array}{r}

@@ -129,7 +129,7 @@ poolDelegationTransition = do
         ei <- asks epochInfo
         epochInfoEpoch ei slot
       let EpochNo maxEpoch = _eMax pp
-      cepoch < e && e < cepoch + maxEpoch
+      cepoch < e && e <= cepoch + maxEpoch
         ?! StakePoolRetirementWrongEpochPOOL cepoch e (cepoch + maxEpoch)
       pure $ ps {_retiring = _retiring ps ⨃ (hk, EpochNo e)}
     DCertDeleg _ -> do
