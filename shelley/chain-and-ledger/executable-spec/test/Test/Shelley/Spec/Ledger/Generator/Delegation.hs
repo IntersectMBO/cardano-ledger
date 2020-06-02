@@ -439,7 +439,7 @@ genRetirePool Constants {frequencyLowMaxEpoch} keysByHash pState slot =
     -- future updates of the protocol parameter, MaxEpoch, will not decrease
     -- the cut-off for pool-retirement and render this RetirePool
     -- "too late in the epoch" when it is retired
-    epochHigh = cepoch + frequencyLowMaxEpoch - 1
+    epochHigh = cepoch + frequencyLowMaxEpoch
 
 -- | Generate an InstantaneousRewards Transfer certificate
 genInstantaneousRewards ::
