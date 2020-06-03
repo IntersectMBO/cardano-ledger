@@ -646,7 +646,7 @@ It has six predicates:
     the set of needed (hashes of) verification keys.
   \item Every multisignature script is valid.
   \item The set of scripts given by the transaction is equal to the set of required scripts.
-  \item Any instantaneous reward certificates have quorum agreement from the genesis nodes.
+  \item Any instantaneous reward certificates have quorum agreement from the genesis nodes delegates.
   \item Either the transaction metadata hash and the transaction metadata are both absent,
     or the hash present in the body is actually equal to the hash of the metadata.
 \end{itemize}
@@ -672,7 +672,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \\~\\
       genSig \leteq
       \left\{
-        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
+        \var{genDelegate}~\vert~(\var{genDelegate},~\wcard) \in\range{genDelegs}
       \right\}
       \cap
       \var{witsKeyHashes}

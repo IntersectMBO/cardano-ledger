@@ -753,19 +753,19 @@ txEx2A =
         (hashTxBody txbodyEx2A)
         ( (asWitness <$> [alicePay, carlPay])
             <> (asWitness <$> [aliceStake])
-            <> (asWitness <$> [cold alicePool, cold $ coreNodeKeys 0])
+            <> ( asWitness
+                   <$> [ cold alicePool,
+                         cold (coreNodeKeys 0),
+                         cold (coreNodeKeys 1),
+                         cold (coreNodeKeys 2),
+                         cold (coreNodeKeys 3),
+                         cold (coreNodeKeys 4)
+                       ]
+               )
         )
         -- Note that Alice's stake key needs to sign this transaction
         -- since it is an owner of the stake pool being registered,
         -- and *not* because of the stake key registration.
-        `Set.union` makeWitnessesVKey
-          (hashTxBody txbodyEx2A)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3),
-            KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
-          ]
     )
     Map.empty
     SNothing
@@ -2589,12 +2589,14 @@ txEx5A pot =
     ( makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
         `Set.union` makeWitnessesVKey
           (hashTxBody $ txbodyEx5A pot)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3),
-            KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
-          ]
+          ( asWitness
+              <$> [ cold (coreNodeKeys 0),
+                    cold (coreNodeKeys 1),
+                    cold (coreNodeKeys 2),
+                    cold (coreNodeKeys 3),
+                    cold (coreNodeKeys 4)
+                  ]
+          )
     )
     Map.empty
     SNothing
@@ -2708,11 +2710,13 @@ txEx5B pot =
     ( makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
         `Set.union` makeWitnessesVKey
           (hashTxBody $ txbodyEx5A pot)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
-          ]
+          ( asWitness
+              <$> [ cold (coreNodeKeys 0),
+                    cold (coreNodeKeys 1),
+                    cold (coreNodeKeys 2),
+                    cold (coreNodeKeys 3)
+                  ]
+          )
     )
     Map.empty
     SNothing
@@ -2806,12 +2810,14 @@ txEx5D pot =
     ( makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake]
         `Set.union` makeWitnessesVKey
           (hashTxBody $ txbodyEx5D pot)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3),
-            KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
-          ]
+          ( asWitness
+              <$> [ cold (coreNodeKeys 0),
+                    cold (coreNodeKeys 1),
+                    cold (coreNodeKeys 2),
+                    cold (coreNodeKeys 3),
+                    cold (coreNodeKeys 4)
+                  ]
+          )
     )
     Map.empty
     SNothing
@@ -2988,6 +2994,7 @@ txEx6A =
     ( makeWitnessesVKey
         (hashTxBody txbodyEx6A)
         ( (asWitness <$> [alicePay])
+            <> (asWitness <$> [aliceStake])
             <> (asWitness <$> [cold alicePool])
         )
     )

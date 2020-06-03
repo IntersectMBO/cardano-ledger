@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.STS.Utxow
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∩))
+import Byron.Spec.Ledger.Core ((∩))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -214,7 +214,8 @@ utxoWitnessed =
           hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
 
       -- check genesis keys signatures for instantaneous rewards certificates
-      let genSig = (Set.map asWitness $ dom genMapping) ∩ Set.map witKeyHash wits
+      let genDelegates = Set.fromList $ fmap (asWitness . fst) $ Map.elems genMapping
+          genSig = genDelegates ∩ witsKeyHashes
           mirCerts =
             StrictSeq.toStrict
               . Seq.filter isInstantaneousRewards

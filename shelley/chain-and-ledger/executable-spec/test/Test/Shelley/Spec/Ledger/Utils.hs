@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Utils
@@ -26,6 +27,7 @@ where
 
 import Cardano.Binary (ToCBOR (..))
 import Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
+import Cardano.Crypto.Hash (Hash (UnsafeHash), MD5, hash)
 import Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
@@ -33,8 +35,6 @@ import Cardano.Prelude (asks)
 import Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
 import Control.Monad.Trans.Reader (runReaderT)
 import Crypto.Random (drgNewTest, withDRG)
-import Data.ByteString.Conversion (toByteString)
-import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
@@ -79,14 +79,8 @@ assertAll p xs = [] === filter (not . p) xs
 mkSeedFromWords ::
   (Word64, Word64, Word64, Word64, Word64) ->
   Seed
-mkSeedFromWords (w1, w2, w3, w4, w5) =
-  mkSeedFromBytes . BSL.toStrict $
-    toByteString (w1 * 15485867)
-      <> toByteString (w2 * 32452867)
-      <> toByteString (w3 * 49979693)
-      <> toByteString (w4 * 67867979)
-      <> toByteString (w5 * 86028157)
-      <> toByteString (2147483647 :: Word64)
+mkSeedFromWords stuff =
+  mkSeedFromBytes . coerce $ hash @MD5 stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN, VKeyGenesis)
