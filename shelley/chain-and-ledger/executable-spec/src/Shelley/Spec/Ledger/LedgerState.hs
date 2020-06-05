@@ -64,8 +64,6 @@ module Shelley.Spec.Ledger.LedgerState
     -- DelegationState
     -- refunds
     keyRefunds,
-    keyRefund,
-    decayedTx,
     -- epoch boundary
     stakeDistr,
     applyRUpd,
@@ -92,7 +90,7 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Monad.Trans.Reader (ReaderT (..), asks)
+import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
@@ -110,7 +108,6 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
     StrictMaybe (..),
-    UnitInterval,
     activeSlotVal,
     intervalValue,
   )
@@ -122,11 +119,10 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     PoolDistr (..),
     StakeCreds (..),
     StakePools (..),
-    decayKey,
     delegCWitness,
     genesisCWitness,
+    isDeRegKey,
     poolCWitness,
-    refund,
     requiresVKeyWitness,
   )
 import Shelley.Spec.Ledger.EpochBoundary
@@ -155,16 +151,9 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.PParams
   ( PParams,
+    PParams' (..),
     ProposedPPUpdates (..),
     Update (..),
-    _d,
-    _keyDecayRate,
-    _keyDeposit,
-    _keyMinRefund,
-    _minfeeA,
-    _minfeeB,
-    _rho,
-    _tau,
     emptyPPPUpdates,
     emptyPParams,
   )
@@ -177,18 +166,15 @@ import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
   ( (+*),
-    (-*),
     Duration (..),
     EpochNo (..),
     SlotNo (..),
-    epochInfoEpoch,
     epochInfoFirst,
     epochInfoSize,
   )
 import Shelley.Spec.Ledger.Tx (Tx (..), extractKeyHash)
 import Shelley.Spec.Ledger.TxData
-  ( DelegCert (..),
-    Ix,
+  ( Ix,
     PoolCert (..),
     PoolParams (..),
     Ptr (..),
@@ -713,79 +699,23 @@ produced pp stakePools tx =
 keyRefunds ::
   Crypto crypto =>
   PParams ->
-  StakeCreds crypto ->
   TxBody crypto ->
   Coin
-keyRefunds pp stk tx =
-  sum [keyRefund dval dmin lambda stk (_ttl tx) c | c@(DCertDeleg (DeRegKey _)) <- toList $ _certs tx]
+keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
   where
-    (dval, dmin, lambda) = decayKey pp
-
--- | Key refund for a deregistration certificate.
-keyRefund ::
-  Coin ->
-  UnitInterval ->
-  Rational ->
-  StakeCreds crypto ->
-  SlotNo ->
-  DCert crypto ->
-  Coin
-keyRefund dval dmin lambda (StakeCreds stkcreds) slot c =
-  case c of
-    DCertDeleg (DeRegKey key) -> case Map.lookup key stkcreds of
-      Nothing -> Coin 0
-      Just s -> refund dval dmin lambda $ slot -* s
-    _ -> Coin 0
-
--- | Functions to calculate decayed deposits
-decayedKey ::
-  PParams ->
-  StakeCreds crypto ->
-  SlotNo ->
-  DCert crypto ->
-  ShelleyBase Coin
-decayedKey pp stk@(StakeCreds stkcreds) cslot cert =
-  case cert of
-    DCertDeleg (DeRegKey key) ->
-      case Map.lookup key stkcreds of
-        Nothing -> pure 0
-        Just created' -> do
-          start <- do
-            ei <- asks epochInfo
-            fs <- epochInfoFirst ei =<< epochInfoEpoch ei cslot
-            pure $ max fs created'
-          let dval = _keyDeposit pp
-              dmin = _keyMinRefund pp
-              lambda = _keyDecayRate pp
-              epochRefund = keyRefund dval dmin lambda stk start cert
-              currentRefund = keyRefund dval dmin lambda stk cslot cert
-          pure $ epochRefund - currentRefund
-    _ -> pure 0
-
--- | Decayed deposit portions
-decayedTx ::
-  Crypto crypto =>
-  PParams ->
-  StakeCreds crypto ->
-  TxBody crypto ->
-  ShelleyBase Coin
-decayedTx pp stk tx =
-  lsum [decayedKey pp stk (_ttl tx) c | c@(DCertDeleg (DeRegKey _)) <- toList $ _certs tx]
-  where
-    lsum xs = ReaderT $ \s -> sum $ fmap (flip runReaderT s) xs
+    deregistrations = filter isDeRegKey (toList $ _certs tx)
 
 -- | Compute the lovelace which are destroyed by the transaction
 consumed ::
   Crypto crypto =>
   PParams ->
   UTxO crypto ->
-  StakeCreds crypto ->
   TxBody crypto ->
   Coin
-consumed pp u stakeKeys tx =
+consumed pp u tx =
   balance (txins tx ◁ u) + refunds + withdrawals
   where
-    refunds = keyRefunds pp stakeKeys tx
+    refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
 
 -- | Collect the set of hashes of keys that needs to sign a
@@ -882,7 +812,7 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
     currentPool = (_deposited . _utxoState) ls
     txDeposits =
       totalDeposits pp ((_stPools . _pstate . _delegationState) ls) (toList $ _certs tx)
-    txRefunds = keyRefunds pp ((_stkCreds . _dstate . _delegationState) ls) tx
+    txRefunds = keyRefunds pp tx
 
 -- | Apply a transaction body as a state transition function on the ledger state.
 applyTxBody ::

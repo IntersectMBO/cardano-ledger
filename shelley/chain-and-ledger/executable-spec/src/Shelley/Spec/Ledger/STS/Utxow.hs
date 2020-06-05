@@ -28,6 +28,20 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
+  ( (?!),
+    (?!:),
+    Embed,
+    IRC (..),
+    InitialRule,
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    failBecause,
+    judgmentContext,
+    liftSTS,
+    trans,
+    wrapFailed,
+  )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -43,17 +57,25 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
     quorum,
   )
-import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
+  ( DSignable,
+    GenDelegs (..),
+    Hash,
+    KeyHash,
+    KeyRole (..),
+    VKey,
+    asWitness,
+  )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), verifiedWits, witsVKeyNeeded)
 import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
-import Shelley.Spec.Ledger.STS.Utxo
+import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
-import Shelley.Spec.Ledger.Tx
-import Shelley.Spec.Ledger.TxData
-import Shelley.Spec.Ledger.UTxO
+import Shelley.Spec.Ledger.Tx (Tx (..), hashScript, txwitsScript, validateScript)
+import Shelley.Spec.Ledger.TxData (TxBody (..), witKeyHash)
+import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW crypto
 
@@ -167,8 +189,8 @@ initialLedgerStateUTXOW ::
   ) =>
   InitialRule (UTXOW crypto)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakeCreds stakepools genDelegs) <- judgmentContext
-  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakeCreds stakepools genDelegs)
+  IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
+  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
 utxoWitnessed ::
   forall crypto.
@@ -178,7 +200,7 @@ utxoWitnessed ::
   TransitionRule (UTXOW crypto)
 utxoWitnessed =
   judgmentContext
-    >>= \(TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx@(Tx txbody wits _ md))) -> do
+    >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits _ md))) -> do
       let utxo = _utxo u
       let witsKeyHashes = Set.map witKeyHash wits
 
@@ -230,7 +252,7 @@ utxoWitnessed =
         ?! MIRInsufficientGenesisSigsUTXOW genSig
 
       trans @(UTXO crypto) $
-        TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx)
+        TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
   ( Crypto crypto,

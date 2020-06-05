@@ -40,17 +40,14 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Delegation.Certificates (decayKey, isDeRegKey)
+import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
-    _dstate,
     _pstate,
     _stPools,
-    _stkCreds,
-    keyRefund,
   )
-import Shelley.Spec.Ledger.PParams (PParams)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (getKeyCombination)
@@ -142,7 +139,6 @@ genDCerts ::
   DPState ->
   SlotNo ->
   Natural ->
-  Natural ->
   AccountState ->
   Gen (StrictSeq DCert, [CertCred], Coin, Coin, DPState)
 genDCerts
@@ -153,7 +149,6 @@ genDCerts
   pparams
   dpState
   slot
-  ttl
   txIx
   acnt = do
     let env = (slot, txIx, pparams, acnt)
@@ -166,7 +161,6 @@ genDCerts
         (lastState_, _) = lastState certsTrace
         (certs, creds) = unzip certsCreds
         deRegStakeCreds = filter isDeRegKey certs
-        slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
     withScriptCreds <- concat <$> mapM extendWithScriptCred creds
 
@@ -174,13 +168,10 @@ genDCerts
       ( StrictSeq.fromList certs,
         withScriptCreds,
         totalDeposits pparams (_stPools (_pstate dpState)) certs,
-        sum (certRefund slotWithTTL <$> deRegStakeCreds),
+        (_keyDeposit pparams) * (fromIntegral $ length deRegStakeCreds),
         lastState_
       )
     where
-      (dval, dmin, lambda) = decayKey pparams
-      stkCreds_ = (_stkCreds . _dstate) dpState
-      certRefund = keyRefund dval dmin lambda stkCreds_
       extendWithScriptCred cred =
         case cred of
           ScriptCred (_, stakeScript) -> do

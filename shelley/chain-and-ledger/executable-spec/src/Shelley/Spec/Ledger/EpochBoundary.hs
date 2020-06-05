@@ -24,7 +24,6 @@ module Shelley.Spec.Ledger.EpochBoundary
     ptrStake,
     poolStake,
     obligation,
-    poolRefunds,
     maxPool,
     groupByPool,
     (⊎),
@@ -48,13 +47,9 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( StakeCreds (..),
     StakePools (..),
-    decayKey,
-    decayPool,
-    refund,
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
-import Shelley.Spec.Ledger.PParams (PParams, _a0, _nOpt)
-import Shelley.Spec.Ledger.Slot ((-*), SlotNo)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
 import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCred)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
@@ -136,34 +131,15 @@ poolStake ::
 poolStake hk delegs (Stake stake) =
   Stake $ dom (delegs ▷ Set.singleton hk) ◁ stake
 
--- | Calculate pool refunds
-poolRefunds ::
-  PParams ->
-  Map (KeyHash 'StakePool crypto) SlotNo ->
-  SlotNo ->
-  Map (KeyHash 'StakePool crypto) Coin
-poolRefunds pp retirees cslot =
-  Map.map
-    ( \s ->
-        refund pval pmin lambda (cslot -* s)
-    )
-    retirees
-  where
-    (pval, pmin, lambda) = decayPool pp
-
 -- | Calculate total possible refunds.
 obligation ::
   PParams ->
   StakeCreds crypto ->
   StakePools crypto ->
-  SlotNo ->
   Coin
-obligation pc (StakeCreds stakeKeys) (StakePools stakePools) cslot =
-  sum (map (\s -> refund dval dmin lambdad (cslot -* s)) $ Map.elems stakeKeys)
-    + sum (map (\s -> refund pval pmin lambdap (cslot -* s)) $ Map.elems stakePools)
-  where
-    (dval, dmin, lambdad) = decayKey pc
-    (pval, pmin, lambdap) = decayPool pc
+obligation pp (StakeCreds stakeKeys) (StakePools stakePools) =
+  (_keyDeposit pp) * (fromIntegral $ length stakeKeys)
+    + (_poolDeposit pp) * (fromIntegral $ length stakePools)
 
 -- | Calculate maximal pool reward
 maxPool :: PParams -> Coin -> Rational -> Rational -> Coin

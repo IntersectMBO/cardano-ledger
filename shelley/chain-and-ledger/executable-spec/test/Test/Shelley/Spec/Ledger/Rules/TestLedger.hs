@@ -55,7 +55,6 @@ import Shelley.Spec.Ledger.LedgerState
     _pstate,
     _rewards,
     _stPools,
-    _stkCreds,
     _utxo,
     pattern DPState,
     pattern DState,
@@ -74,7 +73,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     DELEGS,
     LEDGER,
     POOL,
-    StakeCreds,
     StakePools,
     UTXO,
     UTXOW,
@@ -226,7 +224,7 @@ noDoubleSpend =
 requiredMSigSignaturesSubset :: Property
 requiredMSigSignaturesSubset =
   forAllLedgerTrace $ \tr ->
-    let ssts = map (\(_, _, s) -> s) $ map ledgerToUtxowSsts (sourceSignalTargets tr)
+    let ssts = map (\(_, s) -> s) $ map ledgerToUtxowSsts (sourceSignalTargets tr)
      in TestUtxow.requiredMSigSignaturesSubset ssts
 
 ----------------------------------------------------------------------
@@ -313,10 +311,9 @@ ledgerToUtxoSsts (SourceSignalTarget (utxoSt, _) (utxoSt', _) tx) =
 -- | Transform LEDGER to UTXOW `SourceSignalTargets`s
 ledgerToUtxowSsts ::
   SourceSignalTarget LEDGER ->
-  (StakeCreds, StakePools, SourceSignalTarget UTXOW)
+  (StakePools, SourceSignalTarget UTXOW)
 ledgerToUtxowSsts (SourceSignalTarget (utxoSt, delegSt) (utxoSt', _) tx) =
-  ( (_stkCreds . _dstate) delegSt,
-    (_stPools . _pstate) delegSt,
+  ( (_stPools . _pstate) delegSt,
     SourceSignalTarget utxoSt utxoSt' tx
   )
 

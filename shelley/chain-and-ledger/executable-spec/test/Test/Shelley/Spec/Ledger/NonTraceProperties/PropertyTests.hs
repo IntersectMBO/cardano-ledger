@@ -293,7 +293,7 @@ propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- Hedgehog.forAll genValidStateTx
   let destroyed =
         balance ((_utxo . _utxoState) l)
-          + (keyRefunds emptyPParams ((_stkCreds . _dstate . _delegationState) l) $ _body tx)
+          + (keyRefunds emptyPParams $ _body tx)
   let created =
         balance ((_utxo . _utxoState) l')
           + fee

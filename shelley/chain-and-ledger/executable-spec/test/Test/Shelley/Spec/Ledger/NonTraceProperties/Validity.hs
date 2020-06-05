@@ -7,10 +7,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( StakeCreds (..),
-    StakePools (..),
-  )
+import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
@@ -137,17 +134,16 @@ validFee pc tx =
 preserveBalance ::
   (Crypto crypto) =>
   StakePools crypto ->
-  StakeCreds crypto ->
   PParams ->
   TxBody crypto ->
   UTxOState crypto ->
   Validity
-preserveBalance stakePools stakeKeys pp tx u =
+preserveBalance stakePools pp tx u =
   if destroyed' == created'
     then Valid
     else Invalid [ValueNotConserved destroyed' created']
   where
-    destroyed' = consumed pp (_utxo u) stakeKeys tx
+    destroyed' = consumed pp (_utxo u) tx
     created' = produced pp stakePools tx
 
 -- | Determine if the reward witdrawals correspond
@@ -165,18 +161,17 @@ validRuleUTXO ::
   (Crypto crypto) =>
   RewardAccounts crypto ->
   StakePools crypto ->
-  StakeCreds crypto ->
   PParams ->
   SlotNo ->
   Tx crypto ->
   UTxOState crypto ->
   Validity
-validRuleUTXO accs stakePools stakeKeys pc slot tx u =
+validRuleUTXO accs stakePools pc slot tx u =
   validInputs txb u
     <> current txb slot
     <> validNoReplay txb
     <> validFee pc tx
-    <> preserveBalance stakePools stakeKeys pc txb u
+    <> preserveBalance stakePools pc txb u
     <> correctWithdrawals accs (unWdrl $ _wdrls txb)
   where
     txb = _body tx
@@ -238,7 +233,6 @@ validTx tx d' slot pp l =
   validRuleUTXO
     ((_rewards . _dstate . _delegationState) l)
     ((_stPools . _pstate . _delegationState) l)
-    ((_stkCreds . _dstate . _delegationState) l)
     pp
     slot
     tx
