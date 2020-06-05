@@ -38,6 +38,7 @@ import Crypto.Random (drgNewTest, withDRG)
 import Data.Coerce (coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
+import Data.Ratio (Ratio)
 import Data.Word (Word64)
 import Hedgehog ((===), MonadTest)
 import Shelley.Spec.Ledger.Address (pattern Addr)
@@ -126,7 +127,7 @@ mkAddr (payKey, stakeKey) =
     (StakeRefBase . KeyHashObj . hashKey $ vKey stakeKey)
 
 -- | You vouch that argument is in [0; 1].
-unsafeMkUnitInterval :: Rational -> UnitInterval
+unsafeMkUnitInterval :: Ratio Word64 -> UnitInterval
 unsafeMkUnitInterval r =
   fromMaybe (error "could not construct unit interval") $ mkUnitInterval r
 

@@ -24,6 +24,7 @@ module Shelley.Spec.Ledger.BaseTypes
     interval0,
     interval1,
     intervalValue,
+    unitIntervalToRational,
     invalidKey,
     mkNonce,
     mkUnitInterval,
@@ -69,14 +70,14 @@ import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
-import Data.Ratio ((%), denominator, numerator)
+import Data.Ratio ((%), Ratio, denominator, numerator)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Serialization (rationalFromCBOR, rationalToCBOR)
+import Shelley.Spec.Ledger.Serialization (ratioFromCBOR, ratioToCBOR)
 import Shelley.Spec.NonIntegral (ln')
 
 data E34
@@ -95,32 +96,36 @@ fpEpsilon :: FixedPoint
 fpEpsilon = (10 :: FixedPoint) ^ (17 :: Integer) / fpPrecision
 
 -- | Type to represent a value in the unit interval [0; 1]
-newtype UnitInterval = UnsafeUnitInterval Rational -- TODO: Fixed precision
+newtype UnitInterval = UnsafeUnitInterval (Ratio Word64)
   deriving (Show, Ord, Eq, Generic)
   deriving newtype (NoUnexpectedThunks)
 
 instance ToCBOR UnitInterval where
-  toCBOR (UnsafeUnitInterval u) = rationalToCBOR u
+  toCBOR (UnsafeUnitInterval u) = ratioToCBOR u
 
 instance FromCBOR UnitInterval where
   fromCBOR = do
-    r <- rationalFromCBOR
+    r <- ratioFromCBOR
     case mkUnitInterval r of
       Nothing -> cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
       Just u -> pure u
 
+unitIntervalToRational :: UnitInterval -> Rational
+unitIntervalToRational (UnsafeUnitInterval x) =
+  (fromIntegral $ numerator x) % (fromIntegral $ denominator x)
+
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
-mkUnitInterval :: Rational -> Maybe UnitInterval
+mkUnitInterval :: Ratio Word64 -> Maybe UnitInterval
 mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Nothing
 
 -- | Convert a rational to a `UnitInterval` by ignoring its integer part.
-truncateUnitInterval :: Rational -> UnitInterval
+truncateUnitInterval :: Ratio Word64 -> UnitInterval
 truncateUnitInterval (abs -> r) = case (numerator r, denominator r) of
   (n, d) | n > d -> UnsafeUnitInterval $ (n `mod` d) % d
   _ -> UnsafeUnitInterval r
 
 -- | Get rational value of `UnitInterval` type
-intervalValue :: UnitInterval -> Rational
+intervalValue :: UnitInterval -> Ratio Word64
 intervalValue (UnsafeUnitInterval v) = v
 
 interval0 :: UnitInterval
@@ -324,7 +329,7 @@ mkActiveSlotCoeff v =
           else
             floor
               ( fpPrecision
-                  * ( ln' $ (1 :: FixedPoint) - (fromRational $ intervalValue v)
+                  * ( ln' $ (1 :: FixedPoint) - (fromRational $ unitIntervalToRational v)
                     )
               )
     }

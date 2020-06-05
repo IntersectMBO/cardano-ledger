@@ -239,7 +239,7 @@ instance VRFValue Nonce where
 
 instance VRFValue UnitInterval where
   -- TODO Consider whether this is a reasonable thing to do
-  fromNatural k = truncateUnitInterval $ toInteger k % 10000
+  fromNatural k = truncateUnitInterval $ fromIntegral k % 10000
 
 --------------------------------------------------------------------------------
 -- Genesis delegation

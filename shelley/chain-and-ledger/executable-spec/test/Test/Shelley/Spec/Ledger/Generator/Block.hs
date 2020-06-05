@@ -76,6 +76,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     KeySpace (..),
     NatNonce (..),
     genNatural,
+    genWord64,
     getKESPeriodRenewalNo,
     mkBlock,
     mkOCert,
@@ -269,12 +270,13 @@ genBlock
             -- integer in [1,10]. This value is guaranteed to be below the ϕ
             -- function for the VRF value comparison and generates a valid leader
             -- value for Praos.
+            let (stNumer, stDenom) = (fromIntegral $ numerator stake, fromIntegral $ denominator stake)
             let stake' =
                   if stake > 0
-                    then (numerator stake - 1) % denominator stake
-                    else stake
+                    then (stNumer - 1) % stDenom
+                    else stNumer % stDenom
                 asc = activeSlotCoeff testGlobals
-            n <- genNatural 1 10
+            n <- genWord64 1 10
             pure
               ( unsafeMkUnitInterval
                   ( (stake' / fromIntegral n)

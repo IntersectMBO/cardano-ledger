@@ -64,8 +64,8 @@ import Shelley.Spec.Ledger.Serialization
     decodeMapContents,
     mapFromCBOR,
     mapToCBOR,
-    rationalFromCBOR,
-    rationalToCBOR,
+    ratioFromCBOR,
+    ratioToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
@@ -198,7 +198,7 @@ instance ToCBOR PParams where
         <> toCBOR poolDeposit'
         <> toCBOR eMax'
         <> toCBOR nOpt'
-        <> rationalToCBOR a0'
+        <> ratioToCBOR a0'
         <> toCBOR rho'
         <> toCBOR tau'
         <> toCBOR d'
@@ -219,7 +219,7 @@ instance FromCBOR PParams where
       <*> fromCBOR -- _poolDeposit     :: Coin
       <*> fromCBOR -- _eMax            :: EpochNo
       <*> fromCBOR -- _nOpt            :: Natural
-      <*> rationalFromCBOR -- _a0              :: Rational
+      <*> ratioFromCBOR -- _a0         :: Rational
       <*> fromCBOR -- _rho             :: UnitInterval
       <*> fromCBOR -- _tau             :: UnitInterval
       <*> fromCBOR -- _d               :: UnitInterval
@@ -295,7 +295,7 @@ instance ToCBOR PParamsUpdate where
               encodeMapElement 6 toCBOR =<< _poolDeposit ppup,
               encodeMapElement 7 toCBOR =<< _eMax ppup,
               encodeMapElement 8 toCBOR =<< _nOpt ppup,
-              encodeMapElement 9 rationalToCBOR =<< _a0 ppup,
+              encodeMapElement 9 ratioToCBOR =<< _a0 ppup,
               encodeMapElement 10 toCBOR =<< _rho ppup,
               encodeMapElement 11 toCBOR =<< _tau ppup,
               encodeMapElement 12 toCBOR =<< _d ppup,
@@ -342,7 +342,7 @@ instance FromCBOR PParamsUpdate where
         6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
         7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
         8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-        9 -> rationalFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
+        9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
         10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
         11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
         12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})

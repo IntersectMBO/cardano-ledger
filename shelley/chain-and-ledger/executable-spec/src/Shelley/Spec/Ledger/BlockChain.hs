@@ -106,6 +106,7 @@ import Shelley.Spec.Ledger.BaseTypes
     intervalValue,
     mkNonce,
     strictMaybeToMaybe,
+    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
@@ -643,7 +644,7 @@ checkVRFValue certNat σ f =
           BELOW _ _ -> True
           MaxReached _ -> False
   where
-    leaderVal = (intervalValue . fromNatural) certNat
+    leaderVal = (unitIntervalToRational . fromNatural) certNat
     c = activeSlotLog f
     q = fromRational $ 1 - leaderVal
     x = (- fromRational σ * c)

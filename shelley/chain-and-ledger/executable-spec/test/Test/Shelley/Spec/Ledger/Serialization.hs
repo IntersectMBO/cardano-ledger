@@ -555,7 +555,7 @@ serializationUnitTests =
       checkEncodingCBOR
         "rational"
         (UnsafeUnitInterval (1 % 2))
-        (T (TkTag 30 . TkListLen 2 . TkInteger 1 . TkInteger 2)),
+        (T (TkTag 30 . TkListLen 2 . TkWord64 1 . TkWord64 2)),
       checkEncodingCBOR
         "slot"
         (SlotNo 7)
