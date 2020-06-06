@@ -50,8 +50,7 @@ import Shelley.Spec.Ledger.Tx
     _ttl,
     _txfee,
     _wdrls,
-    _witnessMSigMap,
-    _witnessVKeySet,
+    _witnessSet,
     pattern Tx,
     pattern TxBody,
     pattern TxIn,
@@ -98,7 +97,7 @@ mutateCoin lower upper (Coin val) =
 mutateTx :: Tx -> Gen Tx
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
-  pure $ Tx body' (_witnessVKeySet txwits) (_witnessMSigMap txwits) SNothing
+  pure $ Tx body' (_witnessSet txwits) SNothing
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.

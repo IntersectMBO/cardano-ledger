@@ -135,7 +135,7 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldableMapEncoder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx)
+import Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx, txWitsBytes)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- | The hash of a Block Header
@@ -181,7 +181,7 @@ pattern TxSeq xs <-
             { txSeqTxns' = txns,
               txSeqBodyBytes =
                 serializeEncoding . encodeFoldableEncoder (toCBOR . _body) $ txns,
-              txSeqWitsBytes = serializeFoldable $ txWitsBytes <$> txns,
+              txSeqWitsBytes = serializeFoldable $ txWitsBytes . _witnessSet <$> txns,
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
                   _metadata <$> txns
@@ -507,7 +507,7 @@ blockDecoder lax = annotatorSlice $ do
 txSeqDecoder :: Crypto crypto => Bool -> forall s. Decoder s (Annotator (TxSeq crypto))
 txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
-  (wits, witsAnn) <- withSlice $ decodeSeq (withSlice decodeWits)
+  (wits, witsAnn) <- withSlice $ decodeSeq decodeWits
   let b = length bodies
       w = length wits
 

@@ -37,10 +37,10 @@ import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
-  ( _body,
+  ( WitnessSetHKD (..),
+    _body,
     _metadata,
-    _witnessMSigMap,
-    _witnessVKeySet,
+    _witnessSet,
     hashScript,
     pattern Tx,
   )
@@ -186,8 +186,10 @@ txSimpleUTxO :: Tx
 txSimpleUTxO =
   Tx
     { _body = txbSimpleUTxO,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbSimpleUTxO) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbSimpleUTxO) [alicePay]
+          },
       _metadata = SNothing
     }
 
@@ -224,13 +226,15 @@ txMutiUTxO :: Tx
 txMutiUTxO =
   Tx
     { _body = txbMutiUTxO,
-      _witnessVKeySet =
-        makeWitnessesVKey
-          (hashTxBody txbMutiUTxO)
-          [ alicePay,
-            bobPay
-          ],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits =
+              makeWitnessesVKey
+                (hashTxBody txbMutiUTxO)
+                [ alicePay,
+                  bobPay
+                ]
+          },
       _metadata = SNothing
     }
 
@@ -255,8 +259,10 @@ txRegisterStake :: Tx
 txRegisterStake =
   Tx
     { _body = txbRegisterStake,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbRegisterStake) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbRegisterStake) [alicePay]
+          },
       _metadata = SNothing
     }
 
@@ -281,11 +287,13 @@ txDelegateStake :: Tx
 txDelegateStake =
   Tx
     { _body = txbDelegateStake,
-      _witnessVKeySet =
-        makeWitnessesVKey
-          (hashTxBody txbDelegateStake)
-          [asWitness alicePay, asWitness bobStake],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits =
+              makeWitnessesVKey
+                (hashTxBody txbDelegateStake)
+                [asWitness alicePay, asWitness bobStake]
+          },
       _metadata = SNothing
     }
 
@@ -310,8 +318,10 @@ txDeregisterStake :: Tx
 txDeregisterStake =
   Tx
     { _body = txbDeregisterStake,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbDeregisterStake) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbDeregisterStake) [alicePay]
+          },
       _metadata = SNothing
     }
 
@@ -336,8 +346,10 @@ txRegisterPool :: Tx
 txRegisterPool =
   Tx
     { _body = txbRegisterPool,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbRegisterPool) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbRegisterPool) [alicePay]
+          },
       _metadata = SNothing
     }
 
@@ -362,8 +374,10 @@ txRetirePool :: Tx
 txRetirePool =
   Tx
     { _body = txbRetirePool,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbRetirePool) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbRetirePool) [alicePay]
+          },
       _metadata = SNothing
     }
 
@@ -392,8 +406,10 @@ txWithMD :: Tx
 txWithMD =
   Tx
     { _body = txbWithMD,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbWithMD) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbWithMD) [alicePay]
+          },
       _metadata = SJust md
     }
 
@@ -427,8 +443,11 @@ txWithMultiSig :: Tx
 txWithMultiSig =
   Tx
     { _body = txbWithMultiSig,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbWithMultiSig) [alicePay, bobPay],
-      _witnessMSigMap = Map.singleton (hashScript msig) msig,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbWithMultiSig) [alicePay, bobPay],
+            msigWits = Map.singleton (hashScript msig) msig
+          },
       _metadata = SNothing
     }
 
@@ -453,11 +472,13 @@ txWithWithdrawal :: Tx
 txWithWithdrawal =
   Tx
     { _body = txbWithWithdrawal,
-      _witnessVKeySet =
-        makeWitnessesVKey
-          (hashTxBody txbWithWithdrawal)
-          [asWitness alicePay, asWitness aliceStake],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits =
+              makeWitnessesVKey
+                (hashTxBody txbWithWithdrawal)
+                [asWitness alicePay, asWitness aliceStake]
+          },
       _metadata = SNothing
     }
 

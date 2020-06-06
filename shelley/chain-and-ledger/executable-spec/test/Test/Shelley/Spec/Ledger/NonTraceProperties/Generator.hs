@@ -77,7 +77,13 @@ import Shelley.Spec.Ledger.STS.Utxow
     pattern MissingVKeyWitnessesUTXOW,
   )
 import Shelley.Spec.Ledger.Slot
-import Shelley.Spec.Ledger.Tx (_body, pattern Tx, pattern TxBody, pattern TxOut)
+import Shelley.Spec.Ledger.Tx
+  ( WitnessSetHKD (..),
+    _body,
+    pattern Tx,
+    pattern TxBody,
+    pattern TxOut,
+  )
 import Shelley.Spec.Ledger.TxData
   ( StakeCreds (..),
     Wdrl (..),
@@ -223,7 +229,7 @@ genTx keyList (UTxO m) cslot = do
           SNothing
   let !txbHash = hashTxBody txbody
   let !txwit = makeWitnessVKey txbHash selectedKeyPair
-  pure (txfee', Tx txbody (Set.fromList [txwit]) Map.empty SNothing)
+  pure (txfee', Tx txbody mempty {addrWits = Set.fromList [txwit]} SNothing)
   where
     utxoInputs = Map.keys m
     addr inp = getTxOutAddr $ m Map.! inp

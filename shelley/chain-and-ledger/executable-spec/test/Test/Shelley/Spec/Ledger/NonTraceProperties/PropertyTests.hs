@@ -33,7 +33,8 @@ import Shelley.Spec.Ledger.Tx
     _certs,
     _inputs,
     _outputs,
-    _witnessVKeySet,
+    _witnessSet,
+    addrWits,
     pattern TxIn,
     pattern TxOut,
   )
@@ -246,16 +247,18 @@ propCheckRedundantWitnessSet = property $ do
   let keyPair = fst $ head keyPairs
   let tx = _body txwits
   let witness = makeWitnessVKey (hashTxBody tx) keyPair
-  let txwits' = txwits {_witnessVKeySet = (Set.insert witness (_witnessVKeySet txwits))}
+  let witnessSet = _witnessSet txwits
+  let witnessSet' = witnessSet {addrWits = (Set.insert witness (addrWits witnessSet))}
+  let txwits' = txwits {_witnessSet = witnessSet'}
   let l'' = asStateTransition (SlotNo $ fromIntegral steps) emptyPParams l txwits' (AccountState 0 0)
   classify
     "unneeded signature added"
-    (not $ witness `Set.member` (_witnessVKeySet txwits))
+    (not $ witness `Set.member` (addrWits witnessSet))
   case l'' of
     Right _ ->
       True
         === Set.null
-          ( Set.filter (not . verifyWitVKey (hashTxBody tx)) (_witnessVKeySet txwits')
+          ( Set.filter (not . verifyWitVKey (hashTxBody tx)) (addrWits witnessSet')
           )
     _ -> failure
 
@@ -266,16 +269,16 @@ propCheckMissingWitness = property $ do
   witnessList <-
     Hedgehog.forAll
       ( Gen.subsequence $
-          Set.toList (_witnessVKeySet txwits)
+          Set.toList (addrWits $ _witnessSet txwits)
       )
-  let witnessVKeySet'' = _witnessVKeySet txwits
+  let witnessVKeySet'' = addrWits $ _witnessSet txwits
   let witnessVKeySet' = Set.fromList witnessList
   let l' =
         asStateTransition
           (SlotNo $ fromIntegral steps)
           emptyPParams
           l
-          (txwits {_witnessVKeySet = witnessVKeySet'})
+          (txwits {_witnessSet = (_witnessSet txwits) {addrWits = witnessVKeySet'}})
           (AccountState 0 0)
   let isRealSubset =
         witnessVKeySet' `Set.isSubsetOf` witnessVKeySet''

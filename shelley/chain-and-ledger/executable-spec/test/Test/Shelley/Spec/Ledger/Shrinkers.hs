@@ -32,8 +32,8 @@ shrinkTx ::
   Crypto crypto =>
   Tx crypto ->
   [Tx crypto]
-shrinkTx (Tx _b _ws _wm _md) =
-  [Tx b' _ws _wm _md | b' <- shrinkTxBody _b]
+shrinkTx (Tx _b _ws _md) =
+  [Tx b' _ws _md | b' <- shrinkTxBody _b]
 
 {- TODO @uroboros write shrinker that shrinks to valid transactions
 [ Tx b ws' wm | ws' <- shrinkSet shrinkWitVKey ws ] ++

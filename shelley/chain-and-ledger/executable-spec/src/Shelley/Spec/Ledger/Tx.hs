@@ -3,32 +3,43 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.Tx
   ( -- transaction
     Tx
       ( Tx,
         _body,
-        _witnessVKeySet,
-        _witnessMSigMap,
+        _witnessSet,
         _metadata,
-        txWitsBytes,
         txFullBytes
       ),
     TxBody (..),
     TxOut (..),
     TxIn (..),
     TxId (..),
-    Wits (..),
     decodeWits,
     segwitTx,
     -- witness data
+    WitnessSet,
+    WitnessSetHKD
+      ( WitnessSet,
+        addrWits,
+        bootWits,
+        msigWits,
+        txWitsBytes
+      ),
     WitVKey (..),
     MultiSignatureScript,
     validateScript,
@@ -65,12 +76,14 @@ import Cardano.Prelude
   )
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
+import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BaseTypes
   ( StrictMaybe,
     invalidKey,
@@ -99,59 +112,110 @@ import Shelley.Spec.Ledger.TxData
     witKeyHash,
   )
 
+-- | Higher Kinded Data
+type family HKD f a where
+  HKD Identity a = a
+  HKD f a = f a
+
+data WitnessSetHKD f crypto = WitnessSet'
+  { addrWits' :: !(HKD f (Set (WitVKey crypto))),
+    msigWits' :: !(HKD f (Map (ScriptHash crypto) (MultiSig crypto))),
+    bootWits' :: !(HKD f (Set (BootstrapWitness crypto))),
+    txWitsBytes :: LByteString
+  }
+
+deriving instance Crypto crypto => Show (WitnessSetHKD Identity crypto)
+
+deriving instance Crypto crypto => Eq (WitnessSetHKD Identity crypto)
+
+deriving instance Crypto crypto => Generic (WitnessSetHKD Identity crypto)
+
+deriving via
+  AllowThunksIn
+    '[ "txWitsBytes"
+     ]
+    (WitnessSetHKD Identity crypto)
+  instance
+    Crypto crypto => (NoUnexpectedThunks (WitnessSetHKD Identity crypto))
+
+type WitnessSet = WitnessSetHKD Identity
+
+instance Crypto crypto => ToCBOR (WitnessSetHKD Identity crypto) where
+  toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
+
+instance Crypto crypto => Semigroup (WitnessSetHKD Identity crypto) where
+  (WitnessSet a b c) <> (WitnessSet a' b' c') = WitnessSet (a <> a') (b <> b') (c <> c')
+
+instance Crypto crypto => Monoid (WitnessSetHKD Identity crypto) where
+  mempty = WitnessSet mempty mempty mempty
+
+pattern WitnessSet ::
+  Crypto crypto =>
+  Set (WitVKey crypto) ->
+  Map (ScriptHash crypto) (MultiSig crypto) ->
+  Set (BootstrapWitness crypto) ->
+  WitnessSet crypto
+pattern WitnessSet {addrWits, msigWits, bootWits} <-
+  WitnessSet' addrWits msigWits bootWits _
+  where
+    WitnessSet awits witnessMSigMap bootstrapWits =
+      let encodeMapElement ix enc x =
+            if null x then Nothing else Just (encodeWord ix <> enc x)
+          l =
+            catMaybes $
+              [ encodeMapElement 0 encodeFoldable awits,
+                encodeMapElement 1 encodeFoldable witnessMSigMap,
+                encodeMapElement 2 encodeFoldable bootstrapWits
+              ]
+          n = fromIntegral $ length l
+          witsBytes = serializeEncoding $ encodeMapLen n <> fold l
+       in WitnessSet'
+            { addrWits' = awits,
+              msigWits' = witnessMSigMap,
+              bootWits' = bootstrapWits,
+              txWitsBytes = witsBytes
+            }
+
+{-# COMPLETE WitnessSet #-}
+
 -- | A fully formed transaction.
 data Tx crypto = Tx'
   { _body' :: !(TxBody crypto),
-    _witnessVKeySet' :: !(Set (WitVKey crypto)),
-    _witnessMSigMap' :: !(Map (ScriptHash crypto) (MultiSig crypto)),
+    _witnessSet' :: !(WitnessSet crypto),
     _metadata' :: !(StrictMaybe MetaData),
-    txWitsBytes :: LByteString,
     txFullBytes :: LByteString
   }
   deriving (Show, Eq, Generic)
   deriving
     (NoUnexpectedThunks)
     via AllowThunksIn
-          '[ "txWitsBytes",
-             "txFullBytes"
+          '[ "txFullBytes"
            ]
           (Tx crypto)
 
 pattern Tx ::
   Crypto crypto =>
   TxBody crypto ->
-  Set (WitVKey crypto) ->
-  Map (ScriptHash crypto) (MultiSig crypto) ->
+  WitnessSet crypto ->
   StrictMaybe MetaData ->
   Tx crypto
-pattern Tx {_body, _witnessVKeySet, _witnessMSigMap, _metadata} <-
-  Tx' _body _witnessVKeySet _witnessMSigMap _metadata _ _
+pattern Tx {_body, _witnessSet, _metadata} <-
+  Tx' _body _witnessSet _metadata _
   where
-    Tx body witnessVKeySet witnessMSigMap metadata =
-      let encodeMapElement ix enc x =
-            if null x then Nothing else Just (encodeWord ix <> enc x)
-          l =
-            catMaybes $
-              [ encodeMapElement 0 encodeFoldable witnessVKeySet,
-                encodeMapElement 1 encodeFoldable witnessMSigMap
-              ]
-          n = fromIntegral $ length l
-          bodyBytes = serialize body
-          witsBytes = serializeEncoding $ encodeMapLen n <> fold l
+    Tx body witnessSet metadata =
+      let bodyBytes = serialize body
           wrappedMetadataBytes =
             serializeEncoding $
               encodeNullMaybe toCBOR (strictMaybeToMaybe metadata)
           fullBytes =
             (serializeEncoding $ encodeListLen 3)
               <> bodyBytes
-              <> witsBytes
+              <> serialize witnessSet
               <> wrappedMetadataBytes
        in Tx'
             { _body' = body,
-              _witnessVKeySet' = witnessVKeySet,
-              _witnessMSigMap' = witnessMSigMap,
+              _witnessSet' = witnessSet,
               _metadata' = metadata,
-              txWitsBytes = witsBytes,
               txFullBytes = fullBytes
             }
 
@@ -160,53 +224,57 @@ pattern Tx {_body, _witnessVKeySet, _witnessMSigMap, _metadata} <-
 segwitTx ::
   Crypto crypto =>
   Annotator (TxBody crypto) ->
-  (Annotator (Wits crypto), Annotator LByteString) ->
+  Annotator (WitnessSet crypto) ->
   Maybe (Annotator MetaData) ->
   Annotator (Tx crypto)
 segwitTx
   bodyAnn
-  (wits, witsAnn)
-  metaAnn =
-    Annotator $ \bytes ->
-      let body = runAnnotator bodyAnn bytes
-          Wits witnessVKeySet witnessMSigMap = runAnnotator wits bytes
-          witsBytes = runAnnotator witsAnn bytes
-          metadata = flip runAnnotator bytes <$> metaAnn
-          wrappedMetadataBytes = case metadata of
-            Nothing -> serializeEncoding encodeNull
-            Just b -> serialize b
-          fullBytes =
-            (serializeEncoding $ encodeListLen 3)
-              <> serialize body
-              <> witsBytes
-              <> wrappedMetadataBytes
-       in Tx'
-            { _body' = body,
-              _witnessVKeySet' = witnessVKeySet,
-              _witnessMSigMap' = witnessMSigMap,
-              _metadata' = maybeToStrictMaybe metadata,
-              txWitsBytes = witsBytes,
-              txFullBytes = fullBytes
-            }
+  witsAnn
+  metaAnn = Annotator $ \bytes ->
+    let body = runAnnotator bodyAnn bytes
+        witnessSet = runAnnotator witsAnn bytes
+        metadata = flip runAnnotator bytes <$> metaAnn
+        wrappedMetadataBytes = case metadata of
+          Nothing -> serializeEncoding encodeNull
+          Just b -> serialize b
+        fullBytes =
+          (serializeEncoding $ encodeListLen 3)
+            <> serialize body
+            <> serialize witnessSet
+            <> wrappedMetadataBytes
+     in Tx'
+          { _body' = body,
+            _witnessSet' = witnessSet,
+            _metadata' = maybeToStrictMaybe metadata,
+            txFullBytes = fullBytes
+          }
 
-type MultiSigMap crypto = Map (ScriptHash crypto) (MultiSig crypto)
-
-data Wits crypto
-  = Wits
-      (Set (WitVKey crypto))
-      (MultiSigMap crypto)
-
-decodeWits :: Crypto crypto => Decoder s (Annotator (Wits crypto))
+decodeWits :: forall crypto s. Crypto crypto => Decoder s (Annotator (WitnessSet crypto))
 decodeWits = do
-  mapParts <- decodeMapContents $
+  (mapParts, annBytes) <- withSlice $ decodeMapContents $
     decodeWord >>= \case
-      0 -> decodeList fromCBOR >>= \x -> pure (\(_, b) -> (x, b))
-      1 -> decodeList fromCBOR >>= \x -> pure (\(a, _) -> (a, x))
+      0 -> decodeList fromCBOR >>= \x ->
+        pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
+      1 -> decodeList fromCBOR >>= \x ->
+        pure (\ws -> ws {msigWits' = keyBy hashScript <$> sequence x})
+      2 -> decodeList fromCBOR >>= \x ->
+        pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
       k -> invalidKey k
-  let (witsVKeys, witsScripts) = foldr ($) ([], []) mapParts
-      keysSet = Set.fromList <$> sequence witsVKeys
-      multiSigMap = keyBy hashScript <$> sequence witsScripts
-  pure $ Wits <$> keysSet <*> multiSigMap
+  let witSet = foldr ($) emptyWitnessSetHKD mapParts
+      emptyWitnessSetHKD :: WitnessSetHKD Annotator crypto
+      emptyWitnessSetHKD =
+        WitnessSet'
+          { addrWits' = pure mempty,
+            msigWits' = pure mempty,
+            bootWits' = pure mempty,
+            txWitsBytes = mempty
+          }
+  pure $
+    WitnessSet'
+      <$> addrWits' witSet
+      <*> msigWits' witSet
+      <*> bootWits' witSet
+      <*> annBytes
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
@@ -220,17 +288,15 @@ instance
 instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
   fromCBOR = annotatorSlice $ decodeRecordNamed "Tx" (const 3) $ do
     body <- fromCBOR
-    (wits, witsAnn) <- withSlice decodeWits
-    meta <- decodeNullMaybe fromCBOR
-    pure $ Annotator $ \fullbytes bytes ->
-      let (Wits witsVKeys witsScripts) = runAnnotator wits fullbytes
-       in Tx'
-            (runAnnotator body fullbytes)
-            witsVKeys
-            witsScripts
-            (maybeToStrictMaybe $ flip runAnnotator fullbytes <$> meta)
-            (runAnnotator witsAnn fullbytes)
-            bytes
+    wits <- decodeWits
+    meta <- (decodeNullMaybe fromCBOR :: Decoder s (Maybe (Annotator MetaData)))
+    pure $ Annotator $ \fullBytes bytes ->
+      Tx'
+        { _body' = runAnnotator body fullBytes,
+          _witnessSet' = runAnnotator wits fullBytes,
+          _metadata' = (maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta),
+          txFullBytes = bytes
+        }
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.
@@ -273,15 +339,15 @@ validateNativeMultiSigScript ::
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where
-    witsSet = _witnessVKeySet tx
-    vhks = Set.map witKeyHash witsSet
+    witsSet = _witnessSet tx
+    vhks = Set.map witKeyHash (addrWits' witsSet)
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::
   Crypto crypto =>
   Tx crypto ->
   Map (ScriptHash crypto) (MultiSig crypto)
-txwitsScript = _witnessMSigMap
+txwitsScript = msigWits . _witnessSet
 
 extractKeyHash ::
   [Credential kr crypto] ->

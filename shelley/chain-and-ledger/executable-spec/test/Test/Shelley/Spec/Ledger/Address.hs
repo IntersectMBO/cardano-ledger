@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (pattern KeyHash)
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import qualified Test.Cardano.Chain.Common.Gen as Byron
+import Test.Shelley.Spec.Ledger.Address.Bootstrap (bootstrapTest, genBootstrapAddress)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as C
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
@@ -51,7 +51,7 @@ import qualified Test.Tasty.HUnit as T
 import qualified Test.Tasty.Hedgehog as T
 
 addressTests :: TestTree
-addressTests = T.testGroup "Address golden tests" [goldenTests, testsWithOtherCrypto, roundTripTests]
+addressTests = T.testGroup "Address golden tests" [goldenTests, testsWithOtherCrypto, roundTripTests, bootstrapTest]
 
 goldenTests :: TestTree
 goldenTests =
@@ -249,7 +249,7 @@ genAddr :: Gen C.Addr
 genAddr =
   H.frequency
     [ (5, Addr Testnet <$> genCredential <*> genStakeReference),
-      (1, AddrBootstrap <$> Byron.genAddress)
+      (1, AddrBootstrap <$> genBootstrapAddress)
     ]
   where
     genStakeReference =

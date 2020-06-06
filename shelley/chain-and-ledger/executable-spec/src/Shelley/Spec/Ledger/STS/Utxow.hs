@@ -50,6 +50,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.Address.Bootstrap (bootstrapWitKeyHash)
 import Shelley.Spec.Ledger.BaseTypes
   ( (==>),
     ShelleyBase,
@@ -73,7 +74,13 @@ import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
-import Shelley.Spec.Ledger.Tx (Tx (..), hashScript, txwitsScript, validateScript)
+import Shelley.Spec.Ledger.Tx
+  ( Tx (..),
+    WitnessSetHKD (..),
+    hashScript,
+    txwitsScript,
+    validateScript,
+  )
 import Shelley.Spec.Ledger.TxData (TxBody (..), witKeyHash)
 import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
@@ -200,10 +207,11 @@ utxoWitnessed ::
   TransitionRule (UTXOW crypto)
 utxoWitnessed =
   judgmentContext
-    >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits _ md))) -> do
+    >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits md))) -> do
       let utxo = _utxo u
-      let witsKeyHashes = Set.map witKeyHash wits
-
+      let witsKeyHashes =
+            (Set.map witKeyHash $ addrWits wits)
+              `Set.union` (Set.map bootstrapWitKeyHash $ bootWits wits)
       -- check multi-signature scripts
       let failedScripts =
             filter

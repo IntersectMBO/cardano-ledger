@@ -228,7 +228,7 @@ totalDeposits pc (StakePools stpools) cs = foldl' f (Coin 0) cs'
     cs' = filter notRegisteredPool cs
 
 txup :: Crypto crypto => Tx crypto -> Maybe (Update crypto)
-txup (Tx txbody _ _ _) = strictMaybeToMaybe (_txUpdate txbody)
+txup (Tx txbody _ _) = strictMaybeToMaybe (_txUpdate txbody)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)
