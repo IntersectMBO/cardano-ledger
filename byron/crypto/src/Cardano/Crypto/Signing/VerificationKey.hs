@@ -25,6 +25,8 @@ import qualified Cardano.Crypto.Wallet as CC
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as Builder
 import Formatting
@@ -108,5 +110,5 @@ instance Buildable VerificationKeyParseError where
 -- | Parse 'VerificationKey' from base64 encoded string
 parseFullVerificationKey :: Text -> Either VerificationKeyParseError VerificationKey
 parseFullVerificationKey s = do
-  b <- first (VerificationKeyParseBase64Error . toS) . B64.decode $ toS s
-  VerificationKey <$> first (VerificationKeyParseXPubError . toS) (CC.xpub b)
+  b <- first (VerificationKeyParseBase64Error . Text.pack) . B64.decode $ Text.encodeUtf8 s
+  VerificationKey <$> first (VerificationKeyParseXPubError . Text.pack) (CC.xpub b)

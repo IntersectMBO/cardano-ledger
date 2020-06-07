@@ -39,6 +39,7 @@ import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Base64.URL as B64URL
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import Formatting
   (Format, bprint, build, fitLeft, formatToString, later, sformat, stext, (%.))
 import qualified Formatting.Buildable as B
@@ -110,7 +111,7 @@ redeemVKB64ShortF = fitLeft 8 %. redeemVKB64F
 fromAvvmVK :: Text -> Either AvvmVKError RedeemVerificationKey
 fromAvvmVK addrText = do
   let base64rify = T.replace "-" "+" . T.replace "_" "/"
-  let parsedM    = B64.decode . toS $ base64rify addrText
+  let parsedM    = B64.decode . T.encodeUtf8 $ base64rify addrText
   addrParsed <- case parsedM of
     Left  _ -> throwError $ ApeAddressFormat addrText
     Right a -> Right a
