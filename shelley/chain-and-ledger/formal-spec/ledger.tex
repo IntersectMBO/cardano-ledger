@@ -10,7 +10,7 @@ The environment for this rule consists of:
   \item The current slot.
   \item The transaction index within the current block.
   \item The protocol parameters.
-  \item The amount of available reserves.
+  \item The accounting state.
 \end{itemize}
 The ledger state consists of:
 \begin{itemize}
@@ -27,7 +27,7 @@ The ledger state consists of:
         \var{slot} & \Slot & \text{current slot}\\
         \var{txIx} & \Ix & \text{transaction index}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{reserves} & \Coin & \text{total reserves}
+        \var{acnt} & \Acnt & \text{accounting state}
       \end{array}
     \right)
   \end{equation*}
@@ -68,7 +68,7 @@ then calls the $\mathsf{DELEGS}$ transition.
           \var{txIx} \\
           \var{pp} \\
           \var{tx}\\
-          \var{reserves}
+          \var{acnt}
         \end{array}
       }
       \vdash
@@ -94,7 +94,7 @@ then calls the $\mathsf{DELEGS}$ transition.
         \var{slot} \\
         \var{txIx} \\
         \var{pp} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -141,7 +141,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transactions.
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash \var{ls} \trans{ledgers}{\epsilon} \varUpdate{\var{ls'}}
     }
@@ -157,7 +157,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transactions.
         \begin{array}{r}
           \var{slot}\\
           \var{pp}\\
-          \var{reserves}
+          \var{acnt}
         \end{array}
       }
       \vdash
@@ -170,7 +170,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transactions.
           \var{slot}\\
           \mathsf{len}~\Gamma - 1\\
           \var{pp}\\
-          \var{reserves}
+          \var{acnt}
         \end{array}
       }
       \vdash
@@ -182,7 +182,7 @@ in $\mathsf{LEDGERS}$ in order to process a list of transactions.
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{reserves}
+        \var{acnt}
       \end{array}
     \vdash
       \var{ls}

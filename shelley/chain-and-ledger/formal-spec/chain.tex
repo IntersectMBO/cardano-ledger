@@ -241,18 +241,43 @@ It has no environment or signal, and the state is $\EpochState$.
     \vdash \var{\_} \trans{mir}{} \var{\_} \subseteq
     \powerset (\EpochState \times \EpochState)
   \end{equation*}
+  %
+  \emph{Helper function}
+  \begin{align*}
+      & \fun{mirUpdates} \in \InstantaneousRewards \to \StakeCreds \to
+      (\AddrRWD \mapsto \Coin)\times(\AddrRWD \mapsto \Coin)
+      \\
+      & \fun{mirUpdates}~(\var{irReserves},~\var{irTreasury})~\var{stkCreds} =
+      (\var{updateR},~\var{updateT})\\
+      & ~~~~\where \\
+      & ~~~~~~~~~\var{updateR} =
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{stkCreds})\restrictdom\var{irReserves}
+        \right\}
+        \\
+      & ~~~~~~~~~\var{updateT} =
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{stkCreds})\restrictdom\var{irTreasury}
+        \right\}
+        \\
+  \end{align*}
   \caption{MIR transition-system types}
   \label{fig:ts-types:mir}
 \end{figure}
 
 Figure~\ref{fig:rules:mir} defines the MIR state transition.
-The transition first restricts the instantaneous rewards to those which
-correspond to registered stake keys.
-If the reserve pot is large enough to cover the sum of these rewards,
-the corresponding reward accounts are increased by the appropriate amount
-and the reserve pot is proportionally decreased.
-In either case, if the reserve pot was large enough or not,
-we reset the instantaneous rewards back to the empty mapping.
+The transition uses the function $\fun{mirUpdates}$ to restrict
+the two instantaneous rewards mappings to the registered stake keys,
+and transforms the keys of the mappiing to reward accouts.
+
+If the reserve and treasury pots are large enough to cover the sum
+of the corresponding instantaneous rewards,
+the reward accounts are increased by the appropriate amount
+and the two pots are decreased appropriately.
+In either case, if the pots are large enough or not,
+we reset both of the instantaneous reward mappings back to the empty mapping.
 
 \begin{figure}[ht]
   \begin{equation}\label{eq:mir}
@@ -264,24 +289,26 @@ we reset the instantaneous rewards back to the empty mapping.
       \\
       (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      \var{i_{rwd}'}\leteq (\dom{stkCreds})\restrictdom\var{i_{rwd}}
+      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{stkCreds}
       \\
-      \var{tot}\leteq\sum\limits_{\wcard\mapsto v\in\var{i_{rwd}'}}v
+      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
       &
-      \var{update} =
-        \left\{
-        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in\var{i_{rwd}'}
-        \right\}
+      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateT}}v
       \\
-      \var{tot}\leq\var{reserves}
+      \var{totR}\leq\var{reserves}
+      &
+      \var{totT}\leq\var{treasury}
       \\~\\
-      \var{acnt'}\leteq(\var{treasury},~\varUpdate{\var{reserves}-\var{tot}})
+      \var{acnt'}\leteq
+        (\varUpdate{\var{treasury}-\var{totT}},~\varUpdate{\var{reserves}-\var{totR}})
+      \\
+      \var{rewards'}\leteq\var{rewards}\unionoverridePlus\var{updateR}\unionoverridePlus\var{updateT}
       \\
       \var{ds'} \leteq
       (\var{stkCreds},~
-      \varUpdate{\var{rewards}\unionoverridePlus\var{update}},~\var{delegations},~
-      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\varUpdate{\emptyset})
+      \varUpdate{\var{rewards}'},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
+      ~(\varUpdate{\emptyset},~\varUpdate{\emptyset}))
     }
     {
       \vdash
@@ -312,16 +339,20 @@ we reset the instantaneous rewards back to the empty mapping.
       \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
         \leteq \var{ds}
       \\
-      (\wcard,~\var{reserves})\leteq\var{acnt}
+      (\var{treasury},~\var{reserves})\leteq\var{acnt}
       &
-      \var{i_{rwd}'}\leteq (\dom{stkCreds})\restrictdom\var{i_{rwd}}
-      &
-      \var{tot}\leteq\sum\limits_{\wcard\mapsto v\in\var{i_{rwd}'}}v
+      (\var{updateR},~\var{updateT})\leteq\fun{mirUpdates}~\var{i_{rwd}}~\var{stkCreds}
       \\
-      \var{tot}>\var{reserves}
+      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateR}}v
+      &
+      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{updateT}}v
+      \\
+      \var{totR}>\var{reserves}~\lor~\var{totT}>\var{treasury}
       \\~\\
-      \var{ds'} \leteq (\var{stkCreds},~\var{rewards},~\var{delegations},~
-      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\varUpdate{\emptyset})
+      \var{ds'} \leteq
+      (\var{stkCreds},~\var{rewards},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
+      ~(\varUpdate{\emptyset},~\varUpdate{\emptyset}))
     }
     {
       \vdash
@@ -1494,8 +1525,8 @@ The PRTCL rule has no predicate failures.
 
 The Block Body Transition updates the block body state which comprises the ledger state and the
 map describing the produced blocks.
-The environment of the $\mathsf{BBODY}$ transition are overlay schedule slots and the protocol
-parameters.
+The environment of the $\mathsf{BBODY}$ transition are overlay schedule slots,
+the protocol parameters, and the accounting state.
 The environments and states are defined in Figure~\ref{fig:ts-types:bbody}, along with
 a helper function $\fun{incrBlocks}$, which counts the number of non-overlay blocks
 produced by each stake pool.
@@ -1508,7 +1539,7 @@ produced by each stake pool.
       \begin{array}{r@{~\in~}lr}
         \var{oslots} & \powerset{\Slot} & \text{overlay slots} \\
         \var{pp} & \PParams & \text{protocol parameters} \\
-        \var{reserves} & \Coin & \text{total reserves}
+        \var{acnt} & \Acnt & \text{accounting state}
       \end{array}
     \right)
   \end{equation*}
@@ -1587,7 +1618,7 @@ current slot is not an overlay slot.
         {\begin{array}{c}
                  \bslot{bhb} \\
                  \var{pp} \\
-                 \var{reserves}
+                 \var{acnt}
         \end{array}}
         \vdash
              \var{ls} \\
@@ -1599,7 +1630,7 @@ current slot is not an overlay slot.
       {\begin{array}{c}
                \var{oslots} \\
                \var{pp} \\
-               \var{reserves}
+               \var{acnt}
       \end{array}}
       \vdash
       {\left(\begin{array}{c}
@@ -1815,7 +1846,6 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         ( \wcard,
           ( (\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{genDelegs}),~
           (\wcard,~\wcard,~\wcard)))\leteq\var{ls}\\
-          (\wcard, reserves) \leteq \var{acnt}\\
           \var{ne} \leteq  \var{e_1} \neq \var{e_2}\\
           \eta_{ph} \leteq \prevHashToNonce{(\lastAppliedHash{lab})} \\
       {
@@ -1848,7 +1878,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         {\begin{array}{c}
                  \dom{osched} \\
                  \var{pp'} \\
-                 \var{reserves}
+                 \var{acnt}
         \end{array}}
         \vdash
         {\left(\begin{array}{c}
