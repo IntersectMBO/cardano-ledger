@@ -27,8 +27,8 @@ module Shelley.Spec.Ledger.Serialization
     encodeFoldableMapEncoder,
     encodeNullMaybe,
     groupRecord,
-    rationalToCBOR,
-    rationalFromCBOR,
+    ratioToCBOR,
+    ratioFromCBOR,
     mapToCBOR,
     mapFromCBOR,
     -- IPv4
@@ -86,7 +86,7 @@ import Data.IP
   )
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Ratio ((%), Rational, denominator, numerator)
+import Data.Ratio ((%), Ratio, denominator, numerator)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -253,21 +253,21 @@ decodeCollectionWithLen lenOrIndef el = do
       False -> pure (n, reverse acc)
       True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
 
-rationalToCBOR :: Rational -> Encoding
-rationalToCBOR r =
+ratioToCBOR :: ToCBOR a => Ratio a -> Encoding
+ratioToCBOR r =
   encodeTag 30
     <> encodeListLen 2
     <> toCBOR (numerator r)
     <> toCBOR (denominator r)
 
-rationalFromCBOR :: Decoder s Rational
-rationalFromCBOR = do
+ratioFromCBOR :: (Integral a, FromCBOR a) => Decoder s (Ratio a)
+ratioFromCBOR = do
   t <- decodeTag
   unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
-  (numInts, ints) <- decodeCollectionWithLen (decodeListLenOrIndef) fromCBOR
-  case ints of
+  (numValues, values) <- decodeCollectionWithLen (decodeListLenOrIndef) fromCBOR
+  case values of
     n : d : [] -> pure $ n % d
-    _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numInts
+    _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
 
 encodeNullMaybe :: (a -> Encoding) -> Maybe a -> Encoding
 encodeNullMaybe _ Nothing = encodeNull

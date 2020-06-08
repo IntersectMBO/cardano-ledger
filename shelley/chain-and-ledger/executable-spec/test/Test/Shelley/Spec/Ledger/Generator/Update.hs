@@ -17,7 +17,8 @@ where
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Ratio ((%))
+import Data.Ratio ((%), Ratio)
+import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -81,9 +82,13 @@ genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
   (% 1000) <$> genInteger lower upper
 
-genIntervalInThousands :: HasCallStack => Integer -> Integer -> Gen UnitInterval
+genRatioWord64InThousands :: HasCallStack => Word64 -> Word64 -> Gen (Ratio Word64)
+genRatioWord64InThousands lower upper =
+  (% 1000) <$> genWord64 lower upper
+
+genIntervalInThousands :: HasCallStack => Word64 -> Word64 -> Gen UnitInterval
 genIntervalInThousands lower upper =
-  unsafeMkUnitInterval <$> genRationalInThousands lower upper
+  unsafeMkUnitInterval <$> genRatioWord64InThousands lower upper
 
 genPParams :: HasCallStack => Constants -> Gen PParams
 genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
