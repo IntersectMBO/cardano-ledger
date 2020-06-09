@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -36,8 +37,9 @@ import Shelley.Spec.Ledger.BlockChain
     pattern HashHeader,
   )
 import Shelley.Spec.Ledger.Keys (Hash, KeyRole (BlockIssuer), coerceKeyRole, hash)
-import Shelley.Spec.Ledger.LedgerState (overlaySchedule)
-import Shelley.Spec.Ledger.STS.Chain (initialShelleyState)
+import Shelley.Spec.Ledger.LedgerState (_treasury, esAccountState, nesEs, overlaySchedule)
+import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
+import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Gen)
@@ -96,7 +98,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
             (Map.keysSet delegs0)
             pParams
 
-  pure . Right $
+  pure . Right . withRewards $
     initialShelleyState
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
       epoch0
@@ -109,6 +111,22 @@ mkGenesisChainState constants (IRC _slotNo) = do
   where
     epoch0 = EpochNo 0
     delegs0 = genesisDelegs0 constants
+    -- We preload the initial state with some Treasury to enable generation
+    -- of things dependent on Treasury (e.g. MIR Treasury certificates)
+    withRewards :: ChainState -> ChainState
+    withRewards st@STS.ChainState {..} =
+      st
+        { chainNes =
+            chainNes
+              { nesEs =
+                  (nesEs chainNes)
+                    { esAccountState =
+                        (esAccountState (nesEs chainNes))
+                          { _treasury = 1000000
+                          }
+                    }
+              }
+        }
 
 mkOCertIssueNos ::
   GenDelegs ->

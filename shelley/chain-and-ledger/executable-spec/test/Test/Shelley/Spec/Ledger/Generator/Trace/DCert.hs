@@ -113,16 +113,17 @@ instance QC.HasTrace CERTS GenEnv where
           )
         constants
       )
-    (slot, _txIx, pparams, _reserves)
+    (slot, _txIx, pparams, accountState)
     (dpState, _certIx) =
       genDCert
         constants
         ksKeyPairs
         ksMSigScripts
-        (fst <$> ksCoreNodes)
+        ksCoreNodes
         ksVRFKeyPairs
         (ksKeyPairsByStakeHash ks)
         pparams
+        accountState
         dpState
         slot
 

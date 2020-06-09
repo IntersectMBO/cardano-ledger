@@ -24,6 +24,8 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     isRegPool,
     isRetirePool,
     isInstantaneousRewards,
+    isReservesMIRCert,
+    isTreasuryMIRCert,
     requiresVKeyWitness,
   )
 where
@@ -42,6 +44,7 @@ import Shelley.Spec.Ledger.TxData
     Delegation (..),
     GenesisDelegCert (..),
     MIRCert (..),
+    MIRPot (..),
     PoolCert (..),
     PoolParams (..),
     StakeCreds (..),
@@ -109,6 +112,14 @@ newtype PoolDistr crypto = PoolDistr
 isInstantaneousRewards :: DCert crypto -> Bool
 isInstantaneousRewards (DCertMir _) = True
 isInstantaneousRewards _ = False
+
+isReservesMIRCert :: DCert crypto -> Bool
+isReservesMIRCert (DCertMir (MIRCert ReservesMIR _)) = True
+isReservesMIRCert _ = False
+
+isTreasuryMIRCert :: DCert crypto -> Bool
+isTreasuryMIRCert (DCertMir (MIRCert TreasuryMIR _)) = True
+isTreasuryMIRCert _ = False
 
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure
