@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -25,6 +26,7 @@ module Shelley.Spec.Ledger.BaseTypes
     interval1,
     intervalValue,
     unitIntervalToRational,
+    unitIntervalFromRational,
     invalidKey,
     mkNonce,
     mkUnitInterval,
@@ -66,6 +68,8 @@ import Cardano.Crypto.Hash
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (ReaderT)
+import Data.Aeson (FromJSON (..), ToJSON (..))
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
@@ -98,7 +102,7 @@ fpEpsilon = (10 :: FixedPoint) ^ (17 :: Integer) / fpPrecision
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnsafeUnitInterval (Ratio Word64)
   deriving (Show, Ord, Eq, Generic)
-  deriving newtype (NoUnexpectedThunks)
+  deriving newtype (NoUnexpectedThunks, NFData)
 
 instance ToCBOR UnitInterval where
   toCBOR (UnsafeUnitInterval u) = ratioToCBOR u
@@ -110,9 +114,20 @@ instance FromCBOR UnitInterval where
       Nothing -> cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
       Just u -> pure u
 
+instance ToJSON UnitInterval where
+  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Double)
+
+instance FromJSON UnitInterval where
+  parseJSON v =
+    truncateUnitInterval . realToFrac
+      <$> (parseJSON v :: Aeson.Parser Double)
+
 unitIntervalToRational :: UnitInterval -> Rational
 unitIntervalToRational (UnsafeUnitInterval x) =
   (fromIntegral $ numerator x) % (fromIntegral $ denominator x)
+
+unitIntervalFromRational :: Rational -> UnitInterval
+unitIntervalFromRational = truncateUnitInterval . fromRational
 
 -- | Return a `UnitInterval` type if `r` is in [0; 1].
 mkUnitInterval :: Ratio Word64 -> Maybe UnitInterval
@@ -139,7 +154,7 @@ data Nonce
   = Nonce !(Hash SHA256 Nonce)
   | -- | Identity element
     NeutralNonce
-  deriving (Eq, Generic, Ord, Show)
+  deriving (Eq, Generic, Ord, Show, NFData)
 
 instance NoUnexpectedThunks Nonce
 
@@ -161,6 +176,10 @@ instance FromCBOR Nonce where
         matchSize "Nonce" 2 n
         Nonce <$> fromCBOR
       k -> invalidKey k
+
+deriving anyclass instance ToJSON Nonce
+
+deriving anyclass instance FromJSON Nonce
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce
@@ -194,6 +213,8 @@ data StrictMaybe a
   deriving (Eq, Ord, Show, Generic)
 
 instance NoUnexpectedThunks a => NoUnexpectedThunks (StrictMaybe a)
+
+instance NFData a => NFData (StrictMaybe a)
 
 instance Functor StrictMaybe where
   fmap _ SNothing = SNothing
@@ -381,7 +402,7 @@ type ShelleyBase = ReaderT Globals Identity
 data Network
   = Testnet
   | Mainnet
-  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, NoUnexpectedThunks)
+  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoUnexpectedThunks)
 
 networkToWord8 :: Network -> Word8
 networkToWord8 = toEnum . fromEnum

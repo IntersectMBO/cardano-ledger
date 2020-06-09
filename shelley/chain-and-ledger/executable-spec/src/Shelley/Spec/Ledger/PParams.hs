@@ -36,8 +36,11 @@ import Cardano.Binary
     encodeWord,
     enforceSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
+import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
@@ -57,6 +60,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Serialization
   ( CBORGroup (..),
     FromCBORGroup (..),
@@ -140,12 +144,28 @@ deriving instance Eq (PParams' Identity)
 
 deriving instance Show (PParams' Identity)
 
+deriving instance NFData (PParams' Identity)
+
 data ProtVer = ProtVer !Natural !Natural
-  deriving (Show, Eq, Generic, Ord)
+  deriving (Show, Eq, Generic, Ord, NFData)
   deriving (ToCBOR) via (CBORGroup ProtVer)
   deriving (FromCBOR) via (CBORGroup ProtVer)
 
 instance NoUnexpectedThunks ProtVer
+
+instance ToJSON ProtVer where
+  toJSON (ProtVer major minor) =
+    Aeson.object
+      [ "major" .= major,
+        "minor" .= minor
+      ]
+
+instance FromJSON ProtVer where
+  parseJSON =
+    Aeson.withObject "ProtVer" $ \obj ->
+      ProtVer
+        <$> obj .: "major"
+        <*> obj .: "minor"
 
 instance ToCBORGroup ProtVer where
   toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
@@ -227,6 +247,51 @@ instance FromCBOR PParams where
       <*> fromCBORGroup -- _protocolVersion :: ProtVer
       <*> fromCBOR -- _minUTxOValue    :: Natural
 
+instance ToJSON PParams where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= _minfeeA pp,
+        "minFeeB" .= _minfeeB pp,
+        "maxBlockBodySize" .= _maxBBSize pp,
+        "maxTxSize" .= _maxTxSize pp,
+        "maxBlockHeaderSize" .= _maxBHSize pp,
+        "keyDeposit" .= _keyDeposit pp,
+        "poolDeposit" .= _poolDeposit pp,
+        "eMax" .= _eMax pp,
+        "nOpt" .= _nOpt pp,
+        "a0" .= (fromRational $ _a0 pp :: Double),
+        "rho" .= _rho pp,
+        "tau" .= _tau pp,
+        "decentralisationParam" .= _d pp,
+        "extraEntropy" .= _extraEntropy pp,
+        "protocolVersion" .= _protocolVersion pp,
+        "minUTxOValue" .= _minUTxOValue pp
+      ]
+
+instance FromJSON PParams where
+  parseJSON =
+    Aeson.withObject "PParams" $ \obj ->
+      PParams
+        <$> obj .: "minFeeA"
+        <*> obj .: "minFeeB"
+        <*> obj .: "maxBlockBodySize"
+        <*> obj .: "maxTxSize"
+        <*> obj .: "maxBlockHeaderSize"
+        <*> obj .: "keyDeposit"
+        <*> obj .: "poolDeposit"
+        <*> obj .: "eMax"
+        <*> obj .: "nOpt"
+        <*> parseRationalFromDouble (obj .: "a0")
+        <*> obj .: "rho"
+        <*> obj .: "tau"
+        <*> obj .: "decentralisationParam"
+        <*> obj .: "extraEntropy"
+        <*> obj .: "protocolVersion"
+        <*> obj .:? "minUTxOValue" .!= 0
+    where
+      parseRationalFromDouble :: Aeson.Parser Double -> Aeson.Parser Rational
+      parseRationalFromDouble p = realToFrac <$> p
+
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
 emptyPParams =
@@ -278,6 +343,8 @@ deriving instance Eq (PParams' StrictMaybe)
 deriving instance Show (PParams' StrictMaybe)
 
 deriving instance Ord (PParams' StrictMaybe)
+
+deriving instance NFData (PParams' StrictMaybe)
 
 instance NoUnexpectedThunks PParamsUpdate
 
@@ -359,7 +426,7 @@ instance FromCBOR PParamsUpdate where
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates crypto
   = ProposedPPUpdates (Map (KeyHash 'Genesis crypto) PParamsUpdate)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, NFData)
 
 instance NoUnexpectedThunks (ProposedPPUpdates crypto)
 
