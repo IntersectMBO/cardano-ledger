@@ -18,7 +18,7 @@ where
 
 import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hash.Class as Crypto (Hash (..))
-import Cardano.Prelude (Natural, NoUnexpectedThunks)
+import Cardano.Prelude (NoUnexpectedThunks)
 import Cardano.Slotting.Slot (EpochSize)
 import Data.Aeson ((.:), (.=), FromJSON (..), ToJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
@@ -90,7 +90,6 @@ data ShelleyGenesis c = ShelleyGenesis
     sgMaxKESEvolutions :: !Word64,
     sgSlotLength :: !NominalDiffTime,
     sgUpdateQuorum :: !Word64,
-    sgMaxMajorPV :: !Natural,
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !PParams,
     sgGenDelegs ::
@@ -127,7 +126,6 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
         "maxKESEvolutions" .= sgMaxKESEvolutions sg,
         "slotLength" .= sgSlotLength sg,
         "updateQuorum" .= sgUpdateQuorum sg,
-        "maxMajorPV" .= sgMaxMajorPV sg,
         "maxLovelaceSupply" .= sgMaxLovelaceSupply sg,
         "protocolParams" .= sgProtocolParams sg,
         "genDelegs" .= Map.map toGenDelegPair (sgGenDelegs sg),
@@ -152,7 +150,6 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "maxKESEvolutions"
         <*> obj .: "slotLength"
         <*> obj .: "updateQuorum"
-        <*> obj .: "maxMajorPV"
         <*> obj .: "maxLovelaceSupply"
         <*> obj .: "protocolParams"
         <*> ( Map.map fromGenDelegPair
