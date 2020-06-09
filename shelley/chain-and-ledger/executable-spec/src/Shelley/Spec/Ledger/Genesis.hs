@@ -4,16 +4,20 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Shelley.Spec.Ledger.Genesis
   ( ShelleyGenesisStaking (..),
     ShelleyGenesis (..),
     emptyGenesisStaking,
     sgActiveSlotCoeff,
+    genesisUtxO,
+    initialFundsPseudoTxIn,
   )
 where
 
 import Cardano.Crypto (ProtocolMagicId)
+import qualified Cardano.Crypto.Hash.Class as Crypto (Hash (..))
 import Cardano.Prelude (Natural, NoUnexpectedThunks)
 import Cardano.Slotting.Slot (EpochSize)
 import Data.Aeson ((.:), (.=), FromJSON (..), ToJSON (..), Value (..))
@@ -26,10 +30,13 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Crypto (Crypto)
+import Shelley.Spec.Ledger.Credential
+import Shelley.Spec.Ledger.Crypto (Crypto, HASH)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxData
+import Shelley.Spec.Ledger.UTxO
 
 -- | Genesis Shelley staking configuration.
 --
@@ -175,3 +182,43 @@ instance Crypto crypto => FromJSON (GenDelegPair crypto) where
       GenDelegPair
         <$> obj .: "delegate"
         <*> obj .: "vrf"
+
+{-------------------------------------------------------------------------------
+  Genesis UTxO
+-------------------------------------------------------------------------------}
+
+genesisUtxO :: ShelleyGenesis c -> UTxO c
+genesisUtxO genesis =
+  UTxO $
+    Map.fromList
+      [ (txIn, txOut)
+        | (addr, amount) <- Map.toList (sgInitialFunds genesis),
+          let txIn = initialFundsPseudoTxIn addr
+              txOut = TxOut addr amount
+      ]
+
+-- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
+-- to the given address in the genesis initial funds.
+--
+-- The Shelley initial UTxO is constructed from the 'sgInitialFunds' which
+-- is not a full UTxO but just a map from addresses to coin values.
+--
+-- This gets turned into a UTxO by making a pseudo-transaction for each address,
+-- with the 0th output being the coin value. So to spend from the initial UTxO
+-- we need this same 'TxIn' to use as an input to the spending transaction.
+initialFundsPseudoTxIn :: forall c. Addr c -> TxIn c
+initialFundsPseudoTxIn addr =
+  case addr of
+    Addr _networkId (KeyHashObj (KeyHash h)) _sref -> pseudoTxIn h
+    Addr _networkId (ScriptHashObj (ScriptHash h)) _sref -> pseudoTxIn h
+    AddrBootstrap byronAddr ->
+      error $
+        "Unsupported Byron address in the genesis UTxO: " <> show byronAddr
+  where
+    pseudoTxIn :: Crypto.Hash (HASH c) a -> TxIn c
+    pseudoTxIn h = TxIn (pseudoTxId h) 0
+    pseudoTxId :: Crypto.Hash (HASH c) a -> TxId c
+    pseudoTxId = TxId . castHash
+    --TODO: move this to the hash API module
+    castHash :: Crypto.Hash (HASH c) a -> Crypto.Hash (HASH c) b
+    castHash (Crypto.UnsafeHash h) = Crypto.UnsafeHash h
