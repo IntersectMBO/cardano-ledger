@@ -33,8 +33,10 @@ genesis keys. The genesis keys will still be used for update proposals at the
 beginning of the Shelley era, and so there must be a way to maintain the delegation
 of these keys to their cold keys.  This mapping is also maintained by the
 delegation state. There is also a mechanism to transfer rewards directly from
-the reserves pot to a reward address. While technically everybody can post such
-a certificate, the transaction that contains it must be signed by genesis keys.
+either the reserves pot or the treasury pot to a reward address.
+While technically everybody can post such a certificate,
+the transaction that contains it must be signed by $\Quorum$-many
+genesis key delegates.
 
 \subsection{Delegation Definitions}
 \label{sec:deleg-defs}
@@ -109,6 +111,7 @@ It does the following:
     \begin{array}{r@{~\in~}lr}
       \var{url} & \URL & \text{a url}\\
       \var{pmd} & \PoolMD & \text{pool metadata}\\
+      \var{mp} & \MIRPot & \text{either $\ReservesMIR$ or $\TreasuryMIR$}\\
     \end{array}
   \end{equation*}
   %
@@ -171,6 +174,8 @@ It does the following:
       \\
       \fun{moveRewards} & \DCertMir \to (\StakeCredential \mapsto \Coin)
                                             & \text{moved inst. rewards}
+      \\
+      \fun{mirPot} & \DCertMir \to \MIRPot & \text{pot for inst. rewards}
     \end{array}
   \end{equation*}
   %
@@ -231,8 +236,10 @@ state transition types. We define two separate parts of the ledger state.
       necessary for header validation, see Section \ref{sec:chain})
       \item $\var{genDelegs}$ maps genesis key hashes to hashes of the cold key
         delegates.
-      \item $\var{i_{rwd}}$ stored the map of stake credentials to $\Coin$
-        values for moving instantaneous rewards at the epoch boundary.
+      \item $\var{i_{rwd}}$ stores two maps of stake credentials to $\Coin$,
+        which is used for moving instantaneous rewards at the epoch boundary.
+        One map corresponds to rewards taken from the reserves,
+        and the other corresponds to rewards taken from the treasury.
     \end{itemize}
   \item $\PState$ keeps track of the stake pool information:
     \begin{itemize}
@@ -256,8 +263,8 @@ For a discussion of why this additional mechanism is needed,
 see the document~\cite{delegation_design}, and for
 the relevant rules, see Section \ref{sec:oper-cert-trans}.
 
-The environment for the state transition for $\DState$ contains the current slot number
-and the index for the current certificate pointer.
+The environment for the state transition for $\DState$ contains the current slot number,
+the index for the current certificate pointer, and the account state.
 The environment for the state transition for $\PState$ contains the current slot number
 and the protocol parameters.
 
@@ -267,11 +274,14 @@ and the protocol parameters.
 \begin{figure}
   \emph{Delegation Types}
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{stakeCred} & \StakeCredential & (\KeyHash_{stake} \uniondistinct
+    \begin{array}{rclclr}
+      \var{stakeCred} & \in &  \StakeCredential & = & (\KeyHash_{stake} \uniondistinct
                                        \HashScr) \\
-      \var{fGenDelegs} & \FutGenesisDelegation
+      \var{fGenDelegs} & \in &  \FutGenesisDelegation & =
                        & (\Slot\times\KeyHashGen)\mapsto(\KeyHash\times\KeyHash_{vrf}) \\
+      \var{ir} & \in &  \InstantaneousRewards & =
+               & (\StakeCredential \mapsto \Coin) \\
+               & & & & ~~~~\times(\StakeCredential \mapsto \Coin) \\
     \end{array}
   \end{equation*}
   %
@@ -287,7 +297,7 @@ and the protocol parameters.
             \var{ptrs} & \Ptr \mapsto \StakeCredential & \text{pointer to stake credential}\\
             \var{fGenDelegs} & \FutGenesisDelegation & \text{future genesis key delegations}\\
             \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations}\\
-            \var{i_{rwd}} & \StakeCredential \mapsto \Coin & \text{instantaneous rewards}\\
+            \var{i_{rwd}} & \InstantaneousRewards & \text{instantaneous rewards}\\
           \end{array}
       \right)
       \\
@@ -311,7 +321,7 @@ and the protocol parameters.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{slot}\\
         \var{ptr} & \Ptr & \text{certificate pointer}\\
-        \var{reserves} & \Coin & \text{total reserves available}
+        \var{acnt} & \Acnt & \text{accounting state}
       \end{array}
     \right)
   \end{equation*}
@@ -405,9 +415,10 @@ concerns are independent of the ledger rules.
         to be adopted in $\StabilityWindow$-many slots.
       \end{itemize}
 
-    \item  Moving instantaneous rewards is handled by \cref{eq:deleg-mir}. There
-      is a precondition that the current slot is early enough in the current
-      epoch and that the available reserves are sufficient to pay for the
+    \item  Moving instantaneous rewards is handled by
+      \cref{eq:deleg-mir-reserves} and \cref{eq:deleg-mir-treasury}.
+      There is a precondition that the current slot is early enough in the current
+      epoch and that the available reserves or treasury are sufficient to pay for the
       instantaneous rewards.
 \end{itemize}
 
@@ -427,7 +438,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -466,7 +477,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -504,7 +515,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -560,7 +571,7 @@ concerns are independent of the ledger rules.
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -597,19 +608,24 @@ concerns are independent of the ledger rules.
 
 \begin{figure}[htp]
   \centering
-  \begin{equation}\label{eq:deleg-mir}
+  \begin{equation}\label{eq:deleg-mir-reserves}
     \inference[Deleg-Mir]
     {
-      \var{c}\in \DCertMir\\
+      \var{c}\in \DCertMir
+      &
+      \fun{mirPot}~\var{c}=\ReservesMIR
+      \\
       slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{StabilityWindow}\\
-      \left(
-        \sum\limits_{\wcard\mapsto\var{val}\in(\var{i_{rwd}}\unionoverrideRight\var{i_{rwd}})} val      \right)\leq\var{reserves}
+      (\var{irReserves},~\var{irTreasury})\leteq\var{i_{rwd}}
+      &
+      \var{combinedR}\leteq\var{irReserves}\unionoverrideRight(\fun{moveRewards}~\var{c}) \\
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{combinedR}} val \leq\var{reserves}
     }
     {
       \begin{array}{r}
         \var{slot} \\
         \var{ptr} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -625,15 +641,60 @@ concerns are independent of the ledger rules.
       \right)
       \trans{deleg}{c}
       \left(
-      \begin{array}{rcl}
+      \begin{array}{c}
         \var{stkCreds}\\
         \var{rewards} \\
         \var{delegations} \\
         \var{ptrs} \\
         \var{fGenDelegs}\\
         \var{genDelegs} \\
-        \varUpdate{\var{i_{rwd}}} & \varUpdate{\unionoverrideRight}
-        & \varUpdate{\fun{moveRewards}~\var{c}}
+        (\varUpdate{\var{combinedR}},~\var{irTreasury}) \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \\~\\
+  \begin{equation}\label{eq:deleg-mir-treasury}
+    \inference[Deleg-Mir]
+    {
+      \var{c}\in \DCertMir
+      &
+      \fun{mirPot}~\var{c}=\TreasuryMIR
+      \\
+      slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{StabilityWindow}\\
+      (\var{irReserves},~\var{irTreasury})\leteq\var{i_{rwd}}
+      &
+      \var{combinedT}\leteq\var{irTreasury}\unionoverrideRight(\fun{moveRewards}~\var{c}) \\
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{combinedT}} val \leq\var{treasury}
+    }
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+        \var{acnt}
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{stkCreds} \\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fGenDelegs} \\
+        \var{genDelegs} \\
+        \var{i_{rwd}}
+      \end{array}
+      \right)
+      \trans{deleg}{c}
+      \left(
+      \begin{array}{c}
+        \var{stkCreds}\\
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fGenDelegs}\\
+        \var{genDelegs} \\
+        (\var{irReserves},~\varUpdate{\var{combinedT}}) \\
       \end{array}
       \right)
     }
@@ -865,7 +926,7 @@ combined transition.
         \var{slot} & \Slot & \text{slot}\\
         \var{ptr} & \Ptr & \text{certificate pointer}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{reserves} & \Coin & \text{total available reserves}
+        \var{acnt} & \Acnt & \text{accounting state}
       \end{array}
     \right)
   \end{equation*}
@@ -909,7 +970,7 @@ will be successful, since the pool certificates are disjoint from the delegation
         \begin{array}{r}
           \var{slot} \\
           \var{ptr} \\
-          \var{reserves}
+          \var{acnt}
         \end{array}
       }
       \vdash \var{dstate} \trans{\hyperref[fig:delegation-rules]{deleg}}{c} \var{dstate'}
@@ -919,7 +980,7 @@ will be successful, since the pool certificates are disjoint from the delegation
         \var{slot} \\
         \var{ptr} \\
         \var{pp} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -955,7 +1016,7 @@ will be successful, since the pool certificates are disjoint from the delegation
         \var{slot} \\
         \var{ptr} \\
         \var{pp} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -993,7 +1054,7 @@ transition.
         \var{txIx} & \Ix & \text{transaction index}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
         \var{tx} & \Tx & \text{transaction} \\
-        \var{reserves} & \Coin & \text{total reserves}
+        \var{acnt} & \Acnt & \text{accounting state}
       \end{array}
     \right)
   \end{equation*}
@@ -1053,7 +1114,7 @@ will be invalid.
         \var{txIx} \\
         \var{pp} \\
         \var{tx} \\
-        \var{reserves}
+        \var{acnt}
       \end{array}
       \vdash
       \left(
@@ -1116,7 +1177,7 @@ will be invalid.
             \var{txIx}\\
             \var{pp}\\
             \var{tx}\\
-            \var{reserves}
+            \var{acnt}
           \end{array}
         }
       \vdash
@@ -1131,7 +1192,7 @@ will be invalid.
         \var{slot}\\
         \var{ptr}\\
         \var{pp}\\
-        \var{reserves}
+        \var{acnt}
       \end{array}
     }
     \vdash
@@ -1146,7 +1207,7 @@ will be invalid.
         \var{txIx}\\
         \var{pp}\\
         \var{tx}\\
-        \var{reserves}
+        \var{acnt}
       \end{array}
     }
     \vdash
