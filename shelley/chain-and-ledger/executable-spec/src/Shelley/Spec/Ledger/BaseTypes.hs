@@ -102,7 +102,7 @@ fpEpsilon = (10 :: FixedPoint) ^ (17 :: Integer) / fpPrecision
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnsafeUnitInterval (Ratio Word64)
   deriving (Show, Ord, Eq, Generic)
-  deriving newtype (NoUnexpectedThunks)
+  deriving newtype (NoUnexpectedThunks, NFData)
 
 instance ToCBOR UnitInterval where
   toCBOR (UnsafeUnitInterval u) = ratioToCBOR u
@@ -154,7 +154,7 @@ data Nonce
   = Nonce !(Hash SHA256 Nonce)
   | -- | Identity element
     NeutralNonce
-  deriving (Eq, Generic, Ord, Show)
+  deriving (Eq, Generic, Ord, Show, NFData)
 
 instance NoUnexpectedThunks Nonce
 
@@ -213,6 +213,8 @@ data StrictMaybe a
   deriving (Eq, Ord, Show, Generic)
 
 instance NoUnexpectedThunks a => NoUnexpectedThunks (StrictMaybe a)
+
+instance NFData a => NFData (StrictMaybe a)
 
 instance Functor StrictMaybe where
   fmap _ SNothing = SNothing

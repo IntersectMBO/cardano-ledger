@@ -36,7 +36,7 @@ import Cardano.Binary
     encodeWord,
     enforceSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
 import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as Aeson
@@ -60,6 +60,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Serialization
   ( CBORGroup (..),
     FromCBORGroup (..),
@@ -143,8 +144,10 @@ deriving instance Eq (PParams' Identity)
 
 deriving instance Show (PParams' Identity)
 
+deriving instance NFData (PParams' Identity)
+
 data ProtVer = ProtVer !Natural !Natural
-  deriving (Show, Eq, Generic, Ord)
+  deriving (Show, Eq, Generic, Ord, NFData)
   deriving (ToCBOR) via (CBORGroup ProtVer)
   deriving (FromCBOR) via (CBORGroup ProtVer)
 
@@ -341,6 +344,8 @@ deriving instance Show (PParams' StrictMaybe)
 
 deriving instance Ord (PParams' StrictMaybe)
 
+deriving instance NFData (PParams' StrictMaybe)
+
 instance NoUnexpectedThunks PParamsUpdate
 
 instance ToCBOR PParamsUpdate where
@@ -421,7 +426,7 @@ instance FromCBOR PParamsUpdate where
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates crypto
   = ProposedPPUpdates (Map (KeyHash 'Genesis crypto) PParamsUpdate)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, NFData)
 
 instance NoUnexpectedThunks (ProposedPPUpdates crypto)
 
