@@ -1,8 +1,9 @@
 module Test.Shelley.Spec.Ledger.Genesis.Properties
-  ( genesis
-  ) where
+  ( genesis,
+  )
+where
 
-import Data.Aeson (encode, fromJSON, decode, toJSON)
+import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Hedgehog (Property)
 import qualified Hedgehog
 import Test.Cardano.Prelude
@@ -22,15 +23,18 @@ prop_roundtrip_GenesisDelegationPair_JSON =
     Hedgehog.tripping dp encode decode
 
 prop_roundtrip_ShelleyGenesis_JSON :: Property
-prop_roundtrip_ShelleyGenesis_JSON = Hedgehog.withTests 500 $
-  Hedgehog.property $ do
+prop_roundtrip_ShelleyGenesis_JSON = Hedgehog.withTests 500
+  $ Hedgehog.property
+  $ do
     sg <- Hedgehog.forAll genShelleyGenesis
     Hedgehog.tripping sg toJSON fromJSON
     Hedgehog.tripping sg encode decode
 
 genesis :: TestTree
-genesis = testGroup "Shelley Genesis" [
-    testProperty "Genesis Golden Test" prop_golden_ShelleyGenesis
-  , testProperty "Genesis round trip" prop_roundtrip_ShelleyGenesis_JSON
-  , testProperty "delegation pair round trip" prop_roundtrip_GenesisDelegationPair_JSON
-  ]
+genesis =
+  testGroup
+    "Shelley Genesis"
+    [ testProperty "Genesis Golden Test" prop_golden_ShelleyGenesis,
+      testProperty "Genesis round trip" prop_roundtrip_ShelleyGenesis_JSON,
+      testProperty "delegation pair round trip" prop_roundtrip_GenesisDelegationPair_JSON
+    ]

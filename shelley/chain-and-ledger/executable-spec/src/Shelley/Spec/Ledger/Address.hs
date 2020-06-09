@@ -184,12 +184,12 @@ instance Crypto crypto => FromJSON (Addr crypto) where
 
 addrToText :: Addr crypto -> Text
 addrToText =
-    Text.decodeLatin1 . Base16.encode . serialiseAddr
+  Text.decodeLatin1 . Base16.encode . serialiseAddr
 
 parseAddr :: Crypto crypto => Text -> Aeson.Parser (Addr crypto)
 parseAddr t = do
-    bytes <- either badHex return (parseBase16 t)
-    maybe badFormat return (deserialiseAddr bytes)
+  bytes <- either badHex return (parseBase16 t)
+  maybe badFormat return (deserialiseAddr bytes)
   where
     badHex h = fail $ "Addresses are expected in hex encoding for now: " ++ show h
     badFormat = fail "Address is not in the right format"

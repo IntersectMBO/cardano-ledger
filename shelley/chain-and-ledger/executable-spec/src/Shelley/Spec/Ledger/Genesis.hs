@@ -1,29 +1,28 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Shelley.Spec.Ledger.Genesis
-  ( ShelleyGenesisStaking(..)
-  , ShelleyGenesis(..)
-  , emptyGenesisStaking
-  , sgActiveSlotCoeff
-  ) where
+  ( ShelleyGenesisStaking (..),
+    ShelleyGenesis (..),
+    emptyGenesisStaking,
+    sgActiveSlotCoeff,
+  )
+where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), (.=), (.:))
+import Cardano.Crypto (ProtocolMagicId)
+import Cardano.Prelude (Natural, NoUnexpectedThunks)
+import Cardano.Slotting.Slot (EpochSize)
+import Data.Aeson ((.:), (.=), FromJSON (..), ToJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Time (NominalDiffTime, UTCTime)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
-
-import Cardano.Crypto (ProtocolMagicId)
-import Cardano.Prelude (Natural, NoUnexpectedThunks)
-import Cardano.Slotting.Slot (EpochSize)
-
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
@@ -40,30 +39,31 @@ import Shelley.Spec.Ledger.TxData
 --
 -- For simplicity, pools defined in the genesis staking do not pay deposits for
 -- their registration.
-data ShelleyGenesisStaking c = ShelleyGenesisStaking {
-      -- | Pools to register
-      --
-      --   The key in this map is the hash of the public key of the _pool_. This
-      --   need not correspond to any payment or staking key, but must correspond
-      --   to the cold key held by 'TPraosIsCoreNode'.
-      sgsPools :: !(Map (KeyHash 'StakePool c) (PoolParams c))
-      -- | Stake-holding key hash credentials and the pools to delegate that stake
-      -- to. We require the raw staking key hash in order to:
-      --
-      -- - Avoid pointer addresses, which would be tricky when there's no slot or
-      --   transaction to point to.
-      -- - Avoid script credentials.
-    , sgsStake :: !(Map (KeyHash 'Staking c) (KeyHash 'StakePool c))
-    }
-  deriving stock    (Eq, Show, Generic)
+data ShelleyGenesisStaking c = ShelleyGenesisStaking
+  { -- | Pools to register
+    --
+    --   The key in this map is the hash of the public key of the _pool_. This
+    --   need not correspond to any payment or staking key, but must correspond
+    --   to the cold key held by 'TPraosIsCoreNode'.
+    sgsPools :: !(Map (KeyHash 'StakePool c) (PoolParams c)),
+    -- | Stake-holding key hash credentials and the pools to delegate that stake
+    -- to. We require the raw staking key hash in order to:
+    --
+    -- - Avoid pointer addresses, which would be tricky when there's no slot or
+    --   transaction to point to.
+    -- - Avoid script credentials.
+    sgsStake :: !(Map (KeyHash 'Staking c) (KeyHash 'StakePool c))
+  }
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (NoUnexpectedThunks)
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking c
-emptyGenesisStaking = ShelleyGenesisStaking
-  { sgsPools = Map.empty
-  , sgsStake = Map.empty
-  }
+emptyGenesisStaking =
+  ShelleyGenesisStaking
+    { sgsPools = Map.empty,
+      sgsStake = Map.empty
+    }
 
 -- | Shelley genesis information
 --
@@ -71,35 +71,35 @@ emptyGenesisStaking = ShelleyGenesisStaking
 -- defined here rather than in its own module. In mainnet, Shelley will
 -- transition naturally from Byron, and thus will never have its own genesis
 -- information.
-data ShelleyGenesis c = ShelleyGenesis {
-      sgSystemStart           :: !UTCTime
-    , sgNetworkMagic          :: !Word32
-    , sgNetworkId             :: !Network
-    , sgProtocolMagicId       :: !ProtocolMagicId
-    , sgActiveSlotsCoeff      :: !Double
-    , sgSecurityParam         :: !Word64
-    , sgEpochLength           :: !EpochSize
-    , sgSlotsPerKESPeriod     :: !Word64
-    , sgMaxKESEvolutions      :: !Word64
-    , sgSlotLength            :: !NominalDiffTime
-    , sgUpdateQuorum          :: !Word64
-    , sgMaxMajorPV            :: !Natural
-    , sgMaxLovelaceSupply     :: !Word64
-    , sgProtocolParams        :: !PParams
-    , sgGenDelegs
-        :: !(Map
-              (KeyHash 'Genesis c)
-              (KeyHash 'GenesisDelegate c, Hash c (VerKeyVRF c))
-            )
-    , sgInitialFunds          :: !(Map (Addr c) Coin)
-    , sgStaking               :: !(ShelleyGenesisStaking c)
-    }
-  deriving stock    (Eq, Show, Generic)
+data ShelleyGenesis c = ShelleyGenesis
+  { sgSystemStart :: !UTCTime,
+    sgNetworkMagic :: !Word32,
+    sgNetworkId :: !Network,
+    sgProtocolMagicId :: !ProtocolMagicId,
+    sgActiveSlotsCoeff :: !Double,
+    sgSecurityParam :: !Word64,
+    sgEpochLength :: !EpochSize,
+    sgSlotsPerKESPeriod :: !Word64,
+    sgMaxKESEvolutions :: !Word64,
+    sgSlotLength :: !NominalDiffTime,
+    sgUpdateQuorum :: !Word64,
+    sgMaxMajorPV :: !Natural,
+    sgMaxLovelaceSupply :: !Word64,
+    sgProtocolParams :: !PParams,
+    sgGenDelegs ::
+      !( Map
+           (KeyHash 'Genesis c)
+           (KeyHash 'GenesisDelegate c, Hash c (VerKeyVRF c))
+       ),
+    sgInitialFunds :: !(Map (Addr c) Coin),
+    sgStaking :: !(ShelleyGenesisStaking c)
+  }
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (NoUnexpectedThunks)
 
 sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff =
-      mkActiveSlotCoeff
+  mkActiveSlotCoeff
     . unitIntervalFromRational
     . toRational
     . sgActiveSlotsCoeff
@@ -107,32 +107,32 @@ sgActiveSlotCoeff =
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
   toJSON sg =
     Aeson.object
-      [ "systemStart"           .= sgSystemStart sg
+      [ "systemStart" .= sgSystemStart sg,
         --TODO: this should not have both network magic and protocol magic
         -- they are different names for the same thing used in two ways.
-      , "networkMagic"          .= sgNetworkMagic sg
-      , "networkId"             .= sgNetworkId sg
-      , "protocolMagicId"       .= sgProtocolMagicId sg
-      , "activeSlotsCoeff"      .= sgActiveSlotsCoeff sg
-      , "securityParam"         .= sgSecurityParam sg
-      , "epochLength"           .= sgEpochLength sg
-      , "slotsPerKESPeriod"     .= sgSlotsPerKESPeriod sg
-      , "maxKESEvolutions"      .= sgMaxKESEvolutions sg
-      , "slotLength"            .= sgSlotLength sg
-      , "updateQuorum"          .= sgUpdateQuorum sg
-      , "maxMajorPV"            .= sgMaxMajorPV sg
-      , "maxLovelaceSupply"     .= sgMaxLovelaceSupply sg
-      , "protocolParams"        .= sgProtocolParams sg
-      , "genDelegs"             .= Map.map toGenDelegPair (sgGenDelegs sg)
-      , "initialFunds"          .= sgInitialFunds sg
-      , "staking"               .= Null
+        "networkMagic" .= sgNetworkMagic sg,
+        "networkId" .= sgNetworkId sg,
+        "protocolMagicId" .= sgProtocolMagicId sg,
+        "activeSlotsCoeff" .= sgActiveSlotsCoeff sg,
+        "securityParam" .= sgSecurityParam sg,
+        "epochLength" .= sgEpochLength sg,
+        "slotsPerKESPeriod" .= sgSlotsPerKESPeriod sg,
+        "maxKESEvolutions" .= sgMaxKESEvolutions sg,
+        "slotLength" .= sgSlotLength sg,
+        "updateQuorum" .= sgUpdateQuorum sg,
+        "maxMajorPV" .= sgMaxMajorPV sg,
+        "maxLovelaceSupply" .= sgMaxLovelaceSupply sg,
+        "protocolParams" .= sgProtocolParams sg,
+        "genDelegs" .= Map.map toGenDelegPair (sgGenDelegs sg),
+        "initialFunds" .= sgInitialFunds sg,
+        "staking" .= Null
       ]
     where
-      toGenDelegPair (d,v) = GenDelegPair d v
+      toGenDelegPair (d, v) = GenDelegPair d v
 
 instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
   parseJSON =
-    Aeson.withObject "ShelleyGenesis" $ \ obj ->
+    Aeson.withObject "ShelleyGenesis" $ \obj ->
       ShelleyGenesis
         <$> obj .: "systemStart"
         <*> obj .: "networkMagic"
@@ -148,28 +148,30 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "maxMajorPV"
         <*> obj .: "maxLovelaceSupply"
         <*> obj .: "protocolParams"
-        <*> (Map.map fromGenDelegPair <$>
-            obj .: "genDelegs")
+        <*> ( Map.map fromGenDelegPair
+                <$> obj .: "genDelegs"
+            )
         <*> obj .: "initialFunds"
-        <*> pure emptyGenesisStaking  --TODO
+        <*> pure emptyGenesisStaking --TODO
     where
-      fromGenDelegPair (GenDelegPair d v) = (d,v)
+      fromGenDelegPair (GenDelegPair d v) = (d, v)
 
 -- | Type to adjust the JSON presentation of the genesis delegate mapping.
-data GenDelegPair crypto =
-       GenDelegPair (KeyHash 'GenesisDelegate crypto)
-                    (Hash crypto (VerKeyVRF crypto))
+data GenDelegPair crypto
+  = GenDelegPair
+      (KeyHash 'GenesisDelegate crypto)
+      (Hash crypto (VerKeyVRF crypto))
 
 instance Crypto crypto => ToJSON (GenDelegPair crypto) where
   toJSON (GenDelegPair d v) =
     Aeson.object
-      [ "delegate" .= d
-      , "vrf" .= v
+      [ "delegate" .= d,
+        "vrf" .= v
       ]
 
 instance Crypto crypto => FromJSON (GenDelegPair crypto) where
   parseJSON =
-      Aeson.withObject "GenDelegPair" $ \ obj ->
-        GenDelegPair
-          <$> obj .: "delegate"
-          <*> obj .: "vrf"
+    Aeson.withObject "GenDelegPair" $ \obj ->
+      GenDelegPair
+        <$> obj .: "delegate"
+        <*> obj .: "vrf"

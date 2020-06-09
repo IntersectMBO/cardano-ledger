@@ -3,9 +3,9 @@
 module Test.Shelley.Spec.Ledger.Generator.Genesis where
 
 import Cardano.Crypto.DSIGN.Class
-import Cardano.Crypto.VRF.Class
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
-import Cardano.Prelude (Word64, Word32, Natural)
+import Cardano.Crypto.VRF.Class
+import Cardano.Prelude (Natural, Word32, Word64)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import qualified Data.Map.Strict as Map
@@ -17,15 +17,15 @@ import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Gen ()
 import Hedgehog.Range (Range)
 import qualified Hedgehog.Range as Range
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole(..), KeyPair(..), VKey(..), hashKey, Hash, hashVerKeyVRF)
-import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
-import Shelley.Spec.Ledger.Genesis
-import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Address
+import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
+import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Genesis
+import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyPair (..), KeyRole (..), VKey (..), hashKey, hashVerKeyVRF)
 import Shelley.Spec.Ledger.PParams
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes hiding (Addr, KeyPair, SignKeyDSIGN, VKey, SignKeyVRF, VerKeyVRF, KeyHash)
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes hiding (Addr, KeyHash, KeyPair, SignKeyDSIGN, SignKeyVRF, VKey, VerKeyVRF)
 
 genShelleyGenesis :: Gen (ShelleyGenesis ConcreteCrypto)
 genShelleyGenesis =
@@ -83,8 +83,8 @@ genMinUTxOValue = Gen.integral (Range.linear 1 1000)
 genNonce :: Gen Nonce
 genNonce =
   Gen.choice
-    [ mkNonce <$> genNatural (Range.linear 1 123)
-    , pure NeutralNonce
+    [ mkNonce <$> genNatural (Range.linear 1 123),
+      pure NeutralNonce
     ]
 
 genProtVer :: Gen ProtVer
@@ -98,29 +98,43 @@ genUnitInterval =
   truncateUnitInterval
     <$> Gen.realFrac_ (Range.linearFrac 0.01 1)
 
-genGenesisDelegationList :: Gen [(KeyHash 'Genesis         ConcreteCrypto,
-                                 (KeyHash 'GenesisDelegate ConcreteCrypto,
-                                  Hash ConcreteCrypto
-                                       (VerKeyVRF (VRF ConcreteCrypto))))]
+genGenesisDelegationList ::
+  Gen
+    [ ( KeyHash 'Genesis ConcreteCrypto,
+        ( KeyHash 'GenesisDelegate ConcreteCrypto,
+          Hash
+            ConcreteCrypto
+            (VerKeyVRF (VRF ConcreteCrypto))
+        )
+      )
+    ]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
-genGenesisDelegationPair :: Gen (KeyHash 'Genesis         ConcreteCrypto,
-                                (KeyHash 'GenesisDelegate ConcreteCrypto,
-                                 Hash ConcreteCrypto
-                                      (VerKeyVRF (VRF ConcreteCrypto))))
+genGenesisDelegationPair ::
+  Gen
+    ( KeyHash 'Genesis ConcreteCrypto,
+      ( KeyHash 'GenesisDelegate ConcreteCrypto,
+        Hash
+          ConcreteCrypto
+          (VerKeyVRF (VRF ConcreteCrypto))
+      )
+    )
 genGenesisDelegationPair =
   (,) <$> genKeyHash <*> ((,) <$> genKeyHash <*> genVRFKeyHash)
 
 genVRFKeyHash :: Gen (Hash ConcreteCrypto (VerKeyVRF (VRF ConcreteCrypto)))
 genVRFKeyHash = hashVerKeyVRF . snd <$> genVRFKeyPair
 
-genVRFKeyPair :: Gen (SignKeyVRF (VRF ConcreteCrypto),
-                      VerKeyVRF  (VRF ConcreteCrypto))
+genVRFKeyPair ::
+  Gen
+    ( SignKeyVRF (VRF ConcreteCrypto),
+      VerKeyVRF (VRF ConcreteCrypto)
+    )
 genVRFKeyPair = do
-    seed <- genSeed seedSize
-    let sk = genKeyVRF seed
-        vk = deriveVerKeyVRF sk
-    pure (sk, vk)
+  seed <- genSeed seedSize
+  let sk = genKeyVRF seed
+      vk = deriveVerKeyVRF sk
+  pure (sk, vk)
   where
     seedSize :: Int
     seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF ConcreteCrypto)))
@@ -135,13 +149,16 @@ genKeyHash :: Gen (KeyHash krole ConcreteCrypto)
 genKeyHash = hashKey . snd <$> genKeyPair
 
 -- | Generate a deterministic key pair given a seed.
-genKeyPair :: Gen (SignKeyDSIGN (DSIGN ConcreteCrypto),
-                   VKey krole ConcreteCrypto)
+genKeyPair ::
+  Gen
+    ( SignKeyDSIGN (DSIGN ConcreteCrypto),
+      VKey krole ConcreteCrypto
+    )
 genKeyPair = do
-    seed <- genSeed seedSize
-    let sk = genKeyDSIGN seed
-        vk = deriveVerKeyDSIGN sk
-    pure (sk, VKey vk)
+  seed <- genSeed seedSize
+  let sk = genKeyDSIGN seed
+      vk = deriveVerKeyDSIGN sk
+  pure (sk, VKey vk)
   where
     seedSize :: Int
     seedSize = fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN ConcreteCrypto)))
@@ -175,9 +192,10 @@ genSlotLength = conv <$> Gen.integral (Range.linear 2000 60000)
     -- Explicit type annotation here means that /if/ we change the precision,
     -- we are forced to reconsider this code.
     conv :: Integer -> NominalDiffTime
-    conv = (realToFrac :: Pico -> NominalDiffTime)
-         . (/ 1000)
-         . (fromInteger :: Integer -> Pico)
+    conv =
+      (realToFrac :: Pico -> NominalDiffTime)
+        . (/ 1000)
+        . (fromInteger :: Integer -> Pico)
 
 genUTCTime :: Gen UTCTime
 genUTCTime =

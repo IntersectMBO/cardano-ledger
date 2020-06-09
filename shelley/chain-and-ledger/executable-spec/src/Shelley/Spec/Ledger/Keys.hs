@@ -209,12 +209,16 @@ deriving instance (Crypto crypto, Typeable disc) => ToCBOR (KeyHash disc crypto)
 deriving instance (Crypto crypto, Typeable disc) => FromCBOR (KeyHash disc crypto)
 
 deriving newtype instance ToJSONKey (KeyHash disc crypto)
-deriving newtype instance Crypto crypto =>
-                          FromJSONKey (KeyHash disc crypto)
+
+deriving newtype instance
+  Crypto crypto =>
+  FromJSONKey (KeyHash disc crypto)
 
 deriving newtype instance ToJSON (KeyHash disc crypto)
-deriving newtype instance Crypto crypto =>
-                          FromJSON (KeyHash disc crypto)
+
+deriving newtype instance
+  Crypto crypto =>
+  FromJSON (KeyHash disc crypto)
 
 instance HasKeyRole KeyHash
 

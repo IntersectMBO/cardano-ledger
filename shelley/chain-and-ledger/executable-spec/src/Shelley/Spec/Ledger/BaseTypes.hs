@@ -178,6 +178,7 @@ instance FromCBOR Nonce where
       k -> invalidKey k
 
 deriving anyclass instance ToJSON Nonce
+
 deriving anyclass instance FromJSON Nonce
 
 -- | Evolve the nonce
