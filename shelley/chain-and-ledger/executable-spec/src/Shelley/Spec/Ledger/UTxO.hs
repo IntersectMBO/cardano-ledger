@@ -257,14 +257,17 @@ scriptsNeeded ::
   UTxO crypto ->
   Tx crypto ->
   Set (ScriptHash crypto)
-scriptsNeeded u tx =
+scriptsNeeded (u@(UTxO v)) tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
     `Set.union` Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
     `Set.union` Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx
-    UTxO u'' = txinsScript (txins $ _body tx) u <| u
+    -- UTxO u'' = txinsScript (txins $ _body tx) u <| u
+    u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u) --TIMCHANGED
+
+
     certificates = (toList . _certs . _body) tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
@@ -274,6 +277,7 @@ txinsScript ::
   UTxO crypto ->
   Set (TxIn crypto)
 txinsScript txInps (UTxO u) =
+{-
   txInps
     `Set.intersection` Map.keysSet
       ( Map.filter
@@ -284,3 +288,9 @@ txinsScript txInps (UTxO u) =
           )
           u
       )
+-}
+    foldr add Set.empty txInps -- TIMCHANGED
+      where add input ans = case Map.lookup input u of
+               Just (TxOut (Addr _ (ScriptHashObj _) _) _) -> Set.insert input ans
+               Just _ -> ans
+               Nothing -> ans

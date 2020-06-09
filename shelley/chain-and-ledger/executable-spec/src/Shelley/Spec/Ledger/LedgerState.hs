@@ -716,8 +716,9 @@ consumed ::
   UTxO crypto ->
   TxBody crypto ->
   Coin
-consumed pp u tx =
-  balance (txins tx ◁ u) + refunds + withdrawals
+consumed pp (_u@(UTxO v)) tx =
+  -- balance (txins tx ◁ _u) + refunds + withdrawals
+  balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals -- TIMCHANGED
   where
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx

@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.STS.Utxo
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
+import Byron.Spec.Ledger.Core (dom, range, (∪), {- (⊆), -} (⋪))  --TIMCHANGED
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -203,7 +203,7 @@ utxoInductive ::
   TransitionRule (UTXO crypto)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo deposits' fees ppup = u
+  let UTxOState (utxo@(UTxO v)) deposits' fees ppup = u
   let txb = _body tx
 
   _ttl txb >= slot ?! ExpiredUTxO (_ttl txb) slot
@@ -215,7 +215,8 @@ utxoInductive = do
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   let validInputs = dom utxo
-  txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+  -- txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+  all (`Map.member` v) (txins txb) ?! BadInputsUTxO (txins txb `Set.difference` validInputs)  -- TIMCHANGED
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
