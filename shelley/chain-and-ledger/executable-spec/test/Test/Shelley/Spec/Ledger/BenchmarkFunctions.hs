@@ -1,8 +1,12 @@
+{-# OPTIONS_GHC -fno-warn-orphans  -Wno-unused-binds  -Wno-unused-imports #-}
+
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.BenchmarkFunctions
   ( ledgerSpendOneUTxO,
+    ledgerSpendOneGivenUTxO,
+    initUTxO
   )
 where
 
@@ -50,8 +54,8 @@ import Test.Shelley.Spec.Ledger.Utils (runShelleyBase)
 coins :: Integer -> [TxOut]
 coins n = fmap (\_ -> TxOut aliceAddr (Coin $ 100)) [0 .. n]
 
-utxoState :: Integer -> UTxOState
-utxoState n =
+initUTxO :: Integer -> UTxOState
+initUTxO n =
   UTxOState
     (genesisCoins (coins n))
     (Coin 0)
@@ -97,4 +101,8 @@ txSpendOneUTxO =
     SNothing
 
 ledgerSpendOneUTxO :: Integer -> Bool
-ledgerSpendOneUTxO n = testLEDGER (utxoState n, emptyDPState) txSpendOneUTxO ledgerEnv
+ledgerSpendOneUTxO n = testLEDGER (initUTxO n, emptyDPState) txSpendOneUTxO ledgerEnv
+
+
+ledgerSpendOneGivenUTxO ::  UTxOState -> Bool
+ledgerSpendOneGivenUTxO state = testLEDGER (state, emptyDPState) txSpendOneUTxO ledgerEnv
