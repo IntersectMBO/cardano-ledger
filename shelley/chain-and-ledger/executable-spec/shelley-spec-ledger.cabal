@@ -210,3 +210,49 @@ test-suite shelley-spec-ledger-test
       tasty-quickcheck,
       text,
       transformers
+
+benchmark mainbench
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   bench,
+                    test
+  main-is:          Main.hs
+  other-modules:    Test.Shelley.Spec.Ledger.BenchmarkFunctions,
+                    Test.Shelley.Spec.Ledger.ConcreteCryptoTypes,
+                    Test.Shelley.Spec.Ledger.Examples,
+                    Test.Shelley.Spec.Ledger.Generator.Constants,
+                    Test.Shelley.Spec.Ledger.Generator.Core,
+                    Test.Shelley.Spec.Ledger.Utils,
+                    Test.Cardano.Crypto.VRF.Fake
+  build-depends:    base,
+                    shelley-spec-ledger,
+                    cardano-binary,
+                    cardano-crypto,
+                    cardano-crypto-class,
+                    cardano-prelude,
+                    cardano-slotting,
+                    cryptonite,
+                    transformers,
+                    bytestring,
+                    bytestring-conversion,
+                    hedgehog,
+                    QuickCheck,
+                    tasty-quickcheck,
+                    tasty-hunit,
+                    tasty,
+                    small-steps,
+                    criterion,
+                    random,
+                    containers,
+                    MonadRandom
+  ghc-options:
+      -threaded
+      -rtsopts
+      -with-rtsopts=-N
+      -Wall
+      -Wcompat
+      -Wincomplete-record-updates
+      -Wincomplete-uni-patterns
+      -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:
+      -Werror
