@@ -243,7 +243,8 @@ benchmark mainbench
                     criterion,
                     random,
                     containers,
-                    MonadRandom
+                    MonadRandom,
+                    deepseq
   ghc-options:
       -threaded
       -rtsopts
