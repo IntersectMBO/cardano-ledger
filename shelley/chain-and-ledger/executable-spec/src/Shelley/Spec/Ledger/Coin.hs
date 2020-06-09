@@ -11,13 +11,14 @@ where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NoUnexpectedThunks (..), cborError)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (pack)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 
 -- | The amount of value held by a transaction output.
 newtype Coin = Coin Integer
-  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks, Generic)
+  deriving (Show, Eq, Ord, Num, Integral, Real, Enum, NoUnexpectedThunks, Generic, ToJSON, FromJSON)
 
 instance ToCBOR Coin where
   toCBOR (Coin c) =

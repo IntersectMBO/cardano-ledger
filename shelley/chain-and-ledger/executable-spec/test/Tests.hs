@@ -2,6 +2,7 @@
 
 import Test.Shelley.Spec.Ledger.Address (addressTests)
 import Test.Shelley.Spec.Ledger.CDDL (cddlTests)
+import Test.Shelley.Spec.Ledger.Genesis.Properties
 import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.STSTests (stsTests)
@@ -25,7 +26,8 @@ mainTests =
       minimalPropertyTests,
       serializationTests,
       stsTests,
-      unitTests
+      unitTests,
+      genesis
     ]
 
 nightlyTests :: TestTree

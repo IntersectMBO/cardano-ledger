@@ -23,12 +23,15 @@ library
                      Test.Shelley.Spec.Ledger.Generator.Constants
                      Test.Shelley.Spec.Ledger.Generator.Core
                      Test.Shelley.Spec.Ledger.Generator.Delegation
+                     Test.Shelley.Spec.Ledger.Generator.Genesis
                      Test.Shelley.Spec.Ledger.Generator.Presets
                      Test.Shelley.Spec.Ledger.Generator.Trace.Chain
                      Test.Shelley.Spec.Ledger.Generator.Trace.DCert
                      Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
                      Test.Shelley.Spec.Ledger.Generator.Update
                      Test.Shelley.Spec.Ledger.Generator.Utxo
+                     Test.Shelley.Spec.Ledger.Genesis.Example
+                     Test.Shelley.Spec.Ledger.Genesis.Properties
                      Test.Shelley.Spec.Ledger.MultiSigExamples
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
@@ -48,13 +51,17 @@ library
     ghc-options:
       -Werror
   build-depends:
+    aeson,
     base,
     byron-spec-ledger,
     bytestring,
     bytestring-conversion,
     cardano-binary,
     cardano-crypto-class,
+    cardano-crypto-test,
+    cardano-crypto-wrapper,
     cardano-prelude,
+    cardano-prelude-test,
     cardano-slotting,
     cborg,
     containers,
@@ -73,4 +80,5 @@ library
     tasty-hunit,
     tasty-quickcheck,
     text,
+    time,
     transformers
