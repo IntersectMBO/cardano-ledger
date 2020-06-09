@@ -43,10 +43,11 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   ( isDeRegKey,
     isDelegation,
     isGenesisDelegation,
-    isInstantaneousRewards,
     isRegKey,
     isRegPool,
+    isReservesMIRCert,
     isRetirePool,
+    isTreasuryMIRCert,
   )
 import Shelley.Spec.Ledger.LedgerState (txsize)
 import Shelley.Spec.Ledger.PParams
@@ -172,9 +173,15 @@ relevantCasesAreCovered = do
             (property ()),
         checkCoverage $
           cover
-            60
-            (traceLength tr < 30 * length (filter isInstantaneousRewards certs_))
-            "there is at least 1 MIR certificate for every 30 transactions"
+            40
+            (traceLength tr < 60 * length (filter isReservesMIRCert certs_))
+            "there is at least 1 Reserves MIR certificate (spending Reserves) for every 60 transactions"
+            (property ()),
+        checkCoverage $
+          cover
+            40
+            (traceLength tr < 60 * length (filter isTreasuryMIRCert certs_))
+            "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions"
             (property ()),
         checkCoverage $
           cover
