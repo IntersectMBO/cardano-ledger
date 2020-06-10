@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -90,7 +91,7 @@ import Cardano.Binary
     peekTokenType,
   )
 import Cardano.Crypto.Hash (hashWithSerialiser)
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Foldable (toList)
@@ -472,7 +473,7 @@ data UTxOState crypto = UTxOState
     _fees :: !Coin,
     _ppups :: !(ProposedPPUpdates crypto)
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, NFData)
 
 instance NoUnexpectedThunks (UTxOState crypto)
 
