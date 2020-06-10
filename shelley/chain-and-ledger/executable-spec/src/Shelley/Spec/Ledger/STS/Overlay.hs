@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.STS.Overlay
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range)
+import Shelley.Spec.Ledger.Core (dom, range)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude
   ( MonadError (..),

@@ -15,7 +15,7 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∈), (∉))
+import Shelley.Spec.Ledger.Core (dom, (∈), (∉))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import Data.Maybe (fromMaybe)

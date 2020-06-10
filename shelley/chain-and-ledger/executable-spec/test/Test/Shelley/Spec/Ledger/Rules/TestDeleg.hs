@@ -15,7 +15,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∈), (∉), (◁))
+import Shelley.Spec.Ledger.Core (dom, range, (∈), (∉), (◁))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,

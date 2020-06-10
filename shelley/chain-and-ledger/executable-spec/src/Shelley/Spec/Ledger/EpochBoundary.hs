@@ -30,7 +30,7 @@ module Shelley.Spec.Ledger.EpochBoundary
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (▷), (◁))
+import Shelley.Spec.Ledger.Core (dom, (▷), (◁))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Data.Map.Strict (Map)

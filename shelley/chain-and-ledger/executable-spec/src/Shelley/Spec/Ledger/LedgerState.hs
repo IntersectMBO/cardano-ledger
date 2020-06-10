@@ -79,7 +79,7 @@ module Shelley.Spec.Ledger.LedgerState
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
+import Shelley.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),

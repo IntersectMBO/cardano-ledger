@@ -17,7 +17,8 @@ module Shelley.Spec.Ledger.STS.Utxo
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
+
+import Shelley.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),

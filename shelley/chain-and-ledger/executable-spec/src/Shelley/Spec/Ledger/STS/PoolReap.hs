@@ -11,7 +11,7 @@ module Shelley.Spec.Ledger.STS.PoolReap
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
+import Shelley.Spec.Ledger.Core (dom, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( STS (..),

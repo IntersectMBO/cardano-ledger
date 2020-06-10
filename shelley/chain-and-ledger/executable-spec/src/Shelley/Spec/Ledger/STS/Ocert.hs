@@ -13,7 +13,7 @@ module Shelley.Spec.Ledger.STS.Ocert
   )
 where
 
-import Byron.Spec.Ledger.Core ((⨃))
+import Shelley.Spec.Ledger.Core ((⨃))
 import Cardano.Prelude (NoUnexpectedThunks, asks)
 import Control.State.Transition
 import Data.Map.Strict (Map)

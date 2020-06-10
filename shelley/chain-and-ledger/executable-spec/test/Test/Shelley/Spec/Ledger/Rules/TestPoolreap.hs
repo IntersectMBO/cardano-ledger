@@ -11,7 +11,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (▷))
+import Shelley.Spec.Ledger.Core (dom, (▷))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,

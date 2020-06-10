@@ -13,7 +13,7 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
-import Byron.Spec.Ledger.Core ((⨃))
+import Shelley.Spec.Ledger.Core ((⨃))
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition (Embed (..), InitialRule, STS (..), TRC (..), TransitionRule, judgmentContext, liftSTS, trans)
 import Data.Map.Strict (Map)

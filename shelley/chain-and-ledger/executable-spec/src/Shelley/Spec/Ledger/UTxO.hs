@@ -38,7 +38,7 @@ module Shelley.Spec.Ledger.UTxO
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
