@@ -30,7 +30,7 @@ module Shelley.Spec.Ledger.Delegation.Certificates
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Data.Map.Strict (Map)

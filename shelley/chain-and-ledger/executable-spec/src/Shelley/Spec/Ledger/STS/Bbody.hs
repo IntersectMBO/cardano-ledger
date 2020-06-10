@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
-import Byron.Spec.Ledger.Core ((∈))
+import Shelley.Spec.Ledger.Core ((∈))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( (?!),

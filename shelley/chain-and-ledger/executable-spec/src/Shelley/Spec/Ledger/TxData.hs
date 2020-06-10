@@ -59,7 +59,7 @@ module Shelley.Spec.Ledger.TxData
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary
   ( Annotator (..),
     Case (..),

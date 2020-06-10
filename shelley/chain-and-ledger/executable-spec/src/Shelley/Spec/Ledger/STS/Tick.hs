@@ -15,7 +15,7 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
-import Byron.Spec.Ledger.Core ((⨃))
+import Shelley.Spec.Ledger.Core ((⨃))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition

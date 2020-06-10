@@ -14,7 +14,7 @@ module Shelley.Spec.Ledger.STS.Mir
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∪+), (◁))
+import Shelley.Spec.Ledger.Core (dom, (∪+), (◁))
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
   ( InitialRule,

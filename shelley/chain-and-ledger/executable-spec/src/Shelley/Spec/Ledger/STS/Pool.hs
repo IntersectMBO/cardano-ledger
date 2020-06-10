@@ -13,7 +13,7 @@ module Shelley.Spec.Ledger.STS.Pool
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
+import Shelley.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord, encodeListLen, matchSize)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)

@@ -38,7 +38,7 @@ module Shelley.Spec.Ledger.UTxO
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
@@ -264,8 +264,8 @@ scriptsNeeded (u@(UTxO v)) tx =
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx
-    -- UTxO u'' = txinsScript (txins $ _body tx) u <| u
-    u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u) --TIMCHANGED
+    -- UTxO u'' = txinsScript (txins $ _body tx) u <| u         -- TIMCHANGED
+    u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u) -- TIMCHANGED
 
 
     certificates = (toList . _certs . _body) tx

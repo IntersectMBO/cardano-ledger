@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.STS.Utxo
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∪), {- (⊆), -} (⋪))  --TIMCHANGED
+import Shelley.Spec.Ledger.Core (dom, range, (∪), {- (⊆), -} (⋪))  --TIMCHANGED
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -215,7 +215,7 @@ utxoInductive = do
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   let validInputs = dom utxo
-  -- txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+  -- txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)        -- TIMCHANGED
   all (`Map.member` v) (txins txb) ?! BadInputsUTxO (txins txb `Set.difference` validInputs)  -- TIMCHANGED
 
   ni <- liftSTS $ asks networkId

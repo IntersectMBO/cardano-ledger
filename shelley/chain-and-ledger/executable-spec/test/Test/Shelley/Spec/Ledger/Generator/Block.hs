@@ -9,7 +9,7 @@ module Test.Shelley.Spec.Ledger.Generator.Block
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range)
+import Shelley.Spec.Ledger.Core (dom, range)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)

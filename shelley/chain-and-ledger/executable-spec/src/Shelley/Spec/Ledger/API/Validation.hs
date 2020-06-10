@@ -16,7 +16,7 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except

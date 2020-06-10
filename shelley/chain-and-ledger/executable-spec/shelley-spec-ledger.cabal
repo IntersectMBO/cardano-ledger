@@ -26,6 +26,7 @@ library
                      Shelley.Spec.Ledger.BaseTypes
                      Shelley.Spec.Ledger.BlockChain
                      Shelley.Spec.Ledger.Coin
+                     Shelley.Spec.Ledger.Core
                      Shelley.Spec.Ledger.Credential
                      Shelley.Spec.Ledger.Genesis
                      Shelley.Spec.Ledger.Keys
@@ -114,7 +115,11 @@ library
     stm,
     text,
     time,
-    transformers
+    transformers,
+    -- Added for clone of Core
+    bimap,
+    hashable,
+    goblins
 
 test-suite shelley-spec-ledger-test
     type:                exitcode-stdio-1.0

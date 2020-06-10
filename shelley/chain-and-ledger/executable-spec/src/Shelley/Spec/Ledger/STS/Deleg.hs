@@ -13,7 +13,7 @@ module Shelley.Spec.Ledger.STS.Deleg
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
+import Shelley.Spec.Ledger.Core (dom, range, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),

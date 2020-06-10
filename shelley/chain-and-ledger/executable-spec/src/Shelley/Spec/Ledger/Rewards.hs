@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.Rewards
   )
 where
 
-import Byron.Spec.Ledger.Core ((◁))
+import Shelley.Spec.Ledger.Core ((◁))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),

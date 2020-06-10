@@ -4,7 +4,7 @@
 
 module Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests) where
 
-import Byron.Spec.Ledger.Core ((<|))
+import Shelley.Spec.Ledger.Core ((<|))
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

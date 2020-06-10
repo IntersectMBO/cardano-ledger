@@ -79,7 +79,7 @@ module Shelley.Spec.Ledger.LedgerState
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
+import Shelley.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -717,7 +717,7 @@ consumed ::
   TxBody crypto ->
   Coin
 consumed pp (_u@(UTxO v)) tx =
-  -- balance (txins tx ◁ _u) + refunds + withdrawals
+  -- balance (txins tx ◁ _u) + refunds + withdrawals                     -- TIMCHANGED
   balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals -- TIMCHANGED
   where
     refunds = keyRefunds pp tx
