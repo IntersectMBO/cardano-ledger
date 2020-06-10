@@ -41,7 +41,6 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> genSlotLength
     <*> Gen.word64 (Range.linear 1 100000)
-    <*> fmap fromIntegral (Gen.word $ Range.linear 0 100000)
     <*> Gen.word64 (Range.linear 1 100000)
     <*> genPParams
     <*> fmap Map.fromList genGenesisDelegationList

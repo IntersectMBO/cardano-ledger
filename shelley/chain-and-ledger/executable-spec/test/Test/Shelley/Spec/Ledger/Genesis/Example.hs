@@ -29,7 +29,6 @@ exampleShelleyGenesis =
       sgMaxKESEvolutions = 28899,
       sgSlotLength = 8,
       sgUpdateQuorum = 16991,
-      sgMaxMajorPV = 25446,
       sgMaxLovelaceSupply = 71,
       sgProtocolParams =
         emptyPParams
