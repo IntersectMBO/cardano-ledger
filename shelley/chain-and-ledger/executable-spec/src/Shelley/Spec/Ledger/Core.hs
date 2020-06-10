@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans  -Wno-unused-binds  -Wno-unused-imports #-}
-
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -16,15 +14,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Shelley.Spec.Ledger.Core(
-    Relation(..),  -- (⨃),dom,range, (◁),  (▷), singleton, (∪), (⋪),(⋫),(<|)
-    (⊆),
-    (∪+),
-    (∈),
-    (∉),
-    (∩)
-    ) where
-
+module Shelley.Spec.Ledger.Core where
 
 import           Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
