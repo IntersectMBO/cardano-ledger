@@ -171,8 +171,10 @@ genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 genProtocolVersion :: HasCallStack => Gen ProtVer
 genProtocolVersion = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 
-genMinUTxOValue :: HasCallStack => Gen Natural
-genMinUTxOValue = pure 0 -- TODO generate nonzero minimum UTxO values
+genMinUTxOValue :: HasCallStack => Gen Coin
+genMinUTxOValue = pure $ Coin 0
+-- ^ ^ TODO generate nonzero minimum UTxO values
+-- github issue #1544
 
 genMinPoolCost :: HasCallStack => Gen Coin
 genMinPoolCost = pure $ Coin 0

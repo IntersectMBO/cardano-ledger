@@ -134,7 +134,7 @@ data PParams' f = PParams
     -- | Protocol version
     _protocolVersion :: !(HKD f ProtVer),
     -- | Minimum UTxO value
-    _minUTxOValue :: !(HKD f Natural),
+    _minUTxOValue :: !(HKD f Coin),
     -- | Minimum Stake Pool Cost
     _minPoolCost :: !(HKD f Coin)
   }

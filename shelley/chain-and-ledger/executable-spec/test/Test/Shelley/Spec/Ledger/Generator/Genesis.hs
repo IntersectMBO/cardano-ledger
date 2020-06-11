@@ -77,8 +77,8 @@ genRational = Gen.realFrac_ (Range.linearFrac 0 10000)
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 500)
 
-genMinUTxOValue :: Gen Natural
-genMinUTxOValue = Gen.integral (Range.linear 1 1000)
+genMinUTxOValue :: Gen Coin
+genMinUTxOValue = Coin <$> Gen.integral (Range.linear 1 1000)
 
 genNonce :: Gen Nonce
 genNonce =
