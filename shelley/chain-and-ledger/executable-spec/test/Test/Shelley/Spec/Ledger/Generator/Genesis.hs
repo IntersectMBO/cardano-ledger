@@ -66,6 +66,7 @@ genPParams =
     <*> genNonce
     <*> genProtVer
     <*> genMinUTxOValue
+    <*> (pure 0) -- TODO handle a min pool cost > 0
 
 genNatural :: Range Natural -> Gen Natural
 genNatural range = Gen.integral range

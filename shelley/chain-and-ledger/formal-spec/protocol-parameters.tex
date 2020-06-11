@@ -93,7 +93,8 @@ without being explicit about the types and conversion.
         \var{d} \mapsto \{0,~0.1,~0.2,~\ldots,~1\} & \PParams & \text{decentralization parameter}\\
         \var{extraEntropy} \mapsto \Seed & \PParams & \text{extra entropy}\\
         \var{pv} \mapsto \ProtVer & \PParams & \text{protocol version}\\
-        \var{minUTxOValue} \mapsto \ProtVer & \PParams & \text{minimum allowed value of a new \TxOut}\\
+        \var{minUTxOValue} \mapsto \Coin & \PParams & \text{minimum allowed value of a new \TxOut}\\
+        \var{minPoolCost} \mapsto \Coin & \PParams & \text{minimum allowed stake pool cost}\\
       \end{array}
   \end{equation*}
   %
@@ -115,7 +116,8 @@ without being explicit about the types and conversion.
     \fun{d},
     \fun{extraEntropy},
     \fun{pv},
-    \fun{minUTxOValue}
+    \fun{minUTxOValue},
+    \fun{minPoolCost}
   \end{center}
   %
   \emph{Abstract Functions}

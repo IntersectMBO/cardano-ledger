@@ -32,24 +32,8 @@ import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, ha
 import Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    PParams' (PParams),
+    PParams' (..),
     ProtVer (..),
-    _a0,
-    _d,
-    _eMax,
-    _extraEntropy,
-    _keyDeposit,
-    _maxBBSize,
-    _maxBHSize,
-    _maxTxSize,
-    _minUTxOValue,
-    _minfeeA,
-    _minfeeB,
-    _nOpt,
-    _poolDeposit,
-    _protocolVersion,
-    _rho,
-    _tau,
     pattern ProposedPPUpdates,
     pattern Update,
   )
@@ -106,6 +90,7 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
     <*> genExtraEntropy
     <*> genProtocolVersion
     <*> genMinUTxOValue
+    <*> genMinPoolCost
   where
     szGen :: Gen (Natural, Natural, Natural)
     szGen = do
@@ -189,6 +174,11 @@ genProtocolVersion = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 genMinUTxOValue :: HasCallStack => Gen Natural
 genMinUTxOValue = pure 0 -- TODO generate nonzero minimum UTxO values
 
+genMinPoolCost :: HasCallStack => Gen Coin
+genMinPoolCost = pure $ Coin 0
+-- ^ ^ TODO generate nonzero minimum pool cost
+-- github issue #1545
+
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
 genNextProtocolVersion ::
@@ -233,6 +223,7 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
       extraEntropy <- genExtraEntropy
       protocolVersion <- genNextProtocolVersion pp
       minUTxOValue <- genMinUTxOValue
+      minPoolCost <- genMinPoolCost
       let pps =
             PParams
               { _minfeeA = SJust minFeeA,
@@ -250,7 +241,8 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
                 _d = SJust d,
                 _extraEntropy = SJust extraEntropy,
                 _protocolVersion = SJust protocolVersion,
-                _minUTxOValue = SJust minUTxOValue
+                _minUTxOValue = SJust minUTxOValue,
+                _minPoolCost = SJust minPoolCost
               }
       let ppUpdate = zip genesisKeys (repeat pps)
       pure $

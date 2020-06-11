@@ -125,25 +125,9 @@ import Shelley.Spec.Ledger.LedgerState
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import Shelley.Spec.Ledger.PParams
-  ( PParams' (PParams),
+  ( PParams' (..),
     PParamsUpdate,
     ProtVer (..),
-    _a0,
-    _d,
-    _eMax,
-    _extraEntropy,
-    _keyDeposit,
-    _maxBBSize,
-    _maxBHSize,
-    _maxTxSize,
-    _minUTxOValue,
-    _minfeeA,
-    _minfeeB,
-    _nOpt,
-    _poolDeposit,
-    _protocolVersion,
-    _rho,
-    _tau,
     emptyPParams,
     pattern ProposedPPUpdates,
     pattern Update,
@@ -756,7 +740,8 @@ serializationUnitTests =
               _d = SNothing,
               _extraEntropy = SNothing,
               _protocolVersion = SNothing,
-              _minUTxOValue = SNothing
+              _minUTxOValue = SNothing,
+              _minPoolCost = SNothing
             } ::
             PParamsUpdate
         )
@@ -778,6 +763,7 @@ serializationUnitTests =
           extraEntropy = NeutralNonce
           protocolVersion = ProtVer 0 1
           minUTxOValue = 121
+          minPoolCost = 987
        in checkEncodingCBOR
             "pparams_update_all"
             ( PParams
@@ -796,11 +782,12 @@ serializationUnitTests =
                   _d = SJust d,
                   _extraEntropy = SJust extraEntropy,
                   _protocolVersion = SJust protocolVersion,
-                  _minUTxOValue = SJust minUTxOValue
+                  _minUTxOValue = SJust minUTxOValue,
+                  _minPoolCost = SJust minPoolCost
                 } ::
                 PParamsUpdate
             )
-            ( (T $ TkMapLen 16)
+            ( (T $ TkMapLen 17)
                 <> (T $ TkWord 0)
                 <> S minfeea
                 <> (T $ TkWord 1)
@@ -833,6 +820,8 @@ serializationUnitTests =
                 <> S protocolVersion
                 <> (T $ TkWord 15)
                 <> S minUTxOValue
+                <> (T $ TkWord 16)
+                <> S minPoolCost
             ),
       -- checkEncodingCBOR "full_update"
       let ppup =
@@ -855,7 +844,8 @@ serializationUnitTests =
                         _d = SNothing,
                         _extraEntropy = SNothing,
                         _protocolVersion = SNothing,
-                        _minUTxOValue = SNothing
+                        _minUTxOValue = SNothing,
+                        _minPoolCost = SNothing
                       }
                   )
               )
@@ -920,7 +910,8 @@ serializationUnitTests =
                             _d = SNothing,
                             _extraEntropy = SNothing,
                             _protocolVersion = SNothing,
-                            _minUTxOValue = SNothing
+                            _minUTxOValue = SNothing,
+                            _minPoolCost = SNothing
                           }
                       )
                   )
@@ -981,7 +972,8 @@ serializationUnitTests =
                             _d = SNothing,
                             _extraEntropy = SNothing,
                             _protocolVersion = SNothing,
-                            _minUTxOValue = SNothing
+                            _minUTxOValue = SNothing,
+                            _minPoolCost = SNothing
                           }
                       )
                   )

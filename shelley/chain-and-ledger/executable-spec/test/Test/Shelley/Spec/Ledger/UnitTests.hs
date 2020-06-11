@@ -8,7 +8,9 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
+import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -18,6 +20,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (checkVRFValue)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
+import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -33,7 +36,9 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Delpl (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledger (pattern DelegsFailure, pattern LedgerEnv, pattern UtxoFailure, pattern UtxowFailure)
+import Shelley.Spec.Ledger.STS.Pool (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot
@@ -45,7 +50,24 @@ import Shelley.Spec.Ledger.Tx
     pattern TxIn,
     pattern TxOut,
   )
-import Shelley.Spec.Ledger.TxData (Wdrl (..))
+import Shelley.Spec.Ledger.TxData
+  ( PoolMetaData (..),
+    Wdrl (..),
+    _poolCost,
+    _poolMD,
+    _poolMDHash,
+    _poolMDUrl,
+    _poolMargin,
+    _poolOwners,
+    _poolPledge,
+    _poolPubKey,
+    _poolRAcnt,
+    _poolRelays,
+    _poolVrf,
+    pattern DCertPool,
+    pattern PoolParams,
+    pattern RewardAcnt,
+  )
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
@@ -91,7 +113,8 @@ pp =
       _poolDeposit = 250,
       _maxTxSize = 1024,
       _eMax = EpochNo 10,
-      _minUTxOValue = 100
+      _minUTxOValue = 100,
+      _minPoolCost = 100
     }
 
 testOverlayScheduleZero :: Assertion
@@ -463,6 +486,55 @@ testOutputTooSmall =
         signers = [asWitness alicePay]
       }
 
+alicePoolColdKeys :: KeyPair 'StakePool
+alicePoolColdKeys = KeyPair vk sk
+  where
+    (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
+
+alicePoolParamsSmallCost :: PoolParams
+alicePoolParamsSmallCost =
+  PoolParams
+    { _poolPubKey = hashKey . vKey $ alicePoolColdKeys,
+      _poolVrf = hashKeyVRF vkVrf,
+      _poolPledge = Coin 1,
+      _poolCost = Coin 5, -- Too Small!
+      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolRAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake),
+      _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
+      _poolRelays = StrictSeq.empty,
+      _poolMD =
+        SJust $
+          PoolMetaData
+            { _poolMDUrl = fromJust $ textToUrl "alice.pool",
+              _poolMDHash = BS.pack "{}"
+            }
+    }
+  where
+    (_skVrf, vkVrf) = mkVRFKeyPair (0, 0, 0, 0, 2)
+
+testPoolCostTooSmall :: Assertion
+testPoolCostTooSmall =
+  testInvalidTx
+    [ DelegsFailure
+        ( DelplFailure
+            ( PoolFailure
+                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) (_minPoolCost pp)
+                )
+            )
+        )
+    ]
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = (TxIn genesisId 0),
+        toBob = (Coin 100),
+        fee = (Coin 997),
+        deposits = (Coin 250),
+        refunds = (Coin 0),
+        certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
+        ttl = (SlotNo 0),
+        signers = [asWitness alicePay, asWitness aliceStake, asWitness alicePoolColdKeys]
+      }
+
 testsInvalidLedger :: TestTree
 testsInvalidLedger =
   testGroup
@@ -477,7 +549,8 @@ testsInvalidLedger =
       testCase "Invalid Ledger - Invalid witnesses" testInvalidWintess,
       testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit,
       testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt,
-      testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall
+      testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall,
+      testCase "Invalid Ledger - PoolCostTooSmall" testPoolCostTooSmall
     ]
 
 unitTests :: TestTree

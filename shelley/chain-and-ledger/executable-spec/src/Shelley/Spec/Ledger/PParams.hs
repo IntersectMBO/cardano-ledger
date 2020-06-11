@@ -134,7 +134,9 @@ data PParams' f = PParams
     -- | Protocol version
     _protocolVersion :: !(HKD f ProtVer),
     -- | Minimum UTxO value
-    _minUTxOValue :: !(HKD f Natural)
+    _minUTxOValue :: !(HKD f Natural),
+    -- | Minimum Stake Pool Cost
+    _minPoolCost :: !(HKD f Coin)
   }
   deriving (Generic)
 
@@ -205,10 +207,11 @@ instance ToCBOR PParams where
           _d = d',
           _extraEntropy = extraEntropy',
           _protocolVersion = protocolVersion',
-          _minUTxOValue = minUTxOValue'
+          _minUTxOValue = minUTxOValue',
+          _minPoolCost = minPoolCost'
         }
       ) =
-      encodeListLen 17
+      encodeListLen 18
         <> toCBOR minfeeA'
         <> toCBOR minfeeB'
         <> toCBOR maxBBSize'
@@ -225,10 +228,11 @@ instance ToCBOR PParams where
         <> toCBOR extraEntropy'
         <> toCBORGroup protocolVersion'
         <> toCBOR minUTxOValue'
+        <> toCBOR minPoolCost'
 
 instance FromCBOR PParams where
   fromCBOR = do
-    enforceSize "PParams" 17
+    enforceSize "PParams" 18
     PParams
       <$> fromCBOR -- _minfeeA         :: Integer
       <*> fromCBOR -- _minfeeB         :: Natural
@@ -246,6 +250,7 @@ instance FromCBOR PParams where
       <*> fromCBOR -- _extraEntropy    :: Nonce
       <*> fromCBORGroup -- _protocolVersion :: ProtVer
       <*> fromCBOR -- _minUTxOValue    :: Natural
+      <*> fromCBOR -- _minPoolCost     :: Natural
 
 instance ToJSON PParams where
   toJSON pp =
@@ -265,7 +270,8 @@ instance ToJSON PParams where
         "decentralisationParam" .= _d pp,
         "extraEntropy" .= _extraEntropy pp,
         "protocolVersion" .= _protocolVersion pp,
-        "minUTxOValue" .= _minUTxOValue pp
+        "minUTxOValue" .= _minUTxOValue pp,
+        "minPoolCost" .= _minPoolCost pp
       ]
 
 instance FromJSON PParams where
@@ -288,6 +294,7 @@ instance FromJSON PParams where
         <*> obj .: "extraEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= 0
+        <*> obj .: "minPoolCost"
     where
       parseRationalFromDouble :: Aeson.Parser Double -> Aeson.Parser Rational
       parseRationalFromDouble p = realToFrac <$> p
@@ -311,7 +318,8 @@ emptyPParams =
       _d = interval0,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
-      _minUTxOValue = 0
+      _minUTxOValue = 0,
+      _minPoolCost = 0
     }
 
 -- | Update Proposal
@@ -368,7 +376,8 @@ instance ToCBOR PParamsUpdate where
               encodeMapElement 12 toCBOR =<< _d ppup,
               encodeMapElement 13 toCBOR =<< _extraEntropy ppup,
               encodeMapElement 14 toCBOR =<< _protocolVersion ppup,
-              encodeMapElement 15 toCBOR =<< _minUTxOValue ppup
+              encodeMapElement 15 toCBOR =<< _minUTxOValue ppup,
+              encodeMapElement 16 toCBOR =<< _minPoolCost ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
@@ -393,7 +402,8 @@ emptyPParamsUpdate =
       _d = SNothing,
       _extraEntropy = SNothing,
       _protocolVersion = SNothing,
-      _minUTxOValue = SNothing
+      _minUTxOValue = SNothing,
+      _minPoolCost = SNothing
     }
 
 instance FromCBOR PParamsUpdate where
@@ -416,6 +426,7 @@ instance FromCBOR PParamsUpdate where
         13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
         14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
         15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
+        16 -> fromCBOR >>= \x -> pure (16, \up -> up {_minPoolCost = SJust x})
         k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
@@ -457,7 +468,8 @@ updatePParams pp ppup =
       _d = fromMaybe' (_d pp) (_d ppup),
       _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
       _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
-      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup)
+      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup),
+      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup)
     }
   where
     fromMaybe' :: a -> StrictMaybe a -> a

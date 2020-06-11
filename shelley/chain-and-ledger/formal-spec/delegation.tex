@@ -790,7 +790,10 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     {
       \var{c}\in\DCertRegPool
       & \var{hk} \leteq \cwitness{c}
-      & hk \notin \dom \var{stpools}
+      & \var{pool} \leteq \poolParam{c}
+      \\
+      hk \notin \dom \var{stpools}
+      & \fun{poolCost}~\var{pool}\leq\fun{minPoolCost}~\var{pp}
     }
     {
       \begin{array}{r}
@@ -812,7 +815,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
         \varUpdate{\var{stpools}} & \varUpdate{\union}
                                   & \varUpdate{\{\var{hk} \mapsto \var{slot}\}} \\
         \varUpdate{\var{poolParams}} & \varUpdate{\union}
-                                    & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}} \\
+                                    & \varUpdate{\{\var{hk} \mapsto \var{pool}\}} \\
        \var{fPoolParams} \\
        \var{retiring} \\
       \end{array}
@@ -825,7 +828,10 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     {
       \var{c}\in\DCertRegPool
       & \var{hk} \leteq \cwitness{c}
-      & hk \in \dom \var{stpools}
+      & \var{pool} \leteq \poolParam{c}
+      \\
+      hk \in \dom \var{stpools}
+      & \fun{poolCost}~\var{pool}\leq\fun{minPoolCost}~\var{pp}
     }
     {
       \begin{array}{r}
@@ -847,7 +853,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
           \var{stpools} \\
           \var{poolParams} \\
           \varUpdate{\var{fPoolParams}} & \varUpdate{\unionoverrideRight}
-                                        & \varUpdate{\{\var{hk} \mapsto \poolParam{c}\}}\\
+                                        & \varUpdate{\{\var{hk} \mapsto \var{pool}\}}\\
           \varUpdate{\{\var{hk}\}} & \varUpdate{\subtractdom} & \varUpdate{\var{retiring}} \\
         \end{array}
       \right)
@@ -896,8 +902,11 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
 
 \end{figure}
 
-The POOL rule has three predicate failures:
+The POOL rule has four predicate failures:
 \begin{itemize}
+\item In the case of a pool registration or re-registration certificate,
+  if specified pool cost parameter is smaller than the value of the
+  protocol parameter $\mathsf{minPoolCost}$, there is a \emph{StakePoolCostTooLow} failure.
 \item In the case of a pool retirement certificate, if the pool key is not in
   the domain of the stake pools mapping, there is a
   \emph{StakePoolNotRegisteredOnKey} failure.
