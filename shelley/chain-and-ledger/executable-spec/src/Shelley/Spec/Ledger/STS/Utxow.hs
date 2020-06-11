@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.Utxow
   )
 where
 
-import Shelley.Spec.Ledger.Core ((∩))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -58,6 +57,7 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
     quorum,
   )
+import Shelley.Spec.Ledger.Core ((∩))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys

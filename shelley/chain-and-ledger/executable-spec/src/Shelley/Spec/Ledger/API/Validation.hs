@@ -16,7 +16,6 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
-import Shelley.Spec.Ledger.Core (Relation (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -26,6 +25,7 @@ import Data.Either (fromRight)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.BlockChain
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState

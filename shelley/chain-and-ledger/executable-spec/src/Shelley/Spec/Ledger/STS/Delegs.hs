@@ -16,7 +16,6 @@ module Shelley.Spec.Ledger.STS.Delegs
   )
 where
 
-import Shelley.Spec.Ledger.Core (dom, (∈), (⊆), (⨃))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -35,6 +34,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
+import Shelley.Spec.Ledger.Core (dom, (∈), (⊆), (⨃))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState

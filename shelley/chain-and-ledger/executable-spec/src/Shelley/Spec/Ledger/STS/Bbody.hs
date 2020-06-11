@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
-import Shelley.Spec.Ledger.Core ((∈))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
   ( (?!),
@@ -43,6 +42,7 @@ import Shelley.Spec.Ledger.BlockChain
     hBbsize,
     incrBlocks,
   )
+import Shelley.Spec.Ledger.Core ((∈))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole, hashKey)

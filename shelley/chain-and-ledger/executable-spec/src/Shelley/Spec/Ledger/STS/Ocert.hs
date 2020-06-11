@@ -13,7 +13,6 @@ module Shelley.Spec.Ledger.STS.Ocert
   )
 where
 
-import Shelley.Spec.Ledger.Core ((⨃))
 import Cardano.Prelude (NoUnexpectedThunks, asks)
 import Control.State.Transition
 import Data.Map.Strict (Map)
@@ -23,6 +22,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
+import Shelley.Spec.Ledger.Core ((⨃))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert

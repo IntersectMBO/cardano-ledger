@@ -2,10 +2,10 @@
 
 module Test.Shelley.Spec.Ledger.NonTraceProperties.Validity where
 
-import Shelley.Spec.Ledger.Core (dom)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (dom)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import Shelley.Spec.Ledger.Keys

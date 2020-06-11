@@ -79,7 +79,6 @@ module Shelley.Spec.Ledger.LedgerState
   )
 where
 
-import Shelley.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -113,6 +112,7 @@ import Shelley.Spec.Ledger.BaseTypes
     intervalValue,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates

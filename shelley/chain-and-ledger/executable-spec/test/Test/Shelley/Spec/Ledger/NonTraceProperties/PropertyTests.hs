@@ -4,7 +4,6 @@
 
 module Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests) where
 
-import Shelley.Spec.Ledger.Core ((<|))
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -25,6 +24,7 @@ import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (LabelName (..))
 import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Core ((<|))
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot

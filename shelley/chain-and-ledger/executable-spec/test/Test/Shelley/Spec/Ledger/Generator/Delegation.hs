@@ -15,7 +15,6 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
-import Shelley.Spec.Ledger.Core (dom, (∈), (∉))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
 import Data.Maybe (fromMaybe)
@@ -32,6 +31,7 @@ import Shelley.Spec.Ledger.BaseTypes
     interval0,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (dom, (∈), (∉))
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DCertMir,
