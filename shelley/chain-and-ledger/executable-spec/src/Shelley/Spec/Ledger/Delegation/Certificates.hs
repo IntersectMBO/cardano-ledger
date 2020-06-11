@@ -17,9 +17,6 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     poolCWitness,
     genesisCWitness,
     dvalue,
-    refund,
-    decayKey,
-    decayPool,
     isRegKey,
     isDeRegKey,
     isDelegation,
@@ -27,6 +24,8 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     isRegPool,
     isRetirePool,
     isInstantaneousRewards,
+    isReservesMIRCert,
+    isTreasuryMIRCert,
     requiresVKeyWitness,
   )
 where
@@ -35,33 +34,22 @@ import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Data.Map.Strict (Map)
-import Data.Ratio (approxRational)
-import Shelley.Spec.Ledger.BaseTypes (FixedPoint, UnitInterval, fpEpsilon, intervalValue)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
-import Shelley.Spec.Ledger.PParams
-  ( PParams,
-    _keyDecayRate,
-    _keyDeposit,
-    _keyMinRefund,
-    _poolDecayRate,
-    _poolDeposit,
-    _poolMinRefund,
-  )
-import Shelley.Spec.Ledger.Slot (Duration (..))
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),
     DelegCert (..),
     Delegation (..),
     GenesisDelegCert (..),
     MIRCert (..),
+    MIRPot (..),
     PoolCert (..),
     PoolParams (..),
     StakeCreds (..),
     StakePools (..),
   )
-import Shelley.Spec.NonIntegral (exp')
 
 -- | Determine the certificate author
 delegCWitness :: DelegCert crypto -> Credential 'Staking crypto
@@ -81,15 +69,6 @@ dvalue :: DCert crypto -> PParams -> Coin
 dvalue (DCertDeleg (RegKey _)) = _keyDeposit
 dvalue (DCertPool (RegPool _)) = _poolDeposit
 dvalue _ = const $ Coin 0
-
--- | Compute a refund on a deposit
-refund :: Coin -> UnitInterval -> Rational -> Duration -> Coin
-refund (Coin dval) dmin lambda delta = floor refund'
-  where
-    pow = fromRational (- lambda * fromIntegral delta) :: FixedPoint
-    refund' = fromIntegral dval * (dmin' + (1 - dmin') * dCay)
-    dmin' = intervalValue dmin
-    dCay = approxRational (exp' pow) fpEpsilon
 
 -- | Check for `RegKey` constructor
 isRegKey :: DCert crypto -> Bool
@@ -121,20 +100,6 @@ isRetirePool :: DCert crypto -> Bool
 isRetirePool (DCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-decayKey :: PParams -> (Coin, UnitInterval, Rational)
-decayKey pc = (dval, dmin, lambdad)
-  where
-    dval = fromIntegral $ _keyDeposit pc
-    dmin = _keyMinRefund pc
-    lambdad = _keyDecayRate pc
-
-decayPool :: PParams -> (Coin, UnitInterval, Rational)
-decayPool pc = (pval, pmin, lambdap)
-  where
-    pval = fromIntegral $ _poolDeposit pc
-    pmin = _poolMinRefund pc
-    lambdap = _poolDecayRate pc
-
 newtype PoolDistr crypto = PoolDistr
   { unPoolDistr ::
       ( Map
@@ -147,6 +112,14 @@ newtype PoolDistr crypto = PoolDistr
 isInstantaneousRewards :: DCert crypto -> Bool
 isInstantaneousRewards (DCertMir _) = True
 isInstantaneousRewards _ = False
+
+isReservesMIRCert :: DCert crypto -> Bool
+isReservesMIRCert (DCertMir (MIRCert ReservesMIR _)) = True
+isReservesMIRCert _ = False
+
+isTreasuryMIRCert :: DCert crypto -> Bool
+isTreasuryMIRCert (DCertMir (MIRCert TreasuryMIR _)) = True
+isTreasuryMIRCert _ = False
 
 -- | Returns True for delegation certificates that require at least
 -- one witness, and False otherwise. It is mainly used to ensure

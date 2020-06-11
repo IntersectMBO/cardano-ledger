@@ -104,6 +104,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
 data GenesisDataError
   = GenesisDataParseError Text
   | GenesisDataSchemaError SchemaError
+  | GenesisDataIOError IOException
   deriving (Show)
 
 instance B.Buildable GenesisDataError where
@@ -112,6 +113,9 @@ instance B.Buildable GenesisDataError where
       bprint ("Failed to parse GenesisData.\n Error: " . stext) err
     GenesisDataSchemaError err ->
       bprint ("Incorrect schema for GenesisData.\n Error: " . build) err
+    GenesisDataIOError err ->
+      bprint ("Failed with " . stext . " when tried to read GenesisData file")
+        (show err)
 
 -- | Parse @GenesisData@ from a JSON file and annotate with Canonical JSON hash
 readGenesisData
@@ -119,7 +123,8 @@ readGenesisData
   => FilePath
   -> m (GenesisData, GenesisHash)
 readGenesisData fp = do
-  bytes           <- liftIO $ BSL.fromStrict <$> BS.readFile fp
+  bytes           <- liftIO (try $ BSL.fromStrict <$> BS.readFile fp)
+    >>= (`wrapError` GenesisDataIOError)
 
   genesisDataJSON <-
     parseCanonicalJSON bytes `wrapError` GenesisDataParseError . toS

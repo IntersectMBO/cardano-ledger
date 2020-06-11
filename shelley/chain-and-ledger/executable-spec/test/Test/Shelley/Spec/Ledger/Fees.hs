@@ -37,10 +37,10 @@ import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
-  ( _body,
+  ( WitnessSetHKD (..),
+    _body,
     _metadata,
-    _witnessMSigMap,
-    _witnessVKeySet,
+    _witnessSet,
     hashScript,
     pattern Tx,
   )
@@ -186,13 +186,15 @@ txSimpleUTxO :: Tx
 txSimpleUTxO =
   Tx
     { _body = txbSimpleUTxO,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbSimpleUTxO) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbSimpleUTxO) [alicePay]
+          },
       _metadata = SNothing
     }
 
 txSimpleUTxOBytes16 :: BSL.ByteString
-txSimpleUTxOBytes16 = "83a4008182449db8a417000181824900048cc424f45049940a02185e030aa10081824830303030303231344cc605472f3030303030323134f6"
+txSimpleUTxOBytes16 = "83a4008182449db8a417000181824900d58133b2ac6eb45e0a02185e030aa1008182487c6ffc08d6fa98ad4c0d8fa5c97c6ffc08d6fa98adf6"
 
 -- | Transaction which consumes two UTxO and creates five UTxO
 -- | and has two witness
@@ -224,18 +226,20 @@ txMutiUTxO :: Tx
 txMutiUTxO =
   Tx
     { _body = txbMutiUTxO,
-      _witnessVKeySet =
-        makeWitnessesVKey
-          (hashTxBody txbMutiUTxO)
-          [ alicePay,
-            bobPay
-          ],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits =
+              makeWitnessesVKey
+                (hashTxBody txbMutiUTxO)
+                [ alicePay,
+                  bobPay
+                ]
+          },
       _metadata = SNothing
     }
 
 txMutiUTxOBytes16 :: BSL.ByteString
-txMutiUTxOBytes16 = "83a4008282449db8a4170082449db8a417010185824900048cc424f45049940a824900048cc424f450499414824900048cc424f4504994181e8249003050f79e3050f79e18288249003050f79e3050f79e18320218c7030aa10082824830303030303231344caae80a113030303030323134824831353438353836374caae80a113135343835383637f6"
+txMutiUTxOBytes16 = "83a4008282449db8a4170082449db8a417010185824900d58133b2ac6eb45e0a824900d58133b2ac6eb45e14824900d58133b2ac6eb45e181e824900595ced904b9d3b861828824900595ced904b9d3b8618320218c7030aa100828248933c542202176b764cb88a204b933c542202176b7682487c6ffc08d6fa98ad4cb88a204b7c6ffc08d6fa98adf6"
 
 -- | Transaction which registers a stake key
 txbRegisterStake :: TxBody
@@ -255,13 +259,15 @@ txRegisterStake :: Tx
 txRegisterStake =
   Tx
     { _body = txbRegisterStake,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbRegisterStake) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbRegisterStake) [alicePay]
+          },
       _metadata = SNothing
     }
 
 txRegisterStakeBytes16 :: BSL.ByteString
-txRegisterStakeBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a04818200820044f4504994a10081824830303030303231344c36505f7f3030303030323134f6"
+txRegisterStakeBytes16 = "83a5008182449db8a417000181824900d58133b2ac6eb45e0a02185e030a04818200820044ac6eb45ea1008182487c6ffc08d6fa98ad4c7ca5d4a07c6ffc08d6fa98adf6"
 
 -- | Transaction which delegates a stake key
 txbDelegateStake :: TxBody
@@ -281,16 +287,18 @@ txDelegateStake :: Tx
 txDelegateStake =
   Tx
     { _body = txbDelegateStake,
-      _witnessVKeySet =
-        makeWitnessesVKey
-          (hashTxBody txbDelegateStake)
-          [asWitness alicePay, asWitness bobStake],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits =
+              makeWitnessesVKey
+                (hashTxBody txbDelegateStake)
+                [asWitness alicePay, asWitness bobStake]
+          },
       _metadata = SNothing
     }
 
 txDelegateStakeBytes16 :: BSL.ByteString
-txDelegateStakeBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a048183028200443050f79e4445c847eda10082824830303030303231344c0d7af9f23030303030323134824831353438353836374c0d7af9f23135343835383637f6"
+txDelegateStakeBytes16 = "83a5008182449db8a417000181824900d58133b2ac6eb45e0a02185e030a048183028200444b9d3b8644089b3654a100828248573bf7473760f6b34c5fb99c7c573bf7473760f6b382487c6ffc08d6fa98ad4c5fb99c7c7c6ffc08d6fa98adf6"
 
 -- | Transaction which de-registers a stake key
 txbDeregisterStake :: TxBody
@@ -310,13 +318,15 @@ txDeregisterStake :: Tx
 txDeregisterStake =
   Tx
     { _body = txbDeregisterStake,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbDeregisterStake) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbDeregisterStake) [alicePay]
+          },
       _metadata = SNothing
     }
 
 txDeregisterStakeBytes16 :: BSL.ByteString
-txDeregisterStakeBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a04818201820044f4504994a10081824830303030303231344c87aec09a3030303030323134f6"
+txDeregisterStakeBytes16 = "83a5008182449db8a417000181824900d58133b2ac6eb45e0a02185e030a04818201820044ac6eb45ea1008182487c6ffc08d6fa98ad4c4832f2b57c6ffc08d6fa98adf6"
 
 -- | Transaction which registers a stake pool
 txbRegisterPool :: TxBody
@@ -336,13 +346,15 @@ txRegisterPool :: Tx
 txRegisterPool =
   Tx
     { _body = txbRegisterPool,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbRegisterPool) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbRegisterPool) [alicePay]
+          },
       _metadata = SNothing
     }
 
 txRegisterPoolBytes16 :: BSL.ByteString
-txRegisterPoolBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a04818a034445c847ed44bd9644df0105d81e82010a45e0f45049948144f4504994818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da10081824830303030303231344c7cfb7d383030303030323134f6"
+txRegisterPoolBytes16 = "83a5008182449db8a417000181824900d58133b2ac6eb45e0a02185e030a04818a0344089b365444c6242f6c0105d81e82010a45e0ac6eb45e8144ac6eb45e818301f66872656c61792e696f826a616c6963652e706f6f6c427b7da1008182487c6ffc08d6fa98ad4c268a039a7c6ffc08d6fa98adf6"
 
 -- | Transaction which retires a stake pool
 txbRetirePool :: TxBody
@@ -362,13 +374,15 @@ txRetirePool :: Tx
 txRetirePool =
   Tx
     { _body = txbRetirePool,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbRetirePool) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbRetirePool) [alicePay]
+          },
       _metadata = SNothing
     }
 
 txRetirePoolBytes16 :: BSL.ByteString
-txRetirePoolBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a048183044445c847ed05a10081824830303030303231344c7e8212673030303030323134f6"
+txRetirePoolBytes16 = "83a5008182449db8a417000181824900d58133b2ac6eb45e0a02185e030a0481830444089b365405a1008182487c6ffc08d6fa98ad4cb629c5fb7c6ffc08d6fa98adf6"
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness
@@ -392,13 +406,15 @@ txWithMD :: Tx
 txWithMD =
   Tx
     { _body = txbWithMD,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbWithMD) [alicePay],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbWithMD) [alicePay]
+          },
       _metadata = SJust md
     }
 
 txWithMDBytes16 :: BSL.ByteString
-txWithMDBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a07444eece652a10081824830303030303231344c19bb31e63030303030323134a10082056568656c6c6f"
+txWithMDBytes16 = "83a5008182449db8a417000181824900d58133b2ac6eb45e0a02185e030a07444eece652a1008182487c6ffc08d6fa98ad4c17c68eef7c6ffc08d6fa98ada10082056568656c6c6f"
 
 -- | Spending from a multi-sig address
 msig :: MultiSig
@@ -427,13 +443,16 @@ txWithMultiSig :: Tx
 txWithMultiSig =
   Tx
     { _body = txbWithMultiSig,
-      _witnessVKeySet = makeWitnessesVKey (hashTxBody txbWithMultiSig) [alicePay, bobPay],
-      _witnessMSigMap = Map.singleton (hashScript msig) msig,
+      _witnessSet =
+        mempty
+          { addrWits = makeWitnessesVKey (hashTxBody txbWithMultiSig) [alicePay, bobPay],
+            msigWits = Map.singleton (hashScript msig) msig
+          },
       _metadata = SNothing
     }
 
 txWithMultiSigBytes16 :: BSL.ByteString
-txWithMultiSigBytes16 = "83a4008182449db8a417000181824900048cc424f45049940a02185e030aa20082824830303030303231344cc605472f3030303030323134824831353438353836374cc605472f3135343835383637018183030283820044048cc4248200443050f79e820044833f1591f6"
+txWithMultiSigBytes16 = "83a4008182449db8a417000181824900d58133b2ac6eb45e0a02185e030aa200828248933c542202176b764c0d8fa5c9933c542202176b7682487c6ffc08d6fa98ad4c0d8fa5c97c6ffc08d6fa98ad018183030283820044d58133b2820044595ced908200444afb593df6"
 
 -- | Transaction with a Reward Withdrawal
 txbWithWithdrawal :: TxBody
@@ -453,16 +472,18 @@ txWithWithdrawal :: Tx
 txWithWithdrawal =
   Tx
     { _body = txbWithWithdrawal,
-      _witnessVKeySet =
-        makeWitnessesVKey
-          (hashTxBody txbWithWithdrawal)
-          [asWitness alicePay, asWitness aliceStake],
-      _witnessMSigMap = Map.empty,
+      _witnessSet =
+        mempty
+          { addrWits =
+              makeWitnessesVKey
+                (hashTxBody txbWithWithdrawal)
+                [asWitness alicePay, asWitness aliceStake]
+          },
       _metadata = SNothing
     }
 
 txWithWithdrawalBytes16 :: BSL.ByteString
-txWithWithdrawalBytes16 = "83a5008182449db8a417000181824900048cc424f45049940a02185e030a05a145e0f45049941864a10082824830303030303231344c7c5c72bb3030303030323134824830303030383630324c7c5c72bb3030303038363032f6"
+txWithWithdrawalBytes16 = "83a5008182449db8a417000181824900d58133b2ac6eb45e0a02185e030a05a145e0ac6eb45e1864a100828248c1eb0154006130054c52daf7b2c1eb01540061300582487c6ffc08d6fa98ad4c52daf7b27c6ffc08d6fa98adf6"
 
 -- NOTE the txsize function takes into account which actual crypto parameter is use.
 -- These tests are using ShortHash and MockDSIGN so that:

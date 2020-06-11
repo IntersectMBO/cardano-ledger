@@ -74,6 +74,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Coerce (Coercible, coerce)
 import Data.Map.Strict (Map)
 import Data.Ratio ((%))
@@ -207,6 +208,18 @@ deriving instance (Crypto crypto, Typeable disc) => ToCBOR (KeyHash disc crypto)
 
 deriving instance (Crypto crypto, Typeable disc) => FromCBOR (KeyHash disc crypto)
 
+deriving newtype instance ToJSONKey (KeyHash disc crypto)
+
+deriving newtype instance
+  Crypto crypto =>
+  FromJSONKey (KeyHash disc crypto)
+
+deriving newtype instance ToJSON (KeyHash disc crypto)
+
+deriving newtype instance
+  Crypto crypto =>
+  FromJSON (KeyHash disc crypto)
+
 instance HasKeyRole KeyHash
 
 -- | Hash a given public key
@@ -239,7 +252,7 @@ instance VRFValue Nonce where
 
 instance VRFValue UnitInterval where
   -- TODO Consider whether this is a reasonable thing to do
-  fromNatural k = truncateUnitInterval $ toInteger k % 10000
+  fromNatural k = truncateUnitInterval $ fromIntegral k % 10000
 
 --------------------------------------------------------------------------------
 -- Genesis delegation

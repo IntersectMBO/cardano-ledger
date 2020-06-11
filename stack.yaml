@@ -1,4 +1,4 @@
-resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/594f587bfab626a405ac532112cc0b942ad3efdb/snapshot.yaml
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/316c854d1d3089f480708ad5cd5ecf8a74423ddd/snapshot.yaml
 
 packages:
 - shelley/chain-and-ledger/executable-spec
@@ -30,13 +30,13 @@ extra-deps:
   commit: 2547ad1e80aeabca2899951601079408becbc92c
 
 - git: https://github.com/input-output-hk/cardano-prelude
-  commit: 594f587bfab626a405ac532112cc0b942ad3efdb
+  commit: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
   subdirs:
     - .
     - test
 
 - git: https://github.com/input-output-hk/cardano-base
-  commit: 8061c5dd00f7aad134b18a4e6818879641f8589f
+  commit: cba2a46086b824f413d7fb71c140da2a83483cd4
   subdirs:
     - binary
     - binary/test
@@ -44,7 +44,7 @@ extra-deps:
     - slotting
 
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
-  commit: 20309d5aa56b0ae5fd982465297a1d87aa5658a1
+  commit: 71df15f7b888d2671f619cc632080aaaaca48087
   subdirs:
     - contra-tracer
 

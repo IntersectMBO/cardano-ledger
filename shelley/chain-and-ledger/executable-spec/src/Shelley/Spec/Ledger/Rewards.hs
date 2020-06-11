@@ -40,8 +40,7 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( Network,
     UnitInterval (..),
-    intervalValue,
-    mkUnitInterval,
+    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
@@ -124,7 +123,7 @@ desirability pp r pool (ApparentPerformance p) (Coin total) =
     fTildeNumer = p * fromRational (fromIntegral r * (z0 + min s z0 * a0))
     fTildeDenom = fromRational $ 1 + a0
     cost = (fromIntegral . _poolCost) pool
-    margin = (fromRational . intervalValue . _poolMargin) pool
+    margin = (fromRational . unitIntervalToRational . _poolMargin) pool
     tot = max 1 (fromIntegral total)
     Coin pledge = _poolPledge pool
     s = fromIntegral pledge % tot
@@ -161,17 +160,16 @@ newtype StakeShare
 -- | Calculate pool reward
 mkApparentPerformance ::
   UnitInterval ->
-  UnitInterval ->
+  Rational ->
   Natural ->
   Natural ->
   Rational
 mkApparentPerformance d_ sigma blocksN blocksTotal
-  | sigma' == 0 = 0
-  | intervalValue d_ < 0.8 = beta / sigma'
+  | sigma == 0 = 0
+  | unitIntervalToRational d_ < 0.8 = beta / sigma
   | otherwise = 1
   where
     beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
-    sigma' = intervalValue sigma
 
 -- | Calculate pool leader reward
 leaderRew ::
@@ -186,7 +184,7 @@ leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
     Coin $ c + floor (fromIntegral (f' - c) * (m' + (1 - m') * s / sigma))
   where
     (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
+    m' = unitIntervalToRational m
 
 -- | Calculate pool member reward
 memberRew ::
@@ -200,7 +198,7 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * t / sigma
   where
     (Coin c, m, _) = poolSpec pool
-    m' = intervalValue m
+    m' = unitIntervalToRational m
 
 -- | Reward one pool
 rewardOnePool ::
@@ -230,8 +228,7 @@ rewardOnePool network pp r blocksN blocksTotal pool (Stake stake) (Coin total) a
       if pledge <= ostake
         then maxPool pp r sigma pr
         else 0
-    s' = fromMaybe (error "LedgerState.rewardOnePool: Unexpected Nothing") $ mkUnitInterval sigma
-    appPerf = mkApparentPerformance (_d pp) s' blocksN blocksTotal
+    appPerf = mkApparentPerformance (_d pp) sigma blocksN blocksTotal
     poolR = floor (appPerf * fromIntegral maxP)
     tot = fromIntegral total
     mRewards =

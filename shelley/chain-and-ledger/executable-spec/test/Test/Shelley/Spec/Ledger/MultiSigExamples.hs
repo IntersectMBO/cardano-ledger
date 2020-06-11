@@ -44,10 +44,9 @@ import Shelley.Spec.Ledger.Scripts
     pattern RequireSignature,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (_body, hashScript, pattern Tx)
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), _body, hashScript, pattern Tx)
 import Shelley.Spec.Ledger.TxData
   ( unWdrl,
-    pattern StakeCreds,
     pattern StakePools,
     pattern TxBody,
     pattern TxIn,
@@ -142,8 +141,13 @@ makeTxBody inp addrCs wdrl =
     SNothing
 
 makeTx :: TxBody -> [KeyPair 'Witness] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
-makeTx txBody keyPairs msigs =
-  Tx txBody (makeWitnessesVKey (hashTxBody txBody) keyPairs) msigs . maybeToStrictMaybe
+makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
+  where
+    wits =
+      mempty
+        { addrWits = makeWitnessesVKey (hashTxBody txBody) keyPairs,
+          msigWits = msigs
+        }
 
 aliceInitCoin :: Coin
 aliceInitCoin = 10000
@@ -198,7 +202,6 @@ initialUTxOState aliceKeep msigs =
                     ( UtxoEnv
                         (SlotNo 0)
                         initPParams
-                        (StakeCreds Map.empty)
                         (StakePools Map.empty)
                         (GenDelegs Map.empty),
                       _utxoState genesis,
@@ -255,7 +258,6 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
               ( UtxoEnv
                   (SlotNo 0)
                   initPParams
-                  (StakeCreds Map.empty)
                   (StakePools Map.empty)
                   (GenDelegs Map.empty),
                 utxoSt,

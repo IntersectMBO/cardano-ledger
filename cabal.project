@@ -1,4 +1,4 @@
-index-state: 2020-04-01T00:00:00Z
+index-state: 2020-05-15T00:00:00Z
 
 packages:
   byron/chain/executable-spec
@@ -22,29 +22,29 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 8061c5dd00f7aad134b18a4e6818879641f8589f
-  --sha256: 182a2x16mh7gqjfkyrc4vgindxwwlr0i8vhmqyfbmnnvg6m8bzaq
+  tag: cba2a46086b824f413d7fb71c140da2a83483cd4
+  --sha256: 183qblzac63lndbk5jlsj1r8r91iwb4vqzyi6gz0j1n3nl7xlg3h
   subdir: binary
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 8061c5dd00f7aad134b18a4e6818879641f8589f
-  --sha256: 182a2x16mh7gqjfkyrc4vgindxwwlr0i8vhmqyfbmnnvg6m8bzaq
+  tag: cba2a46086b824f413d7fb71c140da2a83483cd4
+  --sha256: 183qblzac63lndbk5jlsj1r8r91iwb4vqzyi6gz0j1n3nl7xlg3h
   subdir: binary/test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 8061c5dd00f7aad134b18a4e6818879641f8589f
-  --sha256: 182a2x16mh7gqjfkyrc4vgindxwwlr0i8vhmqyfbmnnvg6m8bzaq
+  tag: cba2a46086b824f413d7fb71c140da2a83483cd4
+  --sha256: 183qblzac63lndbk5jlsj1r8r91iwb4vqzyi6gz0j1n3nl7xlg3h
   subdir: cardano-crypto-class
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 8061c5dd00f7aad134b18a4e6818879641f8589f
-  --sha256: 182a2x16mh7gqjfkyrc4vgindxwwlr0i8vhmqyfbmnnvg6m8bzaq
+  tag: cba2a46086b824f413d7fb71c140da2a83483cd4
+  --sha256: 183qblzac63lndbk5jlsj1r8r91iwb4vqzyi6gz0j1n3nl7xlg3h
   subdir: slotting
 
 source-repository-package
@@ -56,21 +56,21 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 594f587bfab626a405ac532112cc0b942ad3efdb
-  --sha256: 09h9kd6drhw53i1k8ahwk95kb0c1nbbxr8f3p9rx63yq3hdga2cw
+  tag: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
+  --sha256: 1srbl3jrkmpwypdz0yrx4nmah3qcsr93dp48zx2bamg51c4hcsyj
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 594f587bfab626a405ac532112cc0b942ad3efdb
-  --sha256: 09h9kd6drhw53i1k8ahwk95kb0c1nbbxr8f3p9rx63yq3hdga2cw
+  tag: 316c854d1d3089f480708ad5cd5ecf8a74423ddd
+  --sha256: 1srbl3jrkmpwypdz0yrx4nmah3qcsr93dp48zx2bamg51c4hcsyj
   subdir: test
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 20309d5aa56b0ae5fd982465297a1d87aa5658a1
-  --sha256: 0j4k6faiy2isqfm12lmwz7szpdrkzxhfz6ljjkv5r2v41v0hnx6f
+  tag: 71df15f7b888d2671f619cc632080aaaaca48087
+  --sha256: 02shwi4qppf88biq2y9amfzkzif9j0fdj0d77zdjrfjacldvc6ci
   subdir:   contra-tracer
 
 source-repository-package

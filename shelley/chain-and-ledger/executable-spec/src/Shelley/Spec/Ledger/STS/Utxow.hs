@@ -17,7 +17,7 @@ module Shelley.Spec.Ledger.STS.Utxow
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∩))
+import Byron.Spec.Ledger.Core ((∩))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -28,6 +28,20 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
+  ( (?!),
+    (?!:),
+    Embed,
+    IRC (..),
+    InitialRule,
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    failBecause,
+    judgmentContext,
+    liftSTS,
+    trans,
+    wrapFailed,
+  )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -36,6 +50,7 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
+import Shelley.Spec.Ledger.Address.Bootstrap (bootstrapWitKeyHash)
 import Shelley.Spec.Ledger.BaseTypes
   ( (==>),
     ShelleyBase,
@@ -43,17 +58,31 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
     quorum,
   )
-import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
+  ( DSignable,
+    GenDelegs (..),
+    Hash,
+    KeyHash,
+    KeyRole (..),
+    VKey,
+    asWitness,
+  )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), verifiedWits, witsVKeyNeeded)
 import Shelley.Spec.Ledger.MetaData (MetaDataHash, hashMetaData)
-import Shelley.Spec.Ledger.STS.Utxo
+import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeSet, encodeFoldable)
 import Shelley.Spec.Ledger.Tx
-import Shelley.Spec.Ledger.TxData
-import Shelley.Spec.Ledger.UTxO
+  ( Tx (..),
+    WitnessSetHKD (..),
+    hashScript,
+    txwitsScript,
+    validateScript,
+  )
+import Shelley.Spec.Ledger.TxData (TxBody (..), witKeyHash)
+import Shelley.Spec.Ledger.UTxO (scriptsNeeded)
 
 data UTXOW crypto
 
@@ -167,8 +196,8 @@ initialLedgerStateUTXOW ::
   ) =>
   InitialRule (UTXOW crypto)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakeCreds stakepools genDelegs) <- judgmentContext
-  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakeCreds stakepools genDelegs)
+  IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
+  trans @(UTXO crypto) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
 utxoWitnessed ::
   forall crypto.
@@ -178,10 +207,11 @@ utxoWitnessed ::
   TransitionRule (UTXOW crypto)
 utxoWitnessed =
   judgmentContext
-    >>= \(TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx@(Tx txbody wits _ md))) -> do
+    >>= \(TRC (UtxoEnv slot pp stakepools genDelegs, u, tx@(Tx txbody wits md))) -> do
       let utxo = _utxo u
-      let witsKeyHashes = Set.map witKeyHash wits
-
+      let witsKeyHashes =
+            (Set.map witKeyHash $ addrWits wits)
+              `Set.union` (Set.map bootstrapWitKeyHash $ bootWits wits)
       -- check multi-signature scripts
       let failedScripts =
             filter
@@ -214,7 +244,8 @@ utxoWitnessed =
           hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
 
       -- check genesis keys signatures for instantaneous rewards certificates
-      let genSig = (Set.map asWitness $ dom genMapping) ∩ Set.map witKeyHash wits
+      let genDelegates = Set.fromList $ fmap (asWitness . fst) $ Map.elems genMapping
+          genSig = genDelegates ∩ witsKeyHashes
           mirCerts =
             StrictSeq.toStrict
               . Seq.filter isInstantaneousRewards
@@ -229,7 +260,7 @@ utxoWitnessed =
         ?! MIRInsufficientGenesisSigsUTXOW genSig
 
       trans @(UTXO crypto) $
-        TRC (UtxoEnv slot pp stakeCreds stakepools genDelegs, u, tx)
+        TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 instance
   ( Crypto crypto,

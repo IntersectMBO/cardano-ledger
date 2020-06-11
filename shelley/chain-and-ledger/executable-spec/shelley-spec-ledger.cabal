@@ -22,10 +22,12 @@ flag development
 
 library
   exposed-modules:   Shelley.Spec.Ledger.Address
+                     Shelley.Spec.Ledger.Address.Bootstrap
                      Shelley.Spec.Ledger.BaseTypes
                      Shelley.Spec.Ledger.BlockChain
                      Shelley.Spec.Ledger.Coin
                      Shelley.Spec.Ledger.Credential
+                     Shelley.Spec.Ledger.Genesis
                      Shelley.Spec.Ledger.Keys
                      Shelley.Spec.Ledger.UTxO
                      Shelley.Spec.Ledger.Slot
@@ -87,29 +89,32 @@ library
   build-depends:
     aeson,
     base >= 4.7 && < 5,
+    base16-bytestring,
     binary,
+    binary,
+    byron-spec-ledger,
     bytestring,
+    cardano-binary,
+    cardano-crypto,
+    cardano-crypto-class,
+    cardano-crypto-wrapper,
     cardano-ledger,
+    cardano-prelude,
+    cardano-slotting,
     cborg,
     cborg-json,
     containers,
     cryptonite,
-    binary,
     hedgehog,
-    QuickCheck,
-    small-steps,
+    iproute,
     mtl,
+    network,
     shelley-spec-non-integral,
+    small-steps,
     stm,
     text,
-    transformers,
-    network,
-    iproute,
-    byron-spec-ledger,
-    cardano-binary,
-    cardano-crypto-class,
-    cardano-prelude,
-    cardano-slotting
+    time,
+    transformers
 
 test-suite shelley-spec-ledger-test
     type:                exitcode-stdio-1.0
@@ -118,6 +123,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Utils
                          Test.Cardano.Crypto.VRF.Fake
                          Test.Shelley.Spec.Ledger.Address
+                         Test.Shelley.Spec.Ledger.Address.Bootstrap
                          Test.Shelley.Spec.Ledger.CDDL
                          Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
                          Test.Shelley.Spec.Ledger.Examples
@@ -126,12 +132,15 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Generator.Constants
                          Test.Shelley.Spec.Ledger.Generator.Core
                          Test.Shelley.Spec.Ledger.Generator.Delegation
+                         Test.Shelley.Spec.Ledger.Generator.Genesis
                          Test.Shelley.Spec.Ledger.Generator.Presets
                          Test.Shelley.Spec.Ledger.Generator.Trace.Chain
                          Test.Shelley.Spec.Ledger.Generator.Trace.DCert
                          Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
                          Test.Shelley.Spec.Ledger.Generator.Update
                          Test.Shelley.Spec.Ledger.Generator.Utxo
+                         Test.Shelley.Spec.Ledger.Genesis.Example
+                         Test.Shelley.Spec.Ledger.Genesis.Properties
                          Test.Shelley.Spec.Ledger.MultiSigExamples
                          Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
                          Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
@@ -175,6 +184,7 @@ test-suite shelley-spec-ledger-test
         -Werror
     build-depends:
       QuickCheck,
+      aeson,
       base,
       base16-bytestring,
       binary,
@@ -182,8 +192,12 @@ test-suite shelley-spec-ledger-test
       bytestring-conversion,
       cardano-binary,
       cardano-crypto-class,
+      cardano-crypto-test,
+      cardano-crypto-wrapper,
+      cardano-ledger,
       cardano-ledger-test,
       cardano-prelude,
+      cardano-prelude-test,
       cardano-slotting,
       cborg,
       containers,
@@ -203,4 +217,51 @@ test-suite shelley-spec-ledger-test
       tasty-hunit,
       tasty-quickcheck,
       text,
+      time,
       transformers
+
+benchmark mainbench
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   bench,
+                    test
+  main-is:          Main.hs
+  other-modules:    Test.Shelley.Spec.Ledger.BenchmarkFunctions,
+                    Test.Shelley.Spec.Ledger.ConcreteCryptoTypes,
+                    Test.Shelley.Spec.Ledger.Examples,
+                    Test.Shelley.Spec.Ledger.Generator.Constants,
+                    Test.Shelley.Spec.Ledger.Generator.Core,
+                    Test.Shelley.Spec.Ledger.Utils,
+                    Test.Cardano.Crypto.VRF.Fake
+  build-depends:    base,
+                    shelley-spec-ledger,
+                    cardano-binary,
+                    cardano-crypto,
+                    cardano-crypto-class,
+                    cardano-prelude,
+                    cardano-slotting,
+                    cryptonite,
+                    transformers,
+                    bytestring,
+                    bytestring-conversion,
+                    hedgehog,
+                    QuickCheck,
+                    tasty-quickcheck,
+                    tasty-hunit,
+                    tasty,
+                    small-steps,
+                    criterion,
+                    random,
+                    containers,
+                    MonadRandom
+  ghc-options:
+      -threaded
+      -rtsopts
+      -with-rtsopts=-N
+      -Wall
+      -Wcompat
+      -Wincomplete-record-updates
+      -Wincomplete-uni-patterns
+      -Wredundant-constraints
+  if (!flag(development))
+    ghc-options:
+      -Werror

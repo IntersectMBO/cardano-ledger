@@ -30,16 +30,16 @@ import Shelley.Spec.Ledger.LedgerState (keyRefunds, pattern UTxOState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Tx
   ( _body,
-    _witnessMSigMap,
-    _witnessVKeySet,
+    _witnessSet,
+    addrWits,
     getKeyCombinations,
+    msigWits,
   )
 import Shelley.Spec.Ledger.TxData (_certs, _inputs, _txfee, witKeyHash, pattern TxIn)
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
 import Test.QuickCheck ((===), Property, conjoin)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( StakeCreds,
-    StakePools,
+  ( StakePools,
     Tx,
     UTXO,
     UTXOW,
@@ -53,57 +53,55 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -- equals the sum of the created value.
 preserveBalance ::
   PParams ->
-  [(StakeCreds, StakePools, SourceSignalTarget UTXOW)] ->
+  [(StakePools, SourceSignalTarget UTXOW)] ->
   Property
 preserveBalance pp tr =
   conjoin $
     map createdIsConsumed tr
   where
     createdIsConsumed
-      ( stk,
-        stp,
+      ( stp,
         SourceSignalTarget
           { source = UTxOState u _ _ _,
             signal = tx,
             target = UTxOState u' _ _ _
           }
         ) =
-        created u' stp tx == consumed u stk tx
+        created u' stp tx == consumed u tx
     created u stp_ tx =
       balance u
         + _txfee (_body tx)
         + totalDeposits pp stp_ (toList $ _certs $ _body tx)
-    consumed u stk_ tx =
+    consumed u tx =
       balance u
-        + keyRefunds pp stk_ (_body tx)
+        + keyRefunds pp (_body tx)
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
   PParams ->
-  [(StakeCreds, StakePools, SourceSignalTarget UTXOW)] ->
+  [(StakePools, SourceSignalTarget UTXOW)] ->
   Property
 preserveBalanceRestricted pp tr =
   conjoin $
     map createdIsConsumed tr
   where
     createdIsConsumed
-      ( stk,
-        stp,
+      ( stp,
         SourceSignalTarget
           { source = UTxOState u _ _ _,
             signal = tx,
             target = UTxOState _ _ _ _
           }
         ) =
-        inps u tx == outs stk stp (_body tx)
+        inps u tx == outs stp (_body tx)
     inps u tx = balance $ (_inputs $ _body tx) <| u
-    outs stk_ stp_ tx =
+    outs stp_ tx =
       balance (txouts tx)
         + _txfee tx
-        + depositChange stk_ stp_ (toList $ _certs tx) tx
-    depositChange stk_ stp_ certs txb =
+        + depositChange stp_ (toList $ _certs tx) tx
+    depositChange stp_ certs txb =
       totalDeposits pp stp_ certs
-        - (keyRefunds pp stk_ txb)
+        - (keyRefunds pp txb)
 
 -- | Preserve outputs of Txs
 preserveOutputsTx ::
@@ -196,8 +194,8 @@ requiredMSigSignaturesSubset tr =
   where
     signaturesSubset sst =
       let khs = keyHashSet sst
-       in all (existsReqKeyComb khs) (_witnessMSigMap $ signal sst)
+       in all (existsReqKeyComb khs) (msigWits . _witnessSet $ signal sst)
     existsReqKeyComb keyHashes msig =
       any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (getKeyCombinations msig)
     keyHashSet sst =
-      Set.map witKeyHash (_witnessVKeySet $ signal sst)
+      Set.map witKeyHash (addrWits . _witnessSet $ signal sst)

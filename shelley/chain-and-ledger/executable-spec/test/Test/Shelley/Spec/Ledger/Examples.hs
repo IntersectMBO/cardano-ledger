@@ -11,9 +11,6 @@ module Test.Shelley.Spec.Ledger.Examples
     ex2A,
     ex2B,
     ex2C,
-    ex2Cbis,
-    ex2Cter,
-    ex2Cquater,
     ex2D,
     ex2E,
     ex2F,
@@ -43,6 +40,7 @@ module Test.Shelley.Spec.Ledger.Examples
     ex6BPoolParams,
     test5DReserves,
     test5DTreasury,
+    ppsEx1,
     -- key pairs and example addresses
     alicePay,
     aliceStake,
@@ -216,9 +214,7 @@ import Shelley.Spec.Ledger.PParams
     _d,
     _eMax,
     _extraEntropy,
-    _keyDecayRate,
     _keyDeposit,
-    _keyMinRefund,
     _maxBBSize,
     _maxBHSize,
     _maxTxSize,
@@ -226,9 +222,7 @@ import Shelley.Spec.Ledger.PParams
     _minfeeA,
     _minfeeB,
     _nOpt,
-    _poolDecayRate,
     _poolDeposit,
-    _poolMinRefund,
     _protocolVersion,
     _rho,
     _tau,
@@ -268,7 +262,7 @@ import Shelley.Spec.Ledger.Slot
     EpochNo (..),
     SlotNo (..),
   )
-import Shelley.Spec.Ledger.Tx (pattern Tx)
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), pattern Tx)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
     PoolMetaData (..),
@@ -569,35 +563,7 @@ ppsEx1 =
       _d = unsafeMkUnitInterval 0.5,
       _tau = unsafeMkUnitInterval 0.2,
       _rho = unsafeMkUnitInterval 0.0021,
-      _keyDecayRate = 0.002,
-      _keyMinRefund = unsafeMkUnitInterval 0.5,
-      _poolDecayRate = 0.001,
-      _poolMinRefund = unsafeMkUnitInterval 0.5,
       _minUTxOValue = 100
-    }
-
--- | Never decay.
-ppsExNoDecay :: PParams
-ppsExNoDecay =
-  ppsEx1
-    { _keyDecayRate = 0,
-      _poolDecayRate = 0
-    }
-
--- | Refund everything.
-ppsExFullRefund :: PParams
-ppsExFullRefund =
-  ppsEx1
-    { _keyMinRefund = unsafeMkUnitInterval 1,
-      _poolMinRefund = unsafeMkUnitInterval 1
-    }
-
--- | Decay instantly within one cycle.
-ppsExInstantDecay :: PParams
-ppsExInstantDecay =
-  ppsEx1
-    { _keyDecayRate = 1000,
-      _poolDecayRate = 1000
     }
 
 -- | Account with empty treasury.
@@ -690,11 +656,7 @@ ppupEx2A =
             _maxTxSize = SNothing,
             _maxBHSize = SNothing,
             _keyDeposit = SJust 255,
-            _keyMinRefund = SNothing,
-            _keyDecayRate = SNothing,
             _poolDeposit = SNothing,
-            _poolMinRefund = SNothing,
-            _poolDecayRate = SNothing,
             _eMax = SNothing,
             _nOpt = SNothing,
             _a0 = SNothing,
@@ -749,25 +711,26 @@ txEx2A :: Tx
 txEx2A =
   Tx
     txbodyEx2A
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx2A)
-        ( (asWitness <$> [alicePay, carlPay])
-            <> (asWitness <$> [aliceStake])
-            <> (asWitness <$> [cold alicePool, cold $ coreNodeKeys 0])
-        )
-        -- Note that Alice's stake key needs to sign this transaction
-        -- since it is an owner of the stake pool being registered,
-        -- and *not* because of the stake key registration.
-        `Set.union` makeWitnessesVKey
-          (hashTxBody txbodyEx2A)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3),
-            KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
-          ]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2A)
+            ( (asWitness <$> [alicePay, carlPay])
+                <> (asWitness <$> [aliceStake])
+                <> ( asWitness
+                       <$> [ cold alicePool,
+                             cold (coreNodeKeys 0),
+                             cold (coreNodeKeys 1),
+                             cold (coreNodeKeys 2),
+                             cold (coreNodeKeys 3),
+                             cold (coreNodeKeys 4)
+                           ]
+                   )
+            )
+            -- Note that Alice's stake key needs to sign this transaction
+            -- since it is an owner of the stake pool being registered,
+            -- and *not* because of the stake key registration.
+      }
     SNothing
 
 -- | Pointer address to address of Alice address.
@@ -938,12 +901,12 @@ txEx2B :: Tx
 txEx2B =
   Tx
     txbodyEx2B -- Body of the transaction
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx2B)
-        [asWitness alicePay, asWitness aliceStake, asWitness bobStake]
-    )
-    -- Witness verification key set
-    Map.empty -- Witness signature map
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2B)
+            [asWitness alicePay, asWitness aliceStake, asWitness bobStake]
+      }
     SNothing
 
 blockEx2B :: Block
@@ -1012,15 +975,15 @@ expectedLSEx2B =
     )
     (DPState dsEx2B psEx2A)
 
-expectedStEx2Bgeneric :: PParams -> ChainState
-expectedStEx2Bgeneric pp =
+-- | Expected state after transition
+expectedStEx2B :: ChainState
+expectedStEx2B =
   ChainState
-    -- New state of the epoch
     ( NewEpochState
         (EpochNo 0) -- First epoch
         (BlocksMade Map.empty) -- Blocks made before current
         (BlocksMade Map.empty) -- Blocks made before current
-        (EpochState acntEx2A emptySnapShots expectedLSEx2B pp pp emptyNonMyopic)
+        (EpochState acntEx2A emptySnapShots expectedLSEx2B ppsEx1 ppsEx1 emptyNonMyopic)
         -- Previous epoch state
         (SJust emptyRewardUpdate)
         (PoolDistr Map.empty)
@@ -1038,23 +1001,6 @@ expectedStEx2Bgeneric pp =
           blockEx2BHash -- Hash header of the chain
     )
 
--- | Expected state after transition
-expectedStEx2B :: ChainState
-expectedStEx2B = expectedStEx2Bgeneric ppsEx1
-
--- | Expected state after transition, variant with no decay
-expectedStEx2Bbis :: ChainState
-expectedStEx2Bbis = expectedStEx2Bgeneric ppsExNoDecay
-
--- | Expected state after transition, variant with full refund
-expectedStEx2Bter :: ChainState
-expectedStEx2Bter = expectedStEx2Bgeneric ppsExFullRefund
-
--- | Expected state after transtion, variant with instant decay
-expectedStEx2Bquater :: ChainState
-expectedStEx2Bquater = expectedStEx2Bgeneric ppsExInstantDecay
-
--- | Wrap plain example
 ex2B :: CHAINExample
 ex2B = CHAINExample expectedStEx2A blockEx2B (Right expectedStEx2B)
 
@@ -1089,34 +1035,21 @@ snapEx2C =
     delegsEx2B
     (Map.singleton (hk alicePool) alicePoolParams)
 
--- | Make a snapshot for a given fee.
-snapsEx2Cgeneric :: Coin -> SnapShots
-snapsEx2Cgeneric feeSnapShot =
-  emptySnapShots
-    { _pstakeMark = snapEx2C, -- snapshot of stake pools and parameters
-      _feeSS = feeSnapShot
-    }
-
 -- | Snapshots with given fees.
 snapsEx2C :: SnapShots
-snapsEx2C = snapsEx2Cgeneric 21
+snapsEx2C =
+  emptySnapShots
+    { _pstakeMark = snapEx2C, -- snapshot of stake pools and parameters
+      _feeSS = 7
+    }
 
-snapsEx2Cbis :: SnapShots
-snapsEx2Cbis = snapsEx2Cgeneric 7
-
-snapsEx2Cter :: SnapShots
-snapsEx2Cter = snapsEx2Cgeneric 7
-
-snapsEx2Cquater :: SnapShots
-snapsEx2Cquater = snapsEx2Cgeneric 144
-
-expectedLSEx2Cgeneric :: Coin -> Coin -> LedgerState
-expectedLSEx2Cgeneric lsDeposits lsFees =
+expectedLSEx2C :: LedgerState
+expectedLSEx2C =
   LedgerState
     ( UTxOState
         utxoEx2B
-        lsDeposits
-        lsFees
+        (Coin 271)
+        (Coin 7)
         emptyPPPUpdates -- Note that the ppup is gone now
     )
     ( DPState
@@ -1127,18 +1060,6 @@ expectedLSEx2Cgeneric lsDeposits lsFees =
           }
         psEx2A
     )
-
-expectedLSEx2C :: LedgerState
-expectedLSEx2C = expectedLSEx2Cgeneric 257 21
-
-expectedLSEx2Cbis :: LedgerState
-expectedLSEx2Cbis = expectedLSEx2Cgeneric 271 7
-
-expectedLSEx2Cter :: LedgerState
-expectedLSEx2Cter = expectedLSEx2Cgeneric 271 7
-
-expectedLSEx2Cquater :: LedgerState
-expectedLSEx2Cquater = expectedLSEx2Cgeneric 134 144
 
 blockEx2CHash :: HashHeader
 blockEx2CHash = bhHash (bheader blockEx2C)
@@ -1172,33 +1093,8 @@ expectedStEx2Cgeneric ss ls pp =
 expectedStEx2C :: ChainState
 expectedStEx2C = expectedStEx2Cgeneric snapsEx2C expectedLSEx2C ppsEx1
 
-expectedStEx2Cbis :: ChainState
-expectedStEx2Cbis = expectedStEx2Cgeneric snapsEx2Cbis expectedLSEx2Cbis ppsExNoDecay
-
-expectedStEx2Cter :: ChainState
-expectedStEx2Cter =
-  expectedStEx2Cgeneric snapsEx2Cter expectedLSEx2Cter ppsExFullRefund
-
-expectedStEx2Cquater :: ChainState
-expectedStEx2Cquater =
-  expectedStEx2Cgeneric snapsEx2Cquater expectedLSEx2Cquater ppsExInstantDecay
-
--- | Example 2C with standard decay.
 ex2C :: CHAINExample
 ex2C = CHAINExample expectedStEx2B blockEx2C (Right expectedStEx2C)
-
--- | Example 2C with no decay.
-ex2Cbis :: CHAINExample
-ex2Cbis = CHAINExample expectedStEx2Bbis blockEx2C (Right expectedStEx2Cbis)
-
--- | Example 2C with full refund.
-ex2Cter :: CHAINExample
-ex2Cter = CHAINExample expectedStEx2Bter blockEx2C (Right expectedStEx2Cter)
-
--- | Example 2C with instant decay.
-ex2Cquater :: CHAINExample
-ex2Cquater =
-  CHAINExample expectedStEx2Bquater blockEx2C (Right expectedStEx2Cquater)
 
 -- | Example 2D - process a block late enough
 -- in the epoch in order to create a second reward update, preparing the way for
@@ -1228,8 +1124,10 @@ txEx2D :: Tx
 txEx2D =
   Tx
     txbodyEx2D
-    (makeWitnessesVKey (hashTxBody txbodyEx2D) [asWitness alicePay, asWitness carlStake])
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody txbodyEx2D) [asWitness alicePay, asWitness carlStake]
+      }
     SNothing
 
 blockEx2D :: Block
@@ -1276,8 +1174,8 @@ expectedLSEx2D =
   LedgerState
     ( UTxOState
         utxoEx2D
-        (Coin 257)
-        (Coin 26)
+        (Coin 271)
+        (Coin 12)
         emptyPPPUpdates
     )
     (DPState dsEx2D psEx2A)
@@ -1299,11 +1197,11 @@ expectedStEx2D =
         )
         ( SJust
             RewardUpdate
-              { deltaT = Coin 21,
+              { deltaT = Coin 7,
                 deltaR = Coin 0,
                 rs = Map.empty,
-                deltaF = Coin (-21),
-                nonMyopic = emptyNonMyopic {rewardPot = Coin 17}
+                deltaF = Coin (-7),
+                nonMyopic = emptyNonMyopic {rewardPot = Coin 6}
               }
         )
         (PoolDistr Map.empty)
@@ -1360,7 +1258,7 @@ snapsEx2E =
   emptySnapShots
     { _pstakeMark = snapEx2E,
       _pstakeSet = snapEx2C,
-      _feeSS = Coin 19
+      _feeSS = Coin 5
     }
 
 expectedLSEx2E :: LedgerState
@@ -1368,8 +1266,8 @@ expectedLSEx2E =
   LedgerState
     ( UTxOState
         utxoEx2D
-        (Coin 243)
-        (Coin 19)
+        (Coin 271)
+        (Coin 5)
         emptyPPPUpdates
     )
     ( DPState
@@ -1387,7 +1285,7 @@ blockEx2EHash = bhHash (bheader blockEx2E)
 acntEx2E :: AccountState
 acntEx2E =
   AccountState
-    { _treasury = Coin 21,
+    { _treasury = Coin 7,
       _reserves = maxLLSupply - balance utxoEx2A - carlMIR
     }
 
@@ -1465,11 +1363,11 @@ expectedStEx2F =
         (EpochState acntEx2E snapsEx2E expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
         ( SJust
             RewardUpdate
-              { deltaT = Coin 19,
+              { deltaT = Coin 5,
                 deltaR = Coin 0,
                 rs = Map.empty,
-                deltaF = Coin (-19),
-                nonMyopic = emptyNonMyopic {rewardPot = Coin 16}
+                deltaF = Coin (-5),
+                nonMyopic = emptyNonMyopic {rewardPot = Coin 4}
               }
         )
         pdEx2F
@@ -1516,7 +1414,7 @@ snapsEx2G =
     { _pstakeMark = snapEx2E,
       _pstakeSet = snapEx2E,
       _pstakeGo = snapEx2C,
-      _feeSS = 10
+      _feeSS = 0
     }
 
 expectedLSEx2G :: LedgerState
@@ -1524,8 +1422,8 @@ expectedLSEx2G =
   LedgerState
     ( UTxOState
         utxoEx2D
-        (Coin 233)
-        (Coin 10)
+        (Coin 271)
+        (Coin 0)
         emptyPPPUpdates
     )
     ( DPState
@@ -1541,7 +1439,7 @@ oCertIssueNosEx2G =
     oCertIssueNosEx2F
 
 acntEx2G :: AccountState
-acntEx2G = acntEx2E {_treasury = Coin 40}
+acntEx2G = acntEx2E {_treasury = Coin 12}
 
 expectedStEx2G :: ChainState
 expectedStEx2G =
@@ -1618,7 +1516,7 @@ alicePerfEx2H = ApparentPerformance (beta / sigma)
     stake = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
 
 deltaT2H :: Coin
-deltaT2H = Coin 786986666678
+deltaT2H = Coin 786986666668
 
 deltaR2H :: Coin
 deltaR2H = Coin (-793333333333)
@@ -1636,11 +1534,11 @@ expectedStEx2H =
               { deltaT = deltaT2H,
                 deltaR = deltaR2H,
                 rs = rewardsEx2H,
-                deltaF = Coin (-10),
+                deltaF = Coin 0,
                 nonMyopic =
                   NonMyopic
                     (Map.singleton (hk alicePool) alicePerfEx2H)
-                    (Coin 634666666675)
+                    (Coin 634666666667)
                     snapEx2C
               }
         )
@@ -1696,8 +1594,8 @@ expectedLSEx2I =
   LedgerState
     ( UTxOState
         utxoEx2D
-        (Coin 224)
-        (Coin 9)
+        (Coin 271)
+        (Coin 0)
         emptyPPPUpdates
     )
     (DPState dsEx2I psEx2A)
@@ -1720,7 +1618,7 @@ snapsEx2I =
       -- The stake snapshots have bigger values now, due to the new rewards
       _pstakeSet = snapEx2E,
       _pstakeGo = snapEx2E,
-      _feeSS = Coin 9
+      _feeSS = Coin 0
     }
 
 oCertIssueNosEx2I :: Map (KeyHash 'BlockIssuer) Natural
@@ -1762,7 +1660,7 @@ bobAda2J :: Coin
 bobAda2J =
   bobRAcnt2H -- reward account
     + bobInitCoin -- txin we will consume (must spend at least one)
-    + Coin 4 -- stake registration refund
+    + Coin 7 -- stake registration refund
     - Coin 9 -- tx fee
 
 txbodyEx2J :: TxBody
@@ -1781,8 +1679,10 @@ txEx2J :: Tx
 txEx2J =
   Tx
     txbodyEx2J
-    (makeWitnessesVKey (hashTxBody txbodyEx2J) [asWitness bobPay, asWitness bobStake])
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody txbodyEx2J) [asWitness bobPay, asWitness bobStake]
+      }
     SNothing
 
 blockEx2J :: Block
@@ -1829,8 +1729,8 @@ expectedLSEx2J =
   LedgerState
     ( UTxOState
         utxoEx2J
-        (Coin (219 - 4) + 5)
-        (Coin 18)
+        (Coin 264)
+        (Coin 9)
         emptyPPPUpdates
     )
     (DPState dsEx2J psEx2A)
@@ -1889,8 +1789,12 @@ txEx2K :: Tx
 txEx2K =
   Tx
     txbodyEx2K
-    (makeWitnessesVKey (hashTxBody txbodyEx2K) [asWitness $ cold alicePool, asWitness alicePay])
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2K)
+            [asWitness $ cold alicePool, asWitness alicePay]
+      }
     SNothing
 
 blockEx2K :: Block
@@ -1927,8 +1831,8 @@ expectedLSEx2K =
   LedgerState
     ( UTxOState
         utxoEx2K
-        (Coin 220)
-        (Coin 20)
+        (Coin 264)
+        (Coin 11)
         emptyPPPUpdates
     )
     (DPState dsEx2J psEx2K)
@@ -1943,14 +1847,14 @@ expectedStEx2K =
         (EpochState acntEx2I snapsEx2I expectedLSEx2K ppsEx1 ppsEx1 emptyNonMyopic)
         ( SJust
             RewardUpdate
-              { deltaT = Coin 9,
+              { deltaT = Coin 0,
                 deltaR = Coin 0,
                 rs = Map.empty,
-                deltaF = Coin (-9),
+                deltaF = Coin 0,
                 nonMyopic =
                   NonMyopic
                     (Map.singleton (hk alicePool) (ApparentPerformance 0))
-                    (Coin 8)
+                    (Coin 0)
                     snapEx2E
               }
         )
@@ -1996,7 +1900,6 @@ acntEx2L =
   acntEx2I
     { _treasury =
         _treasury acntEx2I --previous amount
-          + Coin 9 -- from the reward update
     }
 
 snapsEx2L :: SnapShots
@@ -2015,7 +1918,7 @@ snapsEx2L =
           (Map.singleton (hk alicePool) alicePoolParams),
       _pstakeSet = _pstakeMark snapsEx2I,
       _pstakeGo = _pstakeSet snapsEx2I,
-      _feeSS = Coin 22
+      _feeSS = Coin 11
     }
 
 dsEx2L :: DState
@@ -2029,7 +1932,7 @@ dsEx2L =
       _stkCreds = StakeCreds $ Map.fromList [(aliceSHK, SlotNo 10), (carlSHK, SlotNo 10)],
       _rewards =
         Map.fromList
-          [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H + Coin 201),
+          [ (RewardAcnt Testnet aliceSHK, aliceRAcnt2H + Coin 250),
             (RewardAcnt Testnet carlSHK, carlMIR)
           ]
           -- Note the pool cert refund of 201
@@ -2040,8 +1943,8 @@ expectedLSEx2L =
   LedgerState
     ( UTxOState
         utxoEx2K
-        (Coin 4 + 4)
-        (Coin 22)
+        (Coin 14)
+        (Coin 11)
         emptyPPPUpdates
     )
     (DPState dsEx2L psEx1) -- Note the stake pool is reaped
@@ -2088,11 +1991,7 @@ ppVote3A =
       _maxTxSize = SNothing,
       _maxBHSize = SNothing,
       _keyDeposit = SNothing,
-      _keyMinRefund = SNothing,
-      _keyDecayRate = SNothing,
       _poolDeposit = SJust 200,
-      _poolMinRefund = SNothing,
-      _poolDecayRate = SNothing,
       _eMax = SNothing,
       _nOpt = SNothing,
       _a0 = SNothing,
@@ -2135,15 +2034,16 @@ txEx3A :: Tx
 txEx3A =
   Tx
     txbodyEx3A
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx3A)
-        [ asWitness alicePay,
-          asWitness . cold $ coreNodeKeys 0,
-          asWitness . cold $ coreNodeKeys 3,
-          asWitness . cold $ coreNodeKeys 4
-        ]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx3A)
+            [ asWitness alicePay,
+              asWitness . cold $ coreNodeKeys 0,
+              asWitness . cold $ coreNodeKeys 3,
+              asWitness . cold $ coreNodeKeys 4
+            ]
+      }
     SNothing
 
 blockEx3A :: Block
@@ -2237,14 +2137,15 @@ txEx3B :: Tx
 txEx3B =
   Tx
     txbodyEx3B
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx3B)
-        [ asWitness alicePay,
-          asWitness . cold $ coreNodeKeys 1,
-          asWitness . cold $ coreNodeKeys 5
-        ]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx3B)
+            [ asWitness alicePay,
+              asWitness . cold $ coreNodeKeys 1,
+              asWitness . cold $ coreNodeKeys 5
+            ]
+      }
     SNothing
 
 blockEx3B :: Block
@@ -2414,12 +2315,13 @@ txEx4A :: Tx
 txEx4A =
   Tx
     txbodyEx4A
-    ( makeWitnessesVKey (hashTxBody txbodyEx4A) [alicePay]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody txbodyEx4A)
-          [KeyPair (coreNodeVKG 0) (coreNodeSKG 0)]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody txbodyEx4A) [alicePay]
+            `Set.union` makeWitnessesVKey
+              (hashTxBody txbodyEx4A)
+              [KeyPair (coreNodeVKG 0) (coreNodeSKG 0)]
+      }
     SNothing
 
 blockEx4A :: Block
@@ -2586,17 +2488,20 @@ txEx5A :: MIRPot -> Tx
 txEx5A pot =
   Tx
     (txbodyEx5A pot)
-    ( makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody $ txbodyEx5A pot)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3),
-            KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
-          ]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
+            `Set.union` makeWitnessesVKey
+              (hashTxBody $ txbodyEx5A pot)
+              ( asWitness
+                  <$> [ cold (coreNodeKeys 0),
+                        cold (coreNodeKeys 1),
+                        cold (coreNodeKeys 2),
+                        cold (coreNodeKeys 3),
+                        cold (coreNodeKeys 4)
+                      ]
+              )
+      }
     SNothing
 
 blockEx5A :: MIRPot -> Block
@@ -2705,16 +2610,20 @@ txEx5B :: MIRPot -> Tx
 txEx5B pot =
   Tx
     (txbodyEx5A pot)
-    ( makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody $ txbodyEx5A pot)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3)
-          ]
+    ( mempty
+        { addrWits =
+            makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
+              `Set.union` makeWitnessesVKey
+                (hashTxBody $ txbodyEx5A pot)
+                ( asWitness
+                    <$> [ cold (coreNodeKeys 0),
+                          cold (coreNodeKeys 1),
+                          cold (coreNodeKeys 2),
+                          cold (coreNodeKeys 3)
+                        ]
+                )
+        }
     )
-    Map.empty
     SNothing
 
 blockEx5B :: MIRPot -> Block
@@ -2803,17 +2712,20 @@ txEx5D :: MIRPot -> Tx
 txEx5D pot =
   Tx
     (txbodyEx5D pot)
-    ( makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake]
-        `Set.union` makeWitnessesVKey
-          (hashTxBody $ txbodyEx5D pot)
-          [ KeyPair (coreNodeVKG 0) (coreNodeSKG 0),
-            KeyPair (coreNodeVKG 1) (coreNodeSKG 1),
-            KeyPair (coreNodeVKG 2) (coreNodeSKG 2),
-            KeyPair (coreNodeVKG 3) (coreNodeSKG 3),
-            KeyPair (coreNodeVKG 4) (coreNodeSKG 4)
-          ]
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake]
+            `Set.union` makeWitnessesVKey
+              (hashTxBody $ txbodyEx5D pot)
+              ( asWitness
+                  <$> [ cold (coreNodeKeys 0),
+                        cold (coreNodeKeys 1),
+                        cold (coreNodeKeys 2),
+                        cold (coreNodeKeys 3),
+                        cold (coreNodeKeys 4)
+                      ]
+              )
+      }
     SNothing
 
 blockEx5D :: MIRPot -> Block
@@ -2852,7 +2764,13 @@ txbodyEx5D' pot =
     SNothing
 
 txEx5D' :: MIRPot -> Tx
-txEx5D' pot = Tx (txbodyEx5D' pot) (makeWitnessesVKey (hashTxBody $ txbodyEx5D' pot) [alicePay]) Map.empty SNothing
+txEx5D' pot =
+  Tx
+    (txbodyEx5D' pot)
+    mempty
+      { addrWits = makeWitnessesVKey (hashTxBody $ txbodyEx5D' pot) [alicePay]
+      }
+    SNothing
 
 blockEx5D' :: MIRPot -> Block
 blockEx5D' pot =
@@ -2892,7 +2810,11 @@ txbodyEx5D'' pot =
     SNothing
 
 txEx5D'' :: MIRPot -> Tx
-txEx5D'' pot = Tx (txbodyEx5D'' pot) (makeWitnessesVKey (hashTxBody $ txbodyEx5D'' pot) [alicePay]) Map.empty SNothing
+txEx5D'' pot =
+  Tx
+    (txbodyEx5D'' pot)
+    mempty {addrWits = makeWitnessesVKey (hashTxBody $ txbodyEx5D'' pot) [alicePay]}
+    SNothing
 
 blockEx5D'' :: MIRPot -> Nonce -> Block
 blockEx5D'' pot epochNonce =
@@ -2985,13 +2907,15 @@ txEx6A :: Tx
 txEx6A =
   Tx
     txbodyEx6A
-    ( makeWitnessesVKey
-        (hashTxBody txbodyEx6A)
-        ( (asWitness <$> [alicePay])
-            <> (asWitness <$> [cold alicePool])
-        )
-    )
-    Map.empty
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx6A)
+            ( (asWitness <$> [alicePay])
+                <> (asWitness <$> [aliceStake])
+                <> (asWitness <$> [cold alicePool])
+            )
+      }
     SNothing
 
 earlySlotEx6 :: Word64

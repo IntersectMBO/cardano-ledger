@@ -264,14 +264,14 @@ deriving newtype instance Crypto crypto => FromCBOR (TxId crypto)
 -- | The input of a UTxO.
 data TxIn crypto
   = TxIn !(TxId crypto) !Natural -- TODO use our own Natural type
-  deriving (Show, Eq, Generic, Ord)
+  deriving (Show, Eq, Generic, Ord, NFData)
 
 instance NoUnexpectedThunks (TxIn crypto)
 
 -- | The output of a UTxO.
 data TxOut crypto
   = TxOut !(Addr crypto) !Coin
-  deriving (Show, Eq, Generic, Ord)
+  deriving (Show, Eq, Generic, Ord, NFData)
 
 instance NoUnexpectedThunks (TxOut crypto)
 

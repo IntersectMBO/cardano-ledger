@@ -17,7 +17,8 @@ where
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Ratio ((%))
+import Data.Ratio ((%), Ratio)
+import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -37,9 +38,7 @@ import Shelley.Spec.Ledger.PParams
     _d,
     _eMax,
     _extraEntropy,
-    _keyDecayRate,
     _keyDeposit,
-    _keyMinRefund,
     _maxBBSize,
     _maxBHSize,
     _maxTxSize,
@@ -47,9 +46,7 @@ import Shelley.Spec.Ledger.PParams
     _minfeeA,
     _minfeeB,
     _nOpt,
-    _poolDecayRate,
     _poolDeposit,
-    _poolMinRefund,
     _protocolVersion,
     _rho,
     _tau,
@@ -85,9 +82,13 @@ genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
   (% 1000) <$> genInteger lower upper
 
-genIntervalInThousands :: HasCallStack => Integer -> Integer -> Gen UnitInterval
+genRatioWord64InThousands :: HasCallStack => Word64 -> Word64 -> Gen (Ratio Word64)
+genRatioWord64InThousands lower upper =
+  (% 1000) <$> genWord64 lower upper
+
+genIntervalInThousands :: HasCallStack => Word64 -> Word64 -> Gen UnitInterval
 genIntervalInThousands lower upper =
-  unsafeMkUnitInterval <$> genRationalInThousands lower upper
+  unsafeMkUnitInterval <$> genRatioWord64InThousands lower upper
 
 genPParams :: HasCallStack => Constants -> Gen PParams
 genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
@@ -95,11 +96,7 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
     <*> genNatural 0 maxMinFeeB -- _minfeeB
     <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
     <*> genKeyDeposit
-    <*> genKeyMinRefund
-    <*> genKeyDecayRate
     <*> genPoolDeposit
-    <*> genPoolMinRefund
-    <*> genPoolDecayRate
     <*> genEMax c
     <*> genNOpt
     <*> genA0
@@ -123,10 +120,6 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
     rangeUpTo :: Natural -> Gen Natural
     rangeUpTo upper = genNatural low upper
 
--- keyDecayRate: 0.001-0.1
-genKeyDecayRate :: HasCallStack => Gen Rational
-genKeyDecayRate = genRationalInThousands 1 100
-
 -- poolDeposit
 -- NOTE: we need to keep these deposits small, otherwise
 -- when we generate sequences of transactions we will bleed too
@@ -136,14 +129,6 @@ genPoolDeposit =
   increasingProbabilityAt
     (Coin <$> genInteger 0 100)
     (Coin 0, Coin 100)
-
--- poolMinRefund: 0.1-0.7
-genPoolMinRefund :: HasCallStack => Gen UnitInterval
-genPoolMinRefund = genIntervalInThousands 100 700
-
--- poolDecayRate: 0.001-0.1
-genPoolDecayRate :: HasCallStack => Gen Rational
-genPoolDecayRate = genRationalInThousands 1 100
 
 -- Generates a Neutral or actual Nonces with equal frequency
 genExtraEntropy :: HasCallStack => Gen Nonce
@@ -158,10 +143,6 @@ genExtraEntropy =
 low, hi :: Natural
 low = 50000
 hi = 200000
-
--- keyMinRefund: 0.1-0.5
-genKeyMinRefund :: HasCallStack => Gen UnitInterval
-genKeyMinRefund = genIntervalInThousands 100 500
 
 -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
 genEMax ::
@@ -242,11 +223,7 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
       maxTxSize <- genNatural low hi
       maxBHSize <- genNatural low hi
       keyDeposit <- genKeyDeposit
-      keyMinRefund <- genKeyMinRefund
-      keyDecayRate <- genKeyDecayRate
       poolDeposit <- genPoolDeposit
-      poolMinRefund <- genPoolMinRefund
-      poolDecayRate <- genPoolDecayRate
       eMax <- genEMax c
       nopt <- genNOpt
       a0 <- genA0
@@ -264,11 +241,7 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
                 _maxTxSize = SJust maxTxSize,
                 _maxBHSize = SJust maxBHSize,
                 _keyDeposit = SJust keyDeposit,
-                _keyMinRefund = SJust keyMinRefund,
-                _keyDecayRate = SJust keyDecayRate,
                 _poolDeposit = SJust poolDeposit,
-                _poolMinRefund = SJust poolMinRefund,
-                _poolDecayRate = SJust poolDecayRate,
                 _eMax = SJust eMax,
                 _nOpt = SJust nopt,
                 _a0 = SJust a0,

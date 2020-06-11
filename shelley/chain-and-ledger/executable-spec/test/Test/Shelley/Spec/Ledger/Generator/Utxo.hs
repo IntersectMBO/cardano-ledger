@@ -16,7 +16,7 @@ import qualified Data.Either as Either (lefts, rights)
 import Data.List (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Maybe as Maybe (catMaybes)
+import qualified Data.Maybe as Maybe (mapMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -46,7 +46,8 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
-  ( getKeyCombination,
+  ( WitnessSetHKD (..),
+    getKeyCombination,
     hashScript,
     pattern Tx,
     pattern TxBody,
@@ -64,7 +65,6 @@ import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
-    CoreKeyPair,
     Credential,
     DCert,
     DPState,
@@ -158,39 +158,13 @@ genTx
 
       -- certificates
       (certs, certCreds, deposits_, refunds_, dpState') <-
-        genDCerts ge pparams dpState slot ttl txIx reserves
+        genDCerts ge pparams dpState slot txIx reserves
 
       let balance_ = spendingBalance - deposits_ + refunds_
       if balance_ <= 0
         then QC.discard
         else do
-          -- attempt to make provision for certificate deposits (otherwise discard this generator)
-          let stakeScripts =
-                Maybe.catMaybes $
-                  map
-                    ( \case
-                        ScriptCred c -> Just c
-                        _ -> Nothing
-                    )
-                    certCreds
-              genesisWitnesses =
-                foldl' (++) []
-                  $ Maybe.catMaybes
-                  $ map
-                    ( \case
-                        CoreKeyCred c -> Just c
-                        _ -> Nothing
-                    )
-                    certCreds
-              certWitnesses =
-                Maybe.catMaybes $
-                  map
-                    ( \case
-                        KeyCred c -> Just c
-                        _ -> Nothing
-                    )
-                    certCreds
-
+          let stakeScripts = pickStakeScripts certCreds
           -- calc. fees and output amounts
           let (_, outputs) = calcOutputsFromBalance balance_ recipientAddrs (Coin 0)
 
@@ -218,24 +192,29 @@ genTx
           -- deterministically for each script. Varying the script is possible though.
 
           let spendWitnesses' = fmap coerceKeyRole spendWitnesses
-              certWitnesses' = fmap coerceKeyRole certWitnesses
+              certWitnesses' =
+                fmap coerceKeyRole (pickCertWitnesses certCreds)
+                  ++ fmap coerceKeyRole (pickGenesisDelegateWitnesses certCreds)
               wdrlWitnesses' = fmap coerceKeyRole wdrlWitnesses
               updateWitnesses' = fmap coerceKeyRole updateWitnesses
+              genesisWitnesses' = pickGenesisWitnesses certCreds
+              regularWitnesses = spendWitnesses' ++ certWitnesses' ++ wdrlWitnesses' ++ updateWitnesses'
 
           let keysLists = map getKeyCombination $ Map.elems multiSig
               msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
               wits =
                 mkTxWits
                   txBody
-                  (spendWitnesses' ++ certWitnesses' ++ wdrlWitnesses' ++ updateWitnesses')
-                  genesisWitnesses
+                  regularWitnesses
+                  genesisWitnesses'
                   ksKeyPairsByHash'
                   msigSignatures
 
           let metadata = SNothing -- TODO generate metadata
 
           -- calculate real fees of witnesses transaction
-          let minimalFees = minfee pparams (Tx txBody wits multiSig metadata)
+          let witSet = mempty {addrWits = wits, msigWits = multiSig}
+          let minimalFees = minfee pparams (Tx txBody witSet metadata)
 
           -- discard generated transaction if the balance cannot cover the fees
           if minimalFees > balance_
@@ -252,18 +231,47 @@ genTx
                   wits' =
                     mkTxWits
                       txBody'
-                      (spendWitnesses' ++ certWitnesses' ++ wdrlWitnesses' ++ updateWitnesses')
-                      genesisWitnesses
+                      regularWitnesses
+                      genesisWitnesses'
                       ksKeyPairsByHash'
                       msigSignatures
-
-              pure (Tx txBody' wits' multiSig metadata)
+                  witSet' = mempty {addrWits = wits', msigWits = multiSig}
+              pure (Tx txBody' witSet' metadata)
+    where
+      pickGenesisDelegateWitnesses certs =
+        foldl' (++) [] $
+          Maybe.mapMaybe
+            ( \case
+                DelegateCred c -> Just c
+                _ -> Nothing
+            )
+            certs
+      pickCertWitnesses =
+        Maybe.mapMaybe
+          ( \case
+              KeyCred c -> Just c
+              _ -> Nothing
+          )
+      pickGenesisWitnesses certs =
+        foldl' (++) [] $
+          Maybe.mapMaybe
+            ( \case
+                CoreKeyCred c -> Just c
+                _ -> Nothing
+            )
+            certs
+      pickStakeScripts =
+        Maybe.mapMaybe
+          ( \case
+              ScriptCred c -> Just c
+              _ -> Nothing
+          )
 
 mkTxWits ::
   HasCallStack =>
   TxBody ->
   [KeyPair 'Witness] ->
-  [CoreKeyPair] ->
+  [KeyPair 'Genesis] ->
   Map (KeyHash 'Witness) (KeyPair 'Witness) ->
   Set (KeyHash 'Witness) ->
   Set WitVKey

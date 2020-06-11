@@ -14,7 +14,6 @@ module Shelley.Spec.Ledger.STS.Newpp
 where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( (?!),
     InitialRule,
@@ -22,11 +21,10 @@ import Control.State.Transition
     TRC (..),
     TransitionRule,
     judgmentContext,
-    liftSTS,
   )
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, epochInfo)
+import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
@@ -43,7 +41,6 @@ import Shelley.Spec.Ledger.LedgerState
     pattern UTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates, emptyPParams)
-import Shelley.Spec.Ledger.Slot (EpochNo, epochInfoFirst)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 data NEWPP crypto
@@ -52,11 +49,11 @@ data NewppState crypto
   = NewppState (UTxOState crypto) AccountState PParams
 
 data NewppEnv crypto
-  = NewppEnv (Maybe PParams) (DState crypto) (PState crypto)
+  = NewppEnv (DState crypto) (PState crypto)
 
 instance STS (NEWPP crypto) where
   type State (NEWPP crypto) = NewppState crypto
-  type Signal (NEWPP crypto) = EpochNo
+  type Signal (NEWPP crypto) = Maybe PParams
   type Environment (NEWPP crypto) = NewppEnv crypto
   type BaseM (NEWPP crypto) = ShelleyBase
   data PredicateFailure (NEWPP crypto)
@@ -80,15 +77,12 @@ initialNewPp =
 
 newPpTransition :: TransitionRule (NEWPP crypto)
 newPpTransition = do
-  TRC (NewppEnv ppNew dstate pstate, NewppState utxoSt acnt pp, e) <- judgmentContext
+  TRC (NewppEnv dstate pstate, NewppState utxoSt acnt pp, ppNew) <- judgmentContext
 
   case ppNew of
     Just ppNew' -> do
-      slot <- liftSTS $ do
-        ei <- asks epochInfo
-        epochInfoFirst ei e
-      let Coin oblgCurr = obligation pp (_stkCreds dstate) (_stPools pstate) slot
-          Coin oblgNew = obligation ppNew' (_stkCreds dstate) (_stPools pstate) slot
+      let Coin oblgCurr = obligation pp (_stkCreds dstate) (_stPools pstate)
+          Coin oblgNew = obligation ppNew' (_stkCreds dstate) (_stPools pstate)
           diff = oblgCurr - oblgNew
           Coin reserves = _reserves acnt
           Coin requiredInstantaneousRewards = totalInstantaneousReservesRewards (_irwd dstate)

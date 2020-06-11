@@ -41,7 +41,7 @@ where
 import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (hashWithSerialiser)
-import Cardano.Prelude (Generic, NoUnexpectedThunks (..))
+import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.Map.Strict (Map)
@@ -90,7 +90,7 @@ import Shelley.Spec.Ledger.TxData
 -- | The unspent transaction outputs.
 newtype UTxO crypto
   = UTxO (Map (TxIn crypto) (TxOut crypto))
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic)
+  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
 
 instance Relation (UTxO crypto) where
   type Domain (UTxO crypto) = TxIn crypto
@@ -228,7 +228,7 @@ totalDeposits pc (StakePools stpools) cs = foldl' f (Coin 0) cs'
     cs' = filter notRegisteredPool cs
 
 txup :: Crypto crypto => Tx crypto -> Maybe (Update crypto)
-txup (Tx txbody _ _ _) = strictMaybeToMaybe (_txUpdate txbody)
+txup (Tx txbody _ _) = strictMaybeToMaybe (_txUpdate txbody)
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)

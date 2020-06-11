@@ -102,12 +102,12 @@ Registration will be discussed more in Section~\ref{sec:delegation-shelley}.
     & \text{withdrawal balance} \\
     & \fun{wbalance} ~ ws = \sum_{(\wcard\mapsto c)\in\var{ws}} c
     \nextdef
-    & \fun{consumed} \in \PParams \to \UTxO \to \StakeCreds \to \TxBody \to \Coin
+    & \fun{consumed} \in \PParams \to \UTxO \to \TxBody \to \Coin
     & \text{value consumed} \\
-    & \consumed{pp}{utxo}{stkCreds}{tx} = \\
+    & \consumed{pp}{utxo}{tx} = \\
     & ~~\ubalance{(\txins{tx} \restrictdom \var{utxo})} +
         \fun{wbalance}~(\fun{txwdrls}~{tx}) \\
-    & ~~ + \keyRefunds{pp}{stkCreds}{tx} \\
+    & ~~ + \keyRefunds{pp}{tx} \\
     \nextdef
     & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \Coin
     & \text{value produced} \\
@@ -129,8 +129,6 @@ The environment, $\UTxOEnv$, consists of:
 \begin{itemize}
   \item The current slot.
   \item The protocol parameters.
-  \item The registered stake credentials (which will be explained in
-    Section~\ref{sec:delegation-shelley}, Figure~\ref{fig:delegation-defs}).
   \item The registered stake pools
     (also explained in Section~\ref{sec:delegation-shelley},
     Figure~\ref{fig:delegation-defs}).
@@ -157,7 +155,6 @@ The signal for the UTxO transition is a transaction.
       \begin{array}{r@{~\in~}lr}
         \var{slot} & \Slot & \text{current slot}\\
         \var{pp} & \PParams & \text{protocol parameters}\\
-        \var{stkCreds} & \StakeCreds & \text{stake credential}\\
         \var{stpools} & \StakePools & \text{stake pool}\\
         \var{genDelegs} & \GenesisDelegation & \text{genesis key delegations} \\
       \end{array}
@@ -239,12 +236,8 @@ If all the predicates are satisfied, the state is updated as follows:
       \item Add all the $\var{outputs}$ of $\var{tx}$ to the
         UTxO, associated with the $\fun{txid}$ of the transaction body $\var{txb}$
     \end{itemize}
-  \item Add all new deposits to the deposit pot and subtract all refunds.
-  \item Add the transaction fee to the fee pot. Additionally, for any refund
-    returned by this transaction, add the amount of the original deposit
-    which has decayed to the fee pot.
-    The amount decayed will depend on the time to live of the transaction
-    and will be explained further in Section~\ref{sec:deps-refunds}.
+  \item Add all new deposits to the deposit pot and subtract all deposit refunds.
+  \item Add the transaction fee to the fee pot.
   \item Update the current update proposals.
 \end{itemize}
 
@@ -276,19 +269,6 @@ come from a $\var{deposits}$ pool, which is a single coin value indicating
 the total decayed amount of all the deposits ever made, while rewards come from individual
 accounts where a reward is accumulated to a specific address.
 
-Note that the $\var{refunded}$ and $\var{decayed}$ values added together give what the
-full, non-decayed refund for all the key deregistration certificates in $\var{tx}$
-would be and this total value is always removed from the $\var{deposits}$
-amount on the ledger. The $\var{refunded}$ amount is returned to the certificate
-author and the $\var{decayed}$ amount is transferred over to $\var{fees}$
-(this allows the ledger to adhere to the preservation of value).
-
-Note also that the reason only the decayed value of requested refunds
-from \textit{this epoch} is transferred to fees is that at the epoch
-boundary, the total decayed value for the whole epoch for both the individual
-and pool deposits is transferred into the fees (independent of refund
-requests).
-
 \begin{figure}[htb]
   \begin{equation}\label{eq:utxo-inductive-shelley}
     \inference[UTxO-inductive]
@@ -298,7 +278,7 @@ requests).
       & \minfee{pp}{tx} \leq \txfee{txb}
       & \txins{txb} \subseteq \dom \var{utxo}
       \\
-      \consumed{pp}{utxo}{stkCreds}{rewards}~{txb} = \produced{pp}{stpools}~{txb}
+      \consumed{pp}{utxo}{rewards}~{txb} = \produced{pp}{stpools}~{txb}
       \\
       ~
       \\
@@ -321,18 +301,15 @@ requests).
       \\
       ~
       \\
-      \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
-      \\
-      \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{txb}
+      \var{refunded} \leteq \keyRefunds{pp}{txb}
       \\
       \var{depositChange} \leteq
-        \totalDeposits{pp}{stpools}{(\txcerts{txb})} - (\var{refunded} + \var{decayed})
+        \totalDeposits{pp}{stpools}{(\txcerts{txb})} - \var{refunded}
     }
     {
       \begin{array}{r}
         \var{slot}\\
         \var{pp}\\
-        \var{stkCreds}\\
         \var{stpools}\\
         \var{genDelegs}\\
       \end{array}
@@ -350,7 +327,7 @@ requests).
       \begin{array}{r}
         \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
-        \varUpdate{\var{fees} + \txfee{txb} + \var{decayed}} \\
+        \varUpdate{\var{fees} + \txfee{txb}} \\
         \varUpdate{pup'}\\
       \end{array}
       \right)
@@ -392,47 +369,18 @@ $\cwitness{}$, which gets the certificate witness from a certificate, will be
 defined later.  Figure~\ref{fig:functions:deposits-refunds} defines the deposit
 and refund functions.
 \begin{itemize}
-\item The function $\fun{totalDeposits}$ returns the total deposits that have to be
-  made by a transaction.  This calculation is based on the protocol parameters.
-  Specifically, for a given transaction, it sums up the values of the stake
-  credential deposits and the stake pool deposits. Those certificates which are
-  updates of stake pool parameters of already registered pool keys should not
-  (and are, in fact, not allowed to) make a deposit.
-  \item The function $\fun{refund}$ calculates the deposit refund with an exponential decay.
-  \item The function $\fun{keyRefund}$, calculates the refund for an individual
-    stake credential registration deposit, based on the slot when it was created
-    and the slot passed to the function. The creation slot should always exist
-    in the map $\var{stkCreds}$ passed to the function and this would be a good
-    property to prove about the transition system.
-  \item The function $\fun{keyRefunds}$, in turn, uses $\fun{keyRefund}$ to calculate
-    the total value to be refunded to all individual key deregistration certificate authors
-    in a transaction.
+  \item The function $\fun{totalDeposits}$ returns the total deposits that have to be
+    made by a transaction.  This calculation is based on the protocol parameters.
+    Specifically, for a given transaction, it sums up the values of the stake
+    credential deposits and the stake pool deposits. Those certificates which are
+    updates of stake pool parameters of already registered pool keys should not
+    (and are, in fact, not allowed to) make a deposit.
+  \item The function $\fun{keyRefunds}$, calculates the total amount of returned
+    deposits from stake key deregistration certificates.
 
-    It is important to note here that instead of the \textit{current} slot number,
-    the time to live of $\var{tx}$ is passed to the $\fun{certRefunds}$ function
-    within the summation in $\fun{keyRefunds}$. The reason for this is that the
-    refunds for any key deregistration certificates are, in fact, included in
-    the $\var{tx}$ itself --- meaning that the coin value of the refund must be
-    explicitly specified in the outputs of the transaction. So,
-    the value of the included refund must be calculated before this transaction
-    is ever processed and be the same \textit{no matter when} the $\var{tx}$
-    \textit{is actually processed} in order to allow the system to continue to
-    satisfy the general accounting property.
-
-    It is impossible to predict the exact slot number in which $\var{tx}$ will be processed,
-    but it will be some time before slot number $\fun{txttl}~\var{tx}$. So, this is the slot
-    number value used in both the calculation to generate the refund coin value in the outputs
-    of $\var{tx}$ and in the general accounting property equation.
-
-    Note also that
-    $\fun{keyRefunds}$ calculates the total individual refunds for a transaction
-    based on \textit{current} protocol parameters. This means that any deposits
-    made prior to a change will be different from their corresponding
-    (decayed) refunds in the case of key deregistration after a change in
-    protocol parameters. Constants may only change at the epoch boundary and
-    ensuring there are always sufficient funds for all
-    refunds in the $\var{deposits}$ pool is part of the protocol constant
-    change transition, described in Section~\ref{sec:epoch}.
+    Note that $\fun{keyRefunds}$ uses the \textit{current} protocol parameters.
+    This means that any deposits made prior to a change in the deposit values
+    will be refunded with the current value, not the one originally paid.
 
     The protocol parameters are not
     expected to change often and using the current ones for the calculation
@@ -440,28 +388,6 @@ and refund functions.
     into the system rules or properties. In particular, the general accounting
     property is not violated.
 \end{itemize}
-Figure~\ref{fig:functions:deposits-decay} defines the decays functions.
-\begin{itemize}
-
-\item The function $\fun{decayedKey}$ calculates how much of a stake credential
-  deposit has decayed since the last epoch. Again, this is done using the time
-  to live of the transaction (and not the current slot, as explained above).  At
-  the epoch boundaries, decayed portions of deposits are moved to the reward
-  pot, so between epochs we need only account for what has decayed since the
-  last epoch.  The value is calculated by subtracting the refund calculation
-  based at the epoch boundary from the refund calculation based at the time to
-  live of the transaction.
-  \item The function $\fun{decayedTx}$ calculates the total decayed deposits associated
-    with all the refunds in a given transaction.  This function was used earlier in the
-    UTxO transition in Figure~\ref{fig:rules:utxo-shelley}.
-
-\end{itemize}
-
-Recall that the stake pool retirement refunds are issued not when a certificate
-scheduling the retirement is processed, but at the epoch boundary for which
-the retirement is scheduled. The decayed value over the full previous epoch is
-also accounted for at the boundary change. For details of this accounting, see
-Section~\ref{sec:epoch}.
 
 \begin{figure}[htb]
   \begin{align*}
@@ -470,80 +396,16 @@ Section~\ref{sec:epoch}.
     & \totalDeposits{pp}{stpools}{certs} = \\
     &  \sum\limits_{c\in\var{certs} \cap \DCertRegKey}(\fun{keyDeposit}~pp)
     +  \sum\limits_{\substack{
-         c\in\var{certs}\cap\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
-         (\fun{poolDeposit}~pp)
-      \nextdef
-      & \fun{refund} \in \Coin \to \unitInterval \to \posReals \to \Duration \to \Coin
-      & \text{refund calculation} \\
-      & \refund{\dval}{d_{\min}}{\lambda}{\delta} =
-            \floor*{
-              \dval \cdot
-            \left(d_{\min}+(1-d_{\min})\cdot e^{-\lambda\cdot\delta}\right)}
-      \nextdef
-      & \fun{keyRefund} \in \Coin \to \unitInterval \to \posReals \to \\
-      & ~~~~~\StakeCreds \to \Slot \to \DCertDeRegKey \to \Coin
-      & \text{key refund for a certificate} \\
-      & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{slot}{c} =\\
-      & ~~~~~\begin{cases}
-            0 & \text{if}~\cwitness c \notin \dom stkCreds \\
-            \refund{\dval}{d_{\min}}{\lambda}{\delta}
-            & \text{otherwise}
-        \end{cases}\\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where
-        &\delta & \slotminus{slot}{(stkCreds~(\cwitness c))}\\
-      \end{array}\\
-      \nextdef
-      & \fun{keyRefunds} \in \PParams \to \StakeCreds \to \TxBody \to \Coin
+    c\in\var{certs}\cap\DCertRegPool \\ (\cwitness{c})\notin \var{stpools}}}
+    (\fun{poolDeposit}~pp)
+    \nextdef
+      & \fun{keyRefunds} \in \PParams \to \TxBody \to \Coin
       & \text{key refunds for a transaction} \\
-      & \keyRefunds{pp}{stkCreds}{tx} =\\
-      & ~~~~~ \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
-              \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{(\txttl{tx})}{c}\\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where \\
-        & \dval & \fun{keyDeposit}~\var{pp}\\
-        & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
-        & \lambda & \fun{keyDecayRate}~\var{pp}\\
-      \end{array}\\
-  \end{align*}
-  \caption{Functions used in Deposits - Refunds}
-  \label{fig:functions:deposits-refunds}
-\end{figure}
-
-\begin{figure}[htb]
-  \begin{align*}
-      & \fun{decayedKey} \in
-      \PParams \to \StakeCreds \to \Slot \to \DCertDeRegKey \to \Coin
-      & \text{decayed since epoch} \\
-      & \decayedKey{pp}{stkCreds}{cslot}{c} =\\
-      & \begin{cases}
-            0 & \text{if}~\cwitness c \notin \dom stkCreds\\
-            \var{epochRefund} - \var{currentRefund}
-            & \text{otherwise}
-        \end{cases}\\
-      &
-      \begin{array}{lr@{~=~}l}
-        \where
-          & \var{created} & \var{stkCreds}~(\cwitness~\var{c}) \\
-          & \var{start} & \mathsf{max}~(\fun{firstSlot}~(\epoch{cslot}))~created \\
-          & \var{epochRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{start}{c} \\
-          & \var{currentRefund} & \keyRefund{\dval}{d_{\min}}{\lambda}{stkCreds}{cslot}{c} \\
-          & \dval & \fun{keyDeposit}~\var{pp}\\
-          & d_{\min} & \fun{keyMinRefund}~\var{pp}\\
-          & \lambda & \fun{keyDecayRate}~\var{pp}\\
-      \end{array}\\
-      \nextdef
-      & \fun{decayedTx} \in \PParams \to \StakeCreds \to \TxBody \to \Coin
-      & \text{decayed deposit portions} \\
-      & \decayedTx{pp}{stkCreds}{tx} =\\
-      &   \sum\limits_{\substack{c \in (\txcerts{tx} \\ \cap \DCertDeRegKey)}}
-          \decayedKey{pp}{stkCreds}{(\txttl{tx})}{c}\\
-  \end{align*}
-  \caption{Functions used in Deposits - Decay}
-  \label{fig:functions:deposits-decay}
-\end{figure}
+      & \keyRefunds{pp}{tx} = (\fun{keyDeposit}~\var{pp})\cdot|\txcerts{tx} \cap \DCertDeRegKey|\\
+      \end{align*}
+      \caption{Functions used in Deposits - Refunds}
+      \label{fig:functions:deposits-refunds}
+  \end{figure}
 
 \clearpage
 
@@ -646,7 +508,7 @@ It has six predicates:
     the set of needed (hashes of) verification keys.
   \item Every multisignature script is valid.
   \item The set of scripts given by the transaction is equal to the set of required scripts.
-  \item Any instantaneous reward certificates have quorum agreement from the genesis nodes.
+  \item Any instantaneous reward certificates have quorum agreement from the genesis nodes delegates.
   \item Either the transaction metadata hash and the transaction metadata are both absent,
     or the hash present in the body is actually equal to the hash of the metadata.
 \end{itemize}
@@ -672,7 +534,7 @@ If the predicates are satisfied, the state is transitioned by the UTxO transitio
       \\~\\
       genSig \leteq
       \left\{
-        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
+        \var{genDelegate}~\vert~(\var{genDelegate},~\wcard) \in\range{genDelegs}
       \right\}
       \cap
       \var{witsKeyHashes}

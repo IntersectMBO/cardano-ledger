@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -17,6 +20,7 @@ module Shelley.Spec.Ledger.Address
     serialiseAddr,
     deserialiseAddr,
     Addr (..),
+    BootstrapAddress (..),
     getNetwork,
     RewardAcnt (..),
     serialiseRewardAcnt,
@@ -24,6 +28,7 @@ module Shelley.Spec.Ledger.Address
     -- internals exported for testing
     getAddr,
     getKeyHash,
+    bootstrapKeyHash,
     getPtr,
     getRewardAcnt,
     getScriptHash,
@@ -49,16 +54,23 @@ import Cardano.Binary
   )
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError)
+import qualified Cardano.Crypto.Hashing as Byron
+import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, parseBase16)
+import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.Aeson.Types as Aeson
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
 import Data.Bits ((.&.), (.|.), setBit, shiftL, shiftR, testBit)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldl')
 import Data.String (fromString)
+import qualified Data.Text.Encoding as Text
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
@@ -137,12 +149,12 @@ deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs)
 -- | An address for UTxO.
 data Addr crypto
   = Addr !Network !(PaymentCredential crypto) !(StakeReference crypto)
-  | AddrBootstrap !(Byron.Address)
+  | AddrBootstrap !(BootstrapAddress crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 getNetwork :: Addr crypto -> Network
 getNetwork (Addr n _ _) = n
-getNetwork (AddrBootstrap byronAddr) =
+getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
   case Byron.aaNetworkMagic . Byron.attrData . Byron.addrAttributes $ byronAddr of
     Byron.NetworkMainOrStage -> Mainnet
     Byron.NetworkTestnet _ -> Testnet
@@ -157,6 +169,30 @@ data RewardAcnt crypto = RewardAcnt
   deriving (Show, Eq, Generic, Ord, NFData)
 
 instance NoUnexpectedThunks (RewardAcnt crypto)
+
+instance Crypto crypto => ToJSONKey (Addr crypto) where
+  toJSONKey = Aeson.ToJSONKeyText addrToText (Aeson.text . addrToText)
+
+instance Crypto crypto => FromJSONKey (Addr crypto) where
+  fromJSONKey = Aeson.FromJSONKeyTextParser parseAddr
+
+instance Crypto crypto => ToJSON (Addr crypto) where
+  toJSON = toJSON . addrToText
+
+instance Crypto crypto => FromJSON (Addr crypto) where
+  parseJSON = Aeson.withText "address" parseAddr
+
+addrToText :: Addr crypto -> Text
+addrToText =
+  Text.decodeLatin1 . Base16.encode . serialiseAddr
+
+parseAddr :: Crypto crypto => Text -> Aeson.Parser (Addr crypto)
+parseAddr t = do
+  bytes <- either badHex return (parseBase16 t)
+  maybe badFormat return (deserialiseAddr bytes)
+  where
+    badHex h = fail $ "Addresses are expected in hex encoding for now: " ++ show h
+    badFormat = fail "Address is not in the right format"
 
 byron :: Int
 byron = 7
@@ -177,7 +213,7 @@ rewardCredIsScript :: Int
 rewardCredIsScript = 4
 
 putAddr :: Addr crypto -> Put
-putAddr (AddrBootstrap byronAddr) = B.putLazyByteString (serialize byronAddr)
+putAddr (AddrBootstrap (BootstrapAddress byronAddr)) = B.putLazyByteString (serialize byronAddr)
 putAddr (Addr network pc sr) =
   let setPayCredBit = case pc of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -278,7 +314,7 @@ putCredential (KeyHashObj (KeyHash h)) = putHash h
 getByron :: Get (Addr crypto)
 getByron = decodeFull <$> B.getRemainingLazyByteString >>= \case
   Left e -> fail (show e)
-  Right r -> pure $ AddrBootstrap r
+  Right r -> pure $ AddrBootstrap $ BootstrapAddress r
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
@@ -349,3 +385,21 @@ instance Crypto crypto => ToCBOR (RewardAcnt crypto) where
 
 instance Crypto crypto => FromCBOR (RewardAcnt crypto) where
   fromCBOR = decoderFromGet "RewardAcnt" getRewardAcnt
+
+newtype BootstrapAddress crypto = BootstrapAddress Byron.Address
+  deriving (Eq, Show, Generic)
+  deriving newtype (NFData, Ord)
+
+instance NoUnexpectedThunks (BootstrapAddress crypto)
+
+bootstrapKeyHash ::
+  forall crypto.
+  --(HASH crypto ~ Hash.Blake2b_224) =>
+  BootstrapAddress crypto ->
+  KeyHash 'Payment crypto
+bootstrapKeyHash (BootstrapAddress byronAddress) =
+  --TODO: this constructs an invalid hash when the hash algorithm has a different hash length
+  -- from Hash.Blake2b_224)
+  let root = Byron.addrRoot byronAddress
+      bytes = Byron.abstractHashToBytes root
+   in KeyHash (Hash.UnsafeHash bytes)

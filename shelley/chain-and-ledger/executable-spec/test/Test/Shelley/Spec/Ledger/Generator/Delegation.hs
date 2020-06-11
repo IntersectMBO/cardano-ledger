@@ -46,7 +46,9 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   )
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
-  ( _dstate,
+  ( AccountState (..),
+    _dstate,
+    _fGenDelegs,
     _genDelegs,
     _pParams,
     _pstate,
@@ -91,7 +93,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( genCoinList,
+  ( AllPoolKeys (cold),
+    genCoinList,
     genInteger,
     genWord64,
     toCred,
@@ -103,6 +106,7 @@ data CertCred
   = CoreKeyCred [CoreKeyPair]
   | KeyCred (KeyPair 'Staking)
   | ScriptCred (MultiSig, MultiSig)
+  | DelegateCred [KeyPair 'StakePool]
   | NoCred
   deriving (Show)
 
@@ -121,10 +125,11 @@ genDCert ::
   Constants ->
   KeyPairs ->
   MultiSigPairs ->
-  [CoreKeyPair] ->
+  [(CoreKeyPair, AllPoolKeys)] ->
   VrfKeyPairs ->
   Map (KeyHash 'Staking) (KeyPair 'Staking) -> -- indexed keys By hash
   PParams ->
+  AccountState ->
   DPState ->
   SlotNo ->
   Gen (Maybe (DCert, CertCred))
@@ -141,10 +146,11 @@ genDCert
       )
   keys
   scripts
-  coreKeys
+  genesisKeys
   vrfKeys
   keysByHash
   pparams
+  accountState
   dpState
   slot =
     QC.frequency
@@ -154,11 +160,12 @@ genDCert
         (frequencyGenesisDelegationCert, genGenesisDelegation keys coreKeys dpState),
         (frequencyDeRegKeyCert, genDeRegKeyCert c keys scripts dState),
         (frequencyRetirePoolCert, genRetirePool c keysByHash pState slot),
-        (frequencyMIRCert, genInstantaneousRewards slot coreKeys pparams dState)
+        (frequencyMIRCert, genInstantaneousRewards slot genesisKeys pparams accountState dState)
       ]
     where
       dState = _dstate dpState
       pState = _pstate dpState
+      coreKeys = fst <$> genesisKeys
 
 -- | Generate a RegKey certificate along and also returns the staking credential
 -- (needed to witness the certificate)
@@ -337,7 +344,10 @@ genGenesisDelegation keys coreKeys dpState =
     (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
     genesisDelegator k = k ∈ dom genDelegs_
     genesisDelegators = filter (genesisDelegator . hashVKey) coreKeys
-    notDelegatee k = (coerceKeyRole k) ∉ (fmap fst (Map.elems genDelegs_))
+    notActiveDelegatee k = coerceKeyRole k ∉ fmap fst (Map.elems genDelegs_)
+    fGenDelegs = _fGenDelegs $ _dstate dpState
+    notFutureDelegatee k = coerceKeyRole k ∉ fmap fst (Map.elems fGenDelegs)
+    notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . snd) keys
 
 -- | Generate and return a RegPool certificate along with its witnessing key.
@@ -446,25 +456,30 @@ genRetirePool Constants {frequencyLowMaxEpoch} keysByHash pState slot =
 genInstantaneousRewards ::
   HasCallStack =>
   SlotNo ->
-  [CoreKeyPair] ->
+  [(CoreKeyPair, AllPoolKeys)] ->
   PParams ->
+  AccountState ->
   DState ->
   Gen (Maybe (DCert, CertCred))
-genInstantaneousRewards s coreKeys pparams delegSt = do
+genInstantaneousRewards s genesisKeys pparams accountState delegSt = do
   let StakeCreds credentials = _stkCreds delegSt
 
   winnerCreds <-
     take <$> QC.elements [0 .. (max 0 $ (Map.size credentials) - 1)]
       <*> QC.shuffle (Map.keys credentials)
   coins <- genCoinList 1 1000 (length winnerCreds) (length winnerCreds)
-  pot <- QC.elements [ReservesMIR, TreasuryMIR]
-
-  coreSigners <-
-    take <$> QC.elements [5 .. (max 0 $ (length coreKeys) - 1)]
-      <*> QC.shuffle coreKeys
-
   let credCoinMap = Map.fromList $ zip winnerCreds coins
 
+  coreSigners <-
+    take <$> QC.elements [5 .. (max 0 $ (length genesisKeys) - 1)]
+      <*> QC.shuffle genesisKeys
+
+  pot <- QC.elements [ReservesMIR, TreasuryMIR]
+  let rewardAmount = sum $ Map.elems credCoinMap
+      potAmount = case pot of
+        ReservesMIR -> _reserves accountState
+        TreasuryMIR -> _treasury accountState
+      insufficientFunds = rewardAmount > potAmount
   pure $
     if ( -- Discard this generator (by returning Nothing) if:
          -- we are in full decentralisation mode (d=0) when IR certs are not allowed
@@ -473,10 +488,12 @@ genInstantaneousRewards s coreKeys pparams delegSt = do
            || null credCoinMap
            -- or it's too late in the epoch for IR certs
            || tooLateInEpoch s
+           -- or the rewards exceed the pot amount
+           || insufficientFunds
        )
       then Nothing
       else
         Just
           ( DCertMir (MIRCert pot credCoinMap),
-            CoreKeyCred coreSigners
+            DelegateCred ((\(_, pkeys) -> cold pkeys) <$> coreSigners)
           )

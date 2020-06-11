@@ -36,8 +36,11 @@ import Cardano.Binary
     encodeWord,
     enforceSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..), mapMaybe)
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
+import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
@@ -57,6 +60,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Serialization
   ( CBORGroup (..),
     FromCBORGroup (..),
@@ -64,8 +68,8 @@ import Shelley.Spec.Ledger.Serialization
     decodeMapContents,
     mapFromCBOR,
     mapToCBOR,
-    rationalFromCBOR,
-    rationalToCBOR,
+    ratioFromCBOR,
+    ratioToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
@@ -111,16 +115,8 @@ data PParams' f = PParams
     _maxBHSize :: !(HKD f Natural),
     -- | The amount of a key registration deposit
     _keyDeposit :: !(HKD f Coin),
-    -- | The minimum percent refund guarantee
-    _keyMinRefund :: !(HKD f UnitInterval),
-    -- | The deposit decay rate
-    _keyDecayRate :: !(HKD f Rational),
     -- | The amount of a pool registration deposit
     _poolDeposit :: !(HKD f Coin),
-    -- | The minimum percent pool refund
-    _poolMinRefund :: !(HKD f UnitInterval),
-    -- | Decay rate for pool deposits
-    _poolDecayRate :: !(HKD f Rational),
     -- | epoch bound on pool retirement
     _eMax :: !(HKD f EpochNo),
     -- | Desired number of pools
@@ -148,12 +144,28 @@ deriving instance Eq (PParams' Identity)
 
 deriving instance Show (PParams' Identity)
 
+deriving instance NFData (PParams' Identity)
+
 data ProtVer = ProtVer !Natural !Natural
-  deriving (Show, Eq, Generic, Ord)
+  deriving (Show, Eq, Generic, Ord, NFData)
   deriving (ToCBOR) via (CBORGroup ProtVer)
   deriving (FromCBOR) via (CBORGroup ProtVer)
 
 instance NoUnexpectedThunks ProtVer
+
+instance ToJSON ProtVer where
+  toJSON (ProtVer major minor) =
+    Aeson.object
+      [ "major" .= major,
+        "minor" .= minor
+      ]
+
+instance FromJSON ProtVer where
+  parseJSON =
+    Aeson.withObject "ProtVer" $ \obj ->
+      ProtVer
+        <$> obj .: "major"
+        <*> obj .: "minor"
 
 instance ToCBORGroup ProtVer where
   toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
@@ -184,11 +196,7 @@ instance ToCBOR PParams where
           _maxTxSize = maxTxSize',
           _maxBHSize = maxBHSize',
           _keyDeposit = keyDeposit',
-          _keyMinRefund = keyMinRefund',
-          _keyDecayRate = keyDecayRate',
           _poolDeposit = poolDeposit',
-          _poolMinRefund = poolMinRefund',
-          _poolDecayRate = poolDecayRate',
           _eMax = eMax',
           _nOpt = nOpt',
           _a0 = a0',
@@ -200,21 +208,17 @@ instance ToCBOR PParams where
           _minUTxOValue = minUTxOValue'
         }
       ) =
-      encodeListLen 21
+      encodeListLen 17
         <> toCBOR minfeeA'
         <> toCBOR minfeeB'
         <> toCBOR maxBBSize'
         <> toCBOR maxTxSize'
         <> toCBOR maxBHSize'
         <> toCBOR keyDeposit'
-        <> toCBOR keyMinRefund'
-        <> rationalToCBOR keyDecayRate'
         <> toCBOR poolDeposit'
-        <> toCBOR poolMinRefund'
-        <> rationalToCBOR poolDecayRate'
         <> toCBOR eMax'
         <> toCBOR nOpt'
-        <> rationalToCBOR a0'
+        <> ratioToCBOR a0'
         <> toCBOR rho'
         <> toCBOR tau'
         <> toCBOR d'
@@ -224,7 +228,7 @@ instance ToCBOR PParams where
 
 instance FromCBOR PParams where
   fromCBOR = do
-    enforceSize "PParams" 21
+    enforceSize "PParams" 17
     PParams
       <$> fromCBOR -- _minfeeA         :: Integer
       <*> fromCBOR -- _minfeeB         :: Natural
@@ -232,20 +236,61 @@ instance FromCBOR PParams where
       <*> fromCBOR -- _maxTxSize       :: Natural
       <*> fromCBOR -- _maxBHSize       :: Natural
       <*> fromCBOR -- _keyDeposit      :: Coin
-      <*> fromCBOR -- _keyMinRefund    :: UnitInterval
-      <*> rationalFromCBOR -- _keyDecayRate    :: Rational
       <*> fromCBOR -- _poolDeposit     :: Coin
-      <*> fromCBOR -- _poolMinRefund   :: UnitInterval
-      <*> rationalFromCBOR -- _poolDecayRate   :: Rational
       <*> fromCBOR -- _eMax            :: EpochNo
       <*> fromCBOR -- _nOpt            :: Natural
-      <*> rationalFromCBOR -- _a0              :: Rational
+      <*> ratioFromCBOR -- _a0         :: Rational
       <*> fromCBOR -- _rho             :: UnitInterval
       <*> fromCBOR -- _tau             :: UnitInterval
       <*> fromCBOR -- _d               :: UnitInterval
       <*> fromCBOR -- _extraEntropy    :: Nonce
       <*> fromCBORGroup -- _protocolVersion :: ProtVer
       <*> fromCBOR -- _minUTxOValue    :: Natural
+
+instance ToJSON PParams where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= _minfeeA pp,
+        "minFeeB" .= _minfeeB pp,
+        "maxBlockBodySize" .= _maxBBSize pp,
+        "maxTxSize" .= _maxTxSize pp,
+        "maxBlockHeaderSize" .= _maxBHSize pp,
+        "keyDeposit" .= _keyDeposit pp,
+        "poolDeposit" .= _poolDeposit pp,
+        "eMax" .= _eMax pp,
+        "nOpt" .= _nOpt pp,
+        "a0" .= (fromRational $ _a0 pp :: Double),
+        "rho" .= _rho pp,
+        "tau" .= _tau pp,
+        "decentralisationParam" .= _d pp,
+        "extraEntropy" .= _extraEntropy pp,
+        "protocolVersion" .= _protocolVersion pp,
+        "minUTxOValue" .= _minUTxOValue pp
+      ]
+
+instance FromJSON PParams where
+  parseJSON =
+    Aeson.withObject "PParams" $ \obj ->
+      PParams
+        <$> obj .: "minFeeA"
+        <*> obj .: "minFeeB"
+        <*> obj .: "maxBlockBodySize"
+        <*> obj .: "maxTxSize"
+        <*> obj .: "maxBlockHeaderSize"
+        <*> obj .: "keyDeposit"
+        <*> obj .: "poolDeposit"
+        <*> obj .: "eMax"
+        <*> obj .: "nOpt"
+        <*> parseRationalFromDouble (obj .: "a0")
+        <*> obj .: "rho"
+        <*> obj .: "tau"
+        <*> obj .: "decentralisationParam"
+        <*> obj .: "extraEntropy"
+        <*> obj .: "protocolVersion"
+        <*> obj .:? "minUTxOValue" .!= 0
+    where
+      parseRationalFromDouble :: Aeson.Parser Double -> Aeson.Parser Rational
+      parseRationalFromDouble p = realToFrac <$> p
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams
@@ -257,11 +302,7 @@ emptyPParams =
       _maxTxSize = 2048,
       _maxBHSize = 0,
       _keyDeposit = Coin 0,
-      _keyMinRefund = interval0,
-      _keyDecayRate = 0,
       _poolDeposit = Coin 0,
-      _poolMinRefund = interval0,
-      _poolDecayRate = 0,
       _eMax = EpochNo 0,
       _nOpt = 100,
       _a0 = 0,
@@ -303,6 +344,8 @@ deriving instance Show (PParams' StrictMaybe)
 
 deriving instance Ord (PParams' StrictMaybe)
 
+deriving instance NFData (PParams' StrictMaybe)
+
 instance NoUnexpectedThunks PParamsUpdate
 
 instance ToCBOR PParamsUpdate where
@@ -316,20 +359,16 @@ instance ToCBOR PParamsUpdate where
               encodeMapElement 3 toCBOR =<< _maxTxSize ppup,
               encodeMapElement 4 toCBOR =<< _maxBHSize ppup,
               encodeMapElement 5 toCBOR =<< _keyDeposit ppup,
-              encodeMapElement 6 toCBOR =<< _keyMinRefund ppup,
-              encodeMapElement 7 rationalToCBOR =<< _keyDecayRate ppup,
-              encodeMapElement 8 toCBOR =<< _poolDeposit ppup,
-              encodeMapElement 9 toCBOR =<< _poolMinRefund ppup,
-              encodeMapElement 10 rationalToCBOR =<< _poolDecayRate ppup,
-              encodeMapElement 11 toCBOR =<< _eMax ppup,
-              encodeMapElement 12 toCBOR =<< _nOpt ppup,
-              encodeMapElement 13 rationalToCBOR =<< _a0 ppup,
-              encodeMapElement 14 toCBOR =<< _rho ppup,
-              encodeMapElement 15 toCBOR =<< _tau ppup,
-              encodeMapElement 16 toCBOR =<< _d ppup,
-              encodeMapElement 17 toCBOR =<< _extraEntropy ppup,
-              encodeMapElement 18 toCBOR =<< _protocolVersion ppup,
-              encodeMapElement 19 toCBOR =<< _minUTxOValue ppup
+              encodeMapElement 6 toCBOR =<< _poolDeposit ppup,
+              encodeMapElement 7 toCBOR =<< _eMax ppup,
+              encodeMapElement 8 toCBOR =<< _nOpt ppup,
+              encodeMapElement 9 ratioToCBOR =<< _a0 ppup,
+              encodeMapElement 10 toCBOR =<< _rho ppup,
+              encodeMapElement 11 toCBOR =<< _tau ppup,
+              encodeMapElement 12 toCBOR =<< _d ppup,
+              encodeMapElement 13 toCBOR =<< _extraEntropy ppup,
+              encodeMapElement 14 toCBOR =<< _protocolVersion ppup,
+              encodeMapElement 15 toCBOR =<< _minUTxOValue ppup
             ]
         n = fromIntegral $ length l
      in encodeMapLen n <> fold l
@@ -345,11 +384,7 @@ emptyPParamsUpdate =
       _maxTxSize = SNothing,
       _maxBHSize = SNothing,
       _keyDeposit = SNothing,
-      _keyMinRefund = SNothing,
-      _keyDecayRate = SNothing,
       _poolDeposit = SNothing,
-      _poolMinRefund = SNothing,
-      _poolDecayRate = SNothing,
       _eMax = SNothing,
       _nOpt = SNothing,
       _a0 = SNothing,
@@ -371,20 +406,16 @@ instance FromCBOR PParamsUpdate where
         3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
         4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
         5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
-        6 -> fromCBOR >>= \x -> pure (6, \up -> up {_keyMinRefund = SJust x})
-        7 -> rationalFromCBOR >>= \x -> pure (7, \up -> up {_keyDecayRate = SJust x})
-        8 -> fromCBOR >>= \x -> pure (8, \up -> up {_poolDeposit = SJust x})
-        9 -> fromCBOR >>= \x -> pure (9, \up -> up {_poolMinRefund = SJust x})
-        10 -> rationalFromCBOR >>= \x -> pure (10, \up -> up {_poolDecayRate = SJust x})
-        11 -> fromCBOR >>= \x -> pure (11, \up -> up {_eMax = SJust x})
-        12 -> fromCBOR >>= \x -> pure (12, \up -> up {_nOpt = SJust x})
-        13 -> rationalFromCBOR >>= \x -> pure (13, \up -> up {_a0 = SJust x})
-        14 -> fromCBOR >>= \x -> pure (14, \up -> up {_rho = SJust x})
-        15 -> fromCBOR >>= \x -> pure (15, \up -> up {_tau = SJust x})
-        16 -> fromCBOR >>= \x -> pure (16, \up -> up {_d = SJust x})
-        17 -> fromCBOR >>= \x -> pure (17, \up -> up {_extraEntropy = SJust x})
-        18 -> fromCBOR >>= \x -> pure (18, \up -> up {_protocolVersion = SJust x})
-        19 -> fromCBOR >>= \x -> pure (19, \up -> up {_minUTxOValue = SJust x})
+        6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
+        7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
+        8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
+        9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
+        10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
+        11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
+        12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
+        13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
+        14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
+        15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
         k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
@@ -395,7 +426,7 @@ instance FromCBOR PParamsUpdate where
 -- | Update operation for protocol parameters structure @PParams
 newtype ProposedPPUpdates crypto
   = ProposedPPUpdates (Map (KeyHash 'Genesis crypto) PParamsUpdate)
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, NFData)
 
 instance NoUnexpectedThunks (ProposedPPUpdates crypto)
 
@@ -417,11 +448,7 @@ updatePParams pp ppup =
       _maxTxSize = fromMaybe' (_maxTxSize pp) (_maxTxSize ppup),
       _maxBHSize = fromMaybe' (_maxBHSize pp) (_maxBHSize ppup),
       _keyDeposit = fromMaybe' (_keyDeposit pp) (_keyDeposit ppup),
-      _keyMinRefund = fromMaybe' (_keyMinRefund pp) (_keyMinRefund ppup),
-      _keyDecayRate = fromMaybe' (_keyDecayRate pp) (_keyDecayRate ppup),
       _poolDeposit = fromMaybe' (_poolDeposit pp) (_poolDeposit ppup),
-      _poolMinRefund = fromMaybe' (_poolMinRefund pp) (_poolMinRefund ppup),
-      _poolDecayRate = fromMaybe' (_poolDecayRate pp) (_poolDecayRate ppup),
       _eMax = fromMaybe' (_eMax pp) (_eMax ppup),
       _nOpt = fromMaybe' (_nOpt pp) (_nOpt ppup),
       _a0 = fromMaybe' (_a0 pp) (_a0 ppup),
