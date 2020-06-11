@@ -35,6 +35,9 @@ module Shelley.Spec.Ledger.UTxO
     verifyWitVKey,
     scriptsNeeded,
     txinsScript,
+    combineUTxOs,
+    toTxUTxO,
+    fromTxUTxO,
   )
 where
 
@@ -43,7 +46,7 @@ import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Data.Foldable (toList)
 import Data.List (foldl')
-import Data.Map.Strict (Map, keys)
+import Data.Map.Strict (Map, keys, unionWith)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Set (Set)
@@ -81,6 +84,7 @@ import Shelley.Spec.Ledger.TxData
     TxBody (..),
     TxId (..),
     TxIn (..),
+    TxOut (..),
     UTxOOut (..),
     Wdrl (..),
     WitVKey (..),
@@ -93,6 +97,16 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegate,
     pattern Delegation,
   )
+
+-- needed for defining U
+-- | combine UTxOs
+-- TODO does it matter how we define this exactly? there is no right way
+{-# INLINABLE combineUTxOs #-}
+combineUTxOs :: UTxO crypto -> UTxO crypto -> UTxO crypto
+combineUTxOs (UTxO v1) (UTxO v2) = UTxO (unionWith combineOuts v1 v2)
+  where
+    combineOuts o _ = o
+
 
 -- |The unspent transaction outputs.
 newtype UTxO crypto
@@ -117,7 +131,7 @@ instance Relation (UTxO crypto) where
 
   (UTxO utxo) ⋫ s = UTxO $ utxo ⋫ s
 
-  (UTxO a) ∪ (UTxO b) = UTxO $ a ∪ b
+  a ∪ b = combineUTxOs a b
 
   (UTxO a) ⨃ (UTxO b) = UTxO $ a ⨃ b
 
@@ -131,6 +145,7 @@ instance Relation (UTxO crypto) where
 
   {-# INLINE removekey #-}
   removekey k (UTxO m) = UTxO (Map.delete k m)
+
 
 -- | Compute the hash of a transaction body.
 hashTxBody ::
@@ -152,6 +167,16 @@ txins ::
   TxBody crypto ->
   Set (TxIn crypto)
 txins = _inputs
+
+-- | convert UTxO to the format of tx-input tx-output pairs
+-- used in testing
+toTxUTxO :: UTxO crypto -> [(TxIn crypto, TxOut crypto)]
+toTxUTxO (UTxO utxo) =  Map.toList $ Map.map (\(UTxOOut a v) -> (TxOut a (compactValueToValue v))) utxo
+
+-- | convert from tx-input tx-output pairs back to UTxO
+-- used in testing
+fromTxUTxO :: [(TxIn crypto, TxOut crypto)] -> UTxO crypto
+fromTxUTxO utxo = UTxO $ Map.fromList $ fmap (\(i, TxOut a v) -> (i, UTxOOut a (valueToCompactValue v))) utxo
 
 -- |Compute the transaction outputs of a transaction.
 txouts
@@ -220,8 +245,8 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- |Determine the total balance contained in the UTxO.
-balance :: Crypto crypto => UTxO crypto -> Value crypto
-balance (UTxO utxo) = foldr (+) zeroV (Set.map getValue (range utxo))
+balance :: UTxO crypto -> Value crypto
+balance (UTxO utxo) = foldr addv zeroV (fmap getValue utxo)
 
 -- |Determine the total deposit amount needed
 totalDeposits
@@ -271,7 +296,7 @@ scriptsNeeded u tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . getAddress) u'')
     `Set.union` Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
     `Set.union` Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
-    `Set.union` Set.fromList (keys $ val $ _forge $ _body tx)
+    `Set.union` Set.fromList (fmap policyID (keys $ val $ _forge $ _body tx))
   where
     withdrawals = unWdrl $ _wdrls $ _body tx
     u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)

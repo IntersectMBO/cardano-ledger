@@ -266,7 +266,7 @@ class Relation m where
   dom :: Ord (Domain m) => m -> Set (Domain m)
 
   -- | Range
-  range :: Ord (Range m) => m -> Set (Range m)
+  range :: m -> Set (Range m)
 
   -- | Domain restriction
   --
@@ -283,20 +283,20 @@ class Relation m where
   -- | Range restriction
   --
   -- Unicode: 25b7
-  (▷), (|>) :: Ord (Range m) => m -> Set (Range m) -> m
+  (▷), (|>) :: m -> Set (Range m) -> m
   s |> r = s ▷ r
 
   -- | Range exclusion
   --
   -- Unicode: 22eb
-  (⋫), (|/>) :: Ord (Range m) => m -> Set (Range m) -> m
+  (⋫), (|/>) :: m -> Set (Range m) -> m
   s |/> r = s ⋫ r
 
   -- | Union
-  (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
+  (∪) :: Ord (Domain m) => m -> m -> m
 
   -- | Union Override Right
-  (⨃) :: (Ord (Domain m), Ord (Range m), Foldable f) => m -> f (Domain m, Range m) -> m
+  (⨃) :: (Ord (Domain m), Foldable f) => m -> f (Domain m, Range m) -> m
 
   -- | Restrict domain to values less or equal than the given value.
   --
@@ -307,18 +307,85 @@ class Relation m where
   -- | Restrict range to values less or equal than the given value
   --
   -- Unicode: 25b7
-  (▷<=) :: (Ord (Range m)) => m -> Range m -> m
+  (▷<=) :: m -> Range m -> m
   infixl 5 ▷<=
 
   -- | Restrict range to values greater or equal than the given value
   --
   -- Unicode: 25b7
-  (▷>=) :: (Ord (Range m)) => m -> Range m -> m
+  (▷>=) :: m -> Range m -> m
   infixl 5 ▷>=
 
 
   -- | Size of the relation
   size :: Integral n => m -> n
+
+
+
+--
+-- class Relation' m where
+--   type Domain m :: *
+--   type Range m :: *
+--
+--   singleton :: Domain m -> Range m -> m
+--
+--   -- | Domain
+--   dom :: Ord (Domain m) => m -> Set (Domain m)
+--
+--   -- | Range
+--   range :: Ord (Range m) => m -> Set (Range m)
+--
+--   -- | Domain restriction
+--   --
+--   -- Unicode: 25c1
+--   (◁), (<|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
+--   s <| r = s ◁ r
+--
+--   -- | Domain exclusion
+--   --
+--   -- Unicode: 22ea
+--   (⋪), (</|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
+--   s </| r = s ⋪ r
+--
+--   -- | Range restriction
+--   --
+--   -- Unicode: 25b7
+--   (▷), (|>) :: Ord (Range m) => m -> Set (Range m) -> m
+--   s |> r = s ▷ r
+--
+--   -- | Range exclusion
+--   --
+--   -- Unicode: 22eb
+--   (⋫), (|/>) :: Ord (Range m) => m -> Set (Range m) -> m
+--   s |/> r = s ⋫ r
+--
+--   -- | Union
+--   (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
+--
+--   -- | Union Override Right
+--   (⨃) :: (Ord (Domain m), Ord (Range m), Foldable f) => m -> f (Domain m, Range m) -> m
+--
+--   -- | Restrict domain to values less or equal than the given value.
+--   --
+--   -- Unicode: 25c1
+--   (<=◁) :: Ord (Domain m) => Domain m -> m -> m
+--   infixl 5 <=◁
+--
+--   -- | Restrict range to values less or equal than the given value
+--   --
+--   -- Unicode: 25b7
+--   (▷<=) :: (Ord (Range m)) => m -> Range m -> m
+--   infixl 5 ▷<=
+--
+--   -- | Restrict range to values greater or equal than the given value
+--   --
+--   -- Unicode: 25b7
+--   (▷>=) :: (Ord (Range m)) => m -> Range m -> m
+--   infixl 5 ▷>=
+--
+--
+--   -- | Size of the relation
+--   size :: Integral n => m -> n
 
 -- | Alias for 'elem'.
 --
@@ -362,7 +429,7 @@ instance (Ord k, Ord v) => Relation (Bimap k v) where
 
   size = fromIntegral . Bimap.size
 
-instance Relation (Map k v) where
+instance (Ord k, Ord v) => Relation (Map k v) where
   type Domain (Map k v) = k
   type Range (Map k v) = v
 
@@ -396,7 +463,7 @@ instance Relation (Map k v) where
 (∪+) :: (Ord a, Ord b, Num b) => Map a b -> Map a b -> Map a b
 a ∪+ b = ((dom a) ⋪ b) ∪ ((dom b) ⋪ a) ∪ (Map.unionWith (+) a b)
 
-instance Relation (Set (a, b)) where
+instance (Ord a, Ord b) => Relation (Set (a, b)) where
   type Domain (Set (a, b)) = a
   type Range (Set (a, b))  = b
 
@@ -428,7 +495,7 @@ instance Relation (Set (a, b)) where
 
   size = fromIntegral . Set.size
 
-instance Relation [(a, b)] where
+instance (Ord a, Ord b) => Relation [(a, b)] where
   type Domain [(a, b)] = a
   type Range [(a, b)] = b
 

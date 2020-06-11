@@ -45,6 +45,7 @@ import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.UTxO (balance)
+import Shelley.Spec.Ledger.Value (getAdaAmount)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( CHAIN,
@@ -109,7 +110,7 @@ mkGenesisChainState constants (IRC _slotNo) = do
       (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) (lastByronHeaderHash p))
       epoch0
       utxo0
-      (maxLLSupply - balance utxo0)
+      (maxLLSupply - getAdaAmount (balance utxo0))
       delegs0
       osched_
       pParams

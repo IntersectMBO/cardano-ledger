@@ -411,7 +411,7 @@ instance NoUnexpectedThunks (TxOut crypto)
 -- |The output of a UTxO.
 data UTxOOut crypto
   = UTxOOut !(Addr crypto) !(CompactValue crypto)
-  deriving (Show, Eq, Generic, Ord)
+  deriving (Show, Eq, Ord, Generic)
 
 instance NoUnexpectedThunks (UTxOOut crypto)
 

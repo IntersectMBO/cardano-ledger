@@ -219,6 +219,7 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     txup,
     verifyWitVKey,
+    combineUTxOs,
   )
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
@@ -794,7 +795,7 @@ produced
   -> TxBody crypto
   -> Value crypto
 produced pp stakePools tx =
-    balance (txouts tx) + coinToValue (_txfee tx + totalDeposits pp stakePools (toList $ _certs tx))
+    balance (txouts tx) <> coinToValue (_txfee tx <> totalDeposits pp stakePools (toList $ _certs tx))
 
 -- |Compute the key deregistration refunds in a transaction
 keyRefunds
@@ -973,7 +974,7 @@ applyTxBody ls pp tx =
   ls
     { _utxoState =
         us
-          { _utxo = txins tx ⋪ (_utxo us) ∪ txouts tx,
+          { _utxo = combineUTxOs (txins tx ⋪ (_utxo us)) (txouts tx),
             _deposited = depositPoolChange ls pp tx,
             _fees = (_txfee tx) + (_fees . _utxoState $ ls)
           },

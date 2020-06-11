@@ -253,7 +253,7 @@ utxoInductive = do
 
   let outputValues = [v | (UTxOOut _ v) <- Set.toList (range (txouts txb))]
   let minUTxOValue = fromIntegral $ _minUTxOValue pp
-  all (valueToCompactValue zeroV <=) outputValues
+  all ((checkBinRel (<=)) (coinToValue minUTxOValue)) (fmap compactValueToValue outputValues)
     ?! OutputTooSmallUTxO
       (filter (\(UTxOOut _ v) -> v < (valueToCompactValue $ coinToValue minUTxOValue)) (Set.toList (range (txouts txb))))
 

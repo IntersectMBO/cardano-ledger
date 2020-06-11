@@ -98,7 +98,7 @@ import Shelley.Spec.Ledger.LedgerState
     WitHashes (..),
     emptyRewardUpdate,
   )
-import Shelley.Spec.Ledger.Value (Quantity (..), valueToCompactValue)
+import Shelley.Spec.Ledger.Value (Quantity (..), valueToCompactValue, PolicyID (..), AssetID (..))
 import Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams, ProtVer)
@@ -300,6 +300,9 @@ instance Arbitrary Hash.ByteString where
         return $ BS.pack "DefinitelyAda"
       ]
 
+instance Arbitrary AssetID where
+  arbitrary = AssetID <$> arbitrary
+
 -- TODO this
 instance Arbitrary Mock.CompactValue where
   arbitrary = valueToCompactValue <$> arbitrary
@@ -455,6 +458,10 @@ instance HashAlgorithm h => Arbitrary (ScriptHash (Mock.ConcreteCrypto h)) where
 
 instance HashAlgorithm h => Arbitrary (MetaDataHash (Mock.ConcreteCrypto h)) where
   arbitrary = MetaDataHash <$> genHash (Proxy @(Mock.ConcreteCrypto h))
+
+instance HashAlgorithm h => Arbitrary (PolicyID (Mock.ConcreteCrypto h)) where
+  arbitrary = PolicyID <$> genHash (Proxy @(Mock.ConcreteCrypto h))
+
 
 instance Arbitrary (Crypto.Hash Monomorphic.ShortHash a) where
   arbitrary = genHash (Proxy @(Mock.ConcreteCrypto Monomorphic.ShortHash))

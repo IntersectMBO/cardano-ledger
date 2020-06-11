@@ -251,7 +251,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs
-        [(aliceAddr, aliceInitCoin + bobInitCoin + (coinToValue $ sum (unWdrl wdrl)))]
+        [(aliceAddr, aliceInitCoin <> bobInitCoin <> (coinToValue $ sum (unWdrl wdrl)))]
         wdrl
     inputs =
       [ TxIn txId (fromIntegral n)

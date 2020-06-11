@@ -49,7 +49,7 @@ shrinkTxBody (TxBody is os cs fg ws tf tl tu md) =
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is os' cs fg ws (tf + getAdaAmount (outBalance - outputBalance os')) tl tu md
+  [ TxBody is os' cs fg ws (tf + getAdaAmount (subv outBalance (outputBalance os'))) tl tu md
     | os' <- toList $ shrinkStrictSeq shrinkTxOut os
   ]
   where
@@ -61,8 +61,8 @@ shrinkTxBody (TxBody is os cs fg ws tf tl tu md) =
     -- [ TxBody is os cs fg ws tf tl tu' | tu' <- shrinkUpdate tu ]
     outBalance = outputBalance os
 
-outputBalance :: Crypto crypto => StrictSeq (TxOut crypto) -> Value crypto
-outputBalance = foldl' (\v (TxOut _ c) -> v + c) zeroV
+outputBalance :: StrictSeq (TxOut crypto) -> Value crypto
+outputBalance = foldl' (\v (TxOut _ c) -> v <> c) zeroV
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
 shrinkTxIn = const []

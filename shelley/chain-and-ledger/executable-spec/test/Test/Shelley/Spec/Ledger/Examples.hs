@@ -364,6 +364,8 @@ import Shelley.Spec.Ledger.Value
     zeroV,
     valueToCompactValue,
     getAdaAmount,
+    scalev,
+    subv,
   )
 
 -- TODO zeroV and all coin examples
@@ -741,7 +743,7 @@ updateEx2A :: HashAlgorithm h => Update h
 updateEx2A = Update ppupEx2A (EpochNo 0)
 
 aliceCoinEx2A :: Value
-aliceCoinEx2A = aliceInitCoin - coinToValue ( (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1) - 3)
+aliceCoinEx2A = subv aliceInitCoin $ coinToValue ( (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1) - 3)
 
 -- | Transaction body to be processed.
 txbodyEx2A :: HashAlgorithm h => TxBody h
@@ -950,7 +952,7 @@ aliceCoinEx2BBase :: Value
 aliceCoinEx2BBase = coinToValue (5 * 1000 * 1000 * 1000 * 1000 * 1000)
 
 aliceCoinEx2BPtr :: Value
-aliceCoinEx2BPtr = aliceCoinEx2A - (aliceCoinEx2BBase + coinToValue (Coin 4))
+aliceCoinEx2BPtr = subv aliceCoinEx2A (aliceCoinEx2BBase <> coinToValue (Coin 4))
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
@@ -1122,7 +1124,7 @@ snapEx2C =
   SnapShot
     ( Stake
         ( Map.fromList
-            [ (aliceSHK, getAdaAmount (aliceCoinEx2BBase + aliceCoinEx2BPtr)),
+            [ (aliceSHK, getAdaAmount (aliceCoinEx2BBase <> aliceCoinEx2BPtr)),
               (bobSHK, getAdaAmount bobInitCoin)
             ]
         )
@@ -1205,7 +1207,7 @@ ex2C _ = CHAINExample expectedStEx2B blockEx2C (Right expectedStEx2C)
 
 -- | The transaction delegates Carl's stake to Alice's pool.
 aliceCoinEx2DBase :: Value
-aliceCoinEx2DBase = aliceCoinEx2BBase - coinToValue (Coin 5)
+aliceCoinEx2DBase = aliceCoinEx2BBase <> (scalev (-1) $ coinToValue (Coin 5))
 
 txbodyEx2D :: forall h. HashAlgorithm h => TxBody h
 txbodyEx2D =
@@ -1361,7 +1363,7 @@ snapEx2E =
   SnapShot
     ( Stake
         ( Map.fromList
-            [ (aliceSHK, getAdaAmount (aliceCoinEx2DBase + aliceCoinEx2BPtr)),
+            [ (aliceSHK, getAdaAmount (aliceCoinEx2DBase <> aliceCoinEx2BPtr)),
               (carlSHK, carlMIR),
               (bobSHK, getAdaAmount bobInitCoin)
             ]
@@ -1808,8 +1810,8 @@ snapsEx2I p =
         SnapShot
           ( Stake
               ( Map.fromList
-                  [ (bobSHK, getAdaAmount bobInitCoin + bobRAcnt2H),
-                    (aliceSHK, getAdaAmount (aliceCoinEx2DBase + aliceCoinEx2BPtr) + aliceRAcnt2H),
+                  [ (bobSHK, getAdaAmount bobInitCoin <> bobRAcnt2H),
+                    (aliceSHK, getAdaAmount (aliceCoinEx2DBase <> aliceCoinEx2BPtr) <> aliceRAcnt2H),
                     (carlSHK, carlMIR)
                   ]
               )
@@ -1988,7 +1990,7 @@ ex2J _ = CHAINExample expectedStEx2I blockEx2J (Right expectedStEx2J)
 
 -- | Example 2K - start stake pool retirement
 aliceCoinEx2KPtr :: Value
-aliceCoinEx2KPtr = aliceCoinEx2DBase - coinToValue (Coin 2)
+aliceCoinEx2KPtr = subv aliceCoinEx2DBase $ coinToValue (Coin 2)
 
 txbodyEx2K :: HashAlgorithm h => TxBody h
 txbodyEx2K =
@@ -2173,7 +2175,7 @@ snapsEx2L =
         SnapShot
           ( Stake
               ( Map.fromList
-                  [ (aliceSHK, aliceRAcnt2H + getAdaAmount (aliceCoinEx2BPtr + aliceCoinEx2KPtr)),
+                  [ (aliceSHK, aliceRAcnt2H <> getAdaAmount (aliceCoinEx2BPtr <> aliceCoinEx2KPtr)),
                     (carlSHK, carlMIR)
                   ]
               )
@@ -2290,7 +2292,7 @@ updateEx3A :: HashAlgorithm h => Update h
 updateEx3A = Update ppupEx3A (EpochNo 0)
 
 aliceCoinEx3A :: Value
-aliceCoinEx3A =aliceInitCoin - coinToValue (Coin 1)
+aliceCoinEx3A = subv aliceInitCoin $ coinToValue (Coin 1)
 
 txbodyEx3A :: HashAlgorithm h => TxBody h
 txbodyEx3A =
@@ -2404,7 +2406,7 @@ updateEx3B :: HashAlgorithm h => Update h
 updateEx3B = Update ppupEx3B (EpochNo 0)
 
 aliceCoinEx3B :: Value
-aliceCoinEx3B = aliceCoinEx3A - (coinToValue (Coin 1))
+aliceCoinEx3B = subv aliceCoinEx3A (coinToValue (Coin 1))
 
 txbodyEx3B :: HashAlgorithm h => TxBody h
 txbodyEx3B =
@@ -2725,7 +2727,7 @@ newGenesisVrfKH :: HashAlgorithm h => VRFKeyHash h
 newGenesisVrfKH = hashKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
 
 aliceCoinEx4A :: Value
-aliceCoinEx4A = aliceInitCoin - (coinToValue (Coin 1))
+aliceCoinEx4A = subv aliceInitCoin (coinToValue (Coin 1))
 
 txbodyEx4A :: HashAlgorithm h => TxBody h
 txbodyEx4A =
@@ -2923,7 +2925,7 @@ ir :: HashAlgorithm h => Map (Credential h 'Staking) Coin
 ir = Map.fromList [(aliceSHK, Coin 100)]
 
 aliceCoinEx5A :: Value
-aliceCoinEx5A = aliceInitCoin - (coinToValue (Coin 1))
+aliceCoinEx5A = subv aliceInitCoin (coinToValue (Coin 1))
 
 txbodyEx5A :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5A pot =
@@ -3021,7 +3023,7 @@ initStEx5A =
   setChainStateAccountState
     ( AccountState
         { _treasury = 1000,
-          _reserves = maxLLSupply - (1000 + getAdaAmount (balance (utxoEx2A p)))
+          _reserves = maxLLSupply - ((Coin 1000) <> getAdaAmount (balance (utxoEx2A p)))
         }
     )
     initStEx2A
@@ -3171,7 +3173,7 @@ ex5CTreasury p = ex5C p TreasuryMIR
 -- | The first transaction adds the MIR certificate that transfers a value of
 -- 100 to Alice.
 aliceCoinEx5D :: Value
-aliceCoinEx5D = aliceInitCoin - (coinToValue $ _keyDeposit ppsEx1) - (coinToValue (Coin 1))
+aliceCoinEx5D = subv (subv aliceInitCoin ((coinToValue $ _keyDeposit ppsEx1))) (coinToValue (Coin 1))
 
 txbodyEx5D :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5D pot =
@@ -3232,7 +3234,7 @@ blockEx5D pot =
 -- after the transaction carrying the MIR certificate, then creates the rewards
 -- update that contains the transfer of `100` to Alice.
 aliceCoinEx5D' :: Value
-aliceCoinEx5D' = aliceCoinEx5D - (coinToValue (Coin 1))
+aliceCoinEx5D' = subv aliceCoinEx5D (coinToValue (Coin 1))
 
 txbodyEx5D' :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5D' pot =
@@ -3283,7 +3285,7 @@ blockEx5D' pot =
 -- register a staking credential for Alice, 2) deducing the key deposit from the
 -- 100 and to 3) create the reward account with an initial amount of 93.
 aliceCoinEx5D'' :: Value
-aliceCoinEx5D'' = aliceCoinEx5D' - (coinToValue (Coin 1))
+aliceCoinEx5D'' = subv aliceCoinEx5D' (coinToValue (Coin 1))
 
 txbodyEx5D'' :: HashAlgorithm h => MIRPot -> TxBody h
 txbodyEx5D'' pot =
@@ -3371,7 +3373,7 @@ feeEx6A :: Coin
 feeEx6A = Coin 3
 
 aliceCoinEx6A :: Value
-aliceCoinEx6A = aliceCoinEx2A - (coinToValue feeEx6A)
+aliceCoinEx6A = subv aliceCoinEx2A (coinToValue feeEx6A)
 
 alicePoolParams6A :: HashAlgorithm h => PoolParams h
 alicePoolParams6A = alicePoolParams {_poolCost = Coin 500}
@@ -3458,7 +3460,7 @@ expectedLSEx6A =
             ]
         )
         (Coin 271)
-        (Coin 3 + feeEx6A)
+        (Coin 3 <> feeEx6A)
         (PPUPState ppupEx2A emptyPPPUpdates)
     )
     (DPState dsEx2A psEx6A)
