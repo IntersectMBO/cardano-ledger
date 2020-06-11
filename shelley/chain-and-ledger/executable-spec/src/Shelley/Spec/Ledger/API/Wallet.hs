@@ -44,8 +44,8 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 getNonMyopicMemberRewards ::
   Globals ->
   ShelleyState crypto ->
-  Set (Credential 'Staking crypto) ->
-  Map (Credential 'Staking crypto) (Map (KeyHash 'StakePool crypto) Coin)
+  Set (Either Coin (Credential 'Staking crypto)) ->
+  Map (Either Coin (Credential 'Staking crypto)) (Map (KeyHash 'StakePool crypto) Coin)
 getNonMyopicMemberRewards globals ss creds =
   Map.fromList $
     fmap
@@ -54,7 +54,8 @@ getNonMyopicMemberRewards globals ss creds =
   where
     total = fromIntegral $ maxLovelaceSupply globals
     toShare (Coin x) = StakeShare (x % total)
-    memShare cred = toShare $ Map.findWithDefault (Coin 0) cred (unStake stake)
+    memShare (Right cred) = toShare $ Map.findWithDefault (Coin 0) cred (unStake stake)
+    memShare (Left coin) = toShare coin
     es = nesEs ss
     pp = esPp es
     NonMyopic
