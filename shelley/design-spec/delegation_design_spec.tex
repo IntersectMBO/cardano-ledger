@@ -696,27 +696,27 @@ a Shelley address first.
 A Shelley address contains a payment credential (again, either a key or script
 credential). A transaction that consumes a UTxO entry with a Shelley address
 will need a witness for this payment credential in order to be validated. In
-addition, a Shelley address also contains a stake credential. When calculating
-the stake distribution (see \cref{delegation-relations} for details), the system
-uses this stake credential to decide where to count the stake corresponding to
-the tokens in this address.
+addition, a Shelley address also contains a stake address reference. When
+calculating the stake distribution (see \cref{delegation-relations} for
+details), the system uses this reference to decide where to count the stake
+corresponding to the tokens in this address.
 
-There are three options for the stake credential in a Shelley address: it can be
-provided \emph{by value}, i.e., just be the hash of a verification key or
-validator script. Shelley addresses that provide their stake credential by value
-are sometimes also called \emph{base addresses}.
+There are three options for the stake address reference in a Shelley address: it
+can be provided \emph{by value}, i.e., just be the hash of a verification key or
+validator script. Shelley addresses that provide their stake address reference
+by value are sometimes also called \emph{base addresses}.
 
-There is also a more compact way of representing a stake credential: since stake
+There is also a more compact way of representing a stake address reference: since stake
 addresses need to be registered on the chain in order to be considered for the
 stake distribution (see \cref{stake-address-registration-certificates}), we can
-also include them \emph{by reference}, pointing to the certificate that
-registered the stake address containing a given stake credential. Since the
+also include them \emph{by pointer}, pointing to the certificate that
+registered the stake address containing. Since the
 blockchain orders transactions, this pointer is quite small, containing only
 three numbers (slot index, transaction index within the block, and certificate
 index within the transaction). Shelley addresses that contain their stake
-credential by reference are also called \emph{pointer addresses}.
+ by pointer are also called \emph{pointer addresses}.
 
-The third possibility is to not have a stake credential at all. In this case,
+The third possibility is to not have a stake address reference at all. In this case,
 the stake corresponding to the tokens in the address is not considered by the
 system at all (just as for a Byron address). In particular, it will not be
 counted towards the active stake (\cref{overall-stake-distribution}), and so
@@ -727,12 +727,12 @@ protocol should use this option. Such addresses are also called \emph{enterprise
 \subsubsection{On Pointer Addresses}
 \label{pointer-address}
 
-Allowing the stake credential to be included in a payment address via reference
+Allowing the stake address reference to be included in a payment address via pointer
 allows for shorter addresses, which is a requirement (\cref{short-addresses}).
 However, there are also some subtleties to consider.
 
 \paragraph{Invalid Refereces}
-First, we need to consider the case that the reference does not point to an
+First, we need to consider the case that the pointer does not point to an
 \emph{active} stake address registration. This covers the case that the key was
 unregistered after (or indeed before) the transaction, and also covers pointers
 to targets that are plainly invalid. The system will allow transactions to and
@@ -750,13 +750,13 @@ So, to exercise the stake rights of a pointer address, the stake address must be
 registered in advance of using the pointer address in the output of a
 transaction, and the stake address must remain registered while the pointer
 address holds funds. This is a difference compared to addresses that contain
-their stake credential bby value, where the stake address can be registered
+their stake address reference by value, where the stake address can be registered
 after the value address is used in a transaction.
 
 \paragraph{Pointer Addresses and Rollback}
 A special case of an invalid pointer is a rollback: when the block containing a
 stake address registration certificate gets rolled back, addresses containing
-the stake address by reference to that certificate will lose their stake rights.
+the stake address by pointer to that certificate will lose their stake rights.
 Since the addresses will remain valid for payments, though, the stake rights can
 be restored by moving the funds to another address. Still, it is prudent to
 avoid this, by either allowing a number of blocks between transactions \(t_1\)

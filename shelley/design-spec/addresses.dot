@@ -7,8 +7,8 @@ digraph addresses {
   stake_address [label = "Stake Address"];
 
   payment_credential [label = "Payment Credential"];
+  stake_address_reference [label = "Stake Address Reference"];
   stake_credential [label = "Stake Credential"];
-  stake_credential2 [label = "Stake Credential"];
 
   pvkh [label = "Payment Verification\nKey Hash"];
   psh [label = "Script Hash"];
@@ -16,26 +16,26 @@ digraph addresses {
   ssh [label = "Script Hash"];
 
   by_value [label = "By Value"];
-  by_reference [label = "By Reference"];
+  by_pointer [label = "By Pointer"];
   null [label = "null"];
 
   subgraph cluster_stake {
     stake_address
-    stake_credential2
+    stake_credential
     svkh
     ssh
   }
 
   subgraph cluster_payment {
-    payment_address byron_address payment_credential stake_credential
-    pvkh psh by_value by_reference null
-    by_value by_reference null
+    payment_address byron_address payment_credential stake_address_reference
+    pvkh psh by_value by_pointer null
+    by_value by_pointer null
 
 
     subgraph cluster_shelley {
       label = "Shelley Address"
       payment_credential
-      stake_credential
+      stake_address_reference
     }
 
   }
@@ -43,10 +43,10 @@ digraph addresses {
   payment_address -> byron_address;
   payment_address -> payment_credential [lhead = cluster_shelley];
   payment_credential ->  {pvkh, psh};
-  stake_credential -> {by_value, by_reference, null};
+  stake_address_reference -> {by_value, by_pointer, null};
 
-  by_value -> stake_credential2 [style = dashed, constraint=false];
+  by_value -> stake_credential [style = dashed, constraint=false];
 
-  stake_address -> stake_credential2;
-  stake_credential2 -> {svkh, ssh};
+  stake_address -> stake_credential;
+  stake_credential -> {svkh, ssh};
 }
