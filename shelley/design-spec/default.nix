@@ -12,6 +12,7 @@ stdenv.mkDerivation {
                       # libraries
                       stmaryrd lm-math amsmath
                       extarrows cleveref
+                      titlesec
 
                       # font libraries `mathpazo` seems to depend on palatino, but it isn't pulled.
                       mathpazo palatino microtype
