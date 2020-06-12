@@ -576,10 +576,15 @@ pool operators.
 Delegation is a separation of the control over the movements of funds and the
 rights (and obligations) in the PoS protocol that are associated with those
 funds. We achieve this separation by modelling it in the address structure. We
-will distinguish between \emph{value addresses} that determine how funds can be
-spent, and \emph{stake addresses} that define if and how those funds take part
-in the PoS protocol. Actual coins will belong to an (overall) \emph{address},
-consisting of both a value address and a stake address.
+distinguish between \emph{payment addresses} that determine how funds can be
+spent, and \emph{stake addresses} that define if and how the stake rights of
+those funds take part in the PoS protocol. Coins belong to payment addresses.
+Each payment address (optionally) refers to a stake address. This delegates the
+stake rights of any funds held at the payment address to the corresponding stake
+address. The stake address delegates to a stake pool that participates directly
+in the PoS protocol. Thus overall there are two steps to the delegation of stake
+rights: a payment address refers to a stake address; and the stake address
+delegates to a stake pool.
 
 We support multi signature (multi-sig) schemes, for payments as well as for
 delegations. We do this by allowing value addresses and script addresses to use
