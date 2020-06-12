@@ -208,24 +208,8 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    PParams' (PParams),
+    PParams' (..),
     PParamsUpdate,
-    _a0,
-    _d,
-    _eMax,
-    _extraEntropy,
-    _keyDeposit,
-    _maxBBSize,
-    _maxBHSize,
-    _maxTxSize,
-    _minUTxOValue,
-    _minfeeA,
-    _minfeeB,
-    _nOpt,
-    _poolDeposit,
-    _protocolVersion,
-    _rho,
-    _tau,
     emptyPPPUpdates,
     emptyPParams,
     pattern ProposedPPUpdates,
@@ -665,7 +649,8 @@ ppupEx2A =
             _d = SNothing,
             _extraEntropy = SNothing,
             _protocolVersion = SNothing,
-            _minUTxOValue = SNothing
+            _minUTxOValue = SNothing,
+            _minPoolCost = SNothing
           }
       )
 
@@ -2000,7 +1985,8 @@ ppVote3A =
       _d = SNothing,
       _extraEntropy = SJust (mkNonce 123),
       _protocolVersion = SNothing,
-      _minUTxOValue = SNothing
+      _minUTxOValue = SNothing,
+      _minPoolCost = SNothing
     }
 
 ppupEx3A :: ProposedPPUpdates

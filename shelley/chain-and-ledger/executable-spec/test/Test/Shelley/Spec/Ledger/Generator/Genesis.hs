@@ -66,6 +66,7 @@ genPParams =
     <*> genNonce
     <*> genProtVer
     <*> genMinUTxOValue
+    <*> (pure 0) -- TODO handle a min pool cost > 0
 
 genNatural :: Range Natural -> Gen Natural
 genNatural range = Gen.integral range
@@ -76,8 +77,8 @@ genRational = Gen.realFrac_ (Range.linearFrac 0 10000)
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 500)
 
-genMinUTxOValue :: Gen Natural
-genMinUTxOValue = Gen.integral (Range.linear 1 1000)
+genMinUTxOValue :: Gen Coin
+genMinUTxOValue = Coin <$> Gen.integral (Range.linear 1 1000)
 
 genNonce :: Gen Nonce
 genNonce =

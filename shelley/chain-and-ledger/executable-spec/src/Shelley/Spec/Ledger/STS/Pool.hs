@@ -24,6 +24,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
+import Shelley.Spec.Ledger.Coin (Coin)
 import Shelley.Spec.Ledger.Core (dom, (∈), (∉), (⋪))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -56,6 +57,9 @@ instance STS (POOL crypto) where
         !Word64 -- The first epoch that is too far out for retirement
     | WrongCertificateTypePOOL
         !Word8 -- The disallowed certificate (this case should never happen)
+    | StakePoolCostTooLowPOOL
+        !Coin -- The stake pool cost listed in the Pool Registration Certificate
+        !Coin -- The minimum stake pool cost listed in the protocol parameters
     deriving (Show, Eq, Generic)
 
   initialRules = [pure emptyPState]
@@ -75,6 +79,8 @@ instance
       encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR em
     WrongCertificateTypePOOL ct ->
       encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR ct
+    StakePoolCostTooLowPOOL pc mc ->
+      encodeListLen 3 <> toCBOR (3 :: Word8) <> toCBOR pc <> toCBOR mc
 
 instance
   (Crypto crypto) =>
@@ -97,6 +103,11 @@ instance
         matchSize "WrongCertificateTypePOOL" 2 n
         ct <- fromCBOR
         pure $ WrongCertificateTypePOOL ct
+      3 -> do
+        matchSize "StakePoolCostTooLowPOOL" 3 n
+        pc <- fromCBOR
+        mc <- fromCBOR
+        pure $ StakePoolCostTooLowPOOL pc mc
       k -> invalidKey k
 
 poolDelegationTransition :: TransitionRule (POOL crypto)
@@ -106,6 +117,10 @@ poolDelegationTransition = do
   case c of
     DCertPool (RegPool poolParam) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
+
+      let poolCost = _poolCost poolParam
+          minPoolCost = _minPoolCost pp
+      poolCost >= minPoolCost ?! StakePoolCostTooLowPOOL poolCost minPoolCost
 
       let hk = _poolPubKey poolParam
       if hk ∉ dom stpools
