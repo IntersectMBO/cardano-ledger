@@ -7,7 +7,6 @@
 
 module Test.Shelley.Spec.Ledger.Rules.TestPool where
 
-import Byron.Spec.Ledger.Core (dom, (∈), (∉))
 import Control.State.Transition (Environment, State)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -22,6 +21,7 @@ import qualified Data.Maybe as Maybe (maybe)
 import qualified Data.Set as S
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BaseTypes ((==>))
+import Shelley.Spec.Ledger.Core (dom, (∈), (∉))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
 import Shelley.Spec.Ledger.Keys (KeyRole (..))

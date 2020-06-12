@@ -38,7 +38,6 @@ module Shelley.Spec.Ledger.UTxO
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
@@ -52,6 +51,7 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates

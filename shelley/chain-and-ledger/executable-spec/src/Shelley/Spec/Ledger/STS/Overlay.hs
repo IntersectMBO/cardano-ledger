@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.Overlay
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude
   ( MonadError (..),
@@ -47,6 +46,7 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
+import Shelley.Spec.Ledger.Core (dom, range)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys

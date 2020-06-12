@@ -17,7 +17,6 @@ module Shelley.Spec.Ledger.STS.Utxo
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -48,6 +47,7 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (Addr, getNetwork)
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools)
 import Shelley.Spec.Ledger.Keys (GenDelegs)

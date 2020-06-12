@@ -59,7 +59,6 @@ module Shelley.Spec.Ledger.TxData
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary
   ( Annotator (..),
     Case (..),
@@ -121,6 +120,7 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ix,

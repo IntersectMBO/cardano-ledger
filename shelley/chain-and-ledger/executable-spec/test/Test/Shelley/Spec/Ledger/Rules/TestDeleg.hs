@@ -15,7 +15,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range, (∈), (∉), (◁))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -32,6 +31,7 @@ import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes ((==>), Network (..))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
+import Shelley.Spec.Ledger.Core (dom, range, (∈), (∉), (◁))
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( InstantaneousRewards (..),

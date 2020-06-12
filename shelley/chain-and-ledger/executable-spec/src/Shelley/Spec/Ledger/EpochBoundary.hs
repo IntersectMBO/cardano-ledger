@@ -30,7 +30,6 @@ module Shelley.Spec.Ledger.EpochBoundary
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (▷), (◁))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Data.Map.Strict (Map)
@@ -42,6 +41,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (dom, (▷), (◁))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
