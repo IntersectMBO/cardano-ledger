@@ -1377,7 +1377,6 @@ amongst certificates. Thus, the terms older/newer certificate are well
 defined and are used below.
 
 \paragraph{Stake Pool Registration and Retirement Certificates}
-\label{stake-pool-registration-and-retirement-certificates}
 
 \begin{itemize}
 \item
@@ -1400,7 +1399,6 @@ Newer delegation certificates override older delegation certificates. This
 allows delegators to move from one stake pool to another.
 
 \paragraph{Operational Key Certificates}
-\label{operational-key-certificates-1}
 
 For operational key certificates, we cannot rely on the ordering induced by
 the blockchain. But we do have the counter field, which serves the
@@ -2189,7 +2187,6 @@ provided that
 \end{itemize}
 
 \paragraph{Retrieving Staking Information}
-\label{retrieving-staking-information}
 
 After the wallet software has determined the set of addresses that
 belong to it via the spending keys, it needs to set its delegation
@@ -2682,7 +2679,7 @@ be included in the registration:
   The pool operator \emph{margin} (in \([0,1]\)), indicating the additional
   share that the pool operator will take from the pool's rewards (after the
   costs have been deducted) before splitting rewards amongst members (see
-  \cref{pool-operator-reward}).
+  \cref{reward-splitting-inside-a-pool}).
 \item
   Proof of \emph{ada pledged to the pool}, as a list of public stake
   key hashes that belong to the owner(s) of the pool.
@@ -3011,7 +3008,6 @@ Note that the values \(c\) and \(m\) for registered pools are available
 from the pool registration, see \cref{stake-pool-registration}.
 
 \paragraph{Pool Operator Reward}
-\label{pool-operator-reward}
 
 The \emph{pool operator reward \(r_\mathrm{operator}\)} (in ada) is calculated
 as follows (where \(s\in[0,1]\) is the stake delegated to the pool by its
@@ -3776,7 +3772,7 @@ In the following, we describe how the requirements listed in
 
 \item[\cref{handle-inactive-stake-pools} Handle Inactive Stake Pools]
   Stake pools can be retired via a retirement certificate
-  (\cref{stake-pool-registration-and-retirement-certificates}. If a stake pool
+  (\cref{stake-pool-registration-certificates}. If a stake pool
   ceases to operate without being properly retired, its members will be
   incentivised to re-delegate: their rewards will start to diminish, and their
   wallet will notify them that the pool they have delegated to is not producing
@@ -4018,7 +4014,6 @@ This approach has been ruled out, since it:
 \end{enumerate}
 
 \paragraph{Complexity}
-\label{complexity}
 
 \begin{itemize}
 \item
