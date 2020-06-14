@@ -21,8 +21,8 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
 import Test.Cardano.Prelude
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import Test.Shelley.Spec.Ledger.Examples (exampleShelleyGenesis)
 import Test.Shelley.Spec.Ledger.Generator.Genesis
-import Test.Shelley.Spec.Ledger.Genesis.Example
 import Test.Tasty
 import Test.Tasty.Hedgehog
 

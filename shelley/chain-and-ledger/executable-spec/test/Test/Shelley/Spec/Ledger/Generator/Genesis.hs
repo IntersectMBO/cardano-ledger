@@ -11,7 +11,7 @@ import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.Hash hiding (Hash)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
-import Cardano.Prelude (Natural, Word8, Word32, Word64)
+import Cardano.Prelude (Natural, Word32, Word64, Word8)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import qualified Data.ByteString as BS
 import Data.Fixed

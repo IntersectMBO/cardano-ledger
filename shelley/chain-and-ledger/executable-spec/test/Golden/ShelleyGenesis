@@ -25,16 +25,67 @@
         "a0": 0
     },
     "protocolMagicId": 838299499,
-    "genDelegs": {},
+    "genDelegs": {
+        "23d51e91": {
+            "delegate": "839b047f",
+            "vrf": "231391e7"
+        }
+    },
     "updateQuorum": 16991,
     "networkId": "Testnet",
-    "initialFunds": {},
+    "initialFunds": {
+        "001c14ee8ee37a65ea": 12157196
+    },
     "maxLovelaceSupply": 71,
     "networkMagic": 4036000900,
     "epochLength": 1215,
     "staking": {
-        "pools": {},
-        "stake": {}
+        "pools": {
+            "3dbe00a1": {
+                "owners": [
+                    "f75028da"
+                ],
+                "cost": 5,
+                "margin": 0.25,
+                "publicKey": "4b9d3b86",
+                "pledge": 1,
+                "vrf": "b69330fe",
+                "metadata": {
+                    "hash": "100ab{}",
+                    "url": "best.pool.com"
+                },
+                "relays": [
+                    {
+                        "single host address": {
+                            "IPv6": "2001:db8:a::123",
+                            "IPv4": "0.0.0.0",
+                            "port": 1234
+                        }
+                    },
+                    {
+                        "single host name": {
+                            "dnsName": "cool.domain.com",
+                            "port": null
+                        }
+                    },
+                    {
+                        "multi host name": {
+                            "dnsName": "cool.domain.com",
+                            "port": 65000
+                        }
+                    }
+                ],
+                "rewardAccount": {
+                    "credential": {
+                        "key hash": "f75028da"
+                    },
+                    "network": "Testnet"
+                }
+            }
+        },
+        "stake": {
+            "1c14ee8e": "1c14ee8e"
+        }
     },
     "systemStart": "2009-02-13T23:13:09Z",
     "slotsPerKESPeriod": 8541,
