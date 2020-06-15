@@ -756,7 +756,8 @@ Note that in particular, when a pointer address becomes invalid because the
 stake address it points to is deregistered, registering the same stake address
 again does not ``restore'' the stake in the pointer address; the tokens have to
 be moved to another address in order to use the stake. This minor limitation
-allows the system to not remember unregistered stake addresses.
+allows the system to not remember unregistered stake addresses.\todo{Maybe add a
+  diagram here, about the lifetime of pointer addresses.}
 
 
 So, to exercise the stake rights of a pointer address, the stake address must be
