@@ -533,6 +533,11 @@ delegator.
 \subsubsection{Short Addresses}
 \label{short-addresses}
 
+It is beneficient to have short addresses, for two reasons: addresses are
+user-facing, and overly long addresses are burdensome for users. Also, every
+UTxO entry contains an address, so short addresses reduce the memory footprint
+of the UTxO and the whole ledger state.
+
 Adding delegation to the system should not increase the length of
 addresses more than necessary. Ideally, we should use the opportunity of having
 to modify the address scheme to come up with an address length that is
