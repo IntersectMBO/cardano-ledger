@@ -6,9 +6,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -57,12 +60,16 @@ module Shelley.Spec.Ledger.LedgerState
     genesisState,
 
     -- * Validation
+    WitHashes (..),
+    nullWitHashes,
+    diffWitHashes,
     minfee,
     txsize,
     produced,
     consumed,
     verifiedWits,
     witsVKeyNeeded,
+    witsFromWitnessSet,
     -- DelegationState
     -- refunds
     keyRefunds,
@@ -104,6 +111,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
+import Shelley.Spec.Ledger.Address.Bootstrap (bootstrapWitKeyHash)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     ShelleyBase,
@@ -141,7 +149,6 @@ import Shelley.Spec.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
     Hash,
-    KeyHash,
     KeyHash (..),
     KeyPair,
     KeyRole (..),
@@ -173,7 +180,14 @@ import Shelley.Spec.Ledger.Slot
     epochInfoFirst,
     epochInfoSize,
   )
-import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..), extractKeyHash)
+import Shelley.Spec.Ledger.Tx
+  ( Tx (..),
+    WitnessSet,
+    WitnessSetHKD (..),
+    addrWits,
+    extractKeyHash,
+    regWits,
+  )
 import Shelley.Spec.Ledger.TxData
   ( Ix,
     PoolCert (..),
@@ -187,6 +201,7 @@ import Shelley.Spec.Ledger.TxData
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
+    witKeyHash,
   )
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -276,7 +291,11 @@ instance NoUnexpectedThunks (DState crypto)
 
 instance Crypto crypto => ToCBOR (DState crypto) where
   toCBOR (DState sc rw dlg p fgs gs ir) =
-    encodeListLen 7 <> toCBOR sc <> toCBOR rw <> toCBOR dlg <> toCBOR p
+    encodeListLen 7
+      <> toCBOR sc
+      <> toCBOR rw
+      <> toCBOR dlg
+      <> toCBOR p
       <> toCBOR fgs
       <> toCBOR gs
       <> toCBOR ir
@@ -722,6 +741,34 @@ consumed pp u tx =
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
 
+data WitHashes crypto = WitHashes
+  { addrWitHashes :: !(Set (KeyHash 'AWitness crypto)),
+    regWitHashes :: !(Set (KeyHash 'RWitness crypto))
+  }
+  deriving (Eq, Generic, Show)
+
+instance Crypto crypto => NoUnexpectedThunks (WitHashes crypto)
+
+-- | Check if a set of witness hashes is empty.
+nullWitHashes :: WitHashes crypto -> Bool
+nullWitHashes (WitHashes a b) = Set.null a && Set.null b
+
+-- | Extract the difference between two sets of witness hashes.
+diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
+diffWitHashes (WitHashes x y) (WitHashes x' y') =
+  WitHashes (x `Set.difference` x') (y `Set.difference` y')
+
+-- | Extract the witness hashes from the Witness set.
+witsFromWitnessSet ::
+  Crypto crypto => WitnessSet crypto -> WitHashes crypto
+witsFromWitnessSet (WitnessSet aWits rWits _ bsWits) =
+  WitHashes
+    { addrWitHashes =
+        Set.map witKeyHash aWits
+          `Set.union` Set.map bootstrapWitKeyHash bsWits,
+      regWitHashes = Set.map witKeyHash rWits
+    }
+
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
 --  certificate authors, and withdrawal reward accounts.
@@ -731,13 +778,18 @@ witsVKeyNeeded ::
   UTxO crypto ->
   Tx crypto ->
   GenDelegs crypto ->
-  Set (KeyHash 'Witness crypto)
+  WitHashes crypto
 witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
-  inputAuthors
-    `Set.union` wdrlAuthors
-    `Set.union` certAuthors
-    `Set.union` updateKeys
-    `Set.union` owners
+  WitHashes
+    { addrWitHashes =
+        (Set.fromList $ fst certAuthors)
+          `Set.union` inputAuthors
+          `Set.union` owners
+          `Set.union` wdrlAuthors,
+      regWitHashes =
+        (Set.fromList $ snd certAuthors)
+          `Set.union` updateKeys
+    }
   where
     inputAuthors = asWitness `Set.map` Set.foldr insertHK Set.empty (_inputs txbody)
     insertHK txin hkeys =
@@ -757,13 +809,12 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) _genDelegs =
         [ ((Set.map asWitness) . _poolOwners) pool
           | DCertPool (RegPool pool) <- toList $ _certs txbody
         ]
-    certAuthors = Set.map asWitness . Set.fromList $ foldl (++) [] $ fmap getCertHK certificates
-    getCertHK = cwitness
+    certAuthors = foldl' (<>) ([], []) $ fmap cwitness certificates
     -- key reg requires no witness but this is already filtered out before the
     -- call to `cwitness`
-    cwitness (DCertDeleg dc) = asWitness <$> extractKeyHash [delegCWitness dc]
-    cwitness (DCertPool pc) = asWitness <$> extractKeyHash [poolCWitness pc]
-    cwitness (DCertGenesis gc) = [asWitness $ genesisCWitness gc]
+    cwitness (DCertDeleg dc) = (,[]) $ asWitness <$> extractKeyHash [delegCWitness dc]
+    cwitness (DCertPool pc) = ([],) $ asWitness <$> extractKeyHash [poolCWitness pc]
+    cwitness (DCertGenesis gc) = ([], [asWitness $ genesisCWitness gc])
     cwitness c = error $ show c ++ " does not have a witness"
     certificates = filter requiresVKeyWitness (toList $ _certs txbody)
     updateKeys = asWitness `Set.map` propWits (txup tx) _genDelegs
@@ -775,23 +826,31 @@ verifiedWits ::
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Tx crypto ->
-  Either [VKey 'Witness crypto] ()
+  Either ([VKey 'AWitness crypto], [VKey 'RWitness crypto]) ()
 verifiedWits (Tx txbody wits _) =
-  case failed == mempty of
+  case null failedA && null failedR of
     True -> Right ()
-    False -> Left $ fmap (\(WitVKey vk _) -> vk) failed
+    False ->
+      Left $
+        ( fmap (\(WitVKey vk _) -> vk) failedA,
+          fmap (\(WitVKey vk _) -> vk) failedR
+        )
   where
-    failed =
+    failedA =
       filter
         (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
         (Set.toList $ addrWits wits)
+    failedR =
+      filter
+        (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
+        (Set.toList $ regWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
   Maybe (Update crypto) ->
   GenDelegs crypto ->
-  Set (KeyHash 'Witness crypto)
+  Set (KeyHash 'RWitness crypto)
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys

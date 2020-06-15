@@ -9,6 +9,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -130,11 +131,14 @@ import Shelley.Spec.Ledger.Credential
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
   ( Hash,
+    IsKeyRole,
     KeyHash (..),
     KeyRole (..),
     SignedDSIGN,
     VKey,
     VerKeyVRF,
+    WitnessFor,
+    asWitness,
     decodeSignedDSIGN,
     encodeSignedDSIGN,
     hashKey,
@@ -420,19 +424,19 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 {-# COMPLETE TxBody #-}
 
 -- | Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey crypto = WitVKey'
-  { wvkKey' :: !(VKey 'Witness crypto),
+data WitVKey crypto kr = WitVKey'
+  { wvkKey' :: !(VKey kr crypto),
     wvkSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto))),
     wvkBytes :: LByteString
   }
   deriving (Show, Eq, Generic)
-  deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey crypto)
+  deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey crypto kr)
 
 pattern WitVKey ::
-  Crypto crypto =>
-  VKey 'Witness crypto ->
+  (IsKeyRole kr crypto) =>
+  VKey kr crypto ->
   SignedDSIGN crypto (Hash crypto (TxBody crypto)) ->
-  WitVKey crypto
+  WitVKey crypto kr
 pattern WitVKey k s <-
   WitVKey' k s _
   where
@@ -443,16 +447,16 @@ pattern WitVKey k s <-
 {-# COMPLETE WitVKey #-}
 
 witKeyHash ::
-  forall crypto.
-  (Crypto crypto) =>
-  WitVKey crypto ->
-  KeyHash 'Witness crypto
-witKeyHash (WitVKey key _) = hashKey key
+  forall crypto kr.
+  (IsKeyRole kr crypto) =>
+  WitVKey crypto kr ->
+  KeyHash (WitnessFor kr) crypto
+witKeyHash (WitVKey key _) = asWitness $ hashKey key
 
 instance
-  forall crypto.
-  (Crypto crypto) =>
-  Ord (WitVKey crypto)
+  forall crypto kr.
+  (IsKeyRole kr crypto) =>
+  Ord (WitVKey crypto kr)
   where
   compare = comparing witKeyHash
 
@@ -586,14 +590,14 @@ instance
     pure $ TxOut addr (Coin $ toInteger b)
 
 instance
-  Crypto crypto =>
-  ToCBOR (WitVKey crypto)
+  IsKeyRole kr crypto =>
+  ToCBOR (WitVKey crypto kr)
   where
   toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance
-  Crypto crypto =>
-  FromCBOR (Annotator (WitVKey crypto))
+  IsKeyRole kr crypto =>
+  FromCBOR (Annotator (WitVKey crypto kr))
   where
   fromCBOR =
     annotatorSlice $ decodeRecordNamed "WitVKey" (const 2)

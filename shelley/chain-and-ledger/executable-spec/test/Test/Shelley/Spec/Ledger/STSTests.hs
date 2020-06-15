@@ -14,7 +14,8 @@ import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
-  ( _delegationState,
+  ( WitHashes (..),
+    _delegationState,
     _fPParams,
     _pParams,
     _pstate,
@@ -411,7 +412,16 @@ testScriptAndSKey =
 
 testScriptAndSKey' :: Assertion
 testScriptAndSKey' =
-  utxoSt' @?= Left [[MissingVKeyWitnessesUTXOW wits]]
+  utxoSt'
+    @?= Left
+      [ [ MissingVKeyWitnessesUTXOW $
+            WitHashes
+              { addrWitHashes = wits,
+                regWitHashes =
+                  mempty
+              }
+        ]
+      ]
   where
     utxoSt' =
       applyTxWithScript

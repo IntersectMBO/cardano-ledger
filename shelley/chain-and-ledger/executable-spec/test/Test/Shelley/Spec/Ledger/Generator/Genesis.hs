@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -26,7 +27,16 @@ import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
-import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyPair (..), KeyRole (..), VKey (..), hashKey, hashVerKeyVRF)
+import Shelley.Spec.Ledger.Keys
+  ( Hash,
+    IsKeyRole,
+    KeyHash,
+    KeyPair (..),
+    KeyRole (..),
+    VKey (..),
+    hashKey,
+    hashVerKeyVRF,
+  )
 import Shelley.Spec.Ledger.PParams
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 
@@ -150,8 +160,9 @@ genSeed :: Int -> Gen Seed
 genSeed n = mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 
 genKeyHash ::
-  Crypto c =>
-  Gen (KeyHash krole c)
+  ( IsKeyRole disc c
+  ) =>
+  Gen (KeyHash disc c)
 genKeyHash = hashKey . snd <$> genKeyPair
 
 -- | Generate a deterministic key pair given a seed.

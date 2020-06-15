@@ -1,21 +1,22 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Core
-  ( AllPoolKeys (..),
+  ( AllIssuerKeys (..),
     GenEnv (..),
     KeySpace (..),
     pattern KeySpace,
     NatNonce (..),
-    Testing,
     findPayKeyPairAddr,
     findPayKeyPairCred,
     findPayScriptFromCred,
@@ -54,7 +55,7 @@ import Data.Coerce (coerce)
 import Data.List (foldl')
 import qualified Data.List as List ((\\), findIndex)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (empty, fromList, insert, lookup)
+import qualified Data.Map.Strict as Map (fromList, lookup)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Tuple (swap)
@@ -88,7 +89,17 @@ import Shelley.Spec.Ledger.Credential
     pattern StakeRefBase,
     pattern StakeRefPtr,
   )
-import Shelley.Spec.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyRole (..), asWitness, hashKey, signedDSIGN, signedKES, vKey)
+import Shelley.Spec.Ledger.Keys
+  ( HasKeyRole (coerceKeyRole),
+    HashType (..),
+    KeyRole (..),
+    KeyRoleHashType,
+    asWitness,
+    hashKey,
+    signedDSIGN,
+    signedKES,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -113,8 +124,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     Block,
     ConcreteCrypto,
-    CoreKeyPair,
     Credential,
+    GenesisKeyPair,
     HashHeader,
     KeyHash,
     KeyPair,
@@ -127,10 +138,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Tx,
     TxOut,
     VKey,
-    VRFKeyHash,
     VerKeyKES,
     VerKeyVRF,
-    hashKeyVRF,
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -146,23 +155,11 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
--- | I'm in two minds about this. It basically takes advantage of a GHC bug to allow
---   the inhabiting of a closed kind. On the other hand, the alternatives would be to
---   have `Testing` as a real key role (test code infiltrating the library, yuck) or
---   use a different role everywhere (confusing).
-data family Testing :: k
-
-toTesting :: HasKeyRole a => a r crypto -> a Testing crypto
-toTesting = coerceKeyRole
-
-fromTesting :: HasKeyRole a => a Testing crypto -> a r crypto
-fromTesting = coerceKeyRole
-
-data AllPoolKeys = AllPoolKeys
-  { cold :: KeyPair 'StakePool,
+data AllIssuerKeys r = AllIssuerKeys
+  { cold :: KeyPair r,
     vrf :: (SignKeyVRF, VerKeyVRF),
     hot :: [(KESPeriod, (SignKeyKES, VerKeyKES))],
-    hk :: KeyHash 'StakePool
+    hk :: KeyHash r
   }
   deriving (Show)
 
@@ -176,39 +173,52 @@ data GenEnv = GenEnv
 --
 --   These are the _only_ keys which should be involved in the trace.
 data KeySpace = KeySpace_
-  { ksCoreNodes :: [(CoreKeyPair, AllPoolKeys)],
+  { ksCoreNodes :: [(GenesisKeyPair, AllIssuerKeys 'GenesisDelegate)],
+    -- | Bag of keys to be used for future genesis delegates
+    ksGenesisDelegates :: [AllIssuerKeys 'GenesisDelegate],
+    -- | Bag of keys to be used for future stake pools
+    ksStakePools :: [AllIssuerKeys 'StakePool],
+    -- | Bag of keys to be used for future payment/staking addresses
     ksKeyPairs :: KeyPairs,
-    ksKeyPairsByHash :: Map (KeyHash Testing) (KeyPair Testing),
-    ksKeyPairsByStakeHash :: Map (KeyHash 'Staking) (KeyPair 'Staking),
-    ksMSigScripts :: MultiSigPairs,
-    ksVRFKeyPairs :: [(SignKeyVRF, VerKeyVRF)],
-    ksVRFKeyPairsByHash :: Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
+    -- | Index over the payment keys in 'ksKeyPairs'
+    ksIndexedPaymentKeys :: Map (KeyHash 'Payment) (KeyPair 'Payment),
+    -- | Index over the staking keys in 'ksKeyPairs'
+    ksIndexedStakingKeys :: Map (KeyHash 'Staking) (KeyPair 'Staking),
+    ksMSigScripts :: MultiSigPairs
   }
-  deriving (Show)
+
+deriving instance Show KeySpace
 
 pattern KeySpace ::
-  [(CoreKeyPair, AllPoolKeys)] ->
+  [(GenesisKeyPair, AllIssuerKeys 'GenesisDelegate)] ->
+  [AllIssuerKeys 'GenesisDelegate] ->
+  [AllIssuerKeys 'StakePool] ->
   KeyPairs ->
   MultiSigPairs ->
-  [(SignKeyVRF, VerKeyVRF)] ->
   KeySpace
-pattern KeySpace ksCoreNodes ksKeyPairs ksMSigScripts ksVRFKeyPairs <-
+pattern KeySpace
+  ksCoreNodes
+  ksGenesisDelegates
+  ksStakePools
+  ksKeyPairs
+  ksMSigScripts <-
   KeySpace_
     { ksCoreNodes,
+      ksGenesisDelegates,
+      ksStakePools,
       ksKeyPairs,
-      ksMSigScripts,
-      ksVRFKeyPairs
+      ksMSigScripts
     }
   where
-    KeySpace ksCoreNodes ksKeyPairs ksMSigScripts ksVRFKeyPairs =
+    KeySpace ksCoreNodes ksGenesisDelegates ksStakePools ksKeyPairs ksMSigScripts =
       KeySpace_
         { ksCoreNodes,
+          ksGenesisDelegates,
+          ksStakePools,
           ksKeyPairs,
-          ksKeyPairsByHash = mkKeyHashMap ksKeyPairs,
-          ksKeyPairsByStakeHash = mkStakeKeyHashMap ksKeyPairs,
-          ksMSigScripts,
-          ksVRFKeyPairs,
-          ksVRFKeyPairsByHash = mkVRFKeyPairsByHash ksVRFKeyPairs
+          ksIndexedPaymentKeys = mkPayKeyHashMap ksKeyPairs,
+          ksIndexedStakingKeys = mkStakeKeyHashMap ksKeyPairs,
+          ksMSigScripts
         }
 
 genBool :: HasCallStack => Gen Bool
@@ -247,16 +257,16 @@ mkStakeKeyHashMap keyPairs =
   where
     f (_payK, stakeK) = ((hashKey . vKey) stakeK, stakeK)
 
--- | Generate a mapping from key hash (both payment and stake keys) to keypair
+-- | Generate a mapping from payment key hash to keypair
 -- from a list of (payment, staking) key pairs.
-mkKeyHashMap :: HasCallStack => KeyPairs -> Map (KeyHash Testing) (KeyPair Testing)
-mkKeyHashMap =
-  foldl'
-    ( \m (payKey, stakeKey) ->
-        let m' = Map.insert (toTesting . hashKey $ vKey payKey) (toTesting payKey) m
-         in Map.insert (toTesting . hashKey $ vKey stakeKey) (toTesting stakeKey) m'
-    )
-    Map.empty
+mkPayKeyHashMap ::
+  HasCallStack =>
+  KeyPairs ->
+  Map (KeyHash 'Payment) (KeyPair 'Payment)
+mkPayKeyHashMap keyPairs =
+  Map.fromList (f <$> keyPairs)
+  where
+    f (payK, _stakeK) = ((hashKey . vKey) payK, payK)
 
 -- | Multi-Sig Scripts based on the given key pairs
 mkMSigScripts :: HasCallStack => KeyPairs -> MultiSigPairs
@@ -300,7 +310,7 @@ mkScriptsFromKeyPair ::
 mkScriptsFromKeyPair (k0, k1) =
   (mkScriptFromKey $ asWitness k0, mkScriptFromKey $ asWitness k1)
 
-mkScriptFromKey :: HasCallStack => KeyPair 'Witness -> MultiSig
+mkScriptFromKey :: HasCallStack => KeyPair 'AWitness -> MultiSig
 mkScriptFromKey = (RequireSignature . hashKey . vKey)
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
@@ -323,16 +333,20 @@ findPayKeyPairCred c keyHashMap =
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPairAddr :: HasCallStack => Addr -> Map (KeyHash Testing) (KeyPair Testing) -> KeyPair 'Payment
-findPayKeyPairAddr a keyHashMap = fromTesting $
+findPayKeyPairAddr ::
+  HasCallStack =>
+  Addr ->
+  Map (KeyHash 'Payment) (KeyPair 'Payment) ->
+  KeyPair 'Payment
+findPayKeyPairAddr a keyHashMap =
   case a of
-    Addr _ addr (StakeRefBase _) -> findPayKeyPairCred (toTesting addr) keyHashMap
-    Addr _ addr (StakeRefPtr _) -> findPayKeyPairCred (toTesting addr) keyHashMap
+    Addr _ addr (StakeRefBase _) -> findPayKeyPairCred addr keyHashMap
+    Addr _ addr (StakeRefPtr _) -> findPayKeyPairCred addr keyHashMap
     _ ->
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
 -- | Find first matching script for a credential.
-findPayScriptFromCred :: HasCallStack => Credential 'Witness -> MultiSigPairs -> (MultiSig, MultiSig)
+findPayScriptFromCred :: HasCallStack => Credential 'AWitness -> MultiSigPairs -> (MultiSig, MultiSig)
 findPayScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -345,7 +359,7 @@ findPayScriptFromCred c scripts =
         Just i -> scripts !! i
 
 -- | Find first matching script for a credential.
-findStakeScriptFromCred :: HasCallStack => Credential 'Witness -> MultiSigPairs -> (MultiSig, MultiSig)
+findStakeScriptFromCred :: HasCallStack => Credential 'AWitness -> MultiSigPairs -> (MultiSig, MultiSig)
 findStakeScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -411,9 +425,6 @@ increasingProbabilityAt gen (lower, upper) =
       (5, pure upper)
     ]
 
-mkVRFKeyPairsByHash :: HasCallStack => [(SignKeyVRF, VerKeyVRF)] -> Map VRFKeyHash (SignKeyVRF, VerKeyVRF)
-mkVRFKeyPairsByHash = Map.fromList . fmap (\p -> (hashKeyVRF (snd p), p))
-
 zero :: HasCallStack => UnitInterval
 zero = unsafeMkUnitInterval 0
 
@@ -424,11 +435,11 @@ unitIntervalToNatural :: HasCallStack => UnitInterval -> Natural
 unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
 
 mkBlock ::
-  HasCallStack =>
+  (HasCallStack, KeyRoleHashType r ~ 'RegularHash) =>
   -- | Hash of previous block
   HashHeader ->
   -- | All keys in the stake pool
-  AllPoolKeys ->
+  AllIssuerKeys r ->
   -- | Transactions to record
   [Tx] ->
   -- | Current slot
@@ -490,7 +501,7 @@ mkBlock prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert 
 -- we then encode into the fake VRF implementation.
 newtype NatNonce = NatNonce Natural
 
-mkOCert :: HasCallStack => AllPoolKeys -> Natural -> KESPeriod -> OCert
+mkOCert :: HasCallStack => AllIssuerKeys r -> Natural -> KESPeriod -> OCert
 mkOCert pkeys n c0 =
   let (_, (_, vKeyHot)) = head $ hot pkeys
       KeyPair _vKeyCold sKeyCold = cold pkeys
@@ -503,7 +514,7 @@ mkOCert pkeys n c0 =
 -- | Takes a set of KES hot keys and checks to see whether there is one whose
 -- range contains the current KES period. If so, return its index in the list of
 -- hot keys.
-getKESPeriodRenewalNo :: HasCallStack => AllPoolKeys -> KESPeriod -> Integer
+getKESPeriodRenewalNo :: HasCallStack => AllIssuerKeys r -> KESPeriod -> Integer
 getKESPeriodRenewalNo keys (KESPeriod kp) =
   go (hot keys) 0 kp
   where
