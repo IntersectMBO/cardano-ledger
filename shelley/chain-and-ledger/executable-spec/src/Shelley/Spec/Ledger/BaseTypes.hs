@@ -285,7 +285,7 @@ text64FromCBOR = do
 
 newtype Url = Url {urlToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NoUnexpectedThunks)
+  deriving newtype (ToCBOR, NFData, NoUnexpectedThunks)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
@@ -295,7 +295,7 @@ instance FromCBOR Url where
 
 newtype DnsName = DnsName {dnsToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NoUnexpectedThunks)
+  deriving newtype (ToCBOR, NoUnexpectedThunks, NFData)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t
@@ -305,7 +305,7 @@ instance FromCBOR DnsName where
 
 newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (Num, FromCBOR, ToCBOR, NoUnexpectedThunks)
+  deriving newtype (Num, FromCBOR, ToCBOR, NFData, NoUnexpectedThunks)
 
 --------------------------------------------------------------------------------
 -- Active Slot Coefficent, named f in

@@ -31,7 +31,7 @@ module Shelley.Spec.Ledger.Delegation.Certificates
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Data.Map.Strict (Map)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Core (Relation (..))
@@ -107,7 +107,7 @@ newtype PoolDistr crypto = PoolDistr
           (Rational, Hash crypto (VerKeyVRF crypto))
       )
   }
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Relation)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NFData, NoUnexpectedThunks, Relation)
 
 isInstantaneousRewards :: DCert crypto -> Bool
 isInstantaneousRewards (DCertMir _) = True

@@ -79,6 +79,7 @@ import Cardano.Prelude
   ( AllowThunksIn (..),
     ByteString,
     LByteString,
+    NFData,
     NoUnexpectedThunks (..),
   )
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -142,12 +143,11 @@ import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 -- | The hash of a Block Header
 newtype HashHeader crypto = HashHeader {unHashHeader :: (Hash crypto (BHeader crypto))}
   deriving (Show, Eq, Generic, Ord)
+  deriving newtype (NFData, NoUnexpectedThunks)
 
 deriving instance Crypto crypto => ToCBOR (HashHeader crypto)
 
 deriving instance Crypto crypto => FromCBOR (HashHeader crypto)
-
-instance NoUnexpectedThunks (HashHeader crypto)
 
 data TxSeq crypto = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx crypto)),
@@ -349,6 +349,8 @@ data LastAppliedBlock crypto = LastAppliedBlock
   deriving (Show, Eq, Generic)
 
 instance Crypto crypto => NoUnexpectedThunks (LastAppliedBlock crypto)
+
+instance NFData (LastAppliedBlock crypto)
 
 instance Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
   toCBOR (LastAppliedBlock b s h) =

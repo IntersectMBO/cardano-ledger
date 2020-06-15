@@ -25,7 +25,7 @@ import Cardano.Binary
     encodeListLen,
     enforceSize,
   )
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Data.Function (on)
 import Data.List (foldl', sortBy)
 import Data.Map.Strict (Map)
@@ -59,7 +59,7 @@ import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import Shelley.Spec.Ledger.TxData (PoolParams (..), RewardAcnt (..))
 
 newtype ApparentPerformance = ApparentPerformance {unApparentPerformance :: Double}
-  deriving (Show, Eq, Generic, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, NoUnexpectedThunks, NFData)
 
 instance ToCBOR ApparentPerformance where
   toCBOR = encodeDouble . unApparentPerformance
@@ -78,6 +78,8 @@ emptyNonMyopic :: NonMyopic crypto
 emptyNonMyopic = NonMyopic Map.empty (Coin 0) emptySnapShot
 
 instance NoUnexpectedThunks (NonMyopic crypto)
+
+instance NFData (NonMyopic crypto)
 
 instance Crypto crypto => ToCBOR (NonMyopic crypto) where
   toCBOR

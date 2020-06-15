@@ -228,6 +228,8 @@ data FutureGenDeleg crypto = FutureGenDeleg
 
 instance NoUnexpectedThunks (FutureGenDeleg crypto)
 
+instance NFData (FutureGenDeleg crypto)
+
 instance Crypto crypto => ToCBOR (FutureGenDeleg crypto) where
   toCBOR (FutureGenDeleg a b) =
     encodeListLen 2 <> toCBOR a <> toCBOR b
@@ -252,6 +254,8 @@ totalInstantaneousTreasuryRewards :: InstantaneousRewards crypto -> Coin
 totalInstantaneousTreasuryRewards (InstantaneousRewards _ irT) = sum irT
 
 instance NoUnexpectedThunks (InstantaneousRewards crypto)
+
+instance NFData (InstantaneousRewards crypto)
 
 instance Crypto crypto => ToCBOR (InstantaneousRewards crypto) where
   toCBOR (InstantaneousRewards irR irT) =
@@ -288,6 +292,8 @@ data DState crypto = DState
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (DState crypto)
+
+instance NFData (DState crypto)
 
 instance Crypto crypto => ToCBOR (DState crypto) where
   toCBOR (DState sc rw dlg p fgs gs ir) =
@@ -327,6 +333,8 @@ data PState crypto = PState
 
 instance NoUnexpectedThunks (PState crypto)
 
+instance NFData (PState crypto)
+
 instance Crypto crypto => ToCBOR (PState crypto) where
   toCBOR (PState a b c d) =
     encodeListLen 4 <> toCBOR a <> toCBOR b <> toCBOR c <> toCBOR d
@@ -349,6 +357,8 @@ data DPState crypto = DPState
 
 instance NoUnexpectedThunks (DPState crypto)
 
+instance NFData (DPState crypto)
+
 instance Crypto crypto => ToCBOR (DPState crypto) where
   toCBOR (DPState ds ps) =
     encodeListLen 2 <> toCBOR ds <> toCBOR ps
@@ -370,6 +380,8 @@ data RewardUpdate crypto = RewardUpdate
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (RewardUpdate crypto)
+
+instance NFData (RewardUpdate crypto)
 
 instance Crypto crypto => ToCBOR (RewardUpdate crypto) where
   toCBOR (RewardUpdate dt dr rw df nm) =
@@ -412,6 +424,8 @@ instance FromCBOR AccountState where
 
 instance NoUnexpectedThunks AccountState
 
+instance NFData AccountState
+
 data EpochState crypto = EpochState
   { esAccountState :: !AccountState,
     esSnapshots :: !(SnapShots crypto),
@@ -423,6 +437,8 @@ data EpochState crypto = EpochState
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (EpochState crypto)
+
+instance NFData (EpochState crypto)
 
 instance Crypto crypto => ToCBOR (EpochState crypto) where
   toCBOR (EpochState a s l r p n) =
@@ -534,6 +550,8 @@ instance
 
 instance NoUnexpectedThunks (OBftSlot crypto)
 
+instance NFData (OBftSlot crypto)
+
 -- | New Epoch state and environment
 data NewEpochState crypto = NewEpochState
   { -- | Last epoch
@@ -552,6 +570,8 @@ data NewEpochState crypto = NewEpochState
     nesOsched :: !(Map SlotNo (OBftSlot crypto))
   }
   deriving (Show, Eq, Generic)
+
+instance NFData (NewEpochState crypto)
 
 instance NoUnexpectedThunks (NewEpochState crypto)
 
@@ -627,6 +647,8 @@ data LedgerState crypto = LedgerState
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (LedgerState crypto)
+
+instance NFData (LedgerState crypto)
 
 instance Crypto crypto => ToCBOR (LedgerState crypto) where
   toCBOR (LedgerState u dp) =

@@ -352,7 +352,7 @@ newtype GenDelegs crypto
           (KeyHash 'Genesis crypto)
           (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto))
       )
-  deriving (Show, Eq, FromCBOR, NoUnexpectedThunks, Generic)
+  deriving (Show, Eq, FromCBOR, NoUnexpectedThunks, NFData, Generic)
 
 deriving instance
   (Crypto crypto) =>
