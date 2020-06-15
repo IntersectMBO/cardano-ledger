@@ -573,7 +573,7 @@ pool operators.
 \section{Design of Delegation}
 \label{design-of-delegation}
 
-\newcommand{\hash}[1]{\mathcal{H}(#1)}
+\newcommand{\hash}[1]{\ensuremath{\mathcal{H}(#1)}}
 
 \subsection{Overview of Delegation}
 \label{overview-of-delegation}
@@ -940,9 +940,26 @@ stake pool cold key, using a delegation certificate.
 The owner of a cold and hot key grants the staking rights of their cold key to their
 hot key, using an operational key certificate.
 %
-Incoming solid arrows represent the components of the delegation certificates.
-So, for instance, a delegation certificate contains the stake address of the
-delegator, and the (verifying part of) the stake pool key.
+Incoming solid arrows represent the components of a certificate.
+For instance, a delegation certificate contains the stake address of the
+delegator, and the (hash of the verifying part of the) stake pool key.
+
+Stake pools use a number of keys: a stake pool is controlled using the
+\emph{pool key} pair \((sk_\text{pool}, vk_\text{pool})\). As explained in
+\cref{operational-key-certificates}, this should be a \emph{cold} key, kept on a
+secure machine, and only used to issue stake pool registration and operational
+key certificates.
+
+Producing a valid block will require an operational key certificate, signed by
+\(sk_\text{pool}\), and a witness for the block from the operational key
+specified in the certificate. Since operational keys use key evolving signatures
+(KES), an operational key is also referred to as a KES key.
+
+In addition, the leader election process in Ouroboros Praos requires a
+verifiable random function, or VRF key pair \((sk_\text{VRF}, vk_\text{VRF})\),
+which is needed to prove that a pool has won its private lottery for a given
+slot. The hash of the verification part \hash{vk_\text{VRF}} of this key is
+contained in the pool registration certificate.
 %
 Subsequent sections provide more details.
 
@@ -968,16 +985,17 @@ Subsequent sections provide more details.
           , dummy/.style={draw=none}
           }
 
-  \node (skeys) [key] {Stake addresses};
-  \node (scold) [key, right = of skeys] {Stake pool keys (cold)};
-  \node (shot) [key, right = of scold] {Stake pool keys (hot)};
+  \node (skeys) [key] {Stake address};
+  \node (scold) [key, right = of skeys] {Stake pool key (cold)};
+  \node (shot) [key, right = of scold] {KES key (hot)};
   \node (skeyr) [cert, above = of skeys] {Stake address registration};
   \node (skeyd) [cert, below = of skeys] {Stake address retirement};
   \node (pr) [cert, above = of scold] {Pool\\ registration};
   \node (pd) [cert, below = of scold] {Pool\\ retirement};
   \node (dcert) [cert] at ($(skeyr)!0.5!(pr)$) {Delegation certificate};
   \node (dummy) [dummy, above = of shot] {};
-  \node (lwdcert) [cert] at ($(pr)!0.5!(dummy)$) {Operational key\\certificate};
+  \node (vrf) [key] at ($(pr)!0.5!(dummy)$) {VRF Key};
+  \node (lwdcert) [cert, above = of shot] {Operational key\\certificate};
 
   \tikzset{every node/.style={align=center, text width=7em, text=brown}}
   %%
@@ -1005,6 +1023,8 @@ Subsequent sections provide more details.
             (lwdcert);
   \draw[->] (shot) edge
             (lwdcert);
+
+  \draw[->] (vrf) edge (pr);
   \end{tikzpicture}
 
   \caption{Relationships between the keys, addresses, and certificates}
@@ -1102,7 +1122,10 @@ The certificate contains the following:
 
 \begin{itemize}
 \item
-  The public key of the pool, \(vk_\text{pool}\).
+  The hash of the verification part of the (cold) pool key, \hash{vk_\text{pool}}.
+
+\item
+  The hash of the verification part of the VRF key, \hash{vk_\text{VRF}}.
 
 \item
   A stake address \(\mathcal{A}_{s,\text{reward}}\), called the \emph{reward
@@ -1134,8 +1157,8 @@ The certificate contains the following:
   the stake pledged to the pool by the owner(s), see
   \cref{stake-pool-registration,overview-of-incentives,reward-splitting}. Note
   that adding a stake address to the set of owner stake addresses in itself does
-  not actually delegate the stake controlled by that address to the pool -- an
-  additional delegation certificate is required to do so.
+  not actually delegate the stake controlled by that address to the pool -- this
+  requires posting an ordinary delegation certificate to the chain.
 
   During reward distribution, there will be no rewards paid to the reward
   accounts of the owner stake addresses. Instead, the stake delegated by all owner
@@ -1168,10 +1191,7 @@ The certificate contains the following:
 \end{itemize}
 
 Validating the certificate requires witnesses from all owner stake addresses, as
-well as a signature from the pool signing key \(sk_\text{pool}\)\todo{We could
-  also just include the public pool key hash in the certificate, and have the
-  key itself be provided in the witness, which would make the certificates a bit
-  smaller. I think we should do that.}.
+well as a signature from the pool signing key \(sk_\text{pool}\).
 
 \end{description}
 
