@@ -294,7 +294,7 @@ instance FromJSON PParams where
         <*> obj .: "extraEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= 0
-        <*> obj .: "minPoolCost"
+        <*> obj .:? "minPoolCost" .!= 0
     where
       parseRationalFromDouble :: Aeson.Parser Double -> Aeson.Parser Rational
       parseRationalFromDouble p = realToFrac <$> p
