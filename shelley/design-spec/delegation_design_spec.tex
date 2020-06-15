@@ -4246,13 +4246,9 @@ Disadvantages:
   Cannot use pointer addresses directly to stake pools. Increases fee
   and complexity cost of maintaining wallet privacy.
 \item
-  Unless people stick to a single stake address (which would immediately
-  mean they give up all privacy, not a choice most people would be
-  comfortable with I suspect), we basically end up creating lots of
-  stake addresses, to which we would only deposit once, and withdraw from
-  once -- in other words, we'd have reinvented UTxO entries, and the
-  accumulation does not help.\todo{I think it would still help, by eliminating
-    the exponential growth in time.}
+  When people use multiple stake addresses to retain some privacy, it gets
+  somewhat less efficient at limiting the size of the required state. But it will
+  still prevent the exponential growth of the UTxO.
 \end{itemize}
 
 \section{Deposits}
