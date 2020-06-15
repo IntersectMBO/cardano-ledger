@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.Core
@@ -20,6 +21,9 @@ module Shelley.Spec.Ledger.Core
         (|/>),
         Domain,
         Range,
+        haskey,
+        addpair,
+        removekey,
         -- below are methods not used anywhere
         size,
         (<=◁),
@@ -110,6 +114,18 @@ class Relation m where
   -- | Size of the relation
   size :: Integral n => m -> n
 
+  -- | Is this key in the Domain,  Instances should overide this default with something more efficient
+  haskey :: Ord (Domain m) => Domain m -> m -> Bool
+  haskey key m = key `elem` (dom m)
+
+  -- | Insert (key,value) pair into the Relation.  Instances should overide this default with something more efficient
+  addpair :: (Ord (Domain m), Ord (Range m)) => Domain m -> Range m -> m -> m
+  addpair key val m = m ∪ (singleton key val)
+
+  -- | Remove a key (and its associted value at that key) from the Relation. Instances should overide this default with something more efficient
+  removekey :: Ord (Domain m) => Domain m -> m -> m
+  removekey k m = Set.singleton k ⋪ m
+
 -- | Alias for 'elem'.
 --
 -- Unicode: 2208
@@ -155,6 +171,15 @@ instance Relation (Map k v) where
 
   size = fromIntegral . Map.size
 
+  {-# INLINE haskey #-}
+  haskey x m = case Map.lookup x m of Just _ -> True; Nothing -> False
+
+  {-# INLINE addpair #-}
+  addpair = Map.insertWith (\x _y -> x)
+
+  {-# INLINE removekey #-}
+  removekey k m = Map.delete k m
+
 -- | Union override plus is (A\B)∪(B\A)∪{k|->v1+v2 | k|->v1 : A /\ k|->v2 : B}
 (∪+) :: (Ord a, Ord b, Num b) => Map a b -> Map a b -> Map a b
 a ∪+ b = ((dom a) ⋪ b) ∪ ((dom b) ⋪ a) ∪ (Map.unionWith (+) a b)
@@ -191,6 +216,8 @@ instance Relation (Set (a, b)) where
 
   size = fromIntegral . Set.size
 
+  addpair key val set = Set.insert (key, val) set
+
 -- The [(a,b)] instance is used in `stakeDistr` in the file LedgerState.hs
 
 instance Relation [(a, b)] where
@@ -223,6 +250,8 @@ instance Relation [(a, b)] where
   r ▷>= vmin = filter ((vmin <=) . snd) r
 
   size = fromIntegral . length
+
+  addpair key val list = (key, val) : list
 
 ---------------------------------------------------------------------------------
 -- Aliases
