@@ -679,9 +679,6 @@ By introducing multi-sig script credentials, in Shelley, it will be possible to
 require single or multiple signatures both for the spending of funds and for the
 delegation of stake, independently.
 
-\todo{ Remove ``multi-sig address'', ``key witness'', ``multi-sig witness'',
-  ``script witness'' from the rest of the document}
-
 For the case of multi-sig scripts, a witness contains the validator script
 matching the hash in the script credential, and a set of witnesses for
 individual key credentials. The validator script will determine whether those
@@ -852,8 +849,9 @@ features are added to enterprise addresses.
 Shelley addresses with a verification key hash as payment credential
 support hierarchical deterministic wallets, as per BIP-32~\citep{bip32}.
 
-For multi-sig value addresses, we can use a slight generalisation of
-BIP-45~\citep{bip45}\todo{Lay out the necessary generalisation of BIP-45}.
+For value addresses with a multi-sig script credential, we can use a slight
+generalisation of BIP-45~\citep{bip45}\todo{Lay out the necessary generalisation
+  of BIP-45}.
 
 In particular, this kind of wallet scheme allows implementations that can
 do wallet restoration from seed in time that is better than linear in
@@ -1078,23 +1076,19 @@ register a stake address by posting a \emph{stake address registration
 
 \begin{description}
 \item[Stake address registration certificate] This certificate contains a stake
-  address (see \cref{address-structure}), which can take the form of either a
-  single key, or a multi-sig address.
+  address. The credential can either be a key credential, or script credential,
+  as explained in \cref{address-structure}.
 
   We do not require a witness to register a stake address (besides, of course,
   any witnesses needed for the transaction that is used to post the
   certificate).
 
-We do not require a witness to register a stake key (besides, of course,
-any witnesses needed for the transaction that is used to post the
-certificate).
-
 \item[Stake address de-registration certificate]
 This certificate contains the stake address that should be de-registered.
 
 The certificate requires a witness for the stake address that should be
-de-registered. As stated in \cref{address-structure}, this will be a single key
-or multi-sig witness, depending on the type of stake address in the certificate.
+de-registered. As stated in \cref{address-structure}, this will either be a key
+or script witness, depending on the type of credential of the address.
 
 \end{description}
 
@@ -1105,7 +1099,7 @@ The account is deleted when the stake address is de-registered. See
 In addition to a transaction fee, registering a stake address requires a
 deposit, as explained in \cref{fees-deposits} and \cref{deposits}. The deposit
 is to account for the costs of tracking the stake address and maintaining the
-corresponding stake reward account. It also incentivises de-registering stake
+corresponding reward account. It also incentivises de-registering stake
 addresses that are no longer required, so that the corresponding resources can
 be released.
 
