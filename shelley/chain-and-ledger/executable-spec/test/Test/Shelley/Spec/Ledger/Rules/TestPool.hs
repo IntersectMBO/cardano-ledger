@@ -26,7 +26,8 @@ import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (poolCWitness)
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( _pParams,
+  ( _fPParams,
+    _pParams,
     _retiring,
     _stPools,
     _stPools,
@@ -160,28 +161,29 @@ registeredPoolIsAdded env ssts =
               tSt = target sst
 
           conjoin
-            [ -- Check for pool re-registration. If we register a pool which was already
-              -- registered (indicated by presence in `stPools`), then we check that it
-              -- is not in `retiring` after the signal has been processed.
+            [ -- If this is a pool re-registration (indicated by presence in `stPools`)...
               if hk ∈ dom ((unStakePools . _stPools) sSt)
                 then
                   conjoin
                     [ counterexample
-                        "Pool re-registration: pool should be in 'retiring' before signal"
-                        (hk ∈ dom (_retiring sSt)),
-                      counterexample
                         "Pool re-registration: pool should not be in 'retiring' after signal"
-                        (hk ∉ dom (_retiring tSt))
+                        (hk ∉ dom (_retiring tSt)),
+                      counterexample
+                        "PoolParams are registered in future Params map"
+                        (M.lookup hk (_fPParams tSt) === Just poolParams)
                     ]
-                else property (),
-              counterexample
-                "PoolParams are registered in pParams map"
-                (M.lookup hk (_pParams tSt) === Just poolParams),
-              counterexample
-                "Hashkey is registered in stPools map"
-                ( M.lookup hk ((unStakePools . _stPools) tSt)
-                    === Just (ledgerSlotNo env)
-                )
+                else -- This is the first registration of a pool...
+
+                  conjoin
+                    [ counterexample
+                        "PoolParams are registered in pParams map"
+                        (M.lookup hk (_pParams tSt) === Just poolParams),
+                      counterexample
+                        "Hashkey is registered in stPools map"
+                        ( M.lookup hk ((unStakePools . _stPools) tSt)
+                            === Just (ledgerSlotNo env)
+                        )
+                    ]
             ]
 
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
