@@ -25,6 +25,7 @@ import Shelley.Spec.Ledger.TxData (Wdrl (..), _wdrls)
 import Shelley.Spec.Ledger.UTxO (balance)
 import Test.QuickCheck (Property, conjoin)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (UTXO)
+import Shelley.Spec.Ledger.Value (coinToValue)
 
 --------------------------
 -- Properties for UTXOW --
@@ -74,4 +75,4 @@ potsSumIncreaseWdrls ssts =
             circulation' = balance u'
             withdrawals = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txbody
          in withdrawals >= Coin 0
-              && circulation' + d' + fees' == circulation + d + fees + withdrawals
+              && ((circulation' <> (coinToValue $ d' + fees')) == (circulation <> (coinToValue $ d + fees + withdrawals)))

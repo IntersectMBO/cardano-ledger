@@ -76,6 +76,7 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(Credential ShortHash 'Staking) n "stake_credential",
       cddlTest' @(TxBody ShortHash) n "transaction_body",
       cddlTest @(TxOut ShortHash) n "transaction_output",
+      cddlTest @(Value ShortHash) n "value",
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert ShortHash) n "certificate",
       cddlTest @(TxIn ShortHash) n "transaction_input",

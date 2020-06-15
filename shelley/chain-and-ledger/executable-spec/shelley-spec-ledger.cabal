@@ -208,7 +208,6 @@ test-suite shelley-spec-ledger-test
       containers,
       cryptonite,
       byron-spec-ledger,
-      data,
       directory,
       shelley-spec-ledger,
       generic-random,

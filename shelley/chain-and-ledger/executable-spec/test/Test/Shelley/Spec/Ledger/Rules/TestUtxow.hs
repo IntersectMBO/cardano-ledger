@@ -37,6 +37,7 @@ import Shelley.Spec.Ledger.Tx
     _witnessSet,
   )
 import Shelley.Spec.Ledger.TxData (witKeyHash, _certs, _inputs, _txfee, pattern TxIn)
+import Shelley.Spec.Ledger.Value (coinToValue)
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
 import Test.QuickCheck (Property, conjoin, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -71,11 +72,11 @@ preserveBalance pp tr =
         created u' stp tx == consumed u tx
     created u stp_ tx =
       balance u
-        + _txfee (_body tx)
-        + totalDeposits pp stp_ (toList $ _certs $ _body tx)
+        <> (coinToValue $ _txfee (_body tx)
+        + totalDeposits pp stp_ (toList $ _certs $ _body tx))
     consumed u tx =
-      balance u
-        + keyRefunds pp (_body tx)
+      balance u <> (_forge tx)
+        <> (coinToValue $ keyRefunds pp (_body tx))
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx
 preserveBalanceRestricted ::
@@ -98,8 +99,8 @@ preserveBalanceRestricted pp tr =
     inps u tx = balance $ (_inputs $ _body tx) <| u
     outs stp_ tx =
       balance (txouts tx)
-        + _txfee tx
-        + depositChange stp_ (toList $ _certs tx) tx
+        <> (coinToValue $ _txfee tx
+        + depositChange stp_ (toList $ _certs tx) tx)
     depositChange stp_ certs txb =
       totalDeposits pp stp_ certs
         - (keyRefunds pp txb)

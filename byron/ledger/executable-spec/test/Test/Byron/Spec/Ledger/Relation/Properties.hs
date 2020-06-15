@@ -88,7 +88,7 @@ propDomainExclusionAndSetDifference s r
 --  (since 'dom r1 ⋪ r1' gives an empty relation)
 propDomainExclusionAndUnion
   :: (MonadTest m, Relation r, Eq r, Show r,
-      Ord (Domain r), Ord (Range r))
+      Ord (Domain r))
   => Set (Domain r)
   -> r
   -> r

@@ -35,6 +35,7 @@ import Shelley.Spec.Ledger.LedgerState
     pattern UTxOState,
   )
 import Shelley.Spec.Ledger.UTxO (balance)
+import Shelley.Spec.Ledger.Value (getAdaAmount)
 import Test.QuickCheck (Property, conjoin)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (NEWEPOCH)
 
@@ -100,5 +101,5 @@ preservationOfAda tr =
                 }
           }
         ) =
-        reserves + treasury + sum_ rewards + balance utxo + fees + deposits_
-          == reserves' + treasury' + sum_ rewards' + balance utxo' + fees' + deposits'
+        reserves + treasury + sum_ rewards + (getAdaAmount $ balance utxo) + fees + deposits_
+          == reserves' + treasury' + sum_ rewards' + (getAdaAmount $ balance utxo') + fees' + deposits'
