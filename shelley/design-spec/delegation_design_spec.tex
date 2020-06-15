@@ -395,7 +395,7 @@ PoS protocol changes the address that Bob sends in such a way that funds
 in that address are delegated to the attacker, but the funds still show
 up in Bob's wallet.
 
-The attack is considered successful if the staking rights for the
+The attack is considered successful if the stake rights for the
 transferred money belong to the attacker after the transaction, without
 Alice and Bob noticing the attack.
 \end{description}
@@ -615,7 +615,7 @@ Participating in the PoS protocol requires two steps:
   will automatically be distributed to the apropriate reward addresses.
 
   Note that this does not restrict an individual stakeholder wanting to use
-  their own stake to produce blocks (``self staking''). Such users should
+  their own stake to produce blocks (``self delegation''). Such users should
   register a \emph{private stake pool}, and delegate their own funds to that
   pool. This uniform architecture, not distinguishing between those stakeholders
   that are using their stake directly and those that are delegating, reduces the
@@ -769,10 +769,8 @@ A special case of an invalid pointer is a rollback: when the block containing a
 stake address registration certificate gets rolled back, addresses containing
 the stake address by pointer to that certificate will lose their stake rights.
 Since the addresses will remain valid for payments, though, the stake rights can
-be restored by moving the funds to another address. Still, it is prudent to
-avoid this, by either allowing a number of blocks between transactions \(t_1\)
-registering a stake address and \(t_2\) moving funds to a pointer address for
-this stake address, or by using an output of \(t_1\) as an input to \(t_2\).
+be restored by moving the funds to another address. Wallets can try to avoid
+this situation, as described in \cref{basic-delegation}.
 
 \subsubsection{On Enterprise Address}
 \label{enterprise-address}
@@ -926,16 +924,16 @@ key, it is quite different from the other certificates which are used
 to define the delegation relation. Operational key certificates are
 used by stake pool operators as a safety measure to mitigate key
 theft (see \cref{operational-key-certificates}), not to delegate
-staking rights between different entities.
+stake rights between different entities.
 
 Figure~\ref{fig:relationship-keys-certificates} shows the relationships between
 the different types of certificates and keys.
 %
 Dashed arrows represent relationships between the different keys and addresses:
-the owner(s) of a stake address delegates their staking rights to the owner of a
+the owner(s) of a stake address delegates their stake rights to the owner of a
 stake pool cold key, using a delegation certificate.
 %
-The owner of a cold and hot key grants the staking rights of their cold key to their
+The owner of a cold and hot key grants the stake rights of their cold key to their
 hot key, using an operational key certificate.
 %
 Incoming solid arrows represent the components of a certificate.
@@ -1000,9 +998,9 @@ Subsequent sections provide more details.
   %% Relationship between nodes (arrows)
   %%
   % Horizontal lines.
-  \draw[dashed, ->] (skeys) edge node[above] {Delegates staking rights}
+  \draw[dashed, ->] (skeys) edge node[above] {Delegates stake rights}
   (scold);
-  \draw[dashed, ->] (scold) edge node[above] {Grants\\ staking rights}
+  \draw[dashed, ->] (scold) edge node[above] {Grants\\ stake rights}
             (shot);
   % Vertical lines.
   \draw[->] (skeys) edge
@@ -1157,7 +1155,7 @@ The certificate contains the following:
   During reward distribution, there will be no rewards paid to the reward
   accounts of the owner stake addresses. Instead, the stake delegated by all owner
   stake addresses will be counted as the stake contributed by the pool owner(s),
-  and their reward will be paid to the reward account of the reward staking key.
+  and their reward will be paid to the reward account of the reward address.
 
 \item
   The parameters that specify the reward sharing function of the stake
@@ -1268,22 +1266,22 @@ A delegation certificate is a tuple containing
 
 \begin{itemize}
 \item
-  the stake address delegating its staking rights,
+  the stake address delegating its stake rights,
   \(\mathcal{A}{s,_\text{source}}\)
 \item
-  the public stake pool key hash to which stake is delegated,
+  the stake pool verification key hash to which stake is delegated,
   \(\mathcal{H}(vk_\text{pool})\)
 \end{itemize}
 
-Posting a delegation certificate requires a witness for
-\(\mathcal{A}{s,_\text{source}}\).
+Posting a delegation certificate requires a witness for the delegating stake
+address \(\mathcal{A}{s,_\text{source}}\).
 \end{description}
 
-Note that there is no corresponding delegation revocation certificate.
-If a user wishes to change their delegation choice to a different stake
-pool or their own private stake pool then they can simply post a new
-delegation certificate. The delegation certificate is revoked when the
-source staking key is de-registered.
+Note that there is no corresponding delegation revocation certificate. If a user
+wishes to change their delegation choice to a different stake pool (which might
+be their own private stake pool), they can simply post a new delegation
+certificate. Also, the delegation certificate is revoked automatically when the
+source stake address is de-registered.
 
 \subsubsection{Operational Key Certificates}
 \label{operational-key-certificates}
@@ -1292,7 +1290,7 @@ source staking key is de-registered.
 Stake pool operators must use a \emph{hot}/\emph{cold} key
 arrangement to mitigate key exposure
 (see~\cref{mitigate-key-exposure}). A \emph{hot}, or operational, key
-is kept online and used to sign blocks, while the \emph{cold} key is
+is kept online, and is used to sign blocks, while the \emph{cold} key is
 kept securely offline. This requires an \emph{operational key
   certificate} to create a (1-link) chain of trust from the cold key
 to the hot key, allowing this hot key to participate in the \emph{PoS}
@@ -1318,7 +1316,7 @@ the headers cannot be verified. If the network layer sees one of the
 10 new blocks signed by a hot key it doesn't recognise, it might be
 because there is a delegation certificate in the block bodies (which
 the network layer has not seen yet), that shows that the key is valid
-because some stake pool key deferred its staking rights to it. Similarly,
+because some stake pool key deferred its stake rights to it. Similarly,
 if the network layer sees a known hot key, how can it know that it
 is still valid? There could be a new certificate in the block bodies
 that defers the rights of this key to a different one (which would
@@ -1349,7 +1347,7 @@ key\footnote{This is much the same setup as with TLS certificates:
   certificate is presented inband.}.
 
 Specifically, an operational key certificate specifies that the
-staking rights are transferred from a cold stake poo key \(vk_\text{pool}\)
+stake rights are transferred from a cold stake pool key \(vk_\text{pool}\)
 to a hot key \(vk_\text{hot}\).
 They are included in the message (e.g.~block header) and the message
 itself is signed with \(sk_\text{hot}\).
@@ -1373,7 +1371,7 @@ In detail, the hot/cold key setup is as follows:
   off-line.
 \item The stake pool operator uses \(sk_\text{pool}\)
   to sign an operational key certificate \(C\),
-  transferring the staking rights to a \emph{hot key}
+  transferring the stake rights to a \emph{hot key}
   \(vk_\text{hot}\).
 \item
   The stake pool operator keeps \(sk_\text{hot}\), as well as \(C\), on
@@ -1383,7 +1381,7 @@ In detail, the hot/cold key setup is as follows:
 \item
   Should the node get hacked, and the hot key compromised, the stake
   pool operator will create a new operational key certificate
-  \(C'\), delegating the staking rights to a new hot key
+  \(C'\), delegating the stake rights to a new hot key
   \(vk_{\text{hot}'}\).
 \end{itemize}
 
@@ -1447,39 +1445,40 @@ purpose of establishing precedence:
 \subsection{Delegation Relations}
 \label{delegation-relations}
 
-As stated in the delegation overview: delegating stake rights involves
-two indirections: from addresses to stake addresses, and from stake addresses to
-stake pools.
+As stated in the delegation overview: delegating stake rights involves two
+indirections: from payment addresses to stake addresses, and from stake
+addresses to stake pools.
 
-Equivalently, there are two relations: a relation between addresses and
-stake addresses, and a relation between stake addresses and stake pools. The base
-and pointer addresses form the entries of the first relation. The second
-relation consists of registered stake addresses, registered stake pools and
-delegation certificates as the entries relating the two.
+Equivalently, there are two relations: a relation between payment addresses and
+stake addresses, and a relation between stake addresses and stake pools. The
+first relation can be read off payment addresses, by looking at their stake
+address references. The second relation consists of registered stake addresses,
+registered stake pools and delegation certificates as the entries relating the
+two.
 
 \subsubsection{Address Delegation Relation}
 \label{address-delegation-relation}
 
-The address delegation relation is a relation between addresses and
-stake addresses.
+The address delegation relation is a relation between payment addresses and
+registered stake addresses.
 
-This relation can be defined in terms of the current UTxO and the
-current set of registered stake addresses. For all base addresses in the
-UTxO, the stake address is given directly, so this need only be
-filtered by the current set of registered stake addresses. For pointer
-addresses in the UTxO we select those where their pointer points to a
-currently registered stake address and select this stake address.
+This relation can be defined in terms of the current UTxO and the current set of
+registered stake addresses. For all Shelley addresses in the UTxO, the stake
+address is determined by the stake address reference -- either directly by
+value, via a pointer to a stake address registration certificate, or as null.
+This needs to be filtered by the current set of registered stake addresses.
 
 \subsubsection{Stake Pool Delegation Relation}
 \label{stake-pool-delegation-relation}
 
-The stake pool delegation relation is a relation between stake addresses and
-stake pools.
+The stake pool delegation relation is a relation between registered stake
+addresses and stake pools.
 
 The relation is defined by the active set of delegation certificates,
 filtered by the set of active stake pools. The active delegation
-certificates already excludes those where the source stake address has
-been de-registered.
+certificates already exclude those where the source stake address has
+been de-registered (since a delegation certificate is revoked automatically when
+the stake address is de-registered).
 
 \subsubsection{Overall Stake Distribution}
 \label{overall-stake-distribution}
@@ -1491,17 +1490,17 @@ epoch.
 The overall stake distribution is the set of all registered stake pools
 and their aggregate stake from all addresses that are delegated to them.
 
-This can be defined by taking the composition of the address delegation
-relation and the stake pool delegation relation, giving the relation
-between addresses and stake pools. The final distribution is formed by
-taking the transaction outputs from the UTxO and selecting all the
-addresses related to each stake pool and aggregating all the coins.
+This can be defined by taking the composition of the address delegation relation
+and the stake pool delegation relation, giving the relation between payment
+addresses and stake pools. The final distribution is formed by taking the
+transaction outputs from the UTxO and selecting all the payment addresses
+related to each stake pool and aggregating all the coins.
 
-Note that defining the stake distribution in this way is in contrast to
-using the follow the Satoshi algorithm. This definition automatically
-excludes all addresses that hold no stake, and excludes addresses with
-stake rights but that have not correctly registered their staking key or
-delegation choice.
+Note that defining the stake distribution in this way is in contrast to using
+the follow the Satoshi algorithm. This definition automatically excludes all
+addresses that hold no stake, and excludes addresses that have stake rights, but
+which have not correctly registered their stake address or delegation
+certificate.
 
 We will call stake that is correctly delegated to an existing pool \emph{active
   stake}, sometimes contrasted to the \emph{total stake}, which includes stake
@@ -1552,36 +1551,33 @@ local state -- of all the information they will later need.
 The following sections describe the local state that nodes must maintain
 as they process transactions in blocks.
 
-\subsubsection{Staking Keys}
-\label{stake-keys}
+\subsubsection{Stake Addresses}
+\label{stake-addresses}
 
-The set of active staking keys must be tracked. This contains the
-verification key \(vks\) from each staking key registration certificate.
-The set is uniquely indexed by the key hash \(\mathcal{H}(vks)\). It is
-also uniquely indexed by the location on the blockchain of the key
-registration certificate, using the same location type as pointer
-addresses.
+The set of active stake addresses must be tracked. This contains the stake
+credentials from each stake address registration certificate. The set is
+uniquely indexed by the hash itself (of either the verification key, or script,
+depending on the type of credential). It is also uniquely indexed by the
+location on the blockchain of the stake address registration certificate, using
+the same location type as pointer addresses.
 
-This set is updated when keys are registered and de-registered. This
-state is consulted when validating and applying transactions that
-withdraw from reward accounts, to retrieve the staking key for a reward
-account address.
+This set is updated when stake addresses are registered and de-registered. This
+state is consulted when validating and applying transactions that withdraw from
+reward accounts, to retrieve the stake credential for a reward account address.
 
 \subsubsection{Reward Accounts}
 \label{reward-accounts}
 
-For each staking key there is an associated reward account. The lifetime of
-these accounts follows exactly their associated registered staking key.
+For each stake address, there is an associated reward account. The lifetime of
+these accounts follows exactly those of their associated stake address.
 
-The reward accounts are a mapping from a reward account address to
-their current balance. This address is the unique index for the mapping.
-The staking key account address is a function of the associated key hash
-\(\mathcal{H}(vks)\), as described in \cref{reward-address}.
+The reward accounts are a mapping from a stake address to their current balance.
+The stake address is the unique index for the mapping.
 
 The accounts are updated in bulk following the end of an epoch. They are
-consulted and updated when validating and applying transactions that
-withdraw from reward accounts. See \cref{distributing-rewards} for
-details.
+consulted and updated when validating and applying transactions that withdraw
+from reward accounts. See \cref{reward-address} and \cref{distributing-rewards}
+for details.
 
 \subsubsection{Stake Pools}
 \label{stake-pools}
@@ -1598,22 +1594,22 @@ updated when larger counter values are presented in a valid certificate.
 \subsubsection{Active Delegation Certificates}
 \label{active-delegation-certificates}
 
-Active delegation certificates are tracked, as a finite map from
-source to target staking key hash.
+Active delegation certificates are tracked, as a finite map from stake address
+to pool verification key hash.
 
-\subsubsection{Stake per Staking Key}
+\subsubsection{Stake per Stake Address}
 \label{stake-per-staking-key}
 
-For the purpose of leader election and reward calculation, the system
-needs to know how much stake each registered and delegating staking key
-actually controls. The total stake is calculated as the sum of all
+For the purpose of leader election and reward calculation, the system needs to
+know how much stake each registered and delegating stake address actually
+controls. The total stake of a stake address is calculated as the sum of all
 funds that are
 \begin{itemize}
-\item in base addresses using that staking key
-\item in pointer addresses for that staking key's registration
-  certificate (as long as the requirements in \cref{pointer-address} are
-  fulfilled)
-\item in the reward account of that staking key
+\item in value addresses referring to this stake address in their stake
+  address reference (by value, or by pointer, as long as the pointer points to a
+  stake address registration certificate that was already valid when the value
+  address received funds, and has not been de-registered)
+\item in the reward account of that stake address
 \end{itemize}
 
 \subsection{Slot Leader Schedule and Rewards Calculation}
@@ -1654,25 +1650,30 @@ The nodes will use the state from slot \(s_\text{stakedist}\) to
 \label{block-validity-and-operational-key-certificates}
 
 Stake pool operators will use operational key certificates in order to protect
-the key to which their members delegated. A block for a slot where the key
-\(vks_\text{leader}\) has been elected as leader will be considered valid by all
-nodes if
+the key to which their members delegated. A block for a slot where the VRF key
+\(vk_\text{VRF}\) has been elected as leader (the proof of which is to be
+constructed using \(sk_\text{VRF}\), and to be included in the block header)
+will be considered valid by all nodes if
 
 \begin{itemize}
+\item there is a stake pool with (cold) pool key \(vk_\text{leader}\), which
+  list \hash{sk_\text{VRF}} as the VRF key hash in its pool registration
+  certificate
+
 \item
-  the block is signed by \(vks_\text{hot}\) and contains, in its header, an
-  operational key certificate that transfers the staking rights from
-  \(vks_\text{leader}\) to \(vks_\text{hot}\).
+  the block is signed by \(sk_\text{hot}\) and contains, in its header, an
+  operational key certificate from
+  \(sk_\text{leader}\) to \(sk_\text{hot}\).
 
 \item
   The counter of the operational key certificate must not be smaller than the
   counter of the operational key certificate used to sign the last block of
-  \(vks_\text{leader}\).
+  \(vk_\text{leader}\).
 \end{itemize}
 
-In case there are more than one block for the current slot, each of
-which are signed using an operational key certificate, the newest certificate
-(as per the included counter) takes precedence.
+In case there are more than one block for the current slot, for the same pool,
+each of which are signed using an operational key certificate, the newest
+certificate (as per the included counter) takes precedence.
 
 Note that nodes take the precedence amongst operational key certificates into
 account only \emph{after} comparing the length of the chains. When the node is
@@ -1711,8 +1712,8 @@ case of an emergency.
 
 Another consideration is the amount of stake that is necessary to mount
 a 51\% attack on the system. Since participating in the PoS protocol
-requires an action on behalf of the stakeholders -- registering their
-staking key and delegating -- it is not unreasonable to expect that it
+requires an action on behalf of the stakeholders -- registering a
+stake address and delegating -- it is not unreasonable to expect that it
 will take some time until a significant fraction of the overall stake
 becomes active and starts contributing to the protocol. An attacker
 might use this window of opportunity to attack the system. A gradual
@@ -1844,7 +1845,7 @@ at least 900 slots are missed, we will keep \(d\) at \(0.9\) for the time being.
 
 In addition to monitoring the number of missed blocks, we will also look
 at the fraction of stake that is active (i.e., is stored in addresses
-which belong to a registered staking key that is delegating to a stake
+which belong to a registered stake address that is delegating to a stake
 pool). The lower this ratio, the less stake is required to launch a 51\%
 attack on the system. This can be offset by increasing \(d\). For
 example, if \(d \geq 0.5\), it is impossible to launch a 51\% attack. We
@@ -1872,7 +1873,7 @@ The reward sharing mechanism should satisfy the following requirements:
   particular participant depends on the amount of stake that that
   participant delegated in a particular epoch. Thus, any node that
   verifies a transaction that transfers the rewards for a given epoch
-  needs to access the staking information for that epoch. While this
+  needs to access the stake information for that epoch. While this
   information is archived on the blockchain indefinitely, looking it up
   for arbitrary past epochs might be too costly. Making the sharing of
   rewards an automatic process in the following epoch circumvents this
@@ -1916,7 +1917,7 @@ We have explored several approaches to circumvent this problem
 and ended up with using \emph{reward accounts}
 (\cref{reward-address}). Here, UTxO growth is prevented by using
 addresses that do not use UTxO style accounting at all. Instead, every
-registered staking key has an associated address that uses
+registered stake address has an associated account, using
 account-style book-keeping. That way, the rewards from multiple epochs
 can be pooled, and stakeholders can withdraw them manually. Note that
 this has two advantages over the superficially simpler approach of
@@ -1925,8 +1926,8 @@ having stakeholders claim their rewards directly:
 \item Updating the total rewards a stakeholder is due happens
   frequently, avoiding the need for all nodes to hold on to the state
   that is needed to calculate rewards from old epochs.
-\item Rewards that are accumulated in reward accounts can be used for
-  staking before it is withdrawn, eliminating an incentive for
+\item Rewards that are accumulated in reward accounts can be delegated before
+  they are withdrawn, eliminating an incentive for
   frequent withdrawals (which again would lead to an unnecessary
   growth of the UTxO set).
 \end{itemize}
@@ -1938,12 +1939,12 @@ will be based on
 \item The active stake pools, in particular their cost and margin parameters,
   pledged stake, owner key hashes, and reward accounts for stake pool owners.
 \item The finite map giving the total stake for each registered
-  staking key, \emph{taken at the point in time that was relevant for
+  stake address, \emph{taken at the point in time that was relevant for
     creating the leader schedule for that epoch}.
 \item The stake pool delegation relation.
 \item The leader schedule and list of empty slots for that epoch.
 \end{itemize}
-For each registered staking key, the rewards thus calculated are added
+For each registered stake address, the rewards thus calculated are added
 to the balance of the associated reward account.
 
 Note that all the information that is relevant for the calculation of
@@ -1957,23 +1958,25 @@ accounts and their current balance locally.
 Once a sizeable amount of funds has accumulated in a given reward
 account, the owner of that account will want to withdraw those funds,
 and move them to an ordinary address of their wallet. This withdrawal
-from an account to a UTxO can be done via a special transaction. It
-needs to be signed by the staking key the account belongs to.
+from an account to a UTxO can be done via a transaction, using the
+reward account and its current balance as an additional input. In order to
+validate, it needs a witness for the stake address associated with the reward
+account.
 
 The transaction is protected against replay by the requirement of having at
 least one UTxO input, as described in \cref{certificate-replay-prevention}.
 
-\paragraph{Handling of Bootstrap Addresses}
+\paragraph{Handling of Byron Addresses}
 \label{handling-of-bootstrap-addresses}
 
-All funds in bootstrap addresses will be ignored by the PoS system --
-there is no staking key associated with bootstrap
+All funds in Byron addresses will be ignored by the PoS system --
+there is no stake address associated with Byron
 addresses. Consequently, there will be no rewards, and stakeholders
-will be incentivised to stop using bootstrap addresses. Our transition
+will be incentivised to stop using Byron addresses. Our transition
 plan, laid out in \cref{transition-to-decentralization}, prevents a
 situation where the system would be vulnerable to a 51\% attack
 because only a small fraction of the total stake is active yet, by
-allowing for a period where the original nodes from the bootstrap
+allowing for a period where the original nodes from the Byron
 phase are still eligible to sign some of the blocks.
 
 \subsection{Fees}
@@ -2017,7 +2020,7 @@ In addition to ordinary (non-refundable) fees, actions that require
 resources on the nodes should require a deposit, as described in
 \cref{deposits}. In particular,
 \begin{itemize}
-\item registering a staking key
+\item registering a stake address
 \item registering a new stake pool (but not updating the registration
   certificate of a stake pool that already exists)
 \item creating a new UTxO entry (in a future release)
@@ -2025,7 +2028,7 @@ resources on the nodes should require a deposit, as described in
 should all require making a deposit. This deposit should be released
 when
 \begin{itemize}
-\item a staking key is de-registered
+\item a stake address is de-registered
 \item a stake pool is retired -- there is a subtlety here, however,
   since the retirement certificate states an epoch in the future where
   the pool will cease operation. The refund should depend on that
@@ -2034,10 +2037,10 @@ when
   future release)
 \end{itemize}
 Note that posting a delegation certificate does \emph{not} require a
-deposit; delegation certificates need a staking key registration
+deposit; delegation certificates need a stake address registration
 certificate in order to be valid, so any deposit that we would require
 for a delegation certificate can instead be included in the deposit
-for the associated staking key registration certificate.
+for the associated stake address registration certificate.
 
 \subsection{Time to Live for Transactions}
 \label{time-to-live-for-transactions}
@@ -2214,28 +2217,28 @@ provided that
   at each depth, we can require a certain maximal gap
 \end{itemize}
 
-\paragraph{Retrieving Staking Information}
+\paragraph{Retrieving Delegation Information}
 
 After the wallet software has determined the set of addresses that
 belong to it via the spending keys, it needs to set its delegation
-preference. In order to do so, it compares the staking objects \(\beta\)
+preference. In order to do so, it compares the stake address references
 of its addresses.
 
 \begin{description}
 \item[If the wallet consists of base and/or addresses using the same
-  staking key] the wallet should look whether there is a staking key
+  stake address] the wallet should look whether there is a stake address
   registration and delegation certificate for this key. If there are,
-  and the delegation certificate points to an active staking pool, the
+  and the delegation certificate points to an active stake pool, the
   wallet should set its delegation preference to use pointer addresses
-  to the same staking key, and inform the user of this
-  choice. Otherwise -- if the staking key is unregistered, or there is
+  to the same stake address, and inform the user of this
+  choice. Otherwise -- if the stake address is unregistered, or there is
   either no delegation certificate or one that does not point to an
   active pool -- it should inform the user that the stake is currently
   undelegated, and that they should consider delegating to receive
   rewards and add to the stability of the system.
 
-\item[If the wallet consists of addresses with different staking keys]
-  the wallet should repeat the process above for all the staking keys,
+\item[If the wallet consists of addresses with different stake addresses]
+  the wallet should repeat the process above for all the stake addresses,
   present the list of stake pools that are delegated to by the wallet,
   and ask the user to pick one for future addresses, as well as
   provide an option to re-delegate all funds to that pool.
@@ -2456,45 +2459,42 @@ We decided against this, since
 \label{basic-delegation}
 
 Delegating stake requires posting two certificates to the chain: a
-staking key registration, and a delegation certificate. Posting those
+stake address registration, and a delegation certificate. Posting those
 certificates requires funds, so a user setting up their first wallet
 will need a bootstrapping mechanism. This mechanism relies on the
-possibility of base addresses using a staking key before posting the
+possibility of base addresses using a stake address before posting the
 registration certificate for that key.
 
 \paragraph{Bootstrapping a New Wallet}
 A user about to receive their first ada (whether through redemption,
 from a trade on an exchange, or some other source), will set up a new
-wallet, and create an address to receive those funds. This address
-will be a base address, using a staking key that is generated by the
+wallet, and create a value address to receive those funds. This address
+will refer to a stake address (by value) that is generated by the
 wallet, but not yet registered on the chain.
 
-After receiving the initial funds, the user can then participate in
-staking, by posting a staking key registration certificate, as well as a
-delegation certificate for their staking key. Once the key is
-registered, newly created addresses can be pointer addresses to the
-staking key registration certificate.
+After receiving the initial funds, the user can then delegate, by posting a
+stake address registration certificate, as well as a delegation certificate for
+this stake address. Once the stake address is registered, newly created
+value addresses can refer to it by pointer instead.
 
-Of course, there is a slight possibility that the staking key
-registration certificate can be lost due to a fork. In that case, the
-pointer addresses would no longer point to a valid certificate. Such
-addresses should be considered valid addresses for the purpose of
-moving funds, but ignored when determining the stake distribution
-(just like an enterprise address). The wallet software should detect
-usage of such broken pointer addresses, and ask and assist the user to
-create a new stake pool registration certificate and proper addresses,
-and to move the funds to those addresses. In order to minimise the
-probability of invalid pointer addresses occurring, the wallet should
-only create pointer addresses for certificates that are sufficiently
-deep within the chain (where the exact meaning of sufficiently deep is
-somewhat subjective, and fixed by the security parameter of the
-wallet).
+As mentioned in \cref{pointer-address}, there is a slight possibility that the
+stake address registration certificate can be lost due to a fork. In that case,
+the pointer addresses would no longer point to a valid certificate. Such
+addresses are considered valid addresses for the purpose of moving funds, but
+ignored when determining the stake distribution (just like an enterprise
+address). The wallet software should detect usage of such broken pointer
+addresses, and ask and assist the user to create a new stake address
+registration, and to move the funds to value addresses referring to this new
+stake address. Wallets can try to avoid this situation, by either allowing a
+number of blocks between transactions \(t_1\) registering a stake address and
+\(t_2\) moving funds to a pointer address for this stake address, or by using an
+output of \(t_1\) as an input to \(t_2\).
 
 \paragraph{Additional Accounts}
 The user might want to create an additional account in their wallet
-later on, using a different staking key, to prevent linkability of all
+later on, using a different stake address, to prevent linkability of all
 their addresses. In principle, they could use the funds that are
-already in their wallet to post the staking key registration certificate
+already in their wallet to post the stake address registration certificate
 for the new account, and only have pointer addresses in the new
 account. However, this provides a strong hint for observers of the
 chain that the two accounts belong to the same person, so it is
@@ -2502,7 +2502,7 @@ recommended to also bootstrap additional accounts in the manner
 described above.
 
 \paragraph{Re-Delegating}
-Re-delegating the funds belonging to one staking key of the wallet
+Re-delegating the funds belonging to one stake address of the wallet
 requires posting a single transaction, containing a delegation
 certificate. This will only incur the usual transaction fees. In
 particular, the deposit paid for the first delegation certificate
@@ -2524,21 +2524,20 @@ two scenarios to be considered:
 \item[The User Does Have a Non-Empty Wallet Already] Suppose a user
   owns a wallet with some funds, and wants to move most of those to a
   cold wallet, such as a paper wallet. They will use Daedalus to
-  create this cold wallet. Daedalus can offer to post the staking key
-  registration certificate for the staking key of the cold wallet upon
-  creation of the wallet, and to store that staking key with the
+  create this cold wallet. Daedalus can offer to post the stake address
+  registration certificate for the stake address of the cold wallet upon
+  creation of the wallet, and to store that stake address with the
   non-cold wallet, so that the user will be able to sign and post
   delegation certificates for the cold wallet. In this case, all
   addresses in the cold wallet can be pointer addresses.
-\item[The User Does Not Control Any Funds When Creating the Cold
-  Wallet] In this case, the user will use Daedalus to create a cold
-  wallet, which will use a base address. Daedalus will provide the
-  staking key to the user, so that they can post a registration
-  certificate, and delegation certificates, whenever they have funds
-  in a non-cold wallet.
+\item[The User Does Not Control Any Funds When Creating the Cold Wallet] In this
+  case, the user will use Daedalus to create a cold wallet, which will use a
+  base address. Daedalus will provide the stake address, including the signing
+  key(s), to the user, so that they can post a registration certificate, and
+  delegation certificates, whenever they have funds in a non-cold wallet.
 \end{description}
 
-\subsection{Individual Staking}
+\subsection{Self Delegation}
 \label{individual-staking}
 
 Stakeholders should not be forced to delegate their stake to a
@@ -2789,7 +2788,7 @@ decrease over time. This has to be compensated by
   valuable.
 \end{itemize}
 
-Note that the fees that have been collected during the bootstrap era,
+Note that the fees that have been collected during the Byron era,
 where all nodes have been provided by IOHK, Emurgo, and the Cardano
 Foundation, have not been paid out. Those fees have reduced the amount
 of ada currently in circulation, but they did not change
@@ -3793,7 +3792,7 @@ In the following, we describe how the requirements listed in
 
 \item[\cref{public-spending-keys-should-not-be-disclosed-prematurely}
   Public Spending Keys Should not be Disclosed Prematurely] The
-  introduction of a dedicated staking key (\cref{address-structure})
+  introduction of a dedicated stake address (\cref{address-structure})
   avoids the need to use the payment key for delegation purposes.
 
 \item[\cref{mitigate-key-exposure} Mitigate Key Exposure] Stake pool operators
@@ -3838,15 +3837,15 @@ In the following, we describe how the requirements listed in
 \item[\cref{maintain-privacy} Maintain Privacy] Having an efficient
   delegation mechanism -- and in particular a mechanism where
   delegation is rewarded -- requires a slight compromise on the level
-  of pseudonymity, since addresses using the same staking key will be
+  of pseudonymity, since addresses using the same stake address will be
   linkable. However, users can decide to use a number of different
-  accounts, with separate staking keys, if they are willing to pay the
-  fees for using multiple staking keys. This will give them a level of
+  accounts, with separate stake addresses, if they are willing to pay the
+  fees for using multiple stake addresses. This will give them a level of
   pseudonymity that is not worse than that in the Ethereum network.
 
-  They can also choose to use a distinct staking key per address, or addresses
-  with no staking key at all, which gives pseudonymity that is no worse than in
-  Bitcoin.
+  They can also choose to use a distinct stake address per value address, or
+  value addresses with no stake address at all, which gives pseudonymity that is
+  no worse than in Bitcoin.
 
 \item[\cref{short-addresses} Short Addresses] The goal of having
   reasonably short addresses has guided the design of delegation, and
@@ -3880,7 +3879,7 @@ discarded for Cardano.
   \begin{itemize}
   \item
     To preserve this level of anonymity HD wallet users will need to
-    associate separate staking keys with each HD wallet generated
+    associate separate stake addresses with each HD wallet generated
     address.
   \end{itemize}
 \item
@@ -4154,14 +4153,14 @@ The remaining drawbacks are:
   public might like the gambling aspect, businesses might not!
 \end{enumerate}
 
-\subsubsection{Reward accounts per staking key}
+\subsubsection{Reward accounts per stake address}
 \label{reward-accounts-per-stake-key}
 
 This is in some sense a variation of the ``Automatic UTxO updates'', but
 trying to address its shortcomings.
 
-Add a new class of address, reward addresses, based on a staking key.
-These addresses have special rules:
+Introoduce the notion of a reward account, tied to a stake address.
+Reward accounts have special rules:
 
 \begin{itemize}
 \item
@@ -4169,13 +4168,13 @@ These addresses have special rules:
 \item
   Paid into only by reward payout mechanism, never by normal Txs.
 \item
-  Withdrawn from by normal Txs, using the staking key as the witness.
+  Withdrawn from by normal Txs, using a witness for the stake address.
 \end{itemize}
 
 At the end of an epoch once the pool rewards are known, identify all the
-staking keys that contribute to a pool and the rewards per staking key. The
+stake addresses that contribute to a pool and the rewards per stake address. The
 system implicitly issues a transaction/state-change to pay out rewards
-to each staking key reward account. These rewards accumulate if they are
+to the reward account of each stake address. These rewards accumulate if they are
 not withdrawn.
 
 Value held in a reward account contributes to stake that is delegated to a stake
@@ -4184,40 +4183,40 @@ early and means the stake corresponding to the reward is not effectively
 offline.
 
 Withdrawal of rewards is done similarly to the withdrawal transaction from the
-Chimeric Ledgers paper. This uses the staking key as the witness, which reveals
-the public part of the staking key. Note that we also require at least one UTxO
-input to the transaction for replay protection (see
-\cref{certificate-replay-prevention}, \cref{distributing-rewards}).
+Chimeric Ledgers paper. This uses a witness for the stake address. Note that we
+also require at least one UTxO input to the transaction for replay protection
+(see \cref{certificate-replay-prevention}, \cref{distributing-rewards}).
 
 This aggregation of rewards -- account style -- is the key to resolving
 the UTxO storage asymptotic complexity problem. It is the same
 fundamental approach as the ``Automatic UTxO updates'' approach, but
-putting the aggregation off to into a separate class of addresses, so
+putting the aggregation off to a separate class of addresses, so
 that normal addresses remain in a pure UTxO style.
 
 The asymptotic storage complexity of the ledger state (i.e.~UTxO size)
-is linear in the number of staking keys, but is unrelated to the number of
+is linear in the number of stake addresses, but is unrelated to the number of
 epochs that have passed. This is in contrast to approaches that create
 UTxO entries for rewards on every epoch.
 
-An important constraint for this approach is that is relies on stake
-keys belonging to stakeholders. This means every stakeholder address
-must be associated with some staking key belonging to the stakeholder.
+An important constraint for this approach is that it relies on stake
+addresses belonging to stakeholders. This means every stakeholder's value address
+must be associated with some stake address belonging to the stakeholder.
 This means it is not possible to use addresses that point directly to a
 stake pool and still be able to have a corresponding reward address,
-since there is not staking key to use for that reward address. There are
-alternatives to using addresses that point directly to pools, but these
+since there is not stake address to use for that reward address. There are
+alternatives to using addresses that point directly to pools\footnote{During an
+  early stage of the design, we had anticipated pointer addresses that would
+  refer directly to a pool registration certificate.}, but these
 either reduce privacy or increase fees. One alternative that reduces
-privacy is for all addresses in a wallet to share the same staking key
-(either as base addresses, or a base address and pointer addresses to
-that staking key). This reduces privacy since all addresses in the wallet
-can be tied together by using the same staking key. Another alternative is
-to use a separate staking key for every address. This means using one
-delegation certificate per address. This increases the fees for creating
+privacy is for all addresses in a wallet to share the same stake address.
+This reduces privacy since all addresses in the wallet
+can be tied together by using the same stake address. Another alternative is
+to use a separate stake address for every value address. This means using one
+delegation certificate per (value) address. This increases the fees for creating
 addresses in a wallet following this policy, and for changing delegation
 choices. In principle there's a sliding scale between the two previous
-option , using a number of staking keys, more than one but fewer than the
-number of addresses.
+options, using a number of stake addresses, more than one but fewer than the
+number of value addresses.
 
 \begin{itemize}
 \item
@@ -4249,12 +4248,13 @@ Disadvantages:
   Cannot use pointer addresses directly to stake pools. Increases fee
   and complexity cost of maintaining wallet privacy.
 \item
-  Unless people stick to a single staking key (which would immediately
+  Unless people stick to a single stake address (which would immediately
   mean they give up all privacy, not a choice most people would be
   comfortable with I suspect), we basically end up creating lots of
-  staking keys, to which we would only deposit once, and withdraw from
+  stake addresses, to which we would only deposit once, and withdraw from
   once -- in other words, we'd have reinvented UTxO entries, and the
-  accumulation does not help.
+  accumulation does not help.\todo{I think it would still help, by eliminating
+    the exponential growth in time.}
 \end{itemize}
 
 \section{Deposits}
