@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -14,7 +15,8 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
-import Data.Map.Strict (Map)
+import Data.Functor ((<&>))
+import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%), Ratio)
@@ -28,7 +30,13 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegs (..),
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
@@ -41,8 +49,8 @@ import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( CoreKeyPair,
-    DPState,
+  ( DPState,
+    GenesisKeyPair,
     KeyHash,
     KeyHash,
     KeyPair,
@@ -53,7 +61,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( AllPoolKeys (cold),
+  ( AllIssuerKeys (cold, hk),
     genInteger,
     genNatural,
     genWord64,
@@ -258,7 +266,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [CoreKeyPair] ->
+  [GenesisKeyPair] ->
   PParams ->
   Gen (Maybe Update)
 genUpdateForNodes c s e coreKeys pp =
@@ -272,16 +280,16 @@ genUpdate ::
   HasCallStack =>
   Constants ->
   SlotNo ->
-  [(CoreKeyPair, AllPoolKeys)] ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) -> -- indexed keys By StakeHash
+  [(GenesisKeyPair, AllIssuerKeys 'GenesisDelegate)] ->
+  [AllIssuerKeys 'GenesisDelegate] ->
   PParams ->
   (UTxOState, DPState) ->
-  Gen (Maybe Update, [KeyPair 'Witness])
+  Gen (Maybe Update, [KeyPair 'RWitness])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s
   coreKeyPairs
-  keysByStakeHash
+  genesisDelegateKeys
   pp
   (_utxoSt, delegPoolSt) =
     do
@@ -290,7 +298,7 @@ genUpdate
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
           genesisKeys = (fst . unzip) nodes
-          updateWitnesses = latestPoolColdKey genDelegs <$> nodes
+          updateWitnesses = asWitness . latestPoolColdKey genDelegs <$> nodes
 
       QC.frequency
         [ ( frequencyTxUpdates,
@@ -301,11 +309,13 @@ genUpdate
           )
         ]
     where
-      latestPoolColdKey genDelegs_ (gkey, pkeys) = coerceKeyRole $
+      latestPoolColdKey genDelegs_ (gkey, pkeys) =
         case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
           Nothing ->
             error "genUpdate: NoGenesisStaking"
           Just (gkeyHash, _) ->
             fromMaybe
               (cold pkeys)
-              (coerceKeyRole <$> Map.lookup (coerceKeyRole gkeyHash) keysByStakeHash)
+              ( List.find (\aik -> hk aik == gkeyHash) genesisDelegateKeys
+                  <&> cold
+              )

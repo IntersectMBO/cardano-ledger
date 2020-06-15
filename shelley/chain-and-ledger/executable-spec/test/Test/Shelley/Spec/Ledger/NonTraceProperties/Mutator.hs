@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern RegPool,
     pattern RetirePool,
   )
-import Shelley.Spec.Ledger.Keys (KeyRole (..), coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, vKey)
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( _body,
@@ -65,6 +65,8 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegation,
   )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+-- Used grudgingly for keys.
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | Identity mutator that does not change the input value.
 mutateId :: a -> Gen a
@@ -178,7 +180,7 @@ mutateDCert keys _ (DCertDeleg (DeRegKey _)) =
 mutateDCert keys _ (DCertPool (RetirePool _ epoch@(EpochNo e))) = do
   epoch' <- mutateEpoch 0 (fromIntegral e) epoch
   key' <- getAnyStakeKey keys
-  pure $ DCertPool (RetirePool (coerceKeyRole $ hashKey key') epoch')
+  pure $ DCertPool (RetirePool (unsafeCoerce $ hashKey key') epoch')
 mutateDCert
   keys
   _
@@ -193,14 +195,14 @@ mutateDCert
     let interval = fromMaybe interval0 (mkUnitInterval $ fromIntegral p' % 100)
     pure $
       (DCertPool . RegPool)
-        (PoolParams (coerceKeyRole $ hashKey key') vrfHk pledge cost' interval rwdacnt owners relays poolMD)
+        (PoolParams (unsafeCoerce $ hashKey key') vrfHk pledge cost' interval rwdacnt owners relays poolMD)
 mutateDCert keys _ (DCertDeleg (Delegate (Delegation _ _))) = do
   delegator' <- getAnyStakeKey keys
   delegatee' <- getAnyStakeKey keys
-  pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (coerceKeyRole $ hashKey delegatee')
+  pure $ DCertDeleg $ Delegate $ Delegation (KeyHashObj $ hashKey delegator') (unsafeCoerce $ hashKey delegatee')
 mutateDCert keys _ (DCertGenesis (GenesisDelegCert gk _ vrfKH)) = do
   _delegatee <- getAnyStakeKey keys
-  pure $ DCertGenesis $ GenesisDelegCert gk (coerceKeyRole $ hashKey _delegatee) vrfKH
+  pure $ DCertGenesis $ GenesisDelegCert gk (unsafeCoerce $ hashKey _delegatee) vrfKH
 mutateDCert _ _ (DCertMir (MIRCert pot credCoinMap)) = do
   let credCoinList = Map.toList credCoinMap
       coins = List.map snd credCoinList

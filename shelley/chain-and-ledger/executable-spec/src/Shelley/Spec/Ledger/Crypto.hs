@@ -13,6 +13,7 @@ import Data.Typeable (Typeable)
 
 class
   ( HashAlgorithm (HASH c),
+    HashAlgorithm (ADDRHASH c),
     DSIGNAlgorithm (DSIGN c),
     KESAlgorithm (KES c),
     VRFAlgorithm (VRF c),
@@ -24,6 +25,7 @@ class
   Crypto c
   where
   type HASH c :: Type
+  type ADDRHASH c :: Type
   type DSIGN c :: Type
   type KES c :: Type
   type VRF c :: Type

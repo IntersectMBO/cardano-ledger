@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Pre-generated items to use in traces.
 --
@@ -15,13 +17,15 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
   )
 where
 
-import Cardano.Crypto.VRF (deriveVerKeyVRF, genKeyVRF)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
 import Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Keys
-  ( KeyRole (..),
+  ( HashType (RegularHash),
+    KeyRole (..),
+    KeyRoleHashType,
     coerceKeyRole,
     hashKey,
     vKey,
@@ -31,14 +35,12 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( CoreKeyPair,
+  ( GenesisKeyPair,
     KeyHash,
     KeyPairs,
     MultiSigPairs,
-    SignKeyVRF,
     UTxO,
     VRFKeyHash,
-    VerKeyVRF,
     hashKeyVRF,
     pattern KeyPair,
   )
@@ -52,7 +54,6 @@ import Test.Shelley.Spec.Ledger.Utils
     mkGenKey,
     mkKESKeyPair,
     mkKeyPair,
-    mkSeedFromWords,
     mkVRFKeyPair,
     slotsPerKESIteration,
   )
@@ -70,21 +71,14 @@ keySpace :: Constants -> KeySpace
 keySpace c =
   KeySpace
     (coreNodeKeys c)
+    (genesisDelegates c)
+    (stakePoolKeys c)
     (keyPairs c)
     (mSigCombinedScripts c)
-    vrfKeyPairs
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 keyPairs :: Constants -> KeyPairs
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
-
--- | A pre-populated space of VRF keys for use in the generators.
-vrfKeyPairs :: [(SignKeyVRF, VerKeyVRF)]
-vrfKeyPairs = [body (0, 0, 0, 0, i) | i <- [1 .. 50]]
-  where
-    body seed =
-      let sk = genKeyVRF $ mkSeedFromWords seed
-       in (sk, deriveVerKeyVRF sk)
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
 someKeyPairs :: Constants -> Int -> Int -> Gen KeyPairs
@@ -112,28 +106,10 @@ someScripts c lower upper =
 --
 -- NOTE: we use a seed range in the [1000...] range
 -- to create keys that don't overlap with any of the other generated keys
-coreNodeKeys :: Constants -> [(CoreKeyPair, AllPoolKeys)]
-coreNodeKeys Constants {maxSlotTrace, numCoreNodes} =
+coreNodeKeys :: Constants -> [(GenesisKeyPair, AllIssuerKeys 'GenesisDelegate)]
+coreNodeKeys c@Constants {numCoreNodes} =
   [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
-      let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, 1)
-       in AllPoolKeys
-            (toKeyPair (skCold, vkCold))
-            (mkVRFKeyPair (x, 0, 0, 0, 2))
-            [ ( KESPeriod (fromIntegral (iter * fromIntegral maxKESIterations)),
-                mkKESKeyPair (x, 0, 0, fromIntegral iter, 3)
-              )
-              | iter <-
-                  [ 0
-                    .. ( 1
-                           + div
-                             maxSlotTrace
-                             ( fromIntegral
-                                 (maxKESIterations * slotsPerKESIteration)
-                             )
-                       )
-                  ]
-            ]
-            (hashKey vkCold)
+      issuerKeys c 0 x
     )
     | x <- [1001 .. 1000 + numCoreNodes]
   ]
@@ -149,6 +125,52 @@ genUtxo0 c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts} = do
       c
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr Testnet) genesisScripts)
   return (genesisCoins outs)
+
+-- Pre-generate a set of keys to use for genesis delegates.
+genesisDelegates :: Constants -> [AllIssuerKeys 'GenesisDelegate]
+genesisDelegates c =
+  [ issuerKeys c 20 x
+    | x <- [0 .. 50]
+  ]
+
+-- Pre-generate a set of keys to use for stake pools.
+stakePoolKeys :: Constants -> [AllIssuerKeys 'StakePool]
+stakePoolKeys c =
+  [ issuerKeys c 10 x
+    | x <- [0 .. 50]
+  ]
+
+-- | Generate all keys for any entity which will be issuing blocks.
+issuerKeys ::
+  (KeyRoleHashType r ~ 'RegularHash) =>
+  Constants ->
+  -- | Namespace parameter. Can be used to differentiate between different
+  --   "types" of issuer.
+  Word64 ->
+  Word64 ->
+  AllIssuerKeys r
+issuerKeys Constants {maxSlotTrace} ns x =
+  let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, ns + 1)
+   in AllIssuerKeys
+        { cold = KeyPair vkCold skCold,
+          hot =
+            [ ( KESPeriod (fromIntegral (iter * fromIntegral maxKESIterations)),
+                mkKESKeyPair (x, 0, 0, fromIntegral iter, ns + 3)
+              )
+              | iter <-
+                  [ 0
+                    .. ( 1
+                           + div
+                             maxSlotTrace
+                             ( fromIntegral
+                                 (maxKESIterations * slotsPerKESIteration)
+                             )
+                       )
+                  ]
+            ],
+          vrf = mkVRFKeyPair (x, 0, 0, 0, ns + 2),
+          hk = hashKey vkCold
+        }
 
 genesisDelegs0 :: Constants -> Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash)
 genesisDelegs0 c =

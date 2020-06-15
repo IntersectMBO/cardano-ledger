@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-import Test.Shelley.Spec.Ledger.Address (addressTests)
+-- import Test.Shelley.Spec.Ledger.Address (addressTests)
 import Test.Shelley.Spec.Ledger.CDDL (cddlTests)
 import Test.Shelley.Spec.Ledger.Genesis.Properties
 import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
@@ -21,7 +21,7 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Ledger with Delegation"
-    [ addressTests,
+    [ -- addressTests,
       cddlTests 5,
       minimalPropertyTests,
       serializationTests,
@@ -43,7 +43,7 @@ fastTests :: TestTree
 fastTests =
   testGroup
     "Ledger with Delegation fast"
-    [ addressTests,
+    [ -- addressTests,
       cddlTests 1,
       serializationTests,
       stsTests,

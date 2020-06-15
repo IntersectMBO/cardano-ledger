@@ -127,7 +127,7 @@ test-suite shelley-spec-ledger-test
     other-modules:       Test.Shelley.Spec.Ledger.Orphans
                          Test.Shelley.Spec.Ledger.Utils
                          Test.Cardano.Crypto.VRF.Fake
-                         Test.Shelley.Spec.Ledger.Address
+                         -- Test.Shelley.Spec.Ledger.Address
                          Test.Shelley.Spec.Ledger.Address.Bootstrap
                          Test.Shelley.Spec.Ledger.CDDL
                          Test.Shelley.Spec.Ledger.ConcreteCryptoTypes

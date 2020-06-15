@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 
 module Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -25,7 +26,12 @@ import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
-import Shelley.Spec.Ledger.Keys (HasKeyRole (..), KeyHash, KeyRole (..))
+import Shelley.Spec.Ledger.Keys
+  ( HasKeyRole (..),
+    IsKeyRole,
+    KeyHash,
+    KeyRole (..),
+  )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Serialization
@@ -37,7 +43,7 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 -- | Script hash or key hash for a payment or a staking object.
-data Credential (kr :: KeyRole) crypto
+data Credential (kr :: KeyRole h) crypto
   = ScriptHashObj !(ScriptHash crypto)
   | KeyHashObj !(KeyHash kr crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
@@ -69,7 +75,7 @@ data Ptr
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
 instance
-  (Typeable kr, Typeable crypto, Crypto crypto) =>
+  (IsKeyRole kr crypto) =>
   ToCBOR (Credential kr crypto)
   where
   toCBOR = \case
@@ -77,7 +83,7 @@ instance
     ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
 instance
-  (Typeable kr, Crypto crypto) =>
+  (IsKeyRole kr crypto) =>
   FromCBOR (Credential kr crypto)
   where
   fromCBOR = decodeRecordNamed "Credential" (const 2) $

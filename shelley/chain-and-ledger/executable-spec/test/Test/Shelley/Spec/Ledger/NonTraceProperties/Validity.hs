@@ -21,9 +21,12 @@ import Shelley.Spec.Ledger.LedgerState
     RewardAccounts,
     UTxOState (..),
     consumed,
+    diffWitHashes,
     minfee,
+    nullWitHashes,
     produced,
     verifiedWits,
+    witsFromWitnessSet,
     witsVKeyNeeded,
   )
 import Shelley.Spec.Ledger.PParams
@@ -32,11 +35,10 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
   ( SlotNo (..),
   )
-import Shelley.Spec.Ledger.Tx (Tx (..), addrWits)
+import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
   ( TxBody (..),
     Wdrl (..),
-    witKeyHash,
   )
 import Shelley.Spec.Ledger.UTxO (txins)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
@@ -201,11 +203,11 @@ enoughWits ::
   UTxOState crypto ->
   Validity
 enoughWits tx@(Tx _ wits _) d' u =
-  if witsVKeyNeeded (_utxo u) tx d' `Set.isSubsetOf` signers
+  if nullWitHashes $ witsVKeyNeeded (_utxo u) tx d' `diffWitHashes` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
-    signers = Set.map witKeyHash (addrWits wits)
+    signers = witsFromWitnessSet wits
 
 validRuleUTXOW ::
   ( Crypto crypto,

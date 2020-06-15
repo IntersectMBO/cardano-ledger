@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
-import Shelley.Spec.Ledger.Keys (KeyRole (..), coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     _delegationState,
@@ -101,6 +101,7 @@ import Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
+import Unsafe.Coerce
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
@@ -391,13 +392,13 @@ genDCertDeRegKey keys =
 genDCertRetirePool :: KeyPairs -> EpochNo -> Gen DCert
 genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
-  pure $ DCertPool $ RetirePool (coerceKeyRole $ hashKey key) epoch
+  pure $ DCertPool $ RetirePool (unsafeCoerce $ hashKey key) epoch
 
 genDelegation :: KeyPairs -> DPState -> Gen Delegation
 genDelegation keys d = do
   poolKey <- Gen.element $ Map.keys stkCreds'
   delegatorKey <- getAnyStakeKey keys
-  pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (coerceKeyRole . hashKey $ vKey $ findStakeKeyPair poolKey keys)
+  pure $ Delegation (KeyHashObj $ hashKey delegatorKey) $ (unsafeCoerce . hashKey $ vKey $ findStakeKeyPair poolKey keys)
   where
     (StakeCreds stkCreds') = (_stkCreds . _dstate) d
 
@@ -462,7 +463,7 @@ predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW _)) =
   MissingWitnesses
 predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW _)) =
   MissingWitnesses
-predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW [])) =
+predicateFailureToValidationError (UtxowFailure (InvalidWitnessesUTXOW ([], []))) =
   InvalidWitness
 predicateFailureToValidationError (UtxowFailure (UtxoFailure InputSetEmptyUTxO)) =
   InputSetEmpty

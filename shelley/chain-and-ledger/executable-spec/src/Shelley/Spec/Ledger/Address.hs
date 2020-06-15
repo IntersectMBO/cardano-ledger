@@ -7,6 +7,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -81,7 +82,13 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Crypto
-import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyPair (..), KeyRole (..), hashKey)
+import Shelley.Spec.Ledger.Keys
+  ( IsKeyRole,
+    KeyHash (..),
+    KeyPair (..),
+    KeyRole (..),
+    hashKey,
+  )
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
@@ -107,7 +114,7 @@ toAddr ::
 toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred ::
-  Crypto crypto =>
+  IsKeyRole kr crypto =>
   KeyPair kr crypto ->
   Credential kr crypto
 toCred k = KeyHashObj . hashKey $ vKey k
@@ -295,7 +302,7 @@ getPayCred header = case testBit header payCredIsScript of
 getScriptHash :: Crypto crypto => Get (Credential kr crypto)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getKeyHash :: Crypto crypto => Get (Credential kr crypto)
+getKeyHash :: IsKeyRole kr crypto => Get (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
 getStakeReference :: Crypto crypto => Word8 -> Get (StakeReference crypto)

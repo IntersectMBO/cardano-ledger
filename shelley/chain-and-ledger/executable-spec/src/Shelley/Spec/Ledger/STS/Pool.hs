@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Pool
@@ -17,6 +18,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord, en
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition ((?!), STS (..), TRC (..), TransitionRule, failBecause, judgmentContext, liftSTS)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -33,7 +35,7 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
 import Shelley.Spec.Ledger.TxData (DCert (..), PoolCert (..), PoolParams (..), StakePools (..))
 
-data POOL crypto
+data POOL (crypto :: Type)
 
 data PoolEnv
   = PoolEnv SlotNo PParams

@@ -104,24 +104,14 @@ instance QC.HasTrace CERTS GenEnv where
 
   sigGen
     ( GenEnv
-        ( ks@KeySpace_
-            { ksCoreNodes,
-              ksKeyPairs,
-              ksMSigScripts,
-              ksVRFKeyPairs
-            }
-          )
+        ks
         constants
       )
     (slot, _txIx, pparams, accountState)
     (dpState, _certIx) =
       genDCert
         constants
-        ksKeyPairs
-        ksMSigScripts
-        ksCoreNodes
-        ksVRFKeyPairs
-        (ksKeyPairsByStakeHash ks)
+        ks
         pparams
         accountState
         dpState
@@ -144,7 +134,7 @@ genDCerts ::
   Gen (StrictSeq DCert, [CertCred], Coin, Coin, DPState)
 genDCerts
   ge@( GenEnv
-         KeySpace_ {ksKeyPairsByHash}
+         KeySpace_ {ksIndexedStakingKeys}
          Constants {maxCertsPerTx}
        )
   pparams
@@ -180,8 +170,8 @@ genDCerts
                 witnessHashes' = fmap coerceKeyRole witnessHashes
                 foo = catMaybes (map lookupWit witnessHashes')
                 witnessHashes'' = fmap coerceKeyRole foo
-                witnesses = KeyCred <$> witnessHashes''
+                witnesses = StakeCred <$> witnessHashes''
             pure (witnesses ++ [cred])
           _ ->
             return [cred]
-      lookupWit = flip Map.lookup ksKeyPairsByHash
+      lookupWit = flip Map.lookup ksIndexedStakingKeys
