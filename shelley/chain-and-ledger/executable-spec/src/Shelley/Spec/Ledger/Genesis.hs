@@ -203,7 +203,7 @@ genesisUtxO genesis =
 -- we need this same 'TxIn' to use as an input to the spending transaction.
 initialFundsPseudoTxIn :: forall c. Crypto c => Addr c -> TxIn c
 initialFundsPseudoTxIn addr =
-    TxIn pseudoTxId 0
+  TxIn pseudoTxId 0
   where
     pseudoTxId = TxId . castHash $ Crypto.hash addr
     --TODO: move this to the hash API module
