@@ -11,20 +11,27 @@ module Shelley.Spec.Ledger.Genesis
     ShelleyGenesis (..),
     emptyGenesisStaking,
     sgActiveSlotCoeff,
+    genesisHash,
     genesisUtxO,
     initialFundsPseudoTxIn,
   )
 where
 
+import Cardano.Binary (Encoding, ToCBOR (..), encodeDouble, encodeListLen)
 import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hash.Class as Crypto (Hash (..), hash)
 import Cardano.Prelude (NoUnexpectedThunks)
-import Cardano.Slotting.Slot (EpochSize)
+import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson ((.:), (.=), FromJSON (..), ToJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Time (NominalDiffTime, UTCTime)
+import Data.Time
+  ( Day (..),
+    NominalDiffTime,
+    UTCTime (..),
+    diffTimeToPicoseconds,
+  )
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
@@ -61,6 +68,14 @@ data ShelleyGenesisStaking c = ShelleyGenesisStaking
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NoUnexpectedThunks)
+
+instance Crypto c => ToCBOR (ShelleyGenesisStaking c) where
+  toCBOR (ShelleyGenesisStaking pools stake) =
+    mconcat
+      [ encodeListLen 2,
+        toCBOR pools,
+        toCBOR stake
+      ]
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking c
@@ -107,6 +122,44 @@ sgActiveSlotCoeff =
     . unitIntervalFromRational
     . toRational
     . sgActiveSlotsCoeff
+
+-- | This instance is used by 'genesisHash'.
+instance Crypto crypto => ToCBOR (ShelleyGenesis crypto) where
+  toCBOR sg =
+    mconcat
+      [ encodeListLen 16,
+        encodeUTCTime $ sgSystemStart sg,
+        toCBOR $ sgNetworkMagic sg,
+        toCBOR $ sgNetworkId sg,
+        toCBOR $ sgProtocolMagicId sg,
+        encodeDouble $ sgActiveSlotsCoeff sg,
+        toCBOR $ sgSecurityParam sg,
+        toCBOR $ unEpochSize (sgEpochLength sg),
+        toCBOR $ sgSlotsPerKESPeriod sg,
+        toCBOR $ sgMaxKESEvolutions sg,
+        toCBOR $ sgSlotLength sg,
+        toCBOR $ sgUpdateQuorum sg,
+        toCBOR $ sgMaxLovelaceSupply sg,
+        toCBOR $ sgProtocolParams sg,
+        toCBOR $ sgGenDelegs sg,
+        toCBOR $ sgInitialFunds sg,
+        toCBOR $ sgStaking sg
+      ]
+    where
+      encodeUTCTime :: UTCTime -> Encoding
+      encodeUTCTime (UTCTime (ModifiedJulianDay day) diffTime) =
+        encodeListLen 2
+          <> toCBOR day
+          <> toCBOR (diffTimeToPicoseconds diffTime)
+
+-- | Return the hash of the genesis config.
+--
+-- Uses the 'ToCBOR' instance.
+genesisHash ::
+  Crypto crypto =>
+  ShelleyGenesis crypto ->
+  Hash crypto (ShelleyGenesis crypto)
+genesisHash = hash
 
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
   toJSON sg =
