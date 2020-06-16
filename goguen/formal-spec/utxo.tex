@@ -245,13 +245,6 @@ This includes,
   calculated by this function
   \item $\fun{indexedDats}$ is a similar function that indexes all the datum objects
   carried by the transaction with their hashes
-  \item $\fun{getmdl}$ selects, given a script and protocol parameters,
-  the cost model that is associated with the language of that
-  script in the protocol parameters.
-  \begin{note}
-    $\fun{getmdl}$ is only called on Plutus scripts, so it should always
-    be defined. need a better way to do this
-  \end{note}
   \item $\fun{findRdmr}$ gets the redeemer carried by a Goguen transaction
    which corresponds to the given current item. Recall that items that may require
    Plutus scripts to be run include certificates, withdrawals, forges,
@@ -268,9 +261,9 @@ This includes,
   \emph{Abstract functions}
   \begin{align*}
     &\fun{indexof} \in \DCert \to \seqof{\DCert} \to \Ix\\
-    &\fun{indexof} \in \Wdrl \to \Wdrl \to \Ix\\
-    &\fun{indexof} \in \TxIn \to \powerset{\TxIn} \to \Ix\\
-    &\fun{indexof} \in \Value \to \Value \to \Ix\\
+    &\fun{indexof} \in \AddrRWD \to \Wdrl \to \Ix\\
+    &\fun{indexof} \in (\TxId \times \Ix) \to \powerset{\TxIn} \to \Ix\\
+    &\fun{indexof} \in \CurrencyId \to \Value \to \Ix\\
     & \text{get the index of an item in the an ordered representation} \\
     \nextdef
   \end{align*}
@@ -286,20 +279,16 @@ This includes,
     & \text{make a finite map of hash-indexed datum objects} \\
     &\fun{indexedDats}~{tx} ~=~ \{ h \mapsto d ~\vert~ \fun{hashData}~{d}~=~h,
      d\in~\fun{txdats}~(\fun{txwits}~{tx})\}
-    \nextdef
-    &\fun{getmdl} \in \Script \to \PParams \to \CostMod \\
-    & \text{make a finite map of hash-indexed scripts} \\
-    &\fun{getmdl}~{s}~{pp} = \fun{head}~ (\fun{toList}~ (\range ((\fun{language}~{s})\restrictdom(\fun{costmdls}~{pp}))))
     &\nextdef
     &\fun{findRdmr} \in \GoguenTx \to \CurItem \to \powerset{\Data}\\
     & \text{get empty set or redeemer corresponding to index} \\
     & \fun{findRdmr}~{tx}~\var{it} ~=~ \{~ r ~\vert~ \\
-    &~~(\mathsf{certTag}, \fun{indexof}~\var{it}~(\fun{txcerts}~{txb})) \mapsto ~r \in \fun{txrdmrs}~{txw} \\
-    &~~\vee~ (\mathsf{wdrlTag}, \fun{indexof}~\var{it}~(\fun{txwdrls}~{txb}))
+    &~~(\mathsf{certTag},~\var{it}~\in~\DCert~\wedge~ \fun{indexof}~\var{it}~(\fun{txcerts}~{txb})) \mapsto ~r \in \fun{txrdmrs}~{txw} \\
+    &~~\vee~ (\mathsf{wdrlTag},~\var{it}\mapsto c~\in~\Wdrl~\wedge~\fun{indexof}~\var{w}~(\fun{txwdrls}~{txb}))
       \mapsto ~r \in \fun{txrdmrs}~{txw} \\
-    &~~\vee~(\mathsf{forgeTag}, \fun{indexof}~\var{it}~(\fun{forge}~{txb}))  \mapsto ~r
+    &~~\vee~(\mathsf{forgeTag},~\var{it}\mapsto \var{tkns}~\in~\Value~\wedge~\fun{indexof}~\var{cid}~(\fun{forge}~{txb}))  \mapsto ~r
       \in \fun{txrdmrs}~{txw} \\
-    &~~\vee~(\mathsf{inputTag}, \fun{indexof}~\var{it}~(\fun{txinputs}~{txb})) \mapsto ~r
+    &~~\vee~(\mathsf{inputTag},~\var{(it,\_)}~\in~\TxIn~\wedge~\fun{indexof}~\var{(txid,ix)}~(\fun{txinputs}~{txb})) \mapsto ~r
       \in \fun{txrdmrs}~{txw} \} \\
       & ~~\where \\
       & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
@@ -374,47 +363,48 @@ Recall that $\fun{valContext}$ constructs the validation context (kept abstract
 in this spec).
 
 The function $\fun{mkPLCLst}$ returns a list made of the union of the sets of
-pairs (of a script and the input list) which were constructed by the
+pairs (of a script and the input list, except the execution budget) which were constructed by the
 functions specific to the script uses ($\fun{allCertScrts}$, $\fun{allWDRLSScrts}$,
-$\fun{forgedScrts}$, $\fun{allInsScrts}$). Note that like the functions building
-the script-inputs sets, $\fun{mkPLCLst}$ does not include the execution units or cost model
- parameters in its return type. This data is supplied to the Plutus interpreter
- directly during the application of the validation rule SVAL.
+$\fun{forgedScrts}$, $\fun{allInsScrts}$).
+
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{allCertScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus \times \seqof{\Data})} \\
+    & \fun{allCertScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus \times \seqof{\Data} \times \CostMod)} \\
     & \text{check that all certificate witnessing scripts in a tx validate} \\
-    & \fun{allCertScrts}~{utxo}~{tx}~=~ \\
-    & ~~\{ (\var{script_v}, r;
-    \fun{valContext}~\var{utxo}~\var{tx}~\var{cert}; \epsilon) ~\vert \\
+    & \fun{allCertScrts}~\var{pp}~{utxo}~{tx}~=~ \\
+    & ~~\{ (\var{script_v}, (r;
+    \fun{valContext}~\var{utxo}~\var{tx}~\var{cert}; \epsilon),~cm) ~\vert \\
     & ~~r \in \fun{findRdmr}~{tx}~\var{cert}, \\
     & ~~\var{cert} \in (\DCertDeRegKey\cap\fun{txcerts}~\txbody{tx}), \\
     &~~\fun{regCred}~\var{cert}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
+    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \\
     & ~~\var{script_v} \in \ScriptPlutus
      \}
     %
     \nextdef
-    & \fun{allWDRLSScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data})} \\
+    & \fun{allWDRLSScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data} \times \CostMod)} \\
     & \text{check that all reward withdrawal locking scripts in a tx validate} \\
-    & \fun{allWDRLSScrts}~{utxo}~{tx}~=~ \\
-    & ~~\{ (\var{script_v}, r; \fun{valContext}~\var{utxo}~\var{tx}~
-      (a\mapsto c); \epsilon) ~\vert \\
-    &~~ r\in \fun{findRdmr}~{tx}~\var{(a\mapsto c)}, \\
+    & \fun{allWDRLSScrts}~\var{pp}~{utxo}~{tx}~=~ \\
+    & ~~\{ (\var{script_v}, (r; \fun{valContext}~\var{utxo}~\var{tx}~
+      (a\mapsto c); \epsilon),~cm) ~\vert \\
+    &~~ r\in \fun{findRdmr}~{tx}~\var{a}, \\
     & ~~a \mapsto c \in\fun{txwdrls}~(\txbody{tx}), \\
     & ~~\var{a}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}, \\
+    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \\
     & ~~ \var{script_v} \in \ScriptPlutus \}
     \nextdef
     %
-    & \fun{forgedScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data})} \\
+    & \fun{forgedScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data} \times \CostMod)} \\
     & \text{check that all forging scripts in a tx validate} \\
-    & \fun{forgedScrts}~{utxo}~{tx}~=~\\
-    & ~~\{ (\var{script_v}, r;
-    \fun{valContext}~\var{utxo}~\var{tx}~\var{cid}; \epsilon) ~\vert \\
-    & ~~r \in \fun{findRdmr}~{tx}~(\var{cid}\mapsto ~ \var{tkns}), \\
+    & \fun{forgedScrts}~\var{pp}~{utxo}~{tx}~=~\\
+    & ~~\{ (\var{script_v}, (r;
+    \fun{valContext}~\var{utxo}~\var{tx}~\var{cid}; \epsilon),~cm) ~\vert \\
+    & ~~r \in \fun{findRdmr}~{tx}~\var{cid}, \\
     & ~~\var{cid}\mapsto ~ \var{tkns} \in \fun{forge}~(\txbody{tx}), \\
-    &~~\var{cid}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx}
-     \}
+    &~~\var{cid}\mapsto \var{script_v}\in \fun{indexedScripts}~{tx} \\
+    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \\
+    & ~~ \var{script_v} \in \ScriptPlutus \}
     %
   \end{align*}
   \caption{Scripts and their Arguments}
@@ -423,20 +413,21 @@ the script-inputs sets, $\fun{mkPLCLst}$ does not include the execution units or
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{allInsScrts} \in \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data})} \\
+    & \fun{allInsScrts} \in \PParams \to \UTxO \to \GoguenTx \to \powerset{(\ScriptPlutus\times\seqof{\Data} \times \CostMod)} \\
     & \text{check that all UTxO entry locking scripts in a tx validate} \\
-    & \fun{allInsScrts}~{utxo}~{tx}~=~ \{ (\var{script_v}; (\var{d};\var{r}; \\
+    & \fun{allInsScrts}~\var{pp}~{utxo}~{tx}~=~ \{ (\var{script_v}, (\var{d};\var{r}; \\
     & ~~ \fun{valContext}~\var{utxo}~\var{tx}~
-      (txid,ix,\var{hash_r}))) ~\vert \\
+      (txid,ix,\var{hash_r})),~cm) ~\vert \\
     & ~~(txid,ix, \_) \in \fun{txinputs}~(\txbody{tx}), \\
     & ~~\var{r} \in \fun{findRdmr}~{tx}~\var{(txid,ix)}, \\
     & ~~\var{(txid,ix)} \mapsto ((a,v),h_d, \_) \in \var{utxo}, \\
     & ~~\var{h_d}\mapsto \var{d} \in \fun{indexedDats}~{tx}, \\
-    & ~~(\fun{validatorHash}~{a})\mapsto \var{script_v}\in \fun{indexedScripts}~{tx} \}
+    & ~~(\fun{validatorHash}~{a})\mapsto \var{script_v}\in \fun{indexedScripts}~{tx} \\
+    &~~(\fun{language}~{script_v} \mapsto cm)\in(\fun{costmdls}~{pp}) \}
     \nextdef
-    & \fun{mkPLCLst} \in \GoguenTx \to \UTxO \to \seqof{(\ScriptPlutus \times \seqof{\Data})} \\
+    & \fun{mkPLCLst} \in \PParams \to \GoguenTx \to \UTxO \to \seqof{(\ScriptPlutus \times \seqof{\Data} \times \CostMod)} \\
     & \text{a list of all Plutus validators and corresponding input data} \\
-    & \fun{mkPLCLst} ~\var{tx}~ \var{utxo} ~=~
+    & \fun{mkPLCLst} ~\var{pp}~\var{tx}~ \var{utxo} ~=~
     \fun{toList}~(\fun{allCertScrts}~{utxo}~{tx} \cup \fun{allWDRLSScrts}~{utxo}~{tx} \\
     & ~~ \cup \fun{allInsScrts}~{utxo}~{tx} ~~ \cup \fun{forgedScrts}~{utxo}~{tx}) \\
   \end{align*}
@@ -534,7 +525,7 @@ to run the scripts comes from the signal.
   \begin{equation*}
     \_ \vdash
     \var{\_} \trans{sval}{\_} \var{\_}
-    \subseteq \powerset (\ValEnv \times \ValState \times \seqof{(\ScriptPlutus\times\seqof{\Data})} \times \ValState)
+    \subseteq \powerset (\ValEnv \times \ValState \times \seqof{(\ScriptPlutus\times\seqof{\Data}\times\CostMod)} \times \ValState)
   \end{equation*}
   %
   \caption{UTxO script validation types}
@@ -563,7 +554,7 @@ The first rule, $\mathsf{Scripts\mbox{-}Val}$, applies when
 \begin{itemize}
 \item there
 are no scripts left to validate in the signal list (i.e. this is the base case of
-induction when all the scripts have validated)
+induction when all the scripts have validated), there could be $\ExUnits$ left over
 \item the validation tag is applied correctly (it is $\Yes$)
 \end{itemize}
 
@@ -571,7 +562,7 @@ The $\mathsf{Scripts\mbox{-}Stop}$ rule applies when
 
 \begin{itemize}
   \item The currenct script-input pair being validated does not validate
-  (because there are not enough $\ExUnits$ left or any other reasons)
+  (because the transaction ran out of $\ExUnits$ or any other reasons)
   \item The validation tag is correct ($\Nope$ in this case)
 \end{itemize}
 
@@ -654,8 +645,9 @@ arguments. For how this is done in the ledger calculations, see
   \begin{equation}
     \inference[Scripts-Stop]
     { \\~\\
-    (\var{isVal},\var{remExU'})~:=~ \llbracket \fun{fst}~{s} \rrbracket_
-    {\fun{getmdl}~(\fun{fst}~{s})~\var{pp},\var{remExU}} (\fun{snd}~{s})
+    (\var{isVal},\var{remExU'})~:=~ \llbracket sc \rrbracket_
+    {cm,\var{remExU}} dt \\
+    (sc, dt, cm) := s
     \\
     ~
     \\
@@ -683,16 +675,7 @@ arguments. For how this is done in the ledger calculations, see
   \end{equation}
   \begin{equation}
     \inference[Scripts-Ind]
-    { \\~\\
-    (\var{isVal},\var{remExU''})~:=~ \llbracket \fun{fst}~{s} \rrbracket
-    _{\fun{getmdl}~(\fun{fst}~{s})~\var{pp},\var{remExU'}} (\fun{snd}~{s})
-    \\
-    ~
-    \\
-    \var{remExU''}~\geq~0
-    \\
-    ~
-    \\
+    {
     {
     \begin{array}{l}
       \var{pp}\\
@@ -714,7 +697,10 @@ arguments. For how this is done in the ledger calculations, see
         \var{remExU'}\\
       \end{array}
       }
-      \right)
+      \right) \\
+    (\var{isVal},\var{remExU''})~:=~ \llbracket sc \rrbracket
+    _{cm,\var{remExU'}} dt \\
+    (sc, dt, cm) := s & \var{remExU''}~\geq~0
     }
     {
     \begin{array}{l}
@@ -797,7 +783,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \var{sLst} := \fun{mkPLCLst}~\var{tx}~\var{utxo}
+    \var{sLst} := \fun{mkPLCLst}~\var{pp}~\var{tx}~\var{utxo}
     \\~\\
     {
       \left(
@@ -865,7 +851,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \var{sLst} := \fun{mkPLCLst}~\var{tx}~\var{utxo}
+    \var{sLst} := \fun{mkPLCLst}~\var{pp}~\var{tx}~\var{utxo}
     \\~\\
     {
       \left(
@@ -964,7 +950,7 @@ UTXOS rule.
       ~
       \\
       \mathsf{adaID}~\notin \dom~{\fun{forge}~tx} \\
-      \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout\}  ~\geq ~ \epsilon \\~
+      \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ 0 \\~
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
       \fun{txexunits}~{txb} \leq \fun{maxTxExUnits}~{pp}
@@ -1047,10 +1033,7 @@ Native script validation
 still is, and we need to pick only the native scripts to validate as
 part of witnessing. We have changed the definition of the function
 $\fun{scriptsNeeded}$, see Figure~\ref{fig:functions-witnesses}.
-
-The result type of this function is now a finite map that associates items
-that require script validation with the hash of the script that must be run.
-This includes both MSig and Plutus scripts, and scripts used for every
+It now includes both MSig and Plutus scripts, and scripts used for every
 validation purpose (forging, outputs, certificates, withdrawals), see Figure
 \ref{fig:functions-witnesses}.
 
@@ -1058,26 +1041,28 @@ validation purpose (forging, outputs, certificates, withdrawals), see Figure
 \begin{figure}[htb]
   \begin{align*}
       & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to
-        (\CurItem \mapsto \ScriptHash)\\
+        \ScriptHash\\
       & \hspace{-1cm}\text{items that need script validation and corresponding script hashes} \\
       &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
-      & ~~\{ i \mapsto \fun{validatorHash}~(\fun{getAddr}~{txout}) \mid i \mapsto \var{txout} \in \var{utxo},\\
+      & ~~\{ \fun{validatorHash}~(\fun{getAddr}~{txout}) \mid i \mapsto \var{txout} \in \var{utxo},\\
       & ~~~~~i\in\fun{txinsScript}~{(\fun{txinputs}~\var{txb})}~{utxo}\} \\
-      \cup & ~~\{ (a\mapsto c) \mapsto \fun{stakeCred_{r}}~\var{a} \mid a \mapsto c \in \fun{txwdrls}~\var{txb}),
+      \cup & ~~\{ \var{a} \mid a \mapsto c \in \fun{txwdrls}~\var{txb}),
          a\in \AddrRWDScr \} \\
-        \cup & ~~\{ cert \mapsto a \mid a \in\ScriptHash \cap \fun{certWitsNeeded}~{txb}\} \\
-        \cup & ~~\{ (cid \mapsto \var{tkns}) \mapsto \var{cid} \mid cid \mapsto \var{tkns}~\in~\fun{forge}~{txb} \} \\
+        \cup & ~~\ScriptHash \cap \fun{certWitsNeeded}~{txb} \\
+        \cup & ~~\{ cid \mid cid \mapsto \var{tkns}~\in~\fun{forge}~{txb} \} \\
       & \where \\
       & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
-      & ~~~~~~~ \var{txw}~=~\fun{txwits}~{tx}
   \end{align*}
   \caption{Functions used in witness rule}
   \label{fig:functions-witnesses}
 \end{figure}
 
 Recall here that in the Goguen era, we must be able to validate both Shelley type
-and Goguen type transactions. To do this, we have two separate rules in for the
-UTXOW transition type. The first rule applies when we have $tx \in \GoguenTx$, see
+and Goguen type transactions. To do this, we transform the transaction being processed
+into a Goguen transaction (if it's already a Goguen one, it stays the same).
+Goguen transactions have more data, so it we use defaul values to fill it in.
+The only time we need the original Shelley transaction is to check the signatures
+on the hash of the the orignal transaction body, see
 Figure~\ref{fig:rules:utxow-goguen}. In addition to the Shelley UTXOW preconditions
 that still apply, we have made the following changes and additions to the
 preconditions:
@@ -1118,6 +1103,8 @@ by the UTXO transition (the application of which is also part of the conditions)
     \label{eq:utxo-witness-inductive-goguen}
     \inference[UTxO-witG]
     {
+      \var{tx}~\leteq~\fun{toGoguenTx}~{tx}_o \\~\\
+      \var{h}_{txo}~\leteq~\fun{hash}~{tx}_o &
       \var{txb}\leteq\txbody{tx} &
       \var{txw}\leteq\fun{txwits}~{tx} &
       \var{tx}~\in~\GoguenTx \\
@@ -1126,20 +1113,20 @@ by the UTXO transition (the application of which is also part of the conditions)
       \dom (\txwitsVKey{txw}) \}\\~\\
       \forall \var{validator} \in \fun{txscripts}~{txw} \cap \ScriptMSig,\\
       \fun{runMSigScript}~\var{validator}~\var{tx}\\~\\
-      \range~(\fun{scriptsNeeded}~\var{utxo}~\var{tx}) ~=~ \dom (\fun{indexedScripts}~{tx}) \\
-      \forall c\mapsto h \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, ~h\mapsto s~\in~\fun{indexedScripts}~{tx},\\
+      \fun{scriptsNeeded}~\var{utxo}~\var{tx} ~=~ \dom (\fun{indexedScripts}~{tx}) \\
+      \forall h \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, ~h\mapsto s~\in~\fun{indexedScripts}~{tx},\\
        s \in \ScriptPlutus~\Leftrightarrow ~\fun{findRdmr}~{tx}~{c}\neq \emptyset
       \\~\\
       \forall \var{cert}~\in~\fun{txcerts}~{txb}, \fun{regCred}~{cert}\in \ScriptHash \Leftrightarrow
       \var{cert} \in~ \DCertDeRegKey \\~\\
       \forall~\var{txin}\in\fun{txinputs}~{txb},
       \var{txin} \mapsto \var{(\wcard,\wcard,h_d)} \in \var{utxo},
-      \var{h_d} ~\in \fun{dom}(\fun{indexedDats}~{txw})
+      \var{h_d} ~\in \fun{dom}(\fun{indexedDats}~{tx})
       \\
       ~
       \\
       \forall~ix \mapsto (a,v,d_h,\Yes) ~\in~\fun{txouts}~{txb}, \\
-       \var{d_h}\in \fun{dom}~ (\fun{indexedDats}~{txw})
+       \var{d_h}\in \fun{dom}~ (\fun{indexedDats}~{tx})
       \\
       ~
       \\
@@ -1149,7 +1136,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \fun{hash}~(\fun{txrdmrs}~\var{txw})~ =~  \fun{rdmrsHash}~{txb} \\
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
-      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
+      \mathcal{V}_{\var{vk}}{\serialised{\var{h}_{tx}}}_{\sigma} \\
       \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}
       \\~\\
       genSig \leteq
@@ -1192,94 +1179,12 @@ by the UTXO transition (the application of which is also part of the conditions)
         \var{stpools}\\
         \var{genDelegs}\\
       \end{array}
-      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
+      \vdash \var{utxoSt} \trans{utxow}{{tx}_o} \varUpdate{\var{utxoSt'}}
     }
   \end{equation}
   \caption{UTxO with witnesses inference rules for GoguenTx}
   \label{fig:rules:utxow-goguen}
 \end{figure}
 
-The second rule applies when we have $tx \in \ShelleyTx$, see
-Figure~\ref{fig:rules:utxow-goguen}. In this case, we explicitly use the Shelley
-era functions and types, exactly as defined in the Shelley spec, to perform all the
-witnessing checks in the Shelley UTXOW rule. We must adhere to the Shelley
-witnessing rules on the transaction as is because the VK or multisig
-script signatures will not validate if we transform the transaction in any way.
-
-Having performed the witnessing checks on the original transaction, we use
-the $\fun{toGoguenTx}$ function (defined in Figure
-~\ref{fig:functions:to-shelley}) to strip all of the witnessing data off the
-transaction, and convert it to a Goguen type transaction. We keep the metadata and
-put default trivial values in any fields that are added to the transaction type
-of the Goguen era. We use this transformed version as the signal for the
-UTXO transition (which again determines the state change of this UTXOW rule).
-
-\begin{figure}
-  \begin{equation}
-    \label{eq:utxo-witness-inductive-shelley}
-    \inference[UTxO-witS]
-    {
-      \var{txb}\leteq\txbody{tx} &
-      \var{txw}\leteq\fun{txwits}~{tx} &
-       \var{tx}~\in~\ShelleyTx \\~\\
-      (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
-      \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
-      \dom (\txwitsVKey{txw}) \}\\~\\
-      \forall \var{hs} \mapsto \var{validator} \in \fun{txwitsScript}~{txw},\\
-      \fun{hashScript}~\var{validator} = \var{hs} \wedge
-      \fun{validateScript}~\var{validator}~\var{tx}\\~\\
-      \fun{scriptsNeeded}~\var{utxo}~\var{tx} = \dom (\fun{txwitsScript}~{txw})
-      \\~\\
-      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
-      \mathcal{V}_{\var{vk}}{\serialised{\txbody{tx}}}_{\sigma} \\
-      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq witsKeyHashes
-      \\~\\
-      genSig \leteq
-      \left\{
-        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
-      \right\}
-      \cap
-      \var{witsKeyHashes}
-      \\
-      \left\{
-        c\in\txcerts{txb}~\cap\DCertMir
-      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
-      \fun{d}~\var{pp} > 0
-      \\~\\
-      \var{mdh}\leteq\fun{txMDhash}~\var{txb}
-      &
-      \var{md}\leteq\fun{txMD}~\var{tx}
-      \\
-      (\var{mdh}=\Nothing \land \var{md}=\Nothing)
-      \lor
-      (\var{mdh}=\fun{hashMD}~\var{md})
-      \\~\\
-      \var{txg}~\leteq~\fun{toGoguenTx}~{tx} \\~\\
-      {
-        \begin{array}{r}
-          \var{slot}\\
-          \var{pp}\\
-          \var{stkCreds}\\
-          \var{stpools}\\
-          \var{genDelegs}\\
-        \end{array}
-      }
-      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{txg}
-      \var{utxoSt'}\\
-    }
-    {
-      \begin{array}{r}
-        \var{slot}\\
-        \var{pp}\\
-        \var{stkCreds}\\
-        \var{stpools}\\
-        \var{genDelegs}\\
-      \end{array}
-      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
-    }
-  \end{equation}
-  \caption{UTxO with witnesses inference rules for ShelleyTx}
-  \label{fig:rules:utxow-shelley}
-\end{figure}
 
 \clearpage
