@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
+import Cardano.Crypto.Hash (HashAlgorithm)
 import Data.Functor ((<&>))
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -211,8 +212,8 @@ genPPUpdate ::
   Constants ->
   SlotNo ->
   PParams ->
-  [KeyHash 'Genesis] ->
-  Gen ProposedPPUpdates
+  [KeyHash h 'Genesis] ->
+  Gen (ProposedPPUpdates h)
 genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
   if (tooLateInEpoch s)
     then pure (ProposedPPUpdates Map.empty)
@@ -263,13 +264,13 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
 -- with a 50% chance of having non-empty PPUpdates or AVUpdates
 -- and a 25% chance of both being empty or non-empty
 genUpdateForNodes ::
-  HasCallStack =>
+  (HasCallStack, HashAlgorithm h) =>
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [GenesisKeyPair] ->
+  [GenesisKeyPair h] ->
   PParams ->
-  Gen (Maybe Update)
+  Gen (Maybe (Update h))
 genUpdateForNodes c s e coreKeys pp =
   Just <$> (Update <$> genPPUpdate_ <*> pure e)
   where
@@ -278,14 +279,14 @@ genUpdateForNodes c s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  HasCallStack =>
+  (HasCallStack, HashAlgorithm h) =>
   Constants ->
   SlotNo ->
-  [(GenesisKeyPair, AllIssuerKeys 'GenesisDelegate)] ->
-  [AllIssuerKeys 'GenesisDelegate] ->
+  [(GenesisKeyPair h, AllIssuerKeys h 'GenesisDelegate)] ->
+  [AllIssuerKeys h 'GenesisDelegate] ->
   PParams ->
-  (UTxOState, DPState) ->
-  Gen (Maybe Update, [KeyPair 'RWitness])
+  (UTxOState h, DPState h) ->
+  Gen (Maybe (Update h), [KeyPair h 'RWitness])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s

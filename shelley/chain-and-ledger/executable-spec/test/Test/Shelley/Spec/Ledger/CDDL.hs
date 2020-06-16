@@ -24,6 +24,7 @@ import Cardano.Binary
     serialize,
     serializeEncoding,
   )
+import Cardano.Crypto.Hash (ShortHash)
 import Cardano.Prelude
 import Control.Exception (bracket)
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -63,24 +64,24 @@ import Prelude (String)
 cddlTests :: Int -> TestTree
 cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest' @BHeader n "header",
-      cddlTest @BHBody n "header_body",
-      cddlGroupTest @OCert n "operational_cert",
-      cddlTest @Addr n "address",
-      cddlTest @RewardAcnt n "reward_account",
-      cddlTest @(Credential 'Staking) n "stake_credential",
-      cddlTest' @TxBody n "transaction_body",
-      cddlTest @TxOut n "transaction_output",
+    [ cddlTest' @(BHeader ShortHash) n "header",
+      cddlTest @(BHBody ShortHash) n "header_body",
+      cddlGroupTest @(OCert ShortHash) n "operational_cert",
+      cddlTest @(Addr ShortHash) n "address",
+      cddlTest @(RewardAcnt ShortHash) n "reward_account",
+      cddlTest @(Credential ShortHash 'Staking) n "stake_credential",
+      cddlTest' @(TxBody ShortHash) n "transaction_body",
+      cddlTest @(TxOut ShortHash) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
-      cddlTest @DCert n "certificate",
-      cddlTest @TxIn n "transaction_input",
+      cddlTest @(DCert ShortHash) n "certificate",
+      cddlTest @(TxIn ShortHash) n "transaction_input",
       cddlTest' @MetaData n "transaction_metadata",
-      cddlTest @MultiSig n "multisig_script",
-      cddlTest @Update n "update",
-      cddlTest @ProposedPPUpdates n "proposed_protocol_parameter_updates",
+      cddlTest @(MultiSig ShortHash) n "multisig_script",
+      cddlTest @(Update ShortHash) n "update",
+      cddlTest @(ProposedPPUpdates ShortHash) n "proposed_protocol_parameter_updates",
       cddlTest @PParamsUpdate n "protocol_param_update",
-      cddlTest' @Tx n "transaction",
-      cddlTest' @LaxBlock n "block"
+      cddlTest' @(Tx ShortHash) n "transaction",
+      cddlTest' @(LaxBlock ShortHash) n "block"
     ]
       <*> pure cddl
 

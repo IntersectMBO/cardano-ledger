@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.MultiSigExamples
@@ -14,6 +15,7 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
   )
 where
 
+import Cardano.Crypto.Hash (HashAlgorithm)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -82,41 +84,41 @@ import Test.Shelley.Spec.Ledger.Utils
 -- Multi-Signature tests
 
 -- Multi-signature scripts
-singleKeyOnly :: Addr -> MultiSig
+singleKeyOnly :: HashAlgorithm h => Addr h -> MultiSig h
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: MultiSig
-aliceOnly = singleKeyOnly aliceAddr
+aliceOnly :: HashAlgorithm h => proxy h -> MultiSig h
+aliceOnly _ = singleKeyOnly aliceAddr
 
-bobOnly :: MultiSig
-bobOnly = singleKeyOnly bobAddr
+bobOnly :: HashAlgorithm h => proxy h -> MultiSig h
+bobOnly _ = singleKeyOnly bobAddr
 
-aliceOrBob :: MultiSig
-aliceOrBob = RequireAnyOf [aliceOnly, singleKeyOnly bobAddr]
+aliceOrBob :: HashAlgorithm h => proxy h -> MultiSig h
+aliceOrBob p = RequireAnyOf [aliceOnly p, singleKeyOnly bobAddr]
 
-aliceAndBob :: MultiSig
-aliceAndBob = RequireAllOf [aliceOnly, singleKeyOnly bobAddr]
+aliceAndBob :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBob p = RequireAllOf [aliceOnly p, singleKeyOnly bobAddr]
 
-aliceAndBobOrCarl :: MultiSig
-aliceAndBobOrCarl = RequireMOf 1 [aliceAndBob, singleKeyOnly carlAddr]
+aliceAndBobOrCarl :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBobOrCarl p = RequireMOf 1 [aliceAndBob p, singleKeyOnly carlAddr]
 
-aliceAndBobOrCarlAndDaria :: MultiSig
-aliceAndBobOrCarlAndDaria =
+aliceAndBobOrCarlAndDaria :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBobOrCarlAndDaria p =
   RequireAnyOf
-    [ aliceAndBob,
+    [ aliceAndBob p,
       RequireAllOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
     ]
 
-aliceAndBobOrCarlOrDaria :: MultiSig
-aliceAndBobOrCarlOrDaria =
+aliceAndBobOrCarlOrDaria :: HashAlgorithm h => proxy h -> MultiSig h
+aliceAndBobOrCarlOrDaria p =
   RequireMOf
     1
-    [ aliceAndBob,
+    [ aliceAndBob p,
       RequireAnyOf [singleKeyOnly carlAddr, singleKeyOnly dariaAddr]
     ]
 
-initTxBody :: [(Addr, Coin)] -> TxBody
+initTxBody :: HashAlgorithm h => [(Addr h, Coin)] -> TxBody h
 initTxBody addrs =
   TxBody
     (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
@@ -128,7 +130,7 @@ initTxBody addrs =
     SNothing
     SNothing
 
-makeTxBody :: [TxIn] -> [(Addr, Coin)] -> Wdrl -> TxBody
+makeTxBody :: HashAlgorithm h => [TxIn h] -> [(Addr h, Coin)] -> Wdrl h -> TxBody h
 makeTxBody inp addrCs wdrl =
   TxBody
     (Set.fromList inp)
@@ -140,7 +142,7 @@ makeTxBody inp addrCs wdrl =
     SNothing
     SNothing
 
-makeTx :: TxBody -> [KeyPair 'AWitness] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
+makeTx :: HashAlgorithm h => TxBody h -> [KeyPair h 'AWitness] -> Map (ScriptHash h) (MultiSig h) -> Maybe MetaData -> Tx h
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
@@ -155,7 +157,7 @@ aliceInitCoin = 10000
 bobInitCoin :: Coin
 bobInitCoin = 1000
 
-genesis :: LedgerState
+genesis :: HashAlgorithm h => LedgerState h
 genesis = genesisState genDelegs0 utxo0
   where
     genDelegs0 = Map.empty
@@ -173,9 +175,11 @@ initPParams = emptyPParams {_maxTxSize = 1000}
 -- 'aliceKeep' is greater than 0, gives that amount to Alice and creates outputs
 -- locked by a script for each pair of script, coin value in 'msigs'.
 initialUTxOState ::
+  forall h.
+  HashAlgorithm h =>
   Coin ->
-  [(MultiSig, Coin)] ->
-  (TxId, Either [[PredicateFailure UTXOW]] UTxOState)
+  [(MultiSig h, Coin)] ->
+  (TxId h, Either [[PredicateFailure (UTXOW h)]] (UTxOState h))
 initialUTxOState aliceKeep msigs =
   let addresses =
         [(aliceAddr, aliceKeep) | aliceKeep > 0]
@@ -197,7 +201,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ _body tx,
             runShelleyBase $
-              applySTS @UTXOW
+              applySTS @(UTXOW h)
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -218,13 +222,16 @@ initialUTxOState aliceKeep msigs =
 -- 'aliceKeep' in the case of it being non-zero) to spend all funds back to
 -- Alice. Return resulting UTxO state or collected errors
 applyTxWithScript ::
-  [(MultiSig, Coin)] ->
-  [MultiSig] ->
-  Wdrl ->
+  forall proxy h.
+  HashAlgorithm h =>
+  proxy h ->
+  [(MultiSig h, Coin)] ->
+  [MultiSig h] ->
+  Wdrl h ->
   Coin ->
-  [KeyPair 'AWitness] ->
-  Either [[PredicateFailure UTXOW]] UTxOState
-applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
+  [KeyPair h 'AWitness] ->
+  Either [[PredicateFailure (UTXOW h)]] (UTxOState h)
+applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
     utxoSt = case initUtxo of
@@ -253,7 +260,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTS @UTXOW
+        applySTS @(UTXOW h)
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)

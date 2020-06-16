@@ -12,11 +12,13 @@ module Test.Shelley.Spec.Ledger.Genesis.Properties
   )
 where
 
+import Cardano.Crypto.Hash
 import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
 import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Genesis
 import Test.Cardano.Prelude
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
 import Test.Shelley.Spec.Ledger.Generator.Genesis
@@ -25,7 +27,10 @@ import Test.Tasty
 import Test.Tasty.Hedgehog
 
 prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSON exampleShelleyGenesis "test/Golden/ShelleyGenesis"
+prop_golden_ShelleyGenesis = goldenTestJSON example "test/Golden/ShelleyGenesis"
+  where
+    example :: ShelleyGenesis (ConcreteCrypto ShortHash)
+    example = exampleShelleyGenesis
 
 prop_roundtrip_Address_JSON :: forall c. Crypto c => Proxy c -> Property
 prop_roundtrip_Address_JSON _ =
@@ -64,11 +69,11 @@ genesis =
     "Shelley Genesis"
     [ testProperty "Genesis Golden Test" prop_golden_ShelleyGenesis,
       testProperty "Adress round trip" $
-        prop_roundtrip_Address_JSON @ConcreteCrypto Proxy,
+        prop_roundtrip_Address_JSON @(ConcreteCrypto ShortHash) Proxy,
       testProperty "Genesis round trip" $
-        prop_roundtrip_ShelleyGenesis_JSON @ConcreteCrypto Proxy,
+        prop_roundtrip_ShelleyGenesis_JSON @(ConcreteCrypto ShortHash) Proxy,
       testProperty "fund pair round trip" $
-        prop_roundtrip_FundPair_JSON @ConcreteCrypto Proxy,
+        prop_roundtrip_FundPair_JSON @(ConcreteCrypto ShortHash) Proxy,
       testProperty "delegation pair round trip" $
-        prop_roundtrip_GenesisDelegationPair_JSON @ConcreteCrypto Proxy
+        prop_roundtrip_GenesisDelegationPair_JSON @(ConcreteCrypto ShortHash) Proxy
     ]

@@ -11,6 +11,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   )
 where
 
+import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -53,7 +54,7 @@ import Test.Shelley.Spec.Ledger.Rules.TestPool (getRetiring, getStPools)
 -- | Check that after a POOLREAP certificate transition the pool is removed from
 -- the stake pool and retiring maps.
 removedAfterPoolreap ::
-  [SourceSignalTarget POOLREAP] ->
+  [SourceSignalTarget (POOLREAP ShortHash)] ->
   Property
 removedAfterPoolreap tr =
   conjoin $
@@ -77,7 +78,7 @@ removedAfterPoolreap tr =
 
 -- | Check that deposits are always non-negative
 nonNegativeDeposits ::
-  [SourceSignalTarget POOLREAP] ->
+  [SourceSignalTarget (POOLREAP ShortHash)] ->
   Property
 nonNegativeDeposits tr =
   conjoin $
@@ -92,7 +93,7 @@ nonNegativeDeposits tr =
 -- | Check that the sum of circulation, deposits, fees, treasury, rewards and
 -- reserves is constant.
 constantSumPots ::
-  [SourceSignalTarget POOLREAP] ->
+  [SourceSignalTarget (POOLREAP ShortHash)] ->
   Property
 constantSumPots tr =
   conjoin $

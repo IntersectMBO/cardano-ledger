@@ -1,13 +1,16 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Shelley.Spec.Ledger.SerializationProperties
@@ -31,8 +34,9 @@ import Cardano.Binary
     toCBOR,
   )
 import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
-import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Crypto.Hash.Short (ShortHash)
+import Cardano.Crypto.Hash (HashAlgorithm)
+import qualified Cardano.Crypto.Hash as Crypto
+import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Codec.CBOR.Decoding (Decoder)
@@ -171,31 +175,31 @@ mkDummyHash _ = coerce . hash @(HASH c)
   Serialization Properties
 -------------------------------------------------------------------------------}
 
-prop_roundtrip_Block :: Mock.Block -> Property
+prop_roundtrip_Block :: Mock.Block Monomorphic.ShortHash -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Header :: Mock.BHeader -> Property
+prop_roundtrip_Header :: Mock.BHeader Monomorphic.ShortHash -> Property
 prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_BlockHeaderHash :: Mock.HashHeader -> Property
+prop_roundtrip_BlockHeaderHash :: Mock.HashHeader Monomorphic.ShortHash -> Property
 prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_Tx :: Mock.Tx -> Property
+prop_roundtrip_Tx :: Mock.Tx Monomorphic.ShortHash -> Property
 prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_TxId :: Mock.TxId -> Property
+prop_roundtrip_TxId :: Mock.TxId Monomorphic.ShortHash -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure Mock.LEDGERS] -> Property
+prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (Mock.LEDGERS Monomorphic.ShortHash)] -> Property
 prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_PrtclState :: STS.PrtclState Mock.ConcreteCrypto -> Property
+prop_roundtrip_PrtclState :: STS.PrtclState (Mock.ConcreteCrypto Monomorphic.ShortHash) -> Property
 prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_LedgerState :: Mock.LedgerState -> Property
+prop_roundtrip_LedgerState :: Mock.LedgerState Monomorphic.ShortHash -> Property
 prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_NewEpochState :: Mock.NewEpochState -> Property
+prop_roundtrip_NewEpochState :: Mock.NewEpochState Monomorphic.ShortHash -> Property
 prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
 
 {-------------------------------------------------------------------------------
@@ -205,10 +209,10 @@ prop_roundtrip_NewEpochState = roundtrip toCBOR fromCBOR
   necessarily valid
 -------------------------------------------------------------------------------}
 
-instance Arbitrary Mock.Block where
+instance HashAlgorithm h => Arbitrary (Mock.Block h) where
   arbitrary = do
-    let KeySpace_ {ksCoreNodes} = geKeySpace genEnv
-    prevHash <- arbitrary :: Gen Mock.HashHeader
+    let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
+    prevHash <- arbitrary :: Gen (Mock.HashHeader h)
     allPoolKeys <- elements (map snd ksCoreNodes)
     txs <- arbitrary
     curSlotNo <- SlotNo <$> choose (0, 10)
@@ -232,10 +236,13 @@ instance Arbitrary Mock.Block where
         kesPeriod
         keyRegKesPeriod
         ocert
+    where
+      p :: Proxy h
+      p = Proxy
 
-instance Arbitrary Mock.BHeader where
+instance HashAlgorithm h => Arbitrary (Mock.BHeader h) where
   arbitrary = do
-    res <- arbitrary :: Gen Mock.Block
+    res <- arbitrary :: Gen (Mock.Block h)
     return $ case res of
       Block header _ -> header
       _ -> error "SerializationProperties::BHeader - failed to deconstruct header from block"
@@ -243,9 +250,9 @@ instance Arbitrary Mock.BHeader where
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash (Proxy @c)
 
-instance Arbitrary Mock.Tx where
+instance HashAlgorithm h => Arbitrary (Mock.Tx h) where
   arbitrary = do
-    (_ledgerState, _steps, _txfee, tx, _lv) <- hedgehog genStateTx
+    (_ledgerState, _steps, _txfee, tx, _lv) <- hedgehog (genStateTx (Proxy @h))
     return tx
 
 instance Crypto c => Arbitrary (TxId c) where
@@ -257,7 +264,7 @@ instance Crypto c => Arbitrary (TxIn c) where
       <$> (TxId <$> genHash (Proxy @c))
       <*> arbitrary
 
-instance Arbitrary Mock.TxOut where
+instance HashAlgorithm h => Arbitrary (Mock.TxOut h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -273,15 +280,15 @@ instance Arbitrary UnitInterval where
 
 instance
   ( Crypto c,
-    HASH c ~ ShortHash,
-    ADDRHASH c ~ ShortHash,
-    AlgorithmForHashType c (KeyRoleHashType a) ~ ShortHash
+    HASH c ~ h,
+    ADDRHASH c ~ h,
+    AlgorithmForHashType c (KeyRoleHashType a) ~ h
   ) =>
   Arbitrary (KeyHash a c)
   where
   arbitrary = KeyHash <$> genHash (Proxy @c)
 
-instance Arbitrary (WitHashes Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (WitHashes (Mock.ConcreteCrypto h)) where
   arbitrary = genericArbitraryU
 
 instance Arbitrary MIRPot where
@@ -290,39 +297,39 @@ instance Arbitrary MIRPot where
 instance Arbitrary Natural where
   arbitrary = fromInteger <$> choose (0, 1000)
 
-instance Arbitrary (STS.PredicateFailure Mock.PPUP) where
+instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.PPUP h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.UTXO) where
+instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.UTXO h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.UTXOW) where
+instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.UTXOW h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.POOL) where
+instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.POOL h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.DELPL) where
+instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELPL h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.DELEG) where
+instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELEG h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.DELEGS) where
+instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.DELEGS h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.LEDGER) where
+instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.LEDGER h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (STS.PredicateFailure Mock.LEDGERS) where
+instance (HashAlgorithm h, forall a. Arbitrary (Crypto.Hash h a)) => Arbitrary (STS.PredicateFailure (Mock.LEDGERS h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -338,7 +345,7 @@ instance Arbitrary EpochNo where
   -- Cannot be negative even though it is an 'Integer'
   arbitrary = EpochNo <$> choose (1, 100000)
 
-instance Arbitrary Mock.Addr where
+instance HashAlgorithm h => Arbitrary (Mock.Addr h) where
   arbitrary =
     oneof
       [ Addr <$> arbitrary <*> arbitrary <*> arbitrary
@@ -346,19 +353,19 @@ instance Arbitrary Mock.Addr where
       -- SL.AddrBootstrap
       ]
 
-instance Arbitrary (StakeReference Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (StakeReference (Mock.ConcreteCrypto h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance
-  ( AlgorithmForHashType Mock.ConcreteCrypto (KeyRoleHashType r)
-      ~ ShortHash
+  ( AlgorithmForHashType (Mock.ConcreteCrypto h) (KeyRoleHashType r) ~ h,
+    HashAlgorithm h
   ) =>
-  Arbitrary (Credential r Mock.ConcreteCrypto)
+  Arbitrary (Credential r (Mock.ConcreteCrypto h))
   where
   arbitrary =
     oneof
-      [ ScriptHashObj . ScriptHash <$> genHash (Proxy @Mock.ConcreteCrypto),
+      [ ScriptHashObj . ScriptHash <$> genHash (Proxy @(Mock.ConcreteCrypto h)),
         KeyHashObj <$> arbitrary
       ]
 
@@ -366,53 +373,53 @@ instance Arbitrary Ptr where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (RewardAcnt Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (RewardAcnt (Mock.ConcreteCrypto h)) where
   arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
 
 instance Arbitrary Network where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (VKey kd Mock.ConcreteCrypto) where
+instance Arbitrary (VKey kd (Mock.ConcreteCrypto h)) where
   arbitrary = VKey . VerKeyMockDSIGN <$> arbitrary
 
 instance Arbitrary ProtVer where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (ScriptHash Mock.ConcreteCrypto) where
-  arbitrary = ScriptHash <$> genHash (Proxy @Mock.ConcreteCrypto)
+instance HashAlgorithm h => Arbitrary (ScriptHash (Mock.ConcreteCrypto h)) where
+  arbitrary = ScriptHash <$> genHash (Proxy @(Mock.ConcreteCrypto h))
 
-instance Arbitrary (MetaDataHash Mock.ConcreteCrypto) where
-  arbitrary = MetaDataHash <$> genHash (Proxy @Mock.ConcreteCrypto)
+instance HashAlgorithm h => Arbitrary (MetaDataHash (Mock.ConcreteCrypto h)) where
+  arbitrary = MetaDataHash <$> genHash (Proxy @(Mock.ConcreteCrypto h))
 
-instance Arbitrary (Hash.Hash ShortHash a) where
-  arbitrary = genHash (Proxy @Mock.ConcreteCrypto)
+instance Arbitrary (Crypto.Hash Monomorphic.ShortHash a) where
+  arbitrary = genHash (Proxy @(Mock.ConcreteCrypto Monomorphic.ShortHash))
 
-instance Arbitrary (STS.PrtclState Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (STS.PrtclState (Mock.ConcreteCrypto h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary Mock.LedgerState where
+instance HashAlgorithm h => Arbitrary (Mock.LedgerState h) where
   arbitrary = do
-    (_ledgerState, _steps, _txfee, _tx, ledgerState) <- hedgehog genValidStateTx
+    (_ledgerState, _steps, _txfee, _tx, ledgerState) <- hedgehog (genValidStateTx (Proxy @h))
     return ledgerState
 
-instance Arbitrary Mock.NewEpochState where
+instance HashAlgorithm h => Arbitrary (Mock.NewEpochState h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (BlocksMade Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (BlocksMade (Mock.ConcreteCrypto h)) where
   arbitrary = BlocksMade <$> arbitrary
 
-instance Arbitrary (PoolDistr Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (PoolDistr (Mock.ConcreteCrypto h)) where
   arbitrary =
     PoolDistr . Map.fromList
       <$> listOf ((,) <$> arbitrary <*> genVal)
     where
-      genVal = (,) <$> arbitrary <*> genHash (Proxy @Mock.ConcreteCrypto)
+      genVal = (,) <$> arbitrary <*> genHash (Proxy @(Mock.ConcreteCrypto h))
 
-instance Arbitrary Mock.EpochState where
+instance HashAlgorithm h => Arbitrary (Mock.EpochState h) where
   arbitrary =
     EpochState
       <$> arbitrary
@@ -422,43 +429,46 @@ instance Arbitrary Mock.EpochState where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (RewardUpdate Mock.ConcreteCrypto) where
+instance Arbitrary (RewardUpdate (Mock.ConcreteCrypto h)) where
   arbitrary = return emptyRewardUpdate
 
 instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary (OBftSlot Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (OBftSlot (Mock.ConcreteCrypto h)) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Arbitrary PParams where
-  arbitrary = genPParams (geConstants genEnv)
+  arbitrary = genPParams (geConstants (genEnv p))
+    where
+      p :: Proxy Monomorphic.ShortHash
+      p = Proxy
 
-instance Arbitrary Mock.NonMyopic where
+instance HashAlgorithm h => Arbitrary (Mock.NonMyopic h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary Mock.SnapShot where
+instance HashAlgorithm h => Arbitrary (Mock.SnapShot h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary Mock.SnapShots where
+instance HashAlgorithm h => Arbitrary (Mock.SnapShots h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
 instance Arbitrary ApparentPerformance where
   arbitrary = ApparentPerformance <$> arbitrary
 
-instance Arbitrary Mock.Stake where
+instance HashAlgorithm h => Arbitrary (Mock.Stake h) where
   arbitrary = Stake <$> arbitrary
 
-instance Arbitrary (PoolParams Mock.ConcreteCrypto) where
+instance HashAlgorithm h => Arbitrary (PoolParams (Mock.ConcreteCrypto h)) where
   arbitrary =
     PoolParams
       <$> arbitrary
-      <*> genHash (Proxy @Mock.ConcreteCrypto)
+      <*> genHash (Proxy @(Mock.ConcreteCrypto h))
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

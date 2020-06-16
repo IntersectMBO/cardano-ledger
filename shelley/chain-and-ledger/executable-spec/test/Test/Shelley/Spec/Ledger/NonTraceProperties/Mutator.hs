@@ -17,6 +17,7 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
   )
 where
 
+import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Data.List as List (map)
 import qualified Data.Map.Strict as Map (fromList, toList)
 import Data.Maybe (fromMaybe)
@@ -96,14 +97,14 @@ mutateCoin lower upper (Coin val) =
   Coin . fromIntegral <$> mutateNat lower upper (fromIntegral val)
 
 -- | Mutator of 'Tx' which mutates the contained transaction
-mutateTx :: Tx -> Gen Tx
+mutateTx :: HashAlgorithm h => Tx h -> Gen (Tx h)
 mutateTx txwits = do
   body' <- mutateTxBody $ _body txwits
   pure $ Tx body' (_witnessSet txwits) SNothing
 
 -- | Mutator for Transaction which mutates the set of inputs and the set of
 -- unspent outputs.
-mutateTxBody :: TxBody -> Gen TxBody
+mutateTxBody :: HashAlgorithm h => TxBody h -> Gen (TxBody h)
 mutateTxBody tx = do
   inputs' <- mutateInputs $ Set.toList (_inputs tx)
   outputs' <- mutateOutputs $ _outputs tx
@@ -119,7 +120,7 @@ mutateTxBody tx = do
       SNothing
 
 -- | Mutator for a list of 'TxIn'.
-mutateInputs :: [TxIn] -> Gen [TxIn]
+mutateInputs :: [TxIn h] -> Gen [TxIn h]
 mutateInputs [] = pure []
 mutateInputs (txin : txins) = do
   mtxin <- mutateInput txin
@@ -129,13 +130,13 @@ mutateInputs (txin : txins) = do
 
 -- | Mutator for a single 'TxIn', which mutates the index of the output to
 -- spend.
-mutateInput :: TxIn -> Gen TxIn
+mutateInput :: TxIn h -> Gen (TxIn h)
 mutateInput (TxIn idx index) = do
   index' <- mutateNat 0 100 index
   pure $ TxIn idx index'
 
 -- | Mutator for a list of 'TxOut'.
-mutateOutputs :: StrictSeq TxOut -> Gen (StrictSeq TxOut)
+mutateOutputs :: StrictSeq (TxOut h) -> Gen (StrictSeq (TxOut h))
 mutateOutputs StrictSeq.Empty = pure StrictSeq.Empty
 mutateOutputs (txout :<| txouts) = do
   mtxout <- mutateOutput txout
@@ -145,7 +146,7 @@ mutateOutputs (txout :<| txouts) = do
 
 -- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
 -- the output.
-mutateOutput :: TxOut -> Gen TxOut
+mutateOutput :: TxOut h -> Gen (TxOut h)
 mutateOutput (TxOut addr c) = do
   c' <- mutateCoin 0 100 c
   pure $ TxOut addr c'
@@ -156,7 +157,7 @@ mutateOutput (TxOut addr c) = do
 -- 'Generator.hs' in order to prevent cyclic imports.
 
 -- | Select one random verification staking key from list of pairs of KeyPair.
-getAnyStakeKey :: KeyPairs -> Gen (VKey 'Staking)
+getAnyStakeKey :: KeyPairs h -> Gen (VKey h 'Staking)
 getAnyStakeKey keys = vKey . snd <$> Gen.element keys
 
 -- | Mutate 'Epoch' analogously to 'Coin' data.
@@ -172,7 +173,7 @@ mutateEpoch lower upper (EpochNo val) =
 -- A 'RegPool' certificate mutates the staking key, the pool's cost and margin.
 -- A 'Delegate' certificates selects randomly keys for delegator and delegatee
 -- from the supplied list of keypairs.
-mutateDCert :: KeyPairs -> DPState -> DCert -> Gen DCert
+mutateDCert :: HashAlgorithm h => KeyPairs h -> DPState h -> DCert h -> Gen (DCert h)
 mutateDCert keys _ (DCertDeleg (RegKey _)) =
   DCertDeleg . RegKey . KeyHashObj . hashKey . vKey . snd <$> Gen.element keys
 mutateDCert keys _ (DCertDeleg (DeRegKey _)) =

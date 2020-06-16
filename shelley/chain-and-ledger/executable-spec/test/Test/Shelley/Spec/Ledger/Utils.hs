@@ -28,7 +28,7 @@ where
 
 import Cardano.Binary (ToCBOR (..))
 import Cardano.Crypto.DSIGN (deriveVerKeyDSIGN, genKeyDSIGN)
-import Cardano.Crypto.Hash (Hash (UnsafeHash), MD5, hash)
+import Cardano.Crypto.Hash (Hash (UnsafeHash), HashAlgorithm, MD5, hash)
 import Cardano.Crypto.KES (deriveVerKeyKES, genKeyKES)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
@@ -85,19 +85,19 @@ mkSeedFromWords stuff =
   mkSeedFromBytes . coerce $ hash @MD5 stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
-mkGenKey :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN, VKeyGenesis)
+mkGenKey :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN h, VKeyGenesis h)
 mkGenKey seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
-mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN, VKey kr)
+mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN h, VKey h kr)
 mkKeyPair seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
-mkVRFKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF, VerKeyVRF)
+mkVRFKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF h, VerKeyVRF h)
 mkVRFKeyPair seed =
   let sk = genKeyVRF $ mkSeedFromWords seed
    in (sk, deriveVerKeyVRF sk)
@@ -106,8 +106,8 @@ mkVRFKeyPair seed =
 mkCertifiedVRF ::
   ToCBOR a =>
   WithResult a ->
-  SignKeyVRF ->
-  CertifiedVRF a
+  SignKeyVRF h ->
+  CertifiedVRF h a
 mkCertifiedVRF a sk =
   fst . withDRG (drgNewTest seed) $
     coerce <$> evalCertified () a sk
@@ -115,12 +115,12 @@ mkCertifiedVRF a sk =
     seed = (4, 0, 0, 0, 1)
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyKES, VerKeyKES)
+mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyKES h, VerKeyKES h)
 mkKESKeyPair seed =
   let sk = genKeyKES $ mkSeedFromWords seed
    in (sk, deriveVerKeyKES sk)
 
-mkAddr :: (KeyPair 'Payment, KeyPair 'Staking) -> Addr
+mkAddr :: HashAlgorithm h => (KeyPair h 'Payment, KeyPair h 'Staking) -> Addr h
 mkAddr (payKey, stakeKey) =
   Addr
     Testnet
@@ -160,12 +160,12 @@ slotFromEpoch = runIdentity . epochInfoFirst (epochInfo testGlobals)
 -- | Try to evolve KES key until specific KES period is reached, given the
 -- current KES period.
 evolveKESUntil ::
-  SignKeyKES ->
+  SignKeyKES h ->
   -- | Current KES period
   KESPeriod ->
   -- | Target KES period
   KESPeriod ->
-  Maybe SignKeyKES
+  Maybe (SignKeyKES h)
 evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current target
   where
     go !_ c t | t < c = Nothing

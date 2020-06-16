@@ -9,6 +9,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestUtxo
   )
 where
 
+import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -31,7 +32,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (UTXO)
 
 -- | Property that checks that the fees are non-decreasing
 feesNonDecreasing ::
-  [SourceSignalTarget UTXO] ->
+  [SourceSignalTarget (UTXO ShortHash)] ->
   Property
 feesNonDecreasing ssts =
   conjoin $
@@ -47,7 +48,7 @@ feesNonDecreasing ssts =
 -- | Property that checks that the sum of the pots circulation, deposits and
 -- fees increases by the sum of withdrawals of a transaction.
 potsSumIncreaseWdrls ::
-  [SourceSignalTarget UTXO] ->
+  [SourceSignalTarget (UTXO ShortHash)] ->
   Property
 potsSumIncreaseWdrls ssts =
   conjoin $

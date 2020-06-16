@@ -6,6 +6,7 @@
 
 module Test.Shelley.Spec.Ledger.Rules.TestDelegs where
 
+import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     source,
@@ -26,7 +27,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (DELEGS, Wdrl)
 -- | Check that the rewards pot decreases by the sum of withdrawals in the
 -- transaction.
 rewardsDecreasesByWithdrawals ::
-  [(Wdrl, SourceSignalTarget DELEGS)] ->
+  [(Wdrl ShortHash, SourceSignalTarget (DELEGS ShortHash))] ->
   Property
 rewardsDecreasesByWithdrawals tr =
   conjoin $

@@ -24,8 +24,8 @@ import Test.QuickCheck (shrinkIntegral, shrinkList)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Block)
 
 shrinkBlock ::
-  Block ->
-  [Block]
+  Block h ->
+  [Block h]
 shrinkBlock _ = []
 
 shrinkTx ::

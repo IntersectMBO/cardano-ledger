@@ -4,6 +4,7 @@
 
 module Test.Shelley.Spec.Ledger.Rules.TestNewEpoch (preservationOfAda) where
 
+import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     source,
@@ -44,7 +45,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (NEWEPOCH)
 -- | Check that the rewards decrease by the increase of the treasury and the
 -- rewards.
 preservationOfAda ::
-  [SourceSignalTarget NEWEPOCH] ->
+  [SourceSignalTarget (NEWEPOCH ShortHash)] ->
   Property
 preservationOfAda tr =
   conjoin $
