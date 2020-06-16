@@ -7,6 +7,7 @@
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
+import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -85,26 +86,26 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-alicePay :: KeyPair 'Payment
+alicePay :: KeyPair ShortHash 'Payment
 alicePay = KeyPair 1 1
 
-aliceStake :: KeyPair 'Staking
+aliceStake :: KeyPair ShortHash 'Staking
 aliceStake = KeyPair 2 2
 
-aliceAddr :: Addr
+aliceAddr :: Addr ShortHash
 aliceAddr =
   Addr
     Testnet
     (KeyHashObj . hashKey $ vKey alicePay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey aliceStake)
 
-bobPay :: KeyPair 'Payment
+bobPay :: KeyPair ShortHash 'Payment
 bobPay = KeyPair 3 3
 
-bobStake :: KeyPair 'Staking
+bobStake :: KeyPair ShortHash 'Staking
 bobStake = KeyPair 4 4
 
-bobAddr :: Addr
+bobAddr :: Addr ShortHash
 bobAddr =
   Addr
     Testnet
@@ -175,32 +176,32 @@ testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
      in (x <= 1) && (x >= 0)
 
 testLEDGER ::
-  (UTxOState, DPState) ->
-  Tx ->
+  (UTxOState ShortHash, DPState ShortHash) ->
+  Tx ShortHash ->
   LedgerEnv ->
-  Either [[PredicateFailure LEDGER]] (UTxOState, DPState) ->
+  Either [[PredicateFailure (LEDGER ShortHash)]] (UTxOState ShortHash, DPState ShortHash) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
-  checkTrace @LEDGER runShelleyBase env $ pure initSt .- tx .-> expectedSt
+  checkTrace @(LEDGER ShortHash) runShelleyBase env $ pure initSt .- tx .-> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTS @LEDGER (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTS @(LEDGER ShortHash) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10000
 
 data AliceToBob = AliceToBob
-  { input :: TxIn,
+  { input :: TxIn ShortHash,
     toBob :: Coin,
     fee :: Coin,
     deposits :: Coin,
     refunds :: Coin,
-    certs :: [DCert],
+    certs :: [DCert ShortHash],
     ttl :: SlotNo,
-    signers :: ([KeyPair 'AWitness], [KeyPair 'RWitness])
+    signers :: ([KeyPair ShortHash 'AWitness], [KeyPair ShortHash 'RWitness])
   }
 
-aliceGivesBobLovelace :: AliceToBob -> Tx
+aliceGivesBobLovelace :: AliceToBob -> Tx ShortHash
 aliceGivesBobLovelace
   AliceToBob
     { input,
@@ -232,7 +233,7 @@ aliceGivesBobLovelace
       awits = makeWitnessesVKey (hashTxBody txbody) asigs
       rwits = makeWitnessesVKey (hashTxBody txbody) rsigs
 
-utxoState :: UTxOState
+utxoState :: UTxOState ShortHash
 utxoState =
   UTxOState
     ( genesisCoins
@@ -244,10 +245,10 @@ utxoState =
     (Coin 0)
     emptyPPPUpdates
 
-dpState :: DPState
+dpState :: DPState ShortHash
 dpState = DPState emptyDState emptyPState
 
-addReward :: DPState -> RewardAcnt -> Coin -> DPState
+addReward :: DPState ShortHash -> RewardAcnt ShortHash -> Coin -> DPState ShortHash
 addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
   where
     ds = _dstate dp
@@ -257,8 +258,8 @@ ledgerEnv :: LedgerEnv
 ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState 0 0)
 
 testInvalidTx ::
-  [PredicateFailure LEDGER] ->
-  Tx ->
+  [PredicateFailure (LEDGER ShortHash)] ->
+  Tx ShortHash ->
   Assertion
 testInvalidTx errs tx =
   testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
@@ -528,12 +529,12 @@ testOutputTooSmall =
         signers = ([asWitness alicePay], [])
       }
 
-alicePoolColdKeys :: KeyPair 'StakePool
+alicePoolColdKeys :: KeyPair ShortHash 'StakePool
 alicePoolColdKeys = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
 
-alicePoolParamsSmallCost :: PoolParams
+alicePoolParamsSmallCost :: PoolParams ShortHash
 alicePoolParamsSmallCost =
   PoolParams
     { _poolPubKey = hashKey . vKey $ alicePoolColdKeys,

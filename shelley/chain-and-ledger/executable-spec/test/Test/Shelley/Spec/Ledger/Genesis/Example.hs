@@ -15,7 +15,7 @@ import Shelley.Spec.Ledger.Genesis (ShelleyGenesis (..), emptyGenesisStaking)
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes hiding (Addr, KeyHash, VerKeyVRF)
 
-exampleShelleyGenesis :: ShelleyGenesis ConcreteCrypto
+exampleShelleyGenesis :: ShelleyGenesis (ConcreteCrypto h)
 exampleShelleyGenesis =
   ShelleyGenesis
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),

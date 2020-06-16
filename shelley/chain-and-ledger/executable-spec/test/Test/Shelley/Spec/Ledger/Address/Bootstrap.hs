@@ -71,8 +71,8 @@ genByronVKeyAddr = do
 data C
 
 instance Crypto C where
-  type KES C = KES ConcreteCrypto
-  type VRF C = VRF ConcreteCrypto
+  type KES C = KES (ConcreteCrypto Hash.ShortHash)
+  type VRF C = VRF (ConcreteCrypto Hash.ShortHash)
   type DSIGN C = DSIGN.Ed25519DSIGN
-  type HASH C = HASH ConcreteCrypto
+  type HASH C = HASH (ConcreteCrypto Hash.ShortHash)
   type ADDRHASH C = Hash.Blake2b_224

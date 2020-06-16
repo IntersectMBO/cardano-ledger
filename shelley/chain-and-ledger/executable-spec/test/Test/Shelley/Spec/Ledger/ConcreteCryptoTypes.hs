@@ -9,7 +9,7 @@
 module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes where
 
 import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
-import Cardano.Crypto.Hash (ShortHash)
+import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Crypto.KES (MockKES)
 import Data.Map (Map)
 import qualified Shelley.Spec.Ledger.Address as TxData
@@ -43,205 +43,205 @@ import qualified Shelley.Spec.Ledger.TxData as TxData
 import qualified Shelley.Spec.Ledger.UTxO as UTxO
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 
-data ConcreteCrypto
+data ConcreteCrypto (h :: *)
 
-instance Crypto ConcreteCrypto where
-  type HASH ConcreteCrypto = ShortHash
-  type ADDRHASH ConcreteCrypto = ShortHash
-  type DSIGN ConcreteCrypto = MockDSIGN
-  type KES ConcreteCrypto = MockKES 10
-  type VRF ConcreteCrypto = FakeVRF
+instance HashAlgorithm h => Crypto (ConcreteCrypto h) where
+  type HASH (ConcreteCrypto h) = h
+  type ADDRHASH (ConcreteCrypto h) = h
+  type DSIGN (ConcreteCrypto h) = MockDSIGN
+  type KES (ConcreteCrypto h) = MockKES 10
+  type VRF (ConcreteCrypto h) = FakeVRF
 
-type DCert = Delegation.Certificates.DCert ConcreteCrypto
+type DCert h = Delegation.Certificates.DCert (ConcreteCrypto h)
 
-type PoolDistr = Delegation.Certificates.PoolDistr ConcreteCrypto
+type PoolDistr h = Delegation.Certificates.PoolDistr (ConcreteCrypto h)
 
-type Delegation = TxData.Delegation ConcreteCrypto
+type Delegation h = TxData.Delegation (ConcreteCrypto h)
 
-type PoolParams = TxData.PoolParams ConcreteCrypto
+type PoolParams h = TxData.PoolParams (ConcreteCrypto h)
 
-type RewardAcnt = TxData.RewardAcnt ConcreteCrypto
+type RewardAcnt h = TxData.RewardAcnt (ConcreteCrypto h)
 
-type StakePools = TxData.StakePools ConcreteCrypto
+type StakePools h = TxData.StakePools (ConcreteCrypto h)
 
-type KeyHash kr = Keys.KeyHash kr ConcreteCrypto
+type KeyHash h kr = Keys.KeyHash kr (ConcreteCrypto h)
 
 pattern KeyHash ::
-  forall (h :: Keys.HashType) (kr :: Keys.KeyRole h).
-  ( Keys.AlgorithmForHashType ConcreteCrypto h
-      ~ ShortHash
+  forall (h :: *) (ht :: Keys.HashType) (kr :: Keys.KeyRole ht).
+  ( Keys.AlgorithmForHashType (ConcreteCrypto h) ht ~ h
   ) =>
-  Keys.Hash ConcreteCrypto (VerKeyDSIGN (DSIGN ConcreteCrypto)) ->
-  KeyHash (kr :: Keys.KeyRole h)
+  Keys.Hash (ConcreteCrypto h) (VerKeyDSIGN (DSIGN (ConcreteCrypto h))) ->
+  KeyHash h (kr :: Keys.KeyRole ht)
 pattern KeyHash h = Keys.KeyHash h
 
 {-# COMPLETE KeyHash #-}
 
-type GenDelegPair = Keys.GenDelegPair ConcreteCrypto
+type GenDelegPair h = Keys.GenDelegPair (ConcreteCrypto h)
 
-pattern GenDelegPair :: KeyHash 'Keys.GenesisDelegate -> VRFKeyHash -> GenDelegPair
+pattern GenDelegPair :: KeyHash h 'Keys.GenesisDelegate -> VRFKeyHash h -> GenDelegPair h
 pattern GenDelegPair kh vrfKH = Keys.GenDelegPair kh vrfKH
 
 {-# COMPLETE GenDelegPair #-}
 
-type GenDelegs = Keys.GenDelegs ConcreteCrypto
+type GenDelegs h = Keys.GenDelegs (ConcreteCrypto h)
 
-pattern GenDelegs :: (Map (KeyHash 'Keys.Genesis) GenDelegPair) -> GenDelegs
+pattern GenDelegs :: (Map (KeyHash h 'Keys.Genesis) (GenDelegPair h)) -> GenDelegs h
 pattern GenDelegs m = Keys.GenDelegs m
 
 {-# COMPLETE GenDelegs #-}
 
-type KeyPair kr = Keys.KeyPair kr ConcreteCrypto
+type KeyPair h kr = Keys.KeyPair kr (ConcreteCrypto h)
 
-pattern KeyPair :: VKey kr -> SignKeyDSIGN -> KeyPair kr
+pattern KeyPair :: VKey h kr -> SignKeyDSIGN h -> KeyPair h kr
 pattern KeyPair vk sk = Keys.KeyPair vk sk
 
 {-# COMPLETE KeyPair #-}
 
-type GenesisKeyPair = Keys.KeyPair 'Keys.Genesis ConcreteCrypto
+type GenesisKeyPair h = Keys.KeyPair 'Keys.Genesis (ConcreteCrypto h)
 
-type SignedDSIGN = Keys.SignedDSIGN ConcreteCrypto
+type SignedDSIGN h = Keys.SignedDSIGN (ConcreteCrypto h)
 
-type SignKeyDSIGN = Keys.SignKeyDSIGN ConcreteCrypto
+type SignKeyDSIGN h = Keys.SignKeyDSIGN (ConcreteCrypto h)
 
-type VKey kr = Keys.VKey kr ConcreteCrypto
+type VKey h kr = Keys.VKey kr (ConcreteCrypto h)
 
-pattern VKey :: VerKeyDSIGN (DSIGN ConcreteCrypto) -> VKey kr
+pattern VKey :: VerKeyDSIGN (DSIGN (ConcreteCrypto h)) -> VKey h kr
 pattern VKey x = Keys.VKey x
 
 {-# COMPLETE VKey #-}
 
-type KeyPairs = LedgerState.KeyPairs ConcreteCrypto
+type KeyPairs h = LedgerState.KeyPairs (ConcreteCrypto h)
 
-type MultiSigPairs = [(MultiSig, MultiSig)]
+type MultiSigPairs h = [(MultiSig h, MultiSig h)]
 
-type VKeyGenesis = Keys.VKey 'Keys.Genesis ConcreteCrypto
+type VKeyGenesis h = Keys.VKey 'Keys.Genesis (ConcreteCrypto h)
 
-type EpochState = LedgerState.EpochState ConcreteCrypto
+type EpochState h = LedgerState.EpochState (ConcreteCrypto h)
 
-type NEWEPOCH = STS.NewEpoch.NEWEPOCH ConcreteCrypto
+type NEWEPOCH h = STS.NewEpoch.NEWEPOCH (ConcreteCrypto h)
 
-type LedgerState = LedgerState.LedgerState ConcreteCrypto
+type LedgerState h = LedgerState.LedgerState (ConcreteCrypto h)
 
-type UTxOState = LedgerState.UTxOState ConcreteCrypto
+type UTxOState h = LedgerState.UTxOState (ConcreteCrypto h)
 
-type DState = LedgerState.DState ConcreteCrypto
+type DState h = LedgerState.DState (ConcreteCrypto h)
 
-type PState = LedgerState.PState ConcreteCrypto
+type PState h = LedgerState.PState (ConcreteCrypto h)
 
-type DPState = LedgerState.DPState ConcreteCrypto
+type DPState h = LedgerState.DPState (ConcreteCrypto h)
 
-type StakeReference = TxData.StakeReference ConcreteCrypto
+type StakeReference h = TxData.StakeReference (ConcreteCrypto h)
 
-type Addr = TxData.Addr ConcreteCrypto
+type Addr h = TxData.Addr (ConcreteCrypto h)
 
-type Tx = Tx.Tx ConcreteCrypto
+type Tx h = Tx.Tx (ConcreteCrypto h)
 
-type TxBody = Tx.TxBody ConcreteCrypto
+type TxBody h = Tx.TxBody (ConcreteCrypto h)
 
-type TxIn = Tx.TxIn ConcreteCrypto
+type TxIn h = Tx.TxIn (ConcreteCrypto h)
 
-type TxOut = Tx.TxOut ConcreteCrypto
+type TxOut h = Tx.TxOut (ConcreteCrypto h)
 
-type TxId = TxData.TxId ConcreteCrypto
+type TxId h = TxData.TxId (ConcreteCrypto h)
 
-type UTxO = UTxO.UTxO ConcreteCrypto
+type UTxO h = UTxO.UTxO (ConcreteCrypto h)
 
-type Block = BlockChain.Block ConcreteCrypto
+type Block h = BlockChain.Block (ConcreteCrypto h)
 
-type LaxBlock = BlockChain.LaxBlock ConcreteCrypto
+type LaxBlock h = BlockChain.LaxBlock (ConcreteCrypto h)
 
-type BHBody = BlockChain.BHBody ConcreteCrypto
+type BHBody h = BlockChain.BHBody (ConcreteCrypto h)
 
-type SignKeyKES = Keys.SignKeyKES ConcreteCrypto
+type SignKeyKES h = Keys.SignKeyKES (ConcreteCrypto h)
 
-type VerKeyKES = Keys.VerKeyKES ConcreteCrypto
+type VerKeyKES h = Keys.VerKeyKES (ConcreteCrypto h)
 
-type SignKeyVRF = Keys.SignKeyVRF ConcreteCrypto
+type SignKeyVRF h = Keys.SignKeyVRF (ConcreteCrypto h)
 
-type VerKeyVRF = Keys.VerKeyVRF ConcreteCrypto
+type VerKeyVRF h = Keys.VerKeyVRF (ConcreteCrypto h)
 
-type VrfKeyPairs = [(SignKeyVRF, VerKeyVRF)]
+type VrfKeyPairs h = [(SignKeyVRF h, VerKeyVRF h)]
 
-type CertifiedVRF = Keys.CertifiedVRF ConcreteCrypto
+type CertifiedVRF h = Keys.CertifiedVRF (ConcreteCrypto h)
 
-type BHeader = BlockChain.BHeader ConcreteCrypto
+type BHeader h = BlockChain.BHeader (ConcreteCrypto h)
 
-type OCert = OCert.OCert ConcreteCrypto
+type OCert h = OCert.OCert (ConcreteCrypto h)
 
-type OCertEnv = STS.Ocert.OCertEnv ConcreteCrypto
+type OCertEnv h = STS.Ocert.OCertEnv (ConcreteCrypto h)
 
-type HashHeader = BlockChain.HashHeader ConcreteCrypto
+type HashHeader h = BlockChain.HashHeader (ConcreteCrypto h)
 
-type PrevHash = BlockChain.PrevHash ConcreteCrypto
+type PrevHash h = BlockChain.PrevHash (ConcreteCrypto h)
 
-type NewEpochState = LedgerState.NewEpochState ConcreteCrypto
+type NewEpochState h = LedgerState.NewEpochState (ConcreteCrypto h)
 
-type NonMyopic = Rewards.NonMyopic ConcreteCrypto
+type NonMyopic h = Rewards.NonMyopic (ConcreteCrypto h)
 
-type RewardUpdate = LedgerState.RewardUpdate ConcreteCrypto
+type RewardUpdate h = LedgerState.RewardUpdate (ConcreteCrypto h)
 
-type OBftSlot = LedgerState.OBftSlot ConcreteCrypto
+type OBftSlot h = LedgerState.OBftSlot (ConcreteCrypto h)
 
-type ChainState = STS.Chain.ChainState ConcreteCrypto
+type ChainState h = STS.Chain.ChainState (ConcreteCrypto h)
 
-type CHAIN = STS.Chain.CHAIN ConcreteCrypto
+type CHAIN h = STS.Chain.CHAIN (ConcreteCrypto h)
 
-type TICK = STS.Tick.TICK ConcreteCrypto
+type TICK h = STS.Tick.TICK (ConcreteCrypto h)
 
-type TickEnv = STS.Tick.TickEnv ConcreteCrypto
+type TickEnv h = STS.Tick.TickEnv (ConcreteCrypto h)
 
-type UTXOW = STS.Utxow.UTXOW ConcreteCrypto
+type UTXOW h = STS.Utxow.UTXOW (ConcreteCrypto h)
 
-type UTXO = STS.Utxo.UTXO ConcreteCrypto
+type UTXO h = STS.Utxo.UTXO (ConcreteCrypto h)
 
-type UtxoEnv = STS.Utxo.UtxoEnv ConcreteCrypto
+type UtxoEnv h = STS.Utxo.UtxoEnv (ConcreteCrypto h)
 
-type DELEG = STS.Deleg.DELEG ConcreteCrypto
+type DELEG h = STS.Deleg.DELEG (ConcreteCrypto h)
 
-type DELPL = STS.Delpl.DELPL ConcreteCrypto
+type DELPL h = STS.Delpl.DELPL (ConcreteCrypto h)
 
-type LEDGER = STS.Ledger.LEDGER ConcreteCrypto
+type LEDGER h = STS.Ledger.LEDGER (ConcreteCrypto h)
 
-type LEDGERS = STS.Ledgers.LEDGERS ConcreteCrypto
+type LEDGERS h = STS.Ledgers.LEDGERS (ConcreteCrypto h)
 
 type LedgerEnv = STS.Ledger.LedgerEnv
 
-type DELEGS = STS.Delegs.DELEGS ConcreteCrypto
+type DELEGS h = STS.Delegs.DELEGS (ConcreteCrypto h)
 
-type POOL = STS.Pool.POOL ConcreteCrypto
+type POOL h = STS.Pool.POOL (ConcreteCrypto h)
 
-type POOLREAP = STS.PoolReap.POOLREAP ConcreteCrypto
+type POOLREAP h = STS.PoolReap.POOLREAP (ConcreteCrypto h)
 
-type PPUP = STS.Ppup.PPUP ConcreteCrypto
+type PPUP h = STS.Ppup.PPUP (ConcreteCrypto h)
 
-type Credential kr = TxData.Credential kr ConcreteCrypto
+type Credential h kr = TxData.Credential kr (ConcreteCrypto h)
 
-type StakeCreds = TxData.StakeCreds ConcreteCrypto
+type StakeCreds h = TxData.StakeCreds (ConcreteCrypto h)
 
-type MultiSig = Scripts.MultiSig ConcreteCrypto
+type MultiSig h = Scripts.MultiSig (ConcreteCrypto h)
 
-type ScriptHash = Scripts.ScriptHash ConcreteCrypto
+type ScriptHash h = Scripts.ScriptHash (ConcreteCrypto h)
 
-type WitVKey = TxData.WitVKey ConcreteCrypto
+type WitVKey h = TxData.WitVKey (ConcreteCrypto h)
 
-type WitnessSet = Tx.WitnessSet ConcreteCrypto
+type WitnessSet h = Tx.WitnessSet (ConcreteCrypto h)
 
-type Wdrl = TxData.Wdrl ConcreteCrypto
+type Wdrl h = TxData.Wdrl (ConcreteCrypto h)
 
-type SnapShot = EpochBoundary.SnapShot ConcreteCrypto
+type SnapShot h = EpochBoundary.SnapShot (ConcreteCrypto h)
 
-type SnapShots = EpochBoundary.SnapShots ConcreteCrypto
+type SnapShots h = EpochBoundary.SnapShots (ConcreteCrypto h)
 
-type Stake = EpochBoundary.Stake ConcreteCrypto
+type Stake h = EpochBoundary.Stake (ConcreteCrypto h)
 
-type Update = PParams.Update ConcreteCrypto
+type Update h = PParams.Update (ConcreteCrypto h)
 
-type ProposedPPUpdates = PParams.ProposedPPUpdates ConcreteCrypto
+type ProposedPPUpdates h = PParams.ProposedPPUpdates (ConcreteCrypto h)
 
-type VRFKeyHash = Keys.Hash ConcreteCrypto (Keys.VerKeyVRF ConcreteCrypto)
+type VRFKeyHash h = Keys.Hash (ConcreteCrypto h) (Keys.VerKeyVRF (ConcreteCrypto h))
 
 hashKeyVRF ::
-  Keys.VerKeyVRF ConcreteCrypto ->
-  VRFKeyHash
+  HashAlgorithm h =>
+  Keys.VerKeyVRF (ConcreteCrypto h) ->
+  VRFKeyHash h
 hashKeyVRF = Keys.hashVerKeyVRF

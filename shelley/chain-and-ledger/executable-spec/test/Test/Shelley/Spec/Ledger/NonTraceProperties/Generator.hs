@@ -28,6 +28,7 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
   )
 where
 
+import Cardano.Crypto.Hash (HashAlgorithm)
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -105,7 +106,7 @@ import Unsafe.Coerce
 
 -- | Find first matching key pair for address. Returns the matching key pair
 -- where the first element of the pair matched the hash in 'addr'.
-findPayKeyPair :: Addr -> KeyPairs -> KeyPair 'Payment
+findPayKeyPair :: HashAlgorithm h => Addr h -> KeyPairs h -> KeyPair h 'Payment
 findPayKeyPair (Addr _ (KeyHashObj addr) _) keyList =
   case matches of
     [] -> error "findPayKeyPair: could not find a match for the given address"
@@ -123,15 +124,15 @@ genWord64 :: Word64 -> Word64 -> Gen Word64
 genWord64 lower upper = Gen.integral $ Range.linear lower upper
 
 -- | Returns the number of entries of the UTxO set.
-utxoSize :: UTxO -> Int
+utxoSize :: UTxO h -> Int
 utxoSize (UTxO m) = Map.size m
 
 -- | Extract the map in an 'UTxO'.
-utxoMap :: UTxO -> Map TxIn TxOut
+utxoMap :: UTxO h -> Map (TxIn h) (TxOut h)
 utxoMap (UTxO m) = m
 
 -- | Generates a list of '(pay, stake)' key pairs.
-genKeyPairs :: Int -> Int -> Gen KeyPairs
+genKeyPairs :: Int -> Int -> Gen (KeyPairs h)
 genKeyPairs lower upper = do
   xs <-
     Gen.list (Range.linear lower upper) $
@@ -147,7 +148,7 @@ genKeyPairs lower upper = do
 
 -- | Hashes all pairs of pay, stake key pairs of a list into a list of pairs of
 -- hashed keys
-hashKeyPairs :: KeyPairs -> [(Credential 'Payment, StakeReference)]
+hashKeyPairs :: HashAlgorithm h => KeyPairs h -> [(Credential h 'Payment, StakeReference h)]
 hashKeyPairs keyPairs =
   ( \(a, b) ->
       ( KeyHashObj . hashKey $ vKey a,
@@ -158,7 +159,7 @@ hashKeyPairs keyPairs =
 
 -- | Transforms list of keypairs into 'Addr' types of the form 'AddrTxin pay
 -- stake'
-addrTxins :: KeyPairs -> [Addr]
+addrTxins :: HashAlgorithm h => KeyPairs h -> [Addr h]
 addrTxins keyPairs = uncurry (Addr Testnet) <$> hashKeyPairs keyPairs
 
 -- | Generator for List of 'Coin' values. Generates between 'lower' and 'upper'
@@ -172,7 +173,7 @@ genCoinList minCoin maxCoin lower upper = do
 
 -- | Generator for a list of 'TxOut' where for each 'Addr' of 'addrs' one Coin
 -- value is generated.
-genTxOut :: [Addr] -> Gen [TxOut]
+genTxOut :: [Addr h] -> Gen [TxOut h]
 genTxOut addrs = do
   ys <- genCoinList 100 10000 (length addrs) (length addrs)
   return (uncurry TxOut <$> zip addrs ys)
@@ -183,8 +184,8 @@ defPCs = emptyPParams
 
 -- | Generator of a non-empty genesis ledger state, i.e., at least one valid
 -- address and non-zero UTxO.
-genNonemptyGenesisState :: Gen LedgerState
-genNonemptyGenesisState = do
+genNonemptyGenesisState :: HashAlgorithm h => proxy h -> Gen (LedgerState h)
+genNonemptyGenesisState _ = do
   keyPairs <- genKeyPairs 1 10
   (genesisState Map.empty . genesisCoins) <$> genTxOut (addrTxins keyPairs)
 
@@ -194,7 +195,7 @@ genNonemptyGenesisState = do
 -- addresses and spends the UTxO. If 'n' addresses are selected to spent 'b'
 -- coins, the amount spent to each address is 'div b n' and the fees are set to
 -- 'rem b n'.
-genTx :: KeyPairs -> UTxO -> SlotNo -> Gen (Coin, Tx)
+genTx :: HashAlgorithm h => KeyPairs h -> UTxO h -> SlotNo -> Gen (Coin, Tx h)
 genTx keyList (UTxO m) cslot = do
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
@@ -240,10 +241,11 @@ genTx keyList (UTxO m) cslot = do
 -- accumulated fees and a resulting ledger state or the 'ValidationError'
 -- information in case of an invalid transaction.
 genLedgerStateTx ::
-  KeyPairs ->
+  HashAlgorithm h =>
+  KeyPairs h ->
   SlotNo ->
-  LedgerState ->
-  Gen (Coin, Tx, Either [ValidationError] LedgerState)
+  LedgerState h ->
+  Gen (Coin, Tx h, Either [ValidationError] (LedgerState h))
 genLedgerStateTx keyList (SlotNo _slot) sourceState = do
   let utxo' = (_utxo . _utxoState) sourceState
   slot' <- genWord64 _slot (_slot + 100)
@@ -255,8 +257,8 @@ genLedgerStateTx keyList (SlotNo _slot) sourceState = do
 -- initial ledger state and the final ledger state or the validation error if an
 -- invalid transaction has been generated.
 genNonEmptyAndAdvanceTx ::
-  Gen (KeyPairs, Natural, Coin, LedgerState, [Tx], Either [ValidationError] LedgerState)
-genNonEmptyAndAdvanceTx = do
+  HashAlgorithm h => proxy h -> Gen (KeyPairs h, Natural, Coin, LedgerState h, [Tx h], Either [ValidationError] (LedgerState h))
+genNonEmptyAndAdvanceTx _ = do
   keyPairs <- genKeyPairs 1 10
   steps <- genNatural 1 10
   ls <- (genesisState Map.empty . genesisCoins) <$> genTxOut (addrTxins keyPairs)
@@ -265,8 +267,8 @@ genNonEmptyAndAdvanceTx = do
 
 -- | Mutated variant of above, collects validation errors in 'LedgerValidation'.
 genNonEmptyAndAdvanceTx' ::
-  Gen (KeyPairs, Natural, Coin, LedgerState, [Tx], LedgerValidation)
-genNonEmptyAndAdvanceTx' = do
+  HashAlgorithm h => proxy h -> Gen (KeyPairs h, Natural, Coin, LedgerState h, [Tx h], LedgerValidation h)
+genNonEmptyAndAdvanceTx' _ = do
   keyPairs <- genKeyPairs 1 10
   steps <- genNatural 1 10
   ls <- (genesisState Map.empty . genesisCoins) <$> genTxOut (addrTxins keyPairs)
@@ -278,13 +280,14 @@ genNonEmptyAndAdvanceTx' = do
 -- 'ls' and returns the result of the repeated generation and application of
 -- transactions.
 repeatCollectTx ::
+  HashAlgorithm h =>
   Natural ->
-  KeyPairs ->
+  KeyPairs h ->
   SlotNo ->
   Coin ->
-  LedgerState ->
-  [Tx] ->
-  Gen (Coin, [Tx], Either [ValidationError] LedgerState)
+  LedgerState h ->
+  [Tx h] ->
+  Gen (Coin, [Tx h], Either [ValidationError] (LedgerState h))
 repeatCollectTx 0 _ _ fees ls txs = pure (fees, reverse txs, Right ls)
 repeatCollectTx n keyPairs (SlotNo _slot) fees ls txs = do
   (txfee', tx, next) <- genLedgerStateTx keyPairs (SlotNo _slot) ls
@@ -295,13 +298,14 @@ repeatCollectTx n keyPairs (SlotNo _slot) fees ls txs = do
 -- | Mutated variant of `repeatCollectTx'`, stops at recursion depth or after
 -- exhausting the UTxO set to prevent calling 'head' on empty input list.
 repeatCollectTx' ::
+  HashAlgorithm h =>
   Natural ->
-  KeyPairs ->
+  KeyPairs h ->
   Coin ->
-  LedgerState ->
-  [Tx] ->
+  LedgerState h ->
+  [Tx h] ->
   [ValidationError] ->
-  Gen (Coin, [Tx], LedgerValidation)
+  Gen (Coin, [Tx h], LedgerValidation h)
 repeatCollectTx' n keyPairs fees ls txs validationErrors
   | n == 0 || (utxoSize $ (_utxo . _utxoState) ls) == 0 =
     pure (fees, reverse txs, LedgerValidation validationErrors ls)
@@ -310,56 +314,58 @@ repeatCollectTx' n keyPairs fees ls txs validationErrors
     repeatCollectTx' (n - 1) keyPairs (txfee' + fees) ls' (tx : txs) (validationErrors ++ errors')
 
 -- | Find first matching key pair for stake key in 'AddrTxin'.
-findStakeKeyPair :: Credential 'Staking -> KeyPairs -> KeyPair 'Staking
+findStakeKeyPair :: HashAlgorithm h => Credential h 'Staking -> KeyPairs h -> KeyPair h 'Staking
 findStakeKeyPair (KeyHashObj hk) keyList =
   snd $ head $ filter (\(_, stake) -> hk == hashKey (vKey stake)) keyList
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
-getTxOutAddr :: TxOut -> Addr
+getTxOutAddr :: TxOut h -> Addr h
 getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.
-genValidLedgerState :: Gen (KeyPairs, Natural, [Tx], LedgerState)
-genValidLedgerState = do
-  (keyPairs, steps, _, _, txs, newState) <- genNonEmptyAndAdvanceTx
+genValidLedgerState :: HashAlgorithm h => proxy h -> Gen (KeyPairs h, Natural, [Tx h], LedgerState h)
+genValidLedgerState p = do
+  (keyPairs, steps, _, _, txs, newState) <- genNonEmptyAndAdvanceTx p
   case newState of
     Left _ -> Gen.discard
     Right ls -> pure (keyPairs, steps, txs, ls)
 
 genValidSuccessorState ::
-  KeyPairs ->
+  HashAlgorithm h =>
+  KeyPairs h ->
   SlotNo ->
-  LedgerState ->
-  Gen (Coin, Tx, LedgerState)
+  LedgerState h ->
+  Gen (Coin, Tx h, LedgerState h)
 genValidSuccessorState keyPairs _slot sourceState = do
   (txfee', entry, next) <- genLedgerStateTx keyPairs _slot sourceState
   case next of
     Left _ -> Gen.discard
     Right ls -> pure (txfee', entry, ls)
 
-genValidStateTx :: Gen (LedgerState, Natural, Coin, Tx, LedgerState)
-genValidStateTx = do
-  (ls, steps, txfee', entry, ls', _) <- genValidStateTxKeys
+genValidStateTx :: HashAlgorithm h => proxy h -> Gen (LedgerState h, Natural, Coin, Tx h, LedgerState h)
+genValidStateTx p = do
+  (ls, steps, txfee', entry, ls', _) <- genValidStateTxKeys p
   pure (ls, steps, txfee', entry, ls')
 
-genValidStateTxKeys :: Gen (LedgerState, Natural, Coin, Tx, LedgerState, KeyPairs)
-genValidStateTxKeys = do
-  (keyPairs, steps, _, ls) <- genValidLedgerState
+genValidStateTxKeys :: HashAlgorithm h => proxy h -> Gen (LedgerState h, Natural, Coin, Tx h, LedgerState h, KeyPairs h)
+genValidStateTxKeys p = do
+  (keyPairs, steps, _, ls) <- genValidLedgerState p
   (txfee', entry, ls') <- genValidSuccessorState keyPairs (SlotNo $ fromIntegral steps + 1) ls
   pure (ls, steps, txfee', entry, ls', keyPairs)
 
-genStateTx :: Gen (LedgerState, Natural, Coin, Tx, LedgerValidation)
-genStateTx = do
-  (keyPairs, steps, _, ls) <- genValidLedgerState
+genStateTx :: HashAlgorithm h => proxy h -> Gen (LedgerState h, Natural, Coin, Tx h, LedgerValidation h)
+genStateTx p = do
+  (keyPairs, steps, _, ls) <- genValidLedgerState p
   (txfee', entry, lv) <- genLedgerStateTx' keyPairs ls
   pure (ls, steps, txfee', entry, lv)
 
 genLedgerStateTx' ::
-  KeyPairs ->
-  LedgerState ->
-  Gen (Coin, Tx, LedgerValidation)
+  HashAlgorithm h =>
+  KeyPairs h ->
+  LedgerState h ->
+  Gen (Coin, Tx h, LedgerValidation h)
 genLedgerStateTx' keyList sourceState = do
   let utxo' = (_utxo . _utxoState) sourceState
   _slot <- genWord64 0 1000
@@ -373,7 +379,7 @@ genLedgerStateTx' keyList sourceState = do
 
 -- Generators for 'DelegationData'
 
-genDelegationData :: KeyPairs -> EpochNo -> Gen DCert
+genDelegationData :: HashAlgorithm h => KeyPairs h -> EpochNo -> Gen (DCert h)
 genDelegationData keys epoch =
   Gen.choice
     [ genDCertRegKey keys,
@@ -381,20 +387,20 @@ genDelegationData keys epoch =
       genDCertRetirePool keys epoch
     ]
 
-genDCertRegKey :: KeyPairs -> Gen DCert
+genDCertRegKey :: HashAlgorithm h => KeyPairs h -> Gen (DCert h)
 genDCertRegKey keys =
   DCertDeleg . RegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
-genDCertDeRegKey :: KeyPairs -> Gen DCert
+genDCertDeRegKey :: HashAlgorithm h => KeyPairs h -> Gen (DCert h)
 genDCertDeRegKey keys =
   DCertDeleg . DeRegKey . KeyHashObj . hashKey <$> getAnyStakeKey keys
 
-genDCertRetirePool :: KeyPairs -> EpochNo -> Gen DCert
+genDCertRetirePool :: HashAlgorithm h => KeyPairs h -> EpochNo -> Gen (DCert h)
 genDCertRetirePool keys epoch = do
   key <- getAnyStakeKey keys
   pure $ DCertPool $ RetirePool (unsafeCoerce $ hashKey key) epoch
 
-genDelegation :: KeyPairs -> DPState -> Gen Delegation
+genDelegation :: HashAlgorithm h => KeyPairs h -> DPState h -> Gen (Delegation h)
 genDelegation keys d = do
   poolKey <- Gen.element $ Map.keys stkCreds'
   delegatorKey <- getAnyStakeKey keys
@@ -402,23 +408,25 @@ genDelegation keys d = do
   where
     (StakeCreds stkCreds') = (_stkCreds . _dstate) d
 
-genDCertDelegate :: KeyPairs -> DPState -> Gen DCert
+genDCertDelegate :: HashAlgorithm h => KeyPairs h -> DPState h -> Gen (DCert h)
 genDCertDelegate keys ds = (DCertDeleg . Delegate) <$> genDelegation keys ds
 
 -- | In the case where a transaction is valid for a given ledger state,
 --  apply the transaction as a state transition function on the ledger state.
 --  Otherwise, return a list of validation errors.
 asStateTransition ::
+  forall h.
+  HashAlgorithm h =>
   SlotNo ->
   PParams ->
-  LedgerState ->
-  Tx ->
+  LedgerState h ->
+  Tx h ->
   AccountState ->
-  Either [ValidationError] LedgerState
+  Either [ValidationError] (LedgerState h)
 asStateTransition _slot pp ls tx acnt =
   let next =
         runShelleyBase $
-          applySTS @LEDGER
+          applySTS @(LEDGER h)
             ( TRC
                 ( (LedgerEnv _slot 0 pp acnt),
                   (_utxoState ls, _delegationState ls),
@@ -441,12 +449,13 @@ asStateTransition' ::
   --    , DSignable crypto (TxBody crypto)
   --    )
   -- =>
+  HashAlgorithm h =>
   SlotNo ->
   PParams ->
-  LedgerValidation ->
-  Tx ->
+  LedgerValidation h ->
+  Tx h ->
   AccountState ->
-  LedgerValidation
+  LedgerValidation h
 asStateTransition' _slot pp (LedgerValidation valErrors ls) tx _ =
   let ls' = applyTxBody ls pp (_body tx)
       d' = (_genDelegs . _dstate . _delegationState) ls
@@ -454,11 +463,11 @@ asStateTransition' _slot pp (LedgerValidation valErrors ls) tx _ =
         Invalid errors -> LedgerValidation (valErrors ++ errors) ls'
         Valid -> LedgerValidation valErrors ls'
 
-convertPredicateFailuresToValidationErrors :: [[PredicateFailure LEDGER]] -> [ValidationError]
+convertPredicateFailuresToValidationErrors :: [[PredicateFailure (LEDGER h)]] -> [ValidationError]
 convertPredicateFailuresToValidationErrors pfs =
   map predicateFailureToValidationError $ foldr (++) [] pfs
 
-predicateFailureToValidationError :: PredicateFailure LEDGER -> ValidationError
+predicateFailureToValidationError :: PredicateFailure (LEDGER h) -> ValidationError
 predicateFailureToValidationError (UtxowFailure (MissingVKeyWitnessesUTXOW _)) =
   MissingWitnesses
 predicateFailureToValidationError (UtxowFailure (MissingScriptWitnessesUTXOW _)) =

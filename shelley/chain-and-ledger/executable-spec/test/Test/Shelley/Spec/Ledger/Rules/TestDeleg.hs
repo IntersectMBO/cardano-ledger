@@ -15,6 +15,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestDeleg
   )
 where
 
+import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -63,13 +64,13 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -- helper accessor functions --
 -------------------------------
 
-getStDelegs :: DState -> Set (Credential 'Staking)
+getStDelegs :: DState ShortHash -> Set (Credential ShortHash 'Staking)
 getStDelegs = dom . _stkCreds
 
-getRewards :: DState -> Map RewardAcnt Coin
+getRewards :: DState ShortHash -> Map (RewardAcnt ShortHash) Coin
 getRewards = _rewards
 
-getDelegations :: DState -> Map (Credential 'Staking) (KeyHash 'StakePool)
+getDelegations :: DState ShortHash -> Map (Credential ShortHash 'Staking) (KeyHash ShortHash 'StakePool)
 getDelegations = _delegations
 
 --------------------------
@@ -78,7 +79,7 @@ getDelegations = _delegations
 
 -- | Check that a newly registered key has a reward of 0.
 rewardZeroAfterReg ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG ShortHash)] ->
   Property
 rewardZeroAfterReg tr =
   conjoin $
@@ -97,7 +98,7 @@ rewardZeroAfterReg tr =
 -- | Check that when a stake credential is deregistered, it will not be in the
 -- rewards mapping or delegation mapping of the target state.
 credentialRemovedAfterDereg ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG ShortHash)] ->
   Property
 credentialRemovedAfterDereg tr =
   conjoin $
@@ -119,7 +120,7 @@ credentialRemovedAfterDereg tr =
 -- | Check that a registered stake credential get correctly delegated when
 --  applying a delegation certificate.
 credentialMappingAfterDelegation ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG ShortHash)] ->
   Property
 credentialMappingAfterDelegation tr =
   conjoin $
@@ -139,7 +140,7 @@ credentialMappingAfterDelegation tr =
 -- | Check that the sum of rewards does not change and that each element that is
 -- either removed or added has a zero balance.
 rewardsSumInvariant ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG ShortHash)] ->
   Property
 rewardsSumInvariant tr =
   conjoin $
@@ -160,12 +161,12 @@ rewardsSumInvariant tr =
 
 -- | Check that an accepted MIR certificate adds all entries to the `irwd` mapping
 instantaneousRewardsAdded ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG ShortHash)] ->
   Property
 instantaneousRewardsAdded ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget DELEG -> Property
+    checkMIR :: SourceSignalTarget (DELEG ShortHash) -> Property
     checkMIR (SourceSignalTarget _ t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->
@@ -178,12 +179,12 @@ instantaneousRewardsAdded ssts =
 -- certificate to the existing value in the `irwd` map, overwriting any entries
 -- that already existed.
 instantaneousRewardsValue ::
-  [SourceSignalTarget DELEG] ->
+  [SourceSignalTarget (DELEG ShortHash)] ->
   Property
 instantaneousRewardsValue ssts =
   conjoin (map checkMIR ssts)
   where
-    checkMIR :: SourceSignalTarget DELEG -> Property
+    checkMIR :: SourceSignalTarget (DELEG ShortHash) -> Property
     checkMIR (SourceSignalTarget s t sig) =
       case sig of
         DCertMir (MIRCert ReservesMIR irwd) ->

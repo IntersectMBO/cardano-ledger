@@ -7,6 +7,7 @@
 
 module Test.Shelley.Spec.Ledger.Rules.TestPool where
 
+import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition (Environment, State)
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
@@ -59,10 +60,10 @@ import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
 -- helper accessor functions --
 -------------------------------
 
-getRetiring :: PState -> Map (KeyHash 'StakePool) EpochNo
+getRetiring :: PState ShortHash -> Map (KeyHash ShortHash 'StakePool) EpochNo
 getRetiring = _retiring
 
-getStPools :: PState -> StakePools
+getStPools :: PState ShortHash -> StakePools ShortHash
 getStPools = _stPools
 
 ------------------------------
@@ -81,7 +82,7 @@ traceLen = 100
 
 -- | Check that a newly registered pool key is not in the retiring map.
 rewardZeroAfterReg ::
-  [SourceSignalTarget POOL] ->
+  [SourceSignalTarget (POOL ShortHash)] ->
   Property
 rewardZeroAfterReg ssts =
   conjoin $
@@ -105,8 +106,8 @@ rewardZeroAfterReg ssts =
 -- epoch interval, then the pool key will be added to the retiring map but stays
 -- in the set of stake pools.
 poolRetireInEpoch ::
-  Environment LEDGER ->
-  [SourceSignalTarget POOL] ->
+  Environment (LEDGER ShortHash) ->
+  [SourceSignalTarget (POOL ShortHash)] ->
   Property
 poolRetireInEpoch env ssts =
   conjoin $
@@ -139,22 +140,22 @@ poolRetireInEpoch env ssts =
 
 -- | Check that a `RegPool` certificate properly adds a stake pool.
 registeredPoolIsAdded ::
-  Environment LEDGER ->
-  [SourceSignalTarget POOL] ->
+  Environment (LEDGER ShortHash) ->
+  [SourceSignalTarget (POOL ShortHash)] ->
   Property
 registeredPoolIsAdded env ssts =
   conjoin $
     map addedRegPool ssts
   where
     addedRegPool ::
-      SourceSignalTarget POOL ->
+      SourceSignalTarget (POOL ShortHash) ->
       Property
     addedRegPool sst =
       case signal sst of
         DCertPool (RegPool poolParams) -> check poolParams
         _ -> property ()
       where
-        check :: PoolParams -> Property
+        check :: PoolParams ShortHash -> Property
         check poolParams = do
           let hk = _poolPubKey poolParams
               sSt = source sst
@@ -189,13 +190,13 @@ registeredPoolIsAdded env ssts =
 -- | Check that a `RetirePool` certificate properly marks a stake pool for
 -- retirement.
 poolIsMarkedForRetirement ::
-  [SourceSignalTarget POOL] ->
+  [SourceSignalTarget (POOL ShortHash)] ->
   Property
 poolIsMarkedForRetirement ssts =
   conjoin (map check ssts)
   where
     check ::
-      SourceSignalTarget POOL ->
+      SourceSignalTarget (POOL ShortHash) ->
       Property
     check sst =
       case signal sst of
@@ -204,7 +205,7 @@ poolIsMarkedForRetirement ssts =
         DCertPool (RetirePool hk _epoch) -> wasRemoved hk
         _ -> property ()
       where
-        wasRemoved :: KeyHash 'StakePool -> Property
+        wasRemoved :: KeyHash ShortHash 'StakePool -> Property
         wasRemoved hk =
           conjoin
             [ counterexample
@@ -218,13 +219,13 @@ poolIsMarkedForRetirement ssts =
 -- | Assert that PState maps are in sync with each other after each `Signal
 -- POOL` transition.
 pStateIsInternallyConsistent ::
-  [SourceSignalTarget POOL] ->
+  [SourceSignalTarget (POOL ShortHash)] ->
   Property
 pStateIsInternallyConsistent ssts =
   conjoin $
     map isConsistent (concatMap (\sst -> [source sst, target sst]) ssts)
   where
-    isConsistent :: State POOL -> Property
+    isConsistent :: State (POOL ShortHash) -> Property
     isConsistent (PState stPools_ pParams_ _ retiring_) = do
       let StakePools stPoolsMap = stPools_
           poolKeys = M.keysSet stPoolsMap

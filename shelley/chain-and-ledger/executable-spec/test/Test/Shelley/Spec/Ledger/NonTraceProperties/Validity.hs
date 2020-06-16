@@ -91,8 +91,8 @@ instance Monoid Validity where
 
 -- | A ledger validation state consists of a ledger state 't' and the list of
 -- validation errors that occurred from a valid 's' to reach 't'.
-data LedgerValidation
-  = LedgerValidation [ValidationError] (LedgerState ConcreteCrypto)
+data LedgerValidation h
+  = LedgerValidation [ValidationError] (LedgerState (ConcreteCrypto h))
   deriving (Show, Eq)
 
 -- | Determine if the inputs in a transaction are valid for a given ledger state.
