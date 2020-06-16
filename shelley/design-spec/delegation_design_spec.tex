@@ -2394,8 +2394,8 @@ from their wallet.
 \label{display-of-stake-pools-in-the-wallet}
 
 The wallet software will maintain a set of all the active stake pools. For each,
-it will perform a lookup of the contained \(\mathcal{H}(sk_\text{pool})\) to
-retrieve the corresponding metadata to display to the user.
+it will perform a lookup of the metadata (which is indexed by the metadata hash)
+to display to the user.
 
 In order for stakeholders to be able to delegate their stake to a pool, the
 wallet will provide a listing of stake pools, in a section of the UI called the
