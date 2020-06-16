@@ -77,11 +77,16 @@ pattern KeyHash h = Keys.KeyHash h
 
 {-# COMPLETE KeyHash #-}
 
+type GenDelegPair = Keys.GenDelegPair ConcreteCrypto
+
+pattern GenDelegPair :: KeyHash 'Keys.GenesisDelegate -> VRFKeyHash -> GenDelegPair
+pattern GenDelegPair kh vrfKH = Keys.GenDelegPair kh vrfKH
+
+{-# COMPLETE GenDelegPair #-}
+
 type GenDelegs = Keys.GenDelegs ConcreteCrypto
 
-pattern GenDelegs ::
-  (Map (KeyHash 'Keys.Genesis) (KeyHash 'Keys.GenesisDelegate, VRFKeyHash)) ->
-  GenDelegs
+pattern GenDelegs :: (Map (KeyHash 'Keys.Genesis) GenDelegPair) -> GenDelegs
 pattern GenDelegs m = Keys.GenDelegs m
 
 {-# COMPLETE GenDelegs #-}

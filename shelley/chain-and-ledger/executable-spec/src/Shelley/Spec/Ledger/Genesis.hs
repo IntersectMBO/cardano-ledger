@@ -90,11 +90,7 @@ data ShelleyGenesis c = ShelleyGenesis
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !PParams,
-    sgGenDelegs ::
-      !( Map
-           (KeyHash 'Genesis c)
-           (KeyHash 'GenesisDelegate c, Hash c (VerKeyVRF c))
-       ),
+    sgGenDelegs :: !(Map (KeyHash 'Genesis c) (GenDelegPair c)),
     sgInitialFunds :: !(Map (Addr c) Coin),
     sgStaking :: !(ShelleyGenesisStaking c)
   }
@@ -126,12 +122,10 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
         "updateQuorum" .= sgUpdateQuorum sg,
         "maxLovelaceSupply" .= sgMaxLovelaceSupply sg,
         "protocolParams" .= sgProtocolParams sg,
-        "genDelegs" .= Map.map toGenDelegPair (sgGenDelegs sg),
+        "genDelegs" .= sgGenDelegs sg,
         "initialFunds" .= sgInitialFunds sg,
         "staking" .= Null
       ]
-    where
-      toGenDelegPair (d, v) = GenDelegPair d v
 
 instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
   parseJSON =
@@ -150,33 +144,9 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "updateQuorum"
         <*> obj .: "maxLovelaceSupply"
         <*> obj .: "protocolParams"
-        <*> ( Map.map fromGenDelegPair
-                <$> obj .: "genDelegs"
-            )
+        <*> obj .: "genDelegs"
         <*> obj .: "initialFunds"
         <*> pure emptyGenesisStaking --TODO
-    where
-      fromGenDelegPair (GenDelegPair d v) = (d, v)
-
--- | Type to adjust the JSON presentation of the genesis delegate mapping.
-data GenDelegPair crypto
-  = GenDelegPair
-      (KeyHash 'GenesisDelegate crypto)
-      (Hash crypto (VerKeyVRF crypto))
-
-instance Crypto crypto => ToJSON (GenDelegPair crypto) where
-  toJSON (GenDelegPair d v) =
-    Aeson.object
-      [ "delegate" .= d,
-        "vrf" .= v
-      ]
-
-instance Crypto crypto => FromJSON (GenDelegPair crypto) where
-  parseJSON =
-    Aeson.withObject "GenDelegPair" $ \obj ->
-      GenDelegPair
-        <$> obj .: "delegate"
-        <*> obj .: "vrf"
 
 {-------------------------------------------------------------------------------
   Genesis UTxO

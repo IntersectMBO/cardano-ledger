@@ -51,6 +51,7 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
+    GenDelegPair (..),
     GenDelegs (..),
     Hash,
     KESignable,
@@ -249,14 +250,14 @@ overlayTransition =
             case Map.lookup gkey genDelegs of
               Nothing ->
                 failBecause $ UnknownGenesisKeyOVERLAY gkey
-              Just (genDelegsKey, _genesisVrfKH) -> do
+              Just (GenDelegPair genDelegsKey _genesisVrfKH) -> do
                 vkh == coerceKeyRole genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
         -- pbftVrfChecks genesisVrfKH eta0 bhb ?!: id
 
         let oce =
               OCertEnv
                 { ocertEnvStPools = dom pd,
-                  ocertEnvGenDelegs = Set.map fst $ range genDelegs
+                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
                 }
 
         trans @(OCERT crypto) $ TRC (oce, cs, bh)

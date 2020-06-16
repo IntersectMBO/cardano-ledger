@@ -35,13 +35,14 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( GenesisKeyPair,
+  ( GenDelegPair,
+    GenesisKeyPair,
     KeyHash,
     KeyPairs,
     MultiSigPairs,
     UTxO,
-    VRFKeyHash,
     hashKeyVRF,
+    pattern GenDelegPair,
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Constants
@@ -172,13 +173,13 @@ issuerKeys Constants {maxSlotTrace} ns x =
           hk = hashKey vkCold
         }
 
-genesisDelegs0 :: Constants -> Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash)
+genesisDelegs0 :: Constants -> Map (KeyHash 'Genesis) GenDelegPair
 genesisDelegs0 c =
   Map.fromList
     [ ( hashVKey gkey,
-        ( coerceKeyRole $ hashVKey (cold pkeys),
-          hashKeyVRF . snd . vrf $ pkeys
-        )
+        GenDelegPair
+          (coerceKeyRole $ hashVKey (cold pkeys))
+          (hashKeyVRF . snd . vrf $ pkeys)
       )
       | (gkey, pkeys) <- coreNodeKeys c
     ]

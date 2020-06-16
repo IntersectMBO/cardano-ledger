@@ -291,6 +291,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Credential,
     DState,
     EpochState,
+    GenDelegPair,
     HashHeader,
     KeyHash,
     KeyPair,
@@ -314,6 +315,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     VKeyGenesis,
     VRFKeyHash,
     hashKeyVRF,
+    pattern GenDelegPair,
     pattern GenDelegs,
     pattern KeyPair,
   )
@@ -403,12 +405,13 @@ slotKeys = coreNodeKeysForSlot fullOSched
   where
     fullOSched = Map.unions $ [overlayScheduleFor e | e <- [0 .. 10]]
 
-genDelegs :: Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash)
+genDelegs :: Map (KeyHash 'Genesis) GenDelegPair
 genDelegs =
   Map.fromList
     [ ( hashKey $ snd gkey,
-        ( coerceKeyRole . hashKey . vKey $ cold pkeys,
-          hashKeyVRF . snd . vrf $ pkeys
+        ( GenDelegPair
+            (coerceKeyRole . hashKey . vKey $ cold pkeys)
+            (hashKeyVRF . snd . vrf $ pkeys)
         )
       )
       | (gkey, pkeys) <- coreNodes
@@ -533,7 +536,7 @@ dsEx1 = emptyDState {_genDelegs = GenDelegs genDelegs}
 oCertIssueNosEx1 :: Map (KeyHash 'BlockIssuer) Natural
 oCertIssueNosEx1 = Map.fromList (fmap f (Map.elems genDelegs))
   where
-    f (vk, _) = (coerceKeyRole vk, 0)
+    f (GenDelegPair vk _) = (coerceKeyRole vk, 0)
 
 psEx1 :: PState
 psEx1 = emptyPState
@@ -2356,7 +2359,7 @@ dsEx4A =
     { _fGenDelegs =
         Map.singleton
           (FutureGenDeleg (SlotNo 43) (hashKey $ coreNodeVKG 0))
-          ((hashKey . vKey) newGenDelegate, newGenesisVrfKH)
+          (GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH)
     }
 
 utxoEx4A :: UTxO
@@ -2431,7 +2434,7 @@ dsEx4B =
         GenDelegs $
           Map.insert
             ((hashKey . coreNodeVKG) 0)
-            ((hashKey . vKey) newGenDelegate, newGenesisVrfKH)
+            (GenDelegPair (hashKey . vKey $ newGenDelegate) newGenesisVrfKH)
             genDelegs
     }
 

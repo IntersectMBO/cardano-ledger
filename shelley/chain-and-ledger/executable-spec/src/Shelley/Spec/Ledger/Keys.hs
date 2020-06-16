@@ -9,6 +9,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -40,6 +41,7 @@ module Shelley.Spec.Ledger.Keys
     hashKey,
 
     -- * Genesis delegations
+    GenDelegPair (..),
     GenDelegs (..),
     GKeys (..),
 
@@ -80,13 +82,14 @@ module Shelley.Spec.Ledger.Keys
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Aeson ((.:), (.=), FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
+import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -346,12 +349,41 @@ instance VRFValue UnitInterval where
 -- TODO should this really live in here?
 --------------------------------------------------------------------------------
 
+data GenDelegPair crypto = GenDelegPair
+  { genDelegKeyHash :: !(KeyHash 'GenesisDelegate crypto),
+    genDelegVrfHash :: !(Hash crypto (VerKeyVRF crypto))
+  }
+  deriving (Show, Eq, Ord, Generic)
+
+instance NoUnexpectedThunks (GenDelegPair crypto)
+
+instance NFData (GenDelegPair crypto)
+
+instance Crypto crypto => ToCBOR (GenDelegPair crypto) where
+  toCBOR (GenDelegPair hk vrf) =
+    encodeListLen 2 <> toCBOR hk <> toCBOR vrf
+
+instance Crypto crypto => FromCBOR (GenDelegPair crypto) where
+  fromCBOR = do
+    enforceSize "GenDelegPair" 2
+    GenDelegPair <$> fromCBOR <*> fromCBOR
+
+instance Crypto crypto => ToJSON (GenDelegPair crypto) where
+  toJSON (GenDelegPair d v) =
+    Aeson.object
+      [ "delegate" .= d,
+        "vrf" .= v
+      ]
+
+instance Crypto crypto => FromJSON (GenDelegPair crypto) where
+  parseJSON =
+    Aeson.withObject "GenDelegPair" $ \obj ->
+      GenDelegPair
+        <$> obj .: "delegate"
+        <*> obj .: "vrf"
+
 newtype GenDelegs crypto
-  = GenDelegs
-      ( Map
-          (KeyHash 'Genesis crypto)
-          (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto))
-      )
+  = GenDelegs (Map (KeyHash 'Genesis crypto) (GenDelegPair crypto))
   deriving (Show, Eq, FromCBOR, NoUnexpectedThunks, NFData, Generic)
 
 deriving instance

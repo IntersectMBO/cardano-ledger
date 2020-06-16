@@ -147,13 +147,13 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
+    GenDelegPair (..),
     GenDelegs (..),
     Hash,
     KeyHash (..),
     KeyPair,
     KeyRole (..),
     VKey,
-    VerKeyVRF,
     asWitness,
     hash,
   )
@@ -279,11 +279,7 @@ data DState crypto = DState
     -- | The pointed to hash keys.
     _ptrs :: !(Map Ptr (Credential 'Staking crypto)),
     -- | future genesis key delegations
-    _fGenDelegs ::
-      !( Map
-           (FutureGenDeleg crypto)
-           (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto))
-       ),
+    _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
     -- | Genesis key delegations
     _genDelegs :: !(GenDelegs crypto),
     -- | Instantaneous Rewards
@@ -691,9 +687,7 @@ genesisCoins outs =
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
-  Map
-    (KeyHash 'Genesis crypto)
-    (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto)) ->
+  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
   UTxO crypto ->
   LedgerState crypto
 genesisState genDelegs0 utxo0 =
@@ -878,7 +872,7 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where
     updateKeys' = Map.keysSet pup ◁ genDelegs
-    updateKeys = Map.map fst updateKeys'
+    updateKeys = Map.map genDelegKeyHash updateKeys'
 
 -- Functions for stake delegation model
 

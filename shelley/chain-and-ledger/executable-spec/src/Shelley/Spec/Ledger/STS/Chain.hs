@@ -69,13 +69,13 @@ import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
+    GenDelegPair (..),
     GenDelegs (..),
     Hash,
     KESignable,
     KeyHash,
     KeyRole (..),
     VerKeyKES,
-    VerKeyVRF,
     coerceKeyRole,
   )
 import Shelley.Spec.Ledger.LedgerState
@@ -138,9 +138,7 @@ initialShelleyState ::
   EpochNo ->
   UTxO crypto ->
   Coin ->
-  Map
-    (KeyHash 'Genesis crypto)
-    (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto)) ->
+  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
   Map SlotNo (OBftSlot crypto) ->
   PParams ->
   Nonce ->
@@ -178,7 +176,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
     NeutralNonce
     lab
   where
-    cs = Map.fromList (fmap (\(hk, _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
+    cs = Map.fromList (fmap (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0)) (Map.elems genDelegs))
 
 instance
   ( Crypto crypto,

@@ -61,6 +61,7 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
+    GenDelegPair (..),
     GenDelegs (..),
     Hash,
     KeyHash,
@@ -254,7 +255,7 @@ utxoWitnessed =
           hashMetaData md' == mdh ?! ConflictingMetaDataHash mdh (hashMetaData md')
 
       -- check genesis keys signatures for instantaneous rewards certificates
-      let genDelegates = Set.fromList $ fmap (asWitness . fst) $ Map.elems genMapping
+      let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
           genSig = genDelegates ∩ regWitHashes witsKeyHashes
           mirCerts =
             StrictSeq.toStrict
