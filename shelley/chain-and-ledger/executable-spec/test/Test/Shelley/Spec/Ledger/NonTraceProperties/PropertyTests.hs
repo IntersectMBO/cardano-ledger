@@ -38,8 +38,10 @@ import Shelley.Spec.Ledger.Tx
     _inputs,
     _outputs,
     _witnessSet,
+    _forge,
     pattern TxIn,
     pattern TxOut,
+    pattern UTxOOut,
   )
 import Shelley.Spec.Ledger.UTxO
   ( balance,
@@ -51,21 +53,22 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     verifyWitVKey,
   )
+import Shelley.Spec.Ledger.Value (getAdaAmount, compactValueToValue, zeroV, lt, coinToValue)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Hedgehog (testProperty)
 
--- | Take 'addr |-> c' pair from 'TxOut' and insert into map or add 'c' to value
+-- | Take 'addr |-> v' pair from 'UTxOOut' and insert into map or add 'v' to value
 -- already present. Used to fold over 'UTxO' to accumulate funds per address.
-insertOrUpdate :: TxOut ShortHash -> Map (Addr ShortHash) Coin -> Map (Addr ShortHash) Coin
-insertOrUpdate (TxOut a c) m =
+insertOrUpdate :: UTxOOut ShortHash -> Map (Addr ShortHash) (CompactValue ShortHash) -> Map (Addr ShortHash) (CompactValue ShortHash)
+insertOrUpdate (UTxOOut a v) m =
   Map.insert
     a
     ( if Map.member a m
-        then c + (m Map.! a)
-        else c
+        then v <> (m Map.! a)
+        else v
     )
     m
 
@@ -74,9 +77,9 @@ insertOrUpdate (TxOut a c) m =
 isNotDustDist :: UTxO ShortHash -> UTxO ShortHash -> Bool
 isNotDustDist initUtxo utxo' =
   utxoSize initUtxo
-    <= 2 * Map.size (Map.filter (> Coin 1) coinMap)
+    <= 2 * Map.size (Map.filter (> Coin 1) (Map.map (getAdaAmount . compactValueToValue) valueMap))
   where
-    coinMap = Map.foldr insertOrUpdate Map.empty (utxoMap utxo')
+    valueMap = Map.foldr insertOrUpdate Map.empty (utxoMap utxo')
 
 -- | This property states that a non-empty UTxO set in the genesis state has a
 -- non-zero balance.
@@ -85,14 +88,14 @@ propPositiveBalance =
   property $ do
     initialState <- Hedgehog.forAll (genNonemptyGenesisState (Proxy @ShortHash))
     utxoSize ((_utxo . _utxoState) initialState) /== 0
-    Coin 0 /== balance ((_utxo . _utxoState) initialState)
+    (True === zeroV `lt` balance ((_utxo . _utxoState) initialState))
 
 -- | This property states that the balance of the initial genesis state equals
 -- the balance of the end ledger state plus the collected fees.
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
   property $ do
-    (_, steps, fee, ls, _, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @ShortHash))
+    (_, steps, fee, ls, tx, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @ShortHash)) -- TODO should the forge be added up to over all tx's?!
     classify "non-trivial number of steps" (steps > 1)
     case next of
       Left _ -> failure
@@ -100,7 +103,7 @@ propPreserveBalanceInitTx =
         classify
           "non-trivial wealth dist"
           (isNotDustDist ((_utxo . _utxoState) ls) ((_utxo . _utxoState) ls'))
-        balance ((_utxo . _utxoState) ls) === balance ((_utxo . _utxoState) ls') + fee
+        balance ((_utxo . _utxoState) ls) === balance ((_utxo . _utxoState) ls') <> (coinToValue fee) <> (_forge tx) -- TODO check forge side
 
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Property
@@ -112,7 +115,7 @@ propBalanceTxInTxOut = property $ do
   classify
     "non-trivial wealth dist"
     (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l'))
-  (balance $ inps <| ((_utxo . _utxoState) l)) === (balance (txouts tx) + fee)
+  ((_forge tx) <> (balance $ inps <| ((_utxo . _utxoState) l))) === (balance (txouts tx) <> (coinToValue fee))
 
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
@@ -198,7 +201,7 @@ propNonNegativeTxOuts :: Property
 propNonNegativeTxOuts =
   withTests 100000 . property $ do
     (_, _, _, tx, _) <- Hedgehog.forAll (genStateTx (Proxy @ShortHash))
-    all (\(TxOut _ (Coin x)) -> x >= 0) (_outputs . _body $ tx) === True
+    all (\(TxOut _ v) -> lt zeroV v) (_outputs . _body $ tx) === True
 
 -- | Mutations for Property 7.2
 propBalanceTxInTxOut' :: Property
@@ -212,8 +215,8 @@ propBalanceTxInTxOut' =
       let balanceSource = balance $ inps <| ((_utxo . _utxoState) l)
       let balanceTarget = balance $ txouts tx
       let valErrors = getErrors lv
-      let nonTrivial = balanceSource /= Coin 0
-      let balanceOk = balanceSource == balanceTarget + fee
+      let nonTrivial = not (eq balanceSource zeroV)
+      let balanceOk = balanceSource == balanceTarget <> (coinToValue fee)
       classify "non-valid, OK" (valErrors /= [] && balanceOk && nonTrivial)
       if valErrors /= [] && balanceOk && nonTrivial
         then
@@ -302,11 +305,11 @@ propPreserveBalance = property $ do
   (l, _, fee, tx, l') <- Hedgehog.forAll (genValidStateTx (Proxy @ShortHash))
   let destroyed =
         balance ((_utxo . _utxoState) l)
-          + (keyRefunds emptyPParams $ _body tx)
+          <> (coinToValue $ (keyRefunds emptyPParams $ _body tx)) <> (_forge $ _body tx)
   let created =
         balance ((_utxo . _utxoState) l')
-          + fee
-          + (totalDeposits emptyPParams ((_stPools . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx)
+          <> (coinToValue $ fee
+          + (totalDeposits emptyPParams ((_stPools . _pstate . _delegationState) l') $ toList $ (_certs . _body) tx))
   destroyed === created
 
 -- | 'TestTree' of property-based testing properties.

@@ -25,7 +25,7 @@ import           Cardano.Crypto.Hash (Hash, ShortHash)
 import           Data.Map.Strict (Map, elems, empty, toList, filterWithKey, keys,
                  toList, singleton, lookup, insert, unionWith)
 import           Shelley.Spec.Ledger.Crypto
-import           Data.ByteString.Char8 (ByteString, pack) -- TODO is this the right Bytestring 
+import           Data.ByteString.Char8 (ByteString, pack) -- TODO is this the right Bytestring
 import           Shelley.Spec.Ledger.Scripts
 
 
@@ -161,6 +161,17 @@ instance Monoid (Value crypto) where
     {-# INLINABLE mempty #-}
     mempty  = zeroV
     mappend = (<>)
+
+-- instances for CompactValue
+instance Semigroup (CompactValue crypto) where
+    {-# INLINABLE (<>) #-}
+    (<>) v1 v2 = valueToCompactValue $ addv (compactValueToValue v1) (compactValueToValue v2)
+
+instance Monoid (CompactValue crypto) where
+    {-# INLINABLE mempty #-}
+    mempty  = MixValue zeroV
+    mappend = (<>)
+
 --
 -- instance Group (Value crypto) where
 --     {-# INLINABLE inv #-}

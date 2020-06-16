@@ -59,6 +59,7 @@ import Shelley.Spec.Ledger.LedgerState
     minfee,
     produced,
     txsize,
+    scaledSizeCompactValue,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
@@ -252,10 +253,13 @@ utxoInductive = do
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputValues = [v | (UTxOOut _ v) <- Set.toList (range (txouts txb))]
-  let minUTxOValue = fromIntegral $ _minUTxOValue pp
-  all ((checkBinRel (<=)) (coinToValue minUTxOValue)) (fmap compactValueToValue outputValues)
+  let minUTxOValue = map (\ov -> (getAdaAmount $ compactValueToValue ov) < (Coin $ (scaledSizeCompactValue ov) * (fromIntegral $ _minUTxOValue pp))) outputValues
+    -- TODO check this, uint? price it as compact value?
+    -- TODO make this calc right
+
+  all (True ==) minUTxOValue
     ?! OutputTooSmallUTxO
-      (filter (\(UTxOOut _ v) -> v < (valueToCompactValue $ coinToValue minUTxOValue)) (Set.toList (range (txouts txb))))
+      (filter (\(UTxOOut _ v) -> (getAdaAmount $ compactValueToValue v) < (Coin $ (scaledSizeCompactValue v) * (fromIntegral $ _minUTxOValue pp))) (Set.toList (range (txouts txb))))
 
   let (Value vls) = _forge txb
   let cids = Map.keys vls

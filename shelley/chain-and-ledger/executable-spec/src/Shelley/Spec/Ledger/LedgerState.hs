@@ -86,6 +86,8 @@ module Shelley.Spec.Ledger.LedgerState
     overlaySchedule,
     getGKeys,
     updateNES,
+    --size
+    scaledSizeCompactValue,
   )
 where
 
@@ -764,10 +766,33 @@ genesisState genDelegs0 utxo0 = LedgerState
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
+-- get total size of outputs in a Tx
+allOutputsSize :: forall crypto . (Crypto crypto) => TxBody crypto -> Integer -> Integer -> Integer -> Integer -> Integer
+allOutputsSize txb uint smallArray address addrHashLen
+  = foldl (\s o -> s + smallArray + uint + address + (valueSize addrHashLen maxAssetIDBytes uint (getValueTx o))) 0 (StrictSeq.getSeq $ _outputs txb)
+    where
+      maxAssetIDBytes = 32 -- maybe we want forging script hashes also 32?
+
+-- estimate upper bound on Value size
+valueSize :: Integer -> Integer -> Integer -> Value crypto -> Integer
+valueSize addrHashLen maxAssetIDBytes uint (Value v)
+  = foldl (\_ tkns -> addrHashLen + (addTkns tkns)) 0 v -- TODO should be nicer, but size of map returns Int
+    where
+      addTkns ts = foldl (\_ _ -> maxAssetIDBytes + uint) 0 ts
+
+-- get actual compact value size
+-- TODO should this be different and the real size?
+scaledSizeCompactValue :: CompactValue crypto -> Integer
+scaledSizeCompactValue (MixValue v)
+  | ((snd $ quotRem (valueSize 28 32 5 v) 5) == 0) = fst $ quotRem (valueSize 28 32 5 v) 5
+  | otherwise = 1 + (fst $ quotRem (valueSize 28 32 5 v) 5)
+scaledSizeCompactValue (AdaOnly  _) = 1
+-- TODO fix constants uint, adjust for extra constructor?
+
 -- |Implementation of abstract transaction size
 -- TODO forge value and proper outputs size!
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
-txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
+txsize tx = numInputs * inputSize + (allOutputsSize txbody uint smallArray address addrHashLen) + rest
   where
     uint = 5
     smallArray = 1
@@ -775,12 +800,11 @@ txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
     hashObj = 2 + hashLen
     addrHashLen = 28
     addrHeader = 1
-    address = 2 + addrHeader + 2 * addrHashLen
+    address = 2 + addrHeader + 2 * addrHashLen -- addrHashLen same as script hash length always? TODO
     txbody = _body tx
     numInputs = toInteger . length . _inputs $ txbody
     inputSize = smallArray + uint + hashObj
-    numOutputs = toInteger . length . _outputs $ txbody
-    outputSize = smallArray + uint + address
+
     rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 
 -- | Minimum fee calculation

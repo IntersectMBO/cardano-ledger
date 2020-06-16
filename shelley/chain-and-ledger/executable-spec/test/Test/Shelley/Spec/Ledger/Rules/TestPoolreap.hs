@@ -34,6 +34,7 @@ import Shelley.Spec.Ledger.LedgerState
     pattern DState,
     pattern UTxOState,
   )
+import Shelley.Spec.Ledger.Value (getAdaAmount)
 import Shelley.Spec.Ledger.STS.PoolReap
   ( prAcnt,
     prDState,
@@ -133,5 +134,5 @@ constantSumPots tr =
                 }
           }
         ) =
-        (balance u + d + fees + treasury + reserves + foldl' (+) (Coin 0) rewards)
-          == (balance u' + d' + fees' + treasury' + reserves' + foldl' (+) (Coin 0) rewards')
+        ((getAdaAmount $ balance u) + d + fees + treasury + reserves + foldl' (+) (Coin 0) rewards)
+          == ((getAdaAmount $ balance u') + d' + fees' + treasury' + reserves' + foldl' (+) (Coin 0) rewards')

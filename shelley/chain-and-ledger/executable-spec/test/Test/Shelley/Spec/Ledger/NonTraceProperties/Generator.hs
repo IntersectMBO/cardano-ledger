@@ -202,6 +202,12 @@ genNonemptyGenesisState _ = do
   keyPairs <- genKeyPairs 1 10
   (genesisState Map.empty . genesisCoins) <$> genTxOut (addrTxins keyPairs)
 
+-- TODO make witnesses for forges -- TODO use the one from Utxo
+-- generate value properly
+genValue :: Integer -> Integer -> Gen Value
+genValue _ _ = do
+  pure zeroV
+
 -- | Generator for a new 'Tx' and fee value for executing the
 -- transaction. Selects one valid input from the UTxO, sums up all funds of the
 -- address associated to that input, selects a random subsequence of other valid
@@ -210,12 +216,14 @@ genNonemptyGenesisState _ = do
 -- 'rem b n'.
 genTx :: HashAlgorithm h => KeyPairs h -> UTxO h -> SlotNo -> Gen (Coin, Tx h)
 genTx keyList (UTxO m) cslot = do
+  -- pick a forge value
+  txforge <- genValue 20 20
   -- select payer
   selectedInputs <- Gen.shuffle utxoInputs
   let !selectedAddr    = addr $ head selectedInputs
   let !selectedUTxO    = Map.filter (\out -> getAddress out == selectedAddr) m
   let !selectedKeyPair = findPayKeyPair selectedAddr keyList
-  let !selectedBalance = balance $ UTxO selectedUTxO
+  let !selectedBalance = (balance $ UTxO selectedUTxO) <> txforge
 
   -- select receipients, distribute balance of selected UTxO set
   -- TODO whats up with coin vs value here
@@ -238,7 +246,7 @@ genTx keyList (UTxO m) cslot = do
           (Map.keysSet selectedUTxO)
           (StrictSeq.toStrict ((`TxOut` perReceipient) <$> receipientAddrs))
           StrictSeq.Empty
-          zeroV -- TODO generate forges
+          txforge
           (Wdrl Map.empty) -- TODO generate witdrawals
           txfee'
           (cslot + SlotNo txttl)

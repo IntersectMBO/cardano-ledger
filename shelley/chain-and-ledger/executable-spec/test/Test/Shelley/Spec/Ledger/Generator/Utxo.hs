@@ -104,6 +104,10 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 -- TODO make witnesses for forges
+-- generate value properly
+genValue :: Integer -> Integer -> Gen Value
+genValue _ _ = do
+  pure zeroV
 
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
@@ -142,7 +146,9 @@ genTx
           wdrlWitnesses = Either.lefts wdrlCredentials
           wdrlScripts = Either.rights wdrlCredentials
 
-      let spendingBalance = spendingBalanceUtxo <> coinToValue (sum wdrls)
+      txforge <- genValue 20 20
+
+      let spendingBalance = spendingBalanceUtxo <> coinToValue (sum wdrls) <> txforge
 
       let (inputs, spendCredentials) = unzip witnessedInputs
           spendWitnesses = Either.lefts spendCredentials
@@ -155,6 +161,7 @@ genTx
       recipientAddrs <- genPtrAddrs (_dstate dpState) recipientAddrs'
 
       ttl <- genNatural 50 100
+
       let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
       -- certificates
@@ -189,7 +196,7 @@ genTx
           -- Once the transaction body and the witnesses are constructed, we can use
           -- this model to calculate the real fee value and update the fees and
           -- transaction outputs in the final, generated transaction.
-          txBody <- genTxBody (Set.fromList inputs) outputs certs zeroV wdrls update (Coin 0) slotWithTTL -- TODO change zeroV
+          txBody <- genTxBody (Set.fromList inputs) outputs certs txforge wdrls update (Coin 0) slotWithTTL
           let multiSig =
                 Map.fromList $
                   ( map
