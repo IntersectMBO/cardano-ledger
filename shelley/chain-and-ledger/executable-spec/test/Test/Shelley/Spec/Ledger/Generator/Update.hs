@@ -31,7 +31,8 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys
-  ( GenDelegs (..),
+  ( GenDelegPair (..),
+    GenDelegs (..),
     KeyRole (..),
     asWitness,
     hashKey,
@@ -313,7 +314,7 @@ genUpdate
         case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
           Nothing ->
             error "genUpdate: NoGenesisStaking"
-          Just (gkeyHash, _) ->
+          Just (GenDelegPair gkeyHash _) ->
             fromMaybe
               (cold pkeys)
               ( List.find (\aik -> hk aik == gkeyHash) genesisDelegateKeys

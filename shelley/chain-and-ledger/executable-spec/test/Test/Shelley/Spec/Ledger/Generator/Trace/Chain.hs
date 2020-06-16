@@ -51,6 +51,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     GenDelegs,
     HashHeader,
     KeyHash,
+    pattern GenDelegPair,
     pattern GenDelegs,
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
@@ -135,4 +136,4 @@ mkOCertIssueNos ::
 mkOCertIssueNos (GenDelegs delegs0) =
   Map.fromList (fmap f (Map.elems delegs0))
   where
-    f (vk, _) = (coerceKeyRole vk, 0)
+    f (GenDelegPair vk _) = (coerceKeyRole vk, 0)

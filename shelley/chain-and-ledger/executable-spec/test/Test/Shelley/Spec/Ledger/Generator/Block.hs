@@ -29,7 +29,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 import Shelley.Spec.Ledger.Core (dom, range)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, genDelegKeyHash, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( _delegationState,
     _dstate,
@@ -65,11 +65,12 @@ import qualified Test.QuickCheck as QC (choose, discard, shuffle)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Block,
     ChainState,
+    GenDelegPair,
     KeyHash,
     LEDGERS,
     OBftSlot,
     TICK,
-    VRFKeyHash,
+    pattern GenDelegPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
@@ -203,7 +204,7 @@ genBlock
               Left ghk -> coerce gkeys ghk gds
               -- We chose a Praos slot, and have everything we need.
               Right ks' -> coerce ks'
-            genesisVKHs = Set.map fst $ range gds
+            genesisVKHs = Set.map genDelegKeyHash $ range gds
             n' =
               currentIssueNo
                 (OCertEnv (dom poolParams) genesisVKHs)
@@ -245,13 +246,13 @@ genBlock
         Just k -> snd k
       gkeys ::
         KeyHash 'Genesis ->
-        Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash) ->
+        Map (KeyHash 'Genesis) GenDelegPair ->
         AllIssuerKeys 'GenesisDelegate
       gkeys gkey gds =
         case Map.lookup gkey gds of
           Nothing ->
             error "genBlock: CorruptGenenisDelegation"
-          Just (ckh, _) ->
+          Just (GenDelegPair ckh _) ->
             -- if GenesisDelegate certs changed a delegation to a new key
             fromMaybe (origIssuerKeys gkey) $
               List.find (\x -> hk x == ckh) ksGenesisDelegates

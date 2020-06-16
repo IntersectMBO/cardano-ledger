@@ -46,7 +46,8 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern StakeCreds,
   )
 import Shelley.Spec.Ledger.Keys
-  ( GenDelegs (..),
+  ( GenDelegPair (..),
+    GenDelegs (..),
     KeyRole (..),
     coerceKeyRole,
     hashKey,
@@ -353,9 +354,9 @@ genGenesisDelegation keys coreKeys dpState =
     (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
     genesisDelegator k = k ∈ dom genDelegs_
     genesisDelegators = filter (genesisDelegator . hashVKey) coreKeys
-    notActiveDelegatee k = coerceKeyRole k ∉ fmap fst (Map.elems genDelegs_)
+    notActiveDelegatee k = coerceKeyRole k ∉ fmap genDelegKeyHash (Map.elems genDelegs_)
     fGenDelegs = _fGenDelegs $ _dstate dpState
-    notFutureDelegatee k = coerceKeyRole k ∉ fmap fst (Map.elems fGenDelegs)
+    notFutureDelegatee k = coerceKeyRole k ∉ fmap genDelegKeyHash (Map.elems fGenDelegs)
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . cold) keys
 
@@ -490,7 +491,7 @@ genInstantaneousRewards s delegateKeys pparams accountState delegSt = do
 
   coreSigners <-
     take <$> QC.elements [5 .. (max 0 $ (length genDelegs_) - 1)]
-      <*> QC.shuffle (lookupGenDelegate . fst <$> Map.elems genDelegs_)
+      <*> QC.shuffle (lookupGenDelegate . genDelegKeyHash <$> Map.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
   let rewardAmount = sum $ Map.elems credCoinMap

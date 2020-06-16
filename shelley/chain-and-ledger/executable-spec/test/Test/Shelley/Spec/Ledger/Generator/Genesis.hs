@@ -28,7 +28,8 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys
-  ( Hash,
+  ( GenDelegPair (..),
+    Hash,
     IsKeyRole,
     KeyHash,
     KeyPair (..),
@@ -113,30 +114,15 @@ genUnitInterval =
 
 genGenesisDelegationList ::
   Crypto c =>
-  Gen
-    [ ( KeyHash 'Genesis c,
-        ( KeyHash 'GenesisDelegate c,
-          Hash
-            c
-            (VerKeyVRF (VRF c))
-        )
-      )
-    ]
+  Gen [(KeyHash 'Genesis c, GenDelegPair c)]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair ::
   forall c.
   Crypto c =>
-  Gen
-    ( KeyHash 'Genesis c,
-      ( KeyHash 'GenesisDelegate c,
-        Hash
-          c
-          (VerKeyVRF (VRF c))
-      )
-    )
+  Gen (KeyHash 'Genesis c, GenDelegPair c)
 genGenesisDelegationPair =
-  (,) <$> genKeyHash <*> ((,) <$> genKeyHash <*> genVRFKeyHash)
+  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash)
   where
     genVRFKeyHash :: Gen (Hash c (VerKeyVRF (VRF c)))
     genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @c)
