@@ -152,11 +152,11 @@ except for the following changes and additions:
   below.
 
   \item $\CurItem$ is either the hash of a
-  forging script, the current transaction input being
+  forging script (currency ID), the current transaction input being
   spent, the current reward
   withdrawal, or the current certificate being validated.
-  This current item is a sum type of all the types of things we want to
-  look up $\Data$ for.
+  This current item is a sum type of all the types of things for which we want to
+  run scripts to validate.
 
 \end{itemize}
 
@@ -257,7 +257,7 @@ except for the following changes and additions:
       \\
       \var{cur}
       & \CurItem
-      & \ScriptHash \uniondistinct \TxIn \uniondistinct \Wdrl \uniondistinct \DCert
+      & \CurrencyId \uniondistinct (\TxId \times \Ix) \uniondistinct \AddrRWD \uniondistinct \DCert
 %      & \text{item the script is validated for}
     \end{array}
   \end{equation*}

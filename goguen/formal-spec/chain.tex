@@ -114,7 +114,9 @@ block (stored as a protocol parameter).
 We have also defined a function that transforms the Shelley ledger state into
 the Goguen one, see Figure~\ref{fig:functions:to-shelley}. Note that here we
 refer to Shelley-era protocol parameter type as $\ShelleyPParams$, and the Goguen
-type as $\PParams$.
+type as $\PParams$. We use the notation $\var{chainstate}_{x}$ to represent
+variable $x$ in the chain state. We do not specify the variables that
+remain unchanged during the transition.
 
 \begin{note}
   \textbf{What creation slots should Shelley era UTxOs have?}
@@ -125,11 +127,6 @@ type as $\PParams$.
   the creation slot.
 \end{note}
 
-
-\begin{note}
-  \textbf{How to make this function readable?}
-  What's better notation to use to make the $\fun{toGoguen}$ function readable?
-\end{note}
 %%
 %% Figure - Shelley to Goguen Transition
 %%
@@ -137,6 +134,8 @@ type as $\PParams$.
   \emph{Types and Constants}
   %
   \begin{align*}
+      & s_{last} \\
+      & \text{last slot of Shelley era} \\
       & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \\
       & \text{the type of new parameters to add for Goguen}
       \nextdef
@@ -147,29 +146,25 @@ type as $\PParams$.
   %
   \begin{align*}
       & \fun{mkUTxO} ~\in~ \Slot \to \ShelleyUTxO  \to \UTxO  \\
-      & \fun{mkUTxO}~s~\var{utxo} ~=~ \{~ \var{txin} \mapsto ((a,c),s) ~\vert~
+      & \fun{mkUTxO}~s~\var{utxo} ~=~ \{~ \var{txin} \mapsto ((a,\fun{coinToValue}~c),s) ~\vert~
       \var{txin} \mapsto \var{(a,c)}\in ~\var{utxo}~\} \\
       & \text{make UTxO Goguen}
       \nextdef
       & \fun{toGoguen} \in ~ \ShelleyChainState \to \ChainState \\
-      & \fun{toGoguen}~((v_1, v_2, v_3, (v_4, v_5, (\var{utxo}, v_6), \var{pp}),
-      v_7, v_8, v_8, v_{10}), v_{11}, v_{12}, v_{13}, v_{14}, v_{15}, v_{16}, s_{last}) \\
-      & ~~ = ((v_1, v_2, v_3, (v_4, v_5, (\fun{mkUTxO}~s_{last}~\var{utxo}, v_6),
-       \var{pp}\cup \mathsf{ivPP}),
-      v_7, v_8, v_8, v_{10}), \\
-      & v_{11}, v_{12}, v_{13}, v_{14}, v_{15}, v_{16}, s_{last}) \\
+      & \fun{toGoguen}~\var{chainstate} =~\var{chainstate'} \\
+      &~~\where \\
+      &~~~~\var{chainstate'}_{utxo}~=~\fun{mkUTxO}~s_{last}~\var{utxo} \\
+      &~~~~\var{chainstate'}_{pparams}~=~\var{pp}\cup \mathsf{ivPP}\\
       & \text{transform Shelley chain state to Goguen state}
   \end{align*}
   \caption{Shelley to Goguen State Transtition}
   \label{fig:functions:to-shelley}
 \end{figure}
 
-Block creaters should be able to apply the transformation in Figure
-\ref{fig:functions:to-shelley} to make any Shelley-era transactions
-processable in the Goguen era. Here we give the type of the
-transaction transformation function, but use accessor functions to
-represent the changes that must be made to the original $tx \in \ShelleyTx$
-to transform it into the corresponding Goguen transaction $tx' \in \GoguenTx$.
+The transformation we use in the preceeding rules to turn a Shelley
+transaction into a Goguen one is given in Figure
+\ref{fig:functions:to-shelley}. Recall that it stays the same if the same
+if it was already a Goguen one.
 
 \begin{figure}[htb]
   \emph{Functions}
@@ -179,15 +174,22 @@ to transform it into the corresponding Goguen transaction $tx' \in \GoguenTx$.
       \var{txin} \in \var{ins}~\} \\
       & \text{transform Shelley inputs into Goguen inputs}
       \nextdef
-      & \fun{toGoguenTx} ~\in~  \ShelleyTx \to \GoguenTx \\
-      & \text{transform a Shelley transaction into a Goguen transaction as follows:}
+      & \fun{toGoguenTx} ~\in~  \Tx \to \GoguenTx \\
+      & \text{outputs a Goguen tx given any tx} \\
+      & \fun{toGoguenTx} ~=
+          \begin{cases}
+           \fun{tg}~\var{tx}  & \text{if~} \var{tx} \in \ShelleyTx \\
+                \var{tx} & \text{otherwise}
+              \end{cases}
       \nextdef
+      & \fun{tg} ~\in~  \Tx \to \GoguenTx \\
+      & \text{transform a Shelley transaction into a Goguen transaction as follows:} \\
       & ~~\fun{txinputs}~{txb'} ~=~ \fun{mkIns}~(\fun{txins}~{txb}) \\
       & ~~\fun{forge}~{txb'} ~= ~\epsilon \\
       & ~~\fun{txexunits}~{txb'} ~= ~(0,0) \\
       & ~~\fun{txfst}~{txb'} ~= ~0 \\
       & ~~\fun{ppHash}~{txb'} ~= ~\Nothing \\
-      & ~~\fun{ppHash}~{txb'} ~= ~\Nothing \\~\\
+      & ~~\fun{rdmrsHash}~{txb'} ~= ~\Nothing \\~\\
       & ~~\fun{txwits}~{tx'} ~= ~(\epsilon,\emptyset,\emptyset,\epsilon) \\
       & ~~\fun{txvaltag}~{tx'} ~= ~\Yes \\
       &~~      \where \\
