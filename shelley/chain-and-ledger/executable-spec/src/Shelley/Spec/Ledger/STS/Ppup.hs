@@ -14,7 +14,6 @@ module Shelley.Spec.Ledger.STS.Ppup
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (⊆), (⨃))
 import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (..),
@@ -32,6 +31,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.Core (dom, (⊆), (⨃))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams

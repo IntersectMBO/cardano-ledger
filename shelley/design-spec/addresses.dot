@@ -1,0 +1,52 @@
+digraph addresses {
+  graph[compound=true];
+  node [shape=box];
+
+  payment_address [label = "Payment Address"];
+  byron_address [label = "Byron Address"];
+  stake_address [label = "Stake Address"];
+
+  payment_credential [label = "Payment Credential"];
+  stake_address_reference [label = "Stake Address Reference"];
+  stake_credential [label = "Stake Credential"];
+
+  pvkh [label = "Payment Verification\nKey Hash"];
+  psh [label = "Script Hash"];
+  svkh [label = "Stake Verification\nKey Hash"];
+  ssh [label = "Script Hash"];
+
+  by_value [label = "By Value"];
+  by_pointer [label = "By Pointer"];
+  null [label = "null"];
+
+  subgraph cluster_stake {
+    stake_address
+    stake_credential
+    svkh
+    ssh
+  }
+
+  subgraph cluster_payment {
+    payment_address byron_address payment_credential stake_address_reference
+    pvkh psh by_value by_pointer null
+    by_value by_pointer null
+
+
+    subgraph cluster_shelley {
+      label = "Shelley Address"
+      payment_credential
+      stake_address_reference
+    }
+
+  }
+
+  payment_address -> byron_address;
+  payment_address -> payment_credential [lhead = cluster_shelley];
+  payment_credential ->  {pvkh, psh};
+  stake_address_reference -> {by_value, by_pointer, null};
+
+  by_value -> stake_credential [style = dashed, constraint=false];
+
+  stake_address -> stake_credential;
+  stake_credential -> {svkh, ssh};
+}

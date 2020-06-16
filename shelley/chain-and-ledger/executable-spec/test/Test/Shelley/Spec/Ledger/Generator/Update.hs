@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -14,7 +15,8 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
-import Data.Map.Strict (Map)
+import Data.Functor ((<&>))
+import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%), Ratio)
@@ -28,28 +30,18 @@ import Shelley.Spec.Ledger.BaseTypes
     mkNonce,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, hashKey, vKey)
+import Shelley.Spec.Ledger.Keys
+  ( GenDelegs (..),
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
+  )
 import Shelley.Spec.Ledger.LedgerState (_dstate, _genDelegs)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    PParams' (PParams),
+    PParams' (..),
     ProtVer (..),
-    _a0,
-    _d,
-    _eMax,
-    _extraEntropy,
-    _keyDeposit,
-    _maxBBSize,
-    _maxBHSize,
-    _maxTxSize,
-    _minUTxOValue,
-    _minfeeA,
-    _minfeeB,
-    _nOpt,
-    _poolDeposit,
-    _protocolVersion,
-    _rho,
-    _tau,
     pattern ProposedPPUpdates,
     pattern Update,
   )
@@ -57,8 +49,8 @@ import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-  ( CoreKeyPair,
-    DPState,
+  ( DPState,
+    GenesisKeyPair,
     KeyHash,
     KeyHash,
     KeyPair,
@@ -69,7 +61,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( AllPoolKeys (cold),
+  ( AllIssuerKeys (cold, hk),
     genInteger,
     genNatural,
     genWord64,
@@ -106,6 +98,7 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
     <*> genExtraEntropy
     <*> genProtocolVersion
     <*> genMinUTxOValue
+    <*> genMinPoolCost
   where
     szGen :: Gen (Natural, Natural, Natural)
     szGen = do
@@ -186,8 +179,15 @@ genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
 genProtocolVersion :: HasCallStack => Gen ProtVer
 genProtocolVersion = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 
-genMinUTxOValue :: HasCallStack => Gen Natural
-genMinUTxOValue = pure 0 -- TODO generate nonzero minimum UTxO values
+genMinUTxOValue :: HasCallStack => Gen Coin
+genMinUTxOValue = pure $ Coin 0
+-- ^ ^ TODO generate nonzero minimum UTxO values
+-- github issue #1544
+
+genMinPoolCost :: HasCallStack => Gen Coin
+genMinPoolCost = pure $ Coin 0
+-- ^ ^ TODO generate nonzero minimum pool cost
+-- github issue #1545
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
@@ -233,6 +233,7 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
       extraEntropy <- genExtraEntropy
       protocolVersion <- genNextProtocolVersion pp
       minUTxOValue <- genMinUTxOValue
+      minPoolCost <- genMinPoolCost
       let pps =
             PParams
               { _minfeeA = SJust minFeeA,
@@ -250,7 +251,8 @@ genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
                 _d = SJust d,
                 _extraEntropy = SJust extraEntropy,
                 _protocolVersion = SJust protocolVersion,
-                _minUTxOValue = SJust minUTxOValue
+                _minUTxOValue = SJust minUTxOValue,
+                _minPoolCost = SJust minPoolCost
               }
       let ppUpdate = zip genesisKeys (repeat pps)
       pure $
@@ -264,7 +266,7 @@ genUpdateForNodes ::
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
-  [CoreKeyPair] ->
+  [GenesisKeyPair] ->
   PParams ->
   Gen (Maybe Update)
 genUpdateForNodes c s e coreKeys pp =
@@ -278,16 +280,16 @@ genUpdate ::
   HasCallStack =>
   Constants ->
   SlotNo ->
-  [(CoreKeyPair, AllPoolKeys)] ->
-  Map (KeyHash 'Staking) (KeyPair 'Staking) -> -- indexed keys By StakeHash
+  [(GenesisKeyPair, AllIssuerKeys 'GenesisDelegate)] ->
+  [AllIssuerKeys 'GenesisDelegate] ->
   PParams ->
   (UTxOState, DPState) ->
-  Gen (Maybe Update, [KeyPair 'Witness])
+  Gen (Maybe Update, [KeyPair 'RWitness])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s
   coreKeyPairs
-  keysByStakeHash
+  genesisDelegateKeys
   pp
   (_utxoSt, delegPoolSt) =
     do
@@ -296,7 +298,7 @@ genUpdate
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
           genesisKeys = (fst . unzip) nodes
-          updateWitnesses = latestPoolColdKey genDelegs <$> nodes
+          updateWitnesses = asWitness . latestPoolColdKey genDelegs <$> nodes
 
       QC.frequency
         [ ( frequencyTxUpdates,
@@ -307,11 +309,13 @@ genUpdate
           )
         ]
     where
-      latestPoolColdKey genDelegs_ (gkey, pkeys) = coerceKeyRole $
+      latestPoolColdKey genDelegs_ (gkey, pkeys) =
         case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
           Nothing ->
             error "genUpdate: NoGenesisStaking"
           Just (gkeyHash, _) ->
             fromMaybe
               (cold pkeys)
-              (coerceKeyRole <$> Map.lookup (coerceKeyRole gkeyHash) keysByStakeHash)
+              ( List.find (\aik -> hk aik == gkeyHash) genesisDelegateKeys
+                  <&> cold
+              )

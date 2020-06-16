@@ -97,6 +97,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Typeable
 import Network.Socket (HostAddress6)
+import Prelude
 
 class Typeable a => ToCBORGroup a where
   toCBORGroup :: a -> Encoding

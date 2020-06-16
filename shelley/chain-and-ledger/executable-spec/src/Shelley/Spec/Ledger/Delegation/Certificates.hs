@@ -30,11 +30,11 @@ module Shelley.Spec.Ledger.Delegation.Certificates
   )
 where
 
-import Byron.Spec.Ledger.Core (Relation (..))
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Data.Map.Strict (Map)
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (Relation (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
@@ -107,7 +107,7 @@ newtype PoolDistr crypto = PoolDistr
           (Rational, Hash crypto (VerKeyVRF crypto))
       )
   }
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Relation)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NFData, NoUnexpectedThunks, Relation)
 
 isInstantaneousRewards :: DCert crypto -> Bool
 isInstantaneousRewards (DCertMir _) = True

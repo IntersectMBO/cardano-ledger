@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -45,6 +47,7 @@ data ConcreteCrypto
 
 instance Crypto ConcreteCrypto where
   type HASH ConcreteCrypto = ShortHash
+  type ADDRHASH ConcreteCrypto = ShortHash
   type DSIGN ConcreteCrypto = MockDSIGN
   type KES ConcreteCrypto = MockKES 10
   type VRF ConcreteCrypto = FakeVRF
@@ -64,8 +67,12 @@ type StakePools = TxData.StakePools ConcreteCrypto
 type KeyHash kr = Keys.KeyHash kr ConcreteCrypto
 
 pattern KeyHash ::
+  forall (h :: Keys.HashType) (kr :: Keys.KeyRole h).
+  ( Keys.AlgorithmForHashType ConcreteCrypto h
+      ~ ShortHash
+  ) =>
   Keys.Hash ConcreteCrypto (VerKeyDSIGN (DSIGN ConcreteCrypto)) ->
-  KeyHash kr
+  KeyHash (kr :: Keys.KeyRole h)
 pattern KeyHash h = Keys.KeyHash h
 
 {-# COMPLETE KeyHash #-}
@@ -86,7 +93,7 @@ pattern KeyPair vk sk = Keys.KeyPair vk sk
 
 {-# COMPLETE KeyPair #-}
 
-type CoreKeyPair = Keys.KeyPair 'Keys.Genesis ConcreteCrypto
+type GenesisKeyPair = Keys.KeyPair 'Keys.Genesis ConcreteCrypto
 
 type SignedDSIGN = Keys.SignedDSIGN ConcreteCrypto
 
@@ -212,6 +219,8 @@ type MultiSig = Scripts.MultiSig ConcreteCrypto
 type ScriptHash = Scripts.ScriptHash ConcreteCrypto
 
 type WitVKey = TxData.WitVKey ConcreteCrypto
+
+type WitnessSet = Tx.WitnessSet ConcreteCrypto
 
 type Wdrl = TxData.Wdrl ConcreteCrypto
 

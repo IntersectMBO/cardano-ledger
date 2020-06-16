@@ -2,13 +2,16 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
+import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -18,9 +21,11 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (checkVRFValue)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
+import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
+    WitHashes (..),
     _dstate,
     _rewards,
     emptyDState,
@@ -33,7 +38,14 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Delegs (PredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Ledger (pattern DelegsFailure, pattern LedgerEnv, pattern UtxoFailure, pattern UtxowFailure)
+import Shelley.Spec.Ledger.STS.Delpl (PredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Ledger
+  ( pattern DelegsFailure,
+    pattern LedgerEnv,
+    pattern UtxoFailure,
+    pattern UtxowFailure,
+  )
+import Shelley.Spec.Ledger.STS.Pool (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (PredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot
@@ -45,7 +57,24 @@ import Shelley.Spec.Ledger.Tx
     pattern TxIn,
     pattern TxOut,
   )
-import Shelley.Spec.Ledger.TxData (Wdrl (..))
+import Shelley.Spec.Ledger.TxData
+  ( PoolMetaData (..),
+    Wdrl (..),
+    _poolCost,
+    _poolMD,
+    _poolMDHash,
+    _poolMDUrl,
+    _poolMargin,
+    _poolOwners,
+    _poolPledge,
+    _poolPubKey,
+    _poolRAcnt,
+    _poolRelays,
+    _poolVrf,
+    pattern DCertPool,
+    pattern PoolParams,
+    pattern RewardAcnt,
+  )
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
@@ -91,7 +120,8 @@ pp =
       _poolDeposit = 250,
       _maxTxSize = 1024,
       _eMax = EpochNo 10,
-      _minUTxOValue = 100
+      _minUTxOValue = 100,
+      _minPoolCost = 100
     }
 
 testOverlayScheduleZero :: Assertion
@@ -167,7 +197,7 @@ data AliceToBob = AliceToBob
     refunds :: Coin,
     certs :: [DCert],
     ttl :: SlotNo,
-    signers :: [KeyPair 'Witness]
+    signers :: ([KeyPair 'AWitness], [KeyPair 'RWitness])
   }
 
 aliceGivesBobLovelace :: AliceToBob -> Tx
@@ -181,7 +211,7 @@ aliceGivesBobLovelace
       certs,
       ttl,
       signers
-    } = Tx txbody mempty {addrWits = wits} SNothing
+    } = Tx txbody mempty {addrWits = awits, regWits = rwits} SNothing
     where
       aliceCoin = aliceInitCoin + refunds - (toBob + fee + deposits)
       txbody =
@@ -198,7 +228,9 @@ aliceGivesBobLovelace
           ttl
           SNothing
           SNothing
-      wits = makeWitnessesVKey (hashTxBody txbody) signers
+      (asigs, rsigs) = signers
+      awits = makeWitnessesVKey (hashTxBody txbody) asigs
+      rwits = makeWitnessesVKey (hashTxBody txbody) rsigs
 
 utxoState :: UTxOState
 utxoState =
@@ -246,7 +278,7 @@ testSpendNonexistentInput =
         refunds = (Coin 0),
         certs = [],
         ttl = (SlotNo 100),
-        signers = [asWitness alicePay]
+        signers = ([asWitness alicePay], [])
       }
 
 testWitnessNotIncluded :: Assertion
@@ -267,7 +299,16 @@ testWitnessNotIncluded =
           SNothing
       tx = Tx txbody mempty SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
-   in testInvalidTx [UtxowFailure $ MissingVKeyWitnessesUTXOW wits] tx
+   in testInvalidTx
+        [ UtxowFailure
+            $ MissingVKeyWitnessesUTXOW
+            $ WitHashes
+              { addrWitHashes = wits,
+                regWitHashes =
+                  mempty
+              }
+        ]
+        tx
 
 testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
@@ -284,7 +325,16 @@ testSpendNotOwnedUTxO =
       aliceWit = makeWitnessVKey (hashTxBody txbody) alicePay
       tx = Tx txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
-   in testInvalidTx [UtxowFailure $ MissingVKeyWitnessesUTXOW wits] tx
+   in testInvalidTx
+        [ UtxowFailure
+            $ MissingVKeyWitnessesUTXOW
+            $ WitHashes
+              { addrWitHashes = wits,
+                regWitHashes =
+                  mempty
+              }
+        ]
+        tx
 
 testWitnessWrongUTxO :: Assertion
 testWitnessWrongUTxO =
@@ -312,8 +362,16 @@ testWitnessWrongUTxO =
       tx = Tx txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
-        [ UtxowFailure $ InvalidWitnessesUTXOW [asWitness $ vKey alicePay],
-          UtxowFailure $ MissingVKeyWitnessesUTXOW wits
+        [ UtxowFailure $
+            InvalidWitnessesUTXOW
+              ([asWitness $ vKey alicePay], mempty),
+          UtxowFailure
+            $ MissingVKeyWitnessesUTXOW
+            $ WitHashes
+              { addrWitHashes = wits,
+                regWitHashes =
+                  mempty
+              }
         ]
         tx
 
@@ -352,7 +410,7 @@ testFeeTooSmall =
           refunds = (Coin 0),
           certs = [],
           ttl = (SlotNo 100),
-          signers = [asWitness alicePay]
+          signers = ([asWitness alicePay], [])
         }
 
 testExpiredTx :: Assertion
@@ -368,7 +426,7 @@ testExpiredTx =
               refunds = (Coin 0),
               certs = [],
               ttl = (SlotNo 0),
-              signers = [asWitness alicePay]
+              signers = ([asWitness alicePay], [])
             }
       ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState 0 0)
    in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
@@ -392,7 +450,11 @@ testInvalidWintess =
       txb' = txb {_ttl = SlotNo 2}
       wits = mempty {addrWits = makeWitnessesVKey (hashTxBody txb') [alicePay]}
       tx = Tx txb wits SNothing
-      errs = [UtxowFailure $ InvalidWitnessesUTXOW [asWitness $ vKey alicePay]]
+      errs =
+        [ UtxowFailure $
+            InvalidWitnessesUTXOW
+              ([asWitness $ vKey alicePay], mempty)
+        ]
    in testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
 
 testWithdrawalNoWit :: Assertion
@@ -414,7 +476,10 @@ testWithdrawalNoWit =
       wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashTxBody txb) alicePay}
       tx = Tx txb wits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
-      errs = [UtxowFailure $ MissingVKeyWitnessesUTXOW missing]
+      errs =
+        [ UtxowFailure . MissingVKeyWitnessesUTXOW $
+            WitHashes {addrWitHashes = missing, regWitHashes = mempty}
+        ]
       dpState' = addReward dpState (mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
 
@@ -460,7 +525,59 @@ testOutputTooSmall =
         refunds = (Coin 0),
         certs = [],
         ttl = (SlotNo 0),
-        signers = [asWitness alicePay]
+        signers = ([asWitness alicePay], [])
+      }
+
+alicePoolColdKeys :: KeyPair 'StakePool
+alicePoolColdKeys = KeyPair vk sk
+  where
+    (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
+
+alicePoolParamsSmallCost :: PoolParams
+alicePoolParamsSmallCost =
+  PoolParams
+    { _poolPubKey = hashKey . vKey $ alicePoolColdKeys,
+      _poolVrf = hashKeyVRF vkVrf,
+      _poolPledge = Coin 1,
+      _poolCost = Coin 5, -- Too Small!
+      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolRAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake),
+      _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
+      _poolRelays = StrictSeq.empty,
+      _poolMD =
+        SJust $
+          PoolMetaData
+            { _poolMDUrl = fromJust $ textToUrl "alice.pool",
+              _poolMDHash = BS.pack "{}"
+            }
+    }
+  where
+    (_skVrf, vkVrf) = mkVRFKeyPair (0, 0, 0, 0, 2)
+
+testPoolCostTooSmall :: Assertion
+testPoolCostTooSmall =
+  testInvalidTx
+    [ DelegsFailure
+        ( DelplFailure
+            ( PoolFailure
+                ( StakePoolCostTooLowPOOL (_poolCost alicePoolParamsSmallCost) (_minPoolCost pp)
+                )
+            )
+        )
+    ]
+    $ aliceGivesBobLovelace
+    $ AliceToBob
+      { input = (TxIn genesisId 0),
+        toBob = (Coin 100),
+        fee = (Coin 997),
+        deposits = (Coin 250),
+        refunds = (Coin 0),
+        certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
+        ttl = (SlotNo 0),
+        signers =
+          ( [asWitness alicePay, asWitness aliceStake],
+            [asWitness alicePoolColdKeys]
+          )
       }
 
 testsInvalidLedger :: TestTree
@@ -477,7 +594,8 @@ testsInvalidLedger =
       testCase "Invalid Ledger - Invalid witnesses" testInvalidWintess,
       testCase "Invalid Ledger - No withdrawal witness" testWithdrawalNoWit,
       testCase "Invalid Ledger - Incorrect withdrawal amount" testWithdrawalWrongAmt,
-      testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall
+      testCase "Invalid Ledger - OutputTooSmall" testOutputTooSmall,
+      testCase "Invalid Ledger - PoolCostTooSmall" testPoolCostTooSmall
     ]
 
 unitTests :: TestTree

@@ -19,6 +19,7 @@ library
   exposed-modules:   Test.Cardano.Crypto.VRF.Fake
                      Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
                      Test.Shelley.Spec.Ledger.Examples
+                     Test.Shelley.Spec.Ledger.Fees
                      Test.Shelley.Spec.Ledger.Generator.Block
                      Test.Shelley.Spec.Ledger.Generator.Constants
                      Test.Shelley.Spec.Ledger.Generator.Core
@@ -53,6 +54,7 @@ library
   build-depends:
     aeson,
     base,
+    base16-bytestring,
     byron-spec-ledger,
     bytestring,
     bytestring-conversion,

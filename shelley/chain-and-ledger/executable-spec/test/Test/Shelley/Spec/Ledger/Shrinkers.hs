@@ -1,3 +1,4 @@
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Test.Shelley.Spec.Ledger.Shrinkers where
@@ -86,7 +87,7 @@ shrinkSlotNo (SlotNo x) = SlotNo <$> shrinkIntegral x
 shrinkUpdate :: Update crypto -> [Update crypto]
 shrinkUpdate = const []
 
-shrinkWitVKey :: WitVKey crypto -> [WitVKey crypto]
+shrinkWitVKey :: WitVKey crypto kr -> [WitVKey crypto kr]
 shrinkWitVKey = const []
 
 shrinkScriptHash :: ScriptHash crypto -> [ScriptHash crypto]

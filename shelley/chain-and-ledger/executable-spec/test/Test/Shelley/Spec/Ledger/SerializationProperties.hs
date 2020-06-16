@@ -3,6 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -68,12 +69,14 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (HashHeader (..), pattern Block)
 import Shelley.Spec.Ledger.Coin (Coin (Coin))
 import Shelley.Spec.Ledger.Credential (Credential (..), Ptr, StakeReference)
-import Shelley.Spec.Ledger.Crypto (Crypto, HASH)
+import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, HASH)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), Stake (..))
 import Shelley.Spec.Ledger.Keys
-  ( Hash,
+  ( AlgorithmForHashType,
+    Hash,
     KeyHash (KeyHash),
+    KeyRoleHashType,
     VKey (VKey),
     hash,
   )
@@ -82,6 +85,7 @@ import Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     OBftSlot,
     RewardUpdate,
+    WitHashes (..),
     emptyRewardUpdate,
   )
 import Shelley.Spec.Ledger.MetaData (MetaDataHash (..))
@@ -267,8 +271,18 @@ instance Arbitrary Nonce where
 instance Arbitrary UnitInterval where
   arbitrary = fromJust . mkUnitInterval . (% 100) <$> choose (1, 99)
 
-instance Crypto c => Arbitrary (KeyHash a c) where
+instance
+  ( Crypto c,
+    HASH c ~ ShortHash,
+    ADDRHASH c ~ ShortHash,
+    AlgorithmForHashType c (KeyRoleHashType a) ~ ShortHash
+  ) =>
+  Arbitrary (KeyHash a c)
+  where
   arbitrary = KeyHash <$> genHash (Proxy @c)
+
+instance Arbitrary (WitHashes Mock.ConcreteCrypto) where
+  arbitrary = genericArbitraryU
 
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
@@ -332,14 +346,19 @@ instance Arbitrary Mock.Addr where
       -- SL.AddrBootstrap
       ]
 
-instance Crypto c => Arbitrary (StakeReference c) where
+instance Arbitrary (StakeReference Mock.ConcreteCrypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (Credential r c) where
+instance
+  ( AlgorithmForHashType Mock.ConcreteCrypto (KeyRoleHashType r)
+      ~ ShortHash
+  ) =>
+  Arbitrary (Credential r Mock.ConcreteCrypto)
+  where
   arbitrary =
     oneof
-      [ ScriptHashObj . ScriptHash <$> genHash (Proxy @c),
+      [ ScriptHashObj . ScriptHash <$> genHash (Proxy @Mock.ConcreteCrypto),
         KeyHashObj <$> arbitrary
       ]
 
@@ -347,7 +366,7 @@ instance Arbitrary Ptr where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (RewardAcnt c) where
+instance Arbitrary (RewardAcnt Mock.ConcreteCrypto) where
   arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
 
 instance Arbitrary Network where
@@ -361,11 +380,11 @@ instance Arbitrary ProtVer where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (ScriptHash c) where
-  arbitrary = ScriptHash <$> genHash (Proxy @c)
+instance Arbitrary (ScriptHash Mock.ConcreteCrypto) where
+  arbitrary = ScriptHash <$> genHash (Proxy @Mock.ConcreteCrypto)
 
-instance Crypto c => Arbitrary (MetaDataHash c) where
-  arbitrary = MetaDataHash <$> genHash (Proxy @c)
+instance Arbitrary (MetaDataHash Mock.ConcreteCrypto) where
+  arbitrary = MetaDataHash <$> genHash (Proxy @Mock.ConcreteCrypto)
 
 instance Arbitrary (Hash.Hash ShortHash a) where
   arbitrary = genHash (Proxy @Mock.ConcreteCrypto)
@@ -383,15 +402,15 @@ instance Arbitrary Mock.NewEpochState where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (BlocksMade c) where
+instance Arbitrary (BlocksMade Mock.ConcreteCrypto) where
   arbitrary = BlocksMade <$> arbitrary
 
-instance Crypto c => Arbitrary (PoolDistr c) where
+instance Arbitrary (PoolDistr Mock.ConcreteCrypto) where
   arbitrary =
     PoolDistr . Map.fromList
       <$> listOf ((,) <$> arbitrary <*> genVal)
     where
-      genVal = (,) <$> arbitrary <*> genHash (Proxy @c)
+      genVal = (,) <$> arbitrary <*> genHash (Proxy @Mock.ConcreteCrypto)
 
 instance Arbitrary Mock.EpochState where
   arbitrary =
@@ -403,14 +422,14 @@ instance Arbitrary Mock.EpochState where
       <*> arbitrary
       <*> arbitrary
 
-instance Crypto c => Arbitrary (RewardUpdate c) where
+instance Arbitrary (RewardUpdate Mock.ConcreteCrypto) where
   arbitrary = return emptyRewardUpdate
 
 instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Crypto c => Arbitrary (OBftSlot c) where
+instance Arbitrary (OBftSlot Mock.ConcreteCrypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -435,11 +454,11 @@ instance Arbitrary ApparentPerformance where
 instance Arbitrary Mock.Stake where
   arbitrary = Stake <$> arbitrary
 
-instance Crypto c => Arbitrary (PoolParams c) where
+instance Arbitrary (PoolParams Mock.ConcreteCrypto) where
   arbitrary =
     PoolParams
       <$> arbitrary
-      <*> genHash (Proxy @c)
+      <*> genHash (Proxy @Mock.ConcreteCrypto)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

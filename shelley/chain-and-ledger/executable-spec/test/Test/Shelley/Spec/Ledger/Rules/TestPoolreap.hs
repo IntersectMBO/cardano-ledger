@@ -11,7 +11,6 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (▷))
 import Control.State.Transition.Trace
   ( SourceSignalTarget,
     signal,
@@ -22,6 +21,7 @@ import Control.State.Transition.Trace
 import Data.List (foldl')
 import qualified Data.Set as Set (intersection, isSubsetOf, null, singleton)
 import Shelley.Spec.Ledger.Coin (pattern Coin)
+import Shelley.Spec.Ledger.Core (dom, (▷))
 import Shelley.Spec.Ledger.LedgerState
   ( _deposited,
     _fees,

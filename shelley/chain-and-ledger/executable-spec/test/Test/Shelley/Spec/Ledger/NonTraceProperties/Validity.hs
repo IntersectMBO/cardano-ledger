@@ -2,10 +2,10 @@
 
 module Test.Shelley.Spec.Ledger.NonTraceProperties.Validity where
 
-import Byron.Spec.Ledger.Core (dom)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core (dom)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import Shelley.Spec.Ledger.Keys
@@ -21,9 +21,12 @@ import Shelley.Spec.Ledger.LedgerState
     RewardAccounts,
     UTxOState (..),
     consumed,
+    diffWitHashes,
     minfee,
+    nullWitHashes,
     produced,
     verifiedWits,
+    witsFromWitnessSet,
     witsVKeyNeeded,
   )
 import Shelley.Spec.Ledger.PParams
@@ -32,11 +35,10 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
   ( SlotNo (..),
   )
-import Shelley.Spec.Ledger.Tx (Tx (..), addrWits)
+import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
   ( TxBody (..),
     Wdrl (..),
-    witKeyHash,
   )
 import Shelley.Spec.Ledger.UTxO (txins)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
@@ -201,11 +203,11 @@ enoughWits ::
   UTxOState crypto ->
   Validity
 enoughWits tx@(Tx _ wits _) d' u =
-  if witsVKeyNeeded (_utxo u) tx d' `Set.isSubsetOf` signers
+  if nullWitHashes $ witsVKeyNeeded (_utxo u) tx d' `diffWitHashes` signers
     then Valid
     else Invalid [MissingWitnesses]
   where
-    signers = Set.map witKeyHash (addrWits wits)
+    signers = witsFromWitnessSet wits
 
 validRuleUTXOW ::
   ( Crypto crypto,

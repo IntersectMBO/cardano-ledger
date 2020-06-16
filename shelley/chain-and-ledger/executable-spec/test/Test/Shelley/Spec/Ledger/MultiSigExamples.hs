@@ -140,7 +140,7 @@ makeTxBody inp addrCs wdrl =
     SNothing
     SNothing
 
-makeTx :: TxBody -> [KeyPair 'Witness] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
+makeTx :: TxBody -> [KeyPair 'AWitness] -> Map ScriptHash MultiSig -> Maybe MetaData -> Tx
 makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
   where
     wits =
@@ -222,7 +222,7 @@ applyTxWithScript ::
   [MultiSig] ->
   Wdrl ->
   Coin ->
-  [KeyPair 'Witness] ->
+  [KeyPair 'AWitness] ->
   Either [[PredicateFailure UTXOW]] UTxOState
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where

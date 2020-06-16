@@ -1,5 +1,8 @@
 # Delegation Design Document Changelog
 
+## 2020-06-12
+Rewrote the chapter on addresses. Now includes multi-sig, and is clearly separating addresses (payment and stake) and credentials.
+
 ## 2020-02-28
 Clarify when we use active stake vs total stake.
 

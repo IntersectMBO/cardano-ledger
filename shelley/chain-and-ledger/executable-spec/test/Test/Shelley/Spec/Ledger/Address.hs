@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -40,11 +41,19 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import Shelley.Spec.Ledger.Keys (pattern KeyHash)
+import Shelley.Spec.Ledger.Keys
+  ( AlgorithmForHashType,
+    HashType (..),
+    KeyRole (..),
+    KeyRoleHashType,
+    pattern KeyHash,
+  )
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Test.Shelley.Spec.Ledger.Address.Bootstrap (bootstrapTest, genBootstrapAddress)
-import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as C
+import Test.Shelley.Spec.Ledger.Address.Bootstrap
+  ( bootstrapTest,
+    genBootstrapAddress,
+  )
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
@@ -152,6 +161,7 @@ instance Crypto OtherCrypto where
   type KES OtherCrypto = Sum7KES Ed25519DSIGN Blake2b_256
   type VRF OtherCrypto = SimpleVRF
   type HASH OtherCrypto = Blake2b_256
+  type ADDRHASH OtherCrypto = Blake2b_224
 
 type OtherCredential kr = Credential kr OtherCrypto
 
@@ -262,10 +272,28 @@ genAddr =
 genRewardAcnt :: Gen C.RewardAcnt
 genRewardAcnt = RewardAcnt Testnet <$> genCredential
 
-genCredential :: Gen (C.Credential kr)
+genCredential ::
+  forall kr.
+  ( HashAlgorithm
+      ( AlgorithmForHashType
+          OtherCrypto
+          ( KeyRoleHashType kr
+          )
+      )
+  ) =>
+  Gen (C.Credential kr)
 genCredential = H.choice [genKeyHash, genScriptHash]
 
-genKeyHash :: Gen (C.Credential kr)
+genKeyHash ::
+  forall kr.
+  ( HashAlgorithm
+      ( AlgorithmForHashType
+          OtherCrypto
+          ( KeyRoleHashType kr
+          )
+      )
+  ) =>
+  Gen (C.Credential kr)
 genKeyHash = KeyHashObj . KeyHash <$> genHash
 
 genScriptHash :: Gen (C.Credential kr)

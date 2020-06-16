@@ -9,15 +9,15 @@ module Test.Shelley.Spec.Ledger.Generator.Block
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, range)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
+import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Ratio ((%), denominator, numerator)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes
@@ -27,6 +27,7 @@ import Shelley.Spec.Ledger.BaseTypes
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
+import Shelley.Spec.Ledger.Core (dom, range)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
@@ -71,7 +72,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     VRFKeyHash,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( AllPoolKeys (..),
+  ( AllIssuerKeys (..),
     GenEnv (..),
     KeySpace (..),
     NatNonce (..),
@@ -122,7 +123,7 @@ genBlock ::
   ChainState ->
   Gen Block
 genBlock
-  ge@(GenEnv KeySpace_ {ksCoreNodes, ksKeyPairsByStakeHash, ksVRFKeyPairsByHash} _)
+  ge@(GenEnv KeySpace_ {ksCoreNodes, ksStakePools, ksGenesisDelegates} _)
   chainSt = do
     let os = (nesOsched . chainNes) chainSt
         dpstate = (_delegationState . esLState . nesEs . chainNes) chainSt
@@ -166,21 +167,19 @@ genBlock
     -- the genesis key delegation has changed.
     --
     -- Otherwise, if we choose a Praos solt, we return the chosen slot number,
-    -- and the corresponding stake pool's stake and Right AllPoolKeys for
+    -- and the corresponding stake pool's stake and Right AllIssuerKeys for
     -- some chose stake pool that has non-zero stake.
     let (nextSlot, poolStake, ks) = case poolParams' of
           [] -> (nextOSlot, 0, Left gkh)
-          (pkh, (stake, vrfkey)) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
+          (pkh, (stake, _)) : _ -> case getPraosSlot lookForPraosStart nextOSlot os nextOs of
             Nothing -> (nextOSlot, 0, Left gkh)
             Just ps ->
               let apks =
-                    AllPoolKeys
-                      { cold = coerceKeyRole $ ksKeyPairsByStakeHash Map.! coerceKeyRole pkh,
-                        vrf = ksVRFKeyPairsByHash Map.! vrfkey,
-                        hot = hot $ snd (head ksCoreNodes),
-                        -- TODO @jc - don't use the genesis hot key
-                        hk = coerceKeyRole pkh
-                      }
+                    fromMaybe
+                      (error "Cannot find stake pool key")
+                      $ List.find
+                        (\x -> hk x == pkh)
+                        ksStakePools
                in (ps, stake, Right apks)
 
     let kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
@@ -196,12 +195,14 @@ genBlock
         let NewEpochState _ _ _ es _ _ _ = _nes'
             EpochState acnt _ ls _ pp' _ = es
             GenDelegs gds = _genDelegs . _dstate . _delegationState . esLState . nesEs $ _nes'
+            -- Keys need to be coerced to block issuer keys
+            keys :: AllIssuerKeys 'BlockIssuer
             keys = case ks of
               -- We chose an overlay slot, and need to lookup the given
               -- keys from the genesis key hash.
-              Left ghk -> gkeys ghk gds
+              Left ghk -> coerce gkeys ghk gds
               -- We chose a Praos slot, and have everything we need.
-              Right ks' -> ks'
+              Right ks' -> coerce ks'
             genesisVKHs = Set.map fst $ range gds
             n' =
               currentIssueNo
@@ -245,23 +246,15 @@ genBlock
       gkeys ::
         KeyHash 'Genesis ->
         Map (KeyHash 'Genesis) (KeyHash 'GenesisDelegate, VRFKeyHash) ->
-        AllPoolKeys
+        AllIssuerKeys 'GenesisDelegate
       gkeys gkey gds =
         case Map.lookup gkey gds of
           Nothing ->
             error "genBlock: CorruptGenenisDelegation"
           Just (ckh, _) ->
             -- if GenesisDelegate certs changed a delegation to a new key
-            case Map.lookup (coerceKeyRole ckh) ksKeyPairsByStakeHash of
-              Nothing ->
-                -- then we use the original keys (which have not been changed by a genesis delegation)
-                origIssuerKeys gkey
-              Just updatedCold ->
-                -- if we find the pre-hashed key in keysByStakeHash, we use it instead of the original cold key
-                (origIssuerKeys gkey)
-                  { cold = coerceKeyRole updatedCold,
-                    hk = (hashKey . vKey) $ coerceKeyRole updatedCold
-                  }
+            fromMaybe (origIssuerKeys gkey) $
+              List.find (\x -> hk x == ckh) ksGenesisDelegates
       genPraosLeader stake =
         if stake >= 0 && stake <= 1
           then do

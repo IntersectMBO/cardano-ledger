@@ -14,7 +14,6 @@ module Shelley.Spec.Ledger.STS.Mir
   )
 where
 
-import Byron.Spec.Ledger.Core (dom, (∪+), (◁))
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
   ( InitialRule,
@@ -28,6 +27,7 @@ import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Shelley.Spec.Ledger.Core (dom, (∪+), (◁))
 import Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState

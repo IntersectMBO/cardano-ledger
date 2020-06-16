@@ -1,4 +1,9 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Genesis where
 
@@ -22,12 +27,20 @@ import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
-import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyPair (..), KeyRole (..), VKey (..), hashKey, hashVerKeyVRF)
+import Shelley.Spec.Ledger.Keys
+  ( Hash,
+    IsKeyRole,
+    KeyHash,
+    KeyPair (..),
+    KeyRole (..),
+    VKey (..),
+    hashKey,
+    hashVerKeyVRF,
+  )
 import Shelley.Spec.Ledger.PParams
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes hiding (Addr, KeyHash, KeyPair, SignKeyDSIGN, SignKeyVRF, VKey, VerKeyVRF)
 
-genShelleyGenesis :: Gen (ShelleyGenesis ConcreteCrypto)
+genShelleyGenesis :: Crypto c => Gen (ShelleyGenesis c)
 genShelleyGenesis =
   ShelleyGenesis
     <$> genUTCTime
@@ -66,9 +79,10 @@ genPParams =
     <*> genNonce
     <*> genProtVer
     <*> genMinUTxOValue
+    <*> (pure 0) -- TODO handle a min pool cost > 0
 
 genNatural :: Range Natural -> Gen Natural
-genNatural range = Gen.integral range
+genNatural = Gen.integral
 
 genRational :: Gen Rational
 genRational = Gen.realFrac_ (Range.linearFrac 0 10000)
@@ -76,8 +90,8 @@ genRational = Gen.realFrac_ (Range.linearFrac 0 10000)
 genEpochNo :: Gen EpochNo
 genEpochNo = EpochNo <$> Gen.word64 (Range.linear 0 500)
 
-genMinUTxOValue :: Gen Natural
-genMinUTxOValue = Gen.integral (Range.linear 1 1000)
+genMinUTxOValue :: Gen Coin
+genMinUTxOValue = Coin <$> Gen.integral (Range.linear 1 1000)
 
 genNonce :: Gen Nonce
 genNonce =
@@ -98,60 +112,66 @@ genUnitInterval =
     <$> Gen.realFrac_ (Range.linearFrac 0.01 1)
 
 genGenesisDelegationList ::
+  Crypto c =>
   Gen
-    [ ( KeyHash 'Genesis ConcreteCrypto,
-        ( KeyHash 'GenesisDelegate ConcreteCrypto,
+    [ ( KeyHash 'Genesis c,
+        ( KeyHash 'GenesisDelegate c,
           Hash
-            ConcreteCrypto
-            (VerKeyVRF (VRF ConcreteCrypto))
+            c
+            (VerKeyVRF (VRF c))
         )
       )
     ]
 genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair ::
+  forall c.
+  Crypto c =>
   Gen
-    ( KeyHash 'Genesis ConcreteCrypto,
-      ( KeyHash 'GenesisDelegate ConcreteCrypto,
+    ( KeyHash 'Genesis c,
+      ( KeyHash 'GenesisDelegate c,
         Hash
-          ConcreteCrypto
-          (VerKeyVRF (VRF ConcreteCrypto))
+          c
+          (VerKeyVRF (VRF c))
       )
     )
 genGenesisDelegationPair =
   (,) <$> genKeyHash <*> ((,) <$> genKeyHash <*> genVRFKeyHash)
-
-genVRFKeyHash :: Gen (Hash ConcreteCrypto (VerKeyVRF (VRF ConcreteCrypto)))
-genVRFKeyHash = hashVerKeyVRF . snd <$> genVRFKeyPair
+  where
+    genVRFKeyHash :: Gen (Hash c (VerKeyVRF (VRF c)))
+    genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @c)
 
 genVRFKeyPair ::
-  Gen
-    ( SignKeyVRF (VRF ConcreteCrypto),
-      VerKeyVRF (VRF ConcreteCrypto)
-    )
+  forall c.
+  Crypto c =>
+  Gen (SignKeyVRF (VRF c), VerKeyVRF (VRF c))
 genVRFKeyPair = do
   seed <- genSeed seedSize
   let sk = genKeyVRF seed
       vk = deriveVerKeyVRF sk
   pure (sk, vk)
   where
-    seedSize :: Int
-    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF ConcreteCrypto)))
+    seedSize = fromIntegral (seedSizeVRF (Proxy :: Proxy (VRF c)))
 
-genFundsList :: Gen [(Addr ConcreteCrypto, Coin)]
+genFundsList :: Crypto c => Gen [(Addr c, Coin)]
 genFundsList = Gen.list (Range.linear 1 100) genGenesisFundPair
 
 genSeed :: Int -> Gen Seed
 genSeed n = mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 
-genKeyHash :: Gen (KeyHash krole ConcreteCrypto)
+genKeyHash ::
+  ( IsKeyRole disc c
+  ) =>
+  Gen (KeyHash disc c)
 genKeyHash = hashKey . snd <$> genKeyPair
 
 -- | Generate a deterministic key pair given a seed.
 genKeyPair ::
+  forall c krole.
+  DSIGNAlgorithm (DSIGN c) =>
   Gen
-    ( SignKeyDSIGN (DSIGN ConcreteCrypto),
-      VKey krole ConcreteCrypto
+    ( SignKeyDSIGN (DSIGN c),
+      VKey krole c
     )
 genKeyPair = do
   seed <- genSeed seedSize
@@ -160,13 +180,13 @@ genKeyPair = do
   pure (sk, VKey vk)
   where
     seedSize :: Int
-    seedSize = fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN ConcreteCrypto)))
+    seedSize = fromIntegral (seedSizeDSIGN (Proxy :: Proxy (DSIGN c)))
 
-genGenesisFundPair :: Gen (Addr ConcreteCrypto, Coin)
+genGenesisFundPair :: Crypto c => Gen (Addr c, Coin)
 genGenesisFundPair =
   (,) <$> genAddress <*> genCoin
 
-genAddress :: Gen (Addr ConcreteCrypto)
+genAddress :: Crypto c => Gen (Addr c)
 genAddress = do
   (secKey1, verKey1) <- genKeyPair
   (secKey2, verKey2) <- genKeyPair

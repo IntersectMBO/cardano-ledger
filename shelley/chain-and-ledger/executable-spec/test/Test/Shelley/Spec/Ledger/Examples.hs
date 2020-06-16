@@ -3,7 +3,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
@@ -155,7 +157,9 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import Shelley.Spec.Ledger.Keys
   ( Hash,
+    HashType (RegularHash),
     KeyRole (..),
+    KeyRoleHashType,
     asWitness,
     coerceKeyRole,
     hash,
@@ -208,24 +212,8 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    PParams' (PParams),
+    PParams' (..),
     PParamsUpdate,
-    _a0,
-    _d,
-    _eMax,
-    _extraEntropy,
-    _keyDeposit,
-    _maxBBSize,
-    _maxBHSize,
-    _maxTxSize,
-    _minUTxOValue,
-    _minfeeA,
-    _minfeeB,
-    _nOpt,
-    _poolDeposit,
-    _protocolVersion,
-    _rho,
-    _tau,
     emptyPPPUpdates,
     emptyPParams,
     pattern ProposedPPUpdates,
@@ -330,7 +318,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( AllPoolKeys (..),
+  ( AllIssuerKeys (..),
     NatNonce (..),
     genesisAccountState,
     mkBlock,
@@ -356,9 +344,12 @@ data MIRExample = MIRExample
   }
   deriving (Show, Eq)
 
-mkAllPoolKeys :: Word64 -> AllPoolKeys
-mkAllPoolKeys w =
-  AllPoolKeys
+mkAllIssuerKeys ::
+  (KeyRoleHashType r ~ 'RegularHash) =>
+  Word64 ->
+  AllIssuerKeys r
+mkAllIssuerKeys w =
+  AllIssuerKeys
     (KeyPair vkCold skCold)
     (mkVRFKeyPair (w, 0, 0, 0, 2))
     [(KESPeriod 0, mkKESKeyPair (w, 0, 0, 0, 3))]
@@ -370,8 +361,8 @@ mkAllPoolKeys w =
 numCoreNodes :: Word64
 numCoreNodes = 7
 
-coreNodes :: [((SignKeyDSIGN, VKeyGenesis), AllPoolKeys)]
-coreNodes = [(mkGenKey (x, 0, 0, 0, 0), mkAllPoolKeys x) | x <- [101 .. 100 + numCoreNodes]]
+coreNodes :: [((SignKeyDSIGN, VKeyGenesis), AllIssuerKeys 'GenesisDelegate)]
+coreNodes = [(mkGenKey (x, 0, 0, 0, 0), mkAllIssuerKeys x) | x <- [101 .. 100 + numCoreNodes]]
 
 coreNodeSKG :: Int -> SignKeyDSIGN
 coreNodeSKG = fst . fst . (coreNodes !!)
@@ -379,7 +370,7 @@ coreNodeSKG = fst . fst . (coreNodes !!)
 coreNodeVKG :: Int -> VKeyGenesis
 coreNodeVKG = snd . fst . (coreNodes !!)
 
-coreNodeKeys :: Int -> AllPoolKeys
+coreNodeKeys :: Int -> AllIssuerKeys 'GenesisDelegate
 coreNodeKeys = snd . (coreNodes !!)
 
 -- | Given the slot and an overlay schedule appropriate for this epoch, find the
@@ -388,7 +379,7 @@ coreNodeKeysForSlot ::
   HasCallStack =>
   Map SlotNo OBftSlot ->
   Word64 ->
-  AllPoolKeys
+  AllIssuerKeys 'GenesisDelegate
 coreNodeKeysForSlot overlay slot = case Map.lookup (SlotNo slot) overlay of
   Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
   Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
@@ -407,7 +398,7 @@ overlayScheduleFor e =
       ppsEx1
 
 -- | Look up the correct core node to issue a block in the given slot, over any epoch
-slotKeys :: HasCallStack => Word64 -> AllPoolKeys
+slotKeys :: HasCallStack => Word64 -> AllIssuerKeys 'GenesisDelegate
 slotKeys = coreNodeKeysForSlot fullOSched
   where
     fullOSched = Map.unions $ [overlayScheduleFor e | e <- [0 .. 10]]
@@ -433,8 +424,8 @@ aliceStake = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
 
-alicePool :: AllPoolKeys
-alicePool = mkAllPoolKeys 1
+alicePool :: AllIssuerKeys 'StakePool
+alicePool = mkAllIssuerKeys 1
 
 aliceAddr :: Addr
 aliceAddr = mkAddr (alicePay, aliceStake)
@@ -665,7 +656,8 @@ ppupEx2A =
             _d = SNothing,
             _extraEntropy = SNothing,
             _protocolVersion = SNothing,
-            _minUTxOValue = SNothing
+            _minUTxOValue = SNothing,
+            _minPoolCost = SNothing
           }
       )
 
@@ -717,9 +709,16 @@ txEx2A =
             (hashTxBody txbodyEx2A)
             ( (asWitness <$> [alicePay, carlPay])
                 <> (asWitness <$> [aliceStake])
+            ),
+        -- Note that Alice's stake key needs to sign this transaction
+        -- since it is an owner of the stake pool being registered,
+        -- and *not* because of the stake key registration.
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2A)
+            ( [asWitness $ cold alicePool]
                 <> ( asWitness
-                       <$> [ cold alicePool,
-                             cold (coreNodeKeys 0),
+                       <$> [ cold (coreNodeKeys 0),
                              cold (coreNodeKeys 1),
                              cold (coreNodeKeys 2),
                              cold (coreNodeKeys 3),
@@ -727,9 +726,6 @@ txEx2A =
                            ]
                    )
             )
-            -- Note that Alice's stake key needs to sign this transaction
-            -- since it is an owner of the stake pool being registered,
-            -- and *not* because of the stake key registration.
       }
     SNothing
 
@@ -1793,7 +1789,11 @@ txEx2K =
       { addrWits =
           makeWitnessesVKey
             (hashTxBody txbodyEx2K)
-            [asWitness $ cold alicePool, asWitness alicePay]
+            [asWitness alicePay],
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx2K)
+            [asWitness $ cold alicePool]
       }
     SNothing
 
@@ -2000,7 +2000,8 @@ ppVote3A =
       _d = SNothing,
       _extraEntropy = SJust (mkNonce 123),
       _protocolVersion = SNothing,
-      _minUTxOValue = SNothing
+      _minUTxOValue = SNothing,
+      _minPoolCost = SNothing
     }
 
 ppupEx3A :: ProposedPPUpdates
@@ -2038,8 +2039,11 @@ txEx3A =
       { addrWits =
           makeWitnessesVKey
             (hashTxBody txbodyEx3A)
-            [ asWitness alicePay,
-              asWitness . cold $ coreNodeKeys 0,
+            [asWitness alicePay],
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx3A)
+            [ asWitness . cold $ coreNodeKeys 0,
               asWitness . cold $ coreNodeKeys 3,
               asWitness . cold $ coreNodeKeys 4
             ]
@@ -2141,8 +2145,11 @@ txEx3B =
       { addrWits =
           makeWitnessesVKey
             (hashTxBody txbodyEx3B)
-            [ asWitness alicePay,
-              asWitness . cold $ coreNodeKeys 1,
+            [asWitness alicePay],
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx3B)
+            [ asWitness . cold $ coreNodeKeys 1,
               asWitness . cold $ coreNodeKeys 5
             ]
       }
@@ -2317,10 +2324,11 @@ txEx4A =
     txbodyEx4A
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody txbodyEx4A) [alicePay]
-            `Set.union` makeWitnessesVKey
-              (hashTxBody txbodyEx4A)
-              [KeyPair (coreNodeVKG 0) (coreNodeSKG 0)]
+          makeWitnessesVKey (hashTxBody txbodyEx4A) [alicePay],
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx4A)
+            [KeyPair (coreNodeVKG 0) (coreNodeSKG 0)]
       }
     SNothing
 
@@ -2490,17 +2498,18 @@ txEx5A pot =
     (txbodyEx5A pot)
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
-            `Set.union` makeWitnessesVKey
-              (hashTxBody $ txbodyEx5A pot)
-              ( asWitness
-                  <$> [ cold (coreNodeKeys 0),
-                        cold (coreNodeKeys 1),
-                        cold (coreNodeKeys 2),
-                        cold (coreNodeKeys 3),
-                        cold (coreNodeKeys 4)
-                      ]
-              )
+          makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay],
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody $ txbodyEx5A pot)
+            ( asWitness
+                <$> [ cold (coreNodeKeys 0),
+                      cold (coreNodeKeys 1),
+                      cold (coreNodeKeys 2),
+                      cold (coreNodeKeys 3),
+                      cold (coreNodeKeys 4)
+                    ]
+            )
       }
     SNothing
 
@@ -2612,16 +2621,17 @@ txEx5B pot =
     (txbodyEx5A pot)
     ( mempty
         { addrWits =
-            makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay]
-              `Set.union` makeWitnessesVKey
-                (hashTxBody $ txbodyEx5A pot)
-                ( asWitness
-                    <$> [ cold (coreNodeKeys 0),
-                          cold (coreNodeKeys 1),
-                          cold (coreNodeKeys 2),
-                          cold (coreNodeKeys 3)
-                        ]
-                )
+            makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay],
+          regWits =
+            makeWitnessesVKey
+              (hashTxBody $ txbodyEx5A pot)
+              ( asWitness
+                  <$> [ cold (coreNodeKeys 0),
+                        cold (coreNodeKeys 1),
+                        cold (coreNodeKeys 2),
+                        cold (coreNodeKeys 3)
+                      ]
+              )
         }
     )
     SNothing
@@ -2641,7 +2651,7 @@ blockEx5B pot =
     0
     (mkOCert (slotKeys 10) 0 (KESPeriod 0))
 
-mirWitsEx5B :: Set (KeyHash 'Witness)
+mirWitsEx5B :: Set (KeyHash 'RWitness)
 mirWitsEx5B = Set.fromList [asWitness . hk . coreNodeKeys $ i | i <- [0 .. 3]]
 
 expectedStEx5B :: PredicateFailure CHAIN
@@ -2714,17 +2724,18 @@ txEx5D pot =
     (txbodyEx5D pot)
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake]
-            `Set.union` makeWitnessesVKey
-              (hashTxBody $ txbodyEx5D pot)
-              ( asWitness
-                  <$> [ cold (coreNodeKeys 0),
-                        cold (coreNodeKeys 1),
-                        cold (coreNodeKeys 2),
-                        cold (coreNodeKeys 3),
-                        cold (coreNodeKeys 4)
-                      ]
-              )
+          makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake],
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody $ txbodyEx5D pot)
+            ( asWitness
+                <$> [ cold (coreNodeKeys 0),
+                      cold (coreNodeKeys 1),
+                      cold (coreNodeKeys 2),
+                      cold (coreNodeKeys 3),
+                      cold (coreNodeKeys 4)
+                    ]
+            )
       }
     SNothing
 
@@ -2913,8 +2924,11 @@ txEx6A =
             (hashTxBody txbodyEx6A)
             ( (asWitness <$> [alicePay])
                 <> (asWitness <$> [aliceStake])
-                <> (asWitness <$> [cold alicePool])
-            )
+            ),
+        regWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx6A)
+            ([asWitness $ cold alicePool])
       }
     SNothing
 
