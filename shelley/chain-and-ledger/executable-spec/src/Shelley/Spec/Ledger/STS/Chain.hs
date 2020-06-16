@@ -20,7 +20,13 @@ module Shelley.Spec.Ledger.STS.Chain
 where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Prelude (MonadError (..), NoUnexpectedThunks, asks, unless)
+import Cardano.Prelude
+  ( MonadError (..),
+    NFData,
+    NoUnexpectedThunks,
+    asks,
+    unless,
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition
   ( Embed (..),
@@ -122,7 +128,9 @@ data ChainState crypto = ChainState
     chainPrevEpochNonce :: Nonce,
     chainLastAppliedBlock :: WithOrigin (LastAppliedBlock crypto)
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
+
+instance NFData (ChainState crypto)
 
 -- | Creates a valid initial chain state
 initialShelleyState ::

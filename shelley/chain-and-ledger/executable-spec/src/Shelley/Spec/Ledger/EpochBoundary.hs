@@ -31,7 +31,7 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, enforceSize)
-import Cardano.Prelude (NoUnexpectedThunks (..))
+import Cardano.Prelude (NFData, NoUnexpectedThunks (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -56,11 +56,11 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- | Blocks made
 newtype BlocksMade crypto
   = BlocksMade (Map (KeyHash 'StakePool crypto) Natural)
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto = Stake {unStake :: (Map (Credential 'Staking crypto) Coin)}
-  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks)
+  deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, NFData)
 
 -- | Add two stake distributions
 (⊎) ::
@@ -179,6 +179,8 @@ data SnapShot crypto = SnapShot
 
 instance NoUnexpectedThunks (SnapShot crypto)
 
+instance NFData (SnapShot crypto)
+
 instance
   Crypto crypto =>
   ToCBOR (SnapShot crypto)
@@ -216,6 +218,8 @@ data SnapShots crypto = SnapShots
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (SnapShots crypto)
+
+instance NFData (SnapShots crypto)
 
 instance
   Crypto crypto =>

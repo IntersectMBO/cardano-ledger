@@ -184,6 +184,8 @@ data PoolMetaData = PoolMetaData
 
 instance NoUnexpectedThunks PoolMetaData
 
+instance NFData PoolMetaData
+
 data StakePoolRelay
   = -- | One or both of IPv4 & IPv6
     SingleHostAddr !(StrictMaybe Port) !(StrictMaybe IPv4) !(StrictMaybe IPv6)
@@ -194,6 +196,8 @@ data StakePoolRelay
   deriving (Eq, Ord, Generic, Show)
 
 instance NoUnexpectedThunks StakePoolRelay
+
+instance NFData StakePoolRelay
 
 instance ToCBOR StakePoolRelay where
   toCBOR (SingleHostAddr p ipv4 ipv6) =
@@ -245,6 +249,8 @@ data PoolParams crypto = PoolParams
   deriving (FromCBOR) via CBORGroup (PoolParams crypto)
 
 instance NoUnexpectedThunks (PoolParams crypto)
+
+instance NFData (PoolParams crypto)
 
 newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
