@@ -27,7 +27,7 @@ import Test.Tasty
 import Test.Tasty.Hedgehog
 
 prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSON example "test/Golden/ShelleyGenesis"
+prop_golden_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
   where
     example :: ShelleyGenesis (ConcreteCrypto ShortHash)
     example = exampleShelleyGenesis
