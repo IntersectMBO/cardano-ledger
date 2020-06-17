@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
@@ -24,7 +25,7 @@ import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
-import Cardano.Prelude (NoUnexpectedThunks, UseIsNormalForm (..))
+import Cardano.Prelude (NoUnexpectedThunks)
 import Data.Bits
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
@@ -65,13 +66,15 @@ instance VRFAlgorithm FakeVRF where
   type Signable FakeVRF = SneakilyContainResult
 
   newtype VerKeyVRF FakeVRF = VerKeyFakeVRF Word64
-    deriving (Show, Eq, Ord, Generic, NoUnexpectedThunks)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord, NoUnexpectedThunks)
   newtype SignKeyVRF FakeVRF = SignKeyFakeVRF Word64
-    deriving (Show, Eq, Ord, Generic, NoUnexpectedThunks)
+    deriving stock (Show, Generic)
+    deriving newtype (Eq, Ord, NoUnexpectedThunks)
 
-  data CertVRF FakeVRF = CertFakeVRF Word64 Word16
-    deriving (Show, Eq, Ord, Generic)
-    deriving (NoUnexpectedThunks) via UseIsNormalForm (CertVRF FakeVRF)
+  data CertVRF FakeVRF = CertFakeVRF !Word64 !Word16
+    deriving stock (Show, Eq, Ord, Generic)
+    deriving anyclass (NoUnexpectedThunks)
 
   maxVRF _ = 2 ^ (8 * sizeHash (Proxy :: Proxy MD5)) - 1
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
