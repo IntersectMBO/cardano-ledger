@@ -126,12 +126,10 @@ goldenTests_MockCrypto =
     keyHash =
       KeyHashObj . KeyHash . UnsafeHash . fst $
         B16.decode "01020304"
-
     scriptHash :: Credential kh (ConcreteCrypto ShortHash)
     scriptHash =
       ScriptHashObj . ScriptHash . UnsafeHash . fst $
         B16.decode "05060708"
-
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
 
@@ -189,13 +187,10 @@ goldenTests_ShelleyCrypto =
   where
     paymentKey :: Credential 'Payment ShelleyCrypto
     paymentKey = keyBlake2b224 $ B16.encode "1a2a3a4a5a6a7a8a"
-
     stakeKey :: Credential 'Staking ShelleyCrypto
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
-
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
-
     -- 32-byte verification key is expected, vk, ie., public key without chain code.
     -- The verification key undergoes Blake2b_224 hashing
     -- and should be 28-byte in the aftermath
@@ -209,7 +204,6 @@ goldenTests_ShelleyCrypto =
           invariantSize
             (fromIntegral $ sizeHash (Proxy :: Proxy Blake2b_224))
             (hash vk')
-
     invariantSize :: HasCallStack => Int -> BS.ByteString -> BS.ByteString
     invariantSize expectedLength bytes
       | BS.length bytes == expectedLength = bytes
@@ -224,115 +218,3 @@ golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
 golden name put value expected =
   T.testCase name $
     T.assertEqual name expected (LB16.encode . B.runPut . put $ value)
-
-{------------------------------------------------------------------------------
--- Round-trip address testing
-------------------------------------------------------------------------------}
-
--- roundTripTests :: TestTree
--- roundTripTests =
---   T.testGroup
---     "round trip tests"
---     [ roundTripAddress,
---       roundTripRewardAcnt,
---       putGet "keyhash" genKeyHash putCredential getKeyHash,
---       putGet "scripthash" genScriptHash putCredential getScriptHash,
---       putGet "ptr" genPtr putPtr getPtr,
---       putGet "nat" genNat putVariableLengthNat getVariableLengthNat,
---       roundTripNatWord7s
---     ]
-
--- roundTripAddress :: TestTree
--- roundTripAddress = T.testProperty "address_bytes" $
---   H.property $ do
---     addr <- H.forAll genAddr
---     H.tripping addr serialiseAddr deserialiseAddr
-
--- roundTripRewardAcnt :: TestTree
--- roundTripRewardAcnt = T.testProperty "reward_account_bytes" $
---   H.property $ do
---     ra <- H.forAll genRewardAcnt
---     H.tripping ra serialiseRewardAcnt deserialiseRewardAcnt
-
--- putGet :: (Show a, Eq a) => String -> Gen a -> (a -> B.Put) -> B.Get a -> TestTree
--- putGet name gen put get = T.testProperty (name <> "_bytes") $
---   H.property $ do
---     value <- H.forAll gen
---     H.tripping value (LB16.encode . B.runPut . put) (execGet get . fst . LB16.decode)
---   where
---     execGet :: B.Get a -> LBS.ByteString -> Maybe a
---     execGet g bytes = case B.runGetOrFail g bytes of
---       Left _ -> Nothing
---       Right (_, _, result) -> Just result
-
--- genAddr :: Gen C.Addr
--- genAddr =
---   H.frequency
---     [ (5, Addr Testnet <$> genCredential <*> genStakeReference),
---       (1, AddrBootstrap <$> genBootstrapAddress)
---     ]
---   where
---     genStakeReference =
---       H.choice
---         [ StakeRefBase <$> genCredential,
---           StakeRefPtr <$> genPtr,
---           pure StakeRefNull
---         ]
-
--- genRewardAcnt :: Gen C.RewardAcnt
--- genRewardAcnt = RewardAcnt Testnet <$> genCredential
-
--- genCredential ::
---   forall kr.
---   ( HashAlgorithm
---       ( AlgorithmForHashType
---           ShelleyCrypto
---           ( KeyRoleHashType kr
---           )
---       )
---   ) =>
---   Gen (C.Credential kr)
--- genCredential = H.choice [genKeyHash, genScriptHash]
-
--- genKeyHash ::
---   forall kr.
---   ( HashAlgorithm
---       ( AlgorithmForHashType
---           ShelleyCrypto
---           ( KeyRoleHashType kr
---           )
---       )
---   ) =>
---   Gen (C.Credential kr)
--- genKeyHash = KeyHashObj . KeyHash <$> genHash
-
--- genScriptHash :: Gen (C.Credential kr)
--- genScriptHash = ScriptHashObj . ScriptHash <$> genHash
-
--- genHash :: forall h a. HashAlgorithm h => Gen (Hash h a)
--- genHash = UnsafeHash . BS.pack <$> genWords numBytes
---   where
---     numBytes = fromIntegral $ sizeHash ([] @h)
-
--- genWords :: Natural -> Gen [B.Word8]
--- genWords n
---   | n > 0 = (:) <$> H.word8 H.constantBounded <*> genWords (n -1)
---   | otherwise = pure []
-
--- genPtr :: Gen Ptr
--- genPtr = Ptr <$> (SlotNo <$> genNat) <*> genNat <*> genNat
-
--- genNat :: Integral a => Gen a
--- genNat =
---   H.choice
---     [ fromIntegral <$> H.word8 H.constantBounded,
---       fromIntegral <$> H.word16 H.constantBounded,
---       fromIntegral <$> H.word32 H.constantBounded,
---       fromIntegral <$> H.word64 H.constantBounded
---     ]
-
--- roundTripNatWord7s :: TestTree
--- roundTripNatWord7s = T.testProperty "nat_word7s" $
---   H.property $ do
---     nat <- H.forAll genNat
---     H.tripping nat natToWord7s (Just . word7sToNat)

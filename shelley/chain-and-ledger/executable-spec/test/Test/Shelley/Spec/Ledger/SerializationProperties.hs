@@ -14,7 +14,9 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Shelley.Spec.Ledger.SerializationProperties
-  ( prop_roundtrip_Block,
+  ( prop_roundtrip_Addr,
+    prop_roundtrip_RewardAcnt,
+    prop_roundtrip_Block,
     prop_roundtrip_Header,
     prop_roundtrip_BlockHeaderHash,
     prop_roundtrip_Tx,
@@ -174,6 +176,12 @@ mkDummyHash _ = coerce . hash @(HASH c)
 {-------------------------------------------------------------------------------
   Serialization Properties
 -------------------------------------------------------------------------------}
+
+prop_roundtrip_Addr :: Mock.Addr Monomorphic.ShortHash -> Property
+prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
+
+prop_roundtrip_RewardAcnt :: Mock.RewardAcnt Monomorphic.ShortHash -> Property
+prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_Block :: Mock.Block Monomorphic.ShortHash -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)

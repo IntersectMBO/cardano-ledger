@@ -207,13 +207,15 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern VKey,
   )
 import Test.Shelley.Spec.Ledger.SerializationProperties
-  ( prop_roundtrip_Block,
+  ( prop_roundtrip_Addr,
+    prop_roundtrip_Block,
     prop_roundtrip_BlockHeaderHash,
     prop_roundtrip_Header,
     prop_roundtrip_LEDGER_PredicateFails,
     prop_roundtrip_LedgerState,
     prop_roundtrip_NewEpochState,
     prop_roundtrip_PrtclState,
+    prop_roundtrip_RewardAcnt,
     prop_roundtrip_Tx,
     prop_roundtrip_TxId,
   )
@@ -520,6 +522,8 @@ serializationPropertyTests =
   testGroup
     "Serialisation roundtrip Property Tests"
     [ QC.testProperty "roundtrip Block" prop_roundtrip_Block,
+      QC.testProperty "roundtrip Addr" prop_roundtrip_Addr,
+      QC.testProperty "roundtrip RewardAcnt" prop_roundtrip_RewardAcnt,
       QC.testProperty "roundtrip Header" prop_roundtrip_Header,
       QC.testProperty "roundtrip Block Header Hash" prop_roundtrip_BlockHeaderHash,
       QC.testProperty "roundtrip Tx" prop_roundtrip_Tx,
