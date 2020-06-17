@@ -126,12 +126,13 @@ instance FromCBOR Error where
 register
   :: MonadError Error m => Environment -> State -> Endorsement -> m State
 register env st endorsement =
-  case M.toList (M.filter ((== pv) . fst) registeredProtocolUpdateProposals) of
+  case M.toList (M.filter ((== pv) . Registration.pupProtocolVersion)
+                          registeredProtocolUpdateProposals) of
     -- We ignore endorsement of proposals that aren't registered
     [] -> pure st
 
     -- Try to register the endorsement and check if we can adopt the proposal
-    [(upId, (_, pps'))] -> if isConfirmedAndStable upId
+    [(upId, Registration.ProtocolUpdateProposal _ pps')] -> if isConfirmedAndStable upId
       then if numberOfEndorsements >= adoptionThreshold
         -- Register the endorsement and adopt the proposal in the next epoch
         then do
