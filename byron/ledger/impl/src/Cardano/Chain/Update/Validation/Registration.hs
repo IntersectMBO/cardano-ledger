@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -12,9 +14,12 @@ module Cardano.Chain.Update.Validation.Registration
   ( Error (..)
   , Environment (..)
   , State (..)
+  , ApplicationVersion (..)
   , ApplicationVersions
   , Metadata
+  , ProtocolUpdateProposal (..)
   , ProtocolUpdateProposals
+  , SoftwareUpdateProposal (..)
   , SoftwareUpdateProposals
   , registerProposal
   , TooLarge (..)
@@ -88,7 +93,26 @@ data Environment = Environment
   , delegationMap             :: !Delegation.Map
   }
 
-type ApplicationVersions = Map ApplicationName (NumSoftwareVersion, SlotNumber, Metadata)
+data ApplicationVersion = ApplicationVersion
+  { avNumSoftwareVersion :: !NumSoftwareVersion
+  , avSlotNumber         :: !SlotNumber
+  , avMetadata           :: !Metadata
+  } deriving (Eq, Show, Generic)
+    deriving anyclass (NFData, NoUnexpectedThunks)
+
+instance FromCBOR ApplicationVersion where
+  fromCBOR = do
+    enforceSize "ApplicationVersion" 3
+    ApplicationVersion <$> fromCBOR <*> fromCBOR <*> fromCBOR
+
+instance ToCBOR ApplicationVersion where
+    toCBOR av =
+      encodeListLen 3
+        <> toCBOR (avNumSoftwareVersion av)
+        <> toCBOR (avSlotNumber         av)
+        <> toCBOR (avMetadata           av)
+
+type ApplicationVersions = Map ApplicationName ApplicationVersion
 
 type Metadata = Map SystemTag InstallerHash
 
@@ -99,8 +123,43 @@ data State = State
   , rsSoftwareUpdateProposals :: !SoftwareUpdateProposals
   }
 
-type ProtocolUpdateProposals = Map UpId (ProtocolVersion, ProtocolParameters)
-type SoftwareUpdateProposals = Map UpId (SoftwareVersion, Metadata)
+data ProtocolUpdateProposal = ProtocolUpdateProposal
+  { pupProtocolVersion    :: !ProtocolVersion
+  , pupProtocolParameters :: !ProtocolParameters
+  } deriving (Eq, Show, Generic)
+    deriving anyclass (NFData, NoUnexpectedThunks)
+
+instance FromCBOR ProtocolUpdateProposal where
+  fromCBOR = do
+    enforceSize "ProtocolUpdateProposal" 2
+    ProtocolUpdateProposal <$> fromCBOR <*> fromCBOR
+
+instance ToCBOR ProtocolUpdateProposal where
+    toCBOR pup =
+      encodeListLen 2
+        <> toCBOR (pupProtocolVersion    pup)
+        <> toCBOR (pupProtocolParameters pup)
+
+type ProtocolUpdateProposals = Map UpId ProtocolUpdateProposal
+
+data SoftwareUpdateProposal = SoftwareUpdateProposal
+  { supSoftwareVersion  :: !SoftwareVersion
+  , supSoftwareMetadata :: !Metadata
+  } deriving (Eq, Show, Generic)
+    deriving anyclass (NFData, NoUnexpectedThunks)
+
+instance FromCBOR SoftwareUpdateProposal where
+  fromCBOR = do
+    enforceSize "SoftwareUpdateProposal" 2
+    SoftwareUpdateProposal <$> fromCBOR <*> fromCBOR
+
+instance ToCBOR SoftwareUpdateProposal where
+    toCBOR sup =
+      encodeListLen 2
+        <> toCBOR (supSoftwareVersion  sup)
+        <> toCBOR (supSoftwareMetadata sup)
+
+type SoftwareUpdateProposals = Map UpId SoftwareUpdateProposal
 
 -- | Error captures the ways in which registration could fail
 data Error
@@ -298,10 +357,8 @@ registerProposalComponents env rs proposal = do
   SoftwareVersion appName appVersion = softwareVersion
 
   softwareVersionChanged =
-    maybe True ((/= appVersion) . fst3) $ M.lookup appName appVersions
-    where
-      fst3 :: (a, b, c) -> a
-      fst3 (x, _, _) = x
+    maybe True ((/= appVersion) . avNumSoftwareVersion) $
+      M.lookup appName appVersions
 
   protocolVersionChanged =
     not $ protocolVersion == adoptedPV && PPU.apply ppu adoptedPP == adoptedPP
@@ -364,7 +421,7 @@ registerProtocolUpdate
 registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
   -- Check that this protocol version isn't already registered
-  null (M.filter ((== newPV) . fst) registeredPUPs)
+  null (M.filter ((== newPV) . pupProtocolVersion) registeredPUPs)
     `orThrowError` DuplicateProtocolVersion newPV
 
   -- Check that this protocol version is a valid next version
@@ -373,7 +430,9 @@ registerProtocolUpdate adoptedPV adoptedPP registeredPUPs proposal = do
 
   canUpdate adoptedPP newPP proposal
 
-  pure $ M.insert (recoverUpId proposal) (newPV, newPP) registeredPUPs
+  pure $ M.insert (recoverUpId proposal)
+                  (ProtocolUpdateProposal newPV newPP)
+                  registeredPUPs
  where
   ProposalBody { protocolVersion = newPV, protocolParametersUpdate } =
     Proposal.body proposal
@@ -460,7 +519,8 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
   mapM_ checkSystemTag (M.keys metadata) `wrapError` SystemTagError
 
   -- Check that this software version isn't already registered
-  null (M.filter ((== svAppName softwareVersion) . svAppName . fst) registeredSUPs)
+  null (M.filter ((== svAppName softwareVersion) . svAppName . supSoftwareVersion)
+                 registeredSUPs)
     `orThrowError` DuplicateSoftwareVersion softwareVersion
 
   -- Check that the software version is valid
@@ -471,7 +531,9 @@ registerSoftwareUpdate appVersions registeredSUPs proposal = do
     `orThrowError` InvalidSoftwareVersion appVersions softwareVersion
 
   -- Add to the list of registered software update proposals
-  pure $ M.insert (recoverUpId proposal) (softwareVersion, metadata) registeredSUPs
+  pure $ M.insert (recoverUpId proposal)
+                  (SoftwareUpdateProposal softwareVersion metadata)
+                  registeredSUPs
   where ProposalBody { softwareVersion, metadata } = Proposal.body proposal
 
 
@@ -486,4 +548,4 @@ svCanFollow avs (SoftwareVersion appName appVersion) =
     Nothing -> appVersion == 0 || appVersion == 1
 
     -- For existing apps, it must be exactly one more than the current version
-    Just (currentAppVersion, _, _) -> appVersion == currentAppVersion + 1
+    Just (ApplicationVersion currentAppVersion _ _) -> appVersion == currentAppVersion + 1
