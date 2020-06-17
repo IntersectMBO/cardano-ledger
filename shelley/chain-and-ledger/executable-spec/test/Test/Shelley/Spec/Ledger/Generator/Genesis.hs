@@ -8,13 +8,17 @@
 module Test.Shelley.Spec.Ledger.Generator.Genesis where
 
 import Cardano.Crypto.DSIGN.Class
+import Cardano.Crypto.Hash hiding (Hash)
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
-import Cardano.Prelude (Natural, Word32, Word64)
+import Cardano.Prelude (Natural, Word8, Word32, Word64)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
+import qualified Data.ByteString as BS
 import Data.Fixed
 import qualified Data.Map.Strict as Map
 import Data.Proxy
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Hedgehog (Gen)
@@ -25,13 +29,14 @@ import qualified Hedgehog.Range as Range
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes hiding (Seed)
 import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Credential
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     Hash,
     IsKeyRole,
-    KeyHash,
+    KeyHash (..),
     KeyPair (..),
     KeyRole (..),
     VKey (..),
@@ -39,7 +44,10 @@ import Shelley.Spec.Ledger.Keys
     hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.PParams
+import Shelley.Spec.Ledger.Scripts
+import Shelley.Spec.Ledger.TxData
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
+import Test.Shelley.Spec.Ledger.Serialization (genIPv4, genIPv6)
 
 genShelleyGenesis :: Crypto c => Gen (ShelleyGenesis c)
 genShelleyGenesis =
@@ -59,7 +67,102 @@ genShelleyGenesis =
     <*> genPParams
     <*> fmap Map.fromList genGenesisDelegationList
     <*> fmap Map.fromList genFundsList
-    <*> pure emptyGenesisStaking
+    <*> genStaking
+
+genStaking :: Crypto c => Gen (ShelleyGenesisStaking c)
+genStaking =
+  ShelleyGenesisStaking
+    <$> fmap Map.fromList genPools
+    <*> fmap Map.fromList genStake
+
+genPools ::
+  Crypto c =>
+  Gen
+    [ ( KeyHash 'StakePool c,
+        PoolParams c
+      )
+    ]
+genPools =
+  Gen.list (Range.linear 1 10) $
+    (,) <$> genKeyHash <*> genPoolParams
+
+genStake ::
+  Crypto c =>
+  Gen
+    [ ( KeyHash 'Staking c,
+        KeyHash 'StakePool c
+      )
+    ]
+genStake =
+  Gen.list (Range.linear 1 10) $
+    (,) <$> genKeyHash <*> genKeyHash
+
+genPoolParams :: forall c. Crypto c => Gen (PoolParams c)
+genPoolParams =
+  PoolParams
+    <$> genKeyHash
+    <*> genVRFKeyHash @c
+    <*> genCoin
+    <*> genCoin
+    <*> genUnitInterval
+    <*> genRewardAcnt
+    <*> (Set.fromList <$> (Gen.list (Range.linear 1 10) $ genKeyHash))
+    <*> (StrictSeq.fromList <$> (Gen.list (Range.linear 1 10) $ genStakePoolRelay))
+    <*> genStrictMaybe genPoolMetaData
+
+genStakePoolRelay :: Gen StakePoolRelay
+genStakePoolRelay =
+  Gen.choice
+    [ SingleHostAddr <$> genStrictMaybe genPort <*> genStrictMaybe genIPv4 <*> genStrictMaybe genIPv6,
+      SingleHostName <$> genStrictMaybe genPort <*> genDnsName,
+      MultiHostName <$> genStrictMaybe genPort <*> genDnsName
+    ]
+
+genStrictMaybe :: Gen a -> Gen (StrictMaybe a)
+genStrictMaybe gen = maybeToStrictMaybe <$> Gen.maybe gen
+
+genDnsName :: Gen DnsName
+genDnsName = do
+  txt <- Gen.text (Range.linear 1 63) Gen.ascii
+  case textToDns txt of
+    Nothing -> error "wrong generator for DnsName"
+    Just dns -> return dns
+
+genPoolMetaData :: Gen PoolMetaData
+genPoolMetaData =
+  PoolMetaData
+    <$> genUrl
+    <*> Gen.bytes (Range.linear 1 30)
+
+genPort :: Gen Port
+genPort = Port <$> Gen.enumBounded
+
+genUrl :: Gen Url
+genUrl = do
+  txt <- Gen.text (Range.linear 1 63) Gen.ascii
+  case textToUrl txt of
+    Nothing -> error "wrong generator for Url"
+    Just url -> return url
+
+genRewardAcnt :: Crypto c => Gen (RewardAcnt c)
+genRewardAcnt = RewardAcnt Testnet <$> genCredential
+
+genCredential :: forall c. Crypto c => Gen (Credential 'Staking c)
+genCredential =
+  Gen.choice
+    [ ScriptHashObj . ScriptHash <$> genHash @c,
+      KeyHashObj <$> genKeyHash
+    ]
+
+genHash :: forall c a. HashAlgorithm (HASH c) => Gen (Hash c a)
+genHash = UnsafeHash . BS.pack <$> genWords numBytes
+  where
+    numBytes = fromIntegral $ sizeHash ([] @(HASH c))
+
+genWords :: Natural -> Gen [Word8]
+genWords n
+  | n > 0 = (:) <$> Gen.word8 Range.constantBounded <*> genWords (n -1)
+  | otherwise = pure []
 
 genPParams :: Gen PParams
 genPParams =
@@ -122,10 +225,10 @@ genGenesisDelegationPair ::
   Crypto c =>
   Gen (KeyHash 'Genesis c, GenDelegPair c)
 genGenesisDelegationPair =
-  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash)
-  where
-    genVRFKeyHash :: Gen (Hash c (VerKeyVRF (VRF c)))
-    genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @c)
+  (,) <$> genKeyHash <*> (GenDelegPair <$> genKeyHash <*> genVRFKeyHash @c)
+
+genVRFKeyHash :: forall c. Crypto c => Gen (Hash c (VerKeyVRF (VRF c)))
+genVRFKeyHash = hashVerKeyVRF . snd <$> (genVRFKeyPair @c)
 
 genVRFKeyPair ::
   forall c.

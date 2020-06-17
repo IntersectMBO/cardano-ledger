@@ -45,6 +45,7 @@ import Cardano.Binary
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (AllowThunksIn (..), LByteString, NFData)
 import Cardano.Prelude (Generic, NoUnexpectedThunks (..))
+import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)
 import Data.Word (Word8)
@@ -137,6 +138,10 @@ newtype ScriptHash crypto
 deriving newtype instance Crypto crypto => ToCBOR (ScriptHash crypto)
 
 deriving newtype instance Crypto crypto => FromCBOR (ScriptHash crypto)
+
+deriving newtype instance Crypto crypto => ToJSON (ScriptHash crypto)
+
+deriving newtype instance Crypto crypto => FromJSON (ScriptHash crypto)
 
 data Script crypto = MultiSigScript (MultiSig crypto)
   -- new languages go here

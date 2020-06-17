@@ -2,11 +2,38 @@
 
 module Shelley.Spec.Ledger.Orphans where
 
-import Cardano.Prelude (NFData (..), NoUnexpectedThunks)
+import Cardano.Prelude (NFData (..), NoUnexpectedThunks, readEither)
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Data.Aeson
+import Data.Foldable
 import Data.IP (IPv4, IPv6)
-import Data.Sequence.Strict (StrictSeq, getSeq)
+import Data.Sequence.Strict (StrictSeq, fromList, getSeq)
+import qualified Data.Text as Text
 import Shelley.Spec.Ledger.Slot (BlockNo, EpochNo)
+
+instance FromJSON IPv4 where
+  parseJSON =
+    withText "IPv4" $ \txt -> case readEither (Text.unpack txt) of
+      Right ipv4 -> return ipv4
+      Left _ -> fail $ "failed to read as IPv4 " ++ show txt
+
+instance ToJSON IPv4 where
+  toJSON = toJSON . show
+
+instance FromJSON IPv6 where
+  parseJSON =
+    withText "IPv6" $ \txt -> case readEither (Text.unpack txt) of
+      Right ipv6 -> return ipv6
+      Left _ -> fail $ "failed to read as IPv6 " ++ show txt
+
+instance ToJSON IPv6 where
+  toJSON = toJSON . show
+
+instance FromJSON a => FromJSON (StrictSeq a) where
+  parseJSON = fmap fromList . parseJSON
+
+instance ToJSON a => ToJSON (StrictSeq a) where
+  toJSON = toJSON . toList
 
 instance NoUnexpectedThunks IPv4
 

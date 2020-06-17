@@ -488,9 +488,9 @@ roundTripIpv4 =
   Hedgehog.property $ do
     ha <- forAll genIPv4
     Hedgehog.tripping ha ipv4ToBytes ipv4FromBytes
-  where
-    genIPv4 :: Gen IPv4
-    genIPv4 = fromHostAddress <$> (Gen.word32 constantBounded)
+
+genIPv4 :: Gen IPv4
+genIPv4 = fromHostAddress <$> (Gen.word32 constantBounded)
 
 roundTripIpv6 :: Property
 roundTripIpv6 =
@@ -498,14 +498,14 @@ roundTripIpv6 =
   Hedgehog.property $ do
     ha <- forAll genIPv6
     Hedgehog.tripping ha ipv6ToBytes ipv6FromBytes
-  where
-    genIPv6 :: Hedgehog.Gen IPv6
-    genIPv6 = do
-      w1 <- Gen.word32 constantBounded
-      w2 <- Gen.word32 constantBounded
-      w3 <- Gen.word32 constantBounded
-      w4 <- Gen.word32 constantBounded
-      pure $ fromHostAddress6 (w1, w2, w3, w4)
+
+genIPv6 :: Hedgehog.Gen IPv6
+genIPv6 = do
+  w1 <- Gen.word32 constantBounded
+  w2 <- Gen.word32 constantBounded
+  w3 <- Gen.word32 constantBounded
+  w4 <- Gen.word32 constantBounded
+  pure $ fromHostAddress6 (w1, w2, w3, w4)
 
 serializationTests :: TestTree
 serializationTests =
