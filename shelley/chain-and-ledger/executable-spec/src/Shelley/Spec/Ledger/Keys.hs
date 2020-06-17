@@ -50,7 +50,6 @@ module Shelley.Spec.Ledger.Keys
 
     -- * VRF
     VRFSignable,
-    VRFValue (..),
 
     -- * Re-exports from cardano-crypto-class
     DSIGN.decodeSignedDSIGN,
@@ -93,12 +92,9 @@ import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
-import Data.Ratio ((%))
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (Nonce, UnitInterval, mkNonce, truncateUnitInterval)
 import Shelley.Spec.Ledger.Crypto
 
 -- | Shelley has two types of hashes.
@@ -329,19 +325,6 @@ type KESignable c = KES.Signable (KES c)
 --------------------------------------------------------------------------------
 
 type VRFSignable c = VRF.Signable (VRF c)
-
--- | Our VRFAlgorithm provides a 'Natural', so we must exhibit an extractor to
---   use the bits as some other type
-class VRFValue a where
-  -- | Extract a value from a natural number derived from the VRF computation.
-  fromNatural :: Natural -> a
-
-instance VRFValue Nonce where
-  fromNatural = mkNonce
-
-instance VRFValue UnitInterval where
-  -- TODO Consider whether this is a reasonable thing to do
-  fromNatural k = truncateUnitInterval $ fromIntegral k % 10000
 
 --------------------------------------------------------------------------------
 -- Genesis delegation

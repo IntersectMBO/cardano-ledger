@@ -34,7 +34,7 @@ import Control.State.Transition
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase)
+import Shelley.Spec.Ledger.BaseTypes (Nonce, Seed, ShelleyBase, mkNonce)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
@@ -53,7 +53,6 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     VRFSignable,
     VerKeyKES,
-    fromNatural,
   )
 import Shelley.Spec.Ledger.LedgerState (OBftSlot)
 import Shelley.Spec.Ledger.OCert (KESPeriod)
@@ -166,7 +165,7 @@ prtclTransition = do
     judgmentContext
   let bhb = bhbody bh
       slot = bheaderSlotNo bhb
-      eta = fromNatural . VRF.certifiedNatural $ bheaderEta bhb
+      eta = mkNonce . VRF.certifiedNatural $ bheaderEta bhb
 
   UpdnState eta0' etaV' etaC' etaH' <-
     trans @(UPDN crypto) $

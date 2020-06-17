@@ -44,7 +44,7 @@ module Shelley.Spec.Ledger.BlockChain
     seedL,
     incrBlocks,
     mkSeed,
-    checkVRFValue,
+    checkLeaderValue,
   )
 where
 
@@ -90,6 +90,7 @@ import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
+import Data.Ratio ((%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -99,15 +100,14 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    FixedPoint,
     Nonce (..),
     Seed (..),
-    UnitInterval,
     activeSlotLog,
     activeSlotVal,
     intervalValue,
     mkNonce,
     strictMaybeToMaybe,
-    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
@@ -118,7 +118,6 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     SignedKES,
     VKey,
-    VRFValue (..),
     VerKeyVRF,
     decodeSignedKES,
     decodeVerKeyVRF,
@@ -195,8 +194,9 @@ instance
   ToCBORGroup (TxSeq crypto)
   where
   toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
-    encodePreEncoded $ BSL.toStrict $
-      bodyBytes <> witsBytes <> metadataBytes
+    encodePreEncoded
+      $ BSL.toStrict
+      $ bodyBytes <> witsBytes <> metadataBytes
   encodedGroupSizeExpr size _proxy =
     encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
@@ -382,7 +382,7 @@ data BHBody crypto = BHBody
     -- | block nonce
     bheaderEta :: !(CertifiedVRF crypto Nonce),
     -- | leader election value
-    bheaderL :: !(CertifiedVRF crypto UnitInterval),
+    bheaderL :: !(CertifiedVRF crypto Natural),
     -- | Size of the block body
     bsize :: !Natural,
     -- | Hash of block body
@@ -626,8 +626,8 @@ mkSeed NeutralNonce slot nonce =
 -- in case the reference value `1 / (1 - p)` is above the exponential function
 -- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
 -- conclusively compute this within the given iteration bounds.
-checkVRFValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
-checkVRFValue certNat σ f =
+checkLeaderValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
+checkLeaderValue certNat σ f =
   if (intervalValue $ activeSlotVal f) == 1
     then -- If the active slot coefficient is equal to one,
     -- then nearly every stake pool can produce a block every slot.
@@ -636,19 +636,16 @@ checkVRFValue certNat σ f =
     -- This is a testing convenience, the active slot coefficient should not
     -- bet set above one half otherwise.
       True
-    else
-      if leaderVal == 1
-        then -- Having a VRF value of one is always a failure.
-        -- Moreover, it would cause division by zero.
-          False
-        else case taylorExpCmp 3 (1 / q) x of
-          ABOVE _ _ -> False
-          BELOW _ _ -> True
-          MaxReached _ -> False
+    else case taylorExpCmp 3 q x of
+      ABOVE _ _ -> False
+      BELOW _ _ -> True
+      MaxReached _ -> False
   where
-    leaderVal = (unitIntervalToRational . fromNatural) certNat
+    certNatMax :: Natural
+    certNatMax = (2 :: Natural) ^ (256 :: Natural)
+    c, q, x :: FixedPoint
     c = activeSlotLog f
-    q = fromRational $ 1 - leaderVal
+    q = fromRational (1 % toInteger (certNatMax - certNat))
     x = (- fromRational σ * c)
 
 seedEta :: Nonce
