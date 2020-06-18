@@ -53,7 +53,7 @@ import Cardano.Prelude
   )
 import qualified Data.ByteString.Lazy as LBS
 import Data.Ord (comparing)
-import Shelley.Spec.Ledger.Crypto (Crypto, DSIGN, HASH)
+import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -147,7 +147,7 @@ bootstrapWitKeyHash (BootstrapWitness' _ _ (ChainCode cc) (KeyPadding prefix suf
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
     hash_crypto :: ByteString -> ByteString
-    hash_crypto = Hash.digest (Proxy :: Proxy (HASH crypto))
+    hash_crypto = Hash.digest (Proxy :: Proxy (ADDRHASH crypto))
 
 -- | This calculates the key padding of a Byron address by serializing the relevant parts.
 -- | This only supports VKey addresses, not Redeem adresses

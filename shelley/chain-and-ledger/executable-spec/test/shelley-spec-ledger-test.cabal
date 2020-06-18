@@ -17,6 +17,8 @@ flag development
 
 library
   exposed-modules:   Test.Cardano.Crypto.VRF.Fake
+                     Test.Shelley.Spec.Ledger.Address
+                     Test.Shelley.Spec.Ledger.Address.Bootstrap
                      Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
                      Test.Shelley.Spec.Ledger.Examples
                      Test.Shelley.Spec.Ledger.Fees
@@ -55,6 +57,7 @@ library
     aeson,
     base,
     base16-bytestring,
+    binary,
     byron-spec-ledger,
     bytestring,
     bytestring-conversion,
@@ -62,6 +65,8 @@ library
     cardano-crypto-class,
     cardano-crypto-test,
     cardano-crypto-wrapper,
+    cardano-ledger,
+    cardano-ledger-test,
     cardano-prelude,
     cardano-prelude-test,
     cardano-slotting,
