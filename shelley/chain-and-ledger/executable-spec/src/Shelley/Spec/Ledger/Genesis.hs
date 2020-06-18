@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Genesis
   ( ShelleyGenesisStaking (..),
@@ -20,7 +21,7 @@ import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hash.Class as Crypto (Hash (..), hash)
 import Cardano.Prelude (NoUnexpectedThunks)
 import Cardano.Slotting.Slot (EpochSize)
-import Data.Aeson ((.:), (.=), FromJSON (..), ToJSON (..), Value (..))
+import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -124,7 +125,7 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
         "protocolParams" .= sgProtocolParams sg,
         "genDelegs" .= sgGenDelegs sg,
         "initialFunds" .= sgInitialFunds sg,
-        "staking" .= Null
+        "staking" .= sgStaking sg
       ]
 
 instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
@@ -146,7 +147,21 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "protocolParams"
         <*> obj .: "genDelegs"
         <*> obj .: "initialFunds"
-        <*> pure emptyGenesisStaking --TODO
+        <*> obj .:? "staking" .!= emptyGenesisStaking
+
+instance Crypto c => ToJSON (ShelleyGenesisStaking c) where
+  toJSON sgs =
+    Aeson.object
+      [ "pools" .= sgsPools sgs,
+        "stake" .= sgsStake sgs
+      ]
+
+instance Crypto c => FromJSON (ShelleyGenesisStaking c) where
+  parseJSON =
+    Aeson.withObject "ShelleyGenesisStaking" $ \obj ->
+      ShelleyGenesisStaking
+        <$> obj .: "pools"
+        <*> obj .: "stake"
 
 {-------------------------------------------------------------------------------
   Genesis UTxO

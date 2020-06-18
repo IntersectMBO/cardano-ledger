@@ -41,8 +41,7 @@ module Shelley.Spec.Ledger.BaseTypes
     DnsName,
     dnsToText,
     textToDns,
-    Port,
-    portToWord16,
+    Port (..),
     ActiveSlotCoeff,
     mkActiveSlotCoeff,
     activeSlotVal,
@@ -250,6 +249,12 @@ instance FromCBOR a => FromCBOR (StrictMaybe a) where
       1 -> SJust <$> fromCBOR
       _ -> fail "unknown tag"
 
+instance ToJSON a => ToJSON (StrictMaybe a) where
+  toJSON = toJSON . strictMaybeToMaybe
+
+instance FromJSON a => FromJSON (StrictMaybe a) where
+  parseJSON v = maybeToStrictMaybe <$> parseJSON v
+
 strictMaybeToMaybe :: StrictMaybe a -> Maybe a
 strictMaybeToMaybe SNothing = Nothing
 strictMaybeToMaybe (SJust x) = Just x
@@ -285,7 +290,7 @@ text64FromCBOR = do
 
 newtype Url = Url {urlToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NFData, NoUnexpectedThunks)
+  deriving newtype (ToCBOR, NFData, NoUnexpectedThunks, FromJSON, ToJSON)
 
 textToUrl :: Text -> Maybe Url
 textToUrl t = Url <$> text64 t
@@ -295,7 +300,7 @@ instance FromCBOR Url where
 
 newtype DnsName = DnsName {dnsToText :: Text}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (ToCBOR, NoUnexpectedThunks, NFData)
+  deriving newtype (ToCBOR, NoUnexpectedThunks, NFData, FromJSON, ToJSON)
 
 textToDns :: Text -> Maybe DnsName
 textToDns t = DnsName <$> text64 t
@@ -305,7 +310,7 @@ instance FromCBOR DnsName where
 
 newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (Num, FromCBOR, ToCBOR, NFData, NoUnexpectedThunks)
+  deriving newtype (Num, FromCBOR, ToCBOR, NFData, NoUnexpectedThunks, ToJSON, FromJSON)
 
 --------------------------------------------------------------------------------
 -- Active Slot Coefficent, named f in

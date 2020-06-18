@@ -22,7 +22,9 @@ module Shelley.Spec.Ledger.Credential
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen)
-import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8)
+import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, asum)
+import Data.Aeson ((.:), (.=), FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
+import qualified Data.Aeson as Aeson
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -53,6 +55,31 @@ instance HasKeyRole Credential where
   coerceKeyRole (KeyHashObj x) = KeyHashObj $ coerceKeyRole x
 
 instance NoUnexpectedThunks (Credential kr crypto)
+
+instance
+  (Crypto crypto, IsKeyRole kr crypto) =>
+  ToJSON (Credential kr crypto)
+  where
+  toJSON (ScriptHashObj hash) =
+    Aeson.object
+      [ "script hash" .= hash
+      ]
+  toJSON (KeyHashObj hash) =
+    Aeson.object
+      [ "key hash" .= hash
+      ]
+
+instance (Crypto crypto, IsKeyRole kr crypto) => FromJSON (Credential kr crypto) where
+  parseJSON =
+    Aeson.withObject "Credential" $ \obj ->
+      asum [parser1 obj, parser2 obj]
+    where
+      parser1 obj = ScriptHashObj <$> obj .: "script hash"
+      parser2 obj = KeyHashObj <$> obj .: "key hash"
+
+instance (Crypto crypto, IsKeyRole kr crypto) => ToJSONKey (Credential kr crypto)
+
+instance (Crypto crypto, IsKeyRole kr crypto) => FromJSONKey (Credential kr crypto)
 
 type PaymentCredential crypto = Credential 'Payment crypto
 

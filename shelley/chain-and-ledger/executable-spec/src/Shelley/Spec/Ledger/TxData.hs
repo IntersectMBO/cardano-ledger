@@ -87,12 +87,17 @@ import Cardano.Prelude
     NFData,
     NoUnexpectedThunks (..),
     Word64,
+    asum,
     catMaybes,
     panic,
   )
 import Control.Monad (unless)
+import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (explicitParseField)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
 import Data.IP (IPv4, IPv6)
@@ -182,6 +187,20 @@ data PoolMetaData = PoolMetaData
   }
   deriving (Eq, Ord, Generic, Show)
 
+instance ToJSON PoolMetaData where
+  toJSON pmd =
+    Aeson.object
+      [ "url" .= _poolMDUrl pmd,
+        "hash" .= Char8.unpack (_poolMDHash pmd)
+      ]
+
+instance FromJSON PoolMetaData where
+  parseJSON =
+    Aeson.withObject "PoolMetaData" $ \obj ->
+      PoolMetaData
+        <$> obj .: "url"
+        <*> explicitParseField (fmap Char8.pack . parseJSON) obj "hash"
+
 instance NoUnexpectedThunks PoolMetaData
 
 instance NFData PoolMetaData
@@ -194,6 +213,56 @@ data StakePoolRelay
   | -- | A @SRV@ DNS record
     MultiHostName !(StrictMaybe Port) !DnsName
   deriving (Eq, Ord, Generic, Show)
+
+instance FromJSON StakePoolRelay where
+  parseJSON =
+    Aeson.withObject "Credential" $ \obj ->
+      asum
+        [ explicitParseField parser1 obj "single host address",
+          explicitParseField parser2 obj "single host name",
+          explicitParseField parser3 obj "multi host name"
+        ]
+    where
+      parser1 = Aeson.withObject "SingleHostAddr" $ \obj ->
+        SingleHostAddr
+          <$> obj .:? "port" .!= SNothing
+          <*> obj .:? "IPv4" .!= SNothing
+          <*> obj .:? "IPv6" .!= SNothing
+      parser2 = Aeson.withObject "SingleHostName" $ \obj ->
+        SingleHostName
+          <$> obj .:? "port" .!= SNothing
+          <*> obj .: "dnsName"
+      parser3 = Aeson.withObject "MultiHostName" $ \obj ->
+        MultiHostName
+          <$> obj .:? "port" .!= SNothing
+          <*> obj .: "dnsName"
+
+instance ToJSON StakePoolRelay where
+  toJSON (SingleHostAddr port ipv4 ipv6) =
+    Aeson.object
+      [ "single host address"
+          .= Aeson.object
+            [ "port" .= port,
+              "IPv4" .= ipv4,
+              "IPv6" .= ipv6
+            ]
+      ]
+  toJSON (SingleHostName port dnsName) =
+    Aeson.object
+      [ "single host name"
+          .= Aeson.object
+            [ "port" .= port,
+              "dnsName" .= dnsName
+            ]
+      ]
+  toJSON (MultiHostName port dnsName) =
+    Aeson.object
+      [ "multi host name"
+          .= Aeson.object
+            [ "port" .= port,
+              "dnsName" .= dnsName
+            ]
+      ]
 
 instance NoUnexpectedThunks StakePoolRelay
 
@@ -261,6 +330,34 @@ instance Crypto crypto => ToCBOR (Wdrl crypto) where
 
 instance Crypto crypto => FromCBOR (Wdrl crypto) where
   fromCBOR = Wdrl <$> mapFromCBOR
+
+instance Crypto crypto => ToJSON (PoolParams crypto) where
+  toJSON pp =
+    Aeson.object
+      [ "publicKey" .= _poolPubKey pp,
+        "vrf" .= _poolVrf pp,
+        "pledge" .= _poolPledge pp,
+        "cost" .= _poolCost pp,
+        "margin" .= _poolMargin pp,
+        "rewardAccount" .= _poolRAcnt pp,
+        "owners" .= _poolOwners pp,
+        "relays" .= _poolRelays pp,
+        "metadata" .= _poolMD pp
+      ]
+
+instance Crypto crypto => FromJSON (PoolParams crypto) where
+  parseJSON =
+    Aeson.withObject "PoolParams" $ \obj ->
+      PoolParams
+        <$> obj .: "publicKey"
+        <*> obj .: "vrf"
+        <*> obj .: "pledge"
+        <*> obj .: "cost"
+        <*> obj .: "margin"
+        <*> obj .: "rewardAccount"
+        <*> obj .: "owners"
+        <*> obj .: "relays"
+        <*> obj .: "metadata"
 
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto = TxId {_TxId :: Hash crypto (TxBody crypto)}
@@ -469,7 +566,7 @@ instance
 newtype StakeCreds crypto
   = StakeCreds (Map (Credential 'Staking crypto) SlotNo)
   deriving (Show, Eq, Generic)
-  deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
+  deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR, ToJSON, FromJSON)
 
 addStakeCreds ::
   (Credential 'Staking crypto) ->

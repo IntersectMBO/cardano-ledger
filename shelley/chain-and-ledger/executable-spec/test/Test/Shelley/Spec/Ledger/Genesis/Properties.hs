@@ -21,13 +21,13 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Genesis
 import Test.Cardano.Prelude
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import Test.Shelley.Spec.Ledger.Examples (exampleShelleyGenesis)
 import Test.Shelley.Spec.Ledger.Generator.Genesis
-import Test.Shelley.Spec.Ledger.Genesis.Example
 import Test.Tasty
 import Test.Tasty.Hedgehog
 
 prop_golden_ShelleyGenesis :: Property
-prop_golden_ShelleyGenesis = goldenTestJSON example "test/Golden/ShelleyGenesis"
+prop_golden_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
   where
     example :: ShelleyGenesis (ConcreteCrypto ShortHash)
     example = exampleShelleyGenesis

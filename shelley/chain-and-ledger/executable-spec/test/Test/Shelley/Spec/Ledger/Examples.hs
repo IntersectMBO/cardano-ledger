@@ -44,6 +44,7 @@ module Test.Shelley.Spec.Ledger.Examples
     test5DReserves,
     test5DTreasury,
     ppsEx1,
+    exampleShelleyGenesis,
     -- key pairs and example addresses
     alicePay,
     aliceStake,
@@ -101,8 +102,9 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Monomorphic
+import Cardano.Crypto.ProtocolMagic
 import Cardano.Prelude (asks)
-import Cardano.Slotting.Slot (WithOrigin (..))
+import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
@@ -116,6 +118,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
@@ -124,10 +127,13 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
     Nonce (..),
+    Port (..),
     StrictMaybe (..),
     mkNonce,
     randomnessStabilisationWindow,
+    textToDns,
     textToUrl,
+    truncateUnitInterval,
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain
@@ -138,7 +144,7 @@ import Shelley.Spec.Ledger.BlockChain
     pattern HashHeader,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Credential (Ptr (..), pattern KeyHashObj, pattern StakeRefPtr)
+import Shelley.Spec.Ledger.Credential (Ptr (..), StakeReference (..), pattern KeyHashObj, pattern StakeRefPtr)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
@@ -162,6 +168,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     pattern SnapShots,
     pattern Stake,
   )
+import Shelley.Spec.Ledger.Genesis (ShelleyGenesis (..), ShelleyGenesisStaking (..), sgsPools)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     HashType (RegularHash),
@@ -264,6 +271,7 @@ import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), pattern Tx)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
     PoolMetaData (..),
+    StakePoolRelay (..),
     Wdrl (..),
     _poolCost,
     _poolMD,
@@ -325,9 +333,11 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Update,
     VKeyGenesis,
     VRFKeyHash,
+    VerKeyVRF,
     hashKeyVRF,
     pattern GenDelegPair,
     pattern GenDelegs,
+    pattern KeyHash,
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -3322,3 +3332,81 @@ ex6BPoolParams = Map.singleton (hk (alicePool p)) alicePoolParams6A
   where
     p :: Proxy h
     p = Proxy
+
+exampleShelleyGenesis :: forall h. HashAlgorithm h => ShelleyGenesis (ConcreteCrypto h)
+exampleShelleyGenesis =
+  ShelleyGenesis
+    { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
+      sgNetworkMagic = 4036000900,
+      sgNetworkId = Testnet,
+      sgProtocolMagicId = ProtocolMagicId 838299499,
+      sgActiveSlotsCoeff = 6.259,
+      sgSecurityParam = 120842,
+      sgEpochLength = EpochSize 1215,
+      sgSlotsPerKESPeriod = 8541,
+      sgMaxKESEvolutions = 28899,
+      sgSlotLength = 8,
+      sgUpdateQuorum = 16991,
+      sgMaxLovelaceSupply = 71,
+      sgProtocolParams =
+        emptyPParams
+          { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Double),
+            _maxBBSize = 239857,
+            _maxBHSize = 217569
+          },
+      sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)],
+      sgInitialFunds = Map.fromList [(initialFundedAddress, initialFunds)],
+      sgStaking = staking
+    }
+  where
+    -- hash of the genesis verification key
+    genesisVerKeyHash :: KeyHash h 'Genesis
+    genesisVerKeyHash = KeyHash "23d51e91"
+    -- hash of the delegators verififation key
+    genDelegPair = GenDelegPair delegVerKeyHash delegVrfKeyHash
+    delegVerKeyHash :: KeyHash h 'GenesisDelegate
+    delegVerKeyHash = KeyHash "839b047f"
+    delegVrfKeyHash :: Hash (ConcreteCrypto h) (VerKeyVRF h)
+    delegVrfKeyHash = "231391e7"
+    initialFundedAddress :: Addr h
+    initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
+      where
+        paymentCredential =
+          KeyHashObj $
+            KeyHash
+              "1c14ee8e"
+        stakingCredential =
+          KeyHashObj $
+            KeyHash
+              "e37a65ea"
+    initialFunds :: Coin
+    initialFunds = Coin 12157196
+    relays =
+      StrictSeq.fromList
+        [ SingleHostAddr (SJust $ Port 1234) (SJust $ read "0.0.0.0") (SJust $ read "2001:db8:a::123"),
+          SingleHostName SNothing (fromJust $ textToDns "cool.domain.com"),
+          MultiHostName (SJust $ Port 65000) (fromJust $ textToDns "cool.domain.com")
+        ]
+    poolParams :: PoolParams h
+    poolParams =
+      PoolParams
+        { _poolPubKey = (hashKey . vKey . cold) (mkAllIssuerKeys @h 1),
+          _poolVrf = hashKeyVRF . snd $ vrf (mkAllIssuerKeys @h 1),
+          _poolPledge = Coin 1,
+          _poolCost = Coin 5,
+          _poolMargin = unsafeMkUnitInterval 0.25,
+          _poolRAcnt = RewardAcnt Testnet aliceSHK,
+          _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
+          _poolRelays = relays,
+          _poolMD =
+            SJust $
+              PoolMetaData
+                { _poolMDUrl = fromJust $ textToUrl "best.pool.com",
+                  _poolMDHash = BS.pack "100ab{}"
+                }
+        }
+    staking =
+      ShelleyGenesisStaking
+        { sgsPools = Map.fromList [(KeyHash "3dbe00a1", poolParams)],
+          sgsStake = Map.fromList [(KeyHash "1c14ee8e", KeyHash "1c14ee8e")]
+        }

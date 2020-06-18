@@ -57,7 +57,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, parseBase16)
-import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..))
+import Data.Aeson ((.:), (.=), FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -173,7 +173,21 @@ data RewardAcnt crypto = RewardAcnt
   { getRwdNetwork :: Network,
     getRwdCred :: Credential 'Staking crypto
   }
-  deriving (Show, Eq, Generic, Ord, NFData)
+  deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
+
+instance Crypto crypto => ToJSON (RewardAcnt crypto) where
+  toJSON ra =
+    Aeson.object
+      [ "network" .= getRwdNetwork ra,
+        "credential" .= getRwdCred ra
+      ]
+
+instance Crypto crypto => FromJSON (RewardAcnt crypto) where
+  parseJSON =
+    Aeson.withObject "RewardAcnt" $ \obj ->
+      RewardAcnt
+        <$> obj .: "network"
+        <*> obj .: "credential"
 
 instance NoUnexpectedThunks (RewardAcnt crypto)
 

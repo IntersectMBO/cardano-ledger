@@ -33,7 +33,6 @@ library
                      Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
                      Test.Shelley.Spec.Ledger.Generator.Update
                      Test.Shelley.Spec.Ledger.Generator.Utxo
-                     Test.Shelley.Spec.Ledger.Genesis.Example
                      Test.Shelley.Spec.Ledger.Genesis.Properties
                      Test.Shelley.Spec.Ledger.MultiSigExamples
                      Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
