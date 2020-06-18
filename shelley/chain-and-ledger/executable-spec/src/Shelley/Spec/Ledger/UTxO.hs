@@ -115,15 +115,18 @@ instance Relation (UTxO crypto) where
 
   (UTxO a) ∪ (UTxO b) = UTxO $ a ∪ b
 
-  (UTxO a) ⨃ b = UTxO $ a ⨃ b
-
-  vmax <=◁ (UTxO utxo) = UTxO $ vmax <=◁ utxo
-
-  (UTxO utxo) ▷<= vmax = UTxO $ utxo ▷<= vmax
-
-  (UTxO utxo) ▷>= vmin = UTxO $ utxo ▷>= vmin
+  (UTxO a) ⨃ (UTxO b) = UTxO $ a ⨃ b
 
   size (UTxO utxo) = size utxo
+
+  {-# INLINE haskey #-}
+  haskey k (UTxO x) = case Map.lookup k x of Just _ -> True; Nothing -> False
+
+  {-# INLINE addpair #-}
+  addpair k v (UTxO x) = UTxO (Map.insertWith (\y _z -> y) k v x)
+
+  {-# INLINE removekey #-}
+  removekey k (UTxO m) = UTxO (Map.delete k m)
 
 -- | Compute the hash of a transaction body.
 hashTxBody ::
@@ -264,14 +267,14 @@ scriptsNeeded ::
   UTxO crypto ->
   Tx crypto ->
   Set (ScriptHash crypto)
-scriptsNeeded u tx =
+scriptsNeeded (u@(UTxO v)) tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . unTxOut) u'')
     `Set.union` Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
     `Set.union` Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
   where
     unTxOut (TxOut a _) = a
     withdrawals = unWdrl $ _wdrls $ _body tx
-    UTxO u'' = txinsScript (txins $ _body tx) u <| u
+    u'' = Map.restrictKeys v (txinsScript (txins $ _body tx) u)
     certificates = (toList . _certs . _body) tx
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
@@ -280,14 +283,10 @@ txinsScript ::
   Set (TxIn crypto) ->
   UTxO crypto ->
   Set (TxIn crypto)
-txinsScript txInps (UTxO u) =
-  txInps
-    `Set.intersection` Map.keysSet
-      ( Map.filter
-          ( \(TxOut a _) ->
-              case a of
-                Addr _ (ScriptHashObj _) _ -> True
-                _ -> False
-          )
-          u
-      )
+txinsScript txInps (UTxO u) = foldr add Set.empty txInps
+  where
+    -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
+    add input ans = case Map.lookup input u of
+      Just (TxOut (Addr _ (ScriptHashObj _) _) _) -> Set.insert input ans
+      Just _ -> ans
+      Nothing -> ans

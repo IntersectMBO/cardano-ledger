@@ -2,7 +2,7 @@
 
 module Shelley.Spec.Ledger.Orphans where
 
-import Cardano.Prelude (NFData (..), NoUnexpectedThunks, readEither)
+import Cardano.Prelude (NFData (rnf), NoUnexpectedThunks, readEither)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Data.Aeson
 import Data.Foldable
@@ -49,8 +49,8 @@ instance NFData EpochNo
 instance NFData (StrictSeq a) where
   rnf x = case getSeq x of _any -> ()
 
+-- By defintion it is strict, so as long as the (hidden) constructor is evident, it is in normal form
+
 instance NFData a => NFData (WithOrigin a)
 
 instance NFData BlockNo
-
-{- ------------------------------------------------------ -}

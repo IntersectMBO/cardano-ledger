@@ -22,7 +22,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Core ((⨃))
+import Shelley.Spec.Ledger.Core (addpair)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert
@@ -106,4 +106,4 @@ ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
       pure cs
     Just m -> do
       m <= n ?! KESPeriodWrongOCERT m n
-      pure $ cs ⨃ [(hk, n)]
+      pure $ addpair hk n cs

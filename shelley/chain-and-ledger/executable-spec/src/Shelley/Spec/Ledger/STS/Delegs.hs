@@ -28,13 +28,12 @@ import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition ((?!), (?!:), Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans)
 import Data.Map as Map
 import Data.Sequence (Seq (..))
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Core (dom, (∈), (⊆), (⨃))
+import Shelley.Spec.Ledger.Core ((⨃))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
@@ -129,11 +128,11 @@ delegsTransition = do
           wdrls_ = unWdrl $ _wdrls (_body tx)
           rewards = _rewards ds
 
-      wdrls_ ⊆ rewards
+      Map.isSubmapOfBy (==) wdrls_ rewards -- wdrls_ ⊆ rewards
         ?! WithdrawalsNotInRewardsDELEGS
           (Map.differenceWith (\x y -> if x /= y then Just x else Nothing) wdrls_ rewards)
 
-      let rewards' = rewards ⨃ [(w, 0) | w <- Set.toList (dom wdrls_)]
+      let rewards' = rewards ⨃ (fmap (\_x -> 0) wdrls_)
 
       pure $ dpstate {_dstate = ds {_rewards = rewards'}}
     gamma :|> c -> do
@@ -144,9 +143,9 @@ delegsTransition = do
             DCertDeleg (Delegate deleg) ->
               let StakePools stPools_ = _stPools $ _pstate dpstate'
                   targetPool = _delegatee deleg
-               in case targetPool ∈ dom stPools_ of
-                    True -> Right ()
-                    False -> Left $ DelegateeNotRegisteredDELEG targetPool
+               in case Map.lookup targetPool stPools_ of
+                    Just _ -> Right ()
+                    Nothing -> Left $ DelegateeNotRegisteredDELEG targetPool
             _ -> Right ()
       isDelegationRegistered ?!: id
 

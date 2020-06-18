@@ -112,7 +112,7 @@ epochTransition = do
     trans @(SNAP crypto) $ TRC (ls, ss, ())
 
   let PState _ pParams fPParams _ = pstate
-      ppp = pParams ⨃ (Map.toList fPParams)
+      ppp = pParams ⨃ fPParams
       pstate' =
         pstate
           { _pParams = ppp,

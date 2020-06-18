@@ -25,10 +25,7 @@ module Shelley.Spec.Ledger.Core
         addpair,
         removekey,
         -- below are methods not used anywhere
-        size,
-        (<=◁),
-        (▷<=),
-        (▷>=)
+        size
       ),
     (⊆),
     (∪+),
@@ -63,13 +60,13 @@ class Relation m where
   -- | Domain restriction
   --
   -- Unicode: 25c1
-  (◁), (<|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
+  (◁), (<|) :: (Ord (Domain m)) => Set (Domain m) -> m -> m
   s <| r = s ◁ r
 
   -- | Domain exclusion
   --
   -- Unicode: 22ea
-  (⋪), (</|) :: (Ord (Domain m), Foldable f) => f (Domain m) -> m -> m
+  (⋪), (</|) :: (Ord (Domain m)) => Set (Domain m) -> m -> m
   s </| r = s ⋪ r
 
   -- | Range restriction
@@ -88,28 +85,7 @@ class Relation m where
   (∪) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
 
   -- | Union Override Right
-  (⨃) :: (Ord (Domain m), Ord (Range m), Foldable f) => m -> f (Domain m, Range m) -> m
-
-  -- | Restrict domain to values less or equal than the given value.
-  --
-  -- Unicode: 25c1
-  (<=◁) :: Ord (Domain m) => Domain m -> m -> m
-
-  infixl 5 <=◁
-
-  -- | Restrict range to values less or equal than the given value
-  --
-  -- Unicode: 25b7
-  (▷<=) :: (Ord (Range m)) => m -> Range m -> m
-
-  infixl 5 ▷<=
-
-  -- | Restrict range to values greater or equal than the given value
-  --
-  -- Unicode: 25b7
-  (▷>=) :: (Ord (Range m)) => m -> Range m -> m
-
-  infixl 5 ▷>=
+  (⨃) :: (Ord (Domain m), Ord (Range m)) => m -> m -> m
 
   -- | Size of the relation
   size :: Integral n => m -> n
@@ -149,25 +125,18 @@ instance Relation (Map k v) where
   dom = Map.keysSet
   range = Set.fromList . Map.elems
 
-  s ◁ r = Map.restrictKeys r (toSet s)
+  s ◁ r = Map.restrictKeys r s
 
-  s ⋪ r = Map.filterWithKey (\k _ -> k `Set.notMember` toSet s) r
+  s ⋪ r = Map.withoutKeys r s -- Uses library fuction which is equivalent to: Map.filterWithKey (\k _ -> k `Set.notMember` s) r
 
-  r ▷ s = Map.filter (flip Set.member s) r
+  r ▷ s = Map.filter (`Set.member` s) r
 
-  r ⋫ s = Map.filter (flip Set.notMember s) r
+  r ⋫ s = Map.filter (`Set.notMember` s) r
 
   d0 ∪ d1 = Map.union d0 d1
 
-  -- For union override we pass @d1@ as first argument, since 'Map.union' is
-  -- left biased.
-  d0 ⨃ d1 = Map.union (Map.fromList . toList $ d1) d0
-
-  vmax <=◁ r = Map.filterWithKey (\k _ -> k <= vmax) r
-
-  r ▷<= vmax = Map.filter (<= vmax) r
-
-  r ▷>= vmin = Map.filter (>= vmin) r
+  -- For union override we pass @d1@ as first argument, since 'Map.union' is left biased.
+  d0 ⨃ d1 = Map.union d1 d0
 
   size = fromIntegral . Map.size
 
@@ -181,8 +150,9 @@ instance Relation (Map k v) where
   removekey k m = Map.delete k m
 
 -- | Union override plus is (A\B)∪(B\A)∪{k|->v1+v2 | k|->v1 : A /\ k|->v2 : B}
-(∪+) :: (Ord a, Ord b, Num b) => Map a b -> Map a b -> Map a b
-a ∪+ b = ((dom a) ⋪ b) ∪ ((dom b) ⋪ a) ∪ (Map.unionWith (+) a b)
+-- The library function Map.unionWith is more general, it allows any type for `b` as long as (+) :: b -> b -> b
+(∪+) :: (Ord a, Num b) => Map a b -> Map a b -> Map a b
+a ∪+ b = (Map.unionWith (+) a b)
 
 instance Relation (Set (a, b)) where
   type Domain (Set (a, b)) = a
@@ -208,18 +178,11 @@ instance Relation (Set (a, b)) where
     where
       d1' = toSet d1
 
-  vmax <=◁ r = Set.filter ((<= vmax) . fst) $ r
-
-  r ▷<= vmax = Set.filter ((<= vmax) . snd) $ r
-
-  r ▷>= vmax = Set.filter ((>= vmax) . snd) $ r
-
   size = fromIntegral . Set.size
 
   addpair key val set = Set.insert (key, val) set
 
 -- The [(a,b)] instance is used in `stakeDistr` in the file LedgerState.hs
-
 instance Relation [(a, b)] where
   type Domain [(a, b)] = a
   type Range [(a, b)] = b
@@ -242,12 +205,6 @@ instance Relation [(a, b)] where
 
   -- In principle a list of pairs allows for duplicated keys.
   d0 ⨃ d1 = d0 ++ toList d1
-
-  vmax <=◁ r = filter ((<= vmax) . fst) r
-
-  r ▷<= vmax = filter ((<= vmax) . snd) r
-
-  r ▷>= vmin = filter ((vmin <=) . snd) r
 
   size = fromIntegral . length
 

@@ -143,4 +143,4 @@ ppupTransitionNonEmpty = do
         epochInfoEpoch ei slot
       currentEpoch == te ?! PPUpdateWrongEpoch currentEpoch te
 
-      pure $ ProposedPPUpdates (pupS ⨃ Map.toList pup)
+      pure $ ProposedPPUpdates (pupS ⨃ pup)

@@ -84,7 +84,7 @@ import Cardano.Binary
 import Cardano.Prelude
   ( AllowThunksIn (..),
     LByteString,
-    NFData,
+    NFData (),
     NoUnexpectedThunks (..),
     Word64,
     asum,
@@ -185,7 +185,7 @@ data PoolMetaData = PoolMetaData
   { _poolMDUrl :: !Url,
     _poolMDHash :: !ByteString
   }
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Ord, Generic, Show, NFData)
 
 instance ToJSON PoolMetaData where
   toJSON pmd =
@@ -202,8 +202,6 @@ instance FromJSON PoolMetaData where
         <*> explicitParseField (fmap Char8.pack . parseJSON) obj "hash"
 
 instance NoUnexpectedThunks PoolMetaData
-
-instance NFData PoolMetaData
 
 data StakePoolRelay
   = -- | One or both of IPv4 & IPv6
@@ -313,13 +311,11 @@ data PoolParams crypto = PoolParams
     _poolRelays :: !(StrictSeq StakePoolRelay),
     _poolMD :: !(StrictMaybe PoolMetaData)
   }
-  deriving (Show, Generic, Eq, Ord)
+  deriving (Show, Generic, Eq, Ord, NFData)
   deriving (ToCBOR) via CBORGroup (PoolParams crypto)
   deriving (FromCBOR) via CBORGroup (PoolParams crypto)
 
 instance NoUnexpectedThunks (PoolParams crypto)
-
-instance NFData (PoolParams crypto)
 
 newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
@@ -895,12 +891,15 @@ instance Relation (StakeCreds crypto) where
 
   (StakeCreds a) ∪ (StakeCreds b) = StakeCreds $ a ∪ b
 
-  (StakeCreds a) ⨃ b = StakeCreds $ a ⨃ b
-
-  vmax <=◁ (StakeCreds stkCreds) = StakeCreds $ vmax <=◁ stkCreds
-
-  (StakeCreds stkCreds) ▷<= vmax = StakeCreds $ stkCreds ▷<= vmax
-
-  (StakeCreds stkCreds) ▷>= vmin = StakeCreds $ stkCreds ▷>= vmin
+  (StakeCreds a) ⨃ (StakeCreds b) = StakeCreds $ a ⨃ b
 
   size (StakeCreds stkCreds) = size stkCreds
+
+  {-# INLINE addpair #-}
+  addpair k v (StakeCreds x) = StakeCreds (Map.insertWith (\y _z -> y) k v x)
+
+  {-# INLINE haskey #-}
+  haskey k (StakeCreds x) = case Map.lookup k x of Just _ -> True; Nothing -> False -- haskey k x
+
+  {-# INLINE removekey #-}
+  removekey k (StakeCreds m) = StakeCreds (Map.delete k m)
