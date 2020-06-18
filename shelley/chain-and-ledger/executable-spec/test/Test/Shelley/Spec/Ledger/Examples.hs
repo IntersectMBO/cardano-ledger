@@ -3385,7 +3385,7 @@ exampleShelleyGenesis =
       StrictSeq.fromList
         [ SingleHostAddr (SJust $ Port 1234) (SJust $ read "0.0.0.0") (SJust $ read "2001:db8:a::123"),
           SingleHostName SNothing (fromJust $ textToDns "cool.domain.com"),
-          MultiHostName (SJust $ Port 65000) (fromJust $ textToDns "cool.domain.com")
+          MultiHostName (fromJust $ textToDns "cool.domain.com")
         ]
     poolParams :: PoolParams h
     poolParams =

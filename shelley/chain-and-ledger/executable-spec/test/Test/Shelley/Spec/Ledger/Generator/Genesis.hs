@@ -115,7 +115,7 @@ genStakePoolRelay =
   Gen.choice
     [ SingleHostAddr <$> genStrictMaybe genPort <*> genStrictMaybe genIPv4 <*> genStrictMaybe genIPv6,
       SingleHostName <$> genStrictMaybe genPort <*> genDnsName,
-      MultiHostName <$> genStrictMaybe genPort <*> genDnsName
+      MultiHostName <$> genDnsName
     ]
 
 genStrictMaybe :: Gen a -> Gen (StrictMaybe a)

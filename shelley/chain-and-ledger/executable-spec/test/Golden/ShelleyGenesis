@@ -70,8 +70,7 @@
                     },
                     {
                         "multi host name": {
-                            "dnsName": "cool.domain.com",
-                            "port": 65000
+                            "dnsName": "cool.domain.com"
                         }
                     }
                 ],

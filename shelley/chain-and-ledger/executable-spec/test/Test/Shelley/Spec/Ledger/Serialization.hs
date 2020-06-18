@@ -663,8 +663,8 @@ serializationUnitTests =
           poolRelays =
             StrictSeq.fromList
               [ SingleHostAddr SNothing (SJust ipv4) SNothing,
-                SingleHostName SNothing $ Maybe.fromJust $ textToDns "singlehost.relay.com",
-                MultiHostName (SJust 42) $ Maybe.fromJust $ textToDns "multihost.relay.com"
+                SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns "singlehost.relay.com",
+                MultiHostName $ Maybe.fromJust $ textToDns "multihost.relay.com"
               ]
        in checkEncodingCBOR
             "register_pool"
@@ -701,8 +701,8 @@ serializationUnitTests =
                 <> S poolOwner -- owners
                 <> T (TkListLen 3) -- relays
                 <> T (TkListLen 4 . TkWord 0 . TkNull . TkBytes ipv4Bytes . TkNull)
-                <> T (TkListLen 3 . TkWord 1 . TkNull . TkString ("singlehost.relay.com"))
-                <> T (TkListLen 3 . TkWord 2 . (TkWord 42) . TkString ("multihost.relay.com"))
+                <> T (TkListLen 3 . TkWord 1 . (TkWord 42) . TkString ("singlehost.relay.com"))
+                <> T (TkListLen 2 . TkWord 2 . TkString ("multihost.relay.com"))
                 <> T (TkListLen 2) -- metadata present
                 <> S poolUrl -- metadata url
                 <> S poolMDHash -- metadata hash
