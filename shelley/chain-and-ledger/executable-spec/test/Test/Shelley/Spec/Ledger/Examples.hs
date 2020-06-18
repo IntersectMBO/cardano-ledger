@@ -25,6 +25,7 @@ module Test.Shelley.Spec.Ledger.Examples
     ex3A,
     ex3B,
     ex3C,
+    ex3D,
     ex4A,
     ex4B,
     ex5AReserves,
@@ -75,6 +76,7 @@ module Test.Shelley.Spec.Ledger.Examples
     blockEx3A,
     blockEx3B,
     blockEx3C,
+    blockEx3D,
     blockEx4A,
     blockEx4B,
     blockEx5A,
@@ -191,6 +193,7 @@ import Shelley.Spec.Ledger.LedgerState
     deltaT,
     emptyDState,
     emptyInstantaneousRewards,
+    emptyPPUPState,
     emptyPState,
     emptyRewardUpdate,
     esAccountState,
@@ -222,6 +225,7 @@ import Shelley.Spec.Ledger.LedgerState
     pattern LedgerState,
     pattern NewEpochState,
     pattern NonActiveSlot,
+    pattern PPUPState,
     pattern RewardUpdate,
     pattern UTxOState,
   )
@@ -568,7 +572,7 @@ dariaSHK = (KeyHashObj . hashKey . vKey) dariaStake
 
 -- | Empty set of UTxOs. No coins to be spent.
 utxostEx1 :: UTxOState h
-utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
+utxostEx1 = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 dsEx1 :: HashAlgorithm h => DState h
 dsEx1 = emptyDState {_genDelegs = GenDelegs genDelegs}
@@ -886,7 +890,7 @@ expectedLSEx2A =
         )
         (Coin 271)
         (Coin 3)
-        ppupEx2A
+        (PPUPState ppupEx2A emptyPPPUpdates)
     )
     (DPState dsEx2A psEx2A)
 
@@ -1043,7 +1047,7 @@ expectedLSEx2B =
         utxoEx2B
         (Coin 271)
         (Coin 7)
-        ppupEx2A
+        (PPUPState ppupEx2A emptyPPPUpdates)
     )
     (DPState dsEx2B psEx2A)
 
@@ -1131,7 +1135,7 @@ expectedLSEx2C =
         utxoEx2B
         (Coin 271)
         (Coin 7)
-        emptyPPPUpdates -- Note that the ppup is gone now
+        emptyPPUPState -- Note that the ppup is gone now
     )
     ( DPState
         dsEx2B
@@ -1269,7 +1273,7 @@ expectedLSEx2D =
         utxoEx2D
         (Coin 271)
         (Coin 12)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dsEx2D psEx2A)
 
@@ -1370,7 +1374,7 @@ expectedLSEx2E =
         utxoEx2D
         (Coin 271)
         (Coin 5)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     ( DPState
         dsEx2D
@@ -1565,7 +1569,7 @@ expectedLSEx2G =
         utxoEx2D
         (Coin 271)
         (Coin 0)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     ( DPState
         dsEx2D
@@ -1779,7 +1783,7 @@ expectedLSEx2I =
         utxoEx2D
         (Coin 271)
         (Coin 0)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dsEx2I psEx2A)
 
@@ -1923,7 +1927,7 @@ expectedLSEx2J =
         utxoEx2J
         (Coin 264)
         (Coin 9)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dsEx2J psEx2A)
 
@@ -2045,7 +2049,7 @@ expectedLSEx2K =
         utxoEx2K
         (Coin 264)
         (Coin 11)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dsEx2J psEx2K)
 
@@ -2192,7 +2196,7 @@ expectedLSEx2L =
         utxoEx2K
         (Coin 14)
         (Coin 11)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dsEx2L psEx1) -- Note the stake pool is reaped
 
@@ -2333,7 +2337,7 @@ expectedLSEx3A =
         )
         (Coin 0)
         (Coin 1)
-        ppupEx3A
+        (PPUPState ppupEx3A emptyPPPUpdates)
     )
     (DPState dsEx1 psEx1)
 
@@ -2454,7 +2458,7 @@ expectedLSEx3B =
         utxoEx3B
         (Coin 0)
         (Coin 2)
-        ppupEx3B'
+        (PPUPState ppupEx3B' emptyPPPUpdates)
     )
     (DPState dsEx1 psEx1)
 
@@ -2491,17 +2495,150 @@ expectedStEx3B =
 ex3B :: HashAlgorithm h => proxy h -> CHAINExample h
 ex3B _ = CHAINExample expectedStEx3A blockEx3B (Right expectedStEx3B)
 
--- | Example 3C - Adopt protocol parameter update
+-- | Example 3C - Vote Late in the epoch
+ppVote3C :: PParamsUpdate
+ppVote3C =
+  PParams
+    { _minfeeA = SNothing,
+      _minfeeB = SNothing,
+      _maxBBSize = SNothing,
+      _maxTxSize = SNothing,
+      _maxBHSize = SNothing,
+      _keyDeposit = SNothing,
+      _poolDeposit = SNothing,
+      _eMax = SNothing,
+      _nOpt = SNothing,
+      _a0 = SNothing,
+      _rho = SNothing,
+      _tau = SNothing,
+      _d = SNothing,
+      _extraEntropy = SNothing,
+      _protocolVersion = SNothing,
+      _minUTxOValue = SJust 99,
+      _minPoolCost = SNothing
+    }
+
+ppupEx3C :: HashAlgorithm h => ProposedPPUpdates h
+ppupEx3C =
+  ProposedPPUpdates $
+    Map.fromList
+      [ (hashKey $ coreNodeVKG 1, ppVote3C)
+      ]
+
+updateEx3C :: HashAlgorithm h => Update h
+updateEx3C = Update ppupEx3C (EpochNo 1)
+
+aliceCoinEx3C :: Coin
+aliceCoinEx3C = aliceCoinEx3B - 1
+
+txbodyEx3C :: HashAlgorithm h => TxBody h
+txbodyEx3C =
+  TxBody
+    (Set.fromList [TxIn (txid txbodyEx3B) 0])
+    (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3C)
+    StrictSeq.empty
+    (Wdrl Map.empty)
+    (Coin 1)
+    (SlotNo 81)
+    (SJust updateEx3C)
+    SNothing
+
+txEx3C :: HashAlgorithm h => Tx h
+txEx3C =
+  Tx
+    txbodyEx3C
+    mempty
+      { addrWits =
+          makeWitnessesVKey
+            (hashTxBody txbodyEx3C)
+            [asWitness alicePay, asWitness . cold $ coreNodeKeys p 1]
+      }
+    SNothing
+  where
+    p :: Proxy h
+    p = Proxy
+
 blockEx3C :: forall h. HashAlgorithm h => Block h
 blockEx3C =
   mkBlock
     (blockEx3BHash p)
+    (slotKeys 80)
+    [txEx3C]
+    (SlotNo 80)
+    (BlockNo 3)
+    (nonce0 p)
+    (NatNonce 3)
+    zero
+    4
+    0
+    (mkOCert (slotKeys 80) 0 (KESPeriod 0))
+  where
+    p :: Proxy h
+    p = Proxy
+
+utxoEx3C :: HashAlgorithm h => UTxO h
+utxoEx3C =
+  UTxO . Map.fromList $
+    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
+      (TxIn (txid txbodyEx3C) 0, TxOut aliceAddr aliceCoinEx3C)
+    ]
+
+expectedLSEx3C :: HashAlgorithm h => LedgerState h
+expectedLSEx3C =
+  LedgerState
+    ( UTxOState
+        utxoEx3C
+        (Coin 0)
+        (Coin 3)
+        (PPUPState ppupEx3B' ppupEx3C)
+    )
+    (DPState dsEx1 psEx1)
+
+blockEx3CHash :: HashAlgorithm h => proxy h -> HashHeader h
+blockEx3CHash _ = bhHash (bheader blockEx3C)
+
+expectedStEx3C :: forall h. HashAlgorithm h => ChainState h
+expectedStEx3C =
+  ChainState
+    ( NewEpochState
+        (EpochNo 0)
+        (BlocksMade Map.empty)
+        (BlocksMade Map.empty)
+        (EpochState (acntEx2A p) emptySnapShots expectedLSEx3C ppsEx1 ppsEx1 emptyNonMyopic)
+        (SJust emptyRewardUpdate)
+        (PoolDistr Map.empty)
+        (overlayScheduleFor (EpochNo 0))
+    )
+    oCertIssueNosEx1
+    (nonce0 p)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C])
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B])
+    NeutralNonce
+    ( At $
+        LastAppliedBlock
+          (BlockNo 3)
+          (SlotNo 80)
+          (blockEx3CHash p)
+    )
+  where
+    p :: Proxy h
+    p = Proxy
+
+ex3C :: HashAlgorithm h => proxy h -> CHAINExample h
+ex3C _ = CHAINExample expectedStEx3B blockEx3C (Right expectedStEx3C)
+
+-- | Example 3D - Adopt protocol parameter update
+-- | And make future updates become the new proposals
+blockEx3D :: forall h. HashAlgorithm h => Block h
+blockEx3D =
+  mkBlock
+    (blockEx3CHash p)
     (slotKeys 110)
     []
     (SlotNo 110)
-    (BlockNo 3)
-    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B] ⭒ mkNonceFromNumber 123)
-    (NatNonce 3)
+    (BlockNo 4)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C] ⭒ mkNonceFromNumber 123)
+    (NatNonce 4)
     zero
     5
     0
@@ -2510,55 +2647,55 @@ blockEx3C =
     p :: Proxy h
     p = Proxy
 
-blockEx3CHash :: HashAlgorithm h => HashHeader h
-blockEx3CHash = bhHash (bheader blockEx3C)
+blockEx3DHash :: HashAlgorithm h => HashHeader h
+blockEx3DHash = bhHash (bheader blockEx3D)
 
-snapsEx3C :: SnapShots h
-snapsEx3C = emptySnapShots {_feeSS = Coin 2}
+snapsEx3D :: SnapShots h
+snapsEx3D = emptySnapShots {_feeSS = Coin 3}
 
-expectedLSEx3C :: HashAlgorithm h => LedgerState h
-expectedLSEx3C =
+expectedLSEx3D :: HashAlgorithm h => LedgerState h
+expectedLSEx3D =
   LedgerState
     ( UTxOState
-        utxoEx3B
+        utxoEx3C
         (Coin 0)
-        (Coin 2)
-        emptyPPPUpdates
+        (Coin 3)
+        (PPUPState ppupEx3C emptyPPPUpdates)
     )
     (DPState dsEx1 psEx1)
 
-ppsEx3C :: PParams
-ppsEx3C = ppsEx1 {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
+ppsEx3D :: PParams
+ppsEx3D = ppsEx1 {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
 
-expectedStEx3C :: forall h. HashAlgorithm h => ChainState h
-expectedStEx3C =
+expectedStEx3D :: forall h. HashAlgorithm h => ChainState h
+expectedStEx3D =
   ChainState
     ( NewEpochState
         (EpochNo 1)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2A p) snapsEx3C expectedLSEx3C ppsEx1 ppsEx3C emptyNonMyopic)
+        (EpochState (acntEx2A p) snapsEx3D expectedLSEx3D ppsEx1 ppsEx3D emptyNonMyopic)
         SNothing
         (PoolDistr Map.empty)
         (overlayScheduleFor (EpochNo 1))
     )
     oCertIssueNosEx1
     (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B] ⭒ mkNonceFromNumber 123)
-    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C])
-    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C])
-    (hashHeaderToNonce (blockEx3BHash p))
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C, blockEx3D])
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C, blockEx3D])
+    (hashHeaderToNonce (blockEx3CHash p))
     ( At $
         LastAppliedBlock
-          (BlockNo 3)
+          (BlockNo 4)
           (SlotNo 110)
-          blockEx3CHash
+          blockEx3DHash
     )
   where
     p :: Proxy h
     p = Proxy
 
-ex3C :: HashAlgorithm h => proxy h -> CHAINExample h
-ex3C _ = CHAINExample expectedStEx3B blockEx3C (Right expectedStEx3C)
+ex3D :: HashAlgorithm h => proxy h -> CHAINExample h
+ex3D _ = CHAINExample expectedStEx3C blockEx3D (Right expectedStEx3D)
 
 -- | Example 4A - Genesis key delegation
 newGenDelegate :: KeyPair h 'GenesisDelegate
@@ -2653,7 +2790,7 @@ expectedLSEx4A =
         utxoEx4A
         (Coin 0)
         (Coin 1)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dsEx4A psEx1)
 
@@ -2728,7 +2865,7 @@ expectedLSEx4B =
         utxoEx4A
         (Coin 0)
         (Coin 1)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dsEx4B psEx1)
 
@@ -2847,7 +2984,7 @@ expectedLSEx5A pot =
         (utxoEx5A pot)
         (Coin 0)
         (Coin 1)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState (dsEx5A pot) psEx1)
 
@@ -3298,7 +3435,7 @@ expectedLSEx6A =
         )
         (Coin 271)
         (Coin 3 + feeEx6A)
-        ppupEx2A
+        (PPUPState ppupEx2A emptyPPPUpdates)
     )
     (DPState dsEx2A psEx6A)
 

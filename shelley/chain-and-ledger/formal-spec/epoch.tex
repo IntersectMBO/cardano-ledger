@@ -577,6 +577,27 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
   %
   \caption{New Proto Param transition-system types}
   \label{fig:ts-types:new-proto-param}
+  %
+  \emph{Helper Functions}
+  \begin{align*}
+      & \fun{updatePpup} \in \UTxOState \to \PParams \to \UTxOState\\
+      & \fun{updatePpup}~\var{utxoSt}~\var{pp} =
+      \begin{cases}
+        (\var{utxo},\var{deposits},\var{fees},(\var{fpup},~\emptyset))
+        &
+        \var{canFollow}
+        \\
+        (\var{utxo},\var{deposits},\var{fees},(\emptyset,~\emptyset))
+        &
+        \text{otherwise} \\
+      \end{cases}\\
+      & ~~~\where \\
+      & ~~~~~~~\var{canFollow} =
+        \forall\var{ps}\in\range{pup},~
+        \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
+        \\
+      & ~~~~~~~(\var{utxo},\var{deposits},\var{fees},(\var{pup},~\var{fpup})) = \var{utxoSt} \\
+  \end{align*}
 \end{figure}
 
 
@@ -589,6 +610,15 @@ max transaction size and the max header size.
 If the requirements are met, the new protocol parameters are accepted, the proposal is reset,
 and the reserves are adjusted to account for changes in the deposits.
 Otherwise, the only change is that the proposal is reset.
+
+The $\mathsf{NEWPP}$ rule also cleans up the protocol parameter update proposals,
+by calling $\fun{updatePpup}$ on the UTxO state.
+The $\fun{updatePpup}$ sets the protocol parameter updates to the future protocol
+parameter updates provided the protocol versions all can follow from the
+version given in the protocol parameters, or the emptyset otherwise.
+In any case, the future protocol parameters update proposals are set to the empty set.
+If new protocol parameters are being adopted, then these is the value given to
+$\fun{updatePpup}$, otherwise the old parameters are given.
 
 Regarding adjusting the reserves for changes in the deposits, one of three things happens:
 
@@ -629,7 +659,7 @@ for ease of reading.
          \var{(\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
                                                                                       \leteq
                               & \var{dstate}\\
-         (\var{utxo},~\var{deposits},~\var{fees},~\wcard) & \leteq & \var{utxoSt} \\
+         (\var{utxo},~\var{deposits},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
       \end{array}}
       \\~\\~\\
       \var{oblg_{cur}} = \var{deposits} \\
@@ -638,7 +668,9 @@ for ease of reading.
         \fun{maxBlockSize}~\var{pp_{new}}
       \\~\\
         \var{utxoSt'} \leteq
-        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees},~\varUpdate{\emptyset}\right)
+        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees},~\var{pup}\right)
+      \\
+      \var{utxoSt''} \leteq \fun{updatePpup}~\var{utxoSt'}~\var{pp_{new}}
       \\~\\
       (\var{treasury},~\var{reserves})\leteq \var{acnt} \\
       \var{acnt'} \leteq (\var{treasury},~\varUpdate{reserves + diff}) \\
@@ -659,7 +691,7 @@ for ease of reading.
       \trans{newpp}{\var{pp_{new}}}
       \left(
         \begin{array}{rcl}
-          \varUpdate{utxoSt'}\\
+          \varUpdate{utxoSt''}\\
           \varUpdate{acnt'} \\
           \varUpdate{\var{pp_{new}}} \\
         \end{array}
@@ -690,10 +722,7 @@ for ease of reading.
          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}
       \end{array}}
       \\~\\~\\
-      \left(\var{utxo},~\var{oblg},~\var{fees},~\wcard\right)
-        \leteq \var{utxoSt} \\
-        \var{utxoSt'} \leteq
-        \left(\var{utxo},~\var{oblg},~\var{fees},~\varUpdate{\emptyset}\right)
+      \var{utxoSt'} \leteq \fun{updatePpup}~\var{utxoSt}~\var{pp} \\
     }
     {
       \begin{array}{l}
@@ -848,7 +877,7 @@ is necessary for the preservation of Ada property in the $ \mathsf{NEWPP}$ trans
       }
       \right)
       \\~\\~\\
-      \var{(\wcard,~\wcard,~\wcard,~\var{pup})}\leteq\var{utxoSt'}\\
+      \var{(\wcard,~\wcard,~\wcard,~(\var{pup},\wcard))}\leteq\var{utxoSt'}\\
       \var{pp_{new}}\leteq\var{pp}\unionoverrideRight
       \fun{votedValue}~\var{pup}\\
       {

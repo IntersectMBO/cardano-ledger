@@ -89,6 +89,7 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     UTxOState (..),
     emptyDState,
+    emptyPPUPState,
     emptyPState,
     getGKeys,
     updateNES,
@@ -97,7 +98,6 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.OCert (KESPeriod)
 import Shelley.Spec.Ledger.PParams
   ( PParams,
-    ProposedPPUpdates (..),
     ProtVer (..),
     _maxBBSize,
     _maxBHSize,
@@ -157,7 +157,7 @@ initialShelleyState lab e utxo reserves genDelegs os pp initNonce =
                     utxo
                     (Coin 0)
                     (Coin 0)
-                    (ProposedPPUpdates Map.empty)
+                    emptyPPUPState
                 )
                 (DPState (emptyDState {_genDelegs = (GenDelegs genDelegs)}) emptyPState)
             )

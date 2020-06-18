@@ -32,15 +32,16 @@ import Shelley.Spec.Ledger.LedgerState
     DState (..),
     PState (..),
     UTxOState,
-    clearPpup,
     emptyAccount,
+    emptyPPUPState,
     totalInstantaneousReservesRewards,
+    updatePpup,
     _deposited,
     _irwd,
     _reserves,
     pattern UTxOState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates, emptyPParams)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 data NEWPP crypto
@@ -71,7 +72,7 @@ initialNewPp :: InitialRule (NEWPP crypto)
 initialNewPp =
   pure $
     NewppState
-      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates)
+      (UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState)
       emptyAccount
       emptyPParams
 
@@ -96,6 +97,6 @@ newPpTransition = do
         then
           let utxoSt' = utxoSt {_deposited = Coin oblgNew}
            in let acnt' = acnt {_reserves = Coin $ reserves + diff}
-               in pure $ NewppState (clearPpup utxoSt') acnt' ppNew'
-        else pure $ NewppState (clearPpup utxoSt) acnt pp
-    Nothing -> pure $ NewppState (clearPpup utxoSt) acnt pp
+               in pure $ NewppState (updatePpup utxoSt' ppNew') acnt' ppNew'
+        else pure $ NewppState (updatePpup utxoSt pp) acnt pp
+    Nothing -> pure $ NewppState (updatePpup utxoSt pp) acnt pp

@@ -23,6 +23,7 @@ import Shelley.Spec.Ledger.Core ((⨃))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
+    PPUPState (..),
     PState (..),
     emptyAccount,
     emptyLedgerState,
@@ -123,7 +124,7 @@ epochTransition = do
 
   coreNodeQuorum <- liftSTS $ asks quorum
 
-  let ppup = _ppups utxoSt
+  let ppup = proposals . _ppups $ utxoSt
   let ppNew = votedValuePParams ppup pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt'' acnt'' pp' <-
     trans @(NEWPP crypto) $
