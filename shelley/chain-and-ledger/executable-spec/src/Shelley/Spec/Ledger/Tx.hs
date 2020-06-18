@@ -47,6 +47,7 @@ module Shelley.Spec.Ledger.Tx
     hashScript,
     txwitsScript,
     extractKeyHash,
+    extractKeyHashWitnessSet,
     extractScriptHash,
     getKeyCombinations,
     getKeyCombination,
@@ -367,6 +368,15 @@ extractKeyHash =
         KeyHashObj hk -> Just hk
         _ -> Nothing
     )
+
+extractKeyHashWitnessSet ::
+  forall (h :: HashType) (r :: KeyRole h) crypto.
+  [Credential r crypto] ->
+  Set (KeyHash (WitnessFor r) crypto)
+extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
+  where
+    accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
+    accum _other ans = ans
 
 extractScriptHash ::
   [Credential 'Payment crypto] ->

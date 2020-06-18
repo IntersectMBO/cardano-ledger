@@ -47,7 +47,7 @@ import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (Addr, getNetwork)
 import Shelley.Spec.Ledger.BaseTypes (Network, ShelleyBase, invalidKey, networkId)
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Core (dom, range, (∪), (⊆), (⋪))
+import Shelley.Spec.Ledger.Core (dom, range, (∪), (⋪))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools)
 import Shelley.Spec.Ledger.Keys (GenDelegs)
@@ -203,7 +203,7 @@ utxoInductive ::
   TransitionRule (UTXO crypto)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo deposits' fees ppup = u
+  let UTxOState (utxo@(UTxO v)) deposits' fees ppup = u
   let txb = _body tx
 
   _ttl txb >= slot ?! ExpiredUTxO (_ttl txb) slot
@@ -215,7 +215,7 @@ utxoInductive = do
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   let validInputs = dom utxo
-  txins txb ⊆ validInputs ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
+  all (`Map.member` v) (txins txb) ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =

@@ -242,6 +242,7 @@ benchmark mainbench
                     cardano-binary,
                     cardano-crypto,
                     cardano-crypto-class,
+                    cardano-crypto-wrapper,
                     cardano-prelude,
                     cardano-slotting,
                     cryptonite,
@@ -253,11 +254,13 @@ benchmark mainbench
                     tasty-quickcheck,
                     tasty-hunit,
                     tasty,
+                    time,
                     small-steps,
                     criterion,
                     random,
                     containers,
-                    MonadRandom
+                    MonadRandom,
+                    deepseq
   ghc-options:
       -threaded
       -rtsopts
@@ -267,6 +270,7 @@ benchmark mainbench
       -Wincomplete-record-updates
       -Wincomplete-uni-patterns
       -Wredundant-constraints
+      -O
   if (!flag(development))
     ghc-options:
       -Werror

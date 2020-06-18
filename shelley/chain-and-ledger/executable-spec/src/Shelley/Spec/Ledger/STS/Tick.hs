@@ -88,7 +88,7 @@ adoptGenesisDelegs es slot = es'
     ds' =
       ds
         { _fGenDelegs = fGenDelegs',
-          _genDelegs = GenDelegs $ genDelegs ⨃ Map.toList genDelegs'
+          _genDelegs = GenDelegs $ genDelegs ⨃ genDelegs'
         }
     dp' = dp {_dstate = ds'}
     ls' = ls {_delegationState = dp'}

@@ -13,6 +13,7 @@ module Test.Shelley.Spec.Ledger.Utils
     evolveKESUntil,
     slotFromEpoch,
     mkKeyPair,
+    mkKeyPair',
     mkGenKey,
     mkKESKeyPair,
     mkVRFKeyPair,
@@ -53,7 +54,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, updateKES, vKey)
+import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, updateKES, vKey, pattern KeyPair)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
@@ -95,6 +96,12 @@ mkKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyDSIGN h, VKey h
 mkKeyPair seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
+
+-- | For testing purposes, generate a deterministic key pair given a seed.
+mkKeyPair' :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair h kr
+mkKeyPair' seed = KeyPair vk sk
+  where
+    (sk, vk) = mkKeyPair seed
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
 mkVRFKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyVRF h, VerKeyVRF h)
