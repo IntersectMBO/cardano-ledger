@@ -19,7 +19,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Address (mkVKeyRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.BlockChain (checkVRFValue)
+import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
@@ -79,7 +79,6 @@ import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
-import Test.Shelley.Spec.Ledger.Generator.Core (unitIntervalToNatural)
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty
@@ -147,13 +146,7 @@ testNoGenesisOverlay =
 
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
-  checkVRFValue 0 (1 % 2) (mkActiveSlotCoeff $ unsafeMkUnitInterval 1) @?= True
-
-testVRFCheckWithLeaderValueOne :: Assertion
-testVRFCheckWithLeaderValueOne =
-  checkVRFValue vrfOne (1 % 2) (mkActiveSlotCoeff $ unsafeMkUnitInterval 0.5) @?= False
-  where
-    vrfOne = unitIntervalToNatural (unsafeMkUnitInterval 1)
+  checkLeaderValue 0 (1 % 2) (mkActiveSlotCoeff $ unsafeMkUnitInterval 1) @?= True
 
 testsPParams :: TestTree
 testsPParams =
@@ -164,9 +157,7 @@ testsPParams =
       testCase "generate overlay schedule without genesis nodes" $
         testNoGenesisOverlay,
       testCase "VRF checks when the activeSlotCoeff is one" $
-        testVRFCheckWithActiveSlotCoeffOne,
-      testCase "VRF checks when the VRF leader value is one" $
-        testVRFCheckWithLeaderValueOne
+        testVRFCheckWithActiveSlotCoeffOne
     ]
 
 testTruncateUnitInterval :: TestTree

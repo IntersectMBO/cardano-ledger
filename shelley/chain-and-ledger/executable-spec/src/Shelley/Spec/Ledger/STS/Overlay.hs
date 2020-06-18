@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
-    checkVRFValue,
+    checkLeaderValue,
     mkSeed,
     seedEta,
     seedL,
@@ -193,7 +193,7 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
         (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
       vrfChecks eta0 bhb
       unless
-        (checkVRFValue (VRF.certifiedNatural $ bheaderL bhb) sigma f)
+        (checkLeaderValue (VRF.certifiedNatural $ bheaderL bhb) sigma f)
         (throwError $ VRFLeaderValueTooBig (VRF.certifiedNatural $ bheaderL bhb) sigma f)
       pure ()
   where

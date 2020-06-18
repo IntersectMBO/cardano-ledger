@@ -214,7 +214,7 @@ $\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
       \fun{bblockno} & \BHBody \to \BlockNo &
       \fun{bnonce} & \BHBody \to \Seed \\
       \fun{\bprfn{}} & \BHBody \to \Proof &
-      \fun{bleader} & \BHBody \to \unitInterval \\
+      \fun{bleader} & \BHBody \to \N \\
       \fun{\bprfl{}} & \BHBody \to \Proof &
       \fun{hBbsize} & \BHBody \to \N \\
       \fun{bhash} & \BHBody \to \HashBBody &
@@ -1150,7 +1150,7 @@ parameters. The function checks:
 \item The validity of the proofs for the leader value and the new nonce.
 \item The verification key is associated with relative stake $\sigma$ in the stake distribution.
 \item The $\fun{bleader}$ value of \var{bhb} indicates a possible leader for
-  this slot.
+  this slot. The function $\fun{checkLeaderVal}$ is defined in \ref{sec:leader-value-calc}.
 \end{itemize}
 
 \begin{figure}
@@ -1177,7 +1177,7 @@ parameters. The function checks:
       & \begin{array}{cl}
         ~~~~ & \var{hk}\mapsto (\sigma,~\var{hk_{vrf}})\in\var{pd} \\
         ~~~~ \land & \fun{vrfChecks}~\eta_0~\var{bhb} \\
-        ~~~~ \land & \fun{bleader}~\var{bhb} < 1 - (1 - f)^{\sigma} \\
+        ~~~~ \land & \fun{checkLeaderVal}~(\fun{bleader}~\var{bhb})~\sigma~\var{f} \\
       \end{array} \\
       & ~~~~\where \\
       & ~~~~~~~~~~\var{hk} \leteq \hashKey{(\bvkcold bhb)} \\
