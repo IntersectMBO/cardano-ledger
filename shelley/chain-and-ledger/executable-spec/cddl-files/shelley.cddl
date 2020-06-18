@@ -144,7 +144,6 @@ single_host_name = ( 1
                    , dns_name ; An A or AAAA DNS record
                    )
 multi_host_name = ( 2
-                   , port / null
                    , dns_name ; A SRV DNS record
                    )
 relay =

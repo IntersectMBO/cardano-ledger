@@ -211,7 +211,7 @@ data StakePoolRelay
   | -- | An @A@ or @AAAA@ DNS record
     SingleHostName !(StrictMaybe Port) !DnsName
   | -- | A @SRV@ DNS record
-    MultiHostName !(StrictMaybe Port) !DnsName
+    MultiHostName !DnsName
   deriving (Eq, Ord, Generic, Show)
 
 instance FromJSON StakePoolRelay where
@@ -234,8 +234,7 @@ instance FromJSON StakePoolRelay where
           <*> obj .: "dnsName"
       parser3 = Aeson.withObject "MultiHostName" $ \obj ->
         MultiHostName
-          <$> obj .:? "port" .!= SNothing
-          <*> obj .: "dnsName"
+          <$> obj .: "dnsName"
 
 instance ToJSON StakePoolRelay where
   toJSON (SingleHostAddr port ipv4 ipv6) =
@@ -255,12 +254,11 @@ instance ToJSON StakePoolRelay where
               "dnsName" .= dnsName
             ]
       ]
-  toJSON (MultiHostName port dnsName) =
+  toJSON (MultiHostName dnsName) =
     Aeson.object
       [ "multi host name"
           .= Aeson.object
-            [ "port" .= port,
-              "dnsName" .= dnsName
+            [ "dnsName" .= dnsName
             ]
       ]
 
@@ -280,25 +278,28 @@ instance ToCBOR StakePoolRelay where
       <> toCBOR (1 :: Word8)
       <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
       <> toCBOR n
-  toCBOR (MultiHostName p n) =
-    encodeListLen 3
+  toCBOR (MultiHostName n) =
+    encodeListLen 2
       <> toCBOR (2 :: Word8)
-      <> encodeNullMaybe toCBOR (strictMaybeToMaybe p)
       <> toCBOR n
 
 instance FromCBOR StakePoolRelay where
   fromCBOR = do
     n <- decodeListLen
     w <- decodeWord
-    p <- maybeToStrictMaybe <$> decodeNullMaybe fromCBOR
     case w of
       0 ->
         matchSize "SingleHostAddr" 4 n
-          >> SingleHostAddr p
-          <$> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
+          >> SingleHostAddr
+          <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+          <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv4FromCBOR)
           <*> (maybeToStrictMaybe <$> decodeNullMaybe ipv6FromCBOR)
-      1 -> matchSize "SingleHostName" 3 n >> SingleHostName p <$> fromCBOR
-      2 -> matchSize "MultiHostName" 3 n >> MultiHostName p <$> fromCBOR
+      1 ->
+        matchSize "SingleHostName" 3 n
+          >> SingleHostName
+          <$> (maybeToStrictMaybe <$> decodeNullMaybe fromCBOR)
+          <*> fromCBOR
+      2 -> matchSize "MultiHostName" 2 n >> MultiHostName <$> fromCBOR
       k -> invalidKey k
 
 -- | A stake pool.
