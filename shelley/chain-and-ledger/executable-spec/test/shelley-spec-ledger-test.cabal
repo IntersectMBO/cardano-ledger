@@ -79,6 +79,7 @@ library
     multiset,
     process-extras,
     QuickCheck,
+    scientific,
     shelley-spec-ledger,
     small-steps,
     tasty,
