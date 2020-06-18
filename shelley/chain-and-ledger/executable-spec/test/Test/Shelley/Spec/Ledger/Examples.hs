@@ -115,6 +115,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust, maybe)
 import Data.Proxy
 import Data.Ratio ((%))
+import Data.Scientific
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -3350,7 +3351,7 @@ exampleShelleyGenesis =
       sgMaxLovelaceSupply = 71,
       sgProtocolParams =
         emptyPParams
-          { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Double),
+          { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Scientific),
             _maxBBSize = 239857,
             _maxBHSize = 217569
           },

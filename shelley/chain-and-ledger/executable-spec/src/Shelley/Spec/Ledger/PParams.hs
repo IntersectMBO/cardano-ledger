@@ -40,13 +40,13 @@ import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
 import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
@@ -264,7 +264,7 @@ instance ToJSON PParams where
         "poolDeposit" .= _poolDeposit pp,
         "eMax" .= _eMax pp,
         "nOpt" .= _nOpt pp,
-        "a0" .= (fromRational $ _a0 pp :: Double),
+        "a0" .= (fromRational (_a0 pp) :: Scientific),
         "rho" .= _rho pp,
         "tau" .= _tau pp,
         "decentralisationParam" .= _d pp,
@@ -287,7 +287,9 @@ instance FromJSON PParams where
         <*> obj .: "poolDeposit"
         <*> obj .: "eMax"
         <*> obj .: "nOpt"
-        <*> parseRationalFromDouble (obj .: "a0")
+        <*> ( (toRational :: Scientific -> Rational)
+                <$> obj .: "a0"
+            )
         <*> obj .: "rho"
         <*> obj .: "tau"
         <*> obj .: "decentralisationParam"
@@ -295,9 +297,6 @@ instance FromJSON PParams where
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= 0
         <*> obj .:? "minPoolCost" .!= 0
-    where
-      parseRationalFromDouble :: Aeson.Parser Double -> Aeson.Parser Rational
-      parseRationalFromDouble p = realToFrac <$> p
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams

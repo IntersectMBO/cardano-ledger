@@ -68,12 +68,12 @@ import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
-import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
 import Data.Ratio ((%), Ratio, denominator, numerator)
+import Data.Scientific (Scientific)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
@@ -114,12 +114,14 @@ instance FromCBOR UnitInterval where
       Just u -> pure u
 
 instance ToJSON UnitInterval where
-  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Double)
+  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Scientific)
 
 instance FromJSON UnitInterval where
-  parseJSON v =
-    truncateUnitInterval . realToFrac
-      <$> (parseJSON v :: Aeson.Parser Double)
+  parseJSON v = do
+    d <- parseJSON v
+    case mkUnitInterval (realToFrac (d :: Scientific) :: Ratio Word64) of
+      Just u -> return u
+      Nothing -> fail "The value must be between 0 and 1 (inclusive)"
 
 unitIntervalToRational :: UnitInterval -> Rational
 unitIntervalToRational (UnsafeUnitInterval x) =

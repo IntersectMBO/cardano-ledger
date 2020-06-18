@@ -25,6 +25,7 @@ import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Scientific (Scientific)
 import Data.Time (NominalDiffTime, UTCTime)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -82,7 +83,7 @@ data ShelleyGenesis c = ShelleyGenesis
     sgNetworkMagic :: !Word32,
     sgNetworkId :: !Network,
     sgProtocolMagicId :: !ProtocolMagicId,
-    sgActiveSlotsCoeff :: !Double,
+    sgActiveSlotsCoeff :: !Rational,
     sgSecurityParam :: !Word64,
     sgEpochLength :: !EpochSize,
     sgSlotsPerKESPeriod :: !Word64,
@@ -102,7 +103,6 @@ sgActiveSlotCoeff :: ShelleyGenesis c -> ActiveSlotCoeff
 sgActiveSlotCoeff =
   mkActiveSlotCoeff
     . unitIntervalFromRational
-    . toRational
     . sgActiveSlotsCoeff
 
 instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
@@ -114,7 +114,7 @@ instance Crypto crypto => ToJSON (ShelleyGenesis crypto) where
         "networkMagic" .= sgNetworkMagic sg,
         "networkId" .= sgNetworkId sg,
         "protocolMagicId" .= sgProtocolMagicId sg,
-        "activeSlotsCoeff" .= sgActiveSlotsCoeff sg,
+        "activeSlotsCoeff" .= (fromRational (sgActiveSlotsCoeff sg) :: Scientific),
         "securityParam" .= sgSecurityParam sg,
         "epochLength" .= sgEpochLength sg,
         "slotsPerKESPeriod" .= sgSlotsPerKESPeriod sg,
@@ -136,7 +136,9 @@ instance Crypto crypto => FromJSON (ShelleyGenesis crypto) where
         <*> obj .: "networkMagic"
         <*> obj .: "networkId"
         <*> obj .: "protocolMagicId"
-        <*> obj .: "activeSlotsCoeff"
+        <*> ( (toRational :: Scientific -> Rational)
+                <$> obj .: "activeSlotsCoeff"
+            )
         <*> obj .: "securityParam"
         <*> obj .: "epochLength"
         <*> obj .: "slotsPerKESPeriod"
