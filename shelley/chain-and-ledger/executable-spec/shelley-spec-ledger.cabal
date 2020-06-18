@@ -195,6 +195,7 @@ test-suite shelley-spec-ledger-test
       bytestring,
       bytestring-conversion,
       cardano-binary,
+      cardano-crypto,
       cardano-crypto-class,
       cardano-crypto-test,
       cardano-crypto-wrapper,

@@ -43,6 +43,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     BHBody,
     BHeader,
+    BootstrapWitness,
     Credential,
     DCert,
     LaxBlock,
@@ -65,6 +66,7 @@ cddlTests :: Int -> TestTree
 cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
     [ cddlTest' @(BHeader ShortHash) n "header",
+      cddlTest' @(BootstrapWitness ShortHash) n "bootstrap_witness",
       cddlTest @(BHBody ShortHash) n "header_body",
       cddlGroupTest @(OCert ShortHash) n "operational_cert",
       cddlTest @(Addr ShortHash) n "address",

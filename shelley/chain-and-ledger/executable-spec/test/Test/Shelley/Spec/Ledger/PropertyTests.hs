@@ -4,6 +4,9 @@
 
 module Test.Shelley.Spec.Ledger.PropertyTests (propertyTests, minimalPropertyTests) where
 
+import Test.Shelley.Spec.Ledger.Address.Bootstrap
+  ( bootstrapHashTest,
+  )
 import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,
@@ -47,7 +50,8 @@ minimalPropertyTests =
     "Minimal Property Tests"
     [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" relevantCasesAreCovered,
       TQC.testProperty "total amount of Ada is preserved" preservationOfAda,
-      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated
+      TQC.testProperty "Only valid CHAIN STS signals are generated" onlyValidChainSignalsAreGenerated,
+      bootstrapHashTest
     ]
 
 -- | 'TestTree' of property-based testing properties.

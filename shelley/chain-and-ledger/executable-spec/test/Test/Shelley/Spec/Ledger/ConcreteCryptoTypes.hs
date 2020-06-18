@@ -12,6 +12,7 @@ import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Crypto.KES (MockKES)
 import Data.Map (Map)
 import qualified Shelley.Spec.Ledger.Address as TxData
+import qualified Shelley.Spec.Ledger.Address.Bootstrap as TxData
 import qualified Shelley.Spec.Ledger.BlockChain as BlockChain
 import qualified Shelley.Spec.Ledger.Credential as TxData
 import Shelley.Spec.Ledger.Crypto
@@ -236,6 +237,8 @@ type Update h = PParams.Update (ConcreteCrypto h)
 type ProposedPPUpdates h = PParams.ProposedPPUpdates (ConcreteCrypto h)
 
 type VRFKeyHash h = Keys.Hash (ConcreteCrypto h) (Keys.VerKeyVRF (ConcreteCrypto h))
+
+type BootstrapWitness h = TxData.BootstrapWitness (ConcreteCrypto h)
 
 hashKeyVRF ::
   HashAlgorithm h =>

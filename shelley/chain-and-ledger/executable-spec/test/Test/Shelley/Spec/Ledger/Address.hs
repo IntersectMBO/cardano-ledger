@@ -40,9 +40,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Test.Shelley.Spec.Ledger.Address.Bootstrap
-  ( bootstrapTest,
-  )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
@@ -53,9 +50,8 @@ addressTests =
   T.testGroup
     "Address golden tests"
     [ goldenTests_MockCrypto,
-      goldenTests_ShelleyCrypto,
+      goldenTests_ShelleyCrypto
       -- roundTripTests,
-      bootstrapTest
     ]
 
 {------------------------------------------------------------------------------

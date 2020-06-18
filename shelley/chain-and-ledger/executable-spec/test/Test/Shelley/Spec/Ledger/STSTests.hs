@@ -6,7 +6,6 @@ module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 
 import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Extended (TRC (..), applySTS)
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Either (fromRight, isRight)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, singleton)
@@ -31,6 +30,7 @@ import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
+import Test.Shelley.Spec.Ledger.Address.Bootstrap (testBootstrapSpending)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, KeyHash, NewEpochState, PoolParams, TICK, TickEnv)
 import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
@@ -83,18 +83,15 @@ import Test.Shelley.Spec.Ledger.MultiSigExamples
     applyTxWithScript,
     bobOnly,
   )
-import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase, testSTS)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
 testCHAINExample :: CHAINExample ShortHash -> Assertion
-testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
-  checkTrace @(CHAIN ShortHash) runShelleyBase () $ pure initSt .- block .-> expectedSt
-testCHAINExample (CHAINExample initSt block predicateFailure@(Left _)) = do
-  let st = runShelleyBase $ applySTS @(CHAIN ShortHash) (TRC ((), initSt, block))
-  st @?= predicateFailure
+testCHAINExample (CHAINExample initSt block expectedSt) =
+  testSTS @(CHAIN ShortHash) () initSt block expectedSt
 
 -- | Applies the TICK transition to a given chain state,
 -- and check that some component of the result is as expected.
@@ -238,7 +235,8 @@ stsTests =
       testCase "withdraw from script locked account, same script" testRwdAliceSignsAlone,
       testCase "FAIL: withdraw from script locked account" testRwdAliceSignsAlone',
       testCase "withdraw from script locked account, different script" testRwdAliceSignsAlone'',
-      testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone'''
+      testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone''',
+      testCase "spend from a bootstrap address" testBootstrapSpending
     ]
   where
     p :: Proxy ShortHash
