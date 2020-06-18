@@ -106,6 +106,7 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -166,7 +167,7 @@ import Shelley.Spec.Ledger.PParams
     emptyPParams,
   )
 import Shelley.Spec.Ledger.Rewards
-  ( ApparentPerformance (..),
+  ( Likelihood,
     NonMyopic (..),
     emptyNonMyopic,
     reward,
@@ -962,7 +963,7 @@ applyRUpd ::
   RewardUpdate crypto ->
   EpochState crypto ->
   EpochState crypto
-applyRUpd ru (EpochState as ss ls pr pp nm) = EpochState as' ss ls' pr pp nm
+applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
   where
     utxoState_ = _utxoState ls
     delegState = _delegationState ls
@@ -984,35 +985,24 @@ applyRUpd ru (EpochState as ss ls pr pp nm) = EpochState as' ss ls' pr pp nm
                     }
               }
         }
+    nm' = nonMyopic ru
 
 updateNonMypopic ::
   NonMyopic crypto ->
   Coin ->
-  Map (KeyHash 'StakePool crypto) Rational ->
+  Map (KeyHash 'StakePool crypto) Likelihood ->
   SnapShot crypto ->
   NonMyopic crypto
-updateNonMypopic nm rPot aps ss =
+updateNonMypopic nm rPot newLikelihoods ss =
   nm
-    { apparentPerformances = aps',
-      rewardPot = rPot,
-      snap = ss
+    { likelihoodsNM = updatedLikelihoods,
+      rewardPotNM = rPot,
+      snapNM = ss
     }
   where
-    SnapShot _ _ poolParams = ss
-    absentPools =
-      Set.toList $
-        (Map.keysSet poolParams) `Set.difference` (Map.keysSet aps)
-    performanceZero = Map.fromList $ fmap (\p -> (p, 0)) absentPools
-    -- TODO how to handle pools with near zero stake?
-
-    expMovAvgWeight = 0.5 -- TODO move to globals or protocol parameters?
-    prev = apparentPerformances nm
-    performance kh ap = case Map.lookup kh prev of
-      Nothing -> ApparentPerformance $ fromRational ap -- TODO give new pools the average performance?
-      Just (ApparentPerformance p) ->
-        ApparentPerformance $
-          expMovAvgWeight * p + (1 - expMovAvgWeight) * (fromRational ap)
-    aps' = Map.mapWithKey performance (aps `Map.union` performanceZero)
+    history = likelihoodsNM nm
+    performance kh newPerf = fromMaybe mempty (Map.lookup kh history) <> newPerf
+    updatedLikelihoods = Map.mapWithKey performance newLikelihoods
 
 -- | Create a reward update
 createRUpd ::
@@ -1038,8 +1028,8 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       circulation = total - (_reserves acnt)
-      (rs_, aps) =
-        reward network pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation
+      (rs_, newLikelihoods) =
+        reward network pr b _R (Map.keysSet $ _rewards ds) poolParams stake' delegs' circulation asc slotsPerEpoch
       deltaT2 = _R - (Map.foldr (+) (Coin 0) rs_)
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
   pure $
@@ -1048,7 +1038,7 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       (- deltaR_)
       rs_
       (- (_feeSS ss))
-      (updateNonMypopic nm _R aps (_pstakeGo ss))
+      (updateNonMypopic nm _R newLikelihoods (_pstakeGo ss))
 
 -- | Overlay schedule
 -- This is just a very simple round-robin, evenly spaced schedule.

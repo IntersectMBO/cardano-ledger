@@ -101,6 +101,7 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Monomorphic
+import Cardano.Prelude (asks)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -154,7 +155,9 @@ import Shelley.Spec.Ledger.EpochBoundary
     _pstakeGo,
     _pstakeMark,
     _pstakeSet,
+    _stake,
     emptySnapShots,
+    unStake,
     pattern SnapShot,
     pattern SnapShots,
     pattern Stake,
@@ -224,9 +227,11 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.Rewards
-  ( ApparentPerformance (..),
+  ( Likelihood (..),
     emptyNonMyopic,
-    rewardPot,
+    leaderProbability,
+    likelihood,
+    rewardPotNM,
     pattern NonMyopic,
   )
 import Shelley.Spec.Ledger.STS.Bbody (pattern LedgersFailure)
@@ -253,6 +258,7 @@ import Shelley.Spec.Ledger.Slot
     Duration (..),
     EpochNo (..),
     SlotNo (..),
+    epochInfoSize,
   )
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), pattern Tx)
 import Shelley.Spec.Ledger.TxData
@@ -301,6 +307,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     KeyPair,
     LedgerState,
     NewEpochState,
+    NonMyopic,
     OBftSlot,
     PState,
     PoolDistr,
@@ -1271,7 +1278,7 @@ expectedStEx2D =
                 deltaR = Coin 0,
                 rs = Map.empty,
                 deltaF = Coin (-7),
-                nonMyopic = emptyNonMyopic {rewardPot = Coin 6}
+                nonMyopic = emptyNonMyopic {rewardPotNM = Coin 6}
               }
         )
         (PoolDistr Map.empty)
@@ -1375,6 +1382,9 @@ oCertIssueNosEx2 =
     1
     oCertIssueNosEx1
 
+nonMyopicEx2E :: NonMyopic h
+nonMyopicEx2E = emptyNonMyopic {rewardPotNM = Coin 6}
+
 expectedStEx2E :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2E =
   ChainState
@@ -1382,7 +1392,7 @@ expectedStEx2E =
         (EpochNo 2)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2E p) (snapsEx2E p) expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2E p) (snapsEx2E p) expectedLSEx2E ppsEx1 ppsEx1 nonMyopicEx2E)
         SNothing
         ( PoolDistr
             ( Map.singleton
@@ -1444,6 +1454,9 @@ pdEx2F = PoolDistr $ Map.singleton (hk (alicePool p)) (1, hashKeyVRF $ snd $ vrf
     p :: Proxy h
     p = Proxy
 
+nonMyopicEx2F :: NonMyopic h
+nonMyopicEx2F = emptyNonMyopic {rewardPotNM = Coin 4}
+
 expectedStEx2F :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2F =
   ChainState
@@ -1451,14 +1464,14 @@ expectedStEx2F =
         (EpochNo 2)
         (BlocksMade Map.empty)
         (BlocksMade $ Map.singleton (hk (alicePool p)) 1)
-        (EpochState (acntEx2E p) (snapsEx2E p) expectedLSEx2E ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2E p) (snapsEx2E p) expectedLSEx2E ppsEx1 ppsEx1 nonMyopicEx2E)
         ( SJust
             RewardUpdate
               { deltaT = Coin 5,
                 deltaR = Coin 0,
                 rs = Map.empty,
                 deltaF = Coin (-5),
-                nonMyopic = emptyNonMyopic {rewardPot = Coin 4}
+                nonMyopic = nonMyopicEx2F
               }
         )
         pdEx2F
@@ -1545,7 +1558,7 @@ expectedStEx2G =
         (EpochNo 3)
         (BlocksMade $ Map.singleton (hk (alicePool p)) 1)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2G p) (snapsEx2G p) expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2G p) (snapsEx2G p) expectedLSEx2G ppsEx1 ppsEx1 nonMyopicEx2F)
         SNothing
         pdEx2F
         (overlayScheduleFor (EpochNo 3))
@@ -1610,19 +1623,35 @@ oCertIssueNosEx2H =
     2
     oCertIssueNosEx2G
 
-alicePerfEx2H :: HashAlgorithm h => proxy h -> ApparentPerformance
-alicePerfEx2H p = ApparentPerformance (beta / sigma)
+alicePerfEx2H :: forall h. HashAlgorithm h => Proxy h -> Likelihood
+alicePerfEx2H p = likelihood blocks t slotsPerEpoch
   where
-    beta = 1 -- Alice produced the only decentralized block this epoch
-    reserves = _reserves (acntEx2G p)
-    sigma = fromRational (fromIntegral stake % (fromIntegral $ maxLLSupply - reserves))
+    slotsPerEpoch = runShelleyBase $ do
+      ei <- asks epochInfo
+      epochInfoSize ei 0
+    blocks = 1
+    t = leaderProbability f relativeStake (_d ppsEx1)
     stake = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
+    reserves = _reserves (acntEx2G p)
+    relativeStake =
+      fromRational (fromIntegral stake % (fromIntegral $ maxLLSupply - reserves))
+    f = runShelleyBase (asks activeSlotCoeff)
 
 deltaT2H :: Coin
 deltaT2H = Coin 786986666668
 
 deltaR2H :: Coin
 deltaR2H = Coin (-793333333333)
+
+nonMyopicEx2H :: forall h. HashAlgorithm h => NonMyopic h
+nonMyopicEx2H =
+  NonMyopic
+    (Map.singleton (hk (alicePool p)) (alicePerfEx2H p))
+    (Coin 634666666667)
+    snapEx2C
+  where
+    p :: Proxy h
+    p = Proxy
 
 expectedStEx2H :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2H =
@@ -1631,18 +1660,14 @@ expectedStEx2H =
         (EpochNo 3)
         (BlocksMade $ Map.singleton (hk (alicePool p)) 1)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2G p) (snapsEx2G p) expectedLSEx2G ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2G p) (snapsEx2G p) expectedLSEx2G ppsEx1 ppsEx1 nonMyopicEx2F)
         ( SJust
             RewardUpdate
               { deltaT = deltaT2H,
                 deltaR = deltaR2H,
                 rs = rewardsEx2H,
                 deltaF = Coin 0,
-                nonMyopic =
-                  NonMyopic
-                    (Map.singleton (hk (alicePool p)) (alicePerfEx2H p))
-                    (Coin 634666666667)
-                    snapEx2C
+                nonMyopic = nonMyopicEx2H
               }
         )
         pdEx2F
@@ -1709,8 +1734,8 @@ expectedLSEx2I =
     )
     (DPState dsEx2I psEx2A)
 
-snapsEx2I :: forall h. HashAlgorithm h => SnapShots h
-snapsEx2I =
+snapsEx2I :: forall h. HashAlgorithm h => Proxy h -> SnapShots h
+snapsEx2I p =
   (snapsEx2G p)
     { _pstakeMark =
         SnapShot
@@ -1729,9 +1754,6 @@ snapsEx2I =
       _pstakeGo = snapEx2E,
       _feeSS = Coin 0
     }
-  where
-    p :: Proxy h
-    p = Proxy
 
 oCertIssueNosEx2I :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
 oCertIssueNosEx2I =
@@ -1747,7 +1769,7 @@ expectedStEx2I =
         (EpochNo 4)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2I p) snapsEx2I expectedLSEx2I ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2I p) (snapsEx2I p) expectedLSEx2I ppsEx1 ppsEx1 nonMyopicEx2H)
         SNothing
         pdEx2F
         (overlayScheduleFor (EpochNo 4))
@@ -1870,7 +1892,7 @@ expectedStEx2J =
         (EpochNo 4)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2I p) snapsEx2I expectedLSEx2J ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2I p) (snapsEx2I p) expectedLSEx2J ppsEx1 ppsEx1 nonMyopicEx2H)
         SNothing
         pdEx2F
         (overlayScheduleFor (EpochNo 4))
@@ -1977,6 +1999,30 @@ expectedLSEx2K =
     )
     (DPState dsEx2J psEx2K)
 
+alicePerfEx2K :: forall h. HashAlgorithm h => Proxy h -> Likelihood
+alicePerfEx2K p = (alicePerfEx2H p) <> epoch4Likelihood
+  where
+    epoch4Likelihood = likelihood blocks t slotsPerEpoch
+    slotsPerEpoch = runShelleyBase $ do
+      ei <- asks epochInfo
+      epochInfoSize ei 0
+    blocks = 0
+    t = leaderProbability f relativeStake (_d ppsEx1)
+    stake = sum . unStake . _stake . _pstakeSet $ (snapsEx2I p) -- everyone has delegated to Alice's Pool
+    relativeStake = fromRational (fromIntegral stake % (fromIntegral $ supply))
+    supply = maxLLSupply - _reserves (acntEx2I p)
+    f = runShelleyBase (asks activeSlotCoeff)
+
+nonMyopicEx2K :: forall h. HashAlgorithm h => NonMyopic h
+nonMyopicEx2K =
+  NonMyopic
+    (Map.singleton (hk (alicePool p)) (alicePerfEx2K p))
+    (Coin 0)
+    snapEx2E
+  where
+    p :: Proxy h
+    p = Proxy
+
 expectedStEx2K :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2K =
   ChainState
@@ -1984,18 +2030,14 @@ expectedStEx2K =
         (EpochNo 4)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2I p) snapsEx2I expectedLSEx2K ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2I p) (snapsEx2I p) expectedLSEx2K ppsEx1 ppsEx1 nonMyopicEx2H)
         ( SJust
             RewardUpdate
               { deltaT = Coin 0,
                 deltaR = Coin 0,
                 rs = Map.empty,
                 deltaF = Coin 0,
-                nonMyopic =
-                  NonMyopic
-                    (Map.singleton (hk (alicePool p)) (ApparentPerformance 0))
-                    (Coin 0)
-                    snapEx2E
+                nonMyopic = nonMyopicEx2K
               }
         )
         pdEx2F
@@ -2062,8 +2104,8 @@ snapsEx2L =
           )
           (Map.fromList [(aliceSHK, hk (alicePool p)), (carlSHK, hk (alicePool p))])
           (Map.singleton (hk (alicePool p)) alicePoolParams),
-      _pstakeSet = _pstakeMark snapsEx2I,
-      _pstakeGo = _pstakeSet snapsEx2I,
+      _pstakeSet = _pstakeMark (snapsEx2I p),
+      _pstakeGo = _pstakeSet (snapsEx2I p),
       _feeSS = Coin 11
     }
   where
@@ -2109,7 +2151,7 @@ expectedStEx2L =
         (EpochNo 5)
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
-        (EpochState (acntEx2L p) snapsEx2L expectedLSEx2L ppsEx1 ppsEx1 emptyNonMyopic)
+        (EpochState (acntEx2L p) snapsEx2L expectedLSEx2L ppsEx1 ppsEx1 nonMyopicEx2K)
         SNothing
         pdEx2F
         (overlayScheduleFor (EpochNo 5))
