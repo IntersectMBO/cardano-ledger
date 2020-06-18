@@ -225,6 +225,7 @@ utxoInductive = do
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
   let validInputs = dom utxo
+  --   txins txb ⊆ validInputs  -- Specification translates below
   all (`Map.member` v) (txins txb) ?! BadInputsUTxO (txins txb `Set.difference` validInputs)
 
   ni <- liftSTS $ asks networkId

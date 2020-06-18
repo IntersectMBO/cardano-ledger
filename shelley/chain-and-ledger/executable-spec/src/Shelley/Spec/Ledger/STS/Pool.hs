@@ -139,6 +139,7 @@ poolDelegationTransition = do
               }
     DCertPool (RetirePool hk (EpochNo e)) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
+      --  hk ∈ dom stpools  -- Specification code translates below
       haskey hk stpools ?! StakePoolNotRegisteredOnKeyPOOL hk
       EpochNo cepoch <- liftSTS $ do
         ei <- asks epochInfo

@@ -220,16 +220,21 @@ delegationTransition = do
   case c of
     DCertDeleg (RegKey hk) -> do
       -- note that pattern match is used instead of regCred, as in the spec
+      -- hk ∉ dom (_stkCreds ds) -- Specification code translates below
       not (haskey hk (_stkCreds ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
 
       pure $
         ds
-          { _stkCreds = addpair hk slot (_stkCreds ds), -- _stkCreds ds ∪ (singleton hk slot)
-            _rewards = addpair (RewardAcnt network hk) (Coin 0) (_rewards ds), -- _rewards ds ∪ (singleton (RewardAcnt network hk) (Coin 0) )
-            _ptrs = addpair ptr hk (_ptrs ds) -- _ptrs ds ∪ (singleton ptr hk)
+          { _stkCreds = addpair hk slot (_stkCreds ds),
+            -- _stkCreds ds ∪ (singleton hk slot)
+            _rewards = addpair (RewardAcnt network hk) (Coin 0) (_rewards ds),
+            -- _rewards ds ∪ (singleton (RewardAcnt network hk) (Coin 0) )
+            _ptrs = addpair ptr hk (_ptrs ds)
+            -- _ptrs ds ∪ (singleton ptr hk)
           }
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
+      -- k ∈ dom (_stkCreds ds) -- Specification translates below
       haskey hk (_stkCreds ds) ?! StakeKeyNotRegisteredDELEG hk
 
       let rewardCoin = Map.lookup (RewardAcnt network hk) (_rewards ds)
@@ -237,9 +242,9 @@ delegationTransition = do
 
       pure $
         ds
-          { _stkCreds = removekey hk (_stkCreds ds),
-            _rewards = removekey (RewardAcnt network hk) (_rewards ds),
-            _delegations = removekey hk (_delegations ds),
+          { _stkCreds = removekey hk (_stkCreds ds), -- singleton hk ⋪ _stkCreds ds
+            _rewards = removekey (RewardAcnt network hk) (_rewards ds), -- singleton (RewardAcnt network hk) ⋪ _rewards ds,
+            _delegations = removekey hk (_delegations ds), -- singleton hk ⋪ _delegations ds
             _ptrs = _ptrs ds ⋫ Set.singleton hk
             -- TODO make _ptrs a bijection. This operation takes time proportional to (_ptrs ds)
             -- OR turn _stkCreds into a mapping of stake credentials to pointers
@@ -248,11 +253,12 @@ delegationTransition = do
           }
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
+      -- hk ∈ dom (_stkCreds ds)  -- Specification code translates below
       haskey hk (_stkCreds ds) ?! StakeDelegationImpossibleDELEG hk
 
       pure $
         ds
-          { _delegations = addpair hk dpool (_delegations ds)
+          { _delegations = addpair hk dpool (_delegations ds) -- _delegations ds  ∪  (singleton hk dpool)
           }
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
