@@ -104,6 +104,7 @@ import Shelley.Spec.Ledger.Serialization
     encodeFoldable,
     encodeNullMaybe,
   )
+import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.TxData
   ( TxBody (..),
     TxId (..),
@@ -313,7 +314,7 @@ class
   (Crypto crypto, ToCBOR a) =>
   MultiSignatureScript a crypto
   where
-  validateScript :: a -> Tx crypto -> Bool
+  validateScript :: a -> SlotNo -> Tx crypto -> Bool
   hashScript :: a -> ScriptHash crypto
 
 -- | instance of MultiSignatureScript type class
@@ -329,24 +330,29 @@ instance
 evalNativeMultiSigScript ::
   Crypto crypto =>
   MultiSig crypto ->
+  SlotNo ->
   Set (KeyHash 'AWitness crypto) ->
   Bool
-evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
-evalNativeMultiSigScript (RequireAllOf msigs) vhks =
-  all (`evalNativeMultiSigScript` vhks) msigs
-evalNativeMultiSigScript (RequireAnyOf msigs) vhks =
-  any (`evalNativeMultiSigScript` vhks) msigs
-evalNativeMultiSigScript (RequireMOf m msigs) vhks =
-  m <= sum [if evalNativeMultiSigScript msig vhks then 1 else 0 | msig <- msigs]
+evalNativeMultiSigScript (RequireSignature hk) _slot vhks = Set.member hk vhks
+evalNativeMultiSigScript (RequireAllOf msigs) slot vhks =
+  all (\msig -> evalNativeMultiSigScript msig slot vhks) msigs
+evalNativeMultiSigScript (RequireAnyOf msigs) slot vhks =
+  any (\msig -> evalNativeMultiSigScript msig slot vhks) msigs
+evalNativeMultiSigScript (RequireMOf m msigs) slot vhks =
+  m <= sum [if evalNativeMultiSigScript msig slot vhks then 1 else 0 | msig <- msigs]
+evalNativeMultiSigScript (RequireAfterSlot s) slot _vhks = s > slot
+evalNativeMultiSigScript (RequireBeforeSlot s) slot _vhks = s < slot
+
 
 -- | Script validator for native multi-signature scheme.
 validateNativeMultiSigScript ::
   (Crypto crypto) =>
   MultiSig crypto ->
+  SlotNo ->
   Tx crypto ->
   Bool
-validateNativeMultiSigScript msig tx =
-  evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
+validateNativeMultiSigScript msig slot tx =
+  evalNativeMultiSigScript msig slot (coerceKeyRole `Set.map` vhks)
   where
     witsSet = _witnessSet tx
     vhks = Set.map witKeyHash (addrWits' witsSet)

@@ -223,7 +223,7 @@ utxoWitnessed =
       -- check multi-signature scripts
       let failedScripts =
             filter
-              (\(hs, validator) -> hashScript validator /= hs || not (validateScript validator tx))
+              (\(hs, validator) -> hashScript validator /= hs || not (validateScript validator slot tx))
               (Map.toList $ txwitsScript tx)
       case failedScripts of
         [] -> pure ()

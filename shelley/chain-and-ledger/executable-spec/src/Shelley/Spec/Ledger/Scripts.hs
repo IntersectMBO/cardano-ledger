@@ -16,6 +16,8 @@ module Shelley.Spec.Ledger.Scripts
         RequireAnyOf,
         RequireSignature,
         RequireMOf,
+        RequireAfterSlot,
+        RequireBeforeSlot,
         multiSigBytes
       ),
     Script (..),
@@ -53,6 +55,7 @@ import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (AWitness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordNamed, encodeFoldable)
+import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Magic number representing the tag of the native multi-signature script
 -- language. For each script language included, a new tag is chosen and the tag
@@ -71,9 +74,9 @@ nativeMultiSigTag = 0
 -- * multi-way \"or\";
 -- * multi-way \"N of M\".
 --
--- This makes it easy to express multi-signature addresses, and provides an
--- extension point to express other validity conditions, e.g., as needed for
--- locking funds used with lightning.
+-- In addition to multi-signature, we also allow time-locking funds, i.e.,
+-- specifying an interval (in slots) in which it is possible to spend from an
+-- address.
 data MultiSig' crypto
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
@@ -84,6 +87,10 @@ data MultiSig' crypto
     RequireAnyOf' ![MultiSig crypto]
   | -- | Require M of the given sub-terms to be satisfied.
     RequireMOf' !Int ![MultiSig crypto]
+    -- | Funds can only be spent from this address strictly after given slot.
+  | RequireAfterSlot' SlotNo
+    -- | Funds can only be spent from this address strictly before given slot.
+  | RequireBeforeSlot' SlotNo
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NoUnexpectedThunks)
 
@@ -128,7 +135,27 @@ pattern RequireMOf n ms <-
               encodeListLen 3 <> encodeWord 3 <> toCBOR n <> encodeFoldable ms
        in MultiSig' (RequireMOf' n ms) bytes
 
-{-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
+pattern RequireAfterSlot :: SlotNo -> MultiSig crypto
+pattern RequireAfterSlot s <-
+  MultiSig' (RequireAfterSlot' s) _
+  where
+    RequireAfterSlot s =
+      let bytes =
+            serializeEncoding $
+              encodeListLen 2 <> encodeWord 4 <> toCBOR s
+      in MultiSig' (RequireAfterSlot' s) bytes
+
+pattern RequireBeforeSlot :: SlotNo -> MultiSig crypto
+pattern RequireBeforeSlot s <-
+  MultiSig' (RequireBeforeSlot' s) _
+  where
+    RequireBeforeSlot s =
+      let bytes =
+            serializeEncoding $
+              encodeListLen 2 <> encodeWord 5 <> toCBOR s
+      in MultiSig' (RequireBeforeSlot' s) bytes
+
+{-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf, RequireAfterSlot, RequireBeforeSlot #-}
 
 newtype ScriptHash crypto
   = ScriptHash (Hash crypto (Script crypto))
@@ -155,6 +182,8 @@ countMSigNodes (RequireSignature _) = 1
 countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
+countMSigNodes (RequireAfterSlot _) = 1
+countMSigNodes (RequireBeforeSlot _) = 1
 
 -- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
 -- front and then calling the script CBOR function.
@@ -188,6 +217,8 @@ getKeyCombination (RequireAnyOf msigs) =
     x : _ -> getKeyCombination x
 getKeyCombination (RequireMOf m msigs) =
   List.concatMap getKeyCombination (take m msigs)
+getKeyCombination (RequireAfterSlot _) = []
+getKeyCombination (RequireBeforeSlot _) = []
 
 -- | Get all valid combinations of keys for given multi signature. This is
 -- mainly useful for testing.
@@ -201,6 +232,8 @@ getKeyCombinations (RequireAnyOf msigs) = List.concatMap getKeyCombinations msig
 getKeyCombinations (RequireMOf m msigs) =
   let perms = map (take m) $ List.permutations msigs
    in map (concat . List.concatMap getKeyCombinations) perms
+getKeyCombinations (RequireAfterSlot _) = [[]]
+getKeyCombinations (RequireBeforeSlot _) = [[]]
 
 -- CBOR
 
@@ -225,6 +258,8 @@ instance
         m <- fromCBOR
         msigs <- decodeList fromCBOR
         pure $ RequireMOf m msigs
+      4 -> matchSize "RequireAfterSlot" 2 n >> RequireAfterSlot <$> fromCBOR
+      5 -> matchSize "RequireBeforeSlot" 2 n >> RequireBeforeSlot <$> fromCBOR
       k -> invalidKey k
 
 instance
@@ -250,6 +285,9 @@ instance
         m <- fromCBOR
         multiSigs <- sequence <$> decodeList fromCBOR
         pure $ (3, RequireMOf' m <$> multiSigs)
+      4 -> (,) 2 . pure . RequireAfterSlot' <$> fromCBOR
+      5 -> (,) 2 . pure . RequireBeforeSlot' <$> fromCBOR
+
       k -> invalidKey k
 
 instance
