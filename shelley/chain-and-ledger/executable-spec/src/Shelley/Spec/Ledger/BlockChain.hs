@@ -106,7 +106,7 @@ import Shelley.Spec.Ledger.BaseTypes
     activeSlotLog,
     activeSlotVal,
     intervalValue,
-    mkNonce,
+    mkNonceFromNumber,
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.Crypto
@@ -573,7 +573,7 @@ bBodySize ::
 bBodySize = BS.length . serializeEncoding' . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
-slotToNonce (SlotNo s) = mkNonce (fromIntegral s)
+slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 bheader ::
   Crypto crypto =>
@@ -626,8 +626,8 @@ mkSeed NeutralNonce slot nonce =
 -- in case the reference value `1 / (1 - p)` is above the exponential function
 -- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
 -- conclusively compute this within the given iteration bounds.
-checkLeaderValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
-checkLeaderValue certNat σ f =
+checkLeaderValue :: VRF.OutputVRF v -> Rational -> ActiveSlotCoeff -> Bool
+checkLeaderValue certVRF σ f =
   if (intervalValue $ activeSlotVal f) == 1
     then -- If the active slot coefficient is equal to one,
     -- then nearly every stake pool can produce a block every slot.
@@ -647,12 +647,14 @@ checkLeaderValue certNat σ f =
     c = activeSlotLog f
     q = fromRational (1 % toInteger (certNatMax - certNat))
     x = (- fromRational σ * c)
+    certNat :: Natural
+    certNat = VRF.getOutputVRFNatural certVRF
 
 seedEta :: Nonce
-seedEta = mkNonce 0
+seedEta = mkNonceFromNumber 0
 
 seedL :: Nonce
-seedL = mkNonce 1
+seedL = mkNonceFromNumber 1
 
 hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize

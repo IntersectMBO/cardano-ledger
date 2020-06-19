@@ -198,7 +198,7 @@ genMinUTxOValue = Coin <$> Gen.integral (Range.linear 1 1000)
 genNonce :: Gen Nonce
 genNonce =
   Gen.choice
-    [ mkNonce <$> genNatural (Range.linear 1 123),
+    [ mkNonceFromNumber <$> Gen.word64 (Range.linear 1 123),
       pure NeutralNonce
     ]
 

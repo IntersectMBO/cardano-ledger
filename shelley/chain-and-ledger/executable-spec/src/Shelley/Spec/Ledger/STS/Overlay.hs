@@ -117,7 +117,7 @@ instance
         !Nonce -- Epoch nonce used for VRF calculation
         !(VRF.CertifiedVRF (VRF crypto) Nonce) -- VRF calculated leader value
     | VRFLeaderValueTooBig
-        !Natural -- VRF Leader value
+        !(VRF.OutputVRF (VRF crypto)) -- VRF Leader value
         !Rational -- stake pool's relative stake
         !ActiveSlotCoeff -- Praos active slot coefficient value
     | NotActiveSlotOVERLAY
@@ -193,8 +193,8 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
         (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
       vrfChecks eta0 bhb
       unless
-        (checkLeaderValue (VRF.certifiedNatural $ bheaderL bhb) sigma f)
-        (throwError $ VRFLeaderValueTooBig (VRF.certifiedNatural $ bheaderL bhb) sigma f)
+        (checkLeaderValue (VRF.certifiedOutput $ bheaderL bhb) sigma f)
+        (throwError $ VRFLeaderValueTooBig (VRF.certifiedOutput $ bheaderL bhb) sigma f)
       pure ()
   where
     hk = coerceKeyRole . hashKey $ bheaderVk bhb

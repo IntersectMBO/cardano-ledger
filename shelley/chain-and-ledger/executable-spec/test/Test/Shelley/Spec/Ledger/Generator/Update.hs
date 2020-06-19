@@ -27,7 +27,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    mkNonce,
+    mkNonceFromNumber,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Keys
@@ -129,7 +129,7 @@ genExtraEntropy :: HasCallStack => Gen Nonce
 genExtraEntropy =
   QC.frequency
     [ (1, pure NeutralNonce),
-      (1, mkNonce <$> genNatural 1 123)
+      (1, mkNonceFromNumber <$> genWord64 1 123)
     ]
 
 -- Note: we keep the lower bound high enough so that we can more likely
