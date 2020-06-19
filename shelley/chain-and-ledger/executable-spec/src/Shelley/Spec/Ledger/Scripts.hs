@@ -51,7 +51,7 @@ import qualified Data.List as List (concat, concatMap, permutations)
 import Data.Word (Word8)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
-import Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (AWitness))
+import Shelley.Spec.Ledger.Keys (Hash, KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordNamed, encodeFoldable)
 
 -- | Magic number representing the tag of the native multi-signature script
@@ -77,7 +77,7 @@ nativeMultiSigTag = 0
 data MultiSig' crypto
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'AWitness crypto)
+    RequireSignature' !(KeyHash 'Witness crypto)
   | -- | Require all the sub-terms to be satisfied.
     RequireAllOf' ![MultiSig crypto]
   | -- | Require any one of the sub-terms to be satisfied.
@@ -94,7 +94,7 @@ data MultiSig crypto = MultiSig'
   deriving (Show, Eq, Ord, Generic)
   deriving (NoUnexpectedThunks) via AllowThunksIn '["multiSigBytes"] (MultiSig crypto)
 
-pattern RequireSignature :: Crypto crypto => KeyHash 'AWitness crypto -> MultiSig crypto
+pattern RequireSignature :: Crypto crypto => KeyHash 'Witness crypto -> MultiSig crypto
 pattern RequireSignature akh <-
   MultiSig' (RequireSignature' akh) _
   where
@@ -178,7 +178,7 @@ hashAnyScript ::
 hashAnyScript (MultiSigScript msig) = hashMultiSigScript msig
 
 -- | Get one possible combination of keys for multi signature script
-getKeyCombination :: Crypto crypto => MultiSig crypto -> [KeyHash 'AWitness crypto]
+getKeyCombination :: Crypto crypto => MultiSig crypto -> [KeyHash 'Witness crypto]
 getKeyCombination (RequireSignature hk) = [hk]
 getKeyCombination (RequireAllOf msigs) =
   List.concatMap getKeyCombination msigs
@@ -191,7 +191,7 @@ getKeyCombination (RequireMOf m msigs) =
 
 -- | Get all valid combinations of keys for given multi signature. This is
 -- mainly useful for testing.
-getKeyCombinations :: Crypto crypto => MultiSig crypto -> [[KeyHash 'AWitness crypto]]
+getKeyCombinations :: Crypto crypto => MultiSig crypto -> [[KeyHash 'Witness crypto]]
 getKeyCombinations (RequireSignature hk) = [[hk]]
 getKeyCombinations (RequireAllOf msigs) =
   [ List.concat $

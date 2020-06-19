@@ -2,7 +2,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
@@ -189,7 +188,7 @@ data AliceToBob = AliceToBob
     refunds :: Coin,
     certs :: [DCert ShortHash],
     ttl :: SlotNo,
-    signers :: ([KeyPair ShortHash 'AWitness], [KeyPair ShortHash 'RWitness])
+    signers :: [KeyPair ShortHash 'Witness]
   }
 
 aliceGivesBobLovelace :: AliceToBob -> Tx ShortHash
@@ -203,7 +202,7 @@ aliceGivesBobLovelace
       certs,
       ttl,
       signers
-    } = Tx txbody mempty {addrWits = awits, regWits = rwits} SNothing
+    } = Tx txbody mempty {addrWits = awits} SNothing
     where
       aliceCoin = aliceInitCoin + refunds - (toBob + fee + deposits)
       txbody =
@@ -220,9 +219,7 @@ aliceGivesBobLovelace
           ttl
           SNothing
           SNothing
-      (asigs, rsigs) = signers
-      awits = makeWitnessesVKey (hashTxBody txbody) asigs
-      rwits = makeWitnessesVKey (hashTxBody txbody) rsigs
+      awits = makeWitnessesVKey (hashTxBody txbody) signers
 
 utxoState :: UTxOState ShortHash
 utxoState =
@@ -270,7 +267,7 @@ testSpendNonexistentInput =
         refunds = (Coin 0),
         certs = [],
         ttl = (SlotNo 100),
-        signers = ([asWitness alicePay], [])
+        signers = [asWitness alicePay]
       }
 
 testWitnessNotIncluded :: Assertion
@@ -294,11 +291,7 @@ testWitnessNotIncluded =
    in testInvalidTx
         [ UtxowFailure
             $ MissingVKeyWitnessesUTXOW
-            $ WitHashes
-              { addrWitHashes = wits,
-                regWitHashes =
-                  mempty
-              }
+            $ WitHashes wits
         ]
         tx
 
@@ -320,11 +313,7 @@ testSpendNotOwnedUTxO =
    in testInvalidTx
         [ UtxowFailure
             $ MissingVKeyWitnessesUTXOW
-            $ WitHashes
-              { addrWitHashes = wits,
-                regWitHashes =
-                  mempty
-              }
+            $ WitHashes wits
         ]
         tx
 
@@ -356,14 +345,10 @@ testWitnessWrongUTxO =
    in testInvalidTx
         [ UtxowFailure $
             InvalidWitnessesUTXOW
-              ([asWitness $ vKey alicePay], mempty),
+              [asWitness $ vKey alicePay],
           UtxowFailure
             $ MissingVKeyWitnessesUTXOW
-            $ WitHashes
-              { addrWitHashes = wits,
-                regWitHashes =
-                  mempty
-              }
+            $ WitHashes wits
         ]
         tx
 
@@ -402,7 +387,7 @@ testFeeTooSmall =
           refunds = (Coin 0),
           certs = [],
           ttl = (SlotNo 100),
-          signers = ([asWitness alicePay], [])
+          signers = ([asWitness alicePay])
         }
 
 testExpiredTx :: Assertion
@@ -418,7 +403,7 @@ testExpiredTx =
               refunds = (Coin 0),
               certs = [],
               ttl = (SlotNo 0),
-              signers = ([asWitness alicePay], [])
+              signers = ([asWitness alicePay])
             }
       ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState 0 0)
    in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
@@ -445,7 +430,7 @@ testInvalidWintess =
       errs =
         [ UtxowFailure $
             InvalidWitnessesUTXOW
-              ([asWitness $ vKey alicePay], mempty)
+              [asWitness $ vKey alicePay]
         ]
    in testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
 
@@ -469,8 +454,7 @@ testWithdrawalNoWit =
       tx = Tx txb wits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
-        [ UtxowFailure . MissingVKeyWitnessesUTXOW $
-            WitHashes {addrWitHashes = missing, regWitHashes = mempty}
+        [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
         ]
       dpState' = addReward dpState (mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
    in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
@@ -517,7 +501,7 @@ testOutputTooSmall =
         refunds = (Coin 0),
         certs = [],
         ttl = (SlotNo 0),
-        signers = ([asWitness alicePay], [])
+        signers = [asWitness alicePay]
       }
 
 alicePoolColdKeys :: KeyPair ShortHash 'StakePool
@@ -567,8 +551,10 @@ testPoolCostTooSmall =
         certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
         ttl = (SlotNo 0),
         signers =
-          ( [asWitness alicePay, asWitness aliceStake],
-            [asWitness alicePoolColdKeys]
+          ( [ asWitness alicePay,
+              asWitness aliceStake,
+              asWitness alicePoolColdKeys
+            ]
           )
       }
 

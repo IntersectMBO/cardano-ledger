@@ -8,7 +8,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 
 module Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -30,7 +29,6 @@ import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
   ( HasKeyRole (..),
-    IsKeyRole,
     KeyHash,
     KeyRole (..),
   )
@@ -45,7 +43,7 @@ import Shelley.Spec.Ledger.Serialization
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 -- | Script hash or key hash for a payment or a staking object.
-data Credential (kr :: KeyRole h) crypto
+data Credential (kr :: KeyRole) crypto
   = ScriptHashObj !(ScriptHash crypto)
   | KeyHashObj !(KeyHash kr crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
@@ -57,7 +55,7 @@ instance HasKeyRole Credential where
 instance NoUnexpectedThunks (Credential kr crypto)
 
 instance
-  (Crypto crypto, IsKeyRole kr crypto) =>
+  Crypto crypto =>
   ToJSON (Credential kr crypto)
   where
   toJSON (ScriptHashObj hash) =
@@ -69,7 +67,7 @@ instance
       [ "key hash" .= hash
       ]
 
-instance (Crypto crypto, IsKeyRole kr crypto) => FromJSON (Credential kr crypto) where
+instance Crypto crypto => FromJSON (Credential kr crypto) where
   parseJSON =
     Aeson.withObject "Credential" $ \obj ->
       asum [parser1 obj, parser2 obj]
@@ -77,9 +75,9 @@ instance (Crypto crypto, IsKeyRole kr crypto) => FromJSON (Credential kr crypto)
       parser1 obj = ScriptHashObj <$> obj .: "script hash"
       parser2 obj = KeyHashObj <$> obj .: "key hash"
 
-instance (Crypto crypto, IsKeyRole kr crypto) => ToJSONKey (Credential kr crypto)
+instance Crypto crypto => ToJSONKey (Credential kr crypto)
 
-instance (Crypto crypto, IsKeyRole kr crypto) => FromJSONKey (Credential kr crypto)
+instance Crypto crypto => FromJSONKey (Credential kr crypto)
 
 type PaymentCredential crypto = Credential 'Payment crypto
 
@@ -102,7 +100,7 @@ data Ptr
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
 instance
-  (IsKeyRole kr crypto) =>
+  (Typeable kr, Crypto crypto) =>
   ToCBOR (Credential kr crypto)
   where
   toCBOR = \case
@@ -110,7 +108,7 @@ instance
     ScriptHashObj hs -> encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR hs
 
 instance
-  (IsKeyRole kr crypto) =>
+  (Typeable kr, Crypto crypto) =>
   FromCBOR (Credential kr crypto)
   where
   fromCBOR = decodeRecordNamed "Credential" (const 2) $

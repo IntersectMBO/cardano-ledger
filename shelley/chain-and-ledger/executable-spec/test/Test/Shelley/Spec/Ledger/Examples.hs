@@ -3,7 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -172,9 +171,7 @@ import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesis (..), ShelleyGenesisStaking (..), sgsPools)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
-    HashType (RegularHash),
     KeyRole (..),
-    KeyRoleHashType,
     asWitness,
     coerceKeyRole,
     hash,
@@ -369,7 +366,7 @@ data MIRExample h = MIRExample
   deriving (Show, Eq)
 
 mkAllIssuerKeys ::
-  (HashAlgorithm h, KeyRoleHashType r ~ 'RegularHash) =>
+  (HashAlgorithm h) =>
   Word64 ->
   AllIssuerKeys h r
 mkAllIssuerKeys w =
@@ -756,14 +753,7 @@ txEx2A =
             (hashTxBody txbodyEx2A)
             ( (asWitness <$> [alicePay, carlPay])
                 <> (asWitness <$> [aliceStake])
-            ),
-        -- Note that Alice's stake key needs to sign this transaction
-        -- since it is an owner of the stake pool being registered,
-        -- and *not* because of the stake key registration.
-        regWits =
-          makeWitnessesVKey
-            (hashTxBody txbodyEx2A)
-            ( [asWitness $ cold (alicePool p)]
+                <> [asWitness $ cold (alicePool p)]
                 <> ( asWitness
                        <$> [ cold (coreNodeKeys p 0),
                              cold (coreNodeKeys p 1),
@@ -1953,11 +1943,9 @@ txEx2K =
       { addrWits =
           makeWitnessesVKey
             (hashTxBody txbodyEx2K)
-            [asWitness alicePay],
-        regWits =
-          makeWitnessesVKey
-            (hashTxBody txbodyEx2K)
-            [asWitness $ cold (alicePool p)]
+            ( [asWitness alicePay]
+                <> [asWitness $ cold (alicePool p)]
+            )
       }
     SNothing
   where
@@ -2244,14 +2232,12 @@ txEx3A =
       { addrWits =
           makeWitnessesVKey
             (hashTxBody txbodyEx3A)
-            [asWitness alicePay],
-        regWits =
-          makeWitnessesVKey
-            (hashTxBody txbodyEx3A)
-            [ asWitness . cold $ coreNodeKeys p 0,
-              asWitness . cold $ coreNodeKeys p 3,
-              asWitness . cold $ coreNodeKeys p 4
-            ]
+            ( [asWitness alicePay]
+                <> [ asWitness . cold $ coreNodeKeys p 0,
+                     asWitness . cold $ coreNodeKeys p 3,
+                     asWitness . cold $ coreNodeKeys p 4
+                   ]
+            )
       }
     SNothing
   where
@@ -2359,13 +2345,11 @@ txEx3B =
       { addrWits =
           makeWitnessesVKey
             (hashTxBody txbodyEx3B)
-            [asWitness alicePay],
-        regWits =
-          makeWitnessesVKey
-            (hashTxBody txbodyEx3B)
-            [ asWitness . cold $ coreNodeKeys p 1,
-              asWitness . cold $ coreNodeKeys p 5
-            ]
+            ( [asWitness alicePay]
+                <> [ asWitness . cold $ coreNodeKeys p 1,
+                     asWitness . cold $ coreNodeKeys p 5
+                   ]
+            )
       }
     SNothing
   where
@@ -2399,8 +2383,9 @@ utxoEx3B =
 
 ppupEx3B' :: HashAlgorithm h => ProposedPPUpdates h
 ppupEx3B' =
-  ProposedPPUpdates $ Map.fromList $
-    fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A)) [0, 1, 3, 4, 5]
+  ProposedPPUpdates
+    $ Map.fromList
+    $ fmap (\n -> (hashKey $ coreNodeVKG n, ppVote3A)) [0, 1, 3, 4, 5]
 
 expectedLSEx3B :: HashAlgorithm h => LedgerState h
 expectedLSEx3B =
@@ -2553,11 +2538,11 @@ txEx4A =
     txbodyEx4A
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody txbodyEx4A) [alicePay],
-        regWits =
           makeWitnessesVKey
             (hashTxBody txbodyEx4A)
-            [KeyPair (coreNodeVKG 0) (coreNodeSKG p 0)]
+            ( [asWitness alicePay]
+                <> [asWitness $ KeyPair (coreNodeVKG 0) (coreNodeSKG p 0)]
+            )
       }
     SNothing
   where
@@ -2742,17 +2727,17 @@ txEx5A pot =
     (txbodyEx5A pot)
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay],
-        regWits =
           makeWitnessesVKey
             (hashTxBody $ txbodyEx5A pot)
-            ( asWitness
-                <$> [ cold (coreNodeKeys p 0),
-                      cold (coreNodeKeys p 1),
-                      cold (coreNodeKeys p 2),
-                      cold (coreNodeKeys p 3),
-                      cold (coreNodeKeys p 4)
-                    ]
+            ( [asWitness alicePay]
+                <> ( asWitness
+                       <$> [ cold (coreNodeKeys p 0),
+                             cold (coreNodeKeys p 1),
+                             cold (coreNodeKeys p 2),
+                             cold (coreNodeKeys p 3),
+                             cold (coreNodeKeys p 4)
+                           ]
+                   )
             )
       }
     SNothing
@@ -2877,16 +2862,16 @@ txEx5B pot =
     (txbodyEx5A pot)
     ( mempty
         { addrWits =
-            makeWitnessesVKey (hashTxBody $ txbodyEx5A pot) [alicePay],
-          regWits =
             makeWitnessesVKey
               (hashTxBody $ txbodyEx5A pot)
-              ( asWitness
-                  <$> [ cold (coreNodeKeys p 0),
-                        cold (coreNodeKeys p 1),
-                        cold (coreNodeKeys p 2),
-                        cold (coreNodeKeys p 3)
-                      ]
+              ( [asWitness alicePay]
+                  <> ( asWitness
+                         <$> [ cold (coreNodeKeys p 0),
+                               cold (coreNodeKeys p 1),
+                               cold (coreNodeKeys p 2),
+                               cold (coreNodeKeys p 3)
+                             ]
+                     )
               )
         }
     )
@@ -2913,7 +2898,7 @@ blockEx5B pot =
     p :: Proxy h
     p = Proxy
 
-mirWitsEx5B :: HashAlgorithm h => Set (KeyHash h 'RWitness)
+mirWitsEx5B :: HashAlgorithm h => Set (KeyHash h 'Witness)
 mirWitsEx5B = Set.fromList [asWitness . hk . coreNodeKeys p $ i | i <- [0 .. 3]]
   where
     p :: Proxy h
@@ -2989,17 +2974,17 @@ txEx5D pot =
     (txbodyEx5D pot)
     mempty
       { addrWits =
-          makeWitnessesVKey (hashTxBody $ txbodyEx5D pot) [asWitness alicePay, asWitness aliceStake],
-        regWits =
           makeWitnessesVKey
             (hashTxBody $ txbodyEx5D pot)
-            ( asWitness
-                <$> [ cold (coreNodeKeys p 0),
-                      cold (coreNodeKeys p 1),
-                      cold (coreNodeKeys p 2),
-                      cold (coreNodeKeys p 3),
-                      cold (coreNodeKeys p 4)
-                    ]
+            ( [asWitness alicePay, asWitness aliceStake]
+                <> ( asWitness
+                       <$> [ cold (coreNodeKeys p 0),
+                             cold (coreNodeKeys p 1),
+                             cold (coreNodeKeys p 2),
+                             cold (coreNodeKeys p 3),
+                             cold (coreNodeKeys p 4)
+                           ]
+                   )
             )
       }
     SNothing
@@ -3197,11 +3182,8 @@ txEx6A =
             (hashTxBody txbodyEx6A)
             ( (asWitness <$> [alicePay])
                 <> (asWitness <$> [aliceStake])
-            ),
-        regWits =
-          makeWitnessesVKey
-            (hashTxBody txbodyEx6A)
-            ([asWitness $ cold (alicePool p)])
+                <> [asWitness $ cold (alicePool p)]
+            )
       }
     SNothing
   where

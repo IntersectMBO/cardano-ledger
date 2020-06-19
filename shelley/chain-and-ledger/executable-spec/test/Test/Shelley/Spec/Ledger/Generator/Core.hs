@@ -4,7 +4,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -92,9 +91,7 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
-    HashType (..),
     KeyRole (..),
-    KeyRoleHashType,
     asWitness,
     hashKey,
     signedDSIGN,
@@ -312,7 +309,7 @@ mkScriptsFromKeyPair ::
 mkScriptsFromKeyPair (k0, k1) =
   (mkScriptFromKey $ asWitness k0, mkScriptFromKey $ asWitness k1)
 
-mkScriptFromKey :: (HasCallStack, HashAlgorithm h) => KeyPair h 'AWitness -> MultiSig h
+mkScriptFromKey :: (HasCallStack, HashAlgorithm h) => KeyPair h 'Witness -> MultiSig h
 mkScriptFromKey = (RequireSignature . hashKey . vKey)
 
 -- | Find first matching key pair for a credential. Returns the matching key pair
@@ -348,7 +345,7 @@ findPayKeyPairAddr a keyHashMap =
       error "findPayKeyPairAddr: expects only Base or Ptr addresses"
 
 -- | Find first matching script for a credential.
-findPayScriptFromCred :: (HasCallStack, HashAlgorithm h) => Credential h 'AWitness -> MultiSigPairs h -> (MultiSig h, MultiSig h)
+findPayScriptFromCred :: (HasCallStack, HashAlgorithm h) => Credential h 'Witness -> MultiSigPairs h -> (MultiSig h, MultiSig h)
 findPayScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -361,7 +358,7 @@ findPayScriptFromCred c scripts =
         Just i -> scripts !! i
 
 -- | Find first matching script for a credential.
-findStakeScriptFromCred :: (HasCallStack, HashAlgorithm h) => Credential h 'AWitness -> MultiSigPairs h -> (MultiSig h, MultiSig h)
+findStakeScriptFromCred :: (HasCallStack, HashAlgorithm h) => Credential h 'Witness -> MultiSigPairs h -> (MultiSig h, MultiSig h)
 findStakeScriptFromCred c scripts =
   case c of
     ScriptHashObj scriptHash -> lookForScriptHash scriptHash
@@ -437,7 +434,7 @@ unitIntervalToNatural :: HasCallStack => UnitInterval -> Natural
 unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
 
 mkBlock ::
-  (HasCallStack, HashAlgorithm h, KeyRoleHashType r ~ 'RegularHash) =>
+  (HasCallStack, HashAlgorithm h) =>
   -- | Hash of previous block
   HashHeader h ->
   -- | All keys in the stake pool

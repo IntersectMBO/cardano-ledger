@@ -461,11 +461,7 @@ testScriptAndSKey' =
   utxoSt'
     @?= Left
       [ [ MissingVKeyWitnessesUTXOW $
-            WitHashes
-              { addrWitHashes = wits,
-                regWitHashes =
-                  mempty
-              }
+            WitHashes wits
         ]
       ]
   where

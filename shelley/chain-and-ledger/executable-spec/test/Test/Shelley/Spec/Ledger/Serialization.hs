@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,6 +16,7 @@ import Cardano.Binary
     ToCBOR (..),
     decodeAnnotator,
     decodeFullDecoder,
+    serialize,
     serialize',
     serializeEncoding,
     toCBOR,
@@ -27,6 +27,7 @@ import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6, toIPv4)
@@ -246,12 +247,13 @@ checkEncoding ::
   TestTree
 checkEncoding encode decode name x t =
   testCase testName $
-    assertEqual testName (fromEncoding $ toCBOR t) (fromEncoding $ encode x)
+    assertEqual
+      testName
+      (Base16.encode $ serialize t)
+      (Base16.encode . serializeEncoding . encode $ x)
       >> roundTrip encode decode x
   where
     testName = "prop_serialize_" <> name
-    fromEncoding :: Encoding -> Tokens
-    fromEncoding (Encoding e) = e TkEnd
 
 checkEncodingCBOR ::
   (FromCBOR a, ToCBOR a, Show a, Eq a) =>
@@ -351,7 +353,7 @@ testGenesisDelegateKey _ = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair (0, 0, 0, 0, 6)
 
-testKey1Token :: forall proxy (h :: *). proxy h -> Tokens -> Tokens
+testKey1Token :: forall proxy h. proxy h -> Tokens -> Tokens
 testKey1Token p = e
   where
     (VKey vk) = vKey (testKey1 p) :: VKey h 'Payment
@@ -1087,7 +1089,7 @@ serializationUnitTests =
                 <> T (TkWord 0)
                 <> T (TkListLen 1)
                 <> S w
-                <> T (TkWord 2)
+                <> T (TkWord 1)
                 <> T (TkListLen 1)
                 <> S (testScript p)
                 <> S md
@@ -1229,11 +1231,11 @@ serializationUnitTests =
                 <> S w2
                 <> S w1
                 -- tx 3, one script
-                <> T (TkMapLen 1 . TkWord 2)
+                <> T (TkMapLen 1 . TkWord 1)
                 <> T (TkListLen 1)
                 <> S (testScript p)
                 -- tx 4, two scripts
-                <> T (TkMapLen 1 . TkWord 2)
+                <> T (TkMapLen 1 . TkWord 1)
                 <> T (TkListLen 2)
                 <> S (testScript p)
                 <> S (testScript2 p)
@@ -1243,7 +1245,7 @@ serializationUnitTests =
                 <> T (TkListLen 2)
                 <> S w2
                 <> S w1
-                <> T (TkWord 2)
+                <> T (TkWord 1)
                 <> T (TkListLen 2)
                 <> S (testScript p)
                 <> S (testScript2 p)

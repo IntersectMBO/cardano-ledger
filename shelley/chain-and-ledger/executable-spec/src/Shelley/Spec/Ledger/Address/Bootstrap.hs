@@ -80,7 +80,7 @@ newtype ChainCode = ChainCode ByteString
   deriving newtype (NoUnexpectedThunks, ToCBOR, FromCBOR)
 
 data BootstrapWitness crypto = BootstrapWitness'
-  { bwKey' :: !(VKey 'AWitness crypto),
+  { bwKey' :: !(VKey 'Witness crypto),
     bwSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto))),
     bwChainCode' :: !ChainCode,
     bwPadding' :: !KeyPadding,
@@ -95,7 +95,7 @@ data BootstrapWitness crypto = BootstrapWitness'
 
 pattern BootstrapWitness ::
   Crypto crypto =>
-  (VKey 'AWitness crypto) ->
+  (VKey 'Witness crypto) ->
   (SignedDSIGN crypto (Hash crypto (TxBody crypto))) ->
   ChainCode ->
   KeyPadding ->
@@ -139,7 +139,7 @@ bootstrapWitKeyHash ::
   forall crypto.
   Crypto crypto =>
   BootstrapWitness crypto ->
-  KeyHash 'AWitness crypto
+  KeyHash 'Witness crypto
 bootstrapWitKeyHash (BootstrapWitness' _ _ (ChainCode cc) (KeyPadding prefix suffix) keyBytes) =
   KeyHash . Hash.UnsafeHash . hash_crypto . hash_SHA3_256 $ bytes
   where
@@ -179,7 +179,7 @@ unpackByronKey ::
   forall crypto.
   (DSIGN crypto ~ Ed25519DSIGN) =>
   Byron.VerificationKey ->
-  (VKey 'AWitness crypto, ChainCode)
+  (VKey 'Witness crypto, ChainCode)
 unpackByronKey
   ( Byron.VerificationKey
       (WC.XPub vkeyBytes (WC.ChainCode chainCodeBytes))

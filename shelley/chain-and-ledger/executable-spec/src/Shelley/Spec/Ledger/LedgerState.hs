@@ -186,7 +186,6 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     addrWits,
     extractKeyHashWitnessSet,
-    regWits,
   )
 import Shelley.Spec.Ledger.TxData
   ( Ix,
@@ -760,33 +759,29 @@ consumed pp (_u@(UTxO v)) tx =
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
 
-data WitHashes crypto = WitHashes
-  { addrWitHashes :: !(Set (KeyHash 'AWitness crypto)),
-    regWitHashes :: !(Set (KeyHash 'RWitness crypto))
-  }
+newtype WitHashes crypto
+  = WitHashes
+      (Set (KeyHash 'Witness crypto))
   deriving (Eq, Generic, Show)
 
 instance Crypto crypto => NoUnexpectedThunks (WitHashes crypto)
 
 -- | Check if a set of witness hashes is empty.
 nullWitHashes :: WitHashes crypto -> Bool
-nullWitHashes (WitHashes a b) = Set.null a && Set.null b
+nullWitHashes (WitHashes a) = Set.null a
 
 -- | Extract the difference between two sets of witness hashes.
 diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
-diffWitHashes (WitHashes x y) (WitHashes x' y') =
-  WitHashes (x `Set.difference` x') (y `Set.difference` y')
+diffWitHashes (WitHashes x) (WitHashes x') =
+  WitHashes (x `Set.difference` x')
 
 -- | Extract the witness hashes from the Witness set.
 witsFromWitnessSet ::
   Crypto crypto => WitnessSet crypto -> WitHashes crypto
-witsFromWitnessSet (WitnessSet aWits rWits _ bsWits) =
-  WitHashes
-    { addrWitHashes =
-        Set.map witKeyHash aWits
-          `Set.union` Set.map bootstrapWitKeyHash bsWits,
-      regWitHashes = Set.map witKeyHash rWits
-    }
+witsFromWitnessSet (WitnessSet aWits _ bsWits) =
+  WitHashes $
+    Set.map witKeyHash aWits
+      `Set.union` Set.map bootstrapWitKeyHash bsWits
 
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,
@@ -799,12 +794,14 @@ witsVKeyNeeded ::
   GenDelegs crypto ->
   WitHashes crypto
 witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
-  WitHashes
-    { addrWitHashes = fst certAuthors `Set.union` inputAuthors `Set.union` owners `Set.union` wdrlAuthors,
-      regWitHashes = snd certAuthors `Set.union` updateKeys
-    }
+  WitHashes $
+    certAuthors
+      `Set.union` inputAuthors
+      `Set.union` owners
+      `Set.union` wdrlAuthors
+      `Set.union` updateKeys
   where
-    inputAuthors :: Set (KeyHash 'AWitness crypto)
+    inputAuthors :: Set (KeyHash 'Witness crypto)
     inputAuthors = foldr accum Set.empty (_inputs txbody)
       where
         accum txin ans =
@@ -812,29 +809,28 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
             Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
             Just (TxOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
             _other -> ans
-    wdrlAuthors :: Set (KeyHash 'AWitness crypto)
+    wdrlAuthors :: Set (KeyHash 'Witness crypto)
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (_wdrls txbody))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
-    owners :: Set (KeyHash 'AWitness crypto)
+    owners :: Set (KeyHash 'Witness crypto)
     owners = foldr accum Set.empty (_certs txbody)
       where
         accum (DCertPool (RegPool pool)) ans = Set.union (Set.map asWitness (_poolOwners pool)) ans
         accum _cert ans = ans
-    cwitness (DCertDeleg dc) = (extractKeyHashWitnessSet [delegCWitness dc], Set.empty)
-    cwitness (DCertPool pc) = (Set.empty, extractKeyHashWitnessSet [poolCWitness pc])
-    cwitness (DCertGenesis gc) = (Set.empty, Set.singleton (asWitness $ genesisCWitness gc))
+    cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
+    cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
+    cwitness (DCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
     cwitness c = error $ show c ++ " does not have a witness"
     -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
     -- before the call to `cwitness`, so this error should never be reached.
 
-    certAuthors :: (Set (KeyHash 'AWitness crypto), Set (KeyHash 'RWitness crypto))
-    certAuthors = foldr accum (Set.empty, Set.empty) (_certs txbody)
+    certAuthors :: Set (KeyHash 'Witness crypto)
+    certAuthors = foldr accum Set.empty (_certs txbody)
       where
-        accum cert ans | requiresVKeyWitness cert = unionPair (cwitness cert) ans
+        accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
-        unionPair (x, y) (a, b) = (Set.union x a, Set.union y b)
-    updateKeys :: Set (KeyHash 'RWitness crypto)
+    updateKeys :: Set (KeyHash 'Witness crypto)
     updateKeys = asWitness `Set.map` propWits (txup tx) genDelegs
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
@@ -844,31 +840,25 @@ verifiedWits ::
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Tx crypto ->
-  Either ([VKey 'AWitness crypto], [VKey 'RWitness crypto]) ()
+  Either [VKey 'Witness crypto] ()
 verifiedWits (Tx txbody wits _) =
-  case null failedA && null failedR of
+  case null failed of
     True -> Right ()
     False ->
       Left $
-        ( fmap (\(WitVKey vk _) -> vk) failedA,
-          fmap (\(WitVKey vk _) -> vk) failedR
-        )
+        fmap (\(WitVKey vk _) -> vk) failed
   where
-    failedA =
+    failed =
       filter
         (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
         (Set.toList $ addrWits wits)
-    failedR =
-      filter
-        (not . verifyWitVKey (hashWithSerialiser toCBOR txbody))
-        (Set.toList $ regWits wits)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
   Maybe (Update crypto) ->
   GenDelegs crypto ->
-  Set (KeyHash 'RWitness crypto)
+  Set (KeyHash 'Witness crypto)
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys

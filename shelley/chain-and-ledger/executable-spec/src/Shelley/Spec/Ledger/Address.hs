@@ -7,7 +7,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -83,8 +82,7 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
-  ( IsKeyRole,
-    KeyHash (..),
+  ( KeyHash (..),
     KeyPair (..),
     KeyRole (..),
     hashKey,
@@ -114,7 +112,7 @@ toAddr ::
 toAddr n (payKey, stakeKey) = Addr n (toCred payKey) (StakeRefBase $ toCred stakeKey)
 
 toCred ::
-  IsKeyRole kr crypto =>
+  (Crypto crypto) =>
   KeyPair kr crypto ->
   Credential kr crypto
 toCred k = KeyHashObj . hashKey $ vKey k
@@ -316,7 +314,7 @@ getPayCred header = case testBit header payCredIsScript of
 getScriptHash :: Crypto crypto => Get (Credential kr crypto)
 getScriptHash = ScriptHashObj . ScriptHash <$> getHash
 
-getKeyHash :: IsKeyRole kr crypto => Get (Credential kr crypto)
+getKeyHash :: (Crypto crypto) => Get (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
 
 getStakeReference :: Crypto crypto => Word8 -> Get (StakeReference crypto)
@@ -333,9 +331,10 @@ putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 
 getByron :: Get (Addr crypto)
-getByron = decodeFull <$> B.getRemainingLazyByteString >>= \case
-  Left e -> fail (show e)
-  Right r -> pure $ AddrBootstrap $ BootstrapAddress r
+getByron =
+  decodeFull <$> B.getRemainingLazyByteString >>= \case
+    Left e -> fail (show e)
+    Right r -> pure $ AddrBootstrap $ BootstrapAddress r
 
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do

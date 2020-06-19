@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -233,8 +232,8 @@ txbFromCerts ix regCerts =
 
 makeSimpleTx ::
   TxBody Blake2b_256 ->
-  [KeyPair Blake2b_256 'AWitness] ->
-  [KeyPair Blake2b_256 'RWitness] ->
+  [KeyPair Blake2b_256 'Witness] ->
+  [KeyPair Blake2b_256 'Witness] ->
   Tx Blake2b_256
 makeSimpleTx body keysAddr keysReg =
   Tx

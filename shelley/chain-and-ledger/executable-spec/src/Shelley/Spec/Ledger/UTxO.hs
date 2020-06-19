@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -49,6 +48,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable (Typeable)
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -64,10 +64,9 @@ import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.Keys
   ( DSignable,
     Hash,
-    IsKeyRole,
     KeyHash (..),
     KeyPair (..),
-    WitnessFor,
+    KeyRole (Witness),
     asWitness,
     signedDSIGN,
     verifySignedDSIGN,
@@ -169,7 +168,8 @@ txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
-  ( IsKeyRole kr crypto,
+  ( Typeable kr,
+    Crypto crypto,
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Hash crypto (TxBody crypto) ->
@@ -180,39 +180,36 @@ verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash 
 -- | Create a witness for transaction
 makeWitnessVKey ::
   forall crypto kr.
-  ( IsKeyRole kr crypto,
-    IsKeyRole (WitnessFor kr) crypto,
+  ( Crypto crypto,
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Hash crypto (TxBody crypto) ->
   KeyPair kr crypto ->
-  WitVKey crypto (WitnessFor kr)
+  WitVKey crypto 'Witness
 makeWitnessVKey txbodyHash keys =
   WitVKey (asWitness $ vKey keys) (signedDSIGN @crypto (sKey keys) txbodyHash)
 
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
   forall crypto kr.
-  ( IsKeyRole kr crypto,
-    IsKeyRole (WitnessFor kr) crypto,
+  ( Crypto crypto,
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Hash crypto (TxBody crypto) ->
   [KeyPair kr crypto] ->
-  Set (WitVKey crypto (WitnessFor kr))
+  Set (WitVKey crypto ('Witness))
 makeWitnessesVKey txbodyHash = Set.fromList . fmap (makeWitnessVKey txbodyHash)
 
 -- | From a list of key pairs and a set of key hashes required for a multi-sig
 -- scripts, return the set of required keys.
 makeWitnessesFromScriptKeys ::
-  ( IsKeyRole kr crypto,
-    IsKeyRole (WitnessFor kr) crypto,
+  ( Crypto crypto,
     DSignable crypto (Hash crypto (TxBody crypto))
   ) =>
   Hash crypto (TxBody crypto) ->
   Map (KeyHash kr crypto) (KeyPair kr crypto) ->
   Set (KeyHash kr crypto) ->
-  Set (WitVKey crypto (WitnessFor kr))
+  Set (WitVKey crypto ('Witness))
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)

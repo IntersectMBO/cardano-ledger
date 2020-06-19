@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -67,11 +66,9 @@ type StakePools h = TxData.StakePools (ConcreteCrypto h)
 type KeyHash h kr = Keys.KeyHash kr (ConcreteCrypto h)
 
 pattern KeyHash ::
-  forall (h :: *) (ht :: Keys.HashType) (kr :: Keys.KeyRole ht).
-  ( Keys.AlgorithmForHashType (ConcreteCrypto h) ht ~ h
-  ) =>
+  forall h (kr :: Keys.KeyRole).
   Keys.Hash (ConcreteCrypto h) (VerKeyDSIGN (DSIGN (ConcreteCrypto h))) ->
-  KeyHash h (kr :: Keys.KeyRole ht)
+  KeyHash h (kr :: Keys.KeyRole)
 pattern KeyHash h = Keys.KeyHash h
 
 {-# COMPLETE KeyHash #-}

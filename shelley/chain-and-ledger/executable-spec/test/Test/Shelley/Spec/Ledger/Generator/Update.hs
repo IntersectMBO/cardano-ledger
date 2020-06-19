@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -286,7 +285,7 @@ genUpdate ::
   [AllIssuerKeys h 'GenesisDelegate] ->
   PParams ->
   (UTxOState h, DPState h) ->
-  Gen (Maybe (Update h), [KeyPair h 'RWitness])
+  Gen (Maybe (Update h), [KeyPair h 'Witness])
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s

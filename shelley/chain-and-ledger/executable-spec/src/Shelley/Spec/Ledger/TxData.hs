@@ -9,7 +9,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -136,13 +135,11 @@ import Shelley.Spec.Ledger.Credential
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
   ( Hash,
-    IsKeyRole,
     KeyHash (..),
     KeyRole (..),
     SignedDSIGN,
     VKey,
     VerKeyVRF,
-    WitnessFor,
     asWitness,
     decodeSignedDSIGN,
     encodeSignedDSIGN,
@@ -533,7 +530,7 @@ data WitVKey crypto kr = WitVKey'
   deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey crypto kr)
 
 pattern WitVKey ::
-  (IsKeyRole kr crypto) =>
+  (Typeable kr, Crypto crypto) =>
   VKey kr crypto ->
   SignedDSIGN crypto (Hash crypto (TxBody crypto)) ->
   WitVKey crypto kr
@@ -548,14 +545,14 @@ pattern WitVKey k s <-
 
 witKeyHash ::
   forall crypto kr.
-  (IsKeyRole kr crypto) =>
+  (Typeable kr, Crypto crypto) =>
   WitVKey crypto kr ->
-  KeyHash (WitnessFor kr) crypto
+  KeyHash 'Witness crypto
 witKeyHash (WitVKey key _) = asWitness $ hashKey key
 
 instance
   forall crypto kr.
-  (IsKeyRole kr crypto) =>
+  (Typeable kr, Crypto crypto) =>
   Ord (WitVKey crypto kr)
   where
   compare = comparing witKeyHash
@@ -690,13 +687,13 @@ instance
     pure $ TxOut addr (Coin $ toInteger b)
 
 instance
-  IsKeyRole kr crypto =>
+  (Typeable kr, Crypto crypto) =>
   ToCBOR (WitVKey crypto kr)
   where
   toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
 
 instance
-  IsKeyRole kr crypto =>
+  (Typeable kr, Crypto crypto) =>
   FromCBOR (Annotator (WitVKey crypto kr))
   where
   fromCBOR =

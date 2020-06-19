@@ -8,7 +8,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -37,7 +36,6 @@ module Shelley.Spec.Ledger.Tx
       ( WitnessSet,
         addrWits,
         bootWits,
-        regWits,
         msigWits,
         txWitsBytes
       ),
@@ -120,8 +118,7 @@ type family HKD f a where
   HKD f a = f a
 
 data WitnessSetHKD f crypto = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey crypto 'AWitness))),
-    regWits' :: !(HKD f (Set (WitVKey crypto 'RWitness))),
+  { addrWits' :: !(HKD f (Set (WitVKey crypto 'Witness))),
     msigWits' :: !(HKD f (Map (ScriptHash crypto) (MultiSig crypto))),
     bootWits' :: !(HKD f (Set (BootstrapWitness crypto))),
     txWitsBytes :: LByteString
@@ -147,36 +144,34 @@ instance Crypto crypto => ToCBOR (WitnessSetHKD Identity crypto) where
   toCBOR = encodePreEncoded . BSL.toStrict . txWitsBytes
 
 instance Crypto crypto => Semigroup (WitnessSetHKD Identity crypto) where
-  (WitnessSet a b c d) <> (WitnessSet a' b' c' d') = WitnessSet (a <> a') (b <> b') (c <> c') (d <> d')
+  (WitnessSet a b c) <> (WitnessSet a' b' c') =
+    WitnessSet (a <> a') (b <> b') (c <> c')
 
 instance Crypto crypto => Monoid (WitnessSetHKD Identity crypto) where
-  mempty = WitnessSet mempty mempty mempty mempty
+  mempty = WitnessSet mempty mempty mempty
 
 pattern WitnessSet ::
   Crypto crypto =>
-  Set (WitVKey crypto 'AWitness) ->
-  Set (WitVKey crypto 'RWitness) ->
+  Set (WitVKey crypto 'Witness) ->
   Map (ScriptHash crypto) (MultiSig crypto) ->
   Set (BootstrapWitness crypto) ->
   WitnessSet crypto
-pattern WitnessSet {addrWits, regWits, msigWits, bootWits} <-
-  WitnessSet' addrWits regWits msigWits bootWits _
+pattern WitnessSet {addrWits, msigWits, bootWits} <-
+  WitnessSet' addrWits msigWits bootWits _
   where
-    WitnessSet awits rwits witnessMSigMap bootstrapWits =
+    WitnessSet awits witnessMSigMap bootstrapWits =
       let encodeMapElement ix enc x =
             if null x then Nothing else Just (encodeWord ix <> enc x)
           l =
             catMaybes $
               [ encodeMapElement 0 encodeFoldable awits,
-                encodeMapElement 1 encodeFoldable rwits,
-                encodeMapElement 2 encodeFoldable witnessMSigMap,
-                encodeMapElement 3 encodeFoldable bootstrapWits
+                encodeMapElement 1 encodeFoldable witnessMSigMap,
+                encodeMapElement 2 encodeFoldable bootstrapWits
               ]
           n = fromIntegral $ length l
           witsBytes = serializeEncoding $ encodeMapLen n <> fold l
        in WitnessSet'
             { addrWits' = awits,
-              regWits' = rwits,
               msigWits' = witnessMSigMap,
               bootWits' = bootstrapWits,
               txWitsBytes = witsBytes
@@ -262,10 +257,8 @@ decodeWits = do
       0 -> decodeList fromCBOR >>= \x ->
         pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
       1 -> decodeList fromCBOR >>= \x ->
-        pure (\ws -> ws {regWits' = Set.fromList <$> sequence x})
-      2 -> decodeList fromCBOR >>= \x ->
         pure (\ws -> ws {msigWits' = keyBy hashScript <$> sequence x})
-      3 -> decodeList fromCBOR >>= \x ->
+      2 -> decodeList fromCBOR >>= \x ->
         pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
       k -> invalidKey k
   let witSet = foldr ($) emptyWitnessSetHKD mapParts
@@ -273,7 +266,6 @@ decodeWits = do
       emptyWitnessSetHKD =
         WitnessSet'
           { addrWits' = pure mempty,
-            regWits' = pure mempty,
             msigWits' = pure mempty,
             bootWits' = pure mempty,
             txWitsBytes = mempty
@@ -281,7 +273,6 @@ decodeWits = do
   pure $
     WitnessSet'
       <$> addrWits' witSet
-      <*> regWits' witSet
       <*> msigWits' witSet
       <*> bootWits' witSet
       <*> annBytes
@@ -330,7 +321,7 @@ instance
 evalNativeMultiSigScript ::
   Crypto crypto =>
   MultiSig crypto ->
-  Set (KeyHash 'AWitness crypto) ->
+  Set (KeyHash 'Witness crypto) ->
   Bool
 evalNativeMultiSigScript (RequireSignature hk) vhks = Set.member hk vhks
 evalNativeMultiSigScript (RequireAllOf msigs) vhks =
@@ -370,9 +361,9 @@ extractKeyHash =
     )
 
 extractKeyHashWitnessSet ::
-  forall (h :: HashType) (r :: KeyRole h) crypto.
+  forall (r :: KeyRole) crypto.
   [Credential r crypto] ->
-  Set (KeyHash (WitnessFor r) crypto)
+  Set (KeyHash 'Witness crypto)
 extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
