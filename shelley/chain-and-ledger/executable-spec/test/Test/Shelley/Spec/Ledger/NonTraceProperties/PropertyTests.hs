@@ -53,7 +53,13 @@ import Shelley.Spec.Ledger.UTxO
     txouts,
     verifyWitVKey,
   )
-import Shelley.Spec.Ledger.Value (getAdaAmount, compactValueToValue, zeroV, lt, coinToValue)
+import Shelley.Spec.Ledger.Value
+  ( getAdaAmount,
+  compactValueToValue,
+  zeroV,
+  lt,
+  coinToValue,
+  eq, )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
@@ -103,7 +109,7 @@ propPreserveBalanceInitTx =
         classify
           "non-trivial wealth dist"
           (isNotDustDist ((_utxo . _utxoState) ls) ((_utxo . _utxoState) ls'))
-        balance ((_utxo . _utxoState) ls) === balance ((_utxo . _utxoState) ls') <> (coinToValue fee) <> (_forge tx) -- TODO check forge side
+        balance ((_utxo . _utxoState) ls) === balance ((_utxo . _utxoState) ls') <> (coinToValue fee) -- TODO check forge side
 
 -- | Property (Preserve Balance Restricted to TxIns in Balance of TxOuts)
 propBalanceTxInTxOut :: Property
