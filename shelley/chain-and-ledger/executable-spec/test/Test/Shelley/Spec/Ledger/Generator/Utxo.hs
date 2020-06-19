@@ -3,7 +3,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
@@ -168,8 +167,7 @@ genTx
           let stakeScripts = pickStakeScripts certCreds
               genesisWitnesses = pickGenesisWitnesses certCreds
               genesisDelegationWitnesses = pickGenesisDelegateWitnesses certCreds
-              certAWitnesses = pickAWitnesses certCreds
-              certRWitnesses = pickRWitnesses certCreds
+              certWitnesses = pickAWitnesses certCreds
 
           -- calc. fees and output amounts
           let (_, outputs) = calcOutputsFromBalance balance_ recipientAddrs (Coin 0)
@@ -207,24 +205,17 @@ genTx
           -- TODO mgudemann due to problems with time-outs, we select one combination
           -- deterministically for each script. Varying the script is possible though.
 
-          let spendWitnesses' = fmap asWitness spendWitnesses
-              wdrlWitnesses' = fmap asWitness wdrlWitnesses
-              updateWitnesses' = fmap asWitness updateWitnesses
-              genesisWitnesses' = fmap asWitness genesisWitnesses
-              genesisDelegationWitnesses' = fmap asWitness genesisDelegationWitnesses
-              certAWitnesses' = fmap asWitness certAWitnesses
-              certRWitnesses' = fmap asWitness certRWitnesses
-
           let wits =
                 mkTxWits
                   ksIndexedPaymentKeys
                   ksIndexedStakingKeys
                   (hashTxBody txBody)
-                  (spendWitnesses' ++ wdrlWitnesses' ++ certAWitnesses')
-                  ( updateWitnesses'
-                      ++ genesisWitnesses'
-                      ++ genesisDelegationWitnesses'
-                      ++ certRWitnesses'
+                  ( spendWitnesses
+                      ++ wdrlWitnesses
+                      ++ certWitnesses
+                      ++ updateWitnesses
+                      ++ genesisWitnesses
+                      ++ genesisDelegationWitnesses
                   )
                   multiSig
 
@@ -250,11 +241,12 @@ genTx
                       ksIndexedPaymentKeys
                       ksIndexedStakingKeys
                       (hashTxBody txBody')
-                      (spendWitnesses' ++ wdrlWitnesses' ++ certAWitnesses')
-                      ( updateWitnesses'
-                          ++ genesisWitnesses'
-                          ++ certRWitnesses'
-                          ++ genesisDelegationWitnesses'
+                      ( spendWitnesses
+                          ++ wdrlWitnesses
+                          ++ certWitnesses
+                          ++ updateWitnesses
+                          ++ genesisWitnesses
+                          ++ genesisDelegationWitnesses
                       )
                       multiSig
 
@@ -264,7 +256,7 @@ genTx
         foldl' (++) [] $
           Maybe.mapMaybe
             ( \case
-                DelegateCred c -> Just c
+                DelegateCred c -> Just $ asWitness <$> c
                 _ -> Nothing
             )
             certs
@@ -272,7 +264,7 @@ genTx
         foldl' (++) [] $
           Maybe.mapMaybe
             ( \case
-                CoreKeyCred c -> Just c
+                CoreKeyCred c -> Just $ asWitness <$> c
                 _ -> Nothing
             )
             certs
@@ -285,13 +277,8 @@ genTx
       pickAWitnesses =
         Maybe.mapMaybe
           ( \case
-              StakeCred c -> Just c
-              _ -> Nothing
-          )
-      pickRWitnesses =
-        Maybe.mapMaybe
-          ( \case
-              PoolCred c -> Just c
+              StakeCred c -> Just $ asWitness c
+              PoolCred c -> Just $ asWitness c
               _ -> Nothing
           )
 
@@ -300,8 +287,7 @@ mkTxWits ::
   Map (KeyHash h 'Payment) (KeyPair h 'Payment) ->
   Map (KeyHash h 'Staking) (KeyPair h 'Staking) ->
   Hash (ConcreteCrypto h) (TxBody h) ->
-  [KeyPair h 'AWitness] ->
-  [KeyPair h 'RWitness] ->
+  [KeyPair h 'Witness] ->
   Map (ScriptHash h) (MultiSig h) ->
   WitnessSet h
 mkTxWits
@@ -309,7 +295,6 @@ mkTxWits
   indexedStakingKeys
   txBodyHash
   awits
-  rwits
   msigs =
     WitnessSet
       { addrWits =
@@ -320,7 +305,6 @@ mkTxWits
                   `Map.union` indexedStakingKeysAsWitnesses
               )
               msigSignatures,
-        regWits = makeWitnessesVKey txBodyHash rwits,
         msigWits = msigs,
         bootWits = mempty
       }
@@ -399,7 +383,7 @@ pickSpendingInputs ::
   MultiSigPairs h ->
   Map (KeyHash h 'Payment) (KeyPair h 'Payment) ->
   UTxO h ->
-  Gen ([(TxIn h, Either (KeyPair h 'AWitness) (MultiSig h, MultiSig h))], Coin)
+  Gen ([(TxIn h, Either (KeyPair h 'Witness) (MultiSig h, MultiSig h))], Coin)
 pickSpendingInputs Constants {minNumGenInputs, maxNumGenInputs} scripts keyHashMap (UTxO utxo) = do
   selectedUtxo <-
     take <$> QC.choose (minNumGenInputs, maxNumGenInputs)
@@ -448,13 +432,14 @@ mkWdrlWits ::
   MultiSigPairs h ->
   Map (KeyHash h 'Staking) (KeyPair h 'Staking) ->
   Credential h 'Staking ->
-  Either (KeyPair h 'AWitness) (MultiSig h, MultiSig h)
+  Either (KeyPair h 'Witness) (MultiSig h, MultiSig h)
 mkWdrlWits scripts _ c@(ScriptHashObj _) =
   Right $
     findStakeScriptFromCred (asWitness c) scripts
 mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
-  Left $ asWitness $
-    findPayKeyPairCred c keyHashMap
+  Left
+    $ asWitness
+    $ findPayKeyPairCred c keyHashMap
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients ::

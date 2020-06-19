@@ -4,7 +4,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -79,10 +78,8 @@ import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, HASH)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), Stake (..))
 import Shelley.Spec.Ledger.Keys
-  ( AlgorithmForHashType,
-    Hash,
+  ( Hash,
     KeyHash (KeyHash),
-    KeyRoleHashType,
     VKey (VKey),
     hash,
   )
@@ -292,9 +289,7 @@ instance Arbitrary UnitInterval where
 
 instance
   ( Crypto c,
-    HASH c ~ h,
-    ADDRHASH c ~ h,
-    AlgorithmForHashType c (KeyRoleHashType a) ~ h
+    HASH c ~ ADDRHASH c
   ) =>
   Arbitrary (KeyHash a c)
   where
@@ -370,8 +365,7 @@ instance HashAlgorithm h => Arbitrary (StakeReference (Mock.ConcreteCrypto h)) w
   shrink = genericShrink
 
 instance
-  ( AlgorithmForHashType (Mock.ConcreteCrypto h) (KeyRoleHashType r) ~ h,
-    HashAlgorithm h
+  ( HashAlgorithm h
   ) =>
   Arbitrary (Credential r (Mock.ConcreteCrypto h))
   where

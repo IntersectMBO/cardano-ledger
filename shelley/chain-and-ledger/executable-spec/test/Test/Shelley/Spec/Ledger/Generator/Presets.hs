@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Pre-generated items to use in traces.
@@ -24,9 +23,7 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.Address (scriptsToAddr, toAddr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Keys
-  ( HashType (RegularHash),
-    KeyRole (..),
-    KeyRoleHashType,
+  ( KeyRole (..),
     coerceKeyRole,
     hashKey,
     vKey,
@@ -144,7 +141,7 @@ stakePoolKeys c =
 
 -- | Generate all keys for any entity which will be issuing blocks.
 issuerKeys ::
-  (HashAlgorithm h, KeyRoleHashType r ~ 'RegularHash) =>
+  (HashAlgorithm h) =>
   Constants ->
   -- | Namespace parameter. Can be used to differentiate between different
   --   "types" of issuer.

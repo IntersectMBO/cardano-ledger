@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -35,7 +34,6 @@ import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.Keys
   ( GenDelegPair (..),
     Hash,
-    IsKeyRole,
     KeyHash (..),
     KeyPair (..),
     KeyRole (..),
@@ -249,7 +247,7 @@ genSeed :: Int -> Gen Seed
 genSeed n = mkSeedFromBytes <$> Gen.bytes (Range.singleton n)
 
 genKeyHash ::
-  ( IsKeyRole disc c
+  ( Crypto c
   ) =>
   Gen (KeyHash disc c)
 genKeyHash = hashKey . snd <$> genKeyPair

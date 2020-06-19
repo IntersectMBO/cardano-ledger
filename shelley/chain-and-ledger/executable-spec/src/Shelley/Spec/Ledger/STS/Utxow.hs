@@ -72,6 +72,8 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     WitHashes (..),
+    diffWitHashes,
+    nullWitHashes,
     verifiedWits,
     witsFromWitnessSet,
     witsVKeyNeeded,
@@ -103,17 +105,16 @@ instance
   type BaseM (UTXOW crypto) = ShelleyBase
   data PredicateFailure (UTXOW crypto)
     = InvalidWitnessesUTXOW
-        !( [VKey 'AWitness crypto],
-           [VKey 'RWitness crypto]
-         ) -- witnesses which failed in verifiedWits function
-    | MissingVKeyWitnessesUTXOW
+        ![VKey 'Witness crypto]
+    | -- witnesses which failed in verifiedWits function
+      MissingVKeyWitnessesUTXOW
         !(WitHashes crypto) -- witnesses which were needed and not supplied
     | MissingScriptWitnessesUTXOW
         !(Set (ScriptHash crypto)) -- missing scripts
     | ScriptWitnessNotValidatingUTXOW
         !(Set (ScriptHash crypto)) -- failed scripts
     | UtxoFailure (PredicateFailure (UTXO crypto))
-    | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'RWitness crypto))
+    | MIRInsufficientGenesisSigsUTXOW (Set (KeyHash 'Witness crypto))
     | MissingTxBodyMetaDataHash
         !(MetaDataHash crypto) -- hash of the full metadata
     | MissingTxMetaData
@@ -133,10 +134,10 @@ instance
   ToCBOR (PredicateFailure (UTXOW crypto))
   where
   toCBOR = \case
-    InvalidWitnessesUTXOW (awits, rwits) ->
-      encodeListLen 3 <> toCBOR (0 :: Word8) <> encodeFoldable awits <> encodeFoldable rwits
-    MissingVKeyWitnessesUTXOW (WitHashes missingA missingR) ->
-      encodeListLen 3 <> toCBOR (1 :: Word8) <> encodeFoldable missingA <> encodeFoldable missingR
+    InvalidWitnessesUTXOW wits ->
+      encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
+    MissingVKeyWitnessesUTXOW (WitHashes missing) ->
+      encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
     MissingScriptWitnessesUTXOW ss -> encodeListLen 2 <> toCBOR (2 :: Word8) <> encodeFoldable ss
     ScriptWitnessNotValidatingUTXOW ss -> encodeListLen 2 <> toCBOR (3 :: Word8) <> encodeFoldable ss
     (UtxoFailure a) ->
@@ -158,15 +159,13 @@ instance
     n <- decodeListLen
     decodeWord >>= \case
       0 -> do
-        matchSize "InvalidWitnessesUTXOW" 3 n
-        awits <- decodeList fromCBOR
-        rwits <- decodeList fromCBOR
-        pure $ InvalidWitnessesUTXOW (awits, rwits)
+        matchSize "InvalidWitnessesUTXOW" 2 n
+        wits <- decodeList fromCBOR
+        pure $ InvalidWitnessesUTXOW wits
       1 -> do
-        matchSize "MissingVKeyWitnessesUTXOW" 3 n
-        missingA <- decodeSet fromCBOR
-        missingR <- decodeSet fromCBOR
-        pure $ MissingVKeyWitnessesUTXOW $ WitHashes missingA missingR
+        matchSize "MissingVKeyWitnessesUTXOW" 2 n
+        missing <- decodeSet fromCBOR
+        pure $ MissingVKeyWitnessesUTXOW $ WitHashes missing
       2 -> do
         matchSize "MissingScriptWitnessesUTXOW" 2 n
         ss <- decodeSet fromCBOR
@@ -237,11 +236,8 @@ utxoWitnessed =
       verifiedWits tx ?!: InvalidWitnessesUTXOW
 
       let needed = witsVKeyNeeded utxo tx genDelegs
-          missingWitnesses =
-            WitHashes
-              (addrWitHashes needed `Set.difference` addrWitHashes witsKeyHashes)
-              (regWitHashes needed `Set.difference` regWitHashes witsKeyHashes)
-          haveNeededWitnesses = case missingWitnesses == WitHashes Set.empty Set.empty of
+          missingWitnesses = diffWitHashes needed witsKeyHashes
+          haveNeededWitnesses = case nullWitHashes missingWitnesses of
             True -> Right ()
             False -> Left missingWitnesses
       haveNeededWitnesses ?!: MissingVKeyWitnessesUTXOW
@@ -256,7 +252,8 @@ utxoWitnessed =
 
       -- check genesis keys signatures for instantaneous rewards certificates
       let genDelegates = Set.fromList $ fmap (asWitness . genDelegKeyHash) $ Map.elems genMapping
-          genSig = genDelegates ∩ regWitHashes witsKeyHashes
+          (WitHashes khAsSet) = witsKeyHashes
+          genSig = genDelegates ∩ khAsSet
           mirCerts =
             StrictSeq.toStrict
               . Seq.filter isInstantaneousRewards

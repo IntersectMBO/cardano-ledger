@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -456,7 +455,7 @@ txWithMultiSig p =
     }
 
 txWithMultiSigBytes16 :: BSL.ByteString
-txWithMultiSigBytes16 = "83a4008182449db8a417000181824900d58133b2ac6eb45e0a02185e030aa200828248933c542202176b764c0d8fa5c9933c542202176b7682487c6ffc08d6fa98ad4c0d8fa5c97c6ffc08d6fa98ad028183030283820044d58133b2820044595ced908200444afb593df6"
+txWithMultiSigBytes16 = "83a4008182449db8a417000181824900d58133b2ac6eb45e0a02185e030aa200828248933c542202176b764c0d8fa5c9933c542202176b7682487c6ffc08d6fa98ad4c0d8fa5c97c6ffc08d6fa98ad018183030283820044d58133b2820044595ced908200444afb593df6"
 
 -- | Transaction with a Reward Withdrawal
 txbWithWithdrawal :: HashAlgorithm h => TxBody h
