@@ -28,7 +28,8 @@ module Shelley.Spec.Ledger.BaseTypes
     unitIntervalToRational,
     unitIntervalFromRational,
     invalidKey,
-    mkNonce,
+    mkNonceFromOutputVRF,
+    mkNonceFromNumber,
     mkUnitInterval,
     truncateUnitInterval,
     StrictMaybe (..),
@@ -64,6 +65,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Crypto.Hash
+import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (ReaderT)
@@ -188,9 +190,19 @@ deriving anyclass instance FromJSON Nonce
 x ⭒ NeutralNonce = x
 NeutralNonce ⭒ x = x
 
--- | Make a nonce from a natural number
-mkNonce :: Natural -> Nonce
-mkNonce = Nonce . coerce . hash @SHA256
+-- | Make a nonce from the VRF output bytes
+mkNonceFromOutputVRF :: VRF.OutputVRF v -> Nonce
+mkNonceFromOutputVRF =
+  Nonce
+    . (castHash :: Hash SHA256 (VRF.OutputVRF v) -> Hash SHA256 Nonce)
+    . hashRaw VRF.getOutputVRFBytes
+
+-- | Make a nonce from a number.
+mkNonceFromNumber :: Word64 -> Nonce
+mkNonceFromNumber =
+  Nonce
+    . (castHash :: Hash SHA256 Word64 -> Hash SHA256 Nonce)
+    . hash --TODO: use simpler serialisation
 
 -- | Seed to the verifiable random function.
 --

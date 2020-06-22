@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -48,7 +49,17 @@ instance
   type BaseM (UPDN crypto) = ShelleyBase
   data PredicateFailure (UPDN crypto) -- No predicate failures
     deriving (Generic, Show, Eq)
-  initialRules = [pure (UpdnState (mkNonce 0) (mkNonce 0) (mkNonce 0) (mkNonce 0))]
+  initialRules =
+    [ pure
+        ( UpdnState
+            initialNonce
+            initialNonce
+            initialNonce
+            initialNonce
+        )
+    ]
+    where
+      initialNonce = mkNonceFromNumber 0
   transitionRules = [updTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (UPDN crypto))

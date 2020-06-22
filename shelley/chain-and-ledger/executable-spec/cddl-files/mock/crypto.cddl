@@ -4,7 +4,7 @@ $hash32 /= bytes .size 4
 $vkey /= bytes .size 8
 
 $vrf_vkey /= bytes .size 8
-$vrf_cert /= [natural, bytes .size 10]
+$vrf_cert /= [bytes, bytes .size 10]
 natural = #6.2(bytes)
 
 $kes_vkey /= bytes .size 8

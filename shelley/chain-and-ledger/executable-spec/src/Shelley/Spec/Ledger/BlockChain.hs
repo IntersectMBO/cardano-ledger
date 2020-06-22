@@ -100,14 +100,15 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
-    FixedPoint,
     Nonce (..),
     Seed (..),
     activeSlotLog,
     activeSlotVal,
     intervalValue,
-    mkNonce,
+    mkNonceFromNumber,
     strictMaybeToMaybe,
+    truncateUnitInterval,
+    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
@@ -573,7 +574,7 @@ bBodySize ::
 bBodySize = BS.length . serializeEncoding' . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
-slotToNonce (SlotNo s) = mkNonce (fromIntegral s)
+slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 bheader ::
   Crypto crypto =>
@@ -626,8 +627,8 @@ mkSeed NeutralNonce slot nonce =
 -- in case the reference value `1 / (1 - p)` is above the exponential function
 -- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
 -- conclusively compute this within the given iteration bounds.
-checkLeaderValue :: Natural -> Rational -> ActiveSlotCoeff -> Bool
-checkLeaderValue certNat σ f =
+checkLeaderValue :: VRF.OutputVRF v -> Rational -> ActiveSlotCoeff -> Bool
+checkLeaderValue certVRF σ f =
   if (intervalValue $ activeSlotVal f) == 1
     then -- If the active slot coefficient is equal to one,
     -- then nearly every stake pool can produce a block every slot.
@@ -636,23 +637,29 @@ checkLeaderValue certNat σ f =
     -- This is a testing convenience, the active slot coefficient should not
     -- bet set above one half otherwise.
       True
-    else case taylorExpCmp 3 q x of
-      ABOVE _ _ -> False
-      BELOW _ _ -> True
-      MaxReached _ -> False
+    else
+      if leaderVal == 1
+        then -- Having a VRF value of one is always a failure.
+        -- Moreover, it would cause division by zero.
+          False
+        else case taylorExpCmp 3 (1 / q) x of
+          ABOVE _ _ -> False
+          BELOW _ _ -> True
+          MaxReached _ -> False
   where
-    certNatMax :: Natural
-    certNatMax = (2 :: Natural) ^ (256 :: Natural)
-    c, q, x :: FixedPoint
+    leaderVal = (unitIntervalToRational . fromNatural) certNat
     c = activeSlotLog f
-    q = fromRational (1 % toInteger (certNatMax - certNat))
+    q = fromRational $ 1 - leaderVal
     x = (- fromRational σ * c)
+    certNat :: Natural
+    certNat = VRF.getOutputVRFNatural certVRF
+    fromNatural k = truncateUnitInterval $ fromIntegral k % 10000
 
 seedEta :: Nonce
-seedEta = mkNonce 0
+seedEta = mkNonceFromNumber 0
 
 seedL :: Nonce
-seedL = mkNonce 1
+seedL = mkNonceFromNumber 1
 
 hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize

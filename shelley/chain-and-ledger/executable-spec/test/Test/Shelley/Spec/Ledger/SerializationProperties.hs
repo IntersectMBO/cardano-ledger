@@ -54,7 +54,7 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (Addr))
@@ -66,7 +66,7 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe,
     UnitInterval,
     Url,
-    mkNonce,
+    mkNonceFromNumber,
     mkUnitInterval,
     textToDns,
     textToUrl,
@@ -281,7 +281,7 @@ instance Arbitrary Nonce where
   arbitrary =
     oneof
       [ return NeutralNonce,
-        mkNonce . fromIntegral <$> choose (1, 123 :: Int)
+        mkNonceFromNumber <$> choose (1, 123 :: Word64)
       ]
 
 instance Arbitrary UnitInterval where

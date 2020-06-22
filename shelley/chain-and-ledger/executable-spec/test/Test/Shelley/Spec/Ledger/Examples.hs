@@ -102,6 +102,7 @@ where
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.ProtocolMagic
+import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (asks)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
@@ -129,7 +130,8 @@ import Shelley.Spec.Ledger.BaseTypes
     Nonce (..),
     Port (..),
     StrictMaybe (..),
-    mkNonce,
+    mkNonceFromNumber,
+    mkNonceFromOutputVRF,
     randomnessStabilisationWindow,
     textToDns,
     textToUrl,
@@ -139,7 +141,9 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
   ( LastAppliedBlock (..),
     bhHash,
+    bhbody,
     bheader,
+    bheaderEta,
     hashHeaderToNonce,
     pattern HashHeader,
   )
@@ -522,7 +526,11 @@ nonce0 :: HashAlgorithm h => proxy h -> Nonce
 nonce0 p = hashHeaderToNonce (lastByronHeaderHash p)
 
 mkSeqNonce :: HashAlgorithm h => proxy h -> Natural -> Nonce
-mkSeqNonce p m = foldl' (\c x -> c ⭒ mkNonce x) (nonce0 p) [1 .. m]
+mkSeqNonce p m =
+  foldl'
+    (\c x -> c ⭒ mkNonceFromNumber (fromIntegral x))
+    (nonce0 p)
+    [1 .. m]
 
 carlPay :: KeyPair h 'Payment
 carlPay = KeyPair vk sk
@@ -634,6 +642,13 @@ blockEx1 =
     p :: Proxy h
     p = Proxy
 
+getBlockNonce :: forall h. HashAlgorithm h => Proxy h -> Block h -> Nonce
+getBlockNonce _ =
+  mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta . bhbody . bheader
+
+makeEvolvedNonce :: forall h. HashAlgorithm h => Proxy h -> Nonce -> [Block h] -> Nonce
+makeEvolvedNonce p n bs = foldl' (\n' b -> n' ⭒ getBlockNonce p b) n bs
+
 -- | Expected chain state after successful processing of null block.
 expectedStEx1 :: forall h. HashAlgorithm h => ChainState h
 expectedStEx1 =
@@ -650,8 +665,8 @@ expectedStEx1 =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (nonce0 p ⭒ mkNonce 1)
-    (nonce0 p ⭒ mkNonce 1)
+    (makeEvolvedNonce p (nonce0 p) [blockEx1])
+    (makeEvolvedNonce p (nonce0 p) [blockEx1])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -897,8 +912,8 @@ expectedStEx2A =
     -- issued using the corresponding hot key.
     oCertIssueNosEx1
     (nonce0 p)
-    (nonce0 p ⭒ mkNonce 1)
-    (nonce0 p ⭒ mkNonce 1)
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -1048,8 +1063,8 @@ expectedStEx2B =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (nonce0 p ⭒ mkNonce 1 ⭒ mkNonce 2) -- Evolving nonce
-    (nonce0 p ⭒ mkNonce 1) -- Candidate nonce
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -1074,7 +1089,7 @@ blockEx2C =
     [] -- No transactions at all (empty block)
     (SlotNo 110) -- Current slot
     (BlockNo 3) -- Second block within the epoch
-    (nonce0 p ⭒ mkNonce 1) -- Epoch nonce
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A])
     (NatNonce 3) -- Block nonce
     zero -- Praos leader value
     5 -- Period of KES (key evolving signature scheme)
@@ -1143,9 +1158,9 @@ expectedStEx2Cgeneric ss ls pp =
         (overlayScheduleFor (EpochNo 1))
     )
     oCertIssueNosEx1
-    (nonce0 p ⭒ mkNonce 1)
-    (mkSeqNonce p 3)
-    (mkSeqNonce p 3)
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C])
     (hashHeaderToNonce (blockEx2BHash p))
     ( At $
         LastAppliedBlock
@@ -1210,7 +1225,7 @@ blockEx2D =
     [txEx2D]
     (SlotNo 190)
     (BlockNo 4)
-    (nonce0 p ⭒ mkNonce 1)
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A])
     (NatNonce 4)
     zero
     9
@@ -1286,9 +1301,9 @@ expectedStEx2D =
         (overlayScheduleFor (EpochNo 1))
     )
     oCertIssueNosEx1
-    (nonce0 p ⭒ mkNonce 1)
-    (mkSeqNonce p 4)
-    (mkSeqNonce p 3)
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C, blockEx2D])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C])
     (hashHeaderToNonce (blockEx2BHash p))
     ( At $
         LastAppliedBlock
@@ -1404,9 +1419,9 @@ expectedStEx2E =
         (overlayScheduleFor (EpochNo 2))
     )
     oCertIssueNosEx2
-    ((mkSeqNonce p 3) ⭒ (hashHeaderToNonce (blockEx2BHash p)))
-    (mkSeqNonce p 5)
-    (mkSeqNonce p 5)
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C] ⭒ hashHeaderToNonce (blockEx2BHash p))
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E])
     (hashHeaderToNonce (blockEx2DHash p))
     ( At $
         LastAppliedBlock
@@ -1436,7 +1451,7 @@ blockEx2F =
     []
     (SlotNo 295) -- odd slots open for decentralization in epoch1OSchedEx2E
     (BlockNo 6)
-    ((mkSeqNonce p 3) ⭒ (hashHeaderToNonce (blockEx2BHash p)))
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C] ⭒ hashHeaderToNonce (blockEx2BHash p))
     (NatNonce 6)
     zero
     14
@@ -1479,9 +1494,9 @@ expectedStEx2F =
         (overlayScheduleFor (EpochNo 2))
     )
     oCertIssueNosEx2F
-    ((mkSeqNonce p 3) ⭒ (hashHeaderToNonce (blockEx2BHash p)))
-    (mkSeqNonce p 6)
-    (mkSeqNonce p 5)
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C] ⭒ hashHeaderToNonce (blockEx2BHash p))
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E, blockEx2F])
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E])
     (hashHeaderToNonce (blockEx2DHash p))
     ( At $
         LastAppliedBlock
@@ -1493,8 +1508,23 @@ expectedStEx2F =
     p :: Proxy h
     p = Proxy
 
-ex2F :: HashAlgorithm h => proxy h -> CHAINExample h
+ex2F :: HashAlgorithm h => Proxy h -> CHAINExample h
 ex2F _ = CHAINExample expectedStEx2E blockEx2F (Right expectedStEx2F)
+
+epochNonceEx2G :: HashAlgorithm h => Proxy h -> Nonce
+epochNonceEx2G p =
+  makeEvolvedNonce
+    p
+    (nonce0 p)
+    [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E]
+    ⭒ hashHeaderToNonce (blockEx2DHash p)
+
+evolNonceEx2G :: HashAlgorithm h => Proxy h -> Nonce
+evolNonceEx2G p =
+  makeEvolvedNonce
+    p
+    (nonce0 p)
+    [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E, blockEx2F, blockEx2G]
 
 -- | Example 2G - create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
@@ -1506,7 +1536,7 @@ blockEx2G =
     []
     (SlotNo 310)
     (BlockNo 7)
-    ((mkSeqNonce p 5) ⭒ (hashHeaderToNonce (blockEx2DHash p)))
+    (epochNonceEx2G p)
     (NatNonce 7)
     zero
     15
@@ -1565,9 +1595,9 @@ expectedStEx2G =
         (overlayScheduleFor (EpochNo 3))
     )
     oCertIssueNosEx2G
-    ((mkSeqNonce p 5) ⭒ (hashHeaderToNonce (blockEx2DHash p)))
-    (mkSeqNonce p 7)
-    (mkSeqNonce p 7)
+    (epochNonceEx2G p)
+    (evolNonceEx2G p)
+    (evolNonceEx2G p)
     (hashHeaderToNonce (blockEx2FHash p))
     ( At $
         LastAppliedBlock
@@ -1591,7 +1621,7 @@ blockEx2H =
     []
     (SlotNo 390)
     (BlockNo 8)
-    ((mkSeqNonce p 5) ⭒ (hashHeaderToNonce (blockEx2DHash p)))
+    (epochNonceEx2G p)
     (NatNonce 8)
     zero
     19
@@ -1654,6 +1684,13 @@ nonMyopicEx2H =
     p :: Proxy h
     p = Proxy
 
+evolNonceEx2H :: HashAlgorithm h => Proxy h -> Nonce
+evolNonceEx2H p =
+  makeEvolvedNonce
+    p
+    (nonce0 p)
+    [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E, blockEx2F, blockEx2G, blockEx2H]
+
 expectedStEx2H :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2H =
   ChainState
@@ -1675,9 +1712,9 @@ expectedStEx2H =
         (overlayScheduleFor (EpochNo 3))
     )
     oCertIssueNosEx2H
-    ((mkSeqNonce p 5) ⭒ (hashHeaderToNonce (blockEx2DHash p)))
-    (mkSeqNonce p 8)
-    (mkSeqNonce p 7)
+    (epochNonceEx2G p)
+    (evolNonceEx2H p)
+    (evolNonceEx2G p)
     (hashHeaderToNonce (blockEx2FHash p))
     ( At $
         LastAppliedBlock
@@ -1692,6 +1729,17 @@ expectedStEx2H =
 ex2H :: HashAlgorithm h => proxy h -> CHAINExample h
 ex2H _ = CHAINExample expectedStEx2G blockEx2H (Right expectedStEx2H)
 
+epochNonceEx2I :: HashAlgorithm h => Proxy h -> Nonce
+epochNonceEx2I p =
+  makeEvolvedNonce
+    p
+    (nonce0 p)
+    [blockEx2A, blockEx2B, blockEx2C, blockEx2D, blockEx2E, blockEx2F, blockEx2G]
+    ⭒ hashHeaderToNonce (blockEx2FHash p)
+
+evolNonceEx2I :: HashAlgorithm h => Proxy h -> Nonce
+evolNonceEx2I p = makeEvolvedNonce p (evolNonceEx2G p) [blockEx2H, blockEx2I]
+
 -- | Example 2I - apply the first non-trivial reward update
 blockEx2I :: forall h. HashAlgorithm h => Block h
 blockEx2I =
@@ -1701,7 +1749,7 @@ blockEx2I =
     []
     (SlotNo 410)
     (BlockNo 9)
-    ((mkSeqNonce p 7) ⭒ (hashHeaderToNonce (blockEx2FHash p)))
+    (epochNonceEx2I p)
     (NatNonce 9)
     zero
     20
@@ -1776,9 +1824,9 @@ expectedStEx2I =
         (overlayScheduleFor (EpochNo 4))
     )
     oCertIssueNosEx2I
-    ((mkSeqNonce p 7) ⭒ (hashHeaderToNonce (blockEx2FHash p)))
-    (mkSeqNonce p 9)
-    (mkSeqNonce p 9)
+    (epochNonceEx2I p)
+    (evolNonceEx2I p)
+    (evolNonceEx2I p)
     (hashHeaderToNonce (blockEx2HHash p))
     ( At $
         LastAppliedBlock
@@ -1831,7 +1879,7 @@ blockEx2J =
     [txEx2J]
     (SlotNo 420)
     (BlockNo 10)
-    ((mkSeqNonce p 7) ⭒ (hashHeaderToNonce (blockEx2FHash p)))
+    (epochNonceEx2I p)
     (NatNonce 10)
     zero
     21
@@ -1886,6 +1934,9 @@ oCertIssueNosEx2J =
     2
     oCertIssueNosEx2I
 
+evolNonceEx2J :: HashAlgorithm h => Proxy h -> Nonce
+evolNonceEx2J p = makeEvolvedNonce p (evolNonceEx2I p) [blockEx2J]
+
 expectedStEx2J :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2J =
   ChainState
@@ -1899,9 +1950,9 @@ expectedStEx2J =
         (overlayScheduleFor (EpochNo 4))
     )
     oCertIssueNosEx2J
-    ((mkSeqNonce p 7) ⭒ (hashHeaderToNonce (blockEx2FHash p)))
-    (mkSeqNonce p 10)
-    (mkSeqNonce p 10)
+    (epochNonceEx2I p)
+    (evolNonceEx2J p)
+    (evolNonceEx2J p)
     (hashHeaderToNonce (blockEx2HHash p))
     ( At $
         LastAppliedBlock
@@ -1960,7 +2011,7 @@ blockEx2K =
     [txEx2K]
     (SlotNo 490)
     (BlockNo 11)
-    ((mkSeqNonce p 7) ⭒ (hashHeaderToNonce (blockEx2FHash p)))
+    (epochNonceEx2I p)
     (NatNonce 11)
     zero
     24
@@ -2022,6 +2073,9 @@ nonMyopicEx2K =
     p :: Proxy h
     p = Proxy
 
+evolNonceEx2K :: HashAlgorithm h => Proxy h -> Nonce
+evolNonceEx2K p = makeEvolvedNonce p (evolNonceEx2J p) [blockEx2K]
+
 expectedStEx2K :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2K =
   ChainState
@@ -2043,9 +2097,9 @@ expectedStEx2K =
         (overlayScheduleFor (EpochNo 4))
     )
     oCertIssueNosEx2J
-    ((mkSeqNonce p 7) ⭒ (hashHeaderToNonce (blockEx2FHash p)))
-    (mkSeqNonce p 11)
-    (mkSeqNonce p 10)
+    (epochNonceEx2I p)
+    (evolNonceEx2K p)
+    (evolNonceEx2J p)
     (hashHeaderToNonce (blockEx2HHash p))
     ( At $
         LastAppliedBlock
@@ -2061,6 +2115,9 @@ ex2K :: HashAlgorithm h => proxy h -> CHAINExample h
 ex2K _ = CHAINExample expectedStEx2J blockEx2K (Right expectedStEx2K)
 
 -- | Example 2L - reap a stake pool
+epochNonceEx2L :: HashAlgorithm h => Proxy h -> Nonce
+epochNonceEx2L p = (evolNonceEx2J p) ⭒ hashHeaderToNonce (blockEx2HHash p)
+
 blockEx2L :: forall h. HashAlgorithm h => Block h
 blockEx2L =
   mkBlock
@@ -2069,7 +2126,7 @@ blockEx2L =
     []
     (SlotNo 510)
     (BlockNo 12)
-    ((mkSeqNonce p 10) ⭒ (hashHeaderToNonce (blockEx2HHash p)))
+    (epochNonceEx2L p)
     (NatNonce 12)
     zero
     25
@@ -2143,6 +2200,9 @@ oCertIssueNosEx2L :: HashAlgorithm h => Map (KeyHash h 'BlockIssuer) Natural
 oCertIssueNosEx2L =
   Map.insert (coerceKeyRole . hashKey $ vKey $ cold $ slotKeys 510) 3 oCertIssueNosEx2J
 
+evolNonceEx2L :: HashAlgorithm h => Proxy h -> Nonce
+evolNonceEx2L p = makeEvolvedNonce p (evolNonceEx2K p) [blockEx2L]
+
 expectedStEx2L :: forall h. HashAlgorithm h => ChainState h
 expectedStEx2L =
   ChainState
@@ -2156,9 +2216,9 @@ expectedStEx2L =
         (overlayScheduleFor (EpochNo 5))
     )
     oCertIssueNosEx2L
-    ((mkSeqNonce p 10) ⭒ (hashHeaderToNonce (blockEx2HHash p)))
-    (mkSeqNonce p 12)
-    (mkSeqNonce p 12)
+    (epochNonceEx2L p)
+    (evolNonceEx2L p)
+    (evolNonceEx2L p)
     (hashHeaderToNonce (blockEx2KHash p))
     ( At $
         LastAppliedBlock
@@ -2191,7 +2251,7 @@ ppVote3A =
       _rho = SNothing,
       _tau = SNothing,
       _d = SNothing,
-      _extraEntropy = SJust (mkNonce 123),
+      _extraEntropy = SJust (mkNonceFromNumber 123),
       _protocolVersion = SNothing,
       _minUTxOValue = SNothing,
       _minPoolCost = SNothing
@@ -2294,8 +2354,8 @@ expectedStEx3A =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (nonce0 p ⭒ mkNonce 1)
-    (nonce0 p ⭒ mkNonce 1)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A])
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -2415,8 +2475,8 @@ expectedStEx3B =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (mkSeqNonce p 2)
-    (mkSeqNonce p 2)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B])
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -2440,7 +2500,7 @@ blockEx3C =
     []
     (SlotNo 110)
     (BlockNo 3)
-    (mkSeqNonce p 2 ⭒ mkNonce 123)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B] ⭒ mkNonceFromNumber 123)
     (NatNonce 3)
     zero
     5
@@ -2468,7 +2528,7 @@ expectedLSEx3C =
     (DPState dsEx1 psEx1)
 
 ppsEx3C :: PParams
-ppsEx3C = ppsEx1 {_poolDeposit = Coin 200, _extraEntropy = mkNonce 123}
+ppsEx3C = ppsEx1 {_poolDeposit = Coin 200, _extraEntropy = mkNonceFromNumber 123}
 
 expectedStEx3C :: forall h. HashAlgorithm h => ChainState h
 expectedStEx3C =
@@ -2483,9 +2543,9 @@ expectedStEx3C =
         (overlayScheduleFor (EpochNo 1))
     )
     oCertIssueNosEx1
-    (mkSeqNonce p 2 ⭒ mkNonce 123)
-    (mkSeqNonce p 3)
-    (mkSeqNonce p 3)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B] ⭒ mkNonceFromNumber 123)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C])
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C])
     (hashHeaderToNonce (blockEx3BHash p))
     ( At $
         LastAppliedBlock
@@ -2611,8 +2671,8 @@ expectedStEx4A =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (nonce0 p ⭒ mkNonce 1)
-    (nonce0 p ⭒ mkNonce 1)
+    (makeEvolvedNonce p (nonce0 p) [blockEx4A])
+    (makeEvolvedNonce p (nonce0 p) [blockEx4A])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -2686,8 +2746,8 @@ expectedStEx4B =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (mkSeqNonce p 2)
-    (mkSeqNonce p 2)
+    (makeEvolvedNonce p (nonce0 p) [blockEx4A, blockEx4B])
+    (makeEvolvedNonce p (nonce0 p) [blockEx4A, blockEx4B])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -2833,8 +2893,8 @@ expectedStEx5A pot =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (nonce0 p ⭒ mkNonce 1)
-    (nonce0 p ⭒ mkNonce 1)
+    (makeEvolvedNonce p (nonce0 p) [blockEx5A pot])
+    (makeEvolvedNonce p (nonce0 p) [blockEx5A pot])
     NeutralNonce
     ( At $
         LastAppliedBlock
@@ -3248,11 +3308,11 @@ rewardUpdateEx6A = SNothing
 rewardUpdateEx6A' :: StrictMaybe (RewardUpdate h)
 rewardUpdateEx6A' = SJust emptyRewardUpdate
 
-candidateNonceEx6A :: HashAlgorithm h => proxy h -> Nonce
-candidateNonceEx6A p = nonce0 p ⭒ mkNonce 1 ⭒ mkNonce 2
+candidateNonceEx6A :: HashAlgorithm h => Proxy h -> Nonce
+candidateNonceEx6A p = makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B]
 
-candidateNonceEx6A' :: HashAlgorithm h => proxy h -> Nonce
-candidateNonceEx6A' p = nonce0 p ⭒ mkNonce 1
+candidateNonceEx6A' :: HashAlgorithm h => Proxy h -> Nonce
+candidateNonceEx6A' p = makeEvolvedNonce p (nonce0 p) [blockEx2A]
 
 expectedStEx6A :: forall h. HashAlgorithm h => Word64 -> StrictMaybe (RewardUpdate h) -> Nonce -> ChainState h
 expectedStEx6A slot ru cn =
@@ -3268,7 +3328,7 @@ expectedStEx6A slot ru cn =
     )
     oCertIssueNosEx1
     (nonce0 p)
-    (nonce0 p ⭒ mkNonce 1 ⭒ mkNonce 2)
+    (makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B])
     cn
     NeutralNonce
     ( At $
@@ -3281,14 +3341,14 @@ expectedStEx6A slot ru cn =
     p :: Proxy h
     p = Proxy
 
-ex6A :: HashAlgorithm h => proxy h -> CHAINExample h
+ex6A :: HashAlgorithm h => Proxy h -> CHAINExample h
 ex6A p =
   CHAINExample
     expectedStEx2A
     (blockEx6A earlySlotEx6)
     (Right $ expectedStEx6A earlySlotEx6 rewardUpdateEx6A (candidateNonceEx6A p))
 
-ex6A' :: HashAlgorithm h => proxy h -> CHAINExample h
+ex6A' :: HashAlgorithm h => Proxy h -> CHAINExample h
 ex6A' p =
   CHAINExample
     expectedStEx2A

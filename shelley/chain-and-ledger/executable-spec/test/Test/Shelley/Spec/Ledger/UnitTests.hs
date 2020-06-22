@@ -7,6 +7,7 @@
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import Cardano.Crypto.Hash (ShortHash)
+import qualified Cardano.Crypto.VRF as VRF
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
 import Control.State.Transition.Trace ((.-), (.->), checkTrace)
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -21,6 +22,7 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
+import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
@@ -145,7 +147,11 @@ testNoGenesisOverlay =
 
 testVRFCheckWithActiveSlotCoeffOne :: Assertion
 testVRFCheckWithActiveSlotCoeffOne =
-  checkLeaderValue 0 (1 % 2) (mkActiveSlotCoeff $ unsafeMkUnitInterval 1) @?= True
+  checkLeaderValue
+    (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF (ConcreteCrypto ShortHash)))
+    (1 % 2)
+    (mkActiveSlotCoeff $ unsafeMkUnitInterval 1)
+    @?= True
 
 testsPParams :: TestTree
 testsPParams =

@@ -29,19 +29,20 @@ import Cardano.Prelude (NoUnexpectedThunks)
 import Data.Bits
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes (Seed)
 
 data FakeVRF
 
--- | A class for seeds which sneakily contain the certified natural we wish to
+-- | A class for seeds which sneakily contain the certified output we wish to
 -- "randomly" derive from them.
 class ToCBOR (Payload a) => SneakilyContainResult a where
   type Payload a
-  sneakilyExtractResult :: a -> Natural
+  sneakilyExtractResult :: a -> OutputVRF FakeVRF
   unsneakilyExtractPayload :: a -> Payload a
 
 data WithResult a = WithResult !a !Word64
@@ -49,14 +50,23 @@ data WithResult a = WithResult !a !Word64
 
 instance ToCBOR a => SneakilyContainResult (WithResult a) where
   type Payload (WithResult a) = a
-  sneakilyExtractResult (WithResult _ nat) = fromIntegral nat
+  sneakilyExtractResult (WithResult _ nat) =
+    -- Fill in the word64 as the low 8 bytes of a 16 byte string
+    OutputVRF (toBytes (BS.word64BE 0 <> BS.word64BE nat))
+    where
+      toBytes = LBS.toStrict . BS.toLazyByteString
+
   unsneakilyExtractPayload (WithResult p _) = p
 
 -- | An instance to allow this to be used in the way of `Mock` where no result
 -- has been provided. Though note that the key isn't used at all here.
 instance SneakilyContainResult Seed where
   type Payload Seed = Seed
-  sneakilyExtractResult = fromHash . hashWithSerialiser @MD5 id . toCBOR
+  sneakilyExtractResult =
+    OutputVRF
+      . getHash
+      . hashWithSerialiser @MD5 id
+      . toCBOR
   unsneakilyExtractPayload = id
 
 instance VRFAlgorithm FakeVRF where
@@ -76,7 +86,6 @@ instance VRFAlgorithm FakeVRF where
     deriving stock (Show, Eq, Ord, Generic)
     deriving anyclass (NoUnexpectedThunks)
 
-  maxVRF _ = 2 ^ (8 * sizeHash (Proxy :: Proxy MD5)) - 1
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
   evalVRF () a sk = return $ evalVRF' a sk
@@ -89,6 +98,7 @@ instance VRFAlgorithm FakeVRF where
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
   sizeCertVRF _ = 10
+  sizeOutputVRF _ = sizeHash (Proxy :: Proxy MD5)
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
@@ -121,7 +131,7 @@ evalVRF' ::
   SneakilyContainResult a =>
   a ->
   SignKeyVRF FakeVRF ->
-  (Natural, CertVRF FakeVRF)
+  (OutputVRF FakeVRF, CertVRF FakeVRF)
 evalVRF' a (SignKeyFakeVRF n) =
   let y = sneakilyExtractResult a
       p = unsneakilyExtractPayload a

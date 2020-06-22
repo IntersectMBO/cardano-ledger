@@ -55,7 +55,7 @@ import Shelley.Spec.Ledger.BaseTypes
     Nonce (..),
     StrictMaybe (..),
     UnitInterval (..),
-    mkNonce,
+    mkNonceFromNumber,
     textToDns,
     textToUrl,
   )
@@ -430,7 +430,7 @@ testBHB p =
         coerce $
           mkCertifiedVRF
             ( WithResult
-                (mkSeed seedEta (SlotNo 33) (mkNonce 0))
+                (mkSeed seedEta (SlotNo 33) (mkNonceFromNumber 0))
                 1
             )
             (fst testVRF),
@@ -438,7 +438,7 @@ testBHB p =
         coerce $
           mkCertifiedVRF
             ( WithResult
-                (mkSeed seedL (SlotNo 33) (mkNonce 0))
+                (mkSeed seedL (SlotNo 33) (mkNonceFromNumber 0))
                 1
             )
             (fst testVRF),
@@ -571,8 +571,8 @@ serializationUnitTests =
         (T (TkListLen 1 . TkWord 0)),
       checkEncodingCBOR
         "nonce"
-        (mkNonce 99)
-        (T (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonce 99))),
+        (mkNonceFromNumber 99)
+        (T (TkListLen 2 . TkWord 1 . TkBytes (getRawNonce $ mkNonceFromNumber 99))),
       checkEncodingCBOR
         "key_hash"
         (testKeyHash1 p)
@@ -1098,9 +1098,9 @@ serializationUnitTests =
       let prevhash = BlockHash (testHeaderHash p)
           vrfVkey = snd testVRF
           slot = SlotNo 33
-          nonce = mkSeed seedEta (SlotNo 33) (mkNonce 0)
+          nonce = mkSeed seedEta (SlotNo 33) (mkNonceFromNumber 0)
           nonceProof = coerce $ mkCertifiedVRF (WithResult nonce 1) (fst testVRF)
-          leaderValue = mkSeed seedL (SlotNo 33) (mkNonce 0)
+          leaderValue = mkSeed seedL (SlotNo 33) (mkNonceFromNumber 0)
           leaderProof = coerce $ mkCertifiedVRF (WithResult leaderValue 1) (fst testVRF)
           size = 0
           blockNo = BlockNo 44
