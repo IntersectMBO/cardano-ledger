@@ -78,32 +78,33 @@ ocertTransition ::
     KESignable crypto (BHBody crypto)
   ) =>
   TransitionRule (OCERT crypto)
-ocertTransition = judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
-  let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb
-      vkey = bheaderVk bhb
-      hk = hashKey vkey
-      s = bheaderSlotNo bhb
-  kp@(KESPeriod kp_) <- liftSTS $ kesPeriod s
+ocertTransition =
+  judgmentContext >>= \(TRC (env, cs, BHeader bhb sigma)) -> do
+    let OCert vk_hot n c0@(KESPeriod c0_) tau = bheaderOCert bhb
+        vkey = bheaderVk bhb
+        hk = hashKey vkey
+        s = bheaderSlotNo bhb
+    kp@(KESPeriod kp_) <- liftSTS $ kesPeriod s
 
-  maxKESiterations <- liftSTS $ asks maxKESEvo
+    maxKESiterations <- liftSTS $ asks maxKESEvo
 
-  c0 <= kp ?! KESBeforeStartOCERT c0 kp
-  kp_ < c0_ + (fromIntegral maxKESiterations)
-    ?! KESAfterEndOCERT kp c0 maxKESiterations
+    c0 <= kp ?! KESBeforeStartOCERT c0 kp
+    kp_ < c0_ + (fromIntegral maxKESiterations)
+      ?! KESAfterEndOCERT kp c0 maxKESiterations
 
-  let t = if kp_ >= c0_ then kp_ - c0_ else 0 -- this is required to prevent an
-  -- arithmetic underflow, in the
-  -- case of kp_ < c0_ we get the
-  -- above `KESBeforeStartOCERT`
-  -- predicate failure in the
-  -- transition.
-  verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT n c0
-  verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
+    let t = if kp_ >= c0_ then kp_ - c0_ else 0 -- this is required to prevent an
+    -- arithmetic underflow, in the
+    -- case of kp_ < c0_ we get the
+    -- above `KESBeforeStartOCERT`
+    -- predicate failure in the
+    -- transition.
+    verifySignedDSIGN vkey (vk_hot, n, c0) tau ?! InvalidSignatureOCERT n c0
+    verifySignedKES () vk_hot t bhb sigma ?!: InvalidKesSignatureOCERT kp_ c0_ t
 
-  case currentIssueNo env cs hk of
-    Nothing -> do
-      failBecause $ NoCounterForKeyHashOCERT hk
-      pure cs
-    Just m -> do
-      m <= n ?! KESPeriodWrongOCERT m n
-      pure $ addpair hk n cs
+    case currentIssueNo env cs hk of
+      Nothing -> do
+        failBecause $ NoCounterForKeyHashOCERT hk
+        pure cs
+      Just m -> do
+        m <= n ?! KESPeriodWrongOCERT m n
+        pure $ addpair hk n cs

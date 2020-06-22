@@ -36,9 +36,9 @@ import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     LedgerState (..),
+    emptyLedgerState,
     _delegationState,
     _utxoState,
-    emptyLedgerState,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
@@ -100,8 +100,8 @@ ledgersTransition = do
             TRC (LedgerEnv slot ix pp account, (u', dp'), tx)
       )
       (u, dp)
-      $ zip [0 ..]
-      $ toList txwits
+      $ zip [0 ..] $
+        toList txwits
 
   pure $ LedgerState u'' dp''
 

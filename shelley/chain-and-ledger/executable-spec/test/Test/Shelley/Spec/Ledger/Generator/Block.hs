@@ -20,7 +20,7 @@ import qualified Data.List as List (find)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, listToMaybe)
-import Data.Ratio ((%), denominator, numerator)
+import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes
   ( activeSlotCoeff,
@@ -33,10 +33,7 @@ import Shelley.Spec.Ledger.Core (dom, range)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, genDelegKeyHash, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
-  ( _delegationState,
-    _dstate,
-    _genDelegs,
-    esLState,
+  ( esLState,
     esPp,
     getGKeys,
     nesEL,
@@ -44,6 +41,9 @@ import Shelley.Spec.Ledger.LedgerState
     nesOsched,
     nesPd,
     overlaySchedule,
+    _delegationState,
+    _dstate,
+    _genDelegs,
     pattern ActiveSlot,
     pattern EpochState,
     pattern NewEpochState,

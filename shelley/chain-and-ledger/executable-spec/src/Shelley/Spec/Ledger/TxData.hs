@@ -91,7 +91,7 @@ import Cardano.Prelude
     panic,
   )
 import Control.Monad (unless)
-import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (explicitParseField)
 import Data.ByteString (ByteString)
@@ -408,10 +408,11 @@ instance ToCBOR MIRPot where
   toCBOR TreasuryMIR = toCBOR (1 :: Word8)
 
 instance FromCBOR MIRPot where
-  fromCBOR = decodeWord >>= \case
-    0 -> pure ReservesMIR
-    1 -> pure TreasuryMIR
-    k -> invalidKey k
+  fromCBOR =
+    decodeWord >>= \case
+      0 -> pure ReservesMIR
+      1 -> pure TreasuryMIR
+      k -> invalidKey k
 
 -- | Move instantaneous rewards certificate
 data MIRCert crypto = MIRCert
@@ -697,9 +698,10 @@ instance
   FromCBOR (Annotator (WitVKey crypto kr))
   where
   fromCBOR =
-    annotatorSlice $ decodeRecordNamed "WitVKey" (const 2)
-      $ fmap pure
-      $ WitVKey' <$> fromCBOR <*> decodeSignedDSIGN
+    annotatorSlice $
+      decodeRecordNamed "WitVKey" (const 2) $
+        fmap pure $
+          WitVKey' <$> fromCBOR <*> decodeSignedDSIGN
 
 instance
   (Crypto crypto) =>
@@ -712,29 +714,30 @@ instance
   FromCBOR (Annotator (TxBody crypto))
   where
   fromCBOR = annotatorSlice $ do
-    mapParts <- decodeMapContents $
-      decodeWord >>= \case
-        0 -> f 0 (decodeSet fromCBOR) $ \bytes x t ->
-          t
-            { _inputs' = x,
-              extraSize = extraSize t + BSL.length bytes
-            }
-        1 -> f 1 (decodeStrictSeq fromCBOR) $ \bytes x t ->
-          t
-            { _outputs' = x,
-              extraSize = extraSize t + BSL.length bytes
-            }
-        2 -> f 2 fromCBOR $ \bytes x t ->
-          t
-            { _txfee' = x,
-              extraSize = extraSize t + BSL.length bytes
-            }
-        3 -> f 3 fromCBOR $ \_ x t -> t {_ttl' = x}
-        4 -> f 4 (decodeStrictSeq fromCBOR) $ \_ x t -> t {_certs' = x}
-        5 -> f 5 fromCBOR $ \_ x t -> t {_wdrls' = x}
-        6 -> f 6 fromCBOR $ \_ x t -> t {_txUpdate' = SJust x}
-        7 -> f 7 fromCBOR $ \_ x t -> t {_mdHash' = SJust x}
-        k -> invalidKey k
+    mapParts <-
+      decodeMapContents $
+        decodeWord >>= \case
+          0 -> f 0 (decodeSet fromCBOR) $ \bytes x t ->
+            t
+              { _inputs' = x,
+                extraSize = extraSize t + BSL.length bytes
+              }
+          1 -> f 1 (decodeStrictSeq fromCBOR) $ \bytes x t ->
+            t
+              { _outputs' = x,
+                extraSize = extraSize t + BSL.length bytes
+              }
+          2 -> f 2 fromCBOR $ \bytes x t ->
+            t
+              { _txfee' = x,
+                extraSize = extraSize t + BSL.length bytes
+              }
+          3 -> f 3 fromCBOR $ \_ x t -> t {_ttl' = x}
+          4 -> f 4 (decodeStrictSeq fromCBOR) $ \_ x t -> t {_certs' = x}
+          5 -> f 5 fromCBOR $ \_ x t -> t {_wdrls' = x}
+          6 -> f 6 fromCBOR $ \_ x t -> t {_txUpdate' = SJust x}
+          7 -> f 7 fromCBOR $ \_ x t -> t {_mdHash' = SJust x}
+          k -> invalidKey k
     let requiredFields :: Map Int String
         requiredFields =
           Map.fromList $
@@ -748,8 +751,9 @@ instance
     unless
       (null missingFields)
       (fail $ "missing required transaction component(s): " <> show missingFields)
-    pure $ Annotator $ \fullbytes bytes ->
-      (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
+    pure $
+      Annotator $ \fullbytes bytes ->
+        (foldr ($) basebody (flip runAnnotator fullbytes . snd <$> mapParts)) {bodyBytes = bytes}
     where
       f ::
         Int ->

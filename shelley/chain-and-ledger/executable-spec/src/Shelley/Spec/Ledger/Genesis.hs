@@ -21,7 +21,7 @@ import Cardano.Crypto (ProtocolMagicId)
 import qualified Cardano.Crypto.Hash.Class as Crypto (Hash (..), hash)
 import Cardano.Prelude (NoUnexpectedThunks)
 import Cardano.Slotting.Slot (EpochSize)
-import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

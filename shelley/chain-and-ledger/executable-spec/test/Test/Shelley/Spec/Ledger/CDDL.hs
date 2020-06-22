@@ -193,10 +193,11 @@ generateCBORDiagStdIn rounds cddl =
       Left stdErr -> throwStdErr "Got failing exit code when generating examples" stdErr
 
 diagToBytes :: BSL.ByteString -> IO BSL.ByteString
-diagToBytes diag = readProcessWithExitCode2 "diag2cbor.rb" ["-"] diag
-  >>= \case
-    Right result -> pure result
-    Left stdErr -> throwStdErr "Got failing exit code when converting cbor diagnostic notation to bytes" stdErr
+diagToBytes diag =
+  readProcessWithExitCode2 "diag2cbor.rb" ["-"] diag
+    >>= \case
+      Right result -> pure result
+      Left stdErr -> throwStdErr "Got failing exit code when converting cbor diagnostic notation to bytes" stdErr
 
 readProcessWithExitCode2 :: FilePath -> [String] -> BSL.ByteString -> IO (Either BSL.ByteString BSL.ByteString)
 readProcessWithExitCode2 exec args stdIn = do
@@ -220,7 +221,8 @@ usingFile bytes k = withTempFile "." "tmp" $ \fileName h -> do
   k fileName
 
 verifyConforming :: BSL.ByteString -> FilePath -> IO Bool
-verifyConforming value cddl = readProcessWithExitCode2 "cddl" [cddl, "validate", "-"] value
-  >>= \case
-    Right _ -> pure True
-    Left _ -> pure False
+verifyConforming value cddl =
+  readProcessWithExitCode2 "cddl" [cddl, "validate", "-"] value
+    >>= \case
+      Right _ -> pure True
+      Left _ -> pure False

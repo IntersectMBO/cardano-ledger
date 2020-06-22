@@ -22,7 +22,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord, encodeListLen)
 import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, asum)
-import Data.Aeson ((.:), (.=), FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey)
+import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
@@ -111,11 +111,12 @@ instance
   (Typeable kr, Crypto crypto) =>
   FromCBOR (Credential kr crypto)
   where
-  fromCBOR = decodeRecordNamed "Credential" (const 2) $
-    decodeWord >>= \case
-      0 -> KeyHashObj <$> fromCBOR
-      1 -> ScriptHashObj <$> fromCBOR
-      k -> invalidKey k
+  fromCBOR =
+    decodeRecordNamed "Credential" (const 2) $
+      decodeWord >>= \case
+        0 -> KeyHashObj <$> fromCBOR
+        1 -> ScriptHashObj <$> fromCBOR
+        k -> invalidKey k
 
 instance ToCBORGroup Ptr where
   toCBORGroup (Ptr sl txIx certIx) =

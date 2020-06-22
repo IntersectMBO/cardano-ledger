@@ -26,19 +26,19 @@ import Control.State.Transition.Trace
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map (isSubmapOf)
 import qualified Data.Set as Set (fromList, intersection, isSubsetOf, map, null)
-import Shelley.Spec.Ledger.Core ((<|), dom)
+import Shelley.Spec.Ledger.Core (dom, (<|))
 import Shelley.Spec.Ledger.LedgerState (keyRefunds, pattern UTxOState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.Tx
-  ( _body,
-    _witnessSet,
-    addrWits,
+  ( addrWits,
     getKeyCombinations,
     msigWits,
+    _body,
+    _witnessSet,
   )
-import Shelley.Spec.Ledger.TxData (_certs, _inputs, _txfee, witKeyHash, pattern TxIn)
+import Shelley.Spec.Ledger.TxData (witKeyHash, _certs, _inputs, _txfee, pattern TxIn)
 import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
-import Test.QuickCheck ((===), Property, conjoin)
+import Test.QuickCheck (Property, conjoin, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( StakePools,
     Tx,

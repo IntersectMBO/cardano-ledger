@@ -19,13 +19,13 @@ where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
-  ( (?!),
-    Embed (..),
+  ( Embed (..),
     STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
     trans,
+    (?!),
   )
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)

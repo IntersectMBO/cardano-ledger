@@ -24,6 +24,8 @@ stdenv.mkDerivation {
                       # build tools
                       latexmk
 
+                      # Referencing
+                      zref
                       ;
                   })
                 ];

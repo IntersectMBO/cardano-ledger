@@ -23,7 +23,7 @@ let
       name = "cardano-ledger-specs" ;
       src = ../. ;
       };
-    ghc = buildPackages.haskell-nix.compiler.${compiler};
+    compiler-nix-name = compiler;
     modules = [
       {
         packages.byron-spec-chain.configureFlags = [ "--ghc-option=-Werror" ];

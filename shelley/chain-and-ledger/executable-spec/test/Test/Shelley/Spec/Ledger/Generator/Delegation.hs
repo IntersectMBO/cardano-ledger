@@ -70,8 +70,8 @@ import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Shelley.Spec.Ledger.TxData
   ( MIRPot (..),
     RewardAcnt (..),
-    _poolPubKey,
     unStakePools,
+    _poolPubKey,
     pattern DCertDeleg,
     pattern DCertGenesis,
     pattern DCertPool,

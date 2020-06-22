@@ -13,15 +13,15 @@ import Data.MultiSet (filter, fromSet, occur, size, unions)
 import Data.Proxy
 import qualified Data.Set as Set
 import Hedgehog
-  ( (/==),
-    (===),
-    Property,
+  ( Property,
     classify,
     failure,
     label,
     property,
     success,
     withTests,
+    (/==),
+    (===),
   )
 import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
@@ -32,12 +32,12 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
-  ( _body,
+  ( addrWits,
+    _body,
     _certs,
     _inputs,
     _outputs,
     _witnessSet,
-    addrWits,
     pattern TxIn,
     pattern TxOut,
   )
@@ -160,37 +160,39 @@ propUniqueTxIds = property $ do
 -- | Property checks no double spend occurs in the currently generated 'TxWits'
 -- transactions. Note: this is more a property of the current generator.
 propNoDoubleSpend :: Property
-propNoDoubleSpend = withTests 1000 $ property $ do
-  (_, _, _, _, txs, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @ShortHash))
-  case next of
-    Left _ -> failure
-    Right _ -> do
-      let inputIndicesSet = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
-      0
-        === Data.MultiSet.size
-          ( Data.MultiSet.filter
-              (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
-              inputIndicesSet
-          )
+propNoDoubleSpend = withTests 1000 $
+  property $ do
+    (_, _, _, _, txs, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @ShortHash))
+    case next of
+      Left _ -> failure
+      Right _ -> do
+        let inputIndicesSet = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
+        0
+          === Data.MultiSet.size
+            ( Data.MultiSet.filter
+                (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
+                inputIndicesSet
+            )
 
 -- | Classify mutated transaction into double-spends (validated and
 -- non-validated). This is a property of the validator, i.e., no validated
 -- transaction should ever be able to do a double spend.
 classifyInvalidDoubleSpend :: Property
-classifyInvalidDoubleSpend = withTests 1000 $ property $ do
-  (_, _, _, _, txs, LedgerValidation validationErrors _) <-
-    Hedgehog.forAll (genNonEmptyAndAdvanceTx' (Proxy @ShortHash))
-  let inputIndicesSet = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
-  let multiSpentInputs =
-        Data.MultiSet.size $
-          Data.MultiSet.filter
-            (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
-            inputIndicesSet
-  let isMultiSpend = 0 < multiSpentInputs
-  classify "multi-spend, validation OK" (null validationErrors)
-  classify "multi-spend, validation KO" (isMultiSpend && validationErrors /= [])
-  classify "multi-spend" isMultiSpend
-  True === (not isMultiSpend || validationErrors /= [])
+classifyInvalidDoubleSpend = withTests 1000 $
+  property $ do
+    (_, _, _, _, txs, LedgerValidation validationErrors _) <-
+      Hedgehog.forAll (genNonEmptyAndAdvanceTx' (Proxy @ShortHash))
+    let inputIndicesSet = unions $ map (\txwit -> fromSet $ (_inputs . _body) txwit) txs
+    let multiSpentInputs =
+          Data.MultiSet.size $
+            Data.MultiSet.filter
+              (\idx -> 1 < Data.MultiSet.occur idx inputIndicesSet)
+              inputIndicesSet
+    let isMultiSpend = 0 < multiSpentInputs
+    classify "multi-spend, validation OK" (null validationErrors)
+    classify "multi-spend, validation KO" (isMultiSpend && validationErrors /= [])
+    classify "multi-spend" isMultiSpend
+    True === (not isMultiSpend || validationErrors /= [])
 
 propNonNegativeTxOuts :: Property
 propNonNegativeTxOuts =
@@ -201,43 +203,44 @@ propNonNegativeTxOuts =
 -- | Mutations for Property 7.2
 propBalanceTxInTxOut' :: Property
 propBalanceTxInTxOut' =
-  withTests 1000 $ property $ do
-    (l, _, fee, txwits, lv) <- Hedgehog.forAll (genStateTx (Proxy @ShortHash))
-    let tx = _body txwits
-    let inps = txins tx
-    let getErrors (LedgerValidation valErrors _) = valErrors
-    let balanceSource = balance $ inps <| ((_utxo . _utxoState) l)
-    let balanceTarget = balance $ txouts tx
-    let valErrors = getErrors lv
-    let nonTrivial = balanceSource /= Coin 0
-    let balanceOk = balanceSource == balanceTarget + fee
-    classify "non-valid, OK" (valErrors /= [] && balanceOk && nonTrivial)
-    if valErrors /= [] && balanceOk && nonTrivial
-      then
-        label $
-          LabelName
-            ( "inputs: " ++ show (show $ Set.size $ _inputs tx)
-                ++ " outputs: "
-                ++ show (show $ length $ _outputs tx)
-                ++ " balance l "
-                ++ show balanceSource
-                ++ " balance l' "
-                ++ show balanceTarget
-                ++ " txfee "
-                ++ show fee
-                ++ "\n  validationErrors: "
-                ++ show valErrors
-            )
-      else
-        ( if valErrors /= [] && balanceOk
-            then label "non-validated, OK, trivial"
-            else
-              ( if valErrors /= []
-                  then label "non-validated, KO"
-                  else label "validated"
+  withTests 1000 $
+    property $ do
+      (l, _, fee, txwits, lv) <- Hedgehog.forAll (genStateTx (Proxy @ShortHash))
+      let tx = _body txwits
+      let inps = txins tx
+      let getErrors (LedgerValidation valErrors _) = valErrors
+      let balanceSource = balance $ inps <| ((_utxo . _utxoState) l)
+      let balanceTarget = balance $ txouts tx
+      let valErrors = getErrors lv
+      let nonTrivial = balanceSource /= Coin 0
+      let balanceOk = balanceSource == balanceTarget + fee
+      classify "non-valid, OK" (valErrors /= [] && balanceOk && nonTrivial)
+      if valErrors /= [] && balanceOk && nonTrivial
+        then
+          label $
+            LabelName
+              ( "inputs: " ++ show (show $ Set.size $ _inputs tx)
+                  ++ " outputs: "
+                  ++ show (show $ length $ _outputs tx)
+                  ++ " balance l "
+                  ++ show balanceSource
+                  ++ " balance l' "
+                  ++ show balanceTarget
+                  ++ " txfee "
+                  ++ show fee
+                  ++ "\n  validationErrors: "
+                  ++ show valErrors
               )
-        )
-    success
+        else
+          ( if valErrors /= [] && balanceOk
+              then label "non-validated, OK, trivial"
+              else
+                ( if valErrors /= []
+                    then label "non-validated, KO"
+                    else label "validated"
+                )
+          )
+      success
 
 -- | Check that we correctly test redundant witnesses. We get the list of the
 -- keys from the generator and use one to generate a new witness. If that key

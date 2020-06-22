@@ -86,7 +86,7 @@ import Data.IP
   )
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Ratio ((%), Ratio, denominator, numerator)
+import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -226,14 +226,15 @@ decodeList :: Decoder s a -> Decoder s [a]
 decodeList = decodeCollection decodeListLenOrIndef
 
 decodeMaybe :: Decoder s a -> Decoder s (Maybe a)
-decodeMaybe d = decodeList d >>= \case
-  [] -> pure Nothing
-  [x] -> pure $ Just x
-  _ ->
-    cborError $
-      DecoderErrorCustom
-        "Maybe"
-        "Expected an array of length 0 or 1"
+decodeMaybe d =
+  decodeList d >>= \case
+    [] -> pure Nothing
+    [x] -> pure $ Just x
+    _ ->
+      cborError $
+        DecoderErrorCustom
+          "Maybe"
+          "Expected an array of length 0 or 1"
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
@@ -250,9 +251,10 @@ decodeCollectionWithLen lenOrIndef el = do
     Just len -> (,) len <$> replicateM len el
     Nothing -> loop (0, []) (not <$> decodeBreakOr) el
   where
-    loop (n, acc) condition action = condition >>= \case
-      False -> pure (n, reverse acc)
-      True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
+    loop (n, acc) condition action =
+      condition >>= \case
+        False -> pure (n, reverse acc)
+        True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
 
 ratioToCBOR :: ToCBOR a => Ratio a -> Encoding
 ratioToCBOR r =

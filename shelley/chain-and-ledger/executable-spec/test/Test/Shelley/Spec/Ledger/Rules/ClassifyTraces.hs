@@ -142,104 +142,105 @@ relevantCasesAreCovered = do
         tl' = traceLength tr
         certs_ = allCerts txs
 
-    property $ conjoin $
-      [ checkCoverage $
-          cover
-            60
-            (tl' < 1 * length certs_)
-            "there is at least 1 certificate for every 3 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (tl' < 10 * length (filter isRegKey certs_))
-            "there is at least 1 RegKey certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (tl' < 10 * length (filter isDeRegKey certs_))
-            "there is at least 1 DeRegKey certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (traceLength tr < 10 * length (filter isDelegation certs_))
-            "there is at least 1 Delegation certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (traceLength tr < 20 * length (filter isGenesisDelegation certs_))
-            "there is at least 1 Genesis Delegation certificate for every 20 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (traceLength tr < 10 * length (filter isRetirePool certs_))
-            "there is at least 1 RetirePool certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            40
-            (traceLength tr < 60 * length (filter isReservesMIRCert certs_))
-            "there is at least 1 Reserves MIR certificate (spending Reserves) for every 60 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            40
-            (traceLength tr < 60 * length (filter isTreasuryMIRCert certs_))
-            "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (0.6 > noCertsRatio (certsByTx txs))
-            "at most 60% of transactions have no certificates"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (0.1 < maxCertsRatio c (certsByTx txs))
-            ("at least 10% of transactions have " <> (show maxCertsPerTx) <> " certificates")
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (traceLength tr < 10 * length (filter isRegPool certs_))
-            "there is at least 1 RegPool certificate for every 10 transactions"
-            (property ()),
-        checkCoverage $
-          cover
-            20
-            (0.1 < txScriptOutputsRatio (map (_outputs . _body) txs))
-            "at least 10% of transactions have script TxOuts"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (0.1 < scriptCredentialCertsRatio certs_)
-            "at least 10% of `DCertDeleg` certificates have script credentials"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (0.1 < withdrawalRatio txs)
-            "at least 10% of transactions have a reward withdrawal"
-            (property ()),
-        checkCoverage $
-          cover
-            60
-            (0.98 > noPPUpdateRatio (ppUpdatesByTx txs))
-            "at least 2% of transactions have non-trivial protocol param updates"
-            (property ()),
-        checkCoverage $
-          cover
-            40
-            (2 <= epochBoundariesInTrace bs)
-            "at least 2 epoch changes in trace"
-            (property ())
-      ]
+    property $
+      conjoin $
+        [ checkCoverage $
+            cover
+              60
+              (tl' < 1 * length certs_)
+              "there is at least 1 certificate for every 3 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (tl' < 10 * length (filter isRegKey certs_))
+              "there is at least 1 RegKey certificate for every 10 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (tl' < 10 * length (filter isDeRegKey certs_))
+              "there is at least 1 DeRegKey certificate for every 10 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (traceLength tr < 10 * length (filter isDelegation certs_))
+              "there is at least 1 Delegation certificate for every 10 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (traceLength tr < 20 * length (filter isGenesisDelegation certs_))
+              "there is at least 1 Genesis Delegation certificate for every 20 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (traceLength tr < 10 * length (filter isRetirePool certs_))
+              "there is at least 1 RetirePool certificate for every 10 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              40
+              (traceLength tr < 60 * length (filter isReservesMIRCert certs_))
+              "there is at least 1 Reserves MIR certificate (spending Reserves) for every 60 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              40
+              (traceLength tr < 60 * length (filter isTreasuryMIRCert certs_))
+              "there is at least 1 MIR certificate (spending Treasury) for every 60 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (0.6 > noCertsRatio (certsByTx txs))
+              "at most 60% of transactions have no certificates"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (0.1 < maxCertsRatio c (certsByTx txs))
+              ("at least 10% of transactions have " <> (show maxCertsPerTx) <> " certificates")
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (traceLength tr < 10 * length (filter isRegPool certs_))
+              "there is at least 1 RegPool certificate for every 10 transactions"
+              (property ()),
+          checkCoverage $
+            cover
+              20
+              (0.1 < txScriptOutputsRatio (map (_outputs . _body) txs))
+              "at least 10% of transactions have script TxOuts"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (0.1 < scriptCredentialCertsRatio certs_)
+              "at least 10% of `DCertDeleg` certificates have script credentials"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (0.1 < withdrawalRatio txs)
+              "at least 10% of transactions have a reward withdrawal"
+              (property ()),
+          checkCoverage $
+            cover
+              60
+              (0.98 > noPPUpdateRatio (ppUpdatesByTx txs))
+              "at least 2% of transactions have non-trivial protocol param updates"
+              (property ()),
+          checkCoverage $
+            cover
+              40
+              (2 <= epochBoundariesInTrace bs)
+              "at least 2 epoch changes in trace"
+              (property ())
+        ]
   where
     p :: Proxy ShortHash
     p = Proxy

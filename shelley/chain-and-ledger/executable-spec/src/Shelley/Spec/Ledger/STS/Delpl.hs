@@ -33,9 +33,9 @@ import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState,
+    emptyDelegation,
     _dstate,
     _pstate,
-    emptyDelegation,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..))

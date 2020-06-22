@@ -41,10 +41,10 @@ import Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
+    hashScript,
     _body,
     _metadata,
     _witnessSet,
-    hashScript,
     pattern Tx,
   )
 import Shelley.Spec.Ledger.TxData
@@ -97,7 +97,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ((@?=), Assertion, testCase)
+import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 sizeTest :: HashAlgorithm h => proxy h -> BSL.ByteString -> Tx h -> Integer -> Assertion
 sizeTest _ b16 tx s = do

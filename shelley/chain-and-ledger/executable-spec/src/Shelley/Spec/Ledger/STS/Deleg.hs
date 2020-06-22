@@ -24,13 +24,13 @@ import Cardano.Binary
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
-  ( (?!),
-    STS (..),
+  ( STS (..),
     TRC (..),
     TransitionRule,
     failBecause,
     judgmentContext,
     liftSTS,
+    (?!),
   )
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -59,6 +59,7 @@ import Shelley.Spec.Ledger.LedgerState
     DState,
     FutureGenDeleg (..),
     InstantaneousRewards (..),
+    emptyDState,
     _delegations,
     _fGenDelegs,
     _genDelegs,
@@ -66,16 +67,15 @@ import Shelley.Spec.Ledger.LedgerState
     _ptrs,
     _rewards,
     _stkCreds,
-    emptyDState,
   )
 import Shelley.Spec.Ledger.Slot
-  ( (*-),
-    (+*),
-    Duration (..),
+  ( Duration (..),
     EpochNo (..),
     SlotNo,
     epochInfoEpoch,
     epochInfoFirst,
+    (*-),
+    (+*),
   )
 import Shelley.Spec.Ledger.TxData
   ( DCert (..),

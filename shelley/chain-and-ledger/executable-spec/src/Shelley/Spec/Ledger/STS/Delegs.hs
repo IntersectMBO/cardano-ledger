@@ -25,7 +25,7 @@ import Cardano.Binary
     matchSize,
   )
 import Cardano.Prelude (NoUnexpectedThunks (..))
-import Control.State.Transition ((?!), (?!:), Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans)
+import Control.State.Transition (Embed (..), STS (..), TRC (..), TransitionRule, judgmentContext, trans, (?!), (?!:))
 import Data.Map as Map
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
@@ -39,10 +39,10 @@ import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState (..),
+    emptyDelegation,
     _dstate,
     _rewards,
     _stPools,
-    emptyDelegation,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..))

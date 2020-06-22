@@ -28,8 +28,8 @@ let
     buildInputs = with haskellPackages; [
       cabal-install
       niv
+      pkg-config
       hlint
-      stylish-haskell
       weeder
       ormolu.ormolu
     ];

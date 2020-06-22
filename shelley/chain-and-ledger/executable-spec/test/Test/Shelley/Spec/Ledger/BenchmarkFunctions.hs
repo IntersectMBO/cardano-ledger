@@ -337,8 +337,9 @@ txbWithdrawals x y =
     (Set.fromList [TxIn genesisId 1])
     (StrictSeq.fromList [TxOut aliceAddr (Coin 100)])
     StrictSeq.empty
-    ( Wdrl $ Map.fromList $
-        fmap (\ks -> (RewardAcnt Testnet (stakeKeyToCred ks), Coin 0)) (stakeKeys x y)
+    ( Wdrl $
+        Map.fromList $
+          fmap (\ks -> (RewardAcnt Testnet (stakeKeyToCred ks), Coin 0)) (stakeKeys x y)
     )
     (Coin 0)
     (SlotNo 10)

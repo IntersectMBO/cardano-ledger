@@ -35,9 +35,9 @@ import Shelley.Spec.Ledger.Credential
     pattern StakeRefBase,
   )
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness)
-import Shelley.Spec.Ledger.LedgerState (_utxoState, genesisCoins, genesisId, genesisState)
+import Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
 import Shelley.Spec.Ledger.MetaData (MetaData)
-import Shelley.Spec.Ledger.PParams (PParams, _maxTxSize, emptyPParams)
+import Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Scripts
   ( pattern RequireAllOf,
@@ -46,7 +46,7 @@ import Shelley.Spec.Ledger.Scripts
     pattern RequireSignature,
   )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
-import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), _body, hashScript, pattern Tx)
+import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), hashScript, _body, pattern Tx)
 import Shelley.Spec.Ledger.TxData
   ( unWdrl,
     pattern StakePools,

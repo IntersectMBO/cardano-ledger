@@ -9,6 +9,9 @@ stdenv.mkDerivation {
                     inherit (texlive)
                       scheme-small
 
+                      # fonts
+                      cm-super
+
                       # libraries
                       stmaryrd lm-math amsmath
                       extarrows cleveref
@@ -26,6 +29,8 @@ stdenv.mkDerivation {
                       # build tools
                       latexmk
 
+                      # Referencing
+                      zref
                       ;
                   })
                   gitMinimal

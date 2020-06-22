@@ -24,9 +24,6 @@ import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,
     PState (..),
-    _delegationState,
-    _ppups,
-    _utxoState,
     emptyAccount,
     emptyLedgerState,
     esAccountState,
@@ -35,6 +32,9 @@ import Shelley.Spec.Ledger.LedgerState
     esPp,
     esPrevPp,
     esSnapshots,
+    _delegationState,
+    _ppups,
+    _utxoState,
     pattern DPState,
     pattern EpochState,
   )

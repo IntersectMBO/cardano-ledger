@@ -69,7 +69,7 @@ import Shelley.Spec.Ledger.STS.Pool ()
 import Shelley.Spec.Ledger.Tx (_body)
 import Shelley.Spec.Ledger.TxData (Ptr (..), _certs, _wdrls)
 import Shelley.Spec.Ledger.UTxO (balance)
-import Test.QuickCheck ((===), Property, Testable, conjoin, property, withMaxSuccess)
+import Test.QuickCheck (Property, Testable, conjoin, property, withMaxSuccess, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( DELEG,
     DELEGS,

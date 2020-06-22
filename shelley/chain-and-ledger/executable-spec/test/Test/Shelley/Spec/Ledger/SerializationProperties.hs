@@ -133,7 +133,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Generator (genStateTx, genValidStateTx)
-import Test.Tasty.QuickCheck ((===), Gen, Property, choose, counterexample, elements)
+import Test.Tasty.QuickCheck (Gen, Property, choose, counterexample, elements, (===))
 
 roundtrip ::
   (Eq a, Show a) =>

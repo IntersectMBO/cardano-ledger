@@ -195,9 +195,9 @@ instance
   ToCBORGroup (TxSeq crypto)
   where
   toCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes) =
-    encodePreEncoded
-      $ BSL.toStrict
-      $ bodyBytes <> witsBytes <> metadataBytes
+    encodePreEncoded $
+      BSL.toStrict $
+        bodyBytes <> witsBytes <> metadataBytes
   encodedGroupSizeExpr size _proxy =
     encodedSizeExpr size (Proxy :: Proxy ByteString)
       + encodedSizeExpr size (Proxy :: Proxy ByteString)
