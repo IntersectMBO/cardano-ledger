@@ -9,6 +9,9 @@ stdenv.mkDerivation {
                     inherit (texlive)
                       scheme-small
 
+                      # Fonts
+                      cm-super
+
                       # libraries
                       unicode-math lm-math amsmath
                       enumitem bclogo xcolor newunicodechar
