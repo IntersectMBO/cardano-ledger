@@ -14,7 +14,10 @@ import Control.State.Transition.Trace
 import Data.List (foldl')
 import Shelley.Spec.Ledger.Coin (pattern Coin)
 import Shelley.Spec.Ledger.LedgerState
-  ( _delegationState,
+  ( esAccountState,
+    esLState,
+    nesEs,
+    _delegationState,
     _deposited,
     _dstate,
     _fees,
@@ -23,9 +26,6 @@ import Shelley.Spec.Ledger.LedgerState
     _treasury,
     _utxo,
     _utxoState,
-    esAccountState,
-    esLState,
-    nesEs,
     pattern AccountState,
     pattern DPState,
     pattern DState,

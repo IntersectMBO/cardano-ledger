@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.BlockChain
     pattern HashHeader,
   )
 import Shelley.Spec.Ledger.Keys (Hash, KeyRole (BlockIssuer), coerceKeyRole, hash)
-import Shelley.Spec.Ledger.LedgerState (_treasury, esAccountState, nesEs, overlaySchedule)
+import Shelley.Spec.Ledger.LedgerState (esAccountState, nesEs, overlaySchedule, _treasury)
 import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))

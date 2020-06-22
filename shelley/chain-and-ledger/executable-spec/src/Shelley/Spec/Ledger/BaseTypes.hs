@@ -74,7 +74,7 @@ import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
-import Data.Ratio ((%), Ratio, denominator, numerator)
+import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (Scientific)
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -436,6 +436,7 @@ instance ToCBOR Network where
   toCBOR = toCBOR . networkToWord8
 
 instance FromCBOR Network where
-  fromCBOR = word8ToNetwork <$> fromCBOR >>= \case
-    Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
-    Just n -> pure n
+  fromCBOR =
+    word8ToNetwork <$> fromCBOR >>= \case
+      Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
+      Just n -> pure n

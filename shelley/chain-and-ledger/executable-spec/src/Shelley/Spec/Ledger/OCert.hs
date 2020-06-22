@@ -122,7 +122,8 @@ instance
       <*> decodeSignedDSIGN
 
 kesPeriod :: SlotNo -> ShelleyBase KESPeriod
-kesPeriod (SlotNo s) = asks slotsPerKESPeriod <&> \spkp ->
-  if spkp == 0
-    then error "kesPeriod: slots per KES period was set to zero"
-    else KESPeriod . fromIntegral $ s `div` spkp
+kesPeriod (SlotNo s) =
+  asks slotsPerKESPeriod <&> \spkp ->
+    if spkp == 0
+      then error "kesPeriod: slots per KES period was set to zero"
+      else KESPeriod . fromIntegral $ s `div` spkp

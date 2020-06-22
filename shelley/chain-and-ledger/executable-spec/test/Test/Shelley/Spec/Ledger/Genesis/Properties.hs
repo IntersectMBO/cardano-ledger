@@ -56,12 +56,12 @@ prop_roundtrip_FundPair_JSON _ =
     Hedgehog.tripping fp encode decode
 
 prop_roundtrip_ShelleyGenesis_JSON :: forall c. Crypto c => Proxy c -> Property
-prop_roundtrip_ShelleyGenesis_JSON _ = Hedgehog.withTests 500
-  $ Hedgehog.property
-  $ do
-    sg <- Hedgehog.forAll $ genShelleyGenesis @c
-    Hedgehog.tripping sg toJSON fromJSON
-    Hedgehog.tripping sg encode decode
+prop_roundtrip_ShelleyGenesis_JSON _ = Hedgehog.withTests 500 $
+  Hedgehog.property $
+    do
+      sg <- Hedgehog.forAll $ genShelleyGenesis @c
+      Hedgehog.tripping sg toJSON fromJSON
+      Hedgehog.tripping sg encode decode
 
 genesis :: TestTree
 genesis =

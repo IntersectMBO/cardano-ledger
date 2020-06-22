@@ -222,7 +222,7 @@ import Test.Shelley.Spec.Ledger.SerializationProperties
   )
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ((@?=), Assertion, assertEqual, assertFailure, testCase)
+import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
 import Test.Tasty.Hedgehog (testProperty)
 import qualified Test.Tasty.QuickCheck as QC (testProperty)
 

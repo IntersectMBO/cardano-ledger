@@ -56,7 +56,6 @@ import Data.Ord (comparing)
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
-    KeyHash,
     KeyHash (..),
     KeyRole (..),
     SignedDSIGN,

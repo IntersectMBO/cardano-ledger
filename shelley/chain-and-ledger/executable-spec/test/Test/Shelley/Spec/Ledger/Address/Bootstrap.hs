@@ -20,7 +20,7 @@ import qualified Cardano.Crypto.Signing as Byron
 import Cardano.Prelude (Proxy (..))
 import Data.Maybe (fromJust)
 import Data.String (fromString)
-import Hedgehog ((===), Gen)
+import Hedgehog (Gen, (===))
 import qualified Hedgehog as H
 import Shelley.Spec.Ledger.Address
   ( BootstrapAddress (..),
@@ -38,18 +38,19 @@ import qualified Test.Tasty.Hedgehog as T
 -- Test that a BootstrapWitness properly reconstructs the AddrRoot of a
 -- corresponding BootstrapAddress
 bootstrapTest :: TestTree
-bootstrapTest = T.testProperty "bootstrap addr root" $ H.property $ do
-  (byronVKey, byronAddr) <- H.forAll genByronVKeyAddr
-  let addr = BootstrapAddress byronAddr
-      (shelleyVKey, chainCode) = unpackByronKey @C byronVKey
-      witness =
-        BootstrapWitness
-          { bwKey = shelleyVKey,
-            bwChainCode = chainCode,
-            bwSig = dummySig,
-            bwPadding = fromJust $ getPadding byronAddr
-          }
-  (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
+bootstrapTest = T.testProperty "bootstrap addr root" $
+  H.property $ do
+    (byronVKey, byronAddr) <- H.forAll genByronVKeyAddr
+    let addr = BootstrapAddress byronAddr
+        (shelleyVKey, chainCode) = unpackByronKey @C byronVKey
+        witness =
+          BootstrapWitness
+            { bwKey = shelleyVKey,
+              bwChainCode = chainCode,
+              bwSig = dummySig,
+              bwPadding = fromJust $ getPadding byronAddr
+            }
+    (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
 
 dummySig :: forall v a. DSIGN.DSIGNAlgorithm v => DSIGN.SignedDSIGN v a
 dummySig =

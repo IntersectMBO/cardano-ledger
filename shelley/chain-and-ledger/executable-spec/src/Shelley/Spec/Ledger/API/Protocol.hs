@@ -37,10 +37,10 @@ import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
     OBftSlot,
+    getGKeys,
     _delegationState,
     _dstate,
     _genDelegs,
-    getGKeys,
   )
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl

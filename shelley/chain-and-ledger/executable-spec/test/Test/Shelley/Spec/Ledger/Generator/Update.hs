@@ -19,7 +19,7 @@ import Data.Functor ((<&>))
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Ratio ((%), Ratio)
+import Data.Ratio (Ratio, (%))
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
@@ -52,7 +52,6 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( DPState,
     GenesisKeyPair,
-    KeyHash,
     KeyHash,
     KeyPair,
     ProposedPPUpdates,

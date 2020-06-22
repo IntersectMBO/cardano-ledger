@@ -38,7 +38,7 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NFData, NoUnexpectedThunks (..), mapMaybe)
 import Control.Monad (unless)
-import Data.Aeson ((.!=), (.:), (.:?), (.=), FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
@@ -407,26 +407,27 @@ emptyPParamsUpdate =
 
 instance FromCBOR PParamsUpdate where
   fromCBOR = do
-    mapParts <- decodeMapContents $
-      decodeWord >>= \case
-        0 -> fromCBOR >>= \x -> pure (0, \up -> up {_minfeeA = SJust x})
-        1 -> fromCBOR >>= \x -> pure (1, \up -> up {_minfeeB = SJust x})
-        2 -> fromCBOR >>= \x -> pure (2, \up -> up {_maxBBSize = SJust x})
-        3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
-        4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
-        5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
-        6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
-        7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
-        8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-        9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
-        10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
-        11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
-        12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
-        13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
-        14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
-        15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
-        16 -> fromCBOR >>= \x -> pure (16, \up -> up {_minPoolCost = SJust x})
-        k -> invalidKey k
+    mapParts <-
+      decodeMapContents $
+        decodeWord >>= \case
+          0 -> fromCBOR >>= \x -> pure (0, \up -> up {_minfeeA = SJust x})
+          1 -> fromCBOR >>= \x -> pure (1, \up -> up {_minfeeB = SJust x})
+          2 -> fromCBOR >>= \x -> pure (2, \up -> up {_maxBBSize = SJust x})
+          3 -> fromCBOR >>= \x -> pure (3, \up -> up {_maxTxSize = SJust x})
+          4 -> fromCBOR >>= \x -> pure (4, \up -> up {_maxBHSize = SJust x})
+          5 -> fromCBOR >>= \x -> pure (5, \up -> up {_keyDeposit = SJust x})
+          6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
+          7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
+          8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
+          9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
+          10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
+          11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
+          12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
+          13 -> fromCBOR >>= \x -> pure (13, \up -> up {_extraEntropy = SJust x})
+          14 -> fromCBOR >>= \x -> pure (14, \up -> up {_protocolVersion = SJust x})
+          15 -> fromCBOR >>= \x -> pure (15, \up -> up {_minUTxOValue = SJust x})
+          16 -> fromCBOR >>= \x -> pure (16, \up -> up {_minPoolCost = SJust x})
+          k -> invalidKey k
     let fields = fst <$> mapParts :: [Int]
     unless
       (nub fields == fields)

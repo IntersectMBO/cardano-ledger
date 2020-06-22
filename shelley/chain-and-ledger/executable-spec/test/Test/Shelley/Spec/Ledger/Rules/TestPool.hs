@@ -16,7 +16,7 @@ import Control.State.Transition.Trace
     target,
     pattern SourceSignalTarget,
   )
-import Data.Map ((!?), Map)
+import Data.Map (Map, (!?))
 import qualified Data.Map as M
 import qualified Data.Maybe as Maybe (maybe)
 import qualified Data.Set as S
@@ -31,21 +31,20 @@ import Shelley.Spec.Ledger.LedgerState
     _pParams,
     _retiring,
     _stPools,
-    _stPools,
     pattern PState,
   )
 import Shelley.Spec.Ledger.PParams (_eMax)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (ledgerPp, ledgerSlotNo))
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxData
-  ( _poolPubKey,
-    unStakePools,
+  ( unStakePools,
+    _poolPubKey,
     pattern DCertPool,
     pattern RegPool,
     pattern RetirePool,
     pattern StakePools,
   )
-import Test.QuickCheck ((===), Property, conjoin, counterexample, property)
+import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( KeyHash,
     LEDGER,

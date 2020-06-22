@@ -33,11 +33,11 @@ import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.LedgerState (EpochState, RewardUpdate, createRUpd)
 import Shelley.Spec.Ledger.Slot
-  ( (+*),
-    Duration (..),
+  ( Duration (..),
     SlotNo,
     epochInfoEpoch,
     epochInfoFirst,
+    (+*),
   )
 
 data RUPD crypto

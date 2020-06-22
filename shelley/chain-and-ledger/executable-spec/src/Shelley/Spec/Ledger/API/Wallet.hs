@@ -20,12 +20,12 @@ import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (..), Stake (..), poolStake)
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
-  ( _utxo,
-    _utxoState,
-    esLState,
+  ( esLState,
     esNonMyopic,
     esPp,
     nesEs,
+    _utxo,
+    _utxoState,
   )
 import Shelley.Spec.Ledger.Rewards
   ( NonMyopic (..),

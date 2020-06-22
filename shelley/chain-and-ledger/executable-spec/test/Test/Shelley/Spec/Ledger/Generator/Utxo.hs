@@ -38,10 +38,10 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Keys (Hash, KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState
-  ( _dstate,
+  ( minfee,
+    _dstate,
     _ptrs,
     _rewards,
-    minfee,
     pattern UTxOState,
   )
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
@@ -54,7 +54,7 @@ import Shelley.Spec.Ledger.Tx
     pattern TxBody,
     pattern TxOut,
   )
-import Shelley.Spec.Ledger.TxData (Wdrl (..), _outputs, _txfee, getRwdCred)
+import Shelley.Spec.Ledger.TxData (Wdrl (..), getRwdCred, _outputs, _txfee)
 import Shelley.Spec.Ledger.UTxO
   ( balance,
     hashTxBody,
@@ -437,9 +437,9 @@ mkWdrlWits scripts _ c@(ScriptHashObj _) =
   Right $
     findStakeScriptFromCred (asWitness c) scripts
 mkWdrlWits _ keyHashMap c@(KeyHashObj _) =
-  Left
-    $ asWitness
-    $ findPayKeyPairCred c keyHashMap
+  Left $
+    asWitness $
+      findPayKeyPairCred c keyHashMap
 
 -- | Select recipient addresses that will serve as output targets for a new transaction.
 genRecipients ::

@@ -252,15 +252,20 @@ segwitTx
 
 decodeWits :: forall crypto s. Crypto crypto => Decoder s (Annotator (WitnessSet crypto))
 decodeWits = do
-  (mapParts, annBytes) <- withSlice $ decodeMapContents $
-    decodeWord >>= \case
-      0 -> decodeList fromCBOR >>= \x ->
-        pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
-      1 -> decodeList fromCBOR >>= \x ->
-        pure (\ws -> ws {msigWits' = keyBy hashScript <$> sequence x})
-      2 -> decodeList fromCBOR >>= \x ->
-        pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
-      k -> invalidKey k
+  (mapParts, annBytes) <-
+    withSlice $
+      decodeMapContents $
+        decodeWord >>= \case
+          0 ->
+            decodeList fromCBOR >>= \x ->
+              pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
+          1 ->
+            decodeList fromCBOR >>= \x ->
+              pure (\ws -> ws {msigWits' = keyBy hashScript <$> sequence x})
+          2 ->
+            decodeList fromCBOR >>= \x ->
+              pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
+          k -> invalidKey k
   let witSet = foldr ($) emptyWitnessSetHKD mapParts
       emptyWitnessSetHKD :: WitnessSetHKD Annotator crypto
       emptyWitnessSetHKD =
@@ -287,17 +292,19 @@ instance
   toCBOR tx = encodePreEncoded . BSL.toStrict $ txFullBytes tx
 
 instance Crypto crypto => FromCBOR (Annotator (Tx crypto)) where
-  fromCBOR = annotatorSlice $ decodeRecordNamed "Tx" (const 3) $ do
-    body <- fromCBOR
-    wits <- decodeWits
-    meta <- (decodeNullMaybe fromCBOR :: Decoder s (Maybe (Annotator MetaData)))
-    pure $ Annotator $ \fullBytes bytes ->
-      Tx'
-        { _body' = runAnnotator body fullBytes,
-          _witnessSet' = runAnnotator wits fullBytes,
-          _metadata' = (maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta),
-          txFullBytes = bytes
-        }
+  fromCBOR = annotatorSlice $
+    decodeRecordNamed "Tx" (const 3) $ do
+      body <- fromCBOR
+      wits <- decodeWits
+      meta <- (decodeNullMaybe fromCBOR :: Decoder s (Maybe (Annotator MetaData)))
+      pure $
+        Annotator $ \fullBytes bytes ->
+          Tx'
+            { _body' = runAnnotator body fullBytes,
+              _witnessSet' = runAnnotator wits fullBytes,
+              _metadata' = (maybeToStrictMaybe $ flip runAnnotator fullBytes <$> meta),
+              txFullBytes = bytes
+            }
 
 -- | Typeclass for multis-signature script data types. Allows for script
 -- validation and hashing.

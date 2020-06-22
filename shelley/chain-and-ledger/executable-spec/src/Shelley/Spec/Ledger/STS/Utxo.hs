@@ -25,8 +25,7 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
-  ( (?!),
-    Embed,
+  ( Embed,
     IRC (..),
     InitialRule,
     STS (..),
@@ -36,6 +35,7 @@ import Control.State.Transition
     liftSTS,
     trans,
     wrapFailed,
+    (?!),
   )
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -158,39 +158,48 @@ instance
   FromCBOR (PredicateFailure (UTXO crypto))
   where
   fromCBOR =
-    fmap snd $ decodeRecordNamed "PredicateFailureUTXO" fst $
-      decodeWord >>= \case
-        0 -> (,) 2 <$> do
-          ins <- decodeSet fromCBOR
-          pure $ BadInputsUTxO ins
-        1 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ ExpiredUTxO a b
-        2 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ MaxTxSizeUTxO a b
-        3 -> (,) 1 <$> pure InputSetEmptyUTxO
-        4 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ FeeTooSmallUTxO a b
-        5 -> (,) 3 <$> do
-          a <- fromCBOR
-          b <- fromCBOR
-          pure $ ValueNotConservedUTxO a b
-        6 -> (,) 2 <$> do
-          outs <- decodeList fromCBOR
-          pure $ OutputTooSmallUTxO outs
-        7 -> (,) 2 <$> do
-          a <- fromCBOR
-          pure $ UpdateFailure a
-        8 -> (,) 3 <$> do
-          right <- fromCBOR
-          wrongs <- decodeSet fromCBOR
-          pure $ WrongNetwork right wrongs
-        k -> invalidKey k
+    fmap snd $
+      decodeRecordNamed "PredicateFailureUTXO" fst $
+        decodeWord >>= \case
+          0 ->
+            (,) 2 <$> do
+              ins <- decodeSet fromCBOR
+              pure $ BadInputsUTxO ins
+          1 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ ExpiredUTxO a b
+          2 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ MaxTxSizeUTxO a b
+          3 -> (,) 1 <$> pure InputSetEmptyUTxO
+          4 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ FeeTooSmallUTxO a b
+          5 ->
+            (,) 3 <$> do
+              a <- fromCBOR
+              b <- fromCBOR
+              pure $ ValueNotConservedUTxO a b
+          6 ->
+            (,) 2 <$> do
+              outs <- decodeList fromCBOR
+              pure $ OutputTooSmallUTxO outs
+          7 ->
+            (,) 2 <$> do
+              a <- fromCBOR
+              pure $ UpdateFailure a
+          8 ->
+            (,) 3 <$> do
+              right <- fromCBOR
+              wrongs <- decodeSet fromCBOR
+              pure $ WrongNetwork right wrongs
+          k -> invalidKey k
 
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do

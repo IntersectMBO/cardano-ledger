@@ -24,12 +24,12 @@ import Data.Proxy
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BlockChain (Block (..), bhbody, bheaderSlotNo)
 import Shelley.Spec.Ledger.LedgerState
-  ( _delegationState,
-    _utxoState,
-    esAccountState,
+  ( esAccountState,
     esLState,
     getGKeys,
     nesEs,
+    _delegationState,
+    _utxoState,
     pattern DPState,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))

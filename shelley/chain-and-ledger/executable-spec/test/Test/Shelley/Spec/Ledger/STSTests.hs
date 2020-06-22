@@ -6,7 +6,7 @@ module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 
 import Cardano.Crypto.Hash (ShortHash)
 import Control.State.Transition.Extended (TRC (..), applySTS)
-import Control.State.Transition.Trace ((.-), (.->), checkTrace)
+import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Either (fromRight, isRight)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, singleton)
@@ -17,13 +17,13 @@ import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( WitHashes (..),
+    esLState,
+    getGKeys,
+    nesEs,
     _delegationState,
     _fPParams,
     _pParams,
     _pstate,
-    esLState,
-    getGKeys,
-    nesEs,
   )
 import Shelley.Spec.Ledger.STS.Chain (totalAda)
 import Shelley.Spec.Ledger.STS.Tick (pattern TickEnv)
@@ -84,7 +84,7 @@ import Test.Shelley.Spec.Ledger.MultiSigExamples
   )
 import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit ((@?=), Assertion, assertBool, assertFailure, testCase)
+import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.

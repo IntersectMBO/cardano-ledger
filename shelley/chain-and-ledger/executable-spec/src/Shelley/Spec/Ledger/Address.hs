@@ -56,7 +56,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Prelude (NFData, NoUnexpectedThunks, Text, cborError, parseBase16)
-import Data.Aeson ((.:), (.=), FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..))
+import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -64,7 +64,7 @@ import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
 import qualified Data.Binary.Get as B
 import qualified Data.Binary.Put as B
-import Data.Bits ((.&.), (.|.), setBit, shiftL, shiftR, testBit)
+import Data.Bits (setBit, shiftL, shiftR, testBit, (.&.), (.|.))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as BSL

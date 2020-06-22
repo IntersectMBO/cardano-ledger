@@ -41,7 +41,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Word (Word64)
-import Hedgehog ((===), MonadTest)
+import Hedgehog (MonadTest, (===))
 import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),

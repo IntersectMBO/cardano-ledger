@@ -15,12 +15,12 @@ where
 
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.State.Transition
-  ( (?!),
-    InitialRule,
+  ( InitialRule,
     STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
+    (?!),
   )
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
@@ -32,12 +32,12 @@ import Shelley.Spec.Ledger.LedgerState
     DState (..),
     PState (..),
     UTxOState,
-    _deposited,
-    _irwd,
-    _reserves,
     clearPpup,
     emptyAccount,
     totalInstantaneousReservesRewards,
+    _deposited,
+    _irwd,
+    _reserves,
     pattern UTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates, emptyPParams)
