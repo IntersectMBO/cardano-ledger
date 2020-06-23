@@ -2,7 +2,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
@@ -13,10 +15,12 @@ import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (mkVKeyRwdAcnt, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
@@ -171,6 +175,60 @@ testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
   \n ->
     let x = intervalValue $ truncateUnitInterval n
      in (x <= 1) && (x >= 0)
+
+newtype VRFNatVal = VRFNatVal Natural
+  deriving (Show)
+
+instance Arbitrary VRFNatVal where
+  arbitrary =
+    VRFNatVal . fromIntegral
+      <$> choose @Integer
+        ( 0,
+          2
+            ^ ( 8
+                  * VRF.sizeOutputVRF
+                    (Proxy @(VRF (ConcreteCrypto ShortHash)))
+              )
+        )
+  shrink (VRFNatVal v) = VRFNatVal <$> shrinkIntegral v
+
+newtype ASC = ASC ActiveSlotCoeff
+  deriving (Show)
+
+instance Arbitrary ASC where
+  arbitrary =
+    ASC
+      . mkActiveSlotCoeff
+      . unsafeMkUnitInterval
+      . fromRational
+      . toRational
+      <$> choose @Double (0.01, 0.5)
+
+newtype StakeProportion = StakeProportion Rational
+  deriving (Show)
+
+instance Arbitrary StakeProportion where
+  arbitrary = StakeProportion . toRational <$> choose @Double (0, 1)
+
+-- | Test @checkLeaderVal@ in 'Shelley.Spec.Ledger.BlockChain'
+testCheckLeaderVal ::
+  forall v.
+  (v ~ VRF (ConcreteCrypto ShortHash)) =>
+  TestTree
+testCheckLeaderVal =
+  testGroup
+    "Test checkLeaderVal calculation"
+    [ testProperty "With a stake of 0, cannot lead" $
+        \(VRFNatVal n) (ASC f) ->
+          checkLeaderValue @v (VRF.mkTestOutputVRF n) 0 f == False,
+      testProperty "With a maximal VRF, cannot lead" $
+        \(ASC f) (StakeProportion r) ->
+          checkLeaderValue @v
+            (VRF.mkTestOutputVRF (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v) - 1)))
+            r
+            f
+            == False
+    ]
 
 testLEDGER ::
   (UTxOState ShortHash, DPState ShortHash) ->
@@ -590,5 +648,6 @@ unitTests =
     [ testsInvalidLedger,
       testsPParams,
       sizeTests,
-      testTruncateUnitInterval
+      testTruncateUnitInterval,
+      testCheckLeaderVal
     ]
