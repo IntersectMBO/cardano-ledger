@@ -620,13 +620,19 @@ mkSeed NeutralNonce slot nonce =
 -- let p = fromNat (certNat) and c = ln(1 - f)
 --
 -- then           p < 1 - (1 - f)^σ
--- <=>  1 / (1 - p) > exp(-σ * c)
+-- <=>  1 / (1 - p) < exp(-σ * c)
 --
 -- this can be efficiently be computed by `taylorExpCmp` which returns `ABOVE`
 -- in case the reference value `1 / (1 - p)` is above the exponential function
 -- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
 -- conclusively compute this within the given iteration bounds.
-checkLeaderValue :: VRF.OutputVRF v -> Rational -> ActiveSlotCoeff -> Bool
+checkLeaderValue ::
+  forall v.
+  (VRF.VRFAlgorithm v) =>
+  VRF.OutputVRF v ->
+  Rational ->
+  ActiveSlotCoeff ->
+  Bool
 checkLeaderValue certVRF σ f =
   if (intervalValue $ activeSlotVal f) == 1
     then -- If the active slot coefficient is equal to one,
@@ -642,10 +648,10 @@ checkLeaderValue certVRF σ f =
       MaxReached _ -> False
   where
     certNatMax :: Natural
-    certNatMax = (2 :: Natural) ^ (256 :: Natural)
+    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF (Proxy @v))
     c, q, x :: FixedPoint
     c = activeSlotLog f
-    q = fromRational (1 % toInteger (certNatMax - certNat))
+    q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
     x = (- fromRational σ * c)
     certNat :: Natural
     certNat = VRF.getOutputVRFNatural certVRF
