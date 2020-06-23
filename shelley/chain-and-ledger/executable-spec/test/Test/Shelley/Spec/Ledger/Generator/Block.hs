@@ -72,7 +72,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     LEDGERS,
     OBftSlot,
     TICK,
-    pattern GenDelegPair,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
@@ -82,6 +81,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genNatural,
     genWord64,
     getKESPeriodRenewalNo,
+    lookupGenDelegate,
     mkBlock,
     mkOCert,
   )
@@ -245,21 +245,16 @@ genBlock
       (block, slot, hashheader) = case chainLastAppliedBlock chainSt of
         Origin -> error "block generator does not support from Origin"
         At (LastAppliedBlock b s hh) -> (b, s, hh)
-      origIssuerKeys h = case List.find (\(k, _) -> (hashKey . vKey) k == h) ksCoreNodes of
-        Nothing -> error "couldn't find corresponding core node key"
-        Just k -> snd k
       gkeys ::
         KeyHash h 'Genesis ->
         Map (KeyHash h 'Genesis) (GenDelegPair h) ->
         AllIssuerKeys h 'GenesisDelegate
       gkeys gkey gds =
-        case Map.lookup gkey gds of
-          Nothing ->
-            error "genBlock: CorruptGenenisDelegation"
-          Just (GenDelegPair ckh _) ->
-            -- if GenesisDelegate certs changed a delegation to a new key
-            fromMaybe (origIssuerKeys gkey) $
-              List.find (\x -> hk x == ckh) ksGenesisDelegates
+        fromMaybe
+          (error "genBlock: lookupGenDelegate failed")
+          ( Map.lookup gkey gds
+              >>= lookupGenDelegate ksCoreNodes ksGenesisDelegates . genDelegKeyHash
+          )
       genPraosLeader stake =
         if stake >= 0 && stake <= 1
           then do
