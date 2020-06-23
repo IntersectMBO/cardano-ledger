@@ -208,59 +208,52 @@ genNextProtocolVersion pp = do
 genPPUpdate ::
   HasCallStack =>
   Constants ->
-  SlotNo ->
   PParams ->
   [KeyHash h 'Genesis] ->
   Gen (ProposedPPUpdates h)
-genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) s pp genesisKeys =
-  if (tooLateInEpoch s)
-    then pure (ProposedPPUpdates Map.empty)
-    else do
-      -- TODO generate Maybe tyes so not all updates are full
-      minFeeA <- genNatural 0 maxMinFeeA
-      minFeeB <- genNatural 0 maxMinFeeB
-      maxBBSize <- genNatural low hi
-      maxTxSize <- genNatural low hi
-      maxBHSize <- genNatural low hi
-      keyDeposit <- genKeyDeposit
-      poolDeposit <- genPoolDeposit
-      eMax <- genEMax c
-      nopt <- genNOpt
-      a0 <- genA0
-      rho <- genRho
-      tau <- genTau
-      d <- genDecentralisationParam
-      extraEntropy <- genExtraEntropy
-      protocolVersion <- genNextProtocolVersion pp
-      minUTxOValue <- genMinUTxOValue
-      minPoolCost <- genMinPoolCost
-      let pps =
-            PParams
-              { _minfeeA = SJust minFeeA,
-                _minfeeB = SJust minFeeB,
-                _maxBBSize = SJust maxBBSize,
-                _maxTxSize = SJust maxTxSize,
-                _maxBHSize = SJust maxBHSize,
-                _keyDeposit = SJust keyDeposit,
-                _poolDeposit = SJust poolDeposit,
-                _eMax = SJust eMax,
-                _nOpt = SJust nopt,
-                _a0 = SJust a0,
-                _rho = SJust rho,
-                _tau = SJust tau,
-                _d = SJust d,
-                _extraEntropy = SJust extraEntropy,
-                _protocolVersion = SJust protocolVersion,
-                _minUTxOValue = SJust minUTxOValue,
-                _minPoolCost = SJust minPoolCost
-              }
-      let ppUpdate = zip genesisKeys (repeat pps)
-      pure $
-        (ProposedPPUpdates . Map.fromList) ppUpdate
+genPPUpdate (c@Constants {maxMinFeeA, maxMinFeeB}) pp genesisKeys = do
+  -- TODO generate Maybe tyes so not all updates are full
+  minFeeA <- genNatural 0 maxMinFeeA
+  minFeeB <- genNatural 0 maxMinFeeB
+  maxBBSize <- genNatural low hi
+  maxTxSize <- genNatural low hi
+  maxBHSize <- genNatural low hi
+  keyDeposit <- genKeyDeposit
+  poolDeposit <- genPoolDeposit
+  eMax <- genEMax c
+  nopt <- genNOpt
+  a0 <- genA0
+  rho <- genRho
+  tau <- genTau
+  d <- genDecentralisationParam
+  extraEntropy <- genExtraEntropy
+  protocolVersion <- genNextProtocolVersion pp
+  minUTxOValue <- genMinUTxOValue
+  minPoolCost <- genMinPoolCost
+  let pps =
+        PParams
+          { _minfeeA = SJust minFeeA,
+            _minfeeB = SJust minFeeB,
+            _maxBBSize = SJust maxBBSize,
+            _maxTxSize = SJust maxTxSize,
+            _maxBHSize = SJust maxBHSize,
+            _keyDeposit = SJust keyDeposit,
+            _poolDeposit = SJust poolDeposit,
+            _eMax = SJust eMax,
+            _nOpt = SJust nopt,
+            _a0 = SJust a0,
+            _rho = SJust rho,
+            _tau = SJust tau,
+            _d = SJust d,
+            _extraEntropy = SJust extraEntropy,
+            _protocolVersion = SJust protocolVersion,
+            _minUTxOValue = SJust minUTxOValue,
+            _minPoolCost = SJust minPoolCost
+          }
+  let ppUpdate = zip genesisKeys (repeat pps)
+  pure $ ProposedPPUpdates . Map.fromList $ ppUpdate
 
 -- | Generate an @Update (where all the given nodes participate)
--- with a 50% chance of having non-empty PPUpdates or AVUpdates
--- and a 25% chance of both being empty or non-empty
 genUpdateForNodes ::
   (HasCallStack, HashAlgorithm h) =>
   Constants ->
@@ -270,10 +263,11 @@ genUpdateForNodes ::
   PParams ->
   Gen (Maybe (Update h))
 genUpdateForNodes c s e coreKeys pp =
-  Just <$> (Update <$> genPPUpdate_ <*> pure e)
+  Just <$> (Update <$> genPPUpdate_ <*> pure e')
   where
     genesisKeys = hashKey . vKey <$> coreKeys
-    genPPUpdate_ = genPPUpdate c s pp genesisKeys
+    genPPUpdate_ = genPPUpdate c pp genesisKeys
+    e' = if tooLateInEpoch s then e + 1 else e
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::

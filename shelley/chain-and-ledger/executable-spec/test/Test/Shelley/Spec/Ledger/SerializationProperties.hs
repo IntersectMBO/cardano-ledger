@@ -100,6 +100,7 @@ import Shelley.Spec.Ledger.Rewards
     PerformanceEstimate (..),
   )
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
+import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (ScriptHash))
 import Shelley.Spec.Ledger.TxData
@@ -303,6 +304,10 @@ instance Arbitrary MIRPot where
 
 instance Arbitrary Natural where
   arbitrary = fromInteger <$> choose (0, 1000)
+
+instance Arbitrary STS.VotingPeriod where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
 
 instance HashAlgorithm h => Arbitrary (STS.PredicateFailure (Mock.PPUP h)) where
   arbitrary = genericArbitraryU

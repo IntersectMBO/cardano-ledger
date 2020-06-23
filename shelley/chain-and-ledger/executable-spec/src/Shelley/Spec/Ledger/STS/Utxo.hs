@@ -54,12 +54,13 @@ import Shelley.Spec.Ledger.Keys (GenDelegs)
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     consumed,
+    emptyPPUPState,
     keyRefunds,
     minfee,
     produced,
     txsize,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..))
 import Shelley.Spec.Ledger.Serialization
   ( decodeList,
@@ -204,7 +205,7 @@ instance
 initialLedgerState :: InitialRule (UTXO crypto)
 initialLedgerState = do
   IRC _ <- judgmentContext
-  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
+  pure $ UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 utxoInductive ::
   forall crypto.

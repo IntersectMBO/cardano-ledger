@@ -39,10 +39,13 @@ module Shelley.Spec.Ledger.LedgerState
     EpochState (..),
     emptyEpochState,
     emptyLedgerState,
+    emptyPPUPState,
     emptyUTxOState,
-    clearPpup,
+    updatePpup,
     PState (..),
     KeyPairs,
+    PPUPState (..),
+    pvCanFollow,
     UTxOState (..),
     OBftSlot (..),
     emptyAccount,
@@ -161,6 +164,7 @@ import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
     ProposedPPUpdates (..),
+    ProtVer (..),
     Update (..),
     emptyPPPUpdates,
     emptyPParams,
@@ -450,8 +454,11 @@ instance Crypto crypto => FromCBOR (EpochState crypto) where
     n <- fromCBOR
     pure $ EpochState a s l r p n
 
+emptyPPUPState :: PPUPState crypto
+emptyPPUPState = PPUPState emptyPPPUpdates emptyPPPUpdates
+
 emptyUTxOState :: UTxOState crypto
-emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPPUpdates
+emptyUTxOState = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) emptyPPUPState
 
 emptyEpochState :: EpochState crypto
 emptyEpochState =
@@ -491,17 +498,43 @@ emptyPState =
 emptyDPState :: DPState crypto
 emptyDPState = DPState emptyDState emptyPState
 
--- | Clear the protocol parameter updates
-clearPpup ::
-  UTxOState crypto ->
-  UTxOState crypto
-clearPpup utxoSt = utxoSt {_ppups = emptyPPPUpdates}
+data PPUPState crypto = PPUPState
+  { proposals :: ProposedPPUpdates crypto,
+    futureProposals :: ProposedPPUpdates crypto
+  }
+  deriving (Show, Eq, Generic, NFData, NoUnexpectedThunks)
+
+instance Crypto crypto => ToCBOR (PPUPState crypto) where
+  toCBOR (PPUPState ppup fppup) =
+    encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
+
+instance Crypto crypto => FromCBOR (PPUPState crypto) where
+  fromCBOR = do
+    enforceSize "PPUPState" 2
+    ppup <- fromCBOR
+    fppup <- fromCBOR
+    pure $ PPUPState ppup fppup
+
+pvCanFollow :: ProtVer -> StrictMaybe ProtVer -> Bool
+pvCanFollow _ SNothing = True
+pvCanFollow (ProtVer m n) (SJust (ProtVer m' n')) =
+  (m + 1, 0) == (m', n') || (m, n + 1) == (m', n')
+
+-- | Update the protocol parameter updates by clearing out the proposals
+-- and making the future proposals become the new proposals,
+-- provided the new proposals can follow (otherwise reset them).
+updatePpup :: UTxOState crypto -> PParams -> UTxOState crypto
+updatePpup utxoSt pp = utxoSt {_ppups = PPUPState ps emptyPPPUpdates}
+  where
+    (ProposedPPUpdates newProposals) = futureProposals . _ppups $ utxoSt
+    goodPV = pvCanFollow (_protocolVersion pp) . _protocolVersion
+    ps = if all goodPV newProposals then ProposedPPUpdates newProposals else emptyPPPUpdates
 
 data UTxOState crypto = UTxOState
   { _utxo :: !(UTxO crypto),
     _deposited :: !Coin,
     _fees :: !Coin,
-    _ppups :: !(ProposedPPUpdates crypto)
+    _ppups :: !(PPUPState crypto)
   }
   deriving (Show, Eq, Generic, NFData)
 
@@ -695,7 +728,7 @@ genesisState genDelegs0 utxo0 =
         utxo0
         (Coin 0)
         (Coin 0)
-        emptyPPPUpdates
+        emptyPPUPState
     )
     (DPState dState emptyPState)
   where

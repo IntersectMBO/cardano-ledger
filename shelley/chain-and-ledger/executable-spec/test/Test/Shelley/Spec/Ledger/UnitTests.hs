@@ -29,6 +29,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     WitHashes (..),
     emptyDState,
+    emptyPPUPState,
     emptyPState,
     genesisCoins,
     genesisId,
@@ -237,7 +238,7 @@ utxoState =
     )
     (Coin 0)
     (Coin 0)
-    emptyPPPUpdates
+    emptyPPUPState
 
 dpState :: DPState ShortHash
 dpState = DPState emptyDState emptyPState
