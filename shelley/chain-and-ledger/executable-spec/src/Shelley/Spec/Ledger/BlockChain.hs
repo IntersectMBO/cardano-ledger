@@ -100,6 +100,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    FixedPoint,
     Nonce (..),
     Seed (..),
     activeSlotLog,
@@ -107,8 +108,6 @@ import Shelley.Spec.Ledger.BaseTypes
     intervalValue,
     mkNonceFromNumber,
     strictMaybeToMaybe,
-    truncateUnitInterval,
-    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
@@ -637,23 +636,19 @@ checkLeaderValue certVRF σ f =
     -- This is a testing convenience, the active slot coefficient should not
     -- bet set above one half otherwise.
       True
-    else
-      if leaderVal == 1
-        then -- Having a VRF value of one is always a failure.
-        -- Moreover, it would cause division by zero.
-          False
-        else case taylorExpCmp 3 (1 / q) x of
-          ABOVE _ _ -> False
-          BELOW _ _ -> True
-          MaxReached _ -> False
+    else case taylorExpCmp 3 q x of
+      ABOVE _ _ -> False
+      BELOW _ _ -> True
+      MaxReached _ -> False
   where
-    leaderVal = (unitIntervalToRational . fromNatural) certNat
+    certNatMax :: Natural
+    certNatMax = (2 :: Natural) ^ (256 :: Natural)
+    c, q, x :: FixedPoint
     c = activeSlotLog f
-    q = fromRational $ 1 - leaderVal
+    q = fromRational (1 % toInteger (certNatMax - certNat))
     x = (- fromRational σ * c)
     certNat :: Natural
     certNat = VRF.getOutputVRFNatural certVRF
-    fromNatural k = truncateUnitInterval $ fromIntegral k % 10000
 
 seedEta :: Nonce
 seedEta = mkNonceFromNumber 0
