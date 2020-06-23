@@ -92,7 +92,6 @@ library
     base >= 4.7 && < 5,
     base16-bytestring,
     binary,
-    byron-spec-ledger,
     bytestring,
     cardano-binary,
     cardano-crypto,
