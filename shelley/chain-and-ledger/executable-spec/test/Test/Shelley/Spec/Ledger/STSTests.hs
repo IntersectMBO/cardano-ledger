@@ -80,7 +80,7 @@ import Test.Shelley.Spec.Ledger.MultiSigExamples
     aliceAndBobOrCarl,
     aliceAndBobOrCarlAndDaria,
     aliceAndBobOrCarlOrDaria,
-    aliceOnly p,
+    aliceOnly,
     aliceOrBob,
     applyTxWithScript,
     bobOnly,
@@ -282,7 +282,7 @@ testWrongScript =
     p :: Proxy ShortHash
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOnly p, coinToValue $ 11000)] [aliceOrBob p] (Wdrl Map.empty) zeroV 0 [asWitness alicePay, asWitness bobPay]
+      applyTxWithScript p [(aliceOnly p, coinToValue $ 11000)] [aliceOrBob p] (Wdrl Map.empty) zeroV [asWitness alicePay, asWitness bobPay]
 
 testAliceOrBob :: Assertion
 testAliceOrBob =
@@ -291,7 +291,7 @@ testAliceOrBob =
     p :: Proxy ShortHash
     p = Proxy
     utxoSt' =
-      applyTxWithScript p [(aliceOrBob p, coinToValue $ 11000)] [aliceOrBob p] (Wdrl Map.empty) zeroV 0 [asWitness alicePay]
+      applyTxWithScript p [(aliceOrBob p, coinToValue $ 11000)] [aliceOrBob p] (Wdrl Map.empty) zeroV [asWitness alicePay]
     s = "problem: " ++ show utxoSt'
 
 testAliceOrBob' :: Assertion

@@ -34,6 +34,7 @@ import Shelley.Spec.Ledger.Tx
     getKeyCombinations,
     msigWits,
     _body,
+    _forge,
     _witnessSet,
   )
 import Shelley.Spec.Ledger.TxData (witKeyHash, _certs, _inputs, _txfee, pattern TxIn)
@@ -75,7 +76,7 @@ preserveBalance pp tr =
         <> (coinToValue $ _txfee (_body tx)
         + totalDeposits pp stp_ (toList $ _certs $ _body tx))
     consumed u tx =
-      balance u <> (_forge tx)
+      balance u <> (_forge $ _body tx)
         <> (coinToValue $ keyRefunds pp (_body tx))
 
 -- | Preserve balance restricted to TxIns and TxOuts of the Tx

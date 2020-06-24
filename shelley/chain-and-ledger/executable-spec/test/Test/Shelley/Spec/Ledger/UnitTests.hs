@@ -61,7 +61,6 @@ import Shelley.Spec.Ledger.Value (zeroV, coinToValue, valueToCompactValue)
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
     _ttl,
-    _forge,
     pattern Tx,
     pattern TxBody,
     pattern TxIn,
@@ -325,7 +324,7 @@ data AliceToBob = AliceToBob
   { input :: TxIn ShortHash,
     toBob :: Coin,
     fee :: Coin,
-    forge :: Value,
+    forge :: Value ShortHash,
     deposits :: Coin,
     refunds :: Coin,
     certs :: [DCert ShortHash],
@@ -646,7 +645,7 @@ testWithdrawalWrongAmt =
 testOutputTooSmall :: Assertion
 testOutputTooSmall =
   testInvalidTx
-    [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [TxOut bobAddr (Coin 1)])]
+    [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [UTxOOut bobAddr (valueToCompactValue $ coinToValue $ Coin 1)])]
     $ aliceGivesBobLovelace $
       AliceToBob
         { input = (TxIn genesisId 0),

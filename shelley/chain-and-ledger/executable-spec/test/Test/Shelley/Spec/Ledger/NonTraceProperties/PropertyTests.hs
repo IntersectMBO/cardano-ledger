@@ -101,7 +101,7 @@ propPositiveBalance =
 propPreserveBalanceInitTx :: Property
 propPreserveBalanceInitTx =
   property $ do
-    (_, steps, fee, ls, tx, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @ShortHash)) -- TODO should the forge be added up to over all tx's?!
+    (_, steps, fee, ls, _, next) <- Hedgehog.forAll (genNonEmptyAndAdvanceTx (Proxy @ShortHash)) -- TODO should the forge be added up to over all tx's?!
     classify "non-trivial number of steps" (steps > 1)
     case next of
       Left _ -> failure
