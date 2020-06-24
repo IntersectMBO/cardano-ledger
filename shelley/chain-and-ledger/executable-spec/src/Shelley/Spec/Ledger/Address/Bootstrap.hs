@@ -25,7 +25,8 @@ module Shelley.Spec.Ledger.Address.Bootstrap
     ChainCode (..),
     bootstrapWitKeyHash,
     unpackByronVKey,
-    getPadding,
+    byronAddressPadding,
+    byronVerKeyAddressPadding,
     makeBootstrapWitness,
   )
 where
@@ -162,11 +163,22 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) (KeyPadding pr
     hash_crypto :: ByteString -> ByteString
     hash_crypto = Hash.digest (Proxy :: Proxy (ADDRHASH crypto))
 
--- | This calculates the key padding of a Byron address by serializing the relevant parts.
--- | This only supports VKey addresses, not Redeem adresses
-getPadding :: Byron.Address -> Maybe KeyPadding
-getPadding (Byron.Address _ _ Byron.ATRedeem) = Nothing
-getPadding (Byron.Address _ attributes Byron.ATVerKey) =
+-- | This calculates the key padding of a Byron address by serializing the
+-- relevant parts.
+--
+-- This only supports VKey addresses, not Redeem adresses. You can also use
+-- 'byronVerKeyAddressPadding' for the specific case of VKey addresses.
+--
+byronAddressPadding :: Byron.Address -> Maybe KeyPadding
+byronAddressPadding (Byron.Address _ _ Byron.ATRedeem) = Nothing
+byronAddressPadding (Byron.Address _ attributes Byron.ATVerKey) =
+    Just (byronVerKeyAddressPadding attributes)
+
+-- | This calculates the key padding of a Byron VKey address based only on the
+-- relevant part, which is the address attributes.
+--
+byronVerKeyAddressPadding :: Byron.Attributes Byron.AddrAttributes -> KeyPadding
+byronVerKeyAddressPadding attributes =
   -- The payload hashed to create an addrRoot consists of the following:
   -- 1: a token indicating a list of length 3
   -- 2: the addrType
@@ -179,14 +191,16 @@ getPadding (Byron.Address _ attributes Byron.ATVerKey) =
   -- 4: the addrAttributes
   -- the prefix is all of the bytes before the bytes for the public key
   -- the suffix is all of the bytes after the bytes for the chain code
-  let prefix =
+  KeyPadding {
+    paddingPrefix =
         serializeEncoding' (encodeListLen 3) -- the surrounding 3-tuple
           <> serialize' Byron.ATVerKey
           <> serializeEncoding' (encodeListLen 2) -- the wrapper for the key
           <> serialize' (0 :: Word8) -- union tag for VKey address
           <> "\88\64" -- indicates what follows is a bytestring of length 64
-      suffix = serialize' attributes
-   in Just $ KeyPadding prefix suffix
+
+  , paddingSuffix = serialize' attributes
+  }
 
 unpackByronVKey ::
   forall crypto.
@@ -216,7 +230,7 @@ makeBootstrapWitness txBodyHash byronSigningKey byronAddress =
   BootstrapWitness vk signature cc <$> padding
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
-    padding = getPadding byronAddress
+    padding = byronAddressPadding byronAddress
     signatureBytes =
       WC.unXSignature $
         WC.sign (mempty :: ByteString) (Byron.unSigningKey byronSigningKey) (Hash.getHash txBodyHash)
