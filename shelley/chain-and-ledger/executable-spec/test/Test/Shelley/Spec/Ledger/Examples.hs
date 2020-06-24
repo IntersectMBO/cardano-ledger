@@ -502,10 +502,10 @@ bobAddr = mkAddr (bobPay, bobStake)
 bobSHK :: HashAlgorithm h => Credential h 'Staking
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
-aliceInitCoin :: Value
+aliceInitCoin :: Value h
 aliceInitCoin = coinToValue (10 * 1000 * 1000 * 1000 * 1000 * 1000)
 
-bobInitCoin :: Value
+bobInitCoin :: Value h
 bobInitCoin = coinToValue (1 * 1000 * 1000 * 1000 * 1000 * 1000)
 
 alicePoolParams :: forall h. HashAlgorithm h => PoolParams h
@@ -742,7 +742,7 @@ ppupEx2A =
 updateEx2A :: HashAlgorithm h => Update h
 updateEx2A = Update ppupEx2A (EpochNo 0)
 
-aliceCoinEx2A :: Value
+aliceCoinEx2A :: Value h
 aliceCoinEx2A = subv aliceInitCoin $ coinToValue ( (_poolDeposit ppsEx1) - 3 * (_keyDeposit ppsEx1) - 3)
 
 -- | Transaction body to be processed.
@@ -948,10 +948,10 @@ ex2A _ = CHAINExample initStEx2A blockEx2A (Right expectedStEx2A)
 
 -- * Example 2B - process a block late enough in the epoch in order to create a reward update.
 
-aliceCoinEx2BBase :: Value
+aliceCoinEx2BBase :: Value h
 aliceCoinEx2BBase = coinToValue (5 * 1000 * 1000 * 1000 * 1000 * 1000)
 
-aliceCoinEx2BPtr :: Value
+aliceCoinEx2BPtr :: Value h
 aliceCoinEx2BPtr = subv aliceCoinEx2A (aliceCoinEx2BBase <> coinToValue (Coin 4))
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
@@ -1206,7 +1206,7 @@ ex2C _ = CHAINExample expectedStEx2B blockEx2C (Right expectedStEx2C)
 -- Carl delegates his stake.
 
 -- | The transaction delegates Carl's stake to Alice's pool.
-aliceCoinEx2DBase :: Value
+aliceCoinEx2DBase :: Value h
 aliceCoinEx2DBase = aliceCoinEx2BBase <> (scalev (-1) $ coinToValue (Coin 5))
 
 txbodyEx2D :: forall h. HashAlgorithm h => TxBody h
@@ -1682,7 +1682,7 @@ alicePerfEx2H p = likelihood blocks t slotsPerEpoch
       epochInfoSize ei 0
     blocks = 1
     t = leaderProbability f relativeStake (_d ppsEx1)
-    stake = getAdaAmount (aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin)
+    stake = getAdaAmount (aliceCoinEx2BBase <> aliceCoinEx2BPtr <> bobInitCoin)
     reserves = _reserves (acntEx2G p)
     relativeStake =
       fromRational (fromIntegral stake % (fromIntegral $ maxLLSupply - reserves))
@@ -1862,10 +1862,10 @@ ex2I :: HashAlgorithm h => proxy h -> CHAINExample h
 ex2I _ = CHAINExample expectedStEx2H blockEx2I (Right expectedStEx2I)
 
 -- | Example 2J - drain reward account and de-register stake key
-bobAda2J :: Value
+bobAda2J :: Value h
 bobAda2J =
-  bobRAcnt2H -- reward account
-  <> coinToValue (bobInitCoin -- txin we will consume (must spend at least one)
+  bobInitCoin -- txin we will consume (must spend at least one)
+  <> coinToValue (bobRAcnt2H -- reward account
     + Coin 7 -- stake registration refund
     - Coin 9) -- tx fee
 
@@ -1989,7 +1989,7 @@ ex2J :: HashAlgorithm h => proxy h -> CHAINExample h
 ex2J _ = CHAINExample expectedStEx2I blockEx2J (Right expectedStEx2J)
 
 -- | Example 2K - start stake pool retirement
-aliceCoinEx2KPtr :: Value
+aliceCoinEx2KPtr :: Value h
 aliceCoinEx2KPtr = subv aliceCoinEx2DBase $ coinToValue (Coin 2)
 
 txbodyEx2K :: HashAlgorithm h => TxBody h
@@ -2291,7 +2291,7 @@ ppupEx3A =
 updateEx3A :: HashAlgorithm h => Update h
 updateEx3A = Update ppupEx3A (EpochNo 0)
 
-aliceCoinEx3A :: Value
+aliceCoinEx3A :: Value h
 aliceCoinEx3A = subv aliceInitCoin $ coinToValue (Coin 1)
 
 txbodyEx3A :: HashAlgorithm h => TxBody h
@@ -2405,7 +2405,7 @@ ppupEx3B =
 updateEx3B :: HashAlgorithm h => Update h
 updateEx3B = Update ppupEx3B (EpochNo 0)
 
-aliceCoinEx3B :: Value
+aliceCoinEx3B :: Value h
 aliceCoinEx3B = subv aliceCoinEx3A (coinToValue (Coin 1))
 
 txbodyEx3B :: HashAlgorithm h => TxBody h
@@ -2548,8 +2548,8 @@ ppupEx3C =
 updateEx3C :: HashAlgorithm h => Update h
 updateEx3C = Update ppupEx3C (EpochNo 1)
 
-aliceCoinEx3C :: Coin
-aliceCoinEx3C = aliceCoinEx3B - 1
+aliceCoinEx3C :: Value h
+aliceCoinEx3C = aliceCoinEx3B <> (coinToValue $ Coin (- 1))
 
 txbodyEx3C :: HashAlgorithm h => TxBody h
 txbodyEx3C =
@@ -2557,6 +2557,7 @@ txbodyEx3C =
     (Set.fromList [TxIn (txid txbodyEx3B) 0])
     (StrictSeq.singleton $ TxOut aliceAddr aliceCoinEx3C)
     StrictSeq.empty
+    zeroV
     (Wdrl Map.empty)
     (Coin 1)
     (SlotNo 81)
@@ -2599,8 +2600,8 @@ blockEx3C =
 utxoEx3C :: HashAlgorithm h => UTxO h
 utxoEx3C =
   UTxO . Map.fromList $
-    [ (TxIn genesisId 1, TxOut bobAddr bobInitCoin),
-      (TxIn (txid txbodyEx3C) 0, TxOut aliceAddr aliceCoinEx3C)
+    [ (TxIn genesisId 1, UTxOOut bobAddr (valueToCompactValue bobInitCoin)),
+      (TxIn (txid txbodyEx3C) 0, UTxOOut aliceAddr (valueToCompactValue aliceCoinEx3C))
     ]
 
 expectedLSEx3C :: HashAlgorithm h => LedgerState h
@@ -2726,7 +2727,7 @@ newGenDelegate = KeyPair vkCold skCold
 newGenesisVrfKH :: HashAlgorithm h => VRFKeyHash h
 newGenesisVrfKH = hashKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
 
-aliceCoinEx4A :: Value
+aliceCoinEx4A :: Value h
 aliceCoinEx4A = subv aliceInitCoin (coinToValue (Coin 1))
 
 txbodyEx4A :: HashAlgorithm h => TxBody h
@@ -2924,7 +2925,7 @@ ex4B _ = CHAINExample expectedStEx4A blockEx4B (Right expectedStEx4B)
 ir :: HashAlgorithm h => Map (Credential h 'Staking) Coin
 ir = Map.fromList [(aliceSHK, Coin 100)]
 
-aliceCoinEx5A :: Value
+aliceCoinEx5A :: Value h
 aliceCoinEx5A = subv aliceInitCoin (coinToValue (Coin 1))
 
 txbodyEx5A :: HashAlgorithm h => MIRPot -> TxBody h
@@ -3172,7 +3173,7 @@ ex5CTreasury p = ex5C p TreasuryMIR
 
 -- | The first transaction adds the MIR certificate that transfers a value of
 -- 100 to Alice.
-aliceCoinEx5D :: Value
+aliceCoinEx5D :: Value h
 aliceCoinEx5D = subv (subv aliceInitCoin ((coinToValue $ _keyDeposit ppsEx1))) (coinToValue (Coin 1))
 
 txbodyEx5D :: HashAlgorithm h => MIRPot -> TxBody h
@@ -3233,7 +3234,7 @@ blockEx5D pot =
 -- | The second transaction in the next epoch and at least `randomnessStabilisationWindow` slots
 -- after the transaction carrying the MIR certificate, then creates the rewards
 -- update that contains the transfer of `100` to Alice.
-aliceCoinEx5D' :: Value
+aliceCoinEx5D' :: Value h
 aliceCoinEx5D' = subv aliceCoinEx5D (coinToValue (Coin 1))
 
 txbodyEx5D' :: HashAlgorithm h => MIRPot -> TxBody h
@@ -3284,7 +3285,7 @@ blockEx5D' pot =
 -- | The third transaction in the next epoch applies the reward update to 1)
 -- register a staking credential for Alice, 2) deducing the key deposit from the
 -- 100 and to 3) create the reward account with an initial amount of 93.
-aliceCoinEx5D'' :: Value
+aliceCoinEx5D'' :: Value h
 aliceCoinEx5D'' = subv aliceCoinEx5D' (coinToValue (Coin 1))
 
 txbodyEx5D'' :: HashAlgorithm h => MIRPot -> TxBody h
@@ -3372,7 +3373,7 @@ test5DTreasury p = test5D p TreasuryMIR
 feeEx6A :: Coin
 feeEx6A = Coin 3
 
-aliceCoinEx6A :: Value
+aliceCoinEx6A :: Value h
 aliceCoinEx6A = subv aliceCoinEx2A (coinToValue feeEx6A)
 
 alicePoolParams6A :: HashAlgorithm h => PoolParams h

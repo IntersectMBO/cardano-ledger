@@ -179,7 +179,7 @@ genCoinList minCoin maxCoin lower upper = do
   return (Coin <$> xs)
 
 --TODO make correct
-genValueList :: Integer -> Integer -> Int -> Int -> Gen [Value]
+genValueList :: Integer -> Integer -> Int -> Int -> Gen [Value h]
 genValueList minCoin maxCoin lower upper = do
   xs <- genCoinList minCoin maxCoin lower upper
   return (fmap coinToValue xs)
@@ -204,7 +204,7 @@ genNonemptyGenesisState _ = do
 
 -- TODO make witnesses for forges -- TODO use the one from Utxo
 -- generate value properly
-genValue :: Integer -> Integer -> Gen Value
+genValue :: Integer -> Integer -> Gen (Value h)
 genValue _ _ = do
   pure zeroV
 
@@ -343,8 +343,8 @@ findStakeKeyPair (KeyHashObj hk) keyList =
 findStakeKeyPair _ _ = undefined -- TODO treat script case
 
 -- | Returns the hashed 'addr' part of a 'TxOut'.
-getTxOutAddr :: TxOut h -> Addr h
-getTxOutAddr (TxOut addr _) = addr
+-- getTxOutAddr :: TxOut h -> Addr h
+-- getTxOutAddr (TxOut addr _) = addr
 
 -- | Generator for arbitrary valid ledger state, discarding any generated
 -- invalid one.

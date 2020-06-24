@@ -104,7 +104,7 @@ mutateCoin lower upper (Coin c) =
 
 -- | Mutator for 'Value', based on mutation of the contained value field.
 -- TODO make this correct
-mutateValue :: Natural -> Natural -> Value -> Gen Value
+mutateValue :: Natural -> Natural -> Value h -> Gen (Value h)
 mutateValue lower upper v = (coinToValue . Coin . fromIntegral) <$> mutateNat lower upper (fromIntegral c)
   where (Coin c) = getAdaAmount v
 

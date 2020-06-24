@@ -158,10 +158,10 @@ makeTx txBody keyPairs msigs = Tx txBody wits . maybeToStrictMaybe
           msigWits = msigs
         }
 
-aliceInitCoin :: Value
+aliceInitCoin :: Value h
 aliceInitCoin = coinToValue 10000
 
-bobInitCoin :: Value
+bobInitCoin :: Value h
 bobInitCoin = coinToValue 1000
 
 genesis :: HashAlgorithm h => LedgerState h

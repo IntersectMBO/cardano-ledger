@@ -414,6 +414,7 @@ data UTxOOut crypto
   deriving (Show, Eq, Ord, Generic)
 
 instance NoUnexpectedThunks (UTxOOut crypto)
+instance NFData (UTxOOut crypto)
 
 data DelegCert crypto =
     -- | A stake key registration certificate.

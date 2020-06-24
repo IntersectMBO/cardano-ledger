@@ -292,19 +292,15 @@ instance Arbitrary Quantity where
   -- Can be negative for negative forge
   arbitrary = Quantity <$> choose (-500, 500)
 
--- TODO this
-instance Arbitrary Hash.ByteString where
-  arbitrary =
+instance Arbitrary AssetID where
+  arbitrary = AssetID <$>
     oneof
       [ return $ BS.pack "Ada",
         return $ BS.pack "DefinitelyAda"
       ]
 
-instance Arbitrary AssetID where
-  arbitrary = AssetID <$> arbitrary
-
 -- TODO this
-instance Arbitrary Mock.CompactValue where
+instance HashAlgorithm h => Arbitrary (Mock.CompactValue h) where
   arbitrary = valueToCompactValue <$> arbitrary
 
 instance HashAlgorithm h => Arbitrary (Mock.Tx h) where
@@ -325,11 +321,11 @@ instance HashAlgorithm h => Arbitrary (Mock.TxOut h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary Mock.UTxOOut where
+instance HashAlgorithm h => Arbitrary (Mock.UTxOOut h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Arbitrary Mock.Value where
+instance HashAlgorithm h => Arbitrary (Mock.Value h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -460,7 +456,7 @@ instance HashAlgorithm h => Arbitrary (MetaDataHash (Mock.ConcreteCrypto h)) whe
   arbitrary = MetaDataHash <$> genHash (Proxy @(Mock.ConcreteCrypto h))
 
 instance HashAlgorithm h => Arbitrary (PolicyID (Mock.ConcreteCrypto h)) where
-  arbitrary = PolicyID <$> genHash (Proxy @(Mock.ConcreteCrypto h))
+  arbitrary = PolicyID <$> arbitrary
 
 
 instance Arbitrary (Crypto.Hash Monomorphic.ShortHash a) where

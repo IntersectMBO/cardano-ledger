@@ -50,7 +50,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   )
 import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), _a0, _nOpt)
-import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCred, getAddress, getCoin)
+import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, getRwdCred, getAddress, getCoin)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made

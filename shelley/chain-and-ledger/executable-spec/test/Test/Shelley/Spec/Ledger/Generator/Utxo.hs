@@ -105,7 +105,7 @@ import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
 -- TODO make witnesses for forges
 -- generate value properly
-genValue :: Integer -> Integer -> Gen Value
+genValue :: Integer -> Integer -> Gen (Value h)
 genValue _ _ = do
   pure zeroV
 

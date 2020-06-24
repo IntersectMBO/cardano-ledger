@@ -715,30 +715,6 @@ genesisId =
           SNothing
       )
 
--- | Creates the UTxO for a new ledger with the specified transaction outputs.
-genesisCoins ::
-  (Crypto crypto) =>
-  [TxOut crypto] ->
-  UTxO crypto
-genesisCoins outs = UTxO $
-  Map.fromList [(TxIn genesisId idx, UTxOOut (getAddressTx out) (valueToCompactValue $ getValueTx out)) |
-    (idx, out) <- zip [0..] outs]
-
--- | Creates the ledger state for an empty ledger which
---  contains the specified transaction outputs.
-genesisState ::
-  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
-  UTxO crypto ->
-  LedgerState crypto
-genesisState genDelegs0 utxo0 =
-  LedgerState
-    ( UTxOState
-        utxo0
-        (Coin 0)
-        (Coin 0)
-        emptyPPUPState
-    )
-
 -- |Creates the UTxO for a new ledger with the specified transaction outputs.
 genesisCoins
   :: (Crypto crypto)
@@ -751,18 +727,18 @@ genesisCoins outs = UTxO $
 -- |Creates the ledger state for an empty ledger which
 -- contains the specified transaction outputs.
 genesisState ::
-  Map
-    (KeyHash 'Genesis crypto)
-    (KeyHash 'GenesisDelegate crypto, Hash crypto (VerKeyVRF crypto)) ->
+  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
   UTxO crypto ->
   LedgerState crypto
-genesisState genDelegs0 utxo0 = LedgerState
-  (UTxOState
-    utxo0
-    (Coin 0)
-    (Coin 0)
-    emptyPPPUpdates)
-  (DPState dState emptyPState)
+genesisState genDelegs0 utxo0 =
+  LedgerState
+    ( UTxOState
+        utxo0
+        (Coin 0)
+        (Coin 0)
+        emptyPPUPState
+    )
+    (DPState dState emptyPState)
   where
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
@@ -821,18 +797,6 @@ produced
 produced pp stakePools tx =
     balance (txouts tx) <> coinToValue (_txfee tx <> totalDeposits pp stakePools (toList $ _certs tx))
 
--- |Compute the key deregistration refunds in a transaction
-keyRefunds
-  :: Crypto crypto
-  => PParams
-  -> StakeCreds crypto
-  -> TxBody crypto
-  -> Coin
-keyRefunds pp stk tx =
-  sum [keyRefund dval dmin lambda stk (_ttl tx) c | c@(DCertDeleg (DeRegKey _)) <- toList $ _certs tx]
-  where
-    (dval, dmin, lambda) = decayKey pp
-
 -- | Compute the key deregistration refunds in a transaction
 keyRefunds ::
   Crypto crypto =>
@@ -844,13 +808,12 @@ keyRefunds pp tx = (_keyDeposit pp) * (fromIntegral $ length deregistrations)
     deregistrations = filter isDeRegKey (toList $ _certs tx)
 
 -- |Compute the lovelace which are destroyed by the transaction
-consumed
-  :: Crypto crypto
-  => PParams
-  -> UTxO crypto
-  -> StakeCreds crypto
-  -> TxBody crypto
-  -> Value crypto
+consumed ::
+  Crypto crypto =>
+  PParams ->
+  UTxO crypto ->
+  TxBody crypto ->
+  Value crypto
 consumed pp (_u@(UTxO v)) tx =
   -- balance (txins tx ◁ _u) + refunds + withdrawals
   -- We do not call ◁, as this causes an identity call to toSet(txins tx)
@@ -907,8 +870,8 @@ witsVKeyNeeded utxo' tx@(Tx txbody _ _) genDelegs =
       where
         accum txin ans =
           case txinLookup txin utxo' of
-            Just (TxOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
-            Just (TxOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+            Just (UTxOOut (Addr _ (KeyHashObj pay) _) _) -> Set.insert (asWitness pay) ans
+            Just (UTxOOut (AddrBootstrap bootAddr) _) -> Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
             _other -> ans
     wdrlAuthors :: Set (KeyHash 'Witness crypto)
     wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (_wdrls txbody))

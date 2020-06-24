@@ -10,7 +10,7 @@ module Shelley.Spec.Ledger.Value
 
 import           Cardano.Binary (ToCBOR, FromCBOR, toCBOR, fromCBOR, encodeListLen,
                   decodeWord)
-import           Cardano.Prelude (NoUnexpectedThunks(..))
+import           Cardano.Prelude (NoUnexpectedThunks(..), NFData ())
 import           Data.Coerce (coerce)
 
 import           Shelley.Spec.Ledger.BaseTypes (invalidKey)
@@ -33,18 +33,18 @@ import           Shelley.Spec.Ledger.Scripts
 
 -- | Quantity
 newtype Quantity = Quantity Integer
-  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Num, Real, Enum, NoUnexpectedThunks)
+  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Num, Real, Enum, NoUnexpectedThunks, NFData)
 
 -- | Asset ID
 newtype AssetID = AssetID ByteString
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
 
 assetID :: AssetID -> ByteString
 assetID (AssetID aid) = aid
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID (ScriptHash crypto)
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
 
 policyID :: PolicyID crypto -> ScriptHash crypto
 policyID (PolicyID pid) = pid
@@ -71,6 +71,7 @@ data Value crypto = Value
   deriving (Show, Generic)
 
 instance NoUnexpectedThunks (Value crypto)
+instance NFData (Value crypto)
 
 -- data ValueBSType = ValueBSType (Map ByteString (Map ByteString Quantity))
 --   deriving (Show, Eq, Generic)
@@ -87,7 +88,7 @@ data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
   deriving (Show, Eq, Generic)
 
 instance NoUnexpectedThunks (CompactValue crypto)
-
+instance NFData (CompactValue crypto)
 
 -- get the quantities of the tokens of a value term
 getQs :: Value crypto -> [Quantity]

@@ -150,16 +150,16 @@ instance
     OutputTooSmallUTxO outs ->
       encodeListLen 2 <> toCBOR (6 :: Word8)
         <> encodeFoldable outs
-    (ForgingAda v) ->
-      encodeListLen 2 <> toCBOR (7 :: Word8)
-        <> toCBOR v
     (UpdateFailure a) ->
-      encodeListLen 2 <> toCBOR (8 :: Word8)
+      encodeListLen 2 <> toCBOR (7 :: Word8)
         <> toCBOR a
     (WrongNetwork right wrongs) ->
-      encodeListLen 3 <> toCBOR (9 :: Word8)
+      encodeListLen 3 <> toCBOR (8 :: Word8)
         <> toCBOR right
         <> encodeFoldable wrongs
+    (ForgingAda v) ->
+      encodeListLen 2 <> toCBOR (9 :: Word8)
+        <> toCBOR v
 
 instance
   (Crypto crypto) =>
@@ -252,14 +252,14 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputValues = [v | (UTxOOut _ v) <- Set.toList (range (txouts txb))]
+  let outputValues = [vl | (UTxOOut _ vl) <- Set.toList (range (txouts txb))]
   let minUTxOValue = map (\ov -> (getAdaAmount $ compactValueToValue ov) < (Coin $ (scaledSizeCompactValue ov) * (fromIntegral $ _minUTxOValue pp))) outputValues
     -- TODO check this, uint? price it as compact value?
     -- TODO make this calc right
 
   all (True ==) minUTxOValue
     ?! OutputTooSmallUTxO
-      (filter (\(UTxOOut _ v) -> (getAdaAmount $ compactValueToValue v) < (Coin $ (scaledSizeCompactValue v) * (fromIntegral $ _minUTxOValue pp))) (Set.toList (range (txouts txb))))
+      (filter (\(UTxOOut _ vl) -> (getAdaAmount $ compactValueToValue vl) < (Coin $ (scaledSizeCompactValue vl) * (fromIntegral $ _minUTxOValue pp))) (Set.toList (range (txouts txb))))
 
   let (Value vls) = _forge txb
   let cids = Map.keys vls

@@ -37,6 +37,7 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.TxData
 import Shelley.Spec.Ledger.UTxO
+import Shelley.Spec.Ledger.Value
 
 -- | Genesis Shelley staking configuration.
 --
@@ -173,10 +174,10 @@ genesisUtxO :: Crypto c => ShelleyGenesis c -> UTxO c
 genesisUtxO genesis =
   UTxO $
     Map.fromList
-      [ (txIn, txOut)
+      [ (txIn, utxoOut)
         | (addr, amount) <- Map.toList (sgInitialFunds genesis),
           let txIn = initialFundsPseudoTxIn addr
-              txOut = TxOut addr amount
+              utxoOut = UTxOOut addr (valueToCompactValue $ coinToValue amount)
       ]
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding

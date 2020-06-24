@@ -216,8 +216,8 @@ makeWitnessVKey ::
   Hash crypto (TxBody crypto) ->
   KeyPair kr crypto ->
   WitVKey crypto 'Witness
-makeWitnessVKey txbodyHash keys =
-  WitVKey (asWitness $ vKey keys) (signedDSIGN @crypto (sKey keys) txbodyHash)
+makeWitnessVKey txbodyHash ks =
+  WitVKey (asWitness $ vKey ks) (signedDSIGN @crypto (sKey ks) txbodyHash)
 
 -- | Create witnesses for transaction
 makeWitnessesVKey ::
@@ -292,7 +292,7 @@ scriptsNeeded ::
   UTxO crypto ->
   Tx crypto ->
   Set (ScriptHash crypto)
-scriptsNeeded u tx =
+scriptsNeeded (u@(UTxO v)) tx =
   Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . getAddress) u'')
     `Set.union` Set.fromList (Maybe.mapMaybe (scriptCred . getRwdCred) $ Map.keys withdrawals)
     `Set.union` Set.fromList (Maybe.mapMaybe scriptStakeCred (filter requiresVKeyWitness certificates))
