@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -22,7 +23,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (mkVKeyRwdAcnt, pattern Addr)
-import Shelley.Spec.Ledger.BaseTypes
+import Shelley.Spec.Ledger.BaseTypes hiding ((==>))
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
@@ -83,6 +84,7 @@ import Shelley.Spec.Ledger.TxData
     pattern RewardAcnt,
   )
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
+import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Orphans ()
@@ -209,11 +211,13 @@ newtype StakeProportion = StakeProportion Rational
 
 instance Arbitrary StakeProportion where
   arbitrary = StakeProportion . toRational <$> choose @Double (0, 1)
+  shrink (StakeProportion r) = StakeProportion <$> shrinkRealFrac r
 
 -- | Test @checkLeaderVal@ in 'Shelley.Spec.Ledger.BlockChain'
 testCheckLeaderVal ::
   forall v.
   (v ~ VRF (ConcreteCrypto ShortHash)) =>
+  -- (v ~ CLVVRF) =>
   TestTree
 testCheckLeaderVal =
   testGroup
@@ -224,11 +228,78 @@ testCheckLeaderVal =
       testProperty "With a maximal VRF, cannot lead" $
         \(ASC f) (StakeProportion r) ->
           checkLeaderValue @v
-            (VRF.mkTestOutputVRF (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v) - 1)))
+            (VRF.mkTestOutputVRF maxVRFVal)
             r
             f
-            == False
+            == False,
+      testProperty "checkLeaderVal succeeds iff l < 1 - (1-f)^r" $
+        \(VRFNatVal n) (ASC f) (StakeProportion r) ->
+          r > 0
+            ==> let ascVal :: Double
+                    ascVal = fromRational . unitIntervalToRational $ activeSlotVal f
+                 in checkLeaderValue @v
+                      (VRF.mkTestOutputVRF n)
+                      r
+                      f
+                      === ( (realToFrac n / realToFrac (maxVRFVal + 1))
+                              < (1 - (1 - ascVal) ** fromRational r)
+                          ),
+      -- Suppose that our VRF value V is drawn uniformly from [0, maxVRFVal).
+      -- The leader check verifies that fromNat V < 1 - (1-f)^r, where fromNat
+      -- is an appropriate mapping into the unit interval giving fromNat V ~
+      -- U(0,1). Then the probability X of being selected leader, given that VRF
+      -- value, is given by p = 1 - (1 - f)^r. So assuming n independent draws
+      -- of V, the number of slots in which we lead is given by S ~ Bin(n, p)
+      -- and has an expected value of np.
+      --
+      -- The probability that S sits outside a δ-window around the mean (i.e.
+      -- that this test fails under the hypothesis that our leader check is
+      -- correct) is given by P(np - δ <= S <= np + δ).
+      --
+      -- We wish to choose δ such that this value is sufficiently low (say, <
+      -- 1/1000).
+      --
+      testProperty "We are elected as leader proportional to our stake" $
+        \(ASC f) (StakeProportion r) ->
+          r > 0
+            ==> let ascVal :: Double
+                    ascVal = fromRational . unitIntervalToRational $ activeSlotVal f
+                    numTrials = 500
+                    -- 4 standard deviations
+                    δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
+                    p = 1 - (1 - ascVal) ** fromRational r
+                    mean = realToFrac numTrials * p
+                    maxVRFValInt :: Integer
+                    maxVRFValInt = fromIntegral maxVRFVal
+                    lb = floor (mean - δ)
+                    ub = ceiling (mean + δ)
+                 in do
+                      vrfVals <- Gen.vectorOf numTrials (Gen.choose (0, maxVRFValInt))
+                      let s =
+                            length . filter id $
+                              ( \v ->
+                                  checkLeaderValue @v
+                                    (VRF.mkTestOutputVRF $ fromIntegral v)
+                                    r
+                                    f
+                              )
+                                <$> vrfVals
+                      pure
+                        . counterexample
+                          ( show lb
+                              ++ " /< "
+                              ++ show s
+                              ++ " /< "
+                              ++ show ub
+                              ++ " (p="
+                              ++ show p
+                              ++ ")"
+                          )
+                        $ s > lb && s < ub
     ]
+  where
+    maxVRFVal :: Natural
+    maxVRFVal = (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v))) - 1
 
 testLEDGER ::
   (UTxOState ShortHash, DPState ShortHash) ->

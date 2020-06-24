@@ -642,16 +642,16 @@ checkLeaderValue certVRF σ f =
     -- This is a testing convenience, the active slot coefficient should not
     -- bet set above one half otherwise.
       True
-    else case taylorExpCmp 3 q x of
+    else case taylorExpCmp 3 recip_q x of
       ABOVE _ _ -> False
       BELOW _ _ -> True
       MaxReached _ -> False
   where
     certNatMax :: Natural
     certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF (Proxy @v))
-    c, q, x :: FixedPoint
+    c, recip_q, x :: FixedPoint
     c = activeSlotLog f
-    q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
+    recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
     x = (- fromRational σ * c)
     certNat :: Natural
     certNat = VRF.getOutputVRFNatural certVRF
