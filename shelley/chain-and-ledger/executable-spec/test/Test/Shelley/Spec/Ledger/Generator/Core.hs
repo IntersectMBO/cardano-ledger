@@ -29,6 +29,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     genWord64,
     genTxOut,
     increasingProbabilityAt,
+    lookupGenDelegate,
     mkScriptsFromKeyPair,
     pickStakeKey,
     toAddr,
@@ -53,7 +54,7 @@ import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Data.Coerce (coerce)
 import Data.List (foldl')
-import qualified Data.List as List (findIndex, (\\))
+import qualified Data.List as List (find, findIndex, (\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (fromList, lookup)
 import Data.Ratio ((%))
@@ -219,6 +220,18 @@ pattern KeySpace
           ksIndexedStakingKeys = mkStakeKeyHashMap ksKeyPairs,
           ksMSigScripts
         }
+
+-- | Look up the given GenesisDelegate key in the combined list of
+-- core nodes and potential genesis delegate keys.
+lookupGenDelegate ::
+  HashAlgorithm h =>
+  [(GenesisKeyPair h, AllIssuerKeys h 'GenesisDelegate)] ->
+  [AllIssuerKeys h 'GenesisDelegate] ->
+  KeyHash h 'GenesisDelegate ->
+  Maybe (AllIssuerKeys h 'GenesisDelegate)
+lookupGenDelegate coreNodes genesisDelegates gkey =
+  let allDelegateKeys = (snd <$> coreNodes) <> genesisDelegates
+   in List.find (\a -> (hashKey . vKey . cold) a == gkey) allDelegateKeys
 
 genBool :: HasCallStack => Gen Bool
 genBool = QC.arbitraryBoundedRandom

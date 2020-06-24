@@ -15,10 +15,8 @@ module Test.Shelley.Spec.Ledger.Generator.Update
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
-import Data.Functor ((<&>))
-import qualified Data.List as List
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (catMaybes)
 import Data.Ratio (Ratio, (%))
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
@@ -61,11 +59,12 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Examples (unsafeMkUnitInterval)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( AllIssuerKeys (cold, hk),
+  ( AllIssuerKeys (cold),
     genInteger,
     genNatural,
     genWord64,
     increasingProbabilityAt,
+    lookupGenDelegate,
     tooLateInEpoch,
   )
 import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo)
@@ -180,14 +179,10 @@ genProtocolVersion :: HasCallStack => Gen ProtVer
 genProtocolVersion = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
 
 genMinUTxOValue :: HasCallStack => Gen Coin
-genMinUTxOValue = pure $ Coin 0
--- ^ ^ TODO generate nonzero minimum UTxO values
--- github issue #1544
+genMinUTxOValue = Coin <$> genInteger 1 20
 
 genMinPoolCost :: HasCallStack => Gen Coin
-genMinPoolCost = pure $ Coin 0
--- ^ ^ TODO generate nonzero minimum pool cost
--- github issue #1545
+genMinPoolCost = Coin <$> genInteger 10 50
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
@@ -282,34 +277,28 @@ genUpdate ::
 genUpdate
   c@(Constants {frequencyTxUpdates})
   s
-  coreKeyPairs
+  delegateKeys
   genesisDelegateKeys
   pp
   (_utxoSt, delegPoolSt) =
     do
-      nodes <- take 5 <$> QC.shuffle coreKeyPairs
+      nodes <- take 5 <$> QC.shuffle delegateKeys
 
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
-          genesisKeys = (fst . unzip) nodes
-          updateWitnesses = asWitness . latestPoolColdKey genDelegs <$> nodes
-
-      QC.frequency
-        [ ( frequencyTxUpdates,
-            (,updateWitnesses) <$> genUpdateForNodes c s e genesisKeys pp
-          ),
-          ( 100 - frequencyTxUpdates,
-            pure (Nothing, [])
-          )
-        ]
-    where
-      latestPoolColdKey genDelegs_ (gkey, pkeys) =
-        case Map.lookup (hashKey . vKey $ gkey) genDelegs_ of
-          Nothing ->
-            error "genUpdate: NoGenesisStaking"
-          Just (GenDelegPair gkeyHash _) ->
-            fromMaybe
-              (cold pkeys)
-              ( List.find (\aik -> hk aik == gkeyHash) genesisDelegateKeys
-                  <&> cold
-              )
+          genesisKeys = fst <$> nodes
+          coreSigners = catMaybes $ lookupGenDelegate nodes genesisDelegateKeys . genDelegKeyHash <$> Map.elems genDelegs
+          failedWitnessLookup = length coreSigners < Map.size genDelegs
+      if failedWitnessLookup
+        then -- discard
+          pure (Nothing, [])
+        else
+          let wits = asWitness . cold <$> coreSigners
+           in QC.frequency
+                [ ( frequencyTxUpdates,
+                    (,wits) <$> genUpdateForNodes c s e genesisKeys pp
+                  ),
+                  ( 100 - frequencyTxUpdates,
+                    pure (Nothing, [])
+                  )
+                ]

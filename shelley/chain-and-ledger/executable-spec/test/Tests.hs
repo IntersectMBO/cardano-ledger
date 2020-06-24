@@ -4,7 +4,7 @@ import Test.Shelley.Spec.Ledger.Address (addressTests)
 import Test.Shelley.Spec.Ledger.CDDL (cddlTests)
 import Test.Shelley.Spec.Ledger.Genesis.Properties
 import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
-import Test.Shelley.Spec.Ledger.PropertyTests (propertyTests)
+import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Shelley.Spec.Ledger.STSTests (stsTests)
 import Test.Shelley.Spec.Ledger.Serialization (serializationTests)
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
@@ -23,7 +23,7 @@ mainTests =
     "Ledger with Delegation"
     [ addressTests,
       cddlTests 5,
-      --minimalPropertyTests, TODO re-enable when we can get these to not time out in CI.
+      minimalPropertyTests,
       serializationTests,
       stsTests,
       unitTests,
