@@ -1,6 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -22,6 +25,7 @@ module Test.Shelley.Spec.Ledger.Utils
     maxKESIterations,
     unsafeMkUnitInterval,
     slotsPerKESIteration,
+    testSTS,
     maxLLSupply,
   )
 where
@@ -35,6 +39,16 @@ import Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
 import Cardano.Prelude (asks)
 import Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
 import Control.Monad.Trans.Reader (runReaderT)
+import Control.State.Transition.Extended
+  ( STS (..),
+    TRC (..),
+    applySTS,
+  )
+import Control.State.Transition.Trace
+  ( checkTrace,
+    (.-),
+    (.->),
+  )
 import Crypto.Random (drgNewTest, withDRG)
 import Data.Coerce (coerce)
 import Data.Functor.Identity (runIdentity)
@@ -69,6 +83,10 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     VerKeyKES,
     VerKeyVRF,
     pattern VKey,
+  )
+import Test.Tasty.HUnit
+  ( Assertion,
+    (@?=),
   )
 
 assertAll :: (MonadTest m, Show a, Eq a) => (a -> Bool) -> [a] -> m ()
@@ -188,3 +206,17 @@ slotsPerKESIteration = runShelleyBase (asks slotsPerKESPeriod)
 
 maxLLSupply :: Coin
 maxLLSupply = Coin $ fromIntegral $ runShelleyBase (asks maxLovelaceSupply)
+
+testSTS ::
+  forall s.
+  (BaseM s ~ ShelleyBase, STS s, Eq (State s), Show (State s)) =>
+  Environment s ->
+  State s ->
+  Signal s ->
+  Either [[PredicateFailure s]] (State s) ->
+  Assertion
+testSTS env initSt signal (Right expectedSt) = do
+  checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt
+testSTS env initSt block predicateFailure@(Left _) = do
+  let st = runShelleyBase $ applySTS @s (TRC (env, initSt, block))
+  st @?= predicateFailure

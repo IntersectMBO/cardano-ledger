@@ -15,6 +15,7 @@
 module Test.Shelley.Spec.Ledger.SerializationProperties
   ( prop_roundtrip_Addr,
     prop_roundtrip_RewardAcnt,
+    prop_roundtrip_BootstrapWitness,
     prop_roundtrip_Block,
     prop_roundtrip_Header,
     prop_roundtrip_BlockHeaderHash,
@@ -34,7 +35,8 @@ import Cardano.Binary
     ToCBOR (..),
     toCBOR,
   )
-import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
+import Cardano.Crypto.DSIGN.Class (SignedDSIGN (..), rawDeserialiseSigDSIGN, sizeSigDSIGN)
+import Cardano.Crypto.DSIGN.Mock (MockDSIGN, VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash as Monomorphic
@@ -58,6 +60,11 @@ import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (Addr))
+import Shelley.Spec.Ledger.Address.Bootstrap
+  ( ChainCode (..),
+    KeyPadding (..),
+    pattern BootstrapWitness,
+  )
 import Shelley.Spec.Ledger.BaseTypes
   ( DnsName,
     Network,
@@ -112,6 +119,7 @@ import Shelley.Spec.Ledger.TxData
     TxId (TxId),
     TxIn (TxIn),
   )
+import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck
   ( Arbitrary,
     arbitrary,
@@ -200,6 +208,10 @@ prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 prop_roundtrip_TxId :: Mock.TxId Monomorphic.ShortHash -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
 
+prop_roundtrip_BootstrapWitness ::
+  Mock.BootstrapWitness Monomorphic.ShortHash -> Property
+prop_roundtrip_BootstrapWitness = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
+
 prop_roundtrip_LEDGER_PredicateFails :: [STS.PredicateFailure (Mock.LEDGERS Monomorphic.ShortHash)] -> Property
 prop_roundtrip_LEDGER_PredicateFails = roundtrip toCBOR fromCBOR
 
@@ -256,6 +268,19 @@ instance HashAlgorithm h => Arbitrary (Mock.BHeader h) where
     return $ case res of
       Block header _ -> header
       _ -> error "SerializationProperties::BHeader - failed to deconstruct header from block"
+
+instance Arbitrary (SignedDSIGN MockDSIGN a) where
+  arbitrary =
+    SignedDSIGN . fromJust . rawDeserialiseSigDSIGN
+      <$> hedgehog (genBytes . fromIntegral $ sizeSigDSIGN (Proxy :: Proxy MockDSIGN))
+
+instance HashAlgorithm h => Arbitrary (Mock.BootstrapWitness h) where
+  arbitrary = do
+    key <- arbitrary
+    sig <- arbitrary
+    chainCode <- ChainCode <$> arbitrary
+    padding <- KeyPadding <$> arbitrary <*> arbitrary
+    pure $ BootstrapWitness key sig chainCode padding
 
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash (Proxy @c)

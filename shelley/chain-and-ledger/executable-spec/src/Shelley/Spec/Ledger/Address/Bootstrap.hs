@@ -2,10 +2,12 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,9 +22,11 @@ module Shelley.Spec.Ledger.Address.Bootstrap
         bwPadding
       ),
     KeyPadding (..),
+    ChainCode (..),
     bootstrapWitKeyHash,
-    unpackByronKey,
+    unpackByronVKey,
     getPadding,
+    makeBootstrapWitness,
   )
 where
 
@@ -30,18 +34,20 @@ import Cardano.Binary
   ( Annotator,
     FromCBOR (..),
     ToCBOR (..),
+    annotatorSlice,
     encodeListLen,
+    encodePreEncoded,
     serialize',
+    serializeEncoding,
     serializeEncoding',
-    withSlice,
   )
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN (rawSerialiseVerKeyDSIGN)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.DSIGN.Ed25519 as Ed25519
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
+import Cardano.Prelude (panic)
 import Cardano.Prelude
   ( AllowThunksIn (..),
     ByteString,
@@ -52,6 +58,7 @@ import Cardano.Prelude
     Word8,
   )
 import qualified Data.ByteString.Lazy as LBS
+import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
 import Shelley.Spec.Ledger.Keys
@@ -62,7 +69,9 @@ import Shelley.Spec.Ledger.Keys
     VKey (..),
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
-import Shelley.Spec.Ledger.TxData (TxBody)
+import Shelley.Spec.Ledger.TxData
+  ( TxBody,
+  )
 
 -- | This represents the data prepended/appended to a Byron verification key
 -- when producing a key hash.
@@ -83,14 +92,12 @@ data BootstrapWitness crypto = BootstrapWitness'
     bwSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto))),
     bwChainCode' :: !ChainCode,
     bwPadding' :: !KeyPadding,
-    bwVKeyBytes :: LByteString
+    bwBytes :: LByteString
   }
   deriving (Eq, Generic, Show)
   deriving
     (NoUnexpectedThunks)
-    via AllowThunksIn
-          '["bwVKeyBytes"]
-          (BootstrapWitness crypto)
+    via AllowThunksIn '["bwBytes"] (BootstrapWitness crypto)
 
 pattern BootstrapWitness ::
   Crypto crypto =>
@@ -102,9 +109,16 @@ pattern BootstrapWitness ::
 pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwPadding} <-
   BootstrapWitness' bwKey bwSig bwChainCode bwPadding _
   where
-    BootstrapWitness key@(VKey k) sig cc pad =
-      let keyBytes = LBS.fromStrict $ rawSerialiseVerKeyDSIGN k
-       in BootstrapWitness' key sig cc pad keyBytes
+    BootstrapWitness key sig cc pad@(KeyPadding prefix suffix) =
+      let bytes =
+            serializeEncoding $
+              encodeListLen 5
+                <> toCBOR key
+                <> DSIGN.encodeSignedDSIGN sig
+                <> toCBOR cc
+                <> toCBOR prefix
+                <> toCBOR suffix
+       in BootstrapWitness' key sig cc pad bytes
 
 {-# COMPLETE BootstrapWitness #-}
 
@@ -116,22 +130,18 @@ instance
   compare = comparing bootstrapWitKeyHash
 
 instance Crypto crypto => ToCBOR (BootstrapWitness crypto) where
-  toCBOR (BootstrapWitness key sig cc (KeyPadding prefix suffix)) =
-    encodeListLen 5
-      <> toCBOR key
-      <> DSIGN.encodeSignedDSIGN sig
-      <> toCBOR cc
-      <> toCBOR prefix
-      <> toCBOR suffix
+  toCBOR = encodePreEncoded . LBS.toStrict . bwBytes
 
 instance Crypto crypto => FromCBOR (Annotator (BootstrapWitness crypto)) where
-  fromCBOR = decodeRecordNamed "BootstrapWitness" (const 5) $ do
-    (key, keyBytes) <- withSlice fromCBOR
-    sig <- DSIGN.decodeSignedDSIGN
-    cc <- fromCBOR
-    prefix <- fromCBOR
-    suffix <- fromCBOR
-    pure $ (BootstrapWitness' key sig cc (KeyPadding prefix suffix)) <$> keyBytes
+  fromCBOR = annotatorSlice $
+    decodeRecordNamed "BootstrapWitness" (const 5) $
+      do
+        key <- fromCBOR
+        sig <- DSIGN.decodeSignedDSIGN
+        cc <- fromCBOR
+        prefix <- fromCBOR
+        suffix <- fromCBOR
+        pure . pure $ BootstrapWitness' key sig cc (KeyPadding prefix suffix)
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
@@ -139,10 +149,14 @@ bootstrapWitKeyHash ::
   Crypto crypto =>
   BootstrapWitness crypto ->
   KeyHash 'Witness crypto
-bootstrapWitKeyHash (BootstrapWitness' _ _ (ChainCode cc) (KeyPadding prefix suffix) keyBytes) =
+bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) (KeyPadding prefix suffix)) =
   KeyHash . Hash.UnsafeHash . hash_crypto . hash_SHA3_256 $ bytes
   where
-    bytes = prefix <> LBS.toStrict keyBytes <> cc <> suffix
+    -- Here we are reserializing something that we have previously deserialized.
+    -- This is normally naughty. However, this is a blob of bytes -- serializing it
+    -- amounts to wrapping the underlying byte array in a ByteString constructor.
+    keyBytes = DSIGN.rawSerialiseVerKeyDSIGN key
+    bytes = prefix <> keyBytes <> cc <> suffix
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
     hash_crypto :: ByteString -> ByteString
@@ -174,17 +188,42 @@ getPadding (Byron.Address _ attributes Byron.ATVerKey) =
       suffix = serialize' attributes
    in Just $ KeyPadding prefix suffix
 
-unpackByronKey ::
+unpackByronVKey ::
   forall crypto.
   (DSIGN crypto ~ Ed25519DSIGN) =>
   Byron.VerificationKey ->
   (VKey 'Witness crypto, ChainCode)
-unpackByronKey
+unpackByronVKey
   ( Byron.VerificationKey
       (WC.XPub vkeyBytes (WC.ChainCode chainCodeBytes))
     ) = case DSIGN.rawDeserialiseVerKeyDSIGN vkeyBytes of
     -- This maybe is produced by a check that the length of the public key
     -- is the correct one. (32 bytes). If the XPub was constructed correctly,
     -- we already know that it has this length.
-    Nothing -> error "this should be impossible!"
+    Nothing -> error "unpackByronVKey: impossible!"
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
+
+makeBootstrapWitness ::
+  forall crypto.
+  ( DSIGN crypto ~ Ed25519DSIGN,
+    Crypto crypto
+  ) =>
+  Hash crypto (TxBody crypto) ->
+  Byron.SigningKey ->
+  Byron.Address ->
+  Maybe (BootstrapWitness crypto) -- Fails if the byron address is a Redeem address and not a vkey address
+makeBootstrapWitness txBodyHash byronSigningKey byronAddress =
+  BootstrapWitness vk signature cc <$> padding
+  where
+    (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
+    padding = getPadding byronAddress
+    signatureBytes =
+      WC.unXSignature $
+        WC.sign (mempty :: ByteString) (Byron.unSigningKey byronSigningKey) (Hash.getHash txBodyHash)
+    -- This crashes in the case that the number of bytes in produced the signing is
+    -- different from the number of bytes expected in expected for SigDSIGN Ed25519.
+    -- At the time of writing, both of these are 64 bytes. If this ever fails, then
+    -- one of these has likely changed.
+    signature =
+      DSIGN.SignedDSIGN . fromMaybe (panic "makeBootstrapWitness: impossible!") $
+        DSIGN.rawDeserialiseSigDSIGN signatureBytes

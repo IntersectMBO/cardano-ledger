@@ -36,6 +36,7 @@ stack.yaml.lock
 
 # Editors
 TAGS
+tags
 *.temp
 
 # Emacs auto-generated Emacs-lisp code
