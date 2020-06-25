@@ -100,6 +100,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    FixedPoint,
     Nonce (..),
     Seed (..),
     activeSlotLog,
@@ -107,8 +108,6 @@ import Shelley.Spec.Ledger.BaseTypes
     intervalValue,
     mkNonceFromNumber,
     strictMaybeToMaybe,
-    truncateUnitInterval,
-    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
@@ -621,13 +620,19 @@ mkSeed NeutralNonce slot nonce =
 -- let p = fromNat (certNat) and c = ln(1 - f)
 --
 -- then           p < 1 - (1 - f)^σ
--- <=>  1 / (1 - p) > exp(-σ * c)
+-- <=>  1 / (1 - p) < exp(-σ * c)
 --
 -- this can be efficiently be computed by `taylorExpCmp` which returns `ABOVE`
 -- in case the reference value `1 / (1 - p)` is above the exponential function
 -- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
 -- conclusively compute this within the given iteration bounds.
-checkLeaderValue :: VRF.OutputVRF v -> Rational -> ActiveSlotCoeff -> Bool
+checkLeaderValue ::
+  forall v.
+  (VRF.VRFAlgorithm v) =>
+  VRF.OutputVRF v ->
+  Rational ->
+  ActiveSlotCoeff ->
+  Bool
 checkLeaderValue certVRF σ f =
   if (intervalValue $ activeSlotVal f) == 1
     then -- If the active slot coefficient is equal to one,
@@ -637,23 +642,19 @@ checkLeaderValue certVRF σ f =
     -- This is a testing convenience, the active slot coefficient should not
     -- bet set above one half otherwise.
       True
-    else
-      if leaderVal == 1
-        then -- Having a VRF value of one is always a failure.
-        -- Moreover, it would cause division by zero.
-          False
-        else case taylorExpCmp 3 (1 / q) x of
-          ABOVE _ _ -> False
-          BELOW _ _ -> True
-          MaxReached _ -> False
+    else case taylorExpCmp 3 recip_q x of
+      ABOVE _ _ -> False
+      BELOW _ _ -> True
+      MaxReached _ -> False
   where
-    leaderVal = (unitIntervalToRational . fromNatural) certNat
+    certNatMax :: Natural
+    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF (Proxy @v))
+    c, recip_q, x :: FixedPoint
     c = activeSlotLog f
-    q = fromRational $ 1 - leaderVal
+    recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
     x = (- fromRational σ * c)
     certNat :: Natural
     certNat = VRF.getOutputVRFNatural certVRF
-    fromNatural k = truncateUnitInterval $ fromIntegral k % 10000
 
 seedEta :: Nonce
 seedEta = mkNonceFromNumber 0
