@@ -32,7 +32,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.String (fromString)
-import Hedgehog ((===), Gen)
+import Hedgehog (Gen, (===))
 import qualified Hedgehog as H
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
