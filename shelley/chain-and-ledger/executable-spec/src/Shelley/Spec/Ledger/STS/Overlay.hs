@@ -200,25 +200,25 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
     hk = coerceKeyRole . hashKey $ bheaderVk bhb
     vrfK = bheaderVrfVk bhb
 
--- pbftVrfChecks ::
---   forall crypto.
---   ( Crypto crypto,
---     VRF.Signable (VRF crypto) Seed,
---     VRF.ContextVRF (VRF crypto) ~ ()
---   ) =>
---   Hash crypto (VerKeyVRF crypto) ->
---   Nonce ->
---   BHBody crypto ->
---   Either (PredicateFailure (OVERLAY crypto)) ()
--- pbftVrfChecks vrfHK eta0 bhb = do
---   unless
---     (vrfHK == hashVerKeyVRF vrfK)
---     (throwError $ WrongGenesisVRFKeyOVERLAY hk vrfHK (hashVerKeyVRF vrfK))
---   vrfChecks eta0 bhb
---   pure ()
---   where
---     hk = coerceKeyRole . hashKey $ bheaderVk bhb
---     vrfK = bheaderVrfVk bhb
+pbftVrfChecks ::
+  forall crypto.
+  ( Crypto crypto,
+    VRF.Signable (VRF crypto) Seed,
+    VRF.ContextVRF (VRF crypto) ~ ()
+  ) =>
+  Hash crypto (VerKeyVRF crypto) ->
+  Nonce ->
+  BHBody crypto ->
+  Either (PredicateFailure (OVERLAY crypto)) ()
+pbftVrfChecks vrfHK eta0 bhb = do
+  unless
+    (vrfHK == hashVerKeyVRF vrfK)
+    (throwError $ WrongGenesisVRFKeyOVERLAY hk vrfHK (hashVerKeyVRF vrfK))
+  vrfChecks eta0 bhb
+  pure ()
+  where
+    hk = coerceKeyRole . hashKey $ bheaderVk bhb
+    vrfK = bheaderVrfVk bhb
 
 overlayTransition ::
   forall crypto.
@@ -250,9 +250,9 @@ overlayTransition =
             case Map.lookup gkey genDelegs of
               Nothing ->
                 failBecause $ UnknownGenesisKeyOVERLAY gkey
-              Just (GenDelegPair genDelegsKey _genesisVrfKH) -> do
+              Just (GenDelegPair genDelegsKey genesisVrfKH) -> do
                 vkh == coerceKeyRole genDelegsKey ?! WrongGenesisColdKeyOVERLAY vkh genDelegsKey
-        -- pbftVrfChecks genesisVrfKH eta0 bhb ?!: id
+                pbftVrfChecks genesisVrfKH eta0 bhb ?!: id
 
         let oce =
               OCertEnv
