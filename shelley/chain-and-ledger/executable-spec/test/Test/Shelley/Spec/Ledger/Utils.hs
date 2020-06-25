@@ -161,8 +161,8 @@ testGlobals =
   Globals
     { epochInfo = fixedSizeEpochInfo $ EpochSize 100,
       slotsPerKESPeriod = 20,
-      stabilityWindow = 33,
-      randomnessStabilisationWindow = 33,
+      stabilityWindow = 40,
+      randomnessStabilisationWindow = 40,
       securityParameter = 10,
       maxKESEvo = 10,
       quorum = 5,
