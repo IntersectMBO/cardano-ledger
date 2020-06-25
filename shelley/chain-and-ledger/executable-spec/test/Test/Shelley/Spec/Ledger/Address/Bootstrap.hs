@@ -198,11 +198,10 @@ aliceAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
 
 aliceWitness :: BootstrapWitness C
 aliceWitness =
-  fromJust $
-    makeBootstrapWitness
-      (hashTxBody txBody)
-      aliceSigningKey
-      aliceByronAddr
+  makeBootstrapWitness
+    (hashTxBody txBody)
+    aliceSigningKey
+    (Byron.addrAttributes aliceByronAddr)
 
 bobAddr :: Addr C
 bobAddr = Addr Testnet (KeyHashObj $ coerce someHash) StakeRefNull
@@ -215,14 +214,15 @@ coinsToBob = 1000
 txBody :: TxBody C
 txBody =
   TxBody
-    (Set.fromList [TxIn genesisId 0]) -- inputs
-    (StrictSeq.fromList [TxOut bobAddr coinsToBob, TxOut aliceAddr change]) -- outputs
-    (StrictSeq.fromList mempty) -- dcert
-    (Wdrl Map.empty)
-    fee
-    (SlotNo 10)
-    SNothing -- up
-    SNothing -- md
+    { _inputs = Set.fromList [TxIn genesisId 0],
+      _outputs = StrictSeq.fromList [TxOut bobAddr coinsToBob, TxOut aliceAddr change],
+      _certs = StrictSeq.fromList mempty,
+      _wdrls = Wdrl Map.empty,
+      _txfee = fee,
+      _ttl = SlotNo 10,
+      _txUpdate = SNothing,
+      _mdHash = SNothing
+    }
   where
     change = aliceInitCoin - coinsToBob - fee
     fee = 10
@@ -235,28 +235,6 @@ testBootstrapSpending =
     tx
     (Right utxoState1)
 
--- Test that we can use a BootstrapWitness to spend from a BootstrapAddress
-
--- where
--- lastByronHeaderHash :: HashHeader C
--- lastByronHeaderHash _ = HashHeader $ coerce (hash 0 :: Hash _ Int)
-
-{-
---TODO: combine with STS test stuff
-testSTS ::
-  forall s.
-  (BaseM s ~ ShelleyBase, STS s, Eq (State s), Show (State s)) =>
-  Environment s ->
-  State s ->
-  Signal s ->
-  Either [[PredicateFailure s]] (State s) ->
-  Assertion
-testSTS env initSt signal (Right expectedSt) = do
-  checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt
-testSTS env initSt block predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTS @s (TRC (env, initSt, block))
-  st @?= predicateFailure
--}
 data C
 
 instance Crypto C where
