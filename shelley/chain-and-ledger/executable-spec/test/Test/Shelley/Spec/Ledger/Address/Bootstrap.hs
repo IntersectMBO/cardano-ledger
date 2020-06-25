@@ -110,7 +110,7 @@ bootstrapHashTest = T.testProperty "rebuild the 'addr root' using a bootstrap wi
               { bwKey = shelleyVKey,
                 bwChainCode = chainCode,
                 bwSig = dummySig,
-                bwPadding = fromJust $ getPadding byronAddr
+                bwPadding = fromJust $ byronAddressPadding byronAddr
               }
       (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
 
