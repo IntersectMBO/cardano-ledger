@@ -128,7 +128,7 @@ epochTransition = do
   let ppNew = votedValuePParams ppup pp (fromIntegral coreNodeQuorum)
   NewppState utxoSt'' acnt'' pp' <-
     trans @(NEWPP crypto) $
-      TRC (NewppEnv dstate' pstate', NewppState utxoSt' acnt' pp, ppNew)
+      TRC (NewppEnv dstate' pstate'', NewppState utxoSt' acnt' pp, ppNew)
   pure $
     EpochState
       acnt''
