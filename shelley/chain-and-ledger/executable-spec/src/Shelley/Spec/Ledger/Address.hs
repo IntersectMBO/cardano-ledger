@@ -25,6 +25,7 @@ module Shelley.Spec.Ledger.Address
     RewardAcnt (..),
     serialiseRewardAcnt,
     deserialiseRewardAcnt,
+    networkAddressHeader,
     -- internals exported for testing
     getAddr,
     getKeyHash,
@@ -274,14 +275,18 @@ getAddr = do
 
 putRewardAcnt :: RewardAcnt crypto -> Put
 putRewardAcnt (RewardAcnt network cred) = do
-  let setPayCredBit = case cred of
-        ScriptHashObj _ -> flip setBit payCredIsScript
-        KeyHashObj _ -> id
+  B.putWord8 $ networkAddressHeader network cred
+  putCredential cred
+
+networkAddressHeader :: Network -> Credential k crypto -> Word8
+networkAddressHeader network cred =
+  let setPayCredBit =
+        case cred of
+          ScriptHashObj _ -> flip setBit payCredIsScript
+          KeyHashObj _ -> id
       netId = networkToWord8 network
       rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
-      header = setPayCredBit (netId .|. rewardAcntPrefix)
-  B.putWord8 header
-  putCredential cred
+  in setPayCredBit (netId .|. rewardAcntPrefix)
 
 getRewardAcnt :: forall crypto. Crypto crypto => Get (RewardAcnt crypto)
 getRewardAcnt = do
