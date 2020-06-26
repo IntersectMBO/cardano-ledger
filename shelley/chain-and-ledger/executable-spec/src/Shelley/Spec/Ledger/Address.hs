@@ -25,7 +25,8 @@ module Shelley.Spec.Ledger.Address
     RewardAcnt (..),
     serialiseRewardAcnt,
     deserialiseRewardAcnt,
-    networkAddressHeader,
+    serialiseCredential,
+    deserialiseCredential,
     -- internals exported for testing
     getAddr,
     getKeyHash,
@@ -151,6 +152,18 @@ deserialiseRewardAcnt :: Crypto crypto => ByteString -> Maybe (RewardAcnt crypto
 deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
   Right (_remaining, _offset, result) -> Just result
+
+serialiseCredential :: Network -> Credential kr crypto -> ByteString
+serialiseCredential network cred =
+  BSL.toStrict . B.runPut $ do
+    B.putWord8 $ networkAddressHeader network cred
+    putCredential cred
+
+deserialiseCredential :: Crypto crypto => ByteString -> Maybe (Network, Credential kr crypto)
+deserialiseCredential bs =
+  case B.runGetOrFail getNetworkCredential (BSL.fromStrict bs) of
+    Left (_remaining, _offset, _message) -> Nothing
+    Right (_remaining, _offset, result) -> Just result
 
 -- | An address for UTxO.
 data Addr crypto
@@ -286,10 +299,14 @@ networkAddressHeader network cred =
           KeyHashObj _ -> id
       netId = networkToWord8 network
       rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
-  in setPayCredBit (netId .|. rewardAcntPrefix)
+   in setPayCredBit (netId .|. rewardAcntPrefix)
 
 getRewardAcnt :: forall crypto. Crypto crypto => Get (RewardAcnt crypto)
-getRewardAcnt = do
+getRewardAcnt =
+  uncurry RewardAcnt <$> getNetworkCredential
+
+getNetworkCredential :: forall crypto kr. Crypto crypto => Get (Network, Credential kr crypto)
+getNetworkCredential = do
   header <- B.getWord8
   let rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
       isRewardAcnt = (header .&. rewardAcntPrefix) == rewardAcntPrefix
@@ -303,7 +320,7 @@ getRewardAcnt = do
       cred <- case testBit header rewardCredIsScript of
         True -> getScriptHash
         False -> getKeyHash
-      pure $ RewardAcnt network cred
+      pure $ (network, cred)
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = Hash.UnsafeHash <$> B.getByteString (fromIntegral $ Hash.sizeHash ([] @h))
