@@ -12,9 +12,6 @@ module Shelley.Spec.Ledger.Slot
     EpochNo (..),
     EpochSize (..),
     EpochInfo,
-    -- conversion between Byron / Shelley
-    slotByronToShelley,
-    slotShelleyToByron,
     -- Block number
     BlockNo (..),
     epochInfoEpoch,
@@ -23,7 +20,6 @@ module Shelley.Spec.Ledger.Slot
   )
 where
 
-import qualified Byron.Spec.Ledger.Core as Byron (Slot (..))
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -54,13 +50,6 @@ instance Monoid Duration where
 -- | Subtract a duration from a slot
 (*-) :: SlotNo -> Duration -> SlotNo
 (SlotNo s) *- (Duration d) = SlotNo (if s > d then s - d else 0)
-
--- | Convert `SlotNo` data from Byron to Shelley.
-slotByronToShelley :: Byron.Slot -> SlotNo
-slotByronToShelley (Byron.Slot s) = SlotNo s
-
-slotShelleyToByron :: SlotNo -> Byron.Slot
-slotShelleyToByron (SlotNo s) = Byron.Slot s
 
 epochInfoEpoch ::
   HasCallStack =>
