@@ -211,7 +211,7 @@ unpackByronVKey
     -- This maybe is produced by a check that the length of the public key
     -- is the correct one. (32 bytes). If the XPub was constructed correctly,
     -- we already know that it has this length.
-    Nothing -> error "unpackByronVKey: impossible!"
+    Nothing -> panic "unpackByronVKey: impossible!"
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
 
 makeBootstrapWitness ::
@@ -221,20 +221,19 @@ makeBootstrapWitness ::
   ) =>
   Hash crypto (TxBody crypto) ->
   Byron.SigningKey ->
-  Byron.Address ->
-  Maybe (BootstrapWitness crypto) -- Fails if the byron address is a Redeem address and not a vkey address
+  Byron.Attributes Byron.AddrAttributes ->
+  BootstrapWitness crypto
 makeBootstrapWitness txBodyHash byronSigningKey byronAddress =
-  BootstrapWitness vk signature cc <$> padding
+  BootstrapWitness vk signature cc padding
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
-    padding = byronAddressPadding byronAddress
+    padding = byronVerKeyAddressPadding byronAddress
     signatureBytes =
       WC.unXSignature $
         WC.sign (mempty :: ByteString) (Byron.unSigningKey byronSigningKey) (Hash.getHash txBodyHash)
-    -- This crashes in the case that the number of bytes in produced the signing is
-    -- different from the number of bytes expected in expected for SigDSIGN Ed25519.
-    -- At the time of writing, both of these are 64 bytes. If this ever fails, then
-    -- one of these has likely changed.
+    -- This crashes in the case that the number of bytes produced when signing is
+    -- different from the number of bytes expected for SigDSIGN Ed25519.
+    -- At the time of writing, both of these are 64 bytes.
     signature =
       DSIGN.SignedDSIGN . fromMaybe (panic "makeBootstrapWitness: impossible!") $
         DSIGN.rawDeserialiseSigDSIGN signatureBytes
