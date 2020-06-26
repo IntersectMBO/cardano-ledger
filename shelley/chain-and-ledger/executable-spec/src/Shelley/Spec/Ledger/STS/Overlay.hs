@@ -167,7 +167,7 @@ vrfChecks eta0 bhb = do
         (mkSeed seedL slot eta0)
         (coerce $ bheaderL bhb)
     )
-    (throwError $ VRFKeyBadLeaderValue seedEta slot eta0 (coerce $ bheaderL bhb))
+    (throwError $ VRFKeyBadLeaderValue seedL slot eta0 (coerce $ bheaderL bhb))
   where
     vrfK = bheaderVrfVk bhb
     slot = bheaderSlotNo bhb
