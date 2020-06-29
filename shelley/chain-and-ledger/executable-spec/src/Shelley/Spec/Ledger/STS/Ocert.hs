@@ -107,4 +107,4 @@ ocertTransition =
         pure cs
       Just m -> do
         m <= n ?! KESPeriodWrongOCERT m n
-        pure $ addpair hk n cs
+        pure $ addpair hk n cs -- cs ⨃ (singleton hk n)

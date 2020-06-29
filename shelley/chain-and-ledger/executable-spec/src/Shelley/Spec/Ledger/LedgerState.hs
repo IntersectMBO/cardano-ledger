@@ -783,12 +783,10 @@ consumed ::
   UTxO crypto ->
   TxBody crypto ->
   Coin
-consumed pp (_u@(UTxO v)) tx =
-  -- balance (txins tx ◁ _u) + refunds + withdrawals
-  -- We do not call ◁, as this causes an identity call to toSet(txins tx)
-  -- To be fixed in a following PR
-  balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
+consumed pp u tx =
+  balance (txins tx ◁ u) + refunds + withdrawals
   where
+    -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
 
