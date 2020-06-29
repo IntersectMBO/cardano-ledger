@@ -105,6 +105,10 @@ instance STS (DELEG crypto) where
   data PredicateFailure (DELEG crypto)
     = StakeKeyAlreadyRegisteredDELEG
         !(Credential 'Staking crypto) -- Credential which is already registered
+    | -- | Indicates that the stake key is somehow already in the rewards map.
+      --   This error being seen indicates a potential bug in the rules.
+      StakeKeyInRewardsDELEG
+        !(Credential 'Staking crypto) -- Credential which is already registered
     | StakeKeyNotRegisteredDELEG
         !(Credential 'Staking crypto) -- Credential which is not registered
     | StakeKeyNonZeroAccountBalanceDELEG
@@ -139,6 +143,8 @@ instance
   toCBOR = \case
     StakeKeyAlreadyRegisteredDELEG cred ->
       encodeListLen 2 <> toCBOR (0 :: Word8) <> toCBOR cred
+    StakeKeyInRewardsDELEG cred ->
+      encodeListLen 2 <> toCBOR (10 :: Word8) <> toCBOR cred
     StakeKeyNotRegisteredDELEG cred ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> toCBOR cred
     StakeKeyNonZeroAccountBalanceDELEG rewardBalance ->
@@ -172,6 +178,10 @@ instance
         matchSize "StakeKeyAlreadyRegisteredDELEG" 2 n
         kh <- fromCBOR
         pure $ StakeKeyAlreadyRegisteredDELEG kh
+      10 -> do
+        matchSize "StakeKeyInRewardsDELEG" 2 n
+        kh <- fromCBOR
+        pure $ StakeKeyInRewardsDELEG kh
       1 -> do
         matchSize "StakeKeyNotRegisteredDELEG" 2 n
         kh <- fromCBOR
@@ -222,6 +232,7 @@ delegationTransition = do
       -- note that pattern match is used instead of regCred, as in the spec
       -- hk ∉ dom (_stkCreds ds) -- Specification code translates below
       not (haskey hk (_stkCreds ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
+      not (haskey (RewardAcnt network hk) (_rewards ds)) ?! StakeKeyInRewardsDELEG hk
 
       pure $
         ds
