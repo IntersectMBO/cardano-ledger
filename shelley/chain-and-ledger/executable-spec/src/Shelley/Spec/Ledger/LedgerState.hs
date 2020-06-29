@@ -918,6 +918,8 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
     txRefunds = keyRefunds pp tx
 
 -- | Apply a transaction body as a state transition function on the ledger state.
+--
+--   TODO this function is only used in testing, and should be moved accordingly.
 applyTxBody ::
   (Crypto crypto) =>
   LedgerState crypto ->
