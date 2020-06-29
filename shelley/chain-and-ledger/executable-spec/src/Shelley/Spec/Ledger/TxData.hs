@@ -96,6 +96,7 @@ import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (explicitParseField)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (fold)
@@ -109,6 +110,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -188,7 +190,7 @@ instance ToJSON PoolMetaData where
   toJSON pmd =
     Aeson.object
       [ "url" .= _poolMDUrl pmd,
-        "hash" .= Char8.unpack (_poolMDHash pmd)
+        "hash" .= (Text.decodeLatin1 . Base16.encode) (_poolMDHash pmd)
       ]
 
 instance FromJSON PoolMetaData where
@@ -196,7 +198,7 @@ instance FromJSON PoolMetaData where
     Aeson.withObject "PoolMetaData" $ \obj ->
       PoolMetaData
         <$> obj .: "url"
-        <*> explicitParseField (fmap Char8.pack . parseJSON) obj "hash"
+        <*> explicitParseField (fmap (fst . Base16.decode . Char8.pack) . parseJSON) obj "hash"
 
 instance NoUnexpectedThunks PoolMetaData
 
