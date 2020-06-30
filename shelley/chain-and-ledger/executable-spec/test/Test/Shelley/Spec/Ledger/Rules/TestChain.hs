@@ -11,6 +11,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestChain
     removedAfterPoolreap,
     -- TestNewEpoch
     adaPreservationChain,
+    rewardStkCredSync,
   )
 where
 
@@ -25,9 +26,11 @@ import Control.State.Transition.Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import Data.Foldable (foldl')
 import Data.Proxy
+import qualified Data.Set as Set
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.BlockChain (Block (..), TxSeq (..), bbody, bhbody, bheaderSlotNo)
 import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Core
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda)
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
@@ -56,11 +59,41 @@ traceLen = 100
 -- Properties for Chain
 ---------------------------------------------------------------------
 
+-- | Verify that the domains for '_rewards' and '_srkCreds' remain in sync.
+rewardStkCredSync :: Property
+rewardStkCredSync =
+  forAllChainTrace $ \tr ->
+    conjoin $
+      map checkSync $
+        sourceSignalTargets tr
+  where
+    checkSync SourceSignalTarget {source, signal, target} =
+      let ds =
+            _dstate
+              . _delegationState
+              . esLState
+              . nesEs
+              . chainNes
+              $ target
+       in counterexample
+            ( mconcat
+                [ "source\n",
+                  show source,
+                  "signal\n",
+                  show signal,
+                  "target\n",
+                  show target
+                ]
+            )
+            $ dom
+              (_stkCreds ds)
+              === (Set.map getRwdCred $ dom (_rewards ds))
+
 adaPreservationChain :: Property
 adaPreservationChain =
   forAllChainTrace $ \tr ->
     conjoin . join $
-      map (\x -> [checkWithdrawlBound x, checkPreservation x]) $
+      map (\x -> [checkPreservation x, checkWithdrawlBound x]) $
         sourceSignalTargets tr
   where
     checkPreservation SourceSignalTarget {source, signal, target} =
@@ -75,8 +108,6 @@ adaPreservationChain =
             ]
         )
         $ totalAda source === totalAda target
-    -- | Check that the sum of the withdrawls equals the change in the rewards,
-    -- assuming we are not on an epoch boundary.
     checkWithdrawlBound SourceSignalTarget {source, signal, target} =
       epoch source == epoch target ==> rewardDelta === withdrawls
       where
@@ -87,11 +118,10 @@ adaPreservationChain =
         withdrawls =
           foldl'
             ( \c tx ->
-              let
-                wdrls = unWdrl . _wdrls . _body $
-                              tx
-              in
-                c + sum_ wdrls
+                let wdrls =
+                      unWdrl . _wdrls . _body $
+                        tx
+                 in c + sum_ wdrls
             )
             (Coin 0)
             $ txSeqTxns' . bbody $ signal
