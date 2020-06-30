@@ -369,9 +369,11 @@ concerns are independent of the ledger rules.
   the equations in $\mathsf{DELEG}$ and $\mathsf{POOL}$ follow this same pattern
   of matching on certificate type.
 
-  There is also a precondition on registration that the hashkey associated with
+  There are also preconditions on registration that the hashkey associated with
   the certificate witness of the certificate is not already found in the current
-  list of stake credentials.
+  list of stake credentials or the current reward accounts.
+  We expect that the stake credentials and the reward accounts contain the
+  same key hashes, making one of the checks redundant.
 
     Registration causes the following state transformation:
     \begin{itemize}
@@ -432,7 +434,8 @@ concerns are independent of the ledger rules.
   \begin{equation}\label{eq:deleg-reg}
     \inference[Deleg-Reg]
     {
-      \var{c}\in\DCertRegKey & hk \leteq \fun{regCred}~{c} & hk \notin \dom \var{stkCreds}
+      \var{c}\in\DCertRegKey & hk \leteq \fun{regCred}~{c} \\
+      \var{hk} \notin \dom \var{stkCreds} & (\addrRw \var{hk}) \notin \dom \var{rewards}
     }
     {
       \begin{array}{r}
