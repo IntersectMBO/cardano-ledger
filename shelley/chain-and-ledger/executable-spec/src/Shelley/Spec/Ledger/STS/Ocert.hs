@@ -106,5 +106,5 @@ ocertTransition =
         failBecause $ NoCounterForKeyHashOCERT hk
         pure cs
       Just m -> do
-        m <= n ?! CounterTooSmallOCERT m n
+        m <= n ?! CounterTooSmallOCERT m n -- cs ⨃ (singleton hk n)
         pure $ addpair hk n cs
