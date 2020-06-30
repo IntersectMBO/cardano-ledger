@@ -36,8 +36,6 @@ import Shelley.Spec.Ledger.LedgerState
     emptyDState,
     emptyPPUPState,
     emptyPState,
-    genesisCoins,
-    genesisId,
     overlaySchedule,
     _dstate,
     _rewards,
@@ -87,6 +85,10 @@ import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( genesisCoins,
+    genesisId,
+  )
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty

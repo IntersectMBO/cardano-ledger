@@ -47,8 +47,6 @@ import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
-    applyTxBody,
-    genesisCoins,
     genesisState,
     _delegationState,
     _dstate,
@@ -98,6 +96,10 @@ import Shelley.Spec.Ledger.TxData
   )
 import Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessVKey, pattern UTxO)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( applyTxBody,
+    genesisCoins,
+  )
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Mutator
 import Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
 import Test.Shelley.Spec.Ledger.Orphans ()

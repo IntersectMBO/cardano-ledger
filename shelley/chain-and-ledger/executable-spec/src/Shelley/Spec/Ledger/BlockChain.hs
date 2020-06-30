@@ -123,7 +123,6 @@ import Shelley.Spec.Ledger.Keys
     decodeVerKeyVRF,
     encodeSignedKES,
     encodeVerKeyVRF,
-    hash,
   )
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -604,10 +603,14 @@ mkSeed ::
   -- | Epoch nonce
   Nonce ->
   Seed
-mkSeed (Nonce uc) slot nonce =
-  Seed . coerce $ uc `Hash.xor` coerce (hash @SHA256 (slot, nonce))
-mkSeed NeutralNonce slot nonce =
-  Seed . coerce $ hash @SHA256 (slot, nonce)
+mkSeed uc slot nonce = Seed . coerce $ case uc of
+  NeutralNonce -> seed
+  Nonce ucNonce -> ucNonce `Hash.xor` seed
+  where
+    seed = coerce $ Hash.hashRaw @SHA256 id (serialize' slot <> nonceBytes)
+    nonceBytes = case nonce of
+      NeutralNonce -> mempty
+      Nonce n -> Hash.getHash n
 
 -- | Check that the certified input natural is valid for being slot leader. This
 -- means we check that

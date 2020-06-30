@@ -28,7 +28,6 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     vKey,
   )
-import Shelley.Spec.Ledger.LedgerState (genesisCoins)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC

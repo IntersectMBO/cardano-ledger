@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     pattern RetirePool,
   )
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
-import Shelley.Spec.Ledger.LedgerState (genesisId, txsize)
+import Shelley.Spec.Ledger.LedgerState (txsize)
 import qualified Shelley.Spec.Ledger.MetaData as MD
 import Shelley.Spec.Ledger.Scripts (pattern RequireMOf, pattern RequireSignature)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
@@ -95,6 +95,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     hashKeyVRF,
     pattern KeyPair,
   )
+import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))

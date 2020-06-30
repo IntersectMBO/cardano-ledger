@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.Credential
     pattern StakeRefBase,
   )
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness)
-import Shelley.Spec.Ledger.LedgerState (genesisCoins, genesisId, genesisState, _utxoState)
+import Shelley.Spec.Ledger.LedgerState (genesisState, _utxoState)
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.PParams (PParams, emptyPParams, _maxTxSize)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
@@ -78,6 +78,10 @@ import Test.Shelley.Spec.Ledger.Examples
     bobPay,
     carlAddr,
     dariaAddr,
+  )
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( genesisCoins,
+    genesisId,
   )
 import Test.Shelley.Spec.Ledger.Utils
 
