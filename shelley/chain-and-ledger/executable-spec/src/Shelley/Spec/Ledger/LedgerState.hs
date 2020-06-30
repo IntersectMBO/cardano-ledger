@@ -123,7 +123,7 @@ import Shelley.Spec.Ledger.BaseTypes
     intervalValue,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Core (dom, (∪), (∪+), (⋪), (▷), (◁))
+import Shelley.Spec.Ledger.Core (dom, haskey, range, (∪), (∪+), (⋪), (▷), (◁))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -992,10 +992,14 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     utxoState_ = _utxoState ls
     delegState = _delegationState ls
     dState = _dstate delegState
+    (regRU, unregRU) =
+      Map.partitionWithKey
+        (\(RewardAcnt _ k) _ -> haskey k $ _stkCreds dState)
+        (rs ru)
     as' =
       as
         { _treasury = _treasury as + deltaT ru,
-          _reserves = _reserves as + deltaR ru
+          _reserves = _reserves as + deltaR ru + sum (range unregRU)
         }
     ls' =
       ls
@@ -1005,7 +1009,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
             delegState
               { _dstate =
                   dState
-                    { _rewards = _rewards dState ∪+ rs ru
+                    { _rewards = _rewards dState ∪+ regRU
                     }
               }
         }
