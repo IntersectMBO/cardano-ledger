@@ -55,7 +55,10 @@ instance STS (POOLREAP crypto) where
   type BaseM (POOLREAP crypto) = ShelleyBase
   data PredicateFailure (POOLREAP crypto) -- No predicate Falures
     deriving (Show, Eq, Generic)
-  initialRules = [pure $ PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState]
+  initialRules =
+    [ pure $
+        PoolreapState emptyUTxOState emptyAccount emptyDState emptyPState
+    ]
   transitionRules = [poolReapTransition]
 
 instance NoUnexpectedThunks (PredicateFailure (POOLREAP crypto))
@@ -68,8 +71,14 @@ poolReapTransition = do
       StakePools stpools = _stPools ps
       pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ retired ◁ (_pParams ps)
-      rewardAcnts' = Map.fromList . Map.elems $ Map.intersectionWith (,) rewardAcnts pr
-      (refunds, mRefunds) = Map.partitionWithKey (\k _ -> k ∈ dom (_rewards ds)) rewardAcnts'
+      rewardAcnts' =
+        Map.fromList
+          . Map.elems
+          $ Map.intersectionWith (,) rewardAcnts pr
+      (refunds, mRefunds) =
+        Map.partitionWithKey
+          (\k _ -> k ∈ dom (_rewards ds))
+          rewardAcnts'
       refunded = sum $ Map.elems refunds
       unclaimed = sum $ Map.elems mRefunds
 
@@ -84,5 +93,6 @@ poolReapTransition = do
       ps
         { _stPools = StakePools $ retired ⋪ stpools,
           _pParams = retired ⋪ _pParams ps,
+          _fPParams = retired ⋪ _fPParams ps,
           _retiring = retired ⋪ _retiring ps
         }

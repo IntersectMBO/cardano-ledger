@@ -155,7 +155,6 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.Rules.TestDeleg
                          Test.Shelley.Spec.Ledger.Rules.TestDelegs
                          Test.Shelley.Spec.Ledger.Rules.TestLedger
-                         Test.Shelley.Spec.Ledger.Rules.TestNewEpoch
                          Test.Shelley.Spec.Ledger.Rules.TestPool
                          Test.Shelley.Spec.Ledger.Rules.TestPoolreap
                          Test.Shelley.Spec.Ledger.Rules.TestUtxo

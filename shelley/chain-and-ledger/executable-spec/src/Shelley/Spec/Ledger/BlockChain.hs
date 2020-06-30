@@ -24,7 +24,7 @@ module Shelley.Spec.Ledger.BlockChain
     BHeader (BHeader),
     Block (Block),
     LaxBlock (..),
-    TxSeq (TxSeq),
+    TxSeq (TxSeq, txSeqTxns'),
     HashBBody,
     bhHash,
     bbHash,
