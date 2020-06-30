@@ -529,13 +529,6 @@ lastByronHeaderHash _ = HashHeader $ coerce (hash 0 :: Hash (ConcreteCrypto h) I
 nonce0 :: HashAlgorithm h => proxy h -> Nonce
 nonce0 p = hashHeaderToNonce (lastByronHeaderHash p)
 
-mkSeqNonce :: HashAlgorithm h => proxy h -> Natural -> Nonce
-mkSeqNonce p m =
-  foldl'
-    (\c x -> c ⭒ mkNonceFromNumber (fromIntegral x))
-    (nonce0 p)
-    [1 .. m]
-
 carlPay :: KeyPair h 'Payment
 carlPay = KeyPair vk sk
   where
@@ -1332,7 +1325,9 @@ blockEx2E =
     []
     (SlotNo 220)
     (BlockNo 5)
-    ((mkSeqNonce p 3) ⭒ (hashHeaderToNonce (blockEx2BHash p)))
+    ( makeEvolvedNonce p (nonce0 p) [blockEx2A, blockEx2B, blockEx2C]
+        ⭒ (hashHeaderToNonce (blockEx2BHash p))
+    )
     (NatNonce 5)
     zero
     11
@@ -2637,7 +2632,7 @@ blockEx3D =
     []
     (SlotNo 110)
     (BlockNo 4)
-    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B, blockEx3C] ⭒ mkNonceFromNumber 123)
+    (makeEvolvedNonce p (nonce0 p) [blockEx3A, blockEx3B] ⭒ mkNonceFromNumber 123)
     (NatNonce 4)
     zero
     5
@@ -3244,7 +3239,7 @@ blockEx5D' pot =
     [txEx5D' pot]
     (slot)
     (BlockNo 2)
-    (mkSeqNonce p 1)
+    (makeEvolvedNonce p (nonce0 p) [blockEx5D pot])
     (NatNonce 2)
     zero
     7
@@ -3342,6 +3337,7 @@ test5DTreasury :: HashAlgorithm h => proxy h -> Assertion
 test5DTreasury p = test5D p TreasuryMIR
 
 -- * Example 6A - apply CHAIN transition to re-register a stake pool late in the epoch
+
 -- This example continues on from example 2A.
 
 feeEx6A :: Coin
@@ -3493,6 +3489,7 @@ ex6A' p =
     (Right $ expectedStEx6A lateSlotEx6 rewardUpdateEx6A' (candidateNonceEx6A' p))
 
 -- * Example 6B - If The TICK rule is applied to the NewEpochState
+
 -- in expectedStEx6A, then the future pool parameters should be adopted
 
 ex6BExpectedNES :: forall h. HashAlgorithm h => NewEpochState h
