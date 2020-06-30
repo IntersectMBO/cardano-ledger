@@ -13,11 +13,11 @@ import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
     relevantCasesAreCovered,
   )
 import Test.Shelley.Spec.Ledger.Rules.TestChain
-  ( constantSumPots,
+  ( adaPreservationChain,
+    constantSumPots,
     nonNegativeDeposits,
-    adaPreservationChain,
-    rewardStkCredSync,
     removedAfterPoolreap,
+    rewardStkCredSync,
   )
 import Test.Shelley.Spec.Ledger.Rules.TestLedger
   ( consumedEqualsProduced,
