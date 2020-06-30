@@ -468,4 +468,4 @@ nonMyopicMemberRew
     let nm' = max t nm -- TODO check with researchers that this is how to handle t > nm
         (Coin f) = maxPool pp rPot nm' s
         fHat = floor (p * fromIntegral f)
-     in memberRew (Coin fHat) pool (StakeShare s) (StakeShare nm')
+     in memberRew (Coin fHat) pool (StakeShare t) (StakeShare nm')
