@@ -52,7 +52,7 @@ instance
         !KESPeriod -- Current KES Period
         !KESPeriod -- OCert Start KES Period
         !Word64 -- Max KES Key Evolutions
-    | KESPeriodWrongOCERT
+    | CounterTooSmallOCERT
         !Natural -- last KES counter used
         !Natural -- current KES counter
     | InvalidSignatureOCERT -- TODO use whole OCert
@@ -106,5 +106,5 @@ ocertTransition =
         failBecause $ NoCounterForKeyHashOCERT hk
         pure cs
       Just m -> do
-        m <= n ?! KESPeriodWrongOCERT m n
-        pure $ addpair hk n cs -- cs ⨃ (singleton hk n)
+        m <= n ?! CounterTooSmallOCERT m n -- cs ⨃ (singleton hk n)
+        pure $ addpair hk n cs
