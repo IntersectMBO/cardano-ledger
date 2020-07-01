@@ -58,7 +58,6 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState
   ( PPUPState (..),
     UTxOState (..),
-    genesisId,
   )
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),
@@ -91,6 +90,7 @@ import Shelley.Spec.Ledger.UTxO
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
+import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (testSTS)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit

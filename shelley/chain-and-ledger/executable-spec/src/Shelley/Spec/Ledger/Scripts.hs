@@ -38,7 +38,6 @@ import Cardano.Binary
     encodeListLen,
     encodePreEncoded,
     encodeWord,
-    encodeWord8,
     matchSize,
     serializeEncoding,
   )
@@ -156,20 +155,15 @@ countMSigNodes (RequireAllOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireAnyOf msigs) = 1 + sum (map countMSigNodes msigs)
 countMSigNodes (RequireMOf _ msigs) = 1 + sum (map countMSigNodes msigs)
 
--- | Hashes native multi-signature script, appending the 'nativeMultiSigTag' in
--- front and then calling the script CBOR function.
+-- | Hashes native multi-signature script. We serialize it as a Script, which
+-- includes the type tag.
 hashMultiSigScript ::
   Crypto crypto =>
   MultiSig crypto ->
   ScriptHash crypto
 hashMultiSigScript msig =
   ScriptHash $
-    hashWithSerialiser
-      ( \x ->
-          encodeWord8 nativeMultiSigTag
-            <> toCBOR x
-      )
-      (MultiSigScript msig)
+    hashWithSerialiser toCBOR (MultiSigScript msig)
 
 hashAnyScript ::
   Crypto crypto =>

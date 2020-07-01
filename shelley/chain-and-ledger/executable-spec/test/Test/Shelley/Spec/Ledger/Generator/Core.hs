@@ -12,6 +12,7 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
+    applyTxBody,
     GenEnv (..),
     KeySpace (..),
     pattern KeySpace,
@@ -28,6 +29,8 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     genNatural,
     genWord64,
     genTxOut,
+    genesisCoins,
+    genesisId,
     increasingProbabilityAt,
     lookupGenDelegate,
     mkScriptsFromKeyPair,
@@ -50,15 +53,17 @@ module Test.Shelley.Spec.Ledger.Generator.Core
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
+import qualified Cardano.Crypto.Hash as Hash
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Data.Coerce (coerce)
 import Data.List (foldl')
 import qualified Data.List as List (find, findIndex, (\\))
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (fromList, lookup)
+import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Data.Tuple (swap)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
@@ -66,6 +71,7 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (toAddr, toCred, pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes
   ( Nonce (..),
+    StrictMaybe (..),
     UnitInterval,
     epochInfo,
     intervalValue,
@@ -84,12 +90,14 @@ import Shelley.Spec.Ledger.BlockChain
     pattern BlockHash,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Core ((∪), (⋪))
 import Shelley.Spec.Ledger.Credential
   ( pattern KeyHashObj,
     pattern ScriptHashObj,
     pattern StakeRefBase,
     pattern StakeRefPtr,
   )
+import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
     KeyRole (..),
@@ -99,9 +107,23 @@ import Shelley.Spec.Ledger.Keys
     signedKES,
     vKey,
   )
-import Shelley.Spec.Ledger.LedgerState (AccountState (..))
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState (..),
+    depositPoolChange,
+    reapRewards,
+    _delegationState,
+    _deposited,
+    _dstate,
+    _fees,
+    _rewards,
+    _utxo,
+    _utxoState,
+  )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..), pattern OCert)
-import Shelley.Spec.Ledger.PParams (ProtVer (..))
+import Shelley.Spec.Ledger.PParams
+  ( PParams,
+    ProtVer (..),
+  )
 import Shelley.Spec.Ledger.Scripts
   ( pattern RequireAllOf,
     pattern RequireAnyOf,
@@ -115,7 +137,25 @@ import Shelley.Spec.Ledger.Slot
     epochInfoFirst,
     (*-),
   )
-import Shelley.Spec.Ledger.Tx (hashScript, pattern TxOut)
+import qualified Shelley.Spec.Ledger.Tx as Ledger
+import Shelley.Spec.Ledger.Tx
+  ( hashScript,
+    pattern TxBody,
+    pattern TxId,
+    pattern TxIn,
+    pattern TxOut,
+  )
+import Shelley.Spec.Ledger.TxData
+  ( unWdrl,
+    _txfee,
+    _wdrls,
+    pattern Wdrl,
+  )
+import Shelley.Spec.Ledger.UTxO
+  ( txins,
+    txouts,
+    pattern UTxO,
+  )
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -129,13 +169,16 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     KeyHash,
     KeyPair,
     KeyPairs,
+    LedgerState,
     MultiSig,
     MultiSigPairs,
     OCert,
     SignKeyKES,
     SignKeyVRF,
     Tx,
+    TxBody,
     TxOut,
+    UTxO,
     VKey,
     VerKeyKES,
     VerKeyVRF,
@@ -553,3 +596,58 @@ genesisAccountState =
     { _treasury = Coin 0,
       _reserves = maxLLSupply
     }
+
+-- | The transaction Id for 'UTxO' included at the beginning of a new ledger.
+genesisId ::
+  (Crypto c) => Ledger.TxId c
+genesisId =
+  TxId $
+    Hash.hash
+      ( TxBody
+          Set.empty
+          StrictSeq.Empty
+          StrictSeq.Empty
+          (Wdrl Map.empty)
+          (Coin 0)
+          (SlotNo 0)
+          SNothing
+          SNothing
+      )
+
+-- | Creates the UTxO for a new ledger with the specified transaction outputs.
+genesisCoins ::
+  (HashAlgorithm h) =>
+  [TxOut h] ->
+  UTxO h
+genesisCoins outs =
+  UTxO $
+    Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0 ..] outs]
+
+-- | Apply a transaction body as a state transition function on the ledger state.
+applyTxBody ::
+  (HashAlgorithm h) =>
+  LedgerState h ->
+  PParams ->
+  TxBody h ->
+  LedgerState h
+applyTxBody ls pp tx =
+  ls
+    { _utxoState =
+        us
+          { _utxo = txins tx ⋪ (_utxo us) ∪ txouts tx,
+            _deposited = depositPoolChange ls pp tx,
+            _fees = (_txfee tx) + (_fees . _utxoState $ ls)
+          },
+      _delegationState =
+        dels
+          { _dstate = dst {_rewards = newAccounts}
+          }
+    }
+  where
+    dels = _delegationState ls
+    dst = _dstate dels
+    us = _utxoState ls
+    newAccounts =
+      reapRewards
+        ((_rewards . _dstate . _delegationState) ls)
+        (unWdrl $ _wdrls tx)

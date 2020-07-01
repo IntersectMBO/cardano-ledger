@@ -120,7 +120,6 @@ import Shelley.Spec.Ledger.LedgerState
     deltaR,
     deltaT,
     emptyLedgerState,
-    genesisId,
     nonMyopic,
     rs,
     pattern ActiveSlot,
@@ -207,6 +206,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern KeyPair,
     pattern VKey,
   )
+import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.SerializationProperties
   ( prop_roundtrip_Addr,
     prop_roundtrip_Block,
@@ -1239,8 +1239,8 @@ serializationUnitTests =
                 -- tx 4, two scripts
                 <> T (TkMapLen 1 . TkWord 1)
                 <> T (TkListLen 2)
-                <> S (testScript p)
                 <> S (testScript2 p)
+                <> S (testScript p)
                 -- tx 5, two keys and two scripts
                 <> T (TkMapLen 2)
                 <> T (TkWord 0)
@@ -1249,8 +1249,8 @@ serializationUnitTests =
                 <> S w1
                 <> T (TkWord 1)
                 <> T (TkListLen 2)
-                <> S (testScript p)
                 <> S (testScript2 p)
+                <> S (testScript p)
                 -- metadata
                 <> T (TkMapLen 1)
                 <> T (TkInt 4)

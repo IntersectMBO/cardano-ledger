@@ -23,43 +23,42 @@
 -- as state transformations on a ledger state ('LedgerState'),
 -- as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module Shelley.Spec.Ledger.LedgerState
-  ( LedgerState (..),
-    Ix,
+  ( AccountState (..),
     DPState (..),
     DState (..),
-    AccountState (..),
-    RewardUpdate (..),
-    RewardAccounts,
-    InstantaneousRewards (..),
-    emptyInstantaneousRewards,
-    totalInstantaneousReservesRewards,
-    totalInstantaneousTreasuryRewards,
-    emptyRewardUpdate,
-    FutureGenDeleg (..),
     EpochState (..),
+    FutureGenDeleg (..),
+    InstantaneousRewards (..),
+    Ix,
+    KeyPairs,
+    LedgerState (..),
+    OBftSlot (..),
+    PPUPState (..),
+    PState (..),
+    RewardAccounts,
+    RewardUpdate (..),
+    UTxOState (..),
+    depositPoolChange,
+    emptyAccount,
+    emptyDPState,
+    emptyDState,
     emptyEpochState,
+    emptyInstantaneousRewards,
     emptyLedgerState,
     emptyPPUPState,
-    emptyUTxOState,
-    updatePpup,
-    PState (..),
-    KeyPairs,
-    PPUPState (..),
-    pvCanFollow,
-    UTxOState (..),
-    OBftSlot (..),
-    emptyAccount,
     emptyPState,
-    emptyDState,
-    emptyDPState,
+    emptyRewardUpdate,
+    emptyUTxOState,
+    pvCanFollow,
+    reapRewards,
+    totalInstantaneousReservesRewards,
+    totalInstantaneousTreasuryRewards,
+    updatePpup,
 
     -- * state transitions
     emptyDelegation,
-    applyTxBody,
 
     -- * Genesis State
-    genesisId,
-    genesisCoins,
     genesisState,
 
     -- * Validation
@@ -109,7 +108,6 @@ import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -123,7 +121,7 @@ import Shelley.Spec.Ledger.BaseTypes
     intervalValue,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Core (dom, haskey, range, (∪), (∪+), (⋪), (▷), (◁))
+import Shelley.Spec.Ledger.Core (dom, haskey, range, (∪), (∪+), (▷), (◁))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -158,7 +156,6 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     VKey,
     asWitness,
-    hash,
   )
 import Shelley.Spec.Ledger.PParams
   ( PParams,
@@ -198,8 +195,6 @@ import Shelley.Spec.Ledger.TxData
     Ptr (..),
     RewardAcnt (..),
     TxBody (..),
-    TxId (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
@@ -689,33 +684,6 @@ instance Crypto crypto => FromCBOR (LedgerState crypto) where
     dp <- fromCBOR
     pure $ LedgerState u dp
 
--- | The transaction Id for 'UTxO' included at the beginning of a new ledger.
-genesisId ::
-  (Crypto crypto) =>
-  TxId crypto
-genesisId =
-  TxId $
-    hash
-      ( TxBody
-          Set.empty
-          StrictSeq.Empty
-          StrictSeq.Empty
-          (Wdrl Map.empty)
-          (Coin 0)
-          (SlotNo 0)
-          SNothing
-          SNothing
-      )
-
--- | Creates the UTxO for a new ledger with the specified transaction outputs.
-genesisCoins ::
-  (Crypto crypto) =>
-  [TxOut crypto] ->
-  UTxO crypto
-genesisCoins outs =
-  UTxO $
-    Map.fromList [(TxIn genesisId idx, out) | (idx, out) <- zip [0 ..] outs]
-
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
@@ -916,37 +884,6 @@ depositPoolChange ls pp tx = (currentPool + txDeposits) - txRefunds
     txDeposits =
       totalDeposits pp ((_stPools . _pstate . _delegationState) ls) (toList $ _certs tx)
     txRefunds = keyRefunds pp tx
-
--- | Apply a transaction body as a state transition function on the ledger state.
---
---   TODO this function is only used in testing, and should be moved accordingly.
-applyTxBody ::
-  (Crypto crypto) =>
-  LedgerState crypto ->
-  PParams ->
-  TxBody crypto ->
-  LedgerState crypto
-applyTxBody ls pp tx =
-  ls
-    { _utxoState =
-        us
-          { _utxo = txins tx ⋪ (_utxo us) ∪ txouts tx,
-            _deposited = depositPoolChange ls pp tx,
-            _fees = (_txfee tx) + (_fees . _utxoState $ ls)
-          },
-      _delegationState =
-        dels
-          { _dstate = dst {_rewards = newAccounts}
-          }
-    }
-  where
-    dels = _delegationState ls
-    dst = _dstate dels
-    us = _utxoState ls
-    newAccounts =
-      reapRewards
-        ((_rewards . _dstate . _delegationState) ls)
-        (unWdrl $ _wdrls tx)
 
 reapRewards ::
   RewardAccounts crypto ->
