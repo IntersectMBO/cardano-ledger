@@ -72,7 +72,7 @@ poolReapTransition = do
       pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ retired ◁ (_pParams ps)
       rewardAcnts' =
-        Map.fromList
+        Map.fromListWith (+)
           . Map.elems
           $ Map.intersectionWith (,) rewardAcnts pr
       (refunds, mRefunds) =
