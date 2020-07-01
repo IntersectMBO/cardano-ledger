@@ -1288,6 +1288,13 @@ The $\fun{applyRUpd}$ function does the following:
     \begin{itemize}
       \item Adjust the treasury, reserves and fee pots by the appropriate amounts.
       \item Add each individual reward to the global reward mapping.
+        We must be careful, though, not to give out rewards to accounts
+        that have been deregistered after the reward update was created.
+        \begin{itemize}
+          \item Rewards for accounts that are still registered are added to the reward mappings.
+          \item The sum of the unregistered rewards are added to the reserves.
+            % TODO - We may want to add these to the treasury instead, to be consistent with our other choices.
+        \end{itemize}
     \end{itemize}
 
 These two functions will be used in the blockchain transition systems in Section~\ref{sec:chain}.
@@ -1378,10 +1385,10 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \left(
         \begin{array}{c}
           \varUpdate{\var{treasury} + \Delta t}\\
-          \varUpdate{\var{reserves} + \Delta r}\\
+          \varUpdate{\var{reserves} + \Delta r+ \var{unregRU'}}\\
           ~ \\
           \var{\var{stkCreds}} \\
-          \varUpdate{\var{rewards}\unionoverridePlus\var{rs}} \\
+          \varUpdate{\var{rewards}\unionoverridePlus\var{regRU}} \\
           \var{delegations} \\
           \var{ptrs} \\
           \var{genDelegs} \\
@@ -1399,7 +1406,11 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{prevPp} \\
           \var{pp} \\
         \end{array}
-    \right)
+    \right) \\
+    & ~~~\where \\
+    & ~~~~~~~\var{regRU}=(\dom{stkCreds})\restrictdom rs\\
+    & ~~~~~~~\var{unregRU}=(\dom{stkCreds})\subtractdom rs\\
+    & ~~~~~~~\var{unregRU'}=\sum\limits_{\wcard\mapsto c\in\var{unregRU}} \var{c}\\
   \end{align*}
 
   \caption{Reward Update Application}
