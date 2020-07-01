@@ -150,6 +150,7 @@ test-suite shelley-spec-ledger-test
                          Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests
                          Test.Shelley.Spec.Ledger.NonTraceProperties.Validity
                          Test.Shelley.Spec.Ledger.PropertyTests
+                         Test.Shelley.Spec.Ledger.Rewards
                          Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
                          Test.Shelley.Spec.Ledger.Rules.TestChain
                          Test.Shelley.Spec.Ledger.Rules.TestDeleg
