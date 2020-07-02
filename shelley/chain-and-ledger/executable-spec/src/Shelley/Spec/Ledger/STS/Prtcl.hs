@@ -61,7 +61,6 @@ import Shelley.Spec.Ledger.Keys
   )
 import Shelley.Spec.Ledger.LedgerState (OBftSlot)
 import Shelley.Spec.Ledger.OCert (KESPeriod)
-import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
 import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
@@ -73,24 +72,18 @@ data PrtclState crypto
       !(Map (KeyHash 'BlockIssuer crypto) Natural)
       -- ^ Operation Certificate counters
       !Nonce
-      -- ^ Current epoch nonce
-      !Nonce
       -- ^ Evolving nonce
       !Nonce
       -- ^ Candidate nonce
-      !Nonce
-      -- ^ Prev epoch hash nonce
   deriving (Generic, Show, Eq)
 
 instance Crypto crypto => ToCBOR (PrtclState crypto) where
-  toCBOR (PrtclState m n1 n2 n3 n4) =
+  toCBOR (PrtclState m n2 n3) =
     mconcat
       [ encodeListLen 5,
         toCBOR m,
-        toCBOR n1,
         toCBOR n2,
-        toCBOR n3,
-        toCBOR n4
+        toCBOR n3
       ]
 
 instance Crypto crypto => FromCBOR (PrtclState crypto) where
@@ -100,19 +93,14 @@ instance Crypto crypto => FromCBOR (PrtclState crypto) where
       <$> fromCBOR
       <*> fromCBOR
       <*> fromCBOR
-      <*> fromCBOR
-      <*> fromCBOR
 
 instance Crypto crypto => NoUnexpectedThunks (PrtclState crypto)
 
 data PrtclEnv crypto
-  = -- | New epoch marker
-    PrtclEnv
-      PParams
+  = PrtclEnv
       (Map SlotNo (OBftSlot crypto))
       (PoolDistr crypto)
       (GenDelegs crypto)
-      Bool
       Nonce
   deriving (Generic)
 
@@ -163,8 +151,8 @@ prtclTransition ::
   TransitionRule (PRTCL crypto)
 prtclTransition = do
   TRC
-    ( PrtclEnv pp osched pd dms ne etaPH,
-      PrtclState cs eta0 etaV etaC etaH,
+    ( PrtclEnv osched pd dms eta0,
+      PrtclState cs etaV etaC,
       bh
       ) <-
     judgmentContext
@@ -172,24 +160,22 @@ prtclTransition = do
       slot = bheaderSlotNo bhb
       eta = mkNonceFromOutputVRF . VRF.certifiedOutput $ bheaderEta bhb
 
-  UpdnState eta0' etaV' etaC' etaH' <-
+  UpdnState etaV' etaC' <-
     trans @(UPDN crypto) $
       TRC
-        ( UpdnEnv eta pp etaPH ne,
-          UpdnState eta0 etaV etaC etaH,
+        ( UpdnEnv eta,
+          UpdnState etaV etaC,
           slot
         )
   cs' <-
     trans @(OVERLAY crypto) $
-      TRC (OverlayEnv osched eta0' pd dms, cs, bh)
+      TRC (OverlayEnv osched eta0 pd dms, cs, bh)
 
   pure $
     PrtclState
       cs'
-      eta0'
       etaV'
       etaC'
-      etaH'
 
 instance (Crypto crypto) => NoUnexpectedThunks (PredicateFailure (PRTCL crypto))
 
