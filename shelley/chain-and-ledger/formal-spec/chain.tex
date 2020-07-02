@@ -43,6 +43,8 @@
 \newcommand{\OverlayEnv}{\type{OverlayEnv}}
 \newcommand{\VRFState}{\type{VRFState}}
 \newcommand{\NewEpochEnv}{\type{NewEpochEnv}}
+\newcommand{\TickNonceState}{\type{TickNonceState}}
+\newcommand{\TickNonceEnv}{\type{TickNonceEnv}}
 \newcommand{\NewEpochState}{\type{NewEpochState}}
 \newcommand{\UpdateNonceState}{\type{UpdateNonceState}}
 \newcommand{\UpdateNonceEnv}{\type{UpdateNonceEnv}}
@@ -610,16 +612,107 @@ In the first case, the new epoch state is updated as follows:
 
 \clearpage
 
+\subsection{Tick Nonce Transition}
+\label{sec:tick-nonce-trans}
+
+The Tick Nonce Transition is responsible for updating the epoch nonce and the
+previous hash nonce at the start of an epoch. Its environment is shown in
+Figure~\ref{fig:ts-types:ticknonce} and consists of the protocol parameters
+$\var{pp}$, the candidate nonce $\eta_c$ and the previous header hash as a
+nonce. Its state consists of the epoch nonce $\eta_0$ and the previous hash
+nonce.
+
+\begin{figure}
+  \emph{Tick Nonce environments}
+  \begin{equation*}
+    \TickNonceEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pp} & \PParams & \text{protocol parameters} \\
+        \eta_c & \Seed & \text{candidate nonce} \\
+        \eta_\var{ph} & \Seed & \text{previous header hash as nonce} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{Tick Nonce states}
+  \begin{equation*}
+    \TickNonceState =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \eta_0 & \Seed & \text{epoch nonce} \\
+        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  \label{fig:ts-types:ticknonce}
+\end{figure}
+
+The signal to the transition rule $\mathsf{TICKN}$ is a marker indicating
+whether we are in a new epoch. If we are in a new epoch, we update the epoch
+nonce and the previous hash. Otherwise, we do nothing.
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:tick-nonce-notnewepoch}
+   \inference[Not-New-Epoch]
+   { }
+   {
+     {\begin{array}{c}
+        \var{pp} \\
+        \eta_c \\
+        \eta_\var{ph} \\
+      \end{array}}
+     \vdash
+     {\left(\begin{array}{c}
+           \eta_0 \\
+           \eta_h \\
+     \end{array}\right)}
+     \trans{tickn}{\mathsf{False}}
+     {\left(\begin{array}{c}
+           \eta_0 \\
+           \eta_h \\
+     \end{array}\right)}
+   }
+ \end{equation}
+
+ \nextdef
+
+ \begin{equation}\label{eq:tick-nonce-newepoch}
+   \inference[New-Epoch]
+   {
+     \eta_e \leteq \fun{extraEntropy}~\var{pp}
+   }
+   {
+     {\begin{array}{c}
+        \var{pp} \\
+        \eta_c \\
+        \eta_\var{ph} \\
+      \end{array}}
+     \vdash
+     {\left(\begin{array}{c}
+           \eta_0 \\
+           \eta_h \\
+     \end{array}\right)}
+     \trans{tickn}{\mathsf{True}}
+     {\left(\begin{array}{c}
+           \varUpdate{\eta_c \seedOp \eta_h \seedOp \eta_e} \\
+           \varUpdate{\eta_\var{ph}} \\
+     \end{array}\right)}
+   }
+ \end{equation}
+
+ \caption{Tick Nonce rules}
+ \label{fig:rules:tick-nonce}
+\end{figure}
+
 \subsection{Update Nonce Transition}
 \label{sec:update-nonces-trans}
 
 The Update Nonce Transition updates the nonces until the randomness gets fixed.
 The environment is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
-the block nonce $\eta$, the protocol parameters $\var{pp}$, the current previous hash
-nonce $\eta_\var{ph}$,
-and a marker $\var{ne}$ determining whether we are in a new epoch.
+the block nonce $\eta$.
 The update nonce state is shown in Figure~\ref{fig:ts-types:updnonce} and consists of
-the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
+the candidate nonce $\eta_c$ and the evolving nonce $\eta_v$.
 
 \begin{figure}
   \emph{Update Nonce environments}
@@ -628,9 +721,6 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
     \left(
       \begin{array}{r@{~\in~}lr}
         \eta & \Seed & \text{new nonce} \\
-        \var{pp} & \PParams & \text{protocol parameters} \\
-        \eta_\var{ph} & \Seed & \text{previous header hash as nonce} \\
-        \var{ne} & \Bool & \text{is new epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -640,10 +730,8 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
     \UpdateNonceState =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \eta_0 & \Seed & \text{epoch nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
-        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -662,13 +750,9 @@ the epoch nonce $\eta_0$, the candidate nonce $\eta_c$ and the evolving nonce $\
 \end{figure}
 
 The transition rule $\mathsf{UPDN}$ takes the slot \var{s} as signal. There are
-three different cases for $\mathsf{UPDN}$: one where we are in a new epoch, one
-where \var{s} is not yet \StabilityWindow{} slots from the beginning of the next
-epoch and one where \var{s} is less than \StabilityWindow{} slots until the start of
-the next epoch.
-
-This does assume that the first block in an epoch will occur before
-\StabilityWindow{} slots before the beginning of the next epoch.
+two different cases for $\mathsf{UPDN}$: one where \var{s} is not yet
+\StabilityWindow{} slots from the beginning of the next epoch and one where
+\var{s} is less than \StabilityWindow{} slots until the start of the next epoch.
 
 Note that in \ref{eq:update-both}, the nonce candidate $\eta_c$ transitions to
 $\eta_v\seedOp\eta$, not $\eta_c\seedOp\eta$. The reason for this is that even
@@ -677,35 +761,6 @@ nonces to again be equal at the start of a new epoch (so that the entropy added
 near the end of the epoch is not discarded).
 
 \begin{figure}[ht]
-   \begin{equation}\label{eq:update-all}
-    \inference[Update-All]
-    { \eta_e \leteq \fun{extraEntropy}~\var{pp}
-    }
-    {
-      {\begin{array}{c}
-         \eta \\
-         \var{pp} \\
-         \eta_\var{ph} \\
-         \mathsf{True}
-       \end{array}}
-      \vdash
-      {\left(\begin{array}{c}
-            \eta_0 \\
-            \eta_v \\
-            \eta_c \\
-            \eta_h \\
-      \end{array}\right)}
-      \trans{updn}{\var{s}}
-      {\left(\begin{array}{c}
-            \varUpdate{\eta_c \seedOp \eta_h \seedOp \eta_e} \\
-            \varUpdate{\eta_v\seedOp\eta} \\
-            \varUpdate{\eta_v\seedOp\eta} \\
-            \varUpdate{\eta_\var{ph}} \\
-      \end{array}\right)}
-    }
-  \end{equation}
-
-  \nextdef
 
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
@@ -715,23 +770,16 @@ near the end of the epoch is not discarded).
     {
       {\begin{array}{c}
          \eta \\
-         \var{pp} \\
-         \eta_\var{ph} \\
-         \mathsf{False}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
-            \eta_0 \\
             \eta_v \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
-            \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \varUpdate{\eta_v\seedOp\eta} \\
-            \eta_h \\
       \end{array}\right)}
     }
   \end{equation}
@@ -746,23 +794,16 @@ near the end of the epoch is not discarded).
     {
       {\begin{array}{c}
          \eta \\
-         \var{pp} \\
-         \eta_\var{ph} \\
-         \mathsf{False}
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
-            \eta_0 \\
             \eta_v \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
       \trans{updn}{\var{s}}
       {\left(\begin{array}{c}
-            \eta_0 \\
             \varUpdate{\eta_v\seedOp\eta} \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1388,12 +1429,9 @@ followed by the transition to update the evolving and candidate nonces.
     \PrtclEnv =
     \left(
       \begin{array}{r@{~\in~}lr}
-        \var{pp} & \PParams & \text{protocol parameters} \\
         \var{osched} & \Slot\mapsto\KeyHashGen^? & \text{OBFT overlay schedule} \\
         \var{pd} & \PoolDistr & \text{pool stake distribution} \\
         \var{dms} & \KeyHashGen\mapsto\KeyHash & \text{genesis key delegations} \\
-        \var{ne} & \Bool & \text{new epoch marker} \\
-        \eta_\var{ph} & \Seed & \text{nonce from previous header hash} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1404,10 +1442,8 @@ followed by the transition to update the evolving and candidate nonces.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{cs} & \KeyHash_{pool} \mapsto \N & \text{operational certificate issues numbers} \\
-        \eta_0 & \Seed & \text{current epoch nonce} \\
         \eta_v & \Seed & \text{evolving nonce} \\
         \eta_c & \Seed & \text{candidate nonce} \\
-        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1423,7 +1459,6 @@ followed by the transition to update the evolving and candidate nonces.
 
 The environments for this transition are:
 \begin{itemize}
-  \item The protocol parameters $\var{pp}$.
   \item A mapping $\var{osched}$ of slots to an optional genesis key.
     In the terminology of \cite{delegation_design},
     the slots in $\var{osched}$ are the ``OBFT slots''.
@@ -1432,18 +1467,15 @@ The environments for this transition are:
     responsible for producing the block.
   \item The stake pool stake distribution $\var{pd}$.
   \item The mapping $\var{dms}$ of genesis keys to their cold keys.
-  \item A marker indicating whether we are in a new epoch $\var{ne}$.
-  \item The current previous header hash as a nonce, $\eta_\var{ph}$.
+  \item The epoch nonce $\eta_0$.
 \end{itemize}
 
 The states for this transition consists of:
 \begin{itemize}
   \item The operational certificate issue number mapping.
   \item The last applied block information.
-  \item The current epoch nonce.
   \item The evolving nonce.
   \item The canditate nonce for the next epoch.
-  \item The stored nonce for hash of the last epoch.
 \end{itemize}
 
 \begin{figure}[ht]
@@ -1453,31 +1485,22 @@ The states for this transition consists of:
       \eta\leteq\fun{bnonce}~(\bhbody{bhb})
       \\~\\
       {
-        {\left(\begin{array}{c}
-        \eta \\
-        \var{pp} \\
-        \eta_\var{ph} \\
-        \var{ne} \\
-        \end{array}\right)}
+        \eta
         \vdash
         {\left(\begin{array}{c}
-        \eta_0 \\
         \eta_v \\
         \eta_c \\
-        \eta_h \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{slot}}
         {\left(\begin{array}{c}
-        \eta_0' \\
         \eta_v' \\
         \eta_c' \\
-        \eta_h' \\
         \end{array}\right)}
       }\\~\\
       {
         {\begin{array}{c}
           \var{osched} \\
-          \eta_0' \\
+          \eta_0 \\
           \var{pd} \\
           \var{dms} \\
         \end{array}
@@ -1487,28 +1510,22 @@ The states for this transition consists of:
     }
     {
       {\begin{array}{c}
-         \var{pp} \\
          \var{osched} \\
          \var{pd} \\
          \var{dms} \\
-         \var{ne} \\
-         \eta_\var{ph}
+         \eta_0 \\
        \end{array}}
       \vdash
       {\left(\begin{array}{c}
             \var{cs} \\
-            \eta_0 \\
             \eta_v \\
             \eta_c \\
-            \eta_h \\
       \end{array}\right)}
       \trans{prtcl}{\var{bh}}
       {\left(\begin{array}{c}
             \varUpdate{cs'} \\
-            \varUpdate{\eta_0'} \\
             \varUpdate{\eta_v'} \\
             \varUpdate{\eta_c'} \\
-            \varUpdate{\eta_h'} \\
       \end{array}\right)}
     }
   \end{equation}
@@ -1850,28 +1867,39 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
           \eta_{ph} \leteq \prevHashToNonce{(\lastAppliedHash{lab})} \\
       {
         {\begin{array}{c}
-            \var{pp'} \\
+        \var{pp'} \\
+        \eta_c \\
+        \eta_\var{ph} \\
+        \end{array}}
+        \vdash
+        {\left(\begin{array}{c}
+        \eta_0 \\
+        \eta_h \\
+        \end{array}\right)}
+        \trans{\hyperref[fig:rules:tick-nonce]{tickn}}{\var{ne}}
+        {\left(\begin{array}{c}
+        \eta_0' \\
+        \eta_h' \\
+        \end{array}\right)}
+      }\\~\\~\\
+      {
+        {\begin{array}{c}
             \var{osched} \\
             \var{pd} \\
             \var{genDelegs} \\
-            \var{ne} \\
-            \eta_{ph} \\
+            \eta_0' \\
          \end{array}}
         \vdash
         {\left(\begin{array}{c}
               \var{cs} \\
-              \eta_0 \\
               \eta_v \\
               \eta_c \\
-              \eta_h \\
         \end{array}\right)}
         \trans{\hyperref[fig:rules:prtcl]{prtcl}}{\var{bh}}
         {\left(\begin{array}{c}
               \var{cs'} \\
-              \eta_0' \\
               \eta_v' \\
               \eta_c' \\
-              \eta_h' \\
         \end{array}\right)}
       } \\~\\~\\
       {
