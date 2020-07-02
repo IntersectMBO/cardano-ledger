@@ -113,6 +113,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
     prtlSeqChecks,
   )
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
+import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.Slot (EpochNo, SlotNo)
 import Shelley.Spec.Ledger.Tx (TxBody)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
@@ -210,6 +211,7 @@ instance
         !Natural -- max protocol version
     | BbodyFailure !(PredicateFailure (BBODY crypto)) -- Subtransition Failures
     | TickFailure !(PredicateFailure (TICK crypto)) -- Subtransition Failures
+    | TicknFailure !(PredicateFailure TICKN) -- Subtransition Failures
     | PrtclFailure !(PredicateFailure (PRTCL crypto)) -- Subtransition Failures
     | PrtclSeqFailure !(PrtlSeqFailure crypto) -- Subtransition Failures
     deriving (Show, Eq, Generic)
@@ -272,11 +274,20 @@ chainTransition =
 
       let ph = lastAppliedHash lab
           etaPH = prevHashToNonce ph
-      PrtclState cs' eta0' etaV' etaC' etaH' <-
+
+      TicknState eta0' etaH' <-
+        trans @TICKN $
+          TRC
+            ( TicknEnv pp' etaC etaPH,
+              TicknState eta0 etaH,
+              (e1 /= e2)
+            )
+
+      PrtclState cs' etaV' etaC' <-
         trans @(PRTCL crypto) $
           TRC
-            ( PrtclEnv pp' osched _pd _genDelegs (e1 /= e2) etaPH,
-              PrtclState cs eta0 etaV etaC etaH,
+            ( PrtclEnv osched _pd _genDelegs eta0',
+              PrtclState cs etaV etaC,
               bh
             )
 
@@ -305,6 +316,17 @@ instance
   Embed (BBODY crypto) (CHAIN crypto)
   where
   wrapFailed = BbodyFailure
+
+instance
+  ( Crypto crypto,
+    DSignable crypto (VerKeyKES crypto, Natural, KESPeriod),
+    DSignable crypto (Hash crypto (TxBody crypto)),
+    KESignable crypto (BHBody crypto),
+    VRF.Signable (VRF crypto) Seed
+  ) =>
+  Embed TICKN (CHAIN crypto)
+  where
+  wrapFailed = TicknFailure
 
 instance
   ( Crypto crypto,

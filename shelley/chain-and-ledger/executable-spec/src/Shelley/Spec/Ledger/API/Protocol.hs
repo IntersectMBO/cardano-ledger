@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -12,24 +13,34 @@
 -- state needed for protocol execution, both now and in a 2k-slot window.
 module Shelley.Spec.Ledger.API.Protocol
   ( STS.Prtcl.PrtclEnv,
-    mkPrtclEnv,
     LedgerView (..),
     currentLedgerView,
     -- $timetravel
     futureLedgerView,
+    -- $chainstate
+    ChainDepState (..),
+    ChainTransitionError (..),
+    tickChainDepState,
+    updateChainDepState,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLenOf, encodeListLen)
+import Cardano.Crypto.DSIGN.Class
+import Cardano.Crypto.KES.Class
+import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Data.Either (fromRight)
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
+import GHC.Natural
 import Shelley.Spec.Ledger.API.Validation
-import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce)
+import Shelley.Spec.Ledger.BaseTypes (Globals, Nonce, Seed)
+import Shelley.Spec.Ledger.BlockChain (BHBody, BHeader, bhbody, bheaderPrev, prevHashToNonce)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.Keys (GenDelegs)
@@ -42,9 +53,11 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _genDelegs,
   )
+import Shelley.Spec.Ledger.OCert (KESPeriod)
 import Shelley.Spec.Ledger.PParams (PParams)
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEnv (..))
+import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
@@ -88,20 +101,16 @@ instance Crypto crypto => ToCBOR (LedgerView crypto) where
 -- epoch.
 mkPrtclEnv ::
   LedgerView crypto ->
-  -- | New epoch marker. This should be true iff this execution of the PRTCL
-  -- rule is being run on the first block in a new epoch.
-  Bool ->
+  -- | Epoch nonce
   Nonce ->
   STS.Prtcl.PrtclEnv crypto
 mkPrtclEnv
   LedgerView
-    { lvProtParams,
-      lvOverlaySched,
+    { lvOverlaySched,
       lvPoolDistr,
       lvGenDelegs
     } =
     STS.Prtcl.PrtclEnv
-      lvProtParams
       lvOverlaySched
       lvPoolDistr
       lvGenDelegs
@@ -187,3 +196,130 @@ futureLedgerView globals ss slot =
     tickEnv =
       TickEnv
         (getGKeys ss)
+
+-- $chainstate
+--
+-- Chain state operations
+--
+-- The chain state is an amalgam of the protocol state and the ticked nonce.
+
+data ChainDepState c = ChainDepState
+  { csProtocol :: !(STS.Prtcl.PrtclState c),
+    csTickn :: !STS.Tickn.TicknState,
+    -- | Nonce constructed from the hash of the last applied block header.
+    csLabNonce :: !Nonce
+  }
+  deriving (Eq, Show, Generic)
+
+instance Crypto c => NoUnexpectedThunks (ChainDepState c)
+
+instance Crypto crypto => FromCBOR (ChainDepState crypto) where
+  fromCBOR =
+    decodeListLenOf 3
+      >> ChainDepState
+      <$> fromCBOR
+      <*> fromCBOR
+      <*> fromCBOR
+
+instance Crypto crypto => ToCBOR (ChainDepState crypto) where
+  toCBOR
+    ChainDepState
+      { csProtocol,
+        csTickn,
+        csLabNonce
+      } =
+      mconcat
+        [ encodeListLen 3,
+          toCBOR csProtocol,
+          toCBOR csTickn,
+          toCBOR csLabNonce
+        ]
+
+newtype ChainTransitionError crypto
+  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL crypto)]
+  deriving (Generic)
+
+instance (Crypto crypto) => NoUnexpectedThunks (ChainTransitionError crypto)
+
+deriving instance (Crypto crypto) => Eq (ChainTransitionError crypto)
+
+deriving instance (Crypto crypto) => Show (ChainTransitionError crypto)
+
+-- | Tick the chain state to a new epoch.
+tickChainDepState ::
+  Globals ->
+  LedgerView c ->
+  -- | Are we in a new epoch?
+  Bool ->
+  ChainDepState c ->
+  ChainDepState c
+tickChainDepState
+  globals
+  LedgerView {lvProtParams}
+  isNewEpoch
+  cs@ChainDepState {csProtocol, csTickn, csLabNonce} = cs {csTickn = newTickState}
+    where
+      STS.Prtcl.PrtclState _ _ candidateNonce = csProtocol
+      err = error "Panic! tickChainDepState failed."
+      newTickState =
+        fromRight err . flip runReader globals
+          . applySTS @STS.Tickn.TICKN
+          $ TRC
+            ( STS.Tickn.TicknEnv
+                lvProtParams
+                candidateNonce
+                csLabNonce,
+              csTickn,
+              isNewEpoch
+            )
+
+-- | Update the chain state based upon a new block header.
+--
+--   This also updates the last applied block hash.
+updateChainDepState ::
+  forall crypto m.
+  ( Crypto crypto,
+    MonadError (ChainTransitionError crypto) m,
+    Cardano.Crypto.DSIGN.Class.Signable
+      (DSIGN crypto)
+      ( Cardano.Crypto.KES.Class.VerKeyKES (KES crypto),
+        Natural,
+        Shelley.Spec.Ledger.OCert.KESPeriod
+      ),
+    Cardano.Crypto.KES.Class.Signable
+      (KES crypto)
+      (Shelley.Spec.Ledger.BlockChain.BHBody crypto),
+    Cardano.Crypto.VRF.Class.Signable
+      (VRF crypto)
+      Shelley.Spec.Ledger.BaseTypes.Seed
+  ) =>
+  Globals ->
+  LedgerView crypto ->
+  BHeader crypto ->
+  ChainDepState crypto ->
+  m (ChainDepState crypto)
+updateChainDepState
+  globals
+  lv
+  bh
+  cs@ChainDepState {csProtocol, csTickn} =
+    liftEither
+      . right
+        ( \newPrtclState ->
+            cs
+              { csProtocol = newPrtclState,
+                csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
+              }
+        )
+      . left (ChainTransitionError . join)
+      $ res
+    where
+      res =
+        flip runReader globals
+          . applySTS @(STS.Prtcl.PRTCL crypto)
+          $ TRC
+            ( mkPrtclEnv lv epochNonce,
+              csProtocol,
+              bh
+            )
+      STS.Tickn.TicknState _ epochNonce = csTickn

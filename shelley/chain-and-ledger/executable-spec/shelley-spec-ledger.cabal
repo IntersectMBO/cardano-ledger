@@ -28,25 +28,21 @@ library
                      Shelley.Spec.Ledger.Coin
                      Shelley.Spec.Ledger.Core
                      Shelley.Spec.Ledger.Credential
+                     Shelley.Spec.Ledger.Delegation.Certificates
+                     Shelley.Spec.Ledger.Delegation.PoolParams
+                     Shelley.Spec.Ledger.EpochBoundary
                      Shelley.Spec.Ledger.Genesis
                      Shelley.Spec.Ledger.Keys
-                     Shelley.Spec.Ledger.UTxO
-                     Shelley.Spec.Ledger.Slot
-                     Shelley.Spec.Ledger.PParams
-                     Shelley.Spec.Ledger.Rewards
-                     Shelley.Spec.Ledger.EpochBoundary
                      Shelley.Spec.Ledger.LedgerState
                      Shelley.Spec.Ledger.MetaData
-                     Shelley.Spec.Ledger.Serialization
-                     Shelley.Spec.Ledger.Delegation.PoolParams
-                     Shelley.Spec.Ledger.Delegation.Certificates
                      Shelley.Spec.Ledger.OCert
                      Shelley.Spec.Ledger.Orphans
-                     Shelley.Spec.Ledger.Tx
-                     Shelley.Spec.Ledger.TxData
+                     Shelley.Spec.Ledger.PParams
+                     Shelley.Spec.Ledger.Rewards
                      Shelley.Spec.Ledger.Scripts
+                     Shelley.Spec.Ledger.Serialization
+                     Shelley.Spec.Ledger.Slot
                      Shelley.Spec.Ledger.STS.Bbody
-                     Shelley.Spec.Ledger.STS.Tick
                      Shelley.Spec.Ledger.STS.Chain
                      Shelley.Spec.Ledger.STS.Deleg
                      Shelley.Spec.Ledger.STS.Delegs
@@ -65,9 +61,14 @@ library
                      Shelley.Spec.Ledger.STS.Prtcl
                      Shelley.Spec.Ledger.STS.Rupd
                      Shelley.Spec.Ledger.STS.Snap
+                     Shelley.Spec.Ledger.STS.Tick
+                     Shelley.Spec.Ledger.STS.Tickn
                      Shelley.Spec.Ledger.STS.Updn
                      Shelley.Spec.Ledger.STS.Utxo
                      Shelley.Spec.Ledger.STS.Utxow
+                     Shelley.Spec.Ledger.Tx
+                     Shelley.Spec.Ledger.TxData
+                     Shelley.Spec.Ledger.UTxO
 
                      Shelley.Spec.Ledger.Crypto
 

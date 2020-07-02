@@ -109,6 +109,7 @@ import Shelley.Spec.Ledger.Rewards
 import qualified Shelley.Spec.Ledger.STS.Chain as STS
 import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
+import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import Shelley.Spec.Ledger.Scripts (ScriptHash (ScriptHash))
 import Shelley.Spec.Ledger.TxData
   ( MIRPot,
@@ -431,6 +432,10 @@ instance HashAlgorithm h => Arbitrary (MetaDataHash (Mock.ConcreteCrypto h)) whe
 
 instance Arbitrary (Crypto.Hash Monomorphic.ShortHash a) where
   arbitrary = genHash (Proxy @(Mock.ConcreteCrypto Monomorphic.ShortHash))
+
+instance Arbitrary STS.TicknState where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
 
 instance HashAlgorithm h => Arbitrary (STS.PrtclState (Mock.ConcreteCrypto h)) where
   arbitrary = genericArbitraryU
