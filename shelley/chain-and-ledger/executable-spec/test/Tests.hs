@@ -5,6 +5,7 @@ import Test.Shelley.Spec.Ledger.CDDL (cddlTests)
 import Test.Shelley.Spec.Ledger.Genesis.Properties
 import Test.Shelley.Spec.Ledger.NonTraceProperties.PropertyTests (nonTracePropertyTests)
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
+import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
 import Test.Shelley.Spec.Ledger.STSTests (stsTests)
 import Test.Shelley.Spec.Ledger.Serialization (serializationTests)
 import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
@@ -24,6 +25,7 @@ mainTests =
     [ addressTests,
       cddlTests 5,
       minimalPropertyTests,
+      rewardTests,
       serializationTests,
       stsTests,
       unitTests,
