@@ -108,6 +108,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -119,8 +120,9 @@ import Shelley.Spec.Ledger.BaseTypes
     StrictMaybe (..),
     activeSlotVal,
     intervalValue,
+    unitIntervalToRational,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), rationalToCoinViaFloor)
 import Shelley.Spec.Ledger.Core (dom, haskey, range, (∪), (∪+), (▷), (◁))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -985,10 +987,13 @@ createRUpd e b@(BlocksMade b') (EpochState acnt ss ls pr _ nm) total = do
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change
-      deltaR_ = (floor $ min 1 eta * intervalValue (_rho pr) * fromIntegral reserves)
+      deltaR_ = (rationalToCoinViaFloor $ min 1 eta * unitIntervalToRational (_rho pr) * fromIntegral reserves)
       expectedBlocks =
-        intervalValue (activeSlotVal asc) * fromIntegral slotsPerEpoch
-      eta = fromIntegral blocksMade / expectedBlocks
+        floor $
+          unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
+      -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
+      -- it would be nice to not have to compute expectedBlocks every epoch
+      eta = blocksMade % expectedBlocks
       Coin rPot = _feeSS ss + deltaR_
       deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1

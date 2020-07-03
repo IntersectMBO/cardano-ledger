@@ -6,6 +6,8 @@
 module Shelley.Spec.Ledger.Coin
   ( Coin (..),
     splitCoin,
+    coinToRational,
+    rationalToCoinViaFloor,
   )
 where
 
@@ -23,8 +25,6 @@ newtype Coin = Coin Integer
       Eq,
       Ord,
       Num,
-      Integral,
-      Real,
       Enum,
       NoUnexpectedThunks,
       Generic,
@@ -32,6 +32,12 @@ newtype Coin = Coin Integer
       FromJSON,
       NFData
     )
+
+coinToRational :: Coin -> Rational
+coinToRational (Coin c) = fromIntegral c
+
+rationalToCoinViaFloor :: Rational -> Coin
+rationalToCoinViaFloor r = Coin . floor $ r
 
 instance ToCBOR Coin where
   toCBOR (Coin c) =

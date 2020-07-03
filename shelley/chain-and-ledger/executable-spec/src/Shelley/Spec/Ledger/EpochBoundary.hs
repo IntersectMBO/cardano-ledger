@@ -40,7 +40,7 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
 import Shelley.Spec.Ledger.Core (dom, (▷), (◁))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
@@ -143,14 +143,14 @@ obligation pp (StakeCreds stakeKeys) (StakePools stakePools) =
 
 -- | Calculate maximal pool reward
 maxPool :: PParams -> Coin -> Rational -> Rational -> Coin
-maxPool pc (Coin r) sigma pR = floor $ factor1 * factor2
+maxPool pc r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
   where
     a0 = _a0 pc
     nOpt = _nOpt pc
     z0 = 1 % fromIntegral nOpt
     sigma' = min sigma z0
     p' = min pR z0
-    factor1 = fromIntegral r / (1 + a0)
+    factor1 = coinToRational r / (1 + a0)
     factor2 = sigma' + p' * a0 * factor3
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
