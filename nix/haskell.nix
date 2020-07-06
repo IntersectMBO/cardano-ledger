@@ -35,6 +35,7 @@ let
         enableLibraryProfiling = profiling;
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
         packages.small-steps.components.tests.doctests.buildable = lib.mkForce false;
+        packages.small-steps-test.components.tests.doctests.buildable = lib.mkForce false;
         packages.byron-spec-ledger.components.tests.doctests.buildable = lib.mkForce false;
 
         packages.cardano-ledger = {

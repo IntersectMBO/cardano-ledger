@@ -83,6 +83,7 @@ library
     scientific,
     shelley-spec-ledger,
     small-steps,
+    small-steps-test,
     tasty,
     tasty-hedgehog,
     tasty-hunit,

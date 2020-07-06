@@ -97,7 +97,7 @@ data DelegEnv = DelegEnv
   }
   deriving (Show, Eq)
 
-instance STS (DELEG crypto) where
+instance Typeable crypto => STS (DELEG crypto) where
   type State (DELEG crypto) = DState crypto
   type Signal (DELEG crypto) = DCert crypto
   type Environment (DELEG crypto) = DelegEnv
@@ -223,6 +223,7 @@ instance
       k -> invalidKey k
 
 delegationTransition ::
+  Typeable crypto =>
   TransitionRule (DELEG crypto)
 delegationTransition = do
   TRC (DelegEnv slot ptr acnt, ds, c) <- judgmentContext

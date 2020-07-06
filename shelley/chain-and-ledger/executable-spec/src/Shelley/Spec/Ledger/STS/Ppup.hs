@@ -60,7 +60,7 @@ instance FromCBOR VotingPeriod where
       1 -> pure VoteForNextEpoch
       k -> invalidKey k
 
-instance STS (PPUP crypto) where
+instance Typeable crypto => STS (PPUP crypto) where
   type State (PPUP crypto) = PPUPState crypto
   type Signal (PPUP crypto) = Maybe (Update crypto)
   type Environment (PPUP crypto) = PPUPEnv crypto
@@ -121,7 +121,7 @@ instance
         pure $ PVCannotFollowPPUP p
       k -> invalidKey k
 
-ppupTransitionNonEmpty :: TransitionRule (PPUP crypto)
+ppupTransitionNonEmpty :: Typeable crypto => TransitionRule (PPUP crypto)
 ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs _genDelegs),

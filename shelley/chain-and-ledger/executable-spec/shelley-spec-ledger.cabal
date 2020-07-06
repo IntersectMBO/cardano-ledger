@@ -218,6 +218,7 @@ test-suite shelley-spec-ledger-test
       process-extras,
       scientific,
       small-steps,
+      small-steps-test,
       tasty,
       tasty-hedgehog,
       tasty-hunit,

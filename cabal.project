@@ -8,6 +8,7 @@ packages:
   byron/crypto
   byron/crypto/test
   semantics/executable-spec
+  semantics/small-steps-test
   shelley/chain-and-ledger/dependencies/non-integer
   shelley/chain-and-ledger/executable-spec
   shelley/chain-and-ledger/executable-spec/test

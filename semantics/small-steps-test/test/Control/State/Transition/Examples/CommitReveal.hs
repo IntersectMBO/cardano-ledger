@@ -20,6 +20,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
 import qualified Test.QuickCheck as QC
 
 import           Cardano.Binary (ToCBOR)
@@ -100,6 +101,8 @@ newtype Id = Id { getId :: Int }
   deriving (Eq, Show, ToCBOR, Ord, QC.Arbitrary)
 
 instance ( HashAlgorithm hashAlgo
+         , Typeable hashToDataMap
+         , Typeable commitData
          , MapLike hashToDataMap (Hash hashAlgo Data) commitData
          , Monoid (hashToDataMap (Hash hashAlgo Data) commitData)
          ) => STS (CR hashAlgo hashToDataMap commitData) where
