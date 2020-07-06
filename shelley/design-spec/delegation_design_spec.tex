@@ -2313,7 +2313,7 @@ an adversarial stake pool operator could circumvent the Sybil protection
 of the pledge mechanism, by pledging stake to a pool until it attracted stake,
 and then simply pledging the stake to the next pool. The pledge will be
 enforced during the reward calculation: pools where the owners do not meet the
-pledge in a given epoch will earn no rewards for that epoch.
+pledge in a given epoch will earn no rewards for that epoch. Note that this affects \emph{all} pool rewards, both for the operator and for pool members.
 
 Note that it will still be possible for a stake pool operator to decrease the
 amount of stake that they pledge to the pool, but this will require them to post
