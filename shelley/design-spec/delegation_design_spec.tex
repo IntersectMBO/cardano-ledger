@@ -79,7 +79,7 @@
   \listoffigures%
   \clearpage%
 
-  \begin{changelog}
+\begin{changelog}
 \change{2018-12-18}{PK, LB, DC}{FM (IOHK)}{First version that is considered stable enough to warrant V1. Some things still
 need to be pinned down.}
 \change{2019-01-07}{PK, LB, DC}{FM (IOHK)}{
@@ -181,9 +181,12 @@ First version officially published on the IOHK blog.}
   addresses, credentials.}
 \change{2020-06-15}{PK}{FM (IOHK)}{Ensure consistent wording, after the change
   in terminology in the last edit.}
+\changePageBreak
 \change{2020-07-06}{PK}{FM (IOHK)}{Correct sentence about enforcing pledge, to
   be consistent with implementation; pools do not receive rewards, but can still
   create blocks when they fafil to meet their pledge.}
+\change{2020-07-06}{PK}{FM (IOHK)}{Minor changes after audit. Nothing that
+  affects the implementation.}
 \end{changelog}
 
 \clearpage%
@@ -350,10 +353,10 @@ which will hold large amounts of value, without legally owning it.
 \subsubsection{Multi-Signature Addresses}
 \label{multi-sig-addresses}
 
-We should provide addresses that can hold value that are owned by
-multiple people, such that the signatures from some subset are required
-to spend from those addresses. This needs to enable addresses where
-signatures are required from any N of a pre-determined set of M keys.
+We should provide addresses that can hold value that are owned by multiple
+people, such that the signatures from a specified subset are required to spend
+from those addresses. This needs to enable addresses where signatures are
+required from any N of a pre-determined set of M keys.
 
 \subsubsection{Multi-Signature Delegation}
 \label{multi-sig-delegation}
@@ -364,7 +367,9 @@ rights for certain funds should require multiple signatures.
 This should be as expressive as the multi-signature support for
 addresses. It should be an independent choice: a multi-signature
 address can use a single signature for its stake rights, or a
-different choice of multi-signature threshold N and key set M.
+different choice of multi-signature threshold N and key set M. Similarly, it
+should be possible to require multi-signature only for delegation, not for
+spending from a given address.
 
 \subsection{Security Requirements}
 \label{security-requirements}
@@ -404,6 +409,9 @@ The attack is considered successful if the stake rights for the
 transferred money belong to the attacker after the transaction, without
 Alice and Bob noticing the attack.
 \end{description}
+
+Note that the system should still allow for deliberately separating spending
+rights and the right to delegate, just not in the covert way described above.
 
 \subsubsection{Public Payment Keys Should not be Disclosed Prematurely}
 \label{public-spending-keys-should-not-be-disclosed-prematurely}
@@ -1655,7 +1663,7 @@ will be considered valid by all nodes if
 
 \begin{itemize}
 \item there is a stake pool with (cold) pool key \(vk_\text{leader}\), which
-  list \hash{sk_\text{VRF}} as the VRF key hash in its pool registration
+  list \hash{vk_\text{VRF}} as the VRF key hash in its pool registration
   certificate
 
 \item
@@ -2703,8 +2711,8 @@ be included in the registration:
   costs have been deducted) before splitting rewards amongst members (see
   \cref{reward-splitting-inside-a-pool}).
 \item
-  Proof of \emph{ada pledged to the pool}, as a list of public stake
-  key hashes that belong to the owner(s) of the pool.
+  Proof of \emph{ada pledged to the pool}, as a list of stake addresses that
+  belong to the owner(s) of the pool.
 \end{itemize}
 
 There will be no lower bound on the amount of ada that has to be
