@@ -1109,15 +1109,16 @@ Using this we verify the preconditions of the operational certificate state
 transition which are the following:
 
 \begin{itemize}
-\item The KES period start \var{c_0} is greater than or equal to the KES period of
-  the slot of the block header body and less than $\MaxKESEvo$-many KES periods after \var{c_0}.
+\item The KES period of the slot in the block header body must be greater than or equal to
+  the start value \var{c_0} listed in the operational certificate,
+  and less than $\MaxKESEvo$-many KES periods after \var{c_0}.
   The value of $\MaxKESEvo$ is the agreed-upon lifetime of an operational certificate,
   see \cite{delegation_design}.
 \item \var{hk} exists as key in the mapping of certificate issues numbers to a KES
   period \var{m} and that period is less than or equal to \var{n}.
-\item The signature $\sigma$ can be verified with the cold verification key
+\item The signature $\tau$ can be verified with the cold verification key
   \var{vk_{cold}}.
-\item The KES signature $\tau$ can be verified with the hot verification key
+\item The KES signature $\sigma$ can be verified with the hot verification key
   \var{vk_{hot}}.
 \end{itemize}
 
@@ -1168,7 +1169,7 @@ The OCERT rule has six predicate failures:
 \item If the KES period is greater than or equal to the KES period end (start +
   $\MaxKESEvo$) in the certificate, there is a \emph{KESAfterEnd} failure.
 \item If the period counter in the original key hash counter mapping is larger
-  than the period number in the certificate, there is a \emph{KESPeriodWrong}
+  than the period number in the certificate, there is a \emph{CounterTooSmall}
   failure.
 \item If the signature of the hot key, KES period number and period start is
   incorrect, there is an \emph{InvalidSignature} failure.
