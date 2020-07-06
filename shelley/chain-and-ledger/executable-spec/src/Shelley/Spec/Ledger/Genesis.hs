@@ -18,7 +18,11 @@ module Shelley.Spec.Ledger.Genesis
 where
 
 import Cardano.Crypto (ProtocolMagicId)
-import qualified Cardano.Crypto.Hash.Class as Crypto (Hash (..), hash)
+import qualified Cardano.Crypto.Hash.Class as Crypto
+  ( Hash (..),
+    castHash,
+    hashRaw,
+  )
 import Cardano.Prelude (NoUnexpectedThunks)
 import Cardano.Slotting.Slot (EpochSize)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -190,9 +194,12 @@ genesisUtxO genesis =
 -- we need this same 'TxIn' to use as an input to the spending transaction.
 initialFundsPseudoTxIn :: forall c. Crypto c => Addr c -> TxIn c
 initialFundsPseudoTxIn addr =
-  TxIn pseudoTxId 0
+  TxIn (pseudoTxId addr) 0
   where
-    pseudoTxId = TxId . castHash $ Crypto.hash addr
-    --TODO: move this to the hash API module
-    castHash :: Crypto.Hash (HASH c) a -> Crypto.Hash (HASH c) b
-    castHash (Crypto.UnsafeHash h) = Crypto.UnsafeHash h
+    pseudoTxId =
+      TxId
+        . ( Crypto.castHash ::
+              Crypto.Hash (HASH c) (Addr c) ->
+              Crypto.Hash (HASH c) (TxBody c)
+          )
+        . Crypto.hashRaw serialiseAddr
