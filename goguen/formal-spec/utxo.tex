@@ -41,7 +41,8 @@ validation of all the Plutus scripts in a transaction
 by running the script itself to see how much resources it takes and doing the
 fee calculation using the cost model in protocol parameters. It is then
 also responsible for adding enough inputs to the transaction to cover the
-fees required.
+fees required. In the implementation of the wallet this is handled
+automatically by default, so this generates no overhead for users.
 
 \begin{figure}[htb]
   \begin{align*}
@@ -149,7 +150,7 @@ the $\fun{consumed}$ and $\fun{produced}$ values are compared as $\Value$.
 The type $\Value$ has a partial order defined on it in (see~\cite{plutus_eutxo}).
 The idea of this partial order, as well as operations like addition and subtraction
 of terms of the $\Value$ type, is that a term $v \in \Value$ can be treated
-as a total map that maps to the trivial element $\epsilon \in \Token \to \Quantity$
+as a total map that maps to the trivial element $\epsilon \in \AssetID \to \Quantity$
 almost everywhere except for a several currency IDs that appear in $\dom~v$.
 
 This way, when adding two terms of type value, $\{ cid1 \mapsto tkns1\}$ and
@@ -270,7 +271,7 @@ This includes,
   %
   \emph{Helper functions}
   \begin{align*}
-    &\fun{indexedScripts} \in \GoguenTx \to (\ScriptHash \mapsto \Script) \\
+    &\fun{indexedScripts} \in \GoguenTx \to (\PolicyID \mapsto \Script) \\
     & \text{make a finite map of hash-indexed scripts} \\
     &\fun{indexedScripts}~{tx} ~=~ \{ h \mapsto s ~\vert~ \fun{hashScript}~{s}~=~h,
      s\in~\fun{txscripts}~(\fun{txwits}~{tx})\}
@@ -739,11 +740,11 @@ are all the same as for the for the UTXO transition, see Figure
   \emph{State transitions}
   \begin{equation*}
     \_ \vdash
-    \var{\_} \trans{utxos}{\_} \var{\_}
+    \var{\_} \trans{utxo, utxos}{\_} \var{\_}
     \subseteq \powerset (\UTxOEnv \times \UTxOState \times \GoguenTx \times \UTxOState)
   \end{equation*}
   %
-  \caption{UTxO state update types}
+  \caption{UTxO and UTxO script state update types}
   \label{fig:ts-types:utxo-scripts}
 \end{figure}
 
@@ -810,10 +811,8 @@ In this case, the states of the UTxO, fee
     \\~\\
     \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
     \\
-    \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{txb}
-    \\
     \var{depositChange} \leteq
-      (\deposits{pp}~{stpools}~{\txcerts{txb}}) - (\var{refunded} + \var{decayed})
+      (\deposits{pp}~{stpools}~{\txcerts{txb}}) - \var{refunded}
     }
     {
     \begin{array}{l}
@@ -837,7 +836,7 @@ In this case, the states of the UTxO, fee
       \begin{array}{r}
         \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{slot}~{txb}}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
-        \varUpdate{\var{fees} + \txfee{txb} + \var{decayed}} \\
+        \varUpdate{\var{fees} + \txfee{txb}} \\
         \varUpdate{\var{ups'}} \\
       \end{array}
       \right) \\
@@ -951,6 +950,8 @@ UTXOS rule.
       \\
       \mathsf{adaID}~\notin \dom~{\fun{forge}~tx} \\
       \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ 0 \\~
+      \forall txout \in \txouts{txb}, ~ \fun{getCoin}~txout ~\geq \\
+      \fun{valueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue} pp \\~
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
       \fun{txexunits}~{txb} \leq \fun{maxTxExUnits}~{pp}
@@ -1041,14 +1042,14 @@ validation purpose (forging, outputs, certificates, withdrawals), see Figure
 \begin{figure}[htb]
   \begin{align*}
       & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \GoguenTx \to
-        \ScriptHash\\
+        \PolicyID\\
       & \hspace{-1cm}\text{items that need script validation and corresponding script hashes} \\
       &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
       & ~~\{ \fun{validatorHash}~(\fun{getAddr}~{txout}) \mid i \mapsto \var{txout} \in \var{utxo},\\
       & ~~~~~i\in\fun{txinsScript}~{(\fun{txinputs}~\var{txb})}~{utxo}\} \\
       \cup & ~~\{ \var{a} \mid a \mapsto c \in \fun{txwdrls}~\var{txb}),
          a\in \AddrRWDScr \} \\
-        \cup & ~~\ScriptHash \cap \fun{certWitsNeeded}~{txb} \\
+        \cup & ~~\PolicyID \cap \fun{certWitsNeeded}~{txb} \\
         \cup & ~~\{ cid \mid cid \mapsto \var{tkns}~\in~\fun{forge}~{txb} \} \\
       & \where \\
       & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
@@ -1098,13 +1099,24 @@ preconditions:
 If these conditions are all satisfied, the resulting UTxO state change is fully determined
 by the UTXO transition (the application of which is also part of the conditions).
 
+\begin{figure}[htb]
+  \emph{State transitions}
+  \begin{equation*}
+    \_ \vdash
+    \var{\_} \trans{utxow}{\_} \var{\_}
+    \subseteq \powerset (\UTxOEnv \times \UTxOState \times \Tx \times \UTxOState)
+  \end{equation*}
+  %
+  \caption{UTxO with witnesses state update types}
+  \label{fig:ts-types:utxo-scripts}
+\end{figure}
+
 \begin{figure}
   \begin{equation}
     \label{eq:utxo-witness-inductive-goguen}
     \inference[UTxO-witG]
     {
       \var{tx}~\leteq~\fun{toGoguenTx}~{tx}_o \\~\\
-      \var{h}_{txo}~\leteq~\fun{hash}~{tx}_o &
       \var{txb}\leteq\txbody{tx} &
       \var{txw}\leteq\fun{txwits}~{tx} &
       \var{tx}~\in~\GoguenTx \\
@@ -1117,7 +1129,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \forall h \in ~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, ~h\mapsto s~\in~\fun{indexedScripts}~{tx},\\
        s \in \ScriptPlutus~\Leftrightarrow ~\fun{findRdmr}~{tx}~{c}\neq \emptyset
       \\~\\
-      \forall \var{cert}~\in~\fun{txcerts}~{txb}, \fun{regCred}~{cert}\in \ScriptHash \Leftrightarrow
+      \forall \var{cert}~\in~\fun{txcerts}~{txb}, \fun{regCred}~{cert}\in \PolicyID \Leftrightarrow
       \var{cert} \in~ \DCertDeRegKey \\~\\
       \forall~\var{txin}\in\fun{txinputs}~{txb},
       \var{txin} \mapsto \var{(\wcard,\wcard,h_d)} \in \var{utxo},
@@ -1136,7 +1148,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \fun{hash}~(\fun{txrdmrs}~\var{txw})~ =~  \fun{rdmrsHash}~{txb} \\
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
-      \mathcal{V}_{\var{vk}}{\serialised{\var{h}_{tx}}}_{\sigma} \\
+      \mathcal{V}_{\var{vk}}{\serialised{tx_{o}}}_{\sigma} \\
       \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}
       \\~\\
       genSig \leteq
