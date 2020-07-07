@@ -2,8 +2,12 @@
 \label{sec:crypto-details}
 
 \subsection{Hashing}
-The hashing algorithm for payment and stake credentials (Figure~\ref{fig:defs:addresses}),
-is BLAKE2b-224.
+The hashing algorithm for all verification keys and multi-signature scripts is BLAKE2b-224.
+Explicitly, this is the payment and stake credentials (Figure~\ref{fig:defs:addresses}),
+the genesis keys and their delegates (Figure~\ref{fig:ts-types:pp-update}),
+stake pool verification keys (Figure~\ref{fig:delegation-transitions}),
+and VRF verification keys (Figure~\ref{fig:delegation-defs}).
+
 Everywhere else we use BLAKE2b-256.
 In the CDDL specification in Appendix~\ref{sec:cddl},
 $\mathsf{hash28}$ refers to BLAKE2b-224 and
