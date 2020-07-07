@@ -243,7 +243,7 @@ utxoInductive = do
   ppup' <- trans @(PPUP crypto) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputCoins = [c | (TxOut _ c) <- Set.toList (range (txouts txb))]
-  let minUTxOValue = fromIntegral $ _minUTxOValue pp
+  let minUTxOValue = _minUTxOValue pp
   all (minUTxOValue <=) outputCoins
     ?! OutputTooSmallUTxO
       (filter (\(TxOut _ c) -> c < minUTxOValue) (Set.toList (range (txouts txb))))

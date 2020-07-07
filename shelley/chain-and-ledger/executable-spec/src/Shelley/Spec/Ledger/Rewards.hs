@@ -53,7 +53,11 @@ import Shelley.Spec.Ledger.BaseTypes
     activeSlotVal,
     unitIntervalToRational,
   )
-import Shelley.Spec.Ledger.Coin (Coin (..))
+import Shelley.Spec.Ledger.Coin
+  ( Coin (..),
+    coinToRational,
+    rationalToCoinViaFloor,
+  )
 import Shelley.Spec.Ledger.Core ((◁))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -255,9 +259,9 @@ desirability pp r pool (PerformanceEstimate p) (Coin total) =
     else (fTilde - cost) * (1 - margin)
   where
     fTilde = fTildeNumer / fTildeDenom
-    fTildeNumer = p * fromRational (fromIntegral r * (z0 + min s z0 * a0))
+    fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * a0))
     fTildeDenom = fromRational $ 1 + a0
-    cost = (fromIntegral . _poolCost) pool
+    cost = (fromRational . coinToRational . _poolCost) pool
     margin = (fromRational . unitIntervalToRational . _poolMargin) pool
     tot = max 1 (fromIntegral total)
     Coin pledge = _poolPledge pool
@@ -314,12 +318,14 @@ leaderRew ::
   StakeShare ->
   StakeShare ->
   Coin
-leaderRew f@(Coin f') pool (StakeShare s) (StakeShare sigma)
-  | f' <= c = f
+leaderRew f pool (StakeShare s) (StakeShare sigma)
+  | f <= c = f
   | otherwise =
-    Coin $ c + floor (fromIntegral (f' - c) * (m' + (1 - m') * s / sigma))
+    c
+      + rationalToCoinViaFloor
+        (coinToRational (f - c) * (m' + (1 - m') * s / sigma))
   where
-    (Coin c, m, _) = poolSpec pool
+    (c, m, _) = poolSpec pool
     m' = unitIntervalToRational m
 
 -- | Calculate pool member reward
@@ -331,7 +337,7 @@ memberRew ::
   Coin
 memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | f' <= c = 0
-  | otherwise = floor $ fromIntegral (f' - c) * (1 - m') * t / sigma
+  | otherwise = rationalToCoinViaFloor $ fromIntegral (f' - c) * (1 - m') * t / sigma
   where
     (Coin c, m, _) = poolSpec pool
     m' = unitIntervalToRational m
@@ -364,7 +370,7 @@ rewardOnePool network pp r blocksN blocksTotal pool (Stake stake) sigma (Coin to
         then maxPool pp r sigma pr
         else 0
     appPerf = mkApparentPerformance (_d pp) sigma blocksN blocksTotal
-    poolR = floor (appPerf * fromIntegral maxP)
+    poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
     tot = fromIntegral total
     mRewards =
       Map.fromList
@@ -400,7 +406,7 @@ reward
   poolParams
   stake
   delegs
-  total
+  (Coin total)
   asc
   slotsPerEpoch = (rewards', hs)
     where
@@ -424,7 +430,7 @@ reward
                     pparams
                     actgr
                     sigma
-                    total
+                    (Coin total)
                     addrsRew
             ls =
               likelihood
@@ -466,6 +472,6 @@ nonMyopicMemberRew
   (StakeShare nm)
   (PerformanceEstimate p) =
     let nm' = max t nm -- TODO check with researchers that this is how to handle t > nm
-        (Coin f) = maxPool pp rPot nm' s
-        fHat = floor (p * fromIntegral f)
+        f = maxPool pp rPot nm' s
+        fHat = floor (p * (fromRational . coinToRational) f)
      in memberRew (Coin fHat) pool (StakeShare t) (StakeShare nm')

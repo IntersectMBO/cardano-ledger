@@ -1661,10 +1661,10 @@ alicePerfEx2H p = likelihood blocks t slotsPerEpoch
       epochInfoSize ei 0
     blocks = 1
     t = leaderProbability f relativeStake (_d ppsEx1)
-    stake = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
+    (Coin stake) = aliceCoinEx2BBase + aliceCoinEx2BPtr + bobInitCoin
     reserves = _reserves (acntEx2G p)
-    relativeStake =
-      fromRational (fromIntegral stake % (fromIntegral $ maxLLSupply - reserves))
+    (Coin tot) = maxLLSupply - reserves
+    relativeStake = fromRational (stake % tot)
     f = runShelleyBase (asks activeSlotCoeff)
 
 deltaT2H :: Coin
@@ -2057,9 +2057,9 @@ alicePerfEx2K p = (alicePerfEx2H p) <> epoch4Likelihood
       epochInfoSize ei 0
     blocks = 0
     t = leaderProbability f relativeStake (_d ppsEx1)
-    stake = sum . unStake . _stake . _pstakeSet $ (snapsEx2I p) -- everyone has delegated to Alice's Pool
-    relativeStake = fromRational (fromIntegral stake % (fromIntegral $ supply))
-    supply = maxLLSupply - _reserves (acntEx2I p)
+    (Coin stake) = sum . unStake . _stake . _pstakeSet $ (snapsEx2I p) -- everyone has delegated to Alice's Pool
+    relativeStake = fromRational (stake % supply)
+    (Coin supply) = maxLLSupply - _reserves (acntEx2I p)
     f = runShelleyBase (asks activeSlotCoeff)
 
 nonMyopicEx2K :: forall h. HashAlgorithm h => NonMyopic h
