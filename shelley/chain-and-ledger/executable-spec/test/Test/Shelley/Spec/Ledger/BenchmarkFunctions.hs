@@ -46,6 +46,10 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     vKey,
   )
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( genesisCoins,
+    genesisId,
+  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     emptyDPState,
