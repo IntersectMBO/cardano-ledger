@@ -109,6 +109,7 @@ library
                      , optparse-applicative
                      , resourcet
                      , small-steps
+                     , small-steps-test
                      , streaming
                      , tasty
                      , tasty-hedgehog

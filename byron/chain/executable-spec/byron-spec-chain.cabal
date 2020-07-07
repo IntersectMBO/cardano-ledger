@@ -40,6 +40,7 @@ library
                      , hedgehog >= 1.0
                      , lens
                      , small-steps
+                     , small-steps-test
   ghc-options:         -Wall
                        -Wcompat
                        -Wincomplete-record-updates
@@ -67,6 +68,7 @@ test-suite chain-rules-test
                      , byron-spec-chain
                      , byron-spec-ledger
                      , small-steps
+                     , small-steps-test
   ghc-options:         -Wall
                        -Wcompat
                        -Wincomplete-record-updates

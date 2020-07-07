@@ -16,13 +16,7 @@ let
 
     # If shellFor local packages selection is wrong,
     # then list all local packages then include source-repository-package that cabal complains about:
-    packages = ps: with ps; [
-      byron-spec-chain
-      byron-spec-ledger
-      shelley-spec-non-integral
-      small-steps
-      shelley-spec-ledger
-    ];
+    packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
 
     # These programs will be available inside the nix-shell.
     buildInputs = with haskellPackages; [

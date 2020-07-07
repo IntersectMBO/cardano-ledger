@@ -39,7 +39,7 @@ data PoolEnv
   = PoolEnv SlotNo PParams
   deriving (Show, Eq)
 
-instance STS (POOL crypto) where
+instance Typeable crypto => STS (POOL crypto) where
   type State (POOL crypto) = PState crypto
 
   type Signal (POOL crypto) = DCert crypto
@@ -110,7 +110,7 @@ instance
         pure $ StakePoolCostTooLowPOOL pc mc
       k -> invalidKey k
 
-poolDelegationTransition :: TransitionRule (POOL crypto)
+poolDelegationTransition :: Typeable crypto => TransitionRule (POOL crypto)
 poolDelegationTransition = do
   TRC (PoolEnv slot pp, ps, c) <- judgmentContext
   let StakePools stpools = _stPools ps

@@ -17,6 +17,7 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
   )
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.EpochBoundary
@@ -29,7 +30,7 @@ import Shelley.Spec.Ledger.LedgerState
 
 data SNAP crypto
 
-instance STS (SNAP crypto) where
+instance Typeable crypto => STS (SNAP crypto) where
   type State (SNAP crypto) = SnapShots crypto
   type Signal (SNAP crypto) = ()
   type Environment (SNAP crypto) = LedgerState crypto

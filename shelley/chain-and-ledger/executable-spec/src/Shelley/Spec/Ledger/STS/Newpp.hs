@@ -23,6 +23,7 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.Coin (Coin (..))
@@ -52,7 +53,7 @@ data NewppState crypto
 data NewppEnv crypto
   = NewppEnv (DState crypto) (PState crypto)
 
-instance STS (NEWPP crypto) where
+instance Typeable crypto => STS (NEWPP crypto) where
   type State (NEWPP crypto) = NewppState crypto
   type Signal (NEWPP crypto) = Maybe PParams
   type Environment (NEWPP crypto) = NewppEnv crypto

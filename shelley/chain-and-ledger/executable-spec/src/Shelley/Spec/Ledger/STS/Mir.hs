@@ -24,6 +24,7 @@ import Control.State.Transition
     liftSTS,
   )
 import qualified Data.Map.Strict as Map
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
@@ -55,7 +56,7 @@ import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
 
 data MIR crypto
 
-instance STS (MIR crypto) where
+instance Typeable crypto => STS (MIR crypto) where
   type State (MIR crypto) = EpochState crypto
   type Signal (MIR crypto) = ()
   type Environment (MIR crypto) = ()
@@ -79,7 +80,7 @@ initialMir =
       emptyPParams
       emptyNonMyopic
 
-mirTransition :: forall crypto. TransitionRule (MIR crypto)
+mirTransition :: forall crypto. Typeable crypto => TransitionRule (MIR crypto)
 mirTransition = do
   TRC
     ( _,
