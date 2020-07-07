@@ -147,34 +147,41 @@ instance Basic Sett where
 
 
 -- ============================================================================
--- Every Basic type forms an isomorphism with its embedding.
--- The embedding for List and Sett are not trivial embeddings because the
--- underlying types are not binary type constructors.
+-- Every iterable type type forms an isomorphism with some Base type. For most
+-- Base types the isomorphism is the identity in both directions, but for some,
+-- like List and Sett, the embeddings are not the trivial identities because the
+-- concrete types are not binary type constructors. The Embed class also allows
+-- us to add 'newtypes' which encode some Base type to the system.
 -- ============================================================================
 
-class Embed s t | s->t where
-  embed :: s -> t
-  unbed :: t -> s
+class Embed concrete base | concrete -> base where
+  toBase :: concrete -> base
+  fromBase :: base -> concrete
 
 instance Ord k => Embed [(k,v)] (List k v) where
-   embed xs = List(sortBy (\ x y -> compare (fst x) (fst y)) xs)
-   unbed (List xs) = xs
+   toBase xs = List(sortBy (\ x y -> compare (fst x) (fst y)) xs)
+   fromBase (List xs) = xs
 
 instance Embed (Set.Set k) (Sett k ()) where
-   embed xs = Sett xs
-   unbed (Sett xs) = xs
+   toBase xs = Sett xs
+   fromBase (Sett xs) = xs
 
 instance Embed (Map.Map k v) (Map.Map k v) where
-   embed xs = xs
-   unbed xs = xs
+   toBase xs = xs
+   fromBase xs = xs
 
 instance Embed (BiMap v k v) (BiMap v k v) where
-   embed xs = xs
-   unbed xs = xs
+   toBase xs = xs
+   fromBase xs = xs
 
 instance Embed (Single k v) (Single k v) where
-   embed xs = xs
-   unbed xs = xs
+   toBase xs = xs
+   fromBase xs = xs
+
+-- Necessary when asking Boolean queries like: (⊆),(∈),(∉)
+instance Embed Bool Bool where
+   toBase xs = xs
+   fromBase xs = xs
 
 -- ================= The Iter class =================================================
 -- The Set algebra include types that encode finite maps of some type. They
@@ -367,39 +374,39 @@ data Exp t where
    Subset ::  (Ord k, Iter f, Iter g) => Exp(f k v) -> Exp(g k u) -> Exp Bool
    UnionOverrideLeft:: Ord k => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
    UnionPlus:: (Ord k,Num n) => Exp (f k n) -> Exp (f k n) -> Exp(f k n)
-   UnionOverrideRight:: Ord k => Exp (f k v) -> Exp (f k v) -> Exp(f k v)
-   Singleton:: (Show k,Ord k,Show v) => k -> v -> Exp(Single k v)
-   SetSingleton:: (Show k,Ord k) => k -> Exp(Single k ())
+   UnionOverrideRight:: Ord k => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
+   Singleton:: (Ord k) => k -> v -> Exp(Single k v)
+   SetSingleton:: (Ord k) => k -> Exp(Single k ())
 
 -- =================================================================
 -- | Basic types are those that can be embedded into Exp.
--- The Base class, encodes how to lift a Basic type into an Exp.
+-- The HasExp class, encodes how to lift a Basic type into an Exp.
 -- The function 'toExp' will build a typed Exp for that Basic type.
 -- This will be really usefull in the smart constructors.
 -- ==================================================================
 
-class Base s t | s -> t where
+class HasExp s t | s -> t where
   toExp :: s -> Exp t
 
 -- | The simplest Base type is one that is already an Exp
 
-instance Base (Exp t) t where
+instance HasExp (Exp t) t where
   toExp x = x
 
-instance (Ord k) => Base (Map k v) (Map k v) where
+instance (Ord k) => HasExp (Map k v) (Map k v) where
   toExp x = Base MapR x
 
-instance (Ord k) => Base (Set.Set k) (Sett k ()) where
+instance (Ord k) => HasExp (Set.Set k) (Sett k ()) where
   toExp x = Base SetR (Sett x)
 
 
-instance  (Ord k) => Base [(k,v)] (List k v) where
+instance  (Ord k) => HasExp [(k,v)] (List k v) where
   toExp l = Base ListR (List (sortBy (\ x y -> compare (fst x) (fst y)) l))
 
-instance (Ord k) => Base (Single k v) (Single k v) where
+instance (Ord k) => HasExp (Single k v) (Single k v) where
   toExp x = Base SingleR x
 
-instance (Ord k,Ord v) => Base (Bimap k v) (Bimap k v) where
+instance (Ord k,Ord v) => HasExp (Bimap k v) (Bimap k v) where
   toExp x = Base BiMapR x
 
 -- ==========================================================================================
@@ -409,60 +416,59 @@ instance (Ord k,Ord v) => Base (Bimap k v) (Bimap k v) where
 -- (∩),
 
 
-dom :: (Ord k,Base s (f k v)) => s -> Exp (Sett k ())
+dom :: (Ord k,HasExp s (f k v)) => s -> Exp (Sett k ())
 dom x = Dom (toExp x)
 
-range:: (Ord k,Ord v) => Base s (f k v) => s -> Exp (Sett v ())
+range:: (Ord k,Ord v) => HasExp s (f k v) => s -> Exp (Sett v ())
 range x = Rng(toExp x)
 
-(◁),(<|),drestrict ::  (Ord k,Iter g, Base s1 (g k ()), Base s2 (f k v)) => s1 -> s2 -> Exp (f k v)
+(◁),(<|),drestrict ::  (Ord k,HasExp s1 (Sett k ()), HasExp s2 (f k v)) => s1 -> s2 -> Exp (f k v)
 (◁) x y = DRestrict (toExp x) (toExp y)
 drestrict = (◁)
 (<|) = drestrict
 
-(⋪),dexclude :: (Ord k,Iter g, Base s1 (g k ()), Base s2 (f k v)) => s1 -> s2 -> Exp (f k v)
+(⋪),dexclude :: (Ord k,Iter g, HasExp s1 (g k ()), HasExp s2 (f k v)) => s1 -> s2 -> Exp (f k v)
 (⋪) x y = DExclude (toExp x) (toExp y)
 dexclude = (⋪)
 
-(▷),(|>),rrestrict :: (Ord k,Iter g, Ord v, Base s1 (f k v), Base s2 (g v ())) => s1 -> s2 -> Exp (f k v)
+(▷),(|>),rrestrict :: (Ord k,Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
 (▷) x y = RRestrict (toExp x) (toExp y)
 rrestrict = (▷)
 (|>) = (▷)
 
-(⋫),rexclude :: (Ord k,Iter g, Ord v, Base s1 (f k v), Base s2 (g v ())) => s1 -> s2 -> Exp (f k v)
+(⋫),rexclude :: (Ord k,Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
 (⋫) x y = RExclude (toExp x) (toExp y)
 rexclude = (⋫)
-
-(∈) :: (Show k, Ord k,Iter g,Base s (g k ())) => k -> s -> Exp Bool
+(∈) :: (Show k, Ord k,Iter g,HasExp s (g k ())) => k -> s -> Exp Bool
 (∈) x y = Elem x (toExp y)
 
-(∉),notelem :: (Show k, Ord k,Iter g, Base s (g k ())) => k -> s -> Exp Bool
+(∉),notelem :: (Show k, Ord k,Iter g, HasExp s (g k ())) => k -> s -> Exp Bool
 (∉) x y = NotElem x (toExp y)
 notelem = (∉)
 
-(∪),unionleft :: (Ord k,Base s1 (f k v), Base s2 (g k v)) => s1 -> s2 -> Exp (f k v)
+(∪),unionleft :: (Ord k,HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
 (∪) x y = UnionOverrideLeft (toExp x) (toExp y)
 unionleft = (∪)
 
-(⨃),unionright :: (Ord k,Base s1 (f k v), Base s2 (f k v)) => s1 -> s2 -> Exp (f k v)
+(⨃),unionright :: (Ord k,HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
 (⨃) x y = UnionOverrideRight (toExp x) (toExp y)
 unionright = (⨃)
 
-(∪+),unionplus :: (Ord k,Num n, Base s1 (f k n), Base s2 (f k n)) => s1 -> s2 -> Exp (f k n)
+(∪+),unionplus :: (Ord k,Num n, HasExp s1 (f k n), HasExp s2 (f k n)) => s1 -> s2 -> Exp (f k n)
 (∪+) x y = UnionPlus (toExp x) (toExp y)
 unionplus = (∪+)
 
-singleton :: (Ord k, Show k,Show v) => k -> v -> Exp (Single k v)
+singleton :: (Ord k) => k -> v -> Exp (Single k v)
 singleton k v = Singleton k v
 
-setSingleton :: (Show k, Ord k) => k -> Exp (Single k ())
+setSingleton :: (Ord k) => k -> Exp (Single k ())
 setSingleton k = SetSingleton k
 
-(∩),intersect :: (Ord k, Iter f, Iter g, Base s1 (f k v), Base s2 (g k u)) => s1 -> s2 -> Exp (Sett k ())
+(∩),intersect :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp (Sett k ())
 (∩) x y = Intersect (toExp x) (toExp y)
 intersect = (∩)
 
-(⊆),subset :: (Ord k, Iter f, Iter g, Base s1 (f k v), Base s2 (g k u)) => s1 -> s2 -> Exp Bool
+(⊆),subset :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp Bool
 (⊆) x y = Subset (toExp x) (toExp y)
 subset = (⊆)
 
@@ -833,7 +839,6 @@ run (BaseD ListR x,ListR) = x             -- if the forms do not match.
 run (BaseD source x,target) = materialize target (fifo x)      -- use fifo, since for, at least List, the order matters.
 run (other,target) = materialize target (fifo other)           -- If it is a compund Iterator, than materialize it.
 
-
 -- ==============================================================================================
 -- Evaluate an (Exp t) into real data of type t. Try domain and type specific algorithms first,
 -- and if those fail. Compile the formula as an iterator, then run the iterator to get an answer.
@@ -861,12 +866,17 @@ compute (e@(Rng _ )) = run(compile e)
 
 
 compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m set
+compute (DRestrict (SetSingleton k) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
+compute (DRestrict (Singleton k v) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Base SetR (Sett s1)) (Base SetR (Sett s2))) = Sett(Set.intersection s1 s2)
 compute (DRestrict (Base SetR x1) (Base rep x2)) = materialize rep $ do { (x,y,z) <- x1 `domEq` x2; one (x,z) }
 compute (DRestrict (Dom (Base _ x1)) (Base rep x2)) = materialize rep $ do { (x,y,z) <- x1 `domEq` x2; one (x,z) }
 compute (DRestrict (SetSingleton k) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle k) `domEq` x2; one (x,z) }
 compute (DRestrict (Dom (Singleton k _)) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle k) `domEq` x2; one (x,z) }
 compute (DRestrict (Rng (Singleton _ v)) (Base rep x2)) = materialize rep $  do { (x,y,z) <- (SetSingle v) `domEq` x2; one (x,z) }
+  -- This case inspired by set expression in EpochBoundary.hs
+compute (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state)) =
+   materialize MapR (do { (x,y,z) <- delegs `domEq` state; when (not (y==hk)); one(x,z) })
 compute (e@(DRestrict _ _ )) = run(compile e)
 
 compute (DExclude (SetSingleton n) (Base MapR m)) = Map.withoutKeys m (Set.singleton n)
@@ -905,6 +915,7 @@ compute (NotElem k (SetSingleton key)) = not $ k==key
 compute (NotElem k set) = not $ haskey k (compute set)
 
 compute (Subset (Base SetR (Sett x)) (Base SetR (Sett y))) = Set.isSubsetOf x y
+compute (Subset (Base SetR (Sett x)) (Base MapR y)) = all (`Map.member` y) x
 compute (Subset (Base MapR x) (Base MapR y)) = Map.foldrWithKey accum True x
    where accum k a ans = Map.member k y && ans
 compute (Subset x y) = runCollect (lifo left) True (\ (k,v) ans -> haskey k right && ans)
@@ -929,7 +940,7 @@ compute (SetSingleton k) = (SetSingle k)
 
 
 eval :: Embed s t => Exp t -> s
-eval x = unbed (compute x)
+eval x = fromBase (compute x)
 
 -- ==============================================================================================
 -- To make compound iterators, i.e. instance (Iter Query), we need "step" functions for each kind
@@ -1128,8 +1139,8 @@ instance Show (Exp t) where
   show (UnionOverrideLeft x y) = "("++show x++" ∪ "++show y++")"
   show (UnionPlus x y) = "("++show x++" ∪+ "++show y++")"
   show (UnionOverrideRight x y) = "("++show x++" ⨃ "++show y++")"
-  show (Singleton x y) = "(singleton "++show x++" "++show y++")"
-  show (SetSingleton x) = "(Set.Singleton "++show x++")"
+  show (Singleton x y) = "(singleton _ _ )"
+  show (SetSingleton x) = "(setSingleton _ )"
 
 ppQuery :: Query k v -> Doc
 ppQuery (BaseD rep f) = parens $ text(show rep)

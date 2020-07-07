@@ -12,7 +12,8 @@ import Control.Iterate.SetAlgebra(Iter(..),
                   BiMap(..), Bimap, biMapEmpty, biMapFromList,removeval,
                   Fun(..), Pat(..), Expr(..), Lam(..), evaluate, reify,
                   constant, domElem, second, lift, rngSnd,
-                  Query(..), materialize, fromList, eval, run, compile,(⨝)                 )
+                  Query(..), materialize, fromList, eval, run, compile,(⨝),compute
+                  )
 
 
 import Data.Map.Strict(Map)
@@ -135,13 +136,13 @@ ex7::Exp Bool
 ex7 = 70 ∉ (dom m1)
 
 
--- ===================== test that eval works ======================
+-- ===================== test that compute works ======================
 
 evalTest :: (Show t,Eq t) => String -> Exp t -> t -> Test
-evalTest nm expr ans = TestCase (assertEqual (show expr++" where Map? = "++nm) (eval expr) ans)
+evalTest nm expr ans = TestCase (assertEqual (show expr++" where Map? = "++nm) (compute expr) ans)
 
 eval_compile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> Test
-eval_compile expr = TestCase (assertEqual ("eval and run.compile of "++show expr++" are the same") (eval expr) (run(compile expr)))
+eval_compile expr = TestCase (assertEqual ("compute and run.compile of "++show expr++" are the same") (compute expr) (run(compile expr)))
 
 
 eval_tests :: Test
@@ -214,7 +215,14 @@ testChain2:: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int
 testChain2 nm rep1 rep2 = testcase nm (ChainD (fromListD rep1 l5) (fromListD rep2 l4) (lift (\ x (y,v) -> (x,y,v))))
                                     [("m",("m",105,"Z"))]
 
-
+-- This test inspired by set expression in EpochBoundary.hs
+testEpochEx :: Test
+testEpochEx = TestCase (assertEqual "Epoch Boundary Example"
+                         (Map.fromList [(5,False),(12,True)])
+                         (eval (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state))))
+    where delegs = Map.fromList [(5::Int,"a"),(6,"b"),(12,"c"),(14,"e"),(20,"f"),(25,"g")]
+          hk = "b"
+          state = Map.fromList [(n,even n) | n <- [1..13]]
 
 iter_tests :: Test
 iter_tests = TestList
@@ -264,6 +272,8 @@ iter_tests = TestList
   ,testChain2 "(Chain2 l5:Map l4:List)" MapR ListR
   ,testChain2 "(Chain2 l5:Map l4:List Map)" MapR MapR
   ,testChain2 "(Chain2 l5:BiMap l4:List Map)" BiMapR MapR
+
+  ,testEpochEx
   ]
 
 alltests :: Test

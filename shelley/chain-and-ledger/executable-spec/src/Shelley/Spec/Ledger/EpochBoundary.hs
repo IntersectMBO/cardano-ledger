@@ -41,7 +41,7 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
-import Shelley.Spec.Ledger.Core (dom, (▷), (◁))
+import Control.Iterate.SetAlgebra (eval, dom, (▷), (◁))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -129,7 +129,7 @@ poolStake ::
   Stake crypto ->
   Stake crypto
 poolStake hk delegs (Stake stake) =
-  Stake $ dom (delegs ▷ Set.singleton hk) ◁ stake
+  Stake $ eval(dom (delegs ▷ Set.singleton hk) ◁ stake)
 
 -- | Calculate total possible refunds.
 obligation ::
@@ -165,7 +165,7 @@ groupByPool ::
 groupByPool active delegs =
   Map.fromListWith
     Map.union
-    [ (pool, Set.singleton hk ◁ active)
+    [ (pool, eval(Set.singleton hk ◁ active))
       | (hk, pool) <- Map.toList delegs
     ]
 

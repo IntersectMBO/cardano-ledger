@@ -28,7 +28,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
-import Shelley.Spec.Ledger.Core (dom, (∪+), (◁))
+import Control.Iterate.SetAlgebra (eval,dom, (∪+), (◁))
 import Shelley.Spec.Ledger.Delegation.Certificates (StakeCreds (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
@@ -50,6 +50,7 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     _stkCreds,
     pattern EpochState,
+    RewardAccounts,
   )
 import Shelley.Spec.Ledger.PParams (emptyPParams)
 import Shelley.Spec.Ledger.Rewards (emptyNonMyopic)
@@ -99,15 +100,15 @@ mirTransition = do
   let dpState = _delegationState ls
       dState = _dstate dpState
       StakeCreds stkcreds = _stkCreds dState
-      irwdR = (dom stkcreds) ◁ (iRReserves $ _irwd dState)
+      irwdR = eval $ (dom stkcreds) ◁ (iRReserves $ _irwd dState)
       totFromReserves = sum irwdR
       reserves = _reserves acnt
       updateFromReserves = Map.mapKeys (mkRwdAcnt network) irwdR
-      irwdT = (dom stkcreds) ◁ (iRTreasury $ _irwd dState)
+      irwdT = eval $ (dom stkcreds) ◁ (iRTreasury $ _irwd dState)
       totFromTreasury = sum irwdT
       treasury = _treasury acnt
       updateFromTreasury = Map.mapKeys (mkRwdAcnt network) irwdT
-      update = Map.unionWith (+) updateFromReserves updateFromTreasury
+      update =  (eval (updateFromReserves ∪+ updateFromTreasury)) :: RewardAccounts crypto
 
   if totFromReserves <= reserves && totFromTreasury <= treasury
     then
@@ -123,7 +124,7 @@ mirTransition = do
                 dpState
                   { _dstate =
                       dState
-                        { _rewards = (_rewards dState) ∪+ update,
+                        { _rewards = eval ((_rewards dState) ∪+ update),
                           _irwd = emptyInstantaneousRewards
                         }
                   }

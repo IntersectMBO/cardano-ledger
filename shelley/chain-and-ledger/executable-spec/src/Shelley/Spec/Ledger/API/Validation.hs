@@ -25,7 +25,7 @@ import Control.State.Transition.Extended (TRC (..), applySTS, reapplySTS)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Core (Relation (..))
+import Control.Iterate.SetAlgebra (eval,dom)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
@@ -69,7 +69,7 @@ mkBbodyEnv
       LedgerState.nesEs
     } =
     STS.BbodyEnv
-      { STS.bbodySlots = dom nesOsched,
+      { STS.bbodySlots = eval(dom nesOsched),
         STS.bbodyPp = LedgerState.esPp nesEs,
         STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
