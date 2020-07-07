@@ -49,11 +49,10 @@ import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     emptyDPState,
-    genesisCoins,
-    genesisId,
+    emptyPPUPState,
     pattern UTxOState,
   )
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPPPUpdates)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (pattern LedgerEnv)
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (..), pattern Tx)
@@ -98,6 +97,10 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Examples (ppsEx1)
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( genesisCoins,
+    genesisId,
+  )
 import Test.Shelley.Spec.Ledger.Utils
   ( mkAddr,
     mkKeyPair,
@@ -125,7 +128,7 @@ aliceAddr = mkAddr (alicePay, aliceStake)
 -- ==========================================================
 
 coins :: Integer -> [TxOut Blake2b_256]
-coins n = fmap (\_ -> TxOut aliceAddr (Coin $ 100)) [0 .. n]
+coins n = fmap (\_ -> TxOut aliceAddr (Coin 100)) [0 .. n]
 
 -- Cretae an initial UTxO set with n-many transaction outputs
 initUTxO :: Integer -> UTxOState Blake2b_256
@@ -134,7 +137,7 @@ initUTxO n =
     (genesisCoins (coins n))
     (Coin 0)
     (Coin 0)
-    emptyPPPUpdates
+    emptyPPUPState
 
 -- Protocal Parameters used for the benchmarknig tests.
 -- Note that the fees and deposits are set to zero for
@@ -168,7 +171,7 @@ txbSpendOneUTxO :: TxBody Blake2b_256
 txbSpendOneUTxO =
   TxBody
     (Set.fromList [TxIn genesisId 0])
-    (StrictSeq.fromList [TxOut aliceAddr (Coin 10), TxOut aliceAddr (89)])
+    (StrictSeq.fromList [TxOut aliceAddr (Coin 10), TxOut aliceAddr 89])
     StrictSeq.empty
     (Wdrl Map.empty)
     (Coin 1)
@@ -233,14 +236,12 @@ txbFromCerts ix regCerts =
 makeSimpleTx ::
   TxBody Blake2b_256 ->
   [KeyPair Blake2b_256 'Witness] ->
-  [KeyPair Blake2b_256 'Witness] ->
   Tx Blake2b_256
-makeSimpleTx body keysAddr keysReg =
+makeSimpleTx body keysAddr =
   Tx
     body
     mempty
-      { addrWits = makeWitnessesVKey (hashTxBody body) keysAddr,
-        regWits = makeWitnessesVKey (hashTxBody body) keysReg
+      { addrWits = makeWitnessesVKey (hashTxBody body) keysAddr
       }
     SNothing
 
@@ -250,7 +251,6 @@ txRegStakeKeys ix keys =
   makeSimpleTx
     (txbFromCerts ix $ stakeKeyRegistrations keys)
     [asWitness alicePay]
-    []
 
 initLedgerState :: Integer -> (UTxOState Blake2b_256, DPState Blake2b_256)
 initLedgerState n = (initUTxO n, emptyDPState)
@@ -312,8 +312,7 @@ txDeRegStakeKeys :: Word64 -> Word64 -> Tx Blake2b_256
 txDeRegStakeKeys x y =
   makeSimpleTx
     (txbDeRegStakeKey x y)
-    (asWitness alicePay : (fmap asWitness (stakeKeys x y)))
-    []
+    (asWitness alicePay : fmap asWitness (stakeKeys x y))
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredKeys n m,
 -- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
@@ -352,8 +351,7 @@ txWithdrawals :: Word64 -> Word64 -> Tx Blake2b_256
 txWithdrawals x y =
   makeSimpleTx
     (txbWithdrawals x y)
-    (asWitness alicePay : (fmap asWitness (stakeKeys x y)))
-    []
+    (asWitness alicePay : fmap asWitness (stakeKeys x y))
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredKeys n m,
 -- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
@@ -407,8 +405,7 @@ txRegStakePools :: Natural -> [KeyPair Blake2b_256 'StakePool] -> Tx Blake2b_256
 txRegStakePools ix keys =
   makeSimpleTx
     (txbFromCerts ix $ poolRegCerts keys)
-    [asWitness alicePay, asWitness stakeKeyOne]
-    (fmap asWitness keys)
+    ([asWitness alicePay, asWitness stakeKeyOne] ++ fmap asWitness keys)
 
 -- Create a ledger state that has n registered stake pools.
 -- The keys are seeded with (n, 1, 0, 0, 0) to (m, 1, 0, 0, 0)
@@ -472,8 +469,7 @@ txRetireStakePool :: Word64 -> Word64 -> Tx Blake2b_256
 txRetireStakePool x y =
   makeSimpleTx
     (txbRetireStakePool x y)
-    [asWitness alicePay]
-    (fmap asWitness (poolColdKeys x y))
+    (asWitness alicePay : fmap asWitness (poolColdKeys x y))
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredPools n m,
 -- so that pool keys (n, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
@@ -521,7 +517,6 @@ txDelegate n m =
   makeSimpleTx
     (txbDelegate n m)
     (asWitness alicePay : fmap asWitness (stakeKeys n m))
-    []
 
 -- Given a ledger state, presumably created by ledgerStateWithNkeysMpools n m,
 -- so that stake keys (1, 0, 0, 0, 0) through (n, 0, 0, 0, 0) are already registered
