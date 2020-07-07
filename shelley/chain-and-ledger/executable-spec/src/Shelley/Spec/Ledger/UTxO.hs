@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 -- for the Relation instance
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 -- |
 -- Module      : UTxO
@@ -88,6 +89,14 @@ import Shelley.Spec.Ledger.TxData
     pattern Delegate,
     pattern Delegation,
   )
+import Control.Iterate.SetAlgebra(Base(toExp),BaseRep(MapR),Exp(Base),Embed(..))
+
+instance Base (UTxO crypto) (Map (TxIn crypto) (TxOut crypto)) where
+  toExp (UTxO x) = Base MapR x
+
+instance Embed (UTxO crypto) (Map (TxIn crypto) (TxOut crypto)) where
+   embed (UTxO x) = x
+   unbed x = (UTxO x)
 
 -- | The unspent transaction outputs.
 newtype UTxO crypto
