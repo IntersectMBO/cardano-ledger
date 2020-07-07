@@ -70,7 +70,9 @@ import Cardano.Prelude (NFData, NoUnexpectedThunks (..), cborError)
 import Cardano.Slotting.EpochInfo
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
+import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
@@ -186,7 +188,7 @@ deriving anyclass instance FromJSON Nonce
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce
-(Nonce a) ⭒ (Nonce b) = Nonce . coerce $ hash @SHA256 (getHash a <> getHash b)
+(Nonce a) ⭒ (Nonce b) = Nonce . coerce $ hashRaw @SHA256 id (getHash a <> getHash b)
 x ⭒ NeutralNonce = x
 NeutralNonce ⭒ x = x
 
@@ -202,7 +204,7 @@ mkNonceFromNumber :: Word64 -> Nonce
 mkNonceFromNumber =
   Nonce
     . (castHash :: Hash SHA256 Word64 -> Hash SHA256 Nonce)
-    . hash --TODO: use simpler serialisation
+    . hashRaw (BSL.toStrict . B.runPut . B.putWord64be)
 
 -- | Seed to the verifiable random function.
 --
