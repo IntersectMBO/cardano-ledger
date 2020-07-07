@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -171,6 +172,15 @@ import Shelley.Spec.Ledger.Serialization
     mapToCBOR,
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Control.Iterate.SetAlgebra(HasExp(toExp),BaseRep(MapR),Exp(Base),Embed(..))
+
+instance HasExp (StakeCreds crypto) (Map (Credential 'Staking crypto) SlotNo) where
+  toExp (StakeCreds x) = Base MapR x
+
+instance Embed (StakeCreds crypto) (Map (Credential 'Staking crypto) SlotNo) where
+   toBase (StakeCreds x) = x
+   fromBase x = (StakeCreds x)
+
 
 -- | The delegation of one stake key to another.
 data Delegation crypto = Delegation

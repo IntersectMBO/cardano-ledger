@@ -55,12 +55,13 @@ import Shelley.Spec.Ledger.BaseTypes
     activeSlotVal,
     unitIntervalToRational,
   )
+
 import Shelley.Spec.Ledger.Coin
   ( Coin (..),
     coinToRational,
     rationalToCoinViaFloor,
   )
-import Shelley.Spec.Ledger.Core ((◁))
+import Control.Iterate.SetAlgebra (eval, (◁))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
@@ -385,7 +386,7 @@ rewardOnePool network pp r blocksN blocksTotal pool (Stake stake) sigma (Coin to
         ]
     iReward = leaderRew poolR pool (StakeShare $ fromIntegral ostake % tot) (StakeShare sigma)
     potentialRewards = Map.insert (_poolRAcnt pool) iReward mRewards
-    rewards' = Map.filter (/= Coin 0) $ addrsRew ◁ potentialRewards
+    rewards' = Map.filter (/= Coin 0) $ eval(addrsRew ◁ potentialRewards)
 
 reward ::
   Network ->

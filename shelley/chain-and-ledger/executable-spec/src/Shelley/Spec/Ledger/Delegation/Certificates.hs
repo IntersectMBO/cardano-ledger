@@ -1,6 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
@@ -50,6 +53,24 @@ import Shelley.Spec.Ledger.TxData
     StakeCreds (..),
     StakePools (..),
   )
+
+import Shelley.Spec.Ledger.Crypto(VRF,HASH)
+import qualified Cardano.Crypto.VRF as VRF
+import qualified Cardano.Crypto.Hash as Hash
+import Control.Iterate.SetAlgebra(HasExp(toExp),BaseRep(MapR),Exp(Base),Embed(..))
+
+-- We had to do a bit of type synonym unfolding of VRF and HASH from Shelley.Spec.Ledger.Crypto
+-- These unfoldings need the types VerKeyVRF from Cardano.Crypto.VRF and Hash from Cardano.Crypto.Hash
+-- We also had to move (VRF crypto) and (HASH crypto) to the context, since they are both type synonym families.
+
+instance (u ~ (VRF crypto), v ~ (HASH crypto)) =>
+         HasExp (PoolDistr crypto) (Map (KeyHash 'StakePool crypto) (Rational,Hash.Hash v (VRF.VerKeyVRF u))) where
+  toExp (PoolDistr x) = Base MapR x
+instance (u ~ (VRF crypto), v ~ (HASH crypto)) =>
+         Embed (PoolDistr crypto) (Map (KeyHash 'StakePool crypto) (Rational,Hash.Hash v (VRF.VerKeyVRF u))) where
+  toBase (PoolDistr x) = x
+  fromBase x = (PoolDistr x)
+
 
 -- | Determine the certificate author
 delegCWitness :: DelegCert crypto -> Credential 'Staking crypto

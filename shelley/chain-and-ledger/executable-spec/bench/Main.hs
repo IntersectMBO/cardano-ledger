@@ -131,7 +131,7 @@ main :: IO ()
 main =
   defaultMain $
     [ bgroup "vary input size" $
-        [ varyInput "deregister key" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
+        [ -- varyInput "deregister key" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
           varyInput "register key" (20001, 20501) [(1, 20), (1, 200), (1, 2000)] ledgerStateWithNregisteredKeys ledgerRegisterStakeKeys,
           varyInput "withdrawal" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerRewardWithdrawals,
           varyInput "register pool" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredPools ledgerRegisterStakePools,

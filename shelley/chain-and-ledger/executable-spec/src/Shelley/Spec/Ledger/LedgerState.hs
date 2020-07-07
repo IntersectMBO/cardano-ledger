@@ -131,7 +131,7 @@ import Shelley.Spec.Ledger.BaseTypes
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), rationalToCoinViaFloor)
-import Shelley.Spec.Ledger.Core (dom, haskey, range, (∪), (∪+), (▷), (◁))
+import Control.Iterate.SetAlgebra (eval, dom, range, (∪), (∪+), (▷), (◁), (∈))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -771,7 +771,7 @@ consumed ::
   TxBody crypto ->
   Coin
 consumed pp u tx =
-  balance (txins tx ◁ u) + refunds + withdrawals
+  balance (eval (txins tx ◁ u)) + refunds + withdrawals
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = keyRefunds pp tx
@@ -886,7 +886,7 @@ propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
   Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where
-    updateKeys' = Map.keysSet pup ◁ genDelegs
+    updateKeys' = eval(Map.keysSet pup ◁ genDelegs)
     updateKeys = Map.map genDelegKeyHash updateKeys'
 
 -- Functions for stake delegation model
@@ -931,17 +931,17 @@ stakeDistr ::
   SnapShot crypto
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ dom activeDelegs ◁ aggregatePlus stakeRelation)
+    (Stake $ eval(dom activeDelegs ◁  Map.fromListWith (+) stakeRelation))
     delegs
     poolParams
   where
     DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
     PState (StakePools stpools) poolParams _ _ = ps
     outs = aggregateOuts u
-    stakeRelation :: [(Credential 'Staking crypto, Coin)]
-    stakeRelation = baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards'
-    activeDelegs = dom stkcreds ◁ delegs ▷ dom stpools
-    aggregatePlus = Map.fromListWith (+)
+    stakeRelation :: [(Credential 'Staking crypto, Coin)]  -- Why do these things compute Lists and not Maps?
+    stakeRelation = eval(baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards')
+    activeDelegs :: Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
+    activeDelegs = eval ((dom stkcreds ◁ delegs) ▷ dom stpools)
 
 -- | Apply a reward update
 applyRUpd ::
@@ -955,7 +955,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     dState = _dstate delegState
     (regRU, unregRU) =
       Map.partitionWithKey
-        (\(RewardAcnt _ k) _ -> haskey k $ _stkCreds dState)
+        ( \ (RewardAcnt _ k) _ -> eval(k ∈  dom( _stkCreds dState)))
         (rs ru)
     as' =
       as
@@ -970,7 +970,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
             delegState
               { _dstate =
                   dState
-                    { _rewards = _rewards dState ∪+ regRU
+                    { _rewards = eval( _rewards dState ∪+ regRU)
                     }
               }
         }
