@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,6 +16,7 @@ module Shelley.Spec.Ledger.STS.Chain
     PredicateFailure (..),
     initialShelleyState,
     totalAda,
+    totalAdaPots,
     chainChecks,
   )
 where
@@ -350,13 +352,44 @@ instance
   where
   wrapFailed = PrtclFailure
 
--- | Calculate the total ada in the chain state
-totalAda :: ChainState crypto -> Coin
-totalAda (ChainState nes _ _ _ _ _ _) =
-  treasury_ + reserves_ + rewards_ + circulation + deposits + fees_
+data AdaPots = AdaPots
+  { treasuryAdaPot :: Coin,
+    reservesAdaPot :: Coin,
+    rewardsAdaPot :: Coin,
+    utxoAdaPot :: Coin,
+    depositsAdaPot :: Coin,
+    feesAdaPot :: Coin
+  }
+  deriving (Show, Eq)
+
+-- | Calculate the total ada pots in the chain state
+totalAdaPots :: ChainState crypto -> AdaPots
+totalAdaPots (ChainState nes _ _ _ _ _ _) =
+  AdaPots
+    { treasuryAdaPot = treasury_,
+      reservesAdaPot = reserves_,
+      rewardsAdaPot = rewards_,
+      utxoAdaPot = circulation,
+      depositsAdaPot = deposits,
+      feesAdaPot = fees_
+    }
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls
     (DPState ds _) = _delegationState ls
     rewards_ = sum (Map.elems (_rewards ds))
     circulation = balance u
+
+-- | Calculate the total ada in the chain state
+totalAda :: ChainState crypto -> Coin
+totalAda cs =
+  treasuryAdaPot + reservesAdaPot + rewardsAdaPot + utxoAdaPot + depositsAdaPot + feesAdaPot
+  where
+    AdaPots
+      { treasuryAdaPot,
+        reservesAdaPot,
+        rewardsAdaPot,
+        utxoAdaPot,
+        depositsAdaPot,
+        feesAdaPot
+      } = totalAdaPots cs

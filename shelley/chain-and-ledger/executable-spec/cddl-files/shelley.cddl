@@ -218,11 +218,11 @@ multisig_script =
 coin = uint
 epoch = uint
 
-addr_keyhash = $hash28
-scripthash   = $hash28
+addr_keyhash          = $hash28
+scripthash            = $hash28
+genesis_delegate_hash = $hash28
+pool_keyhash          = $hash28
+genesishash           = $hash28
+vrf_keyhash           = $hash28
 
-genesis_delegate_hash = $hash32
-pool_keyhash          = $hash32
-genesishash           = $hash32
 metadata_hash         = $hash32
-vrf_keyhash           = $hash32
