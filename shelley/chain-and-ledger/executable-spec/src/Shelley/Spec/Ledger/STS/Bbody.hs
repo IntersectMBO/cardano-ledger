@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.BlockChain
     hBbsize,
     incrBlocks,
   )
-import Shelley.Spec.Ledger.Core ((∈))
+import Control.Iterate.SetAlgebra (eval, (∈))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole, hashKey)
@@ -129,7 +129,7 @@ bbodyTransition =
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
         let hkAsStakePool = coerceKeyRole hk
-        pure $ BbodyState ls' (incrBlocks (bheaderSlotNo bhb ∈ oslots) hkAsStakePool b)
+        pure $ BbodyState ls' (incrBlocks (eval(bheaderSlotNo bhb ∈ oslots)) hkAsStakePool b)
 
 instance
   ( Crypto crypto,

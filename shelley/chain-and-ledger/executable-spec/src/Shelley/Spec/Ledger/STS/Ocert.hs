@@ -22,10 +22,10 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Core (addpair)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert
+import Control.Iterate.SetAlgebra (eval, (⨃), singleton)
 
 data OCERT crypto
 
@@ -106,5 +106,5 @@ ocertTransition =
         failBecause $ NoCounterForKeyHashOCERT hk
         pure cs
       Just m -> do
-        m <= n ?! CounterTooSmallOCERT m n -- cs ⨃ (singleton hk n)
-        pure $ addpair hk n cs
+        m <= n ?! CounterTooSmallOCERT m n
+        pure( eval (cs ⨃ (singleton hk n)))--  pure $ addpair hk n cs

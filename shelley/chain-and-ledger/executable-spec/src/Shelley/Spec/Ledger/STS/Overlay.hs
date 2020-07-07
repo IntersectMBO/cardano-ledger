@@ -46,7 +46,7 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
-import Shelley.Spec.Ledger.Core (dom, range)
+import Control.Iterate.SetAlgebra (eval,dom, range)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys
@@ -256,8 +256,8 @@ overlayTransition =
 
         let oce =
               OCertEnv
-                { ocertEnvStPools = dom pd,
-                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
+                { ocertEnvStPools = eval(dom pd),
+                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ eval(range genDelegs)
                 }
 
         trans @(OCERT crypto) $ TRC (oce, cs, bh)
