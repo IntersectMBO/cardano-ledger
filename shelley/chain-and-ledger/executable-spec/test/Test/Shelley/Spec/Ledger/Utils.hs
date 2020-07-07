@@ -49,7 +49,6 @@ import Control.State.Transition.Trace
     (.-),
     (.->),
   )
-import Crypto.Random (drgNewTest, withDRG)
 import Data.Coerce (coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
@@ -133,10 +132,7 @@ mkCertifiedVRF ::
   SignKeyVRF h ->
   CertifiedVRF h a
 mkCertifiedVRF a sk =
-  fst . withDRG (drgNewTest seed) $
-    coerce <$> evalCertified () a sk
-  where
-    seed = (4, 0, 0, 0, 1)
+  coerce $ evalCertified () a sk
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
 mkKESKeyPair :: (Word64, Word64, Word64, Word64, Word64) -> (SignKeyKES h, VerKeyKES h)
