@@ -10,6 +10,7 @@ packages:
 - byron/crypto
 - byron/crypto/test
 - semantics/executable-spec
+- semantics/small-steps-test
 - shelley/chain-and-ledger/dependencies/non-integer
 
 ghc-options:

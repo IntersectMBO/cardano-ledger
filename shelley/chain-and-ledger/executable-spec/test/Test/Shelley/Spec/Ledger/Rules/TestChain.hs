@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.BlockChain (Block (..), TxSeq (..), bbody, bhbody, bh
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Core
 import Shelley.Spec.Ledger.LedgerState
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda)
+import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Tick (TickEnv (TickEnv))
 import Shelley.Spec.Ledger.Tx
@@ -105,13 +105,20 @@ adaPreservationChain =
         ( mconcat
             [ "source\n",
               show source,
-              "signal\n",
+              "\nsignal\n",
               show signal,
-              "target\n",
-              show target
+              "\ntarget\n",
+              show target,
+              "\nsource pots\n",
+              show sourcePots,
+              "\ntarget pots\n",
+              show targetPots
             ]
         )
         $ totalAda source === totalAda target
+      where
+        sourcePots = totalAdaPots source
+        targetPots = totalAdaPots target
     checkWithdrawlBound SourceSignalTarget {source, signal, target} =
       epoch source == epoch target ==> rewardDelta === withdrawls
       where
