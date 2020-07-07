@@ -23,7 +23,7 @@ possible constructors of the MPS language.
 
 \begin{figure*}[htb]
   \begin{align*}
-    & \fun{evalMPSScript} \in\ScriptMPS\to\ScriptHash\to\Slot\to\powerset\KeyHash \\
+    & \fun{evalMPSScript} \in\ScriptMPS\to\PolicyID\to\Slot\to\powerset\KeyHash \\
     &~~~~\to\TxBody\to\UTxO \to\Bool  \\
     & \text{UTxO is only for the outputs THIS tx is spending, not global UTxO, i.e.} \\
     & \text{when called,}~\var{spentouts}~=~(\fun{txins}~\var{txb}) ~\restrictdom~\var{utxo} \\~\\

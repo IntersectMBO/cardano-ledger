@@ -51,7 +51,7 @@ by $(m_1 + m_2)(x) := m_1(x) + m_2(x)$, where the addition treats $\epsilon$ as
 $0$, and $\epsilon + \epsilon = \epsilon$.
 
 Note that this construction has to be iterated twice for the type $\Value$, as
-addition on the type $\Token \mapsto \Quantity$ needs to be defined this way first.
+addition on the type $\AssetID \mapsto \Quantity$ needs to be defined this way first.
 This definition of addition is also defined in
 Section~\ref{sec:notation-shelley}.
 
@@ -78,8 +78,8 @@ UTxO transition system with MC:
   calculation at the epoch boundary
 
   \item
-    The $\fun{ubalance}$ function calculates the (aggregated by currency ID and
-    Token) sum total of all the value in a given UTxO.
+    The $\fun{ubalance}$ function calculates the (aggregated by $\PolicyID$ and
+    $\AssetID$) sum total of all the value in a given UTxO.
 
   \item The $\fun{consumed}$ calculation is still the sum of the reward address
    value consumed, the values of the UTxO entries consumed,
@@ -102,7 +102,7 @@ are converted into MC values for these summations.
 
 While the preservation of value is a single
 equality, it is really a comparison of token quantities aggregated by
-$\Token$ and by $\CurrencyID$. In particular, ensuring that the produced
+$\AssetID$ and by $\PolicyID$. In particular, ensuring that the produced
 amount equals the consumed amount also implies that the total quantity of
 Ada tokens is preserved.
 
@@ -233,7 +233,9 @@ $\Coin$. Moreover, the $\fun{outs}$ map converts $\TxOut$ terms into $\UTxOOut$.
       ~
       \\
       \mathsf{adaID}~\notin \dom~{\fun{forge}~tx} \\
-      \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ \epsilon \\~
+      \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ 0 \\~
+      \forall txout \in \txouts{txb}, ~ \fun{getCoin}~txout ~\geq \\
+      \fun{valueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue} pp \\~
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp}
       \\
@@ -241,10 +243,8 @@ $\Coin$. Moreover, the $\fun{outs}$ map converts $\TxOut$ terms into $\UTxOOut$.
       \\
       \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
       \\
-      \var{decayed} \leteq \decayedTx{pp}{stkCreds}~{txb}
-      \\
       \var{depositChange} \leteq
-        \fun{totalDeposits}~{pp}{stpools}{(\txcerts{txb})} - (\var{refunded} + \var{decayed})
+        \fun{totalDeposits}~{pp}{stpools}{\txcerts{txb}} - \var{refunded}
     }
     {
       \begin{array}{r}
@@ -268,7 +268,7 @@ $\Coin$. Moreover, the $\fun{outs}$ map converts $\TxOut$ terms into $\UTxOOut$.
       \begin{array}{r}
         \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \fun{outs}{txb}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
-        \varUpdate{\var{fees} + \txfee{txb} + \var{decayed}} \\
+        \varUpdate{\var{fees} + \txfee{txb}} \\
         \varUpdate{ups'}\\
       \end{array}
       \right)
@@ -301,7 +301,7 @@ also be a forging script.
 \begin{figure}[htb]
   \begin{align*}
     & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \Tx \to
-      \powerset{\ScriptHash}
+      \powerset{\PolicyID}
     & \text{required script hashes} \\
     &  \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{tx} = \\
     & ~~\{ \fun{validatorHash}~a \mid i \mapsto (a, \wcard) \in \var{utxo},\\
