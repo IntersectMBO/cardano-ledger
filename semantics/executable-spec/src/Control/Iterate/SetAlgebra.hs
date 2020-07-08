@@ -7,6 +7,7 @@
 {-# LANGUAGE DeriveGeneric           #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 
 module Control.Iterate.SetAlgebra where
@@ -26,7 +27,7 @@ import qualified Data.List as List
 import Control.Iterate.Collect
 
 import Text.PrettyPrint.ANSI.Leijen(Doc,text,(<+>),align,vsep,parens)
-import Debug.Trace(trace)
+-- import Debug.Trace(trace)
 
 -- ==================================================================================================
 -- In order to build typed Exp (which are a typed deep embedding) of Set operations, we need to know
@@ -36,8 +37,10 @@ import Debug.Trace(trace)
 -- ===================================================================================================
 
 class Iter f => Basic f where
+  -- | in addpair the new value always prevails, to make a choice use 'addkv' which has a combining function that allows choice.
   addpair:: (Ord k) => k -> v -> f k v -> f k v
   addpair k v f = addkv (k,v) f (\ a b -> a)
+  -- | use (\ l r -> l) if you want the v in (k,v) to prevail, and use (\ l r -> r) if you want the v in (f k v) to prevail
   addkv :: Ord k => (k,v) -> f k v -> (v -> v -> v) -> f k v
   removekey:: (Ord k) => k -> f k v -> f k v
   domain:: Ord k => f k v -> Set k
@@ -48,9 +51,6 @@ class Iter f => Basic f where
 -- ========== Basic List ==============
 
 instance Basic List where
-   addpair k v (List xs) = List(insert xs) where
-       insert [] = [(k,v)]
-       insert ((key,u):ys) = if k==key then ((k,v):ys) else (k,u):(insert ys)
    addkv (k,v) (List xs) comb = List(insert xs) where
        insert [] = [(k,v)]
        insert ((key,u):ys) = if k==key then ((k,comb u v):ys) else (k,u):(insert ys)
@@ -100,7 +100,6 @@ instance Basic Single where
 -- ============== Basic Map =========================
 
 instance Basic Map.Map where
-  addpair = Map.insertWith (\x _y -> x)
   addkv (k,v) m comb = Map.insertWith comb k v m
   removekey k m = Map.delete k m
   domain x = Map.keysSet x
@@ -120,7 +119,6 @@ data BiMap v a b where MkBiMap:: (v ~ b) => !(Map.Map a b) -> !(Map.Map b a) -> 
                                 --  ^   the 1st and 3rd parameter must be the same:   ^   ^
 
 instance Ord v => Basic (BiMap v) where
-  addpair k y (MkBiMap m1 m2) = MkBiMap (Map.insertWith (\x _y -> x) k y m1)  (Map.insertWith (\x _y -> x) y k m2)
   addkv (k,v) (MkBiMap f b) comb =
      case Map.lookup k f of
        Nothing -> MkBiMap (Map.insert k v f) (Map.insert v k b)
@@ -233,9 +231,11 @@ class Iter f where
   element :: (Ord k) => k -> f k v -> Collect ()
   element k f = when (haskey k f)
 
-
 -- ============== Iter List ==============
 data List k v where  List :: Ord k => [(k,v)]  -> List k v
+unList :: List k v -> [(k, v)]
+unList (List xs) = xs
+deriving instance (Eq k,Eq v) => Eq (List k v)
 
 instance Iter List where                      -- List is the only basic instance with non-linear nxt and lub. It also depends on
    nxt (List []) = none                       -- key-value pairs being stored in ascending order. For small Lists (10 or so elements) this is OK.
@@ -248,6 +248,8 @@ instance Iter List where                      -- List is the only basic instance
    hasNxt (List []) = Nothing
    hasNxt (List (((k,v):ps))) = Just(k,v,List ps)
 
+instance (Show k,Show v) => Show (List k v) where
+   show (List xs) = show xs
 
 -- =============== Iter Single ==================
 
@@ -836,9 +838,9 @@ compile (RExclude rel set) =
    case (compile rel,compile set) of
       ((reld,rep),(BaseD _ x,_)) -> (GuardD reld (nEgate (rngElem x)),rep)
       ((reld,rep),_) -> (GuardD reld (nEgate (rngElem (compute set))),rep)  -- This could be expensive
-compile (UnionOverrideLeft rel1 rel2) =  (OrD rel1d (fst(compile rel2)) first,rep)   -- first uses value from rel1 to override value from rel21
+compile (UnionOverrideLeft rel1 rel2) =  (OrD rel1d (fst(compile rel2)) first,rep)   -- first uses value from rel1 to override value from rel2
     where (rel1d,rep) = compile rel1
-compile (UnionOverrideRight rel1 rel2) =  (OrD rel1d (fst(compile rel2)) second,rep) -- second uses value from rel2 to override value from rel
+compile (UnionOverrideRight rel1 rel2) =  (OrD rel1d (fst(compile rel2)) second,rep) -- second uses value from rel2 to override value from rel1
     where (rel1d,rep) = compile rel1
 compile (UnionPlus rel1 rel2) =  (OrD rel1d (fst(compile rel2)) plus,rep)
     where (rel1d,rep) = compile rel1
@@ -848,7 +850,7 @@ compile (Intersect rel1 rel2) = (andPD (fst(compile rel1)) (fst(compile rel2)) (
 -- run materializes compiled code, only if it is not already data
 -- ===========================================================================
 
-run :: Ord k => (Query k v,BaseRep f k v) -> f k v
+run ::(Ord k) => (Query k v,BaseRep f k v) -> f k v
 run (BaseD SetR x,SetR) = x               -- If it is already data (BaseD)
 run (BaseD MapR x,MapR) = x               -- and in the right form (the BaseRep's match)
 run (BaseD SingleR x,SingleR) = x         -- just return the data
@@ -912,8 +914,10 @@ compute (e@(DExclude _ _ )) = run(compile e)
 compute (RExclude (Base BiMapR x) (SetSingleton k)) = removeval k x
 compute (RExclude (Base BiMapR x) (Dom (Singleton k v))) = removeval k x
 compute (RExclude (Base BiMapR x) (Rng (Singleton k v))) = removeval v x
+compute (RExclude (Base rep lhs) (Base SetR (Sett rhs))) | Set.null rhs = lhs
+compute (RExclude (Base rep lhs) (Base SingleR Fail)) = lhs
 compute (RExclude (Base rep lhs) y) =
-   materialize rep $ do { (a,b) <- lifo lhs; (c,_) <- lifo rhs; when (not(b==c)); one (a,b)} where rhs = compute y
+   materialize rep $ do { (a,b) <- fifo lhs; when (not(haskey b rhs)); one (a,b)} where (rhs,_) = compile y
 compute (e@(RExclude _ _ )) = run(compile e)
 
 compute (RRestrict (DRestrict (Dom (Base r1 stkcreds)) (Base r2 delegs)) (Dom (Base r3 stpools))) =
@@ -946,10 +950,12 @@ compute (Intersect (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.inters
 compute (Intersect (Base MapR x) (Base MapR y)) = Sett (Map.keysSet(Map.intersection x y))
 compute (e@(Intersect a b)) = run(compile e)
 
-compute (UnionOverrideLeft (Base rep x) (Singleton k v)) = addkv (k,v) x (\ l r -> l)   -- The value on the left is preferred over the value on the right.
+compute (UnionOverrideLeft (Base rep x) (Singleton k v))  = addkv (k,v) x (\ new old -> old) -- The value on the left is preferred over the right, so 'addkv' chooses 'old'
+compute (UnionOverrideLeft (Base MapR d0) (Base MapR d1)) = Map.union d0 d1  -- 'Map.union' is left biased, just what we want.
 compute (e@(UnionOverrideLeft a b)) = run(compile e)
 
-compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ l r -> r)  -- The value on the right is preferred over the value on the left.
+compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ new old -> new) -- The value on the right is preferred over the left, so 'addkv' chooses 'new'
+compute ((UnionOverrideRight (Base MapR d0) (Base MapR d1))) = Map.union d1 d0   -- we pass @d1@ as first argument, since 'Map.union' is left biased.
 compute (e@(UnionOverrideRight a b)) = run(compile e)
 
 compute (UnionPlus (Base MapR x) (Base MapR y)) = Map.unionWith (+) x y
