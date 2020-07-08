@@ -90,7 +90,7 @@ instance VRFAlgorithm FakeVRF where
 
   genKeyVRF seed = SignKeyFakeVRF $ runMonadRandomWithSeed seed getRandomWord64
   deriveVerKeyVRF (SignKeyFakeVRF n) = VerKeyFakeVRF n
-  evalVRF () a sk = return $ evalVRF' a sk
+  evalVRF () a sk = evalVRF' a sk
 
   -- This implementation of `verifyVRF` checks the real result, which is hidden
   -- in the certificate, but ignores the produced value, which is set to be the
