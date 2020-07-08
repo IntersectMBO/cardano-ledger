@@ -13,6 +13,7 @@ module Shelley.Spec.Ledger.API.Validation
     chainChecks,
     applyTickTransition,
     applyBlockTransition,
+    reapplyBlockTransition,
   )
 where
 
@@ -20,7 +21,7 @@ import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (TRC (..), applySTS)
+import Control.State.Transition.Extended (TRC (..), applySTS, reapplySTS)
 import Data.Either (fromRight)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..))
@@ -123,6 +124,37 @@ applyBlockTransition globals state blk =
   where
     res =
       flip runReader globals . applySTS @(STS.BBODY crypto) $
+        TRC (mkBbodyEnv state, bbs, blk)
+    updateShelleyState ::
+      ShelleyState crypto ->
+      STS.BbodyState crypto ->
+      ShelleyState crypto
+    updateShelleyState ss (STS.BbodyState ls bcur) =
+      LedgerState.updateNES ss bcur ls
+    bbs =
+      STS.BbodyState
+        (LedgerState.esLState $ LedgerState.nesEs state)
+        (LedgerState.nesBcur state)
+
+-- | Re-apply a ledger block to the same state it has been applied to before.
+--
+--   This function does no validation of whether the block applies successfully;
+--   the caller implicitly guarantees that they have previously called
+--   `applyBlockTransition` on the same block and that this was successful.
+reapplyBlockTransition ::
+  forall crypto.
+  ( Crypto crypto,
+    DSignable crypto (Hash crypto (Tx.TxBody crypto))
+  ) =>
+  Globals ->
+  ShelleyState crypto ->
+  Block crypto ->
+  ShelleyState crypto
+reapplyBlockTransition globals state blk =
+  updateShelleyState state res
+  where
+    res =
+      flip runReader globals . reapplySTS @(STS.BBODY crypto) $
         TRC (mkBbodyEnv state, bbs, blk)
     updateShelleyState ::
       ShelleyState crypto ->
