@@ -32,7 +32,7 @@ import qualified Data.Set as Set (isSubsetOf, singleton, size)
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), (==>))
 import Shelley.Spec.Ledger.Coin (Coin, pattern Coin)
-import Shelley.Spec.Ledger.Core (dom, range, (∈), (∉), (◁))
+import Control.Iterate.SetAlgebra (eval, dom, rng, (∈), (∉), (◁))
 import Shelley.Spec.Ledger.Keys (KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( InstantaneousRewards (..),
@@ -65,7 +65,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 -------------------------------
 
 getStDelegs :: DState ShortHash -> Set (Credential ShortHash 'Staking)
-getStDelegs = dom . _stkCreds
+getStDelegs = \ x -> eval(dom ( _stkCreds x))
 
 getRewards :: DState ShortHash -> Map (RewardAcnt ShortHash) Coin
 getRewards = _rewards
@@ -88,8 +88,8 @@ rewardZeroAfterReg tr =
     credNewlyRegisteredAndRewardZero (SourceSignalTarget d d' (DCertDeleg (RegKey hk))) =
       counterexample
         "a newly registered key should have a reward of 0"
-        ( (hk ∉ getStDelegs d)
-            ==> ( hk ∈ getStDelegs d'
+        ( eval(hk ∉ getStDelegs d)
+            ==> ( eval(hk ∈ getStDelegs d')
                     && Maybe.maybe True (== 0) (Map.lookup (mkRwdAcnt Testnet hk) (getRewards d'))
                 )
         )
@@ -111,9 +111,9 @@ credentialRemovedAfterDereg tr =
         } =
         counterexample
           "a deregistered stake key should not be in the reward and delegation mappings"
-          ( cred ∉ getStDelegs d'
-              && mkRwdAcnt Testnet cred ∉ dom (getRewards d')
-              && cred ∉ dom (getDelegations d')
+          ( eval(cred ∉ getStDelegs d')
+              && eval(mkRwdAcnt Testnet cred ∉ dom (getRewards d'))
+              && eval(cred ∉ dom (getDelegations d'))
           )
     removedDeregCredential _ = property ()
 
@@ -131,9 +131,9 @@ credentialMappingAfterDelegation tr =
         { signal = DCertDeleg (Delegate (Delegation cred to)),
           target = d'
         } =
-        let credImage = range (Set.singleton cred ◁ getDelegations d')
-         in cred ∈ getStDelegs d'
-              && to ∈ credImage
+        let credImage = eval(rng(Set.singleton cred ◁ getDelegations d'))
+         in eval(cred ∈ getStDelegs d')
+              && eval(to ∈ credImage)
               && Set.size credImage == 1
     delegatedCredential _ = True
 
