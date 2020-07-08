@@ -1,12 +1,14 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+{-# LANGUAGE FlexibleContexts #-}
+
 module IterTests where
 
 import Control.Iterate.Collect
 import Control.Iterate.SetAlgebra(Iter(..),
-                  Exp(..),BaseRep(..),List(..),Sett(..),Single(..),
-                  dom, range, singleton, setSingleton, (◁), (⋪), (▷), (⋫), (∪), (⨃), (∈), (∉),(|>),(<|),
+                  Exp(..),BaseRep(..),List(..),Sett(..),Single(..),unList,
+                  dom, rng, singleton, setSingleton, (◁), (⋪), (▷), (⋫), (∪), (⨃), (∈), (∉),(|>),(<|),
                   element, lifo, fifo,
                   Fun, apply,
                   BiMap(..), Bimap, biMapEmpty, biMapFromList,removeval,
@@ -130,7 +132,7 @@ ex3 = m0 ∪ (singleton 3 'b')
 ex4,ex5,ex6 :: Exp(Map Int Char)
 ex4 = (setSingleton 2) ⋪ m0
 ex5 = dom(singleton 2 'z') ⋪ m0
-ex6 = range(singleton 'z' 2) ⋪ m0
+ex6 = rng(singleton 'z' 2) ⋪ m0
 
 ex7::Exp Bool
 ex7 = 70 ∉ (dom m1)
@@ -144,6 +146,12 @@ evalTest nm expr ans = TestCase (assertEqual (show expr++" where Map? = "++nm) (
 eval_compile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> Test
 eval_compile expr = TestCase (assertEqual ("compute and run.compile of "++show expr++" are the same") (compute expr) (run(compile expr)))
 
+{-
+(compute $ l4 ⋫ Set.empty)
+[(1,"m"),(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l"),(105,"Z")]
+*IterTests> (compute $ l4 ⋫ Fail)
+[(1,"m"),(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l"),(105,"Z")]
+-}
 
 eval_tests :: Test
 eval_tests = TestList
@@ -152,10 +160,20 @@ eval_tests = TestList
           , evalTest "m0"  (m0 ∪ (singleton 3 'b'))      (Map.fromList [(1,'a'),(2,'z'),(3,'b'),(4,'g')])
           , evalTest "m0"  ((setSingleton 2) ⋪ m0)       (Map.fromList [(1,'a'),(4,'g')])
           , evalTest "m0"  (dom(singleton 2 'z') ⋪ m0)   (Map.fromList [(1,'a'),(4,'g')])
-          , evalTest "m0"  (range(singleton 'z' 2) ⋪ m0) (Map.fromList [(1,'a'),(4,'g')])
+          , evalTest "m0"  (rng(singleton 'z' 2) ⋪ m0) (Map.fromList [(1,'a'),(4,'g')])
+
+        -- , evalTest "m0"  ((Map.fromList [(1,'a'),(2,'n'),(3,'r')]) ∪ (singleton 2 'b')) (Map.fromList[(1::Int,'a'),(2,'n'),(3,'r')])
+        --  , evalTest "m0"  ([(1,'a'),(3,'r')] ∪ (singleton 3 'b')) (List[(1::Int,'a'),(2,'n'),(3,'r')])
+
           , evalTest "m0"  (70 ∉ (dom m1))                True
           , evalTest "((dom stkcred) ◁ deleg) ▷ (dom stpool)"  (((dom stkcred) ◁ deleg) ▷ (dom stpool)) (Map.fromList [(5,'F')])
+          , evalTest "Range exclude 1"  (l4 ⋫ Set.empty) (List l4)
+          , evalTest "Range exclude 2"  (l4 ⋫ Fail) (List l4)
+          , evalTest "Range exclude 3"  (l4 ⋫ (Set.fromList ["m","Z"])) (List [(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l")])
           , eval_compile  (((dom stkcred) ◁ deleg) ▷ (dom stpool))
+          , eval_compile  (l4 ⋫ (Set.fromList ["m","Z"]))
+          , eval_compile  (m0 ∪ (singleton 3 'b'))
+          , eval_compile  ((setSingleton 2) ⋪ m0)
           ]
 
 
