@@ -938,7 +938,7 @@ applyRUpd ru (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
     as' =
       as
         { _treasury = _treasury as + deltaT ru,
-          _reserves = _reserves as + deltaR ru + sum (eval (range unregRU) :: Set Coin)
+          _reserves = _reserves as + deltaR ru + sum (range unregRU)
         }
     ls' =
       ls

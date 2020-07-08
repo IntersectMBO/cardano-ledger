@@ -29,7 +29,7 @@ import Shelley.Spec.Ledger.BaseTypes
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
-import Shelley.Spec.Ledger.Core (dom, range)
+import Control.Iterate.SetAlgebra(eval, dom, range)
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.Keys (GenDelegs (..), KeyRole (..), coerceKeyRole, genDelegKeyHash, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
@@ -212,7 +212,7 @@ genBlock
             genesisVKHs = Set.map genDelegKeyHash $ range gds
             n' =
               currentIssueNo
-                (OCertEnv (dom poolParams) genesisVKHs)
+                (OCertEnv (eval (dom poolParams)) genesisVKHs)
                 cs
                 ((coerceKeyRole . hashKey . vKey . cold) keys)
             m = getKESPeriodRenewalNo keys kp

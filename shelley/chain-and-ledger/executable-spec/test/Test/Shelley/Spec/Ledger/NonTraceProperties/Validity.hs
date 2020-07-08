@@ -5,7 +5,7 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Validity where
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Shelley.Spec.Ledger.Core (dom)
+import Control.Iterate.SetAlgebra (eval,dom,(⊆))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates (StakePools (..))
 import Shelley.Spec.Ledger.Keys
@@ -102,7 +102,7 @@ validInputs ::
   UTxOState crypto ->
   Validity
 validInputs tx u =
-  if txins tx `Set.isSubsetOf` dom (_utxo u)
+  if eval(txins tx ⊆ dom(_utxo u))
     then Valid
     else Invalid [BadInputs]
 
