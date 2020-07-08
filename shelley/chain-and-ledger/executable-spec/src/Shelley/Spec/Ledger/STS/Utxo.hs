@@ -25,7 +25,8 @@ import Cardano.Binary
   )
 import Cardano.Prelude (NoUnexpectedThunks (..), asks)
 import Control.State.Transition
-  ( Embed,
+  ( Assertion (..),
+    Embed,
     IRC (..),
     InitialRule,
     STS (..),
@@ -37,7 +38,7 @@ import Control.State.Transition
     wrapFailed,
     (?!),
   )
-import Data.Foldable (toList)
+import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -70,8 +71,15 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut (..))
-import Shelley.Spec.Ledger.TxData (TxBody (..))
-import Shelley.Spec.Ledger.UTxO (UTxO (..), totalDeposits, txins, txouts, txup)
+import Shelley.Spec.Ledger.TxData (TxBody (..), unWdrl)
+import Shelley.Spec.Ledger.UTxO
+  ( UTxO (..),
+    balance,
+    totalDeposits,
+    txins,
+    txouts,
+    txup,
+  )
 
 data UTXO crypto
 
@@ -116,6 +124,22 @@ instance
     deriving (Eq, Show, Generic)
   transitionRules = [utxoInductive]
   initialRules = [initialLedgerState]
+
+  assertions =
+    [ PostCondition
+        "UTxO must increase fee pot"
+        (\(TRC (_, st, _)) st' -> _fees st' >= _fees st),
+      PostCondition
+        "Deposit pot must not be negative"
+        (\_ st' -> _deposited st' >= 0),
+      let utxoBalance us = _deposited us + _fees us + balance (_utxo us)
+          withdrawals txb = foldl' (+) (Coin 0) $ unWdrl $ _wdrls txb
+       in PostCondition
+            "Should preserve ADA in the UTxO state"
+            ( \(TRC (_, us, tx)) us' ->
+                utxoBalance us + withdrawals (_body tx) == utxoBalance us'
+            )
+    ]
 
 instance NoUnexpectedThunks (PredicateFailure (UTXO crypto))
 

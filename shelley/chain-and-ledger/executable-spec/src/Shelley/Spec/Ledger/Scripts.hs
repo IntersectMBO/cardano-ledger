@@ -42,8 +42,7 @@ import Cardano.Binary
     serializeEncoding,
   )
 import Cardano.Crypto.Hash (hashWithSerialiser)
-import Cardano.Prelude (AllowThunksIn (..), LByteString, NFData)
-import Cardano.Prelude (Generic, NoUnexpectedThunks (..))
+import Cardano.Prelude (AllowThunksIn (..), Generic, LByteString, NFData, NoUnexpectedThunks (..))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.List as List (concat, concatMap, permutations)

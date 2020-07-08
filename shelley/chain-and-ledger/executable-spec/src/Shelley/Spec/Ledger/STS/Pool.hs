@@ -13,10 +13,26 @@ module Shelley.Spec.Ledger.STS.Pool
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeListLen, decodeWord, encodeListLen, matchSize)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord,
+    encodeListLen,
+    matchSize,
+  )
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
-import Control.State.Transition (STS (..), TRC (..), TransitionRule, failBecause, judgmentContext, liftSTS, (?!))
+import Control.State.Transition
+  ( Assertion (..),
+    STS (..),
+    TRC (..),
+    TransitionRule,
+    failBecause,
+    judgmentContext,
+    liftSTS,
+    (?!),
+  )
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -25,13 +41,18 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Shelley.Spec.Ledger.Core (addpair, haskey, removekey)
+import Shelley.Spec.Ledger.Core (addpair, dom, haskey, removekey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
-import Shelley.Spec.Ledger.TxData (DCert (..), PoolCert (..), PoolParams (..), StakePools (..))
+import Shelley.Spec.Ledger.TxData
+  ( DCert (..),
+    PoolCert (..),
+    PoolParams (..),
+    StakePools (..),
+  )
 
 data POOL (crypto :: Type)
 
@@ -65,6 +86,14 @@ instance Typeable crypto => STS (POOL crypto) where
   initialRules = [pure emptyPState]
 
   transitionRules = [poolDelegationTransition]
+
+  assertions =
+    [ PreCondition
+        "_stPools and _pParams must have the same domain"
+        ( \(TRC (_, st, _)) ->
+            dom (unStakePools $ _stPools st) == dom (_pParams st)
+        )
+    ]
 
 instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
 

@@ -48,7 +48,6 @@ import Cardano.Crypto.DSIGN.Ed25519 as Ed25519
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Prelude (panic)
 import Cardano.Prelude
   ( AllowThunksIn (..),
     ByteString,
@@ -57,6 +56,7 @@ import Cardano.Prelude
     NoUnexpectedThunks,
     Proxy (..),
     Word8,
+    panic,
   )
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)

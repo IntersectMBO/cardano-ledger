@@ -137,7 +137,6 @@ import Shelley.Spec.Ledger.Slot
     epochInfoFirst,
     (*-),
   )
-import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.Tx
   ( hashScript,
     pattern TxBody,
@@ -145,6 +144,7 @@ import Shelley.Spec.Ledger.Tx
     pattern TxIn,
     pattern TxOut,
   )
+import qualified Shelley.Spec.Ledger.Tx as Ledger
 import Shelley.Spec.Ledger.TxData
   ( unWdrl,
     _txfee,

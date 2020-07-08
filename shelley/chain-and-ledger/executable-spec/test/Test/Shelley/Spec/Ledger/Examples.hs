@@ -107,7 +107,7 @@ import Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Prelude (asks)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
 import Data.List (foldl')
@@ -3296,13 +3296,13 @@ blockEx5D'' pot epochNonce =
 
 ex5D' :: forall proxy h. HashAlgorithm h => proxy h -> MIRPot -> Either [[PredicateFailure (CHAIN h)]] (ChainState h)
 ex5D' _p pot = do
-  nextState <- runShelleyBase $ applySTS @(CHAIN h) (TRC ((), initStEx5A, blockEx5D pot))
+  nextState <- runShelleyBase $ applySTSTest @(CHAIN h) (TRC ((), initStEx5A, blockEx5D pot))
   midState <-
     runShelleyBase $
-      applySTS @(CHAIN h) (TRC ((), nextState, blockEx5D' pot))
+      applySTSTest @(CHAIN h) (TRC ((), nextState, blockEx5D' pot))
   let finalEpochNonce = (chainCandidateNonce midState) ⭒ (chainPrevEpochNonce midState)
   finalState <-
-    runShelleyBase $ applySTS @(CHAIN h) (TRC ((), midState, blockEx5D'' pot finalEpochNonce))
+    runShelleyBase $ applySTSTest @(CHAIN h) (TRC ((), midState, blockEx5D'' pot finalEpochNonce))
 
   pure finalState
 

@@ -18,7 +18,7 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition.Extended (IRC, TRC (..), applySTS)
+import Control.State.Transition.Extended (IRC, TRC (..))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
 import qualified Data.Sequence as Seq
@@ -43,7 +43,7 @@ import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkTx)
-import Test.Shelley.Spec.Ledger.Utils (runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
 
 genAccountState :: HasCallStack => Constants -> Gen AccountState
 genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
@@ -94,7 +94,7 @@ instance HashAlgorithm h => TQC.HasTrace (LEDGERS h) (GenEnv h) where
           let ledgerEnv = LedgerEnv slotNo ix pParams reserves
           tx <- genTx ge ledgerEnv (u, dp)
 
-          let res = runShelleyBase $ applySTS @(LEDGER h) (TRC (ledgerEnv, (u, dp), tx))
+          let res = runShelleyBase $ applySTSTest @(LEDGER h) (TRC (ledgerEnv, (u, dp), tx))
           pure $ case res of
             Left _ ->
               (u, dp, txs)
