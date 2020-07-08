@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveFunctor #-}
@@ -13,6 +14,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -61,7 +63,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State.Strict (modify, runStateT)
 import qualified Control.Monad.Trans.State.Strict as MonadState
 import Data.Data (Data, Typeable)
-import Data.Foldable (find, for_, traverse_)
+import Data.Foldable (find, traverse_)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
@@ -421,44 +423,45 @@ applySTSInternal ap goRule ctx =
     applySTSInternal' SInitial env =
       goRule env `traverse` initialRules
     applySTSInternal' STransition jc = do
-      when (assertPre ap) $
-        for_ (assertions @s) $
-          ( \case
-              PreCondition msg cond ->
-                if cond jc
-                  then
-                    throw $
-                      AssertionViolation
-                        { avSTS = show $ typeRep (Proxy @s),
-                          avMsg = msg,
-                          avCtx = jc,
-                          avState = Nothing
-                        }
-                  else pure ()
-              _ -> pure ()
-          )
+      !_ <-
+        when (assertPre ap)
+          $! sfor_ (assertions @s)
+          $! ( \case
+                 PreCondition msg cond ->
+                   if not (cond jc)
+                     then
+                       throw
+                         $! AssertionViolation
+                           { avSTS = show $ typeRep (Proxy @s),
+                             avMsg = msg,
+                             avCtx = jc,
+                             avState = Nothing
+                           }
+                     else pure ()
+                 _ -> pure ()
+             )
       res <- goRule jc `traverse` transitionRules
       -- We only care about running postconditions if the state transition was
       -- successful.
-      case (assertPost ap, successOrFirstFailure res) of
+      !_ <- case (assertPost ap, successOrFirstFailure res) of
         (True, (st, [])) ->
-          for_ (assertions @s) $
-            ( \case
-                PostCondition msg cond ->
-                  if cond jc st
-                    then
-                      throw $
-                        AssertionViolation
-                          { avSTS = show $ typeRep (Proxy @s),
-                            avMsg = msg,
-                            avCtx = jc,
-                            avState = Just st
-                          }
-                    else pure ()
-                _ -> pure ()
-            )
+          sfor_ (assertions @s)
+            $! ( \case
+                   PostCondition msg cond ->
+                     if not (cond jc st)
+                       then
+                         throw
+                           $! AssertionViolation
+                             { avSTS = show $ typeRep (Proxy @s),
+                               avMsg = msg,
+                               avCtx = jc,
+                               avState = Just st
+                             }
+                       else pure ()
+                   _ -> pure ()
+               )
         _ -> pure ()
-      pure res
+      pure $! res
 
     assertPre :: AssertionPolicy -> Bool
     assertPre AssertionsAll = True
@@ -476,3 +479,33 @@ applySTSInternal ap goRule ctx =
 -- TODO move this somewhere more sensible
 newtype Threshold a = Threshold a
   deriving (Eq, Ord, Show, Data, Typeable, NoUnexpectedThunks)
+
+{------------------------------------------------------------------------------
+-- Utils
+------------------------------------------------------------------------------}
+
+-- | Map each element of a structure to an action, evaluate these actions from
+-- left to right, and ignore the results. For a version that doesn't ignore the
+-- results see 'Data.Traversable.traverse'.
+--
+-- This is a strict variant on 'Data.Foldable.traverse_', which evaluates each
+-- element of the structure even in a monad which would otherwise allow this to
+-- be lazy.
+straverse_ :: (Foldable t, Applicative f) => (a -> f b) -> t a -> f ()
+straverse_ f = foldr c (pure ())
+  where
+    -- See Note [List fusion and continuations in 'c']
+    c !x !k = seq (f x) k
+    {-# INLINE c #-}
+
+-- | 'sfor_' is 'straverse_' with its arguments flipped. For a version
+-- that doesn't ignore the results see 'Data.Traversable.for'.
+--
+-- >>> sfor_ [1..4] print
+-- 1
+-- 2
+-- 3
+-- 4
+sfor_ :: (Foldable t, Applicative f) => t a -> (a -> f b) -> f ()
+{-# INLINE sfor_ #-}
+sfor_ = flip straverse_
