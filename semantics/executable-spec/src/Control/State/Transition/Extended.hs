@@ -495,7 +495,7 @@ straverse_ :: (Foldable t, Applicative f) => (a -> f b) -> t a -> f ()
 straverse_ f = foldr c (pure ())
   where
     -- See Note [List fusion and continuations in 'c']
-    c !x !k = seq (f x) k
+    c !x !k = (*> k) $! f x
     {-# INLINE c #-}
 
 -- | 'sfor_' is 'straverse_' with its arguments flipped. For a version
