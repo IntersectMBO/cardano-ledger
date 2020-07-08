@@ -19,7 +19,7 @@ where
 import Cardano.Binary (serialize)
 import Cardano.Crypto.Hash (ShortHash)
 import Control.Monad (join)
-import Control.State.Transition.Extended (TRC (TRC), applySTS)
+import Control.State.Transition.Extended (TRC (TRC))
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
     Trace (..),
@@ -31,7 +31,13 @@ import Data.Foldable (foldl')
 import Data.Proxy
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.BlockChain (Block (..), TxSeq (..), bbody, bhbody, bheaderSlotNo)
+import Shelley.Spec.Ledger.BlockChain
+  ( Block (..),
+    TxSeq (..),
+    bbody,
+    bhbody,
+    bheaderSlotNo,
+  )
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Core
 import Shelley.Spec.Ledger.LedgerState
@@ -47,7 +53,12 @@ import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import qualified Test.Shelley.Spec.Ledger.Rules.TestPoolreap as TestPoolreap
 import Test.Shelley.Spec.Ledger.SerializationProperties (prop_roundtrip_NewEpochState)
-import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, runShelleyBase, testGlobals)
+import Test.Shelley.Spec.Ledger.Utils
+  ( applySTSTest,
+    epochFromSlotNo,
+    runShelleyBase,
+    testGlobals,
+  )
 
 ------------------------------
 -- Constants for Properties --
@@ -257,7 +268,7 @@ chainSstWithTick ledgerTr =
           _
           b@(Block bh _)
         ) =
-        case runShelleyBase (applySTS @(TICK ShortHash) (TRC (TickEnv (getGKeys nes), nes, (bheaderSlotNo . bhbody) bh))) of
+        case runShelleyBase (applySTSTest @(TICK ShortHash) (TRC (TickEnv (getGKeys nes), nes, (bheaderSlotNo . bhbody) bh))) of
           Left pf ->
             error ("chainSstWithTick.applyTick Predicate failure " <> show pf)
           Right nes' ->

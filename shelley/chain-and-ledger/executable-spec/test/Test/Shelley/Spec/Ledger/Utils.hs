@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -27,6 +28,7 @@ module Test.Shelley.Spec.Ledger.Utils
     slotsPerKESIteration,
     testSTS,
     maxLLSupply,
+    applySTSTest,
   )
 where
 
@@ -39,11 +41,7 @@ import Cardano.Crypto.VRF (deriveVerKeyVRF, evalCertified, genKeyVRF)
 import Cardano.Prelude (asks)
 import Cardano.Slotting.EpochInfo (epochInfoEpoch, epochInfoFirst, fixedSizeEpochInfo)
 import Control.Monad.Trans.Reader (runReaderT)
-import Control.State.Transition.Extended
-  ( STS (..),
-    TRC (..),
-    applySTS,
-  )
+import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
   ( checkTrace,
     (.-),
@@ -51,6 +49,7 @@ import Control.State.Transition.Trace
   )
 import Crypto.Random (drgNewTest, withDRG)
 import Data.Coerce (coerce)
+import Data.Functor ((<&>))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
@@ -218,5 +217,21 @@ testSTS ::
 testSTS env initSt signal (Right expectedSt) = do
   checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt
 testSTS env initSt block predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTS @s (TRC (env, initSt, block))
+  let st = runShelleyBase $ applySTSTest @s (TRC (env, initSt, block))
   st @?= predicateFailure
+
+applySTSTest ::
+  forall s m rtype.
+  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  RuleContext rtype s ->
+  m (Either [[PredicateFailure s]] (State s))
+applySTSTest ctx =
+  applySTSOpts defaultOpts ctx <&> \case
+    (st, []) -> Right st
+    (_, pfs) -> Left pfs
+  where
+    defaultOpts =
+      ApplySTSOpts
+        { asoAssertions = AssertionsAll,
+          asoValidation = ValidateAll
+        }

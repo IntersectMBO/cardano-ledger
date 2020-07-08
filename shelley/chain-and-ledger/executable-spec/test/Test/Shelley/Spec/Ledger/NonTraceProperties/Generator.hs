@@ -29,7 +29,7 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Generator
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
-import Control.State.Transition.Extended (TRC (..), applySTS)
+import Control.State.Transition.Extended (TRC (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -428,7 +428,7 @@ asStateTransition ::
 asStateTransition _slot pp ls tx acnt =
   let next =
         runShelleyBase $
-          applySTS @(LEDGER h)
+          applySTSTest @(LEDGER h)
             ( TRC
                 ( (LedgerEnv _slot 0 pp acnt),
                   (_utxoState ls, _delegationState ls),

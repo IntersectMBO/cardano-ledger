@@ -11,7 +11,7 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 
 import Cardano.Crypto.Hash (ShortHash)
 import qualified Cardano.Crypto.VRF as VRF
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
@@ -312,7 +312,7 @@ testLEDGER ::
 testLEDGER initSt tx env (Right expectedSt) = do
   checkTrace @(LEDGER ShortHash) runShelleyBase env $ pure initSt .- tx .-> expectedSt
 testLEDGER initSt tx env predicateFailure@(Left _) = do
-  let st = runShelleyBase $ applySTS @(LEDGER ShortHash) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTSTest @(LEDGER ShortHash) (TRC (env, initSt, tx))
   st @?= predicateFailure
 
 aliceInitCoin :: Coin

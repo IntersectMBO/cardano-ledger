@@ -12,7 +12,7 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Control.State.Transition.Extended (TRC (..), applySTS)
+import Control.State.Transition.Extended (TRC (..))
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
@@ -87,7 +87,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( maxKESIterations,
+  ( applySTSTest,
+    maxKESIterations,
     runShelleyBase,
     testGlobals,
     unsafeMkUnitInterval,
@@ -192,7 +193,7 @@ genBlock
 
     -- ran genDelegs
     let nes = chainNes chainSt
-        nes' = runShelleyBase $ applySTS @(TICK h) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
+        nes' = runShelleyBase $ applySTSTest @(TICK h) $ TRC (TickEnv (getGKeys nes), nes, nextSlot)
 
     case nes' of
       Left _ -> QC.discard

@@ -5,7 +5,7 @@
 module Test.Shelley.Spec.Ledger.STSTests (stsTests) where
 
 import Cardano.Crypto.Hash (ShortHash)
-import Control.State.Transition.Extended (TRC (..), applySTS)
+import Control.State.Transition.Extended (TRC (..))
 import Data.Either (fromRight, isRight)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, singleton)
@@ -31,7 +31,14 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap (testBootstrapSpending)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (CHAIN, KeyHash, NewEpochState, PoolParams, TICK, TickEnv)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+  ( CHAIN,
+    KeyHash,
+    NewEpochState,
+    PoolParams,
+    TICK,
+    TickEnv,
+  )
 import Test.Shelley.Spec.Ledger.Examples
   ( CHAINExample (..),
     alicePay,
@@ -83,7 +90,12 @@ import Test.Shelley.Spec.Ledger.MultiSigExamples
     applyTxWithScript,
     bobOnly,
   )
-import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase, testSTS)
+import Test.Shelley.Spec.Ledger.Utils
+  ( applySTSTest,
+    maxLLSupply,
+    runShelleyBase,
+    testSTS,
+  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, assertBool, assertFailure, testCase, (@?=))
 
@@ -104,7 +116,7 @@ testTICKChainState ::
   a ->
   Assertion
 testTICKChainState initSt env slot focus expectedSt = do
-  let result = runShelleyBase $ applySTS @(TICK ShortHash) (TRC (env, initSt, slot))
+  let result = runShelleyBase $ applySTSTest @(TICK ShortHash) (TRC (env, initSt, slot))
   case result of
     Right res -> focus res @?= expectedSt
     Left err -> assertFailure $ show err

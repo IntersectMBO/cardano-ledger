@@ -16,7 +16,7 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
 where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
-import Control.State.Transition.Extended (PredicateFailure, TRC (..), applySTS)
+import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
@@ -205,7 +205,7 @@ initialUTxOState aliceKeep msigs =
               Nothing
        in ( txid $ _body tx,
             runShelleyBase $
-              applySTS @(UTXOW h)
+              applySTSTest @(UTXOW h)
                 ( TRC
                     ( UtxoEnv
                         (SlotNo 0)
@@ -264,7 +264,7 @@ applyTxWithScript _ lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         Nothing
     utxoSt' =
       runShelleyBase $
-        applySTS @(UTXOW h)
+        applySTSTest @(UTXOW h)
           ( TRC
               ( UtxoEnv
                   (SlotNo 0)
