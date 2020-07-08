@@ -141,6 +141,11 @@ The changes due to Plutus integration are as follows:
   to the deposit pot.
   This calculation now also takes the current slot number as an argument, which is
   needed to construct the correct UTxO outputs.
+
+  \item For calculating the minimum size of an output, we need the
+  function $\fun{scaledValueSize}$ that computes the size of a $\Value$
+  that is scaled so that the size of a value that only contains Ada is
+  1.
 \end{itemize}
 
 \subsection{Value Operations and Partial Order.}
@@ -214,6 +219,9 @@ not present in on of the values),
     &~~\ubalance{(\outs{slot}~{txb})}  + \fun{coinToValue}(\txfee{txb} \\
     &~~+ \deposits{pp}{stpools}~{(\txcerts{txb})})\\
     & \text{value produced} \\
+    \nextdef
+    & \fun{scaledValueSize} \in \Value \to \N \\
+    & \fun{scaledValueSize}~\var{val} = \fun{valueSize}~\var{val} / \fun{valueSize}~(\fun{coinToValue}~1) \\
   \end{align*}
   \caption{Functions used in UTxO rules}
   \label{fig:functions:utxo}
@@ -951,7 +959,7 @@ UTXOS rule.
       \mathsf{adaID}~\notin \dom~{\fun{forge}~tx} \\
       \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ 0 \\~
       \forall txout \in \txouts{txb}, ~ \fun{getCoin}~txout ~\geq \\
-      \fun{valueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue} pp \\~
+      \fun{scaledValueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue} pp \\~
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
       \fun{txexunits}~{txb} \leq \fun{maxTxExUnits}~{pp}
