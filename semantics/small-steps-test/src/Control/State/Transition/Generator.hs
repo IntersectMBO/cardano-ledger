@@ -88,10 +88,11 @@ import           Hedgehog.Internal.Gen (integral_, runDiscardEffectT)
 import           Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 
 import           Control.State.Transition.Extended (BaseM, Environment, IRC (IRC), PredicateFailure, STS, Signal,
-                     State, TRC (TRC), applySTS)
+                     State, TRC (TRC))
 import qualified Control.State.Transition.Invalid.Trace as Invalid
 import           Control.State.Transition.Trace (Trace, TraceOrder (OldestFirst), closure,
-                     extractValues, lastState, mkTrace, traceLength, traceSignals, _traceEnv)
+                     extractValues, lastState, mkTrace, traceLength, traceSignals, _traceEnv
+                     , applySTSTest)
 import           Hedgehog.Extra.Manual (Manual)
 import qualified Hedgehog.Extra.Manual as Manual
 
@@ -212,7 +213,7 @@ traceSigGenWithProfile
   -> Gen (Trace s)
 traceSigGenWithProfile baseEnv aTraceLength profile gen = do
   env <- envGen @s (traceLengthValue aTraceLength)
-  case interpretSTS @s baseEnv $ applySTS @s (IRC env) of
+  case interpretSTS @s baseEnv $ applySTSTest @s (IRC env) of
     -- Hedgehog will give up if the generators fail to produce any valid
     -- initial state, hence we don't have a risk of entering an infinite
     -- recursion.
@@ -355,7 +356,7 @@ genTraceOfLength baseEnv aTraceLength profile env st0 aSigGen =
         Nothing ->
           loop (d - 1) sti acc
         Just sig ->
-          case interpretSTS @s baseEnv $ applySTS @s (TRC(env, sti, sig)) of
+          case interpretSTS @s baseEnv $ applySTSTest @s (TRC(env, sti, sig)) of
             Left _err  -> loop (d - 1) sti acc
             Right sti' -> loop (d - 1) sti' ((sti', sigTree) : acc)
 
@@ -405,7 +406,7 @@ invalidTrace baseEnv maxTraceLength failureProfile = do
   let env = _traceEnv tr
       st = lastState tr
   iSig <- generateSignalWithFailureProportions @s failureProfile env st
-  let est' = interpretSTS @s baseEnv $ applySTS @s $ TRC (env, st, iSig)
+  let est' = interpretSTS @s baseEnv $ applySTSTest @s $ TRC (env, st, iSig)
   pure $! Invalid.Trace
             { Invalid.validPrefix = tr
             , Invalid.signal = iSig
@@ -655,7 +656,7 @@ onlyValidSignalsAreGeneratedForTrace baseEnv traceGen = property $ do
     st' :: State s
     st' = lastState tr
   sig <- forAll (sigGen @s env st')
-  let result = interpretSTS @s baseEnv $ applySTS @s (TRC(env, st', sig))
+  let result = interpretSTS @s baseEnv $ applySTSTest @s (TRC(env, st', sig))
   -- TODO: For some reason the result that led to the failure is not shown
   -- (even without using tasty, and setting the condition to True === False)
   footnoteShow st'

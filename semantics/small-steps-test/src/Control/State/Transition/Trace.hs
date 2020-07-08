@@ -42,6 +42,7 @@ module Control.State.Transition.Trace
   , closure
   -- * Miscellaneous utilities
   , extractValues
+  , applySTSTest
   )
 where
 
@@ -51,6 +52,7 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
+import           Data.Functor ((<&>))
 import           Data.Maybe (catMaybes)
 import           Data.Sequence.Strict (StrictSeq ((:<|), Empty))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -58,8 +60,7 @@ import           GHC.Generics (Generic)
 import           GHC.Stack (HasCallStack)
 import           Test.Tasty.HUnit (assertFailure, (@?=))
 
-import           Control.State.Transition.Extended (BaseM, Environment, PredicateFailure, STS, Signal, State,
-                     TRC (TRC), applySTS)
+import           Control.State.Transition.Extended hiding (Assertion, trans)
 
 -- Signal and resulting state.
 --
@@ -374,7 +375,7 @@ closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
   where
     loop _ [] acc = pure acc
     loop sti (sig : sigs') acc =
-      applySTS @s (TRC(env, sti, sig)) >>= \case
+      applySTSTest @s (TRC(env, sti, sig)) >>= \case
         Left _ -> loop sti sigs' acc
         Right sti' -> loop sti' sigs' ((sti', sig) : acc)
 
@@ -419,7 +420,7 @@ checkTrace
   -> ReaderT (State s -> Signal s -> (Either [[PredicateFailure s]] (State s))) IO (State s)
   -> IO ()
 checkTrace interp env act =
-  void $ runReaderT act (\st sig -> interp $ applySTS (TRC(env, st, sig)))
+  void $ runReaderT act (\st sig -> interp $ applySTSTest (TRC(env, st, sig)))
 
 -- | Extract all the values of a given type.
 --
@@ -480,3 +481,20 @@ sourceSignalTargets trace = zipWith3 SourceSignalTarget states (tail states) sig
   where
     states = traceStates OldestFirst trace
     signals = traceSignals OldestFirst trace
+
+-- | Apply STS checking assertions.
+applySTSTest ::
+  forall s m rtype.
+  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  RuleContext rtype s ->
+  m (Either [[PredicateFailure s]] (State s))
+applySTSTest ctx =
+  applySTSOpts defaultOpts ctx <&> \case
+    (st, []) -> Right st
+    (_, pfs) -> Left pfs
+  where
+    defaultOpts =
+      ApplySTSOpts
+        { asoAssertions = AssertionsAll,
+          asoValidation = ValidateAll
+        }

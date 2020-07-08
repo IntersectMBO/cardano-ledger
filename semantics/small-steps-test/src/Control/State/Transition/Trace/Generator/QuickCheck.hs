@@ -98,7 +98,7 @@ traceFrom traceEnv maxTraceLength traceGenEnv env st0 = do
     loop 0 _ acc = pure $! acc
     loop !d sti stSigs = do
       sig <- sigGen @sts @traceGenEnv traceGenEnv env sti
-      case interpretSTS @sts @traceGenEnv traceEnv (STS.applySTS @sts (TRC(env, sti, sig))) of
+      case interpretSTS @sts @traceGenEnv traceEnv (Trace.applySTSTest @sts (TRC(env, sti, sig))) of
         Left _predicateFailures ->
           loop (d - 1) sti stSigs
         Right sti' ->
@@ -135,7 +135,7 @@ traceFromInitState
 traceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 = do
   env <- envGen @sts @traceGenEnv traceGenEnv
   res <- fromMaybe (pure . interpretSTS @sts @traceGenEnv baseEnv
-                         . STS.applySTS) genSt0 $ (IRC env)
+                         . Trace.applySTSTest) genSt0 $ (IRC env)
 
   case res of
     Left pf -> error $ "Failed to apply the initial rule to the generated environment.\n"
@@ -265,7 +265,7 @@ onlyValidSignalsAreGeneratedFromInitState baseEnv maxTraceLength traceGenEnv gen
       signalIsValid
       where
         signalIsValid signal =
-          case interpretSTS @sts @traceGenEnv baseEnv (STS.applySTS @sts (TRC (env, lastState, signal))) of
+          case interpretSTS @sts @traceGenEnv baseEnv (Trace.applySTSTest @sts (TRC (env, lastState, signal))) of
             Left pf -> QuickCheck.counterexample (show (signal, pf)) False
             Right _ -> QuickCheck.property True
         env = Trace._traceEnv someTrace
