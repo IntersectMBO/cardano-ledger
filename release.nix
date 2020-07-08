@@ -57,7 +57,7 @@ let
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
   } // (mkRequiredJob (
       collectTests jobs.native.checks.tests ++
-      # collectTests jobs.native.benchmarks ++
+      collectTests jobs.native.benchmarks ++
       [ jobs.native.byronLedgerSpec.x86_64-linux
         jobs.native.byronChainSpec.x86_64-linux
         jobs.native.semanticsSpec.x86_64-linux
