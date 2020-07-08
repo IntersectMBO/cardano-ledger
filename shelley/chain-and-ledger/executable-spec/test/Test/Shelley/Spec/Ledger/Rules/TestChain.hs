@@ -39,7 +39,7 @@ import Shelley.Spec.Ledger.BlockChain
     bheaderSlotNo,
   )
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Core
+import Control.Iterate.SetAlgebra(eval, dom, domain  )
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..), totalAda, totalAdaPots)
 import Shelley.Spec.Ledger.STS.PoolReap (PoolreapState (..))
@@ -100,9 +100,8 @@ rewardStkCredSync =
                   show target
                 ]
             )
-            $ dom
-              (_stkCreds ds)
-              === (Set.map getRwdCred $ dom (_rewards ds))
+            $ eval(dom (_stkCreds ds))
+              === (Set.map getRwdCred $ domain (_rewards ds))
 
 adaPreservationChain :: Property
 adaPreservationChain =

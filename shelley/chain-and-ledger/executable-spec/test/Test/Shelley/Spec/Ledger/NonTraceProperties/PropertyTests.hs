@@ -27,7 +27,7 @@ import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (LabelName (..))
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Core ((<|))
+import Control.Iterate.SetAlgebra (eval, (<|))
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
@@ -112,7 +112,7 @@ propBalanceTxInTxOut = property $ do
   classify
     "non-trivial wealth dist"
     (isNotDustDist ((_utxo . _utxoState) l) ((_utxo . _utxoState) l'))
-  (balance $ inps <| ((_utxo . _utxoState) l)) === (balance (txouts tx) + fee)
+  (balance $ eval(inps <| ((_utxo . _utxoState) l))) === (balance (txouts tx) + fee)
 
 -- | Property (Preserve Outputs of Transaction)
 propPreserveOutputs :: Property
@@ -209,7 +209,7 @@ propBalanceTxInTxOut' =
       let tx = _body txwits
       let inps = txins tx
       let getErrors (LedgerValidation valErrors _) = valErrors
-      let balanceSource = balance $ inps <| ((_utxo . _utxoState) l)
+      let balanceSource = balance $ eval(inps <| ((_utxo . _utxoState) l))
       let balanceTarget = balance $ txouts tx
       let valErrors = getErrors lv
       let nonTrivial = balanceSource /= Coin 0

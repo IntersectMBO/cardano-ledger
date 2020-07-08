@@ -18,6 +18,7 @@ import Data.Map.Strict(Map)
 import Data.Map.Internal(Map(..),link2)
 
 import qualified Data.Set as Set
+import Data.Set(Set)
 
 import Data.List(sortBy)
 import qualified Data.List as List
@@ -25,6 +26,7 @@ import qualified Data.List as List
 import Control.Iterate.Collect
 
 import Text.PrettyPrint.ANSI.Leijen(Doc,text,(<+>),align,vsep,parens)
+import Debug.Trace(trace)
 
 -- ==================================================================================================
 -- In order to build typed Exp (which are a typed deep embedding) of Set operations, we need to know
@@ -38,6 +40,8 @@ class Iter f => Basic f where
   addpair k v f = addkv (k,v) f (\ a b -> a)
   addkv :: Ord k => (k,v) -> f k v -> (v -> v -> v) -> f k v
   removekey:: (Ord k) => k -> f k v -> f k v
+  domain:: Ord k => f k v -> Set k
+  range:: Ord v => f k v -> Set v
   emptyc:: Ord k => f k v
   emptyc = error ("emptyc only works on some types.")
 
@@ -53,6 +57,8 @@ instance Basic List where
    removekey k (List xs) = List(remove xs) where
        remove [] = []
        remove ((key,u):ys) = if key==k then ys else (k,u):(remove ys)
+   domain (List xs) = foldr (\ (k,v) ans -> Set.insert k ans) Set.empty xs
+   range (List xs) = foldr (\ (k,v) ans -> Set.insert v ans) Set.empty xs
    emptyc = (List [])
 
 
@@ -82,6 +88,12 @@ instance Basic Single where
   removekey key (Single a b) = if key==a then Fail else (Single a b)
   removekey key (SetSingle a) = if key==a then Fail else (SetSingle a)
   removekey key Fail = Fail
+  domain (Single a b) = Set.singleton a
+  domain (SetSingle a) = Set.singleton a
+  domain Fail = Set.empty
+  range (Single a b) = Set.singleton b
+  range (SetSingle a) = Set.singleton ()
+  range Fail = Set.empty
   emptyc = Fail
 
 
@@ -91,6 +103,8 @@ instance Basic Map.Map where
   addpair = Map.insertWith (\x _y -> x)
   addkv (k,v) m comb = Map.insertWith comb k v m
   removekey k m = Map.delete k m
+  domain x = Map.keysSet x
+  range xs = Map.foldrWithKey (\ k v  ans -> Set.insert v ans) Set.empty xs
   emptyc = Map.empty
 
 
@@ -116,6 +130,8 @@ instance Ord v => Basic (BiMap v) where
      case Map.lookup k m1 of
         Just v -> MkBiMap (Map.delete k m1) (Map.delete v m2)
         Nothing -> m
+  domain (MkBiMap left right) = Map.keysSet left
+  range (MkBiMap left right) = Map.keysSet right
   emptyc = error ("emptyc cannot be defined for BiMap, use the variable: biMapEmpty :: BiMap v k v")
 
 
@@ -143,6 +159,8 @@ instance Basic Sett where
   addpair key unit (Sett m) = Sett(Set.insert key m)
   addkv (k,unit) (Sett m) comb = Sett(Set.insert k m)  -- We can ignore comb since there is only one function at type: () -> () -> ()
   removekey k (Sett m) = Sett(Set.delete k m)
+  domain (Sett xs) = xs
+  range (Sett xs) = Set.singleton ()
   emptyc = error ("Sett Set.empty has type (Sett k ()) and it needs type (Sett k v)")
 
 
@@ -419,8 +437,8 @@ instance (Ord k,Ord v) => HasExp (Bimap k v) (Bimap k v) where
 dom :: (Ord k,HasExp s (f k v)) => s -> Exp (Sett k ())
 dom x = Dom (toExp x)
 
-range:: (Ord k,Ord v) => HasExp s (f k v) => s -> Exp (Sett v ())
-range x = Rng(toExp x)
+rng:: (Ord k,Ord v) => HasExp s (f k v) => s -> Exp (Sett v ())
+rng x = Rng(toExp x)
 
 (◁),(<|),drestrict ::  (Ord k,HasExp s1 (Sett k ()), HasExp s2 (f k v)) => s1 -> s2 -> Exp (f k v)
 (◁) x y = DRestrict (toExp x) (toExp y)
@@ -818,9 +836,9 @@ compile (RExclude rel set) =
    case (compile rel,compile set) of
       ((reld,rep),(BaseD _ x,_)) -> (GuardD reld (nEgate (rngElem x)),rep)
       ((reld,rep),_) -> (GuardD reld (nEgate (rngElem (compute set))),rep)  -- This could be expensive
-compile (UnionOverrideLeft rel1 rel2) =  (OrD rel1d (fst(compile rel2)) second,rep)   -- second uses value from rel2 to override value from rel1
+compile (UnionOverrideLeft rel1 rel2) =  (OrD rel1d (fst(compile rel2)) first,rep)   -- first uses value from rel1 to override value from rel21
     where (rel1d,rep) = compile rel1
-compile (UnionOverrideRight rel1 rel2) =  (OrD rel1d (fst(compile rel2)) first,rep)   -- first uses value from rel1 to override value from rel2
+compile (UnionOverrideRight rel1 rel2) =  (OrD rel1d (fst(compile rel2)) second,rep) -- second uses value from rel2 to override value from rel
     where (rel1d,rep) = compile rel1
 compile (UnionPlus rel1 rel2) =  (OrD rel1d (fst(compile rel2)) plus,rep)
     where (rel1d,rep) = compile rel1
@@ -857,11 +875,13 @@ compute (Base rep relation) = relation
 compute (Dom (Base SetR rel)) = rel
 compute (Dom (Singleton k v)) = Sett (Set.singleton k)
 compute (Dom (SetSingleton k)) = Sett (Set.singleton k)
+compute (Dom (Base rep rel)) = Sett(domain rel)
 compute (e@(Dom _)) = run(compile e)
 
 compute (Rng (Base SetR rel)) = Sett (Set.singleton ())
 compute (Rng (Singleton k v)) = Sett (Set.singleton v)
 compute (Rng (SetSingleton k)) = Sett (Set.singleton ())
+compute (Rng (Base rep rel)) = Sett(range rel)
 compute (e@(Rng _ )) = run(compile e)
 
 
@@ -926,10 +946,10 @@ compute (Intersect (Base SetR (Sett x)) (Base SetR (Sett y))) = Sett (Set.inters
 compute (Intersect (Base MapR x) (Base MapR y)) = Sett (Map.keysSet(Map.intersection x y))
 compute (e@(Intersect a b)) = run(compile e)
 
-compute (UnionOverrideLeft (Base rep x) (Singleton k v)) = addkv (k,v) x (\ l r -> r)   -- The value on the left is overwritten by the value on the right.
+compute (UnionOverrideLeft (Base rep x) (Singleton k v)) = addkv (k,v) x (\ l r -> l)   -- The value on the left is preferred over the value on the right.
 compute (e@(UnionOverrideLeft a b)) = run(compile e)
 
-compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ l r -> l)  -- The value on the right is overwritten by the value on the left.
+compute (UnionOverrideRight (Base rep x) (Singleton k v)) = addkv (k,v) x (\ l r -> r)  -- The value on the right is preferred over the value on the left.
 compute (e@(UnionOverrideRight a b)) = run(compile e)
 
 compute (UnionPlus (Base MapR x) (Base MapR y)) = Map.unionWith (+) x y
@@ -940,8 +960,8 @@ compute (SetSingleton k) = (SetSingle k)
 
 
 eval :: Embed s t => Exp t -> s
-eval x = fromBase (compute x)
-
+eval x = -- fromBase (compute (trace ("Tracing\n   "++show x++"\n") x))
+         fromBase (compute x)
 -- ==============================================================================================
 -- To make compound iterators, i.e. instance (Iter Query), we need "step" functions for each kind
 -- ==============================================================================================

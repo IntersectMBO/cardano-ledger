@@ -258,7 +258,7 @@ overlayTransition =
         let oce =
               OCertEnv
                 { ocertEnvStPools = eval(dom pd),
-                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ eval(range genDelegs)
+                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ (range genDelegs)
                 }
 
         trans @(OCERT crypto) $ TRC (oce, cs, bh)
