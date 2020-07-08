@@ -131,7 +131,7 @@ import Shelley.Spec.Ledger.BaseTypes
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..), rationalToCoinViaFloor)
-import Control.Iterate.SetAlgebra (eval, dom, range, (∪), (∪+), (▷), (◁), (∈))
+import Control.Iterate.SetAlgebra (eval, dom, range, (∪+), (▷), (◁), (∈))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -938,8 +938,8 @@ stakeDistr u ds ps =
     DState (StakeCreds stkcreds) rewards' delegs ptrs' _ _ _ = ds
     PState (StakePools stpools) poolParams _ _ = ps
     outs = aggregateOuts u
-    stakeRelation :: [(Credential 'Staking crypto, Coin)]  -- Why do these things compute Lists and not Maps?
-    stakeRelation = eval(baseStake outs ∪ ptrStake outs ptrs' ∪ rewardStake rewards')
+    stakeRelation :: [(Credential 'Staking crypto, Coin)]  -- We compute Lists (not Maps) because the duplicate tuples matter, later when we use: Map.fromListWith (+)
+    stakeRelation = (baseStake outs ++ ptrStake outs ptrs' ++ rewardStake rewards')
     activeDelegs :: Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
     activeDelegs = eval ((dom stkcreds ◁ delegs) ▷ dom stpools)
 
