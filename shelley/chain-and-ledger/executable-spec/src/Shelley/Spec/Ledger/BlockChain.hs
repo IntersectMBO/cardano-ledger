@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -114,6 +115,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
   ( CertifiedVRF,
     Hash,
@@ -221,7 +223,7 @@ bhHash ::
   Crypto crypto =>
   BHeader crypto ->
   HashHeader crypto
-bhHash = HashHeader . Hash.hashWithSerialiser toCBOR
+bhHash = HashHeader . hashAnnotated
 
 -- | Hash a given block body
 bbHash ::
@@ -233,10 +235,8 @@ bbHash (TxSeq' _ bodies wits md) =
   (HashBBody . coerce) $
     hashStrict (hashPart bodies <> hashPart wits <> hashPart md)
   where
-    -- FIXME: hash this with less indirection
-    -- This should be directly hashing the provided bytes with no funny business.
     hashStrict :: ByteString -> Hash crypto ByteString
-    hashStrict = Hash.hashWithSerialiser encodePreEncoded
+    hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 -- | HashHeader to Nonce
@@ -252,6 +252,8 @@ data BHeader crypto = BHeader'
   deriving
     (NoUnexpectedThunks)
     via AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
+
+instance Crypto crypto => HashAnnotated (BHeader crypto) crypto
 
 deriving instance Crypto crypto => Eq (BHeader crypto)
 

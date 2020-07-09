@@ -46,6 +46,7 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
     KeyRole (..),
@@ -86,7 +87,6 @@ import Shelley.Spec.Ledger.TxData
   )
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
-    hashTxBody,
   )
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
@@ -169,7 +169,7 @@ utxoState1 =
       _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
     }
   where
-    txid = TxId $ hashTxBody txBody
+    txid = TxId $ hashAnnotated txBody
     bobResult = (TxIn txid 0, TxOut bobAddr coinsToBob)
     aliceResult = (TxIn txid 1, TxOut aliceAddr (Coin 998990))
 
@@ -209,14 +209,14 @@ aliceAddr = AddrBootstrap (BootstrapAddress aliceByronAddr)
 aliceWitness :: BootstrapWitness C
 aliceWitness =
   makeBootstrapWitness
-    (hashTxBody txBody)
+    (hashAnnotated txBody)
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 
 aliceBadWitness :: BootstrapWitness C
 aliceBadWitness =
   makeBootstrapWitness
-    (hashTxBody txBody {_ttl = SlotNo 100000000})
+    (hashAnnotated txBody {_ttl = SlotNo 100000000})
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 

@@ -44,6 +44,7 @@ import Shelley.Spec.Ledger.Address (pattern Addr)
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (pattern KeyHashObj, pattern StakeRefBase)
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -94,7 +95,7 @@ import Shelley.Spec.Ledger.TxData
     pattern RegKey,
     pattern RetirePool,
   )
-import Shelley.Spec.Ledger.UTxO (balance, hashTxBody, makeWitnessVKey, pattern UTxO)
+import Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey, pattern UTxO)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( applyTxBody,
@@ -231,7 +232,7 @@ genTx keyList (UTxO m) cslot = do
           (cslot + SlotNo txttl)
           SNothing
           SNothing
-  let !txbHash = hashTxBody txbody
+  let !txbHash = hashAnnotated txbody
   let !txwit = makeWitnessVKey txbHash selectedKeyPair
   pure (txfee', Tx txbody mempty {addrWits = Set.fromList [txwit]} SNothing)
   where

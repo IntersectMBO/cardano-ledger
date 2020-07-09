@@ -147,6 +147,7 @@ import Shelley.Spec.Ledger.Credential
     StakeCredential,
   )
 import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Hashing
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
@@ -533,6 +534,8 @@ data TxBody crypto = TxBody'
     (NoUnexpectedThunks)
     via AllowThunksIn '["bodyBytes"] (TxBody crypto)
 
+instance Crypto c => HashAnnotated (TxBody c) c
+
 pattern TxBody ::
   Crypto crypto =>
   Set (TxIn crypto) ->
@@ -608,6 +611,8 @@ data WitVKey crypto kr = WitVKey'
   }
   deriving (Show, Eq, Generic)
   deriving (NoUnexpectedThunks) via AllowThunksIn '["wvkBytes"] (WitVKey crypto kr)
+
+instance (Crypto c, Typeable k) => HashAnnotated (WitVKey c k) c
 
 pattern WitVKey ::
   (Typeable kr, Crypto crypto) =>

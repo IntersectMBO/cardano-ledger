@@ -78,7 +78,7 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(DCert ShortHash) n "certificate",
       cddlTest @(TxIn ShortHash) n "transaction_input",
       cddlTest' @MetaData n "transaction_metadata",
-      cddlTest @(MultiSig ShortHash) n "multisig_script",
+      cddlTest' @(MultiSig ShortHash) n "multisig_script",
       cddlTest @(Update ShortHash) n "update",
       cddlTest @(ProposedPPUpdates ShortHash) n "proposed_protocol_parameter_updates",
       cddlTest @PParamsUpdate n "protocol_param_update",

@@ -92,6 +92,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Crypto
+import Shelley.Spec.Ledger.Hashing (HashAnnotated (..))
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.MetaData (MetaData)
 import Shelley.Spec.Ledger.Scripts
@@ -222,6 +223,8 @@ pattern Tx {_body, _witnessSet, _metadata} <-
 
 {-# COMPLETE Tx #-}
 
+instance Crypto c => HashAnnotated (Tx c) c
+
 segwitTx ::
   Crypto crypto =>
   Annotator (TxBody crypto) ->
@@ -321,7 +324,7 @@ instance
   MultiSignatureScript (MultiSig crypto) crypto
   where
   validateScript = validateNativeMultiSigScript
-  hashScript = \x -> hashAnyScript (MultiSigScript x)
+  hashScript = hashMultiSigScript
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
 -- key hashes that signed the transaction to be validated.

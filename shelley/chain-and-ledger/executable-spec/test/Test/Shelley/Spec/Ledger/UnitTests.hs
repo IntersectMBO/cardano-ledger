@@ -29,6 +29,7 @@ import Shelley.Spec.Ledger.Coin
 import Shelley.Spec.Ledger.Credential (Credential (..), pattern StakeRefBase)
 import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys (KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -81,7 +82,7 @@ import Shelley.Spec.Ledger.TxData
     pattern PoolParams,
     pattern RewardAcnt,
   )
-import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessVKey, makeWitnessesVKey)
+import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Fees (sizeTests)
@@ -357,7 +358,7 @@ aliceGivesBobLovelace
           ttl
           SNothing
           SNothing
-      awits = makeWitnessesVKey (hashTxBody txbody) signers
+      awits = makeWitnessesVKey (hashAnnotated txbody) signers
 
 utxoState :: UTxOState ShortHash
 utxoState =
@@ -445,7 +446,7 @@ testSpendNotOwnedUTxO =
           (SlotNo 100)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (hashTxBody txbody) alicePay
+      aliceWit = makeWitnessVKey (hashAnnotated txbody) alicePay
       tx = Tx txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
@@ -477,7 +478,7 @@ testWitnessWrongUTxO =
           (SlotNo 101)
           SNothing
           SNothing
-      aliceWit = makeWitnessVKey (hashTxBody tx2body) alicePay
+      aliceWit = makeWitnessVKey (hashAnnotated tx2body) alicePay
       tx = Tx txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       wits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
@@ -503,7 +504,7 @@ testEmptyInputSet =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = mempty {addrWits = makeWitnessesVKey (hashTxBody txb) [aliceStake]}
+      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb) [aliceStake]}
       tx = Tx txb wits SNothing
       dpState' = addReward dpState (mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
@@ -563,7 +564,7 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {_ttl = SlotNo 2}
-      wits = mempty {addrWits = makeWitnessesVKey (hashTxBody txb') [alicePay]}
+      wits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
       tx = Tx txb wits SNothing
       errs =
         [ UtxowFailure $
@@ -588,7 +589,7 @@ testWithdrawalNoWit =
           (SlotNo 0)
           SNothing
           SNothing
-      wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashTxBody txb) alicePay}
+      wits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
       tx = Tx txb wits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
@@ -617,7 +618,7 @@ testWithdrawalWrongAmt =
         mempty
           { addrWits =
               makeWitnessesVKey
-                (hashTxBody txb)
+                (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
       rAcnt = mkVKeyRwdAcnt Testnet bobStake

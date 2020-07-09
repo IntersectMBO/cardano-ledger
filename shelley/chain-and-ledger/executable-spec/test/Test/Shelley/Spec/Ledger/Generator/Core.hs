@@ -52,9 +52,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   )
 where
 
-import Cardano.Binary (toCBOR)
 import Cardano.Crypto.Hash (HashAlgorithm)
-import qualified Cardano.Crypto.Hash as Hash
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
@@ -99,6 +97,7 @@ import Shelley.Spec.Ledger.Credential
     pattern StakeRefPtr,
   )
 import Shelley.Spec.Ledger.Crypto (Crypto (..))
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
     KeyRole (..),
@@ -610,8 +609,7 @@ genesisId ::
   (Crypto c) => Ledger.TxId c
 genesisId =
   TxId $
-    Hash.hashWithSerialiser
-      toCBOR
+    hashAnnotated
       ( TxBody
           Set.empty
           StrictSeq.Empty

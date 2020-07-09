@@ -28,6 +28,7 @@ import qualified Hedgehog
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Property (LabelName (..))
 import Shelley.Spec.Ledger.Coin
+import Shelley.Spec.Ledger.Hashing (hashAnnotated)
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot
@@ -43,7 +44,6 @@ import Shelley.Spec.Ledger.Tx
   )
 import Shelley.Spec.Ledger.UTxO
   ( balance,
-    hashTxBody,
     makeWitnessVKey,
     totalDeposits,
     txid,
@@ -252,7 +252,7 @@ propCheckRedundantWitnessSet = property $ do
   (l, steps, _, txwits, _, keyPairs) <- Hedgehog.forAll (genValidStateTxKeys (Proxy @ShortHash))
   let keyPair = fst $ head keyPairs
   let tx = _body txwits
-  let witness = makeWitnessVKey (hashTxBody tx) keyPair
+  let witness = makeWitnessVKey (hashAnnotated tx) keyPair
   let witnessSet = _witnessSet txwits
   let witnessSet' = witnessSet {addrWits = (Set.insert witness (addrWits witnessSet))}
   let txwits' = txwits {_witnessSet = witnessSet'}
@@ -264,7 +264,7 @@ propCheckRedundantWitnessSet = property $ do
     Right _ ->
       True
         === Set.null
-          ( Set.filter (not . verifyWitVKey (hashTxBody tx)) (addrWits witnessSet')
+          ( Set.filter (not . verifyWitVKey (hashAnnotated tx)) (addrWits witnessSet')
           )
     _ -> failure
 
