@@ -43,6 +43,7 @@ library
                      Test.Shelley.Spec.Ledger.Shrinkers
                      Test.Shelley.Spec.Ledger.Orphans
                      Test.Shelley.Spec.Ledger.Utils
+                     Test.Shelley.Spec.Ledger.SetAlgTests
   ghc-options:
     -Wall
     -Wcompat

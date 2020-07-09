@@ -24,7 +24,7 @@ import Cardano.Binary
 import Cardano.Prelude (NoUnexpectedThunks (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
-  ( Assertion (..),
+  ( -- Assertion (..),
     STS (..),
     TRC (..),
     TransitionRule,
@@ -41,7 +41,7 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Control.Iterate.SetAlgebra (eval, singleton, (∪), (∉), (∈), dom, domain, (⨃), setSingleton, (⋪))
+import Control.Iterate.SetAlgebra (eval, singleton, (∪), (∉), (∈), dom, (⨃), setSingleton, (⋪) {- , domain, (≍), keysEqual -})
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
@@ -86,15 +86,17 @@ instance Typeable crypto => STS (POOL crypto) where
   initialRules = [pure emptyPState]
 
   transitionRules = [poolDelegationTransition]
-
+{-
   assertions =
     [ PreCondition
         "_stPools and _pParams must have the same domain"
         ( \(TRC (_, st, _)) ->
-            domain (unStakePools $ _stPools st) == domain (_pParams st)
+            -- domain (unStakePools $ _stPools st) == domain (_pParams st)
+            -- eval(dom (unStakePools $ _stPools st) ≍ dom(_pParams st))
+            keysEqual (unStakePools $ _stPools st) (_pParams st)
         )
     ]
-
+-}
 instance NoUnexpectedThunks (PredicateFailure (POOL crypto))
 
 instance

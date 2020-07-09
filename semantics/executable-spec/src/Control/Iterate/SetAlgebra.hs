@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-
 module Control.Iterate.SetAlgebra where
 
 import Prelude hiding(lookup)
@@ -325,6 +324,18 @@ noKeys m (Bin _ k _ ls rs) = case Map.split k m of
 {-# INLINABLE noKeys #-}
 
 
+keysEqual:: Ord k => Map k v1 -> Map k v2 -> Bool
+keysEqual Tip Tip = True
+keysEqual Tip (Bin _ k _ ls rs) = False
+keysEqual (Bin _ k _ ls rs) Tip = False
+keysEqual m (Bin _ k _ ls rs) =
+   case Map.splitLookup k m of
+      (lm,Just _,rm) -> keysEqual ls lm && keysEqual rs rm
+      other -> False
+
+-- keysEqual (Map.fromList[(1,1),(2,2),(3,3),(4,4),(5,5),(6::Int,6::Int)]) (Map.fromList[(3,'a'),(6,'b'),(5,'c'),(1,'d'),(4,'e'),(2,'f'),(4,'g')])
+
+
 -- ============== Iter BiMap ====================
 
 instance Ord v => Iter (BiMap v) where
@@ -398,6 +409,7 @@ data Exp t where
    UnionOverrideRight:: Ord k => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
    Singleton:: (Ord k) => k -> v -> Exp(Single k v)
    SetSingleton:: (Ord k) => k -> Exp(Single k ())
+   KeyEqual:: (Ord k,Iter f,Iter g) => Exp (f k v) -> Exp(g k u) -> Exp Bool
 
 -- =================================================================
 -- | Basic types are those that can be embedded into Exp.
@@ -492,6 +504,12 @@ intersect = (∩)
 (⊆),subset :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp Bool
 (⊆) x y = Subset (toExp x) (toExp y)
 subset = (⊆)
+
+(≍),keyeq :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp Bool
+(≍) x y = KeyEqual (toExp x) (toExp y)
+keyeq = (≍)
+
+--
 
 -- =================================================================================================
 -- | Symbolc functions (Fun) are data, that can be pattern matched over. They
@@ -760,6 +778,17 @@ domEqSlow m n = do
     loop triplem triplen
 
 
+-- cost O(min (size m) (size n) * log(max (size m) (size n)))
+sameDomain:: (Ord k,Iter f,Iter g) =>  f k b -> g k c -> Bool
+sameDomain m n = loop (hasNxt m) (hasNxt n)
+  where loop (Just(k1,_,nextm)) (Just(k2,_,nextn)) =
+           case compare k1 k2 of
+              EQ -> loop (hasNxt nextm) (hasNxt nextn)
+              LT -> False
+              GT -> False
+        loop Nothing Nothing = True
+        loop _ _ = False
+
 -- =================================================================================
 -- Query is a single datatype that incorporates a language that describes how to build
 -- compound iterators, from other iterators.
@@ -965,6 +994,12 @@ compute (e@(UnionPlus a b)) = run(compile e)
 compute (Singleton k v) = Single k v
 compute (SetSingleton k) = (SetSingle k)
 
+compute (KeyEqual (Base rep1 m) (Base rep2 n)) = sameDomain m n
+compute (KeyEqual (Dom (Base rep1 m)) (Dom (Base rep2 n))) = sameDomain m n
+compute (KeyEqual x y ) = sameDomain left right
+   where left = (fst(compile x))
+         right = (fst(compile y))
+
 
 eval :: Embed s t => Exp t -> s
 eval x = -- fromBase (compute (trace ("Tracing\n   "++show x++"\n") x))
@@ -1168,6 +1203,7 @@ instance Show (Exp t) where
   show (UnionOverrideRight x y) = "("++show x++" ⨃ "++show y++")"
   show (Singleton x y) = "(singleton _ _ )"
   show (SetSingleton x) = "(setSingleton _ )"
+  show (KeyEqual x y) = "("++show x++" ≍ "++show y++")"
 
 ppQuery :: Query k v -> Doc
 ppQuery (BaseD rep f) = parens $ text(show rep)
