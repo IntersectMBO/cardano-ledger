@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Control.Iterate.SetAlgebra (eval, (∉), (⋫), range, singleton, setSingleton, (∪), dom, domain, (∈), (⋪))
+import Control.Iterate.SetAlgebra (eval, (∉), (⋫), range, singleton, setSingleton, (∪), dom, (∈), (⋪){- , domain -} )
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
@@ -126,6 +126,7 @@ instance Typeable crypto => STS (DELEG crypto) where
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
+{-
   assertions =
     [ PreCondition
         "_stkCreds and _rewards must have the same domain"
@@ -134,6 +135,7 @@ instance Typeable crypto => STS (DELEG crypto) where
               == (Set.map getRwdCred $ domain (_rewards st))
         )
     ]
+-}
 
 instance NoUnexpectedThunks (PredicateFailure (DELEG crypto))
 

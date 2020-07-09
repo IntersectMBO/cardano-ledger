@@ -72,6 +72,7 @@ profileCreateRegPools size = do
 
 -- main = profileUTxO
 -- main = includes_init_SpendOneUTxO
+-- main:: IO ()
 -- main = profileCreateRegPools 10000
 -- main = profileCreateRegPools 100000
 
