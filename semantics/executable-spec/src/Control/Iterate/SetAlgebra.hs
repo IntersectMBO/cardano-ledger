@@ -392,7 +392,8 @@ data Exp t where
    NotElem ::(Ord k,Iter g, Show k) => k -> Exp(g k ()) -> Exp Bool
    Intersect :: (Ord k, Iter f, Iter g) => Exp(f k v) -> Exp(g k u) -> Exp(Sett k ())
    Subset ::  (Ord k, Iter f, Iter g) => Exp(f k v) -> Exp(g k u) -> Exp Bool
-   UnionOverrideLeft:: Ord k => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
+   UnionOverrideLeft:: (Show k, Show v,Ord k) => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
+        -- The (Show k, Show v) supports logging errors if there are duplicate keys.
    UnionPlus:: (Ord k,Num n) => Exp (f k n) -> Exp (f k n) -> Exp(f k n)
    UnionOverrideRight:: Ord k => Exp (f k v) -> Exp (g k v) -> Exp(f k v)
    Singleton:: (Ord k) => k -> v -> Exp(Single k v)
@@ -466,7 +467,7 @@ rexclude = (⋫)
 (∉) x y = NotElem x (toExp y)
 notelem = (∉)
 
-(∪),unionleft :: (Ord k,HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
+(∪),unionleft :: (Show k,Show v,Ord k,HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
 (∪) x y = UnionOverrideLeft (toExp x) (toExp y)
 unionleft = (∪)
 
