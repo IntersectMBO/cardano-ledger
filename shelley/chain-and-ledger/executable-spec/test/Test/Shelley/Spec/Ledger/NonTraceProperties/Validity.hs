@@ -4,6 +4,8 @@ module Test.Shelley.Spec.Ledger.NonTraceProperties.Validity where
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.ByteString (ByteString) -- TODO is this the right Bytestring
+import Data.ByteString.Char8 (pack)
 import Shelley.Spec.Ledger.Coin (Coin (..))
 import Shelley.Spec.Ledger.Core (dom)
 import Shelley.Spec.Ledger.Crypto (Crypto)
@@ -54,8 +56,8 @@ data ValidationError
     RetirementCertExpired SlotNo SlotNo
   | -- | The transaction fee is too small
     FeeTooSmall Coin Coin
-  | -- | Value is not conserved
-    ValueNotConserved
+  | -- | Value is not conserved (destroyed, created)
+    ValueNotConserved ByteString ByteString
   | -- | ada being forged
     UserForgingAda
   | -- | Unknown reward account
@@ -145,7 +147,7 @@ preserveBalance ::
 preserveBalance stakePools pp tx u =
   if destroyed' == created'
     then Valid
-    else Invalid [ValueNotConserved]
+    else Invalid [ValueNotConserved (pack $ show destroyed') (pack $ show created')]
   where
     destroyed' = consumed pp (_utxo u) tx
     created' = produced pp stakePools tx

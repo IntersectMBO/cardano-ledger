@@ -287,7 +287,7 @@ instance HashAlgorithm h => Arbitrary (Mock.BootstrapWitness h) where
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash (Proxy @c)
 
--- TODO this
+-- TODO distinguish forge and output Arbitrary cases if possible
 instance Arbitrary Quantity where
   -- Can be negative for negative forge
   arbitrary = Quantity <$> choose (-500, 500)

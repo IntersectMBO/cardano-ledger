@@ -743,16 +743,14 @@ genesisState genDelegs0 utxo0 =
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
 -- get total size of outputs in a Tx
-allOutputsSize :: forall crypto . (Crypto crypto) => TxBody crypto -> Integer -> Integer -> Integer -> Integer -> Integer
-allOutputsSize txb uint smallArray address addrHashLen
-  = foldl (\s o -> s + smallArray + uint + address + (valueSize addrHashLen maxAssetIDBytes uint (getValueTx o))) 0 (StrictSeq.getSeq $ _outputs txb)
-    where
-      maxAssetIDBytes = 32 -- maybe we want forging script hashes also 32?
+allOutputsSize :: forall crypto . (Crypto crypto) => TxBody crypto -> Integer -> Integer
+allOutputsSize txb address
+  = foldl (\s o -> s + smallArray + uint + address + (valueSize (getValueTx o))) 0 (StrictSeq.getSeq $ _outputs txb)
 
 -- estimate upper bound on Value size
-valueSize :: Integer -> Integer -> Integer -> Value crypto -> Integer
-valueSize addrHashLen maxAssetIDBytes uint (Value v)
-  = foldl (\_ tkns -> addrHashLen + (addTkns tkns)) 0 v -- TODO should be nicer, but size of map returns Int
+valueSize :: Value crypto -> Integer
+valueSize (Value v)
+  = foldl (\_ tkns -> policyHashLen + (addTkns tkns)) 0 v -- TODO should be nicer, but size of map returns Int
     where
       addTkns ts = foldl (\_ _ -> maxAssetIDBytes + uint) 0 ts
 
@@ -760,26 +758,43 @@ valueSize addrHashLen maxAssetIDBytes uint (Value v)
 -- TODO should this be different and the real size?
 scaledSizeCompactValue :: CompactValue crypto -> Integer
 scaledSizeCompactValue (MixValue v)
-  | ((snd $ quotRem (valueSize 28 32 5 v) 5) == 0) = fst $ quotRem (valueSize 28 32 5 v) 5
-  | otherwise = 1 + (fst $ quotRem (valueSize 28 32 5 v) 5)
+  | ((snd $ quotRem (valueSize v) uint) == 0) = fst $ quotRem (valueSize v) uint
+  | otherwise = 1 + (fst $ quotRem (valueSize v) uint)
 scaledSizeCompactValue (AdaOnly  _) = 1
 -- TODO fix constants uint, adjust for extra constructor?
+
+-- TODO find the right place for these constants
+uint :: Integer
+uint = 5
+
+smallArray :: Integer
+smallArray = 1
+
+hashLen :: Integer
+hashLen = 32
+
+addrHashLen :: Integer
+addrHashLen = 28
+
+policyHashLen :: Integer
+policyHashLen = 28
+
+addrHeader :: Integer
+addrHeader = 1
+
+maxAssetIDBytes :: Integer
+maxAssetIDBytes = 32 -- maybe we want forging script hashes also 32?
 
 -- |Implementation of abstract transaction size
 -- TODO forge value and proper outputs size!
 txsize :: forall crypto . (Crypto crypto) => Tx crypto-> Integer
-txsize tx = numInputs * inputSize + (allOutputsSize txbody uint smallArray address addrHashLen) + rest
+txsize tx = numInputs * inputSize + (allOutputsSize txbody (address addrHeader addrHashLen)) + rest
   where
-    uint = 5
-    smallArray = 1
-    hashLen = 32
-    hashObj = 2 + hashLen
-    addrHashLen = 28
-    addrHeader = 1
-    address = 2 + addrHeader + 2 * addrHashLen -- addrHashLen same as script hash length always? TODO
+    address ah ahl = 2 + ah + 2 * ahl -- addrHashLen same as script hash length always? TODO
     txbody = _body tx
     numInputs = toInteger . length . _inputs $ txbody
     inputSize = smallArray + uint + hashObj
+    hashObj = 2 + hashLen
 
     rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 

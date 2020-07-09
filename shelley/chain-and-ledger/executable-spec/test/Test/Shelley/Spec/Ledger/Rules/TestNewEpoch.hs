@@ -45,6 +45,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (NEWEPOCH)
 
 -- | Check that the rewards decrease by the increase of the treasury and the
 -- rewards.
+-- TODO how can this apply to MA tokens??
 preservationOfAda ::
   [SourceSignalTarget (NEWEPOCH ShortHash)] ->
   Property

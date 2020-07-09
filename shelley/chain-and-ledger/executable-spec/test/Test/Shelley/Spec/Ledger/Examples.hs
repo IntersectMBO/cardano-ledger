@@ -3360,6 +3360,7 @@ test5D p pot = do
       assertBool "Alice's reward account does not exist" $ isJust rewEntry
       assertBool "Alice's rewards are wrong" $ maybe False (== Coin 100) rewEntry
       assertBool "Total amount of ADA is not preserved" $ maxLLSupply == totalAda ex5DState
+      -- TODO say something about Value presevation here?
 
 test5DReserves :: HashAlgorithm h => proxy h -> Assertion
 test5DReserves p = test5D p ReservesMIR

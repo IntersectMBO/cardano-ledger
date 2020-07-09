@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.STS.Chain
     ChainState (..),
     PredicateFailure (..),
     initialShelleyState,
+    totalValue,
     totalAda,
     chainChecks,
   )
@@ -329,10 +330,21 @@ instance
   where
   wrapFailed = PrtclFailure
 
+-- |Calculate the total Value in the chain state
+totalValue :: ChainState crypto -> Value crypto
+totalValue (ChainState nes _ _ _ _ _ _) =
+  (coinToValue $ treasury_ + reserves_ + rewards_ + deposits + fees_) <> circulation
+  where
+    (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
+    (UTxOState u deposits fees_ _) = _utxoState ls
+    (DPState ds _) = _delegationState ls
+    rewards_ = sum (Map.elems (_rewards ds))
+    circulation = balance u
+
 -- |Calculate the total ada in the chain state
 totalAda :: ChainState crypto -> Coin
 totalAda (ChainState nes _ _ _ _ _ _) =
-  treasury_ + reserves_ + rewards_ + (getAdaAmount circulation) + deposits + fees_
+  (treasury_ + reserves_ + rewards_ + deposits + fees_) + (getAdaAmount circulation)
   where
     (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) = nesEs nes
     (UTxOState u deposits fees_ _) = _utxoState ls

@@ -23,47 +23,56 @@ import           Cardano.Crypto.Hash (Hash, ShortHash)
 --import           Data.Monoid
 -- import           Algebra.Module
 import           Data.Map.Strict (Map, elems, empty, toList, filterWithKey, keys,
-                 toList, singleton, lookup, insert, unionWith)
+                 toList, singleton, lookup, unionWith)
 import           Shelley.Spec.Ledger.Crypto
-import           Data.ByteString.Char8 (ByteString, pack) -- TODO is this the right Bytestring
+import           Data.ByteString (ByteString) -- TODO is this the right Bytestring
 import           Shelley.Spec.Ledger.Scripts
 
 
 
 
 -- | Quantity
-newtype Quantity = Quantity Integer
-  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Num, Real, Enum, NoUnexpectedThunks, NFData)
+newtype Quantity = Quantity {unInt :: Integer}
+  deriving (Show, Eq, Generic, ToCBOR, FromCBOR, Ord, Integral, Real, Num, Enum, NoUnexpectedThunks, NFData)
 
 -- | Asset ID
-newtype AssetID = AssetID ByteString
+newtype AssetID = AssetID {assetID :: ByteString}
   deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
-
-assetID :: AssetID -> ByteString
-assetID (AssetID aid) = aid
 
 -- | Policy ID
-newtype PolicyID crypto = PolicyID (ScriptHash crypto)
+newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
   deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoUnexpectedThunks, NFData)
 
-policyID :: PolicyID crypto -> ScriptHash crypto
-policyID (PolicyID pid) = pid
+{- note [Assets]
 
--- | A cryptocurrency value. This is a map from 'PolicyID's to a
--- quantity of assets with this policy.
---
--- Operations on assets are usually implemented /pointwise/. That is,
--- we apply the operation to the quantities for each asset in turn. So
--- when we add two 'Value's the resulting 'Value' has, for each asset,
--- the sum of the quantities of /that particular/ asset in the argument
--- 'Value'. The effect of this is that the assets in the 'Value' are "independent",
--- and are operated on separately.
---
--- Whenever we need to get the quantity of an asset in a 'Value' where there
--- is no explicit quantity of that asset in the 'Value', then the quantity is
--- taken to be zero.
---
--- See note [Assets] for more details.
+A Value is a map from 'PolicyID's to aquantity of assets with this policy.
+
+Terms of type Value are finitely supported functions. This means :
+
+Operations on assets are usually implemented /pointwise/. That is,
+we apply the operation to the quantities for each asset in turn. So
+when we add two 'Value's the resulting 'Value' has, for each asset,
+the sum of the quantities of /that particular/ asset in the argument
+'Value'. The effect of this is that the assets in the 'Value' are "independent",
+and are operated on separately.
+
+Whenever we need to get the quantity of an asset in a 'Value' where there
+is no explicit quantity of that asset in the 'Value', then the quantity is
+taken to be zero.
+
+We can think of 'Value' as a vector space whose dimensions are
+assets. At the moment there is only a single asset type (Ada), so 'Value'
+contains one-dimensional vectors. When asset-creating transactions are
+implemented, this will change and the definition of 'Value' will change to a
+'Map Asset Int', effectively a vector with infinitely many dimensions whose
+non-zero values are recorded in the map.
+
+To create a value of 'Value', we need to specifiy an asset policy. This can be done
+using 'Ledger.Ada.adaValueOf'. To get the ada dimension of 'Value' we use
+'Ledger.Ada.fromValue'. Plutus contract authors will be able to define modules
+similar to 'Ledger.Ada' for their own assets.
+
+-}
 
 -- | Value type
 data Value crypto = Value
@@ -72,16 +81,6 @@ data Value crypto = Value
 
 instance NoUnexpectedThunks (Value crypto)
 instance NFData (Value crypto)
-
--- data ValueBSType = ValueBSType (Map ByteString (Map ByteString Quantity))
---   deriving (Show, Eq, Generic)
---
--- instance NoUnexpectedThunks ValueBSType
---
--- -- | make a crypto-free Value type
--- -- TODO this is a hack!
--- toValBST :: Value crypto -> ValueBSType
--- toValBST (Value v) = ValueBSType $ fromList $ fmap (\(cid, tkns) -> (pack $ show cid, tkns)) (toList v)
 
 -- | compact representation of Value
 data CompactValue crypto = AdaOnly Coin | MixValue (Value crypto)
@@ -98,50 +97,46 @@ getQs (Value v) = fmap snd (concat $ fmap toList (elems v))
 zeroV :: Value crypto
 zeroV = Value empty
 
--- | make a value out of a coin
+-- | make a Value out of a Coin
 coinToValue :: Coin -> Value crypto
 coinToValue (Coin c) = Value $ singleton adaID (singleton adaToken (Quantity c))
 
--- | make a value out of a coin
+-- | add up all the ada in a Value
 getAdaAmount :: Value crypto -> Coin
 getAdaAmount (Value v) = Coin $ c
   where
     Quantity c = foldl (+) (Quantity 0) (getQs $ Value $ filterWithKey (\k _ -> k == adaID) v)
 
 -- | policy ID of Ada
+-- NOTE : this is an arbitrary choice of hash value - there is no known script that will
+-- need to hash to this value. If a user finds one, there is still a check
+-- in the STS rules to make sure it is not used
 adaID :: PolicyID crypto
 adaID = PolicyID $ ScriptHash $ coerce ("" :: Hash ShortHash (Script crypto))
 
 -- | asset ID of Ada
+-- this is an arbitrary choice of asset ID name!
 adaToken :: AssetID
-adaToken = AssetID $ pack "Ada"
+adaToken = AssetID $ "Ada"
 
+-- | makes a compact representation of Value for in-memory storage
+-- removes 0 values and adds a special case for ada-only values
 valueToCompactValue :: Value crypto -> CompactValue crypto
-valueToCompactValue vl
+valueToCompactValue vl@(Value v)
   | keys v == [adaID] = AdaOnly $ getAdaAmount vl
-  | otherwise         = MixValue $ uniqueAdaToken vl
+  | otherwise         = MixValue $ removeZeros v
     where
-      (Value v) = vl
+      removeZeros vv = Value $ fmap (filterWithKey (\_ q -> q /= (Quantity 0))) vv
 
--- | make a Value term where the only token name within the ada asset group is adaToken
--- no 0-valued
-uniqueAdaToken :: Value crypto -> Value crypto
-uniqueAdaToken (Value v) = Value $ insert adaID
-  (singleton adaToken $ foldl (+) 0
-  (fmap snd $ concat $ fmap toList (elems (filterWithKey (\k _ -> k == adaID) v))) )
-  (removeZeros $ filterWithKey (\k _ -> k /= adaID) v)
-  where
-    removeZeros vv = fmap (filterWithKey (\_ q -> q /= (Quantity 0))) vv
-
+-- | convert to Value
 compactValueToValue :: CompactValue crypto -> Value crypto
 compactValueToValue (AdaOnly c)  = coinToValue c
 compactValueToValue (MixValue v) = v
 
 instance Eq (Value crypto) where
-    {-# INLINABLE (==) #-}
     (==) = eq
 
--- TODO these instances
+-- TODO remove instances
 -- No 'Ord Value' instance since 'Value' is only a partial order, so 'compare' can't
 -- do the right thing in some cases.
 -- Values are compared in a lexicographical way
@@ -155,27 +150,22 @@ instance Ord (CompactValue crypto) where
    compare v1 v2 = compare (compactValueToValue v1) (compactValueToValue v2)
 
 instance Semigroup (Value crypto) where
-    {-# INLINABLE (<>) #-}
     (<>) = addv
 
 instance Monoid (Value crypto) where
-    {-# INLINABLE mempty #-}
     mempty  = zeroV
     mappend = (<>)
 
 -- instances for CompactValue
 instance Semigroup (CompactValue crypto) where
-    {-# INLINABLE (<>) #-}
     (<>) v1 v2 = valueToCompactValue $ addv (compactValueToValue v1) (compactValueToValue v2)
 
 instance Monoid (CompactValue crypto) where
-    {-# INLINABLE mempty #-}
     mempty  = MixValue zeroV
     mappend = (<>)
 
 --
 -- instance Group (Value crypto) where
---     {-# INLINABLE inv #-}
 --     inv = scale Integer (Value crypto) (-1)
 
 -- deriving via (Additive (Value crypto)) instance AdditiveSemigroup (Value crypto)
@@ -188,44 +178,23 @@ instance Monoid (CompactValue crypto) where
 
 -- Linear Map instance
 
-{- note [Assets]
 
-The 'Value' type represents a collection of amounts of different assets.
-
-We can think of 'Value' as a vector space whose dimensions are
-assets. At the moment there is only a single asset type (Ada), so 'Value'
-contains one-dimensional vectors. When asset-creating transactions are
-implemented, this will change and the definition of 'Value' will change to a
-'Map Asset Int', effectively a vector with infinitely many dimensions whose
-non-zero values are recorded in the map.
-
-To create a value of 'Value', we need to specifiy an asset policy. This can be done
-using 'Ledger.Ada.adaValueOf'. To get the ada dimension of 'Value' we use
-'Ledger.Ada.fromValue'. Plutus contract authors will be able to define modules
-similar to 'Ledger.Ada' for their own assets.
-
--}
-
-
-{-# INLINABLE valueOf #-}
 -- | Get the quantity of the given currency in the 'Value'.
-valueOf :: Value crypto -> PolicyID crypto -> AssetID -> Integer
+valueOf :: Value crypto -> PolicyID crypto -> AssetID -> Quantity
 valueOf (Value mp) cur tn =
     case Data.Map.Strict.lookup cur mp of
-        Nothing -> 0 :: Integer
+        Nothing -> (Quantity 0)
         Just i  -> case Data.Map.Strict.lookup tn i of
-            Nothing -> 0
-            Just (Quantity v)  -> v
+            Nothing -> (Quantity 0)
+            Just v  -> v
 
-{-# INLINABLE symbols #-}
 -- | The list of 'PolicyID's of a 'Value'.
-symbols :: Value crypto -> [PolicyID crypto]
-symbols (Value mp) = keys mp
+policyIDs :: Value crypto -> [PolicyID crypto]
+policyIDs (Value mp) = keys mp
 
-{-# INLINABLE singleType #-}
 -- | Make a 'Value' containing only the given quantity of the given currency.
-singleType :: PolicyID crypto -> AssetID -> Integer -> Value crypto
-singleType c tn i = Value (singleton c (singleton tn (Quantity i)))
+singleType :: PolicyID crypto -> AssetID -> Quantity -> Value crypto
+singleType c tn i = Value (singleton c (singleton tn i))
 
 -- {-# INLINABLE unionVal #-}
 -- -- | Combine two 'Value' maps
@@ -267,22 +236,18 @@ singleType c tn i = Value (singleton c (singleton tn (Quantity i)))
 --     in
 --       Map.all inner (unionVal l r)
 
-{-# INLINABLE addv #-}
 -- | add values
 addv :: Value crypto -> Value crypto -> Value crypto
 addv (Value v1) (Value v2) = Value (unionWith (unionWith (+)) v1 v2)
 
-{-# INLINABLE subv #-}
 -- | subtract values
 subv :: Value crypto -> Value crypto -> Value crypto
 subv (Value v1) (Value v2) = Value (unionWith (unionWith (-)) v1 v2)
 
-{-# INLINABLE scalev #-}
 -- | scale values
 scalev :: Integer -> Value crypto -> Value crypto
 scalev s (Value v) = Value (fmap (fmap ((Quantity s) *)) v)
 
-{-# INLINABLE checkBinRel #-}
 -- | Check whether a binary relation holds for value pairs of two 'Value' maps,
 --   supplying 0 where a key is only present in one of them.
 -- geq/leq/etc. only
@@ -291,31 +256,26 @@ checkBinRel :: (Quantity -> Quantity -> Bool) -> Value crypto -> Value crypto ->
 checkBinRel f l r = and $ fmap (f 0) (getQs $ subv l r)
 
 
-{-# INLINABLE geq #-}
 -- | Check whether one 'Value' is greater than or equal to another. See 'Value' for an explanation of how operations on 'Value's work.
 geq :: Value crypto -> Value crypto -> Bool
 -- If both are zero then checkBinRel will be vacuously true, but this is fine.
 geq = checkBinRel (>=)
 
-{-# INLINABLE gt #-}
 -- | Check whether one 'Value' is strictly greater than another. See 'Value' for an explanation of how operations on 'Value's work.
 gt :: Value crypto -> Value crypto -> Bool
 -- If both are zero then checkBinRel will be vacuously true. So we have a special case.
 gt = checkBinRel (>)
 
-{-# INLINABLE leq #-}
 -- | Check whether one 'Value' is less than or equal to another. See 'Value' for an explanation of how operations on 'Value's work.
 leq :: Value crypto -> Value crypto -> Bool
 -- If both are zero then checkBinRel will be vacuously true, but this is fine.
 leq = checkBinRel (<=)
 
-{-# INLINABLE lt #-}
 -- | Check whether one 'Value' is strictly less than another. See 'Value' for an explanation of how operations on 'Value's work.
 lt :: Value crypto -> Value crypto -> Bool
 -- If both are zero then checkBinRel will be vacuously true. So we have a special case.
 lt = checkBinRel (<)
 
-{-# INLINABLE eq #-}
 -- | Check whether one 'Value' is equal to another. See 'Value' for an explanation of how operations on 'Value's work.
 eq :: Value crypto -> Value crypto -> Bool
 -- If both are zero then checkBinRel will be vacuously true, but this is fine.
@@ -335,12 +295,11 @@ eq = checkBinRel (==)
 --     splitIntl mp' = These l r where
 --       (l, r) = Map.mapThese (\i -> if i <= 0 then This i else That i) mp'
 
--- TODO do this right
+-- TODO do this right - is this supposed to add up to v?
 splitValueFee :: Value crypto -> Integer -> (Value crypto, Coin)
-splitValueFee v _ = (v, Coin 0)
--- (Value v) n =
---   | n <= 0 = error "must split coins into positive parts"
---   | otherwise = (fmap $ n `div` m, Coin $ n `rem` m)
+splitValueFee (Value v) n
+    | n <= 0 = error "must split coins into positive parts"
+    | otherwise = (Value $ fmap (fmap (Quantity . (div n) . unInt)) v, getAdaAmount (Value v))
 
 -- CBOR
 
@@ -400,9 +359,3 @@ instance
         v <- fromCBOR
         pure $ compactValueToValue $ MixValue $ Value v
       k -> invalidKey k
-
--- instance ToCBOR ValueBSType where
---   toCBOR (ValueBSType v) = mapToCBOR v
---
--- instance FromCBOR ValueBSType where
---   fromCBOR = ValueBSType <$> mapFromCBOR

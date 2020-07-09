@@ -101,6 +101,7 @@ import Shelley.Spec.Ledger.TxData
 -- needed for defining U
 -- | combine UTxOs
 -- TODO does it matter how we define this exactly? there is no right way
+-- TODO this will change with change of Relation class
 {-# INLINABLE combineUTxOs #-}
 combineUTxOs :: UTxO crypto -> UTxO crypto -> UTxO crypto
 combineUTxOs (UTxO v1) (UTxO v2) = UTxO (unionWith combineOuts v1 v2)

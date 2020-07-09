@@ -31,6 +31,8 @@ where
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Map.Strict (Map)
+import Data.ByteString.Char8 (pack)
+
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as StrictSeq
@@ -505,8 +507,8 @@ predicateFailureToValidationError (UtxowFailure (UtxoFailure (BadInputsUTxO _)))
   BadInputs
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (FeeTooSmallUTxO a b))) =
   FeeTooSmall a b
-predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO _ _))) =
-  ValueNotConserved
+predicateFailureToValidationError (UtxowFailure (UtxoFailure (ValueNotConservedUTxO a b))) =
+  ValueNotConserved (pack $ show a) (pack $ show b)
 predicateFailureToValidationError (UtxowFailure (UtxoFailure (ForgingAda _))) =
   UserForgingAda
 predicateFailureToValidationError (DelegsFailure (DelegateeNotRegisteredDELEG _)) =

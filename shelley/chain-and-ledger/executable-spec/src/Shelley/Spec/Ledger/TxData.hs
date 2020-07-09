@@ -380,7 +380,7 @@ getAddressTx (TxOut a _) = a
 -- | get coin amount from UTxO output
 getCoin :: UTxOOut crypto -> Coin
 getCoin (UTxOOut _ v) =
-  getAdaAmount $ Value $ filterWithKey (\k _ -> k==adaID) v'
+  getAdaAmount $ Value $ filterWithKey (\k _ -> k == adaID) v'
   where
     Value v' = compactValueToValue v
 
