@@ -101,10 +101,7 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     pattern KeyPair,
   )
 import Test.Shelley.Spec.Ledger.Examples (ppsEx1)
-import Test.Shelley.Spec.Ledger.Generator.Core
-  ( genesisCoins,
-    genesisId,
-  )
+
 import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
     mkAddr,

@@ -3,7 +3,7 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
-module IterTests where
+module Test.Shelley.Spec.Ledger.SetAlgTests where
 
 import Control.Iterate.Collect
 import Control.Iterate.SetAlgebra(Iter(..),
@@ -23,7 +23,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Set as Set
 import Data.Char(ord)
-import Test.HUnit
+import Test.Tasty.HUnit
+import Test.Tasty
 
 
 -- =========================================================
@@ -140,21 +141,20 @@ ex7 = 70 ∉ (dom m1)
 
 -- ===================== test that compute works ======================
 
-evalTest :: (Show t,Eq t) => String -> Exp t -> t -> Test
-evalTest nm expr ans = TestCase (assertEqual (show expr++" where Map? = "++nm) (compute expr) ans)
+-- Test that computing  x::(Exp t) computes to the given object with type t.
 
-eval_compile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> Test
-eval_compile expr = TestCase (assertEqual ("compute and run.compile of "++show expr++" are the same") (compute expr) (run(compile expr)))
+evalTest :: (Show t,Eq t) => String -> Exp t -> t -> TestTree
+evalTest nm expr ans = testCase name (assertEqual name (compute expr) ans)
+  where name = (show expr++" where Map? = "++nm)
 
-{-
-(compute $ l4 ⋫ Set.empty)
-[(1,"m"),(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l"),(105,"Z")]
-*IterTests> (compute $ l4 ⋫ Fail)
-[(1,"m"),(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l"),(105,"Z")]
--}
+-- Test that (eval x) and run(compile x) get the same answers
 
-eval_tests :: Test
-eval_tests = TestList
+eval_compile :: (Show (f k v), Ord k, Eq (f k v)) => Exp (f k v) -> TestTree
+eval_compile expr = testCase name (assertEqual name (compute expr) (run(compile expr)))
+  where name = ("compute and run.compile of "++show expr++" are the same")
+
+eval_tests :: TestTree
+eval_tests = testGroup "eval tests"
           [ evalTest "m1"  (5 ∈ (dom m1))                True
           , evalTest "m1"  (70 ∈ (dom m1))               False
           , evalTest "m0"  (m0 ∪ (singleton 3 'b'))      (Map.fromList [(1,'a'),(2,'z'),(3,'b'),(4,'g')])
@@ -179,8 +179,8 @@ eval_tests = TestList
 
 -- ========================== test that various Compound iterators work ================
 
-testcase :: (Eq k, Eq v, Show k, Show v, Iter f) => String -> f k v -> [(k, v)] -> Test
-testcase nm col ans = TestCase (assertEqual nm ans (runCollect (fifo col) [] (:)))
+testcase :: (Eq k, Eq v, Show k, Show v, Iter f) => String -> f k v -> [(k, v)] -> TestTree
+testcase nm col ans = testCase nm (assertEqual nm ans (runCollect (fifo col) [] (:)))
 
 fromListD :: (Ord k,Iter f) => BaseRep f k v -> [(k,v)] -> Query k v
 fromListD rep xs = BaseD rep (fromList rep xs)
@@ -188,13 +188,13 @@ fromListD rep xs = BaseD rep (fromList rep xs)
 -- Tests where we vary how we represent l1 and l2 (the f in (Iter f) )
 -- and see that we always get the same answer no matter how we store the data of l1 and l2
 
-testAnd1,testAnd2,testOr,testDiff1,testDiff2 :: Iter g => String -> BaseRep g Int String -> Test
+testAnd1,testAnd2,testOr,testDiff1,testDiff2 :: Iter g => String -> BaseRep g Int String -> TestTree
 
 testAnd1 nm rep = testcase nm (AndD (fromListD rep l1) (fromListD rep l2))
                               [(4,("d","d")),(5,("e","e")),(10,("j","j")),(21,("v","v"))]
 
 
-testAnd2 nm rep = TestCase (assertEqual nm (runCollect (lifo (AndD (fromListD rep l1) (fromListD rep l2))) [] (:))
+testAnd2 nm rep = testCase nm (assertEqual nm (runCollect (lifo (AndD (fromListD rep l1) (fromListD rep l2))) [] (:))
                                            (reverse  [(4,("d","d")),(5,("e","e")),(10,("j","j")),(21,("v","v"))]))
 
 testOr nm rep = testcase nm (OrD (fromListD rep l1) (fromListD rep l2) (lift (\x y -> x++"-"++y)))
@@ -209,11 +209,11 @@ testDiff2 nm rep = testcase nm (DiffD (fromListD rep l2) (fromListD rep l1)) [(3
 -- ==========================================================================
 -- tests where we vary both the data, and how it is represented.
 
-testGuard :: (Show b, Iter f, Ord b) => String -> BaseRep f Int b -> [(Int, b)] -> Test
+testGuard :: (Show b, Iter f, Ord b) => String -> BaseRep f Int b -> [(Int, b)] -> TestTree
 testGuard nm rep f = testcase nm (GuardD (fromListD rep f) (domElem evens))
                                  (filter (even . fst) f)
 
-testProj :: (Show k, Ord k, Iter f) => String -> BaseRep f k [Char] -> [(k, [Char])] -> Test
+testProj :: (Show k, Ord k, Iter f) => String -> BaseRep f k [Char] -> [(k, [Char])] -> TestTree
 testProj nm rep f = testcase nm (ProjectD (fromListD rep f) (lift (\ _x y -> ord (y!!0))))
                                 [ (k,ord(v!!0)) | (k,v) <- f ]
 
@@ -221,29 +221,29 @@ testProj nm rep f = testcase nm (ProjectD (fromListD rep f) (lift (\ _x y -> ord
 -- tests where we AndP l1 and l3, and use different type of data for l1 from l3
 -- We use the second projection in AndP, that is the value will come from l3
 
-testAndP :: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g Int Int -> Test
+testAndP :: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g Int Int -> TestTree
 testAndP nm rep1 rep2 =  testcase nm (AndPD (fromListD rep1 l1) (fromListD rep2 l3) rngSnd)
                                      [(4,12),(12,44)]
 
-testChain:: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g String Int -> Test
+testChain:: (Iter f, Iter g) => String -> BaseRep f Int String -> BaseRep g String Int -> TestTree
 testChain nm rep1 rep2 = testcase nm (ChainD (fromListD rep1 l4) (fromListD rep2 l5) (lift (\ x (y,v) -> (x,y,v))))
                                     [(1,(1,"m",105)),(2,(2,"a",101)),(6,(6,"b",102)),(12,(12,"w",108)),(34,(34,"a",101)),(50,(50,"q",107))]
 
-testChain2:: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int String -> Test
+testChain2:: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int String -> TestTree
 testChain2 nm rep1 rep2 = testcase nm (ChainD (fromListD rep1 l5) (fromListD rep2 l4) (lift (\ x (y,v) -> (x,y,v))))
                                     [("m",("m",105,"Z"))]
 
 -- This test inspired by set expression in EpochBoundary.hs
-testEpochEx :: Test
-testEpochEx = TestCase (assertEqual "Epoch Boundary Example"
+testEpochEx :: TestTree
+testEpochEx = testCase "Epoch Boundary Example" (assertEqual "Epoch Boundary Example"
                          (Map.fromList [(5,False),(12,True)])
                          (eval (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base MapR state))))
     where delegs = Map.fromList [(5::Int,"a"),(6,"b"),(12,"c"),(14,"e"),(20,"f"),(25,"g")]
           hk = "b"
           state = Map.fromList [(n,even n) | n <- [1..13]]
 
-iter_tests :: Test
-iter_tests = TestList
+iter_tests :: TestTree
+iter_tests = testGroup "Iterator tests"
   [ testAnd1 "(And l1 l2) as List, fifo"  ListR
   , testAnd1 "(And l1 l2) as Map, fifo"   MapR
   , testAnd1 "(And l1 l2) as BiMap, fifo" BiMapR
@@ -294,5 +294,7 @@ iter_tests = TestList
   ,testEpochEx
   ]
 
-alltests :: Test
-alltests = TestList [ eval_tests, iter_tests ]
+
+setAlgTest:: TestTree
+setAlgTest =
+  testGroup "Set Algebra Tests" [ eval_tests, iter_tests ]
