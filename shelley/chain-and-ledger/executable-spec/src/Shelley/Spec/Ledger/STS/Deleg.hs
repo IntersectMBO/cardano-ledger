@@ -35,7 +35,7 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Control.Iterate.SetAlgebra (eval, (∉), (⋫), range, singleton, setSingleton, (∪), dom, (∈), (⋪))
+import Control.Iterate.SetAlgebra (eval, (∉), (⋫), range, singleton, setSingleton, (∪), dom, domain, (∈), (⋪))
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
@@ -130,8 +130,8 @@ instance Typeable crypto => STS (DELEG crypto) where
     [ PreCondition
         "_stkCreds and _rewards must have the same domain"
         ( \(TRC (_, st, _)) ->
-            dom (_stkCreds st)
-              == (Set.map getRwdCred $ dom (_rewards st))
+            eval(dom(_stkCreds st))
+              == (Set.map getRwdCred $ domain (_rewards st))
         )
     ]
 
