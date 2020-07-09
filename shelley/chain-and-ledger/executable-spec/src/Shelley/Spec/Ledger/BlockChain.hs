@@ -21,6 +21,7 @@ module Shelley.Spec.Ledger.BlockChain
     LastAppliedBlock (..),
     lastAppliedHash,
     BHBody (..),
+    poolIDfromBHBody,
     BHeader (BHeader),
     Block (Block),
     LaxBlock (..),
@@ -123,6 +124,7 @@ import Shelley.Spec.Ledger.Keys
     decodeVerKeyVRF,
     encodeSignedKES,
     encodeVerKeyVRF,
+    hashKey,
   )
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
@@ -469,6 +471,11 @@ instance
           bheaderOCert,
           bprotver
         }
+
+-- | Retrieve the pool id (the hash of the pool operator's cold key)
+-- from the body of the block header.
+poolIDfromBHBody :: Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
+poolIDfromBHBody = hashKey . bheaderVk
 
 data Block crypto
   = Block' !(BHeader crypto) !(TxSeq crypto) LByteString
