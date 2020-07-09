@@ -41,7 +41,7 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.Coin (Coin)
-import Control.Iterate.SetAlgebra (eval, singleton, (∪), (∉), (∈), dom, (⨃), setSingleton, (⋪))
+import Control.Iterate.SetAlgebra (eval, singleton, (∪), (∉), (∈), dom, domain, (⨃), setSingleton, (⋪))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState (PState (..), emptyPState)
@@ -91,7 +91,7 @@ instance Typeable crypto => STS (POOL crypto) where
     [ PreCondition
         "_stPools and _pParams must have the same domain"
         ( \(TRC (_, st, _)) ->
-            dom (unStakePools $ _stPools st) == dom (_pParams st)
+            domain (unStakePools $ _stPools st) == domain (_pParams st)
         )
     ]
 
