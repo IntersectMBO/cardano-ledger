@@ -35,6 +35,12 @@ given in Figure \ref{fig:functions:insouts}. These include
   and non-script transaction inputs.
 \end{itemize}
 
+Because the $\Tx$ type is a sum of $\ShelleyTx$ and $\GoguenTx$, and
+there was a way of computing an ID from a Shelley transaction, there
+is potential for confusion how the ID of a transaction is
+computed. Here, $\TxId$ is always computed from values of type $\Tx$,
+never from $\ShelleyTx$ or $\GoguenTx$.
+
 Note that when submitting a transaction, the wallet is responsible for
 determining the total price of the
 validation of all the Plutus scripts in a transaction
@@ -143,36 +149,30 @@ The changes due to Plutus integration are as follows:
   needed to construct the correct UTxO outputs.
 
   \item For calculating the minimum size of an output, we need the
-  function $\fun{scaledValueSize}$ that computes the size of a $\Value$
-  that is scaled so that the size of a value that only contains Ada is
-  1.
+  function $\fun{scaledValueSize}$ that computes the size of a
+  $\Value$. It is defined as the size of the serialization of the
+  $\Value$, in analogy to $\fun{txSize}$.
 \end{itemize}
 
 \subsection{Value Operations and Partial Order.}
 \label{sec:value-ops}
-Note that
-the $\fun{consumed}$ and $\fun{produced}$ values are compared as $\Value$.
-The type $\Value$ has a partial order defined on it in (see~\cite{plutus_eutxo}).
-The idea of this partial order, as well as operations like addition and subtraction
-of terms of the $\Value$ type, is that a term $v \in \Value$ can be treated
-as a total map that maps to the trivial element $\epsilon \in \AssetID \to \Quantity$
-almost everywhere except for a several currency IDs that appear in $\dom~v$.
+Some of the UTxO update and precondition functions now operate on the $\Value$
+type instead of $\Coin$ (sometimes on a combination of $\Value$ and $\Coin$).
+To make this precise, we must define basic operations on $\Value$, which
+include, most notably, addition and $\leq$ comparison.
 
-This way, when adding two terms of type value, $\{ cid1 \mapsto tkns1\}$ and
-$\{ cid2 \mapsto tkns2\}$, the result is
-\[ \{ cid1 \mapsto (tkns1 + \epsilon), cid2 \mapsto (\epsilon + tkns2)\} \]
+Because the absence of a token in a $\Value$ has the same semantics as
+the token being present with an amount of $0$, we regard two elements of
+type $\Value$ as the same if they only differ by some tokens with
+amount $0$. This means that we can equivalently regard values as total
+maps that map all except a finite amount of its inputs to $0$.
 
-which simplifies to
+This way, when adding two partial maps, $m_1$ and $m_2$, $m_1 + m_2$ is defined
+by $(m_1 + m_2)~\var{pid}~\var{aid} := (m_1~\var{pid}~\var{aid}) + (m_2~\var{pid}~\var{aid})$.
 
-\[ \{ cid1 \mapsto tkns1, cid2 \mapsto tkns2\} \]
+Similarly, if we compare two maps, we compare them as follows:
 
-This definition of addition is also defined in Section~\ref{sec:notation-shelley}.
-Similarly, if we compare these two tokens, we compare them as follows
-(element-wise, with $\epsilon$ as the value associated to any currency ID
-not present in on of the values),
-
-\[ (\{ cid1 \mapsto tkns1\}~\leq~\{ cid2 \mapsto tkns2\}) \Leftrightarrow \\
-   (tkns1 \leq \epsilon~\wedge~ \epsilon \leq tkns2) \]
+\[ m_1 \leq m_2 \Leftrightarrow \forall~\var{pid}~\var{aid}, m_1~\var{pid}~\var{aid} \leq m_2~\var{pid}~\var{aid} \]
 
 \begin{figure}[htb]
   \emph{Helper Functions}
@@ -820,7 +820,7 @@ In this case, the states of the UTxO, fee
     \var{refunded} \leteq \keyRefunds{pp}{stkCreds}~{txb}
     \\
     \var{depositChange} \leteq
-      (\deposits{pp}~{stpools}~{\txcerts{txb}}) - \var{refunded}
+      (\deposits{pp}~{stpools}~{(\txcerts{txb})}) - \var{refunded}
     }
     {
     \begin{array}{l}
@@ -959,7 +959,7 @@ UTXOS rule.
       \mathsf{adaID}~\notin \dom~{\fun{forge}~tx} \\
       \forall txout \in \txouts{txb}, ~ \fun{getValue}~txout  ~\geq ~ 0 \\~
       \forall txout \in \txouts{txb}, ~ \fun{getCoin}~txout ~\geq \\
-      \fun{scaledValueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue} pp \\~
+      \fun{scaledValueSize}~(\fun{getValue}~txout) * \fun{minUTxOValue}~pp \\~
       \\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\
       \fun{txexunits}~{txb} \leq \fun{maxTxExUnits}~{pp}
