@@ -1384,8 +1384,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       =
       \left(
         \begin{array}{c}
-          \varUpdate{\var{treasury} + \Delta t}\\
-          \varUpdate{\var{reserves} + \Delta r+ \var{unregRU'}}\\
+          \varUpdate{\var{treasury} + \Delta t + \var{unregRU'}}\\
+          \varUpdate{\var{reserves} + \Delta r}\\
           ~ \\
           \var{\var{stkCreds}} \\
           \varUpdate{\var{rewards}\unionoverridePlus\var{regRU}} \\
