@@ -206,7 +206,14 @@ transaction_metadata =
 
 vkeywitness = [ $vkey, $signature ]
 
-bootstrap_witness = [ $vkey, $signature, bytes, bytes, bytes ]
+; explicit CBOR list of length 5
+bootstrap_witness = 
+  [ public_key      : bytes .size 32
+  , signature       : bytes .size 64
+  , chain_code      : bytes .size 32
+  , pad_prefix      : bytes .size 6
+  , pad_suffix      : bytes 
+  ]
 
 multisig_script =
   [  0, addr_keyhash                 ; public key
