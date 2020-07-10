@@ -8,8 +8,8 @@ module Test.Shelley.Spec.Ledger.SetAlgTests where
 import Control.Iterate.Collect
 import Control.Iterate.SetAlgebra(Iter(..),
                   Exp(..),BaseRep(..),List(..),Sett(..),Single(..),unList,
-                  dom, rng, singleton, setSingleton, (◁), (⋪), (▷), (⋫), (∪), (⨃), (∈), (∉),(|>),(<|),
-                  element, lifo, fifo,
+                  dom, rng, singleton, setSingleton, (◁), (⋪), (▷), (⋫), (∪), (⨃), (∈), (∉),(|>),(<|),(≍),
+                  element, lifo, fifo,keysEqual,sameDomain,
                   Fun, apply,
                   BiMap(..), Bimap, biMapEmpty, biMapFromList,removeval,
                   Fun(..), Pat(..), Expr(..), Lam(..), evaluate, reify,
@@ -177,6 +177,30 @@ eval_tests = testGroup "eval tests"
           ]
 
 
+-- =============== test of KeysEqual and its variants =====================
+
+tree1,tree2,tree3 :: Map Int Int
+tree1 = Map.fromList [(i,i::Int) | i <- [1..20]]
+tree2 = Map.fromList [(i,i::Int) | i <- (reverse[2..20])++[1] ]
+tree3 = Map.fromList [(i,i::Int) | i <- [1..19]]
+set1 :: Set.Set Int
+set1 = Set.fromList [1..20]
+
+keysEqTests :: TestTree
+keysEqTests = testGroup "keysEqual tests" (zipWith tst [(1::Int) .. ]
+        [(keysEqual tree1 tree2 , True)
+        ,(keysEqual tree2 tree1 , True)
+        ,(keysEqual tree1 tree3 , False)
+        ,(sameDomain tree1 tree2 , True)
+        ,(sameDomain tree2 tree1 , True)
+        ,(sameDomain tree1 tree3 , False)
+        ,(eval(tree1 ≍ tree2) , True)
+        ,(eval(tree1 ≍ tree3) , False)
+        ,(eval(tree1 ≍ set1) , True)
+        ,(eval(tree3 ≍ set1) , False)
+        ])
+    where tst n (x,y) = testCase ("keysEqual "++show n) (assertEqual  ("keysEqual "++show n) y x)
+
 -- ========================== test that various Compound iterators work ================
 
 testcase :: (Eq k, Eq v, Show k, Show v, Iter f) => String -> f k v -> [(k, v)] -> TestTree
@@ -297,4 +321,4 @@ iter_tests = testGroup "Iterator tests"
 
 setAlgTest:: TestTree
 setAlgTest =
-  testGroup "Set Algebra Tests" [ eval_tests, iter_tests ]
+  testGroup "Set Algebra Tests" [ eval_tests, keysEqTests, iter_tests ]
