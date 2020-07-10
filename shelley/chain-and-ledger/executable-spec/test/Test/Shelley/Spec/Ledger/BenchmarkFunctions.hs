@@ -46,10 +46,6 @@ import Shelley.Spec.Ledger.Keys
     hashKey,
     vKey,
   )
-import Test.Shelley.Spec.Ledger.Generator.Core
-  ( genesisCoins,
-    genesisId,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     emptyDPState,
@@ -82,6 +78,8 @@ import Shelley.Spec.Ledger.TxData
     pattern Wdrl,
   )
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey)
+
+
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     Credential,
@@ -100,6 +98,12 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     hashKeyVRF,
     pattern KeyPair,
   )
+
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( genesisCoins,
+    genesisId,
+  )
+
 import Test.Shelley.Spec.Ledger.Examples (ppsEx1)
 
 import Test.Shelley.Spec.Ledger.Utils

@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
+-- {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -35,7 +36,7 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))
-import Control.Iterate.SetAlgebra (eval, (∉), (⋫), range, singleton, setSingleton, (∪), dom, (∈), (⋪){- , domain -} )
+import Control.Iterate.SetAlgebra (eval, (∉), (⋫), range, singleton, setSingleton, (∪), dom, (∈), (⋪), (≍))
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
@@ -126,16 +127,15 @@ instance Typeable crypto => STS (DELEG crypto) where
   initialRules = [pure emptyDState]
   transitionRules = [delegationTransition]
 
-{-
+
   assertions =
     [ PreCondition
         "_stkCreds and _rewards must have the same domain"
         ( \(TRC (_, st, _)) ->
-            eval(dom(_stkCreds st))
-              == (Set.map getRwdCred $ domain (_rewards st))
+            -- eval(dom(_stkCreds st)) == (Set.map getRwdCred $ domain (_rewards st))
+            eval(dom(_stkCreds st) ≍ dom(Map.mapKeys getRwdCred (_rewards st)))
         )
     ]
--}
 
 instance NoUnexpectedThunks (PredicateFailure (DELEG crypto))
 
