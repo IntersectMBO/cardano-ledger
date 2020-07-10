@@ -22,7 +22,7 @@ module Test.Shelley.Spec.Ledger.BenchmarkFunctions
 where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
-import Control.State.Transition.Extended (TRC (..))
+import Control.State.Transition.Extended (TRC (..), applySTS)
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -45,10 +45,6 @@ import Shelley.Spec.Ledger.Keys
     asWitness,
     hashKey,
     vKey,
-  )
-import Test.Shelley.Spec.Ledger.Generator.Core
-  ( genesisCoins,
-    genesisId,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -82,6 +78,8 @@ import Shelley.Spec.Ledger.TxData
     pattern Wdrl,
   )
 import Shelley.Spec.Ledger.UTxO (hashTxBody, makeWitnessesVKey)
+
+
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Addr,
     Credential,
@@ -100,11 +98,16 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     hashKeyVRF,
     pattern KeyPair,
   )
+
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( genesisCoins,
+    genesisId,
+  )
+
 import Test.Shelley.Spec.Ledger.Examples (ppsEx1)
 
 import Test.Shelley.Spec.Ledger.Utils
-  ( applySTSTest,
-    mkAddr,
+  ( mkAddr,
     mkKeyPair,
     mkKeyPair',
     mkVRFKeyPair,
@@ -164,7 +167,7 @@ testLEDGER ::
   LedgerEnv ->
   ()
 testLEDGER initSt tx env = do
-  let st = runShelleyBase $ applySTSTest @(LEDGER Blake2b_256) (TRC (env, initSt, tx))
+  let st = runShelleyBase $ applySTS @(LEDGER Blake2b_256) (TRC (env, initSt, tx))
   case st of
     Right _ -> ()
     Left e -> error $ show e
@@ -262,7 +265,7 @@ makeLEDGERState ::
   Tx Blake2b_256 ->
   (UTxOState Blake2b_256, DPState Blake2b_256)
 makeLEDGERState start tx =
-  let st = applySTSTest @(LEDGER Blake2b_256) (TRC (ledgerEnv, start, tx))
+  let st = applySTS @(LEDGER Blake2b_256) (TRC (ledgerEnv, start, tx))
    in case runShelleyBase st of
         Right st' -> st'
         Left e -> error $ show e

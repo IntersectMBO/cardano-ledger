@@ -19,6 +19,23 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredKeys, -- How to precompute env for the StakeKey transactions
     ledgerStateWithNregisteredPools, -- How to compute an initial state with N StakePools
   )
+import Control.Iterate.SetAlgebra(keysEqual)
+import qualified Data.Map as Map
+
+
+eqf:: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark
+eqf name f n = bgroup (name++" "++show n) (map runat [n,n*10,n*100,n*1000])
+  where runat m = env (return $ Map.fromList [ (k,k) | k <- [1..m]]) (\state -> bench (show m) (whnf (f state) state))
+
+mainEq:: IO ()
+mainEq = defaultMain $
+    [ bgroup "KeysEqual tests" $
+        [ eqf "keysEqual" keysEqual (100::Int)
+      --  , eqf "keysEqual2" keysEqual2 (100::Int)
+        , eqf "keys x == keys y" (\ x y -> Map.keys x == Map.keys y) (100::Int)
+      --   , eqf  "domain x == domain y" keysEqual3 (100::Int)
+        ]
+    ]
 
 -- =================================================
 -- Spending 1 UTxO
@@ -57,6 +74,16 @@ profileCreateRegKeys = do
   let touch (x, y) = touchUTxOState x + touchDPState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
+
+-- ============================================
+-- Profiling N keys and M pools
+
+profileNkeysMPools:: IO ()
+profileNkeysMPools = do
+  putStrLn "Enter N keys and M Pools"
+  let unit = ledgerDelegateManyKeysOnePool 50 500 (ledgerStateWithNkeysMpools 5000 500)
+  putStrLn ("Exit profiling " ++ show unit)
+
 -- ==========================================
 -- Registering Pools
 
@@ -67,14 +94,17 @@ profileCreateRegPools size = do
   let touch (x, y) = touchUTxOState x + touchDPState y
   putStrLn ("Exit profiling " ++ show (touch state))
 
+
 -- =================================================
 -- Some things we might want to profile.
 
+-- main :: IO()
 -- main = profileUTxO
 -- main = includes_init_SpendOneUTxO
 -- main:: IO ()
 -- main = profileCreateRegPools 10000
 -- main = profileCreateRegPools 100000
+-- main = profileNkeysMPools
 
 -- =========================================================
 

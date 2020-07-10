@@ -15,7 +15,7 @@ import Prelude hiding(lookup)
 
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict(Map)
-import Data.Map.Internal(Map(..),link2)
+import Data.Map.Internal(Map(..),link2,link)
 
 import qualified Data.Set as Set
 import Data.Set(Set)
@@ -324,17 +324,56 @@ noKeys m (Bin _ k _ ls rs) = case Map.split k m of
 {-# INLINABLE noKeys #-}
 
 
+-- This version benchmarks better than the following three versions, by almost a factor of 4, at Trees with 100 to 100,000 pairs
+-- keysEqual2 x y = Map.foldrWithKey' (\ k v ans -> k:ans) [] x == Map.foldrWithKey' (\ k v ans -> k:ans) [] y
+-- keysEqual3 x y = Map.keysSet x == Map.keysSet y
+-- keysEqual4 x y = Map.keys x == Map.keys y
+-- This is a type specific version of sameDomain
+
 keysEqual:: Ord k => Map k v1 -> Map k v2 -> Bool
 keysEqual Tip Tip = True
 keysEqual Tip (Bin _ k _ ls rs) = False
 keysEqual (Bin _ k _ ls rs) Tip = False
 keysEqual m (Bin _ k _ ls rs) =
-   case Map.splitLookup k m of
-      (lm,Just _,rm) -> keysEqual ls lm && keysEqual rs rm
+   case splitMember k m of
+      (lm,True,rm) -> keysEqual ls lm && keysEqual rs rm
       other -> False
 
--- keysEqual (Map.fromList[(1,1),(2,2),(3,3),(4,4),(5,5),(6::Int,6::Int)]) (Map.fromList[(3,'a'),(6,'b'),(5,'c'),(1,'d'),(4,'e'),(2,'f'),(4,'g')])
+-- cost O(min (size m) (size n) * log(max (size m) (size n))), BUT the constants are high, too slow except for small maps.
+sameDomain:: (Ord k,Iter f,Iter g) =>  f k b -> g k c -> Bool
+sameDomain m n = loop (hasNxt m) (hasNxt n)
+  where loop (Just(k1,_,nextm)) (Just(k2,_,nextn)) =
+           case compare k1 k2 of
+              EQ -> loop (hasNxt nextm) (hasNxt nextn)
+              LT -> False
+              GT -> False
+        loop Nothing Nothing = True
+        loop _ _ = False
 
+-- | A variant of 'splitLookup' that indicates only whether the
+-- key was present, rather than producing its value. This is used to
+-- implement 'keysEqual' to avoid allocating unnecessary 'Just'
+-- constructors.
+splitMember :: Ord k => k -> Map k a -> (Map k a,Bool,Map k a)
+splitMember k0 m = case go k0 m of
+     StrictTriple l mv r -> (l, mv, r)
+  where
+    go :: Ord k => k -> Map k a -> StrictTriple (Map k a) Bool (Map k a)
+    go !k t =
+      case t of
+        Tip            -> StrictTriple Tip False Tip
+        Bin _ kx x l r -> case compare k kx of
+          LT -> let StrictTriple lt z gt = go k l
+                    !gt' = link kx x gt r
+                in StrictTriple lt z gt'
+          GT -> let StrictTriple lt z gt = go k r
+                    !lt' = link kx x l lt
+                in StrictTriple lt' z gt
+          EQ -> StrictTriple l True r
+
+{-# INLINABLE splitMember #-}
+
+data StrictTriple a b c = StrictTriple !a !b !c
 
 -- ============== Iter BiMap ====================
 
@@ -777,18 +816,6 @@ domEqSlow m n = do
             GT -> do { nt' <- nxt nextn; loop mt nt' }
     loop triplem triplen
 
-
--- cost O(min (size m) (size n) * log(max (size m) (size n)))
-sameDomain:: (Ord k,Iter f,Iter g) =>  f k b -> g k c -> Bool
-sameDomain m n = loop (hasNxt m) (hasNxt n)
-  where loop (Just(k1,_,nextm)) (Just(k2,_,nextn)) =
-           case compare k1 k2 of
-              EQ -> loop (hasNxt nextm) (hasNxt nextn)
-              LT -> False
-              GT -> False
-        loop Nothing Nothing = True
-        loop _ _ = False
-
 -- =================================================================================
 -- Query is a single datatype that incorporates a language that describes how to build
 -- compound iterators, from other iterators.
@@ -994,9 +1021,12 @@ compute (e@(UnionPlus a b)) = run(compile e)
 compute (Singleton k v) = Single k v
 compute (SetSingleton k) = (SetSingle k)
 
-compute (KeyEqual (Base rep1 m) (Base rep2 n)) = sameDomain m n
-compute (KeyEqual (Dom (Base rep1 m)) (Dom (Base rep2 n))) = sameDomain m n
-compute (KeyEqual x y ) = sameDomain left right
+compute (KeyEqual (Base MapR m) (Base MapR n)) = keysEqual m n
+compute (KeyEqual (Base BiMapR (MkBiMap m _)) (Base BiMapR (MkBiMap n _))) = keysEqual m n
+compute (KeyEqual (Dom (Base MapR m)) (Dom (Base MapR n))) = keysEqual m n
+compute (KeyEqual (Dom (Base BiMapR (MkBiMap m _))) (Dom (Base BiMapR (MkBiMap n _)))) = keysEqual m n
+compute (KeyEqual (Base SetR (Sett m)) (Base SetR (Sett n))) = n==m
+compute (KeyEqual x y ) = sameDomain left right  -- This is way slower than the
    where left = (fst(compile x))
          right = (fst(compile y))
 
