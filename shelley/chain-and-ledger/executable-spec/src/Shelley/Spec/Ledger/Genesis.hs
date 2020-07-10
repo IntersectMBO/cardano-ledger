@@ -3,17 +3,22 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Genesis
   ( ShelleyGenesisStaking (..),
     ShelleyGenesis (..),
+    ValidationErr (..),
     emptyGenesisStaking,
     sgActiveSlotCoeff,
     genesisUtxO,
     initialFundsPseudoTxIn,
+    validateGenesis,
+    describeValidationErr,
   )
 where
 
@@ -23,20 +28,24 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
     castHash,
     hashRaw,
   )
+import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Prelude (NoUnexpectedThunks)
-import Cardano.Slotting.Slot (EpochSize)
+import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
 import Data.Scientific (Scientific)
+import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Time (NominalDiffTime, UTCTime)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Coin
-import Shelley.Spec.Ledger.Crypto (Crypto, HASH)
+import Shelley.Spec.Ledger.Crypto (Crypto, HASH, KES)
 import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.TxData
@@ -203,3 +212,79 @@ initialFundsPseudoTxIn addr =
               Crypto.Hash (HASH c) (TxBody c)
           )
         . Crypto.hashRaw serialiseAddr
+
+{-------------------------------------------------------------------------------
+  Genesis validation
+-------------------------------------------------------------------------------}
+
+data ValidationErr
+  = EpochNotLongEnough EpochSize Word64 Rational EpochSize
+  | MaxKESEvolutionsUnsupported Word64 Word
+  deriving (Eq, Show)
+
+describeValidationErr :: ValidationErr -> Text
+describeValidationErr (EpochNotLongEnough es secParam asc minEpochSize) =
+  mconcat
+    [ "Epoch length is too low. Your epoch length of ",
+      Text.pack (show es),
+      " does not meet the minimum epoch length of ",
+      Text.pack (show minEpochSize),
+      " required by your choice of parameters for k and f: ",
+      Text.pack (show secParam),
+      " and ",
+      Text.pack (show asc),
+      ". Epochs should be at least 10k/f slots long."
+    ]
+describeValidationErr (MaxKESEvolutionsUnsupported reqKES supportedKES) =
+  mconcat
+    [ "You have specified a 'maxKESEvolutions' higher",
+      " than that supported by the underlying algorithm.",
+      " You requested ",
+      Text.pack (show reqKES),
+      " but the algorithm supports a maximum of ",
+      Text.pack (show supportedKES)
+    ]
+
+-- | Do some basic sanity checking on the Shelley genesis file.
+validateGenesis ::
+  forall c.
+  Crypto c =>
+  ShelleyGenesis c ->
+  Either [ValidationErr] ()
+validateGenesis
+  ShelleyGenesis
+    { sgEpochLength,
+      sgActiveSlotsCoeff,
+      sgMaxKESEvolutions,
+      sgSecurityParam
+    } =
+    case [ x
+           | Just cel <- [checkEpochLength],
+             Just cke <- [checkKesEvolutions],
+             x <- [cel, cke]
+         ] of
+      [] -> Right ()
+      xs -> Left xs
+    where
+      checkEpochLength =
+        let minLength =
+              EpochSize . ceiling $
+                fromIntegral @_ @Double (3 * sgSecurityParam)
+                  / fromRational sgActiveSlotsCoeff
+         in if minLength > sgEpochLength
+              then
+                Just $
+                  EpochNotLongEnough
+                    sgEpochLength
+                    sgSecurityParam
+                    sgActiveSlotsCoeff
+                    minLength
+              else Nothing
+      checkKesEvolutions =
+        if sgMaxKESEvolutions <= fromIntegral (totalPeriodsKES (Proxy @(KES c)))
+          then Nothing
+          else
+            Just $
+              MaxKESEvolutionsUnsupported
+                sgMaxKESEvolutions
+                (totalPeriodsKES (Proxy @(KES c)))
