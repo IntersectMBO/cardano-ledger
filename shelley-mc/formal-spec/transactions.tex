@@ -18,7 +18,7 @@ current Shelley ledger design.
   the type scripting language, e.g.
   $\mathsf{nativeMSigTag}$ and $\mathsf{nativeMCTag}$
 
-  \item $\CurrencyId$ is the identifier of a specific currency. The monetary
+  \item $\PolicyID$ is the identifier of a specific currency. The monetary
   policy of a currency with the ID $cid$ is given by the monetary policy script
   (MPS) $s$, such that $\fun{hashScript}~s~=~cid$. The script is called a
   monetary policy script because when run, it verifies that the tokens of a currency
@@ -27,16 +27,16 @@ current Shelley ledger design.
   $\mathsf{True}$, and
   $\mathsf{False}$ otherwise. More on MPS below.
 
-  \item $\Token$ : for each currency ID $cid$, in the MC model, we can associate
-  some tokens with this currency. A term $t\in\Token$ is an identifier of a
+  \item $\AssetID$ : for each currency ID $cid$, in the MC model, we can associate
+  some tokens with this currency. A term $t\in\AssetID$ is an identifier of a
   kind of token in a given currency $cid$. Within the currency $cid$,
-  tokens of the same type (with the same identifier $t\in\Token$) are fungible
+  tokens of the same type (with the same identifier $t\in\AssetID$) are fungible
   with each other. That is, they are effectively the "same" token, in the same way that
   every Ada coin is indistinguishable from another Ada coin. Ada
   has the currency ID $\mathsf{adaID}$. The statement \textit{all of the tokens
   of this currency must
   be the same}, in a MC scheme, means that there is only one kind of term of
-  type $\Token$ associated
+  type $\AssetID$ associated
   with $\mathsf{adaID}$, and we call it $\mathsf{adaToken}$.
   See below for a more detailed discussion of Ada representation.
 
@@ -45,7 +45,7 @@ current Shelley ledger design.
   These are not the same tokens and are not fungible with each other.
 
   \item $\Quantity$ is an integer type representing an amount. This type is used
-  specifically to represent an amount of a specific $\Token$. We associate
+  specifically to represent an amount of a specific $\AssetID$. We associate
   a term $q\in\Quantity$ with a specific token to keep track of how much of
   this token there is in a given value.
 
@@ -53,12 +53,13 @@ current Shelley ledger design.
   all tokens, including Ada. The key of this finite map type is
   the hash of the monetary policy script for this currency.
   A value $v\in\Value$ is a finite map that assciates to each of its
-  currency ID keys a finite map $tkns\in\Token \mapsto \Quantity$,
+  currency ID keys a finite map $tkns\in\AssetID \mapsto \Quantity$,
   which represents all the tokens (of that particular
   currency) that are contained in $v$.
 
-  The map $tkns$ associates to each key $t\in\Token$ the quantity of tokens of
-  this kind (i.e. with this identifier).
+  The map $tkns$ associates to each key $t\in\AssetID$ the quantity of tokens of
+  this kind (i.e. with this identifier). Tokens are fungible with each other if
+  they belong to the same $\PolicyID$ and $\AssetID$.
 
   \item $\TxOut$ : The type of outputs carried by a transaction. This type
   is different from the Shelley $\TxOut$ type because it contains a $\Value$
@@ -92,14 +93,14 @@ current Shelley ledger design.
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
       \var{lng} & \Language & \N \\
       %\text{script language}
-      \var{cid} & \CurrencyId & \ScriptHash\\
+      \var{pid} & \PolicyID & \PolicyID\\
        % \text{currency ID}\\
-      \var{tok} & \Token & \mathbb{H}\\
+      \var{tok} & \AssetID & \mathbb{H}\\
        % \text{token identifier}\\
       \var{quan} & \Quantity & \Z \\
       %\text{quantity of a token}\\
       \var{val} & \Value
-      & \ScriptHash \mapsto (\Token \mapsto \Quantity) \\
+      & \PolicyID \mapsto (\AssetID \mapsto \Quantity) \\
 %      & \text{a collection of tokens}
       \var{txout}
       & \TxOut
@@ -166,7 +167,7 @@ the type of the language of a given script.
       \\~\\
       \var{s_{mc}}\in\ScriptMPS & = & \type{JustMSig}~ \ScriptMSig\\
       & \uniondistinct &
-         \type{MaxMinTimedTotal}~(\Token \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity)) \\
+         \type{MaxMinTimedTotal}~(\AssetID \mapsto (\Slot\times\Slot\times\Quantity\times\Quantity)) \\
       & \uniondistinct&
         \type{RequireAll}~\powerset{\ScriptMPS}
     \end{array}
@@ -211,7 +212,7 @@ by the UTXOW rule.
 
 \begin{figure*}[htb]
     \begin{align*}
-      \fun{validateScript} & \in\Script\to\ScriptHash\to\Slot\to
+      \fun{validateScript} & \in\Script\to\PolicyID\to\Slot\to
       \powerset{\KeyHash}\to\TxBody\to\UTxO\to\Bool \\
       \fun{validateScript} & ~s~\var{cid}~\var{slot}~\var{vhks}
        ~\var{txb}~\var{spentouts} =
@@ -225,14 +226,6 @@ by the UTXOW rule.
   \caption{Script Validation}
   \label{fig:defs:tx-mc-valid}
 \end{figure*}
-
-\begin{note}
-  give right arguments to validateScript in UTXOW rule
-
-  check about validation interval - ok with just ttl?
-
-  Fresh tokens - can’t unforge, quantity 1
-\end{note}
 
 \textbf{The Forge Field.}
 
@@ -345,9 +338,9 @@ preservation of value calculations.
   \emph{Abstract Functions and Values}
   %
   \begin{align*}
-    \mathsf{adaID} \in& ~\ScriptHash
+    \mathsf{adaID} \in& ~\PolicyID
     & \text{Ada currency ID} \\
-    \mathsf{adaToken} \in& ~\Token
+    \mathsf{adaToken} \in& ~\AssetID
     & \text{Ada Token} \\
     \mathsf{co} \in& ~\Quantity \to \Coin
     & \text{type conversion} \\
