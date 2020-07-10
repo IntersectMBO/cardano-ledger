@@ -42,7 +42,6 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Prelude (Generic, NFData, NoUnexpectedThunks (..))
 import Data.Foldable (toList)
-import Data.List (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
@@ -58,7 +57,7 @@ import Shelley.Spec.Ledger.Crypto
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
     StakePools (..),
-    dvalue,
+    isRegKey,
     requiresVKeyWitness,
   )
 import Shelley.Spec.Ledger.Keys
@@ -66,12 +65,12 @@ import Shelley.Spec.Ledger.Keys
     Hash,
     KeyHash (..),
     KeyPair (..),
-    KeyRole (Witness),
+    KeyRole (StakePool, Witness),
     asWitness,
     signedDSIGN,
     verifySignedDSIGN,
   )
-import Shelley.Spec.Ledger.PParams (PParams, Update)
+import Shelley.Spec.Ledger.PParams (PParams, Update, _keyDeposit, _poolDeposit)
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxData
@@ -220,19 +219,30 @@ balance (UTxO utxo) = foldr addCoins 0 utxo
   where
     addCoins (TxOut _ a) b = a + b
 
--- | Determine the total deposit amount needed
+-- | Determine the total deposit amount needed.
+-- The block may (legitimately) contain multiple registration certificates
+-- for the same pool, where the first will be treated as a registration and
+-- any subsequent ones as re-registration. As such, we must only take a
+-- deposit for the first such registration.
+--
+-- Note that this is not an issue for key registrations since subsequent
+-- registration certificates would be invalid.
 totalDeposits ::
   PParams ->
   StakePools crypto ->
   [DCert crypto] ->
   Coin
-totalDeposits pc (StakePools stpools) cs = foldl' f (Coin 0) cs'
+totalDeposits pp (StakePools stpools) cs =
+  (_keyDeposit pp) * numKeys + (_poolDeposit pp) * numNewPools
   where
-    f coin cert = coin + dvalue cert pc
-    notRegisteredPool (DCertPool (RegPool pool)) =
-      Map.notMember (_poolPubKey pool) stpools
-    notRegisteredPool _ = True
-    cs' = filter notRegisteredPool cs
+    numKeys = intToCoin . length $ filter isRegKey cs
+    pools = Set.fromList . Maybe.catMaybes $ fmap getKeyHashFromRegPool cs
+    numNewPools = intToCoin . length $ pools `Set.difference` (Map.keysSet stpools)
+    intToCoin = Coin . toInteger
+
+getKeyHashFromRegPool :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)
+getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolPubKey $ p
+getKeyHashFromRegPool _ = Nothing
 
 txup :: Crypto crypto => Tx crypto -> Maybe (Update crypto)
 txup (Tx txbody _ _) = strictMaybeToMaybe (_txUpdate txbody)
