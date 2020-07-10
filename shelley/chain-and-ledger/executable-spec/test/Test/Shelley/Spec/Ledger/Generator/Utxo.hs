@@ -99,6 +99,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..))
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (genDCerts)
+import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 
 -- | Generate a new transaction in the context of the LEDGER STS environment and state.
 --
@@ -114,6 +115,8 @@ genTx
   ge@( GenEnv
          KeySpace_
            { ksKeyPairs,
+             ksGenesisDelegates,
+             ksCoreNodes,
              ksIndexedPaymentKeys,
              ksIndexedStakingKeys,
              ksMSigScripts
@@ -121,7 +124,7 @@ genTx
          constants
        )
   (LedgerEnv slot txIx pparams reserves)
-  (_utxoSt@(UTxOState utxo _ _ _), dpState) =
+  (utxoSt@(UTxOState utxo _ _ _), dpState) =
     do
       keys' <- QC.shuffle ksKeyPairs
       scripts' <- QC.shuffle ksMSigScripts
@@ -153,7 +156,7 @@ genTx
       let slotWithTTL = slot + SlotNo (fromIntegral ttl)
 
       -- certificates
-      (certs, certCreds, deposits_, refunds_, _dpState') <-
+      (certs, certCreds, deposits_, refunds_, dpState') <-
         genDCerts ge pparams dpState slot txIx reserves
 
       let balance_ = spendingBalance - deposits_ + refunds_
@@ -170,11 +173,8 @@ genTx
           let (_, outputs) = calcOutputsFromBalance balance_ recipientAddrs (Coin 0)
 
           --- PParam + AV Updates
-          -- TODO @uroboros Restore Updates to generated transactions,
-          -- see https://github.com/input-output-hk/cardano-ledger-specs/issues/1582
-          let (update, updateWitnesses) = (Nothing, []) :: (Maybe (Update h), [KeyPair h 'Witness])
-          -- (update, updateWitnesses) <-
-          --  genUpdate constants slot ksCoreNodes ((snd <$> ksCoreNodes) <> ksGenesisDelegates) pparams (utxoSt, dpState')
+          (update, updateWitnesses) <-
+            genUpdate constants slot ksCoreNodes ((snd <$> ksCoreNodes) <> ksGenesisDelegates) pparams (utxoSt, dpState')
 
           -- this is the "model" `TxBody` which is used to calculate the fees
           --
