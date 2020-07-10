@@ -26,32 +26,32 @@
     },
     "protocolMagicId": 838299499,
     "genDelegs": {
-        "23d51e91": {
-            "delegate": "839b047f",
-            "vrf": "231391e7"
+        "23d51e9123d51e91": {
+            "delegate": "839b047f839b047f",
+            "vrf": "231391e7231391e7"
         }
     },
     "updateQuorum": 16991,
     "networkId": "Testnet",
     "initialFunds": {
-        "001c14ee8ee37a65ea": 12157196
+        "001c14ee8e1c14ee8ee37a65eae37a65ea": 12157196
     },
     "maxLovelaceSupply": 71,
     "networkMagic": 4036000900,
     "epochLength": 1215,
     "staking": {
         "pools": {
-            "3dbe00a1": {
+            "3dbe00a13dbe00a1": {
                 "owners": [
-                    "f75028da"
+                    "f75028da986f114a"
                 ],
                 "cost": 5,
                 "margin": 0.25,
-                "publicKey": "4b9d3b86",
+                "publicKey": "4b9d3b869eab9a27",
                 "pledge": 1,
-                "vrf": "b69330fe",
+                "vrf": "b69330fe113423ff",
                 "metadata": {
-                    "hash": "31303061627b7d",
+                    "hash": "31303061627b7d31303061627b7d",
                     "url": "best.pool.com"
                 },
                 "relays": [
@@ -76,14 +76,14 @@
                 ],
                 "rewardAccount": {
                     "credential": {
-                        "key hash": "f75028da"
+                        "key hash": "f75028da986f114a"
                     },
                     "network": "Testnet"
                 }
             }
         },
         "stake": {
-            "1c14ee8e": "1c14ee8e"
+            "1c14ee8e1c14ee8e": "1c14ee8e1c14ee8e"
         }
     },
     "systemStart": "2009-02-13T23:13:09Z",

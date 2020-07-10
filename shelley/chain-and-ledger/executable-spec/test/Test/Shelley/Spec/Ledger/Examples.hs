@@ -3538,24 +3538,24 @@ exampleShelleyGenesis =
   where
     -- hash of the genesis verification key
     genesisVerKeyHash :: KeyHash h 'Genesis
-    genesisVerKeyHash = KeyHash "23d51e91"
+    genesisVerKeyHash = KeyHash "23d51e9123d51e91"
     -- hash of the delegators verififation key
     genDelegPair = GenDelegPair delegVerKeyHash delegVrfKeyHash
     delegVerKeyHash :: KeyHash h 'GenesisDelegate
-    delegVerKeyHash = KeyHash "839b047f"
+    delegVerKeyHash = KeyHash "839b047f839b047f"
     delegVrfKeyHash :: Hash (ConcreteCrypto h) (VerKeyVRF h)
-    delegVrfKeyHash = "231391e7"
+    delegVrfKeyHash = "231391e7231391e7"
     initialFundedAddress :: Addr h
     initialFundedAddress = Addr Testnet paymentCredential (StakeRefBase stakingCredential)
       where
         paymentCredential =
           KeyHashObj $
             KeyHash
-              "1c14ee8e"
+              "1c14ee8e1c14ee8e"
         stakingCredential =
           KeyHashObj $
             KeyHash
-              "e37a65ea"
+              "e37a65eae37a65ea"
     initialFunds :: Coin
     initialFunds = Coin 12157196
     relays =
@@ -3579,11 +3579,11 @@ exampleShelleyGenesis =
             SJust $
               PoolMetaData
                 { _poolMDUrl = fromJust $ textToUrl "best.pool.com",
-                  _poolMDHash = BS.pack "100ab{}"
+                  _poolMDHash = BS.pack "100ab{}100ab{}"
                 }
         }
     staking =
       ShelleyGenesisStaking
-        { sgsPools = Map.fromList [(KeyHash "3dbe00a1", poolParams)],
-          sgsStake = Map.fromList [(KeyHash "1c14ee8e", KeyHash "1c14ee8e")]
+        { sgsPools = Map.fromList [(KeyHash "3dbe00a13dbe00a1", poolParams)],
+          sgsStake = Map.fromList [(KeyHash "1c14ee8e1c14ee8e", KeyHash "1c14ee8e1c14ee8e")]
         }
