@@ -38,7 +38,7 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Keys (Hash, KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState
-  ( minfee,
+  ( minfeeBound,
     _dstate,
     _ptrs,
     _rewards,
@@ -222,7 +222,7 @@ genTx
           let metadata = SNothing -- TODO generate metadata
 
           -- calculate real fees of witnesses transaction
-          let minimalFees = minfee pparams (Tx txBody wits metadata)
+          let minimalFees = minfeeBound pparams (Tx txBody wits metadata)
 
           -- discard generated transaction if the balance cannot cover the fees
           if minimalFees > balance_

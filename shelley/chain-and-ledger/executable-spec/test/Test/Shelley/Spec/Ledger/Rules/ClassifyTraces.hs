@@ -53,7 +53,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isRetirePool,
     isTreasuryMIRCert,
   )
-import Shelley.Spec.Ledger.LedgerState (txsize)
+import Shelley.Spec.Ledger.LedgerState (txsizeBound)
 import Shelley.Spec.Ledger.PParams
   ( PParamsUpdate,
     pattern ProposedPPUpdates,
@@ -332,7 +332,7 @@ propAbstractSizeBoundsBytes = property $ do
   forAllTraceFromInitState @(LEDGER ShortHash) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
     let txs :: [Tx ShortHash]
         txs = traceSignals OldestFirst tr
-    all (\tx -> txsize tx >= numBytes tx) txs
+    all (\tx -> txsizeBound tx >= numBytes tx) txs
   where
     p :: Proxy ShortHash
     p = Proxy
@@ -349,7 +349,7 @@ propAbstractSizeNotTooBig = property $ do
       -- an acceptableMagnitude of three, though.
       acceptableMagnitude = (3 :: Integer)
       numBytes = toInteger . BS.length . serialize'
-      notTooBig txb = txsize txb <= acceptableMagnitude * numBytes txb
+      notTooBig txb = txsizeBound txb <= acceptableMagnitude * numBytes txb
   forAllTraceFromInitState @(LEDGER ShortHash) testGlobals tl (genEnv p) genesisLedgerState $ \tr -> do
     let txs :: [Tx ShortHash]
         txs = traceSignals OldestFirst tr
