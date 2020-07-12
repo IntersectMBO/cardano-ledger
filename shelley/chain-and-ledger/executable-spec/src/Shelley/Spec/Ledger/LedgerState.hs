@@ -66,7 +66,9 @@ module Shelley.Spec.Ledger.LedgerState
     nullWitHashes,
     diffWitHashes,
     minfee,
+    minfeeBound,
     txsize,
+    txsizeBound,
     produced,
     consumed,
     verifiedWits,
@@ -705,8 +707,13 @@ genesisState genDelegs0 utxo0 =
     dState = emptyDState {_genDelegs = GenDelegs genDelegs0}
 
 -- | Implementation of abstract transaction size
-txsize :: forall crypto. (Crypto crypto) => Tx crypto -> Integer
-txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
+txsize :: Tx crypto -> Integer
+txsize = fromIntegral . BSL.length . txFullBytes
+
+-- | Convenience Function to bound the txsize function.
+-- | It can be helpful for coin selection.
+txsizeBound :: forall crypto. (Crypto crypto) => Tx crypto -> Integer
+txsizeBound tx = numInputs * inputSize + numOutputs * outputSize + rest
   where
     uint = 5
     smallArray = 1
@@ -723,8 +730,12 @@ txsize tx = numInputs * inputSize + numOutputs * outputSize + rest
     rest = fromIntegral $ BSL.length (txFullBytes tx) - extraSize txbody
 
 -- | Minimum fee calculation
-minfee :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
+minfee :: PParams -> Tx crypto -> Coin
 minfee pp tx = Coin $ fromIntegral (_minfeeA pp) * txsize tx + fromIntegral (_minfeeB pp)
+
+-- | Minimum fee bound using txsizeBound
+minfeeBound :: forall crypto. (Crypto crypto) => PParams -> Tx crypto -> Coin
+minfeeBound pp tx = Coin $ fromIntegral (_minfeeA pp) * txsizeBound tx + fromIntegral (_minfeeB pp)
 
 -- | Compute the lovelace which are created by the transaction
 produced ::
