@@ -131,7 +131,6 @@ bbodyTransition =
         let hkAsStakePool = coerceKeyRole . poolIDfromBHBody $ bhb
         pure $ BbodyState ls' (incrBlocks (eval(bheaderSlotNo bhb ∈ oslots)) hkAsStakePool b)
 
-
 instance
   ( Crypto crypto,
     DSignable crypto (Hash crypto (TxBody crypto))
