@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -39,6 +40,7 @@ import Data.Ratio ((%))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
 import Shelley.Spec.Ledger.Core (dom, (▷), (◁))
@@ -54,12 +56,16 @@ import Shelley.Spec.Ledger.TxData (PoolParams, RewardAcnt, TxOut (..), getRwdCre
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Blocks made
-newtype BlocksMade crypto
-  = BlocksMade (Map (KeyHash 'StakePool crypto) Natural)
-  deriving (Show, Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+newtype BlocksMade crypto = BlocksMade
+  { unBlocksMade :: Map (KeyHash 'StakePool crypto) Natural
+  }
+  deriving (Eq, ToCBOR, FromCBOR, NoUnexpectedThunks, Generic, NFData)
+  deriving (Show) via Quiet (BlocksMade crypto)
 
 -- | Type of stake as map from hash key to coins associated.
-newtype Stake crypto = Stake {unStake :: (Map (Credential 'Staking crypto) Coin)}
+newtype Stake crypto = Stake
+  { unStake :: (Map (Credential 'Staking crypto) Coin)
+  }
   deriving (Show, Eq, Ord, ToCBOR, FromCBOR, NoUnexpectedThunks, NFData)
 
 -- | Add two stake distributions

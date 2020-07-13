@@ -4,6 +4,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -87,6 +88,7 @@ import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Quiet
 import Shelley.Spec.Ledger.Crypto
 
 -- | The role of a key.
@@ -147,13 +149,16 @@ type DSignable c = DSIGN.Signable (DSIGN c)
 -- | Discriminated verification key
 --
 --   We wrap the basic `VerKeyDSIGN` in order to add the key role.
-newtype VKey (kd :: KeyRole) crypto = VKey (DSIGN.VerKeyDSIGN (DSIGN crypto))
+newtype VKey (kd :: KeyRole) crypto = VKey {unVKey :: DSIGN.VerKeyDSIGN (DSIGN crypto)}
+  deriving (Generic)
 
-deriving instance Crypto crypto => Show (VKey kd crypto)
+deriving via Quiet (VKey kd crypto) instance Crypto crypto => Show (VKey kd crypto)
 
 deriving instance Crypto crypto => Eq (VKey kd crypto)
 
-deriving instance (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) => NFData (VKey kd crypto)
+deriving instance
+  (Crypto crypto, NFData (DSIGN.VerKeyDSIGN (DSIGN crypto))) =>
+  NFData (VKey kd crypto)
 
 deriving instance Crypto crypto => NoUnexpectedThunks (VKey kd crypto)
 
@@ -299,16 +304,19 @@ instance Crypto crypto => FromJSON (GenDelegPair crypto) where
         <$> obj .: "delegate"
         <*> obj .: "vrf"
 
-newtype GenDelegs crypto
-  = GenDelegs (Map (KeyHash 'Genesis crypto) (GenDelegPair crypto))
-  deriving (Show, Eq, FromCBOR, NoUnexpectedThunks, NFData, Generic)
+newtype GenDelegs crypto = GenDelegs
+  { unGenDelegs :: Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
+  }
+  deriving (Eq, FromCBOR, NoUnexpectedThunks, NFData, Generic)
+  deriving (Show) via Quiet (GenDelegs crypto)
 
 deriving instance
   (Crypto crypto) =>
   ToCBOR (GenDelegs crypto)
 
-newtype GKeys crypto = GKeys (Set (VKey 'Genesis crypto))
-  deriving (Show, Eq, NoUnexpectedThunks, Generic)
+newtype GKeys crypto = GKeys {unGKeys :: Set (VKey 'Genesis crypto)}
+  deriving (Eq, NoUnexpectedThunks, Generic)
+  deriving (Show) via Quiet (GKeys crypto)
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types

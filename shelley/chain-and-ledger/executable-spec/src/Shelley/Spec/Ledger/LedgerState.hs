@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -114,6 +115,7 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Shelley.Spec.Ledger.Address.Bootstrap (bootstrapWitKeyHash)
 import Shelley.Spec.Ledger.BaseTypes
@@ -771,10 +773,10 @@ consumed pp u tx =
     refunds = keyRefunds pp tx
     withdrawals = sum . unWdrl $ _wdrls tx
 
-newtype WitHashes crypto
-  = WitHashes
-      (Set (KeyHash 'Witness crypto))
-  deriving (Eq, Generic, Show)
+newtype WitHashes crypto = WitHashes
+  {unWitHashes :: Set (KeyHash 'Witness crypto)}
+  deriving (Eq, Generic)
+  deriving (Show) via Quiet (WitHashes crypto)
 
 instance Crypto crypto => NoUnexpectedThunks (WitHashes crypto)
 

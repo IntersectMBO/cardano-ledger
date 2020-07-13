@@ -153,7 +153,6 @@ import Shelley.Spec.Ledger.TxData
     StakePoolRelay (..),
     Wdrl (..),
     WitVKey (..),
-    _TxId,
     _poolCost,
     _poolMD,
     _poolMDHash,
@@ -165,6 +164,7 @@ import Shelley.Spec.Ledger.TxData
     _poolRAcnt,
     _poolRelays,
     _poolVrf,
+    _unTxId,
     pattern DCertDeleg,
     pattern DCertGenesis,
     pattern DCertMir,
@@ -298,7 +298,7 @@ getRawScriptHash :: ScriptHash h -> ByteString
 getRawScriptHash (ScriptHash hsh) = getHash hsh
 
 getRawTxId :: TxId h -> ByteString
-getRawTxId = getHash . _TxId
+getRawTxId = getHash . _unTxId
 
 getRawNonce :: Nonce -> ByteString
 getRawNonce (Nonce hsh) = getHash hsh

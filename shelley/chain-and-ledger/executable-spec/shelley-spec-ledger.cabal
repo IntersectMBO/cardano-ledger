@@ -109,6 +109,7 @@ library
     iproute,
     mtl,
     network,
+    quiet,
     scientific,
     shelley-spec-non-integral,
     small-steps,

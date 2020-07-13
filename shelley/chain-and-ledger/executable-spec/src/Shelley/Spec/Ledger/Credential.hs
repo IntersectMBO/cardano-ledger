@@ -25,6 +25,7 @@ import Cardano.Prelude (NFData, Natural, NoUnexpectedThunks, Typeable, Word8, as
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import GHC.Generics (Generic)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.Keys
@@ -140,8 +141,12 @@ instance ToCBORGroup Ptr where
 instance FromCBORGroup Ptr where
   fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
-newtype GenesisCredential crypto = GenesisCredential (KeyHash 'Genesis crypto)
-  deriving (Show, Generic)
+newtype GenesisCredential crypto = GenesisCredential
+  { unGenesisCredential ::
+      KeyHash 'Genesis crypto
+  }
+  deriving (Generic)
+  deriving (Show) via Quiet (GenesisCredential crypto)
 
 instance Ord (GenesisCredential crypto) where
   compare (GenesisCredential gh) (GenesisCredential gh') = compare gh gh'

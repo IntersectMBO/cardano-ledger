@@ -28,11 +28,14 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.Monad.Trans (lift)
 import Data.Functor.Identity (Identity)
 import Data.Word (Word64)
+import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
-newtype Duration = Duration Word64
-  deriving (Show, Eq, Ord, NoUnexpectedThunks, Num, Integral, Real, Enum)
+newtype Duration = Duration {unDuration :: Word64}
+  deriving (Eq, Generic, Ord, NoUnexpectedThunks, Num, Integral, Real, Enum)
+  deriving (Show) via Quiet Duration
 
 instance Semigroup Duration where
   (Duration x) <> (Duration y) = Duration $ x + y

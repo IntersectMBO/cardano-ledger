@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -46,6 +47,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Quiet
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Network,
@@ -75,8 +77,9 @@ import Shelley.Spec.Ledger.PParams (PParams, _a0, _d, _nOpt)
 import Shelley.Spec.Ledger.Serialization (decodeSeq, encodeFoldable)
 import Shelley.Spec.Ledger.TxData (PoolParams (..), RewardAcnt (..))
 
-newtype LogWeight = LogWeight Float
-  deriving (Eq, Show, Ord, Num, NFData, NoUnexpectedThunks, ToCBOR, FromCBOR)
+newtype LogWeight = LogWeight {unLogWeight :: Float}
+  deriving (Eq, Generic, Ord, Num, NFData, NoUnexpectedThunks, ToCBOR, FromCBOR)
+  deriving (Show) via Quiet LogWeight
 
 toLogWeight :: Double -> LogWeight
 toLogWeight d = LogWeight (realToFrac $ log d)
@@ -293,9 +296,9 @@ getTopRankedPools rPot total pp poolParams aps =
       ]
 
 -- | StakeShare type
-newtype StakeShare
-  = StakeShare Rational
-  deriving (Show, Ord, Eq, NoUnexpectedThunks)
+newtype StakeShare = StakeShare {unStakeShare :: Rational}
+  deriving (Generic, Ord, Eq, NoUnexpectedThunks)
+  deriving (Show) via Quiet StakeShare
 
 -- | Calculate pool reward
 mkApparentPerformance ::

@@ -27,7 +27,7 @@ import Shelley.Spec.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
     StrictMaybe (..),
-    UnitInterval (..),
+    UnitInterval,
     mkActiveSlotCoeff,
   )
 import Shelley.Spec.Ledger.Coin (Coin (..))

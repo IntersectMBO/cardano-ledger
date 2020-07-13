@@ -115,6 +115,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
+import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.BaseTypes
   ( DnsName,
@@ -356,7 +357,7 @@ instance Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "metadata"
 
 -- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId crypto = TxId {_TxId :: Hash crypto (TxBody crypto)}
+newtype TxId crypto = TxId {_unTxId :: Hash crypto (TxBody crypto)}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoUnexpectedThunks)
 
@@ -516,10 +517,24 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
           inputBytes = serializeEncoding' $ encodeFoldable _inputs
           outputBytes = serializeEncoding' $ encodeFoldable _outputs
           feeBytes = serializeEncoding' $ toCBOR _txfee
-          es = fromIntegral $ BS.length inputBytes + BS.length outputBytes + BS.length feeBytes
+          es =
+            fromIntegral $
+              BS.length inputBytes
+                + BS.length outputBytes
+                + BS.length feeBytes
           n = fromIntegral $ length l
           bytes = serializeEncoding $ encodeMapLen n <> fold l
-       in TxBody' _inputs _outputs _certs _wdrls _txfee _ttl _txUpdate _mdHash bytes es
+       in TxBody'
+            _inputs
+            _outputs
+            _certs
+            _wdrls
+            _txfee
+            _ttl
+            _txUpdate
+            _mdHash
+            bytes
+            es
 
 {-# COMPLETE TxBody #-}
 
@@ -544,7 +559,11 @@ pattern WitVKey k s <-
   WitVKey' k s _ _
   where
     WitVKey k s =
-      let bytes = serializeEncoding $ encodeListLen 2 <> toCBOR k <> encodeSignedDSIGN s
+      let bytes =
+            serializeEncoding $
+              encodeListLen 2
+                <> toCBOR k
+                <> encodeSignedDSIGN s
           hash = asWitness $ hashKey k
        in WitVKey' k s hash bytes
 
@@ -562,9 +581,11 @@ instance
   where
   compare = comparing wvkKeyHash
 
-newtype StakeCreds crypto
-  = StakeCreds (Map (Credential 'Staking crypto) SlotNo)
-  deriving (Show, Eq, Generic)
+newtype StakeCreds crypto = StakeCreds
+  { unStakeCreds :: Map (Credential 'Staking crypto) SlotNo
+  }
+  deriving (Eq, Generic)
+  deriving (Show) via (Quiet (StakeCreds crypto))
   deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR, ToJSON, FromJSON)
 
 addStakeCreds ::
@@ -574,8 +595,11 @@ addStakeCreds ::
   StakeCreds crypto
 addStakeCreds newCred s (StakeCreds creds) = StakeCreds $ Map.insert newCred s creds
 
-newtype StakePools crypto = StakePools {unStakePools :: (Map (KeyHash 'StakePool crypto) SlotNo)}
-  deriving (Show, Eq, Generic)
+newtype StakePools crypto = StakePools
+  { unStakePools :: (Map (KeyHash 'StakePool crypto) SlotNo)
+  }
+  deriving (Eq, Generic)
+  deriving (Show) via Quiet (StakePools crypto)
   deriving newtype (FromCBOR, NFData, NoUnexpectedThunks, ToCBOR)
 
 -- CBOR
@@ -907,7 +931,9 @@ instance Relation (StakeCreds crypto) where
   addpair k v (StakeCreds x) = StakeCreds (Map.insertWith (\y _z -> y) k v x)
 
   {-# INLINE haskey #-}
-  haskey k (StakeCreds x) = case Map.lookup k x of Just _ -> True; Nothing -> False -- haskey k x
+  haskey k (StakeCreds x) = case Map.lookup k x of
+    Just _ -> True
+    Nothing -> False -- haskey k x
 
   {-# INLINE removekey #-}
   removekey k (StakeCreds m) = StakeCreds (Map.delete k m)
