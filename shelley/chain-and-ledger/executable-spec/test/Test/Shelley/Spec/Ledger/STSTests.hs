@@ -30,7 +30,10 @@ import Shelley.Spec.Ledger.STS.Utxow (PredicateFailure (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxData (Wdrl (..), pattern RewardAcnt)
-import Test.Shelley.Spec.Ledger.Address.Bootstrap (testBootstrapSpending)
+import Test.Shelley.Spec.Ledger.Address.Bootstrap
+  ( testBootstrapNotSpending,
+    testBootstrapSpending,
+  )
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( CHAIN,
     KeyHash,
@@ -248,7 +251,8 @@ stsTests =
       testCase "FAIL: withdraw from script locked account" testRwdAliceSignsAlone',
       testCase "withdraw from script locked account, different script" testRwdAliceSignsAlone'',
       testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone''',
-      testCase "spend from a bootstrap address" testBootstrapSpending
+      testCase "spend from a bootstrap address" testBootstrapSpending,
+      testCase "don't spend from a bootstrap address" testBootstrapNotSpending
     ]
   where
     p :: Proxy ShortHash

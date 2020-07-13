@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
@@ -28,11 +29,14 @@ module Shelley.Spec.Ledger.Address.Bootstrap
     byronAddressPadding,
     byronVerKeyAddressPadding,
     makeBootstrapWitness,
+    verifyBootstrapWit,
   )
 where
 
 import Cardano.Binary
   ( Annotator,
+    Decoder,
+    Encoding,
     FromCBOR (..),
     ToCBOR (..),
     annotatorSlice,
@@ -56,17 +60,16 @@ import Cardano.Prelude
     NoUnexpectedThunks,
     Proxy (..),
     Word8,
+    cborError,
     panic,
   )
 import qualified Data.ByteString.Lazy as LBS
-import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
 import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (..),
     KeyRole (..),
-    SignedDSIGN,
     VKey (..),
   )
 import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
@@ -90,7 +93,7 @@ newtype ChainCode = ChainCode ByteString
 
 data BootstrapWitness crypto = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness crypto),
-    bwSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto))),
+    bwSig' :: !WC.XSignature,
     bwChainCode' :: !ChainCode,
     bwPadding' :: !KeyPadding,
     bwBytes :: LByteString
@@ -103,7 +106,7 @@ data BootstrapWitness crypto = BootstrapWitness'
 pattern BootstrapWitness ::
   Crypto crypto =>
   (VKey 'Witness crypto) ->
-  (SignedDSIGN crypto (Hash crypto (TxBody crypto))) ->
+  WC.XSignature ->
   ChainCode ->
   KeyPadding ->
   BootstrapWitness crypto
@@ -115,7 +118,7 @@ pattern BootstrapWitness {bwKey, bwSig, bwChainCode, bwPadding} <-
             serializeEncoding $
               encodeListLen 5
                 <> toCBOR key
-                <> DSIGN.encodeSignedDSIGN sig
+                <> encodeXSignature sig
                 <> toCBOR cc
                 <> toCBOR prefix
                 <> toCBOR suffix
@@ -138,11 +141,20 @@ instance Crypto crypto => FromCBOR (Annotator (BootstrapWitness crypto)) where
     decodeRecordNamed "BootstrapWitness" (const 5) $
       do
         key <- fromCBOR
-        sig <- DSIGN.decodeSignedDSIGN
+        sig <- decodeXSignature
         cc <- fromCBOR
         prefix <- fromCBOR
         suffix <- fromCBOR
         pure . pure $ BootstrapWitness' key sig cc (KeyPadding prefix suffix)
+
+encodeXSignature :: WC.XSignature -> Encoding
+encodeXSignature = toCBOR . WC.unXSignature
+
+decodeXSignature :: Decoder s WC.XSignature
+decodeXSignature =
+  WC.xsignature <$> fromCBOR >>= \case
+    Left err -> cborError err
+    Right sig -> pure sig
 
 -- | Rebuild the addrRoot of the corresponding address.
 bootstrapWitKeyHash ::
@@ -214,6 +226,18 @@ unpackByronVKey
     Nothing -> panic "unpackByronVKey: impossible!"
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
 
+verifyBootstrapWit ::
+  (Crypto crypto) =>
+  Hash crypto (TxBody crypto) ->
+  BootstrapWitness crypto ->
+  Bool
+verifyBootstrapWit txbodyHash witness =
+  WC.verify xpub (Hash.getHash txbodyHash) xsig
+  where
+    xpub = WC.XPub (DSIGN.rawSerialiseVerKeyDSIGN k) (WC.ChainCode mempty)
+    (VKey k) = (bwKey witness)
+    xsig = bwSig witness
+
 makeBootstrapWitness ::
   forall crypto.
   ( DSIGN crypto ~ Ed25519DSIGN,
@@ -228,12 +252,8 @@ makeBootstrapWitness txBodyHash byronSigningKey byronAddress =
   where
     (vk, cc) = unpackByronVKey $ Byron.toVerification byronSigningKey
     padding = byronVerKeyAddressPadding byronAddress
-    signatureBytes =
-      WC.unXSignature $
-        WC.sign (mempty :: ByteString) (Byron.unSigningKey byronSigningKey) (Hash.getHash txBodyHash)
-    -- This crashes in the case that the number of bytes produced when signing is
-    -- different from the number of bytes expected for SigDSIGN Ed25519.
-    -- At the time of writing, both of these are 64 bytes.
     signature =
-      DSIGN.SignedDSIGN . fromMaybe (panic "makeBootstrapWitness: impossible!") $
-        DSIGN.rawDeserialiseSigDSIGN signatureBytes
+      WC.sign
+        (mempty :: ByteString)
+        (Byron.unSigningKey byronSigningKey)
+        (Hash.getHash txBodyHash)

@@ -206,7 +206,7 @@ transaction_metadata =
 
 vkeywitness = [ $vkey, $signature ]
 
-bootstrap_witness = [ $vkey, $signature, bytes, bytes, bytes ]
+bootstrap_witness = [ $vkey, $xsignature, bytes, bytes, bytes ]
 
 multisig_script =
   [  0, addr_keyhash                 ; public key

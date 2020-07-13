@@ -11,7 +11,9 @@
 module Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( genBootstrapAddress,
     testBootstrapSpending,
+    testBootstrapNotSpending,
     bootstrapHashTest,
+    genXSignature,
   )
 where
 
@@ -22,18 +24,15 @@ import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Prelude
   ( ByteString,
-    Proxy (..),
   )
 import Data.Coerce
   ( coerce,
   )
+import Data.Either (fromRight)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Data.String (fromString)
-import Hedgehog (Gen, (===))
-import qualified Hedgehog as H
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
     BootstrapAddress (..),
@@ -53,6 +52,8 @@ import Shelley.Spec.Ledger.Crypto (Crypto (..))
 import Shelley.Spec.Ledger.Keys
   ( GenDelegs (..),
     KeyHash (..),
+    KeyRole (..),
+    VKey (..),
     coerceKeyRole,
   )
 import Shelley.Spec.Ledger.LedgerState
@@ -67,7 +68,10 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
   )
-import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
+import Shelley.Spec.Ledger.STS.Utxow
+  ( PredicateFailure (..),
+    UTXOW,
+  )
 import Shelley.Spec.Ledger.Slot
   ( SlotNo (..),
   )
@@ -89,6 +93,9 @@ import Shelley.Spec.Ledger.UTxO
   )
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
+import Test.Cardano.Prelude (genBytes)
+import Test.QuickCheck (Gen)
+import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ConcreteCrypto)
 import Test.Shelley.Spec.Ledger.Generator.Core (genesisId)
 import Test.Shelley.Spec.Ledger.Utils (testSTS)
@@ -96,43 +103,42 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
   ( Assertion,
   )
-import qualified Test.Tasty.Hedgehog as T
+import Test.Tasty.QuickCheck (testProperty, (===))
 
 bootstrapHashTest :: TestTree
-bootstrapHashTest = T.testProperty "rebuild the 'addr root' using a bootstrap witness" $
-  H.property $
-    do
-      (byronVKey, byronAddr) <- H.forAll genByronVKeyAddr
-      let addr = BootstrapAddress byronAddr
-          (shelleyVKey, chainCode) = unpackByronVKey @C byronVKey
-          witness =
-            BootstrapWitness
-              { bwKey = shelleyVKey,
-                bwChainCode = chainCode,
-                bwSig = dummySig,
-                bwPadding = fromJust $ byronAddressPadding byronAddr
-              }
-      (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
+bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witness" $
+  do
+    (byronVKey, byronAddr) <- genByronVKeyAddr
+    sig <- genXSignature
+    let addr = BootstrapAddress byronAddr
+        (shelleyVKey, chainCode) = unpackByronVKey @C byronVKey
+        witness =
+          BootstrapWitness
+            { bwKey = shelleyVKey,
+              bwChainCode = chainCode,
+              bwSig = sig,
+              bwPadding = fromJust $ byronAddressPadding byronAddr
+            }
+    pure $ (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
 
-dummySig :: forall v a. DSIGN.DSIGNAlgorithm v => DSIGN.SignedDSIGN v a
-dummySig =
-  DSIGN.SignedDSIGN
-    (fromJust $ DSIGN.rawDeserialiseSigDSIGN (fromString $ replicate size '0'))
-  where
-    size = fromIntegral $ DSIGN.sizeSigDSIGN (Proxy :: Proxy v)
+genXSignature :: Gen Byron.XSignature
+genXSignature =
+  fromRight (error "wrong number of bytes")
+    . Byron.xsignature
+    <$> hedgehog (genBytes 64)
 
 genBootstrapAddress :: Gen (BootstrapAddress crypto)
 genBootstrapAddress = BootstrapAddress . snd <$> genByronVKeyAddr
 
 genByronVKeyAddr :: Gen (Byron.VerificationKey, Byron.Address)
 genByronVKeyAddr = do
-  vkey <- Byron.genVerificationKey
+  vkey <- hedgehog Byron.genVerificationKey
   addr <- genByronAddrFromVKey vkey
   pure (vkey, addr)
 
 genByronAddrFromVKey :: Byron.VerificationKey -> Gen Byron.Address
 genByronAddrFromVKey vkey =
-  Byron.makeAddress (Byron.VerKeyASD vkey) <$> Byron.genAddrAttributes
+  Byron.makeAddress (Byron.VerKeyASD vkey) <$> hedgehog Byron.genAddrAttributes
 
 utxo0 :: UTxO C
 utxo0 =
@@ -152,6 +158,9 @@ utxoState0 =
 
 tx :: Tx C
 tx = Tx txBody mempty {bootWits = Set.fromList [aliceWitness]} SNothing
+
+txBad :: Tx C
+txBad = Tx txBody mempty {bootWits = Set.fromList [aliceBadWitness]} SNothing
 
 utxoState1 :: UTxOState C
 utxoState1 =
@@ -183,6 +192,9 @@ aliceSigningKey = Byron.SigningKey $ Byron.generate seed (mempty :: ByteString)
     seed :: ByteString -- 32 bytes
     seed = "12345678901234567890123456789012"
 
+aliceVKey :: VKey 'Witness C
+aliceVKey = fst . unpackByronVKey . Byron.toVerification $ aliceSigningKey
+
 aliceByronAddr :: Byron.Address
 aliceByronAddr = Byron.makeAddress asd attrs
   where
@@ -200,6 +212,13 @@ aliceWitness :: BootstrapWitness C
 aliceWitness =
   makeBootstrapWitness
     (hashTxBody txBody)
+    aliceSigningKey
+    (Byron.addrAttributes aliceByronAddr)
+
+aliceBadWitness :: BootstrapWitness C
+aliceBadWitness =
+  makeBootstrapWitness
+    (hashTxBody txBody {_ttl = SlotNo 100000000})
     aliceSigningKey
     (Byron.addrAttributes aliceByronAddr)
 
@@ -234,6 +253,14 @@ testBootstrapSpending =
     utxoState0
     tx
     (Right utxoState1)
+
+testBootstrapNotSpending :: Assertion
+testBootstrapNotSpending =
+  testSTS @(UTXOW C)
+    utxoEnv
+    utxoState0
+    txBad
+    (Left [[InvalidWitnessesUTXOW [aliceVKey]]])
 
 data C
 
