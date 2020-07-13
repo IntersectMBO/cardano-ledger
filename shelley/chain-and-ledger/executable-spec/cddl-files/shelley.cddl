@@ -63,7 +63,7 @@ transaction_input = [ transaction_id : $hash32
                     , index : uint
                     ]
 
-transaction_output = [address, amount : uint]
+transaction_output = [address, amount : coin]
 
 ; address = bytes
 ; reward_account = bytes
@@ -99,16 +99,22 @@ transaction_output = [address, amount : uint]
 ; 1111: reward account: scripthash28
 ; 1001 - 1101: future formats
 
+stake_registration = (0, stake_credential)
+stake_deregistration = (1, stake_credential)
+stake_delegation = (2, stake_credential, pool_keyhash)
+pool_registration = (3, pool_params)
+pool_retirement = (4, pool_keyhash, epoch)
+genesis_key_delegation = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
+move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
+
 certificate =
-  [  0, stake_credential               ; stake registration
-  // 1, stake_credential               ; stake deregistration
-  // 2, stake_credential, pool_keyhash ; stake delegation
-  // 3, pool_params                    ; pool registration
-  // 4, pool_keyhash, epoch            ; pool retirement
-  // 5, genesishash,                   ; genesis key delegation
-        genesis_delegate_hash,
-        vrf_keyhash,
-  // 6, move_instantaneous_reward      ; move inst. rewards
+  [ stake_registration
+  // stake_deregistration
+  // stake_delegation
+  // pool_registration
+  // pool_retirement
+  // genesis_key_delegation
+  // move_instantaneous_rewards_cert
   ]
 
 move_instantaneous_reward = [ 0 / 1, { * stake_credential => coin } ]
@@ -208,11 +214,16 @@ vkeywitness = [ $vkey, $signature ]
 
 bootstrap_witness = [ $vkey, $signature, bytes, bytes, bytes ]
 
+multisig_pubkey = (0, addr_keyhash)
+multisig_all = (1, [ * multisig_script ])
+multisig_any = (2, [ * multisig_script ])
+multisig_n_of_k = (3, n: uint, [ * multisig_script ])
+
 multisig_script =
-  [  0, addr_keyhash                 ; public key
-  // 1, [ * multisig_script ]        ; all of
-  // 2, [ * multisig_script ]        ; any of
-  // 3, uint, [ * multisig_script ]  ; n of k
+  [ multisig_pubkey
+  // multisig_all
+  // multisig_any
+  // multisig_n_of_k
   ]
 
 coin = uint
