@@ -6,16 +6,12 @@
 module Test.Shelley.Spec.Ledger.SetAlgTests where
 
 import Control.Iterate.Collect
-import Control.Iterate.SetAlgebra(Iter(..),
-                  Exp(..),BaseRep(..),List(..),Sett(..),Single(..),unList,
-                  dom, rng, singleton, setSingleton, (◁), (⋪), (▷), (⋫), (∪), (⨃), (∈), (∉),(|>),(<|),(≍),
-                  element, lifo, fifo,keysEqual,sameDomain,
-                  Fun, apply,
-                  BiMap(..), Bimap, biMapEmpty, biMapFromList,removeval,
-                  Fun(..), Pat(..), Expr(..), Lam(..), evaluate, reify,
-                  constant, domElem, second, lift, rngSnd,
-                  Query(..), materialize, fromList, eval, run, compile,(⨝),compute
-                  )
+import Control.Iterate.SetAlgebraInternal
+   (eval, compute, compile, run, (⨝),
+    Exp(..), BiMap(..),Sett(..),Query(..), Single(..), List(..), Bimap,
+    sameDomain,fifo,lifo,lift, rngSnd,domElem,
+   )
+import Control.Iterate.SetAlgebra
 
 
 import Data.Map.Strict(Map)
@@ -96,7 +92,7 @@ m5 = mN 1 10000000
 m6 = mN 9999995 10000000
 
 b0::Bimap Int Char
-b0 = biMapFromList [(1,'a'),(2,'z'),(4,'g')]
+b0 = biMapFromList (\ l _r -> l) [(1,'a'),(2,'z'),(4,'g')]
 
 -- ============ Some small Maps to And, Or, Diff, Guard, Project with =========
 
@@ -107,7 +103,7 @@ l2 = [(3,"c"),(4,"d"),(5,"e"),(6,"f"),(10,"j"),(11,"k"),(21,"v")]
 l3 :: [(Int,Int)]
 l3 = [(4,12),(9,13),(12,44),(55,22)]
 evens :: Sett Int ()
-evens = fromList SetR [(n,()) | n <- [2,4,6,8,10,12,14,16,18,20,22,24,26]]
+evens = fromList SetR  (\ l _r -> l)  [(n,()) | n <- [2,4,6,8,10,12,14,16,18,20,22,24,26]]
 
 l4 :: [(Int,String)]
 l4 = [(1,"m"),(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l"),(105,"Z")]
@@ -163,13 +159,13 @@ eval_tests = testGroup "eval tests"
           , evalTest "m0"  (rng(singleton 'z' 2) ⋪ m0) (Map.fromList [(1,'a'),(4,'g')])
 
         -- , evalTest "m0"  ((Map.fromList [(1,'a'),(2,'n'),(3,'r')]) ∪ (singleton 2 'b')) (Map.fromList[(1::Int,'a'),(2,'n'),(3,'r')])
-        --  , evalTest "m0"  ([(1,'a'),(3,'r')] ∪ (singleton 3 'b')) (List[(1::Int,'a'),(2,'n'),(3,'r')])
+        --  , evalTest "m0"  ([(1,'a'),(3,'r')] ∪ (singleton 3 'b')) (UnSafeList[(1::Int,'a'),(2,'n'),(3,'r')])
 
           , evalTest "m0"  (70 ∉ (dom m1))                True
           , evalTest "((dom stkcred) ◁ deleg) ▷ (dom stpool)"  (((dom stkcred) ◁ deleg) ▷ (dom stpool)) (Map.fromList [(5,'F')])
-          , evalTest "Range exclude 1"  (l4 ⋫ Set.empty) (List l4)
-          , evalTest "Range exclude 2"  (l4 ⋫ Fail) (List l4)
-          , evalTest "Range exclude 3"  (l4 ⋫ (Set.fromList ["m","Z"])) (List [(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l")])
+          , evalTest "Range exclude 1"  (l4 ⋫ Set.empty) (UnSafeList l4)
+          , evalTest "Range exclude 2"  (l4 ⋫ Fail) (UnSafeList l4)
+          , evalTest "Range exclude 3"  (l4 ⋫ (Set.fromList ["m","Z"])) (UnSafeList [(2,"a"),(5,"z"),(6,"b"),(7,"r"),(12,"w"),(34,"a"),(50,"q"),(51,"l")])
           , eval_compile  (((dom stkcred) ◁ deleg) ▷ (dom stpool))
           , eval_compile  (l4 ⋫ (Set.fromList ["m","Z"]))
           , eval_compile  (m0 ∪ (singleton 3 'b'))
@@ -207,7 +203,7 @@ testcase :: (Eq k, Eq v, Show k, Show v, Iter f) => String -> f k v -> [(k, v)] 
 testcase nm col ans = testCase nm (assertEqual nm ans (runCollect (fifo col) [] (:)))
 
 fromListD :: (Ord k,Iter f) => BaseRep f k v -> [(k,v)] -> Query k v
-fromListD rep xs = BaseD rep (fromList rep xs)
+fromListD rep xs = BaseD rep (fromList rep (\ l _r -> l) xs)
 
 -- Tests where we vary how we represent l1 and l2 (the f in (Iter f) )
 -- and see that we always get the same answer no matter how we store the data of l1 and l2

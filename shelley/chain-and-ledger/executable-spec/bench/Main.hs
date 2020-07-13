@@ -31,9 +31,7 @@ mainEq:: IO ()
 mainEq = defaultMain $
     [ bgroup "KeysEqual tests" $
         [ eqf "keysEqual" keysEqual (100::Int)
-      --  , eqf "keysEqual2" keysEqual2 (100::Int)
         , eqf "keys x == keys y" (\ x y -> Map.keys x == Map.keys y) (100::Int)
-      --   , eqf  "domain x == domain y" keysEqual3 (100::Int)
         ]
     ]
 
@@ -163,6 +161,8 @@ main =
   defaultMain $
     [ bgroup "vary input size" $
         [ -- varyInput "deregister key" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerDeRegisterStakeKeys,
+          -- The above quuery is too slow to run at the given size. It needs a change in data structure (to a BiMap) so that
+          -- range restriction has a big O better than O(n * log n) To be done in a follow on PR.
           varyInput "register key" (20001, 20501) [(1, 20), (1, 200), (1, 2000)] ledgerStateWithNregisteredKeys ledgerRegisterStakeKeys,
           varyInput "withdrawal" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredKeys ledgerRewardWithdrawals,
           varyInput "register pool" (1, 5000) [(1, 50), (1, 500), (1, 5000)] ledgerStateWithNregisteredPools ledgerRegisterStakePools,
