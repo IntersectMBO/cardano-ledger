@@ -527,6 +527,9 @@ pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdH
 data WitVKey crypto kr = WitVKey'
   { wvkKey' :: !(VKey kr crypto),
     wvkSig' :: !(SignedDSIGN crypto (Hash crypto (TxBody crypto))),
+    -- | Hash of the witness vkey. We store this here to avoid repeated hashing
+    --   when used in ordering.
+    wvkKeyHash :: KeyHash 'Witness crypto,
     wvkBytes :: LByteString
   }
   deriving (Show, Eq, Generic)
@@ -538,27 +541,26 @@ pattern WitVKey ::
   SignedDSIGN crypto (Hash crypto (TxBody crypto)) ->
   WitVKey crypto kr
 pattern WitVKey k s <-
-  WitVKey' k s _
+  WitVKey' k s _ _
   where
     WitVKey k s =
       let bytes = serializeEncoding $ encodeListLen 2 <> toCBOR k <> encodeSignedDSIGN s
-       in WitVKey' k s bytes
+          hash = asWitness $ hashKey k
+       in WitVKey' k s hash bytes
 
 {-# COMPLETE WitVKey #-}
 
 witKeyHash ::
-  forall crypto kr.
-  (Typeable kr, Crypto crypto) =>
   WitVKey crypto kr ->
   KeyHash 'Witness crypto
-witKeyHash (WitVKey key _) = asWitness $ hashKey key
+witKeyHash (WitVKey' _ _ kh _) = kh
 
 instance
   forall crypto kr.
   (Typeable kr, Crypto crypto) =>
   Ord (WitVKey crypto kr)
   where
-  compare = comparing witKeyHash
+  compare = comparing wvkKeyHash
 
 newtype StakeCreds crypto
   = StakeCreds (Map (Credential 'Staking crypto) SlotNo)
@@ -703,7 +705,9 @@ instance
     annotatorSlice $
       decodeRecordNamed "WitVKey" (const 2) $
         fmap pure $
-          WitVKey' <$> fromCBOR <*> decodeSignedDSIGN
+          mkWitVKey <$> fromCBOR <*> decodeSignedDSIGN
+    where
+      mkWitVKey k sig = WitVKey' k sig (asWitness $ hashKey k)
 
 instance
   (Crypto crypto) =>
