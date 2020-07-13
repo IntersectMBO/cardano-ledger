@@ -49,7 +49,7 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Network,
-    UnitInterval (..),
+    UnitInterval,
     activeSlotVal,
     unitIntervalToRational,
   )
