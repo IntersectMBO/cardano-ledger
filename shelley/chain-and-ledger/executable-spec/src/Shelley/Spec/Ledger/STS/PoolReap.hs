@@ -70,7 +70,7 @@ poolReapTransition = do
 
   let retired = dom $ (_retiring ps) ▷ Set.singleton e
       StakePools stpools = _stPools ps
-      pr = Map.fromList $ fmap (\kh -> (kh, _poolDeposit pp)) (Set.toList retired)
+      pr = Map.fromList $ fmap (\hk -> (hk, _poolDeposit pp)) (Set.toList retired)
       rewardAcnts = Map.map _poolRAcnt $ retired ◁ (_pParams ps)
       rewardAcnts' =
         Map.fromListWith (+)
