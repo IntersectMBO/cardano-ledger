@@ -217,8 +217,7 @@ bootstrap_witness =
   [ public_key : $vkey
   , signature  : $signature
   , chain_code : bytes .size 32
-  , pad_prefix : bytes .size 6
-  , pad_suffix : bytes
+  , attributes : bytes
   ]
 
 multisig_script =

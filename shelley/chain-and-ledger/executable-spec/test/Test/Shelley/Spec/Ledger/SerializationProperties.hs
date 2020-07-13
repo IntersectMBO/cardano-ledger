@@ -63,7 +63,6 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (Addr))
 import Shelley.Spec.Ledger.Address.Bootstrap
   ( ChainCode (..),
-    KeyPadding (..),
     pattern BootstrapWitness,
   )
 import Shelley.Spec.Ledger.BaseTypes
@@ -283,8 +282,8 @@ instance HashAlgorithm h => Arbitrary (Mock.BootstrapWitness h) where
     key <- arbitrary
     sig <- genSignature
     chainCode <- ChainCode <$> arbitrary
-    padding <- KeyPadding <$> arbitrary <*> arbitrary
-    pure $ BootstrapWitness key sig chainCode padding
+    attributes <- arbitrary
+    pure $ BootstrapWitness key sig chainCode attributes
 
 instance Crypto c => Arbitrary (HashHeader c) where
   arbitrary = HashHeader <$> genHash (Proxy @c)

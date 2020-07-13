@@ -17,6 +17,7 @@ module Test.Shelley.Spec.Ledger.Address.Bootstrap
   )
 where
 
+import Cardano.Binary (serialize')
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
@@ -113,7 +114,7 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
             { bwKey = shelleyVKey,
               bwChainCode = chainCode,
               bwSig = sig,
-              bwPadding = fromJust $ byronAddressPadding byronAddr
+              bwAttributes = serialize' $ Byron.addrAttributes byronAddr
             }
     pure $ (coerceKeyRole $ bootstrapKeyHash addr) === bootstrapWitKeyHash witness
 
