@@ -249,7 +249,7 @@ state transition types. We define two separate parts of the ledger state.
         their costs and margin.
       \item When changes are made to the pool parameters late in an epoch, they are staged
         in $\var{fPoolParams}$.
-        These parameters will be updated by another transaction (namely $\mathsf{EPOCH}$)
+        These parameters will be updated by another transition (namely $\mathsf{EPOCH}$)
         when the next epoch starts.
       \item $\var{retiring}$ tracks stake pool retirements, using a map from hashkeys to
         the epoch in which it will retire.
