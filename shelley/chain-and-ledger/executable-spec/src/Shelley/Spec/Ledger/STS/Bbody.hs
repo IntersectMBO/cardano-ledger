@@ -41,11 +41,12 @@ import Shelley.Spec.Ledger.BlockChain
     bbHash,
     hBbsize,
     incrBlocks,
+    poolIDfromBHBody,
   )
 import Shelley.Spec.Ledger.Core ((∈))
 import Shelley.Spec.Ledger.Crypto (Crypto)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
-import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole, hashKey)
+import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState (AccountState, LedgerState)
 import Shelley.Spec.Ledger.PParams (PParams)
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
@@ -111,8 +112,7 @@ bbodyTransition =
                Block (BHeader bhb _) txsSeq
                )
            ) -> do
-        let hk = hashKey $ bheaderVk bhb
-            TxSeq txs = txsSeq
+        let TxSeq txs = txsSeq
             actualBodySize = bBodySize txsSeq
             actualBodyHash = bbHash txsSeq
 
@@ -128,7 +128,7 @@ bbodyTransition =
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
-        let hkAsStakePool = coerceKeyRole hk
+        let hkAsStakePool = coerceKeyRole . poolIDfromBHBody $ bhb
         pure $ BbodyState ls' (incrBlocks (bheaderSlotNo bhb ∈ oslots) hkAsStakePool b)
 
 instance
