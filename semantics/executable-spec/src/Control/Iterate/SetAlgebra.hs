@@ -9,7 +9,8 @@ module Control.Iterate.SetAlgebra
    -- Classes supporting abstract constructors of Set Algebra Expressions. These show up in the types of overloaded functions.
    Basic(..),Iter(..),Embed(..),HasExp(..),BaseRep(..),
 
-   -- Overloaded abstract constructors of Set Algebra Expressions
+   -- Overloaded functions acting as abstract constructors of Set Algebra Expressions. These correspond
+   -- with the operators in the specification, except here sets are thought of as a map with a Unit value. (Map k ())
    dom, rng, dexclude, drestrict, rexclude, rrestrict, unionleft, unionright, unionplus,
    singleton, setSingleton, intersect, subset, keyeq,
    (◁), (⋪), (▷), (⋫), (∈), (∉), (∪), (⨃), (∪+), (∩), (⊆), (≍), (<|), (|>),
