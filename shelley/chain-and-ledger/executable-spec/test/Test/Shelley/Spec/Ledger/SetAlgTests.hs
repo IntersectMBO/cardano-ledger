@@ -13,7 +13,6 @@ import Control.Iterate.SetAlgebraInternal
    )
 import Control.Iterate.SetAlgebra
 
-
 import Data.Map.Strict(Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -21,7 +20,6 @@ import qualified Data.Set as Set
 import Data.Char(ord)
 import Test.Tasty.HUnit
 import Test.Tasty
-
 
 -- =========================================================
 -- Some examples of Exp and tests
