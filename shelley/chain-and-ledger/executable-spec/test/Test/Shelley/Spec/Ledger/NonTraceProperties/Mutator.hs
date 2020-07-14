@@ -120,7 +120,7 @@ mutateTxBody tx = do
       SNothing
 
 -- | Mutator for a list of 'TxIn'.
-mutateInputs :: [TxIn h] -> Gen [TxIn h]
+mutateInputs :: HashAlgorithm h => [TxIn h] -> Gen [TxIn h]
 mutateInputs [] = pure []
 mutateInputs (txin : txins) = do
   mtxin <- mutateInput txin
@@ -130,13 +130,13 @@ mutateInputs (txin : txins) = do
 
 -- | Mutator for a single 'TxIn', which mutates the index of the output to
 -- spend.
-mutateInput :: TxIn h -> Gen (TxIn h)
+mutateInput :: HashAlgorithm h => TxIn h -> Gen (TxIn h)
 mutateInput (TxIn idx index) = do
   index' <- mutateNat 0 100 index
   pure $ TxIn idx index'
 
 -- | Mutator for a list of 'TxOut'.
-mutateOutputs :: StrictSeq (TxOut h) -> Gen (StrictSeq (TxOut h))
+mutateOutputs :: HashAlgorithm h => StrictSeq (TxOut h) -> Gen (StrictSeq (TxOut h))
 mutateOutputs StrictSeq.Empty = pure StrictSeq.Empty
 mutateOutputs (txout :<| txouts) = do
   mtxout <- mutateOutput txout
@@ -146,7 +146,7 @@ mutateOutputs (txout :<| txouts) = do
 
 -- | Mutator for a single 'TxOut' which mutates the associated 'Coin' value of
 -- the output.
-mutateOutput :: TxOut h -> Gen (TxOut h)
+mutateOutput :: HashAlgorithm h => TxOut h -> Gen (TxOut h)
 mutateOutput (TxOut addr c) = do
   c' <- mutateCoin 0 100 c
   pure $ TxOut addr c'

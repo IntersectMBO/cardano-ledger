@@ -302,7 +302,7 @@ instance Crypto c => Arbitrary (TxIn c) where
       <$> (TxId <$> genHash (Proxy @c))
       <*> arbitrary
 
-instance HashAlgorithm h => Arbitrary (Mock.TxOut h) where
+instance Arbitrary (Mock.TxOut h) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

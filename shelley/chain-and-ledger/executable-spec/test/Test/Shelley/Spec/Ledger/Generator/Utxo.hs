@@ -353,7 +353,7 @@ genTxBody inputs outputs certs wdrls update fee slotWithTTL = do
 -- The idea is to have an specified spending balance and fees that must be paid
 -- by the selected addresses.
 calcOutputsFromBalance ::
-  HasCallStack =>
+  (HasCallStack, HashAlgorithm h) =>
   Coin ->
   [Addr h] ->
   Coin ->
