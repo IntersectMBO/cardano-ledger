@@ -47,7 +47,7 @@ module Shelley.Spec.Ledger.Keys
     -- * Re-exports from cardano-crypto-class
     DSIGN.decodeSignedDSIGN,
     DSIGN.encodeSignedDSIGN,
-    Hash.hash,
+    Hash.hashWithSerialiser,
     KES.decodeSignedKES,
     KES.decodeVerKeyKES,
     KES.encodeSignedKES,

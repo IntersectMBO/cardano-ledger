@@ -14,7 +14,7 @@ module Test.Shelley.Spec.Ledger.Address
 where
 
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), ShortHash)
+import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), ShortHash, hashFromBytes)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Simple (SimpleVRF)
@@ -24,6 +24,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as LB16
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Short as SBS
+import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.Address
@@ -119,12 +121,12 @@ goldenTests_MockCrypto =
   where
     keyHash :: Credential kh (ConcreteCrypto ShortHash)
     keyHash =
-      KeyHashObj . KeyHash . UnsafeHash . fst $
-        B16.decode "01020304"
+      KeyHashObj . KeyHash . UnsafeHash $
+        SBS.toShort . fst . B16.decode $ "01020304"
     scriptHash :: Credential kh (ConcreteCrypto ShortHash)
     scriptHash =
-      ScriptHashObj . ScriptHash . UnsafeHash . fst $
-        B16.decode "05060708"
+      ScriptHashObj . ScriptHash . UnsafeHash $
+        SBS.toShort . fst . B16.decode $ "05060708"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
 
@@ -191,7 +193,7 @@ goldenTests_ShelleyCrypto =
     -- and should be 28-byte in the aftermath
     keyBlake2b224 :: BS.ByteString -> Credential kh ShelleyCrypto
     keyBlake2b224 vk =
-      KeyHashObj . KeyHash . UnsafeHash $ hk
+      KeyHashObj . KeyHash . fromJust . hashFromBytes $ hk
       where
         hash = digest (Proxy :: Proxy Blake2b_224)
         vk' = invariantSize 32 vk

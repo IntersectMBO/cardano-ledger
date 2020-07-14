@@ -12,7 +12,6 @@ import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
 import Cardano.Prelude (Natural, Word32, Word64, Word8)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
-import qualified Data.ByteString as BS
 import Data.Fixed
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -46,6 +45,7 @@ import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxData
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
 import Test.Shelley.Spec.Ledger.Serialization (genIPv4, genIPv6)
+import Test.Shelley.Spec.Ledger.Utils (mkHash)
 
 genShelleyGenesis :: Crypto c => Gen (ShelleyGenesis c)
 genShelleyGenesis =
@@ -153,9 +153,7 @@ genCredential =
     ]
 
 genHash :: forall c a. HashAlgorithm (HASH c) => Gen (Hash c a)
-genHash = UnsafeHash . BS.pack <$> genWords numBytes
-  where
-    numBytes = fromIntegral $ sizeHash ([] @(HASH c))
+genHash = mkHash <$> Gen.int (Range.linear 0 1000)
 
 genWords :: Natural -> Gen [Word8]
 genWords n

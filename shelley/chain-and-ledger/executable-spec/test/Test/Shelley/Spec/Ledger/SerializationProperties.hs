@@ -40,6 +40,7 @@ import Cardano.Crypto.DSIGN.Mock (MockDSIGN, VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hash as Monomorphic
+import Cardano.Crypto.Hash (hashWithSerialiser)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Codec.CBOR.Decoding (Decoder)
@@ -88,7 +89,6 @@ import Shelley.Spec.Ledger.Keys
   ( Hash,
     KeyHash (KeyHash),
     VKey (VKey),
-    hash,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
@@ -185,7 +185,7 @@ genHash :: forall a c. Crypto c => Proxy c -> Gen (Hash c a)
 genHash proxy = mkDummyHash proxy <$> arbitrary
 
 mkDummyHash :: forall c a. Crypto c => Proxy c -> Int -> Hash c a
-mkDummyHash _ = coerce . hash @(HASH c)
+mkDummyHash _ = coerce . hashWithSerialiser @(HASH c) toCBOR
 
 {-------------------------------------------------------------------------------
   Serialization Properties

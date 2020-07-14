@@ -27,7 +27,6 @@ import Control.State.Transition.Trace.Generator.QuickCheck
     shrinkSignal,
     sigGen,
   )
-import Data.Coerce (coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, fromList, keysSet)
@@ -39,7 +38,7 @@ import Shelley.Spec.Ledger.BlockChain
     hashHeaderToNonce,
     pattern HashHeader,
   )
-import Shelley.Spec.Ledger.Keys (Hash, KeyRole (BlockIssuer), coerceKeyRole, hash)
+import Shelley.Spec.Ledger.Keys (KeyRole (BlockIssuer), coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState (esAccountState, nesEs, overlaySchedule, _treasury)
 import Shelley.Spec.Ledger.STS.Chain (chainNes, initialShelleyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
@@ -49,7 +48,6 @@ import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( CHAIN,
     ChainState,
-    ConcreteCrypto,
     GenDelegs,
     HashHeader,
     KeyHash,
@@ -62,7 +60,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
 import Test.Shelley.Spec.Ledger.Generator.Presets (genUtxo0, genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
 import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock)
-import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (maxLLSupply, mkHash, runShelleyBase)
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
@@ -81,7 +79,7 @@ instance HashAlgorithm h => HasTrace (CHAIN h) (GenEnv h) where
 -- When this transition actually occurs, the consensus layer will do the work of making
 -- sure that the hash gets translated across the fork
 lastByronHeaderHash :: forall proxy h. HashAlgorithm h => proxy h -> HashHeader h
-lastByronHeaderHash _ = HashHeader $ coerce (hash 0 :: Hash (ConcreteCrypto h) Int)
+lastByronHeaderHash _ = HashHeader $ mkHash 0
 
 -- Note: this function must be usable in place of 'applySTS' and needs to align
 -- with the signature 'RuleContext sts -> Gen (Either [[PredicateFailure sts]] (State sts))'.

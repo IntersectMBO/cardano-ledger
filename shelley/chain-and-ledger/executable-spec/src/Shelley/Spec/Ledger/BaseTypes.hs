@@ -189,7 +189,7 @@ deriving anyclass instance FromJSON Nonce
 (⭒) :: Nonce -> Nonce -> Nonce
 Nonce a ⭒ Nonce b =
   Nonce . castHash $
-    hashRaw id (getHash a <> getHash b)
+    hashWith id (hashToBytes a <> hashToBytes b)
 x ⭒ NeutralNonce = x
 NeutralNonce ⭒ x = x
 
@@ -198,14 +198,14 @@ mkNonceFromOutputVRF :: VRF.OutputVRF v -> Nonce
 mkNonceFromOutputVRF =
   Nonce
     . (castHash :: Hash Blake2b_256 (VRF.OutputVRF v) -> Hash Blake2b_256 Nonce)
-    . hashRaw VRF.getOutputVRFBytes
+    . hashWith VRF.getOutputVRFBytes
 
 -- | Make a nonce from a number.
 mkNonceFromNumber :: Word64 -> Nonce
 mkNonceFromNumber =
   Nonce
     . (castHash :: Hash Blake2b_256 Word64 -> Hash Blake2b_256 Nonce)
-    . hashRaw (BSL.toStrict . B.runPut . B.putWord64be)
+    . hashWith (BSL.toStrict . B.runPut . B.putWord64be)
 
 -- | Seed to the verifiable random function.
 --

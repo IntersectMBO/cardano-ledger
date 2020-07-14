@@ -64,6 +64,7 @@ import Cardano.Prelude
     panic,
   )
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coerce (coerce)
 import Data.Ord (comparing)
 import Quiet
 import Shelley.Spec.Ledger.Crypto (ADDRHASH, Crypto, DSIGN)
@@ -165,7 +166,7 @@ bootstrapWitKeyHash ::
   BootstrapWitness crypto ->
   KeyHash 'Witness crypto
 bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) (KeyPadding prefix suffix)) =
-  KeyHash . Hash.UnsafeHash . hash_crypto . hash_SHA3_256 $ bytes
+  KeyHash . hash_crypto . hash_SHA3_256 $ bytes
   where
     -- Here we are reserializing something that we have previously deserialized.
     -- This is normally naughty. However, this is a blob of bytes -- serializing it
@@ -174,8 +175,8 @@ bootstrapWitKeyHash (BootstrapWitness (VKey key) _ (ChainCode cc) (KeyPadding pr
     bytes = prefix <> keyBytes <> cc <> suffix
     hash_SHA3_256 :: ByteString -> ByteString
     hash_SHA3_256 = Hash.digest (Proxy :: Proxy Hash.SHA3_256)
-    hash_crypto :: ByteString -> ByteString
-    hash_crypto = Hash.digest (Proxy :: Proxy (ADDRHASH crypto))
+    hash_crypto :: ByteString -> Hash.Hash (ADDRHASH crypto) a
+    hash_crypto = coerce . Hash.hashWith @(ADDRHASH crypto) id
 
 -- | This calculates the key padding of a Byron address by serializing the
 -- relevant parts.
@@ -234,7 +235,7 @@ verifyBootstrapWit ::
   BootstrapWitness crypto ->
   Bool
 verifyBootstrapWit txbodyHash witness =
-  WC.verify xpub (Hash.getHash txbodyHash) xsig
+  WC.verify xpub (Hash.hashToBytes txbodyHash) xsig
   where
     xpub = WC.XPub (DSIGN.rawSerialiseVerKeyDSIGN k) (WC.ChainCode mempty)
     (VKey k) = (bwKey witness)
@@ -258,4 +259,4 @@ makeBootstrapWitness txBodyHash byronSigningKey byronAddress =
       WC.sign
         (mempty :: ByteString)
         (Byron.unSigningKey byronSigningKey)
-        (Hash.getHash txBodyHash)
+        (Hash.hashToBytes txBodyHash)

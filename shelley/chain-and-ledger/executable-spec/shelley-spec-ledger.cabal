@@ -238,6 +238,7 @@ benchmark mainbench
                     Test.Shelley.Spec.Ledger.Examples,
                     Test.Shelley.Spec.Ledger.Generator.Constants,
                     Test.Shelley.Spec.Ledger.Generator.Core,
+                    Test.Shelley.Spec.Ledger.Orphans,
                     Test.Shelley.Spec.Ledger.Utils,
                     Test.Cardano.Crypto.VRF.Fake
   build-depends:    base,

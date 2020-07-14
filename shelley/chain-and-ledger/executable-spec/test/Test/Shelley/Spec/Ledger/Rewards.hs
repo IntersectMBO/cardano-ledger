@@ -8,13 +8,13 @@
 
 module Test.Shelley.Spec.Ledger.Rewards (rewardTests) where
 
+import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
-import Cardano.Crypto.Hash (Hash (UnsafeHash), MD5, ShortHash, hash)
+import Cardano.Crypto.Hash (MD5, ShortHash, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
-import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -42,6 +42,7 @@ import Shelley.Spec.Ledger.Keys
     KeyRole (..),
     VKey (..),
     hashKey,
+    hashWithSerialiser,
     vKey,
   )
 import Shelley.Spec.Ledger.PParams
@@ -111,13 +112,19 @@ keyPair :: Crypto c => Int -> KeyPair r c
 keyPair seed = KeyPair vk sk
   where
     vk = VKey (Crypto.deriveVerKeyDSIGN sk)
-    sk = Crypto.genKeyDSIGN $ mkSeedFromBytes . coerce $ hash @MD5 seed
+    sk =
+      Crypto.genKeyDSIGN $
+        mkSeedFromBytes . hashToBytes $
+          hashWithSerialiser @MD5 toCBOR seed
 
 vrfKeyPair :: forall v. Crypto.VRFAlgorithm v => Int -> (Crypto.SignKeyVRF v, Crypto.VerKeyVRF v)
 vrfKeyPair seed = (sk, vk)
   where
     vk = Crypto.deriveVerKeyVRF sk
-    sk = Crypto.genKeyVRF $ mkSeedFromBytes . coerce $ hash @MD5 seed
+    sk =
+      Crypto.genKeyVRF $
+        mkSeedFromBytes . hashToBytes $
+          hashWithSerialiser @MD5 toCBOR seed
 
 data PoolSetUpArgs crypto f = PoolSetUpArgs
   { poolPledge :: f Coin,
