@@ -73,7 +73,6 @@ import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coerce (coerce)
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
 import Data.Ratio (Ratio, denominator, numerator, (%))
@@ -156,7 +155,7 @@ interval1 = UnsafeUnitInterval 1
 
 -- | Evolving nonce type.
 data Nonce
-  = Nonce !(Hash SHA256 Nonce)
+  = Nonce !(Hash Blake2b_256 Nonce)
   | -- | Identity element
     NeutralNonce
   deriving (Eq, Generic, Ord, Show, NFData)
@@ -188,7 +187,9 @@ deriving anyclass instance FromJSON Nonce
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce
-(Nonce a) ⭒ (Nonce b) = Nonce . coerce $ hashRaw @SHA256 id (getHash a <> getHash b)
+Nonce a ⭒ Nonce b =
+  Nonce . castHash $
+    hashRaw id (getHash a <> getHash b)
 x ⭒ NeutralNonce = x
 NeutralNonce ⭒ x = x
 
@@ -196,21 +197,21 @@ NeutralNonce ⭒ x = x
 mkNonceFromOutputVRF :: VRF.OutputVRF v -> Nonce
 mkNonceFromOutputVRF =
   Nonce
-    . (castHash :: Hash SHA256 (VRF.OutputVRF v) -> Hash SHA256 Nonce)
+    . (castHash :: Hash Blake2b_256 (VRF.OutputVRF v) -> Hash Blake2b_256 Nonce)
     . hashRaw VRF.getOutputVRFBytes
 
 -- | Make a nonce from a number.
 mkNonceFromNumber :: Word64 -> Nonce
 mkNonceFromNumber =
   Nonce
-    . (castHash :: Hash SHA256 Word64 -> Hash SHA256 Nonce)
+    . (castHash :: Hash Blake2b_256 Word64 -> Hash Blake2b_256 Nonce)
     . hashRaw (BSL.toStrict . B.runPut . B.putWord64be)
 
 -- | Seed to the verifiable random function.
 --
 --   We do not expose the constructor to `Seed`. Instead, a `Seed` should be
 --   created using `mkSeed` for a VRF calculation.
-newtype Seed = Seed (Hash SHA256 Seed)
+newtype Seed = Seed (Hash Blake2b_256 Seed)
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (NoUnexpectedThunks, ToCBOR)
 

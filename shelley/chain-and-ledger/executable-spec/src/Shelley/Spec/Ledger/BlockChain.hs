@@ -72,7 +72,6 @@ import Cardano.Binary
     withSlice,
     withWordSize,
   )
-import Cardano.Crypto.Hash (SHA256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
@@ -85,6 +84,8 @@ import Cardano.Prelude
   )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
+import qualified Data.ByteString.Builder as BS
+import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
@@ -135,6 +136,7 @@ import Shelley.Spec.Ledger.Serialization
     decodeSeq,
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
+    runByteBuilder,
   )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), decodeWits, segwitTx, txWitsBytes)
@@ -610,14 +612,20 @@ mkSeed ::
   -- | Epoch nonce
   Nonce ->
   Seed
-mkSeed uc slot nonce = Seed . coerce $ case uc of
-  NeutralNonce -> seed
-  Nonce ucNonce -> ucNonce `Hash.xor` seed
-  where
-    seed = coerce $ Hash.hashRaw @SHA256 id (serialize' slot <> nonceBytes)
-    nonceBytes = case nonce of
-      NeutralNonce -> mempty
-      Nonce n -> Hash.getHash n
+mkSeed ucNonce (SlotNo slot) eNonce =
+  Seed
+    . ( case ucNonce of
+          NeutralNonce -> id
+          Nonce h -> Hash.xor (Hash.castHash h)
+      )
+    . Hash.castHash
+    . Hash.hashRaw id
+    . runByteBuilder (8 + 32)
+    $ BS.word64BE slot
+      <> ( case eNonce of
+             NeutralNonce -> mempty
+             Nonce h -> BS.byteStringCopy (Hash.getHash h)
+         )
 
 -- | Check that the certified input natural is valid for being slot leader. This
 -- means we check that
